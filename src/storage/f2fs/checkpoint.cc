@@ -56,7 +56,7 @@ zx_status_t F2fs::F2fsWriteMetaPage(Page *page, WritebackControl *wbc) {
   err = this->GetSegmentManager().WriteMetaPage(page, wbc);
   if (err) {
 #if 0  // porting needed
-    // wbc->pages_skipped++;
+    // ++wbc->pages_skipped;
     // set_page_dirty(page, this);
 #else
     FlushDirtyMetaPage(this, *page);
@@ -106,14 +106,14 @@ int64_t F2fs::SyncMetaPages(PageType type, int64_t nr_to_write) {
   // pagevec_init(&pvec, 0);
 
   // while (index <= end) {
-  // 	int i, nr_pages;
+  // 	int nr_pages;
   // 	nr_pages = pagevec_lookup_tag(&pvec, mapping, &index,
   // 			PAGECACHE_TAG_DIRTY,
   // 			min(end - index, (pgoff_t)PAGEVEC_SIZE-1) + 1);
   // 	if (nr_pages == 0)
   // 		break;
 
-  // 	for (i = 0; i < nr_pages; i++) {
+  // 	for (int i = 0; i < nr_pages; ++i) {
   // 		page *page = pvec.pages[i];
   // 		lock_page(page);
   // 		BUG_ON(page->mapping != mapping);
@@ -257,7 +257,7 @@ void F2fs::RecoverOrphanInode(nid_t ino) {
 
 zx_status_t F2fs::RecoverOrphanInodes() {
   SuperblockInfo &superblock_info = GetSuperblockInfo();
-  block_t start_blk, orphan_blkaddr, i, j;
+  block_t start_blk, orphan_blkaddr;
 
   if (!(superblock_info.GetCheckpoint().ckpt_flags & kCpOrphanPresentFlag))
     return ZX_OK;
@@ -265,7 +265,7 @@ zx_status_t F2fs::RecoverOrphanInodes() {
   start_blk = superblock_info.StartCpAddr() + 1;
   orphan_blkaddr = superblock_info.StartSumAddr() - 1;
 
-  for (i = 0; i < orphan_blkaddr; i++) {
+  for (block_t i = 0; i < orphan_blkaddr; ++i) {
     Page *page = GetMetaPage(start_blk + i);
     OrphanBlock *orphan_blk;
 
@@ -274,7 +274,7 @@ zx_status_t F2fs::RecoverOrphanInodes() {
     // TODO: Need to set NeedChkp flag to repair the fs when fsck repair is available.
     // For now, we trigger assertion.
     ZX_ASSERT(entry_count <= kOrphansPerBlock);
-    for (j = 0; j < entry_count; j++) {
+    for (block_t j = 0; j < entry_count; ++j) {
       nid_t ino = LeToCpu(orphan_blk->ino[j]);
       RecoverOrphanInode(ino);
     }
@@ -324,8 +324,8 @@ void F2fs::WriteOrphanInodes(block_t start_blk) {
       FlushDirtyMetaPage(this, *page);
 #endif
       F2fsPutPage(page, 1);
-      index++;
-      start_blk++;
+      ++index;
+      ++start_blk;
       nentries = 0;
       page = nullptr;
     }
@@ -473,7 +473,7 @@ fail_no_cp:
 //     }
 //   }
 //   list_add_tail(&new_entry->list, head);
-//   superblock_info.n_dirty_dirs++;
+//   ++superblock_info.n_dirty_dirs;
 
 //   BUG_ON(!S_ISDIR(inode->i_mode));
 // out:
@@ -504,7 +504,7 @@ fail_no_cp:
 //       list_delete(&entry->list);
 //       // kmem_cache_free(inode_entry_slab, entry);
 //       delete entry;
-//       superblock_info.n_dirty_dirs--;
+//       --superblock_info.n_dirty_dirs;
 //       break;
 //     }
 //   }
@@ -634,7 +634,6 @@ void F2fs::DoCheckpoint(bool is_umount) {
   uint32_t data_sum_blocks, orphan_blocks;
   void *kaddr;
   uint32_t crc32 = 0;
-  int i;
 
   /* Flush all the NAT/SIT pages */
   while (superblock_info.GetPageCount(CountType::kDirtyMeta))
@@ -649,7 +648,7 @@ void F2fs::DoCheckpoint(bool is_umount) {
   ckpt.elapsed_time = CpuToLe(static_cast<uint64_t>(GetSegmentManager().GetMtime()));
   ckpt.valid_block_count = CpuToLe(ValidUserBlocks());
   ckpt.free_segment_count = CpuToLe(GetSegmentManager().FreeSegments());
-  for (i = 0; i < 3; i++) {
+  for (int i = 0; i < 3; ++i) {
     ckpt.cur_node_segno[i] =
         CpuToLe(GetSegmentManager().CursegSegno(i + static_cast<int>(CursegType::kCursegHotNode)));
     ckpt.cur_node_blkoff[i] =
@@ -657,7 +656,7 @@ void F2fs::DoCheckpoint(bool is_umount) {
     ckpt.alloc_type[i + static_cast<int>(CursegType::kCursegHotNode)] =
         GetSegmentManager().CursegAllocType(i + static_cast<int>(CursegType::kCursegHotNode));
   }
-  for (i = 0; i < 3; i++) {
+  for (int i = 0; i < 3; ++i) {
     ckpt.cur_data_segno[i] =
         CpuToLe(GetSegmentManager().CursegSegno(i + static_cast<int>(CursegType::kCursegHotData)));
     ckpt.cur_data_blkoff[i] =

@@ -140,7 +140,7 @@ zx::status<uint32_t> MkfsWorker::GetCalculatedOp(uint32_t user_op) {
   if (user_op < 100 && user_op > 0)
     return zx::ok(user_op);
 
-  for (uint32_t calc_op = 1; calc_op < 100; calc_op++) {
+  for (uint32_t calc_op = 1; calc_op < 100; ++calc_op) {
     uint32_t reserved_segments =
         (2 * (100 / calc_op + 1) + kNrCursegType) * super_block_.segs_per_sec;
 
@@ -425,7 +425,7 @@ zx_status_t MkfsWorker::InitSitArea() {
 
   block_t sit_segment_block_num = LeToCpu(super_block_.sit_blkaddr);
 
-  for (block_t index = 0; index < segment_count_sit_blocks; index++) {
+  for (block_t index = 0; index < segment_count_sit_blocks; ++index) {
     if (zx_status_t ret = WriteToDisk(sit_block, sit_segment_block_num + index); ret != ZX_OK) {
       FX_LOGS(ERROR) << "Error: While zeroing out the sit area on disk!!!";
       return ret;
@@ -442,7 +442,7 @@ zx_status_t MkfsWorker::InitNatArea() {
 
   block_t nat_segment_block_num = LeToCpu(super_block_.nat_blkaddr);
 
-  for (block_t index = 0; index < segment_count_nat_blocks; index++) {
+  for (block_t index = 0; index < segment_count_nat_blocks; ++index) {
     if (zx_status_t ret = WriteToDisk(nat_block, nat_segment_block_num + index); ret != ZX_OK) {
       FX_LOGS(ERROR) << "Error: While zeroing out the nat area on disk!!!";
       return ret;
@@ -491,7 +491,7 @@ zx_status_t MkfsWorker::WriteCheckPointPack() {
       CpuToLe(params_.cur_seg[static_cast<int>(CursegType::kCursegWarmData)]);
   checkpoint->cur_data_segno[2] =
       CpuToLe(params_.cur_seg[static_cast<int>(CursegType::kCursegColdData)]);
-  for (int i = 3; i < kMaxActiveNodeLogs; i++) {
+  for (int i = 3; i < kMaxActiveNodeLogs; ++i) {
     checkpoint->cur_node_segno[i] = 0xffffffff;
     checkpoint->cur_data_segno[i] = 0xffffffff;
   }
@@ -677,7 +677,7 @@ zx_status_t MkfsWorker::WriteSuperblock() {
 
   memcpy(super_block_buff + kSuperOffset, &super_block_, sizeof(super_block_));
 
-  for (block_t index = 0; index < 2; index++) {
+  for (block_t index = 0; index < 2; ++index) {
     if (zx_status_t ret = WriteToDisk(super_block, index); ret != ZX_OK) {
       FX_LOGS(ERROR) << "Error: While while writing supe_blk on disk!!! index : " << index;
       return ret;

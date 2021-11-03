@@ -33,12 +33,12 @@ TEST_F(FileTest, BlkAddrLevel) {
   char buf[kPageSize];
   unsigned int level = 0;
 
-  for (size_t i = 0; i < kPageSize; i++) {
+  for (size_t i = 0; i < kPageSize; ++i) {
     buf[i] = static_cast<char>(rand());
   }
 
   // fill kAddrsPerInode blocks
-  for (int i = 0; i < kAddrsPerInode; i++) {
+  for (int i = 0; i < kAddrsPerInode; ++i) {
     FileTester::AppendToFile(test_file_ptr, buf, kPageSize);
   }
 
@@ -52,7 +52,7 @@ TEST_F(FileTest, BlkAddrLevel) {
   MapTester::CheckNodeLevel(fs_.get(), test_file_ptr, ++level);
 
   // fill direct node #1
-  for (int i = 1; i < kAddrsPerBlock; i++) {
+  for (int i = 1; i < kAddrsPerBlock; ++i) {
     FileTester::AppendToFile(test_file_ptr, buf, kPageSize);
   }
 
@@ -66,7 +66,7 @@ TEST_F(FileTest, BlkAddrLevel) {
   MapTester::CheckNodeLevel(fs_.get(), test_file_ptr, ++level);
 
   // fill direct node #2
-  for (int i = 1; i < kAddrsPerBlock; i++) {
+  for (int i = 1; i < kAddrsPerBlock; ++i) {
     FileTester::AppendToFile(test_file_ptr, buf, kPageSize);
   }
 
@@ -94,13 +94,13 @@ TEST_F(FileTest, NidAndBlkaddrAllocFree) {
 
   char buf[kPageSize];
 
-  for (size_t i = 0; i < kPageSize; i++) {
+  for (size_t i = 0; i < kPageSize; ++i) {
     buf[i] = static_cast<char>(rand() % 128);
   }
 
   // Fill until direct nodes are full
   unsigned int level = 2;
-  for (int i = 0; i < kAddrsPerInode + kAddrsPerBlock * 2; i++) {
+  for (int i = 0; i < kAddrsPerInode + kAddrsPerBlock * 2; ++i) {
     FileTester::AppendToFile(test_file_ptr, buf, kPageSize);
   }
 
@@ -115,17 +115,17 @@ TEST_F(FileTest, NidAndBlkaddrAllocFree) {
   ASSERT_EQ(fs_->GetNodeManager().GetNodePage(test_file_ptr->Ino(), &ipage), ZX_OK);
   Inode *inode = &(static_cast<Node *>(PageAddress(ipage))->i);
 
-  for (int i = 0; i < kNidsPerInode; i++) {
+  for (int i = 0; i < kNidsPerInode; ++i) {
     if (inode->i_nid[i] != 0U)
       nid_set.insert(inode->i_nid[i]);
   }
 
-  for (int i = 0; i < kAddrsPerInode; i++) {
+  for (int i = 0; i < kAddrsPerInode; ++i) {
     ASSERT_NE(inode->i_addr[i], kNullAddr);
     blkaddr_set.insert(inode->i_addr[i]);
   }
 
-  for (int i = 0; i < 2; i++) {
+  for (int i = 0; i < 2; ++i) {
     Page *direct_node_page = nullptr;
     ASSERT_EQ(fs_->GetNodeManager().GetNodePage(inode->i_nid[i], &direct_node_page), ZX_OK);
     DirectNode *direct_node = &(static_cast<Node *>(PageAddress(direct_node_page))->dn);

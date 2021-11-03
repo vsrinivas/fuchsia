@@ -106,7 +106,7 @@ TEST_P(QueryServiceTest, QueryInfo) {
   ASSERT_NO_FATAL_FAILURE(QueryInfo(1, 0));
 
   const uint64_t kExtraNodeCount = 16;
-  for (uint64_t i = 0; i < kExtraNodeCount; i++) {
+  for (uint64_t i = 0; i < kExtraNodeCount; ++i) {
     const std::string path = GetPath("file_" + std::to_string(i));
 
     fbl::unique_fd fd(open(path.c_str(), O_CREAT | O_RDWR));

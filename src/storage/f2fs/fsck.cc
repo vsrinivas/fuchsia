@@ -388,7 +388,7 @@ void FsckWorker::CheckDnodeBlock(Inode *inode, nid_t nid, FileType ftype, Node &
 
 void FsckWorker::CheckIndirectNodeBlock(Inode *inode, nid_t nid, FileType ftype, Node &node_block,
                                         uint32_t &block_count) {
-  for (uint32_t i = 0; i < kNidsPerBlock; i++) {
+  for (uint32_t i = 0; i < kNidsPerBlock; ++i) {
     if (LeToCpu(node_block.in.nid[i]) == 0x0) {
       continue;
     }
@@ -400,7 +400,7 @@ void FsckWorker::CheckIndirectNodeBlock(Inode *inode, nid_t nid, FileType ftype,
 
 void FsckWorker::CheckDoubleIndirectNodeBlock(Inode *inode, nid_t nid, FileType ftype,
                                               Node &node_block, uint32_t &block_count) {
-  for (int i = 0; i < kNidsPerBlock; i++) {
+  for (int i = 0; i < kNidsPerBlock; ++i) {
     if (LeToCpu(node_block.in.nid[i]) == 0x0) {
       continue;
     }
@@ -445,7 +445,7 @@ void FsckWorker::PrintDentry(const uint32_t depth, std::string_view name,
     tree_mark_[depth - 1] = ' ';
   }
 
-  for (uint32_t i = 1; i < depth; i++) {
+  for (uint32_t i = 1; i < depth; ++i) {
     std::cout << tree_mark_[i] << "   ";
   }
   std::cout << (last_de ? "`" : "|") << "-- " << name << std::endl;
@@ -509,7 +509,7 @@ void FsckWorker::CheckDentries(uint32_t &child_count, uint32_t &child_files, con
          fsck->dentry_depth, blk_addr, num_entries, kNrDentryInBlock, kMaxNameLen);
 #endif
 
-  fsck_.dentry_depth--;
+  --fsck_.dentry_depth;
 }
 
 void FsckWorker::CheckDentryBlock(uint32_t block_address, uint32_t &child_count,
@@ -574,7 +574,7 @@ void FsckWorker::CheckOrphanNode() {
   start_blk = superblock_info_.StartCpAddr() + 1;
   orphan_blkaddr = superblock_info_.StartSumAddr() - 1;
 
-  for (block_t i = 0; i < orphan_blkaddr; i++) {
+  for (block_t i = 0; i < orphan_blkaddr; ++i) {
     ZX_ASSERT(ReadBlock(fs_block, start_blk + i) == ZX_OK);
 #ifdef __Fuchsia__
     OrphanBlock *orphan_block = reinterpret_cast<OrphanBlock *>(fs_block.GetData().data());
@@ -582,7 +582,7 @@ void FsckWorker::CheckOrphanNode() {
     OrphanBlock *orphan_block = reinterpret_cast<OrphanBlock *>(fs_block.GetData());
 #endif  // __Fuchsia__
 
-    for (block_t j = 0; j < LeToCpu(orphan_block->entry_count); j++) {
+    for (block_t j = 0; j < LeToCpu(orphan_block->entry_count); ++j) {
       nid_t ino = LeToCpu(orphan_block->ino[j]);
 #if 0  // TODO: implement debug level
       // TODO: DBG (1)
@@ -612,8 +612,8 @@ int FsckWorker::FsckChkXattrBlk(uint32_t ino, uint32_t x_nid, uint32_t *block_co
   }
 
   *block_count = *block_count + 1;
-  fsck->chk.valid_block_count++;
-  fsck->chk.valid_node_count++;
+  ++fsck->chk.valid_block_count;
+  ++fsck->chk.valid_node_count;
 
   ZX_ASSERT(GetNodeInfo(x_nid, &ni) >= 0);
 
@@ -653,7 +653,7 @@ zx_status_t FsckWorker::Verify() {
 
   printf("\n");
 
-  for (uint32_t i = 0; i < fsck_.nr_nat_entries; i++) {
+  for (uint32_t i = 0; i < fsck_.nr_nat_entries; ++i) {
     if (TestValidBitmap(i, fsck_.nat_area_bitmap.get()) != 0) {
       printf("NID[0x%x] is unreachable\n", i);
       ++nr_unref_nid;
@@ -761,7 +761,7 @@ void FsckWorker::PrintInodeInfo(Inode &inode) {
   DisplayMember(sizeof(uint32_t), inode.i_addr[2], "i_addr[2]");  // Pointers to data blocks
   DisplayMember(sizeof(uint32_t), inode.i_addr[3], "i_addr[3]");  // Pointers to data blocks
 
-  for (uint32_t i = 4; i < AddrsPerInode(&inode); i++) {
+  for (uint32_t i = 4; i < AddrsPerInode(&inode); ++i) {
     if (inode.i_addr[i] != 0x0) {
       printf("i_addr[0x%x] points data block\r\t\t\t\t[0x%4x]\n", i, inode.i_addr[i]);
       break;
@@ -787,7 +787,7 @@ void FsckWorker::PrintNodeInfo(Node &node_block) {
     uint32_t *dump_blk = (uint32_t *)&node_block;
     FX_LOGS(INFO) << "Node ID [0x" << std::hex << nid << ":" << nid
                   << "] is direct node or indirect node";
-    for (int i = 0; i <= 10; i++) {  // MSG (0)
+    for (int i = 0; i <= 10; ++i) {  // MSG (0)
       printf("[%d]\t\t\t[0x%8x : %d]\n", i, dump_blk[i], dump_blk[i]);
     }
   }
@@ -1186,7 +1186,7 @@ zx_status_t FsckWorker::ReadCompactedSummaries() {
 
   offset = 2 * kSumJournalSize;
   for (int32_t i = static_cast<int32_t>(CursegType::kCursegHotData);
-       i <= CursegType::kCursegColdData; i++) {
+       i <= CursegType::kCursegColdData; ++i) {
     unsigned short blk_off;
     uint32_t segno;
 
@@ -1202,7 +1202,7 @@ zx_status_t FsckWorker::ReadCompactedSummaries() {
       blk_off = safemath::checked_cast<unsigned short>(superblock_info_.GetBlocksPerSeg());
     }
 
-    for (uint32_t j = 0; j < blk_off; j++) {
+    for (uint32_t j = 0; j < blk_off; ++j) {
       Summary *s;
 #ifdef __Fuchsia__
       s = (Summary *)(fs_block.GetData().data() + offset);
@@ -1288,7 +1288,7 @@ zx_status_t FsckWorker::ReadNormalSummaries(CursegType type) {
     if (IsSetCkptFlags(&ckpt, kCpUmountFlag)) {
 #if 0  // do not change original value
       Summary *sum_entry = &sum_blk->entries[0];
-      for (uint64_t i = 0; i < superblock_info->GetBlocksPerSeg(); i++, sum_entry++) {
+      for (uint64_t i = 0; i < superblock_info->GetBlocksPerSeg(); ++i, ++sum_entry) {
 				sum_entry->version = 0;
 				sum_entry->ofs_in_node = 0;
       }
@@ -1320,7 +1320,7 @@ zx_status_t FsckWorker::RestoreCursegSummaries() {
     type = static_cast<int32_t>(CursegType::kCursegHotNode);
   }
 
-  for (; type <= CursegType::kCursegColdNode; type++) {
+  for (; type <= CursegType::kCursegColdNode; ++type) {
     if (zx_status_t ret = ReadNormalSummaries(static_cast<CursegType>(type)); ret != ZX_OK) {
       return ret;
     }
@@ -1329,7 +1329,7 @@ zx_status_t FsckWorker::RestoreCursegSummaries() {
 }
 
 zx_status_t FsckWorker::BuildCurseg() {
-  for (int i = 0; i < kNrCursegType; i++) {
+  for (int i = 0; i < kNrCursegType; ++i) {
     CursegInfo *curseg = segment_manager_->CURSEG_I(static_cast<CursegType>(i));
     curseg->raw_blk = new FsBlock();
     curseg->segno = kNullSegNo;
@@ -1372,7 +1372,7 @@ void FsckWorker::CheckBlockCount(uint32_t segno, const SitEntry &raw_sit) {
   ZX_ASSERT(segno <= end_segno);
 
   // check bitmap with valid block count
-  for (uint64_t i = 0; i < superblock_info_.GetBlocksPerSeg(); i++) {
+  for (uint64_t i = 0; i < superblock_info_.GetBlocksPerSeg(); ++i) {
     if (TestValidBitmap(i, raw_sit.valid_map)) {
       ++valid_blocks;
     }
@@ -1401,7 +1401,7 @@ std::pair<std::unique_ptr<FsBlock>, SegType> FsckWorker::GetSumBlockInfo(uint32_
   block_t ssa_blk;
 
   ssa_blk = segment_manager_->GetSumBlock(segno);
-  for (int type = 0; type < kNrCursegNodeType; type++) {
+  for (int type = 0; type < kNrCursegNodeType; ++type) {
     if (segno == ckpt.cur_node_segno[type]) {
       curseg = segment_manager_->CURSEG_I(CursegType::kCursegHotNode + type);
       memcpy(summary_block.get(), curseg->sum_blk, kBlockSize);
@@ -1410,7 +1410,7 @@ std::pair<std::unique_ptr<FsBlock>, SegType> FsckWorker::GetSumBlockInfo(uint32_
     }
   }
 
-  for (int type = 0; type < kNrCursegDataType; type++) {
+  for (int type = 0; type < kNrCursegDataType; ++type) {
     if (segno == ckpt.cur_data_segno[type]) {
       curseg = segment_manager_->CURSEG_I(CursegType::kCursegHotData + type);
 #ifdef __Fuchsia__
@@ -1520,12 +1520,12 @@ void FsckWorker::BuildSitEntries() {
   CursegInfo *curseg = segment_manager_->CURSEG_I(CursegType::kCursegColdData);
   SummaryBlock *sum = curseg->sum_blk;
 
-  for (uint32_t segno = 0; segno < segment_manager_->TotalSegs(); segno++) {
+  for (uint32_t segno = 0; segno < segment_manager_->TotalSegs(); ++segno) {
     SegmentEntry &segment_entry = sit_i.sentries[segno];
     SitEntry sit;
     bool found = false;
 
-    for (int i = 0; i < SitsInCursum(sum); i++) {
+    for (int i = 0; i < SitsInCursum(sum); ++i) {
       if (LeToCpu(SegnoInJournal(sum, i)) == segno) {
         sit = sum->sit_j.entries[i].se;
         found = true;
@@ -1580,13 +1580,13 @@ void FsckWorker::BuildSitAreaBitmap() {
   ZX_ASSERT(fsck_.sit_area_bitmap_size == fsck_.main_area_bitmap_size);
   uint8_t *ptr = fsck_.sit_area_bitmap.get();
 
-  for (uint32_t segno = 0; segno < segment_manager_->GetMainSegmentsCount(); segno++) {
+  for (uint32_t segno = 0; segno < segment_manager_->GetMainSegmentsCount(); ++segno) {
     SegmentEntry &segment_entry = GetSegmentEntry(segno);
 
     memcpy(ptr, segment_entry.cur_valid_map.get(), kSitVBlockMapSize);
     ptr += kSitVBlockMapSize;
     vblocks = 0;
-    for (uint64_t j = 0; j < kSitVBlockMapSize; j++) {
+    for (uint64_t j = 0; j < kSitVBlockMapSize; ++j) {
       vblocks += std::bitset<8>(segment_entry.cur_valid_map[j]).count();
     }
     ZX_ASSERT(vblocks == segment_entry.valid_blocks);
@@ -1623,7 +1623,7 @@ zx::status<RawNatEntry> FsckWorker::LookupNatInJournal(nid_t nid) {
   CursegInfo *curseg = segment_manager_->CURSEG_I(CursegType::kCursegHotData);
   SummaryBlock *sum = curseg->sum_blk;
 
-  for (int i = 0; i < NatsInCursum(sum); i++) {
+  for (int i = 0; i < NatsInCursum(sum); ++i) {
     if (LeToCpu(NidInJournal(sum, i)) == nid) {
       RawNatEntry ret = NatInJournal(sum, i);
 #if 0  // TODO: implement debug level
@@ -1653,7 +1653,7 @@ void FsckWorker::BuildNatAreaBitmap() {
   fsck_.nat_area_bitmap.reset(new uint8_t[fsck_.nat_area_bitmap_size]());
   ZX_ASSERT(fsck_.nat_area_bitmap.get() != nullptr);
 
-  for (block_off = 0; block_off < nr_nat_blks; block_off++) {
+  for (block_off = 0; block_off < nr_nat_blks; ++block_off) {
     seg_off = block_off >> superblock_info_.GetLogBlocksPerSeg();
     block_addr = node_manager_->GetNatAddress() +
                  (seg_off << superblock_info_.GetLogBlocksPerSeg() << 1) +
@@ -1672,7 +1672,7 @@ void FsckWorker::BuildNatAreaBitmap() {
 #endif  // __Fuchsia__
 
     nid = block_off * kNatEntryPerBlock;
-    for (uint32_t i = 0; i < kNatEntryPerBlock; i++) {
+    for (uint32_t i = 0; i < kNatEntryPerBlock; ++i) {
       NodeInfo node_info;
       node_info.nid = nid + i;
 

@@ -89,7 +89,7 @@ zx_status_t Mount(const MountOptions &options, std::unique_ptr<f2fs::Bcache> bc)
 }
 
 MountOptions::MountOptions() {
-  for (uint32_t i = 0; i < kOptMaxNum; i++) {
+  for (uint32_t i = 0; i < kOptMaxNum; ++i) {
     opt_[i] = default_option[i];
   }
 }
@@ -102,13 +102,12 @@ zx_status_t MountOptions::GetValue(const uint32_t opt_id, uint32_t *out) {
 }
 
 uint32_t MountOptions::GetOptionID(std::string_view opt) {
-  uint32_t i;
-  for (i = 0; i < kOptMaxNum; i++) {
+  for (uint32_t i = 0; i < kOptMaxNum; ++i) {
     if (opt_[i].name.compare(opt) == 0) {
-      break;
+      return i;
     }
   }
-  return i;
+  return kOptMaxNum;
 }
 
 zx_status_t MountOptions::SetValue(std::string_view opt, const uint32_t value) {

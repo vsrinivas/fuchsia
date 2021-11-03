@@ -22,7 +22,7 @@ constexpr uint32_t kMountActiveLogsTest = 2;
 void MountTestVerifyOptions(F2fs *fs, MountOptions &options) {
   uint32_t value;
   SuperblockInfo &superblock_info = fs->GetSuperblockInfo();
-  for (uint32_t i = 0; i < kOptMaxNum; i++) {
+  for (uint32_t i = 0; i < kOptMaxNum; ++i) {
     ASSERT_EQ(options.GetValue(i, &value), ZX_OK);
     switch (i) {
       case kOptActiveLogs:
@@ -127,10 +127,10 @@ void MountTestActiveLogs(F2fs *fs, MountOptions options) {
   constexpr int dnode_block = 1;
   constexpr int indirect_node_block = 2;
 
-  for (int i = 0; i < 3; i++) {
+  for (int i = 0; i < 3; ++i) {
     results.clear();
     TestSegmentType(fs, root_dir, filenames[i], (i == dir_file), results);
-    for (int j = 0; j < 3; j++) {
+    for (int j = 0; j < 3; ++j) {
       CursegType type = results[j];
       if (j == indirect_node_block) {
         if (num_logs > 2)

@@ -110,7 +110,7 @@ got_it:
   if (p.min_segno != kNullSegNo) {
     *out = static_cast<uint32_t>((p.min_segno / p.ofs_unit) * p.ofs_unit);
     if (p.alloc_mode == AllocMode::kLFS) {
-      for (uint32_t i = 0; i < p.ofs_unit; i++)
+      for (uint32_t i = 0; i < p.ofs_unit; ++i)
         SetBit(*out + i, dirty_info_->victim_segmap[static_cast<int>(gc_type)].get());
     }
   }

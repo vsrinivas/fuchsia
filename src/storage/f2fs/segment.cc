@@ -242,7 +242,6 @@ void SegmentManager::VerifyBlockAddr(block_t blk_addr) {
 void SegmentManager::CheckBlockCount(int segno, SitEntry &raw_sit) {
   uint32_t end_segno = segment_count_ - 1;
   int valid_blocks = 0;
-  uint32_t i;
 
   // check segment usage
   ZX_ASSERT(!(GetSitVblocks(raw_sit) > superblock_info_->GetBlocksPerSeg()));
@@ -251,7 +250,7 @@ void SegmentManager::CheckBlockCount(int segno, SitEntry &raw_sit) {
   ZX_ASSERT(!(segno > (int)end_segno));
 
   // check bitmap with valid block count
-  for (i = 0; i < superblock_info_->GetBlocksPerSeg(); ++i) {
+  for (uint32_t i = 0; i < superblock_info_->GetBlocksPerSeg(); ++i) {
     if (TestValidBitmap(i, raw_sit.valid_map))
       ++valid_blocks;
   }
@@ -549,9 +548,9 @@ int SegmentManager::NpagesForSummaryFlush() {
   SuperblockInfo &superblock_info = fs_->GetSuperblockInfo();
   int total_size_bytes = 0;
   int valid_sum_count = 0;
-  int i, sum_space;
+  int sum_space;
 
-  for (i = static_cast<int>(CursegType::kCursegHotData);
+  for (int i = static_cast<int>(CursegType::kCursegHotData);
        i <= static_cast<int>(CursegType::kCursegColdData); ++i) {
     if (superblock_info.GetCheckpoint().alloc_type[i] == static_cast<uint8_t>(AllocMode::kSSR)) {
       valid_sum_count += superblock_info.GetBlocksPerSeg();
@@ -810,9 +809,8 @@ void SegmentManager::AllocateSegmentByDefault(CursegType type, bool force) {
 void SegmentManager::AllocateNewSegments() {
   CursegInfo *curseg;
   uint32_t old_curseg;
-  int i;
 
-  for (i = static_cast<int>(CursegType::kCursegHotData);
+  for (int i = static_cast<int>(CursegType::kCursegHotData);
        i <= static_cast<int>(CursegType::kCursegColdData); ++i) {
     curseg = CURSEG_I(static_cast<CursegType>(i));
     old_curseg = curseg->segno;
@@ -1193,7 +1191,7 @@ int SegmentManager::ReadCompactedSummaries() {
   uint8_t *kaddr;
   Page *page = nullptr;
   block_t start;
-  int i, j, offset;
+  int offset;
 
   start = StartSumBlock();
 
@@ -1210,7 +1208,7 @@ int SegmentManager::ReadCompactedSummaries() {
   offset = 2 * kSumJournalSize;
 
   // Step 3: restore summary entries
-  for (i = static_cast<int>(CursegType::kCursegHotData);
+  for (int i = static_cast<int>(CursegType::kCursegHotData);
        i <= static_cast<int>(CursegType::kCursegColdData); ++i) {
     uint16_t blk_off;
     uint32_t segno;
@@ -1226,7 +1224,7 @@ int SegmentManager::ReadCompactedSummaries() {
     if (seg_i->alloc_type == static_cast<uint8_t>(AllocMode::kSSR))
       blk_off = static_cast<uint16_t>(superblock_info_->GetBlocksPerSeg());
 
-    for (j = 0; j < blk_off; ++j) {
+    for (int j = 0; j < blk_off; ++j) {
       Summary *s;
       s = reinterpret_cast<Summary *>(kaddr + offset);
       seg_i->sum_blk->entries[j] = *s;
@@ -1278,8 +1276,7 @@ int SegmentManager::ReadNormalSummaries(int type) {
   if (IsNodeSeg(static_cast<CursegType>(type))) {
     if (ckpt.ckpt_flags & kCpUmountFlag) {
       Summary *ns = &sum->entries[0];
-      uint32_t i;
-      for (i = 0; i < superblock_info_->GetBlocksPerSeg(); ++i, ++ns) {
+      for (uint32_t i = 0; i < superblock_info_->GetBlocksPerSeg(); ++i, ++ns) {
         ns->version = 0;
         ns->ofs_in_node = 0;
       }
@@ -1330,7 +1327,6 @@ void SegmentManager::WriteCompactedSummaries(block_t blkaddr) {
   Summary *summary;
   CursegInfo *seg_i;
   int written_size = 0;
-  int i, j;
 
   page = fs_->GrabMetaPage(blkaddr++);
   kaddr = static_cast<uint8_t *>(PageAddress(page));
@@ -1349,7 +1345,7 @@ void SegmentManager::WriteCompactedSummaries(block_t blkaddr) {
   FlushDirtyMetaPage(fs_, *page);
 
   // Step 3: write summary entries
-  for (i = static_cast<int>(CursegType::kCursegHotData);
+  for (int i = static_cast<int>(CursegType::kCursegHotData);
        i <= static_cast<int>(CursegType::kCursegColdData); ++i) {
     uint16_t blkoff;
     seg_i = CURSEG_I(static_cast<CursegType>(i));
@@ -1359,7 +1355,7 @@ void SegmentManager::WriteCompactedSummaries(block_t blkaddr) {
       blkoff = CursegBlkoff(i);
     }
 
-    for (j = 0; j < blkoff; ++j) {
+    for (int j = 0; j < blkoff; ++j) {
       if (!page) {
         page = fs_->GrabMetaPage(blkaddr++);
         kaddr = static_cast<uint8_t *>(PageAddress(page));
@@ -1385,7 +1381,7 @@ void SegmentManager::WriteCompactedSummaries(block_t blkaddr) {
 }
 
 void SegmentManager::WriteNormalSummaries(block_t blkaddr, CursegType type) {
-  int i, end;
+  int end;
 
   if (IsDataSeg(type)) {
     end = static_cast<int>(type) + kNrCursegDataType;
@@ -1393,7 +1389,7 @@ void SegmentManager::WriteNormalSummaries(block_t blkaddr, CursegType type) {
     end = static_cast<int>(type) + kNrCursegNodeType;
   }
 
-  for (i = static_cast<int>(type); i < end; ++i) {
+  for (int i = static_cast<int>(type); i < end; ++i) {
     CursegInfo *sum = CURSEG_I(static_cast<CursegType>(i));
 #ifdef __Fuchsia__
     fbl::AutoLock curseg_lock(&sum->curseg_mutex);
@@ -1416,17 +1412,15 @@ void SegmentManager::WriteNodeSummaries(block_t start_blk) {
 }
 
 int LookupJournalInCursum(SummaryBlock *sum, JournalType type, uint32_t val, int alloc) {
-  int i;
-
   if (type == JournalType::kNatJournal) {
-    for (i = 0; i < NatsInCursum(sum); ++i) {
+    for (int i = 0; i < NatsInCursum(sum); ++i) {
       if (LeToCpu(NidInJournal(sum, i)) == val)
         return i;
     }
     if (alloc && NatsInCursum(sum) < static_cast<int>(kNatJournalEntries))
       return UpdateNatsInCursum(sum, 1);
   } else if (type == JournalType::kSitJournal) {
-    for (i = 0; i < SitsInCursum(sum); ++i) {
+    for (int i = 0; i < SitsInCursum(sum); ++i) {
       if (LeToCpu(SegnoInJournal(sum, i)) == val)
         return i;
     }
@@ -1479,13 +1473,12 @@ Page *SegmentManager::GetNextSitPage(uint32_t start) {
 bool SegmentManager::FlushSitsInJournal() {
   CursegInfo *curseg = CURSEG_I(CursegType::kCursegColdData);
   SummaryBlock *sum = curseg->sum_blk;
-  int i;
 
   // If the journal area in the current summary is full of sit entries,
   // all the sit entries will be flushed. Otherwise the sit entries
   // are not able to replace with newly hot sit entries.
   if ((SitsInCursum(sum) + sit_info_->dirty_sentries) > static_cast<int>(kSitJournalEntries)) {
-    for (i = SitsInCursum(sum) - 1; i >= 0; --i) {
+    for (int i = SitsInCursum(sum) - 1; i >= 0; --i) {
       uint32_t segno;
       segno = LeToCpu(SegnoInJournal(sum, i));
       MarkSitEntryDirty(segno);
@@ -1572,7 +1565,7 @@ void SegmentManager::FlushSitEntries() {
 zx_status_t SegmentManager::BuildSitInfo() {
   const Superblock &raw_super = superblock_info_->GetRawSuperblock();
   Checkpoint &ckpt = superblock_info_->GetCheckpoint();
-  uint32_t sit_segs, start;
+  uint32_t sit_segs;
   uint8_t *src_bitmap;
   uint32_t bitmap_size;
 
@@ -1587,7 +1580,7 @@ zx_status_t SegmentManager::BuildSitInfo() {
   bitmap_size = BitmapSize(TotalSegs());
   sit_i->dirty_sentries_bitmap = std::make_unique<uint8_t[]>(bitmap_size);
 
-  for (start = 0; start < TotalSegs(); ++start) {
+  for (uint32_t start = 0; start < TotalSegs(); ++start) {
     sit_i->sentries[start].cur_valid_map = std::make_unique<uint8_t[]>(kSitVBlockMapSize);
     sit_i->sentries[start].ckpt_valid_map = std::make_unique<uint8_t[]>(kSitVBlockMapSize);
   }
@@ -1699,17 +1692,14 @@ void SegmentManager::BuildSitEntries() {
 }
 
 void SegmentManager::InitFreeSegmap() {
-  uint32_t start;
-  int type;
-
-  for (start = 0; start < TotalSegs(); ++start) {
+  for (uint32_t start = 0; start < TotalSegs(); ++start) {
     SegmentEntry &sentry = GetSegmentEntry(start);
     if (!sentry.valid_blocks)
       SetFree(start);
   }
 
   // set use the current segments
-  for (type = static_cast<int>(CursegType::kCursegHotData);
+  for (int type = static_cast<int>(CursegType::kCursegHotData);
        type <= static_cast<int>(CursegType::kCursegColdNode); ++type) {
     CursegInfo *curseg_t = CURSEG_I(static_cast<CursegType>(type));
     SetTestAndInuse(curseg_t->segno);
@@ -1751,12 +1741,12 @@ zx_status_t SegmentManager::InitVictimSegmap() {
 }
 
 zx_status_t SegmentManager::BuildDirtySegmap() {
-  uint32_t bitmap_size, i;
+  uint32_t bitmap_size;
 
   dirty_info_ = std::make_unique<DirtySeglistInfo>();
   bitmap_size = BitmapSize(TotalSegs());
 
-  for (i = 0; i < static_cast<int>(DirtyType::kNrDirtytype); ++i) {
+  for (uint32_t i = 0; i < static_cast<int>(DirtyType::kNrDirtytype); ++i) {
     dirty_info_->dirty_segmap[i] = std::make_unique<uint8_t[]>(bitmap_size);
     dirty_info_->nr_dirty[i] = 0;
   }
@@ -1767,19 +1757,16 @@ zx_status_t SegmentManager::BuildDirtySegmap() {
 
 // Update min, max modified time for cost-benefit GC algorithm
 void SegmentManager::InitMinMaxMtime() {
-  uint32_t segno;
-
 #ifdef __Fuchsia__
   fbl::AutoLock sentry_lock(&sit_info_->sentry_lock);
 #endif  // __Fuchsia__
 
   sit_info_->min_mtime = LLONG_MAX;
 
-  for (segno = 0; segno < TotalSegs(); segno += superblock_info_->GetSegsPerSec()) {
-    uint32_t i;
+  for (uint32_t segno = 0; segno < TotalSegs(); segno += superblock_info_->GetSegsPerSec()) {
     uint64_t mtime = 0;
 
-    for (i = 0; i < superblock_info_->GetSegsPerSec(); ++i) {
+    for (uint32_t i = 0; i < superblock_info_->GetSegsPerSec(); ++i) {
       mtime += GetSegmentEntry(segno + i).mtime;
     }
 
@@ -1875,13 +1862,11 @@ void SegmentManager::DestroyFreeSegmap() {
 }
 
 void SegmentManager::DestroySitInfo() {
-  uint32_t start;
-
   if (!sit_info_)
     return;
 
   if (sit_info_->sentries) {
-    for (start = 0; start < TotalSegs(); ++start) {
+    for (uint32_t start = 0; start < TotalSegs(); ++start) {
       sit_info_->sentries[start].cur_valid_map.reset();
       sit_info_->sentries[start].ckpt_valid_map.reset();
     }

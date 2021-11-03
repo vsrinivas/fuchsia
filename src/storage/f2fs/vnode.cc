@@ -399,7 +399,7 @@ int VnodeF2fs::TruncateDataBlocksRange(DnodeOfData *dn, int count) {
   raw_node = static_cast<Node *>(PageAddress(dn->node_page));
   addr = BlkaddrInNode(raw_node) + ofs;
 
-  for (; count > 0; count--, addr++, dn->ofs_in_node++) {
+  for (; count > 0; --count, ++addr, ++dn->ofs_in_node) {
     block_t blkaddr = LeToCpu(*addr);
     if (blkaddr == kNullAddr)
       continue;
@@ -407,7 +407,7 @@ int VnodeF2fs::TruncateDataBlocksRange(DnodeOfData *dn, int count) {
     UpdateExtentCache(kNullAddr, dn);
     Vfs()->GetSegmentManager().InvalidateBlocks(blkaddr);
     Vfs()->DecValidBlockCount(dn->vnode, 1);
-    nr_free++;
+    ++nr_free;
   }
   if (nr_free) {
 #if 0  // porting needed
@@ -498,9 +498,7 @@ zx_status_t VnodeF2fs::TruncateBlocks(uint64_t from) {
 }
 
 zx_status_t VnodeF2fs::TruncateHole(pgoff_t pg_start, pgoff_t pg_end) {
-  pgoff_t index;
-
-  for (index = pg_start; index < pg_end; index++) {
+  for (pgoff_t index = pg_start; index < pg_end; ++index) {
     DnodeOfData dn;
 
     NodeManager::SetNewDnode(dn, this, nullptr, nullptr, 0);
@@ -618,7 +616,7 @@ zx_status_t VnodeF2fs::SyncFile(loff_t start, loff_t end, int datasync) {
   //  goto out;
   //}
 #endif
-  fi_.data_version--;
+  --fi_.data_version;
 
   if (!IsReg() || GetNlink() != 1)
     need_cp = true;

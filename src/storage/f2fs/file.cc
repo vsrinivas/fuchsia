@@ -155,7 +155,7 @@ File::File(F2fs *fs, ino_t ino) : VnodeF2fs(fs, ino) {}
 
 // int File::ExpandInodeData(loff_t offset, off_t len, int mode) {
 //   SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
-//   pgoff_t index, pg_start, pg_end;
+//   pgoff_t pg_start, pg_end;
 //   loff_t new_size = i_size;
 //   loff_t off_start, off_end;
 //   int ret = 0;
@@ -172,7 +172,7 @@ File::File(F2fs *fs, ino_t ino) : VnodeF2fs(fs, ino) {}
 //   off_start = offset & (kPageCacheSize - 1);
 //   off_end = (offset + len) & (kPageCacheSize - 1);
 
-//   for (index = pg_start; index <= pg_end; index++) {
+//   for (pgoff_t index = pg_start; index <= pg_end; ++index) {
 //     DnodeOfData dn;
 
 //     superblock_info.mutex_lock_op(LockType::kDataNew);
@@ -308,7 +308,6 @@ zx_status_t File::Read(void *data, size_t len, size_t off, size_t *out_actual) {
   size_t off_in_buf = 0;
   Page *data_page = nullptr;
   void *data_buf = nullptr;
-  pgoff_t n;
   size_t left = len;
   uint64_t npages = (GetSize() + kBlockSize - 1) / kBlockSize;
 
@@ -317,7 +316,7 @@ zx_status_t File::Read(void *data, size_t len, size_t off, size_t *out_actual) {
     return ZX_OK;
   }
 
-  for (n = blk_start; n <= blk_end; n++) {
+  for (pgoff_t n = blk_start; n <= blk_end; ++n) {
     bool is_empty_page = false;
     fs::SharedLock read_lock(io_lock_);
     if (zx_status_t ret = GetLockDataPage(n, &data_page); ret != ZX_OK) {
@@ -380,7 +379,7 @@ zx_status_t File::DoWrite(const void *data, size_t len, size_t offset, size_t *o
 
   std::vector<Page *> data_pages(blk_end - blk_start + 1, nullptr);
 
-  for (uint64_t n = blk_start; n <= blk_end; n++) {
+  for (uint64_t n = blk_start; n <= blk_end; ++n) {
     uint64_t index = n - blk_start;
     size_t cur_len = std::min(static_cast<size_t>(kBlockSize - off_in_block), left);
 
@@ -392,7 +391,7 @@ zx_status_t File::DoWrite(const void *data, size_t len, size_t offset, size_t *o
       // If it succeeds, data_pages[index] has a page of valid virtual memory.
       // If it fails with any reasons such as no space/memory,
       // every data_pages[less than index] is released, and DoWrite() returns with the err code.
-      for (uint64_t m = 0; m < index; m++) {
+      for (uint64_t m = 0; m < index; ++m) {
         if (data_pages[m] != nullptr)
           F2fsPutPage(data_pages[m], 1);
       }
@@ -413,7 +412,7 @@ zx_status_t File::DoWrite(const void *data, size_t len, size_t offset, size_t *o
   off_in_buf = 0;
   left = len;
 
-  for (uint64_t n = blk_start; n <= blk_end; n++) {
+  for (uint64_t n = blk_start; n <= blk_end; ++n) {
     uint64_t index = n - blk_start;
     size_t cur_len = std::min(static_cast<size_t>(kBlockSize - off_in_block), left);
 

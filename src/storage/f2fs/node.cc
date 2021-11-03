@@ -381,9 +381,8 @@ Page *NodeManager::GetNextNatPage(nid_t nid) {
 void NodeManager::RaNatPages(nid_t nid) {
   Page *page = nullptr;
   pgoff_t index;
-  int i;
 
-  for (i = 0; i < kFreeNidPages; i++, nid += kNatEntryPerBlock) {
+  for (int i = 0; i < kFreeNidPages; ++i, nid += kNatEntryPerBlock) {
     if (nid >= max_nid_)
       nid = 0;
     index = CurrentNatAddr(nid);
@@ -526,7 +525,7 @@ int NodeManager::TryToFreeNats(int nr_shrink) {
   while (nr_shrink && !clean_nat_list_.is_empty()) {
     NatEntry *cache_entry = &clean_nat_list_.front();
     DelFromNatCache(*cache_entry);
-    nr_shrink--;
+    --nr_shrink;
   }
   return nr_shrink;
 }
@@ -692,7 +691,7 @@ zx_status_t NodeManager::GetDnodeOfData(DnodeOfData &dn, pgoff_t index, int ro) 
   dn.inode_page_locked = true;
 
   /* get indirect or direct nodes */
-  for (i = 1; i <= level; i++) {
+  for (i = 1; i <= level; ++i) {
     bool done = false;
 
     if (!nids[i] && !ro) {
@@ -811,7 +810,7 @@ zx_status_t NodeManager::TruncateNodes(DnodeOfData &dn, uint32_t nofs, int ofs, 
   nid_t child_nid;
   uint32_t child_nofs;
   int freed = 0;
-  int i, ret;
+  int ret;
   zx_status_t err = 0;
 
   if (dn.nid == 0)
@@ -823,7 +822,7 @@ zx_status_t NodeManager::TruncateNodes(DnodeOfData &dn, uint32_t nofs, int ofs, 
 
   rn = (Node *)PageAddress(page);
   if (depth < 3) {
-    for (i = ofs; i < kNidsPerBlock; i++, freed++) {
+    for (int i = ofs; i < kNidsPerBlock; ++i, ++freed) {
       child_nid = LeToCpu(rn->in.nid[i]);
       if (child_nid == 0)
         continue;
@@ -837,7 +836,7 @@ zx_status_t NodeManager::TruncateNodes(DnodeOfData &dn, uint32_t nofs, int ofs, 
     }
   } else {
     child_nofs = nofs + ofs * (kNidsPerBlock + 1) + 1;
-    for (i = ofs; i < kNidsPerBlock; i++) {
+    for (int i = ofs; i < kNidsPerBlock; ++i) {
       child_nid = LeToCpu(rn->in.nid[i]);
       if (child_nid == 0) {
         child_nofs += kNidsPerBlock + 1;
@@ -860,7 +859,7 @@ zx_status_t NodeManager::TruncateNodes(DnodeOfData &dn, uint32_t nofs, int ofs, 
     // remove current indirect node
     dn.node_page = page;
     TruncateNode(dn);
-    freed++;
+    ++freed;
   } else {
     F2fsPutPage(page, 1);
   }
@@ -873,7 +872,6 @@ zx_status_t NodeManager::TruncatePartialNodes(DnodeOfData &dn, Inode &ri, int (&
   nid_t nid[3];
   nid_t child_nid;
   zx_status_t err = 0;
-  int i;
   int idx = depth - 2;
   auto free_pages = [&]() {
     for (int i = idx; i >= 0; --i) {
@@ -886,7 +884,7 @@ zx_status_t NodeManager::TruncatePartialNodes(DnodeOfData &dn, Inode &ri, int (&
     return ZX_OK;
 
   // get indirect nodes in the path
-  for (i = 0; i < idx + 1; ++i) {
+  for (int i = 0; i < idx + 1; ++i) {
     // refernece count'll be increased
     pages[i] = nullptr;
     err = fs_->GetNodeManager().GetNodePage(nid[i], &pages[i]);
@@ -899,7 +897,7 @@ zx_status_t NodeManager::TruncatePartialNodes(DnodeOfData &dn, Inode &ri, int (&
   }
 
   // free direct nodes linked to a partial indirect node
-  for (i = offset[idx + 1]; i < kNidsPerBlock; ++i) {
+  for (int i = offset[idx + 1]; i < kNidsPerBlock; ++i) {
     child_nid = GetNid(*pages[idx], i, false);
     if (!child_nid)
       continue;
@@ -1024,7 +1022,7 @@ zx_status_t NodeManager::TruncateInodeBlocks(VnodeF2fs &vnode, pgoff_t from) {
 #endif
     }
     offset[1] = 0;
-    offset[0]++;
+    ++offset[0];
     nofs += err;
   }
   F2fsPutPage(page, 0);
@@ -1244,7 +1242,7 @@ int NodeManager::SyncNodePages(nid_t ino, WritebackControl *wbc) {
   // 	end = LONG_MAX;
 
   // 	while (index <= end) {
-  // 		int i, nr_pages;
+  // 		int nr_pages;
   //  TODO: IMPL
   // nr_pages = pagevec_lookup_tag(&pvec, mapping, &index,
   // 		PAGECACHE_TAG_DIRTY,
@@ -1252,7 +1250,7 @@ int NodeManager::SyncNodePages(nid_t ino, WritebackControl *wbc) {
   // if (nr_pages == 0)
   // 	break;
 
-  // 		for (i = 0; i < nr_pages; i++) {
+  // 		for (int i = 0; i < nr_pages; ++i) {
   // 			page *page = pvec.pages[i];
 
   // 			/*
@@ -1301,13 +1299,13 @@ int NodeManager::SyncNodePages(nid_t ino, WritebackControl *wbc) {
   // 				SetFsyncMark(page, 1);
   // 				if (IsInode(page))
   // 					SetDentryMark(page, mark);
-  // 				nwritten++;
+  // 				++nwritten;
   // 			} else {
   // 				SetFyncMark(page, 0);
   // 				SetDentryMark(page, 0);
   // 			}
   // 			mapping->a_ops->writepage(page, wbc);
-  // 			wrote++;
+  // 			++wrote;
 
   // 			if (--wbc->nr_to_write == 0)
   // 				break;
@@ -1322,7 +1320,7 @@ int NodeManager::SyncNodePages(nid_t ino, WritebackControl *wbc) {
   // 	}
 
   // 	if (step < 2) {
-  // 		step++;
+  // 		++step;
   // 		goto next_step;
   // 	}
 
@@ -1343,7 +1341,7 @@ zx_status_t NodeManager::F2fsWriteNodePage(Page &page, WritebackControl *wbc) {
 #if 0  // porting needed
   // 	if (wbc->for_reclaim) {
   // 		superblock_info.SubtractPageCount(CountType::kDirtyNodes);
-  // 		wbc->pages_skipped++;
+  // 		++wbc->pages_skipped;
   //		// set_page_dirty(page);
   //		FlushDirtyNodePage(fs_, page);
   // 		return kAopWritepageActivate;
@@ -1493,15 +1491,12 @@ int NodeManager::ScanNatPage(Page &nat_page, nid_t start_nid) {
   NatBlock *nat_blk = static_cast<NatBlock *>(PageAddress(&nat_page));
   block_t blk_addr;
   int fcnt = 0;
-  uint32_t i;
 
   // 0 nid should not be used
   if (start_nid == 0)
     ++start_nid;
 
-  i = start_nid % kNatEntryPerBlock;
-
-  for (; i < kNatEntryPerBlock; i++, start_nid++) {
+  for (uint32_t i = start_nid % kNatEntryPerBlock; i < kNatEntryPerBlock; ++i, ++start_nid) {
     blk_addr = LeToCpu(nat_blk->entries[i].block_addr);
     ZX_ASSERT(blk_addr != kNewAddr);
     if (blk_addr == kNullAddr)
@@ -1517,7 +1512,6 @@ void NodeManager::BuildFreeNids() {
   nid_t nid = 0;
   bool is_cycled = false;
   uint64_t fcnt = 0;
-  int i;
 
   nid = next_scan_nid_;
   init_scan_nid_ = nid;
@@ -1549,7 +1543,7 @@ void NodeManager::BuildFreeNids() {
 #ifdef __Fuchsia__
     fbl::AutoLock curseg_lock(&curseg->curseg_mutex);
 #endif  // __Fuchsia__
-    for (i = 0; i < NatsInCursum(sum); i++) {
+    for (int i = 0; i < NatsInCursum(sum); ++i) {
       block_t addr = LeToCpu(NatInJournal(sum, i).block_addr);
       nid = LeToCpu(NidInJournal(sum, i));
       if (addr == kNullAddr) {
@@ -1683,7 +1677,7 @@ zx_status_t NodeManager::RestoreNodeSummary(F2fs &fs, uint32_t segno, SummaryBlo
   Summary *sum_entry;
   Page *page = nullptr;
   block_t addr;
-  int i, last_offset;
+  int last_offset;
   SuperblockInfo &superblock_info = fs.GetSuperblockInfo();
 
   // scan the node segment
@@ -1702,7 +1696,7 @@ zx_status_t NodeManager::RestoreNodeSummary(F2fs &fs, uint32_t segno, SummaryBlo
   // lock_page(page);
 #endif
 
-  for (i = 0; i < last_offset; i++, sum_entry++) {
+  for (int i = 0; i < last_offset; ++i, ++sum_entry) {
     if (VnodeF2fs::Readpage(&fs, page, addr, kReadSync)) {
       break;
     }
@@ -1711,7 +1705,7 @@ zx_status_t NodeManager::RestoreNodeSummary(F2fs &fs, uint32_t segno, SummaryBlo
     sum_entry->nid = rn->footer.nid;
     sum_entry->version = 0;
     sum_entry->ofs_in_node = 0;
-    addr++;
+    ++addr;
 
 #if 0  // porting needed
     // In order to read next node page,
@@ -1744,7 +1738,7 @@ bool NodeManager::FlushNatsInJournal() {
     }
   }
 
-  for (i = 0; i < NatsInCursum(sum); i++) {
+  for (i = 0; i < NatsInCursum(sum); ++i) {
     NatEntry *cache_entry = nullptr;
     RawNatEntry raw_entry = NatInJournal(sum, i);
     nid_t nid = LeToCpu(NidInJournal(sum, i));
@@ -1801,8 +1795,10 @@ void NodeManager::FlushNatEntries() {
       int offset = -1;
       __UNUSED block_t old_blkaddr, new_blkaddr;
 
+      // During each iteration, |iter| can be removed from |dirty_nat_list_|.
+      // Therefore, make a copy of |iter| and move to the next element before futher operations.
       NatEntry *cache_entry = iter.CopyPointer();
-      iter++;
+      ++iter;
 
       nid = cache_entry->GetNid();
 
@@ -1945,8 +1941,7 @@ void NodeManager::DestroyNodeManager() {
     std::lock_guard nat_lock(nat_tree_lock_);
 #endif  // __Fuchsia__
     while ((found = GangLookupNatCache(kNatvecSize, natvec))) {
-      uint32_t idx;
-      for (idx = 0; idx < found; idx++) {
+      for (uint32_t idx = 0; idx < found; ++idx) {
         NatEntry *e = natvec[idx];
         DelFromNatCache(*e);
       }

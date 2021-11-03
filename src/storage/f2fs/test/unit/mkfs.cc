@@ -304,7 +304,7 @@ TEST(FormatFilesystemTest, MkfsOptionsExtensions) {
 
   // Try with max extension counts
   std::string extensions("");
-  for (uint32_t i = sizeof(kMediaExtList) / sizeof(const char *); i < kMaxExtension; i++) {
+  for (uint32_t i = sizeof(kMediaExtList) / sizeof(const char *); i < kMaxExtension; ++i) {
     if (i > sizeof(kMediaExtList) / sizeof(const char *))
       extensions.append(",");
     extensions.append(std::to_string(i));

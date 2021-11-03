@@ -197,7 +197,7 @@ void F2fs::CheckIndexInPrevNodes(block_t blkaddr) {
 
   // Get the previous summary
   for (i = static_cast<int>(CursegType::kCursegWarmData);
-       i <= static_cast<int>(CursegType::kCursegColdData); i++) {
+       i <= static_cast<int>(CursegType::kCursegColdData); ++i) {
     CursegInfo *curseg = segment_manager_->CURSEG_I(static_cast<CursegType>(i));
     if (curseg->segno == segno) {
       sum = curseg->sum_blk->entries[blkoff];
@@ -251,7 +251,7 @@ void F2fs::DoRecoverData(VnodeF2fs *vnode, Page *page, block_t blkaddr) {
   ZX_ASSERT(ni.ino == NodeManager::InoOfNode(*page));
   ZX_ASSERT(NodeManager::OfsOfNode(*dn.node_page) == NodeManager::OfsOfNode(*page));
 
-  for (; start < end; start++) {
+  for (; start < end; ++start) {
     block_t src, dest;
 
     src = DatablockAddr(dn.node_page, dn.ofs_in_node);
@@ -272,7 +272,7 @@ void F2fs::DoRecoverData(VnodeF2fs *vnode, Page *page, block_t blkaddr) {
       GetSegmentManager().RecoverDataPage(nullptr, &sum, src, dest);
       vnode->UpdateExtentCache(dest, &dn);
     }
-    dn.ofs_in_node++;
+    ++dn.ofs_in_node;
   }
 
   /* write node page in place */

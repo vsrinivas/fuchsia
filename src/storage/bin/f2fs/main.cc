@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
 #ifdef F2FS_BU_DEBUG
   std::cout << "f2fs arg= ";
 
-  for (int i = 0; i < argc; i++) {
+  for (int i = 0; i < argc; ++i) {
     std::cout << argv[i] << " ";
   }
 

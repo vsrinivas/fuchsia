@@ -60,10 +60,9 @@ void Dir::SetDeType(DirEntry *de, VnodeF2fs *vnode) {
 }
 
 uint64_t Dir::DirBlockIndex(uint32_t level, uint8_t dir_level, uint32_t idx) {
-  uint32_t i;
   uint64_t bidx = 0;
 
-  for (i = 0; i < level; i++) {
+  for (uint32_t i = 0; i < level; ++i) {
     bidx += DirBuckets(i, dir_level) * BucketBlocks(i);
   }
   bidx += idx * BucketBlocks(level);
@@ -137,7 +136,7 @@ DirEntry *Dir::FindInLevel(unsigned int level, std::string_view name, f2fs_hash_
   bidx = DirBlockIndex(level, GetDirLevel(), namehash % nbucket);
   end_block = bidx + nblock;
 
-  for (; bidx < end_block; bidx++) {
+  for (; bidx < end_block; ++bidx) {
     /* no need to allocate new dentry pages to all the indices */
     if (FindDataPage(bidx, &dentry_page) != ZX_OK) {
       room = true;
@@ -184,7 +183,7 @@ DirEntry *Dir::FindEntryOnDevice(std::string_view name, Page **res_page) {
   name_hash = DentryHash(name);
   max_depth = static_cast<unsigned int>(GetCurDirDepth());
 
-  for (level = 0; level < max_depth; level++) {
+  for (level = 0; level < max_depth; ++level) {
     if (de = FindInLevel(level, name, name_hash, res_page); de != nullptr)
       break;
   }
@@ -438,7 +437,7 @@ zx_status_t Dir::AddLink(std::string_view name, VnodeF2fs *vnode) {
   unsigned int bit_pos;
   unsigned int level;
   unsigned int current_depth;
-  uint64_t bidx, block;
+  uint64_t bidx;
   f2fs_hash_t dentry_hash;
   DirEntry *de;
   unsigned int nbucket, nblock;
@@ -447,7 +446,6 @@ zx_status_t Dir::AddLink(std::string_view name, VnodeF2fs *vnode) {
   DentryBlock *dentry_blk = nullptr;
   int slots = (namelen + kNameLen - 1) / kNameLen;
   zx_status_t err = 0;
-  int i;
 
   if (TestFlag(InodeInfoFlag::kInlineDentry)) {
     bool is_converted = false;
@@ -482,11 +480,12 @@ zx_status_t Dir::AddLink(std::string_view name, VnodeF2fs *vnode) {
 
     bidx = DirBlockIndex(level, GetDirLevel(), (dentry_hash % nbucket));
 
-    for (block = bidx; block <= (bidx + nblock - 1); block++) {
+    for (uint64_t block = bidx; block <= (bidx + nblock - 1); ++block) {
 #ifdef __Fuchsia__
       std::lock_guard write_lock(io_lock_);
 #endif  // __Fuchsia__
-      if (err = GetNewDataPage(block, true, &dentry_page); err != ZX_OK) {
+      if (err = GetNewDataPage(safemath::checked_cast<pgoff_t>(block), true, &dentry_page);
+          err != ZX_OK) {
         return err;
       }
 
@@ -506,8 +505,9 @@ zx_status_t Dir::AddLink(std::string_view name, VnodeF2fs *vnode) {
           memcpy(dentry_blk->filename[bit_pos], name.data(), namelen);
           de->ino = CpuToLe(vnode->Ino());
           SetDeType(de, vnode);
-          for (i = 0; i < slots; i++)
+          for (int i = 0; i < slots; ++i) {
             TestAndSetBit(bit_pos + i, dentry_blk->dentry_bitmap);
+          }
 #if 0  // porting needed
        // set_page_dirty(dentry_page);
 #else
@@ -555,7 +555,6 @@ void Dir::DeleteEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode) {
 #endif
   int slots = (LeToCpu(dentry->name_len) + kNameLen - 1) / kNameLen;
   void *kaddr = PageAddress(page);
-  int i;
 
 #ifdef __Fuchsia__
   std::lock_guard write_lock(io_lock_);
@@ -573,8 +572,9 @@ void Dir::DeleteEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode) {
 
   dentry_blk = static_cast<DentryBlock *>(kaddr);
   bit_pos = static_cast<uint32_t>(dentry - dentry_blk->dentry);
-  for (i = 0; i < slots; i++)
+  for (int i = 0; i < slots; ++i) {
     TestAndClearBit(bit_pos + i, dentry_blk->dentry_bitmap);
+  }
 
 #if 0  // porting needed
   // kunmap(page); /* kunmap - pair of f2fs_find_entry */
@@ -678,7 +678,6 @@ zx_status_t Dir::MakeEmpty(VnodeF2fs *vnode) {
 }
 
 bool Dir::IsEmptyDir() {
-  uint64_t bidx;
   Page *dentry_page = nullptr;
   unsigned int bit_pos;
   DentryBlock *dentry_blk;
@@ -687,7 +686,7 @@ bool Dir::IsEmptyDir() {
   if (TestFlag(InodeInfoFlag::kInlineDentry))
     return IsEmptyInlineDir();
 
-  for (bidx = 0; bidx < nblock; bidx++) {
+  for (uint64_t bidx = 0; bidx < nblock; ++bidx) {
     void *kaddr;
 
     if (zx_status_t ret = GetLockDataPage(bidx, &dentry_page); ret != ZX_OK) {
@@ -729,7 +728,6 @@ zx_status_t Dir::Readdir(fs::VdirCookie *cookie, void *dirents, size_t len, size
   DentryBlock *dentry_blk = nullptr;
   DirEntry *de = nullptr;
   Page *dentry_page = nullptr;
-  uint64_t n = 0;
   unsigned char d_type = DT_UNKNOWN;
   int slots;
   zx_status_t ret = ZX_OK;
@@ -747,9 +745,8 @@ zx_status_t Dir::Readdir(fs::VdirCookie *cookie, void *dirents, size_t len, size
 
   const unsigned char *types = kFiletypeTable;
   bit_pos = (pos % kNrDentryInBlock);
-  n = (pos / kNrDentryInBlock);
 
-  for (; n < npages; n++) {
+  for (uint64_t n = (pos / kNrDentryInBlock); n < npages; ++n) {
     if (ret = GetLockDataPage(n, &dentry_page); ret != ZX_OK)
       continue;
 

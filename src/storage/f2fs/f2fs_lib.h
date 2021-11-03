@@ -37,11 +37,10 @@ inline bool VerAfter(uint64_t a, uint64_t b) { return a > b; }
 
 // CRC
 inline uint32_t F2fsCalCrc32(uint32_t crc, void *buff, uint32_t len) {
-  int i;
   unsigned char *p = static_cast<unsigned char *>(buff);
-  while (len--) {
+  while (len-- > 0) {
     crc ^= *p++;
-    for (i = 0; i < 8; i++)
+    for (int i = 0; i < 8; ++i)
       crc = (crc >> 1) ^ ((crc & 1) ? kCrcPolyLe : 0);
   }
   return crc;
@@ -102,7 +101,7 @@ inline uint32_t FindNextZeroBit(const void *addr, uint32_t size, uint32_t offset
     uint8_t mask = static_cast<uint8_t>(~0U << offset_in_iter);
     uint8_t res = bitmap[iter] & mask;
     if (res != mask) {  // found
-      for (; offset_in_iter < size_per_iter; offset_in_iter++) {
+      for (; offset_in_iter < size_per_iter; ++offset_in_iter) {
         if ((bitmap[iter] & static_cast<uint8_t>(1U << offset_in_iter)) == 0) {
           return std::min(iter * size_per_iter + offset_in_iter, size);
         }
@@ -126,7 +125,7 @@ inline uint32_t FindNextBit(const void *addr, uint32_t size, uint32_t offset) {
     uint8_t mask = static_cast<uint8_t>(~0U << offset_in_iter);
     uint8_t res = bitmap[iter] & mask;
     if (res != 0) {  // found
-      for (; offset_in_iter < size_per_iter; offset_in_iter++) {
+      for (; offset_in_iter < size_per_iter; ++offset_in_iter) {
         if ((bitmap[iter] & static_cast<uint8_t>(1U << offset_in_iter)) != 0) {
           return std::min(iter * size_per_iter + offset_in_iter, size);
         }

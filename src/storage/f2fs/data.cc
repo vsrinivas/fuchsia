@@ -16,7 +16,7 @@ void VnodeF2fs::SetDataBlkaddr(DnodeOfData *dn, block_t new_addr) {
   Node *rn;
   uint32_t *addr_array;
   Page *node_page = dn->node_page;
-  unsigned int ofs_in_node = dn->ofs_in_node;
+  uint32_t ofs_in_node = dn->ofs_in_node;
 
   WaitOnPageWriteback(node_page);
 
@@ -59,13 +59,13 @@ zx_status_t VnodeF2fs::ReserveNewBlock(DnodeOfData *dn) {
 //     return 0;
 //   }
 
-//   superblock_info->total_hit_ext++;
+//   ++superblock_info->total_hit_ext;
 //   start_fofs = fi->ext.fofs;
 //   end_fofs = fi->ext.fofs + fi->ext.len - 1;
 //   start_blkaddr = fi->ext.blk_addr;
 
 //   if (pgofs >= start_fofs && pgofs <= end_fofs) {
-//     unsigned int blkbits = inode->i_sb->s_blocksize_bits;
+//     uint32_t blkbits = inode->i_sb->s_blocksize_bits;
 //     size_t count;
 
 //     clear_buffer_new(bh_result);
@@ -77,7 +77,7 @@ zx_status_t VnodeF2fs::ReserveNewBlock(DnodeOfData *dn) {
 //     else
 //       bh_result->b_size = UINT_MAX;
 
-//     superblock_info->read_hit_ext++;
+//     ++superblock_info->read_hit_ext;
 //     ReadUnlock(&fi->ext.ext_lock);
 //     return 1;
 //   }
@@ -123,15 +123,15 @@ void VnodeF2fs::UpdateExtentCache(block_t blk_addr, DnodeOfData *dn) {
 
     /* Frone merge */
     if (fofs == start_fofs - 1 && blk_addr == start_blkaddr - 1) {
-      fi->ext.fofs--;
-      fi->ext.blk_addr--;
-      fi->ext.len++;
+      --fi->ext.fofs;
+      --fi->ext.blk_addr;
+      ++fi->ext.len;
       break;
     }
 
     /* Back merge */
     if (fofs == end_fofs + 1 && blk_addr == end_blkaddr + 1) {
-      fi->ext.len++;
+      ++fi->ext.len;
       break;
     }
 
@@ -368,7 +368,7 @@ zx_status_t VnodeF2fs::Readpage(F2fs *fs, Page *page, block_t blk_addr, int type
 // int VnodeF2fs::GetDataBlockRo(inode *inode, sector_t iblock,
 //       buffer_head *bh_result, int create)
 // {
-//   unsigned int blkbits = inode->i_sb->s_blocksize_bits;
+//   uint32_t blkbits = inode->i_sb->s_blocksize_bits;
 //   unsigned maxblocks = bh_result->b_size >> blkbits;
 //   DnodeOfData dn;
 //   pgoff_t pgofs;
@@ -392,8 +392,7 @@ zx_status_t VnodeF2fs::Readpage(F2fs *fs, Page *page, block_t blk_addr, int type
 //   ZX_ASSERT(!create);
 
 //   if (dn.data_blkaddr != kNewAddr && dn.data_blkaddr != kNullAddr) {
-//     unsigned int i;
-//     unsigned int end_offset;
+//     uint32_t end_offset;
 
 //     end_offset = IsInode(dn.node_page) ?
 //         kAddrsPerInode :
@@ -402,7 +401,7 @@ zx_status_t VnodeF2fs::Readpage(F2fs *fs, Page *page, block_t blk_addr, int type
 //     clear_buffer_new(bh_result);
 
 //     /* Give more consecutive addresses for the read ahead */
-//     for (i = 0; i < end_offset - dn.ofs_in_node; i++)
+//     for (uint32_t i = 0; i < end_offset - dn.ofs_in_node; ++i)
 //       if (((DatablockAddr(dn.node_page,
 //               dn.ofs_in_node + i))
 //         != (dn.data_blkaddr + i)) || maxblocks == i)
@@ -492,7 +491,7 @@ zx_status_t VnodeF2fs::WriteDataPageReq(Page *page, WritebackControl *wbc) {
 
   if (superblock_info.IsOnRecovery()) {
 #if 0  // porting needed
-    // wbc->pages_skipped++;
+    // ++wbc->pages_skipped;
     // set_page_dirty(page);
 #else
     FlushDirtyDataPage(Vfs(), *page);
@@ -516,7 +515,7 @@ zx_status_t VnodeF2fs::WriteDataPageReq(Page *page, WritebackControl *wbc) {
 
     if (err = DoWriteDataPage(page); (err != ZX_OK && err != ZX_ERR_NOT_FOUND)) {
 #if 0  // porting needed
-      // wbc->pages_skipped++;
+      // ++wbc->pages_skipped;
       // set_page_dirty(page);
 #endif
       ZX_ASSERT(0);

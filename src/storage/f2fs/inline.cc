@@ -264,7 +264,7 @@ zx_status_t Dir::AddInlineEntry(std::string_view name, VnodeF2fs *vnode, bool *i
   memcpy(dentry_blk->filename[bit_pos], name.data(), name.length());
   de->ino = CpuToLe(vnode->Ino());
   SetDeType(de, vnode);
-  for (int i = 0; i < slots; i++)
+  for (int i = 0; i < slots; ++i)
     TestAndSetBit(bit_pos + i, dentry_blk->dentry_bitmap);
 #if 0  // porting needed
   // set_page_dirty(ipage);
@@ -304,7 +304,7 @@ void Dir::DeleteInlineEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode) {
 
   unsigned int bit_pos = static_cast<uint32_t>(dentry - inline_dentry->dentry);
   int slots = GetDentrySlots(LeToCpu(dentry->name_len));
-  for (int i = 0; i < slots; i++)
+  for (int i = 0; i < slots; ++i)
     TestAndClearBit(bit_pos + i, inline_dentry->dentry_bitmap);
 
 #if 0  // porting needed

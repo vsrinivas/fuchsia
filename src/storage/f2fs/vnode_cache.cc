@@ -103,11 +103,11 @@ zx_status_t VnodeCache::ForDirtyVnodesIf(Callback cb, Callback cb_if) {
     std::lock_guard lock(list_lock_);
 #endif  // __Fuchsia__
     dirty_vnodes.resize(ndirty_);
-    for (auto iter = dirty_list_.begin(); iter != dirty_list_.end(); iter++) {
+    for (auto iter = dirty_list_.begin(); iter != dirty_list_.end(); ++iter) {
       fbl::RefPtr<VnodeF2fs> vn = iter.CopyPointer();
       if (cb_if == nullptr || cb_if(vn) == ZX_OK) {
         dirty_vnodes[count] = std::move(vn);
-        count++;
+        ++count;
       }
     }
   }
@@ -116,7 +116,7 @@ zx_status_t VnodeCache::ForDirtyVnodesIf(Callback cb, Callback cb_if) {
     return ZX_OK;
   }
 
-  for (int i = 0; i < count; i++) {
+  for (int i = 0; i < count; ++i) {
     fbl::RefPtr<VnodeF2fs>& vn = dirty_vnodes[i];
     zx_status_t status = cb(vn);
     if (status == ZX_ERR_STOP) {
@@ -240,9 +240,9 @@ zx_status_t VnodeCache::AddDirty(VnodeF2fs* vnode) {
       ZX_ASSERT(dirty_vnode != nullptr);
       dirty_list_.push_back(std::move(dirty_vnode));
       if (vnode->IsDir()) {
-        ndirty_dir_++;
+        ++ndirty_dir_;
       }
-      ndirty_++;
+      ++ndirty_;
     }
   }
   return ZX_OK;
@@ -262,9 +262,9 @@ zx_status_t VnodeCache::RemoveDirtyUnsafe(VnodeF2fs* vnode) {
   }
   fbl::RefPtr<VnodeF2fs> clean_vnode = dirty_list_.erase(*vnode);
   if (vnode->IsDir()) {
-    ndirty_dir_--;
+    --ndirty_dir_;
   }
-  ndirty_--;
+  --ndirty_;
   return ZX_OK;
 }
 

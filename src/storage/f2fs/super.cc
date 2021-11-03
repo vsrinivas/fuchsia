@@ -111,7 +111,7 @@ zx_status_t F2fs::SyncFs(int sync) {
 #endif
 
 void F2fs::ParseOptions() {
-  for (uint32_t i = 0; i < kOptMaxNum; i++) {
+  for (uint32_t i = 0; i < kOptMaxNum; ++i) {
     uint32_t value;
     if (mount_options_.GetValue(i, &value) == ZX_OK) {
       switch (i) {
