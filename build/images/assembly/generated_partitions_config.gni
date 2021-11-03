@@ -19,6 +19,7 @@ template("generated_partitions_config") {
   generated_file(target_name) {
     forward_variables_from(invoker,
                            [
+                             "deps",
                              "testonly",
                              "visibility",
                            ])
@@ -53,7 +54,7 @@ template("generated_partitions_config") {
         {
           name = "bootloader"
           type = "esp"
-          source = rebase_path("${invoker.esp_image_path}", root_build_dir)
+          image = rebase_path("${invoker.esp_image_path}", root_build_dir)
         },
       ]
     }

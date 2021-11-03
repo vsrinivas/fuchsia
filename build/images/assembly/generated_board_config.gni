@@ -333,7 +333,7 @@ template("generated_board_config") {
         bootloaders += [
           {
             type = "esp"
-            name = "bootloader"
+            name = "firmware_esp"
             partition = "bootloader"
             source =
                 rebase_path("${root_build_dir}/fuchsia.esp.blk", root_build_dir)
