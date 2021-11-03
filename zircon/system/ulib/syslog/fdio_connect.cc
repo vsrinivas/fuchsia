@@ -30,12 +30,12 @@ zx::socket connect_to_logger(bool structured) {
     return invalid;
   }
   if (syslog_backend::HasStructuredBackend() || structured) {
-    auto result = logger_client.ConnectStructured(std::move(remote));
+    auto result = logger_client->ConnectStructured(std::move(remote));
     if (result.status() != ZX_OK) {
       return invalid;
     }
   } else {
-    auto result = logger_client.Connect(std::move(remote));
+    auto result = logger_client->Connect(std::move(remote));
     if (result.status() != ZX_OK) {
       return invalid;
     }
