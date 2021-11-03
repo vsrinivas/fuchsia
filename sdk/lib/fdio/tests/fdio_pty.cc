@@ -23,7 +23,7 @@ TEST(PtyTest, WindowSize) {
 
   auto endpoints0 = fidl::CreateEndpoints<fpty::Device>();
   ASSERT_OK(endpoints0.status_value());
-  auto result0 = client.OpenClient(0, std::move(endpoints0->server));
+  auto result0 = client->OpenClient(0, std::move(endpoints0->server));
   ASSERT_OK(result0.status());
   ASSERT_OK(result0->s);
 
@@ -34,7 +34,7 @@ TEST(PtyTest, WindowSize) {
   auto endpoints1 = fidl::CreateEndpoints<fpty::Device>();
   ASSERT_OK(endpoints1.status_value());
 
-  auto result1 = client.OpenClient(1, std::move(endpoints1->server));
+  auto result1 = client->OpenClient(1, std::move(endpoints1->server));
   ASSERT_OK(result1.status());
   ASSERT_OK(result1->s);
 

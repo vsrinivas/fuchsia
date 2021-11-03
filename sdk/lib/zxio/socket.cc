@@ -33,7 +33,7 @@ class BaseSocket {
   explicit BaseSocket(Client& client) : client_(client) {}
 
   zx_status_t CloseSocket() {
-    fidl::WireResult result = client_.Close();
+    fidl::WireResult result = client_->Close();
     zx_status_t status;
     if ((status = result.status()) != ZX_OK) {
       return status;
@@ -41,8 +41,8 @@ class BaseSocket {
     if ((status = result->s) != ZX_OK) {
       return status;
     }
-    if ((status = client_.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(),
-                                             nullptr)) != ZX_OK) {
+    if ((status = client_.client_end().channel().wait_one(
+             ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr)) != ZX_OK) {
       return status;
     }
     return ZX_OK;
@@ -54,7 +54,7 @@ class BaseSocket {
       return endpoints.status_value();
     }
     zx_status_t status =
-        client_.Clone(fio::wire::kCloneFlagSameRights, std::move(endpoints->server)).status();
+        client_->Clone(fio::wire::kCloneFlagSameRights, std::move(endpoints->server)).status();
     if (status != ZX_OK) {
       return status;
     }
@@ -77,7 +77,7 @@ static constexpr zxio_ops_t zxio_datagram_socket_ops = []() {
   ops.close = [](zxio_t* io) {
     zxio_datagram_socket_t& zs = zxio_datagram_socket(io);
     zx_status_t status = ZX_OK;
-    if (zs.client.channel().is_valid()) {
+    if (zs.client.is_valid()) {
       status = BaseSocket(zs.client).CloseSocket();
     }
     zs.~zxio_datagram_socket_t();
@@ -87,11 +87,11 @@ static constexpr zxio_ops_t zxio_datagram_socket_ops = []() {
     if (out_handle == nullptr) {
       return ZX_ERR_INVALID_ARGS;
     }
-    *out_handle = zxio_datagram_socket(io).client.mutable_channel()->release();
+    *out_handle = zxio_datagram_socket(io).client.TakeClientEnd().TakeChannel().release();
     return ZX_OK;
   };
   ops.borrow = [](zxio_t* io, zx_handle_t* out_handle) {
-    *out_handle = zxio_datagram_socket(io).client.channel().get();
+    *out_handle = zxio_datagram_socket(io).client.client_end().borrow().handle();
     return ZX_OK;
   };
   ops.clone = [](zxio_t* io, zx_handle_t* out_handle) {
@@ -126,7 +126,7 @@ static constexpr zxio_ops_t zxio_stream_socket_ops = []() {
   ops.close = [](zxio_t* io) {
     zxio_stream_socket_t& zs = zxio_stream_socket(io);
     zx_status_t status = ZX_OK;
-    if (zs.client.channel().is_valid()) {
+    if (zs.client.is_valid()) {
       status = BaseSocket(zs.client).CloseSocket();
     }
     zs.~zxio_stream_socket_t();
@@ -136,11 +136,11 @@ static constexpr zxio_ops_t zxio_stream_socket_ops = []() {
     if (out_handle == nullptr) {
       return ZX_ERR_INVALID_ARGS;
     }
-    *out_handle = zxio_stream_socket(io).client.mutable_channel()->release();
+    *out_handle = zxio_stream_socket(io).client.TakeClientEnd().TakeChannel().release();
     return ZX_OK;
   };
   ops.borrow = [](zxio_t* io, zx_handle_t* out_handle) {
-    *out_handle = zxio_stream_socket(io).client.channel().get();
+    *out_handle = zxio_stream_socket(io).client.client_end().borrow().handle();
     return ZX_OK;
   };
   ops.clone = [](zxio_t* io, zx_handle_t* out_handle) {
@@ -236,7 +236,7 @@ static constexpr zxio_ops_t zxio_raw_socket_ops = []() {
   ops.close = [](zxio_t* io) {
     zxio_raw_socket_t& zs = zxio_raw_socket(io);
     zx_status_t status = ZX_OK;
-    if (zs.client.channel().is_valid()) {
+    if (zs.client.is_valid()) {
       status = BaseSocket(zs.client).CloseSocket();
     }
     zs.~zxio_raw_socket_t();
@@ -246,11 +246,11 @@ static constexpr zxio_ops_t zxio_raw_socket_ops = []() {
     if (out_handle == nullptr) {
       return ZX_ERR_INVALID_ARGS;
     }
-    *out_handle = zxio_raw_socket(io).client.mutable_channel()->release();
+    *out_handle = zxio_raw_socket(io).client.TakeClientEnd().TakeChannel().release();
     return ZX_OK;
   };
   ops.borrow = [](zxio_t* io, zx_handle_t* out_handle) {
-    *out_handle = zxio_raw_socket(io).client.channel().get();
+    *out_handle = zxio_raw_socket(io).client.client_end().borrow().handle();
     return ZX_OK;
   };
   ops.clone = [](zxio_t* io, zx_handle_t* out_handle) {
@@ -284,7 +284,7 @@ static constexpr zxio_ops_t zxio_packet_socket_ops = []() {
   ops.close = [](zxio_t* io) {
     zxio_packet_socket_t& zs = zxio_packet_socket(io);
     zx_status_t status = ZX_OK;
-    if (zs.client.channel().is_valid()) {
+    if (zs.client.is_valid()) {
       status = BaseSocket(zs.client).CloseSocket();
     }
     zs.~zxio_packet_socket_t();
@@ -294,11 +294,11 @@ static constexpr zxio_ops_t zxio_packet_socket_ops = []() {
     if (out_handle == nullptr) {
       return ZX_ERR_INVALID_ARGS;
     }
-    *out_handle = zxio_packet_socket(io).client.mutable_channel()->release();
+    *out_handle = zxio_packet_socket(io).client.TakeClientEnd().TakeChannel().release();
     return ZX_OK;
   };
   ops.borrow = [](zxio_t* io, zx_handle_t* out_handle) {
-    *out_handle = zxio_packet_socket(io).client.channel().get();
+    *out_handle = zxio_packet_socket(io).client.client_end().borrow().handle();
     return ZX_OK;
   };
   ops.clone = [](zxio_t* io, zx_handle_t* out_handle) {

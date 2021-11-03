@@ -45,7 +45,7 @@ static_assert(sizeof(zxio_vmofile_t) <= sizeof(zxio_storage_t),
 
 static zx_status_t zxio_vmofile_close(zxio_t* io) {
   auto file = reinterpret_cast<zxio_vmofile_t*>(io);
-  zx_status_t status = file->control.Close().status();
+  zx_status_t status = file->control->Close().status();
   file->~zxio_vmofile_t();
   return status;
 }
@@ -57,7 +57,7 @@ static zx_status_t zxio_vmofile_release(zxio_t* io, zx_handle_t* out_handle) {
   uint64_t seek = file->offset;
   mtx_unlock(&file->lock);
 
-  auto result = file->control.Seek(seek, fio::wire::SeekOrigin::kStart);
+  auto result = file->control->Seek(seek, fio::wire::SeekOrigin::kStart);
   if (result.status() != ZX_OK) {
     return ZX_ERR_BAD_STATE;
   }
@@ -65,7 +65,7 @@ static zx_status_t zxio_vmofile_release(zxio_t* io, zx_handle_t* out_handle) {
     return ZX_ERR_BAD_STATE;
   }
 
-  *out_handle = file->control.mutable_channel()->release();
+  *out_handle = file->control.TakeClientEnd().TakeChannel().release();
   return ZX_OK;
 }
 
@@ -75,7 +75,7 @@ static zx_status_t zxio_vmofile_clone(zxio_t* io, zx_handle_t* out_handle) {
   if (!ends.is_ok()) {
     return ends.status_value();
   }
-  auto result = file->control.Clone(fio::wire::kCloneFlagSameRights, std::move(ends->server));
+  auto result = file->control->Clone(fio::wire::kCloneFlagSameRights, std::move(ends->server));
   if (result.status() != ZX_OK) {
     return result.status();
   }

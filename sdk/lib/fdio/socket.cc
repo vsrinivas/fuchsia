@@ -49,9 +49,9 @@ bool use_legacy_base_socket_methods() {
 #define MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(client, method, args, handler) \
   [&]() {                                                                               \
     if (use_legacy_base_socket_methods()) {                                             \
-      return handler((client).BaseSocket##method args);                                 \
+      return handler((client)->BaseSocket##method args);                                \
     }                                                                                   \
-    return handler((client).method args);                                               \
+    return handler((client)->method args);                                              \
   }()
 
 // A helper structure to keep a socket address and the variants allocations in stack.
@@ -788,7 +788,7 @@ struct BaseSocket {
           return proc.StoreOption<int32_t>(SOCK_RAW);
         }
         if constexpr (std::is_same_v<T, fidl::WireSyncClient<fpacketsocket::Socket>>) {
-          return proc.Process(client().GetInfo(), [](const auto& response) {
+          return proc.Process(client()->GetInfo(), [](const auto& response) {
             switch (response.kind) {
               case fpacketsocket::wire::Kind::kNetwork:
                 return SOCK_DGRAM;
@@ -801,15 +801,15 @@ struct BaseSocket {
         if constexpr (std::is_same_v<T, fidl::WireSyncClient<fpacketsocket::Socket>>) {
           return proc.StoreOption<int32_t>(AF_PACKET);
         } else {
-          return proc.Process(client().GetInfo(),
+          return proc.Process(client()->GetInfo(),
                               [](const auto& response) { return response.domain; });
         }
       case SO_TIMESTAMP:
-        return proc.Process(client().GetTimestamp(),
+        return proc.Process(client()->GetTimestamp(),
                             [](const auto& response) { return response.value; });
       case SO_PROTOCOL:
         if constexpr (std::is_same_v<T, fidl::WireSyncClient<fsocket::DatagramSocket>>) {
-          return proc.Process(client().GetInfo(), [](const auto& response) {
+          return proc.Process(client()->GetInfo(), [](const auto& response) {
             switch (response.proto) {
               case fsocket::wire::DatagramSocketProtocol::kUdp:
                 return IPPROTO_UDP;
@@ -824,7 +824,7 @@ struct BaseSocket {
           });
         }
         if constexpr (std::is_same_v<T, fidl::WireSyncClient<fsocket::StreamSocket>>) {
-          return proc.Process(client().GetInfo(), [](const auto& response) {
+          return proc.Process(client()->GetInfo(), [](const auto& response) {
             switch (response.proto) {
               case fsocket::wire::StreamSocketProtocol::kTcp:
                 return IPPROTO_TCP;
@@ -832,7 +832,7 @@ struct BaseSocket {
           });
         }
         if constexpr (std::is_same_v<T, fidl::WireSyncClient<frawsocket::Socket>>) {
-          return proc.Process(client().GetInfo(), [](const auto& response) {
+          return proc.Process(client()->GetInfo(), [](const auto& response) {
             switch (response.proto.which()) {
               case frawsocket::wire::ProtocolAssociation::Tag::kUnassociated:
                 return IPPROTO_RAW;
@@ -845,7 +845,7 @@ struct BaseSocket {
           return proc.StoreOption<int32_t>(0);
         }
       case SO_ERROR: {
-        auto response = client().GetError();
+        auto response = client()->GetError();
         if (response.status() != ZX_OK) {
           return SockOptResult::Zx(response.status());
         }
@@ -857,31 +857,31 @@ struct BaseSocket {
         return proc.StoreOption(error_code);
       }
       case SO_SNDBUF:
-        return proc.Process(client().GetSendBuffer(), [](const auto& response) {
+        return proc.Process(client()->GetSendBuffer(), [](const auto& response) {
           return static_cast<uint32_t>(response.value_bytes);
         });
       case SO_RCVBUF:
-        return proc.Process(client().GetReceiveBuffer(), [](const auto& response) {
+        return proc.Process(client()->GetReceiveBuffer(), [](const auto& response) {
           return static_cast<uint32_t>(response.value_bytes);
         });
       case SO_REUSEADDR:
-        return proc.Process(client().GetReuseAddress(),
+        return proc.Process(client()->GetReuseAddress(),
                             [](const auto& response) { return response.value; });
       case SO_REUSEPORT:
-        return proc.Process(client().GetReusePort(),
+        return proc.Process(client()->GetReusePort(),
                             [](const auto& response) { return response.value; });
       case SO_BINDTODEVICE:
         return proc.Process(
-            client().GetBindToDevice(),
+            client()->GetBindToDevice(),
             [](auto& response) -> const fidl::StringView& { return response.value; });
       case SO_BROADCAST:
-        return proc.Process(client().GetBroadcast(),
+        return proc.Process(client()->GetBroadcast(),
                             [](const auto& response) { return response.value; });
       case SO_KEEPALIVE:
-        return proc.Process(client().GetKeepAlive(),
+        return proc.Process(client()->GetKeepAlive(),
                             [](const auto& response) { return response.value; });
       case SO_LINGER:
-        return proc.Process(client().GetLinger(), [](const auto& response) {
+        return proc.Process(client()->GetLinger(), [](const auto& response) {
           struct linger l;
           l.l_onoff = response.linger;
           // NB: l_linger is typed as int but interpreted as unsigned by
@@ -890,13 +890,13 @@ struct BaseSocket {
           return l;
         });
       case SO_ACCEPTCONN:
-        return proc.Process(client().GetAcceptConn(),
+        return proc.Process(client()->GetAcceptConn(),
                             [](const auto& response) { return response.value; });
       case SO_OOBINLINE:
-        return proc.Process(client().GetOutOfBandInline(),
+        return proc.Process(client()->GetOutOfBandInline(),
                             [](const auto& response) { return response.value; });
       case SO_NO_CHECK:
-        return proc.Process(client().GetNoCheck(),
+        return proc.Process(client()->GetNoCheck(),
                             [](const auto& response) { return response.value; });
       case SO_SNDTIMEO:
       case SO_RCVTIMEO:
@@ -911,38 +911,38 @@ struct BaseSocket {
     SetSockOptProcessor proc(optval, optlen);
     switch (optname) {
       case SO_TIMESTAMP:
-        return proc.Process<bool>([this](bool value) { return client().SetTimestamp(value); });
+        return proc.Process<bool>([this](bool value) { return client()->SetTimestamp(value); });
       case SO_SNDBUF:
         return proc.Process<int32_t>([this](int32_t value) {
           // NB: SNDBUF treated as unsigned, we just cast the value to skip sign check.
-          return client().SetSendBuffer(static_cast<uint64_t>(value));
+          return client()->SetSendBuffer(static_cast<uint64_t>(value));
         });
       case SO_RCVBUF:
         // NB: RCVBUF treated as unsigned, we just cast the value to skip sign check.
         return proc.Process<int32_t>([this](int32_t value) {
-          return client().SetReceiveBuffer(static_cast<uint64_t>(value));
+          return client()->SetReceiveBuffer(static_cast<uint64_t>(value));
         });
       case SO_REUSEADDR:
-        return proc.Process<bool>([this](bool value) { return client().SetReuseAddress(value); });
+        return proc.Process<bool>([this](bool value) { return client()->SetReuseAddress(value); });
       case SO_REUSEPORT:
-        return proc.Process<bool>([this](bool value) { return client().SetReusePort(value); });
+        return proc.Process<bool>([this](bool value) { return client()->SetReusePort(value); });
       case SO_BINDTODEVICE:
         return proc.Process<fidl::StringView>(
-            [this](fidl::StringView value) { return client().SetBindToDevice(value); });
+            [this](fidl::StringView value) { return client()->SetBindToDevice(value); });
       case SO_BROADCAST:
-        return proc.Process<bool>([this](bool value) { return client().SetBroadcast(value); });
+        return proc.Process<bool>([this](bool value) { return client()->SetBroadcast(value); });
       case SO_KEEPALIVE:
-        return proc.Process<bool>([this](bool value) { return client().SetKeepAlive(value); });
+        return proc.Process<bool>([this](bool value) { return client()->SetKeepAlive(value); });
       case SO_LINGER:
         return proc.Process<struct linger>([this](struct linger value) {
           // NB: l_linger is typed as int but interpreted as unsigned by linux.
-          return client().SetLinger(value.l_onoff != 0, static_cast<uint32_t>(value.l_linger));
+          return client()->SetLinger(value.l_onoff != 0, static_cast<uint32_t>(value.l_linger));
         });
       case SO_OOBINLINE:
         return proc.Process<bool>(
-            [this](bool value) { return client().SetOutOfBandInline(value); });
+            [this](bool value) { return client()->SetOutOfBandInline(value); });
       case SO_NO_CHECK:
-        return proc.Process<bool>([this](bool value) { return client().SetNoCheck(value); });
+        return proc.Process<bool>([this](bool value) { return client()->SetNoCheck(value); });
       case SO_SNDTIMEO:
       case SO_RCVTIMEO:
         return SockOptResult::Errno(ENOTSUP);
@@ -1199,31 +1199,31 @@ struct BaseNetworkSocket : public BaseSocket<T> {
         if constexpr (std::is_same_v<T, fidl::WireSyncClient<fsocket::StreamSocket>>) {
           switch (optname) {
             case TCP_NODELAY:
-              return proc.Process(client().GetTcpNoDelay(),
+              return proc.Process(client()->GetTcpNoDelay(),
                                   [](const auto& response) { return response.value; });
             case TCP_CORK:
-              return proc.Process(client().GetTcpCork(),
+              return proc.Process(client()->GetTcpCork(),
                                   [](const auto& response) { return response.value; });
             case TCP_QUICKACK:
-              return proc.Process(client().GetTcpQuickAck(),
+              return proc.Process(client()->GetTcpQuickAck(),
                                   [](const auto& response) { return response.value; });
             case TCP_MAXSEG:
-              return proc.Process(client().GetTcpMaxSegment(),
+              return proc.Process(client()->GetTcpMaxSegment(),
                                   [](const auto& response) { return response.value_bytes; });
             case TCP_KEEPIDLE:
-              return proc.Process(client().GetTcpKeepAliveIdle(),
+              return proc.Process(client()->GetTcpKeepAliveIdle(),
                                   [](const auto& response) { return response.value_secs; });
             case TCP_KEEPINTVL:
-              return proc.Process(client().GetTcpKeepAliveInterval(),
+              return proc.Process(client()->GetTcpKeepAliveInterval(),
                                   [](const auto& response) { return response.value_secs; });
             case TCP_KEEPCNT:
-              return proc.Process(client().GetTcpKeepAliveCount(),
+              return proc.Process(client()->GetTcpKeepAliveCount(),
                                   [](const auto& response) { return response.value; });
             case TCP_USER_TIMEOUT:
-              return proc.Process(client().GetTcpUserTimeout(),
+              return proc.Process(client()->GetTcpUserTimeout(),
                                   [](const auto& response) { return response.value_millis; });
             case TCP_CONGESTION:
-              return proc.Process(client().GetTcpCongestion(), [](const auto& response) {
+              return proc.Process(client()->GetTcpCongestion(), [](const auto& response) {
                 switch (response.value) {
                   case fsocket::wire::TcpCongestionControl::kCubic:
                     return TruncatingStringView(
@@ -1234,20 +1234,20 @@ struct BaseNetworkSocket : public BaseSocket<T> {
                 }
               });
             case TCP_DEFER_ACCEPT:
-              return proc.Process(client().GetTcpDeferAccept(),
+              return proc.Process(client()->GetTcpDeferAccept(),
                                   [](const auto& response) { return response.value_secs; });
             case TCP_INFO:
               return proc.Process(
-                  client().GetTcpInfo(),
+                  client()->GetTcpInfo(),
                   [](const auto& response) -> const auto& { return response.info; });
             case TCP_SYNCNT:
-              return proc.Process(client().GetTcpSynCount(),
+              return proc.Process(client()->GetTcpSynCount(),
                                   [](const auto& response) { return response.value; });
             case TCP_WINDOW_CLAMP:
-              return proc.Process(client().GetTcpWindowClamp(),
+              return proc.Process(client()->GetTcpWindowClamp(),
                                   [](const auto& response) { return response.value; });
             case TCP_LINGER2:
-              return proc.Process(client().GetTcpLinger(),
+              return proc.Process(client()->GetTcpLinger(),
                                   [](const auto& response) -> const fsocket::wire::OptionalUint32& {
                                     return response.value_secs;
                                   });
@@ -1398,45 +1398,45 @@ struct BaseNetworkSocket : public BaseSocket<T> {
           switch (optname) {
             case TCP_NODELAY:
               return proc.Process<bool>(
-                  [this](bool value) { return client().SetTcpNoDelay(value); });
+                  [this](bool value) { return client()->SetTcpNoDelay(value); });
             case TCP_CORK:
-              return proc.Process<bool>([this](bool value) { return client().SetTcpCork(value); });
+              return proc.Process<bool>([this](bool value) { return client()->SetTcpCork(value); });
             case TCP_QUICKACK:
               return proc.Process<bool>(
-                  [this](bool value) { return client().SetTcpQuickAck(value); });
+                  [this](bool value) { return client()->SetTcpQuickAck(value); });
             case TCP_MAXSEG:
               return proc.Process<uint32_t>(
-                  [this](uint32_t value) { return client().SetTcpMaxSegment(value); });
+                  [this](uint32_t value) { return client()->SetTcpMaxSegment(value); });
             case TCP_KEEPIDLE:
               return proc.Process<uint32_t>(
-                  [this](uint32_t value) { return client().SetTcpKeepAliveIdle(value); });
+                  [this](uint32_t value) { return client()->SetTcpKeepAliveIdle(value); });
             case TCP_KEEPINTVL:
               return proc.Process<uint32_t>(
-                  [this](uint32_t value) { return client().SetTcpKeepAliveInterval(value); });
+                  [this](uint32_t value) { return client()->SetTcpKeepAliveInterval(value); });
             case TCP_KEEPCNT:
               return proc.Process<uint32_t>(
-                  [this](uint32_t value) { return client().SetTcpKeepAliveCount(value); });
+                  [this](uint32_t value) { return client()->SetTcpKeepAliveCount(value); });
             case TCP_USER_TIMEOUT:
               return proc.Process<uint32_t>(
-                  [this](uint32_t value) { return client().SetTcpUserTimeout(value); });
+                  [this](uint32_t value) { return client()->SetTcpUserTimeout(value); });
             case TCP_CONGESTION:
               return proc.Process<fsocket::wire::TcpCongestionControl>(
                   [this](fsocket::wire::TcpCongestionControl value) {
-                    return client().SetTcpCongestion(value);
+                    return client()->SetTcpCongestion(value);
                   });
             case TCP_DEFER_ACCEPT:
               return proc.Process<int32_t>([this](int32_t value) {
                 if (value < 0) {
                   value = 0;
                 }
-                return client().SetTcpDeferAccept(value);
+                return client()->SetTcpDeferAccept(value);
               });
             case TCP_SYNCNT:
               return proc.Process<uint32_t>(
-                  [this](uint32_t value) { return client().SetTcpSynCount(value); });
+                  [this](uint32_t value) { return client()->SetTcpSynCount(value); });
             case TCP_WINDOW_CLAMP:
               return proc.Process<uint32_t>(
-                  [this](uint32_t value) { return client().SetTcpWindowClamp(value); });
+                  [this](uint32_t value) { return client()->SetTcpWindowClamp(value); });
             case TCP_LINGER2:
               return proc.Process<int32_t>([this](int32_t value) {
                 fsocket::wire::OptionalUint32 opt;
@@ -1445,7 +1445,7 @@ struct BaseNetworkSocket : public BaseSocket<T> {
                 } else {
                   opt.set_value(static_cast<uint32_t>(value));
                 }
-                return client().SetTcpLinger(opt);
+                return client()->SetTcpLinger(opt);
               });
             default:
               return SockOptResult::Errno(ENOPROTOOPT);
@@ -1843,7 +1843,7 @@ struct base_socket_with_event : public zxio {
 
     bool want_addr = msg->msg_namelen != 0 && msg->msg_name != nullptr;
     bool want_cmsg = msg->msg_controllen != 0 && msg->msg_control != nullptr;
-    auto response = zxio_socket_with_event().client.RecvMsg(
+    auto response = zxio_socket_with_event().client->RecvMsg(
         want_addr, static_cast<uint32_t>(datalen), want_cmsg, to_recvmsg_flags(flags));
     zx_status_t status = response.status();
     if (status != ZX_OK) {
@@ -1947,7 +1947,7 @@ struct base_socket_with_event : public zxio {
     // TODO(https://fxbug.dev/21106): Support control messages.
     // TODO(https://fxbug.dev/58503): Use better representation of nullable union when
     // available. Currently just using a default-initialized union with an invalid tag.
-    auto response = zxio_socket_with_event().client.SendMsg(
+    auto response = zxio_socket_with_event().client->SendMsg(
         addr.address(), vec, T::empty_control_data(), to_sendmsg_flags(flags));
     zx_status_t status = response.status();
     if (status != ZX_OK) {
@@ -2037,7 +2037,7 @@ zx_status_t socket_with_event<RawSocket>::setsockopt(int level, int optname, con
           case IP_HDRINCL: {
             SetSockOptProcessor proc(optval, optlen);
             return proc.Process<bool>([this](bool value) {
-              return zxio_socket_with_event().client.SetIpHeaderIncluded(value);
+              return zxio_socket_with_event().client->SetIpHeaderIncluded(value);
             });
           }
         }
@@ -2224,7 +2224,7 @@ struct stream_socket : public zxio {
   }
 
   zx_status_t listen(int backlog, int16_t* out_code) override {
-    auto response = zxio_stream_socket().client.Listen(safemath::saturated_cast<int16_t>(backlog));
+    auto response = zxio_stream_socket().client->Listen(safemath::saturated_cast<int16_t>(backlog));
     zx_status_t status = response.status();
     if (status != ZX_OK) {
       return status;
@@ -2245,7 +2245,7 @@ struct stream_socket : public zxio {
   zx_status_t accept(int flags, struct sockaddr* addr, socklen_t* addrlen, zx_handle_t* out_handle,
                      int16_t* out_code) override {
     bool want_addr = addr != nullptr && addrlen != nullptr;
-    auto response = zxio_stream_socket().client.Accept(want_addr);
+    auto response = zxio_stream_socket().client->Accept(want_addr);
     zx_status_t status = response.status();
     if (status != ZX_OK) {
       return status;
@@ -2400,7 +2400,7 @@ struct stream_socket : public zxio {
   }
 
   zx::status<int32_t> GetError() {
-    fidl::WireResult response = zxio_stream_socket().client.GetError();
+    fidl::WireResult response = zxio_stream_socket().client->GetError();
     if (!response.ok()) {
       return zx::error(response.status());
     }
@@ -2532,7 +2532,7 @@ struct packet_socket : public base_socket_with_event<PacketSocket> {
     }
 
     const fidl::WireResult response =
-        zxio_socket_with_event().client.Bind(proto_assoc, interface_id);
+        zxio_socket_with_event().client->Bind(proto_assoc, interface_id);
     zx_status_t status = response.status();
     if (status != ZX_OK) {
       return status;
@@ -2556,7 +2556,7 @@ struct packet_socket : public base_socket_with_event<PacketSocket> {
       return ZX_OK;
     }
 
-    const fidl::WireResult response = zxio_socket_with_event().client.GetInfo();
+    const fidl::WireResult response = zxio_socket_with_event().client->GetInfo();
     zx_status_t status = response.status();
     if (status != ZX_OK) {
       return status;

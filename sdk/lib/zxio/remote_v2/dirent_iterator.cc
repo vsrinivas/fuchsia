@@ -94,7 +94,7 @@ class DirentIteratorImpl {
   }
 
   zx_status_t ReadNextBatch() {
-    auto result = iterator_.GetNext(boxed_->fidl_buffer.view());
+    auto result = iterator_.buffer(boxed_->fidl_buffer.view())->GetNext();
     if (result.status() != ZX_OK) {
       return result.status();
     }

@@ -141,21 +141,23 @@ zx_status_t load_path(const char* path, zx::vmo* out_vmo, char* err_msg) {
 // associated loader service, if the name resolves within the current realm.
 zx_status_t resolve_name(const char* name, size_t name_len, zx::vmo* out_executable,
                          zx::channel* out_ldsvc, char* err_msg) {
-  fidl::WireSyncClient<fprocess::Resolver> resolver;
-  zx::channel request;
-  zx_status_t status = zx::channel::create(0, &request, resolver.mutable_channel());
-  if (status != ZX_OK) {
-    report_error(err_msg, "failed to create channel for resolver service: %d", status);
+  zx::status endpoints = fidl::CreateEndpoints<fprocess::Resolver>();
+  if (!endpoints.is_ok()) {
+    report_error(err_msg, "failed to create channel for resolver service: %d",
+                 endpoints.status_value());
     return ZX_ERR_INTERNAL;
   }
-  status = fdio_service_connect_by_name(fidl::DiscoverableProtocolName<fprocess::Resolver>,
-                                        request.release());
+
+  fidl::WireSyncClient resolver{std::move(endpoints->client)};
+  zx_status_t status =
+      fdio_service_connect_by_name(fidl::DiscoverableProtocolName<fprocess::Resolver>,
+                                   endpoints->server.TakeChannel().release());
   if (status != ZX_OK) {
     report_error(err_msg, "failed to connect to resolver service: %d", status);
     return ZX_ERR_INTERNAL;
   }
 
-  auto response = resolver.Resolve(fidl::StringView::FromExternal(name, name_len));
+  auto response = resolver->Resolve(fidl::StringView::FromExternal(name, name_len));
 
   status = response.status();
   if (status != ZX_OK) {
@@ -450,7 +452,7 @@ class Inserter {
   size_t capacity_;
 };
 
-zx_status_t send_handles_and_namespace(fidl::WireSyncClient<fprocess::Launcher>* launcher,
+zx_status_t send_handles_and_namespace(const fidl::WireSyncClient<fprocess::Launcher>& launcher,
                                        size_t handle_capacity, uint32_t flags, zx_handle_t job,
                                        zx::channel ldsvc, zx_handle_t utc_clock, size_t name_count,
                                        fdio_flat_namespace_t* flat,
@@ -819,15 +821,15 @@ zx_status_t spawn_vmo_impl(zx_handle_t job, uint32_t flags, zx::vmo executable_v
     ++handle_capacity;
   }
 
-  fidl::WireSyncClient<fprocess::Launcher> launcher;
-  zx::channel request;
-  status = zx::channel::create(0, &request, launcher.mutable_channel());
-  if (status != ZX_OK) {
-    report_error(err_msg, "failed to create channel for launcher service: %d", status);
+  zx::status launcher_endpoints = fidl::CreateEndpoints<fprocess::Launcher>();
+  if (!launcher_endpoints.is_ok()) {
+    report_error(err_msg, "failed to create channel for launcher service: %d",
+                 launcher_endpoints.status_value());
     return status;
   }
+  fidl::WireSyncClient launcher{std::move(launcher_endpoints->client)};
   status = fdio_service_connect_by_name(fidl::DiscoverableProtocolName<fprocess::Launcher>,
-                                        request.release());
+                                        launcher_endpoints->server.TakeChannel().release());
   if (status != ZX_OK) {
     report_error(err_msg, "failed to connect to launcher service: %d", status);
     return status;
@@ -852,7 +854,7 @@ zx_status_t spawn_vmo_impl(zx_handle_t job, uint32_t flags, zx::vmo executable_v
     }
 
     status =
-        launcher.AddArgs(fidl::VectorView<fidl::VectorView<uint8_t>>::FromExternal(args)).status();
+        launcher->AddArgs(fidl::VectorView<fidl::VectorView<uint8_t>>::FromExternal(args)).status();
     if (status != ZX_OK) {
       report_error(err_msg, "failed to send argument vector: %d", status);
       return status;
@@ -870,7 +872,7 @@ zx_status_t spawn_vmo_impl(zx_handle_t job, uint32_t flags, zx::vmo executable_v
       auto ptr = const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(*it));
       env.emplace_back(fidl::VectorView<uint8_t>::FromExternal(ptr, strlen(*it)));
     }
-    status = launcher.AddEnvirons(fidl::VectorView<fidl::VectorView<uint8_t>>::FromExternal(env))
+    status = launcher->AddEnvirons(fidl::VectorView<fidl::VectorView<uint8_t>>::FromExternal(env))
                  .status();
     if (status != ZX_OK) {
       report_error(err_msg, "failed to send environment: %d", status);
@@ -887,7 +889,7 @@ zx_status_t spawn_vmo_impl(zx_handle_t job, uint32_t flags, zx::vmo executable_v
       auto ptr = const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(*it));
       env.emplace_back(fidl::VectorView<uint8_t>::FromExternal(ptr, strlen(*it)));
     }
-    status = launcher.AddEnvirons(fidl::VectorView<fidl::VectorView<uint8_t>>::FromExternal(env))
+    status = launcher->AddEnvirons(fidl::VectorView<fidl::VectorView<uint8_t>>::FromExternal(env))
                  .status();
     if (status != ZX_OK) {
       report_error(err_msg, "failed to send environment clone with FDIO_SPAWN_CLONE_ENVIRON: %d",
@@ -919,7 +921,7 @@ zx_status_t spawn_vmo_impl(zx_handle_t job, uint32_t flags, zx::vmo executable_v
     name_count += flat->count;
   }
 
-  status = send_handles_and_namespace(&launcher, handle_capacity, flags, job, std::move(ldsvc),
+  status = send_handles_and_namespace(launcher, handle_capacity, flags, job, std::move(ldsvc),
                                       utc_clock, name_count, flat,
                                       std::move(spawn_actions).ConsumeWhileIterating(), err_msg);
   if (status != ZX_OK) {
@@ -937,7 +939,7 @@ zx_status_t spawn_vmo_impl(zx_handle_t job, uint32_t flags, zx::vmo executable_v
     return status;
   }
 
-  fidl::WireResult reply = launcher.Launch(std::move(launch_info));
+  fidl::WireResult reply = launcher->Launch(std::move(launch_info));
   status = reply.status();
   if (status != ZX_OK) {
     report_error(err_msg, "failed to send launch message: %d", status);
