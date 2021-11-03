@@ -361,8 +361,22 @@ impl Socket {
     }
 
     pub fn query_events(&self) -> FdEvents {
-        let inner = self.lock();
-        inner.query_events()
+        // Note that self.lock() must be dropped before acquiring peer.inner.lock() to avoid
+        // potential deadlocks.
+        let (mut present_events, peer) = {
+            let inner = self.lock();
+            (inner.query_events(), inner.peer().map(|p| p.clone()))
+        };
+
+        if let Some(peer) = peer {
+            let peer_inner = peer.inner.lock();
+            let peer_events = peer_inner.messages.query_events();
+            if peer_events & FdEvents::POLLOUT {
+                present_events |= FdEvents::POLLOUT;
+            }
+        }
+
+        present_events
     }
 
     /// Shuts down this socket according to how, preventing any future reads and/or writes.
@@ -553,13 +567,6 @@ impl SocketInner {
         let local_events = self.messages.query_events();
         if local_events & FdEvents::POLLIN {
             present_events = FdEvents::POLLIN;
-        }
-        if let Some(peer) = self.peer() {
-            let peer_inner = peer.inner.lock();
-            let peer_events = peer_inner.messages.query_events();
-            if peer_events & FdEvents::POLLOUT {
-                present_events |= FdEvents::POLLOUT;
-            }
         }
 
         match &self.state {
