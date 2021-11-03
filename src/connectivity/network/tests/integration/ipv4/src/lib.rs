@@ -7,13 +7,12 @@
 use fidl_fuchsia_net as net;
 use fuchsia_async::{DurationExt as _, TimeoutExt as _};
 
-use anyhow::{self, Context};
-use futures::{StreamExt as _, TryStreamExt as _};
+use futures::StreamExt as _;
 use net_declare::std_ip_v4;
 use net_types::ip::{self as net_types_ip};
 use net_types::MulticastAddress as _;
 use netemul::RealmUdpSocket as _;
-use netstack_testing_common::{setup_network, Result, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT};
+use netstack_testing_common::{setup_network, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT};
 use netstack_testing_macros::variants_test;
 use packet::ParsablePacket as _;
 use packet_formats::ethernet::{EtherType, EthernetFrame, EthernetFrameLengthCheck};
@@ -22,13 +21,13 @@ use packet_formats::ip::Ipv4Proto;
 use packet_formats::testutil::parse_ip_packet;
 
 #[variants_test]
-async fn sends_igmp_reports<E: netemul::Endpoint>(name: &str) -> Result {
+async fn sends_igmp_reports<E: netemul::Endpoint>(name: &str) {
     const INTERFACE_ADDR: std::net::Ipv4Addr = std_ip_v4!("192.168.0.1");
     const MULTICAST_ADDR: std::net::Ipv4Addr = std_ip_v4!("224.1.2.3");
 
-    let sandbox = netemul::TestSandbox::new().context("error creating sandbox")?;
+    let sandbox = netemul::TestSandbox::new().expect("error creating sandbox");
     let (_network, realm, _netstack, iface, fake_ep) =
-        setup_network::<E, _>(&sandbox, name).await.context("error setting up network")?;
+        setup_network::<E, _>(&sandbox, name).await.expect("error setting up network");
 
     let () = iface
         .add_ip_addr(net::Subnet {
@@ -36,26 +35,26 @@ async fn sends_igmp_reports<E: netemul::Endpoint>(name: &str) -> Result {
             prefix_len: 24,
         })
         .await
-        .context("error adding IP address")?;
+        .expect("error adding IP address");
 
     let sock = fuchsia_async::net::UdpSocket::bind_in_realm(
         &realm,
         std::net::SocketAddrV4::new(std::net::Ipv4Addr::UNSPECIFIED, 0).into(),
     )
     .await
-    .context("error creating socket")?;
+    .expect("error creating socket");
 
     let () = sock
         .as_ref()
         .join_multicast_v4(&MULTICAST_ADDR, &INTERFACE_ADDR)
-        .context("error joining multicast group")?;
+        .expect("error joining multicast group");
 
     let net_types_ip_multicast_addr = net_types_ip::Ipv4Addr::new(MULTICAST_ADDR.octets());
 
     let stream = fake_ep
         .frame_stream()
-        .map(|r| r.context("error getting OnData event"))
-        .try_filter_map(|(data, dropped)| {
+        .map(|r| r.expect("error getting OnData event"))
+        .filter_map(|(data, dropped)| {
             async move {
                 assert_eq!(dropped, 0);
                 let mut data = &data[..];
@@ -64,20 +63,20 @@ async fn sends_igmp_reports<E: netemul::Endpoint>(name: &str) -> Result {
                 // than the minimum ethernet frame length and our virtual (netemul) interface
                 // does not pad runt ethernet frames before transmission.
                 let eth = EthernetFrame::parse(&mut data, EthernetFrameLengthCheck::NoCheck)
-                    .context("error parsing ethernet frame")?;
+                    .expect("error parsing ethernet frame");
 
                 if eth.ethertype() != Some(EtherType::Ipv4) {
                     // Ignore non-IPv4 packets.
-                    return Ok(None);
+                    return None;
                 }
 
                 let (mut payload, src_ip, dst_ip, proto, ttl) =
                     parse_ip_packet::<net_types_ip::Ipv4>(&data)
-                        .context("error parsing IPv4 packet")?;
+                        .expect("error parsing IPv4 packet");
 
                 if proto != Ipv4Proto::Igmp {
                     // Ignore non-IGMP packets.
-                    return Ok(None);
+                    return None;
                 }
 
                 assert_eq!(src_ip, net_types_ip::Ipv4Addr::new(INTERFACE_ADDR.octets()), "IGMP messages must be sent from an address assigned to the NIC");
@@ -91,7 +90,7 @@ async fn sends_igmp_reports<E: netemul::Endpoint>(name: &str) -> Result {
                 assert_eq!(ttl, 1, "IGMP messages must have a TTL of 1");
 
                 let igmp = IgmpMessage::<_, IgmpMembershipReportV2>::parse(&mut payload, ())
-                    .context("error parsing IGMP message")?;
+                    .expect("error parsing IGMP message");
 
                 let group_addr = igmp.group_addr();
                 assert!(group_addr.is_multicast(), "IGMP reports must only be sent for multicast addresses; group_addr = {}", group_addr);
@@ -99,22 +98,20 @@ async fn sends_igmp_reports<E: netemul::Endpoint>(name: &str) -> Result {
                 if group_addr != net_types_ip_multicast_addr {
                     // We are only interested in the report for the multicast group we
                     // joined.
-                    return Ok(None);
+                    return None;
                 }
 
                 assert_eq!(dst_ip, group_addr, "the destination of an IGMP report should be the multicast group the report is for");
 
-                Ok(Some(()))
+                Some(())
             }
         });
     futures::pin_mut!(stream);
     let () = stream
-        .try_next()
+        .next()
         .on_timeout(ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT.after_now(), || {
-            return Err(anyhow::anyhow!("timed out waiting for the IGMP report"));
+            panic!("timed out waiting for the IGMP report");
         })
-        .await?
-        .context("error getting our expected IGMP report")?;
-
-    Ok(())
+        .await
+        .expect("error getting our expected IGMP report");
 }
