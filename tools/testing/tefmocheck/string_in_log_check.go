@@ -166,28 +166,33 @@ func (c *stringInLogCheck) OutputFiles() []string {
 // StringInLogsChecks returns checks to detect bad strings in certain logs.
 func StringInLogsChecks() []FailureModeCheck {
 	ret := []FailureModeCheck{
-		// For fxbug.dev/57548.
-		// Hardware watchdog tripped, should not happen.
-		// This string is specified in u-boot.
-		&stringInLogCheck{String: "reboot_mode=watchdog_reboot", Type: serialLogType},
-		// For fxbug.dev/47649.
-		&stringInLogCheck{String: "kvm run failed Bad address", Type: swarmingOutputType},
-		// For fxbug.dev/44779.
-		&stringInLogCheck{String: netutilconstants.CannotFindNodeErrMsg, Type: swarmingOutputType},
-		// For fxbug.dev/51015.
-		&stringInLogCheck{
-			String:         bootserverconstants.FailedToSendErrMsg(bootserverconstants.CmdlineNetsvcName),
-			Type:           swarmingOutputType,
-			SkipPassedTask: true,
-		},
-		// For fxbug.dev/43188.
-		&stringInLogCheck{String: "/dev/net/tun (qemu): Device or resource busy", Type: swarmingOutputType},
 		// For fxbug.dev/85875
 		// This is printed by Swarming after a Swarming task's command completes, and
 		// suggests that a test leaked a subprocess that modified one of the task's
 		// output files after the task's command completed but before Swarming finished
 		// uploading outputs.
+		//
+		// This is a serious issue and always causes the Swarming task to fail,
+		// so we prioritize it over all other checks.
 		&stringInLogCheck{String: "error: blob size changed while uploading", Type: swarmingOutputType},
+	}
+	// Many of the infra tool checks match failure modes that have a root cause
+	// somewhere within Fuchsia itself, so we want to make sure to check for
+	// failures within the OS first to make sure we get as close to the root
+	// cause as possible.
+	ret = append(ret, fuchsiaLogChecks()...)
+	ret = append(ret, infraToolLogChecks()...)
+	return ret
+}
+
+// fuchsiaLogChecks returns checks for logs that come from the target Fuchsia
+// device rather than from infrastructure host tools.
+func fuchsiaLogChecks() []FailureModeCheck {
+	ret := []FailureModeCheck{
+		// For fxbug.dev/57548.
+		// Hardware watchdog tripped, should not happen.
+		// This string is specified in u-boot.
+		&stringInLogCheck{String: "reboot_mode=watchdog_reboot", Type: serialLogType},
 		// For fxbug.dev/55637
 		&stringInLogCheck{String: " in fx_logger::GetSeverity() ", Type: swarmingOutputType},
 		// For fxbug.dev/71784. Do not check for this in swarming output as this does not indicate
@@ -244,6 +249,47 @@ func StringInLogsChecks() []FailureModeCheck {
 		// These may be in the output of tests, but the syslogType doesn't contain any test output.
 		&stringInLogCheck{String: "ASSERT FAILED", Type: syslogType},
 		&stringInLogCheck{String: "DEVICE SUSPEND TIMED OUT", Type: syslogType},
+		// For fxbug.dev/61419.
+		// Error is being logged at https://fuchsia.googlesource.com/fuchsia/+/675c6b9cc2452cd7108f075d91e048218b92ae69/garnet/bin/run_test_component/main.cc#431
+		&stringInLogCheck{
+			String: ".cmx canceled due to timeout.",
+			Type:   swarmingOutputType,
+			ExceptBlocks: []*logBlock{
+				{
+					startString: "[ RUN      ] RunFixture.TestTimeout",
+					endString:   "RunFixture.TestTimeout (",
+				},
+			},
+			OnlyOnStates: []string{"TIMED_OUT"},
+		},
+		&stringInLogCheck{
+			String: "failed to resolve fuchsia-pkg://fuchsia.com/run_test_component#bin/run-test-component",
+			Type:   swarmingOutputType,
+		},
+		&stringInLogCheck{
+			String: "Got no package for fuchsia-pkg://",
+			Type:   swarmingOutputType,
+		},
+	}...)
+	return ret
+}
+
+// infraToolLogChecks returns all the checks for logs that are emitted by
+// infrastructure host tools.
+func infraToolLogChecks() []FailureModeCheck {
+	return []FailureModeCheck{
+		// For fxbug.dev/47649.
+		&stringInLogCheck{String: "kvm run failed Bad address", Type: swarmingOutputType},
+		// For fxbug.dev/44779.
+		&stringInLogCheck{String: netutilconstants.CannotFindNodeErrMsg, Type: swarmingOutputType},
+		// For fxbug.dev/51015.
+		&stringInLogCheck{
+			String:         bootserverconstants.FailedToSendErrMsg(bootserverconstants.CmdlineNetsvcName),
+			Type:           swarmingOutputType,
+			SkipPassedTask: true,
+		},
+		// For fxbug.dev/43188.
+		&stringInLogCheck{String: "/dev/net/tun (qemu): Device or resource busy", Type: swarmingOutputType},
 		// testrunner logs this when the serial socket goes away unexpectedly.
 		&stringInLogCheck{String: ".sock: write: broken pipe", Type: swarmingOutputType},
 		// For fxbug.dev/85596.
@@ -306,19 +352,6 @@ func StringInLogsChecks() []FailureModeCheck {
 			String: fmt.Sprintf("botanist ERROR: %s", sshutilconstants.TimedOutConnectingMsg),
 			Type:   swarmingOutputType,
 		},
-		// For fxbug.dev/61419.
-		// Error is being logged at https://fuchsia.googlesource.com/fuchsia/+/675c6b9cc2452cd7108f075d91e048218b92ae69/garnet/bin/run_test_component/main.cc#431
-		&stringInLogCheck{
-			String: ".cmx canceled due to timeout.",
-			Type:   swarmingOutputType,
-			ExceptBlocks: []*logBlock{
-				{
-					startString: "[ RUN      ] RunFixture.TestTimeout",
-					endString:   "RunFixture.TestTimeout (",
-				},
-			},
-			OnlyOnStates: []string{"TIMED_OUT"},
-		},
 		// For fxbug.dev/61420.
 		&stringInLogCheck{
 			String:       fmt.Sprintf("syslog: %s", syslogconstants.CtxReconnectError),
@@ -334,14 +367,6 @@ func StringInLogsChecks() []FailureModeCheck {
 			String: fmt.Sprintf("testrunner ERROR: %s", testrunnerconstants.FailedToReconnectMsg),
 			Type:   swarmingOutputType,
 		},
-		&stringInLogCheck{
-			String: "failed to resolve fuchsia-pkg://fuchsia.com/run_test_component#bin/run-test-component",
-			Type:   swarmingOutputType,
-		},
-		&stringInLogCheck{
-			String: "Got no package for fuchsia-pkg://",
-			Type:   swarmingOutputType,
-		},
 		// For fxbug.dev/77689.
 		&stringInLogCheck{
 			String: testrunnerconstants.FailedToStartSerialTestMsg,
@@ -353,6 +378,5 @@ func StringInLogsChecks() []FailureModeCheck {
 			String: fmt.Sprintf("testrunner ERROR: %s", testrunnerconstants.FailedToRunSnapshotMsg),
 			Type:   swarmingOutputType,
 		},
-	}...)
-	return ret
+	}
 }

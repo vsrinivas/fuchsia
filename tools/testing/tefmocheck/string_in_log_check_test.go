@@ -7,10 +7,13 @@ package tefmocheck
 import (
 	"fmt"
 	"path"
+	"strings"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
-func TestStringInLogCheck(t *testing.T) {
+func TestCheck(t *testing.T) {
 	const killerString = "KILLER STRING"
 	const exceptString = "Don't die!"
 	exceptBlock := &logBlock{
@@ -168,4 +171,36 @@ func TestStringInLogCheck(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestStringInLogsChecks(t *testing.T) {
+	t.Run("checks for infra tool logs are bucketed correctly", func(t *testing.T) {
+		infraTools := []string{"botanist", "testrunner"}
+		for _, check := range fuchsiaLogChecks() {
+			for _, tool := range infraTools {
+				if strings.Contains(check.Name(), tool) {
+					t.Errorf("Log check mentioning tool %q should go in infraToolLogChecks: %q", tool, check.Name())
+				}
+			}
+		}
+	})
+
+	t.Run("StringInLogsChecks returns all expected checks", func(t *testing.T) {
+		// This is intentionally brittle; we want to make it difficult for
+		// people to reorder checks in ways that might degrade tefmocheck's
+		// ability to root-cause failures.
+		expected := append(fuchsiaLogChecks(), infraToolLogChecks()...)
+		got := StringInLogsChecks()
+		// Crude check to make sure someone doesn't accidentally strip out most
+		// of StringInLogsChecks .
+		if len(got) < 50 {
+			t.Fatalf("StringInLogsChecks returned only %d checks, expected >=50", len(got))
+		}
+		// It's ok to have some extra checks preceding the start of the expected
+		// checks, so trim those off.
+		got = got[len(got)-len(expected):]
+		if diff := cmp.Diff(expected, got, cmp.AllowUnexported(stringInLogCheck{}, logBlock{})); diff != "" {
+			t.Errorf("StringInLogsChecks() returned diff (-want +got): %s", diff)
+		}
+	})
 }
