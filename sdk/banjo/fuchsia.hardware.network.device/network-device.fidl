@@ -52,7 +52,7 @@
 /// `NetworkDeviceIfc` through [`NetworkDeviceIfc.CompleteRx`], which, in turn,
 /// sends that data over to applications.
 ///
-/// A receive buffer flows from `NetworkDeviceIfc` into `NetworkDeviceImpl`
+/// A transmit buffer flows from `NetworkDeviceIfc` into `NetworkDeviceImpl`
 /// through the [`NetworkDeviceImpl.QueueTx`] method, and it's returned to
 /// [`NetworkDeviceIfc`] as a [`TxResult`]. The diagram below illustrates the
 /// mechanism:
