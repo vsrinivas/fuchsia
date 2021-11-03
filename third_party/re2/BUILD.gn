@@ -79,25 +79,27 @@ source_set("re2_source") {
 
 # Building as a shared library to reduce space usage in production images.
 # See space analysis in fxrev.dev/532721.
-shared_library("re2") {
+target(default_library_type, "re2") {
   deps = [ ":re2_source" ]
   public = [ "src/re2/re2.h" ]
   public_configs = [ ":re2_config" ]
   configs += [ ":re2_skipped_warnings" ]
   configs -= [ "//build/config:symbol_visibility_hidden" ]
 
-  if (is_mac) {
-    version_script = "src/libre2.symbols.darwin"
-  } else {
-    version_script = "src/libre2.symbols"
-  }
-  inputs = [ version_script ]
-  if (is_mac) {
-    ldflags = [ "-Wl,-exported_symbols_list=" +
-                rebase_path(version_script, root_build_dir) ]
-  } else {
-    ldflags = [ "-Wl,--version-script=" +
-                rebase_path(version_script, root_build_dir) ]
+  if (default_library_type == "shared_library") {
+    if (is_mac) {
+      version_script = "src/libre2.symbols.darwin"
+    } else {
+      version_script = "src/libre2.symbols"
+    }
+    inputs = [ version_script ]
+    if (is_mac) {
+      ldflags = [ "-Wl,-exported_symbols_list=" +
+                  rebase_path(version_script, root_build_dir) ]
+    } else {
+      ldflags = [ "-Wl,--version-script=" +
+                  rebase_path(version_script, root_build_dir) ]
+    }
   }
 }
 
