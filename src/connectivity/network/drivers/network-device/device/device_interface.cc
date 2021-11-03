@@ -46,9 +46,8 @@ const char* DeviceStatusToString(network::internal::DeviceStatus status) {
 namespace network {
 
 zx::status<std::unique_ptr<NetworkDeviceInterface>> NetworkDeviceInterface::Create(
-    async_dispatcher_t* dispatcher, ddk::NetworkDeviceImplProtocolClient parent,
-    const char* parent_name) {
-  return internal::DeviceInterface::Create(dispatcher, parent, parent_name);
+    async_dispatcher_t* dispatcher, ddk::NetworkDeviceImplProtocolClient parent) {
+  return internal::DeviceInterface::Create(dispatcher, parent);
 }
 
 namespace internal {
@@ -66,14 +65,13 @@ uint16_t TransformFifoDepth(uint16_t device_depth) {
 }
 
 zx::status<std::unique_ptr<DeviceInterface>> DeviceInterface::Create(
-    async_dispatcher_t* dispatcher, ddk::NetworkDeviceImplProtocolClient parent,
-    const char* parent_name) {
+    async_dispatcher_t* dispatcher, ddk::NetworkDeviceImplProtocolClient parent) {
   fbl::AllocChecker ac;
   std::unique_ptr<DeviceInterface> device(new (&ac) DeviceInterface(dispatcher, parent));
   if (!ac.check()) {
     return zx::error(ZX_ERR_NO_MEMORY);
   }
-  zx_status_t status = device->Init(parent_name);
+  zx_status_t status = device->Init();
   if (status != ZX_OK) {
     return zx::error(status);
   }
@@ -97,8 +95,8 @@ DeviceInterface::~DeviceInterface() {
   ZX_ASSERT_MSG(!active_ports, "Can't destroy device interface with %ld ports", active_ports);
 }
 
-zx_status_t DeviceInterface::Init(const char* parent_name) {
-  LOGF_TRACE("network-device: %s('%s')", __FUNCTION__, parent_name);
+zx_status_t DeviceInterface::Init() {
+  LOGF_TRACE("network-device: %s", __FUNCTION__);
   if (!device_.is_valid()) {
     LOG_ERROR("network-device: init: no protocol");
     return ZX_ERR_INTERNAL;
@@ -114,26 +112,24 @@ zx_status_t DeviceInterface::Init(const char* parent_name) {
   if (ops.init == nullptr || ops.get_info == nullptr || ops.stop == nullptr ||
       ops.start == nullptr || ops.queue_tx == nullptr || ops.queue_rx_space == nullptr ||
       ops.prepare_vmo == nullptr || ops.release_vmo == nullptr || ops.set_snoop == nullptr) {
-    LOGF_ERROR("network-device: init: device '%s': incomplete protocol", parent_name);
+    LOGF_ERROR("network-device: init: device: incomplete protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   device_.GetInfo(&device_info_);
   if (device_info_.buffer_alignment == 0) {
-    LOGF_ERROR("network-device: init: device '%s' reports invalid zero buffer alignment",
-               parent_name);
+    LOGF_ERROR("network-device: init: device reports invalid zero buffer alignment");
     return ZX_ERR_NOT_SUPPORTED;
   }
   if (device_info_.rx_threshold > device_info_.rx_depth) {
-    LOGF_ERROR("network-device: init: device'%s' reports rx_threshold = %d larger than rx_depth %d",
-               parent_name, device_info_.rx_threshold, device_info_.rx_depth);
+    LOGF_ERROR("network-device: init: device reports rx_threshold = %d larger than rx_depth %d",
+               device_info_.rx_threshold, device_info_.rx_depth);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   if (device_info_.rx_accel_count > netdev::wire::kMaxAccelFlags ||
       device_info_.tx_accel_count > netdev::wire::kMaxAccelFlags) {
-    LOGF_ERROR("network-device: init: device '%s' reports too many acceleration flags",
-               parent_name);
+    LOGF_ERROR("network-device: init: device reports too many acceleration flags");
     return ZX_ERR_NOT_SUPPORTED;
   }
   // Copy the vectors of supported acceleration flags.
@@ -153,8 +149,8 @@ zx_status_t DeviceInterface::Init(const char* parent_name) {
   device_info_.tx_accel_list = nullptr;
 
   if (device_info_.rx_depth > kMaxFifoDepth || device_info_.tx_depth > kMaxFifoDepth) {
-    LOGF_ERROR("network-device: init: device '%s' reports too large FIFO depths: %d/%d (max=%d)",
-               parent_name, device_info_.rx_depth, device_info_.tx_depth, kMaxFifoDepth);
+    LOGF_ERROR("network-device: init: device reports too large FIFO depths: %d/%d (max=%d)",
+               device_info_.rx_depth, device_info_.tx_depth, kMaxFifoDepth);
     return ZX_ERR_NOT_SUPPORTED;
   }
 

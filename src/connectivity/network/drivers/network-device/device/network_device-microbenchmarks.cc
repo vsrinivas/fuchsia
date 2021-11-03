@@ -193,7 +193,7 @@ bool LatencyTest(perftest::RepeatState* state, const uint16_t buffer_count) {
   network::FakeDeviceImpl impl(state);
 
   zx::status device_status =
-      network::internal::DeviceInterface::Create(loop.dispatcher(), impl.client(), "BenchmarkImpl");
+      network::internal::DeviceInterface::Create(loop.dispatcher(), impl.client());
   ASSERT_OK(device_status.status_value(), "failed to create device");
   std::unique_ptr device = std::move(device_status.value());
 

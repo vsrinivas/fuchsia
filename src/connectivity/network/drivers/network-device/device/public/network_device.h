@@ -26,8 +26,7 @@ class NetworkDeviceInterface {
   // own threads for fast path operations.
   // The parent_name argument is only used for diagnostic purposes.
   static zx::status<std::unique_ptr<NetworkDeviceInterface>> Create(
-      async_dispatcher_t* dispatcher, ddk::NetworkDeviceImplProtocolClient parent,
-      const char* parent_name);
+      async_dispatcher_t* dispatcher, ddk::NetworkDeviceImplProtocolClient parent);
 
   // Tears down the NetworkDeviceInterface.
   // A NetworkDeviceInterface must not be destroyed until the callback provided to teardown is

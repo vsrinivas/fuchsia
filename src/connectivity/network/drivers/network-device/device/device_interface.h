@@ -59,8 +59,7 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
                         public ::network::NetworkDeviceInterface {
  public:
   static zx::status<std::unique_ptr<DeviceInterface>> Create(
-      async_dispatcher_t* dispatcher, ddk::NetworkDeviceImplProtocolClient parent,
-      const char* parent_name);
+      async_dispatcher_t* dispatcher, ddk::NetworkDeviceImplProtocolClient parent);
   ~DeviceInterface() override;
 
   // Public NetworkDevice API.
@@ -186,7 +185,7 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
 
   explicit DeviceInterface(async_dispatcher_t* dispatcher,
                            ddk::NetworkDeviceImplProtocolClient parent);
-  zx_status_t Init(const char* parent_name);
+  zx_status_t Init();
 
   // Starts the data path with the device implementation.
   void StartDevice() __TA_EXCLUDES(control_lock_, tx_lock_, rx_lock_);

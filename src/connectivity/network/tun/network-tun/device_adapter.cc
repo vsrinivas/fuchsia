@@ -25,8 +25,8 @@ zx::status<std::unique_ptr<DeviceAdapter>> DeviceAdapter::Create(async_dispatche
       .ctx = adapter.get(),
   };
 
-  zx::status device = NetworkDeviceInterface::Create(
-      dispatcher, ddk::NetworkDeviceImplProtocolClient(&proto), "network-tun");
+  zx::status device =
+      NetworkDeviceInterface::Create(dispatcher, ddk::NetworkDeviceImplProtocolClient(&proto));
   if (device.is_error()) {
     return device.take_error();
   }

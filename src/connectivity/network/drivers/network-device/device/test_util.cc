@@ -314,7 +314,7 @@ zx::status<std::unique_ptr<NetworkDeviceInterface>> FakeNetworkDeviceImpl::Creat
     async_dispatcher_t* dispatcher) {
   network_device_impl_protocol_t protocol = proto();
   zx::status device = internal::DeviceInterface::Create(
-      dispatcher, ddk::NetworkDeviceImplProtocolClient(&protocol), "FakeImpl");
+      dispatcher, ddk::NetworkDeviceImplProtocolClient(&protocol));
   if (device.is_error()) {
     return device.take_error();
   }
