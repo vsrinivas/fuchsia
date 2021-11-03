@@ -91,7 +91,7 @@ Status IntelDsp::ParseNhlt() {
   args[1].set_integer_val(fidl::ObjectView<uint64_t>::FromExternal(&nhlt_query_revid));
   args[2].set_integer_val(fidl::ObjectView<uint64_t>::FromExternal(&nhlt_query_func_index));
   auto& acpi = controller_->acpi().borrow();
-  auto result = acpi.EvaluateObject(
+  auto result = acpi->EvaluateObject(
       "_DSM", fuchsia_hardware_acpi::wire::EvaluateObjectMode::kParseResources,
       fidl::VectorView<fuchsia_hardware_acpi::wire::Object>::FromExternal(args));
   if (!result.ok()) {
