@@ -38,7 +38,7 @@ bool CpuStatsFetcherImpl::FetchCpuStats() {
     return false;
   }
   cpu_fetch_time_ = std::chrono::high_resolution_clock::now();
-  auto result = stats_service_.GetCpuStats(cpu_stats_buffer_->view());
+  auto result = stats_service_.buffer(cpu_stats_buffer_->view())->GetCpuStats();
   if (result.status() != ZX_OK) {
     FX_LOGS(ERROR) << "CpuStatsFetcherImpl: Fetching "
                    << "CpuStats through fuchsia.kernel.Stats returns "
