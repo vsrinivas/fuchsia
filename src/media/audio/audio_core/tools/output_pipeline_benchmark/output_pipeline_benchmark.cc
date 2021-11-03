@@ -202,11 +202,14 @@ OutputPipelineBenchmark::Scenario OutputPipelineBenchmark::Scenario::FromString(
   return s;
 }
 
-std::shared_ptr<OutputPipeline> OutputPipelineBenchmark::CreateOutputPipeline() {
+std::shared_ptr<OutputPipeline> OutputPipelineBenchmark::CreateOutputPipeline(
+    std::unique_ptr<EffectsLoaderV2> effects_loader_v2) {
   constexpr char kProcessConfigPath[] = "/config/data/audio_core_config.json";
   auto process_config = ProcessConfigLoader::LoadProcessConfig(kProcessConfigPath);
   FX_CHECK(!process_config.is_error())
       << "Failed to load " << kProcessConfigPath << ": " << process_config.error();
+
+  effects_loader_v2_ = std::move(effects_loader_v2);
 
   auto device_profile = process_config.value().device_config().output_device_profile(
       AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS);
@@ -225,8 +228,9 @@ std::shared_ptr<OutputPipeline> OutputPipelineBenchmark::CreateOutputPipeline() 
       960, ref_time_to_frac_presentation_frame, *device_clock_);
 }
 
-std::unique_ptr<EffectsLoaderV2> OutputPipelineBenchmark::CreateEffectsLoaderV2() {
-  auto result = EffectsLoaderV2::CreateFromContext(context_);
+std::unique_ptr<EffectsLoaderV2> OutputPipelineBenchmark::CreateEffectsLoaderV2(
+    sys::ComponentContext& context) {
+  auto result = EffectsLoaderV2::CreateFromContext(context);
   if (result.is_ok()) {
     return std::move(result.value());
   }

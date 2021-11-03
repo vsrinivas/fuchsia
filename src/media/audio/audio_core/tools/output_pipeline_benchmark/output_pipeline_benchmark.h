@@ -46,7 +46,8 @@ class OutputPipelineBenchmark {
   };
 
   explicit OutputPipelineBenchmark(sys::ComponentContext& context)
-      : context_(context), effects_loader_v2_(CreateEffectsLoaderV2()) {}
+      : context_(context),
+        output_pipeline_(CreateOutputPipeline(CreateEffectsLoaderV2(context_))) {}
 
   void PrintLegend(zx::duration mix_period);
 
@@ -56,17 +57,19 @@ class OutputPipelineBenchmark {
            perftest::ResultsSet* results, bool print_summary);
 
  private:
-  std::shared_ptr<OutputPipeline> CreateOutputPipeline();
+  std::shared_ptr<OutputPipeline> CreateOutputPipeline(
+      std::unique_ptr<EffectsLoaderV2> effects_loader_v2);
   std::shared_ptr<ReadableStream> CreateInput(const Input& input);
-  std::unique_ptr<EffectsLoaderV2> CreateEffectsLoaderV2();
+  static std::unique_ptr<EffectsLoaderV2> CreateEffectsLoaderV2(sys::ComponentContext& context);
 
   std::shared_ptr<testing::FakeAudioClockFactory> clock_factory_ =
       std::make_shared<testing::FakeAudioClockFactory>();
   std::unique_ptr<AudioClock> device_clock_ =
       clock_factory_->CreateDeviceFixed(zx::time(0), 0, AudioClock::kMonotonicDomain);
-  std::shared_ptr<OutputPipeline> output_pipeline_ = CreateOutputPipeline();
+
   sys::ComponentContext& context_;
   std::unique_ptr<EffectsLoaderV2> effects_loader_v2_;
+  std::shared_ptr<OutputPipeline> output_pipeline_;
 };
 
 }  // namespace media::audio
