@@ -52,7 +52,7 @@ class NetDeviceTest : public gtest::RealLoopFixture {
 
   tun::wire::DeviceConfig DefaultDeviceConfig() {
     tun::wire::DeviceConfig config(alloc_);
-    config.set_blocking(alloc_, true);
+    config.set_blocking(true);
     return config;
   }
 
@@ -63,8 +63,8 @@ class NetDeviceTest : public gtest::RealLoopFixture {
 
   tun::wire::BasePortConfig DefaultBasePortConfig() {
     tun::wire::BasePortConfig config(alloc_);
-    config.set_id(alloc_, kPortId);
-    config.set_mtu(alloc_, 1500);
+    config.set_id(kPortId);
+    config.set_mtu(1500);
     const netdev::wire::FrameType rx_types[] = {
         netdev::wire::FrameType::kEthernet,
     };
@@ -92,7 +92,7 @@ class NetDeviceTest : public gtest::RealLoopFixture {
   tun::wire::DevicePortConfig DefaultDevicePortConfig() {
     tun::wire::DevicePortConfig config(alloc_);
     config.set_base(alloc_, DefaultBasePortConfig());
-    config.set_online(alloc_, true);
+    config.set_online(true);
     return config;
   }
 
@@ -256,9 +256,9 @@ TEST_F(NetDeviceTest, TestRxTx) {
 
   bool wrote_frame = false;
   tun::wire::Frame frame(alloc_);
-  frame.set_frame_type(alloc_, netdev::wire::FrameType::kEthernet);
+  frame.set_frame_type(netdev::wire::FrameType::kEthernet);
   frame.set_data(alloc_, fidl::VectorView<uint8_t>::FromExternal(send_data));
-  frame.set_port(alloc_, kPortId);
+  frame.set_port(kPortId);
   tun_device->WriteFrame(
       std::move(frame), [&wrote_frame](fidl::WireResponse<tun::Device::WriteFrame>* response) {
         const tun::wire::DeviceWriteFrameResult& result = response->result;
@@ -324,10 +324,10 @@ TEST_F(NetDeviceTest, TestEcho) {
       write_bridge.completer.complete_ok();
     } else {
       tun::wire::Frame frame(alloc_);
-      frame.set_frame_type(alloc_, netdev::wire::FrameType::kEthernet);
+      frame.set_frame_type(netdev::wire::FrameType::kEthernet);
       frame.set_data(alloc_, fidl::VectorView<uint8_t>::FromExternal(
                                  reinterpret_cast<uint8_t*>(&frame_count), sizeof(frame_count)));
-      frame.set_port(alloc_, kPortId);
+      frame.set_port(kPortId);
       tun_device->WriteFrame(
           std::move(frame),
           [&write_bridge, &write_frame](fidl::WireResponse<tun::Device::WriteFrame>* response) {
@@ -568,7 +568,7 @@ TEST_F(NetDeviceTest, PadTxFrames) {
   constexpr size_t kSmallPayloadLength = kMinBufferLength - 2;
   auto device_config = DefaultDeviceConfig();
   tun::wire::BaseDeviceConfig base_config(alloc_);
-  base_config.set_min_tx_buffer_length(alloc_, kMinBufferLength);
+  base_config.set_min_tx_buffer_length(kMinBufferLength);
   device_config.set_base(alloc_, std::move(base_config));
 
   auto tun_device_result =

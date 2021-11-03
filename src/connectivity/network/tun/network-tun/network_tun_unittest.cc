@@ -206,23 +206,23 @@ class SimpleClient {
     rx_depth_ = rx_depth;
     tx_depth_ = tx_depth;
     fuchsia_hardware_network::wire::SessionInfo session_info(alloc_);
-    session_info.set_descriptor_version(alloc_, NETWORK_DEVICE_DESCRIPTOR_VERSION);
+    session_info.set_descriptor_version(NETWORK_DEVICE_DESCRIPTOR_VERSION);
     session_info.set_descriptor_length(
-        alloc_, static_cast<uint8_t>(sizeof(buffer_descriptor_t) / sizeof(uint64_t)));
-    session_info.set_descriptor_count(alloc_, descriptor_count_);
-    session_info.set_options(alloc_, fuchsia_hardware_network::wire::SessionFlags::kPrimary);
+        static_cast<uint8_t>(sizeof(buffer_descriptor_t) / sizeof(uint64_t)));
+    session_info.set_descriptor_count(descriptor_count_);
+    session_info.set_options(fuchsia_hardware_network::wire::SessionFlags::kPrimary);
 
     zx::vmo data;
     if ((status = data_vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &data)) != ZX_OK) {
       return status;
     }
-    session_info.set_data(alloc_, std::move(data));
+    session_info.set_data(std::move(data));
 
     zx::vmo descriptors;
     if ((status = descriptors_vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &descriptors)) != ZX_OK) {
       return status;
     }
-    session_info.set_descriptors(alloc_, std::move(descriptors));
+    session_info.set_descriptors(std::move(descriptors));
 
     fidl::WireResult session_result = device()->OpenSession("tun-test", std::move(session_info));
     if (!session_result.ok()) {
@@ -456,8 +456,8 @@ class TunTest : public gtest::RealLoopFixture {
 
   fuchsia_net_tun::wire::BasePortConfig DefaultBasePortConfig() {
     fuchsia_net_tun::wire::BasePortConfig config(alloc_);
-    config.set_mtu(alloc_, kDefaultMtu);
-    config.set_id(alloc_, kDefaultTestPort);
+    config.set_mtu(kDefaultMtu);
+    config.set_id(kDefaultTestPort);
     const fuchsia_hardware_network::wire::FrameType rx_types[] = {
         fuchsia_hardware_network::wire::FrameType::kEthernet,
     };
@@ -479,7 +479,7 @@ class TunTest : public gtest::RealLoopFixture {
 
   fuchsia_net_tun::wire::DeviceConfig DefaultDeviceConfig() {
     fuchsia_net_tun::wire::DeviceConfig config(alloc_);
-    config.set_blocking(alloc_, true);
+    config.set_blocking(true);
     return config;
   }
 
@@ -630,14 +630,14 @@ TEST_F(TunTest, InvalidPortConfigs) {
   // Zero MTU
   {
     auto config = DefaultDevicePortConfig();
-    config.base().set_mtu(alloc_, 0);
+    config.base().set_mtu(0);
     ASSERT_STATUS(wait_for_error(std::move(config)), ZX_ERR_INVALID_ARGS);
   }
 
   // MTU too large
   {
     auto config = DefaultDevicePortConfig();
-    config.base().set_mtu(alloc_, fuchsia_net_tun::wire::kMaxMtu + 1);
+    config.base().set_mtu(fuchsia_net_tun::wire::kMaxMtu + 1);
     ASSERT_STATUS(wait_for_error(std::move(config)), ZX_ERR_INVALID_ARGS);
   }
 
@@ -888,8 +888,8 @@ TEST_F(TunTest, NoMac) {
 TEST_F(TunTest, SimpleRxTx) {
   fuchsia_net_tun::wire::DeviceConfig device_config = DefaultDeviceConfig();
   fuchsia_net_tun::wire::DevicePortConfig port_config = DefaultDevicePortConfig();
-  port_config.set_online(alloc_, true);
-  device_config.set_blocking(alloc_, false);
+  port_config.set_online(true);
+  device_config.set_blocking(false);
 
   zx::status device_and_port =
       CreateDeviceAndPort(std::move(device_config), std::move(port_config));
@@ -962,8 +962,8 @@ TEST_F(TunTest, SimpleRxTx) {
   fuchsia_net_tun::wire::DeviceWriteFrameResult write_frame_result;
   {
     fuchsia_net_tun::wire::Frame frame(alloc_);
-    frame.set_frame_type(alloc_, fuchsia_hardware_network::wire::FrameType::kEthernet);
-    frame.set_port(alloc_, kDefaultTestPort);
+    frame.set_frame_type(fuchsia_hardware_network::wire::FrameType::kEthernet);
+    frame.set_port(kDefaultTestPort);
     uint8_t data[] = {0xAA, 0xBB};
     frame.set_data(alloc_, fidl::VectorView<uint8_t>::FromExternal(data));
     fidl::WireResult write_frame_wire_result = tun->WriteFrame(std::move(frame));
@@ -992,8 +992,8 @@ TEST_F(TunTest, SimpleRxTx) {
                              zx::deadline_after(kTimeout), nullptr));
   {
     fuchsia_net_tun::wire::Frame frame(alloc_);
-    frame.set_frame_type(alloc_, fuchsia_hardware_network::wire::FrameType::kEthernet);
-    frame.set_port(alloc_, kDefaultTestPort);
+    frame.set_frame_type(fuchsia_hardware_network::wire::FrameType::kEthernet);
+    frame.set_port(kDefaultTestPort);
     uint8_t data[] = {0xAA, 0xBB};
     frame.set_data(alloc_, fidl::VectorView<uint8_t>::FromExternal(data));
     fidl::WireResult write_frame_wire_result = tun->WriteFrame(std::move(frame));
@@ -1141,7 +1141,7 @@ TEST_F(TunTest, PairFallibleWrites) {
   ASSERT_OK(right_request.status_value());
 
   fuchsia_net_tun::wire::DevicePairConfig config = DefaultDevicePairConfig();
-  config.set_fallible_transmit_left(alloc_, true);
+  config.set_fallible_transmit_left(true);
 
   zx::status client_end = CreatePairAndPort(std::move(config), DefaultDevicePairPortConfig());
   ASSERT_OK(client_end.status_value());
@@ -1251,8 +1251,8 @@ TEST_F(TunTest, RejectsMissingFrameFields) {
       {
           .name = "invalid port ID",
           .update_frame =
-              [this](fuchsia_net_tun::wire::Frame& frame) {
-                frame.set_port(alloc_, fuchsia_hardware_network::wire::kMaxPorts);
+              [](fuchsia_net_tun::wire::Frame& frame) {
+                frame.set_port(fuchsia_hardware_network::wire::kMaxPorts);
               },
           .expect = ZX_ERR_INVALID_ARGS,
       },
@@ -1262,10 +1262,10 @@ TEST_F(TunTest, RejectsMissingFrameFields) {
     SCOPED_TRACE(test.name);
     // Build a valid frame then let each test case update it to make it invalid.
     fuchsia_net_tun::wire::Frame frame(alloc_);
-    frame.set_frame_type(alloc_, fuchsia_hardware_network::wire::FrameType::kEthernet);
+    frame.set_frame_type(fuchsia_hardware_network::wire::FrameType::kEthernet);
     uint8_t data[] = {0x01, 0x02, 0x03};
     frame.set_data(alloc_, fidl::VectorView<uint8_t>::FromExternal(data));
-    frame.set_port(alloc_, kDefaultTestPort);
+    frame.set_port(kDefaultTestPort);
 
     test.update_frame(frame);
 
@@ -1303,10 +1303,10 @@ TEST_F(TunTest, RejectsIfOffline) {
   // Can't send from the tun end.
   {
     fuchsia_net_tun::wire::Frame frame(alloc_);
-    frame.set_frame_type(alloc_, fuchsia_hardware_network::wire::FrameType::kEthernet);
+    frame.set_frame_type(fuchsia_hardware_network::wire::FrameType::kEthernet);
     uint8_t data[] = {0x01, 0x02, 0x03};
     frame.set_data(alloc_, fidl::VectorView<uint8_t>::FromExternal(data));
-    frame.set_port(alloc_, kDefaultTestPort);
+    frame.set_port(kDefaultTestPort);
     fidl::WireResult write_frame_wire_result = tun->WriteFrame(std::move(frame));
     ASSERT_OK(write_frame_wire_result.status());
 
@@ -1463,11 +1463,11 @@ TEST_F(TunTest, PairEcho) {
 TEST_F(TunTest, ReportsInternalTxErrors) {
   fuchsia_net_tun::wire::DeviceConfig device_config = DefaultDeviceConfig();
   fuchsia_net_tun::wire::DevicePortConfig port_config = DefaultDevicePortConfig();
-  port_config.set_online(alloc_, true);
+  port_config.set_online(true);
   // We need tun to be nonblocking so we're able to excite the path that attempts to copy a tx
   // buffer into FIDL and fails because we've removed the VMOs. If the call was blocking it'd block
   // forever and we wouldn't be able to use a sync client here.
-  device_config.set_blocking(alloc_, false);
+  device_config.set_blocking(false);
   zx::status device_and_port =
       CreateDeviceAndPort(std::move(device_config), std::move(port_config));
   ASSERT_OK(device_and_port.status_value());
@@ -1527,9 +1527,9 @@ TEST_F(TunTest, ChainsRxBuffers) {
   constexpr uint16_t kChainedBuffers = 3;
   fuchsia_net_tun::wire::DeviceConfig device_config = DefaultDeviceConfig();
   fuchsia_net_tun::wire::DevicePortConfig port_config = DefaultDevicePortConfig();
-  port_config.set_online(alloc_, true);
+  port_config.set_online(true);
   fuchsia_net_tun::wire::BaseDeviceConfig base_device_config(alloc_);
-  base_device_config.set_min_rx_buffer_length(alloc_, kRxBufferSize);
+  base_device_config.set_min_rx_buffer_length(kRxBufferSize);
   device_config.set_base(alloc_, std::move(base_device_config));
 
   zx::status device_and_port =
@@ -1558,8 +1558,8 @@ TEST_F(TunTest, ChainsRxBuffers) {
   }
 
   fuchsia_net_tun::wire::Frame frame(alloc_);
-  frame.set_port(alloc_, kDefaultTestPort);
-  frame.set_frame_type(alloc_, fuchsia_hardware_network::wire::FrameType::kEthernet);
+  frame.set_port(kDefaultTestPort);
+  frame.set_frame_type(fuchsia_hardware_network::wire::FrameType::kEthernet);
   frame.set_data(alloc_, fidl::VectorView<uint8_t>::FromExternal(send_data));
   fidl::WireResult write_frame_wire_result = tun->WriteFrame(std::move(frame));
   ASSERT_OK(write_frame_wire_result.status());
@@ -1637,7 +1637,7 @@ TEST_F(TunTest, AddRemovePorts) {
     zx::status server_end = fidl::CreateEndpoints(&port.client_end);
     ASSERT_OK(server_end.status_value());
     fuchsia_net_tun::wire::DevicePortConfig port_config = DefaultDevicePortConfig();
-    port_config.base().set_id(alloc_, port.id);
+    port_config.base().set_id(port.id);
     ASSERT_OK(tun->AddPort(std::move(port_config), std::move(*server_end)).status());
 
     zx::status event = WatchPorts(port_watcher);
@@ -1651,7 +1651,7 @@ TEST_F(TunTest, AddRemovePorts) {
     zx::status server_end = fidl::CreateEndpoints(&client_end);
     ASSERT_OK(server_end.status_value());
     fuchsia_net_tun::wire::DevicePortConfig port_config = DefaultDevicePortConfig();
-    port_config.base().set_id(alloc_, ports[0].id);
+    port_config.base().set_id(ports[0].id);
     ASSERT_OK(tun->AddPort(std::move(port_config), std::move(*server_end)).status());
 
     CapturingEventHandler<fuchsia_net_tun::Port> handler;
@@ -1722,7 +1722,7 @@ TEST_F(TunTest, AddRemovePairPorts) {
   for (auto& port : ports) {
     SCOPED_TRACE(port.name);
     fuchsia_net_tun::wire::DevicePairPortConfig port_config = DefaultDevicePairPortConfig();
-    port_config.base().set_id(alloc_, port.id);
+    port_config.base().set_id(port.id);
     fidl::WireResult result = tun->AddPort(std::move(port_config));
     ASSERT_OK(result.status());
     ASSERT_EQ(result.value().result.which(),
@@ -1740,7 +1740,7 @@ TEST_F(TunTest, AddRemovePairPorts) {
   // Adding the same port again returns the appropriate error.
   {
     fuchsia_net_tun::wire::DevicePairPortConfig port_config = DefaultDevicePairPortConfig();
-    port_config.base().set_id(alloc_, ports[0].id);
+    port_config.base().set_id(ports[0].id);
     fidl::WireResult result = tun->AddPort(std::move(port_config));
     ASSERT_OK(result.status());
     ASSERT_EQ(result.value().result.which(),

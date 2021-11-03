@@ -19,7 +19,7 @@ zx_status_t TestSession::Open(fidl::WireSyncClient<netdev::Device>& netdevice, c
     return info_status.status_value();
   }
   netdev::wire::SessionInfo& info = info_status.value();
-  info.set_options(alloc_, flags);
+  info.set_options(flags);
 
   auto session_name = fidl::StringView::FromExternal(name);
 
@@ -73,12 +73,11 @@ zx::status<netdev::wire::SessionInfo> TestSession::GetInfo() {
     return zx::error(status);
   }
   netdev::wire::SessionInfo info(alloc_);
-  info.set_data(alloc_, std::move(data_vmo));
-  info.set_descriptors(alloc_, std::move(descriptors_vmo));
-  info.set_descriptor_version(alloc_, NETWORK_DEVICE_DESCRIPTOR_VERSION);
-  info.set_descriptor_length(alloc_,
-                             static_cast<uint8_t>(sizeof(buffer_descriptor_t) / sizeof(uint64_t)));
-  info.set_descriptor_count(alloc_, descriptors_count_);
+  info.set_data(std::move(data_vmo));
+  info.set_descriptors(std::move(descriptors_vmo));
+  info.set_descriptor_version(NETWORK_DEVICE_DESCRIPTOR_VERSION);
+  info.set_descriptor_length(static_cast<uint8_t>(sizeof(buffer_descriptor_t) / sizeof(uint64_t)));
+  info.set_descriptor_count(descriptors_count_);
   return zx::ok(std::move(info));
 }
 
