@@ -110,10 +110,10 @@ TEST_F(I2cChildTest, Write3BytesOnce) {
   write_buffer[2] = kTestWrite2;
   auto write_segment = fidl::VectorView<uint8_t>::FromExternal(write_buffer.get(), n_write_bytes);
 
-  auto read = client_wrap.Transfer(std::move(segments_is_write),
-                                   fidl::VectorView<fidl::VectorView<uint8_t>>::FromExternal(
-                                       &write_segment, 1),        // 1 write segment.
-                                   fidl::VectorView<uint8_t>());  // No reads.
+  auto read = client_wrap->Transfer(std::move(segments_is_write),
+                                    fidl::VectorView<fidl::VectorView<uint8_t>>::FromExternal(
+                                        &write_segment, 1),        // 1 write segment.
+                                    fidl::VectorView<uint8_t>());  // No reads.
   ASSERT_OK(read.status());
   ASSERT_FALSE(read->result.is_err());
 }
@@ -156,10 +156,10 @@ TEST_F(I2cChildTest, Read3BytesOnce) {
   read_lengths[0] = 3;  // 3 bytes to read in 1 segment.
 
   auto read =
-      client_wrap.Transfer(std::move(segments_is_write),
-                           fidl::VectorView<fidl::VectorView<uint8_t>>(),  // No writes.
-                           fidl::VectorView<uint8_t>::FromExternal(read_lengths.get(),
-                                                                   n_reads));  // 1 read segment.
+      client_wrap->Transfer(std::move(segments_is_write),
+                            fidl::VectorView<fidl::VectorView<uint8_t>>(),  // No writes.
+                            fidl::VectorView<uint8_t>::FromExternal(read_lengths.get(),
+                                                                    n_reads));  // 1 read segment.
   ASSERT_OK(read.status());
   ASSERT_FALSE(read->result.is_err());
 
@@ -220,7 +220,7 @@ TEST_F(I2cChildTest, Write1ByteOnceRead1Byte3Times) {
   read_lengths[1] = 1;
   read_lengths[2] = 1;
 
-  auto read = client_wrap.Transfer(
+  auto read = client_wrap->Transfer(
       std::move(segments_is_write),
       fidl::VectorView<fidl::VectorView<uint8_t>>::FromExternal(&write_segment,
                                                                 1),  // 1 write segment.
@@ -252,7 +252,7 @@ TEST_F(I2cChildTest, BadTransfers) {
     write_buffer[0] = kTestWrite0;
     auto write_segment = fidl::VectorView<uint8_t>::FromExternal(write_buffer.get(), n_write_bytes);
 
-    auto read = client_wrap.Transfer(
+    auto read = client_wrap->Transfer(
         std::move(segments_is_write),
         // 1 segment write (incosistent with the 2 segments_is_write above).
         fidl::VectorView<fidl::VectorView<uint8_t>>::FromExternal(&write_segment, 1),
@@ -273,10 +273,10 @@ TEST_F(I2cChildTest, BadTransfers) {
     write_segments[0] = fidl::VectorView<uint8_t>::FromExternal(write_buffer.get(), n_write_bytes);
     write_segments[1] = fidl::VectorView<uint8_t>::FromExternal(write_buffer.get(), n_write_bytes);
 
-    auto read = client_wrap.Transfer(std::move(segments_is_write),
-                                     fidl::VectorView<fidl::VectorView<uint8_t>>::FromExternal(
-                                         write_segments, 2),        // 2 write segments.
-                                     fidl::VectorView<uint8_t>());  // No reads.
+    auto read = client_wrap->Transfer(std::move(segments_is_write),
+                                      fidl::VectorView<fidl::VectorView<uint8_t>>::FromExternal(
+                                          write_segments, 2),        // 2 write segments.
+                                      fidl::VectorView<uint8_t>());  // No reads.
     ASSERT_OK(read.status());
     ASSERT_TRUE(read->result.is_err());
   }
@@ -291,11 +291,11 @@ TEST_F(I2cChildTest, BadTransfers) {
     read_lengths[0] = 2;
     read_lengths[1] = 2;
 
-    auto read =
-        client_wrap.Transfer(std::move(segments_is_write),
-                             fidl::VectorView<fidl::VectorView<uint8_t>>(),  // No writes.
-                             fidl::VectorView<uint8_t>::FromExternal(read_lengths.get(),
-                                                                     n_reads));  // 2 read segments.
+    auto read = client_wrap->Transfer(
+        std::move(segments_is_write),
+        fidl::VectorView<fidl::VectorView<uint8_t>>(),  // No writes.
+        fidl::VectorView<uint8_t>::FromExternal(read_lengths.get(),
+                                                n_reads));  // 2 read segments.
     ASSERT_OK(read.status());
     ASSERT_TRUE(read->result.is_err());
   }
@@ -309,11 +309,11 @@ TEST_F(I2cChildTest, BadTransfers) {
     auto read_lengths = std::make_unique<uint8_t[]>(n_reads);
     read_lengths[0] = 2;
 
-    auto read =
-        client_wrap.Transfer(std::move(segments_is_write),
-                             fidl::VectorView<fidl::VectorView<uint8_t>>(nullptr, 0),  // No writes.
-                             fidl::VectorView<uint8_t>::FromExternal(read_lengths.get(),
-                                                                     n_reads));  // 1 read segment.
+    auto read = client_wrap->Transfer(
+        std::move(segments_is_write),
+        fidl::VectorView<fidl::VectorView<uint8_t>>(nullptr, 0),  // No writes.
+        fidl::VectorView<uint8_t>::FromExternal(read_lengths.get(),
+                                                n_reads));  // 1 read segment.
     ASSERT_OK(read.status());
     ASSERT_TRUE(read->result.is_err());
   }
