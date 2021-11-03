@@ -121,9 +121,7 @@ zx_status_t AudioDeviceStream::SetGain(float gain) {
 zx_status_t AudioDeviceStream::SetGainParams() {
   fidl::Arena allocator;
   audio_fidl::wire::GainState gain_state(allocator);
-  gain_state.set_muted(allocator, muted_)
-      .set_agc_enabled(allocator, agc_enabled_)
-      .set_gain_db(allocator, gain_);
+  gain_state.set_muted(muted_).set_agc_enabled(agc_enabled_).set_gain_db(gain_);
   fidl::WireCall(stream_ch_)->SetGain(std::move(gain_state));
   return ZX_OK;
 }

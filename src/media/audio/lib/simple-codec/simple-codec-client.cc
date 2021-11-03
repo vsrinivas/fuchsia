@@ -197,9 +197,9 @@ void SimpleCodecClient::SetGainState(GainState state) {
   fidl::Arena allocator;
 
   fuchsia_hardware_audio::wire::GainState state2(allocator);
-  state2.set_gain_db(allocator, state.gain);
-  state2.set_muted(allocator, state.muted);
-  state2.set_agc_enabled(allocator, state.agc_enabled);
+  state2.set_gain_db(state.gain);
+  state2.set_muted(state.muted);
+  state2.set_agc_enabled(state.agc_enabled);
   const auto result = codec_->SetGainState(state2);
   if (result.ok()) {
     fbl::AutoLock lock(&gain_state_lock_);

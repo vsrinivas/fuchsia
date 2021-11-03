@@ -223,7 +223,7 @@ TEST_F(SimpleAudioTest, SetAndGetGain) {
   {
     fidl::Arena allocator;
     audio_fidl::wire::GainState gain_state(allocator);
-    gain_state.set_gain_db(allocator, MockSimpleAudio::kTestGain);
+    gain_state.set_gain_db(MockSimpleAudio::kTestGain);
     auto status =
         fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)->SetGain(std::move(gain_state));
     ASSERT_OK(status.status());
@@ -248,7 +248,7 @@ TEST_F(SimpleAudioTest, WatchGainAndCloseStreamBeforeReply) {
   {
     fidl::Arena allocator;
     audio_fidl::wire::GainState gain_state(allocator);
-    gain_state.set_gain_db(allocator, MockSimpleAudio::kTestGain);
+    gain_state.set_gain_db(MockSimpleAudio::kTestGain);
     auto status =
         fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)->SetGain(std::move(gain_state));
     ASSERT_OK(status.status());
@@ -291,7 +291,7 @@ TEST_F(SimpleAudioTest, SetAndGetAgc) {
   {
     fidl::Arena allocator;
     audio_fidl::wire::GainState gain_state(allocator);
-    gain_state.set_agc_enabled(allocator, true);
+    gain_state.set_agc_enabled(true);
     auto status = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)->SetGain(gain_state);
     ASSERT_OK(status.status());
   }
@@ -303,7 +303,7 @@ TEST_F(SimpleAudioTest, SetAndGetAgc) {
   {
     fidl::Arena allocator;
     audio_fidl::wire::GainState gain_state(allocator);
-    gain_state.set_agc_enabled(allocator, false);
+    gain_state.set_agc_enabled(false);
     auto status = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)->SetGain(gain_state);
     ASSERT_OK(status.status());
   }
@@ -327,7 +327,7 @@ TEST_F(SimpleAudioTest, SetAndGetMute) {
   {
     fidl::Arena allocator;
     audio_fidl::wire::GainState gain_state(allocator);
-    gain_state.set_muted(allocator, true);
+    gain_state.set_muted(true);
     auto status = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)->SetGain(gain_state);
     ASSERT_OK(status.status());
   }
@@ -339,7 +339,7 @@ TEST_F(SimpleAudioTest, SetAndGetMute) {
   {
     fidl::Arena allocator;
     audio_fidl::wire::GainState gain_state(allocator);
-    gain_state.set_muted(allocator, false);
+    gain_state.set_muted(false);
     auto status = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)->SetGain(gain_state);
     ASSERT_OK(status.status());
   }
@@ -371,7 +371,7 @@ TEST_F(SimpleAudioTest, SetMuteWhenDisabled) {
   {
     fidl::Arena allocator;
     audio_fidl::wire::GainState gain_state(allocator);
-    gain_state.set_muted(allocator, true);
+    gain_state.set_muted(true);
     auto status =
         fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)->SetGain(std::move(gain_state));
     ASSERT_OK(status.status());
@@ -851,9 +851,7 @@ TEST_F(SimpleAudioTest, MultipleChannelsGainStateNotify) {
 
     fidl::Arena allocator;
     audio_fidl::wire::GainState gain_state(allocator);
-    gain_state.set_muted(allocator, false)
-        .set_agc_enabled(allocator, false)
-        .set_gain_db(allocator, MockSimpleAudio::kTestGain);
+    gain_state.set_muted(false).set_agc_enabled(false).set_gain_db(MockSimpleAudio::kTestGain);
     fidl::WireCall<audio_fidl::StreamConfig>((*ch1)->channel)->SetGain(std::move(gain_state));
 
     return 0;

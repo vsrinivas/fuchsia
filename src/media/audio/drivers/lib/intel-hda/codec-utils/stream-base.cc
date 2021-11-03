@@ -581,12 +581,12 @@ void IntelHDAStreamBase::WatchGainState(StreamChannel* channel,
     fidl::Arena allocator;
     audio_fidl::wire::GainState gain_state(allocator);
     if (cur_gain_state_.can_mute) {
-      gain_state.set_muted(allocator, cur_gain_state_.cur_mute);
+      gain_state.set_muted(cur_gain_state_.cur_mute);
     }
     if (cur_gain_state_.can_agc) {
-      gain_state.set_agc_enabled(allocator, cur_gain_state_.cur_mute);
+      gain_state.set_agc_enabled(cur_gain_state_.cur_mute);
     }
-    gain_state.set_gain_db(allocator, cur_gain_state_.cur_gain);
+    gain_state.set_gain_db(cur_gain_state_.cur_gain);
     channel->last_reported_gain_state_ = cur_gain_state_;
     channel->gain_completer_->Reply(std::move(gain_state));
     channel->gain_completer_.reset();
@@ -665,7 +665,7 @@ void IntelHDAStreamBase::WatchPlugState(StreamChannel* channel,
       (channel->last_reported_plugged_state_ == StreamChannel::Plugged::kPlugged) != plugged) {
     fidl::Arena allocator;
     audio_fidl::wire::PlugState plug_state(allocator);
-    plug_state.set_plugged(allocator, plugged).set_plug_state_time(allocator, plug.plug_state_time);
+    plug_state.set_plugged(plugged).set_plug_state_time(allocator, plug.plug_state_time);
     channel->last_reported_plugged_state_ =
         plugged ? StreamChannel::Plugged::kPlugged : StreamChannel::Plugged::kUnplugged;
     channel->plug_completer_->Reply(std::move(plug_state));
@@ -678,7 +678,7 @@ void IntelHDAStreamBase::NotifyPlugStateLocked(bool plugged, int64_t plug_time) 
     if (channel.plug_completer_) {
       fidl::Arena allocator;
       audio_fidl::wire::PlugState plug_state(allocator);
-      plug_state.set_plugged(allocator, plugged).set_plug_state_time(allocator, plug_time);
+      plug_state.set_plugged(plugged).set_plug_state_time(allocator, plug_time);
       channel.plug_completer_->Reply(std::move(plug_state));
       channel.plug_completer_.reset();
     }
@@ -696,15 +696,15 @@ void IntelHDAStreamBase::GetProperties(
     unique_id.data_[i] = persistent_unique_id_.data[i];
   }
   response.set_unique_id(allocator, unique_id);
-  response.set_is_input(allocator, is_input());
+  response.set_is_input(is_input());
 
   OnGetGainLocked(&cur_gain_state_);
 
-  response.set_can_mute(allocator, cur_gain_state_.can_mute);
-  response.set_can_agc(allocator, cur_gain_state_.can_agc);
-  response.set_min_gain_db(allocator, cur_gain_state_.min_gain);
-  response.set_max_gain_db(allocator, cur_gain_state_.max_gain);
-  response.set_gain_step_db(allocator, cur_gain_state_.gain_step);
+  response.set_can_mute(cur_gain_state_.can_mute);
+  response.set_can_agc(cur_gain_state_.can_agc);
+  response.set_min_gain_db(cur_gain_state_.min_gain);
+  response.set_max_gain_db(cur_gain_state_.max_gain);
+  response.set_gain_step_db(cur_gain_state_.gain_step);
 
   audio_proto::GetStringResp resp_product = {};
   audio_proto::GetStringReq req = {};
@@ -723,16 +723,15 @@ void IntelHDAStreamBase::GetProperties(
 
   audio_proto::GetClockDomainResp domain_resp = {};
   OnGetClockDomainLocked(&domain_resp);
-  response.set_clock_domain(allocator, domain_resp.clock_domain);
+  response.set_clock_domain(domain_resp.clock_domain);
 
   audio_proto::PlugDetectResp plug = {};
   OnPlugDetectLocked(channel, &plug);
   if (plug.flags & AUDIO_PDNF_CAN_NOTIFY) {
     response.set_plug_detect_capabilities(
-        allocator, audio_fidl::wire::PlugDetectCapabilities::kCanAsyncNotify);
+        audio_fidl::wire::PlugDetectCapabilities::kCanAsyncNotify);
   } else if (plug.flags & AUDIO_PDNF_HARDWIRED) {
-    response.set_plug_detect_capabilities(allocator,
-                                          audio_fidl::wire::PlugDetectCapabilities::kHardwired);
+    response.set_plug_detect_capabilities(audio_fidl::wire::PlugDetectCapabilities::kHardwired);
   }
   completer.Reply(std::move(response));
 }

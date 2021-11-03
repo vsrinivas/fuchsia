@@ -568,12 +568,12 @@ void UsbAudioStream::WatchGainState(StreamChannel* channel,
     fidl::Arena allocator;
     audio_fidl::wire::GainState gain_state(allocator);
     if (cur_gain_state.can_mute) {
-      gain_state.set_muted(allocator, cur_gain_state.cur_mute);
+      gain_state.set_muted(cur_gain_state.cur_mute);
     }
     if (cur_gain_state.can_agc) {
-      gain_state.set_agc_enabled(allocator, cur_gain_state.cur_agc);
+      gain_state.set_agc_enabled(cur_gain_state.cur_agc);
     }
-    gain_state.set_gain_db(allocator, cur_gain_state.cur_gain);
+    gain_state.set_gain_db(cur_gain_state.cur_gain);
     channel->last_reported_gain_state_ = cur_gain_state;
     channel->gain_completer_->Reply(std::move(gain_state));
     channel->gain_completer_.reset();
@@ -632,7 +632,7 @@ void UsbAudioStream::WatchPlugState(StreamChannel* channel,
       (channel->last_reported_plugged_state_ != StreamChannel::Plugged::kPlugged)) {
     fidl::Arena allocator;
     audio_fidl::wire::PlugState plug_state(allocator);
-    plug_state.set_plugged(allocator, true).set_plug_state_time(allocator, create_time_);
+    plug_state.set_plugged(true).set_plug_state_time(allocator, create_time_);
     channel->last_reported_plugged_state_ = StreamChannel::Plugged::kPlugged;
     channel->plug_completer_->Reply(std::move(plug_state));
     channel->plug_completer_.reset();
@@ -654,17 +654,16 @@ void UsbAudioStream::GetProperties(StreamChannel::GetPropertiesCompleter::Sync& 
   auto manufacturer = fidl::StringView::FromExternal(
       reinterpret_cast<const char*>(parent_.mfr_name().begin()), parent_.mfr_name().size());
 
-  stream_properties.set_is_input(allocator, is_input())
-      .set_can_mute(allocator, path.has_mute())
-      .set_can_agc(allocator, path.has_agc())
-      .set_min_gain_db(allocator, path.min_gain())
-      .set_max_gain_db(allocator, path.max_gain())
-      .set_gain_step_db(allocator, path.gain_res())
+  stream_properties.set_is_input(is_input())
+      .set_can_mute(path.has_mute())
+      .set_can_agc(path.has_agc())
+      .set_min_gain_db(path.min_gain())
+      .set_max_gain_db(path.max_gain())
+      .set_gain_step_db(path.gain_res())
       .set_product(allocator, std::move(product))
       .set_manufacturer(allocator, std::move(manufacturer))
-      .set_clock_domain(allocator, clock_domain_)
-      .set_plug_detect_capabilities(allocator,
-                                    audio_fidl::wire::PlugDetectCapabilities::kHardwired);
+      .set_clock_domain(clock_domain_)
+      .set_plug_detect_capabilities(audio_fidl::wire::PlugDetectCapabilities::kHardwired);
 
   completer.Reply(std::move(stream_properties));
 }
@@ -673,10 +672,10 @@ void UsbAudioStream::GetProperties(GetPropertiesRequestView request,
                                    GetPropertiesCompleter::Sync& completer) {
   fidl::Arena allocator;
   audio_fidl::wire::RingBufferProperties ring_buffer_properties(allocator);
-  ring_buffer_properties.set_fifo_depth(allocator, fifo_bytes_);
+  ring_buffer_properties.set_fifo_depth(fifo_bytes_);
   // TODO(johngro): Report the actual external delay.
   ring_buffer_properties.set_external_delay(allocator, 0);
-  ring_buffer_properties.set_needs_cache_flush_or_invalidate(allocator, true);
+  ring_buffer_properties.set_needs_cache_flush_or_invalidate(true);
   completer.Reply(std::move(ring_buffer_properties));
 }
 

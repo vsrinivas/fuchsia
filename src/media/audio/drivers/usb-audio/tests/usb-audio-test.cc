@@ -338,7 +338,7 @@ TEST(UsbAudioTest, SetAndGetGain) {
   {
     fidl::Arena allocator;
     audio_fidl::wire::GainState gain_state(allocator);
-    gain_state.set_gain_db(allocator, kTestGain);
+    gain_state.set_gain_db(kTestGain);
     auto status =
         fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)->SetGain(std::move(gain_state));
     ASSERT_OK(status.status());

@@ -156,7 +156,7 @@ zx_status_t SimpleAudioStream::NotifyPlugDetect() {
     if (channel.plug_completer_) {
       fidl::Arena allocator;
       audio_fidl::wire::PlugState plug_state(allocator);
-      plug_state.set_plugged(allocator, pd_flags_ & AUDIO_PDNF_PLUGGED)
+      plug_state.set_plugged(pd_flags_ & AUDIO_PDNF_PLUGGED)
           .set_plug_state_time(allocator, plug_time_);
 
       channel.plug_completer_->Reply(std::move(plug_state));
@@ -427,12 +427,12 @@ void SimpleAudioStream::WatchGainState(StreamChannel* channel,
     fidl::Arena allocator;
     audio_fidl::wire::GainState gain_state(allocator);
     if (cur_gain_state_.can_mute) {
-      gain_state.set_muted(allocator, cur_gain_state_.cur_mute);
+      gain_state.set_muted(cur_gain_state_.cur_mute);
     }
     if (cur_gain_state_.can_agc) {
-      gain_state.set_agc_enabled(allocator, cur_gain_state_.cur_agc);
+      gain_state.set_agc_enabled(cur_gain_state_.cur_agc);
     }
-    gain_state.set_gain_db(allocator, cur_gain_state_.cur_gain);
+    gain_state.set_gain_db(cur_gain_state_.cur_gain);
     channel->last_reported_gain_state_ = cur_gain_state_;
     channel->gain_completer_->Reply(std::move(gain_state));
     channel->gain_completer_.reset();
@@ -451,7 +451,7 @@ void SimpleAudioStream::WatchPlugState(StreamChannel* channel,
       (channel->last_reported_plugged_state_ == StreamChannel::Plugged::kPlugged) != plugged) {
     fidl::Arena allocator;
     audio_fidl::wire::PlugState plug_state(allocator);
-    plug_state.set_plugged(allocator, plugged).set_plug_state_time(allocator, plug_time_);
+    plug_state.set_plugged(plugged).set_plug_state_time(allocator, plug_time_);
     channel->last_reported_plugged_state_ =
         plugged ? StreamChannel::Plugged::kPlugged : StreamChannel::Plugged::kUnplugged;
     channel->plug_completer_->Reply(std::move(plug_state));
@@ -546,22 +546,22 @@ void SimpleAudioStream::GetProperties(
   fidl::StringView product(prod_name_, strlen(prod_name_));
   fidl::StringView manufacturer(mfr_name_, strlen(mfr_name_));
 
-  stream_properties.set_is_input(allocator, is_input())
-      .set_can_mute(allocator, cur_gain_state_.can_mute)
-      .set_can_agc(allocator, cur_gain_state_.can_agc)
-      .set_min_gain_db(allocator, cur_gain_state_.min_gain)
-      .set_max_gain_db(allocator, cur_gain_state_.max_gain)
-      .set_gain_step_db(allocator, cur_gain_state_.gain_step)
+  stream_properties.set_is_input(is_input())
+      .set_can_mute(cur_gain_state_.can_mute)
+      .set_can_agc(cur_gain_state_.can_agc)
+      .set_min_gain_db(cur_gain_state_.min_gain)
+      .set_max_gain_db(cur_gain_state_.max_gain)
+      .set_gain_step_db(cur_gain_state_.gain_step)
       .set_product(allocator, std::move(product))
       .set_manufacturer(allocator, std::move(manufacturer))
-      .set_clock_domain(allocator, clock_domain_);
+      .set_clock_domain(clock_domain_);
 
   if (pd_flags_ & AUDIO_PDNF_CAN_NOTIFY) {
     stream_properties.set_plug_detect_capabilities(
-        allocator, audio_fidl::wire::PlugDetectCapabilities::kCanAsyncNotify);
+        audio_fidl::wire::PlugDetectCapabilities::kCanAsyncNotify);
   } else if (pd_flags_ & AUDIO_PDNF_HARDWIRED) {
     stream_properties.set_plug_detect_capabilities(
-        allocator, audio_fidl::wire::PlugDetectCapabilities::kHardwired);
+        audio_fidl::wire::PlugDetectCapabilities::kHardwired);
   }
 
   completer.Reply(std::move(stream_properties));
@@ -647,8 +647,8 @@ void SimpleAudioStream::GetSupportedFormats(
                       "must have only one number_of_channels for frequency ranges usage");
         for (uint8_t k = 0; k < src.number_of_channels[j]; ++k) {
           attributes[k].Allocate(allocator);
-          attributes[k].set_min_frequency(allocator, src.frequency_ranges[k].min_frequency);
-          attributes[k].set_max_frequency(allocator, src.frequency_ranges[k].max_frequency);
+          attributes[k].set_min_frequency(src.frequency_ranges[k].min_frequency);
+          attributes[k].set_max_frequency(src.frequency_ranges[k].max_frequency);
         }
       }
       channel_sets[j].Allocate(allocator);
@@ -679,9 +679,9 @@ void SimpleAudioStream::GetProperties(GetPropertiesRequestView request,
   ScopedToken t(domain_token());
   fidl::Arena allocator;
   audio_fidl::wire::RingBufferProperties ring_buffer_properties(allocator);
-  ring_buffer_properties.set_fifo_depth(allocator, fifo_depth_)
+  ring_buffer_properties.set_fifo_depth(fifo_depth_)
       .set_external_delay(allocator, external_delay_nsec_)
-      .set_needs_cache_flush_or_invalidate(allocator, true)
+      .set_needs_cache_flush_or_invalidate(true)
       .set_turn_on_delay(allocator, turn_on_delay_nsec_);
   completer.Reply(std::move(ring_buffer_properties));
 }

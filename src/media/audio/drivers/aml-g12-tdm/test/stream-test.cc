@@ -589,9 +589,7 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
       fidl::Arena allocator;
       // We start with agc false and muted true.
       audio_fidl::wire::GainState gain_state(allocator);
-      gain_state.set_muted(allocator, true)
-          .set_agc_enabled(allocator, false)
-          .set_gain_db(allocator, kTestGain);
+      gain_state.set_muted(true).set_agc_enabled(false).set_gain_db(kTestGain);
       client->SetGain(std::move(gain_state));
     }
 
@@ -619,9 +617,7 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
       fidl::Arena allocator;
       // We switch to agc true and muted false.
       audio_fidl::wire::GainState gain_state(allocator);
-      gain_state.set_muted(allocator, false)
-          .set_agc_enabled(allocator, true)
-          .set_gain_db(allocator, kTestGain);
+      gain_state.set_muted(false).set_agc_enabled(true).set_gain_db(kTestGain);
       client->SetGain(std::move(gain_state));
     }
 
@@ -670,9 +666,7 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
       // Now we set gain again.
       // Change agc from last one, so the Watch below replies.
       audio_fidl::wire::GainState gain_state(allocator);
-      gain_state.set_muted(allocator, false)
-          .set_agc_enabled(allocator, false)
-          .set_gain_db(allocator, kTestGain);
+      gain_state.set_muted(false).set_agc_enabled(false).set_gain_db(kTestGain);
       client->SetGain(std::move(gain_state));
     }
 
