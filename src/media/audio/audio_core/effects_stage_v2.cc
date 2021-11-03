@@ -509,7 +509,7 @@ void EffectsStageV2::CallProcess(ReadLockContext& ctx, int64_t num_frames,
       fidl::ObjectView<fidl::VectorView<uint32_t>>::FromExternal(&usage_mask_vector));
 
   // Synchronous IPC.
-  auto result = processor_.Process(process_buffer_.view(), num_frames, std::move(options));
+  auto result = processor_.buffer(process_buffer_.view())->Process(num_frames, options);
   auto status = result.status();
   if (result.ok() && result->result.is_err()) {
     status = result->result.err();
