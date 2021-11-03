@@ -1094,14 +1094,14 @@ int main(int argc, const char* argv[]) {
 
   printf("Initializing layers\n");
   for (auto& layer : layers) {
-    if (!layer->Init(&dc)) {
+    if (!layer->Init(dc)) {
       printf("Layer init failed\n");
       return -1;
     }
   }
 
   for (auto& display : displays) {
-    display.Init(&dc, color_correction_args);
+    display.Init(dc, color_correction_args);
   }
 
   if (capture && layers.size() != 1) {
@@ -1126,7 +1126,7 @@ int main(int argc, const char* argv[]) {
       }
 
       layer->clear_done();
-      layer->SendLayout(&dc);
+      layer->SendLayout(dc);
     }
 
     for (unsigned i = 0; i < displays.size(); i++) {

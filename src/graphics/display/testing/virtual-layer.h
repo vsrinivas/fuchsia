@@ -39,7 +39,7 @@ class VirtualLayer {
   virtual ~VirtualLayer() {}
 
   // Finish initializing the layer. All Set* methods should be called before this.
-  virtual bool Init(fidl::WireSyncClient<Controller>* dc) = 0;
+  virtual bool Init(const fidl::WireSyncClient<Controller>& dc) = 0;
 
   // Steps the local layout state to frame_num.
   virtual void StepLayout(int32_t frame_num) = 0;
@@ -48,7 +48,7 @@ class VirtualLayer {
   virtual bool WaitForReady() = 0;
 
   // Sets the current layout to the display controller.
-  virtual void SendLayout(fidl::WireSyncClient<Controller>* dc) = 0;
+  virtual void SendLayout(const fidl::WireSyncClient<Controller>& dc) = 0;
 
   // Renders the current frame (and signals the fence if necessary).
   virtual void Render(int32_t frame_num) = 0;
@@ -92,8 +92,8 @@ class VirtualLayer {
   }
 
  protected:
-  custom_layer_t* CreateLayer(fidl::WireSyncClient<Controller>* dc);
-  void SetLayerImages(fidl::WireSyncClient<Controller>* dc, bool alt_image);
+  custom_layer_t* CreateLayer(const fidl::WireSyncClient<Controller>& dc);
+  void SetLayerImages(const fidl::WireSyncClient<Controller>& dc, bool alt_image);
 
   fbl::Vector<Display*> displays_;
   fbl::Vector<custom_layer_t> layers_;
@@ -140,10 +140,10 @@ class PrimaryLayer : public VirtualLayer {
   void SetImageFormat(uint32_t image_format) { image_format_ = image_format; }
   void SetFormatModifier(uint64_t modifier) { modifier_ = modifier; }
 
-  bool Init(fidl::WireSyncClient<Controller>* dc) override;
+  bool Init(const fidl::WireSyncClient<Controller>& dc) override;
   void StepLayout(int32_t frame_num) override;
   bool WaitForReady() override;
-  void SendLayout(fidl::WireSyncClient<Controller>* channel) override;
+  void SendLayout(const fidl::WireSyncClient<Controller>& channel) override;
   void Render(int32_t frame_num) override;
 
   void* GetCurrentImageBuf() override;
@@ -159,7 +159,7 @@ class PrimaryLayer : public VirtualLayer {
   }
 
  private:
-  void SetLayerPositions(fidl::WireSyncClient<Controller>* dc);
+  void SetLayerPositions(const fidl::WireSyncClient<Controller>& dc);
   bool Wait(uint32_t idx);
   void InitImageDimens();
 
@@ -196,9 +196,9 @@ class CursorLayer : public VirtualLayer {
   explicit CursorLayer(Display* display);
   explicit CursorLayer(const fbl::Vector<Display>& displays);
 
-  bool Init(fidl::WireSyncClient<Controller>* dc) override;
+  bool Init(const fidl::WireSyncClient<Controller>& dc) override;
   void StepLayout(int32_t frame_num) override;
-  void SendLayout(fidl::WireSyncClient<Controller>* dc) override;
+  void SendLayout(const fidl::WireSyncClient<Controller>& dc) override;
 
   bool WaitForReady() override { return true; }
   void Render(int32_t frame_num) override {}
@@ -227,9 +227,9 @@ class ColorLayer : public VirtualLayer {
   explicit ColorLayer(Display* display);
   explicit ColorLayer(const fbl::Vector<Display>& displays);
 
-  bool Init(fidl::WireSyncClient<Controller>* dc) override;
+  bool Init(const fidl::WireSyncClient<Controller>& dc) override;
 
-  void SendLayout(fidl::WireSyncClient<Controller>* dc) override {}
+  void SendLayout(const fidl::WireSyncClient<Controller>& dc) override {}
   void StepLayout(int32_t frame_num) override {}
   bool WaitForReady() override { return true; }
   void Render(int32_t frame_num) override {}

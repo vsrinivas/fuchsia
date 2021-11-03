@@ -83,7 +83,7 @@ VirtualLayer::VirtualLayer(const fbl::Vector<Display>& displays, bool tiled) {
   }
 }
 
-custom_layer_t* VirtualLayer::CreateLayer(fidl::WireSyncClient<fhd::Controller>* dc) {
+custom_layer_t* VirtualLayer::CreateLayer(const fidl::WireSyncClient<fhd::Controller>& dc) {
   layers_.push_back(custom_layer_t());
   layers_[layers_.size() - 1].active = false;
 
@@ -119,7 +119,7 @@ PrimaryLayer::PrimaryLayer(const fbl::Vector<Display>& displays, Image::Pattern 
   SetImageDimens(width_, height_);
 }
 
-bool PrimaryLayer::Init(fidl::WireSyncClient<fhd::Controller>* dc) {
+bool PrimaryLayer::Init(const fidl::WireSyncClient<fhd::Controller>& dc) {
   if ((displays_.size() > 1 || rotates_) && scaling_) {
     printf("Unsupported config\n");
     return false;
@@ -288,7 +288,7 @@ void PrimaryLayer::StepLayout(int32_t frame_num) {
   }
 }
 
-void PrimaryLayer::SendLayout(fidl::WireSyncClient<fhd::Controller>* dc) {
+void PrimaryLayer::SendLayout(const fidl::WireSyncClient<fhd::Controller>& dc) {
   if (layer_flipping_) {
     SetLayerImages(dc, alt_image_);
   }
@@ -309,13 +309,13 @@ void PrimaryLayer::Render(int32_t frame_num) {
   }
 }
 
-void PrimaryLayer::SetLayerPositions(fidl::WireSyncClient<fhd::Controller>* dc) {
+void PrimaryLayer::SetLayerPositions(const fidl::WireSyncClient<fhd::Controller>& dc) {
   for (auto& layer : layers_) {
     ZX_ASSERT(dc->SetLayerPrimaryPosition(layer.id, rotation_, layer.src, layer.dest).ok());
   }
 }
 
-void VirtualLayer::SetLayerImages(fidl::WireSyncClient<fhd::Controller>* dc, bool alt_image) {
+void VirtualLayer::SetLayerImages(const fidl::WireSyncClient<fhd::Controller>& dc, bool alt_image) {
   for (auto& layer : layers_) {
     const auto& image = layer.import_info[alt_image];
     auto result = dc->SetLayerImage(layer.id, image.id, image.event_ids[WAIT_EVENT],
@@ -349,7 +349,7 @@ CursorLayer::CursorLayer(Display* display) : VirtualLayer(display) {}
 
 CursorLayer::CursorLayer(const fbl::Vector<Display>& displays) : VirtualLayer(displays) {}
 
-bool CursorLayer::Init(fidl::WireSyncClient<fhd::Controller>* dc) {
+bool CursorLayer::Init(const fidl::WireSyncClient<fhd::Controller>& dc) {
   fhd::wire::CursorInfo info = displays_[0]->cursor();
   uint32_t bg_color = 0xffffffff;
   image_ = Image::Create(dc, info.width, info.height, info.pixel_format, Image::Pattern::kBorder,
@@ -395,7 +395,7 @@ void CursorLayer::StepLayout(int32_t frame_num) {
   y_pos_ = interpolate(height_ + info.height, frame_num, kDestFrameBouncePeriod) - info.height;
 }
 
-void CursorLayer::SendLayout(fidl::WireSyncClient<fhd::Controller>* dc) {
+void CursorLayer::SendLayout(const fidl::WireSyncClient<fhd::Controller>& dc) {
   uint32_t display_start = 0;
   for (unsigned i = 0; i < displays_.size(); i++) {
     ZX_ASSERT(dc->SetLayerCursorPosition(layers_[i].id, x_pos_ - display_start, y_pos_).ok());
@@ -407,7 +407,7 @@ ColorLayer::ColorLayer(Display* display) : VirtualLayer(display) {}
 
 ColorLayer::ColorLayer(const fbl::Vector<Display>& displays) : VirtualLayer(displays) {}
 
-bool ColorLayer::Init(fidl::WireSyncClient<fhd::Controller>* dc) {
+bool ColorLayer::Init(const fidl::WireSyncClient<fhd::Controller>& dc) {
   for (unsigned i = 0; i < displays_.size(); i++) {
     custom_layer_t* layer = CreateLayer(dc);
     if (layer == nullptr) {

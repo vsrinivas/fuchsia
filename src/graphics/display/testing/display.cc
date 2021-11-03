@@ -73,7 +73,7 @@ void Display::Dump() {
   printf("\n");
 }
 
-void Display::Init(fidl::WireSyncClient<fhd::Controller>* dc,
+void Display::Init(const fidl::WireSyncClient<fhd::Controller>& dc,
                    ColorCorrectionArgs color_correction_args) {
   if (mode_idx_ != 0) {
     ZX_ASSERT(dc->SetDisplayMode(id_, modes_[mode_idx_]).ok());

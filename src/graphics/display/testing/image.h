@@ -31,7 +31,7 @@ class Image {
     kBorder,
   };
 
-  static Image* Create(fidl::WireSyncClient<fuchsia_hardware_display::Controller>* dc,
+  static Image* Create(const fidl::WireSyncClient<fuchsia_hardware_display::Controller>& dc,
                        uint32_t width, uint32_t height, zx_pixel_format_t format, Pattern pattern,
                        uint32_t fg_color, uint32_t bg_color, uint64_t modifier);
 
@@ -44,7 +44,7 @@ class Image {
   zx_pixel_format_t format() { return format_; }
 
   void GetConfig(fuchsia_hardware_display::wire::ImageConfig* config_out);
-  bool Import(fidl::WireSyncClient<fuchsia_hardware_display::Controller>* dc,
+  bool Import(const fidl::WireSyncClient<fuchsia_hardware_display::Controller>& dc,
               image_import_t* import_out);
 
  private:
