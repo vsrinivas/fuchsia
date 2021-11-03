@@ -89,7 +89,7 @@ zx_status_t SyncDevice::Bind() {
     return status;
   }
 
-  auto mmio_result = acpi_fidl_.borrow().GetMmio(0);
+  auto mmio_result = acpi_fidl_.borrow()->GetMmio(0);
   if (!mmio_result.ok() || mmio_result->result.is_err()) {
     zx_status_t status = mmio_result.ok() ? mmio_result->result.err() : mmio_result.status();
     zxlogf(ERROR, "GetMmio failed: %d", status);
@@ -107,7 +107,7 @@ zx_status_t SyncDevice::Bind() {
     }
   }
 
-  auto result = acpi_fidl_.borrow().MapInterrupt(0);
+  auto result = acpi_fidl_.borrow()->MapInterrupt(0);
   if (!result.ok() || result->result.is_err()) {
     zxlogf(ERROR, "map_interrupt failed: %d",
            !result.ok() ? result.status() : result->result.err());

@@ -259,7 +259,7 @@ TEST_F(SyncDeviceTest, TriggerHostWait) {
   ASSERT_EQ(status, ZX_OK);
 
   // Make a FIDL TriggerHostWait call.
-  auto result = tl.TriggerHostWait(kGlSyncHandle, kSyncThreadHandle, std::move(event_server));
+  auto result = tl->TriggerHostWait(kGlSyncHandle, kSyncThreadHandle, std::move(event_server));
   ASSERT_TRUE(result.ok());
 
   // Verify the returned eventpair.
@@ -564,7 +564,7 @@ TEST_F(SyncDeviceTest, TriggerHostWaitAndSignalFence) {
   zx_status_t status = zx::eventpair::create(0u, &event_client, &event_server);
   ASSERT_EQ(status, ZX_OK);
 
-  auto result = tl.TriggerHostWait(kGlSyncHandle, kSyncThreadHandle, std::move(event_server));
+  auto result = tl->TriggerHostWait(kGlSyncHandle, kSyncThreadHandle, std::move(event_server));
   ASSERT_TRUE(result.ok());
 
   // Verify the returned eventpair.
