@@ -161,31 +161,7 @@
       ],
       "additionalProperties": false
     },
-    "thermal_policy_entry_old_format": {
-      "type": "object",
-      "properties" : {
-        "target_name": "string",
-        "_comment": "string",
-        "states": {
-          "type" : "array",
-          "items" : {
-            "type" : "object",
-            "properties": {
-              "trip_point" : {
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 100
-              },
-              "_comment": "string",
-              "config" : {}
-            },
-            "required": [ "trip_point", "config" ]
-          }
-        }
-      },
-      "required": [ "target_name", "states" ]
-    },
-    "thermal_policy_entry_new_format": {
+    "thermal_policy_entry_format": {
       "type": "object",
       "properties": {
         "trip_point": {
@@ -280,12 +256,7 @@
     },
     "thermal_policy": {
       "type" : "array",
-      "items": {
-        "oneOf": [
-          {"$ref" : "#/definitions/thermal_policy_entry_old_format"},
-          {"$ref" : "#/definitions/thermal_policy_entry_new_format"}
-        ]
-      }
+      "items": {"$ref" : "#/definitions/thermal_policy_entry_format"}
     }
   },
   "required": ["volume_curve"],
