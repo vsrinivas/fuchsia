@@ -217,7 +217,7 @@ void PreprocessValue(fidl::AnyArena& allocator, uint32_t param_type, const TEEC_
   }
 
   fuchsia_tee::wire::Value value(allocator);
-  value.set_direction(allocator, direction);
+  value.set_direction(direction);
   if (IsDirectionInput(direction)) {
     // The TEEC_Value type only includes two generic fields, whereas the Fuchsia TEE interface
     // supports three. The c field cannot be used by the TEE Client API.
@@ -269,9 +269,9 @@ TEEC_Result PreprocessTemporaryMemref(fidl::AnyArena& allocator, uint32_t param_
   }
 
   fuchsia_tee::wire::Buffer buffer(allocator);
-  buffer.set_direction(allocator, direction);
+  buffer.set_direction(direction);
   if (vmo.is_valid()) {
-    buffer.set_vmo(allocator, std::move(vmo));
+    buffer.set_vmo(std::move(vmo));
   }
   buffer.set_offset(allocator, 0);
   buffer.set_size(allocator, temp_memory_ref.size);
@@ -308,8 +308,8 @@ TEEC_Result PreprocessWholeMemref(fidl::AnyArena& allocator,
   }
 
   fuchsia_tee::wire::Buffer buffer(allocator);
-  buffer.set_direction(allocator, direction);
-  buffer.set_vmo(allocator, std::move(vmo));
+  buffer.set_direction(direction);
+  buffer.set_vmo(std::move(vmo));
   buffer.set_offset(allocator, 0);
   buffer.set_size(allocator, shared_mem->size);
 
@@ -360,8 +360,8 @@ TEEC_Result PreprocessPartialMemref(fidl::AnyArena& allocator, uint32_t param_ty
   }
 
   fuchsia_tee::wire::Buffer buffer(allocator);
-  buffer.set_direction(allocator, direction);
-  buffer.set_vmo(allocator, std::move(vmo));
+  buffer.set_direction(direction);
+  buffer.set_vmo(std::move(vmo));
   buffer.set_offset(allocator, memory_ref.offset);
   buffer.set_size(allocator, memory_ref.size);
 
