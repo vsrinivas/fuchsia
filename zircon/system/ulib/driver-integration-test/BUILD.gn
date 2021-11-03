@@ -27,6 +27,34 @@ zx_library("driver-integration-test") {
     "//zircon/system/ulib/fbl",
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+
+  # STOP: Do not add any new entries to this allow list. Use //sdk/lib/driver_test_realm instead.
+  visibility = [
+    "//src/bringup/bin/netsvc/*",
+    "//src/devices/bin/driver_host/*",
+    "//src/devices/block/drivers/block-verity/*",
+    "//src/devices/block/drivers/zxcrypt/*",
+    "//src/devices/bus/drivers/pci/test/*",
+    "//src/devices/nand/drivers/broker/test/*",
+    "//src/devices/rtc/drivers/fallback/*",
+    "//src/devices/tests/ddk-environment-test/*",
+    "//src/devices/tests/ddk-fallback-test/*",
+    "//src/devices/tests/ddk-fidl-test/*",
+    "//src/devices/tests/ddk-instance-lifecycle-test/*",
+    "//src/devices/tests/ddk-lifecycle/*",
+    "//src/devices/tests/ddk-power/*",
+    "//src/devices/tests/ddk-runcompatibilityhook/*",
+    "//src/devices/tests/driver-inspect-test/*",
+    "//src/devices/tests/isolateddevmgr/*",
+    "//src/diagnostics/validator/logs/ddk/sink/puppet/cpp/*",
+    "//src/recovery/factory_reset/*",
+    "//src/security/zxcrypt/tests/*",
+    "//src/storage/fvm/*",
+    "//src/storage/fvm/driver/test/*",
+    "//src/storage/lib/paver/test/*",
+    "//zircon/system/ulib/driver-integration-test/test/*",
+    "//zircon/system/ulib/usb-virtual-bus-launcher/*",
+  ]
 }
 
 zx_library("driver-integration-test-static") {
@@ -52,6 +80,9 @@ zx_library("driver-integration-test-static") {
     "//zircon/system/ulib/fbl",
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+
+  # STOP: Do not add any new entries to this allow list. Use //sdk/lib/driver_test_realm instead.
+  visibility = [ "//src/lib/storage/ramdevice_client/cpp/*" ]
 }
 
 group("tests") {

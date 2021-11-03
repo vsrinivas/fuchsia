@@ -39,4 +39,15 @@ zx_library("usb-virtual-bus-launcher") {
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+
+  # STOP: Do not add any new entries to this allow list. Use //sdk/lib/driver_test_realm instead.
+  visibility = [
+    "//src/connectivity/ethernet/drivers/asix-88179/*",
+    "//src/connectivity/ethernet/drivers/usb-cdc-ecm/*",
+    "//src/devices/block/drivers/usb-mass-storage/*",
+    "//src/devices/serial/drivers/ftdi/test/*",
+    "//src/devices/serial/drivers/usb-cdc-acm/*",
+    "//src/devices/usb/drivers/usb-virtual-bus/*",
+    "//src/ui/input/drivers/usb-hid/*",
+  ]
 }

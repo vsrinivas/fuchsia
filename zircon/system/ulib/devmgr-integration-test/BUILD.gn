@@ -66,6 +66,36 @@ zx_library("devmgr-integration-test") {
     "//zircon/system/ulib/zx",
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+
+  # STOP: Do not add any new entries to this allow list. Use //sdk/lib/driver_test_realm instead.
+  visibility = [
+    "//src/bringup/bin/netsvc/*",
+    "//src/connectivity/ethernet/drivers/ethernet/*",
+    "//src/connectivity/network/testing/netemul-v2/network-context/*",
+    "//src/devices/bin/driver_host/*",
+    "//src/devices/block/drivers/ftl/tests/*",
+    "//src/devices/block/drivers/ramdisk/test/*",
+    "//src/devices/bus/drivers/pci/test/*",
+    "//src/devices/bus/drivers/platform/test/*",
+    "//src/devices/nand/drivers/broker/test/*",
+    "//src/devices/nand/drivers/ram-nand/*",
+    "//src/devices/rtc/drivers/fallback/*",
+    "//src/devices/tests/bind-fail-test/*",
+    "//src/devices/tests/bind-test-v2/*",
+    "//src/devices/tests/ddk-fallback-test-v2/*",
+    "//src/devices/tests/ddk-metadata-test/*",
+    "//src/devices/tests/libdriver-integration-test/*",
+    "//src/devices/tests/string-bind-test/*",
+    "//src/diagnostics/validator/logs/ddk/sink/puppet/cpp/*",
+    "//src/lib/isolated_devmgr/*",
+    "//src/lib/storage/ramdevice_client/cpp/*",
+    "//src/storage/fvm/*",
+    "//src/storage/lib/paver/test/*",
+    "//vendor/*",
+    "//zircon/system/ulib/devmgr-integration-test/test/*",
+    "//zircon/system/ulib/driver-integration-test/*",
+    "//zircon/system/utest/device-enumeration/*",
+  ]
 }
 
 group("tests") {
