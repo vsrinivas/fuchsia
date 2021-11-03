@@ -2063,7 +2063,7 @@ your test component:
 Note: The `EventSource` capability comes from the test realm (`parent`), but the
 events come from the Component Manager (`framework`). This sets the event scope
 to only components in the test realm. For more details on event scope,
-see [Using events][event-scopes].
+see [event-capabilities][event-capabilities].
 
 ### Build Info {#build-info}
 
@@ -2112,7 +2112,6 @@ described in the [Vulkan documentation][vulkan].
 [eager-manifest]: /docs/concepts/components/v2/component_manifests.md#children
 [elf-runner-docs]: /docs/concepts/components/v2/elf_runner.md#lifecycle
 [event-capabilities]: /docs/concepts/components/v2/capabilities/event.md
-[event-scopes]: /docs/concepts/components/v2/capabilities/event.md#using-events
 [example-component-id-index]: /src/sys/appmgr/config/core_component_id_index.json5
 [example-fonts]: https://fuchsia.googlesource.com/fuchsia/+/cd29e692c5bfdb0979161e52572f847069e10e2f/src/fonts/meta/fonts.cmx
 [example-package-rule]: https://fuchsia.googlesource.com/fuchsia/+/cd29e692c5bfdb0979161e52572f847069e10e2f/src/fonts/BUILD.gn

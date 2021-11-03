@@ -2,14 +2,17 @@
 
 <<../../_v2_banner.md>>
 
-[Directory capabilities][glossary.directory capability] allows components
-to connect to directories provided by other components.
+[Directory capabilities][glossary.directory-capability] allow components
+to connect to a directory provided by another component.
 
-## Providing directory capabilities
+For information on directories that are isolated per-component, see
+[storage capabilities][storage-capabilities].
 
-To provide a directory capability, a component must define the capability and
-[route](#routing-directory-capabilities) it from `self`. The component hosts the
-directory capability in its [outgoing directory][glossary.outgoing directory].
+## Providing directory capabilities {#provide}
+
+To provide a directory capability, a component must declare the capability and
+[route](#route) it from `self`. The component hosts the directory capability in
+its [outgoing directory][glossary.outgoing-directory].
 
 To define the capability, add a `capabilities` declaration for it:
 
@@ -27,29 +30,27 @@ To define the capability, add a `capabilities` declaration for it:
 
 This defines a capability hosted by this component whose outgoing directory path
 is `/published-data`, and whose maximum usable
-[rights](#directory-capability-rights) are `r*`.
+[rights](#directory-capability-rights) are "read-only".
 
-## Routing directory capabilities
+## Routing directory capabilities {#route}
 
-Components route directory capabilities by either
-[exposing](#routing-directory-capability-expose) them or
-[offering](#routing-directory-capability-offer) them.
+Components route directory capabilities by [exposing](#expose) them to their
+parent and [offering](#offer) them to their children.
 
-When a component wants to make one of its directories available to other
-components, it specifies the path of that directory in its
-[outgoing directory][glossary.outgoing directory] in one of the
-following ways:
+For more details on how the framework routes component capabilities,
+see [capability routing][capability-routing].
 
-### Exposing {#routing-directory-capability-expose}
+### Exposing {#expose}
 
-To [expose][expose] the directory to a parent:
+Exposing a directory capability gives the component's parent access to that
+capability:
 
 ```json5
 {
     expose: [
         {
             directory: "data",
-            from: "#child-a",
+            from: "self",
         },
     ],
 }
@@ -61,9 +62,10 @@ You may optionally specify:
 * [`rights`](#directory-capability-rights)
 * [`subdir`](#subdirectories)
 
-### Offering {#routing-directory-capability-offer}
+### Offering {#offer}
 
-To [offer][offer] a directory to a child:
+Offering a storage capability gives a child component access to that
+capability:
 
 ```json5
 {
@@ -83,18 +85,12 @@ You may optionally specify:
 * [`rights`](#directory-capability-rights)
 * [`subdir`](#subdirectories)
 
-## Consuming directory capabilities
+## Consuming directory capabilities {#consume}
 
-When a component wants to make use of a directory from its parent, it does so by
-[using][use] the directory. This will make the directory accessible from the
-component's [namespace][glossary.namespace].
+To consume a storage capability, the component must request the capability and
+open the corresponding path in its [namespace][glossary.namespace].
 
-This example shows a directory named `data` that is included in the component's
-namespace. If the component instance accesses this directory during its
-execution, the component framework performs
-[capability routing][capability-routing] to find the component that provides it.
-Then, the framework connects the directory from the component's namespace to
-this provider.
+To request the capability, add a `use` declaration for it:
 
 ```json5
 {
@@ -108,6 +104,9 @@ this provider.
 }
 ```
 
+This populates the component's namespace with a directory at the provided `path`
+containing the shared directory contents.
+
 You must specify [`rights`](#directory-capability-rights).
 You may optionally specify [`subdir`](#subdirectories).
 
@@ -116,16 +115,16 @@ You may optionally specify [`subdir`](#subdirectories).
 Directory rights enable components to control access to directories as they are
 routed throughout the system. Directory rights are applied as follows:
 
--   [`capability`][capability]: *Required*.
+-   [`capabilities`][manifest-capabilities]: *Required*.
     Provides the base set of rights available for the directory. Any rights
     specified in a `use`, `offer`, or `expose` must be a subset of what is
     declared here.
--   [`use`][use]: *Required*.
+-   [`use`][manifest-use]: *Required*.
     Describes the access rights requested by the consuming component.
--   [`offer`][offer]: *Optional*.
+-   [`offer`][manifest-offer]: *Optional*.
     Modified rights available to the destination component. Rights are inherited
-    from the `offer` source if not present. 
--   [`expose`][expose]: *Optional*.
+    from the `offer` source if not present.
+-   [`expose`][manifest-expose]: *Optional*.
     Modified rights available to the destination component. Rights are inherited
     from the `expose` source if not present.
 
@@ -167,8 +166,8 @@ appended as long as they do not duplicate rights expressed by the alias.
 
 ### Example
 
-This example shows component `A` requesting access to `data` with read-write
-rights:
+Consider the following example where component `A` requests *read-write* access
+to the `data` directory:
 
 ```json5
 // A.cml
@@ -183,8 +182,8 @@ rights:
 }
 ```
 
-Furthermore, parent component `B` offers the directory `data` to component A but
-with only read-only rights. In this case the routing fails and `data` wouldn't
+However, the parent component `B` offers the directory `data` to component `A`
+with only *read-only* rights. In this case the routing fails and `data` wouldn't
 be present in A's namespace.
 
 ```json5
@@ -251,7 +250,7 @@ Fuchsia supports the following framework directories:
 -   [hub][doc-hub]: Allows a component to perform runtime introspection of
     itself and its children.
 
-```
+```json5
 {
     use: [
         {
@@ -264,13 +263,14 @@ Fuchsia supports the following framework directories:
 }
 ```
 
-[glossary.directory capability]: /docs/glossary/README.md#directorty-capability
-[glossary.outgoing directory]: /docs/glossary/README.md#outgoing-directory
-[capability]: ../component_manifests.md#capability
-[capability-routing]: ../component_manifests.md#capability-routing
+[glossary.directory-capability]: /docs/glossary/README.md#directory-capability
+[glossary.outgoing-directory]: /docs/glossary/README.md#outgoing-directory
+[capability-routing]: /docs/concepts/components/v2/component_manifests.md#capability-routing
 [doc-hub]: /docs/concepts/components/v2/hub.md
 [fidl-io2-rights]: /sdk/fidl/fuchsia.io2/rights-abilities.fidl
-[expose]: ../component_manifests.md#expose
-[offer]: ../component_manifests.md#offer
+[manifest-capabilities]: /docs/concepts/components/v2/component_manifests.md#capabilities
+[manifest-expose]: /docs/concepts/components/v2/component_manifests.md#expose
+[manifest-offer]: /docs/concepts/components/v2/component_manifests.md#offer
+[manifest-use]: /docs/concepts/components/v2/component_manifests.md#use
 [routing-example]: /examples/components/routing
-[use]: ../component_manifests.md#use
+[storage-capabilities]: /docs/concepts/components/v2/capabilities/storage.md

@@ -2,93 +2,112 @@
 
 <<../../_v2_banner.md>>
 
-A [storage capability][glossary.storage capability] is a way for components
-to receive _isolated_ access to a private storage directory. When a storage capability is
-declared in a [component manifest][manifests-storage] it must reference a
-backing [directory capability][glossary.directory capability]. Each component that then
-[uses][glossary.use] this storage capability receives a unique and non-overlapping
-subdirectory within the backing directory. This prevents
-[component instances][glossary.component instance] from accessing files belonging to other component
-instances (including their own children).
+[Storage capabilities][glossary.storage-capability] allocate per-component
+*isolated* storage within a filesystem directory. This prevents component
+instances from accessing files belonging to other components, including their
+own children.
 
-## Directory vs storage capabilities
+For information on directories that can be shared between components, see
+[directory capabilities][directory-capabilities].
 
-As an example, if component instance `a` receives a
-[directory capability][glossary.directory capability] from its
-[realm][glossary.realm] and both
-[uses][glossary.use] it and
-[offers][glossary.offer] it to `b`, which also uses the directory,
-both component instances can see and interact with the same directory.
+## Backing directories {#backing-dir}
 
+Each storage capability must be backed by a corresponding
+[directory capability][glossary.directory-capability] to host an isolated
+subdirectory for each component. When a component instance attempts to access
+the directory provided to it through a storage capability, the framework
+generates a unique subdirectory inside the backing directory for that component.
 
-```
-<a's realm>
-    |
-    a
-    |
-    b
+Caution: The backing directory capability can also be routed directly to other
+components. Providing this capability allows components to access all the
+isolated storage directories it contains.
 
-a.cml:
+The framework allocates storage subdirectories based on either the component
+instance's [moniker][glossary.moniker] or a static
+[instance ID][glossary.component-instance-identifier]. Each instance ID is a
+256-bit globally unique identifier listed in a component storage index file.
+
+The following is an example entry in a component storage index file containing a
+stable instance ID:
+
+```json5
 {
-    use: [
+    instances: [
         {
-            directory: "example_dir",
-            rights: ["rw*"],
-            path: "/example_dir",
+            instance_id: "47c3bf08f3e560c4dee659c28fa8d863dbdc0b1dbb74065e6cb1f38441ac759c",
+            moniker: "/core/my_component",
         },
     ],
+}
+```
+
+Instance IDs allow a component's storage to persist across changes to the
+component's moniker, such as moving the component instance to a different realm.
+Storage IDs based on moniker are a good secondary option for tests or other use
+cases where storage does not need to be durable.
+
+For more details on instance IDs, see [Component storage index][storage-index].
+
+## Providing storage capabilities {#provide}
+
+To provide a storage capability, a component must declare the capability and
+[route](#route) it from `self`.
+
+```json5
+{
+    capabilities: [
+        {
+            storage: "tmp",
+            from: "self",
+            backing_dir: "memfs",
+            storage_id: "static_instance_id",
+        },
+    ],
+}
+```
+
+You must specify [`backing_dir`](#backing-dir) with a valid directory capability
+name.
+
+The `from` field declares the component providing the backing directory.
+You may supply a [component reference][component-reference] if the provider is
+another component.
+
+## Routing storage capabilities {#route}
+
+Storage capabilities cannot be exposed to a parent component. Components should
+route the [backing directory](#backing-dir) to an appropriate parent component
+where storage can be [declared](#provide) and [offered](#offer) to the necessary
+children.
+
+For more details on how the framework routes component capabilities,
+see [capability routing][capability-routing].
+
+### Offering {#offer}
+
+Offering a storage capability gives a child component access to that
+capability:
+
+```json5
+{
     offer: [
         {
-            directory: "example_dir",
-            from: "parent",
-            to: [ "#b" ],
-        },
-    ],
-}
-
-b.cml:
-{
-    use: [
-        {
-            directory: "example_dir",
-            rights: ["rw*"],
-            path: "/example_dir",
+            storage: "data",
+            from: "self",
+            to: [ "#storage-user" ],
         },
     ],
 }
 ```
 
-In this example if component instance `a` creates a file named `hippos` inside
-`/example_dir` then `b` will be able to see and read this file.
+## Consuming storage capabilities {#consume}
 
-If the component instances use storage capabilities instead of directory
-capabilities, then component instance `b` cannot see and read the `hippos` file.
+To consume a storage capability, the component must request the capability and
+open the corresponding path in its [namespace][glossary.namespace].
 
-```
-<a's realm>
-    |
-    a
-    |
-    b
+To request the capability, add a `use` declaration for it:
 
-a.cml:
-{
-    use: [
-        {
-            storage: "data",
-            path: "/example_dir",
-        },
-    ],
-    offer: [
-        {
-            storage: "data",
-            from: "parent",
-            to: [ "#b" ],
-        },
-    ],
-}
-
-b.cml:
+```json5
 {
     use: [
         {
@@ -99,28 +118,33 @@ b.cml:
 }
 ```
 
-Any files that `a` creates are not visible to `b`, and vice versa. Storage
-capabilities provide unique non-overlapping directories to each component
-instance that `use`s them.
+This populates the component's namespace with a directory at the provided `path`
+containing the isolated storage contents.
 
-## Creating storage capabilities
+## Storage example {#example}
 
-Storage capabilities can be created with a
-[`storage` declaration][storage-syntax] in a [component manifest][manifests].
-Once storage capabilities have been declared, they can then be offered to other
-component instances.
+Consider the following example where component `A` requests isolated storage
+`tmp` from its parent:
 
-A `storage` declaration must include a reference to a backing directory
-capability. The component manager will create isolated sub-directories within
-the backing directory, one for each component instance using the storage
-capability.
-
-For example, the following manifest describes a new storage capability named
-`tmp` backed by the `memfs` directory capability exposed by the child named
-`memfs`. From this storage declaration a storage capability is offered to the
-child named `storage-user`.
-
+```json5
+// A.cml
+{
+    use: [
+        {
+            storage: "tmp",
+            path: "/example_dir",
+        },
+    ],
+}
 ```
+
+This provides an isolated storage directory at `/example_dir` in the namespace
+of component `A`.
+The parent component `B` offers this capability to `A` using a backing directory
+provided by the `memfs` component in the same realm:
+
+```json5
+// B.cml
 {
     capabilities: [
         {
@@ -133,42 +157,26 @@ child named `storage-user`.
         {
             storage: "tmp",
             from: "self",
-            to: [ "#storage-user" ],
+            to: [ "#A" ],
         },
     ],
     children: [
+        { name: "A", url: "fuchsia-pkg://...", },
         { name: "memfs", url: "fuchsia-pkg://..." },
-        { name: "storage-user", url: "fuchsia-pkg://...", },
     ],
 }
 ```
 
-## Storage capability semantics
+For more details on implementing directories, see
+[directory capabilities][directory-capabilities].
 
-A directory capability that backs storage capabilities can be used to access the
-files of any component that uses the resulting storage capabilities. This type
-of directory capability should be routed carefully to avoid exposing this
-capability to too many component instances.
-
-When a component instance attempts to access the directory provided to it
-through a storage capability, the framework binds to and generates
-sub-directories in the component instance that provides the backing directory
-capability. Then, the framework provides the component instance access to a
-unique subdirectory.
-
-The subdirectory to which a component instance is provided access is determined
-by its location in the component topology. This means that if a component
-instance is renamed in its parent manifest or moved to a different parent then
-it will receive a different subdirectory than it did before the change.
-
-[glossary.storage capability]: /docs/glossary/README.md#storage-instance
-[glossary.component instance]: /docs/glossary/README.md#component-instance
-[glossary.directory capability]: /docs/glossary/README.md#directory-capability
-[glossary.use]: /docs/glossary/README.md#use
-[glossary.realm]: /docs/glossary/README.md#realm
-[glossary.offer]: /docs/glossary/README.md#offer
-[manifests]: /docs/concepts/components/v2/component_manifests.md
-[manifests-storage]: /docs/concepts/components/v2/component_manifests.md#capability-storage
-[outgoing-directory]: /docs/concepts/system/abi/system.md#outgoing_directory
-[storage-syntax]: /docs/concepts/components/v2/component_manifests.md#storage
-[use-syntax]: /docs/concepts/components/v2/component_manifests.md#use
+[glossary.directory-capability]: /docs/glossary/README.md#directory-capability
+[glossary.component-instance-identifier]: /docs/glossary/README.md#component-instance-identifier
+[glossary.moniker]: /docs/glossary/README.md#moniker
+[glossary.namespace]: /docs/glossary/README.md#namespace
+[glossary.outgoing-directory]: /docs/glossary/README.md#outgoing-directory
+[glossary.storage-capability]: /docs/glossary/README.md#storage-capability
+[capability-routing]: /docs/concepts/components/v2/component_manifests.md#capability-routing
+[component-reference]: /docs/concepts/components/v2/component_manifests.md#references
+[directory-capabilities]: /docs/concepts/components/v2/capabilities/directory.md
+[storage-index]: /docs/development/components/component_id_index.md

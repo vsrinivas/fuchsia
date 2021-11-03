@@ -8,20 +8,62 @@ behavior and APIs could change at any time.
 A [service capability][glossary.service-capability] is a capability that
 enables discovery of one or more individually named
 [FIDL service][glossary.service] instances. Service capabilities are backed by
-a [glossary.channel] that speaks the `Directory` protocol, where each entry in
-the directory exposes each named FIDL service.
+a [glossary.channel] that speaks the [`Directory`][directory.fidl] protocol,
+where each entry in the directory exposes a named [service instance](#instances).
 
-Note: _Protocol_ and _service_ capabilities are distinct types of capabilities.
-A protocol capability represents a single instance of a
-[FIDL protocol][glossary.protocol], while a service capability represents zero
-or more instances of a [FIDL service][glossary.service]. See the documentation
-on [protocol capabilities][protocol-capability] for more details.
+```fidl
+library fuchsia.examples;
+
+const MAX_STRING_LENGTH uint64 = 32;
+
+@discoverable
+protocol Echo {
+    EchoString(struct {
+        value string:MAX_STRING_LENGTH;
+    }) -> (struct {
+        response string:MAX_STRING_LENGTH;
+    });
+    SendString(struct {
+        value string:MAX_STRING_LENGTH;
+    });
+    -> OnString(struct {
+        response string:MAX_STRING_LENGTH;
+    });
+};
+
+service EchoService {
+    regular_echo client_end:Echo;
+    reversed_echo client_end:Echo;
+};
+```
+
+Note: For more details on FIDL service syntax, see the
+[FIDL language reference][fidl-reference].
+
+Service implementations are served from provider components using the
+[outgoing directory][glossary.outgoing-directory] and consumed from another
+component's [namespace][glossary.namespace].
+
+## Service instances {#instances}
+
+Multiple named instances of a service can be hosted by a single component.
+These are present in the [namespace][glossary.namespace] of the consuming
+component as subdirectories of the service.
+The component framework generates an arbitrary, unique identifier for each
+service instance name.
+
+For example, if the framework generates `57dfe118a2a8` as the instance name of
+the `fuchsia.examples.EchoService` service, a consuming component could connect
+to the protocols in that instance using the following namespace paths:
+
+- `/svc/fuchsia.examples.EchoService/57dfe118a2a8/regular_echo`
+- `/svc/fuchsia.examples.EchoService/57dfe118a2a8/reversed_echo`
 
 ## Providing service capabilities {#provide}
 
-To provide a service capability, a component must define the capability and
-[route](#route) it from `self`. The component hosts the
-service capability in its [outgoing directory][glossary.outgoing-directory].
+To provide a service capability, a component must declare the capability and
+[route](#route) it from `self`. The component hosts the service capability in
+its [outgoing directory][glossary.outgoing-directory].
 
 To define the capability, add a `capabilities` declaration for it:
 
@@ -54,10 +96,13 @@ is `/svc/fuchsia.example.ExampleService`. You can also customize the path:
 Components route service capabilities by [exposing](#expose) them to their
 parent and [offering](#offer) them to their children.
 
+For more details on how the framework routes component capabilities,
+see [capability routing][capability-routing].
+
 ### Exposing {#expose}
 
 Exposing a service capability gives the component's parent access to that
-capability. This is done through an [`expose`][expose] declaration.
+capability:
 
 ```json5
 {
@@ -70,13 +115,12 @@ capability. This is done through an [`expose`][expose] declaration.
 }
 ```
 
-The `from: "self"` directive means that the service capability is provided by
-this component. In this case the service must have a corresponding
-[definition](#provide).
+The `from: "self"` directive means that the service capability is
+[provided](#provide) by this component.
 
-#### Services routed from collections
+#### Dynamic collections
 
-A service capability can be exposed from a [dynamic collection][collection].
+A service capability can be exposed from a [dynamic collection][collection]:
 
 ```json5
 {
@@ -95,24 +139,15 @@ A service capability can be exposed from a [dynamic collection][collection].
 }
 ```
 
-When routing services exposed from the components in a collection, each
-[service instance][service-instances] entry in the client component's
-[namespace][glossary.namespace] is prefixed with the component name to allow
-multiple components in the collection to expose the same instance.
-
-The instances are named with the scheme `"$component_name,$instance_name"`.
-The `$component_name` is the name given to the
-[`fuchsia.sys2/Realm.CreateChild`][realm.fidl] API when the component is
-created. The `$instance_name` is defined by the component itself.
-
-For example, the namespace path for the `default` instance of
-`fuchsia.example.ExampleService` exposed from a component named `foo` within the
-above collection is `/svc/fuchsia.example.ExampleService/foo,default/protocol`.
+Note: When routing services exposed from components in the collection, the
+component framework renames each [service instance](#instances) with an
+arbitrary, unique identifier to allow multiple components in the collection to
+expose the same service.
 
 ### Offering {#offer}
 
-Offering a service capability gives a child component access to that capability.
-This is done through an [`offer`][offer] declaration.
+Offering a service capability gives a child component access to that
+capability:
 
 ```json5
 {
@@ -128,13 +163,12 @@ This is done through an [`offer`][offer] declaration.
 
 ## Consuming service capabilities {#consume}
 
-When a component [uses][use] a service capability that has been [offered][offer]
-to it, that service is made available through the component's
-[namespace][glossary.namespace].
+To consume a service capability, the component must request the capability and
+open the corresponding path in its [namespace][glossary.namespace].
 
-Consider a component with the following manifest declaration:
+To request the capability, add a `use` declaration for it:
 
-```
+```json5
 {
     use: [
         {
@@ -144,13 +178,8 @@ Consider a component with the following manifest declaration:
 }
 ```
 
-When the component attempts to open the path
-`/svc/fuchsia.example.ExampleService`, the component framework performs
-[capability routing][capability-routing] to find the component that provides
-this service. Then, the framework connects the newly opened channel to this
-provider.
-
-You can also customize the namespace path:
+This populates the service in the component's namespace at the well-known path
+`/svc/fuchsia.example.ExampleService`. You can also customize the path:
 
 ```json5
 {
@@ -169,7 +198,6 @@ For more information about the open request, see
 Note: For a working example of routing a service capability between components,
 see [`//examples/components/services`][routing-example].
 
-[collection]: /docs/concepts/components/v2/realms.md#collections
 [glossary.channel]: /docs/glossary/README.md#channel
 [glossary.namespace]: /docs/glossary/README.md#namespace
 [glossary.outgoing-directory]: /docs/glossary/README.md#outgoing-directory
@@ -177,13 +205,9 @@ see [`//examples/components/services`][routing-example].
 [glossary.service]: /docs/glossary/README.md#service
 [glossary.service-capability]: /docs/glossary/README.md#service-capability
 [capability-routing]: /docs/concepts/components/v2/component_manifests.md#capability-routing
-[expose]: /docs/concepts/components/v2/component_manifests.md#expose
-[fidl-service]: /docs/concepts/components/v2/services.md
-[framework-services]: /docs/concepts/components/v2/component_manifests.md#framework-services
+[collection]: /docs/concepts/components/v2/realms.md#collections
+[fidl-reference]: /docs/reference/fidl/language/language.md
 [life-of-a-protocol-open]: /docs/concepts/components/v2/capabilities/life_of_a_protocol_open.md
-[offer]: /docs/concepts/components/v2/component_manifests.md#offer
-[protocol-capability]: /docs/concepts/components/v2/capabilities/protocol.md
+[directory.fidl]: https://fuchsia.dev/reference/fidl/fuchsia.io#Directory
 [realm.fidl]: https://fuchsia.dev/reference/fidl/fuchsia.sys2#Realm
 [routing-example]: /examples/components/services
-[service-instances]: /docs/concepts/fidl/services.md#instances
-[use]: /docs/concepts/components/v2/component_manifests.md#use

@@ -3,21 +3,42 @@
 <<../../_v2_banner.md>>
 
 A [protocol capability][glossary.protocol-capability] is a capability backed
-by a [glossary.channel] that speaks a particular
-[FIDL protocol][glossary.protocol]. 
+by a [channel][glossary.channel] that speaks a particular
+[FIDL protocol][glossary.protocol].
 
-Note: _Protocol_ and _service_ capabilities are distinct types of
-capabilities. A protocol capability represents a single instance of a
-[FIDL protocol][glossary.protocol], while a service capability represents zero
-or more instances of a [FIDL service][glossary.service].
-See the documentation on [service capabilities][service-capability]
-for more details.
+```fidl
+library fuchsia.examples;
+
+const MAX_STRING_LENGTH uint64 = 32;
+
+@discoverable
+protocol Echo {
+    EchoString(struct {
+        value string:MAX_STRING_LENGTH;
+    }) -> (struct {
+        response string:MAX_STRING_LENGTH;
+    });
+    SendString(struct {
+        value string:MAX_STRING_LENGTH;
+    });
+    -> OnString(struct {
+        response string:MAX_STRING_LENGTH;
+    });
+};
+```
+
+Note: For more details on FIDL protocol syntax, see the
+[FIDL language reference][fidl-reference].
+
+Protocol implementations are served from provider components using the
+[outgoing directory][glossary.outgoing-directory] and consumed from another
+component's [namespace][glossary.namespace].
 
 ## Providing protocol capabilities {#provide}
 
-To provide a protocol capability, a component must define the capability and
-[route](#route) it from `self`. The component hosts the
-protocol capability in its FIDL [outgoing directory][glossary.outgoing-directory].
+To provide a protocol capability, a component must declare the capability and
+[route](#route) it from `self`. The component hosts the protocol capability in
+its [outgoing directory][glossary.outgoing-directory].
 
 To define the capability, add a `capabilities` declaration for it:
 
@@ -50,10 +71,13 @@ is `/svc/fuchsia.example.ExampleProtocol`. You can also customize the path:
 Components route protocol capabilities by [exposing](#expose) them to their
 parent and [offering](#offer) them to their children.
 
+For more details on how the framework routes component capabilities,
+see [capability routing][capability-routing].
+
 ### Exposing {#expose}
 
 Exposing a protocol capability gives the component's parent access to that
-capability. This is done through an [`expose`][expose] declaration.
+capability:
 
 ```json5
 {
@@ -66,14 +90,13 @@ capability. This is done through an [`expose`][expose] declaration.
 }
 ```
 
-The `from: "self"` directive means that the protocol capability is provided by
-this component. In this case the protocol must have a corresponding
-[definition](#provide).
+The `from: "self"` directive means that the protocol capability is
+[provided](#provide) by this component.
 
 ### Offering {#offer}
 
-Offering a protocol capability gives a child component access to that capability.
-This is done through an [`offer`][offer] declaration.
+Offering a protocol capability gives a child component access to that
+capability:
 
 ```json5
 {
@@ -89,13 +112,12 @@ This is done through an [`offer`][offer] declaration.
 
 ## Consuming protocol capabilities {#consume}
 
-When a component [uses][use] a protocol capability that has been [offered][offer]
-to it, that protocol is made available through the component's
-[namespace][glossary.namespace].
+To consume a protocol capability, the component must request the capability and
+open the corresponding path in its [namespace][glossary.namespace].
 
-Consider a component with the following manifest declaration:
+To request the capability, add a `use` declaration for it:
 
-```
+```json5
 {
     use: [
         {
@@ -105,13 +127,8 @@ Consider a component with the following manifest declaration:
 }
 ```
 
-When the component attempts to open the path
-`/svc/fuchsia.example.ExampleProtocol`, the component framework performs
-[capability routing][capability-routing] to find the component that provides
-this protocol. Then, the framework connects the newly opened channel to this
-provider.
-
-You can also customize the namespace path:
+This populates the protocol in the component's namespace at the well-known path
+`/svc/fuchsia.example.ExampleProtocol`. You can also customize the path:
 
 ```json5
 {
@@ -158,13 +175,9 @@ Fuchsia supports the following framework protocols:
 [glossary.channel]: /docs/glossary/README.md#channel
 [glossary.protocol]: /docs/glossary/README.md#protocol
 [glossary.protocol-capability]: /docs/glossary/README.md#protocol-capability
-[glossary.service]: /docs/glossary/README.md#service
 [capability-routing]: /docs/concepts/components/v2/component_manifests.md#capability-routing
-[expose]: /docs/concepts/components/v2/component_manifests.md#expose
+[fidl-reference]: /docs/reference/fidl/language/language.md
 [fidl-binder]: /sdk/fidl/fuchsia.component/binder.fidl
 [fidl-realm]: /sdk/fidl/fuchsia.component/realm.fidl
 [life-of-a-protocol-open]: /docs/concepts/components/v2/capabilities/life_of_a_protocol_open.md
-[offer]: /docs/concepts/components/v2/component_manifests.md#offer
 [routing-example]: /examples/components/routing
-[service-capability]: /docs/concepts/components/v2/capabilities/service.md
-[use]: /docs/concepts/components/v2/component_manifests.md#use

@@ -2,21 +2,96 @@
 
 <<../../_v2_banner.md>>
 
-A component resolver is a protocol-backed [capability][glossary.capability] responsible for
-resolving a URL to a component manifest.
+Component resolvers extend the component framework through an
+[environment][glossary.environment] to resolve a
+[component URL][glossary.component-url] into a component.
 
-Component resolver capabilities are registered with an [`environment`][environment] for a
-particular URL scheme (http, fuchsia-pkg, etc) and are used by the component manager on behalf of a
-component to resolve its children.
+Component manager resolves component URLs by finding a resolver that supports a
+matching URL scheme in the relevant environment and sending a request using the
+[`fuchsia.sys2.ComponentResolver`][fidl-resolver] protocol.
 
-## Registering a component resolver {#registering}
+If resolution succeeds, the component resolver returns a
+[`ComponentDecl`][fidl-decl], the FIDL representation of a
+[component manifest][component-manifest]. If the component being resolved has
+an associated package, the component resolver also returns a
+[`fuchsia.io.Directory`][fidl-directory] handle for the package directory.
 
-Component resolvers are registered with [`environments`][environment] to resolve a particular URL
-scheme. If the environment extends from a parent environment, and the same scheme is registered in
-both parent and child environments, the child registration takes precedence.
+## Providing resolver capabilities {#provide}
 
-Note: For more information on the environments section of the component manifest, see
-[environments](/docs/concepts/components/v2/component_manifests.md#environments).
+To provide a resolver capability, a component must declare the capability backed
+by the [`fuchsia.sys2.ComponentResolver`][fidl-resolver] FIDL protocol and
+[route](#route) it from `self`.
+
+```json5
+{
+    capabilities: [
+        {
+            resolver: "my_resolver",
+            path: "/svc/fuchsia.sys2.ComponentResolver",
+        },
+        { protocol: "fuchsia.sys2.ComponentResolver" },
+    ],
+}
+```
+
+Component manager submits requests to resolve a component URL to the associated
+[protocol capability][protocol-capabilities].
+
+## Routing resolver capabilities {#route}
+
+Components route resolver capabilities by [exposing](#expose) them to their
+parent and [offering](#offer) them to their children.
+
+For more details on how the framework routes component capabilities,
+see [capability routing][capability-routing].
+
+### Exposing {#expose}
+
+Exposing a resolver capability gives the component's parent access to that
+capability:
+
+```json5
+{
+    expose: [
+        {
+            resolver: "my_resolver",
+            from: "self",
+        },
+        {
+            protocol: "fuchsia.sys2.ComponentResolver",
+            from: "self",
+        },
+    ],
+}
+```
+
+### Offering {#offer}
+
+Offering a resolver capability gives a child component access to that
+capability:
+
+```json5
+{
+    offer: [
+        {
+            resolver: "my_resolver",
+            from: "self",
+            to: [ "#child-a" ],
+        },
+        {
+            protocol: "fuchsia.sys2.ComponentResolver",
+            from: "self",
+            to: [ "#child-a" ],
+        },
+    ],
+}
+```
+
+## Registering a component resolver {#register}
+
+Component resolvers are made available to components through their
+[environment][environment]. To register a new resolver within an environment,
+add a new entry to the `resolvers` section of the `environments` declaration:
 
 ```json5
 environments: [
@@ -25,86 +100,40 @@ environments: [
         extends: "realm",
         resolvers: [
             {
-                resolver: "my-resolver",
+                resolver: "my_resolver",
                 scheme: "my-scheme",
                 from: "parent",
             }
         ],
-    }
-```
-
-An environment must be assigned to a child in order for the registered resolver
-to take effect. Then, the registered resolver will be used to resolve any
-component URLs in the environment whose URL scheme matches `scheme`.
-
-Note: For more information on the children section of the component manifest, see
-[children](/docs/concepts/components/v2/component_manifests.md#children).
-
-```json5
-children: [
-    {
-        name: "my-child",
-        url: "my-scheme://myhost.com/my-path",
-        environment: "#my-environ"
     },
 ]
 ```
 
-## Implementing a component resolver
+The registered resolver will be used to resolve component URLs whose URL scheme
+matches the provided `scheme`.
 
-A component resolver can be implemented by doing the following:
+For more details on how to apply environments to components, see the
+[environments documentation][environment].
 
-- Implementing the [`fuchsia.sys2.ComponentResolver`] FIDL protocol in a
-  component.
-- Declaring and [routing] a `resolver` capability backed by this protocol.
+## Framework resolvers {#framework}
 
-When the component manager is asked to resolve a component URL, it finds the component resolver
-registered to the URL’s scheme in the relevant environment and asks it to resolve the URL using the
-[`fuchsia.sys2.ComponentResolver`] FIDL protocol.
+Component framework provides the following built-in component resolvers to
+support standard Fuchsia URL schemes:
 
-If resolution succeeds, the component resolver returns a [`ComponentDecl`], the FIDL
-representation of a [component manifest][component-manifest]. If the component being resolved has
-an associated package, the component resolver should also return a [`fuchsia.io.Directory`] handle
-for the package directory.
+| Resolver            | URL scheme                 |
+| ------------------- | -------------------------- |
+| `boot_resolver`     | [`fuchsia-boot`][url-boot] |
+| `base_resolver`     | [`fuchsia-pkg`][url-pkg]   |
+| `universe_resolver` | [`fuchsia-pkg`][url-pkg]   |
 
-Before registering a resolver with an environment, it must be created and routed to the
-environment.
-
-Note: For more information on the capabilities section of the component manifest, see
-[capabilities](/docs/concepts/components/v2/component_manifests.md#capabilities).
-
-```json5
-capabilities: [
-    {
-        resolver: "my-resolver",
-        path: "/svc/fuchsia.sys2.ComponentResolver",
-    },
-],
-expose: [
-    {
-        resolver: "my-resolver",
-        from: "self",
-    }
-]
-```
-
-`resolver` capabilities are different from [`protocol`] capabilities in that they cannot be used
-directly by a component. They can only be registered with an environment.
-See [registering a component resolver](#registering).
-
-## Built-in boot resolver
-
-The component manager provides a built-in component resolver called `boot-resolver`, which is
-registered to the `fuchsia-boot` scheme in component manager's built-in environment.
-
-This resolver can be routed, and the built-in environment can be extended.
-See [`environments`][environment].
-
-[glossary.capability]: /docs/glossary/README.md#capability
-[environment]: ../environments.md
-[`fuchsia.sys2.ComponentResolver`]: /sdk/fidl/fuchsia.sys2/runtime/component_resolver.fidl
-[`ComponentDecl`]: /sdk/fidl/fuchsia.sys2/decls/component_decl.fidl
-[component-manifest]: ../component_manifests.md
-[`fuchsia.io.Directory`]: /sdk/fidl/fuchsia.io/directory.fidl
-[`protocol`]: protocol.md
-[routing]: ../component_manifests.md#capability-routing
+[glossary.component-url]: /docs/glossary/README.md#component-url
+[glossary.environment]: /docs/glossary/README.md#environment
+[capability-routing]: /docs/concepts/components/v2/component_manifests.md#capability-routing
+[component-manifest]: /docs/concepts/components/v2/component_manifests.md
+[environment]: /docs/concepts/components/v2/environments.md
+[fidl-resolver]: /sdk/fidl/fuchsia.sys2/runtime/component_resolver.fidl
+[fidl-decl]: /sdk/fidl/fuchsia.sys2/decls/component_decl.fidl
+[fidl-directory]: /sdk/fidl/fuchsia.io/directory.fidl
+[protocol-capabilities]: /docs/concepts/components/v2/capabilities/protocol.md
+[url-boot]: /docs/concepts/components/component_urls.md#fuchsia-boot
+[url-pkg]: /docs/concepts/components/component_urls.md#fuchsia-pkg
