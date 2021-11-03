@@ -77,7 +77,7 @@ static int dc_dir_fd;
 static zx_handle_t dc_device;
 
 static zx_status_t vc_set_mode(VirtconMode mode) {
-  return dc_client.SetVirtconMode(static_cast<uint8_t>(mode)).status();
+  return dc_client->SetVirtconMode(static_cast<uint8_t>(mode)).status();
 }
 
 void vc_attach_to_main_display(vc_t* vc) {
@@ -114,7 +114,7 @@ static void handle_ownership_change(bool has_ownership) {
 }
 
 zx_status_t create_layer(uint64_t display_id, uint64_t* layer_id) {
-  auto rsp = dc_client.CreateLayer();
+  auto rsp = dc_client->CreateLayer();
   RETURN_IF_ERROR(rsp, "vc: Create layer call failed");
 
   if (rsp->res != ZX_OK) {
@@ -127,13 +127,13 @@ zx_status_t create_layer(uint64_t display_id, uint64_t* layer_id) {
 }
 
 void destroy_layer(uint64_t layer_id) {
-  if (!dc_client.DestroyLayer(layer_id).ok()) {
+  if (!dc_client->DestroyLayer(layer_id).ok()) {
     printf("vc: Failed to destroy layer\n");
   }
 }
 
 void release_image(uint64_t image_id) {
-  if (!dc_client.ReleaseImage(image_id).ok()) {
+  if (!dc_client->ReleaseImage(image_id).ok()) {
     printf("vc: Failed to release image\n");
   }
 }
@@ -185,7 +185,7 @@ void handle_display_removed(uint64_t id) {
       list_delete(&info->node);
       zx_handle_close(info->image_vmo);
       if (info->buffer_collection_id) {
-        dc_client.ReleaseBufferCollection(info->buffer_collection_id);
+        dc_client->ReleaseBufferCollection(info->buffer_collection_id);
       }
 
       if (info->graphics) {
@@ -205,7 +205,7 @@ void handle_display_removed(uint64_t id) {
 }
 
 static zx_status_t get_single_framebuffer(zx_handle_t* vmo_out, uint32_t* stride_out) {
-  auto rsp = dc_client.GetSingleBufferFramebuffer();
+  auto rsp = dc_client->GetSingleBufferFramebuffer();
   RETURN_IF_ERROR(rsp, "vc: Failed to get single framebuffer");
   if (rsp->res != ZX_OK) {
     // Don't print an error since this can happen on non-single-framebuffer
@@ -224,7 +224,7 @@ static zx_status_t get_single_framebuffer(zx_handle_t* vmo_out, uint32_t* stride
 zx_status_t import_buffer_collection(uint64_t collection_id, fhd::wire::ImageConfig* config,
                                      uint64_t* id) {
   constexpr uint32_t kImageIndex = 0;
-  auto import_rsp = dc_client.ImportImage(*config, collection_id, kImageIndex);
+  auto import_rsp = dc_client->ImportImage(*config, collection_id, kImageIndex);
   RETURN_IF_ERROR(import_rsp, "vc: Failed to import image call");
 
   if (import_rsp->res != ZX_OK) {
@@ -244,7 +244,7 @@ zx_status_t import_vmo(zx_handle_t vmo, fhd::wire::ImageConfig* config, uint64_t
     return status;
   }
 
-  auto import_rsp = dc_client.ImportVmoImage(*config, zx::vmo(vmo_dup), 0);
+  auto import_rsp = dc_client->ImportVmoImage(*config, zx::vmo(vmo_dup), 0);
   RETURN_IF_ERROR(import_rsp, "vc: Failed to import vmo call");
 
   if (import_rsp->res != ZX_OK) {
@@ -257,28 +257,28 @@ zx_status_t import_vmo(zx_handle_t vmo, fhd::wire::ImageConfig* config, uint64_t
 }
 
 zx_status_t set_display_layer(uint64_t display_id, uint64_t layer_id) {
-  RETURN_IF_ERROR(dc_client.SetDisplayLayers(display_id, fidl::VectorView<uint64_t>::FromExternal(
-                                                             &layer_id, layer_id ? 1 : 0)),
+  RETURN_IF_ERROR(dc_client->SetDisplayLayers(display_id, fidl::VectorView<uint64_t>::FromExternal(
+                                                              &layer_id, layer_id ? 1 : 0)),
                   "vc: Failed to set display layers");
   return ZX_OK;
 }
 
 zx_status_t configure_layer(display_info_t* display, uint64_t layer_id, uint64_t image_id,
                             fhd::wire::ImageConfig* config) {
-  RETURN_IF_ERROR(dc_client.SetLayerPrimaryConfig(layer_id, *config),
+  RETURN_IF_ERROR(dc_client->SetLayerPrimaryConfig(layer_id, *config),
                   "vc: Failed to set layer config");
-  RETURN_IF_ERROR(dc_client.SetLayerPrimaryPosition(
+  RETURN_IF_ERROR(dc_client->SetLayerPrimaryPosition(
                       layer_id, fhd::wire::Transform::kIdentity,
                       fhd::wire::Frame{.width = config->width, .height = config->height},
                       fhd::wire::Frame{.width = display->width, .height = display->height}),
                   "vc: Failed to set layer position");
-  RETURN_IF_ERROR(dc_client.SetLayerImage(layer_id, image_id, 0, 0), "vc: Failed to set image");
+  RETURN_IF_ERROR(dc_client->SetLayerImage(layer_id, image_id, 0, 0), "vc: Failed to set image");
   return ZX_OK;
 }
 
 zx_status_t apply_configuration() {
   // Validate and then apply the new configuration
-  auto check_rsp = dc_client.CheckConfig(false);
+  auto check_rsp = dc_client->CheckConfig(false);
   RETURN_IF_ERROR(check_rsp, "vc: Failed to validate display config");
 
   if (check_rsp->res != fhd::wire::ConfigResult::kOk) {
@@ -286,7 +286,7 @@ zx_status_t apply_configuration() {
     return ZX_ERR_INTERNAL;
   }
 
-  RETURN_IF_ERROR(dc_client.ApplyConfig(), "Applying config failed");
+  RETURN_IF_ERROR(dc_client->ApplyConfig(), "Applying config failed");
 
   return ZX_OK;
 }
@@ -302,7 +302,7 @@ static zx_status_t create_buffer_collection(
       return token_server.status_value();
     }
     zx_status_t status =
-        sysmem_allocator.AllocateSharedCollection(std::move(*token_server)).status();
+        sysmem_allocator->AllocateSharedCollection(std::move(*token_server)).status();
     if (status != ZX_OK) {
       printf("vc: Failed to allocate shared collection: %d\n", status);
       return status;
@@ -341,7 +341,7 @@ static zx_status_t create_buffer_collection(
       printf("vc: Failed to create collection channel: %d\n", endpoints.status_value());
       return endpoints.status_value();
     }
-    status = sysmem_allocator.BindSharedCollection(std::move(token), std::move(endpoints->server))
+    status = sysmem_allocator->BindSharedCollection(std::move(token), std::move(endpoints->server))
                  .status();
     if (status != ZX_OK) {
       printf("vc: Failed to bind collection: %d\n", status);
@@ -349,13 +349,13 @@ static zx_status_t create_buffer_collection(
     }
     collection = fidl::BindSyncClient(std::move(endpoints->client));
   }
-  status = collection.Sync().status();
+  status = collection->Sync().status();
   if (status != ZX_OK) {
     printf("vc: Failed to sync collection: %d\n", status);
     return status;
   }
 
-  auto import_rsp = dc_client.ImportBufferCollection(id, std::move(display_token));
+  auto import_rsp = dc_client->ImportBufferCollection(id, std::move(display_token));
   RETURN_IF_ERROR(import_rsp, "vc: Failed to import buffer collection");
   if (import_rsp->res != ZX_OK) {
     printf("vc: Import buffer collection error\n");
@@ -363,7 +363,7 @@ static zx_status_t create_buffer_collection(
   }
 
   auto set_display_constraints =
-      dc_client.SetBufferCollectionConstraints(id, display->image_config);
+      dc_client->SetBufferCollectionConstraints(id, display->image_config);
   RETURN_IF_ERROR(set_display_constraints, "vc: Failed to set display constraints");
   if (set_display_constraints->res != ZX_OK) {
     printf("vc: Display constraints error\n");
@@ -395,7 +395,7 @@ static zx_status_t create_buffer_collection(
   image_constraints.min_bytes_per_row = 0;
   image_constraints.max_bytes_per_row = 0xffffffff;
 
-  RETURN_IF_ERROR(collection.SetConstraints(true, constraints), "vc: Failed to set constraints");
+  RETURN_IF_ERROR(collection->SetConstraints(true, constraints), "vc: Failed to set constraints");
   *collection_client = fidl::WireSyncClient<sysmem::BufferCollection>(std::move(collection));
   return ZX_OK;
 }
@@ -416,7 +416,7 @@ zx_status_t alloc_display_info_vmo(display_info_t* display) {
     }
     display->buffer_collection_id = buffer_collection_id;
 
-    auto info_result = collection_client.WaitForBuffersAllocated();
+    auto info_result = collection_client->WaitForBuffersAllocated();
     RETURN_IF_ERROR(info_result, "vc: Couldn't wait for buffers allocated");
     if (info_result->status != ZX_OK) {
       printf("vc: Couldn't wait for buffers allocated\n");
@@ -433,7 +433,7 @@ zx_status_t alloc_display_info_vmo(display_info_t* display) {
     }
     display->stride = bytes_per_row / ZX_PIXEL_FORMAT_BYTES(display->format);
     display->image_vmo = info_result->buffer_collection_info.buffers[0].vmo.release();
-    collection_client.Close();
+    collection_client->Close();
   }
   return ZX_OK;
 }
@@ -612,7 +612,7 @@ zx_status_t dc_callback_handler(zx_signals_t signals) {
 void initialize_display_channel(fidl::ClientEnd<fhd::Controller> channel) {
   dc_client = fidl::WireSyncClient<fhd::Controller>(fidl::BindSyncClient(std::move(channel)));
 
-  dc_wait.set_object(dc_client.channel().get());
+  dc_wait.set_object(dc_client.client_end().borrow().handle());
 }
 
 #else
@@ -802,7 +802,7 @@ bool vc_sysmem_connect() {
   }
 
   sysmem_allocator = fidl::WireSyncClient<sysmem::Allocator>(*std::move(sysmem_client));
-  sysmem_allocator.SetDebugClientInfo(fidl::StringView::FromExternal(fsl::GetCurrentProcessName()),
-                                      fsl::GetCurrentProcessKoid());
+  sysmem_allocator->SetDebugClientInfo(fidl::StringView::FromExternal(fsl::GetCurrentProcessName()),
+                                       fsl::GetCurrentProcessKoid());
   return true;
 }

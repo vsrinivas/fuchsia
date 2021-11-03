@@ -263,8 +263,8 @@ class StubMultiBufferDisplayController : public StubDisplayController {
     auto endpoints = fidl::CreateEndpoints<sysmem::BufferCollection>();
     ASSERT_OK(endpoints.status_value());
     ASSERT_OK(get_sysmem_allocator()
-                  .BindSharedCollection(std::move(request->collection_token),
-                                        std::move(endpoints->server))
+                  ->BindSharedCollection(std::move(request->collection_token),
+                                         std::move(endpoints->server))
                   .status());
     buffer_collections_[request->collection_id] =
         fidl::BindSyncClient(std::move(endpoints->client));
@@ -301,7 +301,7 @@ class StubMultiBufferDisplayController : public StubDisplayController {
       image_constraints.bytes_per_row_divisor = 4;
     }
 
-    buffer_collections_[request->collection_id].SetConstraints(true, constraints);
+    buffer_collections_[request->collection_id]->SetConstraints(true, constraints);
     _completer.Reply(ZX_OK);
   }
 };

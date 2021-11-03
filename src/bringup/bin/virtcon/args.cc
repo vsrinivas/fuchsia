@@ -20,7 +20,7 @@ zx_status_t ParseArgs(fidl::WireSyncClient<fuchsia_boot::Arguments>& client, Arg
   };
 
   auto string_resp =
-      client.GetStrings(fidl::VectorView<fidl::StringView>::FromExternal(string_keys));
+      client->GetStrings(fidl::VectorView<fidl::StringView>::FromExternal(string_keys));
   if (string_resp.ok() && !string_resp->values[0].is_null()) {
     std::string colorvar(string_resp->values[0].data(), string_resp->values[0].size());
     out->color_scheme = string_to_color_scheme(colorvar.c_str());
@@ -64,7 +64,7 @@ zx_status_t ParseArgs(fidl::WireSyncClient<fuchsia_boot::Arguments>& client, Arg
   };
 
   auto bool_resp =
-      client.GetBools(fidl::VectorView<fuchsia_boot::wire::BoolPair>::FromExternal(bool_keys));
+      client->GetBools(fidl::VectorView<fuchsia_boot::wire::BoolPair>::FromExternal(bool_keys));
   if (bool_resp.ok()) {
     out->keep_log_visible = bool_resp->values[0];
     out->disable = bool_resp->values[1];
