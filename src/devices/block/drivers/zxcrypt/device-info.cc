@@ -10,6 +10,8 @@
 #include <lib/zx/vmar.h>
 #include <zircon/status.h>
 
+#include <string_view>
+
 #include <fbl/macros.h>
 
 #include "src/devices/block/drivers/zxcrypt/extra.h"
@@ -79,6 +81,12 @@ zx_status_t DeviceInfo::Reserve(size_t size) {
     return rc;
   }
   auto cleanup = fit::defer([this]() { vmo.reset(); });
+
+  constexpr std::string_view kZxcryptBufferName = "zxcrypt-buffer";
+  if ((rc = vmo.set_property(ZX_PROP_NAME, kZxcryptBufferName.data(), kZxcryptBufferName.size()))) {
+    zxlogf(ERROR, "vmo::set_property(ZX_PROP_NAME) : %s", zx_status_get_string(rc));
+    return rc;
+  }
 
   constexpr uint32_t flags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
   uintptr_t address;

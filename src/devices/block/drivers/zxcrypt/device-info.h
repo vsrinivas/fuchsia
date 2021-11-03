@@ -21,7 +21,8 @@
 namespace zxcrypt {
 
 // |zxcrypt::DeviceInfo| bundles block device configuration details passed from the controller to
-// the device.  It is used a const struct in |zxcrypt::Device| to allow rapid, lock-free access.
+// the device.  It is used as a `const struct` in |zxcrypt::Device| to allow rapid, lock-free
+// access.
 struct DeviceInfo {
   // Callbacks to the parent's block protocol methods.
   ddk::BlockProtocolClient block_protocol;
