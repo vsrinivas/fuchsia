@@ -563,7 +563,11 @@ test "${#linker[@]}" = 0 || {
 
   clang_lib_triple="$target_triple"
   case "$target_triple" in
+    aarch64-fuchsia) clang_lib_triple="aarch64-unknown-fuchsia" ;;
     x86_64-fuchsia) clang_lib_triple="x86_64-unknown-fuchsia" ;;
+    *) echo "[$script]: unhandled case for clang lib dir: $target_triple"
+      exit 1
+      ;;
   esac
 
   # Linking with clang++ generally requires libc++.
