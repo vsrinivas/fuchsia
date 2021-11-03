@@ -315,6 +315,24 @@ pub fn sys_getrusage(
     Ok(SUCCESS)
 }
 
+pub fn sys_getrlimit(
+    current_task: &CurrentTask,
+    resource: u32,
+    user_rlimit: UserRef<rlimit>,
+) -> Result<SyscallResult, Errno> {
+    let limit = match resource {
+        resource if resource == RLIMIT_NOFILE => {
+            Ok(rlimit { rlim_cur: RLIMIT_NOFILE_MAX, rlim_max: RLIMIT_NOFILE_MAX })
+        }
+        _ => {
+            not_implemented!("getrlimit: {:?}", resource);
+            error!(ENOSYS)
+        }
+    }?;
+    current_task.mm.write_object(user_rlimit, &limit)?;
+    Ok(SUCCESS)
+}
+
 pub fn sys_futex(
     current_task: &CurrentTask,
     addr: UserAddress,

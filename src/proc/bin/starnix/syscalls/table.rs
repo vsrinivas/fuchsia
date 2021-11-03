@@ -99,6 +99,7 @@ pub fn dispatch_syscall(
         getrandom[3],
         getresgid[3],
         getresuid[3],
+        getrlimit[2],
         getrusage[2],
         getsid[1],
         getsockname[3],
