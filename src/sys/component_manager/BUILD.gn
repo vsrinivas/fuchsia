@@ -372,7 +372,10 @@ fuchsia_test_package("component-manager-tests") {
       max_severity = "ERROR"
     }
   }
-  test_components = [ ":component-manager-tests-cmp" ]
+  test_components = [
+    ":component-manager-tests-cmp",
+    ":component-manager-boot-env-tests-cmp",
+  ]
   deps = [
     ":component_manager_tests_invalid_manifest",
     "src/elf_runner/tests/lifecycle:run-indefinitely",
@@ -381,12 +384,6 @@ fuchsia_test_package("component-manager-tests") {
     "//examples/fidl/legacy/echo_server_rust:echo-server-rust-cmp",
     "//examples/hello_world/rust:hello-world-rust-component",
   ]
-
-  # TODO(fxbug.dev/83128): Flaky test disabled on coverage.
-  # Please fix the flake and remove the condition below.
-  if (!is_coverage) {
-    test_components += [ ":component-manager-boot-env-tests-cmp" ]
-  }
 }
 
 group("tests") {
