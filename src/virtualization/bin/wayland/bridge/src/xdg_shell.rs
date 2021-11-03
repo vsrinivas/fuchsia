@@ -1166,7 +1166,7 @@ impl XdgToplevel {
     /// `this`.
     pub fn configure(this: ObjectRef<Self>, client: &mut Client) -> Result<(), Error> {
         ftrace::duration!("wayland", "XdgToplevel::configure");
-        let (width, height, surface_ref) = {
+        let (width, height, maximized, surface_ref) = {
             let (view, surface_ref, maybe_parent_ref) = {
                 let toplevel = this.get(client)?;
                 let xdg_surface_ref = toplevel.xdg_surface_ref;
@@ -1174,14 +1174,14 @@ impl XdgToplevel {
                 (xdg_surface.view.clone(), toplevel.surface_ref, toplevel.parent_ref)
             };
             // Let the client determine the size if it has a parent.
-            let (width, height) = if maybe_parent_ref.is_some() {
+            let (width, height, maximized) = if maybe_parent_ref.is_some() {
                 surface_ref
                     .get(client)
                     .map(|surface| {
                         let geometry = surface.window_geometry();
-                        (geometry.width, geometry.height)
+                        (geometry.width, geometry.height, false)
                     })
-                    .unwrap_or((0, 0))
+                    .unwrap_or((0, 0, false))
             } else {
                 let display_info = client.display_info();
                 let physical_size =
@@ -1189,19 +1189,22 @@ impl XdgToplevel {
                         width: display_info.width_in_px as i32,
                         height: display_info.height_in_px as i32,
                     });
-                (physical_size.width, physical_size.height)
+                (physical_size.width, physical_size.height, true)
             };
-            (width, height, surface_ref)
+            (width, height, maximized, surface_ref)
         };
 
-        // Always set the fullscreen state to hint to the client it really should
-        // obey the geometry we're asking. From the xdg_shell spec:
-        //
-        // fullscreen:
-        //    The surface is fullscreen. The window geometry specified in the
-        //    configure event must be obeyed by the client.
         let mut states = wl::Array::new();
-        states.push(zxdg_toplevel_v6::State::Fullscreen)?;
+        // If the surface doesn't have a parent, set the maximized state
+        // to hint to the client it really should obey the geometry we're
+        // asking for. From the xdg_shell spec:
+        //
+        // maximized:
+        //    The surface is maximized. The window geometry specified in the
+        //    configure event must be obeyed by the client.
+        if maximized {
+            states.push(zxdg_toplevel_v6::State::Maximized)?;
+        }
         if client.input_dispatcher.has_focus(surface_ref) {
             // If the window has focus, we set the activated state. This is
             // just a hint to pass along to the client so it can draw itself
