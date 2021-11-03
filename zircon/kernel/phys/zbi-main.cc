@@ -67,7 +67,7 @@ void PhysMain(void* zbi, arch::EarlyTicks ticks) {
   gBootOptions = &boot_opts;
 
   // Perform any architecture-specific set up.
-  ArchSetUp();
+  ArchSetUp(zbi);
 
   // Call the real entry point now that it can use printf!  It does not return.
   ZbiMain(zbi, ticks);

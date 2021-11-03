@@ -34,6 +34,8 @@ if (toolchain_environment == "kernel.phys") {
   static_library("phys") {
     sources = [
       "exception.S",
+      "psci.S",
+      "psci.cc",
       "reset.cc",
       "setup.cc",
       "shadow-call-stack.S",
@@ -42,8 +44,14 @@ if (toolchain_environment == "kernel.phys") {
     include_dirs = [ "//zircon/.." ]
     deps = [
       "//zircon/kernel/lib/arch",
+      "//zircon/kernel/lib/boot-options",
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
       "//zircon/kernel/phys:main",
+      "//zircon/kernel/phys:stdio",
+      "//zircon/kernel/phys:symbolize",
       "//zircon/system/ulib/static-pie",
+      "//zircon/system/ulib/zbitl",
     ]
   }
 

@@ -85,6 +85,20 @@ constexpr auto Enum<WallclockType> = [](auto&& Switch) {
       .Case("hpet", WallclockType::kHpet);
 };
 
+#if BOOT_OPTIONS_GENERATOR || defined(__aarch64__)
+
+template <>
+constexpr auto Enum<Arm64PhysPsciReset> = [](auto&& Switch) {
+  return Switch  //
+      .Case("disabled", Arm64PhysPsciReset::kDisabled)
+      .Case("shutdown", Arm64PhysPsciReset::kShutdown)
+      .Case("reboot", Arm64PhysPsciReset::kReboot)
+      .Case("reboot-bootloader", Arm64PhysPsciReset::kRebootBootloader)
+      .Case("reboot-recovery", Arm64PhysPsciReset::kRebootRecovery);
+};
+
+#endif  // BOOT_OPTIONS_GENERATOR || defined(__x86_64__)
+
 #if BOOT_OPTIONS_GENERATOR || defined(__x86_64__)
 
 template <>

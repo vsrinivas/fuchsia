@@ -109,7 +109,6 @@ if (toolchain_environment == "kernel.phys" ||
     ]
 
     deps = [
-      "//zircon/kernel/arch/$zircon_cpu/phys",
       "//zircon/kernel/lib/boot-options",
       "//zircon/kernel/lib/ktl",
       "//zircon/kernel/lib/libc",
@@ -127,7 +126,10 @@ if (toolchain_environment == "kernel.phys" ||
   # This is used implicitly by phys_executable() targets,
   # including zbi_executable() targets.
   source_set("phys_executable.deps") {
-    deps = [ ":symbolize" ]
+    deps = [
+      ":symbolize",
+      "//zircon/kernel/arch/$zircon_cpu/phys",
+    ]
   }
 
   # This is used implicitly by zbi_executable() targets.
@@ -141,7 +143,6 @@ if (toolchain_environment == "kernel.phys" ||
       ":main",
       ":stdio",
       ":zbi-memory",
-      "//zircon/kernel/arch/$zircon_cpu/phys",
       "//zircon/kernel/lib/arch",
       "//zircon/kernel/lib/boot-options",
       "//zircon/system/ulib/uart",

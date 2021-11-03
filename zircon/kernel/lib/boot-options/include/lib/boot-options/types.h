@@ -16,6 +16,11 @@
 // as std::string_view, bool, and uintNN_t, can be used in DEFINE_OPTIONS in
 // "options.inc".
 
+#if BOOT_OPTIONS_GENERATOR || defined(__aarch64__)
+// This declares special types used by machine-specific options in "arm64.inc".
+#include "arm64.h"
+#endif
+
 #if BOOT_OPTIONS_GENERATOR || defined(__x86_64__)
 // This declares special types used by machine-specific options in "x86.inc".
 #include "x86.h"

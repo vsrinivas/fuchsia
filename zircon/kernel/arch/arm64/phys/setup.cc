@@ -5,11 +5,16 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/arch/arm64/system.h>
+#include <lib/zbitl/view.h>
 #include <stdio.h>
+#include <zircon/boot/driver-config.h>
+#include <zircon/boot/image.h>
 
 #include <phys/exception.h>
 #include <phys/main.h>
 #include <phys/stack.h>
+
+#include "psci.h"
 
 // The regs.h header is really only used by assembly code.
 // This is just here to get the static_asserts done somewhere.
@@ -73,11 +78,29 @@ constexpr auto ResumeSpEl1 = ResumeSpElx<SpSameEl, SpBadEl, SpBadEl>;
 constexpr auto ResumeSpEl2 = ResumeSpElx<arch::ArmSpEl1, SpSameEl, SpBadEl>;
 constexpr auto ResumeSpEl3 = ResumeSpElx<arch::ArmSpEl1, arch::ArmSpEl2, SpSameEl>;
 
+const dcfg_arm_psci_driver_t* FindPsciConfig(void* zbi_ptr) {
+  const dcfg_arm_psci_driver_t* cfg = nullptr;
+
+  zbitl::View zbi(zbitl::StorageFromRawHeader(static_cast<zbi_header_t*>(zbi_ptr)));
+  for (auto [header, payload] : zbi) {
+    if (header->type == ZBI_TYPE_KERNEL_DRIVER && header->extra == KDRV_ARM_PSCI &&
+        payload.size() >= sizeof(*cfg)) {
+      // Keep looping.  The Last one wins.
+      cfg = reinterpret_cast<const dcfg_arm_psci_driver_t*>(payload.data());
+    }
+  }
+  zbi.ignore_error();
+
+  return cfg;
+}
+
 }  // namespace
 
-void ArchSetUp() {
+void ArchSetUp(void* zbi) {
   // Hereafter any machine exceptions should be handled.
   ArmSetVbar(phys_exception);
+
+  ArmPsciSetup(FindPsciConfig(zbi));
 }
 
 uint64_t PhysExceptionResume(PhysExceptionState& state, uint64_t pc, uint64_t sp, uint64_t psr) {

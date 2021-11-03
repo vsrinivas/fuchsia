@@ -15,4 +15,4 @@ arch::X86StandardSegments gStandardSegments;
 
 }  // namespace
 
-void ArchSetUp() { gStandardSegments.Load(); }
+void ArchSetUp(void* zbi) { gStandardSegments.Load(); }

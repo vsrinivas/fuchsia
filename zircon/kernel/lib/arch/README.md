@@ -237,6 +237,8 @@ the identifiers are expected to be one of the following:
 
 **\[arm/sysreg\]** ~ [Arm® Architecture Registers Armv8, for Armv8-A architecture profile](https://developer.arm.com/docs/ddi0595/i/aarch64-system-registers), September 29 2020
 
+**\[arm/psci\]** ~ [Arm Power State Coordination Interface, Platform Design Document](https://developer.arm.com/documentation/den0022/db), June 2021
+
 **\[intel/vol1\]** ~ [Intel® 64 and IA-32 Architectures Software Developer's Manual Volume 1: Basic Architecture](https://software.intel.com/content/www/us/en/develop/download/intel-64-and-ia-32-architectures-software-developers-manual-volume-1-basic-architecture.html), May 2020
 
 **\[intel/vol2\]** ~ [Intel® 64 and IA-32 Architectures Software Developer's Manual Combined Volumes 2A, 2B, 2C, and 2D: Instruction Set Reference, A-Z](https://software.intel.com/content/www/us/en/develop/download/intel-64-and-ia-32-architectures-sdm-combined-volumes-2a-2b-2c-and-2d-instruction-set-reference-a-z.html), May 2020

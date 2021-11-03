@@ -122,6 +122,10 @@ struct BootOptions {
   OPTION_TYPE(TestStruct);
 #endif
 
+#if BOOT_OPTIONS_GENERATOR || defined(__aarch64__)
+  ARM64_OPTION_TYPES(OPTION_TYPE)
+#endif
+
 #if BOOT_OPTIONS_GENERATOR || defined(__x86_64__)
   X86_OPTION_TYPES(OPTION_TYPE)
 #endif

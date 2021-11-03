@@ -724,7 +724,14 @@ system on chip. Currently accepted values are amlogic-t931g, amlogic-s905d2, and
 This option caps the number of CPUs to initialize.  It cannot be greater than *SMP\_MAX\_CPUS*
 for a specific architecture.
 
-Note: The default value may vary for each architechture.
+Note: The default value may vary for each architecture.
+
+### kernel.phys.psci-reset=[disabled | shutdown | reboot | reboot-bootloader | reboot-recovery]
+**Default:** `reboot`
+
+This option determines what kind of PSCI reset operation (if any)
+the early boot kernel will use if it needs to panic and crash.
+If this is "disabled", the machine may enter an infinite loop on panic.
 
 ### kernel.arm64.phys.map-all-device-memory=\<bool>
 **Default:** `false`

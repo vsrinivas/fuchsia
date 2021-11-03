@@ -62,8 +62,8 @@ if (current_toolchain == default_toolchain) {
         "//zircon/kernel/arch/x86:abi",
         "//zircon/kernel/phys:defines",
 
-        # Don't emit extra code making static initializers thread-safe (we don't
-        # have threads or any of the corresponding library support.)
+        # Don't emit extra code making static initializers thread-safe (we
+        # don't have threads or any of the corresponding library support.)
         "//build/config/zircon:no_threadsafe_statics",
 
         # All physmem code is inherently sensitive and in a position for any

@@ -24,6 +24,46 @@ percpu_ptr .req x20
 /// #if __has_feature(shadow_call_stack) it's used for the SCSP.
 shadow_call_sp .req x18
 
+// Standard prologue sequence for FP setup, with CFI.
+.macro .prologue.fp frame_extra_size=0
+  stp x29, x30, [sp, #-(16 + \frame_extra_size)]!
+  // The CFA is still computed relative to the SP so code will
+  // continue to use .cfi_adjust_cfa_offset for pushes and pops.
+  .cfi_adjust_cfa_offset 16 + \frame_extra_size
+  mov x29, sp
+  .cfi_offset x29, 0 - (16 + \frame_extra_size)
+  .cfi_offset x30, 8 - (16 + \frame_extra_size)
+.endm
+
+// Epilogue sequence to match .prologue.fp with the same argument.
+.macro .epilogue.fp frame_extra_size=0
+  ldp x29, x30, [sp], #(16 + \frame_extra_size)
+  .cfi_adjust_cfa_offset -(16 + \frame_extra_size)
+  .cfi_same_value x29
+  .cfi_same_value x30
+.endm
+
+// Standard prologue sequence for shadow call stack, with CFI.
+.macro .prologue.shadow_call_sp
+#if __has_feature(shadow_call_stack)
+  str x30, [shadow_call_sp], #8
+  // Set the x18 rule to DW_CFA_val_expression{DW_OP_breg18(-8)} to compensate
+  // for the increment just done.
+  .cfi_escape 0x16, 18, 2, 0x70 + 18, (-8) & 0x7f
+  // Set the x30 rule to DW_CFA_expression{DW_OP_breg18(-8)}.
+  .cfi_escape 0x0f, 30, 2, 0x70 + 18, (-8) & 0x7f
+#endif
+.endm
+
+// Epilogue sequence to match .prologue.shadow_call_sp.
+.macro .epilogue.shadow_call_sp
+#if __has_feature(shadow_call_stack)
+  ldr x30, [shadow_call_sp, #-8]!
+  .cfi_same_value shadow_call_sp
+  .cfi_same_value x30
+#endif
+.endm
+
 /// Fill a register with a wide integer literal.
 ///
 /// This emits the one to four instructions required to fill a 64-bit

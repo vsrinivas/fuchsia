@@ -76,7 +76,7 @@ void InitMemory(void* bootloader_data);
 void ZbiInitMemory(void* zbi, ktl::span<zbi_mem_range_t> mem_config);
 
 // Perform any architecture-specific set-up.
-void ArchSetUp();
+void ArchSetUp(void* zbi);
 
 // Try to reboot or shut down the machine in a panic situation.
 [[noreturn]] void ArchPanicReset();

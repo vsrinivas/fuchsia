@@ -39,7 +39,14 @@ DEFINE_OPTION("kernel.smp.maxcpus", uint32_t, arm64_smp_max_cpus, {16}, R"""(
 This option caps the number of CPUs to initialize.  It cannot be greater than *SMP\_MAX\_CPUS*
 for a specific architecture.
 
-Note: The default value may vary for each architechture.
+Note: The default value may vary for each architecture.
+)""")
+
+DEFINE_OPTION("kernel.phys.psci-reset", Arm64PhysPsciReset, phys_psci_reset,
+              {Arm64PhysPsciReset::kReboot}, R"""(
+This option determines what kind of PSCI reset operation (if any)
+the early boot kernel will use if it needs to panic and crash.
+If this is "disabled", the machine may enter an infinite loop on panic.
 )""")
 
 DEFINE_OPTION("kernel.arm64.phys.map-all-device-memory", bool, phys_map_all_device_memory, {false}, R"""(

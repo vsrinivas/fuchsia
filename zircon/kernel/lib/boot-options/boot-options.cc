@@ -438,6 +438,18 @@ void BootOptions::PrintValue(const TestStruct& value, FILE* out) { fprintf(out, 
 
 #endif  // BOOT_OPTIONS_TESTONLY_OPTIONS
 
+#if BOOT_OPTIONS_GENERATOR || defined(__aarch64__)
+
+bool BootOptions::Parse(std::string_view value, Arm64PhysPsciReset BootOptions::*member) {
+  return Enum<Arm64PhysPsciReset>(EnumParser{value, &(this->*member)}).Check();
+}
+
+void BootOptions::PrintValue(const Arm64PhysPsciReset& value, FILE* out) {
+  Enum<Arm64PhysPsciReset>(EnumPrinter{value, out});
+}
+
+#endif  // BOOT_OPTIONS_GENERATOR || defined(__aarch64__)
+
 #if BOOT_OPTIONS_GENERATOR || defined(__x86_64__)
 
 bool BootOptions::Parse(std::string_view value, IntelHwpPolicy BootOptions::*member) {
