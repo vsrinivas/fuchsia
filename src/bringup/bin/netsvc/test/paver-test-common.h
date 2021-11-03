@@ -273,7 +273,7 @@ class FakePaver : public fidl::WireServer<fuchsia_paver::Paver>,
       return;
     }
     fidl::WireSyncClient stream = fidl::BindSyncClient(std::move(request->payload));
-    auto result = stream.RegisterVmo(std::move(vmo));
+    auto result = stream->RegisterVmo(std::move(vmo));
     status = result.ok() ? result.value().status : result.status();
     if (status != ZX_OK) {
       completer.Reply(status);
@@ -294,7 +294,7 @@ class FakePaver : public fidl::WireServer<fuchsia_paver::Paver>,
           }
         }
         while (data_transferred < signal_size_) {
-          auto result = stream.ReadData();
+          auto result = stream->ReadData();
           if (!result.ok()) {
             return result.status();
           }

@@ -122,7 +122,7 @@ int Paver::StreamBuffer() {
     return 0;
   }
 
-  fidl::WireResult res = paver_svc_.FindDataSink(std::move(data_sink->server));
+  fidl::WireResult res = paver_svc_->FindDataSink(std::move(data_sink->server));
   if (!res.ok()) {
     fprintf(stderr, "netsvc: unable to find data sink\n");
     exit_code_.store(res.status());
@@ -182,7 +182,7 @@ zx_status_t Paver::WriteABImage(fidl::WireSyncClient<fuchsia_paver::DataSink> da
     return 0;
   }
 
-  fidl::WireResult res = paver_svc_.FindBootManager(std::move(endpoints->server));
+  fidl::WireResult res = paver_svc_->FindBootManager(std::move(endpoints->server));
   if (!res.ok()) {
     fprintf(stderr, "netsvc: unable to find boot manager\n");
     exit_code_.store(res.status());
@@ -193,7 +193,7 @@ zx_status_t Paver::WriteABImage(fidl::WireSyncClient<fuchsia_paver::DataSink> da
 
   // First find out whether or not ABR is supported.
   {
-    auto result = boot_manager.QueryActiveConfiguration();
+    auto result = boot_manager->QueryActiveConfiguration();
     if (result.status() != ZX_OK) {
       boot_manager = {};
     }
@@ -201,7 +201,7 @@ zx_status_t Paver::WriteABImage(fidl::WireSyncClient<fuchsia_paver::DataSink> da
 
   // Make sure to mark the configuration we are about to pave as no longer bootable.
   if (boot_manager && configuration_ != fuchsia_paver::wire::Configuration::kRecovery) {
-    auto result = boot_manager.SetConfigurationUnbootable(configuration_);
+    auto result = boot_manager->SetConfigurationUnbootable(configuration_);
     auto status = result.ok() ? result->status : result.status();
     if (status != ZX_OK) {
       fprintf(stderr, "netsvc: Unable to set configuration as unbootable.\n");
@@ -209,16 +209,16 @@ zx_status_t Paver::WriteABImage(fidl::WireSyncClient<fuchsia_paver::DataSink> da
     }
   }
   if (command_ == Command::kAsset) {
-    auto result = data_sink.WriteAsset(configuration_, asset_, std::move(buffer));
+    auto result = data_sink->WriteAsset(configuration_, asset_, std::move(buffer));
     auto status = result.ok() ? result->status : result.status();
     if (status != ZX_OK) {
       fprintf(stderr, "netsvc: Unable to write asset.\n");
       return status;
     }
   } else if (command_ == Command::kFirmware) {
-    auto result = data_sink.WriteFirmware(configuration_,
-                                          fidl::StringView(firmware_type_, strlen(firmware_type_)),
-                                          std::move(buffer));
+    auto result = data_sink->WriteFirmware(configuration_,
+                                           fidl::StringView(firmware_type_, strlen(firmware_type_)),
+                                           std::move(buffer));
     if (auto status = ProcessWriteFirmwareResult(result, firmware_type_); status != ZX_OK) {
       return status;
     }
@@ -229,7 +229,7 @@ zx_status_t Paver::WriteABImage(fidl::WireSyncClient<fuchsia_paver::DataSink> da
       command_ == Command::kFirmware ||
       asset_ != fuchsia_paver::wire::Asset::kVerifiedBootMetadata) {
     if (boot_manager) {
-      auto res = boot_manager.Flush();
+      auto res = boot_manager->Flush();
       auto status_sync = res.ok() ? res->status : res.status();
       if (status_sync != ZX_OK) {
         fprintf(stderr, "netsvc: failed to sync A/B/R configuration. %s\n",
@@ -240,7 +240,7 @@ zx_status_t Paver::WriteABImage(fidl::WireSyncClient<fuchsia_paver::DataSink> da
     return ZX_OK;
   }
   {
-    auto result = boot_manager.SetConfigurationActive(configuration_);
+    auto result = boot_manager->SetConfigurationActive(configuration_);
     auto status = result.ok() ? result->status : result.status();
     if (status != ZX_OK) {
       fprintf(stderr, "netsvc: Unable to set configuration as active.\n");
@@ -252,7 +252,7 @@ zx_status_t Paver::WriteABImage(fidl::WireSyncClient<fuchsia_paver::DataSink> da
                         ? fuchsia_paver::wire::Configuration::kB
                         : fuchsia_paver::wire::Configuration::kA;
 
-    auto result = boot_manager.SetConfigurationUnbootable(opposite);
+    auto result = boot_manager->SetConfigurationUnbootable(opposite);
     auto status = result.ok() ? result->status : result.status();
     if (status != ZX_OK) {
       fprintf(stderr, "netsvc: Unable to set opposite configuration as unbootable.\n");
@@ -264,7 +264,7 @@ zx_status_t Paver::WriteABImage(fidl::WireSyncClient<fuchsia_paver::DataSink> da
   // is not optimal for reducing NAND PE cycles. Ideally, we want to sync when all assets, A/B
   // configuration have been written to buffer. Find a safe time and place for sync.
   {
-    auto res = data_sink.Flush();
+    auto res = data_sink->Flush();
     auto status = res.ok() ? res->status : res.status();
     if (status != ZX_OK) {
       fprintf(stderr, "netsvc: failed to flush data_sink. %s\n", zx_status_get_string(status));
@@ -273,7 +273,7 @@ zx_status_t Paver::WriteABImage(fidl::WireSyncClient<fuchsia_paver::DataSink> da
   }
 
   if (boot_manager) {
-    auto res = boot_manager.Flush();
+    auto res = boot_manager->Flush();
     auto status = res.ok() ? res->status : res.status();
     if (status != ZX_OK) {
       fprintf(stderr, "netsvc: failed to flush A/B/R configuration. %s\n",
@@ -292,7 +292,7 @@ zx_status_t Paver::ClearSysconfig() {
     return endpoints.status_value();
   }
 
-  fidl::WireResult status_find_sysconfig = paver_svc_.FindSysconfig(std::move(endpoints->server));
+  fidl::WireResult status_find_sysconfig = paver_svc_->FindSysconfig(std::move(endpoints->server));
   if (!status_find_sysconfig.ok()) {
     fprintf(stderr, "netsvc: unable to find sysconfig\n");
     return status_find_sysconfig.status();
@@ -300,7 +300,7 @@ zx_status_t Paver::ClearSysconfig() {
 
   fidl::WireSyncClient client = fidl::BindSyncClient(std::move(endpoints->client));
 
-  auto wipe_result = client.Wipe();
+  auto wipe_result = client->Wipe();
   auto wipe_status =
       wipe_result.status() == ZX_OK ? wipe_result.value().status : wipe_result.status();
   if (wipe_status == ZX_ERR_PEER_CLOSED) {
@@ -313,7 +313,7 @@ zx_status_t Paver::ClearSysconfig() {
     return wipe_status;
   }
 
-  auto flush_result = client.Flush();
+  auto flush_result = client->Flush();
   auto flush_status =
       flush_result.status() == ZX_OK ? flush_result.value().status : flush_result.status();
   if (flush_status != ZX_OK) {
@@ -360,13 +360,13 @@ zx_status_t Paver::OpenDataSink(fuchsia_mem::wire::Buffer buffer,
   }
 
   fidl::WireResult res =
-      paver_svc_.UseBlockDevice(std::move(client_end.value()), std::move(endpoints->server));
+      paver_svc_->UseBlockDevice(std::move(client_end.value()), std::move(endpoints->server));
   if (!res.ok()) {
     fprintf(stderr, "netsvc: unable to use block device.\n");
     return res.status();
   }
 
-  data_sink->client_end() = std::move(endpoints->client);
+  data_sink->Bind(std::move(endpoints->client));
   return ZX_OK;
 }
 
@@ -378,7 +378,7 @@ zx_status_t Paver::InitPartitionTables(fuchsia_mem::wire::Buffer buffer) {
     return status;
   }
 
-  auto result = data_sink.InitializePartitionTables();
+  auto result = data_sink->InitializePartitionTables();
   status = result.ok() ? result->status : result.status();
   if (status != ZX_OK) {
     fprintf(stderr, "netsvc: Unable to initialize partition tables.\n");
@@ -395,7 +395,7 @@ zx_status_t Paver::WipePartitionTables(fuchsia_mem::wire::Buffer buffer) {
     return status;
   }
 
-  auto result = data_sink.WipePartitionTables();
+  auto result = data_sink->WipePartitionTables();
   status = result.ok() ? result->status : result.status();
   if (status != ZX_OK) {
     fprintf(stderr, "netsvc: Unable to wipe partition tables.\n");
@@ -471,7 +471,7 @@ int Paver::MonitorBuffer() {
     return 0;
   }
 
-  fidl::WireResult res = paver_svc_.FindDataSink(std::move(endpoints->server));
+  fidl::WireResult res = paver_svc_->FindDataSink(std::move(endpoints->server));
   if (!res.ok()) {
     fprintf(stderr, "netsvc: unable to find data sink\n");
     exit_code_.store(res.status());
@@ -482,7 +482,8 @@ int Paver::MonitorBuffer() {
   // Blocks until paving is complete.
   switch (command_) {
     case Command::kDataFile: {
-      auto res = data_sink.WriteDataFile(fidl::StringView(path_, strlen(path_)), std::move(buffer));
+      auto res =
+          data_sink->WriteDataFile(fidl::StringView(path_, strlen(path_)), std::move(buffer));
       status = res.status() == ZX_OK ? res.value().status : res.status();
       break;
     }
