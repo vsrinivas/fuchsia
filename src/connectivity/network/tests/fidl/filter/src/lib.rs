@@ -258,7 +258,7 @@ async fn run_socket_test(
                 client_port,
                 expected_traffic,
             )
-            .await;
+            .await
         }
         fnetfilter::SocketProtocol::Tcp => {
             run_tcp_socket_test(
@@ -270,7 +270,7 @@ async fn run_socket_test(
                 client_port,
                 expected_traffic,
             )
-            .await;
+            .await
         }
         proto => panic!("unexpected protocol {:?}", proto),
     }
@@ -428,7 +428,7 @@ async fn test_filter<E: netemul::Endpoint>(name: &str, test: Test) {
         CLIENT_PORT,
         ExpectedTraffic::TwoWay,
     )
-    .await;
+    .await
 }
 
 /// Tests how the filter on server drops the outgoing traffic from server.
