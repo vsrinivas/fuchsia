@@ -16,6 +16,7 @@ zx_library("devmgr-launcher") {
   # instead.
   visibility = [
     "//src/devices/bin/driver_manager:lib",
+    "//src/devices/testing/devmgr-integration-test-shim/*",
     "//zircon/system/ulib/devmgr-integration-test/*",
   ]
 

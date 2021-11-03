@@ -44,7 +44,7 @@ test("tests") {
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/lib/fdio",
-    "//zircon/system/ulib/devmgr-integration-test",
+    "//src/devices/testing/devmgr-integration-test-shim",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
@@ -57,9 +57,7 @@ test("tests") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-isolated_devmgr_unittest_package("bind-fail-test") {
-  executable_path = "test/bind-fail-test"
-
+fuchsia_unittest_package("bind-fail-test") {
   deps = [
     ":driver",
     ":tests",

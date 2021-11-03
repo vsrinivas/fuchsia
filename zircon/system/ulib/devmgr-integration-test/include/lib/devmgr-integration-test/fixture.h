@@ -31,9 +31,6 @@ class IsolatedDevmgr {
   IsolatedDevmgr(IsolatedDevmgr&& other);
   IsolatedDevmgr& operator=(IsolatedDevmgr&& other);
 
-  // Path to the test sysdev driver
-  static inline constexpr char kSysdevDriver[] = "/boot/driver/sysdev.so";
-
   // Get an args structure pre-populated with the test sysdev driver, the
   // test control driver, and the test driver directory.
   static devmgr_launcher::Args DefaultArgs();
@@ -77,6 +74,9 @@ class IsolatedDevmgr {
 
  private:
   using GetBootItemFunction = devmgr_launcher::GetBootItemFunction;
+
+  // Path to the test sysdev driver
+  static inline constexpr char kSysdevDriver[] = "/boot/driver/sysdev.so";
 
   // Opaque structure for the internal state used for serving /svc
   struct SvcLoopState;
