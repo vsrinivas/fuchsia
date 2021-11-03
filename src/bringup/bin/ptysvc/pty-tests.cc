@@ -44,7 +44,7 @@ class PtyTestCase : public zxtest::Test {
     if (endpoints.is_error()) {
       return endpoints.status_value();
     }
-    auto result = conn->OpenClient(id, std::move(endpoints->server));
+    auto result = (*conn)->OpenClient(id, std::move(endpoints->server));
     if (result.status() != ZX_OK) {
       return ZX_ERR_BAD_STATE;
     }
@@ -78,7 +78,7 @@ class PtyTestCase : public zxtest::Test {
 };
 
 zx::eventpair GetEvent(Connection* conn) {
-  auto result = conn->Describe();
+  auto result = (*conn)->Describe();
   if (result.status() != ZX_OK) {
     return {};
   }
@@ -88,7 +88,7 @@ zx::eventpair GetEvent(Connection* conn) {
 
 void WriteCtrlC(Connection* conn) {
   uint8_t data[] = {0x03};
-  auto result = conn->Write(fidl::VectorView<uint8_t>::FromExternal(data));
+  auto result = (*conn)->Write(fidl::VectorView<uint8_t>::FromExternal(data));
   ASSERT_OK(result.status());
   ASSERT_OK(result->s);
   ASSERT_EQ(result->actual, std::size(data));
@@ -97,7 +97,7 @@ void WriteCtrlC(Connection* conn) {
 // Make sure the server connections describe appropriately
 TEST_F(PtyTestCase, ServerDescribe) {
   Connection server{take_server()};
-  auto result = server.Describe();
+  auto result = server->Describe();
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->info.is_tty());
   ASSERT_TRUE(result->info.tty().event.is_valid());
@@ -105,14 +105,14 @@ TEST_F(PtyTestCase, ServerDescribe) {
 
 TEST_F(PtyTestCase, ServerSetWindowSize) {
   Connection server{take_server()};
-  auto result = server.SetWindowSize({.width = 80, .height = 24});
+  auto result = server->SetWindowSize({.width = 80, .height = 24});
   ASSERT_OK(result.status());
   ASSERT_OK(result->status);
 }  // namespace
 
 TEST_F(PtyTestCase, ServerClrSetFeature) {
   Connection server{take_server()};
-  auto result = server.ClrSetFeature(0, 0);
+  auto result = server->ClrSetFeature(0, 0);
   ASSERT_OK(result.status());
   // ClrSetFeature is only meaningful on clients
   ASSERT_STATUS(result->status, ZX_ERR_NOT_SUPPORTED);
@@ -120,7 +120,7 @@ TEST_F(PtyTestCase, ServerClrSetFeature) {
 
 TEST_F(PtyTestCase, ServerGetWindowSize) {
   Connection server{take_server()};
-  auto result = server.GetWindowSize();
+  auto result = server->GetWindowSize();
   ASSERT_OK(result.status());
   // Our original implementation didn't support this, so preserve that behavior.
   // It's not clear why, though.  If this is causing problems, we should
@@ -130,7 +130,7 @@ TEST_F(PtyTestCase, ServerGetWindowSize) {
 
 TEST_F(PtyTestCase, ServerMakeActive) {
   Connection server{take_server()};
-  auto result = server.MakeActive(0);
+  auto result = server->MakeActive(0);
   ASSERT_OK(result.status());
   // MakeActive is only meaningful on clients
   ASSERT_STATUS(result->status, ZX_ERR_NOT_SUPPORTED);
@@ -138,7 +138,7 @@ TEST_F(PtyTestCase, ServerMakeActive) {
 
 TEST_F(PtyTestCase, ServerReadEvents) {
   Connection server{take_server()};
-  auto result = server.ReadEvents();
+  auto result = server->ReadEvents();
   ASSERT_OK(result.status());
   // ReadEvents is only meaningful on clients
   ASSERT_STATUS(result->status, ZX_ERR_NOT_SUPPORTED);
@@ -151,7 +151,7 @@ TEST_F(PtyTestCase, ServerBasicOpenClient) {
   ASSERT_OK(OpenClient(&server, 0, &client));
 
   // Make sure our client connection is valid after this
-  ASSERT_STATUS(client.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time{}, nullptr),
+  ASSERT_STATUS(client.client_end().channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time{}, nullptr),
                 ZX_ERR_TIMED_OUT);
 }
 
@@ -164,7 +164,7 @@ TEST_F(PtyTestCase, ServerOpenClientTwice) {
   ASSERT_STATUS(OpenClient(&server, 0, &client2), ZX_ERR_INVALID_ARGS);
 
   // Our original client connection should still be good.
-  ASSERT_STATUS(client.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time{}, nullptr),
+  ASSERT_STATUS(client.client_end().channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time{}, nullptr),
                 ZX_ERR_TIMED_OUT);
 }
 
@@ -177,10 +177,11 @@ TEST_F(PtyTestCase, ServerOpenClientTwoDifferent) {
   ASSERT_OK(OpenClient(&server, 0, &client2));
 
   // Both connections should be good
-  ASSERT_STATUS(client.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time{}, nullptr),
+  ASSERT_STATUS(client.client_end().channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time{}, nullptr),
                 ZX_ERR_TIMED_OUT);
-  ASSERT_STATUS(client2.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time{}, nullptr),
-                ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(
+      client2.client_end().channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time{}, nullptr),
+      ZX_ERR_TIMED_OUT);
 }
 
 // Verify a server with no clients behaves as expected
@@ -197,7 +198,7 @@ TEST_F(PtyTestCase, ServerWithNoClientsInitialConditions) {
 
     // Attempts to read should get 0 bytes and ZX_OK
     {
-      auto result = server.Read(10);
+      auto result = server->Read(10);
       ASSERT_OK(result.status());
       ASSERT_OK(result->s);
       ASSERT_EQ(result->data.count(), 0);
@@ -206,7 +207,7 @@ TEST_F(PtyTestCase, ServerWithNoClientsInitialConditions) {
     // Attempts to write should fail with ZX_ERR_PEER_CLOSED
     {
       uint8_t data[16] = {};
-      auto result = server.Write(fidl::VectorView<uint8_t>::FromExternal(data));
+      auto result = server->Write(fidl::VectorView<uint8_t>::FromExternal(data));
       ASSERT_OK(result.status());
       ASSERT_STATUS(result->s, ZX_ERR_PEER_CLOSED);
     }
@@ -246,19 +247,19 @@ TEST_F(PtyTestCase, ServerWithClientInitialConditions) {
 
   // Attempts to read on either side should get SHOULD_WAIT
   {
-    auto result = server.Read(10);
+    auto result = server->Read(10);
     ASSERT_OK(result.status());
     ASSERT_STATUS(result->s, ZX_ERR_SHOULD_WAIT);
   }
   {
-    auto result = client.Read(10);
+    auto result = client->Read(10);
     ASSERT_OK(result.status());
     ASSERT_STATUS(result->s, ZX_ERR_SHOULD_WAIT);
   }
 
   // Client should be in cooked mode
   {
-    auto result = client.ClrSetFeature(0, 0);
+    auto result = client->ClrSetFeature(0, 0);
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
     ASSERT_EQ(result->features, 0);
@@ -271,7 +272,7 @@ TEST_F(PtyTestCase, ServerEmpty0ByteRead) {
   Connection client;
   ASSERT_OK(OpenClient(&server, 1, &client));
 
-  auto result = server.Read(0);
+  auto result = server->Read(0);
   ASSERT_OK(result.status());
   ASSERT_OK(result->s);
   ASSERT_EQ(result->data.count(), 0);
@@ -287,7 +288,7 @@ TEST_F(PtyTestCase, ClientFull0ByteServerWrite) {
   // Fill up FIFO
   while (true) {
     uint8_t buf[256] = {};
-    auto result = server.Write(fidl::VectorView<uint8_t>::FromExternal(buf));
+    auto result = server->Write(fidl::VectorView<uint8_t>::FromExternal(buf));
     ASSERT_OK(result.status());
     if (result->s == ZX_ERR_SHOULD_WAIT) {
       break;
@@ -296,7 +297,7 @@ TEST_F(PtyTestCase, ClientFull0ByteServerWrite) {
     ASSERT_GT(result->actual, 0);
   }
 
-  auto result = server.Write({});
+  auto result = server->Write({});
   ASSERT_OK(result.status());
   ASSERT_OK(result->s);
   ASSERT_EQ(result->actual, 0);
@@ -311,7 +312,7 @@ TEST_F(PtyTestCase, ClientInactive0ByteClientWrite) {
   Connection inactive_client;
   ASSERT_OK(OpenClient(&server, 0, &inactive_client));
 
-  auto result = inactive_client.Write({});
+  auto result = inactive_client->Write({});
   ASSERT_OK(result.status());
   ASSERT_STATUS(result->s, ZX_ERR_SHOULD_WAIT);
 }
@@ -322,7 +323,7 @@ TEST_F(PtyTestCase, ClientDescribe) {
   Connection client;
   ASSERT_OK(OpenClient(&server, 0, &client));
 
-  auto result = client.Describe();
+  auto result = client->Describe();
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->info.is_tty());
   ASSERT_TRUE(result->info.tty().event.is_valid());
@@ -334,24 +335,24 @@ TEST_F(PtyTestCase, ClientWindowSize) {
   ASSERT_OK(OpenClient(&server, 0, &client));
 
   {
-    auto result = server.SetWindowSize({.width = 80, .height = 24});
+    auto result = server->SetWindowSize({.width = 80, .height = 24});
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
   }
   {
-    auto result = client.GetWindowSize();
+    auto result = client->GetWindowSize();
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
     ASSERT_EQ(result->size.width, 80);
     ASSERT_EQ(result->size.height, 24);
   }
   {
-    auto result = client.SetWindowSize({.width = 5, .height = 32});
+    auto result = client->SetWindowSize({.width = 5, .height = 32});
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
   }
   {
-    auto result = client.GetWindowSize();
+    auto result = client->GetWindowSize();
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
     ASSERT_EQ(result->size.width, 5);
@@ -365,7 +366,7 @@ TEST_F(PtyTestCase, ClientClrSetFeature) {
   ASSERT_OK(OpenClient(&server, 0, &client));
 
   {
-    auto result = client.ClrSetFeature(0, 0);
+    auto result = client->ClrSetFeature(0, 0);
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
     ASSERT_EQ(result->features, 0);
@@ -373,7 +374,7 @@ TEST_F(PtyTestCase, ClientClrSetFeature) {
 
   // Make sure we can set bits
   {
-    auto result = client.ClrSetFeature(0, fuchsia_hardware_pty::wire::kFeatureRaw);
+    auto result = client->ClrSetFeature(0, fuchsia_hardware_pty::wire::kFeatureRaw);
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
     ASSERT_EQ(result->features, fuchsia_hardware_pty::wire::kFeatureRaw);
@@ -381,7 +382,7 @@ TEST_F(PtyTestCase, ClientClrSetFeature) {
 
   // If we don't change any bits, we should see the new settings
   {
-    auto result = client.ClrSetFeature(0, 0);
+    auto result = client->ClrSetFeature(0, 0);
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
     ASSERT_EQ(result->features, fuchsia_hardware_pty::wire::kFeatureRaw);
@@ -389,7 +390,7 @@ TEST_F(PtyTestCase, ClientClrSetFeature) {
 
   // Make sure we can clear bits
   {
-    auto result = client.ClrSetFeature(fuchsia_hardware_pty::wire::kFeatureRaw, 0);
+    auto result = client->ClrSetFeature(fuchsia_hardware_pty::wire::kFeatureRaw, 0);
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
     ASSERT_EQ(result->features, 0);
@@ -402,14 +403,14 @@ TEST_F(PtyTestCase, ClientClrSetFeatureInvalidBit) {
   ASSERT_OK(OpenClient(&server, 0, &client));
 
   {
-    auto result = client.ClrSetFeature(0, 0x2);
+    auto result = client->ClrSetFeature(0, 0x2);
     ASSERT_OK(result.status());
     ASSERT_STATUS(result->status, ZX_ERR_NOT_SUPPORTED);
     ASSERT_EQ(result->features, 0);
   }
 
   {
-    auto result = client.ClrSetFeature(0x2, 0);
+    auto result = client->ClrSetFeature(0x2, 0);
     ASSERT_OK(result.status());
     ASSERT_STATUS(result->status, ZX_ERR_NOT_SUPPORTED);
     ASSERT_EQ(result->features, 0);
@@ -421,7 +422,7 @@ TEST_F(PtyTestCase, ClientGetWindowSizeServerNeverSet) {
   Connection client;
   ASSERT_OK(OpenClient(&server, 0, &client));
 
-  auto result = client.GetWindowSize();
+  auto result = client->GetWindowSize();
   ASSERT_OK(result.status());
   ASSERT_OK(result->status);
   ASSERT_EQ(result->size.width, 0);
@@ -437,7 +438,7 @@ TEST_F(PtyTestCase, ClientIndependentFeatureFlags) {
   ASSERT_OK(OpenClient(&server, 0, &client2));
 
   {
-    auto result = client.ClrSetFeature(0, fuchsia_hardware_pty::wire::kFeatureRaw);
+    auto result = client->ClrSetFeature(0, fuchsia_hardware_pty::wire::kFeatureRaw);
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
     ASSERT_EQ(result->features, fuchsia_hardware_pty::wire::kFeatureRaw);
@@ -445,7 +446,7 @@ TEST_F(PtyTestCase, ClientIndependentFeatureFlags) {
 
   {
     // Client 2 shouldn't see the changes
-    auto result = client2.ClrSetFeature(0, 0);
+    auto result = client2->ClrSetFeature(0, 0);
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
     ASSERT_EQ(result->features, 0);
@@ -460,33 +461,33 @@ TEST_F(PtyTestCase, ClientMakeActive) {
   ASSERT_OK(OpenClient(&server, 0, &client2));
 
   {
-    auto result = client.MakeActive(0);
+    auto result = client->MakeActive(0);
     ASSERT_OK(result.status());
     // This client is not the controlling client (id=0), so it cannot change the
     // active client
     ASSERT_STATUS(result->status, ZX_ERR_ACCESS_DENIED);
   }
   {
-    auto result = client2.MakeActive(1);
+    auto result = client2->MakeActive(1);
     ASSERT_OK(result.status());
     // This client is the controlling client (id=0), so it can.
     ASSERT_OK(result->status);
   }
   {
     // Changing the active client to the existing active client should be fine
-    auto result = client2.MakeActive(1);
+    auto result = client2->MakeActive(1);
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
   }
   {
     // Changing the active client to the control client should be fine
-    auto result = client2.MakeActive(0);
+    auto result = client2->MakeActive(0);
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
   }
   {
     // Changing the active client to a non-existent client should fail
-    auto result = client2.MakeActive(2);
+    auto result = client2->MakeActive(2);
     ASSERT_OK(result.status());
     ASSERT_STATUS(result->status, ZX_ERR_NOT_FOUND);
   }
@@ -500,14 +501,14 @@ TEST_F(PtyTestCase, ClientReadEvents) {
   ASSERT_OK(OpenClient(&server, 0, &client2));
 
   {
-    auto result = client.ReadEvents();
+    auto result = client->ReadEvents();
     ASSERT_OK(result.status());
     // This client is not the controlling client (id=0), so it cannot read events
     ASSERT_STATUS(result->status, ZX_ERR_ACCESS_DENIED);
   }
 
   {
-    auto result = client2.ReadEvents();
+    auto result = client2->ReadEvents();
     ASSERT_OK(result.status());
     // This client is the controlling client (id=0), so it can read events
     ASSERT_OK(result->status);
@@ -537,7 +538,7 @@ TEST_F(PtyTestCase, ClientReadEventsClears) {
                                    nullptr));
 
   {
-    auto result = control_client.ReadEvents();
+    auto result = control_client->ReadEvents();
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
     ASSERT_EQ(result->events, fuchsia_hardware_pty::wire::kEventInterrupt);
@@ -550,7 +551,7 @@ TEST_F(PtyTestCase, ClientReadEventsClears) {
 
   // Event should have cleared
   {
-    auto result = control_client.ReadEvents();
+    auto result = control_client->ReadEvents();
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
     ASSERT_EQ(result->events, 0);
@@ -574,7 +575,7 @@ TEST_F(PtyTestCase, EventsSentWithNoControllingClient) {
   ASSERT_OK(control_event.wait_one(fuchsia_hardware_pty::wire::kSignalEvent, zx::time{}, nullptr));
 
   {
-    auto result = control_client.ReadEvents();
+    auto result = control_client->ReadEvents();
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
     ASSERT_EQ(result->events, fuchsia_hardware_pty::wire::kEventInterrupt);
@@ -608,7 +609,7 @@ TEST_F(PtyTestCase, ActiveClientCloses) {
   {
     Connection active_client;
     ASSERT_OK(OpenClient(&server, 1, &active_client));
-    auto result = control_client.MakeActive(1);
+    auto result = control_client->MakeActive(1);
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
   }
@@ -624,7 +625,7 @@ TEST_F(PtyTestCase, ActiveClientCloses) {
   ASSERT_EQ(observed,
             fuchsia_hardware_pty::wire::kSignalEvent | fuchsia_device::wire::kDeviceSignalHangup);
 
-  auto result = control_client.ReadEvents();
+  auto result = control_client->ReadEvents();
   ASSERT_OK(result.status());
   ASSERT_OK(result->status);
   ASSERT_EQ(result->events, fuchsia_hardware_pty::wire::kEventHangup);
@@ -654,13 +655,13 @@ TEST_F(PtyTestCase, ServerClosesWhenClientPresent) {
 
   uint8_t kTestData[] = u8"hello world";
   {
-    auto result = server.Write(fidl::VectorView<uint8_t>::FromExternal(kTestData));
+    auto result = server->Write(fidl::VectorView<uint8_t>::FromExternal(kTestData));
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
     ASSERT_EQ(result->actual, std::size(kTestData));
   }
 
-  server.mutable_channel()->reset();
+  server = {};
 
   zx::eventpair event = GetEvent(&client);
   zx_signals_t observed = 0;
@@ -673,7 +674,7 @@ TEST_F(PtyTestCase, ServerClosesWhenClientPresent) {
                           fuchsia_device::wire::kDeviceSignalReadable);
 
   {
-    auto result = client.ReadEvents();
+    auto result = client->ReadEvents();
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
     ASSERT_EQ(result->events, fuchsia_hardware_pty::wire::kEventHangup);
@@ -682,7 +683,7 @@ TEST_F(PtyTestCase, ServerClosesWhenClientPresent) {
   // Attempts to drain the buffer should succeed
   {
     // Request more bytes than are present
-    auto result = client.Read(std::size(kTestData) + 10);
+    auto result = client->Read(std::size(kTestData) + 10);
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
     ASSERT_EQ(result->data.count(), std::size(kTestData));
@@ -691,7 +692,7 @@ TEST_F(PtyTestCase, ServerClosesWhenClientPresent) {
 
   // Attempts to read the empty buffer should fail with ZX_ERR_PEER_CLOSED
   {
-    auto result = client.Read(10);
+    auto result = client->Read(10);
     ASSERT_OK(result.status());
     ASSERT_STATUS(result->s, ZX_ERR_PEER_CLOSED);
   }
@@ -699,7 +700,7 @@ TEST_F(PtyTestCase, ServerClosesWhenClientPresent) {
   // Attempts to write should fail with ZX_ERR_PEER_CLOSED
   {
     uint8_t data[16] = {};
-    auto result = client.Write(fidl::VectorView<uint8_t>::FromExternal(data));
+    auto result = client->Write(fidl::VectorView<uint8_t>::FromExternal(data));
     ASSERT_OK(result.status());
     ASSERT_STATUS(result->s, ZX_ERR_PEER_CLOSED);
   }
@@ -716,7 +717,7 @@ TEST_F(PtyTestCase, ServerReadClientCooked) {
   uint8_t kTestData[] = u8"hello\x03 world\ntest message\n";
   const uint8_t kExpectedReadback[] = u8"hello\x03 world\r\ntest message\r\n";
   {
-    auto result = client.Write(fidl::VectorView<uint8_t>::FromExternal(kTestData));
+    auto result = client->Write(fidl::VectorView<uint8_t>::FromExternal(kTestData));
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
     ASSERT_EQ(result->actual, std::size(kTestData));
@@ -726,7 +727,7 @@ TEST_F(PtyTestCase, ServerReadClientCooked) {
   ASSERT_OK(
       event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time::infinite(), nullptr));
   {
-    auto result = server.Read(std::size(kExpectedReadback) + 10);
+    auto result = server->Read(std::size(kExpectedReadback) + 10);
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
     ASSERT_EQ(result->data.count(), std::size(kExpectedReadback));
@@ -749,7 +750,7 @@ TEST_F(PtyTestCase, ServerWriteClientCooked) {
   // We expect to read this back, but without the trailing nul
   const uint8_t kExpectedReadbackWithNul[] = u8"hello world\ntest";
   {
-    auto result = server.Write(fidl::VectorView<uint8_t>::FromExternal(kTestData));
+    auto result = server->Write(fidl::VectorView<uint8_t>::FromExternal(kTestData));
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
     // We expect to see the written count to include the ^C
@@ -760,7 +761,7 @@ TEST_F(PtyTestCase, ServerWriteClientCooked) {
   ASSERT_OK(
       event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time::infinite(), nullptr));
   {
-    auto result = client.Read(std::size(kExpectedReadbackWithNul) + 10);
+    auto result = client->Read(std::size(kExpectedReadbackWithNul) + 10);
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
     ASSERT_EQ(result->data.count(), std::size(kExpectedReadbackWithNul) - 1);
@@ -779,7 +780,7 @@ TEST_F(PtyTestCase, ServerReadClientRaw) {
   ASSERT_OK(OpenClient(&server, 1, &client));
 
   {
-    auto result = client.ClrSetFeature(0, fuchsia_hardware_pty::wire::kFeatureRaw);
+    auto result = client->ClrSetFeature(0, fuchsia_hardware_pty::wire::kFeatureRaw);
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
   }
@@ -787,7 +788,7 @@ TEST_F(PtyTestCase, ServerReadClientRaw) {
   // In raw mode, client writes should be untouched.
   uint8_t kTestData[] = u8"hello\x03 world\ntest message\n";
   {
-    auto result = client.Write(fidl::VectorView<uint8_t>::FromExternal(kTestData));
+    auto result = client->Write(fidl::VectorView<uint8_t>::FromExternal(kTestData));
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
     ASSERT_EQ(result->actual, std::size(kTestData));
@@ -797,7 +798,7 @@ TEST_F(PtyTestCase, ServerReadClientRaw) {
   ASSERT_OK(
       event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time::infinite(), nullptr));
   {
-    auto result = server.Read(std::size(kTestData) + 10);
+    auto result = server->Read(std::size(kTestData) + 10);
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
     ASSERT_EQ(result->data.count(), std::size(kTestData));
@@ -817,7 +818,7 @@ TEST_F(PtyTestCase, ServerWriteClientRaw) {
   ASSERT_OK(OpenClient(&server, 0, &control_client));
 
   {
-    auto result = client.ClrSetFeature(0, fuchsia_hardware_pty::wire::kFeatureRaw);
+    auto result = client->ClrSetFeature(0, fuchsia_hardware_pty::wire::kFeatureRaw);
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
   }
@@ -825,7 +826,7 @@ TEST_F(PtyTestCase, ServerWriteClientRaw) {
   // In raw mode, server writes should be untouched.
   uint8_t kTestData[] = u8"hello world\ntest\x03 message\n";
   {
-    auto result = server.Write(fidl::VectorView<uint8_t>::FromExternal(kTestData));
+    auto result = server->Write(fidl::VectorView<uint8_t>::FromExternal(kTestData));
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
     ASSERT_EQ(result->actual, std::size(kTestData));
@@ -835,7 +836,7 @@ TEST_F(PtyTestCase, ServerWriteClientRaw) {
   ASSERT_OK(
       event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time::infinite(), nullptr));
   {
-    auto result = client.Read(std::size(kTestData) + 10);
+    auto result = client->Read(std::size(kTestData) + 10);
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
     ASSERT_EQ(result->data.count(), std::size(kTestData));
@@ -847,7 +848,7 @@ TEST_F(PtyTestCase, ServerWriteClientRaw) {
 
   // Make sure we didn't see an INTERRUPT_EVENT.
   {
-    auto result = control_client.ReadEvents();
+    auto result = control_client->ReadEvents();
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
     ASSERT_EQ(result->events, 0);
@@ -866,7 +867,7 @@ TEST_F(PtyTestCase, ServerFillsClientFifo) {
   size_t total_written = 0;
   while (server_event.wait_one(fuchsia_device::wire::kDeviceSignalWritable, zx::time{}, nullptr) ==
          ZX_OK) {
-    auto result = server.Write(
+    auto result = server->Write(
         fidl::VectorView<uint8_t>::FromExternal(kTestString, std::size(kTestString) - 1));
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
@@ -876,7 +877,7 @@ TEST_F(PtyTestCase, ServerFillsClientFifo) {
 
   // Trying to write when full gets SHOULD_WAIT
   {
-    auto result = server.Write(
+    auto result = server->Write(
         fidl::VectorView<uint8_t>::FromExternal(kTestString, std::size(kTestString) - 1));
     ASSERT_OK(result.status());
     ASSERT_STATUS(result->s, ZX_ERR_SHOULD_WAIT);
@@ -887,7 +888,7 @@ TEST_F(PtyTestCase, ServerFillsClientFifo) {
   while (total_read < total_written) {
     ASSERT_OK(
         client_event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time{}, nullptr));
-    auto result = client.Read(std::size(kTestString) - 1);
+    auto result = client->Read(std::size(kTestString) - 1);
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
     ASSERT_EQ(result->data.count(),
@@ -913,7 +914,7 @@ TEST_F(PtyTestCase, ClientFillsServerFifo) {
   size_t total_written = 0;
   while (client_event.wait_one(fuchsia_device::wire::kDeviceSignalWritable, zx::time{}, nullptr) ==
          ZX_OK) {
-    auto result = client.Write(
+    auto result = client->Write(
         fidl::VectorView<uint8_t>::FromExternal(kTestString, std::size(kTestString) - 1));
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
@@ -923,7 +924,7 @@ TEST_F(PtyTestCase, ClientFillsServerFifo) {
 
   // Trying to write when full gets SHOULD_WAIT
   {
-    auto result = client.Write(
+    auto result = client->Write(
         fidl::VectorView<uint8_t>::FromExternal(kTestString, std::size(kTestString) - 1));
     ASSERT_OK(result.status());
     ASSERT_STATUS(result->s, ZX_ERR_SHOULD_WAIT);
@@ -934,7 +935,7 @@ TEST_F(PtyTestCase, ClientFillsServerFifo) {
   while (total_read < total_written) {
     ASSERT_OK(
         server_event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time{}, nullptr));
-    auto result = server.Read(std::size(kTestString) - 1);
+    auto result = server->Read(std::size(kTestString) - 1);
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
     ASSERT_EQ(result->data.count(),
@@ -963,7 +964,7 @@ TEST_F(PtyTestCase, NonActiveClientsCantWrite) {
   ASSERT_FALSE(observed & fuchsia_device::wire::kDeviceSignalWritable);
   {
     uint8_t byte = 0;
-    auto result = other_client.Write(fidl::VectorView<uint8_t>::FromExternal(&byte, 1));
+    auto result = other_client->Write(fidl::VectorView<uint8_t>::FromExternal(&byte, 1));
     ASSERT_OK(result.status());
     ASSERT_STATUS(result->s, ZX_ERR_SHOULD_WAIT);
   }
@@ -981,7 +982,7 @@ TEST_F(PtyTestCase, ClientsHaveIndependentFifos) {
 
   // control_client is the current active, so it should go to its FIFO
   {
-    auto result = server.Write(fidl::VectorView<uint8_t>::FromExternal(&kControlClientByte, 1));
+    auto result = server->Write(fidl::VectorView<uint8_t>::FromExternal(&kControlClientByte, 1));
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
     ASSERT_EQ(result->actual, 1);
@@ -989,14 +990,14 @@ TEST_F(PtyTestCase, ClientsHaveIndependentFifos) {
 
   // Switch active clients
   {
-    auto result = control_client.MakeActive(1);
+    auto result = control_client->MakeActive(1);
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
   }
 
   // This should go to the other client's FIFO
   {
-    auto result = server.Write(fidl::VectorView<uint8_t>::FromExternal(&kOtherClientByte, 1));
+    auto result = server->Write(fidl::VectorView<uint8_t>::FromExternal(&kOtherClientByte, 1));
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
     ASSERT_EQ(result->actual, 1);
@@ -1007,7 +1008,7 @@ TEST_F(PtyTestCase, ClientsHaveIndependentFifos) {
 
     ASSERT_OK(event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time{}, nullptr));
 
-    auto result = client->Read(10);
+    auto result = (*client)->Read(10);
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
     ASSERT_EQ(result->data.count(), 1);
