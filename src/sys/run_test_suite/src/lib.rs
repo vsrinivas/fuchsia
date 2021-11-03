@@ -785,9 +785,10 @@ pub async fn run_test<'a, Out: Write>(
                     &log_options,
                     args.stdout_writer,
                 )
-                .await?;
-
+                .await;
+                // We should always persist results, even if something failed.
                 suite_reporter.finished()?;
+                let result = result?;
 
                 match &result.outcome {
                     Outcome::Timedout | Outcome::Error { .. } => {

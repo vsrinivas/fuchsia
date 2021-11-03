@@ -829,4 +829,38 @@ mod test {
             &vec![ExpectedSuite::new("suite", directory::Outcome::Passed)],
         );
     }
+
+    #[test]
+    fn early_finish_ok() {
+        // This test verifies that a suite is saved if finished() is called before an outcome is
+        // reported. This could happen if some error causes test execution to terminate early.
+        let dir = tempdir().expect("create temp directory");
+        let run_reporter = RunReporter::new(dir.path().to_path_buf()).expect("create run reporter");
+
+        run_reporter.started(Timestamp::Unknown).expect("start test run");
+
+        let suite_reporter =
+            run_reporter.new_suite("suite", &SuiteId(0)).expect("create new suite");
+        suite_reporter.started(Timestamp::Unknown).expect("start suite");
+
+        let case_reporter = suite_reporter.new_case("case", &CaseId(0)).expect("create case");
+        case_reporter.started(Timestamp::Unknown).expect("start case");
+        // finish run without reporting result
+        case_reporter.finished().expect("finish case");
+        suite_reporter.finished().expect("finish suite");
+        run_reporter.finished().expect("finish test run");
+
+        let (run_result, suite_results) = parse_json_in_output(dir.path());
+        assert_run_result(
+            dir.path(),
+            &run_result,
+            &ExpectedTestRun::new(directory::Outcome::Inconclusive),
+        );
+        assert_suite_results(
+            dir.path(),
+            &suite_results,
+            &vec![ExpectedSuite::new("suite", directory::Outcome::Inconclusive)
+                .with_case(ExpectedTestCase::new("case", directory::Outcome::Inconclusive))],
+        );
+    }
 }
