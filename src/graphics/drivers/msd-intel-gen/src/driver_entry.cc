@@ -308,7 +308,6 @@ static zx_status_t sysdrv_bind(void* ctx, zx_device_t* zx_device) {
   args.ops = &sysdrv_gpu_device_proto;
   args.proto_id = ZX_PROTOCOL_GPU;
   args.proto_ops = nullptr;
-  args.flags = DEVICE_ADD_NON_BINDABLE;
 
   status = device_add(zx_device, &args, &device->zx_device_gpu);
   if (status != ZX_OK)

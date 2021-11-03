@@ -2258,9 +2258,7 @@ zx_status_t Controller::Init() {
     }
   }
 
-  status = DdkAdd(ddk::DeviceAddArgs("intel_i915")
-                      .set_inspect_vmo(inspector_.DuplicateVmo())
-                      .set_flags(DEVICE_ADD_NON_BINDABLE));
+  status = DdkAdd(ddk::DeviceAddArgs("intel_i915").set_inspect_vmo(inspector_.DuplicateVmo()));
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to add controller device");
     return status;

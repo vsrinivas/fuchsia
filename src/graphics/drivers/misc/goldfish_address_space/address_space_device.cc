@@ -136,7 +136,6 @@ zx_status_t AddressSpaceDevice::Bind() {
   mmio_->Write32(static_cast<uint32_t>(dma_region_paddr_ >> 32), REGISTER_PHYS_START_HIGH);
 
   return DdkAdd(ddk::DeviceAddArgs("goldfish-address-space")
-                    .set_flags(DEVICE_ADD_NON_BINDABLE)
                     .set_proto_id(ZX_PROTOCOL_GOLDFISH_ADDRESS_SPACE));
 }
 
