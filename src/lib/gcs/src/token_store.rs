@@ -38,7 +38,8 @@ const APPROVE_AUTH_CODE_URL: &str = "\
 scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-platform\
 &redirect_uri=urn%3Aietf%3Awg%3Aoauth%3A2.0%3Aoob\
 &response_type=code\
-&client_id=909320924072.apps.googleusercontent.com&access_type=offline";
+&access_type=offline\
+&client_id=";
 
 /// Base URL for JSON API access.
 const API_BASE: &str = "https://www.googleapis.com/storage/v1";
@@ -251,7 +252,7 @@ impl TokenStore {
     /// Apply Authorization header, if available.
     ///
     /// If no access_token is set, no changes are made to the builder.
-    async fn authenticate(&self, builder: request::Builder) -> Result<request::Builder> {
+    async fn authorize(&self, builder: request::Builder) -> Result<request::Builder> {
         if self.refresh_token.is_none() {
             return Ok(builder);
         }
@@ -343,7 +344,7 @@ impl TokenStore {
     /// as desired (e.g. follow redirects).
     async fn send_request(&self, https_client: &HttpsClient, url: Url) -> Result<Response<Body>> {
         let req = Request::builder().method(Method::GET).uri(url.into_string());
-        let req = self.authenticate(req).await?;
+        let req = self.authorize(req).await?;
         let req = req.body(Body::from(""))?;
 
         let res = https_client.request(req).await?;
@@ -430,11 +431,11 @@ impl TokenStore {
 ///
 /// Expected flow:
 /// - Request that the user open a browser to this location
-/// - authenticate and grant permission to this program to use GCS
+/// - authorize and grant permission to this program to use GCS
 /// - user, copy-pastes the auth code the web page provides back to this program
 /// - create a TokenStore with TokenStore::new_with_code(pasted_string)
 pub fn auth_code_url() -> String {
-    APPROVE_AUTH_CODE_URL.to_string()
+    APPROVE_AUTH_CODE_URL.to_string() + GSUTIL_CLIENT_ID
 }
 
 /// Fetch an existing refresh token from a .boto (gsutil) configuration file.
@@ -481,7 +482,8 @@ mod test {
             scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-platform\
             &redirect_uri=urn%3Aietf%3Awg%3Aoauth%3A2.0%3Aoob\
             &response_type=code\
-            &client_id={}&access_type=offline",
+            &access_type=offline\
+            &client_id={}",
                 GSUTIL_CLIENT_ID
             )
         );
