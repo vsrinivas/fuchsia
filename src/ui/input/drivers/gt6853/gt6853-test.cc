@@ -359,7 +359,7 @@ TEST_F(Gt6853Test, GetDescriptor) {
   fidl::WireSyncClient<fuchsia_input_report::InputDevice> client(
       ddk_.FidlClient<fuchsia_input_report::InputDevice>());
 
-  auto response = client.GetDescriptor();
+  auto response = client->GetDescriptor();
 
   ASSERT_TRUE(response.ok());
   ASSERT_TRUE(response->descriptor.has_device_info());
@@ -406,7 +406,7 @@ TEST_F(Gt6853Test, ReadReport) {
   auto reader_endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
   ASSERT_TRUE(reader_endpoints.is_ok());
   auto [reader_client, reader_server] = std::move(reader_endpoints.value());
-  client.GetInputReportsReader(std::move(reader_server));
+  client->GetInputReportsReader(std::move(reader_server));
   fidl::WireSyncClient<fuchsia_input_report::InputReportsReader> reader(std::move(reader_client));
   device_->WaitForNextReader();
 
@@ -414,7 +414,7 @@ TEST_F(Gt6853Test, ReadReport) {
 
   fake_i2c_.WaitForTouchDataRead();
 
-  const auto response = reader.ReadInputReports();
+  const auto response = reader->ReadInputReports();
   ASSERT_TRUE(response.ok());
   ASSERT_TRUE(response->result.is_response());
 
