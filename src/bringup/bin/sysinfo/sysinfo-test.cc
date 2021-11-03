@@ -41,7 +41,7 @@ TEST(SysinfoTest, GetBoardName) {
   fidl::WireSyncClient<SysInfo> sysinfo(std::move(channel));
 
   // Test fuchsia::sysinfo::SysInfo.GetBoardName().
-  auto result = sysinfo.GetBoardName();
+  auto result = sysinfo->GetBoardName();
   ASSERT_TRUE(result.ok(), "Failed to get board name");
   ASSERT_OK(result->status, "Failed to get board name");
   ASSERT_GT(result->name.size(), 0, "board name is empty");
@@ -58,7 +58,7 @@ TEST(SysinfoTest, GetBoardRevision) {
   fidl::WireSyncClient<SysInfo> sysinfo(std::move(channel));
 
   // Test fuchsia::sysinfo::SysInfo.GetBoardRevision().
-  auto result = sysinfo.GetBoardRevision();
+  auto result = sysinfo->GetBoardRevision();
   ASSERT_TRUE(result.ok(), "Failed to get board revision");
   ASSERT_OK(result->status, "Failed to get board revision");
 }
@@ -74,7 +74,7 @@ TEST(SysinfoTest, GetBootloaderVendor) {
   fidl::WireSyncClient<SysInfo> sysinfo(std::move(channel));
 
   // Test fuchsia::sysinfo::SysInfo.GetBootloaderVendor().
-  auto result = sysinfo.GetBootloaderVendor();
+  auto result = sysinfo->GetBootloaderVendor();
   ASSERT_TRUE(result.ok(), "Failed to get bootloader vendor");
   ASSERT_OK(result->status, "Failed to get bootloader vendor");
 }
@@ -90,7 +90,7 @@ TEST(SysinfoTest, GetInterruptControllerInfo) {
   fidl::WireSyncClient<SysInfo> sysinfo(std::move(channel));
 
   // Test fuchsia::sysinfo::SysInfo.GetInterruptControllerInfo().
-  auto result = sysinfo.GetInterruptControllerInfo();
+  auto result = sysinfo->GetInterruptControllerInfo();
   ASSERT_TRUE(result.ok(), "Failed to get interrupt controller info");
   ASSERT_OK(result->status, "Failed to get interrupt controller info");
   ASSERT_NOT_NULL(result->info.get(), "interrupt controller type is unknown");

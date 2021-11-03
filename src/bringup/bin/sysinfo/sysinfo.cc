@@ -57,7 +57,7 @@ zx_status_t SysInfo::GetBoardName(std::string *board_name) {
   }
 
   // Get board name from platform bus
-  auto result = client.GetBoardName();
+  auto result = client->GetBoardName();
   if (!result.ok()) {
     printf("sysinfo: Could not GetBoardName: %s\n", result.FormatDescription().c_str());
     return result.status();
@@ -75,7 +75,7 @@ zx_status_t SysInfo::GetBoardRevision(uint32_t *board_revision) {
   }
 
   // Get board revision from platform bus
-  auto result = client.GetBoardRevision();
+  auto result = client->GetBoardRevision();
   if (!result.ok()) {
     printf("sysinfo: Could not GetBoardRevision: %s\n", result.FormatDescription().c_str());
     return result.status();
@@ -93,7 +93,7 @@ zx_status_t SysInfo::GetBootloaderVendor(std::string *bootloader_vendor) {
   }
 
   // Get bootloader vendor from platform bus
-  auto result = client.GetBootloaderVendor();
+  auto result = client->GetBootloaderVendor();
   if (!result.ok()) {
     printf("sysinfo: Could not GetBootloaderVendor: %s\n", result.FormatDescription().c_str());
     return result.status();
@@ -112,7 +112,7 @@ zx_status_t SysInfo::GetInterruptControllerInfo(
   }
 
   // Get interrupt controller information from platform bus
-  auto result = client.GetInterruptControllerInfo();
+  auto result = client->GetInterruptControllerInfo();
   if (!result.ok()) {
     printf("sysinfo: Could not GetInterruptControllerInfo: %s\n",
            result.FormatDescription().c_str());
@@ -123,14 +123,15 @@ zx_status_t SysInfo::GetInterruptControllerInfo(
 }
 
 zx_status_t SysInfo::ConnectToPBus(fidl::WireSyncClient<fuchsia_sysinfo::SysInfo> *client) {
-  zx::channel remote;
-  zx_status_t status = zx::channel::create(0, client->mutable_channel(), &remote);
-  if (status != ZX_OK) {
-    printf("sysinfo: Channel create failed: %s\n", zx_status_get_string(status));
-    return status;
+  zx::status endpoints = fidl::CreateEndpoints<fuchsia_sysinfo::SysInfo>();
+  if (!endpoints.is_ok()) {
+    printf("sysinfo: Channel create failed: %s\n", endpoints.status_string());
+    return endpoints.status_value();
   }
+  client->Bind(std::move(endpoints->client));
 
-  status = fdio_service_connect("/dev/sys/platform", remote.release());
+  zx_status_t status =
+      fdio_service_connect("/dev/sys/platform", endpoints->server.TakeChannel().release());
   if (status != ZX_OK) {
     printf("sysinfo: Could not connect to platform bus: %s\n", zx_status_get_string(status));
     return status;
