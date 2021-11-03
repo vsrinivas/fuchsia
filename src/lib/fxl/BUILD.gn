@@ -54,6 +54,21 @@ source_set("third_party") {
   configs += [ "//build/config:Wno-implicit-fallthrough" ]
 }
 
+source_set("string_printf") {
+  visibility = [
+    ":*",
+    "//src/lib/files:*",
+    "//src/lib/uuid:*",
+  ]
+
+  sources = [
+    "strings/string_printf.cc",
+    "strings/string_printf.h",
+  ]
+
+  public_deps = [ ":common" ]
+}
+
 source_set("strings") {
   visibility = [
     ":*",
@@ -71,8 +86,6 @@ source_set("strings") {
     "strings/split_string.h",
     "strings/string_number_conversions.cc",
     "strings/string_number_conversions.h",
-    "strings/string_printf.cc",
-    "strings/string_printf.h",
     "strings/substitute.cc",
     "strings/substitute.h",
     "strings/trim.cc",
@@ -83,6 +96,7 @@ source_set("strings") {
 
   public_deps = [
     ":common",
+    ":string_printf",
     ":third_party",
     "//sdk/lib/syslog/cpp",
   ]
