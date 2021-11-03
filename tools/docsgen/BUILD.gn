@@ -11,13 +11,7 @@ import("//build/python/python_host_test.gni")
 
 group("docsgen") {
   testonly = true
-  deps = [
-    ":dart_sdk_docs($host_toolchain)",
-    ":invoke_clidoc($host_toolchain)",
-    ":invoke_fidldoc($host_toolchain)",
-    ":invoke_helpdoc($host_toolchain)",
-    "//bundles:create_all_drivers_doc",
-  ]
+  deps = [ ":gen_docs" ]
 }
 
 _dartdoc_transforms_script_target = "dartdoc_transforms"
@@ -32,7 +26,21 @@ python_binary(_dartdoc_transforms_script_target) {
 action("dart_sdk_docs") {
   script_output = get_target_outputs(":${_dartdoc_transforms_script_target}")
   script = script_output[0]
-
+  metadata = {
+    # Record metadata for the //tools/docsgen build API.
+    generated_docset = [
+      {
+        name = "dartdoc"
+        archive = {
+          origin_file =
+              rebase_path("$host_out_dir/obj/tools/docsgen/dartdoc_out.zip",
+                          root_build_dir)
+          base_folder = "dartdoc"
+        }
+        dest_folder = "sdk/dart"
+      },
+    ]
+  }
   inputs = [
     "//sdk/dart",
     "//analysis_options.yaml",
@@ -71,15 +79,6 @@ action("dart_sdk_docs") {
   deps = [ ":${_dartdoc_transforms_script_target}" ] + dart_packages_list
 }
 
-# # Expose relevant paths for the infrastructure to upload.
-build_api_module("generated_docs") {
-  contents = {
-    output_path = rebase_path("$host_out_dir/obj/tools/docsgen", root_build_dir)
-    dartdoc_zip = "dartdoc_out.zip"
-    driversdoc_json = "$root_gen_dir/all_drivers_doc.json"
-  }
-}
-
 _fidldoc_transforms_script_target = "fidldoc_transforms"
 python_binary(_fidldoc_transforms_script_target) {
   main_source = "//build/fidl/gen_fidldocs.py"
@@ -92,7 +91,21 @@ python_binary(_fidldoc_transforms_script_target) {
 action("invoke_fidldoc") {
   script_output = get_target_outputs(":${_fidldoc_transforms_script_target}")
   script = script_output[0]
-
+  metadata = {
+    # Record metadata for the //tools/docsgen build API.
+    generated_docset = [
+      {
+        name = "fidldoc"
+        archive = {
+          origin_file =
+              rebase_path("$host_out_dir/obj/tools/docsgen/fidldoc.zip",
+                          root_build_dir)
+          base_folder = "fidldoc"
+        }
+        dest_folder = "sdk/fidl"
+      },
+    ]
+  }
   inputs = []
 
   outputs = [ "$target_out_dir/fidldoc.zip" ]
@@ -115,19 +128,35 @@ action("invoke_fidldoc") {
   ]
 }
 
+clidoc_tarfile = "clidoc_out.tar.gz"
 compiled_action("invoke_clidoc") {
   tool = "//tools/clidoc:clidoc_bin"
   tool_output_name = "clidoc"
   testonly = true
   deps = [ "//tools:tools" ]
-  outputs = [ "$target_out_dir/clidoc_out.tar.gz" ]
+  metadata = {
+    # Record metadata for the //tools/docsgen build API.
+    generated_docset = [
+      {
+        name = "clidoc"
+        archive = {
+          origin_file =
+              rebase_path("$host_out_dir/obj/tools/docsgen/$clidoc_tarfile",
+                          root_build_dir)
+          base_folder = "clidoc"
+        }
+        dest_folder = "tools/sdk"
+      },
+    ]
+  }
+  outputs = [ "$target_out_dir/$clidoc_tarfile" ]
   args = [
     "-o",
     rebase_path("docs/reference/tools/sdk-docs", root_build_dir),
 
     # TODO (https://fxbug.dev/86553) to rename tarball-dir.
     "--tarball-dir",
-    rebase_path("$target_out_dir/clidoc_out.tar.gz", root_build_dir),
+    rebase_path("$target_out_dir/$clidoc_tarfile", root_build_dir),
   ]
 }
 
@@ -156,7 +185,21 @@ action("invoke_helpdoc") {
   script_output = get_target_outputs(":${_helpdoc_script_target}")
   script = script_output[0]
   testonly = true
-
+  metadata = {
+    # Record metadata for the //tools/docsgen build API.
+    generated_docset = [
+      {
+        name = "helpdoc"
+        archive = {
+          origin_file =
+              rebase_path("$host_out_dir/obj/tools/docsgen/$helpdoc_tarfile",
+                          root_build_dir)
+          base_folder = "helpdoc"
+        }
+        dest_folder = "tools/fx"
+      },
+    ]
+  }
   outputs = [ "$target_out_dir/$helpdoc_tarfile" ]
 
   args = [
@@ -167,4 +210,56 @@ action("invoke_helpdoc") {
   ]
 
   deps = [ ":${_helpdoc_script_target}" ]
+}
+
+# This exposes relevant reference doc paths for infra to upload.
+#
+# Type: list(scope)
+#
+#   name:
+#     Required: name of the reference docs to be generated. This name
+#     will be used to identify the ref doc git commit process downstream
+#     in the docsgen recipe.
+#     Type: string
+#
+#   archive:
+#     Optional: If this key is present, this denotes that the ref docs
+#     are compressed. This is most likely to adhere to hermetic builds.
+#     Additional specific parameters will be included pertaining to archive
+#     paths.
+#     Type: scope
+#
+#     origin_file:
+#        Required: path to compressed archived file holding ref docs.
+#        Type: path relative to $root_build_dir
+#
+#     base_folder:
+#        Optional: base folder containing all ref docs once origin file
+#        is decompresssed. Alternatively if base folder is not specified.
+#        all reference docs are simply decompressed into the current dir.
+#        Type: string
+#
+#   origin_files:
+#     Optional: If this key is present, this denotes that the ref docs
+#     can be listed and are decompressed.
+#     Type: list of file paths relative to $root_build_dir
+
+build_api_module("gen_docs") {
+  testonly = true
+  data_keys = [ "generated_docset" ]
+  deps = [
+    ":dart_sdk_docs($host_toolchain)",
+    ":invoke_clidoc($host_toolchain)",
+    ":invoke_fidldoc($host_toolchain)",
+    ":invoke_helpdoc($host_toolchain)",
+    "//bundles:create_all_drivers_doc",
+  ]
+}
+
+build_api_module("generated_docs") {
+  contents = {
+    output_path = rebase_path("$host_out_dir/obj/tools/docsgen", root_build_dir)
+    dartdoc_zip = "dartdoc_out.zip"
+    driversdoc_json = "$root_gen_dir/all_drivers_doc.json"
+  }
 }

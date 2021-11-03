@@ -41,6 +41,17 @@ template("create_all_drivers_doc") {
     deps = [ ":${all_doc_target}" ]
     script = "//build/drivers/create_all_drivers_doc.py"
     inputs = [ all_doc_output ]
+    metadata = {
+      # Record metadata for the //tools/docsgen build API.
+      generated_docset = [
+        {
+          name = "driversdoc"
+          origin_files = [ rebase_path("$root_gen_dir/all_drivers_doc.json",
+                                       root_build_dir) ]
+          dest_folder = "sdk/drivers"
+        },
+      ]
+    }
     outputs = [ "${target_gen_dir}/all_drivers_doc.json" ]
     depfile = "${target_gen_dir}/${target_name}.d"
     args = [
