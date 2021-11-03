@@ -211,9 +211,20 @@ constexpr size_t BlockSizeForPayload(size_t payload_size) {
 }
 
 // For array types, get a pointer to a specific slot in the array.
+// Because the return type is a pointer to a value inside the input block,
+// the output type needs to be const if the input block is const.
 // If the index is out of bounds, return nullptr.
-template <typename T, typename BlockType>
-constexpr T* GetArraySlot(BlockType* block, size_t index) {
+// If the input block is not an array type, return nullptr.
+template <typename T, typename B,
+          // check that B is a Block* of some kind
+          typename = std::enable_if_t<std::is_same<typename std::decay_t<B>, Block>::value>,
+          // check that the return pointer is at least as const as the input block
+          typename = std::enable_if_t<std::is_const<B>::value ? std::is_const<T>::value : true>>
+constexpr T* GetArraySlot(B* block, size_t index) {
+  if (GetType(block) != BlockType::kArrayValue) {
+    return nullptr;
+  }
+
   if (index > ArrayCapacity(GetOrder(block))) {
     return nullptr;
   }
