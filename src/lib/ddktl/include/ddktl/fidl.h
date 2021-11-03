@@ -129,8 +129,8 @@ class DdkTransaction : public fidl::Transaction {
     if (closed_) {
       return ZX_ERR_CANCELED;
     }
-    status_ = connection_.Txn()->reply(connection_.Txn(), message->message());
-    message->ReleaseHandles();
+    fidl_outgoing_msg_t c_msg = std::move(*message).ReleaseToEncodedCMessage();
+    status_ = connection_.Txn()->reply(connection_.Txn(), &c_msg);
     return status_;
   }
 

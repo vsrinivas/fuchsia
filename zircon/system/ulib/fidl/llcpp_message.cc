@@ -105,6 +105,13 @@ OutgoingMessage::~OutgoingMessage() {
 #endif
 }
 
+fidl_outgoing_msg_t OutgoingMessage::ReleaseToEncodedCMessage() && {
+  ZX_DEBUG_ASSERT(status() == ZX_OK);
+  fidl_outgoing_msg_t result = message_;
+  ReleaseHandles();
+  return result;
+}
+
 bool OutgoingMessage::BytesMatch(const OutgoingMessage& other) const {
   uint32_t iovec_index = 0, other_iovec_index = 0;
   uint32_t byte_index = 0, other_byte_index = 0;

@@ -114,7 +114,7 @@ bool EncodeSuccess(fidl::internal::WireFormatVersion wire_format_version, FidlTy
   std::unique_ptr<fidl_channel_handle_metadata_t[]> handle_metadata_buffer;
   switch (wire_format_version) {
     case fidl::internal::WireFormatVersion::kV1: {
-      memcpy(&c_msg, outgoing_v1.message(), sizeof(c_msg));
+      c_msg = std::move(outgoing_v1).ReleaseToEncodedCMessage();
       break;
     }
     case fidl::internal::WireFormatVersion::kV2: {

@@ -25,6 +25,11 @@
 #include <lib/zx/channel.h>
 #endif  // __Fuchsia__
 
+namespace fidl_testing {
+// Forward declaration of test helpers to support friend declaration.
+class MessageChecker;
+}  // namespace fidl_testing
+
 namespace fidl {
 
 namespace internal {
@@ -42,6 +47,10 @@ struct AllowUnownedInputRef {};
 }  // namespace internal
 
 // |OutgoingMessage| represents a FIDL message on the write path.
+//
+// This class does not allocate its own memory storage. Instead, users need to
+// pass in encoding buffers of sufficient size, which an |OutgoingMessage| will
+// borrow until its destruction.
 //
 // This class takes ownership of handles in the message.
 //
@@ -74,8 +83,12 @@ class OutgoingMessage : public ::fidl::Result {
   OutgoingMessage() = delete;
   ~OutgoingMessage();
 
-  // Creates an object which can manage a FIDL message.
-  // |c_msg| must contain an already-encoded message.
+  // Creates an object which can manage a FIDL message. This should only be used
+  // when interfacing with C APIs. |c_msg| must contain an already-encoded
+  // message. The handles in |c_msg| are owned by the returned |OutgoingMessage|
+  // object.
+  //
+  // The bytes must represent a transactional message.
   static OutgoingMessage FromEncodedCMessage(const fidl_outgoing_msg_t* c_msg);
 
   // Creates an empty outgoing message representing an error.
@@ -104,8 +117,13 @@ class OutgoingMessage : public ::fidl::Result {
   fidl_transport_type transport_type() const { return iovec_message().transport_type; }
   void* handle_metadata() const { return iovec_message().handle_metadata; }
   uint32_t handle_actual() const { return iovec_message().num_handles; }
-  fidl_outgoing_msg_t* message() { return &message_; }
-  const fidl_outgoing_msg_t* message() const { return &message_; }
+
+  // Convert the outgoing message to its C API counterpart, releasing the
+  // ownership of handles to the caller in the process. This consumes the
+  // |OutgoingMessage|.
+  //
+  // This should only be called while the message is in its encoded form.
+  fidl_outgoing_msg_t ReleaseToEncodedCMessage() &&;
 
   // Returns true iff the bytes in this message are identical to the bytes in the argument.
   bool BytesMatch(const OutgoingMessage& other) const;
@@ -174,7 +192,7 @@ class OutgoingMessage : public ::fidl::Result {
       return;
     }
     ZX_ASSERT(message_.iovec.transport_type == transport.type());
-    // TODO(fxbug.dev/85734) Support abitrary transports.
+    // TODO(fxbug.dev/85734) Support arbitrary transports.
     CallImpl(FidlType::Type, transport.get<internal::ChannelTransport>()->get(), result_bytes,
              result_capacity, deadline);
   }
@@ -209,6 +227,8 @@ class OutgoingMessage : public ::fidl::Result {
   uint8_t* backing_buffer() const { return backing_buffer_; }
 
  private:
+  friend ::fidl_testing::MessageChecker;
+
   explicit OutgoingMessage(const fidl_outgoing_msg_t* msg);
 
   fidl_outgoing_msg_iovec_t& iovec_message() {

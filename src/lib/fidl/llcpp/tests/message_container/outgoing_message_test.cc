@@ -10,6 +10,10 @@
 
 #include <gtest/gtest.h>
 
+#include "message_checkers.h"
+
+using fidl_testing::MessageChecker;
+
 TEST(OutgoingMessage, ConstructWithConstructorArgs) {
   zx_channel_iovec_t iovecs[1];
   zx_handle_t handles[2];
@@ -58,7 +62,7 @@ TEST(OutgoingMessage, ConstructFromCIovecMessage) {
           },
   };
   auto msg = fidl::OutgoingMessage::FromEncodedCMessage(&c_msg);
-  ASSERT_EQ(FIDL_OUTGOING_MSG_TYPE_IOVEC, msg.message()->type);
+  ASSERT_EQ(FIDL_OUTGOING_MSG_TYPE_IOVEC, MessageChecker::GetCMessage(msg)->type);
   ASSERT_EQ(&iovec, msg.iovecs());
   ASSERT_EQ(1u, msg.iovec_actual());
   ASSERT_EQ(&handle, msg.handles());
@@ -87,7 +91,7 @@ TEST(OutgoingMessage, ConstructFromCByteMessage) {
           },
   };
   auto msg = fidl::OutgoingMessage::FromEncodedCMessage(&c_msg);
-  ASSERT_EQ(FIDL_OUTGOING_MSG_TYPE_IOVEC, msg.message()->type);
+  ASSERT_EQ(FIDL_OUTGOING_MSG_TYPE_IOVEC, MessageChecker::GetCMessage(msg)->type);
 
   ASSERT_NE(nullptr, msg.iovecs());
   ASSERT_EQ(1u, msg.iovec_actual());

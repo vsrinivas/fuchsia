@@ -91,8 +91,8 @@ class Server {
   template <typename FidlType>
   zx_status_t Reply(fidl_txn_t* txn, FidlType* value) {
     fidl::OwnedEncodedMessage<FidlType> encoded(value);
-    zx_status_t status = txn->reply(txn, encoded.GetOutgoingMessage().message());
-    encoded.GetOutgoingMessage().ReleaseHandles();
+    fidl_outgoing_msg_t c_msg = std::move(encoded.GetOutgoingMessage()).ReleaseToEncodedCMessage();
+    zx_status_t status = txn->reply(txn, &c_msg);
     return status;
   }
 
