@@ -73,7 +73,7 @@ class TestMagmaFidl : public gtest::RealLoopFixture {
 
       {
         auto wire_result =
-            device_.Query2(static_cast<uint64_t>(fuchsia_gpu_magma::wire::QueryId::kVendorId));
+            device_->Query2(static_cast<uint64_t>(fuchsia_gpu_magma::wire::QueryId::kVendorId));
         ASSERT_TRUE(wire_result.ok());
 
         vendor_id_ = wire_result.Unwrap()->result.response().result;
@@ -89,7 +89,7 @@ class TestMagmaFidl : public gtest::RealLoopFixture {
     ASSERT_TRUE(device_.client_end());
 
     {
-      auto wire_result = device_.Query2(
+      auto wire_result = device_->Query2(
           static_cast<uint64_t>(fuchsia_gpu_magma::wire::QueryId::kMaximumInflightParams));
       ASSERT_TRUE(wire_result.ok());
 
@@ -98,7 +98,7 @@ class TestMagmaFidl : public gtest::RealLoopFixture {
     }
 
     uint64_t client_id = 0xabcd;  // anything
-    auto wire_result = device_.Connect(client_id);
+    auto wire_result = device_->Connect(client_id);
     ASSERT_TRUE(wire_result.ok());
 
     primary_ = PrimaryClient(std::move(wire_result.Unwrap()->primary_channel), dispatcher(),
@@ -133,21 +133,21 @@ TEST_F(TestMagmaFidl, Connect) {
 TEST_F(TestMagmaFidl, Query) {
   {
     auto wire_result =
-        device_.Query2(static_cast<uint64_t>(fuchsia_gpu_magma::wire::QueryId::kVendorId));
+        device_->Query2(static_cast<uint64_t>(fuchsia_gpu_magma::wire::QueryId::kVendorId));
     EXPECT_TRUE(wire_result.ok());
   }
   {
     auto wire_result =
-        device_.Query2(static_cast<uint64_t>(fuchsia_gpu_magma::wire::QueryId::kDeviceId));
+        device_->Query2(static_cast<uint64_t>(fuchsia_gpu_magma::wire::QueryId::kDeviceId));
     EXPECT_TRUE(wire_result.ok());
   }
   {
-    auto wire_result = device_.Query2(
+    auto wire_result = device_->Query2(
         static_cast<uint64_t>(fuchsia_gpu_magma::wire::QueryId::kIsTotalTimeSupported));
     EXPECT_TRUE(wire_result.ok());
   }
   {
-    auto wire_result = device_.Query2(
+    auto wire_result = device_->Query2(
         static_cast<uint64_t>(fuchsia_gpu_magma::wire::QueryId::kMaximumInflightParams));
     EXPECT_TRUE(wire_result.ok());
   }
@@ -156,19 +156,19 @@ TEST_F(TestMagmaFidl, Query) {
 TEST_F(TestMagmaFidl, QueryReturnsBuffer) {
   // No predefined queries return a buffer
   const uint64_t query_id = static_cast<uint64_t>(fuchsia_gpu_magma::wire::QueryId::kVendorId);
-  auto wire_result = device_.QueryReturnsBuffer(query_id);
+  auto wire_result = device_->QueryReturnsBuffer(query_id);
   EXPECT_TRUE(wire_result.ok());
   EXPECT_TRUE(wire_result.Unwrap()->result.is_err());
 }
 
 TEST_F(TestMagmaFidl, DumpState) {
   // TODO: define dumpstate param in magma.fidl. Or for testing only (use inspect instead)?
-  auto wire_result = device_.DumpState(0);
+  auto wire_result = device_->DumpState(0);
   EXPECT_TRUE(wire_result.ok());
 }
 
 TEST_F(TestMagmaFidl, GetIcdList) {
-  auto wire_result = device_.GetIcdList();
+  auto wire_result = device_->GetIcdList();
   EXPECT_TRUE(wire_result.ok());
 }
 
@@ -482,7 +482,7 @@ TEST_F(TestMagmaFidl, EnablePerformanceCounters) {
     zx::event access_token;
 
     {
-      auto wire_result = perf_counter_access.GetPerformanceCountToken();
+      auto wire_result = perf_counter_access->GetPerformanceCountToken();
       ASSERT_TRUE(wire_result.ok());
       access_token = std::move(wire_result.Unwrap()->access_token);
     }

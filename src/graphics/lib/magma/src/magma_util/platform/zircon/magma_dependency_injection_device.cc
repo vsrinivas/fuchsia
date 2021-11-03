@@ -42,7 +42,7 @@ void MagmaDependencyInjectionDevice::SetMemoryPressureProvider(
       server_loop_.dispatcher(), std::move(endpoints->server), this);
 
   auto provider = fidl::BindSyncClient(std::move(request->provider));
-  provider.RegisterWatcher(std::move(endpoints->client));
+  provider->RegisterWatcher(std::move(endpoints->client));
 }
 
 static MagmaMemoryPressureLevel GetMagmaLevel(fuchsia_memorypressure::wire::Level level) {

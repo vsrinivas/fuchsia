@@ -65,12 +65,12 @@ class ZirconPlatformPerfCountPoolClient : public PlatformPerfCountPoolClient {
     return std::move(server_endpoint_);
   }
 
-  magma_handle_t handle() override { return perf_counter_events_.channel().get(); }
+  magma_handle_t handle() override { return perf_counter_events_.client_end().channel().get(); }
   magma::Status ReadPerformanceCounterCompletion(uint32_t* trigger_id_out, uint64_t* buffer_id_out,
                                                  uint32_t* buffer_offset_out, uint64_t* time_out,
                                                  uint32_t* result_flags_out) override {
     zx_signals_t pending;
-    zx_status_t status = perf_counter_events_.channel().wait_one(
+    zx_status_t status = perf_counter_events_.client_end().channel().wait_one(
         ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, zx::time(), &pending);
     if (status != ZX_OK) {
       magma_status_t magma_status = MagmaChannelStatus(status);
