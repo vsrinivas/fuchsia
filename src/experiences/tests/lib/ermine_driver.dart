@@ -60,29 +60,38 @@ class ErmineDriver {
   /// of Ermine using FlutterDriver.
   Future<void> setUp() async {
     // Restart the workstation session.
-    final result = await sl4f.ssh.run('session_control restart');
-    if (result.exitCode != 0) {
-      fail('failed to restart workstation session.');
-    }
+    // TODO(fxb/87746): Temporarily remove to see if it causes the issue.
+    // final result = await sl4f.ssh.run('session_control restart');
+    // if (result.exitCode != 0) {
+    //   fail('failed to restart workstation session.');
+    // }
 
     // Initialize Ermine's flutter driver and web driver connectors.
     await _connector.initialize();
+    print('Flutter driver connector initialized');
 
     // Now connect to ermine.
     _driver = await _connector.driverForIsolate('ermine');
     if (_driver == null) {
       fail('Unable to connect to ermine.');
     }
+    print('Driver is connected to Ermine');
 
     // Wait for shell to draw first frame.
     await driver.waitUntilFirstFrameRasterized();
+    print('The first frame has been rasterized');
 
     // Wait until rendering stabilizes and animations settle.
     await driver.waitUntilNoTransientCallbacks();
+    print('No further transient callbacks. ErmineDriver is ready.');
   }
 
   /// Closes [FlutterDriverConnector] and performs cleanup.
   Future<void> tearDown() async {
+    final result = await sl4f.ssh.run('session_control restart');
+    if (result.exitCode != 0) {
+      fail('failed to restart workstation session.');
+    }
     await _driver?.close();
     await _connector.tearDown();
   }
