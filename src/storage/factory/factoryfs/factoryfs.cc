@@ -67,9 +67,9 @@ zx_status_t Factoryfs::OpenRootNode(fbl::RefPtr<fs::Vnode>* out) {
 
 zx_status_t Factoryfs::GetFilesystemInfo(fidl::AnyArena& allocator,
                                          fuchsia_fs::wire::FilesystemInfo& out) {
-  out.set_block_size(allocator, kFactoryfsBlockSize);
-  out.set_max_node_name_size(allocator, kFactoryfsMaxNameSize);
-  out.set_fs_type(allocator, fuchsia_fs::wire::FsType::kFactoryfs);
+  out.set_block_size(kFactoryfsBlockSize);
+  out.set_max_node_name_size(kFactoryfsMaxNameSize);
+  out.set_fs_type(fuchsia_fs::wire::FsType::kFactoryfs);
   out.set_total_bytes(allocator, superblock_.data_blocks * kFactoryfsBlockSize);
   out.set_used_bytes(allocator, superblock_.data_blocks * kFactoryfsBlockSize);
   out.set_total_nodes(allocator, superblock_.directory_entries);
@@ -78,7 +78,7 @@ zx_status_t Factoryfs::GetFilesystemInfo(fidl::AnyArena& allocator,
 
   zx::event fs_id_copy;
   if (fs_id_.duplicate(ZX_RIGHTS_BASIC, &fs_id_copy) == ZX_OK)
-    out.set_fs_id(allocator, std::move(fs_id_copy));
+    out.set_fs_id(std::move(fs_id_copy));
 
   return ZX_OK;
 }

@@ -731,9 +731,9 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks, RawBitmap* block_map) {
 
 zx_status_t Blobfs::GetFilesystemInfo(fidl::AnyArena& allocator,
                                       fuchsia_fs::wire::FilesystemInfo& out) {
-  out.set_block_size(allocator, kBlobfsBlockSize);
-  out.set_max_node_name_size(allocator, digest::kSha256HexLength);
-  out.set_fs_type(allocator, fuchsia_fs::wire::FsType::kBlobfs);
+  out.set_block_size(kBlobfsBlockSize);
+  out.set_max_node_name_size(digest::kSha256HexLength);
+  out.set_fs_type(fuchsia_fs::wire::FsType::kBlobfs);
   out.set_total_bytes(allocator, Info().data_block_count * Info().block_size);
   out.set_used_bytes(allocator, Info().alloc_block_count * Info().block_size);
   out.set_total_nodes(allocator, Info().inode_count);
@@ -742,7 +742,7 @@ zx_status_t Blobfs::GetFilesystemInfo(fidl::AnyArena& allocator,
 
   zx::event fs_id_copy;
   if (fs_id_.duplicate(ZX_RIGHTS_BASIC, &fs_id_copy) == ZX_OK)
-    out.set_fs_id(allocator, std::move(fs_id_copy));
+    out.set_fs_id(std::move(fs_id_copy));
 
   if (auto device_path_or = Device()->GetDevicePath(); device_path_or.is_ok())
     out.set_device_path(allocator, fidl::StringView(allocator, device_path_or.value()));

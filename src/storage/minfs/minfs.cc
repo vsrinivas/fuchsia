@@ -1442,9 +1442,9 @@ zx_status_t Minfs::GetFilesystemInfo(fidl::AnyArena& allocator,
                                      fuchsia_fs::wire::FilesystemInfo& out) {
   uint32_t reserved_blocks = BlocksReserved();
 
-  out.set_block_size(allocator, BlockSize());
-  out.set_max_node_name_size(allocator, kMinfsMaxNameSize);
-  out.set_fs_type(allocator, fuchsia_fs::wire::FsType::kMinfs);
+  out.set_block_size(BlockSize());
+  out.set_max_node_name_size(kMinfsMaxNameSize);
+  out.set_fs_type(fuchsia_fs::wire::FsType::kMinfs);
   out.set_total_bytes(allocator, Info().block_count * Info().block_size);
   out.set_used_bytes(allocator, (Info().alloc_block_count + reserved_blocks) * Info().block_size);
   out.set_total_nodes(allocator, Info().inode_count);
@@ -1452,7 +1452,7 @@ zx_status_t Minfs::GetFilesystemInfo(fidl::AnyArena& allocator,
 
   zx::event fs_id_copy;
   if (fs_id_.duplicate(ZX_RIGHTS_BASIC, &fs_id_copy) == ZX_OK)
-    out.set_fs_id(allocator, std::move(fs_id_copy));
+    out.set_fs_id(std::move(fs_id_copy));
 
   fuchsia_hardware_block_volume_VolumeInfo fvm_info;
   if (FVMQuery(&fvm_info) == ZX_OK) {

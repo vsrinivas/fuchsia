@@ -272,9 +272,9 @@ zx_status_t FlushDirtyNodePage(F2fs* fs, Page& page) {
 
 zx_status_t F2fs::GetFilesystemInfo(fidl::AnyArena& allocator,
                                     fuchsia_fs::wire::FilesystemInfo& out) {
-  out.set_block_size(allocator, kBlockSize);
-  out.set_max_node_name_size(allocator, kMaxNameLen);
-  out.set_fs_type(allocator, fuchsia_fs::wire::FsType::kF2Fs);
+  out.set_block_size(kBlockSize);
+  out.set_max_node_name_size(kMaxNameLen);
+  out.set_fs_type(fuchsia_fs::wire::FsType::kF2Fs);
   out.set_total_bytes(allocator, superblock_info_->GetUserBlockCount() * kBlockSize);
   out.set_used_bytes(allocator, ValidUserBlocks() * kBlockSize);
   out.set_total_nodes(allocator, superblock_info_->GetTotalNodeCount());
@@ -283,7 +283,7 @@ zx_status_t F2fs::GetFilesystemInfo(fidl::AnyArena& allocator,
 
   zx::event fs_id_copy;
   if (fs_id_.duplicate(ZX_RIGHTS_BASIC, &fs_id_copy) == ZX_OK)
-    out.set_fs_id(allocator, std::move(fs_id_copy));
+    out.set_fs_id(std::move(fs_id_copy));
 
   if (auto device_path_or = bc_->device()->GetDevicePath(); device_path_or.is_ok())
     out.set_device_path(allocator, fidl::StringView(allocator, device_path_or.value()));

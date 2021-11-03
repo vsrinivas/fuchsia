@@ -425,7 +425,7 @@ void FsManager::FileReport(ReportReason reason) {
     fuchsia_feedback::wire::CrashReport report(allocator);
     report.set_program_name(allocator, allocator, "minfs");
     report.set_crash_signature(allocator, allocator, ReportReasonStr(reason));
-    report.set_is_fatal(allocator, false);
+    report.set_is_fatal(false);
 
     auto res = client->File(report);
     if (!res.ok()) {

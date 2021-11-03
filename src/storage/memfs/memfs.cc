@@ -63,13 +63,13 @@ zx_status_t Vfs::GrowVMO(zx::vmo& vmo, size_t current_size, size_t request_size,
 
 zx_status_t Vfs::GetFilesystemInfo(fidl::AnyArena& allocator,
                                    fuchsia_fs::wire::FilesystemInfo& out) {
-  out.set_block_size(allocator, GetPageSize());
-  out.set_max_node_name_size(allocator, kDnodeNameMax);
-  out.set_fs_type(allocator, fuchsia_fs::wire::FsType::kMemfs);
+  out.set_block_size(GetPageSize());
+  out.set_max_node_name_size(kDnodeNameMax);
+  out.set_fs_type(fuchsia_fs::wire::FsType::kMemfs);
 
   zx::event fs_id_copy;
   if (fs_id_.duplicate(ZX_RIGHTS_BASIC, &fs_id_copy) == ZX_OK)
-    out.set_fs_id(allocator, std::move(fs_id_copy));
+    out.set_fs_id(std::move(fs_id_copy));
 
   // There's no sensible value to use for the total_bytes for memfs. Fuchsia overcommits memory,
   // which means you can have a memfs that stores more total bytes than the device has physical
