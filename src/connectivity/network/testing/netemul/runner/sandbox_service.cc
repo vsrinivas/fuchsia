@@ -73,13 +73,13 @@ class SandboxBinding : public fuchsia::netemul::sandbox::Sandbox {
   void GetNetworkContext(fidl::InterfaceRequest<::fuchsia::netemul::network::NetworkContext>
                              network_context) override {
     shared_env()->network_context().GetHandler()(std::move(network_context));
-  };
+  }
 
   // Gets this sandbox's SyncManager
   void GetSyncManager(
       fidl::InterfaceRequest<fuchsia::netemul::sync::SyncManager> sync_manager) override {
     shared_env()->sync_manager().GetHandler()(std::move(sync_manager));
-  };
+  }
 
  private:
   std::shared_ptr<SandboxEnv>& shared_env() {
