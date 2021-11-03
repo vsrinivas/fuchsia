@@ -119,22 +119,24 @@ type conn struct {
 	//
 	// +checklocks:mu
 	destinationManip bool
+
+	stateMu sync.RWMutex `state:"nosave"`
 	// tcb is TCB control block. It is used to keep track of states
 	// of tcp connection.
 	//
-	// +checklocks:mu
+	// +checklocks:stateMu
 	tcb tcpconntrack.TCB
 	// lastUsed is the last time the connection saw a relevant packet, and
 	// is updated by each packet on the connection.
 	//
-	// +checklocks:mu
+	// +checklocks:stateMu
 	lastUsed tcpip.MonotonicTime
 }
 
 // timedOut returns whether the connection timed out based on its state.
 func (cn *conn) timedOut(now tcpip.MonotonicTime) bool {
-	cn.mu.RLock()
-	defer cn.mu.RUnlock()
+	cn.stateMu.RLock()
+	defer cn.stateMu.RUnlock()
 	if cn.tcb.State() == tcpconntrack.ResultAlive {
 		// Use the same default as Linux, which doesn't delete
 		// established connections for 5(!) days.
@@ -147,7 +149,7 @@ func (cn *conn) timedOut(now tcpip.MonotonicTime) bool {
 
 // update the connection tracking state.
 //
-// +checklocks:cn.mu
+// +checklocks:cn.stateMu
 func (cn *conn) updateLocked(pkt *PacketBuffer, reply bool) {
 	if pkt.TransportProtocolNumber != header.TCPProtocolNumber {
 		return
@@ -607,14 +609,17 @@ func (cn *conn) handlePacket(pkt *PacketBuffer, hook Hook, rt *Route) bool {
 	// packets are fragmented.
 
 	reply := pkt.tuple.reply
-	tid, performManip := func() (tupleID, bool) {
-		cn.mu.Lock()
-		defer cn.mu.Unlock()
 
-		// Mark the connection as having been used recently so it isn't reaped.
-		cn.lastUsed = cn.ct.clock.NowMonotonic()
-		// Update connection state.
-		cn.updateLocked(pkt, reply)
+	cn.stateMu.Lock()
+	// Mark the connection as having been used recently so it isn't reaped.
+	cn.lastUsed = cn.ct.clock.NowMonotonic()
+	// Update connection state.
+	cn.updateLocked(pkt, reply)
+	cn.stateMu.Unlock()
+
+	tid, performManip := func() (tupleID, bool) {
+		cn.mu.RLock()
+		defer cn.mu.RUnlock()
 
 		var tuple *tuple
 		if reply {
@@ -736,9 +741,6 @@ func (ct *ConnTrack) bucket(id tupleID) int {
 
 // reapUnused deletes timed out entries from the conntrack map. The rules for
 // reaping are:
-// - Most reaping occurs in connFor, which is called on each packet. connFor
-//   cleans up the bucket the packet's connection maps to. Thus calls to
-//   reapUnused should be fast.
 // - Each call to reapUnused traverses a fraction of the conntrack table.
 //   Specifically, it traverses len(ct.buckets)/fractionPerReaping.
 // - After reaping, reapUnused decides when it should next run based on the
@@ -805,45 +807,48 @@ func (ct *ConnTrack) reapUnused(start int, prevInterval time.Duration) (int, tim
 // Precondition: ct.mu is read locked and bkt.mu is write locked.
 // +checklocksread:ct.mu
 // +checklocks:bkt.mu
-func (ct *ConnTrack) reapTupleLocked(tuple *tuple, bktID int, bkt *bucket, now tcpip.MonotonicTime) bool {
-	if !tuple.conn.timedOut(now) {
+func (ct *ConnTrack) reapTupleLocked(reapingTuple *tuple, bktID int, bkt *bucket, now tcpip.MonotonicTime) bool {
+	if !reapingTuple.conn.timedOut(now) {
 		return false
 	}
 
-	// To maintain lock order, we can only reap both tuples if the reply appears
-	// later in the table.
-	replyBktID := ct.bucket(tuple.id().reply())
-	tuple.conn.mu.RLock()
-	replyTupleInserted := tuple.conn.finalized
-	tuple.conn.mu.RUnlock()
-	if bktID > replyBktID && replyTupleInserted {
+	var otherTuple *tuple
+	if reapingTuple.reply {
+		otherTuple = &reapingTuple.conn.original
+	} else {
+		otherTuple = &reapingTuple.conn.reply
+	}
+
+	otherTupleBktID := ct.bucket(otherTuple.id())
+	reapingTuple.conn.mu.RLock()
+	replyTupleInserted := reapingTuple.conn.finalized
+	reapingTuple.conn.mu.RUnlock()
+
+	// To maintain lock order, we can only reap both tuples if the tuple for the
+	// other direction appears later in the table.
+	if bktID > otherTupleBktID && replyTupleInserted {
 		return true
 	}
 
-	// Reap the reply.
-	if replyTupleInserted {
+	bkt.tuples.Remove(reapingTuple)
+
+	if !replyTupleInserted {
+		// The other tuple is the reply which has not yet been inserted.
+		return true
+	}
+
+	// Reap the other connection.
+	if bktID == otherTupleBktID {
 		// Don't re-lock if both tuples are in the same bucket.
-		if bktID != replyBktID {
-			replyBkt := &ct.buckets[replyBktID]
-			replyBkt.mu.Lock()
-			removeConnFromBucket(replyBkt, tuple)
-			replyBkt.mu.Unlock()
-		} else {
-			removeConnFromBucket(bkt, tuple)
-		}
-	}
-
-	bkt.tuples.Remove(tuple)
-	return true
-}
-
-// +checklocks:b.mu
-func removeConnFromBucket(b *bucket, tuple *tuple) {
-	if tuple.reply {
-		b.tuples.Remove(&tuple.conn.original)
+		bkt.tuples.Remove(otherTuple)
 	} else {
-		b.tuples.Remove(&tuple.conn.reply)
+		otherTupleBkt := &ct.buckets[otherTupleBktID]
+		otherTupleBkt.mu.Lock()
+		otherTupleBkt.tuples.Remove(otherTuple)
+		otherTupleBkt.mu.Unlock()
 	}
+
+	return true
 }
 
 func (ct *ConnTrack) originalDst(epID TransportEndpointID, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber) (tcpip.Address, uint16, tcpip.Error) {
