@@ -6,7 +6,7 @@ use {
     crate::{deprecated_fidl_server::*, table::*},
     anyhow::{format_err, Error},
     fuchsia_component::server::ServiceFs,
-    fuchsia_inspect::{self as inspect, ArrayProperty},
+    fuchsia_inspect::{self as inspect, ArithmeticArrayProperty, ArrayProperty},
     futures::{FutureExt, StreamExt},
     std::ops::AddAssign,
     structopt::StructOpt,

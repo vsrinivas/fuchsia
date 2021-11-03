@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::writer::{ArrayProperty, DoubleArrayProperty, HistogramProperty, Node, StringReference};
+use crate::writer::{
+    ArithmeticArrayProperty, ArrayProperty, DoubleArrayProperty, HistogramProperty, Node,
+    StringReference,
+};
 use diagnostics_hierarchy::{ArrayFormat, LinearHistogramParams};
 use inspect_format::constants;
 use tracing::error;

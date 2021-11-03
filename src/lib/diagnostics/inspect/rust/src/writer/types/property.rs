@@ -38,14 +38,16 @@ pub trait ArrayProperty {
     /// Sets the array value to `value` at the given `index`.
     fn set(&self, index: usize, value: Self::Type);
 
+    /// Sets all slots of the array to 0 and releases any references.
+    fn clear(&self);
+}
+
+pub trait ArithmeticArrayProperty: ArrayProperty {
     /// Adds the given `value` to the property current value at the given `index`.
     fn add(&self, index: usize, value: Self::Type);
 
     /// Subtracts the given `value` to the property current value at the given `index`.
     fn subtract(&self, index: usize, value: Self::Type);
-
-    /// Sets all slots of the array to 0.
-    fn clear(&self);
 }
 
 /// Trait implemented by all histogram properties providing common operations.

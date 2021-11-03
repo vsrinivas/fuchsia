@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use crate::writer::{
-    ArrayProperty, Inner, InnerValueType, InspectType, InspectTypeInternal, State,
+    ArithmeticArrayProperty, ArrayProperty, Inner, InnerValueType, InspectType,
+    InspectTypeInternal, State,
 };
 use tracing::error;
 
@@ -52,6 +53,20 @@ impl ArrayProperty for IntArrayProperty {
         }
     }
 
+    fn clear(&self) {
+        if let Some(ref inner_ref) = self.inner.inner_ref() {
+            inner_ref
+                .state
+                .try_lock()
+                .and_then(|mut state| state.clear_array(inner_ref.block_index, 0))
+                .unwrap_or_else(|e| {
+                    error!("Failed to clear property. Error: {:?}", e);
+                });
+        }
+    }
+}
+
+impl ArithmeticArrayProperty for IntArrayProperty {
     fn add(&self, index: usize, value: i64) {
         if let Some(ref inner_ref) = self.inner.inner_ref() {
             inner_ref
@@ -74,18 +89,6 @@ impl ArrayProperty for IntArrayProperty {
                 })
                 .unwrap_or_else(|err| {
                     error!(?err, "Failed to subtract property");
-                });
-        }
-    }
-
-    fn clear(&self) {
-        if let Some(ref inner_ref) = self.inner.inner_ref() {
-            inner_ref
-                .state
-                .try_lock()
-                .and_then(|mut state| state.clear_array(inner_ref.block_index, 0))
-                .unwrap_or_else(|e| {
-                    error!("Failed to clear property. Error: {:?}", e);
                 });
         }
     }
