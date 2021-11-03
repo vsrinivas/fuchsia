@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1394
+From //build/config/BUILDCONFIG.gn:1397
 
 ### allow_legacy_data_partition_names
 Set to true to enable legacy data partition names.
@@ -1256,7 +1256,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1151
+From //build/config/BUILDCONFIG.gn:1154
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -2183,7 +2183,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:991
+From //build/config/BUILDCONFIG.gn:994
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -3173,34 +3173,12 @@ From //products/bringup.gni:40
 
 From //build/product.gni:7
 
-### product_bundle_mapping_file_path
-Path to the product bundle mapping file that contains a JSON with:
-[{
-   Name: Name of the product.
-   Path: Path to the product bundle for the product.
-}]
-If set, all products under the platform surface area must be present in the
-JSON with a valid product bundle path.
-If empty, will create an empty product bundle.
-
-**Current value (from the default):** `""`
-
-From //build/sdk/config.gni:21
-
 ### product_description
 A human readable product description.
 
 **Current value (from the default):** `""`
 
 From //build/product.gni:13
-
-### product_name_override
-Overrides the default name value in the product bundle. Used to distinguish
-between similar builds with different packages.
-
-**Current value (from the default):** `""`
-
-From //build/sdk/config.gni:25
 
 ### product_system_image_deps
 A list of binary labels to include in the system_image package.
@@ -3556,7 +3534,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1384
+From //build/config/BUILDCONFIG.gn:1387
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3565,7 +3543,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1389
+From //build/config/BUILDCONFIG.gn:1392
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3609,7 +3587,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1197
+From //build/config/BUILDCONFIG.gn:1200
 
 ### size_checker_input
 The input to the size checker.
@@ -3883,7 +3861,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1181
+From //build/config/BUILDCONFIG.gn:1184
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
