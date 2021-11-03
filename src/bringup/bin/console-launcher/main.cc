@@ -21,7 +21,7 @@ namespace {
 
 #define LOGF(severity, message...) FX_LOGF(severity, nullptr, message)
 
-zx_status_t log_to_debuglog(fidl::WireSyncClient<fuchsia_boot::WriteOnlyLog>* log_client) {
+zx_status_t log_to_debuglog(const fidl::WireSyncClient<fuchsia_boot::WriteOnlyLog>& log_client) {
   auto result = log_client->Get();
   if (result.status() != ZX_OK) {
     return result.status();
@@ -102,7 +102,7 @@ int main(int argv, char** argc) {
     return 1;
   }
 
-  std::optional<console_launcher::Arguments> args = console_launcher::GetArguments(&boot_args);
+  std::optional<console_launcher::Arguments> args = console_launcher::GetArguments(boot_args);
   if (!args) {
     fprintf(stderr, "console-launcher: Failed to get arguments\n");
     return 1;
@@ -110,7 +110,7 @@ int main(int argv, char** argc) {
 
   // Past this point we should be using logging instead of stdout.
   if (args->log_to_debuglog) {
-    zx_status_t status = log_to_debuglog(&log_client);
+    zx_status_t status = log_to_debuglog(log_client);
     if (status != ZX_OK) {
       fprintf(stderr, "Failed to reconfigure logger to use debuglog: %s\n",
               zx_status_get_string(status));
@@ -118,7 +118,7 @@ int main(int argv, char** argc) {
     }
   }
 
-  status = console_launcher::SetupVirtcon(&boot_args);
+  status = console_launcher::SetupVirtcon(boot_args);
   if (status != ZX_OK) {
     // If launching virtcon fails, we still should continue so that the autorun programs
     // and serial console are launched.
@@ -143,7 +143,7 @@ int main(int argv, char** argc) {
 
   autorun::AutoRun autorun;
   if (!args->autorun_boot.empty()) {
-    auto result = log_client.Get();
+    auto result = log_client->Get();
     if (result.status() != ZX_OK) {
       LOGF(ERROR, "console-launcher: failed to get debuglog '%s'", result.status_string());
       return result.status();
@@ -154,7 +154,7 @@ int main(int argv, char** argc) {
     }
   }
   if (!args->autorun_system.empty()) {
-    auto result = log_client.Get();
+    auto result = log_client->Get();
     if (result.status() != ZX_OK) {
       LOGF(ERROR, "console-launcher: failed to get debuglog '%s'", result.status_string());
       return result.status();

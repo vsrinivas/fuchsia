@@ -27,7 +27,7 @@ struct Arguments {
   std::string autorun_system;
 };
 
-std::optional<Arguments> GetArguments(fidl::WireSyncClient<fuchsia_boot::Arguments>* client);
+std::optional<Arguments> GetArguments(const fidl::WireSyncClient<fuchsia_boot::Arguments>& client);
 
 class ConsoleLauncher {
  public:

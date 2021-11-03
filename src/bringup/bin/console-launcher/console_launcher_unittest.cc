@@ -28,7 +28,7 @@ TEST(SystemInstanceTest, CheckBootArgParsing) {
   fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args;
   boot_server.CreateClient(loop.dispatcher(), &boot_args);
 
-  std::optional<console_launcher::Arguments> args = console_launcher::GetArguments(&boot_args);
+  std::optional<console_launcher::Arguments> args = console_launcher::GetArguments(boot_args);
   ASSERT_TRUE(args.has_value());
 
   ASSERT_TRUE(args->run_shell);
@@ -52,7 +52,7 @@ TEST(SystemInstanceTest, CheckBootArgDefaultStrings) {
   fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args;
   boot_server.CreateClient(loop.dispatcher(), &boot_args);
 
-  std::optional<console_launcher::Arguments> args = console_launcher::GetArguments(&boot_args);
+  std::optional<console_launcher::Arguments> args = console_launcher::GetArguments(boot_args);
   ASSERT_TRUE(args.has_value());
 
   ASSERT_FALSE(args->run_shell);

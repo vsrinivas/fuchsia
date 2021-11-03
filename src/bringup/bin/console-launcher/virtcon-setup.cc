@@ -52,15 +52,15 @@ zx::status<zx::channel> StartShell(const char* cmd) {
 
 // Start a shell with a given command, and send it to virtcon.
 // If `cmd` is null, then the shell is launched interactively.
-zx_status_t StartVirtconShell(fidl::WireSyncClient<fuchsia_virtualconsole::SessionManager>& virtcon,
-                              const char* cmd) {
+zx_status_t StartVirtconShell(
+    const fidl::WireSyncClient<fuchsia_virtualconsole::SessionManager>& virtcon, const char* cmd) {
   auto result = StartShell(cmd);
   if (!result.is_ok()) {
     fprintf(stderr, "console-launcher: unable start virtcon shell: %s\n", result.status_string());
     return result.status_value();
   }
 
-  auto virtcon_result = virtcon.CreateSession(std::move(result.value()));
+  auto virtcon_result = virtcon->CreateSession(std::move(result.value()));
   if (!virtcon_result.ok()) {
     fprintf(stderr, "console-launcher: unable to create virtcon session: %d\n",
             virtcon_result.status());
@@ -76,7 +76,8 @@ zx_status_t StartVirtconShell(fidl::WireSyncClient<fuchsia_virtualconsole::Sessi
 
 }  // namespace
 
-zx::status<VirtconArgs> GetVirtconArgs(fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args) {
+zx::status<VirtconArgs> GetVirtconArgs(
+    const fidl::WireSyncClient<fuchsia_boot::Arguments>& boot_args) {
   fuchsia_boot::wire::BoolPair bool_keys[]{
       {fidl::StringView{"netsvc.disable"}, true},
       {fidl::StringView{"netsvc.netboot"}, false},
@@ -102,8 +103,9 @@ zx::status<VirtconArgs> GetVirtconArgs(fidl::WireSyncClient<fuchsia_boot::Argume
   return zx::ok(std::move(args));
 }
 
-zx_status_t SetupVirtconEtc(fidl::WireSyncClient<fuchsia_virtualconsole::SessionManager>& virtcon,
-                            const VirtconArgs& args) {
+zx_status_t SetupVirtconEtc(
+    const fidl::WireSyncClient<fuchsia_virtualconsole::SessionManager>& virtcon,
+    const VirtconArgs& args) {
   if (!args.should_launch) {
     return ZX_OK;
   }
@@ -124,7 +126,7 @@ zx_status_t SetupVirtconEtc(fidl::WireSyncClient<fuchsia_virtualconsole::Session
   return ZX_OK;
 }
 
-zx_status_t SetupVirtcon(fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args) {
+zx_status_t SetupVirtcon(const fidl::WireSyncClient<fuchsia_boot::Arguments>& boot_args) {
   auto result = GetVirtconArgs(boot_args);
   if (!result.is_ok()) {
     return result.status_value();

@@ -48,7 +48,7 @@ zx::resource GetRootResource() {
   }
 
   auto client = fidl::BindSyncClient(std::move(client_end.value()));
-  auto result = client.Get();
+  auto result = client->Get();
   if (result.status() != ZX_OK) {
     printf("console: Could not retrieve RootResource: %s\n", zx_status_get_string(result.status()));
     return {};
@@ -75,7 +75,7 @@ zx_status_t ConnectListener(fidl::ClientEnd<fuchsia_logger::LogListenerSafe> lis
       .min_severity = fuchsia_logger::wire::LogLevelFilter::kTrace,
       .tags = fidl::VectorView<fidl::StringView>::FromExternal(tags),
   };
-  auto result = log.ListenSafe(
+  auto result = log->ListenSafe(
       std::move(listener),
       fidl::ObjectView<fuchsia_logger::wire::LogFilterOptions>::FromExternal(&options));
   if (!result.ok()) {

@@ -21,7 +21,7 @@ TEST(VirtconSetup, VirtconDefaults) {
   fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args;
   boot_server.CreateClient(loop.dispatcher(), &boot_args);
 
-  auto result = console_launcher::GetVirtconArgs(&boot_args);
+  auto result = console_launcher::GetVirtconArgs(boot_args);
   ASSERT_TRUE(result.is_ok());
   ASSERT_TRUE(result.value().should_launch);
   ASSERT_FALSE(result.value().need_debuglog);
@@ -40,7 +40,7 @@ TEST(VirtconSetup, VirtconNeedDebuglog) {
   fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args;
   boot_server.CreateClient(loop.dispatcher(), &boot_args);
 
-  auto result = console_launcher::GetVirtconArgs(&boot_args);
+  auto result = console_launcher::GetVirtconArgs(boot_args);
   ASSERT_TRUE(result.is_ok());
   ASSERT_TRUE(result.value().need_debuglog);
 }
@@ -58,7 +58,7 @@ TEST(VirtconSetup, VirtconNetbootWithNetsvcDisabled) {
   fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args;
   boot_server.CreateClient(loop.dispatcher(), &boot_args);
 
-  auto result = console_launcher::GetVirtconArgs(&boot_args);
+  auto result = console_launcher::GetVirtconArgs(boot_args);
   ASSERT_TRUE(result.is_ok());
   ASSERT_FALSE(result.value().need_debuglog);
 }
@@ -77,7 +77,7 @@ TEST(VirtconSetup, VirtconDontRequireSystem) {
   fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args;
   boot_server.CreateClient(loop.dispatcher(), &boot_args);
 
-  auto result = console_launcher::GetVirtconArgs(&boot_args);
+  auto result = console_launcher::GetVirtconArgs(boot_args);
   ASSERT_TRUE(result.is_ok());
   ASSERT_TRUE(result.value().should_launch);
   ASSERT_FALSE(result.value().need_debuglog);
@@ -97,7 +97,7 @@ TEST(VirtconSetup, VirtconLaunchWithNetboot) {
   fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args;
   boot_server.CreateClient(loop.dispatcher(), &boot_args);
 
-  auto result = console_launcher::GetVirtconArgs(&boot_args);
+  auto result = console_launcher::GetVirtconArgs(boot_args);
   ASSERT_TRUE(result.is_ok());
   ASSERT_TRUE(result.value().should_launch);
   ASSERT_TRUE(result.value().need_debuglog);
