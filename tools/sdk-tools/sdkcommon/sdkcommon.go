@@ -76,7 +76,7 @@ const (
 	defaultBucketName  string = "fuchsia"
 	defaultSSHPort     string = "22"
 	defaultPackagePort string = "8083"
-	helpfulTipMsg      string = `Try running 'ffx target list --format s' and then 'fconfig set-device <device_name> --image <image_name> --default'.`
+	helpfulTipMsg      string = `Try running 'ffx target list' and then 'fconfig set-device <device_name> --image <image_name> --default'.`
 )
 
 var validPropertyNames = [...]string{
@@ -261,35 +261,6 @@ func (sdk SDKProperties) getDefaultPackageRepoDir(deviceName string) string {
 	// but no default has been configured, so fall back to the generic
 	// legacy path.
 	return filepath.Join(sdk.GetSDKDataPath(), "packages", "amber-files")
-}
-
-// getDefaultDeviceName returns the default fconfig device name if exists.
-// If it doesn't exist, it will try to get the default ffx device.
-func (sdk SDKProperties) getDefaultDeviceName(skipCheckingFFX bool) (string, error) {
-	dataKey := getDeviceDataKey([]string{defaultDeviceKey})
-	data, err := getDeviceConfigurationData(sdk, dataKey)
-	if err != nil {
-		return "", err
-	}
-	if name, ok := data[dataKey].(string); ok {
-		if skipCheckingFFX {
-			return name, nil
-		}
-		if name == "" {
-			return sdk.getDefaultFFXDevice()
-		}
-		ffxDefaultDevice, _ := sdk.getDefaultFFXDevice()
-		if ffxDefaultDevice != "" && ffxDefaultDevice != name {
-			log.Warningf("Unexpected behavior may occur, ffx and fconfig have different default devices. ffx: %v, fconfig: %v", ffxDefaultDevice, name)
-		}
-		return name, nil
-	} else if len(data) == 0 {
-		if skipCheckingFFX {
-			return "", nil
-		}
-		return sdk.getDefaultFFXDevice()
-	}
-	return "", fmt.Errorf("Cannot parse default device from %v", data)
 }
 
 // GetToolsDir returns the path to the SDK tools for the current
@@ -902,7 +873,7 @@ func (sdk SDKProperties) GetDeviceConfigurations() ([]DeviceConfig, error) {
 		return configs, fmt.Errorf("Could not read configuration data : %v", err)
 	}
 
-	defaultDeviceName, err := sdk.getDefaultDeviceName(false)
+	defaultDeviceName, err := sdk.getDefaultFFXDevice()
 	if err != nil {
 		return configs, err
 	}
@@ -954,8 +925,7 @@ func (sdk SDKProperties) GetDeviceConfiguration(name string) (DeviceConfig, erro
 
 	if deviceData, ok := configData[dataKey]; ok {
 		if deviceConfig, ok := sdk.mapToDeviceConfig(deviceData); ok {
-			// Skip checking ffx for default device.
-			defaultDeviceName, err := sdk.getDefaultDeviceName(true)
+			defaultDeviceName, err := sdk.getDefaultFFXDevice()
 			if err != nil {
 				return deviceConfig, err
 			}
@@ -972,7 +942,6 @@ func (sdk SDKProperties) GetDeviceConfiguration(name string) (DeviceConfig, erro
 
 // SaveDeviceConfiguration persists the given device configuration properties.
 func (sdk SDKProperties) SaveDeviceConfiguration(newConfig DeviceConfig) error {
-
 	// Create a map of key to value to store. Only write out values that are explicitly set to something
 	// that is not the default.
 	origConfig, err := sdk.GetDeviceConfiguration(newConfig.DeviceName)
@@ -1017,7 +986,10 @@ func (sdk SDKProperties) SaveDeviceConfiguration(newConfig DeviceConfig) error {
 		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, SSHPortKey})] = ""
 	}
 	if newConfig.IsDefault {
-		dataMap[getDeviceDataKey([]string{defaultDeviceKey})] = newConfig.DeviceName
+		err = sdk.setFFXDefaultDevice(newConfig.DeviceName)
+		if err != nil {
+			return fmt.Errorf("unable to set default device via ffx: %v", err)
+		}
 	}
 
 	for key, value := range dataMap {
@@ -1027,6 +999,22 @@ func (sdk SDKProperties) SaveDeviceConfiguration(newConfig DeviceConfig) error {
 		}
 	}
 	return nil
+}
+
+// setFFXDefaultDevice sets the default device in ffx.
+func (sdk SDKProperties) setFFXDefaultDevice(deviceName string) error {
+	args := []string{"target", "default", "set", deviceName}
+	log.Debugf("Setting default device via ffx: %v\n", args)
+	_, err := sdk.RunFFX(args, false)
+	return err
+}
+
+// unsetFFXDefaultDevice unsets the default device in ffx.
+func (sdk SDKProperties) unsetFFXDefaultDevice() error {
+	args := []string{"target", "default", "unset"}
+	log.Debugf("Unsetting default device via ffx: %v\n", args)
+	_, err := sdk.RunFFX(args, false)
+	return err
 }
 
 // RemoveDeviceConfiguration removes the device settings for the given name.
@@ -1039,15 +1027,14 @@ func (sdk SDKProperties) RemoveDeviceConfiguration(deviceName string) error {
 		return fmt.Errorf("Error removing %s configuration: %v", deviceName, err)
 	}
 
-	// Skip checking ffx for default device.
-	defaultDeviceName, err := sdk.getDefaultDeviceName(true)
+	defaultDeviceName, err := sdk.getDefaultFFXDevice()
 	if err != nil {
 		return err
 	}
 	if defaultDeviceName == deviceName {
-		err := writeConfigurationData(sdk, getDeviceDataKey([]string{defaultDeviceKey}), "")
+		err := sdk.unsetFFXDefaultDevice()
 		if err != nil {
-			return err
+			return fmt.Errorf("unable to unset default device via ffx: %v", err)
 		}
 	}
 	return nil
@@ -1087,7 +1074,7 @@ func (sdk SDKProperties) ResolveTargetAddress(deviceIP string, deviceName string
 
 	if targetAddress == "" {
 		return DeviceConfig{}, fmt.Errorf(`Cannot get target address for %v.
-Try running 'ffx target list --format s' and verify the name matches in 'fconfig get-all'.`, deviceName)
+Try running 'ffx target list' and verify the name matches in 'fconfig list'.`, deviceName)
 	}
 
 	return config, nil
@@ -1260,6 +1247,8 @@ func (sdk SDKProperties) RunFFX(args []string, interactive bool) (string, error)
 
 // isReservedProperty used to differentiate between properties used
 // internally and device names.
+// TODO(fxb/86393): Remove once users no longer store defaultDeviceKey
+// in their configurations.
 func isReservedProperty(property string) bool {
 	switch property {
 	case defaultDeviceKey:

@@ -138,9 +138,6 @@ func handleFakeFFX(args []string) {
 		if args[2] == "DeviceConfiguration" {
 			fmt.Printf(os.Getenv("_FAKE_FFX_DEVICE_CONFIG_DATA"))
 			os.Exit(0)
-		} else if args[2] == "DeviceConfiguration._DEFAULT_DEVICE_" {
-			fmt.Printf(os.Getenv("_FAKE_FFX_DEVICE_CONFIG_DEFAULT_DEVICE"))
-			os.Exit(0)
 		} else if args[2] == "DeviceConfiguration.remote-target-name" {
 			fmt.Println(`{"bucket":"","device-ip":"","device-name":"remote-target-name","image":"","package-port":"","package-repo":"/some/custom/repo/path","ssh-port":""}`)
 			os.Exit(0)
@@ -179,8 +176,6 @@ func TestMain(t *testing.T) {
 	tests := []struct {
 		args                []string
 		deviceConfiguration string
-		defaultConfigDevice string
-		ffxDefaultDevice    string
 		ffxTargetList       string
 		ffxTargetDefault    string
 		expectedArgs        []string
@@ -195,7 +190,7 @@ func TestMain(t *testing.T) {
 			args:          []string{os.Args[0], "-data-path", dataDir, "--device-name", "test-device", "package.far"},
 			expectedArgs:  []string{"publish", "-n", "-a", "-r", filepath.Join(dataDir, "test-device", "packages/amber-files"), "-f", "package.far"},
 			ffxTargetList: `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
-			deviceConfiguration: `{ "_DEFAULT_DEVICE_":"remote-target-name",
+			deviceConfiguration: `{
 			"remote-target-name":{
 				"bucket":"fuchsia-bucket",
 				"device-ip":"::1f",
@@ -215,13 +210,13 @@ func TestMain(t *testing.T) {
 					"ssh-port":"",
 					"default": "true"}
 			}`,
-			defaultConfigDevice: "\"remote-target-name\"",
+			ffxTargetDefault: "remote-target-name",
 		},
 		{
 			args:          []string{os.Args[0], "-data-path", dataDir, "--device-name", "test-device", "package.far"},
 			expectedArgs:  []string{"publish", "-n", "-a", "-r", filepath.Join(dataDir, "test-device", "packages/amber-files"), "-f", "package.far"},
 			ffxTargetList: `[{"nodename":"test-device","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
-			deviceConfiguration: `{ "_DEFAULT_DEVICE_":"remote-target-name",
+			deviceConfiguration: `{
 			"remote-target-name":{
 				"bucket":"fuchsia-bucket",
 				"device-ip":"::1f",
@@ -241,13 +236,13 @@ func TestMain(t *testing.T) {
 					"ssh-port":"",
 					"default": "true"}
 			}`,
-			defaultConfigDevice: "\"remote-target-name\"",
+			ffxTargetDefault: "remote-target-name",
 		},
 		{
 			args:          []string{os.Args[0], "-data-path", dataDir, "package.far"},
 			expectedArgs:  []string{"publish", "-n", "-a", "-r", "/some/custom/repo/path", "-f", "package.far"},
 			ffxTargetList: `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
-			deviceConfiguration: `{ "_DEFAULT_DEVICE_":"remote-target-name",
+			deviceConfiguration: `{
 			"remote-target-name":{
 				"bucket":"fuchsia-bucket",
 				"device-ip":"::1f",
@@ -267,7 +262,7 @@ func TestMain(t *testing.T) {
 					"ssh-port":"",
 					"default": "true"}
 			}`,
-			defaultConfigDevice: "\"remote-target-name\"",
+			ffxTargetDefault: "remote-target-name",
 		},
 	}
 	for testcase, test := range tests {
@@ -275,7 +270,6 @@ func TestMain(t *testing.T) {
 			os.Args = test.args
 			os.Setenv("TEST_EXPECTED_ARGS", strings.Join(test.expectedArgs, ","))
 			os.Setenv("_FAKE_FFX_DEVICE_CONFIG_DATA", test.deviceConfiguration)
-			os.Setenv("_FAKE_FFX_DEVICE_CONFIG_DEFAULT_DEVICE", test.defaultConfigDevice)
 			os.Setenv("_FAKE_FFX_TARGET_DEFAULT", test.ffxTargetDefault)
 			os.Setenv("_FAKE_FFX_TARGET_LIST", test.ffxTargetList)
 			flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
