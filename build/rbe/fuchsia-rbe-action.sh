@@ -200,8 +200,10 @@ test "$dry_run" = 0 || {
 status="$?"
 
 case "$status" in
-  137) # SIGKILL'd (signal 9) by OS.
-    # Reasons may include segmentation fault, or out of memory.
+  45 | 137)
+    # 45: remote execution error, e.g. remote blob download failure
+    # 137: SIGKILL'd (signal 9) by OS.
+    #   Reasons may include segmentation fault, or out of memory.
     echo "[$script]:" "${full_command[@]}"
     echo "[$script] First attempt exited $status.  Retrying once."
     "${full_command[@]}"
