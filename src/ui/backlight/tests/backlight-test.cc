@@ -38,7 +38,7 @@ class BacklightDevice {
   }
 
   zx_status_t GetBrightnessNormalized(double* brightness) {
-    auto response = client_.GetStateNormalized();
+    auto response = client_->GetStateNormalized();
     zx_status_t status = response.ok()
                              ? (response->result.is_err() ? response->result.err() : ZX_OK)
                              : response.status();
@@ -53,7 +53,7 @@ class BacklightDevice {
     FidlBacklight::wire::State state = {.backlight_on = brightness > 0, .brightness = brightness};
 
     printf("Setting brightness to: %f\n", brightness);
-    auto response = client_.SetStateNormalized(state);
+    auto response = client_->SetStateNormalized(state);
     zx_status_t status = response.ok()
                              ? (response->result.is_err() ? response->result.err() : ZX_OK)
                              : response.status();
@@ -61,7 +61,7 @@ class BacklightDevice {
   }
 
   zx_status_t GetBrightnessAbsolute(double* brightness) {
-    auto response = client_.GetStateAbsolute();
+    auto response = client_->GetStateAbsolute();
     zx_status_t status = response.ok()
                              ? (response->result.is_err() ? response->result.err() : ZX_OK)
                              : response.status();
@@ -76,7 +76,7 @@ class BacklightDevice {
     FidlBacklight::wire::State state = {.backlight_on = brightness > 0, .brightness = brightness};
 
     printf("Setting brightness to: %f nits\n", brightness);
-    auto response = client_.SetStateAbsolute(state);
+    auto response = client_->SetStateAbsolute(state);
     zx_status_t status = response.ok()
                              ? (response->result.is_err() ? response->result.err() : ZX_OK)
                              : response.status();
@@ -84,7 +84,7 @@ class BacklightDevice {
   }
 
   zx_status_t GetMaxAbsoluteBrightness(double* brightness) {
-    auto response = client_.GetMaxAbsoluteBrightness();
+    auto response = client_->GetMaxAbsoluteBrightness();
     zx_status_t status = response.ok()
                              ? (response->result.is_err() ? response->result.err() : ZX_OK)
                              : response.status();

@@ -317,7 +317,7 @@ TEST_F(Lp8556DeviceTest, OverwriteStickyRegister) {
 
   fidl::WireSyncClient<fuchsia_hardware_backlight::Device> backlight_client(client());
 
-  auto result = backlight_client.SetStateNormalized({true, 0.25});
+  auto result = backlight_client->SetStateNormalized({true, 0.25});
   EXPECT_TRUE(result.ok());
   EXPECT_FALSE(result.value().result.is_err());
 
@@ -357,7 +357,7 @@ TEST_F(Lp8556DeviceTest, ReadDefaultCurrentScale) {
   EXPECT_OK(dev_->Init());
 
   fidl::WireSyncClient<fuchsia_hardware_backlight::Device> backlight_client(client());
-  auto result = backlight_client.GetNormalizedBrightnessScale();
+  auto result = backlight_client->GetNormalizedBrightnessScale();
   ASSERT_TRUE(result.ok());
   ASSERT_TRUE(result.value().result.is_response());
   EXPECT_TRUE(
@@ -404,11 +404,11 @@ TEST_F(Lp8556DeviceTest, SetCurrentScale) {
       {kCurrentLsbReg, 0xab, 0x72});
 
   auto set_result =
-      backlight_client.SetNormalizedBrightnessScale(static_cast<double>(0x2ab) / 0xfff);
+      backlight_client->SetNormalizedBrightnessScale(static_cast<double>(0x2ab) / 0xfff);
   ASSERT_TRUE(set_result.ok());
   EXPECT_TRUE(set_result.value().result.is_response());
 
-  auto get_result = backlight_client.GetNormalizedBrightnessScale();
+  auto get_result = backlight_client->GetNormalizedBrightnessScale();
   ASSERT_TRUE(get_result.ok());
   ASSERT_TRUE(get_result.value().result.is_response());
   EXPECT_TRUE(
@@ -459,7 +459,7 @@ TEST_F(Lp8556DeviceTest, SetAbsoluteBrightnessScaleReset) {
       {kCurrentLsbReg, 0xab, 0x72});
 
   auto set_result =
-      backlight_client.SetNormalizedBrightnessScale(static_cast<double>(0x2ab) / 0xfff);
+      backlight_client->SetNormalizedBrightnessScale(static_cast<double>(0x2ab) / 0xfff);
   EXPECT_TRUE(set_result.ok());
   EXPECT_FALSE(set_result.value().result.is_err());
 
@@ -471,7 +471,7 @@ TEST_F(Lp8556DeviceTest, SetAbsoluteBrightnessScaleReset) {
       .ExpectReadStop({0xab})
       .ExpectWriteStop({kBacklightBrightnessMsbReg, 0xa8});
 
-  auto absolute_result_1 = backlight_client.SetStateAbsolute({true, 175.0});
+  auto absolute_result_1 = backlight_client->SetStateAbsolute({true, 175.0});
   EXPECT_TRUE(absolute_result_1.ok());
   EXPECT_FALSE(absolute_result_1.value().result.is_err());
 
@@ -481,7 +481,7 @@ TEST_F(Lp8556DeviceTest, SetAbsoluteBrightnessScaleReset) {
       .ExpectReadStop({0x1b})
       .ExpectWriteStop({kBacklightBrightnessMsbReg, 0x14});
 
-  auto absolute_result_2 = backlight_client.SetStateAbsolute({true, 87.5});
+  auto absolute_result_2 = backlight_client->SetStateAbsolute({true, 87.5});
   EXPECT_TRUE(absolute_result_2.ok());
   EXPECT_FALSE(absolute_result_2.value().result.is_err());
 
@@ -559,7 +559,7 @@ TEST_F(Lp8556DeviceTest, GetPowerWatts) {
   EXPECT_LT(abs(dev_->GetBacklightPower(4095) - 0.000144), 0.000001f);
 
   fidl::WireSyncClient<fuchsia_hardware_power_sensor::Device> sensor_client(sensorSyncClient());
-  auto result = sensor_client.GetPowerWatts();
+  auto result = sensor_client->GetPowerWatts();
   EXPECT_TRUE(result.ok());
   EXPECT_FALSE(result.value().result.is_err());
 }

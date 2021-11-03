@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
   fidl::WireSyncClient<FidlBacklight::Device> client(std::move(local));
 
   if (strcmp(argv[1], "--read") == 0) {
-    auto response = client.GetStateNormalized();
+    auto response = client->GetStateNormalized();
     zx_status_t status = response.ok()
                              ? (response->result.is_err() ? response->result.err() : ZX_OK)
                              : response.status();
@@ -77,7 +77,7 @@ int main(int argc, char* argv[]) {
 
   FidlBacklight::wire::State state = {.backlight_on = on, .brightness = brightness};
 
-  auto response = client.SetStateNormalized(state);
+  auto response = client->SetStateNormalized(state);
   status = response.ok() ? (response->result.is_err() ? response->result.err() : ZX_OK)
                          : response.status();
   if (status != ZX_OK) {
