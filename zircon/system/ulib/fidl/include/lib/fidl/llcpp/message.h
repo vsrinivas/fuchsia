@@ -84,15 +84,18 @@ class OutgoingMessage : public ::fidl::Result {
   explicit OutgoingMessage(const ::fidl::Result& failure);
 
   // Set the txid in the message header.
+  //
+  // Requires that the message is encoded, and is a transactional message.
   // Requires that there are sufficient bytes to store the header in the buffer.
   void set_txid(zx_txid_t txid) {
     if (!ok()) {
       return;
     }
+    ZX_ASSERT(is_transactional_);
     ZX_ASSERT(iovec_actual() >= 1 && iovecs()[0].capacity >= sizeof(fidl_message_header_t));
     // The byte buffer is const because the kernel only reads the bytes.
     // const_cast is needed to populate it here.
-    reinterpret_cast<fidl_message_header_t*>(const_cast<void*>(iovecs()[0].buffer))->txid = txid;
+    static_cast<fidl_message_header_t*>(const_cast<void*>(iovecs()[0].buffer))->txid = txid;
   }
 
   zx_channel_iovec_t* iovecs() const { return iovec_message().iovecs; }
@@ -152,7 +155,7 @@ class OutgoingMessage : public ::fidl::Result {
       return;
     }
     ZX_ASSERT(message_.iovec.transport_type == transport.type());
-    // TODO(fxbug.dev/85734) Support abitrary transports.
+    // TODO(fxbug.dev/85734) Support arbitrary transports.
     WriteImpl(transport.get<internal::ChannelTransport>()->get());
   }
 

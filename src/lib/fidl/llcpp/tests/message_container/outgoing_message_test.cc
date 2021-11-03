@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fidl.llcpp.linearized.test/cpp/wire_types.h>
+#include <fidl/fidl.test.misc/cpp/wire_messaging.h>
 #include <lib/fidl/llcpp/message.h>
 
 #include <iterator>
@@ -385,4 +387,19 @@ TEST(OutgoingMessage, OutgoingMessageCopiedBytes) {
   fidl::OutgoingMessage::CopiedBytes msg_bytes = msg.CopyBytes();
   EXPECT_EQ(std::size(expected_bytes), msg_bytes.size());
   EXPECT_EQ(0, memcmp(expected_bytes, msg_bytes.data(), std::size(expected_bytes)));
+}
+
+TEST(OutgoingMessage, SettingTxIdRequiresTransactionalMessageNegative) {
+  fidl_llcpp_linearized_test::wire::NoOpLinearizedStruct value{.x = 42};
+  fidl::OwnedEncodedMessage<fidl_llcpp_linearized_test::wire::NoOpLinearizedStruct> encoded(&value);
+  ASSERT_EQ(ZX_OK, encoded.status());
+  ASSERT_DEATH({ encoded.GetOutgoingMessage().set_txid(1); }, "transactional");
+}
+
+TEST(OutgoingMessage, SettingTxIdRequiresTransactionalMessagePositive) {
+  using Request = fidl::WireRequest<fidl_test_misc::Echo::EchoString>;
+  Request request{fidl::StringView("")};
+  fidl::OwnedEncodedMessage<Request> encoded(&request);
+  ASSERT_EQ(ZX_OK, encoded.status());
+  encoded.GetOutgoingMessage().set_txid(1);
 }
