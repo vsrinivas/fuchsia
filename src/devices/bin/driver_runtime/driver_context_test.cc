@@ -45,7 +45,8 @@ TEST_F(DriverContextTest, PushPopStack) {
   for (size_t i = 0; i < kNumDrivers; i++) {
     size_t pop_driver_idx = kNumDrivers - i - 1;
     PopDriver();
-    EXPECT_EQ(GetCurrentDriver(), drivers[pop_driver_idx - 1]);
+    const void* expect_driver = pop_driver_idx == 0 ? nullptr : drivers[pop_driver_idx - 1];
+    EXPECT_EQ(GetCurrentDriver(), expect_driver);
     EXPECT_FALSE(IsDriverInCallStack(drivers[pop_driver_idx]));
 
     for (size_t j = 0; j < pop_driver_idx; j++) {

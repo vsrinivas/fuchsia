@@ -26,6 +26,7 @@ group("tests") {
     "driver_host:tests",
     "driver_host2:tests",
     "driver_manager:tests",
+    "driver_runtime:tests",
     "register-util:tests",
   ]
 }

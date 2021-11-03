@@ -442,7 +442,7 @@ TEST_F(ChannelTest, ConcurrentReadsConsumeUniqueElements) {
       message.status = ReadMessageStatus::kOk;
       message.data = *(reinterpret_cast<uint64_t*>(data));
       message.data_size = read_bytes;
-      fdf_arena_destroy(message.arena);
+      message.arena = arena;
     }
     return;
   };
@@ -457,13 +457,15 @@ TEST_F(ChannelTest, ConcurrentReadsConsumeUniqueElements) {
       // Notify cancelled.
       event.reset();
     });
+
+    fdf_arena_t* arena;
+    ASSERT_OK(fdf_arena_create(0, "", 0, &arena));
     for (uint64_t i = 1; i <= kNumMessages; ++i) {
-      fdf_arena_t* arena;
-      ASSERT_OK(fdf_arena_create(0, "", 0, &arena));
       void* data = fdf_arena_allocate(arena, sizeof(i));
       memcpy(data, &i, sizeof(i));
       ASSERT_OK(fdf_channel_write(local_, 0, arena, data, sizeof(i), nullptr, 0));
     }
+    fdf_arena_destroy(arena);
     ASSERT_OK(event.signal(0, ZX_USER_SIGNAL_0));
     // Join before cleanup.
     worker_1.Join();
@@ -492,6 +494,10 @@ TEST_F(ChannelTest, ConcurrentReadsConsumeUniqueElements) {
   // No repeated messages.
   ASSERT_EQ(read_data.size(), kNumMessages,
             "Read messages do not match the number of written messages.");
+
+  for (uint32_t i = 0; i < kNumMessages; i++) {
+    fdf_arena_destroy(read_messages[i].arena);
+  }
 }
 
 // Tests that handles in unread messages are closed when the channel is closed.
