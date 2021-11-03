@@ -499,6 +499,10 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
     args.ops = &this->ddk_device_proto_;
     AddProtocol(&args);
 
+    if (name) {
+      this->name_ = name;
+    }
+
     return device_add(this->parent_, &args, &this->zxdev_);
   }
 
@@ -570,7 +574,7 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
                                                  request.TakeChannel().release());
   }
 
-  const char* name() const { return zxdev() ? device_get_name(zxdev()) : nullptr; }
+  const char* name() const { return this->name_.c_str(); }
 
   // The opaque pointer representing this device.
   zx_device_t* zxdev() const { return this->zxdev_; }

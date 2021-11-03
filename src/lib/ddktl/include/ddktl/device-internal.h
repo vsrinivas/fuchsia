@@ -7,6 +7,7 @@
 
 #include <lib/ddk/device.h>
 
+#include <string>
 #include <type_traits>
 
 #include <ddktl/fidl.h>
@@ -112,6 +113,7 @@ class base_device : public Mixins<D>... {
     return ops;
   }();
 
+  std::string name_;
   zx_device_t* zxdev_ = nullptr;
   zx_device_t* const parent_;
 };
