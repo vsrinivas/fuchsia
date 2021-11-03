@@ -952,7 +952,7 @@ zx_status_t NetworkDeviceClient::BufferData::PadTo(size_t size) {
   return ZX_OK;
 }
 
-size_t NetworkDeviceClient::BufferData::Read(void* dst, size_t len) {
+size_t NetworkDeviceClient::BufferData::Read(void* dst, size_t len) const {
   auto* ptr = static_cast<uint8_t*>(dst);
   size_t actual = 0;
   for (uint32_t i = 0; i < parts_count_ && len > 0; i++) {
@@ -989,7 +989,7 @@ size_t NetworkDeviceClient::BufferRegion::Write(const void* src, size_t len, siz
   return this->len();
 }
 
-size_t NetworkDeviceClient::BufferRegion::Read(void* dst, size_t len, size_t offset) {
+size_t NetworkDeviceClient::BufferRegion::Read(void* dst, size_t len, size_t offset) const {
   if (offset >= desc_->data_length) {
     return 0;
   }

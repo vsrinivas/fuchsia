@@ -209,7 +209,7 @@ class NetworkDeviceClient : public internal::DeviceEventHandlerProxy<NetworkDevi
     // Reads `len` bytes from this region into `dst` starting at `offset`.
     //
     // Returns the number of bytes that were read.
-    size_t Read(void* dst, size_t len, size_t offset = 0);
+    size_t Read(void* dst, size_t len, size_t offset = 0) const;
     // Writes the `src` region starting at `src_offset` into this region starting at `offset`.
     //
     // Returns the number of bytes written.
@@ -265,7 +265,7 @@ class NetworkDeviceClient : public internal::DeviceEventHandlerProxy<NetworkDevi
     // Writes up to `len` bytes from `src` into the buffer, returning the number of bytes written.
     size_t Write(const void* src, size_t len);
     // Reads up to `len` bytes from the buffer into `dst`, returning the number of bytes read.
-    size_t Read(void* dst, size_t len);
+    size_t Read(void* dst, size_t len) const;
     // Writes the contents of `data` into this buffer, returning the number of bytes written.
     size_t Write(const BufferData& data);
     // Zero pads buffer to total size `size`.
