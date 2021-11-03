@@ -114,17 +114,15 @@ func checkInspectRecurse(node inspectInner, expected inspectNodeExpectation) err
 }
 
 func TestStatCounterInspectImpl(t *testing.T) {
-	var invalidPortCounter tcpip.StatCounter
 	const invalidPort = 1
 	const invalidPortCount = 10
 	const initAcquireCount = 3
-	invalidPortCounter.IncrementBy(invalidPortCount)
-	s := dhcp.Stats{
-		PacketDiscardStats: dhcp.PacketDiscardStats{
-			InvalidPort: map[uint16]*tcpip.StatCounter{
-				invalidPort: &invalidPortCounter,
-			},
-		},
+	var s dhcp.Stats
+	s.PacketDiscardStats.InvalidPort.Init()
+	s.PacketDiscardStats.InvalidPacketType.Init()
+	s.PacketDiscardStats.InvalidTransProto.Init()
+	for i := 0; i < invalidPortCount; i++ {
+		s.PacketDiscardStats.InvalidPort.Increment(invalidPort)
 	}
 
 	s.InitAcquire.IncrementBy(initAcquireCount)
@@ -160,16 +158,44 @@ func TestStatCounterInspectImpl(t *testing.T) {
 									},
 								},
 							},
+							{
+								node: inspect.Object{
+									Name: "Total",
+									Properties: []inspect.Property{
+										{Key: "Count", Value: inspect.PropertyValueWithStr("10")},
+									},
+								},
+							},
 						},
 					},
 					{
 						node: inspect.Object{
 							Name: "InvalidTransProto",
 						},
+						children: []inspectNodeExpectation{
+							{
+								node: inspect.Object{
+									Name: "Total",
+									Properties: []inspect.Property{
+										{Key: "Count", Value: inspect.PropertyValueWithStr("0")},
+									},
+								},
+							},
+						},
 					},
 					{
 						node: inspect.Object{
 							Name: "InvalidPacketType",
+						},
+						children: []inspectNodeExpectation{
+							{
+								node: inspect.Object{
+									Name: "Total",
+									Properties: []inspect.Property{
+										{Key: "Count", Value: inspect.PropertyValueWithStr("0")},
+									},
+								},
+							},
 						},
 					},
 				},
@@ -255,55 +281,58 @@ func TestCircularLogsInspectImpl(t *testing.T) {
 }
 
 func TestIntegralStatCounterMapInspectImpl(t *testing.T) {
-	keyTypes := []reflect.Type{
-		reflect.TypeOf((*tcpip.TransportProtocolNumber)(nil)).Elem(),
-		reflect.TypeOf((*tcpip.PacketType)(nil)).Elem(),
-		reflect.TypeOf((*int)(nil)).Elem(),
-		reflect.TypeOf((*int8)(nil)).Elem(),
-		reflect.TypeOf((*int16)(nil)).Elem(),
-		reflect.TypeOf((*int32)(nil)).Elem(),
-		reflect.TypeOf((*int64)(nil)).Elem(),
-		reflect.TypeOf((*uint)(nil)).Elem(),
-		reflect.TypeOf((*uint8)(nil)).Elem(),
-		reflect.TypeOf((*uint16)(nil)).Elem(),
-		reflect.TypeOf((*uint32)(nil)).Elem(),
-		reflect.TypeOf((*uint64)(nil)).Elem(),
+	var integralStatCounterMap tcpip.IntegralStatCounterMap
+	integralStatCounterMap.Init()
+	const firstKey = 1
+	const firstValue = 10
+	for i := 0; i < firstValue; i++ {
+		integralStatCounterMap.Increment(firstKey)
 	}
 
-	for _, keyType := range keyTypes {
-		valueType := reflect.TypeOf((*tcpip.StatCounter)(nil))
-		mapType := reflect.MapOf(keyType, valueType)
-		mapValue := reflect.MakeMapWithSize(mapType, 0)
-		const key = 1
-		const value = 10
-		var counter tcpip.StatCounter
-		counter.IncrementBy(value)
+	const secondKey = 2
+	const secondValue = 20
+	for i := 0; i < secondValue; i++ {
+		integralStatCounterMap.Increment(secondKey)
+	}
+	v := integralStatCounterMapInspectImpl{
+		name:  "doesn't matter",
+		value: &integralStatCounterMap,
+	}
 
-		mapValue.SetMapIndex(reflect.ValueOf(key).Convert(keyType), reflect.ValueOf(&counter))
-		v := integralStatCounterMapInspectImpl{
-			name:  "doesn't matter",
-			value: mapValue,
-		}
-
-		expected := inspectNodeExpectation{
-			node: inspect.Object{
-				Name: "doesn't matter",
-			},
-			children: []inspectNodeExpectation{
-				{
-					node: inspect.Object{
-						Name: strconv.Itoa(key),
-						Properties: []inspect.Property{
-							{Key: "Count", Value: inspect.PropertyValueWithStr("10")},
-						},
+	expected := inspectNodeExpectation{
+		node: inspect.Object{
+			Name: "doesn't matter",
+		},
+		children: []inspectNodeExpectation{
+			{
+				node: inspect.Object{
+					Name: strconv.Itoa(firstKey),
+					Properties: []inspect.Property{
+						{Key: "Count", Value: inspect.PropertyValueWithStr("10")},
 					},
 				},
 			},
-		}
+			{
+				node: inspect.Object{
+					Name: strconv.Itoa(secondKey),
+					Properties: []inspect.Property{
+						{Key: "Count", Value: inspect.PropertyValueWithStr("20")},
+					},
+				},
+			},
+			{
+				node: inspect.Object{
+					Name: "Total",
+					Properties: []inspect.Property{
+						{Key: "Count", Value: inspect.PropertyValueWithStr("30")},
+					},
+				},
+			},
+		},
+	}
 
-		if err := checkInspectRecurse(&v, expected); err != nil {
-			t.Error(err)
-		}
+	if err := checkInspectRecurse(&v, expected); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -551,20 +580,22 @@ func TestDHCPInfoInspectImpl(t *testing.T) {
 			{Timestamp: 1, Content: "1"},
 			{Timestamp: 2, Content: "2"},
 		},
-		stats: &dhcp.Stats{
-			PacketDiscardStats: dhcp.PacketDiscardStats{
-				InvalidPort: map[uint16]*tcpip.StatCounter{
-					invalidPort: &invalidPortCounter,
-				},
-				InvalidTransProto: map[tcpip.TransportProtocolNumber]*tcpip.StatCounter{
-					invalidTransProto: &invalidTransProtoCounter,
-				},
-				InvalidPacketType: map[tcpip.PacketType]*tcpip.StatCounter{
-					invalidPacketType:  &invalidPacketTypeCounter,
-					invalidPacketType2: &invalidPacketType2Counter,
-				},
-			},
-		},
+		stats: &dhcp.Stats{},
+	}
+	v.stats.PacketDiscardStats.InvalidPort.Init()
+	v.stats.PacketDiscardStats.InvalidTransProto.Init()
+	v.stats.PacketDiscardStats.InvalidPacketType.Init()
+	for i := 0; i < invalidPortCount; i++ {
+		v.stats.PacketDiscardStats.InvalidPort.Increment(invalidPort)
+	}
+	for i := 0; i < invalidTransProtoCount; i++ {
+		v.stats.PacketDiscardStats.InvalidTransProto.Increment(invalidTransProto)
+	}
+	for i := 0; i < invalidPacketTypeCount; i++ {
+		v.stats.PacketDiscardStats.InvalidPacketType.Increment(invalidPacketType)
+	}
+	for i := 0; i < invalidPacketType2Count; i++ {
+		v.stats.PacketDiscardStats.InvalidPacketType.Increment(invalidPacketType2)
 	}
 	children := v.ListChildren()
 	if diff := cmp.Diff([]string{
@@ -605,6 +636,14 @@ func TestDHCPInfoInspectImpl(t *testing.T) {
 										},
 									},
 								},
+								{
+									node: inspect.Object{
+										Name: "Total",
+										Properties: []inspect.Property{
+											{Key: counterPropertyKey, Value: inspect.PropertyValueWithStr(strconv.FormatUint(invalidPortCounter.Value(), 10))},
+										},
+									},
+								},
 							},
 						},
 						{
@@ -615,6 +654,14 @@ func TestDHCPInfoInspectImpl(t *testing.T) {
 								{
 									node: inspect.Object{
 										Name: strconv.Itoa(invalidTransProto),
+										Properties: []inspect.Property{
+											{Key: counterPropertyKey, Value: inspect.PropertyValueWithStr(strconv.FormatUint(invalidTransProtoCounter.Value(), 10))},
+										},
+									},
+								},
+								{
+									node: inspect.Object{
+										Name: "Total",
 										Properties: []inspect.Property{
 											{Key: counterPropertyKey, Value: inspect.PropertyValueWithStr(strconv.FormatUint(invalidTransProtoCounter.Value(), 10))},
 										},
@@ -640,6 +687,14 @@ func TestDHCPInfoInspectImpl(t *testing.T) {
 										Name: strconv.Itoa(invalidPacketType2),
 										Properties: []inspect.Property{
 											{Key: counterPropertyKey, Value: inspect.PropertyValueWithStr(strconv.FormatUint(invalidPacketType2Counter.Value(), 10))},
+										},
+									},
+								},
+								{
+									node: inspect.Object{
+										Name: "Total",
+										Properties: []inspect.Property{
+											{Key: counterPropertyKey, Value: inspect.PropertyValueWithStr(strconv.FormatUint(invalidPacketTypeCounter.Value()+invalidPacketType2Counter.Value(), 10))},
 										},
 									},
 								},
