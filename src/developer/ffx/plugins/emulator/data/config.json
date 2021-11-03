@@ -1,0 +1,6 @@
+{
+    "emu": {
+        "instance_dir": "$DATA/emu/instances",
+        "upscript": ""
+    }
+}

@@ -3,13 +3,12 @@
 // found in the LICENSE file.
 
 use crate::cipd::Cipd;
+use crate::config::FfxConfigWrapper;
 use crate::device::DeviceSpec;
 use crate::port_picker::{is_free_tcp_port, pick_unused_port, Port};
 use crate::target;
 use crate::tools::HostTools;
-use crate::types::{
-    get_sdk_data_dir, read_env_path, ConfigWrapper, ImageFiles, InTreePaths, SshKeys, VDLArgs,
-};
+use crate::types::{get_sdk_data_dir, read_env_path, ImageFiles, InTreePaths, SshKeys, VDLArgs};
 
 use crate::vdl_proto_parser::{get_emu_pid, get_ssh_port};
 use ansi_term::Colour::*;
@@ -94,11 +93,7 @@ impl Clone for VDLFiles {
 }
 
 impl VDLFiles {
-    pub async fn new(
-        is_sdk: bool,
-        verbose: bool,
-        test_config: Option<&dyn ConfigWrapper>,
-    ) -> Result<VDLFiles> {
+    pub async fn new(is_sdk: bool, verbose: bool, config: &FfxConfigWrapper) -> Result<VDLFiles> {
         let staging_dir = Builder::new().prefix("vdl_staging_").tempdir()?;
         let staging_dir_path = staging_dir.path().to_owned();
         let vdl_files;
@@ -106,7 +101,7 @@ impl VDLFiles {
             vdl_files = VDLFiles {
                 image_files: ImageFiles::from_sdk_env()?,
                 host_tools: HostTools::from_sdk_env()?,
-                ssh_files: SshKeys::from_ffx(test_config).await?,
+                ssh_files: SshKeys::from_ffx(config).await?,
                 output_proto: staging_dir_path.join("vdl_proto"),
                 emulator_log: staging_dir_path.join("emu_log"),
                 staging_dir: staging_dir,
@@ -118,7 +113,7 @@ impl VDLFiles {
             vdl_files = VDLFiles {
                 image_files: ImageFiles::from_tree_env(&mut in_tree)?,
                 host_tools: HostTools::from_tree_env(&mut in_tree)?,
-                ssh_files: SshKeys::from_ffx(test_config).await?,
+                ssh_files: SshKeys::from_ffx(config).await?,
                 output_proto: staging_dir_path.join("vdl_proto"),
                 emulator_log: staging_dir_path.join("emu_log"),
                 staging_dir: staging_dir,
@@ -819,7 +814,7 @@ impl VDLFiles {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{testing::TestConfigWrapper, SSH_PRIVATE_KEY, SSH_PUBLIC_KEY};
+    use crate::config::{SSH_PRIVATE_KEY, SSH_PUBLIC_KEY};
     use serial_test::serial;
 
     pub fn setup() {
@@ -855,14 +850,13 @@ mod tests {
         setup();
 
         // Set up the config for the test.
-        let mut test_config = TestConfigWrapper::new();
-        test_config.test_properties.insert(SSH_PUBLIC_KEY, "/path/to/authorized_keys");
-        test_config.test_properties.insert(SSH_PRIVATE_KEY, "/path/to/private_key");
+        let mut test_config = FfxConfigWrapper::new();
+        test_config.overrides.insert(SSH_PUBLIC_KEY, "/path/to/authorized_keys");
+        test_config.overrides.insert(SSH_PRIVATE_KEY, "/path/to/private_key");
 
         let start_command = &create_start_command();
 
-        let vdl_files =
-            VDLFiles::new(/*is_sdk=*/ true, /*verbose=*/ false, Some(&test_config)).await?;
+        let vdl_files = VDLFiles::new(/*is_sdk=*/ true, /*verbose=*/ false, &test_config).await?;
         let aemu = vdl_files.resolve_aemu_path(start_command)?;
         assert_eq!(PathBuf::from("/path/to/aemu"), aemu);
         let vdl = vdl_files.resolve_vdl_path(start_command)?;
@@ -883,18 +877,17 @@ mod tests {
         env::set_var("FEMU_DOWNLOAD_DIR", tmp_dir.path());
 
         // Set up the config
-        let mut test_config = TestConfigWrapper::new();
-        test_config.test_properties.insert(SSH_PUBLIC_KEY, "/path/to/authorized_keys");
-        test_config.test_properties.insert(SSH_PRIVATE_KEY, "/path/to/private_key");
+        let mut test_config = FfxConfigWrapper::new();
+        test_config.overrides.insert(SSH_PUBLIC_KEY, "/path/to/authorized_keys");
+        test_config.overrides.insert(SSH_PRIVATE_KEY, "/path/to/private_key");
 
         let mut start_command = &mut create_start_command();
         start_command.vdl_path = None;
         start_command.vdl_version = Some("g3-revision:vdl_fuchsia_20210113_RC00".to_string());
 
         // --sdk
-        let vdl = VDLFiles::new(true, false, Some(&test_config))
-            .await?
-            .resolve_vdl_path(start_command)?;
+        let vdl =
+            VDLFiles::new(true, false, &test_config).await?.resolve_vdl_path(start_command)?;
         assert_eq!(
             tmp_dir.path().join("vdl-g3-revision-vdl_fuchsia_20210113_RC00/device_launcher"),
             vdl
@@ -910,9 +903,9 @@ mod tests {
         setup();
 
         // Set up the config
-        let mut test_config = TestConfigWrapper::new();
-        test_config.test_properties.insert(SSH_PUBLIC_KEY, "/path/to/authorized_keys");
-        test_config.test_properties.insert(SSH_PRIVATE_KEY, "/path/to/private_key");
+        let mut test_config = FfxConfigWrapper::new();
+        test_config.overrides.insert(SSH_PUBLIC_KEY, "/path/to/authorized_keys");
+        test_config.overrides.insert(SSH_PRIVATE_KEY, "/path/to/private_key");
 
         let tmp_dir = Builder::new().prefix("fvdl_test_default_").tempdir()?;
         env::set_var("FEMU_DOWNLOAD_DIR", tmp_dir.path());
@@ -925,8 +918,7 @@ mod tests {
         start_command.grpcwebproxy_path = None;
         start_command.grpcwebproxy_version = None;
 
-        let vdl_files =
-            VDLFiles::new(/*is_sdk=*/ true, /*verbose=*/ false, Some(&test_config)).await?;
+        let vdl_files = VDLFiles::new(/*is_sdk=*/ true, /*verbose=*/ false, &test_config).await?;
         // --sdk
         let vdl = vdl_files.resolve_vdl_path(start_command)?;
         assert_eq!(tmp_dir.path().join("vdl-latest/device_launcher"), vdl);
@@ -942,16 +934,15 @@ mod tests {
     async fn test_resolve_portmap() -> Result<()> {
         setup();
         // Set up the config
-        let mut test_config = TestConfigWrapper::new();
-        test_config.test_properties.insert(SSH_PUBLIC_KEY, "/path/to/authorized_keys");
-        test_config.test_properties.insert(SSH_PRIVATE_KEY, "/path/to/private_key");
+        let mut test_config = FfxConfigWrapper::new();
+        test_config.overrides.insert(SSH_PUBLIC_KEY, "/path/to/authorized_keys");
+        test_config.overrides.insert(SSH_PRIVATE_KEY, "/path/to/private_key");
 
         let mut start_command = &mut create_start_command();
         let mut device_spec = &mut DeviceSpec::default();
         start_command.port_map = None;
         device_spec.port_map = None;
-        let vdl_files =
-            VDLFiles::new(/*is_sdk=*/ true, /*verbose=*/ false, Some(&test_config)).await?;
+        let vdl_files = VDLFiles::new(/*is_sdk=*/ true, /*verbose=*/ false, &test_config).await?;
 
         let (port_map, ssh) = vdl_files.resolve_portmap(start_command, device_spec);
         assert!(ssh > 0);
@@ -1027,12 +1018,11 @@ mod tests {
     #[serial]
     async fn test_resolve_analytics_label() -> Result<()> {
         // Set up the config
-        let mut test_config = TestConfigWrapper::new();
-        test_config.test_properties.insert(SSH_PUBLIC_KEY, "/path/to/authorized_keys");
-        test_config.test_properties.insert(SSH_PRIVATE_KEY, "/path/to/private_key");
+        let mut test_config = FfxConfigWrapper::new();
+        test_config.overrides.insert(SSH_PUBLIC_KEY, "/path/to/authorized_keys");
+        test_config.overrides.insert(SSH_PRIVATE_KEY, "/path/to/private_key");
 
-        let vdl_files =
-            VDLFiles::new(/*is_sdk=*/ true, /*verbose=*/ false, Some(&test_config)).await?;
+        let vdl_files = VDLFiles::new(/*is_sdk=*/ true, /*verbose=*/ false, &test_config).await?;
 
         let mut label = vdl_files.resolve_invoker();
         assert_eq!(label, "fvdl-sdk");

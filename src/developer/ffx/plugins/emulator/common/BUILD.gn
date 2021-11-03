@@ -13,6 +13,7 @@ if (is_host) {
     sources = [
       "src/args.rs",
       "src/cipd.rs",
+      "src/config.rs",
       "src/device.rs",
       "src/graphic_utils.rs",
       "src/images.rs",

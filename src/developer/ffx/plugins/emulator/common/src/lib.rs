@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 pub mod args;
+pub mod config;
 pub mod port_picker;
 pub mod vdl_files;
 

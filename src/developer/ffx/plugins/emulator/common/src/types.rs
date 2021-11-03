@@ -2,17 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::graphic_utils::get_default_graphics;
-use crate::images::Images;
-use crate::tools::Tools;
-use async_trait::async_trait;
+use crate::{
+    config::{FfxConfigWrapper, SSH_PRIVATE_KEY, SSH_PUBLIC_KEY},
+    graphic_utils::get_default_graphics,
+    images::Images,
+    tools::Tools,
+};
 
 use anyhow::{anyhow, Result};
 use errors::ffx_bail;
-use ffx_config::{
-    api::ConfigError,
-    sdk::{Sdk, SdkVersion},
-};
+use ffx_config::sdk::{Sdk, SdkVersion};
 use ffx_emulator_start_args::StartCommand;
 use home::home_dir;
 use mockall::automock;
@@ -23,10 +22,6 @@ use std::fs::{create_dir, read_dir, File};
 use std::io::{BufRead, BufReader};
 use std::os::unix;
 use std::path::PathBuf;
-
-// Keys to config properties
-pub const SSH_PRIVATE_KEY: &'static str = "ssh.priv";
-pub const SSH_PUBLIC_KEY: &'static str = "ssh.pub";
 
 pub fn read_env_path(var: &str) -> Result<PathBuf> {
     env::var_os(var)
@@ -299,26 +294,6 @@ impl ImageFiles {
         Ok(())
     }
 }
-
-/// ConfigWrapper is a trait for testing access to ffx_config::
-/// methods. Non-test code should use None as the value where
-/// a method requires a ConfigWrapper parameter.
-#[async_trait]
-pub trait ConfigWrapper {
-    async fn get_filename_from_config(&self, property_name: &str) -> Result<PathBuf, ConfigError>;
-}
-
-/// FfxConfigWrapper is the implementation of ConfigWrapper trait that
-/// calls the running ffx_config methods.
-struct FfxConfigWrapper;
-const FFX_CONFIG: FfxConfigWrapper = FfxConfigWrapper {};
-
-#[async_trait]
-impl ConfigWrapper for FfxConfigWrapper {
-    async fn get_filename_from_config(&self, property_name: &str) -> Result<PathBuf, ConfigError> {
-        ffx_config::file(property_name).await
-    }
-}
 #[derive(Clone)]
 pub struct SshKeys {
     pub authorized_keys: PathBuf,
@@ -335,17 +310,10 @@ impl fmt::Debug for SshKeys {
 
 impl SshKeys {
     /// Initialize SSH key files.
-    /// Non-test code should use None for the optional ConfigWrapper.
-    /// Test code should pass in an implementation of ConfigWrapper which
-    /// suites the needs of the test.
-    pub async fn from_ffx(test_config: Option<&dyn ConfigWrapper>) -> Result<Self> {
-        let config = match test_config {
-            Some(config) => config,
-            None => &FFX_CONFIG,
-        };
+    pub async fn from_ffx(config: &FfxConfigWrapper) -> Result<Self> {
         Ok(Self {
-            authorized_keys: config.get_filename_from_config(SSH_PUBLIC_KEY).await?,
-            private_key: config.get_filename_from_config(SSH_PRIVATE_KEY).await?,
+            authorized_keys: config.file(SSH_PUBLIC_KEY).await?,
+            private_key: config.file(SSH_PRIVATE_KEY).await?,
         })
     }
 
@@ -465,39 +433,7 @@ impl From<&StartCommand> for VDLArgs {
 }
 
 #[cfg(test)]
-pub mod testing {
-    use super::*;
-    /// TestConfigWrapper is the implementation of the ConfigWrapper trait
-    /// that uses a hash map to store the values. This allows tests
-    /// to set the configuration desired then pass it into methods requiring
-    /// ConfigWrapper parameter.
-    /// TODO(fxbug.dev/86958): Support injecting configuration for tests into ffx::config.
-    pub struct TestConfigWrapper {
-        pub test_properties: std::collections::HashMap<&'static str, &'static str>,
-    }
-
-    impl TestConfigWrapper {
-        pub fn new() -> Self {
-            Self { test_properties: std::collections::HashMap::new() }
-        }
-    }
-
-    #[async_trait]
-    impl ConfigWrapper for TestConfigWrapper {
-        async fn get_filename_from_config(
-            &self,
-            property_name: &str,
-        ) -> Result<PathBuf, ConfigError> {
-            match self.test_properties.get(property_name) {
-                Some(value) => Ok(PathBuf::from(value)),
-                None => Err(ConfigError::from(anyhow!("key not found {}", property_name))),
-            }
-        }
-    }
-}
-#[cfg(test)]
 mod tests {
-    use super::testing::TestConfigWrapper;
     use super::*;
     use serial_test::serial;
     use std::io::Write;
@@ -629,13 +565,13 @@ mod tests {
     #[serial]
     async fn test_ssh_files() -> Result<()> {
         // This test looks like it does not do much, but it was helpful
-        // in developing how to inject the TestConfigWrapper so methods
+        // in developing how to inject the FfxConfigWrapper so methods
         // that access ffx_config can do so safely and still be tested
         // since ffx_config is currently a giant, non-hermetic global.
-        let mut test_config = TestConfigWrapper::new();
-        test_config.test_properties.insert(SSH_PUBLIC_KEY, "/path/to/authorized_keys");
-        test_config.test_properties.insert(SSH_PRIVATE_KEY, "/path/to/private_key");
-        let result = SshKeys::from_ffx(Some(&test_config)).await;
+        let mut test_config = FfxConfigWrapper::new();
+        test_config.overrides.insert(SSH_PUBLIC_KEY, "/path/to/authorized_keys");
+        test_config.overrides.insert(SSH_PRIVATE_KEY, "/path/to/private_key");
+        let result = SshKeys::from_ffx(&test_config).await;
         match result {
             Ok(ssh_keys) => {
                 assert_eq!(ssh_keys.authorized_keys.to_str().unwrap(), "/path/to/authorized_keys");
