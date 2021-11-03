@@ -300,7 +300,7 @@ TEST_F(AddressSpaceDeviceTest, OpenChildDriver) {
   Flush(ctrl_regs);
 
   // Test AddressSpaceChildDriver.AllocateBlock()
-  auto result_alloc = client.AllocateBlock(4096u);
+  auto result_alloc = client->AllocateBlock(4096u);
   EXPECT_TRUE(result_alloc.ok());
   EXPECT_EQ(result_alloc.value().res, ZX_OK);
   EXPECT_NE(result_alloc.value().paddr, 0u);
@@ -308,7 +308,7 @@ TEST_F(AddressSpaceDeviceTest, OpenChildDriver) {
 
   // Test AddressSpaceChildDriver.DeallocateBlock()
   auto paddr = result_alloc.value().paddr;
-  auto result_dealloc = client.DeallocateBlock(paddr);
+  auto result_dealloc = client->DeallocateBlock(paddr);
   EXPECT_TRUE(result_dealloc.ok());
   EXPECT_EQ(result_dealloc.value().res, ZX_OK);
 
