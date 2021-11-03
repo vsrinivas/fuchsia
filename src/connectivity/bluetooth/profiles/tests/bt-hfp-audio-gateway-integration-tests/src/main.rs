@@ -328,6 +328,9 @@ async fn expect_data(channel: &mut Channel, expected: Vec<at::Response>) {
         .flatten()
         .collect();
 
+    // `read_datagram` occasionally returns ready with Ok(0) when there are no bytes read from the
+    // socket. Instead of erroring, we retry the read operation until we actually receive a nonzero
+    // amount of data over the channel.
     loop {
         let mut actual_bytes = Vec::new();
         let read_result = channel

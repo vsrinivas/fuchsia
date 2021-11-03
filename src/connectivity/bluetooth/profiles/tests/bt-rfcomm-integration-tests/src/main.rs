@@ -186,18 +186,29 @@ async fn multiple_rfcomm_clients_can_register_advertisements() {
     assert!(futures::poll!(&mut search_results.next()).is_pending());
 }
 
+/// Verifies that the `send` RFCOMM channel can be written to and that the `data` is received by the
+/// `receive` RFCOMM channel.
 #[track_caller]
 async fn send_and_expect_data(send: &Channel, receive: &Channel, data: Vec<u8>) {
     let n = data.len();
     assert_eq!(send.as_ref().write(&data[..]), Ok(n));
 
-    let mut actual_bytes = Vec::new();
-    let read_result = receive
-        .read_datagram(&mut actual_bytes)
-        .on_timeout(RFCOMM_CHANNEL_TIMEOUT.after_now(), move || Err(fidl::Status::TIMED_OUT))
-        .await;
-    assert_eq!(read_result, Ok(n));
-    assert_eq!(actual_bytes, data);
+    // `read_datagram` occasionally returns ready with Ok(0) when there are no bytes read from the
+    // socket. Instead of erroring, we retry the read operation until we actually receive a nonzero
+    // amount of data over the channel.
+    loop {
+        let mut actual_bytes = Vec::new();
+        let read_result = receive
+            .read_datagram(&mut actual_bytes)
+            .on_timeout(RFCOMM_CHANNEL_TIMEOUT.after_now(), move || Err(fidl::Status::TIMED_OUT))
+            .await
+            .expect("reading from channel is ok");
+
+        if read_result != 0 {
+            assert_eq!(actual_bytes, data);
+            break;
+        }
+    }
 }
 
 /// Tests the connection flow between two Fuchsia RFCOMM components. Each RFCOMM component is driven
