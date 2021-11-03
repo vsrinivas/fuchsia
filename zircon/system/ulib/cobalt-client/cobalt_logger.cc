@@ -40,7 +40,7 @@ std::string_view CobaltLogger::GetServiceName() {
 }
 
 bool CobaltLogger::TryObtainLogger() {
-  if (logger_.client_end().is_valid()) {
+  if (logger_.is_valid()) {
     return true;
   }
 
@@ -84,7 +84,7 @@ bool CobaltLogger::Log(const MetricOptions& metric_info, const HistogramBucket* 
   event.payload.set_int_histogram(
       fidl::ObjectView<fidl::VectorView<HistogramBucket>>::FromExternal(&int_histogram));
 
-  auto log_result = logger_.LogCobaltEvent(std::move(event));
+  auto log_result = logger_->LogCobaltEvent(std::move(event));
   if (log_result.status() == ZX_ERR_PEER_CLOSED) {
     Reset();
   }
@@ -100,7 +100,7 @@ bool CobaltLogger::Log(const MetricOptions& metric_info, RemoteCounter::Type cou
   event.payload.set_event_count(
       fidl::ObjectView<fuchsia_cobalt::wire::CountEvent>::FromExternal(&event_count));
 
-  auto log_result = logger_.LogCobaltEvent(std::move(event));
+  auto log_result = logger_->LogCobaltEvent(std::move(event));
   if (log_result.status() == ZX_ERR_PEER_CLOSED) {
     Reset();
   }
@@ -119,7 +119,7 @@ bool CobaltLogger::LogInteger(const MetricOptions& metric_info, RemoteCounter::T
   // usage. So, we use MemoryUsage until we have a better support for integer(in
   // version 1.1).
   auto log_result =
-      logger_.LogMemoryUsage(event.metric_id, event.event_codes[0], event.component, value);
+      logger_->LogMemoryUsage(event.metric_id, event.event_codes[0], event.component, value);
   if (log_result.status() == ZX_ERR_PEER_CLOSED) {
     Reset();
   }

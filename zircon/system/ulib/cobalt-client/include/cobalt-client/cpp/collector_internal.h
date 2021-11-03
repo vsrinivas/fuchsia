@@ -62,7 +62,7 @@ class CobaltLogger final : public Logger {
   bool TryObtainLogger();
 
   // Cleans up the state of the logger.
-  void Reset() { logger_.client_end().reset(); }
+  void Reset() { logger_ = {}; }
 
   // Set of options for this logger.
   CobaltOptions options_;
