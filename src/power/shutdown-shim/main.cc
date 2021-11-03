@@ -195,7 +195,7 @@ zx_status_t set_system_state_transition_behavior(statecontrol_fidl::wire::System
   auto system_state_transition_behavior_client =
       fidl::WireSyncClient<device_manager_fidl::SystemStateTransition>(std::move(local));
 
-  auto resp = system_state_transition_behavior_client.SetTerminationSystemState(state);
+  auto resp = system_state_transition_behavior_client->SetTerminationSystemState(state);
   if (resp.status() != ZX_OK) {
     fprintf(stderr, "[shutdown-shim]: transport error sending message to driver_manager: %s\n",
             resp.FormatDescription().c_str());
@@ -219,7 +219,7 @@ zx_status_t SetMexecZbis(zx::vmo kernel_zbi, zx::vmo data_zbi) {
   }
   auto client = fidl::WireSyncClient<device_manager_fidl::SystemStateTransition>(std::move(local));
 
-  auto resp = client.SetMexecZbis(std::move(kernel_zbi), std::move(data_zbi));
+  auto resp = client->SetMexecZbis(std::move(kernel_zbi), std::move(data_zbi));
   if (resp.status() != ZX_OK) {
     fprintf(stderr, "[shutdown-shim]: transport error sending message to driver_manager: %s\n",
             resp.FormatDescription().c_str());
@@ -246,7 +246,7 @@ zx_status_t initiate_component_shutdown() {
       fidl::WireSyncClient<sys2_fidl::SystemController>(std::move(local));
 
   printf("[shutdown-shim]: calling system_controller_client.Shutdown()\n");
-  auto resp = system_controller_client.Shutdown();
+  auto resp = system_controller_client->Shutdown();
   printf("[shutdown-shim]: status was returned: %s\n", zx_status_get_string(status));
   return resp.status();
 }
@@ -306,7 +306,7 @@ zx_status_t send_command(fidl::WireSyncClient<statecontrol_fidl::Admin> statecon
         fprintf(stderr, "[shutdown-shim]: internal error, bad pointer to reason for reboot\n");
         return ZX_ERR_INTERNAL;
       }
-      auto resp = statecontrol_client.Reboot(*reboot_reason);
+      auto resp = statecontrol_client->Reboot(*reboot_reason);
       if (resp.status() != ZX_OK) {
         return ZX_ERR_UNAVAILABLE;
       } else if (resp->result.is_err()) {
@@ -316,7 +316,7 @@ zx_status_t send_command(fidl::WireSyncClient<statecontrol_fidl::Admin> statecon
       }
     } break;
     case statecontrol_fidl::wire::SystemPowerState::kRebootBootloader: {
-      auto resp = statecontrol_client.RebootToBootloader();
+      auto resp = statecontrol_client->RebootToBootloader();
       if (resp.status() != ZX_OK) {
         return ZX_ERR_UNAVAILABLE;
       } else if (resp->result.is_err()) {
@@ -326,7 +326,7 @@ zx_status_t send_command(fidl::WireSyncClient<statecontrol_fidl::Admin> statecon
       }
     } break;
     case statecontrol_fidl::wire::SystemPowerState::kRebootRecovery: {
-      auto resp = statecontrol_client.RebootToRecovery();
+      auto resp = statecontrol_client->RebootToRecovery();
       if (resp.status() != ZX_OK) {
         return ZX_ERR_UNAVAILABLE;
       } else if (resp->result.is_err()) {
@@ -336,7 +336,7 @@ zx_status_t send_command(fidl::WireSyncClient<statecontrol_fidl::Admin> statecon
       }
     } break;
     case statecontrol_fidl::wire::SystemPowerState::kPoweroff: {
-      auto resp = statecontrol_client.Poweroff();
+      auto resp = statecontrol_client->Poweroff();
       if (resp.status() != ZX_OK) {
         return ZX_ERR_UNAVAILABLE;
       } else if (resp->result.is_err()) {
@@ -350,8 +350,8 @@ zx_status_t send_command(fidl::WireSyncClient<statecontrol_fidl::Admin> statecon
         fprintf(stderr, "[shutdown-shim]: internal error, bad pointer to reason for mexec\n");
         return ZX_ERR_INTERNAL;
       }
-      auto resp = statecontrol_client.Mexec(std::move((*mexec_request)->kernel_zbi),
-                                            std::move((*mexec_request)->data_zbi));
+      auto resp = statecontrol_client->Mexec(std::move((*mexec_request)->kernel_zbi),
+                                             std::move((*mexec_request)->data_zbi));
       if (resp.status() != ZX_OK) {
         return ZX_ERR_UNAVAILABLE;
       } else if (resp->result.is_err()) {
@@ -361,7 +361,7 @@ zx_status_t send_command(fidl::WireSyncClient<statecontrol_fidl::Admin> statecon
       }
     } break;
     case statecontrol_fidl::wire::SystemPowerState::kSuspendRam: {
-      auto resp = statecontrol_client.SuspendToRam();
+      auto resp = statecontrol_client->SuspendToRam();
       if (resp.status() != ZX_OK) {
         return ZX_ERR_UNAVAILABLE;
       } else if (resp->result.is_err()) {
