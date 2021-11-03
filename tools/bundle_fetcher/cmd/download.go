@@ -5,22 +5,26 @@
 package main
 
 import (
-	"cloud.google.com/go/storage"
 	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/google/subcommands"
-	"go.fuchsia.dev/fuchsia/tools/artifactory"
-	"go.fuchsia.dev/fuchsia/tools/build"
-	"go.fuchsia.dev/fuchsia/tools/lib/logger"
-	"google.golang.org/api/iterator"
 	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"go.fuchsia.dev/fuchsia/build/sdk/meta"
+	"go.fuchsia.dev/fuchsia/tools/artifactory"
+	"go.fuchsia.dev/fuchsia/tools/build"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+
+	"cloud.google.com/go/storage"
+	"github.com/google/subcommands"
+	"go.uber.org/multierr"
+	"google.golang.org/api/iterator"
 )
 
 type downloadCmd struct {
@@ -31,11 +35,13 @@ type downloadCmd struct {
 }
 
 const (
-	buildsDirName  = "builds"
-	imageDirName   = "images"
-	imageJSONName  = "images.json"
-	fileFormatName = "files"
-	gcsBaseURI     = "gs://"
+	buildsDirName    = "builds"
+	imageDirName     = "images"
+	imageJSONName    = "images.json"
+	fileFormatName   = "files"
+	gcsBaseURI       = "gs://"
+	pbmContainerType = "product_bundle_container"
+	pbmContainerName = "sdk_product_bundle_container"
 )
 
 func (*downloadCmd) Name() string { return "download" }
@@ -99,7 +105,13 @@ func (cmd *downloadCmd) execute(ctx context.Context) error {
 	}
 	defer sink.close()
 
-	var productBundles []artifactory.ProductBundle
+	productBundleContainer := meta.ProductBundleContainer{
+		SchemaID: meta.PBMContainerSchemaID,
+		Data: meta.Data{
+			Type: pbmContainerType,
+			Name: pbmContainerName,
+		},
+	}
 
 	buildIDsList := strings.Split(cmd.buildIDs, ",")
 	for _, buildID := range buildIDsList {
@@ -119,19 +131,30 @@ func (cmd *downloadCmd) execute(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("unable to read product bundle data for build_id %s: %w", buildID, err)
 		}
-		productBundles = append(productBundles, updatedProductBundleData)
+		productBundleContainer.Data.Bundles = append(productBundleContainer.Data.Bundles, updatedProductBundleData)
+	}
+
+	logger.Debugf(ctx, "validating output data to make sure it follows the appropriate schema")
+	if err := meta.ValidateProductBundleContainer(productBundleContainer); err != nil {
+		return err
 	}
 
 	outputFilePath := filepath.Join(cmd.outDir, cmd.outputProductBundleFileName)
-	data, err := json.MarshalIndent(productBundles, "", "  ")
-	if err != nil {
-		return fmt.Errorf("unable to json marshall product bundles: %w", err)
-	}
 	logger.Debugf(ctx, "writing final product bundle file to: %s", outputFilePath)
-	if err := ioutil.WriteFile(outputFilePath, data, 0644); err != nil {
+	f, err := os.Create(outputFilePath)
+	if err != nil {
 		return err
 	}
-	return nil
+	var errs error
+	enc := json.NewEncoder(f)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(&productBundleContainer); err != nil {
+		errs = multierr.Append(errs, err)
+	}
+	if err := f.Close(); err != nil {
+		errs = multierr.Append(errs, err)
+	}
+	return errs
 }
 
 // getGCSURIBasedOnFileURI gets the gcs_uri based on the product_bundle path.

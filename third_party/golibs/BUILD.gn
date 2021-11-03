@@ -517,6 +517,44 @@ go_library("github.com/ulikunitz/xz") {
   ]
 }
 
+go_library("github.com/xeipuuv/gojsonpointer") {
+  name = "github.com/xeipuuv/gojsonpointer"
+  source_dir = "vendor/github.com/xeipuuv/gojsonpointer"
+  sources = [ "pointer.go" ]
+}
+go_library("github.com/xeipuuv/gojsonreference") {
+  name = "github.com/xeipuuv/gojsonreference"
+  source_dir = "vendor/github.com/xeipuuv/gojsonreference"
+  sources = [ "reference.go" ]
+}
+go_library("github.com/xeipuuv/gojsonschema") {
+  name = "github.com/xeipuuv/gojsonschema"
+  source_dir = "vendor/github.com/xeipuuv/gojsonschema"
+  deps = [
+    ":github.com/xeipuuv/gojsonpointer",
+    ":github.com/xeipuuv/gojsonreference",
+  ]
+  sources = [
+    "draft.go",
+    "errors.go",
+    "format_checkers.go",
+    "internalLog.go",
+    "jsonContext.go",
+    "jsonLoader.go",
+    "locales.go",
+    "result.go",
+    "schema.go",
+    "schemaLoader.go",
+    "schemaPool.go",
+    "schemaReferencePool.go",
+    "schemaType.go",
+    "subSchema.go",
+    "types.go",
+    "utils.go",
+    "validation.go",
+  ]
+}
+
 ### go.opencensus.io/*
 # Actually aggregates the dependencies of other go.opencensus.io/*
 # packages as well. Use this as a convenience target for any such package.

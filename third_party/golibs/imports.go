@@ -25,6 +25,7 @@ import (
 	_ "github.com/theupdateframework/go-tuf/data"
 	_ "github.com/theupdateframework/go-tuf/sign"
 	_ "github.com/ulikunitz/xz"
+	_ "github.com/xeipuuv/gojsonschema"
 	_ "go.uber.org/multierr"
 	_ "golang.org/x/crypto/openpgp"
 	_ "golang.org/x/crypto/ssh"

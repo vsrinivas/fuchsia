@@ -19,6 +19,8 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/theupdateframework/go-tuf v0.0.0-20211008214526-d74a4b4d2712
 	github.com/ulikunitz/xz v0.5.10
+	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
+	github.com/xeipuuv/gojsonschema v1.2.0
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.7.0
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519

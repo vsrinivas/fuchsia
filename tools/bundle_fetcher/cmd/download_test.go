@@ -8,12 +8,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/google/go-cmp/cmp"
-	"go.fuchsia.dev/fuchsia/tools/artifactory"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"go.fuchsia.dev/fuchsia/tools/artifactory"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 // A simple in-memory implementation of dataSink.

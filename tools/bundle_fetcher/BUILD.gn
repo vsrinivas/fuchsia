@@ -26,8 +26,10 @@ go_library("main") {
   ]
 
   deps = [
+    "//build/sdk/meta:go_meta",
     "//third_party/golibs:cloud.google.com/go/storage",
     "//third_party/golibs:github.com/google/subcommands",
+    "//third_party/golibs:go.uber.org/multierr",
     "//third_party/golibs:google.golang.org/api/iterator",
     "//tools/artifactory:lib",
     "//tools/build",
