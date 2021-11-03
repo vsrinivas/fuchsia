@@ -65,13 +65,17 @@ If the feature is approved, the feature summary, usage, stabilization report,
 and owner listed in the doc are added to the "Currently Used Features" section listed
 below. This documentation must be checked in before the feature can be used.
 
-The current list of reviewers is as follows:
+{% dynamic if user.is_googler %}
 
-- bwb@google.com
-- etryzelaar@google.com
-- raggi@google.com
-- tkilbourn@google.com
-- tmandry@google.com
+Reviews are performed by the [Rust Working Group] (tq-rust-wg@google.com).
+
+[Rust Working Group]: https://goto.corp.google.com/tq-rust-wg
+
+{% dynamic else %}
+
+Reviews are performed by the Rust Working Group.
+
+{% dynamic endif %}
 
 ## Currently Used Features
 

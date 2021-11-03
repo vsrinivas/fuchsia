@@ -69,19 +69,20 @@ have a couple [custom settings][rustfmt-toml].
 
 ## Rust Idiomatic Usage Review
 
-If you're new to Rust, and would like someone to review your changes to
-validate that your usage of Rust is idiomatic, contact one of the following
-(or add them as a reviewer to your change.)
+If you're new to Rust or would like someone to review your changes to
+validate that your usage of Rust is idiomatic, add "Fuchsia Rust Reviewers"
+as a reviewer to your CL in Gerrit and a reviewer will be assigned.
 
-- adamperry@google.com
-- belgum@google.com
-- dnordstrom@google.com
-- jamuraa@google.com
-- nickpollard@google.com
-- tmandry@google.com
+Email tq-rust-reviewers@google.com with any issues.
 
-(To volunteer for this, please add yourself to the list above and upload the
-change with one of the above as the reviewer).
+{% dynamic if user.is_googler %}
+
+**[Googlers only]** You can view the
+[list of Rust Reviewers](https://goto.corp.google.com/tq-rust-reviewers-list).
+New reviewers can be nominated by an existing reviewer using
+[this form](https://goto.corp.google.com/tq-rust-reviewers-nominate).
+
+{% dynamic endif %}
 
 ## Communication channels
 
