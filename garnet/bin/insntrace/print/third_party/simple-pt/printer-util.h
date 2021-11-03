@@ -27,12 +27,18 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#ifndef GARNET_BIN_INSNTRACE_PRINT_THIRD_PARTY_SIMPLE_PT_PRINTER_UTIL_H_
+#define GARNET_BIN_INSNTRACE_PRINT_THIRD_PARTY_SIMPLE_PT_PRINTER_UTIL_H_
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
 #include "third_party/processor-trace/libipt/include/intel-pt.h"
+#pragma GCC diagnostic pop
 
 namespace simple_pt {
 
 const char* InsnClassName(enum pt_insn_class iclass);
 
 }  // namespace simple_pt
+
+#endif  // GARNET_BIN_INSNTRACE_PRINT_THIRD_PARTY_SIMPLE_PT_PRINTER_UTIL_H_

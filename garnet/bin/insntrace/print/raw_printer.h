@@ -2,14 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_INSNTRACE_PRINT_RAW_PRINTER_H_
+#define GARNET_BIN_INSNTRACE_PRINT_RAW_PRINTER_H_
 
 #include <cstdio>
-
 #include <memory>
 #include <string>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
 #include "garnet/lib/intel_pt_decode/decoder.h"
+#pragma GCC diagnostic pop
 
 #include "src/lib/fxl/macros.h"
 
@@ -76,3 +79,5 @@ class RawPrinter {
 };
 
 }  // namespace intel_processor_trace
+
+#endif  // GARNET_BIN_INSNTRACE_PRINT_RAW_PRINTER_H_

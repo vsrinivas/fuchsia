@@ -27,9 +27,13 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#ifndef GARNET_BIN_INSNTRACE_PRINT_THIRD_PARTY_SIMPLE_PT_INSTRUCTION_H_
+#define GARNET_BIN_INSNTRACE_PRINT_THIRD_PARTY_SIMPLE_PT_INSTRUCTION_H_
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
 #include "third_party/processor-trace/libipt/include/intel-pt.h"
+#pragma GCC diagnostic pop
 
 namespace simple_pt {
 
@@ -73,3 +77,5 @@ struct Instruction {
 void TransferEvents(Instruction* insn, const struct pt_insn* raw_insn);
 
 }  // namespace simple_pt
+
+#endif  // GARNET_BIN_INSNTRACE_PRINT_THIRD_PARTY_SIMPLE_PT_INSTRUCTION_H_

@@ -630,6 +630,7 @@ config("Wno-conversion") {
     "//garnet/bin/ui/benchmarks/image_grid_cpp:*",
     "//garnet/bin/ui/benchmarks/transparency_benchmark:*",
     "//garnet/lib/debugger_utils:*",
+    "//garnet/lib/intel_pt_decode/*",
     "//garnet/lib/loader:*",
     "//garnet/lib/perfmon:*",
     "//garnet/lib/profiler:*",

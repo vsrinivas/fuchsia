@@ -27,18 +27,20 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#ifndef GARNET_BIN_INSNTRACE_PRINT_THIRD_PARTY_SIMPLE_PT_CALL_PRINTER_H_
+#define GARNET_BIN_INSNTRACE_PRINT_THIRD_PARTY_SIMPLE_PT_CALL_PRINTER_H_
 
 #include <cstdio>
-
 #include <memory>
 #include <string>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
 #include "garnet/lib/intel_pt_decode/decoder.h"
-
-#include "src/lib/fxl/macros.h"
+#pragma GCC diagnostic pop
 
 #include "instruction.h"
+#include "src/lib/fxl/macros.h"
 
 namespace simple_pt {
 
@@ -112,3 +114,5 @@ class CallPrinter {
 };
 
 }  // namespace simple_pt
+
+#endif  // GARNET_BIN_INSNTRACE_PRINT_THIRD_PARTY_SIMPLE_PT_CALL_PRINTER_H_
