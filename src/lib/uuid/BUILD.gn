@@ -11,7 +11,7 @@ source_set("uuid") {
     "uuid.h",
   ]
 
-  deps = [ "//src/lib/fxl:strings" ]
+  deps = [ "//src/lib/fxl:string_printf" ]
 }
 
 test("uuid_unittests") {
