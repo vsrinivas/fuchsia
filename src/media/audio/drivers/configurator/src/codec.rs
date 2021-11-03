@@ -17,7 +17,6 @@ pub struct CodecInterface {
     proxy: Option<fidl_fuchsia_hardware_audio::CodecProxy>,
 }
 
-#[allow(dead_code)]
 impl CodecInterface {
     /// A new interface that will connect to the device at the `path` within the `dev_proxy`
     /// directory. The interface is unconnected when created.
