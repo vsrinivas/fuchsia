@@ -72,7 +72,7 @@ class TestSession {
 
   const zx::fifo& tx_fifo() const { return fifos_.tx; }
   const zx::fifo& rx_fifo() const { return fifos_.rx; }
-  const zx::channel& channel() const { return session_.channel(); }
+  const zx::channel& channel() const { return session_.client_end().channel(); }
 
  private:
   fidl::Arena<> alloc_;

@@ -173,7 +173,7 @@ class NetworkDeviceTest : public ::testing::Test {
     }
     endpoints.status_value();
     auto [client_end, server_end] = std::move(*endpoints);
-    fidl::WireResult result = OpenConnection().GetPort(port_id, std::move(server_end));
+    fidl::WireResult result = OpenConnection()->GetPort(port_id, std::move(server_end));
     if (result.status() != ZX_OK) {
       return zx::error(result.status());
     }
@@ -271,7 +271,7 @@ TEST_F(NetworkDeviceTest, GetInfo) {
   impl_.info().min_tx_buffer_length = 60;
   ASSERT_OK(CreateDevice());
   fidl::WireSyncClient connection = OpenConnection();
-  fidl::WireResult rsp = connection.GetInfo();
+  fidl::WireResult rsp = connection->GetInfo();
   ASSERT_OK(rsp.status());
   auto& info = rsp.value().info;
   ASSERT_TRUE(info.has_tx_depth());
@@ -306,7 +306,7 @@ TEST_F(NetworkDeviceTest, OptionalMaxBufferLength) {
   impl_.info().max_buffer_length = 0;
   ASSERT_OK(CreateDevice());
   fidl::WireSyncClient connection = OpenConnection();
-  fidl::WireResult rsp = connection.GetInfo();
+  fidl::WireResult rsp = connection->GetInfo();
   ASSERT_OK(rsp.status());
   auto& info = rsp.value().info;
   ASSERT_FALSE(info.has_max_buffer_length())
@@ -597,7 +597,7 @@ TEST_F(NetworkDeviceTest, SessionEpitaph) {
   // Closing the session should cause a stop.
   ASSERT_OK(WaitStop());
   // Wait for epitaph to show up in channel.
-  zx::status epitaph = WaitClosedAndReadEpitaph(session.session().channel());
+  zx::status epitaph = WaitClosedAndReadEpitaph(session.session().client_end().channel());
   ASSERT_OK(epitaph.status_value());
   ASSERT_STATUS(epitaph.value(), ZX_ERR_CANCELED);
 }
@@ -788,8 +788,8 @@ TEST_F(NetworkDeviceTest, ClosingPrimarySession) {
   ASSERT_EQ(rx_buff->space().region.length, kDefaultBufferLength / 2);
   // Let's close session_a, it should not be closed until we return the buffers.
   ASSERT_OK(session_a.Close());
-  ASSERT_EQ(session_a.session().channel().wait_one(ZX_CHANNEL_PEER_CLOSED,
-                                                   zx::deadline_after(zx::msec(20)), nullptr),
+  ASSERT_EQ(session_a.session().client_end().channel().wait_one(
+                ZX_CHANNEL_PEER_CLOSED, zx::deadline_after(zx::msec(20)), nullptr),
             ZX_ERR_TIMED_OUT);
   // Session B should've now become primary. Provide enough buffers to fill the device queues.
   uint16_t target_descriptor = 0;
@@ -891,14 +891,14 @@ TEST_F(NetworkDeviceTest, DelayedStop) {
   ASSERT_OK(session_a.Close());
   ASSERT_OK(WaitStop());
   // Session must not have been closed yet.
-  ASSERT_EQ(session_a.session().channel().wait_one(ZX_CHANNEL_PEER_CLOSED,
-                                                   zx::deadline_after(zx::msec(20)), nullptr),
+  ASSERT_EQ(session_a.session().client_end().channel().wait_one(
+                ZX_CHANNEL_PEER_CLOSED, zx::deadline_after(zx::msec(20)), nullptr),
             ZX_ERR_TIMED_OUT);
   ASSERT_TRUE(impl_.TriggerStop());
 
   // Session must not have been closed yet.
-  ASSERT_EQ(session_a.session().channel().wait_one(ZX_CHANNEL_PEER_CLOSED,
-                                                   zx::deadline_after(zx::msec(20)), nullptr),
+  ASSERT_EQ(session_a.session().client_end().channel().wait_one(
+                ZX_CHANNEL_PEER_CLOSED, zx::deadline_after(zx::msec(20)), nullptr),
             ZX_ERR_TIMED_OUT);
 
   // Return the outstanding buffer.
@@ -1113,7 +1113,7 @@ TEST_F(NetworkDeviceTest, ObserveStatus) {
   ASSERT_OK(port.status_value());
   ASSERT_OK(port->GetStatusWatcher(std::move(server_end), 3).status());
   {
-    fidl::WireResult result = watcher.WatchStatus();
+    fidl::WireResult result = watcher->WatchStatus();
     ASSERT_OK(result.status());
     ASSERT_EQ(result.value().port_status.mtu(), port13_.status().mtu);
     ASSERT_EQ(result.value().port_status.flags(), StatusFlags());
@@ -1122,13 +1122,13 @@ TEST_F(NetworkDeviceTest, ObserveStatus) {
   port13_.SetOnline(true);
   port13_.SetOnline(false);
   {
-    fidl::WireResult result = watcher.WatchStatus();
+    fidl::WireResult result = watcher->WatchStatus();
     ASSERT_OK(result.status());
     ASSERT_EQ(result.value().port_status.mtu(), port13_.status().mtu);
     ASSERT_EQ(result.value().port_status.flags(), StatusFlags::kOnline);
   }
   {
-    fidl::WireResult result = watcher.WatchStatus();
+    fidl::WireResult result = watcher->WatchStatus();
     ASSERT_OK(result.status());
     ASSERT_EQ(result.value().port_status.mtu(), port13_.status().mtu);
     ASSERT_EQ(result.value().port_status.flags(), StatusFlags());
@@ -1137,7 +1137,8 @@ TEST_F(NetworkDeviceTest, ObserveStatus) {
   DiscardDeviceSync();
 
   // Watcher must be closed on teardown.
-  ASSERT_OK(watcher.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, TEST_DEADLINE, nullptr));
+  ASSERT_OK(
+      watcher.client_end().channel().wait_one(ZX_CHANNEL_PEER_CLOSED, TEST_DEADLINE, nullptr));
 }
 
 // Test that returning tx buffers in the body of QueueTx is allowed and works.
@@ -1827,7 +1828,7 @@ TEST_F(NetworkDeviceTest, PortGetMac) {
   auto [client_end, server_end] = std::move(*endpoints);
   ASSERT_OK(port->GetMac(std::move(server_end)).status());
   auto mac = fidl::BindSyncClient(std::move(client_end));
-  fidl::WireResult result = mac.GetUnicastAddress();
+  fidl::WireResult result = mac->GetUnicastAddress();
   ASSERT_OK(result.status());
   fuchsia_net::wire::MacAddress& addr = result.value().address;
   decltype(addr.octets) octets;
@@ -1875,7 +1876,7 @@ TEST_F(NetworkDeviceTest, NonExistentPort) {
     SCOPED_TRACE(t.name);
     zx::status port = OpenPort(t.port_id);
     ASSERT_OK(port.status_value());
-    zx::status epitaph = WaitClosedAndReadEpitaph(port.value().channel());
+    zx::status epitaph = WaitClosedAndReadEpitaph(port.value().client_end().channel());
     ASSERT_OK(epitaph.status_value());
     ASSERT_STATUS(epitaph.value(), ZX_ERR_NOT_FOUND);
     ASSERT_STATUS(session.AttachPort(t.port_id, {}), t.session_error);
@@ -2033,7 +2034,7 @@ TEST_F(NetworkDeviceTest, PortWatcher) {
 
   auto watch_next = [watcher = fidl::BindSyncClient(std::move(endpoints->client))]() mutable {
     return std::async([&watcher]() -> zx::status<PortEvent> {
-      fidl::WireResult watch = watcher.Watch();
+      fidl::WireResult watch = watcher->Watch();
       if (!watch.ok()) {
         return zx::error(watch.status());
       }
@@ -2071,7 +2072,7 @@ TEST_F(NetworkDeviceTest, PortWatcher) {
 
   ASSERT_OK(CreateDeviceWithPort13());
   fidl::WireSyncClient device = OpenConnection();
-  ASSERT_OK(device.GetPortWatcher(std::move(endpoints->server)).status());
+  ASSERT_OK(device->GetPortWatcher(std::move(endpoints->server)).status());
 
   // Should list port 13 on creation.
   ASSERT_NO_FATAL_FAILURE(
@@ -2148,7 +2149,7 @@ TEST_F(NetworkDeviceTest, PortWatcherEnforcesQueueLimit) {
   zx::status endpoints = fidl::CreateEndpoints<netdev::PortWatcher>();
   ASSERT_OK(endpoints.status_value());
   fidl::WireSyncClient device = OpenConnection();
-  ASSERT_OK(device.GetPortWatcher(std::move(endpoints->server)).status());
+  ASSERT_OK(device->GetPortWatcher(std::move(endpoints->server)).status());
   fidl::ClientEnd watcher = std::move(endpoints->client);
   // Call watch once to observe the idle event and ensure no races between watcher binding and
   // adding ports will happen.
@@ -2530,7 +2531,7 @@ TEST_F(NetworkDeviceTest, CanUpdatePortStatusWithinSetActive) {
   fidl::WireSyncClient watcher = fidl::BindSyncClient(std::move(client_end));
 
   {
-    fidl::WireResult result = watcher.WatchStatus();
+    fidl::WireResult result = watcher->WatchStatus();
     ASSERT_OK(result.status());
     ASSERT_EQ(result.value().port_status.flags(), netdev::wire::StatusFlags());
   }
@@ -2542,7 +2543,7 @@ TEST_F(NetworkDeviceTest, CanUpdatePortStatusWithinSetActive) {
   // Port goes online on SetActive callback when session attaches.
   {
     ASSERT_OK(AttachSessionPort(session, port13_));
-    fidl::WireResult result = watcher.WatchStatus();
+    fidl::WireResult result = watcher->WatchStatus();
     ASSERT_OK(result.status());
     ASSERT_EQ(result.value().port_status.flags(), netdev::wire::StatusFlags::kOnline);
     ASSERT_EQ(set_active_call_counter, 1u);
@@ -2551,7 +2552,7 @@ TEST_F(NetworkDeviceTest, CanUpdatePortStatusWithinSetActive) {
   // Port goes offline on SetActive callback when session detaches.
   {
     ASSERT_OK(session.DetachPort(port13_.id()));
-    fidl::WireResult result = watcher.WatchStatus();
+    fidl::WireResult result = watcher->WatchStatus();
     ASSERT_OK(result.status());
     ASSERT_EQ(result.value().port_status.flags(), netdev::wire::StatusFlags());
     ASSERT_EQ(set_active_call_counter, 2u);

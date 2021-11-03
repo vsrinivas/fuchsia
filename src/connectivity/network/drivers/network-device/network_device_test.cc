@@ -109,8 +109,8 @@ TEST_F(NetDeviceDriverTest, TestOpenSession) {
   UnbindAndRelease();
   ASSERT_OK(session.WaitClosed(zx::deadline_after(kTestTimeout)));
   // netdevice should also have been closed after device unbind:
-  ASSERT_OK(netdevice.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::deadline_after(kTestTimeout),
-                                         nullptr));
+  ASSERT_OK(netdevice.client_end().channel().wait_one(ZX_CHANNEL_PEER_CLOSED,
+                                                      zx::deadline_after(kTestTimeout), nullptr));
 }
 
 TEST_F(NetDeviceDriverTest, TestWatcherDestruction) {
@@ -124,23 +124,23 @@ TEST_F(NetDeviceDriverTest, TestWatcherDestruction) {
   zx::status port_endpoints = fidl::CreateEndpoints<netdev::Port>();
   ASSERT_OK(port_endpoints.status_value());
   auto [port_client_end, port_server_end] = std::move(*port_endpoints);
-  ASSERT_OK(netdevice.GetPort(kPortId, std::move(port_server_end)).status());
+  ASSERT_OK(netdevice->GetPort(kPortId, std::move(port_server_end)).status());
   auto port = fidl::BindSyncClient(std::move(port_client_end));
 
   zx::status endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
   ASSERT_OK(endpoints.status_value());
   auto [client_end, server_end] = std::move(*endpoints);
-  ASSERT_OK(port.GetStatusWatcher(std::move(server_end), 1).status());
+  ASSERT_OK(port->GetStatusWatcher(std::move(server_end), 1).status());
   fidl::WireSyncClient watcher = fidl::BindSyncClient(std::move(client_end));
-  ASSERT_OK(watcher.WatchStatus().status());
+  ASSERT_OK(watcher->WatchStatus().status());
   UnbindAndRelease();
   // Watcher, port, and netdevice should all observe channel closure.
-  ASSERT_OK(watcher.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::deadline_after(kTestTimeout),
-                                       nullptr));
-  ASSERT_OK(
-      port.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::deadline_after(kTestTimeout), nullptr));
-  ASSERT_OK(netdevice.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::deadline_after(kTestTimeout),
-                                         nullptr));
+  ASSERT_OK(watcher.client_end().channel().wait_one(ZX_CHANNEL_PEER_CLOSED,
+                                                    zx::deadline_after(kTestTimeout), nullptr));
+  ASSERT_OK(port.client_end().channel().wait_one(ZX_CHANNEL_PEER_CLOSED,
+                                                 zx::deadline_after(kTestTimeout), nullptr));
+  ASSERT_OK(netdevice.client_end().channel().wait_one(ZX_CHANNEL_PEER_CLOSED,
+                                                      zx::deadline_after(kTestTimeout), nullptr));
 }
 
 }  // namespace testing

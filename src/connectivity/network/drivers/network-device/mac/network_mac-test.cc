@@ -87,7 +87,7 @@ TEST_F(MacDeviceTest, GetAddress) {
   zx::status open_result = OpenInstance();
   ASSERT_OK(open_result.status_value());
   fidl::WireSyncClient<netdev::MacAddressing>& client = open_result.value();
-  fidl::WireResult result = client.GetUnicastAddress();
+  fidl::WireResult result = client->GetUnicastAddress();
   ASSERT_OK(result.status());
   ASSERT_THAT(result.value().address, MacEq(impl_.mac()));
 }
@@ -128,7 +128,7 @@ TEST_F(MacDeviceTest, SetBadMode) {
   ASSERT_OK(open_result.status_value());
   fidl::WireSyncClient<netdev::MacAddressing>& client = open_result.value();
 
-  fidl::WireResult result = client.SetMode(netdev::wire::MacFilterMode::kPromiscuous);
+  fidl::WireResult result = client->SetMode(netdev::wire::MacFilterMode::kPromiscuous);
   ASSERT_OK(result.status());
   ASSERT_STATUS(result.value().status, ZX_ERR_NOT_SUPPORTED);
 }
@@ -139,7 +139,7 @@ TEST_F(MacDeviceTest, SetPromiscuous) {
   ASSERT_OK(open_result.status_value());
   fidl::WireSyncClient<netdev::MacAddressing>& client = open_result.value();
 
-  fidl::WireResult result = client.SetMode(netdev::wire::MacFilterMode::kPromiscuous);
+  fidl::WireResult result = client->SetMode(netdev::wire::MacFilterMode::kPromiscuous);
   ASSERT_OK(result.status());
   ASSERT_OK(result.value().status);
   ASSERT_OK(impl_.WaitConfigurationChanged());
@@ -153,7 +153,7 @@ TEST_F(MacDeviceTest, SetMulticastPromiscuous) {
   ASSERT_OK(open_result.status_value());
   fidl::WireSyncClient<netdev::MacAddressing>& client = open_result.value();
 
-  fidl::WireResult result = client.SetMode(netdev::wire::MacFilterMode::kMulticastPromiscuous);
+  fidl::WireResult result = client->SetMode(netdev::wire::MacFilterMode::kMulticastPromiscuous);
   ASSERT_OK(result.status());
   ASSERT_OK(result.value().status);
   ASSERT_OK(impl_.WaitConfigurationChanged());
@@ -168,12 +168,12 @@ TEST_F(MacDeviceTest, InvalidMulticastAddress) {
   fidl::WireSyncClient<netdev::MacAddressing>& client = open_result.value();
 
   MacAddress addr{{0x00, 0x01, 0x02, 0x03, 0x04, 0x05}};
-  fidl::WireResult add = client.AddMulticastAddress(addr);
+  fidl::WireResult add = client->AddMulticastAddress(addr);
   ASSERT_OK(add.status());
   ASSERT_STATUS(add.value().status, ZX_ERR_INVALID_ARGS);
 
   // same thing should happen for RemoveMulticastAddress:
-  fidl::WireResult remove = client.RemoveMulticastAddress(addr);
+  fidl::WireResult remove = client->RemoveMulticastAddress(addr);
   ASSERT_OK(remove.status());
   ASSERT_STATUS(remove.value().status, ZX_ERR_INVALID_ARGS);
 }
@@ -194,14 +194,14 @@ TEST_F(MacDeviceTest, AddRemoveMulticastFilter) {
   fidl::WireSyncClient<netdev::MacAddressing>& client = open_result.value();
 
   MacAddress addr{{0x01, 0x01, 0x02, 0x03, 0x04, 0x05}};
-  fidl::WireResult add = client.AddMulticastAddress(addr);
+  fidl::WireResult add = client->AddMulticastAddress(addr);
   ASSERT_OK(add.status());
   ASSERT_OK(add.value().status);
   ASSERT_OK(impl_.WaitConfigurationChanged());
   ASSERT_EQ(impl_.mode(), MODE_MULTICAST_FILTER);
   ASSERT_THAT(impl_.addresses(), ::testing::Pointwise(MacEq(), {addr}));
 
-  fidl::WireResult remove = client.RemoveMulticastAddress(addr);
+  fidl::WireResult remove = client->RemoveMulticastAddress(addr);
   ASSERT_OK(remove.status());
   ASSERT_OK(impl_.WaitConfigurationChanged());
   ASSERT_EQ(impl_.mode(), MODE_MULTICAST_FILTER);
@@ -218,7 +218,7 @@ TEST_F(MacDeviceTest, OverflowsIntoMulticastPromiscuous) {
 
   for (size_t i = 0; i < impl_.features().multicast_filter_count + 1; i++) {
     MacAddress addr{{0x01, 0x00, 0x00, 0x00, 0x00, static_cast<unsigned char>(i)}};
-    fidl::WireResult result = client.AddMulticastAddress(addr);
+    fidl::WireResult result = client->AddMulticastAddress(addr);
     ASSERT_OK(result.status());
     ASSERT_OK(result.value().status);
     ASSERT_OK(impl_.WaitConfigurationChanged());
@@ -241,7 +241,7 @@ TEST_F(MacDeviceTest, MostPermissiveClientWins) {
 
   MacAddress addr{{0x01, 0x00, 0x00, 0x00, 0x00, 0x02}};
   {
-    fidl::WireResult result = cli1.AddMulticastAddress(addr);
+    fidl::WireResult result = cli1->AddMulticastAddress(addr);
     ASSERT_OK(result.status());
     ASSERT_OK(result.value().status);
     ASSERT_OK(impl_.WaitConfigurationChanged());
@@ -249,7 +249,7 @@ TEST_F(MacDeviceTest, MostPermissiveClientWins) {
     ASSERT_EQ(impl_.addresses().size(), 1ul);
   }
   {
-    fidl::WireResult result = cli2.SetMode(netdev::wire::MacFilterMode::kPromiscuous);
+    fidl::WireResult result = cli2->SetMode(netdev::wire::MacFilterMode::kPromiscuous);
     ASSERT_OK(result.status());
     ASSERT_OK(result.value().status);
     ASSERT_OK(impl_.WaitConfigurationChanged());
@@ -257,7 +257,7 @@ TEST_F(MacDeviceTest, MostPermissiveClientWins) {
     ASSERT_TRUE(impl_.addresses().empty());
   }
   // Remove second instance and check that the mode fell back to the first one.
-  cli2.mutable_channel()->reset();
+  cli2 = {};
   ASSERT_OK(impl_.WaitConfigurationChanged());
   ASSERT_EQ(impl_.mode(), MODE_MULTICAST_FILTER);
   ASSERT_EQ(impl_.addresses().size(), 1ul);
@@ -271,14 +271,14 @@ TEST_F(MacDeviceTest, FallsBackToDefaultMode) {
   ASSERT_OK(open_result.status_value());
   fidl::WireSyncClient<netdev::MacAddressing>& client = open_result.value();
 
-  fidl::WireResult result = client.SetMode(netdev::wire::MacFilterMode::kPromiscuous);
+  fidl::WireResult result = client->SetMode(netdev::wire::MacFilterMode::kPromiscuous);
   ASSERT_OK(result.status());
   ASSERT_OK(result.value().status);
   ASSERT_OK(impl_.WaitConfigurationChanged());
   ASSERT_EQ(impl_.mode(), MODE_PROMISCUOUS);
 
   // close the instance and check that we fell back to the default mode.
-  client.mutable_channel()->reset();
+  client = {};
   ASSERT_OK(impl_.WaitConfigurationChanged());
   ASSERT_EQ(impl_.mode(), MODE_MULTICAST_FILTER);
   ASSERT_TRUE(impl_.addresses().empty());

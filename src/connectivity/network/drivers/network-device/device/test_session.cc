@@ -23,7 +23,7 @@ zx_status_t TestSession::Open(fidl::WireSyncClient<netdev::Device>& netdevice, c
 
   auto session_name = fidl::StringView::FromExternal(name);
 
-  auto res = netdevice.OpenSession(std::move(session_name), std::move(info));
+  auto res = netdevice->OpenSession(std::move(session_name), std::move(info));
   if (res.status() != ZX_OK) {
     return res.status();
   }
@@ -39,7 +39,7 @@ zx_status_t TestSession::Open(fidl::WireSyncClient<netdev::Device>& netdevice, c
 
 zx_status_t TestSession::Init(uint16_t descriptor_count, uint64_t buffer_size) {
   zx_status_t status;
-  if (descriptors_vmo_.is_valid() || data_vmo_.is_valid() || session_.channel().is_valid()) {
+  if (descriptors_vmo_.is_valid() || data_vmo_.is_valid() || session_.is_valid()) {
     return ZX_ERR_BAD_STATE;
   }
 
@@ -89,7 +89,7 @@ void TestSession::Setup(fidl::ClientEnd<netdev::Session> session, netdev::wire::
 
 zx_status_t TestSession::AttachPort(uint8_t port_id,
                                     std::vector<netdev::wire::FrameType> frame_types) {
-  fidl::WireResult wire_result = session_.Attach(
+  fidl::WireResult wire_result = session_->Attach(
       port_id, fidl::VectorView<netdev::wire::FrameType>::FromExternal(frame_types));
   if (!wire_result.ok()) {
     return wire_result.status();
@@ -104,7 +104,7 @@ zx_status_t TestSession::AttachPort(uint8_t port_id,
 }
 
 zx_status_t TestSession::DetachPort(uint8_t port_id) {
-  fidl::WireResult wire_result = session_.Detach(port_id);
+  fidl::WireResult wire_result = session_->Detach(port_id);
   if (!wire_result.ok()) {
     return wire_result.status();
   }
@@ -117,10 +117,10 @@ zx_status_t TestSession::DetachPort(uint8_t port_id) {
   }
 }
 
-zx_status_t TestSession::Close() { return session_.Close().status(); }
+zx_status_t TestSession::Close() { return session_->Close().status(); }
 
 zx_status_t TestSession::WaitClosed(zx::time deadline) {
-  return session_.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, deadline, nullptr);
+  return session_.client_end().channel().wait_one(ZX_CHANNEL_PEER_CLOSED, deadline, nullptr);
 }
 
 buffer_descriptor_t& TestSession::ResetDescriptor(uint16_t index) {

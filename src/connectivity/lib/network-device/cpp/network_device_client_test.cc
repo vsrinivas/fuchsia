@@ -107,7 +107,7 @@ class NetDeviceTest : public gtest::RealLoopFixture {
     }
     fidl::WireSyncClient tun = fidl::BindSyncClient(std::move(tunctl.value()));
     if (zx_status_t status =
-            tun.CreateDevice(std::move(config), std::move(device_endpoints->server)).status();
+            tun->CreateDevice(std::move(config), std::move(device_endpoints->server)).status();
         status != ZX_OK) {
       return zx::error(status);
     }
@@ -163,7 +163,7 @@ class NetDeviceTest : public gtest::RealLoopFixture {
     }
     fidl::WireSyncClient tun = fidl::BindSyncClient(std::move(tunctl.value()));
     if (zx_status_t status =
-            tun.CreatePair(std::move(config), std::move(device_pair_endpoints->server)).status();
+            tun->CreatePair(std::move(config), std::move(device_pair_endpoints->server)).status();
         status != ZX_OK) {
       return zx::error(status);
     }
