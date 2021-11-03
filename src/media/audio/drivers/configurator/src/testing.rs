@@ -9,7 +9,7 @@ pub mod tests {
     use async_trait::async_trait;
     use device_watcher;
     use fidl_fuchsia_io;
-    use fuchsia_component_test::{builder::RealmBuilder, RealmInstance};
+    use fuchsia_component_test::{RealmBuilder, RealmInstance};
     use fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance};
 
     use crate::configurator::Configurator;
@@ -27,9 +27,9 @@ pub mod tests {
 
     pub async fn get_dev_proxy() -> Result<(RealmInstance, fidl_fuchsia_io::DirectoryProxy), Error>
     {
-        let mut realm = RealmBuilder::new().await?;
+        let realm = RealmBuilder::new().await?;
         realm.driver_test_realm_setup().await?;
-        let instance = realm.build().create().await?;
+        let instance = realm.build().await?;
         instance.driver_test_realm_start(fidl_fuchsia_driver_test::RealmArgs::EMPTY).await?;
         let dev_dir = instance.driver_test_realm_connect_to_dev()?;
         let codecs_dir = io_util::directory::open_directory(

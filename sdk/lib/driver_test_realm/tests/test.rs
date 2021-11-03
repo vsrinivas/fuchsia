@@ -6,7 +6,7 @@ use {
     anyhow::{Context, Result},
     fidl_fuchsia_driver_development as fdd, fidl_fuchsia_driver_test as fdt,
     fuchsia_async as fasync,
-    fuchsia_component_test::builder::RealmBuilder,
+    fuchsia_component_test::RealmBuilder,
     fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
 };
 
@@ -37,10 +37,10 @@ async fn get_driver_info(
 // are loaded.
 #[fasync::run_singlethreaded(test)]
 async fn test_empty_args() -> Result<()> {
-    let mut realm = RealmBuilder::new().await?;
+    let realm = RealmBuilder::new().await?;
     realm.driver_test_realm_setup().await?;
 
-    let instance = realm.build().create().await?;
+    let instance = realm.build().await?;
 
     instance.driver_test_realm_start(fdt::RealmArgs::EMPTY).await?;
 
@@ -64,10 +64,10 @@ async fn test_empty_args() -> Result<()> {
 // Manually open our /pkg directory and pass it to DriverTestRealm to see that it works.
 #[fasync::run_singlethreaded(test)]
 async fn test_pkg_dir() -> Result<()> {
-    let mut realm = RealmBuilder::new().await?;
+    let realm = RealmBuilder::new().await?;
     realm.driver_test_realm_setup().await?;
 
-    let instance = realm.build().create().await?;
+    let instance = realm.build().await?;
 
     let (pkg, pkg_server) =
         fidl::endpoints::create_endpoints::<fidl_fuchsia_io::DirectoryMarker>()?;
@@ -96,10 +96,10 @@ async fn test_pkg_dir() -> Result<()> {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_root_driver() -> Result<()> {
-    let mut realm = RealmBuilder::new().await?;
+    let realm = RealmBuilder::new().await?;
     realm.driver_test_realm_setup().await?;
 
-    let instance = realm.build().create().await?;
+    let instance = realm.build().await?;
     let args = fdt::RealmArgs {
         root_driver: Some("fuchsia-boot:///#driver/platform-bus.so".to_string()),
         ..fdt::RealmArgs::EMPTY

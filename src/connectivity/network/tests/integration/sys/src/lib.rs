@@ -11,9 +11,7 @@ use {
     fidl_fuchsia_netstack as fnetstack,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
-        builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
-        mock::MockHandles,
-        RouteBuilder,
+        mock::MockHandles, ChildProperties, RealmBuilder, RouteBuilder, RouteEndpoint,
     },
     fuchsia_zircon as zx,
     futures::{FutureExt as _, StreamExt as _},
@@ -65,16 +63,17 @@ async fn start_with_cache_no_space() {
     const DIAGNOSTICS_DIR_NAME: &str = "diagnostics";
     const DIAGNOSTICS_DIR_PATH: &str = "/diagnostics";
 
-    let mut builder = RealmBuilder::new().await.expect("failed to create realm builder");
-    let _: &mut RealmBuilder = builder
-        .add_eager_component(NETSTACK_MONIKER, ComponentSource::url(Netstack2::VERSION.get_url()))
+    let builder = RealmBuilder::new().await.expect("failed to create realm builder");
+    let _: &RealmBuilder = builder
+        .add_child(NETSTACK_MONIKER, Netstack2::VERSION.get_url(), ChildProperties::new())
         .await
         .expect("failed to add netstack component")
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol(fnetstack::NetstackMarker::PROTOCOL_NAME),
-            source: RouteEndpoint::component(NETSTACK_MONIKER),
-            targets: vec![RouteEndpoint::AboveRoot],
-        })
+        .add_route(
+            RouteBuilder::protocol(fnetstack::NetstackMarker::PROTOCOL_NAME)
+                .source(RouteEndpoint::component(NETSTACK_MONIKER))
+                .targets(vec![RouteEndpoint::AboveRoot]),
+        )
+        .await
         .unwrap_or_else(|e| {
             panic!(
                 "failed to expose {} from netstack: {}",
@@ -82,17 +81,18 @@ async fn start_with_cache_no_space() {
                 e,
             )
         })
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol(flogger::LogSinkMarker::PROTOCOL_NAME),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component(NETSTACK_MONIKER)],
-        })
+        .add_route(
+            RouteBuilder::protocol(flogger::LogSinkMarker::PROTOCOL_NAME)
+                .source(RouteEndpoint::AboveRoot)
+                .targets(vec![RouteEndpoint::component(NETSTACK_MONIKER)]),
+        )
+        .await
         .unwrap_or_else(|e| {
             panic!("failed to offer {} to netstack: {}", flogger::LogSinkMarker::PROTOCOL_NAME, e)
         })
-        .add_component(
+        .add_mock_child(
             MOCK_CACHE_MONIKER,
-            ComponentSource::mock(move |mock_handles: MockHandles| {
+            move |mock_handles: MockHandles| {
                 let cache = Clone::clone(&client);
                 Box::pin(async {
                     let mut fs = ServiceFs::new();
@@ -102,12 +102,12 @@ async fn start_with_cache_no_space() {
                     let () = fs.collect::<()>().await;
                     Ok(())
                 })
-            }),
+            },
+            ChildProperties::new(),
         )
         .await
         .expect("failed to add mock cache component");
-    let mut realm = builder.build();
-    let () = realm
+    let _: &RealmBuilder = builder
         .add_route(
             RouteBuilder::directory(CACHE_DIR_NAME, CACHE_DIR_PATH, fio2::RW_STAR_DIR)
                 .source(RouteEndpoint::component(MOCK_CACHE_MONIKER))
@@ -116,10 +116,8 @@ async fn start_with_cache_no_space() {
         )
         .await
         .expect("failed to route cache to netstack");
-    let mut netstack_decl = realm
-        .get_decl(&NETSTACK_MONIKER.into())
-        .await
-        .expect("failed to find netstack component decl");
+    let mut netstack_decl =
+        builder.get_decl(NETSTACK_MONIKER).await.expect("failed to find netstack component decl");
     let cm_rust::ComponentDecl { exposes, capabilities, .. } = &mut netstack_decl;
     // The netstack component exposes `/diagnostics` to `framework` with `connect` rights, in order
     // to serve inspect data. For this test, expose `/diagnostics` to `parent` instead, with `r*`
@@ -147,23 +145,19 @@ async fn start_with_cache_no_space() {
             })
             .expect("failed to find diagnostics capability");
     *rights = fio2::R_STAR_DIR;
-    let () = realm
-        .set_component(&NETSTACK_MONIKER.into(), netstack_decl)
+    let () = builder
+        .set_decl(NETSTACK_MONIKER, netstack_decl)
         .await
         .expect("failed to modify netstack component decl");
-    let () = realm
-        .add_route(CapabilityRoute {
-            capability: Capability::directory(
-                DIAGNOSTICS_DIR_NAME,
-                DIAGNOSTICS_DIR_PATH,
-                fio2::R_STAR_DIR,
-            ),
-            source: RouteEndpoint::component(NETSTACK_MONIKER),
-            targets: vec![RouteEndpoint::AboveRoot],
-        })
+    let _: &RealmBuilder = builder
+        .add_route(
+            RouteBuilder::directory(DIAGNOSTICS_DIR_NAME, DIAGNOSTICS_DIR_PATH, fio2::R_STAR_DIR)
+                .source(RouteEndpoint::component(NETSTACK_MONIKER))
+                .targets(vec![RouteEndpoint::AboveRoot]),
+        )
         .await
         .expect("failed to expose diagnostics directory from netstack");
-    let realm_instance = realm.create().await.expect("error creating realm");
+    let realm_instance = builder.build().await.expect("error creating realm");
 
     let netstack = realm_instance
         .root

@@ -5,10 +5,9 @@
 use {
     anyhow::{anyhow, Result},
     fidl_fuchsia_driver_test as fdt, fidl_fuchsia_io2 as fio2,
-    fuchsia_component_test::builder::{
-        Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint,
+    fuchsia_component_test::{
+        ChildProperties, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
     },
-    fuchsia_component_test::RealmInstance,
 };
 
 pub const COMPONENT_NAME: &str = "driver_test_realm";
@@ -18,45 +17,51 @@ pub const DRIVER_TEST_REALM_URL: &str = "#meta/driver_test_realm.cm";
 pub trait DriverTestRealmBuilder {
     /// Set up the DriverTestRealm component in the RealmBuilder realm.
     /// This configures proper input/output routing of capabilities.
-    async fn driver_test_realm_setup(&mut self) -> Result<()>;
+    async fn driver_test_realm_setup(&self) -> Result<()>;
 }
 
 #[async_trait::async_trait]
 impl DriverTestRealmBuilder for RealmBuilder {
-    async fn driver_test_realm_setup(&mut self) -> Result<()> {
-        self.add_component(COMPONENT_NAME, ComponentSource::url(DRIVER_TEST_REALM_URL)).await?;
+    async fn driver_test_realm_setup(&self) -> Result<()> {
+        self.add_child(COMPONENT_NAME, DRIVER_TEST_REALM_URL, ChildProperties::new()).await?;
 
         let driver_realm = RouteEndpoint::component(COMPONENT_NAME);
-        self.add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.logger.LogSink"),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![driver_realm.clone()],
-        })?;
-        self.add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.process.Launcher"),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![driver_realm.clone()],
-        })?;
-        self.add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.sys.Launcher"),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![driver_realm.clone()],
-        })?;
-        self.add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.driver.development.DriverDevelopment"),
-            source: driver_realm.clone(),
-            targets: vec![RouteEndpoint::AboveRoot],
-        })?;
-        self.add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.driver.test.Realm"),
-            source: driver_realm.clone(),
-            targets: vec![RouteEndpoint::AboveRoot],
-        })?;
-        self.add_route(CapabilityRoute {
-            capability: Capability::directory("dev", "dev", fio2::RW_STAR_DIR),
-            source: driver_realm.clone(),
-            targets: vec![RouteEndpoint::AboveRoot],
-        })?;
+        self.add_route(
+            RouteBuilder::protocol("fuchsia.logger.LogSink")
+                .source(RouteEndpoint::AboveRoot)
+                .targets(vec![driver_realm.clone()]),
+        )
+        .await?;
+        self.add_route(
+            RouteBuilder::protocol("fuchsia.process.Launcher")
+                .source(RouteEndpoint::AboveRoot)
+                .targets(vec![driver_realm.clone()]),
+        )
+        .await?;
+        self.add_route(
+            RouteBuilder::protocol("fuchsia.sys.Launcher")
+                .source(RouteEndpoint::AboveRoot)
+                .targets(vec![driver_realm.clone()]),
+        )
+        .await?;
+        self.add_route(
+            RouteBuilder::protocol("fuchsia.driver.development.DriverDevelopment")
+                .source(driver_realm.clone())
+                .targets(vec![RouteEndpoint::AboveRoot]),
+        )
+        .await?;
+        self.add_route(
+            RouteBuilder::protocol("fuchsia.driver.test.Realm")
+                .source(driver_realm.clone())
+                .targets(vec![RouteEndpoint::AboveRoot]),
+        )
+        .await?;
+        self.add_route(
+            RouteBuilder::directory("dev", "dev", fio2::RW_STAR_DIR)
+                .source(driver_realm.clone())
+                .targets(vec![RouteEndpoint::AboveRoot]),
+        )
+        .await?;
         Ok(())
     }
 }

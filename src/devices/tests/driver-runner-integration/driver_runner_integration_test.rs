@@ -11,7 +11,7 @@ use {
     diagnostics_reader::{assert_data_tree, ArchiveReader, Logs},
     fasync::futures::StreamExt,
     fidl_fuchsia_driver_test as fdt, fuchsia_async as fasync,
-    fuchsia_component_test::builder::RealmBuilder,
+    fuchsia_component_test::RealmBuilder,
     fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
     std::convert::TryFrom,
 };
@@ -42,11 +42,11 @@ async fn driver_runner_test() -> Result<(), anyhow::Error> {
         )])
         .await?;
 
-    let mut realm = RealmBuilder::new().await?;
+    let builder = RealmBuilder::new().await?;
     // TODO(fxbug.dev/85884): This should be a relative URL but then driver_host2.cm doesn't resolve correctly.
-    realm.driver_test_realm_setup().await?;
+    builder.driver_test_realm_setup().await?;
 
-    let instance = realm.build().create().await?;
+    let instance = builder.build().await?;
 
     let args = fdt::RealmArgs {
         use_driver_framework_v2: Some(true),

@@ -235,7 +235,7 @@ mod tests {
             DeviceSynchronousProxy, RootDeviceSynchronousProxy, CONTROL_DEVICE,
         },
         fidl_fuchsia_driver_test as fdt,
-        fuchsia_component_test::{builder::RealmBuilder, RealmInstance},
+        fuchsia_component_test::{RealmBuilder, RealmInstance},
         fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
         matches::assert_matches,
     };
@@ -259,9 +259,9 @@ mod tests {
     /// `/dev` dir and the test control device directory. The RealmInstance must not be dropped
     /// while the DevMgr is in use.
     async fn create_isolated_devmgr() -> Result<IsolatedDevMgrTest, Error> {
-        let mut realm = RealmBuilder::new().await.unwrap();
+        let realm = RealmBuilder::new().await.unwrap();
         let _ = realm.driver_test_realm_setup().await?;
-        let realm = realm.build().create().await.expect("failed to build realm");
+        let realm = realm.build().await.expect("failed to build realm");
         let _ = realm.driver_test_realm_start(fdt::RealmArgs::EMPTY).await?;
 
         let dev_dir = io_util::directory::open_directory(

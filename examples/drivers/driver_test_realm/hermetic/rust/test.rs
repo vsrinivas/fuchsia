@@ -5,7 +5,7 @@
 use {
     anyhow::Result,
     fidl_fuchsia_driver_test as fdt, fuchsia_async as fasync,
-    fuchsia_component_test::builder::RealmBuilder,
+    fuchsia_component_test::RealmBuilder,
     fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
 };
 
@@ -13,10 +13,10 @@ use {
 #[fasync::run_singlethreaded(test)]
 async fn test_empty_args() -> Result<()> {
     // Create the RealmBuilder.
-    let mut realm = RealmBuilder::new().await?;
-    realm.driver_test_realm_setup().await?;
+    let builder = RealmBuilder::new().await?;
+    builder.driver_test_realm_setup().await?;
     // Build the Realm.
-    let instance = realm.build().create().await?;
+    let instance = builder.build().await?;
     // Start DriverTestRealm
     instance.driver_test_realm_start(fdt::RealmArgs::EMPTY).await?;
     // Connect to our driver.
@@ -28,10 +28,10 @@ async fn test_empty_args() -> Result<()> {
 #[fasync::run_singlethreaded(test)]
 async fn test_platform_bus() -> Result<()> {
     // Create the RealmBuilder.
-    let mut realm = RealmBuilder::new().await?;
-    realm.driver_test_realm_setup().await?;
+    let builder = RealmBuilder::new().await?;
+    builder.driver_test_realm_setup().await?;
     // Build the Realm.
-    let instance = realm.build().create().await?;
+    let instance = builder.build().await?;
     // Start DriverTestRealm.
     let args = fdt::RealmArgs {
         root_driver: Some("fuchsia-boot:///#driver/platform-bus.so".to_string()),

@@ -268,7 +268,7 @@ mod tests {
         super::*,
         fidl_fuchsia_bluetooth_test::EmulatorError,
         fidl_fuchsia_driver_test as fdt, fuchsia,
-        fuchsia_component_test::builder::RealmBuilder,
+        fuchsia_component_test::RealmBuilder,
         fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
     };
 
@@ -348,9 +348,9 @@ mod tests {
 
     #[fuchsia::test]
     async fn publish_lifecycle_with_realm() {
-        let mut realm = RealmBuilder::new().await.unwrap();
+        let realm = RealmBuilder::new().await.unwrap();
         realm.driver_test_realm_setup().await.unwrap();
-        let realm = realm.build().create().await.expect("failed to build realm");
+        let realm = realm.build().await.expect("failed to build realm");
         let args = fdt::RealmArgs {
             root_driver: Some("fuchsia-boot:///#driver/platform-bus.so".to_string()),
             ..fdt::RealmArgs::EMPTY

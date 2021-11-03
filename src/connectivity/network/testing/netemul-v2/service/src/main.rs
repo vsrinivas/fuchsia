@@ -15,8 +15,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceFsDir},
     fuchsia_component_test::{
-        self as fcomponent,
-        builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
+        self as fcomponent, ChildProperties, RealmBuilder, RouteBuilder, RouteEndpoint,
     },
     fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
     fuchsia_zircon as zx,
@@ -190,16 +189,17 @@ async fn create_realm_instance(
     let mut components_using_devfs = Vec::new();
 
     let mut builder = RealmBuilder::new().await?;
-    let _: &mut RealmBuilder = builder
-        .add_component(
+    let _: &RealmBuilder = builder
+        .add_mock_child(
             NETEMUL_SERVICES_COMPONENT_NAME,
-            ComponentSource::mock(move |mock_handles: fcomponent::mock::MockHandles| {
+            move |mock_handles: fcomponent::mock::MockHandles| {
                 Box::pin(run_netemul_services(
                     mock_handles,
                     network_realm.clone(),
                     Clone::clone(&devfs_proxy),
                 ))
-            }),
+            },
+            ChildProperties::new(),
         )
         .await?;
     for ChildDef { url, name, exposes, uses, program_args, eager, .. } in
@@ -207,15 +207,13 @@ async fn create_realm_instance(
     {
         let url = url.ok_or(CreateRealmError::UrlNotProvided)?;
         let name = name.ok_or(CreateRealmError::NameNotProvided)?;
+        let mut child = ChildProperties::new();
         if eager.unwrap_or(false) {
-            let _: &mut RealmBuilder =
-                builder.add_eager_component(name.as_ref(), ComponentSource::url(&url)).await?;
-        } else {
-            let _: &mut RealmBuilder =
-                builder.add_component(name.as_ref(), ComponentSource::url(&url)).await?;
+            child = child.eager();
         }
+        let _: &RealmBuilder = builder.add_child(name.as_ref(), &url, child).await?;
         if let Some(program_args) = program_args {
-            // This assertion should always pass because `RealmBuilder::add_component` will have
+            // This assertion should always pass because `RealmBuilder::add_child` will have
             // failed already if a component with the same moniker already exists in the realm.
             assert_eq!(modified_program_args.insert(name.clone(), program_args), None);
         }
@@ -236,11 +234,13 @@ async fn create_realm_instance(
                         );
                     }
                     std::collections::hash_map::Entry::Vacant(entry) => {
-                        let _: &mut RealmBuilder = builder.add_route(CapabilityRoute {
-                            capability: Capability::protocol(entry.key()),
-                            source: RouteEndpoint::component(&name),
-                            targets: vec![RouteEndpoint::AboveRoot],
-                        })?;
+                        let _: &RealmBuilder = builder
+                            .add_route(
+                                RouteBuilder::protocol(entry.key())
+                                    .source(RouteEndpoint::component(&name))
+                                    .targets(vec![RouteEndpoint::AboveRoot]),
+                            )
+                            .await?;
                         let _: &mut String = entry.insert(name.clone());
                     }
                 }
@@ -290,13 +290,14 @@ async fn create_realm_instance(
                             }
                             fnetemul::Capability::NetemulSyncManager(fnetemul::Empty {}) => todo!(),
                             fnetemul::Capability::NetemulNetworkContext(fnetemul::Empty {}) => {
-                                let () = route_network_context_to_component(&mut builder, &name)?;
+                                let () =
+                                    route_network_context_to_component(&builder, &name).await?;
                                 UniqueCapability::new_protocol::<
                                     fnetemul_network::NetworkContextMarker,
                                 >()
                             }
                             fnetemul::Capability::LogSink(fnetemul::Empty {}) => {
-                                let () = route_log_sink_to_component(&mut builder, &name)?;
+                                let () = route_log_sink_to_component(&builder, &name).await?;
                                 UniqueCapability::new_protocol::<flogger::LogSinkMarker>()
                             }
                             fnetemul::Capability::ChildDep(fnetemul::ChildDep {
@@ -312,11 +313,11 @@ async fn create_realm_instance(
                                     "routing capability '{}' from component '{}' to '{}'",
                                     capability, source, name
                                 );
-                                let () = child_dep_routes.push(CapabilityRoute {
-                                    capability: Capability::protocol(&capability),
-                                    source: RouteEndpoint::component(source),
-                                    targets: vec![RouteEndpoint::component(&name)],
-                                });
+                                let () = child_dep_routes.push(
+                                    RouteBuilder::protocol(&capability)
+                                        .source(RouteEndpoint::component(source))
+                                        .targets(vec![RouteEndpoint::component(&name)]),
+                                );
                                 UniqueCapability::Protocol { proto_name: capability.into() }
                             }
                             fnetemul::Capability::StorageDep(fnetemul::StorageDep {
@@ -329,14 +330,16 @@ async fn create_realm_instance(
                                 let variant = StorageVariant(variant);
                                 let mount_path =
                                     path.ok_or(CreateRealmError::StorageCapabilityPathNotProvided)?;
-                                let _: &mut RealmBuilder = builder.add_route(CapabilityRoute {
-                                    capability: Capability::storage(
-                                        variant.to_string(),
-                                        mount_path.to_string(),
-                                    ),
-                                    source: RouteEndpoint::AboveRoot,
-                                    targets: vec![RouteEndpoint::component(&name)],
-                                })?;
+                                let _: &RealmBuilder = builder
+                                    .add_route(
+                                        RouteBuilder::storage(
+                                            variant.to_string(),
+                                            mount_path.to_string(),
+                                        )
+                                        .source(RouteEndpoint::AboveRoot)
+                                        .targets(vec![RouteEndpoint::component(&name)]),
+                                    )
+                                    .await?;
                                 UniqueCapability::Storage { mount_path: mount_path.into() }
                             }
                         };
@@ -358,18 +361,19 @@ async fn create_realm_instance(
         }
     }
     for route in child_dep_routes {
-        let _: &mut RealmBuilder = builder.add_route(route)?;
+        let _: &RealmBuilder = builder.add_route(route).await?;
     }
-    let mut realm = builder.build();
     // Override the program args section of the component declaration for components that specified
     // args.
     for (component, program_args) in modified_program_args {
-        let moniker = fcomponent::Moniker::from(component.as_ref());
-        let mut decl = realm.get_decl(&moniker).await?;
+        let mut decl = builder.get_decl(component.as_str()).await?;
         let cm_rust::ComponentDecl { program, .. } = &mut decl;
         // Create `program` if it is None.
-        let cm_rust::ProgramDecl { runner: _, info } =
-            program.as_mut().ok_or(CreateRealmError::ModifiedNonexistentProgram(component))?;
+        let cm_rust::ProgramDecl { runner: _, info } = if let Some(program) = program.as_mut() {
+            program
+        } else {
+            return Err(CreateRealmError::ModifiedNonexistentProgram(component));
+        };
         let fdata::Dictionary { ref mut entries, .. } = info;
         // Create `entries` if it is None.
         let entries = entries.get_or_insert_with(|| Vec::default());
@@ -392,9 +396,9 @@ async fn create_realm_instance(
                     .push(fdata::DictionaryEntry { key: ARGS_KEY.to_string(), value: args_value });
             }
         };
-        let () = realm.set_component(&moniker, decl).await?;
+        let () = builder.set_decl(component.as_str(), decl).await?;
     }
-    let mut decl = realm.get_decl(&fcomponent::Moniker::root()).await?;
+    let mut decl = builder.get_decl(fcomponent::Moniker::root()).await?;
     let cm_rust::ComponentDecl { offers, exposes, .. } = &mut decl;
     let () = exposes.push(cm_rust::ExposeDecl::Directory(cm_rust::ExposeDirectoryDecl {
         source: cm_rust::ExposeSource::Framework,
@@ -417,11 +421,10 @@ async fn create_realm_instance(
             subdir: subdir.map(std::path::PathBuf::from),
         }));
     }
-    let () = realm.set_component(&fcomponent::Moniker::root(), decl).await?;
+    let () = builder.set_decl(fcomponent::Moniker::root(), decl).await?;
 
     // Expose `devfs` from the netemul-services component.
-    let netemul_services_moniker = fcomponent::Moniker::from(NETEMUL_SERVICES_COMPONENT_NAME);
-    let mut netemul_services = realm.get_decl(&netemul_services_moniker).await?;
+    let mut netemul_services = builder.get_decl(NETEMUL_SERVICES_COMPONENT_NAME).await?;
     let cm_rust::ComponentDecl { exposes, capabilities, .. } = &mut netemul_services;
     let () = exposes.push(cm_rust::ExposeDecl::Directory(cm_rust::ExposeDirectoryDecl {
         source: cm_rust::ExposeSource::Self_,
@@ -439,13 +442,13 @@ async fn create_realm_instance(
         }),
         rights: fio2::RW_STAR_DIR,
     }));
-    let () = realm.set_component(&netemul_services_moniker, netemul_services).await?;
+    let () = builder.set_decl(NETEMUL_SERVICES_COMPONENT_NAME, netemul_services).await?;
 
     let name =
         name.map(|name| format!("{}-{}", prefix, name)).unwrap_or_else(|| prefix.to_string());
     info!("creating new ManagedRealm with name '{}'", name);
-    let () = realm.set_collection_name(REALM_COLLECTION_NAME);
-    realm.create_with_name(name).await.map_err(Into::into)
+    let () = builder.set_collection_name(REALM_COLLECTION_NAME);
+    builder.build_with_name(name).await.map_err(Into::into)
 }
 
 struct ManagedRealm {
@@ -739,27 +742,31 @@ async fn open_or_create_dir(
     Ok(root)
 }
 
-fn route_network_context_to_component(
-    builder: &mut RealmBuilder,
+async fn route_network_context_to_component(
+    builder: &RealmBuilder,
     component: &str,
 ) -> Result<(), fcomponent::error::Error> {
-    let _: &mut RealmBuilder = builder.add_route(CapabilityRoute {
-        capability: Capability::protocol(fnetemul_network::NetworkContextMarker::PROTOCOL_NAME),
-        source: RouteEndpoint::component(NETEMUL_SERVICES_COMPONENT_NAME),
-        targets: vec![RouteEndpoint::component(component)],
-    })?;
+    let _: &RealmBuilder = builder
+        .add_route(
+            RouteBuilder::protocol(fnetemul_network::NetworkContextMarker::PROTOCOL_NAME)
+                .source(RouteEndpoint::component(NETEMUL_SERVICES_COMPONENT_NAME))
+                .targets(vec![RouteEndpoint::component(component)]),
+        )
+        .await?;
     Ok(())
 }
 
-fn route_log_sink_to_component(
-    builder: &mut RealmBuilder,
+async fn route_log_sink_to_component(
+    builder: &RealmBuilder,
     component: &str,
 ) -> Result<(), fcomponent::error::Error> {
-    let _: &mut RealmBuilder = builder.add_route(CapabilityRoute {
-        capability: Capability::protocol(flogger::LogSinkMarker::PROTOCOL_NAME),
-        source: RouteEndpoint::AboveRoot,
-        targets: vec![RouteEndpoint::component(component)],
-    })?;
+    let _: &RealmBuilder = builder
+        .add_route(
+            RouteBuilder::protocol(flogger::LogSinkMarker::PROTOCOL_NAME)
+                .source(RouteEndpoint::AboveRoot)
+                .targets(vec![RouteEndpoint::component(component)]),
+        )
+        .await?;
     Ok(())
 }
 
@@ -813,18 +820,20 @@ async fn setup_network_realm(
 
     let mut builder = RealmBuilder::new().await.context("error creating new realm builder")?;
     let () = builder.driver_test_realm_setup().await?;
-    let _: &mut RealmBuilder = builder
-        .add_component(
+    let _: &RealmBuilder = builder
+        .add_child(
             NETWORK_CONTEXT_COMPONENT_NAME,
-            ComponentSource::url(network_context_package_url),
+            network_context_package_url,
+            ChildProperties::new(),
         )
         .await
         .context("error adding network-context component")?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol(fnetemul_network::NetworkContextMarker::PROTOCOL_NAME),
-            source: RouteEndpoint::component(NETWORK_CONTEXT_COMPONENT_NAME),
-            targets: vec![RouteEndpoint::AboveRoot],
-        })
+        .add_route(
+            RouteBuilder::protocol(fnetemul_network::NetworkContextMarker::PROTOCOL_NAME)
+                .source(RouteEndpoint::component(NETWORK_CONTEXT_COMPONENT_NAME))
+                .targets(vec![RouteEndpoint::AboveRoot]),
+        )
+        .await
         .with_context(|| {
             format!(
                 "error adding route exposing capability '{}' from component '{}'",
@@ -832,11 +841,12 @@ async fn setup_network_realm(
                 NETWORK_CONTEXT_COMPONENT_NAME
             )
         })?
-        .add_route(CapabilityRoute {
-            capability: Capability::directory(DEVFS, DEVFS_PATH, fio2::R_STAR_DIR),
-            source: RouteEndpoint::component(fuchsia_driver_test::COMPONENT_NAME),
-            targets: vec![RouteEndpoint::component(NETWORK_CONTEXT_COMPONENT_NAME)],
-        })
+        .add_route(
+            RouteBuilder::directory(DEVFS, DEVFS_PATH, fio2::R_STAR_DIR)
+                .source(RouteEndpoint::component(fuchsia_driver_test::COMPONENT_NAME))
+                .targets(vec![RouteEndpoint::component(NETWORK_CONTEXT_COMPONENT_NAME)]),
+        )
+        .await
         .with_context(|| {
             format!(
                 "error adding route offering directory 'dev' from component '{}' to '{}'",
@@ -844,11 +854,12 @@ async fn setup_network_realm(
                 NETWORK_CONTEXT_COMPONENT_NAME
             )
         })?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol(fnet_tun::ControlMarker::PROTOCOL_NAME),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component(NETWORK_CONTEXT_COMPONENT_NAME)],
-        })
+        .add_route(
+            RouteBuilder::protocol(fnet_tun::ControlMarker::PROTOCOL_NAME)
+                .source(RouteEndpoint::AboveRoot)
+                .targets(vec![RouteEndpoint::component(NETWORK_CONTEXT_COMPONENT_NAME)]),
+        )
+        .await
         .with_context(|| {
             format!(
                 "error adding route offering capability '{}' to component '{}'",
@@ -856,21 +867,21 @@ async fn setup_network_realm(
                 NETWORK_CONTEXT_COMPONENT_NAME
             )
         })?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol(flogger::LogSinkMarker::PROTOCOL_NAME),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component(NETWORK_CONTEXT_COMPONENT_NAME)],
-        })
+        .add_route(
+            RouteBuilder::protocol(flogger::LogSinkMarker::PROTOCOL_NAME)
+                .source(RouteEndpoint::AboveRoot)
+                .targets(vec![RouteEndpoint::component(NETWORK_CONTEXT_COMPONENT_NAME)]),
+        )
+        .await
         .with_context(|| {
             format!(
                 "error adding route offering capability '{}' to components",
                 flogger::LogSinkMarker::PROTOCOL_NAME,
             )
         })?;
-    let mut realm = builder.build();
-    let () = realm.set_collection_name(REALM_COLLECTION_NAME);
-    let instance = realm
-        .create_with_name(format!("{}-network-realm", sandbox_name))
+    let () = builder.set_collection_name(REALM_COLLECTION_NAME);
+    let instance = builder
+        .build_with_name(format!("{}-network-realm", sandbox_name))
         .await
         .context("error creating realm instance")?;
     let () = instance.driver_test_realm_start(fidl_fuchsia_driver_test::RealmArgs::EMPTY).await?;
