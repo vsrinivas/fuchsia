@@ -7,7 +7,7 @@
 //! and deserialization implementations that perform the required validation.
 
 use {
-    fidl_fuchsia_sys2::{self as fsys},
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_sys2 as fsys,
     serde::de,
     serde::{Deserialize, Serialize},
     std::{borrow::Cow, default::Default, fmt, str::FromStr},
@@ -558,6 +558,7 @@ pub enum Durability {
 }
 
 symmetrical_enums!(Durability, fsys::Durability, Persistent, Transient, SingleRun);
+symmetrical_enums!(Durability, fdecl::Durability, Persistent, Transient, SingleRun);
 
 /// A component instance's startup mode. See [`StartupMode`].
 ///
@@ -570,6 +571,7 @@ pub enum StartupMode {
 }
 
 symmetrical_enums!(StartupMode, fsys::StartupMode, Lazy, Eager);
+symmetrical_enums!(StartupMode, fdecl::StartupMode, Lazy, Eager);
 
 impl Default for StartupMode {
     fn default() -> Self {
@@ -588,6 +590,7 @@ pub enum OnTerminate {
 }
 
 symmetrical_enums!(OnTerminate, fsys::OnTerminate, None, Reboot);
+symmetrical_enums!(OnTerminate, fdecl::OnTerminate, None, Reboot);
 
 impl Default for OnTerminate {
     fn default() -> Self {
@@ -607,6 +610,7 @@ pub enum AllowedOffers {
 }
 
 symmetrical_enums!(AllowedOffers, fsys::AllowedOffers, StaticOnly, StaticAndDynamic);
+symmetrical_enums!(AllowedOffers, fdecl::AllowedOffers, StaticOnly, StaticAndDynamic);
 
 impl Default for AllowedOffers {
     fn default() -> Self {
@@ -626,6 +630,7 @@ pub enum DependencyType {
 }
 
 symmetrical_enums!(DependencyType, fsys::DependencyType, Strong, Weak, WeakForMigration);
+symmetrical_enums!(DependencyType, fdecl::DependencyType, Strong, Weak, WeakForMigration);
 
 impl Default for DependencyType {
     fn default() -> Self {
@@ -639,7 +644,9 @@ pub enum StorageId {
     StaticInstanceId,
     StaticInstanceIdOrMoniker,
 }
+
 symmetrical_enums!(StorageId, fsys::StorageId, StaticInstanceId, StaticInstanceIdOrMoniker);
+symmetrical_enums!(StorageId, fdecl::StorageId, StaticInstanceId, StaticInstanceIdOrMoniker);
 
 #[cfg(test)]
 mod tests {
