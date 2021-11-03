@@ -53,7 +53,7 @@ zx::status<zx::job> GetRootJob(const zx::channel& svc_root) {
   }
 
   fidl::WireSyncClient<fuchsia_kernel::RootJob> job_client(std::move(local));
-  auto job_result = job_client.Get();
+  auto job_result = job_client->Get();
   if (!job_result.ok()) {
     fprintf(stderr, "svchost: unable to get root job\n");
     return zx::error(job_result.status());
@@ -76,7 +76,7 @@ zx::status<zx::resource> GetRootResource(const zx::channel& svc_root) {
   }
 
   fidl::WireSyncClient<fuchsia_boot::RootResource> client(std::move(local));
-  auto result = client.Get();
+  auto result = client->Get();
   if (!result.ok()) {
     fprintf(stderr, "svchost: unable to get root resource\n");
     return zx::error(result.status());
