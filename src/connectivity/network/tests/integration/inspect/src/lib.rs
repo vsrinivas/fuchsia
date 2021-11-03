@@ -4,7 +4,6 @@
 
 #![cfg(test)]
 
-use anyhow::Context as _;
 use diagnostics_hierarchy::Property;
 use fuchsia_async as fasync;
 use fuchsia_inspect::testing::TreeAssertion;
@@ -95,15 +94,15 @@ impl fuchsia_inspect::testing::PropertyAssertion for AddressMatcher {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn inspect_nic() -> Result {
+async fn inspect_nic() {
     // The number of IPv6 addresses that the stack will assign to an interface.
     const EXPECTED_NUM_IPV6_ADDRESSES: usize = 1;
 
-    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
-    let network = sandbox.create_network("net").await.context("failed to create network")?;
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let network = sandbox.create_network("net").await.expect("failed to create network");
     let realm = sandbox
         .create_netstack_realm::<Netstack2, _>("inspect_nic")
-        .context("failed to create realm")?;
+        .expect("failed to create realm");
 
     const ETH_MAC: fidl_fuchsia_net::MacAddress = fidl_mac!("02:01:02:03:04:05");
     const NETDEV_MAC: fidl_fuchsia_net::MacAddress = fidl_mac!("02:0A:0B:0C:0D:0E");
@@ -116,7 +115,7 @@ async fn inspect_nic() -> Result {
             &netemul::InterfaceConfig::StaticIp(fidl_subnet!("192.168.0.1/24")),
         )
         .await
-        .context("failed to join network with ethernet endpoint")?;
+        .expect("failed to join network with ethernet endpoint");
     let netdev = realm
         .join_network_with(
             &network,
@@ -125,17 +124,18 @@ async fn inspect_nic() -> Result {
             &netemul::InterfaceConfig::StaticIp(fidl_subnet!("192.168.0.2/24")),
         )
         .await
-        .context("failed to join network with netdevice endpoint")?;
+        .expect("failed to join network with netdevice endpoint");
 
     let interfaces_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
-        .context("failed to connect to fuchsia.net.interfaces/State")?;
+        .expect("failed to connect to fuchsia.net.interfaces/State");
 
     // Wait for the world to stabilize and capture the state to verify inspect
     // data.
     let (loopback_props, netdev_props, eth_props) =
         fidl_fuchsia_net_interfaces_ext::wait_interface(
-            fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces_state)?,
+            fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces_state)
+                .expect("failed to create event stream"),
             &mut HashMap::new(),
             |if_map| {
                 let loopback =
@@ -175,7 +175,7 @@ async fn inspect_nic() -> Result {
             },
         )
         .await
-        .context("failed to wait for interfaces up and addresses configured")?;
+        .expect("failed to wait for interfaces up and addresses configured");
     let loopback_addrs = AddressMatcher::new(&loopback_props);
     let netdev_addrs = AddressMatcher::new(&netdev_props);
     let eth_addrs = AddressMatcher::new(&eth_props);
@@ -185,16 +185,16 @@ async fn inspect_nic() -> Result {
     const BOB_MAC: fidl_fuchsia_net::MacAddress = fidl_mac!("02:0A:0B:0C:0D:0E");
     let () = realm
         .connect_to_protocol::<fidl_fuchsia_net_neighbor::ControllerMarker>()
-        .context("failed to connect to Controller")?
+        .expect("failed to connect to Controller")
         .add_entry(eth.id(), &mut BOB_IP.clone(), &mut BOB_MAC.clone())
         .await
-        .context("add_entry FIDL error")?
+        .expect("add_entry FIDL error")
         .map_err(zx::Status::from_raw)
-        .context("add_entry failed")?;
+        .expect("add_entry failed");
 
     let data = get_inspect_data(&realm, "netstack", "NICs", "interfaces")
         .await
-        .context("get_inspect_data failed")?;
+        .expect("get_inspect_data failed");
     // Debug print the tree to make debugging easier in case of failures.
     println!("Got inspect data: {:#?}", data);
     use fuchsia_inspect::testing::{AnyProperty, NonZeroUintProperty};
@@ -380,27 +380,25 @@ async fn inspect_nic() -> Result {
         }
     });
 
-    let () = loopback_addrs.check().context("loopback addresses match failed")?;
-    let () = eth_addrs.check().context("ethernet addresses match failed")?;
-    let () = netdev_addrs.check().context("netdev addresses match failed")?;
-
-    Ok(())
+    let () = loopback_addrs.check().expect("loopback addresses match failed");
+    let () = eth_addrs.check().expect("ethernet addresses match failed");
+    let () = netdev_addrs.check().expect("netdev addresses match failed");
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn inspect_routing_table() -> Result {
-    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
+async fn inspect_routing_table() {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
     let realm = sandbox
         .create_netstack_realm::<Netstack2, _>("inspect_routing_table")
-        .context("failed to create realm")?;
+        .expect("failed to create realm");
 
     let netstack = realm
         .connect_to_protocol::<fidl_fuchsia_netstack::NetstackMarker>()
-        .context("failed to connect to fuchsia.netstack/Netstack")?;
+        .expect("failed to connect to fuchsia.netstack/Netstack");
 
     // Capture the state of the routing table to verify the inspect data, and
     // confirm that it's not empty.
-    let routing_table = netstack.get_route_table().await.context("get_route_table FIDL error")?;
+    let routing_table = netstack.get_route_table().await.expect("get_route_table FIDL error");
     assert!(!routing_table.is_empty());
     println!("Got routing table: {:#?}", routing_table);
 
@@ -429,12 +427,10 @@ async fn inspect_routing_table() -> Result {
 
     let data = get_inspect_data(&realm, "netstack", "Routes", "routes")
         .await
-        .context("get_inspect_data failed")?;
-    if let Err(e) = routing_table_assertion.run(&data) {
-        panic!("tree assertion fails: {}, inspect data is: {:#?}", e, data);
-    }
-
-    Ok(())
+        .expect("get_inspect_data failed");
+    let () = routing_table_assertion
+        .run(&data)
+        .unwrap_or_else(|e| panic!("tree assertion fails: {}, inspect data is: {:#?}", e, data));
 }
 
 struct PacketAttributes {
