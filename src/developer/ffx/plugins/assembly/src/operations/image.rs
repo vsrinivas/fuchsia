@@ -4,7 +4,7 @@
 
 use crate::base_package::{construct_base_package, BasePackage};
 use crate::blobfs::construct_blobfs;
-use crate::config::{from_reader, BoardConfig, ProductConfig};
+use crate::config::{from_reader, BoardConfig, PartialProductConfig, ProductConfig};
 use crate::fvm::{construct_fvm, Fvms};
 use crate::update_package::{construct_update, UpdatePackage};
 use crate::vbmeta::construct_vbmeta;
@@ -20,13 +20,18 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 
 pub fn assemble(args: ImageArgs) -> Result<()> {
-    let ImageArgs { product, board, outdir, gendir } = args;
+    let ImageArgs { product: products, board, outdir, gendir } = args;
 
     info!("Loading configuration files.");
-    info!("  product:  {}", product.display());
+    info!("  product:");
+    for product in &products {
+        info!("    {}", product.display());
+    }
     info!("    board:  {}", board.display());
 
-    let (product, board) = read_configs(product, board)?;
+    let (products, board) = read_configs(&products, board)?;
+    let product = ProductConfig::try_from_partials(products)?;
+
     let gendir = gendir.unwrap_or(outdir.clone());
 
     // Use the sdk to get the host tool paths.
@@ -147,15 +152,26 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
 }
 
 fn read_configs(
-    product: impl AsRef<Path>,
+    products: &[impl AsRef<Path>],
     board: impl AsRef<Path>,
-) -> Result<(ProductConfig, BoardConfig)> {
-    let mut product = File::open(product)?;
-    let mut board = File::open(board)?;
-    let product: ProductConfig =
-        from_reader(&mut product).context("Failed to read the product config")?;
-    let board: BoardConfig = from_reader(&mut board).context("Failed to read the board config")?;
-    Ok((product, board))
+) -> Result<(Vec<PartialProductConfig>, BoardConfig)> {
+    let products = products
+        .iter()
+        .map(read_config)
+        .collect::<Result<Vec<PartialProductConfig>>>()
+        .context("Unable to parse product configs")?;
+
+    let board: BoardConfig = read_config(board).context("Failed to read the board config")?;
+    Ok((products, board))
+}
+
+fn read_config<T>(path: impl AsRef<Path>) -> Result<T>
+where
+    T: serde::de::DeserializeOwned,
+{
+    let mut file = File::open(path.as_ref())
+        .context(format!("Unable to open file: {}", path.as_ref().display()))?;
+    from_reader(&mut file)
 }
 
 fn has_base_package(product: &ProductConfig) -> bool {

@@ -28,10 +28,12 @@ pub enum OperationClass {
 #[derive(Debug, FromArgs, PartialEq)]
 #[argh(subcommand, name = "image")]
 pub struct ImageArgs {
-    /// the configuration file that specifies the packages, binaries, and
-    /// settings specific to the product being assembled.
+    /// the configuration file(s) that specifies the packages, binaries, and
+    /// settings specific to the product being assembled.  If multiple files are
+    /// provided, they will be merged.  Only one can provide a kernel
+    /// configuration.
     #[argh(option)]
-    pub product: PathBuf,
+    pub product: Vec<PathBuf>,
 
     /// the configuration file that specifies the packages, binaries, and
     /// settings specific to the board being assembled.

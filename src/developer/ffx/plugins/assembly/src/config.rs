@@ -2,14 +2,133 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use assembly_fvm::FilesystemAttributes;
 use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, BTreeSet};
 use std::io::Read;
 use std::path::PathBuf;
 
-/// The set of information that defines a fuchsia product.
-#[derive(Deserialize, Serialize)]
+/// The set of information that defines a fuchsia product.  All fields are
+/// optional to allow for specifying incomplete configurations.
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PartialProductConfig {
+    /// The packages whose files get added to the base package. The
+    /// packages themselves are not added, but their individual files are
+    /// extracted and added to the base package. These files are needed
+    /// to bootstrap pkgfs.
+    #[serde(default)]
+    pub system: Vec<PathBuf>,
+
+    /// The packages that are in the base package list, which is added
+    /// to the base package (data/static_packages). These packages get
+    /// updated by flashing and OTAing, and cannot be garbage collected.
+    #[serde(default)]
+    pub base: Vec<PathBuf>,
+
+    /// The packages that are in the cache package list, which is added
+    /// to the base package (data/cache_packages). These packages get
+    /// updated by flashing and OTAing, but can be garbage collected.
+    #[serde(default)]
+    pub cache: Vec<PathBuf>,
+
+    /// The parameters that specify which kernel to put into the ZBI.
+    pub kernel: Option<PartialKernelConfig>,
+
+    /// The list of additional boot args to add.
+    #[serde(default)]
+    pub boot_args: Vec<String>,
+
+    /// The set of files to be placed in BOOTFS in the ZBI.
+    #[serde(default)]
+    pub bootfs_files: Vec<FileEntry>,
+}
+
+impl PartialProductConfig {
+    /// Create a new PartialProductConfig by merging N PartialProductConfigs.
+    /// At most one can specify a kernel path, or a clock backstop.
+    ///
+    /// Packages in the base and cache sets are deduplicated, as are any boot
+    /// arguments, kernel args, or packages used to provide files for the system
+    /// itself.
+    ///
+    /// bootfs entries are merged, and any entries with duplicate destination
+    /// paths will cause an error.
+    pub fn try_from_partials(configs: Vec<PartialProductConfig>) -> Result<Self> {
+        let mut system = BTreeSet::new();
+        let mut base = BTreeSet::new();
+        let mut cache = BTreeSet::new();
+        let mut boot_args = BTreeSet::new();
+        let mut bootfs_files = BTreeMap::new();
+
+        let mut kernel_path = None;
+        let mut kernel_args = Vec::new();
+        let mut kernel_clock_backstop = None;
+
+        for config in configs {
+            system.extend(config.system);
+            base.extend(config.base);
+            cache.extend(config.cache);
+            boot_args.extend(config.boot_args);
+
+            for entry in config.bootfs_files {
+                add_bootfs_file(&mut bootfs_files, entry)?;
+            }
+
+            if let Some(PartialKernelConfig { path, mut args, clock_backstop }) = config.kernel {
+                set_option_once_or(
+                    &mut kernel_path,
+                    path,
+                    anyhow!("Only one product configuration can specify a kernel path"),
+                )?;
+                kernel_args.append(&mut args);
+
+                set_option_once_or(
+                    &mut kernel_clock_backstop,
+                    clock_backstop,
+                    anyhow!("Only one product configuration can specify a backstop time"),
+                )?;
+            }
+        }
+
+        Ok(Self {
+            system: system.into_iter().collect(),
+            base: base.into_iter().collect(),
+            cache: cache.into_iter().collect(),
+            kernel: Some(PartialKernelConfig {
+                path: kernel_path,
+                args: kernel_args,
+                clock_backstop: kernel_clock_backstop,
+            }),
+            boot_args: boot_args.into_iter().collect(),
+            bootfs_files: bootfs_files.into_values().collect(),
+        })
+    }
+}
+
+/// Helper fn to insert into an empty Option, or return an Error.
+fn set_option_once_or<T, E>(
+    opt: &mut Option<T>,
+    value: impl Into<Option<T>>,
+    e: E,
+) -> Result<(), E> {
+    let value = value.into();
+    if value.is_none() {
+        Ok(())
+    } else {
+        if opt.is_some() {
+            Err(e)
+        } else {
+            *opt = value;
+            Ok(())
+        }
+    }
+}
+
+/// The set of information that defines a fuchsia product.  This is capable of
+/// being a complete configuration (it at least has a kernel).
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ProductConfig {
     /// The packages whose files get added to the base package. The
@@ -43,8 +162,78 @@ pub struct ProductConfig {
     pub bootfs_files: Vec<FileEntry>,
 }
 
+impl ProductConfig {
+    /// Create a new ProductConfig by merging N PartialProductConfigs, only one
+    /// of which must specify the kernel path and the clock_backstop.
+    ///
+    /// Packages in the base and cache sets are deduplicated, as are any boot
+    /// arguments, kernel args, or packages used to provide files for the system
+    /// itself.
+    ///
+    /// bootfs entries are merged, and any entries with duplicate destination
+    /// paths will cause an error.
+    pub fn try_from_partials(configs: Vec<PartialProductConfig>) -> Result<Self> {
+        let PartialProductConfig { system, base, cache, kernel, boot_args, bootfs_files } =
+            PartialProductConfig::try_from_partials(configs)?;
+
+        let PartialKernelConfig { path: kernel_path, args: cmdline_args, clock_backstop } =
+            kernel.ok_or(anyhow!("A kernel configuration must be specified"))?;
+
+        let kernel_path =
+            kernel_path.ok_or(anyhow!("No product configurations specify a kernel"))?;
+        let clock_backstop = clock_backstop
+            .ok_or(anyhow!("No product configurations specify a clock backstop time"))?;
+
+        Ok(Self {
+            system,
+            base,
+            cache,
+            kernel: KernelConfig { path: kernel_path, args: cmdline_args, clock_backstop },
+            boot_args,
+            bootfs_files,
+        })
+    }
+}
+
+/// Attempt to add the given entry to the map of bootfs entries.
+/// Returns an error if it duplicates an existing entry.
+fn add_bootfs_file(
+    bootfs_entries: &mut BTreeMap<String, FileEntry>,
+    entry: FileEntry,
+) -> Result<()> {
+    if let Some(existing_entry) = bootfs_entries.get(&entry.destination) {
+        if existing_entry.source != entry.source {
+            return Err(anyhow!(format!(
+                "Found a duplicate bootfs entry for destination: {}, with sources:\n{}\n{}",
+                entry.destination,
+                entry.source.display(),
+                existing_entry.source.display()
+            )));
+        }
+    } else {
+        bootfs_entries.insert(entry.destination.clone(), entry);
+    }
+    Ok(())
+}
+
+/// The information required to specify a kernel and its arguments, all optional
+/// to allow for the partial specification
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct PartialKernelConfig {
+    /// The path to the prebuilt kernel.
+    pub path: Option<PathBuf>,
+
+    /// The list of command line arguments to pass to the kernel on startup.
+    #[serde(default)]
+    pub args: Vec<String>,
+
+    /// The backstop UTC time for the clock.
+    pub clock_backstop: Option<u64>,
+}
+
 /// The information required to specify a kernel and its arguments.
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct KernelConfig {
     /// The path to the prebuilt kernel.
@@ -112,7 +301,7 @@ fn default_base_package_name() -> String {
 }
 
 /// A mapping between a file source and destination.
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct FileEntry {
     /// The path of the source file.
@@ -354,10 +543,13 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use matches::assert_matches;
+    use serde_json::json;
     use std::path::Path;
 
     impl ProductConfig {
-        /// Helper function for tests for constructing a ProductConfig.
+        /// Helper function for constructing a ProductConfig in tests in this
+        /// and other modules within the crate.
         pub fn new(kernel_path: impl AsRef<Path>, clock_backstop: u64) -> Self {
             Self {
                 system: Vec::default(),
@@ -375,7 +567,8 @@ mod tests {
     }
 
     impl BoardConfig {
-        /// Helper function for tests for constructing a BoardConfig.
+        /// Helper function for constructing a BoardConfig for tests in this
+        /// and other modules within the crate.
         pub fn new(name: impl AsRef<str>) -> Self {
             Self {
                 version_file: None,
@@ -391,6 +584,42 @@ mod tests {
                 recovery: None,
             }
         }
+    }
+
+    #[test]
+    fn test_set_option_once() {
+        let mut opt = None;
+
+        // should be able to set None on None.
+        assert!(
+            set_option_once_or(&mut opt, None, anyhow!("an error")).is_ok(),
+            "Setting None on None failed"
+        );
+
+        // should be able to set Value on None.
+        assert!(
+            set_option_once_or(&mut opt, Some("some value"), anyhow!("an error")).is_ok(),
+            "initial set value failed"
+        );
+        assert_eq!(opt, Some("some value"));
+
+        // setting None on Some should be a no-op.
+        assert!(
+            set_option_once_or(&mut opt, None, anyhow!("an error")).is_ok(),
+            "Setting None on Some failed"
+        );
+        assert_eq!(opt, Some("some value"), "Setting None on Some was not a no-op");
+
+        // setting Some on Some should fail.
+        assert!(
+            set_option_once_or(&mut opt, "other value", anyhow!("an error")).is_err(),
+            "Setting Some on Some did not fail"
+        );
+        assert_eq!(
+            opt,
+            Some("some value"),
+            "Setting Some(other) on Some(value) changed the value with an error"
+        );
     }
 
     #[test]
@@ -415,8 +644,11 @@ mod tests {
         "#;
 
         let mut cursor = std::io::Cursor::new(json);
-        let config: ProductConfig = from_reader(&mut cursor).expect("parse config");
-        assert_eq!(config.kernel.clock_backstop, 0);
+        let config: PartialProductConfig = from_reader(&mut cursor).expect("parse config");
+        assert_matches!(
+            config.kernel,
+            Some(PartialKernelConfig { path: Some(_), args: _, clock_backstop: Some(0) })
+        );
     }
 
     #[test]
@@ -444,8 +676,11 @@ mod tests {
         "#;
 
         let mut cursor = std::io::Cursor::new(json);
-        let config: ProductConfig = from_reader(&mut cursor).expect("parse config");
-        assert_eq!(config.kernel.clock_backstop, 0);
+        let config: PartialProductConfig = from_reader(&mut cursor).expect("parse config");
+        assert_matches!(
+            config.kernel,
+            Some(PartialKernelConfig { path: Some(_), args: _, clock_backstop: Some(0) })
+        );
     }
 
     #[test]
@@ -460,8 +695,11 @@ mod tests {
         "#;
 
         let mut cursor = std::io::Cursor::new(json);
-        let config: ProductConfig = from_reader(&mut cursor).expect("parse config");
-        assert_eq!(config.kernel.clock_backstop, 0);
+        let config: PartialProductConfig = from_reader(&mut cursor).expect("parse config");
+        assert_matches!(
+            config.kernel,
+            Some(PartialKernelConfig { path: Some(_), args: _, clock_backstop: Some(0) })
+        );
     }
 
     #[test]
@@ -566,6 +804,7 @@ mod tests {
     fn product_from_invalid_json_file() {
         let json = r#"
             {
+                "invalid": "data"
             }
         "#;
 
@@ -584,5 +823,118 @@ mod tests {
         let mut cursor = std::io::Cursor::new(json);
         let config: Result<BoardConfig> = from_reader(&mut cursor);
         assert!(config.is_err());
+    }
+
+    #[test]
+    fn merge_product_config() {
+        let config_a = serde_json::from_value::<PartialProductConfig>(json!({
+            "system": ["package0a"],
+            "base": ["package1a", "package2a"],
+            "cache": ["package3a", "package4a"],
+            "kernel": {
+                "path": "path/to/kernel",
+                "args": ["arg10", "arg20"],
+                "clock_backstop": 0
+            },
+            "bootfs_files": [
+                {
+                    "source": "path/to/source/a",
+                    "destination": "path/to/destination/a"
+                }
+            ],
+            "boot_args": [ "arg1a", "arg2a" ]
+        }))
+        .unwrap();
+
+        let config_b = serde_json::from_value::<PartialProductConfig>(json!({
+          "system": ["package0b"],
+          "base": ["package1a", "package2b"],
+          "cache": ["package3b", "package4b"],
+          "bootfs_files": [
+              {
+                  "source": "path/to/source/b",
+                  "destination": "path/to/destination/b"
+              }
+          ],
+          "boot_args": [ "arg1b", "arg2b" ]
+        }))
+        .unwrap();
+
+        let config_c = serde_json::from_value::<PartialProductConfig>(json!({
+          "system": ["package0c"],
+          "base": ["package1a", "package2c"],
+          "cache": ["package3c", "package4c"],
+          "bootfs_files": [
+              {
+                  "source": "path/to/source/c",
+                  "destination": "path/to/destination/c"
+              }
+          ],
+          "boot_args": [ "arg1c", "arg2c" ]
+        }))
+        .unwrap();
+
+        let result = ProductConfig::try_from_partials(vec![config_a, config_b, config_c]).unwrap();
+
+        let expected = serde_json::from_value::<ProductConfig>(json!({
+            "system": ["package0a", "package0b", "package0c"],
+            "base": ["package1a", "package2a", "package2b", "package2c"],
+            "cache": ["package3a", "package3b", "package3c", "package4a", "package4b", "package4c"],
+            "kernel": {
+                "path": "path/to/kernel",
+                "args": ["arg10", "arg20"],
+                "clock_backstop": 0
+            },
+            "bootfs_files": [
+                {
+                    "source": "path/to/source/a",
+                    "destination": "path/to/destination/a"
+                },
+                {
+                    "source": "path/to/source/b",
+                    "destination": "path/to/destination/b"
+                },
+                {
+                    "source": "path/to/source/c",
+                    "destination": "path/to/destination/c"
+                },
+            ],
+            "boot_args": [ "arg1a", "arg1b", "arg1c", "arg2a", "arg2b", "arg2c" ]
+        }))
+        .unwrap();
+
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_fail_merge_with_no_kernel() {
+        let config_a = PartialProductConfig::default();
+        let config_b = PartialProductConfig::default();
+
+        let result = ProductConfig::try_from_partials(vec![config_a, config_b]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_fail_merge_with_more_than_one_kernel() {
+        let config_a = PartialProductConfig {
+            kernel: Some(PartialKernelConfig {
+                path: Some("foo".into()),
+                args: Vec::default(),
+                clock_backstop: Some(0),
+            }),
+            ..PartialProductConfig::default()
+        };
+        let config_b = PartialProductConfig {
+            kernel: Some(PartialKernelConfig {
+                path: Some("bar".into()),
+                args: Vec::default(),
+                clock_backstop: Some(2),
+            }),
+            ..PartialProductConfig::default()
+        };
+
+        let result = ProductConfig::try_from_partials(vec![config_a, config_b]);
+        assert!(result.is_err());
     }
 }

@@ -6,14 +6,18 @@ Note: This documentation lists the future surface area of the Image Assembler,
 but the transition to the new format is currently in progress in
 [fxbug.dev/84025](http://fxbug.dev/84025).
 
-Image Assembly is responsible for taking prebuilt artifacts and generating images that can be used to update or flash a Fuchsia device.
-The FFX plugin has three subcommands: [`create-system`](#create_system), [`create-update`](#create_update), and [`create-flash-manifest`](#create_flash_manifest).
+Image Assembly is responsible for taking prebuilt artifacts and generating
+images that can be used to update or flash a Fuchsia device. The FFX plugin has
+three subcommands: [`create-system`](#create_system),
+[`create-update`](#create_update), and
+[`create-flash-manifest`](#create_flash_manifest).
 
 ![Command Flow](images/commands.png)
 
 # create-system
 
-Create a Fuchsia system that minimally includes a ZBI, and optionally a VBMeta and FVM images.
+Create a Fuchsia system that minimally includes a ZBI, and optionally a VBMeta
+and FVM images.
 
 ```bash
 ffx assembly create-system                      \
@@ -24,32 +28,53 @@ ffx assembly create-system                      \
 
 ## Arguments
 
-| input | format | description |
-| --- | --- | --- |
-| `--product` | [Product Config](#product-config) | Contents of the Fuchsia system that are put into the images. |
-| `--images` | [Images Config](#images-config) | Which images to generate and how. |
-| `--outdir` | path | Directory to write outputs. |
-| `--gendir` | path | (optional; default=outdir) Directory to write intermediate files. |
-| `--base-package-name` | string | (optional; default="system_image") Name to give the Base Package. This is currently only used by OTA tests to allow publishing muliple base packages to the same amber repository without naming collisions. |
-| `--mode` | [Modes](#modes) | (optional; default="standard") Where to put the packages. |
+| input                 | format                   | description               |
+| --------------------- | ------------------------ | ------------------------- |
+| `--product`           | [Product                 | Contents of the Fuchsia   |
+:                       : Config](#product-config) : system that are put into  :
+:                       :                          : the images. This can be   :
+:                       :                          : specified multiple times. :
+| `--images`            | [Images                  | Which images to generate  |
+:                       : Config](#images-config)  : and how.                  :
+| `--outdir`            | path                     | Directory to write        |
+:                       :                          : outputs.                  :
+| `--gendir`            | path                     | (optional;                |
+:                       :                          : default=outdir) Directory :
+:                       :                          : to write intermediate     :
+:                       :                          : files.                    :
+| `--base-package-name` | string                   | (optional;                |
+:                       :                          : default="system_image")   :
+:                       :                          : Name to give the Base     :
+:                       :                          : Package. This is          :
+:                       :                          : currently only used by    :
+:                       :                          : OTA tests to allow        :
+:                       :                          : publishing muliple base   :
+:                       :                          : packages to the same      :
+:                       :                          : amber repository without  :
+:                       :                          : naming collisions.        :
+| `--mode`              | [Modes](#modes)          | (optional;                |
+:                       :                          : default="standard") Where :
+:                       :                          : to put the packages.      :
 
 ## Modes
 
-| mode | description |
-| --- | --- |
-| `standard` | Packages are placed in a blobfs in a FVM that is flashed to a separate partition. |
-| `fvm_in_zbi` | Packages are placed in a blobfs in a FVM that is embedded into the ZBI as a ramdisk. |
-| `bootfs_only` | Packages are placed into BootFS. |
+| mode          | description                                                 |
+| ------------- | ----------------------------------------------------------- |
+| `standard`    | Packages are placed in a blobfs in a FVM that is flashed to |
+:               : a separate partition.                                       :
+| `fvm_in_zbi`  | Packages are placed in a blobfs in a FVM that is embedded   |
+:               : into the ZBI as a ramdisk.                                  :
+| `bootfs_only` | Packages are placed into BootFS.                            |
 
 ## Outputs
 
-| output | format | description |
-| --- | --- | --- |
-| `packages.json` | [Package Manifest](/docs/concepts/packages/update_pkg.md) | List of packages in the system. |
-| `images.json` | [Images Manifest](#images-manifest) | List of images generated. |
-| `fuchsia.zbi` | | Fuchsia Zircon Boot Image (ZBI). |
-| `fuchsia.vbmeta` | | Fuchsia Verified Boot Metadata (VBMeta). |
-| `fvm.blk` | | Fuchsia Volume Manager (FVM). |
+output           | format                                                    | description
+---------------- | --------------------------------------------------------- | -----------
+`packages.json`  | [Package Manifest](/docs/concepts/packages/update_pkg.md) | List of packages in the system.
+`images.json`    | [Images Manifest](#images-manifest)                       | List of images generated.
+`fuchsia.zbi`    |                                                           | Fuchsia Zircon Boot Image (ZBI).
+`fuchsia.vbmeta` |                                                           | Fuchsia Verified Boot Metadata (VBMeta).
+`fvm.blk`        |                                                           | Fuchsia Volume Manager (FVM).
 
 # create-update
 
@@ -69,23 +94,23 @@ ffx assembly create-update                    \
 
 ## Arguments
 
-| input | format | description |
-| --- | --- | --- |
-| `--packages` | [Package Manifest](/docs/concepts/packages/update_pkg.md) | List of packages in the system. |
-| `--partitions` | [Partitions Config](#partitions-config) | Where in the partition table the images are put. |
-| `--system[a,b,r]` | [Images Manifest](#images-manifest) | The system to place in the slot. |
-| `--board-name` | string | The name of the board. Fuchsia will reject an Update Package with a different board name. |
-| `--version` | `a.b.c.d`, where each digit is u32 | The version of the Fuchsia system. |
-| `--epoch` | int | The backstop OTA version. Fuchsia will reject updates with a lower epoch. |
-| `--outdir` | path | Directory to write outputs. |
-| `--gendir` | path | (optional; default=outdir) Directory to write intermediate files. |
-| `--update-package-name` | string | (optional; default="update") Name to give the Update Package. This is currently only used by OTA tests to allow publishing multiple update packages to the same amber repository without naming collisions. |
+input                   | format                                                    | description
+----------------------- | --------------------------------------------------------- | -----------
+`--packages`            | [Package Manifest](/docs/concepts/packages/update_pkg.md) | List of packages in the system.
+`--partitions`          | [Partitions Config](#partitions-config)                   | Where in the partition table the images are put.
+`--system[a,b,r]`       | [Images Manifest](#images-manifest)                       | The system to place in the slot.
+`--board-name`          | string                                                    | The name of the board. Fuchsia will reject an Update Package with a different board name.
+`--version`             | `a.b.c.d`, where each digit is u32                        | The version of the Fuchsia system.
+`--epoch`               | int                                                       | The backstop OTA version. Fuchsia will reject updates with a lower epoch.
+`--outdir`              | path                                                      | Directory to write outputs.
+`--gendir`              | path                                                      | (optional; default=outdir) Directory to write intermediate files.
+`--update-package-name` | string                                                    | (optional; default="update") Name to give the Update Package. This is currently only used by OTA tests to allow publishing multiple update packages to the same amber repository without naming collisions.
 
 ## Outputs
 
-| output | format | description |
-| --- | --- | --- |
-| `update.far` | [Format](/docs/concepts/packages/update_pkg.md) | Update package. |
+output       | format                                          | description
+------------ | ----------------------------------------------- | ---------------
+`update.far` | [Format](/docs/concepts/packages/update_pkg.md) | Update package.
 
 # create-flash-manifest
 
@@ -103,22 +128,30 @@ ffx assembly create-flash-manifest \
 
 ## Arguments
 
-| input | format | description |
-| --- | --- | --- |
-| `--partitions` | [Partitions Config](#partitions-config) | Where in the partition table the images are put. |
-| `--system[a,b,r]` | [Images Manifest](#images-manifest) | The system to place in the slot. |
-| `--arch` | string | The architecture to specify in the flash manifest. This is typically "arm64" or "x64". |
-| `--outdir` | path | Directory to write outputs. |
+| input             | format                      | description                |
+| ----------------- | --------------------------- | -------------------------- |
+| `--partitions`    | [Partitions                 | Where in the partition     |
+:                   : Config](#partitions-config) : table the images are put.  :
+| `--system[a,b,r]` | [Images                     | The system to place in the |
+:                   : Manifest](#images-manifest) : slot.                      :
+| `--arch`          | string                      | The architecture to        |
+:                   :                             : specify in the flash       :
+:                   :                             : manifest. This is          :
+:                   :                             : typically "arm64" or       :
+:                   :                             : "x64".                     :
+| `--outdir`        | path                        | Directory to write         |
+:                   :                             : outputs.                   :
 
 ## Output
 
-| output | format | description |
-| --- | --- | --- |
-| `flash.json` | [RFC-0100](https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0100_product_metadata) | Flash manifest that specifies which images to flash to which partitions. |
+output       | format                                                                                       | description
+------------ | -------------------------------------------------------------------------------------------- | -----------
+`flash.json` | [RFC-0100](https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0100_product_metadata) | Flash manifest that specifies which images to flash to which partitions.
 
 # Product Config
 
-The product config specifies the **contents** of the Fuchsia system that is put into the images.
+The product config specifies the **contents** of the Fuchsia system that is put
+into the images.
 
 ```json5
 {
@@ -161,6 +194,25 @@ The product config specifies the **contents** of the Fuchsia system that is put 
 }
 ```
 
+When multiple product configs are specified, they are merged, with the following
+details:
+
+-   These lists are merged and deduplicated as lists of strings.
+
+    -   `base`
+    -   `cache`
+    -   `system`
+    -   `kernel.args`
+    -   `boot_args`
+
+-   One product config MUST specify a path to the kernel, and only one may do
+    so.
+
+-   One product config MUST specify a `clock_backstop`, and only one may do so.
+
+-   Bootfs files are deduplicated by `destination` + `source`. Only one `source`
+    path may be used for each `destination` path in bootfs.
+
 # Images Config
 
 The images config specifies **which images** to generate and how.
@@ -200,7 +252,7 @@ The images config specifies **which images** to generate and how.
     compression: "zstd.max",
 
     // An optional script to post-process the ZBI.
-    // This is often used to prepare the ZBI for the 
+    // This is often used to prepare the ZBI for the
     postprocessing_script: <post-processing-script>,
 }
 ```
@@ -247,6 +299,7 @@ The images config specifies **which images** to generate and how.
 ```
 
 ### VBMeta Descriptor
+
 `<descriptor>` has the following format.
 
 ```json5
@@ -371,7 +424,7 @@ The images config specifies **which images** to generate and how.
     "data",
     "internal",
   ],
-  
+
   // Optional parameters to use during construction.
   parameters: {
 
@@ -456,35 +509,35 @@ The images config specifies **which images** to generate and how.
       type: "zbi",
       name: "fuchsia",
     },
-    {   
+    {
       type: "vbmeta",
       name: "fuchsia",
       parameters: {
-        key: "path/to/key", 
-        key_metadata: "path/to/key/metadata", 
-      },  
-    },  
-    {   
+        key: "path/to/key",
+        key_metadata: "path/to/key/metadata",
+      },
+    },
+    {
       type: "fvm",
       name: "fvm",
       parameters: {
         slice_size: 0,
         filesystems: [
-          {   
+          {
             type: "blobfs",
             name: "blob",
             compress: true,
             maximum_bytes: 65536,
             minimum_data_bytes: 0,
             minimum_inodes: 4096,
-          },  
-          {   
+          },
+          {
             type: "minfs",
             name: "data",
             maximum_bytes: 65536,
             minimum_data_bytes: 0,
             minimum_inodes: 4096,
-          },  
+          },
         ],
         outputs: [
           {
@@ -535,7 +588,8 @@ The images config specifies **which images** to generate and how.
 }
 ```
 
-`<image-type>` must be one of: zbi, vbmeta, base-package, blob, storage-full, storage-sparse, storage-sparse-blob, or fvm.fastboot.
+`<image-type>` must be one of: zbi, vbmeta, base-package, blob, storage-full,
+storage-sparse, storage-sparse-blob, or fvm.fastboot.
 
 ## Example
 
@@ -605,8 +659,8 @@ The images config specifies **which images** to generate and how.
 }
 ```
 
-`<partition-type>` can be one of: zbi, vbmeta, fvm.
-`<partition-slot>` can be one of: systema, systemb, systemr.
+`<partition-type>` can be one of: zbi, vbmeta, fvm. `<partition-slot>` can be
+one of: systema, systemb, systemr.
 
 ## Example
 
