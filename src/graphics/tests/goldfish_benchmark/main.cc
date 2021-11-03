@@ -104,7 +104,7 @@ void RunAndMeasure(const char* test_name, unsigned iterations, const T& closure)
 void RunPingPongBenchmark(fidl::WireSyncClient<fuchsia_hardware_goldfish::Pipe>& pipe,
                           unsigned size, unsigned iterations, bool skip_if_out_of_memory) {
   {
-    auto result = pipe.SetBufferSize(size);
+    auto result = pipe->SetBufferSize(size);
     ZX_ASSERT(result.ok());
 
     if (skip_if_out_of_memory && result.value().res == ZX_ERR_NO_MEMORY) {
@@ -120,7 +120,7 @@ void RunPingPongBenchmark(fidl::WireSyncClient<fuchsia_hardware_goldfish::Pipe>&
 
   zx::vmo vmo;
   {
-    auto result = pipe.GetBuffer();
+    auto result = pipe->GetBuffer();
     ZX_ASSERT(result.ok() && result.value().res == ZX_OK);
     vmo = std::move(result.value().vmo);
   }
@@ -136,7 +136,7 @@ void RunPingPongBenchmark(fidl::WireSyncClient<fuchsia_hardware_goldfish::Pipe>&
   snprintf(test_name, sizeof(test_name), "pingpong, %u%s", SizeValue(size), SizeSuffix(size));
 
   RunAndMeasure(test_name, iterations, [&pipe, size] {
-    auto result = pipe.DoCall(size, 0, size, 0);
+    auto result = pipe->DoCall(size, 0, size, 0);
     // For the test purpose we expect the buffer is small enough
     // so that we can finish in one write-read round trip.
     ZX_ASSERT(result.ok() && result.value().res == ZX_OK);
@@ -158,13 +158,13 @@ int main(int argc, char** argv) {
   ZX_ASSERT(zx::channel::create(0, &pipe_client, &pipe_server) == ZX_OK);
 
   fidl::WireSyncClient<fuchsia_hardware_goldfish::PipeDevice> pipe_device(std::move(channel));
-  ZX_ASSERT(pipe_device.OpenPipe(std::move(pipe_server)).ok());
+  ZX_ASSERT(pipe_device->OpenPipe(std::move(pipe_server)).ok());
 
   fidl::WireSyncClient<fuchsia_hardware_goldfish::Pipe> pipe(std::move(pipe_client));
   zx::vmo vmo;
 
   {
-    auto result = pipe.GetBuffer();
+    auto result = pipe->GetBuffer();
     ZX_ASSERT(result.ok() && result.value().res == ZX_OK);
     vmo = std::move(result.value().vmo);
   }
@@ -175,7 +175,7 @@ int main(int argc, char** argv) {
   ZX_ASSERT(vmo.write(kPipeName, 0, bytes) == ZX_OK);
 
   {
-    auto result = pipe.Write(bytes, 0);
+    auto result = pipe->Write(bytes, 0);
     ZX_ASSERT(result.ok() && result.value().res == ZX_OK);
     ZX_ASSERT(result.value().actual == bytes);
   }
