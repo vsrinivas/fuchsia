@@ -179,8 +179,10 @@ void Suite::Run(std::vector<fuchsia::test::Invocation> tests, fuchsia::test::Run
     }
   }
 
-  auto sync_promise = fpromise::make_promise(
-      [listener_proxy = std::move(listener_proxy)] { listener_proxy->OnFinished(); });
+  auto sync_promise = fpromise::make_promise([listener_proxy = std::move(listener_proxy)] {
+    FX_LOGS(INFO) << "Sending OnFinished for legacy tests";
+    listener_proxy->OnFinished();
+  });
   executor_.schedule_task(barrier.sync().and_then(std::move(sync_promise)));
 }
 
@@ -267,11 +269,15 @@ fpromise::promise<> Suite::RunTest(zx::socket out, zx::socket err,
                            << sys::HumanReadableTerminationReason(termination_reason);
         }
 
+        FX_LOGS(INFO) << "Legacy test exited with return code " << return_code
+                      << ", collecting stdout";
+
         auto status =
             return_code == 0 ? fuchsia::test::Status::PASSED : fuchsia::test::Status::FAILED;
 
         auto output_promise = this_ptr->SignalWhenOutputCollected();
 
+        FX_LOGS(INFO) << "Killing environment for legacy test";
         fpromise::bridge<> bridge;
         enclosing_env->Kill(bridge.completer.bind());
         auto promise = bridge.consumer.promise().and_then(
@@ -279,11 +285,14 @@ fpromise::promise<> Suite::RunTest(zx::socket out, zx::socket err,
              status = status, completer = std::move(completer)]() mutable {
               fuchsia::test::Result result;
               result.set_status(status);
+              FX_LOGS(INFO) << "Sending finished event for legacy tests";
               case_listener->Finished(std::move(result));
               completer.complete_ok();
             });
-        this->executor_.schedule_task(
-            output_promise.and_then([this, this_ptr]() { RemoveComponent(this_ptr); }));
+        this->executor_.schedule_task(output_promise.and_then([this, this_ptr]() {
+          FX_LOGS(INFO) << "Done collecting standard output for legacy tests";
+          RemoveComponent(this_ptr);
+        }));
         this->executor_.schedule_task(std::move(promise));
       };
 
