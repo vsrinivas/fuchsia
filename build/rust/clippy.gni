@@ -54,7 +54,6 @@ template("clippy") {
     script = "//build/rust/clippy_wrapper.sh"
     output = _output
     outputs = [ output ]
-    depfile = "$output.d"
 
     edition = "2018"
     if (defined(invoker.edition)) {

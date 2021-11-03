@@ -48,7 +48,10 @@ def main():
         print("Error: Couldn't find any clippy outputs for those inputs")
         return 1
     if not args.no_build:
-        build_targets(output_files, build_dir, args.fuchsia_dir, args.verbose)
+        try:
+            build_targets(output_files, build_dir, args.fuchsia_dir, args.verbose)
+        except subprocess.CalledProcessError:
+            return 1
 
     lints = {}
     for clippy_output in output_files:
@@ -77,7 +80,9 @@ def build_targets(output_files, build_dir, fuchsia_dir, verbose):
     if verbose:
         ninja += ["-v"]
     subprocess.run(
-        ninja + [os.path.relpath(f, build_dir) for f in output_files], stdout=sys.stderr
+        ninja + [os.path.relpath(f, build_dir) for f in output_files],
+        stdout=sys.stderr,
+        check=True,
     )
 
 
