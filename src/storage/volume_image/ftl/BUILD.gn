@@ -135,6 +135,16 @@ install_host_tools("ftl-volume-extractor-host") {
   outputs = [ "ftl-volume-extractor" ]
 }
 
+executable("nandoob-converter") {
+  output_name = "nandoob-converter"
+  sources = [ "nandoob_converter.c" ]
+}
+
+install_host_tools("nandoob-converter-host") {
+  deps = [ ":nandoob-converter" ]
+  outputs = [ "nandoob-converter" ]
+}
+
 source_set("ftl-integration-test") {
   testonly = true
   sources = [ "ftl_image_integration_test.cc" ]

@@ -39,5 +39,6 @@ group("tools") {
     "factory/export_ffs:export-ffs",
     "tools/blobfs-compression:blobfs-compression",
     "volume_image/ftl:ftl-volume-extractor-host",
+    "volume_image/ftl:nandoob-converter-host",
   ]
 }
