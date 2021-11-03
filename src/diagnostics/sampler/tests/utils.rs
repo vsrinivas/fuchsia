@@ -50,7 +50,6 @@ pub async fn gather_sample_group(
 
         let (mut new_events, more) = watch.await.unwrap();
         assert!(!more);
-
         events.append(&mut new_events);
         if events.len() < log_querier_config.expected_batch_size {
             continue;
@@ -60,7 +59,7 @@ pub async fn gather_sample_group(
             break;
         }
 
-        panic!("Sampler should provide descrete groups of cobalt events. Shouldn't see more than {:?} here.", log_querier_config.expected_batch_size);
+        panic!("Sampler should provide discrete groups of cobalt events. Shouldn't see more than {:?} here.", log_querier_config.expected_batch_size);
     }
 
     events

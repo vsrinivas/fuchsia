@@ -21,16 +21,107 @@ use {
     fuchsia_inspect_derive::WithInspect,
     fuchsia_zircon as zx,
     futures::{channel::oneshot, future::join_all, select, stream::FuturesUnordered},
-    itertools::Itertools,
-    sampler_config::{DataType, MetricConfig, ProjectConfig, SamplerConfig},
-    selectors,
+    sampler_config::{
+        DataType, MetricConfig, ParsedSelector, ProjectConfig, SamplerConfig, SelectorList,
+    },
     std::{
-        collections::HashMap,
+        collections::{HashMap, HashSet},
         convert::{TryFrom, TryInto},
         sync::Arc,
     },
     tracing::{error, info, warn},
 };
+
+// Data structure and algorithm overview
+//
+// Cobalt is organized into Projects, each of which contains several Metrics.
+//
+// MetricConfig - defined in src/diagnostics/lib/sampler-config/src/lib.rs
+// This is deserialized from Sampler config files or created by FIRE by interpolating
+// component information into FIRE config files. It contains
+//  - selectors: SelectorList
+//  - metric_id
+//  - metric_type: DataType
+//  - event_codes: Vec<u32>
+//  - upload_once boolean
+//  - use_legacy_cobalt boolean
+//
+// ** NOTE ** Multiple selectors can be provided in a single metric. Only one selector is
+// expected to fetch/match data. When one does, the other selectors will be disabled for
+// efficiency.
+//
+// ProjectConfig - defined in src/diagnostics/lib/sampler-config/src/lib.rs
+// This encodes the contents of a single config file:
+//  - project_id
+//  - customer_id
+//  - poll_rate_sec
+//  - metrics: Vec<MetricConfig>
+//
+// SamplerConfig - defined in src/diagnostics/lib/sampler-config/src/lib.rs
+// The entire config for Sampler. Contains
+//  - list of ProjectConfig
+//  - minimum sample rate
+//
+// ProjectSampler - defined in src/diagnostics/sampler/src/executor.rs
+// This contains
+//  - several MetricConfig's
+//  - an ArchiveReader configured with all active selectors
+//  - a cache of previous Diagnostic values, indexed by selector strings
+//  - FIDL proxies for Cobalt and MetricEvent loggers
+//     - these loggers are configured with project_id and customer_id
+//  - Poll rate
+//  - Inspect stats (struct ProjectSamplerStats)
+//  - moniker_to_selector_map (see below * )
+//
+// ProjectSampler is stored in:
+//  - TaskCancellation:     execution_context: fasync::Task<Vec<ProjectSampler>>,
+//  - RebootSnapshotProcessor:    project_samplers: Vec<ProjectSampler>,
+//  - SamplerExecutor:     project_samplers: Vec<ProjectSampler>,
+//  - ProjectSamplerTaskExit::RebootTriggered(ProjectSampler),
+//
+// SamplerExecutor (defined in executor.rs) is built from a single SamplerConfig
+// SamplerExecutor contains
+//  - a list of ProjectSamplers
+//  - an Inspect stats structure
+// SamplerExecutor only has one member function execute() which calls spawn() on each
+// project sampler, passing it a receiver-oneshot to cancel it. The collection of
+// oneshot-senders and spawned-tasks builds the returned TaskCancellation.
+//
+// TaskCancellation is then passed to a reboot_watcher (in src/diagnostics/sampler/src/lib.rs)
+// which does nothing until the reboot service either closes (in which case it calls
+// run_without_cancellation()) or sends a message (in which case it calls perform_reboot_cleanup()).
+//
+// ProjectSampler.spawn() calls fasync::Task::spawn to create a task that starts a timer, then loops
+// listening to that timer and to the reboot_oneshot. When the timer triggers, it calls
+// self.process_next_snapshot(). If the reboot oneshot arrives, the task returns
+// ProjectSamplerTaskExit::RebootTriggered(self).
+//
+//
+// * moniker_to_selector_map
+//
+// When a ProjectSampler retrieves data, the data arrives from the Archivist organized by moniker.
+// For each moniker, we need to visit the selectors that may find data in it. Those selectors may
+// be scattered throughout the MetricConfig's in the ProjectSampler.
+// moniker_to_selector_map contains a map from moniker to SelectorIndexes, a struct containing the
+// index of the MetricConfig in the ProjectSampler's list, and the selector in the MetricConfig's
+// list.
+//
+// ** NOTE ** The moniker portion of the selectors must match exactly the moniker returned from
+// the Archivist. No wildcards.
+//
+// Selectors will become unused, either because of upload_once, or because data was found by a
+// different selector. Rather than implement deletion in the moniker_to_selector_map and the vec's,
+// which would add lots of bug surface and maintenance debt, each selector is an Option<> so that
+// selectors can be deleted/disabled without changing the rest of the data structure.
+// Once all Diagnostic data is processed, the structure is rebuilt if any selectors
+// have been disabled; rebuilding less often would be
+// premature optimization at this point.
+//
+// perform_reboot_cleanup() builds a moniker_to_project_map for use by the RebootSnapshotProcessor.
+// This has a similar purpose to moniker_to_selector_map, since monikers' data may
+// be relevant to any number of projects. When not rebooting, each project fetches
+// its own data from Archivist, so there's no need for a moniker_to_project_map. But
+// on reboot, all projects' data is fetched at once, and needs to be sorted out.
 
 pub struct TaskCancellation {
     senders: Vec<oneshot::Sender<()>>,
@@ -60,26 +151,34 @@ impl TaskCancellation {
 
         // Maps a selector to the indices of the project_samplers vec which contain configurations
         // that transform the property defined by the selector.
-        let mut project_map: HashMap<String, Vec<usize>> = HashMap::new();
+        let mut moniker_to_projects_map: HashMap<String, HashSet<usize>> = HashMap::new();
+        // Set of all selectors from all projects
+        let mut mondo_selectors_set = Vec::new();
 
         for (index, project_sampler) in project_samplers.iter().enumerate() {
-            for selector in project_sampler.metric_transformation_map.keys() {
-                let relevant_projects = project_map.entry(selector.clone()).or_insert(Vec::new());
-                (*relevant_projects).push(index);
+            for metric in &project_sampler.metrics {
+                for selector_opt in metric.selectors.iter() {
+                    if let Some(selector) = selector_opt {
+                        if moniker_to_projects_map.get(&selector.moniker).is_none() {
+                            moniker_to_projects_map
+                                .insert(selector.moniker.to_string(), HashSet::new());
+                        }
+                        moniker_to_projects_map.get_mut(&selector.moniker).unwrap().insert(index);
+                        mondo_selectors_set.push(selector.selector_string.clone());
+                    }
+                }
             }
         }
 
-        let mondo_selectors_set = project_map.keys().cloned();
-
         let mut reader = ArchiveReader::new();
-        reader.retry_if_empty(false).add_selectors(mondo_selectors_set);
+        reader.retry_if_empty(false).add_selectors(mondo_selectors_set.into_iter());
 
         let mut reboot_processor =
-            RebootSnapshotProcessor { reader, project_samplers, project_map };
+            RebootSnapshotProcessor { reader, project_samplers, moniker_to_projects_map };
         // Log errors encountered in final snapshot, but always swallow errors so we can gracefully
         // notify RebootMethodsWatcherRegister that we yield our remaining time.
         reboot_processor
-            .execute_reboot_sample()
+            .process_reboot_sample()
             .await
             .unwrap_or_else(|e| warn!("Reboot snapshot failed! {:?}", e));
     }
@@ -92,14 +191,14 @@ struct RebootSnapshotProcessor {
     // Vector of mutable ProjectSamplers that will
     // process their final samples.
     project_samplers: Vec<ProjectSampler>,
-    // Mapping from a selector to a vector of indices into
-    // the project_samplers, where each ProjectSampler has
-    // an active config for that selector.
-    project_map: HashMap<String, Vec<usize>>,
+    // Mapping from a moniker to a vector of indices into
+    // the project_samplers, where each indexed ProjectSampler has
+    // at least one selector that uses that moniker.
+    moniker_to_projects_map: HashMap<String, HashSet<usize>>,
 }
 
 impl RebootSnapshotProcessor {
-    pub async fn execute_reboot_sample(&mut self) -> Result<(), Error> {
+    pub async fn process_reboot_sample(&mut self) -> Result<(), Error> {
         let snapshot_data = self.reader.snapshot::<Inspect>().await?;
         for data_packet in snapshot_data {
             let moniker = data_packet.moniker;
@@ -118,54 +217,19 @@ impl RebootSnapshotProcessor {
         hierarchy: DiagnosticsHierarchy<String>,
         moniker: &String,
     ) {
-        // The property iterator will visit empty nodes once,
-        // with a None property type. Skip those by filtering None props.
-        for (hierarchy_path, property) in
-            hierarchy.property_iter().filter(|(_, property)| property.is_some())
-        {
-            let new_sample = property.expect("Filtered out all None props already.");
-            let selector =
-                format!("{}:{}:{}", moniker, hierarchy_path.iter().join("/"), new_sample.key());
-
-            // Get the vector of ints mapping this selector to all project samplers
-            // that are configured to this metric.
-            match self.project_map.get(&selector) {
-                None => {
-                    warn!(
-                        concat!(
-                            "Reboot snapshot retrieved",
-                            " a property that no project samplers claim",
-                            " to need... {:?}"
-                        ),
-                        selector
-                    );
-                }
-                Some(project_sampler_indices) => {
-                    // For each ProjectSampler that is configured with this property,
-                    // use the most recent sample to do one final processing.
-                    // TODO(42067): Should we do these async?
-                    for project_sampler_index in project_sampler_indices {
-                        self.project_samplers
-                            .get_mut(*project_sampler_index)
-                            .context("Index guaranteed to be present.")
-                            .unwrap()
-                            .process_newly_sampled_property(&selector, new_sample)
-                            .await
-                            .unwrap_or_else(|e| {
-                                // If processing the final sample failed, just log the
-                                // error and proceed, everything's getting shut down soon
-                                // anyways.
-                                warn!(
-                                    concat!(
-                                        "A project sampler failed to",
-                                        " process a reboot sample: {:?}"
-                                    ),
-                                    e
-                                )
-                            });
-                    }
+        if let Some(project_indexes) = self.moniker_to_projects_map.get(moniker) {
+            for index in project_indexes {
+                let project_sampler = &mut self.project_samplers[*index];
+                if let Err(err) = project_sampler.process_component_data(&hierarchy, moniker).await
+                {
+                    // If processing the final sample failed, just log the
+                    // error and proceed, everything's getting shut down
+                    // soon anyway.
+                    warn!(?err, "A project sampler failed to process a reboot sample");
                 }
             }
+        } else {
+            warn!(%moniker, "A moniker was not found in the project_samplers map");
         }
     }
 }
@@ -195,11 +259,8 @@ impl SamplerExecutor {
         let sampler_executor_stats = Arc::new(
             SamplerExecutorStats::new()
                 .with_inspect(inspect::component::inspector().root(), "sampler_executor_stats")
-                .unwrap_or_else(|e| {
-                    warn!(
-                        concat!("Failed to attach inspector to SamplerExecutorStats struct: {:?}",),
-                        e
-                    );
+                .unwrap_or_else(|err| {
+                    warn!(?err, "Failed to attach inspector to SamplerExecutorStats struct");
                     SamplerExecutorStats::default()
                 }),
         );
@@ -221,12 +282,10 @@ impl SamplerExecutor {
                                 &sampler_executor_stats.inspect_node,
                                 format!("project_{:?}", project_config.project_id,),
                             )
-                            .unwrap_or_else(|e| {
+                            .unwrap_or_else(|err| {
                                 warn!(
-                                    concat!(
-                                "Failed to attach inspector to ProjectSamplerStats struct: {:?}",
-                            ),
-                                    e
+                                    ?err,
+                                    "Failed to attach inspector to ProjectSamplerStats struct"
                                 );
                                 ProjectSamplerStats::default()
                             }),
@@ -258,7 +317,7 @@ impl SamplerExecutor {
     /// and process errors if any tasks exit unexpectedly.
     pub fn execute(self) -> TaskCancellation {
         // Take ownership of the inspect struct so we can give it to the execution context. We do this
-        // so that the execution context can return the struct when its halted by reboot, which allows inspect
+        // so that the execution context can return the struct when it's halted by reboot, which allows inspect
         // properties to survive through the reboot flow.
         let task_cancellation_owned_stats = self.sampler_executor_stats.clone();
         let execution_context_owned_stats = self.sampler_executor_stats.clone();
@@ -306,16 +365,17 @@ impl SamplerExecutor {
 
 pub struct ProjectSampler {
     archive_reader: ArchiveReader,
-    // Mapping from selector to the metric configs for that selector. Allows
-    // for iteration over returned diagnostics schemas to drive transformations
-    // with constant transformation metadata lookup.
-    metric_transformation_map: HashMap<String, MetricConfig>,
-    // Cache from Inspect selector to last sampled property.
+    // The metrics used by this Project. Indexed by moniker_to_selector_map.
+    metrics: Vec<MetricConfig>,
+    // Cache from Inspect selector to last sampled property. This is the selector from
+    // MetricConfig; it may contain wildcards.
     metric_cache: HashMap<String, Property>,
     // Cobalt logger proxy using this ProjectSampler's project id.
     cobalt_logger: Option<LoggerProxy>,
     // fuchsia.metrics logger proxy using this ProjectSampler's project id.
     metrics_logger: Option<MetricEventLoggerProxy>,
+    // Map from moniker to relevant selectors.
+    moniker_to_selector_map: HashMap<String, Vec<SelectorIndexes>>,
     // The frequency with which we snapshot Inspect properties
     // for this project.
     poll_rate_sec: i64,
@@ -323,6 +383,14 @@ pub struct ProjectSampler {
     // It's an arc since a single project can have multiple samplers at
     // different frequencies, but we want a single project to have one node.
     project_sampler_stats: Arc<ProjectSamplerStats>,
+}
+
+#[derive(Clone, Debug)]
+struct SelectorIndexes {
+    // The index of the metric in ProjectSampler's `metrics` list.
+    metric_index: usize,
+    // The index of the selector in the MetricConfig's `selectors` list.
+    selector_index: usize,
 }
 
 pub enum ProjectSamplerTaskExit {
@@ -341,6 +409,16 @@ pub enum ProjectSamplerEvent {
     TimerDied,
     RebootTriggered,
     RebootChannelClosed(Error),
+}
+
+// Indicates whether a sampler in the project has been removed (set to None), in which case the
+// ArchiveAccessor should be reconfigured.
+// The selector lists may be consolidated (and thus the maps would be rebuilt), but
+// the program will run correctly whether they are or not.
+#[derive(PartialEq)]
+enum SnapshotOutcome {
+    SelectorsChanged,
+    SelectorsUnchanged,
 }
 
 impl ProjectSampler {
@@ -368,21 +446,16 @@ impl ProjectSampler {
 
         let mut cobalt_logged: i64 = 0;
         let mut metrics_logged: i64 = 0;
-        let metric_transformation_map = config
-            .metrics
-            .into_iter()
-            .map(|metric_config| {
-                if metric_config.use_legacy_cobalt.unwrap_or(false) {
-                    cobalt_logged += 1;
-                } else {
-                    metrics_logged += 1;
-                };
-                (metric_config.selector.clone(), metric_config)
-            })
-            .collect::<HashMap<String, MetricConfig>>();
+        for metric_config in &config.metrics {
+            if metric_config.use_legacy_cobalt.unwrap_or(false) {
+                cobalt_logged += 1;
+            } else {
+                metrics_logged += 1;
+            }
+        }
 
         project_sampler_stats.project_sampler_count.add(1);
-        project_sampler_stats.metrics_configured.add(metric_transformation_map.len() as u64);
+        project_sampler_stats.metrics_configured.add(config.metrics.len() as u64);
 
         let cobalt_logger = if cobalt_logged > 0 {
             let (cobalt_logger_proxy, cobalt_server_end) =
@@ -408,20 +481,29 @@ impl ProjectSampler {
         } else {
             None
         };
-
+        let mut all_selectors = Vec::<String>::new();
+        for metric in &config.metrics {
+            for selector_opt in metric.selectors.iter() {
+                if let Some(selector) = selector_opt {
+                    all_selectors.push(selector.selector_string.clone());
+                }
+            }
+        }
         let mut archive_reader = ArchiveReader::new();
-        archive_reader
-            .retry_if_empty(false)
-            .add_selectors(metric_transformation_map.keys().cloned());
-        Ok(ProjectSampler {
-            archive_reader,
-            metric_transformation_map,
+        archive_reader.retry_if_empty(false).add_selectors(all_selectors.into_iter());
+        let mut project_sampler = ProjectSampler {
+            archive_reader: ArchiveReader::new(),
+            moniker_to_selector_map: HashMap::new(),
+            metrics: config.metrics,
             metric_cache: HashMap::new(),
             cobalt_logger,
             metrics_logger,
             poll_rate_sec,
             project_sampler_stats,
-        })
+        };
+        // Fill in archive_reader and moniker_to_selector_map
+        project_sampler.rebuild_selector_data_structures();
+        Ok(project_sampler)
     }
 
     pub fn spawn(
@@ -475,12 +557,12 @@ impl ProjectSampler {
                         return Ok(ProjectSamplerTaskExit::RebootTriggered(self));
                     }
                     ProjectSamplerEvent::TimerTriggered => {
-                        // If the next snapshot was processed and we
-                        // returned Ok(false), we know that this sampler
-                        // no longer needs to run (perhaps all metrics were
-                        // "upload_once"?). If this is the case, we want to be
+                        self.process_next_snapshot().await?;
+                        // Check whether this sampler
+                        // still needs to run (perhaps all metrics were
+                        // "upload_once"?). If it doesn't, we want to be
                         // sure that it is not included in the reboot-workload.
-                        if !self.process_next_snapshot().await? {
+                        if self.is_all_done() {
                             return Ok(ProjectSamplerTaskExit::WorkCompleted);
                         }
                     }
@@ -489,132 +571,164 @@ impl ProjectSampler {
         })
     }
 
-    // Ok(true) implies that the snapshot was processed and we should sample again.
-    // Ok(false) implies that the snapshot was processed and the project sampler can now stop.
-    // Err implies an error was reached while processing the sample.
-    async fn process_next_snapshot(&mut self) -> Result<bool, Error> {
+    async fn process_next_snapshot(&mut self) -> Result<(), Error> {
         let snapshot_data = self.archive_reader.snapshot::<Inspect>().await?;
-        for data_packet in snapshot_data {
-            let moniker = data_packet.moniker;
-            match data_packet.payload {
-                None => process_schema_errors(&data_packet.metadata.errors, &moniker),
-                Some(payload) => match self.process_payload(&payload, &moniker).await {
-                    Ok(true) => (),
-                    r => return r,
-                },
-            }
-        }
-
-        Ok(true)
-    }
-
-    // Ok(true) implies that the payload was processed and we should sample again.
-    // Ok(false) implies that the payload was processed and the project sampler can now stop.
-    // Err implies an error was reached while processing the payload.
-    async fn process_payload(
-        &mut self,
-        payload: &DiagnosticsHierarchy,
-        moniker: &str,
-    ) -> Result<bool, Error> {
-        for (hierarchy_path, property) in payload.property_iter() {
-            // The property iterator will visit empty nodes once,
-            // with a None property type. Skip those.
-            if let Some(new_sample) = property {
-                let selector = format!(
-                    "{}:{}:{}",
-                    moniker,
-                    hierarchy_path
-                        .iter()
-                        .map(|s| selectors::sanitize_string_for_selectors(s))
-                        .collect::<Vec<String>>()
-                        .join("/"),
-                    selectors::sanitize_string_for_selectors(new_sample.key()),
-                );
-
-                self.process_newly_sampled_property(&selector, new_sample).await?;
-
-                // The map is empty, break early, even if there were another
-                // property there would be nothing to transform.
-                if self.metric_transformation_map.is_empty() {
-                    return Ok(false);
+        let mut selectors_changed = false;
+        for data_packet in snapshot_data.iter() {
+            match &data_packet.payload {
+                None => {
+                    process_schema_errors(&data_packet.metadata.errors, &data_packet.moniker);
                 }
-            }
-        }
-
-        Ok(true)
-    }
-
-    // Process a single newly sampled diagnostics property, and update state accordingly.
-    async fn process_newly_sampled_property(
-        &mut self,
-        selector: &String,
-        new_sample: &Property,
-    ) -> Result<(), Error> {
-        let metric_transformation_opt = self.metric_transformation_map.get(selector);
-        match metric_transformation_opt {
-            None => {
-                warn!(concat!(
-                    "A property was returned by the",
-                    " diagnostics snapshot, which wasn't",
-                    " requested by the client."
-                ));
-                warn!("Searched for {:?}, but this selector is not configured", selector,);
-            }
-            Some(metric_transformation) => {
-                // Rust is scared that the sample processors require mutable
-                // references to self, despite us using the values gathered
-                // before the potential mutability, after. These values
-                // won't change during the sample processing, but we do this to
-                // appease the borrow checker.
-                let metric_type = metric_transformation.metric_type.clone();
-                let metric_id = metric_transformation.metric_id.clone();
-                let event_codes = metric_transformation.event_codes.clone();
-                let upload_once = metric_transformation.upload_once.clone();
-                let use_legacy_logger =
-                    metric_transformation.use_legacy_cobalt.clone() == Some(true);
-
-                self.process_metric_transformation(
-                    metric_type,
-                    metric_id,
-                    event_codes,
-                    selector.clone(),
-                    new_sample,
-                    use_legacy_logger,
-                )
-                .await?;
-
-                if let Some(true) = upload_once {
-                    self.metric_transformation_map.remove(selector);
-
-                    // If the metric transformation map is empty, there's no
-                    // more work to be done.
-                    if !self.metric_transformation_map.is_empty() {
-                        // Update archive reader since we've removed
-                        // a selector.
-                        self.archive_reader = ArchiveReader::new();
-                        self.archive_reader
-                            .retry_if_empty(false)
-                            .add_selectors(self.metric_transformation_map.keys().cloned());
+                Some(payload) => {
+                    if self.process_component_data(payload, &data_packet.moniker).await?
+                        == SnapshotOutcome::SelectorsChanged
+                    {
+                        selectors_changed = true;
                     }
                 }
             }
         }
+        if selectors_changed {
+            self.rebuild_selector_data_structures();
+        }
         Ok(())
     }
 
-    async fn process_metric_transformation(
+    fn is_all_done(&self) -> bool {
+        self.moniker_to_selector_map.is_empty()
+    }
+
+    fn rebuild_selector_data_structures(&mut self) {
+        let mut all_selectors = vec![];
+        for mut metric in &mut self.metrics {
+            // TODO(fxbug.dev/87709): Using Box<ParsedSelector> could reduce copying.
+            let active_selectors = metric
+                .selectors
+                .iter()
+                .filter(|selector| selector.is_some())
+                .map(|selector| selector.to_owned())
+                .collect::<Vec<_>>();
+            for selector in active_selectors.iter() {
+                // unwrap() is OK since we filtered for Some
+                all_selectors.push(selector.as_ref().unwrap().selector_string.to_owned());
+            }
+            metric.selectors = SelectorList(active_selectors);
+        }
+        self.archive_reader = ArchiveReader::new();
+        self.archive_reader.retry_if_empty(false).add_selectors(all_selectors.into_iter());
+        self.moniker_to_selector_map = HashMap::new();
+        for (metric_index, metric) in self.metrics.iter().enumerate() {
+            for (selector_index, selector) in metric.selectors.iter().enumerate() {
+                let moniker = &selector.as_ref().unwrap().moniker;
+                if self.moniker_to_selector_map.get(moniker).is_none() {
+                    self.moniker_to_selector_map.insert(moniker.clone(), Vec::new());
+                }
+                self.moniker_to_selector_map
+                    .get_mut(moniker)
+                    .unwrap()
+                    .push(SelectorIndexes { metric_index, selector_index });
+            }
+        }
+    }
+
+    async fn process_component_data(
+        &mut self,
+        payload: &DiagnosticsHierarchy,
+        moniker: &String,
+    ) -> Result<SnapshotOutcome, Error> {
+        let indexes_opt = &self.moniker_to_selector_map.get(moniker);
+        let selector_indexes = match indexes_opt {
+            None => {
+                warn!(%moniker, "Moniker not found in map");
+                return Ok(SnapshotOutcome::SelectorsUnchanged);
+            }
+            Some(indexes) => indexes.to_vec(),
+        };
+        // We cloned the selector indexes. Whatever we do in this function must not invalidate them.
+        let mut selectors_changed = false;
+        for index_info in selector_indexes.iter() {
+            let SelectorIndexes { metric_index, selector_index } = index_info;
+            let metric = &self.metrics[*metric_index];
+            // It's fine if a selector has been removed and is None.
+            if let Some(ParsedSelector { selector, selector_string, .. }) =
+                &metric.selectors[*selector_index]
+            {
+                let found_values = diagnostics_hierarchy::select_from_hierarchy(
+                    payload.clone(),
+                    selector.clone(),
+                )?;
+                match found_values.len() {
+                    // Maybe the data hasn't been published yet. Maybe another selector in this
+                    // metric is the correct one to find the data. Either way, not-found is fine.
+                    0 => {}
+                    1 => {
+                        // export_sample() needs mut self, so we can't pass in values directly from
+                        // metric, since metric is a ref into data contained in self;
+                        // we have to copy them out first.
+                        let metric_type = metric.metric_type;
+                        let metric_id = metric.metric_id;
+                        let codes = metric.event_codes.clone();
+                        let selector_string = selector_string.to_owned();
+                        let use_cobalt = metric.use_legacy_cobalt == Some(true);
+                        self.export_sample(
+                            metric_type,
+                            metric_id,
+                            codes,
+                            &selector_string,
+                            &found_values[0].property,
+                            use_cobalt,
+                        )
+                        .await?;
+                        selectors_changed = selectors_changed
+                            || self.update_metric_selectors(index_info)
+                                == SnapshotOutcome::SelectorsChanged;
+                    }
+                    too_many => {
+                        warn!(%too_many, %selector_string, "Too many matches for selector")
+                    }
+                }
+            }
+        }
+        match selectors_changed {
+            true => Ok(SnapshotOutcome::SelectorsChanged),
+            false => Ok(SnapshotOutcome::SelectorsUnchanged),
+        }
+    }
+
+    fn update_metric_selectors(&mut self, index_info: &SelectorIndexes) -> SnapshotOutcome {
+        let metric = &mut self.metrics[index_info.metric_index];
+        if let Some(true) = metric.upload_once {
+            for selector in metric.selectors.iter_mut() {
+                *selector = None;
+            }
+            return SnapshotOutcome::SelectorsChanged;
+        }
+        let mut deleted = false;
+        for (index, selector) in metric.selectors.iter_mut().enumerate() {
+            if index != index_info.selector_index && *selector != None {
+                *selector = None;
+                deleted = true;
+            }
+        }
+        match deleted {
+            true => SnapshotOutcome::SelectorsChanged,
+            false => SnapshotOutcome::SelectorsUnchanged,
+        }
+    }
+
+    async fn export_sample(
         &mut self,
         metric_type: DataType,
         metric_id: u32,
         event_codes: Vec<u32>,
-        selector: String,
+        selector: &String,
         new_sample: &Property,
         use_legacy_logger: bool,
     ) -> Result<(), Error> {
-        let previous_sample_opt: Option<&Property> = self.metric_cache.get(&selector);
+        let previous_sample_opt: Option<&Property> = self.metric_cache.get(selector);
 
         if let Some(payload) =
-            process_sample_for_data_type(new_sample, previous_sample_opt, &selector, &metric_type)
+            process_sample_for_data_type(new_sample, previous_sample_opt, selector, &metric_type)
         {
             self.maybe_update_cache(new_sample, &metric_type, selector);
 
@@ -654,7 +768,7 @@ impl ProjectSampler {
         &mut self,
         new_sample: &Property,
         data_type: &DataType,
-        selector: String,
+        selector: &String,
     ) {
         match data_type {
             DataType::Occurrence | DataType::IntHistogram => {
@@ -1032,7 +1146,8 @@ mod tests {
 
         let mut sampler = ProjectSampler {
             archive_reader: ArchiveReader::new(),
-            metric_transformation_map: HashMap::new(),
+            moniker_to_selector_map: HashMap::new(),
+            metrics: vec![],
             metric_cache: HashMap::new(),
             cobalt_logger: None,
             metrics_logger: None,
@@ -1040,64 +1155,73 @@ mod tests {
             project_sampler_stats: Arc::new(ProjectSamplerStats::new()),
         };
         let selector: String = "my/component:root/path\\/to:value".to_string();
-        sampler.metric_transformation_map.insert(
-            selector.clone(),
-            MetricConfig {
-                selector: selector.clone(),
-                metric_id: 1,
-                // Occurrence type with a value of zero will not attempt to use any loggers.
-                metric_type: DataType::Occurrence,
-                event_codes: Vec::new(),
-                // upload_once means that the method will return false if it is found in the map.
-                upload_once: Some(true),
-                use_legacy_cobalt: Some(false),
-            },
-        );
-        match executor::block_on(sampler.process_payload(&hierarchy, &"my/component".to_string())) {
-            // This selector will be found and removed from the map. Resulting in a false response.
-            Ok(b) => assert_eq!(b, false),
-            Err(_) => panic!("Expecting false from process_payload."),
+        sampler.metrics.push(MetricConfig {
+            selectors: SelectorList(vec![sampler_config::parse_selector_for_test(&selector)]),
+            metric_id: 1,
+            // Occurrence type with a value of zero will not attempt to use any loggers.
+            metric_type: DataType::Occurrence,
+            event_codes: Vec::new(),
+            // upload_once means that process_component_data will return SelectorsChanged if
+            // it is found in the map.
+            upload_once: Some(true),
+            use_legacy_cobalt: Some(false),
+        });
+        sampler.rebuild_selector_data_structures();
+        match executor::block_on(
+            sampler.process_component_data(&hierarchy, &"my/component".to_string()),
+        ) {
+            // This selector will be found and removed from the map, resulting in a
+            // SelectorsChanged response.
+            Ok(SnapshotOutcome::SelectorsChanged) => (),
+            _ => panic!("Expecting SelectorsChanged from process_component_data."),
         }
 
         let selector_with_escaped_property: String =
             "my/component:root/path\\/to:value\\/with\\:escapes".to_string();
-        sampler.metric_transformation_map.insert(
-            selector_with_escaped_property.clone(),
-            MetricConfig {
-                selector: selector_with_escaped_property.clone(),
-                metric_id: 1,
-                // Occurrence type with a value of zero will not attempt to use any loggers.
-                metric_type: DataType::Occurrence,
-                event_codes: Vec::new(),
-                // upload_once means that the method will return false if it is found in the map.
-                upload_once: Some(true),
-                use_legacy_cobalt: Some(false),
-            },
-        );
-        match executor::block_on(sampler.process_payload(&hierarchy, &"my/component".to_string())) {
-            // This selector will be found and removed from the map. Resulting in a false response.
-            Ok(b) => assert_eq!(b, false),
-            Err(_) => panic!("Expecting false from process_payload."),
+        sampler.metrics.push(MetricConfig {
+            selectors: SelectorList(vec![sampler_config::parse_selector_for_test(
+                &selector_with_escaped_property,
+            )]),
+            metric_id: 1,
+            // Occurrence type with a value of zero will not attempt to use any loggers.
+            metric_type: DataType::Occurrence,
+            event_codes: Vec::new(),
+            // upload_once means that the method will return SelectorsChanged if it is found
+            // in the map.
+            upload_once: Some(true),
+            use_legacy_cobalt: Some(false),
+        });
+        sampler.rebuild_selector_data_structures();
+        match executor::block_on(
+            sampler.process_component_data(&hierarchy, &"my/component".to_string()),
+        ) {
+            // This selector will be found and removed from the map, resulting in a
+            // SelectorsChanged response.
+            Ok(SnapshotOutcome::SelectorsChanged) => (),
+            _ => panic!("Expecting SelectorsChanged from process_component_data."),
         }
 
         let selector_unfound: String = "my/component:root/path/to:value".to_string();
-        sampler.metric_transformation_map.insert(
-            selector_unfound.clone(),
-            MetricConfig {
-                selector: selector_unfound.clone(),
-                metric_id: 1,
-                // Occurrence type with a value of zero will not attempt to use any loggers.
-                metric_type: DataType::Occurrence,
-                event_codes: Vec::new(),
-                // upload_once means that the method will return false if it is found in the map.
-                upload_once: Some(true),
-                use_legacy_cobalt: Some(false),
-            },
-        );
-        match executor::block_on(sampler.process_payload(&hierarchy, &"my/component".to_string())) {
-            // This selector will not be found and removed from the map. Resulting in a true response.
-            Ok(b) => assert_eq!(b, true),
-            Err(_) => panic!("Expecting true from process_payload."),
+        sampler.metrics.push(MetricConfig {
+            selectors: SelectorList(vec![sampler_config::parse_selector_for_test(
+                &selector_unfound,
+            )]),
+            metric_id: 1,
+            // Occurrence type with a value of zero will not attempt to use any loggers.
+            metric_type: DataType::Occurrence,
+            event_codes: Vec::new(),
+            // upload_once means that the method will return SelectorsChanged if it is found
+            // in the map.
+            upload_once: Some(true),
+            use_legacy_cobalt: Some(false),
+        });
+        sampler.rebuild_selector_data_structures();
+        match executor::block_on(
+            sampler.process_component_data(&hierarchy, &"my/component".to_string()),
+        ) {
+            // This selector will not be found and removed from the map, resulting in SelectorsUnchanged.
+            Ok(SnapshotOutcome::SelectorsUnchanged) => (),
+            _ => panic!("Expecting SelectorsUnchanged from process_component_data."),
         }
     }
 

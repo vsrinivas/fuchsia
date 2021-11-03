@@ -50,7 +50,7 @@ pub struct ConfigFileSchema {
 }
 
 /// A selector entry in the configuration file is either a single string
-/// or a vector or string selectors. Either case is converted to a vector
+/// or a vector of string selectors. Either case is converted to a vector
 /// with at least one element.
 #[derive(Debug)]
 pub struct SelectorEntry(Vec<String>);

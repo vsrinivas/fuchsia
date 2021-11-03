@@ -95,12 +95,13 @@ async fn reboot_watcher(
         responder
             .send()
             .unwrap_or_else(|err| warn!("Acking the reboot register failed: {:?}", err));
+
+        info!("Sampler has been halted due to reboot. Goodbye.");
     } else {
         // The reboot watcher channel somehow died. There's no reason to
         // clean ourselves up early, might as well just run until the component
-        // manager tells us to stop.
+        // manager tells us to stop or all tasks finish.
         task_canceller.run_without_cancellation().await;
+        info!("All Sampler tasks have finished running. Goodbye.");
     }
-
-    info!("Sampler has been halted due to reboot. Goodbye.");
 }

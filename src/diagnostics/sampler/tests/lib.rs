@@ -31,7 +31,6 @@ async fn event_count_sampler_test() {
         .unwrap();
 
     test_app_controller.increment_int(1).unwrap();
-
     let events = utils::gather_sample_group(
         utils::LogQuerierConfig { project_id: 5, expected_batch_size: 3 },
         &logger_querier,

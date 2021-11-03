@@ -3,14 +3,15 @@
 // found in the LICENSE file.
 use {
     anyhow::{format_err, Context as _, Error},
-    serde::Deserialize,
+    fidl_fuchsia_diagnostics::StringSelector,
+    serde::{de::Unexpected, Deserialize, Deserializer},
     serde_json5,
     std::fs,
     std::path::Path,
 };
 
 /// Configuration for a single project to map inspect data to its cobalt metrics.
-#[derive(Deserialize, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Debug, PartialEq)]
 pub struct ProjectConfig {
     /// Project ID that metrics are being sampled and forwarded on behalf of.
     pub project_id: u32,
@@ -29,11 +30,12 @@ pub struct ProjectConfig {
 
 /// Configuration for a single metric to map from an inspect property
 /// to a cobalt metric.
-#[derive(Deserialize, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Debug, PartialEq)]
 pub struct MetricConfig {
     /// Selector identifying the metric to
     /// sample via the diagnostics platform.
-    pub selector: String,
+    #[serde(rename = "selector")]
+    pub selectors: SelectorList,
     /// Cobalt metric id to map the selector to.
     pub metric_id: u32,
     /// Data type to transform the metric to.
@@ -53,7 +55,7 @@ pub struct MetricConfig {
 }
 
 /// The supported V1.0 Cobalt Metrics
-#[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
+#[derive(Deserialize, Debug, PartialEq, Eq, Copy, Clone)]
 pub enum DataType {
     // Maps cached diffs from Uint or Int inspect types.
     // NOTE: This does not use duration tracking. Durations
@@ -69,6 +71,116 @@ pub enum DataType {
     // FloatCustomEvent,
     // Maps raw Uint inspect types.
     // IndexCustomEvent,
+}
+
+// SelectorList is adapted from SelectorEntry in src/diagnostics/lib/triage/src/config.rs
+
+/// A selector entry in the configuration file is either a single string
+/// or a vector of string selectors. Either case is converted to a vector
+/// with at least one element.
+///
+/// Each element is optional so selectors can be removed when they're
+/// known not to be needed. If one selector matches data, the others are
+/// removed. After an upload_once is uploaded, all selectors are removed.
+/// On initial parse, all elements will be Some<_>.
+#[derive(Clone, Debug, PartialEq)]
+pub struct SelectorList(pub Vec<Option<ParsedSelector>>);
+
+impl std::ops::Deref for SelectorList {
+    type Target = Vec<Option<ParsedSelector>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl std::ops::DerefMut for SelectorList {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+// TODO(fxbug.dev/87709) - this could be more memory-efficient by using slices into the string.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ParsedSelector {
+    pub selector_string: String,
+    pub selector: fidl_fuchsia_diagnostics::Selector,
+    pub moniker: String,
+}
+
+pub fn parse_selector_for_test(selector_str: &str) -> Option<ParsedSelector> {
+    Some(parse_selector::<serde::de::value::Error>(selector_str).unwrap())
+}
+
+fn parse_selector<E>(selector_str: &str) -> Result<ParsedSelector, E>
+where
+    E: serde::de::Error,
+{
+    let selector = selectors::parse_selector(selector_str)
+        .or(Err(E::invalid_value(Unexpected::Str(selector_str), &"not a valid selector")))?;
+    let component_selector = selector.component_selector.as_ref().ok_or(E::invalid_value(
+        Unexpected::Str(selector_str),
+        &"selector must specify component",
+    ))?;
+    let moniker_segments = component_selector.moniker_segments.as_ref().ok_or(E::invalid_value(
+        Unexpected::Str(selector_str),
+        &"selector must specify component",
+    ))?;
+    let moniker_strings = moniker_segments
+        .iter()
+        .map(|segment| match segment {
+            StringSelector::StringPattern(_) => Err(E::invalid_value(
+                Unexpected::Str(selector_str),
+                &"component monikers cannot contain wildcards",
+            )),
+            StringSelector::ExactMatch(text) => Ok(text),
+            _ => Err(E::invalid_value(Unexpected::Str(selector_str), &"Unexpected moniker type")),
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    let moniker = moniker_strings.iter().map(|s| s.as_str()).collect::<Vec<_>>().join("/");
+    Ok(ParsedSelector { selector, selector_string: selector_str.to_string(), moniker })
+}
+
+impl<'de> Deserialize<'de> for SelectorList {
+    fn deserialize<D>(d: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct SelectorVec(std::marker::PhantomData<Vec<Option<ParsedSelector>>>);
+
+        impl<'de> serde::de::Visitor<'de> for SelectorVec {
+            type Value = Vec<Option<ParsedSelector>>;
+
+            fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                f.write_str("either a single selector or an array of selectors")
+            }
+
+            fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(vec![Some(parse_selector::<E>(value)?)])
+            }
+
+            fn visit_seq<A>(self, mut value: A) -> Result<Self::Value, A::Error>
+            where
+                A: serde::de::SeqAccess<'de>,
+            {
+                let mut out = vec![];
+                while let Some(s) = value.next_element::<String>()? {
+                    out.push(Some(parse_selector::<A::Error>(&s)?));
+                }
+                if out.is_empty() {
+                    use serde::de::Error;
+                    Err(A::Error::invalid_length(0, &"expected at least one selector"))
+                } else {
+                    Ok(out)
+                }
+            }
+        }
+
+        Ok(SelectorList(d.deserialize_any(SelectorVec(std::marker::PhantomData))?))
+    }
 }
 
 /// Parses a configuration file for a single project into a ProjectConfig.

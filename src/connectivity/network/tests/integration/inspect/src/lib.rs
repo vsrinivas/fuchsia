@@ -935,8 +935,20 @@ async fn inspect_for_sampler() {
         project_configs => panic!("expected one project_config but got {:#?}", project_configs),
     };
     for metric_config in &project_config.metrics {
+        // TODO(fxbug.dev/87769): Use the parsed Selector instead of re-parsing the string here.
         let selector = {
-            let selector = &metric_config.selector;
+            let selector = match &metric_config.selectors[..] {
+                // metric_config.selectors is Vec<Option<ParsedSelector>>
+                // ParsedSelector's "selector" field contains fidl.fuchsia.diagnostics::Selector
+                // ParsedSelector's "selector_string" field contains the String which we want here
+                [selector] => &selector
+                    .as_ref()
+                    .expect(
+                        "SamplerConfig::from_directory() should never return None for selectors",
+                    )
+                    .selector_string,
+                selectors => panic!("expected one sampler but got {:#?}", selectors),
+            };
             let index = selector
                 .find(':')
                 .unwrap_or_else(|| panic!("selector {:#?} has no component", selector));
