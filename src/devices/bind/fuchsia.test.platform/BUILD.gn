@@ -4,6 +4,6 @@
 
 import("//build/bind/bind.gni")
 
-bind_library("test.platform") {
-  source = "test.platform.bind"
+bind_library("fuchsia.test.platform") {
+  source = "fuchsia.test.platform.bind"
 }

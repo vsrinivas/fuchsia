@@ -12,7 +12,7 @@ driver_bind_rules("ddk-fallback-test-bind") {
   rules = "test-driver.bind"
   header_output = "test-driver-bind.h"
 
-  deps = [ "//src/devices/bind/test.platform" ]
+  deps = [ "//src/devices/bind/fuchsia.test.platform" ]
 }
 
 fuchsia_driver("ddk-fallback-test-driver") {

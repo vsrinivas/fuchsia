@@ -99,7 +99,7 @@ shared_library("driver") {
 driver_bind_rules("test-devhost-parent-bind") {
   rules = "test-devhost-parent.bind"
   header_output = "test-devhost-parent-bind.h"
-  deps = [ "//src/devices/bind/test.platform" ]
+  deps = [ "//src/devices/bind/fuchsia.test.platform" ]
 }
 
 fuchsia_driver("driver-host-test-driver-driver") {
@@ -156,7 +156,7 @@ fidl("fuchsia.device.restarttest") {
 driver_bind_rules("driver-host-restart-bind") {
   rules = "driver-host-restart.bind"
   header_output = "driver-host-restart-bind.h"
-  deps = [ "//src/devices/bind/test.platform" ]
+  deps = [ "//src/devices/bind/fuchsia.test.platform" ]
 }
 
 fuchsia_driver("driver-host-restart-driver-driver") {

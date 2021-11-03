@@ -14,7 +14,7 @@ driver_bind_rules("fallback_rtc_bind") {
   tests = "bind-tests.json"
   deps = [
     "//src/devices/bind/fuchsia.platform",
-    "//src/devices/bind/test.platform",
+    "//src/devices/bind/fuchsia.test.platform",
   ]
 }
 

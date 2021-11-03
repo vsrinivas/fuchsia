@@ -10,7 +10,7 @@ driver_bind_rules("qmi_fake_bind") {
   rules = "qmi_fake.bind"
   header_output = "qmi_fake_bind.h"
   tests = "bind_tests.json"
-  deps = [ "//src/devices/bind/test.platform" ]
+  deps = [ "//src/devices/bind/fuchsia.test.platform" ]
 }
 
 group("tests") {

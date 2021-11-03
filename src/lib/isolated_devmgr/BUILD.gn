@@ -167,7 +167,7 @@ isolated_devmgr_component("virtual-audio-devmgr") {
 driver_bind_rules("crash-device-bind") {
   rules = "crash-device.bind"
   header_output = "crash-device-bind.h"
-  deps = [ "//src/devices/bind/test.platform" ]
+  deps = [ "//src/devices/bind/fuchsia.test.platform" ]
 }
 
 # A device that causes a crash when it's operated on

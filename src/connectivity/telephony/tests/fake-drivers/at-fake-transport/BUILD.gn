@@ -10,7 +10,7 @@ driver_bind_rules("at_fake_bind") {
   rules = "at_fake.bind"
   header_output = "at_fake_bind.h"
   tests = "bind_tests.json"
-  deps = [ "//src/devices/bind/test.platform" ]
+  deps = [ "//src/devices/bind/fuchsia.test.platform" ]
 }
 
 group("tests") {

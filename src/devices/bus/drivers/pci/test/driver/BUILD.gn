@@ -12,7 +12,7 @@ driver_bind_rules("fake_pci_bus_driver_bind") {
   tests = "fake_pci_bind_tests.json"
   deps = [
     "//src/devices/bind/fuchsia.platform",
-    "//src/devices/bind/test.platform",
+    "//src/devices/bind/fuchsia.test.platform",
   ]
 }
 

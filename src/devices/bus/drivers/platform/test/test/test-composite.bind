@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-using test.platform;
+using fuchsia.test.platform;
 
 fuchsia.BIND_COMPOSITE == 1;
-fuchsia.BIND_PLATFORM_DEV_VID == test.platform.BIND_PLATFORM_DEV_VID.TEST;
-fuchsia.BIND_PLATFORM_DEV_PID == test.platform.BIND_PLATFORM_DEV_PID.PBUS_TEST;
+fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.test.platform.BIND_PLATFORM_DEV_VID.TEST;
+fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.test.platform.BIND_PLATFORM_DEV_PID.PBUS_TEST;
 accept fuchsia.BIND_PLATFORM_DEV_DID {
-  test.platform.BIND_PLATFORM_DEV_DID.COMPOSITE_1,
-  test.platform.BIND_PLATFORM_DEV_DID.COMPOSITE_2,
-  test.platform.BIND_PLATFORM_DEV_DID.GOLDFISH_CONTROL_COMPOSITE,
+  fuchsia.test.platform.BIND_PLATFORM_DEV_DID.COMPOSITE_1,
+  fuchsia.test.platform.BIND_PLATFORM_DEV_DID.COMPOSITE_2,
+  fuchsia.test.platform.BIND_PLATFORM_DEV_DID.GOLDFISH_CONTROL_COMPOSITE,
 }

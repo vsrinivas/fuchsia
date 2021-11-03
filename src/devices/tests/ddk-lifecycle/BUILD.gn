@@ -16,7 +16,7 @@ fidl("fuchsia.device.lifecycle.test") {
 driver_bind_rules("test-lifecycle-bind") {
   rules = "test-lifecycle.bind"
   header_output = "test-lifecycle-bind.h"
-  deps = [ "//src/devices/bind/test.platform" ]
+  deps = [ "//src/devices/bind/fuchsia.test.platform" ]
 }
 
 fuchsia_driver("ddk-lifecycle-test-driver") {

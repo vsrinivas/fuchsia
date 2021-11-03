@@ -10,7 +10,7 @@ driver_bind_rules("fake_ot_radio_bind") {
   rules = "fake-ot-radio.bind"
   header_output = "fake_ot_radio_bind.h"
   tests = "bind-tests.json"
-  deps = [ "//src/devices/bind/test.platform" ]
+  deps = [ "//src/devices/bind/fuchsia.test.platform" ]
 }
 
 fuchsia_driver("fake-ot-radio-driver-driver") {

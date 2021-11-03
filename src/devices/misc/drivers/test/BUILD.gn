@@ -11,7 +11,7 @@ driver_bind_rules("test_bind") {
   tests = "bind_tests.json"
   deps = [
     "//src/devices/bind/fuchsia.test",
-    "//src/devices/bind/test.platform",
+    "//src/devices/bind/fuchsia.test.platform",
   ]
 }
 

@@ -9,8 +9,8 @@
     {
         "device": {
             "fuchsia.BIND_PLATFORM_DEV_DID": "0",
-            "fuchsia.BIND_PLATFORM_DEV_PID": "test.platform.BIND_PLATFORM_DEV_PID.PCI",
-            "fuchsia.BIND_PLATFORM_DEV_VID": "test.platform.BIND_PLATFORM_DEV_VID.TEST"
+            "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.test.platform.BIND_PLATFORM_DEV_PID.PCI",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.test.platform.BIND_PLATFORM_DEV_VID.TEST"
         },
         "expected": "match",
         "name": "Correct_Protocol"

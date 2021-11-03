@@ -15,9 +15,9 @@
     },
     {
         "device": {
-            "fuchsia.BIND_PLATFORM_DEV_DID": "test.platform.BIND_PLATFORM_DEV_DID.COMPOSITE",
-            "fuchsia.BIND_PLATFORM_DEV_PID": "test.platform.BIND_PLATFORM_DEV_PID.LIBDRIVER",
-            "fuchsia.BIND_PLATFORM_DEV_VID": "test.platform.BIND_PLATFORM_DEV_VID.TEST",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.test.platform.BIND_PLATFORM_DEV_DID.COMPOSITE",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.test.platform.BIND_PLATFORM_DEV_PID.LIBDRIVER",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.test.platform.BIND_PLATFORM_DEV_VID.TEST",
             "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
         },
         "expected": "match",

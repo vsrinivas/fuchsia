@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 using fuchsia.platform;
-using test.platform;
+using fuchsia.test.platform;
 
 fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.BUS;
-fuchsia.BIND_PLATFORM_DEV_VID == test.platform.BIND_PLATFORM_DEV_VID.TEST;
-fuchsia.BIND_PLATFORM_DEV_PID == test.platform.BIND_PLATFORM_DEV_PID.INTEGRATION;
+fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.test.platform.BIND_PLATFORM_DEV_VID.TEST;
+fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.test.platform.BIND_PLATFORM_DEV_PID.INTEGRATION;

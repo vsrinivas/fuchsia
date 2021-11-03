@@ -11,7 +11,7 @@ import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 driver_bind_rules("usb-virtual-bus-bind") {
   rules = "usb-virtual-bus.bind"
   header_output = "usb-virtual-bus-bind.h"
-  deps = [ "//src/devices/bind/test.platform" ]
+  deps = [ "//src/devices/bind/fuchsia.test.platform" ]
 }
 
 source_set("common") {

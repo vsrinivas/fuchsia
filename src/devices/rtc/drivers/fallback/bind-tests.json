@@ -3,22 +3,22 @@
         "name": "Test Match",
         "expected": "match",
         "device": {
-            "fuchsia.BIND_PLATFORM_DEV_VID": "test.platform.BIND_PLATFORM_DEV_VID.TEST",
-            "fuchsia.BIND_PLATFORM_DEV_PID": "test.platform.BIND_PLATFORM_DEV_PID.FALLBACK_RTC"
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.test.platform.BIND_PLATFORM_DEV_VID.TEST",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.test.platform.BIND_PLATFORM_DEV_PID.FALLBACK_RTC"
         }
     },
     {
         "name": "Test Mismatch PID",
         "expected": "abort",
         "device": {
-            "fuchsia.BIND_PLATFORM_DEV_VID": "test.platform.BIND_PLATFORM_DEV_VID.TEST"
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.test.platform.BIND_PLATFORM_DEV_VID.TEST"
         }
     },
     {
         "name": "Test Mismatch VID",
         "expected": "abort",
         "device": {
-            "fuchsia.BIND_PLATFORM_DEV_PID": "test.platform.BIND_PLATFORM_DEV_PID.FALLBACK_RTC"
+            "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.test.platform.BIND_PLATFORM_DEV_PID.FALLBACK_RTC"
         }
     },
     {

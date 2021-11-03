@@ -18,7 +18,7 @@ fidl("fuchsia.device.inspect.test") {
 driver_bind_rules("inspect-test-bind") {
   rules = "inspect-test.bind"
   header_output = "inspect-test-bind.h"
-  deps = [ "//src/devices/bind/test.platform" ]
+  deps = [ "//src/devices/bind/fuchsia.test.platform" ]
 }
 
 fuchsia_driver("fuchsia_driver") {
