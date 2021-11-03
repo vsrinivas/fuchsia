@@ -7,7 +7,6 @@ mod tests {
     use {
         anyhow::Result,
         fable_lib::fable,
-        fidl::endpoints::DiscoverableProtocolMarker,
         fidl_fuchsia_intl::{
             self as fintl, CivilTime, CivilToAbsoluteTimeOptions, DayOfWeek, Month,
             RepeatedTimeConversion, SkippedTimeConversion, TimeZoneId, TimeZoneInfo,
@@ -15,8 +14,7 @@ mod tests {
         },
         fuchsia_async as fasync,
         fuchsia_component_test::{
-            builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
-            RealmInstance,
+            ChildProperties, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
         },
         fuchsia_zircon as zx,
     };
@@ -31,17 +29,18 @@ mod tests {
     async fn connect_to_service() -> Result<(RealmInstance, TimeZonesProxy)> {
         const MONIKER: &str = "tzinfo";
 
-        let mut builder = RealmBuilder::new().await?;
+        let builder = RealmBuilder::new().await?;
         builder
-            .add_component(MONIKER, ComponentSource::LegacyUrl(SVC_URL.to_string()))
+            .add_legacy_child(MONIKER, SVC_URL.to_string(), ChildProperties::new())
             .await?
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol(fintl::TimeZonesMarker::PROTOCOL_NAME),
-                source: RouteEndpoint::component(MONIKER),
-                targets: vec![RouteEndpoint::AboveRoot],
-            })?;
+            .add_route(
+                RouteBuilder::protocol_marker::<fintl::TimeZonesMarker>()
+                    .source(RouteEndpoint::component(MONIKER))
+                    .targets(vec![RouteEndpoint::AboveRoot]),
+            )
+            .await?;
 
-        let realm = builder.build().create().await?;
+        let realm = builder.build().await?;
         let svc = realm.root.connect_to_protocol_at_exposed_dir::<fintl::TimeZonesMarker>()?;
         Ok((realm, svc))
     }
