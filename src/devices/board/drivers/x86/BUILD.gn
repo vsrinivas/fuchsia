@@ -87,7 +87,6 @@ fuchsia_driver("platform-bus-x86-driver") {
   }
 
   sources = [
-    "acpi-dev/dev-battery.cc",
     "acpi-dev/dev-cros-ec/acpi.cc",
     "acpi-dev/dev-cros-ec/dev.cc",
     "acpi-dev/dev-cros-ec/motion.cc",
@@ -175,35 +174,6 @@ fuchsia_driver("platform-bus-x86-driver") {
 fuchsia_driver_component("platform-bus-x86") {
   component_name = "platform-bus-x86"
   deps = [ ":platform-bus-x86-driver" ]
-}
-
-test("x86-battery-test") {
-  sources = [
-    "acpi-dev/dev-battery-test.cc",
-    "acpi-dev/dev-battery.cc",
-  ]
-  configs += [ ":config" ]
-  deps = [
-    "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.hidbus:fuchsia.hardware.hidbus_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.pciroot:fuchsia.hardware.pciroot_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_c",
-    "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
-    "//sdk/lib/fdio",
-    "//src/devices/lib/driver",
-    "//src/devices/pci/lib/pci",
-    "//src/lib/ddk",
-    "//src/lib/ddktl",
-    "//third_party/acpica",
-    "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/hid",
-    "//zircon/system/ulib/region-alloc",
-    "//zircon/system/ulib/zxtest",
-    "//zircon/third_party/ulib/chromiumos-platform-ec",
-  ]
 }
 
 test("x86-lid-test") {
@@ -342,11 +312,6 @@ test("x86-cros-ec-test") {
   ]
 }
 
-fuchsia_unittest_package("x86-battery-test-pkg") {
-  package_name = "x86-battery-test"
-  deps = [ ":x86-battery-test" ]
-}
-
 group("tests") {
   testonly = true
   deps = [
@@ -354,10 +319,7 @@ group("tests") {
     "acpi:tests",
   ]
   if (target_cpu == "x64") {
-    deps += [
-      ":x86-battery-test-pkg",
-      ":x86-cros-ec-test-pkg",
-    ]
+    deps += [ ":x86-cros-ec-test-pkg" ]
   }
 }
 

@@ -241,9 +241,7 @@ zx_status_t publish_acpi_devices(acpi::Manager* manager, zx_device_t* platform_b
 
         // Now, if we recognize the HID, go ahead and deal with publishing the
         // device.
-        if (hid == BATTERY_HID_STRING) {
-          battery_init(acpi_root, object);
-        } else if (hid == LID_HID_STRING) {
+        if (hid == LID_HID_STRING) {
           lid_init(acpi_root, object);
         } else if (hid == PWRSRC_HID_STRING) {
           pwrsrc_init(acpi_root, object);

@@ -70,6 +70,7 @@ board_zedboot_bootfs_labels += _bootfs_deps
 
 board_system_image_deps += [
   "//garnet/packages/prod:drivers-system",
+  "//src/devices/acpi:drivers",
   "//src/graphics/drivers/msd-intel-gen",
   "//src/media/audio/bundles:virtual_audio_driver",
 ]

@@ -44,6 +44,7 @@
 //src/connectivity/wlan/drivers/wlanif:wlanif_driver-driver
 //src/connectivity/wlan/drivers/wlanphy:wlanphy_driver-driver
 //src/connectivity/wlan/testing/wlantap-driver:wlantap_driver-driver
+//src/devices/acpi/drivers/acpi-battery:driver
 //src/devices/bin/driver-index:fake-driver
 //src/devices/bin/driver-index:fake-driver2
 //src/devices/bin/driver_host2:test_driver_driver

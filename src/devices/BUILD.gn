@@ -14,6 +14,7 @@ group("devices") {
 group("tests") {
   testonly = true
   deps = [
+    "acpi:tests",
     "bin:tests",
     "block:tests",
     "board:tests",
