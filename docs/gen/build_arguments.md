@@ -68,14 +68,14 @@ TODO(fxbug.dev/67565) - remove once external sync FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/5278258eedc959233965c1c16f2a579022152893/src/intel/vulkan/BUILD.gn#27)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/52a52cf6627f51b820f7c72aba0177d99a8fc5a4/src/intel/vulkan/BUILD.gn#27)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/5278258eedc959233965c1c16f2a579022152893/src/intel/vulkan/BUILD.gn#30)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/52a52cf6627f51b820f7c72aba0177d99a8fc5a4/src/intel/vulkan/BUILD.gn#30)
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -418,9 +418,9 @@ From //boards/arm64.gni:31
 
 From //build/board.gni:21
 
-**Current value for `target_cpu = "x64"`:** `["//src/power/thermd", "//src/power/thermd:config", "//src/media/audio/drivers/configurator", "//garnet/packages/prod:drivers-support", "//src/hwinfo:default_board_config", "//src/graphics/drivers/intel-gen/icd:libvulkan_intel_gen", "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan"]`
+**Current value for `target_cpu = "x64"`:** `["//src/power/thermd", "//src/power/thermd:config", "//garnet/packages/prod:drivers-support", "//src/hwinfo:default_board_config", "//src/graphics/drivers/intel-gen/icd:libvulkan_intel_gen", "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan"]`
 
-From //boards/common/x64-common.gni:77
+From //boards/common/x64-common.gni:78
 
 **Overridden from the default:** `[]`
 
@@ -464,7 +464,7 @@ From //boards/arm64.gni:25
 
 From //build/board.gni:42
 
-**Current value for `target_cpu = "x64"`:** `["//garnet/packages/prod:drivers-system", "//src/graphics/drivers/msd-intel-gen", "//src/media/audio/bundles:virtual_audio_driver"]`
+**Current value for `target_cpu = "x64"`:** `["//garnet/packages/prod:drivers-system", "//src/devices/acpi:drivers", "//src/graphics/drivers/msd-intel-gen", "//src/media/audio/bundles:virtual_audio_driver"]`
 
 From //boards/common/x64-common.gni:71
 
@@ -661,7 +661,7 @@ From //build/images/args.gni:26
 If you add package labels to this variable, the packages will be included
 in the 'cache' package set, which represents an additional set of software
 that is made available on disk immediately after paving and in factory
-flows. These packages are not updated with an OTA, but instead are updated
+flows. These packages are updated with an OTA, and can also be updated
 ephemerally. This cache of software can be evicted by the system if storage
 pressure arises or other policies indicate.
 
@@ -873,19 +873,19 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/e28f31ea4f66fd820f47b66fd50cb57b15daf1e0/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/1b19345e6aee9eee56a3c3f8a2cd3dc57f92d1de/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_http_transport_impl
 
 **Current value (from the default):** `"libcurl"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/e28f31ea4f66fd820f47b66fd50cb57b15daf1e0/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/1b19345e6aee9eee56a3c3f8a2cd3dc57f92d1de/util/net/tls.gni#21)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/e28f31ea4f66fd820f47b66fd50cb57b15daf1e0/util/net/tls.gni#30)
+From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/1b19345e6aee9eee56a3c3f8a2cd3dc57f92d1de/util/net/tls.gni#30)
 
 ### cts_version
 Name of the CTS version.
@@ -3112,7 +3112,7 @@ Used to control whether board definitions include PMM checker options.
 
 **Current value (from the default):** `true`
 
-From //boards/kernel_cmdline/BUILD.gn:34
+From //boards/kernel_cmdline/BUILD.gn:39
 
 ### policy_labels
 Default policy_labels definition to ease with the transition away from
@@ -3326,7 +3326,7 @@ From //build/toolchain/restat.gni:13
 
 **Current value (from the default):** `false`
 
-From [//third_party/boringssl/BUILD.gn:14](https://fuchsia.googlesource.com/third_party/boringssl/+/f1108273fcef473e5c59525c84caf05a045b84ad/BUILD.gn#14)
+From [//third_party/boringssl/BUILD.gn:14](https://fuchsia.googlesource.com/third_party/boringssl/+/5bbf112e40f2e6f9965df44c70038554e86e76c8/BUILD.gn#14)
 
 ### rust_cap_lints
 Sets the maximum lint level.
@@ -4336,7 +4336,7 @@ From //build/images/args.gni:91
 
 **Current value (from the default):** `false`
 
-From //build/config/fuchsia/BUILD.gn:145
+From //build/config/fuchsia/BUILD.gn:150
 
 ### zircon_b_partition
 
