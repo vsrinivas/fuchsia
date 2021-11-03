@@ -234,7 +234,7 @@ TEST_F(HidDevTest, GetReportDescTest) {
 
   auto sync_client = GetSyncClient();
   fidl::WireResult<fuchsia_input_report::InputDevice::GetDescriptor> result =
-      sync_client.GetDescriptor();
+      sync_client->GetDescriptor();
   ASSERT_OK(result.status());
 
   auto& desc = result.Unwrap()->descriptor;
@@ -259,7 +259,7 @@ TEST_F(HidDevTest, ReportDescInfoTest) {
 
   auto sync_client = GetSyncClient();
   fidl::WireResult<fuchsia_input_report::InputDevice::GetDescriptor> result =
-      sync_client.GetDescriptor();
+      sync_client->GetDescriptor();
   ASSERT_OK(result.status());
 
   hid_device_info_t info;
@@ -286,7 +286,7 @@ TEST_F(HidDevTest, ReadInputReportsTest) {
     auto endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
     ASSERT_OK(endpoints.status_value());
 
-    auto result = sync_client.GetInputReportsReader(std::move(endpoints->server));
+    auto result = sync_client->GetInputReportsReader(std::move(endpoints->server));
     ASSERT_OK(result.status());
     reader = fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(
         std::move(endpoints->client));
@@ -298,7 +298,7 @@ TEST_F(HidDevTest, ReadInputReportsTest) {
   fake_hid_.SendReport(sent_report);
 
   // Get the report.
-  auto result = reader.ReadInputReports();
+  auto result = reader->ReadInputReports();
   ASSERT_OK(result.status());
   ASSERT_FALSE(result->result.is_err());
   auto& reports = result->result.response().reports;
@@ -339,7 +339,7 @@ TEST_F(HidDevTest, ReadInputReportsHangingGetTest) {
     auto endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
     ASSERT_OK(endpoints.status_value());
 
-    auto result = sync_client.GetInputReportsReader(std::move(endpoints->server));
+    auto result = sync_client->GetInputReportsReader(std::move(endpoints->server));
     ASSERT_OK(result.status());
     reader.Bind(std::move(endpoints->client), loop.dispatcher());
     ASSERT_OK(device_->WaitForNextReader(zx::duration::infinite()));
@@ -391,7 +391,7 @@ TEST_F(HidDevTest, CloseReaderWithOutstandingRead) {
     auto endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
     ASSERT_OK(endpoints.status_value());
 
-    auto result = sync_client.GetInputReportsReader(std::move(endpoints->server));
+    auto result = sync_client->GetInputReportsReader(std::move(endpoints->server));
     ASSERT_OK(result.status());
     reader.Bind(std::move(endpoints->client), loop.dispatcher());
     ASSERT_OK(device_->WaitForNextReader(zx::duration::infinite()));
@@ -422,7 +422,7 @@ TEST_F(HidDevTest, SensorTest) {
 
   // Get the report descriptor.
   fidl::WireResult<fuchsia_input_report::InputDevice::GetDescriptor> result =
-      sync_client.GetDescriptor();
+      sync_client->GetDescriptor();
   ASSERT_OK(result.status());
   fuchsia_input_report::wire::DeviceDescriptor& desc = result->descriptor;
   ASSERT_TRUE(desc.has_sensor());
@@ -450,7 +450,7 @@ TEST_F(HidDevTest, SensorTest) {
     auto endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
     ASSERT_OK(endpoints.status_value());
 
-    auto result = sync_client.GetInputReportsReader(std::move(endpoints->server));
+    auto result = sync_client->GetInputReportsReader(std::move(endpoints->server));
     ASSERT_OK(result.status());
     reader = fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(
         std::move(endpoints->client));
@@ -476,7 +476,7 @@ TEST_F(HidDevTest, SensorTest) {
   fake_hid_.SendReport(report_vector);
 
   // Get the report.
-  auto report_result = reader.ReadInputReports();
+  auto report_result = reader->ReadInputReports();
   ASSERT_OK(report_result.status());
 
   const fidl::VectorView<fuchsia_input_report::wire::InputReport>& reports =
@@ -512,7 +512,7 @@ TEST_F(HidDevTest, GetTouchInputReportTest) {
     auto endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
     ASSERT_OK(endpoints.status_value());
 
-    auto result = sync_client.GetInputReportsReader(std::move(endpoints->server));
+    auto result = sync_client->GetInputReportsReader(std::move(endpoints->server));
     ASSERT_OK(result.status());
     reader = fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(
         std::move(endpoints->client));
@@ -534,7 +534,7 @@ TEST_F(HidDevTest, GetTouchInputReportTest) {
   fake_hid_.SendReport(sent_report);
 
   // Get the report.
-  auto report_result = reader.ReadInputReports();
+  auto report_result = reader->ReadInputReports();
   ASSERT_OK(report_result.status());
 
   const fidl::VectorView<fuchsia_input_report::wire::InputReport>& reports =
@@ -564,7 +564,7 @@ TEST_F(HidDevTest, GetTouchPadDescTest) {
 
   auto sync_client = GetSyncClient();
   fidl::WireResult<fuchsia_input_report::InputDevice::GetDescriptor> result =
-      sync_client.GetDescriptor();
+      sync_client->GetDescriptor();
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->descriptor.has_touch());
   ASSERT_TRUE(result->descriptor.touch().has_input());
@@ -589,7 +589,7 @@ TEST_F(HidDevTest, KeyboardTest) {
     auto endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
     ASSERT_OK(endpoints.status_value());
 
-    auto result = sync_client.GetInputReportsReader(std::move(endpoints->server));
+    auto result = sync_client->GetInputReportsReader(std::move(endpoints->server));
     ASSERT_OK(result.status());
     reader = fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(
         std::move(endpoints->client));
@@ -608,7 +608,7 @@ TEST_F(HidDevTest, KeyboardTest) {
   fake_hid_.SendReport(sent_report);
 
   // Get the report.
-  auto report_result = reader.ReadInputReports();
+  auto report_result = reader->ReadInputReports();
   ASSERT_OK(report_result.status());
 
   const fidl::VectorView<fuchsia_input_report::wire::InputReport>& reports =
@@ -643,7 +643,7 @@ TEST_F(HidDevTest, KeyboardOutputReportTest) {
   output_report.set_keyboard(allocator, std::move(fidl_keyboard));
   // Send the report.
   fidl::WireResult<fuchsia_input_report::InputDevice::SendOutputReport> response =
-      sync_client.SendOutputReport(std::move(output_report));
+      sync_client->SendOutputReport(std::move(output_report));
   ASSERT_OK(response.status());
   ASSERT_FALSE(response->result.is_err());
   // Get and check the hid output report.
@@ -679,7 +679,7 @@ TEST_F(HidDevTest, ConsumerControlTest) {
 
   // Get the report descriptor.
   fidl::WireResult<fuchsia_input_report::InputDevice::GetDescriptor> result =
-      sync_client.GetDescriptor();
+      sync_client->GetDescriptor();
   ASSERT_OK(result.status());
   fuchsia_input_report::wire::DeviceDescriptor& desc = result->descriptor;
   ASSERT_TRUE(desc.has_consumer_control());
@@ -706,7 +706,7 @@ TEST_F(HidDevTest, ConsumerControlTest) {
     auto endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
     ASSERT_OK(endpoints.status_value());
 
-    auto result = sync_client.GetInputReportsReader(std::move(endpoints->server));
+    auto result = sync_client->GetInputReportsReader(std::move(endpoints->server));
     ASSERT_OK(result.status());
     reader = fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(
         std::move(endpoints->client));
@@ -727,7 +727,7 @@ TEST_F(HidDevTest, ConsumerControlTest) {
   }
 
   // Get the report.
-  auto report_result = reader.ReadInputReports();
+  auto report_result = reader->ReadInputReports();
   ASSERT_OK(report_result.status());
 
   const fidl::VectorView<fuchsia_input_report::wire::InputReport>& reports =
@@ -789,13 +789,13 @@ TEST_F(HidDevTest, ConsumerControlTwoClientsTest) {
       auto endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
       ASSERT_OK(endpoints.status_value());
 
-      auto result = client.GetInputReportsReader(std::move(endpoints->server));
+      auto result = client->GetInputReportsReader(std::move(endpoints->server));
       ASSERT_OK(result.status());
       reader = fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(
           std::move(endpoints->client));
     }
 
-    auto report_result = reader.ReadInputReports();
+    auto report_result = reader->ReadInputReports();
     ASSERT_OK(report_result.status());
     const fidl::VectorView<fuchsia_input_report::wire::InputReport>& reports =
         report_result->result.response().reports;
@@ -814,14 +814,14 @@ TEST_F(HidDevTest, ConsumerControlTwoClientsTest) {
       auto endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
       ASSERT_OK(endpoints.status_value());
 
-      auto result = client.GetInputReportsReader(std::move(endpoints->server));
+      auto result = client->GetInputReportsReader(std::move(endpoints->server));
       ASSERT_OK(result.status());
       reader = fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(
           std::move(endpoints->client));
       ASSERT_OK(device_->WaitForNextReader(zx::duration::infinite()));
     }
 
-    auto report_result = reader.ReadInputReports();
+    auto report_result = reader->ReadInputReports();
     ASSERT_OK(report_result.status());
     const fidl::VectorView<fuchsia_input_report::wire::InputReport>& reports =
         report_result->result.response().reports;
@@ -941,7 +941,7 @@ TEST_F(HidDevTest, GetInputReport) {
 
   {
     const auto report_result =
-        sync_client.GetInputReport(fuchsia_input_report::wire::DeviceType::kSensor);
+        sync_client->GetInputReport(fuchsia_input_report::wire::DeviceType::kSensor);
     ASSERT_TRUE(report_result.ok());
 
     ASSERT_TRUE(report_result->result.is_response());
@@ -960,7 +960,7 @@ TEST_F(HidDevTest, GetInputReport) {
 
   {
     // Requesting a different device type should fail.
-    const auto result = sync_client.GetInputReport(fuchsia_input_report::wire::DeviceType::kTouch);
+    const auto result = sync_client->GetInputReport(fuchsia_input_report::wire::DeviceType::kTouch);
     ASSERT_TRUE(result.ok());
     EXPECT_TRUE(result->result.is_err());
   }
@@ -991,7 +991,7 @@ TEST_F(HidDevTest, GetInputReportMultipleDevices) {
                                report_vector.size());
 
   // There are two devices with this type (finger and stylus), so this should fail.
-  const auto result = sync_client.GetInputReport(fuchsia_input_report::wire::DeviceType::kTouch);
+  const auto result = sync_client->GetInputReport(fuchsia_input_report::wire::DeviceType::kTouch);
   ASSERT_TRUE(result.ok());
   EXPECT_TRUE(result->result.is_err());
 }
