@@ -92,7 +92,7 @@ zx_status_t FindSysconfigPartition(const fbl::unique_fd& devfs_root,
       return ZX_OK;
     }
     fidl::WireSyncClient<skipblock::SkipBlock> skip_block(std::move(local));
-    auto result = skip_block.GetPartitionInfo();
+    auto result = skip_block->GetPartitionInfo();
     status = result.ok() ? result.value().status : result.status();
     if (status != ZX_OK) {
       return ZX_OK;
@@ -394,7 +394,7 @@ zx_status_t SyncClient::Write(size_t offset, size_t len, const zx::vmo& vmo, zx_
       .mode = mode,
   };
   printf("sysconfig: ADDING ERASE CYCLE TO SYSCONFIG\n");
-  auto result = skip_block_.WriteBytes(std::move(operation));
+  auto result = skip_block_->WriteBytes(std::move(operation));
   return result.ok() ? result.value().status : result.status();
 }
 
@@ -413,12 +413,12 @@ zx_status_t SyncClient::WriteBytesWithoutErase(size_t offset, size_t len, const 
       // in fidl errors.
       .mode = skipblock::wire::WriteBytesMode::kReadModifyEraseWrite,
   };
-  auto result = skip_block_.WriteBytesWithoutErase(std::move(operation));
+  auto result = skip_block_->WriteBytesWithoutErase(std::move(operation));
   return result.ok() ? result.value().status : result.status();
 }
 
 zx_status_t SyncClient::InitializeReadMapper() {
-  auto result = skip_block_.GetPartitionInfo();
+  auto result = skip_block_->GetPartitionInfo();
   zx_status_t status = result.ok() ? result.value().status : result.status();
   if (status != ZX_OK) {
     return status;
@@ -471,7 +471,7 @@ zx_status_t SyncClient::LoadFromStorage() {
       .block = 0,
       .block_count = 1,
   };
-  auto result = skip_block_.Read(std::move(operation));
+  auto result = skip_block_->Read(std::move(operation));
   zx_status_t status = result.ok() ? result.value().status : result.status();
   if (status != ZX_OK) {
     return status;
