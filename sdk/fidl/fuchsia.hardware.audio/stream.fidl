@@ -203,6 +203,9 @@ type StreamProperties = table {
 /// For an overview see
 /// [Audio Driver Streaming Interface](https://fuchsia.dev/fuchsia-src/concepts/drivers/driver_architectures/audio_drivers/audio_streaming)
 protocol StreamConfig {
+    /// Allows providing driver health state.
+    compose Health;
+
     /// Retrieves top level static properties.
     GetProperties() -> (struct {
         properties StreamProperties;

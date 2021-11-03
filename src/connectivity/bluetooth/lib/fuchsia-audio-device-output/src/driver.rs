@@ -272,6 +272,9 @@ impl SoftPcmOutput {
         request: StreamConfigRequest,
     ) -> std::result::Result<(), anyhow::Error> {
         match request {
+            StreamConfigRequest::GetHealthState { responder } => {
+                responder.send(HealthState::EMPTY)?;
+            }
             StreamConfigRequest::GetProperties { responder } => {
                 #[rustfmt::skip]
                 let prop = StreamProperties {

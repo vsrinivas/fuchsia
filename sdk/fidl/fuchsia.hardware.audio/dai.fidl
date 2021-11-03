@@ -22,6 +22,8 @@ type DaiProperties = table {
 /// For an overview see
 /// [Digital Audio Interface](https://fuchsia.dev/fuchsia-src/concepts/drivers/driver_architectures/audio_drivers/audio_dai).
 protocol Dai {
+    /// Allows providing driver health state.
+    compose Health;
 
     /// Resets the DAI HW. The `ring_buffer` channel obtained via `CreateRingBuffer` may be closed
     /// by the driver, in this case the client needs to obtain a new `ring_buffer`.

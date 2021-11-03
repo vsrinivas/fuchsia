@@ -58,6 +58,9 @@ class AmlG12TdmDai : public AmlG12TdmDaiDeviceType,
   // FIDL HLCPP methods for fuchsia.hardware.audio.Dai.
   void Reset(ResetCallback callback) override;
   void GetProperties(::fuchsia::hardware::audio::Dai::GetPropertiesCallback callback) override;
+  void GetHealthState(::fuchsia::hardware::audio::Dai::GetHealthStateCallback callback) override {
+    callback({});
+  }
   void GetRingBufferFormats(GetRingBufferFormatsCallback callback) override;
   void GetDaiFormats(GetDaiFormatsCallback callback) override;
   void CreateRingBuffer(

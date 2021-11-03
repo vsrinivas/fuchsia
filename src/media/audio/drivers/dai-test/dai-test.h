@@ -45,6 +45,7 @@ class DaiTest : public DaiTestDeviceType,
   void WatchGainState(WatchGainStateCallback callback) override;
   void SetGain(::fuchsia::hardware::audio::GainState target_state) override;
   void WatchPlugState(WatchPlugStateCallback callback) override;
+  void GetHealthState(GetHealthStateCallback callback) override { callback({}); }
 
   std::optional<fidl::Binding<::fuchsia::hardware::audio::StreamConfig>> stream_config_binding_;
   ::fuchsia::hardware::audio::DaiSyncPtr dai_;

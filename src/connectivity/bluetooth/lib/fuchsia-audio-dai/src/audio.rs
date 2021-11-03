@@ -124,6 +124,9 @@ async fn process_audio_requests(
             break;
         }
         match request.unwrap() {
+            StreamConfigRequest::GetHealthState { responder } => {
+                responder.send(HealthState::EMPTY)?;
+            }
             StreamConfigRequest::GetProperties { responder } => {
                 let prop = StreamProperties {
                     unique_id: Some(unique_id.clone()),

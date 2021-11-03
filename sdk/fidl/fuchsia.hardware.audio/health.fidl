@@ -1,0 +1,21 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.hardware.audio;
+
+type HealthState = table {
+    /// Driver is currently healthy. Optional.
+    /// No health information is provided if this field is not included.
+    /// This allows drivers to signal their health state in scenarios where they have not enough
+    /// capabilities or resources to recover on their own, for instance not able to power down the
+    /// hardware via a GPIO or control over the power subsystem.
+    1: healthy bool;
+};
+
+protocol Health {
+    /// Retrieves top level health state.
+    /// A driver not responding promptly can be used as an indication of an unhealthy driver.
+    GetHealthState() -> (struct {
+        state HealthState;
+    });
+};

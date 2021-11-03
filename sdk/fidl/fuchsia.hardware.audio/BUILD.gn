@@ -14,6 +14,7 @@ fidl("fuchsia.hardware.audio") {
     "dai.fidl",
     "dai_connect.fidl",
     "dai_format.fidl",
+    "health.fidl",
     "ring_buffer.fidl",
     "stream.fidl",
   ]
