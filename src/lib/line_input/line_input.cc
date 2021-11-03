@@ -318,30 +318,21 @@ void LineInputEditor::HandleNegAck() {
   LineChanged();
 }
 
+// This is used to delete the previous word (Control-W).
 void LineInputEditor::HandleEndOfTransimission() {
   const auto& line = cur_line();
   if (line.empty())
     return;
 
-  // We search for the last space that's before the cursor.
-  size_t latest_space = 0;
-  for (size_t i = 0; i < line.size(); i++) {
-    if (i >= pos_)
-      break;
+  // Delete the characters before the cursor following the pattern "<nonspace>*<space>*"
+  size_t begin_delete = pos_;
+  while (begin_delete > 0 && line[begin_delete - 1] == ' ')
+    begin_delete--;
+  while (begin_delete > 0 && line[begin_delete - 1] != ' ')
+    begin_delete--;
 
-    if (line[i] == ' ')
-      latest_space = i;
-  }
-
-  // Ctrl-w removes from the latest space until the cursor.
-  std::string new_line;
-  if (latest_space > 0)
-    new_line.append(line.substr(0, latest_space + 1));
-  new_line.append(line.substr(pos_));
-
-  size_t diff = line.size() - new_line.size();
-  pos_ -= diff;
-  cur_line() = std::move(new_line);
+  cur_line().erase(cur_line().begin() + begin_delete, cur_line().begin() + pos_);
+  pos_ = begin_delete;
   LineChanged();
 }
 

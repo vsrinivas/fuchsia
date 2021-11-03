@@ -324,6 +324,12 @@ TEST(LineInput, EndOfTransimission) {
   input.OnInput(SpecialCharacters::kKeyControlW);
   EXPECT_EQ(input.GetLine(), " Second Third");
 
+  //                   v
+  input.SetLine("First Second Third");
+  input.SetPos(6);
+  input.OnInput(SpecialCharacters::kKeyControlW);
+  EXPECT_EQ(input.GetLine(), "Second Third");
+
   //                     v
   input.SetLine("First Second Third");
   input.SetPos(8);
@@ -335,6 +341,12 @@ TEST(LineInput, EndOfTransimission) {
   input.SetPos(12);
   input.OnInput(SpecialCharacters::kKeyControlW);
   EXPECT_EQ(input.GetLine(), "First  Third");
+
+  //                          v
+  input.SetLine("First Second Third");
+  input.SetPos(13);
+  input.OnInput(SpecialCharacters::kKeyControlW);
+  EXPECT_EQ(input.GetLine(), "First Third");
 
   //                            v
   input.SetLine("First Second Third");

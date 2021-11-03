@@ -265,7 +265,7 @@ class LineInputEditor : public LineInput {
   // Tracks the current line's state before suggesting completions so we can
   // put them back if necessary. Only valid when completion_mode_ = true.
   std::string line_before_completion_;
-  size_t pos_before_completion_;
+  size_t pos_before_completion_ = 0;
 
   // When an escape is read, we enter "escaped input" mode which interprets the
   // next few characters input as an escape sequence.
