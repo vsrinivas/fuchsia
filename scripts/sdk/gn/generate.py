@@ -460,11 +460,6 @@ class GNBuilder(Frontend):
         # config, license, and component_manifest.
         self.copy_files(atom['data'])
 
-    def install_product_bundle_atom(self, atom):
-        self.write_atom_metadata(
-            self.dest('product_bundle', '%s.json' % self.get_atom_name(atom)),
-            atom)
-
     def install_sysroot_atom(self, atom):
         for arch in self.target_arches:
             base = self.dest('arch', arch, 'sysroot')
