@@ -206,7 +206,6 @@ void StreamSinkClient<T>::Pull() {
                       }));
             } else if (result.value().is_clear_request()) {
               auto& clear_request = result.value().clear_request();
-              FX_CHECK(clear_request);
               bool hold_last_frame = clear_request.hold_last_frame();
               stream_sink_->Clear(hold_last_frame, clear_request.take_completion_fence());
             } else {
