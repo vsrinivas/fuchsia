@@ -25,18 +25,20 @@
 
 #include "fake_netstack_v1.h"
 
-static constexpr uint32_t kMtu = 1500;
+namespace {
 
-static constexpr uint8_t kHostMacAddress[ETH_ALEN] = {0x02, 0x1a, 0x11, 0x00, 0x00, 0x00};
+constexpr uint32_t kMtu = 1500;
 
-static constexpr uint8_t kHostIpv4Address[4] = {192, 168, 0, 1};
-static constexpr uint8_t kGuestIpv4Address[4] = {192, 168, 0, 10};
+constexpr uint8_t kHostMacAddress[ETH_ALEN] = {0x02, 0x1a, 0x11, 0x00, 0x00, 0x00};
 
-static constexpr uint16_t kProtocolIpv4 = 0x0800;
-static constexpr uint8_t kPacketTypeUdp = 17;
-static constexpr uint16_t kTestPort = 4242;
+constexpr uint8_t kHostIpv4Address[4] = {192, 168, 0, 1};
+constexpr uint8_t kGuestIpv4Address[4] = {192, 168, 0, 10};
 
-static uint16_t checksum(const void* _data, size_t len, uint16_t _sum) {
+constexpr uint16_t kProtocolIpv4 = 0x0800;
+constexpr uint8_t kPacketTypeUdp = 17;
+constexpr uint16_t kTestPort = 4242;
+
+uint16_t Checksum(const void* _data, size_t len, uint16_t _sum) {
   uint32_t sum = _sum;
   auto data = static_cast<const uint16_t*>(_data);
   for (; len > 1; len -= 2) {
@@ -50,6 +52,8 @@ static uint16_t checksum(const void* _data, size_t len, uint16_t _sum) {
   }
   return static_cast<uint16_t>(~sum);
 }
+
+}  // namespace
 
 void FakeNetstack::Install(sys::testing::EnvironmentServices& services) {
   zx_status_t status =
@@ -94,7 +98,7 @@ fpromise::promise<void, zx_status_t> FakeNetstack::SendUdpPacket(
     memcpy(&ip.saddr, kHostIpv4Address, sizeof(ip.saddr));
     static_assert(sizeof(ip.daddr) == sizeof(kGuestIpv4Address));
     memcpy(&ip.daddr, kGuestIpv4Address, sizeof(ip.daddr));
-    ip.check = checksum(&ip, sizeof(iphdr), 0);
+    ip.check = Checksum(&ip, sizeof(iphdr), 0);
     std::copy_n(reinterpret_cast<uint8_t*>(&ip), sizeof(ip), std::back_inserter(udp_packet));
   }
 
