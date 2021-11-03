@@ -35,7 +35,7 @@ declare_args() {
   # If you add package labels to this variable, the packages will be included
   # in the 'cache' package set, which represents an additional set of software
   # that is made available on disk immediately after paving and in factory
-  # flows. These packages are not updated with an OTA, but instead are updated
+  # flows. These packages are updated with an OTA, and can also be updated
   # ephemerally. This cache of software can be evicted by the system if storage
   # pressure arises or other policies indicate.
   cache_package_labels = []
