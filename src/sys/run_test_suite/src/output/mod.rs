@@ -66,7 +66,10 @@ impl RunReporter {
                 match artifact_type {
                     // All the artifact types are enumerated here as we expect future artifacts
                     // should not be filtered.
-                    ArtifactType::Stdout | ArtifactType::Stderr | ArtifactType::Syslog => {
+                    ArtifactType::Stdout
+                    | ArtifactType::Stderr
+                    | ArtifactType::Syslog
+                    | ArtifactType::RestrictedLog => {
                         Box::new(AnsiFilterWriter::new(artifact)) as Box<DynArtifact>
                     }
                 }
@@ -211,6 +214,7 @@ pub enum ArtifactType {
     Stdout,
     Stderr,
     Syslog,
+    RestrictedLog,
 }
 
 /// An enumeration of different known artifact types consisting of multiple files.
@@ -263,6 +267,7 @@ impl Into<test_output_directory::ArtifactType> for ArtifactType {
             Self::Stdout => test_output_directory::ArtifactType::Stdout,
             Self::Stderr => test_output_directory::ArtifactType::Stderr,
             Self::Syslog => test_output_directory::ArtifactType::Syslog,
+            Self::RestrictedLog => test_output_directory::ArtifactType::RestrictedLog,
         }
     }
 }

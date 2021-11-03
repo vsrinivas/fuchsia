@@ -551,7 +551,12 @@ async fn collect_results_for_suite(
         match t.await {
             Ok(r) => match r {
                 diagnostics::LogCollectionOutcome::Error { restricted_logs: mut logs } => {
-                    restricted_logs.append(&mut logs)
+                    let mut log_artifact =
+                        suite_reporter.new_artifact(&ArtifactType::RestrictedLog)?;
+                    for log in logs.iter() {
+                        writeln!(log_artifact, "{}", log)?;
+                    }
+                    restricted_logs.append(&mut logs);
                 }
                 diagnostics::LogCollectionOutcome::Passed => {}
             },

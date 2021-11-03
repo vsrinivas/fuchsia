@@ -102,6 +102,8 @@ pub struct ArtifactMetadataV0 {
 #[serde(rename_all = "UPPERCASE")]
 pub enum ArtifactType {
     Syslog,
+    /// Unexpected high severity logs that caused a test to fail.
+    RestrictedLog,
     Stdout,
     Stderr,
     /// A directory containing custom artifacts produced by a component in the test.

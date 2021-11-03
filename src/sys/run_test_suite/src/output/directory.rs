@@ -17,6 +17,7 @@ use test_output_directory as directory;
 const STDOUT_FILE: &str = "stdout.txt";
 const STDERR_FILE: &str = "stderr.txt";
 const SYSLOG_FILE: &str = "syslog.txt";
+const RESTRICTED_LOG_FILE: &str = "restricted_logs.txt";
 const CUSTOM_ARTIFACT_DIRECTORY: &str = "custom";
 
 const TEST_SUMMARY_TMP_FILE: &str = ".test_summary_tmp.json";
@@ -322,6 +323,7 @@ fn filename_for_type(artifact_type: &ArtifactType) -> &'static str {
         ArtifactType::Stdout => STDOUT_FILE,
         ArtifactType::Stderr => STDERR_FILE,
         ArtifactType::Syslog => SYSLOG_FILE,
+        ArtifactType::RestrictedLog => RESTRICTED_LOG_FILE,
     }
 }
 

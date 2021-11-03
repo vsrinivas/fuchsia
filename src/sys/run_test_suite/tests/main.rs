@@ -1201,6 +1201,9 @@ async fn test_syslog_to_directory() {
     .with_matching_artifact(directory::ArtifactType::Syslog, "syslog.txt".into(), |actual| {
         assert_output!(actual.as_bytes(), EXPECTED_SYSLOG);
     })
+    .with_matching_artifact(directory::ArtifactType::RestrictedLog, "restricted_logs.txt".into(), |actual| {
+        assert!(actual.contains("ERROR: [../../src/sys/run_test_suite/tests/error_logging_test.rs(23)] my error message"))
+    })
     .with_any_start_time()
     .with_any_run_duration()];
 
