@@ -16,4 +16,7 @@
             ],
         },
     ],
+    facets: {
+        "fuchsia.test": { type: "cts" },
+    },
 }

@@ -1,0 +1,55 @@
+{
+    collections: [
+        {
+            name: "cts-tests",
+            environment: "#test-env",
+            durability: "transient",
+        },
+    ],
+    offer: [
+        {
+            // These hermetic protocols are offered to be used by tests.
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.sys2.EventSource",
+            ],
+            from: "parent",
+            to: [ "#cts-tests" ],
+        },
+
+        // These system capabilities are offered for use by the cts tests.
+        {
+            protocol: [
+                // used for hwinfo cts tests.
+                "fuchsia.hwinfo.Board",
+                "fuchsia.hwinfo.Device",
+                "fuchsia.hwinfo.Product",
+
+                // used for privacy settings cts tests.
+                "fuchsia.settings.Privacy",
+            ],
+            from: "parent",
+            to: "#cts-tests",
+        },
+        {
+            storage: "data",
+            from: "self",
+            to: [ "#cts-tests" ],
+        },
+        {
+            storage: "tmp",
+            from: "self",
+            to: [ "#cts-tests" ],
+        },
+        {
+            storage: "cache",
+            from: "self",
+            to: [ "#cts-tests" ],
+        },
+        {
+            storage: "custom_artifacts",
+            from: "self",
+            to: "#cts-tests",
+        },
+    ],
+}

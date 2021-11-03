@@ -81,13 +81,15 @@ rustc_library("lib") {
     "//third_party/rust_crates:futures-util",
     "//third_party/rust_crates:glob",
     "//third_party/rust_crates:lazy_static",
-    "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:tracing",
   ]
-  test_deps = [ "//third_party/rust_crates:matches" ]
+  test_deps = [
+    "//third_party/rust_crates:maplit",
+    "//third_party/rust_crates:matches",
+  ]
 
   sources = [
     "src/diagnostics.rs",

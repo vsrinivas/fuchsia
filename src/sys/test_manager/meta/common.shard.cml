@@ -1,5 +1,6 @@
 {
     include: [
+        "//sdk/cts/test_realm/meta/cts_test_realm.shard.cml",
         "//src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
         "syslog/client.shard.cml",
     ],
@@ -156,7 +157,8 @@
                 "fuchsia.boot.ReadOnlyLog",
                 "fuchsia.boot.WriteOnlyLog",
 
-                // TODO(fxbug.dev/83029): Package these `hwinfo` protocols better.
+                // TODO(fxbug.dev/83029): Remove hwinfo protocols once canary
+                // package is rolled to latest test changes.
                 "fuchsia.hwinfo.Board",
                 "fuchsia.hwinfo.Device",
                 "fuchsia.hwinfo.Product",
@@ -168,9 +170,6 @@
                 // TODO(fxbug.dev/83038): Remove once e2e is better supported.
                 "fuchsia.net.http.Loader",
                 "fuchsia.scheduler.ProfileProvider",
-
-                // TODO(fxbug.dev/86634): Remove once cts has its own realm.
-                "fuchsia.settings.Privacy",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.vulkan.loader.Loader",
@@ -184,11 +183,6 @@
             protocol: [
                 "fuchsia.boot.ReadOnlyLog",
                 "fuchsia.boot.WriteOnlyLog",
-
-                // TODO(fxbug.dev/83029): Package these `hwinfo` protocols better.
-                "fuchsia.hwinfo.Board",
-                "fuchsia.hwinfo.Device",
-                "fuchsia.hwinfo.Product",
                 "fuchsia.kernel.RootJobForInspect",
                 "fuchsia.kernel.Stats",
                 "fuchsia.kernel.VmexResource",

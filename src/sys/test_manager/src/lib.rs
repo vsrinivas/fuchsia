@@ -38,7 +38,6 @@ use {
     },
     io_util,
     lazy_static::lazy_static,
-    maplit::hashmap,
     moniker::RelativeMonikerBase,
     regex::Regex,
     routing::rights::READ_RIGHTS,
@@ -63,12 +62,17 @@ const ARCHIVIST_FOR_EMBEDDING_URL: &'static str =
     "fuchsia-pkg://fuchsia.com/test_manager#meta/archivist-for-embedding.cm";
 const HERMETIC_TESTS_COLLECTION: &'static str = "tests";
 const SYSTEM_TESTS_COLLECTION: &'static str = "system-tests";
+const CTS_TESTS_COLLECTION: &'static str = "cts-tests";
+
 lazy_static! {
-    static ref TEST_TYPE_REALM_MAP: HashMap<&'static str, &'static str> =
-        [("hermetic", HERMETIC_TESTS_COLLECTION), ("system", SYSTEM_TESTS_COLLECTION)]
-            .iter()
-            .copied()
-            .collect();
+    static ref TEST_TYPE_REALM_MAP: HashMap<&'static str, &'static str> = [
+        ("hermetic", HERMETIC_TESTS_COLLECTION),
+        ("system", SYSTEM_TESTS_COLLECTION),
+        ("cts", CTS_TESTS_COLLECTION)
+    ]
+    .iter()
+    .copied()
+    .collect();
 }
 const TEST_TYPE_FACET_KEY: &'static str = "fuchsia.test.type";
 
@@ -964,7 +968,7 @@ pub async fn run_test_manager_info_server(
 ) -> Result<(), TestManagerError> {
     // This ensures all monikers are relative to test_manager and supports capturing the top-level
     // name of the test realm.
-    let collection_names = [HERMETIC_TESTS_COLLECTION, SYSTEM_TESTS_COLLECTION];
+    let collection_names = TEST_TYPE_REALM_MAP.values().map(|v| *v).collect::<Vec<_>>();
     let re = Regex::new(&format!(r"^\./(?:{}):(.*?):.*$", collection_names.join("|"))).unwrap();
     while let Some(event) = stream.try_next().await.map_err(TestManagerError::Stream)? {
         match event {
@@ -1605,10 +1609,8 @@ impl AboveRootCapabilitiesForTest {
     }
 
     fn load(decl: fsys::ComponentDecl) -> HashMap<&'static str, Vec<RouteBuilder>> {
-        let mut capabilities = hashmap! {
-            HERMETIC_TESTS_COLLECTION => vec![],
-            SYSTEM_TESTS_COLLECTION => vec![]
-        };
+        let mut capabilities: HashMap<_, _> =
+            TEST_TYPE_REALM_MAP.values().map(|v| (*v, vec![])).collect();
         for offer_decl in decl.offers.unwrap_or(vec![]) {
             match offer_decl {
                 fsys::OfferDecl::Protocol(fsys::OfferProtocolDecl {
@@ -2343,6 +2345,23 @@ mod tests {
             ..fdata::Dictionary::EMPTY
         });
         assert_eq!(get_test_realm(&decl).unwrap(), SYSTEM_TESTS_COLLECTION);
+
+        decl.facets = Some(fdata::Dictionary {
+            entries: vec![
+                fdata::DictionaryEntry { key: "somekey".into(), value: None },
+                fdata::DictionaryEntry {
+                    key: format!("{}.somekey", TEST_FACET),
+                    value: Some(fdata::DictionaryValue::Str("some_string".into()).into()),
+                },
+                fdata::DictionaryEntry {
+                    key: TEST_TYPE_FACET_KEY.into(),
+                    value: Some(fdata::DictionaryValue::Str("cts".into()).into()),
+                },
+            ]
+            .into(),
+            ..fdata::Dictionary::EMPTY
+        });
+        assert_eq!(get_test_realm(&decl).unwrap(), CTS_TESTS_COLLECTION);
 
         // invalid facets
         decl.facets = Some(fdata::Dictionary {

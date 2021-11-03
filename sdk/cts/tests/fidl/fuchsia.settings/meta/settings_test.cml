@@ -12,4 +12,7 @@
             protocol: [ "fuchsia.settings.Privacy" ],
         },
     ],
+    facets: {
+        "fuchsia.test": { type: "cts" },
+    },
 }

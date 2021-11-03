@@ -67,6 +67,25 @@ build templates.
 
 Note: This section assumes familiarity with the concept of [Test Components].
 
+```json5
+// my_test_component.cml
+{
+    include: [
+        // Select the appropriate test runner shard here:
+        // rust, elf, etc.
+        "//src/sys/test_runners/rust/default.shard.cml",
+    ],
+    program: {
+        binary: "bin/my_test_binary",
+    },
+    facets: {
+        // mark your test type "cts".
+        "fuchsia.test": { type: "cts" },
+    },
+    ...
+}
+```
+
 Wrap your executable as a Fuchsia component. CTS provides a special GN template
 for creating a component:
 
