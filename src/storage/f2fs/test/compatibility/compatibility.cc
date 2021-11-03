@@ -14,7 +14,7 @@ std::string GenerateTestPath(std::string_view format) {
 }
 
 zx::status<std::pair<std::unique_ptr<F2fs>, fbl::RefPtr<Dir>>> CreateFsAndRootFromImage(
-    MountOptions mount_options, fbl::unique_fd fd, block_t block_count) {
+    MountOptions mount_options, fbl::unique_fd fd, uint64_t block_count) {
   std::unique_ptr<Bcache> bcache;
   std::unique_ptr<F2fs> fs;
   fbl::RefPtr<VnodeF2fs> root;

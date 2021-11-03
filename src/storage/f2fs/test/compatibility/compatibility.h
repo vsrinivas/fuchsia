@@ -12,7 +12,7 @@ namespace f2fs {
 std::string GenerateTestPath(std::string_view format);
 
 zx::status<std::pair<std::unique_ptr<F2fs>, fbl::RefPtr<Dir>>> CreateFsAndRootFromImage(
-    MountOptions mount_options, fbl::unique_fd fd, block_t block_count);
+    MountOptions mount_options, fbl::unique_fd fd, uint64_t block_count);
 
 }  // namespace f2fs
 

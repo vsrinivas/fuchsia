@@ -276,8 +276,18 @@ zx_status_t MkfsWorker::PrepareSuperblock() {
   // So the threshold is determined not to overflow one CP page
   uint32_t sit_bitmap_size =
       ((LeToCpu(super_block_.segment_count_sit) / 2) << log_blks_per_seg) / 8;
-  uint32_t max_nat_bitmap_size = safemath::checked_cast<uint32_t>(
-      (safemath::CheckSub(kBlockSize, sizeof(Checkpoint)) + 1 - sit_bitmap_size).ValueOrDie());
+  uint32_t max_sit_bitmap_size = std::min(sit_bitmap_size, kMaxSitBitmapSize);
+
+  uint32_t max_nat_bitmap_size;
+  if (max_sit_bitmap_size >
+      kChecksumOffset - sizeof(Checkpoint) + 1 + (kDefaultBlocksPerSegment / kBitsPerByte)) {
+    max_nat_bitmap_size = kChecksumOffset - sizeof(Checkpoint) + 1;
+    super_block_.cp_payload = (max_sit_bitmap_size + kBlockSize - 1) / kBlockSize;
+  } else {
+    max_nat_bitmap_size = kChecksumOffset - sizeof(Checkpoint) + 1 - max_sit_bitmap_size;
+    super_block_.cp_payload = 0;
+  }
+
   uint32_t max_nat_segments = (max_nat_bitmap_size * 8) >> log_blks_per_seg;
 
   if (LeToCpu(super_block_.segment_count_nat) > max_nat_segments)
@@ -518,9 +528,9 @@ zx_status_t MkfsWorker::WriteCheckPointPack() {
        params_.blks_per_seg)
           .ValueOrDie()));
 
-  checkpoint->cp_pack_total_block_count = CpuToLe(8U);
+  checkpoint->cp_pack_total_block_count = CpuToLe(8U + LeToCpu(super_block_.cp_payload));
   checkpoint->ckpt_flags |= kCpUmountFlag;
-  checkpoint->cp_pack_start_sum = CpuToLe(1U);
+  checkpoint->cp_pack_start_sum = CpuToLe(1U + LeToCpu(super_block_.cp_payload));
   checkpoint->valid_node_count = CpuToLe(1U);
   checkpoint->valid_inode_count = CpuToLe(1U);
   checkpoint->next_free_nid = CpuToLe(LeToCpu(super_block_.root_ino) + 1);
@@ -544,6 +554,15 @@ zx_status_t MkfsWorker::WriteCheckPointPack() {
   if (zx_status_t ret = WriteToDisk(checkpoint_block, cp_segment_block_num); ret != ZX_OK) {
     FX_LOGS(ERROR) << "Error: While writing the ckp to disk!!!";
     return ret;
+  }
+
+  for (uint32_t i = 0; i < super_block_.cp_payload; ++i) {
+    ++cp_segment_block_num;
+    auto zero_buffer = FsBlock{};
+    if (zx_status_t ret = WriteToDisk(zero_buffer, cp_segment_block_num); ret != ZX_OK) {
+      FX_LOGS(ERROR) << "Error: While zeroing out the sit bitmap area on disk!!!";
+      return ret;
+    }
   }
 
   // 2. Prepare and write Segment summary for data blocks
@@ -644,6 +663,15 @@ zx_status_t MkfsWorker::WriteCheckPointPack() {
     return ret;
   }
 
+  for (uint32_t i = 0; i < super_block_.cp_payload; ++i) {
+    ++cp_segment_block_num;
+    auto zero_buffer = FsBlock{};
+    if (zx_status_t ret = WriteToDisk(zero_buffer, cp_segment_block_num); ret != ZX_OK) {
+      FX_LOGS(ERROR) << "Error: While zeroing out the sit bitmap area on disk!!!";
+      return ret;
+    }
+  }
+
   // 9. cp pages of check point pack 2
   // Initiatialize other checkpoint pack with version zero
   checkpoint->checkpoint_ver = 0;
@@ -658,7 +686,8 @@ zx_status_t MkfsWorker::WriteCheckPointPack() {
     return ret;
   }
 
-  cp_segment_block_num += checkpoint->cp_pack_total_block_count - 1;
+  cp_segment_block_num +=
+      checkpoint->cp_pack_total_block_count - 1 - LeToCpu(super_block_.cp_payload);
   if (zx_status_t ret = WriteToDisk(checkpoint_block, cp_segment_block_num); ret != ZX_OK) {
     FX_LOGS(ERROR) << "Error: While writing the checkpoint to disk!!!";
     return ret;

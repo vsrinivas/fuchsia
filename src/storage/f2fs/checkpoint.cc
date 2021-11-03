@@ -262,7 +262,7 @@ zx_status_t F2fs::RecoverOrphanInodes() {
   if (!(superblock_info.GetCheckpoint().ckpt_flags & kCpOrphanPresentFlag))
     return ZX_OK;
   superblock_info.SetOnRecovery();
-  start_blk = superblock_info.StartCpAddr() + 1;
+  start_blk = superblock_info.StartCpAddr() + LeToCpu(raw_sb_->cp_payload) + 1;
   orphan_blkaddr = superblock_info.StartSumAddr() - 1;
 
   for (block_t i = 0; i < orphan_blkaddr; ++i) {
@@ -423,24 +423,31 @@ zx_status_t F2fs::GetValidCheckpoint() {
       cur_page = cp2;
     } else {
       cur_page = cp1;
+      cp_start_blk_no = LeToCpu(fsb.cp_blkaddr);
     }
   } else if (cp1) {
     cur_page = cp1;
+    cp_start_blk_no = LeToCpu(fsb.cp_blkaddr);
   } else if (cp2) {
     cur_page = cp2;
   } else {
-    goto fail_no_cp;
+    return ZX_ERR_INVALID_ARGS;
   }
 
   cp_block = static_cast<Checkpoint *>(PageAddress(cur_page));
   memcpy(&superblock_info_->GetCheckpoint(), cp_block, blk_size);
 
+  std::vector<FsBlock> checkpoint_trailer(fsb.cp_payload);
+  for (uint32_t i = 0; i < LeToCpu(fsb.cp_payload); ++i) {
+    Page *cp_page = GetMetaPage(cp_start_blk_no + 1 + i);
+    memcpy(&checkpoint_trailer[i], PageAddress(cp_page), blk_size);
+    F2fsPutPage(cp_page, 1);
+  }
+  superblock_info_->SetCheckpointTrailer(std::move(checkpoint_trailer));
+
   F2fsPutPage(cp1, 1);
   F2fsPutPage(cp2, 1);
-  return 0;
-
-fail_no_cp:
-  return ZX_ERR_INVALID_ARGS;
+  return ZX_OK;
 }
 
 #if 0  // porting needed
@@ -636,8 +643,9 @@ void F2fs::DoCheckpoint(bool is_umount) {
   uint32_t crc32 = 0;
 
   /* Flush all the NAT/SIT pages */
-  while (superblock_info.GetPageCount(CountType::kDirtyMeta))
+  while (superblock_info.GetPageCount(CountType::kDirtyMeta)) {
     SyncMetaPages(PageType::kMeta, LONG_MAX);
+  }
 
   GetNodeManager().NextFreeNid(&last_nid);
 
@@ -679,8 +687,9 @@ void F2fs::DoCheckpoint(bool is_umount) {
 
   orphan_blocks = static_cast<uint32_t>((superblock_info.GetOrphanCount() + kOrphansPerBlock - 1) /
                                         kOrphansPerBlock);
-  ckpt.cp_pack_start_sum = 1 + orphan_blocks;
-  ckpt.cp_pack_total_block_count = 2 + data_sum_blocks + orphan_blocks;
+  ckpt.cp_pack_start_sum = 1 + orphan_blocks + LeToCpu(raw_sb_->cp_payload);
+  ckpt.cp_pack_total_block_count =
+      2 + data_sum_blocks + orphan_blocks + LeToCpu(raw_sb_->cp_payload);
 
   if (is_umount) {
     ckpt.ckpt_flags |= kCpUmountFlag;
@@ -715,6 +724,19 @@ void F2fs::DoCheckpoint(bool is_umount) {
   FlushDirtyMetaPage(this, *cp_page);
 #endif
   F2fsPutPage(cp_page, 1);
+
+  for (uint32_t i = 0; i < LeToCpu(raw_sb_->cp_payload); ++i) {
+    cp_page = GrabMetaPage(start_blk++);
+    kaddr = PageAddress(cp_page);
+    memcpy(kaddr, &superblock_info.GetCheckpointTrailer()[i],
+           (1 << superblock_info.GetLogBlocksize()));
+#if 0  // porting needed
+    // set_page_dirty(cp_page, this);
+#else
+    FlushDirtyMetaPage(this, *cp_page);
+#endif
+    F2fsPutPage(cp_page, 1);
+  }
 
   if (superblock_info.GetOrphanCount() > 0) {
     WriteOrphanInodes(start_blk);

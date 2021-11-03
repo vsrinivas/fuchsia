@@ -571,7 +571,8 @@ void FsckWorker::CheckOrphanNode() {
     return;
   }
 
-  start_blk = superblock_info_.StartCpAddr() + 1;
+  start_blk =
+      superblock_info_.StartCpAddr() + 1 + LeToCpu(superblock_info_.GetRawSuperblock().cp_payload);
   orphan_blkaddr = superblock_info_.StartSumAddr() - 1;
 
   for (block_t i = 0; i < orphan_blkaddr; ++i) {
@@ -837,6 +838,7 @@ void FsckWorker::PrintRawSuperblockInfo() {
   DisplayMember(sizeof(uint32_t), sb.root_ino, "root_ino");
   DisplayMember(sizeof(uint32_t), sb.node_ino, "node_ino");
   DisplayMember(sizeof(uint32_t), sb.meta_ino, "meta_ino");
+  DisplayMember(sizeof(uint32_t), sb.cp_payload, "cp_payload");
   printf("\n");
 }
 
@@ -1033,9 +1035,11 @@ zx_status_t FsckWorker::GetValidCheckpoint() {
       cur_page = std::move(cp2->first);
     } else {
       cur_page = std::move(cp1->first);
+      cp_start_blk_no = LeToCpu(raw_sb.cp_blkaddr);
     }
   } else if (cp1.is_ok()) {
     cur_page = std::move(cp1->first);
+    cp_start_blk_no = LeToCpu(raw_sb.cp_blkaddr);
   } else if (cp2.is_ok()) {
     cur_page = std::move(cp2->first);
   } else {
@@ -1043,6 +1047,12 @@ zx_status_t FsckWorker::GetValidCheckpoint() {
   }
 
   memcpy(&superblock_info_.GetCheckpoint(), cur_page.get(), blk_size);
+
+  std::vector<FsBlock> checkpoint_trailer(raw_sb.cp_payload);
+  for (uint32_t i = 0; i < raw_sb.cp_payload; ++i) {
+    ReadBlock(checkpoint_trailer[i], cp_start_blk_no + 1 + i);
+  }
+  superblock_info_.SetCheckpointTrailer(std::move(checkpoint_trailer));
 
   return ZX_OK;
 }

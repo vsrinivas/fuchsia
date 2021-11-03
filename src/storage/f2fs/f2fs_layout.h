@@ -32,7 +32,8 @@ constexpr uint32_t kNumberOfCheckpointPack = 2;
 
 constexpr uint32_t kDefaultSectorSize = 512;
 constexpr uint32_t kDefaultSectorsPerBlock = 8;
-constexpr uint32_t kDefaultBlocksPerSegment = 512;
+constexpr uint32_t kDefaultLogBlocksPerSegment = 9;
+constexpr uint32_t kDefaultBlocksPerSegment = 1 << kDefaultLogBlocksPerSegment;
 constexpr uint32_t kDefaultSegmentsPerSection = 1;
 constexpr uint32_t kCpBlockSize = (kDefaultSectorSize * kDefaultSectorsPerBlock);
 constexpr uint32_t kVolumeLabelLength = 16;
@@ -119,6 +120,7 @@ struct Superblock {
   uint16_t volume_name[512];                 // volume name
   uint32_t extension_count = 0;              // # of extensions below
   uint8_t extension_list[kMaxExtension][8];  // extension array
+  uint32_t cp_payload = 0;                   // # of checkpoint trailing blocks for SIT bitmap
 } __attribute__((packed));
 
 // For checkpoint
@@ -292,6 +294,8 @@ struct SitEntry {
 } __attribute__((packed));
 
 constexpr uint32_t kSitEntryPerBlock = kPageCacheSize / sizeof(SitEntry);
+constexpr uint32_t kMaxSitBitmapSize =
+    1 << (32 - kDefaultLogBlocksPerSegment) / kSitEntryPerBlock / kBitsPerByte;
 
 inline uint16_t GetSitVblocks(const SitEntry &raw_sit) {
   return LeToCpu(raw_sit.vblocks) & kSitVblocksMask;

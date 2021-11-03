@@ -132,6 +132,10 @@ class SuperblockInfo {
   void ClearDirty() { is_dirty_ = false; }
 
   Checkpoint &GetCheckpoint() { return checkpoint_block_.checkpoint_; }
+  const std::vector<FsBlock> &GetCheckpointTrailer() const { return checkpoint_trailer_; }
+  void SetCheckpointTrailer(std::vector<FsBlock> checkpoint_trailer) {
+    checkpoint_trailer_ = std::move(checkpoint_trailer);
+  }
 
 #ifdef __Fuchsia__
   fbl::Mutex &GetCheckpointMutex() { return checkpoint_mutex_; }
@@ -298,6 +302,12 @@ class SuperblockInfo {
   }
 
   void *BitmapPtr(MetaBitmap flag) {
+    if (raw_superblock_->cp_payload > 0) {
+      if (flag == MetaBitmap::kNatBitmap) {
+        return &checkpoint_block_.checkpoint_.sit_nat_version_bitmap;
+      }
+      return checkpoint_trailer_.data();
+    }
     int offset = (flag == MetaBitmap::kNatBitmap)
                      ? checkpoint_block_.checkpoint_.sit_ver_bitmap_bytesize
                      : 0;
@@ -340,6 +350,8 @@ class SuperblockInfo {
     FsBlock fsblock_;
     CheckpointBlock() {}
   } checkpoint_block_;
+
+  std::vector<FsBlock> checkpoint_trailer_;
 
 #ifdef __Fuchsia__
   fbl::Mutex checkpoint_mutex_;                                       // for checkpoint procedure
