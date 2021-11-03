@@ -4,7 +4,6 @@
 
 #![cfg(test)]
 
-use anyhow::Context as _;
 use async_utils::async_once::Once;
 use dhcp::protocol::IntoFidlExt as _;
 use fuchsia_async::TimeoutExt as _;
@@ -100,19 +99,17 @@ impl<'a> DhcpTestNetwork<'a> {
         DhcpTestNetwork { name, network: Once::new(), next_ep_idx: RefCell::new(0), sandbox }
     }
 
-    async fn create_endpoint<E: netemul::Endpoint>(&self) -> Result<netemul::TestEndpoint<'_>> {
+    async fn create_endpoint<E: netemul::Endpoint>(&self) -> netemul::TestEndpoint<'_> {
         let DhcpTestNetwork { name, network, next_ep_idx, sandbox } = self;
         let net = network
             .get_or_try_init(async { sandbox.create_network(name.to_string()).await })
             .await
-            .context("failed to create network")?;
+            .expect("failed to create network");
         let curr_idx: usize = next_ep_idx.replace_with(|&mut old| old + 1);
         let ep_name = format!("{}-{}", name, curr_idx);
-        let endpoint = net
-            .create_endpoint::<E, _>(ep_name.clone())
-            .await
-            .context("failed to create endpoint")?;
-        Ok(endpoint)
+        let endpoint =
+            net.create_endpoint::<E, _>(ep_name.clone()).await.expect("failed to create endpoint");
+        endpoint
     }
 }
 
@@ -130,33 +127,29 @@ async fn set_server_settings(
     dhcp_server: &fidl_fuchsia_net_dhcp::Server_Proxy,
     parameters: &mut [fidl_fuchsia_net_dhcp::Parameter],
     options: &mut [fidl_fuchsia_net_dhcp::Option_],
-) -> Result {
-    let parameters = stream::iter(parameters.iter_mut()).map(Ok).try_for_each_concurrent(
-        None,
-        |parameter| async move {
+) {
+    let parameters =
+        stream::iter(parameters.iter_mut()).for_each_concurrent(None, |parameter| async move {
             dhcp_server
                 .set_parameter(parameter)
                 .await
-                .context("failed to call dhcp/Server.SetParameter")?
+                .expect("failed to call dhcp/Server.SetParameter")
                 .map_err(fuchsia_zircon::Status::from_raw)
-                .with_context(|| {
-                    format!("dhcp/Server.SetParameter({:?}) returned error", parameter)
+                .unwrap_or_else(|e| {
+                    panic!("dhcp/Server.SetParameter({:?}) returned error: {:?}", parameter, e)
                 })
-        },
-    );
-    let options = stream::iter(options.iter_mut()).map(Ok).try_for_each_concurrent(
-        None,
-        |option| async move {
-            dhcp_server
-                .set_option(option)
-                .await
-                .context("failed to call dhcp/Server.SetOption")?
-                .map_err(fuchsia_zircon::Status::from_raw)
-                .with_context(|| format!("dhcp/Server.SetOption({:?}) returned error", option))
-        },
-    );
-    let ((), ()) = futures::future::try_join(parameters, options).await?;
-    Ok(())
+        });
+    let options = stream::iter(options.iter_mut()).for_each_concurrent(None, |option| async move {
+        dhcp_server
+            .set_option(option)
+            .await
+            .expect("failed to call dhcp/Server.SetOption")
+            .map_err(fuchsia_zircon::Status::from_raw)
+            .unwrap_or_else(|e| {
+                panic!("dhcp/Server.SetOption({:?}) returned error: {:?}", option, e)
+            })
+    });
+    let ((), ()) = futures::future::join(parameters, options).await;
 }
 
 async fn assert_client_acquires_addr(
@@ -306,7 +299,7 @@ struct Settings<'a> {
 }
 
 #[variants_test]
-async fn test_acquire_with_dhcpd_bound_device<E: netemul::Endpoint>(name: &str) {
+async fn acquire_with_dhcpd_bound_device<E: netemul::Endpoint>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
     let network = DhcpTestNetwork::new(DEFAULT_NETWORK_NAME, &sandbox);
 
@@ -346,7 +339,7 @@ async fn test_acquire_with_dhcpd_bound_device<E: netemul::Endpoint>(name: &str) 
 }
 
 #[variants_test]
-async fn test_acquire_then_renew_with_dhcpd_bound_device<E: netemul::Endpoint>(name: &str) {
+async fn acquire_then_renew_with_dhcpd_bound_device<E: netemul::Endpoint>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
     let network = DhcpTestNetwork::new(DEFAULT_NETWORK_NAME, &sandbox);
 
@@ -400,7 +393,7 @@ async fn test_acquire_then_renew_with_dhcpd_bound_device<E: netemul::Endpoint>(n
 }
 
 #[variants_test]
-async fn test_acquire_with_dhcpd_bound_device_dup_addr<E: netemul::Endpoint>(name: &str) {
+async fn acquire_with_dhcpd_bound_device_dup_addr<E: netemul::Endpoint>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
     let network = DhcpTestNetwork::new(DEFAULT_NETWORK_NAME, &sandbox);
 
@@ -496,7 +489,7 @@ fn test_dhcp<'a, E: netemul::Endpoint>(
                             KnownServiceProvider::SecureStash,
                         ],
                     )
-                    .context("failed to create netstack realm")?;
+                    .expect("failed to create netstack realm");
                 let netstack_realm_ref = &netstack_realm;
 
                 let servers = stream::iter(servers.into_iter())
@@ -515,8 +508,7 @@ fn test_dhcp<'a, E: netemul::Endpoint>(
                                 let DhcpTestEndpointConfig { ep_type, network } = endpoint;
                                 let endpoint = network
                                     .create_endpoint::<E>()
-                                    .await
-                                    .expect("failed to create endpoint");
+                                    .await;
                                 let if_name = format!("{}{}", "testeth", idx);
                                 let iface = netstack_realm_ref
                                     .install_endpoint(
@@ -525,85 +517,83 @@ fn test_dhcp<'a, E: netemul::Endpoint>(
                                         Some(if_name.clone()),
                                     )
                                     .await
-                                    .context("failed to install server endpoint")?;
+                                    .expect("failed to install server endpoint");
                                 let (static_addrs, server_should_bind) = match ep_type {
                                     DhcpEndpointType::Client { expected_acquired: _ } => {
-                                        Err(anyhow::anyhow!(
+                                        panic!(
                                             "found client endpoint instead of server or unbound endpoint"
-                                        ))
+                                        )
                                     }
                                     DhcpEndpointType::Server { static_addrs } => {
-                                        Ok((static_addrs, true))
+                                        (static_addrs, true)
                                     }
                                     DhcpEndpointType::Unbound { static_addrs } => {
-                                        Ok((static_addrs, false))
+                                        (static_addrs, false)
                                     }
-                                }?;
+                                };
                                 for addr in static_addrs.into_iter() {
-                                    let () = iface.add_ip_addr(*addr).await.with_context(|| {
-                                        format!("failed to add address {:?}", addr)
-                                    })?;
+                                    let () = iface.add_ip_addr(*addr).await.unwrap_or_else(|e| {
+                                        panic!("failed to add address {:?} with error: {:?}", addr, e)
+                                    });
                                 }
-                                Result::Ok((iface, server_should_bind.then(|| if_name)))
+                                (iface, server_should_bind.then(|| if_name))
                             })
-                            .try_fold(
+                            .fold(
                                 (Vec::new(), Vec::new()),
                                 |(mut ifaces, mut names_to_bind), (iface, if_name)| async {
                                     let () = ifaces.push(iface);
                                     if let Some(if_name) = if_name {
                                         let () = names_to_bind.push(if_name);
                                     }
-                                    Ok((ifaces, names_to_bind))
+                                    (ifaces, names_to_bind)
                                 },
                             )
-                            .await?;
+                            .await;
 
                         let dhcp_server = netstack_realm_ref
                             .connect_to_protocol::<fidl_fuchsia_net_dhcp::Server_Marker>()
-                            .context("failed to connect to DHCP server")?;
+                            .expect("failed to connect to DHCP server");
 
                         let mut parameters = parameters.to_vec();
                         let () = parameters.push(
                             fidl_fuchsia_net_dhcp::Parameter::BoundDeviceNames(names_to_bind),
                         );
-                        let () =
-                            set_server_settings(&dhcp_server, &mut parameters, *options).await?;
+                        let () = set_server_settings(&dhcp_server, &mut parameters, *options).await;
 
                         dhcp_server
                             .start_serving()
                             .await
-                            .context("failed to call dhcp/Server.StartServing")?
+                            .expect("failed to call dhcp/Server.StartServing")
                             .map_err(fuchsia_zircon::Status::from_raw)
-                            .context("dhcp/Server.StartServing returned error")?;
-                        Result::Ok((dhcp_server, ifaces))
+                            .expect("dhcp/Server.StartServing returned error");
+                        (dhcp_server, ifaces)
                     })
-                    .try_collect::<Vec<_>>()
-                    .await?;
+                    .collect::<Vec<_>>()
+                    .await;
 
                 let clients = stream::iter(clients.into_iter())
                     .then(|client| async move {
                         let DhcpTestEndpointConfig { ep_type, network } = client;
                         let endpoint = network
                             .create_endpoint::<E>()
-                            .await
-                            .expect("failed to create endpoint");
+                            .await;
                         let iface = netstack_realm_ref
                             .install_endpoint(endpoint, &netemul::InterfaceConfig::None, None)
                             .await
-                            .context("failed to install client endpoint")?;
+                            .expect("failed to install client endpoint");
                         let expected_acquired = match ep_type {
-                            DhcpEndpointType::Client { expected_acquired } => Ok(expected_acquired),
-                            DhcpEndpointType::Server { static_addrs: _ } => Err(anyhow::anyhow!(
+                            DhcpEndpointType::Client { expected_acquired } => expected_acquired,
+                            DhcpEndpointType::Server { static_addrs: _ } => panic!(
                                 "found server endpoint instead of client endpoint"
-                            )),
-                            DhcpEndpointType::Unbound { static_addrs: _ } => Err(anyhow::anyhow!(
+                            ),
+                            DhcpEndpointType::Unbound { static_addrs: _ } => panic!(
                                 "found unbound endpoint instead of client endpoint"
-                            )),
-                        }?;
-                        Result::Ok((iface, expected_acquired))
+                            ),
+                        };
+                        (iface, expected_acquired)
                     })
-                    .try_collect::<Vec<_>>()
-                    .await?;
+                    .collect::<Vec<_>>()
+                    .await;
 
                 Result::Ok((netstack_realm, servers, clients))
             })
@@ -648,11 +638,10 @@ impl PersistenceMode {
     fn dhcpd_params_after_restart(
         &self,
         if_name: String,
-    ) -> Result<Vec<(fidl_fuchsia_net_dhcp::ParameterName, fidl_fuchsia_net_dhcp::Parameter)>> {
-        Ok(match self {
+    ) -> Vec<(fidl_fuchsia_net_dhcp::ParameterName, fidl_fuchsia_net_dhcp::Parameter)> {
+        match self {
             Self::Persistent => {
-                let params =
-                    test_dhcpd_parameters(if_name).context("failed to create test dhcpd params")?;
+                let params = test_dhcpd_parameters(if_name);
                 params.into_iter().map(|p| (param_name(&p), p)).collect()
             }
             Self::Ephemeral => vec![
@@ -676,14 +665,14 @@ impl PersistenceMode {
             .into_iter()
             .map(|p| (param_name(&p), p))
             .collect(),
-        })
+        }
     }
 }
 
 // This collection of parameters is defined as a function because we need to allocate a Vec which
 // cannot be done statically, i.e. as a constant.
-fn test_dhcpd_parameters(if_name: String) -> Result<Vec<fidl_fuchsia_net_dhcp::Parameter>> {
-    Ok(vec![
+fn test_dhcpd_parameters(if_name: String) -> Vec<fidl_fuchsia_net_dhcp::Parameter> {
+    vec![
         fidl_fuchsia_net_dhcp::Parameter::IpAddrs(vec![DEFAULT_TEST_CONFIG.server_addr]),
         fidl_fuchsia_net_dhcp::Parameter::AddressPool(
             DEFAULT_TEST_CONFIG.managed_addrs.into_fidl(),
@@ -703,7 +692,7 @@ fn test_dhcpd_parameters(if_name: String) -> Result<Vec<fidl_fuchsia_net_dhcp::P
         ]),
         fidl_fuchsia_net_dhcp::Parameter::ArpProbe(true),
         fidl_fuchsia_net_dhcp::Parameter::BoundDeviceNames(vec![if_name]),
-    ])
+    ]
 }
 
 fn param_name(param: &fidl_fuchsia_net_dhcp::Parameter) -> fidl_fuchsia_net_dhcp::ParameterName {
@@ -744,9 +733,9 @@ fn param_name(param: &fidl_fuchsia_net_dhcp::Parameter) -> fidl_fuchsia_net_dhcp
 // clear_leases() function is triggered, which will cause a panic if the server is in an
 // inconsistent state.
 #[variants_test]
-async fn acquire_persistent_dhcp_server_after_restart<E: netemul::Endpoint>(name: &str) -> Result {
+async fn acquire_persistent_dhcp_server_after_restart<E: netemul::Endpoint>(name: &str) {
     let mode = PersistenceMode::Persistent;
-    Ok(acquire_dhcp_server_after_restart::<E>(&format!("{}_{}", name, mode), mode).await?)
+    acquire_dhcp_server_after_restart::<E>(&format!("{}_{}", name, mode), mode).await
 }
 
 // An ephemeral dhcp server cannot become inconsistent with its persistent state because it has
@@ -754,16 +743,16 @@ async fn acquire_persistent_dhcp_server_after_restart<E: netemul::Endpoint>(name
 // configuration.  This test verifies that an ephemeral dhcp server will return an error if run
 // after restarting.
 #[variants_test]
-async fn acquire_ephemeral_dhcp_server_after_restart<E: netemul::Endpoint>(name: &str) -> Result {
+async fn acquire_ephemeral_dhcp_server_after_restart<E: netemul::Endpoint>(name: &str) {
     let mode = PersistenceMode::Ephemeral;
-    Ok(acquire_dhcp_server_after_restart::<E>(&format!("{}_{}", name, mode), mode).await?)
+    acquire_dhcp_server_after_restart::<E>(&format!("{}_{}", name, mode), mode).await
 }
 
 async fn acquire_dhcp_server_after_restart<E: netemul::Endpoint>(
     name: &str,
     mode: PersistenceMode,
-) -> Result {
-    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
+) {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
 
     let server_realm = sandbox
         .create_netstack_realm_with::<Netstack2, _, _>(
@@ -781,16 +770,16 @@ async fn acquire_dhcp_server_after_restart<E: netemul::Endpoint>(
                 KnownServiceProvider::SecureStash,
             ],
         )
-        .context("failed to create server realm")?;
+        .expect("failed to create server realm");
 
     let client_realm = sandbox
         .create_netstack_realm::<Netstack2, _>(format!("{}_client", name))
-        .context("failed to create client realm")?;
+        .expect("failed to create client realm");
 
-    let network = sandbox.create_network(name).await.context("failed to create network")?;
+    let network = sandbox.create_network(name).await.expect("failed to create network");
     let if_name = "testeth";
     let endpoint =
-        network.create_endpoint::<E, _>("server-ep").await.context("failed to create endpoint")?;
+        network.create_endpoint::<E, _>("server-ep").await.expect("failed to create endpoint");
     let _server_ep = server_realm
         .install_endpoint(
             endpoint,
@@ -798,27 +787,28 @@ async fn acquire_dhcp_server_after_restart<E: netemul::Endpoint>(
             Some(if_name.to_string()),
         )
         .await
-        .context("failed to create server network endpoint")?;
+        .expect("failed to create server network endpoint");
     let client_ep = client_realm
         .join_network::<E, _>(&network, "client-ep", &netemul::InterfaceConfig::None)
         .await
-        .context("failed to create client network endpoint")?;
+        .expect("failed to create client network endpoint");
 
     // Complete initial DHCP transaction in order to store a lease record in the server's
     // persistent storage.
     {
-        let dhcp_server =
-            server_realm.connect_to_protocol::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
+        let dhcp_server = server_realm
+            .connect_to_protocol::<fidl_fuchsia_net_dhcp::Server_Marker>()
+            .expect("failed to connect to DHCP server");
         let mut parameters = DEFAULT_TEST_CONFIG.dhcp_parameters();
         parameters
             .push(fidl_fuchsia_net_dhcp::Parameter::BoundDeviceNames(vec![if_name.to_string()]));
-        let () = set_server_settings(&dhcp_server, &mut parameters, &mut []).await?;
+        let () = set_server_settings(&dhcp_server, &mut parameters, &mut []).await;
         let () = dhcp_server
             .start_serving()
             .await
-            .context("failed to call dhcp/Server.StartServing")?
+            .expect("failed to call dhcp/Server.StartServing")
             .map_err(fuchsia_zircon::Status::from_raw)
-            .context("dhcp/Server.StartServing returned error")?;
+            .expect("dhcp/Server.StartServing returned error");
         let () = assert_client_acquires_addr(
             &client_realm,
             &client_ep,
@@ -827,12 +817,11 @@ async fn acquire_dhcp_server_after_restart<E: netemul::Endpoint>(
             false,
         )
         .await;
-        let () =
-            dhcp_server.stop_serving().await.context("failed to call dhcp/Server.StopServing")?;
+        let () = dhcp_server.stop_serving().await.expect("failed to call dhcp/Server.StopServing");
         let () = server_realm
             .stop_child_component(constants::dhcp_server::COMPONENT_NAME)
             .await
-            .context("failed to stop dhcpd")?;
+            .expect("failed to stop dhcpd");
     }
 
     // Restart the server in an attempt to force the server's persistent storage into an
@@ -840,27 +829,25 @@ async fn acquire_dhcp_server_after_restart<E: netemul::Endpoint>(
     // the server's address pool. If the server is in ephemeral mode, it will fail at the call to
     // start_serving() since it will not have retained its parameters.
     {
-        let dhcp_server =
-            server_realm.connect_to_protocol::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
+        let dhcp_server = server_realm
+            .connect_to_protocol::<fidl_fuchsia_net_dhcp::Server_Marker>()
+            .expect("failed to connect to DHCP server");
         let () = match mode {
             PersistenceMode::Persistent => {
                 let () = dhcp_server
                     .start_serving()
                     .await
-                    .context("failed to call dhcp/Server.StartServing")?
+                    .expect("failed to call dhcp/Server.StartServing")
                     .map_err(fuchsia_zircon::Status::from_raw)
-                    .context("dhcp/Server.StartServing returned error")?;
-                dhcp_server
-                    .stop_serving()
-                    .await
-                    .context("failed to call dhcp/Server.StopServing")?
+                    .expect("dhcp/Server.StartServing returned error");
+                dhcp_server.stop_serving().await.expect("failed to call dhcp/Server.StopServing")
             }
             PersistenceMode::Ephemeral => {
                 matches::assert_matches!(
                     dhcp_server
                         .start_serving()
                         .await
-                        .context("failed to call dhcp/Server.StartServing")?
+                        .expect("failed to call dhcp/Server.StartServing")
                         .map_err(fuchsia_zircon::Status::from_raw),
                     Err(fuchsia_zircon::Status::INVALID_ARGS)
                 );
@@ -869,7 +856,7 @@ async fn acquire_dhcp_server_after_restart<E: netemul::Endpoint>(
         let () = server_realm
             .stop_child_component(constants::dhcp_server::COMPONENT_NAME)
             .await
-            .context("failed to stop dhcpd")?;
+            .expect("failed to stop dhcpd");
     }
 
     // Restart the server again in order to load the inconsistent state into the server's runtime
@@ -878,33 +865,34 @@ async fn acquire_dhcp_server_after_restart<E: netemul::Endpoint>(
     // ephemeral mode, it will fail at the call to start_serving() since it will not have retained
     // its parameters.
     {
-        let dhcp_server =
-            server_realm.connect_to_protocol::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
+        let dhcp_server = server_realm
+            .connect_to_protocol::<fidl_fuchsia_net_dhcp::Server_Marker>()
+            .expect("failed to connect to DHCP server");
         let () = match mode {
             PersistenceMode::Persistent => {
                 let () = dhcp_server
                     .start_serving()
                     .await
-                    .context("failed to call dhcp/Server.StartServing")?
+                    .expect("failed to call dhcp/Server.StartServing")
                     .map_err(fuchsia_zircon::Status::from_raw)
-                    .context("dhcp/Server.StartServing returned error")?;
+                    .expect("dhcp/Server.StartServing returned error");
                 let () = dhcp_server
                     .stop_serving()
                     .await
-                    .context("failed to call dhcp/Server.StopServing")?;
+                    .expect("failed to call dhcp/Server.StopServing");
                 dhcp_server
                     .clear_leases()
                     .await
-                    .context("failed to call dhcp/Server.ClearLeases")?
+                    .expect("failed to call dhcp/Server.ClearLeases")
                     .map_err(fuchsia_zircon::Status::from_raw)
-                    .context("dhcp/Server.ClearLeases returned error")?;
+                    .expect("dhcp/Server.ClearLeases returned error");
             }
             PersistenceMode::Ephemeral => {
                 matches::assert_matches!(
                     dhcp_server
                         .start_serving()
                         .await
-                        .context("failed to call dhcp/Server.StartServing")?
+                        .expect("failed to call dhcp/Server.StartServing")
                         .map_err(fuchsia_zircon::Status::from_raw),
                     Err(fuchsia_zircon::Status::INVALID_ARGS)
                 );
@@ -913,20 +901,18 @@ async fn acquire_dhcp_server_after_restart<E: netemul::Endpoint>(
         let () = server_realm
             .stop_child_component(constants::dhcp_server::COMPONENT_NAME)
             .await
-            .context("failed to stop dhcpd")?;
+            .expect("failed to stop dhcpd");
     }
-
-    Ok(())
 }
 
 #[variants_test]
-async fn test_dhcp_server_persistence_mode_persistent<E: netemul::Endpoint>(name: &str) {
+async fn dhcp_server_persistence_mode_persistent<E: netemul::Endpoint>(name: &str) {
     let mode = PersistenceMode::Persistent;
     test_dhcp_server_persistence_mode::<E>(&format!("{}_{}", name, mode), mode).await
 }
 
 #[variants_test]
-async fn test_dhcp_server_persistence_mode_ephemeral<E: netemul::Endpoint>(name: &str) {
+async fn dhcp_server_persistence_mode_ephemeral<E: netemul::Endpoint>(name: &str) {
     let mode = PersistenceMode::Ephemeral;
     test_dhcp_server_persistence_mode::<E>(&format!("{}_{}", name, mode), mode).await
 }
@@ -970,14 +956,11 @@ async fn test_dhcp_server_persistence_mode<E: netemul::Endpoint>(
 
     // Configure the server with parameters and then restart it.
     {
-        let mut settings =
-            test_dhcpd_parameters(if_name.to_string()).expect("failed to create test dhcpd params");
+        let mut settings = test_dhcpd_parameters(if_name.to_string());
         let dhcp_server = server_realm
             .connect_to_protocol::<fidl_fuchsia_net_dhcp::Server_Marker>()
             .expect("failed to connect to server");
-        let () = set_server_settings(&dhcp_server, &mut settings, &mut [])
-            .await
-            .expect("failed to set server settings");
+        let () = set_server_settings(&dhcp_server, &mut settings, &mut []).await;
         let () = server_realm
             .stop_child_component(constants::dhcp_server::COMPONENT_NAME)
             .await
@@ -991,9 +974,7 @@ async fn test_dhcp_server_persistence_mode<E: netemul::Endpoint>(
             .connect_to_protocol::<fidl_fuchsia_net_dhcp::Server_Marker>()
             .expect("failed to connect to server");
         let dhcp_server = &dhcp_server;
-        let params = mode
-            .dhcpd_params_after_restart(if_name.to_string())
-            .expect("failed to create dhcpd params after restart");
+        let params = mode.dhcpd_params_after_restart(if_name.to_string());
         let () = stream::iter(params.into_iter())
             .for_each_concurrent(None, |(name, parameter)| async move {
                 assert_eq!(
