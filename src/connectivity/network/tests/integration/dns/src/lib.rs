@@ -16,7 +16,6 @@ use fidl_fuchsia_net_name as net_name;
 use fuchsia_async::{DurationExt as _, TimeoutExt as _};
 use fuchsia_zircon as zx;
 
-use anyhow::Context as _;
 use futures::future::{self, FusedFuture, Future, FutureExt as _};
 use futures::stream::{self, StreamExt as _, TryStreamExt as _};
 use futures::{AsyncReadExt as _, AsyncWriteExt as _};
@@ -56,38 +55,37 @@ async fn poll_lookup_admin<
     mut wait_for_netmgr_fut: &mut F,
     poll_wait: zx::Duration,
     retry_count: u64,
-) -> Result {
+) {
     for i in 0..retry_count {
         let () = futures::select! {
-            () = fuchsia_async::Timer::new(poll_wait.after_now()).fuse() => Ok(()),
+            () = fuchsia_async::Timer::new(poll_wait.after_now()).fuse() => (),
             stopped_event = wait_for_netmgr_fut => {
-                Err(anyhow::anyhow!(
+                panic!(
                     "the network manager unexpectedly exited with event: {:?}",
                     stopped_event,
-                ))
+                )
             }
-        }?;
+        };
 
-        let servers = lookup_admin.get_dns_servers().await.context("Failed to get DNS servers")?;
-        println!("attempt {}) Got DNS servers {:?}", i, servers);
+        let servers = lookup_admin.get_dns_servers().await.expect("failed to get DNS servers");
+        println!("attempt {} got DNS servers {:?}", i, servers);
 
         if servers == expect {
-            return Ok(());
+            return;
         }
     }
 
     // Too many retries.
-    Err(anyhow::anyhow!(
+    panic!(
         "timed out waiting for DNS server configurations; retry_count={}, poll_wait={:?}",
-        retry_count,
-        poll_wait,
-    ))
+        retry_count, poll_wait,
+    )
 }
 
 /// Tests that Netstack exposes DNS servers discovered dynamically and NetworkManager
 /// configures the Lookup service.
 #[variants_test]
-async fn test_discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) -> Result {
+async fn discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) {
     const SERVER_ADDR: fnet::Subnet = fidl_subnet!("192.168.0.1/24");
     /// DNS server served by DHCP.
     const DHCP_DNS_SERVER: fnet::Ipv4Address = fidl_ip_v4!("123.12.34.56");
@@ -102,9 +100,9 @@ async fn test_discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) -> Re
 
     const DEFAULT_DNS_PORT: u16 = 53;
 
-    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
 
-    let network = sandbox.create_network("net").await.context("failed to create network")?;
+    let network = sandbox.create_network("net").await.expect("failed to create network");
     let server_realm = sandbox
         .create_netstack_realm_with::<Netstack2, _, _>(
             format!("{}_server", name),
@@ -114,7 +112,7 @@ async fn test_discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) -> Re
                 KnownServiceProvider::SecureStash,
             ],
         )
-        .context("failed to create server realm")?;
+        .expect("failed to create server realm");
 
     let client_realm = sandbox
         .create_netstack_realm_with::<Netstack2, _, _>(
@@ -131,7 +129,7 @@ async fn test_discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) -> Re
                 KnownServiceProvider::SecureStash,
             ],
         )
-        .context("failed to create client realm")?;
+        .expect("failed to create client realm");
 
     let _server_iface = server_realm
         .join_network::<E, _>(
@@ -140,11 +138,11 @@ async fn test_discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) -> Re
             &netemul::InterfaceConfig::StaticIp(SERVER_ADDR),
         )
         .await
-        .context("failed to configure server networking")?;
+        .expect("failed to configure server networking");
 
     let dhcp_server = server_realm
         .connect_to_protocol::<net_dhcp::Server_Marker>()
-        .context("failed to connect to DHCP server")?;
+        .expect("failed to connect to DHCP server");
 
     let dhcp_server_ref = &dhcp_server;
     // TODO(fxbug.dev/62554): derive these from SERVER_ADDR.
@@ -161,39 +159,40 @@ async fn test_discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) -> Re
         ]
         .iter_mut(),
     )
-    .map(Ok)
-    .try_for_each_concurrent(None, |parameter| async move {
+    .for_each_concurrent(None, |parameter| async move {
         dhcp_server_ref
             .set_parameter(parameter)
             .await
-            .context("failed to call dhcp/Server.SetParameter")?
+            .expect("failed to call dhcp/Server.SetParameter")
             .map_err(fuchsia_zircon::Status::from_raw)
-            .with_context(|| format!("dhcp/Server.SetParameter({:?}) returned error", parameter))
+            .unwrap_or_else(|e| {
+                panic!("dhcp/Server.SetParameter({:?}) returned error: {:?}", parameter, e)
+            })
     })
-    .await?;
+    .await;
 
     let () = dhcp_server
         .set_option(&mut net_dhcp::Option_::DomainNameServer(vec![DHCP_DNS_SERVER]))
         .await
-        .context("Failed to set DNS option")?
+        .expect("Failed to set DNS option")
         .map_err(zx::Status::from_raw)
-        .context("dhcp/Server.SetOption returned error")?;
+        .expect("dhcp/Server.SetOption returned error");
 
     let () = dhcp_server
         .start_serving()
         .await
-        .context("failed to call dhcp/Server.StartServing")?
+        .expect("failed to call dhcp/Server.StartServing")
         .map_err(fuchsia_zircon::Status::from_raw)
-        .context("dhcp/Server.StartServing returned error")?;
+        .expect("dhcp/Server.StartServing returned error");
 
     // Start networking on client realm.
     let _client_iface = client_realm
         .join_network::<E, _>(&network, "client-ep", &netemul::InterfaceConfig::Dhcp)
         .await
-        .context("failed to configure client networking")?;
+        .expect("failed to configure client networking");
 
     // Send a Router Advertisement with DNS server configurations.
-    let fake_ep = network.create_fake_endpoint()?;
+    let fake_ep = network.create_fake_endpoint().expect("failed to create fake endpoint");
     let ra = RouterAdvertisement::new(
         0,     /* current_hop_limit */
         false, /* managed_flag */
@@ -215,7 +214,7 @@ async fn test_discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) -> Re
         &fake_ep,
     )
     .await
-    .context("failed to write NDP message")?;
+    .expect("failed to write NDP message");
 
     // The list of servers we expect to retrieve from `fuchsia.net.name/LookupAdmin`.
     let expect = [
@@ -233,19 +232,17 @@ async fn test_discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) -> Re
     // Poll LookupAdmin until we get the servers we want or after too many tries.
     let lookup_admin = client_realm
         .connect_to_protocol::<net_name::LookupAdminMarker>()
-        .context("failed to connect to LookupAdmin")?;
+        .expect("failed to connect to LookupAdmin");
     let wait_for_netmgr =
         wait_for_component_stopped(&client_realm, constants::netcfg::COMPONENT_NAME, None).fuse();
     futures::pin_mut!(wait_for_netmgr);
-    poll_lookup_admin(&lookup_admin, &expect, &mut wait_for_netmgr, POLL_WAIT, RETRY_COUNT)
-        .await
-        .context("poll lookup admin")
+    poll_lookup_admin(&lookup_admin, &expect, &mut wait_for_netmgr, POLL_WAIT, RETRY_COUNT).await
 }
 
 /// Tests that DHCPv6 exposes DNS servers discovered dynamically and the network manager
 /// configures the Lookup service.
 #[variants_test]
-async fn test_discovered_dhcpv6_dns<E: netemul::Endpoint>(name: &str) -> Result {
+async fn discovered_dhcpv6_dns<E: netemul::Endpoint>(name: &str) {
     /// DHCPv6 server IP.
     const DHCPV6_SERVER: net_types_ip::Ipv6Addr =
         net_types_ip::Ipv6Addr::from_bytes(std_ip_v6!("fe80::1").octets());
@@ -260,8 +257,8 @@ async fn test_discovered_dhcpv6_dns<E: netemul::Endpoint>(name: &str) -> Result 
 
     const DEFAULT_DNS_PORT: u16 = 53;
 
-    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
-    let network = sandbox.create_network("net").await.context("failed to create network")?;
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let network = sandbox.create_network("net").await.expect("failed to create network");
 
     let realm = sandbox
         .create_netstack_realm_with::<Netstack2, _, _>(
@@ -278,22 +275,21 @@ async fn test_discovered_dhcpv6_dns<E: netemul::Endpoint>(name: &str) -> Result 
                 KnownServiceProvider::SecureStash,
             ],
         )
-        .context("failed to create realm")?;
+        .expect("failed to create realm");
 
     // Start networking on client realm.
-    let endpoint = network.create_endpoint::<E, _>(name).await.context("create endpoint")?;
-    let () = endpoint.set_link_up(true).await.context("set link up")?;
+    let endpoint = network.create_endpoint::<E, _>(name).await.expect("create endpoint");
+    let () = endpoint.set_link_up(true).await.expect("set link up");
     let endpoint_mount_path = E::dev_path("ep");
     let endpoint_mount_path = endpoint_mount_path.as_path();
-    let () = realm
-        .add_virtual_device(&endpoint, endpoint_mount_path)
-        .await
-        .with_context(|| format!("add virtual device {}", endpoint_mount_path.display()))?;
+    let () = realm.add_virtual_device(&endpoint, endpoint_mount_path).await.unwrap_or_else(|e| {
+        panic!("add virtual device {}: {:?}", endpoint_mount_path.display(), e)
+    });
 
     // Make sure the Netstack got the new device added.
     let interface_state = realm
         .connect_to_protocol::<net_interfaces::StateMarker>()
-        .context("connect to fuchsia.net.interfaces/State service")?;
+        .expect("connect to fuchsia.net.interfaces/State service");
     let wait_for_netmgr =
         wait_for_component_stopped(&realm, constants::netcfg::COMPONENT_NAME, None).fuse();
     futures::pin_mut!(wait_for_netmgr);
@@ -304,10 +300,10 @@ async fn test_discovered_dhcpv6_dns<E: netemul::Endpoint>(name: &str) -> Result 
         ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
     )
     .await
-    .context("wait for a non loopback interface to come up")?;
+    .expect("wait for a non loopback interface to come up");
 
     // Wait for the DHCPv6 information request.
-    let fake_ep = network.create_fake_endpoint()?;
+    let fake_ep = network.create_fake_endpoint().expect("failed to create fake endpoint");
     let (src_mac, dst_mac, src_ip, dst_ip, src_port, tx_id) = fake_ep
         .frame_stream()
         .try_filter_map(|(data, dropped)| {
@@ -358,14 +354,13 @@ async fn test_discovered_dhcpv6_dns<E: netemul::Endpoint>(name: &str) -> Result 
                 },
             ))
         })
-        .try_next()
-        .map(|r| r.context("error getting OnData event"))
+        .next()
+        .map(|r| r.expect("error getting OnData event"))
         .on_timeout(ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT.after_now(), || {
-            return Err(anyhow::anyhow!("timed out waiting for the DHCPv6 Information request"));
+            panic!("timed out waiting for the DHCPv6 Information request");
         })
         .await
-        .context("wait for DHCPv6 Information Request")?
-        .ok_or(anyhow::anyhow!("ran out of incoming frames"))?;
+        .expect("ran out of incoming frames");
     assert!(src_ip.is_unicast_linklocal(), "src ip {} should be a unicast link-local", src_ip);
     assert_eq!(
         Ok(std::net::Ipv6Addr::from(dst_ip.ipv6_bytes())),
@@ -401,9 +396,9 @@ async fn test_discovered_dhcpv6_dns<E: netemul::Endpoint>(name: &str) -> Result 
         ))
         .encapsulate(EthernetFrameBuilder::new(dst_mac, src_mac, EtherType::Ipv6))
         .serialize_vec_outer()
-        .map_err(|_| anyhow::anyhow!("failed to serialize DHCPv6 packet"))?
+        .unwrap_or_else(|(err, _serializer)| panic!("failed to serialize DHCPv6 packet: {:?}", err))
         .unwrap_b();
-    let () = fake_ep.write(ser.as_ref()).await.context("failed to write to fake endpoint")?;
+    let () = fake_ep.write(ser.as_ref()).await.expect("failed to write to fake endpoint");
 
     // The list of servers we expect to retrieve from `fuchsia.net.name/LookupAdmin`.
     let expect = [fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
@@ -415,10 +410,8 @@ async fn test_discovered_dhcpv6_dns<E: netemul::Endpoint>(name: &str) -> Result 
     // Poll LookupAdmin until we get the servers we want or after too many tries.
     let lookup_admin = realm
         .connect_to_protocol::<net_name::LookupAdminMarker>()
-        .context("failed to connect to LookupAdmin")?;
-    poll_lookup_admin(&lookup_admin, &expect, &mut wait_for_netmgr, POLL_WAIT, RETRY_COUNT)
-        .await
-        .context("poll lookup admin")
+        .expect("failed to connect to LookupAdmin");
+    poll_lookup_admin(&lookup_admin, &expect, &mut wait_for_netmgr, POLL_WAIT, RETRY_COUNT).await
 }
 
 async fn mock_udp_name_server(
@@ -471,7 +464,7 @@ const EXAMPLE_IPV6_ADDR: fnet::IpAddress = fidl_ip!("2606:2800:220:1:248:1893:25
 #[test_case(false, true, EXAMPLE_HOSTNAME, EXAMPLE_IPV6_ADDR; "ipv6 only")]
 #[test_case(true, true, EXAMPLE_HOSTNAME, EXAMPLE_IPV4_ADDR; "ipv4 and ipv6")]
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test_fallback_on_query_refused(
+async fn fallback_on_query_refused(
     ipv4_lookup: bool,
     ipv6_lookup: bool,
     hostname: &str,
@@ -603,7 +596,7 @@ async fn setup_dns_server(
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test_no_fallback_to_tcp_on_failed_udp() {
+async fn no_fallback_to_tcp_on_failed_udp() {
     use trust_dns_proto::op::{Message, ResponseCode};
 
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
@@ -661,7 +654,7 @@ async fn test_no_fallback_to_tcp_on_failed_udp() {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test_fallback_to_tcp_on_truncated_response() {
+async fn fallback_to_tcp_on_truncated_response() {
     use trust_dns_proto::op::{Message, MessageType, OpCode, ResponseCode};
 
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
