@@ -190,7 +190,7 @@ class Tcs3400Test : public zxtest::Test {
 
     const auto set_sensor_report = fuchsia_input_report::wire::SensorFeatureReport(allocator)
                                        .set_report_interval(allocator, report.report_interval_us)
-                                       .set_reporting_state(allocator, report.reporting_state)
+                                       .set_reporting_state(report.reporting_state)
                                        .set_sensitivity(allocator, sensitivity)
                                        .set_threshold_high(allocator, threshold_high)
                                        .set_threshold_low(allocator, threshold_low)
@@ -782,8 +782,7 @@ TEST_F(Tcs3400Test, SetInvalidFeatureReport) {
   const auto set_sensor_report =
       fuchsia_input_report::wire::SensorFeatureReport(allocator)
           .set_report_interval(allocator, report.report_interval_us)
-          .set_reporting_state(allocator,
-                               fuchsia_input_report::wire::SensorReportingState::kReportAllEvents)
+          .set_reporting_state(fuchsia_input_report::wire::SensorReportingState::kReportAllEvents)
           .set_sensitivity(allocator, sensitivity)
           .set_threshold_high(allocator, threshold_high);
 

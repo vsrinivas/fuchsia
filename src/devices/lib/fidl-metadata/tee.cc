@@ -11,7 +11,7 @@ zx::status<std::vector<uint8_t>> TeeMetadataToFidl(
   fidl::Arena allocator;
 
   fuchsia_hardware_tee::wire::TeeMetadata metadata(allocator);
-  metadata.set_default_thread_count(allocator, default_thread_count);
+  metadata.set_default_thread_count(default_thread_count);
 
   fidl::VectorView<fuchsia_hardware_tee::wire::CustomThreadConfig> thr_config(allocator,
                                                                               thread_config.size());
@@ -22,7 +22,7 @@ zx::status<std::vector<uint8_t>> TeeMetadataToFidl(
     thr.Allocate(allocator);
 
     thr.set_role(allocator, fidl::StringView(allocator, src_thr.role));
-    thr.set_count(allocator, src_thr.count);
+    thr.set_count(src_thr.count);
     fidl::VectorView<::fuchsia_tee::wire::Uuid> apps(allocator, src_thr.trusted_apps.size());
     for (size_t j = 0; j < src_thr.trusted_apps.size(); j++) {
       auto& app = apps[j];

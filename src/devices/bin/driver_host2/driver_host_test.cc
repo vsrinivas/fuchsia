@@ -145,10 +145,10 @@ class DriverHostTest : public testing::Test {
     fidl::VectorView<frunner::wire::ComponentNamespaceEntry> ns_entries(arena, 2);
     ns_entries[0].Allocate(arena);
     ns_entries[0].set_path(arena, "/pkg");
-    ns_entries[0].set_directory(arena, std::move(pkg_endpoints->client));
+    ns_entries[0].set_directory(std::move(pkg_endpoints->client));
     ns_entries[1].Allocate(arena);
     ns_entries[1].set_path(arena, "/svc");
-    ns_entries[1].set_directory(arena, std::move(svc_endpoints->client));
+    ns_entries[1].set_directory(std::move(svc_endpoints->client));
 
     TestFile file("/pkg/driver/test_driver.so");
     fidl::Binding<fio::File> file_binding(&file);
@@ -177,13 +177,13 @@ class DriverHostTest : public testing::Test {
 
       fdf::wire::DriverStartArgs driver_start_args(arena);
       if (node != nullptr) {
-        driver_start_args.set_node(arena, std::move(*node));
+        driver_start_args.set_node(std::move(*node));
       }
       driver_start_args.set_symbols(arena, std::move(symbols));
       driver_start_args.set_url(arena, "fuchsia-pkg://fuchsia.com/driver#meta/driver.cm");
       driver_start_args.set_program(arena, std::move(dictionary));
       driver_start_args.set_ns(arena, std::move(ns_entries));
-      driver_start_args.set_outgoing_dir(arena, std::move(outgoing_dir_endpoints->server));
+      driver_start_args.set_outgoing_dir(std::move(outgoing_dir_endpoints->server));
       Completer completer(&transaction);
       fidl::WireRequest<fdf::DriverHost::Start> request(driver_start_args,
                                                         std::move(driver_endpoints->server));
@@ -397,7 +397,7 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
     fidl::VectorView<frunner::wire::ComponentNamespaceEntry> entries1(arena, 1);
     entries1[0].Allocate(arena);
     entries1[0].set_path(arena, "/pkg");
-    entries1[0].set_directory(arena, fidl::ClientEnd<fuchsia_io::Directory>());
+    entries1[0].set_directory(fidl::ClientEnd<fuchsia_io::Directory>());
 
     fdf::wire::DriverStartArgs driver_start_args(arena);
     driver_start_args.set_url(arena, "fuchsia-pkg://fuchsia.com/driver#meta/driver.cm");
@@ -418,7 +418,7 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
     fidl::VectorView<frunner::wire::ComponentNamespaceEntry> entries2(arena, 1);
     entries2[0].Allocate(arena);
     entries2[0].set_path(arena, "/pkg");
-    entries2[0].set_directory(arena, fidl::ClientEnd<fuchsia_io::Directory>());
+    entries2[0].set_directory(fidl::ClientEnd<fuchsia_io::Directory>());
 
     fdf::wire::DriverStartArgs driver_start_args(arena);
     driver_start_args.set_url(arena, "fuchsia-pkg://fuchsia.com/driver#meta/driver.cm");
@@ -460,7 +460,7 @@ TEST_F(DriverHostTest, Start_InvalidBinary) {
   fidl::VectorView<frunner::wire::ComponentNamespaceEntry> ns_entries(arena, 1);
   ns_entries[0].Allocate(arena);
   ns_entries[0].set_path(arena, "/pkg");
-  ns_entries[0].set_directory(arena, std::move(pkg_endpoints->client));
+  ns_entries[0].set_directory(std::move(pkg_endpoints->client));
   TestFile file("/pkg/driver/test_not_driver.so");
   fidl::Binding<fio::File> file_binding(&file);
   TestDirectory pkg_directory;

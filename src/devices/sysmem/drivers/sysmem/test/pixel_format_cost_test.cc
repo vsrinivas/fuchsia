@@ -21,7 +21,7 @@ TEST(PixelFormatCost, Afbc) {
     fuchsia_sysmem2::wire::ImageFormatConstraints image_format_constraints(allocator);
     {
       fuchsia_sysmem2::wire::PixelFormat pixel_format(allocator);
-      pixel_format.set_type(allocator, fuchsia_sysmem2::wire::PixelFormatType::kBgra32);
+      pixel_format.set_type(fuchsia_sysmem2::wire::PixelFormatType::kBgra32);
       image_format_constraints.set_pixel_format(allocator, std::move(pixel_format));
     }
     constraints.image_format_constraints()[0] = std::move(image_format_constraints);
@@ -30,7 +30,7 @@ TEST(PixelFormatCost, Afbc) {
     fuchsia_sysmem2::wire::ImageFormatConstraints image_format_constraints(allocator);
     {
       fuchsia_sysmem2::wire::PixelFormat pixel_format(allocator);
-      pixel_format.set_type(allocator, fuchsia_sysmem2::wire::PixelFormatType::kBgra32);
+      pixel_format.set_type(fuchsia_sysmem2::wire::PixelFormatType::kBgra32);
       pixel_format.set_format_modifier_value(allocator,
                                              fuchsia_sysmem2::wire::kFormatModifierArmAfbc32X8);
       image_format_constraints.set_pixel_format(allocator, std::move(pixel_format));
@@ -69,7 +69,7 @@ TEST(PixelFormatCost, IntelTiling) {
       fuchsia_sysmem2::wire::ImageFormatConstraints image_format_constraints(allocator);
       {
         fuchsia_sysmem2::wire::PixelFormat pixel_format(allocator);
-        pixel_format.set_type(allocator, fuchsia_sysmem2::wire::PixelFormatType::kBgra32);
+        pixel_format.set_type(fuchsia_sysmem2::wire::PixelFormatType::kBgra32);
         pixel_format.set_format_modifier_value(allocator,
                                                fuchsia_sysmem2::wire::kFormatModifierLinear);
         image_format_constraints.set_pixel_format(allocator, std::move(pixel_format));
@@ -80,7 +80,7 @@ TEST(PixelFormatCost, IntelTiling) {
       fuchsia_sysmem2::wire::ImageFormatConstraints image_format_constraints(allocator);
       {
         fuchsia_sysmem2::wire::PixelFormat pixel_format(allocator);
-        pixel_format.set_type(allocator, fuchsia_sysmem2::wire::PixelFormatType::kBgra32);
+        pixel_format.set_type(fuchsia_sysmem2::wire::PixelFormatType::kBgra32);
         pixel_format.set_format_modifier_value(allocator, modifier);
         image_format_constraints.set_pixel_format(allocator, std::move(pixel_format));
       }
@@ -105,7 +105,7 @@ TEST(PixelFormatCost, IntelTiling) {
     // Explicit linear should be treated the same as no format modifier value.
     {
       fuchsia_sysmem2::wire::PixelFormat pixel_format(allocator);
-      pixel_format.set_type(allocator, fuchsia_sysmem2::wire::PixelFormatType::kBgra32);
+      pixel_format.set_type(fuchsia_sysmem2::wire::PixelFormatType::kBgra32);
       constraints.image_format_constraints()[0].set_pixel_format(allocator,
                                                                  std::move(pixel_format));
     }
@@ -129,7 +129,7 @@ TEST(PixelFormatCost, IntelTiling) {
       fuchsia_sysmem2::wire::ImageFormatConstraints image_format_constraints(allocator);
       {
         fuchsia_sysmem2::wire::PixelFormat pixel_format(allocator);
-        pixel_format.set_type(allocator, fuchsia_sysmem2::wire::PixelFormatType::kBgra32);
+        pixel_format.set_type(fuchsia_sysmem2::wire::PixelFormatType::kBgra32);
         pixel_format.set_format_modifier_value(allocator, modifier_list[i]);
         image_format_constraints.set_pixel_format(allocator, std::move(pixel_format));
       }
@@ -154,7 +154,7 @@ TEST(PixelFormatCost, ArmTransactionElimination) {
     fuchsia_sysmem2::wire::ImageFormatConstraints image_format_constraints(allocator);
     {
       fuchsia_sysmem2::wire::PixelFormat pixel_format(allocator);
-      pixel_format.set_type(allocator, fuchsia_sysmem2::wire::PixelFormatType::kBgra32);
+      pixel_format.set_type(fuchsia_sysmem2::wire::PixelFormatType::kBgra32);
       pixel_format.set_format_modifier_value(allocator,
                                              fuchsia_sysmem2::wire::kFormatModifierArmAfbc32X8);
       image_format_constraints.set_pixel_format(allocator, std::move(pixel_format));
@@ -165,7 +165,7 @@ TEST(PixelFormatCost, ArmTransactionElimination) {
     fuchsia_sysmem2::wire::ImageFormatConstraints image_format_constraints(allocator);
     {
       fuchsia_sysmem2::wire::PixelFormat pixel_format(allocator);
-      pixel_format.set_type(allocator, fuchsia_sysmem2::wire::PixelFormatType::kBgra32);
+      pixel_format.set_type(fuchsia_sysmem2::wire::PixelFormatType::kBgra32);
       pixel_format.set_format_modifier_value(allocator,
                                              fuchsia_sysmem2::wire::kFormatModifierArmAfbc32X8Te);
       image_format_constraints.set_pixel_format(allocator, std::move(pixel_format));
@@ -202,7 +202,7 @@ TEST(PixelFormatCost, AfbcWithFlags) {
       fuchsia_sysmem2::wire::ImageFormatConstraints image_format_constraints(allocator);
       {
         fuchsia_sysmem2::wire::PixelFormat pixel_format(allocator);
-        pixel_format.set_type(allocator, fuchsia_sysmem2::wire::PixelFormatType::kBgra32);
+        pixel_format.set_type(fuchsia_sysmem2::wire::PixelFormatType::kBgra32);
         pixel_format.set_format_modifier_value(allocator, modifier_list[i]);
         image_format_constraints.set_pixel_format(allocator, std::move(pixel_format));
       }

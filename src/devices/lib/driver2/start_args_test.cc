@@ -45,7 +45,7 @@ TEST(StartArgsTest, NsValue) {
   fidl::Arena arena;
   fidl::VectorView<frunner::wire::ComponentNamespaceEntry> ns_entries(arena, 1);
   ns_entries[0].Allocate(arena);
-  ns_entries[0].set_path(arena, "/svc").set_directory(arena, std::move(endpoints->client));
+  ns_entries[0].set_path(arena, "/svc").set_directory(std::move(endpoints->client));
 
   auto svc = driver::NsValue(ns_entries, "/svc");
   zx_info_handle_basic_t client_info = {}, server_info = {};

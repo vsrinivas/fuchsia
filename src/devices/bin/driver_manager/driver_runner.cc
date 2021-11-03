@@ -252,12 +252,12 @@ zx::status<fidl::ClientEnd<fdf::Driver>> DriverHostComponent::Start(
   auto binary = driver::ProgramValue(start_info.program(), "binary").value_or("");
   fidl::Arena arena;
   fdf::wire::DriverStartArgs args(arena);
-  args.set_node(arena, std::move(client_end))
+  args.set_node(std::move(client_end))
       .set_symbols(arena, node.symbols())
       .set_url(arena, start_info.resolved_url())
       .set_program(arena, start_info.program())
       .set_ns(arena, start_info.ns())
-      .set_outgoing_dir(arena, std::move(start_info.outgoing_dir()));
+      .set_outgoing_dir(std::move(start_info.outgoing_dir()));
   auto start = driver_host_->Start(args, std::move(endpoints->server));
   if (!start.ok()) {
     LOGF(ERROR, "Failed to start driver '%s' in driver host: %s", binary.data(),
@@ -855,7 +855,7 @@ zx::status<> DriverRunner::CreateComponent(std::string name, Collection collecti
   fdecl::wire::Child child_decl(arena);
   child_decl.set_name(arena, fidl::StringView::FromExternal(name))
       .set_url(arena, fidl::StringView::FromExternal(url))
-      .set_startup(arena, fdecl::wire::StartupMode::kLazy);
+      .set_startup(fdecl::wire::StartupMode::kLazy);
   fcomponent::wire::CreateChildArgs child_args(arena);
   if (opts.node != nullptr) {
     child_args.set_dynamic_offers(arena, opts.node->CreateOffers(arena));

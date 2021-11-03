@@ -229,7 +229,7 @@ zx::status<std::vector<uint8_t>> DeviceBuilder::FidlEncodeMetadata() {
           ZX_ASSERT(HasBusId());  // Bus ID should get set when a child device is added.
           fuchsia_hardware_spi::wire::SpiBusMetadata metadata(allocator);
           for (auto& chan : arg) {
-            chan.set_bus_id(allocator, GetBusId());
+            chan.set_bus_id(GetBusId());
           }
           auto channels = fidl::VectorView<SpiChannel>::FromExternal(arg);
           metadata.set_channels(allocator, channels);
@@ -238,7 +238,7 @@ zx::status<std::vector<uint8_t>> DeviceBuilder::FidlEncodeMetadata() {
           ZX_ASSERT(HasBusId());  // Bus ID should get set when a child device is added.
           fuchsia_hardware_i2c::wire::I2CBusMetadata metadata(allocator);
           for (auto& chan : arg) {
-            chan.set_bus_id(allocator, GetBusId());
+            chan.set_bus_id(GetBusId());
           }
           auto channels = fidl::VectorView<I2CChannel>::FromExternal(arg);
           metadata.set_channels(allocator, channels);

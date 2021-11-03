@@ -14,11 +14,11 @@ zx::status<std::vector<uint8_t>> SpiChannelsToFidl(const cpp20::span<const Chann
     auto& chan = spi_channels[i];
     chan.Allocate(allocator);
 
-    chan.set_bus_id(allocator, channels[i].bus_id);
-    chan.set_cs(allocator, channels[i].cs);
-    chan.set_pid(allocator, channels[i].pid);
-    chan.set_did(allocator, channels[i].did);
-    chan.set_vid(allocator, channels[i].vid);
+    chan.set_bus_id(channels[i].bus_id);
+    chan.set_cs(channels[i].cs);
+    chan.set_pid(channels[i].pid);
+    chan.set_did(channels[i].did);
+    chan.set_vid(channels[i].vid);
   }
 
   fuchsia_hardware_spi::wire::SpiBusMetadata metadata(allocator);

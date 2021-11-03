@@ -156,7 +156,7 @@ TEST(LoggerTest, Create_NoLogSink) {
   fidl::Arena arena;
   fidl::VectorView<frunner::wire::ComponentNamespaceEntry> ns_entries(arena, 1);
   ns_entries[0].Allocate(arena);
-  ns_entries[0].set_path(arena, "/pkg").set_directory(arena, std::move(pkg->client));
+  ns_entries[0].set_path(arena, "/pkg").set_directory(std::move(pkg->client));
   auto ns = driver::Namespace::Create(ns_entries);
   ASSERT_TRUE(ns.is_ok());
 

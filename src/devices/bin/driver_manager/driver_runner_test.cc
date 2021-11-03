@@ -278,7 +278,7 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
     start_info.set_resolved_url(arena, arena, driver.url)
         .set_program(arena, std::move(program))
         .set_ns(arena)
-        .set_outgoing_dir(arena, std::move(outgoing_endpoints->server))
+        .set_outgoing_dir(std::move(outgoing_endpoints->server))
         .set_numbered_handles(arena, realm().GetHandles());
 
     auto controller_endpoints = fidl::CreateEndpoints<frunner::ComponentController>();

@@ -59,7 +59,7 @@ class DeviceTest : public gtest::TestLoopFixture {
     fidl::Arena arena;
     fidl::VectorView<frunner::wire::ComponentNamespaceEntry> entries(arena, 1);
     entries[0].Allocate(arena);
-    entries[0].set_path(arena, "/svc").set_directory(arena, std::move(client_end));
+    entries[0].set_path(arena, "/svc").set_directory(std::move(client_end));
     return driver::Namespace::Create(entries);
   }
 

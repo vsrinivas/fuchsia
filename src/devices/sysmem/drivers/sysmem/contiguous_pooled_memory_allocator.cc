@@ -31,14 +31,14 @@ fuchsia_sysmem2::wire::HeapProperties BuildHeapProperties(fidl::AnyArena& alloca
   using fuchsia_sysmem2::wire::HeapProperties;
 
   auto coherency_domain_support = CoherencyDomainSupport(allocator);
-  coherency_domain_support.set_cpu_supported(allocator, is_cpu_accessible);
-  coherency_domain_support.set_ram_supported(allocator, is_cpu_accessible);
-  coherency_domain_support.set_inaccessible_supported(allocator, true);
+  coherency_domain_support.set_cpu_supported(is_cpu_accessible);
+  coherency_domain_support.set_ram_supported(is_cpu_accessible);
+  coherency_domain_support.set_inaccessible_supported(true);
 
   auto heap_properties = HeapProperties(allocator);
   heap_properties.set_coherency_domain_support(allocator, std::move(coherency_domain_support));
-  heap_properties.set_need_clear(allocator, is_cpu_accessible);
-  heap_properties.set_need_flush(allocator, is_cpu_accessible);
+  heap_properties.set_need_clear(is_cpu_accessible);
+  heap_properties.set_need_flush(is_cpu_accessible);
 
   return heap_properties;
 }

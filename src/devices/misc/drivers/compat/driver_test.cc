@@ -173,10 +173,10 @@ class DriverTest : public gtest::TestLoopFixture {
     fidl::VectorView<frunner::wire::ComponentNamespaceEntry> ns_entries(arena, 2);
     ns_entries[0].Allocate(arena);
     ns_entries[0].set_path(arena, "/pkg");
-    ns_entries[0].set_directory(arena, std::move(pkg_endpoints->client));
+    ns_entries[0].set_directory(std::move(pkg_endpoints->client));
     ns_entries[1].Allocate(arena);
     ns_entries[1].set_path(arena, "/svc");
-    ns_entries[1].set_directory(arena, std::move(svc_endpoints->client));
+    ns_entries[1].set_directory(std::move(svc_endpoints->client));
 
     fidl::VectorView<fdata::wire::DictionaryEntry> program_entries(arena, 1);
     program_entries[0].key.Set(arena, "compat");
@@ -185,11 +185,11 @@ class DriverTest : public gtest::TestLoopFixture {
     program.set_entries(arena, std::move(program_entries));
 
     fdf::wire::DriverStartArgs start_args(arena);
-    start_args.set_node(arena, std::move(node_endpoints->client));
+    start_args.set_node(std::move(node_endpoints->client));
     start_args.set_url(arena, "fuchsia-pkg://fuchsia.com/driver#meta/driver.cm");
     start_args.set_program(arena, std::move(program));
     start_args.set_ns(arena, std::move(ns_entries));
-    start_args.set_outgoing_dir(arena, std::move(outgoing_dir_endpoints->server));
+    start_args.set_outgoing_dir(std::move(outgoing_dir_endpoints->server));
 
     // Start driver.
     auto start = driver.Start(&start_args);

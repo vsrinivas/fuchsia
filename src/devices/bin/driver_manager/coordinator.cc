@@ -1962,7 +1962,7 @@ zx::status<std::vector<fdd::wire::DeviceInfo>> Coordinator::GetDeviceInfo(
                                                  .str_props = str_props,
                                              });
 
-    device_info.set_flags(allocator, device->flags);
+    device_info.set_flags(fdd::wire::DeviceFlags(device->flags));
 
     device_info_vec.push_back(std::move(device_info));
   }

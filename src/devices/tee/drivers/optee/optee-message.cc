@@ -252,7 +252,7 @@ fuchsia_tee::wire::Value Message::CreateOutputValueParameter(fidl::AnyArena& all
     zx_value.set_b(allocator, optee_value.generic.b);
     zx_value.set_c(allocator, optee_value.generic.c);
   }
-  zx_value.set_direction(allocator, direction);
+  zx_value.set_direction(direction);
 
   return zx_value;
 }
@@ -276,7 +276,7 @@ zx_status_t Message::CreateOutputBufferParameter(fidl::AnyArena& allocator,
     default:
       ZX_PANIC("Invalid OP-TEE attribute specified\n");
   }
-  out_buffer->set_direction(allocator, direction);
+  out_buffer->set_direction(direction);
 
   const MessageParam::TemporaryMemory& optee_temp_mem = optee_param.payload.temporary_memory;
 
@@ -310,7 +310,7 @@ zx_status_t Message::CreateOutputBufferParameter(fidl::AnyArena& allocator,
     }
   }
 
-  out_buffer->set_vmo(allocator, zx::vmo(temp_shared_memory.ReleaseVmo()));
+  out_buffer->set_vmo(zx::vmo(temp_shared_memory.ReleaseVmo()));
   out_buffer->set_offset(allocator, temp_shared_memory.vmo_offset());
 
   return ZX_OK;

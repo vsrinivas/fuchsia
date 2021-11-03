@@ -128,7 +128,7 @@ fuchsia_input_report::wire::FeatureReport Tcs3400FeatureReport::ToFidlFeatureRep
 
   const auto sensor_report = fuchsia_input_report::wire::SensorFeatureReport(allocator)
                                  .set_report_interval(allocator, report_interval_us)
-                                 .set_reporting_state(allocator, reporting_state)
+                                 .set_reporting_state(reporting_state)
                                  .set_sensitivity(allocator, sens)
                                  .set_threshold_high(allocator, thresh_high)
                                  .set_threshold_low(allocator, thresh_low)
@@ -380,7 +380,7 @@ void Tcs3400Device::GetDescriptor(GetDescriptorRequestView request,
 
   const auto feature_descriptor = fuchsia_input_report::wire::SensorFeatureDescriptor(allocator)
                                       .set_report_interval(allocator, kReportIntervalAxis)
-                                      .set_supports_reporting_state(allocator, true)
+                                      .set_supports_reporting_state(true)
                                       .set_sensitivity(allocator, sensitivity_axes)
                                       .set_threshold_high(allocator, threshold_high_axes)
                                       .set_threshold_low(allocator, threshold_low_axes)

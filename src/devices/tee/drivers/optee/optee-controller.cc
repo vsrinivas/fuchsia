@@ -642,13 +642,13 @@ zx_status_t OpteeController::ConnectToApplicationInternal(
 void OpteeController::GetOsInfo(GetOsInfoRequestView request, GetOsInfoCompleter::Sync& completer) {
   fidl::Arena allocator;
   fuchsia_tee::wire::OsRevision os_rev(allocator);
-  os_rev.set_major(allocator, os_revision().major);
-  os_rev.set_minor(allocator, os_revision().minor);
+  os_rev.set_major(os_revision().major);
+  os_rev.set_minor(os_revision().minor);
 
   fuchsia_tee::wire::OsInfo os_info(allocator);
   os_info.set_uuid(allocator, kOpteeOsUuid);
   os_info.set_revision(allocator, std::move(os_rev));
-  os_info.set_is_global_platform_compliant(allocator, true);
+  os_info.set_is_global_platform_compliant(true);
 
   completer.Reply(std::move(os_info));
 }

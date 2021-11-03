@@ -15,12 +15,12 @@ zx::status<std::vector<uint8_t>> I2CChannelsToFidl(const cpp20::span<const Chann
     auto& src_chan = channels[i];
     chan.Allocate(allocator);
 
-    chan.set_bus_id(allocator, src_chan.bus_id);
-    chan.set_address(allocator, src_chan.address);
+    chan.set_bus_id(src_chan.bus_id);
+    chan.set_address(src_chan.address);
     if (src_chan.pid || src_chan.vid || src_chan.did) {
-      chan.set_pid(allocator, src_chan.pid);
-      chan.set_did(allocator, src_chan.did);
-      chan.set_vid(allocator, src_chan.vid);
+      chan.set_pid(src_chan.pid);
+      chan.set_did(src_chan.did);
+      chan.set_vid(src_chan.vid);
     }
   }
 

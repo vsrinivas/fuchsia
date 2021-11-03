@@ -94,14 +94,14 @@ static void AddRgbaPixelFormat(fidl::AnyArena& allocator, uint64_t format_modifi
   for (auto format : {fuchsia_sysmem2::wire::PixelFormatType::kBgra32,
                       fuchsia_sysmem2::wire::PixelFormatType::kR8G8B8A8}) {
     fuchsia_sysmem2::wire::PixelFormat pixel_format(allocator);
-    pixel_format.set_type(allocator, format);
+    pixel_format.set_type(format);
     pixel_format.set_format_modifier_value(allocator, format_modifier);
     fuchsia_sysmem2::wire::BufferUsage buffer_usage(allocator);
-    buffer_usage.set_none(allocator, 0u);
-    buffer_usage.set_cpu(allocator, 0u);
-    buffer_usage.set_vulkan(allocator, 0u);
-    buffer_usage.set_display(allocator, 0u);
-    buffer_usage.set_video(allocator, 0u);
+    buffer_usage.set_none(0u);
+    buffer_usage.set_cpu(0u);
+    buffer_usage.set_vulkan(0u);
+    buffer_usage.set_display(0u);
+    buffer_usage.set_video(0u);
     result.emplace_back(UsagePixelFormatCostEntry{
         // .pixel_format
         std::move(pixel_format),
@@ -179,13 +179,13 @@ const std::list<const UsagePixelFormatCostEntry> kAmlogic_Generic_Cost_Entries =
   std::list<const UsagePixelFormatCostEntry> result;
   // NV12 weakly preferred for VIDEO_USAGE_HW_DECODER.
   fuchsia_sysmem2::wire::PixelFormat pixel_format(allocator);
-  pixel_format.set_type(allocator, fuchsia_sysmem2::wire::PixelFormatType::kNv12);
+  pixel_format.set_type(fuchsia_sysmem2::wire::PixelFormatType::kNv12);
   fuchsia_sysmem2::wire::BufferUsage buffer_usage(allocator);
-  buffer_usage.set_none(allocator, 0u);
-  buffer_usage.set_cpu(allocator, 0u);
-  buffer_usage.set_vulkan(allocator, 0u);
-  buffer_usage.set_display(allocator, 0u);
-  buffer_usage.set_video(allocator, fuchsia_sysmem2::wire::kVideoUsageHwDecoder);
+  buffer_usage.set_none(0u);
+  buffer_usage.set_cpu(0u);
+  buffer_usage.set_vulkan(0u);
+  buffer_usage.set_display(0u);
+  buffer_usage.set_video(fuchsia_sysmem2::wire::kVideoUsageHwDecoder);
   result.emplace_back(UsagePixelFormatCostEntry{
       // .pixel_format
       std::move(pixel_format),

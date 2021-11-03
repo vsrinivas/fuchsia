@@ -46,13 +46,13 @@ RegistersMetadataEntry BuildMetadata(fidl::AnyArena& allocator, uint32_t bind_id
     built_masks[i].Allocate(allocator);
     built_masks[i].set_mask(allocator, BuildMask<T>(allocator, masks[i].mask));
     built_masks[i].set_mmio_offset(allocator, masks[i].mmio_offset);
-    built_masks[i].set_count(allocator, masks[i].reg_count);
-    built_masks[i].set_overlap_check_on(allocator, masks[i].overlap_check_on);
+    built_masks[i].set_count(masks[i].reg_count);
+    built_masks[i].set_overlap_check_on(masks[i].overlap_check_on);
   }
 
   RegistersMetadataEntry entry(allocator);
-  entry.set_bind_id(allocator, bind_id);
-  entry.set_mmio_id(allocator, mmio_id);
+  entry.set_bind_id(bind_id);
+  entry.set_mmio_id(mmio_id);
   entry.set_masks(allocator, std::move(built_masks));
   return entry;
 }
@@ -60,7 +60,7 @@ RegistersMetadataEntry BuildMetadata(fidl::AnyArena& allocator, uint32_t bind_id
 using fuchsia_hardware_registers::wire::MmioMetadataEntry;
 MmioMetadataEntry BuildMetadata(fidl::AnyArena& allocator, uint32_t id) {
   MmioMetadataEntry entry(allocator);
-  entry.set_id(allocator, id);
+  entry.set_id(id);
   return entry;
 }
 

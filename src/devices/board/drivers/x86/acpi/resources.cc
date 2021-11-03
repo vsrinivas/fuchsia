@@ -214,13 +214,12 @@ acpi::status<fuchsia_hardware_spi::wire::SpiChannel> resource_parse_spi(
     return found_result.take_error();
   }
   *resource_source = found_result.value();
-  result.set_cs(allocator, spi_bus.DeviceSelection);
-  result.set_cs_polarity_high(allocator, spi_bus.DevicePolarity == ACPI_SPI_ACTIVE_HIGH);
-  result.set_word_length_bits(allocator, spi_bus.DataBitLength);
-  result.set_is_bus_controller(allocator, spi_bus.SlaveMode == ACPI_CONTROLLER_INITIATED);
-  result.set_clock_polarity_high(allocator, spi_bus.ClockPolarity == ACPI_SPI_START_HIGH);
-  result.set_clock_phase(allocator,
-                         spi_bus.ClockPhase == ACPI_SPI_FIRST_PHASE
+  result.set_cs(spi_bus.DeviceSelection);
+  result.set_cs_polarity_high(spi_bus.DevicePolarity == ACPI_SPI_ACTIVE_HIGH);
+  result.set_word_length_bits(spi_bus.DataBitLength);
+  result.set_is_bus_controller(spi_bus.SlaveMode == ACPI_CONTROLLER_INITIATED);
+  result.set_clock_polarity_high(spi_bus.ClockPolarity == ACPI_SPI_START_HIGH);
+  result.set_clock_phase(spi_bus.ClockPhase == ACPI_SPI_FIRST_PHASE
                              ? fuchsia_hardware_spi::wire::SpiClockPhase::kClockPhaseFirst
                              : fuchsia_hardware_spi::wire::SpiClockPhase::kClockPhaseSecond);
 
@@ -239,10 +238,10 @@ acpi::status<fuchsia_hardware_i2c::wire::I2CChannel> resource_parse_i2c(
     return found_result.take_error();
   }
   *resource_source = found_result.value();
-  result.set_address(allocator, i2c_bus.SlaveAddress);
-  result.set_is_bus_controller(allocator, i2c_bus.SlaveMode == ACPI_CONTROLLER_INITIATED);
-  result.set_bus_speed(allocator, i2c_bus.ConnectionSpeed);
-  result.set_is_ten_bit(allocator, i2c_bus.AccessMode == ACPI_I2C_10BIT_MODE);
+  result.set_address(i2c_bus.SlaveAddress);
+  result.set_is_bus_controller(i2c_bus.SlaveMode == ACPI_CONTROLLER_INITIATED);
+  result.set_bus_speed(i2c_bus.ConnectionSpeed);
+  result.set_is_ten_bit(i2c_bus.AccessMode == ACPI_I2C_10BIT_MODE);
 
   return zx::ok(result);
 }

@@ -77,11 +77,11 @@ void FtdiI2c::DdkInit(ddk::InitTxn txn) {
     auto& chan = i2c_channels[i];
     I2cDevice& dev = i2c_devices_[i];
     chan.Allocate(allocator);
-    chan.set_bus_id(allocator, 0);
-    chan.set_address(allocator, static_cast<uint16_t>(dev.address));
-    chan.set_vid(allocator, dev.vid);
-    chan.set_pid(allocator, dev.pid);
-    chan.set_did(allocator, dev.did);
+    chan.set_bus_id(0);
+    chan.set_address(static_cast<uint16_t>(dev.address));
+    chan.set_vid(dev.vid);
+    chan.set_pid(dev.pid);
+    chan.set_did(dev.did);
   }
   fuchsia_hardware_i2c::wire::I2CBusMetadata metadata(allocator);
   metadata.set_channels(allocator, i2c_channels);

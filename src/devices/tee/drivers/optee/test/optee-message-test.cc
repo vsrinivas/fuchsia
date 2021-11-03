@@ -69,7 +69,7 @@ static fidl::VectorView<fuchsia_tee::wire::Parameter> CreateParameters(fidl::Any
 
   for (size_t i = 0; i < num_params; i++) {
     fuchsia_tee::wire::Value value(allocator);
-    value.set_direction(allocator, fuchsia_tee::wire::Direction::kInout);
+    value.set_direction(fuchsia_tee::wire::Direction::kInout);
 
     uint64_t a, b, c;
 

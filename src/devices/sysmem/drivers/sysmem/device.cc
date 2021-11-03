@@ -73,14 +73,14 @@ fuchsia_sysmem2::wire::HeapProperties BuildHeapPropertiesWithCoherencyDomainSupp
   using fuchsia_sysmem2::wire::HeapProperties;
 
   CoherencyDomainSupport coherency_domain_support(allocator);
-  coherency_domain_support.set_cpu_supported(allocator, cpu_supported)
-      .set_ram_supported(allocator, ram_supported)
-      .set_inaccessible_supported(allocator, inaccessible_supported);
+  coherency_domain_support.set_cpu_supported(cpu_supported)
+      .set_ram_supported(ram_supported)
+      .set_inaccessible_supported(inaccessible_supported);
 
   HeapProperties heap_properties(allocator);
   heap_properties.set_coherency_domain_support(allocator, std::move(coherency_domain_support))
-      .set_need_clear(allocator, need_clear)
-      .set_need_flush(allocator, need_flush);
+      .set_need_clear(need_clear)
+      .set_need_flush(need_flush);
   return heap_properties;
 }
 
