@@ -8,7 +8,7 @@ use crate::device::DeviceSpec;
 use crate::port_picker::{is_free_tcp_port, pick_unused_port, Port};
 use crate::target;
 use crate::tools::HostTools;
-use crate::types::{get_sdk_data_dir, read_env_path, ImageFiles, InTreePaths, SshKeys, VDLArgs};
+use crate::types::{get_sdk_data_dir, read_env_path, FuchsiaPaths, ImageFiles, InTreePaths, SshKeys, VDLArgs};
 
 use crate::vdl_proto_parser::{get_emu_pid, get_ssh_port};
 use ansi_term::Colour::*;
@@ -17,13 +17,15 @@ use errors::ffx_bail;
 use ffx_emulator_shutdown_args::ShutdownCommand;
 use ffx_emulator_start_args::StartCommand;
 use fidl_fuchsia_developer_bridge as bridge;
+use fms;
 use regex::Regex;
+use sdk_metadata;
 use shared_child::SharedChild;
 use signal_hook;
 use std::env;
 use std::fs::{copy, File};
-use std::io::Write;
-use std::path::PathBuf;
+use std::io::{BufReader, Write};
+use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 use std::str;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -392,6 +394,14 @@ impl VDLFiles {
         start_command: &StartCommand,
         daemon_proxy: Option<&bridge::DaemonProxy>,
     ) -> Result<i32> {
+        let mut in_tree = InTreePaths { root_dir: None, build_dir: None };
+        let build_dir = in_tree.find_fuchsia_build_dir()?;
+        let build_dir = build_dir.join("gen/build/images");
+        let fms_entries = read_fms_entries(&build_dir)?;
+
+        let product_bundle = get_product_bundle(&fms_entries, &start_command.product_bundle)?;
+        println!("Read PBM {:?}", product_bundle);
+
         self.check_start_command(&start_command)?;
         let vdl_args: VDLArgs = start_command.clone().into();
 
@@ -808,6 +818,80 @@ impl VDLFiles {
             }
         }
         Ok(())
+    }
+}
+
+/// Initialize the FMS database.
+///
+/// Look for appropriate .json files in `build_dir` and import metadata from
+/// them.
+fn read_fms_entries(build_dir: &Path) -> Result<fms::Entries> {
+    let mut entries = fms::Entries::new();
+    let json_file_names: Vec<&str> =
+        vec!["product_bundle.json", "physical_device.json", "virtual_device.json"];
+    for name in json_file_names {
+        let path = build_dir.join(name);
+        match File::open(&path) {
+            Ok(file) => {
+                let mut buf_reader = BufReader::new(file);
+                entries.add_json(&mut buf_reader)?;
+            }
+            Err(e) => {
+                log::info!("{:?}. Unable to open FMS file at {:?}.", e, path);
+            }
+        }
+    }
+    Ok(entries)
+}
+
+/// Retrieve the product bundle (PBM) from FMS.
+///
+/// If `fms_name` is None and only one viable PBM is available, that entry is
+/// returned.
+///
+/// Bails out if no suitable PBM is found.
+fn get_product_bundle<'a>(
+    fms_entries: &'a fms::Entries,
+    fms_name: &Option<String>,
+) -> Result<&'a sdk_metadata::Metadata> {
+    if let Some(fms_name) = fms_name {
+        if let Some(pbm) = fms_entries.entry(fms_name) {
+            Ok(pbm)
+        } else {
+            ffx_bail!(
+                "\
+                The product bundle name {} was not found. \
+                Please check the spelling and try again.",
+                fms_name
+            );
+        }
+    } else {
+        let mut iter =
+            fms_entries.iter().filter(|&x| matches!(x, sdk_metadata::Metadata::ProductBundleV1(_)));
+        if let Some(pbm) = iter.next() {
+            if let None = iter.next() {
+                // Since no specific PBM name was given, take the only
+                // available PBM.
+                Ok(pbm)
+            } else {
+                // In the future it would be better to filter through the
+                // PBMs to see if only one entry would apply, then that one
+                // would be a reasonable default. An error would still
+                // happen if more than one PBM met all the filter criteria.
+                ffx_bail!(
+                    "\
+                    There is more than one product bundle available. \
+                    Please specify a product bundle by name."
+                );
+            }
+        } else {
+            ffx_bail!(
+                "\
+                    No valid product bundles were found. \
+                    Consider creating them by building your product or \
+                    updating the SDK."
+            );
+        }
     }
 }
 

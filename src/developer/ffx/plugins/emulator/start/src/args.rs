@@ -190,7 +190,7 @@ pub struct StartCommand {
     pub package_server_log: Option<String>,
 
     /// path to unpack archived_package downloaded from GCS. This only applies when fvdl is
-    /// downloading images files from GCS (ex: --gcs-bucket, --sdk-verion, --image-name flags
+    /// downloading images files from GCS (ex: --gcs-bucket, --sdk-version, --image-name flags
     /// are specified). If not specified, a temporary path will be used.
     #[argh(option)]
     pub amber_unpack_root: Option<String>,
@@ -234,6 +234,12 @@ pub struct StartCommand {
     /// are specified.
     #[argh(option, short = 'A')]
     pub image_architecture: Option<String>,
+
+    /// use named product information from Product Bundle Metadata (PBM). If no
+    /// product bundle is specified and there is an obvious choice, that will be
+    /// used (e.g. if there is only one PBM available).
+    #[argh(positional)]
+    pub product_bundle: Option<String>,
 
     /// bool, enables extra logging for debugging
     #[argh(switch, short = 'V')]

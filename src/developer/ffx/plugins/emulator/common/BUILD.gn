@@ -27,6 +27,7 @@ if (is_host) {
       "src/vdl_proto_parser.rs",
     ]
     deps = [
+      "//build/sdk/meta:rust",
       "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
       "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
       "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
@@ -34,6 +35,7 @@ if (is_host) {
       "//src/developer/ffx/config:lib",
       "//src/developer/ffx/core:lib",
       "//src/developer/ffx/lib/errors:lib",
+      "//src/developer/ffx/lib/fms",
       "//src/developer/ffx/plugins/emulator/remote:ffx_emulator_remote_args",
       "//src/developer/ffx/plugins/emulator/shutdown:ffx_emulator_shutdown_args",
       "//src/developer/ffx/plugins/emulator/start:ffx_emulator_start_args",
