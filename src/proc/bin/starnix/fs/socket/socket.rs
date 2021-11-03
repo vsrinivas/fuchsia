@@ -549,8 +549,8 @@ impl SocketInner {
     }
 
     fn query_events(&self) -> FdEvents {
-        let local_events = self.messages.query_events();
         let mut present_events = FdEvents::empty();
+        let local_events = self.messages.query_events();
         if local_events & FdEvents::POLLIN {
             present_events = FdEvents::POLLIN;
         }
@@ -561,6 +561,19 @@ impl SocketInner {
                 present_events |= FdEvents::POLLOUT;
             }
         }
+
+        match &self.state {
+            SocketState::Listening(queue) => {
+                if queue.sockets.len() > 0 {
+                    present_events |= FdEvents::POLLIN;
+                }
+            }
+            SocketState::Closed => {
+                present_events |= FdEvents::POLLHUP;
+            }
+            _ => {}
+        }
+
         present_events
     }
 }
@@ -737,14 +750,19 @@ mod tests {
         let socket = Socket::new(SocketDomain::Unix, SocketType::Stream);
         socket.bind(SocketAddress::Unix(b"\0".to_vec())).expect("Failed to bind socket.");
         socket.listen(10).expect("Failed to listen.");
+        assert_eq!(FdEvents::empty(), socket.query_events());
         let connecting_socket = Socket::new(SocketDomain::Unix, SocketType::Stream);
         connecting_socket
             .connect(&socket, current_task.as_ucred())
             .expect("Failed to connect socket.");
+        assert_eq!(FdEvents::POLLIN, socket.query_events());
         let server_socket = socket.accept(current_task.as_ucred()).unwrap();
 
         let message = Message::new(vec![1, 2, 3].into(), None, None);
         server_socket.write_kernel(message.clone()).expect("Failed to write.");
+
+        server_socket.close();
+        assert_eq!(FdEvents::POLLHUP, server_socket.query_events());
 
         assert_eq!(connecting_socket.read_kernel(), vec![message]);
     }
