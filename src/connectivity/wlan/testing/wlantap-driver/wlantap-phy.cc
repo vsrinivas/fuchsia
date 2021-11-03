@@ -454,8 +454,7 @@ zx_status_t CreatePhy(zx_device_t* wlantapctl, zx::channel user_channel,
                             .ctx = phy.get(),
                             .ops = &device_ops,
                             .proto_id = ZX_PROTOCOL_WLANPHY_IMPL,
-                            .proto_ops = &wlanphy_impl_ops,
-                            .flags = DEVICE_ADD_NON_BINDABLE};
+                            .proto_ops = &wlanphy_impl_ops};
   zx_status_t status = device_add(wlantapctl, &args, &phy->device_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "wlantap: %s: could not add device: %d", __func__, status);
