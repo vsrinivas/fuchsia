@@ -3,68 +3,35 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context as _, Error},
+    anyhow::{Context as _, Result},
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
-    futures::{future::try_join, prelude::*},
+    futures::future::try_join,
+    futures::io::BufReader,
+    futures::prelude::*,
     hoist::{hoist, OvernetInstance},
-    std::io::{Read, Write},
+    std::os::unix::io::{AsRawFd, FromRawFd},
 };
 
-async fn copy_stdin_to_socket(
-    mut tx_socket: futures::io::WriteHalf<fidl::AsyncSocket>,
-) -> Result<(), Error> {
-    let (mut tx_stdin, mut rx_stdin) = futures::channel::mpsc::channel::<Vec<u8>>(2);
-    std::thread::Builder::new()
-        .spawn(move || -> Result<(), Error> {
-            let mut buf = [0u8; 1024];
-            let mut stdin = std::io::stdin();
-            loop {
-                let n = stdin.read(&mut buf)?;
-                if n == 0 {
-                    return Ok(());
-                }
-                let buf = &buf[..n];
-                futures::executor::block_on(tx_stdin.send(buf.to_vec()))?;
-            }
-        })
-        .context("Spawning blocking thread")?;
-    while let Some(buf) = rx_stdin.next().await {
-        tx_socket.write(buf.as_slice()).await?;
-    }
-    Ok(())
+const BUFFER_SIZE: usize = 65536;
+
+async fn buffered_copy<R, W>(mut from: R, mut to: W, buffer_size: usize) -> std::io::Result<u64>
+where
+    R: AsyncRead + std::marker::Unpin,
+    W: AsyncWrite + std::marker::Unpin,
+{
+    let mut buf_from = BufReader::with_capacity(buffer_size, &mut from);
+    futures::io::copy(&mut buf_from, &mut to).await
 }
 
-async fn copy_socket_to_stdout(
-    mut rx_socket: futures::io::ReadHalf<fidl::AsyncSocket>,
-) -> Result<(), Error> {
-    let (mut tx_stdout, mut rx_stdout) = futures::channel::mpsc::channel::<Vec<u8>>(2);
-    std::thread::Builder::new()
-        .spawn(move || -> Result<(), Error> {
-            let mut stdout = std::io::stdout();
-            while let Some(buf) = futures::executor::block_on(rx_stdout.next()) {
-                let mut buf = buf.as_slice();
-                loop {
-                    let n = stdout.write(buf)?;
-                    if n == buf.len() {
-                        stdout.flush()?;
-                        break;
-                    }
-                    buf = &buf[n..];
-                }
-            }
-            Ok(())
-        })
-        .context("Spawning blocking thread")?;
-    let mut buf = [0u8; 1024];
-    loop {
-        let n = rx_socket.read(&mut buf).await?;
-        tx_stdout.send((&buf[..n]).to_vec()).await?;
-    }
+fn zx_socket_from_fd(fd: i32) -> Result<fidl::AsyncSocket> {
+    let handle = fdio::transfer_fd(unsafe { std::fs::File::from_raw_fd(fd) })?;
+    fidl::AsyncSocket::from_socket(fidl::Socket::from(handle))
+        .context("making fidl::AsyncSocket from fidl::Socket")
 }
 
-async fn send_request(proxy: &RemoteControlProxy, id: Option<u64>) -> Result<(), Error> {
+async fn send_request(proxy: &RemoteControlProxy, id: Option<u64>) -> Result<()> {
     // If the program was launched with a u64, that's our ffx daemon ID, so add it to RCS.
     // The daemon id is used to map the RCS instance back to an ip address or
     // nodename in the daemon, for target merging.
@@ -78,7 +45,7 @@ async fn send_request(proxy: &RemoteControlProxy, id: Option<u64>) -> Result<(),
     }
 }
 
-fn get_id_argument<I>(mut args: I) -> Result<Option<u64>, Error>
+fn get_id_argument<I>(mut args: I) -> Result<Option<u64>>
 where
     I: Iterator<Item = String>,
 {
@@ -94,16 +61,24 @@ where
 }
 
 #[fasync::run_singlethreaded]
-async fn main() -> Result<(), Error> {
+async fn main() -> Result<()> {
     let rcs_proxy = connect_to_protocol::<RemoteControlMarker>()?;
     send_request(&rcs_proxy, get_id_argument(std::env::args())?).await?;
     let (local_socket, remote_socket) = fidl::Socket::create(fidl::SocketOpts::STREAM)?;
     let local_socket = fidl::AsyncSocket::from_socket(local_socket)?;
-    let (rx_socket, tx_socket) = futures::AsyncReadExt::split(local_socket);
+    let (mut rx_socket, mut tx_socket) = futures::AsyncReadExt::split(local_socket);
     hoist().connect_as_mesh_controller()?.attach_socket_link(remote_socket)?;
-    try_join(copy_socket_to_stdout(rx_socket), copy_stdin_to_socket(tx_socket)).await?;
 
-    Ok(())
+    let mut stdin = zx_socket_from_fd(std::io::stdin().lock().as_raw_fd())?;
+    let mut stdout = zx_socket_from_fd(std::io::stdout().lock().as_raw_fd())?;
+
+    try_join(
+        buffered_copy(&mut stdin, &mut tx_socket, BUFFER_SIZE),
+        buffered_copy(&mut rx_socket, &mut stdout, BUFFER_SIZE),
+    )
+    .await
+    .map(|_| ())
+    .context("io copy")
 }
 
 #[cfg(test)]

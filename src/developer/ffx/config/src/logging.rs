@@ -43,10 +43,14 @@ pub async fn is_enabled() -> bool {
 }
 
 pub async fn filter_level() -> LevelFilter {
-    super::get::<String, _>(LOG_LEVEL).await.ok().map(|str| {
-        // Ideally we could log here, but there may be no log sink, so fall back to a default
-        LevelFilter::from_str(&str).unwrap_or(LevelFilter::Debug)
-    }).unwrap_or(LevelFilter::Debug)
+    super::get::<String, _>(LOG_LEVEL)
+        .await
+        .ok()
+        .map(|str| {
+            // Ideally we could log here, but there may be no log sink, so fall back to a default
+            LevelFilter::from_str(&str).unwrap_or(LevelFilter::Debug)
+        })
+        .unwrap_or(LevelFilter::Debug)
 }
 
 pub async fn init(stdio: bool) -> Result<()> {
@@ -65,7 +69,11 @@ pub async fn init(stdio: bool) -> Result<()> {
     CombinedLogger::init(get_loggers(stdio, file, level)).context("initializing logger")
 }
 
-fn get_loggers(stdio: bool, file: Option<File>, level: LevelFilter) -> Vec<Box<dyn simplelog::SharedLogger>> {
+fn get_loggers(
+    stdio: bool,
+    file: Option<File>,
+    level: LevelFilter,
+) -> Vec<Box<dyn simplelog::SharedLogger>> {
     let mut loggers: Vec<Box<dyn simplelog::SharedLogger>> = vec![];
 
     // The daemon logs to stdio, and is redirected to file by spawn_daemon, which enables
