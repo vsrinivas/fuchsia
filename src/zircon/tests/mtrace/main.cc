@@ -28,7 +28,7 @@ zx::status<zx::resource> GetRootResource() {
 
   fidl::WireSyncClient<fuchsia_boot::RootResource> client =
       fidl::BindSyncClient(std::move(client_end.value()));
-  fidl::WireResult<fuchsia_boot::RootResource::Get> result = client.Get();
+  fidl::WireResult<fuchsia_boot::RootResource::Get> result = client->Get();
   if (result.status() != ZX_OK) {
     printf("mtrace: Could not retrieve RootResource: %s\n", zx_status_get_string(result.status()));
     return zx::error(result.status());
@@ -212,8 +212,7 @@ TEST(X86MtraceTestCase, InstructionsRetiredFixedCounterTest) {
     // Expect at least one record.
     EXPECT_GT(buffer.header.capture_end, sizeof(buffer.header));
     // First record must be a time record.
-    perfmon::RecordHeader* const record =
-        reinterpret_cast<perfmon::RecordHeader*>(buffer.data);
+    perfmon::RecordHeader* const record = reinterpret_cast<perfmon::RecordHeader*>(buffer.data);
     EXPECT_EQ(record->type, perfmon::kRecordTypeTime);
   }
 }
