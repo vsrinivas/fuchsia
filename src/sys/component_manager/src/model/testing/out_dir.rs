@@ -6,7 +6,7 @@ use {
     super::mocks::HostFn,
     cm_rust::CapabilityPath,
     fidl::endpoints::ServerEnd,
-    fidl_fidl_examples_echo::{EchoRequest, EchoRequestStream},
+    fidl_fidl_examples_routing_echo::{EchoRequest, EchoRequestStream},
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY,
         OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
@@ -88,7 +88,7 @@ impl OutDir {
         })
     }
 
-    /// Hosts a new service on `server_end` that implements `fidl.examples.echo.Echo`.
+    /// Hosts a new service on `server_end` that implements `fidl.examples.routing.echo.Echo`.
     async fn echo_server_fn(mut stream: EchoRequestStream) {
         while let Some(EchoRequest::EchoString { value, responder }) =
             stream.try_next().await.unwrap()

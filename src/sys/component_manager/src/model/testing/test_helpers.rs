@@ -26,7 +26,7 @@ use {
     cm_types::Url,
     diagnostics_message::{LoggerMessage, MonikerWithUrl},
     fidl::endpoints::{self, ProtocolMarker, Proxy},
-    fidl_fidl_examples_echo as echo, fidl_fuchsia_component as fcomponent,
+    fidl_fidl_examples_routing_echo as echo, fidl_fuchsia_component as fcomponent,
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_SERVICE,

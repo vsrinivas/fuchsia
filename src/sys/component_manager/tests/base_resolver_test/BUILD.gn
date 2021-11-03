@@ -13,7 +13,7 @@ rustc_test("base_resolver_disabled_test_bin") {
   source_root = "base_resolver_disabled_test.rs"
 
   deps = [
-    "//examples/fidl/legacy/services:echo-rustc",
+    "//examples/components/routing/fidl:echo-rustc",
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/fidl/rust/fidl",
@@ -33,7 +33,7 @@ rustc_test("base_resolver_appmgr_loader_test_bin") {
   source_root = "base_resolver_appmgr_loader_test.rs"
 
   deps = [
-    "//examples/fidl/legacy/services:echo-rustc",
+    "//examples/components/routing/fidl:echo-rustc",
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/fidl/rust/fidl",
@@ -116,7 +116,7 @@ fuchsia_component("component_manager_appmgr_loader") {
 
 fuchsia_component("echo_server") {
   testonly = true
-  deps = [ "//examples/fidl/legacy/echo_server_rust:echo_server_rust_bin" ]
+  deps = [ "//examples/components/routing/echo_server" ]
   manifest = "meta/echo_server.cml"
 }
 

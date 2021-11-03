@@ -9,7 +9,7 @@ use {
     async_trait::async_trait,
     cm_rust::*,
     fidl::endpoints::ServerEnd,
-    fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream},
+    fidl_fidl_examples_routing_echo::{EchoMarker, EchoRequest, EchoRequestStream},
     fuchsia_zircon::{self as zx},
     futures::prelude::*,
     lazy_static::lazy_static,

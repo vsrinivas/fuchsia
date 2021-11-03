@@ -28,7 +28,7 @@ use {
         self,
         endpoints::{self, create_proxy, ClientEnd, Proxy, ServerEnd},
     },
-    fidl_fidl_examples_echo::{self as echo},
+    fidl_fidl_examples_routing_echo::{self as echo},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{
@@ -350,7 +350,7 @@ impl RoutingTest {
 
     /// Set up the given OutDir, installing a set of files assumed to exist by
     /// many tests:
-    ///   - A file `/svc/foo` implementing `fidl.examples.echo.Echo`.
+    ///   - A file `/svc/foo` implementing `fidl.examples.routing.echo.Echo`.
     ///   - A static file `/svc/file`, containing the string "hippos" encoded as UTF-8.
     pub fn install_default_out_files(dir: &mut OutDir) {
         // Add "/svc/foo", providing an echo server.
@@ -1237,7 +1237,7 @@ pub mod capability_util {
     }
 
     /// Looks up `resolved_url` in the namespace, and attempts to use `path`. Expects the service
-    /// to be fidl.examples.echo.Echo.
+    /// to be fidl.examples.routing.echo.Echo.
     pub async fn call_echo_svc_from_namespace(
         namespace: &ManagedNamespace,
         path: CapabilityPath,
@@ -1248,7 +1248,7 @@ pub mod capability_util {
     }
 
     /// Looks up `resolved_url` in the namespace, and attempts to use `instance` at `path`. Expects the service
-    /// to be fidl.examples.echo.Echo.
+    /// to be fidl.examples.routing.echo.Echo.
     pub async fn call_service_instance_echo_svc_from_namespace(
         namespace: &ManagedNamespace,
         path: CapabilityPath,
@@ -1365,7 +1365,7 @@ pub mod capability_util {
         }
     }
 
-    /// Attempts to use the fidl.examples.echo.Echo service at `path` in `abs_moniker`'s exposed
+    /// Attempts to use the fidl.examples.routing.echo.Echo service at `path` in `abs_moniker`'s exposed
     /// directory.
     pub async fn call_echo_svc_from_exposed_dir<'a>(
         path: CapabilityPath,

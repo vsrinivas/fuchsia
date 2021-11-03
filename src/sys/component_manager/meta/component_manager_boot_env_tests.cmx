@@ -30,7 +30,7 @@
             "isolated-temp"
         ],
         "services": [
-            "fidl.examples.echo.Echo",
+            "fidl.examples.routing.echo.Echo",
             "fuchsia.boot.RootResource",
             "fuchsia.io.Directory",
             "fuchsia.kernel.CpuResource",

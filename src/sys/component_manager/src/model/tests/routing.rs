@@ -38,7 +38,7 @@ use {
     cm_rust::*,
     cm_rust_testing::*,
     fidl::endpoints::ServerEnd,
-    fidl_fidl_examples_echo::{self as echo},
+    fidl_fidl_examples_routing_echo::{self as echo},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_mem as fmem, fidl_fuchsia_sys2 as fsys,
     fuchsia_zircon as zx,

@@ -22,7 +22,7 @@ use {
     cm_rust::{ComponentDecl, ExposeDecl, UseDecl},
     fidl::prelude::*,
     fidl::{endpoints::ServerEnd, epitaph::ChannelEpitaphExt},
-    fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream},
+    fidl_fidl_examples_routing_echo::{EchoMarker, EchoRequest, EchoRequestStream},
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_diagnostics_types::{
         ComponentDiagnostics, ComponentTasks, Task as DiagnosticsTask,

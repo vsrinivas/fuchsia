@@ -469,7 +469,7 @@ mod tests {
         },
         cm_rust_testing::*,
         fidl::endpoints::{self, Proxy},
-        fidl_fidl_examples_echo as echo, fidl_fuchsia_component as fcomponent,
+        fidl_fidl_examples_routing_echo as echo, fidl_fuchsia_component as fcomponent,
         fidl_fuchsia_io::MODE_TYPE_SERVICE,
         fuchsia_async as fasync,
         fuchsia_component::client,
