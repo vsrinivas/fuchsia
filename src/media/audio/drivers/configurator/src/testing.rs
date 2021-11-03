@@ -6,10 +6,24 @@
 pub mod tests {
 
     use anyhow::Error;
+    use async_trait::async_trait;
     use device_watcher;
     use fidl_fuchsia_io;
     use fuchsia_component_test::{builder::RealmBuilder, RealmInstance};
     use fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance};
+
+    use crate::configurator::Configurator;
+
+    pub struct NullConfigurator {}
+
+    #[async_trait]
+    impl Configurator for NullConfigurator {
+        fn new() -> Self {
+            Self {}
+        }
+
+        async fn process_new_codec(&mut self, mut _device: crate::codec::CodecInterface) {}
+    }
 
     pub async fn get_dev_proxy() -> Result<(RealmInstance, fidl_fuchsia_io::DirectoryProxy), Error>
     {
