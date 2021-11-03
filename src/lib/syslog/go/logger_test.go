@@ -87,21 +87,23 @@ func setup(t *testing.T, tags ...string) (*logger.LogSinkEventProxy, zx.Socket, 
 	go func() {
 		defer close(ch)
 
-		component.ServeExclusive(ctx, &logger.LogSinkWithCtxStub{
+		component.Serve(ctx, &logger.LogSinkWithCtxStub{
 			Impl: &logSinkImpl{
 				onConnect: func(_ fidl.Context, socket zx.Socket) error {
 					sinChan <- socket
 					return nil
 				},
 			},
-		}, req.Channel, func(err error) {
-			switch err := err.(type) {
-			case *zx.Error:
-				if err.Status == zx.ErrCanceled {
-					return
+		}, req.Channel, component.ServeOptions{
+			OnError: func(err error) {
+				switch err := err.(type) {
+				case *zx.Error:
+					if err.Status == zx.ErrCanceled {
+						return
+					}
 				}
-			}
-			t.Error(err)
+				t.Error(err)
+			},
 		})
 	}()
 

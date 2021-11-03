@@ -402,8 +402,11 @@ func (si *interfaceStateImpl) GetWatcher(_ fidl.Context, _ interfaces.WatcherOpt
 	si.ns.interfaceWatchers.mu.Unlock()
 
 	go func() {
-		component.ServeExclusiveConcurrent(ctx, &interfaces.WatcherWithCtxStub{Impl: &impl}, watcher.Channel, func(err error) {
-			_ = syslog.WarnTf(watcherProtocolName, "%s", err)
+		component.Serve(ctx, &interfaces.WatcherWithCtxStub{Impl: &impl}, watcher.Channel, component.ServeOptions{
+			Concurrent: true,
+			OnError: func(err error) {
+				_ = syslog.WarnTf(watcherProtocolName, "%s", err)
+			},
 		})
 
 		si.ns.interfaceWatchers.mu.Lock()

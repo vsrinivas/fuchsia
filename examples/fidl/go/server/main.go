@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package main
@@ -63,8 +64,10 @@ func main() {
 					eventSender: examples.EchoEventProxy(fidl.ChannelProxy{Channel: c}),
 				},
 			}
-			go component.ServeExclusive(ctx, &stub, c, func(err error) {
-				log.Println(err)
+			go component.Serve(ctx, &stub, c, component.ServeOptions{
+				OnError: func(err error) {
+					log.Println(err)
+				},
 			})
 			return nil
 		},

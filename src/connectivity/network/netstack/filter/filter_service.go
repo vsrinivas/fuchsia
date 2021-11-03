@@ -29,8 +29,10 @@ func AddOutgoingService(ctx *component.Context, f *Filter) {
 	ctx.OutgoingService.AddService(
 		filter.FilterName,
 		func(ctx context.Context, c zx.Channel) error {
-			go component.ServeExclusive(ctx, &stub, c, func(err error) {
-				_ = syslog.WarnTf(tag, "%s", err)
+			go component.Serve(ctx, &stub, c, component.ServeOptions{
+				OnError: func(err error) {
+					_ = syslog.WarnTf(tag, "%s", err)
+				},
 			})
 			return nil
 		},

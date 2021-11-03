@@ -1760,9 +1760,11 @@ func (s *datagramSocket) addConnection(prefix string, object fidlio.NodeWithCtxI
 			}
 		}()
 
-		component.ServeExclusive(ctx, stub, object.Channel, func(err error) {
-			// NB: this protocol is not discoverable, so the bindings do not include its name.
-			_ = syslog.WarnTf(prefix, "%s", err)
+		component.Serve(ctx, stub, object.Channel, component.ServeOptions{
+			OnError: func(err error) {
+				// NB: this protocol is not discoverable, so the bindings do not include its name.
+				_ = syslog.WarnTf(prefix, "%s", err)
+			},
 		})
 	}()
 }
@@ -2012,9 +2014,11 @@ func (s *streamSocketImpl) addConnection(_ fidl.Context, object fidlio.NodeWithC
 			}()
 
 			stub := socket.StreamSocketWithCtxStub{Impl: s}
-			component.ServeExclusive(ctx, &stub, object.Channel, func(err error) {
-				// NB: this protocol is not discoverable, so the bindings do not include its name.
-				_ = syslog.WarnTf("fuchsia.posix.socket.StreamSocket", "%s", err)
+			component.Serve(ctx, &stub, object.Channel, component.ServeOptions{
+				OnError: func(err error) {
+					// NB: this protocol is not discoverable, so the bindings do not include its name.
+					_ = syslog.WarnTf("fuchsia.posix.socket.StreamSocket", "%s", err)
+				},
 			})
 		}()
 	}

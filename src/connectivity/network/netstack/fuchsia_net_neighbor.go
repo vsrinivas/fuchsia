@@ -144,8 +144,10 @@ func (n *neighborImpl) OpenEntryIterator(ctx fidl.Context, it neighbor.EntryIter
 			items: items,
 		},
 	}
-	go component.ServeExclusive(context.Background(), &stub, it.Channel, func(err error) {
-		_ = syslog.WarnTf(neighbor.ViewName, "EntryIterator: %s", err)
+	go component.Serve(context.Background(), &stub, it.Channel, component.ServeOptions{
+		OnError: func(err error) {
+			_ = syslog.WarnTf(neighbor.ViewName, "EntryIterator: %s", err)
+		},
 	})
 
 	return nil

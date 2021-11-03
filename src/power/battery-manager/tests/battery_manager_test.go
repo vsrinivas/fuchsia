@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package main
@@ -75,9 +76,11 @@ func TestBatteryInfoWatcher(t *testing.T) {
 	go func() {
 		defer wg.Done()
 
-		component.ServeExclusive(context.Background(), &power.BatteryInfoWatcherWithCtxStub{
+		component.Serve(context.Background(), &power.BatteryInfoWatcherWithCtxStub{
 			Impl: &pmWatcher,
-		}, rw.Channel, func(err error) { t.Log(err) })
+		}, rw.Channel, component.ServeOptions{
+			OnError: func(err error) { t.Log(err) },
+		})
 	}()
 
 	<-pmWatcher.called

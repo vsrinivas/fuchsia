@@ -122,9 +122,12 @@ func (c *dnsServerWatcherCollection) Bind(request name.DnsServerWatcherWithCtxIn
 		stub := name.DnsServerWatcherWithCtxStub{
 			Impl: &watcher,
 		}
-		component.ServeExclusiveConcurrent(ctx, &stub, request.Channel, func(err error) {
-			// NB: this protocol is not discoverable, so the bindings do not include its name.
-			_ = syslog.WarnTf("fuchsia.net.name.DnsServerWatcher", "%s", err)
+		component.Serve(ctx, &stub, request.Channel, component.ServeOptions{
+			Concurrent: true,
+			OnError: func(err error) {
+				// NB: this protocol is not discoverable, so the bindings do not include its name.
+				_ = syslog.WarnTf("fuchsia.net.name.DnsServerWatcher", "%s", err)
+			},
 		})
 	}()
 

@@ -393,8 +393,11 @@ func (ci *adminControlImpl) AddAddress(_ fidl.Context, interfaceAddr net.Interfa
 	}
 
 	go func() {
-		component.ServeExclusiveConcurrent(ctx, &admin.AddressStateProviderWithCtxStub{Impl: &impl}, request.Channel, func(err error) {
-			_ = syslog.WarnTf(addressStateProviderName, "address state provider for %s: %s", addr, err)
+		component.Serve(ctx, &admin.AddressStateProviderWithCtxStub{Impl: &impl}, request.Channel, component.ServeOptions{
+			Concurrent: true,
+			OnError: func(err error) {
+				_ = syslog.WarnTf(addressStateProviderName, "address state provider for %s: %s", addr, err)
+			},
 		})
 
 		if pi, ok := func() (*adminAddressStateProviderImpl, bool) {
@@ -614,8 +617,10 @@ func (i *interfacesAdminInstallerImpl) InstallDevice(_ fidl.Context, device netw
 	}()
 
 	go func() {
-		component.ServeExclusive(ctx, &admin.DeviceControlWithCtxStub{Impl: impl}, deviceControl.Channel, func(err error) {
-			_ = syslog.WarnTf(deviceControlName, "%s", err)
+		component.Serve(ctx, &admin.DeviceControlWithCtxStub{Impl: impl}, deviceControl.Channel, component.ServeOptions{
+			OnError: func(err error) {
+				_ = syslog.WarnTf(deviceControlName, "%s", err)
+			},
 		})
 
 		// Device lifecycle is tied to channel lifetime.

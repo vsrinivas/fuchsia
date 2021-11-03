@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package main
@@ -45,8 +46,10 @@ func (launcher *echoLauncherImpl) GetEcho(ctx fidl.Context, prefix string) (exam
 	}
 
 	stub := examples.EchoWithCtxStub{Impl: &echoImpl{prefix: prefix}}
-	go component.ServeExclusive(context.Background(), &stub, serverEnd.ToChannel(), func(err error) {
-		log.Println(err)
+	go component.Serve(context.Background(), &stub, serverEnd.ToChannel(), component.ServeOptions{
+		OnError: func(err error) {
+			log.Println(err)
+		},
 	})
 
 	return *clientEnd, nil
@@ -57,8 +60,10 @@ func (launcher *echoLauncherImpl) GetEchoPipelined(ctx fidl.Context, prefix stri
 	// In the pipelined case, the client is responsible for initializing the
 	// channel. It keeps the client end and passes the server end in the request.
 	stub := examples.EchoWithCtxStub{Impl: &echoImpl{prefix: prefix}}
-	go component.ServeExclusive(context.Background(), &stub, serverEnd.ToChannel(), func(err error) {
-		log.Println(err)
+	go component.Serve(context.Background(), &stub, serverEnd.ToChannel(), component.ServeOptions{
+		OnError: func(err error) {
+			log.Println(err)
+		},
 	})
 	return nil
 }
@@ -72,8 +77,10 @@ func main() {
 		examples.EchoLauncherName,
 		func(ctx context.Context, c zx.Channel) error {
 			stub := examples.EchoLauncherWithCtxStub{Impl: &echoLauncherImpl{}}
-			go component.ServeExclusive(ctx, &stub, c, func(err error) {
-				log.Println(err)
+			go component.Serve(ctx, &stub, c, component.ServeOptions{
+				OnError: func(err error) {
+					log.Println(err)
+				},
 			})
 			return nil
 		},

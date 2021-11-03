@@ -85,7 +85,9 @@ func (vfs *ThinVFS) addDirectory(dir fs.Directory, node io.NodeWithCtxInterfaceR
 
 		d.cancel = cancel
 		stub := io.DirectoryWithCtxStub{Impl: &d}
-		component.ServeExclusive(ctx, &stub, node.Channel, func(err error) { log.Print(err) })
+		component.Serve(ctx, &stub, node.Channel, component.ServeOptions{
+			OnError: func(err error) { log.Print(err) },
+		})
 	}()
 }
 
@@ -99,7 +101,9 @@ func (vfs *ThinVFS) addFile(file fs.File, node io.NodeWithCtxInterfaceRequest) {
 			file:   file,
 		}
 		stub := io.FileWithCtxStub{Impl: &f}
-		component.ServeExclusive(ctx, &stub, node.Channel, func(err error) { log.Print(err) })
+		component.Serve(ctx, &stub, node.Channel, component.ServeOptions{
+			OnError: func(err error) { log.Print(err) },
+		})
 	}()
 }
 

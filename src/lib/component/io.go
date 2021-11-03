@@ -80,7 +80,9 @@ func (s *Service) addConnection(ctx fidl.Context, flags, mode uint32, req fidlio
 	// but matches the behaviour of SDK VFS.
 	if flags&fidlio.OpenFlagNodeReference != 0 {
 		stub := fidlio.NodeWithCtxStub{Impl: s}
-		go ServeExclusive(context.Background(), &stub, req.Channel, logError)
+		go Serve(context.Background(), &stub, req.Channel, ServeOptions{
+			OnError: logError,
+		})
 		return respond(ctx, flags, req, nil, s)
 	}
 	return respond(ctx, flags, req, s.AddFn(context.Background(), req.Channel), s)
@@ -190,7 +192,9 @@ func (dir *DirectoryWrapper) getIO() fidlio.NodeWithCtx {
 func (dir *DirectoryWrapper) addConnection(ctx fidl.Context, flags, mode uint32, req fidlio.NodeWithCtxInterfaceRequest) error {
 	ioDir := dir.GetDirectory()
 	stub := fidlio.DirectoryWithCtxStub{Impl: ioDir}
-	go ServeExclusive(context.Background(), &stub, req.Channel, logError)
+	go Serve(context.Background(), &stub, req.Channel, ServeOptions{
+		OnError: logError,
+	})
 	return respond(ctx, flags, req, nil, ioDir)
 }
 
@@ -429,7 +433,9 @@ func (file *FileWrapper) getIO() fidlio.NodeWithCtx {
 func (file *FileWrapper) addConnection(ctx fidl.Context, flags, mode uint32, req fidlio.NodeWithCtxInterfaceRequest) error {
 	ioFile := file.getFile()
 	stub := fidlio.FileWithCtxStub{Impl: ioFile}
-	go ServeExclusive(context.Background(), &stub, req.Channel, logError)
+	go Serve(context.Background(), &stub, req.Channel, ServeOptions{
+		OnError: logError,
+	})
 	return respond(ctx, flags, req, nil, ioFile)
 }
 

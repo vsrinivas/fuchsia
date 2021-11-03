@@ -91,8 +91,10 @@ func (impl *inspectImpl) asService() *component.Service {
 	stub := inspect.InspectWithCtxStub{Impl: impl}
 	return &component.Service{
 		AddFn: func(ctx context.Context, c zx.Channel) error {
-			go component.ServeExclusive(ctx, &stub, c, func(err error) {
-				_ = syslog.WarnTf(inspect.InspectName, "%s", err)
+			go component.Serve(ctx, &stub, c, component.ServeOptions{
+				OnError: func(err error) {
+					_ = syslog.WarnTf(inspect.InspectName, "%s", err)
+				},
 			})
 			return nil
 		},

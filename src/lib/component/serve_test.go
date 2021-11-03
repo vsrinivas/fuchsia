@@ -69,7 +69,7 @@ func TestEmptyWriteErrors(t *testing.T) {
 		if err := ch.Close(); err != nil {
 			t.Error(err)
 		}
-		// Wait for the serving goroutine to exit, then confirm that ServeExclusive
+		// Wait for the serving goroutine to exit, then confirm that Serve
 		// closed the channel.
 		wg.Wait()
 		err := sh.Close()
@@ -84,10 +84,12 @@ func TestEmptyWriteErrors(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		component.ServeExclusive(context.Background(), &bindingstest.Test1WithCtxStub{
+		component.Serve(context.Background(), &bindingstest.Test1WithCtxStub{
 			Impl: &test1Impl{},
-		}, sh, func(err error) {
-			errChan <- err
+		}, sh, component.ServeOptions{
+			OnError: func(err error) {
+				errChan <- err
+			},
 		})
 	}()
 
@@ -102,7 +104,7 @@ func TestEmptyWriteErrors(t *testing.T) {
 	close(errChan)
 	for err := range errChan {
 		if !errors.Is(err, fidl.ErrPayloadTooSmall) {
-			t.Errorf("got ServeExclusive error = %v, want %q", err, fidl.ErrPayloadTooSmall)
+			t.Errorf("got Serve error = %v, want %q", err, fidl.ErrPayloadTooSmall)
 		}
 	}
 }
@@ -123,7 +125,7 @@ func TestEcho(t *testing.T) {
 			}
 			t.Errorf("got ch.Close() = %v, want %q", err, zx.ErrBadHandle)
 		}()
-		// Wait for the serving goroutine to exit, then confirm that ServeExclusive
+		// Wait for the serving goroutine to exit, then confirm that Serve
 		// closed the channel.
 		wg.Wait()
 		func() {
@@ -138,10 +140,12 @@ func TestEcho(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		component.ServeExclusive(context.Background(), &bindingstest.Test1WithCtxStub{
+		component.Serve(context.Background(), &bindingstest.Test1WithCtxStub{
 			Impl: &test1Impl{},
-		}, sh, func(err error) {
-			t.Error(err)
+		}, sh, component.ServeOptions{
+			OnError: func(err error) {
+				t.Error(err)
+			},
 		})
 	}()
 
@@ -307,10 +311,12 @@ func TestRespondErrors(t *testing.T) {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				component.ServeExclusive(context.Background(), &bindingstest.Test1WithCtxStub{
+				component.Serve(context.Background(), &bindingstest.Test1WithCtxStub{
 					Impl: &test1Impl{},
-				}, sh, func(err error) {
-					errChan <- err
+				}, sh, component.ServeOptions{
+					OnError: func(err error) {
+						errChan <- err
+					},
 				})
 			}()
 
@@ -331,7 +337,7 @@ func TestRespondErrors(t *testing.T) {
 	}
 }
 
-func TestServeExclusive_MagicNumberCheck(t *testing.T) {
+func TestServe_MagicNumberCheck(t *testing.T) {
 	var wg sync.WaitGroup
 
 	ch, sh, err := zx.NewChannel(0)
@@ -342,7 +348,7 @@ func TestServeExclusive_MagicNumberCheck(t *testing.T) {
 		if err := ch.Close(); err != nil {
 			t.Error(err)
 		}
-		// Wait for the serving goroutine to exit, then confirm that ServeExclusive
+		// Wait for the serving goroutine to exit, then confirm that Serve
 		// closed the channel.
 		wg.Wait()
 		err := sh.Close()
@@ -357,10 +363,12 @@ func TestServeExclusive_MagicNumberCheck(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		component.ServeExclusive(context.Background(), &bindingstest.Test1WithCtxStub{
+		component.Serve(context.Background(), &bindingstest.Test1WithCtxStub{
 			Impl: &test1Impl{},
-		}, sh, func(err error) {
-			errChan <- err
+		}, sh, component.ServeOptions{
+			OnError: func(err error) {
+				errChan <- err
+			},
 		})
 	}()
 
@@ -385,7 +393,7 @@ func TestServeExclusive_MagicNumberCheck(t *testing.T) {
 	close(errChan)
 	for err := range errChan {
 		if !errors.Is(err, fidl.ErrUnknownMagic) {
-			t.Errorf("got ServeExclusive error = %v, want %q", err, fidl.ErrUnknownMagic)
+			t.Errorf("got Serve error = %v, want %q", err, fidl.ErrUnknownMagic)
 		}
 	}
 }
@@ -413,7 +421,7 @@ func (impl *hangingImpl) NoResponse(ctx fidl.Context) error {
 	}
 }
 
-func TestServeExclusiveConcurrent(t *testing.T) {
+func TestServeConcurrent(t *testing.T) {
 	ch, sh, err := zx.NewChannel(0)
 	if err != nil {
 		t.Fatal(err)
@@ -434,10 +442,13 @@ func TestServeExclusiveConcurrent(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		component.ServeExclusiveConcurrent(context.Background(), &bindingstest.Test1WithCtxStub{
+		component.Serve(context.Background(), &bindingstest.Test1WithCtxStub{
 			Impl: &impl,
-		}, sh, func(err error) {
-			errChan <- err
+		}, sh, component.ServeOptions{
+			Concurrent: true,
+			OnError: func(err error) {
+				errChan <- err
+			},
 		})
 	}()
 
@@ -476,7 +487,7 @@ func TestServeExclusiveConcurrent(t *testing.T) {
 	close(errChan)
 	for err := range errChan {
 		if err != nil {
-			t.Errorf("ServeExclusiveConcurrent(...) = %s", err)
+			t.Errorf("Serve(...) = %s", err)
 		}
 	}
 }

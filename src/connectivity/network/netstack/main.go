@@ -430,8 +430,10 @@ func Main() {
 		appCtx.OutgoingService.AddService(
 			netstack.NetstackName,
 			func(ctx context.Context, c zx.Channel) error {
-				go component.ServeExclusive(ctx, &stub, c, func(err error) {
-					_ = syslog.WarnTf(netstack.NetstackName, "%s", err)
+				go component.Serve(ctx, &stub, c, component.ServeOptions{
+					OnError: func(err error) {
+						_ = syslog.WarnTf(netstack.NetstackName, "%s", err)
+					},
 				})
 
 				return nil
@@ -447,8 +449,10 @@ func Main() {
 		appCtx.OutgoingService.AddService(
 			stack.StackName,
 			func(ctx context.Context, c zx.Channel) error {
-				go component.ServeExclusive(ctx, &stub, c, func(err error) {
-					_ = syslog.WarnTf(stack.StackName, "%s", err)
+				go component.Serve(ctx, &stub, c, component.ServeOptions{
+					OnError: func(err error) {
+						_ = syslog.WarnTf(stack.StackName, "%s", err)
+					},
 				})
 				return nil
 			},
@@ -462,8 +466,10 @@ func Main() {
 		appCtx.OutgoingService.AddService(
 			stack.LogName,
 			func(ctx context.Context, c zx.Channel) error {
-				go component.ServeExclusive(ctx, &stub, c, func(err error) {
-					_ = syslog.WarnTf(stack.LogName, "%s", err)
+				go component.Serve(ctx, &stub, c, component.ServeOptions{
+					OnError: func(err error) {
+						_ = syslog.WarnTf(stack.LogName, "%s", err)
+					},
 				})
 				return nil
 			})
@@ -474,8 +480,10 @@ func Main() {
 		appCtx.OutgoingService.AddService(
 			socket.ProviderName,
 			func(ctx context.Context, c zx.Channel) error {
-				go component.ServeExclusive(ctx, &stub, c, func(err error) {
-					_ = syslog.WarnTf(socket.ProviderName, "%s", err)
+				go component.Serve(ctx, &stub, c, component.ServeOptions{
+					OnError: func(err error) {
+						_ = syslog.WarnTf(socket.ProviderName, "%s", err)
+					},
 				})
 				return nil
 			},
@@ -487,8 +495,10 @@ func Main() {
 		appCtx.OutgoingService.AddService(
 			rawsocket.ProviderName,
 			func(ctx context.Context, c zx.Channel) error {
-				go component.ServeExclusive(ctx, &stub, c, func(err error) {
-					_ = syslog.WarnTf(rawsocket.ProviderName, "%s", err)
+				go component.Serve(ctx, &stub, c, component.ServeOptions{
+					OnError: func(err error) {
+						_ = syslog.WarnTf(rawsocket.ProviderName, "%s", err)
+					},
 				})
 				return nil
 			},
@@ -500,8 +510,10 @@ func Main() {
 		appCtx.OutgoingService.AddService(
 			packetsocket.ProviderName,
 			func(ctx context.Context, c zx.Channel) error {
-				go component.ServeExclusive(ctx, &stub, c, func(err error) {
-					_ = syslog.WarnTf(packetsocket.ProviderName, "%s", err)
+				go component.Serve(ctx, &stub, c, component.ServeOptions{
+					OnError: func(err error) {
+						_ = syslog.WarnTf(packetsocket.ProviderName, "%s", err)
+					},
 				})
 				return nil
 			},
@@ -513,8 +525,10 @@ func Main() {
 		appCtx.OutgoingService.AddService(
 			routes.StateName,
 			func(ctx context.Context, c zx.Channel) error {
-				go component.ServeExclusive(ctx, &stub, c, func(err error) {
-					_ = syslog.WarnTf(routes.StateName, "%s", err)
+				go component.Serve(ctx, &stub, c, component.ServeOptions{
+					OnError: func(err error) {
+						_ = syslog.WarnTf(routes.StateName, "%s", err)
+					},
 				})
 				return nil
 			},
@@ -526,8 +540,10 @@ func Main() {
 		appCtx.OutgoingService.AddService(
 			interfaces.StateName,
 			func(ctx context.Context, c zx.Channel) error {
-				go component.ServeExclusive(ctx, &stub, c, func(err error) {
-					_ = syslog.WarnTf(interfaces.StateName, "%s", err)
+				go component.Serve(ctx, &stub, c, component.ServeOptions{
+					OnError: func(err error) {
+						_ = syslog.WarnTf(interfaces.StateName, "%s", err)
+					},
 				})
 				return nil
 			},
@@ -539,8 +555,10 @@ func Main() {
 		appCtx.OutgoingService.AddService(
 			admin.InstallerName,
 			func(ctx context.Context, c zx.Channel) error {
-				go component.ServeExclusive(ctx, &stub, c, func(err error) {
-					_ = syslog.WarnTf(admin.InstallerName, "%s", err)
+				go component.Serve(ctx, &stub, c, component.ServeOptions{
+					OnError: func(err error) {
+						_ = syslog.WarnTf(admin.InstallerName, "%s", err)
+					},
 				})
 				return nil
 			},
@@ -552,8 +570,10 @@ func Main() {
 		appCtx.OutgoingService.AddService(
 			debug.InterfacesName,
 			func(ctx context.Context, c zx.Channel) error {
-				go component.ServeExclusive(ctx, &stub, c, func(err error) {
-					_ = syslog.WarnTf(debug.InterfacesName, "%s", err)
+				go component.Serve(ctx, &stub, c, component.ServeOptions{
+					OnError: func(err error) {
+						_ = syslog.WarnTf(debug.InterfacesName, "%s", err)
+					},
 				})
 				return nil
 			},
@@ -567,8 +587,10 @@ func Main() {
 		appCtx.OutgoingService.AddService(
 			neighbor.ViewName,
 			func(ctx context.Context, c zx.Channel) error {
-				go component.ServeExclusive(ctx, &viewStub, c, func(err error) {
-					_ = syslog.WarnTf(neighbor.ViewName, "%s", err)
+				go component.Serve(ctx, &viewStub, c, component.ServeOptions{
+					OnError: func(err error) {
+						_ = syslog.WarnTf(neighbor.ViewName, "%s", err)
+					},
 				})
 				return nil
 			},
@@ -578,8 +600,10 @@ func Main() {
 		appCtx.OutgoingService.AddService(
 			neighbor.ControllerName,
 			func(ctx context.Context, c zx.Channel) error {
-				go component.ServeExclusive(ctx, &controllerStub, c, func(err error) {
-					_ = syslog.WarnTf(neighbor.ControllerName, "%s", err)
+				go component.Serve(ctx, &controllerStub, c, component.ServeOptions{
+					OnError: func(err error) {
+						_ = syslog.WarnTf(neighbor.ControllerName, "%s", err)
+					},
 				})
 				return nil
 			},

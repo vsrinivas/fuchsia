@@ -110,9 +110,11 @@ func (ni *netstackImpl) StartRouteTableTransaction(_ fidl.Context, req netstack.
 		ni.ns.mu.transactionRequest = &req
 	}
 	stub := netstack.RouteTableTransactionWithCtxStub{Impl: &routeTableTransactionImpl{ni: ni}}
-	go component.ServeExclusive(context.Background(), &stub, req.Channel, func(err error) {
-		// NB: this protocol is not discoverable, so the bindings do not include its name.
-		_ = syslog.WarnTf("fuchsia.netstack.RouteTableTransaction", "%s", err)
+	go component.Serve(context.Background(), &stub, req.Channel, component.ServeOptions{
+		OnError: func(err error) {
+			// NB: this protocol is not discoverable, so the bindings do not include its name.
+			_ = syslog.WarnTf("fuchsia.netstack.RouteTableTransaction", "%s", err)
+		},
 	})
 	return int32(zx.ErrOk), nil
 }
@@ -214,9 +216,11 @@ func (ni *netstackImpl) GetDhcpClient(_ fidl.Context, id uint32, request dhcp.Cl
 		return result, nil
 	}
 	stub := dhcp.ClientWithCtxStub{Impl: &clientImpl{ns: ni.ns, nicid: nicid}}
-	go component.ServeExclusive(context.Background(), &stub, request.Channel, func(err error) {
-		// NB: this protocol is not discoverable, so the bindings do not include its name.
-		_ = syslog.WarnTf("fuchsia.net.dhcp.Client", "%s", err)
+	go component.Serve(context.Background(), &stub, request.Channel, component.ServeOptions{
+		OnError: func(err error) {
+			// NB: this protocol is not discoverable, so the bindings do not include its name.
+			_ = syslog.WarnTf("fuchsia.net.dhcp.Client", "%s", err)
+		},
 	})
 	result.SetResponse(netstack.NetstackGetDhcpClientResponse{})
 	return result, nil

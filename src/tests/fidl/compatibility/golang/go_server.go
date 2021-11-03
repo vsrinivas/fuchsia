@@ -389,8 +389,10 @@ func main() {
 					delete(mu.proxies, &pxy)
 					mu.Unlock()
 				}()
-				component.ServeExclusive(ctx, &stub, c, func(err error) {
-					log.Print(err)
+				component.Serve(ctx, &stub, c, component.ServeOptions{
+					OnError: func(err error) {
+						log.Print(err)
+					},
 				})
 			}()
 			return nil

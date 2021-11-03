@@ -142,8 +142,10 @@ func BenchmarkEchoCall{{ .Name }}(b *testing.B) {
 	stub := &{{ .ValueType }}EchoCallWithCtxStub{
 		Impl: &{{ .Name }}EchoCallService{},
 	}
-	go component.ServeExclusive(context.Background(), stub, server_end, func (err error) {
-		b.Fatal(err)
+	go component.Serve(context.Background(), stub, server_end, component.ServeOptions{
+		OnError: func (err error) {
+			b.Fatal(err)
+		},
 	})
 	proxy := {{ .ValueType }}EchoCallWithCtxInterface(fidl.ChannelProxy{Channel: client_end})
 

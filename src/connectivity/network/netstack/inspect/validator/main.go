@@ -228,8 +228,10 @@ func main() {
 	appCtx.OutgoingService.AddService(
 		validate.ValidateName,
 		func(ctx context.Context, c zx.Channel) error {
-			go component.ServeExclusive(ctx, &stub, c, func(err error) {
-				panic(err)
+			go component.Serve(ctx, &stub, c, component.ServeOptions{
+				OnError: func(err error) {
+					panic(err)
+				},
 			})
 			return nil
 		},

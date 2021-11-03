@@ -26,16 +26,6 @@ var (
 	ErrTooManyHandlesInResponse = errors.New("too many handles in a response")
 )
 
-// ServeExclusive assumes ownership of req and serially serves requests on it
-// via stub. ServeExclusive closes req before returning.
-//
-// onError is a logging hook that will be called with errors that cannot be propagated.
-func ServeExclusive(ctx context.Context, stub fidl.Stub, req zx.Channel, onError func(error)) {
-	Serve(ctx, stub, req, ServeOptions{
-		OnError: onError,
-	})
-}
-
 // ServeOptions contains options for Serve.
 type ServeOptions struct {
 	// Concurrent controls if requests on the channel are handled concurrently or
@@ -61,18 +51,6 @@ func Serve(ctx context.Context, stub fidl.Stub, req zx.Channel, opts ServeOption
 		return
 	}
 	serveExclusive(nil, ctx, stub, req, opts)
-}
-
-// ServeExclusiveConcurrent assumes ownership of req and concurrently serves
-// requests on it via stub. ServeExclusiveConcurrent closes req before
-// returning.
-//
-// onError is a logging hook that will be called with errors that cannot be propagated.
-func ServeExclusiveConcurrent(ctx context.Context, stub fidl.Stub, req zx.Channel, onError func(error)) {
-	Serve(ctx, stub, req, ServeOptions{
-		OnError:    onError,
-		Concurrent: true,
-	})
 }
 
 var bytesPool = sync.Pool{

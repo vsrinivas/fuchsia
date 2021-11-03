@@ -41,8 +41,10 @@ func main() {
 	ctx.OutgoingService.AddService(
 		echo.EchoName,
 		func(ctx context.Context, c zx.Channel) error {
-			go component.ServeExclusive(ctx, &stub, c, func(err error) {
-				log.Print(err)
+			go component.Serve(ctx, &stub, c, component.ServeOptions{
+				OnError: func(err error) {
+					log.Print(err)
+				},
 			})
 			return nil
 		},
