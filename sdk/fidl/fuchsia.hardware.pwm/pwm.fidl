@@ -9,6 +9,9 @@ type PwmConfig = struct {
     polarity bool;
     period_ns uint32;
     duty_cycle float32; // In the range [0.0, 100.0]
+    @mutable
+    @buffer
+    mode_config vector<uint8>:MAX;
 };
 
 protocol Pwm {

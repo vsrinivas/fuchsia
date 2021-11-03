@@ -9,6 +9,8 @@
 #include <fuchsia/hardware/pwm/cpp/banjo.h>
 #include <lib/ddk/platform-defs.h>
 
+#include <mutex>
+
 #include <ddk/metadata/pwm.h>
 #include <ddktl/device.h>
 
@@ -38,8 +40,11 @@ class PwmDevice : public PwmDeviceType, public ddk::PwmProtocol<PwmDevice, ddk::
   explicit PwmDevice(zx_device_t* parent, pwm_impl_protocol_t* pwm, pwm_id_t id)
       : PwmDeviceType(parent), pwm_(pwm), id_(id) {}
 
-  ddk::PwmImplProtocolClient pwm_;
+  ddk::PwmImplProtocolClient pwm_ __TA_GUARDED(lock_);
   pwm_id_t id_;
+
+  // Protect against concurrent access from both the FIDL and Banjo interfaces.
+  std::mutex lock_;
 };
 
 }  // namespace pwm

@@ -5,13 +5,15 @@
 #include "pwm.h"
 
 #include <lib/ddk/debug.h>
-
 #include <lib/ddk/metadata.h>
+
 #include <fbl/alloc_checker.h>
 
 #include "src/devices/pwm/drivers/pwm/pwm-bind.h"
 
 namespace pwm {
+
+constexpr size_t kMaxConfigBufferSize = 256;
 
 zx_status_t PwmDevice::Create(void* ctx, zx_device_t* parent) {
   pwm_impl_protocol_t pwm_proto;
@@ -75,10 +77,12 @@ zx_status_t PwmDevice::Create(void* ctx, zx_device_t* parent) {
 }
 
 zx_status_t PwmDevice::PwmGetConfig(pwm_config_t* out_config) {
+  std::scoped_lock lock(lock_);
   return pwm_.GetConfig(id_.id, out_config);
 }
 
 zx_status_t PwmDevice::PwmSetConfig(const pwm_config_t* config) {
+  std::scoped_lock lock(lock_);
   if (id_.protect) {
     return ZX_ERR_ACCESS_DENIED;
   }
@@ -86,6 +90,7 @@ zx_status_t PwmDevice::PwmSetConfig(const pwm_config_t* config) {
 }
 
 zx_status_t PwmDevice::PwmEnable() {
+  std::scoped_lock lock(lock_);
   if (id_.protect) {
     return ZX_ERR_ACCESS_DENIED;
   }
@@ -93,6 +98,7 @@ zx_status_t PwmDevice::PwmEnable() {
 }
 
 zx_status_t PwmDevice::PwmDisable() {
+  std::scoped_lock lock(lock_);
   if (id_.protect) {
     return ZX_ERR_ACCESS_DENIED;
   }
@@ -100,9 +106,12 @@ zx_status_t PwmDevice::PwmDisable() {
 }
 
 void PwmDevice::GetConfig(GetConfigRequestView request, GetConfigCompleter::Sync& completer) {
+  std::unique_ptr<uint8_t[]> buffer = std::make_unique<uint8_t[]>(kMaxConfigBufferSize);
   pwm_config_t config;
-  zx_status_t status = PwmGetConfig(&config);
+  config.mode_config_buffer = buffer.get();
+  config.mode_config_size = kMaxConfigBufferSize;
 
+  zx_status_t status = PwmGetConfig(&config);
   if (status != ZX_OK) {
     completer.ReplyError(status);
     return;
@@ -112,6 +121,8 @@ void PwmDevice::GetConfig(GetConfigRequestView request, GetConfigCompleter::Sync
   result.polarity = config.polarity;
   result.period_ns = config.period_ns;
   result.duty_cycle = config.duty_cycle;
+  result.mode_config =
+      fidl::VectorView<uint8_t>::FromExternal(config.mode_config_buffer, config.mode_config_size);
 
   completer.ReplySuccess(result);
 }
@@ -122,6 +133,8 @@ void PwmDevice::SetConfig(SetConfigRequestView request, SetConfigCompleter::Sync
   new_config.polarity = request->config.polarity;
   new_config.period_ns = request->config.period_ns;
   new_config.duty_cycle = request->config.duty_cycle;
+  new_config.mode_config_buffer = request->config.mode_config.mutable_data();
+  new_config.mode_config_size = request->config.mode_config.count();
 
   zx_status_t result = PwmSetConfig(&new_config);
 
