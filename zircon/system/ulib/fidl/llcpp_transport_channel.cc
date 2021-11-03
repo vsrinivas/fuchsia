@@ -12,6 +12,7 @@ namespace internal {
 
 namespace {
 
+#ifdef __Fuchsia__
 zx_status_t channel_write(Handle handle, EncodeFlags encode_flags, const void* data,
                           uint32_t data_count, const Handle* handles, const void* handle_metadata,
                           uint32_t handles_count) {
@@ -95,16 +96,19 @@ zx_status_t channel_call(Handle handle, EncodeFlags encode_flags, zx_time_t dead
   return status;
 }
 void channel_close(Handle handle) { zx_handle_close(handle.value()); }
+#endif
 
 }  // namespace
 
 const TransportVTable ChannelTransport::VTable = {
     .type = FIDL_TRANSPORT_TYPE_CHANNEL,
     .encoding_configuration = &ChannelTransport::EncodingConfiguration,
+#ifdef __Fuchsia__
     .write = channel_write,
     .read = channel_read,
     .call = channel_call,
     .close = channel_close,
+#endif
 };
 
 namespace {
@@ -133,6 +137,7 @@ const EncodingConfiguration ChannelTransport::EncodingConfiguration = {
     .decode_process_handle = channel_decode_process_handle,
 };
 
+#ifdef __Fuchsia__
 AnyTransport MakeAnyTransport(zx::channel channel) {
   return AnyTransport::Make<ChannelTransport>(Handle(channel.release()));
 }
@@ -142,6 +147,7 @@ AnyUnownedTransport MakeAnyUnownedTransport(const zx::channel& channel) {
 AnyUnownedTransport MakeAnyUnownedTransport(const zx::unowned_channel& channel) {
   return AnyUnownedTransport::Make<ChannelTransport>(Handle(channel->get()));
 }
+#endif
 
 }  // namespace internal
 }  // namespace fidl

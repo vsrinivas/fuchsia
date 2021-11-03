@@ -4,6 +4,7 @@
 
 #include <lib/fidl/coding.h>
 #include <lib/fidl/internal.h>
+#include <lib/fidl/llcpp/internal/transport.h>
 #include <lib/fidl/visitor.h>
 #include <lib/fidl/walker.h>
 #include <lib/stdcompat/variant.h>
@@ -62,11 +63,13 @@ struct EnvelopeCheckpoint {
 };
 
 struct EncodeArgs {
+  const fidl::internal::EncodingConfiguration& encoding_configuration;
   uint8_t* const backing_buffer;
   const uint32_t backing_buffer_capacity;
   zx_channel_iovec_t* const iovecs;
   const uint32_t iovecs_capacity;
-  zx_handle_disposition_t* handles;
+  zx_handle_t* handles;
+  void* handle_metadata;
   const uint32_t handles_capacity;
   const uint32_t inline_object_size;
   const char** out_error_msg;
@@ -89,11 +92,13 @@ class FidlEncoder final : public ::fidl::Visitor<WireFormatVersion, fidl::Mutati
 
   FidlEncoder(EncodeArgs args)
       : current_iovec_uses_backing_buffer_(true),
+        encoding_configuration_(args.encoding_configuration),
         backing_buffer_(args.backing_buffer),
         backing_buffer_capacity_(args.backing_buffer_capacity),
         iovecs_(args.iovecs),
         iovecs_capacity_(args.iovecs_capacity),
         handles_(args.handles),
+        handle_metadata_(args.handle_metadata),
         handles_capacity_(args.handles_capacity),
         backing_buffer_offset_(args.inline_object_size),
         total_bytes_written_(args.inline_object_size),
@@ -260,14 +265,19 @@ class FidlEncoder final : public ::fidl::Visitor<WireFormatVersion, fidl::Mutati
       return Status::kConstraintViolationError;
     }
 
-    handles_[handle_idx_] = zx_handle_disposition_t{
-        .operation = ZX_HANDLE_OP_MOVE,
-        .handle = *dest_handle,
-        .type = handle_subtype,
+    fidl::internal::HandleAttributes attr{
+        .obj_type = handle_subtype,
         .rights = handle_rights,
-        .result = ZX_OK,
     };
+    const char* error;
+    zx_status_t status =
+        encoding_configuration_.encode_process_handle(attr, handle_idx_, handle_metadata_, &error);
+    if (status != ZX_OK) {
+      SetError(error);
+      return Status::kConstraintViolationError;
+    }
 
+    handles_[handle_idx_] = *dest_handle;
     *dest_handle = FIDL_HANDLE_PRESENT;
     *handle_position.template GetFromSource<zx_handle_t>() = ZX_HANDLE_INVALID;
     handle_idx_++;
@@ -367,11 +377,13 @@ class FidlEncoder final : public ::fidl::Visitor<WireFormatVersion, fidl::Mutati
   }
 
   bool current_iovec_uses_backing_buffer_ = false;
+  const fidl::internal::EncodingConfiguration& encoding_configuration_;
   uint8_t* const backing_buffer_ = nullptr;
   const uint32_t backing_buffer_capacity_ = 0;
   zx_channel_iovec_t* const iovecs_ = nullptr;
   const uint32_t iovecs_capacity_ = 0;
-  zx_handle_disposition_t* handles_ = nullptr;
+  zx_handle_t* handles_ = nullptr;
+  void* handle_metadata_ = nullptr;
   const uint32_t handles_capacity_ = 0;
 
   // backing_buffer_offset_ is always 8-byte aligned.
@@ -395,9 +407,10 @@ namespace internal {
   }
 
 template <FidlWireFormatVersion WireFormatVersion>
-zx_status_t EncodeIovecEtc(const fidl_type_t* type, void* value, zx_channel_iovec_t* iovecs,
-                           uint32_t num_iovecs, zx_handle_disposition_t* handle_dispositions,
-                           uint32_t num_handle_dispositions, uint8_t* backing_buffer,
+zx_status_t EncodeIovecEtc(const fidl::internal::EncodingConfiguration& encoding_configuration,
+                           const fidl_type_t* type, void* value, zx_channel_iovec_t* iovecs,
+                           uint32_t num_iovecs, fidl_handle_t* handles, void* handle_metadata,
+                           uint32_t num_handles, uint8_t* backing_buffer,
                            uint32_t num_backing_buffer, uint32_t* out_actual_iovec,
                            uint32_t* out_actual_handles, const char** out_error_msg) {
   // Use debug asserts for preconditions that are not user dependent to avoid the runtime cost.
@@ -417,8 +430,11 @@ zx_status_t EncodeIovecEtc(const fidl_type_t* type, void* value, zx_channel_iove
               "backing_buffer must be aligned to FIDL_ALIGNMENT");
   USER_ASSERT(num_backing_buffer % FIDL_ALIGNMENT == 0,
               "num_backing_buffer must be aligned to FIDL_ALIGNMENT");
-  USER_ASSERT(handle_dispositions != nullptr || num_handle_dispositions == 0,
+  USER_ASSERT(handles != nullptr || num_handles == 0,
               "Cannot provide non-zero handle count and null handle pointer");
+  if (num_handles == 0)
+    USER_ASSERT(handle_metadata == nullptr,
+                "Cannot provide non-zero handle count and null handle pointer");
 
   zx_status_t status;
   uint32_t primary_size;
@@ -437,23 +453,22 @@ zx_status_t EncodeIovecEtc(const fidl_type_t* type, void* value, zx_channel_iove
   memcpy(backing_buffer, value, primary_size);
 
   EncodeArgs args = {
+      .encoding_configuration = encoding_configuration,
       .backing_buffer = static_cast<uint8_t*>(backing_buffer),
       .backing_buffer_capacity = num_backing_buffer,
       .iovecs = iovecs,
       .iovecs_capacity = num_iovecs,
-      .handles = handle_dispositions,
-      .handles_capacity = num_handle_dispositions,
+      .handles = handles,
+      .handle_metadata = handle_metadata,
+      .handles_capacity = num_handles,
       .inline_object_size = next_out_of_line,
       .out_error_msg = out_error_msg,
   };
-  if (handle_dispositions != nullptr) {
-    args.handles = handle_dispositions;
-  }
   FidlEncoder<WireFormatVersion> encoder(args);
   ::fidl::Walk<WireFormatVersion>(encoder, type, {.source_object = value, .dest = backing_buffer});
   if (unlikely(encoder.status() != ZX_OK)) {
     *out_actual_handles = 0;
-    FidlHandleDispositionCloseMany(handle_dispositions, encoder.num_out_handles());
+    FidlHandleCloseMany(handles, encoder.num_out_handles());
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -463,15 +478,17 @@ zx_status_t EncodeIovecEtc(const fidl_type_t* type, void* value, zx_channel_iove
 }
 
 template zx_status_t EncodeIovecEtc<FIDL_WIRE_FORMAT_VERSION_V1>(
-    const fidl_type_t* type, void* value, zx_channel_iovec_t* iovecs, uint32_t num_iovecs,
-    zx_handle_disposition_t* handle_dispositions, uint32_t num_handle_dispositions,
-    uint8_t* backing_buffer, uint32_t num_backing_buffer, uint32_t* out_actual_iovec,
-    uint32_t* out_actual_handles, const char** out_error_msg);
+    const fidl::internal::EncodingConfiguration& encoding_configuration, const fidl_type_t* type,
+    void* value, zx_channel_iovec_t* iovecs, uint32_t num_iovecs, fidl_handle_t* handles,
+    void* handle_metadata, uint32_t num_handles, uint8_t* backing_buffer,
+    uint32_t num_backing_buffer, uint32_t* out_actual_iovec, uint32_t* out_actual_handles,
+    const char** out_error_msg);
 template zx_status_t EncodeIovecEtc<FIDL_WIRE_FORMAT_VERSION_V2>(
-    const fidl_type_t* type, void* value, zx_channel_iovec_t* iovecs, uint32_t num_iovecs,
-    zx_handle_disposition_t* handle_dispositions, uint32_t num_handle_dispositions,
-    uint8_t* backing_buffer, uint32_t num_backing_buffer, uint32_t* out_actual_iovec,
-    uint32_t* out_actual_handles, const char** out_error_msg);
+    const fidl::internal::EncodingConfiguration& encoding_configuration, const fidl_type_t* type,
+    void* value, zx_channel_iovec_t* iovecs, uint32_t num_iovecs, fidl_handle_t* handles,
+    void* handle_metadata, uint32_t num_handles, uint8_t* backing_buffer,
+    uint32_t num_backing_buffer, uint32_t* out_actual_iovec, uint32_t* out_actual_handles,
+    const char** out_error_msg);
 
 }  // namespace internal
 }  // namespace fidl

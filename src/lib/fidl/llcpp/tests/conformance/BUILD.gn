@@ -103,6 +103,7 @@ source_set("conformance_utils") {
     "//zircon/system/public",
     "//zircon/system/ulib/fidl:fidl-llcpp",
     "//zircon/system/ulib/fidl:fidl_base",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

@@ -6,6 +6,7 @@
 #define SRC_LIB_FIDL_LLCPP_TESTS_CONFORMANCE_CONFORMANCE_UTILS_H_
 
 #include <lib/fidl/llcpp/coding.h>
+#include <lib/fidl/llcpp/internal/transport_channel.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/transformer.h>
@@ -157,25 +158,17 @@ bool EncodeSuccess(fidl::internal::WireFormatVersion wire_format_version, FidlTy
       handle_buffer = std::make_unique<zx_handle_t[]>(ZX_CHANNEL_MAX_MSG_HANDLES);
       handle_metadata_buffer =
           std::make_unique<fidl_channel_handle_metadata_t[]>(ZX_CHANNEL_MAX_MSG_HANDLES);
-      std::unique_ptr<zx_handle_disposition_t[]> handle_disposition_buffer =
-          std::make_unique<zx_handle_disposition_t[]>(ZX_CHANNEL_MAX_MSG_HANDLES);
       uint32_t actual_iovecs;
       uint32_t actual_handles;
       status = ::fidl::internal::EncodeIovecEtc<FIDL_WIRE_FORMAT_VERSION_V2>(
-          FidlType::Type, transformer_buffer.get(), iovec_buffer.get(), ZX_CHANNEL_MAX_MSG_IOVECS,
-          handle_disposition_buffer.get(), ZX_CHANNEL_MAX_MSG_HANDLES, backing_buffer.get(),
-          ZX_CHANNEL_MAX_MSG_BYTES, &actual_iovecs, &actual_handles, &error);
+          fidl::internal::ChannelTransport::EncodingConfiguration, FidlType::Type,
+          transformer_buffer.get(), iovec_buffer.get(), ZX_CHANNEL_MAX_MSG_IOVECS,
+          handle_buffer.get(), handle_metadata_buffer.get(), ZX_CHANNEL_MAX_MSG_HANDLES,
+          backing_buffer.get(), ZX_CHANNEL_MAX_MSG_BYTES, &actual_iovecs, &actual_handles, &error);
       if (status != ZX_OK) {
         std::cout << "V2 encoder exited with status: " << status << " (error: " << error << ")"
                   << std::endl;
         return false;
-      }
-      for (uint32_t i = 0; i < actual_handles; i++) {
-        handle_buffer[i] = handle_disposition_buffer[i].handle;
-        handle_metadata_buffer[i] = fidl_channel_handle_metadata_t{
-            .obj_type = handle_disposition_buffer[i].type,
-            .rights = handle_disposition_buffer[i].rights,
-        };
       }
 
       c_msg.type = FIDL_OUTGOING_MSG_TYPE_IOVEC;

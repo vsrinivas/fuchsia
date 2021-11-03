@@ -4,6 +4,7 @@
 
 #include <lib/fidl/coding.h>
 #include <lib/fidl/llcpp/coding.h>
+#include <lib/fidl/llcpp/internal/transport_channel.h>
 #include <limits.h>
 #include <stddef.h>
 
@@ -128,22 +129,23 @@ zx_status_t iovec_encode_helper_impl(uint32_t num_iovec, const fidl_type_t* type
                                      uint8_t* bytes, uint32_t num_bytes, zx_handle_t* handles,
                                      uint32_t num_handles, uint32_t* out_actual_bytes,
                                      uint32_t* out_actual_handles, const char** out_error_msg) {
-  std::unique_ptr<zx_handle_disposition_t[]> handle_dispositions;
+  std::unique_ptr<fidl_channel_handle_metadata_t[]> handle_metadata;
   if (handles != nullptr) {
-    handle_dispositions = std::make_unique<zx_handle_disposition_t[]>(num_handles);
+    handle_metadata = std::make_unique<fidl_channel_handle_metadata_t[]>(num_handles);
   }
   auto iovecs = std::make_unique<zx_channel_iovec_t[]>(num_iovec);
   auto backing_buffer = std::make_unique<uint8_t[]>(num_bytes);
   uint32_t actual_iovecs = 0;
   zx_status_t status = fidl::internal::EncodeIovecEtc<FIDL_WIRE_FORMAT_VERSION_V2>(
-      type, value, iovecs.get(), num_iovec, handle_dispositions.get(), num_handles,
-      backing_buffer.get(), num_bytes, &actual_iovecs, out_actual_handles, out_error_msg);
+      fidl::internal::ChannelTransport::EncodingConfiguration, type, value, iovecs.get(), num_iovec,
+      handles, handle_metadata.get(), num_handles, backing_buffer.get(), num_bytes, &actual_iovecs,
+      out_actual_handles, out_error_msg);
   if (status != ZX_OK) {
     return status;
   }
   if (out_actual_bytes == nullptr) {
     *out_error_msg = "Cannot encode with null out_actual_bytes";
-    FidlHandleDispositionCloseMany(handle_dispositions.get(), *out_actual_handles);
+    FidlHandleCloseMany(handles, *out_actual_handles);
     return ZX_ERR_INVALID_ARGS;
   }
   *out_actual_bytes = 0;
@@ -151,19 +153,11 @@ zx_status_t iovec_encode_helper_impl(uint32_t num_iovec, const fidl_type_t* type
     zx_channel_iovec_t& iovec = iovecs[i];
     if (*out_actual_bytes + iovec.capacity > num_bytes) {
       *out_error_msg = "pointed offset exceeds buffer size";
-      FidlHandleDispositionCloseMany(handle_dispositions.get(), *out_actual_handles);
+      FidlHandleCloseMany(handles, *out_actual_handles);
       return ZX_ERR_INVALID_ARGS;
     }
     memcpy(bytes + *out_actual_bytes, iovec.buffer, iovec.capacity);
     *out_actual_bytes += iovec.capacity;
-  }
-  if (handles != nullptr) {
-    for (uint32_t i = 0; i < *out_actual_handles; i++) {
-      handles[i] = handle_dispositions[i].handle;
-    }
-  } else {
-    // If no out arg, close any handles that were created.
-    FidlHandleDispositionCloseMany(handle_dispositions.get(), *out_actual_handles);
   }
   return ZX_OK;
 }
@@ -979,8 +973,9 @@ TEST(Strings, EncodeIovecEtc_absent_nonnullable_string) {
   uint32_t actual_iovecs = 0u;
   uint32_t actual_handles = 0u;
   auto status = fidl::internal::EncodeIovecEtc<FIDL_WIRE_FORMAT_VERSION_V2>(
-      &unbounded_nonnullable_string_message_type, &message, iovecs, std::size(iovecs), nullptr, 0,
-      buf, std::size(buf), &actual_iovecs, &actual_handles, &error);
+      fidl::internal::ChannelTransport::EncodingConfiguration,
+      &unbounded_nonnullable_string_message_type, &message, iovecs, std::size(iovecs), nullptr,
+      nullptr, 0, buf, std::size(buf), &actual_iovecs, &actual_handles, &error);
 
   EXPECT_EQ(status, ZX_OK);
   auto& result = *reinterpret_cast<unbounded_nonnullable_string_message_layout*>(buf);
@@ -1552,8 +1547,9 @@ TEST(Vectors, EncodeIovecEtc_absent_and_empty_nonnullable_vector_of_uint32) {
   uint32_t actual_iovecs = 0u;
   uint32_t actual_handles = 0u;
   auto status = fidl::internal::EncodeIovecEtc<FIDL_WIRE_FORMAT_VERSION_V2>(
+      fidl::internal::ChannelTransport::EncodingConfiguration,
       &unbounded_nonnullable_vector_of_uint32_message_type, &message, iovecs, std::size(iovecs),
-      nullptr, 0, buf, std::size(buf), &actual_iovecs, &actual_handles, &error);
+      nullptr, nullptr, 0, buf, std::size(buf), &actual_iovecs, &actual_handles, &error);
   auto& result = *reinterpret_cast<decltype(message.inline_struct)*>(buf);
 
   EXPECT_EQ(status, ZX_OK);
@@ -1991,8 +1987,9 @@ TEST(TrackingPtr, encode_string_view_with_fidl_allocator) {
   uint32_t actual_handles = 0u;
   const char* error = nullptr;
   auto status = fidl::internal::EncodeIovecEtc<FIDL_WIRE_FORMAT_VERSION_V2>(
-      &fidl_test_coding_StringStructTable, &str, iovecs, 1, nullptr, 0, buffer, kBufSize,
-      &actual_iovecs, &actual_handles, &error);
+      fidl::internal::ChannelTransport::EncodingConfiguration, &fidl_test_coding_StringStructTable,
+      &str, iovecs, 1, nullptr, nullptr, 0, buffer, kBufSize, &actual_iovecs, &actual_handles,
+      &error);
   EXPECT_EQ(status, ZX_OK);
 
   fidl_string_t* written_string = reinterpret_cast<fidl_string_t*>(buffer);
@@ -2019,24 +2016,24 @@ TEST(EncodeIovecEtc, single_present_handle_disposition) {
 
   zx_channel_iovec_t iovecs[1];
   uint8_t buf[sizeof(message)];
-  zx_handle_disposition_t handle_dispositions[1] = {};
+  zx_handle_t handles[1] = {};
+  fidl_channel_handle_metadata_t handle_metadata[1] = {};
 
   const char* error = nullptr;
   uint32_t actual_iovecs = 0u;
   uint32_t actual_handles = 0u;
   auto status = fidl::internal::EncodeIovecEtc<FIDL_WIRE_FORMAT_VERSION_V2>(
-      &nonnullable_channel_message_type, &message, iovecs, std::size(iovecs), handle_dispositions,
-      std::size(handle_dispositions), buf, std::size(buf), &actual_iovecs, &actual_handles, &error);
+      fidl::internal::ChannelTransport::EncodingConfiguration, &nonnullable_channel_message_type,
+      &message, iovecs, std::size(iovecs), handles, handle_metadata, std::size(handles), buf,
+      std::size(buf), &actual_iovecs, &actual_handles, &error);
   auto& result = *reinterpret_cast<nonnullable_handle_message_layout*>(buf);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
   EXPECT_EQ(actual_handles, 1u);
-  EXPECT_EQ(handle_dispositions[0].operation, ZX_HANDLE_OP_MOVE);
-  EXPECT_EQ(handle_dispositions[0].handle, dummy_handle_0);
-  EXPECT_EQ(handle_dispositions[0].type, ZX_OBJ_TYPE_CHANNEL);
-  EXPECT_EQ(handle_dispositions[0].rights, ZX_RIGHT_READ | ZX_RIGHT_WRITE);
-  EXPECT_EQ(handle_dispositions[0].result, ZX_OK);
+  EXPECT_EQ(handles[0], dummy_handle_0);
+  EXPECT_EQ(handle_metadata[0].obj_type, ZX_OBJ_TYPE_CHANNEL);
+  EXPECT_EQ(handle_metadata[0].rights, ZX_RIGHT_READ | ZX_RIGHT_WRITE);
   EXPECT_EQ(message.inline_struct.handle, ZX_HANDLE_INVALID);
   EXPECT_EQ(result.inline_struct.handle, FIDL_HANDLE_PRESENT);
 }
@@ -2530,8 +2527,9 @@ TEST(Iovec, SimpleObject) {
   uint32_t out_actual_handles;
   const char* out_error = nullptr;
   zx_status_t status = fidl::internal::EncodeIovecEtc<FIDL_WIRE_FORMAT_VERSION_V2>(
-      &fidl_test_coding_BoolStructTable, &obj, iovecs.get(), ZX_CHANNEL_MAX_MSG_IOVECS, nullptr, 0,
-      buffer.get(), ZX_CHANNEL_MAX_MSG_BYTES, &out_actual_iovecs, &out_actual_handles, &out_error);
+      fidl::internal::ChannelTransport::EncodingConfiguration, &fidl_test_coding_BoolStructTable,
+      &obj, iovecs.get(), ZX_CHANNEL_MAX_MSG_IOVECS, nullptr, nullptr, 0, buffer.get(),
+      ZX_CHANNEL_MAX_MSG_BYTES, &out_actual_iovecs, &out_actual_handles, &out_error);
   ASSERT_EQ(status, ZX_OK);
   EXPECT_NULL(out_error);
   ASSERT_EQ(out_actual_iovecs, 1);
@@ -2567,9 +2565,10 @@ TEST(Iovec, EncodeDoesntMutateVectorObject) {
   uint32_t out_actual_handles;
   const char* out_error = nullptr;
   zx_status_t status = fidl::internal::EncodeIovecEtc<FIDL_WIRE_FORMAT_VERSION_V2>(
+      fidl::internal::ChannelTransport::EncodingConfiguration,
       &fidl_test_coding_Uint32VectorStructTable, &obj, iovecs.get(), ZX_CHANNEL_MAX_MSG_IOVECS,
-      nullptr, 0, buffer.get(), ZX_CHANNEL_MAX_MSG_BYTES, &out_actual_iovecs, &out_actual_handles,
-      &out_error);
+      nullptr, nullptr, 0, buffer.get(), ZX_CHANNEL_MAX_MSG_BYTES, &out_actual_iovecs,
+      &out_actual_handles, &out_error);
   ASSERT_EQ(status, ZX_OK);
   EXPECT_NULL(out_error);
   ASSERT_EQ(out_actual_iovecs, 3);
@@ -2604,8 +2603,9 @@ TEST(Iovec, ExceedVectorBufferCount) {
   uint32_t out_actual_handles;
   const char* out_error = nullptr;
   zx_status_t status = fidl::internal::EncodeIovecEtc<FIDL_WIRE_FORMAT_VERSION_V2>(
-      &fidl_test_coding_Uint32VectorStructTable, &obj, iovecs.get(), 2, nullptr, 0, buffer.get(),
-      ZX_CHANNEL_MAX_MSG_BYTES, &out_actual_iovecs, &out_actual_handles, &out_error);
+      fidl::internal::ChannelTransport::EncodingConfiguration,
+      &fidl_test_coding_Uint32VectorStructTable, &obj, iovecs.get(), 2, nullptr, nullptr, 0,
+      buffer.get(), ZX_CHANNEL_MAX_MSG_BYTES, &out_actual_iovecs, &out_actual_handles, &out_error);
   ASSERT_EQ(status, ZX_OK);
   EXPECT_NULL(out_error);
   ASSERT_EQ(out_actual_iovecs, 1);
@@ -2630,8 +2630,9 @@ TEST(Iovec, MatchNeededVectorBufferCount) {
   uint32_t out_actual_handles;
   const char* out_error = nullptr;
   zx_status_t status = fidl::internal::EncodeIovecEtc<FIDL_WIRE_FORMAT_VERSION_V2>(
-      &fidl_test_coding_Uint32VectorStructTable, &obj, iovecs.get(), 3, nullptr, 0, buffer.get(),
-      ZX_CHANNEL_MAX_MSG_BYTES, &out_actual_iovecs, &out_actual_handles, &out_error);
+      fidl::internal::ChannelTransport::EncodingConfiguration,
+      &fidl_test_coding_Uint32VectorStructTable, &obj, iovecs.get(), 3, nullptr, nullptr, 0,
+      buffer.get(), ZX_CHANNEL_MAX_MSG_BYTES, &out_actual_iovecs, &out_actual_handles, &out_error);
   ASSERT_EQ(status, ZX_OK);
   EXPECT_NULL(out_error);
   ASSERT_EQ(out_actual_iovecs, 3);
@@ -2653,8 +2654,9 @@ TEST(Iovec, TooFewBytes) {
   uint32_t out_actual_handles;
   const char* out_error = nullptr;
   zx_status_t status = fidl::internal::EncodeIovecEtc<FIDL_WIRE_FORMAT_VERSION_V2>(
-      &fidl_test_coding_StringStructTable, &str, out_iovec, kIovecSize, nullptr, 0, buffer,
-      kBufferSize, &out_actual_iovecs, &out_actual_handles, &out_error);
+      fidl::internal::ChannelTransport::EncodingConfiguration, &fidl_test_coding_StringStructTable,
+      &str, out_iovec, kIovecSize, nullptr, nullptr, 0, buffer, kBufferSize, &out_actual_iovecs,
+      &out_actual_handles, &out_error);
   ASSERT_EQ(status, ZX_ERR_BUFFER_TOO_SMALL);
   EXPECT_NOT_NULL(out_error);
 }
@@ -2669,19 +2671,22 @@ TEST(Iovec, IovecEtcWithHandles) {
   constexpr uint32_t kIovecSize = 2;
   constexpr uint32_t kHandleSize = 4;
   zx_channel_iovec_t out_iovec[kIovecSize];
-  zx_handle_disposition_t handles[kHandleSize];
+  zx_handle_t handles[kHandleSize];
+  fidl_channel_handle_metadata_t handle_metadata[kHandleSize];
   uint8_t buffer[sizeof(message)];
   uint32_t out_actual_iovecs;
   uint32_t out_actual_handles;
   const char* out_error = nullptr;
   zx_status_t status = fidl::internal::EncodeIovecEtc<FIDL_WIRE_FORMAT_VERSION_V2>(
+      fidl::internal::ChannelTransport::EncodingConfiguration,
       &array_of_nonnullable_handles_message_type, &message, out_iovec, kIovecSize, handles,
-      kHandleSize, buffer, sizeof(buffer), &out_actual_iovecs, &out_actual_handles, &out_error);
+      handle_metadata, kHandleSize, buffer, sizeof(buffer), &out_actual_iovecs, &out_actual_handles,
+      &out_error);
   ASSERT_EQ(status, ZX_OK);
   EXPECT_EQ(out_error, nullptr);
   EXPECT_NULL(out_error);
   EXPECT_EQ(kHandleSize, out_actual_handles);
-  FidlHandleDispositionCloseMany(handles, out_actual_handles);
+  FidlHandleCloseMany(handles, out_actual_handles);
 }
 
 TEST(Iovec, TooFewHandles) {
@@ -2693,14 +2698,17 @@ TEST(Iovec, TooFewHandles) {
   constexpr uint32_t kIovecSize = 2;
   constexpr uint32_t kHandleSize = 1;
   zx_channel_iovec_t iovec[2];
-  zx_handle_disposition_t handles[1];
+  zx_handle_t handles[1];
+  fidl_channel_handle_metadata_t handle_metadata[1];
   uint8_t buffer[sizeof(message)];
   uint32_t out_actual_iovecs;
   uint32_t out_actual_handles;
   const char* out_error = nullptr;
   zx_status_t status = fidl::internal::EncodeIovecEtc<FIDL_WIRE_FORMAT_VERSION_V2>(
-      &array_of_nonnullable_handles_message_type, &message, iovec, kIovecSize, handles, kHandleSize,
-      buffer, sizeof(buffer), &out_actual_iovecs, &out_actual_handles, &out_error);
+      fidl::internal::ChannelTransport::EncodingConfiguration,
+      &array_of_nonnullable_handles_message_type, &message, iovec, kIovecSize, handles,
+      handle_metadata, kHandleSize, buffer, sizeof(buffer), &out_actual_iovecs, &out_actual_handles,
+      &out_error);
   ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(out_error);
 }

@@ -5,6 +5,7 @@
 #include <lib/fidl/coding.h>
 #include <lib/fidl/internal.h>
 #include <lib/fidl/llcpp/coding.h>
+#include <lib/fidl/llcpp/internal/transport.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/trace.h>
 #include <lib/fidl/transformer.h>
@@ -146,29 +147,20 @@ void OutgoingMessage::EncodeImpl(const fidl_type_t* message_type, void* data) {
   if (!ok()) {
     return;
   }
-  zx_handle_disposition_t handle_dispositions[ZX_CHANNEL_MAX_MSG_HANDLES];
   uint32_t num_iovecs_actual;
   uint32_t num_handles_actual;
-  zx_status_t status;
-  status = fidl::internal::EncodeIovecEtc<FIDL_WIRE_FORMAT_VERSION_V2>(
-      message_type, data, iovecs(), iovec_capacity(), handle_dispositions, handle_capacity(),
-      backing_buffer(), backing_buffer_capacity(), &num_iovecs_actual, &num_handles_actual,
-      error_address());
+  const internal::EncodingConfiguration* encoding_configuration =
+      internal::LookupTransportVTable(transport_type())->encoding_configuration;
+  zx_status_t status = fidl::internal::EncodeIovecEtc<FIDL_WIRE_FORMAT_VERSION_V2>(
+      *encoding_configuration, message_type, data, iovecs(), iovec_capacity(), handles(),
+      handle_metadata(), handle_capacity(), backing_buffer(), backing_buffer_capacity(),
+      &num_iovecs_actual, &num_handles_actual, error_address());
   if (status != ZX_OK) {
     SetResult(fidl::Result::EncodeError(status, *error_address()));
     return;
   }
   iovec_message().num_iovecs = num_iovecs_actual;
   iovec_message().num_handles = num_handles_actual;
-  fidl_channel_handle_metadata_t* metadata =
-      static_cast<fidl_channel_handle_metadata_t*>(iovec_message().handle_metadata);
-  for (uint32_t i = 0; i < num_handles_actual; i++) {
-    iovec_message().handles[i] = handle_dispositions[i].handle;
-    metadata[i] = {
-        .obj_type = handle_dispositions[i].type,
-        .rights = handle_dispositions[i].rights,
-    };
-  }
 
   auto linearized_bytes = CopyBytes();
   uint32_t actual_num_bytes;

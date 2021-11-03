@@ -36,7 +36,6 @@ static_assert(sizeof(Handle) == sizeof(fidl_handle_t));
 
 constexpr Handle kInvalidHandle = Handle(0);
 
-
 // Attributes of a handle, as defined in FIDL files.
 // Intended to be extensible, for instance if a transport introduces a new object type.
 struct HandleAttributes {
@@ -264,6 +263,8 @@ struct AssociatedTransportImpl;
 
 template <typename TransportObject>
 using AssociatedTransport = typename AssociatedTransportImpl<std::decay_t<TransportObject>>::type;
+
+const TransportVTable* LookupTransportVTable(fidl_transport_type type);
 
 }  // namespace internal
 

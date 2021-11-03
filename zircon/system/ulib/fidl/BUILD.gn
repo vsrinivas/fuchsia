@@ -165,6 +165,8 @@ if (is_fuchsia) {
                     "lib/fidl/llcpp/coding.h",
                     "lib/fidl/llcpp/envelope.h",
                     "lib/fidl/llcpp/arena.h",
+                    "lib/fidl/llcpp/internal/transport.h",
+                    "lib/fidl/llcpp/internal/transport_channel.h",
                     "lib/fidl/llcpp/message_storage.h",
                     "lib/fidl/llcpp/object_view.h",
                     "lib/fidl/llcpp/soft_migration.h",
@@ -181,6 +183,8 @@ if (is_fuchsia) {
       "llcpp_message.cc",
       "llcpp_message_storage.cc",
       "llcpp_result.cc",
+      "llcpp_transport.cc",
+      "llcpp_transport_channel.cc",
     ]
     public_deps = [
       "//sdk/lib/fit:headers",
