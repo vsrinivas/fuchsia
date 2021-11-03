@@ -514,6 +514,7 @@ uint64_t PlatformBuffer::MappableAddressRegionLength() {
 }
 
 std::unique_ptr<PlatformBuffer> PlatformBuffer::Create(uint64_t size, const char* name) {
+  TRACE_DURATION("magma", "PlatformBuffer::Create", "size", size, "name", name);
   size = magma::round_up(size, PAGE_SIZE);
   if (size == 0)
     return DRETP(nullptr, "attempting to allocate 0 sized buffer");
@@ -522,6 +523,13 @@ std::unique_ptr<PlatformBuffer> PlatformBuffer::Create(uint64_t size, const char
   zx_status_t status = zx::vmo::create(size, 0, &vmo);
   if (status != ZX_OK)
     return DRETP(nullptr, "failed to allocate vmo size %" PRIu64 ": %d", size, status);
+  if (TRACE_ENABLED()) {
+    zx_info_handle_basic_t info;
+    zx_status_t status = vmo.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+    if (status == ZX_OK) {
+      TRACE_INSTANT("magma", "PlatformBuffer koid", TRACE_SCOPE_THREAD, "koid", info.koid);
+    }
+  }
 
   vmo.set_property(ZX_PROP_NAME, name, strlen(name));
 
