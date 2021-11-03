@@ -25,12 +25,8 @@ use {
     fuchsia_component::client::{connect_channel_to_protocol, connect_to_protocol},
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
-        builder::{
-            Capability, CapabilityRoute, ComponentSource, Event, RealmBuilder, RouteEndpoint,
-        },
-        error::Error as RealmBuilderError,
-        mock::{Mock, MockHandles},
-        Realm, RealmInstance,
+        error::Error as RealmBuilderError, mock::MockHandles, ChildProperties, Event, RealmBuilder,
+        RealmInstance, RouteBuilder, RouteEndpoint,
     },
     fuchsia_zircon as zx,
     futures::{
@@ -1107,7 +1103,7 @@ impl RunningSuite {
                 .map_err(LaunchTestError::CreateProxyForArchiveAccessor)?;
 
         let archive_accessor_arc = Arc::new(archive_accessor);
-        let mut realm = get_realm(
+        let mut builder = get_realm(
             Arc::downgrade(&archive_accessor_arc),
             test_url,
             test_collection,
@@ -1115,8 +1111,8 @@ impl RunningSuite {
         )
         .await
         .map_err(LaunchTestError::InitializeTestRealm)?;
-        realm.set_collection_name(test_collection);
-        let instance = realm.create().await.map_err(LaunchTestError::CreateTestRealm)?;
+        builder.set_collection_name(test_collection);
+        let instance = builder.build().await.map_err(LaunchTestError::CreateTestRealm)?;
         let test_name = instance.root.child_name().to_string();
         test_map.insert(test_name.clone(), test_url.to_string());
         let test_map_clone = test_map.clone();
@@ -1405,123 +1401,135 @@ async fn get_realm(
     test_url: &str,
     collection: &str,
     above_root_capabilities_for_test: Arc<AboveRootCapabilitiesForTest>,
-) -> Result<Realm, RealmBuilderError> {
-    let mut builder = RealmBuilder::new().await?;
+) -> Result<RealmBuilder, RealmBuilderError> {
+    let builder = RealmBuilder::new().await?;
     builder
-        .add_eager_component(WRAPPER_ROOT_REALM_PATH, ComponentSource::url(test_url))
+        .add_child(WRAPPER_ROOT_REALM_PATH, test_url, ChildProperties::new().eager())
         .await?
-        .add_component(
+        .add_mock_child(
             "mocks-server",
-            ComponentSource::Mock(Mock::new(move |mock_handles| {
-                Box::pin(serve_mocks(archive_accessor.clone(), mock_handles))
-            })),
+            move |mock_handles| Box::pin(serve_mocks(archive_accessor.clone(), mock_handles)),
+            ChildProperties::new(),
         )
         .await?
-        .add_component(
+        .add_mock_child(
             ENCLOSING_ENV,
-            ComponentSource::Mock(Mock::new(move |mock_handles: MockHandles| {
-                Box::pin(gen_enclosing_env(mock_handles))
-            })),
+            move |mock_handles: MockHandles| Box::pin(gen_enclosing_env(mock_handles)),
+            ChildProperties::new(),
         )
         .await?
-        .add_eager_component(
+        .add_child(
             ARCHIVIST_REALM_PATH,
-            ComponentSource::url(ARCHIVIST_FOR_EMBEDDING_URL),
+            ARCHIVIST_FOR_EMBEDDING_URL,
+            ChildProperties::new().eager(),
         )
         .await?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.sys2.EventSource"),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component(ARCHIVIST_REALM_PATH)],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.logger.LogSink"),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component(ARCHIVIST_REALM_PATH)],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.logger.LogSink"),
-            source: RouteEndpoint::component(ARCHIVIST_REALM_PATH),
-            targets: vec![
-                RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH),
-                RouteEndpoint::component(ENCLOSING_ENV),
-            ],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.logger.Log"),
-            source: RouteEndpoint::component(ARCHIVIST_REALM_PATH),
-            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.diagnostics.ArchiveAccessor"),
-            source: RouteEndpoint::component("mocks-server"),
-            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.diagnostics.ArchiveAccessor"),
-            source: RouteEndpoint::component(ARCHIVIST_REALM_PATH),
-            targets: vec![RouteEndpoint::AboveRoot],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::Event(Event::Started, cm_rust::EventMode::Async),
-            source: RouteEndpoint::component("test_wrapper"),
-            targets: vec![RouteEndpoint::component(ARCHIVIST_REALM_PATH)],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::Event(Event::Stopped, cm_rust::EventMode::Async),
-            source: RouteEndpoint::component("test_wrapper"),
-            targets: vec![RouteEndpoint::component(ARCHIVIST_REALM_PATH)],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::Event(Event::Running, cm_rust::EventMode::Async),
-            source: RouteEndpoint::component("test_wrapper"),
-            targets: vec![RouteEndpoint::component(ARCHIVIST_REALM_PATH)],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::Event(
-                Event::directory_ready("diagnostics"),
-                cm_rust::EventMode::Async,
-            ),
-            source: RouteEndpoint::component("test_wrapper"),
-            targets: vec![RouteEndpoint::component(ARCHIVIST_REALM_PATH)],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::Event(
+        .add_route(
+            RouteBuilder::protocol_marker::<fsys::EventSourceMarker>()
+                .source(RouteEndpoint::AboveRoot)
+                .targets(vec![RouteEndpoint::component(ARCHIVIST_REALM_PATH)]),
+        )
+        .await?
+        .add_route(
+            RouteBuilder::protocol("fuchsia.logger.LogSink")
+                .source(RouteEndpoint::AboveRoot)
+                .targets(vec![RouteEndpoint::component(ARCHIVIST_REALM_PATH)]),
+        )
+        .await?
+        .add_route(
+            RouteBuilder::protocol("fuchsia.logger.LogSink")
+                .source(RouteEndpoint::component(ARCHIVIST_REALM_PATH))
+                .targets(vec![
+                    RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH),
+                    RouteEndpoint::component(ENCLOSING_ENV),
+                ]),
+        )
+        .await?
+        .add_route(
+            RouteBuilder::protocol("fuchsia.logger.Log")
+                .source(RouteEndpoint::component(ARCHIVIST_REALM_PATH))
+                .targets(vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)]),
+        )
+        .await?
+        .add_route(
+            RouteBuilder::protocol_marker::<fdiagnostics::ArchiveAccessorMarker>()
+                .source(RouteEndpoint::component("mocks-server"))
+                .targets(vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)]),
+        )
+        .await?
+        .add_route(
+            RouteBuilder::protocol_marker::<fdiagnostics::ArchiveAccessorMarker>()
+                .source(RouteEndpoint::component(ARCHIVIST_REALM_PATH))
+                .targets(vec![RouteEndpoint::AboveRoot]),
+        )
+        .await?
+        .add_route(
+            RouteBuilder::protocol_marker::<ftest::SuiteMarker>()
+                .source(RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH))
+                .targets(vec![RouteEndpoint::AboveRoot]),
+        )
+        .await?
+        .add_route(
+            RouteBuilder::protocol_marker::<fv1sys::EnvironmentMarker>()
+                .source(RouteEndpoint::component(ENCLOSING_ENV))
+                .targets(vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)]),
+        )
+        .await?
+        .add_route(
+            RouteBuilder::protocol_marker::<fv1sys::LauncherMarker>()
+                .source(RouteEndpoint::component(ENCLOSING_ENV))
+                .targets(vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)]),
+        )
+        .await?
+        .add_route(
+            RouteBuilder::protocol_marker::<fv1sys::LoaderMarker>()
+                .source(RouteEndpoint::component(ENCLOSING_ENV))
+                .targets(vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)]),
+        )
+        .await?
+        .add_route(
+            RouteBuilder::protocol_marker::<fdebugdata::DebugDataMarker>()
+                .source(RouteEndpoint::Debug)
+                .targets(vec![RouteEndpoint::component(ENCLOSING_ENV)]),
+        )
+        .await?
+        .add_route(
+            RouteBuilder::event(Event::Started, cm_rust::EventMode::Async)
+                .source(RouteEndpoint::component("test_wrapper"))
+                .targets(vec![RouteEndpoint::component(ARCHIVIST_REALM_PATH)]),
+        )
+        .await?
+        .add_route(
+            RouteBuilder::event(Event::Stopped, cm_rust::EventMode::Async)
+                .source(RouteEndpoint::component("test_wrapper"))
+                .targets(vec![RouteEndpoint::component(ARCHIVIST_REALM_PATH)]),
+        )
+        .await?
+        .add_route(
+            RouteBuilder::event(Event::Running, cm_rust::EventMode::Async)
+                .source(RouteEndpoint::component("test_wrapper"))
+                .targets(vec![RouteEndpoint::component(ARCHIVIST_REALM_PATH)]),
+        )
+        .await?
+        .add_route(
+            RouteBuilder::event(Event::directory_ready("diagnostics"), cm_rust::EventMode::Async)
+                .source(RouteEndpoint::component("test_wrapper"))
+                .targets(vec![RouteEndpoint::component(ARCHIVIST_REALM_PATH)]),
+        )
+        .await?
+        .add_route(
+            RouteBuilder::event(
                 Event::capability_requested("fuchsia.logger.LogSink"),
                 cm_rust::EventMode::Async,
-            ),
-            source: RouteEndpoint::component("test_wrapper"),
-            targets: vec![RouteEndpoint::component(ARCHIVIST_REALM_PATH)],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.test.Suite"),
-            source: RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH),
-            targets: vec![RouteEndpoint::AboveRoot],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol(fv1sys::EnvironmentMarker::NAME),
-            source: RouteEndpoint::component(ENCLOSING_ENV),
-            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol(fv1sys::LauncherMarker::NAME),
-            source: RouteEndpoint::component(ENCLOSING_ENV),
-            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol(fv1sys::LoaderMarker::NAME),
-            source: RouteEndpoint::component(ENCLOSING_ENV),
-            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol(fdebugdata::DebugDataMarker::NAME),
-            source: RouteEndpoint::Debug,
-            targets: vec![RouteEndpoint::component(ENCLOSING_ENV)],
-        })?;
+            )
+            .source(RouteEndpoint::component("test_wrapper"))
+            .targets(vec![RouteEndpoint::component(ARCHIVIST_REALM_PATH)]),
+        )
+        .await?;
 
-    above_root_capabilities_for_test.apply(collection, &mut builder)?;
+    above_root_capabilities_for_test.apply(collection, &builder).await?;
 
-    Ok(builder.build())
+    Ok(builder)
 }
 
 async fn serve_mocks(
@@ -1564,7 +1572,7 @@ fn map_suite_error_epitaph(suite: ftest::SuiteProxy, default_value: LaunchError)
 }
 
 pub struct AboveRootCapabilitiesForTest {
-    capabilities: HashMap<&'static str, Vec<Capability>>,
+    capabilities: HashMap<&'static str, Vec<RouteBuilder>>,
 }
 
 impl AboveRootCapabilitiesForTest {
@@ -1576,20 +1584,27 @@ impl AboveRootCapabilitiesForTest {
         Ok(Self { capabilities })
     }
 
-    fn apply(&self, collection: &str, builder: &mut RealmBuilder) -> Result<(), RealmBuilderError> {
+    async fn apply(
+        &self,
+        collection: &str,
+        builder: &RealmBuilder,
+    ) -> Result<(), RealmBuilderError> {
         if self.capabilities.contains_key(collection) {
-            for capability in &self.capabilities[collection] {
-                builder.add_route(CapabilityRoute {
-                    capability: capability.clone(),
-                    source: RouteEndpoint::AboveRoot,
-                    targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
-                })?;
+            for route_builder in &self.capabilities[collection] {
+                builder
+                    .add_route(
+                        route_builder
+                            .clone()
+                            .source(RouteEndpoint::AboveRoot)
+                            .targets(vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)]),
+                    )
+                    .await?;
             }
         }
         Ok(())
     }
 
-    fn load(decl: fsys::ComponentDecl) -> HashMap<&'static str, Vec<Capability>> {
+    fn load(decl: fsys::ComponentDecl) -> HashMap<&'static str, Vec<RouteBuilder>> {
         let mut capabilities = hashmap! {
             HERMETIC_TESTS_COLLECTION => vec![],
             SYSTEM_TESTS_COLLECTION => vec![]
@@ -1606,7 +1621,7 @@ impl AboveRootCapabilitiesForTest {
                     capabilities
                         .get_mut(name.as_str())
                         .unwrap()
-                        .push(Capability::protocol(target_name));
+                        .push(RouteBuilder::protocol(target_name));
                 }
                 fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl {
                     target: Some(fsys::Ref::Collection(fsys::CollectionRef { name })),
@@ -1614,7 +1629,7 @@ impl AboveRootCapabilitiesForTest {
                     target_name: Some(target_name),
                     ..
                 }) if capabilities.contains_key(name.as_str()) => {
-                    capabilities.get_mut(name.as_str()).unwrap().push(Capability::directory(
+                    capabilities.get_mut(name.as_str()).unwrap().push(RouteBuilder::directory(
                         target_name,
                         "",
                         rights.unwrap_or(*READ_RIGHTS),
@@ -1629,7 +1644,7 @@ impl AboveRootCapabilitiesForTest {
                     capabilities
                         .get_mut(name.as_str())
                         .unwrap()
-                        .push(Capability::storage(target_name, use_path));
+                        .push(RouteBuilder::storage(target_name, use_path));
                 }
                 fsys::OfferDecl::Service(fsys::OfferServiceDecl {
                     target: Some(fsys::Ref::Collection(fsys::CollectionRef { name })),
