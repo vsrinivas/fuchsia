@@ -98,7 +98,7 @@ TEST_F(HidDriverTest, BootMouseTest) {
   // Get the report event.
   zx::event report_event;
   {
-    auto result = client.GetReportsEvent();
+    auto result = client->GetReportsEvent();
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
     report_event = std::move(result->event);
@@ -110,7 +110,7 @@ TEST_F(HidDriverTest, BootMouseTest) {
 
     hid_boot_mouse_report_t test_report = {};
 
-    auto response = client.ReadReport();
+    auto response = client->ReadReport();
     ASSERT_OK(response.status());
     ASSERT_OK(response->status);
     ASSERT_EQ(response->data.count(), sizeof(test_report));
@@ -122,7 +122,7 @@ TEST_F(HidDriverTest, BootMouseTest) {
 
   // Check that report descriptors match completely
   {
-    auto response = client.GetReportDesc();
+    auto response = client->GetReportDesc();
     ASSERT_OK(response.status());
     ASSERT_EQ(response->desc.count(), sizeof(kBootMouseReportDesc));
     for (size_t i = 0; i < sizeof(kBootMouseReportDesc); i++) {
