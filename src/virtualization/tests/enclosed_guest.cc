@@ -117,24 +117,15 @@ zx_status_t EnclosedGuest::Start(zx::time deadline) {
   real_services_->Connect(real_env_.NewRequest());
   auto services = sys::testing::EnvironmentServices::Create(real_env_, loop_.dispatcher());
 
+  // Install faked network-related services into the guest environment.
+  fake_netstack_.Install(*services);
+
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kGuestManagerUrl;
   zx_status_t status = services->AddServiceWithLaunchInfo(std::move(launch_info),
                                                           fuchsia::virtualization::Manager::Name_);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failure launching virtualization manager: " << zx_status_get_string(status);
-    return status;
-  }
-
-  status = services->AddService(fake_state_.GetHandler(), fuchsia::net::interfaces::State::Name_);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failure launching fake state: " << zx_status_get_string(status);
-    return status;
-  }
-
-  status = services->AddService(fake_netstack_.GetHandler(), fuchsia::netstack::Netstack::Name_);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failure launching fake netstack: " << zx_status_get_string(status);
     return status;
   }
 

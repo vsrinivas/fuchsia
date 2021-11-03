@@ -100,13 +100,16 @@ source_set("guest_console") {
 }
 
 source_set("fake_netstack") {
+  testonly = true
   visibility = [
     "//src/connectivity/network/testing/netemul/*",
     "//src/virtualization/*",
   ]
+  public = [ "fake_netstack.h" ]
   sources = [
     "fake_netstack.cc",
-    "fake_netstack.h",
+    "fake_netstack_v1.cc",
+    "fake_netstack_v1.h",
   ]
   deps = [
     "//sdk/fidl/fuchsia.net.interfaces",
@@ -119,6 +122,7 @@ source_set("fake_netstack") {
   public_deps = [
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/lib/fit-promise",
+    "//sdk/lib/sys/cpp/testing:cpp",
   ]
 }
 

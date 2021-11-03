@@ -25,8 +25,7 @@ GuestInteractionTest::GuestInteractionTest() {
   realm_.set_error_handler([this](zx_status_t status) { realm_error_ = status; });
 
   // Add Netstack services.
-  services_->AddService(fake_netstack_.GetHandler(), fuchsia::netstack::Netstack::Name_);
-  services_->AddService(fake_netstack_.GetHandler(), fuchsia::net::stack::Stack::Name_);
+  fake_netstack_.Install(*services_);
 
   // Add guest service.
   services_->AddServiceWithLaunchInfo(

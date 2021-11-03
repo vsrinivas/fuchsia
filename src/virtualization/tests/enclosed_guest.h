@@ -121,7 +121,6 @@ class EnclosedGuest {
   fuchsia::virtualization::RealmPtr realm_;
   fuchsia::virtualization::GuestPtr guest_;
   FakeScenic fake_scenic_;
-  FakeState fake_state_;
   FakeNetstack fake_netstack_;
 
   std::optional<SocketLogger> serial_logger_;
