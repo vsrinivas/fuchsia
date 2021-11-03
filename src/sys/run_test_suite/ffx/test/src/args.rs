@@ -80,6 +80,12 @@ pub struct RunCommand {
     #[argh(switch)]
     pub filter_ansi: bool,
 
+    /// continue running unfinished suites if a suite times out.
+    /// By default, unfinished suites are immediately terminated if a suite times out.
+    /// This option is only relevant when multiple suites are run.
+    #[argh(switch)]
+    pub continue_on_timeout: bool,
+
     /// run tests in parallel, up to the number provided.
     #[argh(option)]
     pub parallel: Option<u16>,

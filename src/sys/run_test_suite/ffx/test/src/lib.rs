@@ -119,11 +119,16 @@ async fn run_test(builder_connector: Box<RunBuilderConnector>, cmd: RunCommand) 
         Ok(true) => true,
         Ok(false) | Err(_) => false,
     };
+    let timeout_behavior = match cmd.continue_on_timeout {
+        false => run_test_suite_lib::TimeoutBehavior::TerminateRemaining,
+        true => run_test_suite_lib::TimeoutBehavior::Continue,
+    };
     let test_definitions = test_params_from_args(cmd, std::io::stdin, json_input_experiment)?;
 
     match run_test_suite_lib::run_tests_and_get_outcome(
         builder_connector.connect().await,
         test_definitions,
+        run_test_suite_lib::RunParams { timeout_behavior },
         min_log_severity,
         filter_ansi,
         output_directory,
@@ -459,6 +464,7 @@ mod test {
                     max_severity_logs: None,
                     output_directory: None,
                     disable_output_directory: false,
+                    continue_on_timeout: false,
                 },
                 vec![run_test_suite_lib::TestParams {
                     test_url: "my-test-url".to_string(),
@@ -484,6 +490,7 @@ mod test {
                     max_severity_logs: Some(diagnostics_data::Severity::Warn),
                     output_directory: None,
                     disable_output_directory: false,
+                    continue_on_timeout: false,
                 },
                 vec![
                     run_test_suite_lib::TestParams {
@@ -512,6 +519,7 @@ mod test {
                     max_severity_logs: None,
                     output_directory: None,
                     disable_output_directory: false,
+                    continue_on_timeout: false,
                 },
                 vec![run_test_suite_lib::TestParams {
                     test_url: "my-test-url".to_string(),
@@ -537,6 +545,7 @@ mod test {
                     max_severity_logs: None,
                     output_directory: None,
                     disable_output_directory: false,
+                    continue_on_timeout: false,
                 },
                 vec![
                     run_test_suite_lib::TestParams {
@@ -575,6 +584,7 @@ mod test {
                     max_severity_logs: None,
                     output_directory: None,
                     disable_output_directory: false,
+                    continue_on_timeout: false,
                 },
                 vec![
                     run_test_suite_lib::TestParams {
@@ -638,6 +648,7 @@ mod test {
                     max_severity_logs: None,
                     output_directory: None,
                     disable_output_directory: false,
+                    continue_on_timeout: false,
                 },
             ),
             (
@@ -657,6 +668,7 @@ mod test {
                     max_severity_logs: None,
                     output_directory: None,
                     disable_output_directory: false,
+                    continue_on_timeout: false,
                 },
             ),
             (
@@ -676,6 +688,7 @@ mod test {
                     max_severity_logs: None,
                     output_directory: None,
                     disable_output_directory: false,
+                    continue_on_timeout: false,
                 },
             ),
         ];

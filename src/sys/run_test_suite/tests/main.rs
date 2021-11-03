@@ -65,6 +65,12 @@ fn new_test_params(test_url: &str) -> TestParams {
     }
 }
 
+fn new_run_params() -> run_test_suite_lib::RunParams {
+    run_test_suite_lib::RunParams {
+        timeout_behavior: run_test_suite_lib::TimeoutBehavior::TerminateRemaining,
+    }
+}
+
 /// run specified test once.
 async fn run_test_once<W: Write + Send>(
     test_params: TestParams,
@@ -77,6 +83,7 @@ async fn run_test_once<W: Write + Send>(
             fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
                 .expect("connecting to RunBuilderProxy"),
             vec![test_params],
+            new_run_params(),
             min_log_severity,
             writer,
             &mut reporter,
@@ -140,6 +147,7 @@ async fn launch_and_test_passing_v2_test() {
         vec![new_test_params(
             "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
         )],
+        new_run_params(),
         None,
         &mut output,
         &mut reporter,
@@ -230,6 +238,7 @@ async fn launch_and_test_stderr_test() {
         vec![new_test_params(
             "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/test-with-stderr.cm",
         )],
+        new_run_params(),
         None,
         &mut output,
         &mut reporter,
@@ -328,6 +337,7 @@ async fn launch_and_test_passing_v2_test_multiple_times() {
             vec![new_test_params(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
                 ); 10],
+                new_run_params(),
             None,&mut output,
             &mut reporter
         )
@@ -400,6 +410,7 @@ async fn launch_and_test_multiple_passing_tests() {
                     "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/test-with-stderr.cm",
                 )
             ],
+            new_run_params(),
             None, &mut output,
             &mut reporter
         )
@@ -712,6 +723,7 @@ async fn launch_and_test_failing_v2_test_multiple_times() {
         vec![new_test_params(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/failing-test-example.cm",
                 ); 10],
+                new_run_params(),
                 None,&mut output, &mut reporter
         )
     .await.expect("run test");
@@ -869,6 +881,7 @@ async fn test_timeout_multiple_times() {
         fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
             .expect("connecting to RunBuilderProxy"),
         vec![test_params; 10],
+        new_run_params(),
         None,
         &mut output,
         &mut reporter,
@@ -887,6 +900,52 @@ async fn test_timeout_multiple_times() {
 
     assert_eq!(run_result.passed, Vec::<String>::new());
     assert!(run_result.successful_completion);
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_coninue_on_timeout() {
+    let mut output = std::io::sink();
+    let mut reporter = output::RunReporter::new_noop();
+    let mut long_test_params = new_test_params(
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm",
+    );
+    long_test_params.timeout = std::num::NonZeroU32::new(1);
+
+    let short_test_params = new_test_params(
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
+    );
+
+    let mut test_params = vec![long_test_params];
+    for _ in 0..10 {
+        test_params.push(short_test_params.clone());
+    }
+
+    let streams = run_test_suite_lib::run_test(
+        fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
+            .expect("connecting to RunBuilderProxy"),
+        test_params,
+        run_test_suite_lib::RunParams {
+            timeout_behavior: run_test_suite_lib::TimeoutBehavior::Continue,
+        },
+        None,
+        &mut output,
+        &mut reporter,
+    )
+    .await
+    .expect("run test");
+    let run_results = streams.collect::<Vec<_>>().await;
+    assert_eq!(run_results.len(), 11);
+
+    let (timed_out, others): (Vec<_>, Vec<_>) = run_results
+        .into_iter()
+        .map(|result| result.unwrap())
+        .partition(|result| result.outcome == Outcome::Timedout);
+
+    // Note - this is a somewhat weak assertion as we generally do not know the order in which the
+    // tests are executed.
+    assert_eq!(timed_out.len(), 1);
+    assert_eq!(others.len(), 10);
+    assert!(others.iter().all(|result| result.outcome == Outcome::Passed));
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -992,6 +1051,7 @@ async fn test_stdout_and_log_filter_ansi() {
             fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
                 .expect("connecting to RunBuilderProxy"),
             vec![test_params],
+            new_run_params(),
             Some(Severity::Info),
             &mut ansi_filter,
             &mut reporter,
@@ -1110,6 +1170,7 @@ async fn test_stdout_to_directory() {
         fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
             .expect("connecting to RunBuilderProxy"),
         vec![test_params],
+        new_run_params(),
         None,
         false,
         Some(output_dir.path().to_path_buf()),
@@ -1174,6 +1235,7 @@ async fn test_syslog_to_directory() {
         fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
             .expect("connecting to RunBuilderProxy"),
         vec![test_params],
+        new_run_params(),
         None,
         false,
         Some(output_dir.path().to_path_buf()),
@@ -1229,6 +1291,7 @@ async fn test_custom_artifacts_to_directory() {
         fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
             .expect("connecting to RunBuilderProxy"),
         vec![test_params],
+        new_run_params(),
         None,
         false,
         Some(output_dir.path().to_path_buf()),

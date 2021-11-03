@@ -88,7 +88,7 @@ pub struct SuiteRunResult {
     pub restricted_logs: Vec<String>,
 }
 
-// Parameters for test.
+/// Parameters that specify how a single test suite should be executed.
 #[derive(Clone, Debug, PartialEq)]
 pub struct TestParams {
     /// Test URL.
@@ -111,6 +111,20 @@ pub struct TestParams {
 
     /// Maximum allowable log severity for the test.
     pub max_severity_logs: Option<Severity>,
+}
+
+/// Parameters that specify how the overall test run should be executed.
+pub struct RunParams {
+    /// The behavior of the test run if a suite times out.
+    pub timeout_behavior: TimeoutBehavior,
+}
+
+/// Sets the behavior of the overall run if a suite terminates with a timeout.
+pub enum TimeoutBehavior {
+    /// Immediately terminate any suites that haven't started.
+    TerminateRemaining,
+    /// Continue executing any suites that haven't finished.
+    Continue,
 }
 
 async fn collect_results_for_suite(
@@ -707,10 +721,11 @@ impl RunningSuite {
     }
 }
 
-/// Runs the test `count` number of times, and writes logs to writer.
+/// Runs the tests in `test_params`, and writes logs to writer.
 pub async fn run_test<'a, Out: Write>(
     builder_proxy: RunBuilderProxy,
     test_params: Vec<TestParams>,
+    run_params: RunParams,
     min_severity_logs: Option<Severity>,
     stdout_writer: &'a mut Out,
     run_reporter: &'a mut RunReporter,
@@ -757,6 +772,7 @@ pub async fn run_test<'a, Out: Write>(
         stdout_writer: &'a mut Out,
         run_reporter: &'a mut RunReporter,
         min_severity_logs: Option<Severity>,
+        run_params: RunParams,
     }
 
     let args = FoldArgs {
@@ -766,6 +782,7 @@ pub async fn run_test<'a, Out: Write>(
         stdout_writer,
         run_reporter,
         min_severity_logs,
+        run_params,
     };
 
     // Handle suite events. Note this assumes that suites are run in serial - it waits to
@@ -797,12 +814,15 @@ pub async fn run_test<'a, Out: Write>(
 
                 match &result.outcome {
                     Outcome::Timedout | Outcome::Error { .. } => {
-                        args.run_controller.stop()?;
-                        // This drops the controllers for remaining suites all at once, which kills
-                        // the execution. This is okay for now, but we should consider more graceful
-                        // termination once we need it (for example, when multiple tests are run in
-                        // CI).
-                        unstarted_suites = vec![];
+                        match &args.run_params.timeout_behavior {
+                            TimeoutBehavior::TerminateRemaining => {
+                                args.run_controller.stop()?;
+                                // Drop remaining controllers, which is the same as calling kill on
+                                // each controller.
+                                unstarted_suites = vec![];
+                            }
+                            TimeoutBehavior::Continue => (),
+                        }
                     }
                     _ => (),
                 }
@@ -896,6 +916,7 @@ async fn collect_results(mut stream: SuiteResults<'_>) -> Outcome {
 pub async fn run_tests_and_get_outcome(
     builder_proxy: RunBuilderProxy,
     test_params: Vec<TestParams>,
+    run_params: RunParams,
     min_severity_logs: Option<Severity>,
     filter_ansi: bool,
     record_directory: Option<PathBuf>,
@@ -921,6 +942,7 @@ pub async fn run_tests_and_get_outcome(
     let result_stream = match run_test(
         builder_proxy,
         test_params,
+        run_params,
         min_severity_logs,
         &mut stdout_for_results,
         &mut reporter,
