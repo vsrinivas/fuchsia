@@ -6,6 +6,7 @@
 use {
     anyhow::{format_err, Error},
     fuchsia_component::server::ServiceFs,
+    fuchsia_inspect_derive::Inspect,
     futures::{channel::mpsc, future, pin_mut},
     tracing::{debug, error, info, warn},
 };
@@ -22,6 +23,7 @@ mod error;
 mod features;
 mod fidl_service;
 mod hfp;
+mod inspect;
 mod peer;
 mod profile;
 mod sco_connector;
@@ -29,6 +31,13 @@ mod service_definitions;
 
 #[fuchsia::component]
 async fn main() -> Result<(), Error> {
+    let mut fs = ServiceFs::new();
+
+    let inspector = fuchsia_inspect::Inspector::new();
+    if let Err(e) = inspect_runtime::serve(&inspector, &mut fs) {
+        warn!("Couldn't serve inspect: {}", e);
+    }
+
     let feature_support = AudioGatewayFeatureSupport::load()?;
     debug!(?feature_support, "Starting HFP Audio Gateway");
     let (profile_client, profile_svc) = register_audio_gateway(feature_support)?;
@@ -44,23 +53,20 @@ async fn main() -> Result<(), Error> {
         Ok(audio) => audio,
     };
 
-    let hfp = Hfp::new(
+    let mut hfp = Hfp::new(
         profile_client,
         profile_svc,
         audio,
         call_manager_receiver,
         feature_support,
         test_request_receiver,
-    )
-    .run();
-    pin_mut!(hfp);
-
-    let mut fs = ServiceFs::new();
-
-    let inspector = fuchsia_inspect::Inspector::new();
-    if let Err(e) = inspect_runtime::serve(&inspector, &mut fs) {
-        warn!("Couldn't serve inspect: {}", e);
+    );
+    if let Err(e) = hfp.iattach(&inspector.root(), "hfp") {
+        warn!("Couldn't attach inspect to HFP: {:?}", e);
     }
+
+    let hfp = hfp.run();
+    pin_mut!(hfp);
 
     let services = run_services(fs, call_manager_sender, test_request_sender);
     pin_mut!(services);

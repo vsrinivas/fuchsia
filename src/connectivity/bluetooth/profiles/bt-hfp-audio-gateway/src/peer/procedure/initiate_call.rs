@@ -55,9 +55,7 @@ impl Procedure for InitiateCallProcedure {
             (
                 State::Start,
                 // `update` above is consumed by this pattern match, so rebind it.
-                update
-                @
-                (at::Command::AtdNumber { .. }
+                update @ (at::Command::AtdNumber { .. }
                 | at::Command::AtdMemory { .. }
                 | at::Command::Bldn { .. }),
             ) => {

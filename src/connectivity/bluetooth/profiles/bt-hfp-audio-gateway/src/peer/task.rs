@@ -641,10 +641,7 @@ impl PeerTask {
     fn hf_indicator_update(&mut self, indicator: HfIndicator) {
         match indicator {
             ind @ HfIndicator::EnhancedSafety(_) => {
-                info!(
-                    "Received EnhancedSafety HF Indicator update {:?} for peer {}",
-                    ind, self.id
-                );
+                info!("Received EnhancedSafety HF Indicator update {:?} for peer {}", ind, self.id);
             }
             HfIndicator::BatteryLevel(v) => {
                 if let Some(handler) = &mut self.handler {

@@ -10,6 +10,8 @@ use {
     fidl_fuchsia_bluetooth_hfp_test as hfp_test,
     fuchsia_bluetooth::profile::find_service_classes,
     fuchsia_bluetooth::types::PeerId,
+    fuchsia_inspect::{self as inspect, Property},
+    fuchsia_inspect_derive::{AttachError, Inspect},
     futures::{
         channel::mpsc::{self, Receiver, Sender},
         select,
@@ -25,6 +27,7 @@ use crate::{
     audio::AudioControl,
     config::AudioGatewayFeatureSupport,
     error::Error,
+    inspect::{CallManagerInspect, HfpInspect},
     peer::{ConnectionBehavior, Peer, PeerImpl},
 };
 
@@ -39,12 +42,12 @@ pub enum Event {
 /// Manages operation of the HFP functionality.
 pub struct Hfp {
     config: AudioGatewayFeatureSupport,
-    /// The `profile_client` provides Hfp with a means to drive the fuchsia.bluetooth.bredr related APIs.
+    /// Provides Hfp with a means to drive the `fuchsia.bluetooth.bredr` related APIs.
     profile_client: ProfileClient,
     /// The client connection to the `fuchsia.bluetooth.bredr.Profile` protocol.
     profile_svc: bredr::ProfileProxy,
-    /// The `call_manager` provides Hfp with a means to interact with clients of the
-    /// fuchsia.bluetooth.hfp.Hfp and fuchsia.bluetooth.hfp.CallManager protocols.
+    /// Provides Hfp with a means to interact with clients of the `fuchsia.bluetooth.hfp.Hfp` and
+    /// `fuchsia.bluetooth.hfp.CallManager` protocols.
     call_manager: CallManager,
     call_manager_registration: Receiver<CallManagerProxy>,
     /// A collection of Bluetooth peers that support the HFP profile.
@@ -55,6 +58,17 @@ pub struct Hfp {
     audio: Arc<Mutex<Box<dyn AudioControl>>>,
     internal_events_rx: Receiver<Event>,
     internal_events_tx: Sender<Event>,
+    inspect_node: HfpInspect,
+}
+
+impl Inspect for &mut Hfp {
+    fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
+        self.inspect_node.iattach(parent, name.as_ref())?;
+        self.config.iattach(self.inspect_node.node(), "audio_gateway_feature_support")?;
+        self.call_manager.iattach(self.inspect_node.node(), "call_manager")?;
+        self.inspect_node.autoconnect.set(self.connection_behavior.autoconnect);
+        Ok(())
+    }
 }
 
 impl Hfp {
@@ -81,6 +95,7 @@ impl Hfp {
             audio: Arc::new(Mutex::new(Box::new(audio))),
             internal_events_rx,
             internal_events_tx,
+            inspect_node: Default::default(),
         }
     }
 
@@ -120,21 +135,7 @@ impl Hfp {
     async fn handle_internal_event(&mut self, event: Event) {
         match event {
             Event::PeerConnected { peer_id, manager_id, handle } => {
-                let current_id = self.call_manager.connection_id();
-                if let Some(proxy) = self.call_manager.proxy() {
-                    if manager_id != current_id {
-                        // This message is for an old manager connection.
-                        // It should be ignored.
-                        return;
-                    }
-                    if let Err(e) = proxy.peer_connected(&mut peer_id.into(), handle).await {
-                        if e.is_closed() {
-                            info!("CallManager channel closed.");
-                        } else {
-                            info!("CallManager channel closed with error: {}", e);
-                        }
-                    }
-                }
+                self.call_manager.peer_connected(manager_id, peer_id, handle).await;
             }
         }
     }
@@ -190,10 +191,10 @@ impl Hfp {
                     self.connection_behavior,
                     self.internal_events_tx.clone(),
                 )?);
-                if self.call_manager.connected() {
+                if let Some(connection_id) = self.call_manager.connection_id() {
                     // Peer should be able to accept call_manager_connected request immediately
                     // after the Peer was constructed.
-                    peer.call_manager_connected(self.call_manager.connection_id()).await?;
+                    peer.call_manager_connected(connection_id).await?;
                 }
                 entry.insert(Box::pin(peer))
             }
@@ -210,11 +211,11 @@ impl Hfp {
             return Ok(());
         }
 
-        self.call_manager.new_connection(proxy);
+        let call_manager_id = self.call_manager.new_connection(proxy);
 
         // Propagate new connection id to peers.
         for (_, peer) in self.peers.inner().iter_mut() {
-            let _ = peer.call_manager_connected(self.call_manager.connection_id()).await;
+            let _ = peer.call_manager_connected(call_manager_id).await;
         }
 
         Ok(())
@@ -225,30 +226,59 @@ impl Hfp {
 #[derive(Copy, Clone, PartialEq, Default, Debug)]
 pub struct ManagerConnectionId(usize);
 
-#[derive(Default)]
+#[derive(Default, Inspect)]
 pub struct CallManager {
     id: ManagerConnectionId,
     proxy: Option<CallManagerProxy>,
+    #[inspect(forward)]
+    inspect: CallManagerInspect,
 }
 
 impl CallManager {
-    /// Assign a new proxy to the CallManager.
-    pub fn new_connection(&mut self, proxy: CallManagerProxy) {
+    /// Assign a new proxy to the CallManager - returns the ID that was assigned to the new manager.
+    pub fn new_connection(&mut self, proxy: CallManagerProxy) -> ManagerConnectionId {
         self.id.0 = self.id.0.wrapping_add(1);
         self.proxy = Some(proxy);
+        self.inspect.new_connection(self.id.0);
+        self.id
     }
 
-    /// Returns true if the proxy is present and connected.
+    /// Returns true if the Call Manager proxy is present and connected.
     pub fn connected(&self) -> bool {
         matches!(&self.proxy, Some(proxy) if !proxy.is_closed())
     }
 
-    pub fn proxy(&self) -> Option<&CallManagerProxy> {
-        self.proxy.as_ref()
+    /// Returns the ID of the connected Call Manager, or None if disconnected.
+    pub fn connection_id(&self) -> Option<ManagerConnectionId> {
+        if !self.connected() {
+            return None;
+        }
+
+        Some(self.id)
     }
 
-    pub fn connection_id(&self) -> ManagerConnectionId {
-        self.id
+    /// Notifies the Call Manager of the connected peer.
+    pub async fn peer_connected(
+        &mut self,
+        manager_id: ManagerConnectionId,
+        peer_id: PeerId,
+        handle: ServerEnd<PeerHandlerMarker>,
+    ) {
+        if manager_id != self.id {
+            // This message is for an old manager connection - it can be ignored.
+            return;
+        }
+
+        if let Some(proxy) = &self.proxy {
+            if let Err(e) = proxy.peer_connected(&mut peer_id.into(), handle).await {
+                if e.is_closed() {
+                    info!("CallManager channel closed.");
+                    self.inspect.set_disconnected();
+                } else {
+                    info!("Failed to notify peer_connected for CallManager {:?}: {}", self.id, e);
+                }
+            }
+        }
     }
 }
 
@@ -262,6 +292,7 @@ mod tests {
         },
         async_test_helpers::run_while,
         async_utils::PollExt,
+        fidl::endpoints::{create_proxy, create_proxy_and_stream},
         fidl_fuchsia_bluetooth as bt,
         fidl_fuchsia_bluetooth_hfp::{
             CallManagerMarker, CallManagerRequest, CallManagerRequestStream,
@@ -274,6 +305,7 @@ mod tests {
     use bt_rfcomm::{profile::build_rfcomm_protocol, ServerChannel};
     use fidl_fuchsia_bluetooth_bredr as bredr;
     use fuchsia_bluetooth::types::Uuid;
+    use fuchsia_inspect::assert_data_tree;
     use fuchsia_zircon as zx;
     use std::convert::TryFrom;
 
@@ -304,8 +336,7 @@ mod tests {
     #[fuchsia::test(allow_stalls = false)]
     async fn new_profile_event_initiates_connections_to_profile_and_call_manager() {
         let (profile, profile_svc, server) = setup_profile_and_test_server();
-        let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<CallManagerMarker>().unwrap();
+        let (proxy, stream) = create_proxy_and_stream::<CallManagerMarker>().unwrap();
 
         let (mut sender, receiver) = mpsc::channel(1);
         sender.send(proxy).await.expect("Hfp to receive the proxy");
@@ -343,8 +374,7 @@ mod tests {
     fn peer_connected_only_after_connection_success() {
         let mut exec = fuchsia_async::TestExecutor::new().unwrap();
         let (profile, profile_svc, server) = setup_profile_and_test_server();
-        let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<CallManagerMarker>().unwrap();
+        let (proxy, stream) = create_proxy_and_stream::<CallManagerMarker>().unwrap();
 
         let (mut sender, receiver) = mpsc::channel(1);
         exec.run_singlethreaded(sender.send(proxy)).expect("Hfp to receive the proxy");
@@ -399,8 +429,7 @@ mod tests {
     #[fuchsia::test]
     async fn peer_then_first_manager_connected_works() {
         let (profile, profile_svc, server) = setup_profile_and_test_server();
-        let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<CallManagerMarker>().unwrap();
+        let (proxy, stream) = create_proxy_and_stream::<CallManagerMarker>().unwrap();
 
         let (mut sender, receiver) = mpsc::channel(1);
 
@@ -438,7 +467,7 @@ mod tests {
     // async fn manager_disconnect_and_new_connection_works() {
     //     let (profile, profile_svc, server) = setup_profile_and_test_server();
     //     let (proxy, stream) =
-    //         fidl::endpoints::create_proxy_and_stream::<CallManagerMarker>().unwrap();
+    //         create_proxy_and_stream::<CallManagerMarker>().unwrap();
 
     //     let (mut sender, receiver) = mpsc::channel(1);
     //     sender.send(proxy).await.expect("Hfp to receive the proxy");
@@ -470,7 +499,7 @@ mod tests {
 
     //     // Setup a new call manager.
     //     let (proxy, stream) =
-    //         fidl::endpoints::create_proxy_and_stream::<CallManagerMarker>().unwrap();
+    //         create_proxy_and_stream::<CallManagerMarker>().unwrap();
     //     sender.send(proxy).await.expect("Hfp to receive the proxy");
 
     //     // The new call manager should receive a peer connected notification for the peer that is
@@ -485,8 +514,7 @@ mod tests {
     fn new_profile_from_audio_gateway_is_ignored() {
         let mut exec = fasync::TestExecutor::new().unwrap();
         let (profile, profile_svc, mut server) = setup_profile_and_test_server();
-        let (proxy, mut stream) =
-            fidl::endpoints::create_proxy_and_stream::<CallManagerMarker>().unwrap();
+        let (proxy, mut stream) = create_proxy_and_stream::<CallManagerMarker>().unwrap();
 
         let (mut sender, receiver) = mpsc::channel(1);
         sender.try_send(proxy).expect("Hfp to receive the proxy");
@@ -633,8 +661,7 @@ mod tests {
         let _hfp_task = fasync::Task::local(hfp.run());
 
         // Make a new fidl request by creating a channel and sending the request over the channel.
-        let (proxy, mut stream) =
-            fidl::endpoints::create_proxy_and_stream::<hfp_test::HfpTestMarker>().unwrap();
+        let (proxy, mut stream) = create_proxy_and_stream::<hfp_test::HfpTestMarker>().unwrap();
         let fidl_request = {
             proxy.battery_indicator(1).unwrap();
             stream.next().await.unwrap().unwrap()
@@ -673,8 +700,7 @@ mod tests {
         let _hfp_task = fasync::Task::local(hfp.run());
 
         // Make a new fidl request by creating a channel and sending the request over the channel.
-        let (proxy, mut stream) =
-            fidl::endpoints::create_proxy_and_stream::<hfp_test::HfpTestMarker>().unwrap();
+        let (proxy, mut stream) = create_proxy_and_stream::<hfp_test::HfpTestMarker>().unwrap();
         let fidl_request = {
             let behavior = hfp_test::ConnectionBehavior {
                 autoconnect: Some(false),
@@ -697,5 +723,87 @@ mod tests {
             peer_request,
             PeerRequest::Behavior(ConnectionBehavior { autoconnect: false })
         );
+    }
+
+    #[fuchsia::test]
+    async fn expected_inspect_tree() {
+        let inspector = inspect::Inspector::new();
+        assert_data_tree!(inspector, root: {});
+
+        let (profile, profile_svc, _server) = setup_profile_and_test_server();
+        let (_tx, rx1) = mpsc::channel(1);
+        let (_, rx2) = mpsc::channel(1);
+
+        let mut hfp = Hfp::new(
+            profile,
+            profile_svc,
+            TestAudioControl::default(),
+            rx1,
+            AudioGatewayFeatureSupport::default(),
+            rx2,
+        );
+
+        hfp.iattach(&inspector.root(), "hfp").expect("can attach inspect");
+        assert_data_tree!(inspector, root: {
+            hfp: {
+                audio_gateway_feature_support: {
+                    reject_incoming_voice_call: false,
+                    three_way_calling: false,
+                    in_band_ringtone: false,
+                    echo_canceling_and_noise_reduction: false,
+                    voice_recognition: false,
+                    attach_phone_number_to_voice_tag: false,
+                    remote_audio_volume_control: false,
+                    respond_and_hold: false,
+                    enhanced_call_controls: false,
+                    wide_band_speech: false,
+                    enhanced_voice_recognition: false,
+                    enhanced_voice_recognition_with_text: false,
+                },
+                call_manager: {
+                    manager_connection_id: 0u64,
+                    connected: false,
+                },
+                autoconnect: true,
+            }
+        });
+
+        let (call_manager, _call_manager_server) = create_proxy::<CallManagerMarker>().unwrap();
+        hfp.handle_new_call_manager(call_manager).await.expect("can set call manager");
+
+        assert_data_tree!(inspector, root: {
+            hfp: {
+                audio_gateway_feature_support: contains {},
+                call_manager: {
+                    manager_connection_id: 1u64,
+                    connected: true,
+                },
+                autoconnect: true,
+            }
+        });
+
+        // The `connected` status is lazily populated. If the Call Manager goes away, then this
+        // status should be updated the next time communication with the Call Manager is attempted.
+        drop(_call_manager_server);
+        let peer_id = PeerId(123);
+        let manager_id = hfp.call_manager.connection_id().expect("just set");
+        let (_peer_handler_client, peer_handler_server) =
+            create_proxy::<PeerHandlerMarker>().unwrap();
+        hfp.handle_internal_event(Event::PeerConnected {
+            peer_id,
+            manager_id,
+            handle: peer_handler_server,
+        })
+        .await;
+        assert_data_tree!(inspector, root: {
+            hfp: {
+                audio_gateway_feature_support: contains {},
+                call_manager: {
+                    manager_connection_id: 1u64,
+                    connected: false,
+                },
+                autoconnect: true,
+            }
+        });
     }
 }

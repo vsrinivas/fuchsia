@@ -64,3 +64,33 @@ To run the tests:
 ```
 fx test bt-hfp-audio-gateway-tests
 ```
+
+## Inspect
+
+The `bt-hfp-audio-gateway` component includes support for
+[component inspection](https://fuchsia.dev/fuchsia-src/development/diagnostics/inspect). To view
+the current state of the component, use `fx iquery show core/bt-hfp-audio-gateway`.
+
+### Hierarchy
+
+```
+root:
+  hfp:
+    autoconnect: (true / false)
+    audio_gateway_feature_support:
+      reject_incoming_voice_call
+      three_way_calling
+      in_band_ringtone
+      echo_canceling_and_noise_reduction
+      voice_recognition
+      attach_phone_number_to_voice_tag
+      remote_audio_volume_control
+      respond_and_hold
+      enhanced_call_controls
+      wide_band_speech
+      enhanced_voice_recognition
+      enhanced_voice_recognition_with_text
+    call_manager:
+        manager_connection_id
+        connected: (true / false)
+```

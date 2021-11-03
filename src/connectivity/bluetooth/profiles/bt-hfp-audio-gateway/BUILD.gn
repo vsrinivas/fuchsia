@@ -64,6 +64,7 @@ rustc_binary("bin") {
     "src/features.rs",
     "src/fidl_service.rs",
     "src/hfp.rs",
+    "src/inspect.rs",
     "src/main.rs",
     "src/peer.rs",
     "src/peer/calls.rs",
