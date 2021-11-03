@@ -931,34 +931,57 @@ async fn inspect_for_sampler() {
         project_configs => panic!("expected one project_config but got {:#?}", project_configs),
     };
     for metric_config in &project_config.metrics {
-        // TODO(fxbug.dev/87769): Use the parsed Selector instead of re-parsing the string here.
-        let selector = {
-            let selector = match &metric_config.selectors[..] {
-                // metric_config.selectors is Vec<Option<ParsedSelector>>
-                // ParsedSelector's "selector" field contains fidl.fuchsia.diagnostics::Selector
-                // ParsedSelector's "selector_string" field contains the String which we want here
+        let selector =
+            match &metric_config.selectors[..] {
                 [selector] => &selector
                     .as_ref()
                     .expect(
                         "SamplerConfig::from_directory() should never return None for selectors",
                     )
-                    .selector_string,
-                selectors => panic!("expected one sampler but got {:#?}", selectors),
+                    .selector,
+                selectors => panic!("expected one selector but got {:#?}", selectors),
             };
-            let index = selector
-                .find(':')
-                .unwrap_or_else(|| panic!("selector {:#?} has no component", selector));
-            selector
-                .get(index + 1..)
-                .unwrap_or_else(|| panic!("selector {:#?} has no component", selector))
+        let fidl_fuchsia_diagnostics::Selector { component_selector, tree_selector, .. } = selector;
+        let fidl_fuchsia_diagnostics::ComponentSelector { moniker_segments, .. } =
+            component_selector.as_ref().expect("component_selector");
+        let component_moniker = match moniker_segments
+            .as_ref()
+            .expect("moniker_segments")
+            .last()
+            .expect("last moniker segment")
+        {
+            fidl_fuchsia_diagnostics::StringSelector::ExactMatch(segment) => segment,
+            selector => panic!("expected exact match selector but got {:#?}", selector),
         };
-        let (_, expected_key) = selector
-            .rsplit_once(":")
-            .unwrap_or_else(|| panic!("selector {:#?} has no key", selector));
-
-        let data = get_inspect_data(&realm, "netstack", selector, "counters")
-            .await
-            .expect("get_inspect_data failed");
+        let (tree_selector, expected_key) = match tree_selector.as_ref().expect("tree_selector") {
+            fidl_fuchsia_diagnostics::TreeSelector::PropertySelector(
+                fidl_fuchsia_diagnostics::PropertySelector { node_path, target_properties },
+            ) => {
+                let tree_selector = node_path
+                    .iter()
+                    .map(|selector| match selector {
+                        fidl_fuchsia_diagnostics::StringSelector::ExactMatch(segment) => {
+                            selectors::sanitize_string_for_selectors(segment)
+                        }
+                        selector => panic!("expected exact match selector but got {:#?}", selector),
+                    })
+                    .join("/");
+                let expected_key = match target_properties {
+                    fidl_fuchsia_diagnostics::StringSelector::ExactMatch(segment) => segment,
+                    selector => panic!("expected exact match selector but got {:#?}", selector),
+                };
+                (tree_selector, expected_key)
+            }
+            selector => panic!("expected property selector but got {:#?}", selector),
+        };
+        let data = get_inspect_data(
+            &realm,
+            component_moniker,
+            format!("{}:{}", tree_selector, expected_key),
+            "counters",
+        )
+        .await
+        .expect("get_inspect_data failed");
         let properties: Vec<_> = data
             .property_iter()
             .filter_map(|(_hierarchy_path, property_opt): (Vec<&String>, _)| property_opt)
