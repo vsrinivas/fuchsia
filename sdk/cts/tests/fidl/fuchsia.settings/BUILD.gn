@@ -7,7 +7,7 @@ import("//sdk/cts/build/cts.gni")
 cts_executable("settings_test_bin") {
   testonly = true
 
-  sources = [ "factory_reset_test.cc" ]
+  sources = [ "privacy_test.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.settings",
@@ -19,12 +19,33 @@ cts_executable("settings_test_bin") {
   ]
 }
 
-fuchsia_component("settings_test") {
+cts_fuchsia_component("settings_test") {
   testonly = true
   manifest = "meta/settings_test.cml"
   deps = [ ":settings_test_bin" ]
 }
 
-fuchsia_test_package("fuchsia_settings_test") {
+cts_fuchsia_test_package("fuchsia_settings_test") {
+  package_name = "fuchsia_settings_test"
   test_components = [ ":settings_test" ]
+}
+
+cts_copy_to_sdk("build") {
+  testonly = true
+  sources = [ "BUILD.gn" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":fuchsia_settings_test" ]
+}
+
+sdk_molecule("test_sdks") {
+  testonly = true
+  deps = [
+    ":build_sdk",
+    ":fuchsia_settings_test_sdk",
+    ":settings_test_bin_sdk",
+    ":settings_test_sdk",
+  ]
 }

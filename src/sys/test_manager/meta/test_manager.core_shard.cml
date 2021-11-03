@@ -93,7 +93,7 @@
         },
         {
             // TODO(fxbug.dev/86634): Remove once cts has its own realm.
-            protocol: [ "fuchsia.settings.FactoryReset" ],
+            protocol: [ "fuchsia.settings.Privacy" ],
             from: "#setui_service",
             to: "#test_manager",
         },

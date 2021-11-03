@@ -9,7 +9,7 @@
     },
     use: [
         {
-            protocol: [ "fuchsia.settings.FactoryReset" ],
+            protocol: [ "fuchsia.settings.Privacy" ],
         },
     ],
 }

@@ -164,7 +164,7 @@
                 "fuchsia.scheduler.ProfileProvider",
 
                 // TODO(fxbug.dev/86634): Remove once cts has its own realm.
-                "fuchsia.settings.FactoryReset",
+                "fuchsia.settings.Privacy",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.vulkan.loader.Loader",
