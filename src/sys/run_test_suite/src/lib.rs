@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    diagnostics_data::Severity,
     fidl::Peered,
     fidl_fuchsia_test_manager::{
         self as ftest_manager, CaseArtifact, CaseFinished, CaseFound, CaseStarted, CaseStopped,
@@ -107,6 +108,9 @@ pub struct TestParams {
 
     /// Arguments to pass to test using command line.
     pub test_args: Vec<String>,
+
+    /// Maximum allowable log severity for the test.
+    pub max_severity_logs: Option<Severity>,
 }
 
 async fn collect_results_for_suite(
@@ -658,12 +662,17 @@ struct RunningSuite {
     unreturned_events: VecDeque<Result<ftest_manager::SuiteEvent, RunTestSuiteError>>,
     events_done: bool,
     url: String,
+    max_severity_logs: Option<Severity>,
 }
 
 impl RunningSuite {
-    async fn wait_for_start(proxy: ftest_manager::SuiteControllerProxy, url: String) -> Self {
+    async fn wait_for_start(
+        proxy: ftest_manager::SuiteControllerProxy,
+        url: String,
+        max_severity_logs: Option<Severity>,
+    ) -> Self {
         let unreturned_events = Self::query_events(&proxy).await;
-        Self { proxy, unreturned_events, events_done: false, url }
+        Self { proxy, unreturned_events, events_done: false, url, max_severity_logs }
     }
 
     async fn query_events(
@@ -687,13 +696,17 @@ impl RunningSuite {
     fn url(&self) -> &str {
         &self.url
     }
+
+    fn max_severity_logs(&self) -> Option<Severity> {
+        self.max_severity_logs
+    }
 }
 
 /// Runs the test `count` number of times, and writes logs to writer.
 pub async fn run_test<'a, Out: Write>(
     builder_proxy: RunBuilderProxy,
     test_params: Vec<TestParams>,
-    log_opts: diagnostics::LogCollectionOptions,
+    min_severity_logs: Option<Severity>,
     stdout_writer: &'a mut Out,
     run_reporter: &'a mut RunReporter,
 ) -> Result<SuiteResults<'a>, RunTestSuiteError> {
@@ -719,8 +732,14 @@ pub async fn run_test<'a, Out: Write>(
         };
 
         let (suite_controller, suite_server_end) = fidl::endpoints::create_proxy()?;
-        suite_start_futs
-            .push(RunningSuite::wait_for_start(suite_controller, params.test_url.clone()).boxed());
+        suite_start_futs.push(
+            RunningSuite::wait_for_start(
+                suite_controller,
+                params.test_url.clone(),
+                params.max_severity_logs,
+            )
+            .boxed(),
+        );
         builder_proxy.add_suite(&params.test_url, run_options.into(), suite_server_end)?;
     }
     let (run_controller, run_server_end) = fidl::endpoints::create_proxy()?;
@@ -732,7 +751,7 @@ pub async fn run_test<'a, Out: Write>(
         next_suite_id: u32,
         stdout_writer: &'a mut Out,
         run_reporter: &'a mut RunReporter,
-        log_opts: diagnostics::LogCollectionOptions,
+        min_severity_logs: Option<Severity>,
     }
 
     let args = FoldArgs {
@@ -741,7 +760,7 @@ pub async fn run_test<'a, Out: Write>(
         next_suite_id: 0,
         stdout_writer,
         run_reporter,
-        log_opts,
+        min_severity_logs,
     };
 
     // Handle suite events. Note this assumes that suites are run in serial - it waits to
@@ -755,11 +774,15 @@ pub async fn run_test<'a, Out: Write>(
                 let suite_reporter = args
                     .run_reporter
                     .new_suite(started_suite_controller.url(), &SuiteId(args.next_suite_id))?;
+                let log_options = diagnostics::LogCollectionOptions {
+                    min_severity: args.min_severity_logs,
+                    max_severity: started_suite_controller.max_severity_logs(),
+                };
 
                 let result = run_suite_and_collect_logs(
                     started_suite_controller,
                     &suite_reporter,
-                    &args.log_opts,
+                    &log_options,
                     args.stdout_writer,
                 )
                 .await?;
@@ -867,7 +890,7 @@ async fn collect_results(mut stream: SuiteResults<'_>) -> Outcome {
 pub async fn run_tests_and_get_outcome(
     builder_proxy: RunBuilderProxy,
     test_params: Vec<TestParams>,
-    log_opts: diagnostics::LogCollectionOptions,
+    min_severity_logs: Option<Severity>,
     filter_ansi: bool,
     record_directory: Option<PathBuf>,
 ) -> Outcome {
@@ -892,7 +915,7 @@ pub async fn run_tests_and_get_outcome(
     let result_stream = match run_test(
         builder_proxy,
         test_params,
-        log_opts,
+        min_severity_logs,
         &mut stdout_for_results,
         &mut reporter,
     )

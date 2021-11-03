@@ -7,9 +7,7 @@ use fidl_fuchsia_test_manager::{LaunchError, RunBuilderMarker};
 use futures::prelude::*;
 use matches::assert_matches;
 use regex::Regex;
-use run_test_suite_lib::{
-    diagnostics, output, Outcome, RunTestSuiteError, SuiteRunResult, TestParams,
-};
+use run_test_suite_lib::{output, Outcome, RunTestSuiteError, SuiteRunResult, TestParams};
 use std::io::Write;
 use std::str::from_utf8;
 use test_output_directory::{
@@ -63,13 +61,14 @@ fn new_test_params(test_url: &str) -> TestParams {
         also_run_disabled_tests: false,
         test_args: vec![],
         parallel: None,
+        max_severity_logs: None,
     }
 }
 
 /// run specified test once.
 async fn run_test_once<W: Write + Send>(
     test_params: TestParams,
-    log_opts: diagnostics::LogCollectionOptions,
+    min_log_severity: Option<Severity>,
     writer: &mut W,
 ) -> Result<SuiteRunResult, RunTestSuiteError> {
     let test_result = {
@@ -78,7 +77,7 @@ async fn run_test_once<W: Write + Send>(
             fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
                 .expect("connecting to RunBuilderProxy"),
             vec![test_params],
-            log_opts,
+            min_log_severity,
             writer,
             &mut reporter,
         )
@@ -97,7 +96,7 @@ async fn launch_and_test_no_clean_exit() {
         new_test_params(
             "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/no-onfinished-after-test-example.cm",
             ),
-        diagnostics::LogCollectionOptions::default(),
+        None,
         &mut output
     )
     .await
@@ -141,7 +140,7 @@ async fn launch_and_test_passing_v2_test() {
         vec![new_test_params(
             "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
         )],
-        diagnostics::LogCollectionOptions::default(),
+        None,
         &mut output,
         &mut reporter,
     )
@@ -231,7 +230,7 @@ async fn launch_and_test_stderr_test() {
         vec![new_test_params(
             "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/test-with-stderr.cm",
         )],
-        diagnostics::LogCollectionOptions::default(),
+        None,
         &mut output,
         &mut reporter,
     )
@@ -329,7 +328,7 @@ async fn launch_and_test_passing_v2_test_multiple_times() {
             vec![new_test_params(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
                 ); 10],
-            diagnostics::LogCollectionOptions::default(),&mut output,
+            None,&mut output,
             &mut reporter
         )
     .await.expect("run test");
@@ -401,7 +400,7 @@ async fn launch_and_test_multiple_passing_tests() {
                     "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/test-with-stderr.cm",
                 )
             ],
-            diagnostics::LogCollectionOptions::default(),&mut output,
+            None, &mut output,
             &mut reporter
         )
     .await.expect("run test");
@@ -484,9 +483,7 @@ async fn launch_and_test_with_filter() {
 
     test_params.test_filters = Some(vec!["*Test3".to_string()]);
     let run_result =
-        run_test_once(test_params, diagnostics::LogCollectionOptions::default(), &mut output)
-            .await
-            .expect("Running test should not fail");
+        run_test_once(test_params, None, &mut output).await.expect("Running test should not fail");
 
     let expected_output = "[RUNNING]	Example.Test3
 log1 for Example.Test3
@@ -514,9 +511,7 @@ async fn launch_and_test_with_multiple_filter() {
 
     test_params.test_filters = Some(vec!["*Test3".to_string(), "*Test1".to_string()]);
     let run_result =
-        run_test_once(test_params, diagnostics::LogCollectionOptions::default(), &mut output)
-            .await
-            .expect("Running test should not fail");
+        run_test_once(test_params, None, &mut output).await.expect("Running test should not fail");
 
     let expected_output = "[RUNNING]	Example.Test1
 log1 for Example.Test1
@@ -548,10 +543,7 @@ async fn launch_with_filter_no_matching_cases() {
     );
 
     test_params.test_filters = Some(vec!["matches-nothing".to_string()]);
-    let run_result =
-        run_test_once(test_params, diagnostics::LogCollectionOptions::default(), &mut output)
-            .await
-            .unwrap_err();
+    let run_result = run_test_once(test_params, None, &mut output).await.unwrap_err();
 
     assert_matches!(run_result, RunTestSuiteError::Launch(LaunchError::NoMatchingCases));
     assert!(!run_result.is_internal_error());
@@ -564,7 +556,7 @@ async fn launch_and_test_empty_test() {
         new_test_params(
             "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/no-test-example.cm",
         ),
-        diagnostics::LogCollectionOptions::default(),
+        None,
         &mut output,
     )
     .await
@@ -583,7 +575,7 @@ async fn launch_and_test_huge_test() {
         new_test_params(
             "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/huge-test-example.cm",
         ),
-        diagnostics::LogCollectionOptions::default(),
+        None,
         &mut output,
     )
     .await
@@ -601,7 +593,7 @@ async fn launch_and_test_disabled_test_exclude_disabled() {
             new_test_params(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/disabled-test-example.cm",
             ),
-            diagnostics::LogCollectionOptions::default(),
+            None,
             &mut output,
         )
     .await
@@ -639,9 +631,7 @@ async fn launch_and_test_disabled_test_include_disabled() {
     );
     test_params.also_run_disabled_tests = true;
     let run_result =
-        run_test_once(test_params, diagnostics::LogCollectionOptions::default(), &mut output)
-            .await
-            .expect("Running test should not fail");
+        run_test_once(test_params, None, &mut output).await.expect("Running test should not fail");
 
     let expected_output = "[RUNNING]	Example.Test1
 log1 for Example.Test1
@@ -680,7 +670,7 @@ async fn launch_and_test_failing_test() {
             new_test_params(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/failing-test-example.cm",
             ),
-            diagnostics::LogCollectionOptions::default(),
+            None,
             &mut output,
         )
     .await
@@ -722,7 +712,7 @@ async fn launch_and_test_failing_v2_test_multiple_times() {
         vec![new_test_params(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/failing-test-example.cm",
                 ); 10],
-                diagnostics::LogCollectionOptions::default(),&mut output, &mut reporter
+                None,&mut output, &mut reporter
         )
     .await.expect("run test");
     let run_results = streams.collect::<Vec<_>>().await;
@@ -744,7 +734,7 @@ async fn launch_and_test_incomplete_test() {
             new_test_params(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/incomplete-test-example.cm",
             ),
-            diagnostics::LogCollectionOptions::default(),
+            None,
             &mut output,
         )
     .await
@@ -786,7 +776,7 @@ async fn launch_and_test_invalid_test() {
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/invalid-test-example.cm",
 
             ),
-            diagnostics::LogCollectionOptions::default(),
+            None,
             &mut output,
         )
     .await
@@ -829,7 +819,7 @@ async fn launch_and_run_echo_test() {
         new_test_params(
             "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/echo_test_realm.cm",
         ),
-        diagnostics::LogCollectionOptions::default(),
+        None,
         &mut output,
     )
     .await
@@ -855,9 +845,7 @@ async fn test_timeout() {
     );
     test_params.timeout = std::num::NonZeroU32::new(1);
     let run_result =
-        run_test_once(test_params, diagnostics::LogCollectionOptions::default(), &mut output)
-            .await
-            .expect("Running test should not fail");
+        run_test_once(test_params, None, &mut output).await.expect("Running test should not fail");
     let expected_output = "[RUNNING]	LongRunningTest.LongRunning
 [TIMED_OUT]	LongRunningTest.LongRunning
 ";
@@ -881,7 +869,7 @@ async fn test_timeout_multiple_times() {
         fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
             .expect("connecting to RunBuilderProxy"),
         vec![test_params; 10],
-        diagnostics::LogCollectionOptions::default(),
+        None,
         &mut output,
         &mut reporter,
     )
@@ -909,9 +897,7 @@ async fn test_passes_with_large_timeout() {
     );
     test_params.timeout = std::num::NonZeroU32::new(600);
     let run_result =
-        run_test_once(test_params, diagnostics::LogCollectionOptions::default(), &mut output)
-            .await
-            .expect("Running test should not fail");
+        run_test_once(test_params, None, &mut output).await.expect("Running test should not fail");
 
     let expected_output = "[RUNNING]	EchoTest
 [PASSED]	EchoTest
@@ -933,9 +919,7 @@ async fn test_logging_component() {
     );
     test_params.timeout = std::num::NonZeroU32::new(600);
     let run_result =
-        run_test_once(test_params, diagnostics::LogCollectionOptions::default(), &mut output)
-            .await
-            .expect("Running test should not fail");
+        run_test_once(test_params, None, &mut output).await.expect("Running test should not fail");
 
     let expected_output = "[RUNNING]	log_and_exit
 [TIMESTAMP][PID][TID][<root>][log_and_exit_test,logging_test] DEBUG: Logging initialized\n\
@@ -956,11 +940,7 @@ async fn test_logging_component_min_severity() {
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logging_test.cm",
     );
     test_params.timeout = std::num::NonZeroU32::new(600);
-    let log_opts = diagnostics::LogCollectionOptions {
-        min_severity: Some(Severity::Info),
-        ..diagnostics::LogCollectionOptions::default()
-    };
-    let run_result = run_test_once(test_params, log_opts, &mut output)
+    let run_result = run_test_once(test_params, Some(Severity::Info), &mut output)
         .await
         .expect("Running test should not fail");
 
@@ -981,11 +961,7 @@ async fn test_stdout_and_log_ansi() {
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/stdout_ansi_test.cm",
     );
     test_params.timeout = std::num::NonZeroU32::new(600);
-    let log_opts = diagnostics::LogCollectionOptions {
-        min_severity: Some(Severity::Info),
-        ..diagnostics::LogCollectionOptions::default()
-    };
-    let run_result = run_test_once(test_params, log_opts, &mut output)
+    let run_result = run_test_once(test_params, Some(Severity::Info), &mut output)
         .await
         .expect("Running test should not fail");
 
@@ -1010,17 +986,13 @@ async fn test_stdout_and_log_filter_ansi() {
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/stdout_ansi_test.cm",
     );
     test_params.timeout = std::num::NonZeroU32::new(600);
-    let log_opts = diagnostics::LogCollectionOptions {
-        min_severity: Some(Severity::Info),
-        ..diagnostics::LogCollectionOptions::default()
-    };
 
     let test_result = {
         let streams = run_test_suite_lib::run_test(
             fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
                 .expect("connecting to RunBuilderProxy"),
             vec![test_params],
-            log_opts,
+            Some(Severity::Info),
             &mut ansi_filter,
             &mut reporter,
         )
@@ -1065,13 +1037,9 @@ async fn test_max_severity(max_severity: Severity) {
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/error_logging_test.cm",
     );
     test_params.timeout = std::num::NonZeroU32::new(600);
-    let log_opts = diagnostics::LogCollectionOptions {
-        max_severity: Some(max_severity),
-        ..diagnostics::LogCollectionOptions::default()
-    };
-    let run_result = run_test_once(test_params, log_opts, &mut output)
-        .await
-        .expect("Running test should not fail");
+    test_params.max_severity_logs = Some(max_severity);
+    let run_result =
+        run_test_once(test_params, None, &mut output).await.expect("Running test should not fail");
 
     let expected_output = "[RUNNING]	log_and_exit
 [TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] DEBUG: Logging initialized\n\
@@ -1124,7 +1092,7 @@ async fn test_does_not_resolve() {
     let test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/nonexistant_test.cm",
     );
-    let log_opts = diagnostics::LogCollectionOptions::default();
+    let log_opts = None;
     let run_err = run_test_once(test_params, log_opts, &mut output).await.unwrap_err();
     assert_matches!(run_err, RunTestSuiteError::Launch(LaunchError::InstanceCannotResolve));
     assert!(!run_err.is_internal_error());
@@ -1142,7 +1110,7 @@ async fn test_stdout_to_directory() {
         fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
             .expect("connecting to RunBuilderProxy"),
         vec![test_params],
-        diagnostics::LogCollectionOptions::default(),
+        None,
         false,
         Some(output_dir.path().to_path_buf()),
     )
@@ -1200,16 +1168,13 @@ async fn test_syslog_to_directory() {
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/error_logging_test.cm",
     );
     test_params.timeout = std::num::NonZeroU32::new(600);
-    let log_opts = diagnostics::LogCollectionOptions {
-        max_severity: Some(Severity::Warn),
-        ..diagnostics::LogCollectionOptions::default()
-    };
+    test_params.max_severity_logs = Some(Severity::Warn);
 
     let outcome = run_test_suite_lib::run_tests_and_get_outcome(
         fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
             .expect("connecting to RunBuilderProxy"),
         vec![test_params],
-        log_opts,
+        None,
         false,
         Some(output_dir.path().to_path_buf()),
     )
@@ -1261,7 +1226,7 @@ async fn test_custom_artifacts_to_directory() {
         fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
             .expect("connecting to RunBuilderProxy"),
         vec![test_params],
-        diagnostics::LogCollectionOptions::default(),
+        None,
         false,
         Some(output_dir.path().to_path_buf()),
     )

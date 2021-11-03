@@ -15,7 +15,7 @@ use {
 // TODO(fxbug.dev/54198, fxbug.dev/70581): deprecate this when implementing metadata selectors for
 // logs or when we support OnRegisterInterest that can be sent to *all* test components.
 #[derive(Clone, Default)]
-pub struct LogCollectionOptions {
+pub(crate) struct LogCollectionOptions {
     pub min_severity: Option<Severity>,
     pub max_severity: Option<Severity>,
 }
@@ -49,7 +49,7 @@ impl From<Vec<String>> for LogCollectionOutcome {
     }
 }
 
-pub async fn collect_logs<S>(
+pub(crate) async fn collect_logs<S>(
     mut stream: S,
     mut artifact_sender: ArtifactSender,
     options: LogCollectionOptions,

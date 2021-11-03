@@ -19,7 +19,6 @@ use {
     fidl_fuchsia_test_manager as ftest_manager,
     ftest_manager::{RunBuilderMarker, RunBuilderProxy},
     output_directory::{DirectoryError, DirectoryId, DirectoryManager},
-    run_test_suite_lib::diagnostics,
     std::fs::File,
     std::io::{stdout, Write},
     std::path::PathBuf,
@@ -113,10 +112,7 @@ async fn run_test(builder_connector: Box<RunBuilderConnector>, cmd: RunCommand) 
             (false, None, false) => None,
         };
 
-    let log_collection_options = diagnostics::LogCollectionOptions {
-        min_severity: cmd.min_severity_logs,
-        max_severity: cmd.max_severity_logs,
-    };
+    let min_log_severity = cmd.max_severity_logs;
     let filter_ansi = cmd.filter_ansi;
 
     let json_input_experiment = match ffx_config::get("test.experimental_json_input").await {
@@ -128,7 +124,7 @@ async fn run_test(builder_connector: Box<RunBuilderConnector>, cmd: RunCommand) 
     match run_test_suite_lib::run_tests_and_get_outcome(
         builder_connector.connect().await,
         test_definitions,
-        log_collection_options,
+        min_log_severity,
         filter_ansi,
         output_directory,
     )
@@ -201,6 +197,7 @@ where
                     } else {
                         Some(cmd.test_filter)
                     },
+                    max_severity_logs: cmd.max_severity_logs,
                     also_run_disabled_tests: cmd.run_disabled,
                     parallel: cmd.parallel,
                     test_args,
@@ -470,6 +467,7 @@ mod test {
                     also_run_disabled_tests: false,
                     parallel: None,
                     test_args: vec![],
+                    max_severity_logs: None,
                 }],
             ),
             (
@@ -483,7 +481,7 @@ mod test {
                     parallel: None,
                     count: Some(10),
                     min_severity_logs: None,
-                    max_severity_logs: None,
+                    max_severity_logs: Some(diagnostics_data::Severity::Warn),
                     output_directory: None,
                     disable_output_directory: false,
                 },
@@ -493,6 +491,7 @@ mod test {
                         timeout: None,
                         test_filters: None,
                         also_run_disabled_tests: false,
+                        max_severity_logs: Some(diagnostics_data::Severity::Warn),
                         parallel: None,
                         test_args: vec![],
                     };
@@ -519,6 +518,7 @@ mod test {
                     timeout: Some(NonZeroU32::new(10).unwrap()),
                     test_filters: Some(vec!["filter".to_string()]),
                     also_run_disabled_tests: true,
+                    max_severity_logs: None,
                     parallel: Some(20),
                     test_args: vec!["--".to_string(), "arg".to_string()],
                 }],
@@ -544,6 +544,7 @@ mod test {
                         timeout: None,
                         test_filters: None,
                         also_run_disabled_tests: false,
+                        max_severity_logs: None,
                         parallel: None,
                         test_args: vec![],
                     },
@@ -552,6 +553,7 @@ mod test {
                         timeout: Some(NonZeroU32::new(60).unwrap()),
                         test_filters: None,
                         also_run_disabled_tests: false,
+                        max_severity_logs: None,
                         parallel: None,
                         test_args: vec![],
                     },
@@ -580,6 +582,7 @@ mod test {
                         timeout: None,
                         test_filters: None,
                         also_run_disabled_tests: false,
+                        max_severity_logs: None,
                         parallel: None,
                         test_args: vec![],
                     },
@@ -588,6 +591,7 @@ mod test {
                         timeout: Some(NonZeroU32::new(60).unwrap()),
                         test_filters: None,
                         also_run_disabled_tests: false,
+                        max_severity_logs: None,
                         parallel: None,
                         test_args: vec![],
                     },

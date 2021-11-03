@@ -23,6 +23,7 @@ struct SuiteDefinition {
     #[serde(default)]
     also_run_disabled_tests: bool,
     parallel: Option<u16>,
+    max_severity_logs: Option<diagnostics_data::Severity>,
 }
 
 impl From<SuiteDefinition> for TestParams {
@@ -34,7 +35,16 @@ impl From<SuiteDefinition> for TestParams {
             test_filters,
             also_run_disabled_tests,
             parallel,
+            max_severity_logs,
         } = other;
-        TestParams { test_url, test_args, timeout, test_filters, also_run_disabled_tests, parallel }
+        TestParams {
+            test_url,
+            test_args,
+            timeout,
+            test_filters,
+            also_run_disabled_tests,
+            parallel,
+            max_severity_logs,
+        }
     }
 }

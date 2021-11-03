@@ -76,11 +76,6 @@ async fn main() {
         std::process::exit(1);
     }
 
-    let log_opts = run_test_suite_lib::diagnostics::LogCollectionOptions {
-        min_severity: min_severity_logs,
-        max_severity: max_severity_logs,
-    };
-
     if filter_ansi {
         println!("Note: Filtering out ANSI escape sequences.");
     }
@@ -97,11 +92,12 @@ async fn main() {
                 test_filters,
                 also_run_disabled_tests,
                 parallel,
-                test_args: test_args,
+                test_args,
+                max_severity_logs
             };
             count as usize
         ],
-        log_opts,
+        min_severity_logs,
         filter_ansi,
         None,
     )
