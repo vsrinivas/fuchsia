@@ -28,9 +28,7 @@ class NetdeviceMigration : public DeviceType,
                            public ddk::NetworkDeviceImplProtocol<NetdeviceMigration>,
                            public ddk::NetworkPortProtocol<NetdeviceMigration> {
  public:
-  // TODO(https://fxbug.dev/64310): Change value once Netstack no longer assumes all devices have a
-  // single port with id 0.
-  static constexpr uint8_t kPortId = 0;
+  static constexpr uint8_t kPortId = 13;
   static zx::status<std::unique_ptr<NetdeviceMigration>> Create(zx_device_t* dev);
   virtual ~NetdeviceMigration() = default;
 
