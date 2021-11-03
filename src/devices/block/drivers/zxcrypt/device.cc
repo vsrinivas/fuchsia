@@ -19,17 +19,20 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 
+#include "lib/inspect/cpp/inspector.h"
 #include "src/devices/block/drivers/zxcrypt/debug.h"
 #include "src/devices/block/drivers/zxcrypt/device-info.h"
+#include "src/lib/uuid/uuid.h"
 
 namespace zxcrypt {
 
-Device::Device(zx_device_t* parent, DeviceInfo&& info)
+Device::Device(zx_device_t* parent, DeviceInfo&& info, inspect::Node inspect)
     : DeviceType(parent),
       active_(false),
       stalled_(false),
       num_ops_(0),
       info_(std::move(info)),
+      inspect_(std::move(inspect)),
       hint_(0) {
   LOG_ENTRY();
 
@@ -61,6 +64,14 @@ zx_status_t Device::Init(const DdkVolume& volume) {
       zxlogf(ERROR, "failed to start worker %zu: %s", i, zx_status_get_string(rc));
       return rc;
     }
+  }
+
+  // Export the instance GUID to inspect to make debugging easier.
+  if (info_.partition_protocol.is_valid()) {
+    guid_t guid;
+    std::string guid_str = uuid::Uuid(reinterpret_cast<const uint8_t*>(&guid)).ToString();
+    info_.partition_protocol.GetGuid(GUIDTYPE_INSTANCE, &guid);
+    instance_guid_ = inspect_.CreateString("instance_guid", guid_str);
   }
 
   // Enable the device.
