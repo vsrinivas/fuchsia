@@ -280,23 +280,22 @@ constexpr ErrorDef<> ErrOnlyClientEndsInServices("service members must be client
 constexpr ErrorDef<const flat::Attribute *> ErrInvalidAttributePlacement(
     "placement of attribute '{}' disallowed here");
 constexpr ErrorDef<const flat::Attribute *> ErrDeprecatedAttribute("attribute '{}' is deprecated");
-constexpr ErrorDef<flat::AttributeArg *, flat::Attribute *>
-    ErrCannotUseNumericArgsOnCustomAttributes(
-        "argument '{}' on user-defined attribute '{}' cannot be a numeric value; use a 'bool' or "
-        "'string' instead");
+constexpr ErrorDef<flat::AttributeArg *, flat::Attribute *> ErrCanOnlyUseStringOrBool(
+    "argument '{}' on user-defined attribute '{}' cannot be a numeric "
+    "value; use a bool or string instead");
 constexpr ErrorDef ErrAttributeArgMustNotBeNamed(
     "attributes that take a single argument must not name that argument");
-constexpr ErrorDef<const flat::AttributeArg *> ErrAttributeArgNotNamed(
+constexpr ErrorDef<flat::AttributeArg *> ErrAttributeArgNotNamed(
     "attributes that take multiple arguments must name all of them explicitly, but '{}' was not");
-constexpr ErrorDef<const flat::Attribute *, std::string_view> ErrMissingRequiredAttributeArg(
+constexpr ErrorDef<flat::Attribute *, std::string> ErrMissingRequiredAttributeArg(
     "attribute '{}' is missing the required '{}' argument");
-constexpr ErrorDef<const flat::Attribute *> ErrMissingRequiredAnonymousAttributeArg(
+constexpr ErrorDef<flat::Attribute *> ErrMissingRequiredAnonymousAttributeArg(
     "attribute '{}' is missing its required argument");
-constexpr ErrorDef<const flat::Attribute *, std::string> ErrUnknownAttributeArg(
+constexpr ErrorDef<flat::Attribute *, std::string> ErrUnknownAttributeArg(
     "attribute '{}' does not support the '{}' argument");
 constexpr ErrorDef<flat::Attribute *, std::string> ErrDuplicateAttributeArg(
     "attribute '{}' declares the '{}' argument multiple times");
-constexpr ErrorDef<const flat::Attribute *> ErrAttributeDisallowsArgs(
+constexpr ErrorDef<flat::Attribute *> ErrAttributeDisallowsArgs(
     "attribute '{}' does not support arguments");
 constexpr ErrorDef<std::string, flat::Attribute *> ErrAttributeArgDisallowsConstants(
     "argument '{}' of attribute '{}' does not support constants; please use a literal instead");

@@ -174,15 +174,6 @@ const AttributeArg* Attribute::GetArg(std::string_view arg_name) const {
   return nullptr;
 }
 
-const AttributeArg* Attribute::GetStandaloneAnonymousArg() const {
-  assert(!compiled &&
-         "if calling after attribute compilation, use GetArg(...) with the resolved name instead");
-  if (args.size() == 1 && !args[0]->name.has_value()) {
-    return args[0].get();
-  }
-  return nullptr;
-}
-
 AttributeArg* Attribute::GetStandaloneAnonymousArg() {
   assert(!compiled &&
          "if calling after attribute compilation, use GetArg(...) with the resolved name instead");
@@ -1079,31 +1070,12 @@ Typespace Typespace::RootTypes(Reporter* reporter) {
   return root_typespace;
 }
 
-bool AttributeArgSchema::ValidateArg(Reporter* reporter, const Attribute* attribute,
-                                     std::optional<std::string_view> desired_name,
-                                     const AttributeArg* maybe_arg) const {
-  if (IsOptional() || maybe_arg != nullptr) {
-    return true;
-  }
-  if (desired_name.has_value()) {
-    reporter->Report(ErrMissingRequiredAttributeArg, attribute->span, attribute,
-                     desired_name.value());
-  } else {
-    reporter->Report(ErrMissingRequiredAnonymousAttributeArg, attribute->span, attribute);
-  }
-  return false;
-}
-
 AttributeSchema AttributeSchema::Deprecated() {
   return AttributeSchema({AttributePlacement::kDeprecated});
 }
 
-bool AttributeSchema::ValidatePlacement(Reporter* reporter, const Attribute* attribute,
-                                        const Attributable* attributable) const {
-  if (allowed_placements_.empty()) {
-    return true;
-  }
-
+bool AttributeSchema::Validate(Reporter* reporter, const Attribute* attribute,
+                               const Attributable* attributable) const {
   if (IsDeprecated()) {
     reporter->Report(ErrDeprecatedAttribute, attribute->span, attribute);
     return false;
@@ -1116,84 +1088,24 @@ bool AttributeSchema::ValidatePlacement(Reporter* reporter, const Attribute* att
       case AttributePlacement::kEnumDecl:
       case AttributePlacement::kStructDecl:
       case AttributePlacement::kTableDecl:
-      case AttributePlacement::kUnionDecl: {
-        const auto* decl = static_cast<const Decl*>(attributable);
-        if (decl->name.as_anonymous() == nullptr) {
+      case AttributePlacement::kUnionDecl:
+        if (static_cast<const Decl*>(attributable)->name.as_anonymous() == nullptr) {
           reporter->Report(ErrInvalidAttributePlacement, attribute->span, attribute);
           return false;
         }
-        return true;
-      }
+        break;
       default:
         reporter->Report(ErrInvalidAttributePlacement, attribute->span, attribute);
         return false;
     }
-  }
-
-  auto iter = allowed_placements_.find(attributable->placement);
-  if (iter != allowed_placements_.end())
-    return true;
-  reporter->Report(ErrInvalidAttributePlacement, attribute->span, attribute);
-  return false;
-}
-
-bool AttributeSchema::ValidateArgs(Reporter* reporter, const Attribute* attribute) const {
-  bool ok = true;
-
-  // There are two distinct cases to handle here: a single, unnamed argument (`@foo("abc")`), and
-  // zero or more named arguments (`@foo`, `@foo(bar="abc")` or `@foo(bar="abc",baz="def")`).
-  const AttributeArg* anon_arg = attribute->GetStandaloneAnonymousArg();
-  if (anon_arg != nullptr) {
-    // Error if the user supplied an anonymous argument, like `@foo("abc")` for an attribute whose
-    // schema specifies multiple arguments (and therefore requires that they always be named).
-    if (arg_schemas_.empty()) {
-      reporter->Report(ErrAttributeDisallowsArgs, attribute->span, attribute);
-      ok = false;
-    } else if (arg_schemas_.size() > 1) {
-      reporter->Report(ErrAttributeArgNotNamed, attribute->span, anon_arg);
-      ok = false;
-    } else {
-      // We've verified that we are expecting a single argument, and that we have a single anonymous
-      // argument that we can validate as an instance of it.
-      const auto& [name, schema] = *arg_schemas_.begin();
-      if (!schema.ValidateArg(reporter, attribute, std::nullopt, anon_arg)) {
-        ok = false;
-      }
-    }
   } else {
-    // If we have a single-arg official attribute its argument must always be anonymous, like
-    // `@transport("foo")`. Check if the user wrote this as a named argument, and error if they did.
-    if (arg_schemas_.size() == 1 && attribute->args.size() == 1) {
-      reporter->Report(ErrAttributeArgMustNotBeNamed, attribute->span);
-      ok = false;
-    }
-
-    // All of the arguments should be named - compare each argument schema against its (possible)
-    // value.
-    for (const auto& [name, schema] : arg_schemas_) {
-      auto desired_name = arg_schemas_.size() == 1 ? std::nullopt : std::make_optional(name);
-      const AttributeArg* arg = attribute->GetArg(name);
-      if (!schema.ValidateArg(reporter, attribute, desired_name, arg)) {
-        ok = false;
-      }
-    }
-
-    // Make sure that no arguments not specified by the schema sneak through.
-    for (const auto& arg : attribute->args) {
-      assert(arg->name.has_value() && "anonymous arguments should not be seen here");
-      auto schema = arg_schemas_.find(arg->name.value());
-      if (schema == arg_schemas_.end()) {
-        reporter->Report(ErrUnknownAttributeArg, attribute->span, attribute, arg->name.value());
-        ok = false;
-      }
+    const bool all_allowed = allowed_placements_.empty();
+    if (!all_allowed && allowed_placements_.count(attributable->placement) == 0) {
+      reporter->Report(ErrInvalidAttributePlacement, attribute->span, attribute);
+      return false;
     }
   }
-  return ok;
-}
 
-bool AttributeSchema::ValidateConstraint(Reporter* reporter, const Attribute* attribute,
-                                         const Attributable* attributable) const {
-  assert(attributable);
   auto check = reporter->Checkpoint();
   auto passed = constraint_(reporter, attribute, attributable);
   if (passed) {
@@ -1207,22 +1119,45 @@ bool AttributeSchema::ValidateConstraint(Reporter* reporter, const Attribute* at
 }
 
 bool AttributeSchema::ResolveArgs(Library* library, Attribute* attribute) const {
-  // For attributes with a single, anonymous argument like `@foo("bar")`, use the schema to assign
-  // that argument a name.
+  auto checkpoint = library->reporter_->Checkpoint();
+
+  // Name the anonymous argument (if present).
   if (auto anon_arg = attribute->GetStandaloneAnonymousArg()) {
-    assert(arg_schemas_.size() == 1 && "expected a schema with only one value");
+    if (arg_schemas_.empty()) {
+      return library->Fail(ErrAttributeDisallowsArgs, attribute->span, attribute);
+    }
+    if (arg_schemas_.size() > 1) {
+      return library->Fail(ErrAttributeArgNotNamed, attribute->span, anon_arg);
+    }
     anon_arg->name = arg_schemas_.begin()->first;
+  } else if (arg_schemas_.size() == 1 && attribute->args.size() == 1) {
+    library->Fail(ErrAttributeArgMustNotBeNamed, attribute->span);
   }
 
-  // Resolve each constant as its schema-specified type.
-  bool ok = true;
+  // Resolve each argument by name.
   for (auto& arg : attribute->args) {
-    const auto& schema = arg_schemas_.at(arg->name.value());
-    if (!schema.ResolveArg(library, attribute, arg.get())) {
-      ok = false;
+    const auto it = arg_schemas_.find(arg->name.value());
+    if (it == arg_schemas_.end()) {
+      library->Fail(ErrUnknownAttributeArg, attribute->span, attribute, arg->name.value());
+      continue;
+    }
+    const auto& [name, schema] = *it;
+    schema.ResolveArg(library, attribute, arg.get());
+  }
+
+  // Check for missing arguments.
+  for (const auto& [name, schema] : arg_schemas_) {
+    if (schema.IsOptional() || attribute->GetArg(name) != nullptr) {
+      continue;
+    }
+    if (arg_schemas_.size() == 1) {
+      library->Fail(ErrMissingRequiredAnonymousAttributeArg, attribute->span, attribute);
+    } else {
+      library->Fail(ErrMissingRequiredAttributeArg, attribute->span, attribute, name);
     }
   }
-  return ok;
+
+  return checkpoint.NoNewErrors();
 }
 
 bool AttributeArgSchema::ResolveArg(Library* library, Attribute* attribute,
@@ -1297,29 +1232,25 @@ bool AttributeSchema::ResolveArgsWithoutSchema(Library* library, Attribute* attr
     anon_arg->name = AttributeArg::kDefaultAnonymousName;
   }
 
-  // Schemaless (ie, user defined) attributes must not have numeric arguments.  Resolve all of
-  // their arguments, making sure to error on numerics (since those cannot be resolved to the
-  // appropriate fidelity).
+  // Try resolving each argument as string or bool. We don't allow numerics
+  // because it's not clear what type (int8, uint32, etc.) we should infer.
   bool ok = true;
   for (const auto& arg : attribute->args) {
     assert(arg->value->kind != Constant::Kind::kBinaryOperator &&
-           "attribute arg starting with a binary operator is a parse error");
+           "attribute arg with a binary operator is a parse error");
 
     // Try first as a string...
     if (library->TryResolveConstant(arg->value.get(), &library->kUnboundedStringType)) {
       arg->type = std::make_unique<StringType>(library->kUnboundedStringType);
-    } else {
-      // ...then as a bool if that doesn't work.
-      if (library->TryResolveConstant(arg->value.get(), &library->kBoolType)) {
-        arg->type = std::make_unique<PrimitiveType>(library->kBoolType);
-      } else {
-        // Since we cannot have an IdentifierConstant resolving to a kDocComment-kinded value,
-        // we know that it must resolve to a numeric instead.
-        library->Fail(ErrCannotUseNumericArgsOnCustomAttributes, attribute->span, arg.get(),
-                      attribute);
-        ok = false;
-      }
+      continue;
     }
+    // ...then as a bool if that doesn't work.
+    if (library->TryResolveConstant(arg->value.get(), &library->kBoolType)) {
+      arg->type = std::make_unique<PrimitiveType>(library->kBoolType);
+      continue;
+    }
+    // Otherwise, it must be an integer or float type.
+    ok = library->Fail(ErrCanOnlyUseStringOrBool, attribute->span, arg.get(), attribute);
   }
   return ok;
 }
@@ -1861,8 +1792,7 @@ bool Library::ValidateAttributes(const Attributable* attributable) {
       // This is a user-defined attribute, not an official attribute.
       continue;
     }
-    if (!(schema->ValidatePlacement(reporter_, attribute.get(), attributable) &&
-          schema->ValidateConstraint(reporter_, attribute.get(), attributable))) {
+    if (!schema->Validate(reporter_, attribute.get(), attributable)) {
       ok = false;
     }
   }
@@ -3345,9 +3275,6 @@ bool Library::CompileAttribute(Attribute* attribute) {
       return false;
     }
   } else {
-    if (!schema->ValidateArgs(reporter_, attribute)) {
-      return false;
-    }
     if (!schema->ResolveArgs(this, attribute)) {
       return false;
     }

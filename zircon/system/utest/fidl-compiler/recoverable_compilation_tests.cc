@@ -104,8 +104,8 @@ type Enum = enum {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 3);
   ASSERT_ERR(errors[0], fidl::ErrDuplicateAttributeArg);
-  ASSERT_ERR(errors[1], fidl::ErrCannotUseNumericArgsOnCustomAttributes);
-  ASSERT_ERR(errors[2], fidl::ErrCannotUseNumericArgsOnCustomAttributes);
+  ASSERT_ERR(errors[1], fidl::ErrCanOnlyUseStringOrBool);
+  ASSERT_ERR(errors[2], fidl::ErrCanOnlyUseStringOrBool);
 }
 
 }  // namespace

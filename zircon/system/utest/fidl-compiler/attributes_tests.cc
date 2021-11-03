@@ -1279,8 +1279,8 @@ type MyStruct = struct {};
 
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrCannotUseNumericArgsOnCustomAttributes,
-                                      fidl::ErrCannotUseNumericArgsOnCustomAttributes);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrCanOnlyUseStringOrBool,
+                                      fidl::ErrCanOnlyUseStringOrBool);
 }
 
 TEST(AttributesTests, GoodReferencedTypesWithoutSchema) {
@@ -1350,8 +1350,8 @@ type MyStruct = struct {};
 
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrCannotUseNumericArgsOnCustomAttributes,
-                                      fidl::ErrCannotUseNumericArgsOnCustomAttributes);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrCanOnlyUseStringOrBool,
+                                      fidl::ErrCanOnlyUseStringOrBool);
 }
 
 TEST(AttributesTests, GoodLiteralTypesWithSchema) {

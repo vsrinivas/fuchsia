@@ -93,7 +93,6 @@ struct Attribute final {
 
   // Returns the lone argument if there is exactly 1 and it is not named. For
   // example it returns non-null for `@foo("x")` but not for `@foo(bar="x")`.
-  const AttributeArg* GetStandaloneAnonymousArg() const;
   AttributeArg* GetStandaloneAnonymousArg();
 
   const std::string name;
@@ -142,7 +141,7 @@ enum class AttributePlacement {
   kUnionMember,
   // The below are "special" placements that don't correspond specifically to a
   // single placement. They exist to emulate generic validation behavior (see
-  // AttributeSchema::ValidatePlacement), and should be used as the sole
+  // AttributeSchema::Validate), and should be used as the sole
   // AttributePlacement value in a list of valid placements passed to an
   // AttributeSchema.
   kDeprecated,
@@ -958,11 +957,9 @@ class Typespace {
   Reporter* reporter_;
 };
 
-// AttributeArgSchema allows for the values for a particular argument of an attribute schema to be
-// constrained by an allowlist, and possibly marked as optional.  The sum of an AttributeSchema's
-// AttributeArgSchema's are sufficient to describe the attribute's "function signature" as
-// experienced by the user in the FIDL language, though there are other aspects of the attribute's
-// schema (placement, constraints, and so on) validated during compilation.
+// AttributeArgSchema defines a schema for a single argument in an attribute.
+// This includes its type (string, uint64, etc.), whether it is optional or
+// required, and (if applicable) a special-case rule for resolving its value.
 class AttributeArgSchema {
  public:
   enum class Optionality {
@@ -976,10 +973,6 @@ class AttributeArgSchema {
     // TODO(fxbug.dev/67858): Add kVersionLiteral (allows number or "HEAD").
   };
 
-  using Constraint =
-      fit::function<bool(Reporter* reporter, const std::unique_ptr<AttributeArg>& attribute_arg,
-                         const Attributable* attributable)>;
-
   explicit AttributeArgSchema(ConstantValue::Kind type,
                               Optionality optionality = Optionality::kRequired,
                               SpecialCase special_case = SpecialCase::kNone)
@@ -989,10 +982,7 @@ class AttributeArgSchema {
 
   bool IsOptional() const { return optionality_ == Optionality::kOptional; }
 
-  bool ValidateArg(Reporter* reporter, const Attribute* attribute,
-                   std::optional<std::string_view> desired_name,
-                   const AttributeArg* maybe_arg) const;
-  bool ResolveArg(Library* target_library, Attribute* attribute, AttributeArg* arg) const;
+  bool ResolveArg(Library* library, Attribute* attribute, AttributeArg* arg) const;
 
  private:
   const ConstantValue::Kind type_;
@@ -1000,13 +990,9 @@ class AttributeArgSchema {
   const SpecialCase special_case_ = SpecialCase::kNone;
 };
 
-// AttributeSchema defines a schema for attributes. This includes:
-// - The allowed placement of an attribute (e.g. on a method, on a struct
-//   declaration).
-// - The allowed schemas for each argument of an attribute.
-// For attributes which may be placed on declarations (e.g. protocol, struct,
-// union, table), a schema may additionally include:
-// - A constraint which must be met by the declaration.
+// AttributeSchema defines a schema for attributes. This includes the allowed
+// placement (e.g. on a method, on a struct), names and schemas for arguments,
+// and a custom constraint validator.
 class AttributeSchema {
  public:
   using Constraint = fit::function<bool(Reporter* reporter, const Attribute* attribute,
@@ -1033,38 +1019,24 @@ class AttributeSchema {
                             {std::string(AttributeArg::kDefaultAnonymousName), arg_schema}},
                         std::move(constraint)) {}
 
-  AttributeSchema(AttributeSchema&& schema) = default;
-
   static AttributeSchema Deprecated();
-
-  bool HasAttributeArgSchema(const std::string& name) const;
 
   bool IsDeprecated() const {
     return allowed_placements_.size() == 1 &&
            *allowed_placements_.cbegin() == AttributePlacement::kDeprecated;
   }
 
-  size_t Size() const { return arg_schemas_.size(); }
-
-  bool ValidatePlacement(Reporter* reporter, const Attribute* attribute,
-                         const Attributable* attributable) const;
-
-  bool ValidateArgs(Reporter* reporter, const Attribute* attribute) const;
-
-  bool ValidateConstraint(Reporter* reporter, const Attribute* attribute,
-                          const Attributable* attributable) const;
-
-  // Certain properties of an attribute may be inferred from the AttributeSchema onto the attribute
-  // it is processing.  For example, if we have a schema for an attribute `foo` that specifies a
-  // single argument named `bar`, we would write that in FIDL as `@foo("abc")`, with "abc" expected
-  // to be inferred as `bar` at compile time.  This method handles such inferences.
-  //
-  // This method should only be run after AttributeSchema::ValidateArgs() has been successfully
-  // completed.
+  // Resolves constants in the attribute's arguments. In the case of an
+  // anonymous argument like @foo("abc"), infers the argument's name too.
   bool ResolveArgs(Library* target_library, Attribute* attribute) const;
 
   // Like `ResolveArgs`, but for a user-defined attribute (has no schema).
   static bool ResolveArgsWithoutSchema(Library* target_library, Attribute* attribute);
+
+  // Validates the attribute's placement and constraints. Must call
+  // `ResolveArgs` first.
+  bool Validate(Reporter* reporter, const Attribute* attribute,
+                const Attributable* attributable) const;
 
  private:
   static bool NoOpConstraint(Reporter* reporter, const Attribute* attribute,
@@ -1214,8 +1186,6 @@ class Library : Attributable {
     return Fail(err, decl.name, args...);
   }
 
-  bool ValidateAttributes(const Attributable* attributable);
-
   // TODO(fxbug.dev/7920): Rationalize the use of names. Here, a simple name is
   // one that is not scoped, it is just text. An anonymous name is one that
   // is guaranteed to be unique within the library, and a derived name is one
@@ -1360,6 +1330,7 @@ class Library : Attributable {
   bool ValidateEnumMembersAndCalcUnknownValue(Enum* enum_decl, MemberType* out_unknown_value);
 
   void VerifyDeclAttributes(const Decl* decl);
+  bool ValidateAttributes(const Attributable* attributable);
   bool VerifyInlineSize(const Struct* decl);
 
  public:
