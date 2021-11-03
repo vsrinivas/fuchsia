@@ -34,9 +34,8 @@ import (
 import "C"
 
 const (
-	tag              = "eth"
-	bufferSize       = 2048
-	VLANTagByteCount = 4
+	tag        = "eth"
+	bufferSize = 2048
 )
 
 // Buffer is a segment of memory backed by a mapped VMO.
@@ -252,23 +251,8 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 		if err := c.handler.RxLoop(func(entry *eth.FifoEntry) {
 			// Process inbound packet.
 			var emptyLinkAddress tcpip.LinkAddress
-			buf := append(buffer.View(nil), c.iob.BufferFromEntry(*entry)...).ToVectorisedView()
-			if hdr, ok := buf.PullUp(header.EthernetMinimumSize); ok {
-				ethHdr := header.Ethernet(hdr)
-				switch ethHdr.Type() {
-				case header.ARPProtocolNumber, header.IPv4ProtocolNumber, header.IPv6ProtocolNumber:
-				default:
-					// VLAN protocols (e.g. 802.1Q) include an extended header which stores the actual
-					// upper-layer type.
-					if hdr, ok := buf.PullUp(header.EthernetMinimumSize + VLANTagByteCount); ok {
-						_ = syslog.WarnTf(tag, "unknown ethertype=%x frame %s -> %s data=%x", ethHdr.Type(), ethHdr.SourceAddress(), ethHdr.DestinationAddress(), hdr[header.EthernetMinimumSize:])
-					} else {
-						_ = syslog.WarnTf(tag, "unknown ethertype=%x frame %s -> %s", ethHdr.Type(), ethHdr.SourceAddress(), ethHdr.DestinationAddress())
-					}
-				}
-			}
 			dispatcher.DeliverNetworkPacket(emptyLinkAddress, emptyLinkAddress, 0, stack.NewPacketBuffer(stack.PacketBufferOptions{
-				Data: buf,
+				Data: append(buffer.View(nil), c.iob.BufferFromEntry(*entry)...).ToVectorisedView(),
 			}))
 
 			// This entry is going back to the driver; it can be reused.
