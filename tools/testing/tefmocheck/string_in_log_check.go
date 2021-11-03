@@ -182,8 +182,6 @@ func StringInLogsChecks() []FailureModeCheck {
 		},
 		// For fxbug.dev/43188.
 		&stringInLogCheck{String: "/dev/net/tun (qemu): Device or resource busy", Type: swarmingOutputType},
-		// For fxbug.dev/85596
-		&stringInLogCheck{String: "connect: no route to host", Type: swarmingOutputType},
 		// For fxbug.dev/85875
 		// This is printed by Swarming after a Swarming task's command completes, and
 		// suggests that a test leaked a subprocess that modified one of the task's
@@ -248,6 +246,8 @@ func StringInLogsChecks() []FailureModeCheck {
 		&stringInLogCheck{String: "DEVICE SUSPEND TIMED OUT", Type: syslogType},
 		// testrunner logs this when the serial socket goes away unexpectedly.
 		&stringInLogCheck{String: ".sock: write: broken pipe", Type: swarmingOutputType},
+		// For fxbug.dev/85596.
+		&stringInLogCheck{String: "connect: no route to host", Type: swarmingOutputType},
 		// For fxbug.dev/57463.
 		&stringInLogCheck{
 			String: fmt.Sprintf("%s: signal: segmentation fault", botanistconstants.QEMUInvocationErrorMsg),
