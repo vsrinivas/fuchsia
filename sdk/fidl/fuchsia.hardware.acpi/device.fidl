@@ -322,7 +322,7 @@ protocol Device {
         mode EvaluateObjectMode;
         parameters vector<Object>:<MAX_METHOD_ARG, optional>;
     }) -> (resource struct {
-        result EncodedObject;
+        result EncodedObject:<optional>;
     }) error Status;
 
     /// Install a Device Object Notification handler for the given notification
