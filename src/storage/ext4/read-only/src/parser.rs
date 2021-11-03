@@ -515,7 +515,7 @@ impl<T: 'static + Reader> Parser<T> {
 mod tests {
     use {
         crate::{parser::Parser, readers::VecReader, structs::EntryType},
-        crypto::{digest::Digest, sha2::Sha256},
+        sha2::{Digest, Sha256},
         maplit::hashmap,
         std::{
             collections::{HashMap, HashSet},
@@ -671,10 +671,10 @@ mod tests {
                         let data = my_self.read_data(entry.e2d_ino.into()).expect("File data");
 
                         let mut hasher = Sha256::new();
-                        hasher.input(&data);
+                        hasher.update(&data);
                         assert_eq!(
                             file_hashes.remove(&file_path).unwrap(),
-                            hasher.result_str().as_str()
+                            hex::encode(hasher.finalize())
                         );
                     }
                     EntryType::Directory => {

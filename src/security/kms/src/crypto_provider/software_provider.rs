@@ -6,8 +6,11 @@ use crate::crypto_provider::{
     mundane_provider::MundaneSoftwareProvider, AsymmetricProviderKey, CryptoProvider,
     CryptoProviderError, ProviderKey, SealingProviderKey,
 };
+use aes_gcm::{
+    aead::{AeadInPlace, NewAead},
+    Aes256Gcm, Key, Nonce, Tag,
+};
 use bincode;
-use crypto::{aead::AeadDecryptor, aead::AeadEncryptor, aes::KeySize, aes_gcm::AesGcm};
 use fidl_fuchsia_kms::{AsymmetricKeyAlgorithm, KeyProvider};
 use mundane;
 use serde::{Deserialize, Serialize};
@@ -78,30 +81,37 @@ impl ProviderKey for SoftwareSealingKey {
 
 impl SealingProviderKey for SoftwareSealingKey {
     fn encrypt(&self, data: &[u8]) -> Result<Vec<u8>, CryptoProviderError> {
-        let inner_key = &self.inner_key;
-        let mut iv = [0; AES_IV_SIZE];
+        let key = Key::from_slice(&self.inner_key.key);
+        let cipher = Aes256Gcm::new(key);
+        let mut iv = Nonce::default();
         mundane::bytes::rand(&mut iv);
+        let mut cipher_text = data.to_vec();
         // We use empty Additional Authentication Data (AAD).
-        let mut key = AesGcm::new(KeySize::KeySize256, &inner_key.key, &iv, &[]);
-        let mut cipher_text = vec![0; data.len()];
-        let mut tag = [0; AES_TAG_SIZE];
-        key.encrypt(data, &mut cipher_text, &mut tag);
+        let tag = cipher
+            .encrypt_in_place_detached(&iv, &[], &mut cipher_text)
+            .expect("buffer is large enough");
         let output =
-            bincode::serialize(&EncryptedData { iv, cipher_text, tag }).map_err(|err| {
-                CryptoProviderError::new(&format!("failed to serialize encrypted data: {:?}", err))
-            })?;
+            bincode::serialize(&EncryptedData { iv: iv.into(), cipher_text, tag: tag.into() })
+                .map_err(|err| {
+                    CryptoProviderError::new(&format!(
+                        "failed to serialize encrypted data: {:?}",
+                        err
+                    ))
+                })?;
         Ok(output)
     }
 
     fn decrypt(&self, data: &[u8]) -> Result<Vec<u8>, CryptoProviderError> {
-        let inner_key = &self.inner_key;
+        let key = Key::from_slice(&self.inner_key.key);
+        let cipher = Aes256Gcm::new(key);
         let encrypted_data: EncryptedData = bincode::deserialize(data).map_err(|err| {
             CryptoProviderError::new(&format!("failed to deserialize encrypted data: {:?}", err))
         })?;
+        let iv = Nonce::from_slice(&encrypted_data.iv);
+        let mut plain_text = encrypted_data.cipher_text.to_vec();
+        let tag = Tag::from_slice(&encrypted_data.tag);
         // We use empty Additional Authentication Data (AAD).
-        let mut key = AesGcm::new(KeySize::KeySize256, &inner_key.key, &encrypted_data.iv, &[]);
-        let mut plain_text = vec![0; encrypted_data.cipher_text.len()];
-        if !key.decrypt(&encrypted_data.cipher_text, &mut plain_text, &encrypted_data.tag) {
+        if cipher.decrypt_in_place_detached(iv, &[], &mut plain_text, tag).is_err() {
             Err(CryptoProviderError::new("failed to decrypt data"))
         } else {
             Ok(plain_text)

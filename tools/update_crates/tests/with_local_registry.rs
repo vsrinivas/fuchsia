@@ -16,9 +16,9 @@
 //! The `update_crates` tool can also be configured at `./uses_local_registry/outdated.toml`.
 
 use argh::FromArgs;
-use crypto::{digest::Digest, sha2::Sha256};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::{
     collections::{BTreeMap, BTreeSet},
     env,
@@ -263,8 +263,8 @@ impl CrateVersion {
         let crate_file_contents = std::fs::read(&crate_source).unwrap();
 
         let mut digest = Sha256::new();
-        digest.input(&crate_file_contents);
-        let cksum = digest.result_str();
+        digest.update(&crate_file_contents);
+        let cksum = hex::encode(digest.finalize());
 
         let metadata = VersionMetadata {
             name: package_name.clone(),
