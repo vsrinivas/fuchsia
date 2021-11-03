@@ -58,7 +58,7 @@ void Gt6853InputReport::ToFidlInputReport(fuchsia_input_report::wire::InputRepor
                                                                                   num_contacts);
   for (size_t i = 0; i < num_contacts; i++) {
     fuchsia_input_report::wire::ContactInputReport contact(allocator);
-    contact.set_contact_id(allocator, contacts[i].contact_id);
+    contact.set_contact_id(contacts[i].contact_id);
     contact.set_position_x(allocator, contacts[i].position_x);
     contact.set_position_y(allocator, contacts[i].position_y);
     input_contacts[i] = std::move(contact);
@@ -159,9 +159,8 @@ void Gt6853Device::GetDescriptor(GetDescriptorRequestView request,
 
   fuchsia_input_report::wire::TouchInputDescriptor touch_input_descriptor(allocator);
   touch_input_descriptor.set_contacts(allocator, std::move(touch_input_contacts));
-  touch_input_descriptor.set_max_contacts(allocator, kMaxContacts);
-  touch_input_descriptor.set_touch_type(allocator,
-                                        fuchsia_input_report::wire::TouchType::kTouchscreen);
+  touch_input_descriptor.set_max_contacts(kMaxContacts);
+  touch_input_descriptor.set_touch_type(fuchsia_input_report::wire::TouchType::kTouchscreen);
 
   fuchsia_input_report::wire::TouchDescriptor touch_descriptor(allocator);
   touch_descriptor.set_input(allocator, std::move(touch_input_descriptor));

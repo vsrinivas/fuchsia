@@ -128,7 +128,7 @@ ParseResult Touch::CreateDescriptor(fidl::AnyArena& allocator,
                                     fuchsia_input_report::wire::DeviceDescriptor& descriptor) {
   fuchsia_input_report::wire::TouchInputDescriptor input(allocator);
 
-  input.set_touch_type(allocator, touch_type_);
+  input.set_touch_type(touch_type_);
 
   fidl::VectorView<fuchsia_input_report::wire::ContactInputDescriptor> input_contacts(
       allocator, num_contacts_);
@@ -221,7 +221,7 @@ ParseResult Touch::ParseInputReport(const uint8_t* data, size_t len, fidl::AnyAr
       // we have to do an "unconverted" extraction.
       uint32_t contact_id;
       if (hid::ExtractUint(data, len, *contacts_[i].contact_id, &contact_id)) {
-        contact.set_contact_id(allocator, contact_id);
+        contact.set_contact_id(contact_id);
       }
     }
 
