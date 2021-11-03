@@ -372,7 +372,7 @@ TEST_F(MultipleDeviceTestCase, ComponentLifecycleStop) {
       coordinator_loop()->dispatcher(), &coordinator(), std::move(lifecycle_endpoints->server),
       std::move(suspend_callback)));
   auto client = fidl::BindSyncClient(std::move(lifecycle_endpoints->client));
-  auto result = client.Stop();
+  auto result = client->Stop();
   ASSERT_OK(result.status());
   event.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), nullptr);
   ASSERT_FALSE(suspend_task_pbus.is_pending());

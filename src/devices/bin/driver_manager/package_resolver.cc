@@ -32,7 +32,7 @@ zx::status<std::unique_ptr<Driver>> PackageResolver::FetchDriver(const std::stri
     return package_dir_result.take_error();
   }
 
-  auto driver_vmo_result = LoadDriver(&package_dir_result.value(), parsed_url);
+  auto driver_vmo_result = LoadDriver(package_dir_result.value(), parsed_url);
   if (driver_vmo_result.status_value()) {
     return driver_vmo_result.take_error();
   }
@@ -47,7 +47,7 @@ zx::status<std::unique_ptr<Driver>> PackageResolver::FetchDriver(const std::stri
   }
 
   fbl::unique_fd package_dir_fd;
-  status = fdio_fd_create(package_dir_result.value().client_end().TakeChannel().release(),
+  status = fdio_fd_create(package_dir_result.value().TakeClientEnd().TakeChannel().release(),
                           package_dir_fd.reset_and_get_address());
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to create package_dir_fd: %sd", zx_status_get_string(status));
@@ -68,7 +68,7 @@ zx_status_t PackageResolver::ConnectToResolverService() {
 
 zx::status<fidl::WireSyncClient<fio::Directory>> PackageResolver::Resolve(
     const component::FuchsiaPkgUrl& package_url) {
-  if (!resolver_client_.channel().is_valid()) {
+  if (!resolver_client_.is_valid()) {
     zx_status_t status = ConnectToResolverService();
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to connect to package resolver service");
@@ -83,7 +83,7 @@ zx::status<fidl::WireSyncClient<fio::Directory>> PackageResolver::Resolve(
 
   // This is synchronous for now so we can get the proof of concept working.
   // Eventually we will want to do this asynchronously.
-  auto result = resolver_client_.Resolve(
+  auto result = resolver_client_->Resolve(
       ::fidl::StringView(fidl::StringView::FromExternal(package_url.package_path())),
       std::move(selectors), std::move(endpoints->server));
   if (!result.ok() || result.Unwrap()->result.is_err()) {
@@ -115,7 +115,7 @@ zx::status<fidl::WireSyncClient<fio::Directory>> PackageResolver::Resolve(
 }
 
 zx::status<zx::vmo> PackageResolver::LoadDriver(
-    fidl::WireSyncClient<fuchsia_io::Directory>* package_dir,
+    const fidl::WireSyncClient<fuchsia_io::Directory>& package_dir,
     const component::FuchsiaPkgUrl& package_url) {
   const uint32_t kFileRights = fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable;
   const uint32_t kDriverVmoFlags = fio::wire::kVmoFlagRead | fio::wire::kVmoFlagExec;
@@ -135,7 +135,7 @@ zx::status<zx::vmo> PackageResolver::LoadDriver(
   }
 
   auto file_client = fidl::BindSyncClient(std::move(endpoints->client));
-  auto file_res = file_client.GetBuffer(kDriverVmoFlags);
+  auto file_res = file_client->GetBuffer(kDriverVmoFlags);
   if (!file_res.ok() || file_res.Unwrap()->s != ZX_OK) {
     LOGF(ERROR, "Failed to get driver vmo");
     return zx::error(ZX_ERR_INTERNAL);

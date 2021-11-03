@@ -74,13 +74,13 @@ DriverManagerParams GetDriverManagerParams(fidl::WireSyncClient<fuchsia_boot::Ar
       {"devmgr.verbose", false},          {"driver_manager.use_driver_framework_v2", false},
   };
   auto bool_resp =
-      client.GetBools(fidl::VectorView<fuchsia_boot::wire::BoolPair>::FromExternal(bool_req));
+      client->GetBools(fidl::VectorView<fuchsia_boot::wire::BoolPair>::FromExternal(bool_req));
   if (!bool_resp.ok()) {
     return {};
   }
 
   auto crash_policy = DriverHostCrashPolicy::kRestartDriverHost;
-  auto response = client.GetString("driver-manager.driver-host-crash-policy");
+  auto response = client->GetString("driver-manager.driver-host-crash-policy");
   if (response.ok() && !response->value.is_null() && !response->value.empty()) {
     std::string crash_policy_str(response->value.get());
     if (crash_policy_str == "reboot-system") {
@@ -97,7 +97,7 @@ DriverManagerParams GetDriverManagerParams(fidl::WireSyncClient<fuchsia_boot::Ar
 
   std::string root_driver = "";
   {
-    auto response = client.GetString("driver_manager.root-driver");
+    auto response = client->GetString("driver_manager.root-driver");
     if (response.ok() && !response->value.is_null() && !response->value.empty()) {
       root_driver = std::string(response->value.data(), response->value.size());
     }

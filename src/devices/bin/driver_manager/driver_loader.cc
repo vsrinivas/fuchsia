@@ -301,8 +301,8 @@ std::vector<const Driver*> DriverLoader::GetAllDriverIndexDrivers() {
   }
 
   auto driver_index = fidl::BindSyncClient(std::move(*driver_index_client));
-  auto info_result = driver_index.GetDriverInfo(fidl::VectorView<fidl::StringView>(),
-                                                std::move(endpoints->server));
+  auto info_result = driver_index->GetDriverInfo(fidl::VectorView<fidl::StringView>(),
+                                                 std::move(endpoints->server));
 
   // There are still some environments where we can't connect to DriverIndex.
   if (info_result.status() != ZX_OK) {
@@ -312,7 +312,7 @@ std::vector<const Driver*> DriverLoader::GetAllDriverIndexDrivers() {
 
   auto iterator = fidl::BindSyncClient(std::move(endpoints->client));
   for (;;) {
-    auto next_result = iterator.GetNext();
+    auto next_result = iterator->GetNext();
     if (!next_result.ok()) {
       // This is likely a pipelined error from the GetDriverInfo call above. We unfortunately
       // cannot read the epitaph without using an async call.

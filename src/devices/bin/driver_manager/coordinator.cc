@@ -399,7 +399,7 @@ zx_status_t Coordinator::NewDriverHost(const char* name, fbl::RefPtr<DriverHost>
     env.push_back(kAsanEnvironment);
   }
 
-  auto driver_host_env = boot_args()->Collect("driver.");
+  auto driver_host_env = (*boot_args())->Collect("driver.");
   if (!driver_host_env.ok()) {
     return driver_host_env.status();
   }
@@ -412,7 +412,7 @@ zx_status_t Coordinator::NewDriverHost(const char* name, fbl::RefPtr<DriverHost>
   // Make the clock backstop boot arg available to drivers that
   // deal with time (RTC).
   // TODO(fxbug.dev/60668): Remove once UTC time is removed from the kernel.
-  auto backstop_env = boot_args()->GetString("clock.backstop");
+  auto backstop_env = (*boot_args())->GetString("clock.backstop");
   if (!backstop_env.ok()) {
     return backstop_env.status();
   }
@@ -1044,13 +1044,13 @@ zx_status_t BindDriver(const fbl::RefPtr<Device>& dev, const char* libname) {
               dev->coordinator->LibnameToDriver(child.libname().data())->name.data();
           auto bootarg = fbl::StringPrintf("driver.%s.compatibility-tests-enable", drivername);
 
-          auto compat_test_enabled = dev->coordinator->boot_args()->GetBool(
-              fidl::StringView::FromExternal(bootarg), false);
+          auto compat_test_enabled = (*dev->coordinator->boot_args())
+                                         ->GetBool(fidl::StringView::FromExternal(bootarg), false);
           if (compat_test_enabled.ok() && compat_test_enabled->value &&
               (real_parent->test_state() == Device::TestStateMachine::kTestNotStarted)) {
             bootarg = fbl::StringPrintf("driver.%s.compatibility-tests-wait-time", drivername);
-            auto test_wait_time =
-                dev->coordinator->boot_args()->GetString(fidl::StringView::FromExternal(bootarg));
+            auto test_wait_time = (*dev->coordinator->boot_args())
+                                      ->GetString(fidl::StringView::FromExternal(bootarg));
             zx::duration test_time = kDefaultTestTimeout;
             if (test_wait_time.ok() && !test_wait_time->value.is_null()) {
               auto test_timeout =
