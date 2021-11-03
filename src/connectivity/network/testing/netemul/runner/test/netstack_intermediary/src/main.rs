@@ -176,20 +176,22 @@ async fn run_mock_guest(network_name: String, ep_name: String, server_name: Stri
                 .expect("create network");
             client
         };
-        let network_device = {
-            let (client, server) =
-                fidl::endpoints::create_endpoints::<fidl_fuchsia_hardware_network::DeviceMarker>()
-                    .expect("create endpoints");
+        let port = {
+            let (device, server) =
+                fidl::endpoints::create_proxy::<fidl_fuchsia_hardware_network::DeviceMarker>()
+                    .expect("create proxy");
             let () = tun_device.get_device(server).expect("get device");
+            let (client, server) =
+                fidl::endpoints::create_endpoints::<fidl_fuchsia_hardware_network::PortMarker>()
+                    .expect("create endpoints");
+            let () = device.get_port(PORT_ID, server).expect("get port");
             client
         };
         let virtualization_interface = {
             let (client, server) =
                 fidl::endpoints::create_proxy::<fidl_fuchsia_net_virtualization::InterfaceMarker>()
                     .expect("create proxy");
-            let () = virtualization_network
-                .add_device(PORT_ID, network_device, server)
-                .expect("add device");
+            let () = virtualization_network.add_port(port, server).expect("add device");
             client
         };
         virtualization_interface

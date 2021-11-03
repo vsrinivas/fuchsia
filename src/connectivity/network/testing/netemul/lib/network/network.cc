@@ -37,14 +37,15 @@ namespace impl {
 
 class Guest : public fuchsia::net::virtualization::Interface, public data::Consumer {
  public:
-  explicit Guest(uint8_t port_id,
-                 fidl::InterfaceRequest<fuchsia::net::virtualization::Interface> interface,
+  explicit Guest(fidl::InterfaceRequest<fuchsia::net::virtualization::Interface> interface,
+                 fidl::InterfaceHandle<fuchsia::hardware::network::Port> port,
                  async_dispatcher_t* dispatcher,
                  fidl::ClientEnd<fuchsia_hardware_network::Device> device)
-      : port_id_(port_id),
-        binding_(this, std::move(interface), dispatcher),
+      : binding_(this, std::move(interface), dispatcher),
         client_(std::move(device), dispatcher),
-        weak_ptr_factory_(this) {}
+        weak_ptr_factory_(this) {
+    port_.Bind(std::move(port), dispatcher);
+  }
 
   // The binding retains a pointer to |this|, so |this| must never move.
   Guest(Guest&&) = delete;
@@ -52,14 +53,21 @@ class Guest : public fuchsia::net::virtualization::Interface, public data::Consu
 
   fidl::Binding<fuchsia::net::virtualization::Interface>& binding() { return binding_; }
   network::client::NetworkDeviceClient& client() { return client_; }
+  fuchsia::hardware::network::PortPtr& port() { return port_; }
+  void SetAttachedPort(uint8_t port_id) { attached_port_id_ = port_id; }
 
   void Consume(const void* data, size_t len) override {
+    if (!attached_port_id_.has_value()) {
+      // Not yet attached to any ports.
+      return;
+    }
+    uint8_t port_id = attached_port_id_.value();
     network::client::NetworkDeviceClient::Buffer buffer = client_.AllocTx();
     if (!buffer.is_valid()) {
       FX_LOGS(ERROR) << "network device client TX buffers depleted, dropping " << len << " bytes";
       return;
     }
-    buffer.data().SetPortId(port_id_);
+    buffer.data().SetPortId(port_id);
     buffer.data().SetFrameType(fuchsia_hardware_network::wire::FrameType::kEthernet);
     const size_t n = buffer.data().Write(data, len);
     if (n != len) {
@@ -77,7 +85,8 @@ class Guest : public fuchsia::net::virtualization::Interface, public data::Consu
   fxl::WeakPtr<data::Consumer> GetPointer() { return weak_ptr_factory_.GetWeakPtr(); }
 
  private:
-  const uint8_t port_id_;
+  std::optional<uint8_t> attached_port_id_;
+  fuchsia::hardware::network::PortPtr port_;
   fidl::Binding<fuchsia::net::virtualization::Interface> binding_;
   network::client::NetworkDeviceClient client_;
   fxl::WeakPtrFactory<data::Consumer> weak_ptr_factory_;
@@ -189,13 +198,19 @@ void Network::Bind(fidl::InterfaceRequest<FNetwork> req) {
   bindings_.AddBinding(this, std::move(req), parent_->dispatcher());
 }
 
-void Network::AddDevice(uint8_t port_id,
-                        fidl::InterfaceHandle<fuchsia::hardware::network::Device> device,
-                        fidl::InterfaceRequest<fuchsia::net::virtualization::Interface> interface) {
+void Network::AddPort(fidl::InterfaceHandle<fuchsia::hardware::network::Port> port,
+                      fidl::InterfaceRequest<fuchsia::net::virtualization::Interface> interface) {
+  zx::status device_endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::Device>();
+  if (device_endpoints.is_error()) {
+    FX_LOGS(ERROR) << "failed to create device endpoints" << device_endpoints.status_string();
+    interface.Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto [device_client_end, device_server_end] = std::move(device_endpoints.value());
   const zx_handle_t key = interface.channel().get();
-  auto [it, inserted] = bus_->guests().try_emplace(
-      key, port_id, std::move(interface), parent_->dispatcher(),
-      fidl::ClientEnd<fuchsia_hardware_network::Device>(device.TakeChannel()));
+  auto [it, inserted] =
+      bus_->guests().try_emplace(key, std::move(interface), std::move(port), parent_->dispatcher(),
+                                 std::move(device_client_end));
   if (!inserted) {
     interface.Close(ZX_ERR_INTERNAL);
     return;
@@ -208,6 +223,7 @@ void Network::AddDevice(uint8_t port_id,
     // happens after other pending work that may want to access the executor.
     async::PostTask(parent_->dispatcher(), [this, key]() { bus_->guests().erase(key); });
   };
+
   {
     auto [it, inserted] = bus_->sinks().insert(guest.GetPointer());
     if (!inserted) {
@@ -235,17 +251,25 @@ void Network::AddDevice(uint8_t port_id,
       };
     }
   });
-  guest.client().OpenSession(name_, [port_id, &guest, cleanup](zx_status_t status) {
-    if (status != ZX_OK) {
-      cleanup(status);
-      return;
-    }
-    guest.client().AttachPort(port_id, {fuchsia_hardware_network::wire::FrameType::kEthernet},
-                              [cleanup](zx_status_t status) {
-                                if (status != ZX_OK) {
-                                  cleanup(status);
-                                }
-                              });
+  guest.port().set_error_handler(cleanup);
+  guest.port()->GetInfo([this, device = std::move(device_server_end), &guest,
+                         cleanup](fuchsia::hardware::network::PortInfo info) mutable {
+    uint8_t port_id = info.id();
+    guest.port()->GetDevice(
+        fidl::InterfaceRequest<fuchsia::hardware::network::Device>(device.TakeChannel()));
+    guest.client().OpenSession(name_, [port_id, &guest, cleanup](zx_status_t status) {
+      if (status != ZX_OK) {
+        cleanup(status);
+        return;
+      }
+      guest.SetAttachedPort(port_id);
+      guest.client().AttachPort(port_id, {fuchsia_hardware_network::wire::FrameType::kEthernet},
+                                [cleanup](zx_status_t status) {
+                                  if (status != ZX_OK) {
+                                    cleanup(status);
+                                  }
+                                });
+    });
   });
 }
 

@@ -45,18 +45,16 @@ protocol Control {
 /// - if the server end is closed, all interfaces on the network and the
 ///     network itself have been destroyed.
 protocol Network {
-    /// Add a device to the network.
+    /// Adds a port to the network.
     ///
-    /// + request `port_id` the netdevice port ID.
-    /// + request `device` the network device to be added.
-    /// + request `interface` provides control over the device. The protocol
+    /// + request `port` port to be added.
+    /// + request `interface` provides control over the interface. The protocol
     ///     will be terminated with the epitaph `ZX_ERR_WRONG_TYPE` if the
-    ///     device could not be added to the network due to incompatibility,
-    ///     e.g. if the network is bridged and the device does not support
-    ///     the same L2 protocol as other devices on the bridge.
-    AddDevice(resource struct {
-        port_id fuchsia.hardware.network.port_id;
-        device client_end:fuchsia.hardware.network.Device;
+    ///     port could not be added to the network due to incompatibility,
+    ///     e.g. if the network is bridged and the port does not support
+    ///     the same L2 protocol as other ports on the bridge.
+    AddPort(resource struct {
+        port client_end:fuchsia.hardware.network.Port;
         interface server_end:Interface;
     });
 };

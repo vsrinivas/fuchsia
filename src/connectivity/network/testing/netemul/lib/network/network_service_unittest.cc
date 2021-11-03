@@ -1337,21 +1337,21 @@ TEST_F(NetworkServiceTest, VirtualizationTeardown) {
         virtualization_interface_status = status;
       });
 
-  // Attempt to attach to a port that doesn't exist.
-  constexpr uint8_t kPortID = 12;
+  // Attempt to attach to a closed port.
   {
-    fidl::InterfaceHandle<fuchsia::hardware::network::Device> network_device;
-    ASSERT_OK(tun_device->GetDevice(network_device.NewRequest()));
-    ASSERT_OK(
-        net->AddDevice(kPortID, std::move(network_device), virtualization_interface.NewRequest()));
+    fidl::InterfaceHandle<fuchsia::hardware::network::Port> port_handle;
+    fidl::InterfaceRequest port_request = port_handle.NewRequest();
+    port_request.TakeChannel().reset();
+    ASSERT_OK(net->AddPort(std::move(port_handle), virtualization_interface.NewRequest()));
   }
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
       [&virtualization_interface_status]() { return virtualization_interface_status.has_value(); },
       kTestTimeout));
-  ASSERT_STATUS(virtualization_interface_status.value(), ZX_ERR_NOT_FOUND);
+  ASSERT_STATUS(virtualization_interface_status.value(), ZX_ERR_PEER_CLOSED);
   virtualization_interface_status.reset();
 
   // Now create the port and attach.
+  constexpr uint8_t kPortID = 12;
   fidl::SynchronousInterfacePtr<fuchsia::net::tun::Port> tun_port;
   ASSERT_OK(tun_device->AddPort(
       []() {
@@ -1371,10 +1371,11 @@ TEST_F(NetworkServiceTest, VirtualizationTeardown) {
       tun_port.NewRequest()));
 
   {
-    fidl::InterfaceHandle<fuchsia::hardware::network::Device> network_device;
-    tun_device->GetDevice(network_device.NewRequest());
-    ASSERT_OK(
-        net->AddDevice(kPortID, std::move(network_device), virtualization_interface.NewRequest()));
+    fidl::SynchronousInterfacePtr<fuchsia::hardware::network::Device> network_device;
+    ASSERT_OK(tun_device->GetDevice(network_device.NewRequest()));
+    fidl::InterfaceHandle<fuchsia::hardware::network::Port> port;
+    ASSERT_OK(network_device->GetPort(kPortID, port.NewRequest()));
+    ASSERT_OK(net->AddPort(std::move(port), virtualization_interface.NewRequest()));
   }
 
   // Wait for the session to attach to the port.
@@ -1405,10 +1406,11 @@ TEST_F(NetworkServiceTest, VirtualizationTeardown) {
   CreateNetwork(netname, &net);
 
   {
-    fidl::InterfaceHandle<fuchsia::hardware::network::Device> network_device;
-    tun_device->GetDevice(network_device.NewRequest());
-    ASSERT_OK(
-        net->AddDevice(kPortID, std::move(network_device), virtualization_interface.NewRequest()));
+    fidl::SynchronousInterfacePtr<fuchsia::hardware::network::Device> network_device;
+    ASSERT_OK(tun_device->GetDevice(network_device.NewRequest()));
+    fidl::InterfaceHandle<fuchsia::hardware::network::Port> port;
+    ASSERT_OK(network_device->GetPort(kPortID, port.NewRequest()));
+    ASSERT_OK(net->AddPort(std::move(port), virtualization_interface.NewRequest()));
   }
 
   // Wait for the session to attach to the port.
@@ -1507,10 +1509,11 @@ TEST_F(NetworkServiceTest, NetworkDeviceAndVirtualization) {
 
   fidl::InterfaceHandle<fuchsia::net::virtualization::Interface> virtualization_interface;
   {
-    fidl::InterfaceHandle<fuchsia::hardware::network::Device> network_device;
+    fidl::SynchronousInterfacePtr<fuchsia::hardware::network::Device> network_device;
     tun_device->GetDevice(network_device.NewRequest());
-    ASSERT_OK(
-        net->AddDevice(kPortID, std::move(network_device), virtualization_interface.NewRequest()));
+    fidl::InterfaceHandle<fuchsia::hardware::network::Port> port;
+    ASSERT_OK(network_device->GetPort(kPortID, port.NewRequest()));
+    ASSERT_OK(net->AddPort(std::move(port), virtualization_interface.NewRequest()));
   }
 
   // Wait for both data paths to become ready.

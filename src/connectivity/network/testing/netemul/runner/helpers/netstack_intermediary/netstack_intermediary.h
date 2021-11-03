@@ -45,9 +45,8 @@ class NetstackIntermediary : public fuchsia::netstack::Netstack,
       fuchsia::net::virtualization::Config config,
       fidl::InterfaceRequest<fuchsia::net::virtualization::Network> network) override;
 
-  void AddDevice(
-      uint8_t port_id, fidl::InterfaceHandle<::fuchsia::hardware::network::Device> device,
-      fidl::InterfaceRequest<fuchsia::net::virtualization::Interface> interface) override;
+  void AddPort(fidl::InterfaceHandle<::fuchsia::hardware::network::Port> port,
+               fidl::InterfaceRequest<fuchsia::net::virtualization::Interface> interface) override;
 
   void AddEthernetDevice(std::string topological_path,
                          fuchsia::netstack::InterfaceConfig interfaceConfig,

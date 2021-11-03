@@ -59,28 +59,25 @@ void NetstackIntermediary::CreateNetwork(
   network_.AddBinding(this, std::move(network), async_get_default_dispatcher());
 }
 
-void NetstackIntermediary::AddDevice(
-    uint8_t port_id, fidl::InterfaceHandle<fuchsia::hardware::network::Device> device,
+void NetstackIntermediary::AddPort(
+    fidl::InterfaceHandle<fuchsia::hardware::network::Port> port,
     fidl::InterfaceRequest<fuchsia::net::virtualization::Interface> interface) {
   fpromise::bridge<MacAddr, zx_status_t> bridge;
   std::shared_ptr completer =
       std::make_shared<decltype(bridge.completer)>(std::move(bridge.completer));
   auto cb = [completer](zx_status_t status) { completer->complete_error(status); };
 
-  fidl::InterfacePtr device_proxy = device.Bind();
-  device_proxy.set_error_handler(cb);
-  fidl::InterfacePtr<fuchsia::hardware::network::Port> port;
-  port.set_error_handler(cb);
-  device_proxy->GetPort(port_id, port.NewRequest());
+  fidl::InterfacePtr port_proxy = port.Bind();
+  port_proxy.set_error_handler(cb);
   fidl::InterfacePtr<fuchsia::hardware::network::MacAddressing> mac_addressing;
   mac_addressing.set_error_handler(cb);
-  port->GetMac(mac_addressing.NewRequest());
+  port_proxy->GetMac(mac_addressing.NewRequest());
   mac_addressing->GetUnicastAddress(
       [completer](fuchsia::net::MacAddress mac) { completer->complete_ok(mac.octets); });
   fpromise::promise<void> task =
       bridge.consumer.promise()
           .and_then(fit::bind_member(this, &NetstackIntermediary::GetNetwork))
-          .then([port_id, device = device_proxy.Unbind(), interface = std::move(interface)](
+          .then([port = std::move(port_proxy), interface = std::move(interface)](
                     fpromise::result<fidl::InterfaceHandle<fuchsia::netemul::network::Network>,
                                      zx_status_t>& network) mutable {
             if (network.is_error()) {
@@ -90,7 +87,7 @@ void NetstackIntermediary::AddDevice(
               network_proxy.set_error_handler([](zx_status_t status) {
                 /* nothing can be done, |interface| is passed off to network */
               });
-              network_proxy->AddDevice(port_id, std::move(device), std::move(interface));
+              network_proxy->AddPort(port.Unbind(), std::move(interface));
             }
           })
           // Keep |mac_addressing| alive; otherwise the callback won't fire.

@@ -33,9 +33,8 @@ class Network : public fuchsia::netemul::network::Network {
   zx_status_t AttachEndpoint(std::string name);
 
   // fidl interface implementations:
-  void AddDevice(
-      uint8_t port_id, fidl::InterfaceHandle<::fuchsia::hardware::network::Device> device,
-      fidl::InterfaceRequest<fuchsia::net::virtualization::Interface> interface) override;
+  void AddPort(fidl::InterfaceHandle<::fuchsia::hardware::network::Port> port,
+               fidl::InterfaceRequest<fuchsia::net::virtualization::Interface> interface) override;
   void GetConfig(GetConfigCallback callback) override;
   void GetName(GetNameCallback callback) override;
   void SetConfig(fuchsia::netemul::network::NetworkConfig config,
