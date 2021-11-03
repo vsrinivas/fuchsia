@@ -1,0 +1,26 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.lightsensor;
+
+/// `Sensor` will return calibrated readings from a product-configured light
+/// sensor.
+@discoverable
+protocol Sensor {
+    /// Gets the current [LightSensorData]. Returns immediately on first call;
+    /// subsequent calls return when the value changes.
+    Watch() -> (struct {
+        data LightSensorData;
+    });
+};
+
+type LightSensorData = table {
+    /// Light intensities measured by the light sensor.
+    1: rgbc Rgbc;
+
+    /// A weighted sum of the RGBC intensities.
+    2: calculated_lux float32;
+
+    /// The color temperature of the measured light.
+    3: correlated_color_temperature float32;
+};

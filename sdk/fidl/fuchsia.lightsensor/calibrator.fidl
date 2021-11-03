@@ -1,0 +1,16 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.lightsensor;
+
+/// `Calibrator` is responsible for calibrating the raw data that comes from the
+/// product-configured light sensor. It is only intended to be used internally.
+@discoverable
+protocol Calibrator {
+    /// Calibrates the supplied raw [Rgbc] and returns calibrated [Rgbc].
+    Calibrate(struct {
+        data Rgbc;
+    }) -> (struct {
+        data Rgbc;
+    });
+};

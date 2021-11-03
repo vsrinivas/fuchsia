@@ -64,6 +64,7 @@ sdk://fidl/fuchsia.io2
 sdk://fidl/fuchsia.kernel
 sdk://fidl/fuchsia.ldsvc
 sdk://fidl/fuchsia.legacymetrics
+sdk://fidl/fuchsia.lightsensor
 sdk://fidl/fuchsia.location
 sdk://fidl/fuchsia.location.namedplace
 sdk://fidl/fuchsia.location.position

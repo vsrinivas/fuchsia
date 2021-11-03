@@ -1,0 +1,14 @@
+protocol/member fuchsia.lightsensor/Calibrator.Calibrate(fuchsia.lightsensor/Rgbc data) -> (fuchsia.lightsensor/Rgbc data)
+protocol fuchsia.lightsensor/Calibrator
+table/member fuchsia.lightsensor/LightSensorData.calculated_lux float32
+table/member fuchsia.lightsensor/LightSensorData.correlated_color_temperature float32
+table/member fuchsia.lightsensor/LightSensorData.rgbc fuchsia.lightsensor/Rgbc
+table fuchsia.lightsensor/LightSensorData
+table/member fuchsia.lightsensor/Rgbc.blue_intensity float32
+table/member fuchsia.lightsensor/Rgbc.clear_intensity float32
+table/member fuchsia.lightsensor/Rgbc.green_intensity float32
+table/member fuchsia.lightsensor/Rgbc.red_intensity float32
+table fuchsia.lightsensor/Rgbc
+protocol/member fuchsia.lightsensor/Sensor.Watch() -> (fuchsia.lightsensor/LightSensorData data)
+protocol fuchsia.lightsensor/Sensor
+library fuchsia.lightsensor
