@@ -1019,7 +1019,7 @@ pub fn sys_ppoll(
     _tmo_p: UserAddress,
     _sigmask: UserAddress,
 ) -> Result<SyscallResult, Errno> {
-    std::thread::sleep(std::time::Duration::new(0, 100000000));
+    std::thread::sleep(std::time::Duration::new(0, 10000000));
     Ok(1.into())
 }
 
