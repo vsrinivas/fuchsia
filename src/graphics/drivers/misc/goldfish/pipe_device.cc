@@ -133,7 +133,7 @@ zx_status_t PipeDevice::Bind() {
     return status;
   }
 
-  auto mmio_result = acpi_fidl_.borrow().GetMmio(0);
+  auto mmio_result = acpi_fidl_.borrow()->GetMmio(0);
   if (!mmio_result.ok() || mmio_result->result.is_err()) {
     zx_status_t status = mmio_result.ok() ? mmio_result->result.err() : mmio_result.status();
     zxlogf(ERROR, "%s: GetMmio failed: %d", kTag, status);
@@ -157,7 +157,7 @@ zx_status_t PipeDevice::Bind() {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  auto irq = acpi_fidl_.borrow().MapInterrupt(0);
+  auto irq = acpi_fidl_.borrow()->MapInterrupt(0);
   if (!irq.ok() || irq->result.is_err()) {
     zxlogf(ERROR, "%s: map_interrupt failed: %d", kTag,
            !irq.ok() ? irq.status() : irq->result.err());

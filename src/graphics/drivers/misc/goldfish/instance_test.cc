@@ -65,7 +65,7 @@ class InstanceDeviceTest : public zxtest::Test {
     ASSERT_OK(endpoints.status_value());
 
     ASSERT_OK(dut_->Connect(loop_.dispatcher(), std::move(endpoints->server)));
-    fidl_client_.client_end() = std::move(endpoints->client);
+    fidl_client_.Bind(std::move(endpoints->client));
   }
 
   // |zxtest::Test|
@@ -94,7 +94,7 @@ TEST_F(InstanceDeviceTest, OpenPipe) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_goldfish::Pipe>();
   ASSERT_TRUE(endpoints.is_ok());
 
-  ASSERT_TRUE(fidl_client_.OpenPipe(std::move(endpoints->server)).ok());
+  ASSERT_TRUE(fidl_client_->OpenPipe(std::move(endpoints->server)).ok());
   loop_.RunUntilIdle();
 }
 
@@ -104,7 +104,7 @@ TEST_F(InstanceDeviceTest, OpenPipeCloseDutFirst) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_goldfish::Pipe>();
   ASSERT_TRUE(endpoints.is_ok());
 
-  ASSERT_TRUE(fidl_client_.OpenPipe(std::move(endpoints->server)).ok());
+  ASSERT_TRUE(fidl_client_->OpenPipe(std::move(endpoints->server)).ok());
   loop_.RunUntilIdle();
 
   dut_.reset();
