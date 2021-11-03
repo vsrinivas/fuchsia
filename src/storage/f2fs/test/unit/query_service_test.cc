@@ -55,7 +55,7 @@ class QueryServiceTest : public fs_test::FilesystemTest {
 
   void QueryInfo(size_t expected_nodes, size_t expected_bytes) {
     fidl::WireSyncClient<fuchsia_fs::Query> query_service = ConnectToQueryService();
-    auto call_result = query_service.GetInfo();
+    auto call_result = query_service->GetInfo();
     ASSERT_EQ(call_result.status(), ZX_OK);
     const auto& query_result = call_result.value().result;
     ASSERT_TRUE(query_result.is_response());
@@ -130,7 +130,7 @@ TEST_P(QueryServiceTest, IsNodeInFilesystemPositiveCase) {
 
   // This token is in the filesystem.
   fidl::WireSyncClient<fuchsia_fs::Query> query_service = ConnectToQueryService();
-  auto result = query_service.IsNodeInFilesystem(std::move(token));
+  auto result = query_service->IsNodeInFilesystem(std::move(token));
   ASSERT_EQ(result.status(), ZX_OK);
   ASSERT_TRUE(result->is_in_filesystem);
 }
@@ -142,7 +142,7 @@ TEST_P(QueryServiceTest, IsNodeInFilesystemNegativeCase) {
 
   // This token should not be in the filesystem.
   fidl::WireSyncClient<fuchsia_fs::Query> query_service = ConnectToQueryService();
-  auto result = query_service.IsNodeInFilesystem(std::move(token));
+  auto result = query_service->IsNodeInFilesystem(std::move(token));
   ASSERT_EQ(result.status(), ZX_OK);
   ASSERT_FALSE(result->is_in_filesystem);
 }
