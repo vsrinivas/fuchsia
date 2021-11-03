@@ -437,8 +437,6 @@ below.
 
 #### Injected service dependencies {#injected-services}
 
-##### Injecting v2 components
-
 For tests that use other [fuchsia.test facets][fuchsia-test-facets], such as
 `injected-services`, your test component manifest must declare each dependent
 component and route the provided capabilities to the test component.
@@ -496,29 +494,75 @@ To migrate this test to the Test Runner Framework, do the following:
 
 1.  You need CML files for each component that provides a capability needed in
     the test. If there is an existing CML file for the component providing the
-    injected service, you may be able to reuse it. Otherwise, create a new CML
-    file.
+    injected service, you may be able to reuse it. Otherwise **if the mock
+    component is being ported to v2**, create a new CML file.  If the **mock
+    component has not been ported to v2 yet**, wrap the component using
+    `cmx_runner`.
 
-    ```json5
-    // mock_font_resolver.cml (capability provider)
-    {
-        program: {
-          runner: "elf",
-          binary: "bin/mock_font_resolver",
-        },
-        capabilities: [
-            {
-                protocol: [ "fuchsia.pkg.FontResolver" ],
+    * {CML component}
+
+        ```json5
+        // mock_font_resolver.cml (capability provider)
+        {
+            program: {
+            runner: "elf",
+            binary: "bin/mock_font_resolver",
             },
-        ],
-        expose: [
-            {
-                protocol: "fuchsia.pkg.FontResolver",
-                from: "self",
+            use: [
+                //  mock_font_resolver's dependencies.
+                {
+                    protocol: [ "fuchsia.proto.SomeProtocol" ],
+                },
+            ],
+            capabilities: [
+                {
+                    protocol: [ "fuchsia.pkg.FontResolver" ],
+                },
+            ],
+            expose: [
+                {
+                    protocol: "fuchsia.pkg.FontResolver",
+                    from: "self",
+                },
+            ],
+        }
+        ```
+
+    * {Wrapped CMX component}
+
+        ```json5
+        // mock_font_resolver.cml (capability provider)
+        {
+            include: [
+                // Use `cmx_runner` to wrap the component.
+                "//src/sys/test_manager/cmx_runner/default.shard.cml",
+                "syslog/client.shard.cml",
+            ],
+            program: {
+                // wrap v1 component
+                legacy_url: "fuchsia-pkg://fuchsia.com/font_provider_test#meta/mock_font_resolver.cmx",
             },
-        ],
-    }
-    ```
+            use: [
+                // if `mock_font_resolver.cmx` depends on some other protocol.
+                {
+                    protocol: [ "fuchsia.proto.SomeProtocol" ],
+                },
+                // Note: Wrapped legacy component can only use protocol capabilities.
+            ],
+            // expose capability provided by mock component.
+            capabilities: [
+                {
+                    protocol: [ "fuchsia.pkg.FontResolver" ],
+                },
+            ],
+            expose: [
+                {
+                    protocol: "fuchsia.pkg.FontResolver",
+                    from: "self",
+                },
+            ],
+        }
+        ```
 
     Note: The CML files for the capability providers can be distributed in the
     same package that contained the v1 test. Follow the same instructions in
@@ -547,161 +591,67 @@ To migrate this test to the Test Runner Framework, do the following:
                 from: "#font_resolver",
             },
         ],
+        offer: [
+            {
+                // offer dependencies to mock font provider.
+                protocol: [ "fuchsia.proto.SomeProtocol" ],
+                from: "#some_other_child",
+            },
+        ],
     }
     ```
 
 1.  Package the test component and capability provider(s) together into a
     single hermetic `fuchsia_test_package()`:
 
-    ```gn
-    # Test component
-    fuchsia_component("my_component_test") {
-      testonly = true
-      manifest = "meta/my_component_test.cml"
-      deps = [ ":bin_test" ]
-    }
+    * {CML component}
 
-    # Capability provider component
-    fuchsia_component("mock_font_resolver") {
-      testonly = true
-      manifest = "meta/mock_font_resolver.cml"
-      deps = [ ":mock_font_resolver_bin" ]
-    }
+        ```gn
+        # Test component
+        fuchsia_component("my_component_test") {
+        testonly = true
+        manifest = "meta/my_component_test.cml"
+        deps = [ ":bin_test" ]
+        }
 
-    # Hermetic test package
-    fuchsia_test_package("my_component_tests") {
-      test_components = [ ":my_component_test" ]
-      deps = [ ":mock_font_resolver" ]
-    }
-    ```
+        fuchsia_component("mock_font_resolver") {
+        testonly = true
+        manifest = "meta/mock_font_resolver.cml"
+        deps = [ ":mock_font_resolver_bin" ]
+        }
+
+        # Hermetic test package
+        fuchsia_test_package("my_component_tests") {
+        test_components = [ ":my_component_test" ]
+        deps = [ ":mock_font_resolver" ]
+        }
+        ```
+
+    * {Wrapped CMX component}
+
+        ```gn
+        # Test component
+        fuchsia_component("my_component_test") {
+        testonly = true
+        manifest = "meta/my_component_test.cml"
+        deps = [ ":bin_test" ]
+        }
+
+        fuchsia_component("mock_font_resolver") {
+        testonly = true
+        manifest = "meta/mock_font_resolver.cml"
+        deps = [ {{ '<var label="legacy_component">"//path/to/legacy(v1)_component"</var>' }} ]
+        }
+
+        # Hermetic test package
+        fuchsia_test_package("my_component_tests") {
+        test_components = [ ":my_component_test" ]
+        deps = [ ":mock_font_resolver" ]
+        }
+        ```
 
 For more details on providing external capabilities to tests, see
 [Integration testing topologies][integration-test].
-
-##### Injecting v1 components
-
-If your test depends on injected services from v1 components that have not been
-migrated to Components v2 first, you need to use [Realm Builder][realm-builder]
-in your test to inject those components.
-
-In the following example, suppose there's a single injected service,
-`fuchsia.pkg.FontResolver`, that has not been migrated to a v2 component:
-
-```json
-// my_component_test.cmx
-{
-    "facets": {
-        "fuchsia.test": {
-            "injected-services": {
-                "fuchsia.pkg.FontResolver":
-                    "fuchsia-pkg://fuchsia.com/font_provider_test#meta/mock_font_resolver.cmx"
-            }
-        }
-    },
-    "program": {
-        "binary": "bin/my_component_test"
-    },
-    "sandbox": {
-        "services": [
-            "fuchsia.pkg.FontResolver"
-        ]
-    }
-}
-```
-
-To migrate this test to the Test Runner Framework, do the following:
-
-1.  Create a CML file for the test component that includes the appropriate
-    [test runner][trf-test-runners] and Realm Builder:
-
-    ```json5
-    // my_component_test.cml (test component)
-    {
-        include: [
-            // Include support for Realm Builder
-            "//src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
-            // Select the appropriate test runner shard here:
-            // rust, gtest, go, etc.
-            "//src/sys/test_runners/rust/default.shard.cml",
-        ],
-        program: {
-            binary: "bin/my_component_test",
-        },
-    }
-    ```
-
-1.  Use the [RealmBuilder API][realm-builder] inside of your test code to add
-    the capability provider(s) as children of the test component, and route the
-    capabilities from each provider:
-
-    ```rust
-    let mut builder = RealmBuilder::new().await?;
-
-    builder
-        .add_component("font_resolver",
-            ComponentSource::LegacyUrl("#meta/mock_font_resolver.cmx".to_string()))
-        .await?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.pkg.FontResolver"),
-            source: RouteEndpoint::component("font_resolver"),
-            targets: vec![RouteEndpoint::AboveRoot],
-        })?;
-    ```
-
-1.  Update your test code to connect to the protocol(s) exposed by the created
-    realm instance:
-
-    ```rust
-    let realm_instance = builder.build().create().await?;
-
-    // Connect to the exposed protocol
-    let resolver_proxy = realm_instance.root
-        .connect_to_protocol_at_exposed_dir::<FontResolverMarker>()?;
-    ```
-
-    If you are unable to modify your test to connect to the exposed protocol,
-    you may be able to update your test to accept a
-    [sys::ServiceDirectory][service-directory-cpp] (C++), or
-    [ProtocolConnector][protocol-connector] (Rust) instead.
-
-    Note: If none of the options are feasible, please reach out to
-    [component-framework-dev][cf-dev-list] for assistance.
-
-1.  Package the test component and capability provider(s) together into a
-    single hermetic `fuchsia_test_package()`:
-
-    ```gn
-    # Test component
-    fuchsia_component("my_component_test") {
-      testonly = true
-      manifest = "meta/my_component_test.cml"
-      deps = [ ":bin_test" ]
-    }
-
-    # Capability provider component
-    fuchsia_component("mock_font_resolver") {
-      testonly = true
-      manifest = "meta/mock_font_resolver.cmx"
-      deps = [ ":mock_font_resolver_bin" ]
-    }
-
-    # Hermetic test package
-    fuchsia_test_package("my_component_tests") {
-      test_components = [ ":my_component_test" ]
-      deps = [ ":mock_font_resolver" ]
-    }
-    ```
-
-There are some key differences between Components v1 and using Realm Builder for
-your tests:
-
-* The injected component will be a child of the realm constructed by
-  Realm Builder and the service won't appear in the test component's namespace.
-* Each test case will use a separate instance of injected component and the
-  topology of the components can be modified for each test case.
-
-For more details and additional strategies for providing external capabilities
-to tests, see [Integration testing topologies][integration-test].
 
 ### Verify the migrated tests {#verify-tests}
 

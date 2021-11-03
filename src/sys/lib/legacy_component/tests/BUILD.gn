@@ -1,0 +1,46 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_test.gni")
+
+rustc_test("legacy_component_lib_tests_bin") {
+  output_name = "legacy_component_lib_tests"
+  testonly = true
+  source_root = "legacy_component_lib_tests.rs"
+  deps = [
+    "//examples/fidl/legacy/services:echo-rustc",
+    "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/storage/vfs/rust:vfs",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/lib/legacy_component:legacy_component_lib",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+  ]
+
+  sources = [ "legacy_component_lib_tests.rs" ]
+}
+
+fuchsia_test_component("legacy_component_lib_tests_cmp") {
+  component_name = "legacy_component_lib_tests"
+  manifest = "meta/legacy_component_lib_tests.cml"
+  deps = [ ":legacy_component_lib_tests_bin" ]
+}
+
+fuchsia_test_package("legacy_component_lib_tests") {
+  test_components = [ ":legacy_component_lib_tests_cmp" ]
+  deps = [ "//examples/fidl/legacy/echo_server_rust:echo-server-rust-cmp" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":legacy_component_lib_tests" ]
+}

@@ -49,6 +49,12 @@
             url: "fuchsia-pkg://fuchsia.com/stress-test-runner#meta/stress-test-runner.cm",
         },
         {
+            // This is not a test runner. This is used to run wrapped legacy
+            // component under tests.
+            name: "cmx_runner",
+            url: "#meta/cmx_runner.cm",
+        },
+        {
             name: "runner_memfs",
             url: "fuchsia-pkg://fuchsia.com/test_manager#meta/memfs.cm",
         },
@@ -206,6 +212,7 @@
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
             to: [
+                "#cmx_runner",
                 "#debug_data",
                 "#elf_test_ambient_exec_runner",
                 "#elf_test_runner",
@@ -227,7 +234,10 @@
                 "fuchsia.sys.Loader",
             ],
             from: "parent",
-            to: [ "#legacy_test_runner" ],
+            to: [
+                "#cmx_runner",
+                "#legacy_test_runner",
+            ],
         },
         {
             protocol: [

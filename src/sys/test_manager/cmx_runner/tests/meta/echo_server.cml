@@ -1,0 +1,21 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_manager/cmx_runner/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        legacy_url: "fuchsia-pkg://fuchsia.com/cmx_runner_tests#meta/echo_server_rust.cmx",
+    },
+    capabilities: [
+        { protocol: "fidl.examples.echo.Echo" },
+    ],
+    expose: [
+        {
+            protocol: "fidl.examples.echo.Echo",
+            from: "self",
+        },
+    ],
+}

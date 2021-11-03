@@ -1,0 +1,13 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/echo_proxy_server"
+    },
+    "sandbox": {
+        "services": [
+            "fidl.examples.echo.Echo"
+        ]
+    }
+}

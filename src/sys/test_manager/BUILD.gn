@@ -144,6 +144,7 @@ fuchsia_package("test_manager_pkg") {
     ":memfs",
     ":test_manager_cmp",
     ":test_manager_for_test_cmp",
+    "cmx_runner",
     "debug_data",
     "//src/diagnostics/archivist:archivist-for-embedding-v2",
   ]
@@ -173,6 +174,7 @@ group("tests") {
   testonly = true
   deps = [
     ":test-manager-unittests",
+    "cmx_runner:tests",
     "debug_data:tests",
     "tests",
   ]

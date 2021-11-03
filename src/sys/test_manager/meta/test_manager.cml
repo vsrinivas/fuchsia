@@ -42,6 +42,10 @@
                     from: "#legacy_test_runner",
                 },
                 {
+                    runner: "cmx_runner",
+                    from: "#cmx_runner",
+                },
+                {
                     runner: "stress_test_runner",
                     from: "#stress_test_runner",
                 },
