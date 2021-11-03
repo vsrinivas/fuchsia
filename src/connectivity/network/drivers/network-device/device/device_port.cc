@@ -6,14 +6,16 @@
 
 #include <lib/async/cpp/task.h>
 
+#include "device_interface.h"
 #include "log.h"
 
 namespace network::internal {
 
-DevicePort::DevicePort(async_dispatcher_t* dispatcher, uint8_t id,
+DevicePort::DevicePort(DeviceInterface* parent, async_dispatcher_t* dispatcher, uint8_t id,
                        ddk::NetworkPortProtocolClient port,
                        std::unique_ptr<MacAddrDeviceInterface> mac, TeardownCallback on_teardown)
-    : dispatcher_(dispatcher),
+    : parent_(parent),
+      dispatcher_(dispatcher),
       port_id_(id),
       port_(port),
       mac_(std::move(mac)),
@@ -26,6 +28,7 @@ DevicePort::DevicePort(async_dispatcher_t* dispatcher, uint8_t id,
   ZX_ASSERT_MSG(info.tx_types_count <= netdev::wire::kMaxFrameTypes,
                 "too many port tx types: %ld > %d", info.tx_types_count,
                 netdev::wire::kMaxFrameTypes);
+  ZX_ASSERT_MSG(parent_ != nullptr, "null parent provided");
 
   port_class_ = static_cast<netdev::wire::DeviceClass>(info.port_class);
 
@@ -230,6 +233,16 @@ void DevicePort::GetStatus(GetStatusRequestView request, GetStatusCompleter::Syn
   port_.GetStatus(&status);
   WithWireStatus(
       [&completer](netdev::wire::PortStatus wire_status) { completer.Reply(wire_status); }, status);
+}
+
+void DevicePort::GetDevice(GetDeviceRequestView request, GetDeviceCompleter::Sync& _completer) {
+  if (zx_status_t status = parent_->Bind(std::move(request->device)); status != ZX_OK) {
+    LOGF_ERROR("network-device: Bind failed %s", zx_status_get_string(status));
+  }
+}
+
+void DevicePort::Clone(CloneRequestView request, CloneCompleter::Sync& _completer) {
+  Bind(std::move(request->port));
 }
 
 }  // namespace network::internal

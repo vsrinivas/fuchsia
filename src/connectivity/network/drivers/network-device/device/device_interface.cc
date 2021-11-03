@@ -273,7 +273,7 @@ void DeviceInterface::NetworkDeviceIfcAddPort(uint8_t port_id,
 
   fbl::AllocChecker checker;
   std::unique_ptr<DevicePort> port(
-      new (&checker) DevicePort(dispatcher_, port_id, port_client, std::move(mac),
+      new (&checker) DevicePort(this, dispatcher_, port_id, port_client, std::move(mac),
                                 fit::bind_member(this, &DeviceInterface::OnPortTeardownComplete)));
   if (!checker.check()) {
     LOGF_ERROR("network-device: failed to allocate port memory");
@@ -464,6 +464,12 @@ void DeviceInterface::GetPortWatcher(GetPortWatcherRequestView request,
     return;
   }
   port_watchers_.push_back(std::move(watcher));
+}
+
+void DeviceInterface::Clone(CloneRequestView request, CloneCompleter::Sync& _completer) {
+  if (zx_status_t status = Bind(std::move(request->device)); status != ZX_OK) {
+    LOGF_ERROR("network-device: Bind failed %s", zx_status_get_string(status));
+  }
 }
 
 uint16_t DeviceInterface::rx_fifo_depth() const {

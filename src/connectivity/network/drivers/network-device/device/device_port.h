@@ -18,11 +18,14 @@
 
 namespace network::internal {
 
+class DeviceInterface;
+
 class DevicePort : public fidl::WireServer<netdev::Port> {
  public:
   using TeardownCallback = fit::callback<void(DevicePort&)>;
-  DevicePort(async_dispatcher_t* dispatcher, uint8_t id, ddk::NetworkPortProtocolClient port,
-             std::unique_ptr<MacAddrDeviceInterface> mac, TeardownCallback on_teardown);
+  DevicePort(DeviceInterface* parent, async_dispatcher_t* dispatcher, uint8_t id,
+             ddk::NetworkPortProtocolClient port, std::unique_ptr<MacAddrDeviceInterface> mac,
+             TeardownCallback on_teardown);
   ~DevicePort() { port_.Removed(); }
 
   uint8_t id() const { return port_id_; }
@@ -61,6 +64,8 @@ class DevicePort : public fidl::WireServer<netdev::Port> {
   void GetStatusWatcher(GetStatusWatcherRequestView request,
                         GetStatusWatcherCompleter::Sync& _completer) override;
   void GetMac(GetMacRequestView request, GetMacCompleter::Sync& _completer) override;
+  void GetDevice(GetDeviceRequestView request, GetDeviceCompleter::Sync& _completer) override;
+  void Clone(CloneRequestView request, CloneCompleter::Sync& _completer) override;
 
  private:
   // Helper class to keep track of clients bound to DevicePort.
@@ -92,6 +97,7 @@ class DevicePort : public fidl::WireServer<netdev::Port> {
   // No-op otherwise.
   void NotifySessionCount(size_t new_count) __TA_REQUIRES(lock_);
 
+  DeviceInterface* const parent_;  // Pointer to parent device. Not owned.
   async_dispatcher_t* const dispatcher_;
   const uint8_t port_id_;
   ddk::NetworkPortProtocolClient port_;

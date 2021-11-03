@@ -135,4 +135,16 @@ protocol Port {
     GetMac(resource struct {
         mac server_end:MacAddressing;
     });
+    /// Connects to the [`Device`] this port belongs to.
+    ///
+    /// + request `device` grants access to the parent device.
+    GetDevice(resource struct {
+        device server_end:Device;
+    });
+    /// Establishes a new connection to this port.
+    ///
+    /// + request `port` the server end for the new connection.
+    Clone(resource struct {
+        port server_end:Port;
+    });
 };

@@ -146,9 +146,10 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
   // FIDL protocol implementation.
   void GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) override;
   void OpenSession(OpenSessionRequestView request, OpenSessionCompleter::Sync& completer) override;
-  void GetPort(GetPortRequestView request, GetPortCompleter::Sync& completer) override;
+  void GetPort(GetPortRequestView request, GetPortCompleter::Sync& _completer) override;
   void GetPortWatcher(GetPortWatcherRequestView request,
-                      GetPortWatcherCompleter::Sync& completer) override;
+                      GetPortWatcherCompleter::Sync& _completer) override;
+  void Clone(CloneRequestView request, CloneCompleter::Sync& _completer) override;
 
   // Serves the OpenSession FIDL handle method synchronously.
   zx::status<netdev::wire::DeviceOpenSessionResponse> OpenSession(

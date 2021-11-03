@@ -2600,5 +2600,50 @@ TEST_F(NetworkDeviceTest, DeadSessionsDontPreventTeardown) {
   ASSERT_OK(sync_completion_wait_deadline(&completer, TEST_DEADLINE.get()));
 }
 
+TEST_F(NetworkDeviceTest, CloneDevice) {
+  impl_.info().min_rx_buffer_length = 1234;
+  ASSERT_OK(CreateDevice());
+  fidl::WireSyncClient connection1 = OpenConnection();
+  zx::status endpoints = fidl::CreateEndpoints<netdev::Device>();
+  ASSERT_OK(endpoints.status_value());
+  auto [client_end, server_end] = std::move(endpoints.value());
+  ASSERT_OK(connection1.Clone(std::move(server_end)).status());
+  fidl::WireSyncClient connection2 = fidl::BindSyncClient(std::move(client_end));
+  fidl::WireResult result = connection2.GetInfo();
+  ASSERT_OK(result.status());
+  ASSERT_EQ(result.value().info.min_rx_buffer_length(), impl_.info().min_rx_buffer_length);
+}
+
+TEST_F(NetworkDeviceTest, ClonePort) {
+  ASSERT_OK(CreateDeviceWithPort13());
+  zx::status port = OpenPort(kPort13);
+  ASSERT_OK(port.status_value());
+  fidl::WireSyncClient connection1 = std::move(port.value());
+  zx::status endpoints = fidl::CreateEndpoints<netdev::Port>();
+  ASSERT_OK(endpoints.status_value());
+  auto [client_end, server_end] = std::move(endpoints.value());
+  ASSERT_OK(connection1.Clone(std::move(server_end)).status());
+  fidl::WireSyncClient connection2 = fidl::BindSyncClient(std::move(client_end));
+  fidl::WireResult result = connection2.GetInfo();
+  ASSERT_OK(result.status());
+  ASSERT_EQ(result.value().info.id(), kPort13);
+}
+
+TEST_F(NetworkDeviceTest, PortGetDevice) {
+  impl_.info().min_rx_buffer_length = 1234;
+  ASSERT_OK(CreateDeviceWithPort13());
+  zx::status port = OpenPort(kPort13);
+  ASSERT_OK(port.status_value());
+  fidl::WireSyncClient port_connection = std::move(port.value());
+  zx::status endpoints = fidl::CreateEndpoints<netdev::Device>();
+  ASSERT_OK(endpoints.status_value());
+  auto [client_end, server_end] = std::move(endpoints.value());
+  ASSERT_OK(port_connection.GetDevice(std::move(server_end)).status());
+  fidl::WireSyncClient device_connection = fidl::BindSyncClient(std::move(client_end));
+  fidl::WireResult result = device_connection.GetInfo();
+  ASSERT_OK(result.status());
+  ASSERT_EQ(result.value().info.min_rx_buffer_length(), impl_.info().min_rx_buffer_length);
+}
+
 }  // namespace testing
 }  // namespace network

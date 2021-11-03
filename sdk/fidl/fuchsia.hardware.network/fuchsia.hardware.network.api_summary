@@ -1,3 +1,4 @@
+protocol/member fuchsia.hardware.network/Device.Clone(server_end:fuchsia.hardware.network/Device device)
 protocol/member fuchsia.hardware.network/Device.GetInfo() -> (fuchsia.hardware.network/DeviceInfo info)
 protocol/member fuchsia.hardware.network/Device.GetPort(uint8 id,server_end:fuchsia.hardware.network/Port port)
 protocol/member fuchsia.hardware.network/Device.GetPortWatcher(server_end:fuchsia.hardware.network/PortWatcher watcher)
@@ -73,6 +74,8 @@ enum/member fuchsia.hardware.network/MacFilterMode.MULTICAST_FILTER 0
 enum/member fuchsia.hardware.network/MacFilterMode.MULTICAST_PROMISCUOUS 1
 enum/member fuchsia.hardware.network/MacFilterMode.PROMISCUOUS 2
 strict enum fuchsia.hardware.network/MacFilterMode uint32
+protocol/member fuchsia.hardware.network/Port.Clone(server_end:fuchsia.hardware.network/Port port)
+protocol/member fuchsia.hardware.network/Port.GetDevice(server_end:fuchsia.hardware.network/Device device)
 protocol/member fuchsia.hardware.network/Port.GetInfo() -> (fuchsia.hardware.network/PortInfo info)
 protocol/member fuchsia.hardware.network/Port.GetMac(server_end:fuchsia.hardware.network/MacAddressing mac)
 protocol/member fuchsia.hardware.network/Port.GetStatus() -> (fuchsia.hardware.network/PortStatus status)

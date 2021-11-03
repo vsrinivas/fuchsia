@@ -135,6 +135,12 @@ protocol Device {
     GetPortWatcher(resource struct {
         watcher server_end:PortWatcher;
     });
+    /// Establishes a new connection to this device.
+    ///
+    /// + request `device` the server end for the new connection.
+    Clone(resource struct {
+        device server_end:Device;
+    });
 };
 
 /// Provides iteration over and updates for ports attached to a device.
