@@ -16,10 +16,10 @@
 #include <cstdlib>
 #include <map>
 #include <random>
-#include <regex>
 #include <vector>
 
 #include <gtest/gtest.h>
+#include <re2/re2.h>
 
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/lib/files/path.h"
@@ -1260,10 +1260,10 @@ std::vector<std::string> servers;
 std::map<std::string, bool> summary;
 
 std::string ExtractShortName(const std::string& pkg_url) {
-  std::regex r("(meta/fidl_compatibility_test_server_)(.*)(\\.cmx)");
-  std::smatch match;
-  std::regex_search(pkg_url, match, r);
-  return match.str(2);
+  std::string short_name;
+  re2::RE2::PartialMatch(pkg_url, "(meta/fidl_compatibility_test_server_)(.*)(\\.cmx)", nullptr,
+                         nullptr, &short_name);
+  return short_name;
 }
 
 using TestBody = std::function<void(async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,

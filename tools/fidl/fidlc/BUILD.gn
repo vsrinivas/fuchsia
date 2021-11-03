@@ -60,6 +60,7 @@ zx_library("fidl") {
   ]
   public_deps = [
     "//sdk/lib/fit:headers",
+    "//third_party/re2",
     "//zircon/system/ulib/cmdline:headers",
     "//zircon/third_party/ulib/safemath",
   ]

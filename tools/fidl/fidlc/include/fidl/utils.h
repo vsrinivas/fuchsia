@@ -11,10 +11,11 @@
 
 #include <clocale>
 #include <cstring>
-#include <regex>
 #include <set>
 #include <string>
 #include <string_view>
+
+#include <re2/re2.h>
 
 namespace fidl::utils {
 

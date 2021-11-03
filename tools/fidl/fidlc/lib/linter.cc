@@ -200,8 +200,7 @@ void Linter::NewFile(const raw::File& element) {
 
   file_is_in_platform_source_tree_ = false;
 
-  auto in_fuchsia_dir_regex = std::regex(R"REGEX(\bfuchsia/)REGEX");
-  if (std::regex_search(filename_, in_fuchsia_dir_regex)) {
+  if (RE2::PartialMatch(filename_, R"REGEX(\bfuchsia/)REGEX")) {
     file_is_in_platform_source_tree_ = true;
   } else {
     file_is_in_platform_source_tree_ = std::ifstream(filename_.c_str()).good();
@@ -238,7 +237,7 @@ void Linter::NewFile(const raw::File& element) {
   // Library name is not checked for CStyle because it must be simply "zx".
   if (lint_style_ == LintStyle::IpcStyle) {
     for (const auto& component : element.library_decl->path->components) {
-      if (std::regex_match(to_string(component), kDisallowedLibraryComponentRegex)) {
+      if (RE2::FullMatch(to_string(component), kDisallowedLibraryComponentRegex)) {
         AddFinding(component, kLibraryNameComponentCheck);
         break;
       }
@@ -489,9 +488,9 @@ Linter::Linter()
           return;
         }
         if (linter.copyright_date_.empty()) {
-          std::smatch match_year;
-          if (std::regex_search(line_comment, match_year, linter.kYearRegex)) {
-            linter.copyright_date_ = match_year[1];
+          std::string year;
+          if (RE2::PartialMatch(line_comment, linter.kYearRegex, &year)) {
+            linter.copyright_date_ = year;
           }
         }
         auto line_to_match = linter.kCopyrightLines[line_number - 1];
@@ -607,12 +606,12 @@ Linter::Linter()
       //
       (const raw::ProtocolDeclaration& element) { linter.ExitContext(); });
 
+  auto copyright_regex = std::make_unique<re2::RE2>(R"REGEX((?i)^[ \t]*Copyright \d\d\d\d\W)REGEX");
+  auto todo_regex = std::make_unique<re2::RE2>(R"REGEX(^[ \t]*TODO\W)REGEX");
   callbacks_.OnAttribute(
       [&linter = *this, check = copyright_should_not_be_doc_comment,
-       copyright_regex =
-           std::regex(R"REGEX(^[ \t]*Copyright \d\d\d\d\W)REGEX", std::regex_constants::icase),
-       todo_check = todo_should_not_be_doc_comment,
-       todo_regex = std::regex(R"REGEX(^[ \t]*TODO\W)REGEX")]
+       copyright_regex = std::move(copyright_regex), todo_check = todo_should_not_be_doc_comment,
+       todo_regex = std::move(todo_regex)]
       //
       (const raw::Attribute& element) {
         if (utils::to_lower_snake_case(element.name) == linter.kDocAttribute) {
@@ -620,10 +619,10 @@ Linter::Linter()
             return;
           auto constant = static_cast<raw::LiteralConstant*>(element.args.front()->value.get());
           auto doc_comment = static_cast<raw::DocCommentLiteral*>(constant->literal.get());
-          if (std::regex_search(doc_comment->MakeContents(), copyright_regex)) {
+          if (re2::RE2::PartialMatch(doc_comment->MakeContents(), *copyright_regex)) {
             linter.AddFinding(element, check, {}, "change '///' to '//'", "//");
           }
-          if (std::regex_search(doc_comment->MakeContents(), todo_regex)) {
+          if (re2::RE2::PartialMatch(doc_comment->MakeContents(), *todo_regex)) {
             linter.AddFinding(element, todo_check, {}, "change '///' to '//'", "//");
           }
         }

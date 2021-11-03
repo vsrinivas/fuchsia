@@ -5,7 +5,8 @@
 #include <fidl/utils.h>
 
 #include <cassert>
-#include <regex>
+
+#include <re2/re2.h>
 
 namespace fidl::utils {
 
@@ -13,29 +14,29 @@ const std::string kLibraryComponentPattern = "[a-z][a-z0-9]*";
 const std::string kIdentifierComponentPattern = "[A-Za-z]([A-Za-z0-9_]*[A-Za-z0-9])?";
 
 bool IsValidLibraryComponent(const std::string& component) {
-  static const std::regex kPattern("^" + kLibraryComponentPattern + "$");
-  return std::regex_match(component, kPattern);
+  static const re2::RE2 kPattern("^" + kLibraryComponentPattern + "$");
+  return re2::RE2::FullMatch(component, kPattern);
 }
 
 bool IsValidIdentifierComponent(const std::string& component) {
-  static const std::regex kPattern("^" + kIdentifierComponentPattern + "$");
-  return std::regex_match(component, kPattern);
+  static const re2::RE2 kPattern("^" + kIdentifierComponentPattern + "$");
+  return re2::RE2::FullMatch(component, kPattern);
 }
 
 bool IsValidFullyQualifiedMethodIdentifier(const std::string& fq_identifier) {
-  static const std::regex kPattern("^" +
-                                   // library identifier
-                                   kLibraryComponentPattern + "(\\." + kLibraryComponentPattern +
-                                   ")*" +
-                                   // slash
-                                   "/" +
-                                   // protocol
-                                   kIdentifierComponentPattern +
-                                   // dot
-                                   "\\." +
-                                   // method
-                                   kIdentifierComponentPattern + "$");
-  return std::regex_match(fq_identifier, kPattern);
+  static const re2::RE2 kPattern("^" +
+                                 // library identifier
+                                 kLibraryComponentPattern + "(\\." + kLibraryComponentPattern +
+                                 ")*" +
+                                 // slash
+                                 "/" +
+                                 // protocol
+                                 kIdentifierComponentPattern +
+                                 // dot
+                                 "\\." +
+                                 // method
+                                 kIdentifierComponentPattern + "$");
+  return re2::RE2::FullMatch(fq_identifier, kPattern);
 }
 
 bool ends_with_underscore(const std::string& str) {
@@ -62,8 +63,8 @@ std::string strip_doc_comment_slashes(std::string_view str) {
   // In English, this regex says: "any number of tabs/spaces, followed by three
   // slashes is group 1, the remainder of the line is group 2.  Keep only group
   // 2."
-  std::string no_slashes =
-      regex_replace(std::string(str), std::regex{"([\\t ]*\\/\\/\\/)(.*)"}, "$2");
+  std::string no_slashes(str);
+  re2::RE2::GlobalReplace(&no_slashes, "([\\t ]*\\/\\/\\/)(.*)", "\\2");
   if (no_slashes[no_slashes.size() - 1] != '\n') {
     return no_slashes + '\n';
   }
@@ -79,32 +80,32 @@ std::string strip_konstant_k(const std::string& str) {
 }
 
 bool is_lower_no_separator_case(const std::string& str) {
-  static std::regex re{"^[a-z][a-z0-9]*$"};
-  return str.size() > 0 && std::regex_match(str, re);
+  static re2::RE2 re{"^[a-z][a-z0-9]*$"};
+  return str.size() > 0 && re2::RE2::FullMatch(str, re);
 }
 
 bool is_lower_snake_case(const std::string& str) {
-  static std::regex re{"^[a-z][a-z0-9_]*$"};
-  return str.size() > 0 && std::regex_match(str, re);
+  static re2::RE2 re{"^[a-z][a-z0-9_]*$"};
+  return str.size() > 0 && re2::RE2::FullMatch(str, re);
 }
 
 bool is_upper_snake_case(const std::string& str) {
-  static std::regex re{"^[A-Z][A-Z0-9_]*$"};
-  return str.size() > 0 && std::regex_match(str, re);
+  static re2::RE2 re{"^[A-Z][A-Z0-9_]*$"};
+  return str.size() > 0 && re2::RE2::FullMatch(str, re);
 }
 
 bool is_lower_camel_case(const std::string& str) {
   if (has_konstant_k(str)) {
     return false;
   }
-  static std::regex re{"^[a-z][a-z0-9]*(([A-Z]{1,2}[a-z0-9]+)|(_[0-9]+))*([A-Z][a-z0-9]*)?$"};
-  return str.size() > 0 && std::regex_match(str, re);
+  static re2::RE2 re{"^[a-z][a-z0-9]*(([A-Z]{1,2}[a-z0-9]+)|(_[0-9]+))*([A-Z][a-z0-9]*)?$"};
+  return str.size() > 0 && re2::RE2::FullMatch(str, re);
 }
 
 bool is_upper_camel_case(const std::string& str) {
-  static std::regex re{
+  static re2::RE2 re{
       "^(([A-Z]{1,2}[a-z0-9]+)(([A-Z]{1,2}[a-z0-9]+)|(_[0-9]+))*)?([A-Z][a-z0-9]*)?$"};
-  return str.size() > 0 && std::regex_match(str, re);
+  return str.size() > 0 && re2::RE2::FullMatch(str, re);
 }
 
 bool is_konstant_case(const std::string& astr) {

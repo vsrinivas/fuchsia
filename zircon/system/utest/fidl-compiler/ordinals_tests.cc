@@ -7,9 +7,9 @@
 
 #define BORINGSSL_NO_CXX
 #include <cinttypes>
-#include <regex>
 
 #include <openssl/sha.h>
+#include <re2/re2.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -46,10 +46,9 @@ protocol Special {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMethodOrdinal);
 
   // The FTP requires the error message as follows
-  const std::regex pattern(R"REGEX(@selector\("(ClashOne|ClashTwo)_"\))REGEX");
-  std::smatch sm;
+  const re2::RE2 pattern(R"REGEX(@selector\("(ClashOne|ClashTwo)_"\))REGEX");
   std::string error_msg(library.errors()[0]->msg);
-  ASSERT_TRUE(std::regex_search(error_msg, sm, pattern), "%s",
+  ASSERT_TRUE(re2::RE2::PartialMatch(error_msg, pattern), "%s",
               ("Selector pattern not found in error: " + library.errors()[0]->msg).c_str());
 }
 
@@ -70,10 +69,9 @@ protocol Special {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMethodOrdinal);
 
   // The FTP requires the error message as follows
-  const std::regex pattern(R"REGEX(@selector\("(ClashOne|ClashTwo)_"\))REGEX");
-  std::smatch sm;
+  const re2::RE2 pattern(R"REGEX(@selector\("(ClashOne|ClashTwo)_"\))REGEX");
   std::string error_msg(library.errors()[0]->msg);
-  ASSERT_TRUE(std::regex_search(error_msg, sm, pattern), "%s",
+  ASSERT_TRUE(re2::RE2::PartialMatch(error_msg, pattern), "%s",
               ("Selector pattern not found in error: " + library.errors()[0]->msg).c_str());
 }
 

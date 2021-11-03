@@ -12,10 +12,11 @@
 #include <fidl/utils.h>
 
 #include <array>
-#include <regex>
 #include <set>
 #include <stack>
 #include <utility>
+
+#include <re2/re2.h>
 
 namespace fidl::linter {
 
@@ -139,9 +140,8 @@ class Linter {
   const std::vector<std::string> kCopyrightLines;
   const std::string kCopyrightBlock;
   const std::string kDocAttribute;
-  const std::regex kYearRegex;
-  const std::regex kDocCommentRegex;
-  const std::regex kDisallowedLibraryComponentRegex;
+  const re2::RE2 kYearRegex;
+  const re2::RE2 kDisallowedLibraryComponentRegex;
 
   const std::set<std::string> kPermittedLibraryPrefixes;
   const std::set<std::string> kStopWords;

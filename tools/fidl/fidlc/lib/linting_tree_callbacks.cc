@@ -6,7 +6,8 @@
 #include <fidl/utils.h>
 
 #include <fstream>
-#include <regex>
+
+#include <re2/re2.h>
 
 namespace fidl::linter {
 
@@ -22,9 +23,10 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
 
    public:
     explicit CallbackTreeVisitor(const LintingTreeCallbacks& callbacks)
-        : callbacks_(callbacks), end_of_last_gap_(nullptr), end_of_last_token_(nullptr) {
-      InitGapTextRegex();
-    }
+        : callbacks_(callbacks),
+          kGapTextRegex_(GapTextRegex()),
+          end_of_last_gap_(nullptr),
+          end_of_last_token_(nullptr) {}
 
     void OnFile(std::unique_ptr<raw::File> const& element) override {
       for (auto& callback : callbacks_.file_callbacks_) {
@@ -168,7 +170,7 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
     // --- end new syntax ---
 
    private:
-    void InitGapTextRegex() {
+    std::string GapTextRegex() {
       std::string subre[gap_subre_count];
 
       // Regex OR expression should try line comment first:
@@ -178,10 +180,8 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
       // white space spanning multiple lines will be split on the
       // newline, with the newline included.
 
-      auto regex_str = "^(" + subre[kLineComment] + ")|(" + subre[kIgnoredToken] + ")|(" +
-                       subre[kWhiteSpace] + ")";
-
-      kGapTextRegex_ = std::regex(regex_str);
+      return "^(" + subre[kLineComment] + ")|(" + subre[kIgnoredToken] + ")|(" +
+             subre[kWhiteSpace] + ")";
     }
 
     // "GapText" includes everything between source elements (or between a
@@ -201,20 +201,20 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
                    std::string_view line_so_far_view) {
       auto remaining_gap_view = gap_view;
       auto remaining_line_so_far_view = line_so_far_view;
-      std::string content = std::string(remaining_gap_view);
-      std::smatch match;
-      while (!content.empty()) {
+      re2::StringPiece match[gap_subre_count];
+      while (!remaining_gap_view.empty()) {
         // The regex_search loop should consume the entire gap
-        std::regex_search(content, match, kGapTextRegex_);
-        assert(!match.empty() &&
-               "gap content did not match any of the expected regular expressions");
+        [[maybe_unused]] bool found =
+            kGapTextRegex_.Match(remaining_gap_view, 0, remaining_gap_view.size(),
+                                 re2::RE2::UNANCHORED, match, gap_subre_count);
+        assert(found && "gap content did not match any of the expected regular expressions");
 
         auto view = remaining_gap_view;
         view.remove_suffix(remaining_gap_view.size() - match[0].length());
         auto line_prefix_view = remaining_line_so_far_view;
         line_prefix_view.remove_suffix(remaining_gap_view.size());
 
-        if (match[kLineComment].matched) {
+        if (!match[kLineComment].empty()) {
           // TODO(fxbug.dev/7979): Remove FirstLineIsRegularComment() check
           // when no longer needed.
           // If there are multiple contiguous lines starting with the
@@ -226,7 +226,7 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
           // first line. So when LintingTreeCallbacks processes the |gap_text|,
           // the first line is not part of the gap, but the remaining lines
           // show up as gap text comments.
-          if (utils::FirstLineIsRegularComment(match[0].str())) {  // not Doc Comment
+          if (utils::FirstLineIsRegularComment(view)) {  // not Doc Comment
             auto line_comment = SourceSpan(view, source_file);
             for (auto& callback : callbacks_.line_comment_callbacks_) {
               // starts with the comment marker (2 slashes) and ends with
@@ -234,13 +234,13 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
               callback(line_comment, line_prefix_view);
             }
           }
-        } else if (match[kIgnoredToken].matched) {
+        } else if (!match[kIgnoredToken].empty()) {
           auto ignored_token = SourceSpan(view, source_file);
           for (auto& callback : callbacks_.ignored_token_callbacks_) {
             // includes (but may not be limited to): "as" : ; , { } [ ] ( )
             callback(ignored_token);
           }
-        } else if (match[kWhiteSpace].matched) {
+        } else if (!match[kWhiteSpace].empty()) {
           auto white_space = SourceSpan(view, source_file);
           for (auto& callback : callbacks_.white_space_up_to_newline_callbacks_) {
             // All whitespace only (space, tab, newline)
@@ -254,7 +254,6 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
               (view.data() - remaining_line_so_far_view.data()) + view.size());
         }
         remaining_gap_view.remove_prefix(match[0].length());
-        content = std::string(remaining_gap_view);
       }
     }
 
@@ -308,7 +307,7 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
     }
 
     const LintingTreeCallbacks& callbacks_;
-    std::regex kGapTextRegex_;
+    re2::RE2 kGapTextRegex_;
     const char* end_of_last_gap_;
     const char* end_of_last_token_;
   };

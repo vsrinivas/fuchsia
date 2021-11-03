@@ -6,10 +6,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <regex>
-
 #include <fidl/diagnostics.h>
 #include <fidl/flat_ast.h>
+
 #include <zxtest/zxtest.h>
 
 #include "error_test.h"
