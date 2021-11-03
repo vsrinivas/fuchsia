@@ -17,12 +17,12 @@ placed on Scenic, both from a product standpoint and a performance standpoint.
 Features like group opacity are impossible, because how to handle shadows for a
 group of translucent content is unclear.
 
-From the product standpoint, our current customers are fundamentally 2D
+From the product standpoint, our current customers are 2D
 products. There is no concept of depth and draw order. They are simply in the
 order that different batches of draw geometry are submitted in. Because there is
 no depth, transparency effects are also dictated by draw order. The "2D" clients
 (via Flutter, Chromium, and session framework) have to do extra work to resolve
-the impedance mismatch between Scenic's 3D scene representation and the 2D
+the mismatch between Scenic's 3D scene representation and the 2D
 representation experienced by the user.
 
 From the performance standpoint, modern Video Display Controller (VDC) hardware
