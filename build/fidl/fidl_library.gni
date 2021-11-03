@@ -305,6 +305,19 @@ template("fidl_library") {
 
       outputs = [ summary_file_json ]
 
+      metadata = {
+        # Refer to //sdk/cts/plasa/plasa_artifacts.gni for the explanation of
+        # this metadata item.
+        plasa = [
+          {
+            kind = "api_fidl"
+            file = summary_file_json
+            path = rebase_path(summary_file_json, root_build_dir)
+            dest = "fidl/" + rebase_path(summary_file_json, target_gen_dir)
+          },
+        ]
+      }
+
       deps = [ ":$compilation_target_name" ]
     }
 
