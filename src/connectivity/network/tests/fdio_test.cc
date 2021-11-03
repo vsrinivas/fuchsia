@@ -73,8 +73,9 @@ TEST(NetStreamTest, RaceClose) {
   fbl::unique_fd fd;
   ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
 
-  fidl::WireSyncClient<fuchsia_posix_socket::StreamSocket> client;
-  ASSERT_OK(fdio_fd_transfer(fd.release(), client.mutable_channel()->reset_and_get_address()));
+  fidl::ClientEnd<fuchsia_posix_socket::StreamSocket> client_end;
+  ASSERT_OK(fdio_fd_transfer(fd.release(), client_end.channel().reset_and_get_address()));
+  fidl::WireSyncClient client = fidl::BindSyncClient(std::move(client_end));
 
   sync_completion_t completion;
 
@@ -83,7 +84,7 @@ TEST(NetStreamTest, RaceClose) {
     worker = std::thread([&client, &completion]() {
       ASSERT_OK(sync_completion_wait(&completion, ZX_TIME_INFINITE));
 
-      auto response = client.Close();
+      auto response = client->Close();
       if (zx_status_t status = response.status(); status != ZX_OK) {
         EXPECT_STATUS(status, ZX_ERR_PEER_CLOSED);
       } else {
@@ -101,10 +102,11 @@ TEST(SocketTest, ZXSocketSignalNotPermitted) {
   fbl::unique_fd fd;
   ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
 
-  fidl::WireSyncClient<fuchsia_posix_socket::StreamSocket> client;
-  ASSERT_OK(fdio_fd_transfer(fd.release(), client.mutable_channel()->reset_and_get_address()));
+  fidl::ClientEnd<fuchsia_posix_socket::StreamSocket> client_end;
+  ASSERT_OK(fdio_fd_transfer(fd.release(), client_end.channel().reset_and_get_address()));
+  fidl::WireSyncClient client = fidl::BindSyncClient(std::move(client_end));
 
-  auto response = client.Describe();
+  auto response = client->Describe();
   ASSERT_OK(response.status());
   const fuchsia_io::wire::NodeInfo& node_info = response.Unwrap()->info;
   ASSERT_EQ(node_info.which(), fuchsia_io::wire::NodeInfo::Tag::kStreamSocket);
@@ -125,11 +127,12 @@ static const zx::eventpair& datagram_handle(const fuchsia_io::wire::NodeInfo& no
   return node_info.datagram_socket().event;
 }
 
-template <int Type, typename ClientType, fuchsia_io::wire::NodeInfo::Tag Tag, typename HandleType,
+template <int Type, typename FidlProtocol, fuchsia_io::wire::NodeInfo::Tag Tag, typename HandleType,
           const HandleType& (*GetHandle)(const fuchsia_io::wire::NodeInfo& node_info),
           zx_signals_t PeerClosed>
 struct SocketImpl {
-  using Client = ClientType;
+  using Client = fidl::WireSyncClient<FidlProtocol>;
+  using ClientEnd = fidl::ClientEnd<FidlProtocol>;
   using Handle = HandleType;
 
   static int type() { return Type; };
@@ -168,15 +171,13 @@ class SocketTest : public testing::Test {
   struct sockaddr_in addr_;
 };
 
-using StreamSocketImpl =
-    SocketImpl<SOCK_STREAM, fidl::WireSyncClient<fuchsia_posix_socket::StreamSocket>,
-               fuchsia_io::wire::NodeInfo::Tag::kStreamSocket, zx::socket, stream_handle,
-               ZX_SOCKET_PEER_CLOSED>;
+using StreamSocketImpl = SocketImpl<SOCK_STREAM, fuchsia_posix_socket::StreamSocket,
+                                    fuchsia_io::wire::NodeInfo::Tag::kStreamSocket, zx::socket,
+                                    stream_handle, ZX_SOCKET_PEER_CLOSED>;
 
-using DatagramSocketImpl =
-    SocketImpl<SOCK_DGRAM, fidl::WireSyncClient<fuchsia_posix_socket::DatagramSocket>,
-               fuchsia_io::wire::NodeInfo::Tag::kDatagramSocket, zx::eventpair, datagram_handle,
-               ZX_EVENTPAIR_PEER_CLOSED>;
+using DatagramSocketImpl = SocketImpl<SOCK_DGRAM, fuchsia_posix_socket::DatagramSocket,
+                                      fuchsia_io::wire::NodeInfo::Tag::kDatagramSocket,
+                                      zx::eventpair, datagram_handle, ZX_EVENTPAIR_PEER_CLOSED>;
 
 class SocketTestNames {
  public:
@@ -198,10 +199,12 @@ TYPED_TEST(SocketTest, CloseResourcesOnClose) {
   ASSERT_OK(fdio_fd_clone(this->fd().get(), clone.reset_and_get_address()));
 
   typename TypeParam::Client client;
-  ASSERT_OK(fdio_fd_transfer(this->mutable_fd().release(),
-                             client.mutable_channel()->reset_and_get_address()));
+  typename TypeParam::ClientEnd client_end;
+  ASSERT_OK(
+      fdio_fd_transfer(this->mutable_fd().release(), client_end.channel().reset_and_get_address()));
+  client.Bind(std::move(client_end));
 
-  auto describe_response = client.Describe();
+  auto describe_response = client->Describe();
   ASSERT_OK(describe_response.status());
   const fuchsia_io::wire::NodeInfo& node_info = describe_response.Unwrap()->info;
   ASSERT_EQ(node_info.which(), TypeParam::tag());
@@ -212,7 +215,7 @@ TYPED_TEST(SocketTest, CloseResourcesOnClose) {
                                                       zx::deadline_after(zx::msec(100)), &observed),
                 ZX_ERR_TIMED_OUT);
 
-  auto close_response = client.Close();
+  auto close_response = client->Close();
   EXPECT_OK(close_response.status());
   EXPECT_OK(close_response.Unwrap()->s);
 
@@ -228,7 +231,7 @@ TYPED_TEST(SocketTest, CloseResourcesOnClose) {
   // handle closure is not inherently asynchronous, but happens to be as an implementation detail.
   zx::time deadline = zx::deadline_after(zx::sec(5));
   ASSERT_OK(TypeParam::handle(node_info).wait_one(TypeParam::peer_closed(), deadline, &observed));
-  ASSERT_OK(client.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, deadline, &observed));
+  ASSERT_OK(client.client_end().channel().wait_one(ZX_CHANNEL_PEER_CLOSED, deadline, &observed));
 }
 
 TEST(SocketTest, AcceptedSocketIsConnected) {
@@ -265,10 +268,11 @@ TEST(SocketTest, AcceptedSocketIsConnected) {
   ASSERT_TRUE(connfd = fbl::unique_fd(accept(serverfd.get(), nullptr, nullptr))) << strerror(errno);
   ASSERT_EQ(close(serverfd.release()), 0) << strerror(errno);
 
-  fidl::WireSyncClient<fuchsia_posix_socket::StreamSocket> client;
-  ASSERT_OK(fdio_fd_transfer(connfd.release(), client.mutable_channel()->reset_and_get_address()));
+  fidl::ClientEnd<fuchsia_posix_socket::StreamSocket> client_end;
+  ASSERT_OK(fdio_fd_transfer(connfd.release(), client_end.channel().reset_and_get_address()));
+  fidl::WireSyncClient client = fidl::BindSyncClient(std::move(client_end));
 
-  auto response = client.Describe();
+  auto response = client->Describe();
   ASSERT_OK(response.status());
   const fuchsia_io::wire::NodeInfo& node_info = response.Unwrap()->info;
   ASSERT_EQ(node_info.which(), fuchsia_io::wire::NodeInfo::Tag::kStreamSocket);
@@ -349,11 +353,13 @@ TEST(SocketTest, CloseClonedSocketAfterTcpRst) {
   // endpoint's reference count, then close all copies of the socket.
   std::array<fidl::WireSyncClient<fuchsia_posix_socket::StreamSocket>, 10> clients;
   for (auto& client : clients) {
-    ASSERT_OK(fdio_fd_clone(connfd.get(), client.mutable_channel()->reset_and_get_address()));
+    fidl::ClientEnd<fuchsia_posix_socket::StreamSocket> client_end;
+    ASSERT_OK(fdio_fd_clone(connfd.get(), client_end.channel().reset_and_get_address()));
+    client.Bind(std::move(client_end));
   }
 
   for (auto& client : clients) {
-    auto response = client.Close();
+    auto response = client->Close();
     EXPECT_OK(response.status());
     EXPECT_OK(response.Unwrap()->s);
   }
