@@ -38,8 +38,7 @@ TEST(TypeInfoTest, Basic) {
   EXPECT_STR_NE(fbl::TypeInfo<decltype(lambda)>::Name(), "");
 
   char array[10];
-  // TODO(fxbug.dev/87272) Temporary disable this test until clang roll.
-  // EXPECT_STR_EQ(fbl::TypeInfo<decltype(array)>::Name(), "char [10]");
+  EXPECT_STR_EQ(fbl::TypeInfo<decltype(array)>::Name(), "char[10]");
 
   char(&array_reference)[10] = array;
   EXPECT_STR_EQ(fbl::TypeInfo<decltype(array_reference)>::Name(), "char (&)[10]");
