@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-using goodix.platform;
+using fuchsia.goodix.platform;
 
 fuchsia.BIND_COMPOSITE == 1;
-fuchsia.BIND_PLATFORM_DEV_VID == goodix.platform.BIND_PLATFORM_DEV_VID.GOODIX;
-fuchsia.BIND_PLATFORM_DEV_DID == goodix.platform.BIND_PLATFORM_DEV_DID.GT6853;
+fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.goodix.platform.BIND_PLATFORM_DEV_VID.GOODIX;
+fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.goodix.platform.BIND_PLATFORM_DEV_DID.GT6853;

@@ -2,16 +2,16 @@
     {
         "device": {
             "fuchsia.BIND_COMPOSITE": "1",
-            "fuchsia.BIND_PLATFORM_DEV_DID": "goodix.platform.BIND_PLATFORM_DEV_DID.GT6853",
-            "fuchsia.BIND_PLATFORM_DEV_VID": "goodix.platform.BIND_PLATFORM_DEV_VID.GOODIX"
+            "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.goodix.platform.BIND_PLATFORM_DEV_DID.GT6853",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.goodix.platform.BIND_PLATFORM_DEV_VID.GOODIX"
         },
         "expected": "match",
         "name": "gt6853"
     },
     {
         "device": {
-            "fuchsia.BIND_PLATFORM_DEV_DID": "goodix.platform.BIND_PLATFORM_DEV_DID.GT6853",
-            "fuchsia.BIND_PLATFORM_DEV_VID": "goodix.platform.BIND_PLATFORM_DEV_VID.GOODIX",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.goodix.platform.BIND_PLATFORM_DEV_DID.GT6853",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.goodix.platform.BIND_PLATFORM_DEV_VID.GOODIX",
             "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.DEVICE"
         },
         "expected": "abort",

@@ -17,5 +17,7 @@ extend uint fuchsia.BIND_PLATFORM_DEV_PID {
 };
 
 extend uint fuchsia.BIND_PLATFORM_DEV_DID {
-  DISPLAY = 0x01,
+  VIM_DISPLAY = 0x01,
+  VIM3_MCU = 0x05,
+  VIM2_THERMAL = 0x06,
 };

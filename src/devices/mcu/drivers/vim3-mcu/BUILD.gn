@@ -13,7 +13,7 @@ driver_bind_rules("vim3_mcu_bind") {
   tests = "bind_tests.json"
   deps = [
     "//src/devices/bind/fuchsia.i2c",
-    "//src/devices/bind/khadas.platform",
+    "//src/devices/bind/fuchsia.khadas.platform",
   ]
 }
 

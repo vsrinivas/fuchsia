@@ -8,9 +8,9 @@
     },
     {
         "device": {
-            "fuchsia.BIND_PLATFORM_DEV_DID": "khadas.platform.BIND_PLATFORM_DEV_DID.VIM3_MCU",
-            "fuchsia.BIND_PLATFORM_DEV_PID": "khadas.platform.BIND_PLATFORM_DEV_PID.VIM3",
-            "fuchsia.BIND_PLATFORM_DEV_VID": "khadas.platform.BIND_PLATFORM_DEV_VID.KHADAS",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.khadas.platform.BIND_PLATFORM_DEV_DID.VIM3_MCU",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.khadas.platform.BIND_PLATFORM_DEV_PID.VIM3",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.khadas.platform.BIND_PLATFORM_DEV_VID.KHADAS",
             "fuchsia.BIND_PROTOCOL": "fuchsia.i2c.BIND_PROTOCOL.DEVICE"
         },
         "expected": "match",
