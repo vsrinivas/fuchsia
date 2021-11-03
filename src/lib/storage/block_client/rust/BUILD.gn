@@ -50,8 +50,5 @@ fuchsia_test_package("block-client-tests") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":block-client-tests",
-    "//src/storage/testing:storage_driver_test_realm",
-  ]
+  deps = [ ":block-client-tests" ]
 }

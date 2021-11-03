@@ -50,10 +50,7 @@ declare_args() {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":fshost-tests",
-    "//src/storage/testing:storage_driver_test_realm",
-  ]
+  deps = [ ":fshost-tests" ]
 }
 
 source_set("headers") {
@@ -493,10 +490,7 @@ fuchsia_component("fshost-integration-test") {
   deps = [
     ":fshost_integration_test",
     ":integration_test_config",
-    "//src/devices/block/drivers/core",
-    "//src/devices/block/drivers/gpt",
-    "//src/devices/block/drivers/ramdisk",
-    "//src/devices/bus/drivers/platform",
+    "//src/storage/testing:storage_driver_test_realm",
   ]
 }
 
@@ -520,7 +514,6 @@ fuchsia_test_package("fshost-tests") {
     "//src/storage/bin/blobfs",
     "//src/storage/bin/minfs",
     "//src/storage/blobfs:decompressor-sandbox",
-    "//src/storage/testing:storage_driver_test_realm",
   ]
 }
 

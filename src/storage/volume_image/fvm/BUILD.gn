@@ -242,8 +242,5 @@ fuchsia_test_package("fvm-sparse-image-reader-tests") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":fvm-sparse-image-reader-tests",
-    "//src/storage/testing:storage_driver_test_realm",
-  ]
+  deps = [ ":fvm-sparse-image-reader-tests" ]
 }

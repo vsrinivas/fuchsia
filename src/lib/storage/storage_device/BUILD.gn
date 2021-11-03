@@ -52,8 +52,5 @@ fuchsia_test_package("storage-device-tests") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":storage-device-tests",
-    "//src/storage/testing:storage_driver_test_realm",
-  ]
+  deps = [ ":storage-device-tests" ]
 }

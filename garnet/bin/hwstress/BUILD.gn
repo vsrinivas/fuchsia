@@ -158,7 +158,10 @@ fuchsia_test_component("hwstress_v1_test_pkg") {
 
 fuchsia_test_component("hwstress_v2_test_pkg") {
   manifest = "meta/hwstress_v2_test.cml"
-  deps = [ ":hwstress_v2_test" ]
+  deps = [
+    ":hwstress_v2_test",
+    "//src/storage/testing:storage_driver_test_realm",
+  ]
 }
 
 fuchsia_test_package("hwstress_test_pkg") {
@@ -176,10 +179,7 @@ fuchsia_test_package("hwstress_test_pkg") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":hwstress_test_pkg",
-    "//src/storage/testing:storage_driver_test_realm",
-  ]
+  public_deps = [ ":hwstress_test_pkg" ]
 }
 
 group("hwstress") {

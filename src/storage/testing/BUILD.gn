@@ -29,17 +29,10 @@ group("driver_test_realm") {
   ]
 }
 
-fuchsia_component("component") {
-  component_name = "storage_driver_test_realm"
-  manifest = "meta/storage_driver_test_realm.cml"
-}
-
-fuchsia_package("storage_driver_test_realm") {
+fuchsia_component("storage_driver_test_realm") {
   testonly = true
-  deps = [
-    ":component",
-    ":driver_test_realm",
-  ]
+  manifest = "meta/storage_driver_test_realm.cml"
+  deps = [ ":driver_test_realm" ]
 }
 
 source_set("storage_driver_test_support") {

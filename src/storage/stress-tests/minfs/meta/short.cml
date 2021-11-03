@@ -24,13 +24,13 @@
     },
     children: [
         {
-            name: "isolated-devmgr",
-            url: "fuchsia-pkg://fuchsia.com/storage_driver_test_realm#meta/storage_driver_test_realm.cm",
+            name: "driver-test-realm",
+            url: "#meta/storage_driver_test_realm.cm",
             startup: "eager",
         },
     ],
     use: [
-        // Used to access the /dev directory of isolated-devmgr
+        // Used to access the /dev directory of driver-test-realm
         {
             directory: "hub",
             from: "framework",
@@ -48,14 +48,14 @@
                 "fuchsia.process.Launcher",
             ],
             from: "parent",
-            to: [ "#isolated-devmgr" ],
+            to: [ "#driver-test-realm" ],
         },
     ],
     expose: [
-        // Makes it easier to access the /dev directory of isolated-devmgr from the hub
+        // Makes it easier to access the /dev directory of driver-test-realm from the hub
         {
             directory: "dev",
-            from: "#isolated-devmgr",
+            from: "#driver-test-realm",
         },
     ],
 }

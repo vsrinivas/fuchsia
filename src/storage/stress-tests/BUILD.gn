@@ -75,6 +75,7 @@ fuchsia_test_package("storage-stress-tests") {
   deps = [
     "//src/storage/bin/blobfs",
     "//src/storage/bin/minfs",
+    "//src/storage/testing:storage_driver_test_realm",
   ]
   test_specs = {
     log_settings = {
@@ -102,6 +103,7 @@ fuchsia_test_package("storage-stress-tests-short") {
   deps = [
     "//src/storage/bin/blobfs",
     "//src/storage/bin/minfs",
+    "//src/storage/testing:storage_driver_test_realm",
   ]
   test_specs = {
     log_settings = {
@@ -122,7 +124,6 @@ group("stress-tests") {
   deps = [
     ":storage-stress-tests",
     ":storage-stress-tests-short",
-    "//src/storage/testing:storage_driver_test_realm",
     "//src/sys/component_manager:component-manager",
   ]
 }

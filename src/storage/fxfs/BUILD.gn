@@ -219,6 +219,5 @@ group("tests") {
     ":fxfs-slow-fs-tests",
     ":fxfs-tests",
     ":lib_test($host_toolchain)",
-    "//src/storage/testing:storage_driver_test_realm",
   ]
 }

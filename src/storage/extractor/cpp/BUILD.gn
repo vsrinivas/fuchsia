@@ -56,13 +56,17 @@ fuchsia_component("disk-extractor-unit-test-component") {
     ":disk_extractor_unit_test",
     "//src/storage/bin/minfs",
     "//src/storage/minfs/test:minfs_fs_test_config",
+    "//src/storage/testing:storage_driver_test_realm",
   ]
 }
 
 fuchsia_component("fvm-extractor-unit-test") {
   testonly = true
   manifest = "meta/fvm_extractor_tests.cml"
-  deps = [ ":fvm_extractor_unit_test" ]
+  deps = [
+    ":fvm_extractor_unit_test",
+    "//src/storage/testing:storage_driver_test_realm",
+  ]
 }
 
 fuchsia_test_package("disk-extractor-unit-test") {

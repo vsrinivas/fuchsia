@@ -12,8 +12,8 @@
     },
     children: [
         {
-            name: "isolated-devmgr",
-            url: "fuchsia-pkg://fuchsia.com/storage_driver_test_realm#meta/storage_driver_test_realm.cm",
+            name: "driver-test-realm",
+            url: "#meta/storage_driver_test_realm.cm",
             startup: "eager",
         },
         {
@@ -48,7 +48,7 @@
         },
         {
             directory: "dev",
-            from: "#isolated-devmgr",
+            from: "#driver-test-realm",
             rights: [ "r*" ],
             path: "/dev",
         },
@@ -63,14 +63,14 @@
             from: "parent",
             to: [
                 "#decompressor",
+                "#driver-test-realm",
                 "#fake-crash-reporter",
                 "#fshost-collection",
-                "#isolated-devmgr",
             ],
         },
         {
             directory: "dev",
-            from: "#isolated-devmgr",
+            from: "#driver-test-realm",
             to: "#fshost-collection",
         },
         {

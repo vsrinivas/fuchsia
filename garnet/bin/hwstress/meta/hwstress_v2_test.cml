@@ -13,7 +13,7 @@
     children: [
         {
             name: "isolated-devmgr",
-            url: "fuchsia-pkg://fuchsia.com/storage_driver_test_realm#meta/storage_driver_test_realm.cm",
+            url: "#meta/storage_driver_test_realm.cm",
             startup: "eager",
         },
     ],

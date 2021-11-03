@@ -94,6 +94,7 @@ fuchsia_component("factoryfs-integration-test") {
     ":integration_test",
     "//src/storage/bin/factoryfs",
     "//src/storage/factory/export_ffs:bin",
+    "//src/storage/testing:storage_driver_test_realm",
   ]
 }
 
