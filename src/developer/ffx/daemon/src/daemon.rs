@@ -22,7 +22,8 @@ use {
     fidl::endpoints::{ClientEnd, DiscoverableProtocolMarker, ProtocolMarker, RequestStream},
     fidl_fuchsia_developer_bridge::{
         self as bridge, DaemonError, DaemonMarker, DaemonRequest, DaemonRequestStream,
-        DiagnosticsStreamError, RepositoryRegistryMarker, StreamMode, TargetCollectionMarker,
+        DiagnosticsStreamError, LogSession, RepositoryRegistryMarker, SessionSpec, StreamMode,
+        TargetCollectionMarker,
     },
     fidl_fuchsia_developer_remotecontrol::{
         ArchiveIteratorEntry, ArchiveIteratorError, ArchiveIteratorRequest, DiagnosticsData,
@@ -608,80 +609,125 @@ impl Daemon {
                 iterator,
                 responder,
             } => {
-                if parameters.stream_mode.is_none() {
+                let stream_mode = if let Some(mode) = parameters.stream_mode {
+                    mode
+                } else {
                     log::info!("StreamDiagnostics failed: stream mode is required");
                     return responder
                         .send(&mut Err(DiagnosticsStreamError::MissingParameter))
                         .context("sending missing parameter response");
-                }
-
-                let mut err = None;
-                let target = match self
-                    .get_target(target_str.clone())
-                    .on_timeout(Duration::from_secs(3), || Err(DaemonError::Timeout))
-                    .await
-                {
-                    Ok(t) => Some(t),
-                    Err(DaemonError::Timeout) => {
-                        err.replace(DiagnosticsStreamError::NoMatchingTargets);
-                        None
-                    }
-                    Err(e) => {
-                        log::warn!(
-                            "got error fetching target with filter '{}': {:?}",
-                            target_str.as_ref().unwrap_or(&String::default()),
-                            e
-                        );
-                        err.replace(DiagnosticsStreamError::TargetMatchFailed);
-                        None
-                    }
                 };
 
-                let stream = match target {
-                    Some(t) => t.stream_info(),
-                    None => {
-                        if target.is_none()
-                            && target_str.is_some()
-                            && (parameters.stream_mode.unwrap() == StreamMode::SnapshotAll)
-                        {
-                            let mut streams =
-                                DiagnosticsStreamer::list_sessions(target_str.clone()).await?;
-                            if streams.is_empty() {
+                let (target_identifier, stream) = if stream_mode == StreamMode::SnapshotAll {
+                    let target_str = if let Some(target_str) = target_str {
+                        target_str
+                    } else {
+                        log::warn!(
+                            "StreamDiagnostics failed: Missing target string in SnapshotAll mode."
+                        );
+                        return responder
+                            .send(&mut Err(DiagnosticsStreamError::MissingParameter))
+                            .context("sending missing parameter response");
+                    };
+
+                    let session = if let Some(session) = parameters.session {
+                        session
+                    } else {
+                        log::warn!(
+                            "StreamDiagnostics failed: Missing session in SnapshotAll mode."
+                        );
+                        return responder
+                            .send(&mut Err(DiagnosticsStreamError::MissingParameter))
+                            .context("sending missing parameter response");
+                    };
+
+                    let mut streams =
+                        DiagnosticsStreamer::list_sessions(Some(target_str.clone())).await?;
+                    if streams.is_empty() {
+                        responder
+                            .send(&mut Err(DiagnosticsStreamError::NoMatchingOfflineTargets))?;
+                        return Ok(());
+                    }
+
+                    let streams = streams
+                        .remove(&target_str)
+                        .context("getting stream by target name. should be infallible")?;
+
+                    if streams.is_empty() {
+                        responder
+                            .send(&mut Err(DiagnosticsStreamError::NoMatchingOfflineTargets))?;
+                        return Ok(());
+                    }
+
+                    match session {
+                        SessionSpec::TimestampNanos(ts) => {
+                            let mut result_stream = None;
+
+                            for stream in streams.into_iter() {
+                                let session_ts = stream.session_timestamp_nanos().await;
+                                if Some(ts) == session_ts.map(|t| t as u64) {
+                                    result_stream = Some(Arc::new(stream));
+                                    break;
+                                }
+                            }
+
+                            if let Some(stream) = result_stream {
+                                (target_str, stream)
+                            } else {
                                 responder.send(&mut Err(
-                                    DiagnosticsStreamError::NoMatchingOfflineTargets,
+                                    DiagnosticsStreamError::NoMatchingOfflineSessions,
                                 ))?;
                                 return Ok(());
                             }
-
-                            let streams = streams
-                                .remove(&target_str.unwrap())
-                                .context("getting stream by target name. should be infallible")?;
-
-                            if streams.is_empty() {
-                                responder.send(&mut Err(
-                                    DiagnosticsStreamError::NoMatchingOfflineTargets,
-                                ))?;
-                                return Ok(());
-                            }
+                        }
+                        SessionSpec::Relative(rel) => {
                             let mut sorted = vec![];
                             for stream in streams.into_iter() {
-                                sorted.push((stream.session_timestamp_nanos().await, stream));
+                                let ts = stream.session_timestamp_nanos().await;
+                                if let Some(ts) = ts {
+                                    sorted.push((ts, stream));
+                                }
                             }
 
-                            let mut sorted = sorted
-                                .into_iter()
-                                .filter_map(
-                                    |t| if let Some(ts) = t.0 { Some((ts, t.1)) } else { None },
-                                )
-                                .collect::<Vec<_>>();
+                            sorted.sort_by_key(|t| -t.0);
 
-                            sorted.sort_by_key(|t| t.0);
-                            Arc::new(sorted.into_iter().map(|t| t.1).last().unwrap())
-                        } else {
-                            responder.send(&mut Err(err.unwrap()))?;
-                            return Ok(());
+                            if let Some((_, stream)) = sorted.into_iter().nth(rel as usize) {
+                                (target_str, Arc::new(stream))
+                            } else {
+                                return responder
+                                    .send(&mut Err(
+                                        DiagnosticsStreamError::NoMatchingOfflineSessions,
+                                    ))
+                                    .context("sending no offline sessions response");
+                            }
                         }
+                        _ => bail!("unexpected SessionSpec value"),
                     }
+                } else {
+                    let target = match self
+                        .get_target(target_str.clone())
+                        .on_timeout(Duration::from_secs(3), || Err(DaemonError::Timeout))
+                        .await
+                    {
+                        Ok(t) => t,
+                        Err(DaemonError::Timeout) => {
+                            return responder
+                                .send(&mut Err(DiagnosticsStreamError::NoMatchingTargets))
+                                .context("sending no matching targets response");
+                        }
+                        Err(e) => {
+                            log::warn!(
+                                "got error fetching target with filter '{}': {:#?}",
+                                target_str.as_ref().unwrap_or(&String::default()),
+                                e
+                            );
+                            return responder
+                                .send(&mut Err(DiagnosticsStreamError::TargetMatchFailed))
+                                .context("sending TargetMatchFailed response");
+                        }
+                    };
+
+                    (target.nodename_str(), target.stream_info())
                 };
 
                 match stream
@@ -775,7 +821,14 @@ impl Daemon {
 
                     Ok::<(), anyhow::Error>(())
                 });
-                responder.send(&mut Ok(()))?;
+                responder.send(&mut Ok(LogSession {
+                    target_identifier: Some(target_identifier),
+                    session_timestamp_nanos: stream
+                        .session_timestamp_nanos()
+                        .await
+                        .map(|t| t as u64),
+                    ..LogSession::EMPTY
+                }))?;
                 task.await?;
             }
         }

@@ -88,7 +88,9 @@ protocol Daemon {
         target string:<fuchsia.device.DEVICE_NAME_MAX, optional>;
         parameters DaemonDiagnosticsStreamParameters;
         iterator server_end:rc.ArchiveIterator;
-    }) -> (struct {}) error DiagnosticsStreamError;
+    }) -> (struct {
+        session LogSession;
+    }) error DiagnosticsStreamError;
 
     /// Connects to a deamon service.
     ///

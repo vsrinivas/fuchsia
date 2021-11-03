@@ -6,21 +6,18 @@ use {
     anyhow::{anyhow, Context, Error, Result},
     async_trait::async_trait,
     blocking::Unblock,
-    chrono::{DateTime, Local, TimeZone, Utc},
+    chrono::{Local, TimeZone, Utc},
     diagnostics_data::{LogsData, Severity, Timestamp},
-    errors::ffx_bail,
+    errors::{ffx_bail, ffx_error},
     ffx_config::{get, get_sdk},
     ffx_core::ffx_plugin,
-    ffx_log_args::{LogCommand, LogSubCommand, TimeFormat, WatchCommand},
+    ffx_log_args::{DumpCommand, LogCommand, LogSubCommand, TimeFormat, WatchCommand},
     ffx_log_data::{EventType, LogData, LogEntry},
     ffx_log_frontend::{exec_log_cmd, LogCommandParameters, LogFormatter},
-    fidl_fuchsia_developer_bridge::{DaemonProxy, StreamMode},
+    fidl_fuchsia_developer_bridge::{DaemonProxy, StreamMode, TimeBound},
     fidl_fuchsia_developer_remotecontrol::{ArchiveIteratorError, RemoteControlProxy},
     fuchsia_async::futures::{AsyncWrite, AsyncWriteExt},
-    std::{
-        iter::Iterator,
-        time::{Duration, SystemTime},
-    },
+    std::{iter::Iterator, time::SystemTime},
     termion::{color, style},
 };
 
@@ -29,6 +26,18 @@ const COLOR_CONFIG_NAME: &str = "log_cmd.color";
 const SYMBOLIZE_ENABLED_CONFIG: &str = "proactive_log.symbolize.enabled";
 const NANOS_IN_SECOND: i64 = 1_000_000_000;
 const TIMESTAMP_FORMAT: &str = "%Y-%m-%d %H:%M:%S.%3f";
+const STREAM_TARGET_CHOICE_HELP: &str = "Unable to connect to any target. There must be a target connected to stream logs.
+
+If you expect a target to be connected, verify that it is listed in `ffx target list`. If it remains disconnected, try running `ffx doctor`.
+
+Alternatively, you can dump historical logs from a target using `ffx [--target <nodename or IP>] log dump`.";
+
+const DUMP_TARGET_CHOICE_HELP: &str = "There is no target connected and there is no default target set.
+
+To view logs for an offline target, provide a target explicitly using `ffx --target <nodename or IP> log dump`, \
+or set a default with `ffx target default set <nodename or IP>` and try again.
+
+Alternatively, if you expected a target to be connected, verify that it is listed in `ffx target list`. If it remains disconnected, try running `ffx doctor`.";
 
 fn get_timestamp() -> Result<Timestamp> {
     Ok(Timestamp::from(
@@ -313,19 +322,6 @@ fn should_color(config_color: bool, cmd_no_color: bool) -> bool {
     return config_color;
 }
 
-fn calculate_monotonic_time(
-    boot_ts: Duration,
-    dt: Option<DateTime<Local>>,
-    monotonic: Option<Duration>,
-) -> Option<Duration> {
-    match (dt, monotonic) {
-        (Some(dt), None) => Duration::from_secs(dt.timestamp() as u64).checked_sub(boot_ts),
-        (None, Some(m)) => Some(m),
-        (None, None) => None,
-        _ => panic!("can only accept either a datetime bound or a monotonic one."),
-    }
-}
-
 async fn print_symbolizer_warning(err: Error) {
     eprintln!(
         "Warning: attempting to get the symbolizer binary failed.
@@ -343,7 +339,7 @@ This likely means that your logs will not be symbolized."
 #[ffx_plugin("proactive_log.enabled")]
 pub async fn log(
     daemon_proxy: DaemonProxy,
-    rcs_proxy: RemoteControlProxy,
+    rcs_proxy: Option<RemoteControlProxy>,
     cmd: LogCommand,
 ) -> Result<()> {
     log_impl(daemon_proxy, rcs_proxy, cmd, &mut std::io::stdout()).await
@@ -351,7 +347,7 @@ pub async fn log(
 
 pub async fn log_impl<W: std::io::Write>(
     daemon_proxy: DaemonProxy,
-    rcs_proxy: RemoteControlProxy,
+    rcs_proxy: Option<RemoteControlProxy>,
     cmd: LogCommand,
     writer: &mut W,
 ) -> Result<()> {
@@ -389,7 +385,7 @@ pub async fn log_impl<W: std::io::Write>(
 
 pub async fn log_cmd<W: std::io::Write>(
     daemon_proxy: DaemonProxy,
-    rcs: RemoteControlProxy,
+    rcs_opt: Option<RemoteControlProxy>,
     log_formatter: &mut impl LogFormatter,
     cmd: LogCommand,
     writer: &mut W,
@@ -404,18 +400,31 @@ pub async fn log_cmd<W: std::io::Write>(
             StreamMode::SnapshotRecentThenSubscribe
         }
     };
-    let target_info_result = rcs.identify_host().await?;
-    let target_info =
-        target_info_result.map_err(|e| anyhow!("failed to get target info: {:?}", e))?;
-    let target_boot_time_nanos = match target_info.boot_timestamp_nanos {
-        Some(t) => {
-            log_formatter.set_boot_timestamp(t as i64);
-            Duration::from_nanos(t)
+
+    let nodename = if let Some(rcs) = rcs_opt {
+        let target_info_result = rcs.identify_host().await?;
+        let target_info =
+            target_info_result.map_err(|e| anyhow!("failed to get target info: {:?}", e))?;
+        target_info.nodename.context("missing nodename")?
+    } else if let LogSubCommand::Dump(..) = sub_command {
+        let default: String = get("target.default")
+            .await
+            .map_err(|e| ffx_error!("{}\n\nError was: {}", DUMP_TARGET_CHOICE_HELP, e))?;
+        if default.is_empty() {
+            ffx_bail!("{}", DUMP_TARGET_CHOICE_HELP);
         }
-        None => Duration::new(0, 0),
+
+        default
+    } else {
+        ffx_bail!("{}", STREAM_TARGET_CHOICE_HELP);
     };
 
-    let nodename = target_info.nodename.context("missing nodename")?;
+    let session = if let LogSubCommand::Dump(DumpCommand { session }) = sub_command {
+        Some(session)
+    } else {
+        None
+    };
+
     if !(cmd.since.is_none() || cmd.since_monotonic.is_none()) {
         ffx_bail!("only one of --from or --from-monotonic may be provided at once.");
     }
@@ -423,28 +432,27 @@ pub async fn log_cmd<W: std::io::Write>(
         ffx_bail!("only one of --to or --to-monotonic may be provided at once.");
     }
 
-    let (from_bound, to_bound) = if target_info.boot_timestamp_nanos.is_none()
-        && (cmd.since.is_some() || cmd.until.is_some())
-    {
-        writeln!(
-            writer,
-            "{}target timestamp not available - since/until filters will not be applied.{}",
-            color::Fg(color::Red),
-            style::Reset
-        )?;
-        (None, None)
+    let from_bound = if let Some(since) = cmd.since {
+        Some(TimeBound::Absolute(since.timestamp() as u64))
+    } else if let Some(since_monotonic) = cmd.since_monotonic {
+        Some(TimeBound::Monotonic(since_monotonic.as_nanos() as u64))
     } else {
-        (
-            calculate_monotonic_time(target_boot_time_nanos, cmd.since, cmd.since_monotonic),
-            calculate_monotonic_time(target_boot_time_nanos, cmd.until, cmd.until_monotonic),
-        )
+        None
     };
+    let to_bound = if let Some(until) = cmd.until {
+        Some(TimeBound::Absolute(until.timestamp() as u64))
+    } else if let Some(until_monotonic) = cmd.until_monotonic {
+        Some(TimeBound::Monotonic(until_monotonic.as_nanos() as u64))
+    } else {
+        None
+    };
+
     exec_log_cmd(
         LogCommandParameters {
             target_identifier: nodename,
-            session_timestamp: target_boot_time_nanos,
-            target_from_bound: from_bound,
-            target_to_bound: to_bound,
+            session: session,
+            from_bound: from_bound,
+            to_bound: to_bound,
             stream_mode,
         },
         daemon_proxy,
@@ -465,18 +473,18 @@ mod test {
         errors::ResultExt as _,
         ffx_log_args::DumpCommand,
         ffx_log_test_utils::{setup_fake_archive_iterator, FakeArchiveIteratorResponse},
-        fidl_fuchsia_developer_bridge::{DaemonDiagnosticsStreamParameters, DaemonRequest},
+        fidl_fuchsia_developer_bridge::{
+            DaemonDiagnosticsStreamParameters, DaemonRequest, LogSession, SessionSpec,
+        },
         fidl_fuchsia_developer_remotecontrol::{
             ArchiveIteratorError, IdentifyHostResponse, RemoteControlRequest,
         },
-        std::sync::Arc,
+        std::{sync::Arc, time::Duration},
     };
 
     const DEFAULT_TS_NANOS: u64 = 1615535969000000000;
     const BOOT_TS: u64 = 98765432000000000;
     const FAKE_START_TIMESTAMP: i64 = 1614669138;
-    // FAKE_START_TIMESTAMP - BOOT_TS
-    const START_TIMESTAMP_FOR_DAEMON: u64 = 1515903706000000000;
     const NODENAME: &str = "some-nodename";
 
     fn default_ts() -> Duration {
@@ -521,8 +529,8 @@ mod test {
         }
     }
 
-    fn setup_fake_rcs() -> RemoteControlProxy {
-        setup_fake_rcs_proxy(move |req| match req {
+    fn setup_fake_rcs() -> Option<RemoteControlProxy> {
+        Some(setup_fake_rcs_proxy(move |req| match req {
             RemoteControlRequest::IdentifyHost { responder } => {
                 responder
                     .send(&mut Ok(IdentifyHostResponse {
@@ -534,7 +542,7 @@ mod test {
                     .unwrap();
             }
             _ => assert!(false),
-        })
+        }))
     }
 
     fn setup_fake_daemon_server(
@@ -542,10 +550,17 @@ mod test {
         expected_responses: Arc<Vec<FakeArchiveIteratorResponse>>,
     ) -> DaemonProxy {
         setup_fake_daemon_proxy(move |req| match req {
-            DaemonRequest::StreamDiagnostics { target: _, parameters, iterator, responder } => {
+            DaemonRequest::StreamDiagnostics { target: t, parameters, iterator, responder } => {
                 assert_eq!(parameters, expected_parameters);
                 setup_fake_archive_iterator(iterator, expected_responses.clone(), false).unwrap();
-                responder.send(&mut Ok(())).context("error sending response").expect("should send")
+                responder
+                    .send(&mut Ok(LogSession {
+                        target_identifier: t,
+                        session_timestamp_nanos: Some(BOOT_TS),
+                        ..LogSession::EMPTY
+                    }))
+                    .context("error sending response")
+                    .expect("should send")
             }
             _ => assert!(false),
         })
@@ -581,7 +596,12 @@ mod test {
     }
 
     fn empty_dump_command() -> LogCommand {
-        LogCommand { sub_command: Some(LogSubCommand::Dump(DumpCommand {})), ..empty_log_command() }
+        LogCommand {
+            sub_command: Some(LogSubCommand::Dump(DumpCommand {
+                session: SessionSpec::Relative(0),
+            })),
+            ..empty_log_command()
+        }
     }
 
     fn logs_data_builder() -> LogsDataBuilder {
@@ -616,6 +636,7 @@ mod test {
         let cmd = empty_dump_command();
         let params = DaemonDiagnosticsStreamParameters {
             stream_mode: Some(StreamMode::SnapshotAll),
+            session: Some(SessionSpec::Relative(0)),
             ..DaemonDiagnosticsStreamParameters::EMPTY
         };
         let expected_responses = vec![];
@@ -724,6 +745,7 @@ mod test {
         let cmd = LogCommand { until_monotonic: Some(default_ts()), ..empty_dump_command() };
         let params = DaemonDiagnosticsStreamParameters {
             stream_mode: Some(StreamMode::SnapshotAll),
+            session: Some(SessionSpec::Relative(0)),
             ..DaemonDiagnosticsStreamParameters::EMPTY
         };
         let log1 = make_log_entry(
@@ -774,15 +796,17 @@ mod test {
         ])];
 
         let mut writer = Vec::new();
-        assert!(log_cmd(
-            setup_fake_daemon_server(params, Arc::new(expected_responses)),
-            setup_fake_rcs(),
-            &mut formatter,
-            cmd,
-            &mut writer,
-        )
-        .await
-        .is_ok());
+        matches::assert_matches!(
+            log_cmd(
+                setup_fake_daemon_server(params, Arc::new(expected_responses)),
+                setup_fake_rcs(),
+                &mut formatter,
+                cmd,
+                &mut writer,
+            )
+            .await,
+            Ok(_)
+        );
 
         let output = String::from_utf8(writer).unwrap();
         assert!(output.is_empty());
@@ -1213,7 +1237,8 @@ mod test {
         };
         let params = DaemonDiagnosticsStreamParameters {
             stream_mode: Some(StreamMode::SnapshotAll),
-            min_target_timestamp_nanos: Some(START_TIMESTAMP_FOR_DAEMON),
+            min_timestamp_nanos: Some(TimeBound::Absolute(FAKE_START_TIMESTAMP as u64)),
+            session: Some(SessionSpec::Relative(0)),
             ..DaemonDiagnosticsStreamParameters::EMPTY
         };
 
@@ -1244,7 +1269,8 @@ mod test {
         };
         let params = DaemonDiagnosticsStreamParameters {
             stream_mode: Some(StreamMode::SnapshotAll),
-            min_target_timestamp_nanos: Some(default_ts().as_nanos() as u64),
+            min_timestamp_nanos: Some(TimeBound::Monotonic(default_ts().as_nanos() as u64)),
+            session: Some(SessionSpec::Relative(0)),
             ..DaemonDiagnosticsStreamParameters::EMPTY
         };
 

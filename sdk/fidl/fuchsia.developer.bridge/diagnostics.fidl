@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 library fuchsia.developer.bridge;
+using fuchsia.device;
 
 type StreamMode = strict enum : uint32 {
     SNAPSHOT_ALL = 1;
@@ -28,10 +29,41 @@ type DiagnosticsStreamError = strict enum : uint32 {
     // Indicates there are no log streams for the provided target specifier,
     // either in the target cache or on disk.
     NO_MATCHING_OFFLINE_TARGETS = 6;
+    // Indicates there are no log streams for the provided target specifier,
+    // either in the target cache or on disk.
+    NO_MATCHING_OFFLINE_SESSIONS = 7;
+};
+
+// Represents a time-bound in nanoseconds, which may be either a host timestamp or monotonic time.
+type TimeBound = flexible union {
+    1: absolute uint64;
+    2: monotonic uint64;
 };
 
 type DaemonDiagnosticsStreamParameters = table {
     1: stream_mode StreamMode;
     // Sets the earliest time (in monotonic nanoseconds) of logs that will be returned.
     2: min_target_timestamp_nanos uint64;
+    // The session the client intends to stream.
+    3: session SessionSpec;
+    // Sets the earliest time (in nanoseconds) of logs that will be returned.
+    4: min_timestamp_nanos TimeBound;
+};
+
+// Specifies a particular log session
+type SessionSpec = flexible union {
+    // An absolute timestamp identifying the session.
+    1: timestamp_nanos uint64;
+    // A number specifying a session relative to the most-recent one, where
+    // "0" means the most-recent session, "1" would be the second-most-recent, etc.
+    2: relative uint32;
+};
+
+// Metadata about a particular log session
+type LogSession = table {
+    // Identifier for the logging target (nodename, in the case of a Fuchsia device).
+    1: target_identifier string:fuchsia.device.DEVICE_NAME_MAX;
+    // Timestamp identifier for the logging session. For Fuchsia targets, this is the
+    // boot timestamp of the target.
+    2: session_timestamp_nanos uint64;
 };

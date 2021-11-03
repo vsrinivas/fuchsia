@@ -11,6 +11,7 @@ ffx_plugin("ffx_log") {
   args_with_unit_tests = true
 
   args_deps = [
+    "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//src/lib/diagnostics/data/rust",
     "//third_party/rust_crates:chrono",
@@ -35,6 +36,7 @@ ffx_plugin("ffx_log") {
     "//third_party/rust_crates:blocking",
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:futures-util",
+    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:termion",
   ]

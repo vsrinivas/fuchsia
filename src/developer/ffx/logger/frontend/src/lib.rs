@@ -12,7 +12,8 @@ use {
     ffx_log_utils::{run_logging_pipeline, OrderedBatchPipeline},
     fidl::endpoints::{create_proxy, ServerEnd},
     fidl_fuchsia_developer_bridge::{
-        DaemonDiagnosticsStreamParameters, DaemonProxy, DiagnosticsStreamError, StreamMode,
+        DaemonDiagnosticsStreamParameters, DaemonProxy, DiagnosticsStreamError, LogSession,
+        SessionSpec, StreamMode, TimeBound,
     },
     fidl_fuchsia_developer_remotecontrol::{
         ArchiveIteratorError, ArchiveIteratorMarker, ArchiveIteratorProxy, DiagnosticsData,
@@ -64,9 +65,9 @@ pub trait LogFormatter {
 #[derive(Clone, Debug)]
 pub struct LogCommandParameters {
     pub target_identifier: String,
-    pub session_timestamp: Duration,
-    pub target_from_bound: Option<Duration>,
-    pub target_to_bound: Option<Duration>,
+    pub session: Option<SessionSpec>,
+    pub from_bound: Option<TimeBound>,
+    pub to_bound: Option<TimeBound>,
     pub stream_mode: StreamMode,
 }
 
@@ -74,9 +75,9 @@ impl Default for LogCommandParameters {
     fn default() -> Self {
         Self {
             target_identifier: String::default(),
-            session_timestamp: Duration::default(),
-            target_from_bound: None,
-            target_to_bound: None,
+            session: Some(SessionSpec::Relative(0)),
+            from_bound: None,
+            to_bound: None,
             stream_mode: StreamMode::SnapshotAll,
         }
     }
@@ -87,11 +88,13 @@ async fn setup_daemon_stream(
     target_str: &str,
     server: ServerEnd<ArchiveIteratorMarker>,
     stream_mode: StreamMode,
-    from_bound: Option<Duration>,
-) -> Result<Result<(), DiagnosticsStreamError>> {
+    from_bound: Option<TimeBound>,
+    session: Option<SessionSpec>,
+) -> Result<Result<LogSession, DiagnosticsStreamError>> {
     let params = DaemonDiagnosticsStreamParameters {
         stream_mode: Some(stream_mode),
-        min_target_timestamp_nanos: from_bound.map(|f| f.as_nanos() as u64),
+        min_timestamp_nanos: from_bound,
+        session,
         ..DaemonDiagnosticsStreamParameters::EMPTY
     };
     daemon_proxy
@@ -108,18 +111,30 @@ pub async fn exec_log_cmd<W: std::io::Write>(
 ) -> Result<()> {
     let (mut proxy, server) =
         create_proxy::<ArchiveIteratorMarker>().context("failed to create endpoints")?;
-    setup_daemon_stream(
+
+    let session = setup_daemon_stream(
         &daemon_proxy,
         &params.target_identifier,
         server,
         params.stream_mode,
-        params.target_from_bound,
+        params.from_bound.clone(),
+        params.session.clone(),
     )
     .await?
     .map_err(|e| match e {
         DiagnosticsStreamError::NoStreamForTarget => anyhow!(ffx_error!("{}", NO_STREAM_ERROR)),
         _ => anyhow!("failure setting up diagnostics stream: {:?}", e),
     })?;
+
+    let session_timestamp_nanos =
+        session.session_timestamp_nanos.as_ref().context("missing session timestamp")?;
+    log_formatter.set_boot_timestamp(*session_timestamp_nanos as i64);
+
+    let to_bound_monotonic = params.to_bound.as_ref().map(|bound| match bound {
+        TimeBound::Monotonic(ts) => Duration::from_nanos(*ts),
+        TimeBound::Absolute(ts) => Duration::from_nanos(ts - session_timestamp_nanos),
+        _ => panic!("unexpected TimeBound value"),
+    });
 
     let mut requests = OrderedBatchPipeline::new(PIPELINE_SIZE);
     // This variable is set to true iff the most recent log we received was a disconnect event.
@@ -172,7 +187,7 @@ pub async fn exec_log_cmd<W: std::io::Write>(
                 };
                 got_disconnect = false;
 
-                match (&parsed.data, params.target_to_bound) {
+                match (&parsed.data, to_bound_monotonic) {
                     (LogData::TargetLog(log_data), Some(t)) => {
                         let ts: i64 = log_data.metadata.timestamp.into();
                         if ts as u128 > t.as_nanos() {
@@ -215,11 +230,12 @@ async fn retry_loop<W: std::io::Write>(
             &params.target_identifier,
             server,
             params.stream_mode,
-            params.target_from_bound,
+            params.from_bound.clone(),
+            params.session.clone(),
         )
         .await?
         {
-            Ok(()) => return Ok(new_proxy),
+            Ok(_) => return Ok(new_proxy),
             Err(e) => {
                 match e {
                     DiagnosticsStreamError::NoMatchingTargets => {
@@ -309,10 +325,8 @@ mod test {
     impl From<DaemonDiagnosticsStreamParameters> for LogCommandParameters {
         fn from(params: DaemonDiagnosticsStreamParameters) -> Self {
             Self {
-                session_timestamp: Duration::default(),
-                target_from_bound: params
-                    .min_target_timestamp_nanos
-                    .map(|t| Duration::from_nanos(t)),
+                session: params.session,
+                from_bound: params.min_timestamp_nanos,
                 stream_mode: params.stream_mode.unwrap(),
                 ..Self::default()
             }
@@ -367,7 +381,7 @@ mod test {
             while let Ok(Some(req)) = stream.try_next().await {
                 match req {
                     DaemonRequest::StreamDiagnostics {
-                        target: _,
+                        target,
                         parameters,
                         iterator,
                         responder,
@@ -376,7 +390,11 @@ mod test {
                         setup_fake_archive_iterator(iterator, expected_responses.clone(), false)
                             .unwrap();
                         responder
-                            .send(&mut Ok(()))
+                            .send(&mut Ok(LogSession {
+                                target_identifier: target,
+                                session_timestamp_nanos: Some(BOOT_TS),
+                                ..LogSession::EMPTY
+                            }))
                             .context("error sending response")
                             .expect("should send")
                     }
@@ -503,7 +521,8 @@ mod test {
         let mut formatter = FakeLogFormatter::new();
         let params = DaemonDiagnosticsStreamParameters {
             stream_mode: Some(StreamMode::SnapshotAll),
-            min_target_timestamp_nanos: Some(START_TIMESTAMP_FOR_DAEMON),
+            min_timestamp_nanos: Some(TimeBound::Absolute(START_TIMESTAMP_FOR_DAEMON)),
+            session: Some(SessionSpec::Relative(0)),
             ..DaemonDiagnosticsStreamParameters::EMPTY
         };
 
@@ -526,7 +545,8 @@ mod test {
         let mut formatter = FakeLogFormatter::new();
         let params = DaemonDiagnosticsStreamParameters {
             stream_mode: Some(StreamMode::SnapshotAll),
-            min_target_timestamp_nanos: Some(default_ts().as_nanos() as u64),
+            min_timestamp_nanos: Some(TimeBound::Monotonic(default_ts().as_nanos() as u64)),
+            session: Some(SessionSpec::Relative(0)),
             ..DaemonDiagnosticsStreamParameters::EMPTY
         };
 
