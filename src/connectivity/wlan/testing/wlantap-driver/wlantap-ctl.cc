@@ -125,7 +125,8 @@ zx_status_t wlantapctl_bind(void* ctx, zx_device_t* parent) {
   device_add_args_t args = {.version = DEVICE_ADD_ARGS_VERSION,
                             .name = "wlantapctl",
                             .ctx = wlantapctl.get(),
-                            .ops = &device_ops};
+                            .ops = &device_ops,
+                            .flags = DEVICE_ADD_NON_BINDABLE};
   zx_status_t status = device_add(parent, &args, &wlantapctl->device_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: could not add device: %d", __func__, status);

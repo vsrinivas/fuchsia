@@ -64,6 +64,7 @@ zx_status_t SimDevice::Create(zx_device_t* parent_device, simulation::FakeDevMgr
       .ctx = device.get(),
       .ops = &kSimDeviceOps,
       .proto_id = ZX_PROTOCOL_WLANPHY_IMPL,
+      .flags = DEVICE_ADD_NON_BINDABLE,
       // The tests don't access any of the other fields yet
   };
   if ((status = dev_mgr->DeviceAdd(parent_device, &add_args, &device->phy_device_)) != ZX_OK) {
