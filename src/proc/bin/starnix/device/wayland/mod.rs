@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod bridge_client;
 mod buffer_collection_file;
 mod dma_buf_file;
+mod file_creation;
 mod wayland;
 
 pub mod sysmem;
