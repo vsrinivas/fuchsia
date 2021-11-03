@@ -16,7 +16,6 @@
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 
-#include "lib/inspect/cpp/inspector.h"
 #include "src/security/zxcrypt/volume.h"
 
 namespace zxcrypt {
@@ -79,9 +78,6 @@ class DeviceManager final : public DeviceManagerType {
   // Used to ensure calls to |Unseal|, |Seal|, and |Unbind| are exclusive to each
   // other, and protects access to |state_|.
   fbl::Mutex mtx_;
-
-  // Used for debug state.
-  inspect::Inspector inspect_;
 
   State state_ __TA_GUARDED(mtx_);
 };

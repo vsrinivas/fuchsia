@@ -53,10 +53,7 @@ zx_status_t DeviceManager::Bind() {
   zx_status_t rc;
   fbl::AutoLock lock(&mtx_);
 
-  if ((rc = DdkAdd(ddk::DeviceAddArgs("zxcrypt")
-                       .set_flags(DEVICE_ADD_NON_BINDABLE)
-                       .set_proto_id(ZX_PROTOCOL_ZXCRYPT)
-                       .set_inspect_vmo(inspect_.DuplicateVmo()))) != ZX_OK) {
+  if ((rc = DdkAdd(ddk::DeviceAddArgs("zxcrypt").set_flags(DEVICE_ADD_NON_BINDABLE))) != ZX_OK) {
     zxlogf(ERROR, "failed to add device: %s", zx_status_get_string(rc));
     state_ = kRemoved;
     return rc;
@@ -195,12 +192,9 @@ zx_status_t DeviceManager::UnsealLocked(const uint8_t* ikm, size_t ikm_len, key_
     return rc;
   }
 
-  inspect::Node inspect = inspect_.GetRoot().CreateChild(inspect_.GetRoot().UniqueName("zxcrypt"));
-
   // Create the unsealed device
   fbl::AllocChecker ac;
-  auto device =
-      fbl::make_unique_checked<zxcrypt::Device>(&ac, zxdev(), std::move(info), std::move(inspect));
+  auto device = fbl::make_unique_checked<zxcrypt::Device>(&ac, zxdev(), std::move(info));
   if (!ac.check()) {
     zxlogf(ERROR, "failed to allocate %zu bytes", sizeof(zxcrypt::Device));
     return ZX_ERR_NO_MEMORY;

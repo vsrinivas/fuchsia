@@ -25,7 +25,6 @@
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 
-#include "lib/inspect/cpp/inspector.h"
 #include "src/devices/block/drivers/zxcrypt/device-info.h"
 #include "src/devices/block/drivers/zxcrypt/extra.h"
 #include "src/devices/block/drivers/zxcrypt/worker.h"
@@ -45,7 +44,7 @@ class Device final : public DeviceType,
                      public ddk::BlockPartitionProtocol<Device>,
                      public ddk::BlockVolumeProtocol<Device> {
  public:
-  Device(zx_device_t* parent, DeviceInfo&& info, inspect::Node inspect);
+  Device(zx_device_t* parent, DeviceInfo&& info);
   ~Device();
 
   // Publish some constants for the workers
@@ -138,10 +137,6 @@ class Device final : public DeviceType,
 
   // Describes a queue of deferred block requests.
   list_node_t queue_ __TA_GUARDED(mtx_);
-
-  // inspect::Node tracking unsealed device GUID.
-  inspect::Node inspect_;
-  inspect::StringProperty instance_guid_;
 
   // Hint as to where in the bitmap to begin looking for available space.
   size_t hint_ __TA_GUARDED(mtx_);
