@@ -345,6 +345,9 @@ int EthDev::Send(eth_fifo_entry_t* entries, size_t count) {
       }
       transmit_buffer.operation()->data_size = e->length;
       transmit_buffer.private_storage()->fifo_cookie = e->cookie;
+      if (state_ & kStateTransmissionLoopback) {
+        edev0_->TransmitEcho(reinterpret_cast<char*>(io_buffer_.start()) + e->offset, e->length);
+      }
       edev0_->mac_.QueueTx(
           opts, transmit_buffer.take(),
           [](void* cookie, zx_status_t status, ethernet_netbuf_t* netbuf) {
@@ -352,9 +355,6 @@ int EthDev::Send(eth_fifo_entry_t* entries, size_t count) {
             reinterpret_cast<EthDev0*>(cookie)->CompleteTx(netbuf, status);
           },
           edev0_);
-      if (state_ & kStateTransmissionLoopback) {
-        edev0_->TransmitEcho(reinterpret_cast<char*>(io_buffer_.start()) + e->offset, e->length);
-      }
 
       ethernet_request_count_++;
     }

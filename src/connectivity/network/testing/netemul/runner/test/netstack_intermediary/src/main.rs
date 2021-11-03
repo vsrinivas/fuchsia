@@ -328,7 +328,7 @@ async fn run_echo_server_ethernet(
     while let Some(event) = eth_events.try_next().await? {
         match event {
             ethernet::Event::Receive(rx, flags) => {
-                let mut data: [u8; 100] = [0; 100];
+                let mut data = [0u8; 100];
                 let sz = rx.read(&mut data);
                 if flags.contains(ethernet::EthernetQueueFlags::TX_ECHO) {
                     match str::from_utf8(&data[0..sz]).expect("failed to parse string") {
@@ -344,7 +344,10 @@ async fn run_echo_server_ethernet(
                             }
                             virtualization_echo_seen = true;
                         }
-                        message => panic!("Client message ({}) did not match expectation", message),
+                        message => panic!(
+                            "Client message ('{}' sz={}) did not match expectation",
+                            message, sz
+                        ),
                     }
                 }
 
