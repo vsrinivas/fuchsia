@@ -40,7 +40,8 @@ pub struct BootloaderPartition {
     pub partition_type: String,
 
     /// The name of the partition known to fastboot.
-    pub name: String,
+    /// If the name is not provided, then the partition should not be flashed.
+    pub name: Option<String>,
 
     /// The path on host to the bootloader image.
     pub image: PathBuf,
