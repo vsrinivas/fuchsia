@@ -9,7 +9,6 @@ use {
     fidl_fuchsia_net as fnet, fidl_fuchsia_net_name as fnetname, fuchsia_async as fasync,
     matches::assert_matches,
     net_declare::{fidl_ip, fidl_ip_v6},
-    std::time::Duration,
 };
 
 #[fasync::run_singlethreaded]
@@ -63,7 +62,7 @@ async fn main() -> Result<(), Error> {
 
     assert_matches!(
         futures::join!(
-            verify_v4_addr_present(want_v4_address, Duration::from_secs(30)),
+            verify_v4_addr_present(want_v4_address),
             verify_v6_dns_servers(2 /* interface_id */, want_v6_dns_servers),
         ),
         (Ok(()), Ok(()))

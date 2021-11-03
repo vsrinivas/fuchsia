@@ -10,11 +10,9 @@ use {
     fidl_fuchsia_netemul_guest::{
         CommandListenerMarker, GuestDiscoveryMarker, GuestInteractionMarker,
     },
-    fuchsia_async::TimeoutExt as _,
     fuchsia_component::client,
     futures::TryFutureExt as _,
     netemul_guest_lib::wait_for_command_completion,
-    std::time::Duration,
 };
 
 /// Run a command on a guest VM to configure its DHCP server.
@@ -44,10 +42,7 @@ pub async fn configure_dhcp_server(guest_name: &str, command_to_run: &str) -> Re
 ///
 /// * `want_addr` - IpAddress that should appear on a Netstack interface.
 /// * `timeout` - Duration to wait for the address to appear in Netstack.
-pub async fn verify_v4_addr_present(
-    want_addr: fnet::IpAddress,
-    timeout: Duration,
-) -> Result<(), Error> {
+pub async fn verify_v4_addr_present(want_addr: fnet::IpAddress) -> Result<(), Error> {
     let interface_state = client::connect_to_protocol::<finterfaces::StateMarker>()?;
     let mut if_map = std::collections::HashMap::new();
     fidl_fuchsia_net_interfaces_ext::wait_interface(
@@ -69,7 +64,6 @@ pub async fn verify_v4_addr_present(
         },
     )
     .map_err(anyhow::Error::from)
-    .on_timeout(timeout, || Err(anyhow::anyhow!("timed out")))
     .await
     .with_context(|| {
         format!(
