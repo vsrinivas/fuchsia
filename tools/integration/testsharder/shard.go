@@ -57,6 +57,16 @@ func (s *Shard) CreatePackageRepo() error {
 		return nil
 	}
 
+	// run-test-suite and run-test-component are used by all shards, so
+	// always add their package manifests to the list.
+	// TODO(rudymathu): This is very much a hack to get the CAS builders
+	// up and running to evaluate stability and performance. In the long
+	// term, this should be handled by the build system and passed in.
+	pkgManifests = append(pkgManifests,
+		"obj/garnet/bin/run_test_component/run-test-component-pkg/package_manifest.json",
+		"obj/src/sys/run_test_suite/run_test_suite_pkg/package_manifest.json",
+	)
+
 	// The path to the package repository should be unique so as to not
 	// conflict with other shards' repositories. Ideally we'd just use
 	// the shard name, but that can include nonstandard characters, so
