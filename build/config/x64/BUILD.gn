@@ -29,3 +29,9 @@ config("mitigate_skylake_jcc") {
     cflags = [ "-mbranches-within-32B-boundaries" ]
   }
 }
+
+# Optimize for Intel Haswell
+config("haswell") {
+  cflags = [ "-mcpu=haswell" ]
+  rustflags = [ "-Ctarget-cpu=haswell" ]
+}
