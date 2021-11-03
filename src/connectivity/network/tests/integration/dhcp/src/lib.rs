@@ -9,7 +9,7 @@ use dhcp::protocol::IntoFidlExt as _;
 use fuchsia_async::TimeoutExt as _;
 use futures::future::TryFutureExt as _;
 use futures::stream::{self, StreamExt as _, TryStreamExt as _};
-use net_declare::{fidl_ip_v4, fidl_mac};
+use net_declare::{fidl_ip_v4, fidl_mac, std_ip_v4};
 use netstack_testing_common::realms::{
     constants, KnownServiceProvider, Netstack2, TestSandboxExt as _,
 };
@@ -65,8 +65,8 @@ const DEFAULT_TEST_CONFIG: DhcpTestConfig = DhcpTestConfig {
     managed_addrs: dhcp::configuration::ManagedAddresses {
         // We know this is safe because 25 is less than the size of an IPv4 address in bits.
         mask: unsafe { dhcp::configuration::SubnetMask::new_unchecked(25) },
-        pool_range_start: std::net::Ipv4Addr::new(192, 168, 0, 2),
-        pool_range_stop: std::net::Ipv4Addr::new(192, 168, 0, 5),
+        pool_range_start: std_ip_v4!("192.168.0.2"),
+        pool_range_stop: std_ip_v4!("192.168.0.5"),
     },
 };
 
@@ -648,8 +648,8 @@ impl PersistenceMode {
                 fidl_fuchsia_net_dhcp::Parameter::IpAddrs(vec![]),
                 fidl_fuchsia_net_dhcp::Parameter::AddressPool(fidl_fuchsia_net_dhcp::AddressPool {
                     prefix_length: Some(0),
-                    range_start: Some(fidl_fuchsia_net::Ipv4Address { addr: [0, 0, 0, 0] }),
-                    range_stop: Some(fidl_fuchsia_net::Ipv4Address { addr: [0, 0, 0, 0] }),
+                    range_start: Some(fidl_ip_v4!("0.0.0.0")),
+                    range_stop: Some(fidl_ip_v4!("0.0.0.0")),
                     ..fidl_fuchsia_net_dhcp::AddressPool::EMPTY
                 }),
                 fidl_fuchsia_net_dhcp::Parameter::Lease(fidl_fuchsia_net_dhcp::LeaseLength {

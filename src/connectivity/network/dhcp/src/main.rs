@@ -399,7 +399,7 @@ impl<'a, S: SocketServerDispatcher> MessageHandler<'a, S> {
                         (addr, None)
                     }
                     ResponseTarget::Unicast(addr, Some(chaddr)) => {
-                        log::info!("sending {:?} to {}", typ, chaddr);
+                        log::info!("sending {:?} to ip {} chaddr {}", typ, addr, chaddr);
                         (addr, Some(chaddr))
                     }
                 };
