@@ -58,7 +58,7 @@ zx_status_t AudioDeviceStream::Open() {
     return client_end.status_value();
   }
   auto client = fidl::BindSyncClient(std::move(client_end.value()));
-  auto channel_wrap = client.GetChannel();
+  auto channel_wrap = client->GetChannel();
   if (!channel_wrap.ok()) {
     printf("GetChannel failed with error %s\n", channel_wrap.status_string());
     return channel_wrap.status();
