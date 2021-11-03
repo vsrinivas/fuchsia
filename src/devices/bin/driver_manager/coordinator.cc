@@ -1609,6 +1609,10 @@ zx_status_t Coordinator::BindDevice(const fbl::RefPtr<Device>& dev, std::string_
   // instead of a specific request
   bool autobind = drvlibname.size() == 0;
 
+  if (autobind && (dev->flags & DEV_CTX_SKIP_AUTOBIND)) {
+    return ZX_OK;
+  }
+
   // Attempt composite device matching first.  This is unnecessary if a
   // specific driver has been requested.
   if (autobind) {

@@ -5,6 +5,7 @@
 group("tests") {
   testonly = true
   deps = [
+    "autobind:tests",
     "bind-fail-test",
     "bind-test-v2",
     "composite-driver-v1:tests",
@@ -32,6 +33,7 @@ group("tests") {
 group("drivers") {
   testonly = true
   deps = [
+    "autobind:drivers",
     "bind-fail-test:driver",
     "bind-test-v2:bind-test-driver-v2",
     "composite-driver-v1:drivers",

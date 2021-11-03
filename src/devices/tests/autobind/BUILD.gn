@@ -1,0 +1,62 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/components.gni")
+import("//build/drivers.gni")
+import("//build/test.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":pkg" ]
+}
+
+group("drivers") {
+  testonly = true
+  deps = [ ":component" ]
+}
+
+driver_bind_rules("bind") {
+  rules = "autobind.bind"
+  header_output = "autobind-bind.h"
+  bind_output = "autobind.bindbc"
+  deps = [
+    "//src/devices/bind/fuchsia.pci",
+    "//src/devices/bind/fuchsia.test",
+  ]
+}
+
+fuchsia_driver("driver") {
+  output_name = "test-autobind"
+  sources = [ "autobind.cc" ]
+  deps = [
+    ":bind",
+    "//src/devices/lib/driver",
+    "//src/lib/ddktl",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
+fuchsia_driver_component("component") {
+  component_name = "test-autobind"
+  deps = [ ":driver" ]
+}
+
+test("autobind-test") {
+  sources = [ "test.cc" ]
+  deps = [
+    ":component",
+    "//sdk/lib/driver_test_realm/simple",
+    "//src/devices/internal/drivers/fragment",
+    "//src/devices/lib/device-watcher/cpp",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+fuchsia_unittest_package("pkg") {
+  package_name = "autobind-test"
+  deps = [ ":autobind-test" ]
+}

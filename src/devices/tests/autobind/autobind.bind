@@ -1,0 +1,14 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using fuchsia.test;
+using fuchsia.pci;
+
+if fuchsia.BIND_PROTOCOL == fuchsia.test.BIND_PROTOCOL.PARENT {
+    true;
+} else if fuchsia.BIND_PCI_VID == 3 {
+    true;
+} else {
+    false;
+}
