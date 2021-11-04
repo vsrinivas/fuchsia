@@ -11,7 +11,7 @@ rustc_binary("echo_proxy_server_bin") {
   testonly = true
   source_root = "echo_proxy_server.rs"
   deps = [
-    "//examples/fidl/legacy/services:echo-rustc",
+    "//examples/components/routing/fidl:echo-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
@@ -36,10 +36,17 @@ fuchsia_test_component("echo_proxy_test") {
       [ "//src/sys/test_runners/legacy_test/test_data/echo_test:echo_test_bin" ]
 }
 
+fuchsia_component("echo_legacy_server") {
+  testonly = true
+  component_name = "echo_server"
+  manifest = "meta/echo_server.cmx"
+  deps = [ "//examples/components/routing/echo_server" ]
+}
+
 fuchsia_component("echo_server") {
   testonly = true
   manifest = "meta/echo_server.cml"
-  deps = [ "//examples/fidl/legacy/echo_server_rust:echo-server-rust-cmp" ]
+  deps = [ ":echo_legacy_server" ]
 }
 
 fuchsia_component("echo_legacy_proxy_server") {

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fidl_fidl_examples_echo as fecho, fuchsia_component::client::connect_to_protocol};
+use {fidl_fidl_examples_routing_echo as fecho, fuchsia_component::client::connect_to_protocol};
 
 #[fuchsia::test]
 async fn test_echo() {

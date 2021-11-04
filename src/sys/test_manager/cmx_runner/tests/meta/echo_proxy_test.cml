@@ -26,7 +26,7 @@
     ],
     use: [
         {
-            protocol: "fidl.examples.echo.Echo",
+            protocol: "fidl.examples.routing.echo.Echo",
             from: "#echo_proxy_server",
         },
     ],
@@ -40,7 +40,7 @@
             ],
         },
         {
-            protocol: "fidl.examples.echo.Echo",
+            protocol: "fidl.examples.routing.echo.Echo",
             from: "#echo_server",
             to: "#echo_proxy_server",
         },

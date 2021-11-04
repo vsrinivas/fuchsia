@@ -4,7 +4,7 @@
 
 use {
     anyhow::{Context as _, Error},
-    fidl_fidl_examples_echo::{self as fecho, EchoRequest, EchoRequestStream},
+    fidl_fidl_examples_routing_echo::{self as fecho, EchoRequest, EchoRequestStream},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_component::server::ServiceFs,

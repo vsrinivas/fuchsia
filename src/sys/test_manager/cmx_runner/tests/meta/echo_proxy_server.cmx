@@ -7,7 +7,7 @@
     },
     "sandbox": {
         "services": [
-            "fidl.examples.echo.Echo"
+            "fidl.examples.routing.echo.Echo"
         ]
     }
 }

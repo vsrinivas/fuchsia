@@ -10,7 +10,7 @@ rustc_test("echo_test_bin") {
   testonly = true
   source_root = "echo_test.rs"
   deps = [
-    "//examples/fidl/legacy/services:echo-rustc",
+    "//examples/components/routing/fidl:echo-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
@@ -36,6 +36,6 @@ group("echo_test") {
   deps = [
     ":echo_test_legacy",
     ":echo_test_modern",
-    "///examples/fidl/legacy/echo_server_rust:echo-server-rust-cmp",
+    "//src/sys/test_manager/cmx_runner/tests:echo_legacy_server",
   ]
 }
