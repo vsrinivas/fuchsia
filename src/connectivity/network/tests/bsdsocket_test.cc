@@ -32,9 +32,6 @@
 
 namespace {
 
-using ::testing::IsNull;
-using ::testing::NotNull;
-
 template <typename T>
 void AssertBlocked(const std::future<T>& fut) {
   // Give an asynchronous blocking operation some time to reach the blocking state. Clocks
@@ -5395,7 +5392,8 @@ TEST_P(NetDatagramSocketsTest, RecvMsgNullPtrNoControlMessages) {
     // The msg_controllen field should be reset when the control buffer is null, even when no
     // control messages are enabled.
     EXPECT_EQ(msghdr.msg_controllen, 0u);
-    EXPECT_THAT(CMSG_FIRSTHDR(&msghdr), IsNull());
+    cmsghdr* cmsg;
+    EXPECT_FALSE(cmsg = CMSG_FIRSTHDR(&msghdr));
   });
 }
 
@@ -5420,7 +5418,7 @@ TEST_P(NetDatagramSocketsTimestampTest, RecvMsg) {
   SendAndCheckReceivedMessage(control, sizeof(control), [before](msghdr& msghdr) {
     ASSERT_EQ(msghdr.msg_controllen, CMSG_SPACE(sizeof(timeval)));
     cmsghdr* cmsg;
-    ASSERT_THAT(cmsg = CMSG_FIRSTHDR(&msghdr), NotNull());
+    ASSERT_TRUE(cmsg = CMSG_FIRSTHDR(&msghdr));
     EXPECT_EQ(cmsg->cmsg_len, CMSG_LEN(sizeof(timeval)));
     EXPECT_EQ(cmsg->cmsg_level, SOL_SOCKET);
     EXPECT_EQ(cmsg->cmsg_type, SO_TIMESTAMP);
@@ -5437,7 +5435,7 @@ TEST_P(NetDatagramSocketsTimestampTest, RecvMsg) {
       ASSERT_LE(received, after);
     }
 
-    EXPECT_THAT(CMSG_NXTHDR(&msghdr, cmsg), IsNull());
+    EXPECT_FALSE(CMSG_NXTHDR(&msghdr, cmsg));
   });
 }
 
@@ -5448,13 +5446,13 @@ TEST_P(NetDatagramSocketsTimestampTest, RecvMsgTruncatedMessage) {
 #if !defined(__Fuchsia__)
     ASSERT_EQ(msghdr.msg_controllen, sizeof(cmsghdr));
     cmsghdr* cmsg;
-    ASSERT_THAT(cmsg = CMSG_FIRSTHDR(&msghdr), NotNull());
+    ASSERT_TRUE(cmsg = CMSG_FIRSTHDR(&msghdr));
     EXPECT_EQ(cmsg->cmsg_len, sizeof(cmsghdr));
     EXPECT_EQ(cmsg->cmsg_level, SOL_SOCKET);
     EXPECT_EQ(cmsg->cmsg_type, SO_TIMESTAMP);
 #else
     // TODO(https://fxbug.dev/86146): Add support for truncated control messages (MSG_CTRUNC).
-    EXPECT_THAT(CMSG_FIRSTHDR(&msghdr), IsNull());
+    EXPECT_FALSE(CMSG_FIRSTHDR(&msghdr));
     EXPECT_EQ(msghdr.msg_controllen, 0u);
 #endif
   });
@@ -5464,7 +5462,8 @@ TEST_P(NetDatagramSocketsTimestampTest, RecvMsgNullControlBuffer) {
   SendAndCheckReceivedMessage(nullptr, 1337, [](msghdr& msghdr) {
     // The msg_controllen field should be reset when the control buffer is null.
     EXPECT_EQ(msghdr.msg_controllen, 0u);
-    EXPECT_THAT(CMSG_FIRSTHDR(&msghdr), IsNull());
+    cmsghdr* cmsg;
+    EXPECT_FALSE(cmsg = CMSG_FIRSTHDR(&msghdr));
   });
 }
 
@@ -5473,7 +5472,8 @@ TEST_P(NetDatagramSocketsTimestampTest, RecvMsgOneByteControlLength) {
   SendAndCheckReceivedMessage(control, sizeof(control), [](msghdr& msghdr) {
     // If there is not enough space to store the cmsghdr, then nothing is stored.
     EXPECT_EQ(msghdr.msg_controllen, 0u);
-    EXPECT_THAT(CMSG_FIRSTHDR(&msghdr), IsNull());
+    cmsghdr* cmsg;
+    EXPECT_FALSE(cmsg = CMSG_FIRSTHDR(&msghdr));
   });
 }
 
@@ -5482,7 +5482,8 @@ TEST_P(NetDatagramSocketsTimestampTest, RecvMsgZeroControlLength) {
   SendAndCheckReceivedMessage(control, 0, [](msghdr& msghdr) {
     // The msg_controllen field should remain zero when no messages were written.
     EXPECT_EQ(msghdr.msg_controllen, 0u);
-    EXPECT_THAT(CMSG_FIRSTHDR(&msghdr), IsNull());
+    cmsghdr* cmsg;
+    EXPECT_FALSE(cmsg = CMSG_FIRSTHDR(&msghdr));
   });
 }
 
@@ -5494,7 +5495,7 @@ TEST_P(NetDatagramSocketsTimestampTest, RecvMsgUnalignedControlBuffer) {
 
     // Fetch back the control buffer and confirm it is unaligned.
     cmsghdr* unaligned_cmsg;
-    ASSERT_THAT(unaligned_cmsg = CMSG_FIRSTHDR(&msghdr), NotNull());
+    ASSERT_TRUE(unaligned_cmsg = CMSG_FIRSTHDR(&msghdr));
     ASSERT_TRUE(reinterpret_cast<uintptr_t>(unaligned_cmsg) % alignof(cmsghdr) != 0);
 
     // Do not access the unaligned control header directly as that would be an undefined behavior.
@@ -5563,14 +5564,14 @@ TEST_P(NetDatagramSocketsIpRecvTosTest, RecvMsgTOS) {
   SendAndCheckReceivedMessage(control, sizeof(control), [tos](msghdr& msghdr) {
     EXPECT_EQ(msghdr.msg_controllen, CMSG_SPACE(sizeof(uint8_t)));
     cmsghdr* cmsg;
-    ASSERT_THAT(cmsg = CMSG_FIRSTHDR(&msghdr), NotNull());
+    ASSERT_TRUE(cmsg = CMSG_FIRSTHDR(&msghdr));
     EXPECT_EQ(cmsg->cmsg_len, CMSG_LEN(sizeof(uint8_t)));
     EXPECT_EQ(cmsg->cmsg_level, SOL_IP);
     EXPECT_EQ(cmsg->cmsg_type, IP_TOS);
     uint8_t recv_tos;
     memcpy(&recv_tos, CMSG_DATA(cmsg), sizeof(tos));
     EXPECT_EQ(recv_tos, tos);
-    EXPECT_THAT(CMSG_NXTHDR(&msghdr, cmsg), IsNull());
+    EXPECT_FALSE(CMSG_NXTHDR(&msghdr, cmsg));
   });
 }
 
@@ -5585,11 +5586,11 @@ TEST_P(NetDatagramSocketsIpRecvTosTest, RecvMsgTOSControlBufferTooSmallToBePadde
     // bytes from the control buffer were used.
     EXPECT_EQ(msghdr.msg_controllen, CMSG_LEN(sizeof(uint8_t)) + 1);
     cmsghdr* cmsg;
-    ASSERT_THAT(cmsg = CMSG_FIRSTHDR(&msghdr), NotNull());
+    ASSERT_TRUE(cmsg = CMSG_FIRSTHDR(&msghdr));
     EXPECT_EQ(cmsg->cmsg_len, CMSG_LEN(sizeof(uint8_t)));
     EXPECT_EQ(cmsg->cmsg_level, SOL_IP);
     EXPECT_EQ(cmsg->cmsg_type, IP_TOS);
-    EXPECT_THAT(CMSG_NXTHDR(&msghdr, cmsg), IsNull());
+    EXPECT_FALSE(CMSG_NXTHDR(&msghdr, cmsg));
   });
 }
 
