@@ -16,6 +16,7 @@ use {
     fidl_fuchsia_bluetooth_hfp::{PeerHandlerMarker, PeerHandlerProxy},
     fuchsia_async::Task,
     fuchsia_bluetooth::types::PeerId,
+    fuchsia_inspect as inspect,
     futures::{channel::mpsc, Future, FutureExt, SinkExt, TryFutureExt},
     parking_lot::Mutex,
     profile_client::ProfileEvent,
@@ -105,6 +106,7 @@ pub struct PeerImpl {
     /// A handle to the audio control interface.
     audio_control: Arc<Mutex<Box<dyn AudioControl>>>,
     hfp_sender: mpsc::Sender<hfp::Event>,
+    inspect_node: inspect::Node,
 }
 
 impl PeerImpl {
@@ -115,6 +117,7 @@ impl PeerImpl {
         local_config: AudioGatewayFeatureSupport,
         connection_behavior: ConnectionBehavior,
         hfp_sender: mpsc::Sender<hfp::Event>,
+        inspect_node: inspect::Node,
     ) -> Result<Self, Error> {
         let (task, queue) = PeerTask::spawn(
             id,
@@ -123,6 +126,7 @@ impl PeerImpl {
             local_config,
             connection_behavior,
             hfp_sender.clone(),
+            &inspect_node,
         )?;
         Ok(Self {
             id,
@@ -133,6 +137,7 @@ impl PeerImpl {
             queue,
             connection_behavior,
             hfp_sender,
+            inspect_node,
         })
     }
 
@@ -145,7 +150,9 @@ impl PeerImpl {
             self.local_config,
             self.connection_behavior,
             self.hfp_sender.clone(),
+            &self.inspect_node,
         )?;
+
         self.task = task;
         self.queue = queue;
         Ok(())
@@ -310,22 +317,27 @@ mod tests {
         Arc::new(Mutex::new(Box::new(TestAudioControl::default())))
     }
 
-    #[fuchsia::test]
-    fn peer_id_returns_expected_id() {
-        // TestExecutor must exist in order to create fidl endpoints
-        let _exec = fasync::TestExecutor::new().unwrap();
-
-        let id = PeerId(1);
+    fn make_peer(id: PeerId) -> PeerImpl {
         let proxy = fidl::endpoints::create_proxy::<ProfileMarker>().unwrap().0;
-        let peer = PeerImpl::new(
+        PeerImpl::new(
             id,
             proxy,
             new_audio_control(),
             AudioGatewayFeatureSupport::default(),
             ConnectionBehavior::default(),
             mpsc::channel(1).0,
+            Default::default(),
         )
-        .unwrap();
+        .expect("valid peer")
+    }
+
+    #[fuchsia::test]
+    fn peer_id_returns_expected_id() {
+        // TestExecutor must exist in order to create fidl endpoints
+        let _exec = fasync::TestExecutor::new().unwrap();
+
+        let id = PeerId(1);
+        let peer = make_peer(id);
         assert_eq!(peer.id(), id);
     }
 
@@ -334,16 +346,7 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().unwrap();
 
         let id = PeerId(1);
-        let proxy = fidl::endpoints::create_proxy::<ProfileMarker>().unwrap().0;
-        let mut peer = PeerImpl::new(
-            id,
-            proxy,
-            new_audio_control(),
-            AudioGatewayFeatureSupport::default(),
-            ConnectionBehavior::default(),
-            mpsc::channel(1).0,
-        )
-        .unwrap();
+        let mut peer = make_peer(id);
 
         // Stop the inner task and wait until it has fully stopped
         // The inner task is replaced by a no-op task so that it can be consumed and canceled.
@@ -374,16 +377,7 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().unwrap();
 
         let id = PeerId(1);
-        let proxy = fidl::endpoints::create_proxy::<ProfileMarker>().unwrap().0;
-        let mut peer = PeerImpl::new(
-            id,
-            proxy,
-            new_audio_control(),
-            AudioGatewayFeatureSupport::default(),
-            ConnectionBehavior::default(),
-            mpsc::channel(1).0,
-        )
-        .unwrap();
+        let mut peer = make_peer(id);
 
         // Stop the inner task and wait until it has fully stopped
         // The inner task is replaced by a no-op task so that it can be consumed and canceled.

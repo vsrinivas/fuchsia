@@ -190,6 +190,7 @@ impl Hfp {
                     self.config,
                     self.connection_behavior,
                     self.internal_events_tx.clone(),
+                    self.inspect_node.peers.create_child(inspect::unique_name("peer_")),
                 )?);
                 if let Some(connection_id) = self.call_manager.connection_id() {
                     // Peer should be able to accept call_manager_connected request immediately
@@ -765,6 +766,7 @@ mod tests {
                     connected: false,
                 },
                 autoconnect: true,
+                peers: {},
             }
         });
 
@@ -779,6 +781,7 @@ mod tests {
                     connected: true,
                 },
                 autoconnect: true,
+                peers: {},
             }
         });
 
@@ -803,6 +806,7 @@ mod tests {
                     connected: false,
                 },
                 autoconnect: true,
+                peers: {},
             }
         });
     }

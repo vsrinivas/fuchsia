@@ -13,6 +13,8 @@ use {
         profile::{Attribute, ProtocolDescriptor},
         types::PeerId,
     },
+    fuchsia_inspect::{self as inspect, Property},
+    fuchsia_inspect_derive::Inspect,
     fuchsia_zircon as zx,
     futures::{
         channel::mpsc::{self, Sender},
@@ -47,6 +49,7 @@ use crate::{
     error::{Error, ScoConnectError},
     features::CodecId,
     hfp,
+    inspect::PeerTaskInspect,
     sco_connector::{ScoConnection, ScoConnector},
 };
 
@@ -97,6 +100,7 @@ impl fmt::Debug for ScoState {
     }
 }
 
+#[derive(Inspect)]
 pub(super) struct PeerTask {
     id: PeerId,
     _local_config: AudioGatewayFeatureSupport,
@@ -119,6 +123,8 @@ pub(super) struct PeerTask {
     audio_control: Arc<Mutex<Box<dyn AudioControl>>>,
     hfp_sender: Sender<hfp::Event>,
     manager_id: Option<hfp::ManagerConnectionId>,
+    #[inspect(forward)]
+    inspect: PeerTaskInspect,
 }
 
 impl PeerTask {
@@ -155,6 +161,7 @@ impl PeerTask {
             audio_control,
             hfp_sender,
             manager_id: None,
+            inspect: PeerTaskInspect::new(id),
         })
     }
 
@@ -165,9 +172,10 @@ impl PeerTask {
         local_config: AudioGatewayFeatureSupport,
         connection_behavior: ConnectionBehavior,
         hfp_sender: Sender<hfp::Event>,
+        inspect: &inspect::Node,
     ) -> Result<(Task<()>, Sender<PeerRequest>), Error> {
         let (sender, receiver) = mpsc::channel(0);
-        let peer = Self::new(
+        let mut peer = Self::new(
             id,
             profile_proxy,
             audio_control,
@@ -175,8 +183,14 @@ impl PeerTask {
             connection_behavior,
             hfp_sender,
         )?;
+        let _ = peer.iattach(inspect, "task");
         let task = Task::local(peer.run(receiver).map(|_| ()));
         Ok((task, sender))
+    }
+
+    fn set_handler(&mut self, handler: Option<PeerHandlerProxy>) {
+        self.handler = handler;
+        self.inspect.connected_peer_handler.set(self.handler.is_some());
     }
 
     /// Always give preference to connection requests received from the peer device.
@@ -253,7 +267,7 @@ impl PeerTask {
             .send(hfp::Event::PeerConnected { peer_id: self.id, manager_id, handle })
             .await
             .expect("Cannot communicate with main Hfp task");
-        self.handler = Some(proxy);
+        self.set_handler(Some(proxy));
     }
 
     async fn setup_handler(&mut self) -> Result<(), Error> {
@@ -294,7 +308,7 @@ impl PeerTask {
         self.manager_id = Some(id);
         if !self.connection.connected() {
             // If there is no peer connection, there should not be a handler.
-            self.handler = None;
+            self.set_handler(None);
             return Ok(());
         }
         self.notify_peer_connected(id).await;
@@ -332,7 +346,7 @@ impl PeerTask {
         self.calls = Calls::new(Some(handler.clone()));
 
         self.create_network_updates_stream(handler.clone());
-        self.handler = Some(handler);
+        self.set_handler(Some(handler));
 
         Ok(())
     }
@@ -827,6 +841,7 @@ impl PeerTask {
             let status = AgIndicator::Roam(self.network.roaming.unwrap() as u8);
             self.phone_status_update(status).await;
         }
+        self.inspect.network.update(&self.network);
     }
 }
 

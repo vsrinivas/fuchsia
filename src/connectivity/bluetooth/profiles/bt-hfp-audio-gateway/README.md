@@ -93,4 +93,13 @@ root:
     call_manager:
         manager_connection_id
         connected: (true / false)
+    peers:
+      peer_0:
+        task:
+          peer_id
+          connected_peer_handler: (true / false)
+          network:
+            service_available
+            signal_strength
+            roaming
 ```
