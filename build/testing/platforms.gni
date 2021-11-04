@@ -125,6 +125,11 @@ test_platforms = [
     pool = "fuchsia.tests.thermal"
     device_type = "Sherlock"
   },
+  {
+    cpu = "x64"
+    pool = "fuchsia.tests.anvl"
+    os = "Linux"
+  },
 
   # Experimental/FYI.
   # fxbug.dev/43946
