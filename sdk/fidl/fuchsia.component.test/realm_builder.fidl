@@ -85,8 +85,7 @@ const MAX_LEN_ROUTE_ENDPOINTS uint32 = 100;
 /// The handles a mock component uses to consume capabilities from and provide
 /// capabilities to the framework.
 type MockComponentStartInfo = resource table {
-    1: ns
-            vector<fuchsia.component.runner.ComponentNamespaceEntry>:fuchsia.component.runner.MAX_NAMESPACE_COUNT;
+    1: ns vector<fuchsia.component.runner.ComponentNamespaceEntry>:fuchsia.component.runner.MAX_NAMESPACE_COUNT;
     2: outgoing_dir server_end:fuchsia.io.Directory;
 };
 

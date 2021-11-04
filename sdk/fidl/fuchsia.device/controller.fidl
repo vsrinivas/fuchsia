@@ -214,15 +214,13 @@ protocol Controller {
     /// Updates the mapping between system power states to device power states. Used by the system
     /// wide power manager to manage power for this device
     UpdatePowerStateMapping(struct {
-        mapping
-                array<SystemPowerStateInfo, fuchsia.hardware.power.statecontrol.MAX_SYSTEM_POWER_STATES>;
+        mapping array<SystemPowerStateInfo, fuchsia.hardware.power.statecontrol.MAX_SYSTEM_POWER_STATES>;
     }) -> (struct {}) error zx.status;
 
     /// Get the mapping between system power states to device power states. Used by the system
     /// wide power manager to manage power for this device.
     GetPowerStateMapping() -> (struct {
-        mapping
-                array<SystemPowerStateInfo, fuchsia.hardware.power.statecontrol.MAX_SYSTEM_POWER_STATES>;
+        mapping array<SystemPowerStateInfo, fuchsia.hardware.power.statecontrol.MAX_SYSTEM_POWER_STATES>;
     }) error zx.status;
 
     /// Transition this device from a working to a sleep state or from a sleep state to a deeper sleep

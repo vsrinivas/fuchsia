@@ -5319,4 +5319,41 @@ protocol Foo {
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
+// Don't wrap if <8 chars have been used before the wrapping, as this will cause greater offsetting
+// with no readability benefit.  For example:
+//
+//     foo zx.handle:<VMO, RIGHT_A | RIGHT_B>;
+//
+// would otherwise get divided into:
+//
+//     foo
+//             zx.handle:<VMO, RIGHT_A | RIGHT_B>;
+//
+// which looks and reads strictly worse.
+TEST(NewFormatterTests, NoPointlessWrapping) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+type MyStruct = resource struct {
+    lilname zx.handle:<VMO, RIGHT_A | RIGHT_B>;
+    longname zx.handle:<VMO, RIGHT_A | RIGHT_B>;
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+type MyStruct = resource struct {
+    lilname zx.handle:<VMO, RIGHT_A | RIGHT_B>;
+    longname
+            zx.handle:<VMO, RIGHT_A | RIGHT_B>;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
+}
+
 }  // namespace

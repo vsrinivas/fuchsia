@@ -64,8 +64,7 @@ type NodeInfo = strict resource union {
 
     /// The connection composes [`fuchsia.posix.socket/StreamSocket`].
    10: stream_socket resource struct {
-        socket
-                zx.handle:<SOCKET, zx.rights.TRANSFER | zx.RIGHTS_IO | zx.rights.WAIT | zx.rights.INSPECT>;
+        socket zx.handle:<SOCKET, zx.rights.TRANSFER | zx.RIGHTS_IO | zx.rights.WAIT | zx.rights.INSPECT>;
     };
 
     /// The connection composes [`fuchsia.posix.socket.raw/Socket`].

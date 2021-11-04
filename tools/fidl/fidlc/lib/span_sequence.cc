@@ -317,7 +317,17 @@ std::optional<SpanSequence::Kind> DivisibleSpanSequence::Print(
 
   MaybeAddBlankLinesAfterStandaloneComment(this, last_printed_kind, out);
 
-  if (required_size > space_available) {
+  // See the `NoPointlessWrapping` test case in `formatter_tests.cc` for an illustrative example
+  // of why the conditional after `&&` exists, but the brief explanation is that indenting in cases
+  // where there are only two elements in the DivisibleSpanSequence and the first one is very short
+  // (<8 chars) is counterproductive, producing output like:
+  //
+  // type MyStruct = {
+  //     a
+  //             MyVeryVery...VeryLongTypeName;
+  // };
+  if (required_size > space_available &&
+      (children.size() > 2 || children[0]->GetRequiredSize() >= kWrappedIndentation)) {
     // We can't fit this DivisibleSpanSequence on a single line, either due to a lack of space, or
     // otherwise because it has a MultiSpanSequence somewhere in the middle of its child nodes,
     // which forces line breaks.
