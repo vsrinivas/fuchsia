@@ -594,6 +594,10 @@ config("Wno-range-loop-construct") {
   visibility = [ "//src/developer/debug/third_party/libunwindstack" ]
 }
 
+config("Wno-strict-prototypes") {
+  cflags = [ "-Wno-strict-prototypes" ]
+}
+
 # TODO(fxbug.dev/58162): clean up instances of this outside of third party code.
 #
 # NOTE: Do not add this to public_configs under any circumstances. Public
