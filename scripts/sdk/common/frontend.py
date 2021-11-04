@@ -219,6 +219,11 @@ class Frontend(object):
                 atom = load_metadata(self.source(part['meta']))
                 if not atom:
                     return False
+                # 'version_history' is a versioned sdk atom that doesn't have a meta.json.
+                if type == 'version_history':
+                    getattr(self, 'install_%s_atom' % type,
+                            self._handle_atom)(atom, part)
+                    continue
                 getattr(self, 'install_%s_atom' % type, self._handle_atom)(atom)
 
             self.finalize(manifest['arch'], types)
@@ -241,7 +246,7 @@ class Frontend(object):
             return atom['data']['name']
         return atom['name']
 
-    def _handle_atom(self, atom):
+    def _handle_atom(self, atom, manifest=None):
         """Default atom handler."""
         print(
             'Ignored %s (%s)' %

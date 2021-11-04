@@ -271,6 +271,9 @@ class GNBuilder(Frontend):
     def install_documentation_atom(self, atom):
         self.copy_files(atom['docs'])
 
+    def install_version_history_atom(self, atom, manifest):
+        self.write_atom_metadata(manifest['meta'], atom)
+
     def install_cts_resource_atom(self, atom):
         # Copy the CTS build files and component manifests.
         # TODO(80274): We should generate the build files instead of
