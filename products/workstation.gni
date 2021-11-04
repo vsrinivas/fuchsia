@@ -52,6 +52,12 @@ base_package_labels += [ "//src/virtualization/bin/linux_runner" ]
 base_package_labels -= [ "//src/cobalt/bin/app:config" ]
 base_package_labels += [ "//src/cobalt/bin/app:user_config" ]
 
+# Explicitly prefer wired networking on workstation
+base_package_labels -=
+    [ "//src/connectivity/management:network_config_default" ]
+base_package_labels +=
+    [ "//src/connectivity/management:network_config_prefer_wired" ]
+
 cache_package_labels += [
   "//src/chromium:web_engine",
   "//src/experiences/bin/settings/license:license_settings",

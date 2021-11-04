@@ -21,7 +21,7 @@
         "wlan"
     ],
     "interface_metrics": {
-        "wlan_metric": 100,
-        "eth_metric": 90
+        "wlan_metric": 90,
+        "eth_metric": 100
     }
 }

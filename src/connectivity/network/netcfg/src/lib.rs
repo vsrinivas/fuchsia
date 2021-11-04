@@ -66,19 +66,6 @@ use self::errors::ContextExt as _;
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
 pub struct Metric(u32);
 
-impl Metric {
-    // TODO(https://fxbug.dev/81921): Currently, we default wireless interfaces to be higher
-    // priority routes than wired interfaces. Once product configurations are changed to specify
-    // their priorities in their configurations, these functions (and their use) can be removed.
-    fn wlan_default() -> Self {
-        Self(90)
-    }
-
-    fn eth_default() -> Self {
-        Self(100)
-    }
-}
-
 impl Default for Metric {
     // A default value of 600 is chosen for Metric: this provides plenty of space for routing
     // policy on devices with many interfaces (physical or logical) while remaining in the same
@@ -232,18 +219,12 @@ enum InterfaceType {
 }
 
 #[cfg_attr(test, derive(PartialEq))]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 pub struct InterfaceMetrics {
-    #[serde(default = "Metric::wlan_default")]
+    #[serde(default)]
     pub wlan_metric: Metric,
-    #[serde(default = "Metric::eth_default")]
+    #[serde(default)]
     pub eth_metric: Metric,
-}
-
-impl Default for InterfaceMetrics {
-    fn default() -> Self {
-        Self { wlan_metric: Metric::wlan_default(), eth_metric: Metric::eth_default() }
-    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -2334,9 +2315,9 @@ mod tests {
     }
 
     #[test_case(
-        "eth_metric", Metric::wlan_default(), Metric(1), Metric(1);
+        "eth_metric", Default::default(), Metric(1), Metric(1);
         "wlan assumes default metric when unspecified")]
-    #[test_case("wlan_metric", Metric(1), Metric::eth_default(), Metric(1);
+    #[test_case("wlan_metric", Metric(1), Default::default(), Metric(1);
         "eth assumes default metric when unspecified")]
     fn test_config_metric_individual_defaults(
         metric_name: &'static str,
