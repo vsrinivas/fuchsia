@@ -425,7 +425,7 @@ zx_status_t HidDevice::Bind(ddk::HidbusProtocolClient hidbus_proto) {
     // continue anyway
   }
 
-  status = DdkAdd(ddk::DeviceAddArgs(name_.data()).set_flags(DEVICE_ADD_NON_BINDABLE));
+  status = DdkAdd(name_.data());
   if (status != ZX_OK) {
     zxlogf(ERROR, "hid: device_add failed for HID device: %d", status);
     ReleaseReassemblyBuffer();
