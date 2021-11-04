@@ -71,7 +71,7 @@ zx_status_t MakeDirAndRemoteMount(const char* path, zx::channel root) {
   }
   fidl::WireSyncClient<fuchsia_io_admin::DirectoryAdmin> parent_client(std::move(parent));
   auto resp =
-      parent_client.MountAndCreate(std::move(root), fidl::StringView::FromExternal(name), 0);
+      parent_client->MountAndCreate(std::move(root), fidl::StringView::FromExternal(name), 0);
   if (!resp.ok()) {
     return resp.status();
   }
@@ -301,7 +301,7 @@ zx_status_t mount_root_handle(zx_handle_t root_handle, const char* mount_path) {
     return status;
   }
   fidl::WireSyncClient<fuchsia_io_admin::DirectoryAdmin> mount_client(std::move(mount_point));
-  auto resp = mount_client.Mount(zx::channel(root_handle));
+  auto resp = mount_client->Mount(zx::channel(root_handle));
   if (!resp.ok()) {
     return resp.status();
   }

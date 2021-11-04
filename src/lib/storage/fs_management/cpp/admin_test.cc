@@ -56,7 +56,7 @@ class OutgoingDirectoryTest : public testing::Test {
     zx::channel data_root;
     GetDataRoot(&data_root);
     fidl::WireSyncClient<fuchsia_io_admin::DirectoryAdmin> data_client(std::move(data_root));
-    auto resp = data_client.QueryFilesystem();
+    auto resp = data_client->QueryFilesystem();
     ASSERT_TRUE(resp.ok());
     ASSERT_EQ(resp.value().s, ZX_OK);
     ASSERT_EQ(strncmp(format_str, reinterpret_cast<char*>(resp.value().info->name.data()),
@@ -83,7 +83,7 @@ class OutgoingDirectoryTest : public testing::Test {
     GetDataRoot(&data_root);
 
     fidl::WireSyncClient<fuchsia_io_admin::DirectoryAdmin> data_client(std::move(data_root));
-    auto resp = data_client.Unmount();
+    auto resp = data_client->Unmount();
     ASSERT_TRUE(resp.ok());
     ASSERT_EQ(resp.value().s, ZX_OK);
 
@@ -100,17 +100,17 @@ class OutgoingDirectoryTest : public testing::Test {
     ASSERT_EQ(zx::channel::create(0, &test_file, &test_file_server), ZX_OK);
     uint32_t file_flags =
         fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable | fio::wire::kOpenFlagCreate;
-    ASSERT_EQ(data_client.Open(file_flags, 0, "test_file", std::move(test_file_server)).status(),
+    ASSERT_EQ(data_client->Open(file_flags, 0, "test_file", std::move(test_file_server)).status(),
               ZX_OK);
 
     fidl::WireSyncClient<fio::File> file_client(std::move(test_file));
     std::vector<uint8_t> content{1, 2, 3, 4};
-    auto resp = file_client.Write(fidl::VectorView<uint8_t>::FromExternal(content));
+    auto resp = file_client->Write(fidl::VectorView<uint8_t>::FromExternal(content));
     ASSERT_EQ(resp.status(), ZX_OK);
     ASSERT_EQ(resp.value().s, ZX_OK);
     ASSERT_EQ(resp.value().actual, content.size());
 
-    auto resp2 = file_client.Close();
+    auto resp2 = file_client->Close();
     ASSERT_EQ(resp2.status(), ZX_OK);
     ASSERT_EQ(resp2.value().s, ZX_OK);
   }
@@ -184,28 +184,28 @@ TEST_F(OutgoingDirectoryMinfs, CannotWriteToReadOnlyMinfsDataRoot) {
   uint32_t fail_file_flags = fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable;
   // open "succeeds" but...
   ASSERT_EQ(
-      data_client.Open(fail_file_flags, 0, "test_file", std::move(fail_test_file_server)).status(),
+      data_client->Open(fail_file_flags, 0, "test_file", std::move(fail_test_file_server)).status(),
       ZX_OK);
 
   // ...we can't actually use the channel
   fidl::WireSyncClient<fio::File> fail_file_client(std::move(fail_test_file));
-  auto resp = fail_file_client.Read(4);
+  auto resp = fail_file_client->Read(4);
   ASSERT_EQ(resp.status(), ZX_ERR_PEER_CLOSED);
 
   // the channel will be valid if we open the file read-only though
   zx::channel test_file, test_file_server;
   ASSERT_EQ(zx::channel::create(0, &test_file, &test_file_server), ZX_OK);
   uint32_t file_flags = fio::wire::kOpenRightReadable;
-  ASSERT_EQ(data_client.Open(file_flags, 0, "test_file", std::move(test_file_server)).status(),
+  ASSERT_EQ(data_client->Open(file_flags, 0, "test_file", std::move(test_file_server)).status(),
             ZX_OK);
 
   fidl::WireSyncClient<fio::File> file_client(std::move(test_file));
-  auto resp2 = file_client.Read(4);
+  auto resp2 = file_client->Read(4);
   ASSERT_EQ(resp2.status(), ZX_OK);
   ASSERT_EQ(resp2.value().s, ZX_OK);
   ASSERT_EQ(resp2.value().data.data()[0], 1);
 
-  auto resp3 = file_client.Close();
+  auto resp3 = file_client->Close();
   ASSERT_EQ(resp3.status(), ZX_OK);
   ASSERT_EQ(resp3.value().s, ZX_OK);
 }
@@ -228,6 +228,6 @@ TEST_F(OutgoingDirectoryMinfs, CannotWriteToOutgoingDirectory) {
 
   fidl::WireSyncClient<fio::File> file_client(std::move(test_file));
   std::vector<uint8_t> content{1, 2, 3, 4};
-  auto resp = file_client.Write(fidl::VectorView<uint8_t>::FromExternal(content));
+  auto resp = file_client->Write(fidl::VectorView<uint8_t>::FromExternal(content));
   ASSERT_EQ(resp.status(), ZX_ERR_PEER_CLOSED);
 }
