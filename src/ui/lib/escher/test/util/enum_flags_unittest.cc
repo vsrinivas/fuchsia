@@ -20,7 +20,7 @@ enum class TestEnumBits : uint8_t {
   test3 = 4,
   kAllFlags = 7,  // test1 | test2 | test3
 };
-ESCHER_DECLARE_ENUM_FLAGS(TestEnumFlags, TestEnumBits);
+ESCHER_DECLARE_ENUM_FLAGS(TestEnumFlags, TestEnumBits)
 
 // More complex enum class with many more members
 // but likewise in sequential order with no gaps.
@@ -40,7 +40,7 @@ enum class LargeEnumBits : uint16_t {
   large13 = 1U << 12,
   kAllFlags = 0x1FFF,
 };
-ESCHER_DECLARE_ENUM_FLAGS(LargeEnumFlags, LargeEnumBits);
+ESCHER_DECLARE_ENUM_FLAGS(LargeEnumFlags, LargeEnumBits)
 
 // Enum class where there are gaps between members.
 enum class SparseEnumBits : uint32_t {
@@ -52,7 +52,7 @@ enum class SparseEnumBits : uint32_t {
   sparse6 = 1U << 29,
   kAllFlags = sparse1 | sparse2 | sparse3 | sparse4 | sparse5 | sparse6,
 };
-ESCHER_DECLARE_ENUM_FLAGS(SparseEnumFlags, SparseEnumBits);
+ESCHER_DECLARE_ENUM_FLAGS(SparseEnumFlags, SparseEnumBits)
 
 // Arrays to iterate over during testing.
 static const std::array<LargeEnumBits, 13> large_enum_array = {

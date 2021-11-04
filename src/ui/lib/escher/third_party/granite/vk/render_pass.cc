@@ -197,7 +197,7 @@ vk::AttachmentReference* FindColorAttachmentRef(vk::SubpassDescription* subpass,
     }
   }
   return nullptr;
-};
+}
 
 // Find and return the vk::AttachmentReference that references the specified
 // attachment in the specified subpass, or nullptr if the attachment is not
@@ -213,7 +213,7 @@ vk::AttachmentReference* FindResolveAttachmentRef(vk::SubpassDescription* subpas
     }
   }
   return nullptr;
-};
+}
 
 // Find and return the vk::AttachmentReference that references the specified
 // attachment in the specified subpass, or nullptr if the attachment is not
@@ -239,7 +239,7 @@ vk::AttachmentReference* FindDepthStencilAttachmentRef(vk::SubpassDescription* s
     return const_cast<vk::AttachmentReference*>(subpass->pDepthStencilAttachment);
   }
   return nullptr;
-};
+}
 
 }  // namespace
 

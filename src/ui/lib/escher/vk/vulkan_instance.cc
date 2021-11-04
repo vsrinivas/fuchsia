@@ -215,4 +215,4 @@ VkBool32 VulkanInstance::DebugReportCallbackEntrance(VkDebugReportFlagsEXT flags
   return VK_FALSE;
 }
 
-};  // namespace escher
+}  // namespace escher

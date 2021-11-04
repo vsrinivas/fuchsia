@@ -20,7 +20,7 @@ SemaphorePtr ChainedSemaphoreGenerator::CreateNextSemaphore(bool exportable) {
 #endif
   last_semaphore_ = exportable ? Semaphore::NewExportableSem(device_) : Semaphore::New(device_);
   return last_semaphore_;
-};
+}
 
 SemaphorePtr ChainedSemaphoreGenerator::TakeLastSemaphore() { return std::move(last_semaphore_); }
 

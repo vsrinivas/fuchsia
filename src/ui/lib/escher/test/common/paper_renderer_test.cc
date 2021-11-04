@@ -55,7 +55,7 @@ void PaperRendererTest::SetupFrame() {
   const escher::ViewingVolume& volume = ViewingVolume(scene_->bounding_box);
   escher::Camera cam = escher::Camera::NewOrtho(volume);
   cameras_ = {cam};
-};
+}
 
 void PaperRendererTest::TeardownFrame() {
   frame_data_.frame->EndFrame(SemaphorePtr(), []() {});
@@ -77,7 +77,7 @@ void PaperRendererTest::EndRenderingFrame() {
 std::vector<uint8_t> PaperRendererTest::GetPixelData() {
   return ReadbackFromColorAttachment(frame_data_.frame, vk::ImageLayout::eColorAttachmentOptimal,
                                      vk::ImageLayout::eColorAttachmentOptimal);
-};
+}
 
 }  // namespace test
 }  // namespace escher

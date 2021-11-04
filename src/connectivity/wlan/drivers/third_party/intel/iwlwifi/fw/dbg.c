@@ -1135,7 +1135,7 @@ const struct iwl_fw_dump_desc iwl_dump_desc_assert = {
             .type = cpu_to_le32(FW_DBG_TRIGGER_FW_ASSERT),
         },
 };
-IWL_EXPORT_SYMBOL(iwl_dump_desc_assert);
+IWL_EXPORT_SYMBOL(iwl_dump_desc_assert)
 
 #if 0  // NEEDS_PORTING
 
@@ -1208,7 +1208,7 @@ zx_status_t iwl_fw_dbg_collect_desc(struct iwl_fw_runtime* fwrt,
 
   return ZX_OK;
 }
-IWL_EXPORT_SYMBOL(iwl_fw_dbg_collect_desc);
+IWL_EXPORT_SYMBOL(iwl_fw_dbg_collect_desc)
 
 zx_status_t _iwl_fw_dbg_collect(struct iwl_fw_runtime* fwrt, enum iwl_fw_dbg_trigger trig,
                                 const char* str, size_t len,
@@ -1246,7 +1246,7 @@ zx_status_t _iwl_fw_dbg_collect(struct iwl_fw_runtime* fwrt, enum iwl_fw_dbg_tri
 
   return iwl_fw_dbg_collect_desc(fwrt, desc, monitor_only, delay);
 }
-IWL_EXPORT_SYMBOL(_iwl_fw_dbg_collect);
+IWL_EXPORT_SYMBOL(_iwl_fw_dbg_collect)
 
 zx_status_t iwl_fw_dbg_collect(struct iwl_fw_runtime* fwrt, uint32_t id, const char* str,
                                size_t len) {
@@ -1292,7 +1292,7 @@ zx_status_t iwl_fw_dbg_collect(struct iwl_fw_runtime* fwrt, uint32_t id, const c
 
   return iwl_fw_dbg_collect_desc(fwrt, desc, true, delay);
 }
-IWL_EXPORT_SYMBOL(iwl_fw_dbg_collect);
+IWL_EXPORT_SYMBOL(iwl_fw_dbg_collect)
 
 zx_status_t iwl_fw_dbg_collect_trig(struct iwl_fw_runtime* fwrt,
                                     struct iwl_fw_dbg_trigger_tlv* trigger, const char* fmt, ...) {
@@ -1322,7 +1322,7 @@ zx_status_t iwl_fw_dbg_collect_trig(struct iwl_fw_runtime* fwrt,
 
   return _iwl_fw_dbg_collect(fwrt, le32_to_cpu(trigger->id), buf, len, trigger);
 }
-IWL_EXPORT_SYMBOL(iwl_fw_dbg_collect_trig);
+IWL_EXPORT_SYMBOL(iwl_fw_dbg_collect_trig)
 
 #if 0  // NEEDS_PORTING
 
@@ -1498,7 +1498,7 @@ void iwl_fw_dbg_collect_sync(struct iwl_fw_runtime* fwrt) {
     iwl_fw_dbg_restart_recording(fwrt, &params);
   }
 }
-IWL_EXPORT_SYMBOL(iwl_fw_dbg_collect_sync);
+IWL_EXPORT_SYMBOL(iwl_fw_dbg_collect_sync)
 
 void iwl_fw_error_dump_wk(void* data) {
   struct iwl_fw_runtime* fwrt = (struct iwl_fw_runtime*)data;

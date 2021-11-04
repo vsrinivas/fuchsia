@@ -72,15 +72,15 @@ struct IndexedTriangleMesh {
 
   size_t sizeof_attribute1() const {
     return std::is_same<AttrT1, nullptr_t>::value ? 0 : sizeof(AttrT1);
-  };
+  }
 
   size_t sizeof_attribute2() const {
     return std::is_same<AttrT2, nullptr_t>::value ? 0 : sizeof(AttrT2);
-  };
+  }
 
   size_t sizeof_attribute3() const {
     return std::is_same<AttrT3, nullptr_t>::value ? 0 : sizeof(AttrT3);
-  };
+  }
 
   // Return the total number of bytes used by vertex position data.
   size_t total_position_bytes() const { return vertex_count() * sizeof(PositionT); }

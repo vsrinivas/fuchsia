@@ -265,7 +265,7 @@ class CommandBufferPipelineState {
 
     bool get_wireframe() const { return static_cast<bool>(wireframe); }
 
-    uint32_t get_color_write_mask() const { return color_write_mask; };
+    uint32_t get_color_write_mask() const { return color_write_mask; }
 
     bool operator==(const StaticState& state) const {
       return 0 == memcmp(this, &state, sizeof(StaticState));
@@ -365,13 +365,13 @@ ESCHER_DEBUG_PRINTABLE(CommandBufferPipelineState::StaticState);
     return result;                                                              \
   }
 
-UNPACK_ENUM_IMPL(CompareOp);
-UNPACK_ENUM_IMPL(StencilOp);
-UNPACK_ENUM_IMPL(BlendFactor);
-UNPACK_ENUM_IMPL(BlendOp);
-UNPACK_ENUM_IMPL(FrontFace);
-UNPACK_ENUM_IMPL(PrimitiveTopology);
-UNPACK_FLAGS_ENUM_IMPL(CullMode);
+UNPACK_ENUM_IMPL(CompareOp)
+UNPACK_ENUM_IMPL(StencilOp)
+UNPACK_ENUM_IMPL(BlendFactor)
+UNPACK_ENUM_IMPL(BlendOp)
+UNPACK_ENUM_IMPL(FrontFace)
+UNPACK_ENUM_IMPL(PrimitiveTopology)
+UNPACK_FLAGS_ENUM_IMPL(CullMode)
 
 #undef UNPACK_ENUM_IMPL
 #undef UNPACK_FLAGS_ENUM_IMPL

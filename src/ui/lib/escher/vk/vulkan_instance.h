@@ -127,6 +127,6 @@ class VulkanInstance : public fxl::RefCountedThreadSafe<VulkanInstance> {
   uint32_t api_version_;
 };
 
-};  // namespace escher
+}  // namespace escher
 
 #endif  // SRC_UI_LIB_ESCHER_VK_VULKAN_INSTANCE_H_

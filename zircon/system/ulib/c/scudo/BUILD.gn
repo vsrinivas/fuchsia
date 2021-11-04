@@ -245,6 +245,9 @@ libc_test("unittests") {
   if (!variant_replaces_allocator) {
     deps += [ ":wrapper-tests" ]
   }
+
+  # Suppress warnings from third party code
+  configs += [ "//build/config:Wno-extra-semi" ]
 }
 
 # These tests use the public API, so they are testing what's actually in libc
@@ -289,5 +292,6 @@ libc_test("gwp_asan-unittests") {
 
   deps += [ ":gwp_asan.testonly" ]
 
-  cflags = [ "-Wno-extra-semi" ]
+  # Suppress warnings from third party code
+  configs += [ "//build/config:Wno-extra-semi" ]
 }

@@ -37,7 +37,7 @@ TexturePtr CreateFourColorTexture(EscherWeakPtr escher, BatchGpuUploader* gpu_up
                           /*green*/ 0,   255, 0,   255, /*blue*/ 0,  0, 255, 255};
   auto image = escher->NewRgbaImage(gpu_uploader, 2, 2, channels);
   return escher->NewTexture(std::move(image), vk::Filter::eNearest);
-};
+}
 
 TexturePtr CreateDepthBuffer(Escher* escher, const ImagePtr& output_image) {
   TexturePtr depth_buffer;
@@ -83,7 +83,7 @@ class RectangleCompositorTest : public ReadbackTest {
   }
 
   // Sets up the environment.
-  void frame_setup() { frame_data_ = NewFrame(vk::ImageLayout::eColorAttachmentOptimal); };
+  void frame_setup() { frame_data_ = NewFrame(vk::ImageLayout::eColorAttachmentOptimal); }
 
   escher::RectangleCompositor* renderer() const { return ren_.get(); }
 

@@ -19,7 +19,7 @@ enum class PaperRenderQueueFlagBits : uint8_t {
 
   kAllFlags = 0x7u,
 };
-ESCHER_DECLARE_ENUM_FLAGS(PaperRenderQueueFlags, PaperRenderQueueFlagBits);
+ESCHER_DECLARE_ENUM_FLAGS(PaperRenderQueueFlags, PaperRenderQueueFlagBits)
 
 }  // namespace escher
 

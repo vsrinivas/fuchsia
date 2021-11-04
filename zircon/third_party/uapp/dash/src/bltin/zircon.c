@@ -702,10 +702,10 @@ typedef struct admin_resp {
     return 0;                                                                                    \
   }
 
-DEFINE_PARAMETERLESS_ADMIN_CALL(Poweroff);
-DEFINE_PARAMETERLESS_ADMIN_CALL(RebootToRecovery);
-DEFINE_PARAMETERLESS_ADMIN_CALL(RebootToBootloader);
-DEFINE_PARAMETERLESS_ADMIN_CALL(SuspendToRam);
+DEFINE_PARAMETERLESS_ADMIN_CALL(Poweroff)
+DEFINE_PARAMETERLESS_ADMIN_CALL(RebootToRecovery)
+DEFINE_PARAMETERLESS_ADMIN_CALL(RebootToBootloader)
+DEFINE_PARAMETERLESS_ADMIN_CALL(SuspendToRam)
 
 static int send_Reboot() {
     zx_handle_t channel;

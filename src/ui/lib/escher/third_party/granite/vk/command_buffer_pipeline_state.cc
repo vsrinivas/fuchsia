@@ -42,7 +42,7 @@ namespace escher {
 
 #define ASSERT_NUM_STATE_BITS(BIT_COUNT, MAX_VALUE)                                           \
   static_assert((1 << CommandBufferPipelineState::StaticState::BIT_COUNT) - 1 >= (MAX_VALUE), \
-                "not enough bits for " #MAX_VALUE);
+                "not enough bits for " #MAX_VALUE)
 
 ASSERT_NUM_STATE_BITS(kNumCompareOpBits, *enum_utils::MaxEnumElementValue<vk::CompareOp>());
 ASSERT_NUM_STATE_BITS(kNumStencilOpBits, *enum_utils::MaxEnumElementValue<vk::StencilOp>());

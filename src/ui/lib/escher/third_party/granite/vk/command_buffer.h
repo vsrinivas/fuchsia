@@ -98,7 +98,7 @@ class CommandBuffer : public Reffable {
 
   // See class comment.  This function makes it illegal to trigger creation of a new pipeline;
   // it is the app's responsibility to ensure that all required pipelines are generated in advance.
-  void DisableLazyPipelineCreation() { allow_renderpass_and_pipeline_creation_ = false; };
+  void DisableLazyPipelineCreation() { allow_renderpass_and_pipeline_creation_ = false; }
 
   // These resources will be retained until the command-buffer is finished
   // running on the GPU.

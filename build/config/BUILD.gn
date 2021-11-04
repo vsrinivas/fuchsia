@@ -1098,6 +1098,10 @@ config("Wno-conversion") {
   ]
 }
 
+config("Wno-extra-semi") {
+  cflags = [ "-Wno-extra-semi" ]
+}
+
 config("Wno-implicit-fallthrough") {
   cflags = [ "-Wno-implicit-fallthrough" ]
   visibility = [

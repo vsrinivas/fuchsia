@@ -145,6 +145,6 @@ class VulkanDeviceQueues : public fxl::RefCountedThreadSafe<VulkanDeviceQueues> 
 
 ESCHER_DEBUG_PRINTABLE(VulkanDeviceQueues::Caps);
 
-};  // namespace escher
+} // namespace escher
 
 #endif  // SRC_UI_LIB_ESCHER_VK_VULKAN_DEVICE_QUEUES_H_
