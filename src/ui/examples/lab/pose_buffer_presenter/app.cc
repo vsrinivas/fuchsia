@@ -23,13 +23,17 @@
 
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <glm/gtx/string_cast.hpp>
+#pragma GCC diagnostic pop
+#include <lib/syslog/cpp/macros.h>
+
 #include <iostream>
 
 #include "lib/ui/scenic/cpp/commands.h"
 #include "src/lib/ui/scenic/cpp/host_memory.h"
 #include "src/lib/ui/scenic/cpp/mesh_utils.h"
-#include <lib/syslog/cpp/macros.h>
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/lib/escher/hmd/pose_buffer.h"
 #include "src/ui/lib/escher/util/image_utils.h"

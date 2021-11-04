@@ -47,7 +47,10 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <glm/gtx/string_cast.hpp>
+#pragma GCC diagnostic pop
 #include <vulkan/vulkan.hpp>
 
 namespace {

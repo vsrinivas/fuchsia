@@ -22,7 +22,10 @@
 
 #include "src/ui/bin/root_presenter/displays/display_configuration.h"
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <glm/ext.hpp>
+#pragma GCC diagnostic pop
 
 namespace root_presenter {
 namespace {

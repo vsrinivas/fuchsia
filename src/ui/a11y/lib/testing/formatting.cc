@@ -6,7 +6,10 @@
 
 #include <iomanip>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <glm/gtx/string_cast.hpp>
+#pragma GCC diagnostic pop
 
 namespace std {
 
