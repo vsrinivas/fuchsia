@@ -156,12 +156,6 @@
             protocol: [
                 "fuchsia.boot.ReadOnlyLog",
                 "fuchsia.boot.WriteOnlyLog",
-
-                // TODO(fxbug.dev/83029): Remove hwinfo protocols once canary
-                // package is rolled to latest test changes.
-                "fuchsia.hwinfo.Board",
-                "fuchsia.hwinfo.Device",
-                "fuchsia.hwinfo.Product",
                 "fuchsia.kernel.RootJobForInspect",
                 "fuchsia.kernel.Stats",
                 "fuchsia.kernel.VmexResource",
