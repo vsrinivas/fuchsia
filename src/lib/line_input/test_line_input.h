@@ -18,7 +18,7 @@ class TestLineInput : public LineInputEditor {
   // null.
   TestLineInput(const std::string& prompt, AcceptCallback accept_cb = AcceptCallback())
       : LineInputEditor(
-            [this](const std::string& s) {
+            [this](std::string s) {
               if (accept_goes_to_history_)
                 AddToHistory(s);
               accept_ = s;
@@ -54,7 +54,7 @@ class TestLineInput : public LineInputEditor {
   }
 
   void SetLine(const std::string& input) {
-    cur_line() = input;
+    mutable_cur_line() = input;
     set_pos(input.size());
   }
 

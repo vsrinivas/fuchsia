@@ -6,6 +6,7 @@
 #define SRC_LIB_LINE_INPUT_LINE_INPUT_H_
 
 #include <deque>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -69,12 +70,14 @@ class LineInput {
  public:
   virtual ~LineInput() = default;
 
-  // Called with the user input when the user acceps a line.
-  using AcceptCallback = fit::function<void(const std::string&)>;
+  // Called with the user input when the user acceps a line. This takes a copy because the accept
+  // callback can often modify the command history which in turn owns the string being edited and
+  // accepted.
+  using AcceptCallback = fit::function<void(std::string)>;
 
   // Called when the current line changes. This is not called for <Enter> which doesn't change
-  // anything but will call the AcceptCallback.
-  using ChangeCallback = fit::function<void(const std::string&)>;
+  // anything but will call the AcceptCallback. As in AcceptCallback, this takes a copy.
+  using ChangeCallback = fit::function<void(std::string)>;
 
   // Given some typing, returns a prioritized list of completions.
   using AutocompleteCallback = fit::function<std::vector<std::string>(const std::string&)>;
@@ -177,8 +180,18 @@ class LineInputEditor : public LineInput {
   // Abstract output function, overridden by a derived class to output to screen.
   virtual void Write(const std::string& data) = 0;
 
-  // Helper to return the current line of text.
-  std::string& cur_line() { return history_[history_index_]; }
+  // Helper to return the current line of text as an editable string. This uses the overlay provided
+  // by editing_history and falls back to promoting the value from persistent_history_.
+  //
+  // Use the const GetLine() on the base class to avoid the promotion if the returned value will
+  // not be modified.
+  std::string& mutable_cur_line() {
+    if (auto found = editing_history_.find(history_index_); found != editing_history_.end())
+      return found->second;
+
+    // Make the permanent history line mutable by copying to the editing history.
+    return editing_history_[history_index_] = persistent_history_[history_index_];
+  }
 
   // Useful for testing.
   void set_pos(size_t pos) { pos_ = pos; }
@@ -243,20 +256,24 @@ class LineInputEditor : public LineInput {
   // Indicates whether the line is currently visible (as controlled by Show()/Hide()).
   bool visible_ = false;
 
-  // The history is basically the line stack going back in time as indices increase. The currently
-  // viewed line is at [history_index_] and this is where editing happens. When you start a new text
-  // entry, a new history item is added and you delete it.
+  // The history is basically the line stack going back in time as indices increase. There are two
+  // versions of history: the permanent history of stuff the user has typed, and the editing history
+  // which is where temporary modifications are made until something is accepted.
   //
-  // This is simple but can be a bit confusing if you go back, edit, and then press enter. The
-  // history item itself will be edited, and the same edited version will be added again as the most
-  // recent history entry.
+  // The editing history shadows the permanent history so the user can move up and down and edit
+  // different items in history, seeing those edits as they move up and down. But when a new history
+  // item is added, those edits are all cleared and the history represents what was actually input
+  // at each point. Only the line that was input is kept, and that's saved only by adding it to the
+  // front of history. This temporary shadow copy of history where edits occur matches the behavior
+  // of other popular line input libraries.
   //
-  // This is weird because the editing has actually changed history. A more complex model might be
-  // to maintain a virtual shadow copy of history that you edit, and this shadow copy is replaced
-  // with the actual history whenever you start editing a new line.
-  std::deque<std::string> history_;  // front() is newest.
-  size_t history_index_ = 0;         // Offset from history_.front().
+  // Use GetLine() to get a const view of the current line.  Use mutable_cur_line() to get a mutable
+  // version of the current line (promotes to editable). Avoid changing the strings in these
+  // structures outside of mutable_cur_line().
+  std::deque<std::string> persistent_history_;  // front() is newest.
+  size_t history_index_ = 0;                    // Offset from persistent_history_.front().
   const size_t max_history_ = 256;
+  std::map<size_t, std::string> editing_history_;  // Indices override items in persistent_history_.
 
   bool completion_mode_ = false;
   std::vector<std::string> completions_;

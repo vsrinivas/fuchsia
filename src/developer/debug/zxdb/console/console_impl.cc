@@ -84,7 +84,7 @@ void PreserveStdoutTermios() {}
 }  // namespace
 
 ConsoleImpl::ConsoleImpl(Session* session) : Console(session), impl_weak_factory_(this) {
-  line_input_.Init([this](const std::string& s) { ProcessInputLine(s); }, "[zxdb] ");
+  line_input_.Init([this](std::string s) { ProcessInputLine(s); }, "[zxdb] ");
 
   // Set the line input completion callback that can know about our context. OK to bind |this| since
   // we own the line_input object.
@@ -92,7 +92,7 @@ ConsoleImpl::ConsoleImpl(Session* session) : Console(session), impl_weak_factory
     context_.FillOutCommand(cmd);  // Ignore errors, this is for autocomplete.
   });
   line_input_.SetAutocompleteCallback([fill_command_context = std::move(fill_command_context)](
-                                          const std::string& prefix) -> std::vector<std::string> {
+                                          std::string prefix) -> std::vector<std::string> {
     return GetCommandCompletions(prefix, fill_command_context);
   });
 

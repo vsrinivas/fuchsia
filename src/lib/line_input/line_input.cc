@@ -32,7 +32,7 @@ size_t GetTerminalMaxCols(int fileno) {
 LineInputEditor::LineInputEditor(AcceptCallback accept_cb, const std::string& prompt)
     : accept_callback_(std::move(accept_cb)), prompt_(prompt) {
   // Start with a blank item at [0] which is where editing will take place.
-  history_.emplace_front();
+  persistent_history_.emplace_front();
 }
 
 LineInputEditor::~LineInputEditor() { EnsureNoRawMode(); }
@@ -49,9 +49,13 @@ void LineInputEditor::SetEofCallback(EofCallback cb) { eof_callback_ = std::move
 
 void LineInputEditor::SetMaxCols(size_t max) { max_cols_ = max; }
 
-const std::string& LineInputEditor::GetLine() const { return history_[history_index_]; }
+const std::string& LineInputEditor::GetLine() const {
+  if (auto found = editing_history_.find(history_index_); found != editing_history_.end())
+    return found->second;
+  return persistent_history_[history_index_];
+}
 
-const std::deque<std::string>& LineInputEditor::GetHistory() const { return history_; }
+const std::deque<std::string>& LineInputEditor::GetHistory() const { return persistent_history_; }
 
 void LineInputEditor::OnInput(char c) {
   FX_DCHECK(visible_);  // Don't call while hidden.
@@ -90,7 +94,7 @@ void LineInputEditor::OnInput(char c) {
       CancelCommand();
       break;
     case SpecialCharacters::kKeyControlD:
-      if (cur_line().empty()) {
+      if (GetLine().empty()) {
         HandleEndOfFile();
         return;
       } else {
@@ -151,16 +155,17 @@ void LineInputEditor::AddToHistory(const std::string& line) {
   if (line.empty())
     return;
 
-  if (history_.size() > 1 && history_[1] == line)
+  if (persistent_history_.size() > 1 && persistent_history_[1] == line)
     return;
 
-  if (history_.size() == max_history_)
-    history_.pop_back();
+  if (persistent_history_.size() == max_history_)
+    persistent_history_.pop_back();
 
-  // Editing takes place at history_[0], so this replaces it and pushes
-  // everything else back with a new blank line to edit.
-  history_[0] = line;
-  history_.emplace_front();
+  // Editing takes place at index 0, so this replaces it and pushes everything else back with a new
+  // blank line to edit.
+  persistent_history_[0] = line;
+  persistent_history_.emplace_front();
+  editing_history_.clear();
 }
 
 void LineInputEditor::Hide() {
@@ -254,13 +259,14 @@ void LineInputEditor::HandleBackspace() {
   if (pos_ == 0)
     return;
   pos_--;
-  cur_line().erase(pos_, 1);
+  mutable_cur_line().erase(pos_, 1);
   LineChanged();
 }
 
 void LineInputEditor::HandleDelete() {
-  if (pos_ < cur_line().size()) {
-    cur_line().erase(pos_, 1);
+  std::string& line = mutable_cur_line();
+  if (pos_ < line.size()) {
+    line.erase(pos_, 1);
     LineChanged();
   }
 }
@@ -268,10 +274,10 @@ void LineInputEditor::HandleDelete() {
 void LineInputEditor::HandleEnter() {
   Write("\r\n");
 
-  if (history_.size() == max_history_)
-    history_.pop_back();
-  std::string new_line = cur_line();
-  history_[0] = new_line;
+  if (persistent_history_.size() == max_history_)
+    persistent_history_.pop_back();
+  std::string new_line = GetLine();
+  persistent_history_[0] = new_line;
   EnsureNoRawMode();
 
   accept_callback_(GetLine());
@@ -286,14 +292,14 @@ void LineInputEditor::HandleTab() {
     return;  // Can't do completions.
 
   if (!completion_mode_) {
-    completions_ = autocomplete_callback_(cur_line());
+    completions_ = autocomplete_callback_(GetLine());
     completion_index_ = 0;
     if (completions_.empty())
       return;  // No completions, don't enter completion mode.
 
     // Transition to tab completion mode.
     completion_mode_ = true;
-    line_before_completion_ = cur_line();
+    line_before_completion_ = GetLine();
     pos_before_completion_ = pos_;
 
     // Put the current line at the end of the completion stack so tabbing
@@ -307,20 +313,22 @@ void LineInputEditor::HandleTab() {
   }
 
   // Show the new completion.
-  cur_line() = completions_[completion_index_];
-  pos_ = cur_line().size();
+  std::string& line = mutable_cur_line();
+  line = completions_[completion_index_];
+  pos_ = line.size();
   LineChanged();
 }
 
 void LineInputEditor::HandleNegAck() {
-  cur_line() = cur_line().substr(pos_);
+  std::string& line = mutable_cur_line();
+  line = line.substr(pos_);
   pos_ = 0;
   LineChanged();
 }
 
 // This is used to delete the previous word (Control-W).
 void LineInputEditor::HandleEndOfTransimission() {
-  const auto& line = cur_line();
+  std::string& line = mutable_cur_line();
   if (line.empty())
     return;
 
@@ -331,7 +339,7 @@ void LineInputEditor::HandleEndOfTransimission() {
   while (begin_delete > 0 && line[begin_delete - 1] != ' ')
     begin_delete--;
 
-  cur_line().erase(cur_line().begin() + begin_delete, cur_line().begin() + pos_);
+  line.erase(line.begin() + begin_delete, line.begin() + pos_);
   pos_ = begin_delete;
   LineChanged();
 }
@@ -422,8 +430,9 @@ void LineInputEditor::EndReverseHistoryMode(bool accept_suggestion) {
   reverse_history_mode_ = false;
 
   if (accept_suggestion) {
-    cur_line() = GetReverseHistorySuggestion();
-    pos_ = cur_line().size();
+    std::string& line = mutable_cur_line();
+    line = GetReverseHistorySuggestion();
+    pos_ = line.size();
   } else {
     pos_ = 0;
   }
@@ -445,8 +454,8 @@ void LineInputEditor::SearchNextReverseHistory(bool restart) {
 
   // Search for a history entry that has the input a a substring.
   size_t index = reverse_history_index_ == 0 ? 1 : reverse_history_index_;
-  for (size_t i = index; i < history_.size(); i++) {
-    const std::string& line = history_[i];
+  for (size_t i = index; i < persistent_history_.size(); i++) {
+    const std::string& line = persistent_history_[i];
     auto cursor_offset = line.find(reverse_history_input_);
     if (cursor_offset == std::string::npos)
       continue;
@@ -469,18 +478,18 @@ void LineInputEditor::HandleFormFeed() {
 }
 
 void LineInputEditor::Insert(char c) {
-  if (pos_ == cur_line().size() &&
-      (max_cols_ == 0 || cur_line().size() + prompt_.size() < max_cols_ - 1)) {
+  std::string& line = mutable_cur_line();
+  if (pos_ == line.size() && (max_cols_ == 0 || line.size() + prompt_.size() < max_cols_ - 1)) {
     // Append to end and no scrolling needed. Optimize output to avoid
     // redrawing the entire line.
-    cur_line().push_back(c);
+    line.push_back(c);
     pos_++;
     Write(std::string(1, c));
     if (change_callback_)
-      change_callback_(cur_line());
+      change_callback_(line);
   } else {
     // Insert in the middle.
-    cur_line().insert(pos_, 1, c);
+    line.insert(pos_, 1, c);
     pos_++;
     LineChanged();
   }
@@ -494,16 +503,16 @@ void LineInputEditor::MoveLeft() {
 }
 
 void LineInputEditor::MoveRight() {
-  if (pos_ < cur_line().size()) {
+  if (pos_ < GetLine().size()) {
     pos_++;
     RepaintLine();
   }
 }
 
 void LineInputEditor::MoveUp() {
-  if (history_index_ < history_.size() - 1) {
+  if (history_index_ < persistent_history_.size() - 1) {
     history_index_++;
-    pos_ = cur_line().size();
+    pos_ = GetLine().size();
     RepaintLine();
   }
 }
@@ -511,7 +520,7 @@ void LineInputEditor::MoveUp() {
 void LineInputEditor::MoveDown() {
   if (history_index_ > 0) {
     history_index_--;
-    pos_ = cur_line().size();
+    pos_ = GetLine().size();
     RepaintLine();
   }
 }
@@ -522,15 +531,16 @@ void LineInputEditor::MoveHome() {
 }
 
 void LineInputEditor::MoveEnd() {
-  pos_ = cur_line().size();
+  pos_ = GetLine().size();
   RepaintLine();
 }
 
 void LineInputEditor::TransposeLastTwoCharacters() {
   if (pos_ >= 2) {
-    auto swap = cur_line()[pos_ - 1];
-    cur_line()[pos_ - 1] = cur_line()[pos_ - 2];
-    cur_line()[pos_ - 2] = swap;
+    std::string& line = mutable_cur_line();
+    auto swap = line[pos_ - 1];
+    line[pos_ - 1] = line[pos_ - 2];
+    line[pos_ - 2] = swap;
     LineChanged();
   }
 }
@@ -546,14 +556,15 @@ void LineInputEditor::CancelCommand() {
 }
 
 void LineInputEditor::DeleteToEnd() {
-  if (pos_ != cur_line().size()) {
-    cur_line().resize(pos_);
+  std::string& line = mutable_cur_line();
+  if (pos_ != line.size()) {
+    line.resize(pos_);
     LineChanged();
   }
 }
 
 void LineInputEditor::CancelCompletion() {
-  cur_line() = line_before_completion_;
+  mutable_cur_line() = line_before_completion_;
   pos_ = pos_before_completion_;
   completion_mode_ = false;
   completions_ = std::vector<std::string>();
@@ -569,14 +580,14 @@ void LineInputEditor::AcceptCompletion() {
 void LineInputEditor::LineChanged() {
   RepaintLine();
   if (change_callback_)
-    change_callback_(cur_line());
+    change_callback_(GetLine());
 }
 
 void LineInputEditor::RepaintLine() {
   std::string prompt, line_data;
   if (!reverse_history_mode_) {
     prompt = prompt_;
-    line_data = prompt + cur_line();
+    line_data = prompt + GetLine();
   } else {
     prompt = GetReverseHistoryPrompt();
     line_data = prompt + GetReverseHistorySuggestion();
@@ -631,10 +642,10 @@ std::string LineInputEditor::GetReverseHistorySuggestion() const {
   if (reverse_history_input_.empty())
     return {};
 
-  if (reverse_history_index_ == 0 || reverse_history_index_ >= history_.size())
+  if (reverse_history_index_ == 0 || reverse_history_index_ >= persistent_history_.size())
     return {};
 
-  return history_[reverse_history_index_];
+  return persistent_history_[reverse_history_index_];
 }
 
 void LineInputEditor::ResetLineState() {
@@ -642,7 +653,7 @@ void LineInputEditor::ResetLineState() {
   history_index_ = 0;
   completion_mode_ = false;
 
-  cur_line() = std::string();
+  mutable_cur_line() = std::string();
 }
 
 // LineInputStdout ---------------------------------------------------------------------------------

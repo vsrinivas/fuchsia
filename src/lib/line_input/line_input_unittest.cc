@@ -161,14 +161,23 @@ TEST(LineInput, History) {
   EXPECT_EQ("one", input.GetLine());
   EXPECT_EQ(3u, input.pos());
 
-  // Append a letter and accept it.
-  input.OnInputStr("s\r");
+  // Append a letter to the first and second lines. Moving away and back should continue to see the
+  // appended letters.
+  input.OnInputStr("s");
+  EXPECT_EQ("ones", input.GetLine());
+  input.OnInputStr(TERM_DOWN);
+  input.OnInputStr("s");
+  EXPECT_EQ("twos", input.GetLine());
+  input.OnInputStr(TERM_UP);
+  EXPECT_EQ("ones", input.GetLine());
 
-  // Start editing a new line with some input.
+  // Accept the first line and start typing a new line.
+  input.OnInputStr("\r");
   input.OnInputStr("three");
 
-  // Check history. Should be:
-  //  ones
+  // That new line should be appended to the history and the previous values in history should be
+  // reset to what they were before:
+  //  one
   //  two
   //  ones
   //  three
@@ -181,7 +190,7 @@ TEST(LineInput, History) {
   EXPECT_FALSE(input.OnInputStr(TERM_UP));  // From here, these are extra to
   EXPECT_FALSE(input.OnInputStr(TERM_UP));  // test that going beyond the top
   EXPECT_FALSE(input.OnInputStr(TERM_UP));  // stays stopped.
-  EXPECT_EQ("ones", input.GetLine());
+  EXPECT_EQ("one", input.GetLine());
 
   // Going back to the bottom (also doing one extra one to test the boundary).
   EXPECT_FALSE(input.OnInputStr(TERM_DOWN TERM_DOWN TERM_DOWN TERM_DOWN));
