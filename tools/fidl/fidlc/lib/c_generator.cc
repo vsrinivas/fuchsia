@@ -1054,7 +1054,18 @@ void CGenerator::ProduceEnumForwardDeclaration(const NamedEnum& named_enum) {
     EnumValue(member.value.get(), &member_value);
     GenerateIntegerDefine(member_name, subtype, std::move(member_value));
   }
-
+  if (named_enum.enum_info.strictness == types::Strictness::kFlexible) {
+    // We emit the unknown member with two underscores to avoid any possibility
+    // of name clashes should the enum contain a member named 'unknown'.
+    std::string member_name = named_enum.name + "__UNKNOWN";
+    std::string member_value;
+    if (named_enum.enum_info.unknown_value_signed) {
+      member_value = std::to_string(named_enum.enum_info.unknown_value_signed.value());
+    } else {
+      member_value = std::to_string(named_enum.enum_info.unknown_value_unsigned.value());
+    }
+    GenerateIntegerDefine(member_name, subtype, member_value);
+  }
   EmitBlank(&file_);
 }
 

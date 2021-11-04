@@ -273,12 +273,14 @@ func (c *compiler) compileHandleSubtype(val fidlgen.HandleSubtype) Type {
 
 func (c *compiler) compileEnum(val fidlgen.Enum) Enum {
 	e := Enum{
-		c.compileCompoundIdentifier(val.Name, ""),
-		string(c.compilePrimitiveSubtype(val.Type)),
-		[]string{},
+		Name: c.compileCompoundIdentifier(val.Name, ""),
+		Type: string(c.compilePrimitiveSubtype(val.Type)),
 	}
 	for _, v := range val.Members {
 		e.Members = append(e.Members, fmt.Sprintf("%s_%s", e.Name, v.Name))
+	}
+	if val.IsFlexible() {
+		e.Members = append(e.Members, fmt.Sprintf("%s__UNKNOWN", e.Name))
 	}
 	return e
 }
