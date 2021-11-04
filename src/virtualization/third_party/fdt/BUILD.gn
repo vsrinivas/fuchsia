@@ -4,6 +4,10 @@
 
 config("fdt_config") {
   include_dirs = [ "." ]
+}
+
+config("warnings") {
+  visibility = [ ":*" ]
   cflags = [ "-Wno-sign-compare" ]
 }
 
@@ -25,4 +29,5 @@ source_set("fdt") {
   ]
   public_configs = [ ":fdt_config" ]
   configs += [ "//build/config:Wno-conversion" ]
+  configs += [ ":warnings" ]
 }
