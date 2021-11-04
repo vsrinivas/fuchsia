@@ -881,6 +881,7 @@
                 "fuchsia.deprecatedtimezone.Timezone",
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.intl.PropertyProvider",
+                "fuchsia.intl.TimeZones",
                 "fuchsia.sys.Launcher",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",

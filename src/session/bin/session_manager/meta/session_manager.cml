@@ -54,6 +54,7 @@
                 "fuchsia.hardware.power.statecontrol.Admin",
                 "fuchsia.identity.account.AccountManager",
                 "fuchsia.intl.PropertyProvider",
+                "fuchsia.intl.TimeZones",
                 "fuchsia.logger.LogSink",
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.sys.Launcher",
