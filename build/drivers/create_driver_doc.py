@@ -27,7 +27,7 @@ def main():
 
     documentation = {
         'short_description': '',
-        'vendor': '',
+        'manufacturer': '',
         'families': '',
         'platforms': '',
         'areas': '',
@@ -36,7 +36,7 @@ def main():
     if (args.doc_input):
         doc_contents = json.load(args.doc_input)
         documentation['short_description'] = doc_contents['short_description']
-        documentation['vendor'] = doc_contents['vendor']
+        documentation['manufacturer'] = doc_contents['manufacturer']
         documentation['families'] = doc_contents['families']
         documentation['platforms'] = doc_contents['platforms']
         documentation['areas'] = doc_contents['areas']

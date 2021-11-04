@@ -1,6 +1,6 @@
 {
     "short_description": "AMLogic g12 audio subsystem support",
-    "vendor": "AMLogic",
+    "manufacturer": "AMLogic",
     "families": [
         "g12"
     ],
