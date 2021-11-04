@@ -7,6 +7,8 @@
 #include <memory>
 #include <vector>
 
+#include "third_party/cobalt/src/public/lib/report_spec.h"
+
 namespace cobalt {
 
 CobaltControllerImpl::CobaltControllerImpl(async_dispatcher_t* dispatcher,
@@ -51,12 +53,13 @@ void CobaltControllerImpl::GetNumEventAggregatorRuns(GetNumEventAggregatorRunsCa
 void CobaltControllerImpl::GenerateAggregatedObservations(
     uint32_t day_index, std::vector<fuchsia::cobalt::ReportSpec> report_specs,
     GenerateAggregatedObservationsCallback callback) {
-  std::vector<ReportSpec> core_report_specs;
+  std::vector<lib::ReportSpec> core_report_specs;
+  core_report_specs.reserve(report_specs.size());
   for (const fuchsia::cobalt::ReportSpec& report_spec : report_specs) {
-    core_report_specs.push_back({.customer_id=report_spec.customer_id(),
-                                 .project_id=report_spec.project_id(),
-                                 .metric_id=report_spec.metric_id(),
-                                 .report_id=report_spec.report_id()});
+    core_report_specs.push_back({.customer_id = report_spec.customer_id(),
+                                 .project_id = report_spec.project_id(),
+                                 .metric_id = report_spec.metric_id(),
+                                 .report_id = report_spec.report_id()});
   }
   std::vector<uint64_t> num_obs_before =
       cobalt_service_->num_observations_added_for_reports(core_report_specs);

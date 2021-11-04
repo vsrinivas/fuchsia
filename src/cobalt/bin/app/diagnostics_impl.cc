@@ -43,7 +43,7 @@ void DiagnosticsImpl::SentObservationResult(const cobalt::util::Status& status) 
 }
 
 void DiagnosticsImpl::ObservationStoreUpdated(
-    const std::map<ReportSpec, uint64_t>& num_obs_per_report, int64_t store_byte_count,
+    const std::map<lib::ReportSpec, uint64_t>& num_obs_per_report, int64_t store_byte_count,
     int64_t max_store_bytes) {
   uint64_t total_observations = 0;
   for (const auto& [report_spec, count] : num_obs_per_report) {

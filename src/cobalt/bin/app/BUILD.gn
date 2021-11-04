@@ -84,6 +84,7 @@ source_set("lib") {
     "//third_party/cobalt/src/public:cobalt_service",
     "//third_party/cobalt/src/public:cobalt_service_interface",
     "//third_party/cobalt/src/public:diagnostics_interface",
+    "//third_party/cobalt/src/public/lib:report_spec",
     "//third_party/cobalt/src/system_data",
     "//third_party/cobalt/src/system_data:configuration_data",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -246,6 +247,7 @@ executable("cobalt_app_unittests") {
     "//src/lib/testing/loop_fixture",
     "//third_party/cobalt/src/logger:fake_logger",
     "//third_party/cobalt/src/logger:logger_test_utils",
+    "//third_party/cobalt/src/public/lib:report_spec",
     "//third_party/cobalt/src/public/testing:fake_cobalt_service",
     "//third_party/googletest:gmock",
   ]

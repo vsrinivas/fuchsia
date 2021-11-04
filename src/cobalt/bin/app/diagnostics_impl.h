@@ -9,6 +9,7 @@
 
 #include "src/lib/fxl/macros.h"
 #include "third_party/cobalt/src/public/diagnostics_interface.h"
+#include "third_party/cobalt/src/public/lib/report_spec.h"
 
 namespace cobalt {
 
@@ -23,7 +24,7 @@ class DiagnosticsImpl : public DiagnosticsInterface {
 
   void SentObservationResult(const cobalt::util::Status& status) override;
 
-  void ObservationStoreUpdated(const std::map<ReportSpec, uint64_t>& num_obs_per_report,
+  void ObservationStoreUpdated(const std::map<lib::ReportSpec, uint64_t>& num_obs_per_report,
                                int64_t store_byte_count, int64_t max_store_bytes) override;
 
  private:

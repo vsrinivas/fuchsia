@@ -75,7 +75,7 @@ TEST_F(DiagnosticsTest, SentObservationResultError) {
 }
 
 TEST_F(DiagnosticsTest, ObservationStoreUpdatedOnce) {
-  std::map<ReportSpec, uint64_t> num_obs_per_report;
+  std::map<lib::ReportSpec, uint64_t> num_obs_per_report;
   num_obs_per_report[{.customer_id = 1, .project_id = 2, .metric_id = 3, .report_id = 4}] = 5;
   num_obs_per_report[{.customer_id = 6, .project_id = 7, .metric_id = 8, .report_id = 9}] = 10;
   listener_->ObservationStoreUpdated(num_obs_per_report, 1024, 2048);
@@ -92,7 +92,7 @@ TEST_F(DiagnosticsTest, ObservationStoreUpdatedOnce) {
 }
 
 TEST_F(DiagnosticsTest, ObservationStoreUpdatedMultipleTimes) {
-  std::map<ReportSpec, uint64_t> num_obs_per_report;
+  std::map<lib::ReportSpec, uint64_t> num_obs_per_report;
   num_obs_per_report[{.customer_id = 1, .project_id = 2, .metric_id = 3, .report_id = 4}] = 5;
   listener_->ObservationStoreUpdated(num_obs_per_report, 1024, 2048);
   num_obs_per_report[{.customer_id = 1, .project_id = 2, .metric_id = 3, .report_id = 4}] = 12;
