@@ -1342,12 +1342,15 @@ async fn control_enable_disable() {
         .await;
 }
 
+#[test_case(false; "no_detach")]
+#[test_case(true; "detach")]
 #[fuchsia_async::run_singlethreaded(test)]
-async fn control_owns_interface_lifetime() {
-    let name = "control_owns_interface_lifetime";
+async fn control_owns_interface_lifetime(detach: bool) {
+    let name = if detach { "detach" } else { "no_detach" };
+    let name = format!("control_owns_interface_lifetime_{}", name);
 
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
+    let realm = sandbox.create_netstack_realm::<Netstack2, _>(&name).expect("create realm");
     let endpoint =
         sandbox.create_endpoint::<netemul::NetworkDevice, _>(name).await.expect("create endpoint");
     let installer = realm
@@ -1410,19 +1413,39 @@ async fn control_owns_interface_lifetime() {
     let same_iface_id = debug_control.get_id().await.expect("get id");
     assert_eq!(same_iface_id, iface_id);
 
-    // Drop control and expect the interface to be removed.
-    std::mem::drop(control);
-    let event = watcher.select_next_some().await;
-    matches::assert_matches!(event,
-        fidl_fuchsia_net_interfaces::Event::Removed(id) if id == iface_id
-    );
+    if detach {
+        let () = control.detach().expect("detach");
+        // Drop control and expect the interface to NOT be removed.
+        std::mem::drop(control);
+        let watcher_fut =
+            watcher.select_next_some().map(|event| panic!("unexpected event {:?}", event));
+        let debug_control_fut = debug_control
+            .wait_termination()
+            .map(|event| panic!("unexpected termination {:?}", event));
+        let ((), ()) = futures::future::join(watcher_fut, debug_control_fut)
+            .on_timeout(
+                fuchsia_async::Time::after(
+                    netstack_testing_common::ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT,
+                ),
+                || ((), ()),
+            )
+            .await;
+    } else {
+        // Drop control and expect the interface to be removed.
+        std::mem::drop(control);
 
-    // The debug control channel is a weak ref, it didn't prevent destruction,
-    // but is closed now.
-    matches::assert_matches!(
-        debug_control.wait_termination().await,
-        fidl_fuchsia_net_interfaces_ext::admin::TerminalError::Terminal(
-            fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::User
-        )
-    );
+        let event = watcher.select_next_some().await;
+        matches::assert_matches!(event,
+            fidl_fuchsia_net_interfaces::Event::Removed(id) if id == iface_id
+        );
+
+        // The debug control channel is a weak ref, it didn't prevent destruction,
+        // but is closed now.
+        matches::assert_matches!(
+            debug_control.wait_termination().await,
+            fidl_fuchsia_net_interfaces_ext::admin::TerminalError::Terminal(
+                fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::User
+            )
+        );
+    }
 }

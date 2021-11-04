@@ -185,6 +185,13 @@ impl Control {
         self.or_terminal_event(self.proxy.disable()).await
     }
 
+    /// Calls Detach on the proxy.
+    pub fn detach(
+        &self,
+    ) -> Result<(), TerminalError<fnet_interfaces_admin::InterfaceRemovedReason>> {
+        self.or_terminal_event_no_return(self.proxy.detach())
+    }
+
     /// Creates a new `Control` wrapper from `proxy`.
     pub fn new(proxy: fnet_interfaces_admin::ControlProxy) -> Self {
         let terminal_event_fut = proxy

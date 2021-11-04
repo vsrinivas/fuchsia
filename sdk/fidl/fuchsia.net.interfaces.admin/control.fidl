@@ -71,6 +71,12 @@ protocol Control {
         did_disable bool;
     }) error flexible enum {};
 
+    /// Detaches the client end from the interface's lifetime.
+    ///
+    /// After calling `Detach`, closing this client end no longer causes the
+    /// interface to be removed.
+    Detach();
+
     /// Terminal event. Immediately precedes the closure of the server end of
     /// the protocol.
     ///

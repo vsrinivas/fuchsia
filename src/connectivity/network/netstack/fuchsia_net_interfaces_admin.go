@@ -254,6 +254,9 @@ type adminControlImpl struct {
 	nicid       tcpip.NICID
 	cancelServe context.CancelFunc
 	doneChannel chan struct{}
+	// TODO(https://fxbug.dev/85061): encode owned, strong, and weak refs once
+	// cloning Control is allowed.
+	isStrongRef bool
 }
 
 func (ci *adminControlImpl) Enable(fidl.Context) (admin.ControlEnableResult, error) {
@@ -298,6 +301,16 @@ func (ci *adminControlImpl) Disable(fidl.Context) (admin.ControlDisableResult, e
 		admin.ControlDisableResponse{
 			DidDisable: wasEnabled,
 		}), nil
+}
+
+func (ci *adminControlImpl) Detach(fidl.Context) error {
+	// Make it a weak ref but don't decrease the reference count. If this was a
+	// strong ref, the interface will leak.
+	//
+	// TODO(https://fxbug.dev/87963): Detach should only be allowed on OWNED refs
+	// once we allow cloning Control.
+	ci.isStrongRef = false
+	return nil
 }
 
 func (ci *adminControlImpl) AddAddress(_ fidl.Context, interfaceAddr net.InterfaceAddress, parameters admin.AddressParameters, request admin.AddressStateProviderWithCtxInterfaceRequest) error {
@@ -493,10 +506,11 @@ func (ifs *ifState) addAdminConnection(request admin.ControlWithCtxInterfaceRequ
 			nicid:       ifs.nicid,
 			cancelServe: cancel,
 			doneChannel: make(chan struct{}),
+			isStrongRef: strong,
 		}
 
 		ifs.adminControls.mu.controls[impl] = struct{}{}
-		if strong {
+		if impl.isStrongRef {
 			ifs.adminControls.mu.strongRefCount++
 		}
 
@@ -550,7 +564,13 @@ func (ifs *ifState) addAdminConnection(request admin.ControlWithCtxInterfaceRequ
 
 			delete(ifs.adminControls.mu.controls, impl)
 			// Don't consider destroying if not a strong ref.
-			if !strong {
+			//
+			// Note that the implementation can change from a strong to a weak ref if
+			// Detach is called, which is how we allow interfaces to leak.
+			//
+			// This is also how we prevent destruction from interfaces created with
+			// the legacy API, since they never have strong refs.
+			if !impl.isStrongRef {
 				return nil
 			}
 			ifs.adminControls.mu.strongRefCount--
