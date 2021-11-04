@@ -44,6 +44,7 @@ test("fbl") {
     "no_destructor_tests.cc",
     "recycler_tests.cc",
     "ref_ptr_tests.cc",
+    "static_vector_tests.cc",
     "string_buffer_tests.cc",
     "string_printf_tests.cc",
     "string_tests.cc",

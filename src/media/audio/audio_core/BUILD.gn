@@ -130,7 +130,6 @@ source_set("audio_core_lib") {
     "route_graph.cc",
     "route_graph.h",
     "stage_metrics.h",
-    "static_vector.h",
     "stream.h",
     "stream_usage.cc",
     "stream_usage.h",

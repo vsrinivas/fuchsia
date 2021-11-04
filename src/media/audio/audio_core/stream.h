@@ -11,9 +11,10 @@
 
 #include <optional>
 
+#include <fbl/static_vector.h>
+
 #include "src/media/audio/audio_core/packet.h"
 #include "src/media/audio/audio_core/stage_metrics.h"
-#include "src/media/audio/audio_core/static_vector.h"
 #include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/lib/clock/audio_clock.h"
 #include "src/media/audio/lib/format/format.h"
@@ -176,7 +177,7 @@ class ReadableStream : public BaseStream {
     }
 
     // Return all metrics accumulated via AddMetrics.
-    using StageMetricsVector = static_vector<StageMetrics, kMaxStages>;
+    using StageMetricsVector = fbl::static_vector<StageMetrics, kMaxStages>;
     const StageMetricsVector& per_stage_metrics() { return per_stage_metrics_; }
 
    private:
