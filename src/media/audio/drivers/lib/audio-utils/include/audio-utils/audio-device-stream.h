@@ -56,6 +56,8 @@ class AudioDeviceStream {
   bool IsStreamBufChannelConnected() const { return IsChannelConnected(stream_ch_.channel()); }
   bool IsRingBufChannelConnected() const { return IsChannelConnected(rb_ch_.channel()); }
 
+  fidl::ClientEnd<audio_fidl::StreamConfig>& BorrowStreamChannel() { return stream_ch_; }
+
   // Available for unit tests.
   void SetStreamChannel(fidl::ClientEnd<audio_fidl::StreamConfig> channel) {
     stream_ch_ = std::move(channel);
