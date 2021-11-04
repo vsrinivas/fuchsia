@@ -507,50 +507,51 @@ static fit::closure MakeRecurringTask(async_dispatcher_t* dispatcher, fit::closu
   };
 }
 
-Sandbox::Promise Sandbox::LaunchGuestEnvironment(ConfiguringEnvironmentPtr env,
+Sandbox::Promise Sandbox::LaunchGuestEnvironment(const ConfiguringEnvironmentPtr& env,
                                                  const config::Guest& guest) {
   ASSERT_HELPER_DISPATCHER;
 
-  return fpromise::make_promise(
-             [this, env = std::move(env),
-              &guest]() -> fpromise::promise<fuchsia::virtualization::GuestPtr, SandboxResult> {
-               // Launch the guest
-               fuchsia::virtualization::GuestConfig cfg;
-               cfg.set_virtio_gpu(false);
+  // Launch the guest.
+  fuchsia::virtualization::GuestConfig cfg;
+  cfg.set_virtio_gpu(false);
 
-               if (!guest.macs().empty()) {
-                 for (const auto& [mac, network] : guest.macs()) {
-                   fuchsia::virtualization::NetSpec out{};
-                   uint32_t bytes[6];
-                   std::sscanf(mac.c_str(), "%02x:%02x:%02x:%02x:%02x:%02x", &bytes[0], &bytes[1],
-                               &bytes[2], &bytes[3], &bytes[4], &bytes[5]);
-                   for (size_t i = 0; i != 6; ++i) {
-                     out.mac_address.octets[i] = static_cast<uint8_t>(bytes[i]);
-                   }
-                   out.enable_bridge = false;
-                   cfg.mutable_net_devices()->push_back(out);
-                 }
+  if (!guest.macs().empty()) {
+    // Prevent the guest from receiving a default MAC address from the VirtioNet
+    // internals.
+    cfg.set_default_net(false);
 
-                 // Prevent the guest from receiving a default MAC address from the VirtioNet
-                 // internals.
-                 cfg.set_default_net(false);
-               }
+    for (const auto& [mac, network] : guest.macs()) {
+      fuchsia::virtualization::NetSpec out = {
+          .enable_bridge = false,
+      };
 
-               fuchsia::virtualization::GuestPtr guest_controller;
+      uint32_t bytes[6];
+      std::sscanf(mac.c_str(), "%02x:%02x:%02x:%02x:%02x:%02x", &bytes[0], &bytes[1], &bytes[2],
+                  &bytes[3], &bytes[4], &bytes[5]);
+      for (size_t i = 0; i != 6; ++i) {
+        out.mac_address.octets[i] = static_cast<uint8_t>(bytes[i]);
+      }
+      cfg.mutable_net_devices()->push_back(out);
+    }
+  }
 
-               fpromise::bridge<fuchsia::virtualization::GuestPtr, SandboxResult> bridge;
-               realm_->LaunchInstance(
-                   guest.guest_image_url(), guest.guest_label(), std::move(cfg),
-                   guest_controller.NewRequest(),
-                   [completer = std::move(bridge.completer),
-                    guest_controller = std::move(guest_controller)](uint32_t cid) mutable {
-                     completer.complete_ok(std::move(guest_controller));
-                   });
+  fpromise::bridge<void, SandboxResult> bridge;
+  std::shared_ptr completer =
+      std::make_shared<decltype(bridge.completer)>(std::move(bridge.completer));
 
-               return bridge.consumer.promise();
-             })
-      .and_then([](fuchsia::virtualization::GuestPtr& guest_controller)
-                    -> fpromise::promise<zx::socket, SandboxResult> {
+  fuchsia::virtualization::GuestPtr guest_controller;
+  guest_controller.set_error_handler([completer](zx_status_t status) {
+    std::stringstream ss;
+    ss << "Could not create guest console: " << zx_status_get_string(status);
+    completer->complete_error(SandboxResult(SandboxResult::Status::SETUP_FAILED, ss.str()));
+  });
+
+  realm_->LaunchInstance(guest.guest_image_url(), guest.guest_label(), std::move(cfg),
+                         guest_controller.NewRequest(),
+                         [completer](uint32_t cid) mutable { completer->complete_ok(); });
+
+  return bridge.consumer.promise()
+      .and_then([guest_controller = std::move(guest_controller)]() mutable {
         fpromise::bridge<zx::socket, SandboxResult> bridge;
         std::shared_ptr completer =
             std::make_shared<decltype(bridge.completer)>(std::move(bridge.completer));
@@ -562,15 +563,19 @@ Sandbox::Promise Sandbox::LaunchGuestEnvironment(ConfiguringEnvironmentPtr env,
         guest_controller->GetConsole(
             [completer](fuchsia::virtualization::Guest_GetConsole_Result result) mutable {
               if (result.is_err()) {
+                std::stringstream ss;
+                ss << "Could not create guest socket connection: "
+                   << zx_status_get_string(result.err());
                 completer->complete_error(
-                    SandboxResult(SandboxResult::Status::SETUP_FAILED,
-                                  "Could not create guest socket connection"));
-                return;
+                    SandboxResult(SandboxResult::Status::SETUP_FAILED, ss.str()));
+              } else {
+                completer->complete_ok(std::move(result.response().socket));
               }
-              completer->complete_ok(std::move(result.response().socket));
             });
-
-        return bridge.consumer.promise();
+        // Keep |guest_controller| alive; otherwise the callback won't fire.
+        return bridge.consumer.promise().inspect(
+            [guest_controller = std::move(guest_controller)](
+                const fpromise::result<zx::socket, SandboxResult>&) {});
       })
       .and_then([this, &guest](zx::socket& socket) -> PromiseResult {
         // Wait until the guest's serial console becomes usable to ensure that the guest has

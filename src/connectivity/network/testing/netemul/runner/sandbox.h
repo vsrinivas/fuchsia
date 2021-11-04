@@ -121,7 +121,7 @@ class Sandbox {
                                 const config::Environment* config);
   Promise StartEnvironmentInner(const ConfiguringEnvironmentPtr& environment,
                                 const config::Environment* config);
-  Promise LaunchGuestEnvironment(ConfiguringEnvironmentPtr env, const config::Guest& config);
+  Promise LaunchGuestEnvironment(const ConfiguringEnvironmentPtr& env, const config::Guest& config);
   Promise SendGuestFiles(const ConfiguringEnvironmentPtr& env, const config::Guest& guest);
   Promise StartGuests(const ConfiguringEnvironmentPtr& env, const config::Config* config);
   Promise StartEnvironmentSetup(const config::Environment* config,
