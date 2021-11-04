@@ -19,7 +19,7 @@ template("generate_chromium_targets") {
   assert(defined(invoker.archive_path_suffix))
 
   prebuilt_archive_root_path = "//prebuilt/third_party"
-  build_output_gen_base_path = "/gen/fuchsia"
+  build_output_gen_base_path = "/gen"
 
   # This target is provided for use by the //src:src target. Dependencies on
   # Chromium-supplied packages should refer explicitly to the desired package.
@@ -105,8 +105,7 @@ template("generate_chromium_targets") {
       prebuilt_archive_base_path =
           "${prebuilt_archive_root_path}/chromium${invoker.archive_path_suffix}"
     }
-    custom_package_path =
-        "${build_output_gen_base_path}/engine/${target_name}/${target_name}.far"
+    custom_package_path = "${build_output_gen_base_path}/fuchsia/engine/${target_name}/${target_name}.far"
     selections = package_flavor_selections
 
     # Config data arguments.
@@ -125,8 +124,7 @@ template("generate_chromium_targets") {
 
   generate_package_flavors("web_engine_shell") {
     prebuilt_archive_base_path = "${prebuilt_archive_root_path}/${target_name}${invoker.archive_path_suffix}"
-    custom_package_path =
-        "${build_output_gen_base_path}/engine/${target_name}/${target_name}.far"
+    custom_package_path = "${build_output_gen_base_path}/fuchsia/engine/${target_name}/${target_name}.far"
     selections = package_flavor_selections
 
     testonly = true
@@ -147,8 +145,7 @@ template("generate_chromium_targets") {
       prebuilt_archive_base_path =
           "${prebuilt_archive_root_path}/chromium${invoker.archive_path_suffix}"
     }
-    custom_package_path =
-        "${build_output_gen_base_path}/runners/web_runner/web_runner.far"
+    custom_package_path = "${build_output_gen_base_path}/fuchsia/runners/${target_name}/${target_name}.far"
     selections = package_flavor_selections
 
     # Config data arguments.

@@ -16,7 +16,7 @@ template("generate_cast_targets") {
   assert(defined(invoker.archive_path_suffix))
 
   prebuilt_archive_root_path = "//prebuilt/third_party"
-  build_output_gen_base_path = "/gen/fuchsia"
+  build_output_gen_base_path = "/gen"
 
   group(target_name) {
     public_deps = [ ":cast_runner" ]
@@ -50,7 +50,7 @@ template("generate_cast_targets") {
 
   generate_package_flavors_and_config("cast_runner") {
     prebuilt_archive_base_path = "${prebuilt_archive_root_path}/${target_name}${invoker.archive_path_suffix}"
-    custom_package_path = "${build_output_gen_base_path}/runners/${target_name}/${target_name}.far"
+    custom_package_path = "${build_output_gen_base_path}/fuchsia/runners/${target_name}/${target_name}.far"
     selections = package_flavor_selections
 
     # Config data arguments.
