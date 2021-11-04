@@ -125,6 +125,7 @@ pub fn dispatch_syscall(
         newfstatat[4],
         openat[4],
         pipe2[2],
+        poll[3],
         ppoll[4],
         prctl[5],
         pread64[4],

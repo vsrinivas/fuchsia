@@ -1,0 +1,7 @@
+{
+    include: [ "//src/proc/tests/android/gvisor.shard.cml" ],
+    program: {
+        binary: "/data/tests/poll_test",
+        args: [ "--gunit_filter=-PollTest.NegativeTimeout:*POLLRDNORM*:*POLLWRNORM*:PollTest.Nfds" ],
+    },
+}

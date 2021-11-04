@@ -17,6 +17,7 @@ use crate::strace;
 use crate::syscalls::*;
 use crate::task::*;
 use crate::types::*;
+use fuchsia_zircon as zx;
 
 pub fn sys_read(
     current_task: &CurrentTask,
@@ -1012,15 +1013,108 @@ pub fn sys_epoll_pwait(
     Ok(active_events.len().into())
 }
 
-pub fn sys_ppoll(
-    _ctx: &CurrentTask,
-    _fds: UserAddress,
-    _nfds: u32,
-    _tmo_p: UserAddress,
-    _sigmask: UserAddress,
+fn poll(
+    current_task: &mut CurrentTask,
+    user_pollfds: UserRef<pollfd>,
+    num_fds: i32,
+    mask: Option<sigset_t>,
+    timeout: i32,
 ) -> Result<SyscallResult, Errno> {
-    std::thread::sleep(std::time::Duration::new(0, 10000000));
-    Ok(1.into())
+    // TODO: Update this to use a dynamic limit (that can be set by setrlimit).
+    if num_fds > RLIMIT_NOFILE_MAX as i32 || num_fds < 0 {
+        return error!(EINVAL);
+    }
+
+    let mut pollfds = vec![pollfd::default(); num_fds as usize];
+    let file_object = EpollFileObject::new(current_task.kernel());
+    let epoll_file = file_object.downcast_file::<EpollFileObject>().unwrap();
+
+    for (index, poll_descriptor) in pollfds.iter_mut().enumerate() {
+        current_task.mm.read_object(user_pollfds.at(index), poll_descriptor)?;
+        if poll_descriptor.fd < 0 {
+            continue;
+        }
+        let file = current_task.files.get(FdNumber::from_raw(poll_descriptor.fd as i32))?;
+        let event = EpollEvent { events: poll_descriptor.events as u32, data: index as u64 };
+        epoll_file.add(&file, event)?;
+    }
+
+    let mask = mask.unwrap_or_else(|| current_task.signals.read().mask);
+    let task = current_task.task_arc_clone();
+    let ready_fds = current_task
+        .wait_with_temporary_mask(mask, |_| epoll_file.wait(&task, num_fds, timeout))?;
+
+    for event in &ready_fds {
+        pollfds[event.data as usize].revents = event.events as i16;
+    }
+
+    for (index, poll_descriptor) in pollfds.iter().enumerate() {
+        current_task.mm.write_object(user_pollfds.at(index), poll_descriptor)?;
+    }
+
+    Ok(ready_fds.len().into())
+}
+
+pub fn sys_ppoll(
+    current_task: &mut CurrentTask,
+    user_fds: UserRef<pollfd>,
+    num_fds: i32,
+    user_timespec: UserRef<timespec>,
+    user_mask: UserRef<sigset_t>,
+) -> Result<SyscallResult, Errno> {
+    let timeout = if user_timespec.is_null() {
+        // Passing -1 to poll is equivalent to an infinite timeout.
+        -1
+    } else {
+        let mut ts = timespec::default();
+        current_task.mm.read_object(user_timespec, &mut ts)?;
+        duration_from_timespec(ts)?.into_millis() as i32
+    };
+
+    let start_time = zx::Time::get_monotonic();
+
+    let mask = if !user_mask.is_null() {
+        let mut mask = sigset_t::default();
+        current_task.mm.read_object(user_mask, &mut mask)?;
+        Some(mask)
+    } else {
+        None
+    };
+
+    let poll_result = poll(current_task, user_fds, num_fds, mask, timeout);
+
+    let elapsed_duration =
+        zx::Duration::from_millis(timeout as i64) - (zx::Time::get_monotonic() - start_time);
+    let remaining_duration = if elapsed_duration < zx::Duration::from_millis(0) {
+        zx::Duration::from_millis(0)
+    } else {
+        elapsed_duration
+    };
+    let mut remaining_timespec = timespec_from_duration(remaining_duration);
+
+    // From gVisor: "ppoll is normally restartable if interrupted by something other than a signal
+    // handled by the application (i.e. returns ERESTARTNOHAND). However, if
+    // [copy out] failed, then the restarted ppoll would use the wrong timeout, so the
+    // error should be left as EINTR."
+    match (current_task.mm.write_object(user_timespec, &mut remaining_timespec), poll_result) {
+        // If write was ok, and poll was ok, return poll result.
+        (Ok(_), Ok(num_events)) => Ok(num_events),
+        // TODO: Here we should return an error that indicates the syscall should return EINTR if
+        // interrupted by a signal with a user handler, and otherwise be restarted.
+        (Ok(_), Err(e)) if e == EINTR => error!(EINTR),
+        (Ok(_), poll_result) => poll_result,
+        // If write was a failure, return the poll result unchanged.
+        (Err(_), poll_result) => poll_result,
+    }
+}
+
+pub fn sys_poll(
+    current_task: &mut CurrentTask,
+    user_fds: UserRef<pollfd>,
+    num_fds: i32,
+    timeout: i32,
+) -> Result<SyscallResult, Errno> {
+    poll(current_task, user_fds, num_fds, None, timeout)
 }
 
 pub fn sys_flock(

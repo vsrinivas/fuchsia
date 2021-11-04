@@ -12,6 +12,7 @@
 #include <stddef.h>
 
 #include <asm/ioctls.h>
+#include <asm/poll.h>
 #include <asm/prctl.h>
 #include <asm/sigcontext.h>
 #include <asm/signal.h>

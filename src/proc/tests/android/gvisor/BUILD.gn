@@ -67,8 +67,9 @@ gvisor_tests = [
   "open_test",
   "pipe_test",
 
-  # "poll_test",
-  # "ppoll_test",
+  "poll_test",
+  "ppoll_test",
+
   # "prctl_test",
   "pread64_test",
 

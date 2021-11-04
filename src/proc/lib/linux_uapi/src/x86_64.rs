@@ -130,6 +130,19 @@ pub const TIOCPKT_NOSTOP: u32 = 16;
 pub const TIOCPKT_DOSTOP: u32 = 32;
 pub const TIOCPKT_IOCTL: u32 = 64;
 pub const TIOCSER_TEMT: u32 = 1;
+pub const POLLIN: u32 = 1;
+pub const POLLPRI: u32 = 2;
+pub const POLLOUT: u32 = 4;
+pub const POLLERR: u32 = 8;
+pub const POLLHUP: u32 = 16;
+pub const POLLNVAL: u32 = 32;
+pub const POLLRDNORM: u32 = 64;
+pub const POLLRDBAND: u32 = 128;
+pub const POLLWRNORM: u32 = 256;
+pub const POLLWRBAND: u32 = 512;
+pub const POLLMSG: u32 = 1024;
+pub const POLLREMOVE: u32 = 4096;
+pub const POLLRDHUP: u32 = 8192;
 pub const ARCH_SET_GS: u32 = 4097;
 pub const ARCH_SET_FS: u32 = 4098;
 pub const ARCH_GET_FS: u32 = 4099;
@@ -1072,19 +1085,6 @@ pub const MAP_HUGE_512MB: u32 = 1946157056;
 pub const MAP_HUGE_1GB: u32 = 2013265920;
 pub const MAP_HUGE_2GB: u32 = 2080374784;
 pub const MAP_HUGE_16GB: u32 = 2281701376;
-pub const POLLIN: u32 = 1;
-pub const POLLPRI: u32 = 2;
-pub const POLLOUT: u32 = 4;
-pub const POLLERR: u32 = 8;
-pub const POLLHUP: u32 = 16;
-pub const POLLNVAL: u32 = 32;
-pub const POLLRDNORM: u32 = 64;
-pub const POLLRDBAND: u32 = 128;
-pub const POLLWRNORM: u32 = 256;
-pub const POLLWRBAND: u32 = 512;
-pub const POLLMSG: u32 = 1024;
-pub const POLLREMOVE: u32 = 4096;
-pub const POLLRDHUP: u32 = 8192;
 pub const PR_SET_PDEATHSIG: u32 = 1;
 pub const PR_GET_PDEATHSIG: u32 = 2;
 pub const PR_GET_DUMPABLE: u32 = 3;
@@ -1786,6 +1786,13 @@ pub struct max_align_t {
     pub __clang_max_align_nonce1: crate::x86_64_types::c_longlong,
     pub __bindgen_padding_0: u64,
     pub __clang_max_align_nonce2: u128,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct pollfd {
+    pub fd: crate::x86_64_types::c_int,
+    pub events: crate::x86_64_types::c_short,
+    pub revents: crate::x86_64_types::c_short,
 }
 pub type __s8 = crate::x86_64_types::c_schar;
 pub type __u8 = crate::x86_64_types::c_uchar;
@@ -2547,13 +2554,6 @@ impl Default for robust_list_head {
             s.assume_init()
         }
     }
-}
-#[repr(C)]
-#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
-pub struct pollfd {
-    pub fd: crate::x86_64_types::c_int,
-    pub events: crate::x86_64_types::c_short,
-    pub revents: crate::x86_64_types::c_short,
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]

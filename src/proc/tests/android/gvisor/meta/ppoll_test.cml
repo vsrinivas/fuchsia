@@ -1,0 +1,12 @@
+{
+    include: [ "//src/proc/tests/android/gvisor.shard.cml" ],
+    program: {
+        binary: "/data/tests/ppoll_test",
+
+        // NoTimeout requires timers to be functional enough to interrupt the wait.
+        // InvalidMaskSize requires an additional parameter to ppoll, need to determine the validity
+        // of that.
+        // SignalMask[Blocks/Allows]Signal require timers to send signals.
+        args: [ "--gunit_filter=-PpollTest.NoTimeout:PpollTest.InvalidMaskSize:PpollTest.SignalMaskBlocksSignal:PpollTest.SignalMaskAllowsSignal" ],
+    },
+}

@@ -93,7 +93,10 @@ impl EpollFileObject {
     }
 
     /// Asynchronously wait on certain events happening on a FileHandle.
-    pub fn add(&self, file: &FileHandle, epoll_event: EpollEvent) -> Result<(), Errno> {
+    pub fn add(&self, file: &FileHandle, mut epoll_event: EpollEvent) -> Result<(), Errno> {
+        epoll_event.events |= FdEvents::POLLHUP.mask();
+        epoll_event.events |= FdEvents::POLLERR.mask();
+
         let mut waits = self.wait_objects.write();
         let key = as_epoll_key(&file);
         match waits.entry(key) {
