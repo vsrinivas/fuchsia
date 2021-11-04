@@ -20,7 +20,6 @@ const char kProductFilePath[] = "/config/build-info/product";
 const char kBoardFilePath[] = "/config/build-info/board";
 const char kVersionFilePath[] = "/config/build-info/version";
 const char kLatestCommitDateFilePath[] = "/config/build-info/latest-commit-date";
-const char kSnapshotFilePath[] = "/config/build-info/snapshot";
 
 // Returns the contents of |file_path| with any trailing whitespace removed.
 std::string ContentsOfFileAtPath(const std::string &file_path) {
@@ -75,31 +74,4 @@ void ProviderImpl::GetBuildInfo(GetBuildInfoCallback callback) {
   }
 
   callback(std::move(build_info));
-}
-
-void ProviderImpl::GetSnapshotInfo(GetSnapshotInfoCallback callback) {
-  zx::vmo file_vmo;
-
-  // Open the snapshot file.
-  fbl::unique_fd fd(open(kSnapshotFilePath, O_RDONLY));
-
-  if (!fd.is_valid()) {
-    FX_LOGS(ERROR) << "Failed to open " << kSnapshotFilePath << ": " << strerror(errno);
-    callback(std::move(file_vmo));
-    return;
-  }
-
-  // Copy the file contents into a vmo.
-  zx_handle_t vmo_handle;
-  zx_status_t status;
-  status = fdio_get_vmo_copy(fd.get(), &vmo_handle);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to get vmo for " << kSnapshotFilePath << ": "
-                   << zx_status_get_string(status);
-  } else {
-    file_vmo.reset(vmo_handle);
-  }
-
-  // Return the vmo.
-  callback(std::move(file_vmo));
 }

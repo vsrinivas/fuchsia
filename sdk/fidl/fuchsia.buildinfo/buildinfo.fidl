@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 library fuchsia.buildinfo;
 
-using zx;
-
 const MAX_STRING_LENGTH uint64 = 100;
 
 type BuildInfo = table {
@@ -34,12 +32,5 @@ protocol Provider {
     /// Returns a table of build information.
     GetBuildInfo() -> (struct {
         build_info BuildInfo;
-    });
-
-    /// Returns a vmo containing the jiri snapshot of the most recent
-    /// 'jiri update'. Returned as a vmo because snapshots are typically
-    /// much longer than the maximum FIDL message size.
-    GetSnapshotInfo() -> (resource struct {
-        snapshot zx.handle:VMO;
     });
 };

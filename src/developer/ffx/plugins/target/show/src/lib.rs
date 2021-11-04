@@ -481,7 +481,6 @@ mod tests {
                     })
                     .unwrap();
             }
-            _ => assert!(false),
         })
     }
 

@@ -404,7 +404,6 @@ mod tests {
                             ..buildinfo::BuildInfo::EMPTY
                         });
                     }
-                    _ => panic!("invalid request"),
                 }
             }
         })

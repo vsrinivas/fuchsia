@@ -23,7 +23,6 @@ const char kProductFileName[] = "product";
 const char kBoardFileName[] = "board";
 const char kVersionFileName[] = "version";
 const char kLastCommitDateFileName[] = "latest-commit-date";
-const char kSnapshotFileName[] = "snapshot";
 }  // namespace
 
 class BuildInfoServiceInstance {
@@ -185,23 +184,6 @@ TEST_F(BuildInfoServiceTestFixture, NonPresentBuildInfo) {
     EXPECT_FALSE(response.has_board_config());
     EXPECT_FALSE(response.has_version());
     EXPECT_FALSE(response.has_latest_commit_date());
-  });
-
-  RunLoopUntilIdle();
-}
-
-TEST_F(BuildInfoServiceTestFixture, Snapshot) {
-  CreateBuildInfoFile(kSnapshotFileName, false);
-
-  fuchsia::buildinfo::ProviderPtr proxy = GetProxy();
-  proxy->GetSnapshotInfo([&](zx::vmo response) {
-    uint64_t size;
-    response.get_size(&size);
-    auto buffer = std::make_unique<char[]>(size);
-    response.read(buffer.get(), 0, size);
-    std::string response_string{buffer.get()};
-
-    EXPECT_EQ(response_string, kSnapshotFileName);
   });
 
   RunLoopUntilIdle();

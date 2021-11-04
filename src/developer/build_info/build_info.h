@@ -14,9 +14,6 @@ class ProviderImpl : public fuchsia::buildinfo::Provider {
   // Returns product, board, version, and timestamp information used at build time.
   void GetBuildInfo(GetBuildInfoCallback callback) override;
 
-  // Returns a vmo containing the jiri snapshot of the most recent ‘jiri update’.
-  void GetSnapshotInfo(GetSnapshotInfoCallback callback) override;
-
  private:
   std::unique_ptr<std::string> product_config_;
   std::unique_ptr<std::string> board_config_;
