@@ -14,7 +14,10 @@ use std::path::{Path, PathBuf};
 ///
 /// let manifest = ImagesManifest {
 ///     images: vec![
-///         Image::ZBI("path/to/fuchsia.zbi"),
+///         Image::ZBI {
+///             path: "path/to/fuchsia.zbi",
+///             signed: false,
+///         },
 ///         Image::VBMeta("path/to/fuchsia.vbmeta"),
 ///         Image::FVM("path/to/fvm.blk"),
 ///         Image::FVMSparse("path/to/fvm.sparse.blk"),
@@ -37,7 +40,12 @@ pub enum Image {
     BasePackage(PathBuf),
 
     /// Zircon Boot Image.
-    ZBI(PathBuf),
+    ZBI {
+        /// Path to the ZBI image.
+        path: PathBuf,
+        /// Whether the ZBI is signed.
+        signed: bool,
+    },
 
     /// Verified Boot Metadata.
     VBMeta(PathBuf),
@@ -63,7 +71,7 @@ impl Image {
     pub fn source(&self) -> &PathBuf {
         match self {
             Image::BasePackage(s) => s,
-            Image::ZBI(s) => s,
+            Image::ZBI { path, signed: _ } => path,
             Image::VBMeta(s) => s,
             Image::BlobFS(s) => s,
             Image::FVM(s) => s,
@@ -80,6 +88,8 @@ struct ImageSerializeHelper<'a> {
     partition_type: &'a str,
     name: &'a str,
     path: &'a Path,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    signed: Option<bool>,
 }
 
 impl Serialize for Image {
@@ -88,30 +98,51 @@ impl Serialize for Image {
         S: Serializer,
     {
         let helper = match self {
-            Image::BasePackage(path) => {
-                ImageSerializeHelper { partition_type: "far", name: "base-package", path }
-            }
-            Image::ZBI(path) => {
-                ImageSerializeHelper { partition_type: "zbi", name: "zircon-a", path }
-            }
-            Image::VBMeta(path) => {
-                ImageSerializeHelper { partition_type: "vbmeta", name: "zircon-a", path }
-            }
+            Image::BasePackage(path) => ImageSerializeHelper {
+                partition_type: "far",
+                name: "base-package",
+                path,
+                signed: None,
+            },
+            Image::ZBI { path, signed } => ImageSerializeHelper {
+                partition_type: "zbi",
+                name: "zircon-a",
+                path,
+                signed: Some(*signed),
+            },
+            Image::VBMeta(path) => ImageSerializeHelper {
+                partition_type: "vbmeta",
+                name: "zircon-a",
+                path,
+                signed: None,
+            },
             Image::BlobFS(path) => {
-                ImageSerializeHelper { partition_type: "blk", name: "blob", path }
+                ImageSerializeHelper { partition_type: "blk", name: "blob", path, signed: None }
             }
-            Image::FVM(path) => {
-                ImageSerializeHelper { partition_type: "blk", name: "storage-full", path }
-            }
-            Image::FVMSparse(path) => {
-                ImageSerializeHelper { partition_type: "blk", name: "storage-sparse", path }
-            }
-            Image::FVMSparseBlob(path) => {
-                ImageSerializeHelper { partition_type: "blk", name: "storage-sparse-blob", path }
-            }
-            Image::FVMFastboot(path) => {
-                ImageSerializeHelper { partition_type: "blk", name: "fvm.fastboot", path }
-            }
+            Image::FVM(path) => ImageSerializeHelper {
+                partition_type: "blk",
+                name: "storage-full",
+                path,
+                signed: None,
+            },
+            Image::FVMSparse(path) => ImageSerializeHelper {
+                partition_type: "blk",
+                name: "storage-sparse",
+                path,
+                signed: None,
+            },
+            Image::FVMSparseBlob(path) => ImageSerializeHelper {
+                partition_type: "blk",
+                name: "storage-sparse-blob",
+                path,
+                signed: None,
+            },
+            Image::FVMFastboot(path) => ImageSerializeHelper {
+                partition_type: "blk",
+                name: "fvm.fastboot",
+                path,
+                signed: None,
+            },
         };
         helper.serialize(serializer)
     }
@@ -123,6 +154,7 @@ struct ImageDeserializeHelper {
     partition_type: String,
     name: String,
     path: PathBuf,
+    signed: Option<bool>,
 }
 
 impl<'de> Deserialize<'de> for Image {
@@ -131,16 +163,18 @@ impl<'de> Deserialize<'de> for Image {
         D: Deserializer<'de>,
     {
         let helper = ImageDeserializeHelper::deserialize(deserializer)?;
-        match (&helper.partition_type[..], &helper.name[..]) {
-            ("far", "base-package") => Ok(Image::BasePackage(helper.path)),
-            ("zbi", "zircon-a") => Ok(Image::ZBI(helper.path)),
-            ("vbmeta", "zircon-a") => Ok(Image::VBMeta(helper.path)),
-            ("blk", "blob") => Ok(Image::BlobFS(helper.path)),
-            ("blk", "storage-full") => Ok(Image::FVM(helper.path)),
-            ("blk", "storage-sparse") => Ok(Image::FVMSparse(helper.path)),
-            ("blk", "storage-sparse-blob") => Ok(Image::FVMSparseBlob(helper.path)),
-            ("blk", "fvm.fastboot") => Ok(Image::FVMFastboot(helper.path)),
-            (partition_type, name) => Err(de::Error::unknown_variant(
+        match (&helper.partition_type[..], &helper.name[..], &helper.signed) {
+            ("far", "base-package", None) => Ok(Image::BasePackage(helper.path)),
+            ("zbi", "zircon-a", Some(signed)) => {
+                Ok(Image::ZBI { path: helper.path, signed: *signed })
+            }
+            ("vbmeta", "zircon-a", None) => Ok(Image::VBMeta(helper.path)),
+            ("blk", "blob", None) => Ok(Image::BlobFS(helper.path)),
+            ("blk", "storage-full", None) => Ok(Image::FVM(helper.path)),
+            ("blk", "storage-sparse", None) => Ok(Image::FVMSparse(helper.path)),
+            ("blk", "storage-sparse-blob", None) => Ok(Image::FVMSparseBlob(helper.path)),
+            ("blk", "fvm.fastboot", None) => Ok(Image::FVMFastboot(helper.path)),
+            (partition_type, name, _) => Err(de::Error::unknown_variant(
                 &format!("({}, {})", partition_type, name),
                 &[
                     "(far, base-package)",
@@ -167,7 +201,7 @@ mod tests {
         let manifest = ImagesManifest {
             images: vec![
                 Image::BasePackage("path/to/base.far".into()),
-                Image::ZBI("path/to/fuchsia.zbi".into()),
+                Image::ZBI { path: "path/to/fuchsia.zbi".into(), signed: true },
                 Image::VBMeta("path/to/fuchsia.vbmeta".into()),
                 Image::BlobFS("path/to/blob.blk".into()),
                 Image::FVM("path/to/fvm.blk".into()),
@@ -181,6 +215,36 @@ mod tests {
     }
 
     #[test]
+    fn serialize_unsigned_zbi() {
+        let manifest = ImagesManifest {
+            images: vec![Image::ZBI { path: "path/to/fuchsia.zbi".into(), signed: false }],
+        };
+
+        let value = json!([
+            {
+                "type": "zbi",
+                "name": "zircon-a",
+                "path": "path/to/fuchsia.zbi",
+                "signed": false,
+            }
+        ]);
+        assert_eq!(value, serde_json::to_value(manifest).unwrap());
+    }
+
+    #[test]
+    fn deserialize_zbi_missing_signed() {
+        let invalid = json!([
+            {
+                "type": "zbi",
+                "name": "zircon-a",
+                "path": "path/to/fuchsia.zbi",
+            }
+        ]);
+        let result: Result<ImagesManifest, _> = serde_json::from_value(invalid);
+        assert!(result.unwrap_err().is_data());
+    }
+
+    #[test]
     fn deserialize() {
         let manifest: ImagesManifest = serde_json::from_value(generate_test_value()).unwrap();
         assert_eq!(manifest.images.len(), 8);
@@ -188,7 +252,10 @@ mod tests {
         for image in &manifest.images {
             let (expected, actual) = match image {
                 Image::BasePackage(path) => ("path/to/base.far", path),
-                Image::ZBI(path) => ("path/to/fuchsia.zbi", path),
+                Image::ZBI { path, signed } => {
+                    assert!(signed);
+                    ("path/to/fuchsia.zbi", path)
+                }
                 Image::VBMeta(path) => ("path/to/fuchsia.vbmeta", path),
                 Image::BlobFS(path) => ("path/to/blob.blk", path),
                 Image::FVM(path) => ("path/to/fvm.blk", path),
@@ -224,6 +291,7 @@ mod tests {
                 "type": "zbi",
                 "name": "zircon-a",
                 "path": "path/to/fuchsia.zbi",
+                "signed": true,
             },
             {
                 "type": "vbmeta",

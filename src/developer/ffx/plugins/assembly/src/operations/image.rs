@@ -102,9 +102,19 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
         None
     };
 
+    // If the board specifies a vendor-specific signing script, use that to
+    // post-process the ZBI, and then use the post-processed ZBI in the update
+    // package and the
+    let (zbi_for_update_path, signed) = if let Some(signing_config) = &board.zbi.signing_script {
+        info!("Vendor signing the ZBI");
+        (vendor_sign_zbi(&outdir, &board, signing_config, &zbi_path)?, true)
+    } else {
+        (zbi_path, false)
+    };
+
     info!("Creating images manifest");
     let mut images_manifest = ImagesManifest::default();
-    images_manifest.images.push(Image::ZBI(zbi_path.clone()));
+    images_manifest.images.push(Image::ZBI { path: zbi_for_update_path.clone(), signed: signed });
     if let Some(base_package) = &base_package {
         images_manifest.images.push(Image::BasePackage(base_package.path.clone()));
     }
@@ -126,16 +136,6 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
     let images_json = File::create(images_json_path).context("Failed to create images.json")?;
     serde_json::to_writer(images_json, &images_manifest)
         .context("Failed to write to images.json")?;
-
-    // If the board specifies a vendor-specific signing script, use that to
-    // post-process the ZBI, and then use the post-processed ZBI in the update
-    // package and the
-    let zbi_for_update_path = if let Some(signing_config) = &board.zbi.signing_script {
-        info!("Vendor signing the ZBI");
-        vendor_sign_zbi(&outdir, &board, signing_config, &zbi_path)?
-    } else {
-        zbi_path
-    };
 
     info!("Creating the update package");
     let _update_package: UpdatePackage = construct_update(
