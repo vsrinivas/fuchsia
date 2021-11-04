@@ -599,7 +599,7 @@ pub(super) fn get_ip_addr_subnet<C: EthernetIpDeviceContext, A: IpAddress>(
     });
 }
 
-/// Get the IP address and subnet pais associated with this device which are in
+/// Get the IP address and subnet pairs associated with this device which are in
 /// the assigned state.
 ///
 /// Tentative IP addresses (addresses which are not yet fully bound to a device)
@@ -619,7 +619,6 @@ pub(super) fn get_assigned_ip_addr_subnets<C: EthernetIpDeviceContext, A: IpAddr
 
     #[ipv4addr]
     return Box::new(state.ipv4_addr_sub.iter().cloned());
-    // let addresses = &state.ipv4_addr_sub;
 
     #[ipv6addr]
     return Box::new(state.ipv6_addr_sub.iter().filter_map(|a| {
