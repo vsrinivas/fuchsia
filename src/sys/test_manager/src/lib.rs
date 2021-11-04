@@ -34,6 +34,7 @@ use {
         future::join_all,
         lock,
         prelude::*,
+        stream::FusedStream,
         StreamExt,
     },
     io_util,
@@ -692,7 +693,7 @@ const EVENTS_THRESHOLD: usize = 50;
 
 impl Suite {
     async fn run_controller(
-        mut controller: SuiteControllerRequestStream,
+        controller: &mut SuiteControllerRequestStream,
         stop_sender: oneshot::Sender<()>,
         run_suite_remote_handle: futures::future::RemoteHandle<()>,
         event_recv: mpsc::Receiver<Result<FidlSuiteEvent, LaunchError>>,
@@ -763,7 +764,7 @@ impl Suite {
         let (sender, recv) = mpsc::channel(1024);
         let (stop_sender, stop_recv) = oneshot::channel::<()>();
         let mut instance = self.launch_suite(sender.clone(), test_map).await;
-        let Self { test_url, options, controller, .. } = self;
+        let Self { test_url, options, mut controller, .. } = self;
 
         let run_test_fut = match instance.as_mut() {
             Some(instance) => instance.run_tests(options, sender, stop_recv).boxed(),
@@ -772,7 +773,8 @@ impl Suite {
 
         let (run_test_remote, run_test_handle) = run_test_fut.remote_handle();
 
-        let controller_fut = Self::run_controller(controller, stop_sender, run_test_handle, recv);
+        let controller_fut =
+            Self::run_controller(&mut controller, stop_sender, run_test_handle, recv);
         // Okay to ignore error in the run test result as aborted is expected when Kill is called
         let ((), controller_ret) = futures::future::join(run_test_remote, controller_fut).await;
 
@@ -782,6 +784,12 @@ impl Suite {
 
         if let Some(instance) = instance {
             instance.destroy().await;
+        }
+        // Workaround to prevent zx_peer_closed error
+        // TODO(fxbug.dev/87976) once fxbug.dev/87890 is fixed, the controller should be dropped as soon as all
+        // events are drained.
+        if !controller.is_terminated() {
+            let () = controller.map(|_| ()).collect().await;
         }
     }
 
@@ -2056,14 +2064,11 @@ mod tests {
         }
         .remote_handle();
         let _task = fasync::Task::spawn(task);
-        let (proxy, controller) =
+        let (proxy, mut controller) =
             create_proxy_and_stream::<ftest_manager::SuiteControllerMarker>().unwrap();
-        let run_controller = fasync::Task::spawn(Suite::run_controller(
-            controller,
-            stop_sender,
-            remote_handle,
-            recv,
-        ));
+        let run_controller = fasync::Task::spawn(async move {
+            Suite::run_controller(&mut controller, stop_sender, remote_handle, recv).await
+        });
         proxy.stop().unwrap();
 
         assert_eq!(proxy.get_events().await.unwrap(), Ok(vec![]));
@@ -2078,14 +2083,11 @@ mod tests {
         // Create a future that normally never resolves.
         let (task, remote_handle) = futures::future::pending().remote_handle();
         let pending_task = fasync::Task::spawn(task);
-        let (proxy, controller) =
+        let (proxy, mut controller) =
             create_proxy_and_stream::<ftest_manager::SuiteControllerMarker>().unwrap();
-        let run_controller = fasync::Task::spawn(Suite::run_controller(
-            controller,
-            stop_sender,
-            remote_handle,
-            recv,
-        ));
+        let run_controller = fasync::Task::spawn(async move {
+            Suite::run_controller(&mut controller, stop_sender, remote_handle, recv).await
+        });
         drop(proxy);
         // After controller is dropped, both the controller future and the task it was
         // controlling should terminate.
@@ -2099,14 +2101,11 @@ mod tests {
         let (stop_sender, stop_recv) = oneshot::channel::<()>();
         let (task, remote_handle) = async {}.remote_handle();
         let _task = fasync::Task::spawn(task);
-        let (proxy, controller) =
+        let (proxy, mut controller) =
             create_proxy_and_stream::<ftest_manager::SuiteControllerMarker>().unwrap();
-        let run_controller = fasync::Task::spawn(Suite::run_controller(
-            controller,
-            stop_sender,
-            remote_handle,
-            recv,
-        ));
+        let run_controller = fasync::Task::spawn(async move {
+            Suite::run_controller(&mut controller, stop_sender, remote_handle, recv).await
+        });
         sender.send(Ok(SuiteEvents::case_found(1, "case1".to_string()).into())).await.unwrap();
         sender.send(Ok(SuiteEvents::case_found(2, "case2".to_string()).into())).await.unwrap();
 
@@ -2153,14 +2152,11 @@ mod tests {
         let (stop_sender, _stop_recv) = oneshot::channel::<()>();
         let (task, remote_handle) = async {}.remote_handle();
         let _task = fasync::Task::spawn(task);
-        let (proxy, controller) =
+        let (proxy, mut controller) =
             create_proxy_and_stream::<ftest_manager::SuiteControllerMarker>().unwrap();
-        let _run_controller = fasync::Task::spawn(Suite::run_controller(
-            controller,
-            stop_sender,
-            remote_handle,
-            recv,
-        ));
+        let _run_controller = fasync::Task::spawn(async move {
+            Suite::run_controller(&mut controller, stop_sender, remote_handle, recv).await
+        });
 
         // send get event call which would hang as there are no events.
         let mut get_events =

@@ -677,9 +677,8 @@ type SuiteResults<'a> = LocalBoxStream<'a, Result<SuiteRunResult, RunTestSuiteEr
 /// A test suite that is known to have started execution. A suite is considered started once
 /// any event is produced for the suite.
 struct RunningSuite {
-    proxy: ftest_manager::SuiteControllerProxy,
+    proxy: Option<ftest_manager::SuiteControllerProxy>,
     unreturned_events: VecDeque<Result<ftest_manager::SuiteEvent, RunTestSuiteError>>,
-    events_done: bool,
     url: String,
     max_severity_logs: Option<Severity>,
 }
@@ -691,7 +690,7 @@ impl RunningSuite {
         max_severity_logs: Option<Severity>,
     ) -> Self {
         let unreturned_events = Self::query_events(&proxy).await;
-        Self { proxy, unreturned_events, events_done: false, url, max_severity_logs }
+        Self { proxy: Some(proxy), unreturned_events, url, max_severity_logs }
     }
 
     async fn query_events(
@@ -705,10 +704,17 @@ impl RunningSuite {
     }
 
     async fn next_event(&mut self) -> Option<Result<ftest_manager::SuiteEvent, RunTestSuiteError>> {
-        if self.unreturned_events.is_empty() && !self.events_done {
-            self.unreturned_events = Self::query_events(&self.proxy).await;
+        match self.proxy.as_ref() {
+            Some(proxy) if self.unreturned_events.is_empty() => {
+                self.unreturned_events = Self::query_events(proxy).await;
+            }
+            Some(_) | None => (),
         }
-        self.events_done = self.unreturned_events.is_empty();
+        if self.unreturned_events.is_empty() {
+            // Once we've exhausted all the events, close the proxy.
+            // TODO(fxbug.dev/87976) - once fxbug.dev/87890 is fixed this can be removed
+            let _ = self.proxy.take();
+        }
         self.unreturned_events.pop_front()
     }
 
