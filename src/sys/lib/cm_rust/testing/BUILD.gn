@@ -6,14 +6,10 @@ import("//build/components.gni")
 import("//build/host.gni")
 import("//build/rust/rustc_library.gni")
 
-# This library is intended for use in tests, but is not marked as testonly
-# because it is a dependency of component_manager::model::testing. That
-# module is currently included in the main component_manager library
-# (rather than being guarded with '#[cfg(test)]') to allow use in separate
-# integration test targets.
-# TODO(https://fxbug.dev/75967): mark this target as test-only.
 rustc_library("testing") {
   name = "cm_rust_testing"
+
+  testonly = true
 
   deps = [
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",

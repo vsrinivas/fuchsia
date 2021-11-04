@@ -7,9 +7,10 @@ import("//build/rust/rustc_library.gni")
 
 # The `routing_test_helpers` library provides test harnesses for users of
 # the `routing` library.
-# TODO(https://fxbug.dev/75967): mark this target as test-only.
 rustc_library("routing_test_helpers") {
   edition = "2018"
+
+  testonly = true
 
   visibility = [
     "//src/sys/component_manager/*",
