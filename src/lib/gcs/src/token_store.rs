@@ -138,7 +138,7 @@ struct ListResponseItem {
 /// - storage_base: https://storage.googleapis.com
 pub struct TokenStore {
     /// Base URL for JSON API access.
-    _api_base: Url,
+    api_base: Url,
 
     /// Base URL for reading (blob) objects.
     storage_base: Url,
@@ -158,7 +158,7 @@ impl TokenStore {
     /// Only allow access to public GCS data.
     pub fn new_without_auth() -> Self {
         Self {
-            _api_base: Url::parse(API_BASE).expect("parse API_BASE"),
+            api_base: Url::parse(API_BASE).expect("parse API_BASE"),
             storage_base: Url::parse(STORAGE_BASE).expect("parse STORAGE_BASE"),
             refresh_token: None,
             access_token: Mutex::new("".to_string()),
@@ -182,7 +182,7 @@ impl TokenStore {
         }
         let access_token = Mutex::new(access_token.into().unwrap_or("".to_string()));
         Ok(Self {
-            _api_base: Url::parse(API_BASE).expect("parse API_BASE"),
+            api_base: Url::parse(API_BASE).expect("parse API_BASE"),
             storage_base: Url::parse(STORAGE_BASE).expect("parse STORAGE_BASE"),
             refresh_token: Some(refresh_token),
             access_token,
@@ -222,7 +222,7 @@ impl TokenStore {
             let info: ExchangeAuthCodeResponse = serde_json::from_slice(&bytes)?;
             let access_token = Mutex::new(info.access_token.unwrap_or("".to_string()));
             Ok(Self {
-                _api_base: Url::parse(API_BASE).expect("parse API_BASE"),
+                api_base: Url::parse(API_BASE).expect("parse API_BASE"),
                 storage_base: Url::parse(STORAGE_BASE).expect("parse STORAGE_BASE"),
                 refresh_token: Some(info.refresh_token),
                 access_token,
@@ -241,12 +241,7 @@ impl TokenStore {
     fn local_fake(refresh_token: Option<String>) -> Self {
         let api_base = Url::parse("http://localhost:9000").expect("api_base");
         let storage_base = Url::parse("http://localhost:9001").expect("storage_base");
-        Self {
-            _api_base: api_base,
-            storage_base,
-            refresh_token,
-            access_token: Mutex::new("".to_string()),
-        }
+        Self { api_base, storage_base, refresh_token, access_token: Mutex::new("".to_string()) }
     }
 
     /// Apply Authorization header, if available.
@@ -389,7 +384,7 @@ impl TokenStore {
         bucket: &str,
         prefix: &str,
     ) -> Result<Vec<String>> {
-        let mut base_url = Url::parse(API_BASE).expect("parse API_BASE");
+        let mut base_url = self.api_base.to_owned();
         base_url.path_segments_mut().unwrap().extend(&["b", bucket, "o"]);
         base_url
             .query_pairs_mut()
