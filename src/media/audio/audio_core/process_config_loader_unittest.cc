@@ -1160,6 +1160,17 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithThermalPolicy) {
     ],
     "thermal_policy" : [
         {
+            "nominal_config": true,
+            "state_transitions": [
+                {
+                    "target_name": "target name 0",
+                    "config": {
+                        "value": "nominal config 0"
+                    }
+                }
+            ]
+        },
+        {
             "trip_point": {
                 "deactivate_below": 23,
                 "activate_at": 25
@@ -1238,6 +1249,11 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithThermalPolicy) {
   EXPECT_EQ(1u, entries[2].state_transitions().size());
   EXPECT_EQ("target name 0", entries[2].state_transitions()[0].target_name());
   EXPECT_EQ("{\"value\":\"config 0 trip point 2\"}", entries[2].state_transitions()[0].config());
+
+  const auto& nominal_states = config.thermal_config().nominal_states();
+  EXPECT_EQ(1u, config.thermal_config().nominal_states().size());
+  EXPECT_EQ("target name 0", nominal_states[0].target_name());
+  EXPECT_EQ("{\"value\":\"nominal config 0\"}", nominal_states[0].config());
 }
 
 TEST(ProcessConfigLoaderTest, LoadOutputDevicePolicyWithDefaultPipeline) {

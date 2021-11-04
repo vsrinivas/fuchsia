@@ -15,7 +15,8 @@ namespace media::audio {
 //
 // ThermalConfig is conceptually of the form [Entry(TripPoint, [StateTransition])]. When the
 // outer list contains N entries, it specifies N+1 thermal states. Each Entry specifies
-// the transitions in effect states that occur when its TripPoint is activated.
+// the transitions in effect states that occur when its TripPoint is activated. The unactivated
+// state configuration is represented by the `nominal_states` vector, one entry per target.
 class ThermalConfig {
  public:
   using TripPoint = fuchsia::thermal::TripPoint;
@@ -46,14 +47,17 @@ class ThermalConfig {
     std::vector<StateTransition> state_transitions_;
   };
 
-  explicit ThermalConfig(std::vector<Entry> entries) : entries_(std::move(entries)) {}
+  explicit ThermalConfig(std::vector<Entry> entries, std::vector<StateTransition> nominal_states)
+      : entries_(std::move(entries)), nominal_states_(std::move(nominal_states)) {}
 
   const std::vector<Entry>& entries() const { return entries_; }
+  const std::vector<StateTransition>& nominal_states() const { return nominal_states_; }
 
  private:
   friend class ProcessConfigBuilder;
 
   std::vector<Entry> entries_;
+  std::vector<StateTransition> nominal_states_;
 };
 
 }  // namespace media::audio

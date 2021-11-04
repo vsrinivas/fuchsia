@@ -54,6 +54,7 @@ static constexpr char kJsonKeyTripPointActivateAt[] = "activate_at";
 static constexpr char kJsonKeyStateTransitions[] = "state_transitions";
 static constexpr char kJsonKeyMinGainDb[] = "min_gain_db";
 static constexpr char kJsonKeyMaxGainDb[] = "max_gain_db";
+static constexpr char kJsonKeyNominalConfig[] = "nominal_config";
 
 void CountLoopbackStages(const PipelineConfig::MixGroup& mix_group, uint32_t* count) {
   if (mix_group.loopback) {
@@ -491,6 +492,34 @@ ThermalConfig::Entry ParseThermalPolicyEntryFromJsonObject(const rapidjson::Valu
       transitions);
 }
 
+std::vector<ThermalConfig::StateTransition> ParseThermalNominalStateFromJsonObject(
+    const rapidjson::Value& value) {
+  FX_CHECK(value.IsObject());
+
+  auto transitions_it = value.FindMember(kJsonKeyStateTransitions);
+  FX_CHECK(transitions_it != value.MemberEnd());
+  FX_CHECK(transitions_it->value.IsArray());
+
+  std::vector<ThermalConfig::StateTransition> transitions;
+  for (const auto& transition : transitions_it->value.GetArray()) {
+    FX_CHECK(transition.IsObject());
+    auto target_name_it = transition.FindMember(kJsonKeyTargetName);
+    FX_CHECK(target_name_it != value.MemberEnd());
+    FX_CHECK(target_name_it->value.IsString());
+    const auto* target_name = target_name_it->value.GetString();
+
+    auto config_it = transition.FindMember(kJsonKeyConfig);
+    FX_CHECK(config_it != transition.MemberEnd());
+    rapidjson::StringBuffer config_buf;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(config_buf);
+    config_it->value.Accept(writer);
+
+    transitions.emplace_back(target_name, config_buf.GetString());
+  }
+
+  return transitions;
+}
+
 fpromise::result<void, std::string> ParseOutputDevicePoliciesFromJsonObject(
     const rapidjson::Value& output_device_profiles, ProcessConfigBuilder* config_builder) {
   FX_CHECK(output_device_profiles.IsArray());
@@ -572,8 +601,16 @@ void ParseThermalPolicyFromJsonObject(const rapidjson::Value& value,
                                       ProcessConfigBuilder* config_builder) {
   FX_CHECK(value.IsArray());
   for (const auto& thermal_policy_entry : value.GetArray()) {
-    config_builder->AddThermalPolicyEntry(
-        ParseThermalPolicyEntryFromJsonObject(thermal_policy_entry));
+    auto nominal_config_it = thermal_policy_entry.FindMember(kJsonKeyNominalConfig);
+    if (nominal_config_it == thermal_policy_entry.MemberEnd()) {
+      config_builder->AddThermalPolicyEntry(
+          ParseThermalPolicyEntryFromJsonObject(thermal_policy_entry));
+    } else {
+      auto nominal_states = ParseThermalNominalStateFromJsonObject(thermal_policy_entry);
+      for (auto nominal_state : nominal_states) {
+        config_builder->AddThermalNominalState(std::move(nominal_state));
+      }
+    }
   }
 }
 

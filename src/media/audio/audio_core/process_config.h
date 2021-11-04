@@ -34,6 +34,7 @@ class ProcessConfigBuilder {
                 DeviceConfig::InputDeviceProfile>
           keyed_profile);
   ProcessConfigBuilder& AddThermalPolicyEntry(ThermalConfig::Entry thermal_policy_entry);
+  ProcessConfigBuilder& AddThermalNominalState(ThermalConfig::StateTransition nominal_state);
   ProcessConfig Build();
 
   VolumeCurve default_volume_curve() {
@@ -51,6 +52,7 @@ class ProcessConfigBuilder {
       input_device_profiles_;
   std::optional<DeviceConfig::InputDeviceProfile> default_input_device_profile_;
   std::vector<ThermalConfig::Entry> thermal_config_entries_;
+  std::vector<ThermalConfig::StateTransition> thermal_nominal_states_;
 };
 
 class ProcessConfig {

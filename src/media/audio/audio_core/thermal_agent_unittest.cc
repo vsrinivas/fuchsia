@@ -149,12 +149,6 @@ const char kThrottledConfig[] = "config";
 TEST_F(ThermalAgentTest, OneConfigEntry) {
   PipelineConfig pipeline_config({
       .name = "mixgroup",
-      .effects_v1 = {{
-          .lib_name = "lib",
-          .effect_name = "effect",
-          .instance_name = kTargetName,
-          .effect_config = kNominalConfig,
-      }},
       .loopback = false,
       .output_rate = 48000,
       .output_channels = 2,
@@ -164,12 +158,8 @@ TEST_F(ThermalAgentTest, OneConfigEntry) {
   ProcessConfig process_config =
       ProcessConfigBuilder()
           .SetDefaultVolumeCurve(volume_curve)
-          .AddDeviceProfile(
-              {std::nullopt, DeviceConfig::OutputDeviceProfile(
-                                 /*eligible_for_loopback=*/false, /*supported_usages=*/{},
-                                 volume_curve, /*independent_volume_control=*/false,
-                                 std::move(pipeline_config), /*driver_gain_db=*/0.0)})
           .AddThermalPolicyEntry(ThermalConfig::Entry(kTripPoint, transitions))
+          .AddThermalNominalState(ThermalConfig::StateTransition(kTargetName, kNominalConfig))
           .Build();
   fuchsia::thermal::ControllerPtr thermal_controller;
   FakeThermalController fake_thermal_controller;
@@ -237,27 +227,6 @@ const char kTripPoint2Config2[] = "config2_2";
 TEST_F(ThermalAgentTest, MultipleConfigEntries) {
   PipelineConfig pipeline_config({
       .name = "mixgroup",
-      .effects_v1 =
-          {
-              {
-                  .lib_name = "lib",
-                  .effect_name = "effect",
-                  .instance_name = kTargetName0,
-                  .effect_config = kNominalConfig0,
-              },
-              {
-                  .lib_name = "lib",
-                  .effect_name = "effect",
-                  .instance_name = kTargetName1,
-                  .effect_config = kNominalConfig1,
-              },
-              {
-                  .lib_name = "lib",
-                  .effect_name = "effect",
-                  .instance_name = kTargetName2,
-                  .effect_config = kNominalConfig2,
-              },
-          },
       .loopback = false,
       .output_rate = 48000,
       .output_channels = 2,
@@ -272,14 +241,12 @@ TEST_F(ThermalAgentTest, MultipleConfigEntries) {
   ProcessConfig process_config =
       ProcessConfigBuilder()
           .SetDefaultVolumeCurve(volume_curve)
-          .AddDeviceProfile(
-              {std::nullopt, DeviceConfig::OutputDeviceProfile(
-                                 /*eligible_for_loopback=*/false, /*supported_usages=*/{},
-                                 volume_curve, /*independent_volume_control=*/false,
-                                 std::move(pipeline_config), /*driver_gain_db=*/0.0)})
           .AddThermalPolicyEntry(ThermalConfig::Entry(kTripPoint0, transitions0))
           .AddThermalPolicyEntry(ThermalConfig::Entry(kTripPoint1, transitions1))
           .AddThermalPolicyEntry(ThermalConfig::Entry(kTripPoint2, transitions2))
+          .AddThermalNominalState(ThermalConfig::StateTransition(kTargetName0, kNominalConfig0))
+          .AddThermalNominalState(ThermalConfig::StateTransition(kTargetName1, kNominalConfig1))
+          .AddThermalNominalState(ThermalConfig::StateTransition(kTargetName2, kNominalConfig2))
           .Build();
   fuchsia::thermal::ControllerPtr thermal_controller;
   FakeThermalController fake_thermal_controller;

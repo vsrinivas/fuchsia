@@ -58,6 +58,16 @@ ProcessConfigBuilder& ProcessConfigBuilder::AddThermalPolicyEntry(
   return *this;
 }
 
+ProcessConfigBuilder& ProcessConfigBuilder::AddThermalNominalState(
+    ThermalConfig::StateTransition nominal_state) {
+  for (auto& state : thermal_nominal_states_) {
+    FX_CHECK(nominal_state.target_name() != state.target_name())
+        << "Only one nominal state per target allowed";
+  }
+  thermal_nominal_states_.push_back(std::move(nominal_state));
+  return *this;
+}
+
 ProcessConfig ProcessConfigBuilder::Build() {
   std::optional<VolumeCurve> maybe_curve = std::nullopt;
   default_volume_curve_.swap(maybe_curve);
@@ -66,7 +76,7 @@ ProcessConfig ProcessConfigBuilder::Build() {
       std::move(*maybe_curve), std::move(default_render_usage_volumes_),
       DeviceConfig(std::move(output_device_profiles_), std::move(default_output_device_profile_),
                    std::move(input_device_profiles_), std::move(default_input_device_profile_)),
-      ThermalConfig(std::move(thermal_config_entries_)));
+      ThermalConfig(std::move(thermal_config_entries_), std::move(thermal_nominal_states_)));
 }
 
 }  // namespace media::audio

@@ -11,6 +11,7 @@
 #include <rapidjson/document.h>
 
 #include "src/media/audio/audio_core/audio_device_manager.h"
+#include "src/media/audio/audio_core/device_config.h"
 #include "src/media/audio/audio_core/reporter.h"
 
 namespace media::audio {
@@ -18,13 +19,25 @@ namespace {
 
 // Finds the nominal config string for the specified target. Returns no value if the specified
 // target could not be found.
-std::optional<std::string> FindNominalConfigForTarget(const std::string& target_name,
-                                                      const DeviceConfig& device_config) {
-  // For 'special' target names (not effect names), this method must return a string. An empty
-  // string is fine. The remainder of this method assumes the |target_name| references an effect.
-
+std::optional<std::string> FindNominalConfigForTarget(
+    const std::vector<ThermalConfig::StateTransition>& nominal_states,
+    const std::string& target_name, const DeviceConfig& device_config) {
+  // First check if target is present in v1 effects list.
+  // TODO(fxbug.dev/80067) This will be removed when we have transitioned to looking up nominal
+  // config directly from ThermalConfig.
   const PipelineConfig::EffectV1* effect = device_config.FindEffectV1(target_name);
-  return effect ? std::optional(effect->effect_config) : std::nullopt;
+  if (effect) {
+    return effect->effect_config;
+  }
+
+  // Then look in ThermalConfig
+  for (auto& s : nominal_states) {
+    if (s.target_name() == target_name) {
+      return s.config();
+    }
+  }
+
+  return std::nullopt;
 }
 
 // Constructs a map {target_name: configs_by_thermal_state}, where configs_by_thermal_state
@@ -56,7 +69,8 @@ std::unordered_map<std::string, std::vector<std::string>> PopulateTargetConfigur
       // record it as a bad target and continue. Otherwise, initialize this target's entry in
       // `result`.
       if (configs_it == result.end()) {
-        auto nominal_config = FindNominalConfigForTarget(target_name, device_config);
+        auto nominal_config =
+            FindNominalConfigForTarget(thermal_config.nominal_states(), target_name, device_config);
         if (!nominal_config.has_value()) {
           bad_targets.insert(target_name);
           FX_LOGS(ERROR) << "Thermal config references unknown target '" << target_name << "'.";
