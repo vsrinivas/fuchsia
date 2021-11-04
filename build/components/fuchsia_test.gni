@@ -36,32 +36,41 @@ import("//build/testing/test_spec.gni")
 #
 #   Additional `test_spec()` parameters will be forwarded.
 template("fuchsia_test") {
-  assert(
-      defined(invoker.package),
-      "A `package` argument was missing when calling fuchsia_test($target_name)")
-  assert(
-      defined(invoker.component),
-      "A `component` argument was missing when calling fuchsia_test($target_name)")
+  if (current_toolchain == default_toolchain) {
+    assert(
+        defined(invoker.package),
+        "A `package` argument was missing when calling fuchsia_test($target_name)")
+    assert(
+        defined(invoker.component),
+        "A `component` argument was missing when calling fuchsia_test($target_name)")
 
-  package_name = get_label_info(invoker.package, "name")
-  if (defined(invoker.package_name)) {
-    package_name = invoker.package_name
-  }
-
-  manifest_name = get_target_outputs(invoker.component)
-  manifest_name = get_path_info(manifest_name[0], "file")
-
-  assert(
-      get_path_info(manifest_name, "extension") == "cm",
-      "`manifest_name` must end with '.cm'. Refer https://fxbug.dev/84888 for more information.")
-
-  test_spec(target_name) {
-    forward_variables_from(invoker, "*")
-    target = get_label_info(invoker.package, "label_with_toolchain")
-    package_url = "fuchsia-pkg://fuchsia.com/$package_name#meta/$manifest_name"
-    if (!defined(deps)) {
-      deps = []
+    package_name = get_label_info(invoker.package, "name")
+    if (defined(invoker.package_name)) {
+      package_name = invoker.package_name
     }
-    deps += [ invoker.package ]
+
+    manifest_name = get_target_outputs(invoker.component)
+    manifest_name = get_path_info(manifest_name[0], "file")
+
+    assert(
+        get_path_info(manifest_name, "extension") == "cm",
+        "`manifest_name` must end with '.cm'. Refer https://fxbug.dev/84888 for more information.")
+
+    test_spec(target_name) {
+      forward_variables_from(invoker, "*")
+      target = get_label_info(invoker.package, "label_with_toolchain")
+      package_url =
+          "fuchsia-pkg://fuchsia.com/$package_name#meta/$manifest_name"
+      if (!defined(deps)) {
+        deps = []
+      }
+      deps += [ invoker.package ]
+    }
+  } else {
+    group(target_name) {
+      testonly = true
+      deps = [ ":$target_name($default_toolchain)" ]
+    }
+    not_needed(invoker, "*")
   }
 }

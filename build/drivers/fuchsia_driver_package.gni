@@ -42,32 +42,40 @@ import("//build/drivers/driver_manifest.gni")
 #   testonly
 #   visibility
 template("fuchsia_driver_package") {
-  assert(
-      defined(invoker.driver_components) && invoker.driver_components != [],
-      "`driver_components` must be specified when calling fuchsia_driver_package($target_name)")
+  if (current_toolchain == default_toolchain) {
+    assert(
+        defined(invoker.driver_components) && invoker.driver_components != [],
+        "`driver_components` must be specified when calling fuchsia_driver_package($target_name)")
 
-  package_name = target_name
-  if (defined(invoker.package_name)) {
-    package_name = invoker.package_name
-  }
-
-  driver_manifest_target = "${target_name}_driver_manifest"
-  driver_manifest(driver_manifest_target) {
-    forward_variables_from(invoker, [ "testonly" ])
-    package_url = "fuchsia-pkg://fuchsia.com/${package_name}"
-    deps = invoker.driver_components
-
-    # We don't want individual package's driver manifests to end up in the image.
-    # Instead these files will be collected by one `combined_driver_manifest` target.
-    install_as_config_resource = false
-  }
-
-  fuchsia_package(target_name) {
-    forward_variables_from(invoker, "*")
-    if (!defined(deps)) {
-      deps = []
+    package_name = target_name
+    if (defined(invoker.package_name)) {
+      package_name = invoker.package_name
     }
-    deps += [ ":${driver_manifest_target}" ]
-    deps += invoker.driver_components
+
+    driver_manifest_target = "${target_name}_driver_manifest"
+    driver_manifest(driver_manifest_target) {
+      forward_variables_from(invoker, [ "testonly" ])
+      package_url = "fuchsia-pkg://fuchsia.com/${package_name}"
+      deps = invoker.driver_components
+
+      # We don't want individual package's driver manifests to end up in the image.
+      # Instead these files will be collected by one `combined_driver_manifest` target.
+      install_as_config_resource = false
+    }
+
+    fuchsia_package(target_name) {
+      forward_variables_from(invoker, "*")
+      if (!defined(deps)) {
+        deps = []
+      }
+      deps += [ ":${driver_manifest_target}" ]
+      deps += invoker.driver_components
+    }
+  } else {
+    group(target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+      deps = [ ":$target_name($default_toolchain)" ]
+    }
+    not_needed(invoker, "*")
   }
 }

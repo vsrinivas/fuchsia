@@ -25,54 +25,62 @@ import("fuchsia_package.gni")
 #   testonly
 #   visibility
 template("fuchsia_shell_package") {
-  package_name = target_name
-  if (defined(invoker.package_name)) {
-    package_name = invoker.package_name
-  }
+  if (current_toolchain == default_toolchain) {
+    package_name = target_name
+    if (defined(invoker.package_name)) {
+      package_name = invoker.package_name
+    }
 
-  shell_command_target = "${target_name}_shell_command"
-  shell_command(shell_command_target) {
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "testonly",
-                           ])
-    visibility = [ ":*" ]
-    package_name = package_name
-  }
-
-  if (defined(invoker.manifest)) {
-    component_target = "${target_name}_component"
-    fuchsia_component(component_target) {
+    shell_command_target = "${target_name}_shell_command"
+    shell_command(shell_command_target) {
       forward_variables_from(invoker,
                              [
                                "deps",
                                "testonly",
                              ])
       visibility = [ ":*" ]
-      manifest = invoker.manifest
-      component_name = package_name
-    }
-  }
-
-  fuchsia_package(target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "disable_elf_binaries_checks",
-                             "testonly",
-                             "visibility",
-                           ])
-    package_name = package_name
-    if (!defined(deps)) {
-      deps = []
-    }
-    deps += [ ":$shell_command_target" ]
-    if (defined(component_target)) {
-      deps += [ ":$component_target" ]
+      package_name = package_name
     }
 
-    # The shell environment is not intended for production use.
-    deps += [ "//build/validate:non_production_tag" ]
+    if (defined(invoker.manifest)) {
+      component_target = "${target_name}_component"
+      fuchsia_component(component_target) {
+        forward_variables_from(invoker,
+                               [
+                                 "deps",
+                                 "testonly",
+                               ])
+        visibility = [ ":*" ]
+        manifest = invoker.manifest
+        component_name = package_name
+      }
+    }
+
+    fuchsia_package(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "disable_elf_binaries_checks",
+                               "testonly",
+                               "visibility",
+                             ])
+      package_name = package_name
+      if (!defined(deps)) {
+        deps = []
+      }
+      deps += [ ":$shell_command_target" ]
+      if (defined(component_target)) {
+        deps += [ ":$component_target" ]
+      }
+
+      # The shell environment is not intended for production use.
+      deps += [ "//build/validate:non_production_tag" ]
+    }
+  } else {
+    group(target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+      deps = [ ":$target_name($default_toolchain)" ]
+    }
+    not_needed(invoker, "*")
   }
 }

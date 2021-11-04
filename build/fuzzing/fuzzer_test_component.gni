@@ -30,51 +30,59 @@ import("//build/components.gni")
 #       to use the corpus when testing.
 #
 template("fuzzer_test_component") {
-  assert(defined(invoker.fuzzer),
-         "missing 'fuzzer' for fuzzer_test_component($target_name)")
-  assert(defined(invoker.label),
-         "missing 'label' for fuzzer_test_component($target_name)")
-  assert(defined(invoker.deps),
-         "missing 'deps' for fuzzer_test_component($target_name)")
-  fuzzer_test = "${invoker.fuzzer}_test"
+  if (current_toolchain == default_toolchain) {
+    assert(defined(invoker.fuzzer),
+           "missing 'fuzzer' for fuzzer_test_component($target_name)")
+    assert(defined(invoker.label),
+           "missing 'label' for fuzzer_test_component($target_name)")
+    assert(defined(invoker.deps),
+           "missing 'deps' for fuzzer_test_component($target_name)")
+    fuzzer_test = "${invoker.fuzzer}_test"
 
-  meta_target_name = "${target_name}_metadata"
+    meta_target_name = "${target_name}_metadata"
 
-  fuchsia_unittest_component(target_name) {
-    forward_variables_from(invoker, [ "visibility" ])
-    component_name = fuzzer_test
-    deps = invoker.deps + [ ":$meta_target_name" ]
-  }
-
-  group(meta_target_name) {
-    testonly = true
-    deps = invoker.deps + [ "//build/fuzzing:includes_cml" ]
-    metadata = {
-      test_component_manifest_cml = [
-        {
-          forward_variables_from(invoker, [ "include" ])
-          program = {
-            args = [ "-q" ]
-            if (defined(invoker.corpus)) {
-              corpus_path = get_label_info(invoker.corpus, "dir")
-              corpus_name = get_label_info(invoker.corpus, "name")
-              if (corpus_name != get_path_info(corpus_path, "file")) {
-                corpus_path += "/" + corpus_name
-              }
-              args += [ "pkg/data/" + rebase_path(corpus_path, "//") ]
-            }
-            args += [ "data/corpus" ]
-          }
-        },
-      ]
-      fuzz_spec = [
-        {
-          label = invoker.label
-          fuzzer_test = fuzzer_test
-          test_manifest = get_target_outputs(":${invoker.target_name}")
-          test_manifest = get_path_info(test_manifest[0], "file")
-        },
-      ]
+    fuchsia_unittest_component(target_name) {
+      forward_variables_from(invoker, [ "visibility" ])
+      component_name = fuzzer_test
+      deps = invoker.deps + [ ":$meta_target_name" ]
     }
+
+    group(meta_target_name) {
+      testonly = true
+      deps = invoker.deps + [ "//build/fuzzing:includes_cml" ]
+      metadata = {
+        test_component_manifest_cml = [
+          {
+            forward_variables_from(invoker, [ "include" ])
+            program = {
+              args = [ "-q" ]
+              if (defined(invoker.corpus)) {
+                corpus_path = get_label_info(invoker.corpus, "dir")
+                corpus_name = get_label_info(invoker.corpus, "name")
+                if (corpus_name != get_path_info(corpus_path, "file")) {
+                  corpus_path += "/" + corpus_name
+                }
+                args += [ "pkg/data/" + rebase_path(corpus_path, "//") ]
+              }
+              args += [ "data/corpus" ]
+            }
+          },
+        ]
+        fuzz_spec = [
+          {
+            label = invoker.label
+            fuzzer_test = fuzzer_test
+            test_manifest = get_target_outputs(":${invoker.target_name}")
+            test_manifest = get_path_info(test_manifest[0], "file")
+          },
+        ]
+      }
+    }
+  } else {
+    group(target_name) {
+      testonly = true
+      deps = [ ":$target_name($default_toolchain)" ]
+    }
+    not_needed(invoker, "*")
   }
 }

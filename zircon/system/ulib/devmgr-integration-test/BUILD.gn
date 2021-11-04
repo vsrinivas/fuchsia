@@ -50,7 +50,6 @@ zx_library("devmgr-integration-test") {
     "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_c",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
-    "//src/devices/bin/driver-index:component",
     "//src/lib/ddk",
     "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -65,6 +64,9 @@ zx_library("devmgr-integration-test") {
     "//zircon/system/ulib/syslog",
     "//zircon/system/ulib/zx",
   ]
+
+  data_deps = [ "//src/devices/bin/driver-index:component" ]
+
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 
   # STOP: Do not add any new entries to this allow list. Use //sdk/lib/driver_test_realm instead.

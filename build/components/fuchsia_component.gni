@@ -100,99 +100,107 @@ import("//tools/cmc/build/cmx.gni")
 #   testonly
 #   visibility
 template("fuchsia_component") {
-  assert(
-      defined(invoker.manifest),
-      "A `manifest` argument was missing when calling fuchsia_component($target_name)")
-
-  component_name = target_name
-  if (defined(invoker.component_name)) {
-    component_name = invoker.component_name
-  }
-
-  # Handle different manifest versions
-  manifest_extension = get_path_info(invoker.manifest, "extension")
-  if (manifest_extension == "cml") {
-    manifest_processor = "cm"
-    manifest_name = "$component_name.cm"
-  } else if (manifest_extension == "cmx") {
-    manifest_processor = "cmx"
-    manifest_name = "$component_name.cmx"
-  } else {
+  if (current_toolchain == default_toolchain) {
     assert(
-        false,
-        "Unknown manifest format for \"${invoker.manifest}\", must be \".cml\" or \".cmx\"")
-  }
+        defined(invoker.manifest),
+        "A `manifest` argument was missing when calling fuchsia_component($target_name)")
 
-  manifest_resource_target = "${target_name}_manifest_resource"
-
-  check_references = true
-  if (defined(invoker.check_references)) {
-    check_references = invoker.check_references
-  }
-
-  if (check_references) {
-    validate_target = "${target_name}_cmc_validate_references"
-  }
-
-  # Process the manifest
-  target(manifest_processor, target_name) {
-    output_name = "$manifest_extension/$target_name/$manifest_name"
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "manifest",
-                             "restricted_features",
-                             "check_includes",
-                             "testonly",
-                             "visibility",
-                             "experimental_force_runner",
-                           ])
-
-    if (!defined(deps)) {
-      deps = []
+    component_name = target_name
+    if (defined(invoker.component_name)) {
+      component_name = invoker.component_name
     }
-    deps += [ ":$manifest_resource_target" ]
-    if (manifest_extension == "cmx") {
-      deps += [ "//build/components/cmx:cmx_allowlist" ]
+
+    # Handle different manifest versions
+    manifest_extension = get_path_info(invoker.manifest, "extension")
+    if (manifest_extension == "cml") {
+      manifest_processor = "cm"
+      manifest_name = "$component_name.cm"
+    } else if (manifest_extension == "cmx") {
+      manifest_processor = "cmx"
+      manifest_name = "$component_name.cmx"
+    } else {
+      assert(
+          false,
+          "Unknown manifest format for \"${invoker.manifest}\", must be \".cml\" or \".cmx\"")
     }
+
+    manifest_resource_target = "${target_name}_manifest_resource"
+
+    check_references = true
+    if (defined(invoker.check_references)) {
+      check_references = invoker.check_references
+    }
+
     if (check_references) {
-      deps += [ ":$validate_target" ]
+      validate_target = "${target_name}_cmc_validate_references"
     }
 
-    metadata = {
-      if (defined(invoker.metadata)) {
-        forward_variables_from(invoker.metadata, "*")
-      }
-
-      test_component_manifest_program_barrier = []
-      test_component_manifest_barrier = []
-
-      # Don't collect expected includes via transitive deps of components
-      expect_includes_barrier = []
-    }
-  }
-
-  # Add the manifest
-  resource(manifest_resource_target) {
-    sources = get_target_outputs(":${invoker.target_name}")
-    outputs = [ "meta/$manifest_name" ]
-    visibility = [ ":*" ]
-  }
-
-  if (check_references) {
-    # Validate the manifest against packaged files
-    cmc_validate_references(validate_target) {
+    # Process the manifest
+    target(manifest_processor, target_name) {
+      output_name = "$manifest_extension/$target_name/$manifest_name"
       forward_variables_from(invoker,
                              [
                                "deps",
+                               "manifest",
+                               "restricted_features",
+                               "check_includes",
                                "testonly",
+                               "visibility",
+                               "experimental_force_runner",
                              ])
+
       if (!defined(deps)) {
         deps = []
       }
-      visibility = [ ":*" ]
-      component_manifest = invoker.manifest
-      label = get_label_info(":$target_name", "label_with_toolchain")
+      deps += [ ":$manifest_resource_target" ]
+      if (manifest_extension == "cmx") {
+        deps += [ "//build/components/cmx:cmx_allowlist" ]
+      }
+      if (check_references) {
+        deps += [ ":$validate_target" ]
+      }
+
+      metadata = {
+        if (defined(invoker.metadata)) {
+          forward_variables_from(invoker.metadata, "*")
+        }
+
+        test_component_manifest_program_barrier = []
+        test_component_manifest_barrier = []
+
+        # Don't collect expected includes via transitive deps of components
+        expect_includes_barrier = []
+      }
     }
+
+    # Add the manifest
+    resource(manifest_resource_target) {
+      sources = get_target_outputs(":${invoker.target_name}")
+      outputs = [ "meta/$manifest_name" ]
+      visibility = [ ":*" ]
+    }
+
+    if (check_references) {
+      # Validate the manifest against packaged files
+      cmc_validate_references(validate_target) {
+        forward_variables_from(invoker,
+                               [
+                                 "deps",
+                                 "testonly",
+                               ])
+        if (!defined(deps)) {
+          deps = []
+        }
+        visibility = [ ":*" ]
+        component_manifest = invoker.manifest
+        label = get_label_info(":$target_name", "label_with_toolchain")
+      }
+    }
+  } else {
+    group(target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+      deps = [ ":$target_name($default_toolchain)" ]
+    }
+    not_needed(invoker, "*")
   }
 }

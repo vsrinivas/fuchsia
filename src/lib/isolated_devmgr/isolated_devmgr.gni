@@ -52,44 +52,52 @@ import("//build/components.gni")
 #   testonly
 #   visibility
 template("isolated_devmgr_component") {
-  component_name = target_name
-  if (defined(invoker.component_name)) {
-    component_name = invoker.component_name
-  }
+  if (current_toolchain == default_toolchain) {
+    component_name = target_name
+    if (defined(invoker.component_name)) {
+      component_name = invoker.component_name
+    }
 
-  manifest_target = "${target_name}_manifest"
-  fuchsia_test_component_manifest(manifest_target) {
-    forward_variables_from(invoker, [ "deps" ])
-    visibility = [ ":*" ]
-    v2 = false
-    if (!defined(deps)) {
-      deps = []
+    manifest_target = "${target_name}_manifest"
+    fuchsia_test_component_manifest(manifest_target) {
+      forward_variables_from(invoker, [ "deps" ])
+      visibility = [ ":*" ]
+      v2 = false
+      if (!defined(deps)) {
+        deps = []
+      }
+      deps += [ "//src/lib/isolated_devmgr:isolated_devmgr" ]
+      metadata = {
+        # Include args in the generated manifest to be passed to isolated_devmgr
+        test_component_manifest_cmx = [
+          {
+            program = {
+              forward_variables_from(invoker, [ "args" ])
+            }
+          },
+        ]
+      }
     }
-    deps += [ "//src/lib/isolated_devmgr:isolated_devmgr" ]
-    metadata = {
-      # Include args in the generated manifest to be passed to isolated_devmgr
-      test_component_manifest_cmx = [
-        {
-          program = {
-            forward_variables_from(invoker, [ "args" ])
-          }
-        },
-      ]
-    }
-  }
 
-  fuchsia_component(target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "visibility",
-                           ])
-    manifest = get_target_outputs(":$manifest_target")
-    manifest = manifest[0]
-    testonly = true
-    if (!defined(deps)) {
-      deps = []
+    fuchsia_component(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "visibility",
+                             ])
+      manifest = get_target_outputs(":$manifest_target")
+      manifest = manifest[0]
+      testonly = true
+      if (!defined(deps)) {
+        deps = []
+      }
+      deps += [ ":$manifest_target" ]
     }
-    deps += [ ":$manifest_target" ]
+  } else {
+    group(target_name) {
+      testonly = true
+      deps = [ ":$target_name($default_toolchain)" ]
+    }
+    not_needed(invoker, "*")
   }
 }

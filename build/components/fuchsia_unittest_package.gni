@@ -85,35 +85,43 @@ import("fuchsia_unittest_component.gni")
 #   deps
 #   visibility
 template("fuchsia_unittest_package") {
-  component_target = "${target_name}_component"
-  fuchsia_unittest_component(component_target) {
-    forward_variables_from(invoker,
-                           [
-                             "component_name",
-                             "deps",
-                             "manifest",
-                             "restricted_features",
-                             "deprecated_legacy_test_execution",
-                             "v2",
-                           ])
-    if (!defined(component_name)) {
-      if (defined(invoker.package_name)) {
-        component_name = invoker.package_name
-      } else {
-        component_name = invoker.target_name
+  if (current_toolchain == default_toolchain) {
+    component_target = "${target_name}_component"
+    fuchsia_unittest_component(component_target) {
+      forward_variables_from(invoker,
+                             [
+                               "component_name",
+                               "deps",
+                               "manifest",
+                               "restricted_features",
+                               "deprecated_legacy_test_execution",
+                               "v2",
+                             ])
+      if (!defined(component_name)) {
+        if (defined(invoker.package_name)) {
+          component_name = invoker.package_name
+        } else {
+          component_name = invoker.target_name
+        }
       }
+      visibility = [ ":*" ]
     }
-    visibility = [ ":*" ]
-  }
 
-  fuchsia_test_package(target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "package_name",
-                             "test_specs",
-                             "visibility",
-                             "wrap_cmx_test_with_cml_test",
-                           ])
-    test_components = [ ":$component_target" ]
+    fuchsia_test_package(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "package_name",
+                               "test_specs",
+                               "visibility",
+                               "wrap_cmx_test_with_cml_test",
+                             ])
+      test_components = [ ":$component_target" ]
+    }
+  } else {
+    group(target_name) {
+      testonly = true
+      deps = [ ":$target_name($default_toolchain)" ]
+    }
+    not_needed(invoker, "*")
   }
 }

@@ -41,139 +41,147 @@ import("//tools/cmc/build/cmc.gni")
 #   testonly
 #   visibility
 template("fuchsia_driver_component") {
-  generate_manifest = true
-  if (defined(invoker.manifest)) {
-    generate_manifest = false
-  }
-  generate_doc = true
-  if (defined(invoker.documentation)) {
-    generate_doc = false
-  }
-  is_v1_driver = true
-  if (defined(invoker.is_v1_driver)) {
-    is_v1_driver = invoker.is_v1_driver
-  }
+  if (current_toolchain == default_toolchain) {
+    generate_manifest = true
+    if (defined(invoker.manifest)) {
+      generate_manifest = false
+    }
+    generate_doc = true
+    if (defined(invoker.documentation)) {
+      generate_doc = false
+    }
+    is_v1_driver = true
+    if (defined(invoker.is_v1_driver)) {
+      is_v1_driver = invoker.is_v1_driver
+    }
 
-  if (generate_manifest) {
-    distribution_manifest_target = "${target_name}_distribution_manifest"
-    distribution_manifest_file =
-        "${target_gen_dir}/${target_name}.distribution_manifest"
-    distribution_manifest(distribution_manifest_target) {
-      visibility = [ ":*" ]
+    if (generate_manifest) {
+      distribution_manifest_target = "${target_name}_distribution_manifest"
+      distribution_manifest_file =
+          "${target_gen_dir}/${target_name}.distribution_manifest"
+      distribution_manifest(distribution_manifest_target) {
+        visibility = [ ":*" ]
+        forward_variables_from(invoker,
+                               [
+                                 "deps",
+                                 "testonly",
+                               ])
+        outputs = [ "${distribution_manifest_file}" ]
+      }
+
+      manifest_target = "${target_name}_manifest"
+      manifest_path = "${target_gen_dir}/meta/${target_name}.cml"
+      action(manifest_target) {
+        visibility = [ ":*" ]
+        forward_variables_from(invoker, [ "testonly" ])
+        deps = [ ":${distribution_manifest_target}" ]
+        script = "//build/drivers/create_component_manifest.py"
+        inputs = [ distribution_manifest_file ]
+        outputs = [ manifest_path ]
+        args = [
+          "--distribution_manifest",
+          rebase_path(distribution_manifest_file, root_build_dir),
+          "--output",
+          rebase_path(outputs[0], root_build_dir),
+        ]
+        if (is_v1_driver) {
+          args += [ "--is_v1" ]
+        }
+        if (defined(invoker.colocate) && invoker.colocate) {
+          args += [ "--colocate" ]
+        }
+      }
+
+      full_manifest_target = "${target_name}_full_manifest"
+      cmc_merge(full_manifest_target) {
+        visibility = [ ":*" ]
+        forward_variables_from(invoker, [ "testonly" ])
+        output_name = invoker.target_name + ".cml"
+        deps = [ ":${manifest_target}" ]
+        sources = []
+        foreach(dep, deps) {
+          sources += get_target_outputs(dep)
+        }
+      }
+    }
+
+    driver_path =
+        get_path_info(get_path_info(invoker.target_name, "abspath"), "dir")
+    doc_output = "${target_gen_dir}/${target_name}-doc.json"
+    doc_target = "${target_name}-driver-info"
+    if (generate_doc) {
+      action(doc_target) {
+        visibility = [ ":*" ]
+        forward_variables_from(invoker, [ "testonly" ])
+        script = "//build/drivers/create_driver_doc.py"
+        inputs = [ driver_path ]
+        outputs = [ doc_output ]
+        args = [
+          "--driver_path",
+          driver_path,
+          "--doc_output",
+          rebase_path(outputs[0], root_build_dir),
+        ]
+      }
+    } else {
+      doc_input = invoker.documentation
+      action(doc_target) {
+        visibility = [ ":*" ]
+        forward_variables_from(invoker, [ "testonly" ])
+        script = "//build/drivers/create_driver_doc.py"
+        inputs = [
+          driver_path,
+          doc_input,
+        ]
+        outputs = [ "${doc_output}" ]
+        args = [
+          "--driver_path",
+          driver_path,
+          "--doc_input",
+          rebase_path(doc_input, root_build_dir),
+          "--doc_output",
+          rebase_path(outputs[0], root_build_dir),
+        ]
+      }
+    }
+
+    fuchsia_component(target_name) {
+      # TODO(fxbug.dev/80980): Remove check_includes = false.
+      check_includes = false
       forward_variables_from(invoker,
                              [
-                               "deps",
+                               "visibility",
+                               "component_name",
                                "testonly",
+                               "manifest",
+                               "deps",
                              ])
-      outputs = [ "${distribution_manifest_file}" ]
-    }
-
-    manifest_target = "${target_name}_manifest"
-    manifest_path = "${target_gen_dir}/meta/${target_name}.cml"
-    action(manifest_target) {
-      visibility = [ ":*" ]
-      forward_variables_from(invoker, [ "testonly" ])
-      deps = [ ":${distribution_manifest_target}" ]
-      script = "//build/drivers/create_component_manifest.py"
-      inputs = [ distribution_manifest_file ]
-      outputs = [ manifest_path ]
-      args = [
-        "--distribution_manifest",
-        rebase_path(distribution_manifest_file, root_build_dir),
-        "--output",
-        rebase_path(outputs[0], root_build_dir),
-      ]
+      if (!defined(deps)) {
+        deps = []
+      }
+      if (generate_manifest) {
+        deps += [ ":${full_manifest_target}" ]
+        manifest = get_target_outputs(":${full_manifest_target}")
+        manifest = manifest[0]
+      }
+      deps += [ ":${doc_target}" ]
+      not_needed(invoker, [ ":${doc_target}" ])
       if (is_v1_driver) {
-        args += [ "--is_v1" ]
+        deps += [ "//src/devices/misc/drivers/compat:driver" ]
       }
-      if (defined(invoker.colocate) && invoker.colocate) {
-        args += [ "--colocate" ]
-      }
-    }
+      metadata = {
+        # Used by the assert_driver_components template.
+        driver_component_barrier = []
 
-    full_manifest_target = "${target_name}_full_manifest"
-    cmc_merge(full_manifest_target) {
-      visibility = [ ":*" ]
-      forward_variables_from(invoker, [ "testonly" ])
-      output_name = invoker.target_name + ".cml"
-      deps = [ ":${manifest_target}" ]
-      sources = []
-      foreach(dep, deps) {
-        sources += get_target_outputs(dep)
+        # Used by the create_all_drivers_doc template.
+        fuchsia_driver_doc_file = [ doc_output ]
       }
-    }
-  }
-
-  driver_path =
-      get_path_info(get_path_info(invoker.target_name, "abspath"), "dir")
-  doc_output = "${target_gen_dir}/${target_name}-doc.json"
-  doc_target = "${target_name}-driver-info"
-  if (generate_doc) {
-    action(doc_target) {
-      visibility = [ ":*" ]
-      forward_variables_from(invoker, [ "testonly" ])
-      script = "//build/drivers/create_driver_doc.py"
-      inputs = [ driver_path ]
-      outputs = [ doc_output ]
-      args = [
-        "--driver_path",
-        driver_path,
-        "--doc_output",
-        rebase_path(outputs[0], root_build_dir),
-      ]
     }
   } else {
-    doc_input = invoker.documentation
-    action(doc_target) {
-      visibility = [ ":*" ]
+    group(target_name) {
       forward_variables_from(invoker, [ "testonly" ])
-      script = "//build/drivers/create_driver_doc.py"
-      inputs = [
-        driver_path,
-        doc_input,
-      ]
-      outputs = [ "${doc_output}" ]
-      args = [
-        "--driver_path",
-        driver_path,
-        "--doc_input",
-        rebase_path(doc_input, root_build_dir),
-        "--doc_output",
-        rebase_path(outputs[0], root_build_dir),
-      ]
+      deps = [ ":$target_name($default_toolchain)" ]
     }
-  }
-
-  fuchsia_component(target_name) {
-    # TODO(fxbug.dev/80980): Remove check_includes = false.
-    check_includes = false
-    forward_variables_from(invoker,
-                           [
-                             "visibility",
-                             "component_name",
-                             "testonly",
-                             "manifest",
-                             "deps",
-                           ])
-    if (!defined(deps)) {
-      deps = []
-    }
-    if (generate_manifest) {
-      deps += [ ":${full_manifest_target}" ]
-      manifest = get_target_outputs(":${full_manifest_target}")
-      manifest = manifest[0]
-    }
-    deps += [ ":${doc_target}" ]
-    not_needed(invoker, [ ":${doc_target}" ])
-    if (is_v1_driver) {
-      deps += [ "//src/devices/misc/drivers/compat:driver" ]
-    }
-    metadata = {
-      # Used by the assert_driver_components template.
-      driver_component_barrier = []
-
-      # Used by the create_all_drivers_doc template.
-      fuchsia_driver_doc_file = [ doc_output ]
-    }
+    not_needed(invoker, "*")
   }
 }

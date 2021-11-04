@@ -32,51 +32,59 @@ import("//build/components.gni")
 #       See https://llvm.org/docs/LibFuzzer.html#options.
 #
 template("fuzzer_component") {
-  assert(defined(invoker.fuzzer),
-         "missing 'fuzzer' for fuzzer_component($target_name)")
-  assert(defined(invoker.label),
-         "missing 'label' for fuzzer_component($target_name)")
-  assert(defined(invoker.deps),
-         "missing 'deps' for fuzzer_component($target_name)")
+  if (current_toolchain == default_toolchain) {
+    assert(defined(invoker.fuzzer),
+           "missing 'fuzzer' for fuzzer_component($target_name)")
+    assert(defined(invoker.label),
+           "missing 'label' for fuzzer_component($target_name)")
+    assert(defined(invoker.deps),
+           "missing 'deps' for fuzzer_component($target_name)")
 
-  meta_target_name = "${target_name}_metadata"
+    meta_target_name = "${target_name}_metadata"
 
-  fuchsia_unittest_component(target_name) {
-    forward_variables_from(invoker, [ "visibility" ])
-    component_name = invoker.fuzzer
-    deps = invoker.deps + [ ":$meta_target_name" ]
+    fuchsia_unittest_component(target_name) {
+      forward_variables_from(invoker, [ "visibility" ])
+      component_name = invoker.fuzzer
+      deps = invoker.deps + [ ":$meta_target_name" ]
 
-    # TODO(fxbug.dev/76528) Support fuzzers in v2 testing.
-    v2 = false
-  }
+      # TODO(fxbug.dev/76528) Support fuzzers in v2 testing.
+      v2 = false
+    }
 
-  group(meta_target_name) {
-    testonly = true
-    deps = invoker.deps + [ "//build/fuzzing:includes_cmx" ]
+    group(meta_target_name) {
+      testonly = true
+      deps = invoker.deps + [ "//build/fuzzing:includes_cmx" ]
 
-    metadata = {
-      test_component_manifest_cmx = [
-        {
-          forward_variables_from(invoker, [ "include" ])
-          program = {
-            if (defined(invoker.options)) {
-              args = []
-              foreach(option, invoker.options) {
-                args += [ "-$option" ]
+      metadata = {
+        test_component_manifest_cmx = [
+          {
+            forward_variables_from(invoker, [ "include" ])
+            program = {
+              if (defined(invoker.options)) {
+                args = []
+                foreach(option, invoker.options) {
+                  args += [ "-$option" ]
+                }
               }
             }
-          }
-        },
-      ]
+          },
+        ]
 
-      fuzz_spec = [
-        {
-          label = invoker.label
-          fuzzer = invoker.fuzzer
-          manifest = get_target_outputs(":${invoker.target_name}")
-          manifest = get_path_info(manifest[0], "file")
-        },
-      ]
+        fuzz_spec = [
+          {
+            label = invoker.label
+            fuzzer = invoker.fuzzer
+            manifest = get_target_outputs(":${invoker.target_name}")
+            manifest = get_path_info(manifest[0], "file")
+          },
+        ]
+      }
     }
+  } else {
+    group(target_name) {
+      testonly = true
+      deps = [ ":$target_name($default_toolchain)" ]
+    }
+    not_needed(invoker, "*")
   }
 }

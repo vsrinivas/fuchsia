@@ -73,102 +73,110 @@ import("fuchsia_test_component_manifest.gni")
 #   deps
 #   visibility
 template("fuchsia_test_package") {
-  assert(
-      defined(invoker.test_components) && invoker.test_components != [],
-      "`test_components` must be specified when calling fuchsia_test_package($target_name)")
+  if (current_toolchain == default_toolchain) {
+    assert(
+        defined(invoker.test_components) && invoker.test_components != [],
+        "`test_components` must be specified when calling fuchsia_test_package($target_name)")
 
-  package_name = target_name
-  package_label = get_label_info(":$target_name", "label_with_toolchain")
-  package_manifest =
-      rebase_path("$target_out_dir/$target_name/package_manifest.json",
-                  root_build_dir)
-  if (defined(invoker.package_name)) {
-    package_name = invoker.package_name
-  }
-  test_specs = {
-  }
-  if (defined(invoker.test_specs)) {
-    test_specs = invoker.test_specs
-  }
+    package_name = target_name
+    package_label = get_label_info(":$target_name", "label_with_toolchain")
+    package_manifest =
+        rebase_path("$target_out_dir/$target_name/package_manifest.json",
+                    root_build_dir)
+    if (defined(invoker.package_name)) {
+      package_name = invoker.package_name
+    }
+    test_specs = {
+    }
+    if (defined(invoker.test_specs)) {
+      test_specs = invoker.test_specs
+    }
 
-  wrap_cmx_test_with_cml_test = true
-  if (defined(invoker.wrap_cmx_test_with_cml_test)) {
-    wrap_cmx_test_with_cml_test = invoker.wrap_cmx_test_with_cml_test
-  }
+    wrap_cmx_test_with_cml_test = true
+    if (defined(invoker.wrap_cmx_test_with_cml_test)) {
+      wrap_cmx_test_with_cml_test = invoker.wrap_cmx_test_with_cml_test
+    }
 
-  test_deps = []
-  foreach(test, invoker.test_components) {
-    test_target_name = get_label_info(test, "name")
-    test_target = "${target_name}_test_" + test_target_name
-    manifest_name = get_target_outputs(test)
-    manifest_name = get_path_info(manifest_name[0], "file")
-
-    if (wrap_cmx_test_with_cml_test &&
-        get_path_info(manifest_name, "extension") == "cmx") {
-      modern_generated_name =
-          "${target_name}_${test_target_name}_modern_generated"
-      generated_manifest_target = "${modern_generated_name}_manifest"
-      fuchsia_test_component_manifest(generated_manifest_target) {
-        metadata = {
-          test_component_manifest_program = [
-            {
-              program = {
-                legacy_manifest = "meta/$manifest_name"
-              }
-            },
-          ]
-          test_component_manifest_cml = [
-            {
-              include =
-                  [ "//src/sys/test_runners/legacy_test/default.shard.cml" ]
-            },
-          ]
-        }
-        visibility = [ ":*" ]
-      }
-
-      manifest = get_target_outputs(":$generated_manifest_target")
-      manifest = manifest[0]
-
-      name = get_path_info(manifest_name, "name")
-
-      fuchsia_test_component("$modern_generated_name") {
-        component_name = name
-        manifest = manifest
-        visibility = [ ":*" ]
-        deps = [ ":$generated_manifest_target" ]
-      }
-
-      manifest_name = get_target_outputs(":$modern_generated_name")
+    test_deps = []
+    foreach(test, invoker.test_components) {
+      test_target_name = get_label_info(test, "name")
+      test_target = "${target_name}_test_" + test_target_name
+      manifest_name = get_target_outputs(test)
       manifest_name = get_path_info(manifest_name[0], "file")
 
-      test_deps += [ ":$modern_generated_name" ]
+      if (wrap_cmx_test_with_cml_test &&
+          get_path_info(manifest_name, "extension") == "cmx") {
+        modern_generated_name =
+            "${target_name}_${test_target_name}_modern_generated"
+        generated_manifest_target = "${modern_generated_name}_manifest"
+        fuchsia_test_component_manifest(generated_manifest_target) {
+          metadata = {
+            test_component_manifest_program = [
+              {
+                program = {
+                  legacy_manifest = "meta/$manifest_name"
+                }
+              },
+            ]
+            test_component_manifest_cml = [
+              {
+                include =
+                    [ "//src/sys/test_runners/legacy_test/default.shard.cml" ]
+              },
+            ]
+          }
+          visibility = [ ":*" ]
+        }
+
+        manifest = get_target_outputs(":$generated_manifest_target")
+        manifest = manifest[0]
+
+        name = get_path_info(manifest_name, "name")
+
+        fuchsia_test_component("$modern_generated_name") {
+          component_name = name
+          manifest = manifest
+          visibility = [ ":*" ]
+          deps = [ ":$generated_manifest_target" ]
+        }
+
+        manifest_name = get_target_outputs(":$modern_generated_name")
+        manifest_name = get_path_info(manifest_name[0], "file")
+
+        test_deps += [ ":$modern_generated_name" ]
+      }
+
+      test_spec(test_target) {
+        forward_variables_from(test_specs, "*")
+        target = get_label_info(":$target_name", "label_with_toolchain")
+        package_label = package_label
+        package_manifest = package_manifest
+        package_url =
+            "fuchsia-pkg://fuchsia.com/$package_name#meta/$manifest_name"
+      }
+      test_deps += [ ":$test_target" ]
     }
 
-    test_spec(test_target) {
-      forward_variables_from(test_specs, "*")
-      target = get_label_info(":$target_name", "label_with_toolchain")
-      package_label = package_label
-      package_manifest = package_manifest
-      package_url =
-          "fuchsia-pkg://fuchsia.com/$package_name#meta/$manifest_name"
+    fuchsia_package(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "disable_elf_binaries_checks",
+                               "visibility",
+                             ])
+      package_name = package_name
+      if (!defined(deps)) {
+        deps = []
+      }
+      deps += invoker.test_components
+      deps += test_deps
+      testonly = true
     }
-    test_deps += [ ":$test_target" ]
-  }
-
-  fuchsia_package(target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "disable_elf_binaries_checks",
-                             "visibility",
-                           ])
-    package_name = package_name
-    if (!defined(deps)) {
-      deps = []
+  } else {
+    group(target_name) {
+      testonly = true
+      deps = [ "$target_name($default_toolchain)" ]
     }
-    deps += invoker.test_components
-    deps += test_deps
-    testonly = true
+    not_needed(invoker, "*")
   }
 }
