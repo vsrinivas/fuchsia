@@ -44,7 +44,6 @@ fuchsia_package("pkg") {
   package_name = "time-zone-info-service"
   deps = [
     ":component",
-    "config",
     "//src/intl:icudtl",
   ]
 }

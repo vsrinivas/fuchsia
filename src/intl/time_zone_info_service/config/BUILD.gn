@@ -5,6 +5,7 @@
 import("//build/config.gni")
 
 group("config") {
+  testonly = true
   deps = [ ":sysmgr" ]
 }
 
