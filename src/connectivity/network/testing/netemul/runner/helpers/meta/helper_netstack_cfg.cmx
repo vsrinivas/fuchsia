@@ -8,6 +8,7 @@
     "sandbox": {
         "services": [
             "fuchsia.net.interfaces.State",
+            "fuchsia.net.interfaces.admin.Installer",
             "fuchsia.net.stack.Stack",
             "fuchsia.netemul.network.NetworkContext",
             "fuchsia.netstack.Netstack"

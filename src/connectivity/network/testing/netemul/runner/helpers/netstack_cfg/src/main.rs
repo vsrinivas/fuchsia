@@ -39,9 +39,6 @@ struct Opt {
 
 const DEFAULT_METRIC: u32 = 100;
 
-// TODO(https://fxbug.dev/64310): Remove default port assumption once Netstack is aware of ports.
-const PORT0: u8 = 0;
-
 async fn config_netstack(opt: Opt) -> Result<(), Error> {
     log::info!("Configuring endpoint {}", opt.endpoint);
 
@@ -77,48 +74,83 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
                 .with_context(|| format!("add_ethernet_device error ({:?})", cfg))?
         }
         fidl_fuchsia_netemul_network::DeviceConnection::NetworkDevice(device_instance) => {
-            let device_instance =
-                device_instance.into_proxy().context("failed to create device instance proxy")?;
-            let (device, server_end) =
-                fidl::endpoints::create_proxy::<fidl_fuchsia_hardware_network::DeviceMarker>()
-                    .context("failed to create device proxy")?;
-            let () = device_instance.get_device(server_end).context("get_device failed")?;
-            let (port, server_end) =
-                fidl::endpoints::create_proxy::<fidl_fuchsia_hardware_network::PortMarker>()
-                    .context("failed to create port proxy")?;
-            let () = device.get_port(PORT0, server_end).context("get_port failed")?;
-            let (mac, server_end) = fidl::endpoints::create_endpoints::<
-                fidl_fuchsia_hardware_network::MacAddressingMarker,
-            >()
-            .context("failed to create mac endpoints")?;
-            let () = port.get_mac(server_end).context("get_mac failed")?;
-            let stack = client::connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()?;
-
-            let cfg = fidl_fuchsia_net_stack::InterfaceConfig {
-                name: Some(opt.endpoint.clone()),
-                topopath: None,
-                metric: Some(DEFAULT_METRIC),
-                ..fidl_fuchsia_net_stack::InterfaceConfig::EMPTY
+            let device = {
+                let device_instance = device_instance
+                    .into_proxy()
+                    .context("failed to create device instance proxy")?;
+                let (proxy, server_end) =
+                    fidl::endpoints::create_proxy::<fidl_fuchsia_hardware_network::DeviceMarker>()
+                        .context("failed to create device proxy")?;
+                let () = device_instance.get_device(server_end).context("get_device failed")?;
+                proxy
             };
-            let mut device_definition = fidl_fuchsia_net_stack::DeviceDefinition::Ethernet(
-                fidl_fuchsia_net_stack::EthernetDeviceDefinition {
-                    network_device: device
-                        .into_channel()
-                        .map_err(|device| {
-                            anyhow::anyhow!("can't get channel from device proxy {:?}", device)
-                        })?
-                        .into_zx_channel()
-                        .into(),
-                    mac,
-                },
-            );
-            let nicid = stack
-                .add_interface(cfg.clone(), &mut device_definition)
-                .await
-                .with_context(|| format!("add_interface FIDL error ({:?})", cfg))?
-                .map_err(|stack_error| {
-                    anyhow::anyhow!("add_interface error {:?} ({:?})", stack_error, cfg)
-                })?;
+
+            let port_watcher = {
+                let (proxy, server_end) = fidl::endpoints::create_proxy::<
+                    fidl_fuchsia_hardware_network::PortWatcherMarker,
+                >()
+                .context("failed to create port watcher proxy")?;
+                let () = device.get_port_watcher(server_end).context("get_port_watcher")?;
+                proxy
+            };
+
+            // Get a port from the device.
+            let port_id = loop {
+                let port_event = port_watcher.watch().await.context("watch")?;
+                match port_event {
+                    fidl_fuchsia_hardware_network::DevicePortEvent::Existing(port_id)
+                    | fidl_fuchsia_hardware_network::DevicePortEvent::Added(port_id) => {
+                        break port_id;
+                    }
+                    fidl_fuchsia_hardware_network::DevicePortEvent::Idle(
+                        fidl_fuchsia_hardware_network::Empty {},
+                    )
+                    | fidl_fuchsia_hardware_network::DevicePortEvent::Removed(_) => (),
+                }
+            };
+            let installer =
+                client::connect_to_protocol::<fidl_fuchsia_net_interfaces_admin::InstallerMarker>()
+                    .context("connect to installer")?;
+            let device_control = {
+                let (proxy, server_end) = fidl::endpoints::create_proxy::<
+                    fidl_fuchsia_net_interfaces_admin::DeviceControlMarker,
+                >()
+                .context("failed to create device control endpoints")?;
+                let device = device.into_channel().map_err(
+                    |fidl_fuchsia_hardware_network::DeviceProxy { .. }| {
+                        anyhow::anyhow!("failed to retrieve inner channel")
+                    },
+                )?;
+                let () = installer
+                    .install_device(
+                        fidl::endpoints::ClientEnd::new(device.into_zx_channel()),
+                        server_end,
+                    )
+                    .context("install device")?;
+                proxy
+            };
+
+            let (control, control_server_end) =
+                fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
+                    .context("failed to create control endpoints")?;
+            let () = device_control
+                .create_interface(
+                    port_id,
+                    control_server_end,
+                    fidl_fuchsia_net_interfaces_admin::Options {
+                        name: Some(opt.endpoint.clone()),
+                        metric: Some(DEFAULT_METRIC),
+                        ..fidl_fuchsia_net_interfaces_admin::Options::EMPTY
+                    },
+                )
+                .context("create interface")?;
+
+            let nicid = control.get_id().await.context("get id")?;
+
+            // Allow interface to live beyond these handles.
+            let () = device_control.detach().context("device control detach")?;
+            let () = control.detach().context("control detach")?;
+
             u32::try_from(nicid).with_context(|| format!("{} does not fit in a u32", nicid))?
         }
     };

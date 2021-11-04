@@ -34,6 +34,7 @@
                 "name": "server",
                 "services": {
                     "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/netstack.cmx",
+                    "fuchsia.net.interfaces.admin.Installer": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/netstack.cmx",
                     "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/netstack.cmx",
                     "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/netstack.cmx",
                     "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/netstack.cmx"

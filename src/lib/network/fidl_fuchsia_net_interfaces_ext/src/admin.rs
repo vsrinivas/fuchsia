@@ -294,17 +294,17 @@ pub enum TerminalError<E> {
 
 impl<E> std::fmt::Display for TerminalError<E>
 where
-    E: std::fmt::Display,
+    E: std::fmt::Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            TerminalError::Terminal(e) => write!(f, "terminal event: {}", e),
+            TerminalError::Terminal(e) => write!(f, "terminal event: {:?}", e),
             TerminalError::Fidl(e) => write!(f, "fidl error: {}", e),
         }
     }
 }
 
-impl<E: std::fmt::Display + std::fmt::Debug> std::error::Error for TerminalError<E> {}
+impl<E: std::fmt::Debug> std::error::Error for TerminalError<E> {}
 
 #[cfg(test)]
 mod test {
