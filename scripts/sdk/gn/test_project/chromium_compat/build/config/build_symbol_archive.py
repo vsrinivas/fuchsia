@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright 2018 The Chromium Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -46,10 +46,15 @@ def main(args):
                 # This is a prebuilt which wasn't accompanied by SDK symbols.
                 continue
 
+        kwargs = dict(universal_newlines=True)
+        # Soft-transition between Python2->3. This kwarg doesn't exist in Python2.
+        if sys.version_info.major == 3:
+            kwargs['text'] = True
+
         # Exclude stripped binaries (indicated by their lack of symbol tables).
         readelf_output = subprocess.check_output(
-            ['readelf', '-S', symbol_source_path])
-        if not '.symtab' in readelf_output:
+            ['readelf', '-S', symbol_source_path], **kwargs)
+        if '.symtab' not in readelf_output:
             continue
 
         # Archive the unstripped ELF binary, placing it in a hierarchy keyed to the

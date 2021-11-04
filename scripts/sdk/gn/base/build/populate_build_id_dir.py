@@ -52,8 +52,12 @@ def populate_build_id_dir(readelf_exec, ids_txt_path, output_dir, build_id_dirs,
 
         # Exclude stripped binaries (indicated by their lack of symbol tables).
         readelf_args = [readelf_exec, '-S', symbol_source_path]
-        readelf_output = subprocess.check_output(readelf_args, universal_newlines=True)
-        if not '.symtab' in readelf_output:
+        kwargs = dict(universal_newlines=True)
+        # Soft-transition between Python2->3. This kwarg doesn't exist in Python2.
+        if sys.version_info.major == 3:
+            kwargs['text'] = True
+        readelf_output = subprocess.check_output(readelf_args, **kwargs)
+        if '.symtab' not in readelf_output:
             continue
 
         output_path = os.path.join(output_dir, output_filename)

@@ -200,7 +200,11 @@ class GNGenerateTest(unittest.TestCase):
 
 def _gen_diff(a, b):
     cmd_args = ['diff', '-U', '2', a, b]
-    pipe = subprocess.Popen(cmd_args, stdout=subprocess.PIPE)
+    kwargs = dict(stdout=subprocess.PIPE)
+    # Soft-transition between Python2->3. This kwarg doesn't exist in Python2.
+    if sys.version_info.major == 3:
+        kwargs['text'] = True
+    pipe = subprocess.Popen(cmd_args, **kwargs)
     out, err = pipe.communicate()
     return "diff of '{}':\n{}\n".format(os.path.basename(a), out)
 
