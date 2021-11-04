@@ -15,13 +15,10 @@ executable("bin") {
     "//src/connectivity/network/testing/netemul/lib/fidl:devmgr",
     "//src/connectivity/network/testing/netemul/lib/fidl:network",
     "//src/connectivity/network/testing/netemul/lib/network:network_service",
+    "//src/devices/lib/device-watcher/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fdio-caller",
-
-    # TODO(https://fxbug.dev/74373) replace once `RecursiveWaitForFile` is
-    # extracted to a library.
-    "//zircon/system/ulib/devmgr-integration-test",
   ]
 }
 

@@ -7,7 +7,6 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/sys/cpp/component_context.h>
@@ -16,6 +15,7 @@
 #include <zircon/status.h>
 
 #include "src/connectivity/network/testing/netemul/lib/network/network_context.h"
+#include "src/devices/lib/device-watcher/cpp/device-watcher.h"
 
 constexpr char kTapctlRelativePath[] = "sys/test/tapctl";
 
@@ -38,7 +38,7 @@ int main(int argc, const char** argv) {
       }
       fbl::unique_fd out;
       zx_status_t status =
-          devmgr_integration_test::RecursiveWaitForFile(devfs_root.fd(), kTapctlRelativePath, &out);
+          device_watcher::RecursiveWaitForFile(devfs_root.fd(), kTapctlRelativePath, &out);
       if (status != ZX_OK) {
         FX_LOGS(ERROR) << "isolated-devmgr failed while waiting for path " << kTapctlRelativePath
                        << ": " << zx_status_get_string(status);
