@@ -27,7 +27,7 @@ group("tests") {
 }
 
 group("config") {
-  public_deps = [ "config" ]
+  public_deps = [ "config:sysmgr" ]
 }
 
 source_set("lib") {
