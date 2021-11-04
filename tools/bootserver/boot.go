@@ -7,6 +7,7 @@ package bootserver
 import (
 	"bytes"
 	"compress/flate"
+	"compress/gzip"
 	"context"
 	"errors"
 	"fmt"
@@ -132,7 +133,7 @@ func isTransientDownloadError(ctx context.Context, err error) bool {
 	if err == nil {
 		return false
 	}
-	if strings.Contains(err.Error(), constants.BadCRCErrorMsg) {
+	if strings.Contains(err.Error(), constants.BadCRCErrorMsg) || errors.Is(err, gzip.ErrChecksum) {
 		// Checksum failure likely indicates transient corruption during download.
 		logger.Warningf(ctx, "GCS checksum failure detected, retrying download...")
 		return true
