@@ -266,7 +266,7 @@ TEST(Teardown, TeardownSlowClone) {
   zx::status endpoints2 = fidl::CreateEndpoints<fuchsia_io::Node>();
   ASSERT_OK(endpoints2.status_value());
   fidl::WireSyncClient fidl_client2 = fidl::BindSyncClient(std::move(endpoints2->client));
-  ASSERT_OK(fidl_client2.Clone(0, std::move(endpoints2->server)).status());
+  ASSERT_OK(fidl_client2->Clone(0, std::move(endpoints2->server)).status());
 
   // The connection is now:
   // - In a sync callback,
