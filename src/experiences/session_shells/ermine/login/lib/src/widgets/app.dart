@@ -13,11 +13,11 @@ import 'package:internationalization/localizations_delegate.dart'
 import 'package:internationalization/supported_locales.dart'
     as supported_locales;
 import 'package:intl/intl.dart';
-import 'package:oobe/src/states/oobe_state.dart';
-import 'package:oobe/src/widgets/ermine.dart';
+import 'package:login/src/states/oobe_state.dart';
+import 'package:login/src/widgets/ermine.dart';
 // TODO(http://fxb/81598): Uncomment once login  is ready.
-// import 'package:oobe/src/widgets/login.dart';
-import 'package:oobe/src/widgets/oobe.dart';
+// import 'package:login/src/widgets/login.dart';
+import 'package:login/src/widgets/oobe.dart';
 
 class OobeApp extends StatelessWidget {
   final OobeState oobe;

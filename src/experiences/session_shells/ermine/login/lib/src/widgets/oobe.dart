@@ -5,14 +5,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:internationalization/strings.dart';
-import 'package:oobe/src/states/oobe_state.dart';
-import 'package:oobe/src/widgets/password.dart';
-import 'package:oobe/src/widgets/channels.dart';
-import 'package:oobe/src/widgets/ready.dart';
+import 'package:login/src/states/oobe_state.dart';
+import 'package:login/src/widgets/password.dart';
+import 'package:login/src/widgets/channels.dart';
+import 'package:login/src/widgets/ready.dart';
 // TODO(fxbug.dev/73407): Skip data sharing screen until privacy policy is
 // finalized.
-// import 'package:oobe/src/widgets/data_sharing.dart';
-import 'package:oobe/src/widgets/ssh_keys.dart';
+// import 'package:login/src/widgets/data_sharing.dart';
+import 'package:login/src/widgets/ssh_keys.dart';
 
 /// Defines a widget that handles the OOBE flow.
 class Oobe extends StatelessWidget {

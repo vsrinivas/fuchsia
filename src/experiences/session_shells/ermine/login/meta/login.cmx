@@ -1,6 +1,6 @@
 {
     "program": {
-        "data": "data/oobe"
+        "data": "data/login"
     },
     "sandbox": {
         "features": [

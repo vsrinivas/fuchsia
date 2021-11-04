@@ -5,7 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:internationalization/strings.dart';
-import 'package:oobe/src/states/oobe_state.dart';
+import 'package:login/src/states/oobe_state.dart';
 
 /// Defines a widget to configure software update channels.
 class DataSharing extends StatelessWidget {

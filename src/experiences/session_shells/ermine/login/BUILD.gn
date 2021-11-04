@@ -13,7 +13,7 @@ declare_args() {
 }
 
 dart_library("lib") {
-  package_name = "oobe"
+  package_name = "login"
   null_safe = true
 
   entrypoints = [ "main.dart" ]
@@ -79,18 +79,12 @@ dart_library("lib") {
 
 flutter_component("component") {
   main_dart = "main.dart"
-  component_name = "oobe"
-  manifest = "meta/oobe.cmx"
+  component_name = "login"
+  manifest = "meta/login.cmx"
   deps = [
+    ":images",
     ":lib",
     ":resources",
-  ]
-}
-
-fuchsia_package("oobe") {
-  deps = [
-    ":component",
-    ":images",
   ]
 
   if (start_oobe) {
@@ -99,6 +93,13 @@ fuchsia_package("oobe") {
     deps += [ ":default_config" ]
   }
 }
+
+# fuchsia_package("login") {
+#   deps = [
+#     ":component",
+#     ":images",
+#   ]
+# }
 
 resource("resources") {
   sources = [
@@ -112,7 +113,7 @@ resource("resources") {
 
 # With the default config, OOBE will be skipped on startup.
 config_data("default_config") {
-  for_pkg = "oobe"
+  for_pkg = "ermine"
 
   sources = [ "config/default_config.json" ]
   outputs = [ "startup_config.json" ]
@@ -120,14 +121,14 @@ config_data("default_config") {
 
 # With the OOBE config, OOBE will launch at startup.
 config_data("oobe_config") {
-  for_pkg = "oobe"
+  for_pkg = "ermine"
 
   sources = [ "config/oobe_config.json" ]
   outputs = [ "startup_config.json" ]
 }
 
 config_data("images") {
-  for_pkg = "oobe"
+  for_pkg = "ermine"
 
   sources = rebase_path([ "images/Fuchsia-logo-2x.png" ])
 

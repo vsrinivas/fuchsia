@@ -10,13 +10,6 @@ import("//build/flutter/test.gni")
 import("//build/testing/flutter_driver.gni")
 import("//src/lib/icu/tools/static_icu_data.gni")
 
-group("shell") {
-  public_deps = [
-    ":ermine",
-    ":images",
-  ]
-}
-
 declare_args() {
   # Build arg that allows overriding the default set of application entries
   # using '--args=ermine_app_entries="config/app_launch_entries.json"'
@@ -157,10 +150,6 @@ flutter_component("component") {
     ":resources",
     ":time_zone_list",
   ]
-}
-
-fuchsia_package("ermine") {
-  deps = [ ":component" ]
 }
 
 tz_ids_path = "${target_gen_dir}/tz_ids.txt"

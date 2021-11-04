@@ -5,12 +5,12 @@
 import 'dart:ui';
 
 import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
-import 'package:oobe/src/services/channel_service.dart';
-import 'package:oobe/src/services/device_service.dart';
-import 'package:oobe/src/services/privacy_consent_service.dart';
-import 'package:oobe/src/services/shell_service.dart';
-import 'package:oobe/src/services/ssh_keys_service.dart';
-import 'package:oobe/src/states/oobe_state_impl.dart';
+import 'package:login/src/services/channel_service.dart';
+import 'package:login/src/services/device_service.dart';
+import 'package:login/src/services/privacy_consent_service.dart';
+import 'package:login/src/services/shell_service.dart';
+import 'package:login/src/services/ssh_keys_service.dart';
+import 'package:login/src/states/oobe_state_impl.dart';
 
 /// The oobe screens the user navigates through.
 // TODO(fxbug.dev/73407): Skip data sharing screen until privacy policy is

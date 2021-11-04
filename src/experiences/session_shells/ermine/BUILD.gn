@@ -2,11 +2,22 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
+
 group("ermine") {
   public_deps = [
-    "oobe",
+    ":ermine-pkg",
     "session:workstation_routing",
     "session:workstation_session",
-    "shell",
+  ]
+}
+
+# Ermine package includes login and user shell components.
+fuchsia_package("ermine-pkg") {
+  package_name = "ermine"
+
+  deps = [
+    "login:component",
+    "shell:component",
   ]
 }

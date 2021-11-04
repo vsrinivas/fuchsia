@@ -6,9 +6,9 @@ import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:internationalization/strings.dart';
-import 'package:oobe/src/states/oobe_state.dart';
-import 'package:oobe/src/widgets/header.dart';
-import 'package:oobe/src/widgets/login.dart';
+import 'package:login/src/states/oobe_state.dart';
+import 'package:login/src/widgets/header.dart';
+import 'package:login/src/widgets/login.dart';
 
 /// Defines a widget to create account password.
 class Password extends StatelessWidget {

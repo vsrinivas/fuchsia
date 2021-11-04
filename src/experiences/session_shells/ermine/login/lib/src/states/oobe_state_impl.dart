@@ -13,12 +13,12 @@ import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:internationalization/strings.dart';
 import 'package:mobx/mobx.dart';
-import 'package:oobe/src/services/channel_service.dart';
-import 'package:oobe/src/services/device_service.dart';
-import 'package:oobe/src/services/privacy_consent_service.dart';
-import 'package:oobe/src/services/shell_service.dart';
-import 'package:oobe/src/services/ssh_keys_service.dart';
-import 'package:oobe/src/states/oobe_state.dart';
+import 'package:login/src/services/channel_service.dart';
+import 'package:login/src/services/device_service.dart';
+import 'package:login/src/services/privacy_consent_service.dart';
+import 'package:login/src/services/shell_service.dart';
+import 'package:login/src/services/ssh_keys_service.dart';
+import 'package:login/src/states/oobe_state.dart';
 
 /// Defines an implementation of [OobeState].
 class OobeStateImpl with Disposable implements OobeState {

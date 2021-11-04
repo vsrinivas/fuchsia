@@ -6,7 +6,7 @@ import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:internationalization/strings.dart';
-import 'package:oobe/src/states/oobe_state.dart';
+import 'package:login/src/states/oobe_state.dart';
 
 /// Width of the password field widget.
 const double kOobeBodyFieldWidth = 492;

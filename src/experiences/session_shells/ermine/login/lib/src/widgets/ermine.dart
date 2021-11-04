@@ -4,7 +4,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
-import 'package:oobe/src/states/oobe_state.dart';
+import 'package:login/src/states/oobe_state.dart';
 
 /// Defines a widget that hosts Ermine shell's root view.
 class ErmineApp extends StatelessWidget {

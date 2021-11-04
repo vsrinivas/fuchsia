@@ -6,14 +6,14 @@ import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:fuchsia_logger/logger.dart';
-import 'package:oobe/src/states/oobe_state.dart';
-import 'package:oobe/src/widgets/app.dart';
-import 'package:oobe/src/widgets/ermine.dart';
+import 'package:login/src/states/oobe_state.dart';
+import 'package:login/src/widgets/app.dart';
+import 'package:login/src/widgets/ermine.dart';
 
 Future<void> main() async {
   final runner = CrashReportingRunner();
   await runner.run(() async {
-    setupLogger(name: 'oobe');
+    setupLogger(name: 'login');
     final oobe = OobeState.fromEnv();
     final app = Observer(builder: (_) {
       return oobe.loginDone ? ErmineApp(oobe) : OobeApp(oobe);
