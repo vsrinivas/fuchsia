@@ -700,9 +700,12 @@ async fn device_control_create_interface() {
 
 // Tests that when a DeviceControl instance is dropped, all interfaces created
 // from it are dropped as well.
+#[test_case(false; "no_detach")]
+#[test_case(true; "detach")]
 #[fuchsia_async::run_singlethreaded(test)]
-async fn device_control_owns_interfaces_lifetimes() {
-    let name = "device_control_owns_interfaces_lifetimes";
+async fn device_control_owns_interfaces_lifetimes(detach: bool) {
+    let name = if detach { "detach" } else { "no_detach" };
+    let name = format!("device_control_owns_interfaces_lifetimes_{}", name);
     const IP_FRAME_TYPES: [fidl_fuchsia_hardware_network::FrameType; 2] = [
         fidl_fuchsia_hardware_network::FrameType::Ipv4,
         fidl_fuchsia_hardware_network::FrameType::Ipv6,
@@ -745,7 +748,7 @@ async fn device_control_owns_interfaces_lifetimes() {
 
     const PORT_COUNT: u8 = 5;
     let mut interfaces = HashSet::new();
-    let mut ports = Vec::new();
+    let mut ports_detached_stream = futures::stream::FuturesUnordered::new();
     let mut control_proxies = Vec::new();
     // NB: For loop here is much more friendly to lifetimes than a closure
     // chain.
@@ -813,52 +816,96 @@ async fn device_control_owns_interfaces_lifetimes() {
             iface_id,
             interfaces
         );
-        let () = ports.push(port);
+        // Enable the interface and wait for port to be attached.
+        assert!(control.enable().await.expect("calling enable").expect("enable failed"));
+        let mut port_has_session_stream = futures::stream::unfold(port, |port| {
+            port.watch_state().map(move |state| {
+                let fidl_fuchsia_net_tun::InternalState { mac: _, has_session, .. } =
+                    state.expect("calling watch_state");
+                Some((has_session.expect("has_session missing from table"), port))
+            })
+        });
+        loop {
+            if port_has_session_stream.next().await.expect("port stream ended unexpectedly") {
+                break;
+            }
+        }
+        let port_detached = port_has_session_stream
+            .filter_map(move |has_session| {
+                futures::future::ready((!has_session).then(move || index))
+            })
+            .into_future()
+            .map(|(i, _stream)| i.expect("port stream ended unexpectedly"));
+        let () = ports_detached_stream.push(port_detached);
         let () = control_proxies.push(control);
     }
 
-    // Now drop the device control channel and expect all interfaces to be
-    // removed.
-    std::mem::drop(device_control);
+    let mut control_wait_termination_stream = control_proxies
+        .into_iter()
+        .map(|control| control.wait_termination())
+        .collect::<futures::stream::FuturesUnordered<_>>();
 
-    let interfaces_removed_fut =
-        async_utils::fold::fold_while(watcher, interfaces, |mut interfaces, event| match event {
-            fidl_fuchsia_net_interfaces::Event::Removed(id) => {
-                assert!(interfaces.remove(&id));
-                futures::future::ready(if interfaces.is_empty() {
-                    async_utils::fold::FoldWhile::Done(())
-                } else {
-                    async_utils::fold::FoldWhile::Continue(interfaces)
-                })
-            }
-            event => panic!("unexpected event {:?}", event),
-        })
+    if detach {
+        // Drop detached device_control and ensure none of the futures resolve.
+        let () = device_control.detach().expect("detach");
+        std::mem::drop(device_control);
+
+        let watcher_fut = watcher.next().map(|e| panic!("unexpected watcher event {:?}", e));
+        let ports_fut = ports_detached_stream
+            .next()
+            .map(|item| panic!("session detached from port unexpectedly {:?}", item));
+        let control_closed_fut = control_wait_termination_stream
+            .next()
+            .map(|termination| panic!("unexpected control termination event {:?}", termination));
+
+        let ((), (), ()) = futures::future::join3(watcher_fut, ports_fut, control_closed_fut)
+            .on_timeout(
+                fuchsia_async::Time::after(
+                    netstack_testing_common::ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT,
+                ),
+                || ((), (), ()),
+            )
+            .await;
+    } else {
+        // Drop device_control and wait for futures to resolve.
+        std::mem::drop(device_control);
+
+        let interfaces_removed_fut = async_utils::fold::fold_while(
+            watcher,
+            interfaces,
+            |mut interfaces, event| match event {
+                fidl_fuchsia_net_interfaces::Event::Removed(id) => {
+                    assert!(interfaces.remove(&id));
+                    futures::future::ready(if interfaces.is_empty() {
+                        async_utils::fold::FoldWhile::Done(())
+                    } else {
+                        async_utils::fold::FoldWhile::Continue(interfaces)
+                    })
+                }
+                event => panic!("unexpected event {:?}", event),
+            },
+        )
         .map(|fold_result| fold_result.short_circuited().expect("watcher ended"));
 
-    let ports_are_detached_fut =
-        futures::stream::iter(ports.into_iter()).for_each_concurrent(None, |port| async move {
-            loop {
-                let fidl_fuchsia_net_tun::InternalState { mac: _, has_session, .. } =
-                    port.watch_state().await.expect("watch state");
-                if !has_session.expect("has_session missing from table") {
-                    break;
-                }
-            }
-        });
-
-    let control_closed_fut =
-        futures::stream::iter(control_proxies).for_each(|control| async move {
+        let ports_are_detached_fut =
+            ports_detached_stream.map(|_port_index: u8| ()).collect::<()>();
+        let control_closed_fut = control_wait_termination_stream.for_each(|termination| {
             matches::assert_matches!(
-                control.wait_termination().await,
+                termination,
                 fidl_fuchsia_net_interfaces_ext::admin::TerminalError::Terminal(
                     fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::PortClosed
                 )
-            )
+            );
+            futures::future::ready(())
         });
 
-    let ((), (), ()) =
-        futures::future::join3(interfaces_removed_fut, ports_are_detached_fut, control_closed_fut)
-            .await;
+        let ((), (), ()) = futures::future::join3(
+            interfaces_removed_fut,
+            ports_are_detached_fut,
+            control_closed_fut,
+        )
+        .await;
+    }
 }
 
 #[test_case(

@@ -155,4 +155,10 @@ protocol DeviceControl {
             2: metric uint32;
         };
     });
+
+    /// Detaches the client end from the device's lifetime.
+    ///
+    /// After calling `Detach`, closing this client end no longer causes the
+    /// device or any of the interfaces created from it to be removed.
+    Detach();
 };

@@ -643,9 +643,11 @@ func (i *interfacesAdminInstallerImpl) InstallDevice(_ fidl.Context, device netw
 			},
 		})
 
-		// Device lifecycle is tied to channel lifetime.
-		if err := impl.deviceClient.Close(); err != nil {
-			_ = syslog.ErrorTf(deviceControlName, "deviceClient.Close() = %s", err)
+		if !impl.detached {
+			// Device lifecycle is tied to channel lifetime.
+			if err := impl.deviceClient.Close(); err != nil {
+				_ = syslog.ErrorTf(deviceControlName, "deviceClient.Close() = %s", err)
+			}
 		}
 	}()
 
@@ -658,6 +660,7 @@ type interfacesAdminDeviceControlImpl struct {
 	ns           *Netstack
 	deviceClient *netdevice.Client
 	cancelServe  context.CancelFunc
+	detached     bool
 }
 
 func (d *interfacesAdminDeviceControlImpl) CreateInterface(_ fidl.Context, portId uint8, control admin.ControlWithCtxInterfaceRequest, options admin.Options) error {
@@ -740,5 +743,10 @@ func (d *interfacesAdminDeviceControlImpl) CreateInterface(_ fidl.Context, portI
 
 	ifs.addAdminConnection(control, true /* strong */)
 
+	return nil
+}
+
+func (d *interfacesAdminDeviceControlImpl) Detach(fidl.Context) error {
+	d.detached = true
 	return nil
 }
