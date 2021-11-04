@@ -18,19 +18,18 @@ use futures::{FutureExt, StreamExt};
 
 #[fuchsia::test]
 async fn component_selectors_filter_logs() {
-    let mut builder = test_topology::create(test_topology::Options::default())
+    let builder = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
-    test_topology::add_component(&mut builder, "a", constants::LOG_AND_EXIT_COMPONENT_URL)
+    test_topology::add_child(&builder, "a", constants::LOG_AND_EXIT_COMPONENT_URL)
         .await
         .expect("add log_and_exit a");
-    test_topology::add_component(&mut builder, "b", constants::LOG_AND_EXIT_COMPONENT_URL)
+    test_topology::add_child(&builder, "b", constants::LOG_AND_EXIT_COMPONENT_URL)
         .await
         .expect("add log_and_exit b");
 
-    let mut realm = builder.build();
-    test_topology::expose_test_realm_protocol(&mut realm).await;
-    let instance = realm.create().await.expect("create instance");
+    test_topology::expose_test_realm_protocol(&builder).await;
+    let instance = builder.build().await.expect("create instance");
     let accessor =
         instance.root.connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>().unwrap();
 

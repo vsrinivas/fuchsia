@@ -19,7 +19,7 @@ async fn timestamp_sorting_for_batches() {
         .await
         .expect("create base topology");
 
-    let instance = builder.build().create().await.expect("create instance");
+    let instance = builder.build().await.expect("create instance");
 
     let message_times = [1_000, 5_000, 10_000, 15_000];
     let hare_times = (0, 2);

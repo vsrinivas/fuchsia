@@ -7,7 +7,9 @@
 use argh::FromArgs;
 use difference::{Changeset, Difference};
 use fuchsia_async as fasync;
-use fuchsia_component_test::{builder::*, RealmInstance};
+use fuchsia_component_test::{
+    ChildProperties, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
+};
 use fuchsia_zircon::{self as zx, DurationNum};
 use iquery::{command_line::CommandLine, commands::*, types::Error};
 use regex::Regex;
@@ -32,35 +34,36 @@ impl TestBuilder {
     }
 
     pub async fn add_basic_component(mut self, name: &str) -> Self {
-        self.add_component(name, BASIC_COMPONENT_URL).await;
+        self.add_child(name, BASIC_COMPONENT_URL).await;
         self
     }
 
     pub async fn add_basic_component_with_logs(mut self, name: &str) -> Self {
-        self.add_component(name, BASIC_COMPONENT_WITH_LOGS_URL).await;
+        self.add_child(name, BASIC_COMPONENT_WITH_LOGS_URL).await;
         self
     }
 
     pub async fn add_test_component(mut self, name: &str) -> Self {
-        self.add_component(name, TEST_COMPONENT_URL).await;
+        self.add_child(name, TEST_COMPONENT_URL).await;
         self
     }
 
     pub async fn start(self) -> TestInExecution {
-        let instance = self.builder.build().create().await.expect("create instance");
+        let instance = self.builder.build().await.expect("create instance");
         TestInExecution { instance }
     }
 
-    async fn add_component(&mut self, name: &str, url: &str) -> &mut Self {
+    async fn add_child(&mut self, name: &str, url: &str) -> &mut Self {
         self.builder
-            .add_eager_component(name, ComponentSource::url(url))
+            .add_child(name, url, ChildProperties::new().eager())
             .await
             .unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.logger.LogSink"),
-                source: RouteEndpoint::AboveRoot,
-                targets: vec![RouteEndpoint::component(name)],
-            })
+            .add_route(
+                RouteBuilder::protocol("fuchsia.logger.LogSink")
+                    .source(RouteEndpoint::AboveRoot)
+                    .targets(vec![RouteEndpoint::component(name)]),
+            )
+            .await
             .unwrap();
         self
     }

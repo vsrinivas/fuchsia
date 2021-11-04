@@ -9,7 +9,7 @@ use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
 use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMarker, LogMessage, LogProxy};
 use fuchsia_async as fasync;
 use fuchsia_component::client;
-use fuchsia_component_test::builder::{Capability, CapabilityRoute, RouteEndpoint};
+use fuchsia_component_test::{RouteBuilder, RouteEndpoint};
 use fuchsia_syslog_listener as syslog_listener;
 use fuchsia_zircon as zx;
 use futures::{channel::mpsc, Stream, StreamExt};
@@ -75,7 +75,7 @@ async fn listen_for_klog() {
     })
     .await
     .expect("create base topology");
-    let instance = builder.build().create().await.expect("create instance");
+    let instance = builder.build().await.expect("create instance");
     let log_proxy = instance.root.connect_to_protocol_at_exposed_dir::<LogMarker>().unwrap();
     let logs = run_listener("klog", log_proxy);
 
@@ -90,20 +90,21 @@ async fn listen_for_klog() {
 
 #[fuchsia::test]
 async fn listen_for_syslog_routed_stdio() {
-    let mut builder = test_topology::create(test_topology::Options::default())
+    let builder = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
-    test_topology::add_eager_component(&mut builder, "stdio-puppet", constants::STDIO_PUPPET_URL)
+    test_topology::add_eager_component(&builder, "stdio-puppet", constants::STDIO_PUPPET_URL)
         .await
         .expect("add child");
     builder
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.archivist.tests.StdioPuppet"),
-            source: RouteEndpoint::component("test/stdio-puppet"),
-            targets: vec![RouteEndpoint::AboveRoot],
-        })
+        .add_route(
+            RouteBuilder::protocol("fuchsia.archivist.tests.StdioPuppet")
+                .source(RouteEndpoint::component("test/stdio-puppet"))
+                .targets(vec![RouteEndpoint::AboveRoot]),
+        )
+        .await
         .unwrap();
-    let instance = builder.build().create().await.expect("create instance");
+    let instance = builder.build().await.expect("create instance");
 
     let accessor =
         instance.root.connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>().unwrap();

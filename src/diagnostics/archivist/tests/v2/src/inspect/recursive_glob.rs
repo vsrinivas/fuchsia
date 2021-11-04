@@ -10,16 +10,16 @@ use std::{collections::HashSet, iter::FromIterator};
 
 #[fuchsia::test]
 async fn read_components_recursive_glob() {
-    let mut builder = test_topology::create(test_topology::Options::default())
+    let builder = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
-    test_topology::add_eager_component(&mut builder, "child_a", COMPONENT_WITH_CHILDREN_URL)
+    test_topology::add_eager_component(&builder, "child_a", COMPONENT_WITH_CHILDREN_URL)
         .await
         .expect("add child a");
-    test_topology::add_eager_component(&mut builder, "child_b", COMPONENT_WITH_CHILDREN_URL)
+    test_topology::add_eager_component(&builder, "child_b", COMPONENT_WITH_CHILDREN_URL)
         .await
         .expect("add child b");
-    let instance = builder.build().create().await.expect("create instance");
+    let instance = builder.build().await.expect("create instance");
 
     // Only inspect from descendants of child_a should be reported
     let expected_monikers = HashSet::from_iter(vec![
@@ -54,16 +54,16 @@ async fn read_components_recursive_glob() {
 
 #[fuchsia::test]
 async fn read_components_subtree_with_recursive_glob() {
-    let mut builder = test_topology::create(test_topology::Options::default())
+    let builder = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
-    test_topology::add_eager_component(&mut builder, "child_a", COMPONENT_WITH_CHILDREN_URL)
+    test_topology::add_eager_component(&builder, "child_a", COMPONENT_WITH_CHILDREN_URL)
         .await
         .expect("add child a");
-    test_topology::add_eager_component(&mut builder, "child_b", COMPONENT_WITH_CHILDREN_URL)
+    test_topology::add_eager_component(&builder, "child_b", COMPONENT_WITH_CHILDREN_URL)
         .await
         .expect("add child b");
-    let instance = builder.build().create().await.expect("create instance");
+    let instance = builder.build().await.expect("create instance");
 
     // Only inspect from test_app_a, and descendants of test_app_a should be reported
     let expected_monikers = HashSet::from_iter(vec![

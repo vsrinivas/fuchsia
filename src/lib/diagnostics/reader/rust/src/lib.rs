@@ -459,7 +459,9 @@ mod tests {
     use diagnostics_data::{Data, LifecycleType};
     use diagnostics_hierarchy::assert_data_tree;
     use fidl_fuchsia_diagnostics as fdiagnostics;
-    use fuchsia_component_test::{builder::*, RealmInstance};
+    use fuchsia_component_test::{
+        ChildProperties, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
+    };
     use fuchsia_zircon as zx;
     use futures::TryStreamExt;
 
@@ -467,16 +469,17 @@ mod tests {
         "fuchsia-pkg://fuchsia.com/diagnostics-reader-tests#meta/inspect_test_component.cm";
 
     async fn start_component() -> Result<RealmInstance, anyhow::Error> {
-        let mut builder = RealmBuilder::new().await?;
+        let builder = RealmBuilder::new().await?;
         builder
-            .add_eager_component("test_component", ComponentSource::url(TEST_COMPONENT_URL))
+            .add_child("test_component", TEST_COMPONENT_URL, ChildProperties::new().eager())
             .await?
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.logger.LogSink"),
-                source: RouteEndpoint::AboveRoot,
-                targets: vec![RouteEndpoint::component("test_component")],
-            })?;
-        let instance = builder.build().create().await?;
+            .add_route(
+                RouteBuilder::protocol("fuchsia.logger.LogSink")
+                    .source(RouteEndpoint::AboveRoot)
+                    .targets(vec![RouteEndpoint::component("test_component")]),
+            )
+            .await?;
+        let instance = builder.build().await?;
         Ok(instance)
     }
 

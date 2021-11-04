@@ -8,17 +8,17 @@ use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
 
 #[fuchsia::test]
 async fn accessor_truncation_test() {
-    let mut builder = test_topology::create(test_topology::Options::default())
+    let builder = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
-    test_topology::add_eager_component(&mut builder, "child_a", IQUERY_TEST_COMPONENT_URL)
+    test_topology::add_eager_component(&builder, "child_a", IQUERY_TEST_COMPONENT_URL)
         .await
         .expect("add child a");
-    test_topology::add_eager_component(&mut builder, "child_b", IQUERY_TEST_COMPONENT_URL)
+    test_topology::add_eager_component(&builder, "child_b", IQUERY_TEST_COMPONENT_URL)
         .await
         .expect("add child b");
 
-    let instance = builder.build().create().await.expect("create instance");
+    let instance = builder.build().await.expect("create instance");
     let accessor =
         instance.root.connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>().unwrap();
     let mut reader = ArchiveReader::new();

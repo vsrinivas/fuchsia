@@ -40,14 +40,14 @@ lazy_static! {
 
 #[fuchsia::test]
 async fn read_components_inspect() {
-    let mut builder = test_topology::create(test_topology::Options::default())
+    let builder = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
-    test_topology::add_eager_component(&mut builder, "child", STUB_INSPECT_COMPONENT_URL)
+    test_topology::add_eager_component(&builder, "child", STUB_INSPECT_COMPONENT_URL)
         .await
         .expect("add child");
 
-    let instance = builder.build().create().await.expect("create instance");
+    let instance = builder.build().await.expect("create instance");
 
     let accessor =
         instance.root.connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>().unwrap();
@@ -70,16 +70,16 @@ async fn read_components_inspect() {
 
 #[fuchsia::test]
 async fn read_components_single_selector() {
-    let mut builder = test_topology::create(test_topology::Options::default())
+    let builder = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
-    test_topology::add_eager_component(&mut builder, "child_a", STUB_INSPECT_COMPONENT_URL)
+    test_topology::add_eager_component(&builder, "child_a", STUB_INSPECT_COMPONENT_URL)
         .await
         .expect("add child a");
-    test_topology::add_eager_component(&mut builder, "child_b", STUB_INSPECT_COMPONENT_URL)
+    test_topology::add_eager_component(&builder, "child_b", STUB_INSPECT_COMPONENT_URL)
         .await
         .expect("add child b");
-    let instance = builder.build().create().await.expect("create instance");
+    let instance = builder.build().await.expect("create instance");
 
     let accessor =
         instance.root.connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>().unwrap();
@@ -103,14 +103,14 @@ async fn read_components_single_selector() {
 
 #[fuchsia::test]
 async fn unified_reader() -> Result<(), Error> {
-    let mut builder = test_topology::create(test_topology::Options::default())
+    let builder = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
-    test_topology::add_eager_component(&mut builder, "test_component", IQUERY_TEST_COMPONENT_URL)
+    test_topology::add_eager_component(&builder, "test_component", IQUERY_TEST_COMPONENT_URL)
         .await
         .expect("add child a");
 
-    let instance = builder.build().create().await.expect("create instance");
+    let instance = builder.build().await.expect("create instance");
 
     // First, retrieve all of the information in our realm to make sure that everything
     // we expect is present.
@@ -152,19 +152,15 @@ async fn unified_reader() -> Result<(), Error> {
 
 #[fuchsia::test]
 async fn memory_monitor_moniker_rewrite() -> Result<(), Error> {
-    let mut builder = test_topology::create(test_topology::Options {
+    let builder = test_topology::create(test_topology::Options {
         archivist_url: ARCHIVIST_WITH_LEGACY_METRICS,
     })
     .await
     .expect("create base topology");
-    test_topology::add_eager_component(
-        &mut builder,
-        "core/memory_monitor",
-        IQUERY_TEST_COMPONENT_URL,
-    )
-    .await
-    .expect("add child a");
-    let instance = builder.build().create().await.expect("create instance");
+    test_topology::add_eager_component(&builder, "core/memory_monitor", IQUERY_TEST_COMPONENT_URL)
+        .await
+        .expect("add child a");
+    let instance = builder.build().await.expect("create instance");
 
     // Verify that fetching "core/memory_monitor" from ArchiveAccessor produces results with
     // the correct v2 moniker.
@@ -216,16 +212,16 @@ async fn memory_monitor_moniker_rewrite() -> Result<(), Error> {
 
 #[fuchsia::test]
 async fn feedback_canonical_reader_test() -> Result<(), Error> {
-    let mut builder = test_topology::create(test_topology::Options {
+    let builder = test_topology::create(test_topology::Options {
         archivist_url: ARCHIVIST_WITH_FEEDBACK_FILTERING,
     })
     .await
     .expect("create base topology");
-    test_topology::add_eager_component(&mut builder, "test_component", IQUERY_TEST_COMPONENT_URL)
+    test_topology::add_eager_component(&builder, "test_component", IQUERY_TEST_COMPONENT_URL)
         .await
         .expect("add child a");
 
-    let instance = builder.build().create().await.expect("create instance");
+    let instance = builder.build().await.expect("create instance");
 
     // First, retrieve all of the information in our realm to make sure that everything
     // we expect is present.
@@ -265,16 +261,16 @@ async fn feedback_canonical_reader_test() -> Result<(), Error> {
 
 #[fuchsia::test]
 async fn feedback_disabled_pipeline() -> Result<(), Error> {
-    let mut builder = test_topology::create(test_topology::Options {
+    let builder = test_topology::create(test_topology::Options {
         archivist_url: ARCHIVIST_WITH_FEEDBACK_FILTERING_DISABLED,
     })
     .await
     .expect("create base topology");
-    test_topology::add_eager_component(&mut builder, "test_component", IQUERY_TEST_COMPONENT_URL)
+    test_topology::add_eager_component(&builder, "test_component", IQUERY_TEST_COMPONENT_URL)
         .await
         .expect("add child a");
 
-    let instance = builder.build().create().await.expect("create instance");
+    let instance = builder.build().await.expect("create instance");
     assert!(!feedback_pipeline_is_filtered(instance, 3).await);
 
     Ok(())
@@ -282,14 +278,14 @@ async fn feedback_disabled_pipeline() -> Result<(), Error> {
 
 #[fuchsia::test]
 async fn feedback_pipeline_missing_selectors() -> Result<(), Error> {
-    let mut builder = test_topology::create(test_topology::Options::default())
+    let builder = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
-    test_topology::add_eager_component(&mut builder, "test_component", IQUERY_TEST_COMPONENT_URL)
+    test_topology::add_eager_component(&builder, "test_component", IQUERY_TEST_COMPONENT_URL)
         .await
         .expect("add child a");
 
-    let instance = builder.build().create().await.expect("create instance");
+    let instance = builder.build().await.expect("create instance");
 
     assert!(!feedback_pipeline_is_filtered(instance, 3).await);
 

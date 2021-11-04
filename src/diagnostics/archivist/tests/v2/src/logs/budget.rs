@@ -22,7 +22,9 @@ use fidl_fuchsia_io::DirectoryMarker;
 use fidl_fuchsia_sys2::EventSourceMarker;
 use fuchsia_async::{Task, Timer};
 use fuchsia_component::{client, server::ServiceFs};
-use fuchsia_component_test::{builder::*, mock, RealmInstance};
+use fuchsia_component_test::{
+    mock::MockHandles, ChildProperties, RealmInstance, RouteBuilder, RouteEndpoint,
+};
 use fuchsia_zircon as zx;
 use futures::{
     channel::mpsc::{self, Receiver},
@@ -78,17 +80,16 @@ struct PuppetEnv {
 impl PuppetEnv {
     async fn create(max_puppets: usize) -> Self {
         let (sender, controllers) = mpsc::channel(1);
-        let mut builder = test_topology::create(test_topology::Options {
+        let builder = test_topology::create(test_topology::Options {
             archivist_url: ARCHIVIST_WITH_SMALL_CACHES,
         })
         .await
         .expect("create base topology");
         builder
-            .add_component(
+            .add_mock_child(
                 "mocks-server",
-                ComponentSource::Mock(mock::Mock::new(move |mock_handles: mock::MockHandles| {
-                    Box::pin(run_mocks(mock_handles, sender.clone()))
-                })),
+                move |mock_handles: MockHandles| Box::pin(run_mocks(mock_handles, sender.clone())),
+                ChildProperties::new(),
             )
             .await
             .unwrap();
@@ -96,29 +97,28 @@ impl PuppetEnv {
         for i in 0..max_puppets {
             let name = format!("test/puppet-{}", i);
             builder
-                .add_component(name.clone(), ComponentSource::url(SOCKET_PUPPET_COMPONENT_URL))
+                .add_child(name.clone(), SOCKET_PUPPET_COMPONENT_URL, ChildProperties::new())
                 .await
                 .unwrap()
-                .add_route(CapabilityRoute {
-                    capability: Capability::protocol(
-                        "fuchsia.archivist.tests.SocketPuppetController",
-                    ),
-                    source: RouteEndpoint::component("mocks-server"),
-                    targets: vec![RouteEndpoint::component(name.clone())],
-                })
+                .add_route(
+                    RouteBuilder::protocol("fuchsia.archivist.tests.SocketPuppetController")
+                        .source(RouteEndpoint::component("mocks-server"))
+                        .targets(vec![RouteEndpoint::component(name.clone())]),
+                )
+                .await
                 .unwrap()
-                .add_route(CapabilityRoute {
-                    capability: Capability::protocol("fuchsia.logger.LogSink"),
-                    source: RouteEndpoint::component("test/archivist"),
-                    targets: vec![RouteEndpoint::component(name)],
-                })
+                .add_route(
+                    RouteBuilder::protocol("fuchsia.logger.LogSink")
+                        .source(RouteEndpoint::component("test/archivist"))
+                        .targets(vec![RouteEndpoint::component(name)]),
+                )
+                .await
                 .unwrap();
         }
 
         info!("starting our instance");
-        let mut realm = builder.build();
-        test_topology::expose_test_realm_protocol(&mut realm).await;
-        let instance = realm.create().await.expect("create instance");
+        test_topology::expose_test_realm_protocol(&builder).await;
+        let instance = builder.build().await.expect("create instance");
 
         let config = parse_config("/pkg/data/config/small-caches-config.json").unwrap();
         let messages_allowed_in_cache = config.logs.max_cached_original_bytes / TEST_PACKET_LEN;
@@ -395,7 +395,7 @@ impl Deref for Puppet {
 }
 
 async fn run_mocks(
-    mock_handles: mock::MockHandles,
+    mock_handles: MockHandles,
     mut sender: mpsc::Sender<SocketPuppetControllerRequestStream>,
 ) -> Result<(), Error> {
     let mut fs = ServiceFs::new();

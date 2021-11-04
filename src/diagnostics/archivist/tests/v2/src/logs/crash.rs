@@ -15,16 +15,15 @@ use futures::prelude::*;
 
 #[fuchsia::test]
 async fn logs_from_crashing_component() {
-    let mut builder = test_topology::create(test_topology::Options::default())
+    let builder = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
-    test_topology::add_component(&mut builder, "log_and_crash", LOG_AND_CRASH_COMPONENT_URL)
+    test_topology::add_child(&builder, "log_and_crash", LOG_AND_CRASH_COMPONENT_URL)
         .await
         .expect("add log_and_exit");
 
-    let mut realm = builder.build();
-    test_topology::expose_test_realm_protocol(&mut realm).await;
-    let instance = realm.create().await.expect("create instance");
+    test_topology::expose_test_realm_protocol(&builder).await;
+    let instance = builder.build().await.expect("create instance");
 
     let accessor =
         instance.root.connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>().unwrap();

@@ -5,8 +5,7 @@
 use anyhow::Error;
 use fidl_fuchsia_examples_inspect::{ReverserMarker, ReverserProxy};
 use fuchsia_component_test::{
-    builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
-    RealmInstance,
+    ChildProperties, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
 };
 
 const FIZZBUZZ_URL: &'static str =
@@ -28,44 +27,48 @@ pub struct IntegrationTest {
 
 impl IntegrationTest {
     pub async fn start(part: usize, options: TestOptions) -> Result<Self, Error> {
-        let mut builder = RealmBuilder::new().await?;
-        if options.include_fizzbuzz {
-            builder
-                .add_component("fizzbuzz", ComponentSource::url(FIZZBUZZ_URL))
-                .await?
-                .add_route(CapabilityRoute {
-                    capability: Capability::protocol("fuchsia.examples.inspect.FizzBuzz"),
-                    source: RouteEndpoint::component("fizzbuzz"),
-                    targets: vec![RouteEndpoint::component("reverser")],
-                })?
-                .add_route(CapabilityRoute {
-                    capability: Capability::protocol("fuchsia.logger.LogSink"),
-                    source: RouteEndpoint::AboveRoot,
-                    targets: vec![RouteEndpoint::component("fizzbuzz")],
-                })?;
-        }
+        let builder = RealmBuilder::new().await?;
         builder
-            .add_component(
+            .add_child(
                 "reverser",
-                ComponentSource::url(format!(
+                format!(
                     "fuchsia-pkg://fuchsia.com/inspect_rust_codelab_integration_tests#meta/part_{}.cm",
                     part
-                )),
+                ),
+                ChildProperties::new(),
+            )
+            .await?;
+        if options.include_fizzbuzz {
+            builder
+                .add_child("fizzbuzz", FIZZBUZZ_URL, ChildProperties::new())
+                .await?
+                .add_route(
+                    RouteBuilder::protocol("fuchsia.examples.inspect.FizzBuzz")
+                        .source(RouteEndpoint::component("fizzbuzz"))
+                        .targets(vec![RouteEndpoint::component("reverser")]),
+                )
+                .await?
+                .add_route(
+                    RouteBuilder::protocol("fuchsia.logger.LogSink")
+                        .source(RouteEndpoint::AboveRoot)
+                        .targets(vec![RouteEndpoint::component("fizzbuzz")]),
+                )
+                .await?;
+        }
+        builder
+            .add_route(
+                RouteBuilder::protocol_marker::<ReverserMarker>()
+                    .source(RouteEndpoint::component("reverser"))
+                    .targets(vec![RouteEndpoint::AboveRoot]),
             )
             .await?
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.examples.inspect.Reverser"),
-                source: RouteEndpoint::component("reverser"),
-                targets: vec![RouteEndpoint::AboveRoot],
-            })?
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.logger.LogSink"),
-                source: RouteEndpoint::AboveRoot,
-                targets: vec![
-                    RouteEndpoint::component("reverser"),
-                ],
-            })?;
-        let instance = builder.build().create().await?;
+            .add_route(
+                RouteBuilder::protocol("fuchsia.logger.LogSink")
+                    .source(RouteEndpoint::AboveRoot)
+                    .targets(vec![RouteEndpoint::component("reverser")]),
+            )
+            .await?;
+        let instance = builder.build().await?;
         Ok(Self { instance })
     }
 

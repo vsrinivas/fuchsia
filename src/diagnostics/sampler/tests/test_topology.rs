@@ -7,7 +7,10 @@ use anyhow::Error;
 use cm_rust;
 use fidl_fuchsia_io2 as fio2;
 use fuchsia_component::server::ServiceFs;
-use fuchsia_component_test::{builder::*, mock::*, Moniker, RealmInstance};
+use fuchsia_component_test::{
+    mock::MockHandles, ChildProperties, Event, Moniker, RealmBuilder, RealmInstance, RouteBuilder,
+    RouteEndpoint,
+};
 use futures::{channel::mpsc, lock::Mutex, StreamExt};
 use std::sync::Arc;
 
@@ -20,154 +23,163 @@ const ARCHIVIST_URL: &str =
     "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cm";
 
 pub async fn create() -> Result<RealmInstance, Error> {
-    let mut builder = RealmBuilder::new().await?;
+    let builder = RealmBuilder::new().await?;
     builder
-        .add_component(
+        .add_mock_child(
             "mocks-server",
-            ComponentSource::Mock(Mock::new(move |mock_handles| {
-                Box::pin(serve_mocks(mock_handles))
-            })),
+            move |mock_handles| Box::pin(serve_mocks(mock_handles)),
+            ChildProperties::new(),
         )
         .await?
-        .add_component("wrapper/mock_cobalt", ComponentSource::url(MOCK_COBALT_URL))
+        .add_child("wrapper/mock_cobalt", MOCK_COBALT_URL, ChildProperties::new())
         .await?
-        .add_component("wrapper/single_counter", ComponentSource::url(SINGLE_COUNTER_URL))
+        .add_child("wrapper/single_counter", SINGLE_COUNTER_URL, ChildProperties::new())
         .await?
-        .add_component("wrapper/sampler", ComponentSource::url(SAMPLER_URL))
+        .add_child("wrapper/sampler", SAMPLER_URL, ChildProperties::new())
         .await?
-        .add_component("wrapper/test_case_archivist", ComponentSource::url(ARCHIVIST_URL))
+        .add_child("wrapper/test_case_archivist", ARCHIVIST_URL, ChildProperties::new())
         .await?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.cobalt.test.LoggerQuerier"),
-            source: RouteEndpoint::component("wrapper/mock_cobalt"),
-            targets: vec![RouteEndpoint::AboveRoot],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.samplertestcontroller.SamplerTestController"),
-            source: RouteEndpoint::component("wrapper/single_counter"),
-            targets: vec![RouteEndpoint::AboveRoot],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.cobalt.LoggerFactory"),
-            source: RouteEndpoint::component("wrapper/mock_cobalt"),
-            targets: vec![RouteEndpoint::component("wrapper/sampler")],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.metrics.MetricEventLoggerFactory"),
-            source: RouteEndpoint::component("wrapper/mock_cobalt"),
-            targets: vec![RouteEndpoint::component("wrapper/sampler")],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol(
+        .add_route(
+            RouteBuilder::protocol("fuchsia.cobalt.test.LoggerQuerier")
+                .source(RouteEndpoint::component("wrapper/mock_cobalt"))
+                .targets(vec![RouteEndpoint::AboveRoot]),
+        )
+        .await?
+        .add_route(
+            RouteBuilder::protocol("fuchsia.samplertestcontroller.SamplerTestController")
+                .source(RouteEndpoint::component("wrapper/single_counter"))
+                .targets(vec![RouteEndpoint::AboveRoot]),
+        )
+        .await?
+        .add_route(
+            RouteBuilder::protocol("fuchsia.cobalt.LoggerFactory")
+                .source(RouteEndpoint::component("wrapper/mock_cobalt"))
+                .targets(vec![RouteEndpoint::component("wrapper/sampler")]),
+        )
+        .await?
+        .add_route(
+            RouteBuilder::protocol("fuchsia.metrics.MetricEventLoggerFactory")
+                .source(RouteEndpoint::component("wrapper/mock_cobalt"))
+                .targets(vec![RouteEndpoint::component("wrapper/sampler")]),
+        )
+        .await?
+        .add_route(
+            RouteBuilder::protocol(
                 "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
-            ),
-            source: RouteEndpoint::component("mocks-server"),
-            targets: vec![RouteEndpoint::component("wrapper/sampler")],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.mockrebootcontroller.MockRebootController"),
-            source: RouteEndpoint::component("mocks-server"),
-            targets: vec![RouteEndpoint::AboveRoot],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.logger.LogSink"),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![
-                RouteEndpoint::component("wrapper/test_case_archivist"),
-                RouteEndpoint::component("wrapper/mock_cobalt"),
-                RouteEndpoint::component("wrapper/sampler"),
-                RouteEndpoint::component("wrapper/single_counter"),
-            ],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::directory("config-data", "", fio2::R_STAR_DIR),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component("wrapper/sampler")],
-        })?
+            )
+            .source(RouteEndpoint::component("mocks-server"))
+            .targets(vec![RouteEndpoint::component("wrapper/sampler")]),
+        )
+        .await?
+        .add_route(
+            RouteBuilder::protocol("fuchsia.mockrebootcontroller.MockRebootController")
+                .source(RouteEndpoint::component("mocks-server"))
+                .targets(vec![RouteEndpoint::AboveRoot]),
+        )
+        .await?
+        .add_route(
+            RouteBuilder::protocol("fuchsia.logger.LogSink")
+                .source(RouteEndpoint::AboveRoot)
+                .targets(vec![
+                    RouteEndpoint::component("wrapper/test_case_archivist"),
+                    RouteEndpoint::component("wrapper/mock_cobalt"),
+                    RouteEndpoint::component("wrapper/sampler"),
+                    RouteEndpoint::component("wrapper/single_counter"),
+                ]),
+        )
+        .await?
+        .add_route(
+            RouteBuilder::directory("config-data", "", fio2::R_STAR_DIR)
+                .source(RouteEndpoint::AboveRoot)
+                .targets(vec![RouteEndpoint::component("wrapper/sampler")]),
+        )
+        .await?
         // TODO(fxbug.dev/76599): refactor these tests to use the single test archivist and remove
         // this archivist. We can also remove the `wrapper` realm when this is done. The
         // ArchiveAccessor and Log protocols routed here would be routed from AboveRoot instead. To
         // do so, uncomment the following routes and delete all the routes after this comment
         // involving "wrapper/test_case_archivist":
-        // .add_route(CapabilityRoute {
-        //     capability: Capability::protocol("fuchsia.diagnostics.ArchiveAccessor"),
-        //     source: RouteEndpoint::AboveRoot,
-        //     targets: vec![RouteEndpoint::component("wrapper/sampler")],
-        // })?
-        // .add_route(CapabilityRoute {
-        //     capability: Capability::protocol("fuchsia.logger.Log"),
-        //     source: RouteEndpoint::AboveRoot,
-        //     targets: vec![RouteEndpoint::component("wrapper/sampler")],
-        // })?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.sys2.EventSource"),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component("wrapper/test_case_archivist")],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::Event(Event::Started, cm_rust::EventMode::Async),
-            source: RouteEndpoint::component("wrapper"),
-            targets: vec![RouteEndpoint::component("wrapper/test_case_archivist")],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::Event(Event::Stopped, cm_rust::EventMode::Async),
-            source: RouteEndpoint::component("wrapper"),
-            targets: vec![RouteEndpoint::component("wrapper/test_case_archivist")],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::Event(Event::Running, cm_rust::EventMode::Async),
-            source: RouteEndpoint::component("wrapper"),
-            targets: vec![RouteEndpoint::component("wrapper/test_case_archivist")],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::Event(
-                Event::directory_ready("diagnostics"),
-                cm_rust::EventMode::Async,
-            ),
-            source: RouteEndpoint::component("wrapper"),
-            targets: vec![RouteEndpoint::component("wrapper/test_case_archivist")],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::Event(
+        // .add_route(RouteBuilder::protocol("fuchsia.diagnostics.ArchiveAccessor")
+        //     .source(RouteEndpoint::AboveRoot)
+        //     .targets(vec![RouteEndpoint::component("wrapper/sampler")])
+        // }).await?
+        // .add_route(RouteBuilder::protocol("fuchsia.logger.Log")
+        //     .source(RouteEndpoint::AboveRoot)
+        //     .targets(vec![RouteEndpoint::component("wrapper/sampler")])
+        // }).await?
+        .add_route(
+            RouteBuilder::protocol("fuchsia.sys2.EventSource")
+                .source(RouteEndpoint::AboveRoot)
+                .targets(vec![RouteEndpoint::component("wrapper/test_case_archivist")]),
+        )
+        .await?
+        .add_route(
+            RouteBuilder::protocol("fuchsia.diagnostics.ArchiveAccessor")
+                .source(RouteEndpoint::component("wrapper/test_case_archivist"))
+                .targets(vec![RouteEndpoint::component("wrapper/sampler")]),
+        )
+        .await?
+        .add_route(
+            RouteBuilder::protocol("fuchsia.logger.Log")
+                .source(RouteEndpoint::component("wrapper/test_case_archivist"))
+                .targets(vec![RouteEndpoint::component("wrapper/sampler")]),
+        )
+        .await?
+        .add_route(
+            RouteBuilder::event(Event::Started, cm_rust::EventMode::Async)
+                .source(RouteEndpoint::component("wrapper"))
+                .targets(vec![RouteEndpoint::component("wrapper/test_case_archivist")]),
+        )
+        .await?
+        .add_route(
+            RouteBuilder::event(Event::Stopped, cm_rust::EventMode::Async)
+                .source(RouteEndpoint::component("wrapper"))
+                .targets(vec![RouteEndpoint::component("wrapper/test_case_archivist")]),
+        )
+        .await?
+        .add_route(
+            RouteBuilder::event(Event::Running, cm_rust::EventMode::Async)
+                .source(RouteEndpoint::component("wrapper"))
+                .targets(vec![RouteEndpoint::component("wrapper/test_case_archivist")]),
+        )
+        .await?
+        .add_route(
+            RouteBuilder::event(Event::directory_ready("diagnostics"), cm_rust::EventMode::Async)
+                .source(RouteEndpoint::component("wrapper"))
+                .targets(vec![RouteEndpoint::component("wrapper/test_case_archivist")]),
+        )
+        .await?
+        .add_route(
+            RouteBuilder::event(
                 Event::capability_requested("fuchsia.logger.LogSink"),
                 cm_rust::EventMode::Async,
-            ),
-            source: RouteEndpoint::component("wrapper"),
-            targets: vec![RouteEndpoint::component("wrapper/test_case_archivist")],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.diagnostics.ArchiveAccessor"),
-            source: RouteEndpoint::component("wrapper/test_case_archivist"),
-            targets: vec![RouteEndpoint::component("wrapper/sampler")],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.logger.Log"),
-            source: RouteEndpoint::component("wrapper/test_case_archivist"),
-            targets: vec![RouteEndpoint::component("wrapper/sampler")],
-        })?;
-    let mut realm = builder.build();
+            )
+            .source(RouteEndpoint::component("wrapper"))
+            .targets(vec![RouteEndpoint::component("wrapper/test_case_archivist")]),
+        )
+        .await?;
 
     // TODO(fxbug.dev/82734): RealmBuilder currently doesn't support renaming capabilities, so we
     // need to manually do it here.
-    let mut wrapper_decl = realm.get_decl(&"wrapper".into()).await.unwrap();
+    let mut wrapper_decl = builder.get_decl("wrapper").await.unwrap();
     wrapper_decl.exposes.push(cm_rust::ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
         source: cm_rust::ExposeSource::Child("sampler".into()),
         target: cm_rust::ExposeTarget::Parent,
         source_name: "fuchsia.component.Binder".into(),
         target_name: "fuchsia.component.SamplerBinder".into(),
     }));
-    realm.set_component(&"wrapper".into(), wrapper_decl).await.unwrap();
+    builder.set_decl("wrapper", wrapper_decl).await.unwrap();
 
-    let mut root_decl = realm.get_decl(&Moniker::root()).await.unwrap();
+    let mut root_decl = builder.get_decl(Moniker::root()).await.unwrap();
     root_decl.exposes.push(cm_rust::ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
         source: cm_rust::ExposeSource::Child("wrapper".into()),
         target: cm_rust::ExposeTarget::Parent,
         source_name: "fuchsia.component.SamplerBinder".into(),
         target_name: "fuchsia.component.SamplerBinder".into(),
     }));
-    realm.set_component(&Moniker::root(), root_decl).await.unwrap();
+    builder.set_decl(Moniker::root(), root_decl).await.unwrap();
 
-    let instance = realm.create().await?;
+    let instance = builder.build().await?;
     Ok(instance)
 }
 

@@ -20,10 +20,7 @@ use fidl_fuchsia_sys2::EventSourceMarker;
 use fidl_fuchsia_sys_internal::{LogConnectorRequest, LogConnectorRequestStream};
 use fuchsia_async as fasync;
 use fuchsia_component::{client, server::ServiceFs};
-use fuchsia_component_test::{
-    builder::{Capability, CapabilityRoute, ComponentSource, RouteEndpoint},
-    mock::{Mock, MockHandles},
-};
+use fuchsia_component_test::{mock::MockHandles, ChildProperties, RouteBuilder, RouteEndpoint};
 use fuchsia_zircon as zx;
 use futures::{channel::mpsc, lock::Mutex, SinkExt, StreamExt};
 use std::sync::Arc;
@@ -59,34 +56,35 @@ async fn test_logs_with_hanging_log_connector() {
     let (mut before_response_snd, before_response_recv) = mpsc::unbounded();
     let (after_response_snd, mut after_response_recv) = mpsc::unbounded();
     let recv = Arc::new(Mutex::new(before_response_recv));
-    let mut builder = test_topology::create(test_topology::Options {
+    let builder = test_topology::create(test_topology::Options {
         archivist_url:
             "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/archivist_with_log_connector.cm",
     })
     .await
     .expect("create base topology");
     builder
-        .add_component(
+        .add_mock_child(
             "mocks-server",
-            ComponentSource::Mock(Mock::new(move |mock_handles| {
+            move |mock_handles| {
                 Box::pin(serve_mocks(mock_handles, recv.clone(), after_response_snd.clone()))
-            })),
+            },
+            ChildProperties::new(),
         )
         .await
         .unwrap()
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.sys.internal.LogConnector"),
-            source: RouteEndpoint::component("mocks-server"),
-            targets: vec![RouteEndpoint::component("test/archivist")],
-        })
+        .add_route(
+            RouteBuilder::protocol("fuchsia.sys.internal.LogConnector")
+                .source(RouteEndpoint::component("mocks-server"))
+                .targets(vec![RouteEndpoint::component("test/archivist")]),
+        )
+        .await
         .unwrap();
-    test_topology::add_component(&mut builder, "log_and_exit", LOG_AND_EXIT_COMPONENT_URL)
+    test_topology::add_child(&builder, "log_and_exit", LOG_AND_EXIT_COMPONENT_URL)
         .await
         .expect("add log_and_exit");
-    let mut realm = builder.build();
-    expose_test_realm_protocol(&mut realm).await;
+    expose_test_realm_protocol(&builder).await;
 
-    let instance = realm.create().await.expect("create instance");
+    let instance = builder.build().await.expect("create instance");
     let accessor =
         instance.root.connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>().unwrap();
 
@@ -128,19 +126,18 @@ async fn test_logs_with_hanging_log_connector() {
 
 #[fuchsia::test]
 async fn test_logs_lifecycle() {
-    let mut builder = test_topology::create(test_topology::Options::default())
+    let builder = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
-    test_topology::add_component(&mut builder, "log_and_exit", LOG_AND_EXIT_COMPONENT_URL)
+    test_topology::add_child(&builder, "log_and_exit", LOG_AND_EXIT_COMPONENT_URL)
         .await
         .expect("add log_and_exit");
 
     // Currently RealmBuilder doesn't support to expose a capability from framework, therefore we
     // manually update the decl that the builder creates.
-    let mut realm = builder.build();
-    test_topology::expose_test_realm_protocol(&mut realm).await;
+    test_topology::expose_test_realm_protocol(&builder).await;
 
-    let instance = realm.create().await.expect("create instance");
+    let instance = builder.build().await.expect("create instance");
     let accessor =
         instance.root.connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>().unwrap();
 

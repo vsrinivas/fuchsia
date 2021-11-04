@@ -21,14 +21,14 @@ use futures::{channel::mpsc, StreamExt};
 // This test verifies that Archivist knows about logging from this component.
 #[fuchsia::test]
 async fn log_attribution() {
-    let mut builder = test_topology::create(test_topology::Options::default())
+    let builder = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
-    test_topology::add_eager_component(&mut builder, "child", STUB_INSPECT_COMPONENT_URL)
+    test_topology::add_eager_component(&builder, "child", STUB_INSPECT_COMPONENT_URL)
         .await
         .expect("add child");
 
-    let instance = builder.build().create().await.expect("create instance");
+    let instance = builder.build().await.expect("create instance");
 
     let accessor =
         instance.root.connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>().unwrap();
@@ -69,7 +69,7 @@ async fn log_unattributed_stream() {
         .await
         .unwrap();
 
-    let instance = builder.build().create().await.expect("create instance");
+    let instance = builder.build().await.expect("create instance");
 
     // Bind to Log to start archivist.
     let log_proxy = instance.root.connect_to_protocol_at_exposed_dir::<LogMarker>().unwrap();

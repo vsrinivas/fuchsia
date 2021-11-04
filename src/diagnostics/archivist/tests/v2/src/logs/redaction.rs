@@ -39,7 +39,7 @@ impl RedactionTest {
             .await
             .expect("create base topology");
 
-        let instance = builder.build().create().await.expect("create instance");
+        let instance = builder.build().await.expect("create instance");
         let mut packet = fx_log_packet_t {
             metadata: fx_log_metadata_t {
                 time: 3000,

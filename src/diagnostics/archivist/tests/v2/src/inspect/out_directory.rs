@@ -15,7 +15,7 @@ async fn out_can_be_read() {
     let builder = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
-    let instance = builder.build().create().await.expect("create instance");
+    let instance = builder.build().await.expect("create instance");
     // Start the archivist by connecting to the accessor.
     let _accessor =
         instance.root.connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>().unwrap();

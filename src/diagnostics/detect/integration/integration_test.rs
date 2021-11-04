@@ -32,9 +32,11 @@ use {
     fidl_fuchsia_diagnostics as diagnostics, fidl_fuchsia_feedback as fcrash,
     fidl_fuchsia_io2 as fio2,
     fuchsia_component::server::*,
-    fuchsia_component_test::builder::*,
+    fuchsia_component_test::{
+        mock::MockHandles, ChildProperties, RealmBuilder, RouteBuilder, RouteEndpoint,
+    },
     fuchsia_zircon as zx,
-    futures::{channel::mpsc, FutureExt, SinkExt, StreamExt},
+    futures::{channel::mpsc, future::BoxFuture, FutureExt, SinkExt, StreamExt},
     std::sync::Arc,
     tracing::*,
 };
@@ -188,8 +190,8 @@ fn create_mock_component(
     crash_reporter: Arc<FakeCrashReporter>,
     crash_reporting_product_register: Arc<FakeCrashReportingProductRegister>,
     archive_accessor: Arc<FakeArchiveAccessor>,
-) -> ComponentSource {
-    ComponentSource::mock(move |mock_handles| {
+) -> impl Fn(MockHandles) -> BoxFuture<'static, Result<(), anyhow::Error>> + Sync + Send + 'static {
+    move |mock_handles| {
         let test_data = test_data.clone();
         let crash_reporter = crash_reporter.clone();
         let crash_reporting_product_register = crash_reporting_product_register.clone();
@@ -229,7 +231,7 @@ fn create_mock_component(
             Ok::<(), anyhow::Error>(())
         }
         .boxed()
-    })
+    }
 }
 
 async fn run_a_test(test_data: TestData) -> Result<(), Error> {
@@ -246,8 +248,8 @@ async fn run_a_test(test_data: TestData) -> Result<(), Error> {
         Box::new(ArchiveEventSignaler::new(events_sender.clone(), done_waiter.get_signaler()));
     let archive_accessor = FakeArchiveAccessor::new(&test_data.inspect_data, Some(event_signaler));
 
-    let mut builder = RealmBuilder::new().await.unwrap();
-    builder.add_eager_component("detect", ComponentSource::url(DETECT_PROGRAM_URL)).await.unwrap();
+    let builder = RealmBuilder::new().await.unwrap();
+    builder.add_child("detect", DETECT_PROGRAM_URL, ChildProperties::new().eager()).await.unwrap();
 
     let mock_component = create_mock_component(
         test_data.clone(),
@@ -256,49 +258,54 @@ async fn run_a_test(test_data: TestData) -> Result<(), Error> {
         archive_accessor.clone(),
     );
 
-    builder.add_component("mocks", mock_component).await.unwrap();
+    builder.add_mock_child("mocks", mock_component, ChildProperties::new()).await.unwrap();
 
     // Forward logging to debug test breakages.
     builder
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.logger.LogSink"),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component("detect")],
-        })
+        .add_route(
+            RouteBuilder::protocol("fuchsia.logger.LogSink")
+                .source(RouteEndpoint::AboveRoot)
+                .targets(vec![RouteEndpoint::component("detect")]),
+        )
+        .await
         .unwrap();
 
     // Forward mocks to detect
     builder
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.feedback.CrashReporter"),
-            source: RouteEndpoint::component("mocks"),
-            targets: vec![RouteEndpoint::component("detect")],
-        })
+        .add_route(
+            RouteBuilder::protocol("fuchsia.feedback.CrashReporter")
+                .source(RouteEndpoint::component("mocks"))
+                .targets(vec![RouteEndpoint::component("detect")]),
+        )
+        .await
         .unwrap();
 
     builder
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.feedback.CrashReportingProductRegister"),
-            source: RouteEndpoint::component("mocks"),
-            targets: vec![RouteEndpoint::component("detect")],
-        })
+        .add_route(
+            RouteBuilder::protocol("fuchsia.feedback.CrashReportingProductRegister")
+                .source(RouteEndpoint::component("mocks"))
+                .targets(vec![RouteEndpoint::component("detect")]),
+        )
+        .await
         .unwrap();
 
     builder
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.diagnostics.FeedbackArchiveAccessor"),
-            source: RouteEndpoint::component("mocks"),
-            targets: vec![RouteEndpoint::component("detect")],
-        })
+        .add_route(
+            RouteBuilder::protocol("fuchsia.diagnostics.FeedbackArchiveAccessor")
+                .source(RouteEndpoint::component("mocks"))
+                .targets(vec![RouteEndpoint::component("detect")]),
+        )
+        .await
         .unwrap();
 
     let rights = fio2::R_STAR_DIR;
     builder
-        .add_route(CapabilityRoute {
-            capability: Capability::directory("config-data", "/config", rights),
-            source: RouteEndpoint::component("mocks"),
-            targets: vec![RouteEndpoint::component("detect")],
-        })
+        .add_route(
+            RouteBuilder::directory("config-data", "/config", rights)
+                .source(RouteEndpoint::component("mocks"))
+                .targets(vec![RouteEndpoint::component("detect")]),
+        )
+        .await
         .unwrap();
 
     // Register for stopped events
@@ -309,7 +316,7 @@ async fn run_a_test(test_data: TestData) -> Result<(), Error> {
         .unwrap();
 
     // Start the component tree
-    let realm_instance = builder.build().create().await.unwrap();
+    let realm_instance = builder.build().await.unwrap();
 
     // Await the test result.
     if test_data.bails {
