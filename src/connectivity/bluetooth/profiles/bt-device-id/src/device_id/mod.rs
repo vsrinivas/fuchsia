@@ -5,3 +5,9 @@
 /// DI server that handles client requests and manages BR/EDR advertisements.
 mod server;
 pub use server::DeviceIdServer;
+
+/// Local type for the BR/EDR Device Identification service record.
+mod service_record;
+
+/// Local type for a FIDL client's request.
+mod token;
