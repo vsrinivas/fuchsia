@@ -12,7 +12,7 @@
 // [END utc_imports]
 
 // [START monotonic]
-void monotonic_examples() {
+void monotonic_examples(void) {
   // Read monotonic time.
   zx_time_t mono_nsec = zx_clock_get_monotonic();
   printf("The monotonic time is %ld ns.\n", mono_nsec);
@@ -20,7 +20,7 @@ void monotonic_examples() {
 // [END monotonic]
 
 // [START utc]
-void utc_examples() {
+void utc_examples(void) {
   // This is a borrowed handle. Do not close it, and do not replace it using
   // zx_utc_reference_swap while using it.
   zx_handle_t utc_clock = zx_utc_reference_get();

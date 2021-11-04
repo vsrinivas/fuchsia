@@ -71,7 +71,7 @@ void call_gethostbyname(char* name, int af, size_t buflen) {
   free(buf);
 }
 
-void usage() {
+void usage(void) {
   printf("usage: gethostbyname_test name [buflen (default:1024)]\n");
 }
 
