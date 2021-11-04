@@ -69,7 +69,7 @@ int main(int argc, char* argv[]) {
   auto res = mipi_dsi::MipiDsi::CreateCommandFidl(sizeof(tbuf), 0, true, allocator);
 
   auto response =
-      client.SendCmd(std::move(res.value()), fidl::VectorView<uint8_t>::FromExternal(tbuf));
+      client->SendCmd(std::move(res.value()), fidl::VectorView<uint8_t>::FromExternal(tbuf));
 
   if (!response.ok()) {
     printf("Could not send command to DSI (%s)\n", response.FormatDescription().c_str());
