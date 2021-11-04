@@ -87,7 +87,7 @@ class OSImpl : public OS, public TaskEnumerator {
     if (!stats_client.is_valid()) {
       return ZX_ERR_BAD_STATE;
     }
-    auto result = stats_client.GetMemoryStats();
+    auto result = stats_client->GetMemoryStats();
     if (result.status() != ZX_OK) {
       return result.status();
     }
@@ -111,7 +111,7 @@ class OSImpl : public OS, public TaskEnumerator {
     if (!stats_client.is_valid()) {
       return ZX_ERR_BAD_STATE;
     }
-    auto result = stats_client.GetMemoryStatsExtended();
+    auto result = stats_client->GetMemoryStatsExtended();
     if (result.status() != ZX_OK) {
       return result.status();
     }
