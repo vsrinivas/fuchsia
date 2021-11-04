@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1397
+From //build/config/BUILDCONFIG.gn:1632
 
 ### allow_legacy_data_partition_names
 Set to true to enable legacy data partition names.
@@ -838,7 +838,7 @@ Tells openweave to include files that require heap access.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:32](https://fuchsia.googlesource.com/third_party/openweave-core/+/86a43dca3db386f449d01ed7aa05c86280add3dc/config.gni#32)
+From [//third_party/openweave-core/config.gni:32](https://fuchsia.googlesource.com/third_party/openweave-core/+/327fec73691439ae65406d9cc0a67c7eeb7d2df4/config.gni#32)
 
 ### core_realm_package_name
 The following arguments are all used to configure the contents of the core
@@ -1256,7 +1256,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1154
+From //build/config/BUILDCONFIG.gn:1389
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -1867,38 +1867,38 @@ Tells inet to support additionally support async dns sockets.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:17](https://fuchsia.googlesource.com/third_party/openweave-core/+/86a43dca3db386f449d01ed7aa05c86280add3dc/config.gni#17)
+From [//third_party/openweave-core/config.gni:17](https://fuchsia.googlesource.com/third_party/openweave-core/+/327fec73691439ae65406d9cc0a67c7eeb7d2df4/config.gni#17)
 
 ### inet_want_endpoint_dns
 Tells inet to include support for the corresponding protocol.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:10](https://fuchsia.googlesource.com/third_party/openweave-core/+/86a43dca3db386f449d01ed7aa05c86280add3dc/config.gni#10)
+From [//third_party/openweave-core/config.gni:10](https://fuchsia.googlesource.com/third_party/openweave-core/+/327fec73691439ae65406d9cc0a67c7eeb7d2df4/config.gni#10)
 
 ### inet_want_endpoint_raw
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:11](https://fuchsia.googlesource.com/third_party/openweave-core/+/86a43dca3db386f449d01ed7aa05c86280add3dc/config.gni#11)
+From [//third_party/openweave-core/config.gni:11](https://fuchsia.googlesource.com/third_party/openweave-core/+/327fec73691439ae65406d9cc0a67c7eeb7d2df4/config.gni#11)
 
 ### inet_want_endpoint_tcp
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:12](https://fuchsia.googlesource.com/third_party/openweave-core/+/86a43dca3db386f449d01ed7aa05c86280add3dc/config.gni#12)
+From [//third_party/openweave-core/config.gni:12](https://fuchsia.googlesource.com/third_party/openweave-core/+/327fec73691439ae65406d9cc0a67c7eeb7d2df4/config.gni#12)
 
 ### inet_want_endpoint_tun
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:14](https://fuchsia.googlesource.com/third_party/openweave-core/+/86a43dca3db386f449d01ed7aa05c86280add3dc/config.gni#14)
+From [//third_party/openweave-core/config.gni:14](https://fuchsia.googlesource.com/third_party/openweave-core/+/327fec73691439ae65406d9cc0a67c7eeb7d2df4/config.gni#14)
 
 ### inet_want_endpoint_udp
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:13](https://fuchsia.googlesource.com/third_party/openweave-core/+/86a43dca3db386f449d01ed7aa05c86280add3dc/config.gni#13)
+From [//third_party/openweave-core/config.gni:13](https://fuchsia.googlesource.com/third_party/openweave-core/+/327fec73691439ae65406d9cc0a67c7eeb7d2df4/config.gni#13)
 
 ### is_analysis
 If set, the build will produce compilation analysis dumps, used for code
@@ -2183,7 +2183,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:994
+From //build/config/BUILDCONFIG.gn:1229
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -3382,7 +3382,7 @@ toolchain, so that recompilations with the new compiler can be triggered.
 When using the prebuilt, this is ignored and the CIPD instance ID of the
 prebuilt is used.
 
-**Current value (from the default):** `"OZaOVXP21h__FDoOH26fDhPjbNH9i9Is96DF22U9cMUC"`
+**Current value (from the default):** `"xdQdkWTFjxXG74zjXc90ibQIKDVqOy6quqGknvqmZHIC"`
 
 From //build/rust/config.gni:30
 
@@ -3534,7 +3534,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1387
+From //build/config/BUILDCONFIG.gn:1622
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3543,7 +3543,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1392
+From //build/config/BUILDCONFIG.gn:1627
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3587,7 +3587,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1200
+From //build/config/BUILDCONFIG.gn:1435
 
 ### size_checker_input
 The input to the size checker.
@@ -3861,7 +3861,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1184
+From //build/config/BUILDCONFIG.gn:1419
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -4232,35 +4232,35 @@ Tells openweave to support legacy WDM mode.
 
 **Current value (from the default):** `false`
 
-From [//third_party/openweave-core/config.gni:29](https://fuchsia.googlesource.com/third_party/openweave-core/+/86a43dca3db386f449d01ed7aa05c86280add3dc/config.gni#29)
+From [//third_party/openweave-core/config.gni:29](https://fuchsia.googlesource.com/third_party/openweave-core/+/327fec73691439ae65406d9cc0a67c7eeb7d2df4/config.gni#29)
 
 ### weave_build_warm
 Tells openweave to build WARM libraries.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:26](https://fuchsia.googlesource.com/third_party/openweave-core/+/86a43dca3db386f449d01ed7aa05c86280add3dc/config.gni#26)
+From [//third_party/openweave-core/config.gni:26](https://fuchsia.googlesource.com/third_party/openweave-core/+/327fec73691439ae65406d9cc0a67c7eeb7d2df4/config.gni#26)
 
 ### weave_system_config_use_sockets
 Tells openweave components to use bsd-like sockets.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:7](https://fuchsia.googlesource.com/third_party/openweave-core/+/86a43dca3db386f449d01ed7aa05c86280add3dc/config.gni#7)
+From [//third_party/openweave-core/config.gni:7](https://fuchsia.googlesource.com/third_party/openweave-core/+/327fec73691439ae65406d9cc0a67c7eeb7d2df4/config.gni#7)
 
 ### weave_with_nlfaultinjection
 Tells openweave components to support fault injection.
 
 **Current value (from the default):** `false`
 
-From [//third_party/openweave-core/config.gni:20](https://fuchsia.googlesource.com/third_party/openweave-core/+/86a43dca3db386f449d01ed7aa05c86280add3dc/config.gni#20)
+From [//third_party/openweave-core/config.gni:20](https://fuchsia.googlesource.com/third_party/openweave-core/+/327fec73691439ae65406d9cc0a67c7eeb7d2df4/config.gni#20)
 
 ### weave_with_verhoeff
 Tells openweave to support Verhoeff checksum.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:23](https://fuchsia.googlesource.com/third_party/openweave-core/+/86a43dca3db386f449d01ed7aa05c86280add3dc/config.gni#23)
+From [//third_party/openweave-core/config.gni:23](https://fuchsia.googlesource.com/third_party/openweave-core/+/327fec73691439ae65406d9cc0a67c7eeb7d2df4/config.gni#23)
 
 ### with_live_usb
 Whether or not to include the live_usb component in the build.
