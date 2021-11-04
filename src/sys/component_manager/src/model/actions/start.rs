@@ -47,6 +47,22 @@ impl Action for StartAction {
     }
 }
 
+struct StartContext {
+    component_decl: cm_rust::ComponentDecl,
+    resolved_url: String,
+    runner: Arc<dyn Runner>,
+    start_info: fcrunner::ComponentStartInfo,
+    controller_server_end: ServerEnd<fcrunner::ComponentControllerMarker>,
+}
+
+/// The result of trying to configure the runtime on the instance's execution
+enum RuntimeConfigResult {
+    Success,
+    /// Configuration failed because the instance is already started
+    AlreadyStarted,
+    Error(ModelError),
+}
+
 async fn do_start(
     component: &Arc<ComponentInstance>,
     bind_reason: &BindReason,
@@ -62,15 +78,6 @@ async fn do_start(
         {
             return res;
         }
-    }
-
-    struct StartContext {
-        component_decl: cm_rust::ComponentDecl,
-        resolved_url: String,
-        runner: Arc<dyn Runner>,
-        pending_runtime: Runtime,
-        start_info: fcrunner::ComponentStartInfo,
-        controller_server_end: ServerEnd<fcrunner::ComponentControllerMarker>,
     }
 
     let result = async move {
@@ -94,35 +101,37 @@ async fn do_start(
         )
         .await?;
 
-        Ok(StartContext {
-            component_decl: component_info.decl,
-            resolved_url: component_info.resolved_url.clone(),
-            runner,
+        Ok((
+            StartContext {
+                component_decl: component_info.decl,
+                resolved_url: component_info.resolved_url.clone(),
+                runner,
+                start_info,
+                controller_server_end,
+            },
             pending_runtime,
-            start_info,
-            controller_server_end,
-        })
+        ))
     }
     .await;
 
-    let mut start_context = match result {
-        Ok(mut start_context) => {
+    let (start_context, pending_runtime) = match result {
+        Ok((start_context, mut pending_runtime)) => {
             let event = Event::new_with_timestamp(
                 component,
                 Ok(EventPayload::Started {
                     component: component.into(),
                     runtime: RuntimeInfo::from_runtime(
-                        &mut start_context.pending_runtime,
+                        &mut pending_runtime,
                         start_context.resolved_url.clone(),
                     ),
                     component_decl: start_context.component_decl.clone(),
                     bind_reason: bind_reason.clone(),
                 }),
-                start_context.pending_runtime.timestamp,
+                pending_runtime.timestamp,
             );
 
             component.hooks.dispatch(&event).await?;
-            start_context
+            (start_context, pending_runtime)
         }
         Err(e) => {
             let event = Event::new(component, Err(EventError::new(&e, EventErrorPayload::Started)));
@@ -131,26 +140,56 @@ async fn do_start(
         }
     };
 
-    // Set the Runtime in the Execution. From component manager's perspective, this indicates
-    // that the component has started. This may return early if the component is shut down.
-    {
-        let state = component.lock_state().await;
-        let mut execution = component.lock_execution().await;
-        if let Some(res) =
-            should_return_early(&state, &execution, &component.abs_moniker.to_partial())
-        {
-            return res;
+    match configure_component_runtime(&component, pending_runtime).await {
+        RuntimeConfigResult::Success => {
+            // It's possible that the component is stopped before getting here. If so, that's fine: the
+            // runner will start the component, but its stop or kill signal will be immediately set on the
+            // component controller.
+            start_context
+                .runner
+                .start(start_context.start_info, start_context.controller_server_end)
+                .await;
         }
-        start_context.pending_runtime.watch_for_exit(component.as_weak());
-        execution.runtime = Some(start_context.pending_runtime);
+        RuntimeConfigResult::Error(e) => {
+            // Since we dispatched a start event, dispatch a stop event
+            // TODO(fxbug.dev/87507): It is possible this issues Stop after
+            // Destroyed is issued.
+            component
+                .hooks
+                .dispatch(&Event::new(
+                    component,
+                    Ok(EventPayload::Stopped { status: zx::Status::OK }),
+                ))
+                .await?;
+            return Err(e);
+        }
+        RuntimeConfigResult::AlreadyStarted => {}
     }
 
-    // It's possible that the component is stopped before getting here. If so, that's fine: the
-    // runner will start the component, but its stop or kill signal will be immediately set on the
-    // component controller.
-    start_context.runner.start(start_context.start_info, start_context.controller_server_end).await;
-
     Ok(())
+}
+
+/// Set the Runtime in the Execution and start the exit water. From component manager's
+/// perspective, this indicates that the component has started. If this returns an error, the
+/// component was shut down and the Runtime is not set, otherwise the function returns the
+/// start context with the runtime set. This function acquires the state and execution locks on
+/// `Component`.
+async fn configure_component_runtime(
+    component: &Arc<ComponentInstance>,
+    mut pending_runtime: Runtime,
+) -> RuntimeConfigResult {
+    let state = component.lock_state().await;
+    let mut execution = component.lock_execution().await;
+
+    match should_return_early(&state, &execution, &component.abs_moniker.to_partial()) {
+        Some(Result::Ok(())) => return RuntimeConfigResult::AlreadyStarted,
+        Some(Result::Err(e)) => return RuntimeConfigResult::Error(e),
+        None => {}
+    }
+
+    pending_runtime.watch_for_exit(component.as_weak());
+    execution.runtime = Some(pending_runtime);
+    RuntimeConfigResult::Success
 }
 
 /// Returns `Some(Result)` if `bind` should return early based on either of the following:
@@ -235,4 +274,86 @@ async fn make_execution_runtime(
     };
 
     Ok((runtime, start_info, controller_server))
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        crate::model::{
+            actions::{ActionSet, ShutdownAction, StartAction},
+            component::{BindReason, ComponentInstance},
+            error::ModelError,
+            hooks::{Event, EventType, Hook, HooksRegistration},
+            testing::{
+                test_helpers::{self, ActionsTest},
+                test_hook::Lifecycle,
+            },
+        },
+        async_trait::async_trait,
+        cm_rust_testing::ComponentDeclBuilder,
+        fuchsia,
+        moniker::PartialAbsoluteMoniker,
+        std::sync::{Arc, Weak},
+    };
+
+    struct StartHook {
+        component: Arc<ComponentInstance>,
+    }
+
+    #[async_trait]
+    impl Hook for StartHook {
+        async fn on(self: Arc<Self>, _event: &Event) -> Result<(), ModelError> {
+            ActionSet::register(self.component.clone(), ShutdownAction::new())
+                .await
+                .expect("shutdown failed");
+            Ok(())
+        }
+    }
+    #[fuchsia::test]
+    /// Validate that if a start action is issued and the component stops
+    /// the action completes we see a Stop event emitted.
+    async fn start_issues_stop() {
+        let child_name = "child";
+        let root_name = "root";
+        let components = vec![
+            (root_name, ComponentDeclBuilder::new().add_lazy_child(child_name).build()),
+            (child_name, test_helpers::component_decl_with_test_runner()),
+        ];
+        let test_topology = ActionsTest::new(components[0].0.clone(), components, None).await;
+
+        let child = test_topology.look_up(vec![child_name].into()).await;
+        let start_hook = Arc::new(StartHook { component: child.clone() });
+        child
+            .hooks
+            .install(vec![HooksRegistration::new(
+                "my_start_hook",
+                vec![EventType::Started],
+                Arc::downgrade(&start_hook) as Weak<dyn Hook>,
+            )])
+            .await;
+
+        match ActionSet::register(child.clone(), StartAction::new(BindReason::Unsupported)).await {
+            Err(ModelError::InstanceShutDown { moniker: m }) => {
+                assert_eq!(PartialAbsoluteMoniker::from(vec![child_name]), m);
+            }
+            e => panic!("Unexpected result from component start: {:?}", e),
+        }
+
+        let events: Vec<_> = test_topology
+            .test_hook
+            .lifecycle()
+            .into_iter()
+            .filter(|event| match event {
+                Lifecycle::Bind(_) | Lifecycle::Stop(_) => true,
+                _ => false,
+            })
+            .collect();
+        assert_eq!(
+            events,
+            vec![
+                Lifecycle::Bind(vec![format!("{}:0", child_name).as_str()].into()),
+                Lifecycle::Stop(vec![format!("{}:0", child_name).as_str()].into())
+            ]
+        );
+    }
 }
