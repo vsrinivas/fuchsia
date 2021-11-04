@@ -52,8 +52,14 @@ impl WaylandDispatcher {
             Ok(Box::new(RequestDispatcher::new(Subcompositor::new())))
         });
         registry.add_global(WlOutput, move |id, _, client| {
+            let output = Output::new();
+            let display_info = client.display_info();
+            // Send current display info.
+            Output::post_output_info(id, client, &display_info)?;
+            Output::post_output_done(id, client)?;
+            // Query actual display info.
             Output::update_display_info(id, client);
-            Ok(Box::new(RequestDispatcher::new(Output::new())))
+            Ok(Box::new(RequestDispatcher::new(output)))
         });
         {
             let mut keymap_file = std::fs::File::open("/pkg/data/keymap.xkb")?;
@@ -87,8 +93,8 @@ impl WaylandDispatcher {
             let xdg_shell = XdgShell::new();
             Ok(Box::new(RequestDispatcher::new(xdg_shell)))
         });
-        registry.add_global(ZwpLinuxDmabufV1, move |id, _, client| {
-            let linux_dmabuf = LinuxDmabuf::new();
+        registry.add_global(ZwpLinuxDmabufV1, move |id, version, client| {
+            let linux_dmabuf = LinuxDmabuf::new(version);
             // announce the set of supported pixel formats.
             linux_dmabuf.post_formats(id, client)?;
             Ok(Box::new(RequestDispatcher::new(linux_dmabuf)))

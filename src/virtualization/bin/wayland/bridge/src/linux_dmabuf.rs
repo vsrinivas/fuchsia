@@ -22,6 +22,8 @@ const DRM_FORMAT_ABGR8888: u32 = 0x34324241;
 const DRM_FORMAT_XRGB8888: u32 = 0x34325258;
 const DRM_FORMAT_XBGR8888: u32 = 0x34324258;
 
+const DRM_FORMAT_MOD_NONE: u64 = 0;
+
 /// The set of pixel formats that will be announced to clients.
 const SUPPORTED_PIXEL_FORMATS: &[(u32, bool)] = &[
     (DRM_FORMAT_ARGB8888, true),
@@ -31,18 +33,32 @@ const SUPPORTED_PIXEL_FORMATS: &[(u32, bool)] = &[
 ];
 
 /// The zwp_linux_dmabuf_v1 global.
-pub struct LinuxDmabuf;
+pub struct LinuxDmabuf {
+    client_version: u32,
+}
 
 impl LinuxDmabuf {
     /// Creates a new `LinuxDmabuf`.
-    pub fn new() -> Self {
-        Self
+    pub fn new(client_version: u32) -> Self {
+        Self { client_version }
     }
 
-    /// Posts an event back to the client for each supported pixel format.
+    /// Posts events back to the client for each supported pixel format.
     pub fn post_formats(&self, this: wl::ObjectId, client: &Client) -> Result<(), Error> {
         for (format, _) in SUPPORTED_PIXEL_FORMATS.iter() {
             client.event_queue().post(this, ZwpLinuxDmabufV1Event::Format { format: *format })?;
+            if self.client_version >= 3 {
+                // Linear layout.
+                let modifier = DRM_FORMAT_MOD_NONE;
+                client.event_queue().post(
+                    this,
+                    ZwpLinuxDmabufV1Event::Modifier {
+                        format: *format,
+                        modifier_hi: (modifier >> 32) as u32,
+                        modifier_lo: (modifier & 0xffffffff) as u32,
+                    },
+                )?;
+            }
         }
         Ok(())
     }

@@ -6,10 +6,12 @@ use {
     crate::client::Client,
     crate::compositor::Surface,
     crate::object::{NewObjectExt, ObjectRef, RequestReceiver},
+    crate::output::Output,
     anyhow::Error,
+    fidl_fuchsia_ui_gfx::DisplayInfo,
     fuchsia_wayland_core as wl,
     zaura_shell::{
-        ZauraOutput, ZauraOutputRequest, ZauraShell, ZauraShellRequest, ZauraSurface,
+        zaura_output, ZauraOutput, ZauraOutputRequest, ZauraShell, ZauraShellRequest, ZauraSurface,
         ZauraSurfaceRequest,
     },
 };
@@ -34,8 +36,13 @@ impl RequestReceiver<ZauraShell> for AuraShell {
             ZauraShellRequest::GetAuraSurface { id, surface } => {
                 id.implement(client, AuraSurface::new(surface))?;
             }
-            ZauraShellRequest::GetAuraOutput { id, .. } => {
-                id.implement(client, AuraOutput::new())?;
+            ZauraShellRequest::GetAuraOutput { id, output } => {
+                let aura_output = AuraOutput::new();
+                let aura_output_ref = id.implement(client, aura_output)?;
+                let output: ObjectRef<Output> = output.into();
+                output.get_mut(client)?.set_aura_output(aura_output_ref);
+                let display_info = client.display_info();
+                Output::post_display_info(output, client, &display_info)?;
             }
         }
         Ok(())
@@ -88,11 +95,36 @@ impl RequestReceiver<ZauraSurface> for AuraSurface {
     }
 }
 
-struct AuraOutput;
+pub struct AuraOutput;
 
 impl AuraOutput {
     pub fn new() -> Self {
         Self
+    }
+
+    pub fn post_display_info(
+        this: ObjectRef<Self>,
+        client: &Client,
+        _display_info: &DisplayInfo,
+    ) -> Result<(), Error> {
+        client.event_queue().post(
+            this.id(),
+            zaura_output::Event::Scale {
+                flags: zaura_output::ScaleProperty::Current
+                    | zaura_output::ScaleProperty::Preferred,
+                // Use scale factor 1.0.
+                scale: zaura_output::ScaleFactor::_1000,
+            },
+        )?;
+        client.event_queue().post(
+            this.id(),
+            zaura_output::Event::Connection { connection: zaura_output::ConnectionType::Internal },
+        )?;
+        client.event_queue().post(
+            this.id(),
+            zaura_output::Event::DeviceScaleFactor { scale: zaura_output::ScaleFactor::_1000 },
+        )?;
+        Ok(())
     }
 }
 

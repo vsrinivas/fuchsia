@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::aura_shell::AuraOutput,
     crate::client::Client,
     crate::object::{ObjectRef, RequestReceiver},
     anyhow::Error,
@@ -13,12 +14,18 @@ use {
 };
 
 /// An implementation of the wl_output global.
-pub struct Output;
+pub struct Output {
+    aura_output: Option<ObjectRef<AuraOutput>>,
+}
 
 impl Output {
     /// Creates a new `Output`.
     pub fn new() -> Self {
-        Output
+        Output { aura_output: None }
+    }
+
+    pub fn set_aura_output(&mut self, aura_output: ObjectRef<AuraOutput>) {
+        self.aura_output = Some(aura_output);
     }
 
     /// Queries the system display info and posts back to the client.
@@ -29,8 +36,19 @@ impl Output {
             if let Ok(display_info) = result {
                 let display_info = DisplayInfo { ..display_info };
                 task_queue.post(move |client| {
+                    // Early out if display has not changed.
+                    if client.display_info() == display_info {
+                        return Ok(());
+                    }
                     client.set_display_info(&display_info);
-                    Self::post_display_info(this.into(), client, &display_info)?;
+                    // Only post messages if the underlying output is still valid. This is
+                    // to guard against the case where the wl_output has been released
+                    // after querying scenic for display info and before the response has
+                    // been received. This isn't an error, so we'll just no-op here.
+                    let output_ref: ObjectRef<Self> = this.into();
+                    if output_ref.is_valid(client) {
+                        Self::post_display_info(output_ref, client, &display_info)?;
+                    }
                     Ok(())
                 });
             }
@@ -38,35 +56,24 @@ impl Output {
         .detach();
     }
 
-    fn post_display_info(
-        this: ObjectRef<Self>,
-        client: &mut Client,
+    pub fn post_output_info(
+        this: wl::ObjectId,
+        client: &Client,
         display_info: &DisplayInfo,
     ) -> Result<(), Error> {
-        // Only post messages if the underlying output is still valid. This is
-        // to guard against the case where the wl_output has been released
-        // after querying scenic for display info and before the response has
-        // been received. This isn't an error, so we'll just no-op here.
-        if !this.is_valid(client) {
-            return Ok(());
-        }
-
         // Just report the current display info as our only mode.
         client.event_queue().post(
-            this.id(),
+            this,
             WlOutputEvent::Mode {
                 flags: wl_output::Mode::Current | wl_output::Mode::Preferred,
                 width: display_info.width_in_px as i32,
                 height: display_info.height_in_px as i32,
-                refresh: 60,
+                // Vertical refresh rate in mHz.
+                refresh: 60 * 1000,
             },
         )?;
-
-        // TODO(tjdetwiler): geometry and scale are not exposed by scenic today.
-        // For now we'll provide some placeholder values to allow clients that
-        // depend on these to behave reasonably.
         client.event_queue().post(
-            this.id(),
+            this,
             WlOutputEvent::Geometry {
                 make: "unknown".to_string(),
                 model: "unknown".to_string(),
@@ -81,10 +88,31 @@ impl Output {
                 physical_height: display_info.height_in_px as i32 / 4,
             },
         )?;
-        client.event_queue().post(this.id(), WlOutputEvent::Scale { factor: 1 })?;
+        client.event_queue().post(this, WlOutputEvent::Scale { factor: 1 })?;
+        Ok(())
+    }
+
+    pub fn post_output_done(this: wl::ObjectId, client: &Client) -> Result<(), Error> {
+        client.event_queue().post(this, WlOutputEvent::Done)
+    }
+
+    pub fn post_display_info(
+        this: ObjectRef<Self>,
+        client: &Client,
+        display_info: &DisplayInfo,
+    ) -> Result<(), Error> {
+        let output = this.get(client)?;
+
+        // Post basic output info.
+        Self::post_output_info(this.id(), client, display_info)?;
+
+        // Post additional Aura output info if requested.
+        if let Some(aura_output) = output.aura_output {
+            AuraOutput::post_display_info(aura_output, client, display_info)?;
+        }
 
         // Any series of output events must be concluded with a 'done' event.
-        client.event_queue().post(this.id(), WlOutputEvent::Done)?;
+        Self::post_output_done(this.id(), client)?;
         Ok(())
     }
 }
