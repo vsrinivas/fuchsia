@@ -16,9 +16,8 @@ use {
     fuchsia_audio_dai::test::mock_dai_dev_with_io_devices,
     fuchsia_bluetooth::types::{Channel, PeerId, Uuid},
     fuchsia_component_test::{
-        builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
-        mock::{Mock, MockHandles},
-        RealmInstance,
+        mock::MockHandles, ChildProperties, RealmBuilder, RealmInstance, RouteBuilder,
+        RouteEndpoint,
     },
     fuchsia_zircon::Duration,
     futures::{channel::mpsc, stream::StreamExt, TryFutureExt},
@@ -130,18 +129,18 @@ impl HfpAgIntegrationTest {
         // - Add a provider for the `AudioDeviceEnumerator` capability used by HFP.
         // - Add the HFP component with a hermetic RFCOMM intermediary component. Expose the
         //   `fuchsia.bluetooth.hfp.Hfp` capability for the `test_call_manager`.
-        add_mock_dai_devices(&mut test_harness.builder).await;
-        add_mock_audio_device_enumerator_provider(&mut test_harness.builder).await;
         let hfp_under_test = test_harness
             .add_profile_with_capabilities(
                 HFP_AG_MONIKER.to_string(),
                 HFP_AG_URL_V2.to_string(),
                 Some(RFCOMM_URL_V2.to_string()),
                 vec![],
-                vec![Capability::protocol(HfpMarker::PROTOCOL_NAME)],
+                vec![RouteBuilder::protocol(HfpMarker::PROTOCOL_NAME)],
             )
             .await
             .expect("failed to add HFP profile");
+        add_mock_dai_devices(&test_harness.builder).await;
+        add_mock_audio_device_enumerator_provider(&test_harness.builder).await;
 
         let test_realm = test_harness.build().await.unwrap();
 
@@ -159,7 +158,7 @@ impl HfpAgIntegrationTest {
 /// Note: This implementation consumes but does not handle the FIDL requests. This is sufficient
 /// for the current integration tests. We should consider injecting a v2 component that implements
 /// this capability once it has been migrated to v2.
-async fn add_mock_audio_device_enumerator_provider(builder: &mut RealmBuilder) {
+async fn add_mock_audio_device_enumerator_provider(builder: &RealmBuilder) {
     const MOCK_AUDIO_DEVICE_MONIKER: &str = "mock-audio-device-provider";
     let (sender, mut receiver) = mpsc::channel(0);
     fasync::Task::spawn(async move {
@@ -169,54 +168,56 @@ async fn add_mock_audio_device_enumerator_provider(builder: &mut RealmBuilder) {
     })
     .detach();
 
-    let _ = builder
-        .add_eager_component(
-            MOCK_AUDIO_DEVICE_MONIKER,
-            ComponentSource::Mock(Mock::new({
-                let sender = sender.clone();
+    let sender = sender.clone();
+    let _ =
+        builder
+            .add_mock_child(
+                MOCK_AUDIO_DEVICE_MONIKER,
                 move |mock_handles: MockHandles| {
                     Box::pin(mock_component::<
                         AudioDeviceEnumeratorMarker,
                         AudioDeviceEnumeratorRequest,
                     >(sender.clone(), mock_handles))
-                }
-            })),
-        )
-        .await
-        .expect("Failed adding AudioDevice mock to topology");
+                },
+                ChildProperties::new().eager(),
+            )
+            .await
+            .expect("Failed adding AudioDevice mock to topology");
 
     let _ = builder
-        .add_protocol_route::<AudioDeviceEnumeratorMarker>(
-            RouteEndpoint::component(MOCK_AUDIO_DEVICE_MONIKER),
-            vec![RouteEndpoint::component(HFP_AG_MONIKER)],
+        .add_route(
+            RouteBuilder::protocol_marker::<AudioDeviceEnumeratorMarker>()
+                .source(RouteEndpoint::component(MOCK_AUDIO_DEVICE_MONIKER))
+                .targets(vec![RouteEndpoint::component(HFP_AG_MONIKER)]),
         )
+        .await
         .expect("Failed adding route for AudioDeviceEnumerator capability");
 }
 
 /// Adds a mock dev/ directory provider for the DAI devices used by HFP.
 /// Routes the directory capability from the provider to the HFP component.
-async fn add_mock_dai_devices(builder: &mut RealmBuilder) {
+async fn add_mock_dai_devices(builder: &RealmBuilder) {
     let _ = builder
-        .add_eager_component(
+        .add_mock_child(
             MOCK_DEV_MONIKER,
-            ComponentSource::Mock(Mock::new({
-                move |mock_handles: MockHandles| {
-                    Box::pin(mock_dev(
-                        mock_handles,
-                        mock_dai_dev_with_io_devices("input1".to_string(), "output1".to_string()),
-                    ))
-                }
-            })),
+            move |mock_handles: MockHandles| {
+                Box::pin(mock_dev(
+                    mock_handles,
+                    mock_dai_dev_with_io_devices("input1".to_string(), "output1".to_string()),
+                ))
+            },
+            ChildProperties::new().eager(),
         )
         .await
         .expect("Failed adding mock /dev provider to topology");
 
     let _ = builder
-        .add_route(CapabilityRoute {
-            capability: Capability::directory("dev-dai", "/dev/class/dai", fio2::RW_STAR_DIR),
-            source: RouteEndpoint::component(MOCK_DEV_MONIKER),
-            targets: vec![RouteEndpoint::component(HFP_AG_MONIKER)],
-        })
+        .add_route(
+            RouteBuilder::directory("dev-dai", "/dev/class/dai", fio2::RW_STAR_DIR)
+                .source(RouteEndpoint::component(MOCK_DEV_MONIKER))
+                .targets(vec![RouteEndpoint::component(HFP_AG_MONIKER)]),
+        )
+        .await
         .expect("Failed adding route for DAI device directory");
 }
 

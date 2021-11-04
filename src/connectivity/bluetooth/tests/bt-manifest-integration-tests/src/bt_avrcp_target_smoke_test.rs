@@ -9,8 +9,7 @@ use {
     fidl_fuchsia_media_sessions2::{DiscoveryMarker, DiscoveryRequest, SessionsWatcherProxy},
     fuchsia_async as fasync,
     fuchsia_component_test::{
-        builder::{ComponentSource, RealmBuilder, RouteEndpoint},
-        mock::{Mock, MockHandles},
+        mock::MockHandles, ChildProperties, RealmBuilder, RouteBuilder, RouteEndpoint,
     },
     fuchsia_zircon::DurationNum,
     futures::{channel::mpsc, SinkExt, StreamExt},
@@ -98,80 +97,85 @@ async fn avrcp_tg_v2_connects_to_avrcp_service() {
     let media_tx = sender.clone();
     let fake_client_tx = sender.clone();
 
-    let mut builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
+    let builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
     // The v2 component under test.
     let _ = builder
-        .add_component("avrcp-target", ComponentSource::url(AVRCP_TARGET_URL.to_string()))
+        .add_child("avrcp-target", AVRCP_TARGET_URL.to_string(), ChildProperties::new())
         .await
         .expect("Failed adding avrcp-tg to topology");
     // Mock AVRCP component to receive PeerManager requests.
     let _ = builder
-        .add_component(
+        .add_mock_child(
             "fake-avrcp",
-            ComponentSource::Mock(Mock::new({
-                move |mock_handles: MockHandles| {
-                    let sender = avrcp_tx.clone();
-                    Box::pin(mock_component::<PeerManagerMarker, _>(sender, mock_handles))
-                }
-            })),
+            move |mock_handles: MockHandles| {
+                let sender = avrcp_tx.clone();
+                Box::pin(mock_component::<PeerManagerMarker, _>(sender, mock_handles))
+            },
+            ChildProperties::new(),
         )
         .await
         .expect("Failed adding avrcp mock to topology");
     // Mock MediaSession component to receive Discovery requests.
     let _ = builder
-        .add_component(
+        .add_mock_child(
             "fake-media-session",
-            ComponentSource::Mock(Mock::new({
-                move |mock_handles: MockHandles| {
-                    let sender = media_tx.clone();
-                    Box::pin(mock_component::<DiscoveryMarker, _>(sender, mock_handles))
-                }
-            })),
+            move |mock_handles: MockHandles| {
+                let sender = media_tx.clone();
+                Box::pin(mock_component::<DiscoveryMarker, _>(sender, mock_handles))
+            },
+            ChildProperties::new(),
         )
         .await
         .expect("Failed adding media session mock to topology");
     // Mock AVRCP-Target client that will request the Lifecycle service.
     let _ = builder
-        .add_eager_component(
+        .add_mock_child(
             "fake-avrcp-target-client",
-            ComponentSource::Mock(Mock::new({
-                move |mock_handles: MockHandles| {
-                    let sender = fake_client_tx.clone();
-                    Box::pin(mock_avrcp_target_client(sender, mock_handles))
-                }
-            })),
+            move |mock_handles: MockHandles| {
+                let sender = fake_client_tx.clone();
+                Box::pin(mock_avrcp_target_client(sender, mock_handles))
+            },
+            ChildProperties::new().eager(),
         )
         .await
         .expect("Failed adding avrcp target client mock to topology");
 
     // Set up capabilities.
     let _ = builder
-        .add_protocol_route::<PeerManagerMarker>(
-            RouteEndpoint::component("fake-avrcp"),
-            vec![RouteEndpoint::component("avrcp-target")],
+        .add_route(
+            RouteBuilder::protocol_marker::<PeerManagerMarker>()
+                .source(RouteEndpoint::component("fake-avrcp"))
+                .targets(vec![RouteEndpoint::component("avrcp-target")]),
         )
+        .await
         .expect("Failed adding route for PeerManager service")
-        .add_protocol_route::<DiscoveryMarker>(
-            RouteEndpoint::component("fake-media-session"),
-            vec![RouteEndpoint::component("avrcp-target")],
+        .add_route(
+            RouteBuilder::protocol_marker::<DiscoveryMarker>()
+                .source(RouteEndpoint::component("fake-media-session"))
+                .targets(vec![RouteEndpoint::component("avrcp-target")]),
         )
+        .await
         .expect("Failed adding route for Discovery service")
-        .add_protocol_route::<LifecycleMarker>(
-            RouteEndpoint::component("avrcp-target"),
-            vec![RouteEndpoint::component("fake-avrcp-target-client")],
+        .add_route(
+            RouteBuilder::protocol_marker::<LifecycleMarker>()
+                .source(RouteEndpoint::component("avrcp-target"))
+                .targets(vec![RouteEndpoint::component("fake-avrcp-target-client")]),
         )
+        .await
         .expect("Failed adding route for Lifecycle service")
-        .add_protocol_route::<fidl_fuchsia_logger::LogSinkMarker>(
-            RouteEndpoint::AboveRoot,
-            vec![
-                RouteEndpoint::component("avrcp-target"),
-                RouteEndpoint::component("fake-avrcp"),
-                RouteEndpoint::component("fake-media-session"),
-                RouteEndpoint::component("fake-avrcp-target-client"),
-            ],
+        .add_route(
+            RouteBuilder::protocol_marker::<fidl_fuchsia_logger::LogSinkMarker>()
+                .source(RouteEndpoint::AboveRoot)
+                .targets(vec![
+                    RouteEndpoint::component("avrcp-target"),
+                    RouteEndpoint::component("fake-avrcp"),
+                    RouteEndpoint::component("fake-media-session"),
+                    RouteEndpoint::component("fake-avrcp-target-client"),
+                ]),
         )
+        .await
         .expect("Failed adding LogSink route to test components");
-    let _test_topology = builder.build().create().await.unwrap();
+    let _test_topology = builder.build().await.unwrap();
 
     // If the routing is correctly configured, we expect three events: `bt-avrcp-target` connecting
     // to the PeerManager and Discovery services and the fake client connecting to the Lifecycle

@@ -12,8 +12,7 @@ use {
     fuchsia_audio_dai::test::mock_dai_dev_with_io_devices,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
-        builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
-        mock::{Mock, MockHandles},
+        mock::MockHandles, ChildProperties, RealmBuilder, RouteBuilder, RouteEndpoint,
     },
     futures::{channel::mpsc, SinkExt, StreamExt},
     realmbuilder_mock_helpers::{add_fidl_service_handler, mock_component, mock_dev},
@@ -92,107 +91,114 @@ async fn hfp_audio_gateway_v2_capability_routing() {
 
     let (sender, mut receiver) = mpsc::channel(4);
 
-    let mut builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
+    let builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
     // The v2 component under test.
     let _ = builder
-        .add_eager_component(HFP_MONIKER, ComponentSource::url(HFP_AG_URL.to_string()))
+        .add_child(HFP_MONIKER, HFP_AG_URL.to_string(), ChildProperties::new().eager())
         .await
         .expect("Failed adding HFP-AG to topology");
     // Mock Profile component to receive `bredr.Profile` requests.
+    let sender_clone = sender.clone();
     let _ = builder
-        .add_component(
+        .add_mock_child(
             FAKE_PROFILE_MONIKER,
-            ComponentSource::Mock(Mock::new({
-                let sender = sender.clone();
-                move |mock_handles: MockHandles| {
-                    Box::pin(mock_component::<ProfileMarker, _>(sender.clone(), mock_handles))
-                }
-            })),
+            move |mock_handles: MockHandles| {
+                Box::pin(mock_component::<ProfileMarker, _>(sender_clone.clone(), mock_handles))
+            },
+            ChildProperties::new(),
         )
         .await
         .expect("Failed adding profile mock to topology");
     // Mock AudioDeviceEnumerator component to receiver requests.
+    let sender_clone = sender.clone();
     let _ = builder
-        .add_component(
+        .add_mock_child(
             FAKE_AUDIO_DEVICE_MONIKER,
-            ComponentSource::Mock(Mock::new({
-                let sender = sender.clone();
-                move |mock_handles: MockHandles| {
-                    Box::pin(mock_audio_device_provider(sender.clone(), mock_handles))
-                }
-            })),
+            move |mock_handles: MockHandles| {
+                Box::pin(mock_audio_device_provider(sender_clone.clone(), mock_handles))
+            },
+            ChildProperties::new(),
         )
         .await
         .expect("Failed adding AudioDevice mock to topology");
 
     let _ = builder
-        .add_eager_component(
+        .add_mock_child(
             MOCK_DEV_MONIKER,
-            ComponentSource::Mock(Mock::new({
-                move |mock_handles: MockHandles| {
-                    Box::pin(mock_dev(
-                        mock_handles,
-                        mock_dai_dev_with_io_devices("input1".to_string(), "output1".to_string()),
-                    ))
-                }
-            })),
+            move |mock_handles: MockHandles| {
+                Box::pin(mock_dev(
+                    mock_handles,
+                    mock_dai_dev_with_io_devices("input1".to_string(), "output1".to_string()),
+                ))
+            },
+            ChildProperties::new().eager(),
         )
         .await
         .expect("Failed adding mock /dev provider to topology");
     // Mock HFP-AG client that will request the `Hfp` and `HfpTest` services
     // which are provided by `bt-hfp-audio-gateway.cml`.
+    let sender_clone = sender.clone();
     let _ = builder
-        .add_eager_component(
+        .add_mock_child(
             HFP_CLIENT_MONIKER,
-            ComponentSource::Mock(Mock::new({
-                let sender = sender.clone();
-                move |mock_handles: MockHandles| {
-                    Box::pin(mock_hfp_client(sender.clone(), mock_handles))
-                }
-            })),
+            move |mock_handles: MockHandles| {
+                Box::pin(mock_hfp_client(sender_clone.clone(), mock_handles))
+            },
+            ChildProperties::new().eager(),
         )
         .await
         .expect("Failed adding hfp client mock to topology");
 
     // Set up capabilities.
     let _ = builder
-        .add_protocol_route::<HfpMarker>(
-            RouteEndpoint::component(HFP_MONIKER),
-            vec![RouteEndpoint::component(HFP_CLIENT_MONIKER)],
+        .add_route(
+            RouteBuilder::protocol_marker::<HfpMarker>()
+                .source(RouteEndpoint::component(HFP_MONIKER))
+                .targets(vec![RouteEndpoint::component(HFP_CLIENT_MONIKER)]),
         )
+        .await
         .expect("Failed adding route for Hfp service")
-        .add_protocol_route::<HfpTestMarker>(
-            RouteEndpoint::component(HFP_MONIKER),
-            vec![RouteEndpoint::component(HFP_CLIENT_MONIKER)],
+        .add_route(
+            RouteBuilder::protocol_marker::<HfpTestMarker>()
+                .source(RouteEndpoint::component(HFP_MONIKER))
+                .targets(vec![RouteEndpoint::component(HFP_CLIENT_MONIKER)]),
         )
+        .await
         .expect("Failed adding route for HfpTest service")
-        .add_protocol_route::<ProfileMarker>(
-            RouteEndpoint::component(FAKE_PROFILE_MONIKER),
-            vec![RouteEndpoint::component(HFP_MONIKER)],
+        .add_route(
+            RouteBuilder::protocol_marker::<ProfileMarker>()
+                .source(RouteEndpoint::component(FAKE_PROFILE_MONIKER))
+                .targets(vec![RouteEndpoint::component(HFP_MONIKER)]),
         )
+        .await
         .expect("Failed adding route for Profile service")
-        .add_protocol_route::<AudioDeviceEnumeratorMarker>(
-            RouteEndpoint::component(FAKE_AUDIO_DEVICE_MONIKER),
-            vec![RouteEndpoint::component(HFP_MONIKER)],
+        .add_route(
+            RouteBuilder::protocol_marker::<AudioDeviceEnumeratorMarker>()
+                .source(RouteEndpoint::component(FAKE_AUDIO_DEVICE_MONIKER))
+                .targets(vec![RouteEndpoint::component(HFP_MONIKER)]),
         )
+        .await
         .expect("Failed adding route for AudioDeviceEnumerator service")
-        .add_route(CapabilityRoute {
-            capability: Capability::directory("dev-dai", "/dev/class/dai", fio2::RW_STAR_DIR),
-            source: RouteEndpoint::component(MOCK_DEV_MONIKER),
-            targets: vec![RouteEndpoint::component(HFP_MONIKER)],
-        })
-        .expect("Failed adding route for bt-host device directory")
-        .add_protocol_route::<fidl_fuchsia_logger::LogSinkMarker>(
-            RouteEndpoint::AboveRoot,
-            vec![
-                RouteEndpoint::component(HFP_MONIKER),
-                RouteEndpoint::component(FAKE_PROFILE_MONIKER),
-                RouteEndpoint::component(FAKE_AUDIO_DEVICE_MONIKER),
-                RouteEndpoint::component(HFP_CLIENT_MONIKER),
-            ],
+        .add_route(
+            RouteBuilder::directory("dev-dai", "/dev/class/dai", fio2::RW_STAR_DIR)
+                .source(RouteEndpoint::component(MOCK_DEV_MONIKER))
+                .targets(vec![RouteEndpoint::component(HFP_MONIKER)]),
         )
+        .await
+        .expect("Failed adding route for bt-host device directory")
+        .add_route(
+            RouteBuilder::protocol_marker::<fidl_fuchsia_logger::LogSinkMarker>()
+                .source(RouteEndpoint::AboveRoot)
+                .targets(vec![
+                    RouteEndpoint::component(HFP_MONIKER),
+                    RouteEndpoint::component(FAKE_PROFILE_MONIKER),
+                    RouteEndpoint::component(FAKE_AUDIO_DEVICE_MONIKER),
+                    RouteEndpoint::component(HFP_CLIENT_MONIKER),
+                ]),
+        )
+        .await
         .expect("Failed adding LogSink route to test components");
-    let mut test_topology = builder.build().create().await.unwrap();
+    let mut test_topology = builder.build().await.unwrap();
     let realm_destroyed = test_topology.root.take_destroy_waiter();
 
     // If the routing is correctly configured, we expect 5 events:

@@ -11,7 +11,7 @@ use fidl_fuchsia_sysmem::AllocatorMarker;
 use fidl_fuchsia_tracing_provider::RegistryMarker;
 use fixture::fixture;
 use fuchsia_bluetooth::types::Uuid;
-use fuchsia_component_test::{builder::Capability, RealmInstance};
+use fuchsia_component_test::{RealmInstance, RouteBuilder};
 use futures::stream::StreamExt;
 use mock_piconet_client_v2::{BtProfileComponent, PiconetHarness, PiconetMember};
 
@@ -65,10 +65,10 @@ async fn setup_piconet_with_a2dp_source_and_mock_peer() -> A2dpSourceIntegration
     // capabilities sufficient for the scope of these integration tests. This list can be expanded
     // when the test code becomes more complex.
     let use_capabilities = vec![
-        Capability::protocol(CodecFactoryMarker::PROTOCOL_NAME),
-        Capability::protocol(LoggerFactoryMarker::PROTOCOL_NAME),
-        Capability::protocol(AllocatorMarker::PROTOCOL_NAME),
-        Capability::protocol(RegistryMarker::PROTOCOL_NAME),
+        RouteBuilder::protocol(CodecFactoryMarker::PROTOCOL_NAME),
+        RouteBuilder::protocol(LoggerFactoryMarker::PROTOCOL_NAME),
+        RouteBuilder::protocol(AllocatorMarker::PROTOCOL_NAME),
+        RouteBuilder::protocol(RegistryMarker::PROTOCOL_NAME),
     ];
     let a2dp_src_under_test = test_harness
         .add_profile_with_capabilities(

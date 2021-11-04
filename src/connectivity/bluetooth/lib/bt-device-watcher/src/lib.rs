@@ -263,7 +263,6 @@ mod tests {
         let _ = realm.driver_test_realm_setup().await?;
         let realm = realm.build().await.expect("failed to build realm");
         let _ = realm.driver_test_realm_start(fdt::RealmArgs::EMPTY).await?;
-
         let dev_dir = io_util::directory::open_directory(
             realm.root.get_exposed_dir(),
             "dev",

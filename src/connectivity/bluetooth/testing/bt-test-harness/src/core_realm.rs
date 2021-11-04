@@ -88,8 +88,7 @@ impl CoreRealm {
                 },
                 ChildProperties::new(),
             )
-            .await?;
-        let _ = builder
+            .await?
             // Route required capabilities from AboveRoot to realm components.
             .add_route(
                 RouteBuilder::protocol_marker::<LogSinkMarker>()

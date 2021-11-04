@@ -24,8 +24,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
-        builder::{ComponentSource, RealmBuilder, RouteEndpoint},
-        mock::{Mock, MockHandles},
+        mock::MockHandles, ChildProperties, RealmBuilder, RouteBuilder, RouteEndpoint,
     },
     futures::{channel::mpsc, SinkExt, StreamExt},
     realmbuilder_mock_helpers::add_fidl_service_handler,
@@ -170,12 +169,14 @@ const A2DP_CLIENT_MONIKER: &str = "fake-a2dp-client";
 /// Local name of the component which provides services used by A2DP in the Realm.
 const SERVICE_PROVIDER_MONIKER: &str = "fake-service-provider";
 
-fn add_a2dp_dependency_route<S: DiscoverableProtocolMarker>(builder: &mut RealmBuilder) {
+async fn add_a2dp_dependency_route<S: DiscoverableProtocolMarker>(builder: &RealmBuilder) {
     let _ = builder
-        .add_protocol_route::<S>(
-            RouteEndpoint::component(SERVICE_PROVIDER_MONIKER),
-            vec![RouteEndpoint::component(A2DP_MONIKER)],
+        .add_route(
+            RouteBuilder::protocol_marker::<S>()
+                .source(RouteEndpoint::component(SERVICE_PROVIDER_MONIKER))
+                .targets(vec![RouteEndpoint::component(A2DP_MONIKER)]),
         )
+        .await
         .expect("Failed adding route for service");
 }
 
@@ -190,24 +191,23 @@ async fn a2dp_v2_component_topology() {
     let fake_client_tx = sender.clone();
     let service_tx = sender.clone();
 
-    let mut builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
+    let builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
 
     // The v2 component under test.
     let _ = builder
-        .add_component(A2DP_MONIKER, ComponentSource::url(A2DP_URL.to_string()))
+        .add_child(A2DP_MONIKER, A2DP_URL.to_string(), ChildProperties::new())
         .await
         .expect("Failed adding a2dp to topology");
 
     // Generic backend component that provides a slew of services that will be requested.
     let _ = builder
-        .add_component(
+        .add_mock_child(
             SERVICE_PROVIDER_MONIKER,
-            ComponentSource::Mock(Mock::new({
-                move |mock_handles: MockHandles| {
-                    let sender = service_tx.clone();
-                    Box::pin(mock_component(sender, mock_handles))
-                }
-            })),
+            move |mock_handles: MockHandles| {
+                let sender = service_tx.clone();
+                Box::pin(mock_component(sender, mock_handles))
+            },
+            ChildProperties::new(),
         )
         .await
         .expect("Failed adding profile mock to topology");
@@ -215,64 +215,71 @@ async fn a2dp_v2_component_topology() {
     // Mock A2DP client that will request the PeerManager and AudioMode services
     // which are provided by the A2DP component.
     let _ = builder
-        .add_eager_component(
+        .add_mock_child(
             A2DP_CLIENT_MONIKER,
-            ComponentSource::Mock(Mock::new({
-                move |mock_handles: MockHandles| {
-                    let sender = fake_client_tx.clone();
-                    Box::pin(mock_a2dp_client(sender, mock_handles))
-                }
-            })),
+            move |mock_handles: MockHandles| {
+                let sender = fake_client_tx.clone();
+                Box::pin(mock_a2dp_client(sender, mock_handles))
+            },
+            ChildProperties::new().eager(),
         )
         .await
         .expect("Failed adding a2dp client mock to topology");
 
     // Capabilities provided by A2DP.
     let _ = builder
-        .add_protocol_route::<fidl_avdtp::PeerManagerMarker>(
-            RouteEndpoint::component(A2DP_MONIKER),
-            vec![RouteEndpoint::component(A2DP_CLIENT_MONIKER)],
+        .add_route(
+            RouteBuilder::protocol_marker::<fidl_avdtp::PeerManagerMarker>()
+                .source(RouteEndpoint::component(A2DP_MONIKER))
+                .targets(vec![RouteEndpoint::component(A2DP_CLIENT_MONIKER)]),
         )
+        .await
         .expect("Failed adding route for avdtp.PeerManager service")
-        .add_protocol_route::<fidl_a2dp::AudioModeMarker>(
-            RouteEndpoint::component(A2DP_MONIKER),
-            vec![RouteEndpoint::component(A2DP_CLIENT_MONIKER)],
+        .add_route(
+            RouteBuilder::protocol_marker::<fidl_a2dp::AudioModeMarker>()
+                .source(RouteEndpoint::component(A2DP_MONIKER))
+                .targets(vec![RouteEndpoint::component(A2DP_CLIENT_MONIKER)]),
         )
+        .await
         .expect("Failed adding route for a2dp.AudioMode service")
-        .add_protocol_route::<ControllerMarker>(
-            RouteEndpoint::component(A2DP_MONIKER),
-            vec![RouteEndpoint::component(A2DP_CLIENT_MONIKER)],
+        .add_route(
+            RouteBuilder::protocol_marker::<ControllerMarker>()
+                .source(RouteEndpoint::component(A2DP_MONIKER))
+                .targets(vec![RouteEndpoint::component(A2DP_CLIENT_MONIKER)]),
         )
+        .await
         .expect("Failed adding route for internal.a2dp.Controller service");
 
     // Capabilities provided by the generic service provider component, which are consumed
     // by the A2DP component.
-    add_a2dp_dependency_route::<fidl_avrcp::PeerManagerMarker>(&mut builder);
-    add_a2dp_dependency_route::<ProfileMarker>(&mut builder);
-    add_a2dp_dependency_route::<LoggerFactoryMarker>(&mut builder);
-    add_a2dp_dependency_route::<AudioDeviceEnumeratorMarker>(&mut builder);
-    add_a2dp_dependency_route::<SessionAudioConsumerFactoryMarker>(&mut builder);
-    add_a2dp_dependency_route::<PublisherMarker>(&mut builder);
-    add_a2dp_dependency_route::<CodecFactoryMarker>(&mut builder);
-    add_a2dp_dependency_route::<AudioMarker>(&mut builder);
-    add_a2dp_dependency_route::<AllocatorMarker>(&mut builder);
-    add_a2dp_dependency_route::<RegistryMarker>(&mut builder);
+    add_a2dp_dependency_route::<fidl_avrcp::PeerManagerMarker>(&builder).await;
+    add_a2dp_dependency_route::<ProfileMarker>(&builder).await;
+    add_a2dp_dependency_route::<LoggerFactoryMarker>(&builder).await;
+    add_a2dp_dependency_route::<AudioDeviceEnumeratorMarker>(&builder).await;
+    add_a2dp_dependency_route::<SessionAudioConsumerFactoryMarker>(&builder).await;
+    add_a2dp_dependency_route::<PublisherMarker>(&builder).await;
+    add_a2dp_dependency_route::<CodecFactoryMarker>(&builder).await;
+    add_a2dp_dependency_route::<AudioMarker>(&builder).await;
+    add_a2dp_dependency_route::<AllocatorMarker>(&builder).await;
+    add_a2dp_dependency_route::<RegistryMarker>(&builder).await;
     // Capability used by AVRCP Target, a child of A2DP. Route this service to A2DP to be
     // transitively routed to it.
-    add_a2dp_dependency_route::<DiscoveryMarker>(&mut builder);
+    add_a2dp_dependency_route::<DiscoveryMarker>(&builder).await;
 
     // Logging service, used by all children in this test.
     let _ = builder
-        .add_protocol_route::<fidl_fuchsia_logger::LogSinkMarker>(
-            RouteEndpoint::AboveRoot,
-            vec![
-                RouteEndpoint::component(A2DP_MONIKER),
-                RouteEndpoint::component(A2DP_CLIENT_MONIKER),
-                RouteEndpoint::component(SERVICE_PROVIDER_MONIKER),
-            ],
+        .add_route(
+            RouteBuilder::protocol_marker::<fidl_fuchsia_logger::LogSinkMarker>()
+                .source(RouteEndpoint::AboveRoot)
+                .targets(vec![
+                    RouteEndpoint::component(A2DP_MONIKER),
+                    RouteEndpoint::component(A2DP_CLIENT_MONIKER),
+                    RouteEndpoint::component(SERVICE_PROVIDER_MONIKER),
+                ]),
         )
+        .await
         .expect("Failed adding LogSink route to test components");
-    let _test_topology = builder.build().create().await.unwrap();
+    let _test_topology = builder.build().await.unwrap();
 
     // If the routing is correctly configured, we expect 15 events:
     //   - `bt-a2dp` connecting to the 10 services specified in its manifest.

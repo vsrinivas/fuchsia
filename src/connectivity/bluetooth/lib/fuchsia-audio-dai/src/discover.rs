@@ -36,8 +36,7 @@ mod tests {
         anyhow::Error,
         fidl_fuchsia_io2 as fio2, fuchsia,
         fuchsia_component_test::{
-            builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
-            mock::{Mock, MockHandles},
+            mock::MockHandles, ChildProperties, RealmBuilder, RouteBuilder, RouteEndpoint,
         },
         futures::{channel::mpsc, SinkExt, StreamExt},
         realmbuilder_mock_helpers::mock_dev,
@@ -62,49 +61,47 @@ mod tests {
     #[fuchsia::test]
     async fn devices_found_from_env() {
         let (device_sender, mut device_receiver) = mpsc::channel(0);
-        let mut builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
+        let builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
 
         // Add a mock that provides the dev/ directory with one input and output device.
         let _ = builder
-            .add_eager_component(
+            .add_mock_child(
                 "mock-dev",
-                ComponentSource::Mock(Mock::new({
-                    move |mock_handles: MockHandles| {
-                        Box::pin(mock_dev(
-                            mock_handles,
-                            mock_dai_dev_with_io_devices(
-                                "input1".to_string(),
-                                "output1".to_string(),
-                            ),
-                        ))
-                    }
-                })),
+                move |mock_handles: MockHandles| {
+                    Box::pin(mock_dev(
+                        mock_handles,
+                        mock_dai_dev_with_io_devices("input1".to_string(), "output1".to_string()),
+                    ))
+                },
+                ChildProperties::new().eager(),
             )
             .await
             .expect("Failed adding mock /dev provider to topology");
 
         // Add a mock that represents a client trying to discover DAI devices.
         let _ = builder
-            .add_eager_component(
+            .add_mock_child(
                 "mock-client",
-                ComponentSource::Mock(Mock::new(move |mock_handles: MockHandles| {
+                move |mock_handles: MockHandles| {
                     let s = device_sender.clone();
                     Box::pin(mock_client(mock_handles, s.clone()))
-                })),
+                },
+                ChildProperties::new().eager(),
             )
             .await
             .expect("Failed adding mock client to topology");
 
         // Give client access to dev/
         let _ = builder
-            .add_route(CapabilityRoute {
-                capability: Capability::directory("dev-dai", DAI_DEVICE_DIR, fio2::RW_STAR_DIR),
-                source: RouteEndpoint::component("mock-dev".to_string()),
-                targets: vec![RouteEndpoint::component("mock-client".to_string())],
-            })
+            .add_route(
+                RouteBuilder::directory("dev-dai", DAI_DEVICE_DIR, fio2::RW_STAR_DIR)
+                    .source(RouteEndpoint::component("mock-dev".to_string()))
+                    .targets(vec![RouteEndpoint::component("mock-client".to_string())]),
+            )
+            .await
             .expect("Failed adding route for dai device directory");
 
-        let _test_topology = builder.build().create().await.unwrap();
+        let _test_topology = builder.build().await.unwrap();
 
         let _ = device_receiver.next().await.expect("should receive devices");
     }

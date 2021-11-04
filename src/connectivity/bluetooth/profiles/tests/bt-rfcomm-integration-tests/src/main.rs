@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_bluetooth_bredr as bredr,
     fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_bluetooth::types::{Channel, PeerId, Uuid},
-    fuchsia_component_test::{builder::Capability, RealmInstance},
+    fuchsia_component_test::{RealmInstance, RouteBuilder},
     fuchsia_zircon::Duration,
     futures::{pin_mut, stream::StreamExt},
     mock_piconet_client_v2::{BtProfileComponent, PiconetHarness, PiconetMember},
@@ -73,7 +73,7 @@ async fn add_rfcomm_component(
     test_harness: &mut PiconetHarness,
     name: String,
 ) -> BtProfileComponent {
-    let expose = vec![Capability::protocol(bredr::ProfileMarker::PROTOCOL_NAME)];
+    let expose = vec![RouteBuilder::protocol(bredr::ProfileMarker::PROTOCOL_NAME)];
     test_harness
         .add_profile_with_capabilities(name, RFCOMM_URL_V2.to_string(), None, vec![], expose)
         .await

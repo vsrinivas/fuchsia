@@ -10,6 +10,7 @@ import("//build/rust/rustc_library.gni")
 shared_deps = [
   "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
   "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
+  "//sdk/fidl/fuchsia.component.test:fuchsia.component.test-rustc",
   "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
   "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
   "//src/connectivity/bluetooth/fidl:host-rustc",

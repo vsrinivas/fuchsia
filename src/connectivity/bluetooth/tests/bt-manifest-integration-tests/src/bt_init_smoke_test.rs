@@ -18,8 +18,7 @@ use {
     fidl_fuchsia_stash::SecureStoreMarker,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
-        builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
-        mock::{Mock, MockHandles},
+        mock::MockHandles, ChildProperties, RealmBuilder, RouteBuilder, RouteEndpoint,
     },
     futures::{channel::mpsc, SinkExt, StreamExt},
     realmbuilder_mock_helpers::{add_fidl_service_handler, mock_dev, provide_bt_gap_uses},
@@ -144,12 +143,14 @@ async fn mock_provider(sender: mpsc::Sender<Event>, handles: MockHandles) -> Res
 }
 
 // Helper for the common case of routing between bt-init and its mock client.
-fn route_from_bt_init_to_mock_client<S: DiscoverableProtocolMarker>(builder: &mut RealmBuilder) {
+async fn route_from_bt_init_to_mock_client<S: DiscoverableProtocolMarker>(builder: &RealmBuilder) {
     let _ = builder
-        .add_protocol_route::<S>(
-            RouteEndpoint::component(BT_INIT_MONIKER),
-            vec![RouteEndpoint::component(MOCK_CLIENT_MONIKER)],
+        .add_route(
+            RouteBuilder::protocol_marker::<S>()
+                .source(RouteEndpoint::component(BT_INIT_MONIKER))
+                .targets(vec![RouteEndpoint::component(MOCK_CLIENT_MONIKER)]),
         )
+        .await
         .expect(&format!("failed routing {} from bt-init to mock client", S::PROTOCOL_NAME));
 }
 
@@ -163,110 +164,119 @@ async fn bt_init_component_topology() {
     let mock_provider_tx = sender.clone();
     let mock_client_tx = sender.clone();
 
-    let mut builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
+    let builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
     // The v2 component under test.
     let _ = builder
         // Add bt-init to the topology
-        .add_component(BT_INIT_MONIKER, ComponentSource::url(BT_INIT_URL.to_string()))
+        .add_child(BT_INIT_MONIKER, BT_INIT_URL.to_string(), ChildProperties::new())
         .await
         .expect("Failed adding bt-init to topology")
         // Implementation of the Secure Store service for use by bt-gap.
-        .add_component(SECURE_STORE_MONIKER, ComponentSource::url(SECURE_STORE_URL.to_string()))
+        .add_child(SECURE_STORE_MONIKER, SECURE_STORE_URL.to_string(), ChildProperties::new())
         .await
         .expect("Failed adding secure store fake to topology")
         // Provides a mock implementation of the services used by bt-init and its children, and
         // notifies the test of connections to these services.
-        .add_component(
+        .add_mock_child(
             MOCK_PROVIDER_MONIKER,
-            ComponentSource::Mock(Mock::new({
-                move |mock_handles: MockHandles| {
-                    let sender = mock_provider_tx.clone();
-                    Box::pin(mock_provider(sender, mock_handles))
-                }
-            })),
+            move |mock_handles: MockHandles| {
+                let sender = mock_provider_tx.clone();
+                Box::pin(mock_provider(sender, mock_handles))
+            },
+            ChildProperties::new(),
         )
         .await
         .expect("Failed adding mock provider to topology")
-        .add_component(
+        .add_mock_child(
             MOCK_DEV_MONIKER,
-            ComponentSource::Mock(Mock::new({
-                move |mock_handles: MockHandles| Box::pin(mock_dev(mock_handles, dev_bt_host()))
-            })),
+            move |mock_handles: MockHandles| Box::pin(mock_dev(mock_handles, dev_bt_host())),
+            ChildProperties::new(),
         )
         .await
         .expect("Failed adding mock /dev provider to topology")
         // Mock bt-init client that will request all the service exposed by bt-init.
-        .add_eager_component(
+        .add_mock_child(
             MOCK_CLIENT_MONIKER,
-            ComponentSource::Mock(Mock::new({
-                move |mock_handles: MockHandles| {
-                    let sender = mock_client_tx.clone();
-                    Box::pin(mock_client(sender, mock_handles))
-                }
-            })),
+            move |mock_handles: MockHandles| {
+                let sender = mock_client_tx.clone();
+                Box::pin(mock_client(sender, mock_handles))
+            },
+            ChildProperties::new().eager(),
         )
         .await
         .expect("Failed adding bt-init client mock to topology");
 
     // Add routes from bt-init to the mock bt-init client.
-    route_from_bt_init_to_mock_client::<ProfileMarker>(&mut builder);
-    route_from_bt_init_to_mock_client::<fbgatt::Server_Marker>(&mut builder);
-    route_from_bt_init_to_mock_client::<fble::CentralMarker>(&mut builder);
-    route_from_bt_init_to_mock_client::<fble::PeripheralMarker>(&mut builder);
-    route_from_bt_init_to_mock_client::<AccessMarker>(&mut builder);
-    route_from_bt_init_to_mock_client::<BootstrapMarker>(&mut builder);
-    route_from_bt_init_to_mock_client::<ConfigurationMarker>(&mut builder);
-    route_from_bt_init_to_mock_client::<HostWatcherMarker>(&mut builder);
-    route_from_bt_init_to_mock_client::<RfcommTestMarker>(&mut builder);
+    route_from_bt_init_to_mock_client::<ProfileMarker>(&builder).await;
+    route_from_bt_init_to_mock_client::<fbgatt::Server_Marker>(&builder).await;
+    route_from_bt_init_to_mock_client::<fble::CentralMarker>(&builder).await;
+    route_from_bt_init_to_mock_client::<fble::PeripheralMarker>(&builder).await;
+    route_from_bt_init_to_mock_client::<AccessMarker>(&builder).await;
+    route_from_bt_init_to_mock_client::<BootstrapMarker>(&builder).await;
+    route_from_bt_init_to_mock_client::<ConfigurationMarker>(&builder).await;
+    route_from_bt_init_to_mock_client::<HostWatcherMarker>(&builder).await;
+    route_from_bt_init_to_mock_client::<RfcommTestMarker>(&builder).await;
 
     let _ = builder
         // Add proxy route between secure store and mock provider
-        .add_protocol_route::<SecureStoreMarker>(
-            RouteEndpoint::component(SECURE_STORE_MONIKER),
-            vec![RouteEndpoint::component(MOCK_PROVIDER_MONIKER)],
+        .add_route(
+            RouteBuilder::protocol_marker::<SecureStoreMarker>()
+                .source(RouteEndpoint::component(SECURE_STORE_MONIKER))
+                .targets(vec![RouteEndpoint::component(MOCK_PROVIDER_MONIKER)]),
         )
+        .await
         .expect("Failed adding proxy route for Secure Store service")
         // Add routes for bt-init's `use`s from mock-provider.
-        .add_protocol_route::<SecureStoreMarker>(
-            RouteEndpoint::component(MOCK_PROVIDER_MONIKER),
-            vec![RouteEndpoint::component(BT_INIT_MONIKER)],
+        .add_route(
+            RouteBuilder::protocol_marker::<SecureStoreMarker>()
+                .source(RouteEndpoint::component(MOCK_PROVIDER_MONIKER))
+                .targets(vec![RouteEndpoint::component(BT_INIT_MONIKER)]),
         )
+        .await
         .expect("Failed adding Secure Store route between mock and bt-init")
-        .add_protocol_route::<SnoopMarker>(
-            RouteEndpoint::component(MOCK_PROVIDER_MONIKER),
-            vec![RouteEndpoint::component(BT_INIT_MONIKER)],
+        .add_route(
+            RouteBuilder::protocol_marker::<SnoopMarker>()
+                .source(RouteEndpoint::component(MOCK_PROVIDER_MONIKER))
+                .targets(vec![RouteEndpoint::component(BT_INIT_MONIKER)]),
         )
+        .await
         .expect("Failed adding route for Snoop service")
-        .add_protocol_route::<NameProviderMarker>(
-            RouteEndpoint::component(MOCK_PROVIDER_MONIKER),
-            vec![RouteEndpoint::component(BT_INIT_MONIKER)],
+        .add_route(
+            RouteBuilder::protocol_marker::<NameProviderMarker>()
+                .source(RouteEndpoint::component(MOCK_PROVIDER_MONIKER))
+                .targets(vec![RouteEndpoint::component(BT_INIT_MONIKER)]),
         )
+        .await
         .expect("Failed adding route for Name Provider service")
-        .add_route(CapabilityRoute {
-            capability: Capability::directory("dev", "/dev", fio2::RW_STAR_DIR),
-            source: RouteEndpoint::component(MOCK_DEV_MONIKER),
-            targets: vec![RouteEndpoint::component(BT_INIT_MONIKER)],
-        })
+        .add_route(
+            RouteBuilder::directory("dev", "/dev", fio2::RW_STAR_DIR)
+                .source(RouteEndpoint::component(MOCK_DEV_MONIKER))
+                .targets(vec![RouteEndpoint::component(BT_INIT_MONIKER)]),
+        )
+        .await
         .expect("Failed adding route for bt-host device directory")
         // Proxy LogSink to children
-        .add_protocol_route::<fidl_fuchsia_logger::LogSinkMarker>(
-            RouteEndpoint::AboveRoot,
-            vec![
-                RouteEndpoint::component(BT_INIT_MONIKER),
-                RouteEndpoint::component(SECURE_STORE_MONIKER),
-                RouteEndpoint::component(MOCK_PROVIDER_MONIKER),
-                RouteEndpoint::component(MOCK_CLIENT_MONIKER),
-            ],
+        .add_route(
+            RouteBuilder::protocol_marker::<fidl_fuchsia_logger::LogSinkMarker>()
+                .source(RouteEndpoint::AboveRoot)
+                .targets(vec![
+                    RouteEndpoint::component(BT_INIT_MONIKER),
+                    RouteEndpoint::component(SECURE_STORE_MONIKER),
+                    RouteEndpoint::component(MOCK_PROVIDER_MONIKER),
+                    RouteEndpoint::component(MOCK_CLIENT_MONIKER),
+                ]),
         )
+        .await
         .expect("Failed adding LogSink route to test components")
         // Proxy temp storage to SecureStore impl
-        .add_route(CapabilityRoute {
-            capability: Capability::storage("data", "/data"),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component(SECURE_STORE_MONIKER)],
-        })
+        .add_route(
+            RouteBuilder::storage("data", "/data")
+                .source(RouteEndpoint::AboveRoot)
+                .targets(vec![RouteEndpoint::component(SECURE_STORE_MONIKER)]),
+        )
+        .await
         .expect("Failed adding temp storage route to SecureStore component");
-    let mut test_topology = builder.build().create().await.unwrap();
+    let mut test_topology = builder.build().await.unwrap();
     let realm_destroyed = test_topology.root.take_destroy_waiter();
     // If the routing is correctly configured, we expect one of each of the Event enum to be
     // sent (so, in total, 10 events)
