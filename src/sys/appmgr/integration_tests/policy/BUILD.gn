@@ -57,13 +57,13 @@ rustc_test("policy_test") {
   edition = "2018"
 
   deps = [
-    "//examples/fidl/legacy/services:echo-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.sys.internal:fuchsia.sys.internal-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/appmgr/integration_tests/fidl:echo-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",

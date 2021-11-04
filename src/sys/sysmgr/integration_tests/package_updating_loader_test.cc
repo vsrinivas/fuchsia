@@ -4,6 +4,7 @@
 
 #include "src/sys/sysmgr/package_updating_loader.h"
 
+#include <fidl/examples/echo/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/pkg/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
@@ -25,7 +26,6 @@
 #include <utility>
 #include <vector>
 
-#include <fidl/examples/echo/cpp/fidl.h>
 #include <gtest/gtest.h>
 
 namespace sysmgr {
@@ -33,7 +33,7 @@ namespace {
 
 const char kEchoServerURL[] =
     "fuchsia-pkg://fuchsia.com/sysmgr-integration-tests#meta/"
-    "echo_server_rust.cmx";
+    "echo_server.cmx";
 
 class PackageResolverMock : public fuchsia::pkg::PackageResolver {
  public:

@@ -32,7 +32,7 @@ const APPMGR_BIN_PATH: &'static str = "/pkg/bin/appmgr";
 // pkg-resolver
 const SYSMGR_SERVICES_CONFIG: &'static str = r#"{
   "services": {
-    "fidl.examples.echo.Echo": "fuchsia-pkg://fuchsia.com/echo_server#meta/echo_server_rust.cmx"
+    "fidl.examples.echo.Echo": "fuchsia-pkg://fuchsia.com/echo_server#meta/echo_server.cmx"
   },
   "update_dependencies": [
     "fuchsia.bogus.DoesNotExist"

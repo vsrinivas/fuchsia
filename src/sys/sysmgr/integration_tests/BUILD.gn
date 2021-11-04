@@ -71,12 +71,12 @@ executable("service_startup_test_bin") {
 
   deps = [
     ":interface",
-    "//examples/fidl/legacy/services:echo",
     "//sdk/fidl/fuchsia.logger",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
+    "//src/sys/appmgr/integration_tests/fidl:echo",
     "//third_party/googletest:gmock",
   ]
 }
@@ -98,12 +98,12 @@ executable("package_updating_loader_test_bin") {
 
   deps = [
     ":interface",
-    "//examples/fidl/legacy/services:echo",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/vfs/cpp",
     "//src/lib/testing/loop_fixture",
+    "//src/sys/appmgr/integration_tests/fidl:echo",
     "//src/sys/sysmgr:lib",
     "//zircon/system/ulib/zx",
   ]
@@ -121,29 +121,15 @@ config_data("sysmgr_integration_test_observer_config") {
   sources = [ "config/service_startup_test.config" ]
 }
 
-resource("echo_server_bin") {
-  sources = [ "$root_out_dir/echo_server_rust" ]
-  outputs = [ "bin/echo_server" ]
-}
-
-fuchsia_component("echo_server_rust") {
-  testonly = true
-  manifest = rebase_path("//examples/fidl/legacy/meta/echo_server.cmx")
-  deps = [
-    ":echo_server_bin",
-    "//examples/fidl/legacy/echo_server_rust:echo_server_rust_bin",
-  ]
-}
-
 fuchsia_test_package("sysmgr-integration-tests") {
   test_components = [
     ":service_startup_test",
     ":package_updating_loader_test",
   ]
   deps = [
-    ":echo_server_rust",
     ":mock_resolver",
     ":test_sysmgr_service",
+    "//src/sys/appmgr/integration_tests:echo_server",
     "//src/sys/sysmgr:sysmgr_component",
   ]
 }

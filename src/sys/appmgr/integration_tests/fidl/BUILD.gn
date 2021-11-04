@@ -7,6 +7,7 @@ import("//build/fidl/fidl.gni")
 group("fidl") {
   testonly = true
   deps = [
+    ":echo",
     ":test.component.mockrunner",
     "fuchsia.testing.appmgr",
   ]
@@ -19,4 +20,10 @@ fidl("test.component.mockrunner") {
   sources = [ "runner.fidl" ]
 
   public_deps = [ "//sdk/fidl/fuchsia.sys" ]
+}
+
+fidl("echo") {
+  name = "fidl.examples.echo"
+
+  sources = [ "echo.test.fidl" ]
 }
