@@ -161,6 +161,20 @@
       ],
       "additionalProperties": false
     },
+    "thermal_state_transitions_format": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "target_name": {
+            "type": "string"
+          },
+          "_comment": "string",
+          "config": {}
+        },
+        "required": ["target_name", "config"]
+      }
+    },
     "thermal_policy_entry_format": {
       "type": "object",
       "properties": {
@@ -180,22 +194,18 @@
           },
           "required": ["deactivate_below", "activate_at"]
         },
-        "state_transitions": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "target_name": {
-                "type": "string"
-              },
-              "_comment": "string",
-              "config": {}
-            },
-            "requried": ["target", "config"]
-          }
-        }
+        "state_transitions": { "#ref" : "#/definitions/thermal_state_transitions_format" }
       },
       "required": ["trip_point", "state_transitions"]
+    },
+    "thermal_policy_nominal_entry_format": {
+      "type": "object",
+      "properties": {
+        "nominal_config": "bool",
+        "state_transitions": { "#ref" : "#/definitions/thermal_state_transitions_format" },
+        "_comment": "string"
+      },
+      "required": ["nominal_config", "state_transitions"]
     },
     "input_device_profile" : {
       "type": "object",
@@ -231,7 +241,7 @@
       "items": { "$ref": "#/definitions/volume_mapping" }
     },
     "default_render_usage_volumes": {
-      "type": "object",    
+      "type": "object",
       "properties":{
         "background": "number",
         "communications": "number",
@@ -243,7 +253,7 @@
         "render:interruption": "number",
         "render:media": "number",
         "render:system_agent": "number"
-      }, 
+      },
       "additionalProperties": false
     },
     "output_devices" : {
@@ -256,7 +266,12 @@
     },
     "thermal_policy": {
       "type" : "array",
-      "items": {"$ref" : "#/definitions/thermal_policy_entry_format"}
+      "items": {
+        "oneOf": [
+          {"$ref" : "#/definitions/thermal_policy_entry_format"},
+          {"$ref" : "#/definitions/thermal_policy_nominal_entry_format"}
+        ]
+      }
     }
   },
   "required": ["volume_curve"],
