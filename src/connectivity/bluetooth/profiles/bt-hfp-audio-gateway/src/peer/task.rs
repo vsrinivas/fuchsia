@@ -1384,29 +1384,25 @@ mod tests {
         };
         info!("transfers_change_sco_state: Sending OngoingActive to initially answer call.");
         state_responder.send(CallState::OngoingActive).expect("Sent OngoingActive.");
-        info!("transfers_change_sco_state: Setting up SCO connection part 1.");
+        info!("transfers_change_sco_state: Setting up SCO connection.");
         let (sco, mut run_fut) =
             run_while(&mut exec, run_fut, expect_sco_connection(&mut profile, true, Ok(())));
-        info!("transfers_change_sco_state: Setting up SCO connection part 2.");
-        exec.run_until_stalled(&mut run_fut).expect_pending("Create SCO conn.");
-        info!("transfers_change_sco_state: Setting up SCO connection part 3.");
+        info!("transfers_change_sco_state: Setting up SCO connection--pausing audio.");
         while let None = exec.run_one_step(&mut run_fut) {}
         let sco = sco.expect("SCO Connection.");
 
         // Call is transferred to AG by AG and SCO is torn down.
         info!("transfers_change_sco_state: Getting WatchState for transferring call to AG by AG part 1.");
-        let (request, mut run_fut) = run_while(&mut exec, run_fut, &mut call_stream.next());
-        info!("transfers_change_sco_state: Getting WatchState for transferring call to AG by AG part 2.");
-        let _ = exec.run_one_step(&mut run_fut);
+        let (request, run_fut) = run_while(&mut exec, run_fut, &mut call_stream.next());
         let state_responder = match request {
             Some(Ok(CallRequest::WatchState { responder })) => responder,
             req => panic!("Expected WatchState, got {:?}", req),
         };
-        info!("transfers_change_sco_state: Transferring call to AG by AG part 1.");
+        info!("transfers_change_sco_state: Sending TransferedToAg.");
         state_responder.send(CallState::TransferredToAg).expect("Sent TransferredToAg.");
-        info!("transfers_change_sco_state: More transferring call to AG by AG part 2.");
-        exec.run_until_stalled(&mut run_fut).expect_pending("Sending TransferredToAg");
-        info!("transfers_change_sco_state: Transferring call to AG by AG part 3.");
+        info!("transfers_change_sco_state: Transferring call to AG by AG.");
+        let (request, mut run_fut) = run_while(&mut exec, run_fut, &mut call_stream.next());
+        info!("transfers_change_sco_state: Transferring call to AG by AG--unpausing audio.");
         while let None = exec.run_one_step(&mut run_fut) {}
         info!("transfers_change_sco_state: Checking if SCO is closed.");
         let sco_is_closed = sco
@@ -1415,8 +1411,6 @@ mod tests {
         assert!(sco_is_closed.is_ok());
 
         // Call is transferred to HF by AG and SCO is set up.
-        info!("transfers_change_sco_state: Getting WatchState for transferring call to HF by AG.");
-        let (request, mut run_fut) = run_while(&mut exec, run_fut, &mut call_stream.next());
         let state_responder = match request {
             Some(Ok(CallRequest::WatchState { responder })) => responder,
             req => panic!("Expected WatchState, got {:?}", req),
@@ -1424,16 +1418,16 @@ mod tests {
         info!("transfers_change_sco_state: Sending OngoingActive.");
         state_responder.send(CallState::OngoingActive).expect("Sent OngoingActive.");
         // Don't send a SCO connection until they are trying to connect.
-        info!("transfers_change_sco_state: Transferring call to HF by AG part 1.");
-        let _ = exec.run_one_step(&mut run_fut);
-        info!("transfers_change_sco_state: Transferring call to HF by AG part 2.");
+        info!("transfers_change_sco_state: Transferring call to HF by AG.");
         let (sco, mut run_fut) =
             run_while(&mut exec, run_fut, expect_sco_connection(&mut profile, true, Ok(())));
+        info!("transfers_change_sco_state: Transferring call to HF by AG--pausing aduio.");
+        let _ = exec.run_one_step(&mut run_fut);
         let sco = sco.expect("SCO Connection.");
         // Run until the connection is handled by the task.  This avoids a race where the
         // the incoming SCO connection is closed before it's received, in which case a call
         // is never set to active.
-        info!("transfers_change_sco_state: Transferring call to HF by AG part 3.");
+        info!("transfers_change_sco_state: Finishing transferring call to HF by AG.");
         let _ = exec.run_one_step(&mut run_fut);
 
         // SCO is torn down by HF and call is transferred to AG
@@ -1452,10 +1446,12 @@ mod tests {
         state_responder.send(CallState::TransferredToAg).expect("Sent TransferredToAg");
 
         // SCO is set up by HF and call is transferred to HF
-        info!("transfers_change_sco_state: Expecting SCO set up by HF part 1.");
-        let (_sco, run_fut) =
+        info!("transfers_change_sco_state: Expecting SCO set up by HF.");
+        let (_sco, mut run_fut) =
             run_while(&mut exec, run_fut, expect_sco_connection(&mut profile, false, Ok(())));
-        info!("transfers_change_sco_state: Expecting SCO set up by HF part 2.");
+        info!("transfers_change_sco_state: Expected SCO set up by HF--pausing audio.");
+        while let None = exec.run_one_step(&mut run_fut) {}
+        info!("transfers_change_sco_state: Getting WatchState.");
         let (_watch_state_req, run_fut) = run_while(&mut exec, run_fut, &mut call_stream.next());
         info!("transfers_change_sco_state: Getting RequestActive.");
         let (req, mut run_fut) = run_while(&mut exec, run_fut, &mut call_stream.next());
@@ -1465,7 +1461,7 @@ mod tests {
         info!("transfers_change_sco_state: Dropping sender.");
         drop(sender);
         info!("transfers_change_sco_state: Finishing.");
-        let _ = exec.run_until_stalled(&mut run_fut).expect("run_fut to complete");
+        while let None = exec.run_one_step(&mut run_fut) {}
         info!("transfers_change_sco_state: Finished.");
     }
 
