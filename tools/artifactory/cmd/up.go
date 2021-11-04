@@ -74,6 +74,9 @@ const (
 	// The blobs manifest. TODO(fxbug.dev/60322) remove this.
 	blobManifestName = "blobs.json"
 
+	// A list of all Public Platform Surface Areas.
+	ctsPlasaReportName = "test_coverage_report.plasa.json"
+
 	// A list of the objects that need their TTL refreshed.
 	objsToRefreshTTLTxt = "objs_to_refresh_ttl.txt"
 
@@ -276,6 +279,10 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 		{
 			Source:      path.Join(buildDir, fidlMangledToApiMappingManifestName),
 			Destination: path.Join(buildsNamespaceDir, fidlMangledToApiMappingManifestName),
+		},
+		{
+			Source:      path.Join(buildDir, ctsPlasaReportName),
+			Destination: path.Join(buildsNamespaceDir, ctsPlasaReportName),
 		},
 	}
 
