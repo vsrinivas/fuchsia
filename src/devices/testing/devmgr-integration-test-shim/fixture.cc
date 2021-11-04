@@ -26,6 +26,17 @@
 
 namespace devmgr_integration_test {
 
+namespace {
+constexpr std::string_view kBootPath = "/boot/";
+
+std::string PathToUrl(std::string_view path) {
+  if (path.find(kBootPath) != 0) {
+    ZX_ASSERT_MSG(false, "Driver path to devmgr-launcher must start with /boot/!");
+  }
+  return std::string("fuchsia-boot:///#").append(path.substr(kBootPath.size()));
+}
+}  // namespace
+
 __EXPORT
 zx_status_t IsolatedDevmgr::AddDevfsToOutgoingDir(vfs::PseudoDir* outgoing_root_dir) {
   zx::channel client, server;
@@ -45,6 +56,7 @@ zx_status_t IsolatedDevmgr::AddDevfsToOutgoingDir(vfs::PseudoDir* outgoing_root_
 __EXPORT
 devmgr_launcher::Args IsolatedDevmgr::DefaultArgs() {
   devmgr_launcher::Args args;
+  args.sys_device_driver = "/boot/driver/sysdev.so";
   return args;
 }
 
@@ -77,7 +89,9 @@ zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, async_dispatcher_
   }
 
   fuchsia::driver::test::Realm_Start_Result realm_result;
-  status = driver_test_realm->Start(fuchsia::driver::test::RealmArgs(), &realm_result);
+  auto realm_args = fuchsia::driver::test::RealmArgs();
+  realm_args.set_root_driver(PathToUrl(args.sys_device_driver));
+  status = driver_test_realm->Start(std::move(realm_args), &realm_result);
   if (status != ZX_OK) {
     return status;
   }

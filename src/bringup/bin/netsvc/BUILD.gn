@@ -125,16 +125,16 @@ test("netsvc-test") {
   ]
   deps = [
     ":args",
+    ":netsvc",
     ":netsvc_common",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
     "//sdk/lib/fdio",
+    "//src/devices/testing/devmgr-integration-test-shim",
     "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/devmgr-integration-test",
-    "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/mock-boot-arguments",
     "//zircon/system/ulib/ramdevice-client",
@@ -151,10 +151,9 @@ test("netsvc-stress-test") {
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
     "//sdk/lib/fdio",
+    "//src/devices/testing/devmgr-integration-test-shim",
     "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/devmgr-integration-test",
-    "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/ramdevice-client",
     "//zircon/system/ulib/zircon-internal",
@@ -163,9 +162,9 @@ test("netsvc-stress-test") {
   ]
 }
 
-isolated_devmgr_unittest_component("netsvc-stress-test-component") {
+fuchsia_test_component("netsvc-stress-test-component") {
   component_name = "netsvc-stress-test"
-  executable_path = "test/netsvc-stress-test"
+  manifest = "meta/netsvc-stress-test.cml"
   deps = [
     ":netsvc-stress-test",
     "//src/devices/board/drivers/integration-test",
@@ -173,11 +172,10 @@ isolated_devmgr_unittest_component("netsvc-stress-test-component") {
   ]
 }
 
-isolated_devmgr_unittest_component("netsvc-test-component") {
+fuchsia_test_component("netsvc-test-component") {
   component_name = "netsvc-test"
-  executable_path = "test/netsvc-test"
+  manifest = "meta/netsvc-test.cml"
   deps = [
-    ":netsvc",
     ":netsvc-test",
     "//src/devices/block/drivers/core",
     "//src/devices/block/drivers/gpt",

@@ -9,7 +9,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/dispatcher.h>
-#include <lib/driver-integration-test/fixture.h>
+#include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -440,16 +440,17 @@ class FakeSvc {
 class FakeDev {
  public:
   FakeDev() {
-    driver_integration_test::IsolatedDevmgr::Args args;
+    auto args = devmgr_integration_test::IsolatedDevmgr::DefaultArgs();
+    args.sys_device_driver = "/boot/driver/platform-bus.so";
 
-    ASSERT_OK(driver_integration_test::IsolatedDevmgr::Create(&args, &devmgr_));
+    ASSERT_OK(devmgr_integration_test::IsolatedDevmgr::Create(std::move(args), &devmgr_));
     // TODO(https://fxbug.dev/80815): Stop requiring this recursive wait.
     fbl::unique_fd fd;
     ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(),
                                                             "sys/platform/00:00:2d/ramctl", &fd));
   }
 
-  driver_integration_test::IsolatedDevmgr devmgr_;
+  devmgr_integration_test::IsolatedDevmgr devmgr_;
 };
 
 class PaverTest : public zxtest::Test {
