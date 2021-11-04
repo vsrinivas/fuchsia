@@ -33,8 +33,8 @@ for the target language).
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="comments" %}
 ```
 
-Note that documentation comments can also be provided via the
-[`@doc]` attribute][doc-attribute].
+Note that documentation comments can also be provided via the [`@doc`
+attribute][doc-attribute].
 
 ### Keywords
 
@@ -195,16 +195,16 @@ In the source tree, each library consists of a directory with some number of
 but by convention it should resemble the library name itself. A directory should
 not contain FIDL files for more than one library.
 
-The scope of "library" and "using" declarations is limited to a single file.
-Each individual file within a FIDL library must restate the "library"
-declaration together with any "using" declarations needed by that file.
+The scope of `library` and `using` declarations is limited to a single file.
+Each individual file within a FIDL library must restate the `library`
+declaration together with any `using` declarations needed by that file.
 
 The library's name may be used by certain language bindings to provide scoping
 for symbols emitted by the code generator.
 
 For example, the C++ bindings generator places declarations for the
-FIDL library "fuchsia.ui" within the C++ namespace
-"fuchsia::ui". Similarly, for languages such as Dart and Rust, which
+FIDL library `fuchsia.ui` within the C++ namespace
+`fuchsia::ui`. Similarly, for languages such as Dart and Rust, which
 have their own module system, each FIDL library is compiled as a
 module for that language.
 
@@ -248,7 +248,7 @@ We also alias **`byte`** to mean **`uint8`** as a [built-in alias](#built-in-ali
 
 #### Operators
 
-'|' is the bitwise OR operator for bits
+`|` is the bitwise OR operator for bits.
 
 #### Use
 
@@ -310,7 +310,7 @@ of the type. In other words, changing the parameter `_N_` is an
 
 *   Variable-length sequence of UTF-8 encoded characters representing text.
 *   Can be optional; absent strings and empty strings are distinct.
-*   Can specify a maximum size, eg. **`string:40`** for a
+*   Can specify a maximum size, e.g. **`string:40`** for a
     maximum 40 byte string.
 *   May contain embedded `NUL` bytes, unlike traditional C strings.
 
@@ -343,7 +343,7 @@ parameter `_N_` is not an [ABI-breaking][compat] change.
 
 *   Variable-length sequence of homogeneous elements.
 *   Can be optional; absent vectors and empty vectors are distinct.
-*   Can specify a maximum size, eg. **`vector<T>:40`** for a
+*   Can specify a maximum size, e.g. **`vector<T>:40`** for a
     maximum 40 element vector.
 *   There is no special case for vectors of bools. Each bool element takes one
     byte as usual.
@@ -373,7 +373,8 @@ _T_ can be any FIDL type.
 *   Transfers a Zircon capability by handle value.
 *   Stored as a 32-bit unsigned integer.
 *   Can be optional; absent handles are encoded as a zero-valued handle.
-*   Handles may optionally be associated with a type and set of required zircon rights
+*   Handles may optionally be associated with a type and set of required Zircon
+    rights.
 
 #### Use
 
@@ -425,7 +426,7 @@ Structs, tables, and unions containing handles must be marked with the
 
 #### Use
 
-Structs are denoted by their declared name (eg. **Circle**):
+Structs are denoted by their declared name (e.g. **Circle**):
 
 *   **`Circle`** : required Circle
 *   **`box<Circle>`** : optional Circle, stored [out-of-line][wire-format].
@@ -455,7 +456,7 @@ type Profile = table {
 
 #### Use
 
-Tables are denoted by their declared name (eg. **Profile**):
+Tables are denoted by their declared name (e.g. **Profile**):
 
 *   **`Profile`** : required Profile
 
@@ -538,7 +539,7 @@ unknown data for flexible types are described in detail in the [bindings
 reference][bindings-reference].
 
 More details are discussed in
-[RFC-0033: Handling of Unknown Fields and Strictness][rfc-033].
+[RFC-0033: Handling of Unknown Fields and Strictness][rfc-0033].
 
 Note: A type that is both flexible and a [value type](#value-vs-resource) will
 not allow deserializing unknown data that contains handles.
@@ -765,8 +766,7 @@ So, we create a protocol (`SystemClock`) that composes both:
 
 ### Aliasing {#aliasing}
 
-Type aliasing is supported.
-For example:
+Type aliasing is supported. For example:
 
 ```fidl
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="aliasing" %}
@@ -787,7 +787,7 @@ Consider:
 Here, the `Message` struct contains a string of `MAX_SIZE` bytes called `baseline`,
 and a vector of up to `5` strings of `MAX_SIZE` called `chapters`.
 
-Note that **`byte`** and **`bytes`** are built in aliases, [see below](#built-in-aliases).
+Note that **`byte`** and **`bytes`** are built-in aliases, [see below](#built-in-aliases).
 
 ### Built-ins
 
