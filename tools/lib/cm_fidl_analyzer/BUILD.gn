@@ -28,9 +28,11 @@ rustc_library("cm_fidl_analyzer") {
     "//third_party/rust_crates:url",
   ]
   sources = [
+    "src/component_instance.rs",
     "src/component_model.rs",
-    "src/component_tree.rs",
+    "src/environment.rs",
     "src/lib.rs",
+    "src/node_path.rs",
     "src/route.rs",
     "src/serde_ext.rs",
   ]

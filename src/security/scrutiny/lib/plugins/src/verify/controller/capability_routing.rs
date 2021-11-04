@@ -9,12 +9,11 @@ use {
     },
     anyhow::{anyhow, Context, Result},
     cm_fidl_analyzer::{
-        component_model::{
-            AnalyzerModelError, BreadthFirstModelWalker, ComponentInstanceForAnalyzer,
-            ComponentInstanceVisitor, ComponentModelForAnalyzer, ComponentModelWalker,
-            ModelMappingVisitor,
-        },
+        component_instance::ComponentInstanceForAnalyzer,
+        component_model::{AnalyzerModelError, ComponentModelForAnalyzer},
         route::{CapabilityRouteError, VerifyRouteResult},
+        BreadthFirstModelWalker, ComponentInstanceVisitor, ComponentModelWalker,
+        ModelMappingVisitor,
     },
     cm_rust::CapabilityTypeName,
     routing::error::{ComponentInstanceError, RoutingError},

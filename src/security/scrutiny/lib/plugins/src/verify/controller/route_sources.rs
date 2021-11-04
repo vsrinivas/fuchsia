@@ -10,7 +10,7 @@ use {
     anyhow::{anyhow, Context, Error, Result},
     cm_fidl_analyzer::{
         component_model::ComponentModelForAnalyzer,
-        component_tree::NodePath,
+        node_path::NodePath,
         route::{CapabilityRouteError, RouteSegment, VerifyRouteResult},
     },
     cm_rust::{
@@ -615,7 +615,7 @@ mod tests {
         },
         anyhow::Result,
         cm_fidl_analyzer::{
-            component_model::ModelBuilderForAnalyzer, component_tree::NodePath, route::RouteSegment,
+            component_model::ModelBuilderForAnalyzer, node_path::NodePath, route::RouteSegment,
         },
         cm_rust::{
             CapabilityName, CapabilityPath, CapabilityTypeName, ChildDecl, ComponentDecl,

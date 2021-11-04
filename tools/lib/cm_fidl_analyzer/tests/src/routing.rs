@@ -6,11 +6,10 @@ use {
     anyhow::anyhow,
     async_trait::async_trait,
     cm_fidl_analyzer::{
-        component_model::{
-            AnalyzerModelError, ComponentInstanceForAnalyzer, ComponentModelForAnalyzer,
-            ModelBuilderForAnalyzer, BOOT_RESOLVER_NAME, BOOT_SCHEME,
-        },
-        component_tree::NodePath,
+        component_instance::ComponentInstanceForAnalyzer,
+        component_model::{AnalyzerModelError, ComponentModelForAnalyzer, ModelBuilderForAnalyzer},
+        environment::{BOOT_RESOLVER_NAME, BOOT_SCHEME},
+        node_path::NodePath,
         route::{CapabilityRouteError, RouteSegment, VerifyRouteResult},
     },
     cm_rust::{

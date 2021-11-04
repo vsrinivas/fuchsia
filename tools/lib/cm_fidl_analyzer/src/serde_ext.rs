@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::component_tree::NodePath,
+    crate::node_path::NodePath,
     serde::{
         de::{self, Deserializer, Visitor},
         Deserialize, Serialize, Serializer,

@@ -16,7 +16,7 @@ use {
         },
     },
     cm_fidl_analyzer::{
-        component_tree::NodePath,
+        node_path::NodePath,
         route::{CapabilityRouteError, RouteSegment},
         serde_ext::ErrorWithMessage,
     },

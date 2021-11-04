@@ -4,66 +4,67 @@
 
 use {
     crate::{
-        component_tree::{
-            ComponentNode, ComponentTree, ComponentTreeBuilder, NodeEnvironment, NodePath,
-            ResolverRegistry,
-        },
-        route::{RouteSegment, VerifyRouteResult},
+        component_instance::{ComponentInstanceForAnalyzer, TopInstanceForAnalyzer},
+        node_path::NodePath,
+        route::{RouteMap, RouteSegment, VerifyRouteResult},
     },
-    anyhow::anyhow,
-    async_trait::async_trait,
+    anyhow::{anyhow, Result},
     cm_rust::{
-        CapabilityDecl, CapabilityName, CapabilityPath, CapabilityTypeName, CollectionDecl,
-        ComponentDecl, ExposeDecl, ExposeDeclCommon, OfferDecl, ProgramDecl, RegistrationSource,
-        ResolverRegistration, UseDecl, UseStorageDecl,
+        CapabilityDecl, CapabilityPath, CapabilityTypeName, ComponentDecl, ExposeDecl,
+        ExposeDeclCommon, ProgramDecl, ResolverRegistration, UseDecl, UseStorageDecl,
     },
     fidl::endpoints::ProtocolMarker,
-    fidl_fuchsia_component_internal as component_internal, fidl_fuchsia_sys2 as fsys,
-    fuchsia_zircon_status as zx_status,
+    fidl_fuchsia_sys2 as fsys, fuchsia_zircon_status as zx_status,
     futures::FutureExt,
-    moniker::{
-        AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase, PartialChildMoniker,
-        RelativeMoniker,
-    },
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, PartialChildMoniker, RelativeMoniker},
     routing::{
         capability_source::{
-            BuiltinCapabilities, CapabilitySourceInterface, ComponentCapability,
-            NamespaceCapabilities, StorageCapabilitySource,
+            CapabilitySourceInterface, ComponentCapability, StorageCapabilitySource,
         },
         component_id_index::ComponentIdIndex,
         component_instance::{
-            ComponentInstanceInterface, ExtendedInstanceInterface, ResolvedInstanceInterface,
-            TopInstanceInterface, WeakExtendedInstanceInterface,
+            ComponentInstanceInterface, ExtendedInstanceInterface, TopInstanceInterface,
         },
         config::RuntimeConfig,
         environment::{
-            component_has_relative_url, find_first_absolute_ancestor_url, DebugRegistry,
-            EnvironmentExtends, EnvironmentInterface, RunnerRegistry,
+            component_has_relative_url, find_first_absolute_ancestor_url, RunnerRegistry,
         },
         error::{ComponentInstanceError, RoutingError},
         policy::GlobalPolicyChecker,
-        route_capability, route_storage_and_backing_directory, DebugRouteMapper, RegistrationDecl,
-        RouteRequest, RouteSource,
+        route_capability, route_storage_and_backing_directory, DebugRouteMapper, RouteRequest,
+        RouteSource,
     },
     serde::{Deserialize, Serialize},
     std::{
-        collections::{HashMap, HashSet, VecDeque},
-        sync::{Arc, RwLock},
+        collections::{HashMap, HashSet},
+        sync::Arc,
     },
     thiserror::Error,
     url::Url,
 };
 
-// Constants used to set up the built-in environment.
-pub static BOOT_RESOLVER_NAME: &str = "boot_resolver";
-pub static BOOT_SCHEME: &str = "fuchsia-boot";
+/// Errors that may occur when building a `ComponentModelForAnalyzer` from
+/// a set of component manifests.
+#[derive(Clone, Debug, Deserialize, Error, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BuildAnalyzerModelError {
+    #[error("no component declaration found for url `{0}` requested by node `{1}`")]
+    ComponentDeclNotFound(String, String),
 
-pub static PKG_RESOLVER_NAME: &str = "package_resolver";
-pub static PKG_SCHEME: &str = "fuchsia-pkg";
+    #[error("invalid child declaration containing url `{0}` at node `{1}`")]
+    InvalidChildDecl(String, String),
 
-static REALM_BUILDER_RESOLVER_NAME: &str = "realm_builder_resolver";
-static REALM_BUILDER_SCHEME: &str = "realm-builder";
+    #[error("no node found with path `{0}`")]
+    ComponentNodeNotFound(String),
 
+    #[error("environment `{0}` requested by child `{1}` not found at node `{2}`")]
+    EnvironmentNotFound(String, String, String),
+
+    #[error("multiple resolvers found for scheme `{0}`")]
+    DuplicateResolverScheme(String),
+}
+
+/// Errors that a `ComponentModelForAnalyzer` may detect in the component graph.
 #[derive(Clone, Debug, Error, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum AnalyzerModelError {
@@ -99,11 +100,13 @@ impl AnalyzerModelError {
     }
 }
 
-/// Builds a `ComponentModelForAnalyzer` from a `ComponentTree` and a `RuntimeConfig`.
+/// Builds a `ComponentModelForAnalyzer` from a set of component manifests.
 pub struct ModelBuilderForAnalyzer {
     default_root_url: String,
 }
 
+/// The type returned by `ModelBuilderForAnalyzer::build()`. May contain some
+/// errors even if `model` is `Some`.
 pub struct BuildModelResult {
     pub model: Option<Arc<ComponentModelForAnalyzer>>,
     pub errors: Vec<anyhow::Error>,
@@ -129,284 +132,109 @@ impl ModelBuilderForAnalyzer {
     ) -> BuildModelResult {
         let mut result = BuildModelResult::new();
 
+        // Initialize the model with an empty `instances` map.
+        let mut model = ComponentModelForAnalyzer {
+            top_instance: TopInstanceForAnalyzer::new(
+                runtime_config.namespace_capabilities.clone(),
+                runtime_config.builtin_capabilities.clone(),
+            ),
+            instances: HashMap::new(),
+            policy_checker: GlobalPolicyChecker::new(Arc::clone(&runtime_config)),
+            component_id_index,
+        };
+
         let root_url: String = match &runtime_config.root_component_url {
             Some(url) => url.clone().into(),
             None => self.default_root_url.clone().into(),
         };
-        let build_tree_result = ComponentTreeBuilder::new(decls_by_url)
-            .build(root_url, self.build_root_environment(&runtime_config, runner_registry));
 
-        result.errors = build_tree_result
-            .errors
-            .into_iter()
-            .map(|err| anyhow!("error building component instance tree: {}", err))
-            .collect();
+        // If `root_url` matches a `ComponentDecl` in `decls_by_url`, construct the root
+        // instance and then recursively add child instances to the model.
+        match decls_by_url.get(&root_url) {
+            Some(root_decl) => {
+                let root_instance = ComponentInstanceForAnalyzer::new_root(
+                    root_decl.clone(),
+                    root_url,
+                    Arc::clone(&model.top_instance),
+                    Arc::clone(&runtime_config),
+                    model.policy_checker.clone(),
+                    Arc::clone(&model.component_id_index),
+                    runner_registry,
+                );
 
-        if let Some(tree) = build_tree_result.tree {
-            let mut model = ComponentModelForAnalyzer {
-                top_instance: TopInstanceForAnalyzer::new(
-                    runtime_config.namespace_capabilities.clone(),
-                    runtime_config.builtin_capabilities.clone(),
-                ),
-                instances: HashMap::new(),
-                policy_checker: GlobalPolicyChecker::new(Arc::clone(&runtime_config)),
-                component_id_index,
-            };
+                Self::add_descendants(&root_instance, &decls_by_url, &mut model, &mut result);
 
-            match tree.get_root_node() {
-                Ok(root) => {
-                    if let Err(err) = self.build_realm(root, &tree, &mut model) {
-                        result.errors.push(anyhow!(
-                            "failed to build component model from instance tree: {}",
-                            err
-                        ));
-                        return result;
-                    }
-                    result.model = Some(Arc::new(model));
-                }
-                Err(err) => {
-                    result.errors.push(anyhow!(
-                        "failed to retrieve root node from component instance tree: {}",
-                        err
-                    ));
-                    return result;
-                }
+                model
+                    .instances
+                    .insert(NodePath::from(root_instance.abs_moniker().clone()), root_instance);
+
+                result.model = Some(Arc::new(model));
             }
-        }
+            None => {
+                result.errors.push(anyhow!(BuildAnalyzerModelError::ComponentDeclNotFound(
+                    root_url,
+                    "".to_string()
+                )));
+            }
+        };
 
         result
     }
 
-    // TODO(https://fxbug.dev/61861): This parallel implementation of component manager's builtin environment
-    // setup will do for now, but is fragile and should be replaced soon. In particular, it doesn't provide a
-    // way to register builtin runners or resolvers that appear in the `builtin_capabilities` field of the
-    // RuntimeConfig but are not one of these hard-coded built-ins.
-    fn build_root_environment(
-        &self,
-        runtime_config: &Arc<RuntimeConfig>,
-        runner_registry: RunnerRegistry,
-    ) -> NodeEnvironment {
-        let mut resolver_registry = ResolverRegistry::default();
-
-        // Register the boot resolver, if any
-        match runtime_config.builtin_boot_resolver {
-            component_internal::BuiltinBootResolver::Boot => {
-                assert!(
-                    resolver_registry
-                        .register(&ResolverRegistration {
-                            resolver: BOOT_RESOLVER_NAME.into(),
-                            source: RegistrationSource::Self_,
-                            scheme: BOOT_SCHEME.to_string(),
-                        })
-                        .is_none(),
-                    "found duplicate resolver for boot scheme"
-                );
-            }
-            component_internal::BuiltinBootResolver::Pkg => {
-                assert!(
-                    resolver_registry
-                        .register(&ResolverRegistration {
-                            resolver: PKG_RESOLVER_NAME.into(),
-                            source: RegistrationSource::Self_,
-                            scheme: PKG_SCHEME.to_string(),
-                        })
-                        .is_none(),
-                    "found duplicate resolver for pkg scheme"
-                );
-            }
-            component_internal::BuiltinBootResolver::None => {}
-        };
-
-        // Register the RealmBuilder resolver and runner, if any
-        match runtime_config.realm_builder_resolver_and_runner {
-            component_internal::RealmBuilderResolverAndRunner::Namespace => {
-                assert!(
-                    resolver_registry
-                        .register(&ResolverRegistration {
-                            resolver: REALM_BUILDER_RESOLVER_NAME.into(),
-                            source: RegistrationSource::Self_,
-                            scheme: REALM_BUILDER_SCHEME.to_string(),
-                        })
-                        .is_none(),
-                    "found duplicate resolver for realm builder scheme"
-                );
-            }
-            component_internal::RealmBuilderResolverAndRunner::None => {}
-        }
-
-        NodeEnvironment::new_root(runner_registry, resolver_registry, DebugRegistry::default())
-    }
-
-    fn build_realm(
-        &self,
-        node: &ComponentNode,
-        tree: &ComponentTree,
-        model: &mut ComponentModelForAnalyzer,
-    ) -> anyhow::Result<Arc<ComponentInstanceForAnalyzer>> {
-        let abs_moniker =
-            AbsoluteMoniker::parse_string_without_instances(&node.node_path().to_string())
-                .expect("failed to parse moniker from id");
-        let parent = match node.parent() {
-            Some(parent_id) => ExtendedInstanceInterface::Component(Arc::clone(
-                model.instances.get(&parent_id).expect("parent instance not found"),
-            )),
-            None => ExtendedInstanceInterface::AboveRoot(Arc::clone(&model.top_instance)),
-        };
-        let environment = EnvironmentForAnalyzer::new(
-            node.environment().clone(),
-            WeakExtendedInstanceInterface::from(&parent),
-        );
-        let instance = Arc::new(ComponentInstanceForAnalyzer {
-            abs_moniker,
-            decl: node.decl.clone(),
-            url: node.url().clone(),
-            parent: WeakExtendedInstanceInterface::from(&parent),
-            children: RwLock::new(HashMap::new()),
-            environment,
-            policy_checker: model.policy_checker.clone(),
-            component_id_index: Arc::clone(&model.component_id_index),
-        });
-        model.instances.insert(node.node_path(), Arc::clone(&instance));
-        self.build_children(node, tree, model)?;
-        Ok(instance)
-    }
-
-    fn build_children(
-        &self,
-        node: &ComponentNode,
-        tree: &ComponentTree,
-        model: &mut ComponentModelForAnalyzer,
-    ) -> anyhow::Result<()> {
-        for child_id in node.children().iter() {
-            let child_instance = self.build_realm(tree.get_node(child_id)?, tree, model)?;
-            let partial_moniker = ChildMoniker::to_partial(
-                child_instance
-                    .abs_moniker()
-                    .leaf()
-                    .expect("expected child instance to have partial moniker"),
-            );
-            model
-                .instances
-                .get(&node.node_path())
-                .expect("instance id not found")
-                .children
-                .write()
-                .expect("failed to acquire write lock")
-                .insert(partial_moniker, child_instance);
-        }
-        Ok(())
-    }
-}
-
-/// The `ComponentInstanceVisitor` trait defines an interface for operating on a `ComponentInstanceForAnalyzer`.
-/// Should return an error if the operation fails.
-pub trait ComponentInstanceVisitor {
-    fn visit_instance(
-        &mut self,
+    // Adds all descendants of `instance` to `model`, also inserting each new instance
+    // in the `children` map of its parent.
+    fn add_descendants(
         instance: &Arc<ComponentInstanceForAnalyzer>,
-    ) -> Result<(), anyhow::Error>;
-}
+        decls_by_url: &HashMap<String, ComponentDecl>,
+        model: &mut ComponentModelForAnalyzer,
+        result: &mut BuildModelResult,
+    ) {
+        for child in instance.decl.children.iter() {
+            if child.name.is_empty() {
+                result.errors.push(anyhow!(BuildAnalyzerModelError::InvalidChildDecl(
+                    child.url.to_string(),
+                    NodePath::from(instance.abs_moniker().clone()).to_string(),
+                )));
+                continue;
+            }
+            match decls_by_url.get(&child.url) {
+                Some(child_decl) => match ComponentInstanceForAnalyzer::new_for_child(
+                    child,
+                    child_decl.clone(),
+                    Arc::clone(instance),
+                    model.policy_checker.clone(),
+                    Arc::clone(&model.component_id_index),
+                ) {
+                    Ok(child_instance) => {
+                        Self::add_descendants(&child_instance, decls_by_url, model, result);
 
-/// The `ComponentModelWalker` trait defines an interface for iteratively operating on component instances
-/// in a `ComponentModelForAnalyzer`, given a type implementing a per-instance operation via the
-/// `ComponentInstanceVisitor` trait.
-pub trait ComponentModelWalker {
-    fn walk<V: ComponentInstanceVisitor>(
-        &mut self,
-        model: &Arc<ComponentModelForAnalyzer>,
-        visitor: &mut V,
-    ) -> Result<(), anyhow::Error> {
-        self.initialize(model)?;
-        let mut instance = model.get_root_instance()?;
-        loop {
-            visitor.visit_instance(&instance)?;
-            match self.get_next_instance()? {
-                Some(next) => instance = next,
+                        instance.add_child(
+                            PartialChildMoniker::new(child.name.clone(), None),
+                            Arc::clone(&child_instance),
+                        );
+
+                        model.instances.insert(
+                            NodePath::from(child_instance.abs_moniker().clone()),
+                            child_instance,
+                        );
+                    }
+                    Err(err) => {
+                        result.errors.push(anyhow!(err));
+                    }
+                },
                 None => {
-                    return Ok(());
+                    result.errors.push(anyhow!(BuildAnalyzerModelError::ComponentDeclNotFound(
+                        child.url.to_string(),
+                        NodePath::from(instance.abs_moniker().clone()).to_string(),
+                    )))
                 }
             }
         }
     }
-
-    // Set up any initial state before beginning the walk.
-    fn initialize(&mut self, model: &Arc<ComponentModelForAnalyzer>) -> Result<(), anyhow::Error>;
-
-    // Get the next component instance to visit.
-    fn get_next_instance(
-        &mut self,
-    ) -> Result<Option<Arc<ComponentInstanceForAnalyzer>>, anyhow::Error>;
 }
 
-/// A walker implementing breadth-first traversal of a full `ComponentModelForAnalyzer`, starting at
-/// the root instance.
-#[derive(Default)]
-pub struct BreadthFirstModelWalker {
-    discovered: VecDeque<Arc<ComponentInstanceForAnalyzer>>,
-}
-
-impl BreadthFirstModelWalker {
-    pub fn new() -> Self {
-        Self { discovered: VecDeque::new() }
-    }
-
-    fn discover_children(&mut self, instance: &Arc<ComponentInstanceForAnalyzer>) {
-        let children = instance.get_children();
-        self.discovered.reserve(children.len());
-        for child in children.into_iter() {
-            self.discovered.push_back(child);
-        }
-    }
-}
-
-impl ComponentModelWalker for BreadthFirstModelWalker {
-    fn initialize(&mut self, model: &Arc<ComponentModelForAnalyzer>) -> Result<(), anyhow::Error> {
-        self.discover_children(&model.get_root_instance()?);
-        Ok(())
-    }
-
-    fn get_next_instance(
-        &mut self,
-    ) -> Result<Option<Arc<ComponentInstanceForAnalyzer>>, anyhow::Error> {
-        match self.discovered.pop_front() {
-            Some(next) => {
-                self.discover_children(&next);
-                Ok(Some(next))
-            }
-            None => Ok(None),
-        }
-    }
-}
-
-/// A ComponentInstanceVisitor which just records an identifier and the url of each component instance visited.
-#[derive(Default)]
-pub struct ModelMappingVisitor {
-    // A vector of (instance id, url) pairs.
-    visited: Vec<(String, String)>,
-}
-
-impl ModelMappingVisitor {
-    pub fn new() -> Self {
-        Self { visited: Vec::new() }
-    }
-
-    pub fn map(&self) -> &Vec<(String, String)> {
-        &self.visited
-    }
-}
-
-impl ComponentInstanceVisitor for ModelMappingVisitor {
-    fn visit_instance(
-        &mut self,
-        instance: &Arc<ComponentInstanceForAnalyzer>,
-    ) -> Result<(), anyhow::Error> {
-        self.visited.push((instance.node_path().to_string(), instance.url().to_string()));
-        Ok(())
-    }
-}
-
-/// `ComponentModelForAnalyzer` owns a representation of each v2 component instance and
-/// supports lookup by `NodePath`.
+/// `ComponentModelForAnalyzer` owns a representation of the v2 component graph and
+/// supports lookup of component instances by `NodePath`.
 #[derive(Default)]
 pub struct ComponentModelForAnalyzer {
     top_instance: Arc<TopInstanceForAnalyzer>,
@@ -441,6 +269,7 @@ impl ComponentModelForAnalyzer {
         }
     }
 
+    /// Checks the routing for all capabilities of the specified types that are `used` by `target`.
     pub fn check_routes_for_instance(
         self: &Arc<Self>,
         target: &Arc<ComponentInstanceForAnalyzer>,
@@ -851,8 +680,8 @@ impl ComponentModelForAnalyzer {
         }
     }
 
-    /// Checks properties of a capability source that are necessary to use the capability
-    /// and that are possible to verify statically.
+    // Checks properties of a capability source that are necessary to use the capability
+    // and that are possible to verify statically.
     fn check_use_source(
         &self,
         route_source: &RouteSource<ComponentInstanceForAnalyzer>,
@@ -867,8 +696,8 @@ impl ComponentModelForAnalyzer {
         }
     }
 
-    /// If the source of a directory capability is a component instance, checks that that
-    /// instance is executable.
+    // If the source of a directory capability is a component instance, checks that that
+    // instance is executable.
     fn check_directory_source(
         &self,
         source: &CapabilitySourceInterface<ComponentInstanceForAnalyzer>,
@@ -884,11 +713,11 @@ impl ComponentModelForAnalyzer {
         }
     }
 
-    /// If the source of a protocol capability is a component instance, checks that that
-    /// instance is executable.
-    ///
-    /// If the source is a capability, checks that the protocol is the `StorageAdmin`
-    /// protocol and that the source is a valid storage capability.
+    // If the source of a protocol capability is a component instance, checks that that
+    // instance is executable.
+    //
+    // If the source is a capability, checks that the protocol is the `StorageAdmin`
+    // protocol and that the source is a valid storage capability.
     fn check_protocol_source(
         &self,
         source: &CapabilitySourceInterface<ComponentInstanceForAnalyzer>,
@@ -908,6 +737,8 @@ impl ComponentModelForAnalyzer {
     }
 
     // A helper function validating a source of type `Capability` for a protocol capability.
+    // If the protocol is the `StorageAdmin` protocol, then it should have a valid storage
+    // source.
     fn check_protocol_capability_source(
         &self,
         source_component: &Arc<ComponentInstanceForAnalyzer>,
@@ -936,8 +767,8 @@ impl ComponentModelForAnalyzer {
         }
     }
 
-    /// If the source of a service capability is a component instance, checks that that
-    /// instance is executable.
+    // If the source of a service capability is a component instance, checks that that
+    // instance is executable.
     fn check_service_source(
         &self,
         source: &CapabilitySourceInterface<ComponentInstanceForAnalyzer>,
@@ -951,8 +782,8 @@ impl ComponentModelForAnalyzer {
         }
     }
 
-    /// If the source of a storage backing directory is a component instance, checks that that
-    /// instance is executable.
+    // If the source of a storage backing directory is a component instance, checks that that
+    // instance is executable.
     fn check_storage_source(
         &self,
         source: &StorageCapabilitySource<ComponentInstanceForAnalyzer>,
@@ -1048,345 +879,19 @@ impl ComponentModelForAnalyzer {
     }
 }
 
-/// A representation of a v2 component instance.
-#[derive(Debug)]
-pub struct ComponentInstanceForAnalyzer {
-    abs_moniker: AbsoluteMoniker,
-    decl: ComponentDecl,
-    url: String,
-    parent: WeakExtendedInstanceInterface<ComponentInstanceForAnalyzer>,
-    children: RwLock<HashMap<PartialChildMoniker, Arc<ComponentInstanceForAnalyzer>>>,
-    environment: Arc<EnvironmentForAnalyzer>,
-    policy_checker: GlobalPolicyChecker,
-    component_id_index: Arc<ComponentIdIndex>,
-}
-
-impl ComponentInstanceForAnalyzer {
-    /// Exposes the component's ComponentDecl. This is referenced directly in
-    /// tests.
-    pub fn decl_for_testing(&self) -> &ComponentDecl {
-        &self.decl
-    }
-
-    pub fn node_path(&self) -> NodePath {
-        NodePath::absolute_from_vec(
-            self.abs_moniker().to_partial().path().into_iter().map(|m| m.as_str()).collect(),
-        )
-    }
-
-    fn get_children(&self) -> Vec<Arc<ComponentInstanceForAnalyzer>> {
-        self.children
-            .read()
-            .expect("failed to acquire read lock")
-            .values()
-            .map(|c| Arc::clone(c))
-            .collect()
-    }
-
-    fn resolve<'a>(
-        self: &'a Arc<Self>,
-    ) -> Result<
-        Box<dyn ResolvedInstanceInterface<Component = ComponentInstanceForAnalyzer> + 'a>,
-        ComponentInstanceError,
-    > {
-        Ok(Box::new(&**self))
-    }
-}
-
-/// A representation of `ComponentManager`'s instance, providing a set of capabilities to
-/// the root component instance.
-#[derive(Debug, Default)]
-pub struct TopInstanceForAnalyzer {
-    namespace_capabilities: NamespaceCapabilities,
-    builtin_capabilities: BuiltinCapabilities,
-}
-
-/// A representation of a capability route.
-#[derive(Clone, Debug, PartialEq)]
-pub struct RouteMap(Vec<RouteSegment>);
-
-impl RouteMap {
-    pub fn new() -> Self {
-        RouteMap(Vec::new())
-    }
-
-    pub fn from_segments(segments: Vec<RouteSegment>) -> Self {
-        RouteMap(segments)
-    }
-
-    pub fn push(&mut self, segment: RouteSegment) {
-        self.0.push(segment)
-    }
-
-    pub fn append(&mut self, other: &mut Self) {
-        self.0.append(&mut other.0)
-    }
-}
-
-impl Into<Vec<RouteSegment>> for RouteMap {
-    fn into(self) -> Vec<RouteSegment> {
-        self.0
-    }
-}
-
-/// A struct implementing `DebugRouteMapper` that records a `RouteMap` as the router
-/// walks a capability route.
-#[derive(Clone, Debug)]
-pub struct RouteMapper {
-    route: RouteMap,
-}
-
-impl DebugRouteMapper for RouteMapper {
-    type RouteMap = RouteMap;
-
-    fn add_use(&mut self, abs_moniker: AbsoluteMoniker, use_decl: UseDecl) {
-        self.route.push(RouteSegment::UseBy {
-            node_path: NodePath::from(abs_moniker),
-            capability: use_decl,
-        })
-    }
-
-    fn add_offer(&mut self, abs_moniker: AbsoluteMoniker, offer_decl: OfferDecl) {
-        self.route.push(RouteSegment::OfferBy {
-            node_path: NodePath::from(abs_moniker),
-            capability: offer_decl,
-        })
-    }
-
-    fn add_expose(&mut self, abs_moniker: AbsoluteMoniker, expose_decl: ExposeDecl) {
-        self.route.push(RouteSegment::ExposeBy {
-            node_path: NodePath::from(abs_moniker),
-            capability: expose_decl,
-        })
-    }
-
-    fn add_registration(
-        &mut self,
-        abs_moniker: AbsoluteMoniker,
-        registration_decl: RegistrationDecl,
-    ) {
-        self.route.push(RouteSegment::RegisterBy {
-            node_path: NodePath::from(abs_moniker),
-            capability: registration_decl,
-        })
-    }
-
-    fn add_component_capability(
-        &mut self,
-        abs_moniker: AbsoluteMoniker,
-        capability_decl: CapabilityDecl,
-    ) {
-        self.route.push(RouteSegment::DeclareBy {
-            node_path: NodePath::from(abs_moniker),
-            capability: capability_decl,
-        })
-    }
-
-    fn add_framework_capability(&mut self, capability_name: CapabilityName) {
-        self.route.push(RouteSegment::ProvideFromFramework { capability: capability_name })
-    }
-
-    fn add_builtin_capability(&mut self, capability_decl: CapabilityDecl) {
-        self.route.push(RouteSegment::ProvideAsBuiltin { capability: capability_decl })
-    }
-
-    fn add_namespace_capability(&mut self, capability_decl: CapabilityDecl) {
-        self.route.push(RouteSegment::ProvideFromNamespace { capability: capability_decl })
-    }
-
-    fn get_route(self) -> RouteMap {
-        self.route
-    }
-}
-
-#[async_trait]
-impl ComponentInstanceInterface for ComponentInstanceForAnalyzer {
-    type TopInstance = TopInstanceForAnalyzer;
-    type DebugRouteMapper = RouteMapper;
-
-    fn abs_moniker(&self) -> &AbsoluteMoniker {
-        &self.abs_moniker
-    }
-
-    fn url(&self) -> &str {
-        &self.url
-    }
-
-    fn environment(&self) -> &dyn EnvironmentInterface<Self> {
-        self.environment.as_ref()
-    }
-
-    fn try_get_parent(&self) -> Result<ExtendedInstanceInterface<Self>, ComponentInstanceError> {
-        Ok(self.parent.upgrade()?)
-    }
-
-    fn try_get_policy_checker(&self) -> Result<GlobalPolicyChecker, ComponentInstanceError> {
-        Ok(self.policy_checker.clone())
-    }
-
-    fn try_get_component_id_index(&self) -> Result<Arc<ComponentIdIndex>, ComponentInstanceError> {
-        Ok(Arc::clone(&self.component_id_index))
-    }
-
-    // The trait definition requires this function to be async, but `ComponentInstanceForAnalyzer`'s
-    // implementation must not await. This method is called by `route_capability`, which must
-    // return immediately for `ComponentInstanceForAnalyzer` (see
-    // `ComponentModelForAnalyzer::route_capability_sync()`).
-    //
-    // TODO(fxbug.dev/87204): Remove this comment when Scrutiny's `DataController` can make async
-    // function calls.
-    async fn lock_resolved_state<'a>(
-        self: &'a Arc<Self>,
-    ) -> Result<
-        Box<dyn ResolvedInstanceInterface<Component = ComponentInstanceForAnalyzer> + 'a>,
-        ComponentInstanceError,
-    > {
-        self.resolve()
-    }
-
-    fn new_route_mapper() -> RouteMapper {
-        RouteMapper { route: RouteMap::new() }
-    }
-}
-
-impl ResolvedInstanceInterface for ComponentInstanceForAnalyzer {
-    type Component = ComponentInstanceForAnalyzer;
-
-    fn uses(&self) -> Vec<UseDecl> {
-        self.decl.uses.clone()
-    }
-
-    fn exposes(&self) -> Vec<ExposeDecl> {
-        self.decl.exposes.clone()
-    }
-
-    fn offers(&self) -> Vec<OfferDecl> {
-        self.decl.offers.clone()
-    }
-
-    fn capabilities(&self) -> Vec<CapabilityDecl> {
-        self.decl.capabilities.clone()
-    }
-
-    fn collections(&self) -> Vec<CollectionDecl> {
-        self.decl.collections.clone()
-    }
-
-    fn get_live_child(
-        &self,
-        moniker: &PartialChildMoniker,
-    ) -> Option<Arc<ComponentInstanceForAnalyzer>> {
-        self.children.read().expect("failed to acquire read lock").get(moniker).map(Arc::clone)
-    }
-
-    // This is a static model with no notion of a collection.
-    fn live_children_in_collection(
-        &self,
-        _collection: &str,
-    ) -> Vec<(PartialChildMoniker, Arc<ComponentInstanceForAnalyzer>)> {
-        vec![]
-    }
-}
-
-impl TopInstanceForAnalyzer {
-    fn new(
-        namespace_capabilities: NamespaceCapabilities,
-        builtin_capabilities: BuiltinCapabilities,
-    ) -> Arc<Self> {
-        Arc::new(Self { namespace_capabilities, builtin_capabilities })
-    }
-}
-
-impl TopInstanceInterface for TopInstanceForAnalyzer {
-    fn namespace_capabilities(&self) -> &NamespaceCapabilities {
-        &self.namespace_capabilities
-    }
-
-    fn builtin_capabilities(&self) -> &BuiltinCapabilities {
-        &self.builtin_capabilities
-    }
-}
-
-/// A representation of a v2 component instance's environment and its relationship to the
-/// parent realm's environment.
-#[derive(Debug)]
-pub struct EnvironmentForAnalyzer {
-    environment: NodeEnvironment,
-    parent: WeakExtendedInstanceInterface<ComponentInstanceForAnalyzer>,
-}
-
-impl EnvironmentForAnalyzer {
-    fn new(
-        environment: NodeEnvironment,
-        parent: WeakExtendedInstanceInterface<ComponentInstanceForAnalyzer>,
-    ) -> Arc<Self> {
-        Arc::new(Self { environment, parent })
-    }
-
-    /// Returns the resolver registered for `scheme` and the component that created the environment the
-    /// resolver was registered to. Returns `None` if there was no match.
-    fn get_registered_resolver(
-        &self,
-        scheme: &str,
-    ) -> Result<
-        Option<(ExtendedInstanceInterface<ComponentInstanceForAnalyzer>, ResolverRegistration)>,
-        ComponentInstanceError,
-    > {
-        let parent = self.parent().upgrade()?;
-        match self.resolver_registry().get_resolver(scheme) {
-            Some(reg) => Ok(Some((parent, reg.clone()))),
-            None => match self.extends() {
-                EnvironmentExtends::Realm => match parent {
-                    ExtendedInstanceInterface::Component(parent) => {
-                        parent.environment.get_registered_resolver(scheme)
-                    }
-                    ExtendedInstanceInterface::AboveRoot(_) => {
-                        unreachable!("root env can't extend")
-                    }
-                },
-                EnvironmentExtends::None => {
-                    return Ok(None);
-                }
-            },
-        }
-    }
-
-    fn resolver_registry(&self) -> &ResolverRegistry {
-        &self.environment.resolver_registry()
-    }
-}
-
-impl EnvironmentInterface<ComponentInstanceForAnalyzer> for EnvironmentForAnalyzer {
-    fn name(&self) -> Option<&str> {
-        self.environment.name()
-    }
-
-    fn parent(&self) -> &WeakExtendedInstanceInterface<ComponentInstanceForAnalyzer> {
-        &self.parent
-    }
-
-    fn extends(&self) -> &EnvironmentExtends {
-        self.environment.extends()
-    }
-
-    fn runner_registry(&self) -> &RunnerRegistry {
-        self.environment.runner_registry()
-    }
-
-    fn debug_registry(&self) -> &DebugRegistry {
-        self.environment.debug_registry()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use {
         super::*,
+        crate::environment::BOOT_SCHEME,
         anyhow::Result,
         cm_rust::{
-            DependencyType, RegistrationSource, RunnerRegistration, UseProtocolDecl, UseSource,
+            CapabilityName, DependencyType, RegistrationSource, RunnerRegistration,
+            UseProtocolDecl, UseSource,
         },
         cm_rust_testing::{ChildDeclBuilder, ComponentDeclBuilder, EnvironmentDeclBuilder},
+        fidl_fuchsia_component_internal as component_internal,
+        routing::component_instance::WeakExtendedInstanceInterface,
         std::{
             convert::{TryFrom, TryInto},
             iter::FromIterator,
@@ -1498,34 +1003,6 @@ mod tests {
         assert!(child_instance.resolve().is_ok());
 
         Ok(())
-    }
-
-    // Spot-checks that `ComponentInstanceForAnalyzer`'s implementation of the `ComponentInstanceInterface`
-    // trait method `lock_resolved_state()` returns immediately. In addition, updates to that method should
-    // be reviewed to make sure that this property holds; otherwise, `ComponentModelForAnalyzer`'s sync
-    // methods may panic.
-    #[test]
-    fn lock_resolved_state_is_sync() {
-        let components = vec![("root", ComponentDeclBuilder::new().build())];
-
-        let config = Arc::new(RuntimeConfig::default());
-        let build_model_result = ModelBuilderForAnalyzer::new(
-            cm_types::Url::new(make_test_url("root")).expect("failed to parse root component url"),
-        )
-        .build(
-            make_decl_map(components),
-            config,
-            Arc::new(ComponentIdIndex::default()),
-            RunnerRegistry::default(),
-        );
-        assert_eq!(build_model_result.errors.len(), 0);
-        assert!(build_model_result.model.is_some());
-        let model = build_model_result.model.unwrap();
-        assert_eq!(model.len(), 1);
-
-        let root_instance =
-            model.get_instance(&NodePath::absolute_from_vec(vec![])).expect("root instance");
-        assert!(root_instance.lock_resolved_state().now_or_never().is_some())
     }
 
     // Spot-checks that `route_capability` returns immediately when routing a capability from a
@@ -1672,7 +1149,7 @@ mod tests {
             .expect("child instance");
 
         let get_child_runner_result = child_instance
-            .environment
+            .environment()
             .get_registered_runner(&child_runner_registration.target_name)?;
         assert!(get_child_runner_result.is_some());
         let (child_runner_registrar, child_runner) = get_child_runner_result.unwrap();
@@ -1702,7 +1179,7 @@ mod tests {
         assert_eq!(child_resolver_registration, child_resolver);
 
         let get_builtin_runner_result = child_instance
-            .environment
+            .environment()
             .get_registered_runner(&CapabilityName::from(builtin_runner_name))?;
         assert!(get_builtin_runner_result.is_some());
         let (builtin_runner_registrar, _builtin_runner) = get_builtin_runner_result.unwrap();
@@ -1723,57 +1200,6 @@ mod tests {
             }
             ExtendedInstanceInterface::AboveRoot(_) => {}
         }
-
-        Ok(())
-    }
-
-    #[test]
-    fn breadth_first_walker() -> Result<(), anyhow::Error> {
-        let components = vec![
-            ("a", ComponentDeclBuilder::new().add_lazy_child("b").add_lazy_child("c").build()),
-            ("b", ComponentDeclBuilder::new().build()),
-            ("c", ComponentDeclBuilder::new().add_lazy_child("d").build()),
-            ("d", ComponentDeclBuilder::new().build()),
-        ];
-        let a_url = make_test_url("a");
-        let b_url = make_test_url("b");
-        let c_url = make_test_url("c");
-        let d_url = make_test_url("d");
-
-        let config = Arc::new(RuntimeConfig::default());
-        let build_model_result = ModelBuilderForAnalyzer::new(
-            cm_types::Url::new(a_url.clone()).expect("failed to parse root component url"),
-        )
-        .build(
-            make_decl_map(components),
-            config,
-            Arc::new(ComponentIdIndex::default()),
-            RunnerRegistry::default(),
-        );
-        assert_eq!(build_model_result.errors.len(), 0);
-        assert!(build_model_result.model.is_some());
-        let model = build_model_result.model.unwrap();
-        assert_eq!(model.len(), 4);
-
-        let mut visitor = ModelMappingVisitor::new();
-        BreadthFirstModelWalker::new().walk(&model, &mut visitor)?;
-        let map = visitor.map();
-
-        // The visitor should visit both "b" and "c" before "d", but may visit "b" and "c" in either order.
-        assert!(
-            (map == &vec![
-                ("/".to_string(), a_url.clone()),
-                ("/b".to_string(), b_url.clone()),
-                ("/c".to_string(), c_url.clone()),
-                ("/c/d".to_string(), d_url.clone())
-            ]) || (map
-                == &vec![
-                    ("/".to_string(), a_url.clone()),
-                    ("/c".to_string(), c_url.clone()),
-                    ("/b".to_string(), b_url.clone()),
-                    ("/c/d".to_string(), d_url.clone())
-                ])
-        );
 
         Ok(())
     }

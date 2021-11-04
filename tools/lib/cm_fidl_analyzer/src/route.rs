@@ -4,12 +4,13 @@
 
 use {
     crate::{
-        component_model::AnalyzerModelError,
-        component_tree::{ComponentTreeError, NodePath},
+        component_model::{AnalyzerModelError, BuildAnalyzerModelError},
+        node_path::NodePath,
     },
     cm_rust::{CapabilityDecl, CapabilityName, ExposeDecl, OfferDecl, UseDecl},
     fuchsia_zircon_status as zx_status,
-    routing::RegistrationDecl,
+    moniker::AbsoluteMoniker,
+    routing::{DebugRouteMapper, RegistrationDecl},
     serde::{Deserialize, Serialize},
     thiserror::Error,
 };
@@ -128,7 +129,7 @@ impl RouteSegment {
 #[serde(rename_all = "snake_case")]
 pub enum CapabilityRouteError {
     #[error("failed to find component: `{0}`")]
-    ComponentNotFound(ComponentTreeError),
+    ComponentNotFound(BuildAnalyzerModelError),
     #[error("no offer declaration for `{0}` with name `{1}`")]
     OfferDeclNotFound(String, String),
     #[error("multiple offer declarations found for `{0}` with name `{1}`")]
@@ -168,8 +169,112 @@ impl CapabilityRouteError {
     }
 }
 
-impl From<ComponentTreeError> for CapabilityRouteError {
-    fn from(err: ComponentTreeError) -> Self {
+impl From<BuildAnalyzerModelError> for CapabilityRouteError {
+    fn from(err: BuildAnalyzerModelError) -> Self {
         CapabilityRouteError::ComponentNotFound(err)
+    }
+}
+
+/// A representation of a capability route.
+#[derive(Clone, Debug, PartialEq)]
+pub struct RouteMap(Vec<RouteSegment>);
+
+impl RouteMap {
+    pub fn new() -> Self {
+        RouteMap(Vec::new())
+    }
+
+    pub fn from_segments(segments: Vec<RouteSegment>) -> Self {
+        RouteMap(segments)
+    }
+
+    pub fn push(&mut self, segment: RouteSegment) {
+        self.0.push(segment)
+    }
+
+    pub fn append(&mut self, other: &mut Self) {
+        self.0.append(&mut other.0)
+    }
+}
+
+impl Into<Vec<RouteSegment>> for RouteMap {
+    fn into(self) -> Vec<RouteSegment> {
+        self.0
+    }
+}
+
+/// A struct implementing `DebugRouteMapper` that records a `RouteMap` as the router
+/// walks a capability route.
+#[derive(Clone, Debug)]
+pub struct RouteMapper {
+    route: RouteMap,
+}
+
+impl RouteMapper {
+    pub fn new() -> Self {
+        Self { route: RouteMap::new() }
+    }
+}
+
+impl DebugRouteMapper for RouteMapper {
+    type RouteMap = RouteMap;
+
+    fn add_use(&mut self, abs_moniker: AbsoluteMoniker, use_decl: UseDecl) {
+        self.route.push(RouteSegment::UseBy {
+            node_path: NodePath::from(abs_moniker),
+            capability: use_decl,
+        })
+    }
+
+    fn add_offer(&mut self, abs_moniker: AbsoluteMoniker, offer_decl: OfferDecl) {
+        self.route.push(RouteSegment::OfferBy {
+            node_path: NodePath::from(abs_moniker),
+            capability: offer_decl,
+        })
+    }
+
+    fn add_expose(&mut self, abs_moniker: AbsoluteMoniker, expose_decl: ExposeDecl) {
+        self.route.push(RouteSegment::ExposeBy {
+            node_path: NodePath::from(abs_moniker),
+            capability: expose_decl,
+        })
+    }
+
+    fn add_registration(
+        &mut self,
+        abs_moniker: AbsoluteMoniker,
+        registration_decl: RegistrationDecl,
+    ) {
+        self.route.push(RouteSegment::RegisterBy {
+            node_path: NodePath::from(abs_moniker),
+            capability: registration_decl,
+        })
+    }
+
+    fn add_component_capability(
+        &mut self,
+        abs_moniker: AbsoluteMoniker,
+        capability_decl: CapabilityDecl,
+    ) {
+        self.route.push(RouteSegment::DeclareBy {
+            node_path: NodePath::from(abs_moniker),
+            capability: capability_decl,
+        })
+    }
+
+    fn add_framework_capability(&mut self, capability_name: CapabilityName) {
+        self.route.push(RouteSegment::ProvideFromFramework { capability: capability_name })
+    }
+
+    fn add_builtin_capability(&mut self, capability_decl: CapabilityDecl) {
+        self.route.push(RouteSegment::ProvideAsBuiltin { capability: capability_decl })
+    }
+
+    fn add_namespace_capability(&mut self, capability_decl: CapabilityDecl) {
+        self.route.push(RouteSegment::ProvideFromNamespace { capability: capability_decl })
+    }
+
+    fn get_route(self) -> RouteMap {
+        self.route
     }
 }
