@@ -43,6 +43,9 @@
 //! This library currently doesn't work outside of a component (the filesystem utility binary paths
 //! are hard-coded strings).
 
+pub mod asynchronous;
+mod error;
+
 use {
     anyhow::{format_err, Context as _, Error},
     cstr::cstr,
@@ -53,6 +56,11 @@ use {
     fuchsia_zircon::{self as zx, AsHandleRef, Task},
     fuchsia_zircon_status as zx_status,
     std::ffi::CStr,
+};
+
+// Re-export errors as public.
+pub use error::{
+    BindError, CommandError, KillError, LaunchProcessError, QueryError, ServeError, ShutdownError,
 };
 
 /// Stores state of the mounted filesystem instance
@@ -144,29 +152,25 @@ impl FSInstance {
     }
 }
 
-fn launch_process(args: &[&CStr], mut actions: Vec<SpawnAction<'_>>) -> Result<zx::Process, Error> {
-    let options = SpawnOptions::CLONE_ALL;
-
-    let process = match spawn_etc(
+fn launch_process(
+    args: &[&CStr],
+    mut actions: Vec<SpawnAction<'_>>,
+) -> Result<zx::Process, LaunchProcessError> {
+    match spawn_etc(
         &zx::Handle::invalid().into(),
-        options,
+        SpawnOptions::CLONE_ALL,
         args[0],
         args,
         None,
         &mut actions,
     ) {
-        Ok(process) => process,
-        Err((status, message)) => {
-            return Err(format_err!(
-                "failed to spawn process. launched with: {:?}, status: {}, message: {}",
-                args,
-                status,
-                message
-            ));
-        }
-    };
-
-    Ok(process)
+        Ok(process) => Ok(process),
+        Err((status, message)) => Err(LaunchProcessError {
+            args: args.iter().map(|&a| a.to_owned()).collect(),
+            status,
+            message,
+        }),
+    }
 }
 
 fn run_command_and_wait_for_clean_exit(
