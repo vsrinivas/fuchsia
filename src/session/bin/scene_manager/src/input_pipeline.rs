@@ -51,7 +51,6 @@ pub async fn handle_input(
         ],
         input_handlers(scene_manager, text_settings_handler, node).await,
     )
-    .await
     .context("Failed to create InputPipeline.")?;
 
     let input_device_registry_fut = handle_input_device_registry_request_streams(

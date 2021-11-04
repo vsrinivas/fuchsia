@@ -22,6 +22,8 @@ use {
 
 mod input_handlers;
 
+const IGNORE_REAL_DEVICES_CONFIG_PATH: &'static str = "/config/data/ignore_real_devices";
+
 enum ExposedServices {
     FactoryResetCountdown(FactoryResetCountdownRequestStream),
     InputDeviceRegistry(InputDeviceRegistryRequestStream),
@@ -50,13 +52,21 @@ async fn main() -> Result<(), Error> {
     let media_buttons_handler = MediaButtonsHandler::new();
     let input_handlers =
         input_handlers::create(factory_reset_handler.clone(), media_buttons_handler.clone()).await;
-    let input_pipeline = input_pipeline_lib::input_pipeline::InputPipeline::new(
-        device_types.clone(),
-        input_pipeline_lib::input_pipeline::InputPipelineAssembly::new()
-            .add_all_handlers(input_handlers),
-    )
-    .await
-    .expect("Failed to create input pipeline");
+
+    let input_pipeline = if std::path::Path::new(IGNORE_REAL_DEVICES_CONFIG_PATH).exists() {
+        input_pipeline_lib::input_pipeline::InputPipeline::new_for_test(
+            device_types.clone(),
+            input_pipeline_lib::input_pipeline::InputPipelineAssembly::new()
+                .add_all_handlers(input_handlers),
+        )
+    } else {
+        input_pipeline_lib::input_pipeline::InputPipeline::new(
+            device_types.clone(),
+            input_pipeline_lib::input_pipeline::InputPipelineAssembly::new()
+                .add_all_handlers(input_handlers),
+        )
+        .expect("Failed to create input pipeline")
+    };
 
     let input_event_sender = input_pipeline.input_event_sender().clone();
     let bindings = input_pipeline.input_device_bindings().clone();

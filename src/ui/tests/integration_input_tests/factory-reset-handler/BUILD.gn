@@ -62,11 +62,18 @@ rustc_test("factory_reset_handler_test") {
   ]
 }
 
-config_data("factory-reset-handler-test-audio") {
+config_data("factory-reset-handler-test-config") {
   for_pkg = "factory-reset-handler-test"
 
-  # This is an empty file required for the FactoryResetHandler to load.
-  sources = [ "data/chirp-start-tone.wav" ]
+  sources = [
+    # This is an empty file required for the FactoryResetHandler to load.
+    "data/chirp-start-tone.wav",
+
+    # Tells input pipeline to ignore real devices; avoids logging
+    # the "Input pipeline is unable to watch the input report directory"
+    # error.
+    "data/ignore_real_devices",
+  ]
 }
 
 fuchsia_component("factory-reset-handler-test-component") {
@@ -79,18 +86,13 @@ fuchsia_component("factory-reset-handler-test-component") {
 fuchsia_test_package("factory-reset-handler-test") {
   test_components = [ ":factory-reset-handler-test-component" ]
   deps = [
-    ":factory-reset-handler-test-audio",
+    ":factory-reset-handler-test-config",
     "//src/cobalt/bin/testing/mock_cobalt:component_v2",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
     "//src/ui/bin/input-pipeline:component-for-test",
     "//src/ui/scenic:component",
   ]
   test_specs = {
-    log_settings = {
-      # TODO(fxrev.dev/597884): update input pipeline test component
-      # not to encounter errors, and remove this error logging allowance.
-      max_severity = "ERROR"
-    }
     environments = [
       {
         dimensions = {

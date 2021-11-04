@@ -162,15 +162,12 @@ pub struct InputPipeline {
 }
 
 impl InputPipeline {
-    /// Creates a new [`InputPipeline`].
-    ///
-    /// # Parameters
-    /// - `device_types`: The types of devices the new [`InputPipeline`] will support.
-    /// - `assembly`: The input handlers that the [`InputPipeline`] sends InputEvents to.
-    pub async fn new(
-        device_types: Vec<input_device::InputDeviceType>,
+    /// Does the work that is common to building an input pipeline, across
+    /// the integration-test and production configurations.
+    fn new_common(
+        input_device_types: Vec<input_device::InputDeviceType>,
         assembly: InputPipelineAssembly,
-    ) -> Result<Self, Error> {
+    ) -> Self {
         let (pipeline_sender, receiver, tasks) = assembly.into_components();
 
         // Add a stage that catches events which drop all the way down through the pipeline
@@ -182,16 +179,43 @@ impl InputPipeline {
 
         let (device_event_sender, device_event_receiver) =
             futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
-        let device_bindings: InputDeviceBindingHashMap = Arc::new(Mutex::new(HashMap::new()));
-        let input_pipeline = InputPipeline {
+        let input_device_bindings: InputDeviceBindingHashMap = Arc::new(Mutex::new(HashMap::new()));
+        InputPipeline {
             pipeline_sender,
             device_event_sender,
             device_event_receiver,
-            input_device_types: device_types.clone(),
-            input_device_bindings: device_bindings.clone(),
-        };
+            input_device_types,
+            input_device_bindings,
+        }
+    }
 
+    /// Creates a new [`InputPipeline`] for integration testing.
+    /// Unlike a production input pipeline, this pipeline will not monitor
+    /// `/dev/class/input-report` for devices.
+    ///
+    /// # Parameters
+    /// - `input_device_types`: The types of devices the new [`InputPipeline`] will support.
+    /// - `assembly`: The input handlers that the [`InputPipeline`] sends InputEvents to.
+    pub fn new_for_test(
+        input_device_types: Vec<input_device::InputDeviceType>,
+        assembly: InputPipelineAssembly,
+    ) -> Self {
+        Self::new_common(input_device_types, assembly)
+    }
+
+    /// Creates a new [`InputPipeline`] for production use.
+    ///
+    /// # Parameters
+    /// - `input_device_types`: The types of devices the new [`InputPipeline`] will support.
+    /// - `assembly`: The input handlers that the [`InputPipeline`] sends InputEvents to.
+    pub fn new(
+        input_device_types: Vec<input_device::InputDeviceType>,
+        assembly: InputPipelineAssembly,
+    ) -> Result<Self, Error> {
+        let input_pipeline = Self::new_common(input_device_types, assembly);
+        let input_device_types = input_pipeline.input_device_types.clone();
         let input_event_sender = input_pipeline.device_event_sender.clone();
+        let input_device_bindings = input_pipeline.input_device_bindings.clone();
         fasync::Task::local(async move {
             // Watches the input device directory for new input devices. Creates new InputDeviceBindings
             // that send InputEvents to `input_event_receiver`.
@@ -206,9 +230,9 @@ impl InputPipeline {
             let _ = Self::watch_for_devices(
                 device_watcher.unwrap(),
                 dir_proxy,
-                device_types,
+                input_device_types,
                 input_event_sender,
-                device_bindings,
+                input_device_bindings,
                 false, /* break_on_idle */
             )
             .await;

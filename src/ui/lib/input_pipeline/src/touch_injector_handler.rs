@@ -335,11 +335,16 @@ impl TouchInjectorHandler {
                         injector.inject(events).await.expect("Failed to inject updated viewport.");
                     }
                 }
-                _ => break,
+                Some(Err(e)) => {
+                    fx_log_err!("Error while reading viewport update: {}", e);
+                    return;
+                }
+                None => {
+                    fx_log_err!("Viewport update stream terminated unexpectedly");
+                    return;
+                }
             }
         }
-
-        fx_log_err!("Stopped tracking viewport changes.");
     }
 }
 
