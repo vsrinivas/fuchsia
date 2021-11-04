@@ -53,7 +53,7 @@ TEST_F(Tmp112DeviceTest, GetTemperatureCelsius) {
   mock_i2c_.ExpectWrite({kTemperatureReg}).ExpectReadStop({0x34, 0x12});
 
   TemperatureClient client(std::move(messenger_.local()));
-  auto result = client.GetTemperatureCelsius();
+  auto result = client->GetTemperatureCelsius();
   EXPECT_OK(result->status);
   EXPECT_TRUE(FloatNear(result->temp, dev_->RegToTemperatureCelsius(0x1234)));
 

@@ -39,16 +39,17 @@ zx_status_t NelsonBrownoutProtection::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NO_RESOURCES;
   }
 
-  fidl::WireSyncClient<fuchsia_hardware_power_sensor::Device> power_sensor_client;
-  zx::channel power_sensor_server;
-  zx_status_t status =
-      zx::channel::create(0, power_sensor_client.mutable_channel(), &power_sensor_server);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to create channel: %s", zx_status_get_string(status));
-    return status;
+  zx::status power_sensor_endpoints =
+      fidl::CreateEndpoints<fuchsia_hardware_power_sensor::Device>();
+  if (!power_sensor_endpoints.is_ok()) {
+    zxlogf(ERROR, "Failed to create channel: %s", power_sensor_endpoints.status_string());
+    return power_sensor_endpoints.status_value();
   }
+  fidl::WireSyncClient power_sensor_client =
+      fidl::BindSyncClient(std::move(power_sensor_endpoints->client));
 
-  if ((status = power_sensor.ConnectServer(std::move(power_sensor_server))) != ZX_OK) {
+  zx_status_t status = power_sensor.ConnectServer(power_sensor_endpoints->server.TakeChannel());
+  if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to connect to power_sensor driver: %s", zx_status_get_string(status));
     return status;
   }
@@ -147,7 +148,7 @@ int NelsonBrownoutProtection::Thread() {
 
     while (run_thread_) {
       zx::nanosleep(zx::deadline_after(kVoltagePollInterval));
-      const auto result = power_sensor_.GetVoltageVolts();
+      const auto result = power_sensor_->GetVoltageVolts();
       if (result.ok() && result->result.response().voltage >= kVoltageUpwardThreshold) {
         break;
       }

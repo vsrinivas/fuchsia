@@ -84,7 +84,7 @@ TEST(TiIna231Test, GetPowerWatts) {
 
   {
     fake_i2c.set_power(4792);
-    auto response = client.GetPowerWatts();
+    auto response = client->GetPowerWatts();
     ASSERT_TRUE(response.ok());
     ASSERT_FALSE(response.value().result.is_err());
     EXPECT_TRUE(FloatNear(response.value().result.response().power, 29.95f));
@@ -92,7 +92,7 @@ TEST(TiIna231Test, GetPowerWatts) {
 
   {
     fake_i2c.set_power(0);
-    auto response = client.GetPowerWatts();
+    auto response = client->GetPowerWatts();
     ASSERT_TRUE(response.ok());
     ASSERT_FALSE(response.value().result.is_err());
     EXPECT_TRUE(FloatNear(response.value().result.response().power, 0.0f));
@@ -100,7 +100,7 @@ TEST(TiIna231Test, GetPowerWatts) {
 
   {
     fake_i2c.set_power(65535);
-    auto response = client.GetPowerWatts();
+    auto response = client->GetPowerWatts();
     ASSERT_TRUE(response.ok());
     ASSERT_FALSE(response.value().result.is_err());
     EXPECT_TRUE(FloatNear(response.value().result.response().power, 409.59375f));
@@ -146,26 +146,28 @@ TEST(TiIna231Test, BanjoClients) {
 
   EXPECT_OK(dut.Init(kMetadata));
 
-  fidl::WireSyncClient<fuchsia_hardware_power_sensor::Device> client1, client2;
+  zx::status<fidl::ClientEnd<fuchsia_hardware_power_sensor::Device>> client_end;
+  fidl::ServerEnd<fuchsia_hardware_power_sensor::Device> server;
 
-  zx::channel server;
-  ASSERT_OK(zx::channel::create(0, client1.mutable_channel(), &server));
-  ASSERT_OK(dut.PowerSensorConnectServer(std::move(server)));
+  ASSERT_OK((client_end = fidl::CreateEndpoints(&server)).status_value());
+  fidl::WireSyncClient client1(std::move(*client_end));
+  ASSERT_OK(dut.PowerSensorConnectServer(server.TakeChannel()));
 
-  ASSERT_OK(zx::channel::create(0, client2.mutable_channel(), &server));
-  ASSERT_OK(dut.PowerSensorConnectServer(std::move(server)));
+  ASSERT_OK((client_end = fidl::CreateEndpoints(&server)).status_value());
+  fidl::WireSyncClient client2(std::move(*client_end));
+  ASSERT_OK(dut.PowerSensorConnectServer(server.TakeChannel()));
 
   fake_i2c.set_power(4792);
 
   {
-    auto response = client1.GetPowerWatts();
+    auto response = client1->GetPowerWatts();
     ASSERT_TRUE(response.ok());
     ASSERT_FALSE(response.value().result.is_err());
     EXPECT_TRUE(FloatNear(response.value().result.response().power, 29.95f));
   }
 
   {
-    auto response = client2.GetPowerWatts();
+    auto response = client2->GetPowerWatts();
     ASSERT_TRUE(response.ok());
     ASSERT_FALSE(response.value().result.is_err());
     EXPECT_TRUE(FloatNear(response.value().result.response().power, 29.95f));
@@ -197,7 +199,7 @@ TEST(TiIna231Test, GetVoltageVolts) {
 
   {
     fake_i2c.set_bus_voltage(9200);
-    auto response = client.GetVoltageVolts();
+    auto response = client->GetVoltageVolts();
     ASSERT_TRUE(response.ok());
     ASSERT_FALSE(response.value().result.is_err());
     EXPECT_TRUE(FloatNear(response.value().result.response().voltage, 11.5f));
@@ -205,7 +207,7 @@ TEST(TiIna231Test, GetVoltageVolts) {
 
   {
     fake_i2c.set_bus_voltage(0);
-    auto response = client.GetVoltageVolts();
+    auto response = client->GetVoltageVolts();
     ASSERT_TRUE(response.ok());
     ASSERT_FALSE(response.value().result.is_err());
     EXPECT_TRUE(FloatNear(response.value().result.response().voltage, 0.0f));
@@ -213,7 +215,7 @@ TEST(TiIna231Test, GetVoltageVolts) {
 
   {
     fake_i2c.set_bus_voltage(65535);
-    auto response = client.GetVoltageVolts();
+    auto response = client->GetVoltageVolts();
     ASSERT_TRUE(response.ok());
     ASSERT_FALSE(response.value().result.is_err());
     EXPECT_TRUE(FloatNear(response.value().result.response().voltage, 81.91875f));

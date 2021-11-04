@@ -57,10 +57,11 @@ class Cr50SpiTest : public zxtest::Test,
   }
 
   fidl::WireSyncClient<fuchsia_hardware_spi::Device> MakeSpiClient() {
-    fidl::WireSyncClient<fuchsia_hardware_spi::Device> client;
-    auto server = fidl::CreateEndpoints(&client.client_end());
-    fidl::BindServer(loop_.dispatcher(), std::move(server.value()), this);
-    return client;
+    fidl::ServerEnd<fuchsia_hardware_spi::Device> server;
+    auto client = fidl::CreateEndpoints(&server);
+    ZX_ASSERT(client.is_ok());
+    fidl::BindServer(loop_.dispatcher(), std::move(server), this);
+    return fidl::BindSyncClient(std::move(*client));
   }
 
   void Exchange(fidl::VectorView<uint8_t> transmit, fidl::VectorView<uint8_t>* receive) {
@@ -202,16 +203,17 @@ TEST_F(Cr50SpiTest, TestTpmRead) {
   ASSERT_NO_FATAL_FAILURES(CreateDevice(false));
   ASSERT_NO_FATAL_FAILURES(ExpectFirmware("hello firmware"));
 
-  fidl::WireSyncClient<fuchsia_hardware_tpmimpl::TpmImpl> client;
-  auto server = fidl::CreateEndpoints(&client.client_end());
+  fidl::ClientEnd<fuchsia_hardware_tpmimpl::TpmImpl> client_end;
+  auto server = fidl::CreateEndpoints(&client_end);
   ASSERT_TRUE(server.is_ok());
+  fidl::WireSyncClient client{std::move(client_end)};
 
   ddk::TpmImplProtocolClient proto(fake_root_->GetLatestChild());
   proto.ConnectServer(server->TakeChannel());
 
   std::vector<uint8_t> expected{1, 2, 3, 4};
   ExpectMessage(false, fuchsia_hardware_tpmimpl::wire::RegisterAddress::kTpmSts, {}, expected);
-  auto read = client.Read(0, fuchsia_hardware_tpmimpl::wire::RegisterAddress::kTpmSts, 4);
+  auto read = client->Read(0, fuchsia_hardware_tpmimpl::wire::RegisterAddress::kTpmSts, 4);
   ASSERT_TRUE(read.ok());
   ASSERT_TRUE(read->result.is_response());
   auto& view = read->result.response().data;
@@ -224,17 +226,18 @@ TEST_F(Cr50SpiTest, TestTpmWrite) {
   ASSERT_NO_FATAL_FAILURES(CreateDevice(false));
   ASSERT_NO_FATAL_FAILURES(ExpectFirmware("hello firmware"));
 
-  fidl::WireSyncClient<fuchsia_hardware_tpmimpl::TpmImpl> client;
-  auto server = fidl::CreateEndpoints(&client.client_end());
+  fidl::ClientEnd<fuchsia_hardware_tpmimpl::TpmImpl> client_end;
+  auto server = fidl::CreateEndpoints(&client_end);
   ASSERT_TRUE(server.is_ok());
+  fidl::WireSyncClient client{std::move(client_end)};
 
   ddk::TpmImplProtocolClient proto(fake_root_->GetLatestChild());
   proto.ConnectServer(server->TakeChannel());
 
   std::vector<uint8_t> expected{4, 4, 2, 0};
   ExpectMessage(true, fuchsia_hardware_tpmimpl::wire::RegisterAddress::kTpmSts, expected, {});
-  auto read = client.Write(0, fuchsia_hardware_tpmimpl::wire::RegisterAddress::kTpmSts,
-                           fidl::VectorView<uint8_t>::FromExternal(expected));
+  auto read = client->Write(0, fuchsia_hardware_tpmimpl::wire::RegisterAddress::kTpmSts,
+                            fidl::VectorView<uint8_t>::FromExternal(expected));
   ASSERT_TRUE(read.ok());
   ASSERT_TRUE(read->result.is_response());
   ASSERT_EQ(messages_.size(), 0);

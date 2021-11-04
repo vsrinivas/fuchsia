@@ -8,6 +8,7 @@
 #include <lib/ddk/binding.h>
 #include <lib/ddk/driver.h>
 #include <lib/devmgr-integration-test/fixture.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/sys/cpp/component_context.h>
 
@@ -38,20 +39,17 @@ class BindCompilerV2Test : public testing::Test {
                                                                        "sys/test/test", &root_fd);
     ASSERT_EQ(status, ZX_OK);
 
-    auto root_device_endpoints = fidl::CreateEndpoints<fuchsia_device_test::RootDevice>();
-    ASSERT_EQ(root_device_endpoints.status_value(), ZX_OK);
-
-    auto root_device = fidl::BindSyncClient(std::move(root_device_endpoints->client));
-    status = fdio_get_service_handle(root_fd.release(),
-                                     root_device.mutable_channel()->reset_and_get_address());
-    ASSERT_EQ(status, ZX_OK);
+    zx::status root_device_client_end =
+        fdio_cpp::FdioCaller(std::move(root_fd)).take_as<fuchsia_device_test::RootDevice>();
+    ASSERT_EQ(root_device_client_end.status_value(), ZX_OK);
+    auto root_device = fidl::BindSyncClient(std::move(*root_device_client_end));
 
     auto endpoints = fidl::CreateEndpoints<fuchsia_device::Controller>();
     ASSERT_EQ(endpoints.status_value(), ZX_OK);
 
     // Create the root test device in /dev/sys/test/test, and get its relative path from /dev.
-    auto result = root_device.CreateDevice(fidl::StringView::FromExternal(kDriverLibname),
-                                           endpoints->server.TakeChannel());
+    auto result = root_device->CreateDevice(fidl::StringView::FromExternal(kDriverLibname),
+                                            endpoints->server.TakeChannel());
 
     ASSERT_EQ(result.status(), ZX_OK);
     ASSERT_EQ(result->status, ZX_OK);

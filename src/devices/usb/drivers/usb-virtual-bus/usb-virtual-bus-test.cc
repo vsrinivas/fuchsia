@@ -105,7 +105,7 @@ class VirtualBusTest : public zxtest::Test {
 
   void TearDown() override {
     ASSERT_NO_FATAL_FAILURES(bus_.ClearPeripheralDeviceFunctions());
-    ASSERT_NO_FATAL_FAILURES(ValidateResult(bus_.virtual_bus().Disable()));
+    ASSERT_NO_FATAL_FAILURES(ValidateResult(bus_.virtual_bus()->Disable()));
   }
 
  protected:
@@ -114,7 +114,7 @@ class VirtualBusTest : public zxtest::Test {
 };
 
 TEST_F(VirtualBusTest, ShortTransfer) {
-  ASSERT_TRUE(test_.RunShortPacketTest()->success);
+  ASSERT_TRUE(test_->RunShortPacketTest()->success);
   ASSERT_NO_FATAL_FAILURES();
 }
 

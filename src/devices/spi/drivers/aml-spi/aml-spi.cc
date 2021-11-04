@@ -240,7 +240,7 @@ zx_status_t AmlSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t t
   // FIFO, but only for subsequent transfers that use 64-bit words. Resetting the IP avoids the
   // problem.
   if (need_reset_ && reset_ && exchange_size >= sizeof(uint64_t)) {
-    reset_.WriteRegister32(kReset6RegisterOffset, reset_mask_, reset_mask_);
+    reset_->WriteRegister32(kReset6RegisterOffset, reset_mask_, reset_mask_);
     need_reset_ = false;
   } else {
     // reset both fifos

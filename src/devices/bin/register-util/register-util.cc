@@ -17,7 +17,7 @@ int run(int argc, const char** argv, zx::channel channel) {
   zx_status_t status = ZX_OK;
   if (argc == 4) {
     uint32_t value = static_cast<uint32_t>(strtoul(argv[3], nullptr, 16));
-    auto result = device.WriteRegister32(address, 0xFFFFFFFF, value);
+    auto result = device->WriteRegister32(address, 0xFFFFFFFF, value);
     if (result->result.is_err()) {
       status = result->result.err();
     }
@@ -25,7 +25,7 @@ int run(int argc, const char** argv, zx::channel channel) {
       fprintf(stderr, "Write failed due to error %s\n", zx_status_get_string(status));
     }
   } else if (argc == 3) {
-    auto result = device.ReadRegister32(address, 0xFFFFFFFF);
+    auto result = device->ReadRegister32(address, 0xFFFFFFFF);
     if (result->result.is_err()) {
       status = result->result.err();
     }

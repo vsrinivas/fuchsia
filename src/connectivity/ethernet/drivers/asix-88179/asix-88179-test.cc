@@ -84,20 +84,22 @@ class UsbAx88179Test : public zxtest::Test {
   void TearDown() override {
     ASSERT_NO_FATAL_FAILURES(bus_.ClearPeripheralDeviceFunctions());
 
-    auto result2 = bus_.virtual_bus().Disable();
+    auto result2 = bus_.virtual_bus()->Disable();
     ASSERT_NO_FATAL_FAILURES(usb_virtual_bus::ValidateResult(result2));
   }
 
   void ConnectEthernetClient() {
     fbl::unique_fd fd(openat(bus_.GetRootFd(), dev_path_.c_str(), O_RDWR));
-    ASSERT_OK(fdio_get_service_handle(fd.release(),
-                                      ethernet_client_.mutable_channel()->reset_and_get_address()));
+    zx::status ethernet_client_end =
+        fdio_cpp::FdioCaller(std::move(fd)).take_as<ethernet::Device>();
+    ASSERT_OK(ethernet_client_end.status_value());
+    ethernet_client_.Bind(std::move(*ethernet_client_end));
 
     // Get device information
-    auto get_info_result = ethernet_client_.GetInfo();
+    auto get_info_result = ethernet_client_->GetInfo();
     ASSERT_OK(get_info_result.status());
     auto info = get_info_result.Unwrap()->info;
-    auto get_fifos_result = ethernet_client_.GetFifos();
+    auto get_fifos_result = ethernet_client_->GetFifos();
     ASSERT_OK(get_fifos_result.status());
     auto fifos = get_fifos_result.Unwrap()->info.get();
     // Calculate optimal size of VMO, and set up RX and TX buffers.
@@ -106,7 +108,7 @@ class UsbAx88179Test : public zxtest::Test {
     fzl::VmoMapper mapper;
     ASSERT_OK(mapper.CreateAndMap(optimal_vmo_size, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
                                   nullptr, &vmo));
-    auto set_io_buffer_result = ethernet_client_.SetIoBuffer(std::move(vmo));
+    auto set_io_buffer_result = ethernet_client_->SetIoBuffer(std::move(vmo));
     ASSERT_OK(set_io_buffer_result.status());
 
     rx_fifo_ = std::move(fifos->rx);
@@ -114,27 +116,27 @@ class UsbAx88179Test : public zxtest::Test {
   }
 
   void StartDevice() {
-    auto start_result = ethernet_client_.Start();
+    auto start_result = ethernet_client_->Start();
     ASSERT_OK(start_result.status());
   }
 
   void SetDeviceOnline() {
     fbl::unique_fd fd(openat(bus_.GetRootFd(), test_function_path_.c_str(), O_RDWR));
-    fidl::WireSyncClient<ax88179::Hooks> test_client;
-    ASSERT_OK(fdio_get_service_handle(fd.release(),
-                                      test_client.mutable_channel()->reset_and_get_address()));
+    zx::status test_client_end = fdio_cpp::FdioCaller(std::move(fd)).take_as<ax88179::Hooks>();
+    ASSERT_OK(test_client_end.status_value());
+    fidl::WireSyncClient test_client{std::move(*test_client_end)};
 
     // Ensure SIGNAL_STATUS is de-asserted before we set it.
-    ASSERT_OK(ethernet_client_.GetStatus().status());
+    ASSERT_OK(ethernet_client_->GetStatus().status());
 
-    auto online_result = test_client.SetOnline(true);
+    auto online_result = test_client->SetOnline(true);
     ASSERT_OK(online_result.status());
     auto result = online_result.Unwrap()->status;
     ASSERT_OK(result);
   }
 
   ethernet::wire::DeviceStatus GetDeviceStatus() {
-    auto status_result = ethernet_client_.GetStatus();
+    auto status_result = ethernet_client_->GetStatus();
     ZX_ASSERT(status_result.status() == ZX_OK);
     return status_result.Unwrap()->device_status;
   }

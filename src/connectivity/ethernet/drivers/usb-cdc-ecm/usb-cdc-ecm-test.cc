@@ -147,13 +147,14 @@ class USBVirtualBus : public usb_virtual_bus_base::USBVirtualBusBase {
 class EthernetInterface {
  public:
   explicit EthernetInterface(fbl::unique_fd fd) {
-    ASSERT_OK(fdio_get_service_handle(fd.release(),
-                                      ethernet_client_.mutable_channel()->reset_and_get_address()));
+    zx::status client_end = fdio_cpp::FdioCaller(std::move(fd)).take_as<ethernet::Device>();
+    ASSERT_OK(client_end.status_value());
+    ethernet_client_.Bind(std::move(*client_end));
     // Get device information
-    auto get_info_result = ethernet_client_.GetInfo();
+    auto get_info_result = ethernet_client_->GetInfo();
     ASSERT_OK(get_info_result.status());
     auto info = get_info_result.Unwrap()->info;
-    auto get_fifos_result = ethernet_client_.GetFifos();
+    auto get_fifos_result = ethernet_client_->GetFifos();
     ASSERT_OK(get_fifos_result.status());
     auto fifos = get_fifos_result.Unwrap()->info.get();
     mtu_ = info.mtu;
@@ -164,9 +165,9 @@ class EthernetInterface {
                                    nullptr, &vmo));
     io_buffer_ = static_cast<uint8_t*>(mapper_.start());
     io_buffer_size_ = optimal_vmo_size;
-    auto set_io_buffer_result = ethernet_client_.SetIoBuffer(std::move(vmo));
+    auto set_io_buffer_result = ethernet_client_->SetIoBuffer(std::move(vmo));
     ASSERT_OK(set_io_buffer_result.status());
-    auto start_result = ethernet_client_.Start();
+    auto start_result = ethernet_client_->Start();
     ASSERT_OK(start_result.status());
     tx_fifo_ = std::move(fifos->tx);
     rx_fifo_ = std::move(fifos->rx);
@@ -261,7 +262,7 @@ class UsbCdcEcmTest : public zxtest::Test {
 
   void TearDown() override {
     ASSERT_NO_FATAL_FAILURES(bus_.ClearPeripheralDeviceFunctions());
-    ASSERT_NO_FATAL_FAILURES(ValidateResult(bus_.virtual_bus().Disable()));
+    ASSERT_NO_FATAL_FAILURES(ValidateResult(bus_.virtual_bus()->Disable()));
   }
 
  protected:

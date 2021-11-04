@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
   auto client = fidl::BindSyncClient(std::move(*client_end));
 
   fidl::Arena allocator;
-  auto response = client.Start(fuchsia_driver_test::wire::RealmArgs(allocator));
+  auto response = client->Start(fuchsia_driver_test::wire::RealmArgs(allocator));
   if (response.status() != ZX_OK) {
     return 1;
   }

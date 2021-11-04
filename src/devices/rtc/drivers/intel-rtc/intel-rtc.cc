@@ -247,7 +247,7 @@ zx_status_t Bind(void* ctx, zx_device_t* parent) {
   }
   auto acpi = std::move(client.value());
 
-  auto pio = acpi.borrow().GetPio(0);
+  auto pio = acpi.borrow()->GetPio(0);
   if (!pio.ok() || pio->result.is_err()) {
     zxlogf(ERROR, "Failed to get port I/O resource");
     return pio.ok() ? pio->result.err() : pio.status();

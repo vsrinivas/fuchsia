@@ -70,7 +70,7 @@ class UsbCdcAcmTest : public zxtest::Test {
   void TearDown() override {
     ASSERT_NO_FATAL_FAILURES(bus_.ClearPeripheralDeviceFunctions());
 
-    auto result2 = bus_.virtual_bus().Disable();
+    auto result2 = bus_.virtual_bus()->Disable();
     ASSERT_NO_FATAL_FAILURES(ValidateResult(result2));
   }
 

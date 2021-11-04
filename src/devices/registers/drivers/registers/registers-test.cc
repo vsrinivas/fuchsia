@@ -184,46 +184,46 @@ TEST_F(RegistersDeviceTest, Read32Test) {
 
   // Invalid Call
   auto invalid_call_result =
-      device->GetClient(0)->ReadRegister8(/* offset: */ 0x0, /* mask: */ 0xFF);
+      (*device->GetClient(0))->ReadRegister8(/* offset: */ 0x0, /* mask: */ 0xFF);
   ASSERT_TRUE(invalid_call_result.ok());
   EXPECT_FALSE(invalid_call_result->result.is_response());
 
   // Address not aligned
   auto unaligned_result =
-      device->GetClient(0)->ReadRegister32(/* offset: */ 0x1, /* mask: */ 0xFFFFFFFF);
+      (*device->GetClient(0))->ReadRegister32(/* offset: */ 0x1, /* mask: */ 0xFFFFFFFF);
   EXPECT_TRUE(unaligned_result.ok());
   EXPECT_FALSE(unaligned_result->result.is_response());
 
   // Address out of range
   auto out_of_range_result =
-      device->GetClient(1)->ReadRegister32(/* offset: */ 0xC, /* mask: */ 0xFFFFFFFF);
+      (*device->GetClient(1))->ReadRegister32(/* offset: */ 0xC, /* mask: */ 0xFFFFFFFF);
   ASSERT_TRUE(out_of_range_result.ok());
   EXPECT_FALSE(out_of_range_result->result.is_response());
 
   // Invalid mask
   auto invalid_mask_result =
-      device->GetClient(1)->ReadRegister32(/* offset: */ 0x8, /* mask: */ 0xFFFFFFFF);
+      (*device->GetClient(1))->ReadRegister32(/* offset: */ 0x8, /* mask: */ 0xFFFFFFFF);
   EXPECT_TRUE(invalid_mask_result.ok());
   EXPECT_FALSE(invalid_mask_result->result.is_response());
 
   // Successful
   (*(mock_mmio_[0]))[0x0].ExpectRead(0x12341234);
   auto read_result1 =
-      device->GetClient(0)->ReadRegister32(/* offset: */ 0x0, /* mask: */ 0xFFFFFFFF);
+      (*device->GetClient(0))->ReadRegister32(/* offset: */ 0x0, /* mask: */ 0xFFFFFFFF);
   ASSERT_TRUE(read_result1.ok());
   ASSERT_TRUE(read_result1->result.is_response());
   EXPECT_EQ(read_result1->result.response().value, 0x12341234);
 
   (*(mock_mmio_[2]))[0x4].ExpectRead(0x12341234);
   auto read_result2 =
-      device->GetClient(1)->ReadRegister32(/* offset: */ 0x4, /* mask: */ 0xFFFF0000);
+      (*device->GetClient(1))->ReadRegister32(/* offset: */ 0x4, /* mask: */ 0xFFFF0000);
   EXPECT_TRUE(read_result2.ok());
   EXPECT_TRUE(read_result2->result.is_response());
   EXPECT_EQ(read_result2->result.response().value, 0x12340000);
 
   (*(mock_mmio_[2]))[0x8].ExpectRead(0x12341234);
   auto read_result3 =
-      device->GetClient(1)->ReadRegister32(/* offset: */ 0x8, /* mask: */ 0xFFFF0000);
+      (*device->GetClient(1))->ReadRegister32(/* offset: */ 0x8, /* mask: */ 0xFFFF0000);
   EXPECT_TRUE(read_result3.ok());
   EXPECT_TRUE(read_result3->result.is_response());
   EXPECT_EQ(read_result3->result.response().value, 0x12340000);
@@ -244,44 +244,54 @@ TEST_F(RegistersDeviceTest, Write32Test) {
 
   // Invalid Call
   auto invalid_call_result =
-      device->GetClient(0)->WriteRegister8(/* offset: */ 0x0, /* mask: */ 0xFF, /* value:  */ 0x12);
+      (*device->GetClient(0))
+          ->WriteRegister8(/* offset: */ 0x0, /* mask: */ 0xFF, /* value:  */ 0x12);
   ASSERT_TRUE(invalid_call_result.ok());
   EXPECT_FALSE(invalid_call_result->result.is_response());
 
   // Address not aligned
-  auto unaligned_result = device->GetClient(0)->WriteRegister32(
-      /* offset: */ 0x1, /* mask: */ 0xFFFFFFFF, /* value: */ 0x43214321);
+  auto unaligned_result =
+      (*device->GetClient(0))
+          ->WriteRegister32(
+              /* offset: */ 0x1, /* mask: */ 0xFFFFFFFF, /* value: */ 0x43214321);
   ASSERT_TRUE(unaligned_result.ok());
   EXPECT_FALSE(unaligned_result->result.is_response());
 
   // Address out of range
-  auto out_of_range_result = device->GetClient(1)->WriteRegister32(
-      /* offset: */ 0xC, /* mask: */ 0xFFFFFFFF, /* value: */ 0x43214321);
+  auto out_of_range_result =
+      (*device->GetClient(1))
+          ->WriteRegister32(
+              /* offset: */ 0xC, /* mask: */ 0xFFFFFFFF, /* value: */ 0x43214321);
   EXPECT_TRUE(out_of_range_result.ok());
   EXPECT_FALSE(out_of_range_result->result.is_response());
 
   // Invalid mask
-  auto invalid_mask_result = device->GetClient(1)->WriteRegister32(
-      /* offset: */ 0x8, /* mask: */ 0xFFFFFFFF, /* value: */ 0x43214321);
+  auto invalid_mask_result =
+      (*device->GetClient(1))
+          ->WriteRegister32(
+              /* offset: */ 0x8, /* mask: */ 0xFFFFFFFF, /* value: */ 0x43214321);
   EXPECT_TRUE(invalid_mask_result.ok());
   EXPECT_FALSE(invalid_mask_result->result.is_response());
 
   // Successful
   (*(mock_mmio_[0]))[0x0].ExpectRead(0x00000000).ExpectWrite(0x43214321);
-  auto read_result1 = device->GetClient(0)->WriteRegister32(
-      /* offset: */ 0x0, /* mask: */ 0xFFFFFFFF, /* value: */ 0x43214321);
+  auto read_result1 = (*device->GetClient(0))
+                          ->WriteRegister32(
+                              /* offset: */ 0x0, /* mask: */ 0xFFFFFFFF, /* value: */ 0x43214321);
   EXPECT_TRUE(read_result1.ok());
   EXPECT_TRUE(read_result1->result.is_response());
 
   (*(mock_mmio_[1]))[0x4].ExpectRead(0x00000000).ExpectWrite(0x43210000);
-  auto read_result2 = device->GetClient(1)->WriteRegister32(
-      /* offset: */ 0x4, /* mask: */ 0xFFFF0000, /* value: */ 0x43214321);
+  auto read_result2 = (*device->GetClient(1))
+                          ->WriteRegister32(
+                              /* offset: */ 0x4, /* mask: */ 0xFFFF0000, /* value: */ 0x43214321);
   EXPECT_TRUE(read_result2.ok());
   EXPECT_TRUE(read_result2->result.is_response());
 
   (*(mock_mmio_[1]))[0x8].ExpectRead(0x00000000).ExpectWrite(0x43210000);
-  auto read_result3 = device->GetClient(1)->WriteRegister32(
-      /* offset: */ 0x8, /* mask: */ 0xFFFF0000, /* value: */ 0x43214321);
+  auto read_result3 = (*device->GetClient(1))
+                          ->WriteRegister32(
+                              /* offset: */ 0x8, /* mask: */ 0xFFFF0000, /* value: */ 0x43214321);
   EXPECT_TRUE(read_result3.ok());
   EXPECT_TRUE(read_result3->result.is_response());
 }
@@ -304,39 +314,39 @@ TEST_F(RegistersDeviceTest, Read64Test) {
 
   // Invalid Call
   auto invalid_call_result =
-      device->GetClient(0)->ReadRegister8(/* offset: */ 0x0, /* mask: */ 0xFF);
+      (*device->GetClient(0))->ReadRegister8(/* offset: */ 0x0, /* mask: */ 0xFF);
   ASSERT_TRUE(invalid_call_result.ok());
   EXPECT_FALSE(invalid_call_result->result.is_response());
 
   // Address not aligned
   auto unaligned_result =
-      device->GetClient(0)->ReadRegister64(/* offset: */ 0x1, /* mask: */ 0xFFFFFFFFFFFFFFFF);
+      (*device->GetClient(0))->ReadRegister64(/* offset: */ 0x1, /* mask: */ 0xFFFFFFFFFFFFFFFF);
   ASSERT_TRUE(unaligned_result.ok());
   EXPECT_FALSE(unaligned_result->result.is_response());
 
   // Address out of range
   auto out_of_range_result =
-      device->GetClient(1)->ReadRegister64(/* offset: */ 0x20, /* mask: */ 0xFFFFFFFFFFFFFFFF);
+      (*device->GetClient(1))->ReadRegister64(/* offset: */ 0x20, /* mask: */ 0xFFFFFFFFFFFFFFFF);
   ASSERT_TRUE(out_of_range_result.ok());
   EXPECT_FALSE(out_of_range_result->result.is_response());
 
   // Invalid mask
   auto invalid_mask_result =
-      device->GetClient(1)->ReadRegister64(/* offset: */ 0x8, /* mask: */ 0xFFFFFFFFFFFFFFFF);
+      (*device->GetClient(1))->ReadRegister64(/* offset: */ 0x8, /* mask: */ 0xFFFFFFFFFFFFFFFF);
   ASSERT_TRUE(invalid_mask_result.ok());
   EXPECT_FALSE(invalid_mask_result->result.is_response());
 
   // Successful
   (*(mock_mmio_[0]))[0x0].ExpectRead(0x1234123412341234);
   auto read_result1 =
-      device->GetClient(0)->ReadRegister64(/* offset: */ 0x0, /* mask: */ 0xFFFFFFFFFFFFFFFF);
+      (*device->GetClient(0))->ReadRegister64(/* offset: */ 0x0, /* mask: */ 0xFFFFFFFFFFFFFFFF);
   ASSERT_TRUE(read_result1.ok());
   ASSERT_TRUE(read_result1->result.is_response());
   EXPECT_EQ(read_result1->result.response().value, 0x1234123412341234);
 
   (*(mock_mmio_[2]))[0x8].ExpectRead(0x1234123412341234);
   auto read_result2 =
-      device->GetClient(1)->ReadRegister64(/* offset: */ 0x8, /* mask: */ 0x00000000FFFF0000);
+      (*device->GetClient(1))->ReadRegister64(/* offset: */ 0x8, /* mask: */ 0x00000000FFFF0000);
   ASSERT_TRUE(read_result2.ok());
   ASSERT_TRUE(read_result2->result.is_response());
   EXPECT_EQ(read_result2->result.response().value, 0x0000000012340000);
@@ -360,41 +370,49 @@ TEST_F(RegistersDeviceTest, Write64Test) {
 
   // Invalid Call
   auto invalid_call_result =
-      device->GetClient(0)->WriteRegister8(/* offset: */ 0x0, /* mask: */ 0xFF, /* value:  */ 0x12);
+      (*device->GetClient(0))
+          ->WriteRegister8(/* offset: */ 0x0, /* mask: */ 0xFF, /* value:  */ 0x12);
   ASSERT_TRUE(invalid_call_result.ok());
   EXPECT_FALSE(invalid_call_result->result.is_response());
 
   // Address not aligned
-  auto unaligned_result = device->GetClient(0)->WriteRegister64(
-      /* offset: */ 0x1, /* mask: */ 0xFFFFFFFFFFFFFFFF, /* value: */ 0x4321432143214321);
+  auto unaligned_result =
+      (*device->GetClient(0))
+          ->WriteRegister64(
+              /* offset: */ 0x1, /* mask: */ 0xFFFFFFFFFFFFFFFF, /* value: */ 0x4321432143214321);
   ASSERT_TRUE(unaligned_result.ok());
   EXPECT_FALSE(unaligned_result->result.is_response());
 
   // Address out of range
-  auto out_of_range_result = device->GetClient(1)->WriteRegister64(
-      /* offset: */ 0x20, /* mask: */ 0xFFFFFFFFFFFFFFFF, /* value: */ 0x4321432143214321);
+  auto out_of_range_result =
+      (*device->GetClient(1))
+          ->WriteRegister64(
+              /* offset: */ 0x20, /* mask: */ 0xFFFFFFFFFFFFFFFF, /* value: */ 0x4321432143214321);
   ASSERT_TRUE(out_of_range_result.ok());
   EXPECT_FALSE(out_of_range_result->result.is_response());
 
   // Invalid mask
-  auto invalid_mask_result = device->GetClient(1)->WriteRegister64(/* offset: */ 0x8,
-                                                                   /* mask: */ 0xFFFFFFFFFFFFFFFF,
-                                                                   /* value: */ 0x4321432143214321);
+  auto invalid_mask_result = (*device->GetClient(1))
+                                 ->WriteRegister64(/* offset: */ 0x8,
+                                                   /* mask: */ 0xFFFFFFFFFFFFFFFF,
+                                                   /* value: */ 0x4321432143214321);
   ASSERT_TRUE(invalid_mask_result.ok());
   EXPECT_FALSE(invalid_mask_result->result.is_response());
 
   // Successful
   (*(mock_mmio_[0]))[0x0].ExpectRead(0x0000000000000000).ExpectWrite(0x4321432143214321);
-  auto read_result1 = device->GetClient(0)->WriteRegister64(
-      /* offset: */ 0x0, /* mask: */ 0xFFFFFFFFFFFFFFFF, /* value: */
-      0x4321432143214321);
+  auto read_result1 = (*device->GetClient(0))
+                          ->WriteRegister64(
+                              /* offset: */ 0x0, /* mask: */ 0xFFFFFFFFFFFFFFFF, /* value: */
+                              0x4321432143214321);
   ASSERT_TRUE(read_result1.ok());
   EXPECT_TRUE(read_result1->result.is_response());
 
   (*(mock_mmio_[1]))[0x8].ExpectRead(0x0000000000000000).ExpectWrite(0x0000000043210000);
-  auto read_result2 = device->GetClient(1)->WriteRegister64(
-      /* offset: */ 0x8, /* mask: */ 0x00000000FFFF0000, /* value: */
-      0x0000000043210000);
+  auto read_result2 = (*device->GetClient(1))
+                          ->WriteRegister64(
+                              /* offset: */ 0x8, /* mask: */ 0x00000000FFFF0000, /* value: */
+                              0x0000000043210000);
   ASSERT_TRUE(read_result2.ok());
   EXPECT_TRUE(read_result2->result.is_response());
 }

@@ -57,7 +57,7 @@ zx::status<Object> Client::CallDsm(Uuid uuid, uint64_t revision, uint64_t func_i
     argc++;
   }
 
-  auto result = client_.EvaluateObject(
+  auto result = client_->EvaluateObject(
       "_DSM", fuchsia_hardware_acpi::wire::EvaluateObjectMode::kPlainObject,
       fidl::VectorView<fuchsia_hardware_acpi::wire::Object>::FromExternal(args.data(), argc));
   if (!result.ok()) {

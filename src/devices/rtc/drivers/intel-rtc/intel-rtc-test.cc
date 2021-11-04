@@ -42,7 +42,7 @@ class IntelRtcTest : public zxtest::Test {
   void ServeNvram(fidl::WireSyncClient<fuchsia_hardware_nvram::Device>* out) {
     auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_nvram::Device>();
     ASSERT_OK(endpoints.status_value());
-    out->client_end() = std::move(endpoints->client);
+    *out = fidl::WireSyncClient(std::move(endpoints->client));
     fidl::BindServer<fidl::WireServer<fuchsia_hardware_nvram::Device>>(
         loop_.dispatcher(), std::move(endpoints->server), device_.get());
   }
@@ -265,7 +265,7 @@ TEST_F(IntelRtcTest, TestNvramGetSize) {
   fidl::WireSyncClient<fuchsia_hardware_nvram::Device> client;
   ASSERT_NO_FATAL_FAILURES(ServeNvram(&client));
 
-  auto result = client.GetSize();
+  auto result = client->GetSize();
   ASSERT_OK(result.status());
   ASSERT_EQ(result->size, 114);
 }
@@ -276,7 +276,7 @@ TEST_F(IntelRtcTest, TestNvramWrite) {
   ASSERT_NO_FATAL_FAILURES(ServeNvram(&client));
 
   std::vector<uint8_t> my_data = {1, 2, 3, 4};
-  auto result = client.Write(0, fidl::VectorView<uint8_t>::FromExternal(my_data));
+  auto result = client->Write(0, fidl::VectorView<uint8_t>::FromExternal(my_data));
   ASSERT_OK(result.status());
   ASSERT_FALSE(result->result.is_err());
 
@@ -290,7 +290,7 @@ TEST_F(IntelRtcTest, TestNvramRead) {
   std::vector<uint8_t> my_data = {7, 8, 42, 10};
   memcpy(&registers_[kNvramStart + 30], my_data.data(), my_data.size());
 
-  auto result = client.Read(30, 4);
+  auto result = client->Read(30, 4);
   ASSERT_OK(result.status());
   ASSERT_FALSE(result->result.is_err());
 
@@ -305,7 +305,7 @@ TEST_F(IntelRtcTest, TestNvramWriteAcrossBanks) {
   ASSERT_NO_FATAL_FAILURES(ServeNvram(&client));
 
   std::vector<uint8_t> my_data = {1, 2, 3, 4};
-  auto result = client.Write(112, fidl::VectorView<uint8_t>::FromExternal(my_data));
+  auto result = client->Write(112, fidl::VectorView<uint8_t>::FromExternal(my_data));
   ASSERT_OK(result.status());
   ASSERT_FALSE(result->result.is_err());
 
@@ -319,7 +319,7 @@ TEST_F(IntelRtcTest, TestNvramReadAcrossBanks) {
   std::vector<uint8_t> my_data = {7, 8, 42, 10};
   memcpy(&registers_[kNvramStart + 112], my_data.data(), my_data.size());
 
-  auto result = client.Read(112, 4);
+  auto result = client->Read(112, 4);
   ASSERT_OK(result.status());
   ASSERT_FALSE(result->result.is_err());
 
@@ -334,13 +334,13 @@ TEST_F(IntelRtcTest, TestNvramOutOfBounds) {
   ASSERT_NO_FATAL_FAILURES(ServeNvram(&client));
 
   {
-    auto result = client.Read(400, 4);
+    auto result = client->Read(400, 4);
     ASSERT_OK(result.status());
     ASSERT_STATUS(result->result.err(), ZX_ERR_OUT_OF_RANGE);
   }
   {
     std::vector<uint8_t> my_data = {7, 8, 42, 10};
-    auto result = client.Write(400, fidl::VectorView<uint8_t>::FromExternal(my_data));
+    auto result = client->Write(400, fidl::VectorView<uint8_t>::FromExternal(my_data));
     ASSERT_OK(result.status());
     ASSERT_STATUS(result->result.err(), ZX_ERR_OUT_OF_RANGE);
   }

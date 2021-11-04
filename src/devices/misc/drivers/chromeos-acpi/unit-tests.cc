@@ -61,7 +61,7 @@ class ChromeosAcpiTest : public InspectTestHelper, public zxtest::Test {
     ASSERT_OK(value.status_value());
 
     fidl::BindServer(loop_.dispatcher(), std::move(value->server), GetDevice());
-    fidl_client_.client_end() = std::move(value->client);
+    fidl_client_.Bind(std::move(value->client));
   }
 
   ChromeosAcpi* GetDevice() {
@@ -191,7 +191,7 @@ TEST_F(ChromeosAcpiTest, NvdataVersionTestV2) {
   values_.emplace("VDAT", ToPackage(entries));
   ASSERT_NO_FATAL_FAILURES(CreateDevice());
 
-  auto result = fidl_client_.GetNvdataVersion();
+  auto result = fidl_client_->GetNvdataVersion();
   ASSERT_OK(result.status());
   ASSERT_EQ(result->result.response().version, 2);
 }
@@ -209,7 +209,7 @@ TEST_F(ChromeosAcpiTest, NvdataVersionTestV1) {
   values_.emplace("VDAT", ToPackage(entries));
   ASSERT_NO_FATAL_FAILURES(CreateDevice());
 
-  auto result = fidl_client_.GetNvdataVersion();
+  auto result = fidl_client_->GetNvdataVersion();
   ASSERT_OK(result.status());
   ASSERT_EQ(result->result.response().version, 1);
 }
@@ -219,7 +219,7 @@ TEST_F(ChromeosAcpiTest, ActiveAPFirmwareTest) {
   values_.emplace("BINF", ToPackage(args));
   ASSERT_NO_FATAL_FAILURES(CreateDevice());
 
-  auto result = fidl_client_.GetActiveApFirmware();
+  auto result = fidl_client_->GetActiveApFirmware();
   ASSERT_OK(result.status());
   ASSERT_EQ(result->result.response().slot, fuchsia_acpi_chromeos::wire::BootSlot::kA);
 }

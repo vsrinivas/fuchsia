@@ -70,7 +70,7 @@ int ClientCall(fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio> client, GpioFun
                uint8_t out_value, uint64_t ds_ua) {
   switch (func) {
     case Read: {
-      auto result = client.Read();
+      auto result = client->Read();
       if ((result.status() != ZX_OK) || result->result.has_invalid_tag()) {
         printf("Could not read GPIO\n");
         return -2;
@@ -79,7 +79,7 @@ int ClientCall(fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio> client, GpioFun
       break;
     }
     case Write: {
-      auto result = client.Write(write_value);
+      auto result = client->Write(write_value);
       if ((result.status() != ZX_OK) || result->result.has_invalid_tag()) {
         printf("Could not write to GPIO\n");
         return -2;
@@ -87,7 +87,7 @@ int ClientCall(fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio> client, GpioFun
       break;
     }
     case ConfigIn: {
-      auto result = client.ConfigIn(in_flag);
+      auto result = client->ConfigIn(in_flag);
       if ((result.status() != ZX_OK) || result->result.has_invalid_tag()) {
         printf("Could not configure GPIO as input\n");
         return -2;
@@ -95,7 +95,7 @@ int ClientCall(fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio> client, GpioFun
       break;
     }
     case ConfigOut: {
-      auto result = client.ConfigOut(out_value);
+      auto result = client->ConfigOut(out_value);
       if ((result.status() != ZX_OK) || result->result.has_invalid_tag()) {
         printf("Could not configure GPIO as output\n");
         return -2;
@@ -103,7 +103,7 @@ int ClientCall(fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio> client, GpioFun
       break;
     }
     case SetDriveStrength: {
-      auto result = client.SetDriveStrength(ds_ua);
+      auto result = client->SetDriveStrength(ds_ua);
       if ((result.status() != ZX_OK) || result->result.has_invalid_tag()) {
         printf("Could not set GPIO drive strength\n");
         return -2;

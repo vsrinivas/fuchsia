@@ -58,8 +58,8 @@ zx_status_t AmlNnaDevice::Init() {
   memory_pd_mmio_.Write32(0, nna_block_.hhi_mem_pd_reg1_offset);
 
   // set bit[12]=0
-  auto clear_result = reset_.WriteRegister32(nna_block_.reset_level2_offset,
-                                             aml_registers::NNA_RESET2_LEVEL_MASK, 0);
+  auto clear_result = reset_->WriteRegister32(nna_block_.reset_level2_offset,
+                                              aml_registers::NNA_RESET2_LEVEL_MASK, 0);
   if ((clear_result.status() != ZX_OK) || clear_result->result.is_err()) {
     zxlogf(ERROR, "%s: Clear Reset Write failed\n", __func__);
     return ZX_ERR_INTERNAL;
@@ -69,8 +69,8 @@ zx_status_t AmlNnaDevice::Init() {
 
   // set bit[12]=1
   auto set_result =
-      reset_.WriteRegister32(nna_block_.reset_level2_offset, aml_registers::NNA_RESET2_LEVEL_MASK,
-                             aml_registers::NNA_RESET2_LEVEL_MASK);
+      reset_->WriteRegister32(nna_block_.reset_level2_offset, aml_registers::NNA_RESET2_LEVEL_MASK,
+                              aml_registers::NNA_RESET2_LEVEL_MASK);
   if ((set_result.status() != ZX_OK) || set_result->result.is_err()) {
     zxlogf(ERROR, "%s: Set Reset Write failed\n", __func__);
     return ZX_ERR_INTERNAL;

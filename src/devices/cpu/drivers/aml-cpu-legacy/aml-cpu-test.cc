@@ -399,7 +399,7 @@ class AmlCpuTestFixture : public InspectTestHelper, public zxtest::Test {
   FakeAmlThermal thermal_;
 
   std::unique_ptr<AmlCpuTest> dut_;
-  std::unique_ptr<CpuCtrlSyncClient> cpu_client_;
+  CpuCtrlSyncClient cpu_client_;
 };
 
 void AmlCpuTestFixture::SetUp() {
@@ -412,7 +412,7 @@ void AmlCpuTestFixture::SetUp() {
   dut_ = std::make_unique<AmlCpuTest>(std::move(thermal_client));
   ASSERT_OK(dut_->Init());
 
-  cpu_client_ = std::make_unique<CpuCtrlSyncClient>(std::move(dut_->GetMessengerChannel()));
+  cpu_client_ = CpuCtrlSyncClient(std::move(dut_->GetMessengerChannel()));
 }
 
 TEST_F(AmlCpuTestFixture, TestGetPerformanceStateInfo) {

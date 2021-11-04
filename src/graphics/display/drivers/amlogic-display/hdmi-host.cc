@@ -73,7 +73,7 @@ zx_status_t HdmiHost::Init() {
     return status;
   }
 
-  auto res = hdmi_.PowerUp(1);  // only supports 1 display for now.
+  auto res = hdmi_->PowerUp(1);  // only supports 1 display for now.
   if ((res.status() != ZX_OK) || res->result.is_err()) {
     zxlogf(ERROR, "Power Up failed\n");
     return ZX_ERR_INTERNAL;
@@ -102,7 +102,7 @@ zx_status_t HdmiHost::HostOn() {
   // power up HDMI Memory (bits 15:8)
   HhiMemPdReg0::Get().ReadFrom(&(*hhi_mmio_)).set_hdmi(0).WriteTo(&(*hhi_mmio_));
 
-  auto res = hdmi_.Reset(1);  // only supports 1 display for now
+  auto res = hdmi_->Reset(1);  // only supports 1 display for now
   if ((res.status() != ZX_OK) || res->result.is_err()) {
     zxlogf(ERROR, "Reset failed\n");
     return ZX_ERR_INTERNAL;
@@ -117,7 +117,7 @@ void HdmiHost::HostOff() {
   /* Disable HPLL */
   WRITE32_REG(HHI, HHI_HDMI_PLL_CNTL0, 0);
 
-  auto res = hdmi_.PowerDown(1);  // only supports 1 display for now
+  auto res = hdmi_->PowerDown(1);  // only supports 1 display for now
   if (res.status() != ZX_OK) {
     zxlogf(ERROR, "Power Down failed\n");
   }
@@ -147,7 +147,7 @@ zx_status_t HdmiHost::ModeSet(const display_mode_t& mode) {
   fidl::Arena<2048> allocator;
   DisplayMode translated_mode(allocator);
   TranslateDisplayMode(allocator, mode, color_, &translated_mode);
-  auto res = hdmi_.ModeSet(1, translated_mode);  // only supports 1 display for now
+  auto res = hdmi_->ModeSet(1, translated_mode);  // only supports 1 display for now
   if ((res.status() != ZX_OK) || res->result.is_err()) {
     DISP_ERROR("Unable to initialize interface\n");
     return ZX_ERR_INTERNAL;
@@ -215,7 +215,7 @@ zx_status_t HdmiHost::EdidTransfer(uint32_t bus_id, const i2c_impl_op_t* op_list
       fidl::VectorView<fidl::VectorView<uint8_t>>::FromExternal(writes.get(), write_cnt);
   auto all_reads = fidl::VectorView<uint8_t>::FromExternal(reads.get(), read_cnt);
 
-  auto res = hdmi_.EdidTransfer(all_ops, all_writes, all_reads);
+  auto res = hdmi_->EdidTransfer(all_ops, all_writes, all_reads);
   if ((res.status() != ZX_OK) || res->result.is_err()) {
     DISP_ERROR("Unable to perform Edid Transfer\n");
     return ZX_ERR_INTERNAL;

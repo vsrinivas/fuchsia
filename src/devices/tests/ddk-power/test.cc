@@ -110,7 +110,7 @@ class PowerTestCase : public zxtest::Test {
     auto local = service::ConnectAt<device_manager_fidl::SystemStateTransition>(*svc);
     ASSERT_OK(local.status_value());
     auto system_state_transition_client = fidl::BindSyncClient(std::move(*local));
-    auto resp = system_state_transition_client.SetTerminationSystemState(state);
+    auto resp = system_state_transition_client->SetTerminationSystemState(state);
     ASSERT_OK(resp.status());
     ASSERT_FALSE(resp->result.is_err());
   }

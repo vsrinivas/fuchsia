@@ -99,7 +99,7 @@ class AmlHdmiTest : public zxtest::Test {
     ASSERT_NOT_NULL(dut_);
     ASSERT_OK(dut_->InitTest());
 
-    hdmi_client_ = std::make_unique<HdmiClient>(
+    hdmi_client_ = fidl::BindSyncClient(
         fidl::ClientEnd<fuchsia_hardware_hdmi::Hdmi>(std::move(dut_->GetMessengerChannel())));
   }
 
@@ -122,7 +122,7 @@ class AmlHdmiTest : public zxtest::Test {
 
  protected:
   std::unique_ptr<FakeAmlHdmiDevice> dut_;
-  std::unique_ptr<HdmiClient> hdmi_client_;
+  HdmiClient hdmi_client_;
 
   fbl::Array<ddk_mock::MockMmioReg> regs_;
   std::unique_ptr<ddk_mock::MockMmioRegRegion> mock_mmio_;

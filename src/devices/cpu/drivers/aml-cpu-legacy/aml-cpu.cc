@@ -147,7 +147,7 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
     return status;
   }
 
-  auto device_info = thermal_fidl_client.GetDeviceInfo();
+  auto device_info = thermal_fidl_client->GetDeviceInfo();
   if (device_info.status() != ZX_OK) {
     zxlogf(ERROR, "aml-cpu: failed to get device info, st = %d", device_info.status());
     return device_info.status();
@@ -272,7 +272,7 @@ zx_status_t AmlCpu::DdkSetPerformanceState(uint32_t requested_state, uint32_t* o
   const uint16_t pstate = PstateToOperatingPoint(requested_state, opps.count);
 
   const auto result =
-      thermal_client_.SetDvfsOperatingPoint(pstate, static_cast<PowerDomain>(power_domain_index_));
+      thermal_client_->SetDvfsOperatingPoint(pstate, static_cast<PowerDomain>(power_domain_index_));
 
   if (!result.ok() || result->status != ZX_OK) {
     zxlogf(ERROR, "%s: failed to set dvfs operating point.", __func__);
@@ -316,7 +316,7 @@ void AmlCpu::GetPerformanceStateInfo(GetPerformanceStateInfoRequestView request,
 }
 
 zx_status_t AmlCpu::GetThermalOperatingPoints(fuchsia_thermal::wire::OperatingPoint* out) {
-  auto result = thermal_client_.GetDeviceInfo();
+  auto result = thermal_client_->GetDeviceInfo();
   if (!result.ok() || result->status != ZX_OK) {
     zxlogf(ERROR, "%s: Failed to get thermal device info", __func__);
     return ZX_ERR_INTERNAL;

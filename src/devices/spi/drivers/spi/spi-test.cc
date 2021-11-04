@@ -618,7 +618,7 @@ TEST_F(SpiDeviceTest, OneClient) {
   }
 
   {
-    auto result = cs0_client.CanAssertCs();
+    auto result = cs0_client->CanAssertCs();
     ASSERT_TRUE(result.ok());
     ASSERT_TRUE(result->can);
   }
@@ -630,14 +630,14 @@ TEST_F(SpiDeviceTest, OneClient) {
     child0->SpiConnectServer(std::move(server));
     fidl::WireSyncClient<fuchsia_hardware_spi::Device> cs0_client_1(std::move(client));
 
-    auto result = cs0_client_1.CanAssertCs();
+    auto result = cs0_client_1->CanAssertCs();
     EXPECT_FALSE(result.ok());
   }
 
   EXPECT_FALSE(spi_impl_.vmos_released_since_last_call());
 
   // Close the first client so that another one can connect.
-  cs0_client.mutable_channel()->reset();
+  cs0_client = {};
 
   // We don't know when the driver will be ready for a new client, just loop
   // until the connection is established.
@@ -647,7 +647,7 @@ TEST_F(SpiDeviceTest, OneClient) {
     child0->SpiConnectServer(std::move(server));
     cs0_client = fidl::WireSyncClient<fuchsia_hardware_spi::Device>(std::move(client));
 
-    auto result = cs0_client.CanAssertCs();
+    auto result = cs0_client->CanAssertCs();
     if (result.ok()) {
       break;
     }
@@ -659,7 +659,7 @@ TEST_F(SpiDeviceTest, OneClient) {
   EXPECT_NOT_OK(child0->DdkOpen(nullptr, 0));
 
   // Close the first client and make sure DdkOpen now works
-  cs0_client.mutable_channel()->reset();
+  cs0_client = {};
 
   while (child0->DdkOpen(nullptr, 0) != ZX_OK) {
   }
@@ -675,7 +675,7 @@ TEST_F(SpiDeviceTest, OneClient) {
 
     fidl::WireSyncClient<fuchsia_hardware_spi::Device> cs0_client_1(std::move(client));
 
-    auto result = cs0_client_1.CanAssertCs();
+    auto result = cs0_client_1->CanAssertCs();
     EXPECT_FALSE(result.ok());
   }
 
@@ -691,7 +691,7 @@ TEST_F(SpiDeviceTest, OneClient) {
 
     cs0_client = fidl::WireSyncClient<fuchsia_hardware_spi::Device>(std::move(client));
 
-    auto result = cs0_client.CanAssertCs();
+    auto result = cs0_client->CanAssertCs();
     if (result.ok()) {
       break;
     }
@@ -720,7 +720,7 @@ TEST_F(SpiDeviceTest, DdkLifecycle) {
   }
 
   {
-    auto result = cs0_client.AssertCs();
+    auto result = cs0_client->AssertCs();
     ASSERT_TRUE(result.ok());
     EXPECT_OK(result->status);
   }
@@ -729,7 +729,7 @@ TEST_F(SpiDeviceTest, DdkLifecycle) {
   EXPECT_TRUE(spi_bus->children().front()->UnbindReplyCalled());
 
   {
-    auto result = cs0_client.DeassertCs();
+    auto result = cs0_client->DeassertCs();
     ASSERT_TRUE(result.ok());
     // DdkUnbind has been called, the child device should respond with errors.
     EXPECT_NOT_OK(result->status);
@@ -741,7 +741,7 @@ TEST_F(SpiDeviceTest, DdkLifecycle) {
   EXPECT_EQ(spi_bus->descendant_count(), 0);
 
   {
-    auto result = cs0_client.DeassertCs();
+    auto result = cs0_client->DeassertCs();
     ASSERT_TRUE(result.ok());
     // The child should still exist and reply since the parent holds a reference to it.
     EXPECT_NOT_OK(result->status);
@@ -751,7 +751,7 @@ TEST_F(SpiDeviceTest, DdkLifecycle) {
   EXPECT_TRUE(spi_bus->UnbindReplyCalled());
 
   {
-    auto result = cs0_client.DeassertCs();
+    auto result = cs0_client->DeassertCs();
     // The parent has stopped its loop, this should now fail.
     EXPECT_FALSE(result.ok());
   }

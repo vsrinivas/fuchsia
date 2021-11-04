@@ -50,7 +50,7 @@ zx_status_t Cr50SpiDevice::Create(void *ctx, zx_device_t *parent) {
 }
 
 zx_status_t Cr50SpiDevice::Bind(std::unique_ptr<Cr50SpiDevice> *dev) {
-  auto result = acpi_.borrow().MapInterrupt(0);
+  auto result = acpi_.borrow()->MapInterrupt(0);
   if (!result.ok() || result->result.is_err()) {
     zxlogf(WARNING, "Failed to get IRQ: %s",
            result.ok() ? zx_status_get_string(result->result.err())
@@ -66,7 +66,7 @@ zx_status_t Cr50SpiDevice::Bind(std::unique_ptr<Cr50SpiDevice> *dev) {
     return status;
   }
 
-  auto can_assert = spi_.CanAssertCs();
+  auto can_assert = spi_->CanAssertCs();
   if (!can_assert.ok()) {
     zxlogf(ERROR, "Failed to send FIDL request to SPI driver: %s",
            can_assert.FormatDescription().data());
@@ -225,14 +225,14 @@ void Cr50SpiDevice::WakeUp() {
   if (zx::clock::get_monotonic() >= sleep_time) {
     zxlogf(INFO, "asleep for too long, waking up!");
     // Wake the cr50 by asserting CS.
-    auto result = spi_.AssertCs();
+    auto result = spi_->AssertCs();
     if (!result.ok() || result->status != ZX_OK) {
       zxlogf(
           ERROR, "Failed to assert SPI CS to wakeup cr50: %s",
           result.ok() ? zx_status_get_string(result->status) : result.FormatDescription().data());
     }
 
-    auto deassert = spi_.DeassertCs();
+    auto deassert = spi_->DeassertCs();
     if (!deassert.ok() || deassert->status != ZX_OK) {
       zxlogf(ERROR, "Failed to deassert SPI CS to wakeup cr50: %s",
              deassert.ok() ? zx_status_get_string(deassert->status)
@@ -256,7 +256,7 @@ zx::status<> Cr50SpiDevice::SendHeader(uint16_t address, size_t msg_length, bool
   header[1] = 0xd4;  // Addresses are always '0xd4xxxx'
   header[2] = (address >> 8) & 0xff;
   header[3] = address & 0xff;
-  auto result = spi_.ExchangeVector(fidl::VectorView<uint8_t>::FromExternal(header));
+  auto result = spi_->ExchangeVector(fidl::VectorView<uint8_t>::FromExternal(header));
   if (!result.ok()) {
     zxlogf(ERROR, "send FIDL request failed: %s", result.FormatDescription().data());
     return zx::error(result.status());
@@ -282,7 +282,7 @@ zx::status<> Cr50SpiDevice::FlowControl() {
   auto deadline = zx::deadline_after(kFlowControlTimeout);
   uint8_t ready = 0;
   while (!ready && zx::clock::get_monotonic() < deadline) {
-    auto result = spi_.ReceiveVector(1);
+    auto result = spi_->ReceiveVector(1);
     if (!result.ok()) {
       zxlogf(ERROR, "send FIDL request failed: %s", result.FormatDescription().data());
       return zx::error(result.status());
@@ -302,7 +302,7 @@ zx::status<> Cr50SpiDevice::FlowControl() {
 }
 
 zx::status<> Cr50SpiDevice::DoSpiWrite(fidl::VectorView<uint8_t> &buf) {
-  auto result = spi_.TransmitVector(buf);
+  auto result = spi_->TransmitVector(buf);
   if (!result.ok()) {
     return zx::error(result.status());
   }
@@ -310,7 +310,7 @@ zx::status<> Cr50SpiDevice::DoSpiWrite(fidl::VectorView<uint8_t> &buf) {
 }
 
 zx::status<> Cr50SpiDevice::DoSpiRead(fidl::VectorView<uint8_t> &buf) {
-  auto ret_vec = spi_.ReceiveVector(buf.count());
+  auto ret_vec = spi_->ReceiveVector(buf.count());
   if (!ret_vec.ok()) {
     return zx::error(ret_vec.status());
   }
@@ -327,12 +327,12 @@ zx::status<> Cr50SpiDevice::DoXfer(uint16_t address, fidl::VectorView<uint8_t> &
                                    bool do_write) {
   zxlogf(DEBUG, "%sing %zu bytes at 0x%x", do_write ? "writ" : "read", buf.count(), address);
   WakeUp();
-  auto assert = spi_.AssertCs();
+  auto assert = spi_->AssertCs();
   if (!assert.ok() || assert->status != ZX_OK) {
     zxlogf(ERROR, "asserting spi bus failed");
     return zx::error(ZX_ERR_UNAVAILABLE);
   }
-  auto deasserter = fit::defer([this]() { spi_.DeassertCs(); });
+  auto deasserter = fit::defer([this]() { spi_->DeassertCs(); });
 
   auto status = SendHeader(address, buf.count(), do_write);
   if (status.is_error()) {

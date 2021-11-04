@@ -177,9 +177,9 @@ void ChromeosAcpi::DdkRelease() { delete this; }
 
 zx_status_t ChromeosAcpi::EvaluateObjectHelper(const char* name,
                                                std::function<void(const facpi::Object&)> callback) {
-  auto result = acpi_.borrow().EvaluateObject(fidl::StringView::FromExternal(name),
-                                              facpi::EvaluateObjectMode::kPlainObject,
-                                              fidl::VectorView<facpi::Object>());
+  auto result = acpi_.borrow()->EvaluateObject(fidl::StringView::FromExternal(name),
+                                               facpi::EvaluateObjectMode::kPlainObject,
+                                               fidl::VectorView<facpi::Object>());
   if (!result.ok()) {
     zxlogf(ERROR, "Failed to send FIDL EvaluateObject: %d", result.status());
     return result.status();

@@ -89,14 +89,14 @@ char* guess_dev(void) {
 
 ssize_t measure_clk_util(fidl::WireSyncClient<fuchsia_hardware_clock::Device>& client,
                          uint32_t idx) {
-  auto measure_result = client.Measure(idx);
+  auto measure_result = client->Measure(idx);
 
   if (!measure_result.ok()) {
     fprintf(stderr, "Failed to measure clock: %s\n", zx_status_get_string(measure_result.status()));
     return -1;
   }
 
-  auto result = client.Measure(idx);
+  auto result = client->Measure(idx);
 
   if (!result.ok()) {
     fprintf(stderr, "ERROR: failed to measure clock: %d\n", result.status());
@@ -128,7 +128,7 @@ ssize_t measure_clk(const char* path, uint32_t idx, bool clk) {
 
   fidl::WireSyncClient<fuchsia_hardware_clock::Device> client(std::move(client_end));
 
-  auto clk_count_result = client.GetCount();
+  auto clk_count_result = client->GetCount();
   if (!clk_count_result.ok()) {
     fprintf(stderr, "Failed to get count: %s\n", zx_status_get_string(clk_count_result.status()));
     return -1;
@@ -176,14 +176,14 @@ ssize_t toggle_clk(const char* path, uint32_t idx, action_t subcmd) {
   fidl::WireSyncClient<fuchsia_hardware_clock::Device> client(std::move(client_end));
 
   if (subcmd == ENABLE) {
-    auto en_result = client.Enable(idx);
+    auto en_result = client->Enable(idx);
     if (!en_result.ok()) {
       fprintf(stderr, "ERROR: Failed to enable clock: %s\n",
               zx_status_get_string(en_result.status()));
       return -1;
     }
   } else if (subcmd == DISABLE) {
-    auto dis_result = client.Disable(idx);
+    auto dis_result = client->Disable(idx);
     if (!dis_result.ok()) {
       fprintf(stderr, "ERROR: Failed to disable clock: %s\n",
               zx_status_get_string(dis_result.status()));

@@ -303,7 +303,7 @@ class AmlCpuTestFixture : public InspectTestHelper, public zxtest::Test {
 
     ASSERT_OK(dut_.Init());
 
-    cpu_client_ = std::make_unique<CpuCtrlClient>(std::move(dut_.GetMessengerChannel()));
+    cpu_client_ = CpuCtrlClient(std::move(dut_.GetMessengerChannel()));
   }
 
  protected:
@@ -320,7 +320,7 @@ class AmlCpuTestFixture : public InspectTestHelper, public zxtest::Test {
   ddk::MockPower power_;
 
   AmlCpuTest dut_;
-  std::unique_ptr<CpuCtrlClient> cpu_client_;
+  CpuCtrlClient cpu_client_;
 
   const std::vector<operating_point_t> operating_points_;
 };

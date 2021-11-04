@@ -151,7 +151,7 @@ class Tcs3400Test : public zxtest::Test {
  protected:
   static void GetFeatureReport(fidl::WireSyncClient<fuchsia_input_report::InputDevice>& client,
                                Tcs3400FeatureReport* const out_report) {
-    const auto response = client.GetFeatureReport();
+    const auto response = client->GetFeatureReport();
     ASSERT_TRUE(response.ok());
     ASSERT_FALSE(response->result.is_err());
     ASSERT_TRUE(response->result.response().report.has_sensor());
@@ -202,7 +202,7 @@ class Tcs3400Test : public zxtest::Test {
     const auto set_report = fuchsia_input_report::wire::FeatureReport(allocator).set_sensor(
         allocator, set_sensor_report);
 
-    return client.SetFeatureReport(set_report);
+    return client->SetFeatureReport(set_report);
   }
 
   void SetLightDataRegisters(uint16_t illuminance, uint16_t red, uint16_t green, uint16_t blue) {
@@ -253,7 +253,7 @@ TEST_F(Tcs3400Test, GetInputReport) {
 
   for (;;) {
     // Wait for the driver's stored values to be updated.
-    const auto response = client.GetInputReport(fuchsia_input_report::wire::DeviceType::kSensor);
+    const auto response = client->GetInputReport(fuchsia_input_report::wire::DeviceType::kSensor);
     ASSERT_TRUE(response.ok());
     if (response->result.is_err()) {
       continue;
@@ -288,7 +288,7 @@ TEST_F(Tcs3400Test, GetInputReport) {
   }
 
   {
-    const auto response = client.GetInputReport(fuchsia_input_report::wire::DeviceType::kSensor);
+    const auto response = client->GetInputReport(fuchsia_input_report::wire::DeviceType::kSensor);
     ASSERT_TRUE(response.ok());
     // Not supported when only threshold events are enabled.
     EXPECT_TRUE(response->result.is_err());
@@ -310,7 +310,7 @@ TEST_F(Tcs3400Test, GetInputReport) {
   }
 
   {
-    const auto response = client.GetInputReport(fuchsia_input_report::wire::DeviceType::kSensor);
+    const auto response = client->GetInputReport(fuchsia_input_report::wire::DeviceType::kSensor);
     ASSERT_TRUE(response.ok());
     EXPECT_TRUE(response->result.is_err());
   }
@@ -336,9 +336,10 @@ TEST_F(Tcs3400Test, GetInputReports) {
   }
 
   fidl::ServerEnd<fuchsia_input_report::InputReportsReader> reader_server;
-  fidl::WireSyncClient<fuchsia_input_report::InputReportsReader> reader;
-  ASSERT_OK(zx::channel::create(0, reader.mutable_channel(), &reader_server.channel()));
-  client.GetInputReportsReader(std::move(reader_server));
+  zx::status reader_client_end = fidl::CreateEndpoints(&reader_server);
+  ASSERT_OK(reader_client_end.status_value());
+  fidl::WireSyncClient reader = fidl::BindSyncClient(std::move(*reader_client_end));
+  client->GetInputReportsReader(std::move(reader_server));
   device_->WaitForNextReader();
 
   SetLightDataRegisters(0x00f8, 0xe79d, 0xa5e4, 0xfb1b);
@@ -350,7 +351,7 @@ TEST_F(Tcs3400Test, GetInputReports) {
   fake_i2c_.WaitForLightDataRead();
 
   {
-    const auto response = reader.ReadInputReports();
+    const auto response = reader->ReadInputReports();
     ASSERT_TRUE(response.ok());
     ASSERT_TRUE(response->result.is_response());
 
@@ -378,7 +379,7 @@ TEST_F(Tcs3400Test, GetInputReports) {
   // The previous illuminance value did not cross a threshold, so there should only be one report to
   // read out.
   {
-    const auto response = reader.ReadInputReports();
+    const auto response = reader->ReadInputReports();
     ASSERT_TRUE(response.ok());
     ASSERT_TRUE(response->result.is_response());
 
@@ -413,7 +414,7 @@ TEST_F(Tcs3400Test, GetInputReports) {
   }
 
   for (uint32_t report_count = 0; report_count < 10;) {
-    const auto response = reader.ReadInputReports();
+    const auto response = reader->ReadInputReports();
     ASSERT_TRUE(response.ok());
     ASSERT_TRUE(response->result.is_response());
 
@@ -451,9 +452,10 @@ TEST_F(Tcs3400Test, GetMultipleInputReports) {
   fake_i2c_.WaitForConfiguration();
 
   fidl::ServerEnd<fuchsia_input_report::InputReportsReader> reader_server;
-  fidl::WireSyncClient<fuchsia_input_report::InputReportsReader> reader;
-  ASSERT_OK(zx::channel::create(0, reader.mutable_channel(), &reader_server.channel()));
-  client.GetInputReportsReader(std::move(reader_server));
+  zx::status reader_client_end = fidl::CreateEndpoints(&reader_server);
+  ASSERT_OK(reader_client_end.status_value());
+  fidl::WireSyncClient reader = fidl::BindSyncClient(std::move(*reader_client_end));
+  client->GetInputReportsReader(std::move(reader_server));
   device_->WaitForNextReader();
 
   constexpr uint16_t kExpectedLightValues[][4] = {
@@ -469,7 +471,7 @@ TEST_F(Tcs3400Test, GetMultipleInputReports) {
   }
 
   for (size_t i = 0; i < std::size(kExpectedLightValues);) {
-    const auto response = reader.ReadInputReports();
+    const auto response = reader->ReadInputReports();
     ASSERT_TRUE(response.ok());
     ASSERT_TRUE(response->result.is_response());
 
@@ -509,8 +511,10 @@ TEST_F(Tcs3400Test, GetInputReportsMultipleReaders) {
   fidl::WireSyncClient<fuchsia_input_report::InputReportsReader> readers[kReaderCount];
   for (auto& reader : readers) {
     fidl::ServerEnd<fuchsia_input_report::InputReportsReader> reader_server;
-    ASSERT_OK(zx::channel::create(0, reader.mutable_channel(), &reader_server.channel()));
-    client.GetInputReportsReader(std::move(reader_server));
+    zx::status reader_client_end = fidl::CreateEndpoints(&reader_server);
+    ASSERT_OK(reader_client_end.status_value());
+    reader = fidl::BindSyncClient(std::move(*reader_client_end));
+    client->GetInputReportsReader(std::move(reader_server));
     device_->WaitForNextReader();
   }
 
@@ -519,7 +523,7 @@ TEST_F(Tcs3400Test, GetInputReportsMultipleReaders) {
   EXPECT_OK(gpio_interrupt_.trigger(0, zx::clock::get_monotonic()));
 
   for (auto& reader : readers) {
-    const auto response = reader.ReadInputReports();
+    const auto response = reader->ReadInputReports();
     ASSERT_TRUE(response.ok());
     ASSERT_TRUE(response->result.is_response());
 
@@ -557,9 +561,10 @@ TEST_F(Tcs3400Test, InputReportSaturated) {
   }
 
   fidl::ServerEnd<fuchsia_input_report::InputReportsReader> reader_server;
-  fidl::WireSyncClient<fuchsia_input_report::InputReportsReader> reader;
-  ASSERT_OK(zx::channel::create(0, reader.mutable_channel(), &reader_server.channel()));
-  client.GetInputReportsReader(std::move(reader_server));
+  zx::status reader_client_end = fidl::CreateEndpoints(&reader_server);
+  ASSERT_OK(reader_client_end.status_value());
+  fidl::WireSyncClient reader = fidl::BindSyncClient(std::move(*reader_client_end));
+  client->GetInputReportsReader(std::move(reader_server));
   device_->WaitForNextReader();
 
   // Set the clear channel to 0xffff to indicate saturation.
@@ -569,7 +574,7 @@ TEST_F(Tcs3400Test, InputReportSaturated) {
 
   fake_i2c_.WaitForLightDataRead();
 
-  const auto response = reader.ReadInputReports();
+  const auto response = reader->ReadInputReports();
   ASSERT_TRUE(response.ok());
   ASSERT_TRUE(response->result.is_response());
 
@@ -590,7 +595,7 @@ TEST_F(Tcs3400Test, GetDescriptor) {
   fidl::WireSyncClient<fuchsia_input_report::InputDevice> client(FidlClient());
   ASSERT_TRUE(client.client_end().is_valid());
 
-  const auto response = client.GetDescriptor();
+  const auto response = client->GetDescriptor();
   ASSERT_TRUE(response.ok());
   ASSERT_TRUE(response->descriptor.has_device_info());
   ASSERT_TRUE(response->descriptor.has_sensor());
@@ -794,7 +799,7 @@ TEST_F(Tcs3400Test, SetInvalidFeatureReport) {
       fuchsia_input_report::wire::FeatureReport(allocator).set_sensor(allocator, set_sensor_report);
 
   {
-    const auto response = client.SetFeatureReport(set_report);
+    const auto response = client->SetFeatureReport(set_report);
     ASSERT_TRUE(response.ok());
     EXPECT_TRUE(response->result.is_err());
   }

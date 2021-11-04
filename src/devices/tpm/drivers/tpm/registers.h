@@ -28,7 +28,7 @@ template <class SelfType, typename BaseType, uint16_t address>
 class TpmReg : public hwreg::RegisterBase<SelfType, BaseType, hwreg::EnablePrinter> {
  public:
   zx_status_t ReadFrom(fidl::WireSyncClient<fuchsia_hardware_tpmimpl::TpmImpl>& client) {
-    auto result = client.Read(0, RegisterAddress(address), sizeof(BaseType));
+    auto result = client->Read(0, RegisterAddress(address), sizeof(BaseType));
     if (!result.ok()) {
       zxlogf(ERROR, "Failed to send read FIDL request: %s", result.FormatDescription().data());
       return result.status();
@@ -53,7 +53,7 @@ class TpmReg : public hwreg::RegisterBase<SelfType, BaseType, hwreg::EnablePrint
     auto value = this->reg_value();
     auto data =
         fidl::VectorView<uint8_t>::FromExternal(reinterpret_cast<uint8_t*>(&value), sizeof(value));
-    auto result = client.Write(0, RegisterAddress(address), data);
+    auto result = client->Write(0, RegisterAddress(address), data);
     if (!result.ok()) {
       zxlogf(ERROR, "Failed to send write FIDL request: %s", result.FormatDescription().data());
       return result.status();

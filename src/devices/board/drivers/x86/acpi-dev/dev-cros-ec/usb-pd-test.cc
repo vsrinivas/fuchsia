@@ -103,7 +103,7 @@ class UsbPdTest : public zxtest::Test {
 };
 
 TEST_F(UsbPdTest, PowerInfo) {
-  auto result = this->client_.GetPowerInfo();
+  auto result = this->client_->GetPowerInfo();
   ASSERT_TRUE(result.ok());
   EXPECT_EQ(result->status, ZX_OK);
   EXPECT_EQ(result->info.type, fuchsia_hardware_power::wire::PowerType::kAc);
@@ -113,7 +113,7 @@ TEST_F(UsbPdTest, PowerInfo) {
 TEST_F(UsbPdTest, PowerInfoCharging) {
   this->ec_->SetChargeState(true);
 
-  auto result = this->client_.GetPowerInfo();
+  auto result = this->client_->GetPowerInfo();
   ASSERT_TRUE(result.ok());
   EXPECT_EQ(result->status, ZX_OK);
   EXPECT_EQ(result->info.type, fuchsia_hardware_power::wire::PowerType::kAc);
@@ -121,13 +121,13 @@ TEST_F(UsbPdTest, PowerInfoCharging) {
 }
 
 TEST_F(UsbPdTest, BatteryInfo) {
-  auto result = this->client_.GetBatteryInfo();
+  auto result = this->client_->GetBatteryInfo();
   ASSERT_TRUE(result.ok());
   EXPECT_EQ(result->status, ZX_ERR_NOT_SUPPORTED);
 }
 
 TEST_F(UsbPdTest, StateChangeEvent) {
-  auto state_change_result = this->client_.GetStateChangeEvent();
+  auto state_change_result = this->client_->GetStateChangeEvent();
   ASSERT_TRUE(state_change_result.ok());
   EXPECT_EQ(state_change_result->status, ZX_OK);
 
@@ -142,7 +142,7 @@ TEST_F(UsbPdTest, StateChangeEvent) {
   event.wait_one(ZX_EVENT_SIGNALED, zx::deadline_after(zx::msec(0)), &signals);
   EXPECT_EQ(signals, ZX_USER_SIGNAL_0);
 
-  auto result = this->client_.GetPowerInfo();
+  auto result = this->client_->GetPowerInfo();
   ASSERT_TRUE(result.ok());
   EXPECT_EQ(result->status, ZX_OK);
   EXPECT_EQ(result->info.state, fuchsia_hardware_power::wire::kPowerStateCharging);

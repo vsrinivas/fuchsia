@@ -91,7 +91,7 @@ TEST_F(AcpiDeviceTest, TestBanjoConnectServer) {
                                                mock_root_.get());
   SetUpFidlServer(std::move(device));
 
-  auto result = fidl_client_.GetBusId();
+  auto result = fidl_client_->GetBusId();
   ASSERT_OK(result.status());
   ASSERT_TRUE(result.value().result.is_err());
   ASSERT_EQ(result.value().result.err(), ZX_ERR_BAD_STATE);
@@ -102,7 +102,7 @@ TEST_F(AcpiDeviceTest, TestBanjoConnectServerTwice) {
                                                mock_root_.get());
   SetUpFidlServer(std::move(device));
   {
-    auto result = fidl_client_.GetBusId();
+    auto result = fidl_client_->GetBusId();
     ASSERT_OK(result.status());
     ASSERT_TRUE(result.value().result.is_err());
     ASSERT_EQ(result.value().result.err(), ZX_ERR_BAD_STATE);
@@ -119,7 +119,7 @@ TEST_F(AcpiDeviceTest, TestBanjoConnectServerTwice) {
 
   auto fidl_client2 = fidl::WireSyncClient<fuchsia_hardware_acpi::Device>(std::move(client_end2));
   {
-    auto result = fidl_client2.GetBusId();
+    auto result = fidl_client2->GetBusId();
     ASSERT_OK(result.status());
     ASSERT_TRUE(result.value().result.is_err());
     ASSERT_EQ(result.value().result.err(), ZX_ERR_BAD_STATE);
@@ -132,7 +132,7 @@ TEST_F(AcpiDeviceTest, TestGetBusId) {
                                                acpi::BusType::kI2c, 37);
   SetUpFidlServer(std::move(device));
 
-  auto result = fidl_client_.GetBusId();
+  auto result = fidl_client_->GetBusId();
   ASSERT_OK(result.status());
   ASSERT_TRUE(result.value().result.is_response());
   ASSERT_EQ(result.value().result.response().bus_id, 37);
@@ -156,7 +156,7 @@ TEST_F(AcpiDeviceTest, TestInstallNotifyHandler) {
       },
       manager_.fidl_dispatcher(), &server);
 
-  auto result = fidl_client_.InstallNotifyHandler(
+  auto result = fidl_client_->InstallNotifyHandler(
       fuchsia_hardware_acpi::wire::NotificationMode::kSystem, std::move(client));
   ASSERT_OK(result.status());
   ASSERT_FALSE(result->result.is_err());
@@ -186,7 +186,7 @@ TEST_F(AcpiDeviceTest, TestNotifyHandlerDropsEvents) {
       },
       manager_.fidl_dispatcher(), &server);
 
-  auto result = fidl_client_.InstallNotifyHandler(
+  auto result = fidl_client_->InstallNotifyHandler(
       fuchsia_hardware_acpi::wire::NotificationMode::kSystem, std::move(client));
   ASSERT_OK(result.status());
   ASSERT_FALSE(result->result.is_err());
@@ -229,7 +229,7 @@ TEST_F(AcpiDeviceTest, RemoveAndAddNotifyHandler) {
 
   {
     auto client = NotifyHandlerServer::CreateAndServe(handler, manager_.fidl_dispatcher(), &server);
-    auto result = fidl_client_.InstallNotifyHandler(
+    auto result = fidl_client_->InstallNotifyHandler(
         fuchsia_hardware_acpi::wire::NotificationMode::kSystem, std::move(client));
     ASSERT_OK(result.status());
     ASSERT_FALSE(result->result.is_err(), "error %d", int(result->result.err()));
@@ -246,7 +246,7 @@ TEST_F(AcpiDeviceTest, RemoveAndAddNotifyHandler) {
   // Try installing a new handler.
   {
     auto client = NotifyHandlerServer::CreateAndServe(handler, manager_.fidl_dispatcher(), &server);
-    auto result = fidl_client_.InstallNotifyHandler(
+    auto result = fidl_client_->InstallNotifyHandler(
         fuchsia_hardware_acpi::wire::NotificationMode::kSystem, std::move(client));
     ASSERT_OK(result.status());
     ASSERT_FALSE(result->result.is_err());
@@ -275,7 +275,7 @@ TEST_F(AcpiDeviceTest, ReceiveEventAfterUnbind) {
       },
       manager_.fidl_dispatcher(), &server);
 
-  auto result = fidl_client_.InstallNotifyHandler(
+  auto result = fidl_client_->InstallNotifyHandler(
       fuchsia_hardware_acpi::wire::NotificationMode::kSystem, std::move(client));
   ASSERT_OK(result.status());
   ASSERT_FALSE(result->result.is_err());

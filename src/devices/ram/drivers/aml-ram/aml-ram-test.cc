@@ -115,7 +115,7 @@ TEST_F(AmlRamDeviceTest, MalformedRequests) {
   // Invalid cycles (too low).
   {
     ram_metrics::wire::BandwidthMeasurementConfig config = {(200), {1, 0, 0, 0, 0, 0}};
-    auto info = client.MeasureBandwidth(config);
+    auto info = client->MeasureBandwidth(config);
     ASSERT_TRUE(info.ok());
     ASSERT_TRUE(info->result.is_err());
     EXPECT_EQ(info->result.err(), ZX_ERR_INVALID_ARGS);
@@ -124,7 +124,7 @@ TEST_F(AmlRamDeviceTest, MalformedRequests) {
   // Invalid cycles (too high).
   {
     ram_metrics::wire::BandwidthMeasurementConfig config = {(0x100000000ull), {1, 0, 0, 0, 0, 0}};
-    auto info = client.MeasureBandwidth(config);
+    auto info = client->MeasureBandwidth(config);
     ASSERT_TRUE(info.ok());
     ASSERT_TRUE(info->result.is_err());
     EXPECT_EQ(info->result.err(), ZX_ERR_INVALID_ARGS);
@@ -133,7 +133,7 @@ TEST_F(AmlRamDeviceTest, MalformedRequests) {
   // Invalid channel (above channel 3).
   {
     ram_metrics::wire::BandwidthMeasurementConfig config = {(1024 * 1024 * 10), {0, 0, 0, 0, 1}};
-    auto info = client.MeasureBandwidth(config);
+    auto info = client->MeasureBandwidth(config);
     ASSERT_TRUE(info.ok());
     ASSERT_TRUE(info->result.is_err());
     EXPECT_EQ(info->result.err(), ZX_ERR_INVALID_ARGS);
@@ -217,7 +217,7 @@ TEST_F(AmlRamDeviceTest, ValidRequest) {
           });
 
   fidl::WireSyncClient<ram_metrics::Device> client{std::move(ddk_.FidlClient())};
-  auto info = client.MeasureBandwidth(config);
+  auto info = client->MeasureBandwidth(config);
   ASSERT_TRUE(info.ok());
   ASSERT_FALSE(info->result.is_err());
 

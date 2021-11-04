@@ -31,7 +31,7 @@ TEST(MetadataTest, RunTests) {
   }
   fidl::WireSyncClient<fuchsia_device::Controller> sys_dev(std::move(sys_chan));
 
-  auto result = sys_dev.Bind(fidl::StringView{kDriver});
+  auto result = sys_dev->Bind(fidl::StringView{kDriver});
   ASSERT_OK(result.status());
   // The driver will run its tests in its bind routine, and return ZX_OK on success.
   ASSERT_FALSE(result->result.is_err());

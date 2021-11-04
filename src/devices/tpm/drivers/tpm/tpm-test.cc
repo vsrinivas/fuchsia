@@ -46,10 +46,11 @@ class TpmTest : public zxtest::Test, public fidl::WireServer<fuchsia_hardware_tp
 
     exec_thread_ = std::thread(&TpmTest::ExecThread, this);
 
-    fidl::WireSyncClient<fuchsia_hardware_tpmimpl::TpmImpl> client;
-    auto server = fidl::CreateEndpoints(&client.client_end());
+    fidl::ClientEnd<fuchsia_hardware_tpmimpl::TpmImpl> client_end;
+    auto server = fidl::CreateEndpoints(&client_end);
     ASSERT_TRUE(server.is_ok());
     fidl::BindServer(loop_.dispatcher(), std::move(server.value()), this);
+    fidl::WireSyncClient client{std::move(client_end)};
 
     ASSERT_TRUE(client.client_end().is_valid());
     auto device = std::make_unique<tpm::TpmDevice>(fake_root_.get(), std::move(client));
@@ -288,7 +289,7 @@ TEST_F(TpmTest, TestGetDeviceId) {
   ASSERT_OK(dev->WaitUntilInitReplyCalled());
 
   auto tpm = GetTpmClient();
-  auto result = tpm.GetDeviceId();
+  auto result = tpm->GetDeviceId();
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_response());
   auto& data = result->result.response();
@@ -332,8 +333,8 @@ TEST_F(TpmTest, TestSendVendorCommand) {
 
   auto tpm = GetTpmClient();
   uint8_t value = 0xaa;
-  auto result = tpm.ExecuteVendorCommand(kTpmVendorCommand,
-                                         fidl::VectorView<uint8_t>::FromExternal(&value, 1));
+  auto result = tpm->ExecuteVendorCommand(kTpmVendorCommand,
+                                          fidl::VectorView<uint8_t>::FromExternal(&value, 1));
   ASSERT_OK(result.status());
   if (result->result.is_err()) {
     ASSERT_OK(result->result.err());

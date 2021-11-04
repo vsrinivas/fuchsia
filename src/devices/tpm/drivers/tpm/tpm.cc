@@ -274,7 +274,7 @@ zx_status_t TpmDevice::DoCommand(TpmCommand &cmd) {
     }
 
     auto view = fidl::VectorView<uint8_t>::FromExternal(buf, burst);
-    auto result = tpm_.Write(0, RegisterAddress::kTpmDataFifo, view);
+    auto result = tpm_->Write(0, RegisterAddress::kTpmDataFifo, view);
     if (!result.ok()) {
       zxlogf(ERROR, "FIDL call failed!");
       return result.status();
@@ -303,8 +303,8 @@ zx_status_t TpmDevice::DoCommand(TpmCommand &cmd) {
     zxlogf(ERROR, "TPM should expect more data!");
     return ZX_ERR_BAD_STATE;
   }
-  auto result =
-      tpm_.Write(0, RegisterAddress::kTpmDataFifo, fidl::VectorView<uint8_t>::FromExternal(buf, 1));
+  auto result = tpm_->Write(0, RegisterAddress::kTpmDataFifo,
+                            fidl::VectorView<uint8_t>::FromExternal(buf, 1));
   if (!result.ok()) {
     zxlogf(ERROR, "FIDL call failed!");
     return result.status();
@@ -380,7 +380,7 @@ zx_status_t TpmDevice::ReadFromFifo(cpp20::span<uint8_t> data) {
   while (read < data.size_bytes() && sts.data_avail()) {
     size_t burst_count = std::min(static_cast<size_t>(sts.burst_count()), data.size_bytes() - read);
     if (burst_count != 0) {
-      auto result = tpm_.Read(0, RegisterAddress::kTpmDataFifo, burst_count);
+      auto result = tpm_->Read(0, RegisterAddress::kTpmDataFifo, burst_count);
       if (!result.ok()) {
         zxlogf(ERROR, "FIDL call failed!");
         return result.status();

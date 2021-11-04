@@ -224,7 +224,7 @@ TEST(RamNandTest, Unlink) {
 
   auto client = fidl::BindSyncClient(ddk.FidlClient<fuchsia_hardware_nand::RamNand>());
   {
-    auto result = client.Unlink();
+    auto result = client->Unlink();
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
   }
@@ -232,7 +232,7 @@ TEST(RamNandTest, Unlink) {
 
   // The device is "dead" now.
   {
-    auto result = client.Unlink();
+    auto result = client->Unlink();
     ASSERT_EQ(ZX_ERR_PEER_CLOSED, result.status());
   }
 

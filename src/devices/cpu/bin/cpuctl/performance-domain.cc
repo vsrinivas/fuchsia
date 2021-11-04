@@ -44,7 +44,7 @@ std::variant<zx_status_t, CpuPerformanceDomain> CpuPerformanceDomain::CreateFrom
 }
 
 std::pair<zx_status_t, uint64_t> CpuPerformanceDomain::GetNumLogicalCores() {
-  auto resp = cpu_client_.GetNumLogicalCores();
+  auto resp = cpu_client_->GetNumLogicalCores();
   return std::make_pair(resp.status(), resp.status() == ZX_OK ? resp.value().count : 0);
 }
 
@@ -54,7 +54,7 @@ CpuPerformanceDomain::GetCurrentPerformanceState() {
       .frequency_hz = cpuctrl::wire::kFrequencyUnknown,
       .voltage_uv = cpuctrl::wire::kVoltageUnknown,
   };
-  auto resp = device_client_.GetCurrentPerformanceState();
+  auto resp = device_client_->GetCurrentPerformanceState();
 
   if (resp.status() != ZX_OK) {
     return std::make_tuple(resp.status(), 0, kEmptyPstate);
@@ -82,7 +82,7 @@ CpuPerformanceDomain::GetPerformanceStates() {
   }
 
   for (uint32_t i = 0; i < kMaxDevicePerformanceStates; i++) {
-    auto resp = cpu_client_.GetPerformanceStateInfo(i);
+    auto resp = cpu_client_->GetPerformanceStateInfo(i);
 
     if (resp.status() != ZX_OK || resp->result.is_err()) {
       continue;
@@ -99,7 +99,7 @@ zx_status_t CpuPerformanceDomain::SetPerformanceState(uint32_t new_performance_s
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  auto result = device_client_.SetPerformanceState(new_performance_state);
+  auto result = device_client_->SetPerformanceState(new_performance_state);
 
   if (result.status() != ZX_OK) {
     return result.status();

@@ -178,7 +178,7 @@ TEST_F(PwmDeviceTest, GetConfigFidlTest) {
   };
   EXPECT_OK(pwm_->PwmSetConfig(&fake_config));
 
-  auto resp = client_.GetConfig();
+  auto resp = client_->GetConfig();
 
   ASSERT_TRUE(resp.ok());
   ASSERT_TRUE(resp->result.is_response());
@@ -210,7 +210,7 @@ TEST_F(PwmDeviceTest, SetConfigFidlTest) {
   config.mode_config = fidl::VectorView<uint8_t>::FromExternal(
       reinterpret_cast<uint8_t*>(&fake_mode), sizeof(fake_mode));
 
-  EXPECT_OK(client_.SetConfig(config));
+  EXPECT_OK(client_->SetConfig(config));
 
   pwm_config_t fake_config;
   auto buffer = std::make_unique<uint8_t[]>(kMaxConfigBufferSize);
@@ -232,7 +232,7 @@ TEST_F(PwmDeviceTest, SetConfigFidlTest) {
 }
 
 TEST_F(PwmDeviceTest, EnableFidlTest) {
-  auto enable_resp = client_.Enable();
+  auto enable_resp = client_->Enable();
 
   ASSERT_OK(enable_resp.status());
 
@@ -245,7 +245,7 @@ TEST_F(PwmDeviceTest, EnableFidlTest) {
 }
 
 TEST_F(PwmDeviceTest, DisableFidlTest) {
-  auto enable_resp = client_.Disable();
+  auto enable_resp = client_->Disable();
 
   ASSERT_OK(enable_resp.status());
 

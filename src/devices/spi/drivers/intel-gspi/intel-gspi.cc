@@ -99,7 +99,7 @@ void GspiDevice::DdkInit(ddk::InitTxn txn) {
   con0.set_ecs(0).set_frf(0);
   con0.WriteTo(&mmio_);
 
-  auto result = acpi_.borrow().GetBusId();
+  auto result = acpi_.borrow()->GetBusId();
   if (!result.ok()) {
     zxlogf(ERROR, "failed to get bus id: %s", result.FormatDescription().data());
     status = result.status();

@@ -176,7 +176,7 @@ class SerialDeviceTest : public zxtest::Test {
       auto connection =
           fidl::BindSyncClient(tester_.ddk().FidlClient<fuchsia_hardware_serial::NewDeviceProxy>());
       auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_serial::NewDevice>();
-      connection.GetChannel(std::move(endpoints->server));
+      connection->GetChannel(std::move(endpoints->server));
       fidl_ = fidl::BindSyncClient(std::move(endpoints->client));
     }
     return fidl_;
@@ -203,8 +203,9 @@ SerialDeviceTest::SerialDeviceTest() {
 
 SerialDeviceTest::~SerialDeviceTest() { device_->DdkRelease(); }
 
-static zx_status_t SerialWrite(fidl::WireSyncClient<fuchsia_hardware_serial::NewDevice>* interface,
-                               std::vector<uint8_t>* data) {
+static zx_status_t SerialWrite(
+    const fidl::WireSyncClient<fuchsia_hardware_serial::NewDevice>& interface,
+    std::vector<uint8_t>* data) {
   zx_status_t status = interface->Write(fidl::VectorView<uint8_t>::FromExternal(*data)).status();
   if (status != ZX_OK) {
     return status;
@@ -212,7 +213,7 @@ static zx_status_t SerialWrite(fidl::WireSyncClient<fuchsia_hardware_serial::New
   return ZX_OK;
 }
 
-static zx_status_t Read(fidl::WireSyncClient<fuchsia_hardware_serial::NewDevice>* interface,
+static zx_status_t Read(const fidl::WireSyncClient<fuchsia_hardware_serial::NewDevice>& interface,
                         std::vector<uint8_t>* data) {
   auto result = interface->Read();
   if (result.status() != ZX_OK) {
@@ -233,7 +234,7 @@ TEST_F(SerialDeviceTest, AsyncRead) {
   ASSERT_OK(device()->Bind());
   auto unbind = fit::defer([=]() { device()->DdkAsyncRemove(); });
   // Test.
-  ASSERT_EQ(ZX_OK, Read(&fidl(), &buffer));
+  ASSERT_EQ(ZX_OK, Read(fidl(), &buffer));
   ASSERT_EQ(4, buffer.size());
   ASSERT_EQ(0, memcmp(expected, buffer.data(), buffer.size()));
 }
@@ -251,7 +252,7 @@ TEST_F(SerialDeviceTest, AsyncWrite) {
   serial_impl().set_state_and_notify(SERIAL_STATE_WRITABLE);
 
   // Test.
-  ASSERT_EQ(ZX_OK, SerialWrite(&fidl(), &data_buffer));
+  ASSERT_EQ(ZX_OK, SerialWrite(fidl(), &data_buffer));
   ASSERT_EQ(0, memcmp(data, serial_impl().write_buffer(), kDataLen));
 }
 

@@ -35,7 +35,7 @@ TEST(BindFailTest, BindFail) {
   }
   fidl::WireSyncClient<fuchsia_device::Controller> sys_dev(std::move(sys_chan));
 
-  auto result = sys_dev.Bind(fidl::StringView{kDriver});
+  auto result = sys_dev->Bind(fidl::StringView{kDriver});
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_err());
   ASSERT_EQ(result->result.err(), ZX_ERR_NOT_SUPPORTED);

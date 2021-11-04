@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
     fidl::WireSyncClient<FidlTemperature::Device> client(
         fidl::ClientEnd<FidlTemperature::Device>(std::move(local)));
 
-    auto response = client.GetTemperatureCelsius();
+    auto response = client->GetTemperatureCelsius();
     if (response.ok()) {
       if (!response->status) {
         printf("temperature = %f\n", response->temp);
@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
     fidl::WireSyncClient<FidlAdc::Device> client(
         fidl::ClientEnd<FidlAdc::Device>(std::move(local)));
     if (strcmp(argv[2], "resolution") == 0) {
-      auto response = client.GetResolution();
+      auto response = client->GetResolution();
       if (response.ok()) {
         if (response->result.is_err()) {
           printf("GetResolution failed: status = %d\n", response->result.err());
@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
         printf("GetResolution fidl call failed: status = %d\n", response.status());
       }
     } else if (strcmp(argv[2], "read") == 0) {
-      auto response = client.GetSample();
+      auto response = client->GetSample();
       if (response.ok()) {
         if (response->result.is_err()) {
           printf("GetSample failed: status = %d\n", response->result.err());
@@ -81,7 +81,7 @@ int main(int argc, char** argv) {
         printf("GetSample fidl call failed: status = %d\n", response.status());
       }
     } else if (strcmp(argv[2], "readnorm") == 0) {
-      auto response = client.GetNormalizedSample();
+      auto response = client->GetNormalizedSample();
       if (response.ok()) {
         if (response->result.is_err()) {
           printf("GetSampleNormalized failed: status = %d\n", response->result.err());
