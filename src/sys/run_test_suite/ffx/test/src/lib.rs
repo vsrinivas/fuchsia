@@ -112,7 +112,7 @@ async fn run_test(builder_connector: Box<RunBuilderConnector>, cmd: RunCommand) 
             (false, None, false) => None,
         };
 
-    let min_log_severity = cmd.max_severity_logs;
+    let min_log_severity = cmd.min_severity_logs;
     let filter_ansi = cmd.filter_ansi;
 
     let json_input_experiment = match ffx_config::get("test.experimental_json_input").await {
