@@ -42,6 +42,7 @@ source_set("lib") {
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl:fxl",
     "//src/lib/intl/intl_property_provider_impl",
+    "//src/lib/intl/time_zone_info:time-zone-info-service-lib",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

@@ -60,7 +60,7 @@ int run_a11y_manager(int argc, const char** argv) {
 int main(int argc, const char** argv) {
   if (strcmp(argv[0], "/pkg/bin/intl_services") == 0) {
     // If the binary was started as intl_services, run only that part of it.
-    exit(intl::serve_intl_profile_provider(argc, argv));
+    exit(intl::serve_fuchsia_intl_services(argc, argv));
   }
   return run_a11y_manager(argc, argv);
 }

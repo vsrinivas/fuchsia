@@ -25,9 +25,16 @@ group("small") {
   deps = [ ":sysmgr_small" ]
 }
 
-# Sysmgr configuration where intl coexists with a11y
+# Sysmgr configuration where intl coexists with a11y.
 config_data("sysmgr_small") {
   for_pkg = "sysmgr"
   outputs = [ "intl_services.config" ]
   sources = [ "sysmgr_config_small.json" ]
+}
+
+# A config that just serves fuchsia.intl.TimeZones.
+config_data("sysmgr_small_timezones") {
+  for_pkg = "sysmgr"
+  outputs = [ "intl_services_timezones.config" ]
+  sources = [ "sysmgr_config_small_timezones.json" ]
 }
