@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{borrow::Cow, cell::RefCell, rc::Rc};
+use std::{borrow::Cow, cell::RefCell, mem, rc::Rc};
 
 use rustc_hash::FxHashMap;
 use surpass::{
@@ -14,11 +14,14 @@ use surpass::{
 
 use crate::{
     buffer::{Buffer, BufferLayerCache},
-    layer::{IdSet, Layer, LayerId, SmallBitSet},
+    layer::{IdSet, Layer, SmallBitSet},
     path::{Path, PathSegments},
 };
 
 const LINES_GARBAGE_THRESHOLD: usize = 2;
+
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct LayerId(usize);
 
 macro_rules! take_builder {
     ( $slf:expr, $f:expr ) => {{
@@ -33,6 +36,8 @@ pub struct Composition {
     rasterizer: Rasterizer,
     layers: FxHashMap<u16, Layer>,
     layer_ids: IdSet,
+    external_count: usize,
+    external_to_internal: FxHashMap<LayerId, u16>,
     orders_to_layers: FxHashMap<u16, u16>,
     layouts: FxHashMap<(*mut [u8; 4], usize), BufferLayout>,
     buffers_with_caches: Rc<RefCell<SmallBitSet>>,
@@ -46,6 +51,8 @@ impl Composition {
             rasterizer: Rasterizer::new(),
             layers: FxHashMap::default(),
             layer_ids: IdSet::new(),
+            external_count: 0,
+            external_to_internal: FxHashMap::default(),
             orders_to_layers: FxHashMap::default(),
             layouts: FxHashMap::default(),
             buffers_with_caches: Rc::new(RefCell::new(SmallBitSet::default())),
@@ -56,15 +63,37 @@ impl Composition {
         self.builder.as_mut().expect("Composition::builder should not be None")
     }
 
-    pub fn create_layer(&mut self) -> Option<LayerId> {
-        self.layer_ids.acquire().map(LayerId)
+    pub fn create_layer(&mut self) -> LayerId {
+        let count = self.external_count;
+        LayerId(mem::replace(&mut self.external_count, count + 1))
     }
 
-    fn insert_segments(&mut self, layer_id: LayerId, segments: PathSegments<'_>) -> &mut Layer {
+    fn insert_segments(
+        &mut self,
+        layer_id: LayerId,
+        segments: PathSegments<'_>,
+    ) -> Option<&mut Layer> {
+        let id = self.external_to_internal.get(&layer_id).copied().or_else(|| {
+            let id = self.layer_ids.acquire();
+
+            if id.is_none() {
+                self.remove_disabled();
+            }
+
+            let id = id.or_else(|| {
+                self.remove_disabled();
+                self.layer_ids.acquire()
+            })?;
+
+            self.external_to_internal.insert(layer_id, id);
+
+            Some(id)
+        })?;
+
         let mut len = 0;
         for segment in segments {
             self.builder().push(
-                layer_id.0 as u32,
+                id as u32,
                 &surpass::Segment::new(
                     surpass::Point::new(segment.p0.x, segment.p0.y),
                     surpass::Point::new(segment.p1.x, segment.p1.y),
@@ -74,17 +103,17 @@ impl Composition {
             len += 1;
         }
 
-        let layer = self.layers.entry(layer_id.0).or_default();
+        let layer = self.layers.entry(id).or_default();
 
-        layer.inner.order = Some(layer_id.0 as u32);
+        layer.inner.order = Some(id as u32);
         layer.inner.is_enabled = true;
         layer.len += len;
 
-        layer
+        Some(layer)
     }
 
     #[inline]
-    pub fn insert_in_layer(&mut self, layer_id: LayerId, path: &Path) -> &mut Layer {
+    pub fn insert_in_layer(&mut self, layer_id: LayerId, path: &Path) -> Option<&mut Layer> {
         self.insert_segments(layer_id, path.segments())
     }
 
@@ -94,18 +123,20 @@ impl Composition {
         layer_id: LayerId,
         path: &Path,
         transform: &[f32; 9],
-    ) -> &mut Layer {
+    ) -> Option<&mut Layer> {
         self.insert_segments(layer_id, path.transformed(transform))
     }
 
     #[inline]
     pub fn get(&self, layer_id: LayerId) -> Option<&Layer> {
-        self.layers.get(&layer_id.0)
+        self.external_to_internal.get(&layer_id).and_then(|id| self.layers.get(id))
     }
 
     #[inline]
     pub fn get_mut(&mut self, layer_id: LayerId) -> Option<&mut Layer> {
-        self.layers.get_mut(&layer_id.0)
+        // TODO: remove with 2021 edition.
+        let layers = &mut self.layers;
+        self.external_to_internal.get(&layer_id).and_then(move |id| layers.get_mut(id))
     }
 
     #[inline]
@@ -146,6 +177,9 @@ impl Composition {
 
                 layer.inner.is_enabled
             });
+
+            let layers = &mut self.layers;
+            self.external_to_internal.retain(|_, id| layers.contains_key(id));
         }
     }
 
@@ -330,8 +364,8 @@ mod tests {
         let mut buffer = [GREEN; 3];
         let mut composition = Composition::new();
 
-        let layer_id = composition.create_layer().unwrap();
-        composition.insert_in_layer(layer_id, &pixel_path(1, 0)).set_props(solid(REDF));
+        let layer_id = composition.create_layer();
+        composition.insert_in_layer(layer_id, &pixel_path(1, 0)).unwrap().set_props(solid(REDF));
 
         composition.render(
             Buffer { buffer: &mut buffer, width: 3, ..Default::default() },
@@ -347,9 +381,9 @@ mod tests {
         let mut buffer = [GREEN; 3];
         let mut composition = Composition::new();
 
-        let layer_id = composition.create_layer().unwrap();
-        composition.insert_in_layer(layer_id, &pixel_path(1, 0)).set_props(solid(REDF));
-        composition.insert_in_layer(layer_id, &pixel_path(2, 0));
+        let layer_id = composition.create_layer();
+        composition.insert_in_layer(layer_id, &pixel_path(1, 0)).unwrap().set_props(solid(REDF));
+        composition.insert_in_layer(layer_id, &pixel_path(2, 0)).unwrap();
 
         composition.render(
             Buffer { buffer: &mut buffer, width: 3, ..Default::default() },
@@ -365,9 +399,10 @@ mod tests {
         let mut buffer = [GREEN; 3];
         let mut composition = Composition::new();
 
-        let layer_id = composition.create_layer().unwrap();
+        let layer_id = composition.create_layer();
         composition
             .insert_in_layer(layer_id, &pixel_path(1, 0))
+            .unwrap()
             .set_props(solid(REDF))
             .set_transform(&[1.0, 0.0, 0.0, 1.0, 0.5, 0.0]);
 
@@ -386,9 +421,10 @@ mod tests {
         let mut composition = Composition::new();
         let angle = -std::f32::consts::PI / 2.0;
 
-        let layer_id = composition.create_layer().unwrap();
+        let layer_id = composition.create_layer();
         composition
             .insert_in_layer(layer_id, &pixel_path(-1, 1))
+            .unwrap()
             .set_props(solid(REDF))
             .set_transform(&[angle.cos(), -angle.sin(), angle.sin(), angle.cos(), 0.0, 0.0]);
 
@@ -406,13 +442,13 @@ mod tests {
         let mut buffer = [GREEN; 4];
         let mut composition = Composition::new();
 
-        let layer_id0 = composition.create_layer().unwrap();
-        let layer_id1 = composition.create_layer().unwrap();
-        let layer_id2 = composition.create_layer().unwrap();
-        composition.insert_in_layer(layer_id0, &pixel_path(0, 0)).set_props(solid(REDF));
-        composition.insert_in_layer(layer_id1, &pixel_path(1, 0)).set_props(solid(REDF));
-        composition.insert_in_layer(layer_id2, &pixel_path(2, 0)).set_props(solid(REDF));
-        composition.insert_in_layer(layer_id2, &pixel_path(3, 0)).set_props(solid(REDF));
+        let layer_id0 = composition.create_layer();
+        let layer_id1 = composition.create_layer();
+        let layer_id2 = composition.create_layer();
+        composition.insert_in_layer(layer_id0, &pixel_path(0, 0)).unwrap().set_props(solid(REDF));
+        composition.insert_in_layer(layer_id1, &pixel_path(1, 0)).unwrap().set_props(solid(REDF));
+        composition.insert_in_layer(layer_id2, &pixel_path(2, 0)).unwrap().set_props(solid(REDF));
+        composition.insert_in_layer(layer_id2, &pixel_path(3, 0)).unwrap().set_props(solid(REDF));
 
         composition.render(
             Buffer { buffer: &mut buffer, width: 4, ..Default::default() },
@@ -457,8 +493,8 @@ mod tests {
     fn remove_twice() {
         let mut composition = Composition::new();
 
-        let layer_id = composition.create_layer().unwrap();
-        composition.insert_in_layer(layer_id, &pixel_path(0, 0)).set_props(solid(REDF));
+        let layer_id = composition.create_layer();
+        composition.insert_in_layer(layer_id, &pixel_path(0, 0)).unwrap().set_props(solid(REDF));
 
         assert_eq!(composition.actual_len(), 4);
 
@@ -477,15 +513,16 @@ mod tests {
         let mut composition = Composition::new();
         let layer_cache = composition.create_buffer_layer_cache();
 
-        let layer_id = composition.create_layer().unwrap();
-        composition.insert_in_layer(layer_id, &pixel_path(0, 0)).set_props(solid(REDF));
-        composition.insert_in_layer(layer_id, &pixel_path(TILE_SIZE as i32, 0));
+        let layer_id = composition.create_layer();
+        composition.insert_in_layer(layer_id, &pixel_path(0, 0)).unwrap().set_props(solid(REDF));
+        composition.insert_in_layer(layer_id, &pixel_path(TILE_SIZE as i32, 0)).unwrap();
 
-        let layer_id = composition.create_layer().unwrap();
+        let layer_id = composition.create_layer();
         composition
             .insert_in_layer(layer_id, &pixel_path(TILE_SIZE as i32 + 1, 0))
+            .unwrap()
             .set_props(solid(GREENF));
-        composition.insert_in_layer(layer_id, &pixel_path(2 * TILE_SIZE as i32, 0));
+        composition.insert_in_layer(layer_id, &pixel_path(2 * TILE_SIZE as i32, 0)).unwrap();
 
         composition.render(
             Buffer {
@@ -530,9 +567,9 @@ mod tests {
         let mut composition = Composition::new();
         let layer_cache = composition.create_buffer_layer_cache();
 
-        let layer_id = composition.create_layer().unwrap();
-        composition.insert_in_layer(layer_id, &pixel_path(0, 0)).set_props(solid(REDF));
-        composition.insert_in_layer(layer_id, &pixel_path(TILE_SIZE as i32, 0));
+        let layer_id = composition.create_layer();
+        composition.insert_in_layer(layer_id, &pixel_path(0, 0)).unwrap().set_props(solid(REDF));
+        composition.insert_in_layer(layer_id, &pixel_path(TILE_SIZE as i32, 0)).unwrap();
 
         composition.render(
             Buffer {
@@ -621,8 +658,8 @@ mod tests {
         let layer_cache0 = composition.create_buffer_layer_cache();
         let layer_cache1 = composition.create_buffer_layer_cache();
 
-        let layer_id = composition.create_layer().unwrap();
-        composition.insert_in_layer(layer_id, &pixel_path(0, 0)).set_props(solid(REDF));
+        let layer_id = composition.create_layer();
+        composition.insert_in_layer(layer_id, &pixel_path(0, 0)).unwrap().set_props(solid(REDF));
 
         composition.render(
             Buffer {
@@ -729,8 +766,8 @@ mod tests {
         let mut buffer = [BLACK; 3 * TILE_SIZE * TILE_SIZE];
         let mut composition = Composition::new();
 
-        let layer_id = composition.create_layer().unwrap();
-        composition.insert_in_layer(layer_id, &path).set_props(Props {
+        let layer_id = composition.create_layer();
+        composition.insert_in_layer(layer_id, &path).unwrap().set_props(Props {
             fill_rule: FillRule::EvenOdd,
             func: Func::Draw(Style { fill: Fill::Solid(REDF), ..Default::default() }),
         });

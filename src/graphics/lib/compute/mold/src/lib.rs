@@ -13,8 +13,8 @@ mod utils;
 const PIXEL_WIDTH: i32 = 16;
 
 pub use buffer::{Buffer, BufferLayerCache, Flusher};
-pub use composition::Composition;
-pub use layer::{Layer, LayerId};
+pub use composition::{Composition, LayerId};
+pub use layer::Layer;
 pub use path::Path;
 pub use point::Point;
 pub use utils::clear_buffer;

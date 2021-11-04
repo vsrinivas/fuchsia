@@ -9,9 +9,6 @@ use surpass::{self, painter::Props};
 
 const IDENTITY: &[f32; 6] = &[1.0, 0.0, 0.0, 1.0, 0.0, 0.0];
 
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct LayerId(pub(crate) u16);
-
 #[derive(Clone, Copy, Debug)]
 struct End {
     index: u16,
@@ -143,7 +140,7 @@ impl SmallBitSet {
 
 #[derive(Debug, Default)]
 pub struct Layer {
-    pub(crate) inner: surpass::Layer,
+    pub inner: surpass::Layer,
     props: Props,
     pub(crate) is_unchanged: SmallBitSet,
     pub(crate) len: usize,

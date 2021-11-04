@@ -314,6 +314,8 @@ impl Context<Mold> for MoldContext {
         );
         duration_end!("gfx", "render::Context<Mold>::render_composition");
 
+        composition.current_layer_ids.clear();
+
         // TODO: Motion blur support.
         if let Some(PostCopy { image: dst_image_id, copy_region, .. }) = ext.post_copy {
             let mut dst_image = self

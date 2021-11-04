@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use euclid::default::{Transform2D, Vector2D};
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
     color::Color,
@@ -19,22 +19,20 @@ pub struct MoldComposition {
     pub(crate) id: Option<usize>,
     pub(crate) composition: mold::Composition,
     orders_to_layer_ids: FxHashMap<u16, mold::LayerId>,
+    pub(crate) current_layer_ids: FxHashSet<mold::LayerId>,
     cached_display_transform: Option<Transform2D<Coord>>,
     pub(crate) background_color: Color,
 }
 
 impl MoldComposition {
-    fn insert_in_composition(&mut self, raster: &MoldRaster) -> (mold::LayerId, Vector2D<f32>) {
+    fn insert_in_composition(&mut self, raster: &MoldRaster) -> mold::LayerId {
         let mut option = raster.layer_details.borrow_mut();
         let layer_details = option
             .filter(|&(layer_id, layer_translation)| {
                 self.composition.get(layer_id).is_some() && raster.translation == layer_translation
             })
             .unwrap_or_else(|| {
-                let layer_id = self
-                    .composition
-                    .create_layer()
-                    .unwrap_or_else(|| panic!("Layer limit reached. ({})", u16::max_value()));
+                let layer_id = self.composition.create_layer();
 
                 for print in &raster.prints {
                     let transform: [f32; 9] = [
@@ -60,7 +58,7 @@ impl MoldComposition {
 
         *option = Some(layer_details);
 
-        layer_details
+        layer_details.0
     }
 
     fn mold_transform(&self, translation: Vector2D<Coord>) -> [f32; 6] {
@@ -120,29 +118,39 @@ impl Composition<Mold> for MoldComposition {
             id: None,
             composition: mold::Composition::new(),
             orders_to_layer_ids: FxHashMap::default(),
+            current_layer_ids: FxHashSet::default(),
             cached_display_transform: None,
             background_color,
         }
     }
 
     fn clear(&mut self) {
+        self.current_layer_ids.clear();
         for layer in self.composition.layers_mut() {
             layer.disable();
         }
     }
 
     fn insert(&mut self, order: u16, layer: Layer<Mold>) {
-        self.remove(order);
+        for i in 0..2 {
+            if let Some(id) = self.orders_to_layer_ids.remove(&(order * 2 + i)) {
+                if let Some(layer) = self.composition.get_mut(id) {
+                    if !self.current_layer_ids.contains(&id) {
+                        layer.disable();
+                    }
+                }
+            }
+        }
 
         if layer.raster.prints.is_empty() {
             return;
         }
 
         if let Some(ref clip) = layer.clip {
-            let layer_details = self.insert_in_composition(clip);
+            let id = self.insert_in_composition(clip);
 
             let mold_transform = self.mold_transform(layer.raster.translation);
-            let mold_layer = self.composition.get_mut(layer_details.0).unwrap();
+            let mold_layer = self.composition.get_mut(id).unwrap();
 
             let mold_order = order * 2;
             mold_layer.enable().set_order(mold_order).set_props(mold::Props {
@@ -155,13 +163,14 @@ impl Composition<Mold> for MoldComposition {
 
             mold_layer.set_transform(&mold_transform);
 
-            self.orders_to_layer_ids.insert(mold_order, layer_details.0);
+            self.orders_to_layer_ids.insert(mold_order, id);
+            self.current_layer_ids.insert(id);
         }
 
-        let layer_details = self.insert_in_composition(&layer.raster);
+        let id = self.insert_in_composition(&layer.raster);
 
         let mold_transform = self.mold_transform(layer.raster.translation);
-        let mold_layer = self.composition.get_mut(layer_details.0).unwrap();
+        let mold_layer = self.composition.get_mut(id).unwrap();
         let mold_order = order * 2 + 1;
         mold_layer.enable().set_order(mold_order).set_props(mold::Props {
             fill_rule: match layer.style.fill_rule {
@@ -209,7 +218,8 @@ impl Composition<Mold> for MoldComposition {
 
         mold_layer.set_transform(&mold_transform);
 
-        self.orders_to_layer_ids.insert(mold_order, layer_details.0);
+        self.orders_to_layer_ids.insert(mold_order, id);
+        self.current_layer_ids.insert(id);
     }
 
     fn remove(&mut self, order: u16) {
