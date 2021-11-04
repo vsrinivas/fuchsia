@@ -235,7 +235,6 @@ template("component_manager") {
       # binary and allows depending on 'testonly' targets.
       deps += [
         "//examples/components/routing/fidl:echo-rustc",
-        "//examples/fidl/legacy/services:echo-rustc",
         "//src/lib/diagnostics/hierarchy/rust",
         "//src/lib/process_builder:test-util-fidl-rustc",
         "//src/sys/lib/cm_rust/testing",
