@@ -561,10 +561,18 @@ test "${#linker[@]}" = 0 || {
   readelf="$clang_dir_local"/bin/llvm-readelf
   dwarfdump="$clang_dir_local"/bin/llvm-dwarfdump
 
-  clang_lib_triple="$target_triple"
+  # These mappings were determined by examining the options available
+  # in the clang lib dir, and verifying against traces of libraries accessed
+  # by local builds.
   case "$target_triple" in
-    aarch64-fuchsia) clang_lib_triple="aarch64-unknown-fuchsia" ;;
-    x86_64-fuchsia) clang_lib_triple="x86_64-unknown-fuchsia" ;;
+    aarch64-fuchsia | aarch64-*-fuchsia)
+      clang_lib_triple="aarch64-unknown-fuchsia" ;;
+    aarch64-linux-gnu | aarch64-*-linux-gnu)
+      clang_lib_triple="aarch64-unknown-linux-gnu" ;;
+    x86_64-fuchsia | x86_64-*-fuchsia)
+      clang_lib_triple="x86_64-unknown-fuchsia" ;;
+    x86_64-linux-gnu | x86_64-*-linux-gnu)
+      clang_lib_triple="x86_64-unknown-linux-gnu" ;;
     *) echo "[$script]: unhandled case for clang lib dir: $target_triple"
       exit 1
       ;;
