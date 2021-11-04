@@ -62,3 +62,4 @@ readonly PREBUILT_RUST_CARGO_OUTDATED_DIR="${PREBUILT_3P_DIR}/rust_cargo_outdate
 readonly PREBUILT_CGPT_DIR="${PREBUILT_TOOLS_DIR}/cgpt/${HOST_PLATFORM}"
 readonly PREBUILT_FUTILITY_DIR="${PREBUILT_TOOLS_DIR}/futility/${HOST_PLATFORM}"
 readonly PREBUILT_VDL_DIR="${FUCHSIA_DIR}/prebuilt/vdl"
+readonly PREBUILT_RECLIENT_DIR="${FUCHSIA_DIR}/prebuilt/proprietary/third_party/reclient/${HOST_PLATFORM}"
