@@ -62,10 +62,18 @@ class WiFiSettings extends StatelessWidget {
                                     ? null
                                     : Theme.of(context).disabledColor),
                             onTap: () => onChange(savedNetworks[index].name),
-                            trailing: ((state.targetNetwork != '') &&
-                                    (state.targetNetwork == networkName))
-                                ? Icon(Icons.check_outlined)
-                                : null,
+                            trailing: PopupMenuButton(
+                              itemBuilder: (context) {
+                                return [
+                                  PopupMenuItem(
+                                    child: Text(Strings.forget),
+                                    value: networkName,
+                                  ),
+                                ];
+                              },
+                              onSelected: state.removeNetwork,
+                              tooltip: Strings.forget,
+                            ),
                           );
                         }),
                     Padding(

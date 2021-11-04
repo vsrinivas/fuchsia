@@ -436,4 +436,8 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   @override
   void setTargetNetwork(String network) =>
       runInAction(() => wifiService.targetNetwork = network);
+
+  @override
+  void removeNetwork(String network) =>
+      runInAction(() => wifiService.remove(network));
 }

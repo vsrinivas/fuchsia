@@ -1088,6 +1088,11 @@ class Strings {
         name: 'factoryDataReset',
         desc: 'The label of button to factory data reset a device.',
       );
+  static String get forget => Intl.message(
+        'Forget',
+        name: 'forget',
+        desc: 'The label for "Forget" text field.',
+      );
 
   /// Lookup message given it's name.
   static String? lookup(String name) {

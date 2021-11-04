@@ -115,4 +115,5 @@ abstract class SettingsState implements TaskService {
   void showWiFiSettings();
   void connectToWPA2Network(String password);
   void setTargetNetwork(String network);
+  void removeNetwork(String network);
 }

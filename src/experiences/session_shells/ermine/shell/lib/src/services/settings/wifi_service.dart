@@ -12,6 +12,7 @@ import 'package:fidl/fidl.dart' show InterfaceHandle, InterfaceRequest;
 import 'package:fidl_fuchsia_wlan_common/fidl_async.dart';
 import 'package:fidl_fuchsia_wlan_policy/fidl_async.dart' as policy;
 import 'package:fuchsia_logger/logger.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fuchsia_services/services.dart';
 
@@ -155,6 +156,9 @@ class WiFiService implements TaskService {
           throw Exception(
               'connecting to $targetNetwork rejected: $requestStatus.');
         }
+
+        // Refresh list of saved networks
+        await getSavedNetworks();
       }()
           .asStream()
           .listen((_) {});
@@ -192,8 +196,8 @@ class WiFiService implements TaskService {
     try {
       _removeNetworkSubscription = () async {
         final ssid = utf8.encode(network);
-        final foundNetwork = _savedNetworks
-            .firstWhereOrNull((network) => network.id?.ssid == ssid);
+        final foundNetwork = _savedNetworks.firstWhereOrNull(
+            (savedNetwork) => listEquals(savedNetwork.id?.ssid, ssid));
 
         if (foundNetwork == null) {
           throw Exception('$network not found in saved networks.');
@@ -203,6 +207,9 @@ class WiFiService implements TaskService {
             id: foundNetwork.id, credential: foundNetwork.credential);
 
         await _clientController?.removeNetwork(networkConfig);
+
+        // Refresh list of saved networks
+        await getSavedNetworks();
       }()
           .asStream()
           .listen((_) {});
