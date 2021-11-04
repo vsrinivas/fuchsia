@@ -610,6 +610,31 @@ TEST_F(MacInterfaceTest, TestSetChannel) {
   EXPECT_EQ(false, mvmvif_sta_.csa_bcn_pending);
 }
 
+// Test call set_channel() multiple times.
+//
+TEST_F(MacInterfaceTest, TestMultipleSetChannel) {
+  ExpectSendCmd(expected_cmd_id_list({
+      // for the first SetChannel()
+      MockCommand(WIDE_ID(LONG_GROUP, PHY_CONTEXT_CMD)),  // for add_chanctx
+      MockCommand(WIDE_ID(LONG_GROUP, PHY_CONTEXT_CMD)),  // for change_chanctx
+      MockCommand(WIDE_ID(LONG_GROUP, BINDING_CONTEXT_CMD)),
+      MockCommand(WIDE_ID(LONG_GROUP, MAC_PM_POWER_TABLE)),
+
+      // for the second SetChannel()
+      MockCommand(WIDE_ID(LONG_GROUP, BINDING_CONTEXT_CMD)),  // for remove_chanctx
+      MockCommand(WIDE_ID(LONG_GROUP, MAC_PM_POWER_TABLE)),
+      MockCommand(WIDE_ID(LONG_GROUP, PHY_CONTEXT_CMD)),
+      MockCommand(WIDE_ID(LONG_GROUP, PHY_CONTEXT_CMD)),  // for add_chanctx
+      MockCommand(WIDE_ID(LONG_GROUP, PHY_CONTEXT_CMD)),  // for change_chanctx
+      MockCommand(WIDE_ID(LONG_GROUP, BINDING_CONTEXT_CMD)),
+      MockCommand(WIDE_ID(LONG_GROUP, MAC_PM_POWER_TABLE)),
+  }));
+
+  for (size_t i = 0; i < 2; i++) {
+    ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
+  }
+}
+
 // Test the unsupported MAC role.
 //
 TEST_F(MacInterfaceTest, TestSetChannelWithUnsupportedRole) {

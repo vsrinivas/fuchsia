@@ -336,6 +336,35 @@ static zx_status_t mac_ensure_phyctxt_valid(struct iwl_mvm_vif* mvmvif) {
 
 static zx_status_t mac_unconfigure_bss(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvm_sta);
 
+static zx_status_t remove_chanctx(struct iwl_mvm_vif* mvmvif) {
+  zx_status_t ret;
+
+  // mvmvif->phy_ctxt will be cleared up in iwl_mvm_unassign_vif_chanctx(). So back up the phy
+  // context ID and the chandef pointer for later use.
+  auto phy_ctxt_id = mvmvif->phy_ctxt->id;
+  auto chandef = &mvmvif->phy_ctxt->chandef;
+
+  // Unbinding MAC and PHY contexts.
+  ret = iwl_mvm_unassign_vif_chanctx(mvmvif);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "cannot unassign VIF channel context: %s\n", zx_status_get_string(ret));
+    goto out;
+  }
+
+  ret = iwl_mvm_remove_chanctx(mvmvif->mvm, phy_ctxt_id);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "Cannot remove channel context: %s\n", zx_status_get_string(ret));
+    goto out;
+  }
+
+  // Clear the chandef in mvm->phy_ctxts[] (was pointed by mvmvif->phy_ctxt->chandef) to indicate
+  // this phy_ctxt is unused.
+  memset(chandef, 0, sizeof(*chandef));
+
+out:
+  return ret;
+}
+
 // This is called right after SSID scan. The MLME tells this function the channel to tune in.
 // This function configures the PHY context and binds the MAC to that PHY context.
 zx_status_t mac_set_channel(void* ctx, uint32_t options, const wlan_channel_t* channel) {
@@ -353,10 +382,9 @@ zx_status_t mac_set_channel(void* ctx, uint32_t options, const wlan_channel_t* c
            channel->secondary80);
 
   if (mvmvif->phy_ctxt && mvmvif->ap_sta_id != IWL_MVM_INVALID_STA) {
-    // We already have PHY context set. It probably was left from the last association attempt
-    // (which was rejected by the AP). Remove it first.
-    IWL_INFO(mvmvif, "We already have PHY context set (ap_sta_id=%d). Removing it.\n",
-             mvmvif->ap_sta_id);
+    // We already have AP STA ID set. It probably was left from the previous association attempt
+    // (had gone through mac_configure_bss but was rejected by the AP). Remove it first.
+    IWL_INFO(mvmvif, "We already have AP STA ID set (%d). Removing it.\n", mvmvif->ap_sta_id);
 
     // In the normal case, the time event is added in the mac_configure_bss() and removed in the
     // mac_configure_assoc(). So in the abnormal cases (assoc failed), we need to remove it before
@@ -378,6 +406,16 @@ zx_status_t mac_set_channel(void* ctx, uint32_t options, const wlan_channel_t* c
         IWL_ERR(mvmvif, "Cannot unconfigure bss: %s\n", zx_status_get_string(ret));
         return ret;
       }
+    }
+  }
+
+  if (mvmvif->phy_ctxt && mvmvif->phy_ctxt->chandef.primary != 0) {
+    // The PHY context is set (the RF is on a particular channel). Remove it first. Below code
+    // will allocate a new one.
+    ret = remove_chanctx(mvmvif);
+    if (ret != ZX_OK) {
+      IWL_ERR(mvmvif, "Cannot reset PHY context: %s\n", zx_status_get_string(ret));
+      return ret;
     }
   }
 
@@ -690,10 +728,6 @@ out:
 
 // This function is to revert what mac_configure_bss() does.
 zx_status_t mac_unconfigure_bss(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvm_sta) {
-  // mvmvif->phy_ctxt will be cleared up in iwl_mvm_unassign_vif_chanctx(). So backup the phy
-  // context ID for removing.
-  auto phy_ctxt_id = mvmvif->phy_ctxt->id;
-
   // REMOVE_STA will be issued to remove the station entry in the firmware.
   zx_status_t ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_NONE, IWL_STA_NOTEXIST);
   if (ret != ZX_OK) {
@@ -713,18 +747,7 @@ zx_status_t mac_unconfigure_bss(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* 
     goto out;
   }
 
-  // Unbinding MAC and PHY contexts.
-  ret = iwl_mvm_unassign_vif_chanctx(mvmvif);
-  if (ret != ZX_OK) {
-    IWL_ERR(mvmvif, "cannot unassign VIF channel context: %s\n", zx_status_get_string(ret));
-    goto out;
-  }
-
-  ret = iwl_mvm_remove_chanctx(mvmvif->mvm, phy_ctxt_id);
-  if (ret != ZX_OK) {
-    IWL_ERR(mvmvif, "Cannot remove channel context: %s\n", zx_status_get_string(ret));
-    goto out;
-  }
+  ret = remove_chanctx(mvmvif);
 
 out:
   free_ap_mvm_sta(mvm_sta);
