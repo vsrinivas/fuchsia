@@ -83,15 +83,6 @@ template("component_manager") {
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:url",
     "//third_party/rust_crates:void",
-
-    # These are 'logical' test-only deps, in that they're only used in the
-    # model::testing helpers, but that module is currently included in the main
-    # library (rather than being guarded with '#[cfg(test)]') to allow use in
-    # separate integration test targets.
-    # TODO(https://fxbug.dev/75967): make these true test-only deps.
-    "//examples/components/routing/fidl:echo-rustc",
-    "//src/sys/lib/cm_rust/testing",
-    "//src/sys/lib/routing/testing:routing_test_helpers",
   ]
   _non_rust_deps = [
     "//zircon/system/ulib/trace",
@@ -203,13 +194,6 @@ template("component_manager") {
     "src/model/runner.rs",
     "src/model/storage/admin_protocol.rs",
     "src/model/storage/mod.rs",
-    "src/model/testing/echo_service.rs",
-    "src/model/testing/mocks.rs",
-    "src/model/testing/mod.rs",
-    "src/model/testing/out_dir.rs",
-    "src/model/testing/routing_test_helpers.rs",
-    "src/model/testing/test_helpers.rs",
-    "src/model/testing/test_hook.rs",
     "src/root_stop_notifier.rs",
     "src/startup.rs",
     "src/task_scope.rs",
@@ -230,6 +214,13 @@ template("component_manager") {
       non_rust_deps = _non_rust_deps
 
       sources += [
+        "src/model/testing/echo_service.rs",
+        "src/model/testing/mocks.rs",
+        "src/model/testing/mod.rs",
+        "src/model/testing/out_dir.rs",
+        "src/model/testing/routing_test_helpers.rs",
+        "src/model/testing/test_helpers.rs",
+        "src/model/testing/test_hook.rs",
         "src/model/tests/lifecycle.rs",
         "src/model/tests/mod.rs",
         "src/model/tests/rights.rs",
@@ -243,8 +234,11 @@ template("component_manager") {
       # above, which has the benefit of keeping unneeded deps out of the production
       # binary and allows depending on 'testonly' targets.
       deps += [
+        "//examples/components/routing/fidl:echo-rustc",
+        "//examples/fidl/legacy/services:echo-rustc",
         "//src/lib/diagnostics/hierarchy/rust",
         "//src/lib/process_builder:test-util-fidl-rustc",
+        "//src/sys/lib/cm_rust/testing",
         "//src/sys/lib/library_loader",
         "//src/sys/lib/routing/testing:routing_test_helpers",
         "//third_party/rust_crates:matches",

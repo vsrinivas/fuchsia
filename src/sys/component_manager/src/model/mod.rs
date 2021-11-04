@@ -10,9 +10,6 @@ pub mod event_logger;
 pub mod hooks;
 pub mod hub;
 pub mod model;
-// TODO: This would be #[cfg(test)], but it cannot be because some external crates depend on
-// fuctionality in this module. Factor out the externally-depended code into its own module.
-pub mod testing;
 
 pub(crate) mod context;
 pub(crate) mod environment;
@@ -36,3 +33,6 @@ mod lifecycle_controller;
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+pub mod testing;

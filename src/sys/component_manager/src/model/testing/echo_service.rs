@@ -11,7 +11,7 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fidl_examples_routing_echo::{EchoMarker, EchoRequest, EchoRequestStream},
     fuchsia_zircon::{self as zx},
-    futures::prelude::*,
+    futures::TryStreamExt,
     lazy_static::lazy_static,
     std::{
         convert::TryInto,
