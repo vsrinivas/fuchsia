@@ -597,7 +597,7 @@ done
 case "$target_triple" in
   aarch64-*-linux*) sysroot_triple=aarch64-linux-gnu ;;
   x86_64-*-linux*) sysroot_triple=x86_64-linux-gnu ;;
-  x86_64-fuchsia) sysroot_triple="" ;;
+  *-fuchsia) sysroot_triple="" ;;
   wasm32-*) sysroot_triple="" ;;
   *) echo "[$script]: unhandled case for sysroot target subdir: $target_triple"
     exit 1
