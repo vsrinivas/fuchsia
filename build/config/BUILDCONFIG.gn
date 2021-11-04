@@ -608,12 +608,61 @@ set_defaults("rustc_staticlib") {
   configs = default_common_binary_configs + default_rust_configs
 }
 
+# `hermetic_inputs_action()` and `hermetic_inputs_action_foreach()` are used
+# to run an action that generates a list of implicit inputs, as required
+# by the `hermetics_inputs_target` argument of our `action()` and `action_foreach()`
+# wrappers (see below).
+#
+# They take exactly the same arguments as action() and action_foreach() respectively.
+#
+# For now, they are never wrapped by the action tracer.
+#
+foreach(_target_type,
+        [
+          "action",
+          "action_foreach",
+        ]) {
+  template("hermetic_inputs_" + _target_type) {
+    # Consistency check: only a single output is allowed,
+    # and 'depfile' is not supported here (and doesn't make sense).
+    _outputs = invoker.outputs
+    assert(_outputs == [ _outputs[0] ],
+           "An hermetic_inputs_action() script should have a single output!")
+    assert(!defined(invoker.depfile),
+           "An hermetic_inputs_action() cannot have a depfile!")
+    target(_target_type, target_name) {
+      forward_variables_from(invoker,
+                             "*",
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+
+      _ext = get_path_info(script, "extension")
+      if (_ext == "py" || _ext == "pyz") {
+        _new_args = [
+                      "-S",
+                      rebase_path(script, root_build_dir),
+                    ] + args
+        script = python_exe_src
+        args = []
+        args = _new_args
+      }
+    }
+  }
+}
+
 # NOTE: This template needs to be defined before some of the templates below so
 # that it takes effect when these templates directly or indirectly expand
 # action() or action_foreach().
 #
 # Each wrapped action() or action_foreach() rule takes the same arguments as
-# the built-in versions, plus the following ones:
+# the built-in version, plus the following ones:
 #
 #   hermetic_deps:
 #     Type: boolean
@@ -632,6 +681,79 @@ set_defaults("rustc_staticlib") {
 #       each command will be run twice. Setting this argument to 'false' will
 #       however disable this behaviour to the current target.
 #
+#   hermetic_inputs_file:
+#     Type: path
+#     Required: no
+#     Description: Path to an output file that will contain the implicit
+#       inputs for the action. This is a text file that simply contains
+#       one implicit input file path per line, and will be generated
+#       _before_ running the command. This can be a useful alternative to depfiles
+#       for action scripts that do not know how to generate them.
+#
+#       In the future, this may be used to setup a filesystem sandbox for the
+#       command. Its content will also be converted into a Ninja depfile
+#       automatically, so using 'depfile' in the same action() call is an
+#       error.
+#
+#       For action_foreach() targets, this should contain an output
+#       substution, like {{source_file_part}} to distinguish each
+#       individual output.
+#
+#       If only this argument is defined, the following happens:
+#
+#         1) An new implicit action is created, to invoke the original
+#            action's script with the same set of arguments, augmented
+#            with "--hermetic-inputs-file=<FILE>". The script is
+#            supposed to change its behaviour in this case, and
+#            only write "<FILE>", and no other output.
+#
+#            Note that the implicit action receives the same
+#            set of inputs and dependencies as the original action
+#            target (but not its list of outputs).
+#
+#         2) The original action's script is launched through a wrapper
+#            that takes the hermetic_inputs_file generated in the
+#            previous step as input, and will generate a Ninja depfile
+#            from it, after launching the command.
+#
+#       It is possible to change the arguments used in the first step
+#       by setting 'hermetic_inputs_args'. Similarly, it is possible
+#       to change the invoked script for the first step by setting
+#       'hermetic_inputs_script'.
+#
+#       Finally, it is possible to define a custom action to generate
+#       the hermetic inputs file, and set 'hermetic_inputs_target' to
+#       point to it.
+#
+#  hermetic_inputs_script:
+#    Type: path
+#    Required: no, but requires hermetic_inputs_file.
+#    Description: Path to alternative script to generate the
+#       hermetic inputs file. By default, the original action's script
+#       is invoked. This argument is incompatible with hermetic_inputs_action.
+#
+#  hermetic_inputs_args:
+#    Type: list of strings
+#    Required: no, but requires hermetic_inputs_file.
+#    Description: List of command-line arguments for the script used
+#       to generate the hermetic_inputs_file file. By default, this
+#       is the same list as the 'args' argument, augmented with
+#       "--hermetic-inputs-file=FILE".
+#
+#  hermetic_inputs_target:
+#    Type: GN label
+#    Required: no, but requires hermetic_inputs_file, conflicts with
+#      hermetic_inputs_script or hermetic_inputs_args.
+#    Description:
+#      Label pointing to an hermetic_inputs_action() target used
+#      to generate the hermetic_inputs_file, in the case where
+#      this is more convenient than using
+#      'hermetic_inputs_script' and 'hermetic_inputs_args'.
+#
+#      This may be useful when the set of dependencies or inputs
+#      to generate the file is smaller than the ones from the parent
+#      action.
+#
 foreach(_target_type,
         [
           "action",
@@ -644,12 +766,95 @@ foreach(_target_type,
              "all_outputs_fresh is obsolete, and should only be set to false!")
       not_needed(invoker, [ "all_outputs_fresh" ])
     }
+
+    # If the action has inputs/outputs that are not explicitly stated then
+    # it will fail verification against the trace.
+    # Actions that are known non-hermetic should set `hermetic_deps = false`.
+    hermetic_deps = true
+    if (defined(invoker.hermetic_deps)) {
+      hermetic_deps = invoker.hermetic_deps
+      if (!hermetic_deps) {
+        assert(
+            !defined(invoker.hermetic_inputs_file),
+            "hermetic_inputs_file cannot be defined with `hermetic_deps = false'")
+      }
+    }
+
+    should_trace = build_should_trace_actions && hermetic_deps
+
+    if (defined(invoker.hermetic_inputs_file)) {
+      assert(!defined(invoker.depfile),
+             "depfile and hermetic_inputs_file cannot be set at the same time!")
+
+      _hermetic_inputs_file = invoker.hermetic_inputs_file
+
+      if (defined(invoker.hermetic_inputs_target)) {
+        _hermetic_inputs_target = invoker.hermetic_inputs_target
+        assert(
+            !defined(invoker.hermetic_inputs_script),
+            "hermetic_inputs_target and hermetic_inputs_script cannot be set at the same time")
+        assert(
+            !defined(invoker.hermetic_inputs_args),
+            "hermetic_inputs_target and hermetic_inputs_args cannot be set at the same time!")
+      } else {
+        # Synthetize an hermetics_inputs_action() from the values
+        # of hermetic_inputs_script and hermetic_inputs_args if they
+        # are provided.
+        _hermetic_inputs_target_name = "${target_name}__hermetic_inputs"
+        _hermetic_inputs_target = ":${_hermetic_inputs_target_name}"
+        _main_target_name = target_name
+        target("hermetic_inputs_" + _target_type,
+               _hermetic_inputs_target_name) {
+          forward_variables_from(invoker,
+                                 [
+                                   "deps",
+                                   "public_deps",
+                                   "inputs",
+                                   "sources",
+                                   "testonly",
+                                 ])
+          visibility = [ ":${_main_target_name}" ]
+          outputs = [ _hermetic_inputs_file ]
+
+          if (defined(invoker.hermetic_input_script)) {
+            _script = invoker.hermetic_input_script
+          } else {
+            _script = invoker.script
+          }
+
+          if (defined(invoker.hermetic_input_args)) {
+            _args = invoker.hermetic_input_args
+          } else {
+            _args = invoker.args
+            _args += [
+              "--hermetic-inputs-file",
+              rebase_path(_hermetic_inputs_file, root_build_dir),
+            ]
+          }
+
+          script = _script
+          args = _args
+        }
+      }
+    } else {
+      assert(!defined(invoker.hermetic_inputs_target),
+             "Setting hermetic_inputs_target requires hermetic_inputs_file")
+      assert(!defined(invoker.hermetic_inputs_script),
+             "Setting hermetic_inputs_script requires hermetic_inputs_file")
+      assert(!defined(invoker.hermetic_inputs_args),
+             "Setting hermetic_inputs_args requires hermetic_inputs_file")
+    }
+
     target(_target_type, target_name) {
       forward_variables_from(invoker,
                              "*",
                              [
                                "args",
                                "hermetic_deps",
+                               "hermetic_inputs_args",
+                               "hermetic_inputs_file",
+                               "hermetic_inputs_script",
+                               "hermetic_inputs_target",
                                "repeatable",
                                "script",
                                "testonly",
@@ -749,18 +954,6 @@ foreach(_target_type,
         _invoker_script = python_exe_src
       }
 
-      # If the action has inputs/outputs that are not explicitly stated then
-      # it will fail verification against the trace.
-      # Actions that are known non-hermetic should set `hermetic_deps = false`.
-      #
-      # TODO(rudymathu): At some point, we may want to restrict usage of
-      # non-hermetic actions, which we can do by depending on a target with
-      # explicit visibility.
-      hermetic_deps = true
-      if (defined(invoker.hermetic_deps)) {
-        hermetic_deps = invoker.hermetic_deps
-      }
-
       if (!defined(deps)) {
         deps = []
       }
@@ -774,12 +967,43 @@ foreach(_target_type,
         inputs += [ "//build/tracer/force_nonhermetic_rebuild" ]
       }
 
-      should_trace = build_should_trace_actions && hermetic_deps
       if (!should_trace) {
         not_needed([ "hermetic_deps" ])
-        script = _invoker_script
-        args = _args
+        if (defined(_hermetic_inputs_file)) {
+          # Use a Python wrapper script to read the hermetic_inputs_file and
+          # convert it into a depfile after launching the command itself.
+          # This is necessary because the depfile is removed by Ninja by default
+          # and cannot be the output of a previous action.
+          script = python_exe_src
+          _wrapper_script = "//build/tracer/hermetic_inputs_action.py"
+          inputs += [
+            _wrapper_script,
+            _hermetic_inputs_file,
+          ]
+          depfile = "${target_gen_dir}/${target_name}.depfile"
+          args = [
+            "-S",
+            rebase_path(_wrapper_script, root_build_dir),
+            "--hermetic-inputs-file",
+            rebase_path(_hermetic_inputs_file, root_build_dir),
+            "--outputs",
+          ]
+          args += rebase_path(outputs, root_build_dir)
+          args += [
+            "--depfile",
+            rebase_path(depfile, root_build_dir),
+            "--",
+            rebase_path(_invoker_script, root_build_dir),
+          ]
+          args += _args
+          deps += [ _hermetic_inputs_target ]
+        } else {
+          # No tracing and no hermetic input file: Run the script directly
+          script = _invoker_script
+          args = _args
+        }
       } else {
+        # Run the script with the action tracer.
         script = python_exe_src
 
         inputs += [
@@ -816,6 +1040,17 @@ foreach(_target_type,
 
         if (!hermetic_deps) {
           args += [ "--no-check-access-permissions" ]
+        }
+
+        if (defined(_hermetic_inputs_file)) {
+          # The action tracer script supports --hermetic-inputs-file and
+          # will generate the --depfile accordingly.
+          depfile = "${target_gen_dir}/${target_name}.depfile"
+          args += [
+            "--hermetic-inputs-file",
+            rebase_path(_hermetic_inputs_file, root_build_dir),
+          ]
+          deps += [ _hermetic_inputs_target ]
         }
 
         # As far as tracing and dependencies are concerned, sources are just inputs.

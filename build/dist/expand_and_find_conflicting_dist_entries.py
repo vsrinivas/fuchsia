@@ -20,8 +20,13 @@ def main():
         '--input', help='Path to original manifest', required=True)
     parser.add_argument(
         '--output', help='Path to the updated manifest', required=True)
+    parser.add_argument('--depfile', help='Path to GN style depfile')
     parser.add_argument(
-        '--depfile', help='Path to GN style depfile', required=True)
+        '--hermetic-inputs-file',
+        metavar='INPUTS_FILE',
+        help=
+        'When used, only output the INPUTS_FILE which lists all inputs used ' +
+        'by this command, instead of OUTPUT and DEPFILE.')
     args = parser.parse_args()
 
     with open(args.input, 'r') as input_file:
@@ -34,16 +39,26 @@ def main():
         print(error, file=sys.stderr)
         return 1
 
-    with open(args.output, 'w') as output_file:
-        json.dump(
-            [e._asdict() for e in sorted(entries)],
-            output_file,
-            indent=2,
-            sort_keys=True,
-            separators=(',', ': '))
+    # NOTE: If --hermetic-inputs-file INPUTS_FILE is used, then
+    # do not output the manifest file or a depfile, only generate an
+    # inputs list file. See hermetrics_inputs_file in BUILDCONFIG.gn.
+    if args.hermetic_inputs_file:
+        with open(args.hermetic_inputs_file, 'w') as inputs_file:
+            inputs_file.write('\n'.join(sorted(opened_files)))
+    else:
+        if args.output:
+            with open(args.output, 'w') as output_file:
+                json.dump(
+                    [e._asdict() for e in sorted(entries)],
+                    output_file,
+                    indent=2,
+                    sort_keys=True,
+                    separators=(',', ': '))
 
-    with open(args.depfile, 'w+') as depfile:
-        depfile.write('%s: %s\n' % (args.output, ' '.join(opened_files)))
+        if args.depfile:
+            with open(args.depfile, 'w+') as depfile:
+                depfile.write(
+                    '%s: %s\n' % (args.output, ' '.join(opened_files)))
 
     return 0
 

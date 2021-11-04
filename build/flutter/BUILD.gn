@@ -39,6 +39,7 @@ group("deprecated_flutter_app_allowlist") {
       target,
       target + "_manifest_dist",
       target + "_manifest_dist_generate",
+      target + "_manifest_dist__hermetic_inputs",
       target + "_component_manifests",
     ]
   }

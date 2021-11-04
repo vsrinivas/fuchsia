@@ -60,7 +60,10 @@ template("distribution_manifest") {
                              "testonly",
                            ])
 
-    visibility = [ ":$main_target" ]
+    visibility = [
+      ":$main_target",
+      ":${main_target}__hermetic_inputs",
+    ]
 
     # See //docs/concepts/build_system/internals/distribution_manifest.md
     # for the schema of `distribution_entries` and `distribution_entries_files`,
@@ -90,7 +93,6 @@ template("distribution_manifest") {
                            ])
 
     script = "//build/dist/expand_and_find_conflicting_dist_entries.py"
-    depfile = "${manifest_file}.d"
 
     sources = [ intermediate_file ]
     outputs = [ manifest_file ]
@@ -101,14 +103,18 @@ template("distribution_manifest") {
       rebase_path(intermediate_file, root_build_dir),
       "--output",
       rebase_path(manifest_file, root_build_dir),
-      "--depfile",
-      rebase_path(depfile, root_build_dir),
     ]
 
     if (!defined(deps)) {
       deps = []
     }
     deps += [ ":$generate_target" ]
+
+    # This flag will make the build system call script with
+    # an extra --hermetic-inputs-file=PATH argument to generate
+    # a depfile, which is needed for list input files referenced
+    # by distribution_entries_files metadata values.
+    hermetic_inputs_file = "$target_gen_dir/${main_target}.hermetic_inputs"
 
     metadata = {
       # Add a barrier here to avoid double of inclusion of elements listed in

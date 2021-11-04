@@ -314,12 +314,16 @@ def parse_depfile(depfile_lines: Iterable[str]) -> DepFile:
         # Ignore empty line
         if not line.strip():
             if current_line:
-                raise ValueError("Line continuation followed by empty line in depfile line " + line)
+                raise ValueError(
+                    "Line continuation followed by empty line in depfile line "
+                    + line)
             continue
         # Ignore comments
         if line.strip().startswith("#"):
             if current_line:
-                raise ValueError("Line continuation followed by comment in depfile line " + line)
+                raise ValueError(
+                    "Line continuation followed by comment in depfile line " +
+                    line)
             continue
         # We currently don't allow consecutive backslashes in filenames to
         # simplify depfile parsing. Support can be added if use cases come up.
@@ -366,6 +370,7 @@ class Action(object):
     inputs: Sequence[str] = dataclasses.field(default_factory=list)
     outputs: Collection[str] = dataclasses.field(default_factory=list)
     depfile: Optional[str] = None
+    hermetic_inputs: Optional[Collection[str]] = None
     parsed_depfile: Optional[DepFile] = None
 
     def access_constraints(
@@ -380,7 +385,9 @@ class Action(object):
 
         allowed_reads = set(self.inputs)
 
-        if self.depfile:
+        if self.hermetic_inputs:
+            allowed_reads.update(self.hermetic_inputs)
+        elif self.depfile:
             # Writing the depfile is not required (yet), but allowed.
             allowed_writes.add(self.depfile)
             if os.path.exists(self.depfile):
@@ -677,7 +684,9 @@ def main_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--inputs", nargs="*", help="action#inputs")
     parser.add_argument("--outputs", nargs="*", help="action#outputs")
     parser.add_argument("--depfile", help="action#depfile")
-
+    parser.add_argument(
+        "--hermetic-inputs-file",
+        help="Path to file listing extra inputs for this command")
     parser.add_argument(
         "--failed-check-status",
         type=int,
@@ -797,9 +806,25 @@ def main():
     if os.path.basename(script) in ignored_scripts:
         return retval
 
+    hermetic_inputs = None
+    depfile = args.depfile
+    if args.hermetic_inputs_file:
+        assert args.depfile, '--hermetic-inputs-file requires --depfile!'
+        with open(args.hermetic_inputs_file) as f:
+            hermetic_inputs = [os.path.abspath(l.strip()) for l in f]
+
+        # Generate the depfile here.
+        with open(args.depfile, 'w') as f:
+            f.write(
+                '%s: %s\n' %
+                (' '.join(args.outputs), ' '.join(hermetic_inputs)))
+
     # Compute constraints from action properties (from args).
     action = Action(
-        inputs=args.inputs, outputs=args.outputs, depfile=args.depfile)
+        inputs=args.inputs,
+        outputs=args.outputs,
+        depfile=depfile,
+        hermetic_inputs=hermetic_inputs)
     access_constraints = action.access_constraints(
         writeable_depfile_inputs=args.writeable_depfile_inputs)
 
