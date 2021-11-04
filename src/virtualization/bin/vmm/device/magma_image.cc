@@ -298,8 +298,8 @@ vk::Result VulkanImageCreator::CreateCollection(vk::ImageCreateInfo* image_creat
 
     fidl::Arena allocator;
     fuchsia_ui_composition::wire::RegisterBufferCollectionArgs args(allocator);
-    args.set_export_token(allocator, std::move(export_token));
-    args.set_buffer_collection_token(allocator, std::move(scenic_token_endpoint_));
+    args.set_export_token(std::move(export_token));
+    args.set_buffer_collection_token(std::move(scenic_token_endpoint_));
 
     auto result = scenic_allocator_->RegisterBufferCollection(std::move(args));
     if (!result.ok()) {
