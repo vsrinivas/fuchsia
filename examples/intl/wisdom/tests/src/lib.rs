@@ -6,7 +6,7 @@ use {
     anyhow::{self, Error},
     diagnostics_reader::{ArchiveReader, Logs},
     fidl_fuchsia_data as fdata,
-    fuchsia_component_test::{builder::*, Moniker},
+    fuchsia_component_test::{ChildProperties, Moniker, RealmBuilder},
     futures::StreamExt,
     std::fs::File,
     std::io::{self, BufRead},
@@ -15,17 +15,16 @@ use {
 #[fuchsia::test]
 async fn wisdom_integration_test() -> Result<(), Error> {
     // Create the test realm,
-    let mut builder = RealmBuilder::new().await?;
+    let builder = RealmBuilder::new().await?;
     builder
-        .add_component(Moniker::root(), ComponentSource::url("#meta/intl_wisdom_realm.cm"))
+        .add_child(Moniker::root(), "#meta/intl_wisdom_realm.cm", ChildProperties::new())
         .await?;
-    let mut realm = builder.build();
 
     // Mark echo_client as eager so it starts automatically.
-    realm.mark_as_eager(&"wisdom_client".into()).await?;
+    builder.mark_as_eager("wisdom_client").await?;
 
     // Inject the program.args of the manifest
-    let mut client_decl = realm.get_decl(&"wisdom_client".into()).await?;
+    let mut client_decl = builder.get_decl("wisdom_client").await?;
     let program = client_decl.program.as_mut().unwrap();
     program.info.entries.as_mut().unwrap().push(fdata::DictionaryEntry {
         key: "args".into(),
@@ -34,10 +33,10 @@ async fn wisdom_integration_test() -> Result<(), Error> {
             "--timezone=America/Los_Angeles".to_string(),
         ]))),
     });
-    realm.set_component(&"wisdom_client".into(), client_decl).await?;
+    builder.set_decl("wisdom_client", client_decl).await?;
 
     // Create the realm instance
-    let realm_instance = realm.create().await?;
+    let realm_instance = builder.build().await?;
 
     // Initialize the log reader
     let moniker = format!(

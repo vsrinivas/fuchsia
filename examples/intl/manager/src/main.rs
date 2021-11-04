@@ -306,7 +306,7 @@ mod test {
             PropertyProviderProxy, TemperatureUnit, TimeZoneId,
         },
         fuchsia_async as fasync,
-        fuchsia_component_test::{builder::*, RouteBuilder},
+        fuchsia_component_test::{ChildProperties, RealmBuilder, RouteBuilder, RouteEndpoint},
         futures::{self, prelude::*},
         lazy_static::lazy_static,
     };
@@ -353,31 +353,34 @@ mod test {
     #[test]
     async fn test_get_set_profile() -> Result<(), Error> {
         // Create the test realm,
-        let mut builder = RealmBuilder::new().await?;
+        let builder = RealmBuilder::new().await?;
         builder
-            .add_component(
+            .add_child(
                 "intl_property_manager",
-                ComponentSource::url("#meta/intl_property_manager_without_flags.cm"),
+                "#meta/intl_property_manager_without_flags.cm",
+                ChildProperties::new(),
             )
             .await?
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.intl.PropertyProvider"),
-                source: RouteEndpoint::component("intl_property_manager"),
-                targets: vec![RouteEndpoint::AboveRoot],
-            })?
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.examples.intl.manager.PropertyManager"),
-                source: RouteEndpoint::component("intl_property_manager"),
-                targets: vec![RouteEndpoint::AboveRoot],
-            })?
+            .add_route(
+                RouteBuilder::protocol("fuchsia.intl.PropertyProvider")
+                    .source(RouteEndpoint::component("intl_property_manager"))
+                    .targets(vec![RouteEndpoint::AboveRoot]),
+            )
+            .await?
+            .add_route(
+                RouteBuilder::protocol("fuchsia.examples.intl.manager.PropertyManager")
+                    .source(RouteEndpoint::component("intl_property_manager"))
+                    .targets(vec![RouteEndpoint::AboveRoot]),
+            )
+            .await?
             .add_route(
                 RouteBuilder::protocol("fuchsia.logger.LogSink")
                     .source(RouteEndpoint::above_root())
                     .targets(vec![RouteEndpoint::component("intl_property_manager")]),
-            )?;
-        let realm = builder.build();
+            )
+            .await?;
         // Create the realm instance
-        let realm_instance = realm.create().await?;
+        let realm_instance = builder.build().await?;
 
         let property_manager: PropertyManagerProxy = realm_instance
             .root
@@ -420,26 +423,28 @@ mod test {
     #[test]
     async fn test_set_initial_profile() -> Result<(), Error> {
         // Create the test realm,
-        let mut builder = RealmBuilder::new().await?;
+        let builder = RealmBuilder::new().await?;
         builder
-            .add_component(
+            .add_child(
                 "intl_property_manager",
-                ComponentSource::url("#meta/intl_property_manager.cm"),
+                "#meta/intl_property_manager.cm",
+                ChildProperties::new(),
             )
             .await?
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.intl.PropertyProvider"),
-                source: RouteEndpoint::component("intl_property_manager"),
-                targets: vec![RouteEndpoint::AboveRoot],
-            })?
+            .add_route(
+                RouteBuilder::protocol("fuchsia.intl.PropertyProvider")
+                    .source(RouteEndpoint::component("intl_property_manager"))
+                    .targets(vec![RouteEndpoint::AboveRoot]),
+            )
+            .await?
             .add_route(
                 RouteBuilder::protocol("fuchsia.logger.LogSink")
                     .source(RouteEndpoint::above_root())
                     .targets(vec![RouteEndpoint::component("intl_property_manager")]),
-            )?;
-        let realm = builder.build();
+            )
+            .await?;
         // Create the realm instance
-        let realm_instance = realm.create().await?;
+        let realm_instance = builder.build().await?;
 
         let property_provider: PropertyProviderProxy = realm_instance
             .root
