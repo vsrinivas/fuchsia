@@ -210,22 +210,20 @@ class _ListSettings extends StatelessWidget {
                   );
                 }),
                 // Wi-Fi
-                Observer(builder: (_) {
-                  return ListTile(
-                    contentPadding: EdgeInsets.symmetric(horizontal: 24),
-                    leading: Icon(Icons.wifi),
-                    title: Text(Strings.wifi),
-                    trailing: Wrap(
-                      alignment: WrapAlignment.end,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      spacing: 8,
-                      children: [
-                        Icon(Icons.arrow_right),
-                      ],
-                    ),
-                    onTap: appState.settingsState.showWiFiSettings,
-                  );
-                }),
+                ListTile(
+                  contentPadding: EdgeInsets.symmetric(horizontal: 24),
+                  leading: Icon(Icons.wifi),
+                  title: Text(Strings.wifi),
+                  trailing: Wrap(
+                    alignment: WrapAlignment.end,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    children: [
+                      Icon(Icons.arrow_right),
+                    ],
+                  ),
+                  onTap: appState.settingsState.showWiFiSettings,
+                ),
                 // Channel
                 ListTile(
                   enabled: true,

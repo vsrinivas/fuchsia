@@ -24,6 +24,7 @@ class ChannelService {
     _control.ctrl.whenBound.then((_) => onConnected(true));
     _control.ctrl.whenClosed.then((_) => onConnected(false));
   }
+
   Stream<Locale> get stream => LocaleSource(_intl).stream();
 
   /// Get the current update channel.
