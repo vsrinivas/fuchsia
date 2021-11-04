@@ -31,7 +31,7 @@ std::unique_ptr<SystemCallTest> ZxFramebufferGetInfo(int64_t result, std::string
   PerformDisplayTest(                                                                    \
       "$plt(zx_framebuffer_get_info)",                                                   \
       ZxFramebufferGetInfo(result, #result, kHandle, &format, &width, &height, &stride), \
-      expected);
+      expected)
 
 #define FRAMEBUFFER_GET_INFO_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                    \
@@ -52,7 +52,7 @@ FRAMEBUFFER_GET_INFO_DISPLAY_TEST(
     "format: \x1B[32muint32\x1B[0m = \x1B[34m1\x1B[0m, "
     "width: \x1B[32muint32\x1B[0m = \x1B[34m1080\x1B[0m, "
     "height: \x1B[32muint32\x1B[0m = \x1B[34m64\x1B[0m, "
-    "stride: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n");
+    "stride: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n")
 
 // zx_framebuffer_set_range tests.
 
@@ -74,7 +74,7 @@ std::unique_ptr<SystemCallTest> ZxFramebufferSetRange(int64_t result, std::strin
 #define FRAMEBUFFER_SET_RANGE_DISPLAY_TEST_CONTENT(result, expected) \
   PerformDisplayTest(                                                \
       "$plt(zx_framebuffer_set_range)",                              \
-      ZxFramebufferSetRange(result, #result, kHandle, kHandle2, 2000, 1, 1080, 64, 0), expected);
+      ZxFramebufferSetRange(result, #result, kHandle, kHandle2, 2000, 1, 1080, 64, 0), expected)
 
 #define FRAMEBUFFER_SET_RANGE_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                     \
@@ -97,6 +97,6 @@ FRAMEBUFFER_SET_RANGE_DISPLAY_TEST(ZxFramebufferSetRange, ZX_OK,
                                    "height: \x1B[32muint32\x1B[0m = \x1B[34m64\x1B[0m, "
                                    "stride: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
                                    "\x1B[32m0.000000\x1B[0m "
-                                   "  -> \x1B[32mZX_OK\x1B[0m\n");
+                                   "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 }  // namespace fidlcat

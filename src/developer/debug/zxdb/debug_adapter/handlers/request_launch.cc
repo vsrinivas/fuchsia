@@ -14,7 +14,7 @@ namespace dap {
 
 DAP_IMPLEMENT_STRUCT_TYPEINFO_EXT(LaunchRequestZxdb, LaunchRequest, "launch",
                                   DAP_FIELD(process, "process"),
-                                  DAP_FIELD(launchCommand, "launchCommand"), DAP_FIELD(cwd, "cwd"));
+                                  DAP_FIELD(launchCommand, "launchCommand"), DAP_FIELD(cwd, "cwd"))
 
 }  // namespace dap
 

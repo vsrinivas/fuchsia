@@ -201,7 +201,7 @@ std::unique_ptr<Value> BoolType::Decode(MessageDecoder* decoder, uint64_t offset
   return std::make_unique<BoolValue>(*byte);
 }
 
-void BoolType::Visit(TypeVisitor* visitor) const { visitor->VisitBoolType(this); };
+void BoolType::Visit(TypeVisitor* visitor) const { visitor->VisitBoolType(this); }
 
 std::string Int8Type::Name() const {
   switch (kind_) {

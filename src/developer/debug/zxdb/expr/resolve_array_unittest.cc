@@ -26,7 +26,7 @@ class ResolveArrayTest : public TestWithLoop {};
 // as the array value.
 class TestPrettyArray : public PrettyType {
  public:
-  TestPrettyArray(){};
+  TestPrettyArray(){}
 
   void Format(FormatNode* node, const FormatOptions& options,
               const fxl::RefPtr<EvalContext>& context, fit::deferred_callback cb) override {}

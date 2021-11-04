@@ -142,4 +142,4 @@ void ColorTransformManager::ChangeColorTransform(
       [] { FX_LOGS(INFO) << "Color transform configuration changed."; });
 }
 
-};  // namespace a11y
+} // namespace a11y

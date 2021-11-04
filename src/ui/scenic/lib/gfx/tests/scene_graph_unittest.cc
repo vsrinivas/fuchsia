@@ -30,7 +30,7 @@ bool ContainsCompositor(const std::vector<CompositorWeakPtr>& compositors, Compo
       std::find_if(compositors.begin(), compositors.end(),
                    [compositor](const CompositorWeakPtr& c) { return c.get() == compositor; });
   return it != compositors.end();
-};
+}
 
 TEST_F(SceneGraphTest, CompositorsGetAddedAndRemoved) {
   SceneGraph scene_graph;

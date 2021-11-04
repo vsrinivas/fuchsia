@@ -131,7 +131,7 @@ int LiRunOnInit(JSContext *ctx, JSModuleDef *m) {
   JS_NewClassID(&js_repl_class_id);
   JS_NewClass(JS_GetRuntime(ctx), js_repl_class_id, &js_repl_class);
   return JS_SetModuleExportList(ctx, m, js_li_funcs, std::size(js_li_funcs));
-};
+}
 
 }  // namespace
 

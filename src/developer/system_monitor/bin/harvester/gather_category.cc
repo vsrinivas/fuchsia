@@ -36,6 +36,6 @@ void GatherCategory::TaskHandler(async_dispatcher_t* dispatcher,
                                  zx_status_t /*status*/) {
   Gather();
   PostUpdate(dispatcher, async::Now(dispatcher), update_period_);
-};
+}
 
 }  // namespace harvester

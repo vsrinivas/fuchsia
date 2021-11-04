@@ -28,4 +28,4 @@ FIDL_FUZZER_DEFINITION(
     // client and server work from the same thread/loop/dispatcher.
     ::fidl::fuzzing::ServerProviderDispatcherMode::kFromCaller,
     // All remaining parameters forwarded to the `SystemDataUpdaterImpl` constructor.
-    inspect::Node(), &system_data, "/tmp/cache");
+    inspect::Node(), &system_data, "/tmp/cache")

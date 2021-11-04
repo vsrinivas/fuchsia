@@ -42,7 +42,7 @@ class BaseRenderer : public AudioObject,
  public:
   ~BaseRenderer() override;
 
-  void OnRenderRange(int64_t presentation_time, uint32_t duration){};
+  void OnRenderRange(int64_t presentation_time, uint32_t duration){}
 
   // |fuchsia::media::AudioRenderer|
   void AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) final;

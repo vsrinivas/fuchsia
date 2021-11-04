@@ -21,7 +21,7 @@ std::unique_ptr<SystemCallTest> ZxTaskSuspend(int64_t result, std::string_view r
 #define TASK_SUSPEND_DISPLAY_TEST_CONTENT(result, expected)                                    \
   zx_handle_t token = kHandleOut;                                                              \
   PerformDisplayTest("$plt(zx_task_suspend)", ZxTaskSuspend(result, #result, kHandle, &token), \
-                     expected);
+                     expected)
 
 #define TASK_SUSPEND_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {            \
@@ -36,7 +36,7 @@ TASK_SUSPEND_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_task_suspend(handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m (token: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (token: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n")
 
 // zx_task_suspend_token tests.
 
@@ -51,7 +51,7 @@ std::unique_ptr<SystemCallTest> ZxTaskSuspendToken(int64_t result, std::string_v
 #define TASK_SUSPEND_TOKEN_DISPLAY_TEST_CONTENT(result, expected) \
   zx_handle_t token = kHandleOut;                                 \
   PerformDisplayTest("$plt(zx_task_suspend_token)",               \
-                     ZxTaskSuspendToken(result, #result, kHandle, &token), expected);
+                     ZxTaskSuspendToken(result, #result, kHandle, &token), expected)
 
 #define TASK_SUSPEND_TOKEN_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                  \
@@ -68,7 +68,7 @@ TASK_SUSPEND_TOKEN_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_task_suspend_token(handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m (token: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (token: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n")
 
 // zx_task_create_exception_channel tests.
 
@@ -87,7 +87,7 @@ std::unique_ptr<SystemCallTest> ZxTaskCreateExceptionChannel(int64_t result,
 #define TASK_CREATE_EXCEPTION_CHANNEL_DISPLAY_TEST_CONTENT(result, expected) \
   zx_handle_t out = kHandleOut;                                              \
   PerformDisplayTest("$plt(zx_task_create_exception_channel)",               \
-                     ZxTaskCreateExceptionChannel(result, #result, kHandle, 0, &out), expected);
+                     ZxTaskCreateExceptionChannel(result, #result, kHandle, 0, &out), expected)
 
 #define TASK_CREATE_EXCEPTION_CHANNEL_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                             \
@@ -106,7 +106,7 @@ TASK_CREATE_EXCEPTION_CHANNEL_DISPLAY_TEST(
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n")
 
 // zx_task_kill tests.
 
@@ -118,7 +118,7 @@ std::unique_ptr<SystemCallTest> ZxTaskKill(int64_t result, std::string_view resu
 }
 
 #define TASK_KILL_DISPLAY_TEST_CONTENT(result, expected) \
-  PerformDisplayTest("$plt(zx_task_kill)", ZxTaskKill(result, #result, kHandle), expected);
+  PerformDisplayTest("$plt(zx_task_kill)", ZxTaskKill(result, #result, kHandle), expected)
 
 #define TASK_KILL_DISPLAY_TEST(name, errno, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { TASK_KILL_DISPLAY_TEST_CONTENT(errno, expected); } \
@@ -130,6 +130,6 @@ TASK_KILL_DISPLAY_TEST(ZxTaskKill, ZX_OK,
                        "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                        "zx_task_kill(handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n"
                        "\x1B[32m0.000000\x1B[0m "
-                       "  -> \x1B[32mZX_OK\x1B[0m\n");
+                       "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 }  // namespace fidlcat

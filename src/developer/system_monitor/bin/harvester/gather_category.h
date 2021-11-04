@@ -46,7 +46,7 @@ class GatherCategory {
   harvester::DockyardProxy* DockyardPtr() { return dockyard_proxy_; }
 
   // Gather one-time data that doesn't vary over time. E.g. total RAM.
-  virtual void GatherDeviceProperties(){};
+  virtual void GatherDeviceProperties(){}
 
   // Override this in a base class to gather sample data.
   virtual void Gather() = 0;

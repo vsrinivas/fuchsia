@@ -60,7 +60,7 @@ class TimerManager {
 
   // In some situations (e.g. fuzzing) the currently active dispatcher may change over time. Rather
   // than constructing a new TimerManager each time, we just update the dispatcher.
-  void UpdateDispatcher(async_dispatcher_t* dispatcher) { dispatcher_ = dispatcher; };
+  void UpdateDispatcher(async_dispatcher_t* dispatcher) { dispatcher_ = dispatcher; }
 
   ~TimerManager();
 

@@ -41,7 +41,7 @@ bool TypedVariable<VT, T>::SetValue(const ::fuchsia::ui::gfx::Value& value) {
 }
 
 template <::fuchsia::ui::gfx::Value::Tag VT, typename T>
-void TypedVariable<VT, T>::Accept(class ResourceVisitor* visitor){};
+void TypedVariable<VT, T>::Accept(class ResourceVisitor* visitor){}
 
 // Explicitly instantiate all the classes in Scenic that use the Variable<>
 // template.

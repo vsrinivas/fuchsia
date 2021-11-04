@@ -10,7 +10,7 @@
 namespace dap {
 
 DAP_IMPLEMENT_STRUCT_TYPEINFO_EXT(AttachRequestZxdb, AttachRequest, "attach",
-                                  DAP_FIELD(process, "process"));
+                                  DAP_FIELD(process, "process"))
 
 }  // namespace dap
 

@@ -284,11 +284,11 @@ void AudioDevice::UpdateRoutableState(bool routable) {
 
 const std::shared_ptr<ReadableRingBuffer>& AudioDevice::driver_readable_ring_buffer() const {
   return driver_->readable_ring_buffer();
-};
+}
 
 const std::shared_ptr<WritableRingBuffer>& AudioDevice::driver_writable_ring_buffer() const {
   return driver_->writable_ring_buffer();
-};
+}
 
 const TimelineFunction& AudioDevice::driver_ref_time_to_frac_presentation_frame() const {
   return driver()->ref_time_to_frac_presentation_frame();

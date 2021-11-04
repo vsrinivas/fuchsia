@@ -60,7 +60,7 @@ class DebugAdapterContext : public ThreadObserver, ProcessObserver {
 
   Session* session() { return session_; }
   dap::Session& dap() { return *dap_; }
-  bool supports_run_in_terminal() { return supports_run_in_terminal_; };
+  bool supports_run_in_terminal() { return supports_run_in_terminal_; }
 
   // Notification about the stream.
   void OnStreamReadable();

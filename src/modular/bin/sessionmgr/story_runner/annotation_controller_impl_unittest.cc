@@ -34,7 +34,7 @@ class AnnotationControllerImplTest : public modular_testing::TestWithSessionStor
     annotation_controller_impl_->Connect(annotation_controller_.NewRequest());
   }
 
-  std::string story_id() const { return story_id_; };
+  std::string story_id() const { return story_id_; }
   SessionStorage* session_storage() { return session_storage_.get(); }
   fuchsia::element::AnnotationControllerPtr& annotation_controller() {
     return annotation_controller_;

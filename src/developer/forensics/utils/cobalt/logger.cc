@@ -45,7 +45,7 @@ inline std::string StatusToString(fuchsia::metrics::Status status) {
     case fuchsia::metrics::Status::INTERNAL_ERROR:
       return "INTERNAL_ERROR";
   }
-};
+}
 
 }  // namespace
 

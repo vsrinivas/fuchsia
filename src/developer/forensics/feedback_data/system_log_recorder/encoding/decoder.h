@@ -18,7 +18,7 @@ namespace system_log_recorder {
 // As an Encoder operates on a block, the Decoder needs to decode a whole block at once.
 class Decoder {
  public:
-  virtual ~Decoder(){};
+  virtual ~Decoder(){}
 
   virtual EncodingVersion GetEncodingVersion() const = 0;
 

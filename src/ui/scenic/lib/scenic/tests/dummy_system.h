@@ -58,7 +58,7 @@ class DummyCommandDispatcher : public CommandDispatcher {
 
   // |CommandDispatcher|
   void DispatchCommand(const fuchsia::ui::scenic::Command command,
-                       scheduling::PresentId present_id) override{};
+                       scheduling::PresentId present_id) override{}
 };
 
 }  // namespace test

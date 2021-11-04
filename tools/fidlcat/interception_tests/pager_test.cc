@@ -20,7 +20,7 @@ std::unique_ptr<SystemCallTest> ZxPagerCreate(int64_t result, std::string_view r
 
 #define PAGER_CREATE_DISPLAY_TEST_CONTENT(result, expected) \
   zx_handle_t out = kHandleOut;                             \
-  PerformDisplayTest("$plt(zx_pager_create)", ZxPagerCreate(result, #result, 0, &out), expected);
+  PerformDisplayTest("$plt(zx_pager_create)", ZxPagerCreate(result, #result, 0, &out), expected)
 
 #define PAGER_CREATE_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {            \
@@ -35,7 +35,7 @@ PAGER_CREATE_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_pager_create(options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n")
 
 // zx_pager_create_vmo tests.
 
@@ -57,7 +57,7 @@ std::unique_ptr<SystemCallTest> ZxPagerCreateVmo(int64_t result, std::string_vie
   zx_handle_t out = kHandleOut;                                                              \
   PerformDisplayTest("$plt(zx_pager_create_vmo)",                                            \
                      ZxPagerCreateVmo(result, #result, kHandle, 0, kPort, kKey, 1024, &out), \
-                     expected);
+                     expected)
 
 #define PAGER_CREATE_VMO_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                \
@@ -79,7 +79,7 @@ PAGER_CREATE_VMO_DISPLAY_TEST(
     "key: \x1B[32muint64\x1B[0m = \x1B[34m1234\x1B[0m, "
     "size: \x1B[32muint64\x1B[0m = \x1B[34m1024\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n")
 
 // zx_pager_detach_vmo tests.
 
@@ -93,7 +93,7 @@ std::unique_ptr<SystemCallTest> ZxPagerDetachVmo(int64_t result, std::string_vie
 
 #define PAGER_DETACH_VMO_DISPLAY_TEST_CONTENT(result, expected) \
   PerformDisplayTest("$plt(zx_pager_detach_vmo)",               \
-                     ZxPagerDetachVmo(result, #result, kHandle, kHandle2), expected);
+                     ZxPagerDetachVmo(result, #result, kHandle, kHandle2), expected)
 
 #define PAGER_DETACH_VMO_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                \
@@ -111,7 +111,7 @@ PAGER_DETACH_VMO_DISPLAY_TEST(ZxPagerDetachVmo, ZX_OK,
                               "pager: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                               "vmo: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1222\x1B[0m)\n"
                               "\x1B[32m0.000000\x1B[0m "
-                              "  -> \x1B[32mZX_OK\x1B[0m\n");
+                              "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 // zx_pager_supply_pages tests.
 
@@ -133,7 +133,7 @@ std::unique_ptr<SystemCallTest> ZxPagerSupplyPages(int64_t result, std::string_v
   PerformDisplayTest(                                                                     \
       "$plt(zx_pager_supply_pages)",                                                      \
       ZxPagerSupplyPages(result, #result, kHandle, kHandle2, 1000, 1024, kHandle3, 2000), \
-      expected);
+      expected)
 
 #define PAGER_SUPPLY_PAGES_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                  \
@@ -155,6 +155,6 @@ PAGER_SUPPLY_PAGES_DISPLAY_TEST(ZxPagerSupplyPages, ZX_OK,
                                 "aux_vmo: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1333\x1B[0m, "
                                 "aux_offset: \x1B[32muint64\x1B[0m = \x1B[34m2000\x1B[0m)\n"
                                 "\x1B[32m0.000000\x1B[0m "
-                                "  -> \x1B[32mZX_OK\x1B[0m\n");
+                                "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 }  // namespace fidlcat

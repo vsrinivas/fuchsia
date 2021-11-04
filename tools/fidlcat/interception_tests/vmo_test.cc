@@ -22,7 +22,7 @@ std::unique_ptr<SystemCallTest> ZxVmoCreate(int64_t result, std::string_view res
 #define VMO_CREATE_DISPLAY_TEST_CONTENT(result, expected) \
   zx_handle_t out = kHandleOut;                           \
   PerformDisplayTest("$plt(zx_vmo_create)",               \
-                     ZxVmoCreate(result, #result, 1024, ZX_VMO_RESIZABLE, &out), expected);
+                     ZxVmoCreate(result, #result, 1024, ZX_VMO_RESIZABLE, &out), expected)
 
 #define VMO_CREATE_DISPLAY_TEST(name, errno, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { VMO_CREATE_DISPLAY_TEST_CONTENT(errno, expected); } \
@@ -37,7 +37,7 @@ VMO_CREATE_DISPLAY_TEST(
     "size: \x1B[32muint64\x1B[0m = \x1B[34m1024\x1B[0m, "
     "options: \x1B[32mzx.vmo_creation_option\x1B[0m = \x1B[34mZX_VMO_RESIZABLE\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n")
 
 // zx_vmo_read tests.
 
@@ -59,7 +59,7 @@ std::unique_ptr<SystemCallTest> ZxVmoRead(int64_t result, std::string_view resul
   }                                                                                         \
   PerformDisplayTest("$plt(zx_vmo_read)",                                                   \
                      ZxVmoRead(result, #result, kHandle, buffer.data(), 10, buffer.size()), \
-                     expected);
+                     expected)
 
 #define VMO_READ_DISPLAY_TEST(name, errno, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { VMO_READ_DISPLAY_TEST_CONTENT(errno, expected); } \
@@ -80,7 +80,7 @@ VMO_READ_DISPLAY_TEST(
     "\x1B[34m04\x1B[0m, \x1B[34m05\x1B[0m, \x1B[34m06\x1B[0m, \x1B[34m07\x1B[0m, "
     "\x1B[34m08\x1B[0m, \x1B[34m09\x1B[0m, \x1B[34m0a\x1B[0m, \x1B[34m0b\x1B[0m, "
     "\x1B[34m0c\x1B[0m, \x1B[34m0d\x1B[0m, \x1B[34m0e\x1B[0m, \x1B[34m0f\x1B[0m, "
-    "\x1B[34m10\x1B[0m, \x1B[34m11\x1B[0m, \x1B[34m12\x1B[0m, \x1B[34m13\x1B[0m ]\n");
+    "\x1B[34m10\x1B[0m, \x1B[34m11\x1B[0m, \x1B[34m12\x1B[0m, \x1B[34m13\x1B[0m ]\n")
 
 // zx_vmo_write tests.
 
@@ -102,7 +102,7 @@ std::unique_ptr<SystemCallTest> ZxVmoWrite(int64_t result, std::string_view resu
   }                                                                                          \
   PerformDisplayTest("$plt(zx_vmo_write)",                                                   \
                      ZxVmoWrite(result, #result, kHandle, buffer.data(), 10, buffer.size()), \
-                     expected);
+                     expected)
 
 #define VMO_WRITE_DISPLAY_TEST(name, errno, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { VMO_WRITE_DISPLAY_TEST_CONTENT(errno, expected); } \
@@ -123,7 +123,7 @@ VMO_WRITE_DISPLAY_TEST(
     "\x1B[34m0c\x1B[0m, \x1B[34m0d\x1B[0m, \x1B[34m0e\x1B[0m, \x1B[34m0f\x1B[0m, "
     "\x1B[34m10\x1B[0m, \x1B[34m11\x1B[0m, \x1B[34m12\x1B[0m, \x1B[34m13\x1B[0m ]\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 // zx_vmo_get_size tests.
 
@@ -138,7 +138,7 @@ std::unique_ptr<SystemCallTest> ZxVmoGetSize(int64_t result, std::string_view re
 #define VMO_GET_SIZE_DISPLAY_TEST_CONTENT(result, expected)                                  \
   uint64_t size = 1024;                                                                      \
   PerformDisplayTest("$plt(zx_vmo_get_size)", ZxVmoGetSize(result, #result, kHandle, &size), \
-                     expected);
+                     expected)
 
 #define VMO_GET_SIZE_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {            \
@@ -153,7 +153,7 @@ VMO_GET_SIZE_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_vmo_get_size(handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m (size: \x1B[32muint64\x1B[0m = \x1B[34m1024\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (size: \x1B[32muint64\x1B[0m = \x1B[34m1024\x1B[0m)\n")
 
 // zx_vmo_set_size tests.
 
@@ -167,7 +167,7 @@ std::unique_ptr<SystemCallTest> ZxVmoSetSize(int64_t result, std::string_view re
 
 #define VMO_SET_SIZE_DISPLAY_TEST_CONTENT(result, expected)                                 \
   PerformDisplayTest("$plt(zx_vmo_set_size)", ZxVmoSetSize(result, #result, kHandle, 1024), \
-                     expected);
+                     expected)
 
 #define VMO_SET_SIZE_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {            \
@@ -183,7 +183,7 @@ VMO_SET_SIZE_DISPLAY_TEST(ZxVmoSetSize, ZX_OK,
                           "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                           "size: \x1B[32muint64\x1B[0m = \x1B[34m1024\x1B[0m)\n"
                           "\x1B[32m0.000000\x1B[0m "
-                          "  -> \x1B[32mZX_OK\x1B[0m\n");
+                          "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 // zx_vmo_op_range tests.
 
@@ -203,7 +203,7 @@ std::unique_ptr<SystemCallTest> ZxVmoOpRange(int64_t result, std::string_view re
 #define VMO_OP_RANGE_DISPLAY_TEST_CONTENT(result, expected) \
   PerformDisplayTest(                                       \
       "$plt(zx_vmo_op_range)",                              \
-      ZxVmoOpRange(result, #result, kHandle, ZX_VMO_OP_CACHE_SYNC, 10, 20, nullptr, 0), expected);
+      ZxVmoOpRange(result, #result, kHandle, ZX_VMO_OP_CACHE_SYNC, 10, 20, nullptr, 0), expected)
 
 #define VMO_OP_RANGE_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {            \
@@ -221,7 +221,7 @@ VMO_OP_RANGE_DISPLAY_TEST(ZxVmoOpRange, ZX_OK,
                           "offset: \x1B[32muint64\x1B[0m = \x1B[34m10\x1B[0m, "
                           "size: \x1B[32muint64\x1B[0m = \x1B[34m20\x1B[0m)\n"
                           "\x1B[32m0.000000\x1B[0m "
-                          "  -> \x1B[32mZX_OK\x1B[0m\n");
+                          "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 // zx_vmo_create_child tests.
 
@@ -241,7 +241,7 @@ std::unique_ptr<SystemCallTest> ZxVmoCreateChild(int64_t result, std::string_vie
   zx_handle_t out = kHandleOut;                                 \
   PerformDisplayTest(                                           \
       "$plt(zx_vmo_create_child)",                              \
-      ZxVmoCreateChild(result, #result, kHandle, ZX_VMO_CHILD_SNAPSHOT, 10, 20, &out), expected);
+      ZxVmoCreateChild(result, #result, kHandle, ZX_VMO_CHILD_SNAPSHOT, 10, 20, &out), expected)
 
 #define VMO_CREATE_CHILD_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                \
@@ -262,7 +262,7 @@ VMO_CREATE_CHILD_DISPLAY_TEST(
     "offset: \x1B[32muint64\x1B[0m = \x1B[34m10\x1B[0m, "
     "size: \x1B[32muint64\x1B[0m = \x1B[34m20\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n")
 
 // zx_vmo_set_cache_policy tests.
 
@@ -277,7 +277,7 @@ std::unique_ptr<SystemCallTest> ZxVmoSetCachePolicy(int64_t result, std::string_
 #define VMO_SET_CACHE_POLICY_DISPLAY_TEST_CONTENT(result, expected)                         \
   PerformDisplayTest("$plt(zx_vmo_set_cache_policy)",                                       \
                      ZxVmoSetCachePolicy(result, #result, kHandle, ZX_CACHE_POLICY_CACHED), \
-                     expected);
+                     expected)
 
 #define VMO_SET_CACHE_POLICY_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                    \
@@ -296,7 +296,7 @@ VMO_SET_CACHE_POLICY_DISPLAY_TEST(
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "cache_policy: \x1B[32mzx.cache_policy\x1B[0m = \x1B[34mZX_CACHE_POLICY_CACHED\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 // zx_vmo_replace_as_executable tests.
 
@@ -316,7 +316,7 @@ std::unique_ptr<SystemCallTest> ZxVmoReplaceAsExecutable(int64_t result,
   zx_handle_t out = kHandleOut;                                                          \
   PerformDisplayTest("$plt(zx_vmo_replace_as_executable)",                               \
                      ZxVmoReplaceAsExecutable(result, #result, kHandle, kHandle2, &out), \
-                     expected);
+                     expected)
 
 #define VMO_REPLACE_AS_EXECUTABLE_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                         \
@@ -335,7 +335,7 @@ VMO_REPLACE_AS_EXECUTABLE_DISPLAY_TEST(
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "vmex: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1222\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n")
 
 // zx_vmo_create_contiguous tests.
 
@@ -353,7 +353,7 @@ std::unique_ptr<SystemCallTest> ZxVmoCreateContiguous(int64_t result, std::strin
 #define VMO_CREATE_CONTIGUOUS_DISPLAY_TEST_CONTENT(result, expected) \
   zx_handle_t out = kHandleOut;                                      \
   PerformDisplayTest("$plt(zx_vmo_create_contiguous)",               \
-                     ZxVmoCreateContiguous(result, #result, kHandle, 20, 2, &out), expected);
+                     ZxVmoCreateContiguous(result, #result, kHandle, 20, 2, &out), expected)
 
 #define VMO_CREATE_CONTIGUOUS_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                     \
@@ -373,7 +373,7 @@ VMO_CREATE_CONTIGUOUS_DISPLAY_TEST(
     "size: \x1B[32msize\x1B[0m = \x1B[34m20\x1B[0m, "
     "alignment_log2: \x1B[32muint32\x1B[0m = \x1B[34m2\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n")
 
 // zx_vmo_create_physical tests.
 
@@ -391,7 +391,7 @@ std::unique_ptr<SystemCallTest> ZxVmoCreatePhysical(int64_t result, std::string_
 #define VMO_CREATE_PHYSICAL_DISPLAY_TEST_CONTENT(result, expected) \
   zx_handle_t out = kHandleOut;                                    \
   PerformDisplayTest("$plt(zx_vmo_create_physical)",               \
-                     ZxVmoCreatePhysical(result, #result, kHandle, 0x12345, 20, &out), expected);
+                     ZxVmoCreatePhysical(result, #result, kHandle, 0x12345, 20, &out), expected)
 
 #define VMO_CREATE_PHYSICAL_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                   \
@@ -411,6 +411,6 @@ VMO_CREATE_PHYSICAL_DISPLAY_TEST(
     "paddr: \x1B[32mzx.paddr\x1B[0m = \x1B[34m0000000000012345\x1B[0m, "
     "size: \x1B[32msize\x1B[0m = \x1B[34m20\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n")
 
 }  // namespace fidlcat

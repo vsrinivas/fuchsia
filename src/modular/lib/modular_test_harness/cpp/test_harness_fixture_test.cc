@@ -66,7 +66,7 @@ class TestFixtureForTestingCleanup : public modular_testing::TestHarnessFixture 
 
     RunLoopUntil([&] { return session_shell.is_running(); });
     on_running();
-  };
+  }
 
   void TearDown() override {
     TestHarnessFixture::TearDown();

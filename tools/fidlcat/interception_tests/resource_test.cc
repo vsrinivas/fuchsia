@@ -31,7 +31,7 @@ std::unique_ptr<SystemCallTest> ZxResourceCreate(int64_t result, std::string_vie
   PerformDisplayTest("$plt(zx_resource_create)",                                               \
                      ZxResourceCreate(result, #result, kHandle, ZX_RSRC_KIND_ROOT, 1000, 1024, \
                                       name.c_str(), name.size(), &resource_out),               \
-                     expected);
+                     expected)
 
 #define RESOURCE_CREATE_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {               \
@@ -53,6 +53,6 @@ RESOURCE_CREATE_DISPLAY_TEST(
     "size: \x1B[32msize\x1B[0m = \x1B[34m1024\x1B[0m, "
     "name: \x1B[32mstring\x1B[0m = \x1B[31m\"My resource\"\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m (resource_out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (resource_out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n")
 
 }  // namespace fidlcat

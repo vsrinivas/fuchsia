@@ -92,7 +92,7 @@ struct ResultsIndex {
     return std::tie(test_name, channel) < std::tie(rhs.test_name, rhs.channel);
   }
 };
-};  // namespace
+} // namespace
 
 // static
 // Retrieve (initially allocating, if necessary) the array of level results for this path|channel.

@@ -63,7 +63,7 @@ class ModularTestHarnessDestructionTest : public gtest::TestWithEnvironmentFixtu
   void Terminate() override {
     termination_signaled_.store(true);
     modular_testing::FakeSessionShell::Terminate();
-  };
+  }
 };
 
 // Test that a session is torn down cleanly.

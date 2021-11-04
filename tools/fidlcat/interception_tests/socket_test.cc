@@ -24,7 +24,7 @@ std::unique_ptr<SystemCallTest> ZxSocketCreate(int64_t result, std::string_view 
   zx_handle_t out0 = kHandleOut;                             \
   zx_handle_t out1 = kHandleOut2;                            \
   PerformDisplayTest("$plt(zx_socket_create)",               \
-                     ZxSocketCreate(result, #result, ZX_SOCKET_STREAM, &out0, &out1), expected);
+                     ZxSocketCreate(result, #result, ZX_SOCKET_STREAM, &out0, &out1), expected)
 
 #define SOCKET_CREATE_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {             \
@@ -42,7 +42,7 @@ SOCKET_CREATE_DISPLAY_TEST(
     "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m ("
     "out0: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m, "
-    "out1: \x1B[32mhandle\x1B[0m = \x1B[31mbde90222\x1B[0m)\n");
+    "out1: \x1B[32mhandle\x1B[0m = \x1B[31mbde90222\x1B[0m)\n")
 
 // zx_socket_write tests.
 
@@ -65,7 +65,7 @@ std::unique_ptr<SystemCallTest> ZxSocketWrite(int64_t result, std::string_view r
   PerformDisplayTest(                                                                    \
       "$plt(zx_socket_write)",                                                           \
       ZxSocketWrite(result, #result, kHandle, 0, buffer.data(), buffer.size(), &actual), \
-      expected);
+      expected)
 
 #define SOCKET_WRITE_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {            \
@@ -86,7 +86,7 @@ SOCKET_WRITE_DISPLAY_TEST(
     "\x1B[34m30\x1B[0m, \x1B[34m03\x1B[0m, \x1B[34m40\x1B[0m, \x1B[34m04\x1B[0m ]\n"
     "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m ("
-    "actual: \x1B[32msize\x1B[0m = \x1B[34m8\x1B[0m/\x1B[34m8\x1B[0m)\n");
+    "actual: \x1B[32msize\x1B[0m = \x1B[34m8\x1B[0m/\x1B[34m8\x1B[0m)\n")
 
 #define SOCKET_WRITE_STRING_DISPLAY_TEST_CONTENT(result, expected)                       \
   std::vector<uint8_t> buffer = {'h', 'e', 'l', 'l', 'o'};                               \
@@ -94,7 +94,7 @@ SOCKET_WRITE_DISPLAY_TEST(
   PerformDisplayTest(                                                                    \
       "$plt(zx_socket_write)",                                                           \
       ZxSocketWrite(result, #result, kHandle, 0, buffer.data(), buffer.size(), &actual), \
-      expected);
+      expected)
 
 #define SOCKET_WRITE_STRING_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                   \
@@ -115,7 +115,7 @@ SOCKET_WRITE_STRING_DISPLAY_TEST(
     "  buffer: \x1B[32mvector<uint8>\x1B[0m = \x1B[31m\"hello\"\x1B[0m\n"
     "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m ("
-    "actual: \x1B[32msize\x1B[0m = \x1B[34m5\x1B[0m/\x1B[34m5\x1B[0m)\n");
+    "actual: \x1B[32msize\x1B[0m = \x1B[34m5\x1B[0m/\x1B[34m5\x1B[0m)\n")
 
 // zx_socket_read tests.
 
@@ -137,7 +137,7 @@ std::unique_ptr<SystemCallTest> ZxSocketRead(int64_t result, std::string_view re
   size_t actual = buffer.size();                                                  \
   PerformDisplayTest(                                                             \
       "$plt(zx_socket_read)",                                                     \
-      ZxSocketRead(result, #result, kHandle, options, buffer.data(), 1024, &actual), expected);
+      ZxSocketRead(result, #result, kHandle, options, buffer.data(), 1024, &actual), expected)
 
 #define SOCKET_READ_DISPLAY_TEST(name, errno, options, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                    \
@@ -161,7 +161,7 @@ SOCKET_READ_DISPLAY_TEST(
     "actual: \x1B[32msize\x1B[0m = \x1B[34m8\x1B[0m/\x1B[34m1024\x1B[0m)\n"
     "    buffer: \x1B[32mvector<uint8>\x1B[0m = [ "
     "\x1B[34m10\x1B[0m, \x1B[34m01\x1B[0m, \x1B[34m20\x1B[0m, \x1B[34m02\x1B[0m, "
-    "\x1B[34m30\x1B[0m, \x1B[34m03\x1B[0m, \x1B[34m40\x1B[0m, \x1B[34m04\x1B[0m ]\n");
+    "\x1B[34m30\x1B[0m, \x1B[34m03\x1B[0m, \x1B[34m40\x1B[0m, \x1B[34m04\x1B[0m ]\n")
 
 SOCKET_READ_DISPLAY_TEST(
     ZxSocketReadPeek, ZX_OK, ZX_SOCKET_PEEK,
@@ -177,14 +177,14 @@ SOCKET_READ_DISPLAY_TEST(
     "actual: \x1B[32msize\x1B[0m = \x1B[34m8\x1B[0m/\x1B[34m1024\x1B[0m)\n"
     "    buffer: \x1B[32mvector<uint8>\x1B[0m = [ "
     "\x1B[34m10\x1B[0m, \x1B[34m01\x1B[0m, \x1B[34m20\x1B[0m, \x1B[34m02\x1B[0m, "
-    "\x1B[34m30\x1B[0m, \x1B[34m03\x1B[0m, \x1B[34m40\x1B[0m, \x1B[34m04\x1B[0m ]\n");
+    "\x1B[34m30\x1B[0m, \x1B[34m03\x1B[0m, \x1B[34m40\x1B[0m, \x1B[34m04\x1B[0m ]\n")
 
 #define SOCKET_READ_STRING_DISPLAY_TEST_CONTENT(result, expected)                             \
   std::vector<uint8_t> buffer = {'h', 'e', 'l', 'l', 'o'};                                    \
   size_t actual = buffer.size();                                                              \
   PerformDisplayTest("$plt(zx_socket_read)",                                                  \
                      ZxSocketRead(result, #result, kHandle, 0, buffer.data(), 1024, &actual), \
-                     expected);
+                     expected)
 
 #define SOCKET_READ_STRING_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                  \
@@ -206,7 +206,7 @@ SOCKET_READ_STRING_DISPLAY_TEST(
     "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m ("
     "actual: \x1B[32msize\x1B[0m = \x1B[34m5\x1B[0m/\x1B[34m1024\x1B[0m)\n"
-    "    buffer: \x1B[32mvector<uint8>\x1B[0m = \x1B[31m\"hello\"\x1B[0m\n");
+    "    buffer: \x1B[32mvector<uint8>\x1B[0m = \x1B[31m\"hello\"\x1B[0m\n")
 
 // zx_socket_shutdown tests.
 
@@ -220,7 +220,7 @@ std::unique_ptr<SystemCallTest> ZxSocketShutdown(int64_t result, std::string_vie
 
 #define SOCKET_SHUTDOWN_DISPLAY_TEST_CONTENT(result, options, expected) \
   PerformDisplayTest("$plt(zx_socket_shutdown)",                        \
-                     ZxSocketShutdown(result, #result, kHandle, options), expected);
+                     ZxSocketShutdown(result, #result, kHandle, options), expected)
 
 #define SOCKET_SHUTDOWN_DISPLAY_TEST(name, errno, options, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                        \
@@ -239,7 +239,7 @@ SOCKET_SHUTDOWN_DISPLAY_TEST(ZxSocketShutdownRead, ZX_OK, ZX_SOCKET_SHUTDOWN_REA
                              "options: \x1B[32mzx.socket_shutdown_options\x1B[0m = "
                              "\x1B[34mZX_SOCKET_SHUTDOWN_READ\x1B[0m)\n"
                              "\x1B[32m0.000000\x1B[0m "
-                             "  -> \x1B[32mZX_OK\x1B[0m\n");
+                             "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 SOCKET_SHUTDOWN_DISPLAY_TEST(ZxSocketShutdownWrite, ZX_OK, ZX_SOCKET_SHUTDOWN_WRITE,
                              "\n"
@@ -250,7 +250,7 @@ SOCKET_SHUTDOWN_DISPLAY_TEST(ZxSocketShutdownWrite, ZX_OK, ZX_SOCKET_SHUTDOWN_WR
                              "options: \x1B[32mzx.socket_shutdown_options\x1B[0m = "
                              "\x1B[34mZX_SOCKET_SHUTDOWN_WRITE\x1B[0m)\n"
                              "\x1B[32m0.000000\x1B[0m "
-                             "  -> \x1B[32mZX_OK\x1B[0m\n");
+                             "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 std::unique_ptr<SystemCallTest> ZxSocketSetDisposition(int64_t result, std::string_view result_name,
                                                        zx_handle_t handle, uint32_t disposition,
@@ -266,7 +266,7 @@ std::unique_ptr<SystemCallTest> ZxSocketSetDisposition(int64_t result, std::stri
                                                     expected)                              \
   PerformDisplayTest(                                                                      \
       "$plt(zx_socket_set_disposition)",                                                   \
-      ZxSocketSetDisposition(result, #result, kHandle, disposition, disposition_peer), expected);
+      ZxSocketSetDisposition(result, #result, kHandle, disposition, disposition_peer), expected)
 
 #define SOCKET_SET_DISPOSITION_DISPLAY_TEST(name, errno, disposition, disposition_peer, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                                                     \
@@ -288,7 +288,7 @@ SOCKET_SET_DISPOSITION_DISPLAY_TEST(ZxSocketSetDispositionLocal, ZX_OK,
                                     "disposition_peer: \x1B[32mzx.socket_disposition\x1B[0m = "
                                     "\x1B[34m0\x1B[0m)\n"
                                     "\x1B[32m0.000000\x1B[0m "
-                                    "  -> \x1B[32mZX_OK\x1B[0m\n");
+                                    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 SOCKET_SET_DISPOSITION_DISPLAY_TEST(ZxSocketSetDispositionPeer, ZX_OK, 0,
                                     ZX_SOCKET_DISPOSITION_WRITE_ENABLED,
@@ -302,7 +302,7 @@ SOCKET_SET_DISPOSITION_DISPLAY_TEST(ZxSocketSetDispositionPeer, ZX_OK, 0,
                                     "disposition_peer: \x1B[32mzx.socket_disposition\x1B[0m = "
                                     "\x1B[34mZX_SOCKET_DISPOSITION_WRITE_ENABLED\x1B[0m)\n"
                                     "\x1B[32m0.000000\x1B[0m "
-                                    "  -> \x1B[32mZX_OK\x1B[0m\n");
+                                    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 SOCKET_SET_DISPOSITION_DISPLAY_TEST(ZxSocketSetDispositionBoth, ZX_OK,
                                     ZX_SOCKET_DISPOSITION_WRITE_DISABLED |
@@ -319,7 +319,7 @@ SOCKET_SET_DISPOSITION_DISPLAY_TEST(ZxSocketSetDispositionBoth, ZX_OK,
                                     "disposition_peer: \x1B[32mzx.socket_disposition\x1B[0m = "
                                     "\x1B[34mZX_SOCKET_DISPOSITION_WRITE_DISABLED\x1B[0m)\n"
                                     "\x1B[32m0.000000\x1B[0m "
-                                    "  -> \x1B[32mZX_OK\x1B[0m\n");
+                                    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 SOCKET_SET_DISPOSITION_DISPLAY_TEST(ZxSocketSetDispositionInvalid, ZX_OK, 1337, 0,
                                     "\n"
@@ -332,6 +332,6 @@ SOCKET_SET_DISPOSITION_DISPLAY_TEST(ZxSocketSetDispositionInvalid, ZX_OK, 1337, 
                                     "disposition_peer: \x1B[32mzx.socket_disposition\x1B[0m = "
                                     "\x1B[34m0\x1B[0m)\n"
                                     "\x1B[32m0.000000\x1B[0m "
-                                    "  -> \x1B[32mZX_OK\x1B[0m\n");
+                                    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 }  // namespace fidlcat

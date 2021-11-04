@@ -36,7 +36,7 @@ class ElementControllerImplTest : public modular_testing::TestWithSessionStorage
     element_controller_impl_->Connect(element_controller_.NewRequest());
   }
 
-  std::string story_id() const { return story_id_; };
+  std::string story_id() const { return story_id_; }
   SessionStorage* session_storage() { return session_storage_.get(); }
   fuchsia::element::ControllerPtr& element_controller() { return element_controller_; }
 

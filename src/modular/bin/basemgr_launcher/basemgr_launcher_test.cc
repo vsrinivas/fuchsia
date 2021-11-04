@@ -95,7 +95,7 @@ TEST_F(BasemgrLauncherTest, BasemgrLauncherAcceptsLaunchCommand) {
   EXPECT_EQ(ZX_OK, RunBasemgrLauncher({"launch"}));
   EXPECT_EQ(ZX_OK, RunBasemgrLauncher({"launch", "--disable_agent_restart_on_crash"}));
   EXPECT_EQ(ZX_OK, RunBasemgrLauncher({"launch", "--disable_agent_restart_on_crash"}));
-};
+}
 
 // Ensures basemgr isn't launched when bad arguments are provided to basemgr_launcher.
 TEST_F(BasemgrLauncherTest, BadArgs) {

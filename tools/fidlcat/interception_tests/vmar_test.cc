@@ -30,7 +30,7 @@ std::unique_ptr<SystemCallTest> ZxVmarAllocate(int64_t result, std::string_view 
   PerformDisplayTest("$plt(zx_vmar_allocate)",                                                    \
                      ZxVmarAllocate(result, #result, kHandle, ZX_VM_COMPACT | ZX_VM_CAN_MAP_READ, \
                                     0, 1024, &child_vmar, &child_addr),                           \
-                     expected);
+                     expected)
 
 #define VMAR_ALLOCATE_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {             \
@@ -51,7 +51,7 @@ VMAR_ALLOCATE_DISPLAY_TEST(
     "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m ("
     "child_vmar: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m, "
-    "child_addr: \x1B[32mzx.vaddr\x1B[0m = \x1B[34m0000000000012345\x1B[0m)\n");
+    "child_addr: \x1B[32mzx.vaddr\x1B[0m = \x1B[34m0000000000012345\x1B[0m)\n")
 
 // zx_vmar_destroy tests.
 
@@ -63,7 +63,7 @@ std::unique_ptr<SystemCallTest> ZxVmarDestroy(int64_t result, std::string_view r
 }
 
 #define VMAR_DESTROY_DISPLAY_TEST_CONTENT(result, expected) \
-  PerformDisplayTest("$plt(zx_vmar_destroy)", ZxVmarDestroy(result, #result, kHandle), expected);
+  PerformDisplayTest("$plt(zx_vmar_destroy)", ZxVmarDestroy(result, #result, kHandle), expected)
 
 #define VMAR_DESTROY_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {            \
@@ -78,7 +78,7 @@ VMAR_DESTROY_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_vmar_destroy(handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 // zx_vmar_map tests.
 
@@ -103,7 +103,7 @@ std::unique_ptr<SystemCallTest> ZxVmarMap(int64_t result, std::string_view resul
   PerformDisplayTest("$plt(zx_vmar_map)",                                                      \
                      ZxVmarMap(result, #result, kHandle, ZX_VM_SPECIFIC | ZX_VM_PERM_READ, 10, \
                                kHandle2, 0, 1024, &mapped_addr),                               \
-                     expected);
+                     expected)
 
 #define VMAR_MAP_DISPLAY_TEST(name, errno, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { VMAR_MAP_DISPLAY_TEST_CONTENT(errno, expected); } \
@@ -123,7 +123,7 @@ VMAR_MAP_DISPLAY_TEST(
     "len: \x1B[32muint64\x1B[0m = \x1B[34m1024\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m ("
-    "mapped_addr: \x1B[32mzx.vaddr\x1B[0m = \x1B[34m0000000000012345\x1B[0m)\n");
+    "mapped_addr: \x1B[32mzx.vaddr\x1B[0m = \x1B[34m0000000000012345\x1B[0m)\n")
 
 // zx_vmar_unmap tests.
 
@@ -138,7 +138,7 @@ std::unique_ptr<SystemCallTest> ZxVmarUnmap(int64_t result, std::string_view res
 
 #define VMAR_UNMAP_DISPLAY_TEST_CONTENT(result, expected)                                         \
   PerformDisplayTest("$plt(zx_vmar_unmap)", ZxVmarUnmap(result, #result, kHandle, 0x12345, 1024), \
-                     expected);
+                     expected)
 
 #define VMAR_UNMAP_DISPLAY_TEST(name, errno, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { VMAR_UNMAP_DISPLAY_TEST_CONTENT(errno, expected); } \
@@ -153,7 +153,7 @@ VMAR_UNMAP_DISPLAY_TEST(ZxVmarUnmap, ZX_OK,
                         "addr: \x1B[32mzx.vaddr\x1B[0m = \x1B[34m0000000000012345\x1B[0m, "
                         "len: \x1B[32muint64\x1B[0m = \x1B[34m1024\x1B[0m)\n"
                         "\x1B[32m0.000000\x1B[0m "
-                        "  -> \x1B[32mZX_OK\x1B[0m\n");
+                        "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 // zx_vmar_protect tests.
 
@@ -172,7 +172,7 @@ std::unique_ptr<SystemCallTest> ZxVmarProtect(int64_t result, std::string_view r
   PerformDisplayTest("$plt(zx_vmar_protect)",                                                      \
                      ZxVmarProtect(result, #result, kHandle, ZX_VM_PERM_READ | ZX_VM_PERM_EXECUTE, \
                                    0x12345, 1024),                                                 \
-                     expected);
+                     expected)
 
 #define VMAR_PROTECT_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {            \
@@ -192,7 +192,7 @@ VMAR_PROTECT_DISPLAY_TEST(
     "= "
     "\x1B[34m1024\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 // zx_vmar_unmap_handle_close_thread_exit tests.
 
@@ -214,7 +214,7 @@ std::unique_ptr<SystemCallTest> ZxVmarUnmapHandleCloseThreadExit(int64_t result,
   PerformDisplayTest(                                                                      \
       "$plt(zx_vmar_unmap_handle_close_thread_exit)",                                      \
       ZxVmarUnmapHandleCloseThreadExit(result, #result, kHandle, 0x12345, 1024, kHandle2), \
-      expected);
+      expected)
 
 #define VMAR_UNMAP_HANDLE_CLOSE_THREAD_EXIT_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                                   \
@@ -235,6 +235,6 @@ VMAR_UNMAP_HANDLE_CLOSE_THREAD_EXIT_DISPLAY_TEST(
     "size: \x1B[32msize\x1B[0m = \x1B[34m1024\x1B[0m, "
     "close_handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1222\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 }  // namespace fidlcat

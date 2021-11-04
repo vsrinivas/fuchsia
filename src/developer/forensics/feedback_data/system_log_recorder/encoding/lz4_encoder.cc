@@ -54,7 +54,7 @@ std::string Lz4Encoder::Encode(const std::string& msg) {
 void Lz4Encoder::Reset() {
   LZ4_freeStream(stream_);
   stream_ = LZ4_createStream();
-};
+}
 
 }  // namespace system_log_recorder
 }  // namespace feedback_data

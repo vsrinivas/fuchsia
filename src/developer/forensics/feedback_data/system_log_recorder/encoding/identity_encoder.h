@@ -16,15 +16,15 @@ namespace system_log_recorder {
 
 class IdentityEncoder : public Encoder {
  public:
-  IdentityEncoder(){};
+  IdentityEncoder(){}
 
-  virtual ~IdentityEncoder(){};
+  virtual ~IdentityEncoder(){}
 
   virtual EncodingVersion GetEncodingVersion() const { return EncodingVersion::kIdentity; }
 
   // |Encoder|
   virtual std::string Encode(const std::string& msg) { return msg; }
-  virtual void Reset(){};
+  virtual void Reset(){}
 };
 
 }  // namespace system_log_recorder

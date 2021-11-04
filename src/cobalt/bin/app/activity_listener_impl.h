@@ -41,9 +41,9 @@ class ActivityListenerImpl : public cobalt::ActivityListenerInterface,
 
   void Start(const std::function<void(ActivityState)>& callback) override;
 
-  ActivityState state() override { return state_; };
+  ActivityState state() override { return state_; }
 
-  bool IsConnected() { return activity_state_ptr_.is_bound(); };
+  bool IsConnected() { return activity_state_ptr_.is_bound(); }
 
  private:
   void RestartListening();

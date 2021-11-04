@@ -6,7 +6,7 @@
 
 namespace modular_testing {
 
-LaunchCounter::LaunchCounter() : weak_factory_(this){};
+LaunchCounter::LaunchCounter() : weak_factory_(this){}
 
 modular_testing::TestHarnessBuilder::InterceptOptions LaunchCounter::WrapInterceptOptions(
     modular_testing::TestHarnessBuilder::InterceptOptions options) {
@@ -24,4 +24,4 @@ modular_testing::TestHarnessBuilder::InterceptOptions LaunchCounter::WrapInterce
   return options;
 }
 
-};  // namespace modular_testing
+} // namespace modular_testing

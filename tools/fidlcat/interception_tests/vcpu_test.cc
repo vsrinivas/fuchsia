@@ -26,7 +26,7 @@ std::unique_ptr<SystemCallTest> ZxVcpuCreate(int64_t result, std::string_view re
 #define VCPU_CREATE_DISPLAY_TEST_CONTENT(result, expected) \
   zx_handle_t out = kHandleOut;                            \
   PerformDisplayTest("$plt(zx_vcpu_create)",               \
-                     ZxVcpuCreate(result, #result, kHandle, 0, 0x123456, &out), expected);
+                     ZxVcpuCreate(result, #result, kHandle, 0, 0x123456, &out), expected)
 
 #define VCPU_CREATE_DISPLAY_TEST(name, errno, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { VCPU_CREATE_DISPLAY_TEST_CONTENT(errno, expected); } \
@@ -42,7 +42,7 @@ VCPU_CREATE_DISPLAY_TEST(
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m, "
     "entry: \x1B[32mzx.vaddr\x1B[0m = \x1B[34m0000000000123456\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n")
 
 // zx_vcpu_resume tests.
 
@@ -71,7 +71,7 @@ std::unique_ptr<SystemCallTest> ZxVcpuResume(int64_t result, std::string_view re
           },                                                                                  \
   };                                                                                          \
   PerformDisplayTest("$plt(zx_vcpu_resume)", ZxVcpuResume(result, #result, kHandle, &packet), \
-                     expected);
+                     expected)
 
 #define VCPU_RESUME_DISPLAY_TEST(name, errno, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { VCPU_RESUME_DISPLAY_TEST_CONTENT(errno, expected); } \
@@ -98,7 +98,7 @@ VCPU_RESUME_DISPLAY_TEST(
     " }\n"
     "        reserved: \x1B[32muint64\x1B[0m = \x1B[34m0\x1B[0m\n"
     "      }\n"
-    "    }\n");
+    "    }\n")
 
 // zx_vcpu_interrupt tests.
 
@@ -112,7 +112,7 @@ std::unique_ptr<SystemCallTest> ZxVcpuInterrupt(int64_t result, std::string_view
 
 #define VCPU_INTERRUPT_DISPLAY_TEST_CONTENT(result, expected)                                  \
   PerformDisplayTest("$plt(zx_vcpu_interrupt)", ZxVcpuInterrupt(result, #result, kHandle, 10), \
-                     expected);
+                     expected)
 
 #define VCPU_INTERRUPT_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {              \
@@ -130,7 +130,7 @@ VCPU_INTERRUPT_DISPLAY_TEST(ZxVcpuInterrupt, ZX_OK,
                             "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                             "vector: \x1B[32muint32\x1B[0m = \x1B[34m10\x1B[0m)\n"
                             "\x1B[32m0.000000\x1B[0m "
-                            "  -> \x1B[32mZX_OK\x1B[0m\n");
+                            "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 // zx_vcpu_read_state tests.
 
@@ -149,7 +149,7 @@ std::unique_ptr<SystemCallTest> ZxVcpuReadState(int64_t result, std::string_view
   PerformDisplayTest(                                                                    \
       "$plt(zx_vcpu_read_state)",                                                        \
       ZxVcpuReadState(result, #result, kHandle, ZX_VCPU_STATE, &buffer, sizeof(buffer)), \
-      expected);
+      expected)
 
 TEST_F(InterceptionWorkflowTestArm, ZxVcpuReadStateAArch64) {
   zx_vcpu_state_aarch64_t buffer;
@@ -258,7 +258,7 @@ std::unique_ptr<SystemCallTest> ZxVcpuWriteState(int64_t result, std::string_vie
   PerformDisplayTest(                                                                    \
       "$plt(zx_vcpu_write_state)",                                                       \
       ZxVcpuReadState(result, #result, kHandle, ZX_VCPU_STATE, &buffer, sizeof(buffer)), \
-      expected);
+      expected)
 
 TEST_F(InterceptionWorkflowTestArm, ZxVcpuWriteStateAArch64) {
   zx_vcpu_state_aarch64_t buffer;
@@ -356,7 +356,7 @@ TEST_F(InterceptionWorkflowTestX64, ZxVcpuWriteStateX86) {
   zx_vcpu_io_t buffer = {.access_size = 4, .u32 = 0x12345678};     \
   PerformDisplayTest(                                              \
       "$plt(zx_vcpu_write_state)",                                 \
-      ZxVcpuReadState(result, #result, kHandle, ZX_VCPU_IO, &buffer, sizeof(buffer)), expected);
+      ZxVcpuReadState(result, #result, kHandle, ZX_VCPU_IO, &buffer, sizeof(buffer)), expected)
 
 #define VCPU_WRITE_STATE_IO_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                   \
@@ -383,6 +383,6 @@ VCPU_WRITE_STATE_IO_DISPLAY_TEST(
     "\x1B[34m78\x1B[0m, \x1B[34m56\x1B[0m, \x1B[34m34\x1B[0m, \x1B[34m12\x1B[0m ]\n"
     "  }\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 }  // namespace fidlcat

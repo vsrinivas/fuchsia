@@ -206,7 +206,7 @@ TEST_F(StoryShellFactoryTest, AttachCalledOnStoryStart) {
 
   // Wait for the StoryShellFactory to attach the StoryShell.
   RunLoopUntil([&] { return is_attached; });
-};
+}
 
 TEST_F(StoryShellFactoryTest, DetachCalledOnStoryStop) {
   InitSession();
@@ -227,7 +227,7 @@ TEST_F(StoryShellFactoryTest, DetachCalledOnStoryStop) {
 
   // Wait for the StoryShellFactory to detach the StoryShell.
   RunLoopUntil([&] { return is_detached; });
-};
+}
 
 TEST_F(StoryShellFactoryTest, DetachCalledOnStoryDelete) {
   InitSession();
@@ -247,6 +247,6 @@ TEST_F(StoryShellFactoryTest, DetachCalledOnStoryDelete) {
 
   // Wait for the StoryShellFactory to detach the StoryShell.
   RunLoopUntil([&] { return is_detached; });
-};
+}
 
 }  // namespace

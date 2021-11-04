@@ -37,7 +37,7 @@ std::unique_ptr<SystemCallTest> ZxPciGetNthDevice(int64_t result, std::string_vi
   zx_handle_t out_handle = kHandleOut;                                                          \
   PerformDisplayTest("$plt(zx_pci_get_nth_device)",                                             \
                      ZxPciGetNthDevice(result, #result, kHandle, 1234, &out_info, &out_handle), \
-                     expected);
+                     expected)
 
 #define PCI_GET_NTH_DEVICE_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                  \
@@ -67,7 +67,7 @@ PCI_GET_NTH_DEVICE_DISPLAY_TEST(
     "    func_id: \x1B[32muint8\x1B[0m = \x1B[34m9\x1B[0m\n"
     "  }\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m (out_handle: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (out_handle: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n")
 
 // zx_pci_enable_bus_master tests.
 
@@ -81,7 +81,7 @@ std::unique_ptr<SystemCallTest> ZxPciEnableBusMaster(int64_t result, std::string
 
 #define PCI_ENABLE_BUS_MASTER_DISPLAY_TEST_CONTENT(result, expected) \
   PerformDisplayTest("$plt(zx_pci_enable_bus_master)",               \
-                     ZxPciEnableBusMaster(result, #result, kHandle, true), expected);
+                     ZxPciEnableBusMaster(result, #result, kHandle, true), expected)
 
 #define PCI_ENABLE_BUS_MASTER_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                     \
@@ -99,7 +99,7 @@ PCI_ENABLE_BUS_MASTER_DISPLAY_TEST(ZxPciEnableBusMaster, ZX_OK,
                                    "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                                    "enable: \x1B[32mbool\x1B[0m = \x1B[34mtrue\x1B[0m)\n"
                                    "\x1B[32m0.000000\x1B[0m "
-                                   "  -> \x1B[32mZX_OK\x1B[0m\n");
+                                   "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 // zx_pci_reset_device tests.
 
@@ -112,7 +112,7 @@ std::unique_ptr<SystemCallTest> ZxPciResetDevice(int64_t result, std::string_vie
 
 #define PCI_RESET_DEVICE_DISPLAY_TEST_CONTENT(result, expected)                               \
   PerformDisplayTest("$plt(zx_pci_reset_device)", ZxPciResetDevice(result, #result, kHandle), \
-                     expected);
+                     expected)
 
 #define PCI_RESET_DEVICE_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                \
@@ -129,7 +129,7 @@ PCI_RESET_DEVICE_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_pci_reset_device(handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 // zx_pci_config_read tests.
 
@@ -147,7 +147,7 @@ std::unique_ptr<SystemCallTest> ZxPciConfigRead(int64_t result, std::string_view
 #define PCI_CONFIG_READ_DISPLAY_TEST_CONTENT(result, expected) \
   uint32_t out_val = 1234;                                     \
   PerformDisplayTest("$plt(zx_pci_config_read)",               \
-                     ZxPciConfigRead(result, #result, kHandle, 1000, 4, &out_val), expected);
+                     ZxPciConfigRead(result, #result, kHandle, 1000, 4, &out_val), expected)
 
 #define PCI_CONFIG_READ_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {               \
@@ -167,7 +167,7 @@ PCI_CONFIG_READ_DISPLAY_TEST(
     "offset: \x1B[32muint16\x1B[0m = \x1B[34m1000\x1B[0m, "
     "width: \x1B[32msize\x1B[0m = \x1B[34m4\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m (out_val: \x1B[32muint32\x1B[0m = \x1B[34m1234\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (out_val: \x1B[32muint32\x1B[0m = \x1B[34m1234\x1B[0m)\n")
 
 CREATE_AUTOMATION_TEST(ZxPciConfigReadAutomation, "zx_pci_config_read", ZX_OK,
                        "Invoked bp instructions:\n"
@@ -179,7 +179,7 @@ CREATE_AUTOMATION_TEST(ZxPciConfigReadAutomation, "zx_pci_config_read", ZX_OK,
                        "  stored_value(0) = x3\n"
                        "Exit bp instructions:\n"
                        "  load_memory stored_value(0), 4\n"
-                       "  clear_stored_values\n");
+                       "  clear_stored_values\n")
 
 // zx_pci_config_write tests.
 
@@ -196,7 +196,7 @@ std::unique_ptr<SystemCallTest> ZxPciConfigWrite(int64_t result, std::string_vie
 
 #define PCI_CONFIG_WRITE_DISPLAY_TEST_CONTENT(result, expected) \
   PerformDisplayTest("$plt(zx_pci_config_write)",               \
-                     ZxPciConfigWrite(result, #result, kHandle, 1000, 4, 1234), expected);
+                     ZxPciConfigWrite(result, #result, kHandle, 1000, 4, 1234), expected)
 
 #define PCI_CONFIG_WRITE_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                \
@@ -216,7 +216,7 @@ PCI_CONFIG_WRITE_DISPLAY_TEST(ZxPciConfigWrite, ZX_OK,
                               "width: \x1B[32msize\x1B[0m = \x1B[34m4\x1B[0m, "
                               "val: \x1B[32muint32\x1B[0m = \x1B[34m1234\x1B[0m)\n"
                               "\x1B[32m0.000000\x1B[0m "
-                              "  -> \x1B[32mZX_OK\x1B[0m\n");
+                              "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 // zx_pci_cfg_pio_rw tests.
 
@@ -240,7 +240,7 @@ std::unique_ptr<SystemCallTest> ZxPciCfgPioRw(int64_t result, std::string_view r
   uint32_t val = 1234;                                                                      \
   PerformDisplayTest("$plt(zx_pci_cfg_pio_rw)",                                             \
                      ZxPciCfgPioRw(result, #result, kHandle, 1, 2, 3, 100, &val, 4, write), \
-                     expected);
+                     expected)
 
 #define PCI_CFG_PIO_RW_DISPLAY_TEST(name, errno, write, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                     \
@@ -264,7 +264,7 @@ PCI_CFG_PIO_RW_DISPLAY_TEST(
     "width: \x1B[32msize\x1B[0m = \x1B[34m4\x1B[0m, "
     "write: \x1B[32mbool\x1B[0m = \x1B[34mfalse\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m (val: \x1B[32muint32\x1B[0m = \x1B[34m1234\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (val: \x1B[32muint32\x1B[0m = \x1B[34m1234\x1B[0m)\n")
 
 PCI_CFG_PIO_RW_DISPLAY_TEST(ZxPciCfgPioRwWrite, ZX_OK, true,
                             "\n"
@@ -280,7 +280,7 @@ PCI_CFG_PIO_RW_DISPLAY_TEST(ZxPciCfgPioRwWrite, ZX_OK, true,
                             "val: \x1B[32muint32\x1B[0m = \x1B[34m1234\x1B[0m, "
                             "write: \x1B[32mbool\x1B[0m = \x1B[34mtrue\x1B[0m)\n"
                             "\x1B[32m0.000000\x1B[0m "
-                            "  -> \x1B[32mZX_OK\x1B[0m\n");
+                            "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 CREATE_AUTOMATION_TEST(ZxPciCfgPioRwAutomation, "zx_pci_cfg_pio_rw", ZX_OK,
                        "Invoked bp instructions:\n"
@@ -294,7 +294,7 @@ CREATE_AUTOMATION_TEST(ZxPciCfgPioRwAutomation, "zx_pci_cfg_pio_rw", ZX_OK,
                        "  stored_value(1) = x5. conditions: stored_value(0) == 0\n"
                        "Exit bp instructions:\n"
                        "  load_memory stored_value(1), 4. conditions: stored_value(0) == 0\n"
-                       "  clear_stored_values\n");
+                       "  clear_stored_values\n")
 
 // zx_pci_get_bar tests.
 
@@ -313,7 +313,7 @@ std::unique_ptr<SystemCallTest> ZxPciGetBar(int64_t result, std::string_view res
   zx_pci_bar_t out_bar = {.id = 1000, .type = ZX_PCI_BAR_TYPE_UNUSED}; \
   zx_handle_t out_handle = kHandleOut;                                 \
   PerformDisplayTest("$plt(zx_pci_get_bar)",                           \
-                     ZxPciGetBar(result, #result, kHandle, 1, &out_bar, &out_handle), expected);
+                     ZxPciGetBar(result, #result, kHandle, 1, &out_bar, &out_handle), expected)
 
 #define PCI_GET_BAR_UNUSED_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                  \
@@ -336,13 +336,13 @@ PCI_GET_BAR_UNUSED_DISPLAY_TEST(
     "    out_bar: \x1B[32mzx_pci_bar_t\x1B[0m = { "
     "id: \x1B[32muint32\x1B[0m = \x1B[34m1000\x1B[0m, "
     "type: \x1B[32mzx.pci_bar_type\x1B[0m = \x1B[34mZX_PCI_BAR_TYPE_UNUSED\x1B[0m"
-    " }\n");
+    " }\n")
 
 #define PCI_GET_BAR_MMIO_DISPLAY_TEST_CONTENT(result, expected)                          \
   zx_pci_bar_t out_bar = {.id = 1000, .type = ZX_PCI_BAR_TYPE_MMIO, .handle = kHandle2}; \
   zx_handle_t out_handle = kHandleOut;                                                   \
   PerformDisplayTest("$plt(zx_pci_get_bar)",                                             \
-                     ZxPciGetBar(result, #result, kHandle, 2, &out_bar, &out_handle), expected);
+                     ZxPciGetBar(result, #result, kHandle, 2, &out_bar, &out_handle), expected)
 
 #define PCI_GET_BAR_MMIO_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                \
@@ -366,13 +366,13 @@ PCI_GET_BAR_MMIO_DISPLAY_TEST(
     "id: \x1B[32muint32\x1B[0m = \x1B[34m1000\x1B[0m, "
     "type: \x1B[32mzx.pci_bar_type\x1B[0m = \x1B[34mZX_PCI_BAR_TYPE_MMIO\x1B[0m, "
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1222\x1B[0m"
-    " }\n");
+    " }\n")
 
 #define PCI_GET_BAR_PIO_DISPLAY_TEST_CONTENT(result, expected)                                     \
   zx_pci_bar_t out_bar = {.id = 1000, .type = ZX_PCI_BAR_TYPE_PIO, .size = 1024, .addr = 0x45678}; \
   zx_handle_t out_handle = kHandleOut;                                                             \
   PerformDisplayTest("$plt(zx_pci_get_bar)",                                                       \
-                     ZxPciGetBar(result, #result, kHandle, 3, &out_bar, &out_handle), expected);
+                     ZxPciGetBar(result, #result, kHandle, 3, &out_bar, &out_handle), expected)
 
 #define PCI_GET_BAR_PIO_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {               \
@@ -397,7 +397,7 @@ PCI_GET_BAR_PIO_DISPLAY_TEST(
     "      type: \x1B[32mzx.pci_bar_type\x1B[0m = \x1B[34mZX_PCI_BAR_TYPE_PIO\x1B[0m\n"
     "      size: \x1B[32msize\x1B[0m = \x1B[34m1024\x1B[0m\n"
     "      addr: \x1B[32muintptr\x1B[0m = \x1B[34m0000000000045678\x1B[0m\n"
-    "    }\n");
+    "    }\n")
 
 // zx_pci_map_interrupt tests.
 
@@ -414,7 +414,7 @@ std::unique_ptr<SystemCallTest> ZxPciMapInterrupt(int64_t result, std::string_vi
 #define PCI_MAP_INTERRUPT_DISPLAY_TEST_CONTENT(result, expected) \
   zx_handle_t out_handle = kHandleOut;                           \
   PerformDisplayTest("$plt(zx_pci_map_interrupt)",               \
-                     ZxPciMapInterrupt(result, #result, kHandle, 5, &out_handle), expected);
+                     ZxPciMapInterrupt(result, #result, kHandle, 5, &out_handle), expected)
 
 #define PCI_MAP_INTERRUPT_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                 \
@@ -433,7 +433,7 @@ PCI_MAP_INTERRUPT_DISPLAY_TEST(
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "which_irq: \x1B[32mint32\x1B[0m = \x1B[34m5\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m (out_handle: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (out_handle: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n")
 
 CREATE_AUTOMATION_TEST(ZxPciMapInterruptAutomation, "zx_pci_map_interrupt", ZX_OK,
                        "Invoked bp instructions:\n"
@@ -445,7 +445,7 @@ CREATE_AUTOMATION_TEST(ZxPciMapInterruptAutomation, "zx_pci_map_interrupt", ZX_O
                        "  stored_value(0) = x2\n"
                        "Exit bp instructions:\n"
                        "  load_memory stored_value(0), 4\n"
-                       "  clear_stored_values\n");
+                       "  clear_stored_values\n")
 
 // zx_pci_query_irq_mode tests.
 
@@ -462,7 +462,7 @@ std::unique_ptr<SystemCallTest> ZxPciQueryIrqMode(int64_t result, std::string_vi
 #define PCI_QUERY_IRQ_MODE_DISPLAY_TEST_CONTENT(result, expected) \
   uint32_t out_max_irqs = 12;                                     \
   PerformDisplayTest("$plt(zx_pci_query_irq_mode)",               \
-                     ZxPciQueryIrqMode(result, #result, kHandle, 0, &out_max_irqs), expected);
+                     ZxPciQueryIrqMode(result, #result, kHandle, 0, &out_max_irqs), expected)
 
 #define PCI_QUERY_IRQ_MODE_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                  \
@@ -481,7 +481,7 @@ PCI_QUERY_IRQ_MODE_DISPLAY_TEST(
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "mode: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m (out_max_irqs: \x1B[32muint32\x1B[0m = \x1B[34m12\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (out_max_irqs: \x1B[32muint32\x1B[0m = \x1B[34m12\x1B[0m)\n")
 
 CREATE_AUTOMATION_TEST(ZxPciQueryIrqModeAutomation, "zx_pci_query_irq_mode", ZX_OK,
                        "Invoked bp instructions:\n"
@@ -493,7 +493,7 @@ CREATE_AUTOMATION_TEST(ZxPciQueryIrqModeAutomation, "zx_pci_query_irq_mode", ZX_
                        "  stored_value(0) = x2\n"
                        "Exit bp instructions:\n"
                        "  load_memory stored_value(0), 4\n"
-                       "  clear_stored_values\n");
+                       "  clear_stored_values\n")
 
 // zx_pci_set_irq_mode tests.
 
@@ -509,7 +509,7 @@ std::unique_ptr<SystemCallTest> ZxPciSetIrqMode(int64_t result, std::string_view
 
 #define PCI_SET_IRQ_MODE_DISPLAY_TEST_CONTENT(result, expected)                                    \
   PerformDisplayTest("$plt(zx_pci_set_irq_mode)", ZxPciSetIrqMode(result, #result, kHandle, 0, 5), \
-                     expected);
+                     expected)
 
 #define PCI_SET_IRQ_MODE_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                \
@@ -528,7 +528,7 @@ PCI_SET_IRQ_MODE_DISPLAY_TEST(ZxPciSetIrqMode, ZX_OK,
                               "mode: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m, "
                               "requested_irq_count: \x1B[32muint32\x1B[0m = \x1B[34m5\x1B[0m)\n"
                               "\x1B[32m0.000000\x1B[0m "
-                              "  -> \x1B[32mZX_OK\x1B[0m\n");
+                              "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 // zx_pci_init tests.
 
@@ -577,7 +577,7 @@ std::unique_ptr<SystemCallTest> ZxPciInit(int64_t result, std::string_view resul
                                .cfg_space_type = 33,                                      \
                                .has_ecam = false};                                        \
   PerformDisplayTest("$plt(zx_pci_init)",                                                 \
-                     ZxPciInit(result, #result, kHandle, init_buf, buffer.size()), expected);
+                     ZxPciInit(result, #result, kHandle, init_buf, buffer.size()), expected)
 
 #define PCI_INIT_DISPLAY_TEST(name, errno, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { PCI_INIT_DISPLAY_TEST_CONTENT(errno, expected); } \
@@ -662,7 +662,7 @@ PCI_INIT_DISPLAY_TEST(
              "  }\n"
              "\x1B[32m0.000000\x1B[0m "
              "  -> \x1B[32mZX_OK\x1B[0m\n")
-        .c_str());
+        .c_str())
 
 // zx_pci_add_subtract_io_range tests.
 
@@ -704,6 +704,6 @@ PCI_ADD_SUBTRACT_IO_RANGE_DISPLAY_TEST(ZxPciAddSubtractIoRange, ZX_OK,
                                        "len: \x1B[32muint64\x1B[0m = \x1B[34m1024\x1B[0m, "
                                        "add: \x1B[32mbool\x1B[0m = \x1B[34mfalse\x1B[0m)\n"
                                        "\x1B[32m0.000000\x1B[0m "
-                                       "  -> \x1B[32mZX_OK\x1B[0m\n");
+                                       "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 }  // namespace fidlcat

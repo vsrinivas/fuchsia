@@ -70,13 +70,13 @@ std::unique_ptr<SystemCallTest> ProcessargsExtractHandles(
   info = dispatcher->inference().GetInferredHandleInfo(kSecondPid, kDuplicatedHandleValue);        \
   ASSERT_NE(info, nullptr);                                                                        \
   ASSERT_EQ(info->type(), "fd");                                                                   \
-  ASSERT_EQ(info->fd(), 1);
+  ASSERT_EQ(info->fd(), 1)
 
 #define PROCESSARGS_EXTRACT_HANDLES_DISPLAY_TEST(name)                              \
   TEST_F(InterceptionWorkflowTestX64, name) { PROCESSARGS_EXTRACT_HANDLES_TEST(); } \
   TEST_F(InterceptionWorkflowTestArm, name) { PROCESSARGS_EXTRACT_HANDLES_TEST(); }
 
-PROCESSARGS_EXTRACT_HANDLES_DISPLAY_TEST(ProcessargsExtractHandles);
+PROCESSARGS_EXTRACT_HANDLES_DISPLAY_TEST(ProcessargsExtractHandles)
 
 // libc_extensions_init tests.
 // This is the second intercepted function. Some handles have already been used by
@@ -119,12 +119,12 @@ std::unique_ptr<SystemCallTest> LibcExtensionsInit(uint32_t nhandles, zx_handle_
       dispatcher->inference().GetInferredHandleInfo(kFirstPid, handles[3]);                  \
   ASSERT_NE(info, nullptr);                                                                  \
   ASSERT_EQ(info->type(), "dir");                                                            \
-  ASSERT_EQ(info->path(), "/pkg");
+  ASSERT_EQ(info->path(), "/pkg")
 
 #define LIBC_EXTENSIONS_INIT_DISPLAY_TEST(name)                              \
   TEST_F(InterceptionWorkflowTestX64, name) { LIBC_EXTENSIONS_INIT_TEST(); } \
   TEST_F(InterceptionWorkflowTestArm, name) { LIBC_EXTENSIONS_INIT_TEST(); }
 
-LIBC_EXTENSIONS_INIT_DISPLAY_TEST(LibcExtensionsInit);
+LIBC_EXTENSIONS_INIT_DISPLAY_TEST(LibcExtensionsInit)
 
 }  // namespace fidlcat

@@ -57,7 +57,7 @@ class LogMessageStore {
   class ContainerStats {
    public:
     explicit ContainerStats(const StorageSize capacity)
-        : capacity_(capacity), remaining_(capacity_){};
+        : capacity_(capacity), remaining_(capacity_){}
     // Reduces the free space in the container by |quantity|.
     void Use(const StorageSize quantity) {
       // We allow overcommitting, but we cap |remaining_| at 0.

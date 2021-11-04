@@ -18,7 +18,7 @@ std::unique_ptr<SystemCallTest> ZxPmtUnpin(int64_t result, std::string_view resu
 }
 
 #define PMT_UNPIN_DISPLAY_TEST_CONTENT(result, expected) \
-  PerformDisplayTest("$plt(zx_pmt_unpin)", ZxPmtUnpin(result, #result, kHandle), expected);
+  PerformDisplayTest("$plt(zx_pmt_unpin)", ZxPmtUnpin(result, #result, kHandle), expected)
 
 #define PMT_UNPIN_DISPLAY_TEST(name, errno, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { PMT_UNPIN_DISPLAY_TEST_CONTENT(errno, expected); } \
@@ -30,6 +30,6 @@ PMT_UNPIN_DISPLAY_TEST(ZxPmtUnpin, ZX_OK,
                        "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                        "zx_pmt_unpin(handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n"
                        "\x1B[32m0.000000\x1B[0m "
-                       "  -> \x1B[32mZX_OK\x1B[0m\n");
+                       "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 }  // namespace fidlcat

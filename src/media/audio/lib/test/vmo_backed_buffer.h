@@ -52,7 +52,7 @@ class VmoBackedBuffer {
     status = vmo_mapper_.Map(vmo, 0u, SizeBytes(), flags);
     ASSERT_EQ(status, ZX_OK) << "VmoMapper::Map failed: " << status;
     Clear();
-  };
+  }
 
   // Reports whether the buffer has been allocated.
   bool IsValid() const { return BufferStart() != nullptr; }

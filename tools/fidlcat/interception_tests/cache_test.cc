@@ -23,7 +23,7 @@ std::unique_ptr<SystemCallTest> ZxCacheFlush(int64_t result, std::string_view re
   const void* addr = reinterpret_cast<const void*>(0x1234567890);                          \
   size_t size = 4096;                                                                      \
   PerformDisplayTest("$plt(zx_cache_flush)", ZxCacheFlush(result, #result, addr, size, 0), \
-                     expected);
+                     expected)
 
 #define CACHE_FLUSH_DISPLAY_TEST(name, errno, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { CACHE_FLUSH_DISPLAY_TEST_CONTENT(errno, expected); } \
@@ -38,6 +38,6 @@ CACHE_FLUSH_DISPLAY_TEST(
     "size: \x1B[32msize\x1B[0m = \x1B[34m4096\x1B[0m, "
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 }  // namespace fidlcat

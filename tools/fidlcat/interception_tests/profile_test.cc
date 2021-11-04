@@ -32,7 +32,7 @@ std::unique_ptr<SystemCallTest> ZxProfileCreate(int64_t result, std::string_view
   profile.cpu_affinity_mask.mask[0] = 0xe;                                       \
   zx_handle_t out = kHandleOut;                                                  \
   PerformDisplayTest("$plt(zx_profile_create)",                                  \
-                     ZxProfileCreate(result, #result, kHandle, 0, &profile, &out), expected);
+                     ZxProfileCreate(result, #result, kHandle, 0, &profile, &out), expected)
 
 #define PROFILE_CREATE_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {              \
@@ -64,6 +64,6 @@ PROFILE_CREATE_DISPLAY_TEST(
     "    }\n"
     "  }\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n")
 
 }  // namespace fidlcat

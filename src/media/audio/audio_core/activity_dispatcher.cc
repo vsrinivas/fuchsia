@@ -64,7 +64,7 @@ class ActivityDispatcherImpl::ActivityReporterImpl : public fuchsia::media::Acti
   class Reporter {
    public:
     Reporter(ActivityDispatcherImpl::ActivityReporterImpl& parent, const Activity& activity)
-        : parent_(parent), last_known_activity_(activity){};
+        : parent_(parent), last_known_activity_(activity){}
     ~Reporter<Activity, Callback>() = default;
     void WatchActivity(Callback callback);
     void MaybeSendActivity();

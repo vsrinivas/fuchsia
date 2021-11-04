@@ -95,7 +95,7 @@ class FakeSwapchain : public scenic_impl::gfx::Swapchain {
 
   bool SetDisplayColorConversion(const ColorTransform& transform) override { return false; }
   void SetUseProtectedMemory(bool use_protected_memory) override {}
-  vk::Format GetImageFormat() override { return target_->format(); };
+  vk::Format GetImageFormat() override { return target_->format(); }
 
  private:
   escher::EscherWeakPtr escher_;

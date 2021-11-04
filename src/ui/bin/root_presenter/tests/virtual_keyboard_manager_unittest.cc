@@ -39,7 +39,7 @@ class FakeVirtualKeyboardCoordinator : public VirtualKeyboardCoordinator {
   void NotifyFocusChange(fuchsia::ui::views::ViewRef focused_view) override { FX_NOTIMPLEMENTED(); }
 
   // Test support.
-  const auto& is_visible() { return is_visible_; };
+  const auto& is_visible() { return is_visible_; }
   const auto& change_reason() { return change_reason_; }
   const auto& manager_error() { return manager_error_; }
 

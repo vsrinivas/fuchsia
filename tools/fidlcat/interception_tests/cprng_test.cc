@@ -24,7 +24,7 @@ std::unique_ptr<SystemCallTest> ZxCprngDraw(int64_t result, std::string_view res
     buffer.emplace_back(i);                               \
   }                                                       \
   PerformDisplayTest("$plt(zx_cprng_draw)",               \
-                     ZxCprngDraw(result, #result, buffer.data(), buffer.size()), expected);
+                     ZxCprngDraw(result, #result, buffer.data(), buffer.size()), expected)
 
 #define CPRNG_DRAW_DISPLAY_TEST(name, errno, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { CPRNG_DRAW_DISPLAY_TEST_CONTENT(errno, expected); } \
@@ -42,7 +42,7 @@ CPRNG_DRAW_DISPLAY_TEST(
     "\x1B[34m04\x1B[0m, \x1B[34m05\x1B[0m, \x1B[34m06\x1B[0m, \x1B[34m07\x1B[0m, "
     "\x1B[34m08\x1B[0m, \x1B[34m09\x1B[0m, \x1B[34m0a\x1B[0m, \x1B[34m0b\x1B[0m, "
     "\x1B[34m0c\x1B[0m, \x1B[34m0d\x1B[0m, \x1B[34m0e\x1B[0m, \x1B[34m0f\x1B[0m, "
-    "\x1B[34m10\x1B[0m, \x1B[34m11\x1B[0m, \x1B[34m12\x1B[0m, \x1B[34m13\x1B[0m ]\n");
+    "\x1B[34m10\x1B[0m, \x1B[34m11\x1B[0m, \x1B[34m12\x1B[0m, \x1B[34m13\x1B[0m ]\n")
 
 // zx_cprng_add_entropy tests.
 
@@ -60,7 +60,7 @@ std::unique_ptr<SystemCallTest> ZxCprngAddEntropy(int64_t result, std::string_vi
     buffer.emplace_back(i);                                      \
   }                                                              \
   PerformDisplayTest("$plt(zx_cprng_add_entropy)",               \
-                     ZxCprngAddEntropy(result, #result, buffer.data(), buffer.size()), expected);
+                     ZxCprngAddEntropy(result, #result, buffer.data(), buffer.size()), expected)
 
 #define CPRNG_ADD_ENTROPY_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                 \
@@ -83,6 +83,6 @@ CPRNG_ADD_ENTROPY_DISPLAY_TEST(
     "\x1B[34m0c\x1B[0m, \x1B[34m0d\x1B[0m, \x1B[34m0e\x1B[0m, \x1B[34m0f\x1B[0m, "
     "\x1B[34m10\x1B[0m, \x1B[34m11\x1B[0m, \x1B[34m12\x1B[0m, \x1B[34m13\x1B[0m ]\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 }  // namespace fidlcat

@@ -79,7 +79,7 @@ class ThreadingModelFixture : public gtest::TestLoopFixture {
  protected:
   // This threading model will be backed by an |async::TestLoop|. Control the loop using the methods
   // in |gtest::TestLoopFixture|.
-  ThreadingModel& threading_model() { return context_->threading_model(); };
+  ThreadingModel& threading_model() { return context_->threading_model(); }
 
   Context& context() { return *context_; }
 

@@ -54,11 +54,11 @@ class StoreMetadataTest : public testing::Test {
 
   std::string ProgramPath(const std::string& program) {
     return fs::path(tmp_dir_.path()) / program;
-  };
+  }
 
   std::string ReportPath(const std::string& program, const ReportId report_id) {
     return fs::path(ProgramPath(program)) / std::to_string(report_id);
-  };
+  }
 
  private:
   files::ScopedTempDir tmp_dir_;

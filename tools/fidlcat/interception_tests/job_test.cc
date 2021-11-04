@@ -25,7 +25,7 @@ std::unique_ptr<SystemCallTest> ZxJobCreate(int64_t result, std::string_view res
 #define JOB_CREATE_DISPLAY_TEST_CONTENT(result, expected)                                   \
   zx_handle_t out = kHandleOut;                                                             \
   PerformDisplayTest("$plt(zx_job_create)", ZxJobCreate(result, #result, kHandle, 0, &out), \
-                     expected);
+                     expected)
 
 #define JOB_CREATE_DISPLAY_TEST(name, errno, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { JOB_CREATE_DISPLAY_TEST_CONTENT(errno, expected); } \
@@ -40,7 +40,7 @@ JOB_CREATE_DISPLAY_TEST(
     "parent_job: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n")
 
 // zx_job_set_policy tests.
 
@@ -63,7 +63,7 @@ std::unique_ptr<SystemCallTest> ZxJobSetPolicy(int64_t result, std::string_view 
   PerformDisplayTest(                                                                              \
       "$plt(zx_job_set_policy)",                                                                   \
       ZxJobSetPolicy(result, #result, kHandle, 0, ZX_JOB_POL_BASIC, policy.data(), policy.size()), \
-      expected);
+      expected)
 
 #define JOB_SET_POLICY_BASIC_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                    \
@@ -89,13 +89,13 @@ JOB_SET_POLICY_BASIC_DISPLAY_TEST(
     "policy: \x1B[32mzx.policy_action\x1B[0m = \x1B[34mZX_POL_ACTION_DENY\x1B[0m }\n"
     "  ]\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 #define JOB_SET_POLICY_TIMER_SLACK_DISPLAY_TEST_CONTENT(result, expected)                     \
   zx_policy_timer_slack_t policy = {.min_slack = 100, .default_mode = ZX_TIMER_SLACK_CENTER}; \
   PerformDisplayTest(                                                                         \
       "$plt(zx_job_set_policy)",                                                              \
-      ZxJobSetPolicy(result, #result, kHandle, 0, ZX_JOB_POL_TIMER_SLACK, &policy, 1), expected);
+      ZxJobSetPolicy(result, #result, kHandle, 0, ZX_JOB_POL_TIMER_SLACK, &policy, 1), expected)
 
 #define JOB_SET_POLICY_TIMER_SLACK_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                          \
@@ -119,6 +119,6 @@ JOB_SET_POLICY_TIMER_SLACK_DISPLAY_TEST(
     "    default_mode: \x1B[32mzx.timer_option\x1B[0m = \x1B[34mZX_TIMER_SLACK_CENTER\x1B[0m\n"
     "  }\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 }  // namespace fidlcat

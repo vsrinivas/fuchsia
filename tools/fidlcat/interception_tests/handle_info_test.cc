@@ -23,7 +23,7 @@ std::unique_ptr<SystemCallTest> ZxChannelWrite(int64_t result, std::string_view 
                                     hello_world.size(), nullptr, 0),                         \
                      expected, loader);                                                      \
   ASSERT_EQ(last_decoder_dispatcher_->inference().GetLinkedKoid(kHandleKoid), kHandle2Koid); \
-  ASSERT_EQ(last_decoder_dispatcher_->inference().GetLinkedKoid(kHandle2Koid), kHandleKoid);
+  ASSERT_EQ(last_decoder_dispatcher_->inference().GetLinkedKoid(kHandle2Koid), kHandleKoid)
 
 #define HANDLE_INFO_TEST(name, errno, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { HANDLE_INFO_TEST_CONTENT(errno, expected); } \
@@ -39,6 +39,6 @@ HANDLE_INFO_TEST(HandleInfo, ZX_OK,
                  "\x1B[32mfidl.examples.echo/Echo.EchoString\x1B[0m = { "
                  "value: \x1B[32mstring\x1B[0m = \x1B[31m\"hello world\"\x1B[0m }\n"
                  "\x1B[32m0.000000\x1B[0m "
-                 "  -> \x1B[32mZX_OK\x1B[0m\n");
+                 "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 }  // namespace fidlcat

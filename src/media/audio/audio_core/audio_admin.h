@@ -81,7 +81,7 @@ class AudioAdmin {
   void ResetInteractions() {
     std::lock_guard<fit::thread_checker> lock(fidl_thread_checker_);
     active_rules_.ResetInteractions();
-  };
+  }
 
   // Clears all configured behaviors and then applies the rules in the provided AudioPolicy.
   void SetInteractionsFromAudioPolicy(AudioPolicy policy);

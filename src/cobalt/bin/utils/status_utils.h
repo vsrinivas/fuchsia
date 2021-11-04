@@ -26,7 +26,7 @@ inline std::string StatusToString(fuchsia::cobalt::Status status) {
     case fuchsia::cobalt::Status::INTERNAL_ERROR:
       return "INTERNAL_ERROR";
   }
-};
+}
 
 }  // namespace cobalt
 

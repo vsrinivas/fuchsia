@@ -17,13 +17,13 @@ class DisplayInfoDelegate : public scenic_impl::Scenic::GetDisplayInfoDelegateDe
   void GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) override {
     auto info = fuchsia::ui::gfx::DisplayInfo();
     callback(std::move(info));
-  };
+  }
 
   void GetDisplayOwnershipEvent(
       fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) override {
     zx::event event;
     callback(std::move(event));
-  };
+  }
 };
 
 class TakeScreenshotDelegate : public scenic_impl::TakeScreenshotDelegateDeprecated {

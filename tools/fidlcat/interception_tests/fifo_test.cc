@@ -26,7 +26,7 @@ std::unique_ptr<SystemCallTest> ZxFifoCreate(int64_t result, std::string_view re
   zx_handle_t out0 = kHandleOut;                                                                   \
   zx_handle_t out1 = kHandleOut2;                                                                  \
   PerformDisplayTest("$plt(zx_fifo_create)", ZxFifoCreate(result, #result, 4, 3, 0, &out0, &out1), \
-                     expected);
+                     expected)
 
 #define FIFO_CREATE_DISPLAY_TEST(name, errno, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { FIFO_CREATE_DISPLAY_TEST_CONTENT(errno, expected); } \
@@ -43,7 +43,7 @@ FIFO_CREATE_DISPLAY_TEST(ZxFifoCreate, ZX_OK,
                          "\x1B[32m0.000000\x1B[0m "
                          "  -> \x1B[32mZX_OK\x1B[0m ("
                          "out0: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m, "
-                         "out1: \x1B[32mhandle\x1B[0m = \x1B[31mbde90222\x1B[0m)\n");
+                         "out1: \x1B[32mhandle\x1B[0m = \x1B[31mbde90222\x1B[0m)\n")
 
 // zx_fifo_read tests.
 
@@ -69,7 +69,7 @@ std::unique_ptr<SystemCallTest> ZxFifoRead(int64_t result, std::string_view resu
   PerformDisplayTest(                                                                    \
       "$plt(zx_fifo_read)",                                                              \
       ZxFifoRead(result, #result, kHandle, kElemSize, buffer.data(), 10, &actual_count), \
-      expected);
+      expected)
 
 #define FIFO_READ_DISPLAY_TEST(name, errno, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { FIFO_READ_DISPLAY_TEST_CONTENT(errno, expected); } \
@@ -92,7 +92,7 @@ FIFO_READ_DISPLAY_TEST(
     "\x1B[34m04\x1B[0m, \x1B[34m05\x1B[0m, \x1B[34m06\x1B[0m, \x1B[34m07\x1B[0m, "
     "\x1B[34m08\x1B[0m, \x1B[34m09\x1B[0m, \x1B[34m0a\x1B[0m, \x1B[34m0b\x1B[0m, "
     "\x1B[34m0c\x1B[0m, \x1B[34m0d\x1B[0m, \x1B[34m0e\x1B[0m, \x1B[34m0f\x1B[0m, "
-    "\x1B[34m10\x1B[0m, \x1B[34m11\x1B[0m, \x1B[34m12\x1B[0m, \x1B[34m13\x1B[0m ]\n");
+    "\x1B[34m10\x1B[0m, \x1B[34m11\x1B[0m, \x1B[34m12\x1B[0m, \x1B[34m13\x1B[0m ]\n")
 
 // zx_fifo_write tests.
 
@@ -118,7 +118,7 @@ std::unique_ptr<SystemCallTest> ZxFifoWrite(int64_t result, std::string_view res
   PerformDisplayTest("$plt(zx_fifo_write)",                                          \
                      ZxFifoWrite(result, #result, kHandle, kElemSize, buffer.data(), \
                                  buffer.size() / kElemSize, &actual_count),          \
-                     expected);
+                     expected)
 
 #define FIFO_WRITE_DISPLAY_TEST(name, errno, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { FIFO_WRITE_DISPLAY_TEST_CONTENT(errno, expected); } \
@@ -141,6 +141,6 @@ FIFO_WRITE_DISPLAY_TEST(
     "\x1B[34m10\x1B[0m, \x1B[34m11\x1B[0m, \x1B[34m12\x1B[0m, \x1B[34m13\x1B[0m ]\n"
     "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m ("
-    "actual: \x1B[32msize\x1B[0m = \x1B[34m2\x1B[0m/\x1B[34m5\x1B[0m)\n");
+    "actual: \x1B[32msize\x1B[0m = \x1B[34m2\x1B[0m/\x1B[34m5\x1B[0m)\n")
 
 }  // namespace fidlcat

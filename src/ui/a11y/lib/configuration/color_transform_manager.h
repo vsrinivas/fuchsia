@@ -40,6 +40,6 @@ class ColorTransformManager : public fuchsia::accessibility::ColorTransform {
   // Note that for now, this class supports exactly one color transform handler.
   fuchsia::accessibility::ColorTransformHandlerPtr color_transform_handler_ptr_;
 };
-};  // namespace a11y
+} // namespace a11y
 
 #endif  // SRC_UI_A11Y_LIB_CONFIGURATION_COLOR_TRANSFORM_MANAGER_H_

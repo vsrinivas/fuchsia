@@ -29,7 +29,7 @@ std::unique_ptr<SystemCallTest> ZxIommuCreate(int64_t result, std::string_view r
   PerformDisplayTest(                                                                        \
       "$plt(zx_iommu_create)",                                                               \
       ZxIommuCreate(result, #result, kHandle, ZX_IOMMU_TYPE_DUMMY, nullptr, 0, &handle_out), \
-      expected);
+      expected)
 
 #define IOMMU_CREATE_DUMMY_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                  \
@@ -48,7 +48,7 @@ IOMMU_CREATE_DUMMY_DISPLAY_TEST(
     "resource: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "type: \x1B[32mzx.iommu_type\x1B[0m = \x1B[31mZX_IOMMU_TYPE_DUMMY\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n")
 
 #define IOMMU_CREATE_INTEL_DISPLAY_TEST_CONTENT(result, expected)                        \
   zx_iommu_desc_intel_t desc = {.register_base = 0x1234,                                 \
@@ -60,7 +60,7 @@ IOMMU_CREATE_DUMMY_DISPLAY_TEST(
   PerformDisplayTest("$plt(zx_iommu_create)",                                            \
                      ZxIommuCreate(result, #result, kHandle, ZX_IOMMU_TYPE_INTEL, &desc, \
                                    sizeof(desc), &handle_out),                           \
-                     expected);
+                     expected)
 
 #define IOMMU_CREATE_INTEL_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                  \
@@ -86,6 +86,6 @@ IOMMU_CREATE_INTEL_DISPLAY_TEST(
     "    reserved_memory_bytes: \x1B[32muint16\x1B[0m = \x1B[34m1024\x1B[0m\n"
     "  }\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n")
 
 }  // namespace fidlcat

@@ -84,7 +84,7 @@ class System {
       const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
       uint64_t frame_trace_id, fit::function<void(scheduling::SessionId)> destroy_session) {
     return {};
-  };
+  }
 
   SystemContext* context() { return &context_; }
 

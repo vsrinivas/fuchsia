@@ -37,7 +37,7 @@ fit::deferred_action<fit::closure> SetupCobalt(bool enable_cobalt, async_dispatc
     return fit::defer<fit::closure>([] {});
   }
   return modular::InitializeCobalt(dispatcher, component_context);
-};
+}
 
 std::unique_ptr<modular::BasemgrImpl> CreateBasemgrImpl(
     modular::ModularConfigAccessor config_accessor, sys::ComponentContext* component_context,

@@ -15,7 +15,7 @@ std::unique_ptr<SystemCallTest> ZxThreadExit() {
 }
 
 #define THREAD_EXIT_DISPLAY_TEST_CONTENT(expected) \
-  PerformNoReturnDisplayTest("$plt(zx_thread_exit)", ZxThreadExit(), expected);
+  PerformNoReturnDisplayTest("$plt(zx_thread_exit)", ZxThreadExit(), expected)
 
 #define THREAD_EXIT_DISPLAY_TEST(name, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { THREAD_EXIT_DISPLAY_TEST_CONTENT(expected); } \
@@ -25,7 +25,7 @@ THREAD_EXIT_DISPLAY_TEST(ZxThreadExit,
                          "\n"
                          "\x1B[32m0.000000\x1B[0m "
                          "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
-                         "zx_thread_exit()\n");
+                         "zx_thread_exit()\n")
 
 // zx_thread_create tests.
 
@@ -47,7 +47,7 @@ std::unique_ptr<SystemCallTest> ZxThreadCreate(int64_t result, std::string_view 
   zx_handle_t out = kHandleOut;                                                             \
   PerformDisplayTest("$plt(zx_thread_create)",                                              \
                      ZxThreadCreate(result, #result, kHandle, name, strlen(name), 0, &out), \
-                     expected);
+                     expected)
 
 #define THREAD_CREATE_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {             \
@@ -65,7 +65,7 @@ THREAD_CREATE_DISPLAY_TEST(ZxThreadCreate, ZX_OK,
                            "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
                            "\x1B[32m0.000000\x1B[0m "
                            "  -> \x1B[32mZX_OK\x1B[0m ("
-                           "out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
+                           "out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n")
 
 CREATE_AUTOMATION_TEST(ZxThreadCreateAutomation, "zx_thread_create", ZX_OK,
                        "Invoked bp instructions:\n"
@@ -79,7 +79,7 @@ CREATE_AUTOMATION_TEST(ZxThreadCreateAutomation, "zx_thread_create", ZX_OK,
                        "  stored_value(0) = x4\n"
                        "Exit bp instructions:\n"
                        "  load_memory stored_value(0), 4\n"
-                       "  clear_stored_values\n");
+                       "  clear_stored_values\n")
 
 // zx_thread_start tests.
 
@@ -102,7 +102,7 @@ std::unique_ptr<SystemCallTest> ZxThreadStart(int64_t result, std::string_view r
   uintptr_t arg2 = 0x2222;                                                                     \
   PerformDisplayTest("$plt(zx_thread_start)",                                                  \
                      ZxThreadStart(result, #result, kHandle, thread_entry, stack, arg1, arg2), \
-                     expected);
+                     expected)
 
 #define THREAD_START_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {            \
@@ -122,7 +122,7 @@ THREAD_START_DISPLAY_TEST(
     "arg1: \x1B[32muintptr\x1B[0m = \x1B[34m0000000000001111\x1B[0m, "
     "arg2: \x1B[32muintptr\x1B[0m = \x1B[34m0000000000002222\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 // zx_thread_read_state tests.
 
@@ -140,7 +140,7 @@ std::unique_ptr<SystemCallTest> ZxThreadReadState(int64_t result, std::string_vi
 #define THREAD_READ_STATE_DISPLAY_TEST_CONTENT(result, kind, buffer, expected)                   \
   PerformDisplayTest("$plt(zx_thread_read_state)",                                               \
                      ZxThreadReadState(result, #result, kHandle, kind, &buffer, sizeof(buffer)), \
-                     expected);
+                     expected)
 
 TEST_F(InterceptionWorkflowTestArm, ZxThreadReadStateGeneralRegsAArch64) {
   zx_thread_state_general_regs_aarch64_t buffer;
@@ -863,7 +863,7 @@ THREAD_READ_STATE_SINGLE_STEP_DISPLAY_TEST(
     "kind: \x1B[32mzx.thread_state_topic\x1B[0m = \x1B[34mZX_THREAD_STATE_SINGLE_STEP\x1B[0m, "
     "buffer_size: \x1B[32msize\x1B[0m = \x1B[34m4\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m (single_step: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (single_step: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n")
 
 THREAD_READ_STATE_SINGLE_STEP_DISPLAY_TEST(
     ZxThreadReadStateSingleStep1, ZX_OK, 1,
@@ -875,7 +875,7 @@ THREAD_READ_STATE_SINGLE_STEP_DISPLAY_TEST(
     "kind: \x1B[32mzx.thread_state_topic\x1B[0m = \x1B[34mZX_THREAD_STATE_SINGLE_STEP\x1B[0m, "
     "buffer_size: \x1B[32msize\x1B[0m = \x1B[34m4\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m (single_step: \x1B[32muint32\x1B[0m = \x1B[34m1\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (single_step: \x1B[32muint32\x1B[0m = \x1B[34m1\x1B[0m)\n")
 
 // zx_thread_write_state tests.
 
@@ -893,7 +893,7 @@ std::unique_ptr<SystemCallTest> ZxThreadWriteState(int64_t result, std::string_v
 #define THREAD_WRITE_STATE_DISPLAY_TEST_CONTENT(result, kind, buffer, expected)                   \
   PerformDisplayTest("$plt(zx_thread_write_state)",                                               \
                      ZxThreadWriteState(result, #result, kHandle, kind, &buffer, sizeof(buffer)), \
-                     expected);
+                     expected)
 
 TEST_F(InterceptionWorkflowTestArm, ZxThreadWriteStateGeneralRegsAArch64) {
   zx_thread_state_general_regs_aarch64_t buffer;
@@ -1620,7 +1620,7 @@ THREAD_WRITE_STATE_SINGLE_STEP_DISPLAY_TEST(
     "buffer_size: \x1B[32msize\x1B[0m = \x1B[34m4\x1B[0m, "
     "single_step: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 THREAD_WRITE_STATE_SINGLE_STEP_DISPLAY_TEST(
     ZxThreadWriteStateSingleStep1, ZX_OK, 1,
@@ -1633,6 +1633,6 @@ THREAD_WRITE_STATE_SINGLE_STEP_DISPLAY_TEST(
     "buffer_size: \x1B[32msize\x1B[0m = \x1B[34m4\x1B[0m, "
     "single_step: \x1B[32muint32\x1B[0m = \x1B[34m1\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 }  // namespace fidlcat

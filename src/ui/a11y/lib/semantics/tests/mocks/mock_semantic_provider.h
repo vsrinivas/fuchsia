@@ -33,7 +33,7 @@ class MockSemanticProvider {
       fuchsia::accessibility::virtualkeyboard::Registry* registry = nullptr);
   ~MockSemanticProvider() = default;
 
-  zx_koid_t koid() const { return a11y::GetKoid(view_ref_); };
+  zx_koid_t koid() const { return a11y::GetKoid(view_ref_); }
 
   const fuchsia::ui::views::ViewRef& view_ref() { return view_ref_; }
 
@@ -51,7 +51,7 @@ class MockSemanticProvider {
   void SetHitTestResult(std::optional<uint32_t> hit_test_result);
 
   // Returns Commit Failed status.
-  bool CommitFailedStatus() const { return commit_failed_; };
+  bool CommitFailedStatus() const { return commit_failed_; }
 
   void SetSemanticsEnabled(bool enabled);
 

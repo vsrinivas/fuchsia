@@ -26,7 +26,7 @@ std::unique_ptr<SystemCallTest> ZxGuestCreate(int64_t result, std::string_view r
   zx_handle_t vmar_handle = kHandleOut2;                                                      \
   PerformDisplayTest("$plt(zx_guest_create)",                                                 \
                      ZxGuestCreate(result, #result, kHandle, 0, &guest_handle, &vmar_handle), \
-                     expected);
+                     expected)
 
 #define GUEST_CREATE_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {            \
@@ -44,7 +44,7 @@ GUEST_CREATE_DISPLAY_TEST(ZxGuestCreate, ZX_OK,
                           "\x1B[32m0.000000\x1B[0m "
                           "  -> \x1B[32mZX_OK\x1B[0m ("
                           "guest_handle: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m, "
-                          "vmar_handle: \x1B[32mhandle\x1B[0m = \x1B[31mbde90222\x1B[0m)\n");
+                          "vmar_handle: \x1B[32mhandle\x1B[0m = \x1B[31mbde90222\x1B[0m)\n")
 
 // zx_guest_set_trap tests.
 
@@ -65,7 +65,7 @@ std::unique_ptr<SystemCallTest> ZxGuestSetTrap(int64_t result, std::string_view 
   PerformDisplayTest(                                                                         \
       "$plt(zx_guest_set_trap)",                                                              \
       ZxGuestSetTrap(result, #result, kHandle, ZX_GUEST_TRAP_IO, 0x1234, 16, kHandle2, kKey), \
-      expected);
+      expected)
 
 #define GUEST_SET_TRAP_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {              \
@@ -87,6 +87,6 @@ GUEST_SET_TRAP_DISPLAY_TEST(ZxGuestSetTrap, ZX_OK,
                             "port_handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1222\x1B[0m, "
                             "key: \x1B[32muint64\x1B[0m = \x1B[34m1234\x1B[0m)\n"
                             "\x1B[32m0.000000\x1B[0m "
-                            "  -> \x1B[32mZX_OK\x1B[0m\n");
+                            "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 }  // namespace fidlcat

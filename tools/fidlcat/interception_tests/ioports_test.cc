@@ -22,7 +22,7 @@ std::unique_ptr<SystemCallTest> ZxIoportsRequest(int64_t result, std::string_vie
 
 #define IOPORTS_REQUEST_DISPLAY_TEST_CONTENT(result, expected) \
   PerformDisplayTest("$plt(zx_ioports_request)",               \
-                     ZxIoportsRequest(result, #result, kHandle, 0x1230, 16), expected);
+                     ZxIoportsRequest(result, #result, kHandle, 0x1230, 16), expected)
 
 #define IOPORTS_REQUEST_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {               \
@@ -41,7 +41,7 @@ IOPORTS_REQUEST_DISPLAY_TEST(ZxIoportsRequest, ZX_OK,
                              "io_addr: \x1B[32muint16\x1B[0m = \x1B[34m1230\x1B[0m, "
                              "len: \x1B[32muint32\x1B[0m = \x1B[34m16\x1B[0m)\n"
                              "\x1B[32m0.000000\x1B[0m "
-                             "  -> \x1B[32mZX_OK\x1B[0m\n");
+                             "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 // zx_ioports_release tests.
 
@@ -57,7 +57,7 @@ std::unique_ptr<SystemCallTest> ZxIoportsRelease(int64_t result, std::string_vie
 
 #define IOPORTS_RELEASE_DISPLAY_TEST_CONTENT(result, expected) \
   PerformDisplayTest("$plt(zx_ioports_release)",               \
-                     ZxIoportsRelease(result, #result, kHandle, 0x1230, 16), expected);
+                     ZxIoportsRelease(result, #result, kHandle, 0x1230, 16), expected)
 
 #define IOPORTS_RELEASE_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {               \
@@ -76,6 +76,6 @@ IOPORTS_RELEASE_DISPLAY_TEST(ZxIoportsRelease, ZX_OK,
                              "io_addr: \x1B[32muint16\x1B[0m = \x1B[34m1230\x1B[0m, "
                              "len: \x1B[32muint32\x1B[0m = \x1B[34m16\x1B[0m)\n"
                              "\x1B[32m0.000000\x1B[0m "
-                             "  -> \x1B[32mZX_OK\x1B[0m\n");
+                             "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 }  // namespace fidlcat

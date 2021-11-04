@@ -16,9 +16,9 @@ namespace system_log_recorder {
 
 class IdentityDecoder : public Decoder {
  public:
-  IdentityDecoder(){};
+  IdentityDecoder(){}
 
-  virtual ~IdentityDecoder(){};
+  virtual ~IdentityDecoder(){}
 
   virtual EncodingVersion GetEncodingVersion() const { return EncodingVersion::kIdentity; }
 

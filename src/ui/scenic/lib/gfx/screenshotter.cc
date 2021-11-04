@@ -109,7 +109,7 @@ constexpr vk::Format kScenicScreenshotFormat = vk::Format::eB8G8R8A8Srgb;
 
 constexpr uint32_t kBytesPerPixel = 4u;
 
-};  // namespace
+} // namespace
 
 // static
 void Screenshotter::OnCommandBufferDone(

@@ -37,7 +37,7 @@ class TestErrorReporter : public ErrorReporter {
 
 class TestEventReporter : public EventReporter {
  public:
-  TestEventReporter() : weak_factory_(this){};
+  TestEventReporter() : weak_factory_(this){}
 
   const std::vector<fuchsia::ui::scenic::Event>& events() const { return events_; }
 

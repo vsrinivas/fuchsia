@@ -25,7 +25,7 @@ std::unique_ptr<SystemCallTest> ZxDebuglogCreate(int64_t result, std::string_vie
 #define DEBUGLOG_CREATE_DISPLAY_TEST_CONTENT(result, expected) \
   zx_handle_t out = kHandleOut;                                \
   PerformDisplayTest("$plt(zx_debuglog_create)",               \
-                     ZxDebuglogCreate(result, #result, kHandle, 0, &out), expected);
+                     ZxDebuglogCreate(result, #result, kHandle, 0, &out), expected)
 
 #define DEBUGLOG_CREATE_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {               \
@@ -44,7 +44,7 @@ DEBUGLOG_CREATE_DISPLAY_TEST(
     "resource: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n")
 
 // zx_debuglog_write tests.
 
@@ -63,7 +63,7 @@ std::unique_ptr<SystemCallTest> ZxDebuglogWrite(int64_t result, std::string_view
   std::string buffer = "My buffer data";                                                          \
   PerformDisplayTest("$plt(zx_debuglog_write)",                                                   \
                      ZxDebuglogWrite(result, #result, kHandle, 0, buffer.c_str(), buffer.size()), \
-                     expected);
+                     expected)
 
 #define DEBUGLOG_WRITE_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {              \
@@ -83,7 +83,7 @@ DEBUGLOG_WRITE_DISPLAY_TEST(
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
     "  buffer: \x1B[32mvector<uint8>\x1B[0m = \x1B[31m\"My buffer data\"\x1B[0m\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 // zx_debuglog_read tests.
 
@@ -102,7 +102,7 @@ std::unique_ptr<SystemCallTest> ZxDebuglogRead(int64_t result, std::string_view 
   std::string buffer = "My buffer data";                                                        \
   PerformDisplayTest("$plt(zx_debuglog_read)",                                                  \
                      ZxDebuglogRead(result, #result, kHandle, 0, buffer.data(), buffer.size()), \
-                     expected);
+                     expected)
 
 #define DEBUGLOG_READ_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {             \
@@ -120,7 +120,7 @@ DEBUGLOG_READ_DISPLAY_TEST(
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n"
-    "    buffer: \x1B[32mvector<uint8>\x1B[0m = \x1B[31m\"My buffer data\"\x1B[0m\n");
+    "    buffer: \x1B[32mvector<uint8>\x1B[0m = \x1B[31m\"My buffer data\"\x1B[0m\n")
 
 // zx_ktrace_read tests.
 
@@ -143,7 +143,7 @@ std::unique_ptr<SystemCallTest> ZxKtraceRead(int64_t result, std::string_view re
   memcpy(data.data(), my_data.c_str(), my_data.size());                                            \
   PerformDisplayTest("$plt(zx_ktrace_read)",                                                       \
                      ZxKtraceRead(result, #result, kHandle, data.data(), 0, data.size(), &actual), \
-                     expected);
+                     expected)
 
 #define KTRACE_READ_DISPLAY_TEST(name, errno, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { KTRACE_READ_DISPLAY_TEST_CONTENT(errno, expected); } \
@@ -159,7 +159,7 @@ KTRACE_READ_DISPLAY_TEST(ZxKtraceRead, ZX_OK,
                          "\x1B[32m0.000000\x1B[0m "
                          "  -> \x1B[32mZX_OK\x1B[0m ("
                          "actual: \x1B[32msize\x1B[0m = \x1B[34m7\x1B[0m/\x1B[34m100\x1B[0m)\n"
-                         "    data: \x1B[32mvector<uint8>\x1B[0m = \x1B[31m\"My data\"\x1B[0m\n");
+                         "    data: \x1B[32mvector<uint8>\x1B[0m = \x1B[31m\"My data\"\x1B[0m\n")
 
 // zx_ktrace_control tests.
 
@@ -180,7 +180,7 @@ std::unique_ptr<SystemCallTest> ZxKtraceControl(int64_t result, std::string_view
   memcpy(buffer.data(), data.c_str(), data.size() + 1);                                   \
   PerformDisplayTest("$plt(zx_ktrace_control)",                                           \
                      ZxKtraceControl(result, #result, kHandle, action, 0, buffer.data()), \
-                     expected);
+                     expected)
 
 #define KTRACE_CONTROL_DISPLAY_TEST(name, errno, action, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                      \
@@ -200,7 +200,7 @@ KTRACE_CONTROL_DISPLAY_TEST(
     "action: \x1B[32mzx.ktrace_control_action\x1B[0m = \x1B[34mKTRACE_ACTION_START\x1B[0m, "
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 KTRACE_CONTROL_DISPLAY_TEST(
     ZxKtraceControl4, ZX_OK, 4,
@@ -213,7 +213,7 @@ KTRACE_CONTROL_DISPLAY_TEST(
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m, "
     "ptr: \x1B[32mstring\x1B[0m = \x1B[31m\"My_name\"\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 // zx_ktrace_write tests.
 
@@ -230,7 +230,7 @@ std::unique_ptr<SystemCallTest> ZxKtraceWrite(int64_t result, std::string_view r
 
 #define KTRACE_WRITE_DISPLAY_TEST_CONTENT(result, expected)                                     \
   PerformDisplayTest("$plt(zx_ktrace_write)", ZxKtraceWrite(result, #result, kHandle, 0, 1, 2), \
-                     expected);
+                     expected)
 
 #define KTRACE_WRITE_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {            \
@@ -248,7 +248,7 @@ KTRACE_WRITE_DISPLAY_TEST(ZxKtraceWrite, ZX_OK,
                           "arg0: \x1B[32muint32\x1B[0m = \x1B[34m1\x1B[0m, "
                           "arg1: \x1B[32muint32\x1B[0m = \x1B[34m2\x1B[0m)\n"
                           "\x1B[32m0.000000\x1B[0m "
-                          "  -> \x1B[32mZX_OK\x1B[0m\n");
+                          "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 // zx_mtrace_control tests.
 
@@ -270,7 +270,7 @@ std::unique_ptr<SystemCallTest> ZxMtraceControl(int64_t result, std::string_view
   std::string data = "My data";                               \
   PerformDisplayTest(                                         \
       "$plt(zx_mtrace_control)",                              \
-      ZxMtraceControl(result, #result, kHandle, 1, 2, 3, data.c_str(), data.size()), expected);
+      ZxMtraceControl(result, #result, kHandle, 1, 2, 3, data.c_str(), data.size()), expected)
 
 #define MTRACE_CONTROL_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {              \
@@ -291,7 +291,7 @@ MTRACE_CONTROL_DISPLAY_TEST(ZxMtraceControl, ZX_OK,
                             "options: \x1B[32muint32\x1B[0m = \x1B[34m3\x1B[0m)\n"
                             "  ptr: \x1B[32mvector<uint8>\x1B[0m = \x1B[31m\"My data\"\x1B[0m\n"
                             "\x1B[32m0.000000\x1B[0m "
-                            "  -> \x1B[32mZX_OK\x1B[0m\n");
+                            "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 // zx_debug_read tests.
 
@@ -313,7 +313,7 @@ std::unique_ptr<SystemCallTest> ZxDebugRead(int64_t result, std::string_view res
   size_t actual = data.size();                                                                     \
   PerformDisplayTest("$plt(zx_debug_read)",                                                        \
                      ZxDebugRead(result, #result, kHandle, buffer.data(), buffer.size(), &actual), \
-                     expected);
+                     expected)
 
 #define DEBUG_READ_DISPLAY_TEST(name, errno, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { DEBUG_READ_DISPLAY_TEST_CONTENT(errno, expected); } \
@@ -327,7 +327,7 @@ DEBUG_READ_DISPLAY_TEST(ZxDebugRead, ZX_OK,
                         "\x1B[32m0.000000\x1B[0m "
                         "  -> \x1B[32mZX_OK\x1B[0m ("
                         "actual: \x1B[32msize\x1B[0m = \x1B[34m7\x1B[0m/\x1B[34m32\x1B[0m, "
-                        "buffer: \x1B[32mstring\x1B[0m = \x1B[31m\"My data\"\x1B[0m)\n");
+                        "buffer: \x1B[32mstring\x1B[0m = \x1B[31m\"My data\"\x1B[0m)\n")
 
 // zx_debug_write tests.
 
@@ -342,7 +342,7 @@ std::unique_ptr<SystemCallTest> ZxDebugWrite(int64_t result, std::string_view re
 #define DEBUG_WRITE_DISPLAY_TEST_CONTENT(result, expected) \
   std::string buffer = "My data";                          \
   PerformDisplayTest("$plt(zx_debug_write)",               \
-                     ZxDebugWrite(result, #result, buffer.data(), buffer.size()), expected);
+                     ZxDebugWrite(result, #result, buffer.data(), buffer.size()), expected)
 
 #define DEBUG_WRITE_DISPLAY_TEST(name, errno, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { DEBUG_WRITE_DISPLAY_TEST_CONTENT(errno, expected); } \
@@ -355,7 +355,7 @@ DEBUG_WRITE_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_debug_write(buffer: \x1B[32mstring\x1B[0m = \x1B[31m\"My data\"\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 // zx_debug_send_command tests.
 
@@ -373,7 +373,7 @@ std::unique_ptr<SystemCallTest> ZxDebugSendCommand(int64_t result, std::string_v
   std::string buffer = "My data";                                                                \
   PerformDisplayTest("$plt(zx_debug_send_command)",                                              \
                      ZxDebugSendCommand(result, #result, kHandle, buffer.data(), buffer.size()), \
-                     expected);
+                     expected)
 
 #define DEBUG_SEND_COMMAND_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                  \
@@ -391,6 +391,6 @@ DEBUG_SEND_COMMAND_DISPLAY_TEST(ZxDebugSendCommand, ZX_OK,
                                 "resource: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
                                 "buffer: \x1B[32mstring\x1B[0m = \x1B[31m\"My data\"\x1B[0m)\n"
                                 "\x1B[32m0.000000\x1B[0m "
-                                "  -> \x1B[32mZX_OK\x1B[0m\n");
+                                "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 }  // namespace fidlcat

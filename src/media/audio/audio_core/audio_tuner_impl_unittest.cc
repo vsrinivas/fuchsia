@@ -87,7 +87,7 @@ class TestDevice : public AudioOutput {
     ZX_ASSERT(ZX_OK == driver()->Init(std::move(c2)));
     fake_driver_->Start();
     driver()->GetDriverInfo();
-  };
+  }
 
   void UpdatePlugState(bool plugged) { AudioDevice::UpdatePlugState(plugged, plug_time()); }
   void CompleteUpdates() {

@@ -22,7 +22,7 @@ constexpr auto kElementModuleName = "element";
 // Returns a unique story name for a newly proposed element.
 std::string GenerateStoryName() {
   return kElementStoryNamePrefix + uuid::Uuid::Generate().ToString();
-};
+}
 
 }  // namespace
 

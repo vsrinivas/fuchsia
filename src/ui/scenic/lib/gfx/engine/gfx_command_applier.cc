@@ -480,7 +480,7 @@ bool GfxCommandApplier::ApplySetViewHolderBoundsColor(
     return true;
   }
   return false;
-};
+}
 
 bool GfxCommandApplier::ApplyDetachCmd(Session* session, fuchsia::ui::gfx::DetachCmd command) {
   if (auto resource = session->resources()->FindResource<Resource>(command.id)) {

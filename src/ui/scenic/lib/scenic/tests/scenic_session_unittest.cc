@@ -19,11 +19,11 @@ namespace scenic_impl::test {
 
 class MockGfxSession : public gfx::Session {
  public:
-  MockGfxSession(scheduling::SessionId session_id = 1) : Session(session_id, {}){};
+  MockGfxSession(scheduling::SessionId session_id = 1) : Session(session_id, {}){}
 
   void DispatchCommand(fuchsia::ui::scenic::Command command, scheduling::PresentId) override {
     ++num_commands_dispatched_;
-  };
+  }
 
   int num_commands_dispatched_ = 0;
 };

@@ -245,7 +245,7 @@ TEST_F(CrashRegisterTest, GetProduct_NoUpsert) {
   };
   EXPECT_THAT(GetProduct("some program name"), expected);
   EXPECT_TRUE(ReadRegisterJson().empty());
-};
+}
 
 TEST_F(CrashRegisterTest, GetProduct_NoUpsert_NoChannelControl) {
   SetUpChannelControlServer(nullptr);
@@ -257,7 +257,7 @@ TEST_F(CrashRegisterTest, GetProduct_NoUpsert_NoChannelControl) {
   };
   EXPECT_THAT(GetProduct("some program name"), expected);
   EXPECT_TRUE(ReadRegisterJson().empty());
-};
+}
 
 TEST_F(CrashRegisterTest, GetProduct_FromUpsert) {
   CrashReportingProduct product;
@@ -279,7 +279,7 @@ TEST_F(CrashRegisterTest, GetProduct_FromUpsert) {
         "channel": "some channel"
     }
 })");
-};
+}
 
 TEST_F(CrashRegisterTest, GetProduct_DifferentUpsert) {
   SetUpChannelControlServer(
@@ -307,7 +307,7 @@ TEST_F(CrashRegisterTest, GetProduct_DifferentUpsert) {
         "channel": "some channel"
     }
 })");
-};
+}
 
 TEST_F(CrashRegisterTest, ReinitializesFromJson) {
   constexpr char kOtherComponentUrl[] =

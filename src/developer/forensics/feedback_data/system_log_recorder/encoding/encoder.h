@@ -16,7 +16,7 @@ namespace system_log_recorder {
 // Encodes data, taking into account what it has already encoded so far until it gets reset.
 class Encoder {
  public:
-  virtual ~Encoder(){};
+  virtual ~Encoder(){}
 
   virtual EncodingVersion GetEncodingVersion() const = 0;
 

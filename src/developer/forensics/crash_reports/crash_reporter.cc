@@ -143,7 +143,7 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
   callback(::fpromise::ok());
 
   File(std::move(report), /*is_hourly_snapshot=*/false);
-};
+}
 
 void CrashReporter::File(fuchsia::feedback::CrashReport report, const bool is_hourly_snapshot) {
   if (reporting_policy_watcher_->CurrentPolicy() == ReportingPolicy::kDoNotFileAndDelete) {

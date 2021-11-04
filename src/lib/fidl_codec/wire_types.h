@@ -56,7 +56,7 @@ class Type {
   // Prints a colorized representation of the type.
   virtual void PrettyPrint(PrettyPrinter& printer) const {
     printer << Green << Name() << ResetColor;
-  };
+  }
 
   // Returns the size of this type when embedded in another object.
   virtual size_t InlineSize(WireVersion version) const = 0;

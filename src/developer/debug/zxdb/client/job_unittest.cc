@@ -35,7 +35,7 @@ class JobSink : public RemoteAPI {
   void Attach(const debug_ipc::AttachRequest& request,
               fit::callback<void(const Err&, debug_ipc::AttachReply)> cb) override {}
 
-  void set_status(debug::Status status) { status_ = std::move(status); };
+  void set_status(debug::Status status) { status_ = std::move(status); }
   void set_err(Err err) { err_ = err; }
   void set_pids(std::vector<uint64_t> pids) { pids_ = std::move(pids); }
 

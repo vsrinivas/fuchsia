@@ -27,7 +27,7 @@ std::unique_ptr<SystemCallTest> ZxInterruptCreate(int64_t result, std::string_vi
       "$plt(zx_interrupt_create)",                                                         \
       ZxInterruptCreate(result, #result, kHandle, 1,                                       \
                         ZX_INTERRUPT_MODE_EDGE_LOW | ZX_INTERRUPT_REMAP_IRQ, &out_handle), \
-      expected);
+      expected)
 
 #define INTERRUPT_CREATE_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                \
@@ -48,7 +48,7 @@ INTERRUPT_CREATE_DISPLAY_TEST(
     "options: \x1B[32mzx.interrupt_flags\x1B[0m = "
     "\x1B[31mZX_INTERRUPT_MODE_EDGE_LOW | ZX_INTERRUPT_REMAP_IRQ\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m (out_handle: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (out_handle: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n")
 
 // zx_interrupt_bind tests.
 
@@ -65,7 +65,7 @@ std::unique_ptr<SystemCallTest> ZxInterruptBind(int64_t result, std::string_view
 
 #define INTERRUPT_BIND_DISPLAY_TEST_CONTENT(result, expected) \
   PerformDisplayTest("$plt(zx_interrupt_bind)",               \
-                     ZxInterruptBind(result, #result, kHandle, kHandle2, kKey, 0), expected);
+                     ZxInterruptBind(result, #result, kHandle, kHandle2, kKey, 0), expected)
 
 #define INTERRUPT_BIND_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {              \
@@ -85,7 +85,7 @@ INTERRUPT_BIND_DISPLAY_TEST(ZxInterruptBind, ZX_OK,
                             "key: \x1B[32muint64\x1B[0m = \x1B[34m1234\x1B[0m, "
                             "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
                             "\x1B[32m0.000000\x1B[0m "
-                            "  -> \x1B[32mZX_OK\x1B[0m\n");
+                            "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 // zx_interrupt_wait tests.
 
@@ -100,7 +100,7 @@ std::unique_ptr<SystemCallTest> ZxInterruptWait(int64_t result, std::string_view
 #define INTERRUPT_WAIT_DISPLAY_TEST_CONTENT(result, expected) \
   zx_time_t out_timestamp = ZX_SEC(8000) + ZX_USEC(123);      \
   PerformDisplayTest("$plt(zx_interrupt_wait)",               \
-                     ZxInterruptWait(result, #result, kHandle, &out_timestamp), expected);
+                     ZxInterruptWait(result, #result, kHandle, &out_timestamp), expected)
 
 #define INTERRUPT_WAIT_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {              \
@@ -119,7 +119,7 @@ INTERRUPT_WAIT_DISPLAY_TEST(
     "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m ("
     "out_timestamp: \x1B[32mzx.time\x1B[0m = "
-    "\x1B[34m2 hours, 13 minutes, 20 seconds and 123000 nano seconds\x1B[0m)\n");
+    "\x1B[34m2 hours, 13 minutes, 20 seconds and 123000 nano seconds\x1B[0m)\n")
 
 // zx_interrupt_destroy tests.
 
@@ -132,7 +132,7 @@ std::unique_ptr<SystemCallTest> ZxInterruptDestroy(int64_t result, std::string_v
 
 #define INTERRUPT_DESTROY_DISPLAY_TEST_CONTENT(result, expected)                                 \
   PerformDisplayTest("$plt(zx_interrupt_destroy)", ZxInterruptDestroy(result, #result, kHandle), \
-                     expected);
+                     expected)
 
 #define INTERRUPT_DESTROY_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                 \
@@ -149,7 +149,7 @@ INTERRUPT_DESTROY_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_interrupt_destroy(handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 // zx_interrupt_ack tests.
 
@@ -161,7 +161,7 @@ std::unique_ptr<SystemCallTest> ZxInterruptAck(int64_t result, std::string_view 
 }
 
 #define INTERRUPT_ACK_DISPLAY_TEST_CONTENT(result, expected) \
-  PerformDisplayTest("$plt(zx_interrupt_ack)", ZxInterruptAck(result, #result, kHandle), expected);
+  PerformDisplayTest("$plt(zx_interrupt_ack)", ZxInterruptAck(result, #result, kHandle), expected)
 
 #define INTERRUPT_ACK_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {             \
@@ -176,7 +176,7 @@ INTERRUPT_ACK_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_interrupt_ack(handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 // zx_interrupt_trigger tests.
 
@@ -192,7 +192,7 @@ std::unique_ptr<SystemCallTest> ZxInterruptTrigger(int64_t result, std::string_v
 
 #define INTERRUPT_TRIGGER_DISPLAY_TEST_CONTENT(result, expected) \
   PerformDisplayTest("$plt(zx_interrupt_trigger)",               \
-                     ZxInterruptTrigger(result, #result, kHandle, 0, ZX_SEC(8000)), expected);
+                     ZxInterruptTrigger(result, #result, kHandle, 0, ZX_SEC(8000)), expected)
 
 #define INTERRUPT_TRIGGER_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                 \
@@ -212,7 +212,7 @@ INTERRUPT_TRIGGER_DISPLAY_TEST(
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m, "
     "timestamp: \x1B[32mzx.time\x1B[0m = \x1B[34m2 hours, 13 minutes, 20 seconds\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 // zx_interrupt_bind_vcpu tests.
 
@@ -228,7 +228,7 @@ std::unique_ptr<SystemCallTest> ZxInterruptBindVcpu(int64_t result, std::string_
 
 #define INTERRUPT_BIND_VCPU_DISPLAY_TEST_CONTENT(result, expected) \
   PerformDisplayTest("$plt(zx_interrupt_bind_vcpu)",               \
-                     ZxInterruptBindVcpu(result, #result, kHandle, kHandle2, 0), expected);
+                     ZxInterruptBindVcpu(result, #result, kHandle, kHandle2, 0), expected)
 
 #define INTERRUPT_BIND_VCPU_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                   \
@@ -247,6 +247,6 @@ INTERRUPT_BIND_VCPU_DISPLAY_TEST(ZxInterruptBindVcpu, ZX_OK,
                                  "vcpu: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1222\x1B[0m, "
                                  "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
                                  "\x1B[32m0.000000\x1B[0m "
-                                 "  -> \x1B[32mZX_OK\x1B[0m\n");
+                                 "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 }  // namespace fidlcat

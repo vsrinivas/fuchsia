@@ -25,7 +25,7 @@ class DataRegister : public fuchsia::feedback::ComponentDataRegister {
   // Exposed for testing purposes.
   const std::map<std::string, Annotations>& GetNamespacedAnnotations() const {
     return namespaced_annotations_;
-  };
+  }
 
  private:
   void RestoreFromJson();

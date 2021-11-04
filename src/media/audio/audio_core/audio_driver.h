@@ -134,14 +134,14 @@ class AudioDriver {
   const std::shared_ptr<ReadableRingBuffer>& readable_ring_buffer() const
       FXL_NO_THREAD_SAFETY_ANALYSIS {
     return readable_ring_buffer_;
-  };
+  }
   const std::shared_ptr<WritableRingBuffer>& writable_ring_buffer() const
       FXL_NO_THREAD_SAFETY_ANALYSIS {
     return writable_ring_buffer_;
-  };
+  }
 
   AudioClock& reference_clock() { return *audio_clock_; }
-  zx::duration turn_on_delay() { return turn_on_delay_; };
+  zx::duration turn_on_delay() { return turn_on_delay_; }
   std::vector<ChannelAttributes> channel_config() { return configured_channel_config_; }
 
   zx_status_t SetActiveChannels(uint64_t chan_bit_mask);

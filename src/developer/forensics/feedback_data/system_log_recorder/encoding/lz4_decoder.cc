@@ -92,7 +92,7 @@ void Lz4Decoder::Reset() {
   LZ4_freeStreamDecode(stream_);
   stream_ = LZ4_createStreamDecode();
   ring_.Reset();
-};
+}
 
 }  // namespace system_log_recorder
 }  // namespace feedback_data

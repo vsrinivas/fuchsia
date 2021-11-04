@@ -59,10 +59,10 @@ class MediaButtonsHandlerTest : public gtest::TestLoopFixture,
     device_added = false;
   }
 
-  void OnDeviceDisconnected(ui_input::InputDeviceImpl* input_device){};
+  void OnDeviceDisconnected(ui_input::InputDeviceImpl* input_device){}
   void OnReport(ui_input::InputDeviceImpl* input_device, fuchsia::ui::input::InputReport report) {
     handler->OnReport(input_device->id(), std::move(report));
-  };
+  }
 
  protected:
   std::unique_ptr<MockListener> CreateListener() {

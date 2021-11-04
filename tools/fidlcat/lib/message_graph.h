@@ -377,8 +377,8 @@ class GoldenBase {
  public:
   void PrintNode(std::ostream& output) const { output << " golden "; }
 
-  bool has_matching_actual_node() const { return has_matching_actual_node_; };
-  void set_has_matching_actual_node() { has_matching_actual_node_ = true; };
+  bool has_matching_actual_node() const { return has_matching_actual_node_; }
+  void set_has_matching_actual_node() { has_matching_actual_node_ = true; }
 
  protected:
   bool has_matching_actual_node_ = false;
@@ -390,11 +390,11 @@ class GoldenBase {
 class ActualBase {
  public:
   void PrintNode(std::ostream& output) const { output << " actual "; }
-  std::shared_ptr<Node<GoldenBase>> matching_golden_node() const { return matching_golden_node_; };
+  std::shared_ptr<Node<GoldenBase>> matching_golden_node() const { return matching_golden_node_; }
 
   void set_matching_golden_node(std::shared_ptr<Node<GoldenBase>> node) {
     matching_golden_node_ = node;
-  };
+  }
 
  protected:
   std::shared_ptr<Node<GoldenBase>> matching_golden_node_;

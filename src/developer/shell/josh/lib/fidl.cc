@@ -282,7 +282,7 @@ int FidlRunOnInit(JSContext* ctx, JSModuleDef* m) {
   JS_SetClassProto(ctx, fidl_class_id_, proto);
   JS_SetModuleExportList(ctx, m, module_funcs_, std::size(module_funcs_));
   return 0;
-};
+}
 
 }  // namespace
 

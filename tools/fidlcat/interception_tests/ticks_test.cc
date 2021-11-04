@@ -15,7 +15,7 @@ std::unique_ptr<SystemCallTest> ZxTicksGet(int64_t result, std::string_view resu
 }
 
 #define TICKS_GET_DISPLAY_TEST_CONTENT(result, expected) \
-  PerformDisplayTest("$plt(zx_ticks_get)", ZxTicksGet(result, #result), expected);
+  PerformDisplayTest("$plt(zx_ticks_get)", ZxTicksGet(result, #result), expected)
 
 #define TICKS_GET_DISPLAY_TEST(name, errno, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { TICKS_GET_DISPLAY_TEST_CONTENT(errno, expected); } \
@@ -26,7 +26,7 @@ TICKS_GET_DISPLAY_TEST(ZxTicksGet, 497475301988264,
                        "\x1B[32m0.000000\x1B[0m "
                        "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_ticks_get()\n"
                        "\x1B[32m0.000000\x1B[0m "
-                       "  -> \x1B[32mticks\x1B[0m: \x1B[34m497475301988264\x1B[0m\n");
+                       "  -> \x1B[32mticks\x1B[0m: \x1B[34m497475301988264\x1B[0m\n")
 
 // zx_ticks_per_second tests.
 
@@ -35,7 +35,7 @@ std::unique_ptr<SystemCallTest> ZxTicksPerSecond(int64_t result, std::string_vie
 }
 
 #define TICKS_PER_SECOND_DISPLAY_TEST_CONTENT(result, expected) \
-  PerformDisplayTest("$plt(zx_ticks_per_second)", ZxTicksPerSecond(result, #result), expected);
+  PerformDisplayTest("$plt(zx_ticks_per_second)", ZxTicksPerSecond(result, #result), expected)
 
 #define TICKS_PER_SECOND_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                \
@@ -51,6 +51,6 @@ TICKS_PER_SECOND_DISPLAY_TEST(
     "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_ticks_per_second()\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mticks\x1B[0m: \x1B[34m2992964000\x1B[0m\n");
+    "  -> \x1B[32mticks\x1B[0m: \x1B[34m2992964000\x1B[0m\n")
 
 }  // namespace fidlcat

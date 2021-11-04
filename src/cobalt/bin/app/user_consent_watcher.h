@@ -43,7 +43,7 @@ class UserConsentWatcher {
   // Whether the watcher is currently connected to fuchsia.settings.Privacy.
   //
   // Mostly for testing purposes.
-  bool IsConnected() { return privacy_settings_ptr_.is_bound(); };
+  bool IsConnected() { return privacy_settings_ptr_.is_bound(); }
 
   // Mostly for testing purposes.
   const fuchsia::settings::PrivacySettings& privacy_settings() { return privacy_settings_; }

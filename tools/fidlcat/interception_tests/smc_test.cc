@@ -34,7 +34,7 @@ std::unique_ptr<SystemCallTest> ZxSmcCall(int64_t result, std::string_view resul
                                     .secure_os_id = 9};                                     \
   zx_smc_result_t out_smc_result = {.arg0 = 1, .arg1 = 2, .arg2 = 3, .arg3 = 3, .arg6 = 4}; \
   PerformDisplayTest("$plt(zx_smc_call)",                                                   \
-                     ZxSmcCall(result, #result, kHandle, &parameters, &out_smc_result), expected);
+                     ZxSmcCall(result, #result, kHandle, &parameters, &out_smc_result), expected)
 
 #define SMC_CALL_DISPLAY_TEST(name, errno, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { SMC_CALL_DISPLAY_TEST_CONTENT(errno, expected); } \
@@ -64,6 +64,6 @@ SMC_CALL_DISPLAY_TEST(ZxSmcCall, ZX_OK,
                       "arg2: \x1B[32muint64\x1B[0m = \x1B[34m3\x1B[0m, "
                       "arg3: \x1B[32muint64\x1B[0m = \x1B[34m3\x1B[0m, "
                       "arg6: \x1B[32muint64\x1B[0m = \x1B[34m4\x1B[0m "
-                      "}\n");
+                      "}\n")
 
 }  // namespace fidlcat

@@ -19,7 +19,7 @@ class Node;
 // binding automatically sets the value of the target.
 class VariableBinding {
  public:
-  virtual ~VariableBinding(){};
+  virtual ~VariableBinding(){}
 };
 
 template <::fuchsia::ui::gfx::Value::Tag VT, typename T>

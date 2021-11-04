@@ -10,7 +10,7 @@ namespace fidlcat {
 
 // Program stopped on exception tests.
 
-#define DISPLAY_EXCEPTION_TEST_CONTENT(type, expected) PerformExceptionDisplayTest(type, expected);
+#define DISPLAY_EXCEPTION_TEST_CONTENT(type, expected) PerformExceptionDisplayTest(type, expected)
 
 #define DISPLAY_EXCEPTION_TEST(name, type, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { DISPLAY_EXCEPTION_TEST_CONTENT(type, expected); } \
@@ -29,7 +29,7 @@ DISPLAY_EXCEPTION_TEST(DisplayExceptionPageFault, debug_ipc::ExceptionType::kPag
                        "at \x1B[31mfidlcat/foo.cc\x1B[0m\x1B[103m:\x1B[34m25:8\x1B[0m\n"
                        "\x1B[32m0.000000\x1B[0m "
                        "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m \x1B[31m"
-                       "thread stopped on exception\x1B[0m\n");
+                       "thread stopped on exception\x1B[0m\n")
 
 DISPLAY_EXCEPTION_TEST(DisplayExceptionGeneral, debug_ipc::ExceptionType::kGeneral,
                        "\n"
@@ -44,7 +44,7 @@ DISPLAY_EXCEPTION_TEST(DisplayExceptionGeneral, debug_ipc::ExceptionType::kGener
                        "at \x1B[31mfidlcat/foo.cc\x1B[0m\x1B[103m:\x1B[34m25:8\x1B[0m\n"
                        "\x1B[32m0.000000\x1B[0m "
                        "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m \x1B[31m"
-                       "thread stopped on exception\x1B[0m\n");
+                       "thread stopped on exception\x1B[0m\n")
 
 // zx_exception_get_thread tests.
 
@@ -59,7 +59,7 @@ std::unique_ptr<SystemCallTest> ZxExceptionGetThread(int64_t result, std::string
 #define ZX_EXCEPTION_GET_THREAD_DISPLAY_TEST_CONTENT(result, expected) \
   zx_handle_t out = kHandleOut;                                        \
   PerformDisplayTest("$plt(zx_exception_get_thread)",                  \
-                     ZxExceptionGetThread(result, #result, kHandle, &out), expected);
+                     ZxExceptionGetThread(result, #result, kHandle, &out), expected)
 
 #define ZX_EXCEPTION_GET_THREAD_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                       \
@@ -76,7 +76,7 @@ ZX_EXCEPTION_GET_THREAD_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_exception_get_thread(handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n")
 
 // zx_exception_get_process tests.
 
@@ -91,7 +91,7 @@ std::unique_ptr<SystemCallTest> ZxExceptionGetProcess(int64_t result, std::strin
 #define ZX_EXCEPTION_GET_PROCESS_DISPLAY_TEST_CONTENT(result, expected) \
   zx_handle_t out = kHandleOut;                                         \
   PerformDisplayTest("$plt(zx_exception_get_process)",                  \
-                     ZxExceptionGetProcess(result, #result, kHandle, &out), expected);
+                     ZxExceptionGetProcess(result, #result, kHandle, &out), expected)
 
 #define ZX_EXCEPTION_GET_PROCESS_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                        \
@@ -108,6 +108,6 @@ ZX_EXCEPTION_GET_PROCESS_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_exception_get_process(handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n")
 
 }  // namespace fidlcat

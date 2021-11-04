@@ -24,7 +24,7 @@ std::unique_ptr<SystemCallTest> ZxBtiCreate(int64_t result, std::string_view res
 #define BTI_CREATE_DISPLAY_TEST_CONTENT(result, expected)                                       \
   zx_handle_t out = kHandleOut;                                                                 \
   PerformDisplayTest("$plt(zx_bti_create)", ZxBtiCreate(result, #result, kHandle, 0, 10, &out), \
-                     expected);
+                     expected)
 
 #define BTI_CREATE_DISPLAY_TEST(name, errno, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { BTI_CREATE_DISPLAY_TEST_CONTENT(errno, expected); } \
@@ -39,7 +39,7 @@ BTI_CREATE_DISPLAY_TEST(
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m, "
     "bti_id: \x1B[32muint64\x1B[0m = \x1B[34m10\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n")
 
 // zx_bti_pin tests.
 
@@ -65,7 +65,7 @@ std::unique_ptr<SystemCallTest> ZxBtiPin(int64_t result, std::string_view result
   PerformDisplayTest("$plt(zx_bti_pin)",                                                        \
                      ZxBtiPin(result, #result, kHandle, ZX_BTI_PERM_READ | ZX_BTI_PERM_EXECUTE, \
                               kHandle2, 1000, 1024, addrs.data(), addrs.size(), &pmt),          \
-                     expected);
+                     expected)
 
 #define BTI_PIN_DISPLAY_TEST(name, errno, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { BTI_PIN_DISPLAY_TEST_CONTENT(errno, expected); } \
@@ -85,7 +85,7 @@ BTI_PIN_DISPLAY_TEST(
     "  -> \x1B[32mZX_OK\x1B[0m (pmt: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n"
     "    addrs: \x1B[32mvector<zx.paddr>\x1B[0m = [ "
     "\x1B[34m0000000000001234\x1B[0m, \x1B[34m0000000000002345\x1B[0m, "
-    "\x1B[34m0000000000003456\x1B[0m ]\n");
+    "\x1B[34m0000000000003456\x1B[0m ]\n")
 
 // zx_bti_release_quarantine tests.
 
@@ -98,7 +98,7 @@ std::unique_ptr<SystemCallTest> ZxBtiReleaseQuarantine(int64_t result, std::stri
 
 #define BTI_RELEASE_QUARANTINE_DISPLAY_TEST_CONTENT(result, expected) \
   PerformDisplayTest("$plt(zx_bti_release_quarantine)",               \
-                     ZxBtiReleaseQuarantine(result, #result, kHandle), expected);
+                     ZxBtiReleaseQuarantine(result, #result, kHandle), expected)
 
 #define BTI_RELEASE_QUARANTINE_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                      \
@@ -114,6 +114,6 @@ BTI_RELEASE_QUARANTINE_DISPLAY_TEST(
     "\x1B[32m0.000000\x1B[0m test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_bti_release_quarantine(handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 }  // namespace fidlcat

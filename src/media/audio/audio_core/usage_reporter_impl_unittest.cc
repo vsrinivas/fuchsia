@@ -22,7 +22,7 @@ const auto kDeactivateCallback = false;
 
 class FakeUsageWatcher : public fuchsia::media::UsageWatcher {
  public:
-  explicit FakeUsageWatcher(bool activate_callback) : activate_callback_(activate_callback){};
+  explicit FakeUsageWatcher(bool activate_callback) : activate_callback_(activate_callback){}
 
   const fuchsia::media::Usage& last_usage() const { return last_usage_; }
 

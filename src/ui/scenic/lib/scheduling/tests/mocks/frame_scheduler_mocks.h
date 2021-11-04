@@ -107,7 +107,7 @@ class MockSessionUpdater : public SessionUpdater {
   }
 
   // |SessionUpdater|
-  void OnCpuWorkDone() override { cpu_work_done_count_++; };
+  void OnCpuWorkDone() override { cpu_work_done_count_++; }
 
   void SetUpdateSessionsReturnValue(SessionUpdater::UpdateResults new_value) {
     update_sessions_return_value_ = new_value;
@@ -119,7 +119,7 @@ class MockSessionUpdater : public SessionUpdater {
   const std::unordered_map<scheduling::SessionId, scheduling::PresentId>&
   last_sessions_to_update() {
     return last_sessions_to_update_;
-  };
+  }
 
   const std::unordered_map<SessionId, std::map<PresentId, zx::time>>& last_latched_times() const {
     return last_latched_times_;

@@ -22,7 +22,7 @@ class Image;
 class Semaphore;
 using ImagePtr = fxl::RefPtr<Image>;
 using SemaphorePtr = fxl::RefPtr<Semaphore>;
-};  // namespace escher
+} // namespace escher
 
 namespace scenic_impl {
 namespace gfx {

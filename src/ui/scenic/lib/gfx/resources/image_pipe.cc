@@ -77,7 +77,7 @@ void ImagePipe::AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_inf
     CloseConnectionAndCleanUp();
     return;
   }
-};
+}
 
 void ImagePipe::CloseConnectionAndCleanUp() {
   handler_.reset();
@@ -104,7 +104,7 @@ void ImagePipe::RemoveImage(uint32_t image_id) {
                              << image_id << ".";
     CloseConnectionAndCleanUp();
   }
-};
+}
 
 scheduling::PresentId ImagePipe::PresentImage(
     uint32_t image_id, zx::time presentation_time, std::vector<zx::event> acquire_fences,
@@ -139,7 +139,7 @@ scheduling::PresentId ImagePipe::PresentImage(
                 .presentation_time = presentation_time});
 
   return present_id;
-};
+}
 
 ImagePipeUpdateResults ImagePipe::Update(scheduling::PresentId present_id) {
   ImagePipeUpdateResults results{.image_updated = false};

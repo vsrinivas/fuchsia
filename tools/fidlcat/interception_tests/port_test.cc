@@ -42,7 +42,7 @@ std::unique_ptr<SystemCallTest> ZxPortCreate(int64_t status, std::string_view st
       dispatcher->inference().GetInferredHandleInfo(kSecondPid, handle);                     \
   ASSERT_NE(info1, nullptr);                                                                 \
   ASSERT_EQ(info1->type(), "port");                                                          \
-  ASSERT_EQ(info1->fd(), 1);
+  ASSERT_EQ(info1->fd(), 1)
 
 #define PORT_CREATE_DISPLAY_TEST(name, status, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {            \
@@ -57,7 +57,7 @@ PORT_CREATE_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_port_create(options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n")
 
 // zx_port_queue tests.
 
@@ -73,7 +73,7 @@ std::unique_ptr<SystemCallTest> ZxPortQueue(int64_t status, std::string_view sta
   zx_port_packet_t packet;                                                                 \
   init_packet(&packet);                                                                    \
   PerformDisplayTest("$plt(zx_port_queue)", ZxPortQueue(status, #status, handle, &packet), \
-                     expected);
+                     expected)
 
 #define PORT_QUEUE_DISPLAY_TEST(name, status, handle, init_packet, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                                \
@@ -134,7 +134,7 @@ PORT_QUEUE_DISPLAY_TEST(
     "    }\n"
     "  }\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 // zx_port_wait tests.
 
@@ -152,7 +152,7 @@ std::unique_ptr<SystemCallTest> ZxPortWait(int64_t status, std::string_view stat
   zx_port_packet_t packet;                                                                         \
   init_packet(&packet);                                                                            \
   PerformDisplayTest("$plt(zx_port_wait)", ZxPortWait(status, #status, handle, deadline, &packet), \
-                     expected);
+                     expected)
 
 #define PORT_WAIT_DISPLAY_TEST(name, status, handle, deadline, init_packet, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                                         \
@@ -204,7 +204,7 @@ PORT_WAIT_DISPLAY_TEST(
     "          \x1B[34m9a\x1B[0m, \x1B[34m78\x1B[0m\n"
     "        ]\n"
     "      }\n"
-    "    }\n");
+    "    }\n")
 
 void InitSignalOne(zx_port_packet_t* packet) {
   packet->key = kKey;
@@ -242,7 +242,7 @@ PORT_WAIT_DISPLAY_TEST(
      "        reserved1: \x1B[32muint64\x1B[0m = \x1B[34m0\x1B[0m\n"
      "      }\n"
      "    }\n")
-        .c_str());
+        .c_str())
 
 void InitGuestBell(zx_port_packet_t* packet) {
   constexpr uint64_t kAddr = 0x78654321;
@@ -275,7 +275,7 @@ PORT_WAIT_DISPLAY_TEST(
      "        reserved1: \x1B[32muint64\x1B[0m = \x1B[34m1\x1B[0m\n"
      "        reserved2: \x1B[32muint64\x1B[0m = \x1B[34m2\x1B[0m\n"
      "      }\n"
-     "    }\n"));
+     "    }\n"))
 
 void InitGuestMemX64(zx_port_packet_t* packet) {
   constexpr uint64_t kAddr = 0x78654321;
@@ -412,7 +412,7 @@ PORT_WAIT_DISPLAY_TEST(
     "        reserved1: \x1B[32muint64\x1B[0m = \x1B[34m1\x1B[0m\n"
     "        reserved2: \x1B[32muint64\x1B[0m = \x1B[34m2\x1B[0m\n"
     "      }\n"
-    "    }\n");
+    "    }\n")
 
 void InitGuestVcpuInterrupt(zx_port_packet_t* packet) {
   constexpr uint64_t kMask = 1234;
@@ -449,7 +449,7 @@ PORT_WAIT_DISPLAY_TEST(
     " }\n"
     "        reserved: \x1B[32muint64\x1B[0m = \x1B[34m0\x1B[0m\n"
     "      }\n"
-    "    }\n");
+    "    }\n")
 
 void InitGuestVcpuStartup(zx_port_packet_t* packet) {
   constexpr uint64_t kId = 56789;
@@ -486,7 +486,7 @@ PORT_WAIT_DISPLAY_TEST(
     "}\n"
     "        reserved: \x1B[32muint64\x1B[0m = \x1B[34m0\x1B[0m\n"
     "      }\n"
-    "    }\n");
+    "    }\n")
 
 void InitInterrupt(zx_port_packet_t* packet) {
   packet->key = kKey;
@@ -521,7 +521,7 @@ PORT_WAIT_DISPLAY_TEST(
         "        reserved2: \x1B[32muint64\x1B[0m = \x1B[34m2\x1B[0m\n"
         "      }\n"
         "    }\n")
-        .c_str());
+        .c_str())
 
 void InitPageRequest(zx_port_packet_t* packet) {
   constexpr uint64_t kLength = 4096;
@@ -559,7 +559,7 @@ PORT_WAIT_DISPLAY_TEST(
     "        length: \x1B[32muint64\x1B[0m = \x1B[34m4096\x1B[0m\n"
     "        reserved1: \x1B[32muint64\x1B[0m = \x1B[34m1\x1B[0m\n"
     "      }\n"
-    "    }\n");
+    "    }\n")
 
 // zx_port_cancel tests.
 
@@ -574,7 +574,7 @@ std::unique_ptr<SystemCallTest> ZxPortCancel(int64_t status, std::string_view st
 
 #define PORT_CANCEL_DISPLAY_TEST_CONTENT(status, expected) \
   PerformDisplayTest("$plt(zx_port_cancel)",               \
-                     ZxPortCancel(status, #status, kHandle, kSource, kKey), expected);
+                     ZxPortCancel(status, #status, kHandle, kSource, kKey), expected)
 
 #define PORT_CANCEL_DISPLAY_TEST(name, status, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {            \
@@ -591,6 +591,6 @@ PORT_CANCEL_DISPLAY_TEST(ZxPortCancel, ZX_OK,
                          "source: \x1B[32mhandle\x1B[0m = \x1B[31m00ab1234\x1B[0m, "
                          "key: \x1B[32muint64\x1B[0m = \x1B[34m1234\x1B[0m)\n"
                          "\x1B[32m0.000000\x1B[0m "
-                         "  -> \x1B[32mZX_OK\x1B[0m\n");
+                         "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 }  // namespace fidlcat

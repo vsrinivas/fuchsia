@@ -74,7 +74,7 @@ WRITE_DISPLAY_TEST(
     "  \x1B[45m\x1B[37msent request\x1B[0m \x1B[32mfidl.examples.echo/Echo.EchoString\x1B[0m = { "
     "value: \x1B[32mstring\x1B[0m = \x1B[31m\"hello world\"\x1B[0m }\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 WRITE_DISPLAY_TEST(
     ZxChannelWriteDecodedDumped, ZX_OK, true,
@@ -95,7 +95,7 @@ WRITE_DISPLAY_TEST(
     "      0020: \x1B[31m68, 65, 6c, 6c\x1B[0m, 6f, 20, 77, 6f\x1B[31m, "
     "72, 6c, 64, 00\x1B[0m, 00, 00, 00, 00\x1B[0m\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 // zx_channel_write_with_iovec_tests.
 
@@ -126,7 +126,7 @@ WRITE_IOVEC_DISPLAY_TEST(
     "  \x1B[45m\x1B[37msent request\x1B[0m \x1B[32mfidl.examples.echo/Echo.EchoString\x1B[0m = { "
     "value: \x1B[32mstring\x1B[0m = \x1B[31m\"hello world\"\x1B[0m }\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 WRITE_IOVEC_DISPLAY_TEST(
     ZxChannelWriteIovecDecodedDumped, ZX_OK, true,
@@ -147,7 +147,7 @@ WRITE_IOVEC_DISPLAY_TEST(
     "      0020: \x1B[31m68, 65, 6c, 6c\x1B[0m, 6f, 20, 77, 6f\x1B[31m, "
     "72, 6c, 64, 00\x1B[0m, 00, 00, 00, 00\x1B[0m\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 // zx_channel_write_etc_tests.
 
@@ -193,7 +193,7 @@ WRITE_ETC_DISPLAY_TEST(
     "handle: \x1B[32mhandle\x1B[0m = Duplicate(\x1B[31mChannel:bde90caf\x1B[0m, "
     "\x1B[34mZX_RIGHT_SAME_RIGHTS\x1B[0m) }\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 // zx_channel_call_etc_tests.
 
@@ -235,7 +235,7 @@ std::unique_ptr<SystemCallTest> ZxChannelCallEtc(int64_t result, std::string_vie
   PerformDisplayTest("$plt(zx_channel_call_etc)",                                         \
                      ZxChannelCallEtc(errno, #errno, kHandle, 0, ZX_TIME_INFINITE, &args, \
                                       &actual_bytes, &actual_handles),                    \
-                     expected, loader);
+                     expected, loader)
 
 #define CALL_ETC_DISPLAY_TEST(name, errno, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { CALL_ETC_DISPLAY_TEST_CONTENT(errno, expected); } \
@@ -259,7 +259,7 @@ CALL_ETC_DISPLAY_TEST(
     "    \x1B[45m\x1B[37mreceived response\x1B[0m "
     "\x1B[32mfidl.examples.echo/Echo.EchoHandle\x1B[0m = { "
     "handle: \x1B[32mhandle\x1B[0m = "
-    "\x1B[31mChannel:bde90222\x1B[0m(\x1B[34mZX_RIGHT_EXECUTE\x1B[0m) }\n");
+    "\x1B[31mChannel:bde90222\x1B[0m(\x1B[34mZX_RIGHT_EXECUTE\x1B[0m) }\n")
 
 // Event tests.
 
@@ -288,6 +288,6 @@ WRITE_EVENT_TEST(
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
     "  \x1B[45m\x1B[37msent event\x1B[0m \x1B[32mfidl.examples.echo/Echo.OnPong\x1B[0m = {}\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 }  // namespace fidlcat

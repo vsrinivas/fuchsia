@@ -18,7 +18,7 @@ std::unique_ptr<SystemCallTest> ZxHandleClose(int64_t result, std::string_view r
 }
 
 #define HANDLE_CLOSE_DISPLAY_TEST_CONTENT(result, expected) \
-  PerformDisplayTest("$plt(zx_handle_close)", ZxHandleClose(result, #result, kHandle), expected);
+  PerformDisplayTest("$plt(zx_handle_close)", ZxHandleClose(result, #result, kHandle), expected)
 
 #define HANDLE_CLOSE_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {            \
@@ -33,7 +33,7 @@ HANDLE_CLOSE_DISPLAY_TEST(ZxHandleClose, ZX_OK,
                           "zx_handle_close("
                           "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m)\n"
                           "\x1B[32m0.000000\x1B[0m "
-                          "  -> \x1B[32mZX_OK\x1B[0m\n");
+                          "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 // zx_handle_close_many tests.
 
@@ -49,7 +49,7 @@ std::unique_ptr<SystemCallTest> ZxHandleCloseMany(int64_t result, std::string_vi
   std::vector<zx_handle_t> handles = {kHandle, kHandle2, kHandle3};                      \
   PerformDisplayTest("$plt(zx_handle_close_many)",                                       \
                      ZxHandleCloseMany(result, #result, handles.data(), handles.size()), \
-                     expected);
+                     expected)
 
 #define HANDLE_CLOSE_MANY_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                 \
@@ -68,7 +68,7 @@ HANDLE_CLOSE_MANY_DISPLAY_TEST(ZxHandleCloseMany, ZX_OK,
                                "\x1B[31mcefa1db0\x1B[0m, \x1B[31mcefa1222\x1B[0m, "
                                "\x1B[31mcefa1333\x1B[0m ]\n"
                                "\x1B[32m0.000000\x1B[0m "
-                               "  -> \x1B[32mZX_OK\x1B[0m\n");
+                               "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 // zx_handle_duplicate tests.
 
@@ -86,7 +86,7 @@ std::unique_ptr<SystemCallTest> ZxHandleDuplicate(int64_t result, std::string_vi
   zx_handle_t out = kHandleOut;                                                               \
   PerformDisplayTest("$plt(zx_handle_duplicate)",                                             \
                      ZxHandleDuplicate(result, #result, kHandle, ZX_RIGHT_SAME_RIGHTS, &out), \
-                     expected);
+                     expected)
 
 #define HANDLE_DUPLICATE_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                \
@@ -105,7 +105,7 @@ HANDLE_DUPLICATE_DISPLAY_TEST(
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "rights: \x1B[32mzx.rights\x1B[0m = \x1B[34mZX_RIGHT_SAME_RIGHTS\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n")
 
 // zx_handle_replace tests.
 
@@ -123,7 +123,7 @@ std::unique_ptr<SystemCallTest> ZxHandleReplace(int64_t result, std::string_view
   zx_handle_t out = kHandleOut;                                                             \
   PerformDisplayTest("$plt(zx_handle_replace)",                                             \
                      ZxHandleReplace(result, #result, kHandle, ZX_RIGHT_SAME_RIGHTS, &out), \
-                     expected);
+                     expected)
 
 #define HANDLE_REPLACE_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {              \
@@ -142,6 +142,6 @@ HANDLE_REPLACE_DISPLAY_TEST(
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "rights: \x1B[32mzx.rights\x1B[0m = \x1B[34mZX_RIGHT_SAME_RIGHTS\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n")
 
 }  // namespace fidlcat
