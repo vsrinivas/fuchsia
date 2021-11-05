@@ -16,7 +16,7 @@ use {
 /// Takes a [`zx::Vmo`] that represents guest memory and provides an implementation of
 /// [`DriverMem`].
 // # Safety
-// if mapping is not none then it must be the address of mapping in the root vmar, such that it may
+// If mapping is not none then it must be the address of mapping in the root vmar, such that it may
 // be unmapped according to drop. Once a mapping is set to Some it must not be changed until the
 // object is dropped.
 pub struct GuestMem {
