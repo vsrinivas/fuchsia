@@ -22,6 +22,10 @@
 namespace fs_test {
 namespace {
 
+// These tests supplement the cross-platform mmap tests in `sdk/lib/fdio/tests/fdio_mman.cc` by:
+// testing additional combinations of inputs and handling edge cases specific to particular
+// filesystems implementations on Fuchsia.
+
 using ::testing::_;
 
 using MmapTest = FilesystemTest;
@@ -249,40 +253,24 @@ TEST_P(MmapTest, Private) {
   ASSERT_EQ(unlink(filename.c_str()), 0);
 }
 
-// Test that mmap fails with appropriate error codes when
-// we expect.
-TEST_P(MmapTest, Evil) {
+// Test that we fail to mmap an fd that does not support it.
+TEST_P(MmapTest, FailMapDirectory) {
   // Try (and fail) to mmap a directory
   const std::string mydir = GetPath("mydir");
   ASSERT_EQ(mkdir(mydir.c_str(), 0666), 0);
   fbl::unique_fd fd(open(mydir.c_str(), O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(fd);
   ASSERT_EQ(mmap(nullptr, PAGE_SIZE, PROT_READ, MAP_SHARED, fd.get(), 0), MAP_FAILED);
-  ASSERT_EQ(errno, EACCES);
+  ASSERT_EQ(errno, ENODEV);
   errno = 0;
   ASSERT_EQ(close(fd.release()), 0);
   ASSERT_EQ(rmdir(mydir.c_str()), 0);
+}
 
+TEST_P(MmapTest, BadPermissions) {
   const std::string myfile = GetPath("myfile");
-  fd.reset(open(myfile.c_str(), O_RDWR | O_CREAT | O_EXCL));
+  fbl::unique_fd fd(open(myfile.c_str(), O_RDWR | O_CREAT | O_EXCL));
   ASSERT_TRUE(fd);
-
-  // Mmap without MAP_PRIVATE or MAP_SHARED
-  ASSERT_EQ(mmap(nullptr, PAGE_SIZE, PROT_READ, 0, fd.get(), 0), MAP_FAILED);
-  ASSERT_EQ(errno, EINVAL);
-  errno = 0;
-  // Mmap with both MAP_PRIVATE and MAP_SHARED
-  ASSERT_EQ(mmap(nullptr, PAGE_SIZE, PROT_READ, MAP_SHARED | MAP_PRIVATE, fd.get(), 0), MAP_FAILED);
-  ASSERT_EQ(errno, EINVAL);
-  errno = 0;
-  // Mmap with unaligned offset
-  ASSERT_EQ(mmap(nullptr, PAGE_SIZE, PROT_READ, MAP_SHARED, fd.get(), 1), MAP_FAILED);
-  ASSERT_EQ(errno, EINVAL);
-  errno = 0;
-  // Mmap with a length of zero
-  ASSERT_EQ(mmap(nullptr, 0, PROT_READ, MAP_SHARED, fd.get(), 0), MAP_FAILED);
-  ASSERT_EQ(errno, EINVAL);
-  errno = 0;
   ASSERT_EQ(close(fd.release()), 0);
   // Test all cases of MAP_PRIVATE and MAP_SHARED which require
   // a readable file.
@@ -320,7 +308,7 @@ TEST_P(MmapTest, Evil) {
   errno = 0;
   ASSERT_EQ(close(fd.release()), 0);
   // PROT_WRITE requires that the file is NOT append-only
-  fd.reset(open(myfile.c_str(), O_RDONLY | O_APPEND));
+  fd.reset(open(myfile.c_str(), O_RDWR | O_APPEND));
   ASSERT_TRUE(fd);
   ASSERT_EQ(mmap(nullptr, PAGE_SIZE, PROT_WRITE, MAP_SHARED, fd.get(), 0), MAP_FAILED);
   ASSERT_EQ(errno, EACCES);

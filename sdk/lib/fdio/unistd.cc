@@ -641,7 +641,24 @@ extern "C" __EXPORT zx_status_t _mmap_file(size_t offset, size_t len, zx_vm_opti
     return ZX_ERR_BAD_HANDLE;
   }
 
-  int vflags = zx_options | (flags & MAP_PRIVATE ? fio::wire::kVmoFlagPrivate : 0);
+  // Verify that the ZX_VM_PERM_* flags passed to __mmap_file match the respective constants
+  // from fuchsia.io when calling zxio_vmo_get.
+  static_assert(ZX_VM_PERM_READ == fio::wire::kVmoFlagRead);
+  static_assert(ZX_VM_PERM_WRITE == fio::wire::kVmoFlagWrite);
+  static_assert(ZX_VM_PERM_EXECUTE == fio::wire::kVmoFlagExec);
+
+  if (zx_options & (ZX_VM_PERM_WRITE | ZX_VM_PERM_EXECUTE)) {
+    // The POSIX standard requires the file to be opened with read permissions regardless of the
+    // PROT_* flags, and also permits implementations to allow access types exceeding those which
+    // were requested (e.g. PROT_WRITE may imply PROT_READ).
+    //
+    // Since zx_vmar_map currently disallows mapping writable/executable VMOs that lack read
+    // permissions, we add that here:
+    // https://cs.opensource.google/fuchsia/fuchsia/+/5cbdfbb2a7be562a76095a384efca39dac00d477:zircon/kernel/object/vm_address_region_dispatcher.cc;l=260
+    zx_options |= ZX_VM_PERM_READ;
+  }
+
+  uint32_t vflags = zx_options | (flags & MAP_PRIVATE ? fio::wire::kVmoFlagPrivate : 0);
 
   zx::vmo vmo;
   size_t size;
@@ -649,11 +666,6 @@ extern "C" __EXPORT zx_status_t _mmap_file(size_t offset, size_t len, zx_vm_opti
     zx_status_t status =
         zxio_vmo_get(&io->zxio_storage().io, vflags, vmo.reset_and_get_address(), &size);
     if (status != ZX_OK) {
-      // On POSIX, performing mmap on an fd which does not support it returns an access denied
-      // error.
-      if (status == ZX_ERR_NOT_SUPPORTED) {
-        status = ZX_ERR_ACCESS_DENIED;
-      }
       return status;
     }
   }

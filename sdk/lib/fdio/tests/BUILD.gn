@@ -55,6 +55,7 @@ test("fdio-test") {
     "eventfd.cc",
     "fdio_inotify.cc",
     "fdio_lock.cc",
+    "fdio_mmap.cc",
     "fdio_poll.cc",
     "fdio_rmdir.cc",
     "fdio_select.cc",
