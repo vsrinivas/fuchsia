@@ -138,7 +138,7 @@ class TestServerEvent final : public TestServerBase {
       fio2::wire::ConnectionInfo info(allocator);
       info.set_representation(allocator,
                               fio2::wire::Representation::WithFile(allocator, allocator));
-      info.representation().mutable_file().set_observer(allocator, std::move(client_observer));
+      info.representation().mutable_file().set_observer(std::move(client_observer));
       completer.Reply(std::move(info));
       return;
     }
@@ -308,7 +308,7 @@ class TestServerStream final : public TestServerBase {
       fio2::wire::ConnectionInfo info(allocator);
       info.set_representation(allocator,
                               fio2::wire::Representation::WithFile(allocator, allocator));
-      info.representation().mutable_file().set_stream(allocator, std::move(client_stream));
+      info.representation().mutable_file().set_stream(std::move(client_stream));
       completer.Reply(std::move(info));
       return;
     }

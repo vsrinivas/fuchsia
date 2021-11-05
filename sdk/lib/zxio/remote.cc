@@ -531,8 +531,8 @@ zx_status_t zxio_common_advisory_lock(zx::unowned_channel control, advisory_lock
   fidl::Arena allocator;
   fuchsia_io2::wire::AdvisoryLockRequest lock_req;
   lock_req.Allocate(allocator);
-  lock_req.set_type(allocator, lock_type);
-  lock_req.set_wait(allocator, req->wait);
+  lock_req.set_type(lock_type);
+  lock_req.set_wait(req->wait);
   auto result = fidl::WireCall(fidl::UnownedClientEnd<fio2::AdvisoryLocking>(control))
                     ->AdvisoryLock(std::move(lock_req));
   if (!result.ok()) {
