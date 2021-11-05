@@ -86,6 +86,17 @@ inline constexpr bool IsCompatibleFidlScalarTypes_v = IsCompatibleFidlScalarType
     static_assert(IsCompatibleFidlScalarTypes_v<V2FieldType, V1FieldType>);      \
     if (std::is_same<bool, RemoveCVRef<V1FieldType>::type>::value ||             \
         static_cast<bool>(v1.field_name)) {                                      \
+      v2b.set_##field_name(static_cast<V2FieldType>(v1.field_name));             \
+    }                                                                            \
+  } while (false)
+#define PROCESS_SCALAR_FIELD_V1_WITH_ALLOCATOR(field_name)                       \
+  do {                                                                           \
+    using V2FieldType = std::remove_reference<decltype(v2b.field_name())>::type; \
+    /* double parens are significant here */                                     \
+    using V1FieldType = std::remove_reference<decltype((v1.field_name))>::type;  \
+    static_assert(IsCompatibleFidlScalarTypes_v<V2FieldType, V1FieldType>);      \
+    if (std::is_same<bool, RemoveCVRef<V1FieldType>::type>::value ||             \
+        static_cast<bool>(v1.field_name)) {                                      \
       v2b.set_##field_name(allocator, static_cast<V2FieldType>(v1.field_name));  \
     }                                                                            \
   } while (false)
@@ -383,8 +394,8 @@ fpromise::result<fuchsia_sysmem2::wire::ImageFormat> V2CopyFromV1ImageFormat(
   }
   v2b.set_color_space(allocator, V2CopyFromV1ColorSpace(allocator, v1.color_space));
   if (v1.has_pixel_aspect_ratio) {
-    v2b.set_pixel_aspect_ratio_width(allocator, v1.pixel_aspect_ratio_width);
-    v2b.set_pixel_aspect_ratio_height(allocator, v1.pixel_aspect_ratio_height);
+    v2b.set_pixel_aspect_ratio_width(v1.pixel_aspect_ratio_width);
+    v2b.set_pixel_aspect_ratio_height(v1.pixel_aspect_ratio_height);
   } else {
     ZX_DEBUG_ASSERT(!v2b.has_pixel_aspect_ratio_width());
     ZX_DEBUG_ASSERT(!v2b.has_pixel_aspect_ratio_height());
@@ -405,7 +416,7 @@ fpromise::result<fuchsia_sysmem2::wire::ImageFormat> V2CopyFromV1ImageFormat(
   PROCESS_SCALAR_FIELD_V1(is_physically_contiguous);
   PROCESS_SCALAR_FIELD_V1(is_secure);
   PROCESS_SCALAR_FIELD_V1(coherency_domain);
-  PROCESS_SCALAR_FIELD_V1(heap);
+  PROCESS_SCALAR_FIELD_V1_WITH_ALLOCATOR(heap);
   return v2b;
 }
 
@@ -431,9 +442,9 @@ fuchsia_sysmem2::wire::VmoBuffer V2MoveFromV1VmoBuffer(
   fuchsia_sysmem::wire::VmoBuffer v1 = std::move(to_move_v1);
   fuchsia_sysmem2::wire::VmoBuffer v2b(allocator);
   if (v1.vmo) {
-    v2b.set_vmo(allocator, std::move(v1.vmo));
+    v2b.set_vmo(std::move(v1.vmo));
   }
-  PROCESS_SCALAR_FIELD_V1(vmo_usable_start);
+  PROCESS_SCALAR_FIELD_V1_WITH_ALLOCATOR(vmo_usable_start);
   ZX_DEBUG_ASSERT(!v2b.has_aux_vmo());
   return v2b;
 }
@@ -761,7 +772,7 @@ fuchsia_sysmem2::wire::PixelFormat V2ClonePixelFormat(
     fidl::AnyArena& allocator, const fuchsia_sysmem2::wire::PixelFormat& src) {
   fuchsia_sysmem2::wire::PixelFormat pixel_format(allocator);
   if (src.has_type()) {
-    pixel_format.set_type(allocator, src.type());
+    pixel_format.set_type(src.type());
   }
   if (src.has_format_modifier_value()) {
     pixel_format.set_format_modifier_value(allocator, src.format_modifier_value());
@@ -773,7 +784,7 @@ fuchsia_sysmem2::wire::ColorSpace V2CloneColorSpace(fidl::AnyArena& allocator,
                                                     const fuchsia_sysmem2::wire::ColorSpace& src) {
   fuchsia_sysmem2::wire::ColorSpace color_space(allocator);
   if (src.has_type()) {
-    color_space.set_type(allocator, src.type());
+    color_space.set_type(src.type());
   }
   return color_space;
 }
@@ -782,16 +793,16 @@ fuchsia_sysmem2::wire::BufferMemorySettings V2CloneBufferMemorySettings(
     fidl::AnyArena& allocator, const fuchsia_sysmem2::wire::BufferMemorySettings& src) {
   fuchsia_sysmem2::wire::BufferMemorySettings buffer_memory_settings(allocator);
   if (src.has_size_bytes()) {
-    buffer_memory_settings.set_size_bytes(allocator, src.size_bytes());
+    buffer_memory_settings.set_size_bytes(src.size_bytes());
   }
   if (src.has_is_physically_contiguous()) {
-    buffer_memory_settings.set_is_physically_contiguous(allocator, src.is_physically_contiguous());
+    buffer_memory_settings.set_is_physically_contiguous(src.is_physically_contiguous());
   }
   if (src.has_is_secure()) {
-    buffer_memory_settings.set_is_secure(allocator, src.is_secure());
+    buffer_memory_settings.set_is_secure(src.is_secure());
   }
   if (src.has_coherency_domain()) {
-    buffer_memory_settings.set_coherency_domain(allocator, src.coherency_domain());
+    buffer_memory_settings.set_coherency_domain(src.coherency_domain());
   }
   if (src.has_heap()) {
     buffer_memory_settings.set_heap(allocator, src.heap());
@@ -814,68 +825,62 @@ fuchsia_sysmem2::wire::ImageFormatConstraints V2CloneImageFormatConstraints(
     }
   }
   if (src.has_min_coded_width()) {
-    image_format_constraints.set_min_coded_width(allocator, src.min_coded_width());
+    image_format_constraints.set_min_coded_width(src.min_coded_width());
   }
   if (src.has_max_coded_width()) {
-    image_format_constraints.set_max_coded_width(allocator, src.max_coded_width());
+    image_format_constraints.set_max_coded_width(src.max_coded_width());
   }
   if (src.has_min_coded_height()) {
-    image_format_constraints.set_min_coded_height(allocator, src.min_coded_height());
+    image_format_constraints.set_min_coded_height(src.min_coded_height());
   }
   if (src.has_max_coded_height()) {
-    image_format_constraints.set_max_coded_height(allocator, src.max_coded_height());
+    image_format_constraints.set_max_coded_height(src.max_coded_height());
   }
   if (src.has_min_bytes_per_row()) {
-    image_format_constraints.set_min_bytes_per_row(allocator, src.min_bytes_per_row());
+    image_format_constraints.set_min_bytes_per_row(src.min_bytes_per_row());
   }
   if (src.has_max_bytes_per_row()) {
-    image_format_constraints.set_max_bytes_per_row(allocator, src.max_bytes_per_row());
+    image_format_constraints.set_max_bytes_per_row(src.max_bytes_per_row());
   }
   if (src.has_max_coded_width_times_coded_height()) {
     image_format_constraints.set_max_coded_width_times_coded_height(
-        allocator, src.max_coded_width_times_coded_height());
+        src.max_coded_width_times_coded_height());
   }
   if (src.has_coded_width_divisor()) {
-    image_format_constraints.set_coded_width_divisor(allocator, src.coded_width_divisor());
+    image_format_constraints.set_coded_width_divisor(src.coded_width_divisor());
   }
   if (src.has_coded_height_divisor()) {
-    image_format_constraints.set_coded_height_divisor(allocator, src.coded_height_divisor());
+    image_format_constraints.set_coded_height_divisor(src.coded_height_divisor());
   }
   if (src.has_bytes_per_row_divisor()) {
-    image_format_constraints.set_bytes_per_row_divisor(allocator, src.bytes_per_row_divisor());
+    image_format_constraints.set_bytes_per_row_divisor(src.bytes_per_row_divisor());
   }
   if (src.has_start_offset_divisor()) {
-    image_format_constraints.set_start_offset_divisor(allocator, src.start_offset_divisor());
+    image_format_constraints.set_start_offset_divisor(src.start_offset_divisor());
   }
   if (src.has_display_width_divisor()) {
-    image_format_constraints.set_display_width_divisor(allocator, src.display_width_divisor());
+    image_format_constraints.set_display_width_divisor(src.display_width_divisor());
   }
   if (src.has_display_height_divisor()) {
-    image_format_constraints.set_display_height_divisor(allocator, src.display_height_divisor());
+    image_format_constraints.set_display_height_divisor(src.display_height_divisor());
   }
   if (src.has_required_min_coded_width()) {
-    image_format_constraints.set_required_min_coded_width(allocator,
-                                                          src.required_min_coded_width());
+    image_format_constraints.set_required_min_coded_width(src.required_min_coded_width());
   }
   if (src.has_required_max_coded_width()) {
-    image_format_constraints.set_required_max_coded_width(allocator,
-                                                          src.required_max_coded_width());
+    image_format_constraints.set_required_max_coded_width(src.required_max_coded_width());
   }
   if (src.has_required_min_coded_height()) {
-    image_format_constraints.set_required_min_coded_height(allocator,
-                                                           src.required_min_coded_height());
+    image_format_constraints.set_required_min_coded_height(src.required_min_coded_height());
   }
   if (src.has_required_max_coded_height()) {
-    image_format_constraints.set_required_max_coded_height(allocator,
-                                                           src.required_max_coded_height());
+    image_format_constraints.set_required_max_coded_height(src.required_max_coded_height());
   }
   if (src.has_required_min_bytes_per_row()) {
-    image_format_constraints.set_required_min_bytes_per_row(allocator,
-                                                            src.required_min_bytes_per_row());
+    image_format_constraints.set_required_min_bytes_per_row(src.required_min_bytes_per_row());
   }
   if (src.has_required_max_bytes_per_row()) {
-    image_format_constraints.set_required_max_bytes_per_row(allocator,
-                                                            src.required_max_bytes_per_row());
+    image_format_constraints.set_required_max_bytes_per_row(src.required_max_bytes_per_row());
   }
   return image_format_constraints;
 }
@@ -916,7 +921,7 @@ fpromise::result<fuchsia_sysmem2::wire::VmoBuffer, zx_status_t> V2CloneVmoBuffer
     } else {
       ZX_DEBUG_ASSERT(clone_vmo.get() == ZX_HANDLE_INVALID);
     }
-    vmo_buffer.set_vmo(allocator, std::move(clone_vmo));
+    vmo_buffer.set_vmo(std::move(clone_vmo));
   }
   if (src.has_vmo_usable_start()) {
     vmo_buffer.set_vmo_usable_start(allocator, src.vmo_usable_start());
@@ -940,7 +945,7 @@ fpromise::result<fuchsia_sysmem2::wire::VmoBuffer, zx_status_t> V2CloneVmoBuffer
     } else {
       ZX_DEBUG_ASSERT(clone_vmo.get() == ZX_HANDLE_INVALID);
     }
-    vmo_buffer.set_aux_vmo(allocator, std::move(clone_vmo));
+    vmo_buffer.set_aux_vmo(std::move(clone_vmo));
   }
   return fpromise::ok(std::move(vmo_buffer));
 }
@@ -972,13 +977,13 @@ fuchsia_sysmem2::wire::CoherencyDomainSupport V2CloneCoherencyDomainSuppoort(
     fidl::AnyArena& allocator, const fuchsia_sysmem2::wire::CoherencyDomainSupport& src) {
   fuchsia_sysmem2::wire::CoherencyDomainSupport coherency_domain_support(allocator);
   if (src.has_cpu_supported()) {
-    coherency_domain_support.set_cpu_supported(allocator, src.cpu_supported());
+    coherency_domain_support.set_cpu_supported(src.cpu_supported());
   }
   if (src.has_ram_supported()) {
-    coherency_domain_support.set_ram_supported(allocator, src.ram_supported());
+    coherency_domain_support.set_ram_supported(src.ram_supported());
   }
   if (src.has_inaccessible_supported()) {
-    coherency_domain_support.set_inaccessible_supported(allocator, src.inaccessible_supported());
+    coherency_domain_support.set_inaccessible_supported(src.inaccessible_supported());
   }
   return coherency_domain_support;
 }
@@ -991,7 +996,7 @@ fuchsia_sysmem2::wire::HeapProperties V2CloneHeapProperties(
         allocator, V2CloneCoherencyDomainSuppoort(allocator, src.coherency_domain_support()));
   }
   if (src.has_need_clear()) {
-    heap_properties.set_need_clear(allocator, src.need_clear());
+    heap_properties.set_need_clear(src.need_clear());
   }
   return heap_properties;
 }
@@ -1004,21 +1009,21 @@ fuchsia_sysmem2::wire::BufferCollectionConstraints V2CloneBufferCollectionConstr
   }
   if (src.has_min_buffer_count_for_camping()) {
     buffer_collection_constraints.set_min_buffer_count_for_camping(
-        allocator, src.min_buffer_count_for_camping());
+        src.min_buffer_count_for_camping());
   }
   if (src.has_min_buffer_count_for_dedicated_slack()) {
     buffer_collection_constraints.set_min_buffer_count_for_dedicated_slack(
-        allocator, src.min_buffer_count_for_dedicated_slack());
+        src.min_buffer_count_for_dedicated_slack());
   }
   if (src.has_min_buffer_count_for_shared_slack()) {
     buffer_collection_constraints.set_min_buffer_count_for_shared_slack(
-        allocator, src.min_buffer_count_for_shared_slack());
+        src.min_buffer_count_for_shared_slack());
   }
   if (src.has_min_buffer_count()) {
-    buffer_collection_constraints.set_min_buffer_count(allocator, src.min_buffer_count());
+    buffer_collection_constraints.set_min_buffer_count(src.min_buffer_count());
   }
   if (src.has_max_buffer_count()) {
-    buffer_collection_constraints.set_max_buffer_count(allocator, src.max_buffer_count());
+    buffer_collection_constraints.set_max_buffer_count(src.max_buffer_count());
   }
   if (src.has_buffer_memory_constraints()) {
     buffer_collection_constraints.set_buffer_memory_constraints(
@@ -1034,11 +1039,11 @@ fuchsia_sysmem2::wire::BufferCollectionConstraints V2CloneBufferCollectionConstr
   }
   if (src.has_need_clear_aux_buffers_for_secure()) {
     buffer_collection_constraints.set_need_clear_aux_buffers_for_secure(
-        allocator, src.need_clear_aux_buffers_for_secure());
+        src.need_clear_aux_buffers_for_secure());
   }
   if (src.has_allow_clear_aux_buffers_for_secure()) {
     buffer_collection_constraints.set_allow_clear_aux_buffers_for_secure(
-        allocator, src.allow_clear_aux_buffers_for_secure());
+        src.allow_clear_aux_buffers_for_secure());
   }
   return buffer_collection_constraints;
 }
@@ -1047,19 +1052,19 @@ fuchsia_sysmem2::wire::BufferUsage V2CloneBufferUsage(
     fidl::AnyArena& allocator, const fuchsia_sysmem2::wire::BufferUsage& src) {
   fuchsia_sysmem2::wire::BufferUsage buffer_usage(allocator);
   if (src.has_none()) {
-    buffer_usage.set_none(allocator, src.none());
+    buffer_usage.set_none(src.none());
   }
   if (src.has_cpu()) {
-    buffer_usage.set_cpu(allocator, src.cpu());
+    buffer_usage.set_cpu(src.cpu());
   }
   if (src.has_vulkan()) {
-    buffer_usage.set_vulkan(allocator, src.vulkan());
+    buffer_usage.set_vulkan(src.vulkan());
   }
   if (src.has_display()) {
-    buffer_usage.set_display(allocator, src.display());
+    buffer_usage.set_display(src.display());
   }
   if (src.has_video()) {
-    buffer_usage.set_video(allocator, src.video());
+    buffer_usage.set_video(src.video());
   }
   return buffer_usage;
 }
@@ -1068,27 +1073,27 @@ fuchsia_sysmem2::wire::BufferMemoryConstraints V2CloneBufferMemoryConstraints(
     fidl::AnyArena& allocator, const fuchsia_sysmem2::wire::BufferMemoryConstraints& src) {
   fuchsia_sysmem2::wire::BufferMemoryConstraints buffer_memory_constraints(allocator);
   if (src.has_min_size_bytes()) {
-    buffer_memory_constraints.set_min_size_bytes(allocator, src.min_size_bytes());
+    buffer_memory_constraints.set_min_size_bytes(src.min_size_bytes());
   }
   if (src.has_max_size_bytes()) {
-    buffer_memory_constraints.set_max_size_bytes(allocator, src.max_size_bytes());
+    buffer_memory_constraints.set_max_size_bytes(src.max_size_bytes());
   }
   if (src.has_physically_contiguous_required()) {
     buffer_memory_constraints.set_physically_contiguous_required(
-        allocator, src.physically_contiguous_required());
+        src.physically_contiguous_required());
   }
   if (src.has_secure_required()) {
-    buffer_memory_constraints.set_secure_required(allocator, src.secure_required());
+    buffer_memory_constraints.set_secure_required(src.secure_required());
   }
   if (src.has_cpu_domain_supported()) {
-    buffer_memory_constraints.set_cpu_domain_supported(allocator, src.cpu_domain_supported());
+    buffer_memory_constraints.set_cpu_domain_supported(src.cpu_domain_supported());
   }
   if (src.has_ram_domain_supported()) {
-    buffer_memory_constraints.set_ram_domain_supported(allocator, src.ram_domain_supported());
+    buffer_memory_constraints.set_ram_domain_supported(src.ram_domain_supported());
   }
   if (src.has_inaccessible_domain_supported()) {
     buffer_memory_constraints.set_inaccessible_domain_supported(
-        allocator, src.inaccessible_domain_supported());
+        src.inaccessible_domain_supported());
   }
   if (src.has_heap_permitted()) {
     buffer_memory_constraints.set_heap_permitted(allocator, allocator,

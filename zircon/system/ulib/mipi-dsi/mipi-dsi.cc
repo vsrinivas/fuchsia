@@ -62,11 +62,11 @@ zx::status<fuchsia_hardware_dsi::wire::MipiDsiCmd> MipiDsi::CreateCommandFidl(
       break;
   }
 
-  command.set_virtual_channel_id(allocator, ch_id);
-  command.set_expected_read_length(allocator, rlen);
-  command.set_dsi_data_type(allocator, dsi_data_type);
-  command.set_write_length(allocator, tlen);
-  command.set_flags(allocator, flags);
+  command.set_virtual_channel_id(ch_id);
+  command.set_expected_read_length(rlen);
+  command.set_dsi_data_type(dsi_data_type);
+  command.set_write_length(tlen);
+  command.set_flags(flags);
   // packet command has been created.
   return zx::ok(std::move(command));
 }

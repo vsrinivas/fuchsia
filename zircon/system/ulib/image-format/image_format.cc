@@ -1293,7 +1293,7 @@ fpromise::result<fuchsia_sysmem2::wire::PixelFormat> ImageFormatConvertZxToSysme
     default:
       return fpromise::error();
   }
-  v2b.set_type(allocator, out_type);
+  v2b.set_type(out_type);
   return fpromise::ok(std::move(v2b));
 }
 
@@ -1340,16 +1340,16 @@ fpromise::result<ImageFormat> ImageConstraintsToFormat(fidl::AnyArena& allocator
   ImageFormat result(allocator);
   uint32_t minimum_row_bytes;
   if (ImageFormatMinimumRowBytes(constraints, width, &minimum_row_bytes)) {
-    result.set_bytes_per_row(allocator, minimum_row_bytes);
+    result.set_bytes_per_row(minimum_row_bytes);
   } else {
-    result.set_bytes_per_row(allocator, 0);
+    result.set_bytes_per_row(0);
   }
   result.set_pixel_format(allocator,
                           sysmem::V2ClonePixelFormat(allocator, constraints.pixel_format()));
-  result.set_coded_width(allocator, width);
-  result.set_coded_height(allocator, height);
-  result.set_display_width(allocator, width);
-  result.set_display_height(allocator, height);
+  result.set_coded_width(width);
+  result.set_coded_height(height);
+  result.set_display_width(width);
+  result.set_display_height(height);
   if (constraints.has_color_spaces() && constraints.color_spaces().count()) {
     result.set_color_space(allocator,
                            sysmem::V2CloneColorSpace(allocator, constraints.color_spaces()[0]));

@@ -654,9 +654,9 @@ TEST(SysmemVersion, CoherencyDomainSupport) {
     random(&inaccessible_supported);
 
     v2::wire::CoherencyDomainSupport v2_1(allocator);
-    v2_1.set_cpu_supported(allocator, cpu_supported);
-    v2_1.set_ram_supported(allocator, ram_supported);
-    v2_1.set_inaccessible_supported(allocator, inaccessible_supported);
+    v2_1.set_cpu_supported(cpu_supported);
+    v2_1.set_ram_supported(ram_supported);
+    v2_1.set_inaccessible_supported(inaccessible_supported);
 
     v2::wire::CoherencyDomainSupport v2_2 = sysmem::V2CloneCoherencyDomainSuppoort(allocator, v2_1);
     EXPECT_TRUE(v2_2.has_cpu_supported());
@@ -682,12 +682,12 @@ TEST(SysmemVersion, HeapProperties) {
     random(&need_clear);
 
     v2::wire::HeapProperties v2_1(allocator);
-    v2_1.set_need_clear(allocator, need_clear);
+    v2_1.set_need_clear(need_clear);
     {
       v2::wire::CoherencyDomainSupport coherency_domain_support(allocator);
-      coherency_domain_support.set_cpu_supported(allocator, cpu_supported);
-      coherency_domain_support.set_ram_supported(allocator, ram_supported);
-      coherency_domain_support.set_inaccessible_supported(allocator, inaccessible_supported);
+      coherency_domain_support.set_cpu_supported(cpu_supported);
+      coherency_domain_support.set_ram_supported(ram_supported);
+      coherency_domain_support.set_inaccessible_supported(inaccessible_supported);
       v2_1.set_coherency_domain_support(allocator, std::move(coherency_domain_support));
     }
 
