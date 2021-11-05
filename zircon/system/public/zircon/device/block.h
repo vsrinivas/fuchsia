@@ -7,7 +7,7 @@
 
 // !!! IMPORTANT !!!
 // Most of the definitions in this file need to be kept in sync with:
-// - //sdk/banjo/fuchsia.hardware.block/block.banjo;
+// - //sdk/banjo/fuchsia.hardware.block/block.fidl;
 // - //src/lib/storage/block_client/rust/src/lib.rs.
 
 #include <assert.h>
@@ -16,7 +16,7 @@
 
 #define BLOCK_FLAG_READONLY 0x00000001
 #define BLOCK_FLAG_REMOVABLE 0x00000002
-// Block device has bootdata partition map  provided by device metadata.
+// Block device has bootdata partition map provided by device metadata.
 #define BLOCK_FLAG_BOOTPART 0x00000004
 #define BLOCK_FLAG_TRIM_SUPPORT 0x00000008
 
@@ -33,12 +33,12 @@ typedef struct {
 } block_info_t;
 
 typedef struct {
-  size_t total_ops;     // Total number of block ops processed
-  size_t total_blocks;  // Total number of blocks processed
-  size_t total_reads;
-  size_t total_blocks_read;
-  size_t total_writes;
-  size_t total_blocks_written;
+  uint64_t total_ops;     // Total number of block ops processed
+  uint64_t total_blocks;  // Total number of blocks processed
+  uint64_t total_reads;
+  uint64_t total_blocks_read;
+  uint64_t total_writes;
+  uint64_t total_blocks_written;
 } block_stats_t;
 
 typedef uint16_t vmoid_t;
@@ -56,7 +56,10 @@ typedef struct {
   uint8_t type[BLOCK_GUID_LEN];
   uint8_t guid[BLOCK_GUID_LEN];
   char name[BLOCK_NAME_LEN];
-  uint32_t flags;  // Refer to fvm.h for options here; default is zero.
+  // Refer to //sdk/fidl/fuchsia.hardware.block.volume/volume.fidl for options
+  // here. (Currently only `ALLOCATE_PARTITION_FLAG_INACTIVE` is defined.)
+  // Default is 0.
+  uint32_t flags;
 } alloc_req_t;
 
 typedef struct {
@@ -69,59 +72,62 @@ typedef struct {
   size_t vslice_start[MAX_FVM_VSLICE_REQUESTS];  // vslices to query from
 } query_request_t;
 
-// Multiple Block IO operations may be sent at once before a response is actually sent back.
-// Block IO ops may be sent concurrently to different vmoids, and they also may be sent
-// to different groups at any point in time.
+// Multiple block I/O operations may be sent at once before a response is
+// actually sent back. Block I/O ops may be sent concurrently to different
+// vmoids, and they also may be sent to different groups at any point in time.
 //
-// MAX_TXN_GROUP_COUNT "groups" are pre-allocated lanes separated on the block
-// server.  Using a group allows multiple message to be buffered at once
+// `MAX_TXN_GROUP_COUNT` "groups" are pre-allocated lanes separated on the
+// block server.  Using a group allows multiple message to be buffered at once
 // on a single communication channel before receiving a response.
 //
-// Usage of groups is identified by BLOCKIO_GROUP_ITEM, and is optional.
+// Usage of groups is identified by `BLOCKIO_GROUP_ITEM`, and is optional.
 //
 // These groups may be referred to with a "groupid", in the range [0,
-// MAX_TXN_GROUP_COUNT).
+// `MAX_TXN_GROUP_COUNT`).
 //
 // The protocol to communicate with a single group is as follows:
 // 1) SEND [N - 1] messages with an allocated groupid for any value of 1 <= N.
-//    The BLOCKIO_GROUP_ITEM flag is set for these messages.
-// 2) SEND a final Nth message with the same groupid.
-//    The BLOCKIO_GROUP_ITEM | BLOCKIO_GROUP_LAST flags are set for this
-//    message.
-// 3) RECEIVE a single response from the Block IO server after all N requests have completed.
-//    This response is sent once all operations either complete or a single operation fails.
-//    At this point, step (1) may begin again for the same groupid.
+//    The `BLOCKIO_GROUP_ITEM` flag is set for these messages.
+// 2) SEND a final Nth message with the same groupid. The `BLOCKIO_GROUP_ITEM
+//    | BLOCKIO_GROUP_LAST` flags are set for this message.
+// 3) RECEIVE a single response from the Block I/O server after all N requests
+//    have completed. This response is sent once all operations either complete
+//    or a single operation fails. At this point, step (1) may begin again for
+//    the same groupid.
 //
-// For BLOCKIO_READ and BLOCKIO_WRITE, N may be greater than 1.
-// Otherwise, N == 1 (skipping step (1) in the protocol above).
+// For `BLOCKIO_READ` and `BLOCKIO_WRITE`, N may be greater than 1. Otherwise,
+// N == 1 (skipping step (1) in the protocol above).
 //
 // Notes:
 // - groupids may operate on any number of vmoids at once.
-// - If additional requests are sent on the same groupid before step (3) has completed, then
-//   the additional request will not be processed. If BLOCKIO_GROUP_LAST is set, an error will
-//   be returned. Otherwise, the request will be silently dropped.
+// - If additional requests are sent on the same groupid before step (3) has
+//   completed, then the additional request will not be processed. If
+//   `BLOCKIO_GROUP_LAST` is set, an error will be returned. Otherwise, the
+//   request will be silently dropped.
 // - Messages within a group are not guaranteed to be processed in any order
 //   relative to each other.
-// - All requests receive responses, except for ones with BLOCKIO_GROUP_ITEM
-//   that do not have BLOCKIO_GROUP_LAST set.
+// - All requests receive responses, except for ones with `BLOCKIO_GROUP_ITEM`
+//   that do not have `BLOCKIO_GROUP_LAST` set.
 //
 // For example, the following is a valid sequence of transactions:
-//   -> (groupid = 1,          vmoid = 1, OP = Write | GroupItem,             reqid = 1)
-//   -> (groupid = 1,          vmoid = 2, OP = Write | GroupItem,             reqid = 2)
-//   -> (groupid = 2,          vmoid = 3, OP = Write | GroupItem | GroupLast, reqid = 0)
+//
+//   -> (groupid = 1, vmoid = 1, OP = Write | GroupItem,             reqid = 1)
+//   -> (groupid = 1, vmoid = 2, OP = Write | GroupItem,             reqid = 2)
+//   -> (groupid = 2, vmoid = 3, OP = Write | GroupItem | GroupLast, reqid = 0)
 //   <- Response sent to groupid = 2, reqid = 0
-//   -> (groupid = 1,          vmoid = 1, OP = Read | GroupItem | GroupLast,  reqid = 3)
+//   -> (groupid = 1, vmoid = 1, OP = Read | GroupItem | GroupLast,  reqid = 3)
 //   <- Response sent to groupid = 1, reqid = 3
-//   -> (groupid = 3,          vmoid = 1, OP = Write | GroupItem,             reqid = 4)
+//   -> (groupid = 3, vmoid = 1, OP = Write | GroupItem,             reqid = 4)
 //   -> (groupid = don't care, vmoid = 1, OP = Read, reqid = 5)
 //   <- Response sent to reqid = 5
-//   -> (groupid = 3,          vmoid = 1, OP = Read | GroupItem | GroupLast,  reqid = 6)
+//   -> (groupid = 3, vmoid = 1, OP = Read | GroupItem | GroupLast,  reqid = 6)
 //   <- Response sent to groupid = 3, reqid = 6
 //
-// Each transaction reads or writes up to 'length' blocks from the device, starting at 'dev_offset'
-// blocks, into the VMO associated with 'vmoid', starting at 'vmo_offset' blocks.  If the
-// transaction is out of range, for example if 'length' is too large or if 'dev_offset' is beyond
-// the end of the device, ZX_ERR_OUT_OF_RANGE is returned.
+// Each transaction reads or writes up to `length` blocks from the device,
+// starting at `dev_offset` blocks, into the VMO associated with `vmoid`,
+// starting at `vmo_offset` blocks.  If the transaction is out of range, for
+// example if `length` is too large or if `dev_offset` is beyond the end of the
+// device, `ZX_ERR_OUT_OF_RANGE` is returned.
 
 #define MAX_TXN_GROUP_COUNT 8
 

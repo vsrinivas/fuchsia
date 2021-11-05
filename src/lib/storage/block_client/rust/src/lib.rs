@@ -4,7 +4,7 @@
 
 // !!! IMPORTANT !!!
 // Most of the definitions in this file need to be kept in sync with:
-// - //sdk/banjo/fuchsia.hardware.block/block.banjo;
+// - //sdk/banjo/fuchsia.hardware.block/block.fidl;
 // - //zircon/public/system/public/zircon/device/block.h.
 
 use {

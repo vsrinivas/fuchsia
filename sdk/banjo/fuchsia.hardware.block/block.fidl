@@ -12,7 +12,7 @@ using zx;
 
 const BLOCK_FLAG_READONLY uint32 = 0x00000001;
 const BLOCK_FLAG_REMOVABLE uint32 = 0x00000002;
-/// Block device has bootdata partition map  provided by device metadata.
+/// Block device has bootdata partition map provided by device metadata.
 const BLOCK_FLAG_BOOTPART uint32 = 0x00000004;
 /// Flag advertising trim support.
 const BLOCK_FLAG_TRIM_SUPPORT uint32 = 0x00000008;
@@ -26,9 +26,8 @@ type BlockInfo = struct {
     /// The size of a single block.
     block_size uint32;
 
-    /// Max size in bytes per transfer.
-    /// May be BLOCK_MAX_TRANSFER_UNBOUNDED if there
-    /// is no restriction.
+    /// Max size in bytes per transfer. May be `BLOCK_MAX_TRANSFER_UNBOUNDED` if
+    /// there is no restriction.
     max_transfer_size uint32;
 
     flags uint32;
@@ -36,9 +35,9 @@ type BlockInfo = struct {
 };
 
 type BlockStats = struct {
-    /// Total number of block ops processed
+    /// Total number of block ops processed.
     total_ops uint64;
-    /// Total number of blocks processed
+    /// Total number of blocks processed.
     total_blocks uint64;
     total_reads uint64;
     total_blocks_read uint64;
@@ -50,76 +49,80 @@ alias Vmoid = uint16;
 
 // Dummy vmoid value reserved for "invalid". Will never be allocated; can be
 // used as a local value for unallocated / freed ID.
-const BLOCK_VMOID_INVALID uint32 = 0;
+const BLOCK_VMOID_INVALID Vmoid = 0;
 
 const BLOCK_GUID_LEN uint32 = 16;
 
-/// Multiple Block IO operations may be sent at once before a response is actually sent back.
-/// Block IO ops may be sent concurrently to different vmoids, and they also may be sent
-/// to different groups at any point in time.
+/// Multiple block I/O operations may be sent at once before a response is
+/// actually sent back. Block I/O ops may be sent concurrently to different
+/// vmoids, and they also may be sent to different groups at any point in time.
 ///
-/// MAX_TXN_GROUP_COUNT "groups" are pre-allocated lanes separated on the block
-/// server.  Using a group allows multiple message to be buffered at once
+/// `MAX_TXN_GROUP_COUNT` "groups" are pre-allocated lanes separated on the
+/// block server.  Using a group allows multiple message to be buffered at once
 /// on a single communication channel before receiving a response.
 ///
-/// Usage of groups is identified by BLOCKIO_GROUP_ITEM, and is optional.
+/// Usage of groups is identified by `BLOCKIO_GROUP_ITEM`, and is optional.
 ///
 /// These groups may be referred to with a "groupid", in the range [0,
-/// MAX_TXN_GROUP_COUNT).
+/// `MAX_TXN_GROUP_COUNT`).
 ///
 /// The protocol to communicate with a single group is as follows:
 /// 1) SEND [N - 1] messages with an allocated groupid for any value of 1 <= N.
-///    The BLOCKIO_GROUP_ITEM flag is set for these messages.
-/// 2) SEND a final Nth message with the same groupid.
-///    The BLOCKIO_GROUP_ITEM | BLOCKIO_GROUP_LAST flags are set for this
-///    message.
-/// 3) RECEIVE a single response from the Block IO server after all N requests have completed.
-///    This response is sent once all operations either complete or a single operation fails.
-///    At this point, step (1) may begin again for the same groupid.
+///    The `BLOCKIO_GROUP_ITEM` flag is set for these messages.
+/// 2) SEND a final Nth message with the same groupid. The `BLOCKIO_GROUP_ITEM
+///    | BLOCKIO_GROUP_LAST` flags are set for this message.
+/// 3) RECEIVE a single response from the Block I/O server after all N requests
+///    have completed. This response is sent once all operations either complete
+///    or a single operation fails. At this point, step (1) may begin again for
+///    the same groupid.
 ///
-/// For BLOCKIO_READ and BLOCKIO_WRITE, N may be greater than 1.
-/// Otherwise, N == 1 (skipping step (1) in the protocol above).
+/// For `BLOCKIO_READ` and `BLOCKIO_WRITE`, N may be greater than 1. Otherwise,
+/// N == 1 (skipping step (1) in the protocol above).
 ///
 /// Notes:
 /// - groupids may operate on any number of vmoids at once.
-/// - If additional requests are sent on the same groupid before step (3) has completed, then
-///   the additional request will not be processed. If BLOCKIO_GROUP_LAST is set, an error will
-///   be returned. Otherwise, the request will be silently dropped.
+/// - If additional requests are sent on the same groupid before step (3) has
+///   completed, then the additional request will not be processed. If
+///   `BLOCKIO_GROUP_LAST` is set, an error will be returned. Otherwise, the
+///   request will be silently dropped.
 /// - Messages within a group are not guaranteed to be processed in any order
 ///   relative to each other.
-/// - All requests receive responses, except for ones with BLOCKIO_GROUP_ITEM
-///   that do not have BLOCKIO_GROUP_LAST set.
+/// - All requests receive responses, except for ones with `BLOCKIO_GROUP_ITEM`
+///   that do not have `BLOCKIO_GROUP_LAST` set.
 ///
 /// For example, the following is a valid sequence of transactions:
-///   -> (groupid = 1,          vmoid = 1, OP = Write | GroupItem,             reqid = 1)
-///   -> (groupid = 1,          vmoid = 2, OP = Write | GroupItem,             reqid = 2)
-///   -> (groupid = 2,          vmoid = 3, OP = Write | GroupItem | GroupLast, reqid = 0)
+///
+///   -> (groupid = 1, vmoid = 1, OP = Write | GroupItem,             reqid = 1)
+///   -> (groupid = 1, vmoid = 2, OP = Write | GroupItem,             reqid = 2)
+///   -> (groupid = 2, vmoid = 3, OP = Write | GroupItem | GroupLast, reqid = 0)
 ///   <- Response sent to groupid = 2, reqid = 0
-///   -> (groupid = 1,          vmoid = 1, OP = Read | GroupItem | GroupLast,  reqid = 3)
+///   -> (groupid = 1, vmoid = 1, OP = Read | GroupItem | GroupLast,  reqid = 3)
 ///   <- Response sent to groupid = 1, reqid = 3
-///   -> (groupid = 3,          vmoid = 1, OP = Write | GroupItem,             reqid = 4)
+///   -> (groupid = 3, vmoid = 1, OP = Write | GroupItem,             reqid = 4)
 ///   -> (groupid = don't care, vmoid = 1, OP = Read, reqid = 5)
 ///   <- Response sent to reqid = 5
-///   -> (groupid = 3,          vmoid = 1, OP = Read | GroupItem | GroupLast,  reqid = 6)
+///   -> (groupid = 3, vmoid = 1, OP = Read | GroupItem | GroupLast,  reqid = 6)
 ///   <- Response sent to groupid = 3, reqid = 6
 ///
-/// Each transaction reads or writes up to 'length' blocks from the device, starting at 'dev_offset'
-/// blocks, into the VMO associated with 'vmoid', starting at 'vmo_offset' blocks.  If the
-/// transaction is out of range, for example if 'length' is too large or if 'dev_offset' is beyond
-/// the end of the device, ZX_ERR_OUT_OF_RANGE is returned.
+/// Each transaction reads or writes up to `length` blocks from the device,
+/// starting at `dev_offset` blocks, into the VMO associated with `vmoid`,
+/// starting at `vmo_offset` blocks.  If the transaction is out of range, for
+/// example if `length` is too large or if `dev_offset` is beyond the end of the
+/// device, `ZX_ERR_OUT_OF_RANGE` is returned.
+
 const MAX_TXN_GROUP_COUNT uint32 = 8;
 
-/// The Request ID allowing callers to correspond requests with responses.
-/// This field is entirely for client-side bookkeeping; there is no obligation
-/// to make request IDs unique.
+/// The Request ID allowing callers to correspond requests with responses. This
+/// field is entirely for client-side bookkeeping; there is no obligation to
+/// make request IDs unique.
 alias Reqid = uint32;
 alias Groupid = uint16;
 
 type BlockFifoRequest = struct {
     opcode uint32;
-    /// Transmitted in the block_fifo_response_t.
+    /// Transmitted in the `block_fifo_response_t`.
     reqid Reqid;
-    /// Only used if opcode & BLOCK_GROUP_ITEM.
+    /// Only used if `opcode & BLOCK_GROUP_ITEM`.
     group Groupid;
     vmoid Vmoid;
     length uint32;
@@ -133,7 +136,7 @@ type BlockFifoResponse = struct {
     reqid Reqid;
     /// Only valid if transmitted in request.
     group Groupid;
-    reserved0 uint16;
+    reserved0 Vmoid;
     /// The number of messages in the transaction completed by the block server.
     count uint32;
     reserved1 uint64;
@@ -142,9 +145,10 @@ type BlockFifoResponse = struct {
 };
 
 /// `BLOCK_OP_READ`, `BLOCK_OP_WRITE`
-// Note: this data structure is used for the driver <--> driver interfaces, while
-// BlockFifoRequest above is part of a client <--> server interface and related
-// to the block FIDL API.
+//
+// Note: this data structure is used for the driver <--> driver interfaces,
+// while `BlockFifoRequest` above is part of a client <--> server interface and
+// related to the block FIDL API.
 type BlockReadWrite = resource struct {
     /// Command and flags.
     command uint32;
@@ -191,10 +195,10 @@ type BlockOp = strict resource union {
 const BLOCK_OP_READ uint32 = 0x00000001;
 const BLOCK_OP_WRITE uint32 = 0x00000002;
 
-/// Write any controller or device cached data to nonvolatile storage.
-/// This operation always implies BARRIER_BEFORE and BARRIER_AFTER,
-/// meaning that previous operations will complete before it starts
-/// and later operations will not start until it is done.
+/// Write any controller or device cached data to nonvolatile storage. This
+/// operation always implies `BLOCK_FL_BARRIER_BEFORE` and
+/// `BLOCK_FL_BARRIER_AFTER`, meaning that previous operations will complete
+/// before it starts and later operations will not start until it is done.
 const BLOCK_OP_FLUSH uint32 = 0x00000003;
 
 /// Instructs the device to invalidate a number of blocks, making them  usable
@@ -214,42 +218,42 @@ const BLOCK_OP_MASK uint32 = 0x000000FF;
 /// medium (write), and that reads should bypass any on-device caches.
 const BLOCK_FL_FORCE_ACCESS uint32 = 0x00001000;
 
-/// Require that this operation will not begin until all previous
-/// operations have completed.
+/// Require that this operation will not begin until all previous operations
+/// have completed.
 ///
 /// Prevents earlier operations from being reordered after this one.
 const BLOCK_FL_BARRIER_BEFORE uint32 = 0x00000100;
 
-/// Require that this operation complete before any subsequent
-/// operations are started.
+/// Require that this operation complete before any subsequent operations are
+/// started.
 ///
 /// Prevents later operations from being reordered before this one.
 const BLOCK_FL_BARRIER_AFTER uint32 = 0x00000200;
 
-/// Associate the following request with |group|.
+/// Associate the following request with `group`.
 const BLOCK_GROUP_ITEM uint32 = 0x00000400;
 
-/// Only respond after this request (and all previous within group) have completed.
-/// Only valid with BLOCKIO_GROUP_ITEM.
+/// Only respond after this request (and all previous within group) have
+/// completed. Only valid with `BLOCKIO_GROUP_ITEM`.
 const BLOCK_GROUP_LAST uint32 = 0x00000800;
 const BLOCK_FLAG_MASK uint32 = 0x0000FF00;
 
 @transport("Banjo")
 @banjo_layout("ddk-protocol")
 protocol BlockImpl {
-    /// Obtains the parameters of the block device (block_info_t) and
-    /// the required size of block_txn_t.  The block_txn_t's submitted
-    /// via queue() must have block_op_size_out - sizeof(block_op_t) bytes
+    /// Obtains the parameters of the block device (`block_info_t`) and the
+    /// required size of `block_txn_t`. The `block_txn_t`s submitted via
+    /// `Queue()` must have `block_op_size_out - sizeof(block_op_t)` bytes
     /// available at the end of the structure for the use of the driver.
     Query() -> (struct {
         info BlockInfo;
         block_op_size uint64;
     });
 
-    /// Submits an IO request for processing. Ownership of |op| is transferred to
-    /// callee until |completion_cb| is invoked|. Success or failure will
-    /// be reported via the |completion_cb|.  This / callback may be called
-    /// before the queue() method returns.
+    /// Submits an I/O request for processing. Ownership of `op` is transferred
+    /// to callee until `completion_cb` is invoked. Success or failure will be
+    /// reported via the `completion_cb`. This callback may be called before the
+    /// `Queue()` method returns.
     @async
     Queue(resource struct {
         @in_out
@@ -264,19 +268,19 @@ protocol BlockImpl {
 @transport("Banjo")
 @banjo_layout("ddk-protocol")
 protocol Block {
-    /// Obtains the parameters of the block device (block_info_t) and
-    /// the required size of block_txn_t.  The block_txn_t's submitted
-    /// via queue() must have block_op_size_out - sizeof(block_op_t) bytes
+    /// Obtains the parameters of the block device (`block_info_t`) and the
+    /// required size of `block_txn_t`. The `block_txn_t`s submitted via
+    /// `Queue()` must have `block_op_size_out - sizeof(block_op_t)` bytes
     /// available at the end of the structure for the use of the driver.
     Query() -> (struct {
         info BlockInfo;
         block_op_size uint64;
     });
 
-    /// Submits an IO request for processing. Ownership of |op| is transferred to
-    /// callee until |completion_cb| is invoked|. Success or failure will
-    /// be reported via the |completion_cb|.  This / callback may be called
-    /// before the queue() method returns.
+    /// Submits an I/O request for processing. Ownership of `op` is transferred
+    /// to callee until `completion_cb` is invoked. Success or failure will be
+    /// reported via the `completion_cb`. This callback may be called before the
+    /// `Queue()` method returns.
     @async
     Queue(resource struct {
         @in_out
