@@ -6,14 +6,13 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
-
-	"go.fuchsia.dev/fuchsia/tools/artifactory"
 
 	"github.com/google/go-cmp/cmp"
 )
@@ -180,11 +179,106 @@ func TestGetProductBundlePathFromImagesJSON(t *testing.T) {
 	}
 }
 
-func TestGetProductBundleData(t *testing.T) {
-	contents := map[string][]byte{
-		"builds/123456/images/gen/build/images/emulator.json": []byte(`{
+var contents = map[string][]byte{
+	"builds/123456/images/gen/build/images/emulator.json": []byte(`{
+		"data": {
+		  "description": "some emulator device",
+		  "metadata": [
+			[
+			  "is_debug",
+			  false
+			]
+		  ],
+		  "device_refs": [
+			"qemu-x64"
+		  ],
+		  "images": [
+			{
+			  "base_uri": "file:/../../../..",
+			  "format": "files"
+			}
+		  ],
+		  "name": "terminal.qemu-x64",
+		  "packages": [
+			{
+			  "format": "files",
+			  "blob_uri": "file:/../../../../../../../blobs",
+			  "repo_uri": "file:/../../../../../packages"
+			}
+		  ],
+		  "type": "product_bundle",
+		  "manifests": {
+			"emu": {
+			  "disk_images": [
+				"obj/build/images/fuchsia/fuchsia/fvm.blob.sparse.blk"
+			  ],
+			  "initial_ramdisk": "fuchsia.zbi",
+			  "kernel": "multiboot.bin"
+			}
+		   }
+		},
+		"schema_id": "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json"
+		}`),
+	"builds/789123/images/gen/build/images/physical_device.json": []byte(`{
 			"data": {
-			  "description": "some emulator device",
+			  "description": "",
+			  "device_refs": [
+				"x64"
+			  ],
+			  "images": [
+				{
+				  "base_uri": "file:/../../../..",
+				  "format": "files"
+				}
+			  ],
+			  "manifests": {
+				"flash": {
+				  "hw_revision": "x64",
+				  "products": [
+					{
+					  "name": "fuchsia",
+					  "bootloader_partitions": [
+						{
+						  "name": "fuchsia-esp",
+						  "path": "fuchsia.esp.blk"
+						}
+					  ],
+					  "oem_files": [],
+					  "partitions": [
+						{
+						  "name": "a",
+						  "path": "zbi"
+						},
+						{
+						  "name": "r",
+						  "path": "vbmeta"
+						}
+					  ]
+					}
+				  ]
+				}
+			  },
+			  "metadata": [
+				[
+				  "build_info_board",
+				  "x64"
+				]
+			  ],
+			  "name": "terminal.x64",
+			  "packages": [
+				{
+				  "format": "files",
+				  "blob_uri": "file:/../../../../../../../blobs",
+				  "repo_uri": "file:/../../../../../packages"
+				}
+			  ],
+			  "type": "product_bundle"
+			},
+			"schema_id": "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json"
+		  }`),
+	"builds/invalid/path/images/gen/build/images/emulator.json": []byte(`{
+			"data": {
+			  "description": "some invalid emulator device",
 			  "device_refs": [
 				"qemu-x64"
 			  ],
@@ -215,209 +309,159 @@ func TestGetProductBundleData(t *testing.T) {
 			},
 			"schema_id": "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json"
 			}`),
-		"builds/789123/images/gen/build/images/physical_device.json": []byte(`{
-				"data": {
-				  "description": "",
-				  "device_refs": [
-					"x64"
-				  ],
-				  "images": [
-					{
-					  "base_uri": "file:/../../../..",
-					  "format": "files"
-					}
-				  ],
-				  "manifests": {
-					"flash": {
-					  "hw_revision": "x64",
-					  "products": [
-						{
-						  "bootloader_partitions": [
-							{
-							  "name": "fuchsia-esp",
-							  "path": "fuchsia.esp.blk"
-							}
-						  ],
-						  "name": "fuchsia",
-						  "oem_files": [],
-						  "partitions": [
-							{
-							  "name": "a",
-							  "path": "zbi"
-							},
-							{
-							  "name": "r",
-							  "path": "vbmeta"
-							}
-						  ]
-						}
-					  ]
-					}
-				  },
-				  "metadata": [
-					[
-					  "build_info_board",
-					  "x64"
-					]
-				  ],
-				  "name": "terminal.x64",
-				  "packages": [
-					{
-					  "format": "files",
-					  "blob_uri": "file:/../../../../../../../blobs",
-				      "repo_uri": "file:/../../../../../packages"
-					}
-				  ],
-				  "type": "product_bundle"
-				},
-				"schema_id": "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json"
-			  }`),
-		"builds/invalid/path/images/gen/build/images/emulator.json": []byte(`{
-				"data": {
-				  "description": "some invalid emulator device",
-				  "device_refs": [
-					"qemu-x64"
-				  ],
-				  "images": [
-					{
-					  "base_uri": "file:/../../../..",
-					  "format": "files"
-					}
-				  ],
-				  "name": "terminal.qemu-x64",
-				  "packages": [
-					{
-					  "format": "files",
-					  "blob_uri": "file:/../../../../../../../blobs",
-					  "repo_uri": "file:/../../../../../packages"
-					}
-				  ],
-				  "type": "product_bundle",
-				  "manifests": {
-					"emu": {
-					  "disk_images": [
-						"obj/build/images/fuchsia/fuchsia/fvm.blob.sparse.blk"
-					  ],
-					  "initial_ramdisk": "fuchsia.zbi",
-					  "kernel": "multiboot.bin"
-					}
-				   }
-				},
-				"schema_id": "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json"
-				}`),
-		"some/invalid/product_bundle.json": []byte(`{
-				  "data": "I am a string instead of an object",
-				"schema_id": "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json"
-			  }`),
-		"builds/123456/images":   []byte(""),
-		"builds/123456/packages": []byte(""),
-		"builds/789123/images":   []byte(""),
-		"builds/789123/packages": []byte(""),
-		"blobs":                  []byte(""),
-	}
+	"some/invalid/product_bundle.json": []byte(`{
+			  "data": "I am a string instead of an object",
+			"schema_id": "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json"
+		  }`),
+	"builds/123456/images":   []byte(""),
+	"builds/123456/packages": []byte(""),
+	"builds/789123/images":   []byte(""),
+	"builds/789123/packages": []byte(""),
+	"blobs":                  []byte(""),
+}
+
+func TestGetProductBundleData(t *testing.T) {
 	ctx := context.Background()
 	var tests = []struct {
 		name                  string
 		productBundlePath     string
 		dir                   string
-		dataSinkErr           error
-		expectedProductBundle artifactory.ProductBundle
-		expectedErrMessage    string
+		expectedProductBundle string
 	}{
 		{
 			name:              "valid product bundle for emulator",
 			productBundlePath: "builds/123456/images/gen/build/images/emulator.json",
-			expectedProductBundle: artifactory.ProductBundle{
-				SchemaID: "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json",
-				Data: artifactory.Data{
-					Description: "some emulator device",
-					DeviceRefs:  []string{"qemu-x64"},
-					Images: []*artifactory.Image{
-						{
-							BaseURI: "gs://fuchsia/builds/123456/images",
-							Format:  "files",
-						},
-					},
-					Type: "product_bundle",
-					Name: "terminal.qemu-x64",
-					Packages: []*artifactory.Package{
-						{
-							Format:  "files",
-							RepoURI: "gs://fuchsia/builds/123456/packages",
-							BlobURI: "gs://fuchsia/blobs",
-						},
-					},
-					Manifests: &artifactory.Manifests{
-						Emu: &artifactory.EmuManifest{
-							DiskImages:     []string{"obj/build/images/fuchsia/fuchsia/fvm.blob.sparse.blk"},
-							InitialRamdisk: "fuchsia.zbi",
-							Kernel:         "multiboot.bin",
-						},
-					},
-				},
-			},
+			expectedProductBundle: `{
+  "data": {
+    "device_refs": [
+      "qemu-x64"
+    ],
+    "images": [
+      {
+        "base_uri": "gs://fuchsia/builds/123456/images",
+        "format": "files"
+      }
+    ],
+    "type": "product_bundle",
+    "name": "terminal.qemu-x64",
+    "packages": [
+      {
+        "format": "files",
+        "blob_uri": "gs://fuchsia/blobs",
+        "repo_uri": "gs://fuchsia/builds/123456/packages"
+      }
+    ],
+    "description": "some emulator device",
+    "metadata": [
+      [
+        "is_debug",
+        false
+      ]
+    ],
+    "manifests": {
+      "emu": {
+        "disk_images": [
+          "obj/build/images/fuchsia/fuchsia/fvm.blob.sparse.blk"
+        ],
+        "initial_ramdisk": "fuchsia.zbi",
+        "kernel": "multiboot.bin"
+      }
+    }
+  },
+  "schema_id": "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json"
+}`,
 			dir: "fuchsia",
 		},
 		{
 			name:              "valid product bundle for physical device",
 			productBundlePath: "builds/789123/images/gen/build/images/physical_device.json",
-			expectedProductBundle: artifactory.ProductBundle{
-				SchemaID: "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json",
-				Data: artifactory.Data{
-					Description: "",
-					DeviceRefs:  []string{"x64"},
-					Images: []*artifactory.Image{
-						{
-							BaseURI: "gs://fuchsia/builds/789123/images",
-							Format:  "files",
-						},
-					},
-					Type: "product_bundle",
-					Name: "terminal.x64",
-					Packages: []*artifactory.Package{
-						{
-							Format:  "files",
-							RepoURI: "gs://fuchsia/builds/789123/packages",
-							BlobURI: "gs://fuchsia/blobs",
-						},
-					},
-					Manifests: &artifactory.Manifests{
-						Flash: &artifactory.FlashManifest{
-							HWRevision: "x64",
-							Products: []*artifactory.Product{
-								{
-									Name:     "fuchsia",
-									OEMFiles: []*artifactory.OEMFile{},
-									BootloaderPartitions: []*artifactory.Partition{
-										{
-											Name: "fuchsia-esp",
-											Path: "fuchsia.esp.blk",
-										},
-									},
-									Partitions: []*artifactory.Partition{
-										{
-											Name: "a",
-											Path: "zbi",
-										},
-										{
-											Name: "r",
-											Path: "vbmeta",
-										},
-									},
-								},
-							},
-						},
-					},
-					Metadata: [][]artifactory.Metadata{
-						{
-							"build_info_board",
-							"x64",
-						},
-					},
-				},
-			},
+			expectedProductBundle: `{
+  "data": {
+    "device_refs": [
+      "x64"
+    ],
+    "images": [
+      {
+        "base_uri": "gs://fuchsia/builds/789123/images",
+        "format": "files"
+      }
+    ],
+    "type": "product_bundle",
+    "name": "terminal.x64",
+    "packages": [
+      {
+        "format": "files",
+        "blob_uri": "gs://fuchsia/blobs",
+        "repo_uri": "gs://fuchsia/builds/789123/packages"
+      }
+    ],
+    "description": "",
+    "metadata": [
+      [
+        "build_info_board",
+        "x64"
+      ]
+    ],
+    "manifests": {
+      "flash": {
+        "hw_revision": "x64",
+        "products": [
+          {
+            "name": "fuchsia",
+            "bootloader_partitions": [
+              {
+                "name": "fuchsia-esp",
+                "path": "fuchsia.esp.blk"
+              }
+            ],
+            "oem_files": [],
+            "partitions": [
+              {
+                "name": "a",
+                "path": "zbi"
+              },
+              {
+                "name": "r",
+                "path": "vbmeta"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "schema_id": "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json"
+}`,
 			dir: "fuchsia",
 		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			sink := newMemSink(contents, nil, test.dir)
+			output, err := readAndUpdateProductBundle(ctx, sink, test.productBundlePath)
+			if err != nil {
+				t.Errorf("Got error: %s, expected no error", err)
+			}
+			marshalledOutput, err := json.MarshalIndent(&output, "", "  ")
+			if err != nil {
+				t.Fatalf("json.MarshalIndent(%#v): %s", &output, err)
+			}
+			if diff := cmp.Diff(test.expectedProductBundle, string(marshalledOutput)); diff != "" {
+				t.Errorf("unexpected image uploads (-want +got):\n%v", diff)
+			}
+		})
+	}
+}
+
+func TestGetProductBundleDataInvalid(t *testing.T) {
+	ctx := context.Background()
+	var tests = []struct {
+		name               string
+		productBundlePath  string
+		dir                string
+		dataSinkErr        error
+		expectedErrMessage string
+	}{
 		{
 			name:               "product bundle does not exist in GCS",
 			productBundlePath:  "product/bundle/does/not/exist.json",
@@ -425,11 +469,8 @@ func TestGetProductBundleData(t *testing.T) {
 			expectedErrMessage: "storage: object doesn't exist",
 		},
 		{
-			name:              "product bundle contains incorrect json schema",
-			productBundlePath: "some/invalid/product_bundle.json",
-			expectedProductBundle: artifactory.ProductBundle{
-				SchemaID: "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json",
-			},
+			name:               "product bundle contains incorrect json schema",
+			productBundlePath:  "some/invalid/product_bundle.json",
 			expectedErrMessage: "json: cannot unmarshal string into Go struct field ProductBundle.data of type artifactory.Data",
 		},
 		{
@@ -441,10 +482,7 @@ func TestGetProductBundleData(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			sink := newMemSink(contents, test.dataSinkErr, test.dir)
-			output, err := readAndUpdateProductBundle(ctx, sink, test.productBundlePath)
-			if !cmp.Equal(&output, &test.expectedProductBundle) {
-				t.Errorf("Got output: %v, want: %v", output, test.expectedProductBundle)
-			}
+			_, err := readAndUpdateProductBundle(ctx, sink, test.productBundlePath)
 			if err != nil && err.Error() != test.expectedErrMessage {
 				t.Errorf("Got error: %s, want: %s", err.Error(), test.expectedErrMessage)
 			}
