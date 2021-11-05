@@ -429,7 +429,6 @@ async fn relative_echo_realm() -> Result<(), Error> {
     Ok(())
 }
 
-#[ignore]
 #[fasync::run_singlethreaded(test)]
 async fn altered_echo_client_args() -> Result<(), Error> {
     let (send_echo_server_called, mut receive_echo_server_called) = mpsc::channel(1);
@@ -454,6 +453,13 @@ async fn altered_echo_client_args() -> Result<(), Error> {
         .add_route(
             RouteBuilder::protocol("fidl.examples.routing.echo.Echo")
                 .source(RouteEndpoint::component("echo_server"))
+                .targets(vec![RouteEndpoint::component("echo_client")])
+                .force(),
+        )
+        .await?
+        .add_route(
+            RouteBuilder::protocol("fuchsia.logger.LogSink")
+                .source(RouteEndpoint::above_root())
                 .targets(vec![RouteEndpoint::component("echo_client")])
                 .force(),
         )
