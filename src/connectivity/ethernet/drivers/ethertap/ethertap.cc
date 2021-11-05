@@ -347,6 +347,7 @@ int TapDevice::Thread() {
   fidl_channel_handle_metadata_t handle_metadata_buff[handle_count];
 
   fidl_incoming_msg_t msg = {
+      .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
       .bytes = data_buff.get(),
       .handles = handles_buff,
       .handle_metadata = handle_metadata_buff,

@@ -295,27 +295,40 @@ OutgoingMessage::CopiedBytes::CopiedBytes(const OutgoingMessage& msg) {
 }
 
 IncomingMessage::IncomingMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles,
-                                 fidl_transport_type transport_type, void* handle_metadata,
+                                 fidl_channel_handle_metadata_t* handle_metadata,
                                  uint32_t handle_actual)
-    : IncomingMessage(bytes, byte_actual, handles, transport_type, handle_metadata, handle_actual,
+    : IncomingMessage(FIDL_TRANSPORT_TYPE_CHANNEL, bytes, byte_actual, handles, handle_metadata,
+                      handle_actual) {}
+
+IncomingMessage::IncomingMessage(fidl_transport_type transport_type, uint8_t* bytes,
+                                 uint32_t byte_actual, zx_handle_t* handles, void* handle_metadata,
+                                 uint32_t handle_actual)
+    : IncomingMessage(transport_type, bytes, byte_actual, handles, handle_metadata, handle_actual,
                       kSkipMessageHeaderValidation) {
   Validate();
   is_transactional_ = true;
 }
 
 IncomingMessage IncomingMessage::FromEncodedCMessage(const fidl_incoming_msg_t* c_msg) {
-  return IncomingMessage(reinterpret_cast<uint8_t*>(c_msg->bytes), c_msg->num_bytes, c_msg->handles,
-                         c_msg->transport_type, c_msg->handle_metadata, c_msg->num_handles);
+  return IncomingMessage(c_msg->transport_type, reinterpret_cast<uint8_t*>(c_msg->bytes),
+                         c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
+                         c_msg->num_handles);
 }
 
 IncomingMessage::IncomingMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles,
-                                 fidl_transport_type transport_type, void* handle_metadata,
+                                 fidl_channel_handle_metadata_t* handle_metadata,
+                                 uint32_t handle_actual, SkipMessageHeaderValidationTag)
+    : IncomingMessage(FIDL_TRANSPORT_TYPE_CHANNEL, bytes, byte_actual, handles, handle_metadata,
+                      handle_actual, kSkipMessageHeaderValidation) {}
+
+IncomingMessage::IncomingMessage(fidl_transport_type transport_type, uint8_t* bytes,
+                                 uint32_t byte_actual, zx_handle_t* handles, void* handle_metadata,
                                  uint32_t handle_actual, SkipMessageHeaderValidationTag)
     : fidl::Result(fidl::Result::Ok()),
       message_{
+          .transport_type = transport_type,
           .bytes = bytes,
           .handles = handles,
-          .transport_type = transport_type,
           .handle_metadata = handle_metadata,
           .num_bytes = byte_actual,
           .num_handles = handle_actual,
@@ -386,22 +399,11 @@ void IncomingMessage::Decode(internal::WireFormatVersion wire_format_version,
   }
 
   fidl_trace(WillLLCPPDecode, message_type, bytes(), byte_actual(), handle_actual());
-  // TODO(fxbug.dev/85734) This assumes channel transport - remove the assumption.
-  zx_handle_info_t handle_infos[ZX_CHANNEL_MAX_MSG_HANDLES];
-  for (uint32_t i = 0; i < message_.num_handles; i++) {
-    handle_infos[i] = {
-        .handle = message_.handles[i],
-    };
-    if (message_.handle_metadata) {
-      const fidl_channel_handle_metadata_t* metadata =
-          reinterpret_cast<const fidl_channel_handle_metadata_t*>(message_.handle_metadata);
-      handle_infos[i].type = metadata[i].obj_type;
-      handle_infos[i].rights = metadata[i].rights;
-    }
-  }
-  zx_status_t status =
-      internal_fidl_decode_etc__v2__may_break(message_type, message_.bytes, message_.num_bytes,
-                                              handle_infos, message_.num_handles, error_address());
+  const internal::CodingConfig* encoding_configuration =
+      internal::LookupTransportVTable(message_.transport_type)->encoding_configuration;
+  zx_status_t status = fidl::internal::DecodeEtc<FIDL_WIRE_FORMAT_VERSION_V2>(
+      *encoding_configuration, message_type, message_.bytes, message_.num_bytes, message_.handles,
+      message_.handle_metadata, message_.num_handles, error_address());
   fidl_trace(DidLLCPPDecode);
   // Now the caller is responsible for the handles contained in `bytes()`.
   ReleaseHandles();
@@ -459,8 +461,7 @@ IncomingMessage MessageRead(internal::AnyUnownedTransport transport, uint32_t op
         .rights = handle_infos[i].rights,
     };
   }
-  return IncomingMessage(bytes_storage.data, num_bytes, handle_storage, transport_type,
-                         handle_metadata_storage, num_handles);
+  return IncomingMessage(bytes_storage.data, num_bytes, handle_storage, metadata, num_handles);
 }
 }  // namespace internal
 
@@ -478,7 +479,6 @@ IncomingMessage OutgoingToIncomingMessage::ConversionImpl(
     std::unique_ptr<zx_handle_t[]>& buf_handles,
     // TODO(fxbug.dev/85734) Remove channel-specific logic.
     std::unique_ptr<fidl_channel_handle_metadata_t[]>& buf_handle_metadata) {
-  constexpr fidl_transport_type conversion_transport_type = FIDL_TRANSPORT_TYPE_CHANNEL;
   zx_handle_t* handles = input.handles();
   fidl_channel_handle_metadata_t* handle_metadata =
       static_cast<fidl_channel_handle_metadata_t*>(input.handle_metadata());
@@ -516,10 +516,10 @@ IncomingMessage OutgoingToIncomingMessage::ConversionImpl(
 
   if (input.is_transactional()) {
     return fidl::IncomingMessage(buf_bytes.data(), buf_bytes.size(), buf_handles.get(),
-                                 conversion_transport_type, buf_handle_metadata.get(), num_handles);
+                                 buf_handle_metadata.get(), num_handles);
   }
   return fidl::IncomingMessage(buf_bytes.data(), buf_bytes.size(), buf_handles.get(),
-                               conversion_transport_type, buf_handle_metadata.get(), num_handles,
+                               buf_handle_metadata.get(), num_handles,
                                fidl::IncomingMessage::kSkipMessageHeaderValidation);
 }
 

@@ -75,9 +75,9 @@ TEST_F(IncomingMessageWithHandlesTest, AdoptHandlesFromC) {
 }
 
 TEST_F(IncomingMessageWithHandlesTest, AdoptHandlesWithRegularConstructor) {
-  auto incoming = fidl::IncomingMessage(bytes_, static_cast<uint32_t>(std::size(bytes_)), handles_,
-                                        FIDL_TRANSPORT_TYPE_CHANNEL, handle_metadata_,
-                                        static_cast<uint32_t>(std::size(handles_)));
+  auto incoming =
+      fidl::IncomingMessage(bytes_, static_cast<uint32_t>(std::size(bytes_)), handles_,
+                            handle_metadata_, static_cast<uint32_t>(std::size(handles_)));
   EXPECT_EQ(ZX_OK, incoming.status());
 }
 
@@ -85,9 +85,9 @@ TEST_F(IncomingMessageWithHandlesTest, ReleaseHandles) {
   fidl_incoming_msg c_msg = {};
 
   {
-    auto incoming = fidl::IncomingMessage(bytes_, static_cast<uint32_t>(std::size(bytes_)),
-                                          handles_, FIDL_TRANSPORT_TYPE_CHANNEL, handle_metadata_,
-                                          static_cast<uint32_t>(std::size(handles_)));
+    auto incoming =
+        fidl::IncomingMessage(bytes_, static_cast<uint32_t>(std::size(bytes_)), handles_,
+                              handle_metadata_, static_cast<uint32_t>(std::size(handles_)));
     ASSERT_EQ(ZX_OK, incoming.status());
     c_msg = std::move(incoming).ReleaseToEncodedCMessage();
     // At this point, |incoming| will not close the handles.
@@ -106,9 +106,9 @@ TEST_F(IncomingMessageWithHandlesTest, ReleaseHandles) {
 }
 
 TEST_F(IncomingMessageWithHandlesTest, MoveConstructorHandleOwnership) {
-  auto incoming = fidl::IncomingMessage(bytes_, static_cast<uint32_t>(std::size(bytes_)), handles_,
-                                        FIDL_TRANSPORT_TYPE_CHANNEL, handle_metadata_,
-                                        static_cast<uint32_t>(std::size(handles_)));
+  auto incoming =
+      fidl::IncomingMessage(bytes_, static_cast<uint32_t>(std::size(bytes_)), handles_,
+                            handle_metadata_, static_cast<uint32_t>(std::size(handles_)));
   fidl::IncomingMessage another{std::move(incoming)};
   EXPECT_EQ(incoming.handle_actual(), 0u);
   EXPECT_GT(another.handle_actual(), 0u);
@@ -123,16 +123,17 @@ TEST(IncomingMessage, ValidateTransactionalMessageHeader) {
   hdr->magic_number = 42;
 
   {
-    auto incoming = fidl::IncomingMessage(bytes, static_cast<uint32_t>(std::size(bytes)), nullptr,
-                                          FIDL_TRANSPORT_TYPE_INVALID, nullptr, 0);
+    auto incoming =
+        fidl::IncomingMessage(FIDL_TRANSPORT_TYPE_INVALID, bytes,
+                              static_cast<uint32_t>(std::size(bytes)), nullptr, nullptr, 0);
     EXPECT_EQ(ZX_ERR_PROTOCOL_NOT_SUPPORTED, incoming.status());
     EXPECT_FALSE(incoming.ok());
   }
 
   {
-    auto incoming = fidl::IncomingMessage(bytes, static_cast<uint32_t>(std::size(bytes)), nullptr,
-                                          FIDL_TRANSPORT_TYPE_INVALID, nullptr, 0,
-                                          fidl::IncomingMessage::kSkipMessageHeaderValidation);
+    auto incoming = fidl::IncomingMessage(FIDL_TRANSPORT_TYPE_INVALID, bytes,
+                                          static_cast<uint32_t>(std::size(bytes)), nullptr, nullptr,
+                                          0, fidl::IncomingMessage::kSkipMessageHeaderValidation);
     EXPECT_EQ(ZX_OK, incoming.status());
     EXPECT_TRUE(incoming.ok());
   }

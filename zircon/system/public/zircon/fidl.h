@@ -567,6 +567,10 @@ typedef struct fidl_outgoing_msg {
 
 // An incoming FIDL message.
 typedef struct fidl_incoming_msg {
+  // Type identifier for the FIDL transport.
+  // This determines the type of the data in |handle_metadata|.
+  fidl_transport_type transport_type;
+
   // The bytes of the message.
   //
   // The bytes of the message might be in the encoded or decoded form.
@@ -580,10 +584,6 @@ typedef struct fidl_incoming_msg {
   //
   // See |num_handles| for the number of handles in the message.
   fidl_handle_t* handles;
-
-  // Type identifier for the FIDL transport.
-  // This determines the type of the data in |handle_metadata|.
-  fidl_transport_type transport_type;
 
   // Array of metadata providing additional information on the handles.
   // The type of data held in this array is determined by |transport_type|.

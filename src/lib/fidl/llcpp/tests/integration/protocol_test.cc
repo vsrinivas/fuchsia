@@ -138,6 +138,7 @@ TEST(MagicNumberTest, RequestWrite) {
   zx_handle_info_t handle_infos[ZX_CHANNEL_MAX_MSG_HANDLES];
 
   fidl_incoming_msg_t msg = {
+      .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
       .bytes = bytes,
       .num_bytes = 0u,
       .num_handles = 0u,
@@ -162,6 +163,7 @@ TEST(MagicNumberTest, EventWrite) {
   zx_handle_info_t handle_infos[ZX_CHANNEL_MAX_MSG_HANDLES];
 
   fidl_incoming_msg_t msg = {
+      .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
       .bytes = bytes,
       .num_bytes = 0u,
       .num_handles = 0u,

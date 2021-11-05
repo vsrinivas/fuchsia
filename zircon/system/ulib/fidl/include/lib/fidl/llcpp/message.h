@@ -297,15 +297,23 @@ constexpr WireFormatVersion kLLCPPEncodedWireFormatVersion = WireFormatVersion::
 //
 class IncomingMessage : public ::fidl::Result {
  public:
+  // Creates an object which can manage a FIDL channel message. Allocated memory is
+  // not owned by the |IncomingMessage|, but handles are owned by it and cleaned up when the
+  // |IncomingMessage| is destructed.
+  //
+  // The bytes must represent a transactional message. See
+  // https://fuchsia.dev/fuchsia-src/reference/fidl/language/wire-format?hl=en#transactional-messages
+  IncomingMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles,
+                  fidl_channel_handle_metadata_t* handle_metadata, uint32_t handle_actual);
+
   // Creates an object which can manage a FIDL message. Allocated memory is not owned by
   // the |IncomingMessage|, but handles are owned by it and cleaned up when the
   // |IncomingMessage| is destructed.
   //
   // The bytes must represent a transactional message. See
   // https://fuchsia.dev/fuchsia-src/reference/fidl/language/wire-format?hl=en#transactional-messages
-  IncomingMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles,
-                  fidl_transport_type transport_type, void* handle_metadata,
-                  uint32_t handle_actual);
+  IncomingMessage(fidl_transport_type transport_type, uint8_t* bytes, uint32_t byte_actual,
+                  zx_handle_t* handles, void* handle_metadata, uint32_t handle_actual);
 
   // Creates an |IncomingMessage| from a C |fidl_incoming_msg_t| already in
   // encoded form. This should only be used when interfacing with C APIs.
@@ -328,7 +336,17 @@ class IncomingMessage : public ::fidl::Result {
   // using the constructor in |FidlType::DecodedMessage|, which delegates
   // here appropriately.
   IncomingMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles,
-                  fidl_transport_type transport_type, void* handle_metadata, uint32_t handle_actual,
+                  fidl_channel_handle_metadata_t* handle_metadata, uint32_t handle_actual,
+                  SkipMessageHeaderValidationTag);
+
+  // An overload for when the bytes do not represent a transactional message.
+  //
+  // This constructor should be rarely used in practice. When decoding
+  // FIDL types that are not transactional messages (e.g. tables), consider
+  // using the constructor in |FidlType::DecodedMessage|, which delegates
+  // here appropriately.
+  IncomingMessage(fidl_transport_type transport_type, uint8_t* bytes, uint32_t byte_actual,
+                  zx_handle_t* handles, void* handle_metadata, uint32_t handle_actual,
                   SkipMessageHeaderValidationTag);
 
   // Creates an empty incoming message representing an error (e.g. failed to read from

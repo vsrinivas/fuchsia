@@ -109,6 +109,7 @@ static void fidl_message_handler(async_dispatcher_t* dispatcher, async_wait_t* w
     fidl_channel_handle_metadata_t handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
     for (uint64_t i = 0; i < signal->count; i++) {
       fidl_incoming_msg_t msg = {
+          .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
           .bytes = bytes,
           .handles = handles,
           .handle_metadata = handle_metadata,

@@ -143,6 +143,13 @@ struct CodingConfig {
 }  // namespace internal
 }  // namespace fidl
 
+// Internal fidl decode implementation, exposed for the purpose of sharing an implementation with
+// LLCPP decode.
+template <FidlWireFormatVersion WireFormatVersion>
+zx_status_t internal__fidl_decode_impl__may_break(
+    const fidl::internal::CodingConfig& encoding_configuration, const fidl_type_t* type,
+    void* bytes, uint32_t num_bytes, const fidl_handle_t* handles, const void* handle_metadata,
+    uint32_t num_handles, const char** out_error_msg, bool hlcpp_mode);
 #endif
 
 #endif  // LIB_FIDL_CODING_H_

@@ -55,6 +55,7 @@ TEST(ServerTests, dispatch_test) {
   };
 
   fidl_incoming_msg_t msg = {
+      .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
       .bytes = &request,
       .handles = handles,
       .handle_metadata = handle_metadata,
@@ -184,6 +185,7 @@ TEST(ServerTests, error_test) {
       },
   };
   fidl_incoming_msg_t msg = {
+      .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
       .bytes = &request,
       .handles = handles,
       .handle_metadata = handle_metadata,
@@ -228,6 +230,7 @@ TEST(ServerTests, incompatible_magic_test) {
       },
   };
   fidl_incoming_msg_t msg = {
+      .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
       .bytes = &request,
       .handles = handles,
       .handle_metadata = handle_metadata,

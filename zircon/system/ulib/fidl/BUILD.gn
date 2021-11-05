@@ -113,6 +113,7 @@ if (is_fuchsia) {
       "llcpp_async_transaction.cc",
       "llcpp_client_base.cc",
       "llcpp_coding.c",
+      "llcpp_decoding.cc",
       "llcpp_encoding.cc",
       "llcpp_message.cc",
       "llcpp_message_storage.cc",
@@ -179,6 +180,7 @@ if (is_fuchsia) {
     sources = [
       "llcpp_arena.cc",
       "llcpp_coding.c",
+      "llcpp_decoding.cc",
       "llcpp_encoding.cc",
       "llcpp_message.cc",
       "llcpp_message_storage.cc",

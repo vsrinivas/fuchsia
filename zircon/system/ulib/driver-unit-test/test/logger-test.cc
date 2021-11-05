@@ -65,6 +65,7 @@ void DecodeMessage(const zx::channel& channel, uint64_t want_ordinal, const fidl
   const uint32_t buf_size = kMaxFidlMsgSize;
   std::unique_ptr<uint8_t[]> buf(new uint8_t[buf_size]);
   fidl_incoming_msg_t fidl_msg = {
+      .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
       .bytes = buf.get(),
       .handles = nullptr,
       .num_bytes = buf_size,
