@@ -37,8 +37,7 @@ void MapUart(page_table::AddressSpaceBuilderInterface& builder, memalloc::Pool& 
 
   GetUartDriver().Visit([mapper = ktl::move(mapper)](auto&& driver) {
     using config_type = typename ktl::decay_t<decltype(driver.uart())>::config_type;
-    if constexpr (ktl::is_same_v<config_type, dcfg_simple_t> ||
-                  ktl::is_same_v<config_type, dcfg_soc_uart_t>) {
+    if constexpr (ktl::is_same_v<config_type, dcfg_simple_t>) {
       driver.io() = uart::BasicIoProvider<config_type>{
           driver.uart().config(),
           driver.uart().pio_size(),

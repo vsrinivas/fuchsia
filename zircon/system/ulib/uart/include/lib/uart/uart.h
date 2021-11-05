@@ -274,30 +274,6 @@ class BasicIoProvider<dcfg_simple_pio_t> {
 };
 #endif
 
-// The specialization for devices requiring two separate MMIO areas
-// provides an additional entry point for the second one.
-template <>
-class BasicIoProvider<dcfg_soc_uart_t> {
- public:
-  // The third argument can be passed by a subclass's constructor.
-  template <typename T>
-  BasicIoProvider(const dcfg_soc_uart_t& cfg, uint16_t pio_size, T&& map_mmio)
-      : soc_mmio_(map_mmio(cfg.soc_mmio_phys)), uart_mmio_(map_mmio(cfg.uart_mmio_phys)) {
-    ZX_DEBUG_ASSERT(pio_size == 0);
-  }
-  BasicIoProvider(const dcfg_soc_uart_t& cfg, uint16_t pio_size)
-      : BasicIoProvider(cfg, pio_size, DirectMapMmio) {}
-
-  auto* io() { return &uart_mmio_; }
-
-  auto* soc_io() { return &soc_mmio_; }
-
-  uint16_t pio_size() const { return 0; }
-
- private:
-  hwreg::RegisterMmio soc_mmio_, uart_mmio_;
-};
-
 // The Sync class provides synchronization around the UartDriver.
 //
 // This is the degenerate case of the uart::KernelDriver Sync API.
@@ -449,12 +425,6 @@ std::optional<dcfg_simple_pio_t> ParseConfig<dcfg_simple_pio_t>(std::string_view
 
 template <>
 void UnparseConfig(const dcfg_simple_pio_t& config, FILE* out);
-
-template <>
-std::optional<dcfg_soc_uart_t> ParseConfig<dcfg_soc_uart_t>(std::string_view string);
-
-template <>
-void UnparseConfig(const dcfg_soc_uart_t& config, FILE* out);
 
 }  // namespace uart
 

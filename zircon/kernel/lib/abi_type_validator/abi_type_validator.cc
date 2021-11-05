@@ -527,12 +527,6 @@ VALIDATE_FIELD_OFFSET_SIZE(dcfg_simple_pio_t, base, 0, 2);
 VALIDATE_FIELD_OFFSET_SIZE(dcfg_simple_pio_t, reserved, 2, 2);
 VALIDATE_FIELD_OFFSET_SIZE(dcfg_simple_pio_t, irq, 4, 4);
 
-VALIDATE_TYPE_SIZE_ALIGNMENT(dcfg_soc_uart_t, 24, 8);
-VALIDATE_FIELD_OFFSET_SIZE(dcfg_soc_uart_t, soc_mmio_phys, 0, 8);
-VALIDATE_FIELD_OFFSET_SIZE(dcfg_soc_uart_t, uart_mmio_phys, 8, 8);
-VALIDATE_FIELD_OFFSET_SIZE(dcfg_soc_uart_t, irq, 16, 4);
-VALIDATE_FIELD_OFFSET_SIZE(dcfg_soc_uart_t, reserved, 20, 4);
-
 VALIDATE_TYPE_SIZE_ALIGNMENT(dcfg_arm_psci_driver_t, 104, 8);
 VALIDATE_FIELD_OFFSET_SIZE(dcfg_arm_psci_driver_t, use_hvc, 0, 1);
 VALIDATE_FIELD_OFFSET_SIZE(dcfg_arm_psci_driver_t, reserved, 1, 7);
@@ -540,10 +534,6 @@ VALIDATE_FIELD_OFFSET_SIZE(dcfg_arm_psci_driver_t, shutdown_args, 8, 24);
 VALIDATE_FIELD_OFFSET_SIZE(dcfg_arm_psci_driver_t, reboot_args, 32, 24);
 VALIDATE_FIELD_OFFSET_SIZE(dcfg_arm_psci_driver_t, reboot_bootloader_args, 56, 24);
 VALIDATE_FIELD_OFFSET_SIZE(dcfg_arm_psci_driver_t, reboot_recovery_args, 80, 24);
-
-VALIDATE_TYPE_SIZE_ALIGNMENT(dcfg_msm_power_driver_t, 16, 8);
-VALIDATE_FIELD_OFFSET_SIZE(dcfg_msm_power_driver_t, soc_imem_phys, 0, 8);
-VALIDATE_FIELD_OFFSET_SIZE(dcfg_msm_power_driver_t, soc_imem_offset, 8, 8);
 
 VALIDATE_TYPE_SIZE_ALIGNMENT(dcfg_arm_gicv2_driver_t, 56, 8);
 VALIDATE_FIELD_OFFSET_SIZE(dcfg_arm_gicv2_driver_t, mmio_phys, 0, 8);

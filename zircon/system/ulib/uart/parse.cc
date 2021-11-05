@@ -38,18 +38,4 @@ void UnparseConfig(const dcfg_simple_pio_t& config, FILE* out) {
   UnparseInts(out, config.base, config.irq);
 }
 
-template <>
-std::optional<dcfg_soc_uart_t> ParseConfig<dcfg_soc_uart_t>(std::string_view string) {
-  dcfg_soc_uart_t config{};
-  if (ParseInts(string, &config.soc_mmio_phys, &config.uart_mmio_phys, &config.irq)) {
-    return config;
-  }
-  return {};
-}
-
-template <>
-void UnparseConfig(const dcfg_soc_uart_t& config, FILE* out) {
-  UnparseInts(out, config.soc_mmio_phys, config.uart_mmio_phys, config.irq);
-}
-
 }  // namespace uart

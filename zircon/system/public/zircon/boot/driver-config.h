@@ -17,12 +17,8 @@
 #define KDRV_PL011_UART 0x55304C50              // 'PL0U'
 #define KDRV_AMLOGIC_UART 0x554C4D41            // 'AMLU'
 #define KDRV_NXP_IMX_UART 0x55584D49            // 'IMXU'
-#define KDRV_MT8167_UART 0x5538544D             // 'MT8U'
 #define KDRV_AMLOGIC_HDCP 0x484C4D41            // 'AMLH'
-#define KDRV_MSM_UART 0x554D534D                // 'MSMU'
-#define KDRV_MSM_POWER 1347244877               // 'MSMP'
 #define KDRV_DW8250_UART 0x44573855             // 'DW8U'
-#define KDRV_AS370_POWER 0x50303733             // '370P'
 #define KDRV_AMLOGIC_RNG 0x484C4D52             // 'AMLR'
 #define KDRV_GENERIC_32BIT_WATCHDOG 0x32334457  // 'WD32'
 #define KDRV_I8250_PIO_UART 0x30353238          // '8250'
@@ -45,14 +41,6 @@ typedef struct {
   uint32_t irq;
 } dcfg_simple_pio_t;
 
-// for KDRV_MT8167_UART
-typedef struct {
-  uint64_t soc_mmio_phys;
-  uint64_t uart_mmio_phys;
-  uint32_t irq;
-  uint32_t reserved;
-} dcfg_soc_uart_t;
-
 // for KDRV_ARM_PSCI
 typedef struct {
   uint8_t use_hvc;
@@ -62,11 +50,6 @@ typedef struct {
   uint64_t reboot_bootloader_args[3];
   uint64_t reboot_recovery_args[3];
 } dcfg_arm_psci_driver_t;
-
-typedef struct {
-  uint64_t soc_imem_phys;
-  uint64_t soc_imem_offset;
-} dcfg_msm_power_driver_t;
 
 // for KDRV_ARM_GIC_V2
 typedef struct {
