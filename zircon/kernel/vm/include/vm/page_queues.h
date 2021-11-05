@@ -214,7 +214,7 @@ class PageQueues {
   // until _after_ all the pages have been removed from the VmCowPages and have become FREE.  Not
   // all methods are safe to call via a referenced VmoContainerBacklink, but ReplacePage() is.
   fitx::result<zx_status_t, ktl::optional<VmoContainerBacklink>> GetCowWithReplaceablePage(
-      vm_page_t* page, VmCowPages* owning_cow, zx_duration_t unpin_age_threshold);
+      vm_page_t* page, VmCowPages* owning_cow);
 
   // Helper struct to group pager-backed queue length counts returned by GetPagerQueueCounts.
   struct PagerCounts {

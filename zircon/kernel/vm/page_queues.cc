@@ -4,8 +4,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include "include/vm/page_queues.h"
-
 #include <lib/counters.h>
 #include <lib/fit/defer.h>
 #include <lib/zircon-internal/macros.h>
@@ -1008,8 +1006,7 @@ PageQueues::ActiveInactiveCounts PageQueues::GetActiveInactiveCountsLocked() con
 }
 
 fitx::result<zx_status_t, ktl::optional<PageQueues::VmoContainerBacklink>>
-PageQueues::GetCowWithReplaceablePage(vm_page_t* page, VmCowPages* owning_cow,
-                                      zx_duration_t unpin_age_threshold) {
+PageQueues::GetCowWithReplaceablePage(vm_page_t* page, VmCowPages* owning_cow) {
   // Wait for the page to not be in a transient state.  This is in a loop, since the wait happens
   // outside the lock, so another thread doing commit/decommit on owning_cow can cause the page
   // state to change, potentially multiple times.
@@ -1023,11 +1020,12 @@ PageQueues::GetCowWithReplaceablePage(vm_page_t* page, VmCowPages* owning_cow,
   // by another thread.  Thanks to loan_cancelled, we can limit all the wait required cases to a max
   // of once.  This mitigation doesn't try to maximally detect interference and minimize iterations
   // but the mitigation does limit iterations to a finite number.
-  // DO NOT SUBMIT:
-  // complain on excessive loop iterations / duration looping
-  // complain on excessive lifetime duration of StackOwnedLoanedPagesInterval, probably during
-  // destructor, but consider if there's any cheap and simple enough way to complain if it's just
-  // existing too long without any pre-existing calls on it.
+  //
+  // TODO(dustingreen):
+  //  * complain on excessive loop iterations / duration looping
+  //  * complain on excessive lifetime duration of StackOwnedLoanedPagesInterval, probably during
+  //    destructor, but consider if there's any cheap and simple enough way to complain if it's just
+  //    existing too long without any pre-existing calls on it.
   while (true) {
     // This is just for asserting that we don't end up trying to wait when we didn't intend to.
     bool wait_on_stack_ownership = false;

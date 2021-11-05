@@ -48,8 +48,6 @@ class VmCowPages final
  public:
   static zx_status_t Create(fbl::RefPtr<VmHierarchyState> root_lock, uint32_t pmm_alloc_flags,
                             uint64_t size, fbl::RefPtr<VmCowPages>* cow_pages);
-  // Destructor is public only to allow std::is_destructible_v<> to say true.  Don't call directly.
-  ~VmCowPages() override;
 
   static zx_status_t CreateExternal(fbl::RefPtr<PageSource> src,
                                     fbl::RefPtr<VmHierarchyState> root_lock, uint64_t size,
@@ -323,6 +321,8 @@ class VmCowPages final
              fbl::RefPtr<VmHierarchyState> root_lock, uint32_t options, uint32_t pmm_alloc_flags,
              uint64_t size, fbl::RefPtr<PageSource> page_source);
   friend class VmCowPagesContainer;
+
+  ~VmCowPages() override;
 
   // This takes all the constructor parameters including the VmCowPagesContainer, which avoids any
   // possiblity of allocation failure.

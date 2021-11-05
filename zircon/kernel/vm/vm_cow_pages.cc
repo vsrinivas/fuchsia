@@ -233,8 +233,8 @@ void VmCowPages::fbl_recycle() {
         // Avoid recursing destructors when we delete our parent by using the deferred deletion
         // method. See common in parent else branch for why we can avoid this on a hidden parent.
         if (!parent_->is_hidden_locked()) {
-          guard.CallUnlocked([this, parent = std::move(parent_)]() mutable {
-            hierarchy_state_ptr_->DoDeferredDelete(std::move(parent));
+          guard.CallUnlocked([this, parent = ktl::move(parent_)]() mutable {
+            hierarchy_state_ptr_->DoDeferredDelete(ktl::move(parent));
           });
         }
       }
@@ -264,8 +264,6 @@ void VmCowPages::fbl_recycle() {
     }
 
     RemoveFromDiscardableListLocked();
-
-    __UNINITIALIZED StackOwnedLoanedPagesInterval raii_interval;
 
     // Cleanup page lists and page sources.
     list_node_t list;
@@ -629,10 +627,10 @@ zx_status_t VmCowPages::CreateCloneLocked(CloneType type, uint64_t offset, uint6
     // to be added prior to creation.
 
     fbl::RefPtr<VmCowPages> left_child =
-        NewVmCowPages(std::move(left_child_placeholder), hierarchy_state_ptr_, 0, pmm_alloc_flags_,
+        NewVmCowPages(ktl::move(left_child_placeholder), hierarchy_state_ptr_, 0, pmm_alloc_flags_,
                       size_, nullptr);
     fbl::RefPtr<VmCowPages> right_child =
-        NewVmCowPages(std::move(right_child_placeholder), hierarchy_state_ptr_, 0, pmm_alloc_flags_,
+        NewVmCowPages(ktl::move(right_child_placeholder), hierarchy_state_ptr_, 0, pmm_alloc_flags_,
                       size, nullptr);
 
     AssertHeld(left_child->lock_ref());
@@ -3873,7 +3871,7 @@ template <class... Args>
 fbl::RefPtr<VmCowPages> VmCowPages::NewVmCowPages(
     ktl::unique_ptr<VmCowPagesContainer> cow_container, Args&&... args) {
   VmCowPagesContainer* raw_cow_container = cow_container.get();
-  cow_container->EmplaceCow(ktl::move(cow_container), std::forward<Args>(args)...);
+  cow_container->EmplaceCow(ktl::move(cow_container), ktl::forward<Args>(args)...);
   auto cow = fbl::AdoptRef<VmCowPages>(&raw_cow_container->cow());
   return cow;
 }
@@ -3888,7 +3886,7 @@ fbl::RefPtr<VmCowPages> VmCowPages::NewVmCowPages(fbl::AllocChecker* ac, Args&&.
   if (!cow_container) {
     return nullptr;
   }
-  return NewVmCowPages(ktl::move(cow_container), std::forward<Args>(args)...);
+  return NewVmCowPages(ktl::move(cow_container), ktl::forward<Args>(args)...);
 }
 
 VmCowPagesContainer::~VmCowPagesContainer() {
@@ -3901,7 +3899,7 @@ VmCowPagesContainer::~VmCowPagesContainer() {
 template <class... Args>
 void VmCowPagesContainer::EmplaceCow(Args&&... args) {
   DEBUG_ASSERT(!is_cow_present_);
-  new (reinterpret_cast<VmCowPages*>(&cow_space_)) VmCowPages(std::forward<Args>(args)...);
+  new (reinterpret_cast<VmCowPages*>(&cow_space_)) VmCowPages(ktl::forward<Args>(args)...);
   is_cow_present_ = true;
 }
 
