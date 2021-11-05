@@ -593,5 +593,31 @@ TEST(Fastboot, TcpReboot) {
   EXPECT_EQ(tcp.ClientDisconnect(), REBOOT);
 }
 
+TEST(Fastboot, TcpIsAvailable) {
+  FakeFastbootUdp udp;
+  FakeFastbootTcp tcp;
+
+  // Not available before the drivers have initialized.
+  ASSERT_FALSE(fb_tcp_is_available());
+
+  // Run the loop once, drivers will initialize and TCP should be available.
+  ASSERT_EQ(POLL, fb_poll(nullptr));
+  ASSERT_TRUE(fb_tcp_is_available());
+
+  // Should continue to be available as we progress through the session and
+  // after disconnecting.
+  ASSERT_NO_FATAL_FAILURE(tcp.InitializeSession());
+  ASSERT_TRUE(fb_tcp_is_available());
+
+  ASSERT_TRUE(tcp.SendData(TcpPacket("getvar:product")));
+  ASSERT_TRUE(fb_tcp_is_available());
+
+  ASSERT_EQ(tcp.ReceiveData(), TcpPacket("OKAYgigaboot"));
+  ASSERT_TRUE(fb_tcp_is_available());
+
+  EXPECT_EQ(tcp.ClientDisconnect(), POLL);
+  ASSERT_TRUE(fb_tcp_is_available());
+}
+
 }  // namespace
 }  // namespace gigaboot

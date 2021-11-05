@@ -7,6 +7,9 @@
 #include <zircon/compiler.h>
 
 #include <cstring>
+#include <string>
+#include <tuple>
+#include <utility>
 
 #include <gtest/gtest.h>
 
@@ -29,6 +32,13 @@ void netifc_set_timer(uint32_t ms) { abort(); }
 __END_CDECLS
 
 namespace {
+
+// Header size, not including the variable-length name.
+// 2 bytes type + 2 bytes class + 4 bytes TTL + 2 bytes length.
+constexpr size_t kMdnsRecordHeaderSize = 10;
+
+// 2 bytes priority + 2 bytes weight + 2 bytes port.
+constexpr size_t kMdnsSrvHeaderSize = 6;
 
 TEST(MdnsTest, TestWriteU16) {
   struct mdns_buf b = {
@@ -172,4 +182,105 @@ TEST(MdnsTest, TestNoSpaceLeft) {
   ASSERT_FALSE(mdns_write_u32(&b, 2));
   ASSERT_FALSE(mdns_write_name(&b, &seg));
 }
+
+// Reads a 16-bit big-endian value from a buffer.
+uint16_t ReadU16(const uint8_t *buffer) {
+  return static_cast<uint16_t>(buffer[0] << 8) + buffer[1];
+}
+
+// Reads a segmented name from an mDNS packet starting at |index|.
+// Returns the resulting assembled string, and the index of the next item in
+// the packet.
+std::pair<std::string, size_t> ReadMdnsName(const mdns_buf &buf, size_t index) {
+  std::pair<std::string, size_t> result;
+
+  while (1) {
+    // Safety check so we don't run off into the weeds if the packet is
+    // malformed.
+    if (index >= buf.used) {
+      ADD_FAILURE() << "mDNS index " << index << " exceeds packet buffer";
+      return result;
+    }
+
+    // If this is a pointer, jump to where it says.
+    uint16_t ptr = ReadU16(&buf.data[index]);
+    if (ptr & MDNS_NAME_AT_OFFSET_FLAG) {
+      // If this is our first jump, save the next index, this will be
+      // the next item in the packet.
+      if (result.second == 0) {
+        result.second = index + 2;
+      }
+      index = (ptr & ~MDNS_NAME_AT_OFFSET_FLAG);
+      continue;
+    }
+
+    uint8_t length = buf.data[index];
+
+    // If the length is 0, we're done.
+    if (length == 0) {
+      // If we never jumped, the next item follows our current index.
+      if (result.second == 0) {
+        result.second = index + 1;
+      }
+      return result;
+    }
+
+    // Otherwise append this segment and proceed to the next.
+    const char *segment_start = reinterpret_cast<const char *>(&buf.data[index + 1]);
+    if (!result.first.empty()) {
+      result.first += ".";
+    }
+    result.first += std::string(segment_start, segment_start + length);
+    index += length + 1;
+  }
+}
+
+// Verifies that the mDNS packet looks like we expect for fastboot.
+//
+// We don't want to implement full mDNS packet parsing here, just check
+// a few things to give us reasonable confidence that the packet is good.
+//
+// Args:
+//   packet_buffer: buffer containing the mDNS packet.
+//   protocol: expected protocol, "udp" or "tcp".
+void VerifyFastbootMdnsPacket(const mdns_buf &packet_buffer, std::string protocol) {
+  std::string ptr_name = "_fastboot._" + protocol + ".local";
+  std::string srv_name = MDNS_DEFAULT_NODENAME_FOR_TEST "._fastboot._" + protocol + ".local";
+  std::string aaaa_name = MDNS_DEFAULT_NODENAME_FOR_TEST ".local";
+
+  // PTR packet should come first, pointing to the SRV name.
+  auto [name, index] = ReadMdnsName(packet_buffer, sizeof(mdns_header));
+  ASSERT_EQ(ptr_name, name);
+  ASSERT_EQ(MDNS_TYPE_PTR, ReadU16(&packet_buffer.data[index]));
+  std::tie(name, index) = ReadMdnsName(packet_buffer, index + kMdnsRecordHeaderSize);
+  ASSERT_EQ(srv_name, name);
+
+  // SRV should come next, pointing to the AAAA name.
+  std::tie(name, index) = ReadMdnsName(packet_buffer, index);
+  ASSERT_EQ(srv_name, name);
+  ASSERT_EQ(MDNS_TYPE_SRV, ReadU16(&packet_buffer.data[index]));
+  std::tie(name, index) =
+      ReadMdnsName(packet_buffer, index + kMdnsRecordHeaderSize + kMdnsSrvHeaderSize);
+  ASSERT_EQ(aaaa_name, name);
+
+  // AAAA should come last.
+  std::tie(name, index) = ReadMdnsName(packet_buffer, index);
+  ASSERT_EQ(aaaa_name, name);
+  ASSERT_EQ(MDNS_TYPE_AAAA, ReadU16(&packet_buffer.data[index]));
+}
+
+TEST(MdnsTest, TestWriteFastbootUdpPacket) {
+  mdns_buf packet_buffer = {};
+
+  ASSERT_TRUE(mdns_write_fastboot_packet(false, false, &packet_buffer));
+  VerifyFastbootMdnsPacket(packet_buffer, "udp");
+}
+
+TEST(MdnsTest, TestWriteFastbootTcpPacket) {
+  mdns_buf packet_buffer = {};
+
+  ASSERT_TRUE(mdns_write_fastboot_packet(false, true, &packet_buffer));
+  VerifyFastbootMdnsPacket(packet_buffer, "tcp");
+}
+
 }  // namespace

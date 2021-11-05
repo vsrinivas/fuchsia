@@ -99,5 +99,21 @@ bool mdns_write_u32(struct mdns_buf* b, uint32_t v);
 bool mdns_write_name(struct mdns_buf* b, struct mdns_name_segment* name);
 bool mdns_write_record(struct mdns_buf* b, struct mdns_record* r);
 bool mdns_write_packet(struct mdns_header* hdr, struct mdns_record* records, struct mdns_buf* pkt);
+
+// Writes the full fastboot mDNS packet.
+//
+// Args:
+//   finished: true for the final mDNS packet with TTL = 0.
+//   tcp: true for TCP, false for UDP.
+//   packet_buf: packet buffer to fill.
+//
+// Returns true on success.
+bool mdns_write_fastboot_packet(bool finished, bool tcp, struct mdns_buf* packet_buf);
+
+// The default nodename, will be replaced as soon as mdns_start() is called,
+// but exposed here so that tests can more easily validate behavior.
+#define MDNS_DEFAULT_NODENAME_FOR_TEST "<no_nodename>"
+
 __END_CDECLS
+
 #endif  // SRC_FIRMWARE_GIGABOOT_SRC_MDNS_H_

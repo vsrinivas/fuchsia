@@ -8,6 +8,7 @@
 #define FB_SERVER_PORT 5554
 
 #include <inttypes.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <zircon/compiler.h>
 
@@ -66,6 +67,9 @@ void fb_recv(void *data, size_t len, const void *saddr, uint16_t sport);
 // "getvar" will probably be slower over TCP, but it's worth it because things
 // like flashing will be much faster.
 void fb_tcp_recv(void);
+
+// Returns true if fastboot-over-TCP is available.
+bool fb_tcp_is_available(void);
 
 // Sets replacements for UDP functions used by fastboot.
 //

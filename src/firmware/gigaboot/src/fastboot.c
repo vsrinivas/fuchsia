@@ -588,6 +588,12 @@ void fb_tcp_recv(void) {
   }
 }
 
+bool fb_tcp_is_available(void) {
+  // Fastboot-over-TCP is available if we're idling waiting for a connection or
+  // if there is currently an active connection.
+  return (fb_tcp_state == TCP_STATE_IDLE) || (fb_tcp_state & TCP_STATE_ACTIVE_FLAG);
+}
+
 // fb_recv runs every time a UDP packet destined for the fastboot port is
 // received.
 void fb_recv(void *data, size_t len, const void *saddr, uint16_t sport) {

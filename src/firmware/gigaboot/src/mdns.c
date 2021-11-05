@@ -4,15 +4,18 @@
 
 #include "mdns.h"
 
+#include <log.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <zircon/compiler.h>
 
 #include "device_id.h"
 #include "fastboot.h"
 #include "inet6.h"
 #include "netifc.h"
+#include "util.h"
 
 #define MDNS_FLAG_QUERY_RESPONSE 0x8000
 #define MDNS_FLAG_AUTHORITATIVE 0x400
@@ -24,26 +27,68 @@
 
 #define MDNS_PORT (5353)
 
-#define MDNS_BROADCAST_FREQ_MS (10000)  // Broadcast every 10 seconds.
-static char device_nodename[DEVICE_ID_MAX];
+// Broadcast every 10 seconds.
+#define MDNS_BROADCAST_FREQ_MS (10000)
+// Overwritten by mdns_start(), just initialize to some non-empty name for
+// test purposes.
+static char device_nodename[DEVICE_ID_MAX] = MDNS_DEFAULT_NODENAME_FOR_TEST;
 
-static struct mdns_name_segment fastboot_name_segments[3] = {
-    {
-        .name = "_fastboot",
-        .loc = 0,
-        .next = &fastboot_name_segments[1],
-    },
-    {
-        .name = "_udp",
-        .loc = 0,
-        .next = &fastboot_name_segments[2],
-    },
+static struct mdns_name_segment name_segments[] = {
+    // 0: local.
     {
         .name = "local",
         .loc = 0,
         .next = NULL,
     },
+    // 1: <nodename>._fastboot._udp.local.
+    {
+        .name = device_nodename,
+        .loc = 0,
+        .next = &name_segments[2],
+    },
+    // 2: _fastboot._udp.local.
+    {
+        .name = "_fastboot",
+        .loc = 0,
+        .next = &name_segments[3],
+    },
+    // 3: _udp.local.
+    {
+        .name = "_udp",
+        .loc = 0,
+        .next = &name_segments[0],
+    },
+    // 4: <nodename>._fastboot._tcp.local.
+    {
+        .name = device_nodename,
+        .loc = 0,
+        .next = &name_segments[5],
+    },
+    // 5: _fastboot._tcp.local.
+    {
+        .name = "_fastboot",
+        .loc = 0,
+        .next = &name_segments[6],
+    },
+    // 6: _tcp.local.
+    {
+        .name = "_tcp",
+        .loc = 0,
+        .next = &name_segments[0],
+    },
+    // 7: <nodename>.local.
+    {
+        .name = device_nodename,
+        .loc = 0,
+        .next = &name_segments[0],
+    },
 };
+
+static struct mdns_name_segment* const mdns_name_nodename_fastboot_udp_local = &name_segments[1];
+static struct mdns_name_segment* const mdns_name_nodename_fastboot_tcp_local = &name_segments[4];
+static struct mdns_name_segment* const mdns_name_fastboot_udp_local = &name_segments[2];
+static struct mdns_name_segment* const mdns_name_fastboot_tcp_local = &name_segments[5];
+static struct mdns_name_segment* const mdns_name_nodename_local = &name_segments[7];
 
 /*** packet writing ***/
 bool mdns_write_bytes(struct mdns_buf* b, const void* bytes, size_t len) {
@@ -172,33 +217,23 @@ bool mdns_write_packet(struct mdns_header* hdr, struct mdns_record* records, str
   return true;
 }
 
-static struct mdns_buf pkt;
-bool mdns_send(struct mdns_header* hdr, struct mdns_record* records) {
-  if (!mdns_write_packet(hdr, records, &pkt))
-    return false;
-  if (udp6_send(pkt.data, pkt.used, &ip6_mdns_broadcast, MDNS_PORT, MDNS_PORT))
-    return false;
-  return true;
-}
-
-/*** fastboot mdns broadcasts ***/
-bool mdns_broadcast_fastboot(bool finished) {
+bool mdns_write_fastboot_packet(bool finished, bool tcp, struct mdns_buf* packet_buf) {
   // Clear name segment locations.
-  fastboot_name_segments[0].loc = 0;
-  fastboot_name_segments[1].loc = 0;
-  fastboot_name_segments[2].loc = 0;
-  struct mdns_name_segment ptr_name = {
-      .name = device_nodename,
-      .loc = 0,
-      .next = fastboot_name_segments,
-  };
-  struct mdns_name_segment my_name = {
-      .name = device_nodename,
-      .loc = 0,
-      .next = &fastboot_name_segments[2],
-  };
+  for (size_t i = 0; i < countof(name_segments); ++i) {
+    name_segments[i].loc = 0;
+  }
 
   uint16_t ttl = (finished ? 0 : MDNS_SHORT_TTL);
+
+  // If we have TCP available, advertise that instead of UDP. We could send both
+  // and let the recipient decide which to use, but as of now there's no reason
+  // we would ever prefer UDP so keep it simple.
+  struct mdns_name_segment* fastboot_ptr_name = mdns_name_fastboot_udp_local;
+  struct mdns_name_segment* fastboot_service_name = mdns_name_nodename_fastboot_udp_local;
+  if (tcp) {
+    fastboot_ptr_name = mdns_name_fastboot_tcp_local;
+    fastboot_service_name = mdns_name_nodename_fastboot_tcp_local;
+  }
 
   // MDNS query response.
   struct mdns_header hdr = {
@@ -212,14 +247,14 @@ bool mdns_broadcast_fastboot(bool finished) {
   // MDNS response records.
   struct mdns_record records[] = {
       {
-          .name = fastboot_name_segments,
+          .name = fastboot_ptr_name,
           .type = MDNS_TYPE_PTR,
           .record_class = MDNS_CLASS_CACHE_FLUSH | MDNS_CLASS_IN,
           .time_to_live = ttl,
-          .data.ptr.name = &ptr_name,
+          .data.ptr.name = fastboot_service_name,
       },
       {
-          .name = &ptr_name,
+          .name = fastboot_service_name,
           .type = MDNS_TYPE_SRV,
           .record_class = MDNS_CLASS_CACHE_FLUSH | MDNS_CLASS_IN,
           .time_to_live = ttl,
@@ -228,11 +263,11 @@ bool mdns_broadcast_fastboot(bool finished) {
                   .priority = 0,
                   .weight = 0,
                   .port = FB_SERVER_PORT,
-                  .target = &my_name,
+                  .target = mdns_name_nodename_local,
               },
       },
       {
-          .name = &my_name,
+          .name = mdns_name_nodename_local,
           .type = MDNS_TYPE_AAAA,
           .record_class = MDNS_CLASS_CACHE_FLUSH | MDNS_CLASS_IN,
           .time_to_live = ttl,
@@ -240,7 +275,18 @@ bool mdns_broadcast_fastboot(bool finished) {
       },
   };
 
-  return mdns_send(&hdr, records);
+  return mdns_write_packet(&hdr, records, packet_buf);
+}
+
+/*** fastboot mdns broadcasts ***/
+bool mdns_broadcast_fastboot(bool finished) {
+  static struct mdns_buf pkt;
+  if (!mdns_write_fastboot_packet(finished, fb_tcp_is_available(), &pkt)) {
+    ELOG("Failed to create fastboot mDNS packet");
+    return false;
+  }
+
+  return udp6_send(pkt.data, pkt.used, &ip6_mdns_broadcast, MDNS_PORT, MDNS_PORT) == 0;
 }
 
 static int mdns_active = 0;
