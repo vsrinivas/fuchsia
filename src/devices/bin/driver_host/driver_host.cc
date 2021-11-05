@@ -232,11 +232,11 @@ void DriverHostContext::SetupDriverHostController(
 
 // Send message to driver_manager asking to add child device to
 // parent device.  Called under the api lock.
-zx_status_t DriverHostContext::DriverManagerAdd(
-    const fbl::RefPtr<zx_device_t>& parent, const fbl::RefPtr<zx_device_t>& child,
-    const char* proxy_args, const zx_device_prop_t* props, uint32_t prop_count,
-    const zx_device_str_prop_t* str_props, uint32_t str_prop_count, zx::vmo inspect,
-    zx::channel client_remote, fidl::ClientEnd<fio::Directory> outgoing_dir) {
+zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& parent,
+                                                const fbl::RefPtr<zx_device_t>& child,
+                                                device_add_args_t* add_args, zx::vmo inspect,
+                                                zx::channel client_remote,
+                                                fidl::ClientEnd<fio::Directory> outgoing_dir) {
   using fuchsia_device_manager::wire::AddDeviceConfig;
   AddDeviceConfig add_device_config;
 
@@ -262,17 +262,17 @@ zx_status_t DriverHostContext::DriverManagerAdd(
   auto conn = DeviceControllerConnection::Create(this, child, std::move(coordinator));
 
   std::vector<fuchsia_device_manager::wire::DeviceProperty> props_list = {};
-  for (size_t i = 0; i < prop_count; i++) {
-    props_list.push_back(convert_device_prop(props[i]));
+  for (size_t i = 0; i < add_args->prop_count; i++) {
+    props_list.push_back(convert_device_prop(add_args->props[i]));
   }
 
   fidl::Arena allocator;
   std::vector<fuchsia_device_manager::wire::DeviceStrProperty> str_props_list = {};
-  for (size_t i = 0; i < str_prop_count; i++) {
-    if (!property_value_type_valid(str_props[i].property_value.value_type)) {
+  for (size_t i = 0; i < add_args->str_prop_count; i++) {
+    if (!property_value_type_valid(add_args->str_props[i].property_value.value_type)) {
       return ZX_ERR_INVALID_ARGS;
     }
-    str_props_list.push_back(convert_device_str_prop(str_props[i], allocator));
+    str_props_list.push_back(convert_device_str_prop(add_args->str_props[i], allocator));
   }
   for (const auto& offer : child->fidl_offers()) {
     auto str_property = fuchsia_device_manager::wire::DeviceStrProperty{
@@ -286,7 +286,7 @@ zx_status_t DriverHostContext::DriverManagerAdd(
   if (!coordinator_client) {
     return ZX_ERR_IO_REFUSED;
   }
-  size_t proxy_args_len = proxy_args ? strlen(proxy_args) : 0;
+  size_t proxy_args_len = add_args->proxy_args ? strlen(add_args->proxy_args) : 0;
   zx_status_t call_status = ZX_OK;
   static_assert(sizeof(zx_device_prop_t) == sizeof(uint64_t));
   uint64_t device_id = 0;
@@ -303,7 +303,7 @@ zx_status_t DriverHostContext::DriverManagerAdd(
       std::move(coordinator_endpoints->server), std::move(controller_endpoints->client),
       property_list, ::fidl::StringView::FromExternal(child->name()), child->protocol_id(),
       ::fidl::StringView::FromExternal(child->driver->libname()),
-      ::fidl::StringView::FromExternal(proxy_args, proxy_args_len), add_device_config,
+      ::fidl::StringView::FromExternal(add_args->proxy_args, proxy_args_len), add_device_config,
       child->ops()->init /* has_init */, std::move(inspect), std::move(client_remote),
       std::move(outgoing_dir));
   zx_status_t status = response.status();

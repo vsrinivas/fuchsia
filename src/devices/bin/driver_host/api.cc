@@ -167,16 +167,19 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
       *out = dev.get();
     }
     if (args->flags & DEVICE_ADD_MUST_ISOLATE) {
-      r = api_ctx->DeviceAdd(dev, parent_ref, args->props, args->prop_count, args->str_props,
-                             args->str_prop_count, args->proxy_args, std::move(inspect),
-                             std::move(client_remote), std::move(outgoing_dir));
+      r = api_ctx->DeviceAdd(dev, parent_ref, args, std::move(inspect), std::move(client_remote),
+                             std::move(outgoing_dir));
     } else if (args->flags & DEVICE_ADD_INSTANCE) {
       dev->set_flag(DEV_FLAG_INSTANCE | DEV_FLAG_UNBINDABLE);
-      r = api_ctx->DeviceAdd(dev, parent_ref, nullptr, 0, nullptr, 0, nullptr, zx::vmo(),
-                             zx::channel() /* client_remote */, fidl::ClientEnd<fio::Directory>());
+      // Set props and proxy args to null just in case:
+      args->str_prop_count = 0;
+      args->prop_count = 0;
+      args->proxy_args = nullptr;
+      r = api_ctx->DeviceAdd(dev, parent_ref, args, zx::vmo(), zx::channel() /* client_remote */,
+                             fidl::ClientEnd<fio::Directory>());
     } else {
-      r = api_ctx->DeviceAdd(dev, parent_ref, args->props, args->prop_count, args->str_props,
-                             args->str_prop_count, nullptr, std::move(inspect),
+      args->proxy_args = nullptr;
+      r = api_ctx->DeviceAdd(dev, parent_ref, args, std::move(inspect),
                              zx::channel() /* client_remote */, fidl::ClientEnd<fio::Directory>());
     }
     if (r != ZX_OK) {

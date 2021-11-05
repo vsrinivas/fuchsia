@@ -42,9 +42,7 @@ class DriverHostContext {
   // |client_remote| will only be a valid handle if the device was added with
   // DEVICE_ADD_MUST_ISOLATE.
   zx_status_t DriverManagerAdd(const fbl::RefPtr<zx_device_t>& dev,
-                               const fbl::RefPtr<zx_device_t>& child, const char* proxy_args,
-                               const zx_device_prop_t* props, uint32_t prop_count,
-                               const zx_device_str_prop_t* str_props, uint32_t str_prop_count,
+                               const fbl::RefPtr<zx_device_t>& child, device_add_args_t* add_args,
                                zx::vmo inspect, zx::channel client_remote,
                                fidl::ClientEnd<fuchsia_io::Directory> outgoing_dir)
       TA_REQ(api_lock_);
@@ -55,9 +53,7 @@ class DriverHostContext {
   // |client_remote| will only be a valid handle if the device was added with
   // DEVICE_ADD_MUST_ISOLATE.
   zx_status_t DeviceAdd(const fbl::RefPtr<zx_device_t>& dev, const fbl::RefPtr<zx_device_t>& parent,
-                        const zx_device_prop_t* props, uint32_t prop_count,
-                        const zx_device_str_prop_t* str_props, uint32_t str_prop_count,
-                        const char* proxy_args, zx::vmo inspect, zx::channel client_remote,
+                        device_add_args_t* add_args, zx::vmo inspect, zx::channel client_remote,
                         fidl::ClientEnd<fuchsia_io::Directory> outgoing_dir) TA_REQ(api_lock_);
 
   zx_status_t DeviceInit(const fbl::RefPtr<zx_device_t>& dev) TA_REQ(api_lock_);
