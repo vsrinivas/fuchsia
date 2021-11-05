@@ -260,6 +260,10 @@ rustc_library("lib") {
     "src/tests/volume_change_earcons_tests.rs",
     "src/trace.rs",
   ]
+
+  # -Copt-level=1 makes building the _test OOM on RBE with core.arm64-asan
+  # TODO(fxbug.dev/86896, fxbug.dev/85921): split this crate up to prevent OOM on RBE
+  disable_rbe = true
 }
 
 fuchsia_unittest_package("setui_service_tests") {
