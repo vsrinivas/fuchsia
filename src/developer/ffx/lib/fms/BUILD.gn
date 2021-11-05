@@ -15,11 +15,15 @@ if (is_host) {
     deps = [
       "//build/sdk/meta:rust",
       "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:glob",
     ]
+
+    test_deps = [ "//third_party/rust_crates:tempfile" ]
 
     inputs = [
       "test_data/test_physical_device.json",
       "test_data/test_product_bundle.json",
+      "test_data/test_virtual_device.json",
     ]
 
     sources = [ "src/lib.rs" ]

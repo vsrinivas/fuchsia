@@ -1,0 +1,13 @@
+{
+    "data": {
+        "description": "A virtual arm64 device",
+        "hardware": {
+            "cpu": {
+                "arch": "arm64"
+            }
+        },
+        "name": "virtual-arm64",
+        "type": "virtual_device"
+    },
+    "schema_id": "http://fuchsia.com/schemas/sdk/virtual_device-93A41932.json"
+}

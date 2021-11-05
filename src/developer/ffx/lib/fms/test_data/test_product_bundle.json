@@ -2,7 +2,8 @@
     "data": {
         "description": "A terminal x64 product.",
         "device_refs": [
-            "generic-x64"
+            "generic-x64",
+            "virtual-arm64"
         ],
         "images": [
             {
