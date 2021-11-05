@@ -350,8 +350,6 @@ pub struct VDLArgs {
     pub enable_hidpi_scaling: bool,
     pub grpcwebproxy_port: String,
     pub upscript: String,
-    pub start_package_server: bool,
-    pub packages_to_serve: String,
     pub device_proto: String,
     pub gpu: GpuType,
     pub gcs_bucket: String,
@@ -359,8 +357,6 @@ pub struct VDLArgs {
     pub sdk_version: String,
     pub cache_root: PathBuf,
     pub extra_kernel_args: String,
-    pub amber_unpack_root: String,
-    pub package_server_port: String,
     pub acceleration: bool,
     pub image_architecture: String,
 }
@@ -398,12 +394,6 @@ impl From<&StartCommand> for VDLArgs {
             tuntap: cmd.tuntap,
             enable_hidpi_scaling: cmd.hidpi_scaling,
             upscript: cmd.upscript.as_ref().unwrap_or(&String::from("")).to_string(),
-            start_package_server: cmd.start_package_server,
-            packages_to_serve: cmd
-                .packages_to_serve
-                .as_ref()
-                .unwrap_or(&String::from(""))
-                .to_string(),
             device_proto: cmd.device_proto.as_ref().unwrap_or(&String::from("")).to_string(),
             gpu,
             enable_grpcwebproxy,
@@ -413,12 +403,6 @@ impl From<&StartCommand> for VDLArgs {
             sdk_version,
             cache_root: cache_path,
             extra_kernel_args: cmd.kernel_args.as_ref().unwrap_or(&String::from("")).to_string(),
-            amber_unpack_root: cmd
-                .amber_unpack_root
-                .as_ref()
-                .unwrap_or(&String::from(""))
-                .to_string(),
-            package_server_port: cmd.package_server_port.as_ref().unwrap_or(&0).to_string(),
             acceleration: !cmd.noacceleration,
             image_architecture: cmd
                 .image_architecture
@@ -441,12 +425,10 @@ mod tests {
         let start_command = &StartCommand {
             tuntap: true,
             upscript: Some("/path/to/upscript".to_string()),
-            packages_to_serve: Some("pkg1.far,pkg2.far".to_string()),
             gpu: Some(GpuType::Host),
             aemu_version: Some("git_revision:da1cc2ee512714a176f08b8b5fec035994ca305d".to_string()),
             sdk_version: Some("0.20201130.3.1".to_string()),
             image_name: Some("qemu-x64".to_string()),
-            package_server_log: Some("/a/b/c/server.log".to_string()),
             envs: Vec::new(),
             cache_image: true,
             ..Default::default()
@@ -455,13 +437,9 @@ mod tests {
         assert_eq!(vdl_args.headless, false);
         assert_eq!(vdl_args.tuntap, true);
         assert_eq!(vdl_args.upscript, "/path/to/upscript");
-        assert_eq!(vdl_args.packages_to_serve, "pkg1.far,pkg2.far");
         assert_eq!(vdl_args.device_proto, "");
         assert_eq!(vdl_args.gpu, GpuType::Host);
-        assert_eq!(vdl_args.start_package_server, false);
         assert_eq!(vdl_args.acceleration, true);
-        assert_eq!(vdl_args.package_server_port, "0");
-        assert_eq!(vdl_args.amber_unpack_root, "");
         assert!(vdl_args.cache_root.as_path().ends_with("qemu-x64/0.20201130.3.1"));
     }
 

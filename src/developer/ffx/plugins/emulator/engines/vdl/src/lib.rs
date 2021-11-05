@@ -355,14 +355,6 @@ impl VDLFiles {
     }
 
     pub fn check_start_command(&self, command: &StartCommand) -> Result<()> {
-        // TODO(fxb/82804) Remove after a month.
-        if command.nopackageserver {
-            println!(
-                "{}",
-                Yellow
-                    .paint("WARNING: --nopackageserver will be removed soon, the default behavior no longer starts package server.")
-            );
-        }
         if command.nointeractive && command.vdl_output.is_none() {
             ffx_bail!(
                 "--vdl-output must be specified for --nointeractive mode.\n\
@@ -478,9 +470,6 @@ impl VDLFiles {
             .as_ref()
             .map_or(self.emulator_log.clone(), |v| PathBuf::from(v));
 
-        let package_server_log =
-            start_command.package_server_log.as_ref().map_or(PathBuf::new(), |v| PathBuf::from(v));
-
         if let Some(location) = &start_command.vdl_output {
             self.output_proto = PathBuf::from(location);
         }
@@ -518,8 +507,6 @@ impl VDLFiles {
             .arg(&self.output_proto)
             .arg("--emu_log")
             .arg(&emu_log)
-            .arg("--package_server_log")
-            .arg(&package_server_log)
             .arg("--proto_file_path")
             .arg(&fvd)
             .arg(format!("--audio={}", &device_spec.audio))
@@ -532,10 +519,6 @@ impl VDLFiles {
             .arg(format!("--headless_mode={}", vdl_args.headless))
             .arg(format!("--tuntap={}", vdl_args.tuntap))
             .arg(format!("--upscript={}", vdl_args.upscript))
-            .arg(format!("--start_package_server={}", vdl_args.start_package_server))
-            .arg(format!("--serve_packages={}", vdl_args.packages_to_serve))
-            .arg(format!("--package_server_port={}", vdl_args.package_server_port))
-            .arg(format!("--unpack_repo_root={}", vdl_args.amber_unpack_root))
             .arg(format!("--pointing_device={}", device_spec.pointing_device))
             .arg(format!("--enable_webrtc={}", vdl_args.enable_grpcwebproxy))
             .arg(format!("--grpcwebproxy_port={}", vdl_args.grpcwebproxy_port))
@@ -921,7 +904,6 @@ mod tests {
         StartCommand {
             tuntap: true,
             upscript: Some("/path/to/upscript".to_string()),
-            packages_to_serve: Some("pkg1.far,pkg2.far".to_string()),
             aemu_path: Some("/path/to/aemu".to_string()),
             vdl_path: Some("/path/to/device_launcher".to_string()),
             gpu: Some(GpuType::Host),

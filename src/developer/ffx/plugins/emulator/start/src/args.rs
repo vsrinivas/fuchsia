@@ -221,30 +221,6 @@ pub struct StartCommand {
     #[argh(switch)]
     pub emu_only: bool,
 
-    /// deprecated, does nothing, will soon be removed.
-    #[argh(switch)]
-    pub nopackageserver: bool,
-
-    /// bool, enables automatically launching package server.
-    #[argh(switch, short = 'P')]
-    pub start_package_server: bool,
-
-    /// comma separated string of fuchsia package urls, extra packages to serve after starting FEMU.
-    /// Requires --start_package_server=true
-    #[argh(option)]
-    pub packages_to_serve: Option<String>,
-
-    /// file path to store package server log. Default is a stdout.
-    /// Requires --start_package_server=true
-    #[argh(option)]
-    pub package_server_log: Option<String>,
-
-    /// path to unpack archived_package downloaded from GCS. This only applies when fvdl is
-    /// downloading images files from GCS (ex: --gcs-bucket, --sdk-version, --image-name flags
-    /// are specified). If not specified, a temporary path will be used.
-    #[argh(option)]
-    pub amber_unpack_root: Option<String>,
-
     /// environment variables for emulator. The argument can be repeated for multiple times
     /// to add multiple arguments. If not specified, only the default environment variables
     /// (DISPLAY) will be set to run the emulator.
@@ -254,10 +230,6 @@ pub struct StartCommand {
     /// bool, disable acceleration using KVM on Linux and HVF on macOS.
     #[argh(switch)]
     pub noacceleration: bool,
-
-    /// int, port to an existing package server running on the host.
-    #[argh(option)]
-    pub package_server_port: Option<usize>,
 
     /// string, absolute path to amber-files location, path name must end with 'amber-files'.
     #[argh(option, short = 'a')]
