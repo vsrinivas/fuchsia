@@ -27,6 +27,7 @@ source_set("lib") {
     "//src/lib/files",
     "//src/lib/fxl",
     "//third_party/rapidjson",
+    "//third_party/re2",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/sync",
@@ -76,6 +77,7 @@ executable("loadbench_unittests") {
     ":lib",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
+    "//third_party/re2",
   ]
 }
 

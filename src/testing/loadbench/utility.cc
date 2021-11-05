@@ -16,8 +16,9 @@
 #include <map>
 #include <mutex>
 #include <optional>
-#include <regex>
 #include <tuple>
+
+#include <re2/re2.h>
 
 #include "fuchsia/kernel/cpp/fidl.h"
 #include "fuchsia/scheduler/cpp/fidl.h"
@@ -89,15 +90,12 @@ constexpr bool operator<(const zx_cpu_set_t& a, const zx_cpu_set_t& b) {
 std::chrono::nanoseconds ParseDurationString(const std::string& duration) {
   // Match one or more digits, optionally followed by time units m, s, ms, us,
   // or ns.
-  static const std::regex kReDuration{"^\\d+(m|s|ms|us|ns)?$"};
+  static const re2::RE2 kReDuration{"^(\\d+)(m|s|ms|us|ns)?$"};
 
-  std::smatch match;
-  std::regex_search(duration, match, kReDuration);
-  FX_CHECK(!match.empty()) << "String \"" << duration << "\" is not a valid duration!";
-
-  FX_CHECK(match.size() == 2) << "Unexpected match size " << match.size();
-  const uint64_t scalar = std::stoull(match[0]);
-  const std::string units = match[1];
+  uint64_t scalar;
+  std::string units;
+  bool matched = re2::RE2::PartialMatch(duration, kReDuration, &scalar, &units);
+  FX_CHECK(matched) << "String \"" << duration << "\" is not a valid duration!";
 
   if (units == "") {
     return std::chrono::nanoseconds{scalar};
@@ -121,28 +119,20 @@ std::chrono::nanoseconds ParseDurationString(const std::string& duration) {
 // Parses an expression of the form "cpu_num<+|-|*><positive integer>" and returns evaluated result
 // as an integer.
 size_t ParseInstancesString(const std::string& instances) {
-  static const std::regex kReInstances{"(^[a-zA-Z_]+)((\\+|\\*|-)(\\d+))?$"};
+  static const re2::RE2 kReInstances{"^cpu_num((\\+|\\*|-)(\\d+))?$"};
 
-  // Match[0]: Full match
-  // Match[1]: "num_cpu"
-  // Match[2]: <operation><argument>
-  // Match[3]: <operation>
-  // Match[4]: <argument>
-  std::smatch match;
+  // submatch[0]: <operation><argument>
+  // submatch[1]: <operation>
+  // submatch[2]: <argument>
+  std::string operation;
+  size_t argument;
 
-  FX_CHECK(std::regex_search(instances, match, kReInstances))
+  FX_CHECK(re2::RE2::PartialMatch(instances, kReInstances, nullptr, &operation, &argument))
       << "The expression string must be in the format cpu_num<+|-|*><positive integer>.";
-  FX_CHECK(match[1] == "cpu_num")
-      << "The expression string must be in the format cpu_num<+|-|*><positive integer>.";
-  FX_CHECK(match.size() == 5) << "Unexpected match size " << match.size();
-
-  const std::string operation = match[3];
 
   if (operation == "") {
     return ReadCpuCount();
   } else {
-    const size_t argument = std::stoull(match[4]);
-
     if (operation == "+") {
       return ReadCpuCount() + argument;
     } else if (operation == "-") {

@@ -15,7 +15,6 @@
 #include <chrono>
 #include <memory>
 #include <optional>
-#include <regex>
 #include <sstream>
 #include <utility>
 #include <vector>

@@ -7,11 +7,11 @@
 #include <lib/zircon-internal/ktrace.h>
 
 #include <fstream>
-#include <regex>
 #include <string>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <re2/re2.h>
 
 using ::testing::Invoke;
 using ::testing::Return;
@@ -392,9 +392,8 @@ TEST(TracingTest, WriteHumanReadableWritesCorrectFormat16B) {
   std::string first_line;
   getline(in_file, first_line);
 
-  const std::regex k16BFormat{"^[0-9]+: [a-zA-Z_]+\\(0x[0-9a-f]+\\), arg 0x[0-9a-f]+$"};
-  std::smatch match;
-  ASSERT_TRUE(std::regex_search(first_line, match, k16BFormat));
+  const re2::RE2 k16BFormat{"^[0-9]+: [a-zA-Z_]+\\(0x[0-9a-f]+\\), arg 0x[0-9a-f]+$"};
+  ASSERT_TRUE(re2::RE2::PartialMatch(first_line, k16BFormat));
 
   in_file.close();
 }
@@ -424,11 +423,10 @@ TEST(TracingTest, WriteHumanReadableWritesCorrectFormat32B) {
   std::string first_line;
   getline(in_file, first_line);
 
-  const std::regex k32BFormat{
+  const re2::RE2 k32BFormat{
       "^[0-9]+: [a-zA-Z_]+\\(0x[0-9a-e]+\\), tid 0x[0-9a-f]+, a 0x[0-9a-f]+, b 0x[0-9a-f]+, c "
       "0x[0-9a-f]+, d 0x[0-9a-f]+$"};
-  std::smatch match;
-  ASSERT_TRUE(std::regex_search(first_line, match, k32BFormat));
+  ASSERT_TRUE(re2::RE2::PartialMatch(first_line, k32BFormat));
 
   in_file.close();
 }
@@ -458,10 +456,8 @@ TEST(TracingTest, WriteHumanReadableWritesCorrectFormatName) {
   std::string first_line;
   getline(in_file, first_line);
 
-  const std::regex kNameFormat{
-      "^[a-zA-Z_]+\\(0x[0-9a-f]+\\), id 0x[0-9a-f]+, arg 0x[0-9a-f]+, .*$"};
-  std::smatch match;
-  ASSERT_TRUE(std::regex_search(first_line, match, kNameFormat));
+  const re2::RE2 kNameFormat{"^[a-zA-Z_]+\\(0x[0-9a-f]+\\), id 0x[0-9a-f]+, arg 0x[0-9a-f]+, .*$"};
+  ASSERT_TRUE(re2::RE2::PartialMatch(first_line, kNameFormat));
 
   in_file.close();
 }
@@ -491,9 +487,8 @@ TEST(TracingTest, WriteHumanReadableWritesCorrectFormatUnexpectedEvent) {
   std::string first_line;
   getline(in_file, first_line);
 
-  const std::regex kUnexpectedFormat{"^Unexpected event: 0x[0-9a-f]+$"};
-  std::smatch match;
-  ASSERT_TRUE(std::regex_search(first_line, match, kUnexpectedFormat));
+  const re2::RE2 kUnexpectedFormat{"^Unexpected event: 0x[0-9a-f]+$"};
+  ASSERT_TRUE(re2::RE2::PartialMatch(first_line, kUnexpectedFormat));
 
   in_file.close();
 }
@@ -523,11 +518,10 @@ TEST(TracingTest, WriteHumanReadableHandlesProbeRecord16) {
   std::string first_line;
   getline(in_file, first_line);
 
-  const std::regex kProbeRecord16Format{
+  const re2::RE2 kProbeRecord16Format{
       "^PROBE: tag 0x[0-9a-f]+, event_name_id 0x[0-9a-f]+, tid 0x[0-9a-f]+, ts [0-9]+$"};
-  std::smatch match;
 
-  ASSERT_TRUE(std::regex_search(first_line, match, kProbeRecord16Format));
+  ASSERT_TRUE(re2::RE2::PartialMatch(first_line, kProbeRecord16Format));
 
   in_file.close();
 }
@@ -557,12 +551,11 @@ TEST(TracingTest, WriteHumanReadableHandlesProbeRecord24) {
   std::string first_line;
   getline(in_file, first_line);
 
-  const std::regex kProbeRecord24Format{
+  const re2::RE2 kProbeRecord24Format{
       "^PROBE: tag 0x[0-9a-f]+, event_name_id 0x[0-9a-f]+, tid 0x[0-9a-f]+, ts [0-9]+, a "
       "0x[0-9a-f]+, b 0x[0-9a-f]+$"};
-  std::smatch match;
 
-  ASSERT_TRUE(std::regex_search(first_line, match, kProbeRecord24Format));
+  ASSERT_TRUE(re2::RE2::PartialMatch(first_line, kProbeRecord24Format));
 
   in_file.close();
 }
@@ -592,12 +585,11 @@ TEST(TracingTest, WriteHumanReadableHandlesProbeRecord32) {
   std::string first_line;
   getline(in_file, first_line);
 
-  const std::regex kProbeRecord32Format{
+  const re2::RE2 kProbeRecord32Format{
       "^PROBE: tag 0x[0-9a-f]+, event_name_id 0x[0-9a-f]+, tid 0x[0-9a-f]+, ts [0-9]+, a "
       "0x[0-9a-f]+, b 0x[0-9a-f]+$"};
-  std::smatch match;
 
-  ASSERT_TRUE(std::regex_search(first_line, match, kProbeRecord32Format));
+  ASSERT_TRUE(re2::RE2::PartialMatch(first_line, kProbeRecord32Format));
 
   in_file.close();
 }
@@ -627,10 +619,9 @@ TEST(TracingTest, WriteHumanReadableHandlesProbeRecordUnexpectedSize) {
   std::string first_line;
   getline(in_file, first_line);
 
-  const std::regex kProbeRecordUnexpectedFormat{"^Unexpected tag: 0x[0-9a-f]+$"};
-  std::smatch match;
+  const re2::RE2 kProbeRecordUnexpectedFormat{"^Unexpected tag: 0x[0-9a-f]+$"};
 
-  ASSERT_TRUE(std::regex_search(first_line, match, kProbeRecordUnexpectedFormat));
+  ASSERT_TRUE(re2::RE2::PartialMatch(first_line, kProbeRecordUnexpectedFormat));
 
   in_file.close();
 }
@@ -661,11 +652,10 @@ TEST(TracingTest, WriteHumanReadableHandlesDurationRecord16Begin) {
   std::string first_line;
   getline(in_file, first_line);
 
-  const std::regex kDurationRecord16BeginFormat{
+  const re2::RE2 kDurationRecord16BeginFormat{
       "^[0-9]+: DURATION BEGIN: tag 0x[0-9a-f]+, id 0x[0-9a-f]+, tid 0x[0-9a-f]+$"};
-  std::smatch match;
 
-  ASSERT_TRUE(std::regex_search(first_line, match, kDurationRecord16BeginFormat));
+  ASSERT_TRUE(re2::RE2::PartialMatch(first_line, kDurationRecord16BeginFormat));
 
   in_file.close();
 }
@@ -696,11 +686,10 @@ TEST(TracingTest, WriteHumanReadableHandlesDurationRecord16End) {
   std::string first_line;
   getline(in_file, first_line);
 
-  const std::regex kDurationRecord16EndFormat{
+  const re2::RE2 kDurationRecord16EndFormat{
       "^[0-9]+: DURATION END: tag 0x[0-9a-f]+, id 0x[0-9a-f]+, tid 0x[0-9a-f]+$"};
-  std::smatch match;
 
-  ASSERT_TRUE(std::regex_search(first_line, match, kDurationRecord16EndFormat));
+  ASSERT_TRUE(re2::RE2::PartialMatch(first_line, kDurationRecord16EndFormat));
 
   in_file.close();
 }
@@ -730,10 +719,9 @@ TEST(TracingTest, WriteHumanReadableHandlesDurationRecord16Unexpected) {
   std::string first_line;
   getline(in_file, first_line);
 
-  const std::regex kDurationRecord16UnexpectedFormat{"^Unexpected tag: 0x[0-9a-f]+$"};
-  std::smatch match;
+  const re2::RE2 kDurationRecord16UnexpectedFormat{"^Unexpected tag: 0x[0-9a-f]+$"};
 
-  ASSERT_TRUE(std::regex_search(first_line, match, kDurationRecord16UnexpectedFormat));
+  ASSERT_TRUE(re2::RE2::PartialMatch(first_line, kDurationRecord16UnexpectedFormat));
 
   in_file.close();
 }
@@ -764,13 +752,12 @@ TEST(TracingTest, WriteHumanReadableHandlesDurationRecord32Begin) {
   std::string first_line;
   getline(in_file, first_line);
 
-  const std::regex kDurationRecord32BeginFormat{
+  const re2::RE2 kDurationRecord32BeginFormat{
       "^[0-9]+: DURATION BEGIN: tag 0x[0-9a-f]+, id 0x[0-9a-f]+, tid 0x[0-9a-f]+, a 0x[0-9a-f]+, b "
       "0x"
       "[0-9a-f]+$"};
-  std::smatch match;
 
-  ASSERT_TRUE(std::regex_search(first_line, match, kDurationRecord32BeginFormat));
+  ASSERT_TRUE(re2::RE2::PartialMatch(first_line, kDurationRecord32BeginFormat));
 
   in_file.close();
 }
@@ -801,12 +788,11 @@ TEST(TracingTest, WriteHumanReadableHandlesDurationRecord32End) {
   std::string first_line;
   getline(in_file, first_line);
 
-  const std::regex kDurationRecord32EndFormat{
+  const re2::RE2 kDurationRecord32EndFormat{
       "^[0-9]+: DURATION END: tag 0x[0-9a-f]+, id 0x[0-9a-f]+, tid 0x[0-9a-f]+, a 0x[0-9a-f]+, b 0x"
       "[0-9a-f]+$"};
-  std::smatch match;
 
-  ASSERT_TRUE(std::regex_search(first_line, match, kDurationRecord32EndFormat));
+  ASSERT_TRUE(re2::RE2::PartialMatch(first_line, kDurationRecord32EndFormat));
 
   in_file.close();
 }
@@ -836,10 +822,9 @@ TEST(TracingTest, WriteHumanReadableHandlesDurationRecord32Unexpected) {
   std::string first_line;
   getline(in_file, first_line);
 
-  const std::regex kDurationRecord32UnexpectedFormat{"^Unexpected tag: 0x[0-9a-f]+$"};
-  std::smatch match;
+  const re2::RE2 kDurationRecord32UnexpectedFormat{"^Unexpected tag: 0x[0-9a-f]+$"};
 
-  ASSERT_TRUE(std::regex_search(first_line, match, kDurationRecord32UnexpectedFormat));
+  ASSERT_TRUE(re2::RE2::PartialMatch(first_line, kDurationRecord32UnexpectedFormat));
 
   in_file.close();
 }
@@ -870,10 +855,9 @@ TEST(TracingTest, WriteHumanReadableHandlesDurationRecord32UnexpectedSize) {
   std::string first_line;
   getline(in_file, first_line);
 
-  const std::regex kDurationRecordUnexpectedFormat{"^Unexpected tag: 0x[0-9a-f]+$"};
-  std::smatch match;
+  const re2::RE2 kDurationRecordUnexpectedFormat{"^Unexpected tag: 0x[0-9a-f]+$"};
 
-  ASSERT_TRUE(std::regex_search(first_line, match, kDurationRecordUnexpectedFormat));
+  ASSERT_TRUE(re2::RE2::PartialMatch(first_line, kDurationRecordUnexpectedFormat));
 
   in_file.close();
 }
@@ -904,12 +888,11 @@ TEST(TracingTest, WriteHumanReadableHandlesFlowRecord32Begin) {
   std::string first_line;
   getline(in_file, first_line);
 
-  const std::regex kFlowRecord32BeginFormat{
+  const re2::RE2 kFlowRecord32BeginFormat{
       "^[0-9]+: FLOW BEGIN: tag 0x[0-9a-f]+, id 0x[0-9a-f]+, tid 0x[0-9a-f]+, flow id "
       "0x[0-9a-f]+$"};
-  std::smatch match;
 
-  ASSERT_TRUE(std::regex_search(first_line, match, kFlowRecord32BeginFormat));
+  ASSERT_TRUE(re2::RE2::PartialMatch(first_line, kFlowRecord32BeginFormat));
 
   in_file.close();
 }
@@ -940,12 +923,11 @@ TEST(TracingTest, WriteHumanReadableHandlesFlowRecord32End) {
   std::string first_line;
   getline(in_file, first_line);
 
-  const std::regex kFlowRecord32EndFormat{
+  const re2::RE2 kFlowRecord32EndFormat{
       "^[0-9]+: FLOW END: tag 0x[0-9a-f]+, id 0x[0-9a-f]+, tid 0x[0-9a-f]+, flow id "
       "0x[0-9a-f]+$"};
-  std::smatch match;
 
-  ASSERT_TRUE(std::regex_search(first_line, match, kFlowRecord32EndFormat));
+  ASSERT_TRUE(re2::RE2::PartialMatch(first_line, kFlowRecord32EndFormat));
 
   in_file.close();
 }
@@ -976,10 +958,9 @@ TEST(TracingTest, WriteHumanReadableHandlesFlowRecord32Unexpected) {
   std::string first_line;
   getline(in_file, first_line);
 
-  const std::regex kFlowRecord32UnexpectedFormat{"^Unexpected tag: 0x[0-9a-f]+$"};
-  std::smatch match;
+  const re2::RE2 kFlowRecord32UnexpectedFormat{"^Unexpected tag: 0x[0-9a-f]+$"};
 
-  ASSERT_TRUE(std::regex_search(first_line, match, kFlowRecord32UnexpectedFormat));
+  ASSERT_TRUE(re2::RE2::PartialMatch(first_line, kFlowRecord32UnexpectedFormat));
 
   in_file.close();
 }
@@ -1010,10 +991,9 @@ TEST(TracingTest, WriteHumanReadableHandlesFlowRecordUnexpectedSize) {
   std::string first_line;
   getline(in_file, first_line);
 
-  const std::regex kFlowRecordUnexpectedFormat{"^Unexpected tag: 0x[0-9a-f]+$"};
-  std::smatch match;
+  const re2::RE2 kFlowRecordUnexpectedFormat{"^Unexpected tag: 0x[0-9a-f]+$"};
 
-  ASSERT_TRUE(std::regex_search(first_line, match, kFlowRecordUnexpectedFormat));
+  ASSERT_TRUE(re2::RE2::PartialMatch(first_line, kFlowRecordUnexpectedFormat));
 
   in_file.close();
 }
