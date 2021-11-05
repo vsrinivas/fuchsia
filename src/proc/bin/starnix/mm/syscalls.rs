@@ -191,12 +191,15 @@ pub fn sys_munmap(
 }
 
 pub fn sys_msync(
-    _ctx: &CurrentTask,
-    _addr: UserAddress,
-    _length: usize,
+    current_task: &CurrentTask,
+    addr: UserAddress,
+    length: usize,
     _flags: u32,
 ) -> Result<SyscallResult, Errno> {
     not_implemented!("msync not implemented");
+    // Perform some basic validation of the address range given to satisfy gvisor tests that
+    // use msync as a way to probe whether a page is mapped or not.
+    current_task.mm.ensure_mapped(addr, length)?;
     Ok(SUCCESS)
 }
 
@@ -484,5 +487,43 @@ mod tests {
         for mapped_address in mapped_addresses {
             assert_eq!(current_task.mm.read_memory(mapped_address, &mut data), error!(EFAULT));
         }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_msync_validates_address_range() {
+        let (_kernel, current_task) = create_kernel_and_task();
+
+        // Map 3 pages and test that ranges covering these pages return no error.
+        let addr = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE * 3);
+        assert_eq!(sys_msync(&current_task, addr, *PAGE_SIZE as usize * 3, 0), Ok(SUCCESS));
+        assert_eq!(sys_msync(&current_task, addr, *PAGE_SIZE as usize * 2, 0), Ok(SUCCESS));
+        assert_eq!(
+            sys_msync(&current_task, addr + *PAGE_SIZE, *PAGE_SIZE as usize * 2, 0),
+            Ok(SUCCESS)
+        );
+
+        // Unmap the middle page and test that ranges covering that page return ENOMEM.
+        sys_munmap(&current_task, addr + *PAGE_SIZE, *PAGE_SIZE as usize).expect("unmap middle");
+        assert_eq!(sys_msync(&current_task, addr, *PAGE_SIZE as usize, 0), Ok(SUCCESS));
+        assert_eq!(sys_msync(&current_task, addr, *PAGE_SIZE as usize * 3, 0), error!(ENOMEM));
+        assert_eq!(sys_msync(&current_task, addr, *PAGE_SIZE as usize * 2, 0), error!(ENOMEM));
+        assert_eq!(
+            sys_msync(&current_task, addr + *PAGE_SIZE, *PAGE_SIZE as usize * 2, 0),
+            error!(ENOMEM)
+        );
+        assert_eq!(
+            sys_msync(&current_task, addr + *PAGE_SIZE * 2, *PAGE_SIZE as usize, 0),
+            Ok(SUCCESS)
+        );
+
+        // Map the middle page back and test that ranges covering the three pages
+        // (spanning multiple ranges) return no error.
+        assert_eq!(map_memory(&current_task, addr + *PAGE_SIZE, *PAGE_SIZE), addr + *PAGE_SIZE);
+        assert_eq!(sys_msync(&current_task, addr, *PAGE_SIZE as usize * 3, 0), Ok(SUCCESS));
+        assert_eq!(sys_msync(&current_task, addr, *PAGE_SIZE as usize * 2, 0), Ok(SUCCESS));
+        assert_eq!(
+            sys_msync(&current_task, addr + *PAGE_SIZE, *PAGE_SIZE as usize * 2, 0),
+            Ok(SUCCESS)
+        );
     }
 }

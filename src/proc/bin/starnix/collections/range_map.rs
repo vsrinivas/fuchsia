@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::borrow::Borrow;
 use std::cmp::{Eq, Ord, Ordering, PartialOrd};
 use std::collections::BTreeMap;
 use std::iter::Iterator;
@@ -270,6 +271,21 @@ where
             .map(|(k, value)| (&k.range, value))
     }
 
+    /// Iterate over the ranges in the map that intersect the requested range.
+    pub fn intersection<R>(&self, range: R) -> impl Iterator<Item = (&Range<K>, &V)>
+    where
+        R: Borrow<Range<K>>,
+    {
+        let range = range.borrow();
+        let start = self.get(&range.start).map(|(r, _)| &r.start).unwrap_or(&range.start);
+        self.map
+            .range((
+                Bound::Included(RangeStart::from_point(start)),
+                Bound::Excluded(RangeStart::from_point(&range.end)),
+            ))
+            .map(|(k, value)| (&k.range, value))
+    }
+
     /// Associate the keys in the given range with the given value.
     ///
     /// Callers must ensure that the keys in the given range are not already
@@ -388,5 +404,66 @@ mod test {
         assert_eq!((&(3..5), &-21), map.get(&4).unwrap());
         assert_eq!((&(5..6), &-42), map.get(&5).unwrap());
         assert_eq!((&(6..8), &-44), map.get(&7).unwrap());
+    }
+
+    #[test]
+    fn test_intersect_single() {
+        let mut map = RangeMap::<u32, i32>::new();
+
+        map.insert(2..7, -10);
+
+        let mut iter = map.intersection(3..4);
+        assert_eq!(iter.next(), Some((&(2..7), &-10)));
+        assert_eq!(iter.next(), None);
+
+        let mut iter = map.intersection(2..3);
+        assert_eq!(iter.next(), Some((&(2..7), &-10)));
+        assert_eq!(iter.next(), None);
+
+        let mut iter = map.intersection(1..4);
+        assert_eq!(iter.next(), Some((&(2..7), &-10)));
+        assert_eq!(iter.next(), None);
+
+        let mut iter = map.intersection(1..2);
+        assert_eq!(iter.next(), None);
+
+        let mut iter = map.intersection(6..7);
+        assert_eq!(iter.next(), Some((&(2..7), &-10)));
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn test_intersect_multiple() {
+        let mut map = RangeMap::<u32, i32>::new();
+
+        map.insert(2..7, -10);
+        map.insert(7..9, -20);
+        map.insert(10..11, -30);
+
+        let mut iter = map.intersection(3..8);
+        assert_eq!(iter.next(), Some((&(2..7), &-10)));
+        assert_eq!(iter.next(), Some((&(7..9), &-20)));
+        assert_eq!(iter.next(), None);
+
+        let mut iter = map.intersection(3..11);
+        assert_eq!(iter.next(), Some((&(2..7), &-10)));
+        assert_eq!(iter.next(), Some((&(7..9), &-20)));
+        assert_eq!(iter.next(), Some((&(10..11), &-30)));
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn test_intersect_no_gaps() {
+        let mut map = RangeMap::<u32, i32>::new();
+
+        map.insert(0..1, -10);
+        map.insert(1..2, -20);
+        map.insert(2..3, -30);
+
+        let mut iter = map.intersection(0..3);
+        assert_eq!(iter.next(), Some((&(0..1), &-10)));
+        assert_eq!(iter.next(), Some((&(1..2), &-20)));
+        assert_eq!(iter.next(), Some((&(2..3), &-30)));
+        assert_eq!(iter.next(), None);
     }
 }

@@ -566,6 +566,39 @@ impl MemoryManager {
         Ok(())
     }
 
+    /// Returns [`Ok`] if the entire range specified by `addr..(addr+length)` contains valid
+    /// mappings.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err(errno)`] where `errno` is:
+    ///
+    ///   - `EINVAL`: `addr` is not page-aligned, or the range is too large,
+    ///   - `ENOMEM`: one or more pages in the range are not mapped.
+    pub fn ensure_mapped(&self, addr: UserAddress, length: usize) -> Result<(), Errno> {
+        if !addr.is_aligned(*PAGE_SIZE) {
+            return error!(EINVAL);
+        }
+
+        let length = round_up_to_system_page_size(length)?;
+        let end_addr = addr.checked_add(length).ok_or_else(|| errno!(EINVAL))?;
+        let state = self.state.read();
+        let mut last_end = addr;
+        for (range, _) in state.mappings.intersection(addr..end_addr) {
+            if range.start > last_end {
+                // This mapping does not start immediately after the last.
+                return error!(ENOMEM);
+            }
+            last_end = range.end;
+        }
+        if last_end < end_addr {
+            // There is a gap of no mappings at the end of the range.
+            error!(ENOMEM)
+        } else {
+            Ok(())
+        }
+    }
+
     #[cfg(test)]
     pub fn get_mapping_name(&self, addr: UserAddress) -> Result<CString, Errno> {
         let state = self.state.read();
