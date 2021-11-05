@@ -26,7 +26,7 @@ bt::DeviceAddress LeAddressFromFidl(const fbt::Address& address) {
 bt::hci_spec::ConnectionRole ConnectionRoleFromFidl(fbt::ConnectionRole role) {
   switch (role) {
     case fbt::ConnectionRole::LEADER:
-      return bt::hci_spec::ConnectionRole::kMaster;
+      return bt::hci_spec::ConnectionRole::kCentral;
     case fbt::ConnectionRole::FOLLOWER:
       [[fallthrough]];
     default:
