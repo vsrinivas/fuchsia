@@ -5,15 +5,16 @@
 use crate::cipd::Cipd;
 use crate::config::FfxConfigWrapper;
 use crate::device::DeviceSpec;
-use crate::port_picker::{is_free_tcp_port, pick_unused_port, Port};
-use crate::target;
 use crate::tools::HostTools;
-use crate::types::{get_sdk_data_dir, read_env_path, FuchsiaPaths, ImageFiles, InTreePaths, SshKeys, VDLArgs};
-
+use crate::types::{
+    get_sdk_data_dir, read_env_path, FuchsiaPaths, ImageFiles, InTreePaths, SshKeys, VDLArgs,
+};
 use crate::vdl_proto_parser::{get_emu_pid, get_ssh_port};
+
 use ansi_term::Colour::*;
 use anyhow::Result;
 use errors::ffx_bail;
+use ffx_emulator_common::port_picker::{is_free_tcp_port, pick_unused_port, Port};
 use ffx_emulator_shutdown_args::ShutdownCommand;
 use ffx_emulator_start_args::StartCommand;
 use fidl_fuchsia_developer_bridge as bridge;
@@ -34,7 +35,16 @@ use std::thread;
 use std::time;
 use tempfile::{Builder, TempDir};
 
-mod remote;
+pub mod config;
+
+mod cipd;
+mod device;
+mod graphic_utils;
+mod images;
+mod target;
+mod tools;
+mod types;
+mod vdl_proto_parser;
 
 static ANALYTICS_ENV_VAR: &str = "FVDL_INVOKER";
 static DEFAULT_SSH_PORT: u16 = 8022;

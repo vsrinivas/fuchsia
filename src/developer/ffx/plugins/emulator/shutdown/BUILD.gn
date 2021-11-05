@@ -4,10 +4,13 @@
 
 import("//src/developer/ffx/build/ffx_plugin.gni")
 
-ffx_plugin("ffx_emulator_shutdown") {
-  version = "0.1.0"
-  edition = "2018"
-  deps = [ "//src/developer/ffx/plugins/emulator/common:lib" ]
-  args_sources = [ "src/args.rs" ]
-  sources = [ "src/lib.rs" ]
+if (is_host) {
+  ffx_plugin("ffx_emulator_shutdown") {
+    version = "0.1.0"
+    edition = "2018"
+    deps =
+        [ "//src/developer/ffx/plugins/emulator/engines:ffx_emulator_engines" ]
+    args_sources = [ "src/args.rs" ]
+    sources = [ "src/lib.rs" ]
+  }
 }

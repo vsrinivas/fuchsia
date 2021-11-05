@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// Note: This code is currently inactive. It is not compiled into the emu plugin, as the plugin is
+// undergoing big structural changes. We'll come back to this when emu is stable again.
+
 use super::VDLFiles;
 use crate::types::{FuchsiaPaths, InTreePaths};
 use anyhow::{format_err, Result};

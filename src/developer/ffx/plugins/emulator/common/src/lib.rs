@@ -2,16 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub mod args;
-pub mod config;
-pub mod port_picker;
-pub mod vdl_files;
+//! This library contains the shared functions used by multiple emulation engines. Any code placed
+//! in this library may not depend on any other code within the plugin, with the exception of "args"
+//! libraries.
 
-mod cipd;
-mod device;
-mod graphic_utils;
-mod images;
-mod target;
-mod tools;
-mod types;
-mod vdl_proto_parser;
+pub mod port_picker;

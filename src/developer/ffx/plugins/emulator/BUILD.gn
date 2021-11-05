@@ -4,16 +4,21 @@
 
 import("//src/developer/ffx/build/ffx_plugin.gni")
 
-ffx_plugin("ffx_emulator") {
-  version = "0.1.0"
-  edition = "2018"
-  with_unit_tests = true
-  args_sources = [ "src/args.rs" ]
-  config_data = [ "data/config.json" ]
-  plugin_deps = [
-    "remote:ffx_emulator_remote",
-    "shutdown:ffx_emulator_shutdown",
-    "start:ffx_emulator_start",
-  ]
-  test_deps = [ "common:lib_test" ]
+if (is_host) {
+  ffx_plugin("ffx_emulator") {
+    version = "0.1.0"
+    edition = "2018"
+    with_unit_tests = true
+    args_sources = [ "src/args.rs" ]
+    config_data = [ "data/config.json" ]
+    plugin_deps = [
+      "shutdown:ffx_emulator_shutdown",
+      "start:ffx_emulator_start",
+    ]
+    test_deps = [
+      "common:tests",
+      "config_types:tests",
+      "engines:tests",
+    ]
+  }
 }
