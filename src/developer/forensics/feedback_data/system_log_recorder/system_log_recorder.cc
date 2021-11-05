@@ -60,8 +60,8 @@ void SystemLogRecorder::Flush(const std::optional<std::string> message) {
 
   // Ensure data is written to disk ASAP when the system log recorder (and maybe the system) is
   // expected to stop soon.
-  writer_.EnableFsyncOnWrite();
   writer_.Write();
+  writer_.Fsync();
 }
 
 void SystemLogRecorder::StopAndDeleteLogs() {

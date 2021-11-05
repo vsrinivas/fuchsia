@@ -68,9 +68,6 @@ void SystemLogWriter::Write() {
     // Overcommit, i.e. write everything we consumed before starting a new file for the next
     // block as we cannot have a block spanning multiple files.
     write(current_file_descriptor_.get(), str.c_str(), str.size());
-    if (call_fsync_) {
-      fsync(current_file_descriptor_.get());
-    }
   }
 
   if (end_of_block) {
@@ -78,7 +75,7 @@ void SystemLogWriter::Write() {
   }
 }
 
-void SystemLogWriter::EnableFsyncOnWrite() { call_fsync_ = true; }
+void SystemLogWriter::Fsync() { fsync(current_file_descriptor_.get()); }
 
 std::string SystemLogWriter::Path(const size_t file_num) const {
   return files::JoinPath(logs_dir_, std::to_string(file_num));
