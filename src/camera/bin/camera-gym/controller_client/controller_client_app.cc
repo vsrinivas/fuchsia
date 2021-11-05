@@ -12,7 +12,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
-#include <regex>
+#include <re2/re2.h>
 
 #include "src/camera/bin/camera-gym/controller_error/controller_error.h"
 #include "src/lib/fxl/command_line.h"
@@ -65,16 +65,15 @@ bool ControllerClientApp::ConnectToServer() {
 static bool FindServicesForPath(char* glob_str, char* regex_str, std::vector<Service>* services) {
   glob_t glob_buf;
   bool service_exists = glob(glob_str, 0, nullptr, &glob_buf) == 0;
-  std::regex name_regex(regex_str);
+  re2::RE2 name_regex(regex_str);
   if (!service_exists) {
     return false;
   }
   for (size_t i = 0; i < glob_buf.gl_pathc; ++i) {
     Service service;
     service.service_path = glob_buf.gl_pathv[i];
-    std::smatch match;
-    FX_CHECK(std::regex_search(service.service_path, match, name_regex)) << service.service_path;
-    service.name = match[1];
+    FX_CHECK(re2::RE2::PartialMatch(service.service_path, name_regex, &service.name))
+        << service.service_path;
     services->push_back(std::move(service));
   }
   globfree(&glob_buf);
