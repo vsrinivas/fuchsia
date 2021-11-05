@@ -11,6 +11,4 @@ fidl("fuchsia.buildinfo") {
   sdk_category = "partner"
 
   sources = [ "buildinfo.fidl" ]
-
-  public_deps = [ "//zircon/vdso/zx" ]
 }
