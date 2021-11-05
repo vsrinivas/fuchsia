@@ -6,13 +6,13 @@
 
 #include <stdint.h>
 
-#include <regex>
 #include <sstream>
 #include <string>
 #include <unordered_set>
 #include <vector>
 
 #include <gtest/gtest.h>
+#include <re2/re2.h>
 
 namespace uuid {
 namespace {
@@ -79,12 +79,12 @@ TEST(Uuid, Unique) {
 TEST(Uuid, Version4) {
   // The format of UUID version 4 must be xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx,
   // where y is one of [8, 9, A, B].
-  std::regex uuid_v4("^........-....-4...-[89ab]...-............$");
+  re2::RE2 uuid_v4("^........-....-4...-[89ab]...-............$");
 
   // Test a few random UUIDs.
   for (int i = 0; i < 10; ++i) {
     std::string n = uuid::Generate();
-    EXPECT_TRUE(std::regex_match(n, uuid_v4))
+    EXPECT_TRUE(re2::RE2::FullMatch(n, uuid_v4))
         << "UUID '" << n << "' did not match expected template.";
   }
 }
