@@ -465,6 +465,11 @@ typedef uint8_t fidl_transport_type;
 
 // Transport agnostic handle representation.
 typedef uint32_t fidl_handle_t;
+static_assert(sizeof(fidl_handle_t) == sizeof(zx_handle_t), "handle type size mismatch");
+
+// An invalid handle.
+#define FIDL_HANDLE_INVALID ((fidl_handle_t)(0))
+static_assert(FIDL_HANDLE_INVALID == ZX_HANDLE_INVALID, "invalid handle value mismatch");
 
 // Pair of object type and rights, used for handle metadata for the channel
 // transport.

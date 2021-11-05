@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_LLCPP_CODING_H_
 #define LIB_FIDL_LLCPP_CODING_H_
 
-#include <lib/fidl/llcpp/internal/transport.h>
+#include <lib/fidl/coding.h>
 #include <zircon/compiler.h>
 #include <zircon/fidl.h>
 #include <zircon/types.h>
@@ -38,12 +38,12 @@ namespace internal {
 // On success, handles in the original object will be moved to the |out_handles| array.
 // On failure, handles in the original object will be closed.
 template <FidlWireFormatVersion WireFormatVersion>
-zx_status_t EncodeIovecEtc(const fidl::internal::EncodingConfiguration& encoding_configuration,
-                           const fidl_type_t* type, void* value, zx_channel_iovec_t* iovecs,
-                           uint32_t num_iovecs, fidl_handle_t* handles, void* handle_metadata,
-                           uint32_t num_handles, uint8_t* backing_buffer,
-                           uint32_t num_backing_buffer, uint32_t* out_actual_iovec,
-                           uint32_t* out_actual_handles, const char** out_error_msg);
+zx_status_t EncodeIovecEtc(const CodingConfig& encoding_configuration, const fidl_type_t* type,
+                           void* value, zx_channel_iovec_t* iovecs, uint32_t num_iovecs,
+                           fidl_handle_t* handles, void* handle_metadata, uint32_t num_handles,
+                           uint8_t* backing_buffer, uint32_t num_backing_buffer,
+                           uint32_t* out_actual_iovec, uint32_t* out_actual_handles,
+                           const char** out_error_msg);
 
 }  // namespace internal
 }  // namespace fidl

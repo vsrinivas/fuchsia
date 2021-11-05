@@ -149,7 +149,7 @@ void OutgoingMessage::EncodeImpl(const fidl_type_t* message_type, void* data) {
   }
   uint32_t num_iovecs_actual;
   uint32_t num_handles_actual;
-  const internal::EncodingConfiguration* encoding_configuration =
+  const internal::CodingConfig* encoding_configuration =
       internal::LookupTransportVTable(transport_type())->encoding_configuration;
   zx_status_t status = fidl::internal::EncodeIovecEtc<FIDL_WIRE_FORMAT_VERSION_V2>(
       *encoding_configuration, message_type, data, iovecs(), iovec_capacity(), handles(),

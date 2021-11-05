@@ -22,7 +22,7 @@ struct ChannelTransport {
   using HandleMetadata = fidl_channel_handle_metadata_t;
 
   static const TransportVTable VTable;
-  static const EncodingConfiguration EncodingConfiguration;
+  static const CodingConfig EncodingConfiguration;
 };
 
 #ifdef __Fuchsia__
