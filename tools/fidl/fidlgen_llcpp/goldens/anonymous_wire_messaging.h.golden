@@ -607,33 +607,6 @@ class ::fidl::WireSyncClient<::fidl_test_anonymous::SomeProtocol> final
  public:
   using ::fidl::internal::WireSyncClientBase<
       ::fidl_test_anonymous::SomeProtocol>::WireSyncClientBase;
-  using ::fidl::internal::WireSyncClientBase<
-      ::fidl_test_anonymous::SomeProtocol>::Bind;
-
-  // Allocates 128 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::WireResult<::fidl_test_anonymous::SomeProtocol::SomeMethod>
-  SomeMethod(::fidl_test_anonymous::wire::UnionMember union_member,
-             ::fidl_test_anonymous::wire::TableMember table_member) const {
-    ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>
-        _request{union_member, table_member};
-    return ::fidl::WireResult<::fidl_test_anonymous::SomeProtocol::SomeMethod>(
-        this->client_end(), &_request);
-  }
-
-  // Caller provides the backing storage for FIDL message via request and
-  // response buffers.
-  ::fidl::WireUnownedResult<::fidl_test_anonymous::SomeProtocol::SomeMethod>
-  SomeMethod(::fidl::BufferSpan _buffer_span,
-             ::fidl_test_anonymous::wire::UnionMember union_member,
-             ::fidl_test_anonymous::wire::TableMember table_member) const {
-    auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-    ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>
-        _request{union_member, table_member};
-    return ::fidl::WireUnownedResult<
-        ::fidl_test_anonymous::SomeProtocol::SomeMethod>(this->client_end(),
-                                                         _allocator, &_request);
-  }
 };
 
 template <>

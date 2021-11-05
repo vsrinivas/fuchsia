@@ -38,7 +38,7 @@ constexpr char kSetConfig[] = "config";
 }  // namespace cmd_str
 
 zx_status_t enable(fidl::WireSyncClient<fuchsia_hardware_pwm::Pwm>& client) {
-  auto result = client.Enable();
+  auto result = client->Enable();
 
   if (!result.ok()) {
     fprintf(stderr, "Failed to enable device\n");
@@ -49,7 +49,7 @@ zx_status_t enable(fidl::WireSyncClient<fuchsia_hardware_pwm::Pwm>& client) {
 }
 
 zx_status_t disable(fidl::WireSyncClient<fuchsia_hardware_pwm::Pwm>& client) {
-  auto result = client.Disable();
+  auto result = client->Disable();
 
   if (!result.ok()) {
     fprintf(stderr, "Failed to disable device\n");
@@ -77,7 +77,7 @@ zx_status_t set_config(fidl::WireSyncClient<fuchsia_hardware_pwm::Pwm>& client, 
   config.mode_config =
       fidl::VectorView<uint8_t>::FromExternal(reinterpret_cast<uint8_t*>(&cfg), sizeof(cfg));
 
-  zx_status_t result = client.SetConfig(config).status();
+  zx_status_t result = client->SetConfig(config).status();
 
   if (result != ZX_OK) {
     fprintf(stderr, "Failed to set config, rc = %d\n", result);

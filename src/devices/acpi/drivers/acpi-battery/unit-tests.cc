@@ -134,7 +134,7 @@ class AcpiBatteryTest : public InspectTestHelper, public zxtest::Test {
   }
 
   void CheckInfo() {
-    auto res = source_client_.GetBatteryInfo();
+    auto res = source_client_->GetBatteryInfo();
     ASSERT_OK(res.status());
     ASSERT_OK(res->status);
 
@@ -171,7 +171,7 @@ class AcpiBatteryTest : public InspectTestHelper, public zxtest::Test {
 TEST_F(AcpiBatteryTest, CheckBatteryInfo) { ASSERT_NO_FATAL_FAILURES(CheckInfo()); }
 
 TEST_F(AcpiBatteryTest, CheckSourceInfo) {
-  auto res = source_client_.GetPowerInfo();
+  auto res = source_client_->GetPowerInfo();
   ASSERT_OK(res.status());
   ASSERT_OK(res->status);
 
@@ -181,7 +181,7 @@ TEST_F(AcpiBatteryTest, CheckSourceInfo) {
 }
 
 TEST_F(AcpiBatteryTest, CheckDataUpdated) {
-  auto res = source_client_.GetStateChangeEvent();
+  auto res = source_client_->GetStateChangeEvent();
   ASSERT_OK(res.status());
   ASSERT_OK(res->status);
 
@@ -196,7 +196,7 @@ TEST_F(AcpiBatteryTest, CheckDataUpdated) {
 
   // Percentage point drop!
   battery_capacity_ = 990;
-  notify_client_.Handle(0x80);
+  notify_client_->Handle(0x80);
 
   // Expect an event.
   ASSERT_OK(event.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), &pending));
@@ -204,7 +204,7 @@ TEST_F(AcpiBatteryTest, CheckDataUpdated) {
 
   // Check state, which should also clear the event.
   {
-    auto res = source_client_.GetPowerInfo();
+    auto res = source_client_->GetPowerInfo();
     ASSERT_OK(res.status());
     ASSERT_OK(res->status);
   }

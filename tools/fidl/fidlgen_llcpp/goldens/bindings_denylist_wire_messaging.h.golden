@@ -647,21 +647,6 @@ class ::fidl::WireSyncClient<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
  public:
   using ::fidl::internal::WireSyncClientBase<
       ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::WireSyncClientBase;
-  using ::fidl::internal::WireSyncClientBase<
-      ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::Bind;
-
-  // Allocates 32 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::WireResult<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                         LibfuzzerNeedsNonemptyProtocol>
-  LibfuzzerNeedsNonemptyProtocol() const {
-    ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                            LibfuzzerNeedsNonemptyProtocol>
-        _request{};
-    return ::fidl::WireResult<
-        ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-            LibfuzzerNeedsNonemptyProtocol>(this->client_end(), &_request);
-  }
 };
 
 template <>
@@ -832,8 +817,6 @@ class ::fidl::WireSyncClient<::fidl_test_bindingsdenylist::OnlyCppAndDeps> final
  public:
   using ::fidl::internal::WireSyncClientBase<
       ::fidl_test_bindingsdenylist::OnlyCppAndDeps>::WireSyncClientBase;
-  using ::fidl::internal::WireSyncClientBase<
-      ::fidl_test_bindingsdenylist::OnlyCppAndDeps>::Bind;
 };
 
 // Pure-virtual interface to be implemented by a server.

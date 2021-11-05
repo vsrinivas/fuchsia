@@ -489,20 +489,6 @@ class ::fidl::WireSyncClient<::fidl_test_doccomments::Interface> final
  public:
   using ::fidl::internal::WireSyncClientBase<
       ::fidl_test_doccomments::Interface>::WireSyncClientBase;
-  using ::fidl::internal::WireSyncClientBase<
-      ::fidl_test_doccomments::Interface>::Bind;
-
-  /// method comment #1
-  ///
-  /// method comment #3
-  // Allocates 16 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::WireResult<::fidl_test_doccomments::Interface::Method> Method()
-      const {
-    ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method> _request{};
-    return ::fidl::WireResult<::fidl_test_doccomments::Interface::Method>(
-        this->client_end(), &_request);
-  }
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method defined in |SyncEventHandler|. The return

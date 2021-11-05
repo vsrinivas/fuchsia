@@ -556,27 +556,6 @@ class ::fidl::WireSyncClient<::fidl_test_inheritance::Super> final
  public:
   using ::fidl::internal::WireSyncClientBase<
       ::fidl_test_inheritance::Super>::WireSyncClientBase;
-  using ::fidl::internal::WireSyncClientBase<
-      ::fidl_test_inheritance::Super>::Bind;
-
-  // Allocates 24 bytes of response buffer on the stack. Request is
-  // heap-allocated.
-  ::fidl::WireResult<::fidl_test_inheritance::Super::Foo> Foo(
-      ::fidl::StringView s) const {
-    ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo> _request{s};
-    return ::fidl::WireResult<::fidl_test_inheritance::Super::Foo>(
-        this->client_end(), &_request);
-  }
-
-  // Caller provides the backing storage for FIDL message via request and
-  // response buffers.
-  ::fidl::WireUnownedResult<::fidl_test_inheritance::Super::Foo> Foo(
-      ::fidl::BufferSpan _buffer_span, ::fidl::StringView s) const {
-    auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-    ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo> _request{s};
-    return ::fidl::WireUnownedResult<::fidl_test_inheritance::Super::Foo>(
-        this->client_end(), _allocator, &_request);
-  }
 };
 
 template <>
@@ -1162,27 +1141,6 @@ class ::fidl::WireSyncClient<::fidl_test_inheritance::Sub> final
  public:
   using ::fidl::internal::WireSyncClientBase<
       ::fidl_test_inheritance::Sub>::WireSyncClientBase;
-  using ::fidl::internal::WireSyncClientBase<
-      ::fidl_test_inheritance::Sub>::Bind;
-
-  // Allocates 24 bytes of response buffer on the stack. Request is
-  // heap-allocated.
-  ::fidl::WireResult<::fidl_test_inheritance::Sub::Foo> Foo(
-      ::fidl::StringView s) const {
-    ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo> _request{s};
-    return ::fidl::WireResult<::fidl_test_inheritance::Sub::Foo>(
-        this->client_end(), &_request);
-  }
-
-  // Caller provides the backing storage for FIDL message via request and
-  // response buffers.
-  ::fidl::WireUnownedResult<::fidl_test_inheritance::Sub::Foo> Foo(
-      ::fidl::BufferSpan _buffer_span, ::fidl::StringView s) const {
-    auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-    ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo> _request{s};
-    return ::fidl::WireUnownedResult<::fidl_test_inheritance::Sub::Foo>(
-        this->client_end(), _allocator, &_request);
-  }
 };
 
 template <>

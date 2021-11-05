@@ -121,8 +121,6 @@ class ::fidl::WireSyncClient<::fidl_test_handles::SomeProtocol> final
  public:
   using ::fidl::internal::WireSyncClientBase<
       ::fidl_test_handles::SomeProtocol>::WireSyncClientBase;
-  using ::fidl::internal::WireSyncClientBase<
-      ::fidl_test_handles::SomeProtocol>::Bind;
 };
 
 // Pure-virtual interface to be implemented by a server.

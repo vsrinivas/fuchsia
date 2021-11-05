@@ -77,8 +77,8 @@ void AcpiBattery::DdkInit(ddk::InitTxn txn) {
   fidl::BindServer<fidl::WireServer<fuchsia_hardware_acpi::NotifyHandler>>(
       dispatcher, std::move(endpoints->server), this);
 
-  auto result = acpi_.borrow().InstallNotifyHandler(facpi::NotificationMode::kDevice,
-                                                    std::move(endpoints->client));
+  auto result = acpi_.borrow()->InstallNotifyHandler(facpi::NotificationMode::kDevice,
+                                                     std::move(endpoints->client));
   if (!result.ok()) {
     zxlogf(ERROR, "Failed to send installnotifyhandler FIDL request: %s",
            result.FormatDescription().data());
@@ -112,7 +112,7 @@ zx_status_t AcpiBattery::ClearSignal() {
 }
 
 zx_status_t AcpiBattery::CheckAcpiState() {
-  auto result = acpi_.borrow().EvaluateObject("_STA", facpi::EvaluateObjectMode::kPlainObject, {});
+  auto result = acpi_.borrow()->EvaluateObject("_STA", facpi::EvaluateObjectMode::kPlainObject, {});
   if (!result.ok()) {
     zxlogf(ERROR, "EvaluateObject FIDL call failed: %s", zx_status_get_string(result.status()));
     return result.status();
@@ -147,7 +147,7 @@ zx_status_t AcpiBattery::CheckAcpiState() {
 }
 
 zx_status_t AcpiBattery::CheckAcpiBatteryInformation() {
-  auto result = acpi_.borrow().EvaluateObject("_BIF", facpi::EvaluateObjectMode::kPlainObject, {});
+  auto result = acpi_.borrow()->EvaluateObject("_BIF", facpi::EvaluateObjectMode::kPlainObject, {});
   if (!result.ok()) {
     zxlogf(ERROR, "EvaluateObject FIDL call failed: %s", zx_status_get_string(result.status()));
     return result.status();
@@ -206,7 +206,7 @@ zx_status_t AcpiBattery::CheckAcpiBatteryInformation() {
 }
 
 zx_status_t AcpiBattery::CheckAcpiBatteryState() {
-  auto result = acpi_.borrow().EvaluateObject("_BST", facpi::EvaluateObjectMode::kPlainObject, {});
+  auto result = acpi_.borrow()->EvaluateObject("_BST", facpi::EvaluateObjectMode::kPlainObject, {});
   if (!result.ok()) {
     zxlogf(ERROR, "EvaluateObject FIDL call failed: %s", zx_status_get_string(result.status()));
     return result.status();

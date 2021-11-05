@@ -1169,65 +1169,6 @@ class ::fidl::WireSyncClient<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax>
  public:
   using ::fidl::internal::WireSyncClientBase<
       ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax>::WireSyncClientBase;
-  using ::fidl::internal::WireSyncClientBase<
-      ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax>::Bind;
-
-  // Allocates 40 bytes of response buffer on the stack. Request is
-  // heap-allocated.
-  ::fidl::WireResult<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
-                         ComposedCallWhichMayFail>
-  ComposedCallWhichMayFail(::fidl::StringView s) const {
-    ::fidl::WireRequest<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
-                            ComposedCallWhichMayFail>
-        _request{s};
-    return ::fidl::WireResult<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
-                                  ComposedCallWhichMayFail>(this->client_end(),
-                                                            &_request);
-  }
-
-  // Caller provides the backing storage for FIDL message via request and
-  // response buffers.
-  ::fidl::WireUnownedResult<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
-                                ComposedCallWhichMayFail>
-  ComposedCallWhichMayFail(::fidl::BufferSpan _buffer_span,
-                           ::fidl::StringView s) const {
-    auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-    ::fidl::WireRequest<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
-                            ComposedCallWhichMayFail>
-        _request{s};
-    return ::fidl::WireUnownedResult<
-        ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
-            ComposedCallWhichMayFail>(this->client_end(), _allocator,
-                                      &_request);
-  }
-
-  // Allocates 40 bytes of response buffer on the stack. Request is
-  // heap-allocated.
-  ::fidl::WireResult<
-      ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
-  CallWhichMayFail(::fidl::StringView s) const {
-    ::fidl::WireRequest<
-        ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
-        _request{s};
-    return ::fidl::WireResult<
-        ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>(
-        this->client_end(), &_request);
-  }
-
-  // Caller provides the backing storage for FIDL message via request and
-  // response buffers.
-  ::fidl::WireUnownedResult<
-      ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
-  CallWhichMayFail(::fidl::BufferSpan _buffer_span,
-                   ::fidl::StringView s) const {
-    auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-    ::fidl::WireRequest<
-        ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
-        _request{s};
-    return ::fidl::WireUnownedResult<
-        ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>(
-        this->client_end(), _allocator, &_request);
-  }
 };
 
 template <>

@@ -164,7 +164,7 @@ static bool bind_display(const char* controller, fbl::Vector<Display>* displays)
     }
   }
 
-  if (!dc.EnableVsync(true).ok()) {
+  if (!dc->EnableVsync(true).ok()) {
     printf("Failed to enable vsync\n");
     return false;
   }
@@ -179,7 +179,7 @@ bool import_gamma_tables(uint64_t id, float gamma) {
   generate_gamma_table(gamma, r.data());
   generate_gamma_table(gamma, g.data());
   generate_gamma_table(gamma, b.data());
-  return dc.ImportGammaTable(id, r, g, b).ok();
+  return dc->ImportGammaTable(id, r, g, b).ok();
 }
 
 Display* find_display(fbl::Vector<Display>& displays, const char* id_str) {
@@ -217,8 +217,8 @@ bool update_display_layers(const fbl::Vector<std::unique_ptr<VirtualLayer>>& lay
 
   if (layer_change) {
     current_layers->swap(new_layers);
-    if (!dc.SetDisplayLayers(display.id(), fidl::VectorView<uint64_t>::FromExternal(
-                                               current_layers->data(), current_layers->size()))
+    if (!dc->SetDisplayLayers(display.id(), fidl::VectorView<uint64_t>::FromExternal(
+                                                current_layers->data(), current_layers->size()))
              .ok()) {
       printf("Failed to set layers\n");
       return false;
@@ -228,7 +228,7 @@ bool update_display_layers(const fbl::Vector<std::unique_ptr<VirtualLayer>>& lay
 }
 
 bool apply_config() {
-  auto result = dc.CheckConfig(false);
+  auto result = dc->CheckConfig(false);
   if (!result.ok()) {
     printf("Failed to make check call: %s\n", result.FormatDescription().c_str());
     return false;
@@ -243,7 +243,7 @@ bool apply_config() {
     return false;
   }
 
-  if (!dc.ApplyConfig().ok()) {
+  if (!dc->ApplyConfig().ok()) {
     printf("Apply failed\n");
     return false;
   }
@@ -266,7 +266,7 @@ zx_status_t wait_for_vsync(const fbl::Vector<std::unique_ptr<VirtualLayer>>& lay
     void OnVsync(fidl::WireResponse<fhd::Controller::OnVsync>* event) override {
       // Acknowledge cookie if non-zero
       if (event->cookie) {
-        dc.AcknowledgeVsync(event->cookie);
+        dc->AcknowledgeVsync(event->cookie);
       }
 
       for (auto& layer : layers_) {
@@ -308,7 +308,7 @@ zx_status_t wait_for_vsync(const fbl::Vector<std::unique_ptr<VirtualLayer>>& lay
 }
 
 zx_status_t set_minimum_rgb(uint8_t min_rgb) {
-  auto resp = dc.SetMinimumRgb(min_rgb);
+  auto resp = dc->SetMinimumRgb(min_rgb);
   return resp.status();
 }
 
@@ -316,7 +316,7 @@ zx_status_t capture_setup() {
   // TODO(fxbug.dev/41413): Pull common image setup code into a library
 
   // First make sure capture is supported on this platform
-  auto support_resp = dc.IsCaptureSupported();
+  auto support_resp = dc->IsCaptureSupported();
   if (!support_resp.ok()) {
     printf("%s: %s\n", __func__, support_resp.FormatDescription().c_str());
     return ZX_ERR_NOT_SUPPORTED;
@@ -336,7 +336,7 @@ zx_status_t capture_setup() {
     printf("Could not duplicate event %d\n", status);
     return status;
   }
-  auto event_status = dc.ImportEvent(std::move(e2), kEventId);
+  auto event_status = dc->ImportEvent(std::move(e2), kEventId);
   if (event_status.status() != ZX_OK) {
     printf("Could not import event: %s\n", event_status.FormatDescription().c_str());
     return event_status.status();
@@ -370,7 +370,7 @@ zx_status_t capture_setup() {
       fidl::WireSyncClient<sysmem::BufferCollectionToken>(std::move(token_client));
 
   // pass token server to sysmem allocator
-  auto alloc_status = sysmem_allocator.AllocateSharedCollection(std::move(token_server));
+  auto alloc_status = sysmem_allocator->AllocateSharedCollection(std::move(token_server));
   if (alloc_status.status() != ZX_OK) {
     printf("Could not pass token to sysmem allocator: %s\n",
            alloc_status.FormatDescription().c_str());
@@ -386,14 +386,14 @@ zx_status_t capture_setup() {
     return status;
   }
   fidl::WireSyncClient<sysmem::BufferCollectionToken> display_token(std::move(token_dup_client));
-  auto dup_res = token.Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_dup_server));
+  auto dup_res = token->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_dup_server));
   if (dup_res.status() != ZX_OK) {
     printf("Could not duplicate token: %s\n", dup_res.FormatDescription().c_str());
     return dup_res.status();
   }
-  token.Sync();
+  token->Sync();
   auto import_resp =
-      dc.ImportBufferCollection(kCollectionId, display_token.TakeClientEnd().TakeChannel());
+      dc->ImportBufferCollection(kCollectionId, display_token.TakeClientEnd().TakeChannel());
   if (import_resp.status() != ZX_OK) {
     printf("Could not import token: %s\n", import_resp.FormatDescription().c_str());
     return import_resp.status();
@@ -402,7 +402,7 @@ zx_status_t capture_setup() {
   // set buffer constraints
   fhd::wire::ImageConfig image_config = {};
   image_config.type = fhd::wire::kTypeCapture;
-  auto constraints_resp = dc.SetBufferCollectionConstraints(kCollectionId, image_config);
+  auto constraints_resp = dc->SetBufferCollectionConstraints(kCollectionId, image_config);
   if (constraints_resp.status() != ZX_OK) {
     printf("Could not set capture constraints %s\n", constraints_resp.FormatDescription().c_str());
     return constraints_resp.status();
@@ -417,8 +417,8 @@ zx_status_t capture_setup() {
     return status;
   }
   // let's return token
-  auto bind_resp = sysmem_allocator.BindSharedCollection(token.TakeClientEnd().TakeChannel(),
-                                                         std::move(collection_server));
+  auto bind_resp = sysmem_allocator->BindSharedCollection(token.TakeClientEnd().TakeChannel(),
+                                                          std::move(collection_server));
   if (bind_resp.status() != ZX_OK) {
     printf("Could not bind to shared collection: %s\n", bind_resp.FormatDescription().c_str());
     return bind_resp.status();
@@ -457,14 +457,14 @@ zx_status_t capture_setup() {
   image_constraints.display_height_divisor = 1;
 
   collection_ = fidl::WireSyncClient<sysmem::BufferCollection>(std::move(collection_client));
-  auto collection_resp = collection_.SetConstraints(true, constraints);
+  auto collection_resp = collection_->SetConstraints(true, constraints);
   if (collection_resp.status() != ZX_OK) {
     printf("Could not set buffer constraints: %s\n", collection_resp.FormatDescription().c_str());
     return collection_resp.status();
   }
 
   // wait for allocation
-  auto wait_resp = collection_.WaitForBuffersAllocated();
+  auto wait_resp = collection_->WaitForBuffersAllocated();
   if (wait_resp.status() != ZX_OK) {
     printf("Wait for buffer allocation failed: %s\n", wait_resp.FormatDescription().c_str());
     return wait_resp.status();
@@ -473,7 +473,7 @@ zx_status_t capture_setup() {
   capture_vmo = std::move(wait_resp.value().buffer_collection_info.buffers[0].vmo);
   // import image for capture
   fhd::wire::ImageConfig capture_cfg = {};  // will contain a handle
-  auto importcap_resp = dc.ImportImageForCapture(capture_cfg, kCollectionId, 0);
+  auto importcap_resp = dc->ImportImageForCapture(capture_cfg, kCollectionId, 0);
   if (importcap_resp.status() != ZX_OK) {
     printf("Failed to start capture: %s\n", importcap_resp.FormatDescription().c_str());
     return importcap_resp.status();
@@ -488,7 +488,7 @@ zx_status_t capture_setup() {
 
 zx_status_t capture_start() {
   // start capture
-  auto capstart_resp = dc.StartCapture(kEventId, capture_id);
+  auto capstart_resp = dc->StartCapture(kEventId, capture_id);
   if (capstart_resp.status() != ZX_OK) {
     printf("Could not start capture: %s\n", capstart_resp.FormatDescription().c_str());
     return capstart_resp.status();
@@ -601,8 +601,8 @@ bool capture_compare(void* input_image_buf, uint32_t height, uint32_t width) {
 }
 
 void capture_release() {
-  dc.ReleaseCapture(capture_id);
-  dc.ReleaseBufferCollection(kCollectionId);
+  dc->ReleaseCapture(capture_id);
+  dc->ReleaseBufferCollection(kCollectionId);
 }
 
 void usage(void) {
@@ -1141,7 +1141,7 @@ int main(int argc, const char* argv[]) {
 
     // Check to see if we should set gamma correction
     if (!std::isnan(gamma)) {
-      if (!dc.SetDisplayGammaTable(displays[0].id(), gamma_id).ok()) {
+      if (!dc->SetDisplayGammaTable(displays[0].id(), gamma_id).ok()) {
         printf("Could not set Gamma Table\n");
         return -1;
       }

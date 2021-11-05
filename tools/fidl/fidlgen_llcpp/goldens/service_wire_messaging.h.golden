@@ -338,19 +338,6 @@ class ::fidl::WireSyncClient<::fidl_test_service::SecondProtocol> final
  public:
   using ::fidl::internal::WireSyncClientBase<
       ::fidl_test_service::SecondProtocol>::WireSyncClientBase;
-  using ::fidl::internal::WireSyncClientBase<
-      ::fidl_test_service::SecondProtocol>::Bind;
-
-  // Allocates 16 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::WireResult<::fidl_test_service::SecondProtocol::MethodOnSecond>
-  MethodOnSecond() const {
-    ::fidl::WireRequest<::fidl_test_service::SecondProtocol::MethodOnSecond>
-        _request{};
-    return ::fidl::WireResult<
-        ::fidl_test_service::SecondProtocol::MethodOnSecond>(this->client_end(),
-                                                             &_request);
-  }
 };
 
 // Pure-virtual interface to be implemented by a server.
@@ -689,19 +676,6 @@ class ::fidl::WireSyncClient<::fidl_test_service::FirstProtocol> final
  public:
   using ::fidl::internal::WireSyncClientBase<
       ::fidl_test_service::FirstProtocol>::WireSyncClientBase;
-  using ::fidl::internal::WireSyncClientBase<
-      ::fidl_test_service::FirstProtocol>::Bind;
-
-  // Allocates 16 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::WireResult<::fidl_test_service::FirstProtocol::MethodOnFirst>
-  MethodOnFirst() const {
-    ::fidl::WireRequest<::fidl_test_service::FirstProtocol::MethodOnFirst>
-        _request{};
-    return ::fidl::WireResult<
-        ::fidl_test_service::FirstProtocol::MethodOnFirst>(this->client_end(),
-                                                           &_request);
-  }
 };
 
 // Pure-virtual interface to be implemented by a server.
