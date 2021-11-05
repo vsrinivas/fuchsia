@@ -4,4 +4,5 @@
 
 pub mod build;
 pub mod capability_routing;
+pub mod component_resolvers;
 pub mod route_sources;

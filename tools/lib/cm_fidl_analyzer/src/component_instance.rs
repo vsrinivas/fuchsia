@@ -131,6 +131,10 @@ impl ComponentInstanceForAnalyzer {
     {
         Ok(Box::new(&**self))
     }
+
+    pub fn environment(&self) -> &Arc<EnvironmentForAnalyzer> {
+        &self.environment
+    }
 }
 
 #[async_trait]

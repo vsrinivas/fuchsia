@@ -827,7 +827,9 @@ mod tests {
         },
         cm_rust_testing::{ChildDeclBuilder, ComponentDeclBuilder, EnvironmentDeclBuilder},
         fidl_fuchsia_component_internal as component_internal,
-        routing::component_instance::WeakExtendedInstanceInterface,
+        routing::{
+            component_instance::WeakExtendedInstanceInterface, environment::EnvironmentInterface,
+        },
         std::{
             convert::{TryFrom, TryInto},
             iter::FromIterator,

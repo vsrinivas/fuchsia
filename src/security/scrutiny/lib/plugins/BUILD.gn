@@ -26,7 +26,6 @@ if (is_host) {
       "//src/sys/lib/component_id_index",
       "//src/sys/lib/moniker",
       "//src/sys/lib/routing",
-      "//src/sys/lib/routing",
       "//src/sys/pkg/lib/far/rust:fuchsia-archive",
       "//src/sys/pkg/lib/fuchsia-hash",
       "//src/sys/pkg/lib/fuchsia-merkle",
@@ -52,6 +51,7 @@ if (is_host) {
 
     test_deps = [
       "//src/security/scrutiny/lib/testing",
+      "//src/sys/lib/cm_rust/testing",
       "//third_party/rust_crates:tempfile",
     ]
 
@@ -111,6 +111,7 @@ if (is_host) {
       "src/verify/collector/mod.rs",
       "src/verify/controller/build.rs",
       "src/verify/controller/capability_routing.rs",
+      "src/verify/controller/component_resolvers.rs",
       "src/verify/controller/mod.rs",
       "src/verify/controller/route_sources.rs",
       "src/verify/mod.rs",

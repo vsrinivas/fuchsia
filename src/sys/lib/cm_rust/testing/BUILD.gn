@@ -24,6 +24,7 @@ rustc_library("testing") {
   ]
 
   visibility = [
+    "//src/security/scrutiny/lib/plugins:*",
     "//src/sys/component_manager/*",
     "//src/sys/lib/cm_rust/testing:*",
     "//src/sys/lib/routing/testing/*",

@@ -203,7 +203,7 @@ impl EnvironmentForAnalyzer {
 
     /// Returns the resolver registered for `scheme` and the component that created the environment the
     /// resolver was registered to. Returns `None` if there was no match.
-    pub(crate) fn get_registered_resolver(
+    pub fn get_registered_resolver(
         &self,
         scheme: &str,
     ) -> Result<
