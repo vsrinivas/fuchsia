@@ -170,6 +170,9 @@ rustc_command=("$env")
 # arch-vendor-os
 target_triple=
 
+extra_filename=
+llvm_ir_output="no"
+
 # Paths to direct dependencies.
 extern_paths=()
 
@@ -283,6 +286,7 @@ EOF
           esac
           case "$emit_arg" in
             dep-info=*) depfile="$emit_value" ;;
+            llvm-ir) llvm_ir_output="yes" ;;
           esac
         done
       }
@@ -294,6 +298,9 @@ EOF
       # TODO(https://fxbug.dev/78292): this -Z flag is not known to be stable yet.
       dep_only_command+=( "-Zbinary-dep-depinfo" )
       ;;
+
+    -Cextra-filename=*) extra_filename="$optarg" ;;
+    -Cextra-filename) prev_opt=extra_filename ;;
 
     # --crate-type cdylib needs rust-lld (hard-coding this is a hack)
     cdylib)
@@ -540,6 +547,11 @@ done
 depfile_inputs+=( "${depfile_shlibs[@]}" )
 
 extra_outputs+=( "${extra_linker_outputs[@]}" )
+
+test "$llvm_ir_output" = "no" || {
+  # Expect a llvm-ir .ll file.
+  extra_outputs+="$build_subdir/$(dirname "$output")/$(basename "$output" .rlib)$extra_filename".ll
+}
 
 test "$save_analysis" = 0 || {
   analysis_file=save-analysis-temp/"$(basename "$output" .rlib)".json
