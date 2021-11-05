@@ -137,10 +137,6 @@ static void platform_save_bootloader_data(void) {
   for (auto it = view.begin(); it != view.end(); ++it) {
     auto [header, payload] = *it;
     switch (header->type) {
-      case ZBI_TYPE_STORAGE_KERNEL: {
-        gPhysHandoff = PhysHandoff::FromPayload(payload);
-        break;
-      }
       case ZBI_TYPE_PLATFORM_ID: {
         if (payload.size() >= sizeof(zbi_platform_id_t)) {
           memcpy(&bootloader.platform_id, payload.data(), sizeof(zbi_platform_id_t));

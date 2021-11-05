@@ -51,25 +51,7 @@ class PhysBootTimes {
 
 // This holds (or points to) everything that is handed off from physboot to the
 // kernel proper at boot time.
-//
-// TODO(fxbug.dev/32414): Currently this data is just tunneled through the
-// ZBI_TYPE_STORAGE_KERNEL item payload in the data ZBI.  That's where the
-// compressed kernel image was originally, and physboot just overwrites the
-// beginning of that payload with this struct.  This allows for the current
-// transitional state where physboot just loads the kernel via the ZBI protocol
-// so it uses the same old early boot path via start.S as when booted without
-// the physboot layer.  When physboot lands and sticks as the only path for
-// booting, the pointer to this will be the argument passed to the kernel's
-// entry point, rather than the data ZBI; it will by then have grown to include
-// all the state the kernel needs to know from the early boot stages.
 struct PhysHandoff {
-  static PhysHandoff* FromPayload(ktl::span<ktl::byte> payload) {
-    ZX_ASSERT(payload.size() >= sizeof(PhysHandoff));
-    PhysHandoff* handoff = reinterpret_cast<PhysHandoff*>(payload.data());
-    ZX_ASSERT(handoff->Valid());
-    return handoff;
-  }
-
   constexpr bool Valid() const { return magic == kMagic; }
 
   static constexpr uint64_t kMagic = 0xfeedfaceb002da2a;
