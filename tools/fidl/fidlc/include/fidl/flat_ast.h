@@ -960,27 +960,20 @@ class AttributeArgSchema {
     kRequired,
   };
 
-  enum class SpecialCase {
-    kNone,
-    kStringLiteral,
-    // TODO(fxbug.dev/67858): Add kVersionLiteral (allows number or "HEAD").
-  };
-
   explicit AttributeArgSchema(ConstantValue::Kind type,
-                              Optionality optionality = Optionality::kRequired,
-                              SpecialCase special_case = SpecialCase::kNone)
-      : type_(type), optionality_(optionality), special_case_(special_case) {
+                              Optionality optionality = Optionality::kRequired)
+      : type_(type), optionality_(optionality) {
     assert(type != ConstantValue::Kind::kDocComment);
   }
 
   bool IsOptional() const { return optionality_ == Optionality::kOptional; }
 
-  void ResolveArg(Library* library, Attribute* attribute, AttributeArg* arg) const;
+  void ResolveArg(Library* library, Attribute* attribute, AttributeArg* arg,
+                  bool literal_only) const;
 
  private:
   const ConstantValue::Kind type_;
   const Optionality optionality_;
-  const SpecialCase special_case_;
 };
 
 // AttributeSchema defines a schema for attributes. This includes the allowed
@@ -988,6 +981,8 @@ class AttributeArgSchema {
 // and an optional constraint validator.
 class AttributeSchema {
  public:
+  // Note: Constraints get access to the fully compiled parent Attributable.
+  // This is one reason why VerifyAttributesStep is a separate step.
   using Constraint = fit::function<bool(Reporter* reporter, const Attribute* attribute,
                                         const Attributable* attributable)>;
 
@@ -1001,6 +996,11 @@ class AttributeSchema {
   AttributeSchema& AddArg(AttributeArgSchema arg_schema);
   AttributeSchema& AddArg(std::string name, AttributeArgSchema arg_schema);
   AttributeSchema& Constrain(AttributeSchema::Constraint constraint);
+  // Marks as use-early. See Kind::kUseEarly below.
+  AttributeSchema& UseEarly();
+  // Marks as compile-early. See Kind::kCompileEarly below.
+  AttributeSchema& CompileEarly();
+  // Marks as deprecated. See Kind::kDeprecated below.
   AttributeSchema& Deprecate();
 
   // Special schema for arbitrary user-defined attributes.
@@ -1017,11 +1017,23 @@ class AttributeSchema {
 
  private:
   enum class Kind {
-    // Official attribute: expects particular arguments.
-    kOfficial,
-    // Deprecated attribute: produces an error if used.
+    // Most attributes are validate-only. They do not participate in compilation
+    // apart from validation at the end (possibly with a custom constraint).
+    kValidateOnly,
+    // Some attributes influence compilation and are used early, before
+    // VerifyAttributesStep. These schemas do not allow a constraint, since
+    // constraint validation happens too late to be relied on.
+    kUseEarly,
+    // Some attributes get compiled and used early, before the main CompileStep.
+    // These schemas ensure all arguments are literals to avoid kicking off
+    // other compilations. Like kUseEarly, they do not allow a constraint.
+    kCompileEarly,
+    // Deprecated attributes produce an error if used.
     kDeprecated,
-    // User-defined attribute: allows any placement and arguments.
+    // All unrecognized attributes are considered user-defined. They receive
+    // minimal validation since we don't know what to expect. They allow any
+    // placement, only support string and bool arguments (lacking a way to
+    // decide between int8, uint32, etc.), and have no constraint.
     kUserDefined,
   };
 
@@ -1039,7 +1051,7 @@ class AttributeSchema {
 
   static void ResolveArgsWithoutSchema(Library* library, Attribute* attribute);
 
-  Kind kind_ = Kind::kOfficial;
+  Kind kind_ = Kind::kValidateOnly;
   Placement placement_ = Placement::kAnywhere;
   std::set<AttributePlacement> specific_placements_;
   std::map<std::string, AttributeArgSchema> arg_schemas_;

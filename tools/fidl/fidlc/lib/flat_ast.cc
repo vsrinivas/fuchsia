@@ -1069,7 +1069,9 @@ Typespace Typespace::RootTypes(Reporter* reporter) {
 
 AttributeSchema& AttributeSchema::RestrictTo(std::set<AttributePlacement> placements) {
   assert(!placements.empty() && "must allow some placements");
-  assert(kind_ == AttributeSchema::Kind::kOfficial && "wrong kind");
+  assert(kind_ == AttributeSchema::Kind::kValidateOnly ||
+         kind_ == AttributeSchema::Kind::kUseEarly ||
+         kind_ == AttributeSchema::Kind::kCompileEarly && "wrong kind");
   assert(placement_ == AttributeSchema::Placement::kAnywhere && "already set placements");
   assert(specific_placements_.empty() && "already set placements");
   placement_ = AttributeSchema::Placement::kSpecific;
@@ -1078,7 +1080,9 @@ AttributeSchema& AttributeSchema::RestrictTo(std::set<AttributePlacement> placem
 }
 
 AttributeSchema& AttributeSchema::RestrictToAnonymousLayouts() {
-  assert(kind_ == AttributeSchema::Kind::kOfficial && "wrong kind");
+  assert(kind_ == AttributeSchema::Kind::kValidateOnly ||
+         kind_ == AttributeSchema::Kind::kUseEarly ||
+         kind_ == AttributeSchema::Kind::kCompileEarly && "wrong kind");
   assert(placement_ == AttributeSchema::Placement::kAnywhere && "already set placements");
   assert(specific_placements_.empty() && "already set placements");
   placement_ = AttributeSchema::Placement::kAnonymousLayout;
@@ -1086,14 +1090,18 @@ AttributeSchema& AttributeSchema::RestrictToAnonymousLayouts() {
 }
 
 AttributeSchema& AttributeSchema::AddArg(AttributeArgSchema arg_schema) {
-  assert(kind_ == AttributeSchema::Kind::kOfficial && "wrong kind");
+  assert(kind_ == AttributeSchema::Kind::kValidateOnly ||
+         kind_ == AttributeSchema::Kind::kUseEarly ||
+         kind_ == AttributeSchema::Kind::kCompileEarly && "wrong kind");
   assert(arg_schemas_.empty() && "can only have one unnamed arg");
   arg_schemas_.emplace(AttributeArg::kDefaultAnonymousName, arg_schema);
   return *this;
 }
 
 AttributeSchema& AttributeSchema::AddArg(std::string name, AttributeArgSchema arg_schema) {
-  assert(kind_ == AttributeSchema::Kind::kOfficial && "wrong kind");
+  assert(kind_ == AttributeSchema::Kind::kValidateOnly ||
+         kind_ == AttributeSchema::Kind::kUseEarly ||
+         kind_ == AttributeSchema::Kind::kCompileEarly && "wrong kind");
   [[maybe_unused]] const auto& [it, inserted] =
       arg_schemas_.try_emplace(std::move(name), arg_schema);
   assert(inserted && "duplicate argument name");
@@ -1102,14 +1110,29 @@ AttributeSchema& AttributeSchema::AddArg(std::string name, AttributeArgSchema ar
 
 AttributeSchema& AttributeSchema::Constrain(AttributeSchema::Constraint constraint) {
   assert(constraint != nullptr && "constraint must be non-null");
-  assert(kind_ == AttributeSchema::Kind::kOfficial && "wrong kind");
   assert(constraint_ == nullptr && "already set constraint");
+  assert(kind_ == AttributeSchema::Kind::kValidateOnly &&
+         "constraints only allowed on kValidateOnly attributes");
   constraint_ = std::move(constraint);
   return *this;
 }
 
+AttributeSchema& AttributeSchema::UseEarly() {
+  assert(kind_ == AttributeSchema::Kind::kValidateOnly && "already changed kind");
+  assert(constraint_ == nullptr && "use-early attribute should not specify constraint");
+  kind_ = AttributeSchema::Kind::kUseEarly;
+  return *this;
+}
+
+AttributeSchema& AttributeSchema::CompileEarly() {
+  assert(kind_ == AttributeSchema::Kind::kValidateOnly && "already changed kind");
+  assert(constraint_ == nullptr && "compile-early attribute should not specify constraint");
+  kind_ = AttributeSchema::Kind::kCompileEarly;
+  return *this;
+}
+
 AttributeSchema& AttributeSchema::Deprecate() {
-  assert(kind_ == AttributeSchema::Kind::kOfficial && "wrong kind");
+  assert(kind_ == AttributeSchema::Kind::kValidateOnly && "wrong kind");
   assert(placement_ == AttributeSchema::Placement::kAnywhere &&
          "deprecated attribute should not specify placement");
   assert(arg_schemas_.empty() && "deprecated attribute should not specify arguments");
@@ -1124,7 +1147,12 @@ const AttributeSchema AttributeSchema::kUserDefined(Kind::kUserDefined);
 void AttributeSchema::Validate(Reporter* reporter, const Attribute* attribute,
                                const Attributable* attributable) const {
   switch (kind_) {
-    case Kind::kOfficial:
+    case Kind::kValidateOnly:
+      break;
+    case Kind::kUseEarly:
+    case Kind::kCompileEarly:
+      assert(constraint_ == nullptr &&
+             "use-early and compile-early schemas should not have a constraint");
       break;
     case Kind::kDeprecated:
       reporter->Report(ErrDeprecatedAttribute, attribute->span, attribute);
@@ -1177,7 +1205,9 @@ void AttributeSchema::Validate(Reporter* reporter, const Attribute* attribute,
 
 void AttributeSchema::ResolveArgs(Library* library, Attribute* attribute) const {
   switch (kind_) {
-    case Kind::kOfficial:
+    case Kind::kValidateOnly:
+    case Kind::kUseEarly:
+    case Kind::kCompileEarly:
       break;
     case Kind::kDeprecated:
       // Don't attempt to resolve arguments, as we don't store arument schemas
@@ -1212,7 +1242,8 @@ void AttributeSchema::ResolveArgs(Library* library, Attribute* attribute) const 
       continue;
     }
     const auto& [name, schema] = *it;
-    schema.ResolveArg(library, attribute, arg.get());
+    const bool literal_only = kind_ == Kind::kCompileEarly;
+    schema.ResolveArg(library, attribute, arg.get(), literal_only);
   }
 
   // Check for missing arguments.
@@ -1228,33 +1259,13 @@ void AttributeSchema::ResolveArgs(Library* library, Attribute* attribute) const 
   }
 }
 
-void AttributeArgSchema::ResolveArg(Library* library, Attribute* attribute,
-                                    AttributeArg* arg) const {
+void AttributeArgSchema::ResolveArg(Library* library, Attribute* attribute, AttributeArg* arg,
+                                    bool literal_only) const {
   Constant* constant = arg->value.get();
 
-  switch (special_case_) {
-    case SpecialCase::kNone:
-      break;
-    case SpecialCase::kStringLiteral: {
-      switch (constant->kind) {
-        case Constant::Kind::kLiteral: {
-          auto literal_constant = static_cast<LiteralConstant*>(constant);
-          if (library->ResolveLiteralConstant(literal_constant, &library->kUnboundedStringType)) {
-            arg->type = std::make_unique<StringType>(library->kUnboundedStringType);
-          } else {
-            library->Fail(ErrCouldNotResolveAttributeArg, arg->span);
-          }
-          return;
-        }
-        case Constant::Kind::kIdentifier:
-          library->Fail(ErrAttributeArgDisallowsConstants, constant->span, arg->name.value(),
-                        attribute);
-          return;
-        case Constant::Kind::kBinaryOperator:
-          assert(false && "binary operator in attribute arg should be parser error");
-      }
-    }
-      __builtin_unreachable();
+  if (literal_only && constant->kind != Constant::Kind::kLiteral) {
+    library->Fail(ErrAttributeArgRequiresLiteral, constant->span, arg->name.value(), attribute);
+    return;
   }
 
   switch (type_) {
@@ -1385,18 +1396,6 @@ bool ParseBound(Reporter* reporter, const Attribute* attribute, const std::strin
 bool Library::VerifyInlineSize(const Struct* struct_decl) {
   if (struct_decl->typeshape(WireFormat::kV1NoEe).InlineSize() >= 65536) {
     return Library::Fail(ErrInlineSizeExceeds64k, *struct_decl);
-  }
-  return true;
-}
-
-bool GeneratedNameConstraint(Reporter* reporter, const Attribute* attribute,
-                             const Attributable* attributable) {
-  auto arg = attribute->GetArg(AttributeArg::kDefaultAnonymousName);
-  auto arg_value = static_cast<const flat::StringConstantValue&>(arg->value->Value());
-
-  if (!utils::IsValidIdentifierComponent(arg_value.MakeContents())) {
-    reporter->Report(ErrInvalidGeneratedName, attribute->span);
-    return false;
   }
   return true;
 }
@@ -1630,10 +1629,8 @@ Libraries::Libraries() {
       .Constrain(SimpleLayoutConstraint);
   AddAttributeSchema("generated_name")
       .RestrictToAnonymousLayouts()
-      .AddArg(AttributeArgSchema(ConstantValue::Kind::kString,
-                                 AttributeArgSchema::Optionality::kRequired,
-                                 AttributeArgSchema::SpecialCase::kStringLiteral))
-      .Constrain(GeneratedNameConstraint);
+      .AddArg(AttributeArgSchema(ConstantValue::Kind::kString))
+      .CompileEarly();
   AddAttributeSchema("max_bytes")
       .RestrictTo({
           AttributePlacement::kProtocolDecl,
@@ -1663,7 +1660,8 @@ Libraries::Libraries() {
       .RestrictTo({
           AttributePlacement::kMethod,
       })
-      .AddArg(AttributeArgSchema(ConstantValue::Kind::kString));
+      .AddArg(AttributeArgSchema(ConstantValue::Kind::kString))
+      .UseEarly();
   AddAttributeSchema("transitional")
       .RestrictTo({
           AttributePlacement::kMethod,
@@ -2514,7 +2512,7 @@ void Library::MaybeOverrideName(AttributeList& attributes, NamingContext* contex
     return;
 
   // Although we are still in the consume step, this early compilation is safe
-  // since @generated_name uses AttributeArgSchema::SpecialCase::kStringLiteral.
+  // because @generated_name uses AttributeSchema::Kind::kCompileEarly.
   CompileAttribute(attr);
   const auto* arg = attr->GetArg(AttributeArg::kDefaultAnonymousName);
   if (arg == nullptr || !arg->value->IsResolved()) {
@@ -2522,8 +2520,12 @@ void Library::MaybeOverrideName(AttributeList& attributes, NamingContext* contex
   }
   const ConstantValue& value = arg->value->Value();
   assert(value.kind == ConstantValue::Kind::kString);
-  const auto string_value = static_cast<const StringConstantValue&>(value);
-  context->set_name_override(string_value.MakeContents());
+  std::string str = static_cast<const StringConstantValue&>(value).MakeContents();
+  if (utils::IsValidIdentifierComponent(str)) {
+    context->set_name_override(std::move(str));
+  } else {
+    Fail(ErrInvalidGeneratedName, arg->span);
+  }
 }
 
 // TODO(fxbug.dev/77853): these conversion methods may need to be refactored
@@ -4302,7 +4304,8 @@ void Library::CompileProtocol(Protocol* protocol_declaration) {
     auto selector = fidl::ordinals::GetSelector(method.attributes.get(), method.name);
     if (!utils::IsValidIdentifierComponent(selector) &&
         !utils::IsValidFullyQualifiedMethodIdentifier(selector)) {
-      Fail(ErrInvalidSelectorValue, method.name);
+      Fail(ErrInvalidSelectorValue,
+           method.attributes->Get("selector")->GetArg(AttributeArg::kDefaultAnonymousName)->span);
       continue;
     }
     // TODO(fxbug.dev/77623): Remove.

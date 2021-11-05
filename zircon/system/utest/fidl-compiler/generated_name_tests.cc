@@ -5,6 +5,7 @@
 #include <zxtest/zxtest.h>
 
 #include "error_test.h"
+#include "fidl/diagnostics.h"
 #include "test_library.h"
 
 namespace {
@@ -331,6 +332,19 @@ type Baz = struct {};
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameCollision);
 }
 
+TEST(GeneratedNameTests, BadNotString) {
+  TestLibrary library(R"FIDL(
+library fidl.test;
+
+type Foo = struct {
+  bar @generated_name(true) struct {};
+};
+
+)FIDL");
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCouldNotResolveAttributeArg);
+}
+
 TEST(GeneratedNameTests, BadNonLiteralArgument) {
   TestLibrary library(R"FIDL(
 library fidl.test;
@@ -342,7 +356,7 @@ type Foo = struct {
 };
 
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeArgDisallowsConstants);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeArgRequiresLiteral);
 }
 
 }  // namespace

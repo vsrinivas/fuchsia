@@ -1772,6 +1772,36 @@ type MyStruct = struct {};
                                       fidl::ErrCouldNotResolveAttributeArg);
 }
 
+TEST(AttributesTests, GoodCompileEarlyAttributeLiteralArgument) {
+  TestLibrary library(R"FIDL(
+library example;
+
+@attr(1)
+type MyStruct = struct {};
+
+)FIDL");
+  library.AddAttributeSchema("attr")
+      .AddArg("int8", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint8))
+      .CompileEarly();
+  ASSERT_COMPILED(library);
+}
+
+TEST(AttributesTests, BadCompileEarlyAttributeReferencedArgument) {
+  TestLibrary library(R"FIDL(
+library example;
+
+@attr(BAD)
+type MyStruct = struct {};
+
+const BAD uint8 = 1;
+
+)FIDL");
+  library.AddAttributeSchema("attr")
+      .AddArg("int8", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint8))
+      .CompileEarly();
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeArgRequiresLiteral);
+}
+
 TEST(AttributesTests, GoodAnonymousArgumentGetsNamedValue) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);

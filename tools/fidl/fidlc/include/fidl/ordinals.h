@@ -10,7 +10,7 @@
 
 namespace fidl::ordinals {
 
-// Returns the Selector. If the Selector attribute is present, the
+// Returns the selector. If the @selector attribute is present, the
 // function returns its value; otherwise, it returns the name parameter.
 std::string GetSelector(const flat::AttributeList* attributes, SourceSpan name);
 
