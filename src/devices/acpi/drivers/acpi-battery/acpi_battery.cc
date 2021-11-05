@@ -290,8 +290,8 @@ zx_status_t AcpiBattery::CheckAcpiBatteryState() {
 void AcpiBattery::GetPowerInfo(GetPowerInfoRequestView request,
                                GetPowerInfoCompleter::Sync& completer) {
   std::scoped_lock lock(lock_);
-  completer.Reply(ZX_OK, source_info_);
   ClearSignal();
+  completer.Reply(ZX_OK, source_info_);
 }
 
 void AcpiBattery::GetStateChangeEvent(GetStateChangeEventRequestView request,
