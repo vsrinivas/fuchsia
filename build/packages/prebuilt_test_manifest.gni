@@ -26,6 +26,11 @@ import("//build/packages/prebuilt_test_package.gni")
 #     Type: string
 #     Default: $package
 #
+#   log_settings (optional)
+#     The properties of logs produced by the test.
+#     See //build/testing/test_spec.gni for more details.
+#     Type: JSON
+#
 # Parameters
 #
 #   archive_dir (required)
@@ -56,6 +61,9 @@ template("prebuilt_test_manifest") {
   foreach(test, manifest) {
     test_package = test.package
     component_name = test.component_name
+    if (defined(test.log_settings)) {
+      log_settings = test.log_settings
+    }
     archive_name = test_package
     if (defined(test.archive_name)) {
       archive_name = test.archive_name
