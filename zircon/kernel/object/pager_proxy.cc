@@ -32,7 +32,7 @@ PagerProxy::~PagerProxy() {
   DEBUG_ASSERT(!complete_pending_);
 }
 
-void PagerProxy::GetPageAsync(page_request_t* request) {
+void PagerProxy::SendAsyncRequest(page_request_t* request) {
   Guard<Mutex> guard{&mtx_};
   ASSERT(!closed_);
 
@@ -102,7 +102,7 @@ void PagerProxy::ClearAsyncRequest(page_request_t* request) {
   }
 }
 
-void PagerProxy::SwapRequest(page_request_t* old, page_request_t* new_req) {
+void PagerProxy::SwapAsyncRequest(page_request_t* old, page_request_t* new_req) {
   Guard<Mutex> guard{&mtx_};
   ASSERT(!closed_);
 

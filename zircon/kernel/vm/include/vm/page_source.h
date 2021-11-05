@@ -40,13 +40,13 @@ class PageProvider : public fbl::RefCounted<PageProvider> {
                            paddr_t* const pa_out) = 0;
   // Informs the backing source of a page request. The provider has ownership
   // of |request| until the async request is cancelled.
-  virtual void GetPageAsync(page_request_t* request) = 0;
+  virtual void SendAsyncRequest(page_request_t* request) = 0;
   // Informs the backing source that a page request has been fulfilled. This
   // must be called for all requests that are raised.
   virtual void ClearAsyncRequest(page_request_t* request) = 0;
   // Swaps the backing memory for a request. Assumes that |old|
   // and |new_request| have the same type, offset, and length.
-  virtual void SwapRequest(page_request_t* old, page_request_t* new_req) = 0;
+  virtual void SwapAsyncRequest(page_request_t* old, page_request_t* new_req) = 0;
 
   // OnDetach is called once no more calls to GetPageSync/GetPageAsync will be made. It
   // will be called before OnClose and will only be called once.
@@ -59,6 +59,10 @@ class PageProvider : public fbl::RefCounted<PageProvider> {
 
   // Dumps relevant state for debugging purposes.
   virtual void Dump() = 0;
+
+  // Whether the provider supports the |type| of page request. Controls which requests can be safely
+  // forwarded to the provider.
+  virtual bool SupportsPageRequestType(page_request_type type) const = 0;
 
   friend PageSource;
   friend PageRequest;
@@ -151,9 +155,11 @@ class PageSource : public fbl::RefCounted<PageSource> {
   bool detached_ TA_GUARDED(page_source_mtx_) = false;
   bool closed_ TA_GUARDED(page_source_mtx_) = false;
 
-  // Tree of outstanding requests which have been sent to the PageProvider. The list
-  // is keyed by the end offset of the requests (not the start offsets).
-  fbl::WAVLTree<uint64_t, PageRequest*> outstanding_requests_ TA_GUARDED(page_source_mtx_);
+  // Trees of outstanding requests which have been sent to the PageProvider, one for each supported
+  // page request type. These lists are keyed by the end offset of the requests (not the start
+  // offsets).
+  fbl::WAVLTree<uint64_t, PageRequest*> outstanding_requests_[page_request_type::COUNT] TA_GUARDED(
+      page_source_mtx_);
 
 #ifdef DEBUG_ASSERT_IMPLEMENTED
   // Tracks the request currently being processed (only used for verifying batching assertions).
@@ -164,8 +170,8 @@ class PageSource : public fbl::RefCounted<PageSource> {
   // PagerProxy for details).
   fbl::RefPtr<PageProvider> page_provider_;
 
-  // Sends a read request to the backing source, or adds the request to the overlap_ list if the
-  // needed region has already been requested from the source.
+  // Sends a request to the backing source, or adds the request to the overlap_ list if
+  // the needed region has already been requested from the source.
   void SendRequestToProviderLocked(PageRequest* request) TA_REQ(page_source_mtx_);
 
   // Wakes up the given PageRequest and all overlapping requests, with an optional |status|.
@@ -195,9 +201,11 @@ class PageRequest : public fbl::WAVLTreeContainable<PageRequest*>,
   DISALLOW_COPY_ASSIGN_AND_MOVE(PageRequest);
 
  private:
-  // PageRequests passed to GetPage may or may not be initialized. offset_ must be checked
-  // and the object must be initialized if necessary.
-  void Init(fbl::RefPtr<PageSource> src, uint64_t offset, VmoDebugInfo vmo_debug_info);
+  // PageRequests may or may not be initialized, to support batching of requests. offset_ must be
+  // checked and the object must be initialized if necessary (an uninitialized request has offset_
+  // set to UINT64_MAX).
+  void Init(fbl::RefPtr<PageSource> src, uint64_t offset, page_request_type type,
+            VmoDebugInfo vmo_debug_info);
 
   const bool allow_batching_;
 
@@ -210,6 +218,8 @@ class PageRequest : public fbl::WAVLTreeContainable<PageRequest*>,
   uint64_t offset_ = UINT64_MAX;
   // The total length of the request.
   uint64_t len_ = 0;
+  // The type of the page request.
+  page_request_type type_;
   // The vmobject this page request is for.
   VmoDebugInfo vmo_debug_info_ = {};
 
@@ -226,7 +236,7 @@ class PageRequest : public fbl::WAVLTreeContainable<PageRequest*>,
   fbl::DoublyLinkedList<PageRequest*> overlap_;
 
   // Request struct for the PageProvider.
-  page_request_t read_request_;
+  page_request_t provider_request_;
 
   uint64_t GetEnd() const {
     // Assert on overflow, since it means vmobject made an out-of-bounds request.

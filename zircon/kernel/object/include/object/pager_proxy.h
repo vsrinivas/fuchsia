@@ -45,13 +45,16 @@ class PagerProxy : public PageProvider,
     // Pagers cannot synchronusly fulfill requests.
     return false;
   }
-  void GetPageAsync(page_request_t* request) final;
+  void SendAsyncRequest(page_request_t* request) final;
   void ClearAsyncRequest(page_request_t* request) final;
-  void SwapRequest(page_request_t* old, page_request_t* new_req) final;
+  void SwapAsyncRequest(page_request_t* old, page_request_t* new_req) final;
   void OnClose() final;
   void OnDetach() final;
   zx_status_t WaitOnEvent(Event* event) final;
   void Dump() final;
+  bool SupportsPageRequestType(page_request_type type) const final {
+    return type == page_request_type::READ;
+  }
 
   // Called by the pager dispatcher when it is about to go away. Handles cleaning up port's
   // reference to any in flight packets.

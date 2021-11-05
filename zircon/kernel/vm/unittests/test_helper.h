@@ -46,7 +46,8 @@ constexpr uint kArchRwUserFlags = kArchRwFlags | ARCH_MMU_FLAG_PERM_USER;
 class TestPageRequest {
  public:
   TestPageRequest(PmmNode* node, uint64_t off, uint64_t len)
-      : node_(node), request_({off, len, pages_available_cb, drop_ref_cb, this, {}}) {}
+      : node_(node),
+        request_({off, len, page_request_type::READ, pages_available_cb, drop_ref_cb, this, {}}) {}
 
   ~TestPageRequest() {
     ASSERT(drop_ref_evt_.Wait(Deadline::no_slack(ZX_TIME_INFINITE_PAST)) == ZX_OK);
@@ -99,15 +100,16 @@ class StubPageProvider : public PageProvider {
                    paddr_t* const pa_out) override {
     return false;
   }
-  void GetPageAsync(page_request_t* request) override { panic("Not implemented\n"); }
+  void SendAsyncRequest(page_request_t* request) override { panic("Not implemented\n"); }
   void ClearAsyncRequest(page_request_t* request) override { panic("Not implemented\n"); }
-  void SwapRequest(page_request_t* old, page_request_t* new_req) override {
+  void SwapAsyncRequest(page_request_t* old, page_request_t* new_req) override {
     panic("Not implemented\n");
   }
   void OnDetach() override {}
   void OnClose() override {}
   zx_status_t WaitOnEvent(Event* event) override { panic("Not implemented\n"); }
   void Dump() override {}
+  bool SupportsPageRequestType(page_request_type type) const override { return true; }
 };
 
 // Helper function to allocate memory in a user address space.
