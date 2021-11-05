@@ -5,7 +5,7 @@
 use {
     anyhow::{Context, Error},
     component_events::{events::*, matcher::*},
-    fuchsia_component_test::{builder::*, Moniker},
+    fuchsia_component_test::{ChildProperties, Moniker, RealmBuilder},
 };
 
 #[fuchsia::test]
@@ -21,15 +21,14 @@ async fn launch_realm_components() -> Result<(), Error> {
         .context("failed to subscribe to EventSource")?;
 
     // Create the test realm,
-    let mut builder = RealmBuilder::new().await?;
-    builder.add_component(Moniker::root(), ComponentSource::url("#meta/echo_realm.cm")).await?;
-    let realm = builder.build();
+    let builder = RealmBuilder::new().await?;
+    builder.add_child(Moniker::root(), "#meta/echo_realm.cm", ChildProperties::new()).await?;
 
     // Mark echo_client as eager so it starts automatically.
-    realm.mark_as_eager(&"echo_client".into()).await?;
+    builder.mark_as_eager("echo_client").await?;
 
     // Create the realm instance
-    let realm_instance = realm.create().await?;
+    let realm_instance = builder.build().await?;
 
     // Verify that both client and server components started
     EventMatcher::ok()
