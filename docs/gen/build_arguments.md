@@ -2555,7 +2555,7 @@ From //src/graphics/drivers/msd-intel-gen/tests/integration/BUILD.gn:8
 
 **Current value (from the default):** `[]`
 
-From //src/bringup/bin/netsvc/BUILD.gn:22
+From //src/bringup/bin/netsvc/BUILD.gn:21
 
 ### omaha_app_id
 Default app id will always return no update.
