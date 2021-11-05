@@ -6,7 +6,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-#include <regex>
+#include <re2/re2.h>
 
 #include "src/modular/bin/sessionctl/session_ctl_constants.h"
 
@@ -113,9 +113,8 @@ void SessionCtlApp::ExecuteAddModCommandInternal(std::string mod_url,
   if (command_line.HasOption(kStoryNameFlagString)) {
     command_line.GetOptionValue(kStoryNameFlagString, &story_name);
     // regex from src/sys/appmgr/realm.cc:168
-    std::regex story_name_regex("[0-9a-zA-Z\\.\\-_:#]+");
-    std::smatch story_name_match;
-    if (!std::regex_search(story_name, story_name_match, story_name_regex)) {
+    re2::RE2 story_name_regex("[0-9a-zA-Z\\.\\-_:#]+");
+    if (!re2::RE2::PartialMatch(story_name, story_name_regex)) {
       auto parsing_error = "Bad characters in story_name: " + story_name;
       logger_.LogError(kStoryNameFlagString, parsing_error);
       done(fpromise::error(parsing_error));

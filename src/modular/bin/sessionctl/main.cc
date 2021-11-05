@@ -20,10 +20,11 @@
 
 #include <chrono>
 #include <iostream>
-#include <regex>
 #include <string>
 #include <thread>
 #include <vector>
+
+#include <re2/re2.h>
 
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/command_line.h"
@@ -116,14 +117,12 @@ void FindDebugServicesForPath(const char* glob_str, const char* regex_str,
                               std::vector<DebugService>* services) {
   glob_t globbuf;
   bool service_exists = glob(glob_str, 0, nullptr, &globbuf) == 0;
-  std::regex name_regex(regex_str);
+  re2::RE2 name_regex(regex_str);
   if (service_exists) {
     for (size_t i = 0; i < globbuf.gl_pathc; ++i) {
       DebugService s;
       s.service_path = globbuf.gl_pathv[i];
-      std::smatch match;
-      FX_CHECK(std::regex_search(s.service_path, match, name_regex)) << s.service_path;
-      s.name = match[1];
+      FX_CHECK(re2::RE2::PartialMatch(s.service_path, name_regex, &s.name)) << s.service_path;
       services->push_back(std::move(s));
     }
     globfree(&globbuf);

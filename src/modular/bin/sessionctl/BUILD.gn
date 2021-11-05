@@ -16,6 +16,7 @@ executable("sessionctl_bin") {
     "//sdk/lib/sys/cpp",
     "//src/modular/lib/async/cpp:future",
     "//src/modular/lib/session",
+    "//third_party/re2",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
@@ -48,6 +49,7 @@ source_set("lib") {
   deps = [
     "//sdk/fidl/fuchsia.modular.internal",
     "//src/lib/json_parser",
+    "//third_party/re2",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
