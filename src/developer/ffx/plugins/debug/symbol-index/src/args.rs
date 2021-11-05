@@ -25,7 +25,6 @@ pub enum SymbolIndexSubCommand {
     Add(AddCommand),
     Remove(RemoveCommand),
     Clean(CleanCommand),
-    Generate(GenerateCommand),
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -45,8 +44,6 @@ pub struct ListCommand {
   - A build-id directory, with an optional build directory.
   - An ids.txt file, with an optional build directory.
   - A file that ends with .symbol-index.json.
-  - A <package_name>.far file with a corresponding
-    <package_name>.symbol-index.json.
 
 Duplicated adding of the same path is a no-op, regardless of the optional
 build directory."
@@ -86,33 +83,3 @@ pub struct RemoveCommand {
 collection."
 )]
 pub struct CleanCommand {}
-
-#[derive(FromArgs, PartialEq, Debug)]
-#[argh(
-    subcommand,
-    name = "generate",
-    description = "generate a <package_name>.symbol-index.json",
-    note = "A helper that should be invoked by a build tool to generate a
-<package_name>.symbol-index.json."
-)]
-pub struct GenerateCommand {
-    /// output filename
-    #[argh(option, short = 'o')]
-    pub output: String,
-
-    /// add a .build-id directory
-    #[argh(option)]
-    pub build_id_dir: Vec<String>,
-
-    /// add an ids.txt file
-    #[argh(option)]
-    pub ids_txt: Vec<String>,
-
-    /// add another symbol-index.json file
-    #[argh(option)]
-    pub symbol_index_json: Vec<String>,
-
-    /// associated build_dir for all .build-id directories and ids.txt.
-    #[argh(option)]
-    pub build_dir: Option<String>,
-}
