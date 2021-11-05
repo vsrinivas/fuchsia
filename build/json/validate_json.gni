@@ -23,6 +23,10 @@ import("//build/compiled_action.gni")
 #     [bool] If true, the |data| file may contain C-style comments
 #     (`/* block */` and `// inline`) that will be ignored.
 #
+#   use_valico (optional; default is false)
+#     [bool] If true, a valico-based validator will be used instead of the
+#     previous rapidjson-based version.
+#
 #   deps (optional)
 #   public_deps (optional)
 #   testonly (optional)
@@ -39,6 +43,7 @@ template("validate_json") {
   assert(defined(invoker.data), "data is required")
   assert(defined(invoker.schema), "schema is required")
   allow_comments = defined(invoker.allow_comments) && invoker.allow_comments
+  use_valico = defined(invoker.use_valico) && invoker.use_valico
 
   compiled_action(target_name) {
     forward_variables_from(invoker,
@@ -50,7 +55,11 @@ template("validate_json") {
                              "visibility",
                            ])
 
-    tool = "//build/tools/json_validator"
+    if (use_valico) {
+      tool = "//build/tools/json_validator:json_validator_valico"
+    } else {
+      tool = "//build/tools/json_validator"
+    }
 
     stamp_file = "$target_gen_dir/$target_name.verified"
 
@@ -64,7 +73,11 @@ template("validate_json") {
     args = []
 
     if (allow_comments) {
-      args += [ "--allow_comments" ]
+      if (use_valico) {
+        args += [ "--json5" ]
+      } else {
+        args += [ "--allow_comments" ]
+      }
     }
 
     args += [

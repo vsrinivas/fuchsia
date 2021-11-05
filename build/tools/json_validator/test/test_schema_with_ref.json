@@ -1,0 +1,24 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "json_validator test schema with reference",
+    "description": "A basic JSON schema with a reference",
+    "type": "object",
+    "$ref": "#/$defs/root_schema",
+    "$defs": {
+        "root_schema": {
+            "properties": {
+                "message": {
+                    "description": "An arbitrary message",
+                    "type": "string"
+                },
+                "extra_field": {
+                    "type": "number"
+                }
+            },
+            "required": [
+                "message",
+                "extra_field"
+            ]
+        }
+    }
+}

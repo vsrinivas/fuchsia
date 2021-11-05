@@ -5,5 +5,5 @@
 group("tests") {
   testonly = true
 
-  deps = [ "json_validator/test:tests" ]
+  deps = [ "json_validator:tests" ]
 }

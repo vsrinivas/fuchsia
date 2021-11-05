@@ -3,13 +3,17 @@
 # found in the LICENSE file.
 
 import("//build/json/validate_json.gni")
+import("//build/testing/host_test.gni")
+import("//build/testing/host_test_data.gni")
 
 group("tests") {
   testonly = true
 
   deps = [
-    ":test_json_validator",
-    ":test_json_validator_with_comments",
+    ":test_json_validator($host_toolchain)",
+    ":test_json_validator_valico($host_toolchain)",
+    ":test_json_validator_with_comments($host_toolchain)",
+    ":test_validate_json_valico($host_toolchain)",
   ]
 }
 
@@ -24,4 +28,35 @@ validate_json("test_json_validator_with_comments") {
   data = "test_document_with_comments.json"
   schema = "test_schema.json"
   allow_comments = true
+}
+
+valico_validator_path = "$root_out_dir/json_validator_valico"
+
+host_test_data("test_json_validator_valico_data") {
+  sources = [
+    "test_document.json",
+    "test_document_with_comments.json",
+    "test_schema.json",
+    "test_schema_with_ref.json",
+    valico_validator_path,
+  ]
+}
+
+host_test("test_json_validator_valico") {
+  binary_path = "json_validator_valico_test.sh"
+  deps = [ "//build/tools/json_validator:json_validator_valico" ]
+  data_deps = [ ":test_json_validator_valico_data" ]
+  args = [
+    rebase_path(valico_validator_path, root_build_dir),
+    rebase_path(".", root_build_dir),
+  ]
+}
+
+# Test (at build time) that the use_valico option of the validate_json build
+# rule.
+validate_json("test_validate_json_valico") {
+  testonly = true
+  data = "test_document.json"
+  schema = "test_schema.json"
+  use_valico = true
 }

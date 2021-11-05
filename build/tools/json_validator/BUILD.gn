@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/host.gni")
+import("//build/rust/rustc_binary.gni")
 
 executable("json_validator") {
   sources = [ "main.cc" ]
@@ -14,7 +15,29 @@ executable("json_validator") {
 }
 
 install_host_tools("install") {
-  deps = [ ":json_validator" ]
+  deps = [
+    ":json_validator",
+    ":json_validator_valico",
+  ]
 
-  outputs = [ "json_validator" ]
+  outputs = [
+    "json_validator",
+    "json_validator_valico",
+  ]
+}
+
+rustc_binary("json_validator_valico") {
+  sources = [ "src/main.rs" ]
+
+  deps = [
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:serde_json5",
+    "//third_party/rust_crates:valico",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
 }
