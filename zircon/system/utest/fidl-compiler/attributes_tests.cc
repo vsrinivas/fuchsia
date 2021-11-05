@@ -657,12 +657,7 @@ type MyStruct = struct {
 };
 
 )FIDL");
-  library.AddAttributeSchema("must_have_three_members",
-                             fidl::flat::AttributeSchema(
-                                 {
-                                     fidl::flat::AttributePlacement::kStructDecl,
-                                 },
-                                 MustHaveThreeMembers));
+  library.AddAttributeSchema("must_have_three_members").Constrain(MustHaveThreeMembers);
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeConstraintNotSatisfied);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "must_have_three_members");
 }
@@ -676,12 +671,7 @@ protocol MyProtocol {
 };
 
 )FIDL");
-  library.AddAttributeSchema("must_have_three_members",
-                             fidl::flat::AttributeSchema(
-                                 {
-                                     fidl::flat::AttributePlacement::kMethod,
-                                 },
-                                 MustHaveThreeMembers));
+  library.AddAttributeSchema("must_have_three_members").Constrain(MustHaveThreeMembers);
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeConstraintNotSatisfied);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "must_have_three_members");
 }
@@ -697,12 +687,7 @@ protocol MyProtocol {
 };
 
 )FIDL");
-  library.AddAttributeSchema("must_have_three_members",
-                             fidl::flat::AttributeSchema(
-                                 {
-                                     fidl::flat::AttributePlacement::kProtocolDecl,
-                                 },
-                                 MustHaveThreeMembers));
+  library.AddAttributeSchema("must_have_three_members").Constrain(MustHaveThreeMembers);
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeConstraintNotSatisfied);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "must_have_three_members");
 }
@@ -967,16 +952,10 @@ type MyStruct = struct {};
 
 )FIDL",
                       experimental_flags);
-  library.AddAttributeSchema(
-      "foo", fidl::flat::AttributeSchema(
-                 {
-                     fidl::flat::AttributePlacement::kStructDecl,
-                 },
-                 {
-                     {"value", fidl::flat::AttributeArgSchema(
-                                   fidl::flat::ConstantValue::Kind::kString,
-                                   fidl::flat::AttributeArgSchema::Optionality::kRequired)},
-                 }));
+  library.AddAttributeSchema("foo").AddArg(
+      "value",
+      fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kString,
+                                     fidl::flat::AttributeArgSchema::Optionality::kRequired));
   ASSERT_TRUE(library.Compile());
 }
 
@@ -991,16 +970,10 @@ type MyStruct = struct {};
 
 )FIDL",
                       experimental_flags);
-  library.AddAttributeSchema(
-      "foo", fidl::flat::AttributeSchema(
-                 {
-                     fidl::flat::AttributePlacement::kStructDecl,
-                 },
-                 {
-                     {"inferrable", fidl::flat::AttributeArgSchema(
-                                        fidl::flat::ConstantValue::Kind::kString,
-                                        fidl::flat::AttributeArgSchema::Optionality::kRequired)},
-                 }));
+  library.AddAttributeSchema("foo").AddArg(
+      "inferrable",
+      fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kString,
+                                     fidl::flat::AttributeArgSchema::Optionality::kRequired));
   ASSERT_TRUE(library.Compile());
 
   auto example_struct = library.LookupStruct("MyStruct");
@@ -1025,16 +998,10 @@ type MyOtherStruct = struct {};
 
 )FIDL",
                       experimental_flags);
-  library.AddAttributeSchema(
-      "foo", fidl::flat::AttributeSchema(
-                 {
-                     fidl::flat::AttributePlacement::kStructDecl,
-                 },
-                 {
-                     {"value", fidl::flat::AttributeArgSchema(
-                                   fidl::flat::ConstantValue::Kind::kString,
-                                   fidl::flat::AttributeArgSchema::Optionality::kOptional)},
-                 }));
+  library.AddAttributeSchema("foo").AddArg(
+      "value",
+      fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kString,
+                                     fidl::flat::AttributeArgSchema::Optionality::kOptional));
   ASSERT_TRUE(library.Compile());
 }
 
@@ -1051,16 +1018,10 @@ type MyStruct = struct {};
 
 )FIDL",
                       experimental_flags);
-  library.AddAttributeSchema(
-      "foo", fidl::flat::AttributeSchema(
-                 {
-                     fidl::flat::AttributePlacement::kStructDecl,
-                 },
-                 {
-                     {"value", fidl::flat::AttributeArgSchema(
-                                   fidl::flat::ConstantValue::Kind::kString,
-                                   fidl::flat::AttributeArgSchema::Optionality::kRequired)},
-                 }));
+  library.AddAttributeSchema("foo").AddArg(
+      "value",
+      fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kString,
+                                     fidl::flat::AttributeArgSchema::Optionality::kRequired));
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeArgMustNotBeNamed);
 }
 
@@ -1077,19 +1038,13 @@ type MyStruct = struct {};
 
 )FIDL",
                       experimental_flags);
-  library.AddAttributeSchema(
-      "foo", fidl::flat::AttributeSchema(
-                 {
-                     fidl::flat::AttributePlacement::kStructDecl,
-                 },
-                 {
-                     {"value", fidl::flat::AttributeArgSchema(
-                                   fidl::flat::ConstantValue::Kind::kString,
-                                   fidl::flat::AttributeArgSchema::Optionality::kRequired)},
-                     {"other", fidl::flat::AttributeArgSchema(
-                                   fidl::flat::ConstantValue::Kind::kString,
-                                   fidl::flat::AttributeArgSchema::Optionality::kOptional)},
-                 }));
+  library.AddAttributeSchema("foo")
+      .AddArg("value", fidl::flat::AttributeArgSchema(
+                           fidl::flat::ConstantValue::Kind::kString,
+                           fidl::flat::AttributeArgSchema::Optionality::kRequired))
+      .AddArg("other", fidl::flat::AttributeArgSchema(
+                           fidl::flat::ConstantValue::Kind::kString,
+                           fidl::flat::AttributeArgSchema::Optionality::kOptional));
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeArgNotNamed);
 }
 
@@ -1108,20 +1063,13 @@ type MyOtherStruct = struct {};
 
 )FIDL",
                       experimental_flags);
-  library.AddAttributeSchema(
-      "multiple_args",
-      fidl::flat::AttributeSchema(
-          {
-              fidl::flat::AttributePlacement::kStructDecl,
-          },
-          {
-              {"first", fidl::flat::AttributeArgSchema(
+  library.AddAttributeSchema("multiple_args")
+      .AddArg("first", fidl::flat::AttributeArgSchema(
+                           fidl::flat::ConstantValue::Kind::kString,
+                           fidl::flat::AttributeArgSchema::Optionality::kRequired))
+      .AddArg("second", fidl::flat::AttributeArgSchema(
                             fidl::flat::ConstantValue::Kind::kString,
-                            fidl::flat::AttributeArgSchema::Optionality::kRequired)},
-              {"second", fidl::flat::AttributeArgSchema(
-                             fidl::flat::ConstantValue::Kind::kString,
-                             fidl::flat::AttributeArgSchema::Optionality::kRequired)},
-          }));
+                            fidl::flat::AttributeArgSchema::Optionality::kRequired));
   ASSERT_TRUE(library.Compile());
 }
 
@@ -1150,20 +1098,13 @@ type MyStruct5 = struct {};
 
 )FIDL",
                       experimental_flags);
-  library.AddAttributeSchema(
-      "multiple_args",
-      fidl::flat::AttributeSchema(
-          {
-              fidl::flat::AttributePlacement::kStructDecl,
-          },
-          {
-              {"first", fidl::flat::AttributeArgSchema(
+  library.AddAttributeSchema("multiple_args")
+      .AddArg("first", fidl::flat::AttributeArgSchema(
+                           fidl::flat::ConstantValue::Kind::kString,
+                           fidl::flat::AttributeArgSchema::Optionality::kOptional))
+      .AddArg("second", fidl::flat::AttributeArgSchema(
                             fidl::flat::ConstantValue::Kind::kString,
-                            fidl::flat::AttributeArgSchema::Optionality::kOptional)},
-              {"second", fidl::flat::AttributeArgSchema(
-                             fidl::flat::ConstantValue::Kind::kString,
-                             fidl::flat::AttributeArgSchema::Optionality::kOptional)},
-          }));
+                            fidl::flat::AttributeArgSchema::Optionality::kOptional));
   ASSERT_TRUE(library.Compile());
 }
 
@@ -1186,20 +1127,13 @@ type MyStruct3 = struct {};
 
 )FIDL",
                       experimental_flags);
-  library.AddAttributeSchema(
-      "multiple_args",
-      fidl::flat::AttributeSchema(
-          {
-              fidl::flat::AttributePlacement::kStructDecl,
-          },
-          {
-              {"first", fidl::flat::AttributeArgSchema(
+  library.AddAttributeSchema("multiple_args")
+      .AddArg("first", fidl::flat::AttributeArgSchema(
+                           fidl::flat::ConstantValue::Kind::kString,
+                           fidl::flat::AttributeArgSchema::Optionality::kRequired))
+      .AddArg("second", fidl::flat::AttributeArgSchema(
                             fidl::flat::ConstantValue::Kind::kString,
-                            fidl::flat::AttributeArgSchema::Optionality::kRequired)},
-              {"second", fidl::flat::AttributeArgSchema(
-                             fidl::flat::ConstantValue::Kind::kString,
-                             fidl::flat::AttributeArgSchema::Optionality::kOptional)},
-          }));
+                            fidl::flat::AttributeArgSchema::Optionality::kOptional));
   ASSERT_TRUE(library.Compile());
 }
 
@@ -1214,20 +1148,13 @@ type MyStruct = struct {};
 
 )FIDL",
                       experimental_flags);
-  library.AddAttributeSchema(
-      "multiple_args",
-      fidl::flat::AttributeSchema(
-          {
-              fidl::flat::AttributePlacement::kStructDecl,
-          },
-          {
-              {"required", fidl::flat::AttributeArgSchema(
-                               fidl::flat::ConstantValue::Kind::kString,
-                               fidl::flat::AttributeArgSchema::Optionality::kRequired)},
-              {"optional", fidl::flat::AttributeArgSchema(
-                               fidl::flat::ConstantValue::Kind::kString,
-                               fidl::flat::AttributeArgSchema::Optionality::kOptional)},
-          }));
+  library.AddAttributeSchema("multiple_args")
+      .AddArg("required", fidl::flat::AttributeArgSchema(
+                              fidl::flat::ConstantValue::Kind::kString,
+                              fidl::flat::AttributeArgSchema::Optionality::kRequired))
+      .AddArg("optional", fidl::flat::AttributeArgSchema(
+                              fidl::flat::ConstantValue::Kind::kString,
+                              fidl::flat::AttributeArgSchema::Optionality::kOptional));
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMissingRequiredAttributeArg);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "multiple_args");
 }
@@ -1377,28 +1304,19 @@ type MyStruct = struct {};
 
 )FIDL",
                       experimental_flags);
-  library.AddAttributeSchema(
-      "attr",
-      fidl::flat::AttributeSchema(
-          {
-              fidl::flat::AttributePlacement::kStructDecl,
-          },
-          {
-              {"string", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kString)},
-              {"bool", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kBool)},
-              {"int8", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kInt8)},
-              {"int16", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kInt16)},
-              {"int32", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kInt32)},
-              {"int64", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kInt64)},
-              {"uint8", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint8)},
-              {"uint16", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint16)},
-              {"uint32", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint32)},
-              {"uint64", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint64)},
-              {"float32",
-               fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kFloat32)},
-              {"float64",
-               fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kFloat64)},
-          }));
+  library.AddAttributeSchema("attr")
+      .AddArg("string", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kString))
+      .AddArg("bool", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kBool))
+      .AddArg("int8", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kInt8))
+      .AddArg("int16", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kInt16))
+      .AddArg("int32", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kInt32))
+      .AddArg("int64", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kInt64))
+      .AddArg("uint8", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint8))
+      .AddArg("uint16", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint16))
+      .AddArg("uint32", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint32))
+      .AddArg("uint64", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint64))
+      .AddArg("float32", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kFloat32))
+      .AddArg("float64", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kFloat64));
   ASSERT_TRUE(library.Compile());
 
   auto example_struct = library.LookupStruct("MyStruct");
@@ -1557,15 +1475,8 @@ type MyStruct = struct {};
 
 )FIDL",
                       experimental_flags);
-  library.AddAttributeSchema(
-      "attr",
-      fidl::flat::AttributeSchema(
-          {
-              fidl::flat::AttributePlacement::kStructDecl,
-          },
-          {
-              {"string", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kString)},
-          }));
+  library.AddAttributeSchema("attr").AddArg(
+      "string", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kString));
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType);
 }
 
@@ -1580,15 +1491,8 @@ type MyStruct = struct {};
 
 )FIDL",
                       experimental_flags);
-  library.AddAttributeSchema(
-      "attr",
-      fidl::flat::AttributeSchema(
-          {
-              fidl::flat::AttributePlacement::kStructDecl,
-          },
-          {
-              {"bool", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kBool)},
-          }));
+  library.AddAttributeSchema("attr").AddArg(
+      "bool", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kBool));
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType);
 }
 
@@ -1603,15 +1507,8 @@ type MyStruct = struct {};
 
 )FIDL",
                       experimental_flags);
-  library.AddAttributeSchema(
-      "attr",
-      fidl::flat::AttributeSchema(
-          {
-              fidl::flat::AttributePlacement::kStructDecl,
-          },
-          {
-              {"uint8", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint8)},
-          }));
+  library.AddAttributeSchema("attr").AddArg(
+      "uint8", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint8));
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType);
 }
 
@@ -1655,28 +1552,19 @@ type MyStruct = struct {};
 
 )FIDL",
                       experimental_flags);
-  library.AddAttributeSchema(
-      "attr",
-      fidl::flat::AttributeSchema(
-          {
-              fidl::flat::AttributePlacement::kStructDecl,
-          },
-          {
-              {"string", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kString)},
-              {"bool", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kBool)},
-              {"int8", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kInt8)},
-              {"int16", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kInt16)},
-              {"int32", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kInt32)},
-              {"int64", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kInt64)},
-              {"uint8", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint8)},
-              {"uint16", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint16)},
-              {"uint32", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint32)},
-              {"uint64", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint64)},
-              {"float32",
-               fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kFloat32)},
-              {"float64",
-               fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kFloat64)},
-          }));
+  library.AddAttributeSchema("attr")
+      .AddArg("string", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kString))
+      .AddArg("bool", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kBool))
+      .AddArg("int8", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kInt8))
+      .AddArg("int16", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kInt16))
+      .AddArg("int32", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kInt32))
+      .AddArg("int64", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kInt64))
+      .AddArg("uint8", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint8))
+      .AddArg("uint16", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint16))
+      .AddArg("uint32", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint32))
+      .AddArg("uint64", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint64))
+      .AddArg("float32", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kFloat32))
+      .AddArg("float64", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kFloat64));
   ASSERT_TRUE(library.Compile());
 
   auto example_struct = library.LookupStruct("MyStruct");
@@ -1837,15 +1725,8 @@ type MyStruct = struct {};
 
 )FIDL",
                       experimental_flags);
-  library.AddAttributeSchema(
-      "attr",
-      fidl::flat::AttributeSchema(
-          {
-              fidl::flat::AttributePlacement::kStructDecl,
-          },
-          {
-              {"string", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kString)},
-          }));
+  library.AddAttributeSchema("attr").AddArg(
+      "string", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kString));
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotConvertConstantToType);
 }
 
@@ -1862,15 +1743,8 @@ type MyStruct = struct {};
 
 )FIDL",
                       experimental_flags);
-  library.AddAttributeSchema(
-      "attr",
-      fidl::flat::AttributeSchema(
-          {
-              fidl::flat::AttributePlacement::kStructDecl,
-          },
-          {
-              {"bool", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kBool)},
-          }));
+  library.AddAttributeSchema("attr").AddArg(
+      "bool", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kBool));
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotConvertConstantToType);
 }
 
@@ -1887,15 +1761,8 @@ type MyStruct = struct {};
 
 )FIDL",
                       experimental_flags);
-  library.AddAttributeSchema(
-      "attr",
-      fidl::flat::AttributeSchema(
-          {
-              fidl::flat::AttributePlacement::kStructDecl,
-          },
-          {
-              {"int8", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kInt8)},
-          }));
+  library.AddAttributeSchema("attr").AddArg(
+      "int8", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kInt8));
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotConvertConstantToType);
 }
 

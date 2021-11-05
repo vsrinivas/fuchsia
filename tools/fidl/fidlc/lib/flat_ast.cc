@@ -1070,42 +1070,103 @@ Typespace Typespace::RootTypes(Reporter* reporter) {
   return root_typespace;
 }
 
-AttributeSchema AttributeSchema::Deprecated() {
-  return AttributeSchema({AttributePlacement::kDeprecated});
+AttributeSchema& AttributeSchema::RestrictTo(std::set<AttributePlacement> placements) {
+  assert(!placements.empty() && "must allow some placements");
+  assert(kind_ == AttributeSchema::Kind::kOfficial && "wrong kind");
+  assert(placement_ == AttributeSchema::Placement::kAnywhere && "already set placements");
+  assert(specific_placements_.empty() && "already set placements");
+  placement_ = AttributeSchema::Placement::kSpecific;
+  specific_placements_ = std::move(placements);
+  return *this;
 }
+
+AttributeSchema& AttributeSchema::RestrictToAnonymousLayouts() {
+  assert(kind_ == AttributeSchema::Kind::kOfficial && "wrong kind");
+  assert(placement_ == AttributeSchema::Placement::kAnywhere && "already set placements");
+  assert(specific_placements_.empty() && "already set placements");
+  placement_ = AttributeSchema::Placement::kAnonymousLayout;
+  return *this;
+}
+
+AttributeSchema& AttributeSchema::AddArg(AttributeArgSchema arg_schema) {
+  assert(kind_ == AttributeSchema::Kind::kOfficial && "wrong kind");
+  assert(arg_schemas_.empty() && "can only have one unnamed arg");
+  arg_schemas_.emplace(AttributeArg::kDefaultAnonymousName, arg_schema);
+  return *this;
+}
+
+AttributeSchema& AttributeSchema::AddArg(std::string name, AttributeArgSchema arg_schema) {
+  assert(kind_ == AttributeSchema::Kind::kOfficial && "wrong kind");
+  [[maybe_unused]] const auto& [it, inserted] =
+      arg_schemas_.try_emplace(std::move(name), arg_schema);
+  assert(inserted && "duplicate argument name");
+  return *this;
+}
+
+AttributeSchema& AttributeSchema::Constrain(AttributeSchema::Constraint constraint) {
+  assert(constraint != nullptr && "constraint must be non-null");
+  assert(kind_ == AttributeSchema::Kind::kOfficial && "wrong kind");
+  assert(constraint_ == nullptr && "already set constraint");
+  constraint_ = std::move(constraint);
+  return *this;
+}
+
+AttributeSchema& AttributeSchema::Deprecate() {
+  assert(kind_ == AttributeSchema::Kind::kOfficial && "wrong kind");
+  assert(placement_ == AttributeSchema::Placement::kAnywhere &&
+         "deprecated attribute should not specify placement");
+  assert(arg_schemas_.empty() && "deprecated attribute should not specify arguments");
+  assert(constraint_ == nullptr && "deprecated attribute should not specify constraint");
+  kind_ = AttributeSchema::Kind::kDeprecated;
+  return *this;
+}
+
+// static
+const AttributeSchema AttributeSchema::kUserDefined(Kind::kUserDefined);
 
 bool AttributeSchema::Validate(Reporter* reporter, const Attribute* attribute,
                                const Attributable* attributable) const {
-  if (IsDeprecated()) {
-    reporter->Report(ErrDeprecatedAttribute, attribute->span, attribute);
-    return false;
+  switch (kind_) {
+    case Kind::kOfficial:
+      break;
+    case Kind::kDeprecated:
+      reporter->Report(ErrDeprecatedAttribute, attribute->span, attribute);
+      return false;
+    case Kind::kUserDefined:
+      return true;
   }
 
-  if (allowed_placements_.size() == 1 &&
-      *allowed_placements_.cbegin() == AttributePlacement::kAnonymousLayout) {
-    switch (attributable->placement) {
-      case AttributePlacement::kBitsDecl:
-      case AttributePlacement::kEnumDecl:
-      case AttributePlacement::kStructDecl:
-      case AttributePlacement::kTableDecl:
-      case AttributePlacement::kUnionDecl:
-        if (static_cast<const Decl*>(attributable)->name.as_anonymous() == nullptr) {
-          reporter->Report(ErrInvalidAttributePlacement, attribute->span, attribute);
-          return false;
-        }
-        break;
-      default:
+  switch (placement_) {
+    case Placement::kAnywhere:
+      break;
+    case Placement::kSpecific:
+      if (specific_placements_.count(attributable->placement) == 0) {
         reporter->Report(ErrInvalidAttributePlacement, attribute->span, attribute);
         return false;
-    }
-  } else {
-    const bool all_allowed = allowed_placements_.empty();
-    if (!all_allowed && allowed_placements_.count(attributable->placement) == 0) {
-      reporter->Report(ErrInvalidAttributePlacement, attribute->span, attribute);
-      return false;
-    }
+      }
+      break;
+    case Placement::kAnonymousLayout:
+      switch (attributable->placement) {
+        case AttributePlacement::kBitsDecl:
+        case AttributePlacement::kEnumDecl:
+        case AttributePlacement::kStructDecl:
+        case AttributePlacement::kTableDecl:
+        case AttributePlacement::kUnionDecl:
+          if (static_cast<const Decl*>(attributable)->name.as_anonymous()) {
+            // Good: the attribute is on an anonymous layout.
+            break;
+          }
+          [[fallthrough]];
+        default:
+          reporter->Report(ErrInvalidAttributePlacement, attribute->span, attribute);
+          return false;
+      }
+      break;
   }
 
+  if (constraint_ == nullptr) {
+    return true;
+  }
   auto check = reporter->Checkpoint();
   auto passed = constraint_(reporter, attribute, attributable);
   if (passed) {
@@ -1119,6 +1180,18 @@ bool AttributeSchema::Validate(Reporter* reporter, const Attribute* attribute,
 }
 
 bool AttributeSchema::ResolveArgs(Library* library, Attribute* attribute) const {
+  switch (kind_) {
+    case Kind::kOfficial:
+      break;
+    case Kind::kDeprecated:
+      // Don't attempt to resolve arguments, as we don't store arument schemas
+      // for deprecated attributes. Instead, rely on AttributeSchema::Validate
+      // to report the error.
+      return true;
+    case Kind::kUserDefined:
+      return ResolveArgsWithoutSchema(library, attribute);
+  }
+
   auto checkpoint = library->reporter_->Checkpoint();
 
   // Name the anonymous argument (if present).
@@ -1548,57 +1621,69 @@ Resource::Property* Resource::LookupProperty(std::string_view name) {
 }
 
 Libraries::Libraries() {
-  // clang-format off
-  AddAttributeSchema("discoverable", AttributeSchema({
-    AttributePlacement::kProtocolDecl,
-  }));
-  AddAttributeSchema("doc", AttributeSchema({
-    /* any placement */
-  }, AttributeArgSchema(ConstantValue::Kind::kString)));
-  AddAttributeSchema("layout", AttributeSchema::Deprecated()),
-  AddAttributeSchema("for_deprecated_c_bindings", AttributeSchema({
-    AttributePlacement::kProtocolDecl,
-    AttributePlacement::kStructDecl,
-  }, SimpleLayoutConstraint));
-  AddAttributeSchema("generated_name", AttributeSchema({
-    AttributePlacement::kAnonymousLayout,
-  }, AttributeArgSchema(
-      ConstantValue::Kind::kString,
-      AttributeArgSchema::Optionality::kRequired,
-      AttributeArgSchema::SpecialCase::kStringLiteral),
-  GeneratedNameConstraint)),
-  AddAttributeSchema("max_bytes", AttributeSchema({
-    AttributePlacement::kProtocolDecl,
-    AttributePlacement::kMethod,
-    AttributePlacement::kStructDecl,
-    AttributePlacement::kTableDecl,
-    AttributePlacement::kUnionDecl,
-  }, AttributeArgSchema(ConstantValue::Kind::kString),
-  MaxBytesConstraint));
-  AddAttributeSchema("max_handles", AttributeSchema({
-    AttributePlacement::kProtocolDecl,
-    AttributePlacement::kMethod,
-    AttributePlacement::kStructDecl,
-    AttributePlacement::kTableDecl,
-    AttributePlacement::kUnionDecl,
-  }, AttributeArgSchema(ConstantValue::Kind::kString),
-  MaxHandlesConstraint));
-  AddAttributeSchema("result", AttributeSchema({
-    AttributePlacement::kUnionDecl,
-  }, ResultShapeConstraint));
-  AddAttributeSchema("selector", AttributeSchema({
-    AttributePlacement::kMethod,
-  }, AttributeArgSchema(ConstantValue::Kind::kString)));
-  AddAttributeSchema("transitional", AttributeSchema({
-    AttributePlacement::kMethod,
-  }, AttributeArgSchema(ConstantValue::Kind::kString, AttributeArgSchema::Optionality::kOptional)));
-  AddAttributeSchema("transport", AttributeSchema({
-    AttributePlacement::kProtocolDecl,
-  }, AttributeArgSchema(ConstantValue::Kind::kString), TransportConstraint));
-  AddAttributeSchema("unknown", AttributeSchema({
-    AttributePlacement::kEnumMember,
-  }));
-  // clang-format on
+  AddAttributeSchema("discoverable")
+      .RestrictTo({
+          AttributePlacement::kProtocolDecl,
+      });
+  AddAttributeSchema("doc").AddArg(AttributeArgSchema(ConstantValue::Kind::kString));
+  AddAttributeSchema("layout").Deprecate();
+  AddAttributeSchema("for_deprecated_c_bindings")
+      .RestrictTo({
+          AttributePlacement::kProtocolDecl,
+          AttributePlacement::kStructDecl,
+      })
+      .Constrain(SimpleLayoutConstraint);
+  AddAttributeSchema("generated_name")
+      .RestrictToAnonymousLayouts()
+      .AddArg(AttributeArgSchema(ConstantValue::Kind::kString,
+                                 AttributeArgSchema::Optionality::kRequired,
+                                 AttributeArgSchema::SpecialCase::kStringLiteral))
+      .Constrain(GeneratedNameConstraint);
+  AddAttributeSchema("max_bytes")
+      .RestrictTo({
+          AttributePlacement::kProtocolDecl,
+          AttributePlacement::kMethod,
+          AttributePlacement::kStructDecl,
+          AttributePlacement::kTableDecl,
+          AttributePlacement::kUnionDecl,
+      })
+      .AddArg(AttributeArgSchema(ConstantValue::Kind::kString))
+      .Constrain(MaxBytesConstraint);
+  AddAttributeSchema("max_handles")
+      .RestrictTo({
+          AttributePlacement::kProtocolDecl,
+          AttributePlacement::kMethod,
+          AttributePlacement::kStructDecl,
+          AttributePlacement::kTableDecl,
+          AttributePlacement::kUnionDecl,
+      })
+      .AddArg(AttributeArgSchema(ConstantValue::Kind::kString))
+      .Constrain(MaxHandlesConstraint);
+  AddAttributeSchema("result")
+      .RestrictTo({
+          AttributePlacement::kUnionDecl,
+      })
+      .Constrain(ResultShapeConstraint);
+  AddAttributeSchema("selector")
+      .RestrictTo({
+          AttributePlacement::kMethod,
+      })
+      .AddArg(AttributeArgSchema(ConstantValue::Kind::kString));
+  AddAttributeSchema("transitional")
+      .RestrictTo({
+          AttributePlacement::kMethod,
+      })
+      .AddArg(AttributeArgSchema(ConstantValue::Kind::kString,
+                                 AttributeArgSchema::Optionality::kOptional));
+  AddAttributeSchema("transport")
+      .RestrictTo({
+          AttributePlacement::kProtocolDecl,
+      })
+      .AddArg(AttributeArgSchema(ConstantValue::Kind::kString))
+      .Constrain(TransportConstraint);
+  AddAttributeSchema("unknown").RestrictTo({
+      AttributePlacement::kEnumMember,
+  });
 }
 
 bool Libraries::Insert(std::unique_ptr<Library> library) {
@@ -1658,33 +1743,29 @@ size_t EditDistance(const std::string& sequence1, const std::string& sequence2) 
   return last_row[s1_length];
 }
 
-const AttributeSchema* Libraries::RetrieveAttributeSchema(Reporter* reporter,
+const AttributeSchema& Libraries::RetrieveAttributeSchema(Reporter* reporter,
                                                           const Attribute* attribute,
                                                           bool warn_on_typo) const {
   auto attribute_name = attribute->name;
   auto iter = attribute_schemas_.find(attribute_name);
   if (iter != attribute_schemas_.end()) {
-    const auto& schema = iter->second;
-    return &schema;
+    return iter->second;
   }
 
-  // Skip typo check?
-  if (!warn_on_typo) {
-    return nullptr;
-  }
+  if (warn_on_typo) {
+    // Match against all known attributes.
+    for (const auto& name_and_schema : attribute_schemas_) {
+      std::string supplied_name = attribute_name;
+      std::string suspected_name = name_and_schema.first;
 
-  // Match against all known attributes.
-  for (const auto& name_and_schema : attribute_schemas_) {
-    std::string supplied_name = attribute_name;
-    std::string suspected_name = name_and_schema.first;
-
-    auto edit_distance = EditDistance(supplied_name, suspected_name);
-    if (0 < edit_distance && edit_distance < 2) {
-      reporter->Report(WarnAttributeTypo, attribute->span, supplied_name, suspected_name);
+      auto edit_distance = EditDistance(supplied_name, suspected_name);
+      if (0 < edit_distance && edit_distance < 2) {
+        reporter->Report(WarnAttributeTypo, attribute->span, supplied_name, suspected_name);
+      }
     }
   }
 
-  return nullptr;
+  return AttributeSchema::kUserDefined;
 }
 
 Dependencies::RegisterResult Dependencies::Register(
@@ -1787,12 +1868,9 @@ bool Library::Fail(const ErrorDef<Args...>& err, const std::optional<SourceSpan>
 bool Library::ValidateAttributes(const Attributable* attributable) {
   bool ok = true;
   for (const auto& attribute : attributable->attributes->attributes) {
-    auto schema = all_libraries_->RetrieveAttributeSchema(reporter_, attribute.get());
-    if (schema == nullptr) {
-      // This is a user-defined attribute, not an official attribute.
-      continue;
-    }
-    if (!schema->Validate(reporter_, attribute.get(), attributable)) {
+    const AttributeSchema& schema =
+        all_libraries_->RetrieveAttributeSchema(reporter_, attribute.get());
+    if (!schema.Validate(reporter_, attribute.get(), attributable)) {
       ok = false;
     }
   }
@@ -3255,9 +3333,6 @@ bool Library::CompileAttribute(Attribute* attribute) {
     return true;
   }
 
-  auto schema = all_libraries_->RetrieveAttributeSchema(reporter_, attribute,
-                                                        /* warn_on_typo = */ true);
-
   // Check for duplicate args, and return early if we find them.
   std::set<std::string> seen;
   for (auto& arg : attribute->args) {
@@ -3266,20 +3341,12 @@ bool Library::CompileAttribute(Attribute* attribute) {
     }
   }
 
-  // Don't resolve with the schema if it's deprecated, since placement
-  // validation will already report an error. We don't keep around argument
-  // schemas for deprecated attributes, so continuing would lead to spurious
-  // errors about unknown arguments.
-  if (schema == nullptr || schema->IsDeprecated()) {
-    if (!AttributeSchema::ResolveArgsWithoutSchema(this, attribute)) {
-      return false;
-    }
-  } else {
-    if (!schema->ResolveArgs(this, attribute)) {
-      return false;
-    }
+  const AttributeSchema& schema =
+      all_libraries_->RetrieveAttributeSchema(reporter_, attribute,
+                                              /* warn_on_typo = */ true);
+  if (!schema.ResolveArgs(this, attribute)) {
+    return false;
   }
-
   attribute->compiled = true;
   return true;
 }

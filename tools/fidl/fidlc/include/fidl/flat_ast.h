@@ -139,13 +139,6 @@ enum class AttributePlacement {
   kTypeAliasDecl,
   kUnionDecl,
   kUnionMember,
-  // The below are "special" placements that don't correspond specifically to a
-  // single placement. They exist to emulate generic validation behavior (see
-  // AttributeSchema::Validate), and should be used as the sole
-  // AttributePlacement value in a list of valid placements passed to an
-  // AttributeSchema.
-  kDeprecated,
-  kAnonymousLayout,
 };
 
 struct Attributable {
@@ -986,52 +979,36 @@ class AttributeArgSchema {
 
  private:
   const ConstantValue::Kind type_;
-  const Optionality optionality_ = Optionality::kRequired;
-  const SpecialCase special_case_ = SpecialCase::kNone;
+  const Optionality optionality_;
+  const SpecialCase special_case_;
 };
 
 // AttributeSchema defines a schema for attributes. This includes the allowed
 // placement (e.g. on a method, on a struct), names and schemas for arguments,
-// and a custom constraint validator.
+// and an optional constraint validator.
 class AttributeSchema {
  public:
   using Constraint = fit::function<bool(Reporter* reporter, const Attribute* attribute,
                                         const Attributable* attributable)>;
 
-  // This constructor is used to build a schema for an attribute that takes multiple arguments.
-  explicit AttributeSchema(std::set<AttributePlacement> allowed_placements,
-                           std::map<std::string, AttributeArgSchema> arg_schemas,
-                           Constraint constraint = NoOpConstraint)
-      : allowed_placements_(std::move(allowed_placements)),
-        arg_schemas_(std::move(arg_schemas)),
-        constraint_(std::move(constraint)) {}
+  // Constructs a new schema that allows any placement, takes no arguments, and
+  // has no constraint. Use the methods below to customize it.
+  AttributeSchema() = default;
 
-  // This constructor is used to build a schema for an attribute that takes no arguments.
-  explicit AttributeSchema(std::set<AttributePlacement> allowed_placements,
-                           Constraint constraint = NoOpConstraint)
-      : AttributeSchema(std::move(allowed_placements), {}, std::move(constraint)) {}
+  // Chainable mutators for customizing the schema.
+  AttributeSchema& RestrictTo(std::set<AttributePlacement> placements);
+  AttributeSchema& RestrictToAnonymousLayouts();
+  AttributeSchema& AddArg(AttributeArgSchema arg_schema);
+  AttributeSchema& AddArg(std::string name, AttributeArgSchema arg_schema);
+  AttributeSchema& Constrain(AttributeSchema::Constraint constraint);
+  AttributeSchema& Deprecate();
 
-  // This constructor is used to build a schema for an attribute that takes a single argument.
-  explicit AttributeSchema(std::set<AttributePlacement> allowed_placements,
-                           AttributeArgSchema arg_schema, Constraint constraint = NoOpConstraint)
-      : AttributeSchema(std::move(allowed_placements),
-                        std::map<std::string, AttributeArgSchema>{
-                            {std::string(AttributeArg::kDefaultAnonymousName), arg_schema}},
-                        std::move(constraint)) {}
-
-  static AttributeSchema Deprecated();
-
-  bool IsDeprecated() const {
-    return allowed_placements_.size() == 1 &&
-           *allowed_placements_.cbegin() == AttributePlacement::kDeprecated;
-  }
+  // Special schema for arbitrary user-defined attributes.
+  static const AttributeSchema kUserDefined;
 
   // Resolves constants in the attribute's arguments. In the case of an
   // anonymous argument like @foo("abc"), infers the argument's name too.
   bool ResolveArgs(Library* target_library, Attribute* attribute) const;
-
-  // Like `ResolveArgs`, but for a user-defined attribute (has no schema).
-  static bool ResolveArgsWithoutSchema(Library* target_library, Attribute* attribute);
 
   // Validates the attribute's placement and constraints. Must call
   // `ResolveArgs` first.
@@ -1039,14 +1016,34 @@ class AttributeSchema {
                 const Attributable* attributable) const;
 
  private:
-  static bool NoOpConstraint(Reporter* reporter, const Attribute* attribute,
-                             const Attributable* attributable) {
-    return true;
-  }
+  enum class Kind {
+    // Official attribute: expects particular arguments.
+    kOfficial,
+    // Deprecated attribute: produces an error if used.
+    kDeprecated,
+    // User-defined attribute: allows any placement and arguments.
+    kUserDefined,
+  };
 
-  std::set<AttributePlacement> allowed_placements_;
+  enum class Placement {
+    // Allowed anywhere.
+    kAnywhere,
+    // Only allowed in certain places specified by std::set<AttributePlacement>.
+    kSpecific,
+    // Only allowed on anonymous layouts (not directly bound to a type
+    // declaration like `type foo = struct { ... };`).
+    kAnonymousLayout,
+  };
+
+  explicit AttributeSchema(Kind kind) : kind_(kind) {}
+
+  static bool ResolveArgsWithoutSchema(Library* library, Attribute* attribute);
+
+  Kind kind_ = Kind::kOfficial;
+  Placement placement_ = Placement::kAnywhere;
+  std::set<AttributePlacement> specific_placements_;
   std::map<std::string, AttributeArgSchema> arg_schemas_;
-  Constraint constraint_;
+  Constraint constraint_ = nullptr;
 };
 
 class Libraries {
@@ -1059,12 +1056,14 @@ class Libraries {
   // Lookup a library by its |library_name|.
   bool Lookup(const std::vector<std::string_view>& library_name, Library** out_library) const;
 
-  void AddAttributeSchema(const std::string& name, AttributeSchema schema) {
-    [[maybe_unused]] auto iter = attribute_schemas_.emplace(name, std::move(schema));
-    assert(iter.second && "do not add schemas twice");
+  // Registers a new attribute schema under the given name, and returns it.
+  AttributeSchema& AddAttributeSchema(const std::string& name) {
+    auto [it, inserted] = attribute_schemas_.try_emplace(name);
+    assert(inserted && "do not add schemas twice");
+    return it->second;
   }
 
-  const AttributeSchema* RetrieveAttributeSchema(Reporter* reporter, const Attribute* attribute,
+  const AttributeSchema& RetrieveAttributeSchema(Reporter* reporter, const Attribute* attribute,
                                                  bool warn_on_typo = false) const;
 
   std::set<std::vector<std::string_view>> Unused(const Library* target_library) const;

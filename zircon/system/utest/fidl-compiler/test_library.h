@@ -5,8 +5,6 @@
 #ifndef ZIRCON_SYSTEM_UTEST_FIDL_COMPILER_TEST_LIBRARY_H_
 #define ZIRCON_SYSTEM_UTEST_FIDL_COMPILER_TEST_LIBRARY_H_
 
-#include <fstream>
-
 #include <fidl/flat_ast.h>
 #include <fidl/json_generator.h>
 #include <fidl/lexer.h>
@@ -15,6 +13,8 @@
 #include <fidl/parser.h>
 #include <fidl/source_file.h>
 #include <fidl/tables_generator.h>
+
+#include <fstream>
 
 #include "fidl/experimental_flags.h"
 
@@ -106,8 +106,8 @@ class TestLibrary final {
     return all_libraries_->Insert(std::move(dependent_library->library_));
   }
 
-  void AddAttributeSchema(const std::string& name, fidl::flat::AttributeSchema schema) {
-    all_libraries_->AddAttributeSchema(name, std::move(schema));
+  fidl::flat::AttributeSchema& AddAttributeSchema(const std::string& name) {
+    return all_libraries_->AddAttributeSchema(name);
   }
 
   // TODO(pascallouis): remove, this does not use a library.

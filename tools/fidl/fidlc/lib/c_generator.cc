@@ -4,7 +4,6 @@
 
 #include "fidl/c_generator.h"
 
-#include "fidl/attributes.h"
 #include "fidl/flat_ast.h"
 #include "fidl/names.h"
 #include "fidl/type_shape.h"
