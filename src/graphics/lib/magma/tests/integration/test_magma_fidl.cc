@@ -61,7 +61,7 @@ class TestMagmaFidl : public gtest::RealLoopFixture {
 
   void SetUp() override {
     for (auto& p : std::filesystem::directory_iterator(kDevicePathFuchsia)) {
-      ASSERT_FALSE(device_.client_end()) << " More than one GPU device found, specify --vendor-id";
+      ASSERT_FALSE(device_.is_valid()) << " More than one GPU device found, specify --vendor-id";
 
       zx::channel server_end, client_end;
       zx::channel::create(0, &server_end, &client_end);

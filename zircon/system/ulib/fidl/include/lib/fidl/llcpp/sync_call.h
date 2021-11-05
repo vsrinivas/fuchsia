@@ -298,13 +298,6 @@ class WireSyncClientBase {
   WireSyncClientBase(WireSyncClientBase&&) noexcept = default;
   WireSyncClientBase& operator=(WireSyncClientBase&&) noexcept = default;
 
-  // TODO(fxbug.dev/85688): exposing a mutable reference to the endpoint is deprecated.
-  ::fidl::ClientEnd<FidlProtocol>& client_end() { return client_end_; }
-  // TODO(fxbug.dev/85688): exposing a direct reference to the channel is deprecated.
-  const ::zx::channel& channel() const { return client_end_.channel(); }
-  // TODO(fxbug.dev/85688): exposing a mutable reference to the channel is deprecated.
-  ::zx::channel* mutable_channel() { return &client_end_.channel(); }
-
   // Whether the client is initialized.
   bool is_valid() const { return client_end_.is_valid(); }
   explicit operator bool() const { return is_valid(); }

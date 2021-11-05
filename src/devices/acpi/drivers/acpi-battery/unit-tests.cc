@@ -66,7 +66,7 @@ class AcpiBatteryTest : public InspectTestHelper, public zxtest::Test {
     ASSERT_OK(endpoints.status_value());
     fidl::BindServer<fidl::WireServer<fuchsia_hardware_power::Source>>(
         loop_.dispatcher(), std::move(endpoints->server), ptr);
-    source_client_.client_end() = std::move(endpoints->client);
+    source_client_.Bind(std::move(endpoints->client));
   }
 
   void TearDown() override {
@@ -78,8 +78,8 @@ class AcpiBatteryTest : public InspectTestHelper, public zxtest::Test {
 
   void InstallNotifyHandler(AcpiDevice::InstallNotifyHandlerRequestView request,
                             AcpiDevice::InstallNotifyHandlerCompleter::Sync& completer) {
-    ASSERT_FALSE(notify_client_.channel().is_valid());
-    notify_client_.client_end() = std::move(request->handler);
+    ASSERT_FALSE(notify_client_.is_valid());
+    notify_client_.Bind(std::move(request->handler));
     completer.ReplySuccess();
   }
 

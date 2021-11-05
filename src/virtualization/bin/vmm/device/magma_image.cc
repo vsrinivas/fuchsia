@@ -84,7 +84,7 @@ class VulkanImageCreator {
                            zx::eventpair* token_out, magma_image_info_t* image_info_out);
 
   // Scenic is used if client asks for presentable images.
-  bool use_scenic() { return scenic_allocator_.client_end().is_valid(); }
+  bool use_scenic() { return scenic_allocator_.is_valid(); }
 
  private:
   vk::DispatchLoaderDynamic loader_;

@@ -393,7 +393,7 @@ zx_status_t capture_setup() {
   }
   token.Sync();
   auto import_resp =
-      dc.ImportBufferCollection(kCollectionId, std::move(*display_token.mutable_channel()));
+      dc.ImportBufferCollection(kCollectionId, display_token.TakeClientEnd().TakeChannel());
   if (import_resp.status() != ZX_OK) {
     printf("Could not import token: %s\n", import_resp.FormatDescription().c_str());
     return import_resp.status();
@@ -417,7 +417,7 @@ zx_status_t capture_setup() {
     return status;
   }
   // let's return token
-  auto bind_resp = sysmem_allocator.BindSharedCollection(std::move(*token.mutable_channel()),
+  auto bind_resp = sysmem_allocator.BindSharedCollection(token.TakeClientEnd().TakeChannel(),
                                                          std::move(collection_server));
   if (bind_resp.status() != ZX_OK) {
     printf("Could not bind to shared collection: %s\n", bind_resp.FormatDescription().c_str());

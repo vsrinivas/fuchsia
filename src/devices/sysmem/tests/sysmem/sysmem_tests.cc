@@ -755,7 +755,7 @@ bool AttachTokenSucceeds(
     }
   }
 
-  if (attach_before_also && !collection_3.client_end()) {
+  if (attach_before_also && !collection_3.is_valid()) {
     // We already failed collection_client_3 early, so AttachToken() can't succeed, but we've
     // checked that initial allocation did succeed despite the pre-allocation
     // failure of client 3.
