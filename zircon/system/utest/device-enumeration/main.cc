@@ -207,10 +207,6 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
       // XHCI driver will not be loaded if we are in USB peripheral mode.
       // "xhci/xhci/usb-bus",
 
-      // TODO(fxbug.dev/33871): Astro can have one of two possible touch screens
-      // so we can't just test that one of them is bound. That is why the
-      // following test is disabled.
-      // "sys/platform/03:03:5/gt92xx HidDevice/hid-device-000",
       "backlight/ti-lp8556",
       "display/amlogic-display/display-controller",
       "sys/platform/00:00:1e/dw-dsi",
@@ -278,8 +274,8 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
 
   static const char* kTouchscreenDevicePaths[] = {
-      "gt92xx-touch/gt92xx HidDevice/hid-device-000",
-      "ft3x27-touch/focaltouch HidDevice/hid-device-000",
+      "gt92xx-touch/gt92xx HidDevice/hid-device/InputReport",
+      "ft3x27-touch/focaltouch HidDevice/hid-device/InputReport",
   };
   ASSERT_NO_FATAL_FAILURES(
       WaitForOne(cpp20::span(kTouchscreenDevicePaths, std::size(kTouchscreenDevicePaths))));
@@ -556,9 +552,9 @@ TEST_F(DeviceEnumerationTest, NocturneTest) {
       "sys/platform/acpi/TSR1",
       "sys/platform/acpi/TSR2",
       "sys/platform/acpi/TSR3",
-      "sys/platform/acpi/acpi-lid/hid-device-000",
-      "sys/platform/acpi/acpi-pwrbtn/hid-device-000",
-      "sys/platform/pci/00:15.0/i2c-bus-9d60/000a/i2c-hid/hid-device-000",
+      "sys/platform/acpi/acpi-lid/hid-device/InputReport",
+      "sys/platform/acpi/acpi-pwrbtn/hid-device/InputReport",
+      "sys/platform/pci/00:15.0/i2c-bus-9d60/000a/i2c-hid/hid-device/InputReport",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
@@ -573,8 +569,8 @@ TEST_F(DeviceEnumerationTest, QemuX64Q35Test) {
 
       "sys/platform/acpi",
       "sys/platform/acpi/acpi-pwrbtn",
-      "sys/platform/acpi/acpi-_SB_/acpi-PCI0/acpi-ISA_/acpi-KBD_/i8042-keyboard",
-      "sys/platform/acpi/acpi-_SB_/acpi-PCI0/acpi-ISA_/acpi-KBD_/i8042-mouse",
+      "sys/platform/acpi/acpi-_SB_/acpi-PCI0/acpi-ISA_/acpi-KBD_/i8042-keyboard/hid-device/InputReport",
+      "sys/platform/acpi/acpi-_SB_/acpi-PCI0/acpi-ISA_/acpi-KBD_/i8042-mouse/hid-device/InputReport",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
