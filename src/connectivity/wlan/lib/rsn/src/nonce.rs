@@ -5,9 +5,9 @@
 use crate::prf;
 use anyhow;
 use bytes::{BufMut, BytesMut};
-use num::bigint::{BigUint, RandBigInt};
+use num::bigint::BigUint;
 use parking_lot::Mutex;
-use rand::OsRng;
+use rand::{OsRng, Rng as _};
 use std::sync::Arc;
 use time;
 
@@ -32,8 +32,8 @@ impl NonceReader {
         let mut buf = BytesMut::with_capacity(14);
         buf.put_u64_le(time::precise_time_ns());
         buf.put_slice(sta_addr);
-        let k = OsRng::new()?.gen_biguint(256).to_bytes_le();
-        let init = prf::prf(&k[..], "Init Counter", &buf[..], 256)?;
+        let k = OsRng::new()?.gen::<[u8; 32]>();
+        let init = prf::prf(&k[..], "Init Counter", &buf[..], 8 * std::mem::size_of_val(&k))?;
         Ok(Arc::new(NonceReader { key_counter: Mutex::new(BigUint::from_bytes_le(&init[..])) }))
     }
 
