@@ -32,7 +32,7 @@ bt::hci_spec::ConnectionRole ConnectionRoleFromFidl(fbt::ConnectionRole role) {
     default:
       break;
   }
-  return bt::hci_spec::ConnectionRole::kSlave;
+  return bt::hci_spec::ConnectionRole::kPeripheral;
 }
 
 }  // namespace

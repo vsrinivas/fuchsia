@@ -24,8 +24,7 @@ For more orientation, see
 -   [Respectful Code](#Respectful-Code)
 
 For a note on used (and avoided) vocabulary, see
-
--   [Bluetooth Vocabulary](docs/vocabulary.md)
+[Bluetooth Vocabulary](docs/vocabulary.md)
 
 ## Getting Started
 
@@ -183,27 +182,13 @@ Inclusivity is central to Fuchsia's culture, and our values include treating
 each other with dignity. As such, it’s important that everyone can contribute
 without facing the harmful effects of bias and discrimination.
 
-The Bluetooth standard makes use of the terms "master" and "slave" to define
-link layer connection roles in many of the protocol specifications. Here are a
-few rules of thumb when referring to these roles in code and comments:
-
-1.  Do not propagate these terms beyond the layer of code directly involved with
-    link layer roles. Use the suggested alternative terminology at FIDL API
-    boundaries. See
-    [Bluetooth Vocabulary Guide](//src/connectivity/bluetooth/docs/vocabulary.md).
-1.  Whenever possible, prefer different terms that more specifically describe
-    function. For example, the SMP specification defines "initiator" and
-    "responder" roles that correspond to the aforementioned roles without loss
-    of clarity.
-1.  If an explicit reference to the link layer role is necessary, then try to
-    avoid the term "slave" where possible. For example this formulation avoids
-    the term without losing clarity:
-
-```
-   if (link->role() != hci::Connection::Role::kMaster) {
-     ...
-   }
-```
+Bluetooth Core Specification 5.3 updated certain terms that were identified as
+inappropriate to more inclusive versions. For example, usages of 'master' and
+'slave' were changed to 'central' and 'peripheral', respectively. We have
+transitioned our code's terminology to the more appropriate language. We no
+longer allow uses of the prior terms. For more information, see the
+[Appropriate Language Mapping Table](https://specificationrefs.bluetooth.com/language-mapping/Appropriate_Language_Mapping_Table.pdf)
+published by the Bluetooth SIG.
 
 See the Fuchsia project [guide](//docs/best-practices/respectful_code.md) on
 best practices for more information.
