@@ -13,9 +13,9 @@
 namespace fidl {
 namespace test {
 
-FrobinatorImpl::FrobinatorImpl(fit::closure on_destroy) : on_destroy_(std::move(on_destroy)){};
+FrobinatorImpl::FrobinatorImpl(fit::closure on_destroy) : on_destroy_(std::move(on_destroy)) {}
 
-FrobinatorImpl::~FrobinatorImpl() { on_destroy_(); };
+FrobinatorImpl::~FrobinatorImpl() { on_destroy_(); }
 
 void FrobinatorImpl::Frob(std::string value) { frobs.push_back(std::move(value)); }
 
