@@ -5,7 +5,7 @@
 ![minimum rustc 1.15](https://img.shields.io/badge/rustc-1.15+-red.svg)
 [![Travis status](https://travis-ci.org/rust-num/num-rational.svg?branch=master)](https://travis-ci.org/rust-num/num-rational)
 
-Generic `Rational` numbers for Rust.
+Generic `Rational` numbers (aka fractions) for Rust.
 
 ## Usage
 

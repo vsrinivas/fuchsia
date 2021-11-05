@@ -38,13 +38,15 @@ use core::str::FromStr;
 #[cfg(feature = "std")]
 use std::error::Error;
 
-use traits::{Inv, Num, One, Zero};
+use traits::{Inv, MulAdd, Num, One, Pow, Signed, Zero};
 
 #[cfg(feature = "std")]
 use traits::float::Float;
 use traits::float::FloatCore;
 
 mod cast;
+mod pow;
+
 #[cfg(feature = "rand")]
 mod crand;
 #[cfg(feature = "rand")]
@@ -90,16 +92,26 @@ pub struct Complex<T> {
 pub type Complex32 = Complex<f32>;
 pub type Complex64 = Complex<f64>;
 
-impl<T: Clone + Num> Complex<T> {
+impl<T> Complex<T> {
+    #[cfg(has_const_fn)]
     /// Create a new Complex
     #[inline]
-    pub fn new(re: T, im: T) -> Complex<T> {
+    pub const fn new(re: T, im: T) -> Self {
         Complex { re: re, im: im }
     }
 
+    #[cfg(not(has_const_fn))]
+    /// Create a new Complex
+    #[inline]
+    pub fn new(re: T, im: T) -> Self {
+        Complex { re: re, im: im }
+    }
+}
+
+impl<T: Clone + Num> Complex<T> {
     /// Returns imaginary unit
     #[inline]
-    pub fn i() -> Complex<T> {
+    pub fn i() -> Self {
         Self::new(T::zero(), T::one())
     }
 
@@ -112,32 +124,54 @@ impl<T: Clone + Num> Complex<T> {
 
     /// Multiplies `self` by the scalar `t`.
     #[inline]
-    pub fn scale(&self, t: T) -> Complex<T> {
-        Complex::new(self.re.clone() * t.clone(), self.im.clone() * t)
+    pub fn scale(&self, t: T) -> Self {
+        Self::new(self.re.clone() * t.clone(), self.im.clone() * t)
     }
 
     /// Divides `self` by the scalar `t`.
     #[inline]
-    pub fn unscale(&self, t: T) -> Complex<T> {
-        Complex::new(self.re.clone() / t.clone(), self.im.clone() / t)
+    pub fn unscale(&self, t: T) -> Self {
+        Self::new(self.re.clone() / t.clone(), self.im.clone() / t)
+    }
+
+    /// Raises `self` to an unsigned integer power.
+    #[inline]
+    pub fn powu(&self, exp: u32) -> Self {
+        Pow::pow(self, exp)
     }
 }
 
 impl<T: Clone + Num + Neg<Output = T>> Complex<T> {
     /// Returns the complex conjugate. i.e. `re - i im`
     #[inline]
-    pub fn conj(&self) -> Complex<T> {
-        Complex::new(self.re.clone(), -self.im.clone())
+    pub fn conj(&self) -> Self {
+        Self::new(self.re.clone(), -self.im.clone())
     }
 
     /// Returns `1/self`
     #[inline]
-    pub fn inv(&self) -> Complex<T> {
+    pub fn inv(&self) -> Self {
         let norm_sqr = self.norm_sqr();
-        Complex::new(
+        Self::new(
             self.re.clone() / norm_sqr.clone(),
             -self.im.clone() / norm_sqr,
         )
+    }
+
+    /// Raises `self` to a signed integer power.
+    #[inline]
+    pub fn powi(&self, exp: i32) -> Self {
+        Pow::pow(self, exp)
+    }
+}
+
+impl<T: Clone + Signed> Complex<T> {
+    /// Returns the L1 norm `|re| + |im|` -- the [Manhattan distance] from the origin.
+    ///
+    /// [Manhattan distance]: https://en.wikipedia.org/wiki/Taxicab_geometry
+    #[inline]
+    pub fn l1_norm(&self) -> T {
+        self.re.abs() + self.im.abs()
     }
 }
 
@@ -161,16 +195,16 @@ impl<T: Clone + Float> Complex<T> {
     }
     /// Convert a polar representation into a complex number.
     #[inline]
-    pub fn from_polar(r: &T, theta: &T) -> Complex<T> {
-        Complex::new(*r * theta.cos(), *r * theta.sin())
+    pub fn from_polar(r: &T, theta: &T) -> Self {
+        Self::new(*r * theta.cos(), *r * theta.sin())
     }
 
     /// Computes `e^(self)`, where `e` is the base of the natural logarithm.
     #[inline]
-    pub fn exp(&self) -> Complex<T> {
+    pub fn exp(&self) -> Self {
         // formula: e^(a + bi) = e^a (cos(b) + i*sin(b))
         // = from_polar(e^a, b)
-        Complex::from_polar(&self.re.exp(), &self.im)
+        Self::from_polar(&self.re.exp(), &self.im)
     }
 
     /// Computes the principal value of natural logarithm of `self`.
@@ -181,10 +215,10 @@ impl<T: Clone + Float> Complex<T> {
     ///
     /// The branch satisfies `-π ≤ arg(ln(z)) ≤ π`.
     #[inline]
-    pub fn ln(&self) -> Complex<T> {
+    pub fn ln(&self) -> Self {
         // formula: ln(z) = ln|z| + i*arg(z)
         let (r, theta) = self.to_polar();
-        Complex::new(r.ln(), theta)
+        Self::new(r.ln(), theta)
     }
 
     /// Computes the principal value of the square root of `self`.
@@ -195,35 +229,117 @@ impl<T: Clone + Float> Complex<T> {
     ///
     /// The branch satisfies `-π/2 ≤ arg(sqrt(z)) ≤ π/2`.
     #[inline]
-    pub fn sqrt(&self) -> Complex<T> {
-        // formula: sqrt(r e^(it)) = sqrt(r) e^(it/2)
-        let two = T::one() + T::one();
-        let (r, theta) = self.to_polar();
-        Complex::from_polar(&(r.sqrt()), &(theta / two))
+    pub fn sqrt(&self) -> Self {
+        if self.im.is_zero() {
+            if self.re.is_sign_positive() {
+                // simple positive real √r, and copy `im` for its sign
+                Self::new(self.re.sqrt(), self.im)
+            } else {
+                // √(r e^(iπ)) = √r e^(iπ/2) = i√r
+                // √(r e^(-iπ)) = √r e^(-iπ/2) = -i√r
+                let re = T::zero();
+                let im = (-self.re).sqrt();
+                if self.im.is_sign_positive() {
+                    Self::new(re, im)
+                } else {
+                    Self::new(re, -im)
+                }
+            }
+        } else if self.re.is_zero() {
+            // √(r e^(iπ/2)) = √r e^(iπ/4) = √(r/2) + i√(r/2)
+            // √(r e^(-iπ/2)) = √r e^(-iπ/4) = √(r/2) - i√(r/2)
+            let one = T::one();
+            let two = one + one;
+            let x = (self.im.abs() / two).sqrt();
+            if self.im.is_sign_positive() {
+                Self::new(x, x)
+            } else {
+                Self::new(x, -x)
+            }
+        } else {
+            // formula: sqrt(r e^(it)) = sqrt(r) e^(it/2)
+            let one = T::one();
+            let two = one + one;
+            let (r, theta) = self.to_polar();
+            Self::from_polar(&(r.sqrt()), &(theta / two))
+        }
+    }
+
+    /// Computes the principal value of the cube root of `self`.
+    ///
+    /// This function has one branch cut:
+    ///
+    /// * `(-∞, 0)`, continuous from above.
+    ///
+    /// The branch satisfies `-π/3 ≤ arg(cbrt(z)) ≤ π/3`.
+    ///
+    /// Note that this does not match the usual result for the cube root of
+    /// negative real numbers. For example, the real cube root of `-8` is `-2`,
+    /// but the principal complex cube root of `-8` is `1 + i√3`.
+    #[inline]
+    pub fn cbrt(&self) -> Self {
+        if self.im.is_zero() {
+            if self.re.is_sign_positive() {
+                // simple positive real ∛r, and copy `im` for its sign
+                Self::new(self.re.cbrt(), self.im)
+            } else {
+                // ∛(r e^(iπ)) = ∛r e^(iπ/3) = ∛r/2 + i∛r√3/2
+                // ∛(r e^(-iπ)) = ∛r e^(-iπ/3) = ∛r/2 - i∛r√3/2
+                let one = T::one();
+                let two = one + one;
+                let three = two + one;
+                let re = (-self.re).cbrt() / two;
+                let im = three.sqrt() * re;
+                if self.im.is_sign_positive() {
+                    Self::new(re, im)
+                } else {
+                    Self::new(re, -im)
+                }
+            }
+        } else if self.re.is_zero() {
+            // ∛(r e^(iπ/2)) = ∛r e^(iπ/6) = ∛r√3/2 + i∛r/2
+            // ∛(r e^(-iπ/2)) = ∛r e^(-iπ/6) = ∛r√3/2 - i∛r/2
+            let one = T::one();
+            let two = one + one;
+            let three = two + one;
+            let im = self.im.abs().cbrt() / two;
+            let re = three.sqrt() * im;
+            if self.im.is_sign_positive() {
+                Self::new(re, im)
+            } else {
+                Self::new(re, -im)
+            }
+        } else {
+            // formula: cbrt(r e^(it)) = cbrt(r) e^(it/3)
+            let one = T::one();
+            let three = one + one + one;
+            let (r, theta) = self.to_polar();
+            Self::from_polar(&(r.cbrt()), &(theta / three))
+        }
     }
 
     /// Raises `self` to a floating point power.
     #[inline]
-    pub fn powf(&self, exp: T) -> Complex<T> {
+    pub fn powf(&self, exp: T) -> Self {
         // formula: x^y = (ρ e^(i θ))^y = ρ^y e^(i θ y)
         // = from_polar(ρ^y, θ y)
         let (r, theta) = self.to_polar();
-        Complex::from_polar(&r.powf(exp), &(theta * exp))
+        Self::from_polar(&r.powf(exp), &(theta * exp))
     }
 
     /// Returns the logarithm of `self` with respect to an arbitrary base.
     #[inline]
-    pub fn log(&self, base: T) -> Complex<T> {
+    pub fn log(&self, base: T) -> Self {
         // formula: log_y(x) = log_y(ρ e^(i θ))
         // = log_y(ρ) + log_y(e^(i θ)) = log_y(ρ) + ln(e^(i θ)) / ln(y)
         // = log_y(ρ) + i θ / ln(y)
         let (r, theta) = self.to_polar();
-        Complex::new(r.log(base), theta / base.ln())
+        Self::new(r.log(base), theta / base.ln())
     }
 
     /// Raises `self` to a complex power.
     #[inline]
-    pub fn powc(&self, exp: Complex<T>) -> Complex<T> {
+    pub fn powc(&self, exp: Self) -> Self {
         // formula: x^y = (a + i b)^(c + i d)
         // = (ρ e^(i θ))^c (ρ e^(i θ))^(i d)
         //    where ρ=|x| and θ=arg(x)
@@ -236,7 +352,7 @@ impl<T: Clone + Float> Complex<T> {
         // = p^c e^(−d θ) (cos(c θ + d ln(ρ)) + i sin(c θ + d ln(ρ)))
         // = from_polar(p^c e^(−d θ), c θ + d ln(ρ))
         let (r, theta) = self.to_polar();
-        Complex::from_polar(
+        Self::from_polar(
             &(r.powf(exp.re) * (-exp.im * theta).exp()),
             &(exp.re * theta + exp.im * r.ln()),
         )
@@ -244,17 +360,17 @@ impl<T: Clone + Float> Complex<T> {
 
     /// Raises a floating point number to the complex power `self`.
     #[inline]
-    pub fn expf(&self, base: T) -> Complex<T> {
+    pub fn expf(&self, base: T) -> Self {
         // formula: x^(a+bi) = x^a x^bi = x^a e^(b ln(x) i)
         // = from_polar(x^a, b ln(x))
-        Complex::from_polar(&base.powf(self.re), &(self.im * base.ln()))
+        Self::from_polar(&base.powf(self.re), &(self.im * base.ln()))
     }
 
     /// Computes the sine of `self`.
     #[inline]
-    pub fn sin(&self) -> Complex<T> {
+    pub fn sin(&self) -> Self {
         // formula: sin(a + bi) = sin(a)cosh(b) + i*cos(a)sinh(b)
-        Complex::new(
+        Self::new(
             self.re.sin() * self.im.cosh(),
             self.re.cos() * self.im.sinh(),
         )
@@ -262,9 +378,9 @@ impl<T: Clone + Float> Complex<T> {
 
     /// Computes the cosine of `self`.
     #[inline]
-    pub fn cos(&self) -> Complex<T> {
+    pub fn cos(&self) -> Self {
         // formula: cos(a + bi) = cos(a)cosh(b) - i*sin(a)sinh(b)
-        Complex::new(
+        Self::new(
             self.re.cos() * self.im.cosh(),
             -self.re.sin() * self.im.sinh(),
         )
@@ -272,10 +388,10 @@ impl<T: Clone + Float> Complex<T> {
 
     /// Computes the tangent of `self`.
     #[inline]
-    pub fn tan(&self) -> Complex<T> {
+    pub fn tan(&self) -> Self {
         // formula: tan(a + bi) = (sin(2a) + i*sinh(2b))/(cos(2a) + cosh(2b))
         let (two_re, two_im) = (self.re + self.re, self.im + self.im);
-        Complex::new(two_re.sin(), two_im.sinh()).unscale(two_re.cos() + two_im.cosh())
+        Self::new(two_re.sin(), two_im.sinh()).unscale(two_re.cos() + two_im.cosh())
     }
 
     /// Computes the principal value of the inverse sine of `self`.
@@ -287,10 +403,10 @@ impl<T: Clone + Float> Complex<T> {
     ///
     /// The branch satisfies `-π/2 ≤ Re(asin(z)) ≤ π/2`.
     #[inline]
-    pub fn asin(&self) -> Complex<T> {
+    pub fn asin(&self) -> Self {
         // formula: arcsin(z) = -i ln(sqrt(1-z^2) + iz)
-        let i = Complex::<T>::i();
-        -i * ((Complex::<T>::one() - self * self).sqrt() + i * self).ln()
+        let i = Self::i();
+        -i * ((Self::one() - self * self).sqrt() + i * self).ln()
     }
 
     /// Computes the principal value of the inverse cosine of `self`.
@@ -302,10 +418,10 @@ impl<T: Clone + Float> Complex<T> {
     ///
     /// The branch satisfies `0 ≤ Re(acos(z)) ≤ π`.
     #[inline]
-    pub fn acos(&self) -> Complex<T> {
+    pub fn acos(&self) -> Self {
         // formula: arccos(z) = -i ln(i sqrt(1-z^2) + z)
-        let i = Complex::<T>::i();
-        -i * (i * (Complex::<T>::one() - self * self).sqrt() + self).ln()
+        let i = Self::i();
+        -i * (i * (Self::one() - self * self).sqrt() + self).ln()
     }
 
     /// Computes the principal value of the inverse tangent of `self`.
@@ -317,24 +433,24 @@ impl<T: Clone + Float> Complex<T> {
     ///
     /// The branch satisfies `-π/2 ≤ Re(atan(z)) ≤ π/2`.
     #[inline]
-    pub fn atan(&self) -> Complex<T> {
+    pub fn atan(&self) -> Self {
         // formula: arctan(z) = (ln(1+iz) - ln(1-iz))/(2i)
-        let i = Complex::<T>::i();
-        let one = Complex::<T>::one();
+        let i = Self::i();
+        let one = Self::one();
         let two = one + one;
         if *self == i {
-            return Complex::new(T::zero(), T::infinity());
+            return Self::new(T::zero(), T::infinity());
         } else if *self == -i {
-            return Complex::new(T::zero(), -T::infinity());
+            return Self::new(T::zero(), -T::infinity());
         }
         ((one + i * self).ln() - (one - i * self).ln()) / (two * i)
     }
 
     /// Computes the hyperbolic sine of `self`.
     #[inline]
-    pub fn sinh(&self) -> Complex<T> {
+    pub fn sinh(&self) -> Self {
         // formula: sinh(a + bi) = sinh(a)cos(b) + i*cosh(a)sin(b)
-        Complex::new(
+        Self::new(
             self.re.sinh() * self.im.cos(),
             self.re.cosh() * self.im.sin(),
         )
@@ -342,9 +458,9 @@ impl<T: Clone + Float> Complex<T> {
 
     /// Computes the hyperbolic cosine of `self`.
     #[inline]
-    pub fn cosh(&self) -> Complex<T> {
+    pub fn cosh(&self) -> Self {
         // formula: cosh(a + bi) = cosh(a)cos(b) + i*sinh(a)sin(b)
-        Complex::new(
+        Self::new(
             self.re.cosh() * self.im.cos(),
             self.re.sinh() * self.im.sin(),
         )
@@ -352,10 +468,10 @@ impl<T: Clone + Float> Complex<T> {
 
     /// Computes the hyperbolic tangent of `self`.
     #[inline]
-    pub fn tanh(&self) -> Complex<T> {
+    pub fn tanh(&self) -> Self {
         // formula: tanh(a + bi) = (sinh(2a) + i*sin(2b))/(cosh(2a) + cos(2b))
         let (two_re, two_im) = (self.re + self.re, self.im + self.im);
-        Complex::new(two_re.sinh(), two_im.sin()).unscale(two_re.cosh() + two_im.cos())
+        Self::new(two_re.sinh(), two_im.sin()).unscale(two_re.cosh() + two_im.cos())
     }
 
     /// Computes the principal value of inverse hyperbolic sine of `self`.
@@ -367,9 +483,9 @@ impl<T: Clone + Float> Complex<T> {
     ///
     /// The branch satisfies `-π/2 ≤ Im(asinh(z)) ≤ π/2`.
     #[inline]
-    pub fn asinh(&self) -> Complex<T> {
+    pub fn asinh(&self) -> Self {
         // formula: arcsinh(z) = ln(z + sqrt(1+z^2))
-        let one = Complex::<T>::one();
+        let one = Self::one();
         (self + (one + self * self).sqrt()).ln()
     }
 
@@ -381,9 +497,9 @@ impl<T: Clone + Float> Complex<T> {
     ///
     /// The branch satisfies `-π ≤ Im(acosh(z)) ≤ π` and `0 ≤ Re(acosh(z)) < ∞`.
     #[inline]
-    pub fn acosh(&self) -> Complex<T> {
+    pub fn acosh(&self) -> Self {
         // formula: arccosh(z) = 2 ln(sqrt((z+1)/2) + sqrt((z-1)/2))
-        let one = Complex::one();
+        let one = Self::one();
         let two = one + one;
         two * (((self + one) / two).sqrt() + ((self - one) / two).sqrt()).ln()
     }
@@ -397,16 +513,72 @@ impl<T: Clone + Float> Complex<T> {
     ///
     /// The branch satisfies `-π/2 ≤ Im(atanh(z)) ≤ π/2`.
     #[inline]
-    pub fn atanh(&self) -> Complex<T> {
+    pub fn atanh(&self) -> Self {
         // formula: arctanh(z) = (ln(1+z) - ln(1-z))/2
-        let one = Complex::one();
+        let one = Self::one();
         let two = one + one;
         if *self == one {
-            return Complex::new(T::infinity(), T::zero());
+            return Self::new(T::infinity(), T::zero());
         } else if *self == -one {
-            return Complex::new(-T::infinity(), T::zero());
+            return Self::new(-T::infinity(), T::zero());
         }
         ((one + self).ln() - (one - self).ln()) / two
+    }
+
+    /// Returns `1/self` using floating-point operations.
+    ///
+    /// This may be more accurate than the generic `self.inv()` in cases
+    /// where `self.norm_sqr()` would overflow to ∞ or underflow to 0.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use num_complex::Complex64;
+    /// let c = Complex64::new(1e300, 1e300);
+    ///
+    /// // The generic `inv()` will overflow.
+    /// assert!(!c.inv().is_normal());
+    ///
+    /// // But we can do better for `Float` types.
+    /// let inv = c.finv();
+    /// assert!(inv.is_normal());
+    /// println!("{:e}", inv);
+    ///
+    /// let expected = Complex64::new(5e-301, -5e-301);
+    /// assert!((inv - expected).norm() < 1e-315);
+    /// ```
+    #[inline]
+    pub fn finv(&self) -> Complex<T> {
+        let norm = self.norm();
+        self.conj() / norm / norm
+    }
+
+    /// Returns `self/other` using floating-point operations.
+    ///
+    /// This may be more accurate than the generic `Div` implementation in cases
+    /// where `other.norm_sqr()` would overflow to ∞ or underflow to 0.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use num_complex::Complex64;
+    /// let a = Complex64::new(2.0, 3.0);
+    /// let b = Complex64::new(1e300, 1e300);
+    ///
+    /// // Generic division will overflow.
+    /// assert!(!(a / b).is_normal());
+    ///
+    /// // But we can do better for `Float` types.
+    /// let quotient = a.fdiv(b);
+    /// assert!(quotient.is_normal());
+    /// println!("{:e}", quotient);
+    ///
+    /// let expected = Complex64::new(2.5e-300, 5e-301);
+    /// assert!((quotient - expected).norm() < 1e-315);
+    /// ```
+    #[inline]
+    pub fn fdiv(&self, other: Complex<T>) -> Complex<T> {
+        self * other.finv()
     }
 }
 
@@ -438,17 +610,14 @@ impl<T: Clone + FloatCore> Complex<T> {
 
 impl<T: Clone + Num> From<T> for Complex<T> {
     #[inline]
-    fn from(re: T) -> Complex<T> {
-        Complex {
-            re: re,
-            im: T::zero(),
-        }
+    fn from(re: T) -> Self {
+        Self::new(re, T::zero())
     }
 }
 
 impl<'a, T: Clone + Num> From<&'a T> for Complex<T> {
     #[inline]
-    fn from(re: &T) -> Complex<T> {
+    fn from(re: &T) -> Self {
         From::from(re.clone())
     }
 }
@@ -459,7 +628,7 @@ macro_rules! forward_ref_ref_binop {
             type Output = Complex<T>;
 
             #[inline]
-            fn $method(self, other: &Complex<T>) -> Complex<T> {
+            fn $method(self, other: &Complex<T>) -> Self::Output {
                 self.clone().$method(other.clone())
             }
         }
@@ -472,7 +641,7 @@ macro_rules! forward_ref_val_binop {
             type Output = Complex<T>;
 
             #[inline]
-            fn $method(self, other: Complex<T>) -> Complex<T> {
+            fn $method(self, other: Complex<T>) -> Self::Output {
                 self.clone().$method(other)
             }
         }
@@ -485,7 +654,7 @@ macro_rules! forward_val_ref_binop {
             type Output = Complex<T>;
 
             #[inline]
-            fn $method(self, other: &Complex<T>) -> Complex<T> {
+            fn $method(self, other: &Complex<T>) -> Self::Output {
                 self.$method(other.clone())
             }
         }
@@ -505,11 +674,11 @@ forward_all_binop!(impl Add, add);
 
 // (a + i b) + (c + i d) == (a + c) + i (b + d)
 impl<T: Clone + Num> Add<Complex<T>> for Complex<T> {
-    type Output = Complex<T>;
+    type Output = Self;
 
     #[inline]
-    fn add(self, other: Complex<T>) -> Complex<T> {
-        Complex::new(self.re + other.re, self.im + other.im)
+    fn add(self, other: Self) -> Self::Output {
+        Self::Output::new(self.re + other.re, self.im + other.im)
     }
 }
 
@@ -517,11 +686,11 @@ forward_all_binop!(impl Sub, sub);
 
 // (a + i b) - (c + i d) == (a - c) + i (b - d)
 impl<T: Clone + Num> Sub<Complex<T>> for Complex<T> {
-    type Output = Complex<T>;
+    type Output = Self;
 
     #[inline]
-    fn sub(self, other: Complex<T>) -> Complex<T> {
-        Complex::new(self.re - other.re, self.im - other.im)
+    fn sub(self, other: Self) -> Self::Output {
+        Self::Output::new(self.re - other.re, self.im - other.im)
     }
 }
 
@@ -529,13 +698,34 @@ forward_all_binop!(impl Mul, mul);
 
 // (a + i b) * (c + i d) == (a*c - b*d) + i (a*d + b*c)
 impl<T: Clone + Num> Mul<Complex<T>> for Complex<T> {
+    type Output = Self;
+
+    #[inline]
+    fn mul(self, other: Self) -> Self::Output {
+        let re = self.re.clone() * other.re.clone() - self.im.clone() * other.im.clone();
+        let im = self.re * other.im + self.im * other.re;
+        Self::Output::new(re, im)
+    }
+}
+
+// (a + i b) * (c + i d) + (e + i f) == ((a*c + e) - b*d) + i (a*d + (b*c + f))
+impl<T: Clone + Num + MulAdd<Output = T>> MulAdd<Complex<T>> for Complex<T> {
     type Output = Complex<T>;
 
     #[inline]
-    fn mul(self, other: Complex<T>) -> Complex<T> {
-        let re = self.re.clone() * other.re.clone() - self.im.clone() * other.im.clone();
-        let im = self.re * other.im + self.im * other.re;
+    fn mul_add(self, other: Complex<T>, add: Complex<T>) -> Complex<T> {
+        let re = self.re.clone().mul_add(other.re.clone(), add.re)
+            - (self.im.clone() * other.im.clone()); // FIXME: use mulsub when available in rust
+        let im = self.re.mul_add(other.im, self.im.mul_add(other.re, add.im));
         Complex::new(re, im)
+    }
+}
+impl<'a, 'b, T: Clone + Num + MulAdd<Output = T>> MulAdd<&'b Complex<T>> for &'a Complex<T> {
+    type Output = Complex<T>;
+
+    #[inline]
+    fn mul_add(self, other: &Complex<T>, add: &Complex<T>) -> Complex<T> {
+        self.clone().mul_add(other.clone(), add.clone())
     }
 }
 
@@ -544,14 +734,14 @@ forward_all_binop!(impl Div, div);
 // (a + i b) / (c + i d) == [(a + i b) * (c - i d)] / (c*c + d*d)
 //   == [(a*c + b*d) / (c*c + d*d)] + i [(b*c - a*d) / (c*c + d*d)]
 impl<T: Clone + Num> Div<Complex<T>> for Complex<T> {
-    type Output = Complex<T>;
+    type Output = Self;
 
     #[inline]
-    fn div(self, other: Complex<T>) -> Complex<T> {
+    fn div(self, other: Self) -> Self::Output {
         let norm_sqr = other.norm_sqr();
         let re = self.re.clone() * other.re.clone() + self.im.clone() * other.im.clone();
         let im = self.im * other.re - self.re * other.im;
-        Complex::new(re / norm_sqr.clone(), im / norm_sqr)
+        Self::Output::new(re / norm_sqr.clone(), im / norm_sqr)
     }
 }
 
@@ -560,15 +750,15 @@ forward_all_binop!(impl Rem, rem);
 // Attempts to identify the gaussian integer whose product with `modulus`
 // is closest to `self`.
 impl<T: Clone + Num> Rem<Complex<T>> for Complex<T> {
-    type Output = Complex<T>;
+    type Output = Self;
 
     #[inline]
-    fn rem(self, modulus: Complex<T>) -> Self {
+    fn rem(self, modulus: Self) -> Self::Output {
         let Complex { re, im } = self.clone() / modulus.clone();
         // This is the gaussian integer corresponding to the true ratio
         // rounded towards zero.
         let (re0, im0) = (re.clone() - re % T::one(), im.clone() - im % T::one());
-        self - modulus * Complex::new(re0, im0)
+        self - modulus * Self::Output::new(re0, im0)
     }
 }
 
@@ -577,38 +767,60 @@ impl<T: Clone + Num> Rem<Complex<T>> for Complex<T> {
 mod opassign {
     use core::ops::{AddAssign, DivAssign, MulAssign, RemAssign, SubAssign};
 
-    use traits::NumAssign;
+    use traits::{MulAddAssign, NumAssign};
 
     use Complex;
 
     impl<T: Clone + NumAssign> AddAssign for Complex<T> {
-        fn add_assign(&mut self, other: Complex<T>) {
+        fn add_assign(&mut self, other: Self) {
             self.re += other.re;
             self.im += other.im;
         }
     }
 
     impl<T: Clone + NumAssign> SubAssign for Complex<T> {
-        fn sub_assign(&mut self, other: Complex<T>) {
+        fn sub_assign(&mut self, other: Self) {
             self.re -= other.re;
             self.im -= other.im;
         }
     }
 
     impl<T: Clone + NumAssign> MulAssign for Complex<T> {
-        fn mul_assign(&mut self, other: Complex<T>) {
+        fn mul_assign(&mut self, other: Self) {
             *self = self.clone() * other;
         }
     }
 
+    // (a + i b) * (c + i d) + (e + i f) == ((a*c + e) - b*d) + i (b*c + (a*d + f))
+    impl<T: Clone + NumAssign + MulAddAssign> MulAddAssign for Complex<T> {
+        fn mul_add_assign(&mut self, other: Complex<T>, add: Complex<T>) {
+            let a = self.re.clone();
+
+            self.re.mul_add_assign(other.re.clone(), add.re); // (a*c + e)
+            self.re -= self.im.clone() * other.im.clone(); // ((a*c + e) - b*d)
+
+            let mut adf = a;
+            adf.mul_add_assign(other.im, add.im); // (a*d + f)
+            self.im.mul_add_assign(other.re, adf); // (b*c + (a*d + f))
+        }
+    }
+
+    impl<'a, 'b, T: Clone + NumAssign + MulAddAssign> MulAddAssign<&'a Complex<T>, &'b Complex<T>>
+        for Complex<T>
+    {
+        fn mul_add_assign(&mut self, other: &Complex<T>, add: &Complex<T>) {
+            self.mul_add_assign(other.clone(), add.clone());
+        }
+    }
+
     impl<T: Clone + NumAssign> DivAssign for Complex<T> {
-        fn div_assign(&mut self, other: Complex<T>) {
+        fn div_assign(&mut self, other: Self) {
             *self = self.clone() / other;
         }
     }
 
     impl<T: Clone + NumAssign> RemAssign for Complex<T> {
-        fn rem_assign(&mut self, other: Complex<T>) {
+        fn rem_assign(&mut self, other: Self) {
             *self = self.clone() % other;
         }
     }
@@ -649,7 +861,7 @@ mod opassign {
         (impl $imp:ident, $method:ident) => {
             impl<'a, T: Clone + NumAssign> $imp<&'a Complex<T>> for Complex<T> {
                 #[inline]
-                fn $method(&mut self, other: &Complex<T>) {
+                fn $method(&mut self, other: &Self) {
                     self.$method(other.clone())
                 }
             }
@@ -669,7 +881,7 @@ mod opassign {
 
     impl<'a, T: Clone + NumAssign> RemAssign<&'a Complex<T>> for Complex<T> {
         #[inline]
-        fn rem_assign(&mut self, other: &Complex<T>) {
+        fn rem_assign(&mut self, other: &Self) {
             self.rem_assign(other.clone())
         }
     }
@@ -682,11 +894,11 @@ mod opassign {
 }
 
 impl<T: Clone + Num + Neg<Output = T>> Neg for Complex<T> {
-    type Output = Complex<T>;
+    type Output = Self;
 
     #[inline]
-    fn neg(self) -> Complex<T> {
-        Complex::new(-self.re, -self.im)
+    fn neg(self) -> Self::Output {
+        Self::Output::new(-self.re, -self.im)
     }
 }
 
@@ -694,16 +906,16 @@ impl<'a, T: Clone + Num + Neg<Output = T>> Neg for &'a Complex<T> {
     type Output = Complex<T>;
 
     #[inline]
-    fn neg(self) -> Complex<T> {
+    fn neg(self) -> Self::Output {
         -self.clone()
     }
 }
 
 impl<T: Clone + Num + Neg<Output = T>> Inv for Complex<T> {
-    type Output = Complex<T>;
+    type Output = Self;
 
     #[inline]
-    fn inv(self) -> Complex<T> {
+    fn inv(self) -> Self::Output {
         (&self).inv()
     }
 }
@@ -712,7 +924,7 @@ impl<'a, T: Clone + Num + Neg<Output = T>> Inv for &'a Complex<T> {
     type Output = Complex<T>;
 
     #[inline]
-    fn inv(self) -> Complex<T> {
+    fn inv(self) -> Self::Output {
         self.inv()
     }
 }
@@ -723,7 +935,7 @@ macro_rules! real_arithmetic {
             type Output = Complex<T>;
 
             #[inline]
-            fn $method(self, other: &T) -> Complex<T> {
+            fn $method(self, other: &T) -> Self::Output {
                 self.$method(other.clone())
             }
         }
@@ -731,7 +943,7 @@ macro_rules! real_arithmetic {
             type Output = Complex<T>;
 
             #[inline]
-            fn $method(self, other: T) -> Complex<T> {
+            fn $method(self, other: T) -> Self::Output {
                 self.clone().$method(other)
             }
         }
@@ -739,7 +951,7 @@ macro_rules! real_arithmetic {
             type Output = Complex<T>;
 
             #[inline]
-            fn $method(self, other: &T) -> Complex<T> {
+            fn $method(self, other: &T) -> Self::Output {
                 self.clone().$method(other.clone())
             }
         }
@@ -782,8 +994,8 @@ macro_rules! real_arithmetic {
                 type Output = Complex<$real>;
 
                 #[inline]
-                fn add(self, other: Complex<$real>) -> Complex<$real> {
-                    Complex::new(self + other.re, other.im)
+                fn add(self, other: Complex<$real>) -> Self::Output {
+                    Self::Output::new(self + other.re, other.im)
                 }
             }
 
@@ -791,8 +1003,8 @@ macro_rules! real_arithmetic {
                 type Output = Complex<$real>;
 
                 #[inline]
-                fn sub(self, other: Complex<$real>) -> Complex<$real> {
-                    Complex::new(self - other.re, $real::zero() - other.im)
+                fn sub(self, other: Complex<$real>) -> Self::Output  {
+                    Self::Output::new(self - other.re, $real::zero() - other.im)
                 }
             }
 
@@ -800,8 +1012,8 @@ macro_rules! real_arithmetic {
                 type Output = Complex<$real>;
 
                 #[inline]
-                fn mul(self, other: Complex<$real>) -> Complex<$real> {
-                    Complex::new(self * other.re, self * other.im)
+                fn mul(self, other: Complex<$real>) -> Self::Output {
+                    Self::Output::new(self * other.re, self * other.im)
                 }
             }
 
@@ -809,11 +1021,11 @@ macro_rules! real_arithmetic {
                 type Output = Complex<$real>;
 
                 #[inline]
-                fn div(self, other: Complex<$real>) -> Complex<$real> {
+                fn div(self, other: Complex<$real>) -> Self::Output {
                     // a / (c + i d) == [a * (c - i d)] / (c*c + d*d)
                     let norm_sqr = other.norm_sqr();
-                    Complex::new(self * other.re / norm_sqr.clone(),
-                                 $real::zero() - self * other.im / norm_sqr)
+                    Self::Output::new(self * other.re / norm_sqr.clone(),
+                                      $real::zero() - self * other.im / norm_sqr)
                 }
             }
 
@@ -821,8 +1033,8 @@ macro_rules! real_arithmetic {
                 type Output = Complex<$real>;
 
                 #[inline]
-                fn rem(self, other: Complex<$real>) -> Complex<$real> {
-                    Complex::new(self, Self::zero()) % other
+                fn rem(self, other: Complex<$real>) -> Self::Output {
+                    Self::Output::new(self, Self::zero()) % other
                 }
             }
         )*
@@ -833,8 +1045,8 @@ impl<T: Clone + Num> Add<T> for Complex<T> {
     type Output = Complex<T>;
 
     #[inline]
-    fn add(self, other: T) -> Complex<T> {
-        Complex::new(self.re + other, self.im)
+    fn add(self, other: T) -> Self::Output {
+        Self::Output::new(self.re + other, self.im)
     }
 }
 
@@ -842,8 +1054,8 @@ impl<T: Clone + Num> Sub<T> for Complex<T> {
     type Output = Complex<T>;
 
     #[inline]
-    fn sub(self, other: T) -> Complex<T> {
-        Complex::new(self.re - other, self.im)
+    fn sub(self, other: T) -> Self::Output {
+        Self::Output::new(self.re - other, self.im)
     }
 }
 
@@ -851,17 +1063,17 @@ impl<T: Clone + Num> Mul<T> for Complex<T> {
     type Output = Complex<T>;
 
     #[inline]
-    fn mul(self, other: T) -> Complex<T> {
-        Complex::new(self.re * other.clone(), self.im * other)
+    fn mul(self, other: T) -> Self::Output {
+        Self::Output::new(self.re * other.clone(), self.im * other)
     }
 }
 
 impl<T: Clone + Num> Div<T> for Complex<T> {
-    type Output = Complex<T>;
+    type Output = Self;
 
     #[inline]
-    fn div(self, other: T) -> Complex<T> {
-        Complex::new(self.re / other.clone(), self.im / other)
+    fn div(self, other: T) -> Self::Output {
+        Self::Output::new(self.re / other.clone(), self.im / other)
     }
 }
 
@@ -869,8 +1081,8 @@ impl<T: Clone + Num> Rem<T> for Complex<T> {
     type Output = Complex<T>;
 
     #[inline]
-    fn rem(self, other: T) -> Complex<T> {
-        Complex::new(self.re % other.clone(), self.im % other)
+    fn rem(self, other: T) -> Self::Output {
+        Self::Output::new(self.re % other.clone(), self.im % other)
     }
 }
 
@@ -882,25 +1094,37 @@ real_arithmetic!(usize, u8, u16, u32, u64, u128, isize, i8, i16, i32, i64, i128,
 /* constants */
 impl<T: Clone + Num> Zero for Complex<T> {
     #[inline]
-    fn zero() -> Complex<T> {
-        Complex::new(Zero::zero(), Zero::zero())
+    fn zero() -> Self {
+        Self::new(Zero::zero(), Zero::zero())
     }
 
     #[inline]
     fn is_zero(&self) -> bool {
         self.re.is_zero() && self.im.is_zero()
     }
+
+    #[inline]
+    fn set_zero(&mut self) {
+        self.re.set_zero();
+        self.im.set_zero();
+    }
 }
 
 impl<T: Clone + Num> One for Complex<T> {
     #[inline]
-    fn one() -> Complex<T> {
-        Complex::new(One::one(), Zero::zero())
+    fn one() -> Self {
+        Self::new(One::one(), Zero::zero())
     }
 
     #[inline]
     fn is_one(&self) -> bool {
         self.re.is_one() && self.im.is_zero()
+    }
+
+    #[inline]
+    fn set_one(&mut self) {
+        self.re.set_one();
+        self.im.set_zero();
     }
 }
 
@@ -1058,6 +1282,7 @@ where
     }
 }
 
+#[allow(deprecated)] // `trim_left_matches` and `trim_right_matches` since 1.33
 fn from_str_generic<T, E, F>(s: &str, from: F) -> Result<Complex<T>, ParseComplexError<E>>
 where
     F: Fn(&str) -> Result<T, E>,
@@ -1238,7 +1463,7 @@ where
         D: serde::Deserializer<'de>,
     {
         let (re, im) = try!(serde::Deserialize::deserialize(deserializer));
-        Ok(Complex::new(re, im))
+        Ok(Self::new(re, im))
     }
 }
 
@@ -1369,10 +1594,40 @@ mod test {
         assert!(_0_0i.inv().is_nan());
     }
 
+    #[test]
+    fn test_l1_norm() {
+        assert_eq!(_0_0i.l1_norm(), 0.0);
+        assert_eq!(_1_0i.l1_norm(), 1.0);
+        assert_eq!(_1_1i.l1_norm(), 2.0);
+        assert_eq!(_0_1i.l1_norm(), 1.0);
+        assert_eq!(_neg1_1i.l1_norm(), 2.0);
+        assert_eq!(_05_05i.l1_norm(), 1.0);
+        assert_eq!(_4_2i.l1_norm(), 6.0);
+    }
+
+    #[test]
+    fn test_pow() {
+        for c in all_consts.iter() {
+            assert_eq!(c.powi(0), _1_0i);
+            let mut pos = _1_0i;
+            let mut neg = _1_0i;
+            for i in 1i32..20 {
+                pos *= c;
+                assert_eq!(pos, c.powi(i));
+                if c.is_zero() {
+                    assert!(c.powi(-i).is_nan());
+                } else {
+                    neg /= c;
+                    assert_eq!(neg, c.powi(-i));
+                }
+            }
+        }
+    }
+
     #[cfg(feature = "std")]
     mod float {
         use super::*;
-        use traits::Float;
+        use traits::{Float, Pow};
 
         #[test]
         #[cfg_attr(target_arch = "x86", ignore)]
@@ -1417,7 +1672,11 @@ mod test {
 
         fn close_to_tol(a: Complex64, b: Complex64, tol: f64) -> bool {
             // returns true if a and b are reasonably close
-            (a == b) || (a - b).norm() < tol
+            let close = (a == b) || (a - b).norm() < tol;
+            if !close {
+                println!("{:?} != {:?}", a, b);
+            }
+            close
         }
 
         #[test]
@@ -1474,9 +1733,11 @@ mod test {
 
         #[test]
         fn test_powf() {
-            let c = Complex::new(2.0, -1.0);
-            let r = c.powf(3.5);
-            assert!(close_to_tol(r, Complex::new(-0.8684746, -16.695934), 1e-5));
+            let c = Complex64::new(2.0, -1.0);
+            let expected = Complex64::new(-0.8684746, -16.695934);
+            assert!(close_to_tol(c.powf(3.5), expected, 1e-5));
+            assert!(close_to_tol(Pow::pow(c, 3.5_f64), expected, 1e-5));
+            assert!(close_to_tol(Pow::pow(c, 3.5_f32), expected, 1e-5));
         }
 
         #[test]
@@ -1513,11 +1774,107 @@ mod test {
                 assert!(close(c.conj().sqrt(), c.sqrt().conj()));
                 // for this branch, -pi/2 <= arg(sqrt(z)) <= pi/2
                 assert!(
-                    -f64::consts::PI / 2.0 <= c.sqrt().arg()
-                        && c.sqrt().arg() <= f64::consts::PI / 2.0
+                    -f64::consts::FRAC_PI_2 <= c.sqrt().arg()
+                        && c.sqrt().arg() <= f64::consts::FRAC_PI_2
                 );
                 // sqrt(z) * sqrt(z) = z
                 assert!(close(c.sqrt() * c.sqrt(), c));
+            }
+        }
+
+        #[test]
+        fn test_sqrt_real() {
+            for n in (0..100).map(f64::from) {
+                // √(n² + 0i) = n + 0i
+                let n2 = n * n;
+                assert_eq!(Complex64::new(n2, 0.0).sqrt(), Complex64::new(n, 0.0));
+                // √(-n² + 0i) = 0 + ni
+                assert_eq!(Complex64::new(-n2, 0.0).sqrt(), Complex64::new(0.0, n));
+                // √(-n² - 0i) = 0 - ni
+                assert_eq!(Complex64::new(-n2, -0.0).sqrt(), Complex64::new(0.0, -n));
+            }
+        }
+
+        #[test]
+        fn test_sqrt_imag() {
+            for n in (0..100).map(f64::from) {
+                // √(0 + n²i) = n e^(iπ/4)
+                let n2 = n * n;
+                assert!(close(
+                    Complex64::new(0.0, n2).sqrt(),
+                    Complex64::from_polar(&n, &(f64::consts::FRAC_PI_4))
+                ));
+                // √(0 - n²i) = n e^(-iπ/4)
+                assert!(close(
+                    Complex64::new(0.0, -n2).sqrt(),
+                    Complex64::from_polar(&n, &(-f64::consts::FRAC_PI_4))
+                ));
+            }
+        }
+
+        #[test]
+        fn test_cbrt() {
+            assert!(close(_0_0i.cbrt(), _0_0i));
+            assert!(close(_1_0i.cbrt(), _1_0i));
+            assert!(close(
+                Complex::new(-1.0, 0.0).cbrt(),
+                Complex::new(0.5, 0.75.sqrt())
+            ));
+            assert!(close(
+                Complex::new(-1.0, -0.0).cbrt(),
+                Complex::new(0.5, -0.75.sqrt())
+            ));
+            assert!(close(_0_1i.cbrt(), Complex::new(0.75.sqrt(), 0.5)));
+            assert!(close(_0_1i.conj().cbrt(), Complex::new(0.75.sqrt(), -0.5)));
+            for &c in all_consts.iter() {
+                // cbrt(conj(z() = conj(cbrt(z))
+                assert!(close(c.conj().cbrt(), c.cbrt().conj()));
+                // for this branch, -pi/3 <= arg(cbrt(z)) <= pi/3
+                assert!(
+                    -f64::consts::FRAC_PI_3 <= c.cbrt().arg()
+                        && c.cbrt().arg() <= f64::consts::FRAC_PI_3
+                );
+                // cbrt(z) * cbrt(z) cbrt(z) = z
+                assert!(close(c.cbrt() * c.cbrt() * c.cbrt(), c));
+            }
+        }
+
+        #[test]
+        fn test_cbrt_real() {
+            for n in (0..100).map(f64::from) {
+                // ∛(n³ + 0i) = n + 0i
+                let n3 = n * n * n;
+                assert!(close(
+                    Complex64::new(n3, 0.0).cbrt(),
+                    Complex64::new(n, 0.0)
+                ));
+                // ∛(-n³ + 0i) = n e^(iπ/3)
+                assert!(close(
+                    Complex64::new(-n3, 0.0).cbrt(),
+                    Complex64::from_polar(&n, &(f64::consts::FRAC_PI_3))
+                ));
+                // ∛(-n³ - 0i) = n e^(-iπ/3)
+                assert!(close(
+                    Complex64::new(-n3, -0.0).cbrt(),
+                    Complex64::from_polar(&n, &(-f64::consts::FRAC_PI_3))
+                ));
+            }
+        }
+
+        #[test]
+        fn test_cbrt_imag() {
+            for n in (0..100).map(f64::from) {
+                // ∛(0 + n³i) = n e^(iπ/6)
+                let n3 = n * n * n;
+                assert!(close(
+                    Complex64::new(0.0, n3).cbrt(),
+                    Complex64::from_polar(&n, &(f64::consts::FRAC_PI_6))
+                ));
+                // ∛(0 - n³i) = n e^(-iπ/6)
+                assert!(close(
+                    Complex64::new(0.0, -n3).cbrt(),
+                    Complex64::from_polar(&n, &(-f64::consts::FRAC_PI_6))
+                ));
             }
         }
 
@@ -1885,7 +2242,7 @@ mod test {
 
     mod complex_arithmetic {
         use super::{_05_05i, _0_0i, _0_1i, _1_0i, _1_1i, _4_2i, _neg1_1i, all_consts};
-        use traits::Zero;
+        use traits::{MulAdd, MulAddAssign, Zero};
 
         #[test]
         fn test_add() {
@@ -1923,6 +2280,65 @@ mod test {
             for &c in all_consts.iter() {
                 test_op!(c * _1_0i, c);
                 test_op!(_1_0i * c, c);
+            }
+        }
+
+        #[test]
+        #[cfg(feature = "std")]
+        fn test_mul_add_float() {
+            assert_eq!(_05_05i.mul_add(_05_05i, _0_0i), _05_05i * _05_05i + _0_0i);
+            assert_eq!(_05_05i * _05_05i + _0_0i, _05_05i.mul_add(_05_05i, _0_0i));
+            assert_eq!(_0_1i.mul_add(_0_1i, _0_1i), _neg1_1i);
+            assert_eq!(_1_0i.mul_add(_1_0i, _1_0i), _1_0i * _1_0i + _1_0i);
+            assert_eq!(_1_0i * _1_0i + _1_0i, _1_0i.mul_add(_1_0i, _1_0i));
+
+            let mut x = _1_0i;
+            x.mul_add_assign(_1_0i, _1_0i);
+            assert_eq!(x, _1_0i * _1_0i + _1_0i);
+
+            for &a in &all_consts {
+                for &b in &all_consts {
+                    for &c in &all_consts {
+                        let abc = a * b + c;
+                        assert_eq!(a.mul_add(b, c), abc);
+                        let mut x = a;
+                        x.mul_add_assign(b, c);
+                        assert_eq!(x, abc);
+                    }
+                }
+            }
+        }
+
+        #[test]
+        fn test_mul_add() {
+            use super::Complex;
+            const _0_0i: Complex<i32> = Complex { re: 0, im: 0 };
+            const _1_0i: Complex<i32> = Complex { re: 1, im: 0 };
+            const _1_1i: Complex<i32> = Complex { re: 1, im: 1 };
+            const _0_1i: Complex<i32> = Complex { re: 0, im: 1 };
+            const _neg1_1i: Complex<i32> = Complex { re: -1, im: 1 };
+            const all_consts: [Complex<i32>; 5] = [_0_0i, _1_0i, _1_1i, _0_1i, _neg1_1i];
+
+            assert_eq!(_1_0i.mul_add(_1_0i, _0_0i), _1_0i * _1_0i + _0_0i);
+            assert_eq!(_1_0i * _1_0i + _0_0i, _1_0i.mul_add(_1_0i, _0_0i));
+            assert_eq!(_0_1i.mul_add(_0_1i, _0_1i), _neg1_1i);
+            assert_eq!(_1_0i.mul_add(_1_0i, _1_0i), _1_0i * _1_0i + _1_0i);
+            assert_eq!(_1_0i * _1_0i + _1_0i, _1_0i.mul_add(_1_0i, _1_0i));
+
+            let mut x = _1_0i;
+            x.mul_add_assign(_1_0i, _1_0i);
+            assert_eq!(x, _1_0i * _1_0i + _1_0i);
+
+            for &a in &all_consts {
+                for &b in &all_consts {
+                    for &c in &all_consts {
+                        let abc = a * b + c;
+                        assert_eq!(a.mul_add(b, c), abc);
+                        let mut x = a;
+                        x.mul_add_assign(b, c);
+                        assert_eq!(x, abc);
+                    }
+                }
             }
         }
 
@@ -2206,5 +2622,42 @@ mod test {
         let v = vec![_0_1i, _1_0i];
         assert_eq!(v.iter().product::<Complex64>(), _0_1i);
         assert_eq!(v.into_iter().product::<Complex64>(), _0_1i);
+    }
+
+    #[test]
+    fn test_zero() {
+        let zero = Complex64::zero();
+        assert!(zero.is_zero());
+
+        let mut c = Complex::new(1.23, 4.56);
+        assert!(!c.is_zero());
+        assert_eq!(&c + &zero, c);
+
+        c.set_zero();
+        assert!(c.is_zero());
+    }
+
+    #[test]
+    fn test_one() {
+        let one = Complex64::one();
+        assert!(one.is_one());
+
+        let mut c = Complex::new(1.23, 4.56);
+        assert!(!c.is_one());
+        assert_eq!(&c * &one, c);
+
+        c.set_one();
+        assert!(c.is_one());
+    }
+
+    #[cfg(has_const_fn)]
+    #[test]
+    fn test_const() {
+        const R: f64 = 12.3;
+        const I: f64 = -4.5;
+        const C: Complex64 = Complex::new(R, I);
+
+        assert_eq!(C.re, 12.3);
+        assert_eq!(C.im, -4.5);
     }
 }

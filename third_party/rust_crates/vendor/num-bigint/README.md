@@ -33,6 +33,19 @@ Implementations for `i128` and `u128` are only available with Rust 1.26 and
 later.  The build script automatically detects this, but you can make it
 mandatory by enabling the `i128` crate feature.
 
+### Random Generation
+
+`num-bigint` supports the generation of random big integers when the `rand`
+feature is enabled. To enable it include rand as
+
+```toml
+rand = "0.5"
+num-bigint = { version = "0.2", features = ["rand"] }
+```
+
+Note that you must use the version of `rand` that `num-bigint` is compatible
+with: `0.5`.
+
 ## Releases
 
 Release notes are available in [RELEASES.md](RELEASES.md).
@@ -51,7 +64,7 @@ table offers a brief comparison to a few alternatives.
 | :--------------- | :------------- | :-------- | :------------- |
 | **`num-bigint`** | MIT/Apache-2.0 | 1.15      | pure rust |
 | [`ramp`]         | Apache-2.0     | nightly   | rust and inline assembly |
-| [`rug`]          | LGPL-3.0+      | 1.18      | bundles [GMP] via [`gmp-mpfr-sys`] |
+| [`rug`]          | LGPL-3.0+      | 1.31      | bundles [GMP] via [`gmp-mpfr-sys`] |
 | [`rust-gmp`]     | MIT            | stable?   | links to [GMP] |
 | [`apint`]        | MIT/Apache-2.0 | 1.26      | pure rust (unfinished) |
 

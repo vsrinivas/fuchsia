@@ -3,7 +3,7 @@
 # When uploading crates to the registry Cargo will automatically
 # "normalize" Cargo.toml files for maximal compatibility
 # with all versions of Cargo and also rewrite `path` dependencies
-# to registry (e.g. crates.io) dependencies
+# to registry (e.g., crates.io) dependencies
 #
 # If you believe there's an error in this file please file an
 # issue against the rust-lang/cargo repository. If you're
@@ -12,36 +12,39 @@
 
 [package]
 name = "num-rational"
-version = "0.2.1"
+version = "0.2.4"
 authors = ["The Rust Project Developers"]
 build = "build.rs"
+exclude = ["/ci/*", "/.travis.yml", "/bors.toml"]
 description = "Rational numbers implementation for Rust"
 homepage = "https://github.com/rust-num/num-rational"
 documentation = "https://docs.rs/num-rational"
 readme = "README.md"
-keywords = ["mathematics", "numerics"]
+keywords = ["mathematics", "numerics", "fractions"]
 categories = ["algorithms", "data-structures", "science", "no-std"]
 license = "MIT/Apache-2.0"
 repository = "https://github.com/rust-num/num-rational"
 [package.metadata.docs.rs]
 features = ["std", "bigint-std", "serde"]
 [dependencies.num-bigint]
-version = "0.2.0"
+version = "0.2.5"
 optional = true
 default-features = false
 
 [dependencies.num-integer]
-version = "0.1.38"
+version = "0.1.42"
 default-features = false
 
 [dependencies.num-traits]
-version = "0.2.4"
+version = "0.2.11"
 default-features = false
 
 [dependencies.serde]
 version = "1.0.0"
 optional = true
 default-features = false
+[build-dependencies.autocfg]
+version = "1"
 
 [features]
 bigint = ["num-bigint"]

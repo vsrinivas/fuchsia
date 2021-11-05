@@ -16,8 +16,8 @@ fn inv_mod_u32(num: u32) -> u32 {
     // num needs to be relatively prime to 2**32 -- i.e. it must be odd.
     assert!(num % 2 != 0);
 
-    let mut a: i64 = num as i64;
-    let mut b: i64 = (u32::max_value() as i64) + 1;
+    let mut a: i64 = i64::from(num);
+    let mut b: i64 = i64::from(u32::max_value()) + 1;
 
     // ExtendedGcd
     // Input: positive integers a and b
@@ -84,7 +84,7 @@ fn monty_redc(a: BigUint, mr: &MontyReducer) -> BigUint {
     let ret = BigUint::new(c[n_size..].to_vec());
 
     // 5: if R >= β^n then return R-N else return R.
-    if &ret < mr.n {
+    if ret < *mr.n {
         ret
     } else {
         ret - mr.n
@@ -121,7 +121,7 @@ pub fn monty_modpow(a: &BigUint, exp: &BigUint, modulus: &BigUint) -> BigUint {
             ans = monty_mult(ans, &apri, &mr);
         }
         apri = monty_sqr(apri, &mr);
-        e = e >> 1;
+        e >>= 1;
     }
 
     // Map the result back to the residues domain

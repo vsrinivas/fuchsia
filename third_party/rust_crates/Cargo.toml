@@ -97,7 +97,10 @@ mockall = "0.9"
 nom = { version = "5.0.0", default-features = false, features = ["std", "regexp_macros"] }
 nom_locate = "2.0.0"
 nonzero_ext = "0.3.0"
-num = { version = "0.2", features = ["rand"] }
+# Can't go higher than 0.3.0 because
+# https://github.com/rust-num/num-bigint/commit/a9b7800 introduces code
+# generation in build.rs :(
+num = { version = "^0.2.0", features = ["rand"] }
 num-derive = "0.3"
 num-traits = "0.2"
 numtoa = "0.1.0"
@@ -414,17 +417,17 @@ rustflags = ["--cfg=memchr_runtime_simd", "--cfg=memchr_runtime_sse2", "--cfg=me
 [gn.package.mime_guess."1.8.6"]
 env_vars = ["OUT_DIR=../../../compat/mime_guess"]
 
-[gn.package.num-bigint."0.2.2"]
+[gn.package.num-bigint."0.2.6"]
 rustflags = ["--cfg=has_i128"]
 
-[gn.package.num-complex."0.2.1"]
+[gn.package.num-complex."0.2.4"]
+rustflags = ["--cfg=has_i128", "--cfg=has_const_fn"]
+
+[gn.package.num-integer."0.1.44"]
 rustflags = ["--cfg=has_i128"]
 
-[gn.package.num-integer."0.1.39"]
-rustflags = ["--cfg=has_i128"]
-
-[gn.package.num-rational."0.2.1"]
-rustflags = ["--cfg=has_i128"]
+[gn.package.num-rational."0.2.4"]
+rustflags = ["--cfg=has_i128", "--cfg=has_const_fn"]
 
 [gn.package.num-traits."0.2.14"]
 rustflags = ["--cfg=has_i128"]
@@ -435,7 +438,7 @@ rustflags = ["--cfg=derive_copy", "--cfg=repr_transparent", "--cfg=native_uninit
 [gn.package.memoffset."0.6.3"]
 rustflags = ["--cfg=tuple_ty", "--cfg=allow_clippy", "--cfg=maybe_uninit", "--cfg=doctests", "--cfg=raw_ref_macros"]
 
-[gn.package.num-iter."0.1.37"]
+[gn.package.num-iter."0.1.42"]
 rustflags = ["--cfg=has_i128"]
 
 [gn.package.pin-project-internal."0.4.26"]

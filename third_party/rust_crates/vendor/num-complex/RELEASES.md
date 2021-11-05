@@ -1,3 +1,40 @@
+# Release 0.2.4 (2020-01-09)
+
+- [`Complex::new` is now a `const fn` for Rust 1.31 and later][63].
+- [Updated the `autocfg` build dependency to 1.0][68].
+
+**Contributors**: @burrbull, @cuviper, @dingelish
+
+[63]: https://github.com/rust-num/num-complex/pull/63
+[68]: https://github.com/rust-num/num-complex/pull/68
+
+# Release 0.2.3 (2019-06-11)
+
+- [`Complex::sqrt()` is now more accurate for negative reals][60].
+- [`Complex::cbrt()` computes the principal cube root][61].
+
+**Contributors**: @cuviper
+
+[60]: https://github.com/rust-num/num-complex/pull/60
+[61]: https://github.com/rust-num/num-complex/pull/61
+
+# Release 0.2.2 (2019-06-10)
+
+- [`Complex::l1_norm()` computes the Manhattan distance from the origin][43].
+- [`Complex::fdiv()` and `finv()` use floating-point for inversion][41], which
+  may avoid overflows for some inputs, at the cost of trigonometric rounding.
+- [`Complex` now implements `num_traits::MulAdd` and `MulAddAssign`][44].
+- [`Complex` now implements `Zero::set_zero` and `One::set_one`][57].
+- [`Complex` now implements `num_traits::Pow` and adds `powi` and `powu`][56].
+
+**Contributors**: @adamnemecek, @cuviper, @ignatenkobrain, @Schultzer
+
+[41]: https://github.com/rust-num/num-complex/pull/41
+[43]: https://github.com/rust-num/num-complex/pull/43
+[44]: https://github.com/rust-num/num-complex/pull/44
+[56]: https://github.com/rust-num/num-complex/pull/56
+[57]: https://github.com/rust-num/num-complex/pull/57
+
 # Release 0.2.1 (2018-10-08)
 
 - [`Complex` now implements `ToPrimitive`, `FromPrimitive`, `AsPrimitive`, and `NumCast`][33].

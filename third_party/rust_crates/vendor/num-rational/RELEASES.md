@@ -1,3 +1,31 @@
+# Release 0.2.4 (2020-03-17)
+
+- [Fixed `CheckedDiv` when both dividend and divisor are 0][74].
+- [Fixed `CheckedDiv` with `min_value()` numerators][76].
+
+[74]: https://github.com/rust-num/num-rational/pull/74
+[76]: https://github.com/rust-num/num-rational/pull/76
+
+# Release 0.2.3 (2020-01-09)
+
+- [`Ratio` now performs earlier reductions to avoid overflow with `+-*/%` operators][42].
+- [`Ratio::{new_raw, numer, denom}` are now `const fn` for Rust 1.31 and later][48].
+- [Updated the `autocfg` build dependency to 1.0][63].
+
+**Contributors**: @cuviper, @dingelish, @jimbo1qaz, @maxbla
+
+[42]: https://github.com/rust-num/num-rational/pull/42
+[48]: https://github.com/rust-num/num-rational/pull/48
+[63]: https://github.com/rust-num/num-rational/pull/63
+
+# Release 0.2.2 (2019-06-10)
+
+- [`Ratio` now implements `Zero::set_zero` and `One::set_one`][47].
+
+**Contributors**: @cuviper, @ignatenkobrain, @vks
+
+[47]: https://github.com/rust-num/num-rational/pull/47
+
 # Release 0.2.1 (2018-06-22)
 
 - Maintenance release to fix `html_root_url`.
@@ -18,7 +46,7 @@
   implication that building *without* this feature makes this a `#![no_std]`
   crate.  A few methods now require `FloatCore` instead of `Float`.
 - [The `serde` dependency has been updated to 1.0][24], and `rustc-serialize`
-  is no longer supported by `num-complex`.
+  is no longer supported by `num-rational`.
 - The optional `num-bigint` dependency has been updated to 0.2, and should be
   enabled using the `bigint-std` feature.  In the future, it may be possible
   to use the `bigint` feature with `no_std`.

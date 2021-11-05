@@ -411,7 +411,7 @@ if (!(current_os == "fuchsia")) {
 }
 
 group("num") {
-  deps = [ ":num-v0_2_0" ]
+  deps = [ ":num-v0_2_1" ]
 }
 
 group("num-derive") {
@@ -2221,7 +2221,7 @@ rust_library("chrono-v0_4_11") {
   ]
 
   deps = []
-  deps += [ ":num-integer-v0_1_39" ]
+  deps += [ ":num-integer-v0_1_44" ]
   deps += [ ":num-traits-v0_2_14" ]
   deps += [ ":serde-v1_0_116" ]
   deps += [ ":time-v0_1_42" ]
@@ -5877,21 +5877,21 @@ rust_library("ntapi-v0_3_4") {
   ]
 }
 
-rust_library("num-v0_2_0") {
+rust_library("num-v0_2_1") {
   crate_name = "num"
   crate_root = "//third_party/rust_crates/vendor/num/src/lib.rs"
-  output_name = "num-fd01d44f35253e6d"
+  output_name = "num-dab29524c5e74b61"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
   ]
 
   deps = []
-  deps += [ ":num-bigint-v0_2_2" ]
-  deps += [ ":num-complex-v0_2_1" ]
-  deps += [ ":num-integer-v0_1_39" ]
-  deps += [ ":num-iter-v0_1_37" ]
-  deps += [ ":num-rational-v0_2_1" ]
+  deps += [ ":num-bigint-v0_2_6" ]
+  deps += [ ":num-complex-v0_2_4" ]
+  deps += [ ":num-integer-v0_1_44" ]
+  deps += [ ":num-iter-v0_1_42" ]
+  deps += [ ":num-rational-v0_2_4" ]
   deps += [ ":num-traits-v0_2_14" ]
 
   rustenv = []
@@ -5899,8 +5899,8 @@ rust_library("num-v0_2_0") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=fd01d44f35253e6d",
-    "-Cextra-filename=-fd01d44f35253e6d",
+    "-Cmetadata=dab29524c5e74b61",
+    "-Cextra-filename=-dab29524c5e74b61",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"num-bigint\"",
     "--cfg=feature=\"rand\"",
@@ -5908,17 +5908,17 @@ rust_library("num-v0_2_0") {
   ]
 }
 
-rust_library("num-bigint-v0_2_2") {
+rust_library("num-bigint-v0_2_6") {
   crate_name = "num_bigint"
   crate_root = "//third_party/rust_crates/vendor/num-bigint/src/lib.rs"
-  output_name = "num_bigint-61c27594421f5cd0"
+  output_name = "num_bigint-af98ae7c1cb87406"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
   ]
 
   deps = []
-  deps += [ ":num-integer-v0_1_39" ]
+  deps += [ ":num-integer-v0_1_44" ]
   deps += [ ":num-traits-v0_2_14" ]
   deps += [ ":rand-v0_5_6" ]
 
@@ -5927,18 +5927,18 @@ rust_library("num-bigint-v0_2_2") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=61c27594421f5cd0",
-    "-Cextra-filename=-61c27594421f5cd0",
+    "-Cmetadata=af98ae7c1cb87406",
+    "-Cextra-filename=-af98ae7c1cb87406",
     "--cfg=feature=\"rand\"",
     "--cfg=feature=\"std\"",
     "--cfg=has_i128",
   ]
 }
 
-rust_library("num-complex-v0_2_1") {
+rust_library("num-complex-v0_2_4") {
   crate_name = "num_complex"
   crate_root = "//third_party/rust_crates/vendor/num-complex/src/lib.rs"
-  output_name = "num_complex-8a072fd0857db963"
+  output_name = "num_complex-20c18a8462f75d5f"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -5953,11 +5953,12 @@ rust_library("num-complex-v0_2_1") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=8a072fd0857db963",
-    "-Cextra-filename=-8a072fd0857db963",
+    "-Cmetadata=20c18a8462f75d5f",
+    "-Cextra-filename=-20c18a8462f75d5f",
     "--cfg=feature=\"rand\"",
     "--cfg=feature=\"std\"",
     "--cfg=has_i128",
+    "--cfg=has_const_fn",
   ]
 }
 
@@ -5985,10 +5986,10 @@ rust_proc_macro("num-derive-v0_3_3") {
   ]
 }
 
-rust_library("num-integer-v0_1_39") {
+rust_library("num-integer-v0_1_44") {
   crate_name = "num_integer"
   crate_root = "//third_party/rust_crates/vendor/num-integer/src/lib.rs"
-  output_name = "num_integer-784ce5b14502b374"
+  output_name = "num_integer-2a84ff8675296986"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -6002,24 +6003,24 @@ rust_library("num-integer-v0_1_39") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=784ce5b14502b374",
-    "-Cextra-filename=-784ce5b14502b374",
+    "-Cmetadata=2a84ff8675296986",
+    "-Cextra-filename=-2a84ff8675296986",
     "--cfg=feature=\"std\"",
     "--cfg=has_i128",
   ]
 }
 
-rust_library("num-iter-v0_1_37") {
+rust_library("num-iter-v0_1_42") {
   crate_name = "num_iter"
   crate_root = "//third_party/rust_crates/vendor/num-iter/src/lib.rs"
-  output_name = "num_iter-56f02b88a493c33a"
+  output_name = "num_iter-a257411d06b07f30"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
   ]
 
   deps = []
-  deps += [ ":num-integer-v0_1_39" ]
+  deps += [ ":num-integer-v0_1_44" ]
   deps += [ ":num-traits-v0_2_14" ]
 
   rustenv = []
@@ -6027,26 +6028,26 @@ rust_library("num-iter-v0_1_37") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=56f02b88a493c33a",
-    "-Cextra-filename=-56f02b88a493c33a",
+    "-Cmetadata=a257411d06b07f30",
+    "-Cextra-filename=-a257411d06b07f30",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
     "--cfg=has_i128",
   ]
 }
 
-rust_library("num-rational-v0_2_1") {
+rust_library("num-rational-v0_2_4") {
   crate_name = "num_rational"
   crate_root = "//third_party/rust_crates/vendor/num-rational/src/lib.rs"
-  output_name = "num_rational-7e86b517853427e3"
+  output_name = "num_rational-bf48987f8b31a0ac"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
   ]
 
   deps = []
-  deps += [ ":num-bigint-v0_2_2" ]
-  deps += [ ":num-integer-v0_1_39" ]
+  deps += [ ":num-bigint-v0_2_6" ]
+  deps += [ ":num-integer-v0_1_44" ]
   deps += [ ":num-traits-v0_2_14" ]
 
   rustenv = []
@@ -6054,12 +6055,13 @@ rust_library("num-rational-v0_2_1") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=7e86b517853427e3",
-    "-Cextra-filename=-7e86b517853427e3",
+    "-Cmetadata=bf48987f8b31a0ac",
+    "-Cextra-filename=-bf48987f8b31a0ac",
     "--cfg=feature=\"bigint\"",
     "--cfg=feature=\"num-bigint\"",
     "--cfg=feature=\"std\"",
     "--cfg=has_i128",
+    "--cfg=has_const_fn",
   ]
 }
 
@@ -6842,7 +6844,7 @@ rust_library("png-v0_14_0") {
   deps += [ ":bitflags-v1_2_1" ]
   deps += [ ":deflate-v0_7_19" ]
   deps += [ ":inflate-v0_4_5" ]
-  deps += [ ":num-iter-v0_1_37" ]
+  deps += [ ":num-iter-v0_1_42" ]
 
   rustenv = []
 

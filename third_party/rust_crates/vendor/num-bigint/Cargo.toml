@@ -3,7 +3,7 @@
 # When uploading crates to the registry Cargo will automatically
 # "normalize" Cargo.toml files for maximal compatibility
 # with all versions of Cargo and also rewrite `path` dependencies
-# to registry (e.g. crates.io) dependencies
+# to registry (e.g., crates.io) dependencies
 #
 # If you believe there's an error in this file please file an
 # issue against the rust-lang/cargo repository. If you're
@@ -12,7 +12,7 @@
 
 [package]
 name = "num-bigint"
-version = "0.2.2"
+version = "0.2.6"
 authors = ["The Rust Project Developers"]
 build = "build.rs"
 description = "Big integer implementation for Rust"
@@ -24,7 +24,7 @@ categories = ["algorithms", "data-structures", "science"]
 license = "MIT/Apache-2.0"
 repository = "https://github.com/rust-num/num-bigint"
 [package.metadata.docs.rs]
-features = ["std", "serde", "rand"]
+features = ["std", "serde", "rand", "quickcheck"]
 
 [[bench]]
 name = "bigint"
@@ -42,11 +42,21 @@ name = "roots"
 name = "shootout-pidigits"
 harness = false
 [dependencies.num-integer]
-version = "0.1.39"
+version = "0.1.42"
 default-features = false
 
 [dependencies.num-traits]
-version = "0.2.4"
+version = "0.2.11"
+default-features = false
+
+[dependencies.quickcheck]
+version = "0.8"
+optional = true
+default-features = false
+
+[dependencies.quickcheck_macros]
+version = "0.8"
+optional = true
 default-features = false
 
 [dependencies.rand]
@@ -62,6 +72,8 @@ optional = true
 default-features = false
 [dev-dependencies.serde_test]
 version = "1.0"
+[build-dependencies.autocfg]
+version = "1"
 
 [features]
 default = ["std"]

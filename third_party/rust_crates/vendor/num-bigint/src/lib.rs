@@ -71,6 +71,33 @@
 //! # }
 //! ```
 //!
+//! See the "Features" section for instructions for enabling random number generation.
+//!
+//! ## Features
+//!
+//! The `std` crate feature is mandatory and enabled by default.  If you depend on
+//! `num-bigint` with `default-features = false`, you must manually enable the
+//! `std` feature yourself.  In the future, we hope to support `#![no_std]` with
+//! the `alloc` crate when `std` is not enabled.
+//!
+//! Implementations for `i128` and `u128` are only available with Rust 1.26 and
+//! later.  The build script automatically detects this, but you can make it
+//! mandatory by enabling the `i128` crate feature.
+//!
+//! ### Random Generation
+//!
+//! `num-bigint` supports the generation of random big integers when the `rand`
+//! feature is enabled. To enable it include rand as
+//!
+//! ```toml
+//! rand = "0.5"
+//! num-bigint = { version = "0.2", features = ["rand"] }
+//! ```
+//!
+//! Note that you must use the version of `rand` that `num-bigint` is compatible
+//! with: `0.5`.
+//!
+//!
 //! ## Compatibility
 //!
 //! The `num-bigint` crate is tested for rustc 1.15 and greater.
@@ -87,6 +114,8 @@ extern crate serde;
 
 extern crate num_integer as integer;
 extern crate num_traits as traits;
+#[cfg(feature = "quickcheck")]
+extern crate quickcheck;
 
 use std::error::Error;
 use std::fmt;
@@ -199,6 +228,6 @@ mod big_digit {
     /// Join two `BigDigit`s into one `DoubleBigDigit`
     #[inline]
     pub fn to_doublebigdigit(hi: BigDigit, lo: BigDigit) -> DoubleBigDigit {
-        (lo as DoubleBigDigit) | ((hi as DoubleBigDigit) << BITS)
+        DoubleBigDigit::from(lo) | (DoubleBigDigit::from(hi) << BITS)
     }
 }

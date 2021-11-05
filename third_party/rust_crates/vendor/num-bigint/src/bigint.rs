@@ -34,6 +34,9 @@ use biguint::{BigUint, IntDigits};
 use IsizePromotion;
 use UsizePromotion;
 
+#[cfg(feature = "quickcheck")]
+use quickcheck::{Arbitrary, Gen};
+
 /// A Sign is a `BigInt`'s composing element.
 #[derive(PartialEq, PartialOrd, Eq, Ord, Copy, Clone, Debug, Hash)]
 pub enum Sign {
@@ -112,6 +115,22 @@ impl<'de> serde::Deserialize<'de> for Sign {
 pub struct BigInt {
     sign: Sign,
     data: BigUint,
+}
+
+#[cfg(feature = "quickcheck")]
+impl Arbitrary for BigInt {
+    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+        let positive = bool::arbitrary(g);
+        let sign = if positive { Sign::Plus } else { Sign::Minus };
+        Self::from_biguint(sign, BigUint::arbitrary(g))
+    }
+
+    #[allow(bare_trait_objects)] // `dyn` needs Rust 1.27 to parse, even when cfg-disabled
+    fn shrink(&self) -> Box<Iterator<Item = Self>> {
+        let sign = self.sign();
+        let unsigned_shrink = self.data.shrink();
+        Box::new(unsigned_shrink.map(move |x| BigInt::from_biguint(sign, x)))
+    }
 }
 
 /// Return the magnitude of a `BigInt`.
@@ -219,7 +238,7 @@ impl fmt::UpperHex for BigInt {
 // ff ff -> ...f 00 01
 #[inline]
 fn negate_carry(a: BigDigit, acc: &mut DoubleBigDigit) -> BigDigit {
-    *acc += (!a) as DoubleBigDigit;
+    *acc += DoubleBigDigit::from(!a);
     let lo = *acc as BigDigit;
     *acc >>= big_digit::BITS;
     lo
@@ -676,7 +695,7 @@ impl Num for BigInt {
         } else {
             Plus
         };
-        let bu = try!(BigUint::from_str_radix(s, radix));
+        let bu = BigUint::from_str_radix(s, radix)?;
         Ok(BigInt::from_biguint(sign, bu))
     }
 }
@@ -757,6 +776,12 @@ impl Zero for BigInt {
     }
 
     #[inline]
+    fn set_zero(&mut self) {
+        self.data.set_zero();
+        self.sign = NoSign;
+    }
+
+    #[inline]
     fn is_zero(&self) -> bool {
         self.sign == NoSign
     }
@@ -766,6 +791,12 @@ impl One for BigInt {
     #[inline]
     fn one() -> BigInt {
         BigInt::from_biguint(Plus, One::one())
+    }
+
+    #[inline]
+    fn set_one(&mut self) {
+        self.data.set_one();
+        self.sign = Plus;
     }
 
     #[inline]
@@ -857,6 +888,7 @@ pow_impl!(u64);
 pow_impl!(usize);
 #[cfg(has_i128)]
 pow_impl!(u128);
+pow_impl!(BigUint);
 
 // A convenience method for getting the absolute value of an i32 in a u32.
 #[inline]
@@ -2065,21 +2097,21 @@ impl<'a> Neg for &'a BigInt {
 impl CheckedAdd for BigInt {
     #[inline]
     fn checked_add(&self, v: &BigInt) -> Option<BigInt> {
-        return Some(self.add(v));
+        Some(self.add(v))
     }
 }
 
 impl CheckedSub for BigInt {
     #[inline]
     fn checked_sub(&self, v: &BigInt) -> Option<BigInt> {
-        return Some(self.sub(v));
+        Some(self.sub(v))
     }
 }
 
 impl CheckedMul for BigInt {
     #[inline]
     fn checked_mul(&self, v: &BigInt) -> Option<BigInt> {
-        return Some(self.mul(v));
+        Some(self.mul(v))
     }
 }
 
@@ -2089,7 +2121,7 @@ impl CheckedDiv for BigInt {
         if v.is_zero() {
             return None;
         }
-        return Some(self.div(v));
+        Some(self.div(v))
     }
 }
 
@@ -2163,7 +2195,7 @@ impl Integer for BigInt {
     /// Deprecated, use `is_multiple_of` instead.
     #[inline]
     fn divides(&self, other: &BigInt) -> bool {
-        return self.is_multiple_of(other);
+        self.is_multiple_of(other)
     }
 
     /// Returns `true` if the number is a multiple of `other`.
@@ -2467,7 +2499,9 @@ impl<'de> serde::Deserialize<'de> for BigInt {
     }
 }
 
-/// A generic trait for converting a value to a `BigInt`.
+/// A generic trait for converting a value to a `BigInt`. This may return
+/// `None` when converting from `f32` or `f64`, and will always succeed
+/// when converting from any integer or unsigned primitive, or `BigUint`.
 pub trait ToBigInt {
     /// Converts the value of `self` to a `BigInt`.
     fn to_bigint(&self) -> Option<BigInt>;
@@ -2538,7 +2572,7 @@ impl_to_bigint!(f64, FromPrimitive::from_f64);
 impl BigInt {
     /// Creates and initializes a BigInt.
     ///
-    /// The digits are in little-endian base 2<sup>32</sup>.
+    /// The base 2<sup>32</sup> digits are ordered least significant digit first.
     #[inline]
     pub fn new(sign: Sign, digits: Vec<u32>) -> BigInt {
         BigInt::from_biguint(sign, BigUint::new(digits))
@@ -2546,7 +2580,7 @@ impl BigInt {
 
     /// Creates and initializes a `BigInt`.
     ///
-    /// The digits are in little-endian base 2<sup>32</sup>.
+    /// The base 2<sup>32</sup> digits are ordered least significant digit first.
     #[inline]
     pub fn from_biguint(mut sign: Sign, mut data: BigUint) -> BigInt {
         if sign == NoSign {
@@ -2562,12 +2596,16 @@ impl BigInt {
     }
 
     /// Creates and initializes a `BigInt`.
+    ///
+    /// The base 2<sup>32</sup> digits are ordered least significant digit first.
     #[inline]
     pub fn from_slice(sign: Sign, slice: &[u32]) -> BigInt {
         BigInt::from_biguint(sign, BigUint::from_slice(slice))
     }
 
     /// Reinitializes a `BigInt`.
+    ///
+    /// The base 2<sup>32</sup> digits are ordered least significant digit first.
     #[inline]
     pub fn assign_from_slice(&mut self, sign: Sign, slice: &[u32]) {
         if sign == NoSign {
@@ -2744,7 +2782,26 @@ impl BigInt {
         (self.sign, self.data.to_bytes_le())
     }
 
-    /// Returns the two's complement byte representation of the `BigInt` in big-endian byte order.
+    /// Returns the sign and the `u32` digits representation of the `BigInt` ordered least
+    /// significant digit first.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use num_bigint::{BigInt, Sign};
+    ///
+    /// assert_eq!(BigInt::from(-1125).to_u32_digits(), (Sign::Minus, vec![1125]));
+    /// assert_eq!(BigInt::from(4294967295u32).to_u32_digits(), (Sign::Plus, vec![4294967295]));
+    /// assert_eq!(BigInt::from(4294967296u64).to_u32_digits(), (Sign::Plus, vec![0, 1]));
+    /// assert_eq!(BigInt::from(-112500000000i64).to_u32_digits(), (Sign::Minus, vec![830850304, 26]));
+    /// assert_eq!(BigInt::from(112500000000i64).to_u32_digits(), (Sign::Plus, vec![830850304, 26]));
+    /// ```
+    #[inline]
+    pub fn to_u32_digits(&self) -> (Sign, Vec<u32>) {
+        (self.sign, self.data.to_u32_digits())
+    }
+
+    /// Returns the two's-complement byte representation of the `BigInt` in big-endian byte order.
     ///
     /// # Examples
     ///
@@ -2757,7 +2814,7 @@ impl BigInt {
     #[inline]
     pub fn to_signed_bytes_be(&self) -> Vec<u8> {
         let mut bytes = self.data.to_bytes_be();
-        let first_byte = bytes.first().map(|v| *v).unwrap_or(0);
+        let first_byte = bytes.first().cloned().unwrap_or(0);
         if first_byte > 0x7f
             && !(first_byte == 0x80
                 && bytes.iter().skip(1).all(Zero::is_zero)
@@ -2772,7 +2829,7 @@ impl BigInt {
         bytes
     }
 
-    /// Returns the two's complement byte representation of the `BigInt` in little-endian byte order.
+    /// Returns the two's-complement byte representation of the `BigInt` in little-endian byte order.
     ///
     /// # Examples
     ///
@@ -2785,7 +2842,7 @@ impl BigInt {
     #[inline]
     pub fn to_signed_bytes_le(&self) -> Vec<u8> {
         let mut bytes = self.data.to_bytes_le();
-        let last_byte = bytes.last().map(|v| *v).unwrap_or(0);
+        let last_byte = bytes.last().cloned().unwrap_or(0);
         if last_byte > 0x7f
             && !(last_byte == 0x80
                 && bytes.iter().rev().skip(1).all(Zero::is_zero)
@@ -2896,17 +2953,17 @@ impl BigInt {
 
     #[inline]
     pub fn checked_add(&self, v: &BigInt) -> Option<BigInt> {
-        return Some(self.add(v));
+        Some(self.add(v))
     }
 
     #[inline]
     pub fn checked_sub(&self, v: &BigInt) -> Option<BigInt> {
-        return Some(self.sub(v));
+        Some(self.sub(v))
     }
 
     #[inline]
     pub fn checked_mul(&self, v: &BigInt) -> Option<BigInt> {
-        return Some(self.mul(v));
+        Some(self.mul(v))
     }
 
     #[inline]
@@ -2914,7 +2971,7 @@ impl BigInt {
         if v.is_zero() {
             return None;
         }
-        return Some(self.div(v));
+        Some(self.div(v))
     }
 
     /// Returns `(self ^ exponent) mod modulus`
@@ -2938,7 +2995,10 @@ impl BigInt {
         }
 
         // The sign of the result follows the modulus, like `mod_floor`.
-        let (sign, mag) = match (self.is_negative(), modulus.is_negative()) {
+        let (sign, mag) = match (
+            self.is_negative() && exponent.is_odd(),
+            modulus.is_negative(),
+        ) {
             (false, false) => (Plus, result),
             (true, false) => (Plus, &modulus.data - result),
             (false, true) => (Minus, &modulus.data - result),
