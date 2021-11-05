@@ -225,8 +225,8 @@ pub struct Surface {
     /// If set, this determines how a surface should be scaled to the viewport.
     scale_params: Option<ViewportScaleParams>,
 
-    /// A callback set by the client for redraw hints.
-    frame: Option<ObjectRef<Callback>>,
+    /// Callbacks set by the client for redraw hints.
+    frame_callbacks: Vec<ObjectRef<Callback>>,
 
     /// The set of scenic node resources that implement this surface. Initially
     /// this is `None` and becomes populated when a scenic session has been
@@ -375,7 +375,7 @@ impl Surface {
             role: None,
             crop_params: None,
             scale_params: None,
-            frame: None,
+            frame_callbacks: vec![],
             node: None,
             window_geometry: None,
             parent: None,
@@ -435,10 +435,7 @@ impl Surface {
             }
             SurfaceCommand::ClearBuffer => {}
             SurfaceCommand::Frame(callback) => {
-                if self.frame.is_some() {
-                    return Err(format_err!("Multiple frame requests posted between commits"));
-                }
-                self.frame = Some(callback);
+                self.frame_callbacks.push(callback);
             }
             SurfaceCommand::SetViewportCropParams(params) => {
                 self.crop_params = Some(params);
@@ -585,9 +582,7 @@ impl Surface {
             }
         }
 
-        if let Some(callback) = self.frame.take() {
-            callbacks.push(callback);
-        }
+        callbacks.append(&mut self.frame_callbacks);
 
         Ok(())
     }
@@ -595,14 +590,14 @@ impl Surface {
     pub fn present(
         this: ObjectRef<Self>,
         client: &mut Client,
-        callbacks: Vec<ObjectRef<Callback>>,
+        mut callbacks: Vec<ObjectRef<Callback>>,
     ) -> Result<(), Error> {
         ftrace::duration!("wayland", "Surface::present");
         if this.get(client)?.present_credits == 0 {
             // Drop frame by adding callbacks to previous frame. There must be at least
             // one set of pending callbacks when we enter this state.
             let surface = this.get_mut(client)?;
-            surface.callbacks.back_mut().expect("no pending frame").extend(callbacks);
+            surface.callbacks.back_mut().expect("no pending frame").append(&mut callbacks);
             println!("dropped frame, no present credits remaining");
             return Ok(());
         }
@@ -636,7 +631,7 @@ impl Surface {
             role: None,
             crop_params: None,
             scale_params: None,
-            frame: None,
+            frame_callbacks: vec![],
             node: None,
             window_geometry: None,
             pixel_scale: (1.0, 1.0),
@@ -755,10 +750,7 @@ impl Surface {
                 true
             }
             SurfaceCommand::Frame(callback) => {
-                if self.frame.is_some() {
-                    return Err(format_err!("Multiple frame requests posted between commits"));
-                }
-                self.frame = Some(callback);
+                self.frame_callbacks.push(callback);
                 false
             }
             SurfaceCommand::SetViewportCropParams(params) => {
@@ -934,9 +926,7 @@ impl Surface {
                 -(self.z_order as f32),
             );
         }
-        if let Some(callback) = self.frame.take() {
-            callbacks.push(callback);
-        }
+        callbacks.append(&mut self.frame_callbacks);
         Ok(())
     }
 
