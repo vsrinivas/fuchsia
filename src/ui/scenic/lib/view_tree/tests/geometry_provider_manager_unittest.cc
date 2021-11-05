@@ -147,7 +147,7 @@ TEST_F(GeometryProviderManagerTest, BufferOverflowTest) {
   EXPECT_TRUE(client_result.has_value());
 
   // Client should receive the latest BUFFER_SIZE snapshot updates.
-  // TODO(fxbug.dev/84801): Update the unittest once the implementation of
+  // TODO(fxbug.dev/87579): Update the unittest once the implementation of
   // ExtractObservationSnapshot is completed to reflect only the latest snapshot are stored.
   EXPECT_EQ(client_result->response().updates.size(), fuog_BUFFER_SIZE);
 }

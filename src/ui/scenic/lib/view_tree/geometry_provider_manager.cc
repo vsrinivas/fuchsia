@@ -47,7 +47,7 @@ void GeometryProviderManager::OnNewViewTreeSnapshot(
 
 fuog_ViewTreeSnapshotPtr GeometryProviderManager::ExtractObservationSnapshot(
     zx_koid_t context_view, std::shared_ptr<const view_tree::Snapshot> snapshot) {
-  // TODO(fxbug.dev/84801): Implement the logic to convert a view_tree:Snapshot to ViewTreeSnapshot
+  // TODO(fxbug.dev/87579): Implement the logic to convert a view_tree:Snapshot to ViewTreeSnapshot
   // here. Currently returning a unique ptr to an empty ViewTreeSnapshot.
   return fuog_ViewTreeSnapshot::New();
 }
