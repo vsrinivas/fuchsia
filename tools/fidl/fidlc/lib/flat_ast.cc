@@ -3539,14 +3539,6 @@ bool Library::DeclDependencies(const Decl* decl, std::set<const Decl*>* out_edge
     }
   };
 
-  for (const auto& attribute : decl->attributes->attributes) {
-    for (const auto& arg : attribute->args) {
-      if (!AddConstantDependencies(arg->value.get(), &edges)) {
-        return false;
-      }
-    }
-  }
-
   switch (decl->kind) {
     case Decl::Kind::kBits: {
       auto bits_decl = static_cast<const Bits*>(decl);

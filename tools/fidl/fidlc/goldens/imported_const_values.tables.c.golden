@@ -3,9 +3,9 @@
 #include <lib/fidl/internal.h>
 
 
+__LOCAL extern const struct FidlCodedStruct fidl_test_importedconstvalues_MyStructTable;
 __LOCAL extern const struct FidlCodedEnum dependent_MyEnumTable;
 __LOCAL extern const struct FidlCodedBits dependent_MyBitsTable;
-__LOCAL extern const struct FidlCodedStruct fidl_test_importedconstvalues_MyStructTable;
 
 
 

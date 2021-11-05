@@ -464,25 +464,4 @@ alias #Alias# = uint32;
   }
 }
 
-TEST(DeclarationOrderTest, GoodAttributeArgConstantComesFirst) {
-  for (int i = 0; i < kRepeatTestCount; i++) {
-    Namer namer;
-    auto source = namer.mangle(R"FIDL(
-library example;
-
-@some_attribute(#Const#)
-type #Struct# = struct {};
-
-const #Const# string = "foo";
-
-)FIDL");
-    TestLibrary library(source);
-    ASSERT_COMPILED(library);
-    auto decl_order = library.declaration_order();
-    ASSERT_EQ(2, decl_order.size());
-    ASSERT_DECL_NAME(decl_order[0], namer.of("Const"));
-    ASSERT_DECL_NAME(decl_order[1], namer.of("Struct"));
-  }
-}
-
 }  // namespace
