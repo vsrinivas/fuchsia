@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//third_party/openthread/openthread_upstream_version.gni")
+
 source_set("platform") {
   sources = [
     "alarm.cc",
@@ -24,6 +26,14 @@ source_set("platform") {
     "system.cc",
     "thread_config_manager.cc",
   ]
+
+  # Define during the soft-transition.
+  # This allows for compilation work both before and after update
+  # of third_party/openthread
+  if (openthread_upstream_version ==
+      "c36c0e77a2465355bcf13bd7dc718d8c9aa6ff64") {
+    defines = [ "OPENTHREAD_SOFT_TRANSITION_NEW_CODE" ]
+  }
 
   public_deps = [
     "//sdk/fidl/fuchsia.lowpan.bootstrap:fuchsia.lowpan.bootstrap_llcpp",

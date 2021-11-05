@@ -261,6 +261,7 @@ otError otPlatRadioGetRegion(otInstance *a_instance, uint16_t *a_region_code) {
   return sRadioSpinel.GetRadioRegion(a_region_code);
 }
 
+#ifndef OPENTHREAD_SOFT_TRANSITION_NEW_CODE
 void otPlatRadioSetMacKey(otInstance *a_instance, uint8_t a_key_id_mode, uint8_t a_key_id,
                           const otMacKey *a_prev_key, const otMacKey *a_curr_key,
                           const otMacKey *a_next_key) {
@@ -268,6 +269,15 @@ void otPlatRadioSetMacKey(otInstance *a_instance, uint8_t a_key_id_mode, uint8_t
       sRadioSpinel.SetMacKey(a_key_id_mode, a_key_id, *a_prev_key, *a_curr_key, *a_next_key));
   OT_UNUSED_VARIABLE(a_instance);
 }
+#else
+void otPlatRadioSetMacKey(otInstance *a_instance, uint8_t a_key_id_mode, uint8_t a_key_id,
+                          const otMacKeyMaterial *a_prev_key, const otMacKeyMaterial *a_curr_key,
+                          const otMacKeyMaterial *a_next_key, otRadioKeyType a_key_type) {
+  SuccessOrDie(sRadioSpinel.SetMacKey(a_key_id_mode, a_key_id, a_prev_key, a_curr_key, a_next_key));
+  OT_UNUSED_VARIABLE(a_instance);
+  OT_UNUSED_VARIABLE(a_key_type);
+}
+#endif
 
 extern "C" bool otPlatRadioIsEnabled(otInstance *a_instance) {
   OT_UNUSED_VARIABLE(a_instance);

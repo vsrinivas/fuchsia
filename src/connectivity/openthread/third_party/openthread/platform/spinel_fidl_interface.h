@@ -53,6 +53,14 @@ class SpinelFidlInterface {
    */
   void Process(const otRadioSpinelContext& aContext);
 
+#ifdef OPENTHREAD_SOFT_TRANSITION_NEW_CODE
+  /**
+   * Used when RCP is reset to recreate the connection with it.
+   *
+   */
+  otError ResetConnection(void) { return OT_ERROR_NONE; }
+#endif
+
  private:
   /**
    * Write received inbound frame to the buffer where can be processed by ot-lib
