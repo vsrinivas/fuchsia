@@ -1,0 +1,153 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/json/validate_json.gni")
+
+# Defines an SDK element.
+#
+# Direct instantiation of `sdk_element` is not supported. Element authors should
+# use specialized templates, e.g. `host_tool_sdk_element`, instead.
+#
+# Outputs
+#
+#   $target_gen_dir/${target_name}_packaging_manifest.json
+#     A manifest describing which files are included in the element.
+#
+#   $target_gen_dir/${target_name}_sdk_metadata.json
+#     A metadata file describing the element.
+#     * This file is included in the final SDK and may be used by tools that
+#       interact with the SDK.
+#
+# Parameters
+#
+#   type (required)
+#     Type of the element. For example, "host_tool".
+#     * Supported types are listed in //build/sdk/meta.
+#
+#   schema_version (required)
+#     Version of the schema for this element type.
+#     * Metadata schema files are hosted under //build/sdk/meta and have
+#       filenames of the form "{type}-{version}.json".
+#
+#   meta (required)
+#     Scope describing the element's metadata file.
+#     * This parameter's contents are determined by the schema defined by `type`
+#       and `schema_version`.
+#
+#   files (required)
+#     List of scopes describing the contents of this element.
+#     * A file scope has the following attributes:
+#       src (required)
+#         Path to the original file.
+#         Must be the absolute GN path, beginning with "//".
+#       dst (required)
+#         Destination path of the file relative to the element root.
+#
+#   api (optional) [TODO(b/204903307): implement the api parameter]
+#     Path to the file representing the API canonically exposed by this element.
+#     * If this attribute is set, "files" or "api_contents" must be set as well.
+#     * An API file is a JSON file containing a map of file paths to canonical
+#       MD5 hashes. The file paths correspond to the `dst` field of a file scope
+#       (see "files" above).
+#     * This file is used to ensure modifications to the API are explicitly
+#       acknowledged.
+#     * Changes to the API contents are approximated by comparing the MD5 hashes
+#       of the API contents to the ones listed in the API file.
+#
+#   api_contents (optional)
+#     List of scopes representing the files making up the element's API.
+#     * Ignored if `api` is not set.
+#     * By default, this parameter will be equal to the `files` parameter.
+#     * Set `api_contents` explicitly if the element's API surface is describe
+#       by only a subset of its files. For example, a C++ library may contain
+#       header and source files, but its API consists of header files only.
+#     * See the "files" section above for the definition of a file scope.
+#
+#   sdk_deps (optional)
+#     List of GN labels for other SDK elements this element depends on at build
+#     time.
+#
+#   sdk_soft_deps (optional)
+#     List of GN labels for other SDK elements this element may depend on to be
+#     useful to SDK users, but that are not build dependencies. For example, a
+#     FIDL library may have a soft dependency on fidlc.
+#
+#   non_sdk_deps (optional)
+#     List of GN labels which this target needs built, but are not SDK elements.
+template("sdk_element") {
+  assert(defined(invoker.files) && invoker.files != [],
+         "Must define files with at least one file")
+  files = invoker.files
+  foreach(file, files) {
+    assert(defined(file.src), "File $file does not specify a source.")
+    assert(defined(file.dst), "File $file does not specify a destination.")
+  }
+
+  assert(defined(invoker.type), "Must define element type")
+  type = invoker.type
+
+  assert(defined(invoker.schema_version), "Must define schema version")
+  schema_version = invoker.schema_version
+
+  assert(defined(invoker.meta), "Must define meta")
+  meta_content = invoker.meta
+
+  gn_deps = []
+  if (defined(invoker.non_sdk_deps)) {
+    gn_deps += invoker.non_sdk_deps
+  }
+  if (defined(invoker.sdk_deps)) {
+    gn_deps += invoker.sdk_deps
+  }
+  if (defined(invoker.sdk_soft_deps)) {
+    gn_deps += invoker.sdk_soft_deps
+  }
+
+  # The manifest file contains the file mappings needed to package the element.
+  manifest_target_name = "${target_name}_packaging_manifest"
+  manifest_file = "${target_gen_dir}/${manifest_target_name}.json"
+  generated_file(manifest_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+    visibility = [ ":*" ]
+    outputs = [ manifest_file ]
+    contents = files
+    output_conversion = "json"
+  }
+
+  # The meta file contains the metadata describing the element, according to the
+  # type-specific schema (see //build/sdk/meta).
+  meta_target_name = "${target_name}_sdk_metadata"
+  meta_file = "${target_gen_dir}/${meta_target_name}.json"
+  generated_file(meta_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+    visibility = [ ":*" ]
+    outputs = [ meta_file ]
+    contents = meta_content
+    output_conversion = "json"
+  }
+
+  validate_target_name = "validate_${meta_target_name}"
+  validate_json(validate_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+    visibility = [ ":*" ]
+    data = meta_file
+    schema = "//build/sdk/meta/${type}-${schema_version}.json"
+    sources = [ "//sdk/schema/common-00000000.json" ]
+    public_deps = [ ":${meta_target_name}" ]
+  }
+
+  # TODO(b/204903307): .api generation/validation
+
+  group(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    public_deps = [
+                    ":${manifest_target_name}",
+                    ":${validate_target_name}",
+                  ] + gn_deps
+  }
+}
