@@ -23,7 +23,7 @@ type Properties = table {
     /// even if the device is removed and subsequently re-added. Immutable.
     1: id fuchsia.net.interface_id;
     /// The addresses currently assigned to the interface.
-    2: addresses vector< @generated_name("Address")table {
+    2: addresses vector<@generated_name("Address") table {
         /// The address and prefix length.
         1: addr fuchsia.net.Subnet;
         /// The time after which the address will no longer be valid.

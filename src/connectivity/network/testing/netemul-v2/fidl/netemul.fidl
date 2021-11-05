@@ -49,7 +49,7 @@ protocol Sandbox {
             /// Child components to dynamically create in this realm.
             ///
             /// If not set, interpreted as an empty vector.
-            2: children vector< @generated_name("ChildDef")table {
+            2: children vector<@generated_name("ChildDef") table {
                 /// The component URL of this child.
                 ///
                 /// Required.
@@ -70,7 +70,7 @@ protocol Sandbox {
                     /// capabilities.
                     ///
                     /// `capabilities` must be unique.
-                    1: capabilities vector< @generated_name("Capability")strict union {
+                    1: capabilities vector<@generated_name("Capability") strict union {
                         /// The `devfs` instance offered by netemul, where
                         /// virtual devices are mounted.
                         1: netemul_devfs @generated_name("DevfsDep") table {

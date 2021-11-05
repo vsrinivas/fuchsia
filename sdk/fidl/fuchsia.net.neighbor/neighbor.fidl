@@ -76,7 +76,7 @@ protocol EntryIterator {
     /// - response `events` a list of events that occurred since the last
     ///     invocation of this method.
     GetNext() -> (struct {
-        events vector< @generated_name("EntryIteratorItem")strict union {
+        events vector<@generated_name("EntryIteratorItem") strict union {
             /// An existing entry in the neighbor table. Does not indicate that
             /// an event occurred.
             1: existing Entry;

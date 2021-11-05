@@ -459,6 +459,7 @@ void SpanSequenceTreeVisitor::OnAttribute(const std::unique_ptr<raw::Attribute>&
   // Ingest the closing ")" token, and append it to the final argument.
   auto postscript = IngestUpToAndIncluding(element->end_);
   if (postscript.has_value()) {
+    postscript.value()->SetTrailingSpace(true);
     auto last_argument_span_sequence =
         static_cast<AtomicSpanSequence*>(building_.top().back().get());
     last_argument_span_sequence->AddChild(std::move(postscript.value()));
@@ -487,7 +488,6 @@ void SpanSequenceTreeVisitor::OnAttributeList(const std::unique_ptr<raw::Attribu
       const auto visiting = Visiting(this, VisitorKind::kAttributeList);
       const auto builder = SpanBuilder<DivisibleSpanSequence>(this, *element);
       TreeVisitor::OnAttributeList(element);
-      SetSpacesBetweenChildren(building_.top(), true);
       return;
     }
 

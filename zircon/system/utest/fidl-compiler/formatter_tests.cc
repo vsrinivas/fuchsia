@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 #include <fidl/formatter.h>
 #include <fidl/utils.h>
+
 #include <zxtest/zxtest.h>
 
 #include "test_library.h"
@@ -5291,7 +5292,7 @@ type MyEnum = strict enum : uint16 {
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
-TEST(NewFormatterTests, ParameterListAttributes) {
+TEST(NewFormatterTests, InlineAttribute) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(
 library foo.bar;
@@ -5313,6 +5314,32 @@ protocol Foo {
     }) -> (@baz @qux struct {
         data uint8;
     });
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, VectorWithInlineAttribute) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+type MyTable = struct {
+    anon vector< @foo("bar") table {
+        1: inner bool;
+    }>:123;
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+type MyTable = struct {
+    anon vector<@foo("bar") table {
+        1: inner bool;
+    }>:123;
 };
 )FIDL";
 

@@ -64,7 +64,7 @@ type Parameter = flexible union {
     /// network devices which should always have the same IP address, such as
     /// network printers. The vector bound has been arbitrarily selected as a
     /// generous upper limit.
-    5: statically_assigned_addrs vector< @generated_name("StaticAssignment")table {
+    5: statically_assigned_addrs vector<@generated_name("StaticAssignment") table {
         /// The MAC address of the host or device which will have the static IP
         /// address assignment.
         1: host fuchsia.net.MacAddress;
