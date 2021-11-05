@@ -64,7 +64,8 @@ struct GlobalListTag {};
 // Base class for any objects that want to be part of the VMO hierarchy and share some state,
 // including a lock. Additionally all objects in the hierarchy can become part of the same
 // deferred deletion mechanism to avoid unbounded chained destructors.
-class VmHierarchyBase : public fbl::RefCountedUpgradeable<VmHierarchyBase> {
+class VmHierarchyBase : public fbl::RefCountedUpgradeable<VmHierarchyBase>,
+                        public fbl::Recyclable<VmHierarchyBase> {
  public:
   explicit VmHierarchyBase(fbl::RefPtr<VmHierarchyState> state);
 
@@ -75,6 +76,11 @@ class VmHierarchyBase : public fbl::RefCountedUpgradeable<VmHierarchyBase> {
   // private destructor, only called from refptr
   virtual ~VmHierarchyBase() = default;
   friend fbl::RefPtr<VmHierarchyBase>;
+  // Similar to the destructor, fbl_recycle() needs to be virtual so DoDeferredDelete() can take a
+  // RefPtr<VmHierarchyBase> but when fbl_recycle() is called the VmCowPages::fbl_recycle() will be
+  // run.
+  virtual void fbl_recycle() { delete this; }
+  friend class fbl::Recyclable<VmHierarchyBase>;
 
   // The lock which protects this class. All objects in a clone tree
   // share the same lock.

@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_VM_INCLUDE_VM_PAGE_QUEUES_H_
 #define ZIRCON_KERNEL_VM_INCLUDE_VM_PAGE_QUEUES_H_
 
+#include <lib/fitx/result.h>
 #include <sys/types.h>
 #include <zircon/listnode.h>
 
@@ -21,6 +22,7 @@
 #include <vm/page.h>
 
 class VmCowPages;
+class VmCowPagesContainer;
 
 // Allocated pages that are part of the cow pages in a VmObjectPaged can be placed in a page queue.
 // The page queues provide a way to
@@ -194,6 +196,25 @@ class PageQueues {
   // VmoBacklink for more details). If a page is returned its location in the pager_backed queue is
   // not modified.
   ktl::optional<VmoBacklink> PeekPagerBacked(size_t lowest_queue);
+
+  // Not all methods are safe to call via a referenced VmoContainerBacklink since VmCowPages
+  // refcount may already be 0, but ReplacePage() is.  For loaned page reclaim we don't have the
+  // option of just recognizing that the VmCowPages is deleting soon and moving on - we must get
+  // the page.
+  struct VmoContainerBacklink {
+    fbl::RefPtr<VmCowPagesContainer> cow_container;
+    vm_page_t* page = nullptr;
+    uint64_t offset = 0;
+  };
+
+  // Called while the loaning VmCowPages is known referenced, so the loaning VmCowPages won't be
+  // running its destructor.  The owning_cow parameter can be nullptr, if the caller doesn't care
+  // to exclude the owning cow from being returned, or if there isn't an owning cow.  We use a
+  // VmoContainerBacklink instead of VmoBacklink so that it remains possible to get a backlink
+  // until _after_ all the pages have been removed from the VmCowPages and have become FREE.  Not
+  // all methods are safe to call via a referenced VmoContainerBacklink, but ReplacePage() is.
+  fitx::result<zx_status_t, ktl::optional<VmoContainerBacklink>> GetCowWithReplaceablePage(
+      vm_page_t* page, VmCowPages* owning_cow, zx_duration_t unpin_age_threshold);
 
   // Helper struct to group pager-backed queue length counts returned by GetPagerQueueCounts.
   struct PagerCounts {

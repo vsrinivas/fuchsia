@@ -191,9 +191,12 @@ class BatchPQRemove {
   list_node_t* freed_list_ = nullptr;
 };
 
-VmCowPages::VmCowPages(fbl::RefPtr<VmHierarchyState> hierarchy_state_ptr, uint32_t options,
+VmCowPages::VmCowPages(ktl::unique_ptr<VmCowPagesContainer> cow_container,
+                       fbl::RefPtr<VmHierarchyState> hierarchy_state_ptr, uint32_t options,
                        uint32_t pmm_alloc_flags, uint64_t size, fbl::RefPtr<PageSource> page_source)
     : VmHierarchyBase(ktl::move(hierarchy_state_ptr)),
+      container_(fbl::AdoptRef(cow_container.release())),
+      debug_retained_raw_container_(container_.get()),
       options_(options),
       size_(size),
       pmm_alloc_flags_(pmm_alloc_flags),
@@ -203,7 +206,7 @@ VmCowPages::VmCowPages(fbl::RefPtr<VmHierarchyState> hierarchy_state_ptr, uint32
   DEBUG_ASSERT(!(options & kUnpinOnDelete));
 }
 
-VmCowPages::~VmCowPages() {
+void VmCowPages::fbl_recycle() {
   canary_.Assert();
 
   // To prevent races with a hidden parent creation or merging, it is necessary to hold the lock
@@ -212,75 +215,97 @@ VmCowPages::~VmCowPages() {
   // a VmCowPages to be dropped in this code whilst holding the lock. The single place we drop a
   // a VmCowPages reference that could trigger a deletion is in this destructor when parent_ is
   // dropped, but that is always done without holding the lock.
-  Guard<Mutex> guard{&lock_};
-  VMO_VALIDATION_ASSERT(DebugValidatePageSplitsHierarchyLocked());
-  if (is_unpin_on_delete_locked()) {
-    DEBUG_ASSERT(!is_slice_locked());
-    // Unpin all present pages.
-    UnpinLocked(0, size_, /*allow_gaps=*/true);
-  }
-  // If we're not a hidden vmo, then we need to remove ourself from our parent. This needs
-  // to be done before emptying the page list so that a hidden parent can't merge into this
-  // vmo and repopulate the page list.
-  if (!is_hidden_locked()) {
-    if (parent_) {
-      parent_->RemoveChildLocked(this);
-      guard.Release();
-      // Avoid recursing destructors when we delete our parent by using the deferred deletion
-      // method. See common in parent else branch for why we can avoid this on a hidden parent.
-      if (!parent_->is_hidden_locked()) {
-        hierarchy_state_ptr_->DoDeferredDelete(ktl::move(parent_));
-      }
+  {  // scope guard
+    Guard<Mutex> guard{&lock_};
+    VMO_VALIDATION_ASSERT(DebugValidatePageSplitsHierarchyLocked());
+    if (is_unpin_on_delete_locked()) {
+      DEBUG_ASSERT(!is_slice_locked());
+      // Unpin all present pages.
+      UnpinLocked(0, size_, /*allow_gaps=*/true);
     }
-  } else {
-    // Most of the hidden vmo's state should have already been cleaned up when it merged
-    // itself into its child in ::RemoveChildLocked.
-    DEBUG_ASSERT(children_list_len_ == 0);
-    DEBUG_ASSERT(page_list_.HasNoPages());
-    // Even though we are hidden we might have a parent. Unlike in the other branch of this if we
-    // do not need to perform any deferred deletion. The reason for this is that the deferred
-    // deletion mechanism is intended to resolve the scenario where there is a chain of 'one ref'
-    // parent pointers that will chain delete. However, with hidden parents we *know* that a hidden
-    // parent has two children (and hence at least one other ref to it) and so we cannot be in a
-    // one ref chain. Even if N threads all tried to remove children from the hierarchy at once,
-    // this would ultimately get serialized through the lock and the hierarchy would go from
-    //
-    //          [..]
-    //           /
-    //          A                             [..]
-    //         / \                             /
-    //        B   E           TO         B    A
-    //       / \                        /    / \.
-    //      C   D                      C    D   E
-    //
-    // And so each serialized deletion breaks of a discrete two VMO chain that can be safely
-    // finalized with one recursive step.
-  }
+    // If we're not a hidden vmo, then we need to remove ourself from our parent. This needs
+    // to be done before emptying the page list so that a hidden parent can't merge into this
+    // vmo and repopulate the page list.
+    if (!is_hidden_locked()) {
+      if (parent_) {
+        AssertHeld(parent_->lock_);
+        parent_->RemoveChildLocked(this);
+        // Avoid recursing destructors when we delete our parent by using the deferred deletion
+        // method. See common in parent else branch for why we can avoid this on a hidden parent.
+        if (!parent_->is_hidden_locked()) {
+          guard.CallUnlocked([this, parent = std::move(parent_)]() mutable {
+            hierarchy_state_ptr_->DoDeferredDelete(std::move(parent));
+          });
+        }
+      }
+    } else {
+      // Most of the hidden vmo's state should have already been cleaned up when it merged
+      // itself into its child in ::RemoveChildLocked.
+      DEBUG_ASSERT(children_list_len_ == 0);
+      DEBUG_ASSERT(page_list_.HasNoPages());
+      // Even though we are hidden we might have a parent. Unlike in the other branch of this if we
+      // do not need to perform any deferred deletion. The reason for this is that the deferred
+      // deletion mechanism is intended to resolve the scenario where there is a chain of 'one ref'
+      // parent pointers that will chain delete. However, with hidden parents we *know* that a
+      // hidden parent has two children (and hence at least one other ref to it) and so we cannot be
+      // in a one ref chain. Even if N threads all tried to remove children from the hierarchy at
+      // once, this would ultimately get serialized through the lock and the hierarchy would go from
+      //
+      //          [..]
+      //           /
+      //          A                             [..]
+      //         / \                             /
+      //        B   E           TO         B    A
+      //       / \                        /    / \.
+      //      C   D                      C    D   E
+      //
+      // And so each serialized deletion breaks of a discrete two VMO chain that can be safely
+      // finalized with one recursive step.
+    }
 
-  RemoveFromDiscardableListLocked();
+    RemoveFromDiscardableListLocked();
 
-  // Cleanup page lists and page sources.
-  list_node_t list;
-  list_initialize(&list);
+    __UNINITIALIZED StackOwnedLoanedPagesInterval raii_interval;
 
-  __UNINITIALIZED BatchPQRemove page_remover(&list);
-  // free all of the pages attached to us
-  page_list_.RemoveAllPages([&page_remover](vm_page_t* page) {
-    ASSERT(page->object.pin_count == 0);
-    page_remover.Push(page);
-  });
+    // Cleanup page lists and page sources.
+    list_node_t list;
+    list_initialize(&list);
 
-  if (page_source_) {
-    page_source_->Close();
-  }
-  page_remover.Flush();
+    __UNINITIALIZED BatchPQRemove page_remover(&list);
+    // free all of the pages attached to us
+    page_list_.RemoveAllPages([&page_remover](vm_page_t* page) {
+      ASSERT(page->object.pin_count == 0);
+      page_remover.Push(page);
+    });
+    page_remover.Flush();
 
-  pmm_free(&list);
+    if (page_source_) {
+      page_source_->Close();
+    }
 
-  // Update counters
-  if (is_latency_sensitive_) {
-    vm_vmo_latency_sensitive_destroyed.Add(1);
-  }
+    pmm_free(&list);
+
+    // Update counters
+    if (is_latency_sensitive_) {
+      vm_vmo_latency_sensitive_destroyed.Add(1);
+    }
+  }  // ~guard
+
+  // Release the ref that VmCowPages keeps on VmCowPagesContainer.
+  container_.reset();
+}
+
+VmCowPages::~VmCowPages() {
+  // All the explicit cleanup happens in fbl_recycle().  Only asserts and implicit cleanup happens
+  // in the destructor.
+  canary_.Assert();
+  // While use a ktl::optional<VmCowPages> in VmCowPagesContainer, we don't intend to reset() it
+  // early.
+  DEBUG_ASSERT(0 == ref_count_debug());
+  // We only intent to delete VmCowPages when the container is also deleting, and the container
+  // won't be deleting unless it's ref is 0.
+  DEBUG_ASSERT(!container_);
+  DEBUG_ASSERT(0 == debug_retained_raw_container_->ref_count_debug());
 }
 
 bool VmCowPages::DedupZeroPage(vm_page_t* page, uint64_t offset) {
@@ -380,8 +405,7 @@ uint32_t VmCowPages::ScanForZeroPagesLocked(bool reclaim) {
 zx_status_t VmCowPages::Create(fbl::RefPtr<VmHierarchyState> root_lock, uint32_t pmm_alloc_flags,
                                uint64_t size, fbl::RefPtr<VmCowPages>* cow_pages) {
   fbl::AllocChecker ac;
-  auto cow = fbl::AdoptRef<VmCowPages>(
-      new (&ac) VmCowPages(ktl::move(root_lock), 0, pmm_alloc_flags, size, nullptr));
+  auto cow = NewVmCowPages(&ac, ktl::move(root_lock), 0, pmm_alloc_flags, size, nullptr);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -393,8 +417,7 @@ zx_status_t VmCowPages::CreateExternal(fbl::RefPtr<PageSource> src,
                                        fbl::RefPtr<VmHierarchyState> root_lock, uint64_t size,
                                        fbl::RefPtr<VmCowPages>* cow_pages) {
   fbl::AllocChecker ac;
-  auto cow = fbl::AdoptRef<VmCowPages>(
-      new (&ac) VmCowPages(ktl::move(root_lock), 0, PMM_ALLOC_FLAG_ANY, size, ktl::move(src)));
+  auto cow = NewVmCowPages(&ac, ktl::move(root_lock), 0, PMM_ALLOC_FLAG_ANY, size, ktl::move(src));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -471,8 +494,7 @@ zx_status_t VmCowPages::CreateChildSliceLocked(uint64_t offset, uint64_t size,
   fbl::AllocChecker ac;
   // Slices just need the slice option and default alloc flags since they will propagate any
   // operation up to a parent and use their options and alloc flags.
-  auto slice = fbl::AdoptRef<VmCowPages>(
-      new (&ac) VmCowPages(hierarchy_state_ptr_, kSlice, PMM_ALLOC_FLAG_ANY, size, nullptr));
+  auto slice = NewVmCowPages(&ac, hierarchy_state_ptr_, kSlice, PMM_ALLOC_FLAG_ANY, size, nullptr);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -587,35 +609,32 @@ zx_status_t VmCowPages::CreateCloneLocked(CloneType type, uint64_t offset, uint6
 
   if (type == CloneType::Snapshot) {
     // We need two new VmCowPages for our two children. To avoid destructor of the first being
-    // invoked if the second fails we separately perform allocations and construction.
-    union VmCowPagesPlaceHolder {
-      VmCowPagesPlaceHolder() {}
-      ~VmCowPagesPlaceHolder() {}
-
-      uint8_t trivially_destructible_default_variant;
-      VmCowPages vm_cow_pages;
-    };
+    // invoked if the second fails we separately perform allocations and construction.  It's fine
+    // for the destructor of VmCowPagesContainer to run since the optional VmCowPages isn't emplaced
+    // yet so the VmCowPages destructor doesn't run if the second fails allocation.
     fbl::AllocChecker ac;
-    ktl::unique_ptr<VmCowPagesPlaceHolder> left_child_placeholder =
-        ktl::make_unique<VmCowPagesPlaceHolder>(&ac);
+    ktl::unique_ptr<VmCowPagesContainer> left_child_placeholder =
+        ktl::make_unique<VmCowPagesContainer>(&ac);
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
     }
-    ktl::unique_ptr<VmCowPagesPlaceHolder> right_child_placeholder =
-        ktl::make_unique<VmCowPagesPlaceHolder>(&ac);
+    ktl::unique_ptr<VmCowPagesContainer> right_child_placeholder =
+        ktl::make_unique<VmCowPagesContainer>(&ac);
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
     }
+
     // At this point cow_pages must *not* be destructed in this function, as doing so would cause a
     // deadlock. That means from this point on we *must* succeed and any future error checking needs
     // to be added prior to creation.
 
     fbl::RefPtr<VmCowPages> left_child =
-        fbl::AdoptRef<VmCowPages>(new (&left_child_placeholder.release()->vm_cow_pages) VmCowPages(
-            hierarchy_state_ptr_, 0, pmm_alloc_flags_, size_, nullptr));
+        NewVmCowPages(std::move(left_child_placeholder), hierarchy_state_ptr_, 0, pmm_alloc_flags_,
+                      size_, nullptr);
     fbl::RefPtr<VmCowPages> right_child =
-        fbl::AdoptRef<VmCowPages>(new (&right_child_placeholder.release()->vm_cow_pages) VmCowPages(
-            hierarchy_state_ptr_, 0, pmm_alloc_flags_, size, nullptr));
+        NewVmCowPages(std::move(right_child_placeholder), hierarchy_state_ptr_, 0, pmm_alloc_flags_,
+                      size, nullptr);
+
     AssertHeld(left_child->lock_ref());
     AssertHeld(right_child->lock_ref());
 
@@ -637,8 +656,7 @@ zx_status_t VmCowPages::CreateCloneLocked(CloneType type, uint64_t offset, uint6
     return ZX_OK;
   } else {
     fbl::AllocChecker ac;
-    auto cow_pages = fbl::AdoptRef<VmCowPages>(
-        new (&ac) VmCowPages(hierarchy_state_ptr_, 0, pmm_alloc_flags_, size, nullptr));
+    auto cow_pages = NewVmCowPages(&ac, hierarchy_state_ptr_, 0, pmm_alloc_flags_, size, nullptr);
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
     }
@@ -3810,4 +3828,52 @@ uint64_t VmCowPages::ReclaimPagesFromDiscardableVmos(uint64_t target_pages,
     }
   }
   return total_pages_discarded;
+}
+
+VmCowPagesContainer* VmCowPages::raw_container() {
+  DEBUG_ASSERT(container_);
+  return container_.get();
+}
+
+// This takes all the constructor parameters including the VmCowPagesContainer, which avoids any
+// possiblity of allocation failure.
+template <class... Args>
+fbl::RefPtr<VmCowPages> VmCowPages::NewVmCowPages(
+    ktl::unique_ptr<VmCowPagesContainer> cow_container, Args&&... args) {
+  VmCowPagesContainer* raw_cow_container = cow_container.get();
+  cow_container->EmplaceCow(ktl::move(cow_container), std::forward<Args>(args)...);
+  auto cow = fbl::AdoptRef<VmCowPages>(&raw_cow_container->cow());
+  return cow;
+}
+
+// This takes all the constructor parameters except for the VmCowPagesContainer which is allocated.
+// The AllocChecker will reflect whether allocation was successful.
+template <class... Args>
+fbl::RefPtr<VmCowPages> VmCowPages::NewVmCowPages(fbl::AllocChecker* ac, Args&&... args) {
+  auto cow_container = ktl::make_unique<VmCowPagesContainer>(ac);
+  // Don't check via the AllocChecker so that the caller is still forced to check via the
+  // AllocChecker.
+  if (!cow_container) {
+    return nullptr;
+  }
+  return NewVmCowPages(ktl::move(cow_container), std::forward<Args>(args)...);
+}
+
+VmCowPagesContainer::~VmCowPagesContainer() {
+  if (is_cow_present_) {
+    reinterpret_cast<VmCowPages*>(&cow_space_)->~VmCowPages();
+    is_cow_present_ = false;
+  }
+}
+
+template <class... Args>
+void VmCowPagesContainer::EmplaceCow(Args&&... args) {
+  DEBUG_ASSERT(!is_cow_present_);
+  new (reinterpret_cast<VmCowPages*>(&cow_space_)) VmCowPages(std::forward<Args>(args)...);
+  is_cow_present_ = true;
+}
+
+VmCowPages& VmCowPagesContainer::cow() {
+  DEBUG_ASSERT(is_cow_present_);
+  return *reinterpret_cast<VmCowPages*>(&cow_space_);
 }

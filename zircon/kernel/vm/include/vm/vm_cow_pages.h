@@ -43,10 +43,13 @@ class VmCowPages final
           // Guarded by lock_.
           fbl::TaggedDoublyLinkedListable<VmCowPages*, internal::ChildListTag>,
           // Guarded by DiscardableVmosLock::Get().
-          fbl::TaggedDoublyLinkedListable<VmCowPages*, internal::DiscardableListTag>> {
+          fbl::TaggedDoublyLinkedListable<VmCowPages*, internal::DiscardableListTag>>,
+      public fbl::Recyclable<VmCowPages> {
  public:
   static zx_status_t Create(fbl::RefPtr<VmHierarchyState> root_lock, uint32_t pmm_alloc_flags,
                             uint64_t size, fbl::RefPtr<VmCowPages>* cow_pages);
+  // Destructor is public only to allow std::is_destructible_v<> to say true.  Don't call directly.
+  ~VmCowPages() override;
 
   static zx_status_t CreateExternal(fbl::RefPtr<PageSource> src,
                                     fbl::RefPtr<VmHierarchyState> root_lock, uint64_t size,
@@ -301,14 +304,30 @@ class VmCowPages final
   // Walks up the parent tree and returns the root, or |this| if there is no parent.
   const VmCowPages* GetRootLocked() const TA_REQ(lock_);
 
- private:
-  // private constructor (use Create())
-  VmCowPages(fbl::RefPtr<VmHierarchyState> root_lock, uint32_t options, uint32_t pmm_alloc_flags,
-             uint64_t size, fbl::RefPtr<PageSource> page_source);
+  // Only for use by loaned page reclaim.
+  VmCowPagesContainer* raw_container();
 
-  // private destructor, only called from refptr
-  ~VmCowPages() override;
-  friend fbl::RefPtr<VmCowPages>;
+ private:
+  // private constructor (use Create...())
+  VmCowPages(ktl::unique_ptr<VmCowPagesContainer> cow_container,
+             fbl::RefPtr<VmHierarchyState> root_lock, uint32_t options, uint32_t pmm_alloc_flags,
+             uint64_t size, fbl::RefPtr<PageSource> page_source);
+  friend class VmCowPagesContainer;
+
+  // This takes all the constructor parameters including the VmCowPagesContainer, which avoids any
+  // possiblity of allocation failure.
+  template <class... Args>
+  static fbl::RefPtr<VmCowPages> NewVmCowPages(ktl::unique_ptr<VmCowPagesContainer> cow_container,
+                                               Args&&... args);
+
+  // This takes all the constructor parameters except for the VmCowPagesContainer which is
+  // allocated. The AllocChecker will reflect whether allocation was successful.
+  template <class... Args>
+  static fbl::RefPtr<VmCowPages> NewVmCowPages(fbl::AllocChecker* ac, Args&&... args);
+
+  // fbl_recycle() does all the explicit cleanup, and the destructor does all the implicit cleanup.
+  void fbl_recycle() override;
+  friend class fbl::Recyclable<VmCowPages>;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(VmCowPages);
 
@@ -595,6 +614,14 @@ class VmCowPages final
   // magic value
   fbl::Canary<fbl::magic("VMCP")> canary_;
 
+  // VmCowPages keeps this ref on VmCowPagesContainer until the end of VmCowPages::fbl_recycle().
+  // This allows loaned page reclaim to upgrade a raw container pointer until _after_ all the pages
+  // have been removed from the VmCowPages.  This way there's always something for loaned page
+  // reclaim to block on that'll do priority inheritance to the thread that needs to finish moving
+  // pages.
+  fbl::RefPtr<VmCowPagesContainer> container_;
+  VmCowPagesContainer* debug_retained_raw_container_ = nullptr;
+
   // |options_| is a bitmask of:
   static constexpr uint32_t kHidden = (1u << 2);
   static constexpr uint32_t kSlice = (1u << 3);
@@ -726,6 +753,73 @@ class VmCowPages final
   // be advanced (by calling AdvanceIf()) before removing any element from the discardable lists.
   static fbl::DoublyLinkedList<Cursor*> discardable_vmos_cursors_
       TA_GUARDED(DiscardableVmosLock::Get());
+};
+
+// VmCowPagesContainer exists to essentially split the VmCowPages ref_count_ into two counts, so
+// that it remains possible to upgrade from a raw container pointer until after the VmCowPages
+// fbl_recycle() has mostly completed and has removed and freed all the pages.
+//
+// This way, if we can upgrade, then we can call ReplacePage() and it'll either work or the page
+// will already have been removed, or we can't upgrade, in which case all the pages have already
+// been removed and freed.
+//
+// In contrast if we were to attempt upgrade of a raw VmCowPages pointer to VmCowPages ref, the
+// ability to upgrade would disappear before the backlink is removed to make room for a
+// StackOnwedLoanedPagesInterval, so loaned page reclaim would need to wait (somehow) for the page
+// to be removed from the VmCowPages and at least have a backlink.  That wait is problematic since
+// it would also need to propagate priority inheritance properly like StackOwnedLoanedPagesInterval
+// does, but the interval begins at the moment the refcount goes from 1 to 0, and reliably wrapping
+// that 1 to 0 transition, while definitely posssible with some RefPtr changes etc etc, is more
+// complicated than having a VmCowPagesContainer whose ref can still be obtained up until after the
+// pages have become FREE.  There may of course be yet other options that are overall better; please
+// suggest if you think of one.
+//
+// All the explicit cleanup of VmCowPages happens in VmCowPages::fbl_recycle(), with the final
+// explicit fbl_recycle() step being release of the containing VmCowPagesContainer which in turn
+// triggers ~VmCowPages which finishes up with implicit cleanup of VmCowPages (but possibly delayed
+// slightly by loaned page reclaimer(s) that can have a VmCowPagesContainer ref transiently).
+//
+// Those paying close attention may note that under high load with potential low priority thread
+// starvation (with a hypothetical scheduling policy that is assumed to let thread starvation be
+// possible), each low priority loaned page reclaiming thread may essentially be thought of as
+// having up to one VmCowPagesContainer + contained de-populated VmCowPages as additional memory
+// overhead that can be thought of as being essentially attributed to the memory cost of the low
+// priority thread.  I think this is completely fine and completely analogous to many other similar
+// situations.  In a sense it's priority inversion of the rest of cleanup of the VmCowPages memory,
+// but since it's a depopulated VmCowPages, the symptom isn't enough of a problem to justify any
+// mitigation other than mentally accounting for it in the low priority thread's memory cost.  We
+// should be careful not to let a refcount held by a lower priority thread potentially keep
+// unbounded memory allocated of course, but in this case it's well bounded.
+//
+// We restrict visibility of VmCowPages via its VmCowPagesContainer, to control which methods are
+// ok to call on the VmCowPages via a VmCowPagesContainer ref while lacking any direct VmCowPages
+// ref.  The methods that are ok to call with only a VmCowPagesContainer ref are called via a
+// corresponding method on VmCowPagesContainer.
+class VmCowPagesContainer : public fbl::RefCountedUpgradeable<VmCowPagesContainer> {
+ public:
+  VmCowPagesContainer() = default;
+  ~VmCowPagesContainer();
+
+  // TODO: Add (only) methods here which are ok to call on a VmCowPages between VmCowPages ref going
+  // from 1 to 0 and VmCowPages::fbl_recycle() (or even up to ~VmCowPages if something is preventing
+  // VmCowPagesContainer from destructing VmCowPages).  For example, a method to replace a loaned
+  // page with a non-loaned page.
+
+ private:
+  friend class VmCowPages;
+
+  // We'd use ktl::optional<VmCowPages> or std::variant<monostate, VmCowPages>, but both those
+  // require is_constructible_v<VmCowPages, ...>, which in turn requires the VmCowPages constructor
+  // to be public, which we don't want.
+
+  // Used for construction of contained VmCowPages.
+  template <class... Args>
+  void EmplaceCow(Args&&... args);
+
+  VmCowPages& cow();
+
+  ktl::aligned_storage_t<sizeof(VmCowPages), alignof(VmCowPages)> cow_space_;
+  bool is_cow_present_ = false;
 };
 
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_VM_COW_PAGES_H_

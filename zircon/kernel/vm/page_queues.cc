@@ -4,8 +4,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include "include/vm/page_queues.h"
+
 #include <lib/counters.h>
 #include <lib/fit/defer.h>
+#include <lib/zircon-internal/macros.h>
 
 #include <fbl/ref_counted_upgradeable.h>
 #include <kernel/auto_preempt_disabler.h>
@@ -1001,5 +1004,181 @@ PageQueues::ActiveInactiveCounts PageQueues::GetActiveInactiveCountsLocked() con
     return ActiveInactiveCounts{.cached = false,
                                 .active = static_cast<uint64_t>(active_queue_count_),
                                 .inactive = static_cast<uint64_t>(inactive_queue_count_)};
+  }
+}
+
+fitx::result<zx_status_t, ktl::optional<PageQueues::VmoContainerBacklink>>
+PageQueues::GetCowWithReplaceablePage(vm_page_t* page, VmCowPages* owning_cow,
+                                      zx_duration_t unpin_age_threshold) {
+  // Wait for the page to not be in a transient state.  This is in a loop, since the wait happens
+  // outside the lock, so another thread doing commit/decommit on owning_cow can cause the page
+  // state to change, potentially multiple times.
+  //
+  // While it's possible for another thread that's concurrently committing/decommitting this page
+  // to/from owning_cow, or moving the page from one VmCowPages to another without going through
+  // FREE, to interfere to some extent with this thread's progress toward a terminal state in this
+  // loop (and the caller's loop), this interference is fairly similar to page eviction interfering
+  // with progress of commit of a pager-backed range.  That said, we mitigate here by tracking which
+  // cases we've seen that we only expect to see once in the absence of commit/decommit interference
+  // by another thread.  Thanks to loan_cancelled, we can limit all the wait required cases to a max
+  // of once.  This mitigation doesn't try to maximally detect interference and minimize iterations
+  // but the mitigation does limit iterations to a finite number.
+  // DO NOT SUBMIT:
+  // complain on excessive loop iterations / duration looping
+  // complain on excessive lifetime duration of StackOwnedLoanedPagesInterval, probably during
+  // destructor, but consider if there's any cheap and simple enough way to complain if it's just
+  // existing too long without any pre-existing calls on it.
+  while (true) {
+    // This is just for asserting that we don't end up trying to wait when we didn't intend to.
+    bool wait_on_stack_ownership = false;
+    {  // scope guard
+      Guard<CriticalMutex> guard{&lock_};
+      // While holding lock_, we can safely add an event to be notified, if needed.  While a page
+      // state transition from ALLOC to OBJECT, and from OBJECT with no VmCowPages to OBJECT with a
+      // VmCowPages, are both guarded by lock_, a transition to FREE is not.  So we must check
+      // again, in an ordered fashion (using PmmNode lock not just "relaxed" atomic) for the page
+      // being in FREE state after we add an event, to ensure the transition to FREE doesn't miss
+      // the added event.  If a page transitions back out of FREE due to actions by other threads,
+      // the lock_ protects the page's object field from being overwritten by an event being added.
+      vm_page_state state = page->state();
+      // If owning_cow, we know the owning_cow destructor can't run, so the only valid page
+      // states while FREE or borrowed by a VmCowPages and not pinned are FREE, ALLOC, OBJECT.
+      //
+      // If !owning_cow, the set of possible states isn't constrained, and we don't try to wait for
+      // the page.
+      switch (state) {
+        case vm_page_state::FREE:
+          // No cow, but still success.  The fact that we were holding lock_ while reading page
+          // state isn't relevant to the transition to FREE; we just care that we'll notice FREE
+          // somewhere in the loop.
+          //
+          // We care that we will notice transition _to_ FREE that stays FREE indefinitely via this
+          // check.  Other threads doing commit/decommit on owning_cow can cause this check to miss
+          // a transient FREE state, but we avoid getting stuck waiting indefinitely.
+          return fitx::ok(ktl::nullopt);
+        case vm_page_state::OBJECT: {
+          // Sub-cases:
+          //  * Using cow.
+          //  * Loaning cow.
+          //  * No cow (page moving from cow to cow).
+          VmCowPages* cow = reinterpret_cast<VmCowPages*>(page->object.get_object());
+          if (!cow) {
+            if (!owning_cow) {
+              // If there's not a specific owning_cow, then we can't be as certain of the states the
+              // page may reach.  For example the page may get used by something other than a
+              // VmCowPages, which wouldn't trigger the event.  So we can't use the event mechanism.
+              //
+              // This is a success case.  We checked if there was a using cow at the moment, and
+              // there wasn't.
+              return fitx::ok(ktl::nullopt);
+            }
+            // Page is moving from cow to cow, and/or is on the way to FREE, so wait below for
+            // page to get a new VmCowPages or become FREE.  We still have to synchronize further
+            // below using thread_lock, since OBJECT to FREE doesn't hold PageQueues lock_.
+            wait_on_stack_ownership = true;
+            break;
+          } else if (cow == owning_cow) {
+            DEBUG_ASSERT(owning_cow);
+            // Another thread has already put this page in owning_cow, so there is no borrowing
+            // cow.  Success.
+            return fitx::ok(ktl::nullopt);
+          } else {
+            // At this point the page may have pin_count != 0.  We have to check in terms of which
+            // queue here, since we can't acquire the VmCowPages lock (wrong order).
+            if (!owning_cow) {
+              if (page->object.get_page_queue_ref().load(ktl::memory_order_relaxed) ==
+                  PageQueueWired) {
+                // A pinned page is not replaceable.
+                return fitx::ok(ktl::nullopt);
+              }
+            }
+            // There is a using/borrowing cow, but we may not be able to get a ref to it, if it's
+            // already destructing.  We actually try to get a ref to the VmCowPagesContainer instead
+            // since that allows us to get a ref successfully up until _after_ the page has moved to
+            // FREE, avoiding any need to wait, and avoiding stuff needed to support such a wait.
+            //
+            // We're under PageQueues lock, so this value is stable at the moment, but by the time
+            // the caller acquires the cow lock this page can be elsewhere (in a different
+            // VmCowPages, or at a different offset of this VmCowPages).  Very rarely this offset
+            // might still happen to be "correct" despite the page having been removed and re-added
+            // at the same offset of the same VmCowPages by the time cow->ReplacePage() is called.
+            // The cow->ReplacePage() does a re-check that this page is still at this offset.  The
+            // caller's loop takes care of chasing down the page.
+            uint64_t page_offset = page->object.get_page_offset();
+            // We may be racing with destruction of VMO. As we currently hold PageQueues lock we
+            // know that our back pointer is correct as the VmCowPages has not yet completed
+            // running fbl_recycle() (which has to acquire PageQueues lock to remove the backlink
+            // and then release the ref on its VmCowPagesContainer), so we know it is safe to
+            // attempt to upgrade from a raw VmCowPagesContainer pointer to a VmCowPagesContainer
+            // RefPtr, and that this upgrade will succeed until _after_ the page is FREE.  If
+            // upgrading fails we know the page has already become FREE; in that case we just go
+            // back around the loop since that's almost as efficient and less code than handling
+            // here.
+            VmCowPagesContainer* raw_cow_container = cow->raw_container();
+            VmoContainerBacklink backlink{fbl::MakeRefPtrUpgradeFromRaw(raw_cow_container, guard),
+                                          page, page_offset};
+            if (!backlink.cow_container) {
+              // Existing cow is at least at the end of fbl_recycle().  The page has already become
+              // FREE.  Let the loop handle that since it's less code than handling here and not
+              // significantly more expensive to handle with the loop.
+              continue;
+            } else {
+              // We AddRef(ed) the using cow_container.  Success.  Return the backlink.  The caller
+              // can use this to call cow->ReplacePage(), which is ok to call on a cow with refcount
+              // 0 as long as the caller is holding the backlink's cow_container VmCowPagesContainer
+              // ref.
+              return fitx::ok(backlink);
+            }
+          }
+          break;
+        }
+        case vm_page_state::ALLOC:
+          if (!owning_cow) {
+            // When there's not an owning_cow, we don't know what use the page may be put to, so
+            // we don't know if the page has a StackOwnedLoanedPagesInterval, since those are only
+            // required for intervals involving stack ownership of loaned pages.  Since the caller
+            // isn't strictly required to succeed at replacing a page when !owning_cow, the caller
+            // is ok with a successful "none" here since the page isn't immediately replaceable.
+            return fitx::ok(ktl::nullopt);
+          }
+          // Wait for ALLOC to become OBJECT or FREE.
+          wait_on_stack_ownership = true;
+          break;
+        default:
+          // If owning_cow, we know the owning_cow destructor can't run, so the only valid page
+          // states while FREE or borrowed by a VmCowPages and not pinned are FREE, ALLOC, OBJECT.
+          DEBUG_ASSERT(!owning_cow);
+          // When !owning_cow, the possible page states include all page states.  The caller is only
+          // interested in pages that are both used by a VmCowPages (not transiently stack owned)
+          // and which the caller can immediately replace with a different page, so WIRED state goes
+          // along with the list of other states where the caller can't just replace the page.
+          //
+          // There is no cow with this page as an immediately-replaceable page.
+          return fitx::ok(ktl::nullopt);
+      }
+    }  // ~guard
+    // If we get here, we know that wait_on_stack_ownership is true, and we know that never happens
+    // when !owning_cow.
+    DEBUG_ASSERT(wait_on_stack_ownership);
+    DEBUG_ASSERT(owning_cow);
+
+    StackOwnedLoanedPagesInterval::WaitUntilContiguousPageNotStackOwned(page);
+
+    // At this point, the state of the page has changed, but we don't know how much.  Another thread
+    // doing commit on owning_cow may have finished moving the page into owning_cow.  Yet another
+    // thread may have decommitted the page again, and yet another thread may be using the loaned
+    // page again now despite loan_cancelled having been used.  The page may have been moved to a
+    // destination cow, but may now be moving again.  What we do still know is that the page still
+    // has owning_cow as its underlying owner (owning_cow is a contiguous VmCowPages), thanks to
+    // the ref on owning_cow held by the caller, and how contiguous VmCowPages keep the same
+    // physical pages from creation to fbl_recycle().
+    //
+    // It's still the goal of this method to return the borrowing cow if there is one, or return
+    // success without a borrowing cow if the page is verified to be reclaim-able by the owning_cow
+    // at some point during this method (regardless of whether that remains true).
+    //
+    // Go around again to observe new page state.
+    //
+    // ~thread_lock_guard
   }
 }
