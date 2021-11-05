@@ -9,25 +9,27 @@ use {
     fidl_fuchsia_hardware_power_statecontrol as fstatecontrol, fidl_fuchsia_io as fio,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::server as fserver,
-    fuchsia_component_test::{builder::*, mock},
+    fuchsia_component_test::mock::MockHandles,
     fuchsia_syslog::macros::*,
     fuchsia_zircon as zx,
-    futures::{channel::mpsc, StreamExt, TryFutureExt, TryStreamExt},
+    futures::{channel::mpsc, future::BoxFuture, FutureExt, StreamExt, TryFutureExt, TryStreamExt},
 };
 
-pub fn new_mocks_provider() -> (ComponentSource, mpsc::UnboundedReceiver<Signal>) {
+pub fn new_mocks_provider() -> (
+    impl Fn(MockHandles) -> BoxFuture<'static, Result<(), anyhow::Error>> + Sync + Send + 'static,
+    mpsc::UnboundedReceiver<Signal>,
+) {
     let (send_signals, recv_signals) = mpsc::unbounded();
 
-    let mock = ComponentSource::Mock(mock::Mock::new(move |mock_handles: mock::MockHandles| {
-        Box::pin(run_mocks(send_signals.clone(), mock_handles))
-    }));
+    let mock =
+        move |mock_handles: MockHandles| run_mocks(send_signals.clone(), mock_handles).boxed();
 
     (mock, recv_signals)
 }
 
 async fn run_mocks(
     send_signals: mpsc::UnboundedSender<Signal>,
-    mock_handles: mock::MockHandles,
+    mock_handles: MockHandles,
 ) -> Result<(), Error> {
     let mut fs = fserver::ServiceFs::new();
     let send_admin_signals = send_signals.clone();

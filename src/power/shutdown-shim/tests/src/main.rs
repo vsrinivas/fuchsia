@@ -5,8 +5,13 @@
 use {
     crate::shutdown_mocks::{new_mocks_provider, Admin, Signal},
     anyhow::Error,
-    fidl_fuchsia_hardware_power_statecontrol as fstatecontrol, fuchsia_async as fasync,
-    fuchsia_component_test::{builder::*, mock},
+    fidl_fuchsia_boot as fboot, fidl_fuchsia_device_manager as fdevicemanager,
+    fidl_fuchsia_hardware_power_statecontrol as fstatecontrol, fidl_fuchsia_sys2 as fsys,
+    fuchsia_async as fasync,
+    fuchsia_component_test::{
+        mock::MockHandles, ChildProperties, RealmBuilder, RealmInstance, RouteBuilder,
+        RouteEndpoint,
+    },
     fuchsia_zircon as zx,
     futures::{channel::mpsc, future, StreamExt},
     matches::assert_matches,
@@ -47,86 +52,92 @@ enum RealmVariant {
 // power_manager mocks.
 async fn new_realm(
     variant: RealmVariant,
-) -> Result<(fuchsia_component_test::Realm, mpsc::UnboundedReceiver<Signal>), Error> {
+) -> Result<(RealmInstance, mpsc::UnboundedReceiver<Signal>), Error> {
     let (mocks_provider, recv_signals) = new_mocks_provider();
-    let mut builder = RealmBuilder::new().await?;
+    let builder = RealmBuilder::new().await?;
     builder
-        .add_component("shutdown-shim", ComponentSource::url(SHUTDOWN_SHIM_URL))
+        .add_child("shutdown-shim", SHUTDOWN_SHIM_URL, ChildProperties::new())
         .await?
-        .add_component("mocks-server", mocks_provider)
+        .add_mock_child("mocks-server", mocks_provider, ChildProperties::new())
         .await?
         // Give the shim logging
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.boot.WriteOnlyLog"),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component("shutdown-shim")],
-        })?
+        .add_route(
+            RouteBuilder::protocol_marker::<fboot::WriteOnlyLogMarker>()
+                .source(RouteEndpoint::AboveRoot)
+                .targets(vec![RouteEndpoint::component("shutdown-shim")]),
+        )
+        .await?
         // Expose the shim's statecontrol.Admin so test cases can access it
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.hardware.power.statecontrol.Admin"),
-            source: RouteEndpoint::component("shutdown-shim"),
-            targets: vec![RouteEndpoint::AboveRoot],
-        })?
+        .add_route(
+            RouteBuilder::protocol_marker::<fstatecontrol::AdminMarker>()
+                .source(RouteEndpoint::component("shutdown-shim"))
+                .targets(vec![RouteEndpoint::AboveRoot]),
+        )
+        .await?
         // Give the shim the driver_manager and component_manager mocks, as those are always
         // available to the shim in prod
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.device.manager.SystemStateTransition"),
-            source: RouteEndpoint::component("mocks-server"),
-            targets: vec![RouteEndpoint::component("shutdown-shim")],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.sys2.SystemController"),
-            source: RouteEndpoint::component("mocks-server"),
-            targets: vec![RouteEndpoint::component("shutdown-shim")],
-        })?;
+        .add_route(
+            RouteBuilder::protocol_marker::<fdevicemanager::SystemStateTransitionMarker>()
+                .source(RouteEndpoint::component("mocks-server"))
+                .targets(vec![RouteEndpoint::component("shutdown-shim")]),
+        )
+        .await?
+        .add_route(
+            RouteBuilder::protocol_marker::<fsys::SystemControllerMarker>()
+                .source(RouteEndpoint::component("mocks-server"))
+                .targets(vec![RouteEndpoint::component("shutdown-shim")]),
+        )
+        .await?;
 
     match variant {
         RealmVariant::PowerManagerPresent => {
-            builder.add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.hardware.power.statecontrol.Admin"),
-                source: RouteEndpoint::component("mocks-server"),
-                targets: vec![RouteEndpoint::component("shutdown-shim")],
-            })?;
+            builder
+                .add_route(
+                    RouteBuilder::protocol_marker::<fstatecontrol::AdminMarker>()
+                        .source(RouteEndpoint::component("mocks-server"))
+                        .targets(vec![RouteEndpoint::component("shutdown-shim")]),
+                )
+                .await?;
         }
         RealmVariant::PowerManagerIsntStartedYet => {
             builder
-                .add_component(
+                .add_mock_child(
                     "black-hole",
-                    ComponentSource::Mock(mock::Mock::new(
-                        move |mock_handles: mock::MockHandles| {
-                            Box::pin(async move {
-                                let outgoing_dir_handle = mock_handles.outgoing_dir;
-                                // We want to hold the mock_handles for the lifetime of this mock component, but
-                                // never do anything with them. This will cause FIDL requests to us to go
-                                // unanswered, simulating the environment where a component is unable to launch due
-                                // to pkgfs not coming online.
-                                future::pending::<()>().await;
-                                println!(
-                                    "look, I still have the outgoing dir: {:?}",
-                                    outgoing_dir_handle
-                                );
-                                panic!("the black hole component should never return")
-                            })
-                        },
-                    )),
+                    move |mock_handles: MockHandles| {
+                        Box::pin(async move {
+                            let outgoing_dir_handle = mock_handles.outgoing_dir;
+                            // We want to hold the mock_handles for the lifetime of this mock component, but
+                            // never do anything with them. This will cause FIDL requests to us to go
+                            // unanswered, simulating the environment where a component is unable to launch due
+                            // to pkgfs not coming online.
+                            future::pending::<()>().await;
+                            println!(
+                                "look, I still have the outgoing dir: {:?}",
+                                outgoing_dir_handle
+                            );
+                            panic!("the black hole component should never return")
+                        })
+                    },
+                    ChildProperties::new(),
                 )
                 .await?;
-            builder.add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.hardware.power.statecontrol.Admin"),
-                source: RouteEndpoint::component("black-hole"),
-                targets: vec![RouteEndpoint::component("shutdown-shim")],
-            })?;
+            builder
+                .add_route(
+                    RouteBuilder::protocol_marker::<fstatecontrol::AdminMarker>()
+                        .source(RouteEndpoint::component("black-hole"))
+                        .targets(vec![RouteEndpoint::component("shutdown-shim")]),
+                )
+                .await?;
         }
         RealmVariant::PowerManagerNotPresent => (),
     }
 
-    Ok((builder.build(), recv_signals))
+    Ok((builder.build().await?, recv_signals))
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn power_manager_present_reboot_system_update() -> Result<(), Error> {
-    let (realm, mut recv_signals) = new_realm(RealmVariant::PowerManagerPresent).await?;
-    let realm_instance = realm.create().await?;
+    let (realm_instance, mut recv_signals) = new_realm(RealmVariant::PowerManagerPresent).await?;
     let shim_statecontrol =
         realm_instance.root.connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
@@ -141,8 +152,7 @@ async fn power_manager_present_reboot_system_update() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn power_manager_present_reboot_session_failure() -> Result<(), Error> {
-    let (realm, mut recv_signals) = new_realm(RealmVariant::PowerManagerPresent).await?;
-    let realm_instance = realm.create().await?;
+    let (realm_instance, mut recv_signals) = new_realm(RealmVariant::PowerManagerPresent).await?;
     let shim_statecontrol =
         realm_instance.root.connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
@@ -157,8 +167,7 @@ async fn power_manager_present_reboot_session_failure() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn power_manager_present_reboot_to_bootloader() -> Result<(), Error> {
-    let (realm, mut recv_signals) = new_realm(RealmVariant::PowerManagerPresent).await?;
-    let realm_instance = realm.create().await?;
+    let (realm_instance, mut recv_signals) = new_realm(RealmVariant::PowerManagerPresent).await?;
     let shim_statecontrol =
         realm_instance.root.connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
@@ -170,8 +179,7 @@ async fn power_manager_present_reboot_to_bootloader() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn power_manager_present_reboot_to_recovery() -> Result<(), Error> {
-    let (realm, mut recv_signals) = new_realm(RealmVariant::PowerManagerPresent).await?;
-    let realm_instance = realm.create().await?;
+    let (realm_instance, mut recv_signals) = new_realm(RealmVariant::PowerManagerPresent).await?;
     let shim_statecontrol =
         realm_instance.root.connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
@@ -183,8 +191,7 @@ async fn power_manager_present_reboot_to_recovery() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn power_manager_present_poweroff() -> Result<(), Error> {
-    let (realm, mut recv_signals) = new_realm(RealmVariant::PowerManagerPresent).await?;
-    let realm_instance = realm.create().await?;
+    let (realm_instance, mut recv_signals) = new_realm(RealmVariant::PowerManagerPresent).await?;
     let shim_statecontrol =
         realm_instance.root.connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
@@ -196,8 +203,7 @@ async fn power_manager_present_poweroff() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn power_manager_present_mexec() -> Result<(), Error> {
-    let (realm, mut recv_signals) = new_realm(RealmVariant::PowerManagerPresent).await?;
-    let realm_instance = realm.create().await?;
+    let (realm_instance, mut recv_signals) = new_realm(RealmVariant::PowerManagerPresent).await?;
     let shim_statecontrol =
         realm_instance.root.connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
@@ -211,8 +217,7 @@ async fn power_manager_present_mexec() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn power_manager_present_suspend_to_ram() -> Result<(), Error> {
-    let (realm, mut recv_signals) = new_realm(RealmVariant::PowerManagerPresent).await?;
-    let realm_instance = realm.create().await?;
+    let (realm_instance, mut recv_signals) = new_realm(RealmVariant::PowerManagerPresent).await?;
     let shim_statecontrol =
         realm_instance.root.connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
@@ -224,8 +229,8 @@ async fn power_manager_present_suspend_to_ram() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn power_manager_missing_poweroff() -> Result<(), Error> {
-    let (realm, mut recv_signals) = new_realm(RealmVariant::PowerManagerIsntStartedYet).await?;
-    let realm_instance = realm.create().await?;
+    let (realm_instance, mut recv_signals) =
+        new_realm(RealmVariant::PowerManagerIsntStartedYet).await?;
     let shim_statecontrol =
         realm_instance.root.connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
@@ -246,8 +251,8 @@ async fn power_manager_missing_poweroff() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn power_manager_missing_reboot_system_update() -> Result<(), Error> {
-    let (realm, mut recv_signals) = new_realm(RealmVariant::PowerManagerIsntStartedYet).await?;
-    let realm_instance = realm.create().await?;
+    let (realm_instance, mut recv_signals) =
+        new_realm(RealmVariant::PowerManagerIsntStartedYet).await?;
     let shim_statecontrol =
         realm_instance.root.connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
@@ -269,8 +274,8 @@ async fn power_manager_missing_reboot_system_update() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn power_manager_missing_mexec() -> Result<(), Error> {
-    let (realm, mut recv_signals) = new_realm(RealmVariant::PowerManagerIsntStartedYet).await?;
-    let realm_instance = realm.create().await?;
+    let (realm_instance, mut recv_signals) =
+        new_realm(RealmVariant::PowerManagerIsntStartedYet).await?;
     let shim_statecontrol =
         realm_instance.root.connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
@@ -294,8 +299,8 @@ async fn power_manager_missing_mexec() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn power_manager_not_present_poweroff() -> Result<(), Error> {
-    let (realm, mut recv_signals) = new_realm(RealmVariant::PowerManagerNotPresent).await?;
-    let realm_instance = realm.create().await?;
+    let (realm_instance, mut recv_signals) =
+        new_realm(RealmVariant::PowerManagerNotPresent).await?;
     let shim_statecontrol =
         realm_instance.root.connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
@@ -316,8 +321,8 @@ async fn power_manager_not_present_poweroff() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn power_manager_not_present_reboot() -> Result<(), Error> {
-    let (realm, mut recv_signals) = new_realm(RealmVariant::PowerManagerNotPresent).await?;
-    let realm_instance = realm.create().await?;
+    let (realm_instance, mut recv_signals) =
+        new_realm(RealmVariant::PowerManagerNotPresent).await?;
     let shim_statecontrol =
         realm_instance.root.connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
@@ -338,8 +343,8 @@ async fn power_manager_not_present_reboot() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn power_manager_not_present_mexec() -> Result<(), Error> {
-    let (realm, mut recv_signals) = new_realm(RealmVariant::PowerManagerNotPresent).await?;
-    let realm_instance = realm.create().await?;
+    let (realm_instance, mut recv_signals) =
+        new_realm(RealmVariant::PowerManagerNotPresent).await?;
     let shim_statecontrol =
         realm_instance.root.connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
