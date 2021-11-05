@@ -31,7 +31,7 @@ if (is_host) {
       "src/cipd.rs",
       "src/config.rs",
       "src/device.rs",
-      "src/graphic_utils.rs",
+      "src/graphics.rs",
       "src/images.rs",
       "src/lib.rs",
       "src/target.rs",

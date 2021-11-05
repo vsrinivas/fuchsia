@@ -4,7 +4,7 @@
 
 use crate::{
     config::{FfxConfigWrapper, SSH_PRIVATE_KEY, SSH_PUBLIC_KEY},
-    graphic_utils::get_default_graphics,
+    graphics::get_default_graphics,
     images::Images,
     tools::Tools,
 };

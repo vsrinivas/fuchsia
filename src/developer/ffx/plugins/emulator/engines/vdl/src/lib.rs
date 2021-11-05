@@ -39,7 +39,7 @@ pub mod config;
 
 mod cipd;
 mod device;
-mod graphic_utils;
+mod graphics;
 mod images;
 mod target;
 mod tools;
