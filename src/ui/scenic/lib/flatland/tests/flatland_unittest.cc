@@ -2222,6 +2222,58 @@ TEST_F(FlatlandTest, ValidChildToParentFlow) {
   EXPECT_TRUE(child_viewref.value().reference);
 }
 
+TEST_F(FlatlandTest, ContentHasPresentedSignalWaitsForAcquireFences) {
+  std::shared_ptr<Flatland> parent = CreateFlatland();
+  std::shared_ptr<Flatland> child = CreateFlatland();
+
+  ViewportCreationToken parent_token;
+  ViewCreationToken child_token;
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
+
+  const ContentId kLinkId = {1};
+
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+  ViewportProperties properties;
+  properties.set_logical_size({1, 2});
+  parent->CreateViewport(kLinkId, std::move(parent_token), std::move(properties),
+                         child_view_watcher.NewRequest());
+
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+  child->CreateView(std::move(child_token), parent_viewport_watcher.NewRequest());
+
+  std::optional<ChildViewStatus> cvs;
+  child_view_watcher->GetStatus([&cvs](ChildViewStatus status) {
+    ASSERT_EQ(ChildViewStatus::CONTENT_HAS_PRESENTED, status);
+    cvs = status;
+  });
+
+  // The content link status changes as soon as the child presents - the parent does not have to
+  // present.
+  EXPECT_FALSE(cvs.has_value());
+
+  // Present the child with unsignalled acquire fence.
+  PresentArgs args;
+  args.acquire_fences = utils::CreateEventArray(1);
+  auto acquire1_copy = utils::CopyEvent(args.acquire_fences[0]);
+  EXPECT_FALSE(utils::IsEventSignalled(args.acquire_fences[0], ZX_EVENT_SIGNALED));
+  PRESENT_WITH_ARGS(child, std::move(args), true);
+
+  // Hanging get should not be run yet because the fence is not signalled.
+  UpdateLinks(parent->GetRoot());
+  EXPECT_FALSE(cvs.has_value());
+
+  // Signal the acquire fence.
+  EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _));
+  acquire1_copy.signal(0, ZX_EVENT_SIGNALED);
+  RunLoopUntilIdle();
+  ApplySessionUpdatesAndSignalFences();
+
+  // Hanging get should run now.
+  UpdateLinks(parent->GetRoot());
+  EXPECT_TRUE(cvs.has_value());
+  EXPECT_EQ(cvs.value(), ChildViewStatus::CONTENT_HAS_PRESENTED);
+}
+
 TEST_F(FlatlandTest, LayoutOnlyUpdatesChildrenInGlobalTopology) {
   std::shared_ptr<Flatland> parent = CreateFlatland();
   std::shared_ptr<Flatland> child = CreateFlatland();
