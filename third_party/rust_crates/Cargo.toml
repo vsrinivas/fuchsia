@@ -97,8 +97,9 @@ mockall = "0.9"
 nom = { version = "5.0.0", default-features = false, features = ["std", "regexp_macros"] }
 nom_locate = "2.0.0"
 nonzero_ext = "0.3.0"
+num = { version = "0.2", features = ["rand"] }
 num-derive = "0.3"
-num-traits= "0.2.14"
+num-traits = "0.2"
 numtoa = "0.1.0"
 once_cell = { version = "1.2.0", features = ["parking_lot"] }
 parking_lot = "0.9"
@@ -168,9 +169,6 @@ vte = "0.3"
 wasm-bindgen = "0.2.60"
 webpki = "0.21"
 xml-rs = "0.8"
-# move once target-side tests of host-side code have been removed
-# in wayland/scanner:lib and unicode_block_generator :
-num = "0.2"
 unic-char-range = "0.9"
 unic-ucd-block = "0.9"
 unicode-segmentation = "1.0"
@@ -193,7 +191,6 @@ euclid = { version = "0.22.1", features = [ "serde" ] }
 getopts = "0.2"
 hyper-rustls = { version = "0.20.0", default-features = false }
 lipsum = "0.6.0"
-num-bigint = { version = "0.2", features = ["rand"] }
 openat = "0.1.17"
 owning_ref = "0.4.0"
 pretty = "0.5.2"

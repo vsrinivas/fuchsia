@@ -744,7 +744,7 @@ mod tests {
     use {
         super::*,
         anyhow::{format_err, Error},
-        num::FromPrimitive,
+        num_traits::FromPrimitive,
         protocol::{tests::serialize_reports, PacketType, Report, ScalarType},
         std::collections::VecDeque,
         std::rc::Rc,
@@ -894,7 +894,7 @@ mod tests {
     mod fake_device {
         use {
             super::*,
-            num::FromPrimitive,
+            num_traits::FromPrimitive,
             protocol::{tests::*, PacketType, Unit},
         };
 

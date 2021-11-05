@@ -1255,7 +1255,6 @@ dependencies = [
  "nonzero_ext",
  "notify",
  "num",
- "num-bigint",
  "num-derive",
  "num-traits",
  "numtoa",
@@ -2197,6 +2196,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "107b9be86cd2481930688277b675b0114578227f034674726605b8a482d8baf8"
 dependencies = [
  "num-traits",
+ "rand 0.5.6",
 ]
 
 [[package]]

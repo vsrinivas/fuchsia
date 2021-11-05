@@ -7,8 +7,8 @@
 
 use {
     byteorder::{LittleEndian as LE, ReadBytesExt},
-    num::FromPrimitive,
     num_derive::FromPrimitive,
+    num_traits::FromPrimitive,
     std::io::{BufRead, Cursor},
     std::str,
 };

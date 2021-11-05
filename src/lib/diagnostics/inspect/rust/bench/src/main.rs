@@ -19,8 +19,7 @@ use {
     futures::FutureExt,
     inspect_runtime::service::{spawn_tree_server, TreeServerSettings},
     mapped_vmo::Mapping,
-    num::{pow, One},
-    num_traits::FromPrimitive,
+    num::{pow, traits::FromPrimitive, One},
     parking_lot::Mutex,
     paste,
     std::{

@@ -414,12 +414,6 @@ group("num") {
   deps = [ ":num-v0_2_0" ]
 }
 
-if (current_os == "fuchsia") {
-  group("num-bigint") {
-    deps = [ ":num-bigint-v0_2_2" ]
-  }
-}
-
 group("num-derive") {
   deps = [ ":num-derive-v0_3_3($host_toolchain)" ]
 }
@@ -5909,6 +5903,7 @@ rust_library("num-v0_2_0") {
     "-Cextra-filename=-fd01d44f35253e6d",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"num-bigint\"",
+    "--cfg=feature=\"rand\"",
     "--cfg=feature=\"std\"",
   ]
 }
@@ -5934,7 +5929,6 @@ rust_library("num-bigint-v0_2_2") {
     "--edition=2015",
     "-Cmetadata=61c27594421f5cd0",
     "-Cextra-filename=-61c27594421f5cd0",
-    "--cfg=feature=\"default\"",
     "--cfg=feature=\"rand\"",
     "--cfg=feature=\"std\"",
     "--cfg=has_i128",
@@ -5952,6 +5946,7 @@ rust_library("num-complex-v0_2_1") {
 
   deps = []
   deps += [ ":num-traits-v0_2_14" ]
+  deps += [ ":rand-v0_5_6" ]
 
   rustenv = []
 
@@ -5960,6 +5955,7 @@ rust_library("num-complex-v0_2_1") {
     "--edition=2015",
     "-Cmetadata=8a072fd0857db963",
     "-Cextra-filename=-8a072fd0857db963",
+    "--cfg=feature=\"rand\"",
     "--cfg=feature=\"std\"",
     "--cfg=has_i128",
   ]
