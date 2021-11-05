@@ -36,7 +36,7 @@ enum ExposedServices {
     AccessibilityViewRegistry(A11yViewRegistryRequestStream),
     SceneManager(SceneManagerRequestStream),
     InputDeviceRegistry(InputDeviceRegistryRequestStream),
-    /// The requests for `fuchsia.input.keymap.experimental.Configuration`.
+    /// The requests for `fuchsia.input.keymap.Configuration`.
     TextSettingsConfig(fkeymap::ConfigurationRequestStream),
 }
 
@@ -73,10 +73,16 @@ async fn main() -> Result<(), Error> {
         // to the SceneManager, the same way we do for the Gfx branch.
         let display = connect_to_protocol::<fland::FlatlandDisplayMarker>()?;
         let root_flatland = connect_to_protocol::<fland::FlatlandMarker>()?;
+        let pointerinjector_flatland = connect_to_protocol::<fland::FlatlandMarker>()?;
         let a11y_flatland = connect_to_protocol::<fland::FlatlandMarker>()?;
         Arc::new(Mutex::new(Box::new(
-            scene_management::FlatlandSceneManager::new(display, root_flatland, a11y_flatland)
-                .await?,
+            scene_management::FlatlandSceneManager::new(
+                display,
+                pointerinjector_flatland,
+                root_flatland,
+                a11y_flatland,
+            )
+            .await?,
         )))
     } else {
         let scenic = connect_to_protocol::<ScenicMarker>()?;
@@ -101,7 +107,8 @@ async fn main() -> Result<(), Error> {
             }
             ExposedServices::SceneManager(request_stream) => {
                 if let Some(input_receiver) = input_receiver {
-                    fasync::Task::local(handle_manager_request_stream(
+                    fasync::Task::local(handle_scene_manager_request_stream(
+                        use_flatland,
                         request_stream,
                         Arc::clone(&scene_manager),
                         input_receiver,
@@ -160,7 +167,8 @@ async fn main() -> Result<(), Error> {
     Ok(())
 }
 
-pub async fn handle_manager_request_stream(
+pub async fn handle_scene_manager_request_stream(
+    use_flatland: bool,
     mut request_stream: SceneManagerRequestStream,
     scene_manager: Arc<Mutex<Box<dyn scene_management::SceneManager>>>,
     input_device_registry_request_stream_receiver: futures::channel::mpsc::UnboundedReceiver<
@@ -170,6 +178,7 @@ pub async fn handle_manager_request_stream(
     inspect_root: Rc<inspect::Node>,
 ) {
     if let Ok(input_pipeline) = input_pipeline::handle_input(
+        use_flatland,
         scene_manager.clone(),
         input_device_registry_request_stream_receiver,
         text_handler,
@@ -386,6 +395,24 @@ mod tests {
             .await?
             .add_route(
                 RouteBuilder::protocol("fuchsia.ui.scenic.Session")
+                    .source(RouteEndpoint::component("scenic"))
+                    .targets(vec![
+                        RouteEndpoint::AboveRoot,
+                        RouteEndpoint::component("scene_manager"),
+                    ]),
+            )
+            .await?
+            .add_route(
+                RouteBuilder::protocol("fuchsia.ui.composition.Flatland")
+                    .source(RouteEndpoint::component("scenic"))
+                    .targets(vec![
+                        RouteEndpoint::AboveRoot,
+                        RouteEndpoint::component("scene_manager"),
+                    ]),
+            )
+            .await?
+            .add_route(
+                RouteBuilder::protocol("fuchsia.ui.composition.FlatlandDisplay")
                     .source(RouteEndpoint::component("scenic"))
                     .targets(vec![
                         RouteEndpoint::AboveRoot,

@@ -17,9 +17,12 @@ rustc_library("scene_management") {
     "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app-rustc",
     "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition-rustc",
     "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx-rustc",
+    "//sdk/fidl/fuchsia.ui.pointerinjector:fuchsia.ui.pointerinjector-rustc",
+    "//sdk/fidl/fuchsia.ui.pointerinjector.configuration:fuchsia.ui.pointerinjector.configuration-rustc",
     "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy-rustc",
     "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
+    "//src/lib/async-utils",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -42,6 +45,7 @@ rustc_library("scene_management") {
     "src/gfx_scene_manager.rs",
     "src/graphics_utils.rs",
     "src/lib.rs",
+    "src/pointerinjector_config.rs",
     "src/scene_manager.rs",
   ]
 }

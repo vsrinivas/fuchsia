@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_ui_shortcut as ui_shortcut, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_inspect as inspect,
-    fuchsia_syslog::fx_log_warn,
+    fuchsia_syslog::{fx_log_err, fx_log_warn},
     futures::lock::Mutex,
     futures::StreamExt,
     input_pipeline::{
@@ -19,6 +19,7 @@ use {
         keymap,
         shortcut_handler::ShortcutHandler,
         text_settings,
+        touch_injector_handler::TouchInjectorHandler,
     },
     scene_management::{self, SceneManager},
     std::rc::Rc,
@@ -36,6 +37,9 @@ use {
 ///    text settings (e.g. desired keymap IDs).
 /// - `node`: The inspect node to insert individual inspect handler nodes into.
 pub async fn handle_input(
+    // If this is false, it means we're using the legacy Scenic Gfx API, instead of the
+    // new Flatland API.
+    use_flatland: bool,
     scene_manager: Arc<Mutex<Box<dyn SceneManager>>>,
     input_device_registry_request_stream_receiver: futures::channel::mpsc::UnboundedReceiver<
         InputDeviceRegistryRequestStream,
@@ -49,7 +53,8 @@ pub async fn handle_input(
             input_device::InputDeviceType::Touch,
             input_device::InputDeviceType::Keyboard,
         ],
-        input_handlers(scene_manager, text_settings_handler, node).await,
+        build_input_pipeline_assembly(use_flatland, scene_manager, text_settings_handler, node)
+            .await,
     )
     .context("Failed to create InputPipeline.")?;
 
@@ -65,7 +70,39 @@ pub async fn handle_input(
     Ok(input_pipeline)
 }
 
-async fn input_handlers(
+async fn add_flatland_touch_handler(
+    scene_manager: Arc<Mutex<Box<dyn SceneManager>>>,
+    mut assembly: InputPipelineAssembly,
+) -> InputPipelineAssembly {
+    let (setup_proxy, setup_server_end) = fidl::endpoints::create_proxy::<
+        fidl_fuchsia_ui_pointerinjector_configuration::SetupMarker,
+    >()
+    .expect("Failed to create pointerinjector.configuration.Setup channel.");
+    let setup_request_stream =
+        setup_server_end.into_stream().expect("Failed to convert server-end to request-stream.");
+
+    scene_management::handle_pointer_injector_configuration_setup_request_stream(
+        setup_request_stream,
+        scene_manager.clone(),
+    );
+
+    let size = scene_manager.lock().await.get_pointerinjection_display_size();
+    let touch_handler = TouchInjectorHandler::new_with_config_proxy(setup_proxy, size).await;
+    match touch_handler {
+        Ok(touch_handler) => {
+            fasync::Task::local(touch_handler.clone().watch_viewport()).detach();
+            assembly = assembly.add_handler(touch_handler);
+        }
+        Err(e) => fx_log_err!(
+            "build_input_pipeline_assembly(): failed to instantiate TouchInjectorHandler: {:?}",
+            e
+        ),
+    };
+    assembly
+}
+
+async fn build_input_pipeline_assembly(
+    use_flatland: bool,
     scene_manager: Arc<Mutex<Box<dyn SceneManager>>>,
     text_settings_handler: Rc<text_settings::Handler>,
     node: &inspect::Node,
@@ -81,11 +118,16 @@ async fn input_handlers(
         // Shortcut needs to go before IME.
         assembly = add_shortcut_handler(assembly).await;
         assembly = add_ime(assembly).await;
-        {
+
+        if use_flatland {
+            assembly = add_flatland_touch_handler(scene_manager.clone(), assembly).await;
+            assembly = scene_manager.lock().await.add_mouse_handler(sender, assembly).await;
+        } else {
             let locked_scene_manager = scene_manager.lock().await;
             assembly = locked_scene_manager.add_touch_handler(assembly).await;
             assembly = locked_scene_manager.add_mouse_handler(sender, assembly).await;
         }
+
         assembly = add_inspect_handler(node.create_child("input_pipeline_exit"), assembly);
     }
 

@@ -228,6 +228,12 @@ impl SceneManager for GfxSceneManager {
         Err(anyhow::anyhow!("A11y should be configured to use Gfx, not Flatland"))
     }
 
+    fn get_pointerinjection_view_refs(&self) -> (ui_views::ViewRef, ui_views::ViewRef) {
+        // Gfx implementation doesn't use the fuchsia.ui.pointerinjection APIs.
+        // This is very ugly, but the entire Gfx implementation will soon be deleted.
+        panic!("Not implemented in Gfx SceneManager");
+    }
+
     fn set_cursor_position(&mut self, position: input_pipeline::Position) {
         let location = ScreenCoordinates::from_pixels(position.x, position.y, self.display_metrics);
         if self.cursor_node.is_none() {
@@ -243,15 +249,19 @@ impl SceneManager for GfxSceneManager {
         GfxSceneManager::request_present(&self.presentation_sender);
     }
 
+    fn get_pointerinjection_display_size(&self) -> Size {
+        let (width_pixels, height_pixels) = self.display_size.pixels();
+        Size { width: width_pixels, height: height_pixels }
+    }
+
     async fn add_touch_handler(
         &self,
         mut assembly: InputPipelineAssembly,
     ) -> InputPipelineAssembly {
-        let (width_pixels, height_pixels) = self.display_size.pixels();
         if let Ok(touch_handler) = TouchHandler::new(
             self.session.clone(),
             self.compositor_id,
-            Size { width: width_pixels, height: height_pixels },
+            self.get_pointerinjection_display_size(),
         )
         .await
         {
@@ -274,6 +284,14 @@ impl SceneManager for GfxSceneManager {
         );
         assembly = assembly.add_handler(mouse_handler);
         assembly
+    }
+
+    fn get_pointerinjector_viewport_watcher_subscription(
+        &self,
+    ) -> crate::pointerinjector_config::InjectorViewportSubscriber {
+        // Gfx implementation doesn't use the fuchsia.ui.pointerinjection APIs.
+        // This is very ugly, but the entire Gfx implementation will soon be deleted.
+        panic!("get_pointerinjector_viewport_watcher_subscription() not implemented for GfxSceneManager.");
     }
 }
 

@@ -30,3 +30,53 @@ impl LinkTokenPair {
         })
     }
 }
+
+/// IdGenerator generates a monotonically-increasing sequence of IDs, either TransformIds or
+/// ContentIds, depending on what the caller asks for.  The ID values are unique both across and
+/// within ID types, e.g. a given IdGenerator will not generate two TransformIds with the same
+/// value, nor a TransformId and a ContentId with the same value.
+pub struct IdGenerator {
+    next_id: u64,
+}
+
+impl IdGenerator {
+    pub fn new() -> Self {
+        IdGenerator { next_id: 1 }
+    }
+
+    pub fn new_with_first_id(first_id: u64) -> Self {
+        IdGenerator { next_id: first_id }
+    }
+
+    pub fn next_transform_id(&mut self) -> TransformId {
+        let id = self.next_id;
+        self.next_id += 1;
+        TransformId { value: id }
+    }
+
+    pub fn next_content_id(&mut self) -> ContentId {
+        let id = self.next_id;
+        self.next_id += 1;
+        ContentId { value: id }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn id_generator_basic() {
+        let mut generator = IdGenerator::new();
+        assert_eq!(generator.next_content_id(), ContentId { value: 1 });
+        assert_eq!(generator.next_content_id(), ContentId { value: 2 });
+        assert_eq!(generator.next_transform_id(), TransformId { value: 3 });
+        assert_eq!(generator.next_transform_id(), TransformId { value: 4 });
+    }
+
+    #[test]
+    fn id_generator_with_first_id() {
+        let mut generator = IdGenerator::new_with_first_id(11);
+        assert_eq!(generator.next_transform_id(), TransformId { value: 11 });
+    }
+}

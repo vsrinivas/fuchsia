@@ -32,6 +32,7 @@
                 "fuchsia.ui.input.ImeService",
                 "fuchsia.ui.input3.Keyboard",
                 "fuchsia.ui.input3.KeyEventInjector",
+                "fuchsia.ui.pointerinjector.Registry",
                 "fuchsia.ui.scenic.Scenic",
                 "fuchsia.ui.shortcut.Manager",
                 "fuchsia.ui.views.ViewRefInstalled",

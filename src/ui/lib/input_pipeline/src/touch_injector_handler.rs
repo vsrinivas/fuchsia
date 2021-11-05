@@ -17,9 +17,7 @@ use {
     fuchsia_syslog::{fx_log_err, fx_log_info},
     futures::lock::Mutex,
     futures::stream::StreamExt,
-    std::collections::HashMap,
-    std::convert::TryInto,
-    std::rc::Rc,
+    std::{collections::HashMap, convert::TryInto, option::Option, rc::Rc},
 };
 
 /// An input handler that parses touch events and forwards them to Scenic through the
@@ -109,23 +107,47 @@ impl TouchInjectorHandler {
     /// Creates a new touch handler that holds touch pointer injectors.
     /// The caller is expected to spawn a task to continually watch for updates to the viewport.
     /// Example:
-    /// let handler = TouchInjectorHandler::new(display_size).await.expect("Error");
+    /// let handler = TouchInjectorHandler::new_handler(None, None, display_size).await?;
     /// fasync::Task::local(handler.clone().watch_viewport()).detach();
     ///
     /// # Parameters
-    /// - `configuration_proxy`: A proxy used to get configuration details for pointer injection.
-    /// - `injector_registry_proxy`: A proxy used to register new pointer injectors.
+    /// - `configuration_proxy`: A proxy used to get configuration details for pointer
+    ///    injection.
     /// - `display_size`: The size of the associated touch display.
     ///
     /// # Errors
     /// If unable to get injection view refs from `configuration_proxy`.
-    pub async fn new_handler(
+    /// If unable to connect to pointerinjector Registry protocol.
+    pub async fn new_with_config_proxy(
+        configuration_proxy: pointerinjector_config::SetupProxy,
+        display_size: Size,
+    ) -> Result<Rc<Self>, Error> {
+        let injector_registry_proxy = connect_to_protocol::<pointerinjector::RegistryMarker>()?;
+        Self::new_handler(configuration_proxy, injector_registry_proxy, display_size).await
+    }
+
+    /// Creates a new touch handler that holds touch pointer injectors.
+    /// The caller is expected to spawn a task to continually watch for updates to the viewport.
+    /// Example:
+    /// let handler = TouchInjectorHandler::new_handler(None, None, display_size).await?;
+    /// fasync::Task::local(handler.clone().watch_viewport()).detach();
+    ///
+    /// # Parameters
+    /// - `configuration_proxy`: A proxy used to get configuration details for pointer
+    ///    injection.  If none is provided, connect to protocol routed to this component.
+    /// - `injector_registry_proxy`: A proxy used to register new pointer injectors.  If
+    ///    none is provided, connect to protocol routed to this component.
+    /// - `display_size`: The size of the associated touch display.
+    ///
+    /// # Errors
+    /// If unable to get injection view refs from `configuration_proxy`.
+    async fn new_handler(
         configuration_proxy: pointerinjector_config::SetupProxy,
         injector_registry_proxy: pointerinjector::RegistryProxy,
         display_size: Size,
     ) -> Result<Rc<Self>, Error> {
         // Get the context and target views to inject into.
-        let (context, target) = configuration_proxy.get_view_refs().await?;
+        let (context_view_ref, target_view_ref) = configuration_proxy.get_view_refs().await?;
 
         // Continuously watch for viewport updates.
         let handler = Rc::new(TouchInjectorHandler {
@@ -133,8 +155,8 @@ impl TouchInjectorHandler {
                 viewport: None,
                 injectors: HashMap::new(),
             }),
-            context_view_ref: context,
-            target_view_ref: target,
+            context_view_ref,
+            target_view_ref,
             display_size,
             injector_registry_proxy,
             configuration_proxy,
