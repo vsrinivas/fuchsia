@@ -305,7 +305,8 @@ void BaseRenderer::SetPtsUnits(uint32_t tick_per_second_numerator,
 
   // Sanity checks to ensure that Scale() operations cannot overflow.
   // Must have at most 1 tick per nanosecond. Ticks should not have higher resolution than clocks.
-  if (auto t = pts_ticks_per_second_.Scale(1); t > 1'000'000'000 || t == TimelineRate::kOverflow) {
+  if (auto t = pts_ticks_per_second_.Scale(1, TimelineRate::RoundingMode::Ceiling);
+      t > 1'000'000'000 || t == TimelineRate::kOverflow) {
     FX_LOGS(ERROR) << "PTS ticks per second too high (" << tick_per_second_numerator << "/"
                    << tick_per_second_denominator << ")";
     return;

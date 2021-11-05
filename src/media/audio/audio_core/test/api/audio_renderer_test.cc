@@ -813,24 +813,47 @@ TEST_F(AudioRendererPtsLeadTimeTest, GetMinLeadTimeCanAlwaysBeCalled) {
 }
 
 // SetPtsUnits accepts uint numerator and denominator that must be within certain range
+//
+// Numerator cannot be zero
 TEST_F(AudioRendererPtsLeadTimeTest, SetPtsUnitsZeroNumeratorShouldDisconnect) {
   audio_renderer_->SetPtsUnits(0, 1);
   ExpectDisconnect(audio_renderer_);
 }
 
+// There cannot be more than one PTS tick per nanosecond. We use ratio 1e9/1 + epsilon to test this
+// limit. The smallest such epsilon we can encode in uint32 / uint32 is (4e9+1)/4, where epsilon =
+// 1/4. The next smallest (5e9+1)/5 cannot be encoded because 5e9+1 exceeds MAX_UINT32.
 TEST_F(AudioRendererPtsLeadTimeTest, SetPtsUnitsTooHighShouldDisconnect) {
-  audio_renderer_->SetPtsUnits(1'000'000'001, 1);
+  // This value equates to 0.99999999975 nanoseconds.
+  audio_renderer_->SetPtsUnits(4'000'000'001, 4);
   ExpectDisconnect(audio_renderer_);
 }
 
+// Denominator cannot be zero
 TEST_F(AudioRendererPtsLeadTimeTest, SetPtsUnitsZeroDenominatorShouldDisconnect) {
   audio_renderer_->SetPtsUnits(1000, 0);
   ExpectDisconnect(audio_renderer_);
 }
 
+// There must be at least one PTS tick per minute. We test this limit with ratio 1/60 - epsilon.
+// To compute the smallest epsilon that can be encoded in uint32 / uint32, we find the largest X
+// and Y such that X/Y = 1/60, then use a ratio of X/(Y+1).
+//   floor(2^32/60) = 71582788, so we use the ratio 71582788 / (4294967280+1).
 TEST_F(AudioRendererPtsLeadTimeTest, SetPtsUnitsTooLowShouldDisconnect) {
-  audio_renderer_->SetPtsUnits(1, 61);
+  // This value equates to 60.000000013969839 seconds.
+  audio_renderer_->SetPtsUnits(71582788, 4294967281);
   ExpectDisconnect(audio_renderer_);
+}
+
+// Ensure that the max and min PTS-unit values are accepted.
+TEST_F(AudioRendererPtsLeadTimeTest, SetPtsUnitsLimits) {
+  audio_renderer_->SetPtsUnits(1, 60);
+  audio_renderer_->GetMinLeadTime(AddCallback("GetMinLeadTime after SetPtsUnit(max)"));
+  ExpectCallbacks();
+
+  audio_renderer_->SetPtsUnits(1e9, 1);
+  audio_renderer_->GetMinLeadTime(AddCallback("GetMinLeadTime after SetPtsUnits(min)"));
+  ExpectCallbacks();
 }
 
 // SetPtsUnits can be called at any time, except when active packets are outstanding
