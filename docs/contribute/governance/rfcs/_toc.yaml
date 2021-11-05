@@ -281,6 +281,8 @@ toc:
   path: /docs/contribute/governance/rfcs/0133_swd_goals.md
 - title: "RFC-0134: Software updates time dependency"
   path: /docs/contribute/governance/rfcs/0134_software_updates_time_dependency.md
+- title: "RFC-0135: Encoding the system ABI revisions into packages"
+  path: /docs/contribute/governance/rfcs/0135_package_abi_revision.md
 - title: "RFC-0136: Fxfs"
   path: /docs/contribute/governance/rfcs/0136_fxfs.md
 - title: "RFC-0138: Handling unknown interactions"

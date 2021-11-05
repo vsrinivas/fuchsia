@@ -1747,6 +1747,19 @@
   submitted: '2021-07-24'
   reviewed: '2021-10-06'
 
+- name: 'RFC-0135'
+  title: 'Package ABI revisions'
+  short_description: 'Encoding the system ABI revision into packages.'
+  authors: ['etryzelaar@google.com']
+  file: '0135_package_abi_revision.md'
+  area: ['Software Delivery']
+  issue: ['85820']
+  gerrit_change_id: ['588486']
+  status: 'Accepted'
+  reviewers: ['abarth@google.com', 'raggi@google.com', 'computerdruid@google.com', 'mkember@google.com', 'wittrock@google.com' ]
+  submitted: '2021-09-30'
+  reviewed: '2021-11-05'
+
 - name: 'RFC-0136'
   title: 'Fxfs'
   short_description: 'High level overview of a new Fuchsia filesystem.'
