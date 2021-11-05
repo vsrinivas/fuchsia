@@ -2,7 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/unification/zx_library.gni")
+
+expect_includes("client_includes") {
+  includes = [ "meta/client.shard.cml" ]
+}
 
 zx_library("devmgr-integration-test") {
   testonly = true
@@ -15,6 +20,8 @@ zx_library("devmgr-integration-test") {
     "launcher.cc",
   ]
   public_deps = [
+    ":client_includes",
+
     # <lib/devmgr-integration-test/fixture.h> has #include <lib/vfs/cpp/pseudo_dir.h>
     "//sdk/lib/vfs/cpp",
     "//zircon/system/ulib/async",
@@ -65,7 +72,13 @@ zx_library("devmgr-integration-test") {
     "//zircon/system/ulib/zx",
   ]
 
-  data_deps = [ "//src/devices/bin/driver-index:component" ]
+  # These binaries need to get launched by devmgr-integration-test.
+  deps += [
+    "//src/devices/bin/driver-index:component",
+    "//src/devices/bin/driver_host",
+    "//src/devices/bin/driver_manager",
+    "//src/storage/fshost",
+  ]
 
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 

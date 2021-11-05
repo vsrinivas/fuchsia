@@ -71,9 +71,7 @@ bootfs_test("nand-broker-bootfs-test") {
   deps = [ ":nand-broker" ]
 }
 
-isolated_devmgr_unittest_package("nandpart-broker-test") {
-  executable_path = "test/nandpart-broker-test"
-
+fuchsia_unittest_package("nandpart-broker-test") {
   deps = [
     ":nandpart-broker",
     "//src/devices/board/drivers/integration-test",
