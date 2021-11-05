@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1632
+From //build/config/BUILDCONFIG.gn:1629
 
 ### allow_legacy_data_partition_names
 Set to true to enable legacy data partition names.
@@ -68,14 +68,14 @@ TODO(fxbug.dev/67565) - remove once external sync FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/52a52cf6627f51b820f7c72aba0177d99a8fc5a4/src/intel/vulkan/BUILD.gn#27)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/f1555b5a2d04d41bf3065f24a8bd6bbb91c59fe2/src/intel/vulkan/BUILD.gn#27)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/52a52cf6627f51b820f7c72aba0177d99a8fc5a4/src/intel/vulkan/BUILD.gn#30)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/f1555b5a2d04d41bf3065f24a8bd6bbb91c59fe2/src/intel/vulkan/BUILD.gn#30)
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -873,19 +873,19 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/1b19345e6aee9eee56a3c3f8a2cd3dc57f92d1de/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/4d948e103efcf23664b7771343dfab17cdb875f2/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_http_transport_impl
 
 **Current value (from the default):** `"libcurl"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/1b19345e6aee9eee56a3c3f8a2cd3dc57f92d1de/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/4d948e103efcf23664b7771343dfab17cdb875f2/util/net/tls.gni#21)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/1b19345e6aee9eee56a3c3f8a2cd3dc57f92d1de/util/net/tls.gni#30)
+From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/4d948e103efcf23664b7771343dfab17cdb875f2/util/net/tls.gni#30)
 
 ### cts_version
 Name of the CTS version.
@@ -1182,14 +1182,14 @@ using '--args=ermine_app_entries="config/app_launch_entries.json"'
 
 **Current value (from the default):** `"config/app_launch_entries.json"`
 
-From //src/experiences/session_shells/ermine/shell/BUILD.gn:23
+From //src/experiences/session_shells/ermine/shell/BUILD.gn:16
 
 ### ermine_start_screensaver
 Whether or not to launch screensaver.
 
 **Current value (from the default):** `true`
 
-From //src/experiences/session_shells/ermine/shell/BUILD.gn:26
+From //src/experiences/session_shells/ermine/shell/BUILD.gn:19
 
 ### escher_test_for_glsl_spirv_mismatch
 If true, this enables the |SpirvNotChangedTest| to check if the precompiled
@@ -1256,7 +1256,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1389
+From //build/config/BUILDCONFIG.gn:1386
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -2183,7 +2183,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1229
+From //build/config/BUILDCONFIG.gn:1226
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -3534,7 +3534,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1622
+From //build/config/BUILDCONFIG.gn:1619
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3543,7 +3543,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1627
+From //build/config/BUILDCONFIG.gn:1624
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3587,7 +3587,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1435
+From //build/config/BUILDCONFIG.gn:1432
 
 ### size_checker_input
 The input to the size checker.
@@ -3691,7 +3691,7 @@ Whether or not to launch OOBE workflow on startup.
 
 **Current value (from the default):** `false`
 
-From //src/experiences/session_shells/ermine/oobe/BUILD.gn:12
+From //src/experiences/session_shells/ermine/login/BUILD.gn:12
 
 ### sysmgr_golden_warn_override
 Used by config_package().
@@ -3861,7 +3861,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1419
+From //build/config/BUILDCONFIG.gn:1416
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
