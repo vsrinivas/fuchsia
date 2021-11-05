@@ -13,6 +13,7 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
+#include <usb/usb.h>
 
 namespace usb_composite {
 

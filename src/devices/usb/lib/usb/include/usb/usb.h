@@ -37,6 +37,9 @@ typedef struct {
 // initializes a usb_desc_iter_t
 zx_status_t usb_desc_iter_init(usb_protocol_t* usb, usb_desc_iter_t* iter);
 
+// initializes a usb_desc_iter_t. Doesn't allocate any memory (iterator doesn't need to be released)
+zx_status_t usb_desc_iter_init_unowned(void* descriptors, size_t length, usb_desc_iter_t* iter);
+
 // Clones a usb_desc_iter_t
 zx_status_t usb_desc_iter_clone(const usb_desc_iter_t* src, usb_desc_iter_t* dest);
 

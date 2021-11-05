@@ -65,8 +65,6 @@ __EXPORT zx_status_t usb_claim_additional_interfaces(
 
 // initializes a usb_desc_iter_t
 __EXPORT zx_status_t usb_desc_iter_init(usb_protocol_t* usb, usb_desc_iter_t* iter) {
-  memset(iter, 0, sizeof(*iter));
-
   size_t length = usb_get_descriptors_length(usb);
   void* descriptors = malloc(length);
   if (!descriptors) {
@@ -74,6 +72,14 @@ __EXPORT zx_status_t usb_desc_iter_init(usb_protocol_t* usb, usb_desc_iter_t* it
   }
   size_t actual;
   usb_get_descriptors(usb, descriptors, length, &actual);
+
+  return usb_desc_iter_init_unowned(descriptors, length, iter);
+}
+
+// initializes a usb_desc_iter_t
+__EXPORT zx_status_t usb_desc_iter_init_unowned(void* descriptors, size_t length,
+                                                usb_desc_iter_t* iter) {
+  memset(iter, 0, sizeof(*iter));
 
   iter->desc = descriptors;
   iter->desc_end = descriptors + length;
