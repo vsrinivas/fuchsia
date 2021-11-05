@@ -308,19 +308,23 @@ EOF
         debug_var "[from -Clinker]" "${linker[@]}"
         ;;
 
-    # sysroot is a directory with system libraries
-    -Clink-arg=--sysroot=*)
-        sysroot="$(expr "X$optarg" : '[^=]*=\(.*\)')"
-        sysroot_relative="$(realpath --relative-to="$project_root" "$sysroot")"
-        debug_var "[from -Clink-arg=--sysroot]" "$sysroot_relative"
-        link_sysroot=("$sysroot_relative")
-        ;;
+    -Clink-arg=* )
+        case "$optarg" in
+          # sysroot is a directory with system libraries
+          --sysroot=* )
+            sysroot="$(expr "X$optarg" : '[^=]*=\(.*\)')"
+            sysroot_relative="$(realpath --relative-to="$project_root" "$sysroot")"
+            debug_var "[from -Clink-arg=--sysroot]" "$sysroot_relative"
+            link_sysroot=("$sysroot_relative")
+            ;;
 
-    # Link arguments that reference .o or .a files need to be uploaded.
-    -Clink-arg=*.o | -Clink-arg=*.a | -Clink-arg=*.so | -Clink-arg=*.so.debug)
-        link_arg="$build_subdir/$optarg"
-        debug_var "[from -Clink-arg]" "$link_arg"
-        link_arg_files+=("$link_arg")
+          # Link arguments that reference .o or .a files need to be uploaded.
+          *.o | *.a | *.so | *.so.debug | *.ld )
+            link_arg="$build_subdir/$optarg"
+            debug_var "[from -Clink-arg]" "$link_arg"
+            link_arg_files+=("$link_arg")
+          ;;
+        esac
         ;;
 
     # Linker can produce a .map output file.
