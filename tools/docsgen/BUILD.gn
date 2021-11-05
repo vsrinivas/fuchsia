@@ -212,6 +212,30 @@ action("invoke_helpdoc") {
   deps = [ ":${_helpdoc_script_target}" ]
 }
 
+compiled_action("invoke_cmldoc") {
+  tool = "//tools/cmc:cmc"
+  tool_output_name = "cmc"
+  testonly = true
+  metadata = {
+    # Record metadata for the //tools/docsgen build API.
+    generated_docset = [
+      {
+        name = "cmldoc"
+        origin_files = [ rebase_path("$target_out_dir/cmldoc_out/index.md",
+                                     root_build_dir) ]
+        dest_folder = "sdk/cml"
+      },
+    ]
+  }
+  outputs = [ "$target_out_dir/cmldoc_out/index.md" ]
+  args = [
+    "print-cml-reference",
+    "-o",
+    rebase_path("$target_out_dir/cmldoc_out/index.md", root_build_dir),
+  ]
+  deps = [ "//tools/cmc($host_toolchain)" ]
+}
+
 # This exposes relevant reference doc paths for infra to upload.
 #
 # Type: list(scope)
@@ -255,6 +279,7 @@ build_api_module("gen_docs") {
   deps = [
     ":dart_sdk_docs($host_toolchain)",
     ":invoke_clidoc($host_toolchain)",
+    ":invoke_cmldoc($host_toolchain)",
     ":invoke_fidldoc($host_toolchain)",
     ":invoke_helpdoc($host_toolchain)",
     "//bundles:create_all_drivers_doc",
