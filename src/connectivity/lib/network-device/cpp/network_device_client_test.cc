@@ -706,7 +706,7 @@ TEST_F(NetDeviceTest, TestPortInfoInvalidPort) {
   ASSERT_TRUE(RunLoopUntilOrFailure([&response]() { return response.has_value(); }));
 
   // Ensure we received the correct error.
-  EXPECT_EQ(response->status_value(), ZX_ERR_NOT_FOUND);
+  ASSERT_STATUS(response->status_value(), ZX_ERR_NOT_FOUND);
 }
 
 }  // namespace
