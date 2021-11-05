@@ -28,6 +28,11 @@
         }
     },
     {
+        "archive_name": "fuchsia_settings_test",
+        "component_name": "settings_test.cm",
+        "package": "fuchsia_settings_test"
+    },
+    {
         "archive_name": "fdio-spawn-tests",
         "component_name": "fdio-spawn-tests-component.cmx",
         "package": "fdio-spawn-tests"
