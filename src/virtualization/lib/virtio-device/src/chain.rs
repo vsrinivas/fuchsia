@@ -108,8 +108,8 @@ impl<'a, 'b, N: DriverNotify, M: DriverMem, const E: bool> State<'a, 'b, N, M, E
                 };
                 Some(self.mem.translate(range.clone()).ok_or(ChainError::TranslateFailed(range)))
             }
-            // Readable descriptor when we are expecting a writable indicates a corrupt descriptor
-            // chain and we cannot progress and return an error.
+            // This is a readable descriptor, while we are expecting a writable one.
+            // This indicates a corrupt descriptor chain, so return an error.
             (DescAccess::DeviceWrite, DescAccess::DeviceRead) => {
                 // Consume the rest of the iterator to ensure any future calls to next_with_limit
                 // fail.
