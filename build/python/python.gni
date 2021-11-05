@@ -4,4 +4,3 @@
 
 import("//third_party/jinja2/py_srcs.gni")
 import("//third_party/markupsafe/py_srcs.gni")
-import("//third_party/pyyaml/py_srcs.gni")

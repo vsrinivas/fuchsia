@@ -1,0 +1,13 @@
+Name: PyYAML
+License: MIT
+License File: LICENSE
+Upstream Git: https://github.com/yaml/pyyaml
+URL: http://pyyaml.org/
+Description:
+
+YAML (Yet Another Markup Language) parser and emitter for Python.
+
+Local Modifications:
+Added README.fuchsia.
+Added py_srcs.gni.
+Added BUILD.gn.

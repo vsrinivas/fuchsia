@@ -1,0 +1,28 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/python/python_library.gni")
+
+python_library("yaml") {
+  source_root = "//third_party/pyyaml/src/lib/yaml"
+  sources = [
+    "__init__.py",
+    "composer.py",
+    "constructor.py",
+    "cyaml.py",
+    "dumper.py",
+    "emitter.py",
+    "error.py",
+    "events.py",
+    "loader.py",
+    "nodes.py",
+    "parser.py",
+    "reader.py",
+    "representer.py",
+    "resolver.py",
+    "scanner.py",
+    "serializer.py",
+    "tokens.py",
+  ]
+}
