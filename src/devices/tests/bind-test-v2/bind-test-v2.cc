@@ -7,13 +7,13 @@
 #include <fuchsia/driver/development/cpp/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/driver.h>
-#include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <gtest/gtest.h>
 
+#include "src/devices/lib/device-watcher/cpp/device-watcher.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 const std::string kDevPrefix = "/dev/";
@@ -21,22 +21,12 @@ const std::string kDriverUrl = "fuchsia-boot:///#driver/bind-test-v2-driver.so";
 const std::string kDriverLibname = "bind-test-v2-driver.so";
 const std::string kChildDeviceName = "child";
 
-using devmgr_integration_test::IsolatedDevmgr;
-
 class BindCompilerV2Test : public testing::Test {
  protected:
   void SetUp() override {
-    auto args = IsolatedDevmgr::DefaultArgs();
-
-    args.sys_device_driver = "fuchsia-boot:///#driver/test-parent-sys.so";
-
-    ASSERT_EQ(IsolatedDevmgr::Create(std::move(args), &devmgr_), ZX_OK);
-    ASSERT_NE(devmgr_.svc_root_dir().channel(), ZX_HANDLE_INVALID);
-
     // Wait for /dev/sys/test/test to appear, then create an endpoint to it.
     fbl::unique_fd root_fd;
-    zx_status_t status = devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(),
-                                                                       "sys/test/test", &root_fd);
+    zx_status_t status = device_watcher::RecursiveWaitForFile("/dev/sys/test/test", &root_fd);
     ASSERT_EQ(status, ZX_OK);
 
     zx::status root_device_client_end =
@@ -71,19 +61,10 @@ class BindCompilerV2Test : public testing::Test {
     ASSERT_EQ(status, ZX_OK);
 
     // Connect to the DriverDevelopment service.
-    auto bind_endpoints = fidl::CreateEndpoints<fuchsia::driver::development::DriverDevelopment>();
-    ASSERT_EQ(bind_endpoints.status_value(), ZX_OK);
-
-    std::string svc_name =
-        fxl::StringPrintf("svc/%s", fuchsia::driver::development::DriverDevelopment::Name_);
-    sys::ServiceDirectory svc_dir(devmgr_.TakeSvcRootDir().TakeChannel());
-    status = svc_dir.Connect(svc_name, bind_endpoints->server.TakeChannel());
-    ASSERT_EQ(status, ZX_OK);
-
-    driver_dev_.Bind(bind_endpoints->client.TakeChannel());
+    auto context = sys::ComponentContext::Create();
+    context->svc()->Connect(driver_dev_.NewRequest());
   }
 
-  IsolatedDevmgr devmgr_;
   fuchsia::driver::development::DriverDevelopmentSyncPtr driver_dev_;
   std::string relative_device_path_;
 };

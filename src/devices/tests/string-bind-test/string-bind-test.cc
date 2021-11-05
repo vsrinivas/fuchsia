@@ -7,51 +7,33 @@
 #include <fuchsia/driver/development/cpp/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/driver.h>
-#include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <gtest/gtest.h>
 
+#include "src/devices/lib/device-watcher/cpp/device-watcher.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 const std::string kDriverBaseUrl = "fuchsia-boot:///#driver";
 const std::string kStringBindDriverLibPath = kDriverBaseUrl + "/string-bind-child.so";
 const std::string kChildDevicePath = "sys/test/parent";
 
-using devmgr_integration_test::IsolatedDevmgr;
-
 class StringBindTest : public testing::Test {
  protected:
   void SetUp() override {
-    auto args = IsolatedDevmgr::DefaultArgs();
-
-    args.sys_device_driver = "/boot/driver/test-parent-sys.so";
-
-    ASSERT_EQ(IsolatedDevmgr::Create(std::move(args), &devmgr_), ZX_OK);
-    ASSERT_NE(devmgr_.svc_root_dir().channel(), ZX_HANDLE_INVALID);
-
     // Wait for the child device to bind and appear. The child device should bind with its string
     // properties.
     fbl::unique_fd string_bind_fd;
-    zx_status_t status = devmgr_integration_test::RecursiveWaitForFile(
-        devmgr_.devfs_root(), "sys/test/parent/child", &string_bind_fd);
+    zx_status_t status =
+        device_watcher::RecursiveWaitForFile("/dev/sys/test/parent/child", &string_bind_fd);
     ASSERT_EQ(ZX_OK, status);
 
     // Connect to the DriverDevelopment service.
-    auto bind_endpoints = fidl::CreateEndpoints<fuchsia::driver::development::DriverDevelopment>();
-    ASSERT_EQ(ZX_OK, bind_endpoints.status_value());
-
-    std::string svc_name =
-        fxl::StringPrintf("svc/%s", fuchsia::driver::development::DriverDevelopment::Name_);
-    sys::ServiceDirectory svc_dir(devmgr_.TakeSvcRootDir().TakeChannel());
-    status = svc_dir.Connect(svc_name, bind_endpoints->server.TakeChannel());
-    ASSERT_EQ(ZX_OK, status);
-
-    driver_dev_.Bind(bind_endpoints->client.TakeChannel());
+    auto context = sys::ComponentContext::Create();
+    context->svc()->Connect(driver_dev_.NewRequest());
   }
 
-  IsolatedDevmgr devmgr_;
   fuchsia::driver::development::DriverDevelopmentSyncPtr driver_dev_;
 };
 
