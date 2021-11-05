@@ -128,8 +128,7 @@ fuchsia_unittest_package("pci-unit-test") {
   deps = [ ":pci-unit" ]
 }
 
-isolated_devmgr_unittest_package("pci-driver-test") {
-  executable_path = "test/pci-driver-test"
+fuchsia_unittest_package("pci-driver-test") {
   deps = [
     ":pci-driver",
     ":pci_fake",

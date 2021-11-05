@@ -561,8 +561,7 @@ foreach(driver, simple_drivers) {
   }
 }
 
-isolated_devmgr_unittest_package("platform-bus-test") {
-  executable_path = "test/platform-bus-test"
+fuchsia_unittest_package("platform-bus-test") {
   deps = [
     ":platform-bus",
     ":test-board",

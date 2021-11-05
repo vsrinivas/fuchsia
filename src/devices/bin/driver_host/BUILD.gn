@@ -260,9 +260,7 @@ fuchsia_driver_component("unit-test-pass") {
   deps = [ ":unit-test-pass-driver" ]
 }
 
-isolated_devmgr_unittest_package("driver-host-tests") {
-  executable_path = "test/driver_host_test"
-
+fuchsia_unittest_package("driver-host-tests") {
   deps = [
     ":driver-host-restart-driver",
     ":driver-host-test-child-driver",

@@ -96,6 +96,19 @@ test("ftl-integration") {
     "//zircon/system/ulib/zxtest",
   ]
 
+  # Other components/binaries we depend on.
+  deps += [
+    "//src/devices/block/bin/blktest",
+    "//src/devices/block/bin/iochk",
+    "//src/devices/block/drivers/core",
+    "//src/devices/block/drivers/ftl",
+    "//src/devices/bus/drivers/platform",
+    "//src/devices/misc/drivers/test",
+    "//src/devices/nand/drivers/nand",
+    "//src/devices/nand/drivers/ram-nand",
+    "//src/devices/tests/sysdev",
+  ]
+
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.
@@ -112,14 +125,8 @@ fuzzers_package("ftl-fuzzers") {
   cpp_fuzzers = [ ":ftl-read-write-fuzzer" ]
 }
 
-packaged_shared_library("devmgr-integration-test") {
-  testonly = true
-  library = "//zircon/system/ulib/devmgr-integration-test"
-}
-
-isolated_devmgr_unittest_package("ftl-integration-package") {
+fuchsia_unittest_package("ftl-integration-package") {
   package_name = "ftl-integration"
-  executable_path = "test/ftl-integration-test"
   test_specs = {
     # Raising log severity limit to allow for NDM init errors which are truly
     # bad in actual devices, but when init'ing a new device, it is fine.
@@ -127,17 +134,5 @@ isolated_devmgr_unittest_package("ftl-integration-package") {
       max_severity = "ERROR"
     }
   }
-  deps = [
-    ":devmgr-integration-test",
-    ":ftl-integration",
-    "//src/devices/block/bin/blktest",
-    "//src/devices/block/bin/iochk",
-    "//src/devices/block/drivers/core",
-    "//src/devices/block/drivers/ftl",
-    "//src/devices/bus/drivers/platform",
-    "//src/devices/misc/drivers/test",
-    "//src/devices/nand/drivers/nand",
-    "//src/devices/nand/drivers/ram-nand",
-    "//src/devices/tests/sysdev",
-  ]
+  deps = [ ":ftl-integration" ]
 }

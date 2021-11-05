@@ -76,8 +76,7 @@ test("ftdi-integration") {
   ]
 }
 
-isolated_devmgr_unittest_package("ftdi-integration-test") {
-  executable_path = "test/ftdi-integration-test"
+fuchsia_unittest_package("ftdi-integration-test") {
   deps = [
     ":ftdi-integration",
     "//src/devices/board/drivers/integration-test",

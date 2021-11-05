@@ -155,9 +155,8 @@ test("usb-hid-test") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-isolated_devmgr_unittest_package("usb-hid-test-package") {
+fuchsia_unittest_package("usb-hid-test-package") {
   package_name = "usb-hid-test"
-  executable_path = "test/usb-hid-test"
   deps = [
     ":fake",
     ":usb-hid",

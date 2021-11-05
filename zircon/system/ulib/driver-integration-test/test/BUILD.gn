@@ -18,8 +18,7 @@ test("driver-integration") {
   ]
 }
 
-isolated_devmgr_unittest_package("driver-integration-test") {
-  executable_path = "test/driver-integration"
+fuchsia_unittest_package("driver-integration-test") {
   deps = [
     ":driver-integration",
     "//src/devices/board/drivers/integration-test",

@@ -28,9 +28,7 @@ test("test") {
   ]
 }
 
-isolated_devmgr_unittest_package("string-bind-test") {
-  executable_path = "test/string-bind-test"
-
+fuchsia_unittest_package("string-bind-test") {
   deps = [
     ":child-driver",
     ":parent-driver",

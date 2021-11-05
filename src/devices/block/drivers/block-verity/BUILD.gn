@@ -208,9 +208,8 @@ fuchsia_unittest_package("block-verity-config-test") {
   deps = [ ":config-test" ]
 }
 
-isolated_devmgr_unittest_package("block-verity-integration-test-package") {
+fuchsia_unittest_package("block-verity-integration-test-package") {
   package_name = "block-verity-test"
-  executable_path = "test/block-verity-test"
   deps = [
     ":block-verity",
     ":block-verity-test",

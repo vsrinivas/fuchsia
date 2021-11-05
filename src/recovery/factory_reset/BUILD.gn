@@ -132,9 +132,7 @@ test("factory_reset_unittests") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-isolated_devmgr_unittest_package("factory-reset-tests") {
-  executable_path = "test/factory_reset_unittests"
-
+fuchsia_unittest_package("factory-reset-tests") {
   test_specs = {
     environments = [
       astro_env,

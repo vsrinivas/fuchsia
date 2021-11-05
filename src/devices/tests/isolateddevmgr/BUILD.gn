@@ -51,9 +51,8 @@ test("isolateddevmgr") {
   ]
 }
 
-isolated_devmgr_unittest_package("isolateddevmgr-test") {
+fuchsia_unittest_package("isolateddevmgr-test") {
   package_name = "isolateddevmgr"
-  executable_path = "test/isolateddevmgr-test"
 
   deps = [
     ":isolateddevmgr",

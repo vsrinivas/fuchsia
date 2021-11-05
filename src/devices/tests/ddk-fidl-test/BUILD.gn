@@ -91,9 +91,9 @@ test("ddk-fidl-test") {
   ]
 }
 
-isolated_devmgr_unittest_package("ddk-fidl-test-package") {
+fuchsia_unittest_package("ddk-fidl-test-package") {
   package_name = "ddk-fidl-test"
-  executable_path = "test/ddk-fidl-test"
+
   deps = [
     ":ddk-fidl-test",
     ":fidl-async-llcpp-driver",

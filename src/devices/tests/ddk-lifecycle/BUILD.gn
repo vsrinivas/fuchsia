@@ -65,9 +65,7 @@ test("ddk-lifecycle") {
   ]
 }
 
-isolated_devmgr_unittest_package("ddk-lifecycle-test-package") {
-  package_name = "ddk-lifecycle-test"
-  executable_path = "test/ddk-lifecycle"
+fuchsia_unittest_package("ddk-lifecycle-test-package") {
   deps = [
     ":ddk-lifecycle",
     ":ddk-lifecycle-test",

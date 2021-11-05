@@ -117,8 +117,7 @@ test("asix-88179-integration") {
   ]
 }
 
-isolated_devmgr_unittest_package("asix-88179-integration-test") {
-  executable_path = "test/asix-88179-integration-test"
+fuchsia_unittest_package("asix-88179-integration-test") {
   deps = [
     ":asix-88179",
     ":asix-88179-integration",

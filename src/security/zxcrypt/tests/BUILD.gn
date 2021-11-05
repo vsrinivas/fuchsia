@@ -47,9 +47,7 @@ test("zxcrypt") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-isolated_devmgr_unittest_package("zxcrypt-test") {
-  executable_path = "test/zxcrypt-test"
-
+fuchsia_unittest_package("zxcrypt-test") {
   deps = [
     ":zxcrypt",
     "//src/devices/block/drivers/core",

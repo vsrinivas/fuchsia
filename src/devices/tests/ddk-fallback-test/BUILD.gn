@@ -74,9 +74,8 @@ test("ddk-fallback") {
   ]
 }
 
-isolated_devmgr_unittest_package("ddk-fallback-test-package") {
-  package_name = "ddk-fallback-test"
-  executable_path = "test/ddk-fallback"
+fuchsia_unittest_package("ddk-fallback-test-package") {
+  package_name = "ddk-fallback-test-test"
   deps = [
     ":ddk-fallback",
     ":ddk-fallback-test",

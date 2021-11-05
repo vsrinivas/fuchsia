@@ -84,8 +84,7 @@ test("ddk-runcompatibilityhook") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-isolated_devmgr_unittest_package("ddk-runcompatibilityhook-test-package") {
-  executable_path = "test/ddk-runcompatibilityhook"
+fuchsia_unittest_package("ddk-runcompatibilityhook-test-package") {
   deps = [
     ":ddk-runcompatibilityhook",
     ":ddk-runcompatibilityhook-test",

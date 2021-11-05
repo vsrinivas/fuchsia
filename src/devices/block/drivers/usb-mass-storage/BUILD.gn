@@ -118,17 +118,8 @@ test("ums-integration") {
     "//zircon/system/ulib/zxtest",
   ]
 
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
-}
-
-isolated_devmgr_unittest_package("ums-integration-test") {
-  executable_path = "test/ums-integration-test"
-  deps = [
-    ":ums-integration",
-    ":usb-mass-storage",
+  # Other components/binaries we depend on.
+  deps += [
     "//src/devices/block/bin/blktest",
     "//src/devices/block/drivers/core",
     "//src/devices/block/drivers/ums-function",
@@ -138,6 +129,18 @@ isolated_devmgr_unittest_package("ums-integration-test") {
     "//src/devices/usb/drivers/usb-composite",
     "//src/devices/usb/drivers/usb-peripheral",
     "//src/devices/usb/drivers/usb-virtual-bus",
+  ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+}
+
+fuchsia_unittest_package("ums-integration-test") {
+  deps = [
+    ":ums-integration",
+    ":usb-mass-storage",
   ]
   test_specs = {
     log_settings = {

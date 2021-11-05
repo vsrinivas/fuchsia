@@ -31,9 +31,7 @@ test("fvm-driver-integration") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-isolated_devmgr_unittest_package("fvm-driver-integration-test") {
-  executable_path = "test/fvm-driver-integration-test"
-
+fuchsia_unittest_package("fvm-driver-integration-test") {
   test_specs = {
     log_settings = {
       # Some of the API tests deliberately test the error cases that log.

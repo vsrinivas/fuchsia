@@ -62,9 +62,7 @@ test("ddk-environment") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-isolated_devmgr_unittest_package("ddk-environment-test-package") {
-  package_name = "ddk-environment-test"
-  executable_path = "test/ddk-environment"
+fuchsia_unittest_package("ddk-environment-test-package") {
   deps = [
     ":ddk-environment",
     ":ddk-environment-test",

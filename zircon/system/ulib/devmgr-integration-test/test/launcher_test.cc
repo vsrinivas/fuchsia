@@ -72,34 +72,4 @@ TEST(LauncherTest, OutgoingServices) {
       devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "sys/test/test", &fd));
 }
 
-TEST(LauncherTest, ExposeDevfsToHub) {
-  // Setup outgoing directory. This should be done only once in the test component.
-  // Ideally done during test setup, but since this is the only test case using outgoing directory
-  // it is done here.
-  async::Loop loop{&kAsyncLoopConfigNeverAttachToThread};
-  auto context = sys::ComponentContext::Create();
-  context->outgoing()->ServeFromStartupInfo(loop.dispatcher());
-  loop.StartThread();
-
-  // Create devmgr instance
-  devmgr_launcher::Args args;
-  args.sys_device_driver = "/boot/driver/test-parent-sys.so";
-
-  IsolatedDevmgr devmgr;
-  ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));
-
-  // Add devfs to out directory
-  devmgr.AddDevfsToOutgoingDir(context->outgoing()->root_dir());
-
-  // Verify that devfs is accessible in the outgoing directory
-  constexpr char kGlob[] = "/hub/c/devmgr-integration-test.cmx/*/out/dev";
-  files::Glob glob(kGlob);
-  EXPECT_EQ(glob.size(), 1u);
-  loop.Shutdown();
-
-  fbl::unique_fd fd;
-  ASSERT_OK(
-      devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "sys/test/test", &fd));
-}
-
 }  // namespace devmgr_integration_test

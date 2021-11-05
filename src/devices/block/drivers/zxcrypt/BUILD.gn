@@ -112,9 +112,7 @@ test("device-manager-test-bin") {
   ]
 }
 
-isolated_devmgr_unittest_package("device-manager-test") {
-  executable_path = "test/device-manager-test"
-
+fuchsia_unittest_package("device-manager-test") {
   deps = [
     ":device-manager-test-bin",
     "//src/devices/block/drivers/core",

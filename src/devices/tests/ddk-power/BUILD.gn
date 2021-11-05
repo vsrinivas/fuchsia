@@ -97,9 +97,7 @@ test("ddk-power") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-isolated_devmgr_unittest_package("ddk-power-test-package") {
-  package_name = "ddk-power-test"
-  executable_path = "test/ddk-power"
+fuchsia_unittest_package("ddk-power-test-package") {
   deps = [
     ":ddk-power",
     ":ddk-power-test",

@@ -58,9 +58,7 @@ test("fallback-rtc") {
   ]
 }
 
-isolated_devmgr_unittest_package("fallback-rtc-test") {
-  executable_path = "test/fallback-rtc"
-
+fuchsia_unittest_package("fallback-rtc-test") {
   deps = [
     ":fallback",
     ":fallback-rtc",

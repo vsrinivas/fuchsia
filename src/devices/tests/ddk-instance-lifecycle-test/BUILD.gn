@@ -68,9 +68,7 @@ test("tests") {
   visibility = [ ":*" ]
 }
 
-isolated_devmgr_unittest_package("ddk-instance-lifecycle-test") {
-  executable_path = "test/ddk-instance-lifecycle-test"
-
+fuchsia_unittest_package("ddk-instance-lifecycle-test") {
   deps = [
     ":driver",
     ":tests",

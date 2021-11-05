@@ -75,9 +75,7 @@ test("tests") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-isolated_devmgr_unittest_package("driver-inspect-test") {
-  executable_path = "test/driver-inspect-test"
-
+fuchsia_unittest_package("driver-inspect-test") {
   deps = [
     ":driver",
     ":tests",

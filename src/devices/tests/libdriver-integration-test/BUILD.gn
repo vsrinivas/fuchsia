@@ -45,9 +45,7 @@ test("tests") {
   ]
 }
 
-isolated_devmgr_unittest_package("libdriver-integration-test") {
-  executable_path = "test/libdriver-integration-test"
-
+fuchsia_unittest_package("libdriver-integration-test") {
   deps = [
     ":tests",
     "//src/devices/internal/drivers/fragment",

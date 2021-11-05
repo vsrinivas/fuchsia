@@ -103,8 +103,7 @@ test("usb-cdc-acm-integration") {
   ]
 }
 
-isolated_devmgr_unittest_package("usb-cdc-acm-integration-test") {
-  executable_path = "test/usb-cdc-acm-integration-test"
+fuchsia_unittest_package("usb-cdc-acm-integration-test") {
   deps = [
     ":fake-usb-cdc-acm",
     ":usb-cdc-acm",

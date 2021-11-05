@@ -29,9 +29,7 @@ test("test") {
   ]
 }
 
-isolated_devmgr_unittest_package("bind-test-v2") {
-  executable_path = "test/bind-test-v2"
-
+fuchsia_unittest_package("bind-test-v2") {
   deps = [
     ":bind-test-driver-v2",
     ":test",

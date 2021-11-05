@@ -21,9 +21,7 @@ test("devmgr-integration") {
   ]
 }
 
-isolated_devmgr_unittest_package("devmgr-integration-test") {
-  executable_path = "test/devmgr-integration"
-  features = [ "hub" ]
+fuchsia_unittest_package("devmgr-integration-test") {
   deps = [
     ":devmgr-integration",
     "//src/devices/misc/drivers/test",

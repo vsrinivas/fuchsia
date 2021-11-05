@@ -80,9 +80,7 @@ test("test") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-isolated_devmgr_unittest_package("paver-test") {
-  executable_path = "test/paver-test"
-
+fuchsia_unittest_package("paver-test") {
   deps = [
     ":test",
     "//src/devices/block/drivers/core",

@@ -156,8 +156,7 @@ test("usb-virtual-bus-test-bin") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-isolated_devmgr_unittest_package("usb-virtual-bus-test") {
-  executable_path = "test/usb-virtual-bus-test"
+fuchsia_unittest_package("usb-virtual-bus-test") {
   deps = [
     ":usb-virtual-bus-test-bin",
     ":virtual-bus-tester",
