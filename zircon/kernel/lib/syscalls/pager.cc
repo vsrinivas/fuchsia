@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <align.h>
+#include <zircon/syscalls-next.h>
 
 #include <fbl/ref_ptr.h>
 #include <ktl/move.h>
@@ -13,6 +14,25 @@
 #include <vm/vm_object_paged.h>
 
 #include "priv.h"
+
+namespace {
+
+// Split out the pager vmo creation flags between PageSource and VmObjectPaged flags.
+void split_syscall_flags(uint32_t flags, uint32_t* source_flags, uint32_t* vmo_flags) {
+  // Extract any option flags relevant to creation of the page source.
+  uint32_t src_flags = 0;
+  if (flags & ZX_VMO_TRAP_DIRTY) {
+    src_flags |= ZX_VMO_TRAP_DIRTY;
+  }
+
+  // Mask out any source flags. The remaining flags are the vmo creation flags; vmo creation will
+  // perform validation on them.
+  flags &= ~(ZX_VMO_TRAP_DIRTY);
+  *vmo_flags = flags;
+  *source_flags = src_flags;
+}
+
+}  // namespace
 
 // zx_status_t zx_pager_create
 zx_status_t sys_pager_create(uint32_t options, user_out_handle* out) {
@@ -52,14 +72,18 @@ zx_status_t sys_pager_create_vmo(zx_handle_t pager, uint32_t options, zx_handle_
     return status;
   }
 
+  uint32_t source_flags = 0;
+  uint32_t vmo_flags = 0;
+  split_syscall_flags(options, &source_flags, &vmo_flags);
+
   fbl::RefPtr<PageSource> src;
-  status = pager_dispatcher->CreateSource(ktl::move(port_dispatcher), key, &src);
+  status = pager_dispatcher->CreateSource(ktl::move(port_dispatcher), key, source_flags, &src);
   if (status != ZX_OK) {
     return status;
   }
 
   uint32_t vmo_options = 0;
-  status = VmObjectDispatcher::parse_create_syscall_flags(options, &vmo_options);
+  status = VmObjectDispatcher::parse_create_syscall_flags(vmo_flags, &vmo_options);
   if (status != ZX_OK) {
     return status;
   }

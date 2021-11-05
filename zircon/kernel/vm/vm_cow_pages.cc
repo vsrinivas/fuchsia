@@ -1554,6 +1554,26 @@ VmPageOrMarker* VmCowPages::FindInitialPageContentLocked(uint64_t offset, VmCowP
   return page;
 }
 
+zx_status_t VmCowPages::MarkDirtyOnWriteLocked(LazyPageRequest* page_request, uint64_t offset,
+                                               uint64_t len) {
+  // If the VMO does not require us to trap dirty transitions, simply proceed with the write.
+  if (!page_source_ || !page_source_->ShouldTrapDirtyTransitions()) {
+    // TODO: Mark pages dirty if page_source_ is not null.
+    return ZX_OK;
+  }
+  // Otherwise, generate a DIRTY page request.
+  // TODO: Generate requests only for clean pages when the dirty bit is supported. For now just
+  // cover the entire range.
+  AssertHeld(paged_ref_->lock_ref());
+  VmoDebugInfo vmo_debug_info = {.vmo_ptr = reinterpret_cast<uintptr_t>(paged_ref_),
+                                 .vmo_id = paged_ref_->user_id_locked()};
+  zx_status_t status =
+      page_source_->RequestDirtyTransition(page_request->get(), offset, len, vmo_debug_info);
+  // The page source will never succeed synchronously.
+  DEBUG_ASSERT(status != ZX_OK);
+  return status;
+}
+
 void VmCowPages::UpdateOnAccessLocked(vm_page_t* page, uint pf_flags) {
   // The only kinds of pages where there is anything to update on an access is pager backed pages.
   // To that end we can skip pages not directly backed by a pager.
@@ -1672,6 +1692,18 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags, uint64
     out->add_page(p->paddr());
     if (max_out_pages > 1) {
       collect_pages(this, offset + PAGE_SIZE, (max_out_pages - 1) * PAGE_SIZE);
+    }
+    // If we're writing to a root VMO backed by a pager, we'll need to mark pages Dirty so that they
+    // can be written back later. This is the only path that can result in such a write; if the page
+    // was not present, we would have already blocked on a read request the first time, and ended up
+    // here when unblocked, at which point the page would be present.
+    if (pf_flags & VMM_PF_FLAG_WRITE && page_source_) {
+      zx_status_t status = MarkDirtyOnWriteLocked(page_request, offset, out->num_pages * PAGE_SIZE);
+      if (status != ZX_OK) {
+        // No pages to return.
+        out->num_pages = 0;
+        return status;
+      }
     }
     return ZX_OK;
   }

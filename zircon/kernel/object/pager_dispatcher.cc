@@ -6,6 +6,7 @@
 
 #include <lib/counters.h>
 #include <trace.h>
+#include <zircon/syscalls-next.h>
 
 #include <kernel/thread.h>
 #include <object/pager_dispatcher.h>
@@ -39,7 +40,7 @@ PagerDispatcher::~PagerDispatcher() {
 }
 
 zx_status_t PagerDispatcher::CreateSource(fbl::RefPtr<PortDispatcher> port, uint64_t key,
-                                          fbl::RefPtr<PageSource>* src_out) {
+                                          uint32_t options, fbl::RefPtr<PageSource>* src_out) {
   Guard<Mutex> guard{&lock_};
   // Make sure on_zero_handles has not been called. This could happen if a call to pager_create_vmo
   // races with closing the last handle, as pager_create_vmo does not hold the handle table lock
@@ -48,10 +49,21 @@ zx_status_t PagerDispatcher::CreateSource(fbl::RefPtr<PortDispatcher> port, uint
     return ZX_ERR_BAD_STATE;
   }
 
+  // Process any options relevant to creation of the PagerProxy.
+  uint32_t proxy_options = 0;
+  if (options & ZX_VMO_TRAP_DIRTY) {
+    proxy_options = PagerProxy::kTrapDirty;
+    options &= ~ZX_VMO_TRAP_DIRTY;
+  }
+  if (options) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   // We are going to setup two objects that both need to point to each other. As such one of the
   // pointers must be bound 'late' and not in the constructor.
   fbl::AllocChecker ac;
-  auto proxy = fbl::MakeRefCountedChecked<PagerProxy>(&ac, this, ktl::move(port), key);
+  auto proxy =
+      fbl::MakeRefCountedChecked<PagerProxy>(&ac, this, ktl::move(port), key, proxy_options);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

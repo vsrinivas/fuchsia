@@ -109,7 +109,9 @@ class StubPageProvider : public PageProvider {
   void OnClose() override {}
   zx_status_t WaitOnEvent(Event* event) override { panic("Not implemented\n"); }
   void Dump() override {}
-  bool SupportsPageRequestType(page_request_type type) const override { return true; }
+  bool SupportsPageRequestType(page_request_type type) const override {
+    return type == page_request_type::READ;
+  }
 };
 
 // Helper function to allocate memory in a user address space.

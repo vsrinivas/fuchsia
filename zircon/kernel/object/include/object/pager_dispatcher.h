@@ -19,8 +19,8 @@ class PagerDispatcher final : public SoloDispatcher<PagerDispatcher, ZX_DEFAULT_
   static zx_status_t Create(KernelHandle<PagerDispatcher>* handle, zx_rights_t* rights);
   ~PagerDispatcher() final;
 
-  zx_status_t CreateSource(fbl::RefPtr<PortDispatcher> port, uint64_t key,
-                           fbl::RefPtr<PageSource>* src);
+  zx_status_t CreateSource(fbl::RefPtr<PortDispatcher> port, uint64_t key, uint32_t options,
+                           fbl::RefPtr<PageSource>* src_out);
   // Drop and return this object's reference to |proxy|. Must be called under
   // |proxy|'s lock to prevent races with dispatcher teardown.
   fbl::RefPtr<PagerProxy> ReleaseProxy(PagerProxy* proxy) TA_REQ(proxy->mtx_);

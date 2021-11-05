@@ -29,21 +29,6 @@ __END_CDECLS
 
 namespace pager_tests {
 
-static bool check_buffer_data(Vmo* vmo, uint64_t offset, uint64_t len, const void* data,
-                              bool check_vmar) {
-  return check_vmar ? vmo->CheckVmar(offset, len, data) : vmo->CheckVmo(offset, len, data);
-}
-
-static bool check_buffer(Vmo* vmo, uint64_t offset, uint64_t len, bool check_vmar) {
-  return check_vmar ? vmo->CheckVmar(offset, len) : vmo->CheckVmo(offset, len);
-}
-
-#define VMO_VMAR_TEST(fn_name)                   \
-  void fn_name(bool);                            \
-  TEST(Pager, fn_name##_vmar) { fn_name(true); } \
-  TEST(Pager, fn_name##_vmo) { fn_name(false); } \
-  void fn_name(bool check_vmar)
-
 // Simple test that checks that a single thread can access a single page.
 VMO_VMAR_TEST(SinglePageTest) {
   UserPager pager;

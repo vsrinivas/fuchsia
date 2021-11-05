@@ -5,6 +5,8 @@
 #ifndef SYSROOT_ZIRCON_SYSCALLS_NEXT_H_
 #define SYSROOT_ZIRCON_SYSCALLS_NEXT_H_
 
+#ifndef _KERNEL
+
 #include <zircon/syscalls.h>
 
 __BEGIN_CDECLS
@@ -26,5 +28,20 @@ __BEGIN_CDECLS
 #undef _ZX_SYSCALL_DECL
 
 __END_CDECLS
+
+#endif  // !_KERNEL
+
+// ====== Pager writeback support ====== //
+//
+// Make sure the constants defined here do not overlap with VMO / pager constants defined in
+// <zircon/types.h> or <zircon/syscalls/port.h>. These constants will eventually get moved over.
+
+// VM Object creation options
+#define ZX_VMO_TRAP_DIRTY ((uint32_t)1u << 3)
+
+// zx_packet_page_request_t::command
+#define ZX_PAGER_VMO_DIRTY ((uint16_t)2)
+
+// ====== End of pager writeback support ====== //
 
 #endif  // SYSROOT_ZIRCON_SYSCALLS_NEXT_H_

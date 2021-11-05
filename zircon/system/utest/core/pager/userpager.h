@@ -90,6 +90,8 @@ class UserPager {
 
   // Creates a new paged vmo.
   bool CreateVmo(uint64_t size, Vmo** vmo_out);
+  // Creates a new paged vmo with the provided create |options|.
+  bool CreateVmoWithOptions(uint64_t size, uint32_t options, Vmo** vmo_out);
   // Detaches the paged vmo.
   bool DetachVmo(Vmo* vmo);
   // Destroyes the paged vmo.
@@ -114,6 +116,7 @@ class UserPager {
   // Checks if there is a request for the range [page_offset, length). Will
   // wait until |deadline|.
   bool WaitForPageRead(Vmo* vmo, uint64_t page_offset, uint64_t page_count, zx_time_t deadline);
+  bool WaitForPageDirty(Vmo* vmo, uint64_t page_offset, uint64_t page_count, zx_time_t deadline);
   bool WaitForPageComplete(uint64_t key, zx_time_t deadline);
 
   // Gets the first page read request. Blocks until |deadline|.
@@ -129,6 +132,8 @@ class UserPager {
   const zx::pager& pager() const { return pager_; }
 
  private:
+  bool WaitForPageRequest(uint16_t command, Vmo* vmo, uint64_t page_offset, uint64_t page_count,
+                          zx_time_t deadline);
   bool WaitForRequest(uint64_t key, const zx_packet_page_request_t& request, zx_time_t deadline);
   bool WaitForRequest(fbl::Function<bool(const zx_port_packet_t& packet)> cmp_fn,
                       zx_time_t deadline);
@@ -150,6 +155,21 @@ class UserPager {
   zx::event shutdown_event_;
   TestThread pager_thread_;
 };
+
+inline bool check_buffer_data(Vmo* vmo, uint64_t offset, uint64_t len, const void* data,
+                              bool check_vmar) {
+  return check_vmar ? vmo->CheckVmar(offset, len, data) : vmo->CheckVmo(offset, len, data);
+}
+
+inline bool check_buffer(Vmo* vmo, uint64_t offset, uint64_t len, bool check_vmar) {
+  return check_vmar ? vmo->CheckVmar(offset, len) : vmo->CheckVmo(offset, len);
+}
+
+#define VMO_VMAR_TEST(fn_name)                  \
+  void fn_name(bool);                           \
+  TEST(Pager, fn_name##Vmar) { fn_name(true); } \
+  TEST(Pager, fn_name##Vmo) { fn_name(false); } \
+  void fn_name(bool check_vmar)
 
 }  // namespace pager_tests
 

@@ -79,6 +79,16 @@ class VmCowPages final
   // content, and not zero pages.
   bool is_pager_backed_locked() const TA_REQ(lock_) { return GetRootPageSourceLocked() != nullptr; }
 
+  // Returns whether this cow pages node is dirty tracked.
+  bool is_dirty_tracked_locked() const TA_REQ(lock_) {
+    // Pager-backed VMOs require dirty tracking either if:
+    // 1. They are directly backed by the pager, i.e. the root VMO.
+    // OR
+    // 2. They are slice children of root pager-backed VMOs, since slices directly reference the
+    // parent's pages.
+    return (is_slice_locked() ? parent_->page_source_ : page_source_) != nullptr;
+  }
+
   // When attributing pages hidden nodes must be attributed to either their left or right
   // descendants. The attribution IDs of all involved determine where attribution goes. For
   // historical and practical reasons actual user ids are used, although any consistent naming
@@ -474,6 +484,13 @@ class VmCowPages final
   // the page queue to track which ones were recently accessed for the purposes of eviction. In
   // terms of functional correctness this never has to be called.
   void UpdateOnAccessLocked(vm_page_t* page, uint pf_flags) TA_REQ(lock_);
+
+  // Attempts to dirty pages in the specified range, forwarding a DIRTY page request to the page
+  // source if pages are clean, in which case ZX_ERR_SHOULD_WAIT will be returned and the caller
+  // should wait on |page_request|. If no page requests need to be generated, i.e. the pages are
+  // already dirty, or if they do not require the dirty transition to be trapped, ZX_OK is returned.
+  zx_status_t MarkDirtyOnWriteLocked(LazyPageRequest* page_request, uint64_t offset, uint64_t len)
+      TA_REQ(lock_);
 
   // Initializes and adds as a child the given VmCowPages as a full clone of this one such that the
   // VmObjectPaged backlink can be moved from this to the child, keeping all page offsets, sizes and

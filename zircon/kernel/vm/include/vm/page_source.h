@@ -132,6 +132,19 @@ class PageSource : public fbl::RefCounted<PageSource> {
   // supported return error code for those syscalls.
   static bool IsValidFailureCode(zx_status_t error_status);
 
+  // Whether transitions from clean to dirty should be trapped.
+  bool ShouldTrapDirtyTransitions() const {
+    return page_provider_->SupportsPageRequestType(page_request_type::DIRTY);
+  }
+
+  // Request the page provider for clean pages in the range [offset, offset + len) to become dirty,
+  // in order for a write to proceed. Returns ZX_ERR_SHOULD_WAIT if the request will be
+  // asynchronously fulfilled; the caller should wait on |request|. Depending on the state of pages
+  // in the range, the |request| might be generated for a range that is a subset of
+  // [offset, offset + len).
+  zx_status_t RequestDirtyTransition(PageRequest* request, uint64_t offset, uint64_t len,
+                                     VmoDebugInfo vmo_debug_info);
+
   // Detaches the source from the VMO. All future calls into the page source will fail. All
   // pending read transactions are aborted. Pending flush transactions will still
   // be serviced.
@@ -169,6 +182,28 @@ class PageSource : public fbl::RefCounted<PageSource> {
   // PageProvider instance that will provide pages asynchronously (e.g. a userspace pager, see
   // PagerProxy for details).
   fbl::RefPtr<PageProvider> page_provider_;
+
+  // Helper that adds page at |offset| to |request| and potentially forwards it to the provider.
+  // |request| must already be initialized. |offset| must be page-aligned.
+  //
+  // Returns ZX_ERR_SHOULD_WAIT if the request will be asynchronously fulfilled. The caller should
+  // wait on |request|.
+  //
+  // Returns ZX_ERR_NEXT if the request is in batch mode and the caller can continue
+  // to add more pages to the request. The request can be in batch mode under two scenarios:
+  // 1) The request was created with |allow_batching_| set. The external caller into PageSource
+  // will handle the ZX_ERR_NEXT in this case, and add more pages.
+  // 2) |internal_batching| is true, in which case the caller of this function within PageSource
+  // *must* handle ZX_ERR_NEXT itself before returning from PageSource. This option is used for
+  // request types that want to operate in batch mode by default (e.g. DIRTY requests), where pages
+  // are added to the batch internally in PageSource without involving the external caller.
+  // TODO(rashaeqbal): Figure out if internal_batching can be unified with allow_batching_.
+  zx_status_t PopulateRequestLocked(PageRequest* request, uint64_t offset,
+                                    bool internal_batching = false) TA_REQ(page_source_mtx_);
+
+  // Helper used to complete a batched page request if the last call to PopulateRequestLocked
+  // returned ZX_ERR_NEXT.
+  zx_status_t FinalizeRequestLocked(PageRequest* request) TA_REQ(page_source_mtx_);
 
   // Sends a request to the backing source, or adds the request to the overlap_ list if
   // the needed region has already been requested from the source.

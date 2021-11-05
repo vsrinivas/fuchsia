@@ -74,6 +74,10 @@ class VmObjectPaged final : public VmObject {
     Guard<Mutex> guard{&lock_};
     return cow_pages_locked()->is_pager_backed_locked();
   }
+  bool is_dirty_tracked() const override {
+    Guard<Mutex> guard{&lock_};
+    return cow_pages_locked()->is_dirty_tracked_locked();
+  }
   ChildType child_type() const override {
     if (is_slice()) {
       return ChildType::kSlice;

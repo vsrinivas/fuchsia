@@ -7,6 +7,7 @@
 #include <lib/boot-options/boot-options.h>
 #include <lib/counters.h>
 #include <trace.h>
+#include <zircon/syscalls-next.h>
 
 #include <lk/init.h>
 #include <object/pager_dispatcher.h>
@@ -21,9 +22,10 @@ KCOUNTER(dispatcher_pager_succeeded_request_count, "dispatcher.pager.succeeded_r
 KCOUNTER(dispatcher_pager_failed_request_count, "dispatcher.pager.failed_requests")
 KCOUNTER(dispatcher_pager_timed_out_request_count, "dispatcher.pager.timed_out_requests")
 
-PagerProxy::PagerProxy(PagerDispatcher* dispatcher, fbl::RefPtr<PortDispatcher> port, uint64_t key)
-    : pager_(dispatcher), port_(ktl::move(port)), key_(key) {
-  LTRACEF("%p key %lx\n", this, key_);
+PagerProxy::PagerProxy(PagerDispatcher* dispatcher, fbl::RefPtr<PortDispatcher> port, uint64_t key,
+                       uint32_t options)
+    : pager_(dispatcher), port_(ktl::move(port)), key_(key), options_(options) {
+  LTRACEF("%p key %lx options %x\n", this, key_, options_);
 }
 
 PagerProxy::~PagerProxy() {
@@ -51,7 +53,18 @@ void PagerProxy::QueuePacketLocked(page_request_t* request) {
   uint64_t offset, length;
   uint16_t cmd;
   if (request != &complete_request_) {
-    cmd = ZX_PAGER_VMO_READ;
+    switch (request->type) {
+      case page_request_type::READ:
+        cmd = ZX_PAGER_VMO_READ;
+        break;
+      case page_request_type::DIRTY:
+        DEBUG_ASSERT(options_ & kTrapDirty);
+        cmd = ZX_PAGER_VMO_DIRTY;
+        break;
+      default:
+        // Not reached
+        ASSERT(false);
+    }
     offset = request->offset;
     length = request->length;
 

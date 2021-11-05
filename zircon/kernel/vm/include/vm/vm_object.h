@@ -269,6 +269,8 @@ class VmObject : public VmHierarchyBase,
   virtual bool is_discardable() const { return false; }
   // Returns true if the VMO was created via CreatePagerVmo().
   virtual bool is_pager_backed() const { return false; }
+  // Returns true if the VMO's pages require dirty bit tracking.
+  virtual bool is_dirty_tracked() const { return false; }
 
   // Returns true if the vmo is a hidden paged vmo.
   virtual bool is_hidden() const { return false; }

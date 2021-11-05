@@ -9,6 +9,7 @@
 #include <string.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
+#include <zircon/syscalls-next.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 
@@ -144,6 +145,10 @@ bool UserPager::Init() {
 }
 
 bool UserPager::CreateVmo(uint64_t size, Vmo** vmo_out) {
+  return CreateVmoWithOptions(size, ZX_VMO_RESIZABLE, vmo_out);
+}
+
+bool UserPager::CreateVmoWithOptions(uint64_t size, uint32_t options, Vmo** vmo_out) {
   if (shutdown_event_) {
     fprintf(stderr, "creating vmo after starting pager thread\n");
     return false;
@@ -152,7 +157,7 @@ bool UserPager::CreateVmo(uint64_t size, Vmo** vmo_out) {
   zx::vmo vmo;
   size *= zx_system_get_page_size();
   zx_status_t status;
-  if ((status = pager_.create_vmo(ZX_VMO_RESIZABLE, port_, next_base_, size, &vmo)) != ZX_OK) {
+  if ((status = pager_.create_vmo(options, port_, next_base_, size, &vmo)) != ZX_OK) {
     fprintf(stderr, "pager create_vmo failed with %s\n", zx_status_get_string(status));
     return false;
   }
@@ -244,11 +249,22 @@ void UserPager::ReleaseVmo(Vmo* vmo) {
   vmos_.erase(*vmo);
 }
 
-bool UserPager::WaitForPageRead(Vmo* vmo, uint64_t offset, uint64_t length, zx_time_t deadline) {
+bool UserPager::WaitForPageRead(Vmo* vmo, uint64_t page_offset, uint64_t page_count,
+                                zx_time_t deadline) {
+  return WaitForPageRequest(ZX_PAGER_VMO_READ, vmo, page_offset, page_count, deadline);
+}
+
+bool UserPager::WaitForPageDirty(Vmo* vmo, uint64_t page_offset, uint64_t page_count,
+                                 zx_time_t deadline) {
+  return WaitForPageRequest(ZX_PAGER_VMO_DIRTY, vmo, page_offset, page_count, deadline);
+}
+
+bool UserPager::WaitForPageRequest(uint16_t command, Vmo* vmo, uint64_t page_offset,
+                                   uint64_t page_count, zx_time_t deadline) {
   zx_packet_page_request_t req = {};
-  req.command = ZX_PAGER_VMO_READ;
-  req.offset = offset * zx_system_get_page_size();
-  req.length = length * zx_system_get_page_size();
+  req.command = command;
+  req.offset = page_offset * zx_system_get_page_size();
+  req.length = page_count * zx_system_get_page_size();
   return WaitForRequest(vmo->base_val_, req, deadline);
 }
 

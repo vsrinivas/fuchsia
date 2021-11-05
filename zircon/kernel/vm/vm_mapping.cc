@@ -783,6 +783,25 @@ zx_status_t VmMapping::PageFaultWithVmoCallback(
     return ZX_ERR_ACCESS_DENIED;
   }
 
+  // Determine how far to the end of the page table so we do not cause extra allocations.
+  const uint64_t next_pt_base = ArchVmAspace::NextUserPageTableOffset(va);
+  // Find the minimum between the size of this mapping and the end of the page table.
+  const uint64_t max_map = ktl::min(next_pt_base, base_ + size_);
+  // Convert this into a number of pages, limited by the max lookup window.
+  //
+  // If this is a write fault and the VMO supports dirty tracking, only lookup 1 page. The pages
+  // will also be marked dirty for a write, which we only want for the current page. We could
+  // optimize this to lookup following pages here too and map them in, however we would have to not
+  // mark them dirty in LookupPagesLocked, and map them in without write permissions here, so that
+  // we can take a permission fault on a write to update their dirty tracking later. Instead, we can
+  // keep things simple by just looking up 1 page.
+  // TODO(rashaeqbal): Revisit this decision if there are performance issues.
+  const uint64_t max_pages =
+      (pf_flags & VMM_PF_FLAG_WRITE && object_->is_dirty_tracked())
+          ? 1
+          : ktl::min((max_map - va) / PAGE_SIZE, VmObject::LookupInfo::kMaxPages);
+  DEBUG_ASSERT(max_pages > 0);
+
   // grab the lock for the vmo
   Guard<Mutex> guard{object_->lock()};
 
@@ -796,14 +815,6 @@ zx_status_t VmMapping::PageFaultWithVmoCallback(
     AssertHeld(object_->lock_ref());
     currently_faulting_ = false;
   });
-
-  // Determine how far to the end of the page table so we do not cause extra allocations.
-  const uint64_t next_pt_base = ArchVmAspace::NextUserPageTableOffset(va);
-  // Find the minimum between the size of this mapping and the end of the page table.
-  const uint64_t max_map = ktl::min(next_pt_base, base_ + size_);
-  // Convert this into a number of pages, limited by the max lookup window.
-  const uint64_t max_pages = ktl::min((max_map - va) / PAGE_SIZE, VmObject::LookupInfo::kMaxPages);
-  DEBUG_ASSERT(max_pages > 0);
 
   // fault in or grab existing pages.
   __UNINITIALIZED VmObject::LookupInfo lookup_info;

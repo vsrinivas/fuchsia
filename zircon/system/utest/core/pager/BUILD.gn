@@ -9,7 +9,10 @@ source_set("pager") {
   ]
 
   testonly = true
-  sources = [ "pager.cc" ]
+  sources = [
+    "pager-writeback.cc",
+    "pager.cc",
+  ]
   deps = [
     ":userpager",
     "//sdk/lib/fdio",

@@ -28,7 +28,11 @@ class PagerProxy : public PageProvider,
                    public PortAllocator,
                    public fbl::DoublyLinkedListable<fbl::RefPtr<PagerProxy>> {
  public:
-  PagerProxy(PagerDispatcher* dispatcher, fbl::RefPtr<PortDispatcher> port, uint64_t key);
+  // |options_| is a bitmask of:
+  static constexpr uint32_t kTrapDirty = (1u << 0u);
+
+  PagerProxy(PagerDispatcher* dispatcher, fbl::RefPtr<PortDispatcher> port, uint64_t key,
+             uint32_t options);
   ~PagerProxy() override;
 
  private:
@@ -53,7 +57,13 @@ class PagerProxy : public PageProvider,
   zx_status_t WaitOnEvent(Event* event) final;
   void Dump() final;
   bool SupportsPageRequestType(page_request_type type) const final {
-    return type == page_request_type::READ;
+    if (type == page_request_type::READ) {
+      return true;
+    }
+    if (type == page_request_type::DIRTY) {
+      return options_ & kTrapDirty;
+    }
+    return false;
   }
 
   // Called by the pager dispatcher when it is about to go away. Handles cleaning up port's
@@ -112,6 +122,9 @@ class PagerProxy : public PageProvider,
   // Called when the packet becomes free. If pending_requests_ is non-empty, queues the
   // next request.
   void OnPacketFreedLocked() TA_REQ(mtx_);
+
+  // Options set at creation.
+  const uint32_t options_;
 
   friend PagerDispatcher;
 };

@@ -30,14 +30,20 @@ parameter, if the specified *op* supports one.
 
 Operations that can be performed, i.e. values *op* can take:
 
+**ZX_PAGER_OP_DIRTY** - The userspace pager wants to transition pages in the range [*offset*,
+*offset* + *length*) from clean to dirty. This will unblock any writes that were waiting on
+**ZX_PAGER_VMO_DIRTY** page requests for the specified range.
+
 **ZX_PAGER_OP_FAIL** - The userspace pager failed to fulfill page requests for *pager_vmo* in the
-range [*offset*, *offset* + *length*). *data* contains the error encountered (a `zx_status_t`
-error code sign-extended to a `uint64_t` value) - permitted values are **ZX_ERR_IO**,
-**ZX_ERR_IO_DATA_INTEGRITY** and **ZX_ERR_BAD_STATE**.  This will signal threads that might be
-waiting on page requests in that range, unblocking them. If the blocked thread was requesting pages
-through a [`zx_vmo_read()`] or a [`zx_vmo_op_range()`] with **ZX_VMO_OP_COMMIT**, the call will
-fail and the error status (*data*) will be returned. If the blocked thread was requesting pages
-through a VMAR mapping, the thread will take a fatal page fault exception.
+range [*offset*, *offset* + *length*) with command **ZX_PAGER_VMO_READ** or **ZX_PAGER_VMO_DIRTY**.
+*data* contains the error encountered (a `zx_status_t` error code sign-extended to a `uint64_t`
+value) - permitted values are **ZX_ERR_IO**, **ZX_ERR_IO_DATA_INTEGRITY** and **ZX_ERR_BAD_STATE**.
+
+This will signal threads that might be waiting on page requests in that range, unblocking them. If
+the blocked thread was requesting pages through a [`zx_vmo_read()`/`zx_vmo_write()`] or a
+[`zx_vmo_op_range()`] with **ZX_VMO_OP_COMMIT**, the call will fail and the error status (*data*)
+will be returned. If the blocked thread was requesting pages through a VMAR mapping, the thread will
+take a fatal page fault exception.
 
 ## RIGHTS
 

@@ -35,19 +35,23 @@ void PageSource::Detach() {
 
   detached_ = true;
 
-  // Cancel READ requests (which is everything for now).
-  while (!outstanding_requests_[page_request_type::READ].is_empty()) {
-    auto req = outstanding_requests_[page_request_type::READ].pop_front();
-    LTRACEF("dropping request with offset %lx\n", req->offset_);
+  // Cancel all requests except writebacks, which can be completed after detach.
+  for (uint8_t type = 0; type < page_request_type::COUNT; type++) {
+    if (type == page_request_type::WRITEBACK ||
+        !page_provider_->SupportsPageRequestType(page_request_type(type))) {
+      continue;
+    }
+    while (!outstanding_requests_[type].is_empty()) {
+      auto req = outstanding_requests_[type].pop_front();
+      LTRACEF("dropping request with offset %lx len %lx\n", req->offset_, req->len_);
 
-    // Tell the clients the request is complete - they'll fail when they try
-    // asking for the requested pages again after failing to find the pages
-    // for this request.
-    CompleteRequestLocked(req);
+      // Tell the clients the request is complete - they'll fail when they
+      // reattempt the page request for the same pages after failing this time.
+      CompleteRequestLocked(req);
+    }
   }
 
-  // No other request types supported for now.
-  DEBUG_ASSERT(outstanding_requests_[page_request_type::DIRTY].is_empty());
+  // No writebacks supported yet.
   DEBUG_ASSERT(outstanding_requests_[page_request_type::WRITEBACK].is_empty());
 
   page_provider_->OnDetach();
@@ -146,18 +150,23 @@ void PageSource::OnPagesFailed(uint64_t offset, uint64_t len, zx_status_t error_
     return;
   }
 
-  // The first possible request we could fail is the one with the smallest
-  // end address that is greater than offset. Then keep looking as long as the
-  // target request's start offset is less than the supply end.
-  auto start = outstanding_requests_[page_request_type::READ].upper_bound(offset);
-  while (start.IsValid() && start->offset_ < end) {
-    auto cur = start;
-    ++start;
+  for (uint8_t type = 0; type < page_request_type::COUNT; type++) {
+    if (!page_provider_->SupportsPageRequestType(page_request_type(type))) {
+      continue;
+    }
+    // The first possible request we could fail is the one with the smallest
+    // end address that is greater than offset. Then keep looking as long as the
+    // target request's start offset is less than the supply end.
+    auto start = outstanding_requests_[type].upper_bound(offset);
+    while (start.IsValid() && start->offset_ < end) {
+      auto cur = start;
+      ++start;
 
-    LTRACEF_LEVEL(2, "%p, signaling failure %d %lx\n", this, error_status, cur->offset_);
+      LTRACEF_LEVEL(2, "%p, signaling failure %d %lx\n", this, error_status, cur->offset_);
 
-    // Notify anything waiting on this page.
-    CompleteRequestLocked(outstanding_requests_[page_request_type::READ].erase(cur), error_status);
+      // Notify anything waiting on this page.
+      CompleteRequestLocked(outstanding_requests_[type].erase(cur), error_status);
+    }
   }
 }
 
@@ -199,6 +208,16 @@ zx_status_t PageSource::GetPage(uint64_t offset, PageRequest* request, VmoDebugI
     LTRACEF_LEVEL(2, "%p offset %lx\n", this, offset);
   }
 
+  return PopulateRequestLocked(request, offset);
+}
+
+zx_status_t PageSource::PopulateRequestLocked(PageRequest* request, uint64_t offset,
+                                              bool internal_batching) {
+  ASSERT(request);
+  DEBUG_ASSERT(IS_ALIGNED(offset, PAGE_SIZE));
+  DEBUG_ASSERT(request->type_ < page_request_type::COUNT);
+  DEBUG_ASSERT(request->offset_ != UINT64_MAX);
+
 #ifdef DEBUG_ASSERT_IMPLEMENTED
   ASSERT(current_request_ == nullptr || current_request_ == request);
   current_request_ = request;
@@ -206,8 +225,8 @@ zx_status_t PageSource::GetPage(uint64_t offset, PageRequest* request, VmoDebugI
 
   bool send_request = false;
   zx_status_t res;
-  if (request->allow_batching_) {
-    // If possible, append the page directly to the current page. Else have the
+  if (request->allow_batching_ || internal_batching) {
+    // If possible, append the page directly to the current request. Else have the
     // caller try again with a new request.
     if (request->offset_ + request->len_ == offset) {
       request->len_ += PAGE_SIZE;
@@ -218,7 +237,7 @@ zx_status_t PageSource::GetPage(uint64_t offset, PageRequest* request, VmoDebugI
       DEBUG_ASSERT(!add_overflow(request->offset_, request->len_, &unused));
 
       bool end_batch = false;
-      auto node = outstanding_requests_[page_request_type::READ].upper_bound(request->offset_);
+      auto node = outstanding_requests_[request->type_].upper_bound(request->offset_);
       if (node.IsValid()) {
         uint64_t cur_end = request->offset_ + request->len_;
         if (node->offset_ <= request->offset_) {
@@ -249,7 +268,6 @@ zx_status_t PageSource::GetPage(uint64_t offset, PageRequest* request, VmoDebugI
   }
 
   if (send_request) {
-    DEBUG_ASSERT(request->type_ == page_request_type::READ);
     SendRequestToProviderLocked(request);
   }
 
@@ -267,8 +285,16 @@ zx_status_t PageSource::FinalizeRequest(PageRequest* request) {
   if (detached_) {
     return ZX_ERR_BAD_STATE;
   }
-
+  // Currently only read requests are batched externally.
   DEBUG_ASSERT(request->type_ == page_request_type::READ);
+  return FinalizeRequestLocked(request);
+}
+
+zx_status_t PageSource::FinalizeRequestLocked(PageRequest* request) {
+  DEBUG_ASSERT(!detached_);
+  DEBUG_ASSERT(request->offset_ != UINT64_MAX);
+  DEBUG_ASSERT(request->type_ < page_request_type::COUNT);
+
   SendRequestToProviderLocked(request);
   return ZX_ERR_SHOULD_WAIT;
 }
@@ -366,6 +392,43 @@ void PageSource::CancelRequest(PageRequest* request) {
   }
 
   request->offset_ = UINT64_MAX;
+}
+
+zx_status_t PageSource::RequestDirtyTransition(PageRequest* request, uint64_t offset, uint64_t len,
+                                               VmoDebugInfo vmo_debug_info) {
+  canary_.Assert();
+  if (!page_provider_->SupportsPageRequestType(page_request_type::DIRTY)) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  ASSERT(request);
+
+  uint64_t end;
+  bool overflow = add_overflow(offset, len, &end);
+  DEBUG_ASSERT(!overflow);
+  offset = fbl::round_down(offset, static_cast<uint64_t>(PAGE_SIZE));
+  end = fbl::round_up(end, static_cast<uint64_t>(PAGE_SIZE));
+
+  Guard<Mutex> guard{&page_source_mtx_};
+  if (detached_) {
+    return ZX_ERR_BAD_STATE;
+  }
+
+  // Request should not be previously initialized.
+  DEBUG_ASSERT(request->offset_ == UINT64_MAX);
+  request->Init(fbl::RefPtr<PageSource>(this), offset, page_request_type::DIRTY, vmo_debug_info);
+
+  zx_status_t status;
+  // Keep building up the current request as long as PopulateRequestLocked returns ZX_ERR_NEXT.
+  do {
+    status = PopulateRequestLocked(request, offset, true);
+    offset += PAGE_SIZE;
+  } while (offset < end && status == ZX_ERR_NEXT);
+
+  // PopulateRequestLocked did not complete the batch. Finalize it to complete.
+  if (status == ZX_ERR_NEXT) {
+    return FinalizeRequestLocked(request);
+  }
+  return status;
 }
 
 void PageSource::Dump() const {
