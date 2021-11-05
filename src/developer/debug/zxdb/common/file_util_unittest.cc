@@ -6,6 +6,8 @@
 
 #include <gtest/gtest.h>
 
+#include "src/developer/debug/zxdb/common/scoped_temp_file.h"
+
 namespace zxdb {
 
 TEST(FileUtil, ExtractLastFileComponent) {
@@ -44,7 +46,7 @@ TEST(FileUtil, CatPathComponents) {
   EXPECT_EQ("a/b/", CatPathComponents("a/", "b/"));
 }
 
-TEST(FileUtil, CanonicalizePath) {
+TEST(FileUtil, NormalizePath) {
   EXPECT_EQ("", NormalizePath(""));
   EXPECT_EQ("foo/bar.txt", NormalizePath("foo/bar.txt"));
   EXPECT_EQ(".", NormalizePath("."));
@@ -64,6 +66,17 @@ TEST(FileUtil, CanonicalizePath) {
   // slash for consistency, but this behavior should be fine for our needs.
   EXPECT_EQ("..", NormalizePath("../"));
   EXPECT_EQ("/foo/bar/", NormalizePath("/foo/bar/"));
+}
+
+TEST(FileUtil, GetFileModificationTime) {
+  ScopedTempFile temp_file;
+
+  time_t modification_time = GetFileModificationTime(temp_file.name());
+  time_t now = time(nullptr);
+
+  // EXPECT_NEAR accepts double rather than int.
+  EXPECT_GT(modification_time, now - 10);
+  EXPECT_LT(modification_time, now + 10);
 }
 
 }  // namespace zxdb

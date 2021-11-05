@@ -6,6 +6,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <chrono>
 #include <filesystem>
 
 #include "src/developer/debug/zxdb/common/string_util.h"
@@ -51,7 +52,7 @@ std::time_t GetFileModificationTime(const std::string& path) {
   if (ec)
     return 0;
 
-  return std::filesystem::file_time_type::clock::to_time_t(last_write);
+  return std::chrono::duration_cast<std::chrono::seconds>(last_write.time_since_epoch()).count();
 }
 
 }  // namespace zxdb
