@@ -63,8 +63,8 @@ protocol AuthTarget {
         granularity AuthChangeGranularity;
     }) -> (struct {}) error Error;
 
-// TODO(fxbug.dev/562): Add methods that request in increase in the authentication
-//                 state or authentication for a particular event.
+    // TODO(fxbug.dev/562): Add methods that request in increase in the authentication
+    //                 state or authentication for a particular event.
 };
 
 /// A protocol that exposes information about the personae for a system account

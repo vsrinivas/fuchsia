@@ -144,6 +144,6 @@ type SignalReportIndication = struct {
 // changes and does not include a delay field.
 type ChannelSwitchInfo = struct {
     new_channel uint8;
-// The operating class/country may also be modified by an extended channel switch request, but
-// we do not currently support this.
+    // The operating class/country may also be modified by an extended channel switch request, but
+    // we do not currently support this.
 };

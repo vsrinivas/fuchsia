@@ -42,8 +42,8 @@ protocol StorageUnlockMechanism {
         prekey_material PrekeyMaterial;
     }) error Error;
 
-// TODO(dnordstrom): Add method for initilizing authentication event,
-// in order to support user initiated authentication mode.
+    // TODO(dnordstrom): Add method for initilizing authentication event,
+    // in order to support user initiated authentication mode.
 };
 
 // TODO(dnordstrom): Add a layer of indirection such that multiple

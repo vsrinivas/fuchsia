@@ -33,7 +33,7 @@ type DeviceInfo = struct {
     /// simultaneously.
     max_stream_count uint16;
     output_capabilities uint32; // CameraOutputCapabilities
-// TODO(fxbug.dev/3397): Add CameraPose, when we can actually use it.
+    // TODO(fxbug.dev/3397): Add CameraPose, when we can actually use it.
 };
 
 /// Status to be set when a frame is signalled available.

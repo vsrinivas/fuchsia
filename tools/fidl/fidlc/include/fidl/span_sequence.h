@@ -12,6 +12,33 @@
 
 namespace fidl::fmt {
 
+// Tracks whether the line a particular token finds itself on is indented relative to either its
+// immediate predecessor (in which case the `prev` property is true) or follower (in which case the
+// `next` property is true). This is done to ensure that comments are always properly "aligned,"
+// meaning that they match the indentation of either their previous or following line, whichever is
+// greater. Consider the following text:
+//
+// type MyStruct = struct {
+//   // C1
+//   a bool;
+//   // C2
+//   b bool;
+//   // C3
+// }
+//
+// For `C1`, we need to know that the line immediately following it has a greater indentation so
+// that we may indent the comment properly. Similarly, for `C3`, we need to know that the preceding
+// line has the greater indentation. However, for `C2`, we know that the preceding and following
+// lines have equal indentation, an indentation depth which `C2` is expected to match.
+class AdjacentIndents final {
+ public:
+  AdjacentIndents(const bool prev, const bool next) : prev(prev), next(next) {}
+  const bool prev = false;
+  const bool next = false;
+
+  bool HasAdjacentIndent() const { return prev || next; }
+};
+
 // A SpanSequence represents some source text in the FIDL file being formatted.  Depending on its
 // kind, the SpanSequence encodes how that block of text should be handled by the printer.  For
 // example, a DivisibleSpanSequence should be broken up into its constituent parts and wrapped if it
@@ -94,7 +121,7 @@ class SpanSequence {
   //   * out: a pointer to the output string being built by this printer.
   virtual std::optional<SpanSequence::Kind> Print(
       size_t max_col_width, std::optional<SpanSequence::Kind> last_printed_kind, size_t indentation,
-      bool wrapped, bool is_next_sibling_indented, std::string* out) const = 0;
+      bool wrapped, AdjacentIndents adjacent_indents, std::string* out) const = 0;
 
   size_t GetLeadingBlankLines() const { return leading_blank_lines_; }
   size_t GetOutdentation() const { return outdentation_; }
@@ -181,7 +208,7 @@ class TokenSpanSequence final : public SpanSequence {
   std::optional<SpanSequence::Kind> Print(size_t max_col_width,
                                           std::optional<SpanSequence::Kind> last_printed_kind,
                                           size_t indentation, bool wrapped,
-                                          bool is_next_sibling_indented,
+                                          AdjacentIndents adjacent_indents,
                                           std::string* out) const override;
 
  private:
@@ -272,7 +299,7 @@ class AtomicSpanSequence final : public CompositeSpanSequence {
   std::optional<SpanSequence::Kind> Print(size_t max_col_width,
                                           std::optional<SpanSequence::Kind> last_printed_kind,
                                           size_t indentation, bool wrapped,
-                                          bool is_next_sibling_indented,
+                                          AdjacentIndents adjacent_indents,
                                           std::string* out) const override;
 };
 
@@ -303,7 +330,7 @@ class DivisibleSpanSequence final : public CompositeSpanSequence {
   std::optional<SpanSequence::Kind> Print(size_t max_col_width,
                                           std::optional<SpanSequence::Kind> last_printed_kind,
                                           size_t indentation, bool wrapped,
-                                          bool is_next_sibling_indented,
+                                          AdjacentIndents adjacent_indents,
                                           std::string* out) const override;
 };
 
@@ -322,7 +349,7 @@ class MultilineSpanSequence final : public CompositeSpanSequence {
   std::optional<SpanSequence::Kind> Print(size_t max_col_width,
                                           std::optional<SpanSequence::Kind> last_printed_kind,
                                           size_t indentation, bool wrapped,
-                                          bool is_next_sibling_indented,
+                                          AdjacentIndents adjacent_indents,
                                           std::string* out) const override;
 };
 
@@ -372,7 +399,7 @@ class InlineCommentSpanSequence final : public CommentSpanSequence {
   std::optional<SpanSequence::Kind> Print(size_t max_col_width,
                                           std::optional<SpanSequence::Kind> last_printed_kind,
                                           size_t indentation, bool wrapped,
-                                          bool is_next_sibling_indented,
+                                          AdjacentIndents adjacent_indents,
                                           std::string* out) const override;
 
  private:
@@ -411,7 +438,7 @@ class StandaloneCommentSpanSequence final : public CommentSpanSequence {
   std::optional<SpanSequence::Kind> Print(size_t max_col_width,
                                           std::optional<SpanSequence::Kind> last_printed_kind,
                                           size_t indentation, bool wrapped,
-                                          bool is_next_sibling_indented,
+                                          AdjacentIndents adjacent_indents,
                                           std::string* out) const override;
 
  private:

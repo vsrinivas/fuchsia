@@ -21,8 +21,8 @@ type StartupInfo = resource struct {
     /// obtained from its component manifest.
     program_metadata vector<ProgramMetadata>:optional;
 
-// TODO(abarth): Add more fields to this struct relating to component and
-// environment identity.
+    // TODO(abarth): Add more fields to this struct relating to component and
+    // environment identity.
 };
 
 /// Program information about a component.

@@ -12,7 +12,7 @@ const BT_VENDOR_MAX_COMMAND_BUFFER_LEN uint16 = 16;
 /// Bitmask of features supported by the vendor.
 type BtVendorFeatures = strict enum : uint32 {
     SET_ACL_PRIORITY_COMMAND = 0x1;
-// Bits 1-31 reserved.
+    // Bits 1-31 reserved.
 };
 
 type BtVendorAclPriority = strict enum : uint8 {

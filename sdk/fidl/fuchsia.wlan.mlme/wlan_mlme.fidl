@@ -19,7 +19,7 @@ using zx;
 type ScanTypes = strict enum {
     ACTIVE = 1;
     PASSIVE = 2;
-//LAST = PASSIVE;
+    //LAST = PASSIVE;
 };
 
 const MAX_SSIDS_PER_SCAN_REQUEST uint32 = 32;
@@ -37,12 +37,12 @@ type ScanRequest = struct {
     max_channel_time uint32; // in TimeUnits
     // RequestInformation
     ssid_list vector<ieee80211.Ssid>:<MAX_SSIDS_PER_SCAN_REQUEST, optional>;
-// ChannelUsage
-// AccessNetworkType
-// HESSID
-// Mesh ID
-// DiscoveryMode
-// VendorSpecificInfo
+    // ChannelUsage
+    // AccessNetworkType
+    // HESSID
+    // Mesh ID
+    // DiscoveryMode
+    // VendorSpecificInfo
 };
 
 // MLME-SCAN.confirm (IEEE Std 802.11-2016 6.3.3.3)
@@ -110,7 +110,7 @@ type JoinRequest = struct {
 type JoinResultCode = strict enum {
     SUCCESS = 0;
     JOIN_FAILURE_TIMEOUT = 1;
-//LAST = JOIN_FAILURE_TIMEOUT;
+    //LAST = JOIN_FAILURE_TIMEOUT;
 };
 
 type JoinConfirm = struct {
@@ -124,7 +124,7 @@ type AuthenticationTypes = strict enum {
     SHARED_KEY = 2;
     FAST_BSS_TRANSITION = 3;
     SAE = 4;
-//LAST = SAE;
+    //LAST = SAE;
 };
 
 type AuthenticateRequest = struct {
@@ -135,7 +135,7 @@ type AuthenticateRequest = struct {
     // If populated, use this password to perform SAE in the driver/firmware.
     sae_password vector<uint8>:optional;
 
-// etc
+    // etc
 };
 
 // MLME-AUTHENTICATE.confirm (IEEE Std 802.11-2016, 6.3.5.3)
@@ -154,7 +154,7 @@ type AuthenticateConfirm = struct {
     auth_type AuthenticationTypes;
     result_code ieee80211.StatusCode;
 
-// etc
+    // etc
 };
 
 // MLME-AUTHENTICATE.indication (IEEE Std 802.11-2016, 6.3.5.4)
@@ -163,7 +163,7 @@ type AuthenticateIndication = struct {
     peer_sta_address ieee80211.MacAddr;
     auth_type AuthenticationTypes;
 
-// etc
+    // etc
 };
 
 // MLME-AUTHENTICATE.response (IEEE Std 802.11-2016, 6.3.5.5)
@@ -172,7 +172,7 @@ type AuthenticateResponse = struct {
     peer_sta_address ieee80211.MacAddr;
     result_code AuthenticateResultCode;
 
-// etc
+    // etc
 };
 
 // MLME-DEAUTHENTICATE.request (IEEE Std 802.11-2016, 6.3.6.2)
@@ -180,7 +180,7 @@ type AuthenticateResponse = struct {
 type DeauthenticateRequest = struct {
     peer_sta_address ieee80211.MacAddr;
     reason_code ieee80211.ReasonCode;
-// VendorSpecificInfo
+    // VendorSpecificInfo
 };
 
 // MLME-DEAUTHENTICATE.confirm (IEEE Std 802.11-2016, 6.3.6.3)
@@ -197,7 +197,7 @@ type DeauthenticateIndication = struct {
     /// locally_initiated is true if deauth is initiated from the device,
     /// and is false if it's initiated remotely (e.g. due to deauth frame)
     locally_initiated bool;
-// VendorSpecificInfo
+    // VendorSpecificInfo
 };
 
 // MLME-ASSOCIATE.request (IEEE Std 802.11-2016, 6.3.7.2)
@@ -214,7 +214,7 @@ type AssociateRequest = struct {
     // Serialized list of vendor IEs to be appended after all other associate request IEs.
     vendor_ies bytes:optional;
 
-// etc
+    // etc
 };
 
 // MLME-ASSOCIATE.confrm (IEEE Std 802.11-2016, 6.3.7.3)
@@ -244,7 +244,7 @@ type AssociateConfirm = struct {
     ht_cap box<internal.HtCapabilities>;
     vht_cap box<internal.VhtCapabilities>;
 
-// etc
+    // etc
 };
 
 // MLME-ASSOCIATE.indication (IEEE Std 802.11-2016, 6.3.7.4)
@@ -258,7 +258,7 @@ type AssociateIndication = struct {
     // BSSMembershipSelectorSet
     rsne bytes:optional;
 
-// etc
+    // etc
 };
 
 // MLME-ASSOCIATE.response (IEEE Std 802.11-2016, 6.3.7.5)
@@ -277,7 +277,7 @@ type AssociateResponse = struct {
     // them up.
     rates bytes:internal.RATES_MAX_LEN;
 
-// etc
+    // etc
 };
 
 // MLME-DISASSOCIATE.request (IEEE Std 802.11-2016, 6.3.9.1)
@@ -285,7 +285,7 @@ type AssociateResponse = struct {
 type DisassociateRequest = struct {
     peer_sta_address ieee80211.MacAddr;
     reason_code ieee80211.ReasonCode;
-// VendorSpecificInfo
+    // VendorSpecificInfo
 };
 
 // MLME-DISASSOCIATE.confirm (IEEE Std 802.11-2016, 6.3.9.2)
@@ -302,7 +302,7 @@ type DisassociateIndication = struct {
     /// locally_initiated is true if diassoc is initiated from the device,
     /// and is false if it's initiated remotely (e.g. due to disassoc frame)
     locally_initiated bool;
-// VendorSpecificInfo
+    // VendorSpecificInfo
 };
 
 // MLME-RESET.request (IEEE Std 802.11-2016, 6.3.10.2)
@@ -453,7 +453,7 @@ type EapolRequest = struct {
 type EapolResultCode = strict enum {
     SUCCESS = 0;
     TRANSMISSION_FAILURE = 1;
-//LAST = TRANSMISSION_FAILURE;
+    //LAST = TRANSMISSION_FAILURE;
 };
 
 type EapolConfirm = struct {
@@ -505,7 +505,7 @@ type MeshPeeringParams = struct {
     peer_sta_address ieee80211.MacAddr;
     local_aid uint16;
     rates vector<uint8>;
-// TODO(gbonik): HT/VHT caps
+    // TODO(gbonik): HT/VHT caps
 };
 
 type GetMeshPathTableRequest = struct {

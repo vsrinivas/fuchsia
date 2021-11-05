@@ -88,7 +88,7 @@ void TokenSpanSequence::Close() {
 
 std::optional<SpanSequence::Kind> TokenSpanSequence::Print(
     const size_t max_col_width, std::optional<SpanSequence::Kind> last_printed_kind,
-    size_t indentation, bool wrapped, bool is_next_sibling_indented, std::string* out) const {
+    size_t indentation, bool wrapped, AdjacentIndents adjacent_indents, std::string* out) const {
   MaybeAddBlankLinesAfterStandaloneComment(this, last_printed_kind, out);
   MaybeIndentLine(indentation, GetOutdentation(), out);
   *out += std::string(span_);
@@ -211,7 +211,7 @@ const std::vector<std::unique_ptr<SpanSequence>>& CompositeSpanSequence::GetChil
 
 std::optional<SpanSequence::Kind> AtomicSpanSequence::Print(
     const size_t max_col_width, std::optional<SpanSequence::Kind> last_printed_kind,
-    size_t indentation, bool wrapped, bool is_next_sibling_indented, std::string* out) const {
+    size_t indentation, bool wrapped, AdjacentIndents adjacent_indents, std::string* out) const {
   const auto& children = GetChildren();
   const auto first = FirstNonCommentChildIndex(children);
   const auto last = LastNonCommentChildIndex(children);
@@ -221,13 +221,15 @@ std::optional<SpanSequence::Kind> AtomicSpanSequence::Print(
 
   for (size_t i = 0; i < children.size(); ++i) {
     const auto& child = children[i];
-    const bool next_token_is_indented = is_next_sibling_indented && i == children.size() - 1;
+    const AdjacentIndents indents = AdjacentIndents(
+        i == 0 && adjacent_indents.prev, i == children.size() - 1 && adjacent_indents.next);
+
     switch (child->GetKind()) {
       case SpanSequence::Kind::kAtomic:
       case SpanSequence::Kind::kDivisible: {
         MaybeIndentLine(wrapped_indentation, child->GetOutdentation(), out);
-        last_printed_kind = child->Print(max_col_width, last_printed_kind, indentation, wrapped,
-                                         next_token_is_indented, out);
+        last_printed_kind =
+            child->Print(max_col_width, last_printed_kind, indentation, wrapped, indents, out);
 
         // If the child AtomicSpanSequence had comments, we know that it forces a wrapping, so
         // all future printing for this AtomicSpanSequence must be wrapped as well.
@@ -239,14 +241,14 @@ std::optional<SpanSequence::Kind> AtomicSpanSequence::Print(
       }
       case SpanSequence::Kind::kToken: {
         last_printed_kind = child->Print(max_col_width, last_printed_kind, wrapped_indentation,
-                                         wrapped, next_token_is_indented, out);
+                                         wrapped, indents, out);
         break;
       }
       case SpanSequence::Kind::kInlineComment: {
         // An inline comment must always have a leading space, to properly separate it from the
         // preceding token.
-        last_printed_kind = child->Print(max_col_width, last_printed_kind, indentation, wrapped,
-                                         next_token_is_indented, out);
+        last_printed_kind =
+            child->Print(max_col_width, last_printed_kind, indentation, wrapped, indents, out);
 
         // A comment always forces the rest of the AtomicSpanSequence content to be wrapped if its
         // between non-comment children.
@@ -265,10 +267,11 @@ std::optional<SpanSequence::Kind> AtomicSpanSequence::Print(
         //     type MyStruct = «⸢struct⸥ ⸢{⸥
         //     ⸢// You should have indented me!⸥»
         //         field1 ...
-        if (next_token_is_indented) {
+        if (!wrapped && indents.HasAdjacentIndent()) {
           indentation += kIndentation;
-          return child->Print(max_col_width, last_printed_kind, indentation, wrapped,
-                              next_token_is_indented, out);
+          last_printed_kind =
+              child->Print(max_col_width, last_printed_kind, indentation, wrapped, indents, out);
+          break;
         }
 
         // A standalone comment always forces the rest of the AtomicSpanSequence content to be
@@ -277,14 +280,14 @@ std::optional<SpanSequence::Kind> AtomicSpanSequence::Print(
           wrapped = true;
           wrapped_indentation += kWrappedIndentation;
         }
-        last_printed_kind = child->Print(max_col_width, last_printed_kind, indentation, wrapped,
-                                         next_token_is_indented, out);
+        last_printed_kind =
+            child->Print(max_col_width, last_printed_kind, indentation, wrapped, indents, out);
         break;
       }
       case SpanSequence::Kind::kMultiline: {
         MaybeIndentLine(wrapped_indentation, child->GetOutdentation(), out);
-        last_printed_kind = child->Print(max_col_width, last_printed_kind, indentation, wrapped,
-                                         next_token_is_indented, out);
+        last_printed_kind =
+            child->Print(max_col_width, last_printed_kind, indentation, wrapped, indents, out);
         if (!wrapped) {
           wrapped = true;
         }
@@ -307,7 +310,7 @@ std::optional<SpanSequence::Kind> AtomicSpanSequence::Print(
 
 std::optional<SpanSequence::Kind> DivisibleSpanSequence::Print(
     const size_t max_col_width, std::optional<SpanSequence::Kind> last_printed_kind,
-    size_t indentation, bool wrapped, bool is_next_sibling_indented, std::string* out) const {
+    size_t indentation, bool wrapped, AdjacentIndents adjacent_indents, std::string* out) const {
   const auto& children = GetChildren();
   const auto required_size = GetRequiredSize();
   const auto last = LastNonCommentChildIndex(children);
@@ -333,10 +336,12 @@ std::optional<SpanSequence::Kind> DivisibleSpanSequence::Print(
     // which forces line breaks.
     for (size_t i = 0; i < children.size(); ++i) {
       const auto& child = children[i];
-      const bool next_token_is_indented = is_next_sibling_indented && i == children.size() - 1;
+      const AdjacentIndents indents = AdjacentIndents(
+          i == 0 && adjacent_indents.prev, i == children.size() - 1 && adjacent_indents.next);
+
       MaybeIndentLine(wrapped_indentation, child->GetOutdentation(), out);
-      last_printed_kind = child->Print(max_col_width, last_printed_kind, indentation, wrapped,
-                                       next_token_is_indented, out);
+      last_printed_kind =
+          child->Print(max_col_width, last_printed_kind, indentation, wrapped, indents, out);
       if (i < last.value_or(0)) {
         *out += "\n";
       }
@@ -352,7 +357,8 @@ std::optional<SpanSequence::Kind> DivisibleSpanSequence::Print(
   // We can fit this DivisibleSpanSequence on a single line!
   for (size_t i = 0; i < children.size(); ++i) {
     auto& child = children[i];
-    const bool next_token_is_indented = is_next_sibling_indented && i == children.size() - 1;
+    const AdjacentIndents indents = AdjacentIndents(
+        i == 0 && adjacent_indents.prev, i == children.size() - 1 && adjacent_indents.next);
     switch (child->GetKind()) {
       case SpanSequence::Kind::kInlineComment:
       case SpanSequence::Kind::kStandaloneComment: {
@@ -362,8 +368,8 @@ std::optional<SpanSequence::Kind> DivisibleSpanSequence::Print(
       case SpanSequence::Kind::kAtomic:
       case SpanSequence::Kind::kDivisible: {
         MaybeIndentLine(wrapped_indentation, child->GetOutdentation(), out);
-        last_printed_kind = child->Print(max_col_width, last_printed_kind, indentation, wrapped,
-                                         next_token_is_indented, out);
+        last_printed_kind =
+            child->Print(max_col_width, last_printed_kind, indentation, wrapped, indents, out);
 
         // In certain weird circumstances (ie, comments placed in unexpected areas), a child
         // AtomicSpanSequence may start with an inline comment.  If this is the case, make sure to
@@ -386,13 +392,13 @@ std::optional<SpanSequence::Kind> DivisibleSpanSequence::Print(
       }
       case SpanSequence::Kind::kToken: {
         last_printed_kind = child->Print(max_col_width, last_printed_kind, indentation, wrapped,
-                                         next_token_is_indented, out);
+                                         adjacent_indents, out);
         break;
       }
       case SpanSequence::Kind::kMultiline: {
         MaybeIndentLine(wrapped_indentation, child->GetOutdentation(), out);
         last_printed_kind = child->Print(max_col_width, last_printed_kind, indentation, wrapped,
-                                         next_token_is_indented, out);
+                                         adjacent_indents, out);
         if (!wrapped) {
           wrapped = true;
         }
@@ -426,24 +432,21 @@ size_t MultilineSpanSequence::CalculateRequiredSize() const {
 
 std::optional<SpanSequence::Kind> MultilineSpanSequence::Print(
     const size_t max_col_width, std::optional<SpanSequence::Kind> last_printed_kind,
-    size_t indentation, bool wrapped, bool is_next_sibling_indented, std::string* out) const {
+    size_t indentation, bool wrapped, AdjacentIndents adjacent_indents, std::string* out) const {
   const auto& children = GetChildren();
   const auto first_non_comment_index = FirstNonCommentChildIndex(children);
   for (size_t i = 0; i < children.size(); ++i) {
     const auto& child = children[i];
     auto child_indentation = indentation;
-    bool next_token_is_indented = false;
-    if (i == children.size() - 1) {
-      // This is the last child of this MultilineSpanSequence - use the ingested boolean to
-      // determine if the next token after this SpanSequence will be indented.
-      next_token_is_indented = is_next_sibling_indented;
-    } else if (i < children.size() - 1) {
-      // This is not the last child of this MultilineSpanSequence - just check the position of next
-      // child to see if its indented.
-      next_token_is_indented =
-          child->GetPosition() != SpanSequence::Position::kNewlineIndented &&
-          children[i + 1]->GetPosition() == SpanSequence::Position::kNewlineIndented;
-    }
+    const bool prev_token_is_indented =
+        i == 0 ? adjacent_indents.prev
+               : (children[i - 1]->GetPosition() == SpanSequence::Position::kNewlineIndented &&
+                  child->GetPosition() != SpanSequence::Position::kNewlineIndented);
+    const bool next_token_is_indented =
+        i == children.size() - 1
+            ? adjacent_indents.next
+            : (children[i + 1]->GetPosition() == SpanSequence::Position::kNewlineIndented &&
+               child->GetPosition() != SpanSequence::Position::kNewlineIndented);
 
     if (child->GetPosition() != SpanSequence::Position::kDefault) {
       if (last_printed_kind == SpanSequence::Kind::kToken) {
@@ -463,8 +466,9 @@ std::optional<SpanSequence::Kind> MultilineSpanSequence::Print(
     }
 
     const bool keep_wrapped = wrapped && i == first_non_comment_index.value_or(children.size());
-    last_printed_kind = child->Print(max_col_width, last_printed_kind, child_indentation,
-                                     keep_wrapped, next_token_is_indented, out);
+    last_printed_kind =
+        child->Print(max_col_width, last_printed_kind, child_indentation, keep_wrapped,
+                     AdjacentIndents(prev_token_is_indented, next_token_is_indented), out);
   }
 
   return last_printed_kind;
@@ -477,7 +481,7 @@ void CommentSpanSequence::Close() {
 
 std::optional<SpanSequence::Kind> InlineCommentSpanSequence::Print(
     const size_t max_col_width, std::optional<SpanSequence::Kind> last_printed_kind,
-    size_t indentation, bool wrapped, bool is_next_sibling_indented, std::string* out) const {
+    size_t indentation, bool wrapped, AdjacentIndents adjacent_indents, std::string* out) const {
   // Remove all whitespace before the inline comment, then add exactly one space back.
   while (!out->empty() && (out->back() == ' ' || out->back() == '\n'))
     out->pop_back();
@@ -513,7 +517,7 @@ void StandaloneCommentSpanSequence::AddLine(const std::string_view line,
 
 std::optional<SpanSequence::Kind> StandaloneCommentSpanSequence::Print(
     const size_t max_col_width, std::optional<SpanSequence::Kind> last_printed_kind,
-    size_t indentation, bool wrapped, bool is_next_sibling_indented, std::string* out) const {
+    size_t indentation, bool wrapped, AdjacentIndents adjacent_indents, std::string* out) const {
   // A standalone comment forces a newline, but its possible that the preceding token already
   // printed its trailing space(s), or otherwise we've already indented this line.  We don't want to
   // leave that trailing whitespace hanging before a newline, so let's delete the extra space(s).

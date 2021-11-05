@@ -15,9 +15,9 @@ type Modifiers = flexible bits : uint64 {
     /// Applies when the `SCROLL_LOCK` modifier is actuated.
     SCROLL_LOCK = 0x00000004;
 
-// TODO: Define additional modifiers as needed.
-// SHIFT, CONTROL, ALT, META
-// ALT_GRAPH, FUNCTION, FUNCTION_LOCK, SYMBOL, SYMBOL_LOCK
+    // TODO: Define additional modifiers as needed.
+    // SHIFT, CONTROL, ALT, META
+    // ALT_GRAPH, FUNCTION, FUNCTION_LOCK, SYMBOL, SYMBOL_LOCK
 };
 
 /// Lock state reports whether the lock is active for the keys which have a lock

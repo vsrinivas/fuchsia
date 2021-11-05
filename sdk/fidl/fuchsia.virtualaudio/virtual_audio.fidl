@@ -75,11 +75,11 @@ protocol Control {
 protocol Input {
     compose Device;
 
-// TODO(mpuryear): `SetCaptureSignal()` -- indicate what to "capture".
-// E.g. sinusoid, constant, square, ramp, saw, noise. Can differ by channel.
+    // TODO(mpuryear): `SetCaptureSignal()` -- indicate what to "capture".
+    // E.g. sinusoid, constant, square, ramp, saw, noise. Can differ by channel.
 
-// TODO(mpuryear): `PairWithOutput()` -- client passes an output (server)
-// binding; input device returns as captured data the streamed output data.
+    // TODO(mpuryear): `PairWithOutput()` -- client passes an output (server)
+    // binding; input device returns as captured data the streamed output data.
 };
 
 // fuchsia.virtualaudio.Output
@@ -94,7 +94,7 @@ protocol Input {
 protocol Output {
     compose Device;
 
-// TODO(mpuryear): any render-specific configuration or runtime triggers.
+    // TODO(mpuryear): any render-specific configuration or runtime triggers.
 };
 
 /// This protocol represents the base functionality of active Input and Output

@@ -83,7 +83,7 @@ type AudioStreamType = struct {
     sample_format AudioSampleFormat;
     channels uint32;
     frames_per_second uint32;
-// TODO(mpuryear): Add channel config.
+    // TODO(mpuryear): Add channel config.
 };
 
 /// Enumerates the supported audio sample formats.

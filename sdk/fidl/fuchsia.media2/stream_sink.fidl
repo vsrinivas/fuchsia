@@ -119,10 +119,10 @@ type PacketTimestamp = flexible union {
     /// as soon as possible if not.
     3: unspecified_best_effort struct {};
 
-// TODO: There’s an argument to be made for another option
-// here, which means “present ASAP, discarding all previous
-// packets.” That would be used for video trick modes like
-// timeline scrubbing.
+    // TODO: There’s an argument to be made for another option
+    // here, which means “present ASAP, discarding all previous
+    // packets.” That would be used for video trick modes like
+    // timeline scrubbing.
 };
 
 /// Properties accompanying a packet in a compressed stream.

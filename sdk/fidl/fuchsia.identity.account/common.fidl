@@ -89,9 +89,9 @@ type Error = strict enum {
     /// attempt. User consent or input is required before any retry.
     FAILED_AUTHENTICATION = 10;
 
-// This enumeration may expand to include additional statuses in the future.
-// Examples are likely to include: MAX_LISTENERS, NO_SUITABLE_AUTHENTICATOR,
-// INVALID_AUTH_PROVIDER,
+    // This enumeration may expand to include additional statuses in the future.
+    // Examples are likely to include: MAX_LISTENERS, NO_SUITABLE_AUTHENTICATOR,
+    // INVALID_AUTH_PROVIDER,
 };
 
 /// Basic data about a system account. These data are available even while an
@@ -118,7 +118,7 @@ type AuthMechanismProperties = struct {
     /// If true, the authentication mechanism can be used for storage unlock.
     storage_unlock bool;
 
-// TODO(dnordstrom): Add more properties as they become useful to clients.
+    // TODO(dnordstrom): Add more properties as they become useful to clients.
 };
 
 /// An identifier for an enrollment of an authentication mechanism. It is
@@ -134,5 +134,5 @@ type AuthMechanismEnrollmentMetadata = struct {
     /// fingerprint authenticator.
     name string:MAX_NAME_SIZE;
 
-// TODO(dnordstrom): Add field for date created.
+    // TODO(dnordstrom): Add field for date created.
 };

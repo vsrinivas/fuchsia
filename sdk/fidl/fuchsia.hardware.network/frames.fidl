@@ -98,7 +98,7 @@ type TxAcceleration = strict enum : uint8 {
     /// Request that the device calculate the UDP checksum and write it in
     /// place.
     COMPUTE_UDP_CHECKSUM = 3;
-// Future expansions: TCP segmentation acceleration
+    // Future expansions: TCP segmentation acceleration
 };
 
 /// Flags set by a Device when handing a buffer to a client on the rx path.

@@ -4396,12 +4396,38 @@ type // C8
     my_field // C10
     bool;
 
-// C11
+    // C11
 
 
 };
 
 // C12
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
+}
+
+// TODO(fxbug.dev/88107): This test currently behaves correctly per the specified line-wrapping
+// algorithm, but the output is unintuitive and unexpected. Once the referenced bug is fixed, this
+// test should result in the `unformatted` input being unmodified.
+TEST(NewFormatterTests, DISABLED_CommentsEmptyLayout) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+MyStruct = struct {
+    // Comment
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+MyStruct = struct {
+        // Comment
+        };
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));

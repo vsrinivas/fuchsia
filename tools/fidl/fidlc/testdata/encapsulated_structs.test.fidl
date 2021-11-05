@@ -11,12 +11,12 @@ type Int8Int32 = struct {
 type Int16Int8 = struct {
     a int16;
     b int8;
-// padding of 1 byte.
+    // padding of 1 byte.
 };
 
 type ArrayInt16Int8 = struct {
     arr array<Int16Int8, 3>;
-// inner padding plus 3 bytes padding at the end.
+    // inner padding plus 3 bytes padding at the end.
 };
 
 type StructPaddingTestStruct = struct {
@@ -26,14 +26,14 @@ type StructPaddingTestStruct = struct {
     // struct for the coding tables, there will be 5 bytes of padding.
     inner Int8Int32;
     array ArrayInt16Int8;
-// after flattening, there should be 3 bytes of padding after the array
-// elements.
+    // after flattening, there should be 3 bytes of padding after the array
+    // elements.
 };
 
 type NonInlineStructTestStruct = resource struct {
     element box<Int16Int8>; // 8-byte alignment
     h zx.handle;
-// 4-byte padding after handle.
+    // 4-byte padding after handle.
 };
 
 type TopLevelStruct = resource struct {

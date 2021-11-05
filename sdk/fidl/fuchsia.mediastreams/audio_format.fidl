@@ -19,8 +19,8 @@ type AudioFormat = struct {
     /// The spatial assignment of each channel.
     channel_layout AudioChannelLayout;
 
-// TODO: Maybe add bytes_per_frame for convenience. It’s
-// a function of sample_format and channel_count.
+    // TODO: Maybe add bytes_per_frame for convenience. It’s
+    // a function of sample_format and channel_count.
 };
 
 /// Expresses the format of individual audio samples.

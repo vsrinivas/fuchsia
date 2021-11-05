@@ -187,9 +187,9 @@ type PcmFormat = struct {
     // in a range starting from AudioChannel_ExtendedChannelIdBase.
     channel_map vector<AudioChannelId>:16;
 
-// TODO(dustingreen): Add unsigned 8 bit, float 32 bit, maybe others. FWIW,
-// AOSP appears to support signed 16 bit, unsigned 8 bit, and float 32 bit
-// under "Pcm", AFAICT based on OMX_NUMERICALDATATYPE and ACodec.cpp code.
+    // TODO(dustingreen): Add unsigned 8 bit, float 32 bit, maybe others. FWIW,
+    // AOSP appears to support signed 16 bit, unsigned 8 bit, and float 32 bit
+    // under "Pcm", AFAICT based on OMX_NUMERICALDATATYPE and ACodec.cpp code.
 };
 
 /// AudioUncompressedFormat

@@ -15,6 +15,6 @@ type Package = resource table {
     /// The package's content directory.
     2: package_dir client_end:fuchsia.io.Directory;
 
-// TODO(fxbug.dev/4051): Add more metadata for the package such as its
-// code signing information.
+    // TODO(fxbug.dev/4051): Add more metadata for the package such as its
+    // code signing information.
 };

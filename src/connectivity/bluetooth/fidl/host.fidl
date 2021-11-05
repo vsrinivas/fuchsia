@@ -228,6 +228,6 @@ protocol Host {
         data sys.BondingData;
     });
 
-// TODO(fxbug.dev/787): Introduce a "OnBondRemoved()" event to notify when existing
-// keys become stale.
+    // TODO(fxbug.dev/787): Introduce a "OnBondRemoved()" event to notify when existing
+    // keys become stale.
 };

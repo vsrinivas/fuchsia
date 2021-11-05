@@ -79,9 +79,9 @@ type PacketType = strict enum {
     /// is being sent (unicasted, multicasted, broadcasted).
     OUTGOING = 5;
 
-// Intentionally do not include PACKET_LOOPBACK or PACKET_FASTROUTE as those
-// are not exposed to applications:
-// https://github.com/torvalds/linux/blob/73bfd370/include/uapi/linux/if_packet.h#L29.
+    // Intentionally do not include PACKET_LOOPBACK or PACKET_FASTROUTE as those
+    // are not exposed to applications:
+    // https://github.com/torvalds/linux/blob/73bfd370/include/uapi/linux/if_packet.h#L29.
 };
 
 /// A hardware address.

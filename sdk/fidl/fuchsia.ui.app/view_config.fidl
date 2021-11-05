@@ -10,5 +10,5 @@ using fuchsia.intl;
 /// night mode, high contrast mode, etc.
 type ViewConfig = struct {
     intl_profile fuchsia.intl.Profile;
-// Add others as needed.
+    // Add others as needed.
 };

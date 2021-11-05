@@ -111,8 +111,8 @@ type DevicePerformanceStateInfo = struct {
     restore_latency int64;
     /// Is this state supported?
     is_supported bool;
-// TODO(ravoorir): Explore how more device specific metadata can be saved here.
-// Maybe a union of metadata coming from different devices.
+    // TODO(ravoorir): Explore how more device specific metadata can be saved here.
+    // Maybe a union of metadata coming from different devices.
 };
 
 type SystemPowerStateInfo = struct {

@@ -40,7 +40,7 @@ type Data = flexible resource union {
 
     /// The binary data provided out-of-line in a `Buffer`.
     2: buffer Buffer;
-    
+
     // TODO(https://fxbug.dev/85452): Add a VMO entry and teach all users
     // of this type how to store data in it.
 };

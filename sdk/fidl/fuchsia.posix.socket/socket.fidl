@@ -839,9 +839,9 @@ protocol StreamSocket {
         value_millis uint32;
     }) error fuchsia.posix.Errno;
 
-// NOTE: set `SOL_TCP` -> `TCP_REPAIR_OPTIONS` not supported in netstack.
-// NOTE: get `SOL_CTP` -> `TCP_NOTSENT_LOWAT` not supported in netstack.
-// NOTE: get `SOL_TCP` -> `TCP_CC_INFO` not supported in netstack.
+    // NOTE: set `SOL_TCP` -> `TCP_REPAIR_OPTIONS` not supported in netstack.
+    // NOTE: get `SOL_CTP` -> `TCP_NOTSENT_LOWAT` not supported in netstack.
+    // NOTE: get `SOL_TCP` -> `TCP_CC_INFO` not supported in netstack.
 };
 
 /// TCP congestion control modes.

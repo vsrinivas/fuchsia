@@ -405,7 +405,7 @@ protocol LoggerBase {
         status Status;
     });
 
-// Method ordinals >= 100 are reserved for sub-interfaces.
+    // Method ordinals >= 100 are reserved for sub-interfaces.
 };
 
 /////////////////////////////////////////////////////////////////////

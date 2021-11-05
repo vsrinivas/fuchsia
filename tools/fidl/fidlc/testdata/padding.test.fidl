@@ -3,44 +3,44 @@ library fidl.test.padding;
 type Padding1ByteEnd = struct {
     a uint16;
     b uint8;
-// 1 byte padding
+    // 1 byte padding
 };
 
 type Padding2ByteEnd = struct {
     a uint32;
     b uint16;
-// 2 byte padding
+    // 2 byte padding
 };
 
 type Padding3ByteEnd = struct {
     a uint32;
     b uint8;
-// 3 byte padding
+    // 3 byte padding
 };
 
 type Padding4ByteEnd = struct {
     a uint64;
     b uint32;
-// 4 byte padding
+    // 4 byte padding
 };
 
 type Padding5ByteEnd = struct {
     a uint64;
     b uint16;
     c uint8;
-// 5 byte padding
+    // 5 byte padding
 };
 
 type Padding6ByteEnd = struct {
     a uint64;
     b uint16;
-// 6 byte padding
+    // 6 byte padding
 };
 
 type Padding7ByteEnd = struct {
     a uint64;
     b uint8;
-// 7 byte padding
+    // 7 byte padding
 };
 
 type Padding1ByteMiddle = struct {
@@ -96,7 +96,7 @@ type Padding4ByteAlignmentLength12 = struct {
     // 1 byte padding
     c uint16;
     d uint16;
-// 2 bytes padding
+    // 2 bytes padding
 };
 
 type Padding2ByteAlignmentLength6 = struct {
@@ -106,5 +106,5 @@ type Padding2ByteAlignmentLength6 = struct {
     b uint16;
     // 2 byte padding mask starts here.
     c uint8;
-// 1 byte padding
+    // 1 byte padding
 };

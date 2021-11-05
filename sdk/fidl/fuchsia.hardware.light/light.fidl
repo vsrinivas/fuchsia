@@ -199,6 +199,6 @@ protocol Light {
         values vector<Rgb>:MAX;
     }) -> (struct {}) error LightError;
 
-// TODO: Ideas for future expansion
-// - Hardware blinking configuration, for lights that have hardware or MCU support for blinking.
+    // TODO: Ideas for future expansion
+    // - Hardware blinking configuration, for lights that have hardware or MCU support for blinking.
 };

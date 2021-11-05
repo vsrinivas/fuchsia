@@ -13,9 +13,9 @@ protocol FontSetEventListener {
         event FontSetUpdatedEvent;
     }) -> ();
 
-// A future addition might include an event that is triggered when the user changes the mapping
-// for generic font families (e.g. configuring "monospace" to default to "Inconsolata" instead of
-// "Roboto Mono").
+    // A future addition might include an event that is triggered when the user changes the mapping
+    // for generic font families (e.g. configuring "monospace" to default to "Inconsolata" instead of
+    // "Roboto Mono").
 };
 
 /// An event indicating that the set of fonts available in the `Provider` has changed. This is most

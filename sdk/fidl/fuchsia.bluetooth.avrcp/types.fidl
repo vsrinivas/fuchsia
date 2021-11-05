@@ -280,7 +280,7 @@ type MediaAttributes = table {
     6: genre string:MAX_ATTRIBUTE_VALUE_LENGTH;
     /// The length of the media in milliseconds (ms).
     7: playing_time string:MAX_ATTRIBUTE_VALUE_LENGTH;
-// TODO(fxbug.dev/1322): Add BIP cover art handle.
+    // TODO(fxbug.dev/1322): Add BIP cover art handle.
 };
 
 /// Status of currently playing media on the TG.
@@ -316,7 +316,7 @@ type MajorPlayerType = strict bits : uint8 {
 
     BROADCASTING_VIDEO = 0x08;
 
-// Bits 4 - 7 are reserved.
+    // Bits 4 - 7 are reserved.
 };
 
 /// The Player Sub Type associated with a media player.
@@ -326,7 +326,7 @@ type PlayerSubType = strict bits : uint32 {
 
     PODCAST = 0x02;
 
-// Bits 2 - 31 are reserved.
+    // Bits 2 - 31 are reserved.
 };
 
 /// Response data for the browseable items associated with a media player.

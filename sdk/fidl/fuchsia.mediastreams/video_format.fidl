@@ -31,9 +31,9 @@ type VideoFormat = struct {
     /// be displayed.
     aspect_ratio box<fuchsia.math.Size>;
 
-// TODO: fuchsia.sysmem2.ImageFormat has bytes_per_row, but
-// that’s a function of pixel_format and coded_size. Do we
-// need that?
+    // TODO: fuchsia.sysmem2.ImageFormat has bytes_per_row, but
+    // that’s a function of pixel_format and coded_size. Do we
+    // need that?
 };
 
 /// Expresses the manner in which video pixels are encoded.

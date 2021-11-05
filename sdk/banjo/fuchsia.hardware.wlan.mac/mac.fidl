@@ -36,7 +36,7 @@ type WlanRxInfoFlags = strict enum : uint32 {
     FCS_INVALID = 0x1;
     /// Padding was added after the MAC header to align the frame body to 4 bytes.
     FRAME_BODY_PADDING_4 = 0x2;
-// Bits 2-31 reserved
+    // Bits 2-31 reserved
 };
 
 const WLAN_RSSI_DBM_MIN int8 = -97;
@@ -87,7 +87,7 @@ type WlanTxInfoValid = strict enum : uint8 {
     PHY = 0x4;
     //CHAN_WIDTH = 0x4;
     MCS = 0x8;
-// Bits 5-31 reserved
+    // Bits 5-31 reserved
 };
 
 const WLAN_TX_INFO_VALID_CHAN_WIDTH uint8 = 0x4;

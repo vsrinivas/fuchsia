@@ -55,5 +55,5 @@ type ImageSpec = struct {
     /// Color space.
     color_space ColorSpace;
 
-// TODO(fxbug.dev/32128): Add tiling formats.
+    // TODO(fxbug.dev/32128): Add tiling formats.
 };

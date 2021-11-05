@@ -24,5 +24,5 @@ type ExperimentToggle = strict enum : uint64 {
     /// This does nothing, but is visible in inspect.
     LIGHTBULB = 0;
 
-// Next unused experiment id: 3
+    // Next unused experiment id: 3
 };

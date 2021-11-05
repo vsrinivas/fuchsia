@@ -341,14 +341,14 @@ protocol AudioRenderer {
     });
     PauseNoReply();
 
-// TODO(mpuryear): Spec methods/events which can be used for unintentional
-// discontinuity/underflow detection.
-//
-// TODO(mpuryear): Spec methods/events which can be used to report routing
-// changes. (Presuming that they belong at this level at all; they may
-// belong on some sort of policy object).
-//
-// TODO(mpuryear): Spec methods/events which can be used to report policy
-// induced gain/ducking changes. (Presuming that they belong at this level
-// at all; they may belong on some sort of policy object).
+    // TODO(mpuryear): Spec methods/events which can be used for unintentional
+    // discontinuity/underflow detection.
+    //
+    // TODO(mpuryear): Spec methods/events which can be used to report routing
+    // changes. (Presuming that they belong at this level at all; they may
+    // belong on some sort of policy object).
+    //
+    // TODO(mpuryear): Spec methods/events which can be used to report policy
+    // induced gain/ducking changes. (Presuming that they belong at this level
+    // at all; they may belong on some sort of policy object).
 };

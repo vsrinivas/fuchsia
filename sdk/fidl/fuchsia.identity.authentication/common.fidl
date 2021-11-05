@@ -45,9 +45,9 @@ type Error = strict enum {
     /// An interactive authentication operation was cancelled by the user.
     ABORTED = 8;
 
-// This enumeration may expand to include additional statuses in the future.
-// Examples are likely to include: MECHANISM_NOT_FOUND,
-// MECHANISM_NOT_AVAILABLE.
+    // This enumeration may expand to include additional statuses in the future.
+    // Examples are likely to include: MECHANISM_NOT_FOUND,
+    // MECHANISM_NOT_AVAILABLE.
 };
 
 /// The maximum number of active enrollments per authentication mechanism and
@@ -67,8 +67,8 @@ type Enrollment = struct {
     /// Data associated with the enrollment.
     data EnrollmentData;
 
-// TODO(dnordstrom): We might want to version label all persistent data in
-// the future.
+    // TODO(dnordstrom): We might want to version label all persistent data in
+    // the future.
 };
 
 /// A unique identifier for an `Enrollment` within an account and an
@@ -97,8 +97,8 @@ type PositiveEvent = struct {
     /// The UTC time when the event completed.
     timestamp zx.time;
 
-// TODO(dnordstrom): Add fields for account, confidence, range, engagement
-// and mobility.
+    // TODO(dnordstrom): Add fields for account, confidence, range, engagement
+    // and mobility.
 };
 
 /// A negative authentication event may contribute to a decrease in
@@ -108,7 +108,7 @@ type NegativeEvent = struct {
     /// The UTC time when the event completed.
     timestamp zx.time;
 
-// TODO(dnordstrom): Add fields for account, range and disengagement.
+    // TODO(dnordstrom): Add fields for account, range and disengagement.
 };
 
 /// A attempted authentication event may contribute to an increase in
@@ -130,6 +130,6 @@ type AttemptedEvent = struct {
     /// Pre-key material produced during the authentication attempt.
     prekey_material PrekeyMaterial;
 
-// TODO(dnordstrom): Add fields for account, confidence, range, engagement
-// and mobility (or a shared type with PositiveEvent).
+    // TODO(dnordstrom): Add fields for account, confidence, range, engagement
+    // and mobility (or a shared type with PositiveEvent).
 };

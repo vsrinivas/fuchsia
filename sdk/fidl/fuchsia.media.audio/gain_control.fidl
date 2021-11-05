@@ -92,7 +92,7 @@ type RampType = strict enum : uint16 {
     /// Amplitude scale changes at a fixed rate across the ramp duration.
     SCALE_LINEAR = 1;
 
-// TODO(mpuryear) Additional ramp shapes (easings) may be added in the
-// future, perhaps including logarithmic (i.e. linear wrt dB), cubic
-// (in/out/inout) or others.
+    // TODO(mpuryear) Additional ramp shapes (easings) may be added in the
+    // future, perhaps including logarithmic (i.e. linear wrt dB), cubic
+    // (in/out/inout) or others.
 };

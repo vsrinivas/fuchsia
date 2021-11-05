@@ -102,7 +102,7 @@ type PointerEventPhase = strict enum {
     /// The input from the pointer is no longer directed towards this receiver.
     CANCEL = 6;
 
-// TODO: add phases to indicate button press / release
+    // TODO: add phases to indicate button press / release
 };
 
 /// Pointers represent raw data about the user's interaction with the screen.

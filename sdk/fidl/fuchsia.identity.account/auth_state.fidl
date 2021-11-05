@@ -109,8 +109,8 @@ type AuthState = struct {
     /// An assessment of whether the account owner is engaged.
     engagement Engagement;
 
-// TODO(jsankey): Add additional fields to express timeliness and
-// confidence.
+    // TODO(jsankey): Add additional fields to express timeliness and
+    // confidence.
 };
 
 /// An expression of the types of changes to an auth state that should be

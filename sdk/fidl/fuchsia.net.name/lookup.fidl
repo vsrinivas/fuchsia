@@ -46,8 +46,8 @@ protocol Lookup {
             /// If not set, interpreted as false.
             3: sort_addresses bool;
 
-        // TODO(https://fxbug.dev/21414): add a field here and in `LookupResult`
-        // to support returning the canonical name.
+            // TODO(https://fxbug.dev/21414): add a field here and in `LookupResult`
+            // to support returning the canonical name.
         };
     }) -> (struct {
         result @generated_name("LookupResult") table {

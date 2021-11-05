@@ -33,10 +33,10 @@ type Child = table {
     /// May be unset, in which case defaults to `NONE`.
     5: on_terminate OnTerminate;
 
-// TODO(fxbug.dev/4051): Provide a way to supply parameters to the child, possibly
-// as command-line arguments, by URL, or maybe in some other way which is
-// orthogonal to other inputs to mitigate confused deputy issues.  Perhaps
-// as a dictionary like we do for runners?
+    // TODO(fxbug.dev/4051): Provide a way to supply parameters to the child, possibly
+    // as command-line arguments, by URL, or maybe in some other way which is
+    // orthogonal to other inputs to mitigate confused deputy issues.  Perhaps
+    // as a dictionary like we do for runners?
 };
 
 /// Describes under what conditions the component may be started.

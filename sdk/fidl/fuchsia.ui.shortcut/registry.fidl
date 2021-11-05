@@ -84,9 +84,9 @@ type Trigger = strict enum {
     /// Activate shortcut on key release which is preceded by a key press.
     KEY_PRESSED_AND_RELEASED = 2;
 
-// TODO: add later when needed
-// KEY_LONG_PRESSED = 3;
-// KEY_PRESSED_REPEATEDLY = 4;
+    // TODO: add later when needed
+    // KEY_LONG_PRESSED = 3;
+    // KEY_PRESSED_REPEATEDLY = 4;
 };
 
 /// Client should implement this protocol to get notified of shortcut activation.

@@ -11,11 +11,11 @@ type PciBar = struct {
     id uint32;
     type uint32;
     size usize;
-// TODO(scottmg): Unnamed union.
-//union {
-//    uintptr_t addr;
-//    zx_handle_t handle;
-//};
+    // TODO(scottmg): Unnamed union.
+    //union {
+    //    uintptr_t addr;
+    //    zx_handle_t handle;
+    //};
 };
 
 // Defines and structures related to zx_pci_*()
@@ -49,15 +49,15 @@ type PciInitArg = struct {
     //} irqs[ZX_PCI_MAX_IRQS];
 
     addr_window_count uint32;
-// TODO(scottmg): struct-hack sized.
-//struct {
-//  uint64_t base;
-//  size_t size;
-//  uint8_t bus_start;
-//  uint8_t bus_end;
-//  uint8_t cfg_space_type;
-//  bool has_ecam;
-//} addr_windows[];
+    // TODO(scottmg): struct-hack sized.
+    //struct {
+    //  uint64_t base;
+    //  size_t size;
+    //  uint8_t bus_start;
+    //  uint8_t bus_end;
+    //  uint8_t cfg_space_type;
+    //  bool has_ecam;
+    //} addr_windows[];
 };
 
 @transport("Syscall")
