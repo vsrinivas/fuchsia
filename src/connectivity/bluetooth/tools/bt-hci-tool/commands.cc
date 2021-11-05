@@ -517,7 +517,7 @@ bool HandleLESetScanParams(const CommandData* cmd_data, const fxl::CommandLine& 
   params->scan_interval = htole16(::bt::hci_spec::kLEScanIntervalDefault);
   params->scan_window = htole16(::bt::hci_spec::kLEScanIntervalDefault);
   params->own_address_type = ::bt::hci_spec::LEOwnAddressType::kPublic;
-  params->filter_policy = ::bt::hci_spec::LEScanFilterPolicy::kNoWhiteList;
+  params->filter_policy = ::bt::hci_spec::LEScanFilterPolicy::kNoFilterAcceptList;
 
   auto id = SendCompleteCommand(cmd_data, std::move(packet), std::move(complete_cb));
 
