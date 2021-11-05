@@ -213,8 +213,7 @@ mod tests {
         fuchsia_async as fasync,
         fuchsia_component::server as fserver,
         fuchsia_component_test::{
-            builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
-            mock::{Mock, MockHandles},
+            mock::MockHandles, ChildProperties, RealmBuilder, RouteBuilder, RouteEndpoint,
         },
         fuchsia_zircon::Vmo,
         futures::{channel::mpsc, join, lock::Mutex},
@@ -293,25 +292,26 @@ mod tests {
                 .to_string();
         let requested_url =
             "fuchsia-pkg://fuchsia.com/test-pkg-request#meta/test-component.cm".to_string();
-        let mut builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
+        let builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
         builder
-            .add_component("universe-resolver", ComponentSource::url(resolver_url))
+            .add_child("universe-resolver", resolver_url, ChildProperties::new())
             .await
             .expect("Failed add universe-resolver to test topology")
-            .add_component(
+            .add_mock_child(
                 "fake-pkg-resolver",
-                ComponentSource::Mock(Mock::new({
+                {
                     let sender = tx.clone();
                     move |mock_handles: MockHandles| {
                         Box::pin(mock_pkg_resolver(sender.clone(), mock_handles))
                     }
-                })),
+                },
+                ChildProperties::new(),
             )
             .await
             .expect("Failed adding base resolver mock")
-            .add_eager_component(
+            .add_mock_child(
                 "requesting-component",
-                ComponentSource::Mock(Mock::new({
+                {
                     let sender = tx.clone();
                     move |mock_handles: MockHandles| {
                         Box::pin(package_requester(
@@ -320,33 +320,37 @@ mod tests {
                             mock_handles,
                         ))
                     }
-                })),
+                },
+                ChildProperties::new().eager(),
             )
             .await
             .expect("Failed adding mock request component")
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.pkg.PackageResolver"),
-                source: RouteEndpoint::component("fake-pkg-resolver"),
-                targets: vec![RouteEndpoint::component("universe-resolver")],
-            })
+            .add_route(
+                RouteBuilder::protocol("fuchsia.pkg.PackageResolver")
+                    .source(RouteEndpoint::component("fake-pkg-resolver"))
+                    .targets(vec![RouteEndpoint::component("universe-resolver")]),
+            )
+            .await
             .expect("Failed adding resolver route from fake-base-resolver to universe-resolver")
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.sys2.ComponentResolver"),
-                source: RouteEndpoint::component("universe-resolver"),
-                targets: vec![RouteEndpoint::component("requesting-component")],
-            })
+            .add_route(
+                RouteBuilder::protocol("fuchsia.sys2.ComponentResolver")
+                    .source(RouteEndpoint::component("universe-resolver"))
+                    .targets(vec![RouteEndpoint::component("requesting-component")]),
+            )
+            .await
             .expect("Failed adding resolver route from universe-resolver to requesting-component")
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.logger.LogSink"),
-                source: RouteEndpoint::AboveRoot,
-                targets: vec![
-                    RouteEndpoint::component("universe-resolver"),
-                    RouteEndpoint::component("fake-pkg-resolver"),
-                    RouteEndpoint::component("requesting-component"),
-                ],
-            })
+            .add_route(
+                RouteBuilder::protocol("fuchsia.logger.LogSink")
+                    .source(RouteEndpoint::AboveRoot)
+                    .targets(vec![
+                        RouteEndpoint::component("universe-resolver"),
+                        RouteEndpoint::component("fake-pkg-resolver"),
+                        RouteEndpoint::component("requesting-component"),
+                    ]),
+            )
+            .await
             .expect("Failed adding LogSink route to test components");
-        let _test_topo = builder.build().create().await.unwrap();
+        let _test_topo = builder.build().await.unwrap();
 
         receiver.next().await.expect("Unexpected error waiting for response").expect("error sent");
         receiver.next().await.expect("Unexpected error waiting for response").expect("error sent");
@@ -399,25 +403,26 @@ mod tests {
                 .to_string();
         let requested_url =
             "fuchsia-pkg://fuchsia.com/test-pkg-request#meta/test-component.cm".to_string();
-        let mut builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
+        let builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
         builder
-            .add_component("universe-resolver", ComponentSource::url(resolver_url))
+            .add_child("universe-resolver", resolver_url, ChildProperties::new())
             .await
             .expect("Failed add universe-resolver to test topology")
-            .add_component(
+            .add_mock_child(
                 "fake-base-resolver",
-                ComponentSource::Mock(Mock::new({
+                {
                     let sender = tx.clone();
                     move |mock_handles: MockHandles| {
                         Box::pin(mock_base_resolver(sender.clone(), mock_handles))
                     }
-                })),
+                },
+                ChildProperties::new(),
             )
             .await
             .expect("Failed adding base resolver mock")
-            .add_eager_component(
+            .add_mock_child(
                 "requesting-component",
-                ComponentSource::Mock(Mock::new({
+                {
                     let sender = tx.clone();
                     move |mock_handles: MockHandles| {
                         Box::pin(package_requester(
@@ -426,33 +431,37 @@ mod tests {
                             mock_handles,
                         ))
                     }
-                })),
+                },
+                ChildProperties::new().eager(),
             )
             .await
             .expect("Failed adding mock request component")
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.sys2.ComponentResolver"),
-                source: RouteEndpoint::component("fake-base-resolver"),
-                targets: vec![RouteEndpoint::component("universe-resolver")],
-            })
+            .add_route(
+                RouteBuilder::protocol("fuchsia.sys2.ComponentResolver")
+                    .source(RouteEndpoint::component("fake-base-resolver"))
+                    .targets(vec![RouteEndpoint::component("universe-resolver")]),
+            )
+            .await
             .expect("Failed adding resolver route from fake-base-resolver to universe-resolver")
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.sys2.ComponentResolver"),
-                source: RouteEndpoint::component("universe-resolver"),
-                targets: vec![RouteEndpoint::component("requesting-component")],
-            })
+            .add_route(
+                RouteBuilder::protocol("fuchsia.sys2.ComponentResolver")
+                    .source(RouteEndpoint::component("universe-resolver"))
+                    .targets(vec![RouteEndpoint::component("requesting-component")]),
+            )
+            .await
             .expect("Failed adding resolver route from universe-resolver to requesting-component")
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.logger.LogSink"),
-                source: RouteEndpoint::AboveRoot,
-                targets: vec![
-                    RouteEndpoint::component("universe-resolver"),
-                    RouteEndpoint::component("fake-base-resolver"),
-                    RouteEndpoint::component("requesting-component"),
-                ],
-            })
+            .add_route(
+                RouteBuilder::protocol("fuchsia.logger.LogSink")
+                    .source(RouteEndpoint::AboveRoot)
+                    .targets(vec![
+                        RouteEndpoint::component("universe-resolver"),
+                        RouteEndpoint::component("fake-base-resolver"),
+                        RouteEndpoint::component("requesting-component"),
+                    ]),
+            )
+            .await
             .expect("Failed adding LogSink route to test components");
-        let _test_topo = builder.build().create().await.unwrap();
+        let _test_topo = builder.build().await.unwrap();
 
         receiver.next().await.expect("Unexpected error waiting for response").expect("error sent");
         receiver.next().await.expect("Unexpected error waiting for response").expect("error sent");
