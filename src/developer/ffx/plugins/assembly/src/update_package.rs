@@ -50,7 +50,7 @@ pub fn construct_update(
     }
 
     if let Some(recovery_config) = &board.recovery {
-        update_pkg_builder.add_file(&recovery_config.zbi, &recovery_config.name)?;
+        update_pkg_builder.add_file(&recovery_config.zbi, "recovery")?;
 
         // TODO(fxbug.dev/77997)
         // TODO(fxbug.dev/77535)

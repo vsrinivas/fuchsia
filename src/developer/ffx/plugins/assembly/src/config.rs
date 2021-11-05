@@ -520,9 +520,6 @@ pub enum FvmFilesystemEntry {
 #[derive(Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct RecoveryConfig {
-    /// The name of the recovery image in the update package
-    pub name: String,
-
     /// The path on the host to the prebuilt recovery ZBI.
     pub zbi: PathBuf,
 
@@ -761,7 +758,6 @@ mod tests {
                 "compress": true
               },
               "recovery": {
-                "name": "recovery",
                 "zbi": "path/to/recovery.zbi",
                 "vbmeta": "path/to/recovery.vbmeta"
               }
@@ -788,7 +784,6 @@ mod tests {
                 "partition": "name",
               },
               "recovery": {
-                "name": "recovery",
                 "zbi": "path/to/recovery.zbi",
                 "vbmeta": "path/to/recovery.vbmeta"
               }

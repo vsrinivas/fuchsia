@@ -364,16 +364,10 @@ template("generated_board_config") {
           # vars and just mutate the fields we need to have in the final until they
           # have the right values.
           #
-
-          # Get the 'name' field of the recovery implementation's GN target.
-          #  e.g. "zedboot" for "//build/images:zedboot"
-          name = get_label_info(invoker.recovery, "name")
-
-          if (name == "zedboot") {
+          if (get_label_info(invoker.recovery, "name") == "zedboot") {
             # Zedboot's name is different depending on if, and how, it's post-
             # processed for booting by the board's bootloaders.
             if (custom_signing_script != "" || use_vboot) {
-              name = "zedboot.signed"
               zbi = "zedboot.zbi.signed"
             } else {
               zbi = "zedboot.zbi"
@@ -383,9 +377,6 @@ template("generated_board_config") {
               vbmeta = "zedboot.vbmeta"
             }
           } else {
-            # All recovery options result in a "recovery.zbi", not the default of
-            # "${name}.zbi", and need to be named "recovery" in the update package.
-            name = "recovery"
             zbi = "recovery.zbi"
 
             if (use_vbmeta) {
