@@ -66,7 +66,7 @@ void PressureNotifier::Notify() {
 void PressureNotifier::PostLevelChange() {
   Level level_to_send = observer_.GetCurrentLevel();
   if (notify_cb_) {
-    notify_cb_(level_to_send);
+    async::PostTask(provider_dispatcher_, [level_to_send, this]() { notify_cb_(level_to_send); });
   }
 
   if (level_to_send == Level::kImminentOOM) {
