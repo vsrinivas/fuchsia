@@ -52,7 +52,6 @@ extern "C" {
  */
 typedef struct otPlatformConfig {
   uint32_t m_speed_up_factor;  ///< Speed up factor.
-  OtStackCallBack *callback_ptr;
   bool reset_rcp;
 } otPlatformConfig;
 
@@ -64,10 +63,10 @@ typedef struct otPlatformConfig {
  *
  * @param[in]  a_platform_config  Platform configuration structure.
  *
- * @returns A pointer to the OpenThread instance.
+ * @returns None.
  *
  */
-otInstance *otSysInit(otPlatformConfig *a_platform_config);
+void otSysInit(otPlatformConfig *a_platform_config);
 
 /**
  * This function performs all platform-specific deinitialization of OpenThread's drivers.

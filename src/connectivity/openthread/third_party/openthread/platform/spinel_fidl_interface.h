@@ -9,12 +9,16 @@
 #include <string.h>
 
 #include <openthread/error.h>
+#include <spinel/spinel.h>
 
 #include "openthread-system.h"
 
 #include <spinel/spinel_interface.hpp>
+
 namespace ot {
 namespace Fuchsia {
+
+void spinelInterfaceInit(otInstance* a_instance);
 /**
  * This class defines an spinel interface to the Radio Co-processor (RCP)
  *
@@ -28,14 +32,15 @@ class SpinelFidlInterface {
   SpinelFidlInterface(Spinel::SpinelInterface::ReceiveFrameCallback aCallback,
                       void* aCallbackContext, Spinel::SpinelInterface::RxFrameBuffer& aFrameBuffer);
   /**
-   * Initializes the Spinel Fidl Interface with a valid OtStackCallBack pointer in the config
+   * Initializes the Spinel Fidl Interface
    *
    */
-  otError Init(const otPlatformConfig* a_platform_config);
+  otError Init(void);
   /**
    * Deinitialized the instance
    *
    */
+
   void Deinit(void);
   /**
    * Send the frame from ot-lib to ot-radio driver
@@ -72,7 +77,6 @@ class SpinelFidlInterface {
   void* mReceiveFrameContext;
   Spinel::SpinelInterface::RxFrameBuffer& mReceiveFrameBuffer;
 
-  std::optional<OtStackCallBack*> ot_stack_callback_ptr_;
 };  // SpinelFidlInterface
 }  // namespace Fuchsia
 }  // namespace ot

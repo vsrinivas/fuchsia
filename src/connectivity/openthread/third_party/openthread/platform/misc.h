@@ -8,6 +8,4 @@
 
 #include <openthread/platform/misc.h>
 
-void platformMiscSetCallbackPtr(OtStackCallBack* callback_ptr);
-
 #endif  // SRC_CONNECTIVITY_OPENTHREAD_THIRD_PARTY_OPENTHREAD_PLATFORM_MISC_H_

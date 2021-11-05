@@ -14,6 +14,7 @@
 #include <zircon/status.h>
 
 #include <fbl/auto_lock.h>
+#include <openthread/platform/misc.h>
 #include <openthread/tasklet.h>
 #include <src/lib/files/file.h>
 
@@ -25,6 +26,8 @@ constexpr char kMigrationConfigPath[] = "/config/data/migration_config.json";
 
 constexpr uint8_t kSpinelResetFrame[]{0x80, 0x06, 0x0};
 constexpr uint8_t kSpinelResetFrameLen = 4;
+
+static OtStackApp::OtStackCallBackImpl* sLowpanSpinelPtr = nullptr;
 }  // namespace
 
 OtStackApp::LowpanSpinelDeviceFidlImpl::LowpanSpinelDeviceFidlImpl(OtStackApp& app) : app_(app) {}
@@ -192,7 +195,7 @@ void OtStackApp::LowpanSpinelDeviceFidlImpl::ReadyToReceiveFrames(
 OtStackApp::OtStackCallBackImpl::OtStackCallBackImpl(OtStackApp& app) : app_(app) {}
 
 // TODO (jiamingw): flow control, and timeout when it is unable to send out the packet
-void OtStackApp::OtStackCallBackImpl::SendOneFrameToRadio(uint8_t* buffer, uint32_t size) {
+void OtStackApp::OtStackCallBackImpl::SendOneFrameToRadio(uint8_t* buffer, size_t size) {
   auto data = fidl::VectorView<uint8_t>::FromExternal(buffer, size);
   fbl::AutoLock lock(&app_.radio_ctrl_flow_mtx_);
   if (app_.radio_outbound_allowance_ == 0) {
@@ -205,7 +208,9 @@ void OtStackApp::OtStackCallBackImpl::SendOneFrameToRadio(uint8_t* buffer, uint3
   app_.UpdateRadioOutboundAllowance();
 }
 
-std::vector<uint8_t> OtStackApp::OtStackCallBackImpl::WaitForFrameFromRadio(uint64_t timeout_us) {
+size_t OtStackApp::OtStackCallBackImpl::WaitForFrameFromRadio(uint8_t* buffer,
+                                                              size_t buffer_len_max,
+                                                              uint64_t timeout_us) {
   FX_LOGS(DEBUG) << "ot-stack-callbackform: radio-callback: waiting for frame";
   {
     fbl::AutoLock lock(&app_.radio_q_mtx_);
@@ -213,39 +218,48 @@ std::vector<uint8_t> OtStackApp::OtStackCallBackImpl::WaitForFrameFromRadio(uint
       sync_completion_reset(&app_.radio_rx_complete_);
     } else {
       std::vector<uint8_t> vec = std::move(app_.radio_inbound_queue_.front());
+      OT_STACK_ASSERT(vec.size() < buffer_len_max);
+      std::copy(vec.begin(), vec.end(), buffer);
       app_.radio_inbound_queue_.pop_front();
-      return vec;
+      return vec.size();
     }
   }
   zx_status_t res = sync_completion_wait(&app_.radio_rx_complete_, ZX_USEC(timeout_us));
   sync_completion_reset(&app_.radio_rx_complete_);
   if (res == ZX_ERR_TIMED_OUT) {
     // This method will be called multiple times by ot-lib. It is okay to timeout here.
-    return std::vector<uint8_t>{};
+    return 0;
   }
   if (res != ZX_OK) {
     FX_PLOGS(ERROR, res) << "ot-stack-callbackform: radio-callback: waiting frame end with err";
-    return std::vector<uint8_t>{};
+    return 0;
   }
   fbl::AutoLock lock0(&app_.radio_q_mtx_);
   assert(!app_.radio_inbound_queue_.empty());
   std::vector<uint8_t> vec = std::move(app_.radio_inbound_queue_.front());
+  OT_STACK_ASSERT(vec.size() < buffer_len_max);
+  std::copy(vec.begin(), vec.end(), buffer);
   app_.radio_inbound_queue_.pop_front();
-  return vec;
+  return vec.size();
 }
 
-std::vector<uint8_t> OtStackApp::OtStackCallBackImpl::Process() {
-  std::vector<uint8_t> vec;
+size_t OtStackApp::OtStackCallBackImpl::FetchQueuedFrameFromRadio(uint8_t* buffer,
+                                                                  size_t buffer_len_max) {
+  size_t size = 0;
   fbl::AutoLock lock(&app_.radio_q_mtx_);
   if (!app_.radio_inbound_queue_.empty()) {
-    vec = std::move(app_.radio_inbound_queue_.front());
+    std::vector<uint8_t> vec = std::move(app_.radio_inbound_queue_.front());
+    OT_STACK_ASSERT(vec.size() < buffer_len_max);
+    std::copy(vec.begin(), vec.end(), buffer);
+    size = vec.size();
     app_.radio_inbound_queue_.pop_front();
+    lock.release();
     FX_LOGS(DEBUG) << "ot-stack-callbackform: radio-callback: check for frame: new frame";
   }
-  return vec;
+  return size;
 }
 
-void OtStackApp::OtStackCallBackImpl::SendOneFrameToClient(uint8_t* buffer, uint32_t size) {
+void OtStackApp::OtStackCallBackImpl::SendOneFrameToClient(uint8_t* buffer, size_t size) {
   if ((size == kSpinelResetFrameLen) &&
       (memcmp(buffer, kSpinelResetFrame, sizeof(kSpinelResetFrame)) == 0) &&
       ((buffer[kSpinelResetFrameLen - 1] & 0x70) == 0x70)) {
@@ -384,12 +398,13 @@ zx_status_t OtStackApp::InitRadioDriver() {
 void OtStackApp::InitOpenThreadLibrary(bool reset_rcp) {
   FX_LOGS(INFO) << "init ot-lib";
   otPlatformConfig config;
-  config.callback_ptr = lowpan_spinel_ptr_.get();
   config.m_speed_up_factor = 1;
   config.reset_rcp = reset_rcp;
-  ot_instance_ptr_ = static_cast<void*>(otSysInit(&config));
+  otSysInit(&config);
+  ot_instance_ptr_ = static_cast<void*>(otInstanceInitSingle());
+  ot::Fuchsia::spinelInterfaceInit(static_cast<otInstance*>(ot_instance_ptr_.value()));
   ot::Ncp::otNcpInit(static_cast<otInstance*>(ot_instance_ptr_.value()));
-  ot::Ncp::otNcpGetInstance()->Init(lowpan_spinel_ptr_.get());
+  ot::Ncp::otNcpGetInstance()->Init();
 }
 
 zx_status_t OtStackApp::Init(const std::string& path, bool is_test_env) {
@@ -402,6 +417,7 @@ zx_status_t OtStackApp::Init(const std::string& path, bool is_test_env) {
   }
 
   lowpan_spinel_ptr_ = std::make_unique<OtStackCallBackImpl>(*this);
+  sLowpanSpinelPtr = lowpan_spinel_ptr_.get();
 
   zx_status_t status = InitRadioDriver();
   if (status != ZX_OK) {
@@ -620,5 +636,40 @@ void OtStackApp::Shutdown() {
   DisconnectDevice();
   loop_.Quit();
 }
+
+extern "C" void platformCallbackSendOneFrameToRadio(otInstance* a_instance, uint8_t* buffer,
+                                                    size_t size) {
+  sLowpanSpinelPtr->SendOneFrameToRadio(buffer, size);
+}
+
+extern "C" size_t platformCallbackWaitForFrameFromRadio(otInstance* a_instance, uint8_t* buffer,
+                                                        size_t buffer_len_max,
+                                                        uint64_t timeout_us) {
+  return sLowpanSpinelPtr->WaitForFrameFromRadio(buffer, buffer_len_max, timeout_us);
+}
+
+extern "C" size_t platformCallbackFetchQueuedFrameFromRadio(otInstance* a_instance, uint8_t* buffer,
+                                                            size_t buffer_len_max) {
+  return sLowpanSpinelPtr->FetchQueuedFrameFromRadio(buffer, buffer_len_max);
+}
+
+extern "C" void platformCallbackSendOneFrameToClient(otInstance* a_instance, uint8_t* buffer,
+                                                     size_t size) {
+  sLowpanSpinelPtr->SendOneFrameToClient(buffer, size);
+}
+
+extern "C" void platformCallbackPostNcpFidlInboundTask(otInstance* a_instance) {
+  sLowpanSpinelPtr->PostNcpFidlInboundTask();
+}
+
+extern "C" void platformCallbackPostDelayedAlarmTask(otInstance* a_instance, zx_duration_t delay) {
+  sLowpanSpinelPtr->PostDelayedAlarmTask(zx::duration(delay));
+}
+
+extern "C" void otTaskletsSignalPending(otInstance* a_instance) {
+  sLowpanSpinelPtr->PostOtLibTaskletProcessTask();
+}
+
+extern "C" void otPlatReset(otInstance* a_instance) { sLowpanSpinelPtr->Reset(); }
 
 }  // namespace otstack

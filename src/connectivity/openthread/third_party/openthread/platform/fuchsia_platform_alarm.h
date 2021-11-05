@@ -26,8 +26,7 @@ class FuchsiaPlatformAlarm {
   bool MicroSecAlarmFired();
   void SetMicroSecAlarm(uint32_t time_us);
   void ClearMicroSecAlarm();
-  void SetOtStackCallBackPtr(OtStackCallBack *callback_ptr);
-  OtStackCallBack *GetOtStackCallBackPtr();
+
   // Gets the current time in usec
   // Note - in posix world this is redefined in sim.
   // See if we need to do something similar
@@ -43,7 +42,6 @@ class FuchsiaPlatformAlarm {
 
   uint32_t us_alarm_;
   bool is_us_running_ = false;
-  OtStackCallBack *ot_stack_callback_ptr_ = nullptr;
 };
 
 #endif  // SRC_CONNECTIVITY_OPENTHREAD_THIRD_PARTY_OPENTHREAD_PLATFORM_FUCHSIA_PLATFORM_ALARM_H_

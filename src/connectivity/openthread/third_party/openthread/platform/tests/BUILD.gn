@@ -47,6 +47,7 @@ executable("unittests-bin") {
   testonly = true
 
   sources = [
+    "dummy_plat_impl.cc",
     "entropy_test.cc",
     "fuchsia_platform_alarm_tests.cc",
     "settings_test.cc",
@@ -78,7 +79,10 @@ executable("bootstrap-unittests-bin") {
 
   testonly = true
 
-  sources = [ "bootstrap_fidl_impl_tests.cc" ]
+  sources = [
+    "bootstrap_fidl_impl_tests.cc",
+    "dummy_plat_impl.cc",
+  ]
 
   deps = [
     "//src/connectivity/openthread/third_party/openthread/platform",
@@ -92,6 +96,8 @@ executable("bootstrap-unittests-bin") {
     "//zircon/system/ulib/zx",
   ]
 
-  include_dirs =
-      [ "//src/connectivity/openthread/third_party/openthread/platform" ]
+  include_dirs = [
+    "//third_party/openthread/include",
+    "//src/connectivity/openthread/third_party/openthread/platform",
+  ]
 }

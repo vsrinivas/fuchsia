@@ -15,6 +15,7 @@ static OT_DEFINE_ALIGNED_VAR(s_ncp_raw, sizeof(NcpFidl), uint64_t);
 void otNcpInit(otInstance *a_instance) {
   NcpFidl *ncp_fidl = NULL;
   Instance *instance = reinterpret_cast<Instance *>(a_instance);
+  ot_instance_ptr_ = a_instance;
   ncp_fidl = new (&s_ncp_raw) class NcpFidl(instance);
   if (ncp_fidl == NULL || ncp_fidl != NcpBase::GetNcpInstance()) {
     OT_ASSERT(false);
@@ -30,7 +31,7 @@ NcpFidl::NcpFidl(Instance *a_instance) : NcpBase(a_instance) {
             reinterpret_cast<uint64_t>(s_ncp_raw));
 }
 
-void NcpFidl::Init(OtStackCallBack *callback_ptr) { ot_stack_callback_ptr_ = callback_ptr; }
+void NcpFidl::Init() {}
 
 // TODO (jiamingw): remove after ot-lib integration is stabilized
 static void printHexArr(const uint8_t *buf, uint16_t buf_len, const char *str) {
@@ -57,53 +58,37 @@ void NcpFidl::HandleFidlSendDone(void) {
   otPlatLog(OT_LOG_LEVEL_DEBG, OT_LOG_REGION_PLATFORM, "ncp-fidl: HandleFidlSendDone() called");
 }
 
-OtStackCallBack *NcpFidl::OtStackCallbackPtr() {
-  if (ot_stack_callback_ptr_.has_value()) {
-    return ot_stack_callback_ptr_.value();
-  } else {
-    return nullptr;
-  }
-}
-
 void NcpFidl::HandleFrameAddedToNcpBuffer(void *aContext, Spinel::Buffer::FrameTag aTag,
                                           Spinel::Buffer::Priority aPriority,
                                           Spinel::Buffer *aBuffer) {
   OT_UNUSED_VARIABLE(aBuffer);
   OT_UNUSED_VARIABLE(aTag);
   OT_UNUSED_VARIABLE(aPriority);
-  if (static_cast<NcpFidl *>(aContext)->OtStackCallbackPtr() == nullptr) {
-    // This is not valid. Assert here to help debugging.
-    OT_ASSERT(0);
-  }
-  static_cast<NcpFidl *>(aContext)->OtStackCallbackPtr()->PostNcpFidlInboundTask();
+  platformCallbackPostNcpFidlInboundTask(ot_instance_ptr_);
 }
 
 void NcpFidl::HandleFrameAddedToNcpBuffer(void) {
   // Send back the frame
-  if (ot_stack_callback_ptr_.has_value()) {
-    OT_ASSERT(!mTxFrameBuffer.IsEmpty());
-    if (auto ret = mTxFrameBuffer.OutFrameBegin() != OT_ERROR_NONE) {
-      otPlatLog(OT_LOG_LEVEL_CRIT, OT_LOG_REGION_PLATFORM,
-                "ncp-fidl: error calling mTxFrameBuffer.OutFrameBegin()");
-      return;
-    }
+  OT_ASSERT(!mTxFrameBuffer.IsEmpty());
+  if (auto ret = mTxFrameBuffer.OutFrameBegin() != OT_ERROR_NONE) {
+    otPlatLog(OT_LOG_LEVEL_CRIT, OT_LOG_REGION_PLATFORM,
+              "ncp-fidl: error calling mTxFrameBuffer.OutFrameBegin()");
+    return;
+  }
 
-    uint16_t frame_length = mTxFrameBuffer.OutFrameGetLength();
-    uint8_t buffer[SPINEL_FRAME_MAX_SIZE];
-    uint16_t read_length = mTxFrameBuffer.OutFrameRead(frame_length, buffer);
-    OT_ASSERT(frame_length == read_length);
+  uint16_t frame_length = mTxFrameBuffer.OutFrameGetLength();
+  uint8_t buffer[SPINEL_FRAME_MAX_SIZE];
+  uint16_t read_length = mTxFrameBuffer.OutFrameRead(frame_length, buffer);
+  OT_ASSERT(frame_length == read_length);
 
-    otPlatLog(OT_LOG_LEVEL_DEBG, OT_LOG_REGION_PLATFORM,
-              "ncp-fidl: prep to send to client: frame_length:%u,read_length:%u", frame_length,
-              read_length);
-    printHexArr(buffer, read_length, "tx to client");
-    ot_stack_callback_ptr_.value()->SendOneFrameToClient(buffer, frame_length);
-    otError error = mTxFrameBuffer.OutFrameRemove();
-    if (error != OT_ERROR_NONE) {
-      otPlatLog(OT_LOG_LEVEL_CRIT, OT_LOG_REGION_PLATFORM, "ncp-fidl: error removing out fram");
-    }
-  } else {
-    otPlatLog(OT_LOG_LEVEL_WARN, OT_LOG_REGION_PLATFORM, "ncp-fidl: client not connected");
+  otPlatLog(OT_LOG_LEVEL_DEBG, OT_LOG_REGION_PLATFORM,
+            "ncp-fidl: prep to send to client: frame_length:%u,read_length:%u", frame_length,
+            read_length);
+  printHexArr(buffer, read_length, "tx to client");
+  platformCallbackSendOneFrameToClient(ot_instance_ptr_, buffer, frame_length);
+  otError error = mTxFrameBuffer.OutFrameRemove();
+  if (error != OT_ERROR_NONE) {
+    otPlatLog(OT_LOG_LEVEL_CRIT, OT_LOG_REGION_PLATFORM, "ncp-fidl: error removing out fram");
   }
 }
 

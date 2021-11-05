@@ -25,7 +25,7 @@ class NcpFidl : public NcpBase {
    * Initialization, requires an initialized OtStackCallBack instance.
    *
    */
-  void Init(OtStackCallBack* callback_ptr);
+  void Init();
   /**
    * This method is called when Ncp Fidl inbound tramsmission is finished.
    * It prepares and sends the next data chunk (if any) to Fidl.
@@ -51,15 +51,9 @@ class NcpFidl : public NcpBase {
    *
    */
   void HandleFidlReceiveDone(const uint8_t* a_buf, uint16_t a_buf_length);
-  /**
-   * Get the callback pointer of ot-stack.
-   *
-   */
-  OtStackCallBack* OtStackCallbackPtr();
-
- private:
-  std::optional<OtStackCallBack*> ot_stack_callback_ptr_{std::nullopt};
 };
+
+static otInstance* ot_instance_ptr_ = nullptr;
 
 /**
  * This is called when initialize the singleton NcpFidl object.

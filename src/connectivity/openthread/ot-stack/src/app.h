@@ -53,6 +53,24 @@ class OtStackApp : public fidl::WireSyncEventHandler<fidl_spinel::Device> {
   void HandleClientReadyToReceiveFrames(uint32_t allowance);
   void PushFrameToOtLib();
 
+  class OtStackCallBackImpl {
+   public:
+    explicit OtStackCallBackImpl(OtStackApp& ot_stack_app);
+    ~OtStackCallBackImpl() = default;
+
+    void SendOneFrameToRadio(uint8_t* buffer, size_t size);
+    size_t WaitForFrameFromRadio(uint8_t* buffer, size_t buffer_len_max, uint64_t timeout_us);
+    size_t FetchQueuedFrameFromRadio(uint8_t* buffer, size_t buffer_len_max);
+    void SendOneFrameToClient(uint8_t* buffer, size_t size);
+    void PostNcpFidlInboundTask();
+    void PostDelayedAlarmTask(zx::duration delay);
+    void PostOtLibTaskletProcessTask();
+    void Reset();
+
+   private:
+    OtStackApp& app_;
+  };
+
  private:
   zx_status_t InitOutgoingAndServe();
   zx_status_t SetupFidlService();
@@ -100,24 +118,6 @@ class OtStackApp : public fidl::WireSyncEventHandler<fidl_spinel::Device> {
     void ReadyToReceiveFrames(ReadyToReceiveFramesRequestView request,
                               ReadyToReceiveFramesCompleter::Sync& completer) override;
 
-    OtStackApp& app_;
-  };
-
-  class OtStackCallBackImpl : public OtStackCallBack {
-   public:
-    explicit OtStackCallBackImpl(OtStackApp& ot_stack_app);
-    ~OtStackCallBackImpl() override = default;
-
-    void SendOneFrameToRadio(uint8_t* buffer, uint32_t size) override;
-    std::vector<uint8_t> WaitForFrameFromRadio(uint64_t timeout_us) override;
-    std::vector<uint8_t> Process() override;
-    void SendOneFrameToClient(uint8_t* buffer, uint32_t size) override;
-    void PostNcpFidlInboundTask() override;
-    void PostOtLibTaskletProcessTask() override;
-    void PostDelayedAlarmTask(zx::duration delay) override;
-    void Reset() override;
-
-   private:
     OtStackApp& app_;
   };
 

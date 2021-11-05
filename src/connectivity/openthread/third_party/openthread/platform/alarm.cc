@@ -16,19 +16,11 @@ static FuchsiaPlatformAlarm alarm;
 
 void platformAlarmInit(uint32_t speed_up_factor) { alarm.SetSpeedUpFactor(speed_up_factor); }
 
-void platformAlarmSetCallbackPtr(OtStackCallBack *callback_ptr) {
-  alarm.SetOtStackCallBackPtr(callback_ptr);
-}
-
 extern "C" uint32_t otPlatAlarmMilliGetNow(void) { return alarm.GetNowMilliSec(); }
 
 extern "C" void otPlatAlarmMilliStartAt(otInstance *instance, uint32_t t0, uint32_t dt) {
-  OT_UNUSED_VARIABLE(instance);
-
   alarm.SetMilliSecAlarm(t0 + dt);
-  if (alarm.GetOtStackCallBackPtr()) {
-    alarm.GetOtStackCallBackPtr()->PostDelayedAlarmTask(zx::duration(ZX_MSEC(dt)));
-  }
+  platformCallbackPostDelayedAlarmTask(instance, ZX_MSEC(dt));
 }
 
 extern "C" void otPlatAlarmMilliStop(otInstance *instance) {
@@ -46,9 +38,7 @@ extern "C" void otPlatAlarmMicroStartAt(otInstance *instance, uint32_t t0, uint3
 
   alarm.SetMicroSecAlarm(t0 + dt);
 
-  if (alarm.GetOtStackCallBackPtr()) {
-    alarm.GetOtStackCallBackPtr()->PostDelayedAlarmTask(zx::duration(ZX_USEC(dt)));
-  }
+  platformCallbackPostDelayedAlarmTask(instance, ZX_USEC(dt));
 }
 
 extern "C" void otPlatAlarmMicroStop(otInstance *instance) {
