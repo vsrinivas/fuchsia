@@ -25,10 +25,11 @@ import (
 )
 
 type toolsPath struct {
-	ffxPath     string
-	ffxInstance *ffxutil.FFXInstance
-	fconfigPath string
-	fsshPath    string
+	ffxPath       string
+	ffxInstance   *ffxutil.FFXInstance
+	ffxConfigPath string // Used to make ffx isolated.
+	fconfigPath   string
+	fsshPath      string
 }
 
 // findSubDir searches the root dir and returns the first path that matches dirName.
@@ -90,6 +91,11 @@ func setUp(t *testing.T) (toolsPath, error) {
 		return tools, fmt.Errorf("unable to create new ffx instance %w", err)
 	}
 
+	tools.ffxConfigPath = filepath.Join(testOutDir, "ffx_config.json")
+	if _, err := os.Stat(tools.ffxConfigPath); os.IsNotExist(err) {
+		return tools, fmt.Errorf("ffx config path does not exist: %v", err)
+	}
+
 	return tools, nil
 }
 
@@ -101,6 +107,7 @@ func TestFSSH(t *testing.T) {
 
 	tools, err := setUp(t)
 	t.Cleanup(func() {
+		os.Unsetenv(sdkcommon.FFXIsolatedEnvKey)
 		if tools.ffxInstance != nil {
 			tools.ffxInstance.Stop()
 		}
@@ -128,15 +135,7 @@ func TestFSSH(t *testing.T) {
 	ffxTargetListStderr := strings.TrimSpace(stderr.String())
 	deviceIP := strings.TrimSpace(stdout.String())
 
-	// The test no longer needs the ffx instance.
-	tools.ffxInstance.Stop()
-	tools.ffxInstance = nil
-	// Error out if the context was previously cancelled.
-	if ctx.Err() != nil {
-		t.Fatal(ctx.Err())
-	}
-	// Enable sigterms again.
-	cancel()
+	os.Setenv(sdkcommon.FFXIsolatedEnvKey, tools.ffxConfigPath)
 
 	if ffxTargetListStderr != "" {
 		t.Fatalf("ffx target list returned unexpected output to stderr: %s", ffxTargetListStderr)

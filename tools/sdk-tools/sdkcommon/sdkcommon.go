@@ -70,6 +70,8 @@ const (
 	// Top level key for storing data.
 	deviceConfigurationKey string = "DeviceConfiguration"
 	defaultDeviceKey       string = "_DEFAULT_DEVICE_"
+
+	FFXIsolatedEnvKey = "FFX_ISOLATED_CONFIG"
 )
 
 const (
@@ -1230,6 +1232,10 @@ func (sdk SDKProperties) RunFFX(args []string, interactive bool) (string, error)
 		return "", fmt.Errorf("Could not determine tools directory %v", err)
 	}
 	cmd := filepath.Join(toolsDir, "ffx")
+
+	if ffxConfigPath, present := os.LookupEnv(FFXIsolatedEnvKey); present {
+		args = append([]string{"--config", ffxConfigPath}, args...)
+	}
 
 	ffx := ExecCommand(cmd, args...)
 	if interactive {
