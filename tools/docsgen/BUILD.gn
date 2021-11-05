@@ -243,6 +243,11 @@ action("invoke_helpdoc") {
 #     Optional: If this key is present, this denotes that the ref docs
 #     can be listed and are decompressed.
 #     Type: list of file paths relative to $root_build_dir
+#
+#   dest_folder:
+#     Required: path to destination folder within reference docs repo
+#     Type: path relative to reference docs repo root directory
+#
 
 build_api_module("gen_docs") {
   testonly = true
@@ -257,9 +262,13 @@ build_api_module("gen_docs") {
 }
 
 build_api_module("generated_docs") {
-  contents = {
-    output_path = rebase_path("$host_out_dir/obj/tools/docsgen", root_build_dir)
-    dartdoc_zip = "dartdoc_out.zip"
-    driversdoc_json = "$root_gen_dir/all_drivers_doc.json"
-  }
+  testonly = true
+  data_keys = [ "generated_docset" ]
+  deps = [
+    ":dart_sdk_docs($host_toolchain)",
+    ":invoke_clidoc($host_toolchain)",
+    ":invoke_fidldoc($host_toolchain)",
+    ":invoke_helpdoc($host_toolchain)",
+    "//bundles:create_all_drivers_doc",
+  ]
 }
