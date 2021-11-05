@@ -8,7 +8,6 @@
 #include <stdlib.h>
 
 #include <iomanip>
-#include <regex>
 #include <sstream>
 #include <string_view>
 #include <vector>
