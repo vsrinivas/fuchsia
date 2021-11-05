@@ -12,7 +12,7 @@ use crate::{
 use anyhow::{anyhow, Result};
 use errors::ffx_bail;
 use ffx_config::sdk::{Sdk, SdkVersion};
-use ffx_emulator_start_args::StartCommand;
+use ffx_emulator_start_args::{GpuType, StartCommand};
 use home::home_dir;
 use mockall::automock;
 use std::convert::From;
@@ -353,7 +353,7 @@ pub struct VDLArgs {
     pub start_package_server: bool,
     pub packages_to_serve: String,
     pub device_proto: String,
-    pub gpu: String,
+    pub gpu: GpuType,
     pub gcs_bucket: String,
     pub gcs_image_archive: String,
     pub sdk_version: String,
@@ -367,13 +367,10 @@ pub struct VDLArgs {
 
 impl From<&StartCommand> for VDLArgs {
     fn from(cmd: &StartCommand) -> Self {
-        let mut gpu = get_default_graphics();
-        if cmd.host_gpu {
-            gpu = "host".to_string();
-        } else if cmd.software_gpu {
-            gpu = "swiftshader_indirect".to_string();
-        }
-
+        let gpu = match cmd.gpu {
+            None | Some(GpuType::Auto) => get_default_graphics(),
+            _ => cmd.gpu.unwrap(),
+        };
         let mut enable_grpcwebproxy = false;
         let mut grpcwebproxy_port = "0".to_string();
 
@@ -408,12 +405,12 @@ impl From<&StartCommand> for VDLArgs {
                 .unwrap_or(&String::from(""))
                 .to_string(),
             device_proto: cmd.device_proto.as_ref().unwrap_or(&String::from("")).to_string(),
-            gpu: gpu,
-            enable_grpcwebproxy: enable_grpcwebproxy,
-            grpcwebproxy_port: grpcwebproxy_port,
+            gpu,
+            enable_grpcwebproxy,
+            grpcwebproxy_port,
             gcs_bucket: cmd.gcs_bucket.as_ref().unwrap_or(&String::from("fuchsia")).to_string(),
             gcs_image_archive: gcs_image,
-            sdk_version: sdk_version,
+            sdk_version,
             cache_root: cache_path,
             extra_kernel_args: cmd.kernel_args.as_ref().unwrap_or(&String::from("")).to_string(),
             amber_unpack_root: cmd
@@ -445,7 +442,7 @@ mod tests {
             tuntap: true,
             upscript: Some("/path/to/upscript".to_string()),
             packages_to_serve: Some("pkg1.far,pkg2.far".to_string()),
-            host_gpu: true,
+            gpu: Some(GpuType::Host),
             aemu_version: Some("git_revision:da1cc2ee512714a176f08b8b5fec035994ca305d".to_string()),
             sdk_version: Some("0.20201130.3.1".to_string()),
             image_name: Some("qemu-x64".to_string()),
@@ -460,7 +457,7 @@ mod tests {
         assert_eq!(vdl_args.upscript, "/path/to/upscript");
         assert_eq!(vdl_args.packages_to_serve, "pkg1.far,pkg2.far");
         assert_eq!(vdl_args.device_proto, "");
-        assert_eq!(vdl_args.gpu, "host");
+        assert_eq!(vdl_args.gpu, GpuType::Host);
         assert_eq!(vdl_args.start_package_server, false);
         assert_eq!(vdl_args.acceleration, true);
         assert_eq!(vdl_args.package_server_port, "0");

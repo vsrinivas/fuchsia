@@ -909,6 +909,7 @@ fn get_product_bundle<'a>(
 mod tests {
     use super::*;
     use crate::config::{SSH_PRIVATE_KEY, SSH_PUBLIC_KEY};
+    use ffx_emulator_start_args::GpuType;
     use serial_test::serial;
 
     pub fn setup() {
@@ -923,7 +924,7 @@ mod tests {
             packages_to_serve: Some("pkg1.far,pkg2.far".to_string()),
             aemu_path: Some("/path/to/aemu".to_string()),
             vdl_path: Some("/path/to/device_launcher".to_string()),
-            host_gpu: true,
+            gpu: Some(GpuType::Host),
             grpcwebproxy_path: Some("/path/to/grpcwebproxy".to_string()),
             pointing_device: Some("mouse".to_string()),
             aemu_version: Some("git_revision:da1cc2ee512714a176f08b8b5fec035994ca305d".to_string()),

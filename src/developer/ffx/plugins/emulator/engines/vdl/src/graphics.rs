@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub fn get_default_graphics() -> String {
+use ffx_emulator_start_args::GpuType;
+
+pub fn get_default_graphics() -> GpuType {
     return get_default_graphics_for_os();
 }
 
@@ -27,32 +29,32 @@ pub fn read_vga() -> String {
 }
 
 #[cfg(target_os = "linux")]
-fn get_default_graphics_for_os() -> String {
+fn get_default_graphics_for_os() -> GpuType {
     match env::var_os("DISPLAY") {
         Some(port) => {
             // Running on chrome remote desktop
             if port == ":20" || port.to_string_lossy().starts_with(":20.") {
-                return "swiftshader_indirect".to_string();
+                return GpuType::SwiftshaderIndirect;
             }
         }
         // No display support, should use --headless & software-gpu
-        None => return "swiftshader_indirect".to_string(),
+        None => return GpuType::SwiftshaderIndirect,
     };
     let vga = read_vga();
     // If HOST is using Intel or NVIDIA GPU, we generally recommend using
     // "-gpu host" for better graphic performance.
     if !vga.is_empty() && vga.contains("Intel Corporation") {
-        return "host".to_string();
+        return GpuType::Host;
     }
     if !vga.is_empty() && vga.contains("NVIDIA Corporation") {
-        return "host".to_string();
+        return GpuType::Host;
     }
-    return "swiftshader_indirect".to_string();
+    return GpuType::SwiftshaderIndirect;
 }
 
 #[cfg(target_os = "macos")]
-fn get_default_graphics_for_os() -> String {
-    return "host".to_string();
+fn get_default_graphics_for_os() -> GpuType {
+    return GpuType::Host;
 }
 
 #[cfg(test)]
@@ -76,10 +78,10 @@ mod tests {
     #[cfg(target_os = "linux")]
     fn test_crd() {
         env::set_var("DISPLAY", ":20");
-        assert_eq!(get_default_graphics(), "swiftshader_indirect");
+        assert_eq!(get_default_graphics(), GpuType::SwiftshaderIndirect);
 
         env::set_var("DISPLAY", ":20.0");
-        assert_eq!(get_default_graphics(), "swiftshader_indirect");
+        assert_eq!(get_default_graphics(), GpuType::SwiftshaderIndirect);
     }
 
     #[test]
@@ -87,6 +89,6 @@ mod tests {
     #[cfg(target_os = "linux")]
     fn test_no_display_driver() {
         env::remove_var("DISPLAY");
-        assert_eq!(get_default_graphics(), "swiftshader_indirect");
+        assert_eq!(get_default_graphics(), GpuType::SwiftshaderIndirect);
     }
 }
