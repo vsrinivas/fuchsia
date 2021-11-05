@@ -87,6 +87,7 @@ impl ComponentInstanceForAnalyzer {
     // Creates a new non-root component instance as a child of `parent`.
     pub(crate) fn new_for_child(
         child: &ChildDecl,
+        absolute_url: String,
         decl: ComponentDecl,
         parent: Arc<Self>,
         policy_checker: GlobalPolicyChecker,
@@ -96,7 +97,7 @@ impl ComponentInstanceForAnalyzer {
         Ok(Arc::new(Self {
             abs_moniker: parent.abs_moniker().child(ChildMoniker::new(child.name.clone(), None, 0)),
             decl,
-            url: child.url.clone(),
+            url: absolute_url,
             parent: WeakExtendedInstanceInterface::from(&ExtendedInstanceInterface::Component(
                 parent,
             )),

@@ -62,6 +62,9 @@ pub enum BuildAnalyzerModelError {
 
     #[error("multiple resolvers found for scheme `{0}`")]
     DuplicateResolverScheme(String),
+
+    #[error("malformed url {0} for component instance {1}")]
+    MalformedUrl(String, String),
 }
 
 /// Errors that a `ComponentModelForAnalyzer` may detect in the component graph.
@@ -190,45 +193,81 @@ impl ModelBuilderForAnalyzer {
         result: &mut BuildModelResult,
     ) {
         for child in instance.decl.children.iter() {
-            if child.name.is_empty() {
-                result.errors.push(anyhow!(BuildAnalyzerModelError::InvalidChildDecl(
-                    child.url.to_string(),
-                    NodePath::from(instance.abs_moniker().clone()).to_string(),
-                )));
-                continue;
-            }
-            match decls_by_url.get(&child.url) {
-                Some(child_decl) => match ComponentInstanceForAnalyzer::new_for_child(
-                    child,
-                    child_decl.clone(),
-                    Arc::clone(instance),
-                    model.policy_checker.clone(),
-                    Arc::clone(&model.component_id_index),
-                ) {
-                    Ok(child_instance) => {
-                        Self::add_descendants(&child_instance, decls_by_url, model, result);
-
-                        instance.add_child(
-                            PartialChildMoniker::new(child.name.clone(), None),
-                            Arc::clone(&child_instance),
-                        );
-
-                        model.instances.insert(
-                            NodePath::from(child_instance.abs_moniker().clone()),
-                            child_instance,
-                        );
+            match Self::get_absolute_child_url(&child.url, instance) {
+                Ok(url) => {
+                    let absolute_url = url.to_string();
+                    if child.name.is_empty() {
+                        result.errors.push(anyhow!(BuildAnalyzerModelError::InvalidChildDecl(
+                            absolute_url.to_string(),
+                            NodePath::from(instance.abs_moniker().clone()).to_string(),
+                        )));
+                        continue;
                     }
-                    Err(err) => {
-                        result.errors.push(anyhow!(err));
-                    }
-                },
-                None => {
-                    result.errors.push(anyhow!(BuildAnalyzerModelError::ComponentDeclNotFound(
-                        child.url.to_string(),
-                        NodePath::from(instance.abs_moniker().clone()).to_string(),
-                    )))
+
+                    match decls_by_url.get(&absolute_url) {
+                        Some(child_decl) => match ComponentInstanceForAnalyzer::new_for_child(
+                            child,
+                            absolute_url,
+                            child_decl.clone(),
+                            Arc::clone(instance),
+                            model.policy_checker.clone(),
+                            Arc::clone(&model.component_id_index),
+                        ) {
+                            Ok(child_instance) => {
+                                Self::add_descendants(&child_instance, decls_by_url, model, result);
+
+                                instance.add_child(
+                                    PartialChildMoniker::new(child.name.clone(), None),
+                                    Arc::clone(&child_instance),
+                                );
+
+                                model.instances.insert(
+                                    NodePath::from(child_instance.abs_moniker().clone()),
+                                    child_instance,
+                                );
+                            }
+                            Err(err) => {
+                                result.errors.push(anyhow!(err));
+                            }
+                        },
+                        None => result.errors.push(anyhow!(
+                            BuildAnalyzerModelError::ComponentDeclNotFound(
+                                absolute_url.to_string(),
+                                NodePath::from(instance.abs_moniker().clone()).to_string(),
+                            )
+                        )),
+                    };
+                }
+                Err(err) => {
+                    result.errors.push(anyhow!(err));
                 }
             }
+        }
+    }
+
+    // Given a component instance and the url `child_url` of a child of that instance,
+    // returns an absolute url for the child.
+    fn get_absolute_child_url(
+        child_url: &str,
+        instance: &Arc<ComponentInstanceForAnalyzer>,
+    ) -> Result<Url, BuildAnalyzerModelError> {
+        let err = BuildAnalyzerModelError::MalformedUrl(
+            instance.url().to_string(),
+            instance.node_path().to_string(),
+        );
+
+        match Url::parse(&child_url) {
+            Ok(url) => Ok(url),
+            Err(url::ParseError::RelativeUrlWithoutBase) => {
+                let absolute_prefix = match component_has_relative_url(instance) {
+                    true => find_first_absolute_ancestor_url(instance).map_err(|_| err),
+                    false => Url::parse(instance.url()).map_err(|_| err),
+                }?;
+                Ok(absolute_prefix
+                    .join(child_url)
+                    .expect("failed to join child URL to absolute prefix"))
+            }
+            _ => Err(err),
         }
     }
 }
@@ -315,11 +354,7 @@ impl ComponentModelForAnalyzer {
             let type_results = results
                 .get_mut(&CapabilityTypeName::Resolver)
                 .expect("expected results for capability type");
-            for result in self.check_child_resolvers(&target).into_iter() {
-                {
-                    type_results.push(result);
-                }
-            }
+            type_results.push(self.check_resolver(&target));
         }
 
         results
@@ -485,118 +520,34 @@ impl ComponentModelForAnalyzer {
         }
     }
 
-    /// Given a component instance, extracts the URL scheme of each child of that instance. Then
-    /// checks that each scheme corresponds to a unique resolver in the component's scope, and
-    /// checks that each resolver has a valid capability route. Returns the results of those checks
-    /// in sorted order by URL scheme name. If any URL parsing errors occurred, they appear at the
-    /// beginning of the vector of results.
-    pub fn check_child_resolvers(
+    /// Given a component instance, extracts the URL scheme for that instance and looks for a
+    /// resolver for that scheme in the instance's environment, recording an error if none
+    /// is found. If a resolver is found, checks that it has a valid capability route.
+    pub fn check_resolver(
         self: &Arc<Self>,
-        target: &Arc<ComponentInstanceForAnalyzer>,
-    ) -> Vec<VerifyRouteResult> {
-        let mut results = Vec::new();
-        // Results of checks so far, keyed by URL scheme.
-        let mut checked = HashMap::new();
-        for child in target.decl.children.iter() {
-            match Self::get_absolute_child_url(&child.url, target) {
-                Ok(absolute_url) => {
-                    let scheme = absolute_url.scheme();
-                    if checked.get(scheme).is_none() {
-                        let mut route = vec![RouteSegment::RequireResolver {
-                            node_path: target.node_path(),
-                            scheme: scheme.to_string(),
-                        }];
-                        let check_scheme =
-                            self.check_resolver_for_scheme(scheme, &child.environment, target);
-                        let check_result = match check_scheme.result {
-                            Ok(mut segments) => {
-                                route.append(&mut segments);
-                                Ok(route.into())
-                            }
-                            Err(err) => Err(err.into()),
-                        };
-                        checked.insert(
-                            scheme.to_string(),
-                            VerifyRouteResult {
-                                using_node: target.node_path(),
-                                capability: check_scheme.capability,
-                                result: check_result,
-                            },
-                        );
-                    }
-                }
-                Err(err) => {
-                    results.push(VerifyRouteResult {
-                        using_node: target.node_path(),
-                        capability: "".into(),
-                        result: Err(err.into()),
-                    });
-                }
-            }
-        }
-        let mut results_by_scheme = checked.drain().collect::<Vec<(String, VerifyRouteResult)>>();
-        results_by_scheme.sort_by(|x, y| x.0.cmp(&y.0));
-
-        results.append(&mut results_by_scheme.into_iter().map(|(_, route)| route).collect());
-        results
-    }
-
-    /// Looks for a resolver for `scheme` in one of two places. If `environment` contains an
-    /// environment name, looks first for an environment defined by `target` with that name
-    /// and attempts to find the resolver there. If not found, or if `environment` is None,
-    /// looks for the resolver in the environment offered to `target`.
-    ///
-    /// After finding a resolver, checks that it is routed correctly.
-    fn check_resolver_for_scheme(
-        self: &Arc<Self>,
-        scheme: &str,
-        environment: &Option<String>,
         target: &Arc<ComponentInstanceForAnalyzer>,
     ) -> VerifyRouteResult {
-        // The child was declared with a named environment. A resolver for the child's url
-        // scheme can be sourced from that environment, if a matching resolver is present.
-        if let Some(env_name) = environment {
-            if let Some(env) = target.decl.environments.iter().find(|e| &e.name == env_name) {
-                if let Some(resolver) = env.resolvers.iter().find(|r| r.scheme == scheme) {
-                    match Self::route_capability_sync(
-                        RouteRequest::Resolver(resolver.clone()),
-                        target,
-                    ) {
-                        Ok((_source, route)) => {
-                            return VerifyRouteResult {
-                                using_node: target.node_path(),
-                                capability: resolver.resolver.clone(),
-                                result: Ok(route.into()),
-                            };
-                        }
-                        Err(err) => {
-                            return VerifyRouteResult {
-                                using_node: target.node_path(),
-                                capability: resolver.resolver.clone(),
-                                result: Err(AnalyzerModelError::from(err).into()),
-                            };
-                        }
-                    }
-                }
-            }
-        }
-        // Either the child was not declared with a named environment, or that environment
-        // did not provide a matching resolver. The resolver, if any, must be available in
-        // `target`'s own environment.
-        match target.environment.get_registered_resolver(scheme) {
-            Ok(Some((ExtendedInstanceInterface::Component(instance), ref resolver))) => {
+        let url = Url::parse(target.url()).expect("failed to parse target URL");
+        let scheme = url.scheme();
+        let mut route = vec![RouteSegment::RequireResolver {
+            node_path: target.node_path(),
+            scheme: scheme.to_string(),
+        }];
+
+        let check_route = match target.environment.get_registered_resolver(scheme) {
+            Ok(Some((ExtendedInstanceInterface::Component(instance), resolver))) => {
                 match Self::route_capability_sync(
                     RouteRequest::Resolver(resolver.clone()),
                     &instance,
                 ) {
                     Ok((_source, route)) => VerifyRouteResult {
                         using_node: target.node_path(),
-                        capability: resolver.resolver.clone(),
+                        capability: resolver.resolver,
                         result: Ok(route.into()),
                     },
                     Err(err) => VerifyRouteResult {
                         using_node: target.node_path(),
-                        capability: resolver.resolver.clone(),
+                        capability: resolver.resolver,
                         result: Err(AnalyzerModelError::from(err).into()),
                     },
                 }
@@ -629,6 +580,19 @@ impl ComponentModelForAnalyzer {
                 capability: "".into(),
                 result: Err(AnalyzerModelError::from(err).into()),
             },
+        };
+
+        let check_result = match check_route.result {
+            Ok(mut segments) => {
+                route.append(&mut segments);
+                Ok(route.into())
+            }
+            Err(err) => Err(err.into()),
+        };
+        VerifyRouteResult {
+            using_node: target.node_path(),
+            capability: check_route.capability,
+            result: check_result,
         }
     }
 
@@ -649,34 +613,6 @@ impl ComponentModelForAnalyzer {
             None => Err(AnalyzerModelError::RoutingError(
                 RoutingError::use_from_component_manager_not_found(resolver.resolver.to_string()),
             )),
-        }
-    }
-
-    // Given a component instance `target` and the url `child_url` of a child of that instance,
-    // returns an absolute url for the child.
-    fn get_absolute_child_url(
-        child_url: &str,
-        target: &Arc<ComponentInstanceForAnalyzer>,
-    ) -> Result<Url, AnalyzerModelError> {
-        match Url::parse(&child_url) {
-            Ok(url) => Ok(url),
-            Err(url::ParseError::RelativeUrlWithoutBase) => {
-                let absolute_prefix = match component_has_relative_url(target) {
-                    true => find_first_absolute_ancestor_url(target),
-                    false => {
-                        Url::parse(target.url()).map_err(|_| ComponentInstanceError::MalformedUrl {
-                            url: target.url().to_string(),
-                            moniker: target.abs_moniker().to_partial(),
-                        })
-                    }
-                }?;
-                Ok(absolute_prefix.join(child_url).unwrap())
-            }
-            _ => Err(ComponentInstanceError::MalformedUrl {
-                url: target.url().to_string(),
-                moniker: target.abs_moniker().to_partial(),
-            }
-            .into()),
         }
     }
 
@@ -1003,6 +939,43 @@ mod tests {
         assert!(child_instance.resolve().is_ok());
 
         Ok(())
+    }
+
+    // Builds a model with structure `root -- child` where the child's URL is expressed in
+    // the root manifest as a relative URL.
+    #[test]
+    fn build_model_with_relative_url() {
+        let root_decl = ComponentDeclBuilder::new()
+            .add_child(ChildDeclBuilder::new().name("child").url("#child").build())
+            .build();
+        let child_decl = ComponentDeclBuilder::new().build();
+        let root_url = make_test_url("root");
+        let absolute_child_url = format!("{}#child", root_url);
+
+        let mut decls_by_url = HashMap::new();
+        decls_by_url.insert(root_url.clone(), root_decl);
+        decls_by_url.insert(absolute_child_url.clone(), child_decl);
+
+        let config = Arc::new(RuntimeConfig::default());
+        let build_model_result = ModelBuilderForAnalyzer::new(
+            cm_types::Url::new(root_url).expect("failed to parse root component url"),
+        )
+        .build(
+            decls_by_url,
+            config,
+            Arc::new(ComponentIdIndex::default()),
+            RunnerRegistry::default(),
+        );
+        assert_eq!(build_model_result.errors.len(), 0);
+        assert!(build_model_result.model.is_some());
+        let model = build_model_result.model.unwrap();
+        assert_eq!(model.len(), 2);
+
+        let child_instance = model
+            .get_instance(&NodePath::absolute_from_vec(vec!["child"]))
+            .expect("child instance");
+
+        assert_eq!(child_instance.url(), absolute_child_url);
     }
 
     // Spot-checks that `route_capability` returns immediately when routing a capability from a

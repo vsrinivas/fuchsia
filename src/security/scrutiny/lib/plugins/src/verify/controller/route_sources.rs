@@ -635,6 +635,12 @@ mod tests {
         std::{path::PathBuf, str::FromStr, sync::Arc},
     };
 
+    const TEST_URL_PREFIX: &str = "test:///";
+
+    fn make_test_url(component_name: &str) -> String {
+        format!("{}{}", TEST_URL_PREFIX, component_name)
+    }
+
     #[test]
     fn test_match_some_only() {
         // Match Some(path), ignoring None name.
@@ -766,9 +772,13 @@ mod tests {
     fn valid_two_instance_two_dir_tree_model(
         data_model: Option<Arc<DataModel>>,
     ) -> Result<Arc<DataModel>> {
+        let root_url = DEFAULT_ROOT_URL.to_string();
+        let two_dir_user_url = make_test_url("two_dir_user");
+        let one_dir_provider_url = make_test_url("one_dir_provider");
+
         let data_model = data_model.unwrap_or(fake_data_model());
         let components = hashmap! {
-            DEFAULT_ROOT_URL.to_string() => ComponentDecl{
+            root_url.clone() => ComponentDecl{
                 program: Some(ProgramDecl{ runner: Some("some_runner".into()), ..ProgramDecl::default()}),
                 capabilities: vec![
                     DirectoryDecl{
@@ -800,14 +810,14 @@ mod tests {
                 children: vec![
                     ChildDecl{
                         name: "two_dir_user".to_string(),
-                        url: "two_dir_user_url".to_string(),
+                        url: two_dir_user_url.clone(),
                         startup: fsys::StartupMode::Lazy,
                         on_terminate: None,
                         environment: None,
                     },
                     ChildDecl{
                         name: "one_dir_provider".to_string(),
-                        url: "one_dir_provider_url".to_string(),
+                        url: one_dir_provider_url.clone(),
                         startup: fsys::StartupMode::Lazy,
                         on_terminate: None,
                         environment: None,
@@ -815,7 +825,7 @@ mod tests {
                 ],
                 ..ComponentDecl::default()
             },
-            "two_dir_user_url".to_string() => ComponentDecl{
+            two_dir_user_url => ComponentDecl{
                 uses: vec![
                     UseDirectoryDecl{
                         source: UseSource::Parent,
@@ -836,7 +846,7 @@ mod tests {
                 ],
                 ..ComponentDecl::default()
             },
-            "one_dir_provider_url".to_string() => ComponentDecl{
+            one_dir_provider_url => ComponentDecl{
                 program: Some(ProgramDecl{ runner: Some("some_runner".into()), ..ProgramDecl::default()}),
                 capabilities: vec![
                     DirectoryDecl{
@@ -859,7 +869,7 @@ mod tests {
             },
         };
         let build_component_model = ModelBuilderForAnalyzer::new(
-            cm_types::Url::new(DEFAULT_ROOT_URL.to_string()).expect("failed to parse root url"),
+            cm_types::Url::new(root_url).expect("failed to parse root url"),
         )
         .build(
             components,
@@ -882,9 +892,12 @@ mod tests {
         let data_model = data_model.unwrap_or(fake_data_model());
         let components = vec![
             create_component(&DEFAULT_ROOT_URL.to_string(), ComponentSource::ZbiBootfs),
-            create_component("two_dir_user_url", ComponentSource::StaticPackage("".to_string())),
             create_component(
-                "one_dir_provider_url",
+                &make_test_url("two_dir_user"),
+                ComponentSource::StaticPackage("".to_string()),
+            ),
+            create_component(
+                &make_test_url("one_dir_provider"),
                 ComponentSource::StaticPackage("".to_string()),
             ),
         ];
@@ -899,7 +912,7 @@ mod tests {
         let components = vec![
             create_component(&DEFAULT_ROOT_URL.to_string(), ComponentSource::ZbiBootfs),
             create_component(
-                "one_dir_provider_url",
+                &make_test_url("one_dir_provider"),
                 ComponentSource::StaticPackage("".to_string()),
             ),
         ];
@@ -910,26 +923,27 @@ mod tests {
     fn two_instance_two_dir_components_model_duplicate_user(
         data_model: Option<Arc<DataModel>>,
     ) -> Result<(Arc<DataModel>, Vec<Component>)> {
+        let root_url = DEFAULT_ROOT_URL.to_string();
+        let two_dir_user_url = make_test_url("two_dir_user");
+        let one_dir_provider_url = make_test_url("one_dir_provider");
+
         let data_model = data_model.unwrap_or(fake_data_model());
         let components = vec![
-            create_component(&DEFAULT_ROOT_URL.to_string(), ComponentSource::ZbiBootfs),
-            create_component("two_dir_user_url", ComponentSource::StaticPackage("0".to_string())),
-            create_component("two_dir_user_url", ComponentSource::StaticPackage("1".to_string())),
-            create_component(
-                "one_dir_provider_url",
-                ComponentSource::StaticPackage("".to_string()),
-            ),
+            create_component(&root_url, ComponentSource::ZbiBootfs),
+            create_component(&two_dir_user_url, ComponentSource::StaticPackage("0".to_string())),
+            create_component(&two_dir_user_url, ComponentSource::StaticPackage("1".to_string())),
+            create_component(&one_dir_provider_url, ComponentSource::StaticPackage("".to_string())),
         ];
         data_model.set(Components { entries: components })?;
         Ok((
             data_model,
             vec![
                 create_component(
-                    "two_dir_user_url",
+                    &two_dir_user_url,
                     ComponentSource::StaticPackage("0".to_string()),
                 ),
                 create_component(
-                    "two_dir_user_url",
+                    &two_dir_user_url,
                     ComponentSource::StaticPackage("1".to_string()),
                 ),
             ],
@@ -942,9 +956,12 @@ mod tests {
         let data_model = data_model.unwrap_or(fake_data_model());
         let components = vec![
             create_component(&DEFAULT_ROOT_URL.to_string(), ComponentSource::ZbiBootfs),
-            create_component("two_dir_user_url", ComponentSource::Package("".to_string())),
             create_component(
-                "one_dir_provider_url",
+                &make_test_url("two_dir_user"),
+                ComponentSource::Package("".to_string()),
+            ),
+            create_component(
+                &make_test_url("one_dir_provider"),
                 ComponentSource::StaticPackage("".to_string()),
             ),
         ];
@@ -1893,11 +1910,11 @@ mod tests {
                     "/two_dir_user".to_string() => vec![
                         VerifyRouteSourcesResult{
                             query: config.component_routes[0].routes_to_verify[0].clone(),
-                            result: Err(RouteSourceError::ComponentInstanceLookupByUrlFailed("two_dir_user_url".to_string())),
+                            result: Err(RouteSourceError::ComponentInstanceLookupByUrlFailed(make_test_url("two_dir_user"))),
                         },
                         VerifyRouteSourcesResult{
                             query: config.component_routes[0].routes_to_verify[1].clone(),
-                            result: Err(RouteSourceError::ComponentInstanceLookupByUrlFailed("two_dir_user_url".to_string())),
+                            result: Err(RouteSourceError::ComponentInstanceLookupByUrlFailed(make_test_url("two_dir_user"))),
                         }
                     ],
             }

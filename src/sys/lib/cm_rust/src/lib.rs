@@ -1548,7 +1548,7 @@ impl NativeIntoFidl<fdecl::Ref> for StorageDirectorySource {
     }
 }
 
-#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RegistrationSource {
     Parent,

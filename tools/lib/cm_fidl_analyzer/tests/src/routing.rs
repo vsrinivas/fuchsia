@@ -53,6 +53,10 @@ use {
 
 const TEST_URL_PREFIX: &str = "test:///";
 
+fn make_test_url(component_name: &str) -> String {
+    format!("{}{}", TEST_URL_PREFIX, component_name)
+}
+
 pub struct RoutingTestForAnalyzer {
     model: Arc<ComponentModelForAnalyzer>,
 }
@@ -73,14 +77,34 @@ impl RoutingTestBuilderForAnalyzer {
     fn set_builtin_boot_resolver(&mut self, resolver: component_internal::BuiltinBootResolver) {
         self.builtin_boot_resolver = resolver;
     }
+
+    // Creates a new builder with the specified map of component URLs to `ComponentDecl`s, rather
+    // than using the default test URL scheme.
+    fn new_with_custom_urls(root_url: String, components: Vec<(String, ComponentDecl)>) -> Self {
+        let root_url = cm_types::Url::new(root_url).expect("failed to parse root component url");
+        let decls_by_url = HashMap::from_iter(components.into_iter());
+        Self {
+            root_url,
+            decls_by_url,
+            namespace_capabilities: Vec::new(),
+            builtin_capabilities: Vec::new(),
+            builtin_runner_registrations: Vec::new(),
+            capability_policy: HashMap::new(),
+            debug_capability_policy: HashMap::new(),
+            component_id_index_path: None,
+            builtin_boot_resolver: component_internal::BuiltinBootResolver::None,
+        }
+    }
 }
 
 #[async_trait]
 impl RoutingTestModelBuilder for RoutingTestBuilderForAnalyzer {
     type Model = RoutingTestForAnalyzer;
 
+    // Creates a new builder with the specified components. Components are specified by name;
+    // the method assigns each component a test URL.
     fn new(root_component: &str, components: Vec<(&'static str, ComponentDecl)>) -> Self {
-        let root_url = cm_types::Url::new(format!("{}{}", TEST_URL_PREFIX, root_component))
+        let root_url = cm_types::Url::new(make_test_url(root_component))
             .expect("failed to parse root component url");
         let decls_by_url = HashMap::from_iter(
             components
@@ -759,20 +783,19 @@ mod tests {
     ///   a
     ///    \
     ///     b
-    ///    / \
-    ///   d   c
     ///
-    /// a: creates environment "env" and registers resolver "base" from self.
-    /// b: has environment "env".
-    /// c: is resolved by resolver from grandarent.
+    /// a: creates environment "env" and registers resolver "base" in "env" from self.
+    /// b: has environment "env" and is resolved by the "base" resolver.
     #[fuchsia::test]
-    async fn check_child_resolvers_from_grandparent_environment() {
-        // Note that we do not define a component "c" or "d". These will be resolved by our custom resolver.
+    async fn check_resolver_from_extended_environment() {
+        let a_url = make_test_url("a");
+        let b_url = "base://b/".to_string();
+
         let components = vec![
             (
-                "a",
+                a_url.clone(),
                 ComponentDeclBuilder::new()
-                    .add_child(ChildDeclBuilder::new_lazy_child("b").environment("env"))
+                    .add_child(ChildDeclBuilder::new().name("b").url(&b_url).environment("env"))
                     .add_environment(
                         EnvironmentDeclBuilder::new()
                             .name("env")
@@ -789,53 +812,83 @@ mod tests {
                     })
                     .build(),
             ),
-            (
-                "b",
-                ComponentDeclBuilder::new_empty_component()
-                    .add_child(ChildDeclBuilder::new().name("c").url("base://c"))
-                    .add_child(ChildDeclBuilder::new().name("d").url("base://d"))
-                    .build(),
-            ),
+            (b_url, ComponentDeclBuilder::new_empty_component().build()),
         ];
 
-        let test = RoutingTestBuilderForAnalyzer::new("a", components).build().await;
+        let test =
+            RoutingTestBuilderForAnalyzer::new_with_custom_urls(a_url, components).build().await;
         let b_component = test.look_up_instance(&vec!["b"].into()).await.expect("b instance");
 
-        // Expect only one result, since both children of "b" have the same URL scheme.
-        let results = test.model.check_child_resolvers(&b_component);
-        assert_eq!(results.len(), 1);
-        assert!(results[0].result.is_ok());
+        let result = test.model.check_resolver(&b_component);
+        assert!(result.result.is_ok());
+        assert_eq!(result.using_node, NodePath::absolute_from_vec(vec!["b"]));
+        assert_eq!(result.capability, "base");
     }
 
     ///   a
     ///    \
     ///     b
+    ///      \
+    ///       c
     ///
-    /// a: is provided with the standard built-in boot resolver.
-    /// b: is resolved by the standard boot resolver.
+    /// a: creates environment "b_env" and registers resolver "base" in "b_env" from self.
+    /// b: inherits environment "b_env" but creates a new empty environment "c_env" for c.
+    /// c: doesn't inherit the "base" resolver.
     #[fuchsia::test]
-    async fn check_child_resolver_from_builtin_environment() {
-        let boot_resolver_decl = CapabilityDecl::Resolver(ResolverDecl {
-            name: BOOT_RESOLVER_NAME.into(),
-            source_path: Some("/builtin/source/path".parse().unwrap()),
-        });
+    async fn check_resolver_from_grandparent_environment_not_found() {
+        let a_url = make_test_url("a");
+        let b_url = make_test_url("b");
+        let c_url = "base://c/".to_string();
 
-        let components = vec![(
-            "a",
-            ComponentDeclBuilder::new()
-                .add_child(ChildDeclBuilder::new().name("b").url(&format!("{}://b", BOOT_SCHEME)))
-                .build(),
-        )];
+        let components = vec![
+            (
+                a_url.clone(),
+                ComponentDeclBuilder::new()
+                    .add_child(ChildDeclBuilder::new_lazy_child("b").environment("b_env"))
+                    .add_environment(
+                        EnvironmentDeclBuilder::new()
+                            .name("b_env")
+                            .extends(fsys::EnvironmentExtends::Realm)
+                            .add_resolver(ResolverRegistration {
+                                resolver: "base".into(),
+                                source: RegistrationSource::Self_,
+                                scheme: "base".into(),
+                            }),
+                    )
+                    .resolver(ResolverDecl {
+                        name: "base".into(),
+                        source_path: Some("/svc/fuchsia.sys2.ComponentResolver".parse().unwrap()),
+                    })
+                    .build(),
+            ),
+            (
+                b_url,
+                ComponentDeclBuilder::new_empty_component()
+                    .add_child(ChildDeclBuilder::new().name("c").url(&c_url).environment("c_env"))
+                    .add_environment(
+                        EnvironmentDeclBuilder::new()
+                            .name("c_env")
+                            .extends(fsys::EnvironmentExtends::None),
+                    )
+                    .build(),
+            ),
+            (c_url, ComponentDeclBuilder::new_empty_component().build()),
+        ];
 
-        let mut builder = RoutingTestBuilderForAnalyzer::new("a", components);
-        builder.set_builtin_boot_resolver(component_internal::BuiltinBootResolver::Boot);
-        builder.set_builtin_capabilities(vec![boot_resolver_decl.clone()]);
-        let test = builder.build().await;
-        let a_component = test.look_up_instance(&vec![].into()).await.expect("a instance");
+        let test =
+            RoutingTestBuilderForAnalyzer::new_with_custom_urls(a_url, components).build().await;
+        let c_component = test.look_up_instance(&vec!["b", "c"].into()).await.expect("c instance");
 
-        let route_maps = test.model.check_child_resolvers(&a_component);
-        assert_eq!(route_maps.len(), 1);
-        assert!(route_maps[0].result.is_ok(),);
+        let result = test.model.check_resolver(&c_component);
+
+        assert_matches!(
+            &result.result,
+            Err(CapabilityRouteError::AnalyzerModelError(
+                AnalyzerModelError::MissingResolverForScheme(
+                    resolver
+                )))
+                if resolver == "base"
+        );
     }
 
     ///   a
@@ -846,24 +899,31 @@ mod tests {
     ///    the resolver is not provided as a built-in capability.
     /// b: is resolved by the standard boot resolver.
     #[fuchsia::test]
-    async fn check_child_resolver_from_builtin_environment_not_found() {
-        let components = vec![(
-            "a",
-            ComponentDeclBuilder::new()
-                .add_child(ChildDeclBuilder::new().name("b").url(&format!("{}://b", BOOT_SCHEME)))
-                .build(),
-        )];
+    async fn check_resolver_from_builtin_environment_not_found() {
+        let a_url = make_test_url("a");
+        let b_url = format!("{}://b/", BOOT_SCHEME);
 
-        let mut builder = RoutingTestBuilderForAnalyzer::new("a", components);
+        let components = vec![
+            (
+                a_url.clone(),
+                ComponentDeclBuilder::new()
+                    .add_child(
+                        ChildDeclBuilder::new().name("b").url(&format!("{}://b", BOOT_SCHEME)),
+                    )
+                    .build(),
+            ),
+            (b_url, ComponentDeclBuilder::new().build()),
+        ];
+
+        let mut builder = RoutingTestBuilderForAnalyzer::new_with_custom_urls(a_url, components);
         builder.set_builtin_boot_resolver(component_internal::BuiltinBootResolver::Boot);
         let test = builder.build().await;
-        let a_component = test.look_up_instance(&vec![].into()).await.expect("a instance");
+        let b_component = test.look_up_instance(&vec!["b"].into()).await.expect("b instance");
 
-        let route_maps = test.model.check_child_resolvers(&a_component);
-        assert_eq!(route_maps.len(), 1);
+        let result = test.model.check_resolver(&b_component);
 
         assert_matches!(
-        &route_maps[0].result,
+        &result.result,
             Err(CapabilityRouteError::AnalyzerModelError(
                 AnalyzerModelError::RoutingError(
                     RoutingError::UseFromComponentManagerNotFound{
@@ -1468,9 +1528,13 @@ mod tests {
     ///
     /// a: creates environment "env" and registers resolver "base" from c.
     /// b: resolved by resolver "base" through "env".
-    /// b: exposes resolver "base" from self.
+    /// c: exposes resolver "base" from self.
     #[fuchsia::test]
-    async fn route_map_child_resolver_from_parent_environment() {
+    async fn route_map_resolver_from_parent_environment() {
+        let a_url = make_test_url("a");
+        let b_url = "base://b/".to_string();
+        let c_url = make_test_url("c");
+
         let registration_decl = ResolverRegistration {
             resolver: "base".into(),
             source: RegistrationSource::Child("c".to_string()),
@@ -1486,12 +1550,12 @@ mod tests {
             name: "base".into(),
             source_path: Some("/svc/fuchsia.sys2.ComponentResolver".parse().unwrap()),
         };
-        // Note that we do not define a component "b". This will be resolved by our custom resolver.
+
         let components = vec![
             (
-                "a",
+                a_url.clone(),
                 ComponentDeclBuilder::new_empty_component()
-                    .add_child(ChildDeclBuilder::new().name("b").url("base://b").environment("env"))
+                    .add_child(ChildDeclBuilder::new().name("b").url(&b_url).environment("env"))
                     .add_child(ChildDeclBuilder::new_lazy_child("c"))
                     .add_environment(
                         EnvironmentDeclBuilder::new()
@@ -1501,8 +1565,9 @@ mod tests {
                     )
                     .build(),
             ),
+            (b_url, ComponentDeclBuilder::new().build()),
             (
-                "c",
+                c_url,
                 ComponentDeclBuilder::new()
                     .expose(expose_decl.clone())
                     .resolver(resolver_decl.clone())
@@ -1510,17 +1575,19 @@ mod tests {
             ),
         ];
 
-        let test = RoutingTestBuilderForAnalyzer::new("a", components).build().await;
-        let a_component = test.look_up_instance(&vec![].into()).await.expect("a instance");
+        let test =
+            RoutingTestBuilderForAnalyzer::new_with_custom_urls(a_url, components).build().await;
+        let b_component = test.look_up_instance(&vec!["b"].into()).await.expect("b instance");
 
-        let route_maps = test.model.check_child_resolvers(&a_component);
-        assert_eq!(route_maps.len(), 2);
+        let route_map = test.model.check_resolver(&b_component);
 
+        assert_eq!(route_map.using_node, NodePath::absolute_from_vec(vec!["b"]));
+        assert_eq!(route_map.capability, "base");
         assert_eq!(
-            route_maps[0].result.clone().expect("expected OK route"),
+            route_map.result.clone().expect("expected OK route"),
             vec![
                 RouteSegment::RequireResolver {
-                    node_path: NodePath::absolute_from_vec(vec![]),
+                    node_path: NodePath::absolute_from_vec(vec!["b"]),
                     scheme: "base".to_string(),
                 },
                 RouteSegment::RegisterBy {
@@ -1537,14 +1604,6 @@ mod tests {
                 }
             ]
         );
-
-        assert_matches!(
-        &route_maps[1].result,
-            Err(CapabilityRouteError::AnalyzerModelError(
-                AnalyzerModelError::MissingResolverForScheme(scheme)
-            ))
-                if scheme == "test"
-        );
     }
 
     ///   a
@@ -1554,10 +1613,14 @@ mod tests {
     ///       c
     ///
     /// a: creates environment "env" and registers resolver "base" from self.
-    /// b: has environment "env".
-    /// c: is resolved by resolver from grandarent.
+    /// b: has environment "env" extending the realm's environment.
+    /// c: inherits "env" and is resolved by "base" from grandparent.
     #[fuchsia::test]
-    async fn route_map_child_resolver_from_grandparent_environment() {
+    async fn route_map_resolver_from_grandparent_environment() {
+        let a_url = make_test_url("a");
+        let b_url = make_test_url("b");
+        let c_url = "base://c/".to_string();
+
         let registration_decl = ResolverRegistration {
             resolver: "base".into(),
             source: RegistrationSource::Self_,
@@ -1567,10 +1630,9 @@ mod tests {
             name: "base".into(),
             source_path: Some("/svc/fuchsia.sys2.ComponentResolver".parse().unwrap()),
         };
-        // Note that we do not define a component "c". This will be resolved by our custom resolver.
         let components = vec![
             (
-                "a",
+                a_url.clone(),
                 ComponentDeclBuilder::new()
                     .add_child(ChildDeclBuilder::new_lazy_child("b").environment("env"))
                     .add_environment(
@@ -1583,24 +1645,27 @@ mod tests {
                     .build(),
             ),
             (
-                "b",
+                b_url,
                 ComponentDeclBuilder::new_empty_component()
-                    .add_child(ChildDeclBuilder::new().name("c").url("base://c"))
+                    .add_child(ChildDeclBuilder::new().name("c").url(&c_url))
                     .build(),
             ),
+            (c_url, ComponentDeclBuilder::new_empty_component().build()),
         ];
 
-        let test = RoutingTestBuilderForAnalyzer::new("a", components).build().await;
-        let b_component = test.look_up_instance(&vec!["b"].into()).await.expect("b instance");
+        let test =
+            RoutingTestBuilderForAnalyzer::new_with_custom_urls(a_url, components).build().await;
+        let c_component = test.look_up_instance(&vec!["b", "c"].into()).await.expect("c instance");
 
-        let route_maps = test.model.check_child_resolvers(&b_component);
-        assert_eq!(route_maps.len(), 1);
+        let route_map = test.model.check_resolver(&c_component);
 
+        assert_eq!(route_map.using_node, NodePath::absolute_from_vec(vec!["b", "c"]));
+        assert_eq!(route_map.capability, "base");
         assert_eq!(
-            route_maps[0].result.clone().expect("expected OK route"),
+            route_map.result.clone().expect("expected OK route"),
             vec![
                 RouteSegment::RequireResolver {
-                    node_path: NodePath::absolute_from_vec(vec!["b"]),
+                    node_path: NodePath::absolute_from_vec(vec!["b", "c"]),
                     scheme: "base".to_string(),
                 },
                 RouteSegment::RegisterBy {
@@ -1622,33 +1687,40 @@ mod tests {
     /// a: is provided with the standard built-in boot resolver.
     /// b: is resolved by the standard boot resolver.
     #[fuchsia::test]
-    async fn route_map_child_resolver_from_builtin_environment() {
+    async fn route_map_resolver_from_builtin_environment() {
+        let a_url = make_test_url("a");
+        let b_url = format!("{}://b/", BOOT_SCHEME);
+
         let boot_resolver_decl = CapabilityDecl::Resolver(ResolverDecl {
             name: BOOT_RESOLVER_NAME.into(),
             source_path: Some("/builtin/source/path".parse().unwrap()),
         });
 
-        let components = vec![(
-            "a",
-            ComponentDeclBuilder::new()
-                .add_child(ChildDeclBuilder::new().name("b").url(&format!("{}://b", BOOT_SCHEME)))
-                .build(),
-        )];
+        let components = vec![
+            (
+                a_url.clone(),
+                ComponentDeclBuilder::new()
+                    .add_child(ChildDeclBuilder::new().name("b").url(&b_url))
+                    .build(),
+            ),
+            (b_url, ComponentDeclBuilder::new().build()),
+        ];
 
-        let mut builder = RoutingTestBuilderForAnalyzer::new("a", components);
+        let mut builder = RoutingTestBuilderForAnalyzer::new_with_custom_urls(a_url, components);
         builder.set_builtin_boot_resolver(component_internal::BuiltinBootResolver::Boot);
         builder.set_builtin_capabilities(vec![boot_resolver_decl.clone()]);
         let test = builder.build().await;
-        let a_component = test.look_up_instance(&vec![].into()).await.expect("a instance");
+        let b_component = test.look_up_instance(&vec!["b"].into()).await.expect("b instance");
 
-        let route_maps = test.model.check_child_resolvers(&a_component);
-        assert_eq!(route_maps.len(), 1);
+        let route_map = test.model.check_resolver(&b_component);
 
+        assert_eq!(route_map.using_node, NodePath::absolute_from_vec(vec!["b"]));
+        assert_eq!(route_map.capability, BOOT_RESOLVER_NAME);
         assert_eq!(
-            route_maps[0].result.clone().expect("expected OK route"),
+            route_map.result.clone().expect("expected OK route"),
             vec![
                 RouteSegment::RequireResolver {
-                    node_path: NodePath::absolute_from_vec(vec![]),
+                    node_path: NodePath::absolute_from_vec(vec!["b"]),
                     scheme: BOOT_SCHEME.to_string(),
                 },
                 RouteSegment::ProvideAsBuiltin { capability: boot_resolver_decl }
@@ -1664,6 +1736,10 @@ mod tests {
     /// b: has environment "env" and a relative url that is resolved by resolver "test" from parent.
     #[fuchsia::test]
     async fn route_map_resolver_relative_child_url() {
+        let a_url = make_test_url("a");
+        let b_relative = "#b";
+        let b_url = format!("{}{}", a_url, b_relative);
+
         let resolver_registration = ResolverRegistration {
             resolver: "test".into(),
             source: RegistrationSource::Self_,
@@ -1673,31 +1749,36 @@ mod tests {
             name: "test".into(),
             source_path: Some("/svc/fuchsia.sys2.ComponentResolver".parse().unwrap()),
         };
-        let components = vec![(
-            "a",
-            ComponentDeclBuilder::new()
-                .add_child(ChildDeclBuilder::new().name("b").url("#b").environment("env"))
-                .add_environment(
-                    EnvironmentDeclBuilder::new()
-                        .name("env")
-                        .extends(fsys::EnvironmentExtends::Realm)
-                        .add_resolver(resolver_registration.clone()),
-                )
-                .resolver(resolver_decl.clone())
-                .build(),
-        )];
+        let components = vec![
+            (
+                a_url.clone(),
+                ComponentDeclBuilder::new()
+                    .add_child(ChildDeclBuilder::new().name("b").url(b_relative).environment("env"))
+                    .add_environment(
+                        EnvironmentDeclBuilder::new()
+                            .name("env")
+                            .extends(fsys::EnvironmentExtends::Realm)
+                            .add_resolver(resolver_registration.clone()),
+                    )
+                    .resolver(resolver_decl.clone())
+                    .build(),
+            ),
+            (b_url, ComponentDeclBuilder::new().build()),
+        ];
 
-        let test = RoutingTestBuilderForAnalyzer::new("a", components).build().await;
-        let a_component = test.look_up_instance(&vec![].into()).await.expect("a instance");
+        let test =
+            RoutingTestBuilderForAnalyzer::new_with_custom_urls(a_url, components).build().await;
+        let b_component = test.look_up_instance(&vec!["b"].into()).await.expect("b instance");
 
-        let route_maps = test.model.check_child_resolvers(&a_component);
+        let route_map = test.model.check_resolver(&b_component);
 
-        assert_eq!(route_maps.len(), 1);
+        assert_eq!(route_map.using_node, NodePath::absolute_from_vec(vec!["b"]));
+        assert_eq!(route_map.capability, "test");
         assert_eq!(
-            route_maps[0].result.clone().expect("expected OK route"),
+            route_map.result.clone().expect("expected OK route"),
             vec![
                 RouteSegment::RequireResolver {
-                    node_path: NodePath::absolute_from_vec(vec![]),
+                    node_path: NodePath::absolute_from_vec(vec!["b"]),
                     scheme: "test".to_string(),
                 },
                 RouteSegment::RegisterBy {
@@ -1772,6 +1853,9 @@ mod tests {
     /// c: is resolved by resolver "base" from grandparent.
     #[fuchsia::test]
     async fn route_maps_all_routes_for_instance() {
+        let a_url = make_test_url("a");
+        let b_url = "base://b/".to_string();
+
         let resolver_registration_decl = ResolverRegistration {
             resolver: "base_resolver".into(),
             source: RegistrationSource::Self_,
@@ -1825,9 +1909,9 @@ mod tests {
 
         let components = vec![
             (
-                "a",
+                a_url.clone(),
                 ComponentDeclBuilder::new()
-                    .add_child(ChildDeclBuilder::new_lazy_child("b").environment("env"))
+                    .add_child(ChildDeclBuilder::new().name("b").url(&b_url).environment("env"))
                     .add_environment(
                         EnvironmentDeclBuilder::new()
                             .name("env")
@@ -1842,9 +1926,8 @@ mod tests {
                     .build(),
             ),
             (
-                "b",
+                b_url,
                 ComponentDeclBuilder::new_empty_component()
-                    .add_child(ChildDeclBuilder::new().name("c").url("base://c"))
                     .add_program("dwarf")
                     .expose(expose_protocol_decl)
                     .use_(use_directory_decl.clone())
@@ -1853,7 +1936,8 @@ mod tests {
             ),
         ];
 
-        let test = RoutingTestBuilderForAnalyzer::new("a", components).build().await;
+        let test =
+            RoutingTestBuilderForAnalyzer::new_with_custom_urls(a_url, components).build().await;
         let b_component = test.look_up_instance(&vec!["b"].into()).await.expect("b instance");
 
         let route_maps = test.model.check_routes_for_instance(
