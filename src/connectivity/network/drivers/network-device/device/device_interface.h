@@ -288,7 +288,7 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
   DeviceStatus device_status_ __TA_GUARDED(control_lock_) = DeviceStatus::STOPPED;
 
   fbl::Mutex rx_lock_;
-  fbl::Mutex tx_lock_ __TA_ACQUIRED_AFTER(tx_lock_);
+  fbl::Mutex tx_lock_ __TA_ACQUIRED_AFTER(rx_lock_);
   fbl::Mutex tx_buffers_lock_ __TA_ACQUIRED_AFTER(tx_lock_);
   SharedLock control_lock_ __TA_ACQUIRED_AFTER(tx_lock_, tx_buffers_lock_, rx_lock_);
 
