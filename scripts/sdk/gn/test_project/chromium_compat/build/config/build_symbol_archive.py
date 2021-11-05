@@ -46,14 +46,11 @@ def main(args):
                 # This is a prebuilt which wasn't accompanied by SDK symbols.
                 continue
 
-        kwargs = dict(universal_newlines=True)
-        # Soft-transition between Python2->3. This kwarg doesn't exist in Python2.
-        if sys.version_info.major == 3:
-            kwargs['text'] = True
-
         # Exclude stripped binaries (indicated by their lack of symbol tables).
         readelf_output = subprocess.check_output(
-            ['readelf', '-S', symbol_source_path], **kwargs)
+            ['readelf', '-S', symbol_source_path],
+            universal_newlines=True,
+            text=True)
         if '.symtab' not in readelf_output:
             continue
 

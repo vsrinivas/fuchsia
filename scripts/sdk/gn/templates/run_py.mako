@@ -93,13 +93,7 @@ class GnTester(object):
         print("FIDL response file unit test passed.")
 
     def _run_cmd(self, args, cwd=None):
-        kwargs = dict(cwd=cwd, stdout=PIPE, stderr=PIPE)
-
-        # Soft-transition between Python2->3. This kwarg doesn't exist in Python2.
-        if sys.version_info.major == 3:
-            kwargs['text'] = True
-
-        job = Popen(args, **kwargs)
+        job = Popen(args, cwd=cwd, stdout=PIPE, stderr=PIPE, text=True)
         (stdoutdata, stderrdata) = job.communicate()
         print(stdoutdata)
         if job.returncode:

@@ -31,17 +31,12 @@ class popen:
     self._process = None
 
   def __enter__(self):
-    kwargs = dict(
+    self._process = Popen(self._command,
         stdout=PIPE,
         stderr=PIPE,
         close_fds=True,
-        preexec_fn=os.setsid)
-
-    # Soft-transition between Python2->3, this kwarg doesn't exist in Python2.
-    if sys.version_info.major == 3:
-      kwargs['text'] = True
-
-    self._process = Popen(self._command, **kwargs)
+        preexec_fn=os.setsid,
+        text=True)
     return self._process
 
   def __exit__(self, type, value, traceback):
