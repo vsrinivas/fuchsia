@@ -7,13 +7,19 @@ import("//build/components.gni")
 import("//build/drivers.gni")
 import("//build/test.gni")
 
+fidl("echo") {
+  name = "fidl.examples.echo"
+
+  sources = [ "echo.test.fidl" ]
+}
+
 test("test") {
   output_name = "fidl-protocol-test"
 
   sources = [ "fidl-protocol-test.cc" ]
 
   deps = [
-    "//examples/fidl/legacy/services:echo_llcpp",
+    ":echo_llcpp",
     "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_llcpp",
     "//sdk/lib/fdio",
     "//src/devices/lib/device-watcher/cpp",
@@ -48,8 +54,8 @@ fuchsia_driver("parent-driver") {
   output_name = "fidl-protocol-parent"
   sources = [ "parent-driver.cc" ]
   deps = [
+    ":echo_llcpp",
     ":parent-driver-bind",
-    "//examples/fidl/legacy/services:echo_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
@@ -75,7 +81,7 @@ fuchsia_driver("child-driver") {
   sources = [ "child-driver.cc" ]
   deps = [
     ":child-driver-bind",
-    "//examples/fidl/legacy/services:echo_llcpp",
+    ":echo_llcpp",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
