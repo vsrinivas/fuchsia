@@ -221,7 +221,7 @@ constexpr ErrorDef<std::string_view, std::string_view, SourceSpan, std::string>
         "struct field '{}' conflicts with field '{}' from {}; both are represented "
         "by the canonical form '{}'");
 constexpr ErrorDef<std::string, const flat::Type *> ErrInvalidStructMemberType(
-    "struct field {} has an invalid default type{}");
+    "struct field {} has an invalid default type {}");
 constexpr ErrorDef<> ErrTooManyTableOrdinals(
     "table contains too many ordinals; tables are limited to 64 ordinals");
 constexpr ErrorDef<> ErrMaxOrdinalNotTable(
@@ -244,11 +244,11 @@ constexpr ErrorDef<std::string_view, std::string_view, SourceSpan, std::string>
         "by the canonical form '{}'");
 constexpr ErrorDef<uint64_t> ErrNonDenseOrdinal(
     "missing ordinal {} (ordinals must be dense); consider marking it reserved");
-constexpr ErrorDef ErrCouldNotResolveHandleRights("unable to resolve handle rights");
-constexpr ErrorDef<flat::Name> ErrCouldNotResolveHandleSubtype(
-    "unable to resolve handle subtype {}");
 constexpr ErrorDef ErrCouldNotParseSizeBound("unable to parse size bound");
 constexpr ErrorDef<std::string> ErrCouldNotResolveMember("unable to resolve {} member");
+constexpr ErrorDef<std::string> ErrCouldNotResolveMemberDefault(
+    "unable to resolve {} default value");
+constexpr ErrorDef ErrCouldNotResolveAttributeArg("unable to resolve attribute argument");
 constexpr ErrorDef<std::string_view, std::string_view, SourceSpan> ErrDuplicateMemberName(
     "multiple {} members named '{}'; previous was at {}");
 constexpr ErrorDef<std::string_view, std::string_view, std::string_view, SourceSpan, std::string>
@@ -308,7 +308,7 @@ constexpr ErrorDef<uint32_t, uint32_t> ErrTooManyBytes(
 constexpr ErrorDef<uint32_t, uint32_t> ErrTooManyHandles(
     "too many handles: only {} allowed, but {} found");
 constexpr ErrorDef ErrInvalidErrorType(
-    "invalid error type: must be int32, uint32 or an enum therof");
+    "invalid error type: must be int32, uint32 or an enum thereof");
 constexpr ErrorDef<std::string, std::set<std::string>> ErrInvalidTransportType(
     "invalid transport type: got {} expected one of {}");
 constexpr ErrorDef<const flat::Attribute *> ErrInvalidAttributeType(

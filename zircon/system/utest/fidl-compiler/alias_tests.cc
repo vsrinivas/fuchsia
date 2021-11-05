@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/names.h>
+
 #include <zxtest/zxtest.h>
 
 #include "error_test.h"
@@ -195,8 +196,11 @@ type Message = struct {
 
 alias alias_of_vector = vector;
 )FIDL");
-  // NOTE(fxbug.dev/72924): A more general error is thrown in the new syntax
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrWrongNumberOfLayoutParameters);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrWrongNumberOfLayoutParameters,
+                                      fidl::ErrWrongNumberOfLayoutParameters);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "vector expected 1 layout parameter(s)");
+  ASSERT_SUBSTR(library.errors()[1]->msg.c_str(),
+                "example/alias_of_vector expected 0 layout parameter(s)");
 }
 
 TEST(AliasTests, BadVectorBoundedOnDecl) {
@@ -209,8 +213,11 @@ type Message = struct {
 
 alias alias_of_vector_max_8 = vector:8;
 )FIDL");
-  // NOTE(fxbug.dev/72924): A more general error is thrown in the new syntax
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrWrongNumberOfLayoutParameters);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrWrongNumberOfLayoutParameters,
+                                      fidl::ErrWrongNumberOfLayoutParameters);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "vector expected 1 layout parameter(s)");
+  ASSERT_SUBSTR(library.errors()[1]->msg.c_str(),
+                "example/alias_of_vector_max_8 expected 0 layout parameter(s)");
 }
 
 TEST(AliasTests, GoodVectorBoundedOnUse) {

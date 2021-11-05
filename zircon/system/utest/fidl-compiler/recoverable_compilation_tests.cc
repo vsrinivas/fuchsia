@@ -94,18 +94,196 @@ TEST(RecoverableCompilationTests, BadRecoverInAttributeCompile) {
 library example;
 
 @foo(first="a", first="b")   // Error: duplicate args
-@bar(first=3, second=4)      // Error: x2 cannot use numeric args on custom attributes
+@bar(first=3, second=4)      // Error: x2 can only use string or bool
 type Enum = enum {
-    FOO = 1;
+    FOO                      // Error: cannot resolve enum member
+        = "not a number";    // Error: cannot be interpreted as uint32
 };
 )FIDL",
                       experimental_flags);
   EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 3);
+  ASSERT_EQ(errors.size(), 5);
   ASSERT_ERR(errors[0], fidl::ErrDuplicateAttributeArg);
   ASSERT_ERR(errors[1], fidl::ErrCanOnlyUseStringOrBool);
   ASSERT_ERR(errors[2], fidl::ErrCanOnlyUseStringOrBool);
+  ASSERT_ERR(errors[3], fidl::ErrConstantCannotBeInterpretedAsType);
+  ASSERT_ERR(errors[4], fidl::ErrCouldNotResolveMember);
+}
+
+TEST(RecoverableCompilationTests, BadRecoverInConst) {
+  TestLibrary library(R"FIDL(
+library example;
+
+@attr(1)
+const FOO string = 2;
+)FIDL");
+  EXPECT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 3);
+  EXPECT_ERR(errors[0], fidl::ErrCanOnlyUseStringOrBool);
+  EXPECT_ERR(errors[1], fidl::ErrConstantCannotBeInterpretedAsType);
+  EXPECT_ERR(errors[2], fidl::ErrCannotResolveConstantValue);
+}
+
+TEST(RecoverableCompilationTests, BadRecoverInBits) {
+  TestLibrary library(R"FIDL(
+library example;
+
+type Foo = bits {
+    BAR                    // Error: cannot resolve bits member
+        = "not a number";  // Error: cannot interpret as uint32
+    QUX = nonexistent;     // Error: cannot resolve bits member
+    bar = 2;               // Error: canonical name conflicts with 'bar'
+    BAZ = 2;               // Error: duplicate value 2
+    XYZ = 3;               // Error: not a power of two
+};
+)FIDL");
+  EXPECT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 6);
+  EXPECT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
+  EXPECT_ERR(errors[1], fidl::ErrCouldNotResolveMember);
+  EXPECT_ERR(errors[2], fidl::ErrCouldNotResolveMember);
+  EXPECT_ERR(errors[3], fidl::ErrDuplicateMemberNameCanonical);
+  EXPECT_ERR(errors[4], fidl::ErrDuplicateMemberValue);
+  EXPECT_ERR(errors[5], fidl::ErrBitsMemberMustBePowerOfTwo);
+}
+
+TEST(RecoverableCompilationTests, BadRecoverInEnum) {
+  TestLibrary library(R"FIDL(
+library example;
+
+type Foo = flexible enum : uint8 {
+    BAR                    // Error: cannot resolve enum member
+        = "not a number";  // Error: cannot interpret as uint32
+    QUX = nonexistent;     // Error: cannot resolve enum member
+    bar = 2;               // Error: canonical name conflicts with 'bar'
+    BAZ = 2;               // Error: duplicate value 2
+    XYZ = 255;             // Error: max value on flexible enum
+};
+)FIDL");
+  EXPECT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 6);
+  EXPECT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
+  EXPECT_ERR(errors[1], fidl::ErrCouldNotResolveMember);
+  EXPECT_ERR(errors[2], fidl::ErrCouldNotResolveMember);
+  EXPECT_ERR(errors[3], fidl::ErrDuplicateMemberNameCanonical);
+  EXPECT_ERR(errors[4], fidl::ErrDuplicateMemberValue);
+  EXPECT_ERR(errors[5], fidl::ErrFlexibleEnumMemberWithMaxValue);
+}
+
+TEST(RecoverableCompilationTests, BadRecoverInStruct) {
+  TestLibrary library(R"FIDL(
+library example;
+
+type Foo = struct {
+    bar string<1>;     // Error: unexpected layout parameter
+    qux nonexistent;   // Error: unknown type
+    BAR                // Error: canonical name conflicts with 'bar'
+        bool           // Error: cannot resolve default value
+        = "not bool";  // Error: cannot interpret as bool
+};
+)FIDL");
+  EXPECT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 5);
+  EXPECT_ERR(errors[0], fidl::ErrWrongNumberOfLayoutParameters);
+  EXPECT_ERR(errors[1], fidl::ErrUnknownType);
+  EXPECT_ERR(errors[2], fidl::ErrDuplicateStructMemberNameCanonical);
+  EXPECT_ERR(errors[3], fidl::ErrConstantCannotBeInterpretedAsType);
+  EXPECT_ERR(errors[4], fidl::ErrCouldNotResolveMemberDefault);
+}
+
+TEST(RecoverableCompilationTests, BadRecoverInTable) {
+  TestLibrary library(R"FIDL(
+library example;
+
+type Foo = table {
+    1: bar string:optional;  // Error: table member cannot be optional
+    1: qux                   // Error: duplicate ordinal
+       nonexistent;          // Error: unknown type
+    // 2: reserved;          // Error: not dense
+    3: BAR bool;             // Error: canonical name conflicts with 'bar'
+};
+)FIDL");
+  EXPECT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 5);
+  EXPECT_ERR(errors[0], fidl::ErrNullableTableMember);
+  EXPECT_ERR(errors[1], fidl::ErrDuplicateTableFieldOrdinal);
+  EXPECT_ERR(errors[2], fidl::ErrUnknownType);
+  EXPECT_ERR(errors[3], fidl::ErrDuplicateTableFieldNameCanonical);
+  EXPECT_ERR(errors[4], fidl::ErrNonDenseOrdinal);
+}
+
+TEST(RecoverableCompilationTests, BadRecoverInUnion) {
+  TestLibrary library(R"FIDL(
+library example;
+
+type Foo = union {
+    1: bar string:optional;  // Error: union member cannot be optional
+    1: qux                   // Error: duplicate ordinal
+        nonexistent;         // Error: unknown type
+    // 2: reserved;          // Error: not dense
+    3: BAR bool;             // Error: canonical name conflicts with 'bar'
+};
+)FIDL");
+  EXPECT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 5);
+  EXPECT_ERR(errors[0], fidl::ErrNullableUnionMember);
+  EXPECT_ERR(errors[1], fidl::ErrDuplicateUnionMemberOrdinal);
+  EXPECT_ERR(errors[2], fidl::ErrUnknownType);
+  EXPECT_ERR(errors[3], fidl::ErrDuplicateUnionMemberNameCanonical);
+  EXPECT_ERR(errors[4], fidl::ErrNonDenseOrdinal);
+}
+
+TEST(RecoverableCompilationTests, BadRecoverInProtocol) {
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol Foo {
+    compose nonexistent;   // Error: unknown type
+    @selector("not good")  // Error: invalid selector
+    Bar();
+    BAR() -> (struct {     // Error: canonical name conflicts with 'bar'
+        b bool:optional;   // Error: bool cannot be optional
+    }) error nonexistent;  // Error: unknown type
+};
+)FIDL");
+  EXPECT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 5);
+  EXPECT_ERR(errors[0], fidl::ErrUnknownType);
+  EXPECT_ERR(errors[1], fidl::ErrInvalidSelectorValue);
+  EXPECT_ERR(errors[2], fidl::ErrDuplicateMethodNameCanonical);
+  EXPECT_ERR(errors[3], fidl::ErrCannotBeNullable);
+  EXPECT_ERR(errors[4], fidl::ErrUnknownType);
+}
+
+TEST(RecoverableCompilationTests, BadRecoverInService) {
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol P {};
+service Foo {
+    bar string;                   // Error: must be client_end
+    baz nonexistent;              // Error: unknown type
+    qux server_end:P;             // Error: must be client_end
+    BAR                           // Error: canonical name conflicts with 'bar'
+        client_end:<P,optional>;  // Error: cannot be optional
+};
+)FIDL");
+  EXPECT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 5);
+  EXPECT_ERR(errors[0], fidl::ErrOnlyClientEndsInServices);
+  EXPECT_ERR(errors[1], fidl::ErrUnknownType);
+  EXPECT_ERR(errors[2], fidl::ErrOnlyClientEndsInServices);
+  EXPECT_ERR(errors[3], fidl::ErrDuplicateServiceMemberNameCanonical);
+  EXPECT_ERR(errors[4], fidl::ErrNullableServiceMember);
 }
 
 }  // namespace

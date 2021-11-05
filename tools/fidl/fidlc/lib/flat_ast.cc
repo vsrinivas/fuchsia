@@ -512,6 +512,8 @@ class VectorTypeTemplate final : public TypeTemplate {
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
     size_t num_params = unresolved_args.parameters->items.size();
     if (num_params != 1) {
+      // TODO(fxbug.dev/87619): If num_params is 0, parameters->span will be
+      // null, so we should use the overall type constructor's span instead.
       return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span, size_t(1),
                   num_params);
     }
@@ -835,9 +837,7 @@ class TypeDeclTypeTemplate final : public TypeTemplate {
       if (type_decl_->compiling) {
         type_decl_->recursive = true;
       } else {
-        if (!library_->CompileDecl(type_decl_)) {
-          return false;
-        }
+        library_->CompileDecl(type_decl_);
       }
     }
 
@@ -935,10 +935,7 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
       if (decl_->compiling) {
         return Fail(ErrIncludeCycle);
       }
-
-      if (!lib.CompileDecl(decl_)) {
-        return false;
-      }
+      lib.CompileDecl(decl_);
     }
 
     size_t num_params = unresolved_args.parameters->items.size();
@@ -1124,16 +1121,16 @@ AttributeSchema& AttributeSchema::Deprecate() {
 // static
 const AttributeSchema AttributeSchema::kUserDefined(Kind::kUserDefined);
 
-bool AttributeSchema::Validate(Reporter* reporter, const Attribute* attribute,
+void AttributeSchema::Validate(Reporter* reporter, const Attribute* attribute,
                                const Attributable* attributable) const {
   switch (kind_) {
     case Kind::kOfficial:
       break;
     case Kind::kDeprecated:
       reporter->Report(ErrDeprecatedAttribute, attribute->span, attribute);
-      return false;
+      return;
     case Kind::kUserDefined:
-      return true;
+      return;
   }
 
   switch (placement_) {
@@ -1142,7 +1139,7 @@ bool AttributeSchema::Validate(Reporter* reporter, const Attribute* attribute,
     case Placement::kSpecific:
       if (specific_placements_.count(attributable->placement) == 0) {
         reporter->Report(ErrInvalidAttributePlacement, attribute->span, attribute);
-        return false;
+        return;
       }
       break;
     case Placement::kAnonymousLayout:
@@ -1159,27 +1156,26 @@ bool AttributeSchema::Validate(Reporter* reporter, const Attribute* attribute,
           [[fallthrough]];
         default:
           reporter->Report(ErrInvalidAttributePlacement, attribute->span, attribute);
-          return false;
+          return;
       }
       break;
   }
 
   if (constraint_ == nullptr) {
-    return true;
+    return;
   }
   auto check = reporter->Checkpoint();
   auto passed = constraint_(reporter, attribute, attributable);
   if (passed) {
     assert(check.NoNewErrors() && "cannot add errors and pass");
-    return true;
+    return;
   }
   if (check.NoNewErrors()) {
     reporter->Report(ErrAttributeConstraintNotSatisfied, attribute->span, attribute);
   }
-  return false;
 }
 
-bool AttributeSchema::ResolveArgs(Library* library, Attribute* attribute) const {
+void AttributeSchema::ResolveArgs(Library* library, Attribute* attribute) const {
   switch (kind_) {
     case Kind::kOfficial:
       break;
@@ -1187,20 +1183,21 @@ bool AttributeSchema::ResolveArgs(Library* library, Attribute* attribute) const 
       // Don't attempt to resolve arguments, as we don't store arument schemas
       // for deprecated attributes. Instead, rely on AttributeSchema::Validate
       // to report the error.
-      return true;
+      return;
     case Kind::kUserDefined:
-      return ResolveArgsWithoutSchema(library, attribute);
+      ResolveArgsWithoutSchema(library, attribute);
+      return;
   }
-
-  auto checkpoint = library->reporter_->Checkpoint();
 
   // Name the anonymous argument (if present).
   if (auto anon_arg = attribute->GetStandaloneAnonymousArg()) {
     if (arg_schemas_.empty()) {
-      return library->Fail(ErrAttributeDisallowsArgs, attribute->span, attribute);
+      library->Fail(ErrAttributeDisallowsArgs, attribute->span, attribute);
+      return;
     }
     if (arg_schemas_.size() > 1) {
-      return library->Fail(ErrAttributeArgNotNamed, attribute->span, anon_arg);
+      library->Fail(ErrAttributeArgNotNamed, attribute->span, anon_arg);
+      return;
     }
     anon_arg->name = arg_schemas_.begin()->first;
   } else if (arg_schemas_.size() == 1 && attribute->args.size() == 1) {
@@ -1229,11 +1226,9 @@ bool AttributeSchema::ResolveArgs(Library* library, Attribute* attribute) const 
       library->Fail(ErrMissingRequiredAttributeArg, attribute->span, attribute, name);
     }
   }
-
-  return checkpoint.NoNewErrors();
 }
 
-bool AttributeArgSchema::ResolveArg(Library* library, Attribute* attribute,
+void AttributeArgSchema::ResolveArg(Library* library, Attribute* attribute,
                                     AttributeArg* arg) const {
   Constant* constant = arg->value.get();
 
@@ -1244,15 +1239,17 @@ bool AttributeArgSchema::ResolveArg(Library* library, Attribute* attribute,
       switch (constant->kind) {
         case Constant::Kind::kLiteral: {
           auto literal_constant = static_cast<LiteralConstant*>(constant);
-          if (!library->ResolveLiteralConstant(literal_constant, &library->kUnboundedStringType)) {
-            return false;
+          if (library->ResolveLiteralConstant(literal_constant, &library->kUnboundedStringType)) {
+            arg->type = std::make_unique<StringType>(library->kUnboundedStringType);
+          } else {
+            library->Fail(ErrCouldNotResolveAttributeArg, arg->span);
           }
-          arg->type = std::make_unique<StringType>(library->kUnboundedStringType);
-          return true;
+          return;
         }
         case Constant::Kind::kIdentifier:
-          return library->Fail(ErrAttributeArgDisallowsConstants, constant->span, arg->name.value(),
-                               attribute);
+          library->Fail(ErrAttributeArgDisallowsConstants, constant->span, arg->name.value(),
+                        attribute);
+          return;
         case Constant::Kind::kBinaryOperator:
           assert(false && "binary operator in attribute arg should be parser error");
       }
@@ -1263,10 +1260,11 @@ bool AttributeArgSchema::ResolveArg(Library* library, Attribute* attribute,
   switch (type_) {
     case ConstantValue::Kind::kDocComment:
     case ConstantValue::Kind::kString: {
-      if (!library->ResolveConstant(constant, &library->kUnboundedStringType)) {
-        return false;
+      if (library->ResolveConstant(constant, &library->kUnboundedStringType)) {
+        arg->type = std::make_unique<StringType>(library->kUnboundedStringType);
+      } else {
+        library->Fail(ErrCouldNotResolveAttributeArg, arg->span);
       }
-      arg->type = std::make_unique<StringType>(library->kUnboundedStringType);
       break;
     }
     case ConstantValue::Kind::kBool:
@@ -1286,19 +1284,18 @@ bool AttributeArgSchema::ResolveArg(Library* library, Attribute* attribute,
       assert(primitive_subtype.has_value());
       auto primitive_type = std::make_unique<PrimitiveType>(Name::CreateIntrinsic(primitive_name),
                                                             primitive_subtype.value());
-      if (!library->ResolveConstant(constant, primitive_type.get())) {
-        return false;
+      if (library->ResolveConstant(constant, primitive_type.get())) {
+        arg->type = std::move(primitive_type);
+      } else {
+        library->Fail(ErrCouldNotResolveAttributeArg, arg->span);
       }
-      arg->type = std::move(primitive_type);
       break;
     }
   }
-
-  return true;
 }
 
 // static
-bool AttributeSchema::ResolveArgsWithoutSchema(Library* library, Attribute* attribute) {
+void AttributeSchema::ResolveArgsWithoutSchema(Library* library, Attribute* attribute) {
   // For attributes with a single, anonymous argument like `@foo("bar")`, assign
   // a default name so that arguments are always named after compilation.
   if (auto anon_arg = attribute->GetStandaloneAnonymousArg()) {
@@ -1307,7 +1304,6 @@ bool AttributeSchema::ResolveArgsWithoutSchema(Library* library, Attribute* attr
 
   // Try resolving each argument as string or bool. We don't allow numerics
   // because it's not clear what type (int8, uint32, etc.) we should infer.
-  bool ok = true;
   for (const auto& arg : attribute->args) {
     assert(arg->value->kind != Constant::Kind::kBinaryOperator &&
            "attribute arg with a binary operator is a parse error");
@@ -1323,9 +1319,8 @@ bool AttributeSchema::ResolveArgsWithoutSchema(Library* library, Attribute* attr
       continue;
     }
     // Otherwise, it must be an integer or float type.
-    ok = library->Fail(ErrCanOnlyUseStringOrBool, attribute->span, arg.get(), attribute);
+    library->Fail(ErrCanOnlyUseStringOrBool, attribute->span, arg.get(), attribute);
   }
-  return ok;
 }
 
 bool SimpleLayoutConstraint(Reporter* reporter, const Attribute* attr,
@@ -1865,16 +1860,12 @@ bool Library::Fail(const ErrorDef<Args...>& err, const std::optional<SourceSpan>
   return false;
 }
 
-bool Library::ValidateAttributes(const Attributable* attributable) {
-  bool ok = true;
+void Library::ValidateAttributes(const Attributable* attributable) {
   for (const auto& attribute : attributable->attributes->attributes) {
     const AttributeSchema& schema =
         all_libraries_->RetrieveAttributeSchema(reporter_, attribute.get());
-    if (!schema.Validate(reporter_, attribute.get(), attributable)) {
-      ok = false;
-    }
+    schema.Validate(reporter_, attribute.get(), attributable);
   }
-  return ok;
 }
 
 SourceSpan Library::GeneratedSimpleName(const std::string& name) {
@@ -2524,10 +2515,11 @@ void Library::MaybeOverrideName(AttributeList& attributes, NamingContext* contex
 
   // Although we are still in the consume step, this early compilation is safe
   // since @generated_name uses AttributeArgSchema::SpecialCase::kStringLiteral.
-  if (!CompileAttribute(attr)) {
+  CompileAttribute(attr);
+  const auto* arg = attr->GetArg(AttributeArg::kDefaultAnonymousName);
+  if (arg == nullptr || !arg->value->IsResolved()) {
     return;
   }
-  const auto& arg = attr->GetArg(AttributeArg::kDefaultAnonymousName);
   const ConstantValue& value = arg->value->Value();
   assert(value.kind == ConstantValue::Kind::kString);
   const auto string_value = static_cast<const StringConstantValue&>(value);
@@ -2932,6 +2924,8 @@ bool Library::ResolveOrOperatorConstant(Constant* constant, const Type* type,
 bool Library::TryResolveConstant(Constant* constant, const Type* type) {
   reporter::Reporter::ScopedReportingMode silenced =
       reporter_->OverrideMode(reporter::Reporter::ReportingMode::kDoNotReport);
+  // Reset flag to allow re-entry on multiple attempts with different types.
+  constant->compiled = false;
   return ResolveConstant(constant, type);
 }
 
@@ -2941,22 +2935,13 @@ bool Library::ResolveConstant(Constant* constant, const Type* type) {
   // Prevent re-entry.
   if (constant->compiled)
     return constant->IsResolved();
+  constant->compiled = true;
 
   switch (constant->kind) {
-    case Constant::Kind::kIdentifier: {
-      auto identifier_constant = static_cast<IdentifierConstant*>(constant);
-      if (!ResolveIdentifierConstant(identifier_constant, type)) {
-        return false;
-      }
-      break;
-    }
-    case Constant::Kind::kLiteral: {
-      auto literal_constant = static_cast<LiteralConstant*>(constant);
-      if (!ResolveLiteralConstant(literal_constant, type)) {
-        return false;
-      }
-      break;
-    }
+    case Constant::Kind::kIdentifier:
+      return ResolveIdentifierConstant(static_cast<IdentifierConstant*>(constant), type);
+    case Constant::Kind::kLiteral:
+      return ResolveLiteralConstant(static_cast<LiteralConstant*>(constant), type);
     case Constant::Kind::kBinaryOperator: {
       auto binary_operator_constant = static_cast<BinaryOperatorConstant*>(constant);
       if (!ResolveConstant(binary_operator_constant->left_operand.get(), type)) {
@@ -2966,23 +2951,17 @@ bool Library::ResolveConstant(Constant* constant, const Type* type) {
         return false;
       }
       switch (binary_operator_constant->op) {
-        case BinaryOperatorConstant::Operator::kOr: {
-          if (!ResolveOrOperatorConstant(constant, type,
-                                         binary_operator_constant->left_operand->Value(),
-                                         binary_operator_constant->right_operand->Value())) {
-            return false;
-          }
-          break;
-        }
+        case BinaryOperatorConstant::Operator::kOr:
+          return ResolveOrOperatorConstant(constant, type,
+                                           binary_operator_constant->left_operand->Value(),
+                                           binary_operator_constant->right_operand->Value());
         default:
           assert(false && "Compiler bug: unhandled binary operator");
       }
       break;
     }
   }
-
-  constant->compiled = true;
-  return true;
+  __builtin_unreachable();
 }
 
 ConstantValue::Kind Library::ConstantValuePrimitiveKind(
@@ -3021,16 +3000,16 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
   auto decl = LookupDeclByName(identifier_constant->name.memberless_key());
   if (!decl)
     return false;
-
-  if (!CompileDecl(decl)) {
-    return false;
-  }
+  CompileDecl(decl);
 
   const Type* const_type = nullptr;
   const ConstantValue* const_val = nullptr;
   switch (decl->kind) {
     case Decl::Kind::kConst: {
       auto const_decl = static_cast<Const*>(decl);
+      if (!const_decl->value->IsResolved()) {
+        return false;
+      }
       const_type = const_decl->type_ctor->type;
       const_val = &const_decl->value->Value();
       break;
@@ -3042,6 +3021,9 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
         const_type = enum_decl->subtype_ctor->type;
         for (auto& member : enum_decl->members) {
           if (member.name.data() == member_name) {
+            if (!member.value->IsResolved()) {
+              return false;
+            }
             const_val = &member.value->Value();
           }
         }
@@ -3060,6 +3042,9 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
         const_type = bits_decl->subtype_ctor->type;
         for (auto& member : bits_decl->members) {
           if (member.name.data() == member_name) {
+            if (!member.value->IsResolved()) {
+              return false;
+            }
             const_val = &member.value->Value();
           }
         }
@@ -3102,6 +3087,9 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
       switch (identifier_type->type_decl->kind) {
         case Decl::Kind::kEnum: {
           auto enum_decl = static_cast<const Enum*>(identifier_type->type_decl);
+          if (!enum_decl->subtype_ctor->type) {
+            return false;
+          }
           assert(enum_decl->subtype_ctor->type->kind == Type::Kind::kPrimitive);
           primitive_type = static_cast<const PrimitiveType*>(enum_decl->subtype_ctor->type);
           break;
@@ -3109,6 +3097,9 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
         case Decl::Kind::kBits: {
           auto bits_decl = static_cast<const Bits*>(identifier_type->type_decl);
           assert(bits_decl->subtype_ctor->type->kind == Type::Kind::kPrimitive);
+          if (!bits_decl->subtype_ctor->type) {
+            return false;
+          }
           primitive_type = static_cast<const PrimitiveType*>(bits_decl->subtype_ctor->type);
           break;
         }
@@ -3318,37 +3309,31 @@ bool Library::ResolveAsOptional(Constant* constant) const {
   return identifier_constant->name.decl_name() == "optional";
 }
 
-bool Library::CompileAttributeList(AttributeList* attributes) {
-  bool ok = true;
+void Library::CompileAttributeList(AttributeList* attributes) {
   for (auto& attribute : attributes->attributes) {
-    if (!CompileAttribute(attribute.get())) {
-      ok = false;
-    }
+    CompileAttribute(attribute.get());
   }
-  return ok;
 }
 
-bool Library::CompileAttribute(Attribute* attribute) {
+void Library::CompileAttribute(Attribute* attribute) {
   if (attribute->compiled) {
-    return true;
+    return;
   }
 
   // Check for duplicate args, and return early if we find them.
   std::set<std::string> seen;
   for (auto& arg : attribute->args) {
     if (arg->name.has_value() && !seen.insert(utils::canonicalize(arg->name.value())).second) {
-      return Fail(ErrDuplicateAttributeArg, attribute->span, attribute, arg->name.value());
+      Fail(ErrDuplicateAttributeArg, attribute->span, attribute, arg->name.value());
+      return;
     }
   }
 
   const AttributeSchema& schema =
       all_libraries_->RetrieveAttributeSchema(reporter_, attribute,
                                               /* warn_on_typo = */ true);
-  if (!schema.ResolveArgs(this, attribute)) {
-    return false;
-  }
+  schema.ResolveArgs(this, attribute);
   attribute->compiled = true;
-  return true;
 }
 
 const Type* Library::TypeResolve(const Type* type) {
@@ -3361,8 +3346,7 @@ const Type* Library::TypeResolve(const Type* type) {
     Fail(ErrCouldNotResolveIdentifierToType);
     return nullptr;
   }
-  if (!CompileDecl(decl))
-    return nullptr;
+  CompileDecl(decl);
   switch (decl->kind) {
     case Decl::Kind::kBits:
       return static_cast<const Bits*>(decl)->subtype_ctor->type;
@@ -3736,75 +3720,47 @@ bool Library::SortDeclarations() {
   return true;
 }
 
-bool Library::CompileDecl(Decl* decl) {
-  if (decl->compiled)
-    return true;
-  if (decl->compiling)
-    return Fail(ErrIncludeCycle);
+void Library::CompileDecl(Decl* decl) {
+  if (decl->compiled) {
+    return;
+  }
+  if (decl->compiling) {
+    Fail(ErrIncludeCycle);
+    return;
+  }
   Compiling guard(decl);
   switch (decl->kind) {
-    case Decl::Kind::kBits: {
-      auto bits_decl = static_cast<Bits*>(decl);
-      if (!CompileBits(bits_decl))
-        return false;
+    case Decl::Kind::kBits:
+      CompileBits(static_cast<Bits*>(decl));
       break;
-    }
-    case Decl::Kind::kConst: {
-      auto const_decl = static_cast<Const*>(decl);
-      if (!CompileConst(const_decl))
-        return false;
+    case Decl::Kind::kConst:
+      CompileConst(static_cast<Const*>(decl));
       break;
-    }
-    case Decl::Kind::kEnum: {
-      auto enum_decl = static_cast<Enum*>(decl);
-      if (!CompileEnum(enum_decl))
-        return false;
+    case Decl::Kind::kEnum:
+      CompileEnum(static_cast<Enum*>(decl));
       break;
-    }
-    case Decl::Kind::kProtocol: {
-      auto protocol_decl = static_cast<Protocol*>(decl);
-      if (!CompileProtocol(protocol_decl))
-        return false;
+    case Decl::Kind::kProtocol:
+      CompileProtocol(static_cast<Protocol*>(decl));
       break;
-    }
-    case Decl::Kind::kResource: {
-      auto resource_decl = static_cast<Resource*>(decl);
-      if (!CompileResource(resource_decl))
-        return false;
+    case Decl::Kind::kResource:
+      CompileResource(static_cast<Resource*>(decl));
       break;
-    }
-    case Decl::Kind::kService: {
-      auto service_decl = static_cast<Service*>(decl);
-      if (!CompileService(service_decl))
-        return false;
+    case Decl::Kind::kService:
+      CompileService(static_cast<Service*>(decl));
       break;
-    }
-    case Decl::Kind::kStruct: {
-      auto struct_decl = static_cast<Struct*>(decl);
-      if (!CompileStruct(struct_decl))
-        return false;
+    case Decl::Kind::kStruct:
+      CompileStruct(static_cast<Struct*>(decl));
       break;
-    }
-    case Decl::Kind::kTable: {
-      auto table_decl = static_cast<Table*>(decl);
-      if (!CompileTable(table_decl))
-        return false;
+    case Decl::Kind::kTable:
+      CompileTable(static_cast<Table*>(decl));
       break;
-    }
-    case Decl::Kind::kUnion: {
-      auto union_decl = static_cast<Union*>(decl);
-      if (!CompileUnion(union_decl))
-        return false;
+    case Decl::Kind::kUnion:
+      CompileUnion(static_cast<Union*>(decl));
       break;
-    }
-    case Decl::Kind::kTypeAlias: {
-      auto type_alias_decl = static_cast<TypeAlias*>(decl);
-      if (!CompileTypeAlias(type_alias_decl))
-        return false;
+    case Decl::Kind::kTypeAlias:
+      CompileTypeAlias(static_cast<TypeAlias*>(decl));
       break;
-    }
   }  // switch
-  return true;
 }
 
 template <template <typename> typename Constness, typename MemberFn>
@@ -4066,22 +4022,21 @@ types::Resourceness VerifyResourcenessStep::EffectiveResourceness(const Type* ty
   return types::Resourceness::kValue;
 }
 
-bool Library::CompileBits(Bits* bits_declaration) {
-  if (!CompileAttributeList(bits_declaration->attributes.get())) {
-    return false;
-  }
+void Library::CompileBits(Bits* bits_declaration) {
+  CompileAttributeList(bits_declaration->attributes.get());
   for (auto& member : bits_declaration->members) {
-    if (!CompileAttributeList(member.attributes.get())) {
-      return false;
-    }
+    CompileAttributeList(member.attributes.get());
   }
 
-  if (!CompileTypeConstructor(bits_declaration->subtype_ctor.get()))
-    return false;
+  CompileTypeConstructor(bits_declaration->subtype_ctor.get());
+  if (!bits_declaration->subtype_ctor->type) {
+    return;
+  }
 
   if (bits_declaration->subtype_ctor->type->kind != Type::Kind::kPrimitive) {
-    return Fail(ErrBitsTypeMustBeUnsignedIntegralPrimitive, *bits_declaration,
-                bits_declaration->subtype_ctor->type);
+    Fail(ErrBitsTypeMustBeUnsignedIntegralPrimitive, *bits_declaration,
+         bits_declaration->subtype_ctor->type);
+    return;
   }
 
   // Validate constants.
@@ -4090,28 +4045,28 @@ bool Library::CompileBits(Bits* bits_declaration) {
     case types::PrimitiveSubtype::kUint8: {
       uint8_t mask;
       if (!ValidateBitsMembersAndCalcMask<uint8_t>(bits_declaration, &mask))
-        return false;
+        return;
       bits_declaration->mask = mask;
       break;
     }
     case types::PrimitiveSubtype::kUint16: {
       uint16_t mask;
       if (!ValidateBitsMembersAndCalcMask<uint16_t>(bits_declaration, &mask))
-        return false;
+        return;
       bits_declaration->mask = mask;
       break;
     }
     case types::PrimitiveSubtype::kUint32: {
       uint32_t mask;
       if (!ValidateBitsMembersAndCalcMask<uint32_t>(bits_declaration, &mask))
-        return false;
+        return;
       bits_declaration->mask = mask;
       break;
     }
     case types::PrimitiveSubtype::kUint64: {
       uint64_t mask;
       if (!ValidateBitsMembersAndCalcMask<uint64_t>(bits_declaration, &mask))
-        return false;
+        return;
       bits_declaration->mask = mask;
       break;
     }
@@ -4122,46 +4077,41 @@ bool Library::CompileBits(Bits* bits_declaration) {
     case types::PrimitiveSubtype::kInt64:
     case types::PrimitiveSubtype::kFloat32:
     case types::PrimitiveSubtype::kFloat64:
-      return Fail(ErrBitsTypeMustBeUnsignedIntegralPrimitive, *bits_declaration,
-                  bits_declaration->subtype_ctor->type);
+      Fail(ErrBitsTypeMustBeUnsignedIntegralPrimitive, *bits_declaration,
+           bits_declaration->subtype_ctor->type);
+      return;
   }
-
-  return true;
 }
 
-bool Library::CompileConst(Const* const_declaration) {
-  if (!CompileAttributeList(const_declaration->attributes.get())) {
-    return false;
-  }
-
-  if (!CompileTypeConstructor(const_declaration->type_ctor.get()))
-    return false;
+void Library::CompileConst(Const* const_declaration) {
+  CompileAttributeList(const_declaration->attributes.get());
+  CompileTypeConstructor(const_declaration->type_ctor.get());
   const auto* const_type = const_declaration->type_ctor->type;
-  if (!TypeCanBeConst(const_type)) {
-    return Fail(ErrInvalidConstantType, *const_declaration, const_type);
+  if (!const_type) {
+    return;
   }
-  if (!ResolveConstant(const_declaration->value.get(), const_type))
-    return Fail(ErrCannotResolveConstantValue, *const_declaration);
-
-  return true;
+  if (!TypeCanBeConst(const_type)) {
+    Fail(ErrInvalidConstantType, *const_declaration, const_type);
+  } else if (!ResolveConstant(const_declaration->value.get(), const_type)) {
+    Fail(ErrCannotResolveConstantValue, *const_declaration);
+  }
 }
 
-bool Library::CompileEnum(Enum* enum_declaration) {
-  if (!CompileAttributeList(enum_declaration->attributes.get())) {
-    return false;
-  }
+void Library::CompileEnum(Enum* enum_declaration) {
+  CompileAttributeList(enum_declaration->attributes.get());
   for (auto& member : enum_declaration->members) {
-    if (!CompileAttributeList(member.attributes.get())) {
-      return false;
-    }
+    CompileAttributeList(member.attributes.get());
   }
 
-  if (!CompileTypeConstructor(enum_declaration->subtype_ctor.get()))
-    return false;
+  CompileTypeConstructor(enum_declaration->subtype_ctor.get());
+  if (!enum_declaration->subtype_ctor->type) {
+    return;
+  }
 
   if (enum_declaration->subtype_ctor->type->kind != Type::Kind::kPrimitive) {
-    return Fail(ErrEnumTypeMustBeIntegralPrimitive, *enum_declaration,
-                enum_declaration->subtype_ctor->type);
+    Fail(ErrEnumTypeMustBeIntegralPrimitive, *enum_declaration,
+         enum_declaration->subtype_ctor->type);
+    return;
   }
 
   // Validate constants.
@@ -4170,130 +4120,121 @@ bool Library::CompileEnum(Enum* enum_declaration) {
   switch (primitive_type->subtype) {
     case types::PrimitiveSubtype::kInt8: {
       int8_t unknown_value;
-      if (!ValidateEnumMembersAndCalcUnknownValue<int8_t>(enum_declaration, &unknown_value))
-        return false;
-      enum_declaration->unknown_value_signed = unknown_value;
+      if (ValidateEnumMembersAndCalcUnknownValue<int8_t>(enum_declaration, &unknown_value)) {
+        enum_declaration->unknown_value_signed = unknown_value;
+      }
       break;
     }
     case types::PrimitiveSubtype::kInt16: {
       int16_t unknown_value;
-      if (!ValidateEnumMembersAndCalcUnknownValue<int16_t>(enum_declaration, &unknown_value))
-        return false;
-      enum_declaration->unknown_value_signed = unknown_value;
+      if (ValidateEnumMembersAndCalcUnknownValue<int16_t>(enum_declaration, &unknown_value)) {
+        enum_declaration->unknown_value_signed = unknown_value;
+      }
       break;
     }
     case types::PrimitiveSubtype::kInt32: {
       int32_t unknown_value;
-      if (!ValidateEnumMembersAndCalcUnknownValue<int32_t>(enum_declaration, &unknown_value))
-        return false;
-      enum_declaration->unknown_value_signed = unknown_value;
+      if (ValidateEnumMembersAndCalcUnknownValue<int32_t>(enum_declaration, &unknown_value)) {
+        enum_declaration->unknown_value_signed = unknown_value;
+      }
       break;
     }
     case types::PrimitiveSubtype::kInt64: {
       int64_t unknown_value;
-      if (!ValidateEnumMembersAndCalcUnknownValue<int64_t>(enum_declaration, &unknown_value))
-        return false;
-      enum_declaration->unknown_value_signed = unknown_value;
+      if (ValidateEnumMembersAndCalcUnknownValue<int64_t>(enum_declaration, &unknown_value)) {
+        enum_declaration->unknown_value_signed = unknown_value;
+      }
       break;
     }
     case types::PrimitiveSubtype::kUint8: {
       uint8_t unknown_value;
-      if (!ValidateEnumMembersAndCalcUnknownValue<uint8_t>(enum_declaration, &unknown_value))
-        return false;
-      enum_declaration->unknown_value_unsigned = unknown_value;
+      if (ValidateEnumMembersAndCalcUnknownValue<uint8_t>(enum_declaration, &unknown_value)) {
+        enum_declaration->unknown_value_unsigned = unknown_value;
+      }
       break;
     }
     case types::PrimitiveSubtype::kUint16: {
       uint16_t unknown_value;
-      if (!ValidateEnumMembersAndCalcUnknownValue<uint16_t>(enum_declaration, &unknown_value))
-        return false;
-      enum_declaration->unknown_value_unsigned = unknown_value;
+      if (ValidateEnumMembersAndCalcUnknownValue<uint16_t>(enum_declaration, &unknown_value)) {
+        enum_declaration->unknown_value_unsigned = unknown_value;
+      }
       break;
     }
     case types::PrimitiveSubtype::kUint32: {
       uint32_t unknown_value;
-      if (!ValidateEnumMembersAndCalcUnknownValue<uint32_t>(enum_declaration, &unknown_value))
-        return false;
-      enum_declaration->unknown_value_unsigned = unknown_value;
+      if (ValidateEnumMembersAndCalcUnknownValue<uint32_t>(enum_declaration, &unknown_value)) {
+        enum_declaration->unknown_value_unsigned = unknown_value;
+      }
       break;
     }
     case types::PrimitiveSubtype::kUint64: {
       uint64_t unknown_value;
-      if (!ValidateEnumMembersAndCalcUnknownValue<uint64_t>(enum_declaration, &unknown_value))
-        return false;
-      enum_declaration->unknown_value_unsigned = unknown_value;
+      if (ValidateEnumMembersAndCalcUnknownValue<uint64_t>(enum_declaration, &unknown_value)) {
+        enum_declaration->unknown_value_unsigned = unknown_value;
+      }
       break;
     }
     case types::PrimitiveSubtype::kBool:
     case types::PrimitiveSubtype::kFloat32:
     case types::PrimitiveSubtype::kFloat64:
-      return Fail(ErrEnumTypeMustBeIntegralPrimitive, *enum_declaration,
-                  enum_declaration->subtype_ctor->type);
+      Fail(ErrEnumTypeMustBeIntegralPrimitive, *enum_declaration,
+           enum_declaration->subtype_ctor->type);
+      break;
   }
-
-  return true;
 }
 
 bool HasSimpleLayout(const Decl* decl) {
   return decl->attributes->Get("for_deprecated_c_bindings") != nullptr;
 }
 
-bool Library::CompileResource(Resource* resource_declaration) {
+void Library::CompileResource(Resource* resource_declaration) {
   Scope<std::string_view> scope;
 
-  if (!CompileAttributeList(resource_declaration->attributes.get())) {
-    return false;
+  CompileAttributeList(resource_declaration->attributes.get());
+  CompileTypeConstructor(resource_declaration->subtype_ctor.get());
+  if (!resource_declaration->subtype_ctor->type) {
+    return;
   }
 
-  if (!CompileTypeConstructor(resource_declaration->subtype_ctor.get()))
-    return false;
-
   if (resource_declaration->subtype_ctor->type->kind != Type::Kind::kPrimitive) {
-    return Fail(ErrEnumTypeMustBeIntegralPrimitive, *resource_declaration,
-                resource_declaration->subtype_ctor->type);
+    Fail(ErrEnumTypeMustBeIntegralPrimitive, *resource_declaration,
+         resource_declaration->subtype_ctor->type);
+    return;
   }
 
   for (auto& property : resource_declaration->properties) {
-    if (!CompileAttributeList(property.attributes.get())) {
-      return false;
-    }
-
+    CompileAttributeList(property.attributes.get());
     auto name_result = scope.Insert(property.name.data(), property.name);
-    if (!name_result.ok())
-      return Fail(ErrDuplicateResourcePropertyName, property.name,
-                  name_result.previous_occurrence());
-
-    if (!CompileTypeConstructor(property.type_ctor.get()))
-      return false;
+    if (!name_result.ok()) {
+      Fail(ErrDuplicateResourcePropertyName, property.name, name_result.previous_occurrence());
+      return;
+    }
+    CompileTypeConstructor(property.type_ctor.get());
   }
-  return true;
 }
 
-bool Library::CompileProtocol(Protocol* protocol_declaration) {
-  if (!CompileAttributeList(protocol_declaration->attributes.get())) {
-    return false;
-  }
+void Library::CompileProtocol(Protocol* protocol_declaration) {
+  CompileAttributeList(protocol_declaration->attributes.get());
 
   MethodScope method_scope;
   auto CheckScopes = [this, &protocol_declaration, &method_scope](const Protocol* protocol,
-                                                                  auto Visitor) -> bool {
+                                                                  auto Visitor) -> void {
     for (const auto& composed_protocol : protocol->composed_protocols) {
       auto name = composed_protocol.name;
       auto decl = LookupDeclByName(name);
       // TODO(fxbug.dev/7926): Special handling here should not be required, we
       // should first rely on creating the types representing composed
       // protocols.
-      if (!decl) {
-        return Fail(ErrUnknownType, name, name);
+      if (!decl || decl->kind != Decl::Kind::kProtocol) {
+        // No need to report an error here since it was already done by the loop
+        // after the definition of CheckScopes (before calling CheckScopes).
+        continue;
       }
-      if (decl->kind != Decl::Kind::kProtocol)
-        return Fail(ErrComposingNonProtocol, name);
       auto composed_protocol_declaration = static_cast<const Protocol*>(decl);
       auto span = composed_protocol_declaration->name.span();
       assert(span);
       if (method_scope.protocols.Insert(composed_protocol_declaration, span.value()).ok()) {
-        if (!Visitor(composed_protocol_declaration, Visitor))
-          return false;
+        Visitor(composed_protocol_declaration, Visitor);
       } else {
         // Otherwise we have already seen this protocol in
         // the inheritance graph.
@@ -4304,38 +4245,38 @@ bool Library::CompileProtocol(Protocol* protocol_declaration) {
       const auto canonical_name = utils::canonicalize(original_name);
       const auto name_result = method_scope.canonical_names.Insert(canonical_name, method.name);
       if (!name_result.ok()) {
-        if (original_name == name_result.previous_occurrence().data()) {
-          return Fail(ErrDuplicateMethodName, method.name, original_name,
-                      name_result.previous_occurrence());
-        }
         const auto previous_span = name_result.previous_occurrence();
-        return Fail(ErrDuplicateMethodNameCanonical, method.name, original_name,
-                    previous_span.data(), previous_span, canonical_name);
+        if (original_name == previous_span.data()) {
+          Fail(ErrDuplicateMethodName, method.name, original_name, previous_span);
+        } else {
+          Fail(ErrDuplicateMethodNameCanonical, method.name, original_name, previous_span.data(),
+               previous_span, canonical_name);
+        }
       }
       if (!method.generated_ordinal64) {
         // If a composed method failed to compile, we do not associate have a
         // generated ordinal, and proceeding leads to a segfault. Instead,
-        // return immediately, without reporting additional errors (the error
-        // emitted when compiliing the composed method is sufficient).
-        return false;
+        // continue to the next method, without reporting additional errors (the
+        // error emitted when compiling the composed method is sufficient).
+        continue;
       }
-      if (method.generated_ordinal64->value == 0)
-        return Fail(ErrGeneratedZeroValueOrdinal, method.generated_ordinal64->span());
+      if (method.generated_ordinal64->value == 0) {
+        Fail(ErrGeneratedZeroValueOrdinal, method.generated_ordinal64->span());
+      }
       auto ordinal_result =
           method_scope.ordinals.Insert(method.generated_ordinal64->value, method.name);
       if (!ordinal_result.ok()) {
         std::string replacement_method(
             fidl::ordinals::GetSelector(method.attributes.get(), method.name));
         replacement_method.push_back('_');
-        return Fail(ErrDuplicateMethodOrdinal, method.generated_ordinal64->span(),
-                    ordinal_result.previous_occurrence(), replacement_method);
+        Fail(ErrDuplicateMethodOrdinal, method.generated_ordinal64->span(),
+             ordinal_result.previous_occurrence(), replacement_method);
       }
 
       // Add a pointer to this method to the protocol_declarations list.
       bool is_composed = protocol_declaration != protocol;
       protocol_declaration->all_methods.emplace_back(&method, is_composed);
     }
-    return true;
   };
 
   // Before scope checking can occur, ordinals must be generated for each of the
@@ -4344,190 +4285,173 @@ bool Library::CompileProtocol(Protocol* protocol_declaration) {
   // this one, or they will not have generated_ordinal64s on their methods, and
   // will fail the scope check.
   for (const auto& composed_protocol : protocol_declaration->composed_protocols) {
-    if (!CompileAttributeList(composed_protocol.attributes.get())) {
-      return false;
-    }
-
+    CompileAttributeList(composed_protocol.attributes.get());
     auto decl = LookupDeclByName(composed_protocol.name);
     if (!decl) {
-      return Fail(ErrUnknownType, composed_protocol.name, composed_protocol.name);
+      Fail(ErrUnknownType, composed_protocol.name, composed_protocol.name);
+      continue;
     }
-    if (decl->kind != Decl::Kind::kProtocol)
-      return Fail(ErrComposingNonProtocol, composed_protocol.name);
-    if (!CompileDecl(decl)) {
-      return false;
+    if (decl->kind != Decl::Kind::kProtocol) {
+      Fail(ErrComposingNonProtocol, composed_protocol.name);
+      continue;
     }
+    CompileDecl(decl);
   }
   for (auto& method : protocol_declaration->methods) {
-    if (!CompileAttributeList(method.attributes.get())) {
-      return false;
-    }
-
+    CompileAttributeList(method.attributes.get());
     auto selector = fidl::ordinals::GetSelector(method.attributes.get(), method.name);
     if (!utils::IsValidIdentifierComponent(selector) &&
         !utils::IsValidFullyQualifiedMethodIdentifier(selector)) {
       Fail(ErrInvalidSelectorValue, method.name);
+      continue;
     }
     // TODO(fxbug.dev/77623): Remove.
     if (library_name_.size() == 2 && library_name_[0] == "fuchsia" && library_name_[1] == "io" &&
         selector.find("/") == selector.npos) {
       Fail(ErrFuchsiaIoExplicitOrdinals, method.name);
-      return false;
+      continue;
     }
     method.generated_ordinal64 = std::make_unique<raw::Ordinal64>(method_hasher_(
         library_name_, protocol_declaration->name.decl_name(), selector, *method.identifier));
   }
 
-  if (!CheckScopes(protocol_declaration, CheckScopes))
-    return false;
+  CheckScopes(protocol_declaration, CheckScopes);
 
   for (auto& method : protocol_declaration->methods) {
     if (method.maybe_request_payload) {
-      if (!CompileDecl(method.maybe_request_payload))
-        return false;
+      CompileDecl(method.maybe_request_payload);
     }
     if (method.maybe_response_payload) {
-      if (!CompileDecl(method.maybe_response_payload))
-        return false;
+      CompileDecl(method.maybe_response_payload);
     }
   }
-
-  return true;
 }
 
-bool Library::CompileService(Service* service_decl) {
+void Library::CompileService(Service* service_decl) {
   Scope<std::string> scope;
-  if (!CompileAttributeList(service_decl->attributes.get())) {
-    return false;
-  }
 
+  CompileAttributeList(service_decl->attributes.get());
   for (auto& member : service_decl->members) {
-    if (!CompileAttributeList(member.attributes.get())) {
-      return false;
-    }
-
-    const auto original_name = member.name.data();
-    const auto canonical_name = utils::canonicalize(original_name);
-    const auto name_result = scope.Insert(canonical_name, member.name);
-    if (!name_result.ok()) {
-      const auto previous_span = name_result.previous_occurrence();
-      if (original_name == name_result.previous_occurrence().data()) {
-        return Fail(ErrDuplicateServiceMemberName, member.name, original_name, previous_span);
-      }
-      return Fail(ErrDuplicateServiceMemberNameCanonical, member.name, original_name,
-                  previous_span.data(), previous_span, canonical_name);
-    }
-    if (!CompileTypeConstructor(member.type_ctor.get()))
-      return false;
-    if (member.type_ctor->type->kind != Type::Kind::kTransportSide)
-      return Fail(ErrOnlyClientEndsInServices, member.name);
-    const auto transport_side_type = static_cast<const TransportSideType*>(member.type_ctor->type);
-    if (transport_side_type->end != TransportSide::kClient)
-      return Fail(ErrOnlyClientEndsInServices, member.name);
-    if (member.type_ctor->type->nullability != types::Nullability::kNonnullable)
-      return Fail(ErrNullableServiceMember, member.name);
-  }
-  return true;
-}
-
-bool Library::CompileStruct(Struct* struct_declaration) {
-  Scope<std::string> scope;
-  DeriveResourceness derive_resourceness(&struct_declaration->resourceness);
-
-  if (!CompileAttributeList(struct_declaration->attributes.get())) {
-    return false;
-  }
-
-  for (auto& member : struct_declaration->members) {
-    if (!CompileAttributeList(member.attributes.get())) {
-      return false;
-    }
-
+    CompileAttributeList(member.attributes.get());
     const auto original_name = member.name.data();
     const auto canonical_name = utils::canonicalize(original_name);
     const auto name_result = scope.Insert(canonical_name, member.name);
     if (!name_result.ok()) {
       const auto previous_span = name_result.previous_occurrence();
       if (original_name == previous_span.data()) {
-        return Fail(struct_declaration->is_request_or_response ? ErrDuplicateMethodParameterName
-                                                               : ErrDuplicateStructMemberName,
-                    member.name, original_name, previous_span);
+        Fail(ErrDuplicateServiceMemberName, member.name, original_name, previous_span);
+      } else {
+        Fail(ErrDuplicateServiceMemberNameCanonical, member.name, original_name,
+             previous_span.data(), previous_span, canonical_name);
       }
-      return Fail(struct_declaration->is_request_or_response
-                      ? ErrDuplicateMethodParameterNameCanonical
-                      : ErrDuplicateStructMemberNameCanonical,
-                  member.name, original_name, previous_span.data(), previous_span, canonical_name);
+    }
+    CompileTypeConstructor(member.type_ctor.get());
+    if (!member.type_ctor->type) {
+      continue;
+    }
+    if (member.type_ctor->type->kind != Type::Kind::kTransportSide) {
+      Fail(ErrOnlyClientEndsInServices, member.name);
+      continue;
+    }
+    const auto transport_side_type = static_cast<const TransportSideType*>(member.type_ctor->type);
+    if (transport_side_type->end != TransportSide::kClient) {
+      Fail(ErrOnlyClientEndsInServices, member.name);
+    }
+    if (member.type_ctor->type->nullability != types::Nullability::kNonnullable) {
+      Fail(ErrNullableServiceMember, member.name);
+    }
+  }
+}
+
+void Library::CompileStruct(Struct* struct_declaration) {
+  Scope<std::string> scope;
+  DeriveResourceness derive_resourceness(&struct_declaration->resourceness);
+
+  CompileAttributeList(struct_declaration->attributes.get());
+  for (auto& member : struct_declaration->members) {
+    CompileAttributeList(member.attributes.get());
+    const auto original_name = member.name.data();
+    const auto canonical_name = utils::canonicalize(original_name);
+    const auto name_result = scope.Insert(canonical_name, member.name);
+    if (!name_result.ok()) {
+      const auto previous_span = name_result.previous_occurrence();
+      if (original_name == previous_span.data()) {
+        Fail(struct_declaration->is_request_or_response ? ErrDuplicateMethodParameterName
+                                                        : ErrDuplicateStructMemberName,
+             member.name, original_name, previous_span);
+      } else {
+        Fail(struct_declaration->is_request_or_response ? ErrDuplicateMethodParameterNameCanonical
+                                                        : ErrDuplicateStructMemberNameCanonical,
+             member.name, original_name, previous_span.data(), previous_span, canonical_name);
+      }
     }
 
-    if (!CompileTypeConstructor(member.type_ctor.get()))
-      return false;
+    CompileTypeConstructor(member.type_ctor.get());
+    if (!member.type_ctor->type) {
+      continue;
+    }
     assert(!(struct_declaration->is_request_or_response && member.maybe_default_value) &&
            "method parameters cannot have default values");
     if (member.maybe_default_value) {
       const auto* default_value_type = member.type_ctor->type;
       if (!TypeCanBeConst(default_value_type)) {
-        return Fail(ErrInvalidStructMemberType, *struct_declaration, NameIdentifier(member.name),
-                    default_value_type);
-      }
-      if (!ResolveConstant(member.maybe_default_value.get(), default_value_type)) {
-        return false;
+        Fail(ErrInvalidStructMemberType, *struct_declaration, NameIdentifier(member.name),
+             default_value_type);
+      } else if (!ResolveConstant(member.maybe_default_value.get(), default_value_type)) {
+        Fail(ErrCouldNotResolveMemberDefault, member.name, NameIdentifier(member.name));
       }
     }
     derive_resourceness.AddType(member.type_ctor->type);
   }
-
-  return true;
 }
 
-bool Library::CompileTable(Table* table_declaration) {
+void Library::CompileTable(Table* table_declaration) {
   Scope<std::string> name_scope;
   Ordinal64Scope ordinal_scope;
 
-  if (!CompileAttributeList(table_declaration->attributes.get())) {
-    return false;
-  }
-
+  CompileAttributeList(table_declaration->attributes.get());
   if (table_declaration->members.size() > kMaxTableOrdinals) {
-    return Fail(ErrTooManyTableOrdinals);
+    Fail(ErrTooManyTableOrdinals);
   }
 
   for (size_t i = 0; i < table_declaration->members.size(); i++) {
     auto& member = table_declaration->members[i];
-    if (!CompileAttributeList(member.attributes.get())) {
-      return false;
-    }
-
+    CompileAttributeList(member.attributes.get());
     const auto ordinal_result = ordinal_scope.Insert(member.ordinal->value, member.ordinal->span());
     if (!ordinal_result.ok()) {
-      return Fail(ErrDuplicateTableFieldOrdinal, member.ordinal->span(),
-                  ordinal_result.previous_occurrence());
+      Fail(ErrDuplicateTableFieldOrdinal, member.ordinal->span(),
+           ordinal_result.previous_occurrence());
     }
-    if (member.maybe_used) {
-      auto& member_used = *member.maybe_used;
-      const auto original_name = member_used.name.data();
-      const auto canonical_name = utils::canonicalize(original_name);
-      const auto name_result = name_scope.Insert(canonical_name, member_used.name);
-      if (!name_result.ok()) {
-        const auto previous_span = name_result.previous_occurrence();
-        if (original_name == name_result.previous_occurrence().data()) {
-          return Fail(ErrDuplicateTableFieldName, member_used.name, original_name, previous_span);
-        }
-        return Fail(ErrDuplicateTableFieldNameCanonical, member_used.name, original_name,
-                    previous_span.data(), previous_span, canonical_name);
+    if (!member.maybe_used) {
+      continue;
+    }
+    auto& member_used = *member.maybe_used;
+    const auto original_name = member_used.name.data();
+    const auto canonical_name = utils::canonicalize(original_name);
+    const auto name_result = name_scope.Insert(canonical_name, member_used.name);
+    if (!name_result.ok()) {
+      const auto previous_span = name_result.previous_occurrence();
+      if (original_name == previous_span.data()) {
+        Fail(ErrDuplicateTableFieldName, member_used.name, original_name, previous_span);
+      } else {
+        Fail(ErrDuplicateTableFieldNameCanonical, member_used.name, original_name,
+             previous_span.data(), previous_span, canonical_name);
       }
-      if (!CompileTypeConstructor(member_used.type_ctor.get())) {
-        return false;
-      }
-      if (member_used.type_ctor->type->nullability != types::Nullability::kNonnullable) {
-        return Fail(ErrNullableTableMember, member_used.name);
-      }
-      if (i == kMaxTableOrdinals - 1) {
-        if (member_used.type_ctor->type->kind != Type::Kind::kIdentifier) {
-          return Fail(ErrMaxOrdinalNotTable);
-        }
+    }
+    CompileTypeConstructor(member_used.type_ctor.get());
+    if (!member_used.type_ctor->type) {
+      continue;
+    }
+    if (member_used.type_ctor->type->nullability != types::Nullability::kNonnullable) {
+      Fail(ErrNullableTableMember, member_used.name);
+    }
+    if (i == kMaxTableOrdinals - 1) {
+      if (member_used.type_ctor->type->kind != Type::Kind::kIdentifier) {
+        Fail(ErrMaxOrdinalNotTable);
+      } else {
         auto identifier_type = static_cast<const IdentifierType*>(member_used.type_ctor->type);
         if (identifier_type->type_decl->kind != Decl::Kind::kTable) {
-          return Fail(ErrMaxOrdinalNotTable);
+          Fail(ErrMaxOrdinalNotTable);
         }
       }
     }
@@ -4535,69 +4459,60 @@ bool Library::CompileTable(Table* table_declaration) {
 
   if (auto ordinal_and_loc = FindFirstNonDenseOrdinal(ordinal_scope)) {
     auto [ordinal, span] = *ordinal_and_loc;
-    return Fail(ErrNonDenseOrdinal, span, ordinal);
+    Fail(ErrNonDenseOrdinal, span, ordinal);
   }
-
-  return true;
 }
 
-bool Library::CompileUnion(Union* union_declaration) {
+void Library::CompileUnion(Union* union_declaration) {
   Scope<std::string> scope;
   Ordinal64Scope ordinal_scope;
   DeriveResourceness derive_resourceness(&union_declaration->resourceness);
 
-  if (!CompileAttributeList(union_declaration->attributes.get())) {
-    return false;
-  }
-
+  CompileAttributeList(union_declaration->attributes.get());
   for (const auto& member : union_declaration->members) {
-    if (!CompileAttributeList(member.attributes.get())) {
-      return false;
-    }
-
+    CompileAttributeList(member.attributes.get());
     const auto ordinal_result = ordinal_scope.Insert(member.ordinal->value, member.ordinal->span());
     if (!ordinal_result.ok()) {
-      return Fail(ErrDuplicateUnionMemberOrdinal, member.ordinal->span(),
-                  ordinal_result.previous_occurrence());
+      Fail(ErrDuplicateUnionMemberOrdinal, member.ordinal->span(),
+           ordinal_result.previous_occurrence());
     }
-    if (member.maybe_used) {
-      const auto& member_used = *member.maybe_used;
-      const auto original_name = member_used.name.data();
-      const auto canonical_name = utils::canonicalize(original_name);
-      const auto name_result = scope.Insert(canonical_name, member_used.name);
-      if (!name_result.ok()) {
-        const auto previous_span = name_result.previous_occurrence();
-        if (original_name == name_result.previous_occurrence().data()) {
-          return Fail(ErrDuplicateUnionMemberName, member_used.name, original_name, previous_span);
-        }
-        return Fail(ErrDuplicateUnionMemberNameCanonical, member_used.name, original_name,
-                    previous_span.data(), previous_span, canonical_name);
+    if (!member.maybe_used) {
+      continue;
+    }
+    const auto& member_used = *member.maybe_used;
+    const auto original_name = member_used.name.data();
+    const auto canonical_name = utils::canonicalize(original_name);
+    const auto name_result = scope.Insert(canonical_name, member_used.name);
+    if (!name_result.ok()) {
+      const auto previous_span = name_result.previous_occurrence();
+      if (original_name == previous_span.data()) {
+        Fail(ErrDuplicateUnionMemberName, member_used.name, original_name, previous_span);
+      } else {
+        Fail(ErrDuplicateUnionMemberNameCanonical, member_used.name, original_name,
+             previous_span.data(), previous_span, canonical_name);
       }
+    }
 
-      if (!CompileTypeConstructor(member_used.type_ctor.get())) {
-        return false;
-      }
-      if (member_used.type_ctor->type->nullability != types::Nullability::kNonnullable) {
-        return Fail(ErrNullableUnionMember, member_used.name);
-      }
-      derive_resourceness.AddType(member_used.type_ctor->type);
+    CompileTypeConstructor(member_used.type_ctor.get());
+    if (!member_used.type_ctor->type) {
+      continue;
     }
+    if (member_used.type_ctor->type->nullability != types::Nullability::kNonnullable) {
+      Fail(ErrNullableUnionMember, member_used.name);
+    }
+    derive_resourceness.AddType(member_used.type_ctor->type);
   }
 
   if (auto ordinal_and_loc = FindFirstNonDenseOrdinal(ordinal_scope)) {
     auto [ordinal, span] = *ordinal_and_loc;
-    return Fail(ErrNonDenseOrdinal, span, ordinal);
+    Fail(ErrNonDenseOrdinal, span, ordinal);
   }
-
-  return true;
 }
 
-bool Library::CompileTypeAlias(TypeAlias* type_alias) {
-  if (!CompileAttributeList(type_alias->attributes.get())) {
-    return false;
-  }
+void Library::CompileTypeAlias(TypeAlias* type_alias) {
+  CompileAttributeList(type_alias->attributes.get());
 
-  if (type_alias->partial_type_ctor->name == type_alias->name)
+  if (type_alias->partial_type_ctor->name == type_alias->name) {
     // fidlc's current semantics for cases like `alias foo = foo;` is to
     // include the LHS in the scope while compiling the RHS. Note that because
     // of an interaction with a fidlc scoping bug that prevents shadowing builtins,
@@ -4606,14 +4521,14 @@ bool Library::CompileTypeAlias(TypeAlias* type_alias) {
     // defined `uint32` fails to shadow the builtin which means that we successfully
     // resolve the RHS. To avoid inconsistent semantics, we need to manually
     // catch this case and fail.
-    return Fail(ErrIncludeCycle);
-  return CompileTypeConstructor(type_alias->partial_type_ctor.get());
+    Fail(ErrIncludeCycle);
+    return;
+  }
+  CompileTypeConstructor(type_alias->partial_type_ctor.get());
 }
 
 bool Library::Compile() {
-  if (!CompileAttributeList(attributes.get())) {
-    return false;
-  }
+  CompileAttributeList(attributes.get());
 
   // We process declarations in topologically sorted order. For
   // example, we process a struct member's type before the entire
@@ -4660,14 +4575,18 @@ bool Library::Compile() {
   return reporter_->errors().size() == 0;
 }
 
-bool Library::CompileTypeConstructor(TypeConstructor* type_ctor) {
+void Library::CompileTypeConstructor(TypeConstructor* type_ctor) {
+  if (type_ctor->type != nullptr) {
+    return;
+  }
   if (!typespace_->Create(LibraryMediator(this), type_ctor->name, type_ctor->parameters,
-                          type_ctor->constraints, &type_ctor->type, &type_ctor->resolved_params))
-    return false;
+                          type_ctor->constraints, &type_ctor->type, &type_ctor->resolved_params)) {
+    return;
+  }
 
   // // postcondition: compilation sets the Type of the TypeConstructor
   assert(type_ctor->type && "type constructors' type not resolved after compilation");
-  return VerifyTypeCategory(type_ctor->type, type_ctor->name.span(), AllowedCategories::kTypeOnly);
+  VerifyTypeCategory(type_ctor->type, type_ctor->name.span(), AllowedCategories::kTypeOnly);
 }
 
 bool Library::VerifyTypeCategory(const Type* type, std::optional<SourceSpan> span,
@@ -4713,11 +4632,11 @@ bool Library::ResolveHandleRightsConstant(Resource* resource, Constant* constant
     return false;
   }
 
-  if (rights_property->type_ctor->type == nullptr) {
-    if (!CompileTypeConstructor(rights_property->type_ctor.get()))
-      return false;
-  }
+  CompileTypeConstructor(rights_property->type_ctor.get());
   const Type* rights_type = rights_property->type_ctor->type;
+  if (!rights_type) {
+    return false;
+  }
 
   if (!ResolveConstant(constant, rights_type))
     return false;
@@ -4755,11 +4674,11 @@ bool Library::ResolveHandleSubtypeIdentifier(Resource* resource,
     return false;
   }
 
-  if (subtype_property->type_ctor->type == nullptr) {
-    if (!CompileTypeConstructor(subtype_property->type_ctor.get()))
-      return false;
-  }
+  CompileTypeConstructor(subtype_property->type_ctor.get());
   const Type* subtype_type = subtype_property->type_ctor->type;
+  if (!subtype_type) {
+    return false;
+  }
 
   auto* subtype_enum = static_cast<Enum*>(subtype_decl);
   for (const auto& member : subtype_enum->members) {
@@ -4808,10 +4727,6 @@ bool Library::ValidateMembers(DeclType* decl, MemberValidator<MemberType> valida
   for (const auto& member : decl->members) {
     assert(member.value != nullptr && "Compiler bug: member value is null!");
 
-    if (!ResolveConstant(member.value.get(), decl->subtype_ctor->type)) {
-      return Fail(ErrCouldNotResolveMember, member.name, std::string(decl_type));
-    }
-
     // Check that the member identifier hasn't been used yet
     const auto original_name = member.name.data();
     const auto canonical_name = utils::canonicalize(original_name);
@@ -4826,6 +4741,11 @@ bool Library::ValidateMembers(DeclType* decl, MemberValidator<MemberType> valida
         success = Fail(ErrDuplicateMemberNameCanonical, member.name, std::string_view(decl_type),
                        original_name, previous_span.data(), previous_span, canonical_name);
       }
+    }
+
+    if (!ResolveConstant(member.value.get(), decl->subtype_ctor->type)) {
+      success = Fail(ErrCouldNotResolveMember, member.name, std::string(decl_type));
+      continue;
     }
 
     MemberType value =
@@ -4889,7 +4809,8 @@ bool Library::ValidateEnumMembersAndCalcUnknownValue(Enum* enum_decl,
   std::optional<MemberType> explicit_unknown_value;
   for (const auto& member : enum_decl->members) {
     if (!ResolveConstant(member.value.get(), enum_decl->subtype_ctor->type)) {
-      return Fail(ErrCouldNotResolveMember, member.name, std::string("enum"));
+      // ValidateMembers will resolve each member and report errors.
+      continue;
     }
     if (member.attributes->Get("unknown") != nullptr) {
       if (explicit_unknown_value.has_value()) {
@@ -5082,7 +5003,8 @@ bool LibraryMediator::ResolveConstraintAs(const std::unique_ptr<Constant>& const
 }
 
 bool LibraryMediator::ResolveType(TypeConstructor* type) const {
-  return library_->CompileTypeConstructor(type);
+  library_->CompileTypeConstructor(type);
+  return type->type != nullptr;
 }
 
 bool LibraryMediator::ResolveSizeBound(Constant* size_constant, const Size** out_size) const {
@@ -5151,6 +5073,6 @@ Constant* IdentifierLayoutParameter::AsConstant() const {
   return as_constant.get();
 }
 
-bool LibraryMediator::CompileDecl(Decl* decl) const { return library_->CompileDecl(decl); }
+void LibraryMediator::CompileDecl(Decl* decl) const { library_->CompileDecl(decl); }
 
 }  // namespace fidl::flat

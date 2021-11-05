@@ -872,7 +872,7 @@ class LibraryMediator {
 
   // Used specifically in TypeAliasTypeTemplates to recursively compile the next
   // type alias.
-  bool CompileDecl(Decl* decl) const;
+  void CompileDecl(Decl* decl) const;
 
  private:
   Library* library_;
@@ -975,7 +975,7 @@ class AttributeArgSchema {
 
   bool IsOptional() const { return optionality_ == Optionality::kOptional; }
 
-  bool ResolveArg(Library* library, Attribute* attribute, AttributeArg* arg) const;
+  void ResolveArg(Library* library, Attribute* attribute, AttributeArg* arg) const;
 
  private:
   const ConstantValue::Kind type_;
@@ -1008,11 +1008,11 @@ class AttributeSchema {
 
   // Resolves constants in the attribute's arguments. In the case of an
   // anonymous argument like @foo("abc"), infers the argument's name too.
-  bool ResolveArgs(Library* target_library, Attribute* attribute) const;
+  void ResolveArgs(Library* target_library, Attribute* attribute) const;
 
   // Validates the attribute's placement and constraints. Must call
   // `ResolveArgs` first.
-  bool Validate(Reporter* reporter, const Attribute* attribute,
+  void Validate(Reporter* reporter, const Attribute* attribute,
                 const Attributable* attributable) const;
 
  private:
@@ -1037,7 +1037,7 @@ class AttributeSchema {
 
   explicit AttributeSchema(Kind kind) : kind_(kind) {}
 
-  static bool ResolveArgsWithoutSchema(Library* library, Attribute* attribute);
+  static void ResolveArgsWithoutSchema(Library* library, Attribute* attribute);
 
   Kind kind_ = Kind::kOfficial;
   Placement placement_ = Placement::kAnywhere;
@@ -1273,17 +1273,19 @@ class Library : Attributable {
 
   bool SortDeclarations();
 
-  bool CompileBits(Bits* bits_declaration);
-  bool CompileConst(Const* const_declaration);
-  bool CompileEnum(Enum* enum_declaration);
-  bool CompileProtocol(Protocol* protocol_declaration);
-  bool CompileResource(Resource* resource_declaration);
-  bool CompileService(Service* service_decl);
-  bool CompileStruct(Struct* struct_declaration);
-  bool CompileTable(Table* table_declaration);
-  bool CompileUnion(Union* union_declaration);
-  bool CompileTypeAlias(TypeAlias* type_alias);
-  bool CompileTypeConstructor(TypeConstructor* type_ctor);
+  void CompileAttributeList(AttributeList* attributes);
+  void CompileAttribute(Attribute* attribute);
+  void CompileBits(Bits* bits_declaration);
+  void CompileConst(Const* const_declaration);
+  void CompileEnum(Enum* enum_declaration);
+  void CompileProtocol(Protocol* protocol_declaration);
+  void CompileResource(Resource* resource_declaration);
+  void CompileService(Service* service_decl);
+  void CompileStruct(Struct* struct_declaration);
+  void CompileTable(Table* table_declaration);
+  void CompileUnion(Union* union_declaration);
+  void CompileTypeAlias(TypeAlias* type_alias);
+  void CompileTypeConstructor(TypeConstructor* type_ctor);
 
   enum class AllowedCategories {
     kTypeOrProtocol,
@@ -1295,9 +1297,6 @@ class Library : Attributable {
   // and false otherwise. A span can be provided for error reporting.
   bool VerifyTypeCategory(const Type* type, std::optional<SourceSpan> span,
                           AllowedCategories category);
-
-  bool CompileAttributeList(AttributeList* attributes);
-  bool CompileAttribute(Attribute* attribute);
 
   ConstantValue::Kind ConstantValuePrimitiveKind(const types::PrimitiveSubtype primitive_subtype);
   bool ResolveHandleRightsConstant(Resource* resource, Constant* constant,
@@ -1329,11 +1328,11 @@ class Library : Attributable {
   bool ValidateEnumMembersAndCalcUnknownValue(Enum* enum_decl, MemberType* out_unknown_value);
 
   void VerifyDeclAttributes(const Decl* decl);
-  bool ValidateAttributes(const Attributable* attributable);
+  void ValidateAttributes(const Attributable* attributable);
   bool VerifyInlineSize(const Struct* decl);
 
  public:
-  bool CompileDecl(Decl* decl);
+  void CompileDecl(Decl* decl);
 
   // Returns nullptr when the |name| cannot be resolved to a
   // Name. Otherwise it returns the declaration.

@@ -1477,7 +1477,8 @@ type MyStruct = struct {};
                       experimental_flags);
   library.AddAttributeSchema("attr").AddArg(
       "string", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kString));
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCouldNotResolveAttributeArg);
 }
 
 TEST(AttributesTests, BadInvalidLiteralBoolTypeWithSchema) {
@@ -1493,7 +1494,8 @@ type MyStruct = struct {};
                       experimental_flags);
   library.AddAttributeSchema("attr").AddArg(
       "bool", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kBool));
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCouldNotResolveAttributeArg);
 }
 
 TEST(AttributesTests, BadInvalidLiteralNumericTypeWithSchema) {
@@ -1509,7 +1511,8 @@ type MyStruct = struct {};
                       experimental_flags);
   library.AddAttributeSchema("attr").AddArg(
       "uint8", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint8));
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCouldNotResolveAttributeArg);
 }
 
 TEST(AttributesTests, GoodReferencedTypesWithSchema) {
@@ -1727,7 +1730,8 @@ type MyStruct = struct {};
                       experimental_flags);
   library.AddAttributeSchema("attr").AddArg(
       "string", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kString));
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotConvertConstantToType);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrCannotConvertConstantToType,
+                                      fidl::ErrCouldNotResolveAttributeArg);
 }
 
 TEST(AttributesTests, BadInvalidReferencedBoolTypeWithSchema) {
@@ -1745,7 +1749,8 @@ type MyStruct = struct {};
                       experimental_flags);
   library.AddAttributeSchema("attr").AddArg(
       "bool", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kBool));
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotConvertConstantToType);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrCannotConvertConstantToType,
+                                      fidl::ErrCouldNotResolveAttributeArg);
 }
 
 TEST(AttributesTests, BadInvalidReferencedNumericTypeWithSchema) {
@@ -1763,7 +1768,8 @@ type MyStruct = struct {};
                       experimental_flags);
   library.AddAttributeSchema("attr").AddArg(
       "int8", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kInt8));
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotConvertConstantToType);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrCannotConvertConstantToType,
+                                      fidl::ErrCouldNotResolveAttributeArg);
 }
 
 TEST(AttributesTests, GoodAnonymousArgumentGetsNamedValue) {

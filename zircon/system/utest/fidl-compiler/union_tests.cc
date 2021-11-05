@@ -7,6 +7,7 @@
 #include <fidl/names.h>
 #include <fidl/parser.h>
 #include <fidl/source_file.h>
+
 #include <zxtest/zxtest.h>
 
 #include "error_test.h"
@@ -201,7 +202,7 @@ library test;
 
 type Foo = strict union {
   1: reserved;
-  1: uint64 x;
+  1: x uint64;
 };
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateUnionMemberOrdinal);

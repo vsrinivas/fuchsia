@@ -85,7 +85,8 @@ type MyStruct = struct {
     field MyEnum = OtherEnum.A;
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMismatchedNameTypeAssignment);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMismatchedNameTypeAssignment,
+                                      fidl::ErrCouldNotResolveMemberDefault);
 }
 
 TEST(StructsTests, BadDefaultValuePrimitiveInEnum) {
@@ -98,7 +99,8 @@ type MyStruct = struct {
     field MyEnum = 1;
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCouldNotResolveMemberDefault);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "MyEnum");
 }
 
@@ -141,7 +143,8 @@ type MyStruct = struct {
     field MyBits = OtherBits.A;
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMismatchedNameTypeAssignment);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMismatchedNameTypeAssignment,
+                                      fidl::ErrCouldNotResolveMemberDefault);
 }
 
 TEST(StructsTests, BadDefaultValuePrimitiveInBits) {
@@ -154,7 +157,8 @@ type MyStruct = struct {
     field MyBits = 1;
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+                                      fidl::ErrCouldNotResolveMemberDefault);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "MyBits");
 }
 
@@ -273,6 +277,23 @@ TEST(StructsTests, BadTypeCannotBeBoxed) {
     auto library = WithLibraryZx(fidl_library);
     ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeBoxed);
   }
+}
+
+TEST(StructsTests, BadDefaultValueReferencesInvalidConst) {
+  TestLibrary library(R"FIDL(
+library example;
+
+type Foo = struct {
+    flag bool = BAR;
+};
+
+const BAR bool = "not a bool";
+)FIDL");
+  ASSERT_FALSE(library.Compile());
+  ASSERT_EQ(library.errors().size(), 3);
+  EXPECT_ERR(library.errors()[0], fidl::ErrConstantCannotBeInterpretedAsType);
+  EXPECT_ERR(library.errors()[1], fidl::ErrCannotResolveConstantValue);
+  EXPECT_ERR(library.errors()[2], fidl::ErrCouldNotResolveMemberDefault);
 }
 
 }  // namespace

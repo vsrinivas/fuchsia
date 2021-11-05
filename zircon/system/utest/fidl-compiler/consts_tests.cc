@@ -758,4 +758,26 @@ const a OneEnum = AnotherEnum.B;
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "OneEnum");
 }
 
+TEST(ConstsTests, BadConstReferencesInvalidConst) {
+  // Test all orderings since this previously crashed only when the invalid
+  // const (set to 1 instead of a string) was lexicographically smaller.
+  for (auto& defs : {
+           "const A string = Z; const Z string = 1;",
+           "const A string = 1; const Z string = A;",
+           "const Z string = A; const A string = 1;",
+           "const Z string = 1; const A string = Z;",
+       }) {
+    std::ostringstream ss;
+    ss << "library example;\n";
+    ss << defs << "\n";
+
+    TestLibrary library(ss.str());
+    ASSERT_FALSE(library.Compile());
+    ASSERT_EQ(library.errors().size(), 3);
+    EXPECT_ERR(library.errors()[0], fidl::ErrConstantCannotBeInterpretedAsType);
+    EXPECT_ERR(library.errors()[1], fidl::ErrCannotResolveConstantValue);
+    EXPECT_ERR(library.errors()[2], fidl::ErrCannotResolveConstantValue);
+  }
+}
+
 }  // namespace
