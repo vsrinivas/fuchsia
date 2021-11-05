@@ -9,6 +9,7 @@
 #include <stack>
 
 #include "src/ui/scenic/lib/utils/helpers.h"
+#include "src/ui/scenic/lib/utils/logging.h"
 
 namespace flatland {
 
@@ -43,6 +44,8 @@ void UberStructSystem::RemoveSession(scheduling::SessionId session_id) {
 
 UberStructSystem::UpdateResults UberStructSystem::UpdateSessions(
     const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update) {
+  FLATLAND_VERBOSE_LOG << "UberStructSystem::UpdateSessions for " << sessions_to_update.size()
+                       << " sessions.";
   UpdateResults results;
   for (const auto& [session_id, present_id] : sessions_to_update) {
     // Find the queue associated with this SessonId. It may not exist if the SessionId is
@@ -62,6 +65,8 @@ UberStructSystem::UpdateResults UberStructSystem::UpdateSessions(
     while (pending_struct.has_value()) {
       ++present_credits_returned;
       if (pending_struct->present_id == present_id) {
+        FLATLAND_VERBOSE_LOG << "    Updating UberStruct for session_id: " << session_id
+                             << " present_id: " << present_id;
         uber_struct_map_[session_id] = std::move(pending_struct->uber_struct);
         successful_update = true;
         break;
@@ -73,6 +78,7 @@ UberStructSystem::UpdateResults UberStructSystem::UpdateSessions(
     }
 
     if (!successful_update) {
+      FLATLAND_VERBOSE_LOG << "    No update for session_id: " << session_id;
       results.scheduling_results.sessions_with_failed_updates.insert(session_id);
     } else {
       results.present_credits_returned[session_id] = present_credits_returned;

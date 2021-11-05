@@ -92,7 +92,10 @@ protocol ParentViewportWatcher {
 type ChildViewStatus = strict enum {
     /// The underlying Flatland instance has connected its View, called [`Present`], and the
     /// acquisition fences of the [`Present`] call have all be reached, indicating that it has some
-    /// content ready to be displayed.
+    /// content ready to be displayed, and NOT that the child content has actually been shown on the
+    /// screen (a common use case is for the parent to wait for the child content to be ready before
+    /// attaching the child to the global scene graph).
+    // TODO(fxbug.dev/87800): rename to CONTENT_IS_AVAILABLE.
     CONTENT_HAS_PRESENTED = 1;
 };
 
@@ -104,7 +107,10 @@ protocol ChildViewWatcher {
     /// such as whether or not the child has successfully presented content through this View.
     ///
     /// This hanging get will only fire when the ChildViewStatus is different than the previously
-    /// returned ChildViewStatus.
+    /// returned ChildViewStatus.  This can happen immediately, and even if the creator of the
+    /// Viewport hasn't yet called Present() after calling CreateViewport().  This allows the parent
+    /// to know that the child has content ready to display before the parent modifies their own
+    /// local scene graph to incorporate the child content.
     ///
     /// It is invalid to call `GetStatus` while a previous call is still pending. Doing so will
     /// cause both this channel and the Flatland channel that handed out ChildViewWatcher to be
@@ -113,21 +119,19 @@ protocol ChildViewWatcher {
         status ChildViewStatus;
     });
 
-    /// Hanging get to receive the ViewRef of the child view. This will only fire when the view ref
-    /// is different from the previously-returned view ref. Note: currently the view ref will not
+    /// Hanging get to receive the ViewRef of the child View. This will only fire when the View ref
+    /// is different from the previously-returned View ref. Note: currently the View ref will not
     /// change after it is first received, but this will change if/when the API changes to allow
     /// relinking of views.
+    ///
+    /// The ViewRef is not returned until the View is included in the View tree, in other words when
+    /// there is a chain of ancestor transforms all the way back up to the root of the scene graph,
+    /// i.e. the display.
     ///
     /// It is invalid to call `GetViewRef` while a previous call is still pending. Doing so will
     /// cause both this channel and the Flatland channel that handed out ChildViewWatcher to be
     /// closed.
     ///
-    /// Note: it is planned that this method will obviate the need for [`GetStatus`], by not
-    /// returning the view ref until the view is reflected in the view tree (i.e. not only is the
-    /// view connected to the viewport, the view must also have presented content).  For now, it is
-    /// returned earlier (as soon as the connection is made to the viewport), therefore it is
-    /// necessary for clients to continue to listen to the result of [`GetStatus`] before e.g.
-    /// focusing or injecting input events to the view ref.  See fxbug.dev/81850.
     GetViewRef() -> (resource struct {
         view_ref fuchsia.ui.views.ViewRef;
     });
@@ -268,26 +272,26 @@ type OnNextFrameBeginValues = table {
 };
 
 /// The protocol endpoints bound to a Flatland ViewCreationToken. These protocols operate on the
-/// view that ViewCreationToken created in the Flatland session.
+/// View that ViewCreationToken created in the Flatland session.
 type ViewBoundProtocols = resource table {
-    /// Learn when a view gains focus.
+    /// Learn when a View gains focus.
     ///
     /// Server-bound ViewRef. The [`view_ref_focused`] client does not specify the ViewRef
-    /// explicitly; instead, the server implementation uses the ViewRef used in view creation for
-    /// reporting focus movement on/off this view.
+    /// explicitly; instead, the server implementation uses the ViewRef used in View creation for
+    /// reporting focus movement on/off this View.
     1: view_ref_focused server_end:fuchsia.ui.views.ViewRefFocused;
 
-    /// Enable a view to request focus transfer to a child (target) view.
+    /// Enable a View to request focus transfer to a child (target) View.
     ///
     /// Server-bound ViewRef. The [`view_focuser`] client does not specify the "requestor" ViewRef
     /// explicitly, only the "target" ViewRef. Instead, the server implementation uses the ViewRef
-    /// used in view creation as the "requestor" ViewRef.
+    /// used in View creation as the "requestor" ViewRef.
     2: view_focuser server_end:fuchsia.ui.views.Focuser;
 
-    /// Receive touch events that are associated with a view.
+    /// Receive touch events that are associated with a View.
     3: touch_source server_end:fuchsia.ui.pointer.TouchSource;
 
-    /// Receive mouse events that are associated with a view.
+    /// Receive mouse events that are associated with a View.
     4: mouse_source server_end:fuchsia.ui.pointer.MouseSource;
 };
 
@@ -302,11 +306,11 @@ type HitTestInteraction = flexible enum : uint8 {
 
     /// Some use cases require that a hit region to interact with regular hit testing, but not
     /// interact with accessibility hit testing. Here, "semantics" refers to accessibility's
-    /// semantic tree data, which describes UI elements in a view.
+    /// semantic tree data, which describes UI elements in a View.
     SEMANTICALLY_INVISIBLE = 1;
 };
 
-/// An interactive area of a view, placed in the coordinate space of a specific Transform.
+/// An interactive area of a View, placed in the coordinate space of a specific Transform.
 type HitRegion = struct {
     /// The position and size of this hit region, in the coordinate space of the Transform that owns
     /// this hit region.
@@ -436,7 +440,7 @@ protocol Flatland {
         parent_viewport_watcher server_end:ParentViewportWatcher;
     });
 
-    /// Identical to [`CreateView`], except it allows association of view identity (ViewRef) and
+    /// Identical to [`CreateView`], except it allows association of View identity (ViewRef) and
     /// view-bound protocols.
     @transitional
     CreateView2(resource struct {
@@ -576,16 +580,16 @@ protocol Flatland {
     ///   and (2) A only interacts with D. Generally, hit regions that overlap in a single Transform
     ///   can cause confusing behavior.
     ///
-    ///   Within a view, for a given hit test, the front-most Transform's hit regions take
+    ///   Within a View, for a given hit test, the front-most Transform's hit regions take
     ///   precedence over those behind. This follows the expected reverse "render order" of
     ///   Transforms (described in [`CreateTransform`]), where a user expects to interact with
     ///   Content that is visible, or front-most.
     ///
     ///   Across Flatland instances, for a given hit test, the front-most instance's front-most
     ///   Transform's hit regions take precedence over those behind. This follows the expected
-    ///   reverse "render order" of views, where a user expects to interact with the view that is
-    ///   visible, or front-most. For example, if a child view owns Content that is rendered over
-    ///   the parent view, the user expects to interact with the child's Content.
+    ///   reverse "render order" of views, where a user expects to interact with the View that is
+    ///   visible, or front-most. For example, if a child View owns Content that is rendered over
+    ///   the parent View, the user expects to interact with the child's Content.
     ///
     /// To reset a Transform to "no hit testing": send an empty vector.
     @transitional

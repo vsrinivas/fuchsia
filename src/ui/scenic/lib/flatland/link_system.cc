@@ -155,21 +155,28 @@ void LinkSystem::UpdateLinks(const GlobalTopologyData::TopologyVector& global_to
   for (auto& [graph_handle, parent_viewport_watcher] : parent_viewport_watcher_map_) {
     // The child Flatland instance is connected to the display if it is present in the global
     // topology.
-    if (!live_handles.count(parent_viewport_watcher.child_link_origin)) {
-      parent_viewport_watcher.impl->UpdateLinkStatus(
-          ParentViewportStatus::DISCONNECTED_FROM_DISPLAY);
-    } else {
-      parent_viewport_watcher.impl->UpdateLinkStatus(ParentViewportStatus::CONNECTED_TO_DISPLAY);
-    }
+    parent_viewport_watcher.impl->UpdateLinkStatus(
+        live_handles.count(parent_viewport_watcher.child_link_origin) > 0
+            ? ParentViewportStatus::CONNECTED_TO_DISPLAY
+            : ParentViewportStatus::DISCONNECTED_FROM_DISPLAY);
   }
 
-  // The ChildViewStatus changes the first time the child presents with a particular parent link.
-  // This is indicated by an UberStruct with the |link_origin| as its first TransformHandle in the
-  // snapshot. The LinkSystem can technically "miss" updating the ChildViewStatus for a
-  // particular ChildViewWatcher if the child presents two CreateView() calls before UpdateLinks()
-  // is called, but in that case, the first Link is destroyed, and therefore its status does not
-  // need to be updated anyway.
+  // ChildViewWatcher has two hanging get methods, GetStatus() and GetViewRef(), whose responses are
+  // generated in the loop below.
   for (auto& [link_origin, child_view_watcher] : child_view_watcher_map_) {
+    // The ChildViewStatus changes the first time the child presents with a particular parent link.
+    // This is indicated by an UberStruct with the |link_origin| as its first TransformHandle in the
+    // snapshot.
+    //
+    // NOTE: This does not mean the child content is actually appears on-screen; it simply informs
+    //       the parent that the child has content that is available to present on screen.  This is
+    //       intentional; for example, the parent might not want to attach the child to the global
+    //       scene graph until it knows the child is ready to present content on screen.
+    //
+    // NOTE: The LinkSystem can technically "miss" updating the ChildViewStatus for a
+    //       particular ChildViewWatcher if the child presents two CreateView() calls before
+    //       UpdateLinks() is called, but in that case, the first Link is destroyed, and therefore
+    //       its status does not need to be updated anyway.
     auto uber_struct_kv = uber_structs.find(link_origin.GetInstanceId());
     if (uber_struct_kv != uber_structs.end()) {
       const auto& local_topology = uber_struct_kv->second->local_topology;
@@ -180,6 +187,14 @@ void LinkSystem::UpdateLinks(const GlobalTopologyData::TopologyVector& global_to
       if (!local_topology.empty() && local_topology.front().handle == link_origin) {
         child_view_watcher->UpdateLinkStatus(ChildViewStatus::CONTENT_HAS_PRESENTED);
       }
+    }
+
+    // As soon as the child view is part of the global topology, update the watcher to send it along
+    // to any caller of GetViewRef().  For example, this means that by the time the watcher receives
+    // it, the child view will already exist in the view tree, and therefore an attempt to focus it
+    // will succeed.
+    if (live_handles.count(link_origin) > 0) {
+      child_view_watcher->UpdateViewRef();
     }
   }
 

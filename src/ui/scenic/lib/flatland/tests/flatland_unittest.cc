@@ -115,37 +115,37 @@ struct GlobalIdPair {
 // |flatland| is a Flatland object constructed with the MockFlatlandPresenter owned by the
 // FlatlandTest harness. |expect_success| should be false if the call to Present() is expected to
 // trigger an error.
-#define PRESENT_WITH_ARGS(flatland, args, expect_success)                                      \
-  {                                                                                            \
-    bool had_acquire_fences = !args.acquire_fences.empty();                                    \
-    if (expect_success) {                                                                      \
-      EXPECT_CALL(*mock_flatland_presenter_,                                                   \
-                  RegisterPresent(flatland->GetRoot().GetInstanceId(), _));                    \
-    }                                                                                          \
-    bool processed_callback = false;                                                           \
-    fuchsia::ui::composition::PresentArgs present_args;                                        \
-    present_args.set_requested_presentation_time(args.requested_presentation_time.get());      \
-    present_args.set_acquire_fences(std::move(args.acquire_fences));                           \
-    present_args.set_release_fences(std::move(args.release_fences));                           \
-    present_args.set_unsquashable(args.unsquashable);                                          \
-    flatland->Present(std::move(present_args));                                                \
-    if (expect_success) {                                                                      \
-      /* Even with no acquire_fences, UberStruct updates queue on the dispatcher. */           \
-      if (!had_acquire_fences) {                                                               \
-        EXPECT_CALL(                                                                           \
-            *mock_flatland_presenter_,                                                         \
-            ScheduleUpdateForSession(args.requested_presentation_time, _, args.unsquashable)); \
-      }                                                                                        \
-      RunLoopUntilIdle();                                                                      \
-      if (!args.skip_session_update_and_release_fences) {                                      \
-        ApplySessionUpdatesAndSignalFences();                                                  \
-      }                                                                                        \
-      flatland->OnNextFrameBegin(args.present_credits_returned,                                \
-                                 std::move(args.presentation_infos));                          \
-    } else {                                                                                   \
-      RunLoopUntilIdle();                                                                      \
-      EXPECT_EQ(GetPresentError(flatland->GetSessionId()), args.expected_error);               \
-    }                                                                                          \
+#define PRESENT_WITH_ARGS(flatland, args, expect_success)                                          \
+  {                                                                                                \
+    bool had_acquire_fences = !(args).acquire_fences.empty();                                      \
+    if (expect_success) {                                                                          \
+      EXPECT_CALL(*mock_flatland_presenter_,                                                       \
+                  RegisterPresent((flatland)->GetRoot().GetInstanceId(), _));                      \
+    }                                                                                              \
+    bool processed_callback = false;                                                               \
+    fuchsia::ui::composition::PresentArgs present_args;                                            \
+    present_args.set_requested_presentation_time((args).requested_presentation_time.get());        \
+    present_args.set_acquire_fences(std::move((args).acquire_fences));                             \
+    present_args.set_release_fences(std::move((args).release_fences));                             \
+    present_args.set_unsquashable((args).unsquashable);                                            \
+    (flatland)->Present(std::move(present_args));                                                  \
+    if (expect_success) {                                                                          \
+      /* Even with no acquire_fences, UberStruct updates queue on the dispatcher. */               \
+      if (!had_acquire_fences) {                                                                   \
+        EXPECT_CALL(                                                                               \
+            *mock_flatland_presenter_,                                                             \
+            ScheduleUpdateForSession((args).requested_presentation_time, _, (args).unsquashable)); \
+      }                                                                                            \
+      RunLoopUntilIdle();                                                                          \
+      if (!(args).skip_session_update_and_release_fences) {                                        \
+        ApplySessionUpdatesAndSignalFences();                                                      \
+      }                                                                                            \
+      (flatland)->OnNextFrameBegin((args).present_credits_returned,                                \
+                                   std::move((args).presentation_infos));                          \
+    } else {                                                                                       \
+      RunLoopUntilIdle();                                                                          \
+      EXPECT_EQ(GetPresentError((flatland)->GetSessionId()), (args).expected_error);               \
+    }                                                                                              \
   }
 
 // Identical to PRESENT_WITH_ARGS, but supplies an empty PresentArgs to the Present() call.
@@ -2149,26 +2149,31 @@ TEST_F(FlatlandTest, ValidChildToParentFlow) {
   std::shared_ptr<Flatland> parent = CreateFlatland();
   std::shared_ptr<Flatland> child = CreateFlatland();
 
-  ViewportCreationToken parent_token;
-  ViewCreationToken child_token;
-  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
+  ViewportCreationToken parent_viewport_token;
+  ViewCreationToken child_view_token;
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_viewport_token.value, &child_view_token.value));
 
   const ContentId kLinkId = {1};
+  const TransformId kRootTransform = {1};
 
   fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
   ViewportProperties properties;
   properties.set_logical_size({1, 2});
-  parent->CreateViewport(kLinkId, std::move(parent_token), std::move(properties),
+  parent->CreateViewport(kLinkId, std::move(parent_viewport_token), std::move(properties),
                          child_view_watcher.NewRequest());
 
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
-  child->CreateView(std::move(child_token), parent_viewport_watcher.NewRequest());
+  child->CreateView(std::move(child_view_token), parent_viewport_watcher.NewRequest());
 
   bool status_updated = false;
   child_view_watcher->GetStatus([&](ChildViewStatus status) {
     ASSERT_EQ(ChildViewStatus::CONTENT_HAS_PRESENTED, status);
     status_updated = true;
   });
+
+  std::optional<fuchsia::ui::views::ViewRef> child_viewref;
+  child_view_watcher->GetViewRef(
+      [&](fuchsia::ui::views::ViewRef viewref) { child_viewref = std::move(viewref); });
 
   // The content link status changes as soon as the child presents - the parent does not have to
   // present.
@@ -2177,6 +2182,44 @@ TEST_F(FlatlandTest, ValidChildToParentFlow) {
   PRESENT(child, true);
   UpdateLinks(parent->GetRoot());
   EXPECT_TRUE(status_updated);
+
+  // Note that although CONTENT_HAS_PRESENTED is signaled, GetViewRef() does not yet return the ref.
+  // This is because although the parent and child are connected, neither appears in the global
+  // topology, because neither is connected to the root.
+  EXPECT_FALSE(child_viewref.has_value());
+
+  // Having the parent present is still not sufficient to fulfill GetViewRef(), because the viewport
+  // has not been added to the parent's local sub-tree, and therefore doesn't appear in the global
+  // topology.
+  PRESENT(parent, true);
+  UpdateLinks(parent->GetRoot());
+  EXPECT_FALSE(child_viewref.has_value());
+
+  // Adding the viewport to the parent's local tree, then presenting, is sufficient for the call to
+  // GetViewRef() to succeed.
+  parent->CreateTransform(kRootTransform);
+  parent->SetRootTransform(kRootTransform);
+  parent->SetContent(kRootTransform, kLinkId);
+
+  // While we're at it, add an acquire fence and make sure that the ViewRef isn't sent until the
+  // event is signaled.
+  PresentArgs args;
+  args.acquire_fences = utils::CreateEventArray(1);
+  auto event_copy = utils::CopyEvent(args.acquire_fences[0]);
+
+  // We still don't get the ViewRef, because we haven't signaled the event.
+  PRESENT_WITH_ARGS(parent, std::move(args), true);
+  UpdateLinks(parent->GetRoot());
+  EXPECT_FALSE(child_viewref.has_value());
+
+  // Signal the acquire fence to unblock the present.
+  event_copy.signal(0, ZX_EVENT_SIGNALED);
+  EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _));
+  RunLoopUntilIdle();
+  ApplySessionUpdatesAndSignalFences();
+  UpdateLinks(parent->GetRoot());
+  EXPECT_TRUE(child_viewref.has_value());
+  EXPECT_TRUE(child_viewref.value().reference);
 }
 
 TEST_F(FlatlandTest, LayoutOnlyUpdatesChildrenInGlobalTopology) {

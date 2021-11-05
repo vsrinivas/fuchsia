@@ -15,6 +15,7 @@
 // clang-format on
 
 #include <functional>
+#include <optional>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -98,11 +99,25 @@ class ChildViewWatcherImpl : public fuchsia::ui::composition::ChildViewWatcher {
         viewref_helper_(std::move(dispatcher_holder)) {}
 
   void UpdateLinkStatus(fuchsia::ui::composition::ChildViewStatus status) {
-    status_helper_.Update(std::move(status));
+    status_helper_.Update(status);
+    if (viewref_) {
+      // At the time of writing, CONTENT_HAS_PRESENTED is the only possible value.  DCHECK just in
+      // case this changes.
+      FX_DCHECK(status == fuchsia::ui::composition::ChildViewStatus::CONTENT_HAS_PRESENTED);
+    }
+  }
+
+  // If ViewRef hasn't yet been pushed to the hanging get helper, do so.
+  void UpdateViewRef() {
+    if (viewref_) {
+      viewref_helper_.Update(std::move(viewref_.value()));
+      viewref_.reset();
+    }
   }
 
   void SetViewRef(fuchsia::ui::views::ViewRef viewref) {
-    viewref_helper_.Update(std::move(viewref));
+    FX_CHECK(viewref.reference);
+    viewref_ = std::move(viewref);
   }
 
   // |fuchsia::ui::composition::ChildViewWatcher|
@@ -136,6 +151,10 @@ class ChildViewWatcherImpl : public fuchsia::ui::composition::ChildViewWatcher {
   LinkProtocolErrorCallback error_callback_;
   HangingGetHelper<fuchsia::ui::composition::ChildViewStatus> status_helper_;
   HangingGetHelper<fuchsia::ui::views::ViewRef> viewref_helper_;
+
+  // Temporarily held when SetViewRef() is called.  Instead of immediately notifying any pending
+  // hanging get requests, we wait until the child view first appears in the global topology.
+  std::optional<fuchsia::ui::views::ViewRef> viewref_;
 };
 
 // A system for managing links between Flatland instances. Each Flatland instance creates Links
@@ -279,7 +298,9 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
     std::shared_ptr<ParentViewportWatcherImpl> impl;
     TransformHandle child_link_origin;
   };
+  // Keyed by the transform in the parent instance.
   std::unordered_map<TransformHandle, ParentViewportWatcherData> parent_viewport_watcher_map_;
+  // Keyed by the transform in the child instance.
   std::unordered_map<TransformHandle, std::shared_ptr<ChildViewWatcherImpl>>
       child_view_watcher_map_;
   // The set of current link topologies. Access is managed by |map_mutex_|.
