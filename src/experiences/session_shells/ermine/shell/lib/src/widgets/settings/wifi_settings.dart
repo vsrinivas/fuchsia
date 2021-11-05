@@ -12,6 +12,7 @@ import 'package:internationalization/strings.dart';
 class WiFiSettings extends StatelessWidget {
   final SettingsState state;
   final ValueChanged<String> onChange;
+  static TextEditingController textController = TextEditingController();
 
   const WiFiSettings({required this.state, required this.onChange});
 
@@ -127,7 +128,6 @@ class WiFiSettings extends StatelessWidget {
   }
 
   Widget _buildPasswordPrompt(BuildContext context) {
-    TextEditingController textController = TextEditingController();
     bool networkSelected = state.targetNetwork != '';
     return AppBar(
       elevation: 0,
