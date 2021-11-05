@@ -51,6 +51,9 @@ class FakeAudioDriver : public fuchsia::hardware::audio::StreamConfig,
   void set_fifo_depth(uint32_t fifo_depth) { fifo_depth_ = fifo_depth; }
   void set_external_delay(zx::duration external_delay) { external_delay_ = external_delay; }
 
+  void clear_fifo_depth() { fifo_depth_ = std::nullopt; }
+  void clear_external_delay() { external_delay_ = std::nullopt; }
+
   void SendPositionNotification(zx::time timestamp, uint32_t position);
 
   // |true| after an |audio_rb_cmd_start| is received, until an |audio_rb_cmd_stop| is received.
@@ -113,8 +116,8 @@ class FakeAudioDriver : public fuchsia::hardware::audio::StreamConfig,
   size_t ring_buffer_size_;
   zx::vmo ring_buffer_;
 
-  uint32_t fifo_depth_ = 0;
-  zx::duration external_delay_{zx::nsec(0)};
+  std::optional<uint32_t> fifo_depth_;
+  std::optional<zx::duration> external_delay_;
   bool plugged_ = true;
 
   std::optional<fuchsia::hardware::audio::PcmFormat> selected_format_;

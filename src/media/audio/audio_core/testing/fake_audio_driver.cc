@@ -119,8 +119,12 @@ void FakeAudioDriver::GetProperties(
     fuchsia::hardware::audio::RingBuffer::GetPropertiesCallback callback) {
   fuchsia::hardware::audio::RingBufferProperties props = {};
 
-  props.set_external_delay(external_delay_.get());
-  props.set_fifo_depth(fifo_depth_);
+  if (external_delay_.has_value()) {
+    props.set_external_delay(external_delay_->to_nsecs());
+  }
+  if (fifo_depth_.has_value()) {
+    props.set_fifo_depth(*fifo_depth_);
+  }
   props.set_needs_cache_flush_or_invalidate(false);
 
   callback(std::move(props));

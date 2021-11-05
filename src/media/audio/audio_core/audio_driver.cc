@@ -423,9 +423,9 @@ zx_status_t AudioDriver::Configure(const Format& format, zx::duration min_ring_b
 
   ring_buffer_fidl_->GetProperties([this](fuchsia::hardware::audio::RingBufferProperties props) {
     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
-    external_delay_ = zx::nsec(props.external_delay());
+    external_delay_ = zx::nsec(props.has_external_delay() ? props.external_delay() : 0);
     turn_on_delay_ = zx::nsec(props.has_turn_on_delay() ? props.turn_on_delay() : 0);
-    uint32_t fifo_depth_bytes = props.fifo_depth();
+    uint32_t fifo_depth_bytes = props.has_fifo_depth() ? props.fifo_depth() : 0;
 
     auto format = GetFormat();
     auto bytes_per_frame = format->bytes_per_frame();

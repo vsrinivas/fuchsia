@@ -16,7 +16,7 @@ namespace {
 class AudioDriverTest : public testing::ThreadingModelFixture {
  public:
   void SetUp() override {
-    driver_ = CreateAudioDriver<testing::FakeAudioDriver>();
+    driver_ = CreateAudioDriver();
     zx::channel c1, c2;
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &c1, &c2));
     remote_driver_ = std::make_unique<testing::FakeAudioDriver>(std::move(c1), dispatcher());
@@ -30,6 +30,11 @@ class AudioDriverTest : public testing::ThreadingModelFixture {
   }
 
  protected:
+  std::unique_ptr<AudioDriver> CreateAudioDriver() {
+    return std::make_unique<AudioDriver>(
+        device_.get(), [this](zx::duration delay) { last_late_command_ = delay; });
+  }
+
   static constexpr auto kSampleFormat = fuchsia::media::AudioSampleFormat::SIGNED_16;
   static constexpr uint32_t kChannelCount = 2;
   static constexpr uint32_t kFramesPerSec = 48000;
@@ -51,16 +56,6 @@ class AudioDriverTest : public testing::ThreadingModelFixture {
   zx::duration last_late_command_ = zx::duration::infinite();
 
   fzl::VmoMapper mapped_ring_buffer_;
-
- private:
-  template <typename U>
-  std::unique_ptr<AudioDriver> CreateAudioDriver() {}
-
-  template <>
-  std::unique_ptr<AudioDriver> CreateAudioDriver<testing::FakeAudioDriver>() {
-    return std::make_unique<AudioDriver>(
-        device_.get(), [this](zx::duration delay) { last_late_command_ = delay; });
-  }
 };
 
 TEST_F(AudioDriverTest, GetDriverInfo) {
@@ -188,6 +183,52 @@ TEST_F(AudioDriverTest, SanityCheckTimelineMath) {
   int64_t ptscts_pos_frames =
       ref_time_to_frac_presentation_frame.Apply(ref_now.get()) / Fixed(1).raw_value();
   EXPECT_EQ(txrx_pos, ptscts_pos_frames);
+}
+
+TEST_F(AudioDriverTest, RingBufferPropsEmpty) {
+  remote_driver_->clear_external_delay();
+  remote_driver_->clear_fifo_depth();
+
+  zx_status_t res;
+  remote_driver_->Start();
+  RunLoopUntilIdle();
+
+  // Start by fetching the driver info.  The class will not allow us to
+  // configure it unless it has fetched its simulated format list.
+  res = driver_->GetDriverInfo();
+  ASSERT_EQ(res, ZX_OK);
+  RunLoopUntilIdle();
+  ASSERT_TRUE(device_->driver_info_fetched());
+  ASSERT_EQ(driver_->state(), AudioDriver::State::Unconfigured);
+
+  // Now tell it to configure itself using a format we know will be on its fake
+  // format list, and a ring buffer size we know it will be able to give us.
+  fuchsia::media::AudioStreamType fidl_format;
+  fidl_format.sample_format = kSampleFormat;
+  fidl_format.channels = kChannelCount;
+  fidl_format.frames_per_second = kFramesPerSec;
+
+  auto format = Format::Create(fidl_format);
+  ASSERT_TRUE(format.is_ok());
+  res = driver_->Configure(format.value(), kRingBufferMinDuration);
+  ASSERT_EQ(res, ZX_OK);
+
+  RunLoopUntilIdle();
+  ASSERT_TRUE(device_->driver_config_complete());
+  ASSERT_EQ(driver_->state(), AudioDriver::State::Configured);
+
+  // Finally, tell the driver to start.  This will establish the start time and
+  // allow the driver to compute the various transformations it will expose to
+  // the rest of the system.
+  res = driver_->Start();
+  ASSERT_EQ(res, ZX_OK);
+  RunLoopUntilIdle();
+  ASSERT_TRUE(device_->driver_start_complete());
+  ASSERT_EQ(driver_->state(), AudioDriver::State::Started);
+
+  // These are unspecified by the driver so they should be zero.
+  ASSERT_EQ(0u, driver_->fifo_depth_frames());
+  ASSERT_EQ(zx::nsec(0), driver_->external_delay());
 }
 
 }  // namespace
