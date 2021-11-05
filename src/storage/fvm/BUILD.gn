@@ -4,7 +4,6 @@
 
 import("//build/components.gni")
 import("//build/test.gni")
-import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 group("tests") {
   testonly = true
@@ -87,11 +86,12 @@ static_library("test_support") {
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
+    "//src/devices/lib/device-watcher/cpp",
     "//src/lib/storage/fs_management",
     "//src/storage/fvm",
-    "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/ramdevice-client",

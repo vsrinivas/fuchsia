@@ -22,7 +22,6 @@ executable("ddk-puppet") {
     "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl",

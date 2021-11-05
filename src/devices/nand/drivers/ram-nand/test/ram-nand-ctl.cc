@@ -4,7 +4,6 @@
 
 #include <fcntl.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
-#include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/cpp/caller.h>
 #include <limits.h>
 #include <stdio.h>
@@ -16,6 +15,8 @@
 #include <fbl/unique_fd.h>
 #include <ramdevice-client/ramnand.h>
 #include <zxtest/zxtest.h>
+
+#include "src/devices/lib/device-watcher/cpp/device-watcher.h"
 
 namespace {
 
@@ -51,10 +52,10 @@ class NandDevice {
 };
 
 TEST(RamNandCtlTest, TrivialLifetime) {
-  std::unique_ptr<devmgr_integration_test::DirWatcher> watcher;
+  std::unique_ptr<device_watcher::DirWatcher> watcher;
   fbl::unique_fd dir_fd(open(ramdevice_client::RamNand::kBasePath, O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(dir_fd);
-  ASSERT_EQ(devmgr_integration_test::DirWatcher::Create(std::move(dir_fd), &watcher), ZX_OK);
+  ASSERT_EQ(device_watcher::DirWatcher::Create(std::move(dir_fd), &watcher), ZX_OK);
 
   fbl::String path;
   fbl::String filename;

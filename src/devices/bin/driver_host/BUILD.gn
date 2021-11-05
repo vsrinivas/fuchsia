@@ -202,7 +202,6 @@ test("driver_host_test") {
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/lib/storage/vfs/cpp:test_support",
-    "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",

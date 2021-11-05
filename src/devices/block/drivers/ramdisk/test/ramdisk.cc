@@ -8,7 +8,6 @@
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <fuchsia/hardware/ramdisk/c/fidl.h>
-#include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/watcher.h>
@@ -47,6 +46,8 @@
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 #include <ramdevice-client/ramdisk.h>
+
+#include "src/devices/lib/device-watcher/cpp/device-watcher.h"
 
 namespace ramdisk {
 namespace {
@@ -514,9 +515,8 @@ TEST(RamdiskTests, RamdiskTestFilesystem) {
   ASSERT_EQ(close(devfd), 0);
 
   // Start watching for the block device removal.
-  std::unique_ptr<devmgr_integration_test::DirWatcher> watcher;
-  ASSERT_EQ(devmgr_integration_test::DirWatcher::Create(fbl::unique_fd(dirfd(dir)), &watcher),
-            ZX_OK);
+  std::unique_ptr<device_watcher::DirWatcher> watcher;
+  ASSERT_EQ(device_watcher::DirWatcher::Create(fbl::unique_fd(dirfd(dir)), &watcher), ZX_OK);
 
   ASSERT_NO_FATAL_FAILURE(ramdisk->Terminate());
 

@@ -4,18 +4,18 @@
 #include <fidl/fuchsia.driver.test/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/devmgr-integration-test/fixture.h>
 #include <lib/service/llcpp/service.h>
 
 #include <gtest/gtest.h>
+
+#include "src/devices/lib/device-watcher/cpp/device-watcher.h"
 
 TEST(DdkFirmwaretest, DriverWasLoaded) {
   fbl::unique_fd dev(open("/dev", O_RDONLY));
   ASSERT_TRUE(dev);
 
   fbl::unique_fd out;
-  ASSERT_EQ(ZX_OK,
-            devmgr_integration_test::RecursiveWaitForFile(dev, "sys/test/ddk-fallback-test", &out));
+  ASSERT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(dev, "sys/test/ddk-fallback-test", &out));
 }
 
 int main(int argc, char **argv) {

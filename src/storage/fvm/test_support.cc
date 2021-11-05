@@ -10,10 +10,7 @@
 #include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
-#include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/cpp/caller.h>
-#include <lib/fidl/cpp/message.h>
-#include <lib/fidl/cpp/message_part.h>
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/zx/time.h>
@@ -27,6 +24,8 @@
 #include <fs-management/fvm.h>
 #include <zxtest/zxtest.h>
 
+#include "src/devices/lib/device-watcher/cpp/device-watcher.h"
+
 namespace fvm {
 namespace {
 
@@ -35,9 +34,9 @@ constexpr zx::duration kDeviceWaitTime = zx::sec(30);
 
 zx_status_t RebindBlockDevice(DeviceRef* device) {
   // We need to create a DirWatcher to wait for the block device's child to disappear.
-  std::unique_ptr<devmgr_integration_test::DirWatcher> watcher;
+  std::unique_ptr<device_watcher::DirWatcher> watcher;
   fbl::unique_fd dir_fd(openat(device->devfs_root_fd(), device->path(), O_RDONLY | O_DIRECTORY));
-  zx_status_t status = devmgr_integration_test::DirWatcher::Create(std::move(dir_fd), &watcher);
+  zx_status_t status = device_watcher::DirWatcher::Create(std::move(dir_fd), &watcher);
   if (status != ZX_OK) {
     ADD_FAILURE("DirWatcher create failed. Path: %s", device->path());
     return status;

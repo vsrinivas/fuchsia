@@ -7,7 +7,6 @@
 #include <fuchsia/sysinfo/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -24,12 +23,13 @@
 #include <zxtest/base/log-sink.h>
 #include <zxtest/zxtest.h>
 
+#include "src/devices/lib/device-watcher/cpp/device-watcher.h"
 #include "src/lib/fsl/io/device_watcher.h"
 #include "zircon/system/utest/device-enumeration/aemu.h"
 
 namespace {
 
-using devmgr_integration_test::RecursiveWaitForFile;
+using device_watcher::RecursiveWaitForFile;
 
 // Asyncronously wait for a path to appear, and call `callback` when the path exists.
 // The `watchers` array is needed because each directory in the path needs to allocate a

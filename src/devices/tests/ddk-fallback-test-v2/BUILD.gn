@@ -43,11 +43,11 @@ test("test") {
   deps = [
     "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_llcpp",
     "//sdk/lib/fdio",
+    "//src/devices/lib/device-watcher/cpp",
     "//src/lib/ddk",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zx",
