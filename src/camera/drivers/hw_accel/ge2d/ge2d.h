@@ -23,6 +23,7 @@
 #include <atomic>
 #include <deque>
 #include <unordered_map>
+#include <vector>
 
 #include <ddktl/device.h>
 #include <fbl/auto_lock.h>
@@ -38,6 +39,12 @@ namespace {
 constexpr uint64_t kPortKeyIrqMsg = 0x00;
 constexpr uint64_t kPortKeyDebugFakeInterrupt = 0x01;
 
+// Expected maximum size (in bytes) of the watermark image.
+constexpr uint32_t kWatermarkMaxSize = 144 * 84 * 4;
+
+// Expected count of input watermark buffers (one for each supported watermark image resolution).
+constexpr uint32_t kWatermarkInputBufferCount = 3;
+
 }  // namespace
 
 // This provides ZX_PROTOCOL_GE2D.
@@ -48,12 +55,16 @@ class Ge2dDevice : public Ge2dDeviceType, public ddk::Ge2dProtocol<Ge2dDevice, d
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(Ge2dDevice);
   explicit Ge2dDevice(zx_device_t* parent, ddk::MmioBuffer ge2d_mmio, zx::interrupt ge2d_irq,
-                      zx::bti bti, zx::port port, amlogic_canvas_protocol_t canvas)
+                      zx::bti bti, zx::port port,
+                      std::vector<zx::vmo> watermark_input_contiguous_vmos,
+                      zx::vmo watermark_blended_contiguous_vmo, amlogic_canvas_protocol_t canvas)
       : Ge2dDeviceType(parent),
         port_(std::move(port)),
         ge2d_mmio_(std::move(ge2d_mmio)),
         ge2d_irq_(std::move(ge2d_irq)),
         bti_(std::move(bti)),
+        watermark_input_contiguous_vmos_(std::move(watermark_input_contiguous_vmos)),
+        watermark_blended_contiguous_vmo_(std::move(watermark_blended_contiguous_vmo)),
         canvas_(canvas) {}
 
   // Setup() is used to create an instance of Ge2dDevice.
@@ -180,6 +191,12 @@ class Ge2dDevice : public Ge2dDeviceType, public ddk::Ge2dProtocol<Ge2dDevice, d
   ddk::MmioBuffer ge2d_mmio_;
   zx::interrupt ge2d_irq_;
   zx::bti bti_;
+
+  // Vector of VMOs to hold watermark image data in contiguous memory.
+  std::vector<zx::vmo> watermark_input_contiguous_vmos_;
+
+  // VMO to hold blended watermark image in contiguous memory.
+  zx::vmo watermark_blended_contiguous_vmo_;
 
   uint32_t next_task_index_ __TA_GUARDED(interface_lock_) = 0;
   std::unordered_map<uint32_t, std::unique_ptr<Ge2dTask>> task_map_ __TA_GUARDED(interface_lock_);

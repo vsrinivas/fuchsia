@@ -9,6 +9,7 @@
 #include <fuchsia/hardware/ge2d/cpp/banjo.h>
 
 #include <deque>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -88,6 +89,8 @@ class Ge2dTask : public generictask::GenericTask {
                             const water_mark_info_t* info_list,
                             const image_format_2_t* image_format_table_list,
                             size_t image_format_table_count, uint32_t image_format_index,
+                            std::vector<zx::vmo>& watermark_input_contiguous_vmos,
+                            zx::vmo& watermark_blended_contiguous_vmo,
                             const hw_accel_frame_callback_t* frame_callback,
                             const hw_accel_res_change_callback_t* res_callback,
                             const hw_accel_remove_task_callback_t* remove_task_callback,
@@ -99,6 +102,8 @@ class Ge2dTask : public generictask::GenericTask {
                                    const water_mark_info_t* info_list,
                                    const image_format_2_t* image_format_table_list,
                                    size_t image_format_table_count, uint32_t image_format_index,
+                                   std::vector<zx::vmo>& watermark_input_contiguous_vmos,
+                                   zx::vmo& watermark_blended_contiguous_vmo,
                                    const hw_accel_frame_callback_t* frame_callback,
                                    const hw_accel_res_change_callback_t* res_callback,
                                    const hw_accel_remove_task_callback_t* remove_task_callback,
@@ -152,6 +157,8 @@ class Ge2dTask : public generictask::GenericTask {
                    const hw_accel_remove_task_callback_t* remove_task_callback, const zx::bti& bti);
   zx_status_t InitializeWatermarkImages(const water_mark_info_t* wm_info,
                                         size_t image_format_table_count, const zx::bti& bti,
+                                        std::vector<zx::vmo>& watermark_input_contiguous_vmos,
+                                        zx::vmo& watermark_blended_contiguous_vmo,
                                         amlogic_canvas_protocol_t canvas);
   // Allocates canvas ids for every frame in the input and output buffer collections
   // (amlogic). One canvas id is allocated per plane of the image frame. Internally,
@@ -170,6 +177,10 @@ class Ge2dTask : public generictask::GenericTask {
                                    const image_format_2_t* output_image_format);
   void FreeCanvasIds();
   void AllocateWatermarkCanvasIds();
+
+  static zx_status_t InitContiguousWatermarkVmo(zx::vmo& contiguous_watermark_vmo, size_t size,
+                                                const std::string& vmo_name, const zx::bti& bti,
+                                                zx::vmo& result);
 
   enum Ge2dTaskType task_type_;
   amlogic_canvas_protocol_t canvas_ = {};

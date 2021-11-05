@@ -326,11 +326,17 @@ zx_status_t Ge2dTask::InitResize(const buffer_collection_info_2_t* input_buffer_
   return status;
 }
 
-zx_status_t Ge2dTask::InitializeWatermarkImages(const water_mark_info_t* wm_info,
-                                                size_t image_format_table_count, const zx::bti& bti,
-                                                amlogic_canvas_protocol_t canvas) {
+zx_status_t Ge2dTask::InitializeWatermarkImages(
+    const water_mark_info_t* wm_info, size_t image_format_table_count, const zx::bti& bti,
+    std::vector<zx::vmo>& watermark_input_contiguous_vmos,
+    zx::vmo& watermark_blended_contiguous_vmo, amlogic_canvas_protocol_t canvas) {
   size_t max_size = 0;
   zx_status_t status;
+
+  if (image_format_table_count > watermark_input_contiguous_vmos.size()) {
+    watermark_input_contiguous_vmos.resize(image_format_table_count);
+  }
+
   for (uint32_t i = 0; i < image_format_table_count; i++) {
     wm_.push_back({});
     auto& wm = wm_.back();
@@ -363,13 +369,15 @@ zx_status_t Ge2dTask::InitializeWatermarkImages(const water_mark_info_t* wm_info
       ZX_ASSERT(wm.image_format.coded_width * 4 <= wm.image_format.bytes_per_row);
     }
 
-    // The watermark vmo may not necessarily be contig. Allocate a contig vmo and
-    // copy the contents of the watermark image into it and use that.
-    status = zx::vmo::create_contiguous(bti, output_vmo_size, 0, &wm.watermark_input_vmo);
+    // The watermark vmo may not necessarily be contig. Attempt to reuse a contiguous VMO passed
+    // into this method. If one isn't available or isn't the right size, allocate a new contig vmo.
+    // Then, copy the contents of the watermark image into it and use that.
+    status = InitContiguousWatermarkVmo(watermark_input_contiguous_vmos[i], output_vmo_size,
+                                        "input", bti, wm.watermark_input_vmo);
     if (status != ZX_OK) {
-      FX_LOG(ERROR, kTag, "Unable to get create contiguous input watermark VMO");
       return status;
     }
+
     // Copy the watermark image over.
     fzl::VmoMapper mapped_watermark_input_vmo;
     status = mapped_watermark_input_vmo.Map(*zx::unowned_vmo(wm_info[i].watermark_vmo), 0,
@@ -406,9 +414,9 @@ zx_status_t Ge2dTask::InitializeWatermarkImages(const water_mark_info_t* wm_info
   }
 
   // Allocate a vmo to hold the blended watermark id, then allocate a canvas id for the same.
-  status = zx::vmo::create_contiguous(bti, max_size, 0, &watermark_blended_vmo_);
+  status = InitContiguousWatermarkVmo(watermark_blended_contiguous_vmo, max_size, "blended", bti,
+                                      watermark_blended_vmo_);
   if (status != ZX_OK) {
-    FX_LOG(ERROR, kTag, "Unable to get create contiguous blended watermark VMO");
     return status;
   }
 
@@ -417,11 +425,53 @@ zx_status_t Ge2dTask::InitializeWatermarkImages(const water_mark_info_t* wm_info
   return ZX_OK;
 }
 
+// static
+zx_status_t Ge2dTask::InitContiguousWatermarkVmo(zx::vmo& contiguous_watermark_vmo, size_t size,
+                                                 const std::string& vmo_name, const zx::bti& bti,
+                                                 zx::vmo& result) {
+  // Check that the passed-in contiguous watermark VMO exists and is the expected size. If it is,
+  // use it.
+  zx_status_t status = ZX_OK;
+  if (contiguous_watermark_vmo.is_valid()) {
+    uint64_t contiguous_watermark_vmo_size;
+    contiguous_watermark_vmo.get_size(&contiguous_watermark_vmo_size);
+    if (contiguous_watermark_vmo_size >= size) {
+      status = contiguous_watermark_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &result);
+      if (status == ZX_OK) {
+        FX_LOGF(DEBUG, kTag, "Reusing contiguous %s watermark VMO", vmo_name.c_str());
+        return ZX_OK;
+      }
+    }
+  }
+
+  // Fallback: the passed-in VMO was either invalid or not large enough, so create a new contiguous
+  // memory VMO for the result.
+  FX_LOGF(WARNING, kTag, "Fallback: creating contiguous %s watermark VMO", vmo_name.c_str());
+  status = zx::vmo::create_contiguous(bti, size, 0, &result);
+  if (status != ZX_OK) {
+    FX_LOGF(ERROR, kTag, "Unable to get create contiguous %s watermark VMO", vmo_name.c_str());
+    return status;
+  }
+
+  // After creating the fallback contiguous memory VMO, update the passed-in VMO to point to it
+  // so that it can be reused the next time watermarks are initialized.
+  status = result.duplicate(ZX_RIGHT_SAME_RIGHTS, &contiguous_watermark_vmo);
+  if (status != ZX_OK) {
+    FX_LOGF(WARNING, kTag,
+            "Unable to duplicate newly created contiguous %s watermark VMO for reuse",
+            vmo_name.c_str());
+  }
+
+  return ZX_OK;
+}
+
 zx_status_t Ge2dTask::InitWatermark(const buffer_collection_info_2_t* input_buffer_collection,
                                     const buffer_collection_info_2_t* output_buffer_collection,
                                     const water_mark_info_t* wm_info,
                                     const image_format_2_t* image_format_table_list,
                                     size_t image_format_table_count, uint32_t image_format_index,
+                                    std::vector<zx::vmo>& watermark_input_contiguous_vmos,
+                                    zx::vmo& watermark_blended_contiguous_vmo,
                                     const hw_accel_frame_callback_t* frame_callback,
                                     const hw_accel_res_change_callback_t* res_callback,
                                     const hw_accel_remove_task_callback_t* remove_task_callback,
@@ -438,13 +488,16 @@ zx_status_t Ge2dTask::InitWatermark(const buffer_collection_info_2_t* input_buff
   }
   task_type_ = GE2D_WATERMARK;
 
-  return InitializeWatermarkImages(wm_info, image_format_table_count, bti, canvas);
+  return InitializeWatermarkImages(wm_info, image_format_table_count, bti,
+                                   watermark_input_contiguous_vmos,
+                                   watermark_blended_contiguous_vmo, canvas);
 }
 
 zx_status_t Ge2dTask::InitInPlaceWatermark(
     const buffer_collection_info_2_t* buffer_collection, const water_mark_info_t* wm_info,
     const image_format_2_t* image_format_table_list, size_t image_format_table_count,
-    uint32_t image_format_index, const hw_accel_frame_callback_t* frame_callback,
+    uint32_t image_format_index, std::vector<zx::vmo>& watermark_input_contiguous_vmos,
+    zx::vmo& watermark_blended_contiguous_vmo, const hw_accel_frame_callback_t* frame_callback,
     const hw_accel_res_change_callback_t* res_callback,
     const hw_accel_remove_task_callback_t* remove_task_callback, const zx::bti& bti,
     amlogic_canvas_protocol_t canvas) {
@@ -460,7 +513,9 @@ zx_status_t Ge2dTask::InitInPlaceWatermark(
   }
   task_type_ = GE2D_IN_PLACE_WATERMARK;
 
-  return InitializeWatermarkImages(wm_info, image_format_table_count, bti, canvas);
+  return InitializeWatermarkImages(wm_info, image_format_table_count, bti,
+                                   watermark_input_contiguous_vmos,
+                                   watermark_blended_contiguous_vmo, canvas);
 }
 
 }  // namespace ge2d

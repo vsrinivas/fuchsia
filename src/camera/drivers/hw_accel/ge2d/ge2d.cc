@@ -80,6 +80,7 @@ zx_status_t Ge2dDevice::Ge2dInitTaskWaterMark(
   zx_status_t status =
       task->InitWatermark(input_buffer_collection, output_buffer_collection, info_list,
                           image_format_table_list, image_format_table_count, image_format_index,
+                          watermark_input_contiguous_vmos_, watermark_blended_contiguous_vmo_,
                           frame_callback, res_callback, task_remove_callback, bti_, canvas_);
   if (status != ZX_OK) {
     FX_PLOGST(ERROR, kTag, status) << "Task Creation Failed";
@@ -111,7 +112,8 @@ zx_status_t Ge2dDevice::Ge2dInitTaskInPlaceWaterMark(
   auto task = std::make_unique<Ge2dTask>();
   zx_status_t status = task->InitInPlaceWatermark(
       buffer_collection, info_list, image_format_table_list, image_format_table_count,
-      image_format_index, frame_callback, res_callback, task_remove_callback, bti_, canvas_);
+      image_format_index, watermark_input_contiguous_vmos_, watermark_blended_contiguous_vmo_,
+      frame_callback, res_callback, task_remove_callback, bti_, canvas_);
   if (status != ZX_OK) {
     FX_PLOGST(ERROR, kTag, status) << "Task Creation Failed";
     return status;
@@ -980,8 +982,27 @@ zx_status_t Ge2dDevice::Setup(zx_device_t* parent, std::unique_ptr<Ge2dDevice>* 
   GenCtrl1::Get().FromValue(0).set_soft_reset(0).WriteTo(&*ge2d_mmio);
   GenCtrl1::Get().FromValue(0).set_interrupt_on_idling(1).WriteTo(&*ge2d_mmio);
 
+  std::vector<zx::vmo> watermark_input_contiguous_vmos;
+  for (uint32_t i = 0; i < kWatermarkInputBufferCount; i++) {
+    zx::vmo vmo;
+    status = zx::vmo::create_contiguous(bti, kWatermarkMaxSize, 0, &vmo);
+    if (status != ZX_OK) {
+      FX_LOGST(ERROR, kTag) << "Unable to create contiguous memory for input watermark VMO";
+      return ZX_ERR_NO_MEMORY;
+    }
+    watermark_input_contiguous_vmos.push_back(std::move(vmo));
+  }
+
+  zx::vmo watermark_blended_contiguous_vmo;
+  status = zx::vmo::create_contiguous(bti, kWatermarkMaxSize, 0, &watermark_blended_contiguous_vmo);
+  if (status != ZX_OK) {
+    FX_LOGST(ERROR, kTag) << "Unable to create contiguous memory for blended watermark VMO";
+    return ZX_ERR_NO_MEMORY;
+  }
+
   auto ge2d_device = std::make_unique<Ge2dDevice>(
-      parent, std::move(*ge2d_mmio), std::move(ge2d_irq), std::move(bti), std::move(port), c);
+      parent, std::move(*ge2d_mmio), std::move(ge2d_irq), std::move(bti), std::move(port),
+      std::move(watermark_input_contiguous_vmos), std::move(watermark_blended_contiguous_vmo), c);
 
   status = ge2d_device->StartThread();
   *out = std::move(ge2d_device);

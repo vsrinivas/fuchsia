@@ -28,6 +28,7 @@
 #include "src/camera/drivers/hw_accel/task/task.h"
 #include "src/camera/drivers/test_utils/fake_buffer_collection.h"
 #include "src/devices/lib/sysmem/sysmem.h"
+#include "src/lib/fsl/handles/object_info.h"
 
 namespace ge2d {
 namespace {
@@ -74,6 +75,19 @@ void DuplicateWatermarkInfo(const water_mark_info_t& input, const zx::vmo& vmo, 
     output->push_back(input);
     output->back().watermark_vmo = vmo.get();
   }
+}
+
+void CreateContiguousWatermarkVmos(const zx::bti& bti_handle, uint32_t watermark_size,
+                                   uint32_t input_watermark_count,
+                                   std::vector<zx::vmo>& watermark_input_contiguous_vmos,
+                                   zx::vmo& watermark_blended_contiguous_vmo) {
+  for (uint32_t i = 0; i < input_watermark_count; i++) {
+    zx::vmo vmo;
+    EXPECT_OK(zx::vmo::create_contiguous(bti_handle, watermark_size, 0, &vmo));
+    watermark_input_contiguous_vmos.push_back(std::move(vmo));
+  }
+  EXPECT_OK(
+      zx::vmo::create_contiguous(bti_handle, watermark_size, 0, &watermark_blended_contiguous_vmo));
 }
 
 // Integration test for the driver defined in zircon/system/dev/camera/arm-isp.
@@ -174,6 +188,10 @@ class TaskTest : public zxtest::Test {
         output_buffer_collection_, output_image_format_table_[0], bti_handle_.get(),
         buffer_collection_count);
     ASSERT_OK(status);
+
+    CreateContiguousWatermarkVmos(bti_handle_, watermark_size, duplicated_watermark_info_.size(),
+                                  watermark_input_contiguous_vmos_,
+                                  watermark_blended_contiguous_vmo_);
   }
 
   // Sets up Ge2dDevice, initialize a task.
@@ -212,9 +230,10 @@ class TaskTest : public zxtest::Test {
     zx::interrupt irq;
     EXPECT_OK(irq_.duplicate(ZX_RIGHT_SAME_RIGHTS, &irq));
 
-    ge2d_device_ = std::make_unique<Ge2dDevice>(nullptr, ddk::MmioBuffer(fake_regs.GetMmioBuffer()),
-                                                std::move(irq), std::move(bti_handle_),
-                                                std::move(port), fake_canvas);
+    ge2d_device_ = std::make_unique<Ge2dDevice>(
+        nullptr, ddk::MmioBuffer(fake_regs.GetMmioBuffer()), std::move(irq), std::move(bti_handle_),
+        std::move(port), std::move(watermark_input_contiguous_vmos_),
+        std::move(watermark_blended_contiguous_vmo_), fake_canvas);
 
     uint32_t task_id;
     zx::vmo watermark_vmo;
@@ -268,6 +287,8 @@ class TaskTest : public zxtest::Test {
   std::vector<water_mark_info_t> duplicated_watermark_info_;
   buffer_collection_info_2_t input_buffer_collection_;
   buffer_collection_info_2_t output_buffer_collection_;
+  std::vector<zx::vmo> watermark_input_contiguous_vmos_;
+  zx::vmo watermark_blended_contiguous_vmo_;
   std::unique_ptr<Ge2dDevice> ge2d_device_;
   uint32_t output_image_format_index_;
   bool frame_status_error_ = false;
@@ -291,8 +312,9 @@ TEST_F(TaskTest, BasicCreationTest) {
   EXPECT_OK(status);
   status = watermark_task->InitWatermark(
       &input_buffer_collection_, &output_buffer_collection_, duplicated_watermark_info_.data(),
-      output_image_format_table_, kImageFormatTableSize, 0, &frame_callback_, &res_callback_,
-      &remove_task_callback_, bti_handle_, fake_canvas);
+      output_image_format_table_, kImageFormatTableSize, 0, watermark_input_contiguous_vmos_,
+      watermark_blended_contiguous_vmo_, &frame_callback_, &res_callback_, &remove_task_callback_,
+      bti_handle_, fake_canvas);
   EXPECT_OK(status);
 }
 
@@ -339,8 +361,9 @@ TEST_F(TaskTest, WatermarkResTest) {
   zx_status_t status;
   status = wm_task->InitWatermark(&input_buffer_collection_, &output_buffer_collection_,
                                   duplicated_watermark_info_.data(), output_image_format_table_,
-                                  kImageFormatTableSize, 0, &frame_callback_, &res_callback_,
-                                  &remove_task_callback_, bti_handle_, fake_canvas);
+                                  kImageFormatTableSize, 0, watermark_input_contiguous_vmos_,
+                                  watermark_blended_contiguous_vmo_, &frame_callback_,
+                                  &res_callback_, &remove_task_callback_, bti_handle_, fake_canvas);
   EXPECT_OK(status);
   image_format_2_t format = wm_task->WatermarkFormat();
   EXPECT_EQ(format.display_width, kWidth / 4);
@@ -769,12 +792,20 @@ TEST(TaskTest, NonContigVmoTest) {
   EXPECT_OK(camera::GetImageFormat(watermark_info.wm_image_format,
                                    fuchsia_sysmem_PixelFormatType_R8G8B8A8, kWidth / 4,
                                    kHeight / 4));
+
   std::vector<water_mark_info_t> duplicated_watermark_info;
   DuplicateWatermarkInfo(watermark_info, watermark_vmo, kImageFormatTableSize,
                          &duplicated_watermark_info);
+
+  std::vector<zx::vmo> watermark_input_contiguous_vmos;
+  zx::vmo watermark_blended_contiguous_vmo;
+  CreateContiguousWatermarkVmos(bti_handle, watermark_size, duplicated_watermark_info.size(),
+                                watermark_input_contiguous_vmos, watermark_blended_contiguous_vmo);
+
   status = task->InitWatermark(&input_buffer_collection, &output_buffer_collection,
                                duplicated_watermark_info.data(), image_format_table,
-                               kImageFormatTableSize, 0, &frame_callback, &res_callback,
+                               kImageFormatTableSize, 0, watermark_input_contiguous_vmos,
+                               watermark_blended_contiguous_vmo, &frame_callback, &res_callback,
                                &remove_task_callback, bti_handle, fake_canvas);
   // Expecting Task setup to be returning an error when watermark vmo is not
   // contig.
@@ -808,13 +839,67 @@ TEST(TaskTest, InvalidBufferCollectionTest) {
   EXPECT_OK(camera::GetImageFormat(watermark_info.wm_image_format,
                                    fuchsia_sysmem_PixelFormatType_R8G8B8A8, kWidth / 4,
                                    kHeight / 4));
+
   std::vector<water_mark_info_t> duplicated_watermark_info;
   DuplicateWatermarkInfo(watermark_info, watermark_vmo, kImageFormatTableSize,
                          &duplicated_watermark_info);
-  status = task->InitWatermark(nullptr, nullptr, duplicated_watermark_info.data(),
-                               image_format_table, kImageFormatTableSize, 0, &frame_callback,
-                               &res_callback, &remove_task_callback, bti_handle, fake_canvas);
+
+  std::vector<zx::vmo> watermark_input_contiguous_vmos;
+  zx::vmo watermark_blended_contiguous_vmo;
+  CreateContiguousWatermarkVmos(bti_handle, watermark_size, duplicated_watermark_info.size(),
+                                watermark_input_contiguous_vmos, watermark_blended_contiguous_vmo);
+
+  status = task->InitWatermark(
+      nullptr, nullptr, duplicated_watermark_info.data(), image_format_table, kImageFormatTableSize,
+      0, watermark_input_contiguous_vmos, watermark_blended_contiguous_vmo, &frame_callback,
+      &res_callback, &remove_task_callback, bti_handle, fake_canvas);
   EXPECT_NE(ZX_OK, status);
+}
+
+TEST_F(TaskTest, ReuseWatermarkContiguousVmoTest) {
+  SetUpBufferCollections(kNumberOfBuffers);
+  auto watermark_task = std::make_unique<Ge2dTask>();
+  zx_status_t status;
+  status = watermark_task->InitWatermark(
+      &input_buffer_collection_, &output_buffer_collection_, duplicated_watermark_info_.data(),
+      output_image_format_table_, kImageFormatTableSize, 0, watermark_input_contiguous_vmos_,
+      watermark_blended_contiguous_vmo_, &frame_callback_, &res_callback_, &remove_task_callback_,
+      bti_handle_, fake_canvas);
+  EXPECT_OK(status);
+
+  EXPECT_EQ(fsl::GetKoid(watermark_blended_contiguous_vmo_.get()),
+            fsl::GetKoid(watermark_task->watermark_blended_vmo().get()));
+}
+
+TEST_F(TaskTest, CreateWatermarkContiguousVmoTest) {
+  SetUpBufferCollections(kNumberOfBuffers);
+
+  // Change the blended watermark VMO to an invalid size (1 byte). The watermark task will
+  // need to create its own contiguous VMO to use instead.
+  zx::vmo vmo;
+  EXPECT_OK(zx::vmo::create_contiguous(bti_handle_, 1, 0, &vmo));
+  watermark_blended_contiguous_vmo_.reset(vmo.get());
+  auto original_watermark_koid = fsl::GetKoid(watermark_blended_contiguous_vmo_.get());
+
+  auto watermark_task = std::make_unique<Ge2dTask>();
+  zx_status_t status;
+  status = watermark_task->InitWatermark(
+      &input_buffer_collection_, &output_buffer_collection_, duplicated_watermark_info_.data(),
+      output_image_format_table_, kImageFormatTableSize, 0, watermark_input_contiguous_vmos_,
+      watermark_blended_contiguous_vmo_, &frame_callback_, &res_callback_, &remove_task_callback_,
+      bti_handle_, fake_canvas);
+  EXPECT_OK(status);
+
+  // The InitWatermark task should detect that the original watermark_blended_contiguous_vmo_ is too
+  // small and fallback creating a new VMO with the right size. This means that the InitWatermark
+  // task uses a different VMO koid than the original watermark VMO.
+  EXPECT_NE(original_watermark_koid, fsl::GetKoid(watermark_task->watermark_blended_vmo().get()));
+
+  // Additionally, the InitWatermark task will update watermark_blended_contiguous_vmo_ to point to
+  // the newly created fallback VMO, so their koids should now match. Subsequent InitWatermark tasks
+  // will not need to create fallback VMOs.
+  EXPECT_EQ(fsl::GetKoid(watermark_blended_contiguous_vmo_.get()),
+            fsl::GetKoid(watermark_task->watermark_blended_vmo().get()));
 }
 
 }  // namespace

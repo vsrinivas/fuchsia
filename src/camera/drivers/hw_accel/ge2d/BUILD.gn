@@ -112,6 +112,7 @@ executable("ge2d_task_unittest_bin") {
     "//src/devices/testing/mock-mmio-reg",
     "//src/devices/testing/no_ddk",
     "//src/lib/ddk",
+    "//src/lib/fsl",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
