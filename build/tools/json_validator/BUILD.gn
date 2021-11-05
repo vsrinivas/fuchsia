@@ -11,6 +11,7 @@ executable("json_validator") {
   deps = [
     "//src/lib/fxl",
     "//third_party/rapidjson",
+    "//third_party/re2",
   ]
 }
 

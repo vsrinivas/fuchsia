@@ -6,12 +6,12 @@
 
 #include <fstream>
 #include <map>
-#include <regex>
 #include <string>
 
 #include <rapidjson/document.h>
 #include <rapidjson/schema.h>
 #include <rapidjson/stringbuffer.h>
+#include <re2/re2.h>
 #include <src/lib/fxl/command_line.h>
 
 using namespace rapidjson;
@@ -58,14 +58,13 @@ class LocalSchemaProvider : public IRemoteSchemaDocumentProvider {
 
   const SchemaDocument* GetRemoteDocument(const char* uri, SizeType length) override {
     std::string input(uri, length);
-    std::smatch matches;
-    std::regex pattern("^(file:)?([^/#:]+)$");
-    if (!std::regex_search(input, matches, pattern)) {
+    std::string file_name;
+    re2::RE2 pattern("^(file:)?([^/#:]+)$");
+    if (!re2::RE2::PartialMatch(input, pattern, nullptr, &file_name)) {
       fprintf(stderr, "Error: could not find schema %s.\n", input.c_str());
       has_errors_ = true;
       return nullptr;
     }
-    std::string file_name = matches[matches.size() == 2 ? 1 : 2].str();
     if (documents_[file_name]) {
       return documents_[file_name].get();
     }
