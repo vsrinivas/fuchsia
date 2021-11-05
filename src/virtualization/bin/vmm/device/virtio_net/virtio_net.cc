@@ -149,10 +149,7 @@ class TxStream {
       if (desc.has_next) {
         // Section 5.1.6.2  Packet Transmission: The header and packet are added
         // as one output descriptor to the transmitq.
-        if (!warned_) {
-          warned_ = true;
-          FX_LOGS(WARNING) << "Transmit packet and header must be on a single descriptor";
-        }
+        FX_LOGS_FIRST_N(WARNING, 1) << "Transmit packet and header must be on a single descriptor";
         continue;
       }
       if (desc.len < sizeof(virtio_net_hdr_t)) {
@@ -185,7 +182,6 @@ class TxStream {
 
   GuestEthernet* guest_ethernet_ = nullptr;
   const PhysMem* phys_mem_ = nullptr;
-  bool warned_ = false;
   VirtioQueue queue_;
 
   // Pending chain and descriptor.
