@@ -25,7 +25,7 @@
 #include "guest_ethernet.h"
 #include "src/connectivity/network/lib/net_interfaces/cpp/net_interfaces.h"
 #include "src/virtualization/bin/vmm/device/device_base.h"
-#include "src/virtualization/bin/vmm/device/stream_base.h"
+#include "src/virtualization/bin/vmm/device/virtio_queue.h"
 
 static constexpr char kInterfaceName[] = "ethv0";
 
@@ -34,24 +34,30 @@ enum class Queue : uint16_t {
   TRANSMIT = 1,
 };
 
-class RxStream : public StreamBase {
+class RxStream {
  public:
   void Init(GuestEthernet* guest_ethernet, const PhysMem& phys_mem,
             VirtioQueue::InterruptFn interrupt) {
     guest_ethernet_ = guest_ethernet;
     phys_mem_ = &phys_mem;
-    StreamBase::Init(phys_mem, std::move(interrupt));
+    queue_.set_phys_mem(&phys_mem);
+    queue_.set_interrupt(std::move(interrupt));
+  }
+
+  void Configure(uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail, zx_gpaddr_t used) {
+    queue_.Configure(size, desc, avail, used);
   }
 
   void Notify() {
-    for (; !packet_queue_.empty() && queue_.NextChain(&chain_); chain_.Return()) {
+    for (VirtioChain chain; !packet_queue_.empty() && queue_.NextChain(&chain); chain.Return()) {
       Packet pkt = packet_queue_.front();
-      chain_.NextDescriptor(&desc_);
-      if (desc_.len < sizeof(virtio_net_hdr_t)) {
+      VirtioDescriptor desc;
+      chain.NextDescriptor(&desc);
+      if (desc.len < sizeof(virtio_net_hdr_t)) {
         FX_LOGS(ERROR) << "Malformed descriptor";
         continue;
       }
-      auto header = static_cast<virtio_net_hdr_t*>(desc_.addr);
+      auto header = static_cast<virtio_net_hdr_t*>(desc.addr);
       // Section 5.1.6.4.1 Device Requirements: Processing of Incoming Packets
 
       // If VIRTIO_NET_F_MRG_RXBUF has not been negotiated, the device MUST
@@ -68,7 +74,7 @@ class RxStream : public StreamBase {
       header->flags = 0;
 
       uintptr_t offset = phys_mem_->offset(header + 1);
-      uintptr_t length = desc_.len - sizeof(*header);
+      uintptr_t length = desc.len - sizeof(*header);
       packet_queue_.pop();
       if (length < pkt.length) {
         // 5.1.6.3.1 Driver Requirements: Setting Up Receive Buffers: the driver
@@ -81,7 +87,7 @@ class RxStream : public StreamBase {
         continue;
       }
       memcpy(phys_mem_->ptr(offset, length), reinterpret_cast<void*>(pkt.addr), pkt.length);
-      *chain_.Used() = static_cast<uint32_t>(pkt.length + sizeof(*header));
+      *chain.Used() = static_cast<uint32_t>(pkt.length + sizeof(*header));
       pkt.entry.flags = ETH_FIFO_TX_OK;
       guest_ethernet_->Complete(pkt.entry);
     }
@@ -102,31 +108,45 @@ class RxStream : public StreamBase {
   GuestEthernet* guest_ethernet_ = nullptr;
   const PhysMem* phys_mem_ = nullptr;
   std::queue<Packet> packet_queue_;
+  VirtioQueue queue_;
 };
 
-class TxStream : public StreamBase {
+class TxStream {
  public:
+  ~TxStream() {
+    // Drop any pending chain.
+    if (pending_chain_.IsValid()) {
+      pending_chain_.Return();
+    }
+  }
+
+  void Configure(uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail, zx_gpaddr_t used) {
+    queue_.Configure(size, desc, avail, used);
+  }
+
   void Init(GuestEthernet* guest_ethernet, const PhysMem& phys_mem,
             VirtioQueue::InterruptFn interrupt) {
     guest_ethernet_ = guest_ethernet;
     phys_mem_ = &phys_mem;
-    StreamBase::Init(phys_mem, std::move(interrupt));
+    queue_.set_phys_mem(&phys_mem);
+    queue_.set_interrupt(std::move(interrupt));
   }
 
   void Notify() {
     // If Send returned ZX_ERR_SHOULD_WAIT last time Notify was called, then we should process that
     // descriptor first.
-    if (chain_.IsValid()) {
-      bool processed = ProcessDescriptor();
+    if (pending_chain_.IsValid()) {
+      bool processed = ProcessDescriptor(pending_desc_);
       if (!processed) {
         return;
       }
-      chain_.Return();
+      pending_chain_.Return();
     }
 
-    for (; queue_.NextChain(&chain_); chain_.Return()) {
-      chain_.NextDescriptor(&desc_);
-      if (desc_.has_next) {
+    for (VirtioChain chain; queue_.NextChain(&chain); chain.Return()) {
+      VirtioDescriptor desc;
+      chain.NextDescriptor(&desc);
+      if (desc.has_next) {
         // Section 5.1.6.2  Packet Transmission: The header and packet are added
         // as one output descriptor to the transmitq.
         if (!warned_) {
@@ -135,25 +155,28 @@ class TxStream : public StreamBase {
         }
         continue;
       }
-      if (desc_.len < sizeof(virtio_net_hdr_t)) {
+      if (desc.len < sizeof(virtio_net_hdr_t)) {
         FX_LOGS(ERROR) << "Failed to read descriptor header";
         continue;
       }
 
-      bool processed = ProcessDescriptor();
+      bool processed = ProcessDescriptor(desc);
       if (!processed) {
         // Stop processing and wait for GuestEthernet to notify us again. Do not return the
         // descriptor to the guest.
+        FX_DCHECK(!pending_chain_.IsValid());
+        pending_desc_ = desc;
+        pending_chain_ = std::move(chain);
         return;
       }
     }
   }
 
  private:
-  bool ProcessDescriptor() {
-    auto header = static_cast<virtio_net_hdr_t*>(desc_.addr);
+  bool ProcessDescriptor(VirtioDescriptor& desc) {
+    auto header = static_cast<virtio_net_hdr_t*>(desc.addr);
     uintptr_t offset = phys_mem_->offset(header + 1);
-    uintptr_t length = desc_.len - sizeof(*header);
+    uintptr_t length = desc.len - sizeof(*header);
 
     zx_status_t status =
         guest_ethernet_->Send(phys_mem_->ptr(offset, length), static_cast<uint16_t>(length));
@@ -163,6 +186,14 @@ class TxStream : public StreamBase {
   GuestEthernet* guest_ethernet_ = nullptr;
   const PhysMem* phys_mem_ = nullptr;
   bool warned_ = false;
+  VirtioQueue queue_;
+
+  // Pending chain and descriptor.
+  //
+  // Tracks a chain that was read from the guest but was unable to be processed
+  // immediately.
+  VirtioDescriptor pending_desc_;
+  VirtioChain pending_chain_;
 };
 
 class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
