@@ -141,17 +141,14 @@ template("fuchsia_package") {
         if (defined(invoker.metadata)) {
           forward_variables_from(invoker.metadata, "*")
         }
-        if (!bootfs_only && !_is_system_package) {
+        if (!_is_system_package) {
           # Installing a Fuchsia package into another one should not also install
           # its content to the root install location, which is why this metadata key
-          # is set to an empty list. However, there are two exceptions to this:
-          #
-          #  - fuchsia_system_package() instances whose content must end up
-          #    into either the system image (handled by system_image_package_info below)
-          #    or the boot filesystem (handled through distribution_manifest().
-          #
-          #  - When 'bootfs_only' is set to true, which corresponds to the "bringup"
-          #    configuration which requires subtle adjustments in the build graph.
+          # is set to an empty list.
+          # An exception to this rule is fuchsia_system_package() instances whose
+          # content must end up in either the system image (handled by
+          # system_image_package_info below) or the boot filesystem (handled through
+          # distribution_manifest()).
           #
           distribution_entries_barrier = []
         }
