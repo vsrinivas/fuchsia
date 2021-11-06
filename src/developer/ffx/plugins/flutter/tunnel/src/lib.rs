@@ -21,7 +21,7 @@ use {
     timeout::timeout,
 };
 
-pub use ffx_emulator_common::port_picker::{pick_unused_port, Port};
+pub use port_picker::{pick_unused_port, Port};
 
 static DEFAULT_SSH_OPTIONS: &'static [&str] = &[
     "-o",
