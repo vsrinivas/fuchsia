@@ -138,7 +138,7 @@ int main() {
 
             std::optional<zx::duration> delete_previous_boot_logs_time(std::nullopt);
             if (files::IsFile(kPreviousLogsFilePath)) {
-              delete_previous_boot_logs_time = zx::hour(1);
+              delete_previous_boot_logs_time = zx::hour(24);
             }
 
             main_service = std::make_unique<MainService>(
