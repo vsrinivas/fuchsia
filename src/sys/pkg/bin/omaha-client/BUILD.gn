@@ -136,7 +136,6 @@ fuchsia_unittest_package("omaha-client-service-bin-tests") {
     ":omaha-client-test-config",
     "//src/connectivity/network/dns:component",
     "//src/connectivity/network/netstack:component",
-    "//src/connectivity/network/netstack:component",
     "//src/power/shutdown-shim/tests:shutdown_shim_component",
     "//src/sys/pkg/bin/fake-channel-control:fake-channel-control-v2",
     "//src/sys/stash:stash2_v2",
