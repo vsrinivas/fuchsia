@@ -616,33 +616,33 @@ class NodeVisitor {
     }
   }
 
-  virtual T VisitTerminal(const Terminal& node) { return VisitNode(node); };
-  virtual T VisitNonterminal(const Nonterminal& node) { return VisitNode(node); };
-  virtual T VisitError(const Error& node) { return VisitTerminal(node); };
-  virtual T VisitConst(const Const& node) { return VisitTerminal(node); };
-  virtual T VisitVar(const Var& node) { return VisitTerminal(node); };
-  virtual T VisitFieldSeparator(const FieldSeparator& node) { return VisitTerminal(node); };
-  virtual T VisitProgram(const Program& node) { return VisitNonterminal(node); };
-  virtual T VisitVariableDecl(const VariableDecl& node) { return VisitNonterminal(node); };
-  virtual T VisitIdentifier(const Identifier& node) { return VisitNonterminal(node); };
-  virtual T VisitInteger(const Integer& node) { return VisitNonterminal(node); };
-  virtual T VisitExpression(const Expression& node) { return VisitNonterminal(node); };
-  virtual T VisitDecimalGroup(const DecimalGroup& node) { return VisitTerminal(node); };
-  virtual T VisitHexGroup(const HexGroup& node) { return VisitTerminal(node); };
+  virtual T VisitTerminal(const Terminal& node) { return VisitNode(node); }
+  virtual T VisitNonterminal(const Nonterminal& node) { return VisitNode(node); }
+  virtual T VisitError(const Error& node) { return VisitTerminal(node); }
+  virtual T VisitConst(const Const& node) { return VisitTerminal(node); }
+  virtual T VisitVar(const Var& node) { return VisitTerminal(node); }
+  virtual T VisitFieldSeparator(const FieldSeparator& node) { return VisitTerminal(node); }
+  virtual T VisitProgram(const Program& node) { return VisitNonterminal(node); }
+  virtual T VisitVariableDecl(const VariableDecl& node) { return VisitNonterminal(node); }
+  virtual T VisitIdentifier(const Identifier& node) { return VisitNonterminal(node); }
+  virtual T VisitInteger(const Integer& node) { return VisitNonterminal(node); }
+  virtual T VisitExpression(const Expression& node) { return VisitNonterminal(node); }
+  virtual T VisitDecimalGroup(const DecimalGroup& node) { return VisitTerminal(node); }
+  virtual T VisitHexGroup(const HexGroup& node) { return VisitTerminal(node); }
   virtual T VisitUnescapedIdentifier(const UnescapedIdentifier& node) {
     return VisitTerminal(node);
-  };
-  virtual T VisitStringEntity(const StringEntity& node) { return VisitTerminal(node); };
-  virtual T VisitEscapeSequence(const EscapeSequence& node) { return VisitStringEntity(node); };
-  virtual T VisitString(const String& node) { return VisitNonterminal(node); };
-  virtual T VisitObject(const Object& node) { return VisitNonterminal(node); };
-  virtual T VisitField(const Field& node) { return VisitNonterminal(node); };
-  virtual T VisitPathElement(const PathElement& node) { return VisitTerminal(node); };
-  virtual T VisitPathEscape(const PathEscape& node) { return VisitTerminal(node); };
-  virtual T VisitPathSeparator(const PathSeparator& node) { return VisitTerminal(node); };
-  virtual T VisitOperator(const Operator& node) { return VisitTerminal(node); };
-  virtual T VisitPath(const Path& node) { return VisitNonterminal(node); };
-  virtual T VisitAddSub(const AddSub& node) { return VisitNonterminal(node); };
+  }
+  virtual T VisitStringEntity(const StringEntity& node) { return VisitTerminal(node); }
+  virtual T VisitEscapeSequence(const EscapeSequence& node) { return VisitStringEntity(node); }
+  virtual T VisitString(const String& node) { return VisitNonterminal(node); }
+  virtual T VisitObject(const Object& node) { return VisitNonterminal(node); }
+  virtual T VisitField(const Field& node) { return VisitNonterminal(node); }
+  virtual T VisitPathElement(const PathElement& node) { return VisitTerminal(node); }
+  virtual T VisitPathEscape(const PathEscape& node) { return VisitTerminal(node); }
+  virtual T VisitPathSeparator(const PathSeparator& node) { return VisitTerminal(node); }
+  virtual T VisitOperator(const Operator& node) { return VisitTerminal(node); }
+  virtual T VisitPath(const Path& node) { return VisitNonterminal(node); }
+  virtual T VisitAddSub(const AddSub& node) { return VisitNonterminal(node); }
 };
 
 template <typename T>
