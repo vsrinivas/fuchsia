@@ -245,7 +245,6 @@ impl Scene {
 
     pub(crate) fn update_scene_layers(
         &mut self,
-        size: Size,
         render_context: &mut RenderContext,
         view_context: &ViewAssistantContext,
     ) {
@@ -256,7 +255,7 @@ impl Scene {
             let mut layer_group = SimpleLayerGroup(facet_layers);
             facet_entry
                 .facet
-                .update_layers(size, &mut layer_group, render_context, view_context)
+                .update_layers(facet_entry.size, &mut layer_group, render_context, view_context)
                 .expect("update_layers");
         }
     }
@@ -380,7 +379,7 @@ impl Scene {
                 composition,
             );
         } else {
-            self.update_scene_layers(size, render_context, context);
+            self.update_scene_layers(render_context, context);
 
             let composition = &mut self.composition;
             let facet_order = &self.facet_order;
@@ -489,7 +488,8 @@ impl Scene {
         let sizes: Vec<_> =
             members.iter().map(|member| *size_map.get(member).expect("members size")).collect();
         if let Some(arranger) = self.groups.group_arranger(group_id) {
-            let positions = arranger.arrange(*group_size, &sizes);
+            let member_data = self.groups.group_member_data(group_id);
+            let positions = arranger.arrange(*group_size, &sizes, &member_data);
             let member_ids = self.groups.group_members(group_id);
             for (pos, member_id) in positions.iter().zip(member_ids.iter()) {
                 match member_id {

@@ -14,12 +14,15 @@ use carnelian::{
             Facet, FacetId, TextFacetOptions, TextHorizontalAlignment, TextVerticalAlignment,
         },
         group::GroupMemberData,
-        layout::{Alignment, CrossAxisAlignment, FlexMemberData, MainAxisAlignment, MainAxisSize},
+        layout::{
+            Alignment, CrossAxisAlignment, FlexMemberData, MainAxisAlignment, MainAxisSize,
+            StackMemberDataBuilder,
+        },
         scene::{Scene, SceneBuilder},
         LayerGroup,
     },
-    App, AppAssistant, Point, Rect, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr,
-    ViewKey,
+    App, AppAssistant, Coord, Point, Rect, Size, ViewAssistant, ViewAssistantContext,
+    ViewAssistantPtr, ViewKey,
 };
 use euclid::size2;
 use fuchsia_zircon::Event;
@@ -76,6 +79,7 @@ enum Mode {
     Flex(usize, usize, usize),
     Button,
     OneThirdTwoThird,
+    OneThirdTwoThirdNoCol,
 }
 
 impl Default for Mode {
@@ -88,6 +92,7 @@ struct LayoutsViewAssistant {
     face: FontFace,
     scene_details: Option<SceneDetails>,
     mode: Mode,
+    background: bool,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -98,7 +103,12 @@ struct BoundsHolder {
 impl LayoutsViewAssistant {
     fn new() -> Result<ViewAssistantPtr, Error> {
         let face = load_font(PathBuf::from("/pkg/data/fonts/RobotoSlab-Regular.ttf"))?;
-        Ok(Box::new(LayoutsViewAssistant { face, mode: Mode::default(), scene_details: None }))
+        Ok(Box::new(LayoutsViewAssistant {
+            face,
+            mode: Mode::default(),
+            background: false,
+            scene_details: None,
+        }))
     }
 
     fn cycle1(&mut self) {
@@ -139,7 +149,8 @@ impl LayoutsViewAssistant {
             Mode::Stack(..) => Mode::Flex(0, 0, 0),
             Mode::Flex(..) => Mode::Button,
             Mode::Button => Mode::OneThirdTwoThird,
-            Mode::OneThirdTwoThird => Mode::Stack(0),
+            Mode::OneThirdTwoThird => Mode::OneThirdTwoThirdNoCol,
+            Mode::OneThirdTwoThirdNoCol => Mode::Stack(0),
         };
         self.refresh();
     }
@@ -155,6 +166,11 @@ impl LayoutsViewAssistant {
             let toml = toml::to_string(&bounds_holder).unwrap();
             println!("let expected_text = r#\"{}\"#;", toml);
         }
+    }
+
+    fn toggle_background(&mut self) {
+        self.background = !self.background;
+        self.refresh();
     }
 }
 
@@ -182,6 +198,7 @@ impl ViewAssistant for LayoutsViewAssistant {
                     ),
                     Mode::Button => String::from("button"),
                     Mode::OneThirdTwoThird => String::from("one_third_two_third"),
+                    Mode::OneThirdTwoThirdNoCol => String::from("one_third_two_third_no_col"),
                 }
                 .to_lowercase();
                 builder.text(
@@ -206,6 +223,21 @@ impl ViewAssistant for LayoutsViewAssistant {
                     ),
                     Mode::Button => make_fake_button(builder),
                     Mode::OneThirdTwoThird => make_one_third_two_third(builder),
+                    Mode::OneThirdTwoThirdNoCol => make_one_third_two_third_no_col(builder),
+                }
+                if self.background {
+                    build_flexible_test_facet(
+                        builder,
+                        Size::zero(),
+                        size2(Coord::MAX, Coord::MAX),
+                        None,
+                        StackMemberDataBuilder::new()
+                            .top(50.0)
+                            .left(100.0)
+                            .bottom(150.0)
+                            .right(200.0)
+                            .build(),
+                    );
                 }
             });
             let mut scene = builder.build();
@@ -231,6 +263,7 @@ impl ViewAssistant for LayoutsViewAssistant {
         const THREE: u32 = 51;
         const D: u32 = 100;
         const R: u32 = 114;
+        const B: u32 = 98;
         if let Some(code_point) = keyboard_event.code_point {
             if keyboard_event.phase == input::keyboard::Phase::Pressed
                 || keyboard_event.phase == input::keyboard::Phase::Repeat
@@ -242,6 +275,7 @@ impl ViewAssistant for LayoutsViewAssistant {
                     M => self.cycle_mode(),
                     D => self.dump_bounds(),
                     R => self.refresh(),
+                    B => self.toggle_background(),
                     _ => println!("code_point = {}", code_point),
                 }
             }
@@ -270,26 +304,40 @@ fn random_color() -> Color {
     }
 }
 
+#[allow(unused)]
 struct TestFacet {
+    min_size: Size,
+    max_size: Size,
     size: Size,
     color: Color,
     raster: Option<Raster>,
 }
 
 impl TestFacet {
-    fn new(size: Size, color: Option<Color>) -> Self {
-        Self { size, color: color.unwrap_or_else(|| random_color()), raster: None }
+    fn new(min_size: Size, max_size: Size, color: Option<Color>) -> Self {
+        Self {
+            min_size,
+            max_size,
+            size: min_size,
+            color: color.unwrap_or_else(|| random_color()),
+            raster: None,
+        }
     }
 }
 
 impl Facet for TestFacet {
     fn update_layers(
         &mut self,
-        _size: Size,
+        size: Size,
         layer_group: &mut dyn LayerGroup,
         render_context: &mut RenderContext,
         _view_context: &ViewAssistantContext,
     ) -> Result<(), Error> {
+        let desired_size = size.max(self.min_size).min(self.max_size);
+        if self.size != desired_size {
+            self.raster = None;
+            self.size = desired_size;
+        }
         let line_raster = self.raster.take().unwrap_or_else(|| {
             let line_path = path_for_rectangle(&Rect::from_size(self.size), render_context);
             let mut raster_builder = render_context.raster_builder().expect("raster_builder");
@@ -313,23 +361,34 @@ impl Facet for TestFacet {
         Ok(())
     }
 
-    fn calculate_size(&self, _available: Size) -> Size {
+    fn calculate_size(&self, _: Size) -> Size {
         self.size
     }
 }
 
 fn build_test_facet_with_member_data(
     builder: &mut SceneBuilder,
-    size: Size,
+    min_size: Size,
+    max_size: Size,
     color: Option<Color>,
     member_data: Option<GroupMemberData>,
 ) -> FacetId {
-    let facet = TestFacet::new(size, color);
+    let facet = TestFacet::new(min_size, max_size, color);
     builder.facet_with_data(Box::new(facet), member_data)
 }
 
 fn build_test_facet(builder: &mut SceneBuilder, size: Size, color: Option<Color>) -> FacetId {
-    build_test_facet_with_member_data(builder, size, color, None)
+    build_test_facet_with_member_data(builder, size, size, color, None)
+}
+
+fn build_flexible_test_facet(
+    builder: &mut SceneBuilder,
+    min_size: Size,
+    max_size: Size,
+    color: Option<Color>,
+    member_data: Option<GroupMemberData>,
+) -> FacetId {
+    build_test_facet_with_member_data(builder, min_size, max_size, color, member_data)
 }
 
 const OUTER_FACET_SIZE: Size = size2(300.0, 100.0);
@@ -403,6 +462,29 @@ fn make_one_third_two_third(builder: &mut SceneBuilder) {
                 .contents(|builder| {
                     let _ = build_test_facet(builder, indicator_size, Some(Color::red()));
                 });
+        });
+    });
+}
+
+fn make_one_third_two_third_no_col(builder: &mut SceneBuilder) {
+    builder.group().column().max_size().space_evenly().contents(|builder| {
+        builder.group().row().max_size().space_evenly().contents(|builder| {
+            let mut indicator_size = INDICATOR_FACET_SIZE;
+            let _ = build_flexible_test_facet(
+                builder,
+                indicator_size,
+                size2(f32::MAX, indicator_size.height),
+                Some(Color::new()),
+                FlexMemberData::new(1),
+            );
+            indicator_size += INDICATOR_FACET_DELTA;
+            let _ = build_flexible_test_facet(
+                builder,
+                indicator_size,
+                size2(f32::MAX, indicator_size.height),
+                Some(Color::red()),
+                FlexMemberData::new(2),
+            );
         });
     });
 }

@@ -24,7 +24,12 @@ pub trait Arranger: std::fmt::Debug {
     ) -> Size;
     /// Return the group-relative positions of the members of this group, based
     /// on the sizes of the members.
-    fn arrange(&self, group_size: Size, member_sizes: &[Size]) -> Vec<Point>;
+    fn arrange(
+        &self,
+        group_size: Size,
+        member_sizes: &[Size],
+        member_data: &[&Option<GroupMemberData>],
+    ) -> Vec<Point>;
 }
 
 /// Reference to an arranger.
@@ -108,6 +113,265 @@ pub struct StackOptions {
     pub alignment: Alignment,
 }
 
+#[derive(Default, Debug, Clone)]
+/// Member data for the Stack arranger.
+pub struct StackMemberData {
+    /// The distance by which the member's top edge is inset from the top of the stack.
+    pub top: Option<Coord>,
+    /// The distance by which the member's right edge is inset from the right of the stack.
+    pub right: Option<Coord>,
+    /// The distance by which the member's bottom edge is inset from the bottom of the stack.
+    pub bottom: Option<Coord>,
+    /// The distance by which the member's left edge is inset from the left of the stack.
+    pub left: Option<Coord>,
+    /// The member's width.
+    ///
+    /// Ignored if both left and right are non-null.
+    pub width: Option<Coord>,
+    /// The member's height.
+    ///
+    /// Ignored if both top and bottom are non-null.
+    pub height: Option<Coord>,
+}
+
+impl StackMemberData {
+    fn validate(&self) {
+        assert!(self.top.unwrap_or(0.0) >= 0.0);
+        assert!(self.right.unwrap_or(0.0) >= 0.0);
+        assert!(self.bottom.unwrap_or(0.0) >= 0.0);
+        assert!(self.left.unwrap_or(0.0) >= 0.0);
+        assert!(self.width.unwrap_or(0.0) >= 0.0);
+        assert!(self.height.unwrap_or(0.0) >= 0.0);
+    }
+
+    fn from(data: &Option<GroupMemberData>) -> Option<Self> {
+        data.as_ref().and_then(|has_data| has_data.downcast_ref::<Self>()).cloned()
+    }
+
+    fn from_if_positioned(data: &Option<GroupMemberData>) -> Option<Self> {
+        Self::from(data).and_then(|data| data.is_positioned().then(|| data))
+    }
+
+    fn is_positioned(&self) -> bool {
+        self.top.is_some()
+            || self.right.is_some()
+            || self.bottom.is_some()
+            || self.left.is_some()
+            || self.width.is_some()
+            || self.height.is_some()
+    }
+
+    fn width(&self) -> Option<Coord> {
+        if self.left.is_none() || self.right.is_none() {
+            self.width
+        } else {
+            None
+        }
+    }
+
+    fn height(&self) -> Option<Coord> {
+        if self.top.is_none() || self.bottom.is_none() {
+            self.height
+        } else {
+            None
+        }
+    }
+
+    fn size(&self, calculated: Size, available: Size) -> Size {
+        self.validate();
+
+        let width = if let Some(width) = self.width() {
+            width
+        } else {
+            let left = self.left.unwrap_or(0.0);
+            let right =
+                self.right.map(|right| available.width - right).unwrap_or_else(|| calculated.width);
+            right - left
+        };
+
+        let height = if let Some(height) = self.height() {
+            height
+        } else {
+            let top = self.top.unwrap_or(0.0);
+            let bottom = self
+                .bottom
+                .map(|bottom| available.height - bottom)
+                .unwrap_or_else(|| calculated.height);
+            bottom - top
+        };
+
+        size2(width, height)
+    }
+}
+
+/// Builder interface for making stack member data structures.
+pub struct StackMemberDataBuilder {
+    data: StackMemberData,
+}
+
+impl StackMemberDataBuilder {
+    fn allow_only_positive(amount: Coord) -> Option<Coord> {
+        if amount < 0.0 {
+            println!("Warning, negative amounts not allow for StackMemberData");
+            None
+        } else {
+            Some(amount)
+        }
+    }
+
+    /// Create a new builder
+    pub fn new() -> Self {
+        Self { data: StackMemberData::default() }
+    }
+
+    /// Set the top value
+    pub fn top(mut self, amount: Coord) -> Self {
+        self.data.top = Self::allow_only_positive(amount);
+        self
+    }
+
+    /// Set the left value
+    pub fn left(mut self, amount: Coord) -> Self {
+        self.data.left = Self::allow_only_positive(amount);
+        self
+    }
+
+    /// Set the bottom value
+    pub fn bottom(mut self, amount: Coord) -> Self {
+        self.data.bottom = Self::allow_only_positive(amount);
+        self
+    }
+
+    /// Set the right value
+    pub fn right(mut self, amount: Coord) -> Self {
+        self.data.right = Self::allow_only_positive(amount);
+        self
+    }
+
+    /// Set the width
+    pub fn width(mut self, amount: Coord) -> Self {
+        self.data.width = Self::allow_only_positive(amount);
+        self
+    }
+
+    /// Set the height
+    pub fn height(mut self, amount: Coord) -> Self {
+        self.data.height = Self::allow_only_positive(amount);
+        self
+    }
+
+    /// Make the member data
+    pub fn build(self) -> Option<GroupMemberData> {
+        if self.data.is_positioned() {
+            Some(Box::new(self.data))
+        } else {
+            None
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const TEST_SIZE: Size = size2(110.0, 120.0);
+    const TEST_GROUP_SIZE: Size = size2(1000.0, 800.0);
+    const OFFSET_VALUE: Coord = 33.0;
+
+    #[test]
+    fn test_stack_member_width() {
+        const WIDTH_VALUE: Coord = 200.0;
+        // Width only
+        let member_data =
+            StackMemberData { width: Some(WIDTH_VALUE), ..StackMemberData::default() };
+        let size = member_data.size(TEST_SIZE, TEST_GROUP_SIZE);
+        assert_eq!(size, size2(WIDTH_VALUE, TEST_SIZE.height));
+
+        // Width with left but not right
+        let member_data = StackMemberData {
+            width: Some(WIDTH_VALUE),
+            left: Some(55.0),
+            ..StackMemberData::default()
+        };
+        let size = member_data.size(TEST_SIZE, TEST_GROUP_SIZE);
+        assert_eq!(size, size2(WIDTH_VALUE, TEST_SIZE.height));
+
+        // Width with right but not left
+        let member_data = StackMemberData {
+            width: Some(WIDTH_VALUE),
+            right: Some(25.0),
+            ..StackMemberData::default()
+        };
+        let size = member_data.size(TEST_SIZE, TEST_GROUP_SIZE);
+        assert_eq!(size, size2(WIDTH_VALUE, TEST_SIZE.height));
+
+        // Width with left and right, width should be ignored
+        let member_data = StackMemberData {
+            width: Some(200.0),
+            left: Some(OFFSET_VALUE),
+            right: Some(OFFSET_VALUE),
+            ..StackMemberData::default()
+        };
+        let size = member_data.size(TEST_SIZE, TEST_GROUP_SIZE);
+        assert_eq!(size, size2(TEST_GROUP_SIZE.width - OFFSET_VALUE * 2.0, TEST_SIZE.height));
+    }
+
+    #[test]
+    fn test_stack_member_height() {
+        const HEIGHT_VALUE: Coord = 200.0;
+        // Width only
+        let member_data =
+            StackMemberData { height: Some(HEIGHT_VALUE), ..StackMemberData::default() };
+        let size = member_data.size(TEST_SIZE, TEST_GROUP_SIZE);
+        assert_eq!(size, size2(TEST_SIZE.width, HEIGHT_VALUE));
+
+        // Width with left but not right
+        let member_data = StackMemberData {
+            height: Some(HEIGHT_VALUE),
+            top: Some(55.0),
+            ..StackMemberData::default()
+        };
+        let size = member_data.size(TEST_SIZE, TEST_GROUP_SIZE);
+        assert_eq!(size, size2(TEST_SIZE.width, HEIGHT_VALUE));
+
+        // Width with right but not left
+        let member_data = StackMemberData {
+            height: Some(HEIGHT_VALUE),
+            bottom: Some(25.0),
+            ..StackMemberData::default()
+        };
+        let size = member_data.size(TEST_SIZE, TEST_GROUP_SIZE);
+        assert_eq!(size, size2(TEST_SIZE.width, HEIGHT_VALUE));
+
+        // Height with top and bottom, height should be ignored
+        let member_data = StackMemberData {
+            height: Some(200.0),
+            top: Some(OFFSET_VALUE),
+            bottom: Some(OFFSET_VALUE),
+            ..StackMemberData::default()
+        };
+        let size = member_data.size(TEST_SIZE, TEST_GROUP_SIZE);
+        assert_eq!(size, size2(TEST_SIZE.width, TEST_GROUP_SIZE.height - OFFSET_VALUE * 2.0,));
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_stack_member_negative_value() {
+        let member_data = StackMemberData { height: Some(-10.0), ..StackMemberData::default() };
+        let _size = member_data.size(TEST_SIZE, TEST_GROUP_SIZE);
+    }
+
+    #[test]
+    fn test_stack_member_negative_value_builder() {
+        let member_data =
+            StackMemberDataBuilder::new().height(-10.0).width(TEST_SIZE.width).build();
+        assert!(member_data.is_some());
+        let member_data = StackMemberData::from(&member_data).unwrap();
+        let size = member_data.size(TEST_SIZE, TEST_GROUP_SIZE);
+        assert_eq!(size, TEST_SIZE);
+    }
+}
+
 #[derive(Debug)]
 /// Stack arranger.
 pub struct Stack {
@@ -142,26 +406,57 @@ impl Arranger for Stack {
         &self,
         group_size: Size,
         member_sizes: &mut [Size],
-        _member_data: &[&Option<GroupMemberData>],
+        member_data: &[&Option<GroupMemberData>],
     ) -> Size {
-        if self.expand {
+        let group_size = if self.expand {
             group_size
         } else {
             let mut desired_size = Rect::zero();
 
-            for member in member_sizes.iter() {
-                let r = Rect::from_size(*member);
-                desired_size = desired_size.union(&r);
+            for (member_size, member_data) in member_sizes.iter().zip(member_data.iter()) {
+                let is_positioned = StackMemberData::from(member_data)
+                    .map(|md| md.is_positioned())
+                    .unwrap_or(false);
+                if !is_positioned {
+                    let r = Rect::from_size(*member_size);
+                    desired_size = desired_size.union(&r);
+                }
             }
 
             desired_size.size
+        };
+
+        for (member_size, member_data) in member_sizes.iter_mut().zip(member_data.iter()) {
+            let from_if_positioned = StackMemberData::from_if_positioned(member_data);
+            if let Some(stack_member_data) = from_if_positioned {
+                *member_size = stack_member_data.size(*member_size, group_size);
+            }
         }
+
+        group_size
     }
 
-    fn arrange(&self, group_size: Size, member_sizes: &[Size]) -> Vec<Point> {
+    fn arrange(
+        &self,
+        group_size: Size,
+        member_sizes: &[Size],
+        member_data: &[&Option<GroupMemberData>],
+    ) -> Vec<Point> {
         member_sizes
             .iter()
-            .map(|facet_size| self.alignment.arrange(facet_size, &group_size))
+            .zip(member_data.iter())
+            .map(|(facet_size, member_data)| {
+                let stack_member_data = StackMemberData::from(member_data)
+                    .unwrap_or_else(|| StackMemberData::default());
+                if stack_member_data.is_positioned() {
+                    point2(
+                        stack_member_data.left.unwrap_or(0.0),
+                        stack_member_data.top.unwrap_or(0.0),
+                    )
+                } else {
+                    self.alignment.arrange(facet_size, &group_size)
+                }
+            })
             .collect()
     }
 }
@@ -464,7 +759,12 @@ impl Arranger for Flex {
         }
     }
 
-    fn arrange(&self, group_size: Size, member_sizes: &[Size]) -> Vec<Point> {
+    fn arrange(
+        &self,
+        group_size: Size,
+        member_sizes: &[Size],
+        _member_data: &[&Option<GroupMemberData>],
+    ) -> Vec<Point> {
         let item_count = member_sizes.len();
         let group_main_span = self.direction.span(&group_size);
         let group_cross_span = self.direction.cross_span(&group_size);
@@ -486,19 +786,19 @@ impl Arranger for Flex {
             }
         };
         let mut positions = Vec::new();
-        for facet_size in member_sizes {
+        for member_size in member_sizes {
             let cross = match self.cross_align {
                 CrossAxisAlignment::Start => 0.0,
                 CrossAxisAlignment::End => {
-                    group_cross_span - self.direction.cross_span(&facet_size)
+                    group_cross_span - self.direction.cross_span(&member_size)
                 }
                 CrossAxisAlignment::Center => {
-                    group_cross_span / 2.0 - self.direction.cross_span(&facet_size) / 2.0
+                    group_cross_span / 2.0 - self.direction.cross_span(&member_size) / 2.0
                 }
             };
             positions.push(self.direction.point2(pos, cross));
-            pos += self.direction.span(facet_size);
-            pos += between;
+            let direction_span = self.direction.span(member_size) + between;
+            pos += direction_span;
         }
         positions
     }

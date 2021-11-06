@@ -272,14 +272,14 @@ impl<T> TextGridFacet<T> {
 impl<T: 'static> Facet for TextGridFacet<T> {
     fn update_layers(
         &mut self,
-        size: Size,
+        _: Size,
         layer_group: &mut dyn LayerGroup,
         render_context: &mut RenderContext,
-        _: &ViewAssistantContext,
+        view_context: &ViewAssistantContext,
     ) -> std::result::Result<(), anyhow::Error> {
         duration!("gfx", "TextGrid::update_layers");
 
-        self.size = size;
+        self.size = view_context.size;
 
         let config = self.color_scheme.into();
         let term = self.term.as_ref().map(|t| t.borrow());
