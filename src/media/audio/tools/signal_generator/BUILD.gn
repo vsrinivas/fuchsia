@@ -20,6 +20,7 @@ executable("bin") {
     "//src/media/audio/lib/clock",
     "//src/media/audio/lib/logging:cli",
     "//src/media/audio/lib/wav",
+    "//third_party/re2",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fzl",

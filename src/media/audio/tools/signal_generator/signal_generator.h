@@ -14,6 +14,9 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/clock.h>
 
+#include <memory>
+
+#include "src/media/audio/lib/timeline/timeline_function.h"
 #include "src/media/audio/lib/wav/wav_writer.h"
 
 namespace {
@@ -80,6 +83,10 @@ class MediaApp {
   void set_ref_start_time(bool set_ref_time) { set_ref_start_time_ = set_ref_time; }
   void set_media_start_pts(int64_t media_start_pts) { media_start_pts_ = media_start_pts; }
   void use_pkt_pts(bool use_pts) { timestamp_packets_ = use_pts; }
+  void set_pts_units(uint32_t numerator, uint32_t denominator) {
+    pts_units_numerator_ = numerator;
+    pts_units_denominator_ = denominator;
+  }
   void set_pts_continuity_threshold(float pts_continuity_threshold) {
     pts_continuity_threshold_secs_ = pts_continuity_threshold;
   }
@@ -202,7 +209,10 @@ class MediaApp {
   std::optional<int64_t> media_start_pts_ = std::nullopt;
 
   bool timestamp_packets_ = false;
+  std::optional<uint32_t> pts_units_numerator_;
+  std::optional<uint32_t> pts_units_denominator_;
   std::optional<float> pts_continuity_threshold_secs_ = std::nullopt;
+  std::unique_ptr<TimelineFunction> packet_num_to_pts_;
 
   bool online_;
   // In online mode, we preload the payload buffer half-full then send additional packets per timer.

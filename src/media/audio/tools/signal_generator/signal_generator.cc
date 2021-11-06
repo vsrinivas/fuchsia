@@ -17,6 +17,7 @@
 #include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/clock/utils.h"
 #include "src/media/audio/lib/logging/cli.h"
+#include "src/media/audio/lib/timeline/timeline_function.h"
 
 namespace media::tools {
 
@@ -374,11 +375,18 @@ void MediaApp::SetAudioRendererEvents() {
 }
 
 void MediaApp::ConfigureAudioRendererPts() {
-  if (timestamp_packets_) {
-    audio_renderer_->SetPtsUnits(frame_rate_, 1);
+  if (pts_units_numerator_.has_value()) {
+    audio_renderer_->SetPtsUnits(pts_units_numerator_.value(), pts_units_denominator_.value());
   }
   if (pts_continuity_threshold_secs_.has_value()) {
     audio_renderer_->SetPtsContinuityThreshold(pts_continuity_threshold_secs_.value());
+  }
+
+  if (timestamp_packets_) {
+    packet_num_to_pts_ = std::make_unique<TimelineFunction>(
+        media_start_pts_.value_or(0), 0,
+        static_cast<uint64_t>(frames_per_packet_) * pts_units_numerator_.value_or(1'000'000'000),
+        static_cast<uint64_t>(frame_rate_) * pts_units_denominator_.value_or(1));
   }
 }
 
@@ -438,10 +446,31 @@ void MediaApp::DisplayConfigurationSettings() {
   CLI_CHECK(it != kRenderUsageOptions.cend(), "no RenderUsage found");
   auto usage_str = it->first;
 
-  printf("\nAudioRenderer configured for %d-channel %s at %u Hz with the %s usage.", num_channels_,
+  printf("\nAudioRenderer configured for %d-channel %s at %u Hz with the %s usage", num_channels_,
          SampleFormatToString(sample_format_), frame_rate_, usage_str);
 
-  printf("\nContent is ");
+  if (ramp_target_gain_db_.has_value()) {
+    printf(",\nramping stream gain from %.3f dB to %.3f dB over %.6lf seconds (%ld nanoseconds)",
+           stream_gain_db_.value(), ramp_target_gain_db_.value(),
+           static_cast<double>(ramp_duration_nsec_) / 1000000000, ramp_duration_nsec_);
+  } else if (stream_gain_db_.has_value()) {
+    printf(",\nsetting stream gain to %.3f dB", stream_gain_db_.value());
+  }
+  if (stream_mute_.has_value()) {
+    printf(",\nafter explicitly %s this stream", stream_mute_.value() ? "muting" : "unmuting");
+  }
+  if (usage_gain_db_.has_value() || usage_volume_.has_value()) {
+    printf(",\nafter setting ");
+    if (usage_gain_db_.has_value()) {
+      printf("%s gain to %.3f dB%s", usage_str, usage_gain_db_.value(),
+             (usage_volume_.has_value() ? " and " : ""));
+    }
+    if (usage_volume_.has_value()) {
+      printf("%s volume to %.1f", usage_str, usage_volume_.value());
+    }
+  }
+
+  printf(".\nContent is ");
   if (output_signal_type_ == kOutputTypeNoise) {
     printf("white noise");
   } else if (output_signal_type_ == kOutputTypePinkNoise) {
@@ -460,30 +489,7 @@ void MediaApp::DisplayConfigurationSettings() {
   }
   printf(" with amplitude %.4f", amplitude_);
 
-  if (ramp_target_gain_db_.has_value()) {
-    printf(",\nramping stream gain from %.3f dB to %.3f dB over %.6lf seconds (%ld nanoseconds)",
-           stream_gain_db_.value(), ramp_target_gain_db_.value(),
-           static_cast<double>(ramp_duration_nsec_) / 1000000000, ramp_duration_nsec_);
-  } else if (stream_gain_db_.has_value()) {
-    printf(",\nsetting stream gain to %.3f dB", stream_gain_db_.value());
-  }
-  if (stream_mute_.has_value()) {
-    printf(",\n after explicitly %s this stream", stream_mute_.value() ? "muting" : "unmuting");
-  }
-
-  if (usage_gain_db_.has_value() || usage_volume_.has_value()) {
-    printf(",\nafter setting ");
-    if (usage_gain_db_.has_value()) {
-      printf("%s gain to %.3f dB%s", usage_str, usage_gain_db_.value(),
-             (usage_volume_.has_value() ? " and " : ""));
-    }
-    if (usage_volume_.has_value()) {
-      printf("%s volume to %.1f", usage_str, usage_volume_.value());
-    }
-  }
-
   printf(".\nThe generated signal will play for %.3f seconds", duration_secs_);
-
   if (file_name_) {
     printf(" and will be saved to '%s'", file_name_.value().c_str());
   }
@@ -512,16 +518,22 @@ void MediaApp::DisplayConfigurationSettings() {
 
   printf(".\nThe renderer will transport data using %u %stimestamped buffer sections of %u frames",
          total_mappable_packets_, (timestamp_packets_ ? "" : "non-"), frames_per_packet_);
-
-  if (pts_continuity_threshold_secs_.has_value()) {
-    printf(",\nhaving set the PTS continuity threshold to %f seconds",
-           pts_continuity_threshold_secs_.value());
-  }
-
   if (online_) {
     printf(",\nusing strict timing for flow control (online mode)");
   } else {
     printf(",\nusing previous packet completions for flow control (contiguous mode)");
+  }
+  printf(".\nPlayback will start at %s reference time, at media PTS %s",
+         set_ref_start_time_ ? "a specific" : "an unspecified ('NO_TIMESTAMP')",
+         media_start_pts_.has_value() ? std::to_string(media_start_pts_.value()).c_str()
+                                      : "'NO_TIMESTAMP'");
+  if (timestamp_packets_ || media_start_pts_.has_value()) {
+    printf(",\nusing a timestamp unit of (%u / %u) per second",
+           pts_units_numerator_.value_or(1'000'000'000), pts_units_denominator_.value_or(1));
+  }
+  if (pts_continuity_threshold_secs_.has_value()) {
+    printf(",\nhaving set the PTS continuity threshold to %f seconds",
+           pts_continuity_threshold_secs_.value());
   }
 
   printf(".\n\n");
@@ -716,13 +728,9 @@ MediaApp::AudioPacket MediaApp::CreateAudioPacket(uint64_t packet_num) {
           ? (total_frames_to_send_ - (packet_num * frames_per_packet_)) * frame_size_
           : bytes_per_packet_;
 
-  // packet.pts (media time) is NO_TIMESTAMP by default unless we override it.
+  // By default, the packet.pts (media time) field is NO_TIMESTAMP if we do not override it.
   if (timestamp_packets_) {
-    packet.pts = packet_num * frames_per_packet_;  // assumes PTS units of "frames"
-
-    if (media_start_pts_) {
-      packet.pts += media_start_pts_.value();
-    }
+    packet.pts = static_cast<uint64_t>(packet_num_to_pts_->Apply(packet_num));
   }
 
   return {
