@@ -71,7 +71,7 @@ fn misalign_stack_pointer(pointer: u64) -> u64 {
 fn dispatch_signal_handler(
     current_task: &mut CurrentTask,
     signal_state: &mut SignalState,
-    signal: Signal,
+    siginfo: SignalInfo,
     action: sigaction_t,
 ) {
     let signal_stack_frame = SignalStackFrame::new(
@@ -104,6 +104,7 @@ fn dispatch_signal_handler(
                     ss_sp: stack.ss_sp.ptr() as *mut c_void,
                     ss_flags: stack.ss_flags as i32,
                     ss_size: stack.ss_size,
+                    ..Default::default()
                 })
                 .unwrap_or(sigaltstack::default()),
             uc_sigmask: signal_state.mask,
@@ -140,7 +141,7 @@ fn dispatch_signal_handler(
     signal_state.mask = action.sa_mask;
 
     current_task.registers.rsp = stack_pointer;
-    current_task.registers.rdi = signal.number() as u64;
+    current_task.registers.rdi = siginfo.signal.number() as u64;
     current_task.registers.rip = action.sa_handler.ptr() as u64;
 }
 
@@ -182,17 +183,12 @@ pub fn restore_from_signal_handler(current_task: &mut CurrentTask) {
     current_task.signals.write().mask = signal_stack_frame.context.uc_sigmask;
 }
 
-pub fn send_signal(task: &Task, signal: Signal) {
+pub fn send_signal(task: &Task, siginfo: SignalInfo) {
     let mut signal_state = task.signals.write();
-    let pending_count = signal_state.pending.entry(signal.clone()).or_insert(0);
-    if signal.is_real_time() {
-        *pending_count += 1;
-    } else {
-        *pending_count = 1;
-    }
+    signal_state.enqueue(siginfo.clone());
 
-    if signal.passes_mask(signal_state.mask)
-        && action_for_signal(signal, task.signal_actions.get(signal)) != DeliveryAction::Ignore
+    if !signal_state.is_blocked(siginfo.signal)
+        && action_for_signal(&siginfo, task.signal_actions.get(siginfo.signal)) != DeliveryAction::Ignore
     {
         // Wake the task. Note that any potential signal handler will be executed before
         // the task returns from the suspend (from the perspective of user space).
@@ -200,19 +196,6 @@ pub fn send_signal(task: &Task, signal: Signal) {
             waiter.interrupt();
         }
     }
-}
-
-fn next_pending_signal(state: &SignalState) -> Option<Signal> {
-    state
-        .pending
-        .iter()
-        // Filter out signals that are blocked.
-        .filter(|&(signal, num_signals)| signal.passes_mask(state.mask) && *num_signals > 0)
-        .flat_map(
-            // Filter out signals that are present in the map but have a 0 count.
-            |(signal, num_signals)| if *num_signals > 0 { Some(*signal) } else { None },
-        )
-        .next()
 }
 
 /// Represents the action to take when signal is delivered.
@@ -228,10 +211,11 @@ enum DeliveryAction {
     Continue,
 }
 
-fn action_for_signal(signal: Signal, sigaction: sigaction_t) -> DeliveryAction {
+fn action_for_signal(siginfo: &SignalInfo, sigaction: sigaction_t) -> DeliveryAction {
     match sigaction.sa_handler {
-        SIG_DFL => match signal.number() {
-            SIGCHLD | SIGURG | SIGWINCH | SIGRTMIN..=Signal::NUM_SIGNALS => DeliveryAction::Ignore,
+        SIG_DFL => match siginfo.signal {
+            SIGCHLD | SIGURG | SIGWINCH => DeliveryAction::Ignore,
+            sig if sig.is_real_time() => DeliveryAction::Ignore,
             SIGHUP | SIGINT | SIGKILL | SIGPIPE | SIGALRM | SIGTERM | SIGUSR1 | SIGUSR2
             | SIGPROF | SIGVTALRM | SIGSTKFLT | SIGIO | SIGPWR => DeliveryAction::Terminate,
             SIGQUIT | SIGILL | SIGABRT | SIGFPE | SIGSEGV | SIGBUS | SIGSYS | SIGTRAP | SIGXCPU
@@ -250,23 +234,16 @@ pub fn dequeue_signal(current_task: &mut CurrentTask) {
     let task = current_task.task_arc_clone();
     let mut signal_state = task.signals.write();
 
-    if let Some(signal) = next_pending_signal(&signal_state) {
-        let sigaction = task.signal_actions.get(signal);
-        let action = action_for_signal(signal, sigaction);
-        match action {
+    if let Some(siginfo) = signal_state.take_next_pending() {
+        let sigaction = task.signal_actions.get(siginfo.signal);
+        match action_for_signal(&siginfo, sigaction) {
             DeliveryAction::CallHandler => {
-                dispatch_signal_handler(current_task, &mut signal_state, signal, sigaction);
+                dispatch_signal_handler(current_task, &mut signal_state, siginfo, sigaction);
             }
 
             DeliveryAction::Ignore => {}
 
-            _ => not_implemented!("Unimplemented signal delivery action {:?}", action),
+            action => not_implemented!("Unimplemented signal delivery action {:?}", action),
         };
-        // This unwrap is safe since we checked the signal comes from the signals collection.
-        *signal_state.pending.get_mut(&signal).unwrap() -= 1;
     }
-}
-
-pub fn are_signals_pending(state: &SignalState) -> bool {
-    next_pending_signal(state).is_some()
 }

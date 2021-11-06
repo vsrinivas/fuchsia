@@ -5,10 +5,6 @@
 #ifndef SRC_PROC_LIB_LINUX_UAPI_WRAPPER_H_
 #define SRC_PROC_LIB_LINUX_UAPI_WRAPPER_H_
 
-// Skip this header for now. There are some tricky unions in here that we'll
-// need to deal with later.
-#define _UAPI_ASM_GENERIC_SIGINFO_H
-
 #include <stddef.h>
 
 #include <asm/ioctls.h>

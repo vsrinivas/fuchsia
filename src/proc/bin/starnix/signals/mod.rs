@@ -8,3 +8,4 @@ pub mod types;
 pub mod waiting;
 
 pub use types::*;
+pub use signal_handling::*;

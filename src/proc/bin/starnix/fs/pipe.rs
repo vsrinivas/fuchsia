@@ -12,7 +12,7 @@ use crate::fd_impl_nonseekable;
 use crate::fs::buffers::*;
 use crate::fs::*;
 use crate::mm::PAGE_SIZE;
-use crate::signals::{signal_handling::send_signal, *};
+use crate::signals::*;
 use crate::syscalls::*;
 use crate::task::*;
 use crate::types::*;
@@ -156,7 +156,7 @@ impl Pipe {
         }
 
         if self.reader_count == 0 {
-            send_signal(task, Signal::SIGPIPE);
+            send_signal(task, SignalInfo::default(SIGPIPE));
             return error!(EPIPE);
         }
 

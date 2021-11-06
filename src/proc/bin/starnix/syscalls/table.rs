@@ -10,7 +10,6 @@ use crate::fs::syscalls::*;
 use crate::fs::FdNumber;
 use crate::mm::syscalls::*;
 use crate::signals::syscalls::*;
-use crate::signals::types::*;
 use crate::syscalls::system::*;
 use crate::syscalls::{CurrentTask, SyscallResult};
 use crate::task::syscalls::*;

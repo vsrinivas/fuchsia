@@ -1290,6 +1290,90 @@ pub const SCHED_FLAG_UTIL_CLAMP_MAX: u32 = 64;
 pub const SCHED_FLAG_KEEP_ALL: u32 = 24;
 pub const SCHED_FLAG_UTIL_CLAMP: u32 = 96;
 pub const SCHED_FLAG_ALL: u32 = 127;
+pub const SI_MAX_SIZE: u32 = 128;
+pub const SI_USER: u32 = 0;
+pub const SI_KERNEL: u32 = 128;
+pub const SI_QUEUE: i32 = -1;
+pub const SI_TIMER: i32 = -2;
+pub const SI_MESGQ: i32 = -3;
+pub const SI_ASYNCIO: i32 = -4;
+pub const SI_SIGIO: i32 = -5;
+pub const SI_TKILL: i32 = -6;
+pub const SI_DETHREAD: i32 = -7;
+pub const SI_ASYNCNL: i32 = -60;
+pub const ILL_ILLOPC: u32 = 1;
+pub const ILL_ILLOPN: u32 = 2;
+pub const ILL_ILLADR: u32 = 3;
+pub const ILL_ILLTRP: u32 = 4;
+pub const ILL_PRVOPC: u32 = 5;
+pub const ILL_PRVREG: u32 = 6;
+pub const ILL_COPROC: u32 = 7;
+pub const ILL_BADSTK: u32 = 8;
+pub const ILL_BADIADDR: u32 = 9;
+pub const __ILL_BREAK: u32 = 10;
+pub const __ILL_BNDMOD: u32 = 11;
+pub const NSIGILL: u32 = 11;
+pub const FPE_INTDIV: u32 = 1;
+pub const FPE_INTOVF: u32 = 2;
+pub const FPE_FLTDIV: u32 = 3;
+pub const FPE_FLTOVF: u32 = 4;
+pub const FPE_FLTUND: u32 = 5;
+pub const FPE_FLTRES: u32 = 6;
+pub const FPE_FLTINV: u32 = 7;
+pub const FPE_FLTSUB: u32 = 8;
+pub const __FPE_DECOVF: u32 = 9;
+pub const __FPE_DECDIV: u32 = 10;
+pub const __FPE_DECERR: u32 = 11;
+pub const __FPE_INVASC: u32 = 12;
+pub const __FPE_INVDEC: u32 = 13;
+pub const FPE_FLTUNK: u32 = 14;
+pub const FPE_CONDTRAP: u32 = 15;
+pub const NSIGFPE: u32 = 15;
+pub const SEGV_MAPERR: u32 = 1;
+pub const SEGV_ACCERR: u32 = 2;
+pub const SEGV_BNDERR: u32 = 3;
+pub const SEGV_PKUERR: u32 = 4;
+pub const SEGV_ACCADI: u32 = 5;
+pub const SEGV_ADIDERR: u32 = 6;
+pub const SEGV_ADIPERR: u32 = 7;
+pub const SEGV_MTEAERR: u32 = 8;
+pub const SEGV_MTESERR: u32 = 9;
+pub const NSIGSEGV: u32 = 9;
+pub const BUS_ADRALN: u32 = 1;
+pub const BUS_ADRERR: u32 = 2;
+pub const BUS_OBJERR: u32 = 3;
+pub const BUS_MCEERR_AR: u32 = 4;
+pub const BUS_MCEERR_AO: u32 = 5;
+pub const NSIGBUS: u32 = 5;
+pub const TRAP_BRKPT: u32 = 1;
+pub const TRAP_TRACE: u32 = 2;
+pub const TRAP_BRANCH: u32 = 3;
+pub const TRAP_HWBKPT: u32 = 4;
+pub const TRAP_UNK: u32 = 5;
+pub const NSIGTRAP: u32 = 5;
+pub const CLD_EXITED: u32 = 1;
+pub const CLD_KILLED: u32 = 2;
+pub const CLD_DUMPED: u32 = 3;
+pub const CLD_TRAPPED: u32 = 4;
+pub const CLD_STOPPED: u32 = 5;
+pub const CLD_CONTINUED: u32 = 6;
+pub const NSIGCHLD: u32 = 6;
+pub const POLL_IN: u32 = 1;
+pub const POLL_OUT: u32 = 2;
+pub const POLL_MSG: u32 = 3;
+pub const POLL_ERR: u32 = 4;
+pub const POLL_PRI: u32 = 5;
+pub const POLL_HUP: u32 = 6;
+pub const NSIGPOLL: u32 = 6;
+pub const SYS_SECCOMP: u32 = 1;
+pub const NSIGSYS: u32 = 1;
+pub const EMT_TAGOVF: u32 = 1;
+pub const NSIGEMT: u32 = 1;
+pub const SIGEV_SIGNAL: u32 = 0;
+pub const SIGEV_NONE: u32 = 1;
+pub const SIGEV_THREAD: u32 = 2;
+pub const SIGEV_THREAD_ID: u32 = 4;
+pub const SIGEV_MAX_SIZE: u32 = 64;
 pub const SS_ONSTACK: u32 = 1;
 pub const SS_DISABLE: u32 = 2;
 pub const SS_AUTODISARM: u32 = 2147483648;
@@ -1784,7 +1868,7 @@ pub type wchar_t = crate::x86_64_types::c_int;
 #[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 pub struct max_align_t {
     pub __clang_max_align_nonce1: crate::x86_64_types::c_longlong,
-    pub __bindgen_padding_0: u64,
+    pub __bindgen_padding_0: [u8; 8usize],
     pub __clang_max_align_nonce2: u128,
 }
 #[repr(C)]
@@ -2192,11 +2276,6 @@ pub struct timezone {
     pub tz_minuteswest: crate::x86_64_types::c_int,
     pub tz_dsttime: crate::x86_64_types::c_int,
 }
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct siginfo {
-    _unused: [u8; 0],
-}
 pub type sigset_t = crate::x86_64_types::c_ulong;
 pub type __signalfn_t =
     ::std::option::Option<unsafe extern "C" fn(arg1: crate::x86_64_types::c_int)>;
@@ -2216,6 +2295,7 @@ pub struct sigaction {
 pub struct sigaltstack {
     pub ss_sp: *mut crate::x86_64_types::c_void,
     pub ss_flags: crate::x86_64_types::c_int,
+    pub __bindgen_padding_0: [u8; 4usize],
     pub ss_size: usize,
 }
 impl Default for sigaltstack {
@@ -2629,6 +2709,265 @@ pub struct clone_args {
     pub set_tid_size: __u64,
     pub cgroup: __u64,
 }
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union sigval {
+    pub sival_int: crate::x86_64_types::c_int,
+    pub sival_ptr: *mut crate::x86_64_types::c_void,
+}
+impl Default for sigval {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+pub type sigval_t = sigval;
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union __sifields {
+    pub _kill: __sifields__bindgen_ty_1,
+    pub _timer: __sifields__bindgen_ty_2,
+    pub _rt: __sifields__bindgen_ty_3,
+    pub _sigchld: __sifields__bindgen_ty_4,
+    pub _sigfault: __sifields__bindgen_ty_5,
+    pub _sigpoll: __sifields__bindgen_ty_6,
+    pub _sigsys: __sifields__bindgen_ty_7,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct __sifields__bindgen_ty_1 {
+    pub _pid: __kernel_pid_t,
+    pub _uid: __kernel_uid32_t,
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct __sifields__bindgen_ty_2 {
+    pub _tid: __kernel_timer_t,
+    pub _overrun: crate::x86_64_types::c_int,
+    pub _sigval: sigval_t,
+    pub _sys_private: crate::x86_64_types::c_int,
+    pub __bindgen_padding_0: [u8; 4usize],
+}
+impl Default for __sifields__bindgen_ty_2 {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct __sifields__bindgen_ty_3 {
+    pub _pid: __kernel_pid_t,
+    pub _uid: __kernel_uid32_t,
+    pub _sigval: sigval_t,
+}
+impl Default for __sifields__bindgen_ty_3 {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct __sifields__bindgen_ty_4 {
+    pub _pid: __kernel_pid_t,
+    pub _uid: __kernel_uid32_t,
+    pub _status: crate::x86_64_types::c_int,
+    pub __bindgen_padding_0: [u8; 4usize],
+    pub _utime: __kernel_clock_t,
+    pub _stime: __kernel_clock_t,
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct __sifields__bindgen_ty_5 {
+    pub _addr: *mut crate::x86_64_types::c_void,
+    pub __bindgen_anon_1: __sifields__bindgen_ty_5__bindgen_ty_1,
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union __sifields__bindgen_ty_5__bindgen_ty_1 {
+    pub _addr_lsb: crate::x86_64_types::c_short,
+    pub _addr_bnd: __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_1,
+    pub _addr_pkey: __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_2,
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_1 {
+    pub _dummy_bnd: [crate::x86_64_types::c_char; 8usize],
+    pub _lower: *mut crate::x86_64_types::c_void,
+    pub _upper: *mut crate::x86_64_types::c_void,
+}
+impl Default for __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_1 {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_2 {
+    pub _dummy_pkey: [crate::x86_64_types::c_char; 8usize],
+    pub _pkey: __u32,
+}
+impl Default for __sifields__bindgen_ty_5__bindgen_ty_1 {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+impl Default for __sifields__bindgen_ty_5 {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct __sifields__bindgen_ty_6 {
+    pub _band: crate::x86_64_types::c_long,
+    pub _fd: crate::x86_64_types::c_int,
+    pub __bindgen_padding_0: [u8; 4usize],
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct __sifields__bindgen_ty_7 {
+    pub _call_addr: *mut crate::x86_64_types::c_void,
+    pub _syscall: crate::x86_64_types::c_int,
+    pub _arch: crate::x86_64_types::c_uint,
+}
+impl Default for __sifields__bindgen_ty_7 {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+impl Default for __sifields {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct siginfo {
+    pub __bindgen_anon_1: siginfo__bindgen_ty_1,
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union siginfo__bindgen_ty_1 {
+    pub __bindgen_anon_1: siginfo__bindgen_ty_1__bindgen_ty_1,
+    pub _si_pad: [crate::x86_64_types::c_int; 32usize],
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct siginfo__bindgen_ty_1__bindgen_ty_1 {
+    pub si_signo: crate::x86_64_types::c_int,
+    pub si_errno: crate::x86_64_types::c_int,
+    pub si_code: crate::x86_64_types::c_int,
+    pub __bindgen_padding_0: [u8; 4usize],
+    pub _sifields: __sifields,
+}
+impl Default for siginfo__bindgen_ty_1__bindgen_ty_1 {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+impl Default for siginfo__bindgen_ty_1 {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+impl Default for siginfo {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+pub type siginfo_t = siginfo;
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct sigevent {
+    pub sigev_value: sigval_t,
+    pub sigev_signo: crate::x86_64_types::c_int,
+    pub sigev_notify: crate::x86_64_types::c_int,
+    pub _sigev_un: sigevent__bindgen_ty_1,
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union sigevent__bindgen_ty_1 {
+    pub _pad: [crate::x86_64_types::c_int; 12usize],
+    pub _tid: crate::x86_64_types::c_int,
+    pub _sigev_thread: sigevent__bindgen_ty_1__bindgen_ty_1,
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct sigevent__bindgen_ty_1__bindgen_ty_1 {
+    pub _function: ::std::option::Option<unsafe extern "C" fn(arg1: sigval_t)>,
+    pub _attribute: *mut crate::x86_64_types::c_void,
+}
+impl Default for sigevent__bindgen_ty_1__bindgen_ty_1 {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+impl Default for sigevent__bindgen_ty_1 {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+impl Default for sigevent {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+pub type sigevent_t = sigevent;
 pub type __kernel_sa_family_t = crate::x86_64_types::c_ushort;
 #[repr(C)]
 #[derive(Copy, Clone)]

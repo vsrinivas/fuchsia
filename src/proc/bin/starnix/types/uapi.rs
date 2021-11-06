@@ -96,6 +96,17 @@ pub struct sigaction_t {
     pub sa_mask: sigset_t,
 }
 
+#[repr(C)]
+#[derive(AsBytes, FromBytes, Debug, Default)]
+pub struct siginfo {
+    pub si_signo: c_int,
+    pub si_errno: c_int,
+    pub si_code: c_int,
+    padding1: [u8; 12],
+    pub si_status: c_int,
+}
+pub type siginfo_t = siginfo;
+
 pub use uapi::__SIGRTMIN as SIGRTMIN;
 
 pub const SIG_DFL: UserAddress = UserAddress::from(0);

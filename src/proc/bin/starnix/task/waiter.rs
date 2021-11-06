@@ -5,7 +5,6 @@
 use crate::error;
 use crate::fs::FdEvents;
 use crate::logging::*;
-use crate::signals::signal_handling::are_signals_pending;
 use crate::task::Task;
 use crate::types::Errno;
 use crate::types::*;
@@ -77,7 +76,7 @@ impl Waiter {
     ) -> Result<(), Errno> {
         {
             let mut signal_state = current_task.signals.write();
-            if are_signals_pending(&signal_state) {
+            if signal_state.is_any_pending() {
                 return error!(EINTR);
             }
             signal_state.waiter = Some(Arc::clone(self));

@@ -786,7 +786,7 @@ impl Task {
         }
 
         // TODO(lindkvist): This check should also verify that the sessions are the same.
-        if Signal::try_from(unchecked_signal) == Ok(Signal::SIGCONT) {
+        if Signal::try_from(unchecked_signal) == Ok(SIGCONT) {
             return true;
         }
 

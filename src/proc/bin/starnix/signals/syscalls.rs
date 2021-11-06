@@ -9,7 +9,6 @@ use super::waiting::*;
 use crate::errno;
 use crate::error;
 use crate::not_implemented;
-use crate::signals::signal_handling::*;
 use crate::signals::*;
 use crate::syscalls::*;
 use crate::task::*;
@@ -98,10 +97,7 @@ pub fn sys_rt_sigprocmask(
         // Arguments have already been verified, this should never match.
         _ => signal_mask,
     };
-
-    // Can't block SIGKILL, or SIGSTOP.
-    let signal_mask = signal_mask & !(Signal::SIGSTOP.mask() | Signal::SIGKILL.mask());
-    signal_state.mask = signal_mask;
+    signal_state.set_signal_mask(signal_mask);
 
     Ok(SUCCESS)
 }
@@ -175,7 +171,10 @@ fn send_unchecked_signal(task: &Task, unchecked_signal: &UncheckedSignal) -> Res
         return Ok(());
     }
 
-    send_signal(task, Signal::try_from(unchecked_signal)?);
+    send_signal(task, SignalInfo {
+        code: SI_USER,
+        ..SignalInfo::default(Signal::try_from(unchecked_signal)?)
+    });
     Ok(())
 }
 
@@ -342,8 +341,8 @@ pub fn sys_waitid(
                 let status = exit_code_to_status(zombie_task.exit_code);
 
                 let mut siginfo = siginfo_t::default();
-                siginfo.si_signo = SIGCHLD as i32;
-                siginfo.si_code = CLD_EXITED;
+                siginfo.si_signo = uapi::SIGCHLD as i32;
+                siginfo.si_code = CLD_EXITED as i32;
                 siginfo.si_status = status;
                 current_task.mm.write_object(user_info, &siginfo)?;
             }
@@ -500,7 +499,7 @@ mod tests {
     async fn test_sigprocmask_null_set() {
         let (_kernel, current_task) = create_kernel_and_task();
         let addr = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
-        let original_mask = Signal::SIGTRAP.mask();
+        let original_mask = SIGTRAP.mask();
         {
             current_task.signals.write().mask = original_mask;
         }
@@ -529,7 +528,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_sigprocmask_null_set_and_old_set() {
         let (_kernel, current_task) = create_kernel_and_task();
-        let original_mask = Signal::SIGTRAP.mask();
+        let original_mask = SIGTRAP.mask();
         {
             current_task.signals.write().mask = original_mask;
         }
@@ -555,12 +554,12 @@ mod tests {
             .write_memory(addr, &[0u8; std::mem::size_of::<sigset_t>() * 2])
             .expect("failed to clear struct");
 
-        let original_mask = Signal::SIGTRAP.mask();
+        let original_mask = SIGTRAP.mask();
         {
             current_task.signals.write().mask = original_mask;
         }
 
-        let new_mask: sigset_t = Signal::SIGIO.mask();
+        let new_mask: sigset_t = SIGIO.mask();
         let set = UserRef::<sigset_t>::new(addr);
         current_task.mm.write_object(set, &new_mask).expect("failed to set mask");
 
@@ -588,12 +587,12 @@ mod tests {
             .write_memory(addr, &[0u8; std::mem::size_of::<sigset_t>() * 2])
             .expect("failed to clear struct");
 
-        let original_mask = Signal::SIGTRAP.mask();
+        let original_mask = SIGTRAP.mask();
         {
             current_task.signals.write().mask = original_mask;
         }
 
-        let new_mask: sigset_t = Signal::SIGIO.mask();
+        let new_mask: sigset_t = SIGIO.mask();
         let set = UserRef::<sigset_t>::new(addr);
         current_task.mm.write_object(set, &new_mask).expect("failed to set mask");
 
@@ -621,12 +620,12 @@ mod tests {
             .write_memory(addr, &[0u8; std::mem::size_of::<sigset_t>() * 2])
             .expect("failed to clear struct");
 
-        let original_mask = Signal::SIGTRAP.mask() | Signal::SIGIO.mask();
+        let original_mask = SIGTRAP.mask() | SIGIO.mask();
         {
             current_task.signals.write().mask = original_mask;
         }
 
-        let new_mask: sigset_t = Signal::SIGTRAP.mask();
+        let new_mask: sigset_t = SIGTRAP.mask();
         let set = UserRef::<sigset_t>::new(addr);
         current_task.mm.write_object(set, &new_mask).expect("failed to set mask");
 
@@ -641,7 +640,7 @@ mod tests {
         let mut old_mask = sigset_t::default();
         current_task.mm.read_object(old_set, &mut old_mask).expect("failed to read mask");
         assert_eq!(old_mask, original_mask);
-        assert_eq!(current_task.signals.read().mask, Signal::SIGIO.mask());
+        assert_eq!(current_task.signals.read().mask, SIGIO.mask());
     }
 
     /// It's ok to call sigprocmask to unblock a signal that is not set.
@@ -654,12 +653,12 @@ mod tests {
             .write_memory(addr, &[0u8; std::mem::size_of::<sigset_t>() * 2])
             .expect("failed to clear struct");
 
-        let original_mask = Signal::SIGIO.mask();
+        let original_mask = SIGIO.mask();
         {
             current_task.signals.write().mask = original_mask;
         }
 
-        let new_mask: sigset_t = Signal::SIGTRAP.mask();
+        let new_mask: sigset_t = SIGTRAP.mask();
         let set = UserRef::<sigset_t>::new(addr);
         current_task.mm.write_object(set, &new_mask).expect("failed to set mask");
 
@@ -687,12 +686,12 @@ mod tests {
             .write_memory(addr, &[0u8; std::mem::size_of::<sigset_t>() * 2])
             .expect("failed to clear struct");
 
-        let original_mask = Signal::SIGIO.mask();
+        let original_mask = SIGIO.mask();
         {
             current_task.signals.write().mask = original_mask;
         }
 
-        let new_mask: sigset_t = Signal::SIGSTOP.mask() | Signal::SIGKILL.mask();
+        let new_mask: sigset_t = SIGSTOP.mask() | SIGKILL.mask();
         let set = UserRef::<sigset_t>::new(addr);
         current_task.mm.write_object(set, &new_mask).expect("failed to set mask");
 
@@ -761,7 +760,7 @@ mod tests {
         original_action.sa_mask = 3;
 
         {
-            current_task.signal_actions.set(Signal::SIGHUP, original_action.clone());
+            current_task.signal_actions.set(SIGHUP, original_action.clone());
         }
 
         let old_action_ref = UserRef::<sigaction_t>::new(addr);
@@ -812,7 +811,7 @@ mod tests {
             Ok(SUCCESS)
         );
 
-        assert_eq!(current_task.signal_actions.get(Signal::SIGINT), original_action,);
+        assert_eq!(current_task.signal_actions.get(SIGINT), original_action,);
     }
 
     /// A task should be able to signal itself.
@@ -852,7 +851,7 @@ mod tests {
             .write_memory(addr, &[0u8; std::mem::size_of::<sigset_t>() * 2])
             .expect("failed to clear struct");
 
-        let new_mask: sigset_t = Signal::SIGIO.mask();
+        let new_mask: sigset_t = SIGIO.mask();
         let set = UserRef::<sigset_t>::new(addr);
         current_task.mm.write_object(set, &new_mask).expect("failed to set mask");
 
@@ -867,19 +866,11 @@ mod tests {
             Ok(SUCCESS)
         );
         assert_eq!(sys_kill(&current_task, current_task.id, SIGIO.into()), Ok(SUCCESS));
-
-        {
-            let pending_signals = &current_task.signals.read().pending;
-            assert_eq!(pending_signals[&Signal::SIGIO], 1);
-        }
+        assert_eq!(current_task.signals.read().queued_count(SIGIO), 1);
 
         // A second signal should not increment the number of pending signals.
         assert_eq!(sys_kill(&current_task, current_task.id, SIGIO.into()), Ok(SUCCESS));
-
-        {
-            let pending_signals = &current_task.signals.read().pending;
-            assert_eq!(pending_signals[&Signal::SIGIO], 1);
-        }
+        assert_eq!(current_task.signals.read().queued_count(SIGIO), 1);
     }
 
     /// More than one instance of a real-time signal can be blocked.
@@ -892,7 +883,7 @@ mod tests {
             .write_memory(addr, &[0u8; std::mem::size_of::<sigset_t>() * 2])
             .expect("failed to clear struct");
 
-        let new_mask: sigset_t = Signal::SIGRTMIN.mask();
+        let new_mask: sigset_t = SIGRTMIN.mask();
         let set = UserRef::<sigset_t>::new(addr);
         current_task.mm.write_object(set, &new_mask).expect("failed to set mask");
 
@@ -907,19 +898,11 @@ mod tests {
             Ok(SUCCESS)
         );
         assert_eq!(sys_kill(&current_task, current_task.id, SIGRTMIN.into()), Ok(SUCCESS));
-
-        {
-            let pending_signals = &current_task.signals.read().pending;
-            assert_eq!(pending_signals[&Signal::SIGRTMIN], 1);
-        }
+        assert_eq!(current_task.signals.read().queued_count(SIGRTMIN), 1);
 
         // A second signal should increment the number of pending signals.
         assert_eq!(sys_kill(&current_task, current_task.id, SIGRTMIN.into()), Ok(SUCCESS));
-
-        {
-            let pending_signals = &current_task.signals.read().pending;
-            assert_eq!(pending_signals[&Signal::SIGRTMIN], 2);
-        }
+        assert_eq!(current_task.signals.read().queued_count(SIGRTMIN), 2);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -933,7 +916,7 @@ mod tests {
             let addr = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
             let user_ref = UserRef::<sigset_t>::new(addr);
 
-            let sigset: sigset_t = !Signal::SIGCONT.mask();
+            let sigset: sigset_t = !SIGCONT.mask();
             current_task.mm.write_object(user_ref, &sigset).expect("failed to set action");
 
             assert_eq!(

@@ -170,6 +170,7 @@ if (target_cpu == "x64") {
       "types/mod.rs",
       "types/open_flags.rs",
       "types/resource_limits.rs",
+      "types/signals.rs",
       "types/time.rs",
       "types/uapi.rs",
       "types/user_address.rs",

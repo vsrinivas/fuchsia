@@ -49,7 +49,6 @@ mod tests {
     use super::*;
 
     use crate::signals::syscalls::sys_kill;
-    use crate::signals::UncheckedSignal;
     use crate::testing::*;
 
     #[test]

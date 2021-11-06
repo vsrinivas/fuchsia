@@ -24,6 +24,7 @@ PATH="$PWD/prebuilt/third_party/rust/linux-x64/bin:$PATH" \
   --size_t-is-usize \
   --ignore-functions \
   --with-derive-default \
+  --explicit-padding \
   --opaque-type=__sighandler_t \
   --opaque-type=__sigrestore_t \
   --ctypes-prefix="crate::x86_64_types" \
