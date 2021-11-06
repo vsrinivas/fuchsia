@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 use crate::errno;
 use crate::from_status_like_fdio;
-use crate::signals::signal_handling::send_checked_signal;
+use crate::signals::signal_handling::send_signal;
 use crate::signals::types::*;
 use crate::task::*;
 use crate::types::*;
@@ -101,7 +101,7 @@ impl ThreadGroup {
             if let Some(parent) = self.kernel.pids.read().get_task(zombie.parent) {
                 parent.zombie_children.lock().push(zombie);
                 // TODO: Should this be zombie_leader.exit_signal?
-                send_checked_signal(&parent, Signal::SIGCHLD);
+                send_signal(&parent, Signal::SIGCHLD);
             }
 
             if let Some(parent) = self.kernel.pids.read().get_task(task.parent) {

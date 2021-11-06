@@ -168,6 +168,17 @@ pub fn sys_rt_sigsuspend(
     Ok(SUCCESS)
 }
 
+fn send_unchecked_signal(task: &Task, unchecked_signal: &UncheckedSignal) -> Result<(), Errno> {
+    // 0 is a sentinel value used to do permission checks.
+    let sentinel_signal = UncheckedSignal::from(0);
+    if *unchecked_signal == sentinel_signal {
+        return Ok(());
+    }
+
+    send_signal(task, Signal::try_from(unchecked_signal)?);
+    Ok(())
+}
+
 pub fn sys_kill(
     current_task: &CurrentTask,
     pid: pid_t,
@@ -181,7 +192,7 @@ pub fn sys_kill(
             if !current_task.can_signal(&target, &unchecked_signal) {
                 return error!(EPERM);
             }
-            send_signal(&target, &unchecked_signal)?;
+            send_unchecked_signal(&target, &unchecked_signal)?;
         }
         pid if pid == -1 => {
             // "If pid equals -1, then sig is sent to every process for which
@@ -254,7 +265,7 @@ pub fn sys_tgkill(
         return error!(EPERM);
     }
 
-    send_signal(&target, &unchecked_signal)?;
+    send_unchecked_signal(&target, &unchecked_signal)?;
     Ok(SUCCESS)
 }
 
@@ -292,7 +303,7 @@ where
             last_error = errno!(EPERM);
         }
 
-        match send_signal(&leader, unchecked_signal) {
+        match send_unchecked_signal(&leader, unchecked_signal) {
             Ok(_) => sent_signal = true,
             Err(errno) => last_error = errno,
         }

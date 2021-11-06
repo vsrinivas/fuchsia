@@ -6,7 +6,6 @@ use crate::not_implemented;
 use crate::signals::*;
 use crate::task::*;
 use crate::types::*;
-use std::convert::TryFrom;
 
 use fuchsia_zircon as zx;
 
@@ -183,18 +182,7 @@ pub fn restore_from_signal_handler(current_task: &mut CurrentTask) {
     current_task.signals.write().mask = signal_stack_frame.context.uc_sigmask;
 }
 
-pub fn send_signal(task: &Task, unchecked_signal: &UncheckedSignal) -> Result<(), Errno> {
-    // 0 is a sentinel value used to do permission checks.
-    let sentinel_signal = UncheckedSignal::from(0);
-    if *unchecked_signal == sentinel_signal {
-        return Ok(());
-    }
-
-    send_checked_signal(task, Signal::try_from(unchecked_signal)?);
-    Ok(())
-}
-
-pub fn send_checked_signal(task: &Task, signal: Signal) {
+pub fn send_signal(task: &Task, signal: Signal) {
     let mut signal_state = task.signals.write();
     let pending_count = signal_state.pending.entry(signal.clone()).or_insert(0);
     if signal.is_real_time() {
