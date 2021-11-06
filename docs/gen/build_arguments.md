@@ -68,14 +68,14 @@ TODO(fxbug.dev/67565) - remove once external sync FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/f1555b5a2d04d41bf3065f24a8bd6bbb91c59fe2/src/intel/vulkan/BUILD.gn#27)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/ed6ce9eda242b3f983ea5337ac428a22668df3c1/src/intel/vulkan/BUILD.gn#27)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/f1555b5a2d04d41bf3065f24a8bd6bbb91c59fe2/src/intel/vulkan/BUILD.gn#30)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/ed6ce9eda242b3f983ea5337ac428a22668df3c1/src/intel/vulkan/BUILD.gn#30)
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -873,19 +873,19 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/4d948e103efcf23664b7771343dfab17cdb875f2/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/fb1282c0d18177efac375f45ec7ae92ee6de2951/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_http_transport_impl
 
 **Current value (from the default):** `"libcurl"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/4d948e103efcf23664b7771343dfab17cdb875f2/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/fb1282c0d18177efac375f45ec7ae92ee6de2951/util/net/tls.gni#21)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/4d948e103efcf23664b7771343dfab17cdb875f2/util/net/tls.gni#30)
+From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/fb1282c0d18177efac375f45ec7ae92ee6de2951/util/net/tls.gni#30)
 
 ### cts_version
 Name of the CTS version.
