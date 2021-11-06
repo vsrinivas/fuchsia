@@ -1,16 +1,19 @@
 {
     include: [
-        "syslog/client.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
         "//src/sys/test_runners/tmp_storage.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
         binary: "bin/remote_control_lib_test",
     },
     use: [
         {
-            protocol: [ "fuchsia.sys.Launcher" ],
-            from: "parent",
+            protocol: [
+                "fuchsia.net.name.Lookup",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.sys.Launcher",
+            ],
         },
     ],
 }

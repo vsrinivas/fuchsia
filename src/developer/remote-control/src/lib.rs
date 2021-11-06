@@ -13,9 +13,7 @@ use {
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::future::join,
     futures::prelude::*,
-    std::cell::RefCell,
-    std::net::SocketAddr,
-    std::rc::Rc,
+    std::{cell::RefCell, net::SocketAddr, rc::Rc},
     tracing::*,
 };
 
@@ -171,7 +169,7 @@ impl RemoteControlService {
                     }
                 };
 
-                Self::spawn_tcp_forward_task(stream, local);
+                spawn_forward_traffic(stream, local);
 
                 // Send the socket to the client.
                 if let Err(e) = client.forward(remote, &mut SocketAddressExt(addr).into()) {
@@ -196,63 +194,10 @@ impl RemoteControlService {
         socket: fasync::Socket,
     ) -> Result<(), std::io::Error> {
         let tcp_conn = fasync::net::TcpStream::connect(addr)?.await?;
-        Self::spawn_tcp_forward_task(tcp_conn, socket);
+
+        spawn_forward_traffic(tcp_conn, socket);
+
         Ok(())
-    }
-
-    fn spawn_tcp_forward_task(tcp_side: fasync::net::TcpStream, socket: fasync::Socket) {
-        let mut socket_closed = fasync::OnSignals::new(&socket, zx::Signals::SOCKET_PEER_CLOSED)
-            .extend_lifetime()
-            .fuse();
-
-        let (mut conn_read, mut conn_write) = tcp_side.split();
-        let (mut socket_read, mut socket_write) = socket.split();
-
-        let write_read = async move {
-            // TODO(84188): Use a buffer pool once we have them.
-            let mut buf = [0; 4096];
-            loop {
-                let bytes = socket_read.read(&mut buf).await?;
-                if bytes == 0 {
-                    break Ok(());
-                }
-                conn_write.write_all(&mut buf[..bytes]).await?;
-                conn_write.flush().await?;
-            }
-        };
-
-        let read_write = async move {
-            // TODO(84188): Use a buffer pool once we have them.
-            let mut buf = [0; 4096];
-            loop {
-                futures::select! {
-                    res = conn_read.read(&mut buf).fuse() => {
-                        let bytes = res?;
-                        if bytes == 0 {
-                            break Ok(()) as Result<(), std::io::Error>;
-                        }
-                        socket_write.write_all(&mut buf[..bytes]).await?;
-                        socket_write.flush().await?;
-                    }
-                    _ = socket_closed => {
-                        break Ok(());
-                    }
-                }
-            }
-        };
-        let forward = join(read_write, write_read);
-        fasync::Task::local(async move {
-            match forward.await {
-                (Err(a), Err(b)) => {
-                    log::warn!("Port forward closed with errors:\n  {:?}\n  {:?}", a, b)
-                }
-                (Err(e), _) | (_, Err(e)) => {
-                    log::warn!("Port forward closed with error: {:?}", e)
-                }
-                (Ok(()), Ok(())) => (),
-            }
-        })
-        .detach();
     }
 
     async fn connect_with_matcher(
@@ -352,14 +297,130 @@ impl RemoteControlService {
     }
 }
 
+#[derive(Debug)]
+enum ForwardError {
+    TcpToZx(anyhow::Error),
+    ZxToTcp(anyhow::Error),
+    Both {
+        tcp_to_zx: anyhow::Error,
+        zx_to_tcp: anyhow::Error,
+    },
+}
+
+fn spawn_forward_traffic(
+    tcp_side: fasync::net::TcpStream,
+    zx_side: fasync::Socket,
+) {
+    fasync::Task::local(async move {
+        match forward_traffic(tcp_side, zx_side).await {
+            Ok(()) => {}
+            Err(ForwardError::TcpToZx(err)) => {
+                log::error!("error forwarding from tcp to zx socket: {:#}", err);
+            }
+            Err(ForwardError::ZxToTcp(err)) => {
+                log::error!("error forwarding from zx to tcp socket: {:#}", err);
+            }
+            Err(ForwardError::Both { tcp_to_zx, zx_to_tcp }) => {
+                log::error!("error forwarding from zx to tcp socket:\n{:#}\n{:#}", tcp_to_zx, zx_to_tcp);
+            }
+        }
+    }).detach()
+}
+
+async fn forward_traffic(
+    tcp_side: fasync::net::TcpStream,
+    zx_side: fasync::Socket,
+) -> Result<(), ForwardError> {
+    // We will forward traffic with two sub-tasks. One to stream bytes from the
+    // tcp socket to the zircon socket, and vice versa. Since we have two tasks,
+    // we need to handle how we exit the loops, otherwise we risk leaking
+    // resource.
+    //
+    // To handle this, we'll create two promises that will resolve upon the
+    // stream closing. For the zircon socket, we can use a native signal, but
+    // unfortunately fasync::net::TcpStream doesn't support listening for
+    // closure, so we'll just use a oneshot channel to signal to the other task
+    // when the tcp stream closes.
+    let (tcp_closed_tx, mut tcp_closed_rx) = futures::channel::oneshot::channel::<()>();
+    let mut zx_closed =
+        fasync::OnSignals::new(&zx_side, zx::Signals::SOCKET_PEER_CLOSED).extend_lifetime().fuse();
+
+    let (mut tcp_read, mut tcp_write) = tcp_side.split();
+    let (mut zx_read, mut zx_write) = zx_side.split();
+
+    let tcp_to_zx = async move {
+        let res = async move {
+            // TODO(84188): Use a buffer pool once we have them.
+            let mut buf = [0; 4096];
+            loop {
+                futures::select! {
+                    res = tcp_read.read(&mut buf).fuse() => {
+                        let num_bytes = res.context("read tcp socket")?;
+                        if num_bytes == 0 {
+                            return Ok(());
+                        }
+
+                        zx_write.write_all(&mut buf[..num_bytes]).await.context("write zx socket")?;
+                        zx_write.flush().await.context("flush zx socket")?;
+                    }
+                    _ = zx_closed => {
+                        return Ok(());
+                    }
+                }
+            }
+        }
+        .await;
+
+        // Let the other task know the tcp stream has shut down. If the other
+        // task finished before this one, this send could fail. That's okay, so
+        // just ignore the result.
+        let _ = tcp_closed_tx.send(());
+
+        res
+    };
+
+    let zx_to_tcp = async move {
+        // TODO(84188): Use a buffer pool once we have them.
+        let mut buf = [0; 4096];
+        loop {
+            futures::select! {
+                res = zx_read.read(&mut buf).fuse() => {
+                    let num_bytes = res.context("read zx socket")?;
+                    if num_bytes == 0 {
+                        return Ok(());
+                    }
+                    tcp_write.write_all(&mut buf[..num_bytes]).await.context("write tcp socket")?;
+                    tcp_write.flush().await.context("flush tcp socket")?;
+                }
+                _ = tcp_closed_rx => {
+                    break Ok(());
+                }
+            }
+        }
+    };
+
+    match join(tcp_to_zx, zx_to_tcp).await {
+        (Ok(()), Ok(())) => Ok(()),
+        (Err(tcp_to_zx), Err(zx_to_tcp)) => {
+            Err(ForwardError::Both { tcp_to_zx, zx_to_tcp })
+        }
+        (Err(tcp_to_zx), Ok(())) => {
+            Err(ForwardError::TcpToZx(tcp_to_zx))
+        }
+        (Ok(()), Err(zx_to_tcp)) => {
+            Err(ForwardError::ZxToTcp(zx_to_tcp))
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use {
         super::*, fidl_fuchsia_buildinfo as buildinfo, fidl_fuchsia_developer_remotecontrol as rcs,
         fidl_fuchsia_device as fdevice, fidl_fuchsia_hwinfo as hwinfo, fidl_fuchsia_io::NodeMarker,
         fidl_fuchsia_net as fnet, fidl_fuchsia_net_interfaces as fnet_interfaces,
-        fuchsia_zircon as zx, selectors::parse_selector, service_discovery::PathEntry,
-        std::path::PathBuf,
+        fuchsia_zircon as zx, matches::assert_matches, selectors::parse_selector,
+        service_discovery::PathEntry, std::net::Ipv4Addr, std::path::PathBuf,
     };
 
     const NODENAME: &'static str = "thumb-set-human-shred";
@@ -683,5 +744,94 @@ mod tests {
                 service: "myservice2".to_string()
             }));
         Ok(())
+    }
+
+    async fn create_forward_tunnel(
+    ) -> (fasync::net::TcpStream, fasync::Socket, fasync::Task<Result<(), ForwardError>>) {
+        let addr = (Ipv4Addr::LOCALHOST, 0).into();
+        let listener = fasync::net::TcpListener::bind(&addr).unwrap();
+        let listen_addr = listener.local_addr().unwrap();
+        let mut listener_stream = listener.accept_stream();
+
+        let (remote_tx, remote_rx) = futures::channel::oneshot::channel();
+
+        // Run the listener in a background task so it can forward traffic in
+        // parallel with the test.
+        let forward_task = fasync::Task::local(async move {
+            let (stream, _) = listener_stream.next().await.unwrap().unwrap();
+
+            let (local, remote) = zx::Socket::create(zx::SocketOpts::STREAM).unwrap();
+            let local = fasync::Socket::from_socket(local).unwrap();
+            let remote = fasync::Socket::from_socket(remote).unwrap();
+
+            remote_tx.send(remote).unwrap();
+
+            forward_traffic(stream, local).await
+        });
+
+        // We should connect to the TCP socket, which should set us up a zircon socket.
+        let tcp_stream = fasync::net::TcpStream::connect(listen_addr).unwrap().await.unwrap();
+        let zx_socket = remote_rx.await.unwrap();
+
+        (tcp_stream, zx_socket, forward_task)
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_forward_traffic_tcp_closes_first() {
+        let (mut tcp_stream, mut zx_socket, forward_task) = create_forward_tunnel().await;
+
+        // Now any traffic that is sent to the tcp stream should come out of the zx socket.
+        let msg = b"ping";
+        tcp_stream.write_all(msg).await.unwrap();
+
+        let mut buf = [0; 4096];
+        zx_socket.read_exact(&mut buf[..msg.len()]).await.unwrap();
+        assert_eq!(&buf[..msg.len()], msg);
+
+        // Send a reply from the zx socket to the tcp stream.
+        let msg = b"pong";
+        zx_socket.write_all(msg).await.unwrap();
+
+        tcp_stream.read_exact(&mut buf[..msg.len()]).await.unwrap();
+        assert_eq!(&buf[..msg.len()], msg);
+
+        // Now, close the tcp stream, this should cause the zx socket to close as well.
+        std::mem::drop(tcp_stream);
+
+        let mut buf = vec![];
+        zx_socket.read_to_end(&mut buf).await.unwrap();
+        assert_eq!(&buf, &[]);
+
+        // Make sure the forward task shuts down as well.
+        assert_matches!(forward_task.await, Ok(()));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_forward_traffic_zx_socket_closes_first() {
+        let (mut tcp_stream, mut zx_socket, forward_task) = create_forward_tunnel().await;
+
+        // Check that the zx socket can send the first data.
+        let msg = b"ping";
+        zx_socket.write_all(msg).await.unwrap();
+
+        let mut buf = [0; 4096];
+        tcp_stream.read_exact(&mut buf[..msg.len()]).await.unwrap();
+        assert_eq!(&buf[..msg.len()], msg);
+
+        let msg = b"pong";
+        tcp_stream.write_all(msg).await.unwrap();
+
+        zx_socket.read_exact(&mut buf[..msg.len()]).await.unwrap();
+        assert_eq!(&buf[..msg.len()], msg);
+
+        // Now, close the zx socket, this should cause the tcp stream to close as well.
+        std::mem::drop(zx_socket);
+
+        let mut buf = vec![];
+        tcp_stream.read_to_end(&mut buf).await.unwrap();
+        assert_eq!(&buf, &[]);
+
+        // Make sure the forward task shuts down as well.
+        assert_matches!(forward_task.await, Ok(()));
     }
 }

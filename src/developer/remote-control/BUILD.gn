@@ -69,6 +69,8 @@ rustc_library("lib") {
     "//third_party/rust_crates:tracing",
   ]
 
+  test_deps = [ "//third_party/rust_crates:matches" ]
+
   sources = [
     "src/host_identifier.rs",
     "src/lib.rs",
@@ -105,10 +107,15 @@ rustc_binary("bin") {
   ]
 }
 
-fuchsia_test_component("lib_test-component") {
-  component_name = "remote_control_lib_test"
+fuchsia_test_component("lib_test-test-driver") {
+  component_name = "test_driver"
   manifest = "meta/test_driver.cml"
   deps = [ ":lib_test" ]
+}
+
+fuchsia_test_component("lib_test-component") {
+  component_name = "remote_control_lib_test"
+  manifest = "meta/remote_control_lib_test.cml"
 }
 
 # Used at runtime during testing, but not a test.
@@ -121,7 +128,11 @@ fuchsia_component("mock_sys_launcher-component") {
 
 fuchsia_test_package("remote-control-lib-tests") {
   test_components = [ ":lib_test-component" ]
-  deps = [ ":mock_sys_launcher-component" ]
+  deps = [
+    ":lib_test-test-driver",
+    ":mock_sys_launcher-component",
+    "//src/connectivity/network/netstack:component",
+  ]
 }
 
 fuchsia_package_with_single_component("pkg-diagnostics-bridge") {

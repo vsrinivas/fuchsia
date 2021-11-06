@@ -1,4 +1,5 @@
 {
+    include: [ "syslog/client.shard.cml" ],
     children: [
         {
             name: "test-driver",
@@ -8,6 +9,10 @@
             name: "sys-launcher",
             url: "fuchsia-pkg://fuchsia.com/remote-control-lib-tests#meta/mock_sys_launcher.cm",
         },
+        {
+            name: "netstack",
+            url: "fuchsia-pkg://fuchsia.com/remote-control-lib-tests#meta/netstack.cm",
+        },
     ],
     offer: [
         {
@@ -16,9 +21,31 @@
             to: "#test-driver",
         },
         {
+            storage: "tmp",
+            from: "parent",
+            as: "cache",
+            to: "#netstack",
+        },
+        {
             protocol: "fuchsia.sys.Launcher",
             from: "#sys-launcher",
             to: "#test-driver",
+        },
+        {
+            protocol: [
+                "fuchsia.net.routes.State",
+                "fuchsia.posix.socket.Provider",
+            ],
+            from: "#netstack",
+            to: "#test-driver",
+        },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [
+                "#netstack",
+                "#test-driver",
+            ],
         },
     ],
     expose: [
