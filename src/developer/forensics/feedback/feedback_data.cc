@@ -145,7 +145,7 @@ void FeedbackData::DeletePreviousBootLogsAt(zx::duration uptime,
   async::PostDelayedTask(
       dispatcher_,
       [this, previous_boot_logs_file] {
-        FX_LOGS(INFO) << "Deleting previous boot logs after 1 hour of device uptime";
+        FX_LOGS(INFO) << "Deleting previous boot logs after 24 hours of device uptime";
 
         datastore_.DropStaticAttachment(feedback_data::kAttachmentLogSystemPrevious,
                                         Error::kCustom);

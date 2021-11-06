@@ -34,7 +34,7 @@ inline std::string ToReason(const Error error) {
     case Error::kFileWriteFailure:
       return "file write failure";
     case Error::kCustom:
-      return "became irrelevant after 1 hr of uptime";
+      return "became irrelevant after 24 hrs of uptime";
     case Error::kDefault:
       FX_LOGS(FATAL) << "Error::kDefault does not have a reason";
       return "FATAL, THIS SHOULD NOT HAPPEN";
