@@ -52,7 +52,7 @@ std::unique_ptr<SystemCallTest> ZxChannelCreate(int64_t result, std::string_view
   ASSERT_EQ(dispatcher->inference().GetLinkedHandle(kFirstPid, out0), out1);                 \
   ASSERT_EQ(dispatcher->inference().GetLinkedHandle(kFirstPid, out1), out0);                 \
   ASSERT_EQ(dispatcher->inference().GetLinkedHandle(kSecondPid, out0), out1);                \
-  ASSERT_EQ(dispatcher->inference().GetLinkedHandle(kSecondPid, out1), out0);
+  ASSERT_EQ(dispatcher->inference().GetLinkedHandle(kSecondPid, out1), out0)
 
 #define CREATE_DISPLAY_TEST(name, errno, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { CREATE_DISPLAY_TEST_CONTENT(errno, expected); } \
@@ -66,7 +66,7 @@ CREATE_DISPLAY_TEST(
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (out0: \x1B[32mhandle\x1B[0m = \x1B[31m12345678\x1B[0m, "
-    "out1: \x1B[32mhandle\x1B[0m = \x1B[31m87654321\x1B[0m)\n");
+    "out1: \x1B[32mhandle\x1B[0m = \x1B[31m87654321\x1B[0m)\n")
 
 // Checks that we can decode a zx_channel_create syscall with interleaved responses.
 // Also checks that we create the right semantic for the channels.
@@ -100,7 +100,7 @@ CREATE_DISPLAY_TEST(
   ASSERT_EQ(dispatcher->inference().GetLinkedHandle(kFirstPid, out0), out1);                 \
   ASSERT_EQ(dispatcher->inference().GetLinkedHandle(kFirstPid, out1), out0);                 \
   ASSERT_EQ(dispatcher->inference().GetLinkedHandle(kSecondPid, out0), out1);                \
-  ASSERT_EQ(dispatcher->inference().GetLinkedHandle(kSecondPid, out1), out0);
+  ASSERT_EQ(dispatcher->inference().GetLinkedHandle(kSecondPid, out1), out0)
 
 #define CREATE_INTERLEAVED_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                  \
@@ -129,7 +129,7 @@ CREATE_INTERLEAVED_DISPLAY_TEST(
     "\x1B[32m0.000000\x1B[0m "
     "test_2718 \x1B[31m2718\x1B[0m:\x1B[31m8765\x1B[0m   -> \x1B[32mZX_OK\x1B[0m ("
     "out0: \x1B[32mhandle\x1B[0m = \x1B[31m12345678\x1B[0m, "
-    "out1: \x1B[32mhandle\x1B[0m = \x1B[31m87654321\x1B[0m)\n");
+    "out1: \x1B[32mhandle\x1B[0m = \x1B[31m87654321\x1B[0m)\n")
 
 CREATE_AUTOMATION_TEST(ZxChannelCreateAutomation, "zx_channel_create", ZX_OK,
                        "Invoked bp instructions:\n"
@@ -145,7 +145,7 @@ CREATE_AUTOMATION_TEST(ZxChannelCreateAutomation, "zx_channel_create", ZX_OK,
                        "Exit bp instructions:\n"
                        "  load_memory stored_value(0), 4\n"
                        "  load_memory stored_value(1), 4\n"
-                       "  clear_stored_values\n");
+                       "  clear_stored_values\n")
 
 // zx_channel_write_tests.
 
@@ -190,7 +190,7 @@ WRITE_DISPLAY_TEST(ZxChannelWrite, ZX_OK,
                    "    handles=\n"
                    "      0000: 01234567, 89abcdef\n"
                    "\x1B[32m0.000000\x1B[0m "
-                   "  -> \x1B[32mZX_OK\x1B[0m\n");
+                   "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 WRITE_DISPLAY_TEST(ZxChannelWritePeerClosed, ZX_ERR_PEER_CLOSED,
                    "\n"
@@ -207,7 +207,7 @@ WRITE_DISPLAY_TEST(ZxChannelWritePeerClosed, ZX_ERR_PEER_CLOSED,
                    "    handles=\n"
                    "      0000: 01234567, 89abcdef\n"
                    "\x1B[32m0.000000\x1B[0m "
-                   "  -> \x1B[31mZX_ERR_PEER_CLOSED\x1B[0m\n");
+                   "  -> \x1B[31mZX_ERR_PEER_CLOSED\x1B[0m\n")
 
 #define LARGE_WRITE_DISPLAY_TEST_CONTENT(errno, expected)                                       \
   PerformDisplayTest(                                                                           \
@@ -246,7 +246,7 @@ LARGE_WRITE_DISPLAY_TEST(ZxChannelWriteLarge, ZX_OK,
                          "    handles=\n"
                          "      0000: 01234567, 89abcdef\n"
                          "\x1B[32m0.000000\x1B[0m "
-                         "  -> \x1B[32mZX_OK\x1B[0m\n");
+                         "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 #define WRITE_ABORTED_TEST_CONTENT(errno, expected)                                                \
   PerformAbortedTest("$plt(zx_channel_write)",                                                     \
@@ -262,7 +262,7 @@ LARGE_WRITE_DISPLAY_TEST(ZxChannelWriteLarge, ZX_OK,
 
 WRITE_ABORTED_TEST(ZxChannelWriteAborted, ZX_OK,
                    "\n\x1B[32m1\x1B[0m \x1B[32mStop monitoring\x1B[0m \x1B[34mtest_3141\x1B[0m "
-                   "koid \x1B[31m3141\x1B[0m\n");
+                   "koid \x1B[31m3141\x1B[0m\n")
 
 CREATE_AUTOMATION_TEST(
     ZxChannelWriteAutomation, "zx_channel_write", ZX_OK,
@@ -279,7 +279,7 @@ CREATE_AUTOMATION_TEST(
     "  load_memory x2, x3. conditions: (x1 & 0x2) == 0x0\n"
     "  load_memory x4, x5 * 4\n"
     "Exit bp instructions:\n"
-    "  clear_stored_values\n");
+    "  clear_stored_values\n")
 
 // zx_channel_read tests.
 
@@ -313,7 +313,7 @@ std::unique_ptr<SystemCallTest> ZxChannelRead(int64_t result, std::string_view r
                      ZxChannelRead(errno, #errno, kHandle, 0, data().bytes(), data().handles(), \
                                    100, 64, (check_bytes) ? &actual_bytes : nullptr,            \
                                    (check_handles) ? &actual_handles : nullptr),                \
-                     expected);
+                     expected)
 
 #define READ_DISPLAY_TEST(name, errno, check_bytes, check_handles, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                                \
@@ -339,7 +339,7 @@ READ_DISPLAY_TEST(ZxChannelRead, ZX_OK, true, true,
                   "        0000: \x1B[31maa, aa, aa, aa\x1B[0m, 00, 00, 00, 01\x1B[31m"
                   ", 00, 00, 00, 00\x1B[0m, eb, cc, e4, 77\x1B[0m\n"
                   "      handles=\n"
-                  "        0000: 01234567, 89abcdef\n");
+                  "        0000: 01234567, 89abcdef\n")
 
 READ_DISPLAY_TEST(ZxChannelReadShouldWait, ZX_ERR_SHOULD_WAIT, true, true,
                   "\n"
@@ -350,7 +350,7 @@ READ_DISPLAY_TEST(ZxChannelReadShouldWait, ZX_ERR_SHOULD_WAIT, true, true,
                   "num_bytes: \x1B[32muint32\x1B[0m = \x1B[34m100\x1B[0m, "
                   "num_handles: \x1B[32muint32\x1B[0m = \x1B[34m64\x1B[0m)\n"
                   "\x1B[32m0.000000\x1B[0m "
-                  "  -> \x1B[31mZX_ERR_SHOULD_WAIT\x1B[0m\n");
+                  "  -> \x1B[31mZX_ERR_SHOULD_WAIT\x1B[0m\n")
 
 READ_DISPLAY_TEST(ZxChannelReadTooSmall, ZX_ERR_BUFFER_TOO_SMALL, true, true,
                   "\n"
@@ -363,7 +363,7 @@ READ_DISPLAY_TEST(ZxChannelReadTooSmall, ZX_ERR_BUFFER_TOO_SMALL, true, true,
                   "\x1B[32m0.000000\x1B[0m "
                   "  -> \x1B[31mZX_ERR_BUFFER_TOO_SMALL\x1B[0m ("
                   "actual_bytes: \x1B[32muint32\x1B[0m = \x1B[34m16\x1B[0m, "
-                  "actual_handles: \x1B[32muint32\x1B[0m = \x1B[34m2\x1B[0m)\n");
+                  "actual_handles: \x1B[32muint32\x1B[0m = \x1B[34m2\x1B[0m)\n")
 
 READ_DISPLAY_TEST(ZxChannelReadNoBytes, ZX_OK, false, true,
                   "\n"
@@ -379,7 +379,7 @@ READ_DISPLAY_TEST(ZxChannelReadNoBytes, ZX_OK, false, true,
                   "    \x1B[31mCan't decode message: num_bytes=0 num_handles=2\x1B[0m\n"
                   "      data=\x1B[0m\n"
                   "      handles=\n"
-                  "        0000: 01234567, 89abcdef\n");
+                  "        0000: 01234567, 89abcdef\n")
 
 READ_DISPLAY_TEST(ZxChannelReadNoHandles, ZX_OK, true, false,
                   "\n"
@@ -395,7 +395,7 @@ READ_DISPLAY_TEST(ZxChannelReadNoHandles, ZX_OK, true, false,
                   "txid=aaaaaaaa ordinal=77e4cceb00000000\x1B[0m\n"
                   "      data=\n"
                   "        0000: \x1B[31maa, aa, aa, aa\x1B[0m, 00, 00, 00, 01\x1B[31m"
-                  ", 00, 00, 00, 00\x1B[0m, eb, cc, e4, 77\x1B[0m\n");
+                  ", 00, 00, 00, 00\x1B[0m, eb, cc, e4, 77\x1B[0m\n")
 
 // zx_channel_read_etc tests.
 std::unique_ptr<SystemCallTest> ZxChannelReadEtc(int64_t result, std::string_view result_name,
@@ -430,7 +430,7 @@ std::unique_ptr<SystemCallTest> ZxChannelReadEtc(int64_t result, std::string_vie
       ZxChannelReadEtc(errno, #errno, kHandle, 0, data().bytes(), data().handle_infos(), 100, 64, \
                        (check_bytes) ? &actual_bytes : nullptr,                                   \
                        (check_handles) ? &actual_handles : nullptr),                              \
-      expected);
+      expected)
 
 #define READ_ETC_DISPLAY_TEST(name, errno, check_bytes, check_handles, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                                    \
@@ -456,7 +456,7 @@ READ_ETC_DISPLAY_TEST(ZxChannelReadEtc, ZX_OK, true, true,
                       "        0000: \x1B[31maa, aa, aa, aa\x1B[0m, 00, 00, 00, 01\x1B[31m"
                       ", 00, 00, 00, 00\x1B[0m, eb, cc, e4, 77\x1B[0m\n"
                       "      handles=\n"
-                      "        0000: 01234567, 89abcdef\n");
+                      "        0000: 01234567, 89abcdef\n")
 
 READ_ETC_DISPLAY_TEST(ZxChannelReadEtcShouldWait, ZX_ERR_SHOULD_WAIT, true, true,
                       "\n"
@@ -467,7 +467,7 @@ READ_ETC_DISPLAY_TEST(ZxChannelReadEtcShouldWait, ZX_ERR_SHOULD_WAIT, true, true
                       "num_bytes: \x1B[32muint32\x1B[0m = \x1B[34m100\x1B[0m, "
                       "num_handles: \x1B[32muint32\x1B[0m = \x1B[34m64\x1B[0m)\n"
                       "\x1B[32m0.000000\x1B[0m "
-                      "  -> \x1B[31mZX_ERR_SHOULD_WAIT\x1B[0m\n");
+                      "  -> \x1B[31mZX_ERR_SHOULD_WAIT\x1B[0m\n")
 
 READ_ETC_DISPLAY_TEST(ZxChannelReadEtcTooSmall, ZX_ERR_BUFFER_TOO_SMALL, true, true,
                       "\n"
@@ -481,7 +481,7 @@ READ_ETC_DISPLAY_TEST(ZxChannelReadEtcTooSmall, ZX_ERR_BUFFER_TOO_SMALL, true, t
                       "\x1B[32m0.000000\x1B[0m "
                       "  -> \x1B[31mZX_ERR_BUFFER_TOO_SMALL\x1B[0m ("
                       "actual_bytes: \x1B[32muint32\x1B[0m = \x1B[34m16\x1B[0m, "
-                      "actual_handles: \x1B[32muint32\x1B[0m = \x1B[34m2\x1B[0m)\n");
+                      "actual_handles: \x1B[32muint32\x1B[0m = \x1B[34m2\x1B[0m)\n")
 
 READ_ETC_DISPLAY_TEST(ZxChannelReadEtcNoBytes, ZX_OK, false, true,
                       "\n"
@@ -497,7 +497,7 @@ READ_ETC_DISPLAY_TEST(ZxChannelReadEtcNoBytes, ZX_OK, false, true,
                       "    \x1B[31mCan't decode message: num_bytes=0 num_handles=2\x1B[0m\n"
                       "      data=\x1B[0m\n"
                       "      handles=\n"
-                      "        0000: 01234567, 89abcdef\n");
+                      "        0000: 01234567, 89abcdef\n")
 
 READ_ETC_DISPLAY_TEST(ZxChannelReadEtcNoHandles, ZX_OK, true, false,
                       "\n"
@@ -513,7 +513,7 @@ READ_ETC_DISPLAY_TEST(ZxChannelReadEtcNoHandles, ZX_OK, true, false,
                       "txid=aaaaaaaa ordinal=77e4cceb00000000\x1B[0m\n"
                       "      data=\n"
                       "        0000: \x1B[31maa, aa, aa, aa\x1B[0m, 00, 00, 00, 01\x1B[31m"
-                      ", 00, 00, 00, 00\x1B[0m, eb, cc, e4, 77\x1B[0m\n");
+                      ", 00, 00, 00, 00\x1B[0m, eb, cc, e4, 77\x1B[0m\n")
 
 // zx_channel_call tests.
 
@@ -554,7 +554,7 @@ std::unique_ptr<SystemCallTest> ZxChannelCall(int64_t result, std::string_view r
                      ZxChannelCall(errno, #errno, kHandle, 0, ZX_TIME_INFINITE, &args, \
                                    (check_bytes) ? &actual_bytes : nullptr,            \
                                    (check_handles) ? &actual_handles : nullptr),       \
-                     expected);
+                     expected)
 
 #define CALL_DISPLAY_TEST(name, errno, check_bytes, check_handles, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                                \
@@ -588,7 +588,7 @@ CALL_DISPLAY_TEST(ZxChannelCall, ZX_OK, true, true,
                   "        0000: \x1B[31maa, aa, aa, aa\x1B[0m, 00, 00, 00, 01\x1B[31m"
                   ", 00, 00, 00, 00\x1B[0m, eb, cc, e4, 77\x1B[0m\n"
                   "      handles=\n"
-                  "        0000: 01234567, 89abcdef\n");
+                  "        0000: 01234567, 89abcdef\n")
 
 #define CALL_DISPLAY_TEST_WITH_PROCESS_INFO(name, errno, check_bytes, check_handles, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                                                  \
@@ -647,13 +647,13 @@ CALL_DISPLAY_TEST_WITH_PROCESS_INFO(
     "      handles=\n"
     "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
-    "        0000: 01234567, 89abcdef\n");
+    "        0000: 01234567, 89abcdef\n")
 
 #define CALL_DISPLAY_TEST_CONTENT_NULL_ARGS(errno, expected)                                 \
   PerformDisplayTest(                                                                        \
       "$plt(zx_channel_call)",                                                               \
       ZxChannelCall(errno, #errno, kHandle, 0, ZX_TIME_INFINITE, nullptr, nullptr, nullptr), \
-      expected);
+      expected)
 
 #define CALL_DISPLAY_TEST_NULL_ARGS(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {              \
@@ -679,6 +679,6 @@ CALL_DISPLAY_TEST_NULL_ARGS(ZxChannelCallNullArgs, ZX_OK,
                             "  -> \x1B[32mZX_OK\x1B[0m\n"
                             "    not enough data for message\n"
                             "    \x1B[31mCan't decode message: num_bytes=0 num_handles=0\x1B[0m\n"
-                            "      data=\x1B[0m\n");
+                            "      data=\x1B[0m\n")
 
 }  // namespace fidlcat

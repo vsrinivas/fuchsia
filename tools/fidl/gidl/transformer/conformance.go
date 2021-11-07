@@ -33,14 +33,14 @@ TEST(V1_TO_V2, {{ .Name }}) {
 	const auto expected_bytes = {{ .V2Bytes }};
 	transformer_conformance_utils::FidlTransformSuccessCase<{{ .Type }}>(
 		FIDL_TRANSFORMATION_V1_TO_V2, input_bytes, expected_bytes);
-};
+}
 
 TEST(V2_TO_V1, {{ .Name }}) {
 	const auto input_bytes = {{ .V2Bytes }};
 	const auto expected_bytes = {{ .V1Bytes }};
 	transformer_conformance_utils::FidlTransformSuccessCase<{{ .Type }}>(
 		FIDL_TRANSFORMATION_V2_TO_V1, input_bytes, expected_bytes);
-};
+}
 {{- if .FuchsiaOnly }}
 #endif  // __Fuchsia__
 {{- end }}
@@ -54,7 +54,7 @@ TEST(V1_TO_V2_FAILURE, {{ .Name }}) {
 	const auto input_bytes = {{ .Bytes }};
 	transformer_conformance_utils::FidlTransformFailureCase<{{ .Type }}>(
 		FIDL_TRANSFORMATION_V1_TO_V2, input_bytes);
-};
+}
 {{- if .FuchsiaOnly }}
 #endif  // __Fuchsia__
 {{- end }}
@@ -68,7 +68,7 @@ TEST(V2_TO_V1_FAILURE, {{ .Name }}) {
 	const auto input_bytes = {{ .Bytes }};
 	transformer_conformance_utils::FidlTransformFailureCase<{{ .Type }}>(
 		FIDL_TRANSFORMATION_V2_TO_V1, input_bytes);
-};
+}
 {{- if .FuchsiaOnly }}
 #endif  // __Fuchsia__
 {{- end }}

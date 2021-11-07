@@ -26,7 +26,7 @@ std::unique_ptr<SystemCallTest> ZxObjectWaitOne(int64_t result, std::string_view
   auto value =                                                                                  \
       ZxObjectWaitOne(result, #result, kHandle, __ZX_OBJECT_READABLE | __ZX_OBJECT_PEER_CLOSED, \
                       ZX_TIME_INFINITE, &observed);                                             \
-  PerformDisplayTest("$plt(zx_object_wait_one)", std::move(value), expected);
+  PerformDisplayTest("$plt(zx_object_wait_one)", std::move(value), expected)
 
 #define OBJECT_WAIT_ONE_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {               \
@@ -48,7 +48,7 @@ OBJECT_WAIT_ONE_DISPLAY_TEST(ZxObjectWaitOne, ZX_OK,
                              "\x1B[32m0.000000\x1B[0m "
                              "  -> \x1B[32mZX_OK\x1B[0m ("
                              "observed: \x1B[32msignals\x1B[0m = "
-                             "\x1B[34m__ZX_OBJECT_READABLE | __ZX_OBJECT_WRITABLE\x1B[0m)\n");
+                             "\x1B[34m__ZX_OBJECT_READABLE | __ZX_OBJECT_WRITABLE\x1B[0m)\n")
 
 // zx_object_wait_many tests.
 
@@ -85,7 +85,7 @@ std::unique_ptr<SystemCallTest> ZxObjectWaitMany(int64_t result, std::string_vie
     }                                                                                             \
   };                                                                                              \
   PerformOneThreadDisplayTest("$plt(zx_object_wait_many)", std::move(value), expected);           \
-  delete[] items;
+  delete[] items
 
 #define OBJECT_WAIT_MANY_DISPLAY_TEST(name, errno, item_count, canceled, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                                      \
@@ -105,7 +105,7 @@ OBJECT_WAIT_MANY_DISPLAY_TEST(
     "  items: \x1B[32mvector<zx_wait_item_t>\x1B[0m = \x1B[31mnull\x1B[0m\n"
     "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n"
-    "    items: \x1B[32mvector<zx_wait_item_t>\x1B[0m = \x1B[31mnull\x1B[0m\n");
+    "    items: \x1B[32mvector<zx_wait_item_t>\x1B[0m = \x1B[31mnull\x1B[0m\n")
 
 OBJECT_WAIT_MANY_DISPLAY_TEST(
     ZxObjectWaitManyZero, ZX_OK, 0, false,
@@ -117,7 +117,7 @@ OBJECT_WAIT_MANY_DISPLAY_TEST(
     "  items: \x1B[32mvector<zx_wait_item_t>\x1B[0m = \x1B[31mnull\x1B[0m\n"
     "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n"
-    "    items: \x1B[32mvector<zx_wait_item_t>\x1B[0m = \x1B[31mnull\x1B[0m\n");
+    "    items: \x1B[32mvector<zx_wait_item_t>\x1B[0m = \x1B[31mnull\x1B[0m\n")
 
 OBJECT_WAIT_MANY_DISPLAY_TEST(
     ZxObjectWaitMany, ZX_OK, 3, false,
@@ -164,7 +164,7 @@ OBJECT_WAIT_MANY_DISPLAY_TEST(
     "        pending: \x1B[32msignals\x1B[0m = "
     "\x1B[34m__ZX_OBJECT_READABLE | __ZX_OBJECT_WRITABLE\x1B[0m\n"
     "      }\n"
-    "    ]\n");
+    "    ]\n")
 
 OBJECT_WAIT_MANY_DISPLAY_TEST(
     ZxObjectWaitManyCanceled, ZX_ERR_CANCELED, 1, true,
@@ -189,7 +189,7 @@ OBJECT_WAIT_MANY_DISPLAY_TEST(
     "        pending: \x1B[32msignals\x1B[0m = "
     "\x1B[34m__ZX_OBJECT_HANDLE_CLOSED\x1B[0m\n"
     "      }\n"
-    "    ]\n");
+    "    ]\n")
 
 // zx_object_wait_async tests.
 
@@ -209,7 +209,7 @@ std::unique_ptr<SystemCallTest> ZxObjectWaitAsync(int64_t result, std::string_vi
 #define OBJECT_WAIT_ASYNC_DISPLAY_TEST_CONTENT(result, expected)                     \
   auto value = ZxObjectWaitAsync(result, #result, kHandle, kPort, kKey,              \
                                  __ZX_OBJECT_READABLE | __ZX_OBJECT_PEER_CLOSED, 0); \
-  PerformDisplayTest("$plt(zx_object_wait_async)", std::move(value), expected);
+  PerformDisplayTest("$plt(zx_object_wait_async)", std::move(value), expected)
 
 #define OBJECT_WAIT_ASYNC_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                 \
@@ -231,7 +231,7 @@ OBJECT_WAIT_ASYNC_DISPLAY_TEST(ZxObjectWaitAsync, ZX_OK,
                                "\x1B[34m__ZX_OBJECT_READABLE | __ZX_OBJECT_PEER_CLOSED\x1B[0m, "
                                "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
                                "\x1B[32m0.000000\x1B[0m "
-                               "  -> \x1B[32mZX_OK\x1B[0m\n");
+                               "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 // zx_object_signal tests.
 
@@ -248,7 +248,7 @@ std::unique_ptr<SystemCallTest> ZxObjectSignal(int64_t result, std::string_view 
 #define OBJECT_SIGNAL_DISPLAY_TEST_CONTENT(result, expected)                                 \
   auto value = ZxObjectSignal(result, #result, kHandle, ZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_3, \
                               ZX_USER_SIGNAL_5 | ZX_USER_SIGNAL_7);                          \
-  PerformDisplayTest("$plt(zx_object_signal)", std::move(value), expected);
+  PerformDisplayTest("$plt(zx_object_signal)", std::move(value), expected)
 
 #define OBJECT_SIGNAL_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {             \
@@ -266,7 +266,7 @@ OBJECT_SIGNAL_DISPLAY_TEST(
     "clear_mask: \x1B[32msignals\x1B[0m = \x1B[34mZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_3\x1B[0m, "
     "set_mask: \x1B[32msignals\x1B[0m = \x1B[34mZX_USER_SIGNAL_5 | ZX_USER_SIGNAL_7\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 // zx_object_signal_peer tests.
 
@@ -283,7 +283,7 @@ std::unique_ptr<SystemCallTest> ZxObjectSignalPeer(int64_t result, std::string_v
 #define OBJECT_SIGNAL_PEER_DISPLAY_TEST_CONTENT(result, expected)                                \
   auto value = ZxObjectSignalPeer(result, #result, kHandle, ZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_3, \
                                   ZX_USER_SIGNAL_5 | ZX_USER_SIGNAL_7);                          \
-  PerformDisplayTest("$plt(zx_object_signal_peer)", std::move(value), expected);
+  PerformDisplayTest("$plt(zx_object_signal_peer)", std::move(value), expected)
 
 #define OBJECT_SIGNAL_PEER_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                  \
@@ -303,7 +303,7 @@ OBJECT_SIGNAL_PEER_DISPLAY_TEST(
     "clear_mask: \x1B[32msignals\x1B[0m = \x1B[34mZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_3\x1B[0m, "
     "set_mask: \x1B[32msignals\x1B[0m = \x1B[34mZX_USER_SIGNAL_5 | ZX_USER_SIGNAL_7\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 // zx_object_get_property tests.
 
@@ -325,7 +325,7 @@ std::unique_ptr<SystemCallTest> ZxObjectGetProperty(int64_t result, std::string_
   PerformDisplayTest(                                                                            \
       "$plt(zx_object_get_property)",                                                            \
       ZxObjectGetProperty(result, #result, kHandle, ZX_PROP_NAME, buffer.data(), buffer.size()), \
-      expected);
+      expected)
 
 #define OBJECT_GET_PROPERTY_NAME_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                        \
@@ -344,14 +344,14 @@ OBJECT_GET_PROPERTY_NAME_DISPLAY_TEST(
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "property: \x1B[32mzx.prop_type\x1B[0m = \x1B[34mZX_PROP_NAME\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m (value: \x1B[32mstring\x1B[0m = \x1B[31m\"My_name\"\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (value: \x1B[32mstring\x1B[0m = \x1B[31m\"My_name\"\x1B[0m)\n")
 
 #define OBJECT_GET_PROPERTY_PROCESS_DEBUG_ADDR_DISPLAY_TEST_CONTENT(result, expected)          \
   uintptr_t value = 0x45678;                                                                   \
   PerformDisplayTest("$plt(zx_object_get_property)",                                           \
                      ZxObjectGetProperty(result, #result, kHandle, ZX_PROP_PROCESS_DEBUG_ADDR, \
                                          &value, sizeof(value)),                               \
-                     expected);
+                     expected)
 
 #define OBJECT_GET_PROPERTY_PROCESS_DEBUG_ADDR_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                                      \
@@ -371,7 +371,7 @@ OBJECT_GET_PROPERTY_PROCESS_DEBUG_ADDR_DISPLAY_TEST(
     "property: \x1B[32mzx.prop_type\x1B[0m = \x1B[34mZX_PROP_PROCESS_DEBUG_ADDR\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (value: \x1B[32mzx.vaddr\x1B[0m = "
-    "\x1B[34m0000000000045678\x1B[0m)\n");
+    "\x1B[34m0000000000045678\x1B[0m)\n")
 
 #define OBJECT_GET_PROPERTY_PROCESS_VDSO_BASE_ADDRESS_DISPLAY_TEST_CONTENT(result, expected)   \
   uintptr_t value = 0x45678;                                                                   \
@@ -379,7 +379,7 @@ OBJECT_GET_PROPERTY_PROCESS_DEBUG_ADDR_DISPLAY_TEST(
       "$plt(zx_object_get_property)",                                                          \
       ZxObjectGetProperty(result, #result, kHandle, ZX_PROP_PROCESS_VDSO_BASE_ADDRESS, &value, \
                           sizeof(value)),                                                      \
-      expected);
+      expected)
 
 #define OBJECT_GET_PROPERTY_PROCESS_VDSO_BASE_ADDRESS_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                                             \
@@ -399,14 +399,14 @@ OBJECT_GET_PROPERTY_PROCESS_VDSO_BASE_ADDRESS_DISPLAY_TEST(
     "property: \x1B[32mzx.prop_type\x1B[0m = \x1B[34mZX_PROP_PROCESS_VDSO_BASE_ADDRESS\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (value: \x1B[32mzx.vaddr\x1B[0m = "
-    "\x1B[34m0000000000045678\x1B[0m)\n");
+    "\x1B[34m0000000000045678\x1B[0m)\n")
 
 #define OBJECT_GET_PROPERTY_SOCKET_RX_THRESHOLD_DISPLAY_TEST_CONTENT(result, expected)          \
   size_t value = 1000;                                                                          \
   PerformDisplayTest("$plt(zx_object_get_property)",                                            \
                      ZxObjectGetProperty(result, #result, kHandle, ZX_PROP_SOCKET_RX_THRESHOLD, \
                                          &value, sizeof(value)),                                \
-                     expected);
+                     expected)
 
 #define OBJECT_GET_PROPERTY_SOCKET_RX_THRESHOLD_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                                       \
@@ -425,14 +425,14 @@ OBJECT_GET_PROPERTY_SOCKET_RX_THRESHOLD_DISPLAY_TEST(
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "property: \x1B[32mzx.prop_type\x1B[0m = \x1B[34mZX_PROP_SOCKET_RX_THRESHOLD\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m (value: \x1B[32msize\x1B[0m = \x1B[34m1000\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (value: \x1B[32msize\x1B[0m = \x1B[34m1000\x1B[0m)\n")
 
 #define OBJECT_GET_PROPERTY_SOCKET_TX_THRESHOLD_DISPLAY_TEST_CONTENT(result, expected)          \
   size_t value = 1000;                                                                          \
   PerformDisplayTest("$plt(zx_object_get_property)",                                            \
                      ZxObjectGetProperty(result, #result, kHandle, ZX_PROP_SOCKET_TX_THRESHOLD, \
                                          &value, sizeof(value)),                                \
-                     expected);
+                     expected)
 
 #define OBJECT_GET_PROPERTY_SOCKET_TX_THRESHOLD_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                                       \
@@ -451,14 +451,14 @@ OBJECT_GET_PROPERTY_SOCKET_TX_THRESHOLD_DISPLAY_TEST(
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "property: \x1B[32mzx.prop_type\x1B[0m = \x1B[34mZX_PROP_SOCKET_TX_THRESHOLD\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m (value: \x1B[32msize\x1B[0m = \x1B[34m1000\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (value: \x1B[32msize\x1B[0m = \x1B[34m1000\x1B[0m)\n")
 
 #define OBJECT_GET_PROPERTY_EXCEPTION_STATE_DISPLAY_TEST_CONTENT(result, expected)          \
   uint32_t value = ZX_EXCEPTION_STATE_HANDLED;                                              \
   PerformDisplayTest("$plt(zx_object_get_property)",                                        \
                      ZxObjectGetProperty(result, #result, kHandle, ZX_PROP_EXCEPTION_STATE, \
                                          &value, sizeof(value)),                            \
-                     expected);
+                     expected)
 
 #define OBJECT_GET_PROPERTY_EXCEPTION_STATE_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                                   \
@@ -478,7 +478,7 @@ OBJECT_GET_PROPERTY_EXCEPTION_STATE_DISPLAY_TEST(
     "property: \x1B[32mzx.prop_type\x1B[0m = \x1B[34mZX_PROP_EXCEPTION_STATE\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m ("
-    "value: \x1B[32mzx.exception_state\x1B[0m = \x1B[34mZX_EXCEPTION_STATE_HANDLED\x1B[0m)\n");
+    "value: \x1B[32mzx.exception_state\x1B[0m = \x1B[34mZX_EXCEPTION_STATE_HANDLED\x1B[0m)\n")
 
 CREATE_AUTOMATION_TEST(
     ZxObjectGetPropertyAutomation, "zx_object_get_property", ZX_OK,
@@ -525,7 +525,7 @@ CREATE_AUTOMATION_TEST(
     "  load_memory stored_value(8), 8. conditions: stored_value(7) == 12\n"
     "  load_memory stored_value(10), 8. conditions: stored_value(9) == 13\n"
     "  load_memory stored_value(12), 4. conditions: stored_value(11) == 16\n"
-    "  clear_stored_values\n");
+    "  clear_stored_values\n")
 
 // zx_object_set_property tests.
 
@@ -547,7 +547,7 @@ std::unique_ptr<SystemCallTest> ZxObjectSetProperty(int64_t result, std::string_
   PerformDisplayTest(                                                                            \
       "$plt(zx_object_set_property)",                                                            \
       ZxObjectSetProperty(result, #result, kHandle, ZX_PROP_NAME, buffer.data(), buffer.size()), \
-      expected);
+      expected)
 
 #define OBJECT_SET_PROPERTY_NAME_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                        \
@@ -567,14 +567,14 @@ OBJECT_SET_PROPERTY_NAME_DISPLAY_TEST(
     "property: \x1B[32mzx.prop_type\x1B[0m = \x1B[34mZX_PROP_NAME\x1B[0m, "
     "value: \x1B[32mstring\x1B[0m = \x1B[31m\"My_name\"\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 #define OBJECT_SET_PROPERTY_REGISTER_FS_DISPLAY_TEST_CONTENT(result, expected)                   \
   uintptr_t value = 0x45678;                                                                     \
   PerformDisplayTest(                                                                            \
       "$plt(zx_object_set_property)",                                                            \
       ZxObjectSetProperty(result, #result, kHandle, ZX_PROP_REGISTER_FS, &value, sizeof(value)), \
-      expected);
+      expected)
 
 #define OBJECT_SET_PROPERTY_REGISTER_FS_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                               \
@@ -594,14 +594,14 @@ OBJECT_SET_PROPERTY_REGISTER_FS_DISPLAY_TEST(
     "property: \x1B[32mzx.prop_type\x1B[0m = \x1B[34mZX_PROP_REGISTER_FS\x1B[0m, "
     "value: \x1B[32mzx.vaddr\x1B[0m = \x1B[34m0000000000045678\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 #define OBJECT_SET_PROPERTY_REGISTER_GS_DISPLAY_TEST_CONTENT(result, expected)                   \
   uintptr_t value = 0x45678;                                                                     \
   PerformDisplayTest(                                                                            \
       "$plt(zx_object_set_property)",                                                            \
       ZxObjectSetProperty(result, #result, kHandle, ZX_PROP_REGISTER_GS, &value, sizeof(value)), \
-      expected);
+      expected)
 
 #define OBJECT_SET_PROPERTY_REGISTER_GS_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                               \
@@ -621,14 +621,14 @@ OBJECT_SET_PROPERTY_REGISTER_GS_DISPLAY_TEST(
     "property: \x1B[32mzx.prop_type\x1B[0m = \x1B[34mZX_PROP_REGISTER_GS\x1B[0m, "
     "value: \x1B[32mzx.vaddr\x1B[0m = \x1B[34m0000000000045678\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 #define OBJECT_SET_PROPERTY_PROCESS_DEBUG_ADDR_DISPLAY_TEST_CONTENT(result, expected)          \
   uintptr_t value = 0x45678;                                                                   \
   PerformDisplayTest("$plt(zx_object_set_property)",                                           \
                      ZxObjectSetProperty(result, #result, kHandle, ZX_PROP_PROCESS_DEBUG_ADDR, \
                                          &value, sizeof(value)),                               \
-                     expected);
+                     expected)
 
 #define OBJECT_SET_PROPERTY_PROCESS_DEBUG_ADDR_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                                      \
@@ -648,14 +648,14 @@ OBJECT_SET_PROPERTY_PROCESS_DEBUG_ADDR_DISPLAY_TEST(
     "property: \x1B[32mzx.prop_type\x1B[0m = \x1B[34mZX_PROP_PROCESS_DEBUG_ADDR\x1B[0m, "
     "value: \x1B[32mzx.vaddr\x1B[0m = \x1B[34m0000000000045678\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 #define OBJECT_SET_PROPERTY_SOCKET_RX_THRESHOLD_DISPLAY_TEST_CONTENT(result, expected)          \
   size_t value = 1000;                                                                          \
   PerformDisplayTest("$plt(zx_object_set_property)",                                            \
                      ZxObjectSetProperty(result, #result, kHandle, ZX_PROP_SOCKET_RX_THRESHOLD, \
                                          &value, sizeof(value)),                                \
-                     expected);
+                     expected)
 
 #define OBJECT_SET_PROPERTY_SOCKET_RX_THRESHOLD_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                                       \
@@ -675,14 +675,14 @@ OBJECT_SET_PROPERTY_SOCKET_RX_THRESHOLD_DISPLAY_TEST(
     "property: \x1B[32mzx.prop_type\x1B[0m = \x1B[34mZX_PROP_SOCKET_RX_THRESHOLD\x1B[0m, "
     "value: \x1B[32msize\x1B[0m = \x1B[34m1000\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 #define OBJECT_SET_PROPERTY_SOCKET_TX_THRESHOLD_DISPLAY_TEST_CONTENT(result, expected)          \
   size_t value = 1000;                                                                          \
   PerformDisplayTest("$plt(zx_object_set_property)",                                            \
                      ZxObjectSetProperty(result, #result, kHandle, ZX_PROP_SOCKET_TX_THRESHOLD, \
                                          &value, sizeof(value)),                                \
-                     expected);
+                     expected)
 
 #define OBJECT_SET_PROPERTY_SOCKET_TX_THRESHOLD_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                                       \
@@ -702,14 +702,14 @@ OBJECT_SET_PROPERTY_SOCKET_TX_THRESHOLD_DISPLAY_TEST(
     "property: \x1B[32mzx.prop_type\x1B[0m = \x1B[34mZX_PROP_SOCKET_TX_THRESHOLD\x1B[0m, "
     "value: \x1B[32msize\x1B[0m = \x1B[34m1000\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 #define OBJECT_SET_PROPERTY_JOB_KILL_ON_OOM_DISPLAY_TEST_CONTENT(result, expected)          \
   size_t value = 1;                                                                         \
   PerformDisplayTest("$plt(zx_object_set_property)",                                        \
                      ZxObjectSetProperty(result, #result, kHandle, ZX_PROP_JOB_KILL_ON_OOM, \
                                          &value, sizeof(value)),                            \
-                     expected);
+                     expected)
 
 #define OBJECT_SET_PROPERTY_JOB_KILL_ON_OOM_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                                   \
@@ -729,14 +729,14 @@ OBJECT_SET_PROPERTY_JOB_KILL_ON_OOM_DISPLAY_TEST(
     "property: \x1B[32mzx.prop_type\x1B[0m = \x1B[34mZX_PROP_JOB_KILL_ON_OOM\x1B[0m, "
     "value: \x1B[32msize\x1B[0m = \x1B[34m1\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 #define OBJECT_SET_PROPERTY_EXCEPTION_STATE_DISPLAY_TEST_CONTENT(result, expected)          \
   uint32_t value = ZX_EXCEPTION_STATE_HANDLED;                                              \
   PerformDisplayTest("$plt(zx_object_set_property)",                                        \
                      ZxObjectSetProperty(result, #result, kHandle, ZX_PROP_EXCEPTION_STATE, \
                                          &value, sizeof(value)),                            \
-                     expected);
+                     expected)
 
 #define OBJECT_SET_PROPERTY_EXCEPTION_STATE_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                                   \
@@ -756,7 +756,7 @@ OBJECT_SET_PROPERTY_EXCEPTION_STATE_DISPLAY_TEST(
     "property: \x1B[32mzx.prop_type\x1B[0m = \x1B[34mZX_PROP_EXCEPTION_STATE\x1B[0m, "
     "value: \x1B[32mzx.exception_state\x1B[0m = \x1B[34mZX_EXCEPTION_STATE_HANDLED\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 CREATE_AUTOMATION_TEST(ZxObjectSetPropertyAutomation, "zx_object_set_property", ZX_OK,
                        "Invoked bp instructions:\n"
@@ -780,7 +780,7 @@ CREATE_AUTOMATION_TEST(ZxObjectSetPropertyAutomation, "zx_object_set_property", 
                        "  load_memory x2, 8. conditions: x1 == 15\n"
                        "  load_memory x2, 4. conditions: x1 == 16\n"
                        "Exit bp instructions:\n"
-                       "  clear_stored_values\n");
+                       "  clear_stored_values\n")
 
 // zx_object_get_info tests.
 
@@ -800,7 +800,7 @@ std::unique_ptr<SystemCallTest> ZxObjectGetInfo(int64_t result, std::string_view
 #define OBJECT_GET_INFO_HANDLE_VALID_DISPLAY_TEST_CONTENT(result, expected)                \
   auto value = ZxObjectGetInfo(result, #result, kHandle, ZX_INFO_HANDLE_VALID, nullptr, 0, \
                                nullptr, nullptr);                                          \
-  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected);
+  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected)
 
 #define OBJECT_GET_INFO_HANDLE_VALID_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                            \
@@ -820,7 +820,7 @@ OBJECT_GET_INFO_HANDLE_VALID_DISPLAY_TEST(
     "topic: \x1B[32mzx.object_info_topic\x1B[0m = \x1B[34mZX_INFO_HANDLE_VALID\x1B[0m, "
     "buffer_size: \x1B[32msize\x1B[0m = \x1B[34m0\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 OBJECT_GET_INFO_HANDLE_VALID_DISPLAY_TEST(
     ZxObjectGetInfoHandleValidBad, ZX_ERR_BAD_HANDLE,
@@ -832,7 +832,7 @@ OBJECT_GET_INFO_HANDLE_VALID_DISPLAY_TEST(
     "topic: \x1B[32mzx.object_info_topic\x1B[0m = \x1B[34mZX_INFO_HANDLE_VALID\x1B[0m, "
     "buffer_size: \x1B[32msize\x1B[0m = \x1B[34m0\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[31mZX_ERR_BAD_HANDLE\x1B[0m\n");
+    "  -> \x1B[31mZX_ERR_BAD_HANDLE\x1B[0m\n")
 
 #define OBJECT_GET_INFO_HANDLE_BASIC_DISPLAY_TEST_CONTENT(result, expected)                   \
   zx_info_handle_basic_t buffer;                                                              \
@@ -844,7 +844,7 @@ OBJECT_GET_INFO_HANDLE_VALID_DISPLAY_TEST(
   auto value =                                                                                \
       ZxObjectGetInfo(result, #result, kHandle, ZX_INFO_HANDLE_BASIC,                         \
                       reinterpret_cast<void*>(&buffer), sizeof(buffer), nullptr, nullptr);    \
-  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected);
+  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected)
 
 #define OBJECT_GET_INFO_HANDLE_BASIC_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                            \
@@ -871,7 +871,7 @@ OBJECT_GET_INFO_HANDLE_BASIC_DISPLAY_TEST(
     "ZX_RIGHT_WRITE | ZX_RIGHT_SIGNAL | ZX_RIGHT_WAIT | ZX_RIGHT_INSPECT\x1B[0m\n"
     "      type: \x1B[32mzx.obj_type\x1B[0m = \x1B[34mZX_OBJ_TYPE_LOG\x1B[0m\n"
     "      related_koid: \x1B[32mzx.koid\x1B[0m = \x1B[31mZX_KOID_INVALID (0)\x1B[0m\n"
-    "    }\n");
+    "    }\n")
 
 #define OBJECT_GET_INFO_HANDLE_COUNT_DISPLAY_TEST_CONTENT(result, expected)                \
   zx_info_handle_count_t buffer;                                                           \
@@ -879,7 +879,7 @@ OBJECT_GET_INFO_HANDLE_BASIC_DISPLAY_TEST(
   auto value =                                                                             \
       ZxObjectGetInfo(result, #result, kHandle, ZX_INFO_HANDLE_COUNT,                      \
                       reinterpret_cast<void*>(&buffer), sizeof(buffer), nullptr, nullptr); \
-  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected);
+  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected)
 
 #define OBJECT_GET_INFO_HANDLE_COUNT_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                            \
@@ -901,7 +901,7 @@ OBJECT_GET_INFO_HANDLE_COUNT_DISPLAY_TEST(
     "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n"
     "    info: \x1B[32mzx_info_handle_count_t\x1B[0m = { "
-    "handle_count: \x1B[32muint32\x1B[0m = \x1B[34m2\x1B[0m }\n");
+    "handle_count: \x1B[32muint32\x1B[0m = \x1B[34m2\x1B[0m }\n")
 
 #define OBJECT_GET_INFO_PROCESS_HANDLE_STATS_DISPLAY_TEST_CONTENT(result, expected)        \
   zx_info_process_handle_stats_t buffer;                                                   \
@@ -912,7 +912,7 @@ OBJECT_GET_INFO_HANDLE_COUNT_DISPLAY_TEST(
   auto value =                                                                             \
       ZxObjectGetInfo(result, #result, kHandle, ZX_INFO_PROCESS_HANDLE_STATS,              \
                       reinterpret_cast<void*>(&buffer), sizeof(buffer), nullptr, nullptr); \
-  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected);
+  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected)
 
 #define OBJECT_GET_INFO_PROCESS_HANDLE_STATS_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                                    \
@@ -950,7 +950,7 @@ OBJECT_GET_INFO_PROCESS_HANDLE_STATS_DISPLAY_TEST(
     "\x1B[34m0\x1B[0m, \x1B[34m0\x1B[0m, \x1B[34m0\x1B[0m, \x1B[34m0\x1B[0m, \x1B[34m0\x1B[0m, "
     "\x1B[34m0\x1B[0m, \x1B[34m0\x1B[0m, \x1B[34m0\x1B[0m, \x1B[34m0\x1B[0m\n"
     "      ]\n"
-    "    }\n");
+    "    }\n")
 
 #define OBJECT_GET_INFO_JOB_DISPLAY_TEST_CONTENT(result, expected)                             \
   zx_info_job_t buffer;                                                                        \
@@ -961,7 +961,7 @@ OBJECT_GET_INFO_PROCESS_HANDLE_STATS_DISPLAY_TEST(
   auto value =                                                                                 \
       ZxObjectGetInfo(result, #result, kHandle, ZX_INFO_JOB, reinterpret_cast<void*>(&buffer), \
                       sizeof(buffer), nullptr, nullptr);                                       \
-  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected);
+  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected)
 
 #define OBJECT_GET_INFO_JOB_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                   \
@@ -987,7 +987,7 @@ OBJECT_GET_INFO_JOB_DISPLAY_TEST(
     "      exited: \x1B[32mbool\x1B[0m = \x1B[34mtrue\x1B[0m\n"
     "      kill_on_oom: \x1B[32mbool\x1B[0m = \x1B[34mfalse\x1B[0m\n"
     "      debugger_attached: \x1B[32mbool\x1B[0m = \x1B[34mfalse\x1B[0m\n"
-    "    }\n");
+    "    }\n")
 
 #define OBJECT_GET_INFO_PROCESS_V1_DISPLAY_TEST_CONTENT(result, expected)                  \
   zx_info_process_v1_t buffer;                                                             \
@@ -998,7 +998,7 @@ OBJECT_GET_INFO_JOB_DISPLAY_TEST(
   auto value =                                                                             \
       ZxObjectGetInfo(result, #result, kHandle, ZX_INFO_PROCESS_V1,                        \
                       reinterpret_cast<void*>(&buffer), sizeof(buffer), nullptr, nullptr); \
-  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected);
+  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected)
 
 #define OBJECT_GET_INFO_PROCESS_V1_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                          \
@@ -1024,7 +1024,7 @@ OBJECT_GET_INFO_PROCESS_V1_DISPLAY_TEST(
     "      started: \x1B[32mbool\x1B[0m = \x1B[34mtrue\x1B[0m\n"
     "      exited: \x1B[32mbool\x1B[0m = \x1B[34mtrue\x1B[0m\n"
     "      debugger_attached: \x1B[32mbool\x1B[0m = \x1B[34mfalse\x1B[0m\n"
-    "    }\n");
+    "    }\n")
 
 #define OBJECT_GET_INFO_PROCESS_V2_DISPLAY_TEST_CONTENT(result, expected)                  \
   zx_info_process_v2_t buffer;                                                             \
@@ -1034,7 +1034,7 @@ OBJECT_GET_INFO_PROCESS_V1_DISPLAY_TEST(
   auto value =                                                                             \
       ZxObjectGetInfo(result, #result, kHandle, ZX_INFO_PROCESS_V2,                        \
                       reinterpret_cast<void*>(&buffer), sizeof(buffer), nullptr, nullptr); \
-  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected);
+  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected)
 
 #define OBJECT_GET_INFO_PROCESS_V2_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                          \
@@ -1058,7 +1058,7 @@ OBJECT_GET_INFO_PROCESS_V2_DISPLAY_TEST(
     "    info: \x1B[32mzx_info_process_v2_t\x1B[0m = { "
     "return_code: \x1B[32mint64\x1B[0m = \x1B[34m-1\x1B[0m, "
     "start_time: \x1B[32mzx.time\x1B[0m = \x1B[34mZX_TIME_INFINITE\x1B[0m, "
-    "flags: \x1B[32muint32\x1B[0m = \x1B[34m3\x1B[0m }\n");
+    "flags: \x1B[32muint32\x1B[0m = \x1B[34m3\x1B[0m }\n")
 
 #define OBJECT_GET_INFO_PROCESS_THREADS_DISPLAY_TEST_CONTENT(result, expected)      \
   constexpr zx_koid_t kThread1 = 1111;                                              \
@@ -1070,7 +1070,7 @@ OBJECT_GET_INFO_PROCESS_V2_DISPLAY_TEST(
   auto value = ZxObjectGetInfo(result, #result, kHandle, ZX_INFO_PROCESS_THREADS,   \
                                reinterpret_cast<void*>(buffer.data()),              \
                                buffer.size() * sizeof(zx_koid_t), &actual, &avail); \
-  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected);
+  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected)
 
 #define OBJECT_GET_INFO_PROCESS_THREADS_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                               \
@@ -1093,7 +1093,7 @@ OBJECT_GET_INFO_PROCESS_THREADS_DISPLAY_TEST(
     "  -> \x1B[32mZX_OK\x1B[0m (actual: \x1B[32msize\x1B[0m = "
     "\x1B[34m3\x1B[0m/\x1B[34m5\x1B[0m)\n"
     "    info: \x1B[32mvector<zx.koid>\x1B[0m = [ "
-    "\x1B[31m1111\x1B[0m, \x1B[31m2222\x1B[0m, \x1B[31m3333\x1B[0m ]\n");
+    "\x1B[31m1111\x1B[0m, \x1B[31m2222\x1B[0m, \x1B[31m3333\x1B[0m ]\n")
 
 #define OBJECT_GET_INFO_THREAD_DISPLAY_TEST_CONTENT(result, expected)                             \
   zx_info_thread_t buffer;                                                                        \
@@ -1104,7 +1104,7 @@ OBJECT_GET_INFO_PROCESS_THREADS_DISPLAY_TEST(
   auto value =                                                                                    \
       ZxObjectGetInfo(result, #result, kHandle, ZX_INFO_THREAD, reinterpret_cast<void*>(&buffer), \
                       sizeof(buffer), nullptr, nullptr);                                          \
-  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected);
+  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected)
 
 #define OBJECT_GET_INFO_THREAD_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                      \
@@ -1139,7 +1139,7 @@ OBJECT_GET_INFO_THREAD_DISPLAY_TEST(
     "          \x1B[34m0000000000000000\x1B[0m, \x1B[34m0000000000000000\x1B[0m\n"
     "        ]\n"
     "      }\n"
-    "    }\n");
+    "    }\n")
 
 #define OBJECT_GET_INFO_THREAD_STATS_DISPLAY_TEST_CONTENT(result, expected)                \
   zx_info_thread_stats_t buffer;                                                           \
@@ -1148,7 +1148,7 @@ OBJECT_GET_INFO_THREAD_DISPLAY_TEST(
   auto value =                                                                             \
       ZxObjectGetInfo(result, #result, kHandle, ZX_INFO_THREAD_STATS,                      \
                       reinterpret_cast<void*>(&buffer), sizeof(buffer), nullptr, nullptr); \
-  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected);
+  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected)
 
 #define OBJECT_GET_INFO_THREAD_STATS_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                            \
@@ -1173,7 +1173,7 @@ OBJECT_GET_INFO_THREAD_STATS_DISPLAY_TEST(
     "      total_runtime: \x1B[32mzx.duration\x1B[0m = "
     "\x1B[34m1 hours, 1 minutes, 4 seconds and 1234 nano seconds\x1B[0m\n"
     "      last_scheduled_cpu: \x1B[32muint32\x1B[0m = \x1B[34m1\x1B[0m\n"
-    "    }\n");
+    "    }\n")
 
 #define OBJECT_GET_INFO_CPU_STATS_DISPLAY_TEST_CONTENT(result, expected)                   \
   constexpr zx_duration_t kIdleTime = ZX_SEC(50) + 567;                                    \
@@ -1206,7 +1206,7 @@ OBJECT_GET_INFO_THREAD_STATS_DISPLAY_TEST(
   auto value =                                                                             \
       ZxObjectGetInfo(result, #result, kHandle, ZX_INFO_CPU_STATS,                         \
                       reinterpret_cast<void*>(&buffer), sizeof(buffer), nullptr, nullptr); \
-  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected);
+  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected)
 
 #define OBJECT_GET_INFO_CPU_STATS_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                         \
@@ -1242,7 +1242,7 @@ OBJECT_GET_INFO_CPU_STATS_DISPLAY_TEST(
     "      syscalls: \x1B[32muint64\x1B[0m = \x1B[34m15\x1B[0m\n"
     "      reschedule_ipis: \x1B[32muint64\x1B[0m = \x1B[34m2\x1B[0m\n"
     "      generic_ipis: \x1B[32muint64\x1B[0m = \x1B[34m1\x1B[0m\n"
-    "    }\n");
+    "    }\n")
 
 #define OBJECT_GET_INFO_VMAR_DISPLAY_TEST_CONTENT(result, expected)                             \
   constexpr uintptr_t kBase = 0x124680aceUL;                                                    \
@@ -1253,7 +1253,7 @@ OBJECT_GET_INFO_CPU_STATS_DISPLAY_TEST(
   auto value =                                                                                  \
       ZxObjectGetInfo(result, #result, kHandle, ZX_INFO_VMAR, reinterpret_cast<void*>(&buffer), \
                       sizeof(buffer), nullptr, nullptr);                                        \
-  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected);
+  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected)
 
 #define OBJECT_GET_INFO_VMAR_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                    \
@@ -1276,7 +1276,7 @@ OBJECT_GET_INFO_VMAR_DISPLAY_TEST(
     "  -> \x1B[32mZX_OK\x1B[0m\n"
     "    info: \x1B[32mzx_info_vmar_t\x1B[0m = { "
     "base: \x1B[32muintptr\x1B[0m = \x1B[34m0000000124680ace\x1B[0m, "
-    "len: \x1B[32msize\x1B[0m = \x1B[34m4096\x1B[0m }\n");
+    "len: \x1B[32msize\x1B[0m = \x1B[34m4096\x1B[0m }\n")
 
 #define OBJECT_GET_INFO_VMO_DISPLAY_TEST_CONTENT(result, expected)                             \
   constexpr size_t kSizeBytes = 4000;                                                          \
@@ -1296,7 +1296,7 @@ OBJECT_GET_INFO_VMAR_DISPLAY_TEST(
   auto value =                                                                                 \
       ZxObjectGetInfo(result, #result, kHandle, ZX_INFO_VMO, reinterpret_cast<void*>(&buffer), \
                       sizeof(buffer), nullptr, nullptr);                                       \
-  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected);
+  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected)
 
 #define OBJECT_GET_INFO_VMO_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                   \
@@ -1332,7 +1332,7 @@ OBJECT_GET_INFO_VMO_DISPLAY_TEST(
     "      cache_policy: \x1B[32mzx.cache_policy\x1B[0m = \x1B[34mZX_CACHE_POLICY_CACHED\x1B[0m\n"
     "      metadata_bytes: \x1B[32muint64\x1B[0m = \x1B[34m0\x1B[0m\n"
     "      committed_change_events: \x1B[32muint64\x1B[0m = \x1B[34m0\x1B[0m\n"
-    "    }\n");
+    "    }\n")
 
 #define OBJECT_GET_INFO_SOCKET_DISPLAY_TEST_CONTENT(result, expected)                             \
   constexpr size_t kRxBufMax = 8192;                                                              \
@@ -1350,7 +1350,7 @@ OBJECT_GET_INFO_VMO_DISPLAY_TEST(
   auto value =                                                                                    \
       ZxObjectGetInfo(result, #result, kHandle, ZX_INFO_SOCKET, reinterpret_cast<void*>(&buffer), \
                       sizeof(buffer), nullptr, nullptr);                                          \
-  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected);
+  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected)
 
 #define OBJECT_GET_INFO_SOCKET_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                      \
@@ -1378,7 +1378,7 @@ OBJECT_GET_INFO_SOCKET_DISPLAY_TEST(
     "      rx_buf_available: \x1B[32msize\x1B[0m = \x1B[34m4002\x1B[0m\n"
     "      tx_buf_max: \x1B[32msize\x1B[0m = \x1B[34m8192\x1B[0m\n"
     "      tx_buf_size: \x1B[32msize\x1B[0m = \x1B[34m4096\x1B[0m\n"
-    "    }\n");
+    "    }\n")
 
 #define OBJECT_GET_INFO_TIMER_DISPLAY_TEST_CONTENT(result, expected)                             \
   constexpr int kDeadline = 1000;                                                                \
@@ -1390,7 +1390,7 @@ OBJECT_GET_INFO_SOCKET_DISPLAY_TEST(
   auto value =                                                                                   \
       ZxObjectGetInfo(result, #result, kHandle, ZX_INFO_TIMER, reinterpret_cast<void*>(&buffer), \
                       sizeof(buffer), nullptr, nullptr);                                         \
-  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected);
+  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected)
 
 #define OBJECT_GET_INFO_TIMER_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                     \
@@ -1415,7 +1415,7 @@ OBJECT_GET_INFO_TIMER_DISPLAY_TEST(
     "      options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m\n"
     "      deadline: \x1B[32mzx.time\x1B[0m = \x1B[34m16 minutes, 40 seconds\x1B[0m\n"
     "      slack: \x1B[32mzx.duration\x1B[0m = \x1B[34m100 nano seconds\x1B[0m\n"
-    "    }\n");
+    "    }\n")
 
 #define OBJECT_GET_INFO_JOB_CHILDREN_DISPLAY_TEST_CONTENT(result, expected)         \
   constexpr zx_koid_t kThread1 = 1111;                                              \
@@ -1427,7 +1427,7 @@ OBJECT_GET_INFO_TIMER_DISPLAY_TEST(
   auto value = ZxObjectGetInfo(result, #result, kHandle, ZX_INFO_JOB_CHILDREN,      \
                                reinterpret_cast<void*>(buffer.data()),              \
                                buffer.size() * sizeof(zx_koid_t), &actual, &avail); \
-  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected);
+  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected)
 
 #define OBJECT_GET_INFO_JOB_CHILDREN_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                            \
@@ -1450,7 +1450,7 @@ OBJECT_GET_INFO_JOB_CHILDREN_DISPLAY_TEST(
     "  -> \x1B[32mZX_OK\x1B[0m (actual: \x1B[32msize\x1B[0m = "
     "\x1B[34m3\x1B[0m/\x1B[34m5\x1B[0m)\n"
     "    info: \x1B[32mvector<zx.koid>\x1B[0m = [ "
-    "\x1B[31m1111\x1B[0m, \x1B[31m2222\x1B[0m, \x1B[31m3333\x1B[0m ]\n");
+    "\x1B[31m1111\x1B[0m, \x1B[31m2222\x1B[0m, \x1B[31m3333\x1B[0m ]\n")
 
 #define OBJECT_GET_INFO_JOB_PROCESSES_DISPLAY_TEST_CONTENT(result, expected)        \
   constexpr zx_koid_t kThread1 = 1111;                                              \
@@ -1462,7 +1462,7 @@ OBJECT_GET_INFO_JOB_CHILDREN_DISPLAY_TEST(
   auto value = ZxObjectGetInfo(result, #result, kHandle, ZX_INFO_JOB_PROCESSES,     \
                                reinterpret_cast<void*>(buffer.data()),              \
                                buffer.size() * sizeof(zx_koid_t), &actual, &avail); \
-  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected);
+  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected)
 
 #define OBJECT_GET_INFO_JOB_PROCESSES_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                             \
@@ -1485,7 +1485,7 @@ OBJECT_GET_INFO_JOB_PROCESSES_DISPLAY_TEST(
     "  -> \x1B[32mZX_OK\x1B[0m (actual: \x1B[32msize\x1B[0m = "
     "\x1B[34m3\x1B[0m/\x1B[34m5\x1B[0m)\n"
     "    info: \x1B[32mvector<zx.koid>\x1B[0m = [ "
-    "\x1B[31m1111\x1B[0m, \x1B[31m2222\x1B[0m, \x1B[31m3333\x1B[0m ]\n");
+    "\x1B[31m1111\x1B[0m, \x1B[31m2222\x1B[0m, \x1B[31m3333\x1B[0m ]\n")
 
 #define OBJECT_GET_INFO_TASK_STATS_DISPLAY_TEST_CONTENT(result, expected)                  \
   constexpr size_t kMemMappedBytes = 65536;                                                \
@@ -1500,7 +1500,7 @@ OBJECT_GET_INFO_JOB_PROCESSES_DISPLAY_TEST(
   auto value =                                                                             \
       ZxObjectGetInfo(result, #result, kHandle, ZX_INFO_TASK_STATS,                        \
                       reinterpret_cast<void*>(&buffer), sizeof(buffer), nullptr, nullptr); \
-  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected);
+  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected)
 
 #define OBJECT_GET_INFO_TASK_STATS_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                          \
@@ -1526,7 +1526,7 @@ OBJECT_GET_INFO_TASK_STATS_DISPLAY_TEST(
     "      mem_private_bytes: \x1B[32msize\x1B[0m = \x1B[34m16000\x1B[0m\n"
     "      mem_shared_bytes: \x1B[32msize\x1B[0m = \x1B[34m20000\x1B[0m\n"
     "      mem_scaled_shared_bytes: \x1B[32msize\x1B[0m = \x1B[34m5000\x1B[0m\n"
-    "    }\n");
+    "    }\n")
 
 #define OBJECT_GET_INFO_PROCESS_MAPS_DISPLAY_TEST_CONTENT(result, expected)                       \
   std::vector<zx_info_maps_t> buffer(3);                                                          \
@@ -1549,7 +1549,7 @@ OBJECT_GET_INFO_TASK_STATS_DISPLAY_TEST(
   auto value = ZxObjectGetInfo(result, #result, kHandle, ZX_INFO_PROCESS_MAPS,                    \
                                reinterpret_cast<void*>(buffer.data()),                            \
                                buffer.size() * sizeof(zx_info_maps_t), &actual, &avail);          \
-  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected);
+  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected)
 
 #define OBJECT_GET_INFO_PROCESS_MAPS_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                            \
@@ -1600,7 +1600,7 @@ OBJECT_GET_INFO_PROCESS_MAPS_DISPLAY_TEST(
     "        depth: \x1B[32msize\x1B[0m = \x1B[34m2\x1B[0m\n"
     "        type: \x1B[32mzx.info_maps_type\x1B[0m = \x1B[31mZX_INFO_MAPS_TYPE_VMAR\x1B[0m\n"
     "      }\n"
-    "    ]\n");
+    "    ]\n")
 
 #define OBJECT_GET_INFO_PROCESS_VMOS_DISPLAY_TEST_CONTENT(result, expected)                      \
   std::vector<zx_info_vmo_t> buffer(2);                                                          \
@@ -1631,7 +1631,7 @@ OBJECT_GET_INFO_PROCESS_MAPS_DISPLAY_TEST(
   auto value = ZxObjectGetInfo(result, #result, kHandle, ZX_INFO_PROCESS_VMOS,                   \
                                reinterpret_cast<void*>(buffer.data()),                           \
                                buffer.size() * sizeof(zx_info_vmo_t), &actual, &avail);          \
-  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected);
+  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected)
 
 #define OBJECT_GET_INFO_PROCESS_VMOS_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                            \
@@ -1688,7 +1688,7 @@ OBJECT_GET_INFO_PROCESS_VMOS_DISPLAY_TEST(
     "        metadata_bytes: \x1B[32muint64\x1B[0m = \x1B[34m0\x1B[0m\n"
     "        committed_change_events: \x1B[32muint64\x1B[0m = \x1B[34m0\x1B[0m\n"
     "      }\n"
-    "    ]\n");
+    "    ]\n")
 
 #define OBJECT_GET_INFO_KMEM_STATS_DISPLAY_TEST_CONTENT(result, expected)                  \
   constexpr size_t kTotalBytes = 16384;                                                    \
@@ -1711,7 +1711,7 @@ OBJECT_GET_INFO_PROCESS_VMOS_DISPLAY_TEST(
   auto value =                                                                             \
       ZxObjectGetInfo(result, #result, kHandle, ZX_INFO_KMEM_STATS,                        \
                       reinterpret_cast<void*>(&buffer), sizeof(buffer), nullptr, nullptr); \
-  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected);
+  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected)
 
 #define OBJECT_GET_INFO_KMEM_STATS_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                          \
@@ -1741,7 +1741,7 @@ OBJECT_GET_INFO_KMEM_STATS_DISPLAY_TEST(
     "      vmo_bytes: \x1B[32msize\x1B[0m = \x1B[34m8000\x1B[0m\n"
     "      mmu_overhead_bytes: \x1B[32msize\x1B[0m = \x1B[34m200\x1B[0m\n"
     "      other_bytes: \x1B[32msize\x1B[0m = \x1B[34m50\x1B[0m\n"
-    "    }\n");
+    "    }\n")
 
 #define OBJECT_GET_INFO_RESOURCE_DISPLAY_TEST_CONTENT(result, expected)                       \
   constexpr uint64_t kBase = 1000;                                                            \
@@ -1751,7 +1751,7 @@ OBJECT_GET_INFO_KMEM_STATS_DISPLAY_TEST(
   auto value =                                                                                \
       ZxObjectGetInfo(result, #result, kHandle, ZX_INFO_RESOURCE,                             \
                       reinterpret_cast<void*>(&buffer), sizeof(buffer), nullptr, nullptr);    \
-  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected);
+  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected)
 
 #define OBJECT_GET_INFO_RESOURCE_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                        \
@@ -1778,7 +1778,7 @@ OBJECT_GET_INFO_RESOURCE_DISPLAY_TEST(
     "      base: \x1B[32muint64\x1B[0m = \x1B[34m1000\x1B[0m\n"
     "      size: \x1B[32msize\x1B[0m = \x1B[34m100\x1B[0m\n"
     "      name: vector<\x1B[32mchar\x1B[0m> = \x1B[31m\"my_res\"\x1B[0m\n"
-    "    }\n");
+    "    }\n")
 
 #define OBJECT_GET_INFO_BTI_DISPLAY_TEST_CONTENT(result, expected)                             \
   constexpr uint64_t kMinimumContiguity = 1024 * 1024;                                         \
@@ -1791,7 +1791,7 @@ OBJECT_GET_INFO_RESOURCE_DISPLAY_TEST(
   auto value =                                                                                 \
       ZxObjectGetInfo(result, #result, kHandle, ZX_INFO_BTI, reinterpret_cast<void*>(&buffer), \
                       sizeof(buffer), nullptr, nullptr);                                       \
-  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected);
+  PerformDisplayTest("$plt(zx_object_get_info)", std::move(value), expected)
 
 #define OBJECT_GET_INFO_BTI_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                   \
@@ -1817,7 +1817,7 @@ OBJECT_GET_INFO_BTI_DISPLAY_TEST(
     "      aspace_size: \x1B[32muint64\x1B[0m = \x1B[34m536870912\x1B[0m\n"
     "      pmo_count: \x1B[32muint64\x1B[0m = \x1B[34m0\x1B[0m\n"
     "      quarantine_count: \x1B[32muint64\x1B[0m = \x1B[34m0\x1B[0m\n"
-    "    }\n");
+    "    }\n")
 
 // zx_object_get_child tests.
 
@@ -1835,7 +1835,7 @@ std::unique_ptr<SystemCallTest> ZxObjectGetChild(int64_t result, std::string_vie
 #define OBJECT_GET_CHILD_DISPLAY_TEST_CONTENT(result, expected)                               \
   zx_handle_t out = kHandleOut;                                                               \
   auto value = ZxObjectGetChild(result, #result, kHandle, kKoid, ZX_RIGHT_SAME_RIGHTS, &out); \
-  PerformDisplayTest("$plt(zx_object_get_child)", std::move(value), expected);
+  PerformDisplayTest("$plt(zx_object_get_child)", std::move(value), expected)
 
 #define OBJECT_GET_CHILD_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                \
@@ -1855,7 +1855,7 @@ OBJECT_GET_CHILD_DISPLAY_TEST(
     "koid: \x1B[32muint64\x1B[0m = \x1B[34m4252\x1B[0m, "
     "rights: \x1B[32mzx.rights\x1B[0m = \x1B[34mZX_RIGHT_SAME_RIGHTS\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
+    "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n")
 
 // zx_object_set_profile tests.
 
@@ -1871,7 +1871,7 @@ std::unique_ptr<SystemCallTest> ZxObjectSetProfile(int64_t result, std::string_v
 
 #define OBJECT_SET_PROFILE_DISPLAY_TEST_CONTENT(result, expected) \
   PerformDisplayTest("$plt(zx_object_set_profile)",               \
-                     ZxObjectSetProfile(result, #result, kHandle, kHandle2, 0), expected);
+                     ZxObjectSetProfile(result, #result, kHandle, kHandle2, 0), expected)
 
 #define OBJECT_SET_PROFILE_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                  \
@@ -1890,6 +1890,6 @@ OBJECT_SET_PROFILE_DISPLAY_TEST(
     "profile: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1222\x1B[0m, "
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
-    "  -> \x1B[32mZX_OK\x1B[0m\n");
+    "  -> \x1B[32mZX_OK\x1B[0m\n")
 
 }  // namespace fidlcat
