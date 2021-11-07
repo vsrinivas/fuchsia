@@ -105,17 +105,17 @@
 #define SPN_VK_DS_ID_RECLAIM         reclaim
 
 #define SPN_VK_GLSL_DS_EXPAND()                                                                        \
-  SPN_VK_GLSL_DS_STATUS    (SPN_EMPTY,SPN_EMPTY);                                                      \
-  SPN_VK_GLSL_DS_BLOCK_POOL(SPN_EMPTY,SPN_EMPTY,SPN_EMPTY,SPN_EMPTY,SPN_EMPTY);                        \
-  SPN_VK_GLSL_DS_PATHS_COPY(SPN_EMPTY,SPN_EMPTY,SPN_EMPTY,SPN_EMPTY);                                  \
-  SPN_VK_GLSL_DS_RASTERIZE (SPN_EMPTY,SPN_EMPTY,SPN_EMPTY,SPN_EMPTY,SPN_EMPTY,SPN_EMPTY,SPN_EMPTY);    \
-  SPN_VK_GLSL_DS_TTRKS     (SPN_EMPTY,SPN_EMPTY,SPN_EMPTY,SPN_EMPTY);                                  \
-  SPN_VK_GLSL_DS_RASTER_IDS(SPN_EMPTY,SPN_EMPTY);                                                      \
-  SPN_VK_GLSL_DS_TTCKS     (SPN_EMPTY,SPN_EMPTY,SPN_EMPTY);                                            \
-  SPN_VK_GLSL_DS_PLACE     (SPN_EMPTY,SPN_EMPTY);                                                      \
-  SPN_VK_GLSL_DS_STYLING   (SPN_EMPTY,SPN_EMPTY);                                                      \
-  SPN_VK_GLSL_DS_SURFACE   (SPN_EMPTY,SPN_EMPTY,SPN_EMPTY);                                            \
-  SPN_VK_GLSL_DS_RECLAIM   (SPN_EMPTY,SPN_EMPTY);
+  SPN_VK_GLSL_DS_STATUS    (SPN_EMPTY,SPN_EMPTY)                                                       \
+  SPN_VK_GLSL_DS_BLOCK_POOL(SPN_EMPTY,SPN_EMPTY,SPN_EMPTY,SPN_EMPTY,SPN_EMPTY)                         \
+  SPN_VK_GLSL_DS_PATHS_COPY(SPN_EMPTY,SPN_EMPTY,SPN_EMPTY,SPN_EMPTY)                                   \
+  SPN_VK_GLSL_DS_RASTERIZE (SPN_EMPTY,SPN_EMPTY,SPN_EMPTY,SPN_EMPTY,SPN_EMPTY,SPN_EMPTY,SPN_EMPTY)     \
+  SPN_VK_GLSL_DS_TTRKS     (SPN_EMPTY,SPN_EMPTY,SPN_EMPTY,SPN_EMPTY)                                   \
+  SPN_VK_GLSL_DS_RASTER_IDS(SPN_EMPTY,SPN_EMPTY)                                                       \
+  SPN_VK_GLSL_DS_TTCKS     (SPN_EMPTY,SPN_EMPTY,SPN_EMPTY)                                             \
+  SPN_VK_GLSL_DS_PLACE     (SPN_EMPTY,SPN_EMPTY)                                                       \
+  SPN_VK_GLSL_DS_STYLING   (SPN_EMPTY,SPN_EMPTY)                                                       \
+  SPN_VK_GLSL_DS_SURFACE   (SPN_EMPTY,SPN_EMPTY,SPN_EMPTY)                                             \
+  SPN_VK_GLSL_DS_RECLAIM   (SPN_EMPTY,SPN_EMPTY)
 
 #define SPN_VK_DS_EXPAND()                                                            \
   SPN_VK_DS_EXPAND_X(0 ,SPN_VK_DS_ID_STATUS,          SPN_VK_DS_STATUS())             \
