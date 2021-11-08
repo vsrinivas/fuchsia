@@ -4,6 +4,8 @@
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/sim-mvm.h"
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/sim-time-event.h"
+
 extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/commands.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/datapath.h"
@@ -40,7 +42,8 @@ zx_status_t SimMvm::SendCmd(struct iwl_host_cmd* cmd, bool* notify_wait) {
         // On real hardware, this command will reply a pakcet to unblock the driver waiting.
         // In the simulated code, we don't generate the packet. Instead, we unblock it directly.
         case PHY_CONFIGURATION_CMD:
-          // passthru
+          *notify_wait = true;
+          return ZX_OK;
 
         // The driver code expects 2 notifications from the firmware in this command:
         //
@@ -51,11 +54,11 @@ zx_status_t SimMvm::SendCmd(struct iwl_host_cmd* cmd, bool* notify_wait) {
         // However, the current sim-mvm code can only unblock the first wait. So added
         // TODO(fxbug.dev/51671) to track this.
         case TIME_EVENT_CMD:
-          // passthru
-
-          // The above commands require unblock the notification.
+          ret = HandleTimeEvent(cmd, &resp);
           *notify_wait = true;
-          __FALLTHROUGH;
+          break;
+
+        // Below commands don't require a response in the testing code to continue.
         case SHARED_MEM_CFG:
         case TX_ANT_CONFIGURATION_CMD:
         case PHY_DB_CMD:
@@ -76,7 +79,7 @@ zx_status_t SimMvm::SendCmd(struct iwl_host_cmd* cmd, bool* notify_wait) {
         case REPLY_BEACON_FILTERING_CMD:
           return ZX_OK;
 
-        // Command would return 'status' back to driver.
+        // Commands would return 'status' back to driver.
         case BINDING_CONTEXT_CMD:
           build_response_with_status(&resp, 0);
           ret = ZX_OK;

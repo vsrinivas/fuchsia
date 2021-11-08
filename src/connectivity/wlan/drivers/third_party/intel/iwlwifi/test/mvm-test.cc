@@ -18,6 +18,7 @@ extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/memory.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/fake-ucode-capa-test.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/mock-trans.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/sim-time-event.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/single-ap-test.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/wlan-pkt-builder.h"
 
@@ -624,12 +625,53 @@ class TimeEventTest : public MvmTest {
 
 TEST_F(TimeEventTest, NormalCase) {
   // wait_for_notif is true.
+  ASSERT_EQ(0, list_length(&mvm_->time_event_list));
   ASSERT_EQ(ZX_OK, iwl_mvm_protect_session(mvm_, mvmvif_, 1, 2, 3, true));
+  ASSERT_EQ(1, list_length(&mvm_->time_event_list));
   ASSERT_EQ(ZX_OK, iwl_mvm_stop_session_protection(mvmvif_));
+  ASSERT_EQ(0, list_length(&mvm_->time_event_list));
 
   // wait_for_notif is false.
+  ASSERT_EQ(0, list_length(&mvm_->time_event_list));
   ASSERT_EQ(ZX_OK, iwl_mvm_protect_session(mvm_, mvmvif_, 1, 2, 3, false));
+  ASSERT_EQ(1, list_length(&mvm_->time_event_list));
   ASSERT_EQ(ZX_OK, iwl_mvm_stop_session_protection(mvmvif_));
+  ASSERT_EQ(0, list_length(&mvm_->time_event_list));
+}
+
+TEST_F(TimeEventTest, Notification) {
+  // Set wait_for_notif to false so that we don't wait for TIME_EVENT_NOTIFICATION.
+  ASSERT_EQ(ZX_OK, iwl_mvm_protect_session(mvm_, mvmvif_, 1, 2, 3, false));
+
+  // On the real device, 'te_data->uid' is populated by response of TIME_EVENT_CMD. However, the
+  // iwl_mvm_time_event_send_add() uses iwl_wait_notification() to get the value instead of reading
+  // from the cmd->resp_pkt (see the comment in iwl_mvm_time_event_send_add()).
+  //
+  // However, the current test/sim-mvm.cc is hard to implement the wait notification yet (which
+  // requires multi-threading model). So, the hack is inserting the 'te_data->uid' in the test code.
+  //
+  // TODO(fxbug.dev/87974): remove this hack once the wait notification model is supported in the
+  //                        testing code.
+  //
+  ASSERT_EQ(1, list_length(&mvm_->time_event_list));
+  auto* te_data = list_peek_head_type(&mvm_->time_event_list, struct iwl_mvm_time_event_data, list);
+  te_data->uid = kFakeUniqueId;
+
+  // Generate a fake TIME_EVENT_NOTIFICATION from the firmware. Note that this notification is
+  // differnt from the above code, which is the notification for TIME_EVENT_CMD.
+  //
+  // We expect the driver will remove the waiting notification from the `time_event_list`.
+  //
+  // TODO(fxbug.dev/51671): remove this hack once the test/sim-mvm.cc can support filing another
+  //                        notification from one host command.
+  //
+  struct iwl_time_event_notif notif = {
+      .unique_id = kFakeUniqueId,
+      .action = TE_V2_NOTIF_HOST_EVENT_END,
+  };
+  TestRxcb time_event_rxcb(sim_trans_.iwl_trans()->dev, &notif, sizeof(notif));
+  iwl_mvm_rx_time_event_notif(mvm_, &time_event_rxcb);
+  ASSERT_EQ(0, list_length(&mvm_->time_event_list));
 }
 
 ///////////////////////////////////////////////////////////////////////////////

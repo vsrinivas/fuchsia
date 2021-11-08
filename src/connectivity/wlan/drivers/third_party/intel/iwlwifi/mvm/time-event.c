@@ -163,26 +163,28 @@ static void iwl_mvm_csa_noa_start(struct iwl_mvm* mvm) {
 out_unlock:
   rcu_read_unlock();
 }
+#endif  // NEEDS_PORTING
 
-static bool iwl_mvm_te_check_disconnect(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
+static bool iwl_mvm_te_check_disconnect(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvmvif,
                                         const char* errmsg) {
-  struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
-
-  if (vif->type != NL80211_IFTYPE_STATION) {
+  if (mvmvif->mac_role != WLAN_INFO_MAC_ROLE_CLIENT) {
     return false;
   }
 
-  if (!mvmvif->csa_bcn_pending && vif->bss_conf.assoc && vif->bss_conf.dtim_period) {
+  if (!mvmvif->csa_bcn_pending && mvmvif->bss_conf.assoc && mvmvif->bss_conf.dtim_period) {
     return false;
   }
   if (errmsg) {
     IWL_ERR(mvm, "%s\n", errmsg);
   }
 
+#if 0   // NEEDS_PORTING
   iwl_mvm_connection_loss(mvm, vif, errmsg);
+#endif  // NEEDS_PORTING
   return true;
 }
 
+#if 0   // NEEDS_PORTING
 static void iwl_mvm_te_handle_notify_csa(struct iwl_mvm* mvm,
                                          struct iwl_mvm_time_event_data* te_data,
                                          struct iwl_time_event_notif* notif) {
@@ -247,6 +249,7 @@ static void iwl_mvm_te_check_trigger(struct iwl_mvm* mvm, struct iwl_time_event_
     break;
   }
 }
+#endif  // NEEDS_PORTING
 
 /*
  * Handles a FW notification for an event that is known to the driver.
@@ -262,7 +265,9 @@ static void iwl_mvm_te_handle_notif(struct iwl_mvm* mvm, struct iwl_mvm_time_eve
   IWL_DEBUG_TE(mvm, "Handle time event notif - UID = 0x%x action %d\n",
                le32_to_cpu(notif->unique_id), le32_to_cpu(notif->action));
 
+#if 0   // NEEDS_PORTING
   iwl_mvm_te_check_trigger(mvm, notif, te_data);
+#endif  // NEEDS_PORTING
 
   /*
    * The FW sends the start/end time event notifications even for events
@@ -283,28 +288,30 @@ static void iwl_mvm_te_handle_notif(struct iwl_mvm* mvm, struct iwl_mvm_time_eve
 
     IWL_DEBUG_TE(mvm, "%s\n", msg);
 
-    if (iwl_mvm_te_check_disconnect(mvm, te_data->vif, msg)) {
+    if (iwl_mvm_te_check_disconnect(mvm, te_data->mvmvif, msg)) {
       iwl_mvm_te_clear_data(mvm, te_data);
       return;
     }
   }
 
   if (le32_to_cpu(notif->action) & TE_V2_NOTIF_HOST_EVENT_END) {
-    IWL_DEBUG_TE(mvm, "TE ended - current time %lu, estimated end %lu\n", jiffies,
-                 te_data->end_jiffies);
+    IWL_DEBUG_TE(mvm, "TE ended - current time %lu, estimated end %lu\n", iwl_time_now(mvm->dev),
+                 te_data->end_time);
 
-    switch (te_data->vif->type) {
+    switch (te_data->mvmvif->mac_role) {
+#if 0   // NEEDS_PORTING
       case NL80211_IFTYPE_P2P_DEVICE:
         ieee80211_remain_on_channel_expired(mvm->hw);
         set_bit(IWL_MVM_STATUS_NEED_FLUSH_P2P, &mvm->status);
         iwl_mvm_roc_finished(mvm);
         break;
-      case NL80211_IFTYPE_STATION:
+#endif  // NEEDS_PORTING
+      case WLAN_INFO_MAC_ROLE_CLIENT:
         /*
          * By now, we should have finished association
          * and know the dtim period.
          */
-        iwl_mvm_te_check_disconnect(mvm, te_data->vif,
+        iwl_mvm_te_check_disconnect(mvm, te_data->mvmvif,
                                     "No beacon heard and the time event is over already...");
         break;
       default:
@@ -314,8 +321,9 @@ static void iwl_mvm_te_handle_notif(struct iwl_mvm* mvm, struct iwl_mvm_time_eve
     iwl_mvm_te_clear_data(mvm, te_data);
   } else if (le32_to_cpu(notif->action) & TE_V2_NOTIF_HOST_EVENT_START) {
     te_data->running = true;
-    te_data->end_jiffies = TU_TO_EXP_TIME(te_data->duration);
+    te_data->end_time = TU_TO_DURATION(te_data->duration);
 
+#if 0   // NEEDS_PORTING
     if (te_data->vif->type == NL80211_IFTYPE_P2P_DEVICE) {
       set_bit(IWL_MVM_STATUS_ROC_RUNNING, &mvm->status);
       iwl_mvm_ref(mvm, IWL_MVM_REF_ROC);
@@ -323,11 +331,13 @@ static void iwl_mvm_te_handle_notif(struct iwl_mvm* mvm, struct iwl_mvm_time_eve
     } else if (te_data->id == TE_CHANNEL_SWITCH_PERIOD) {
       iwl_mvm_te_handle_notify_csa(mvm, te_data, notif);
     }
+#endif  // NEEDS_PORTING
   } else {
     IWL_WARN(mvm, "Got TE with unknown action\n");
   }
 }
 
+#if 0   // NEEDS_PORTING
 /*
  * Handle A Aux ROC time event
  */
@@ -374,6 +384,7 @@ static int iwl_mvm_aux_roc_te_handle_notif(struct iwl_mvm* mvm,
 
   return 0;
 }
+#endif  // NEEDS_PORTING
 
 /*
  * The Rx handler for time event notifications
@@ -386,21 +397,24 @@ void iwl_mvm_rx_time_event_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* 
   IWL_DEBUG_TE(mvm, "Time event notification - UID = 0x%x action %d\n",
                le32_to_cpu(notif->unique_id), le32_to_cpu(notif->action));
 
-  spin_lock_bh(&mvm->time_event_lock);
+  mtx_lock(&mvm->time_event_lock);
+
+#if 0   // NEEDS_PORTING
   /* This time event is triggered for Aux ROC request */
   if (!iwl_mvm_aux_roc_te_handle_notif(mvm, notif)) {
     goto unlock;
   }
+#endif  // NEEDS_PORTING
 
-  list_for_each_entry_safe(te_data, tmp, &mvm->time_event_list, list) {
+  list_for_every_entry_safe (&mvm->time_event_list, te_data, tmp, struct iwl_mvm_time_event_data,
+                             list) {
     if (le32_to_cpu(notif->unique_id) == te_data->uid) {
       iwl_mvm_te_handle_notif(mvm, te_data, notif);
     }
   }
-unlock:
-  spin_unlock_bh(&mvm->time_event_lock);
+
+  mtx_unlock(&mvm->time_event_lock);
 }
-#endif  // NEEDS_PORTING
 
 static bool iwl_mvm_te_notif(struct iwl_notif_wait_data* notif_wait, struct iwl_rx_packet* pkt,
                              void* data) {
@@ -481,6 +495,7 @@ static zx_status_t iwl_mvm_time_event_send_add(struct iwl_mvm_vif* mvmvif,
     mtx_unlock(&mvm->time_event_lock);
     return ZX_ERR_BAD_STATE;
   }
+  // TODO(fxbug.dev/88102): ensure pointer validation.
   te_data->mvmvif = mvmvif;
   te_data->duration = le32_to_cpu(te_cmd->duration);
   te_data->id = le32_to_cpu(te_cmd->id);

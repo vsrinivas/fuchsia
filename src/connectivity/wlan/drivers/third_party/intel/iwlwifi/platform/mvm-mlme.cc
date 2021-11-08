@@ -386,17 +386,6 @@ zx_status_t mac_set_channel(void* ctx, uint32_t options, const wlan_channel_t* c
     // (had gone through mac_configure_bss but was rejected by the AP). Remove it first.
     IWL_INFO(mvmvif, "We already have AP STA ID set (%d). Removing it.\n", mvmvif->ap_sta_id);
 
-    // In the normal case, the time event is added in the mac_configure_bss() and removed in the
-    // mac_configure_assoc(). So in the abnormal cases (assoc failed), we need to remove it before
-    // configure_bss().
-    mtx_lock(&mvmvif->mvm->mutex);
-    ret = iwl_mvm_remove_time_event(mvmvif, &mvmvif->time_event_data);
-    mtx_unlock(&mvmvif->mvm->mutex);
-    if (ret != ZX_OK) {
-      IWL_ERR(mvmvif, "cannot remove time event: %s\n", zx_status_get_string(ret));
-      return ret;
-    }
-
     // TODO(fxbug.dev/86715): this RCU-unprotected access is safe as deletions from the map are
     // RCU-synchronized from API calls to mac_stop() in this same thread.
     auto mvm_sta = mvmvif->mvm->fw_id_to_mac_id[mvmvif->ap_sta_id];

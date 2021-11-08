@@ -261,8 +261,11 @@ static const struct iwl_rx_handlers iwl_mvm_rx_handlers[] = {
     RX_HANDLER(STATISTICS_NOTIFICATION, iwl_mvm_rx_statistics, RX_HANDLER_ASYNC_LOCKED),
 
     RX_HANDLER(BA_WINDOW_STATUS_NOTIFICATION_ID, iwl_mvm_window_status_notif, RX_HANDLER_SYNC),
+#endif  // NEEDS_PORTING
 
     RX_HANDLER(TIME_EVENT_NOTIFICATION, iwl_mvm_rx_time_event_notif, RX_HANDLER_SYNC),
+
+#if 0   // NEEDS_PORTING
     RX_HANDLER(MCC_CHUB_UPDATE_CMD, iwl_mvm_rx_chub_update_mcc, RX_HANDLER_ASYNC_LOCKED),
 
     RX_HANDLER(EOSP_NOTIFICATION, iwl_mvm_rx_eosp_notif, RX_HANDLER_SYNC),
