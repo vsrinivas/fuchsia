@@ -10,7 +10,6 @@
 #include <zircon/status.h>
 
 #include <iostream>
-#include <regex>
 
 #include "logger.h"
 #include "src/lib/fxl/strings/string_printf.h"
