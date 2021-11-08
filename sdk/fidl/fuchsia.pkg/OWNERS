@@ -1,12 +1,3 @@
-aaronwood@google.com
-computerdruid@google.com
-etryzelaar@google.com
-galbanum@google.com
-kevinwells@google.com
-raggi@google.com
-senj@google.com
-zkbaum@google.com
-wittrock@google.com
-jakehehrlich@google.com
+include /src/sys/pkg/OWNERS
 
 # COMPONENT: Packages
