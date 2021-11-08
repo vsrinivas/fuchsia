@@ -1,0 +1,33 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Generates a virtual device specification JSON from a board definition.
+#
+#  THIS IS A TEMPORARY IMPLEMENTATION UNTIL fxbug.dev/84738 is done.
+#
+template("virtual_device_specification") {
+  assert(defined(invoker.name), "Device name is required.")
+
+  not_needed(invoker, [ "name" ])
+
+  # TODO(fxbug.dev/84738): Generate a virtual device specification.
+  copy_target = "${target_name}_copy_test_file"
+
+  # Copy a sample virtual device specification to unblock finalization of the
+  # spec. Remove this when fxbug.dev/84738 is fixed.
+  copy(copy_target) {
+    sources =
+        [ "//src/developer/ffx/plugins/emulator/testdata/device_spec.json" ]
+    outputs = [ "${target_gen_dir}/virtual_device.json" ]
+  }
+
+  group(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    deps = [ ":${copy_target}" ]
+  }
+}
