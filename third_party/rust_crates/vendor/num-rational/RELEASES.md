@@ -1,3 +1,60 @@
+# Release 0.4.0 (2021-03-05)
+
+- The optional `num-bigint` dependency is now 0.4.
+- [The `Rational` alias for `Ratio<usize>` is now deprecated][92]. It is
+  recommended to use specific type sizes for numeric computation, like
+  `Rational32` and `Rational64`.
+
+**Contributors**: @cuviper, @vks
+
+[92]: https://github.com/rust-num/num-rational/pull/92
+
+# Release 0.3.2 (2020-11-06)
+
+- [Fix always rebuilding with --remap-path-prefix][88]
+
+**Contributors**: @Nemo157
+
+[88]: https://github.com/rust-num/num-rational/pull/88
+
+# Release 0.3.1 (2020-10-29)
+
+- [Handle to_f64() with raw division by zero][83].
+- [Better document panic behaviour][84].
+- Clarify the license specification as "MIT OR Apache-2.0".
+
+**Contributors**: @cuviper, @zetok
+
+[83]: https://github.com/rust-num/num-rational/pull/83
+[84]: https://github.com/rust-num/num-rational/pull/84
+
+# Release 0.3.0 (2020-06-13)
+
+### Enhancements
+
+- [`Ratio` now implements `ToPrimitive`][52].
+- [`Ratio` now implements additional formatting traits][56]:
+  - `Binary`, `Octal`, `LowerHex`, `UpperHex`, `LowerExp`, `UpperExp`
+- [The `Pow` implementations have been expanded][70].
+  - `Pow<BigInt>` and `Pow<BigUint>` are now implemented.
+  - `Pow<_> for &Ratio<T>` now uses `&T: Pow`.
+  - The inherent `pow` method now uses `&T: Pow`.
+
+### Breaking Changes
+
+- [`num-rational` now requires Rust 1.31 or greater][66].
+  - The "i128" opt-in feature was removed, now always available.
+- [The "num-bigint-std" feature replaces "bigint" with `std` enabled][80].
+  - The "num-bigint" feature without `std` uses `alloc` on Rust 1.36+.
+
+**Contributors**: @cuviper, @MattX, @maxbla
+
+[52]: https://github.com/rust-num/num-rational/pull/52
+[56]: https://github.com/rust-num/num-rational/pull/56
+[66]: https://github.com/rust-num/num-rational/pull/66
+[70]: https://github.com/rust-num/num-rational/pull/70
+[80]: https://github.com/rust-num/num-rational/pull/80
+
 # Release 0.2.4 (2020-03-17)
 
 - [Fixed `CheckedDiv` when both dividend and divisor are 0][74].

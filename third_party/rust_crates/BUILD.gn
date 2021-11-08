@@ -411,7 +411,7 @@ if (!(current_os == "fuchsia")) {
 }
 
 group("num") {
-  deps = [ ":num-v0_2_1" ]
+  deps = [ ":num-v0_4_0" ]
 }
 
 group("num-derive") {
@@ -5877,30 +5877,30 @@ rust_library("ntapi-v0_3_4") {
   ]
 }
 
-rust_library("num-v0_2_1") {
+rust_library("num-v0_4_0") {
   crate_name = "num"
   crate_root = "//third_party/rust_crates/vendor/num/src/lib.rs"
-  output_name = "num-dab29524c5e74b61"
+  output_name = "num-bbbc48fd5d807e0a"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
   ]
 
   deps = []
-  deps += [ ":num-bigint-v0_2_6" ]
-  deps += [ ":num-complex-v0_2_4" ]
+  deps += [ ":num-bigint-v0_4_3" ]
+  deps += [ ":num-complex-v0_4_0" ]
   deps += [ ":num-integer-v0_1_44" ]
   deps += [ ":num-iter-v0_1_42" ]
-  deps += [ ":num-rational-v0_2_4" ]
+  deps += [ ":num-rational-v0_4_0" ]
   deps += [ ":num-traits-v0_2_14" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=dab29524c5e74b61",
-    "-Cextra-filename=-dab29524c5e74b61",
+    "--edition=2018",
+    "-Cmetadata=bbbc48fd5d807e0a",
+    "-Cextra-filename=-bbbc48fd5d807e0a",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"num-bigint\"",
     "--cfg=feature=\"rand\"",
@@ -5908,10 +5908,10 @@ rust_library("num-v0_2_1") {
   ]
 }
 
-rust_library("num-bigint-v0_2_6") {
+rust_library("num-bigint-v0_4_3") {
   crate_name = "num_bigint"
   crate_root = "//third_party/rust_crates/vendor/num-bigint/src/lib.rs"
-  output_name = "num_bigint-af98ae7c1cb87406"
+  output_name = "num_bigint-362cd991252bf6d3"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -5920,25 +5920,26 @@ rust_library("num-bigint-v0_2_6") {
   deps = []
   deps += [ ":num-integer-v0_1_44" ]
   deps += [ ":num-traits-v0_2_14" ]
-  deps += [ ":rand-v0_5_6" ]
+  deps += [ ":rand-v0_8_4" ]
 
-  rustenv = []
+  rustenv = [ "OUT_DIR=../../../../compat/num-bigint" ]
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=af98ae7c1cb87406",
-    "-Cextra-filename=-af98ae7c1cb87406",
+    "--edition=2018",
+    "-Cmetadata=362cd991252bf6d3",
+    "-Cextra-filename=-362cd991252bf6d3",
     "--cfg=feature=\"rand\"",
     "--cfg=feature=\"std\"",
-    "--cfg=has_i128",
+    "--cfg=u64_digit",
+    "--cfg=has_try_from",
   ]
 }
 
-rust_library("num-complex-v0_2_4") {
+rust_library("num-complex-v0_4_0") {
   crate_name = "num_complex"
   crate_root = "//third_party/rust_crates/vendor/num-complex/src/lib.rs"
-  output_name = "num_complex-20c18a8462f75d5f"
+  output_name = "num_complex-2c955e71eec8ce6e"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -5946,15 +5947,15 @@ rust_library("num-complex-v0_2_4") {
 
   deps = []
   deps += [ ":num-traits-v0_2_14" ]
-  deps += [ ":rand-v0_5_6" ]
+  deps += [ ":rand-v0_8_4" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=20c18a8462f75d5f",
-    "-Cextra-filename=-20c18a8462f75d5f",
+    "--edition=2018",
+    "-Cmetadata=2c955e71eec8ce6e",
+    "-Cextra-filename=-2c955e71eec8ce6e",
     "--cfg=feature=\"rand\"",
     "--cfg=feature=\"std\"",
     "--cfg=has_i128",
@@ -6005,6 +6006,7 @@ rust_library("num-integer-v0_1_44") {
     "--edition=2015",
     "-Cmetadata=2a84ff8675296986",
     "-Cextra-filename=-2a84ff8675296986",
+    "--cfg=feature=\"i128\"",
     "--cfg=feature=\"std\"",
     "--cfg=has_i128",
   ]
@@ -6031,22 +6033,23 @@ rust_library("num-iter-v0_1_42") {
     "-Cmetadata=a257411d06b07f30",
     "-Cextra-filename=-a257411d06b07f30",
     "--cfg=feature=\"default\"",
+    "--cfg=feature=\"i128\"",
     "--cfg=feature=\"std\"",
     "--cfg=has_i128",
   ]
 }
 
-rust_library("num-rational-v0_2_4") {
+rust_library("num-rational-v0_4_0") {
   crate_name = "num_rational"
   crate_root = "//third_party/rust_crates/vendor/num-rational/src/lib.rs"
-  output_name = "num_rational-bf48987f8b31a0ac"
+  output_name = "num_rational-dcc88f7010610c33"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
   ]
 
   deps = []
-  deps += [ ":num-bigint-v0_2_6" ]
+  deps += [ ":num-bigint-v0_4_3" ]
   deps += [ ":num-integer-v0_1_44" ]
   deps += [ ":num-traits-v0_2_14" ]
 
@@ -6054,14 +6057,13 @@ rust_library("num-rational-v0_2_4") {
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=bf48987f8b31a0ac",
-    "-Cextra-filename=-bf48987f8b31a0ac",
-    "--cfg=feature=\"bigint\"",
+    "--edition=2018",
+    "-Cmetadata=dcc88f7010610c33",
+    "-Cextra-filename=-dcc88f7010610c33",
     "--cfg=feature=\"num-bigint\"",
+    "--cfg=feature=\"num-bigint-std\"",
     "--cfg=feature=\"std\"",
-    "--cfg=has_i128",
-    "--cfg=has_const_fn",
+    "--cfg=has_int_exp_fmt",
   ]
 }
 
@@ -6084,6 +6086,7 @@ rust_library("num-traits-v0_2_14") {
     "-Cmetadata=eace97eec9f18ef0",
     "-Cextra-filename=-eace97eec9f18ef0",
     "--cfg=feature=\"default\"",
+    "--cfg=feature=\"i128\"",
     "--cfg=feature=\"std\"",
     "--cfg=has_i128",
   ]

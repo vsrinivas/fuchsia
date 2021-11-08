@@ -12,22 +12,14 @@
 //!
 //! ## Compatibility
 //!
-//! The `num-complex` crate is tested for rustc 1.15 and greater.
+//! The `num-complex` crate is tested for rustc 1.31 and greater.
 
-#![doc(html_root_url = "https://docs.rs/num-complex/0.2")]
+#![doc(html_root_url = "https://docs.rs/num-complex/0.4")]
 #![no_std]
 
 #[cfg(any(test, feature = "std"))]
 #[cfg_attr(test, macro_use)]
 extern crate std;
-
-extern crate num_traits as traits;
-
-#[cfg(feature = "serde")]
-extern crate serde;
-
-#[cfg(feature = "rand")]
-extern crate rand;
 
 use core::fmt;
 #[cfg(test)]
@@ -38,11 +30,11 @@ use core::str::FromStr;
 #[cfg(feature = "std")]
 use std::error::Error;
 
-use traits::{Inv, MulAdd, Num, One, Pow, Signed, Zero};
+use num_traits::{Inv, MulAdd, Num, One, Pow, Signed, Zero};
 
-#[cfg(feature = "std")]
-use traits::float::Float;
-use traits::float::FloatCore;
+#[cfg(any(feature = "std", feature = "libm"))]
+use num_traits::float::Float;
+use num_traits::float::FloatCore;
 
 mod cast;
 mod pow;
@@ -50,7 +42,7 @@ mod pow;
 #[cfg(feature = "rand")]
 mod crand;
 #[cfg(feature = "rand")]
-pub use crand::ComplexDistribution;
+pub use crate::crand::ComplexDistribution;
 
 // FIXME #1284: handle complex NaN & infinity etc. This
 // probably doesn't map to C's _Complex correctly.
@@ -93,18 +85,10 @@ pub type Complex32 = Complex<f32>;
 pub type Complex64 = Complex<f64>;
 
 impl<T> Complex<T> {
-    #[cfg(has_const_fn)]
     /// Create a new Complex
     #[inline]
     pub const fn new(re: T, im: T) -> Self {
-        Complex { re: re, im: im }
-    }
-
-    #[cfg(not(has_const_fn))]
-    /// Create a new Complex
-    #[inline]
-    pub fn new(re: T, im: T) -> Self {
-        Complex { re: re, im: im }
+        Complex { re, im }
     }
 }
 
@@ -175,36 +159,36 @@ impl<T: Clone + Signed> Complex<T> {
     }
 }
 
-#[cfg(feature = "std")]
-impl<T: Clone + Float> Complex<T> {
+#[cfg(any(feature = "std", feature = "libm"))]
+impl<T: Float> Complex<T> {
     /// Calculate |self|
     #[inline]
-    pub fn norm(&self) -> T {
+    pub fn norm(self) -> T {
         self.re.hypot(self.im)
     }
     /// Calculate the principal Arg of self.
     #[inline]
-    pub fn arg(&self) -> T {
+    pub fn arg(self) -> T {
         self.im.atan2(self.re)
     }
     /// Convert to polar form (r, theta), such that
     /// `self = r * exp(i * theta)`
     #[inline]
-    pub fn to_polar(&self) -> (T, T) {
+    pub fn to_polar(self) -> (T, T) {
         (self.norm(), self.arg())
     }
     /// Convert a polar representation into a complex number.
     #[inline]
-    pub fn from_polar(r: &T, theta: &T) -> Self {
-        Self::new(*r * theta.cos(), *r * theta.sin())
+    pub fn from_polar(r: T, theta: T) -> Self {
+        Self::new(r * theta.cos(), r * theta.sin())
     }
 
     /// Computes `e^(self)`, where `e` is the base of the natural logarithm.
     #[inline]
-    pub fn exp(&self) -> Self {
+    pub fn exp(self) -> Self {
         // formula: e^(a + bi) = e^a (cos(b) + i*sin(b))
         // = from_polar(e^a, b)
-        Self::from_polar(&self.re.exp(), &self.im)
+        Self::from_polar(self.re.exp(), self.im)
     }
 
     /// Computes the principal value of natural logarithm of `self`.
@@ -215,7 +199,7 @@ impl<T: Clone + Float> Complex<T> {
     ///
     /// The branch satisfies `-π ≤ arg(ln(z)) ≤ π`.
     #[inline]
-    pub fn ln(&self) -> Self {
+    pub fn ln(self) -> Self {
         // formula: ln(z) = ln|z| + i*arg(z)
         let (r, theta) = self.to_polar();
         Self::new(r.ln(), theta)
@@ -229,7 +213,7 @@ impl<T: Clone + Float> Complex<T> {
     ///
     /// The branch satisfies `-π/2 ≤ arg(sqrt(z)) ≤ π/2`.
     #[inline]
-    pub fn sqrt(&self) -> Self {
+    pub fn sqrt(self) -> Self {
         if self.im.is_zero() {
             if self.re.is_sign_positive() {
                 // simple positive real √r, and copy `im` for its sign
@@ -261,7 +245,7 @@ impl<T: Clone + Float> Complex<T> {
             let one = T::one();
             let two = one + one;
             let (r, theta) = self.to_polar();
-            Self::from_polar(&(r.sqrt()), &(theta / two))
+            Self::from_polar(r.sqrt(), theta / two)
         }
     }
 
@@ -277,7 +261,7 @@ impl<T: Clone + Float> Complex<T> {
     /// negative real numbers. For example, the real cube root of `-8` is `-2`,
     /// but the principal complex cube root of `-8` is `1 + i√3`.
     #[inline]
-    pub fn cbrt(&self) -> Self {
+    pub fn cbrt(self) -> Self {
         if self.im.is_zero() {
             if self.re.is_sign_positive() {
                 // simple positive real ∛r, and copy `im` for its sign
@@ -314,22 +298,22 @@ impl<T: Clone + Float> Complex<T> {
             let one = T::one();
             let three = one + one + one;
             let (r, theta) = self.to_polar();
-            Self::from_polar(&(r.cbrt()), &(theta / three))
+            Self::from_polar(r.cbrt(), theta / three)
         }
     }
 
     /// Raises `self` to a floating point power.
     #[inline]
-    pub fn powf(&self, exp: T) -> Self {
+    pub fn powf(self, exp: T) -> Self {
         // formula: x^y = (ρ e^(i θ))^y = ρ^y e^(i θ y)
         // = from_polar(ρ^y, θ y)
         let (r, theta) = self.to_polar();
-        Self::from_polar(&r.powf(exp), &(theta * exp))
+        Self::from_polar(r.powf(exp), theta * exp)
     }
 
     /// Returns the logarithm of `self` with respect to an arbitrary base.
     #[inline]
-    pub fn log(&self, base: T) -> Self {
+    pub fn log(self, base: T) -> Self {
         // formula: log_y(x) = log_y(ρ e^(i θ))
         // = log_y(ρ) + log_y(e^(i θ)) = log_y(ρ) + ln(e^(i θ)) / ln(y)
         // = log_y(ρ) + i θ / ln(y)
@@ -339,7 +323,7 @@ impl<T: Clone + Float> Complex<T> {
 
     /// Raises `self` to a complex power.
     #[inline]
-    pub fn powc(&self, exp: Self) -> Self {
+    pub fn powc(self, exp: Self) -> Self {
         // formula: x^y = (a + i b)^(c + i d)
         // = (ρ e^(i θ))^c (ρ e^(i θ))^(i d)
         //    where ρ=|x| and θ=arg(x)
@@ -353,22 +337,22 @@ impl<T: Clone + Float> Complex<T> {
         // = from_polar(p^c e^(−d θ), c θ + d ln(ρ))
         let (r, theta) = self.to_polar();
         Self::from_polar(
-            &(r.powf(exp.re) * (-exp.im * theta).exp()),
-            &(exp.re * theta + exp.im * r.ln()),
+            r.powf(exp.re) * (-exp.im * theta).exp(),
+            exp.re * theta + exp.im * r.ln(),
         )
     }
 
     /// Raises a floating point number to the complex power `self`.
     #[inline]
-    pub fn expf(&self, base: T) -> Self {
+    pub fn expf(self, base: T) -> Self {
         // formula: x^(a+bi) = x^a x^bi = x^a e^(b ln(x) i)
         // = from_polar(x^a, b ln(x))
-        Self::from_polar(&base.powf(self.re), &(self.im * base.ln()))
+        Self::from_polar(base.powf(self.re), self.im * base.ln())
     }
 
     /// Computes the sine of `self`.
     #[inline]
-    pub fn sin(&self) -> Self {
+    pub fn sin(self) -> Self {
         // formula: sin(a + bi) = sin(a)cosh(b) + i*cos(a)sinh(b)
         Self::new(
             self.re.sin() * self.im.cosh(),
@@ -378,7 +362,7 @@ impl<T: Clone + Float> Complex<T> {
 
     /// Computes the cosine of `self`.
     #[inline]
-    pub fn cos(&self) -> Self {
+    pub fn cos(self) -> Self {
         // formula: cos(a + bi) = cos(a)cosh(b) - i*sin(a)sinh(b)
         Self::new(
             self.re.cos() * self.im.cosh(),
@@ -388,7 +372,7 @@ impl<T: Clone + Float> Complex<T> {
 
     /// Computes the tangent of `self`.
     #[inline]
-    pub fn tan(&self) -> Self {
+    pub fn tan(self) -> Self {
         // formula: tan(a + bi) = (sin(2a) + i*sinh(2b))/(cos(2a) + cosh(2b))
         let (two_re, two_im) = (self.re + self.re, self.im + self.im);
         Self::new(two_re.sin(), two_im.sinh()).unscale(two_re.cos() + two_im.cosh())
@@ -403,7 +387,7 @@ impl<T: Clone + Float> Complex<T> {
     ///
     /// The branch satisfies `-π/2 ≤ Re(asin(z)) ≤ π/2`.
     #[inline]
-    pub fn asin(&self) -> Self {
+    pub fn asin(self) -> Self {
         // formula: arcsin(z) = -i ln(sqrt(1-z^2) + iz)
         let i = Self::i();
         -i * ((Self::one() - self * self).sqrt() + i * self).ln()
@@ -418,7 +402,7 @@ impl<T: Clone + Float> Complex<T> {
     ///
     /// The branch satisfies `0 ≤ Re(acos(z)) ≤ π`.
     #[inline]
-    pub fn acos(&self) -> Self {
+    pub fn acos(self) -> Self {
         // formula: arccos(z) = -i ln(i sqrt(1-z^2) + z)
         let i = Self::i();
         -i * (i * (Self::one() - self * self).sqrt() + self).ln()
@@ -433,14 +417,14 @@ impl<T: Clone + Float> Complex<T> {
     ///
     /// The branch satisfies `-π/2 ≤ Re(atan(z)) ≤ π/2`.
     #[inline]
-    pub fn atan(&self) -> Self {
+    pub fn atan(self) -> Self {
         // formula: arctan(z) = (ln(1+iz) - ln(1-iz))/(2i)
         let i = Self::i();
         let one = Self::one();
         let two = one + one;
-        if *self == i {
+        if self == i {
             return Self::new(T::zero(), T::infinity());
-        } else if *self == -i {
+        } else if self == -i {
             return Self::new(T::zero(), -T::infinity());
         }
         ((one + i * self).ln() - (one - i * self).ln()) / (two * i)
@@ -448,7 +432,7 @@ impl<T: Clone + Float> Complex<T> {
 
     /// Computes the hyperbolic sine of `self`.
     #[inline]
-    pub fn sinh(&self) -> Self {
+    pub fn sinh(self) -> Self {
         // formula: sinh(a + bi) = sinh(a)cos(b) + i*cosh(a)sin(b)
         Self::new(
             self.re.sinh() * self.im.cos(),
@@ -458,7 +442,7 @@ impl<T: Clone + Float> Complex<T> {
 
     /// Computes the hyperbolic cosine of `self`.
     #[inline]
-    pub fn cosh(&self) -> Self {
+    pub fn cosh(self) -> Self {
         // formula: cosh(a + bi) = cosh(a)cos(b) + i*sinh(a)sin(b)
         Self::new(
             self.re.cosh() * self.im.cos(),
@@ -468,7 +452,7 @@ impl<T: Clone + Float> Complex<T> {
 
     /// Computes the hyperbolic tangent of `self`.
     #[inline]
-    pub fn tanh(&self) -> Self {
+    pub fn tanh(self) -> Self {
         // formula: tanh(a + bi) = (sinh(2a) + i*sin(2b))/(cosh(2a) + cos(2b))
         let (two_re, two_im) = (self.re + self.re, self.im + self.im);
         Self::new(two_re.sinh(), two_im.sin()).unscale(two_re.cosh() + two_im.cos())
@@ -483,7 +467,7 @@ impl<T: Clone + Float> Complex<T> {
     ///
     /// The branch satisfies `-π/2 ≤ Im(asinh(z)) ≤ π/2`.
     #[inline]
-    pub fn asinh(&self) -> Self {
+    pub fn asinh(self) -> Self {
         // formula: arcsinh(z) = ln(z + sqrt(1+z^2))
         let one = Self::one();
         (self + (one + self * self).sqrt()).ln()
@@ -497,7 +481,7 @@ impl<T: Clone + Float> Complex<T> {
     ///
     /// The branch satisfies `-π ≤ Im(acosh(z)) ≤ π` and `0 ≤ Re(acosh(z)) < ∞`.
     #[inline]
-    pub fn acosh(&self) -> Self {
+    pub fn acosh(self) -> Self {
         // formula: arccosh(z) = 2 ln(sqrt((z+1)/2) + sqrt((z-1)/2))
         let one = Self::one();
         let two = one + one;
@@ -513,13 +497,13 @@ impl<T: Clone + Float> Complex<T> {
     ///
     /// The branch satisfies `-π/2 ≤ Im(atanh(z)) ≤ π/2`.
     #[inline]
-    pub fn atanh(&self) -> Self {
+    pub fn atanh(self) -> Self {
         // formula: arctanh(z) = (ln(1+z) - ln(1-z))/2
         let one = Self::one();
         let two = one + one;
-        if *self == one {
+        if self == one {
             return Self::new(T::infinity(), T::zero());
-        } else if *self == -one {
+        } else if self == -one {
             return Self::new(-T::infinity(), T::zero());
         }
         ((one + self).ln() - (one - self).ln()) / two
@@ -548,7 +532,7 @@ impl<T: Clone + Float> Complex<T> {
     /// assert!((inv - expected).norm() < 1e-315);
     /// ```
     #[inline]
-    pub fn finv(&self) -> Complex<T> {
+    pub fn finv(self) -> Complex<T> {
         let norm = self.norm();
         self.conj() / norm / norm
     }
@@ -577,12 +561,12 @@ impl<T: Clone + Float> Complex<T> {
     /// assert!((quotient - expected).norm() < 1e-315);
     /// ```
     #[inline]
-    pub fn fdiv(&self, other: Complex<T>) -> Complex<T> {
+    pub fn fdiv(self, other: Complex<T>) -> Complex<T> {
         self * other.finv()
     }
 }
 
-impl<T: Clone + FloatCore> Complex<T> {
+impl<T: FloatCore> Complex<T> {
     /// Checks if the given complex number is NaN
     #[inline]
     pub fn is_nan(self) -> bool {
@@ -669,7 +653,7 @@ macro_rules! forward_all_binop {
     };
 }
 
-/* arithmetic */
+// arithmetic
 forward_all_binop!(impl Add, add);
 
 // (a + i b) + (c + i d) == (a + c) + i (b + d)
@@ -747,18 +731,21 @@ impl<T: Clone + Num> Div<Complex<T>> for Complex<T> {
 
 forward_all_binop!(impl Rem, rem);
 
-// Attempts to identify the gaussian integer whose product with `modulus`
-// is closest to `self`.
+impl<T: Clone + Num> Complex<T> {
+    /// Find the gaussian integer corresponding to the true ratio rounded towards zero.
+    fn div_trunc(&self, divisor: &Self) -> Self {
+        let Complex { re, im } = self / divisor;
+        Complex::new(re.clone() - re % T::one(), im.clone() - im % T::one())
+    }
+}
+
 impl<T: Clone + Num> Rem<Complex<T>> for Complex<T> {
     type Output = Self;
 
     #[inline]
     fn rem(self, modulus: Self) -> Self::Output {
-        let Complex { re, im } = self.clone() / modulus.clone();
-        // This is the gaussian integer corresponding to the true ratio
-        // rounded towards zero.
-        let (re0, im0) = (re.clone() - re % T::one(), im.clone() - im % T::one());
-        self - modulus * Self::Output::new(re0, im0)
+        let gaussian = self.div_trunc(&modulus);
+        self - modulus * gaussian
     }
 }
 
@@ -767,9 +754,9 @@ impl<T: Clone + Num> Rem<Complex<T>> for Complex<T> {
 mod opassign {
     use core::ops::{AddAssign, DivAssign, MulAssign, RemAssign, SubAssign};
 
-    use traits::{MulAddAssign, NumAssign};
+    use num_traits::{MulAddAssign, NumAssign};
 
-    use Complex;
+    use crate::Complex;
 
     impl<T: Clone + NumAssign> AddAssign for Complex<T> {
         fn add_assign(&mut self, other: Self) {
@@ -785,9 +772,16 @@ mod opassign {
         }
     }
 
+    // (a + i b) * (c + i d) == (a*c - b*d) + i (a*d + b*c)
     impl<T: Clone + NumAssign> MulAssign for Complex<T> {
         fn mul_assign(&mut self, other: Self) {
-            *self = self.clone() * other;
+            let a = self.re.clone();
+
+            self.re *= other.re.clone();
+            self.re -= self.im.clone() * other.im.clone();
+
+            self.im *= other.re;
+            self.im += a * other.im;
         }
     }
 
@@ -813,15 +807,27 @@ mod opassign {
         }
     }
 
+    // (a + i b) / (c + i d) == [(a + i b) * (c - i d)] / (c*c + d*d)
+    //   == [(a*c + b*d) / (c*c + d*d)] + i [(b*c - a*d) / (c*c + d*d)]
     impl<T: Clone + NumAssign> DivAssign for Complex<T> {
         fn div_assign(&mut self, other: Self) {
-            *self = self.clone() / other;
+            let a = self.re.clone();
+            let norm_sqr = other.norm_sqr();
+
+            self.re *= other.re.clone();
+            self.re += self.im.clone() * other.im.clone();
+            self.re /= norm_sqr.clone();
+
+            self.im *= other.re;
+            self.im -= a * other.im;
+            self.im /= norm_sqr;
         }
     }
 
     impl<T: Clone + NumAssign> RemAssign for Complex<T> {
-        fn rem_assign(&mut self, other: Self) {
-            *self = self.clone() % other;
+        fn rem_assign(&mut self, modulus: Self) {
+            let gaussian = self.div_trunc(&modulus);
+            *self -= modulus * gaussian;
         }
     }
 
@@ -853,7 +859,8 @@ mod opassign {
 
     impl<T: Clone + NumAssign> RemAssign<T> for Complex<T> {
         fn rem_assign(&mut self, other: T) {
-            *self = self.clone() % other;
+            self.re %= other.clone();
+            self.im %= other;
         }
     }
 
@@ -878,19 +885,7 @@ mod opassign {
     forward_op_assign!(impl SubAssign, sub_assign);
     forward_op_assign!(impl MulAssign, mul_assign);
     forward_op_assign!(impl DivAssign, div_assign);
-
-    impl<'a, T: Clone + NumAssign> RemAssign<&'a Complex<T>> for Complex<T> {
-        #[inline]
-        fn rem_assign(&mut self, other: &Self) {
-            self.rem_assign(other.clone())
-        }
-    }
-    impl<'a, T: Clone + NumAssign> RemAssign<&'a T> for Complex<T> {
-        #[inline]
-        fn rem_assign(&mut self, other: &T) {
-            self.rem_assign(other.clone())
-        }
-    }
+    forward_op_assign!(impl RemAssign, rem_assign);
 }
 
 impl<T: Clone + Num + Neg<Output = T>> Neg for Complex<T> {
@@ -1086,12 +1081,9 @@ impl<T: Clone + Num> Rem<T> for Complex<T> {
     }
 }
 
-#[cfg(not(has_i128))]
-real_arithmetic!(usize, u8, u16, u32, u64, isize, i8, i16, i32, i64, f32, f64);
-#[cfg(has_i128)]
 real_arithmetic!(usize, u8, u16, u32, u64, u128, isize, i8, i16, i32, i64, i128, f32, f64);
 
-/* constants */
+// constants
 impl<T: Clone + Num> Zero for Complex<T> {
     #[inline]
     fn zero() -> Self {
@@ -1160,11 +1152,11 @@ macro_rules! write_complex {
         };
 
         fn fmt_re_im(
-            f: &mut fmt::Formatter,
+            f: &mut fmt::Formatter<'_>,
             re_neg: bool,
             im_neg: bool,
-            real: fmt::Arguments,
-            imag: fmt::Arguments,
+            real: fmt::Arguments<'_>,
+            imag: fmt::Arguments<'_>,
         ) -> fmt::Result {
             let prefix = if f.alternate() { $prefix } else { "" };
             let sign = if re_neg {
@@ -1202,7 +1194,7 @@ macro_rules! write_complex {
 
         #[cfg(feature = "std")]
         // Currently, we can only apply width using an intermediate `String` (and thus `std`)
-        fn fmt_complex(f: &mut fmt::Formatter, complex: fmt::Arguments) -> fmt::Result {
+        fn fmt_complex(f: &mut fmt::Formatter<'_>, complex: fmt::Arguments<'_>) -> fmt::Result {
             use std::string::ToString;
             if let Some(width) = f.width() {
                 write!(f, "{0: >1$}", complex.to_string(), width)
@@ -1212,18 +1204,18 @@ macro_rules! write_complex {
         }
 
         #[cfg(not(feature = "std"))]
-        fn fmt_complex(f: &mut fmt::Formatter, complex: fmt::Arguments) -> fmt::Result {
+        fn fmt_complex(f: &mut fmt::Formatter<'_>, complex: fmt::Arguments<'_>) -> fmt::Result {
             write!(f, "{}", complex)
         }
     }};
 }
 
-/* string conversions */
+// string conversions
 impl<T> fmt::Display for Complex<T>
 where
     T: fmt::Display + Num + PartialOrd + Clone,
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write_complex!(f, "", "", self.re, self.im, T)
     }
 }
@@ -1232,7 +1224,7 @@ impl<T> fmt::LowerExp for Complex<T>
 where
     T: fmt::LowerExp + Num + PartialOrd + Clone,
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write_complex!(f, "e", "", self.re, self.im, T)
     }
 }
@@ -1241,7 +1233,7 @@ impl<T> fmt::UpperExp for Complex<T>
 where
     T: fmt::UpperExp + Num + PartialOrd + Clone,
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write_complex!(f, "E", "", self.re, self.im, T)
     }
 }
@@ -1250,7 +1242,7 @@ impl<T> fmt::LowerHex for Complex<T>
 where
     T: fmt::LowerHex + Num + PartialOrd + Clone,
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write_complex!(f, "x", "0x", self.re, self.im, T)
     }
 }
@@ -1259,7 +1251,7 @@ impl<T> fmt::UpperHex for Complex<T>
 where
     T: fmt::UpperHex + Num + PartialOrd + Clone,
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write_complex!(f, "X", "0x", self.re, self.im, T)
     }
 }
@@ -1268,7 +1260,7 @@ impl<T> fmt::Octal for Complex<T>
 where
     T: fmt::Octal + Num + PartialOrd + Clone,
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write_complex!(f, "o", "0o", self.re, self.im, T)
     }
 }
@@ -1277,7 +1269,7 @@ impl<T> fmt::Binary for Complex<T>
 where
     T: fmt::Binary + Num + PartialOrd + Clone,
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write_complex!(f, "b", "0b", self.re, self.im, T)
     }
 }
@@ -1288,25 +1280,6 @@ where
     F: Fn(&str) -> Result<T, E>,
     T: Clone + Num,
 {
-    #[cfg(not(feature = "std"))]
-    #[inline]
-    fn is_whitespace(c: char) -> bool {
-        match c {
-            ' ' | '\x09'...'\x0d' => true,
-            _ if c > '\x7f' => match c {
-                '\u{0085}' | '\u{00a0}' | '\u{1680}' => true,
-                '\u{2000}'...'\u{200a}' => true,
-                '\u{2028}' | '\u{2029}' | '\u{202f}' | '\u{205f}' => true,
-                '\u{3000}' => true,
-                _ => false,
-            },
-            _ => false,
-        }
-    }
-
-    #[cfg(feature = "std")]
-    let is_whitespace = char::is_whitespace;
-
     let imag = match s.rfind('j') {
         None => 'i',
         _ => 'j',
@@ -1323,8 +1296,8 @@ where
         // ignore '+'/'-' if part of an exponent
         if (c == b'+' || c == b'-') && !(p == b'e' || p == b'E') {
             // trim whitespace around the separator
-            a = &s[..i + 1].trim_right_matches(is_whitespace);
-            b = &s[i + 2..].trim_left_matches(is_whitespace);
+            a = &s[..=i].trim_right_matches(char::is_whitespace);
+            b = &s[i + 2..].trim_left_matches(char::is_whitespace);
             neg_b = c == b'-';
 
             if b.is_empty() || (neg_b && b.starts_with('-')) {
@@ -1337,10 +1310,7 @@ where
     // split off real and imaginary parts
     if b.is_empty() {
         // input was either pure real or pure imaginary
-        b = match a.ends_with(imag) {
-            false => "0i",
-            true => "0",
-        };
+        b = if a.ends_with(imag) { "0" } else { "0i" };
     }
 
     let re;
@@ -1362,7 +1332,7 @@ where
     }
 
     // parse re
-    let re = try!(from(re).map_err(ParseComplexError::from_error));
+    let re = from(re).map_err(ParseComplexError::from_error)?;
     let re = if neg_re { T::zero() - re } else { re };
 
     // pop imaginary unit off
@@ -1375,7 +1345,7 @@ where
     }
 
     // parse im
-    let im = try!(from(im).map_err(ParseComplexError::from_error));
+    let im = from(im).map_err(ParseComplexError::from_error)?;
     let im = if neg_im { T::zero() - im } else { im };
 
     Ok(Complex::new(re, im))
@@ -1462,7 +1432,7 @@ where
     where
         D: serde::Deserializer<'de>,
     {
-        let (re, im) = try!(serde::Deserialize::deserialize(deserializer));
+        let (re, im) = serde::Deserialize::deserialize(deserializer)?;
         Ok(Self::new(re, im))
     }
 }
@@ -1494,6 +1464,7 @@ impl<E> ParseComplexError<E> {
 
 #[cfg(feature = "std")]
 impl<E: Error> Error for ParseComplexError<E> {
+    #[allow(deprecated)]
     fn description(&self) -> &str {
         match self.kind {
             ComplexErrorKind::ParseError(ref e) => e.description(),
@@ -1503,7 +1474,7 @@ impl<E: Error> Error for ParseComplexError<E> {
 }
 
 impl<E: fmt::Display> fmt::Display for ParseComplexError<E> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.kind {
             ComplexErrorKind::ParseError(ref e) => e.fmt(f),
             ComplexErrorKind::ExprError => "invalid or unsupported complex expression".fmt(f),
@@ -1530,7 +1501,7 @@ mod test {
 
     use std::string::{String, ToString};
 
-    use traits::{Num, One, Zero};
+    use num_traits::{Num, One, Zero};
 
     pub const _0_0i: Complex64 = Complex { re: 0.0, im: 0.0 };
     pub const _1_0i: Complex64 = Complex { re: 1.0, im: 0.0 };
@@ -1595,6 +1566,7 @@ mod test {
     }
 
     #[test]
+    #[allow(clippy::float_cmp)]
     fn test_l1_norm() {
         assert_eq!(_0_0i.l1_norm(), 0.0);
         assert_eq!(_1_0i.l1_norm(), 1.0);
@@ -1624,14 +1596,15 @@ mod test {
         }
     }
 
-    #[cfg(feature = "std")]
+    #[cfg(any(feature = "std", feature = "libm"))]
     mod float {
         use super::*;
-        use traits::{Float, Pow};
+        use num_traits::{Float, Pow};
 
         #[test]
         #[cfg_attr(target_arch = "x86", ignore)]
         // FIXME #7158: (maybe?) currently failing on x86.
+        #[allow(clippy::float_cmp)]
         fn test_norm() {
             fn test(c: Complex64, ns: f64) {
                 assert_eq!(c.norm_sqr(), ns);
@@ -1659,7 +1632,7 @@ mod test {
         fn test_polar_conv() {
             fn test(c: Complex64) {
                 let (r, theta) = c.to_polar();
-                assert!((c - Complex::from_polar(&r, &theta)).norm() < 1e-6);
+                assert!((c - Complex::from_polar(r, theta)).norm() < 1e-6);
             }
             for &c in all_consts.iter() {
                 test(c);
@@ -1802,12 +1775,12 @@ mod test {
                 let n2 = n * n;
                 assert!(close(
                     Complex64::new(0.0, n2).sqrt(),
-                    Complex64::from_polar(&n, &(f64::consts::FRAC_PI_4))
+                    Complex64::from_polar(n, f64::consts::FRAC_PI_4)
                 ));
                 // √(0 - n²i) = n e^(-iπ/4)
                 assert!(close(
                     Complex64::new(0.0, -n2).sqrt(),
-                    Complex64::from_polar(&n, &(-f64::consts::FRAC_PI_4))
+                    Complex64::from_polar(n, -f64::consts::FRAC_PI_4)
                 ));
             }
         }
@@ -1822,7 +1795,7 @@ mod test {
             ));
             assert!(close(
                 Complex::new(-1.0, -0.0).cbrt(),
-                Complex::new(0.5, -0.75.sqrt())
+                Complex::new(0.5, -(0.75.sqrt()))
             ));
             assert!(close(_0_1i.cbrt(), Complex::new(0.75.sqrt(), 0.5)));
             assert!(close(_0_1i.conj().cbrt(), Complex::new(0.75.sqrt(), -0.5)));
@@ -1851,12 +1824,12 @@ mod test {
                 // ∛(-n³ + 0i) = n e^(iπ/3)
                 assert!(close(
                     Complex64::new(-n3, 0.0).cbrt(),
-                    Complex64::from_polar(&n, &(f64::consts::FRAC_PI_3))
+                    Complex64::from_polar(n, f64::consts::FRAC_PI_3)
                 ));
                 // ∛(-n³ - 0i) = n e^(-iπ/3)
                 assert!(close(
                     Complex64::new(-n3, -0.0).cbrt(),
-                    Complex64::from_polar(&n, &(-f64::consts::FRAC_PI_3))
+                    Complex64::from_polar(n, -f64::consts::FRAC_PI_3)
                 ));
             }
         }
@@ -1868,12 +1841,12 @@ mod test {
                 let n3 = n * n * n;
                 assert!(close(
                     Complex64::new(0.0, n3).cbrt(),
-                    Complex64::from_polar(&n, &(f64::consts::FRAC_PI_6))
+                    Complex64::from_polar(n, f64::consts::FRAC_PI_6)
                 ));
                 // ∛(0 - n³i) = n e^(-iπ/6)
                 assert!(close(
                     Complex64::new(0.0, -n3).cbrt(),
-                    Complex64::from_polar(&n, &(-f64::consts::FRAC_PI_6))
+                    Complex64::from_polar(n, -f64::consts::FRAC_PI_6)
                 ));
             }
         }
@@ -2242,7 +2215,7 @@ mod test {
 
     mod complex_arithmetic {
         use super::{_05_05i, _0_0i, _0_1i, _1_0i, _1_1i, _4_2i, _neg1_1i, all_consts};
-        use traits::{MulAdd, MulAddAssign, Zero};
+        use num_traits::{MulAdd, MulAddAssign, Zero};
 
         #[test]
         fn test_add() {
@@ -2284,7 +2257,7 @@ mod test {
         }
 
         #[test]
-        #[cfg(feature = "std")]
+        #[cfg(any(feature = "std", feature = "libm"))]
         fn test_mul_add_float() {
             assert_eq!(_05_05i.mul_add(_05_05i, _0_0i), _05_05i * _05_05i + _0_0i);
             assert_eq!(_05_05i * _05_05i + _0_0i, _05_05i.mul_add(_05_05i, _0_0i));
@@ -2461,9 +2434,9 @@ mod test {
         let a = Complex::new(0i32, 0i32);
         let b = Complex::new(1i32, 0i32);
         let c = Complex::new(0i32, 1i32);
-        assert!(::hash(&a) != ::hash(&b));
-        assert!(::hash(&b) != ::hash(&c));
-        assert!(::hash(&c) != ::hash(&a));
+        assert!(crate::hash(&a) != crate::hash(&b));
+        assert!(crate::hash(&b) != crate::hash(&c));
+        assert!(crate::hash(&c) != crate::hash(&a));
     }
 
     #[test]
@@ -2631,7 +2604,7 @@ mod test {
 
         let mut c = Complex::new(1.23, 4.56);
         assert!(!c.is_zero());
-        assert_eq!(&c + &zero, c);
+        assert_eq!(c + zero, c);
 
         c.set_zero();
         assert!(c.is_zero());
@@ -2644,14 +2617,14 @@ mod test {
 
         let mut c = Complex::new(1.23, 4.56);
         assert!(!c.is_one());
-        assert_eq!(&c * &one, c);
+        assert_eq!(c * one, c);
 
         c.set_one();
         assert!(c.is_one());
     }
 
-    #[cfg(has_const_fn)]
     #[test]
+    #[allow(clippy::float_cmp)]
     fn test_const() {
         const R: f64 = 12.3;
         const I: f64 = -4.5;

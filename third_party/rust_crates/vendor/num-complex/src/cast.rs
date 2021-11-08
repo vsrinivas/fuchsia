@@ -1,13 +1,17 @@
 use super::Complex;
-use traits::{AsPrimitive, FromPrimitive, Num, NumCast, ToPrimitive};
+use num_traits::{AsPrimitive, FromPrimitive, Num, NumCast, ToPrimitive};
 
 macro_rules! impl_to_primitive {
     ($ty:ty, $to:ident) => {
         #[inline]
         fn $to(&self) -> Option<$ty> {
-            if self.im.is_zero() { self.re.$to() } else { None }
+            if self.im.is_zero() {
+                self.re.$to()
+            } else {
+                None
+            }
         }
-    }
+    };
 } // impl_to_primitive
 
 // Returns None if Complex part is non-zero
@@ -22,9 +26,7 @@ impl<T: ToPrimitive + Num> ToPrimitive for Complex<T> {
     impl_to_primitive!(i16, to_i16);
     impl_to_primitive!(i32, to_i32);
     impl_to_primitive!(i64, to_i64);
-    #[cfg(has_i128)]
     impl_to_primitive!(u128, to_u128);
-    #[cfg(has_i128)]
     impl_to_primitive!(i128, to_i128);
     impl_to_primitive!(f32, to_f32);
     impl_to_primitive!(f64, to_f64);
@@ -34,8 +36,8 @@ macro_rules! impl_from_primitive {
     ($ty:ty, $from_xx:ident) => {
         #[inline]
         fn $from_xx(n: $ty) -> Option<Self> {
-            T::$from_xx(n).map(|re| Complex {
-                re: re,
+            Some(Complex {
+                re: T::$from_xx(n)?,
                 im: T::zero(),
             })
         }
@@ -53,9 +55,7 @@ impl<T: FromPrimitive + Num> FromPrimitive for Complex<T> {
     impl_from_primitive!(i16, from_i16);
     impl_from_primitive!(i32, from_i32);
     impl_from_primitive!(i64, from_i64);
-    #[cfg(has_i128)]
     impl_from_primitive!(u128, from_u128);
-    #[cfg(has_i128)]
     impl_from_primitive!(i128, from_i128);
     impl_from_primitive!(f32, from_f32);
     impl_from_primitive!(f64, from_f64);
@@ -63,8 +63,8 @@ impl<T: FromPrimitive + Num> FromPrimitive for Complex<T> {
 
 impl<T: NumCast + Num> NumCast for Complex<T> {
     fn from<U: ToPrimitive>(n: U) -> Option<Self> {
-        T::from(n).map(|re| Complex {
-            re: re,
+        Some(Complex {
+            re: T::from(n)?,
             im: T::zero(),
         })
     }

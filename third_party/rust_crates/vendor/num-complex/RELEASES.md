@@ -1,3 +1,37 @@
+# Release 0.4.0 (2021-03-05)
+
+- `rand` support has been updated to 0.8, requiring Rust 1.36.
+
+**Contributors**: @cuviper
+
+# Release 0.3.1 (2020-10-29)
+
+- Clarify the license specification as "MIT OR Apache-2.0".
+
+**Contributors**: @cuviper
+
+# Release 0.3.0 (2020-06-13)
+
+### Enhancements
+
+- [The new "libm" feature passes through to `num-traits`][73], enabling `Float`
+  features on no-`std` builds.
+
+### Breaking Changes
+
+- `num-complex` now requires Rust 1.31 or greater.
+  - The "i128" opt-in feature was removed, now always available.
+- [Updated public dependences][65]:
+  - `rand` support has been updated to 0.7, requiring Rust 1.32.
+- [Methods for `T: Float` now take values instead of references][82], most
+  notably affecting the constructor `from_polar`.
+
+**Contributors**: @cuviper, @SOF3, @vks
+
+[65]: https://github.com/rust-num/num-complex/pull/65
+[73]: https://github.com/rust-num/num-complex/pull/73
+[82]: https://github.com/rust-num/num-complex/pull/82
+
 # Release 0.2.4 (2020-01-09)
 
 - [`Complex::new` is now a `const fn` for Rust 1.31 and later][63].

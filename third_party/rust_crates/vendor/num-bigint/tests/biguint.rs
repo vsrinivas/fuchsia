@@ -1,7 +1,3 @@
-extern crate num_bigint;
-extern crate num_integer;
-extern crate num_traits;
-
 use num_bigint::Sign::Plus;
 use num_bigint::{BigInt, ToBigInt};
 use num_bigint::{BigUint, ToBigUint};
@@ -14,17 +10,16 @@ use std::i64;
 use std::iter::repeat;
 use std::str::FromStr;
 use std::{f32, f64};
-#[cfg(has_i128)]
 use std::{i128, u128};
 use std::{u16, u32, u64, u8, usize};
 
 use num_traits::{
-    CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Float, FromPrimitive, Num, One, Pow,
-    ToPrimitive, Zero,
+    pow, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, FromPrimitive, Num, One, Pow, ToPrimitive,
+    Zero,
 };
 
 mod consts;
-use consts::*;
+use crate::consts::*;
 
 #[macro_use]
 mod macros;
@@ -41,7 +36,7 @@ fn test_from_bytes_be() {
     check("AA", "16705");
     check("AB", "16706");
     check("Hello world!", "22405534230753963835153736737");
-    assert_eq!(BigUint::from_bytes_be(&[]), Zero::zero());
+    assert_eq!(BigUint::from_bytes_be(&[]), BigUint::zero());
 }
 
 #[test]
@@ -74,7 +69,7 @@ fn test_from_bytes_le() {
     check("AA", "16705");
     check("BA", "16706");
     check("!dlrow olleH", "22405534230753963835153736737");
-    assert_eq!(BigUint::from_bytes_le(&[]), Zero::zero());
+    assert_eq!(BigUint::from_bytes_le(&[]), BigUint::zero());
 }
 
 #[test]
@@ -140,7 +135,7 @@ fn hash<T: Hash>(x: &T) -> u64 {
 
 #[test]
 fn test_hash() {
-    use hash;
+    use crate::hash;
 
     let a = BigUint::new(vec![]);
     let b = BigUint::new(vec![0]);
@@ -154,13 +149,7 @@ fn test_hash() {
 }
 
 // LEFT, RIGHT, AND, OR, XOR
-const BIT_TESTS: &'static [(
-    &'static [u32],
-    &'static [u32],
-    &'static [u32],
-    &'static [u32],
-    &'static [u32],
-)] = &[
+const BIT_TESTS: &[(&[u32], &[u32], &[u32], &[u32], &[u32])] = &[
     (&[], &[], &[], &[], &[]),
     (&[1, 0, 1], &[1, 1], &[1], &[1, 1, 1], &[0, 1, 1]),
     (&[1, 0, 1], &[0, 1, 1], &[0, 0, 1], &[1, 1, 1], &[1, 1]),
@@ -542,7 +531,6 @@ fn test_convert_i64() {
 }
 
 #[test]
-#[cfg(has_i128)]
 fn test_convert_i128() {
     fn check(b1: BigUint, i: i128) {
         let b2: BigUint = FromPrimitive::from_i128(i).unwrap();
@@ -591,7 +579,6 @@ fn test_convert_u64() {
 }
 
 #[test]
-#[cfg(has_i128)]
 fn test_convert_u128() {
     fn check(b1: BigUint, u: u128) {
         let b2: BigUint = FromPrimitive::from_u128(u).unwrap();
@@ -615,6 +602,7 @@ fn test_convert_u128() {
 }
 
 #[test]
+#[allow(clippy::float_cmp)]
 fn test_convert_f32() {
     fn check(b1: &BigUint, f: f32) {
         let b2 = BigUint::from_f32(f).unwrap();
@@ -624,14 +612,14 @@ fn test_convert_f32() {
 
     check(&BigUint::zero(), 0.0);
     check(&BigUint::one(), 1.0);
-    check(&BigUint::from(u16::MAX), 2.0.powi(16) - 1.0);
-    check(&BigUint::from(1u64 << 32), 2.0.powi(32));
-    check(&BigUint::from_slice(&[0, 0, 1]), 2.0.powi(64));
+    check(&BigUint::from(u16::MAX), pow(2.0_f32, 16) - 1.0);
+    check(&BigUint::from(1u64 << 32), pow(2.0_f32, 32));
+    check(&BigUint::from_slice(&[0, 0, 1]), pow(2.0_f32, 64));
     check(
         &((BigUint::one() << 100) + (BigUint::one() << 123)),
-        2.0.powi(100) + 2.0.powi(123),
+        pow(2.0_f32, 100) + pow(2.0_f32, 123),
     );
-    check(&(BigUint::one() << 127), 2.0.powi(127));
+    check(&(BigUint::one() << 127), pow(2.0_f32, 127));
     check(&(BigUint::from((1u64 << 24) - 1) << (128 - 24)), f32::MAX);
 
     // keeping all 24 digits with the bits at different offsets to the BigDigits
@@ -641,7 +629,7 @@ fn test_convert_f32() {
     for _ in 0..64 {
         check(&b, f);
         f *= 2.0;
-        b = b << 1;
+        b <<= 1;
     }
 
     // this number when rounded to f64 then f32 isn't the same as when rounded straight to f32
@@ -655,7 +643,7 @@ fn test_convert_f32() {
     for _ in 0..64 {
         assert_eq!(b.to_f32(), Some(f));
         f *= 2.0;
-        b = b << 1;
+        b <<= 1;
     }
 
     // rounding
@@ -683,15 +671,19 @@ fn test_convert_f32() {
     assert_eq!(BigUint::from_f32(f32::MIN), None);
 
     // largest BigUint that will round to a finite f32 value
-    let big_num = (BigUint::one() << 128) - BigUint::one() - (BigUint::one() << (128 - 25));
+    let big_num = (BigUint::one() << 128u8) - 1u8 - (BigUint::one() << (128u8 - 25));
     assert_eq!(big_num.to_f32(), Some(f32::MAX));
-    assert_eq!((big_num + BigUint::one()).to_f32(), None);
+    assert_eq!((big_num + 1u8).to_f32(), Some(f32::INFINITY));
 
-    assert_eq!(((BigUint::one() << 128) - BigUint::one()).to_f32(), None);
-    assert_eq!((BigUint::one() << 128).to_f32(), None);
+    assert_eq!(
+        ((BigUint::one() << 128u8) - 1u8).to_f32(),
+        Some(f32::INFINITY)
+    );
+    assert_eq!((BigUint::one() << 128u8).to_f32(), Some(f32::INFINITY));
 }
 
 #[test]
+#[allow(clippy::float_cmp)]
 fn test_convert_f64() {
     fn check(b1: &BigUint, f: f64) {
         let b2 = BigUint::from_f64(f).unwrap();
@@ -701,14 +693,14 @@ fn test_convert_f64() {
 
     check(&BigUint::zero(), 0.0);
     check(&BigUint::one(), 1.0);
-    check(&BigUint::from(u32::MAX), 2.0.powi(32) - 1.0);
-    check(&BigUint::from(1u64 << 32), 2.0.powi(32));
-    check(&BigUint::from_slice(&[0, 0, 1]), 2.0.powi(64));
+    check(&BigUint::from(u32::MAX), pow(2.0_f64, 32) - 1.0);
+    check(&BigUint::from(1u64 << 32), pow(2.0_f64, 32));
+    check(&BigUint::from_slice(&[0, 0, 1]), pow(2.0_f64, 64));
     check(
         &((BigUint::one() << 100) + (BigUint::one() << 152)),
-        2.0.powi(100) + 2.0.powi(152),
+        pow(2.0_f64, 100) + pow(2.0_f64, 152),
     );
-    check(&(BigUint::one() << 1023), 2.0.powi(1023));
+    check(&(BigUint::one() << 1023), pow(2.0_f64, 1023));
     check(&(BigUint::from((1u64 << 53) - 1) << (1024 - 53)), f64::MAX);
 
     // keeping all 53 digits with the bits at different offsets to the BigDigits
@@ -718,7 +710,7 @@ fn test_convert_f64() {
     for _ in 0..128 {
         check(&b, f);
         f *= 2.0;
-        b = b << 1;
+        b <<= 1;
     }
 
     // test rounding up with the bits at different offsets to the BigDigits
@@ -727,7 +719,7 @@ fn test_convert_f64() {
     for _ in 0..128 {
         assert_eq!(b.to_f64(), Some(f));
         f *= 2.0;
-        b = b << 1;
+        b <<= 1;
     }
 
     // rounding
@@ -755,12 +747,15 @@ fn test_convert_f64() {
     assert_eq!(BigUint::from_f64(f64::MIN), None);
 
     // largest BigUint that will round to a finite f64 value
-    let big_num = (BigUint::one() << 1024) - BigUint::one() - (BigUint::one() << (1024 - 54));
+    let big_num = (BigUint::one() << 1024u16) - 1u8 - (BigUint::one() << (1024u16 - 54));
     assert_eq!(big_num.to_f64(), Some(f64::MAX));
-    assert_eq!((big_num + BigUint::one()).to_f64(), None);
+    assert_eq!((big_num + 1u8).to_f64(), Some(f64::INFINITY));
 
-    assert_eq!(((BigInt::one() << 1024) - BigInt::one()).to_f64(), None);
-    assert_eq!((BigUint::one() << 1024).to_f64(), None);
+    assert_eq!(
+        ((BigUint::one() << 1024u16) - 1u8).to_f64(),
+        Some(f64::INFINITY)
+    );
+    assert_eq!((BigUint::one() << 1024u16).to_f64(), Some(f64::INFINITY));
 }
 
 #[test]
@@ -791,7 +786,6 @@ fn test_convert_from_uint() {
     check!(u16, BigUint::from_slice(&[u16::MAX as u32]));
     check!(u32, BigUint::from_slice(&[u32::MAX]));
     check!(u64, BigUint::from_slice(&[u32::MAX, u32::MAX]));
-    #[cfg(has_i128)]
     check!(
         u128,
         BigUint::from_slice(&[u32::MAX, u32::MAX, u32::MAX, u32::MAX])
@@ -872,17 +866,17 @@ fn test_div_rem() {
 
         if !a.is_zero() {
             assert_op!(c / a == b);
-            assert_op!(c % a == Zero::zero());
+            assert_op!(c % a == BigUint::zero());
             assert_assign_op!(c /= a == b);
-            assert_assign_op!(c %= a == Zero::zero());
-            assert_eq!(c.div_rem(&a), (b.clone(), Zero::zero()));
+            assert_assign_op!(c %= a == BigUint::zero());
+            assert_eq!(c.div_rem(&a), (b.clone(), BigUint::zero()));
         }
         if !b.is_zero() {
             assert_op!(c / b == a);
-            assert_op!(c % b == Zero::zero());
+            assert_op!(c % b == BigUint::zero());
             assert_assign_op!(c /= b == a);
-            assert_assign_op!(c %= b == Zero::zero());
-            assert_eq!(c.div_rem(&b), (a.clone(), Zero::zero()));
+            assert_assign_op!(c %= b == BigUint::zero());
+            assert_eq!(c.div_rem(&b), (a.clone(), BigUint::zero()));
         }
     }
 
@@ -899,6 +893,57 @@ fn test_div_rem() {
             assert_assign_op!(a /= b == c);
             assert_assign_op!(a %= b == d);
             assert!(a.div_rem(&b) == (c, d));
+        }
+    }
+}
+
+#[test]
+fn test_div_rem_big_multiple() {
+    let a = BigUint::from(3u32).pow(100u32);
+    let a2 = &a * &a;
+
+    let (div, rem) = a2.div_rem(&a);
+    assert_eq!(div, a);
+    assert!(rem.is_zero());
+
+    let (div, rem) = (&a2 - 1u32).div_rem(&a);
+    assert_eq!(div, &a - 1u32);
+    assert_eq!(rem, &a - 1u32);
+}
+
+#[test]
+fn test_div_ceil() {
+    fn check(a: &BigUint, b: &BigUint, d: &BigUint, m: &BigUint) {
+        if m.is_zero() {
+            assert_eq!(a.div_ceil(b), *d);
+        } else {
+            assert_eq!(a.div_ceil(b), d + 1u32);
+        }
+    }
+
+    for elm in MUL_TRIPLES.iter() {
+        let (a_vec, b_vec, c_vec) = *elm;
+        let a = BigUint::from_slice(a_vec);
+        let b = BigUint::from_slice(b_vec);
+        let c = BigUint::from_slice(c_vec);
+
+        if !a.is_zero() {
+            check(&c, &a, &b, &Zero::zero());
+        }
+        if !b.is_zero() {
+            check(&c, &b, &a, &Zero::zero());
+        }
+    }
+
+    for elm in DIV_REM_QUADRUPLES.iter() {
+        let (a_vec, b_vec, c_vec, d_vec) = *elm;
+        let a = BigUint::from_slice(a_vec);
+        let b = BigUint::from_slice(b_vec);
+        let c = BigUint::from_slice(c_vec);
+        let d = BigUint::from_slice(d_vec);
+
+        if !b.is_zero() {
+            check(&a, &b, &c, &d);
         }
     }
 }
@@ -962,11 +1007,25 @@ fn test_checked_mul() {
 
 #[test]
 fn test_mul_overflow() {
-    /* Test for issue #187 - overflow due to mac3 incorrectly sizing temporary */
-    let s = "531137992816767098689588206552468627329593117727031923199444138200403559860852242739162502232636710047537552105951370000796528760829212940754539968588340162273730474622005920097370111";
+    // Test for issue #187 - overflow due to mac3 incorrectly sizing temporary
+    let s = "5311379928167670986895882065524686273295931177270319231994441382\
+             0040355986085224273916250223263671004753755210595137000079652876\
+             0829212940754539968588340162273730474622005920097370111";
     let a: BigUint = s.parse().unwrap();
     let b = a.clone();
     let _ = a.checked_mul(&b);
+}
+
+#[test]
+fn test_mul_overflow_2() {
+    // Try a bunch of sizes that are right on the edge of multiplication length
+    // overflow, where (x * x).data.len() == 2 * x.data.len() + 1.
+    for i in 1u8..20 {
+        let bits = 1u32 << i;
+        let x = (BigUint::one() << bits) - 1u32;
+        let x2 = (BigUint::one() << (2 * bits)) - &x - &x - 1u32;
+        assert_eq!(&x * &x, x2);
+    }
 }
 
 #[test]
@@ -996,6 +1055,7 @@ fn test_gcd() {
         let big_c: BigUint = FromPrimitive::from_usize(c).unwrap();
 
         assert_eq!(big_a.gcd(&big_b), big_c);
+        assert_eq!(big_a.gcd_lcm(&big_b).0, big_c);
     }
 
     check(10, 2, 2);
@@ -1013,6 +1073,7 @@ fn test_lcm() {
         let big_c: BigUint = FromPrimitive::from_usize(c).unwrap();
 
         assert_eq!(big_a.lcm(&big_b), big_c);
+        assert_eq!(big_a.gcd_lcm(&big_b).1, big_c);
     }
 
     check(0, 0, 0);
@@ -1022,6 +1083,30 @@ fn test_lcm() {
     check(8, 9, 72);
     check(11, 5, 55);
     check(99, 17, 1683);
+}
+
+#[test]
+fn test_next_multiple_of() {
+    assert_eq!(
+        BigUint::from(16u32).next_multiple_of(&BigUint::from(8u32)),
+        BigUint::from(16u32)
+    );
+    assert_eq!(
+        BigUint::from(23u32).next_multiple_of(&BigUint::from(8u32)),
+        BigUint::from(24u32)
+    );
+}
+
+#[test]
+fn test_prev_multiple_of() {
+    assert_eq!(
+        BigUint::from(16u32).prev_multiple_of(&BigUint::from(8u32)),
+        BigUint::from(16u32)
+    );
+    assert_eq!(
+        BigUint::from(23u32).prev_multiple_of(&BigUint::from(8u32)),
+        BigUint::from(16u32)
+    );
 }
 
 #[test]
@@ -1036,8 +1121,8 @@ fn test_is_even() {
     assert!(thousand.is_even());
     assert!(big.is_even());
     assert!(bigger.is_odd());
-    assert!((&one << 64).is_even());
-    assert!(((&one << 64) + one).is_odd());
+    assert!((&one << 64u8).is_even());
+    assert!(((&one << 64u8) + one).is_odd());
 }
 
 fn to_str_pairs() -> Vec<(BigUint, Vec<(u32, String)>)> {
@@ -1165,7 +1250,7 @@ fn test_to_str_radix() {
 
 #[test]
 fn test_from_and_to_radix() {
-    const GROUND_TRUTH: &'static [(&'static [u8], u32, &'static [u8])] = &[
+    const GROUND_TRUTH: &[(&[u8], u32, &[u8])] = &[
         (b"0", 42, &[0]),
         (
             b"ffffeeffbb",
@@ -1480,6 +1565,8 @@ fn test_from_and_to_radix() {
     }
 
     assert!(BigUint::from_radix_le(&[10, 100, 10], 50).is_none());
+    assert_eq!(BigUint::from_radix_le(&[], 2), Some(BigUint::zero()));
+    assert_eq!(BigUint::from_radix_be(&[], 2), Some(BigUint::zero()));
 }
 
 #[test]
@@ -1515,9 +1602,6 @@ fn test_from_str_radix() {
 
 #[test]
 fn test_all_str_radix() {
-    #[allow(deprecated, unused_imports)]
-    use std::ascii::AsciiExt;
-
     let n = BigUint::new((0..10).collect());
     for radix in 2..37 {
         let s = n.to_str_radix(radix);
@@ -1531,9 +1615,19 @@ fn test_all_str_radix() {
 }
 
 #[test]
+fn test_big_str() {
+    for n in 2..=20_u32 {
+        let x: BigUint = BigUint::from(n).pow(10_000_u32);
+        let s = x.to_string();
+        let y: BigUint = s.parse().unwrap();
+        assert_eq!(x, y);
+    }
+}
+
+#[test]
 fn test_lower_hex() {
     let a = BigUint::parse_bytes(b"A", 16).unwrap();
-    let hello = BigUint::parse_bytes("22405534230753963835153736737".as_bytes(), 10).unwrap();
+    let hello = BigUint::parse_bytes(b"22405534230753963835153736737", 10).unwrap();
 
     assert_eq!(format!("{:x}", a), "a");
     assert_eq!(format!("{:x}", hello), "48656c6c6f20776f726c6421");
@@ -1543,7 +1637,7 @@ fn test_lower_hex() {
 #[test]
 fn test_upper_hex() {
     let a = BigUint::parse_bytes(b"A", 16).unwrap();
-    let hello = BigUint::parse_bytes("22405534230753963835153736737".as_bytes(), 10).unwrap();
+    let hello = BigUint::parse_bytes(b"22405534230753963835153736737", 10).unwrap();
 
     assert_eq!(format!("{:X}", a), "A");
     assert_eq!(format!("{:X}", hello), "48656C6C6F20776F726C6421");
@@ -1553,7 +1647,7 @@ fn test_upper_hex() {
 #[test]
 fn test_binary() {
     let a = BigUint::parse_bytes(b"A", 16).unwrap();
-    let hello = BigUint::parse_bytes("224055342307539".as_bytes(), 10).unwrap();
+    let hello = BigUint::parse_bytes(b"224055342307539", 10).unwrap();
 
     assert_eq!(format!("{:b}", a), "1010");
     assert_eq!(
@@ -1566,7 +1660,7 @@ fn test_binary() {
 #[test]
 fn test_octal() {
     let a = BigUint::parse_bytes(b"A", 16).unwrap();
-    let hello = BigUint::parse_bytes("22405534230753963835153736737".as_bytes(), 10).unwrap();
+    let hello = BigUint::parse_bytes(b"22405534230753963835153736737", 10).unwrap();
 
     assert_eq!(format!("{:o}", a), "12");
     assert_eq!(format!("{:o}", hello), "22062554330674403566756233062041");
@@ -1576,7 +1670,7 @@ fn test_octal() {
 #[test]
 fn test_display() {
     let a = BigUint::parse_bytes(b"A", 16).unwrap();
-    let hello = BigUint::parse_bytes("22405534230753963835153736737".as_bytes(), 10).unwrap();
+    let hello = BigUint::parse_bytes(b"22405534230753963835153736737", 10).unwrap();
 
     assert_eq!(format!("{}", a), "10");
     assert_eq!(format!("{}", hello), "22405534230753963835153736737");
@@ -1587,21 +1681,18 @@ fn test_display() {
 fn test_factor() {
     fn factor(n: usize) -> BigUint {
         let mut f: BigUint = One::one();
-        for i in 2..n + 1 {
+        for i in 2..=n {
             // FIXME(#5992): assignment operator overloads
             // f *= FromPrimitive::from_usize(i);
             let bu: BigUint = FromPrimitive::from_usize(i).unwrap();
-            f = f * bu;
+            f *= bu;
         }
-        return f;
+        f
     }
 
     fn check(n: usize, s: &str) {
         let n = factor(n);
-        let ans = match BigUint::from_str_radix(s, 10) {
-            Ok(x) => x,
-            Err(_) => panic!(),
-        };
+        let ans = BigUint::from_str_radix(s, 10).unwrap();
         assert_eq!(n, ans);
     }
 
@@ -1623,7 +1714,7 @@ fn test_bits() {
     let n: BigUint = BigUint::from_str_radix("4000000000", 16).unwrap();
     assert_eq!(n.bits(), 39);
     let one: BigUint = One::one();
-    assert_eq!((one << 426).bits(), 427);
+    assert_eq!((one << 426u16).bits(), 427);
 }
 
 #[test]
@@ -1639,8 +1730,8 @@ fn test_iter_sum() {
         FromPrimitive::from_u32(7).unwrap(),
     ];
 
-    assert_eq!(result, data.iter().sum());
-    assert_eq!(result, data.into_iter().sum());
+    assert_eq!(result, data.iter().sum::<BigUint>());
+    assert_eq!(result, data.into_iter().sum::<BigUint>());
 }
 
 #[test]
@@ -1658,8 +1749,8 @@ fn test_iter_product() {
         * data.get(3).unwrap()
         * data.get(4).unwrap();
 
-    assert_eq!(result, data.iter().product());
-    assert_eq!(result, data.into_iter().product());
+    assert_eq!(result, data.iter().product::<BigUint>());
+    assert_eq!(result, data.into_iter().product::<BigUint>());
 }
 
 #[test]
@@ -1667,8 +1758,8 @@ fn test_iter_sum_generic() {
     let result: BigUint = FromPrimitive::from_isize(1234567).unwrap();
     let data = vec![1000000_u32, 200000, 30000, 4000, 500, 60, 7];
 
-    assert_eq!(result, data.iter().sum());
-    assert_eq!(result, data.into_iter().sum());
+    assert_eq!(result, data.iter().sum::<BigUint>());
+    assert_eq!(result, data.into_iter().sum::<BigUint>());
 }
 
 #[test]
@@ -1680,8 +1771,8 @@ fn test_iter_product_generic() {
         * data[3].to_biguint().unwrap()
         * data[4].to_biguint().unwrap();
 
-    assert_eq!(result, data.iter().product());
-    assert_eq!(result, data.into_iter().product());
+    assert_eq!(result, data.iter().product::<BigUint>());
+    assert_eq!(result, data.into_iter().product::<BigUint>());
 }
 
 #[test]
@@ -1694,20 +1785,80 @@ fn test_pow() {
     let twentyfourtyeight = BigUint::from(2048u32);
     macro_rules! check {
         ($t:ty) => {
-            assert_eq!(two.pow(0 as $t), one);
-            assert_eq!(two.pow(1 as $t), two);
-            assert_eq!(two.pow(2 as $t), four);
-            assert_eq!(two.pow(3 as $t), eight);
-            assert_eq!(two.pow(10 as $t), tentwentyfour);
-            assert_eq!(two.pow(11 as $t), twentyfourtyeight);
-            assert_eq!(two.pow(&(11 as $t)), twentyfourtyeight);
+            assert_eq!(Pow::pow(&two, 0 as $t), one);
+            assert_eq!(Pow::pow(&two, 1 as $t), two);
+            assert_eq!(Pow::pow(&two, 2 as $t), four);
+            assert_eq!(Pow::pow(&two, 3 as $t), eight);
+            assert_eq!(Pow::pow(&two, 10 as $t), tentwentyfour);
+            assert_eq!(Pow::pow(&two, 11 as $t), twentyfourtyeight);
+            assert_eq!(Pow::pow(&two, &(11 as $t)), twentyfourtyeight);
         };
     }
     check!(u8);
     check!(u16);
     check!(u32);
     check!(u64);
-    check!(usize);
-    #[cfg(has_i128)]
     check!(u128);
+    check!(usize);
+
+    let pow_1e10000 = BigUint::from(10u32).pow(10_000_u32);
+    let manual_1e10000 = repeat(10u32).take(10_000).product::<BigUint>();
+    assert!(manual_1e10000 == pow_1e10000);
+}
+
+#[test]
+fn test_trailing_zeros() {
+    assert!(BigUint::from(0u8).trailing_zeros().is_none());
+    assert_eq!(BigUint::from(1u8).trailing_zeros().unwrap(), 0);
+    assert_eq!(BigUint::from(2u8).trailing_zeros().unwrap(), 1);
+    let x: BigUint = BigUint::one() << 128;
+    assert_eq!(x.trailing_zeros().unwrap(), 128);
+}
+
+#[test]
+fn test_trailing_ones() {
+    assert_eq!(BigUint::from(0u8).trailing_ones(), 0);
+    assert_eq!(BigUint::from(1u8).trailing_ones(), 1);
+    assert_eq!(BigUint::from(2u8).trailing_ones(), 0);
+    assert_eq!(BigUint::from(3u8).trailing_ones(), 2);
+    let x: BigUint = (BigUint::from(3u8) << 128) | BigUint::from(3u8);
+    assert_eq!(x.trailing_ones(), 2);
+    let x: BigUint = (BigUint::one() << 128) - BigUint::one();
+    assert_eq!(x.trailing_ones(), 128);
+}
+
+#[test]
+fn test_count_ones() {
+    assert_eq!(BigUint::from(0u8).count_ones(), 0);
+    assert_eq!(BigUint::from(1u8).count_ones(), 1);
+    assert_eq!(BigUint::from(2u8).count_ones(), 1);
+    assert_eq!(BigUint::from(3u8).count_ones(), 2);
+    let x: BigUint = (BigUint::from(3u8) << 128) | BigUint::from(3u8);
+    assert_eq!(x.count_ones(), 4);
+}
+
+#[test]
+fn test_bit() {
+    assert!(!BigUint::from(0u8).bit(0));
+    assert!(!BigUint::from(0u8).bit(100));
+    assert!(!BigUint::from(42u8).bit(4));
+    assert!(BigUint::from(42u8).bit(5));
+    let x: BigUint = (BigUint::from(3u8) << 128) | BigUint::from(3u8);
+    assert!(x.bit(129));
+    assert!(!x.bit(130));
+}
+
+#[test]
+fn test_set_bit() {
+    let mut x = BigUint::from(3u8);
+    x.set_bit(128, true);
+    x.set_bit(129, true);
+    assert_eq!(x, (BigUint::from(3u8) << 128) | BigUint::from(3u8));
+    x.set_bit(0, false);
+    x.set_bit(128, false);
+    x.set_bit(130, false);
+    assert_eq!(x, (BigUint::from(2u8) << 128) | BigUint::from(2u8));
+    x.set_bit(129, false);
+    x.set_bit(1, false);
+    assert_eq!(x, BigUint::zero());
 }

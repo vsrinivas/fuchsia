@@ -1,3 +1,138 @@
+# Release 0.4.3 (2021-11-02)
+
+- [GHSA-v935-pqmr-g8v9]: [Fix unexpected panics in multiplication.][228]
+
+**Contributors**: @arvidn, @cuviper, @guidovranken
+
+[228]: https://github.com/rust-num/num-bigint/pull/228
+[GHSA-v935-pqmr-g8v9]: https://github.com/rust-num/num-bigint/security/advisories/GHSA-v935-pqmr-g8v9
+
+# Release 0.4.2 (2021-09-03)
+
+- [Use explicit `Integer::div_ceil` to avoid the new unstable method.][219]
+
+**Contributors**: @catenacyber, @cuviper
+
+[219]: https://github.com/rust-num/num-bigint/pull/219
+
+# Release 0.4.1 (2021-08-27)
+
+- [Fixed scalar divide-by-zero panics.][200]
+- [Implemented `DoubleEndedIterator` for `U32Digits` and `U64Digits`.][208]
+- [Optimized multiplication to avoid unnecessary allocations.][199]
+- [Optimized string formatting for very large values.][216]
+
+**Contributors**: @cuviper, @PatrickNorton
+
+[199]: https://github.com/rust-num/num-bigint/pull/199
+[200]: https://github.com/rust-num/num-bigint/pull/200
+[208]: https://github.com/rust-num/num-bigint/pull/208
+[216]: https://github.com/rust-num/num-bigint/pull/216
+
+# Release 0.4.0 (2021-03-05)
+
+### Breaking Changes
+
+- Updated public dependences on [arbitrary, quickcheck][194], and [rand][185]:
+  - `arbitrary` support has been updated to 1.0, requiring Rust 1.40.
+  - `quickcheck` support has been updated to 1.0, requiring Rust 1.46.
+  - `rand` support has been updated to 0.8, requiring Rust 1.36.
+- [`Debug` now shows plain numeric values for `BigInt` and `BigUint`][195],
+  rather than the raw list of internal digits.
+
+**Contributors**: @cuviper, @Gelbpunkt
+
+[185]: https://github.com/rust-num/num-bigint/pull/185
+[194]: https://github.com/rust-num/num-bigint/pull/194
+[195]: https://github.com/rust-num/num-bigint/pull/195
+
+# Release 0.3.3 (2021-09-03)
+
+- [Use explicit `Integer::div_ceil` to avoid the new unstable method.][219]
+
+**Contributors**: @catenacyber, @cuviper
+
+# Release 0.3.2 (2021-03-04)
+
+- [The new `BigUint` methods `count_ones` and `trailing_ones`][175] return the
+  number of `1` bits in the entire value or just its least-significant tail,
+  respectively.
+- [The new `BigInt` and `BigUint` methods `bit` and `set_bit`][183] will read
+  and write individual bits of the value. For negative `BigInt`, bits are
+  determined as if they were in the two's complement representation.
+- [The `from_radix_le` and `from_radix_be` methods][187] now accept empty
+  buffers to represent zero.
+- [`BigInt` and `BigUint` can now iterate digits as `u32` or `u64`][192],
+  regardless of the actual internal digit size.
+
+**Contributors**: @BartMassey, @cuviper, @janmarthedal, @sebastianv89, @Speedy37
+
+[175]: https://github.com/rust-num/num-bigint/pull/175
+[183]: https://github.com/rust-num/num-bigint/pull/183
+[187]: https://github.com/rust-num/num-bigint/pull/187
+[192]: https://github.com/rust-num/num-bigint/pull/192
+
+# Release 0.3.1 (2020-11-03)
+
+- [Addition and subtraction now uses intrinsics][141] for performance on `x86`
+  and `x86_64` when built with Rust 1.33 or later.
+- [Conversions `to_f32` and `to_f64` now return infinity][163] for very large
+  numbers, rather than `None`. This does preserve the sign too, so a large
+  negative `BigInt` will convert to negative infinity.
+- [The optional `arbitrary` feature implements `arbitrary::Arbitrary`][166],
+  distinct from `quickcheck::Arbitrary`.
+- [The division algorithm has been optimized][170] to reduce the number of
+  temporary allocations and improve the internal guesses at each step.
+- [`BigInt` and `BigUint` will opportunistically shrink capacity][171] if the
+  internal vector is much larger than needed.
+
+**Contributors**: @cuviper, @e00E, @ejmahler, @notoria, @tczajka
+
+[141]: https://github.com/rust-num/num-bigint/pull/141
+[163]: https://github.com/rust-num/num-bigint/pull/163
+[166]: https://github.com/rust-num/num-bigint/pull/166
+[170]: https://github.com/rust-num/num-bigint/pull/170
+[171]: https://github.com/rust-num/num-bigint/pull/171
+
+# Release 0.3.0 (2020-06-12)
+
+### Enhancements
+
+- [The internal `BigDigit` may now be either `u32` or `u64`][62], although that
+  implementation detail is not exposed in the API. For now, this is chosen to
+  match the target pointer size, but may change in the future.
+- [No-`std` is now supported with the `alloc` crate on Rust 1.36][101].
+- [`Pow` is now implemented for bigint values][137], not just references.
+- [`TryFrom` is now implemented on Rust 1.34 and later][123], converting signed
+  integers to unsigned, and narrowing big integers to primitives.
+- [`Shl` and `Shr` are now implemented for a variety of shift types][142].
+- A new `trailing_zeros()` returns the number of consecutive zeros from the
+  least significant bit.
+- The new `BigInt::magnitude` and `into_parts` methods give access to its
+  `BigUint` part as the magnitude.
+
+### Breaking Changes
+
+- `num-bigint` now requires Rust 1.31 or greater.
+  - The "i128" opt-in feature was removed, now always available.
+- [Updated public dependences][110]:
+  - `rand` support has been updated to 0.7, requiring Rust 1.32.
+  - `quickcheck` support has been updated to 0.9, requiring Rust 1.34.
+- [Removed `impl Neg for BigUint`][145], which only ever panicked.
+- [Bit counts are now `u64` instead of `usize`][143].
+
+**Contributors**: @cuviper, @dignifiedquire, @hansihe,
+@kpcyrd, @milesand, @tech6hutch
+
+[62]: https://github.com/rust-num/num-bigint/pull/62
+[101]: https://github.com/rust-num/num-bigint/pull/101
+[110]: https://github.com/rust-num/num-bigint/pull/110
+[123]: https://github.com/rust-num/num-bigint/pull/123
+[137]: https://github.com/rust-num/num-bigint/pull/137
+[142]: https://github.com/rust-num/num-bigint/pull/142
+[143]: https://github.com/rust-num/num-bigint/pull/143
+[145]: https://github.com/rust-num/num-bigint/pull/145
+
 # Release 0.2.6 (2020-01-27)
 
 - [Fix the promotion of negative `isize` in `BigInt` assign-ops][133].
