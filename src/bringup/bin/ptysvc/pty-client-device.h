@@ -34,22 +34,32 @@ class PtyClientDevice : public fidl::WireServer<fuchsia_hardware_pty::Device> {
 
   // fuchsia.io.File methods
   void Read(ReadRequestView request, ReadCompleter::Sync& completer) final;
+  void Read2(Read2RequestView request, Read2Completer::Sync& completer) final;
   void ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) final;
+  void ReadAt2(ReadAt2RequestView request, ReadAt2Completer::Sync& completer) final;
 
   void Write(WriteRequestView request, WriteCompleter::Sync& completer) final;
+  void Write2(Write2RequestView request, Write2Completer::Sync& completer) final;
   void WriteAt(WriteAtRequestView request, WriteAtCompleter::Sync& completer) final;
+  void WriteAt2(WriteAt2RequestView request, WriteAt2Completer::Sync& completer) final;
 
   void Seek(SeekRequestView request, SeekCompleter::Sync& completer) final;
+  void Seek2(Seek2RequestView request, Seek2Completer::Sync& completer) final;
   void Truncate(TruncateRequestView request, TruncateCompleter::Sync& completer) final;
+  void Resize(ResizeRequestView request, ResizeCompleter::Sync& completer) final;
   void GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) final;
   void SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) final;
   void GetBuffer(GetBufferRequestView request, GetBufferCompleter::Sync& completer) final;
+  void GetBackingMemory(GetBackingMemoryRequestView request,
+                        GetBackingMemoryCompleter::Sync& completer) final;
 
   void Clone(CloneRequestView request, CloneCompleter::Sync& completer) final;
   void Close(CloseRequestView request, CloseCompleter::Sync& completer) final;
   void Close2(Close2RequestView request, Close2Completer::Sync& completer) final;
   void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) final;
+  void Describe2(Describe2RequestView request, Describe2Completer::Sync& completer) final;
   void Sync(SyncRequestView request, SyncCompleter::Sync& completer) final;
+  void Sync2(Sync2RequestView request, Sync2Completer::Sync& completer) final;
   void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) final;
   void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) final;
 

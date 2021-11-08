@@ -89,7 +89,15 @@ void PtyClientDevice::Read(ReadRequestView request, ReadCompleter::Sync& complet
   ZX_ASSERT(false);
 }
 
+void PtyClientDevice::Read2(Read2RequestView request, Read2Completer::Sync& completer) {
+  ZX_ASSERT(false);
+}
+
 void PtyClientDevice::Write(WriteRequestView request, WriteCompleter::Sync& completer) {
+  ZX_ASSERT(false);
+}
+
+void PtyClientDevice::Write2(Write2RequestView request, Write2Completer::Sync& completer) {
   ZX_ASSERT(false);
 }
 
@@ -109,6 +117,10 @@ void PtyClientDevice::Describe(DescribeRequestView request, DescribeCompleter::S
   ZX_ASSERT(false);
 }
 
+void PtyClientDevice::Describe2(Describe2RequestView request, Describe2Completer::Sync& completer) {
+  ZX_ASSERT(false);
+}
+
 void PtyClientDevice::GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
@@ -121,7 +133,15 @@ void PtyClientDevice::ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& c
   ZX_ASSERT(false);
 }
 
+void PtyClientDevice::ReadAt2(ReadAt2RequestView request, ReadAt2Completer::Sync& completer) {
+  ZX_ASSERT(false);
+}
+
 void PtyClientDevice::WriteAt(WriteAtRequestView request, WriteAtCompleter::Sync& completer) {
+  ZX_ASSERT(false);
+}
+
+void PtyClientDevice::WriteAt2(WriteAt2RequestView request, WriteAt2Completer::Sync& completer) {
   ZX_ASSERT(false);
 }
 
@@ -129,7 +149,15 @@ void PtyClientDevice::Seek(SeekRequestView request, SeekCompleter::Sync& complet
   ZX_ASSERT(false);
 }
 
+void PtyClientDevice::Seek2(Seek2RequestView request, Seek2Completer::Sync& completer) {
+  ZX_ASSERT(false);
+}
+
 void PtyClientDevice::Truncate(TruncateRequestView request, TruncateCompleter::Sync& completer) {
+  ZX_ASSERT(false);
+}
+
+void PtyClientDevice::Resize(ResizeRequestView request, ResizeCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
@@ -141,7 +169,16 @@ void PtyClientDevice::GetBuffer(GetBufferRequestView request, GetBufferCompleter
   ZX_ASSERT(false);
 }
 
+void PtyClientDevice::GetBackingMemory(GetBackingMemoryRequestView request,
+                                       GetBackingMemoryCompleter::Sync& completer) {
+  ZX_ASSERT(false);
+}
+
 void PtyClientDevice::Sync(SyncRequestView request, SyncCompleter::Sync& completer) {
+  ZX_ASSERT(false);
+}
+
+void PtyClientDevice::Sync2(Sync2RequestView request, Sync2Completer::Sync& completer) {
   ZX_ASSERT(false);
 }
 
