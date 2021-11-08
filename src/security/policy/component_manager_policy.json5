@@ -42,7 +42,6 @@
                     "/bootstrap/netsvc",
                     "/bootstrap/svchost",
                     "/core",
-                    "/core/appmgr",
                     "/core/debug_serial",
                     "/core/test_manager/system-tests:**",
                 ],
@@ -56,7 +55,6 @@
                     "/bootstrap",
                     "/bootstrap/power_manager",
                     "/core",
-                    "/core/appmgr",
                 ],
             },
             {
@@ -67,7 +65,6 @@
                 target_monikers: [
                     "/bootstrap",
                     "/core",
-                    "/core/appmgr",
                     "/core/debug_serial",
                 ],
             },
@@ -79,7 +76,6 @@
                 target_monikers: [
                     "/bootstrap",
                     "/core",
-                    "/core/appmgr",
                     "/core/debug_serial",
                 ],
             },
@@ -91,7 +87,6 @@
                 target_monikers: [
                     "/bootstrap",
                     "/core",
-                    "/core/appmgr",
                     "/core/debug_serial",
                 ],
             },
@@ -103,7 +98,6 @@
                 target_monikers: [
                     "/bootstrap",
                     "/core",
-                    "/core/appmgr",
                     "/core/debug_serial",
                 ],
             },
@@ -115,7 +109,6 @@
                 target_monikers: [
                     "/bootstrap",
                     "/core",
-                    "/core/appmgr",
                     "/core/debug_serial",
                 ],
             },
@@ -131,7 +124,6 @@
                     "/bootstrap/netsvc",
                     "/bootstrap/svchost",
                     "/core",
-                    "/core/appmgr",
                 ],
             },
             {
@@ -144,7 +136,6 @@
                     "/bootstrap/console-launcher",
                     "/bootstrap/netsvc",
                     "/core",
-                    "/core/appmgr",
                     "/core/memory_monitor",
                     "/core/test_manager/tests:**",
                 ],
@@ -157,7 +148,6 @@
                 target_monikers: [
                     "/bootstrap",
                     "/core",
-                    "/core/appmgr",
                     "/core/debug_serial",
                 ],
             },
@@ -169,7 +159,6 @@
                 target_monikers: [
                     "/bootstrap",
                     "/core",
-                    "/core/appmgr",
                     "/core/debug_serial",
                 ],
             },
@@ -182,7 +171,6 @@
                     "/bootstrap",
                     "/bootstrap/fshost",
                     "/core",
-                    "/core/appmgr",
                     "/core/debug_serial",
                     "/core/starnix_manager/starnix_runner",
                     "/core/test_manager/starnix_test_runner/starnix_runner",
@@ -324,7 +312,7 @@
                     // system-updater still runs as a v1 component and is a
                     // valid client of PackageResolver.  appmgr has its own
                     // allowlist for v1 components accessing pkg-resolver.
-                    "/core/appmgr",
+                    "/core",
                     "/core/full-resolver",
                     "/core/system-update-checker",
                     "/core/system-updater",
@@ -338,7 +326,7 @@
                 source_name: "fuchsia.pkg.PackageCache",
                 capability: "protocol",
                 target_monikers: [
-                    "/core/appmgr",
+                    "/core",
                     "/core/pkg-resolver",
                     "/core/system-updater",
                 ],
@@ -384,6 +372,7 @@
         child_policy: {
             reboot_on_terminate: [
                 "/bootstrap/driver_index",
+                "/core",
                 "/core/appmgr",
                 "/core/network/netstack",
                 "/core/omaha-client-service",

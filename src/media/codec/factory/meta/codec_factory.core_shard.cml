@@ -9,6 +9,12 @@
             environment: "#full-resolver-env",
         },
     ],
+    use: [
+        {
+            protocol: "fuchsia.mediacodec.CodecFactory",
+            from: "#codec_factory",
+        },
+    ],
     offer: [
         {
             directory: "dev",
@@ -27,7 +33,7 @@
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
             ],
-            from: "#appmgr",
+            from: "self",
             to: "#codec_factory",
             dependency: "weak_for_migration",
         },
@@ -38,11 +44,6 @@
             ],
             from: "parent",
             to: "#codec_factory",
-        },
-        {
-            protocol: "fuchsia.mediacodec.CodecFactory",
-            from: "#codec_factory",
-            to: "#appmgr",
         },
     ],
 }

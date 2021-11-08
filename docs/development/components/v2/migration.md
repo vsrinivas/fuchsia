@@ -704,7 +704,7 @@ services".
 
 1.  Create a [manifest shard][manifests-shard]. A manifest shard uses generally
     the syntax as a manifest, but *may* reference objects that don't exist
-    within the manifest itself. In this case we reference the `appmgr` child
+    within the manifest itself. In this case we reference the `session-manager` child
     which is not defined here, but we know is defined in `core`'s manifest.
 
     ```json5
@@ -720,7 +720,7 @@ services".
             {
                 protocol: "fuchsia.fonts.Provider",
                 from: "#font_provider",
-                to: [ "#appmgr" ],
+                to: [ "#session-manager" ],
             },
         ],
     }
@@ -758,7 +758,7 @@ services".
 #### Add directly to core {#add-core-direct}
 
 Add your component as a child instance of the [`core.cml`][cs-core-cml]
-component, and offer its exposed services to appmgr. You need to choose a name
+component, and offer its exposed services to dependent components. You need to choose a name
 for your component instance and identify its component URL (you should be able
 to get this from the config mapping).
 
@@ -777,7 +777,7 @@ to get this from the config mapping).
         {
             protocol: "fuchsia.fonts.Provider",
             from: "#font_provider",
-            to: [ "#appmgr" ],
+            to: [ "#session-manager" ],
         },
     ],
 }
@@ -811,24 +811,28 @@ You can see this hierarchy using `ffx component list` as well:
   startup
 ```
 
-### Expose services to sys environment {#expose-services}
+### Make your component's services available to v1 components {#route-to-v1}
 
-Declare each of these services in [`appmgr.cml`][cs-appmgr-cml] to make them
-available to v1 components under the `sys` environment. Change `appmgr.cml` as
-follows:
+It is very common for there to be components in the v1 `sys` realm that depend
+on your component's exposed services, or for them to be used by
+[shell binaries](#shell-binaries).  Make your component's services available to
+the v1 `sys` realm by adding a declaration like the following to your core
+realm shard or `core.cml`.
 
 ```json5
-// appmgr.cml
+// core.cml
 {
     use: [
-        ...
         {
-            protocol: "fuchsia.fonts.Provider",
-            path: "/svc_for_sys/fuchsia.fonts.Provider",
+            protocol: "fuchsia.fonts.FontProvider",
+            from: "#font_provider",
         },
     ],
 }
 ```
+
+Note: You do _not_ need to offer the service to `appmgr`. `core` itself proxies
+to and from the v1 `sys` realm, which is why we have `core` `use` the service.
 
 ### Offer services to your component {#offer-services}
 
@@ -853,27 +857,7 @@ in your manifest's [`include`][manifests-include].
 #### v1 component provides service {#v1-component-provides-service}
 
 You’ll reach this case if a mapping for the service exists in a sysmgr config
-file. Take a look at [`appmgr.cml`][cs-appmgr-cml], and search for the service.
-If it’s already exposed, no modifications are required. If not, you’ll need to
-change `appmgr.cml` to expose the service and route it from `appmgr` to your
-component:
-
-```json5
-// appmgr.cml
-{
-    expose: [
-        ...
-        {
-            protocol: [
-                ... // (Any services already exposed from appmgr are here)
-                "fuchsia.pkg.FontResolver",
-            ],
-            from: "self",
-        },
-        ...
-    ],
-}
-```
+file. To make the service available to your component, you offer it from `core`:
 
 ```json5
 // core.cml
@@ -881,21 +865,17 @@ component:
     offer: [
         ...
         {
-            protocol: "fuchsia.logger.LogSink",
-            from: "parent",
-            to: [ "#font_provider" ],
-        },
-        {
-            protocol: [
-                "fuchsia.pkg.FontResolver",
-            ],
-            from: "#appmgr",
+            protocol: "fuchsia.pkg.FontResolver",
+            from: "self",
             to: [ "#font_provider" ],
         },
         ...
     ],
 }
 ```
+
+Note: You do _not_ offer the service from `appmgr`. `core` itself proxies
+to and from the v1 `sys` realm, which is why we have `core` offer the service.
 
 #### v2 component in core.cml provides service {#v2-core-cml-provides-service}
 
@@ -1428,7 +1408,7 @@ policy allowlist at
 Your project may contain a `fuchsia_shell_package()` build target designed to
 execute in a shell environment. Many of these packages also contain a CMX file
 to support invoking the binary as a v1 component. When
-[exposing your services](#expose-services) to the `sys` environment, include any
+[routing your services](#route-to-v2) to the `sys` environment, include any
 services required by shell binaries.
 
 Note: If your component requires `shell-commands` directory access to invoke

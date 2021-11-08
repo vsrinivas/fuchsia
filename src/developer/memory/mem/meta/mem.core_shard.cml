@@ -24,7 +24,7 @@
         },
         {
             protocol: [ "fuchsia.tracing.provider.Registry" ],
-            from: "#appmgr",
+            from: "self",
             to: "#mem",
             dependency: "weak_for_migration",
         },

@@ -6,12 +6,13 @@
             environment: "#full-resolver-env",
         },
     ],
-    offer: [
+    use: [
         {
             protocol: "fuchsia.location.position.EmergencyProvider",
             from: "#emergency",
-            to: "#appmgr",
         },
+    ],
+    offer: [
         {
             protocol: "fuchsia.location.sensor.WlanBaseStationWatcher",
             from: "#emergency",

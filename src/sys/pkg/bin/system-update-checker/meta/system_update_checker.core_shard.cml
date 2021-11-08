@@ -7,12 +7,7 @@
             on_terminate: "reboot",
         },
     ],
-    offer: [
-        {
-            protocol: "fuchsia.update.installer.Installer",
-            from: "#system-updater",
-            to: [ "#system-update-checker" ],
-        },
+    use: [
         {
             protocol: [
                 "fuchsia.update.channel.Provider",
@@ -20,7 +15,13 @@
                 "fuchsia.update.Manager",
             ],
             from: "#system-update-checker",
-            to: "#appmgr",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.update.installer.Installer",
+            from: "#system-updater",
+            to: [ "#system-update-checker" ],
         },
         {
             protocol: "fuchsia.cobalt.SystemDataUpdater",

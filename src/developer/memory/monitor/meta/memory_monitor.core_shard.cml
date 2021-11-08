@@ -11,7 +11,7 @@
             environment: "#full-resolver-env",
         },
     ],
-    offer: [
+    use: [
         {
             protocol: [
                 "fuchsia.memory.Debugger",
@@ -19,14 +19,15 @@
                 "fuchsia.memorypressure.Provider",
             ],
             from: "#memory_monitor",
-            to: "#appmgr",
         },
+    ],
+    offer: [
         {
             protocol: [
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.tracing.provider.Registry",
             ],
-            from: "#appmgr",
+            from: "self",
             to: "#memory_monitor",
             dependency: "weak_for_migration",
         },

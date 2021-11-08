@@ -12,7 +12,7 @@
             environment: "#full-resolver-env",
         },
     ],
-    offer: [
+    use: [
         {
             protocol: [
                 "fuchsia.bluetooth.a2dp.AudioMode",
@@ -24,8 +24,9 @@
                 "fuchsia.bluetooth.internal.a2dp.Controller",
             ],
             from: "#bt-a2dp",
-            to: [ "#appmgr" ],
         },
+    ],
+    offer: [
         {
             protocol: [
                 "fuchsia.bluetooth.bredr.Profile",
@@ -37,7 +38,7 @@
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
             ],
-            from: "#appmgr",
+            from: "self",
             to: [ "#bt-a2dp" ],
             dependency: "weak_for_migration",
         },

@@ -1,6 +1,5 @@
 {
     include: [
-        "//src/developer/memory/monitor/meta/memory_monitor.sys_shard.cml",
         "inspect/client.shard.cml",
         "syslog/client.shard.cml",
     ],
@@ -15,91 +14,16 @@
     },
     capabilities: [
         {
-            protocol: "fuchsia.appmgr.Startup",
-            path: "/appmgr_svc/fuchsia.appmgr.Startup",
-        },
-        {
-            protocol: [
-                "fuchsia.sys.internal.CrashIntrospect",
-                "fuchsia.test.manager.Query",
-                "fuchsia.test.manager.RunBuilder",
-            ],
-        },
-        {
             directory: "hub-legacy",
             rights: [ "rw*" ],
             path: "/hub",
         },
 
-        // These protocols exposed by appmgr are services from the v1 component
-        // runtime being made available to the v2 component runtime. These all cause
-        // dependency cycles between the two runtimes. Cycles require trickier
-        // runtime logic to ensure correctness, are a general design smell, and may
-        // be disallowed in the future.
-        {
-            protocol: [
-                "fuchsia.bluetooth.bredr.Profile",
-                "fuchsia.bluetooth.gatt.Server",
-                "fuchsia.bluetooth.le.Peripheral",
-                "fuchsia.camera3.DeviceWatcher",
-                "fuchsia.deprecatedtimezone.Timezone",
-                "fuchsia.exception.Handler",
-                "fuchsia.factory.MiscFactoryStoreProvider",
-                "fuchsia.factory.WeaveFactoryStoreProvider",
-                "fuchsia.feedback.ComponentDataRegister",
-                "fuchsia.feedback.CrashReporter",
-                "fuchsia.feedback.CrashReportingProductRegister",
-                "fuchsia.hwinfo.Device",
-                "fuchsia.intl.PropertyProvider",
-                "fuchsia.intl.TimeZones",
-                "fuchsia.lowpan.device.Lookup",
-                "fuchsia.media.Audio",
-                "fuchsia.media.AudioCore",
-                "fuchsia.media.AudioDeviceEnumerator",
-                "fuchsia.media.ProfileProvider",
-                "fuchsia.media.SessionAudioConsumerFactory",
-                "fuchsia.media.sessions2.Discovery",
-                "fuchsia.media.sessions2.Publisher",
-                "fuchsia.media.UsageReporter",
-                "fuchsia.memorypressure.Provider",
-                "fuchsia.overnet.Overnet",
-                "fuchsia.overnet.ServicePublisher",
-                "fuchsia.power.manager.DriverManagerRegistration",
-                "fuchsia.process.Resolver",
-                "fuchsia.recovery.policy.Device",
-                "fuchsia.settings.Audio",
-                "fuchsia.settings.Input",
-                "fuchsia.settings.Privacy",
-                "fuchsia.stash.SecureStore",
-                "fuchsia.sys.Environment",
-                "fuchsia.sys.Launcher",
-                "fuchsia.sys.Loader",
-                "fuchsia.sysmem.Allocator",
-                "fuchsia.tracing.controller.Controller",
-                "fuchsia.tracing.provider.Registry",
-                "fuchsia.ui.composition.Allocator",
-                "fuchsia.ui.composition.Flatland",
-                "fuchsia.ui.composition.FlatlandDisplay",
-                "fuchsia.ui.focus.FocusChainListenerRegistry",
-                "fuchsia.ui.input.ImeService",
-                "fuchsia.ui.input3.Keyboard",
-                "fuchsia.ui.input3.KeyEventInjector",
-                "fuchsia.ui.keyboard.focus.Controller",
-                "fuchsia.ui.lifecycle.LifecycleController",
-                "fuchsia.ui.pointerinjector.Registry",
-                "fuchsia.ui.policy.DeviceListenerRegistry",
-                "fuchsia.ui.policy.Presenter",
-                "fuchsia.ui.scenic.Scenic",
-                "fuchsia.ui.shortcut.Manager",
-                "fuchsia.ui.views.ViewRefInstalled",
-                "fuchsia.virtualization.Manager",
-                "fuchsia.weave.FactoryDataManager",
-                "fuchsia.weave.Signer",
-                "widevine.oemcrypto.Provider",
-            ],
-        },
-
         // These protocols exposed by appmgr are implemented by appmgr.
+        {
+            protocol: "fuchsia.appmgr.Startup",
+            path: "/appmgr_svc/fuchsia.appmgr.Startup",
+        },
         {
             protocol: "fuchsia.sys.internal.LogConnector",
             from: "self",
@@ -110,8 +34,30 @@
             from: "self",
             path: "/appmgr_svc/fuchsia.sys.internal.ComponentEventProvider",
         },
+
+        // `svc_from_sys` and `svc_for_sys` contain protocols that are routed from `appmgr` to
+        // `core` and `core` to `appmgr` respectively. This makes it possible to add a declaration
+        // that routes a protocol to or from the `sys` realm without having to change `appmgr.cml`.
+        // This is particulary helpful for core shards, because it allows the routes between v1 and
+        // v2 to be contained within the core shard itself. `core` runs a `core_proxy` executable
+        // which manages the task of proxying protocols used by or offered from `self` to or from
+        // these directories.
+        //
+        // For more information on how to route protocols between v1 and v2, read:
+        // https://fuchsia.dev/fuchsia-src/development/components/v2/migration#v1-component-provides-service
+        // https://fuchsia.dev/fuchsia-src/development/components/v2/migration#route-to-v1
+        {
+            directory: "svc_from_sys",
+            rights: [ "rw*" ],
+            path: "/svc",
+        },
     ],
     use: [
+        {
+            directory: "svc_for_sys",
+            rights: [ "rw*" ],
+            path: "/svc_for_sys",
+        },
         {
             directory: "blob",
             rights: [ "rw*" ],
@@ -163,545 +109,6 @@
             path: "/hub-v2",
         },
 
-        // Services used by appmgr with the svc_for_sys prefix are passed through to
-        // the sys realm
-
-        // From setui service
-        {
-            protocol: "fuchsia.settings.Accessibility",
-            path: "/svc_for_sys/fuchsia.settings.Accessibility",
-        },
-        {
-            protocol: "fuchsia.settings.Audio",
-            path: "/svc_for_sys/fuchsia.settings.Audio",
-        },
-        {
-            protocol: "fuchsia.settings.Display",
-            path: "/svc_for_sys/fuchsia.settings.Display",
-        },
-        {
-            protocol: "fuchsia.settings.DoNotDisturb",
-            path: "/svc_for_sys/fuchsia.settings.DoNotDisturb",
-        },
-        {
-            protocol: "fuchsia.settings.FactoryReset",
-            path: "/svc_for_sys/fuchsia.settings.FactoryReset",
-        },
-        {
-            protocol: "fuchsia.settings.Input",
-            path: "/svc_for_sys/fuchsia.settings.Input",
-        },
-        {
-            protocol: "fuchsia.settings.Intl",
-            path: "/svc_for_sys/fuchsia.settings.Intl",
-        },
-        {
-            protocol: "fuchsia.settings.Light",
-            path: "/svc_for_sys/fuchsia.settings.Light",
-        },
-        {
-            protocol: "fuchsia.settings.NightMode",
-            path: "/svc_for_sys/fuchsia.settings.NightMode",
-        },
-        {
-            protocol: "fuchsia.settings.policy.VolumePolicyController",
-            path: "/svc_for_sys/fuchsia.settings.policy.VolumePolicyController",
-        },
-        {
-            protocol: "fuchsia.settings.Privacy",
-            path: "/svc_for_sys/fuchsia.settings.Privacy",
-        },
-        {
-            protocol: "fuchsia.settings.Setup",
-            path: "/svc_for_sys/fuchsia.settings.Setup",
-        },
-
-        // From bootsvc
-        {
-            protocol: "fuchsia.boot.Arguments",
-            path: "/svc_for_sys/fuchsia.boot.Arguments",
-        },
-        {
-            protocol: "fuchsia.boot.FactoryItems",
-            path: "/svc_for_sys/fuchsia.boot.FactoryItems",
-        },
-        {
-            protocol: "fuchsia.boot.Items",
-            path: "/svc_for_sys/fuchsia.boot.Items",
-        },
-        {
-            protocol: "fuchsia.boot.ReadOnlyLog",
-            path: "/svc_for_sys/fuchsia.boot.ReadOnlyLog",
-        },
-        {
-            protocol: "fuchsia.kernel.RootJob",
-            path: "/svc_for_sys/fuchsia.kernel.RootJob",
-        },
-        {
-            protocol: "fuchsia.kernel.RootJobForInspect",
-            path: "/svc_for_sys/fuchsia.kernel.RootJobForInspect",
-        },
-        {
-            protocol: "fuchsia.boot.RootResource",
-            path: "/svc_for_sys/fuchsia.boot.RootResource",
-        },
-        {
-            protocol: "fuchsia.devicesettings.DeviceSettingsManager",
-            path: "/svc_for_sys/fuchsia.devicesettings.DeviceSettingsManager",
-        },
-        {
-            protocol: "fuchsia.boot.WriteOnlyLog",
-            path: "/svc_for_sys/fuchsia.boot.WriteOnlyLog",
-        },
-        {
-            protocol: "fuchsia.kernel.CpuResource",
-            path: "/svc_for_sys/fuchsia.kernel.CpuResource",
-        },
-        {
-            protocol: "fuchsia.kernel.DebugResource",
-            path: "/svc_for_sys/fuchsia.kernel.DebugResource",
-        },
-        {
-            protocol: "fuchsia.kernel.HypervisorResource",
-            path: "/svc_for_sys/fuchsia.kernel.HypervisorResource",
-        },
-        {
-            protocol: "fuchsia.kernel.InfoResource",
-            path: "/svc_for_sys/fuchsia.kernel.InfoResource",
-        },
-        {
-            protocol: "fuchsia.kernel.IoportResource",
-            path: "/svc_for_sys/fuchsia.kernel.IoportResource",
-        },
-        {
-            protocol: "fuchsia.kernel.IrqResource",
-            path: "/svc_for_sys/fuchsia.kernel.IrqResource",
-        },
-        {
-            protocol: "fuchsia.kernel.MmioResource",
-            path: "/svc_for_sys/fuchsia.kernel.MmioResource",
-        },
-        {
-            protocol: "fuchsia.kernel.SmcResource",
-            path: "/svc_for_sys/fuchsia.kernel.SmcResource",
-        },
-        {
-            protocol: "fuchsia.kernel.Stats",
-            path: "/svc_for_sys/fuchsia.kernel.Stats",
-        },
-        {
-            protocol: "fuchsia.kernel.VmexResource",
-            path: "/svc_for_sys/fuchsia.kernel.VmexResource",
-        },
-        {
-            protocol: "fuchsia.tracing.kernel.Controller",
-            path: "/svc_for_sys/fuchsia.tracing.kernel.Controller",
-        },
-        {
-            protocol: "fuchsia.tracing.kernel.Reader",
-            path: "/svc_for_sys/fuchsia.tracing.kernel.Reader",
-        },
-
-        // From ptysvc
-        {
-            protocol: "fuchsia.hardware.pty.Device",
-            path: "/svc_for_sys/fuchsia.hardware.pty.Device",
-        },
-
-        // From devcoordinator
-        {
-            protocol: "fuchsia.device.NameProvider",
-            path: "/svc_for_sys/fuchsia.device.NameProvider",
-        },
-        {
-            protocol: "fuchsia.device.manager.Administrator",
-            path: "/svc_for_sys/fuchsia.device.manager.Administrator",
-        },
-        {
-            protocol: "fuchsia.device.manager.DebugDumper",
-            path: "/svc_for_sys/fuchsia.device.manager.DebugDumper",
-        },
-        {
-            protocol: "fuchsia.driver.registrar.DriverRegistrar",
-            path: "/svc_for_sys/fuchsia.driver.registrar.DriverRegistrar",
-        },
-        {
-            protocol: "fuchsia.hardware.power.statecontrol.Admin",
-            path: "/svc_for_sys/fuchsia.hardware.power.statecontrol.Admin",
-        },
-        {
-            protocol: "fuchsia.hardware.usb.DeviceWatcher",
-            path: "/svc_for_sys/fuchsia.hardware.usb.DeviceWatcher",
-        },
-        {
-            protocol: "fuchsia.kernel.Counter",
-            path: "/svc_for_sys/fuchsia.kernel.Counter",
-        },
-        {
-            protocol: "fuchsia.kernel.DebugBroker",
-            path: "/svc_for_sys/fuchsia.kernel.DebugBroker",
-        },
-        {
-            protocol: "fuchsia.paver.Paver",
-            path: "/svc_for_sys/fuchsia.paver.Paver",
-        },
-        {
-            protocol: "fuchsia.scheduler.ProfileProvider",
-            path: "/svc_for_sys/fuchsia.scheduler.ProfileProvider",
-        },
-        {
-            protocol: "fuchsia.virtualconsole.SessionManager",
-            path: "/svc_for_sys/fuchsia.virtualconsole.SessionManager",
-        },
-
-        // From component_manager
-        {
-            protocol: "fuchsia.process.Launcher",
-            path: "/svc_for_sys/fuchsia.process.Launcher",
-        },
-        {
-            protocol: "fuchsia.time.Maintenance",
-            path: "/svc_for_sys/fuchsia.time.Maintenance",
-        },
-        {
-            protocol: "fuchsia.sys2.CrashIntrospect",
-            path: "/svc_for_sys/fuchsia.sys2.CrashIntrospect",
-        },
-
-        // From v2 components
-        {
-            protocol: "fuchsia.net.interfaces.State",
-            path: "/svc_for_sys/fuchsia.net.interfaces.State",
-        },
-        {
-            protocol: "fuchsia.net.name.Lookup",
-            path: "/svc_for_sys/fuchsia.net.name.Lookup",
-        },
-        {
-            protocol: "fuchsia.net.routes.State",
-            path: "/svc_for_sys/fuchsia.net.routes.State",
-        },
-        {
-            protocol: "fuchsia.net.stack.Stack",
-            path: "/svc_for_sys/fuchsia.net.stack.Stack",
-        },
-        {
-            protocol: "fuchsia.netstack.Netstack",
-            path: "/svc_for_sys/fuchsia.netstack.Netstack",
-        },
-        {
-            protocol: "fuchsia.posix.socket.Provider",
-            path: "/svc_for_sys/fuchsia.posix.socket.Provider",
-        },
-        {
-            protocol: "fuchsia.net.http.Loader",
-            path: "/svc_for_sys/fuchsia.net.http.Loader",
-        },
-        {
-            protocol: "fuchsia.power.BatteryManager",
-            path: "/svc_for_sys/fuchsia.power.BatteryManager",
-        },
-        {
-            protocol: "fuchsia.power.test.BatterySimulator",
-            path: "/svc_for_sys/fuchsia.power.test.BatterySimulator",
-        },
-        {
-            protocol: "fuchsia.fshost.BlockWatcher",
-            path: "/svc_for_sys/fuchsia.fshost.BlockWatcher",
-        },
-        {
-            protocol: "fuchsia.fonts.Provider",
-            path: "/svc_for_sys/fuchsia.fonts.Provider",
-        },
-        {
-            protocol: "fuchsia.hwinfo.Product",
-            path: "/svc_for_sys/fuchsia.hwinfo.Product",
-        },
-        {
-            protocol: "fuchsia.hwinfo.Device",
-            path: "/svc_for_sys/fuchsia.hwinfo.Device",
-        },
-        {
-            protocol: "fuchsia.hwinfo.Board",
-            path: "/svc_for_sys/fuchsia.hwinfo.Board",
-        },
-        {
-            protocol: "fuchsia.update.CommitStatusProvider",
-            path: "/svc_for_sys/fuchsia.update.CommitStatusProvider",
-        },
-        {
-            protocol: "fuchsia.update.installer.Installer",
-            path: "/svc_for_sys/fuchsia.update.installer.Installer",
-        },
-        {
-            protocol: "fuchsia.developer.remotecontrol.RemoteControl",
-            path: "/svc_for_sys/fuchsia.developer.remotecontrol.RemoteControl",
-        },
-        {
-            protocol: "fuchsia.starnix.developer.Manager",
-            path: "/svc_for_sys/fuchsia.starnix.developer.Manager",
-        },
-        {
-            protocol: "fuchsia.hardware.serial.NewDeviceProxy",
-            path: "/svc_for_sys/fuchsia.hardware.serial.NewDeviceProxy",
-        },
-        {
-            protocol: "fuchsia.systemmetrics.test.SystemMetricsLogger",
-            path: "/svc_for_sys/fuchsia.systemmetrics.test.SystemMetricsLogger",
-        },
-        {
-            protocol: "fuchsia.thermal.test.TemperatureLogger",
-            path: "/svc_for_sys/fuchsia.thermal.test.TemperatureLogger",
-        },
-        {
-            protocol: "fuchsia.ui.activity.Provider",
-            path: "/svc_for_sys/fuchsia.ui.activity.Provider",
-        },
-        {
-            protocol: "fuchsia.ui.brightness.Control",
-            path: "/svc_for_sys/fuchsia.ui.brightness.Control",
-        },
-        {
-            protocol: "fuchsia.ui.activity.Tracker",
-            path: "/svc_for_sys/fuchsia.ui.activity.Tracker",
-        },
-        {
-            protocol: "fuchsia.ui.activity.control.Control",
-            path: "/svc_for_sys/fuchsia.ui.activity.control.Control",
-        },
-        {
-            protocol: "fuchsia.pkg.PackageCache",
-            path: "/svc_for_sys/fuchsia.pkg.PackageCache",
-        },
-        {
-            protocol: "fuchsia.pkg.PackageResolver",
-            path: "/svc_for_sys/fuchsia.pkg.PackageResolver",
-        },
-        {
-            protocol: "fuchsia.pkg.PackageResolverAdmin",
-            path: "/svc_for_sys/fuchsia.pkg.PackageResolverAdmin",
-        },
-        {
-            protocol: "fuchsia.pkg.RepositoryManager",
-            path: "/svc_for_sys/fuchsia.pkg.RepositoryManager",
-        },
-        {
-            protocol: "fuchsia.pkg.rewrite.Engine",
-            path: "/svc_for_sys/fuchsia.pkg.rewrite.Engine",
-        },
-        {
-            protocol: "fuchsia.space.Manager",
-            path: "/svc_for_sys/fuchsia.space.Manager",
-        },
-        {
-            protocol: "fuchsia.vboot.FirmwareParam",
-            path: "/svc_for_sys/fuchsia.vboot.FirmwareParam",
-        },
-
-        // TODO(fxbug.dev/71830): Remove once the Feedback migration has completed.
-        {
-            protocol: "fuchsia.feedback.internal.LastRebootDirectoryMigrator",
-            path: "/svc_for_sys/fuchsia.feedback.internal.LastRebootDirectoryMigrator",
-        },
-        {
-            protocol: "fuchsia.stash.Store",
-            path: "/svc_for_sys/fuchsia.stash.Store",
-        },
-        {
-            protocol: "fuchsia.stash.Store2",
-            path: "/svc_for_sys/fuchsia.stash.Store2",
-        },
-        {
-            protocol: "fuchsia.stash.SecureStore",
-            path: "/svc_for_sys/fuchsia.stash.SecureStore",
-        },
-        {
-            protocol: "fuchsia.vulkan.loader.Loader",
-            path: "/svc_for_sys/fuchsia.vulkan.loader.Loader",
-        },
-        {
-            protocol: "fuchsia.tpm.cr50.Cr50",
-            path: "/svc_for_sys/fuchsia.tpm.cr50.Cr50",
-        },
-
-        // From v2 Bluetooth components
-        {
-            protocol: "fuchsia.bluetooth.avrcp.PeerManager",
-            path: "/svc_for_sys/fuchsia.bluetooth.avrcp.PeerManager",
-        },
-        {
-            protocol: "fuchsia.bluetooth.a2dp.AudioMode",
-            path: "/svc_for_sys/fuchsia.bluetooth.a2dp.AudioMode",
-        },
-        {
-            protocol: "fuchsia.bluetooth.internal.a2dp.Controller",
-            path: "/svc_for_sys/fuchsia.bluetooth.internal.a2dp.Controller",
-        },
-        {
-            protocol: "fuchsia.bluetooth.hfp.Hfp",
-            path: "/svc_for_sys/fuchsia.bluetooth.hfp.Hfp",
-        },
-
-        // From v2 Bluetooth components (testonly capabilities).
-        // TODO(fxbug.dev/86390): These capabilities should not always be available to the system.
-        // Remove this once we can conditionally expose these testonly capabilities.
-        {
-            protocol: "fuchsia.bluetooth.avrcp.test.PeerManagerExt",
-            path: "/svc_for_sys/fuchsia.bluetooth.avrcp.test.PeerManagerExt",
-        },
-        {
-            protocol: "fuchsia.bluetooth.hfp.test.HfpTest",
-            path: "/svc_for_sys/fuchsia.bluetooth.hfp.test.HfpTest",
-        },
-
-        // From archivist
-        {
-            protocol: "fuchsia.diagnostics.ArchiveAccessor",
-            path: "/svc_for_sys/fuchsia.diagnostics.ArchiveAccessor",
-        },
-        {
-            protocol: "fuchsia.diagnostics.FeedbackArchiveAccessor",
-            path: "/svc_for_sys/fuchsia.diagnostics.FeedbackArchiveAccessor",
-        },
-        {
-            protocol: "fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
-            path: "/svc_for_sys/fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
-        },
-        {
-            protocol: "fuchsia.logger.Log",
-            path: "/svc_for_sys/fuchsia.logger.Log",
-        },
-
-        // From build-info
-        {
-            protocol: "fuchsia.buildinfo.Provider",
-            path: "/svc_for_sys/fuchsia.buildinfo.Provider",
-        },
-
-        // From cobalt
-        {
-            protocol: "fuchsia.cobalt.LoggerFactory",
-            path: "/svc_for_sys/fuchsia.cobalt.LoggerFactory",
-        },
-        {
-            protocol: "fuchsia.cobalt.SystemDataUpdater",
-            path: "/svc_for_sys/fuchsia.cobalt.SystemDataUpdater",
-        },
-        {
-            protocol: "fuchsia.metrics.MetricEventLoggerFactory",
-            path: "/svc_for_sys/fuchsia.metrics.MetricEventLoggerFactory",
-        },
-
-        // From diagnostics-persistence
-        {
-            protocol: "fuchsia.diagnostics.persist.DataPersistence-wlan",
-            path: "/svc_for_sys/fuchsia.diagnostics.persist.DataPersistence-wlan",
-        },
-
-        // From sysinfo
-        {
-            protocol: "fuchsia.sysinfo.SysInfo",
-            path: "/svc_for_sys/fuchsia.sysinfo.SysInfo",
-        },
-
-        // From power_manager
-        {
-            protocol: "fuchsia.thermal.Controller",
-            path: "/svc_for_sys/fuchsia.thermal.Controller",
-        },
-        {
-            protocol: "fuchsia.power.profile.Watcher",
-            path: "/svc_for_sys/fuchsia.power.profile.Watcher",
-        },
-        {
-            protocol: "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
-            path: "/svc_for_sys/fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
-        },
-        {
-            protocol: "fuchsia.ssh.AuthorizedKeys",
-            path: "/svc_for_sys/fuchsia.ssh.AuthorizedKeys",
-        },
-
-        // From wlancfg
-        {
-            protocol: "fuchsia.wlan.policy.ClientProvider",
-            path: "/svc_for_sys/fuchsia.wlan.policy.ClientProvider",
-        },
-        {
-            protocol: "fuchsia.wlan.policy.ClientListener",
-            path: "/svc_for_sys/fuchsia.wlan.policy.ClientListener",
-        },
-        {
-            protocol: "fuchsia.wlan.policy.AccessPointProvider",
-            path: "/svc_for_sys/fuchsia.wlan.policy.AccessPointProvider",
-        },
-        {
-            protocol: "fuchsia.wlan.policy.AccessPointListener",
-            path: "/svc_for_sys/fuchsia.wlan.policy.AccessPointListener",
-        },
-        {
-            protocol: "fuchsia.wlan.product.deprecatedclient.DeprecatedClient",
-            path: "/svc_for_sys/fuchsia.wlan.product.deprecatedclient.DeprecatedClient",
-        },
-        {
-            protocol: "fuchsia.wlan.product.deprecatedconfiguration.DeprecatedConfigurator",
-            path: "/svc_for_sys/fuchsia.wlan.product.deprecatedconfiguration.DeprecatedConfigurator",
-        },
-
-        // From wlandevicemonitor
-        {
-            protocol: "fuchsia.wlan.device.service.DeviceMonitor",
-            path: "/svc_for_sys/fuchsia.wlan.device.service.DeviceMonitor",
-        },
-
-        // From wlanstack
-        {
-            protocol: "fuchsia.wlan.device.service.DeviceService",
-            path: "/svc_for_sys/fuchsia.wlan.device.service.DeviceService",
-        },
-
-        // From location
-        {
-            protocol: "fuchsia.location.position.EmergencyProvider",
-            path: "/svc_for_sys/fuchsia.location.position.EmergencyProvider",
-        },
-        {
-            protocol: "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
-            path: "/svc_for_sys/fuchsia.location.namedplace.RegulatoryRegionConfigurator",
-        },
-        {
-            protocol: "fuchsia.location.namedplace.RegulatoryRegionWatcher",
-            path: "/svc_for_sys/fuchsia.location.namedplace.RegulatoryRegionWatcher",
-        },
-
-        // From session_manager
-        {
-            protocol: "fuchsia.input.injection.InputDeviceRegistry",
-            path: "/svc_for_sys/fuchsia.input.injection.InputDeviceRegistry",
-        },
-        {
-            protocol: "fuchsia.session.Launcher",
-            path: "/svc_for_sys/fuchsia.session.Launcher",
-        },
-
-        // From session_manager
-        {
-            protocol: "fuchsia.ui.accessibility.view.Registry",
-            path: "/svc_for_sys/fuchsia.ui.accessibility.view.Registry",
-        },
-
-        // From test_manager
-        {
-            protocol: "fuchsia.test.manager.Query",
-            path: "/svc_for_sys/fuchsia.test.manager.Query",
-        },
-
-        // From test_manager
-        {
-            protocol: "fuchsia.test.manager.RunBuilder",
-            path: "/svc_for_sys/fuchsia.test.manager.RunBuilder",
-        },
-
         // These services are used by appmgr directly
         {
             protocol: [
@@ -712,131 +119,20 @@
                 "fuchsia.process.Launcher",
             ],
         },
-
-        // From soundplayer
-        {
-            protocol: "fuchsia.media.sounds.Player",
-            path: "/svc_for_sys/fuchsia.media.sounds.Player",
-        },
-
-        // From exceptions
-        {
-            protocol: "fuchsia.exception.Handler",
-            path: "/svc_for_sys/fuchsia.exception.Handler",
-        },
-        {
-            protocol: "fuchsia.exception.ProcessLimbo",
-            path: "/svc_for_sys/fuchsia.exception.ProcessLimbo",
-        },
-
-        // From codec factory
-        {
-            protocol: "fuchsia.mediacodec.CodecFactory",
-            path: "/svc_for_sys/fuchsia.mediacodec.CodecFactory",
-        },
-
-        // From system-update-checker or omaha-client-service
-        {
-            protocol: "fuchsia.update.channel.Provider",
-            path: "/svc_for_sys/fuchsia.update.channel.Provider",
-        },
-        {
-            protocol: "fuchsia.update.channelcontrol.ChannelControl",
-            path: "/svc_for_sys/fuchsia.update.channelcontrol.ChannelControl",
-        },
-        {
-            protocol: "fuchsia.update.Manager",
-            path: "/svc_for_sys/fuchsia.update.Manager",
-        },
-
-        // From weavestack
-        {
-            protocol: "fuchsia.weave.Bootstrap",
-            path: "/svc_for_sys/fuchsia.weave.Bootstrap",
-        },
-        {
-            protocol: "fuchsia.weave.Stack",
-            path: "/svc_for_sys/fuchsia.weave.Stack",
-        },
-        {
-            protocol: "fuchsia.weave.StackProvider",
-            path: "/svc_for_sys/fuchsia.weave.StackProvider",
-        },
     ],
     expose: [
+        {
+            directory: "svc_from_sys",
+            from: "self",
+        },
         {
             directory: "hub-legacy",
             from: "self",
         },
         {
             protocol: [
-                "fuchsia.bluetooth.bredr.Profile",
-                "fuchsia.bluetooth.gatt.Server",
-                "fuchsia.bluetooth.le.Peripheral",
-                "fuchsia.camera3.DeviceWatcher",
-                "fuchsia.deprecatedtimezone.Timezone",
-                "fuchsia.factory.MiscFactoryStoreProvider",
-                "fuchsia.factory.WeaveFactoryStoreProvider",
-                "fuchsia.feedback.ComponentDataRegister",
-                "fuchsia.feedback.CrashReporter",
-                "fuchsia.feedback.CrashReportingProductRegister",
-                "fuchsia.hwinfo.Device",
-                "fuchsia.intl.PropertyProvider",
-                "fuchsia.intl.TimeZones",
-                "fuchsia.lowpan.device.Lookup",
-                "fuchsia.media.Audio",
-                "fuchsia.media.AudioCore",
-                "fuchsia.media.AudioDeviceEnumerator",
-                "fuchsia.media.ProfileProvider",
-                "fuchsia.media.SessionAudioConsumerFactory",
-                "fuchsia.media.sessions2.Discovery",
-                "fuchsia.media.sessions2.Publisher",
-                "fuchsia.media.UsageReporter",
-                "fuchsia.memorypressure.Provider",
-                "fuchsia.overnet.Overnet",
-                "fuchsia.overnet.ServicePublisher",
-                "fuchsia.power.manager.DriverManagerRegistration",
-                "fuchsia.process.Resolver",
-                "fuchsia.recovery.policy.Device",
-                "fuchsia.settings.Audio",
-                "fuchsia.settings.Input",
-                "fuchsia.settings.Privacy",
-                "fuchsia.stash.SecureStore",
-                "fuchsia.sys.Environment",
-                "fuchsia.sys.Launcher",
-                "fuchsia.sys.Loader",
-                "fuchsia.sysmem.Allocator",
-                "fuchsia.test.manager.Query",
-                "fuchsia.test.manager.RunBuilder",
-                "fuchsia.tracing.controller.Controller",
-                "fuchsia.tracing.provider.Registry",
-                "fuchsia.ui.composition.Allocator",
-                "fuchsia.ui.composition.Flatland",
-                "fuchsia.ui.composition.FlatlandDisplay",
-                "fuchsia.ui.focus.FocusChainListenerRegistry",
-                "fuchsia.ui.input.ImeService",
-                "fuchsia.ui.input3.Keyboard",
-                "fuchsia.ui.input3.KeyEventInjector",
-                "fuchsia.ui.keyboard.focus.Controller",
-                "fuchsia.ui.lifecycle.LifecycleController",
-                "fuchsia.ui.pointerinjector.Registry",
-                "fuchsia.ui.policy.DeviceListenerRegistry",
-                "fuchsia.ui.policy.Presenter",
-                "fuchsia.ui.scenic.Scenic",
-                "fuchsia.ui.shortcut.Manager",
-                "fuchsia.ui.views.ViewRefInstalled",
-                "fuchsia.virtualization.Manager",
-                "fuchsia.weave.FactoryDataManager",
-                "fuchsia.weave.Signer",
-                "widevine.oemcrypto.Provider",
-            ],
-            from: "self",
-        },
-        {
-            protocol: [
                 "fuchsia.appmgr.Startup",
                 "fuchsia.sys.internal.ComponentEventProvider",
-                "fuchsia.sys.internal.CrashIntrospect",
                 "fuchsia.sys.internal.LogConnector",
             ],
             from: "self",

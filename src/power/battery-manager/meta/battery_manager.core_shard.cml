@@ -5,15 +5,16 @@
             url: "fuchsia-pkg://fuchsia.com/battery-manager#meta/battery_manager.cm",
         },
     ],
-    offer: [
+    use: [
         {
             protocol: [
                 "fuchsia.power.BatteryManager",
                 "fuchsia.power.test.BatterySimulator",
             ],
             from: "#battery_manager",
-            to: "#appmgr",
         },
+    ],
+    offer: [
         {
             protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",

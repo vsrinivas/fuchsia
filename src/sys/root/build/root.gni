@@ -41,6 +41,7 @@ template("root_realm") {
         "            name: \"core\",",
         "            url: \"fuchsia-pkg://fuchsia.com/${invoker.core_package_name}#meta/core.cm\",",
         "            environment: \"#core-env\",",
+        "            on_terminate: \"reboot\",",
         "        },",
         "    ],",
         "}",

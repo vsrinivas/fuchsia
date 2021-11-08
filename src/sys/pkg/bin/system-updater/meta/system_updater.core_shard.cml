@@ -6,12 +6,13 @@
             startup: "eager",
         },
     ],
-    offer: [
+    use: [
         {
             protocol: "fuchsia.update.installer.Installer",
             from: "#system-updater",
-            to: "#appmgr",
         },
+    ],
+    offer: [
         {
             protocol: [ "fuchsia.cobalt.LoggerFactory" ],
             from: "#cobalt",

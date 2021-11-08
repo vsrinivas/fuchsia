@@ -7,6 +7,19 @@
             on_terminate: "reboot",
         },
     ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.wlan.policy.AccessPointListener",
+                "fuchsia.wlan.policy.AccessPointProvider",
+                "fuchsia.wlan.policy.ClientListener",
+                "fuchsia.wlan.policy.ClientProvider",
+                "fuchsia.wlan.product.deprecatedclient.DeprecatedClient",
+                "fuchsia.wlan.product.deprecatedconfiguration.DeprecatedConfigurator",
+            ],
+            from: "#wlancfg",
+        },
+    ],
     offer: [
         {
             protocol: "fuchsia.stash.SecureStore",
@@ -46,18 +59,6 @@
             from: "parent",
             to: "#wlancfg",
             subdir: "wlancfg",
-        },
-        {
-            protocol: [
-                "fuchsia.wlan.policy.AccessPointListener",
-                "fuchsia.wlan.policy.AccessPointProvider",
-                "fuchsia.wlan.policy.ClientListener",
-                "fuchsia.wlan.policy.ClientProvider",
-                "fuchsia.wlan.product.deprecatedclient.DeprecatedClient",
-                "fuchsia.wlan.product.deprecatedconfiguration.DeprecatedConfigurator",
-            ],
-            from: "#wlancfg",
-            to: "#appmgr",
         },
         {
             storage: "data",

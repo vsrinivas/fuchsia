@@ -1,4 +1,10 @@
 {
+    use: [
+        {
+            protocol: [ "fuchsia.wlan.device.service.DeviceService" ],
+            from: "#wlanstack",
+        },
+    ],
     offer: [
         {
             protocol: "fuchsia.stash.SecureStore",
@@ -32,10 +38,7 @@
         {
             protocol: [ "fuchsia.wlan.device.service.DeviceService" ],
             from: "#wlanstack",
-            to: [
-                "#appmgr",
-                "#wlandevicemonitor",
-            ],
+            to: [ "#wlandevicemonitor" ],
         },
     ],
 }

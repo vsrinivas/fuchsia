@@ -11,6 +11,16 @@
             environment: "#full-resolver-env",
         },
     ],
+    use: [
+        // Integrate with run_test_suite
+        {
+            protocol: [
+                "fuchsia.test.manager.Query",
+                "fuchsia.test.manager.RunBuilder",
+            ],
+            from: "#test_manager",
+        },
+    ],
     offer: [
         // Needed by test_manager and/or some test runners
         {
@@ -33,7 +43,7 @@
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.Loader",
             ],
-            from: "#appmgr",
+            from: "self",
             to: "#test_manager",
             dependency: "weak_for_migration",
         },
@@ -86,7 +96,7 @@
                 "fuchsia.ui.scenic.Scenic",
                 "fuchsia.virtualization.Manager",
             ],
-            from: "#appmgr",
+            from: "self",
             to: "#test_manager",
             dependency: "weak_for_migration",
         },
@@ -198,16 +208,6 @@
             ],
             from: "#test_manager",
             to: "#remote-control",
-        },
-
-        // Integrate with run_test_suite
-        {
-            protocol: [
-                "fuchsia.test.manager.Query",
-                "fuchsia.test.manager.RunBuilder",
-            ],
-            from: "#test_manager",
-            to: "#appmgr",
         },
 
         // Needed for //src/cobalt/bin/meta/cobalt_testapp_for_prober_do_not_run_manually.cml

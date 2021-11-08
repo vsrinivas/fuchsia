@@ -17,7 +17,7 @@
         },
         {
             protocol: [ "fuchsia.media.AudioDeviceEnumerator" ],
-            from: "#appmgr",
+            from: "self",
             to: [ "#configurator" ],
         },
         {

@@ -9,12 +9,7 @@
             environment: "#full-resolver-env",
         },
     ],
-    offer: [
-        {
-            protocol: [ "fuchsia.logger.LogSink" ],
-            from: "parent",
-            to: [ "#bt-hfp-audio-gateway" ],
-        },
+    use: [
         {
             protocol: [
                 "fuchsia.bluetooth.hfp.Hfp",
@@ -24,7 +19,13 @@
                 "fuchsia.bluetooth.hfp.test.HfpTest",
             ],
             from: "#bt-hfp-audio-gateway",
-            to: [ "#appmgr" ],
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [ "#bt-hfp-audio-gateway" ],
         },
         {
             directory: "dev",
@@ -38,7 +39,7 @@
                 "fuchsia.bluetooth.bredr.Profile",
                 "fuchsia.media.AudioDeviceEnumerator",
             ],
-            from: "#appmgr",
+            from: "self",
             to: [ "#bt-hfp-audio-gateway" ],
             dependency: "weak_for_migration",
         },

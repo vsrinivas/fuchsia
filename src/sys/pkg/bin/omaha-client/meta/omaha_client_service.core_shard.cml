@@ -7,6 +7,16 @@
             on_terminate: "reboot",
         },
     ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.update.channel.Provider",
+                "fuchsia.update.channelcontrol.ChannelControl",
+                "fuchsia.update.Manager",
+            ],
+            from: "#omaha-client-service",
+        },
+    ],
     offer: [
         {
             protocol: "fuchsia.update.installer.Installer",
@@ -45,15 +55,6 @@
             to: [ "#omaha-client-service" ],
         },
         {
-            protocol: [
-                "fuchsia.update.channel.Provider",
-                "fuchsia.update.channelcontrol.ChannelControl",
-                "fuchsia.update.Manager",
-            ],
-            from: "#omaha-client-service",
-            to: "#appmgr",
-        },
-        {
             protocol: "fuchsia.update.CommitStatusProvider",
             from: "#system-update-committer",
             to: "#omaha-client-service",
@@ -68,7 +69,7 @@
                 "fuchsia.feedback.ComponentDataRegister",
                 "fuchsia.feedback.CrashReporter",
             ],
-            from: "#appmgr",
+            from: "self",
             to: "#omaha-client-service",
             dependency: "weak_for_migration",
         },
