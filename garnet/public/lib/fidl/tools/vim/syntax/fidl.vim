@@ -25,7 +25,7 @@ endif
 "   sed '/-------/,$d' |
 "   grep -P '"[a-z]*?"'
 " to update.
-syn keyword fidlKeyword alias as bits compose const enum error false flexible library properties protocol reserved resource resource_definition service strict struct table true union using
+syn keyword fidlKeyword alias as bits compose const enum error false flexible library properties protocol reserved resource resource_definition service strict struct table true type union using
 
 " Types
 syn match fidlType "\<request<@\?[a-zA-Z][a-zA-Z0-9]*\(\.[a-zA-Z][a-zA-Z0-9]*\)*>?\?"
