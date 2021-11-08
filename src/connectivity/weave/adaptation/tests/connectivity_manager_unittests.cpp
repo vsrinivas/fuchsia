@@ -3,11 +3,14 @@
 // found in the LICENSE file.
 
 // clang-format off
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <Weave/DeviceLayer/internal/WeaveDeviceLayerInternal.h>
 #include <Weave/DeviceLayer/ConnectivityManager.h>
 #include <Weave/DeviceLayer/internal/ServiceTunnelAgent.h>
 #include <Weave/Profiles/WeaveProfiles.h>
 #include <Warm/Warm.h>
+#pragma GCC diagnostic pop
 // clang-format on
 
 #include <fuchsia/net/interfaces/cpp/fidl_test_base.h>

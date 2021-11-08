@@ -6,6 +6,8 @@
 #define SRC_CONNECTIVITY_WEAVE_ADAPTATION_PLATFORM_AUTH_DELEGATE_H_
 
 // clang-format off
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <Weave/DeviceLayer/internal/WeaveDeviceLayerInternal.h>
 #include <Weave/Core/WeaveTLV.h>
 #include <Weave/Profiles/WeaveProfiles.h>
@@ -17,6 +19,7 @@
 #include <Weave/Support/NestCerts.h>
 #include <Weave/Support/ASN1.h>
 #include <Weave/Support/TimeUtils.h>
+#pragma GCC diagnostic pop
 // clang-format on
 
 namespace nl {

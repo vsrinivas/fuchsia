@@ -7,7 +7,10 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <Weave/DeviceLayer/internal/NetworkProvisioningServer.h>
+#pragma GCC diagnostic pop
 
 namespace weavestack {
 

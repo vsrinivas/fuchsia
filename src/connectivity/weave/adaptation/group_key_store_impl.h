@@ -7,9 +7,12 @@
 
 #include <vector>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <Weave/Core/WeaveKeyIds.h>
 #include <Weave/DeviceLayer/internal/WeaveDeviceLayerInternal.h>
 #include <Weave/Profiles/security/WeaveApplicationKeys.h>
+#pragma GCC diagnostic pop
 
 #include "src/connectivity/weave/adaptation/environment_config.h"
 

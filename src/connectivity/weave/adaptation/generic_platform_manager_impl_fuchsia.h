@@ -6,9 +6,12 @@
 
 #include <mutex>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <Weave/DeviceLayer/internal/GenericPlatformManagerImpl.h>
 #include <Weave/Profiles/device-control/DeviceControl.h>
 #include <Weave/Profiles/service-directory/ServiceDirectory.h>
+#pragma GCC diagnostic pop
 
 namespace nl {
 namespace Weave {

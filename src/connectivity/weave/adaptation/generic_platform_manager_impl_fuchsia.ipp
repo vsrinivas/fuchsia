@@ -5,18 +5,27 @@
 #define GENERIC_PLATFORM_MANAGER_IMPL_FUCHSIA_IPP
 
 // clang-format off
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <Weave/DeviceLayer/internal/WeaveDeviceLayerInternal.h>
 #include <Weave/DeviceLayer/PlatformManager.h>
+#pragma GCC diagnostic pop
 #include "generic_platform_manager_impl_fuchsia.h"
 #include "thread_stack_manager_impl.h"
 
 // Include the non-inline definitions for the GenericPlatformManagerImpl<> template,
 // from which the GenericPlatformManagerImpl_Fuchsia<> template inherits.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <Weave/DeviceLayer/internal/GenericPlatformManagerImpl.ipp>
+#pragma GCC diagnostic pop
 // clang-format on
 
 #include <lib/syslog/cpp/macros.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <Warm/Warm.h>
+#pragma GCC diagnostic pop
 
 #include "platform_auth_delegate.h"
 #include "weave_inspector.h"

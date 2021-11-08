@@ -8,7 +8,10 @@
 
 #include <unordered_set>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <Weave/DeviceLayer/ConnectivityManager.h>
+#pragma GCC diagnostic pop
 
 namespace nl::Weave::DeviceLayer {
 

@@ -9,7 +9,10 @@
 #include <poll.h>
 #include <zircon/types.h>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <Weave/DeviceLayer/PlatformManager.h>
+#pragma GCC diagnostic pop
 
 #include "src/connectivity/weave/lib/core/trait_updater.h"
 

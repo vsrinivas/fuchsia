@@ -9,10 +9,13 @@
 #include <lib/syslog/cpp/macros.h>
 
 // clang-format off
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <Weave/DeviceLayer/internal/WeaveDeviceLayerInternal.h>
 #include <Weave/DeviceLayer/PlatformManager.h>
 #include <Weave/DeviceLayer/ConnectivityManager.h>
 #include <Weave/DeviceLayer/ThreadStackManager.h>
+#pragma GCC diagnostic pop
 #include "thread_stack_manager_delegate_impl.h"
 
 #include "generic_platform_manager_impl_fuchsia.ipp"
@@ -24,6 +27,7 @@
 // clang-format on
 
 #include <unordered_map>
+
 #include <gtest/gtest.h>
 
 namespace weavestack {
@@ -46,12 +50,12 @@ using nl::Weave::DeviceLayer::PlatformMgr;
 using nl::Weave::DeviceLayer::PlatformMgrImpl;
 using nl::Weave::DeviceLayer::ThreadStackManagerDelegateImpl;
 using nl::Weave::DeviceLayer::ThreadStackMgrImpl;
+using nl::Weave::DeviceLayer::TraitUpdater;
+using nl::Weave::DeviceLayer::TraitUpdaterDelegateImpl;
 using nl::Weave::DeviceLayer::Internal::NetworkProvisioningServerDelegateImpl;
 using nl::Weave::DeviceLayer::Internal::NetworkProvisioningServerImpl;
 using nl::Weave::DeviceLayer::Internal::NetworkProvisioningSvrImpl;
 using nl::Weave::Profiles::DeviceControl::DeviceControlDelegate;
-using nl::Weave::DeviceLayer::TraitUpdater;
-using nl::Weave::DeviceLayer::TraitUpdaterDelegateImpl;
 
 // Provide a TSM delegate that overrides InitThreadStack to be an no-op. This is because TSM
 // connects to fuchsia.lowpan, which isn't provided in this test. It is unneccessary to fake out
@@ -64,10 +68,8 @@ class TestThreadStackManagerDelegate : public ThreadStackManagerDelegateImpl {
 };
 
 class TestTraitUpdaterDelegate : public TraitUpdaterDelegateImpl {
-public:
-  WEAVE_ERROR Init() override {
-    return WEAVE_NO_ERROR;
-  }
+ public:
+  WEAVE_ERROR Init() override { return WEAVE_NO_ERROR; }
   void HandleWeaveDeviceEvent(const nl::Weave::DeviceLayer::WeaveDeviceEvent* event) override {}
 };
 

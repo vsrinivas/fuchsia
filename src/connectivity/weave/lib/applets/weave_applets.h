@@ -9,7 +9,10 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <Weave/DeviceLayer/TraitManager.h>
+#pragma GCC diagnostic pop
 
 __BEGIN_CDECLS
 

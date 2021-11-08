@@ -4,7 +4,10 @@
 #ifndef SRC_CONNECTIVITY_WEAVE_ADAPTATION_WEAVE_DEVICE_PLATFORM_EVENT_H_
 #define SRC_CONNECTIVITY_WEAVE_ADAPTATION_WEAVE_DEVICE_PLATFORM_EVENT_H_
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <Weave/DeviceLayer/WeaveDeviceEvent.h>
+#pragma GCC diagnostic pop
 
 namespace nl {
 namespace Weave {

@@ -5,15 +5,18 @@
 #ifndef SRC_CONNECTIVITY_WEAVE_WEAVESTACK_FIDL_STACK_IMPL_H_
 #define SRC_CONNECTIVITY_WEAVE_WEAVESTACK_FIDL_STACK_IMPL_H_
 
-#include <memory>
-
 #include <fuchsia/weave/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 
+#include <memory>
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <Weave/DeviceLayer/WeaveDeviceEvent.h>
-#include <Weave/Profiles/service-directory/ServiceDirectory.h>
 #include <Weave/Profiles/device-control/DeviceControl.h>
+#include <Weave/Profiles/service-directory/ServiceDirectory.h>
+#pragma GCC diagnostic pop
 
 namespace weavestack {
 
@@ -32,18 +35,15 @@ class StackImpl : public fuchsia::weave::Stack {
 
   /// Get a |PairingStateWatcher| to get or watch for changes in pairing state.
   void GetPairingStateWatcher(
-      fidl::InterfaceRequest<fuchsia::weave::PairingStateWatcher> watcher)
-      override;
+      fidl::InterfaceRequest<fuchsia::weave::PairingStateWatcher> watcher) override;
   /// Get a |ServiceDirectoryWatcher| watching an endpoint ID.
   void GetSvcDirectoryWatcher(
       uint64_t endpoint_id,
-      fidl::InterfaceRequest<fuchsia::weave::SvcDirectoryWatcher> watcher)
-      override;
+      fidl::InterfaceRequest<fuchsia::weave::SvcDirectoryWatcher> watcher) override;
   /// Retrieve a QR code that can be used in the pairing process.
   void GetQrCode(GetQrCodeCallback callback) override;
   /// Reset the Weave configuration.
-  void ResetConfig(fuchsia::weave::ResetConfigFlags flags,
-                   ResetConfigCallback callback) override;
+  void ResetConfig(fuchsia::weave::ResetConfigFlags flags, ResetConfigCallback callback) override;
 
   /// Notify all active |PairingStateWatcher|s.
   void NotifyPairingState();
@@ -55,21 +55,17 @@ class StackImpl : public fuchsia::weave::Stack {
   class SvcDirectoryWatcherImpl;
 
   // Access to device control server (overridable for testing).
-  virtual nl::Weave::Profiles::DeviceControl::DeviceControlDelegate&
-      GetDeviceControl();
+  virtual nl::Weave::Profiles::DeviceControl::DeviceControlDelegate& GetDeviceControl();
   // Service directory lookup (overridable for testing).
-  virtual zx_status_t LookupHostPorts(
-      uint64_t endpoint_id,
-      std::vector<fuchsia::weave::HostPort>* host_ports);
+  virtual zx_status_t LookupHostPorts(uint64_t endpoint_id,
+                                      std::vector<fuchsia::weave::HostPort>* host_ports);
 
   // Device layer event handling.
-  void HandleWeaveDeviceEvent(
-      const nl::Weave::DeviceLayer::WeaveDeviceEvent* event);
+  void HandleWeaveDeviceEvent(const nl::Weave::DeviceLayer::WeaveDeviceEvent* event);
   // Static handler to trampoline event calls into an instance, as the event
   // handler registration can only accept raw function pointers. The |arg|
   // argument is a pointer to the instance.
-  static void TrampolineEvent(
-      const nl::Weave::DeviceLayer::WeaveDeviceEvent* event, intptr_t arg);
+  static void TrampolineEvent(const nl::Weave::DeviceLayer::WeaveDeviceEvent* event, intptr_t arg);
 
   // Prevent copy/move construction
   StackImpl(const StackImpl&) = delete;
@@ -80,12 +76,10 @@ class StackImpl : public fuchsia::weave::Stack {
 
   // FIDL servicing related state
   fidl::BindingSet<fuchsia::weave::Stack> bindings_;
-  fidl::BindingSet<fuchsia::weave::PairingStateWatcher,
-      std::unique_ptr<PairingStateWatcherImpl>>
-          pairing_state_watchers_;
-  fidl::BindingSet<fuchsia::weave::SvcDirectoryWatcher,
-      std::unique_ptr<SvcDirectoryWatcherImpl>>
-          svc_directory_watchers_;
+  fidl::BindingSet<fuchsia::weave::PairingStateWatcher, std::unique_ptr<PairingStateWatcherImpl>>
+      pairing_state_watchers_;
+  fidl::BindingSet<fuchsia::weave::SvcDirectoryWatcher, std::unique_ptr<SvcDirectoryWatcherImpl>>
+      svc_directory_watchers_;
   sys::ComponentContext* context_;
   std::unique_ptr<fuchsia::weave::PairingState> last_pairing_state_;
 };

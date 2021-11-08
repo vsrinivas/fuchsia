@@ -2,14 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-
+// clang-format off
 #include <arpa/inet.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <Weave/DeviceLayer/PlatformManager.h>
 #include <Weave/DeviceLayer/ConfigurationManager.h>
 #include <Weave/DeviceLayer/ConnectivityManager.h>
+#pragma GCC diagnostic pop
+// clang-format on
 
 namespace weavestack {
-namespace  {
+namespace {
 using fuchsia::net::IpAddress;
 using fuchsia::net::Ipv4Address;
 using fuchsia::net::Ipv6Address;
@@ -25,18 +29,13 @@ PairingState CurrentPairingState() {
   fuchsia::weave::PairingState pairing_state;
 
   // Set individual profile/component provisioning state
-  pairing_state.set_is_wlan_provisioned(
-      ConnectivityMgr().IsWiFiStationProvisioned());
-  pairing_state.set_is_thread_provisioned(
-      ConnectivityMgr().IsThreadProvisioned());
-  pairing_state.set_is_fabric_provisioned(
-      ConfigurationMgr().IsMemberOfFabric());
-  pairing_state.set_is_service_provisioned(
-      ConfigurationMgr().IsPairedToAccount());
+  pairing_state.set_is_wlan_provisioned(ConnectivityMgr().IsWiFiStationProvisioned());
+  pairing_state.set_is_thread_provisioned(ConnectivityMgr().IsThreadProvisioned());
+  pairing_state.set_is_fabric_provisioned(ConfigurationMgr().IsMemberOfFabric());
+  pairing_state.set_is_service_provisioned(ConfigurationMgr().IsPairedToAccount());
 
   // Set overall provisioning state
-  pairing_state.set_is_weave_fully_provisioned(
-      ConfigurationMgr().IsFullyProvisioned());
+  pairing_state.set_is_weave_fully_provisioned(ConfigurationMgr().IsFullyProvisioned());
 
   return pairing_state;
 }
@@ -72,4 +71,3 @@ Host HostFromHostname(std::string hostname) {
 }
 
 }  // namespace weavestack
-

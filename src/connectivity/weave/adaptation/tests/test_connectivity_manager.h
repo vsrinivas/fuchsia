@@ -6,9 +6,12 @@
 #define SRC_CONNECTIVITY_WEAVE_ADAPTATION_TESTS_TEST_CONNECTIVITY_MANAGER_H_
 
 // clang-format off
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <Weave/DeviceLayer/internal/WeaveDeviceLayerInternal.h>
 #include <Weave/DeviceLayer/ConnectivityManager.h>
 #include <Weave/DeviceLayer/internal/ServiceTunnelAgent.h>
+#pragma GCC diagnostic pop
 // clang-format on
 
 #include <lib/fit/defer.h>

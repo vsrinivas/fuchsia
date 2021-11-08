@@ -6,10 +6,14 @@
 #define SRC_CONNECTIVITY_WEAVE_LIB_CORE_TRAIT_UPDATER_H_
 
 // clang-format off
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <Weave/DeviceLayer/internal/WeaveDeviceLayerInternal.h>
+#pragma GCC diagnostic pop
 // clang-format on
 
 #include <lib/syslog/cpp/macros.h>
+
 #include <memory>
 
 namespace nl::Weave::DeviceLayer {
@@ -33,7 +37,7 @@ class TraitUpdaterImpl {
 
     virtual WEAVE_ERROR Init() = 0;
 
- private:
+   private:
     TraitUpdaterImpl* impl_;
   };
 

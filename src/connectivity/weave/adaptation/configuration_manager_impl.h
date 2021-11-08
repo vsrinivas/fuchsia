@@ -5,8 +5,11 @@
 #define SRC_CONNECTIVITY_WEAVE_ADAPTATION_CONFIGURATION_MANAGER_IMPL_H_
 
 // clang-format off
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <Weave/DeviceLayer/WeaveDeviceConfig.h>
 #include <Weave/DeviceLayer/internal/GenericConfigurationManagerImpl.h>
+#pragma GCC diagnostic pop
 // clang-format on
 
 #include <fuchsia/factory/cpp/fidl.h>

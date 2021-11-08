@@ -11,8 +11,11 @@
 #include <string>
 
 // clang-format off
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <Weave/DeviceLayer/PlatformManager.h>
 #include <Weave/DeviceLayer/ConfigurationManager.h>
+#pragma GCC diagnostic pop
 // clang-format on
 
 #include "stack_utils.h"

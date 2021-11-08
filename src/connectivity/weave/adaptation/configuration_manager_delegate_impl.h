@@ -10,7 +10,10 @@
 #include <fuchsia/weave/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <Weave/DeviceLayer/ConfigurationManager.h>
+#pragma GCC diagnostic pop
 
 #include "src/connectivity/weave/adaptation/environment_config.h"
 #include "src/connectivity/weave/adaptation/group_key_store_impl.h"

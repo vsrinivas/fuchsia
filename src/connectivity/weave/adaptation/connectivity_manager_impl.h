@@ -4,6 +4,8 @@
 #ifndef SRC_CONNECTIVITY_WEAVE_ADAPTATION_CONNECTIVITY_MANAGER_IMPL_H_
 #define SRC_CONNECTIVITY_WEAVE_ADAPTATION_CONNECTIVITY_MANAGER_IMPL_H_
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <Weave/DeviceLayer/ConnectivityManager.h>
 #include <Weave/DeviceLayer/internal/GenericConnectivityManagerImpl.h>
 #if WEAVE_DEVICE_CONFIG_ENABLE_WOBLE
@@ -17,6 +19,7 @@
 #include <Weave/Profiles/weave-tunneling/WeaveTunnelConnectionMgr.h>
 
 #include <Weave/Support/FlagUtils.hpp>
+#pragma GCC diagnostic pop
 
 #include <optional>
 #include <string>

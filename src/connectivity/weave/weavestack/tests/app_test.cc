@@ -9,10 +9,13 @@
 #include <lib/syslog/cpp/macros.h>
 
 // clang-format off
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <Weave/DeviceLayer/internal/WeaveDeviceLayerInternal.h>
 #include <Weave/DeviceLayer/ConnectivityManager.h>
 #include <Weave/DeviceLayer/PlatformManager.h>
 #include <Weave/DeviceLayer/ThreadStackManager.h>
+#pragma GCC diagnostic pop
 
 #include "src/connectivity/weave/adaptation/generic_platform_manager_impl_fuchsia.ipp"
 #include "src/connectivity/weave/adaptation/configuration_manager_delegate_impl.h"

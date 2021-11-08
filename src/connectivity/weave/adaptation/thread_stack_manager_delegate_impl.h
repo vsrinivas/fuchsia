@@ -10,9 +10,12 @@
 #include <lib/async/cpp/task.h>
 
 // clang-format off
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <Weave/DeviceLayer/internal/WeaveDeviceLayerInternal.h>
 #include <Weave/DeviceLayer/internal/DeviceNetworkInfo.h>
 #include <Weave/DeviceLayer/ThreadStackManager.h>
+#pragma GCC diagnostic pop
 // clang-format on
 
 namespace nl {
