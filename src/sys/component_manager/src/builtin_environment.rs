@@ -41,7 +41,6 @@ use {
         framework::RealmCapabilityHost,
         fuchsia_pkg_resolver,
         model::{
-            binding::Binder,
             component::ComponentManagerInstance,
             environment::{DebugRegistry, Environment, RunnerRegistry},
             error::ModelError,
@@ -60,7 +59,6 @@ use {
             storage::admin_protocol::StorageAdmin,
         },
         root_stop_notifier::RootStopNotifier,
-        work_scheduler::WorkScheduler,
     },
     anyhow::{bail, format_err, Context as _, Error},
     cm_rust::{CapabilityName, RunnerRegistration},
@@ -334,7 +332,6 @@ pub struct BuiltinEnvironment {
     pub vmex_resource: Option<Arc<VmexResource>>,
     pub crash_records_svc: Arc<CrashIntrospectSvc>,
 
-    pub work_scheduler: Arc<WorkScheduler>,
     pub binder_capability_host: Arc<BinderCapabilityHost>,
     pub realm_capability_host: Arc<RealmCapabilityHost>,
     pub collection_capability_host: Arc<CollectionCapabilityHost>,
@@ -634,11 +631,6 @@ impl BuiltinEnvironment {
             Arc::new(SystemController::new(Arc::downgrade(&model), SHUTDOWN_TIMEOUT));
         model.root().hooks.install(system_controller.hooks()).await;
 
-        // Set up work scheduler.
-        let work_scheduler =
-            WorkScheduler::new(Arc::new(Arc::downgrade(&model)) as Arc<dyn Binder>).await;
-        model.root().hooks.install(work_scheduler.hooks()).await;
-
         // Set up the realm service.
         let realm_capability_host =
             Arc::new(RealmCapabilityHost::new(Arc::downgrade(&model), runtime_config.clone()));
@@ -750,7 +742,6 @@ impl BuiltinEnvironment {
             root_resource,
             system_controller,
             utc_time_maintainer,
-            work_scheduler,
             binder_capability_host,
             realm_capability_host,
             collection_capability_host,

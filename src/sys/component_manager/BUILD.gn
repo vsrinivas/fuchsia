@@ -197,13 +197,6 @@ template("component_manager") {
     "src/root_stop_notifier.rs",
     "src/startup.rs",
     "src/task_scope.rs",
-    "src/work_scheduler/delegate.rs",
-    "src/work_scheduler/dispatcher.rs",
-    "src/work_scheduler/hook.rs",
-    "src/work_scheduler/mod.rs",
-    "src/work_scheduler/timer.rs",
-    "src/work_scheduler/work_item.rs",
-    "src/work_scheduler/work_scheduler.rs",
   ]
 
   if (is_test) {
@@ -227,7 +220,6 @@ template("component_manager") {
         "src/model/tests/routing.rs",
         "src/model/tests/storage.rs",
         "src/model/tests/storage_admin.rs",
-        "src/work_scheduler/routing_tests.rs",
       ]
 
       # Test-only deps. Prefer adding deps used only in tests here instead of

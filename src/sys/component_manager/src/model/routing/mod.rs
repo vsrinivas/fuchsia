@@ -281,10 +281,13 @@ async fn open_capability_at_source(open_request: OpenRequest<'_>) -> Result<(), 
         capability_provider.open(task_scope, flags, open_mode, relative_path, server_chan).await?;
         Ok(())
     } else {
-        // TODO(fsamuel): This is a temporary hack. If a global path-based framework capability
+        // This is a temporary hack. If a global path-based framework capability
         // is not provided by a hook in the component tree, then attempt to connect to the service
         // in component manager's namespace. We could have modeled this as a default provider,
-        // but several hooks (such as WorkScheduler) require that a provider is not set.
+        // but several hooks require that a provider is not set.
+        //
+        // TODO: Remove this hack, first investigating whether the restriction in the paragraph
+        // above is still relevant.
         let namespace_path = match &source {
             CapabilitySource::Component { .. } => {
                 unreachable!(

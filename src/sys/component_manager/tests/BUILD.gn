@@ -31,7 +31,6 @@ group("tests") {
     "shutdown:shutdown_integration_test",
     "storage:storage_integration_test",
     "utc-time:tests",
-    "work_scheduler:work_scheduler_integration_test",
   ]
 }
 
