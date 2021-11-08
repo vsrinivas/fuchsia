@@ -81,8 +81,18 @@ zx_status_t ClientMlme::Init() {
       .set_key = [](void* device, wlan_key_config_t* key) -> zx_status_t {
         return DEVICE(device)->SetKey(key);
       },
-      .start_hw_scan = [](void* device, const wlan_hw_scan_config_t* config) -> zx_status_t {
-        return DEVICE(device)->StartHwScan(config);
+      .start_passive_scan = [](void* device, const uint8_t* channel_list_buffer, size_t channel_list_size, zx_duration_t min_channel_time, zx_duration_t max_channel_time, zx_duration_t min_home_time, uint64_t* out_scan_id) -> zx_status_t {
+              return DEVICE(device)->StartPassiveScan(channel_list_buffer, channel_list_size, min_channel_time, max_channel_time, min_home_time, out_scan_id);
+      },
+      .start_active_scan = [](void* device, const uint8_t* channel_list_buffer,
+                              size_t channel_list_size, const cssid_t* ssid_list_list,
+                              size_t ssid_list_count, const uint8_t* mac_header_buffer,
+                              size_t mac_header_size, const uint8_t* ies_buffer,
+                              size_t ies_size, zx_duration_t min_channel_time,
+                              zx_duration_t max_channel_time, zx_duration_t min_home_time,
+                              uint8_t min_probes_per_channel, uint8_t max_probes_per_channel,
+                              uint64_t* out_scan_id) -> zx_status_t {
+        return DEVICE(device)->StartActiveScan(channel_list_buffer, channel_list_size, ssid_list_list, ssid_list_count, mac_header_buffer, mac_header_size, ies_buffer, ies_size, min_channel_time, max_channel_time, min_home_time, min_probes_per_channel, max_probes_per_channel, out_scan_id);
       },
       .get_wlanmac_info = [](void* device) -> wlanmac_info_t {
         return DEVICE(device)->GetWlanMacInfo();

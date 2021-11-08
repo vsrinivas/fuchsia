@@ -122,7 +122,7 @@ struct MockDevice : public DeviceInterface {
                                    .complete_tx = ifc->ops->complete_tx,
                                    .indication = ifc->ops->indication,
                                    .report_tx_status = ifc->ops->report_tx_status,
-                                   .hw_scan_complete = ifc->ops->hw_scan_complete});
+                                   .scan_complete = ifc->ops->scan_complete});
     protocol_ctx_ = ifc->ctx;
     if (mlme_->is_valid()) {
       *out_sme_channel = std::move(mlme_.value());

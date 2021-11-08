@@ -1562,7 +1562,7 @@ static void iwl_mvm_fill_scan_type(struct iwl_mvm* mvm, struct iwl_mvm_scan_para
 #endif  // NEEDS_PORTING
 
 zx_status_t iwl_mvm_reg_scan_start(struct iwl_mvm_vif* mvmvif,
-                                   const wlan_hw_scan_config_t* scan_config) {
+                                   const uint8_t* channel_list_buffer, size_t channel_list_size, zx_duration_t min_channel_time, zx_duration_t max_channel_time, zx_duration_t min_home_time, uint64_t* out_scan_id) {
   struct iwl_mvm* mvm = mvmvif->mvm;
   struct iwl_host_cmd hcmd = {
       .len =
@@ -1619,9 +1619,9 @@ zx_status_t iwl_mvm_reg_scan_start(struct iwl_mvm_vif* mvmvif,
       .delay = 0,
   };
 
-  params.n_channels = scan_config->num_channels;
+  params.n_channels = channel_list_size;
   for (uint32_t i = 0; i < params.n_channels; ++i) {
-    params.channels[i] = scan_config->channels[i];
+    params.channels[i] = channel_list_buffer[i];
   }
 
 #if 0   // NEEDS_PORTING

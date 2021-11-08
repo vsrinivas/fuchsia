@@ -744,15 +744,14 @@ out:
   return ret;
 }
 
-zx_status_t mac_start_hw_scan(void* ctx, const wlan_hw_scan_config_t* scan_config) {
+zx_status_t mac_start_passive_scan(void* ctx, const uint8_t* channel_list_buffer, size_t channel_list_size, zx_duration_t min_channel_time, zx_duration_t max_channel_time, zx_duration_t min_home_time, uint64_t* out_scan_id) {
   const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
 
-  if (scan_config->scan_type != WLAN_HW_SCAN_TYPE_PASSIVE) {
-    IWL_ERR(ctx, "Unsupported scan type: %s\n", wlan_hw_scan_type_to_str(scan_config->scan_type));
-    return ZX_ERR_NOT_SUPPORTED;
-  }
+  return iwl_mvm_mac_passive_scan(mvmvif, channel_list_buffer, channel_list_size, min_channel_time, max_channel_time, min_home_time, out_scan_id);
+}
 
-  return iwl_mvm_mac_hw_scan(mvmvif, scan_config);
+zx_status_t mac_start_active_scan(void* ctx, const uint8_t* channel_list_buffer, size_t channel_list_size, const cssid_t* ssid_list_list, size_t ssid_list_count, const uint8_t* mac_header_buffer, size_t mac_header_size, const uint8_t* ies_buffer, size_t ies_size, zx_duration_t min_channel_time, zx_duration_t max_channel_time, zx_duration_t min_home_time, uint8_t min_probes_per_channel, uint8_t max_probes_per_channel, uint64_t* out_scan_id) {
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t mac_init(void* ctx, struct iwl_trans* drvdata, zx_device_t* zxdev, uint16_t idx) {
@@ -777,7 +776,8 @@ wlanmac_protocol_ops_t wlanmac_ops = {
     .set_key = mac_set_key,
     .configure_assoc = mac_configure_assoc,
     .clear_assoc = mac_clear_assoc,
-    .start_hw_scan = mac_start_hw_scan,
+    .start_passive_scan = mac_start_passive_scan,
+    .start_active_scan = mac_start_active_scan,
 };
 
 void mac_unbind(void* ctx) {

@@ -139,8 +139,12 @@ impl Device {
         self.raw_device.set_key(key)
     }
 
-    pub fn start_hw_scan(&self, config: &WlanHwScanConfig) -> Result<(), zx::Status> {
-        self.raw_device.start_hw_scan(config)
+    pub fn start_passive_scan(&self) -> Result<(), zx::Status> {
+        self.raw_device.start_passive_scan()
+    }
+
+    pub fn start_active_scan(&self) -> Result<(), zx::Status> {
+        self.raw_device.start_active_scan()
     }
 
     pub fn channel(&self) -> banjo_common::WlanChannel {
@@ -330,8 +334,34 @@ pub struct DeviceInterface {
     /// Set a key on the device.
     /// |key| is mutable because the underlying API does not take a const wlan_key_config_t.
     set_key: extern "C" fn(device: *mut c_void, key: *mut key::KeyConfig) -> i32,
-    /// Make scan request to the driver
-    start_hw_scan: extern "C" fn(device: *mut c_void, config: *const WlanHwScanConfig) -> i32,
+    /// Make passive scan request to the driver
+    start_passive_scan: extern "C" fn(
+        device: *mut c_void,
+        channel_list_buffer: *const u8,
+        channel_list_size: usize,
+        min_channel_time: i64,
+        max_channel_time: i64,
+        min_home_time: i64,
+        out_scan_id: *mut u64,
+    ) -> i32,
+    /// Make active scan request to the driver
+    start_active_scan: extern "C" fn(
+        device: *mut c_void,
+        channel_list_buffer: *const u8,
+        channel_list_size: usize,
+        ssid_list_list: *const CSsid,
+        ssid_list_count: usize,
+        mac_header_buffer: *const u8,
+        mac_header_size: usize,
+        ies_buffer: *const u8,
+        ies_size: usize,
+        min_channel_time: i64, // zx_duration_t
+        max_channel_time: i64, // zx_duration_t
+        min_home_time: i64,    // zx_duration_t
+        min_probes_per_channel: u8,
+        max_probes_per_channel: u8,
+        out_scan_id: *mut u64,
+    ) -> i32,
     /// Get information and capabilities of this WLAN interface
     get_wlanmac_info: extern "C" fn(device: *mut c_void) -> WlanmacInfo,
     /// Configure the device's BSS.

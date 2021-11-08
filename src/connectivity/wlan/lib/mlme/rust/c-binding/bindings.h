@@ -11,6 +11,7 @@
 
 #include <fuchsia/hardware/wlan/info/c/banjo.h>
 #include <fuchsia/hardware/wlan/mac/c/banjo.h>
+#include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -114,9 +115,23 @@ typedef struct {
    */
   int32_t (*set_key)(void *device, wlan_key_config_t *key);
   /**
-   * Make scan request to the driver
+   * Make passive scan request to the driver
    */
-  int32_t (*start_hw_scan)(void *device, const wlan_hw_scan_config_t *config);
+  int32_t (*start_passive_scan)(void *device, const uint8_t *channel_list_buffer,
+                                uintptr_t channel_list_size, int64_t min_channel_time,
+                                int64_t max_channel_time, int64_t min_home_time,
+                                uint64_t *out_scan_id);
+  /**
+   * Make active scan request to the driver
+   */
+  int32_t (*start_active_scan)(void *device, const uint8_t *channel_list_buffer,
+                               uintptr_t channel_list_size, const cssid_t *ssid_list_list,
+                               uintptr_t ssid_list_count, const uint8_t *mac_header_buffer,
+                               uintptr_t mac_header_size, const uint8_t *ies_buffer,
+                               uintptr_t ies_size, int64_t min_channel_time,
+                               int64_t max_channel_time, int64_t min_home_time,
+                               uint8_t min_probes_per_channel, uint8_t max_probes_per_channel,
+                               uint64_t *out_scan_id);
   /**
    * Get information and capabilities of this WLAN interface
    */

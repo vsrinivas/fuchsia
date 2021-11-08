@@ -240,8 +240,8 @@ protocol WlanmacIfc {
     /// `ZX_OUT_OF_RANGE` implies the scan request included a prohibited channel. The channel may be
     /// prohibited because of the current country setting.
     ScanComplete(struct {
-        scan_id uint64;
         status zx.status;
+        scan_id uint64;
     });
 };
 
@@ -368,8 +368,8 @@ protocol Wlanmac {
         /// on while not scanning.
         min_home_time zx.duration;
     }) -> (struct {
-        scan_id uint64;
         status zx.status;
+        scan_id uint64;
     });
 
     /// Start an active scan in the device driver. Scan results will be delivered as Beacon or
@@ -415,8 +415,8 @@ protocol Wlanmac {
         /// Maximum number of Probe Request frames to transmit per channel.
         max_probes_per_channel uint8;
     }) -> (struct {
-        scan_id uint64;
         status zx.status;
+        scan_id uint64;
     });
 
     /// Notifies change of WMM parameters for specified AC
