@@ -229,8 +229,7 @@ zx_status_t MbrDevice::Create(zx_device_t* parent,
   }
   ddk::BlockProtocolClient parent_proto(parent);
   if (!parent_proto.is_valid()) {
-    zxlogf(ERROR, "mbr: ERROR: Parent device '%s' does not support ZX_PROTOCOL_BLOCK",
-           device_get_name(parent));
+    zxlogf(ERROR, "mbr: ERROR: Parent device does not support ZX_PROTOCOL_BLOCK");
     return ZX_ERR_NOT_SUPPORTED;
   }
 

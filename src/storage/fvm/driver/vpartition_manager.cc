@@ -74,7 +74,7 @@ zx_status_t VPartitionManager::Bind(void* /*unused*/, zx_device_t* dev) {
   block_impl_protocol_t bp;
   size_t block_op_size = 0;
   if (device_get_protocol(dev, ZX_PROTOCOL_BLOCK, &bp) != ZX_OK) {
-    zxlogf(ERROR, "block device '%s': does not support block protocol", device_get_name(dev));
+    zxlogf(ERROR, "block device: does not support block protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
   bp.ops->query(bp.ctx, &block_info, &block_op_size);
@@ -85,8 +85,7 @@ zx_status_t VPartitionManager::Bind(void* /*unused*/, zx_device_t* dev) {
                                        .set_flags(DEVICE_ADD_NON_BINDABLE)
                                        .set_inspect_vmo(vpm->diagnostics().DuplicateVmo()));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "block device '%s': failed to DdkAdd: %s", device_get_name(dev),
-           zx_status_get_string(status));
+    zxlogf(ERROR, "block device: failed to DdkAdd: %s", zx_status_get_string(status));
     return status;
   }
   // The VPartitionManager object is owned by the DDK, now that it has been
@@ -106,8 +105,7 @@ void VPartitionManager::DdkInit(ddk::InitTxn txn) {
   // Read vpartition table asynchronously.
   int rc = thrd_create_with_name(&initialization_thread_, FvmLoadThread, this, "fvm-init");
   if (rc < 0) {
-    zxlogf(ERROR, "block device '%s': Could not load initialization thread",
-           device_get_name(parent()));
+    zxlogf(ERROR, "block device: Could not load initialization thread");
     sync_completion_signal(&worker_completed_);
     // This will schedule the device to be unbound.
     return init_txn_->Reply(ZX_ERR_NO_MEMORY);

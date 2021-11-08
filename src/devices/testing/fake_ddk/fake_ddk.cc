@@ -468,14 +468,6 @@ zx_status_t device_open_protocol_session_multibindable(const zx_device_t* dev, u
 }
 
 __EXPORT
-const char* device_get_name(zx_device_t* device) {
-  if (!fake_ddk::Bind::Instance()) {
-    return nullptr;
-  }
-  return fake_ddk::Bind::Instance()->DeviceGetName(device);
-}
-
-__EXPORT
 zx_off_t device_get_size(zx_device_t* device) {
   if (!fake_ddk::Bind::Instance()) {
     return 0;

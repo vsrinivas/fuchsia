@@ -9,13 +9,12 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/ddk/metadata.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/boot/image.h>
 #include <zircon/types.h>
-
-#include <lib/ddk/metadata.h>
 
 #include "src/devices/block/drivers/bootpart/bootpart_bind.h"
 
@@ -191,8 +190,7 @@ static zx_status_t bootpart_bind(void* ctx, zx_device_t* parent) {
   size_t actual;
 
   if (device_get_protocol(parent, ZX_PROTOCOL_BLOCK, &bp) != ZX_OK) {
-    zxlogf(ERROR, "bootpart: block device '%s': does not support block protocol",
-           device_get_name(parent));
+    zxlogf(ERROR, "bootpart: block device: does not support block protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
 

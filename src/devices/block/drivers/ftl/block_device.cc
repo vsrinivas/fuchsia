@@ -82,17 +82,16 @@ BlockDevice::~BlockDevice() {
 }
 
 zx_status_t BlockDevice::Bind() {
-  zxlogf(INFO, "FTL: parent: '%s'", device_get_name(parent()));
+  zxlogf(INFO, "FTL: Binding to parent");
 
   if (device_get_protocol(parent(), ZX_PROTOCOL_NAND, &parent_) != ZX_OK) {
-    zxlogf(ERROR, "FTL: device '%s' does not support nand protocol", device_get_name(parent()));
+    zxlogf(ERROR, "FTL: Parent device does not support nand protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   // Get the optional bad block protocol.
   if (device_get_protocol(parent(), ZX_PROTOCOL_BAD_BLOCK, &bad_block_) != ZX_OK) {
-    zxlogf(WARNING, "FTL: Parent device '%s': does not support bad_block protocol",
-           device_get_name(parent()));
+    zxlogf(WARNING, "FTL: Parent device does not support bad_block protocol");
   }
 
   zx_status_t status = Init();

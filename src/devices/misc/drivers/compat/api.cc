@@ -43,8 +43,6 @@ __EXPORT zx_status_t device_set_profile_by_role(zx_device_t* device, zx_handle_t
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-__EXPORT const char* device_get_name(zx_device_t* dev) { return dev->Name(); }
-
 __EXPORT zx_status_t device_get_protocol(const zx_device_t* dev, uint32_t proto_id, void* out) {
   return dev->GetProtocol(proto_id, out);
 }

@@ -49,7 +49,6 @@ class IntelHDAController : public fbl::RefCounted<IntelHDAController> {
   zx_status_t Init(zx_device_t* pci_dev);
 
   // one-liner accessors.
-  const char* dev_name() const { return device_get_name(dev_node_); }
   zx_device_t* dev_node() { return dev_node_; }
   const pcie_device_info_t& dev_info() const { return pci_dev_info_; }
   unsigned int id() const { return id_; }

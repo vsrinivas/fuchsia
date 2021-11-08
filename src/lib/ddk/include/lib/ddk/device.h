@@ -416,9 +416,6 @@ typedef struct zx_protocol_device {
 
 } zx_protocol_device_t;
 
-// Device Accessors
-const char* device_get_name(zx_device_t* dev);
-
 // protocols look like:
 // typedef struct {
 //     protocol_xyz_ops_t* ops;

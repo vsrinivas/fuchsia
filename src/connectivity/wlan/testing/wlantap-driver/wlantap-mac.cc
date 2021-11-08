@@ -224,7 +224,7 @@ zx_status_t CreateWlantapMac(zx_device_t* parent_phy, const wlan_device::MacRole
                              WlantapMac::Listener* listener, zx::channel sme_channel,
                              WlantapMac** ret) {
   char name[ZX_MAX_NAME_LEN + 1];
-  snprintf(name, sizeof(name), "%s-mac%u", device_get_name(parent_phy), id);
+  snprintf(name, sizeof(name), "mac%u", id);
   std::unique_ptr<WlantapMacImpl> wlanmac(
       new WlantapMacImpl(parent_phy, id, role, phy_config, listener, std::move(sme_channel)));
   static zx_protocol_device_t device_ops = {.version = DEVICE_OPS_VERSION,

@@ -597,12 +597,11 @@ zx_status_t pci_init(zx_device_t* platform_bus, ACPI_HANDLE object, ACPI_DEVICE_
 
   if (zx_status_t status = device_add(platform_bus, &args, device->mutable_zxdev());
       status != ZX_OK) {
-    zxlogf(ERROR, "acpi: error %d in device_add, parent=%s(%p)", status,
-           device_get_name(platform_bus), platform_bus);
+    zxlogf(ERROR, "acpi: error %d in device_add, parent=(%p)", status, platform_bus);
     return status;
   } else {
-    zxlogf(INFO, "acpi: published device %s(%p), parent=%s(%p), handle=%p", args.name, device.get(),
-           device_get_name(platform_bus), platform_bus, device->acpi_handle());
+    zxlogf(INFO, "acpi: published device %s(%p), parent=(%p), handle=%p", args.name, device.get(),
+           platform_bus, device->acpi_handle());
     // device_add takes ownership of args.ctx, but only on success.
     device.release();
   }

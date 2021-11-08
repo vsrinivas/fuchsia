@@ -119,8 +119,8 @@ zx_status_t Device::ReportCurrentResources() {
     return acpi_to_zx_status(acpi_status);
   }
 
-  zxlogf(DEBUG, "acpi-bus[%s]: found %zd port resources %zd memory resources %zx irqs",
-         device_get_name(zxdev_), pio_resources_.size(), mmio_resources_.size(), irqs_.size());
+  zxlogf(DEBUG, "acpi-bus: found %zd port resources %zd memory resources %zx irqs",
+         pio_resources_.size(), mmio_resources_.size(), irqs_.size());
   if (zxlog_level_enabled(TRACE)) {
     zxlogf(TRACE, "port resources:");
     for (size_t i = 0; i < pio_resources_.size(); i++) {
@@ -222,8 +222,8 @@ void Device::GetMmio(GetMmioRequestView request, GetMmioCompleter::Sync& complet
   // TODO(fxbug.dev/67899): This check becomes overly pessimistic at larger page sizes.
   if (((res.base_address & (zx_system_get_page_size() - 1)) != 0) ||
       ((res.address_length & (zx_system_get_page_size() - 1)) != 0)) {
-    zxlogf(ERROR, "acpi-bus[%s]: memory id=%d addr=0x%08x len=0x%x is not page aligned",
-           device_get_name(zxdev_), request->index, res.base_address, res.address_length);
+    zxlogf(ERROR, "acpi-bus: memory id=%d addr=0x%08x len=0x%x is not page aligned", request->index,
+           res.base_address, res.address_length);
     completer.ReplyError(ZX_ERR_NOT_FOUND);
     return;
   }
@@ -397,7 +397,7 @@ void Device::GetPio(GetPioRequestView request, GetPioCompleter::Sync& completer)
   const DevicePioResource& res = pio_resources_[request->index];
 
   char name[ZX_MAX_NAME_LEN];
-  snprintf(name, ZX_MAX_NAME_LEN, "%s-ioport-%u", device_get_name(zxdev_), request->index);
+  snprintf(name, ZX_MAX_NAME_LEN, "ioport-%u", request->index);
 
   zx::resource out_pio;
   // Please do not use get_root_resource() in new code. See fxbug.dev/31358.

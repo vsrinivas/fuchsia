@@ -124,7 +124,6 @@ void UsbMassStorageDevice::RequestQueue(usb_request_t* request,
 zx_status_t UsbMassStorageDevice::Init(bool is_test_mode) {
   dead_ = false;
   is_test_mode_ = is_test_mode;
-  zxlogf(INFO, "UMS: parent: '%s'", device_get_name(parent()));
   // Add root device, which will contain block devices for logical units
   zx_status_t status = DdkAdd("ums", DEVICE_ADD_NON_BINDABLE);
   if (status != ZX_OK) {

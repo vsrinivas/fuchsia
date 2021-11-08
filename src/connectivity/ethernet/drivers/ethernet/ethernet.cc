@@ -949,7 +949,7 @@ zx_status_t EthDev0::AddDevice() {
   ops = proto.ops;
   if (ops->query == nullptr || ops->stop == nullptr || ops->start == nullptr ||
       ops->queue_tx == nullptr || ops->set_param == nullptr) {
-    zxlogf(ERROR, "eth: bind: device '%s': incomplete ethermac protocol", device_get_name(parent_));
+    zxlogf(ERROR, "eth: bind: device: incomplete ethermac protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -959,14 +959,12 @@ zx_status_t EthDev0::AddDevice() {
   }
 
   if ((info_.features & ETHERNET_FEATURE_DMA) && (ops->get_bti == nullptr)) {
-    zxlogf(ERROR, "eth: bind: device '%s': does not implement ops->get_bti()",
-           device_get_name(parent_));
+    zxlogf(ERROR, "eth: bind: device: does not implement ops->get_bti()");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   if (info_.netbuf_size < sizeof(ethernet_netbuf_t)) {
-    zxlogf(ERROR, "eth: bind: device '%s': invalid buffer size %ld", device_get_name(parent_),
-           info_.netbuf_size);
+    zxlogf(ERROR, "eth: bind: device: invalid buffer size %ld", info_.netbuf_size);
     return ZX_ERR_NOT_SUPPORTED;
   }
   info_.netbuf_size = ZX_ROUNDUP(info_.netbuf_size, 8);
@@ -977,8 +975,8 @@ zx_status_t EthDev0::AddDevice() {
   // Make sure device starts with expected settings.
   if ((status = mac_.SetParam(ETHERNET_SETPARAM_PROMISC, 0, nullptr, 0)) != ZX_OK) {
     // Log the error, but continue, as this is not critical.
-    zxlogf(WARNING, "eth: bind: device '%s': unable to disable promiscuous mode: %s",
-           device_get_name(parent_), zx_status_get_string(status));
+    zxlogf(WARNING, "eth: bind: device: unable to disable promiscuous mode: %s",
+           zx_status_get_string(status));
   }
 
   return ZX_OK;

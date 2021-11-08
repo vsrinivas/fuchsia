@@ -98,19 +98,6 @@ __EXPORT void device_resume_reply(zx_device_t* device, zx_status_t status, uint8
   device->RecordResumeReply(status);
 }
 
-__EXPORT
-const char* device_get_name(zx_device_t* device) {
-  if (!device) {
-    zxlogf(ERROR, "Error: %s passed an null device\n", __func__);
-    return nullptr;
-  }
-  if (device->IsRootParent()) {
-    zxlogf(ERROR, "Error: Mock parent device does not support %s\n", __func__);
-    return nullptr;
-  }
-  return device->name();
-}
-
 // These functions TODO(will be) supported by devices created as root parents:
 __EXPORT
 zx_status_t device_get_protocol(const zx_device_t* device, uint32_t proto_id, void* protocol) {

@@ -104,8 +104,7 @@ class Broker : public DeviceType {
 
 zx_status_t Broker::Bind() {
   if (!nand_.is_valid()) {
-    zxlogf(ERROR, "nand-broker: device '%s' does not support nand protocol",
-           device_get_name(parent()));
+    zxlogf(ERROR, "nand-broker: device does not support nand protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
 

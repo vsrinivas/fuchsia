@@ -77,7 +77,7 @@ zx_status_t IntelI2cController::Create(void* ctx, zx_device_t* parent) {
 
   ddk::AcpiProtocolClient acpi(parent, "acpi");
   if (!acpi.is_valid()) {
-    zxlogf(ERROR, "Failed to get ACPI fragment from parent %s", device_get_name(parent));
+    zxlogf(ERROR, "Failed to get ACPI fragment from parent");
     return ZX_ERR_BAD_STATE;
   }
   acpi.ConnectServer(server_end->TakeChannel());

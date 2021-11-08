@@ -545,22 +545,22 @@ zx_status_t BlockDevice::Bind(void* ctx, zx_device_t* dev) {
 
   // The Block Implementation Protocol is required.
   if (!bdev->parent_protocol_.is_valid()) {
-    printf("ERROR: block device '%s': does not support block protocol\n", device_get_name(dev));
+    printf("ERROR: block device: does not support block protocol\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   bdev->parent_protocol_.Query(&bdev->info_, &bdev->parent_op_size_);
 
   if (bdev->info_.max_transfer_size < bdev->info_.block_size) {
-    printf("ERROR: block device '%s': has smaller max xfer (0x%x) than block size (0x%x)\n",
-           device_get_name(dev), bdev->info_.max_transfer_size, bdev->info_.block_size);
+    printf("ERROR: block device: has smaller max xfer (0x%x) than block size (0x%x)\n",
+           bdev->info_.max_transfer_size, bdev->info_.block_size);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   bdev->io_op_ = std::make_unique<uint8_t[]>(bdev->OpSize());
   size_t block_size = bdev->info_.block_size;
   if ((block_size < 512) || (block_size & (block_size - 1))) {
-    printf("block: device '%s': invalid block size: %zu\n", device_get_name(dev), block_size);
+    printf("block: device: invalid block size: %zu\n", block_size);
     return ZX_ERR_NOT_SUPPORTED;
   }
 

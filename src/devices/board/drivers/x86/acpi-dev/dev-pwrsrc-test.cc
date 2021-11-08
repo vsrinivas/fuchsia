@@ -112,8 +112,6 @@ extern "C" void driver_logf_internal(const zx_driver_t* drv, fx_log_severity_t f
                                      const char* tag, const char* file, int line, const char* msg,
                                      ...) {}
 
-const char* device_get_name(zx_device_t* device) { return "fake-acpi-pwrsrc"; }
-
 zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
                                    zx_device_t** out) {
   return ZX_OK;

@@ -166,16 +166,14 @@ zx_status_t SkipBlockDevice::Create(void*, zx_device_t* parent) {
   // Get NAND protocol.
   ddk::NandProtocolClient nand(parent);
   if (!nand.is_valid()) {
-    zxlogf(ERROR, "skip-block: parent device '%s': does not support nand protocol",
-           device_get_name(parent));
+    zxlogf(ERROR, "skip-block: parent device: does not support nand protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   // Get bad block protocol.
   ddk::BadBlockProtocolClient bad_block(parent);
   if (!bad_block.is_valid()) {
-    zxlogf(ERROR, "skip-block: parent device '%s': does not support bad_block protocol",
-           device_get_name(parent));
+    zxlogf(ERROR, "skip-block: parent device: does not support bad_block protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -184,8 +182,7 @@ zx_status_t SkipBlockDevice::Create(void*, zx_device_t* parent) {
   zx_status_t status = device_get_metadata(parent, DEVICE_METADATA_PRIVATE, &copy_count,
                                            sizeof(copy_count), &actual);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "skip-block: parent device '%s' has no private metadata",
-           device_get_name(parent));
+    zxlogf(ERROR, "skip-block: parent device has no private metadata");
     return status;
   }
   if (actual != sizeof(copy_count)) {
@@ -236,7 +233,7 @@ zx_status_t SkipBlockDevice::GetBadBlockList(fbl::Array<uint32_t>* bad_blocks) {
 }
 
 zx_status_t SkipBlockDevice::Bind() {
-  zxlogf(INFO, "skip-block: Binding to %s", device_get_name(parent()));
+  zxlogf(INFO, "skip-block: Binding");
 
   fbl::AutoLock al(&lock_);
 

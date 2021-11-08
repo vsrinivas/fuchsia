@@ -69,8 +69,7 @@ zx_status_t NandPartDevice::Create(void* ctx, zx_device_t* parent) {
 
   nand_protocol_t nand_proto;
   if (device_get_protocol(parent, ZX_PROTOCOL_NAND, &nand_proto) != ZX_OK) {
-    zxlogf(ERROR, "nandpart: parent device '%s': does not support nand protocol",
-           device_get_name(parent));
+    zxlogf(ERROR, "nandpart: parent device does not support nand protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -87,7 +86,7 @@ zx_status_t NandPartDevice::Create(void* ctx, zx_device_t* parent) {
   zx_status_t status = device_get_metadata(parent, DEVICE_METADATA_PRIVATE, &nand_config,
                                            sizeof(nand_config), &actual);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "nandpart: parent device '%s' has no device metadata", device_get_name(parent));
+    zxlogf(ERROR, "nandpart: parent device has no device metadata");
     return status;
   }
   if (actual < sizeof(nand_config_t)) {
@@ -112,7 +111,7 @@ zx_status_t NandPartDevice::Create(void* ctx, zx_device_t* parent) {
   status =
       device_get_metadata(parent, DEVICE_METADATA_PARTITION_MAP, buffer, sizeof(buffer), &actual);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "nandpart: parent device '%s' has no partition map", device_get_name(parent));
+    zxlogf(ERROR, "nandpart: parent device has no partition map");
     return status;
   }
   if (actual < sizeof(zbi_partition_map_t)) {
@@ -196,7 +195,7 @@ void NandPartDevice::DdkInit(ddk::InitTxn init_txn) {
 }
 
 zx_status_t NandPartDevice::Bind(const char* name, uint32_t copy_count) {
-  zxlogf(INFO, "nandpart: Binding %s to %s", name, device_get_name(parent()));
+  zxlogf(INFO, "nandpart: Binding %s", name);
   extra_partition_copy_count_ = copy_count;
   zx_device_prop_t props[] = {
       {BIND_PROTOCOL, 0, ZX_PROTOCOL_NAND},

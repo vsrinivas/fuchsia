@@ -238,8 +238,7 @@ zx_status_t Bind(void* ctx, zx_device_t* parent) {
 
   block_impl_protocol_t block_protocol;
   if (device_get_protocol(parent, ZX_PROTOCOL_BLOCK, &block_protocol) != ZX_OK) {
-    zxlogf(ERROR, "gpt: ERROR: block device '%s': does not support block protocol",
-           device_get_name(parent));
+    zxlogf(ERROR, "gpt: ERROR: block device parent does not support block protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
 

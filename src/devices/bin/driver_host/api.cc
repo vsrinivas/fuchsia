@@ -266,8 +266,6 @@ __EXPORT zx_status_t device_set_profile_by_role(zx_device_t* device, zx_handle_t
   return internal::set_scheduler_profile_by_role(thread, role, role_size);
 }
 
-__EXPORT const char* device_get_name(zx_device_t* dev) { return dev->name(); }
-
 struct GenericProtocol {
   void* ops;
   void* ctx;
