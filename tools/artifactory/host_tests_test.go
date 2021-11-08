@@ -13,12 +13,16 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+
 	"go.fuchsia.dev/fuchsia/tools/build"
 )
 
 func TestHostTestUploads(t *testing.T) {
 	checkoutDir := t.TempDir()
 	buildDir := filepath.Join(checkoutDir, "out", "build_dir")
+	if err := os.MkdirAll(buildDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
 	runtimeDepsRelPath := "runtime_deps.json"
 	testSpecs := []build.TestSpec{
 		{Test: build.Test{OS: "linux", Path: "foo"}},
@@ -28,7 +32,7 @@ func TestHostTestUploads(t *testing.T) {
 	runtimeDeps := []string{"a", filepath.Join("b", "c.txt"), "a", testSpecs[0].Test.Path}
 	runtimeDepsBytes, err := json.Marshal(runtimeDeps)
 	if err != nil {
-		t.Fatalf("failed to Marhsal(runtimeDeps): %v", err)
+		t.Fatalf("failed to Marshal(runtimeDeps): %v", err)
 	}
 	if err := ioutil.WriteFile(filepath.Join(buildDir, runtimeDepsRelPath), runtimeDepsBytes, 0o400); err != nil {
 		t.Fatalf("failed to write runtimeDepsRelPath: %v", err)
