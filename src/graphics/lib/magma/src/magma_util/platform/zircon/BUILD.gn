@@ -155,6 +155,7 @@ source_set("connection_client") {
 
   public_deps = [
     ":handle",
+    ":status",
     "$magma_build_root/include:msd",
     "$magma_build_root/src/magma_util:macros",
     "$zircon_build_root/system/ulib/zx",
@@ -453,4 +454,10 @@ source_set("pdev_driver_gtest") {
     "//src/lib/ddk",
     "//third_party/googletest:gtest",
   ]
+}
+
+source_set("status") {
+  sources = [ "zircon_platform_status.h" ]
+
+  public_deps = [ "$magma_build_root/src/magma_util:macros" ]
 }

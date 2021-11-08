@@ -10,6 +10,7 @@
 #include "magma_util/dlog.h"
 #include "platform_connection_client.h"
 #include "zircon_platform_handle.h"
+#include "zircon_platform_status.h"
 
 // clang-format off
 using fuchsia_gpu_magma::wire::QueryId;
@@ -26,24 +27,6 @@ static_assert(static_cast<uint64_t>(MapFlags::kGrowable) == MAGMA_GPU_MAP_FLAG_G
 static_assert(static_cast<uint64_t>(MapFlags::kVendorFlag0) == MAGMA_GPU_MAP_FLAG_VENDOR_0, "mismatch");
 
 // clang-format on
-
-namespace {
-// Convert zx channel status to magma status.
-static magma_status_t MagmaChannelStatus(const zx_status_t status) {
-  switch (status) {
-    case ZX_OK:
-      return MAGMA_STATUS_OK;
-    case ZX_ERR_PEER_CLOSED:
-    case ZX_ERR_CANCELED:
-      return MAGMA_STATUS_CONNECTION_LOST;
-    case ZX_ERR_TIMED_OUT:
-      return MAGMA_STATUS_TIMED_OUT;
-    default:
-      DMESSAGE("MagmaChannelStatus: no match for zx status %d", status);
-      return MAGMA_STATUS_INTERNAL_ERROR;
-  }
-}
-}  // namespace
 
 namespace magma {
 
@@ -73,7 +56,7 @@ class ZirconPlatformPerfCountPoolClient : public PlatformPerfCountPoolClient {
     zx_status_t status = perf_counter_events_.client_end().channel().wait_one(
         ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, zx::time(), &pending);
     if (status != ZX_OK) {
-      magma_status_t magma_status = MagmaChannelStatus(status);
+      magma_status_t magma_status = magma::FromZxStatus(status).get();
       return DRET(magma_status);
     }
     if (!(pending & ZX_CHANNEL_READABLE)) {
@@ -117,7 +100,7 @@ class ZirconPlatformPerfCountPoolClient : public PlatformPerfCountPoolClient {
     EventHandler event_handler(trigger_id_out, buffer_id_out, buffer_offset_out, time_out,
                                result_flags_out);
     magma_status_t magma_status =
-        MagmaChannelStatus(perf_counter_events_.HandleOneEvent(event_handler).status());
+        magma::FromZxStatus(perf_counter_events_.HandleOneEvent(event_handler).status()).get();
     return DRET(magma_status);
   }
 
@@ -185,7 +168,7 @@ magma_status_t PrimaryWrapper::ImportObject(zx::handle handle,
   if (status == ZX_OK) {
     UpdateFlowControl(size);
   }
-  return MagmaChannelStatus(status);
+  return magma::FromZxStatus(status).get();
 }
 
 magma_status_t PrimaryWrapper::ReleaseObject(uint64_t object_id,
@@ -199,7 +182,7 @@ magma_status_t PrimaryWrapper::ReleaseObject(uint64_t object_id,
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
-  return MagmaChannelStatus(status);
+  return magma::FromZxStatus(status).get();
 }
 
 magma_status_t PrimaryWrapper::CreateContext(uint32_t context_id) {
@@ -209,7 +192,7 @@ magma_status_t PrimaryWrapper::CreateContext(uint32_t context_id) {
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
-  return MagmaChannelStatus(status);
+  return magma::FromZxStatus(status).get();
 }
 
 magma_status_t PrimaryWrapper::DestroyContext(uint32_t context_id) {
@@ -219,7 +202,7 @@ magma_status_t PrimaryWrapper::DestroyContext(uint32_t context_id) {
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
-  return MagmaChannelStatus(status);
+  return magma::FromZxStatus(status).get();
 }
 
 static_assert(static_cast<uint64_t>(fuchsia_gpu_magma::wire::CommandBufferFlags::kVendorFlag0) ==
@@ -239,7 +222,7 @@ magma_status_t PrimaryWrapper::ExecuteCommandBufferWithResources2(
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
-  return MagmaChannelStatus(status);
+  return magma::FromZxStatus(status).get();
 }
 
 magma_status_t PrimaryWrapper::ExecuteImmediateCommands(uint32_t context_id,
@@ -253,7 +236,7 @@ magma_status_t PrimaryWrapper::ExecuteImmediateCommands(uint32_t context_id,
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
-  return MagmaChannelStatus(status);
+  return magma::FromZxStatus(status).get();
 }
 
 magma_status_t PrimaryWrapper::MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va,
@@ -266,7 +249,7 @@ magma_status_t PrimaryWrapper::MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va,
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
-  return MagmaChannelStatus(status);
+  return magma::FromZxStatus(status).get();
 }
 
 magma_status_t PrimaryWrapper::UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va) {
@@ -276,7 +259,7 @@ magma_status_t PrimaryWrapper::UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_v
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
-  return MagmaChannelStatus(status);
+  return magma::FromZxStatus(status).get();
 }
 
 magma_status_t PrimaryWrapper::BufferRangeOp(uint64_t buffer_id,
@@ -288,7 +271,7 @@ magma_status_t PrimaryWrapper::BufferRangeOp(uint64_t buffer_id,
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
-  return MagmaChannelStatus(status);
+  return magma::FromZxStatus(status).get();
 }
 
 magma_status_t PrimaryWrapper::AccessPerformanceCounters(zx::event event) {
@@ -298,7 +281,7 @@ magma_status_t PrimaryWrapper::AccessPerformanceCounters(zx::event event) {
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
-  return MagmaChannelStatus(status);
+  return magma::FromZxStatus(status).get();
 }
 
 magma_status_t PrimaryWrapper::EnablePerformanceCounters(fidl::VectorView<uint64_t> counters) {
@@ -308,7 +291,7 @@ magma_status_t PrimaryWrapper::EnablePerformanceCounters(fidl::VectorView<uint64
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
-  return MagmaChannelStatus(status);
+  return magma::FromZxStatus(status).get();
 }
 
 magma_status_t PrimaryWrapper::CreatePerformanceCounterBufferPool(uint64_t pool_id,
@@ -320,7 +303,7 @@ magma_status_t PrimaryWrapper::CreatePerformanceCounterBufferPool(uint64_t pool_
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
-  return MagmaChannelStatus(status);
+  return magma::FromZxStatus(status).get();
 }
 
 magma_status_t PrimaryWrapper::ReleasePerformanceCounterBufferPool(uint64_t pool_id) {
@@ -330,7 +313,7 @@ magma_status_t PrimaryWrapper::ReleasePerformanceCounterBufferPool(uint64_t pool
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
-  return MagmaChannelStatus(status);
+  return magma::FromZxStatus(status).get();
 }
 
 magma_status_t PrimaryWrapper::AddPerformanceCounterBufferOffsetsToPool(
@@ -342,7 +325,7 @@ magma_status_t PrimaryWrapper::AddPerformanceCounterBufferOffsetsToPool(
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
-  return MagmaChannelStatus(status);
+  return magma::FromZxStatus(status).get();
 }
 
 magma_status_t PrimaryWrapper::RemovePerformanceCounterBufferFromPool(uint64_t pool_id,
@@ -353,7 +336,7 @@ magma_status_t PrimaryWrapper::RemovePerformanceCounterBufferFromPool(uint64_t p
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
-  return MagmaChannelStatus(status);
+  return magma::FromZxStatus(status).get();
 }
 
 magma_status_t PrimaryWrapper::DumpPerformanceCounters(uint64_t pool_id, uint32_t trigger_id) {
@@ -363,7 +346,7 @@ magma_status_t PrimaryWrapper::DumpPerformanceCounters(uint64_t pool_id, uint32_
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
-  return MagmaChannelStatus(status);
+  return magma::FromZxStatus(status).get();
 }
 
 magma_status_t PrimaryWrapper::ClearPerformanceCounters(fidl::VectorView<uint64_t> counters) {
@@ -373,7 +356,7 @@ magma_status_t PrimaryWrapper::ClearPerformanceCounters(fidl::VectorView<uint64_
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
-  return MagmaChannelStatus(status);
+  return magma::FromZxStatus(status).get();
 }
 
 std::tuple<bool, uint64_t, uint64_t> PrimaryWrapper::ShouldWait(uint64_t new_bytes) {
@@ -445,7 +428,7 @@ void PrimaryWrapper::UpdateFlowControl(uint64_t new_bytes) {
 
 magma_status_t PrimaryWrapper::Flush() {
   auto result = client_->Flush_Sync();
-  return MagmaChannelStatus(result.status());
+  return magma::FromZxStatus(result.status()).get();
 }
 
 magma_status_t PrimaryWrapper::GetError() {
@@ -474,11 +457,9 @@ magma_status_t PrimaryWrapper::GetError() {
       if (unbind_info->reason() == fidl::Reason::kPeerClosed) {
         if (unbind_info->status() > 0) {
           error_ = -unbind_info->status();
-        } else if (unbind_info->status() == ZX_ERR_PEER_CLOSED) {
-          // ZX_ERR_PEER_CLOSED may be returned if the MSD crashes
-          error_ = MAGMA_STATUS_CONNECTION_LOST;
         } else {
-          DASSERT(false);
+          DASSERT(unbind_info->status() < 0);
+          error_ = magma::FromZxStatus(unbind_info->status()).get();
         }
       }
     }
@@ -698,7 +679,7 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
   magma_status_t IsPerformanceCounterAccessEnabled(bool* enabled_out) override {
     auto rsp = client_.IsPerformanceCounterAccessEnabled();
     if (!rsp.ok())
-      return DRET_MSG(MagmaChannelStatus(rsp.status()), "failed to write to channel");
+      return DRET_MSG(magma::FromZxStatus(rsp.status()).get(), "failed to write to channel");
 
     *enabled_out = rsp->enabled;
     return MAGMA_STATUS_OK;
@@ -718,7 +699,8 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
     auto zircon_pool = std::make_unique<ZirconPlatformPerfCountPoolClient>();
     zx_status_t status = zircon_pool->Initialize();
     if (status != ZX_OK)
-      return MagmaChannelStatus(status);
+      return magma::FromZxStatus(status).get();
+
     magma_status_t result = client_.CreatePerformanceCounterBufferPool(
         zircon_pool->pool_id(), zircon_pool->TakeServerEndpoint());
     if (result != MAGMA_STATUS_OK)
