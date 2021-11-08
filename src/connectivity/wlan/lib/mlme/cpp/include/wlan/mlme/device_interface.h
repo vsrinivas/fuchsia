@@ -64,8 +64,8 @@ class DeviceInterface {
   virtual zx_status_t EnableBeaconing(wlan_bcn_config_t* bcn_cfg) = 0;
   virtual zx_status_t ConfigureBeacon(std::unique_ptr<Packet> packet) = 0;
   virtual zx_status_t SetKey(wlan_key_config_t* key_config) = 0;
-  virtual zx_status_t StartPassiveScan(const uint8_t* channel_list_buffer, size_t channel_list_size, zx_duration_t min_channel_time, zx_duration_t max_channel_time, zx_duration_t min_home_time, uint64_t* out_scan_id) = 0;
-  virtual zx_status_t StartActiveScan(const uint8_t* channel_list_buffer, size_t channel_list_size, const cssid_t* ssid_list_list, size_t ssid_list_count, const uint8_t* mac_header_buffer, size_t mac_header_size, const uint8_t* ies_buffer, size_t ies_size, zx_duration_t min_channel_time, zx_duration_t max_channel_time, zx_duration_t min_home_time, uint8_t min_probes_per_channel, uint8_t max_probes_per_channel, uint64_t* out_scan_id) = 0;
+  virtual zx_status_t StartPassiveScan(const wlanmac_passive_scan_args_t* passive_scan_args, uint64_t* out_scan_id) = 0;
+  virtual zx_status_t StartActiveScan(const wlanmac_active_scan_args_t* active_scan_args, uint64_t* out_scan_id) = 0;
   virtual zx_status_t ConfigureAssoc(wlan_assoc_ctx_t* assoc_ctx) = 0;
   virtual zx_status_t ClearAssoc(const common::MacAddr& peer_addr) = 0;
 

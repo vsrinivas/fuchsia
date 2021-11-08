@@ -6,8 +6,7 @@ use {
     crate::{buffer::OutBuf, key},
     banjo_fuchsia_hardware_wlan_info::*,
     banjo_fuchsia_hardware_wlan_mac::{
-        self as banjo_wlan_mac, WlanHwScanConfig, WlanHwScanResult, WlanRxPacket, WlanTxPacket,
-        WlanTxStatus, WlanmacInfo,
+        self as banjo_wlan_mac, WlanRxPacket, WlanTxPacket, WlanTxStatus, WlanmacInfo,
     },
     banjo_fuchsia_wlan_common as banjo_common,
     banjo_fuchsia_wlan_internal::BssConfig,
@@ -139,12 +138,18 @@ impl Device {
         self.raw_device.set_key(key)
     }
 
-    pub fn start_passive_scan(&self) -> Result<(), zx::Status> {
-        self.raw_device.start_passive_scan()
+    pub fn start_passive_scan(
+        &self,
+        passive_scan_args: banjo_wlan_mac::WlanPassiveScanArgs,
+    ) -> Result<(), zx::Status> {
+        self.raw_device.start_passive_scan(passive_scan_args)
     }
 
-    pub fn start_active_scan(&self) -> Result<(), zx::Status> {
-        self.raw_device.start_active_scan()
+    pub fn start_active_scan(
+        &self,
+        active_scan_args: banjo_wlan_mac::WlanActiveScanArgs,
+    ) -> Result<(), zx::Status> {
+        self.raw_device.start_active_scan(active_scan_args)
     }
 
     pub fn channel(&self) -> banjo_common::WlanChannel {
@@ -225,8 +230,7 @@ pub struct WlanmacIfcProtocolOps {
     indication: extern "C" fn(ctx: &mut crate::DriverEventSink, ind: u32),
     report_tx_status:
         extern "C" fn(ctx: &mut crate::DriverEventSink, tx_status: *const WlanTxStatus),
-    hw_scan_complete:
-        extern "C" fn(ctx: &mut crate::DriverEventSink, result: *const WlanHwScanResult),
+    scan_complete: extern "C" fn(ctx: &mut crate::DriverEventSink, status: i32, scan_id: u64),
 }
 
 #[no_mangle]
@@ -269,20 +273,11 @@ extern "C" fn handle_report_tx_status(
     let _ = ctx.0.unbounded_send(crate::DriverEvent::TxStatusReport { tx_status });
 }
 #[no_mangle]
-extern "C" fn handle_hw_scan_complete(
-    ctx: &mut crate::DriverEventSink,
-    result: *const WlanHwScanResult,
-) {
-    if result.is_null() {
-        return;
-    }
-    let result = unsafe { *result };
-    let ind = match result.code {
-        banjo_wlan_mac::WlanHwScan::SUCCESS => banjo_wlan_mac::WlanIndication::HW_SCAN_COMPLETE,
-        banjo_wlan_mac::WlanHwScan::ABORTED => banjo_wlan_mac::WlanIndication::HW_SCAN_ABORTED,
-        _ => return,
-    };
-    let _ = ctx.0.unbounded_send(crate::DriverEvent::HwIndication { ind });
+extern "C" fn handle_scan_complete(ctx: &mut crate::DriverEventSink, status: i32, scan_id: u32) {
+    let _ = ctx.0.unbounded_send(crate::DriverEvent::ScanComplete {
+        status: zx::Status::from_raw(status),
+        scan_id,
+    });
 }
 
 const PROTOCOL_OPS: WlanmacIfcProtocolOps = WlanmacIfcProtocolOps {
@@ -291,7 +286,7 @@ const PROTOCOL_OPS: WlanmacIfcProtocolOps = WlanmacIfcProtocolOps {
     complete_tx: handle_complete_tx,
     indication: handle_indication,
     report_tx_status: handle_report_tx_status,
-    hw_scan_complete: handle_hw_scan_complete,
+    scan_complete: handle_scan_complete,
 };
 
 impl<'a> WlanmacIfcProtocol<'a> {
@@ -337,29 +332,13 @@ pub struct DeviceInterface {
     /// Make passive scan request to the driver
     start_passive_scan: extern "C" fn(
         device: *mut c_void,
-        channel_list_buffer: *const u8,
-        channel_list_size: usize,
-        min_channel_time: i64,
-        max_channel_time: i64,
-        min_home_time: i64,
+        passive_scan_args: *const WlanmacPassiveScanArgs,
         out_scan_id: *mut u64,
     ) -> i32,
     /// Make active scan request to the driver
     start_active_scan: extern "C" fn(
         device: *mut c_void,
-        channel_list_buffer: *const u8,
-        channel_list_size: usize,
-        ssid_list_list: *const CSsid,
-        ssid_list_count: usize,
-        mac_header_buffer: *const u8,
-        mac_header_size: usize,
-        ies_buffer: *const u8,
-        ies_size: usize,
-        min_channel_time: i64, // zx_duration_t
-        max_channel_time: i64, // zx_duration_t
-        min_home_time: i64,    // zx_duration_t
-        min_probes_per_channel: u8,
-        max_probes_per_channel: u8,
+        active_scan_args: *const WlanmacActiveScanArgs,
         out_scan_id: *mut u64,
     ) -> i32,
     /// Get information and capabilities of this WLAN interface
@@ -424,9 +403,30 @@ impl DeviceInterface {
         zx::ok(status)
     }
 
-    fn start_hw_scan(&self, config: &WlanHwScanConfig) -> Result<(), zx::Status> {
-        let status = (self.start_hw_scan)(self.device, config as *const WlanHwScanConfig);
-        zx::ok(status)
+    fn start_passive_scan(
+        &self,
+        passive_scan_args: &WlanmacPassiveScanArgs,
+    ) -> Result<u64, zx::Status> {
+        let out_scan_id = 0;
+        let status = (self.start_passive_scan)(
+            self.device,
+            passive_scan_args as *const WlanmacPassiveScanArgs,
+            &mut out_scan_id as *mut u64,
+        );
+        zx::ok(status).map_ok(|_| out_scan_id)
+    }
+
+    fn start_active_scan(
+        &self,
+        active_scan_args: &WlanmacActiveScanArgs,
+    ) -> Result<u64, zx::Status> {
+        let out_scan_id = 0;
+        let status = (self.start_active_scan)(
+            self.device,
+            active_scan_args as *const WlanmacActiveScanArgs,
+            &mut out_scan_id as *mut u64,
+        );
+        zx::ok(status).map_ok(|_| out_scan_id)
     }
 
     fn channel(&self) -> banjo_common::WlanChannel {

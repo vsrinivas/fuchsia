@@ -42,6 +42,7 @@
 #include <zircon/status.h>
 #include <zircon/time.h>
 
+#include "out/atlas/x64-shared/gen/zircon/public/sysroot/cpp/include/zircon/errors.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-io.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/task.h"
@@ -371,11 +372,9 @@ static const char* iwl_mvm_ebs_status_str(enum iwl_scan_ebs_status status) {
   }
 }
 
-static void notify_mlme_scan_completion(struct iwl_mvm_vif* mvmvif, bool successful) {
-  wlan_hw_scan_result_t scan_result = {
-      .code = successful ? WLAN_HW_SCAN_SUCCESS : WLAN_HW_SCAN_ABORTED,
-  };
-  wlanmac_ifc_hw_scan_complete(&mvmvif->ifc, &scan_result);
+static void notify_mlme_scan_completion(struct iwl_mvm_vif* mvmvif, bool canceled) {
+  // TODO(fxbug.dev/...): scan_id is ignored everywhere
+  wlanmac_ifc_scan_complete(&mvmvif->ifc, canceled ? ZX_ERR_CANCELED : ZX_OK, 0);
 }
 
 void iwl_mvm_rx_lmac_scan_complete_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
@@ -1455,7 +1454,7 @@ static zx_status_t iwl_mvm_scan_umac(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_
   return ZX_OK;
 }
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
 static int iwl_mvm_num_scans(struct iwl_mvm* mvm) {
     return hweight32(mvm->scan_status & IWL_MVM_SCAN_MASK);
 }
@@ -1561,8 +1560,11 @@ static void iwl_mvm_fill_scan_type(struct iwl_mvm* mvm, struct iwl_mvm_scan_para
 }
 #endif  // NEEDS_PORTING
 
-zx_status_t iwl_mvm_reg_scan_start(struct iwl_mvm_vif* mvmvif,
-                                   const uint8_t* channel_list_buffer, size_t channel_list_size, zx_duration_t min_channel_time, zx_duration_t max_channel_time, zx_duration_t min_home_time, uint64_t* out_scan_id) {
+ zx_status_t iwl_mvm_passive_scan_start(struct iwl_mvm_vif* mvmvif, const wlanmac_passive_scan_args_t* passive_scan_args, uint64_t* out_scan_id) {
+  return iwl_mvm_reg_scan_start(mvmvif, passive_scan_args->channel_list_buffer, passive_scan_args->channel_list_size);
+}
+ 
+zx_status_t iwl_mvm_reg_scan_start(struct iwl_mvm_vif* mvmvif, const uint8_t* channel_list_buffer, size_t channel_list_size) {
   struct iwl_mvm* mvm = mvmvif->mvm;
   struct iwl_host_cmd hcmd = {
       .len =

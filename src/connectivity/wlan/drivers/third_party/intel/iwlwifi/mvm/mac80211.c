@@ -2507,20 +2507,18 @@ static void iwl_mvm_bss_info_changed(struct ieee80211_hw* hw, struct ieee80211_v
 }
 #endif  // NEEDS_PORTING
 
-zx_status_t iwl_mvm_mac_passive_scan(struct iwl_mvm_vif* mvmvif,
-                                     const uint8_t* channel_list_buffer, size_t channel_list_size, zx_duration_t min_channel_time, zx_duration_t max_channel_time, zx_duration_t min_home_time, uint64_t* out_scan_id) {
+zx_status_t iwl_mvm_mac_passive_scan(struct iwl_mvm_vif* mvmvif, const wlanmac_passive_scan_args_t* passive_scan_args, uint64_t* out_scan_id) {
   struct iwl_mvm* mvm = mvmvif->mvm;
   zx_status_t ret;
 
-  if (channel_list_size == 0 ||
-      channel_list_size > mvm->fw->ucode_capa.n_scan_channels) {
-    IWL_WARN(mvmvif, "Cannot scan: invalid #channel (%zu). FW's cap (%d)\n",
-             channel_list_size, mvm->fw->ucode_capa.n_scan_channels);
+  if (passive_scan_args->channel_list_size == 0 || passive_scan_args->channel_list_size > mvm->fw->ucode_capa.n_scan_channels) {
+    IWL_WARN(mvmvif, "Cannot scan: invalid #channel (%zu). FW's cap (%d)\n", passive_scan_args->channel_list_size,
+             mvm->fw->ucode_capa.n_scan_channels);
     return ZX_ERR_INVALID_ARGS;
   }
 
   mtx_lock(&mvm->mutex);
-  ret = iwl_mvm_reg_scan_start(mvmvif, channel_list_buffer, channel_list_size, min_channel_time, max_channel_time, min_home_time, out_scan_id);
+  ret = iwl_mvm_passive_scan_start(mvmvif, passive_scan_args, out_scan_id);
   mtx_unlock(&mvm->mutex);
 
   return ret;

@@ -1767,8 +1767,8 @@ ssize_t iwl_dbgfs_quota_status_read(struct file* file, char __user* user_buf, si
 #endif
 
 /* Scanning */
-zx_status_t iwl_mvm_reg_scan_start(struct iwl_mvm_vif* mvmvif,
-                                   const uint8_t* channel_list_buffer, size_t channel_list_size, zx_duration_t min_channel_time, zx_duration_t max_channel_time, zx_duration_t min_home_time, uint64_t* out_scan_id);
+zx_status_t iwl_mvm_passive_scan_start(struct iwl_mvm_vif* mvmvif, const wlanmac_passive_scan_args_t* passive_scan_args, uint64_t* out_scan_id);
+zx_status_t iwl_mvm_reg_scan_start(struct iwl_mvm_vif* mvmvif, const uint8_t* channel_list_buffer, size_t channel_list_size);
 int iwl_mvm_scan_size(struct iwl_mvm* mvm);
 int iwl_mvm_scan_stop(struct iwl_mvm* mvm, int type, bool notify);
 int iwl_mvm_max_scan_ie_len(struct iwl_mvm* mvm);
@@ -2144,8 +2144,8 @@ zx_status_t iwl_mvm_mac_remove_interface(struct iwl_mvm_vif* mvmvif);
 
 void iwl_mvm_configure_filter(struct iwl_mvm* mvm);
 
-zx_status_t iwl_mvm_mac_passive_scan(struct iwl_mvm_vif* mvmvif,
-                                     const uint8_t* channel_list_buffer, size_t channel_list_size, zx_duration_t min_channel_time, zx_duration_t max_channel_time, zx_duration_t min_home_time, uint64_t* out_scan_id);
+zx_status_t iwl_mvm_mac_passive_scan(struct iwl_mvm_vif* mvmvif, const wlanmac_passive_scan_args_t* passive_scan_args,
+                                     uint64_t* out_scan_id);
 
 zx_status_t iwl_mvm_mac_sta_state(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvm_sta,
                                   enum iwl_sta_state old_state, enum iwl_sta_state new_state);

@@ -45,8 +45,8 @@ class WlanmacDevice : public WlanmacDeviceType,
   zx_status_t WlanmacConfigureAssoc(uint32_t options, const wlan_assoc_ctx_t* assoc_ctx);
   zx_status_t WlanmacClearAssoc(uint32_t options,
                                 const uint8_t peer_addr_list[fuchsia_wlan_ieee80211_MAC_ADDR_LEN]);
-  zx_status_t WlanmacStartPassiveScan( const uint8_t* channel_list_buffer, size_t channel_list_size, zx_duration_t min_channel_time, zx_duration_t max_channel_time, zx_duration_t min_home_time, uint64_t* out_scan_id);
-  zx_status_t WlanmacStartActiveScan(const uint8_t* channel_list_buffer, size_t channel_list_size, const cssid_t* ssid_list_list, size_t ssid_list_count, const uint8_t* mac_header_buffer, size_t mac_header_size, const uint8_t* ies_buffer, size_t ies_size, zx_duration_t min_channel_time, zx_duration_t max_channel_time, zx_duration_t min_home_time, uint8_t min_probes_per_channel, uint8_t max_probes_per_channel, uint64_t* out_scan_id);
+  zx_status_t WlanmacStartPassiveScan(const wlanmac_passive_scan_args_t* passive_scan_args, uint64_t* out_scan_id);
+  zx_status_t WlanmacStartActiveScan(const wlanmac_active_scan_args_t* active_scan_args, uint64_t* out_scan_id);
   zx_status_t WlanmacUpdateWmmParams(wlan_ac_t ac, const wlan_wmm_params_t* params);
 
  protected:

@@ -156,7 +156,7 @@ pub enum DriverEvent {
     // Requests transmission of an ethernet frame over the air.
     EthFrameTx { bytes: Vec<u8> },
     // A notification of some event from the vendor driver.
-    HwIndication { ind: banjo_wlan_mac::WlanIndication },
+    ScanComplete { status: zx::Status, scan_id: u64 },
     // Reports the result of an attempted frame transmission.
     TxStatusReport { tx_status: banjo_wlan_mac::WlanTxStatus },
     // Reports the current status of the vendor driver.

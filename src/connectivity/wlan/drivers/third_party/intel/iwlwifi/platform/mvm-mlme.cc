@@ -744,13 +744,12 @@ out:
   return ret;
 }
 
-zx_status_t mac_start_passive_scan(void* ctx, const uint8_t* channel_list_buffer, size_t channel_list_size, zx_duration_t min_channel_time, zx_duration_t max_channel_time, zx_duration_t min_home_time, uint64_t* out_scan_id) {
+zx_status_t mac_start_passive_scan(void* ctx, const wlanmac_passive_scan_args_t* passive_scan_args, uint64_t* out_scan_id) {
   const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
-
-  return iwl_mvm_mac_passive_scan(mvmvif, channel_list_buffer, channel_list_size, min_channel_time, max_channel_time, min_home_time, out_scan_id);
+  return iwl_mvm_mac_passive_scan(mvmvif, passive_scan_args, out_scan_id);
 }
 
-zx_status_t mac_start_active_scan(void* ctx, const uint8_t* channel_list_buffer, size_t channel_list_size, const cssid_t* ssid_list_list, size_t ssid_list_count, const uint8_t* mac_header_buffer, size_t mac_header_size, const uint8_t* ies_buffer, size_t ies_size, zx_duration_t min_channel_time, zx_duration_t max_channel_time, zx_duration_t min_home_time, uint8_t min_probes_per_channel, uint8_t max_probes_per_channel, uint64_t* out_scan_id) {
+zx_status_t mac_start_active_scan(void* ctx, const wlanmac_active_scan_args_t* active_scan_args, uint64_t* out_scan_id) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 

@@ -183,7 +183,11 @@ struct MockDevice : public DeviceInterface {
     return ZX_OK;
   }
 
-  zx_status_t StartHwScan(const wlan_hw_scan_config_t* scan_config) override {
+  zx_status_t StartPassiveScan(const wlanmac_passive_scan_args_t* passive_scan_args, uint64_t* scan_id) override {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  zx_status_t StartActiveScan(const wlanmac_active_scan_args_t* active_scan_args, uint64_t* scan_id) override {
     return ZX_ERR_NOT_SUPPORTED;
   }
 

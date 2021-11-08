@@ -48,7 +48,7 @@ typedef struct {
   void (*complete_tx)(void *ctx, const wlan_tx_packet_t *packet, int32_t status);
   void (*indication)(void *ctx, uint32_t ind);
   void (*report_tx_status)(void *ctx, const wlan_tx_status_t *tx_status);
-  void (*hw_scan_complete)(void *ctx, const wlan_hw_scan_result_t *result);
+  void (*scan_complete)(void *ctx, int32_t status, uint64_t scan_id);
 } rust_wlanmac_ifc_protocol_ops_copy_t;
 
 /**
@@ -117,20 +117,12 @@ typedef struct {
   /**
    * Make passive scan request to the driver
    */
-  int32_t (*start_passive_scan)(void *device, const uint8_t *channel_list_buffer,
-                                uintptr_t channel_list_size, int64_t min_channel_time,
-                                int64_t max_channel_time, int64_t min_home_time,
+  int32_t (*start_passive_scan)(void *device, const wlanmac_passive_scan_args_t *passive_scan_args,
                                 uint64_t *out_scan_id);
   /**
    * Make active scan request to the driver
    */
-  int32_t (*start_active_scan)(void *device, const uint8_t *channel_list_buffer,
-                               uintptr_t channel_list_size, const cssid_t *ssid_list_list,
-                               uintptr_t ssid_list_count, const uint8_t *mac_header_buffer,
-                               uintptr_t mac_header_size, const uint8_t *ies_buffer,
-                               uintptr_t ies_size, int64_t min_channel_time,
-                               int64_t max_channel_time, int64_t min_home_time,
-                               uint8_t min_probes_per_channel, uint8_t max_probes_per_channel,
+  int32_t (*start_active_scan)(void *device, const wlanmac_active_scan_args_t *active_scan_args,
                                uint64_t *out_scan_id);
   /**
    * Get information and capabilities of this WLAN interface

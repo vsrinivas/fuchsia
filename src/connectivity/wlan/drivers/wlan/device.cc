@@ -281,7 +281,7 @@ zx_status_t Device::Start(const rust_wlanmac_ifc_protocol_copy_t* ifc,
       .complete_tx = ifc->ops->complete_tx,
       .indication = ifc->ops->indication,
       .report_tx_status = ifc->ops->report_tx_status,
-      .hw_scan_complete = ifc->ops->hw_scan_complete,
+      .scan_complete = ifc->ops->scan_complete,
   });
 
   return wlanmac_proxy_.Start(ifc->ctx, wlanmac_ifc_protocol_ops_.get(), out_sme_channel);
@@ -376,23 +376,13 @@ zx_status_t Device::SetKey(wlan_key_config_t* key_config) {
   return wlanmac_proxy_.SetKey(0u, key_config);
 }
 
-  zx_status_t Device::StartPassiveScan(const uint8_t* channel_list_buffer, size_t channel_list_size, zx_duration_t min_channel_time, zx_duration_t max_channel_time, zx_duration_t min_home_time, uint64_t* out_scan_id) {
-      return wlanmac_proxy_.StartPassiveScan(channel_list_buffer,
-                                channel_list_size, min_channel_time,
-                                max_channel_time, min_home_time,
-                                       out_scan_id);
+zx_status_t Device::StartPassiveScan(const wlanmac_passive_scan_args_t* passive_scan_args, uint64_t* out_scan_id) {
+  return wlanmac_proxy_.StartPassiveScan(passive_scan_args, out_scan_id);
+}
 
-  }
-  zx_status_t Device::StartActiveScan(const uint8_t* channel_list_buffer, size_t channel_list_size, const cssid_t* ssid_list_list, size_t ssid_list_count, const uint8_t* mac_header_buffer, size_t mac_header_size, const uint8_t* ies_buffer, size_t ies_size, zx_duration_t min_channel_time, zx_duration_t max_channel_time, zx_duration_t min_home_time, uint8_t min_probes_per_channel, uint8_t max_probes_per_channel, uint64_t* out_scan_id){
-    return wlanmac_proxy_.StartActiveScan(channel_list_buffer,
-                                channel_list_size, ssid_list_list,
-                                ssid_list_count, mac_header_buffer,
-                                mac_header_size, ies_buffer,
-                                ies_size, min_channel_time,
-                                max_channel_time, min_home_time,
-                                          out_scan_id);
-  };
-  
+zx_status_t Device::StartActiveScan(const wlanmac_active_scan_args_t* active_scan_args, uint64_t* out_scan_id) {
+  return wlanmac_proxy_.StartActiveScan(active_scan_args, out_scan_id);
+}
 
 zx_status_t Device::ConfigureAssoc(wlan_assoc_ctx_t* assoc_ctx) {
   return wlanmac_proxy_.ConfigureAssoc(0u, assoc_ctx);
