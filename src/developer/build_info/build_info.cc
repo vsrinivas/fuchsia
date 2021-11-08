@@ -4,6 +4,7 @@
 
 #include "build_info.h"
 
+#include <fcntl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>

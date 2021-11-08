@@ -4,6 +4,7 @@
 
 #include "driver_loader.h"
 
+#include <fcntl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <sched.h>

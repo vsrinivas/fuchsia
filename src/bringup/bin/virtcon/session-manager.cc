@@ -4,6 +4,7 @@
 
 #include "src/bringup/bin/virtcon/session-manager.h"
 
+#include <fcntl.h>
 #include <fuchsia/hardware/pty/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>

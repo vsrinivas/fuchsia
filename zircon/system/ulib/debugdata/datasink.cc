@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <zircon/status.h>
 
+#include <fcntl.h>
 #include <cstddef>
 #include <cstdio>
 #include <forward_list>

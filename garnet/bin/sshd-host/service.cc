@@ -4,6 +4,7 @@
 
 #include "garnet/bin/sshd-host/service.h"
 
+#include <fcntl.h>
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fuchsia/boot/cpp/fidl.h>

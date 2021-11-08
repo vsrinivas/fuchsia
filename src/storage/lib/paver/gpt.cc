@@ -4,6 +4,7 @@
 
 #include "src/storage/lib/paver/gpt.h"
 
+#include <fcntl.h>
 #include <dirent.h>
 #include <fuchsia/device/llcpp/fidl.h>
 #include <lib/fit/defer.h>

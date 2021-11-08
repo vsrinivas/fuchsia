@@ -4,6 +4,7 @@
 
 #include "src/bringup/bin/console-launcher/autorun.h"
 
+#include <fcntl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fdio/unsafe.h>

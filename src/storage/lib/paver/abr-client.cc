@@ -4,6 +4,7 @@
 
 #include "src/storage/lib/paver/abr-client.h"
 
+#include <fcntl.h>
 #include <dirent.h>
 #include <endian.h>
 #include <fuchsia/boot/llcpp/fidl.h>

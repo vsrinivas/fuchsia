@@ -4,6 +4,7 @@
 
 #include "ram-info.h"
 
+#include <fcntl.h>
 #include <lib/fdio/fdio.h>
 #include <stdlib.h>
 

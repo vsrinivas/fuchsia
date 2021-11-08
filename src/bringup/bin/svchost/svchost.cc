@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fcntl.h>
 #include <fuchsia/boot/llcpp/fidl.h>
 #include <fuchsia/kernel/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>

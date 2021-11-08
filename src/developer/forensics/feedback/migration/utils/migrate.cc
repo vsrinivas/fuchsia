@@ -4,6 +4,7 @@
 
 #include "src/developer/forensics/feedback/migration/utils/migrate.h"
 
+#include <fcntl.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <memory>

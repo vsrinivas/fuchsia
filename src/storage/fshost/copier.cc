@@ -4,6 +4,7 @@
 
 #include "src/storage/fshost/copier.h"
 
+#include <fcntl.h>
 #include <dirent.h>
 #include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>

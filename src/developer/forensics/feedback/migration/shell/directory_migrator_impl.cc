@@ -4,6 +4,7 @@
 
 #include "src/developer/forensics/feedback/migration/shell/directory_migrator_impl.h"
 
+#include <fcntl.h>
 #include <lib/fdio/fd.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>

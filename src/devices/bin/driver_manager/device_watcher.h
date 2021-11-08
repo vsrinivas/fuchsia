@@ -6,6 +6,7 @@
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_DEVICE_WATCHER_H_
 
 #include <fuchsia/device/manager/llcpp/fidl.h>
+#include <fcntl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
