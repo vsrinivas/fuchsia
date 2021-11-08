@@ -10,7 +10,7 @@ use {
         RunBuilderProxy, SuiteArtifact, SuiteStopped,
     },
     fuchsia_async as fasync,
-    futures::{channel::mpsc, future::BoxFuture, prelude::*, stream::LocalBoxStream},
+    futures::{channel::mpsc, future::BoxFuture, prelude::*, stream::LocalBoxStream, StreamExt},
     log::{error, warn},
     std::collections::{HashMap, HashSet, VecDeque},
     std::convert::TryInto,
@@ -673,49 +673,83 @@ async fn run_suite_and_collect_logs<Out: Write>(
 }
 
 type SuiteResults<'a> = LocalBoxStream<'a, Result<SuiteRunResult, RunTestSuiteError>>;
+type SuiteEventStream = std::pin::Pin<
+    Box<dyn Stream<Item = Result<ftest_manager::SuiteEvent, RunTestSuiteError>> + Send>,
+>;
 
 /// A test suite that is known to have started execution. A suite is considered started once
 /// any event is produced for the suite.
 struct RunningSuite {
-    proxy: Option<ftest_manager::SuiteControllerProxy>,
-    unreturned_events: VecDeque<Result<ftest_manager::SuiteEvent, RunTestSuiteError>>,
+    event_stream: Option<SuiteEventStream>,
     url: String,
     max_severity_logs: Option<Severity>,
 }
 
 impl RunningSuite {
+    /// Number of concurrently active GetEvents requests. Chosen by testing powers of 2 when
+    /// running a set of tests using ffx test against an emulator, and taking the value at
+    /// which improvement stops.
+    const PIPELINED_REQUESTS: usize = 8;
     async fn wait_for_start(
         proxy: ftest_manager::SuiteControllerProxy,
         url: String,
         max_severity_logs: Option<Severity>,
     ) -> Self {
-        let unreturned_events = Self::query_events(&proxy).await;
-        Self { proxy: Some(proxy), unreturned_events, url, max_severity_logs }
+        // Stream of fidl responses, with multiple concurrently active requests.
+        let unprocessed_event_stream = futures::stream::repeat_with(move || proxy.get_events())
+            .buffered(Self::PIPELINED_REQUESTS);
+        // Terminate the stream after we get an error or empty list of events.
+        let mut terminate_next = false;
+        let terminated_event_stream = unprocessed_event_stream.take_while(move |result| {
+            let take_result = !terminate_next;
+            terminate_next = match result {
+                Ok(Ok(events)) if !events.is_empty() => false,
+                Ok(Ok(_)) | Ok(Err(_)) | Err(_) => true,
+            };
+            futures::future::ready(take_result)
+        });
+        // Flatten the stream of vecs into a stream of single events.
+        let mut event_stream = terminated_event_stream
+            .map(Self::convert_to_result_vec)
+            .map(futures::stream::iter)
+            .flatten()
+            .peekable();
+        // Wait for the first event to be ready, which signals the suite has started.
+        std::pin::Pin::new(&mut event_stream).peek().await;
+
+        Self { event_stream: Some(event_stream.boxed()), url, max_severity_logs }
     }
 
-    async fn query_events(
-        proxy: &ftest_manager::SuiteControllerProxy,
-    ) -> VecDeque<Result<ftest_manager::SuiteEvent, RunTestSuiteError>> {
-        match proxy.get_events().await {
+    fn convert_to_result_vec(
+        vec: Result<
+            Result<Vec<ftest_manager::SuiteEvent>, ftest_manager::LaunchError>,
+            fidl::Error,
+        >,
+    ) -> Vec<Result<ftest_manager::SuiteEvent, RunTestSuiteError>> {
+        match vec {
             Ok(Ok(events)) => events.into_iter().map(Ok).collect(),
-            Ok(Err(e)) => std::iter::once(Err(e.into())).collect(),
-            Err(e) => std::iter::once(Err(e.into())).collect(),
+            Ok(Err(e)) => vec![Err(e.into())],
+            Err(e) => vec![Err(e.into())],
         }
     }
 
     async fn next_event(&mut self) -> Option<Result<ftest_manager::SuiteEvent, RunTestSuiteError>> {
-        match self.proxy.as_ref() {
-            Some(proxy) if self.unreturned_events.is_empty() => {
-                self.unreturned_events = Self::query_events(proxy).await;
+        match self.event_stream.take() {
+            Some(mut stream) => {
+                let next = stream.next().await;
+                if next.is_some() {
+                    self.event_stream = Some(stream);
+                } else {
+                    // Once we've exhausted all the events, drop the stream, which owns the proxy.
+                    // TODO(fxbug.dev/87976) - once fxbug.dev/87890 is fixed this is not needed.
+                    // The explicit drop isn't strictly necessary, but it's left here to
+                    // communicate that we NEED to close the proxy.
+                    drop(stream);
+                }
+                next
             }
-            Some(_) | None => (),
+            None => None,
         }
-        if self.unreturned_events.is_empty() {
-            // Once we've exhausted all the events, close the proxy.
-            // TODO(fxbug.dev/87976) - once fxbug.dev/87890 is fixed this can be removed
-            let _ = self.proxy.take();
-        }
-        self.unreturned_events.pop_front()
     }
 
     fn url(&self) -> &str {
@@ -1015,5 +1049,123 @@ impl From<SuiteRunOptions> for fidl_fuchsia_test_manager::RunOptions {
             log_iterator: test_run_options.log_iterator,
             ..fidl_fuchsia_test_manager::RunOptions::EMPTY
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use fidl::endpoints::create_proxy_and_stream;
+    use matches::assert_matches;
+
+    const TEST_URL: &str = "test.cm";
+
+    async fn respond_to_get_events(
+        request_stream: &mut ftest_manager::SuiteControllerRequestStream,
+        events: Vec<ftest_manager::SuiteEvent>,
+    ) {
+        let request = request_stream
+            .next()
+            .await
+            .expect("did not get next request")
+            .expect("error getting next request");
+        let responder = match request {
+            ftest_manager::SuiteControllerRequest::GetEvents { responder } => responder,
+            r => panic!("Expected GetEvents request but got {:?}", r),
+        };
+
+        responder.send(&mut Ok(events)).expect("send events");
+    }
+
+    /// Creates a SuiteEvent which is unpopulated, except for timestamp.
+    /// This isn't representative of an actual event from test framework, but is sufficient
+    /// to assert events are routed correctly.
+    fn create_empty_event(timestamp: i64) -> ftest_manager::SuiteEvent {
+        ftest_manager::SuiteEvent { timestamp: Some(timestamp), ..ftest_manager::SuiteEvent::EMPTY }
+    }
+
+    macro_rules! assert_empty_events_eq {
+        ($t1:expr, $t2:expr) => {
+            assert_eq!($t1.timestamp, $t2.timestamp, "Got incorrect event.")
+        };
+    }
+
+    #[fuchsia::test]
+    async fn running_suite_events_simple() {
+        let (suite_proxy, mut suite_request_stream) =
+            create_proxy_and_stream::<ftest_manager::SuiteControllerMarker>()
+                .expect("create proxy");
+        let suite_server_task = fasync::Task::spawn(async move {
+            respond_to_get_events(&mut suite_request_stream, vec![create_empty_event(0)]).await;
+            respond_to_get_events(&mut suite_request_stream, vec![]).await;
+            drop(suite_request_stream);
+        });
+
+        let mut running_suite =
+            RunningSuite::wait_for_start(suite_proxy, TEST_URL.to_string(), None).await;
+        assert_empty_events_eq!(
+            running_suite.next_event().await.unwrap().unwrap(),
+            create_empty_event(0)
+        );
+        assert!(running_suite.next_event().await.is_none());
+        // polling again should still give none.
+        assert!(running_suite.next_event().await.is_none());
+        suite_server_task.await;
+    }
+
+    #[fuchsia::test]
+    async fn running_suite_events_multiple_events() {
+        let (suite_proxy, mut suite_request_stream) =
+            create_proxy_and_stream::<ftest_manager::SuiteControllerMarker>()
+                .expect("create proxy");
+        let suite_server_task = fasync::Task::spawn(async move {
+            respond_to_get_events(
+                &mut suite_request_stream,
+                vec![create_empty_event(0), create_empty_event(1)],
+            )
+            .await;
+            respond_to_get_events(
+                &mut suite_request_stream,
+                vec![create_empty_event(2), create_empty_event(3)],
+            )
+            .await;
+            respond_to_get_events(&mut suite_request_stream, vec![]).await;
+            drop(suite_request_stream);
+        });
+
+        let mut running_suite =
+            RunningSuite::wait_for_start(suite_proxy, TEST_URL.to_string(), None).await;
+
+        for num in 0..4 {
+            assert_empty_events_eq!(
+                running_suite.next_event().await.unwrap().unwrap(),
+                create_empty_event(num)
+            );
+        }
+        assert!(running_suite.next_event().await.is_none());
+        suite_server_task.await;
+    }
+
+    #[fuchsia::test]
+    async fn running_suite_events_peer_closed() {
+        let (suite_proxy, mut suite_request_stream) =
+            create_proxy_and_stream::<ftest_manager::SuiteControllerMarker>()
+                .expect("create proxy");
+        let suite_server_task = fasync::Task::spawn(async move {
+            respond_to_get_events(&mut suite_request_stream, vec![create_empty_event(1)]).await;
+            drop(suite_request_stream);
+        });
+
+        let mut running_suite =
+            RunningSuite::wait_for_start(suite_proxy, TEST_URL.to_string(), None).await;
+        assert_empty_events_eq!(
+            running_suite.next_event().await.unwrap().unwrap(),
+            create_empty_event(1)
+        );
+        assert_matches!(
+            running_suite.next_event().await,
+            Some(Err(RunTestSuiteError::Fidl(fidl::Error::ClientChannelClosed { .. })))
+        );
+        suite_server_task.await;
     }
 }

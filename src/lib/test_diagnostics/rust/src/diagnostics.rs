@@ -147,13 +147,21 @@ impl ArchiveLogStream {
 }
 
 impl ArchiveLogStream {
+    /// Number of concurrently active GetNext requests. Chosen by testing powers of 2 when
+    /// running a set of tests using ffx test against an emulator, and taking the value at
+    /// which improvement stops.
+    const PIPELINED_REQUESTS: usize = 32;
+
     fn start_streaming_logs(
         proxy: ArchiveIteratorProxy,
     ) -> (mpsc::Receiver<Result<LogsData, Error>>, fasync::Task<()>) {
         let (mut sender, receiver) = mpsc::channel(32);
+        let mut log_stream = futures::stream::repeat_with(move || proxy.get_next())
+            .buffered(Self::PIPELINED_REQUESTS);
         let task = fasync::Task::spawn(async move {
             loop {
-                let result = match proxy.get_next().await {
+                // unwrap okay as repeat_with produces an infinite stream.
+                let result = match log_stream.next().await.unwrap() {
                     Err(e) => {
                         let _ =
                             sender.send(Err(format_err!("Error calling GetNext: {:?}", e))).await;
@@ -309,6 +317,7 @@ mod tests {
                 ArchiveIteratorRequest, DiagnosticsData, InlineData,
             },
             matches::assert_matches,
+            std::collections::VecDeque,
         };
 
         fn create_log_stream() -> Result<(LogStream, ftest_manager::LogsIterator), fidl::Error> {
@@ -322,12 +331,23 @@ mod tests {
         ) {
             let mut request_stream = server_end.into_stream().expect("got stream");
             let mut values = vec![1, 2, 3].into_iter();
+            let mut empty_response_sent = false;
             while let Some(ArchiveIteratorRequest::GetNext { responder }) =
                 request_stream.try_next().await.expect("get next request")
             {
                 match values.next() {
                     None => {
-                        responder.send(&mut Ok(vec![])).expect("send empty response");
+                        let result = responder.send(&mut Ok(vec![]));
+                        match empty_response_sent {
+                            false => {
+                                assert!(result.is_ok(), "send response");
+                                empty_response_sent = true;
+                            }
+                            true => {
+                                // Because of pipelining, the channel may be open or closed
+                                // depending on the exact timing.
+                            }
+                        }
                     }
                     Some(value) => {
                         if with_error {
@@ -373,6 +393,40 @@ mod tests {
             };
             fasync::Task::spawn(spawn_archive_iterator_server(server_end, true)).detach();
             assert_matches!(log_stream.next().await, Some(Err(_)));
+        }
+
+        #[fasync::run_singlethreaded(test)]
+        async fn archive_stream_pipelines_requests() {
+            let (proxy, mut request_stream) =
+                fidl::endpoints::create_proxy_and_stream::<ArchiveIteratorMarker>().unwrap();
+            let (receiver, task) = ArchiveLogStream::start_streaming_logs(proxy);
+            // Multiple requests should be active at once. Note - StreamExt::buffered only
+            // guaranteed that up to ArchiveLogStream::PIPELINED_REQUESTS requests are buffered,
+            // so we can't assert equality.
+            let mut active_requests: VecDeque<_> = request_stream
+                .by_ref()
+                .take(ArchiveLogStream::PIPELINED_REQUESTS / 2)
+                .collect()
+                .await;
+            assert_eq!(active_requests.len(), ArchiveLogStream::PIPELINED_REQUESTS / 2);
+
+            // Verify that a log sent as a response to the first request is received.
+            let responder = active_requests.pop_front().unwrap().unwrap().into_get_next().unwrap();
+            responder
+                .send(&mut Ok(vec![ArchiveIteratorEntry {
+                    diagnostics_data: Some(DiagnosticsData::Inline(InlineData {
+                        data: "data".to_string(),
+                        truncated_chars: 0,
+                    })),
+                    ..ArchiveIteratorEntry::EMPTY
+                }]))
+                .unwrap();
+            // Send an empty response, which shuts down the pending task.
+            let responder = active_requests.pop_front().unwrap().unwrap().into_get_next().unwrap();
+            responder.send(&mut Ok(vec![])).unwrap();
+            drop(request_stream);
+            task.await;
+            assert_eq!(receiver.collect::<Vec<_>>().await.len(), 1);
         }
     }
 

@@ -30,6 +30,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
     "//src/lib/diagnostics/data/rust",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/test_diagnostics/rust:test_diagnostics",
     "//third_party/rust_crates:anyhow",
@@ -48,6 +49,7 @@ rustc_library("lib") {
 
   test_deps = [
     "//third_party/rust_crates:ansi_term",
+    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:tempfile",
   ]
 
