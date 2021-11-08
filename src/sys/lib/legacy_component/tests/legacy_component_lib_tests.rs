@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error, fidl::endpoints::ProtocolMarker, fidl_fidl_examples_echo as fecho,
+    anyhow::Error, fidl::endpoints::ProtocolMarker, fidl_fidl_examples_routing_echo as fecho,
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_io as fio, fidl_fuchsia_sys as fsys,
     fuchsia_component::client::connect_to_protocol, futures::StreamExt,
     vfs::execution_scope::ExecutionScope,
@@ -17,7 +17,7 @@ async fn launch_echo_component(
     let env =
         connect_to_protocol::<fsys::EnvironmentMarker>().expect("error connecting to environment");
     legacy_component_lib::LegacyComponent::run(
-        "fuchsia-pkg://fuchsia.com/legacy_component_lib_tests#meta/echo_server_rust.cmx".into(),
+        "fuchsia-pkg://fuchsia.com/legacy_component_lib_tests#meta/echo_server.cmx".into(),
         start_info,
         env.into(),
         realm_name.into(),

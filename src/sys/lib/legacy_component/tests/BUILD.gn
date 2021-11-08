@@ -10,7 +10,7 @@ rustc_test("legacy_component_lib_tests_bin") {
   testonly = true
   source_root = "legacy_component_lib_tests.rs"
   deps = [
-    "//examples/fidl/legacy/services:echo-rustc",
+    "//examples/components/routing/fidl:echo-rustc",
     "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
@@ -37,7 +37,7 @@ fuchsia_test_component("legacy_component_lib_tests_cmp") {
 
 fuchsia_test_package("legacy_component_lib_tests") {
   test_components = [ ":legacy_component_lib_tests_cmp" ]
-  deps = [ "//examples/fidl/legacy/echo_server_rust:echo-server-rust-cmp" ]
+  deps = [ "//src/sys/test_manager/cmx_runner/tests:echo_legacy_server" ]
 }
 
 group("tests") {
