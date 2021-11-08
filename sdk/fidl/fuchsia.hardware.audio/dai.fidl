@@ -12,10 +12,12 @@ type DaiProperties = table {
     /// Dai type is input or output. Required.
     1: is_input bool;
 
-    /// Name of the DAI interface provider manufacturer.
+    /// Name of the DAI interface provider manufacturer. If not included, the manufacturer is
+    /// unspecified.
     2: manufacturer string:MAX_DAI_UI_STRING_SIZE;
 
-    /// Product name of the DAI interface provider.
+    /// Product name of the DAI interface provider. If not included, the product name is
+    /// unspecified.
     3: product_name string:MAX_DAI_UI_STRING_SIZE;
 };
 

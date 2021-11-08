@@ -10,17 +10,18 @@ type RingBufferProperties = table {
     /// The driver's best estimate of the external delay present in the presentation pipeline for
     /// the chosen format. When precisely synchronizing presentation across multiple entities
     /// (e.g. devices), the external delay should be taken into account.
+    /// If not included `external_delay` is unknown.
     1: external_delay zx.duration;
 
     /// Size (in bytes) representing a temporary buffer used by the driver in order to consume or
-    /// generate the ring buffer contents. The ring buffer contents must be produced and consumed
-    /// at the rate specified with the `CreateRingBuffer` command, however some amount of buffering
-    /// is required when the data is written into and read from the ring buffer. For playback the
-    /// data is consumed by the driver by reading ahead up to `fifo_depth` bytes. For capture the
-    /// data is produced by the driver holding up to `fifo_depth` bytes at the time before
-    /// committing it to main system memory. Hence `fifo_depth` must be taken into account by the
-    /// client when determining either the minimum lead time requirement (for playback) or the
-    /// maximum capture delay (for capture).
+    /// generate the ring buffer contents. Required.
+    /// The ring buffer contents must be produced and consumed at the rate specified with the
+    /// `CreateRingBuffer` command, however some amount of buffering is required when the data is
+    /// written into and read from the ring buffer. For playback the data is consumed by the driver
+    /// by reading ahead up to `fifo_depth` bytes. For capture the data is produced by the driver
+    /// holding up to `fifo_depth` bytes at the time before committing it to main system
+    /// memory. Hence `fifo_depth` must be taken into account by the client when determining either
+    /// the minimum lead time requirement (for playback) or the maximum capture delay (for capture).
     ///
     /// To convert `fifo_depth` to the corresponding number of audio frames, use the frame size
     /// returned by `CreateRingBuffer` in the `StreamConfig` protocol, note that the `fifo_depth`
@@ -45,7 +46,7 @@ type RingBufferProperties = table {
 
     /// When set to true, indicates that clients need to make sure that their data has been flushed
     /// all the way to physical memory (in the case of playback) or that their view of the ring
-    /// buffer will need to be invalidated before read (in the case of capture).
+    /// buffer will need to be invalidated before read (in the case of capture). Required.
     3: needs_cache_flush_or_invalidate bool;
 
     /// The driver's best estimate of the amount of time it takes the hardware to actually start
@@ -60,6 +61,7 @@ type RingBufferProperties = table {
     /// as in a Bluetooth driver. This delay must be taken into account if not getting the initial
     /// audio samples played or captured is not acceptable. If not included, turn_on_delay is
     /// considered 0.
+    /// If not included `turn_on_delay` is unknown.
     4: turn_on_delay zx.duration;
 };
 

@@ -28,7 +28,7 @@ type GainType = strict enum : uint8 {
 
 /// Gain format/parameters.
 type GainFormat = table {
-    /// Specifies what the numbers for gain represent, e.g. a percentage.
+    /// Specifies what the numbers for gain represent, e.g. a percentage. Required.
     1: type GainType;
 
     /// Minimum gain. Required.
@@ -54,6 +54,7 @@ type CodecFormatInfo = table {
     /// The driver's best estimate of the external delay (in nanoseconds) present in the pipeline
     /// for the chosen format. When precisely synchronizing presentation across multiple entities
     /// (e.g. devices), the external delay should be taken into account. Optional.
+    /// If not included `external_delay` is unknown.
     1: external_delay zx.duration;
 
     /// The driver's best estimate of the amount of time (in nanoseconds) it takes the hardware to
@@ -61,6 +62,7 @@ type CodecFormatInfo = table {
     /// It may take some time for the hardware to get into fully operational mode, for example due
     /// a power state change. This delay must be taken into account if not getting the initial audio
     /// samples played or captured is not acceptable. Optional.
+    /// If not included `turn_on_delay` is unknown.
     2: turn_on_delay zx.duration;
 
     /// The driver's best estimate of the amount of time (in nanoseconds) it takes the hardware to
@@ -68,6 +70,7 @@ type CodecFormatInfo = table {
     /// It may take some time for the hardware to get into fully stopped mode, for example due
     /// a power state change. This delay must be taken into account if playback/capture of samples
     /// after a 'Stop' command is not acceptable. Optional.
+    /// If not included `turn_off_delay` is unknown.
     3: turn_off_delay zx.duration;
 };
 
