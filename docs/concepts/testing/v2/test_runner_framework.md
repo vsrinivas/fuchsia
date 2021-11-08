@@ -499,6 +499,8 @@ Protocols:
 
 ```text
 fuchsia.boot.ReadOnlyLog
+fuchsia.boot.RootResource
+fuchsia.exception.Handler
 fuchsia.hwinfo.Board
 fuchsia.hwinfo.Device
 fuchsia.hwinfo.Product

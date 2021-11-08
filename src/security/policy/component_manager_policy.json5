@@ -44,6 +44,7 @@
                     "/core",
                     "/core/appmgr",
                     "/core/debug_serial",
+                    "/core/test_manager/system-tests:**",
                 ],
             },
             {

@@ -60,12 +60,20 @@
         // Needed by some non-hermetic tests
         {
             protocol: [
+                "fuchsia.boot.RootResource",
                 "fuchsia.kernel.RootJobForInspect",
                 "fuchsia.kernel.Stats",
                 "fuchsia.process.Launcher",
                 "fuchsia.scheduler.ProfileProvider",
             ],
             from: "parent",
+            to: "#test_manager",
+        },
+
+        // Needed by some non-hermetic tests.
+        {
+            protocol: [ "fuchsia.exception.Handler" ],
+            from: "#exceptions",
             to: "#test_manager",
         },
         {

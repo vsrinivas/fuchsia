@@ -1,0 +1,22 @@
+{
+    include: [
+        "//sdk/lib/inspect/client.shard.cml",
+        "//sdk/lib/syslog/client.shard.cml",
+        "//src/sys/test_runners/elf/default.shard.cml",
+        "//zircon/system/ulib/devmgr-integration-test/meta/client.shard.cml",
+    ],
+    program: {
+        binary: "test/platform-bus-bti-test",
+    },
+    use: [
+        {
+            protocol: [
+                "fuchsia.boot.RootResource",
+                "fuchsia.exception.Handler",
+            ],
+        },
+    ],
+    facets: {
+        "fuchsia.test": { type: "system" },
+    },
+}
