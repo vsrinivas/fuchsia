@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 use crate::cipd::Cipd;
-use crate::config::FfxConfigWrapper;
 use crate::device::DeviceSpec;
 use crate::tools::HostTools;
 use crate::types::{
     get_sdk_data_dir, read_env_path, FuchsiaPaths, ImageFiles, InTreePaths, SshKeys, VDLArgs,
 };
 use crate::vdl_proto_parser::{get_emu_pid, get_ssh_port};
+use ffx_emulator_common::config::FfxConfigWrapper;
 
 use ansi_term::Colour::*;
 use anyhow::Result;
@@ -34,8 +34,6 @@ use std::sync::Arc;
 use std::thread;
 use std::time;
 use tempfile::{Builder, TempDir};
-
-pub mod config;
 
 mod cipd;
 mod device;
@@ -891,7 +889,7 @@ fn get_product_bundle<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::{SSH_PRIVATE_KEY, SSH_PUBLIC_KEY};
+    use ffx_emulator_common::config::{SSH_PRIVATE_KEY, SSH_PUBLIC_KEY};
     use ffx_emulator_start_args::GpuType;
     use serial_test::serial;
 

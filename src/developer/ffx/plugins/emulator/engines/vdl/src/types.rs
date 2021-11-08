@@ -2,16 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{
-    config::{FfxConfigWrapper, SSH_PRIVATE_KEY, SSH_PUBLIC_KEY},
-    graphics::get_default_graphics,
-    images::Images,
-    tools::Tools,
-};
+use crate::{graphics::get_default_graphics, images::Images, tools::Tools};
 
 use anyhow::{anyhow, Result};
 use errors::ffx_bail;
 use ffx_config::sdk::{Sdk, SdkVersion};
+use ffx_emulator_common::config::{FfxConfigWrapper, SSH_PRIVATE_KEY, SSH_PUBLIC_KEY};
 use ffx_emulator_start_args::{GpuType, StartCommand};
 use home::home_dir;
 use mockall::automock;

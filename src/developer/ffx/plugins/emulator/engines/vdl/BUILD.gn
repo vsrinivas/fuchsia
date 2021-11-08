@@ -29,7 +29,6 @@ if (is_host) {
     edition = "2018"
     sources = [
       "src/cipd.rs",
-      "src/config.rs",
       "src/device.rs",
       "src/graphics.rs",
       "src/images.rs",
@@ -50,6 +49,7 @@ if (is_host) {
       "//src/developer/ffx/lib/errors:lib",
       "//src/developer/ffx/lib/fms",
       "//src/developer/ffx/lib/port_picker",
+      "//src/developer/ffx/plugins/emulator/common:lib",
       "//src/developer/ffx/plugins/emulator/shutdown:ffx_emulator_shutdown_args",
       "//src/developer/ffx/plugins/emulator/start:ffx_emulator_start_args",
       "//src/lib/diagnostics/selectors",

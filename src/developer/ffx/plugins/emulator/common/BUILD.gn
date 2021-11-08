@@ -10,7 +10,16 @@ if (is_host) {
     name = "ffx_emulator_common"
     with_unit_tests = true
     edition = "2018"
-    sources = [ "src/lib.rs" ]
+    sources = [
+      "src/config.rs",
+      "src/lib.rs",
+    ]
+    deps = [
+      "//src/developer/ffx/config:lib",
+      "//src/lib/fuchsia-async",
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:serial_test",
+    ]
   }
 
   group("tests") {

@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use ffx_core::ffx_plugin;
-use ffx_emulator_engines_vdl::{config::FfxConfigWrapper, VDLFiles};
+use ffx_emulator_common::config::FfxConfigWrapper;
+use ffx_emulator_engines_vdl::VDLFiles;
 use ffx_emulator_shutdown_args::ShutdownCommand;
 use fidl_fuchsia_developer_bridge as bridge;
 

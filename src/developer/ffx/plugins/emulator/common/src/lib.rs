@@ -5,3 +5,6 @@
 //! This library contains the shared functions used by multiple emulation engines. Any code placed
 //! in this library may not depend on any other code within the plugin, with the exception of "args"
 //! libraries.
+
+// Provides access to ffx_config properties.
+pub mod config;
