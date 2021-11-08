@@ -11,10 +11,10 @@ executable("component_context_provider_example_bin") {
   sources = [ "component_context_provider_example.cc" ]
 
   deps = [
-    "//examples/fidl/legacy/echo_client_cpp:lib",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
+    "//src/testing/fidl:placeholders",
   ]
 }
 

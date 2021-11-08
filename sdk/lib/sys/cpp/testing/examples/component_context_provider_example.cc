@@ -12,15 +12,15 @@
 
 #include <memory>
 
-#include "examples/fidl/legacy/echo_client_cpp/echo_client_app.h"
+#include <test/placeholders/cpp/fidl.h>
 
 // This test file demonstrates how to use |ComponentContextProvider|.
 
 namespace echo {
 namespace testing {
 
-using fidl::examples::echo::Echo;
-using fidl::examples::echo::EchoPtr;
+using test::placeholders::Echo;
+using test::placeholders::EchoPtr;
 
 // Fake server, which the client under test will be used against
 class FakeEcho : public Echo {
@@ -49,11 +49,31 @@ class FakeEcho : public Echo {
 
 const char FakeEcho::kURL[] = "fake-echo";
 
-class EchoClientAppForTest : public EchoClientApp {
+// Fake implementation of client-side-logic
+class EchoClientAppForTest {
  public:
-  // Expose injecting constructor so we can pass an instrumented Context
   EchoClientAppForTest(std::unique_ptr<sys::ComponentContext> context)
-      : EchoClientApp(std::move(context)) {}
+      : context_(std::move(context)) {}
+
+  test::placeholders::EchoPtr& echo() { return echo_; }
+
+  void Start(std::string server_url) {
+    fidl::InterfaceHandle<fuchsia::io::Directory> directory;
+    fuchsia::sys::LaunchInfo launch_info;
+    launch_info.url = server_url;
+    launch_info.directory_request = directory.NewRequest().TakeChannel();
+    fuchsia::sys::LauncherPtr launcher;
+    context_->svc()->Connect(launcher.NewRequest());
+    launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
+
+    sys::ServiceDirectory echo_provider(std::move(directory));
+    echo_provider.Connect(echo_.NewRequest());
+  }
+
+ private:
+  std::unique_ptr<sys::ComponentContext> context_;
+  fuchsia::sys::ComponentControllerPtr controller_;
+  test::placeholders::EchoPtr echo_;
 };
 
 class TestWithContextExampleTest : public gtest::TestLoopFixture {
