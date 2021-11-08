@@ -1,0 +1,22 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/developer/ffx/build/ffx_plugin.gni")
+
+ffx_plugin("ffx_wlan_ap") {
+  version = "0.1.0"
+  edition = "2018"
+  args_sources = [ "src/args.rs" ]
+  sources = [ "src/lib.rs" ]
+  deps = [
+    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
+    "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy-rustc",
+    "//src/connectivity/wlan/wlancfg/tool/policy:donut-lib",
+    "//src/developer/ffx/plugins/wlan/common:ffx-wlan-common",
+  ]
+  args_deps = [
+    "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy-rustc",
+    "//src/developer/ffx/plugins/wlan/common:ffx-wlan-common",
+  ]
+}

@@ -1,0 +1,21 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/developer/ffx/build/ffx_plugin.gni")
+
+ffx_plugin("ffx_wlan_deprecated") {
+  version = "0.1.0"
+  edition = "2018"
+  args_sources = [ "src/args.rs" ]
+  sources = [ "src/lib.rs" ]
+  deps = [
+    "//sdk/fidl/fuchsia.wlan.product.deprecatedconfiguration:fuchsia.wlan.product.deprecatedconfiguration-rustc",
+    "//src/connectivity/wlan/wlancfg/tool/policy:donut-lib",
+    "//third_party/rust_crates:eui48",
+  ]
+  args_deps = [
+    "//sdk/fidl/fuchsia.wlan.product.deprecatedconfiguration:fuchsia.wlan.product.deprecatedconfiguration-rustc",
+    "//third_party/rust_crates:eui48",
+  ]
+}
