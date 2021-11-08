@@ -1,41 +1,35 @@
-# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_test.gni")
 
-rustc_library("lib") {
-  name = "netemul"
-  edition = "2018"
-
+rustc_test("bridge") {
+  output_name = "netstack_bridge_integration_test"
   deps = [
-    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet-rustc",
-    "//sdk/fidl/fuchsia.hardware.ethertap:fuchsia.hardware.ethertap-rustc",
-    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network-rustc",
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
-    "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",
+    "//sdk/fidl/fuchsia.net.debug:fuchsia.net.debug-rustc",
     "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces-rustc",
+    "//sdk/fidl/fuchsia.net.interfaces.admin:fuchsia.net.interfaces.admin-rustc",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket-rustc",
-    "//src/connectivity/lib/fidl_fuchsia_net_stack_ext",
+    "//src/connectivity/lib/net-declare",
+    "//src/connectivity/lib/net-types",
     "//src/connectivity/lib/ping",
-    "//src/connectivity/network/testing/netemul-v2/fidl:fuchsia.netemul-rustc",
-    "//src/connectivity/network/testing/netemul/lib/fidl:network-rustc",
-    "//src/lib/fdio/rust:fdio",
+    "//src/connectivity/network/testing/netemul/rust:lib",
+    "//src/connectivity/network/tests/integration/common:netstack_testing_common",
+    "//src/connectivity/network/tests/integration/macros:netstack_testing_macros",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
     "//src/lib/network/fidl_fuchsia_net_interfaces_ext",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:libc",
+    "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:matches",
-    "//third_party/rust_crates:socket2",
+    "//third_party/rust_crates:test-case",
   ]
-
   sources = [ "src/lib.rs" ]
-
   configs -= [ "//build/config/rust:allow_unused_results" ]
 }

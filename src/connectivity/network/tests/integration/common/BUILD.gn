@@ -27,6 +27,7 @@ rustc_library("netstack_testing_common") {
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/connectivity/lib/net-types",
     "//src/connectivity/lib/packet-formats",
+    "//src/connectivity/lib/ping",
     "//src/connectivity/network/testing/netemul-v2/fidl:fuchsia.netemul-rustc",
     "//src/connectivity/network/testing/netemul/rust:lib",
     "//src/lib/diagnostics/data/rust",
@@ -45,10 +46,12 @@ rustc_library("netstack_testing_common") {
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:bitflags",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:itertools",
   ]
   sources = [
     "src/constants.rs",
     "src/lib.rs",
+    "src/ping.rs",
     "src/realms.rs",
   ]
   configs -= [ "//build/config/rust:allow_unused_results" ]

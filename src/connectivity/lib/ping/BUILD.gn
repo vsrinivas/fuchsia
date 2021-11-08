@@ -13,6 +13,7 @@ rustc_library("ping") {
     "src/lib.rs",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket-rustc",
     "//src/connectivity/lib/net-types",
     "//src/lib/fuchsia-async",
     "//src/lib/zerocopy",

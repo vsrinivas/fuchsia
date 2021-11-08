@@ -14,6 +14,7 @@ group("tests") {
 }
 
 tests = [
+  "bridge",
   "dhcp",
   "dns",
   "fidl",

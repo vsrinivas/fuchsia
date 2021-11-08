@@ -10,7 +10,7 @@
 mod fuchsia;
 
 #[cfg(target_os = "fuchsia")]
-pub use fuchsia::new_icmp_socket;
+pub use fuchsia::{new_icmp_socket, IpExt};
 
 use byteorder::NetworkEndian;
 use futures::{ready, Sink, SinkExt as _, Stream, TryStreamExt as _};
@@ -142,7 +142,10 @@ pub trait Ip:
         + Clone
         + Unpin
         + PartialEq
-        + std::fmt::Debug;
+        + std::fmt::Debug
+        + std::fmt::Display
+        + Eq
+        + std::hash::Hash;
 
     /// ICMP socket domain.
     const DOMAIN: socket2::Domain;
@@ -281,9 +284,11 @@ where
 {
     /// Construct a stream from an `IcmpSocket`.
     ///
-    /// `buffer_len` must be greater than or equal to the largest ICMP body expected to be received
-    /// over the socket, otherwise received packets may be truncated. Note that this does not need
-    /// to include the 8-byte overhead of the ICMP header.
+    /// `N` must be set to the length of the largest ICMP body expected
+    /// to be received plus the 8 bytes of overhead due to the ICMP
+    /// header, otherwise received packets may be truncated. Note
+    /// that this does not need to include the 8-byte overhead of
+    /// the ICMP header.
     pub fn new(socket: &'a S) -> Self {
         Self { socket, recv_buf: [0; N], _marker: PhantomData::<I> }
     }

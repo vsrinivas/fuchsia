@@ -22,11 +22,11 @@ use fidl_fuchsia_netstack as fnetstack;
 use fidl_fuchsia_posix_socket as fposix_socket;
 use fuchsia_zircon as zx;
 
-use anyhow::Context as _;
+use anyhow::{anyhow, Context as _};
 use fidl::endpoints::Proxy as _;
 use futures::{
     future::{FutureExt as _, TryFutureExt as _},
-    TryStreamExt as _,
+    SinkExt as _, StreamExt as _, TryStreamExt as _,
 };
 
 type Result<T = ()> = std::result::Result<T, anyhow::Error>;
@@ -322,6 +322,8 @@ impl<'a> TestRealm<'a> {
     }
 
     /// Installs and configures the endpoint in this realm.
+    ///
+    /// Note that if `name` is not `None`, the string must fit within interface name limits.
     pub async fn install_endpoint(
         &self,
         endpoint: TestEndpoint<'a>,
@@ -445,6 +447,83 @@ impl<'a> TestRealm<'a> {
         // Ensure there are no more events sent on the event stream after `OnShutdown`.
         matches::assert_matches!(events[..], [fnetemul::ManagedRealmEvent::OnShutdown {}]);
         Ok(())
+    }
+
+    /// Constructs an ICMP socket.
+    pub async fn icmp_socket<Ip: ping::IpExt>(&self) -> Result<fuchsia_async::net::DatagramSocket> {
+        let sock = self
+            .datagram_socket(
+                Ip::DOMAIN_FIDL,
+                fidl_fuchsia_posix_socket::DatagramSocketProtocol::IcmpEcho,
+            )
+            .await
+            .context("failed to create ICMP datagram socket")?;
+        fuchsia_async::net::DatagramSocket::new_from_socket(sock)
+            .context("failed to create async ICMP datagram socket")
+    }
+
+    /// Sends a single ICMP echo request to `addr`, and waits for the echo reply.
+    pub async fn ping_once<Ip: ping::IpExt>(&self, addr: Ip::Addr, seq: u16) -> Result {
+        let icmp_sock = self.icmp_socket::<Ip>().await?;
+
+        const MESSAGE: &'static str = "hello, world";
+        let (mut sink, mut stream) = ping::new_unicast_sink_and_stream::<
+            Ip,
+            _,
+            { MESSAGE.len() + ping::ICMP_HEADER_LEN },
+        >(&icmp_sock, &addr, MESSAGE.as_bytes());
+
+        let send_fut = sink.send(seq).map_err(anyhow::Error::new);
+        let recv_fut = stream.try_next().map(|r| match r {
+            Ok(Some(got)) if got == seq => Ok(()),
+            Ok(Some(got)) => Err(anyhow!("unexpected echo reply; got: {}, want: {}", got, seq)),
+            Ok(None) => Err(anyhow!("echo reply stream ended unexpectedly")),
+            Err(e) => Err(anyhow::Error::from(e)),
+        });
+
+        let ((), ()) = futures::future::try_join(send_fut, recv_fut)
+            .await
+            .with_context(|| format!("failed to ping from {} to {}", self.name, addr,))?;
+        Ok(())
+    }
+
+    // TODO(https://fxbug.dev/88245): Remove this function when pinging only
+    // once is free from NUD-related issues and is guaranteed to succeed.
+    /// Sends ICMP echo requests to `addr` on a 1-second interval until a response
+    /// is received.
+    pub async fn ping<Ip: ping::IpExt>(&self, addr: Ip::Addr) -> Result {
+        let icmp_sock = self.icmp_socket::<Ip>().await?;
+
+        const MESSAGE: &'static str = "hello, world";
+        let (mut sink, stream) = ping::new_unicast_sink_and_stream::<
+            Ip,
+            _,
+            { MESSAGE.len() + ping::ICMP_HEADER_LEN },
+        >(&icmp_sock, &addr, MESSAGE.as_bytes());
+
+        let mut seq = 0;
+        let mut interval_stream =
+            fuchsia_async::Interval::new(fuchsia_async::Duration::from_seconds(1));
+        let mut stream = stream.fuse();
+        loop {
+            futures::select! {
+                opt = interval_stream.next() => {
+                    let () = opt.ok_or_else(|| anyhow!("ping interval stream ended unexpectedly"))?;
+                    seq += 1;
+                    let () = sink.send(seq).map_err(anyhow::Error::new).await?;
+                }
+                r = stream.try_next() => {
+                    return match r {
+                        Ok(Some(got)) if got <= seq => Ok(()),
+                        Ok(Some(got)) => {
+                            Err(anyhow!("unexpected echo reply; got: {}, want: {}", got, seq))
+                        }
+                        Ok(None) => Err(anyhow!("echo reply stream ended unexpectedly")),
+                        Err(e) => Err(anyhow::Error::from(e)),
+                    };
+                }
+            }
+        }
     }
 }
 
@@ -813,6 +892,18 @@ impl<'a> TestInterface<'a> {
             has_default_ipv6_route: _,
         } = self.get_properties().await?;
         Ok(addresses)
+    }
+
+    /// Gets a fuchsia.net.interfaces/Watcher proxy.
+    pub fn get_interfaces_watcher(&self) -> Result<fidl_fuchsia_net_interfaces::WatcherProxy> {
+        let (watcher, server_end) =
+            fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()
+                .context("failed to create fuchsia.net.interfaces/Watcher proxy")?;
+        let () = self
+            .interface_state
+            .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::EMPTY, server_end)
+            .context("failed to create interface property watcher")?;
+        Ok(watcher)
     }
 
     async fn get_dhcp_client(&self) -> Result<fnet_dhcp::ClientProxy> {

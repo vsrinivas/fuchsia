@@ -4,7 +4,7 @@
 
 #![deny(missing_docs)]
 
-use crate::{IcmpSocket, Ip, TryFromSockAddr as _};
+use crate::{IcmpSocket, Ip, Ipv4, Ipv6, TryFromSockAddr as _};
 use core::task::{Context, Poll};
 use fuchsia_async as fasync;
 use futures::ready;
@@ -53,4 +53,18 @@ where
 /// Create a new ICMP socket.
 pub fn new_icmp_socket<I: Ip>() -> std::io::Result<fasync::net::DatagramSocket> {
     fasync::net::DatagramSocket::new(I::DOMAIN, Some(I::PROTOCOL))
+}
+
+/// Extension trait on [`Ip`] for Fuchsia-specific functionality.
+pub trait IpExt: Ip {
+    /// Socket domain.
+    const DOMAIN_FIDL: fidl_fuchsia_posix_socket::Domain;
+}
+
+impl IpExt for Ipv4 {
+    const DOMAIN_FIDL: fidl_fuchsia_posix_socket::Domain = fidl_fuchsia_posix_socket::Domain::Ipv4;
+}
+
+impl IpExt for Ipv6 {
+    const DOMAIN_FIDL: fidl_fuchsia_posix_socket::Domain = fidl_fuchsia_posix_socket::Domain::Ipv6;
 }
