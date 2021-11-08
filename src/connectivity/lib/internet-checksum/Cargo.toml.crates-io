@@ -1,10 +1,10 @@
 [package]
 name = "internet-checksum"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Joshua Liebow-Feeser <joshlf@google.com>", "Ghanan Gowripalan <ghanan@google.com>", "Zeling Feng <zeling@google.com>"]
 edition = "2018"
 description = "RFC 1071 checksum computation (the \"internet checksum\")"
-license-file = "LICENSE"
+license-file = "../../../../LICENSE"
 repository = "https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/connectivity/lib/internet-checksum"
 categories = ["algorithms", "network-programming", "no-std"]
 keywords = ["rfc1071", "checksum", "internet", "ipv4", "tcp"]
