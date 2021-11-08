@@ -15,12 +15,12 @@
 const char* capabilities[3] = {"Brightness", "Rgb", "Simple"};
 
 zx_status_t LightsCli::PrintValue(uint32_t idx) {
-  auto result1 = client_.GetInfo(idx);
+  auto result1 = client_->GetInfo(idx);
   if ((result1.status() != ZX_OK) || result1->result.has_invalid_tag()) {
     printf("Could not get info\n");
     return std::min(result1.status(), ZX_ERR_INTERNAL);
   }
-  auto result2 = client_.GetCurrentBrightnessValue(idx);
+  auto result2 = client_->GetCurrentBrightnessValue(idx);
   if ((result2.status() != ZX_OK) || result2->result.has_invalid_tag()) {
     printf("Could not get value\n");
     return std::min(result2.status(), ZX_ERR_INTERNAL);
@@ -32,7 +32,7 @@ zx_status_t LightsCli::PrintValue(uint32_t idx) {
 }
 
 int LightsCli::SetValue(uint32_t idx, double value) {
-  auto result = client_.SetBrightnessValue(idx, value);
+  auto result = client_->SetBrightnessValue(idx, value);
   if ((result.status() != ZX_OK) || result->result.has_invalid_tag()) {
     printf("Could not set value\n");
     return std::min(result.status(), ZX_ERR_INTERNAL);
@@ -42,7 +42,7 @@ int LightsCli::SetValue(uint32_t idx, double value) {
 }
 
 zx_status_t LightsCli::Summary() {
-  auto result1 = client_.GetNumLights();
+  auto result1 = client_->GetNumLights();
   if (result1.status() != ZX_OK) {
     printf("Could not get count\n");
     return result1.status();
@@ -50,7 +50,7 @@ zx_status_t LightsCli::Summary() {
 
   printf("Total %u lights\n", result1.value().count);
   for (uint32_t i = 0; i < result1.value().count; i++) {
-    auto result2 = client_.GetInfo(i);
+    auto result2 = client_->GetInfo(i);
     if ((result2.status() != ZX_OK) || result2->result.has_invalid_tag()) {
       printf("Could not get capability for light number %u. Skipping.\n", i);
       continue;
