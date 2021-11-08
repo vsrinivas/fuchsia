@@ -127,7 +127,7 @@ class ActiveRanges {
         return values_[2];
       case kMinExtendedTypeValue ... kMaxExtendedTypeValue - 1:
         static_assert(kNumBaseTypes == 3);
-        return values_[kNumBaseTypes + type_val - kMinExtendedTypeValue];
+        return values_[kNumBaseTypes + static_cast<size_t>(type_val - kMinExtendedTypeValue)];
     }
     // Normalize to kReserved if unknown.
     return (*this)[Type::kReserved];

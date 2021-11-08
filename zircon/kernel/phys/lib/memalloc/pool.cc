@@ -411,7 +411,7 @@ std::byte* Pool::PopulateAsBookkeeping(std::byte* addr, uint64_t size) {
   ZX_DEBUG_ASSERT(addr);
   ZX_DEBUG_ASSERT(size <= kMax - reinterpret_cast<uint64_t>(addr));
 
-  memset(addr, 0, size);
+  memset(addr, 0, static_cast<size_t>(size));
   std::byte* end = addr + size;
   while (addr < end && end - addr >= static_cast<int>(sizeof(Node))) {
     unused_.push_back(reinterpret_cast<MemRange*>(addr));
@@ -429,7 +429,7 @@ void Pool::PrintMemoryRanges(const char* prefix, FILE* f) const {
   fprintf(f, "%s: | %-*s | %-*s | Type\n", prefix, kRangeColWidth, "Physical memory range",
           kSizeColWidth, "Size");
   for (const memalloc::MemRange& range : *this) {
-    pretty::FormattedBytes size(range.size);
+    pretty::FormattedBytes size(static_cast<size_t>(range.size));
     std::string_view type = ToString(range.type);
     fprintf(f, "%s: | [0x%016" PRIx64 ", 0x%016" PRIx64 ") | %*s | %-.*s\n",  //
             prefix, range.addr, range.end(),                                  //
