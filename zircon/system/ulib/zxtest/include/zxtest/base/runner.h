@@ -5,6 +5,7 @@
 #ifndef ZXTEST_BASE_RUNNER_H_
 #define ZXTEST_BASE_RUNNER_H_
 
+#include <lib/stdcompat/span.h>
 #include <lib/stdcompat/string_view.h>
 
 #include <atomic>
@@ -285,6 +286,12 @@ class Runner {
   void EnableAsserts() { return test_driver_.EnableAsserts(); }
   void DisableAsserts() { return test_driver_.DisableAsserts(); }
 
+  void PushTrace(zxtest::Message* trace) { scoped_traces_.push_back(trace); }
+
+  void PopTrace() { scoped_traces_.pop_back(); }
+
+  cpp20::span<zxtest::Message*> GetScopedTraces() { return scoped_traces_; }
+
  private:
   friend class RunnerTestPeer;
 
@@ -308,6 +315,9 @@ class Runner {
 
   // List of registered test cases.
   fbl::Vector<TestCase> test_cases_;
+
+  // Store the traces coming from the SCOPED_TRACE() macro.
+  std::vector<zxtest::Message*> scoped_traces_;
 
   // Serves as a |LifecycleObserver| list where events are sent to all subscribed observers.
   internal::EventBroadcaster event_broadcaster_;

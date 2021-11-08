@@ -68,7 +68,7 @@ class FailingTest : public zxtest::Test {
  private:
   void TestBody() {
     Assertion assertion("eq", "a", "1", "b", "2", {.filename = __FILE__, .line_number = __LINE__},
-                        /*is_fatal=*/true);
+                        /*is_fatal=*/true, zxtest::Runner::GetInstance()->GetScopedTraces());
     runner_->NotifyAssertion(assertion);
   }
   Runner* runner_;
@@ -89,7 +89,7 @@ class NonFailingTest : public zxtest::Test {
   void TestBody() {
     runner_->DisableAsserts();
     Assertion assertion("eq", "a", "1", "b", "2", {.filename = __FILE__, .line_number = __LINE__},
-                        /* is_fatal = */ true);
+                        /* is_fatal = */ true, zxtest::Runner::GetInstance()->GetScopedTraces());
     runner_->NotifyAssertion(assertion);
   }
   Runner* runner_;
@@ -111,7 +111,7 @@ class FailingTest2 : public zxtest::Test {
     runner_->DisableAsserts();
     runner_->EnableAsserts();
     Assertion assertion("eq", "a", "1", "b", "2", {.filename = __FILE__, .line_number = __LINE__},
-                        /* is_fatal = */ true);
+                        /* is_fatal = */ true, zxtest::Runner::GetInstance()->GetScopedTraces());
     runner_->NotifyAssertion(assertion);
   }
   Runner* runner_;
@@ -284,7 +284,7 @@ class FakeRepeatingTest : public zxtest::Test {
     ++*counter_;
     if (*counter_ >= fail_at) {
       Assertion assertion("eq", "a", "1", "b", "2", {.filename = __FILE__, .line_number = __LINE__},
-                          /*is_fatal=*/true);
+                          /*is_fatal=*/true, zxtest::Runner::GetInstance()->GetScopedTraces());
       runner_->NotifyAssertion(assertion);
     }
   }
@@ -558,7 +558,7 @@ void TestDriverImplReset() {
   TestDriverImpl driver;
   Assertion assertion("desc", "A", "A", "B", "B",
                       {.filename = kFileName, .line_number = kLineNumber},
-                      /*is_fatal*/ true);
+                      /*is_fatal*/ true, zxtest::Runner::GetInstance()->GetScopedTraces());
 
   driver.OnAssertion(assertion);
   ZX_ASSERT_MSG(!driver.Continue(),
@@ -579,7 +579,7 @@ void TestDriverImplFatalFailureEndsTest() {
   TestDriverImpl driver;
   Assertion assertion("desc", "A", "A", "B", "B",
                       {.filename = kFileName, .line_number = kLineNumber},
-                      /*is_fatal*/ true);
+                      /*is_fatal*/ true, zxtest::Runner::GetInstance()->GetScopedTraces());
 
   ZX_ASSERT_MSG(driver.Continue(), "TestDriverImpl::Continue should return true by default.\n");
   ZX_ASSERT_MSG(!driver.HadAnyFailures(),
@@ -595,7 +595,7 @@ void TestDriverImplNonFatalFailureDoesNotEndTest() {
   TestDriverImpl driver;
   Assertion assertion("desc", "A", "A", "B", "B",
                       {.filename = kFileName, .line_number = kLineNumber},
-                      /*is_fatal*/ false);
+                      /*is_fatal*/ false, zxtest::Runner::GetInstance()->GetScopedTraces());
 
   ZX_ASSERT_MSG(driver.Continue(), "TestDriverImpl::Continue should return true by default.\n");
   ZX_ASSERT_MSG(!driver.HadAnyFailures(),
@@ -632,7 +632,7 @@ void TestDriverImplResetOnTestCompletion() {
     TestDriverImpl driver;
     Assertion assertion("desc", "A", "A", "B", "B",
                         {.filename = kFileName, .line_number = kLineNumber},
-                        /*is_fatal*/ false);
+                        /*is_fatal*/ false, zxtest::Runner::GetInstance()->GetScopedTraces());
 
     driver.OnAssertion(assertion);
     (driver.*complete_fn.complete)(test_case, test_info);

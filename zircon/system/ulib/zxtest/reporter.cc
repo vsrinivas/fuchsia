@@ -138,6 +138,14 @@ void Reporter::OnAssertion(const Assertion& assertion) {
       log_sink_->Write("    Which is: %s\n", assertion.actual_eval().c_str());
     }
   }
+  auto traces = assertion.scoped_traces();
+  if (!traces.empty()) {
+    log_sink_->Write("Test trace:\n");
+    for (auto it = traces.rbegin(); it != traces.rend(); ++it) {
+      log_sink_->Write("%s:%" PRIi64 ": %s\n", (*it)->location().filename,
+                       (*it)->location().line_number, (*it)->text().c_str());
+    }
+  }
   log_sink_->Flush();
 }
 

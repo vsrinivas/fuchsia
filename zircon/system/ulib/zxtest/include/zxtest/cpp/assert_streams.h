@@ -14,7 +14,8 @@
   if ([]() { LIB_ZXTEST_CHECK_RUNNING(); }(); true)                                               \
     if (StreamableAssertion assertion = StreamableAssertion(                                      \
             actual, expected, #actual, #expected, {.filename = file, .line_number = line}, fatal, \
-            LIB_ZXTEST_COMPARE_FN(op), LIB_ZXTEST_DEFAULT_PRINTER, LIB_ZXTEST_DEFAULT_PRINTER);   \
+            LIB_ZXTEST_COMPARE_FN(op), LIB_ZXTEST_DEFAULT_PRINTER, LIB_ZXTEST_DEFAULT_PRINTER,    \
+            zxtest::Runner::GetInstance()->GetScopedTraces());                                    \
         assertion.IsTriggered())                                                                  \
   LIB_ZXTEST_RETURN_TAG(fatal) assertion << desc << " "
 
@@ -23,7 +24,8 @@
     if (StreamableAssertion assertion = StreamableAssertion(                            \
             GetStatus(actual), GetStatus(expected), #actual, #expected,                 \
             {.filename = file, .line_number = line}, fatal, LIB_ZXTEST_COMPARE_FN(op),  \
-            LIB_ZXTEST_STATUS_PRINTER, LIB_ZXTEST_STATUS_PRINTER);                      \
+            LIB_ZXTEST_STATUS_PRINTER, LIB_ZXTEST_STATUS_PRINTER,                       \
+            zxtest::Runner::GetInstance()->GetScopedTraces());                          \
         assertion.IsTriggered())                                                        \
   LIB_ZXTEST_RETURN_TAG(fatal) assertion << desc << " "
 
@@ -37,7 +39,8 @@
               return op(static_cast<const DecayType&>(actual_),                                   \
                         static_cast<const DecayType&>(expected_));                                \
             },                                                                                    \
-            LIB_ZXTEST_DEFAULT_PRINTER, LIB_ZXTEST_DEFAULT_PRINTER);                              \
+            LIB_ZXTEST_DEFAULT_PRINTER, LIB_ZXTEST_DEFAULT_PRINTER,                               \
+            zxtest::Runner::GetInstance()->GetScopedTraces());                                    \
         assertion.IsTriggered())                                                                  \
   LIB_ZXTEST_RETURN_TAG(fatal) assertion << desc << " "
 
@@ -48,12 +51,15 @@
               zxtest::internal::ToPointer(actual), zxtest::internal::ToPointer(expected), #actual, \
               #expected, {.filename = file, .line_number = line}, fatal,                           \
               LIB_ZXTEST_COMPARE_3_FN(op, byte_count), LIB_ZXTEST_HEXDUMP_PRINTER(byte_count),     \
-              LIB_ZXTEST_HEXDUMP_PRINTER(byte_count));                                             \
+              LIB_ZXTEST_HEXDUMP_PRINTER(byte_count),                                              \
+              zxtest::Runner::GetInstance()->GetScopedTraces());                                   \
           assertion.IsTriggered())                                                                 \
   LIB_ZXTEST_RETURN_TAG(fatal) assertion << desc << " "
 
-#define LIB_ZXTEST_FAIL_NO_RETURN(fatal, desc, ...) \
-  StreamableFail({.filename = __FILE__, .line_number = __LINE__}, fatal) << desc << " "
+#define LIB_ZXTEST_FAIL_NO_RETURN(fatal, desc, ...)                      \
+  StreamableFail({.filename = __FILE__, .line_number = __LINE__}, fatal, \
+                 zxtest::Runner::GetInstance()->GetScopedTraces())       \
+      << desc << " "
 
 #define LIB_ZXTEST_ASSERT_ERROR(has_errors, fatal, desc, ...) \
   if ([]() { LIB_ZXTEST_CHECK_RUNNING(); }(); has_errors)     \

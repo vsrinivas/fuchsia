@@ -21,6 +21,8 @@
 #include <zxtest/base/death-statement.h>
 #endif
 
+#include <zxtest/cpp/scoped_trace.h>
+
 namespace {
 
 class CTestWrapper final : public zxtest::Test {
@@ -62,9 +64,9 @@ void zxtest_runner_notify_assertion(const char* desc, const char* expected,
                                     const char* expected_eval, const char* actual,
                                     const char* actual_eval, const char* file, int64_t line,
                                     bool is_fatal) {
-  zxtest::Runner::GetInstance()->NotifyAssertion(
-      zxtest::Assertion(desc, expected, expected_eval, actual, actual_eval,
-                        {.filename = file, .line_number = line}, is_fatal));
+  zxtest::Runner::GetInstance()->NotifyAssertion(zxtest::Assertion(
+      desc, expected, expected_eval, actual, actual_eval, {.filename = file, .line_number = line},
+      is_fatal, zxtest::Runner::GetInstance()->GetScopedTraces()));
 }
 
 bool zxtest_runner_current_test_has_fatal_failures(void) {
@@ -135,7 +137,8 @@ void zxtest_c_clean_buffer(char** buffer) { free(*buffer); }
 void zxtest_runner_fail_current_test(bool is_fatal, const char* file, int line,
                                      const char* message) {
   zxtest::Runner::GetInstance()->NotifyAssertion(
-      zxtest::Assertion(message, {.filename = file, .line_number = line}, is_fatal));
+      zxtest::Assertion(message, {.filename = file, .line_number = line}, is_fatal,
+                        zxtest::Runner::GetInstance()->GetScopedTraces()));
 }
 
 void zxtest_runner_skip_current_test(const char* file, int line, const char* message) {
@@ -144,6 +147,23 @@ void zxtest_runner_skip_current_test(const char* file, int line, const char* mes
 }
 
 bool zxtest_runner_is_running(void) { return zxtest::Runner::GetInstance()->IsRunning(); }
+
+struct zxtest_scoped_trace_t {
+ public:
+  zxtest_scoped_trace_t(const char* message, const char* filename, uint64_t line)
+      : trace_({.filename = filename, .line_number = static_cast<int64_t>(line)}, message) {}
+
+ private:
+  zxtest::ScopedTrace trace_;
+};
+
+zxtest_scoped_trace_t* zxtest_runner_push_trace(const char* message, const char* filename,
+                                                uint64_t line) {
+  zxtest_scoped_trace_t* trace = new zxtest_scoped_trace_t(message, filename, line);
+  return trace;
+}
+
+void zxtest_runner_pop_trace(struct zxtest_scoped_trace_t** ptr) { delete *ptr; }
 
 #ifdef __Fuchsia__
 bool zxtest_death_statement_execute(zxtest_test_fn_t statement, enum DeathResult result,

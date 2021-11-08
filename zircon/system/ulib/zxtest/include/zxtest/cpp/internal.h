@@ -67,7 +67,7 @@ bool EvaluateStatusCondition(const Actual& actual, const Expected& expected,
   fbl::String actual_value = print_actual(actual_status);
   fbl::String expected_value = print_expected(expected);
   Assertion assertion(description(), expected_symbol, expected_value, actual_symbol, actual_value,
-                      location, is_fatal);
+                      location, is_fatal, zxtest::Runner::GetInstance()->GetScopedTraces());
   zxtest::Runner::GetInstance()->NotifyAssertion(assertion);
   return false;
 }
@@ -88,7 +88,7 @@ bool EvaluateCondition(const Actual& actual, const Expected& expected, const cha
   fbl::String actual_value = print_actual(actual);
   fbl::String expected_value = print_expected(expected);
   Assertion assertion(description(), expected_symbol, expected_value, actual_symbol, actual_value,
-                      location, is_fatal);
+                      location, is_fatal, zxtest::Runner::GetInstance()->GetScopedTraces());
   zxtest::Runner::GetInstance()->NotifyAssertion(assertion);
   return false;
 }

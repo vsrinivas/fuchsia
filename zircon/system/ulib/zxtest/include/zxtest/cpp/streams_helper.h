@@ -58,16 +58,18 @@ class StreamableBase {
 
 class StreamableFail : public StreamableBase {
  public:
-  StreamableFail(const zxtest::SourceLocation location, bool is_fatal)
-      : StreamableBase(location), is_fatal_(is_fatal) {}
+  StreamableFail(const zxtest::SourceLocation location, bool is_fatal,
+                 const cpp20::span<zxtest::Message*> traces)
+      : StreamableBase(location), is_fatal_(is_fatal), traces_(traces) {}
 
   virtual ~StreamableFail() {
     zxtest::Runner::GetInstance()->NotifyAssertion(
-        zxtest::Assertion(stream_.str(), location_, is_fatal_));
+        zxtest::Assertion(stream_.str(), location_, is_fatal_, traces_));
   }
 
  private:
   bool is_fatal_ = false;
+  cpp20::span<zxtest::Message*> traces_;
 };
 
 class StreamableAssertion : public StreamableBase {
@@ -77,11 +79,13 @@ class StreamableAssertion : public StreamableBase {
   StreamableAssertion(const Actual& actual, const Expected& expected, const char* actual_symbol,
                       const char* expected_symbol, const zxtest::SourceLocation location,
                       bool is_fatal, const CompareOp& compare, const PrintActual& print_actual,
-                      const PrintExpected& print_expected)
+                      const PrintExpected& print_expected,
+                      const cpp20::span<zxtest::Message*> traces)
       : StreamableBase(location),
         actual_symbol_(actual_symbol),
         expected_symbol_(expected_symbol),
-        is_fatal_(is_fatal) {
+        is_fatal_(is_fatal),
+        traces_(traces) {
     actual_value_ = print_actual(actual);
     expected_value_ = print_expected(expected);
     is_triggered_ = !compare(actual, expected);
@@ -89,9 +93,9 @@ class StreamableAssertion : public StreamableBase {
 
   ~StreamableAssertion() {
     if (is_triggered_) {
-      zxtest::Runner::GetInstance()->NotifyAssertion(
-          zxtest::Assertion(stream_.str(), expected_symbol_.value(), expected_value_.value(),
-                            actual_symbol_.value(), actual_value_.value(), location_, is_fatal_));
+      zxtest::Runner::GetInstance()->NotifyAssertion(zxtest::Assertion(
+          stream_.str(), expected_symbol_.value(), expected_value_.value(), actual_symbol_.value(),
+          actual_value_.value(), location_, is_fatal_, traces_));
     }
   }
 
@@ -104,6 +108,7 @@ class StreamableAssertion : public StreamableBase {
   std::optional<const char*> expected_symbol_;
   bool is_fatal_ = false;
   bool is_triggered_ = true;
+  cpp20::span<zxtest::Message*> traces_;
 };
 
 class StreamableSkip : public StreamableBase {

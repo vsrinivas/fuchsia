@@ -897,3 +897,10 @@ TEST(ZxTestCAssertionTest, AssertSkip) {
   FAIL("Skip test did not skip");
   TEST_CHECKPOINT();
 }
+
+TEST(ZxTestCAssertionTest, ScopedTrace) {
+  TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS, "Failure should have happened.");
+  SCOPED_TRACE("This is a trace.");
+  FAIL();
+  TEST_CHECKPOINT();
+}

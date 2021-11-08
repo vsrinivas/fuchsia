@@ -1203,4 +1203,11 @@ TEST(ZxTestAssertionStreamTest, AssertSkipIsFirstStatement) {
   FAIL();
   TEST_CHECKPOINT();
 }
+
+TEST(ZxTestAssertionStreamTest, ScopedTrace) {
+  TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS, "Failure should have happened.");
+  SCOPED_TRACE("This is a trace.");
+  FAIL();
+  TEST_CHECKPOINT();
+}
 }  // namespace

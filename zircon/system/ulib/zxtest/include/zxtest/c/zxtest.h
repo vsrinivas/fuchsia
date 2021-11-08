@@ -60,6 +60,15 @@ void zxtest_runner_fail_current_test(bool fatal, const char* file, int line_numb
 // Skips the current running test.
 void zxtest_runner_skip_current_test(const char* file, int line, const char* message);
 
+// Declare an opaque type.
+typedef struct zxtest_scoped_trace_t zxtest_scoped_trace_t;
+
+// Use opaque type ptr on the header signatures.
+zxtest_scoped_trace_t* zxtest_runner_push_trace(const char* message, const char* filename,
+                                                uint64_t line);
+
+void zxtest_runner_pop_trace(zxtest_scoped_trace_t** ptr);
+
 #ifdef __Fuchsia__
 // Possible expected results for the death statements.
 enum DeathResult {
@@ -114,6 +123,9 @@ __END_CDECLS
 #define LIB_ZXTEST_SUBSTR(str, substr) (strstr(str, substr) != NULL)
 #define LIB_ZXTEST_BYTEEQ(actual, expected, size) memcmp(actual, expected, size) == 0
 #define LIB_ZXTEST_BYTENE(actual, expected, size) memcmp(actual, expected, size) != 0
+
+#define LIB_ZXTEST_CONCAT_TOKEN(foo, bar) LIB_ZXTEST_CONCAT_TOKEN_IMPL(foo, bar)
+#define LIB_ZXTEST_CONCAT_TOKEN_IMPL(foo, bar) foo##bar
 
 // C specific macros for registering tests.
 #define RUN_ALL_TESTS(argc, argv) zxtest_run_all_tests(argc, argv)
@@ -338,5 +350,10 @@ static void zxtest_clean_buffer(char** buffer) { free(*buffer); }
 #else
 #define LIB_ZXTEST_CHECK_VAR_STATUS(...) LIB_ZXTEST_CHECK_VAR(__VA_ARGS__)
 #endif
+
+#define SCOPED_TRACE(message)                                             \
+  zxtest_scoped_trace_t* LIB_ZXTEST_CONCAT_TOKEN(zxtest_trace_, __LINE__) \
+      __attribute__((unused, cleanup(zxtest_runner_pop_trace))) =         \
+          zxtest_runner_push_trace(message, __FILE__, __LINE__)
 
 #endif  // ZXTEST_C_ZXTEST_H_

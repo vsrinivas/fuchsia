@@ -26,6 +26,8 @@
 #include <zxtest/base/death-statement.h>
 #endif
 
+#include "scoped_trace.h"
+
 // Pre-processor magic to allow EXPECT_ macros not enforce a return type on helper functions.
 #define LIB_ZXTEST_RETURN_IF_FATAL_true \
   do {                                  \
@@ -57,6 +59,9 @@
 
 #define LIB_ZXTEST_TEST_REF_N(TestCase, Test, Tag) TestCase##_##Test##_##Tag##_Ref
 #define LIB_ZXTEST_TEST_REF(TestCase, Test) LIB_ZXTEST_TEST_REF_N(TestCase, Test, 0)
+
+#define LIB_ZXTEST_CONCAT_TOKEN(foo, bar) LIB_ZXTEST_CONCAT_TOKEN_IMPL(foo, bar)
+#define LIB_ZXTEST_CONCAT_TOKEN_IMPL(foo, bar) foo##bar
 
 #define LIB_ZXTEST_DEFAULT_FIXTURE ::zxtest::Test
 #define LIB_ZXTEST_PARAM_FIXTURE ::zxtest::TestWithParam
@@ -217,5 +222,9 @@
     }                                                                                      \
   } while (0)
 #endif  // __Fuchsia__
+
+#define SCOPED_TRACE(message)                                           \
+  zxtest::ScopedTrace LIB_ZXTEST_CONCAT_TOKEN(zxtest_trace_, __LINE__)( \
+      {.filename = __FILE__, .line_number = __LINE__}, message)
 
 #endif  // ZXTEST_CPP_ZXTEST_H_

@@ -5,8 +5,11 @@
 #ifndef ZXTEST_BASE_ASSERTION_H_
 #define ZXTEST_BASE_ASSERTION_H_
 
+#include <lib/stdcompat/span.h>
+
 #include <fbl/string.h>
 #include <zxtest/base/message.h>
+#include <zxtest/base/types.h>
 
 namespace zxtest {
 
@@ -17,8 +20,9 @@ class Assertion {
   Assertion() = delete;
   Assertion(const fbl::String& desc, const fbl::String& expected, const fbl::String& expected_eval,
             const fbl::String& actual, const fbl::String& actual_eval,
-            const SourceLocation& location, bool is_fatal);
-  Assertion(const fbl::String& desc, const SourceLocation& location, bool is_fatal);
+            const SourceLocation& location, bool is_fatal, cpp20::span<zxtest::Message*> traces);
+  Assertion(const fbl::String& desc, const SourceLocation& location, bool is_fatal,
+            cpp20::span<zxtest::Message*> traces);
   Assertion(const Assertion&) = delete;
   Assertion(Assertion&&) noexcept;
   ~Assertion();
@@ -55,6 +59,8 @@ class Assertion {
   // Returns true if this assertions is value based or manually generated.
   bool has_values() const { return has_values_; }
 
+  cpp20::span<zxtest::Message*> scoped_traces() const { return traces_; }
+
  private:
   // Message indicating the nature of the assertion (whether it was expected to be equal, not
   // equal, etc), and the source location.
@@ -66,6 +72,8 @@ class Assertion {
 
   bool is_fatal_;
   bool has_values_;
+
+  cpp20::span<zxtest::Message*> traces_;
 };
 
 }  // namespace zxtest

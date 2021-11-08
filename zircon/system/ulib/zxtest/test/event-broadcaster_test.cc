@@ -226,7 +226,8 @@ void EventBroadcasterOnAssertion() {
 
   internal::EventBroadcaster event_broadcaster;
   Assertion assertion("Value should be equal", "kExpectedValue", "5", "actual_value", "10",
-                      {.filename = "test.cpp", .line_number = 99999}, /*is_fatal*/ false);
+                      {.filename = "test.cpp", .line_number = 99999}, /*is_fatal*/ false,
+                      zxtest::Runner::GetInstance()->GetScopedTraces());
   fbl::Vector<FakeObserver> observers;
   observers.reserve(kNumObservers);
 

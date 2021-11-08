@@ -59,12 +59,13 @@
     }                                                                                             \
   } while (0)
 
-#define LIB_ZXTEST_FAIL_NO_RETURN(fatal, desc, ...)                                 \
-  do {                                                                              \
-    LIB_ZXTEST_CHECK_RUNNING();                                                     \
-    zxtest::Runner::GetInstance()->NotifyAssertion(                                 \
-        zxtest::Assertion(LIB_ZXTEST_DESC_PROVIDER(desc, __VA_ARGS__)(),            \
-                          {.filename = __FILE__, .line_number = __LINE__}, fatal)); \
+#define LIB_ZXTEST_FAIL_NO_RETURN(fatal, desc, ...)                               \
+  do {                                                                            \
+    LIB_ZXTEST_CHECK_RUNNING();                                                   \
+    zxtest::Runner::GetInstance()->NotifyAssertion(                               \
+        zxtest::Assertion(LIB_ZXTEST_DESC_PROVIDER(desc, __VA_ARGS__)(),          \
+                          {.filename = __FILE__, .line_number = __LINE__}, fatal, \
+                          zxtest::Runner::GetInstance()->GetScopedTraces()));     \
   } while (0)
 
 #define LIB_ZXTEST_ASSERT_ERROR(has_errors, fatal, desc, ...) \

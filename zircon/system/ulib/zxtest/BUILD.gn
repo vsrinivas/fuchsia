@@ -31,6 +31,7 @@ zxtest_headers = [
   "include/zxtest/cpp/assert.h",
   "include/zxtest/cpp/assert_streams.h",
   "include/zxtest/cpp/internal.h",
+  "include/zxtest/cpp/scoped_trace.h",
   "include/zxtest/cpp/zxtest.h",
   "include/zxtest/zxtest.h",
 ]
@@ -40,6 +41,7 @@ non_public_headers = [
   "include/zxtest/c/zxtest.h",
   "include/zxtest/cpp/assert.h",
   "include/zxtest/cpp/assert_streams.h",
+  "include/zxtest/cpp/scoped_trace.h",
   "include/zxtest/cpp/zxtest.h",
 ]
 
