@@ -43,7 +43,6 @@ rustc_binary("log_and_crash_component_bin") {
   source_root = "src/log_and_crash.rs"
   deps = [
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
-    "//src/diagnostics/archivist:lib",
     "//src/lib/diagnostics/log/message/rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
