@@ -5,85 +5,87 @@
 package artifactory
 
 import (
-	"encoding/json"
-	"github.com/google/go-cmp/cmp"
-	"go.fuchsia.dev/fuchsia/tools/build"
 	"io/ioutil"
 	"path/filepath"
 	"testing"
+
+	"go.fuchsia.dev/fuchsia/tools/build"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestProductBundleUploads(t *testing.T) {
 	productBundleData := []byte(`{
-		"data": {
-		  "description": "some emulator device",
-		  "device_refs": [
-			"qemu-x64"
-		  ],
-		  "images": [
-			{
-			  "base_uri": "file:/../../..",
-			  "format": "files"
-			}
-		  ],
-		  "name": "core.qemu-x64",
-		  "packages": [
-			{
-			  "format": "files",
-			  "repo_uri": "file:/../../../../amber-files"
-			}
-		  ],
-		  "type": "product_bundle",
-		  "manifests": {
-			"emu": {
-			  "disk_images": [
-				"obj/build/images/fuchsia/fuchsia/fvm.blob.sparse.blk"
-			  ],
-			  "initial_ramdisk": "fuchsia.zbi",
-			  "kernel": "multiboot.bin"
-			}
-		   }
-		},
-		"schema_id": "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json"
-		}`)
+  "data": {
+    "description": "some emulator device",
+    "device_refs": [
+      "qemu-x64"
+    ],
+    "images": [
+      {
+        "base_uri": "file:/../../..",
+        "format": "files"
+      }
+    ],
+    "name": "core.qemu-x64",
+    "packages": [
+      {
+        "format": "files",
+        "repo_uri": "file:/../../../../amber-files"
+      }
+    ],
+    "type": "product_bundle",
+    "manifests": {
+      "emu": {
+        "disk_images": [
+          "obj/build/images/fuchsia/fuchsia/fvm.blob.sparse.blk"
+        ],
+        "initial_ramdisk": "fuchsia.zbi",
+        "kernel": "multiboot.bin"
+	  }
+	}
+  },
+  "schema_id": "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json"
+}`)
 	dir := t.TempDir()
 	productBundlePath := filepath.Join(dir, "product_bundle.json")
 	if err := ioutil.WriteFile(productBundlePath, productBundleData, 0o600); err != nil {
 		t.Fatalf("failed to write to fake product_bundle.json file: %v", err)
 	}
 
-	expectedProductBundle, err := json.MarshalIndent(ProductBundle{
-		SchemaID: "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json",
-		Data: Data{
-			Description: "some emulator device",
-			DeviceRefs:  []string{"qemu-x64"},
-			Images: []*Image{
-				{
-					BaseURI: "file:/..",
-					Format:  "files",
-				},
-			},
-			Type: "product_bundle",
-			Name: "core.qemu-x64",
-			Packages: []*Package{
-				{
-					Format:  "files",
-					RepoURI: "file:/../../packages",
-					BlobURI: "file:/../../blobs",
-				},
-			},
-			Manifests: &Manifests{
-				Emu: &EmuManifest{
-					DiskImages:     []string{"obj/build/images/fuchsia/fuchsia/fvm.blob.sparse.blk"},
-					InitialRamdisk: "fuchsia.zbi",
-					Kernel:         "multiboot.bin",
-				},
-			},
-		},
-	}, "", "  ")
-	if err != nil {
-		t.Fatalf("unable to generate expected product bundle: %v", err)
-	}
+	expectedProductBundle := []byte(`{
+  "data": {
+    "device_refs": [
+      "qemu-x64"
+    ],
+    "images": [
+      {
+        "base_uri": "file:/..",
+        "format": "files"
+      }
+    ],
+    "type": "product_bundle",
+    "name": "core.qemu-x64",
+    "packages": [
+      {
+        "format": "files",
+        "blob_uri": "file:/../../blobs",
+        "repo_uri": "file:/../../packages"
+      }
+    ],
+    "description": "some emulator device",
+    "manifests": {
+      "emu": {
+        "disk_images": [
+          "obj/build/images/fuchsia/fuchsia/fvm.blob.sparse.blk"
+        ],
+        "initial_ramdisk": "fuchsia.zbi",
+        "kernel": "multiboot.bin"
+      }
+    }
+  },
+  "schema_id": "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json"
+}`)
 
 	var tests = []struct {
 		name string
@@ -105,7 +107,7 @@ func TestProductBundleUploads(t *testing.T) {
 			want: &Upload{
 				Compress:    true,
 				Destination: filepath.Join(dir, "images", "product_bundle.json"),
-				Contents:    expectedProductBundle,
+				Contents:    []byte(expectedProductBundle),
 			},
 		},
 		{

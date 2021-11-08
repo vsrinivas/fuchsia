@@ -7,10 +7,11 @@ package artifactory
 import (
 	"encoding/json"
 	"fmt"
-	"go.fuchsia.dev/fuchsia/tools/build"
 	"io/ioutil"
 	"path"
 	"path/filepath"
+
+	"go.fuchsia.dev/fuchsia/tools/build"
 )
 
 const (
@@ -33,23 +34,14 @@ type ProductBundle struct {
 
 // Data contained in the product bundle.
 type Data struct {
-	DeviceRefs  []string     `json:"device_refs"`
-	Images      []*Image     `json:"images"`
-	Type        string       `json:"type"`
-	Name        string       `json:"name"`
-	Packages    []*Package   `json:"packages"`
-	Description string       `json:"description"`
-	Metadata    [][]Metadata `json:"metadata"`
-	Manifests   *Manifests   `json:"manifests,omitempty"`
-}
-
-// Product bundle metadata can be an integer, string, or boolean.
-type Metadata interface{}
-
-// Manifests describing how to boot the product on a device.
-type Manifests struct {
-	Flash *FlashManifest `json:"flash,omitempty"`
-	Emu   *EmuManifest   `json:"emu,omitempty"`
+	DeviceRefs  json.RawMessage `json:"device_refs"`
+	Images      []*Image        `json:"images"`
+	Type        json.RawMessage `json:"type"`
+	Name        json.RawMessage `json:"name"`
+	Packages    []*Package      `json:"packages"`
+	Description json.RawMessage `json:"description"`
+	Metadata    json.RawMessage `json:"metadata,omitempty"`
+	Manifests   json.RawMessage `json:"manifests,omitempty"`
 }
 
 // A set of artifacts necessary to run a physical or virtual device.
@@ -63,46 +55,6 @@ type Package struct {
 type Image struct {
 	BaseURI string `json:"base_uri"`
 	Format  string `json:"format"`
-}
-
-// A manifest that describes how to flash a device.
-type FlashManifest struct {
-	HWRevision string     `json:"hw_revision"`
-	Products   []*Product `json:"products"`
-}
-
-// A name and path corresponding to the partition.
-type Partition struct {
-	Name      string     `json:"name"`
-	Path      string     `json:"path"`
-	Condition *Condition `json:"condition,omitempty"`
-}
-
-// A condition that must be true for a partition to be flashed.
-type Condition struct {
-	Value    string `json:"value"`
-	Variable string `json:"variable"`
-}
-
-// A OEM file that is uploaded followed by a given OEM command.
-type OEMFile struct {
-	Command string `json:"command"`
-	Path    string `json:"path"`
-}
-
-// A named product specification.
-type Product struct {
-	Name                 string       `json:"name"`
-	BootloaderPartitions []*Partition `json:"bootloader_partitions"`
-	OEMFiles             []*OEMFile   `json:"oem_files"`
-	Partitions           []*Partition `json:"partitions"`
-}
-
-// A manifest that describes how to boot an emulator.
-type EmuManifest struct {
-	DiskImages     []string `json:"disk_images"`
-	InitialRamdisk string   `json:"initial_ramdisk"`
-	Kernel         string   `json:"kernel"`
 }
 
 // updateProductManifest reads the product bundle from the build_dir and updates it to match
