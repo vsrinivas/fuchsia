@@ -160,6 +160,7 @@ static void x86_nmi_handler(iframe_t* frame) {
   // stack.  We'd be open to unexpected reentrancy.
   DEBUG_ASSERT(arch_ints_disabled());
 
+  kcounter_add(exceptions_nmi, 1);
   g_cpu_context_exchange.HandleRequest(frame->rbp, *frame);
 }
 
@@ -367,10 +368,6 @@ static void handle_exception_types(iframe_t* frame) {
       kcounter_add(exceptions_debug, 1);
       x86_debug_handler(frame);
       break;
-    case X86_INT_NMI:
-      kcounter_add(exceptions_nmi, 1);
-      x86_nmi_handler(frame);
-      break;
     case X86_INT_BREAKPOINT:
       kcounter_add(exceptions_brkpt, 1);
       x86_breakpoint_handler(frame);
@@ -479,8 +476,18 @@ static void handle_exception_types(iframe_t* frame) {
 
 /* top level x86 exception handler for most exceptions and irqs */
 void x86_exception_handler(iframe_t* frame) {
+  // Is this an NMI?  If so we're going to let a special minimal handler take care of it because
+  // it's important that we don't call any non-reentrant-safe code that may have been interrupted by
+  // the NMI.  In particular, it's crucial that we don't acquire any spinlocks in the NMI handling
+  // path because the NMI could have interrupted the thread while it was holding a spinlock we would
+  // then attempt to (re)acquire.
+  if (unlikely(frame->vector == X86_INT_NMI)) {
+    x86_nmi_handler(frame);
+    return;
+  }
+
   // are we recursing?
-  if (unlikely(arch_blocking_disallowed()) && frame->vector != X86_INT_NMI) {
+  if (unlikely(arch_blocking_disallowed())) {
     exception_die(frame, "recursion in interrupt handler\n");
   }
 
