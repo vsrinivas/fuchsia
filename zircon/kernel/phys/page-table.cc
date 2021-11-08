@@ -4,7 +4,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <lib/memalloc/allocator.h>
 #include <lib/memalloc/pool.h>
 #include <lib/memalloc/range.h>
 #include <lib/page-table/builder-interface.h>

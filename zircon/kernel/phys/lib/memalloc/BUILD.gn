@@ -12,14 +12,12 @@ import("//build/zircon/migrated_targets.gni")
 zx_library("memalloc") {
   sdk = "source"
   sdk_headers = [
-    "lib/memalloc/allocator.h",
     "lib/memalloc/pool.h",
     "lib/memalloc/range.h",
   ]
 
   sources = [
     "algorithm.cc",
-    "allocator.cc",
     "pool.cc",
     "range.cc",
   ]
@@ -27,7 +25,6 @@ zx_library("memalloc") {
   deps = [
     "//sdk/lib/fit",
     "//sdk/lib/stdcompat",
-    "//src/zircon/lib/zircon",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/zxc",
@@ -45,15 +42,10 @@ zx_library("memalloc") {
     # <lib/memalloc/range.h> has #include <lib/fit/function.h>.
     "//sdk/lib/fit:headers",
 
-    # <lib/memalloc/allocator.h> has #include <fbl/intrusive_double_list.h>.
     # <lib/memalloc/pool.h> has #include <fbl/intrusive_double_list.h>.
     "//zircon/system/ulib/fbl:headers",
 
-    # <lib/memalloc/allocator.h> has #include <zx/status.h>.
-    "//src/zircon/lib/zircon:headers",
-
-    # <lib/memalloc/allocator.h> has #include <lib/zx/status.h>.
-    # <lib/memalloc/pool.h> has #include <lib/zx/status.h>.
+    # <lib/memalloc/pool.h> has #include <lib/fitx/result.h>.
     "//zircon/system/ulib/zxc:headers",
   ]
 }
@@ -71,7 +63,6 @@ source_set("testing") {
 test("memalloc-test") {
   sources = [
     "algorithm-test.cc",
-    "allocator-test.cc",
     "pool-test.cc",
   ]
   deps = [

@@ -4,7 +4,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <lib/memalloc/allocator.h>
 #include <stdio.h>
 #include <zircon/boot/image.h>
 

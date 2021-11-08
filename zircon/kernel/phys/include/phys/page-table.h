@@ -12,7 +12,7 @@
 
 #include <ktl/byte.h>
 
-// Forward-declared; fully declared in <lib/memalloc/allocator.h>.
+// Forward-declared; fully declared in <lib/memalloc/pool.h>.
 namespace memalloc {
 class Pool;
 }  // namespace memalloc

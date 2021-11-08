@@ -5,7 +5,6 @@
 // https://opensource.org/licenses/MIT
 
 #include <inttypes.h>
-#include <lib/memalloc/allocator.h>
 #include <lib/zbitl/view.h>
 #include <stdio.h>
 #include <zircon/assert.h>
