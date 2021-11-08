@@ -49,7 +49,7 @@ mkdir -p "${OUTPUT_DIR}"
 LINUX_GIT_HASH="$( cd "${WORKING_DIR}/linux" && git rev-parse --verify HEAD )"
 
 # Copy to the prebuilt directory.
-cp -f "${OUTPUT_DIR}/vm_kernel" "${FUCHSIA_DIR}/prebuilt/virtualization/packages/linux_guest/images/${ARCH}/Image"
+cp -f "${OUTPUT_DIR}/vm_kernel" "${FUCHSIA_DIR}/prebuilt/virtualization/packages/termina_guest/images/${ARCH}/Image"
 
 # Upload to CIPD.
 declare -r CIPD_PATH="fuchsia_internal/linux/linux_kernel-${LINUX_BRANCH}-${ARCH}"
