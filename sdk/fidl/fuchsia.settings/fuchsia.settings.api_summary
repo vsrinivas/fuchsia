@@ -71,7 +71,6 @@ strict enum fuchsia.settings/DeviceType uint32
 protocol/member fuchsia.settings/Display.Set(fuchsia.settings/DisplaySettings settings) -> (fuchsia.settings/Display_Set_Result result)
 protocol/member fuchsia.settings/Display.Watch() -> (fuchsia.settings/DisplaySettings settings)
 protocol/member fuchsia.settings/Display.WatchLightSensor(float32 delta) -> (fuchsia.settings/LightSensorData light_sensor_data)
-protocol/member fuchsia.settings/Display.WatchLightSensor2(float32 delta) -> (fuchsia.settings/LightSensorData light_sensor_data)
 protocol fuchsia.settings/Display
 table/member fuchsia.settings/DisplaySettings.adjusted_auto_brightness float32
 table/member fuchsia.settings/DisplaySettings.auto_brightness bool

@@ -26,20 +26,6 @@ protocol Display {
     ///
     /// If this call fails, it is considered a fatal error and the channel
     /// will be closed.
-    @transitional("Deprecated in favor of WatchLightSensor")
-    WatchLightSensor2(struct {
-        delta float32;
-    }) -> (struct {
-        light_sensor_data LightSensorData;
-    });
-
-    /// Obtains the current data from the light sensor. Returns immediately on
-    /// first call; subsequent calls return when the light sensor value changes
-    ///  by a certain amount measured in lux.
-    ///
-    /// If this call fails, it is considered a fatal error and the channel
-    /// will be closed.
-    @transitional("Future replacement for WatchLightSensor2")
     WatchLightSensor(struct {
         delta float32;
     }) -> (struct {
