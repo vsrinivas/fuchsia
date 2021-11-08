@@ -75,7 +75,7 @@ uint8_t GetGpioValue(const char* gpio_path) {
     return -1;
   }
   auto client = fidl::BindSyncClient(std::move(*client_end));
-  auto res = client.Read();
+  auto res = client->Read();
   if (!res.ok() || res.value().result.is_err()) {
     return -1;
   }
