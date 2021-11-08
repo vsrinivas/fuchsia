@@ -54,12 +54,15 @@ var (
 	noWorkString = "\nninja: no work to do."
 
 	// Allow dirty no-op builds, but only if they appear to be failing on these
-	// paths on Mac where the filesystem has a bug. See https://fxbug.dev/61784.
+	// paths on Mac where the filesystem has a bug that causes it to erroneously
+	// report that system files do not exist when referenced via relative paths.
+	// See https://fxbug.dev/61784.
 	brokenMacPaths = []string{
 		"/usr/bin/env",
 		"/bin/ln",
 		"/bin/bash",
 		"/bin/sh",
+		"/dev/zero",
 	}
 
 	// The following tests should never be considered affected. These tests use
