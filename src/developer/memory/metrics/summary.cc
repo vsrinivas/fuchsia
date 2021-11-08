@@ -21,11 +21,10 @@ const std::vector<const NameMatch> Summary::kNameMatches = {
     {"scudo:.*", "[scudo]"},
     {".*\\.so.*", "[libraries]"}};
 
-Namer::Namer(const std::vector<const NameMatch>& name_matches) {
-  regex_matches_.reserve(name_matches.size());
+Namer::Namer(const std::vector<const NameMatch>& name_matches)
+    : regex_matches_(name_matches.size()) {
   for (const auto& name_match : name_matches) {
-    regex_matches_.push_back(
-        RegexMatch{std::make_unique<re2::RE2>(name_match.regex), name_match.name});
+    regex_matches_.push_back(RegexMatch{std::regex(name_match.regex), name_match.name});
   }
 }
 
@@ -35,7 +34,7 @@ const std::string& Namer::NameForName(const std::string& name) {
     return found_name->second;
   }
   for (const auto& regex_match : regex_matches_) {
-    if (re2::RE2::FullMatch(name, *regex_match.regex)) {
+    if (std::regex_match(name, regex_match.regex)) {
       name_to_name_.emplace(name, regex_match.name);
       return regex_match.name;
     }

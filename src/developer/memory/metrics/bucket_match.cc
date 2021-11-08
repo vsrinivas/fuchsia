@@ -9,8 +9,7 @@
 
 #include <filesystem>
 #include <optional>
-
-#include <re2/re2.h>
+#include <regex>
 
 #include "third_party/rapidjson/include/rapidjson/document.h"
 #include "third_party/rapidjson/include/rapidjson/ostreamwrapper.h"
@@ -23,10 +22,11 @@ BucketMatch::BucketMatch(const std::string& name, const std::string& process,
                          const std::string& vmo, std::optional<int64_t> event_code)
     : name_(name),
       match_all_processes_(process.empty() || process == ".*"),
-      process_(std::make_shared<re2::RE2>(process)),
+      process_(process),
       match_all_vmos_(vmo.empty() || vmo == ".*"),
-      vmo_(std::make_shared<re2::RE2>(vmo)),
-      event_code_(event_code) {}
+      vmo_(vmo),
+      event_code_(event_code) {
+}
 
 bool BucketMatch::ProcessMatch(const Process& process) {
   if (match_all_processes_) {
@@ -36,7 +36,7 @@ bool BucketMatch::ProcessMatch(const Process& process) {
   if (pi != process_match_.end()) {
     return pi->second;
   }
-  bool match = re2::RE2::FullMatch(process.name, *process_);
+  bool match = std::regex_match(process.name, process_);
   process_match_.emplace(process.koid, match);
   return match;
 }
@@ -49,7 +49,7 @@ bool BucketMatch::VmoMatch(const std::string& vmo) {
   if (vi != vmo_match_.end()) {
     return vi->second;
   }
-  bool match = re2::RE2::FullMatch(vmo, *vmo_);
+  bool match = std::regex_match(vmo, vmo_);
   vmo_match_.emplace(vmo, match);
   return match;
 }

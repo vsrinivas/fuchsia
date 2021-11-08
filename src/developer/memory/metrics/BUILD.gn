@@ -18,10 +18,7 @@ source_set("metrics") {
     "watcher.h",
   ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_llcpp",
-    "//third_party/re2",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_llcpp" ]
 
   deps = [
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",

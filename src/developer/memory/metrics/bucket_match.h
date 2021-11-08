@@ -9,11 +9,10 @@
 
 #include <functional>
 #include <optional>
+#include <regex>
 #include <string>
 #include <unordered_map>
 #include <vector>
-
-#include <re2/re2.h>
 
 #include "src/developer/memory/metrics/capture.h"
 #include "src/lib/files/file.h"
@@ -44,9 +43,9 @@ class BucketMatch {
  private:
   const std::string name_;
   bool match_all_processes_;
-  const std::shared_ptr<re2::RE2> process_;  // shared_ptr because RE2 is not movable or copyable
+  const std::regex process_;
   bool match_all_vmos_;
-  const std::shared_ptr<re2::RE2> vmo_;
+  const std::regex vmo_;
   const std::optional<int64_t> event_code_;
 
   // Cache of the matching results against the |process_| regexp.

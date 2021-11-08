@@ -7,12 +7,11 @@
 
 #include <zircon/types.h>
 
+#include <regex>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-
-#include <re2/re2.h>
 
 #include "src/developer/memory/metrics/capture.h"
 
@@ -62,7 +61,7 @@ class Namer {
 
  private:
   struct RegexMatch {
-    std::unique_ptr<re2::RE2> regex;  // unique_ptr because RE2 is not movable
+    std::regex regex;
     std::string name;
   };
 
