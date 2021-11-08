@@ -13,6 +13,7 @@ use {
     },
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
     fuchsia_async as fasync,
+    io_util::file::{AsyncFile, AsyncGetSizeExt},
     std::fs,
     std::path::{Path, PathBuf},
     std::vec::Vec,
@@ -209,6 +210,22 @@ async fn read_factory_files_from_alpha_store() -> Result<(), Error> {
 async fn read_factory_files_from_alpha_store_missing_files_fail() -> Result<(), Error> {
     let dir_proxy = connect_to_factory_store_provider!(AlphaFactoryStoreProviderMarker);
     read_file_from_proxy(&dir_proxy, "alpha_bad").await.unwrap_err();
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn read_factory_files_from_alpha_store_reports_correct_size() -> Result<(), Error> {
+    let dir_proxy = connect_to_factory_store_provider!(AlphaFactoryStoreProviderMarker);
+    let path = format!("{}/{}", DATA_FILE_PATH, "alpha_file");
+    let expected_contents =
+        fs::read(&path).expect(&format!("Unable to read expected file: {}", &path));
+
+    let file =
+        io_util::open_file(&dir_proxy, &PathBuf::from("alpha"), io_util::OPEN_RIGHT_READABLE)?;
+    let mut async_file = AsyncFile::from_proxy(file);
+    let reported_size = async_file.get_size().await?;
+
+    assert_eq!(expected_contents.len() as u64, reported_size);
     Ok(())
 }
 

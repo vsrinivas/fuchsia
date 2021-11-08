@@ -30,20 +30,19 @@ use {
     fuchsia_async::{self as fasync},
     fuchsia_bootfs::BootfsParser,
     fuchsia_component::server::ServiceFs,
-    fuchsia_syslog as syslog,
-    fuchsia_vfs_pseudo_fs::{
-        directory::{self, entry::DirectoryEntry},
-        file::simple::read_only,
-        tree_builder::TreeBuilder,
-    },
-    fuchsia_zircon as zx,
+    fuchsia_syslog as syslog, fuchsia_zircon as zx,
     futures::{lock::Mutex, prelude::*, TryStreamExt},
     io_util,
     std::{
         io::{self, Read, Seek},
-        iter,
         path::PathBuf,
         sync::Arc,
+    },
+    vfs::{
+        directory::{self, entry::DirectoryEntry},
+        execution_scope::ExecutionScope,
+        file::vmo::asynchronous::read_only_const,
+        tree_builder::TreeBuilder,
     },
 };
 
@@ -60,7 +59,7 @@ enum IncomingServices {
     WidevineFactoryStoreProvider(WidevineFactoryStoreProviderRequestStream),
 }
 
-fn parse_bootfs<'a>(vmo: zx::Vmo) -> directory::simple::Simple<'static> {
+fn parse_bootfs<'a>(vmo: zx::Vmo) -> Arc<directory::immutable::Simple> {
     let mut tree_builder = TreeBuilder::empty_dir();
 
     match BootfsParser::create_from_vmo(vmo) {
@@ -71,15 +70,15 @@ fn parse_bootfs<'a>(vmo: zx::Vmo) -> directory::simple::Simple<'static> {
                 let name = entry.name;
                 let path_parts: Vec<&str> = name.split("/").collect();
                 let payload = entry.payload;
-                tree_builder
-                    .add_entry(&path_parts, read_only(move || Ok(payload.clone())))
-                    .unwrap_or_else(|err| {
+                tree_builder.add_entry(&path_parts, read_only_const(&payload)).unwrap_or_else(
+                    |err| {
                         syslog::fx_log_err!(
                             "Failed to add bootfs entry {} to directory: {}",
                             name,
                             err
                         );
-                    });
+                    },
+                );
             }
             Err(err) => syslog::fx_log_err!(tag: "BootfsParser", "{}", err),
         }),
@@ -111,7 +110,7 @@ fn load_config_file(path: &str) -> Result<FactoryConfig, Error> {
 async fn create_dir_from_context<'a>(
     context: &'a ConfigContext,
     dir: &'a DirectoryProxy,
-) -> directory::simple::Simple<'static> {
+) -> Arc<directory::immutable::Simple> {
     let mut tree_builder = TreeBuilder::empty_dir();
 
     for (path, dest) in &context.file_path_map {
@@ -146,7 +145,7 @@ async fn create_dir_from_context<'a>(
         if !failed_validation && validated {
             let path_parts: Vec<&str> = dest.split("/").collect();
             let content = contents.to_vec();
-            let file = read_only(move || Ok(content.clone()));
+            let file = read_only_const(&content);
             tree_builder.add_entry(&path_parts, file).unwrap_or_else(|err| {
                 syslog::fx_log_err!("Failed to add file {} to directory: {}", dest, err);
             });
@@ -161,26 +160,22 @@ async fn create_dir_from_context<'a>(
 async fn apply_config(config: Config, dir: Arc<Mutex<DirectoryProxy>>) -> DirectoryProxy {
     let (directory_proxy, directory_server_end) = create_proxy::<DirectoryMarker>().unwrap();
 
-    fasync::Task::spawn(async move {
-        let dir_mtx = dir.clone();
+    let dir_mtx = dir.clone();
 
-        // We only want to hold this lock to create `dir` so limit the scope of `dir_ref`.
-        let mut dir = {
-            let dir_ref = dir_mtx.lock().await;
-            let context = config.into_context().expect("Failed to convert config into context");
-            create_dir_from_context(&context, &*dir_ref).await
-        };
+    // We only want to hold this lock to create `dir` so limit the scope of `dir_ref`.
+    let dir = {
+        let dir_ref = dir_mtx.lock().await;
+        let context = config.into_context().expect("Failed to convert config into context");
+        create_dir_from_context(&context, &*dir_ref).await
+    };
 
-        dir.open(
-            OPEN_RIGHT_READABLE,
-            MODE_TYPE_DIRECTORY,
-            &mut iter::empty(),
-            ServerEnd::<NodeMarker>::new(directory_server_end.into_channel()),
-        );
-
-        dir.await;
-    })
-    .detach();
+    dir.open(
+        ExecutionScope::new(),
+        OPEN_RIGHT_READABLE,
+        MODE_TYPE_DIRECTORY,
+        vfs::path::Path::dot(),
+        ServerEnd::<NodeMarker>::new(directory_server_end.into_channel()),
+    );
 
     directory_proxy
 }
@@ -218,28 +213,23 @@ async fn open_factory_source(factory_config: FactoryConfig) -> Result<DirectoryP
     match factory_config {
         FactoryConfig::FactoryItems => {
             syslog::fx_log_info!("{}", "Reading from FactoryItems service");
-            fasync::Task::spawn(async move {
-                let mut factory_items_directory = fetch_new_factory_item()
-                    .await
-                    .map(|vmo| parse_bootfs(vmo))
-                    .unwrap_or_else(|err| {
-                        syslog::fx_log_err!(
-                            "Failed to get factory item, returning empty item list: {}",
-                            err
-                        );
-                        directory::simple::empty()
-                    });
+            let factory_items_directory =
+                fetch_new_factory_item().await.map(|vmo| parse_bootfs(vmo)).unwrap_or_else(|err| {
+                    syslog::fx_log_err!(
+                        "Failed to get factory item, returning empty item list: {}",
+                        err
+                    );
+                    directory::immutable::simple()
+                });
 
-                factory_items_directory.open(
-                    OPEN_RIGHT_READABLE,
-                    MODE_TYPE_DIRECTORY,
-                    &mut iter::empty(),
-                    ServerEnd::<NodeMarker>::new(directory_server_end.into_channel()),
-                );
+            factory_items_directory.open(
+                ExecutionScope::new(),
+                OPEN_RIGHT_READABLE,
+                MODE_TYPE_DIRECTORY,
+                vfs::path::Path::dot(),
+                ServerEnd::<NodeMarker>::new(directory_server_end.into_channel()),
+            );
 
-                factory_items_directory.await;
-            })
-            .detach();
             Ok(directory_proxy)
         }
         FactoryConfig::Ext4(path) => {
@@ -415,11 +405,7 @@ mod tests {
     use {
         super::*,
         fidl::endpoints::Proxy,
-        fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
-        vfs::{
-            directory::entry::DirectoryEntry as _, execution_scope::ExecutionScope,
-            file::vmo::read_only_static, pseudo_directory,
-        },
+        vfs::{file::vmo::read_only_static, pseudo_directory},
     };
 
     #[fasync::run_singlethreaded(test)]
@@ -435,7 +421,7 @@ mod tests {
         let scope = ExecutionScope::new();
         dir.open(
             scope,
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            OPEN_RIGHT_READABLE,
             MODE_TYPE_DIRECTORY,
             vfs::path::Path::dot(),
             ServerEnd::new(dir_server.into_channel()),
