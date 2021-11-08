@@ -12,7 +12,6 @@ import 'package:internationalization/strings.dart';
 class WiFiSettings extends StatelessWidget {
   final SettingsState state;
   final ValueChanged<String> onChange;
-  static TextEditingController textController = TextEditingController();
 
   const WiFiSettings({required this.state, required this.onChange});
 
@@ -133,7 +132,7 @@ class WiFiSettings extends StatelessWidget {
       elevation: 0,
       title: networkSelected
           ? TextField(
-              controller: textController,
+              controller: state.networkPasswordTextController,
               maxLines: 1,
               decoration: InputDecoration(
                 border: InputBorder.none,
@@ -150,7 +149,8 @@ class WiFiSettings extends StatelessWidget {
           Padding(
             padding: EdgeInsets.fromLTRB(8, 12, 24, 12),
             child: ElevatedButton(
-              onPressed: () => _enterPassword(textController),
+              onPressed: () =>
+                  _enterPassword(state.networkPasswordTextController),
               child: Text(Strings.connect),
             ),
           ),

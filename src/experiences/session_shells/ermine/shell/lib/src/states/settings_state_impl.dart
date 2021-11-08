@@ -166,6 +166,12 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   final Observable<String> _targetNetwork = Observable<String>('');
 
   @override
+  TextEditingController get networkPasswordTextController =>
+      _networkPasswordTextController;
+  final TextEditingController _networkPasswordTextController =
+      TextEditingController();
+
+  @override
   final List<NetworkInformation> availableNetworks =
       ObservableList<NetworkInformation>();
 
