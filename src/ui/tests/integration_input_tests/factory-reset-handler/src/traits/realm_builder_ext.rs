@@ -5,7 +5,7 @@
 use {
     crate::traits::test_realm_component::TestRealmComponent,
     fidl::endpoints::DiscoverableProtocolMarker,
-    fuchsia_component_test::{builder::RealmBuilder, RouteEndpoint},
+    fuchsia_component_test::{RealmBuilder, RouteBuilder, RouteEndpoint},
 };
 
 /// Ergonomic extension of RealmBuilder.
@@ -21,24 +21,24 @@ use {
 #[async_trait::async_trait]
 pub(crate) trait RealmBuilderExt {
     /// Adds `component` to the realm.
-    async fn add(&mut self, component: &(dyn TestRealmComponent + Sync));
+    async fn add(&self, component: &(dyn TestRealmComponent + Sync));
 
     /// Routes `D` from the parent realm to the given `destination` component.
-    fn route_from_parent<D: DiscoverableProtocolMarker>(
-        &mut self,
+    async fn route_from_parent<D: DiscoverableProtocolMarker>(
+        &self,
         destination: &(dyn TestRealmComponent + Sync),
     );
 
     /// Routes `D` from the given `source` component to the parent realm.
-    fn route_to_parent<D: DiscoverableProtocolMarker>(
-        &mut self,
+    async fn route_to_parent<D: DiscoverableProtocolMarker>(
+        &self,
         source: &(dyn TestRealmComponent + Sync),
     );
 
     /// Routes `D` from the given `source` component to the given `destination`
     /// component. Both components must be part of the test realm.
-    fn route_to_peer<D: DiscoverableProtocolMarker>(
-        &mut self,
+    async fn route_to_peer<D: DiscoverableProtocolMarker>(
+        &self,
         source: &(dyn TestRealmComponent + Sync),
         destination: &(dyn TestRealmComponent + Sync),
     );
@@ -46,52 +46,56 @@ pub(crate) trait RealmBuilderExt {
 
 #[async_trait::async_trait]
 impl RealmBuilderExt for RealmBuilder {
-    async fn add(&mut self, component: &(dyn TestRealmComponent + Sync)) {
-        RealmBuilder::add_component(self, component.moniker().clone(), component.source())
-            .await
-            .unwrap();
+    async fn add(&self, component: &(dyn TestRealmComponent + Sync)) {
+        component.add_to_builder(&self).await;
 
         // Route `fuchsia.logger.LogSink` to `component`. This ensures that `component`s
         // logs go to the test log, rather than the global syslog. (The capability from
         // the parent realm is set up to connect to the test runner; without that, the
         // messages probably go to `stdout`, and then from `stdout` to the global syslog.)
-        self.route_from_parent::<fidl_fuchsia_logger::LogSinkMarker>(component);
+        self.route_from_parent::<fidl_fuchsia_logger::LogSinkMarker>(component).await;
     }
 
-    fn route_from_parent<D: DiscoverableProtocolMarker>(
-        &mut self,
+    async fn route_from_parent<D: DiscoverableProtocolMarker>(
+        &self,
         destination: &(dyn TestRealmComponent + Sync),
     ) {
-        RealmBuilder::add_protocol_route::<D>(
-            self,
-            RouteEndpoint::above_root(),
-            vec![RouteEndpoint::component(destination.moniker().to_string())],
+        RealmBuilder::add_route(
+            &self,
+            RouteBuilder::protocol_marker::<D>()
+                .source(RouteEndpoint::above_root())
+                .targets(vec![RouteEndpoint::component(destination.moniker().to_string())]),
         )
+        .await
         .unwrap();
     }
 
-    fn route_to_parent<D: DiscoverableProtocolMarker>(
-        &mut self,
+    async fn route_to_parent<D: DiscoverableProtocolMarker>(
+        &self,
         source: &(dyn TestRealmComponent + Sync),
     ) {
-        RealmBuilder::add_protocol_route::<D>(
-            self,
-            RouteEndpoint::component(source.moniker().to_string()),
-            vec![RouteEndpoint::above_root()],
+        RealmBuilder::add_route(
+            &self,
+            RouteBuilder::protocol_marker::<D>()
+                .source(RouteEndpoint::component(source.moniker().to_string()))
+                .targets(vec![RouteEndpoint::above_root()]),
         )
+        .await
         .unwrap();
     }
 
-    fn route_to_peer<D: DiscoverableProtocolMarker>(
-        &mut self,
+    async fn route_to_peer<D: DiscoverableProtocolMarker>(
+        &self,
         source: &(dyn TestRealmComponent + Sync),
         destination: &(dyn TestRealmComponent + Sync),
     ) {
-        RealmBuilder::add_protocol_route::<D>(
-            self,
-            RouteEndpoint::component(source.moniker().to_string()),
-            vec![RouteEndpoint::component(destination.moniker().to_string())],
+        RealmBuilder::add_route(
+            &self,
+            RouteBuilder::protocol_marker::<D>()
+                .source(RouteEndpoint::component(source.moniker().to_string()))
+                .targets(vec![RouteEndpoint::component(destination.moniker().to_string())]),
         )
+        .await
         .unwrap();
     }
 }

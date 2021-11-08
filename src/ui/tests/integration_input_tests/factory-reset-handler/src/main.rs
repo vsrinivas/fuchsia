@@ -13,7 +13,7 @@ use {
         traits::realm_builder_ext::RealmBuilderExt as _,
     },
     fidl_fuchsia_ui_pointerinjector as pointerinjector,
-    fuchsia_component_test::{builder::RealmBuilder, Moniker, RealmInstance},
+    fuchsia_component_test::{Moniker, RealmBuilder, RealmInstance},
     futures::StreamExt,
     input_synthesis::{modern_backend, synthesizer},
 };
@@ -27,7 +27,7 @@ async fn assemble_realm(
     pointer_injector_mock: PointerInjectorMock,
     factory_reset_mock: FactoryResetMock,
 ) -> RealmInstance {
-    let mut b = RealmBuilder::new().await.expect("Failed to create RealmBuilder");
+    let b = RealmBuilder::new().await.expect("Failed to create RealmBuilder");
 
     // Declare packaged components.
     let scenic = PackagedComponent::new_from_legacy_url(
@@ -59,38 +59,44 @@ async fn assemble_realm(
     // Allow Scenic to access the capabilities it needs. Capabilities that can't
     // be run hermetically are routed from the parent realm. The remainder are
     // routed from peers.
-    b.route_from_parent::<fidl_fuchsia_tracing_provider::RegistryMarker>(&scenic);
-    b.route_from_parent::<fidl_fuchsia_sysmem::AllocatorMarker>(&scenic);
-    b.route_from_parent::<fidl_fuchsia_vulkan_loader::LoaderMarker>(&scenic);
-    b.route_from_parent::<fidl_fuchsia_scheduler::ProfileProviderMarker>(&scenic);
-    b.route_to_peer::<fidl_fuchsia_hardware_display::ProviderMarker>(&display_provider, &scenic);
-    b.route_to_peer::<fidl_fuchsia_cobalt::LoggerFactoryMarker>(&cobalt, &scenic);
+    b.route_from_parent::<fidl_fuchsia_tracing_provider::RegistryMarker>(&scenic).await;
+    b.route_from_parent::<fidl_fuchsia_sysmem::AllocatorMarker>(&scenic).await;
+    b.route_from_parent::<fidl_fuchsia_vulkan_loader::LoaderMarker>(&scenic).await;
+    b.route_from_parent::<fidl_fuchsia_scheduler::ProfileProviderMarker>(&scenic).await;
+    b.route_to_peer::<fidl_fuchsia_hardware_display::ProviderMarker>(&display_provider, &scenic)
+        .await;
+    b.route_to_peer::<fidl_fuchsia_cobalt::LoggerFactoryMarker>(&cobalt, &scenic).await;
 
     // Allow the display provider to access the capabilities it needs. None of these
     // capabilities can be run hermetically, so they are all routed from the parent
     // realm.
-    b.route_from_parent::<fidl_fuchsia_tracing_provider::RegistryMarker>(&display_provider);
-    b.route_from_parent::<fidl_fuchsia_sysmem::AllocatorMarker>(&display_provider);
+    b.route_from_parent::<fidl_fuchsia_tracing_provider::RegistryMarker>(&display_provider).await;
+    b.route_from_parent::<fidl_fuchsia_sysmem::AllocatorMarker>(&display_provider).await;
 
     // Allow the input pipeline to access the capabilities it needs. All of these
     // capabilities are run hermetically, so they are all routed from peers.
-    b.route_to_peer::<fidl_fuchsia_ui_scenic::ScenicMarker>(&scenic, &input_pipeline);
-    b.route_to_peer::<fidl_fuchsia_ui_pointerinjector::RegistryMarker>(&scenic, &input_pipeline);
-    b.route_to_peer::<fidl_fuchsia_media_sounds::PlayerMarker>(&sound_player_mock, &input_pipeline);
+    b.route_to_peer::<fidl_fuchsia_ui_scenic::ScenicMarker>(&scenic, &input_pipeline).await;
+    b.route_to_peer::<fidl_fuchsia_ui_pointerinjector::RegistryMarker>(&scenic, &input_pipeline)
+        .await;
+    b.route_to_peer::<fidl_fuchsia_media_sounds::PlayerMarker>(&sound_player_mock, &input_pipeline)
+        .await;
     b.route_to_peer::<fidl_fuchsia_ui_pointerinjector_configuration::SetupMarker>(
         &pointer_injector_mock,
         &input_pipeline,
-    );
+    )
+    .await;
     b.route_to_peer::<fidl_fuchsia_recovery::FactoryResetMarker>(
         &factory_reset_mock,
         &input_pipeline,
-    );
+    )
+    .await;
 
     // Allow tests to inject input reports into the input pipeline.
-    b.route_to_parent::<fidl_fuchsia_input_injection::InputDeviceRegistryMarker>(&input_pipeline);
+    b.route_to_parent::<fidl_fuchsia_input_injection::InputDeviceRegistryMarker>(&input_pipeline)
+        .await;
 
     // Create the test realm.
-    b.build().create().await.expect("Failed to create realm")
+    b.build().await.expect("Failed to create realm")
 }
 
 async fn perform_factory_reset(realm: &RealmInstance) {

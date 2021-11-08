@@ -56,20 +56,28 @@ where
 /// `$component_type`.
 macro_rules! impl_test_realm_component {
     ($component_type:ty) => {
+        #[async_trait::async_trait]
         impl crate::traits::test_realm_component::TestRealmComponent for $component_type {
             fn moniker(&self) -> &Moniker {
                 &self.moniker
             }
 
-            fn source(&self) -> ComponentSource {
+            async fn add_to_builder(&self, builder: &RealmBuilder) {
                 let slf = self.clone();
-                ComponentSource::mock(move |mock_handles| {
-                    Box::pin(crate::mocks::serve_clients(
-                        mock_handles,
-                        Self::serve_one_client,
-                        slf.clone(),
-                    ))
-                })
+                builder
+                    .add_mock_child(
+                        self.moniker().clone(),
+                        move |mock_handles| {
+                            Box::pin(crate::mocks::serve_clients(
+                                mock_handles,
+                                Self::serve_one_client,
+                                slf.clone(),
+                            ))
+                        },
+                        ChildProperties::new(),
+                    )
+                    .await
+                    .unwrap();
             }
         }
     };

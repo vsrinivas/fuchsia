@@ -4,31 +4,47 @@
 
 use {
     crate::traits::test_realm_component::TestRealmComponent,
-    fuchsia_component_test::{builder::ComponentSource, Moniker},
+    fuchsia_component_test::{ChildProperties, Moniker, RealmBuilder},
 };
+
+enum LegacyOrModernUrl {
+    LegacyUrl(String),
+    ModernUrl(String),
+}
 
 /// A component which can be instantiated from a Fuchsia package.
 pub(crate) struct PackagedComponent {
     moniker: Moniker,
-    source: ComponentSource,
+    source: LegacyOrModernUrl,
 }
 
 impl PackagedComponent {
     pub(crate) fn new_from_legacy_url(moniker: Moniker, legacy_url: impl Into<String>) -> Self {
-        Self { moniker, source: ComponentSource::LegacyUrl(legacy_url.into()) }
+        Self { moniker, source: LegacyOrModernUrl::LegacyUrl(legacy_url.into()) }
     }
 
     pub(crate) fn new_from_modern_url(moniker: Moniker, modern_url: impl Into<String>) -> Self {
-        Self { moniker, source: ComponentSource::Url(modern_url.into()) }
+        Self { moniker, source: LegacyOrModernUrl::ModernUrl(modern_url.into()) }
     }
 }
 
+#[async_trait::async_trait]
 impl TestRealmComponent for PackagedComponent {
     fn moniker(&self) -> &Moniker {
         &self.moniker
     }
 
-    fn source(&self) -> ComponentSource {
-        self.source.clone()
+    async fn add_to_builder(&self, builder: &RealmBuilder) {
+        match &self.source {
+            LegacyOrModernUrl::LegacyUrl(url) => {
+                builder
+                    .add_legacy_child(self.moniker.clone(), url, ChildProperties::new())
+                    .await
+                    .unwrap();
+            }
+            LegacyOrModernUrl::ModernUrl(url) => {
+                builder.add_child(self.moniker.clone(), url, ChildProperties::new()).await.unwrap();
+            }
+        }
     }
 }

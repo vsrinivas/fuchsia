@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_ui_pointerinjector_configuration::{
         SetupRequest, SetupRequestStream, SetupWatchViewportResponder,
     },
-    fuchsia_component_test::{builder::ComponentSource, Moniker},
+    fuchsia_component_test::{ChildProperties, Moniker, RealmBuilder},
     futures::TryStreamExt,
 };
 
