@@ -24,7 +24,7 @@ using ErrorType = boot_shim::ItemBase::DataZbi::Error;
 constexpr auto Accumulate = [](const memalloc::Pool& pool, auto&& callback,
                                auto sum) -> decltype(sum) {
   std::optional<zbi_mem_range_t> pending;
-  for (const memalloc::MemRange& range : pool) {
+  for (const memalloc::Range& range : pool) {
     const zbi_mem_range_t new_range = {
         .paddr = range.addr,
         .length = range.size,

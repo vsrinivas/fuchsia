@@ -13,7 +13,7 @@
 
 namespace memalloc {
 
-std::ostream& operator<<(std::ostream& stream, MemRange range);
+std::ostream& operator<<(std::ostream& stream, Range range);
 
 }  // namespace memalloc
 

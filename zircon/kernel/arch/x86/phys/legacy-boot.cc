@@ -45,7 +45,7 @@ ktl::span<const ktl::byte> AsBytes(const T& obj) {
 
 void LegacyBootInitMemory() {
   constexpr auto as_memrange =
-      [](auto obj, memalloc::Type type = memalloc::Type::kLegacyBootData) -> memalloc::MemRange {
+      [](auto obj, memalloc::Type type = memalloc::Type::kLegacyBootData) -> memalloc::Range {
     auto bytes = AsBytes(obj);
     return {
         .addr = reinterpret_cast<uint64_t>(bytes.data()),
@@ -68,7 +68,7 @@ void LegacyBootInitMemory() {
 
   // Do not fill in the last three ranges in the array yet; we only need to
   // account for them if they do not lie within the shim's load image.
-  memalloc::MemRange ranges[] = {
+  memalloc::Range ranges[] = {
       {
           .addr = phys_start,
           .size = phys_end - phys_start,
@@ -91,8 +91,8 @@ void LegacyBootInitMemory() {
   }
 
   ktl::array all_ranges = {
-      memalloc::AsMemRanges(gLegacyBoot.mem_config),
-      ktl::span<memalloc::MemRange>({ranges}).subspan(0, num_ranges),
+      memalloc::AsRanges(gLegacyBoot.mem_config),
+      ktl::span<memalloc::Range>({ranges}).subspan(0, num_ranges),
   };
 
   auto& pool = Allocation::GetPool();

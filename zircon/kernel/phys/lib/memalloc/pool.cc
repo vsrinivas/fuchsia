@@ -43,11 +43,11 @@ constexpr std::optional<uint64_t> Align(uint64_t addr, uint64_t alignment) {
 
 }  // namespace
 
-fitx::result<fitx::failed> Pool::Init(cpp20::span<internal::MemRangeIterationContext> state) {
-  MemRangeStream ranges(state);
+fitx::result<fitx::failed> Pool::Init(cpp20::span<internal::RangeIterationContext> state) {
+  RangeStream ranges(state);
 
   const size_t scratch_size = FindNormalizedRangesScratchSize(ranges.size()) * sizeof(void*);
-  MemRange bookkeeping = {
+  Range bookkeeping = {
       // To be set by `find_bookkeeping()`.
       .addr = 0,
       // We want enough bookkeeping to fit our initial pages as well as the
@@ -55,7 +55,7 @@ fitx::result<fitx::failed> Pool::Init(cpp20::span<internal::MemRangeIterationCon
       .size = *Align(ranges.size() * sizeof(Node) + scratch_size, kBookkeepingChunkSize),
       .type = Type::kPoolBookkeeping,
   };
-  auto find_bookkeeping = [&bookkeeping](const MemRange& range) {
+  auto find_bookkeeping = [&bookkeeping](const Range& range) {
     ZX_DEBUG_ASSERT(range.type == Type::kFreeRam);
     // Align past the null pointer region, as bookkeeping is not permitted to
     // be allocated from there.
@@ -89,7 +89,7 @@ fitx::result<fitx::failed> Pool::Init(cpp20::span<internal::MemRangeIterationCon
 
   ranges.reset();
   bool alloc_failure = false;
-  auto process_range = [this, &alloc_failure](const MemRange& range) {
+  auto process_range = [this, &alloc_failure](const Range& range) {
     if (auto result = NewNode(range); result.is_error()) {
       alloc_failure = true;
       return false;
@@ -118,11 +118,11 @@ fitx::result<fitx::failed> Pool::Init(cpp20::span<internal::MemRangeIterationCon
   return UpdateFreeRamSubranges(Type::kNullPointerRegion, 0, kNullPointerRegionEnd);
 }
 
-fitx::result<fitx::failed, Pool::Node*> Pool::NewNode(const MemRange& range) {
+fitx::result<fitx::failed, Pool::Node*> Pool::NewNode(const Range& range) {
   if (unused_.is_empty()) {
     return fitx::failed();
   }
-  MemRange* node = unused_.pop_back();
+  Range* node = unused_.pop_back();
   ZX_DEBUG_ASSERT(node);
   node->addr = range.addr;
   node->size = range.size;
@@ -130,7 +130,7 @@ fitx::result<fitx::failed, Pool::Node*> Pool::NewNode(const MemRange& range) {
   return fitx::ok(static_cast<Node*>(node));
 }
 
-const MemRange* Pool::GetContainingRange(uint64_t addr) {
+const Range* Pool::GetContainingRange(uint64_t addr) {
   auto it = GetContainingNode(addr, 1);
   return it == ranges_.end() ? nullptr : &*it;
 }
@@ -148,7 +148,7 @@ fitx::result<fitx::failed, uint64_t> Pool::Allocate(Type type, uint64_t size, ui
     addr = std::move(result).value();
   }
 
-  const MemRange allocated{.addr = addr, .size = size, .type = type};
+  const Range allocated{.addr = addr, .size = size, .type = type};
   if (auto result = InsertSubrange(allocated); result.is_error()) {
     return result.take_error();
   } else {
@@ -168,7 +168,7 @@ fitx::result<fitx::failed, uint64_t> Pool::FindAllocatable(Type type, uint64_t s
 
   // We use a simple first-fit approach, ultimately assuming that allocation
   // patterns will not create a lot of fragmentation.
-  for (const MemRange& range : *this) {
+  for (const Range& range : *this) {
     if (range.type != Type::kFreeRam) {
       continue;
     }
@@ -214,7 +214,7 @@ fitx::result<fitx::failed> Pool::Free(uint64_t addr, uint64_t size) {
 
   ZX_ASSERT(it->type != Type::kPoolBookkeeping);
   ZX_ASSERT(IsExtendedType(it->type));
-  const MemRange range{.addr = addr, .size = size, .type = Type::kFreeRam};
+  const Range range{.addr = addr, .size = size, .type = Type::kFreeRam};
   if (auto status = InsertSubrange(range, it); status.is_error()) {
     return status.take_error();
   } else {
@@ -243,7 +243,7 @@ fitx::result<fitx::failed> Pool::UpdateFreeRamSubranges(Type type, uint64_t addr
     if (addr < it->end() && it->type == Type::kFreeRam) {
       uint64_t first = std::max(it->addr, addr);
       uint64_t last = std::min(it->end(), addr + size);
-      const MemRange range{.addr = first, .size = last - first, .type = type};
+      const Range range{.addr = first, .size = last - first, .type = type};
       if (auto status = InsertSubrange(range, it); status.is_error()) {
         return status.take_error();
       } else {
@@ -257,7 +257,7 @@ fitx::result<fitx::failed> Pool::UpdateFreeRamSubranges(Type type, uint64_t addr
 }
 
 fitx::result<fitx::failed, Pool::mutable_iterator> Pool::InsertSubrange(
-    const MemRange& range, std::optional<mutable_iterator> parent_it) {
+    const Range& range, std::optional<mutable_iterator> parent_it) {
   auto it = parent_it.value_or(GetContainingNode(range.addr, range.size));
   ZX_DEBUG_ASSERT(it != ranges_.end());
 
@@ -316,7 +316,7 @@ fitx::result<fitx::failed, Pool::mutable_iterator> Pool::InsertSubrange(
   it->size = range.addr - it->addr;
   ranges_.insert(next, node);
 
-  MemRange after = {
+  Range after = {
       .addr = range.end(),
       .size = containing_end - range.end(),
       .type = it->type,
@@ -337,8 +337,7 @@ Pool::mutable_iterator Pool::GetContainingNode(uint64_t addr, uint64_t size) {
 
   // Despite the name, this function gives us the first range that is
   // lexicographically >= [addr, addr + size)
-  auto next =
-      std::lower_bound(ranges_.begin(), ranges_.end(), MemRange{.addr = addr, .size = size});
+  auto next = std::lower_bound(ranges_.begin(), ranges_.end(), Range{.addr = addr, .size = size});
   uint64_t range_end = addr + size;
   if (next != ranges_.end() && addr >= next->addr) {
     return range_end <= next->end() ? next : ranges_.end();
@@ -395,7 +394,7 @@ void Pool::TryToEnsureTwoBookkeepingNodes() {
   ZX_ASSERT(ptr);
   PopulateAsBookkeeping(ptr, kBookkeepingChunkSize);
 
-  const MemRange bookkeeping = {
+  const Range bookkeeping = {
       .addr = addr,
       .size = kBookkeepingChunkSize,
       .type = Type::kPoolBookkeeping,
@@ -414,7 +413,7 @@ std::byte* Pool::PopulateAsBookkeeping(std::byte* addr, uint64_t size) {
   memset(addr, 0, static_cast<size_t>(size));
   std::byte* end = addr + size;
   while (addr < end && end - addr >= static_cast<int>(sizeof(Node))) {
-    unused_.push_back(reinterpret_cast<MemRange*>(addr));
+    unused_.push_back(reinterpret_cast<Range*>(addr));
     addr += sizeof(Node);
   }
   return addr;
@@ -428,7 +427,7 @@ void Pool::PrintMemoryRanges(const char* prefix, FILE* f) const {
 
   fprintf(f, "%s: | %-*s | %-*s | Type\n", prefix, kRangeColWidth, "Physical memory range",
           kSizeColWidth, "Size");
-  for (const memalloc::MemRange& range : *this) {
+  for (const memalloc::Range& range : *this) {
     pretty::FormattedBytes size(static_cast<size_t>(range.size));
     std::string_view type = ToString(range.type);
     fprintf(f, "%s: | [0x%016" PRIx64 ", 0x%016" PRIx64 ") | %*s | %-.*s\n",  //

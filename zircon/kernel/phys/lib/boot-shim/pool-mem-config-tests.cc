@@ -61,7 +61,7 @@ TEST(BootShimTests, PoolMemConfigItem) {
   EXPECT_TRUE(zbi.take_error().is_ok());
 
   // Now actually initialize the pool.
-  memalloc::MemRange test_pool_ranges[] = {
+  memalloc::Range test_pool_ranges[] = {
       {
           .addr = 0,
           .size = kChunkSize * 1000,
@@ -73,7 +73,7 @@ TEST(BootShimTests, PoolMemConfigItem) {
           .type = memalloc::Type::kReserved,
       },
   };
-  EXPECT_TRUE(pool.Init(std::array{cpp20::span<memalloc::MemRange>(test_pool_ranges)}).is_ok());
+  EXPECT_TRUE(pool.Init(std::array{cpp20::span<memalloc::Range>(test_pool_ranges)}).is_ok());
   auto alloc_result = pool.Allocate(memalloc::Type::kPoolTestPayload, kChunkSize * 100);
   ASSERT_TRUE(alloc_result.is_ok());
   EXPECT_EQ(kChunkSize * 52, alloc_result.value());

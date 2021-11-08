@@ -21,9 +21,9 @@ constexpr uint64_t kMax = std::numeric_limits<uint64_t>::max();
 
 namespace {
 
-constexpr uint64_t GetLeft(const MemRange& range) { return range.addr; }
+constexpr uint64_t GetLeft(const Range& range) { return range.addr; }
 
-constexpr uint64_t GetRight(const MemRange& range) {
+constexpr uint64_t GetRight(const Range& range) {
   return GetLeft(range) + std::min(kMax - GetLeft(range), range.size);
 }
 
@@ -48,7 +48,7 @@ class Interval {
   constexpr Interval(uint64_t left, uint64_t right)
       : left_(left >= right ? 0 : left), right_(left >= right ? 0 : right) {}
 
-  constexpr Interval(const MemRange& range) : Interval(GetLeft(range), GetRight(range)) {}
+  constexpr Interval(const Range& range) : Interval(GetLeft(range), GetRight(range)) {}
 
   constexpr bool empty() const { return Left() == Right(); }
 
@@ -85,7 +85,7 @@ class Interval {
     right_ = empty() ? other.right_ : std::max(Right(), other.Right());
   }
 
-  constexpr MemRange AsRamRange() const {
+  constexpr Range AsRamRange() const {
     return {.addr = Left(), .size = Right() - Left(), .type = Type::kFreeRam};
   }
 
@@ -97,7 +97,7 @@ class Interval {
 enum class EndpointType { kLeft, kRight };
 
 struct Endpoint {
-  const MemRange* range;
+  const Range* range;
   EndpointType type;
 
   constexpr bool IsLeft() const { return type == EndpointType::kLeft; }
@@ -177,11 +177,11 @@ class ActiveRanges {
 
 }  // namespace
 
-const MemRange* MemRangeStream::operator()() {
+const Range* RangeStream::operator()() {
   static constexpr auto at_end = [](const auto& ctx) { return ctx.it_ == ctx.ranges_.end(); };
 
   // Dereferencing a cpp20::span iterator returns a reference.
-  constexpr auto to_ptr = [](auto it) -> const MemRange* { return &(*it); };
+  constexpr auto to_ptr = [](auto it) -> const Range* { return &(*it); };
 
   // We want to take the lexicographic minimum among the ranges currently
   // pointed to by the context.
@@ -202,8 +202,8 @@ const MemRange* MemRangeStream::operator()() {
   return to_ptr(state_it->it_++);
 }
 
-void FindNormalizedRamRanges(MemRangeStream ranges, MemRangeCallback cb) {
-  // Having sorted lexicographically on range endpoints (as MemRangeStream
+void FindNormalizedRamRanges(RangeStream ranges, RangeCallback cb) {
+  // Having sorted lexicographically on range endpoints (as RangeStream
   // does) is crucial to the following logic. With this ordering, given a range
   // of interest, the moment we come across a range disjoint from it, we know
   // that all subsequent ranges will similarly be disjoint. This allows us to
@@ -220,7 +220,7 @@ void FindNormalizedRamRanges(MemRangeStream ranges, MemRangeCallback cb) {
   // Tracks the last contiguous range of memory that is the union of all
   // non-RAM types.
   Interval current_non_ram;
-  for (const MemRange* range = ranges(); range != nullptr; range = ranges()) {
+  for (const Range* range = ranges(); range != nullptr; range = ranges()) {
     Interval interval(*range);
     if (interval.empty()) {
       continue;
@@ -281,8 +281,8 @@ void FindNormalizedRamRanges(MemRangeStream ranges, MemRangeCallback cb) {
   }
 }
 
-fitx::result<fitx::failed> FindNormalizedRanges(MemRangeStream ranges, cpp20::span<void*> scratch,
-                                                MemRangeCallback cb) {
+fitx::result<fitx::failed> FindNormalizedRanges(RangeStream ranges, cpp20::span<void*> scratch,
+                                                RangeCallback cb) {
   if (ranges.empty()) {
     return fitx::ok();
   }
@@ -301,7 +301,7 @@ fitx::result<fitx::failed> FindNormalizedRanges(MemRangeStream ranges, cpp20::sp
 
   cpp20::span<Endpoint> endpoints{reinterpret_cast<Endpoint*>(scratch.data()), 2 * ranges.size()};
   for (size_t i = 0; i < ranges.size(); ++i) {
-    const MemRange* range = ranges();
+    const Range* range = ranges();
     ZX_DEBUG_ASSERT(range);
     endpoints[2 * i] = {range, EndpointType::kLeft};
     endpoints[2 * i + 1] = {range, EndpointType::kRight};

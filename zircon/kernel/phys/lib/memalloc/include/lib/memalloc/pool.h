@@ -54,9 +54,8 @@ class Pool {
   struct NodeTraits;
 
   // The internal doubly-linked list type whose iterators - which are public
-  // API - deference as const MemRange&.
-  using List =
-      fbl::DoublyLinkedList<MemRange*, fbl::DefaultObjectTag, fbl::SizeOrder::N, NodeTraits>;
+  // API - deference as const Range&.
+  using List = fbl::DoublyLinkedList<Range*, fbl::DefaultObjectTag, fbl::SizeOrder::N, NodeTraits>;
 
  public:
   // Pool decouples the memory tracked by it from the dynamic memory it
@@ -125,7 +124,7 @@ class Pool {
   // Pool's initial bookkeeping.
   //
   template <size_t N>
-  fitx::result<fitx::failed> Init(std::array<cpp20::span<MemRange>, N> ranges) {
+  fitx::result<fitx::failed> Init(std::array<cpp20::span<Range>, N> ranges) {
     return Init(ranges, std::make_index_sequence<N>());
   }
 
@@ -137,19 +136,19 @@ class Pool {
 
   bool empty() const { return ranges_.is_empty(); }
 
-  const MemRange& front() const {
+  const Range& front() const {
     ZX_ASSERT(!empty());
     return *begin();
   }
 
-  const MemRange& back() const {
+  const Range& back() const {
     ZX_ASSERT(!empty());
     return *std::prev(end());
   }
 
   // Returns a pointer to the tracked, normalized range containing the
   // provided address, if one exists.
-  const MemRange* GetContainingRange(uint64_t addr);
+  const Range* GetContainingRange(uint64_t addr);
 
   // Attempts to allocate memory out of free RAM of the prescribed type, size,
   // and alignment, and with the given largest possible address. The provided
@@ -200,9 +199,9 @@ class Pool {
   using TypeUpdateFunc = fit::inline_function<void(Type&)>;
 
   // Custom node struct defined so that List's iterators dereference instead as
-  // const MemRange&.
-  struct Node : public MemRange {
-    using State = fbl::DoublyLinkedListNodeState<MemRange*, fbl::NodeOptions::AllowClearUnsafe>;
+  // const Range&.
+  struct Node : public Range {
+    using State = fbl::DoublyLinkedListNodeState<Range*, fbl::NodeOptions::AllowClearUnsafe>;
 
     State node_;
   };
@@ -210,16 +209,16 @@ class Pool {
   struct NodeTraits {
     using NodeState = typename Node::State;
 
-    static NodeState& node_state(MemRange& element) { return static_cast<Node&>(element).node_; }
+    static NodeState& node_state(Range& element) { return static_cast<Node&>(element).node_; }
   };
 
   // Ultimately deferred to as the actual initialization routine.
-  fitx::result<fitx::failed> Init(cpp20::span<internal::MemRangeIterationContext> state);
+  fitx::result<fitx::failed> Init(cpp20::span<internal::RangeIterationContext> state);
 
   template <size_t... I>
-  fitx::result<fitx::failed> Init(std::array<cpp20::span<MemRange>, sizeof...(I)> ranges,
+  fitx::result<fitx::failed> Init(std::array<cpp20::span<Range>, sizeof...(I)> ranges,
                                   std::index_sequence<I...> seq) {
-    std::array state{internal::MemRangeIterationContext(ranges[I])...};
+    std::array state{internal::RangeIterationContext(ranges[I])...};
     return Init({state});
   }
 
@@ -232,7 +231,7 @@ class Pool {
 
   // On success, returns disconnected node with the given range information;
   // fails if there is insufficient bookkeeping space for the new node.
-  fitx::result<fitx::failed, Node*> NewNode(const MemRange& range);
+  fitx::result<fitx::failed, Node*> NewNode(const Range& range);
 
   // Insert creates a new node for a range that is expected to already be a
   // subrange of an existing node. No policy checking is done to determine
@@ -241,7 +240,7 @@ class Pool {
   // optimization if known, the iterator pointing to the parent node may be
   // provided.
   fitx::result<fitx::failed, mutable_iterator> InsertSubrange(
-      const MemRange& range, std::optional<mutable_iterator> parent_it = std::nullopt);
+      const Range& range, std::optional<mutable_iterator> parent_it = std::nullopt);
 
   // Merges into `it` any neighboring nodes with directly adjacent ranges of
   // the same type.

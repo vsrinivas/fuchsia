@@ -21,7 +21,7 @@ void ZbiInitMemory(void* zbi, ktl::span<zbi_mem_range_t> mem_config) {
 
   uint64_t phys_start = reinterpret_cast<uint64_t>(PHYS_LOAD_ADDRESS);
   uint64_t phys_end = reinterpret_cast<uint64_t>(_end);
-  memalloc::MemRange special_memory_ranges[] = {
+  memalloc::Range special_memory_ranges[] = {
       {
           .addr = phys_start,
           .size = phys_end - phys_start,
@@ -34,8 +34,8 @@ void ZbiInitMemory(void* zbi, ktl::span<zbi_mem_range_t> mem_config) {
       },
   };
 
-  ktl::span<memalloc::MemRange> zbi_ranges(memalloc::AsMemRanges(mem_config));
-  ktl::span<memalloc::MemRange> special_ranges(special_memory_ranges);
+  ktl::span<memalloc::Range> zbi_ranges(memalloc::AsRanges(mem_config));
+  ktl::span<memalloc::Range> special_ranges(special_memory_ranges);
 
   auto& pool = Allocation::GetPool();
 

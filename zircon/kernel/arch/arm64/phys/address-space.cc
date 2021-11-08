@@ -129,7 +129,7 @@ void CreateBootstrapPageTable() {
     MapUart(*builder, pool);
   }
 
-  auto map = [map_device_memory, &builder](const memalloc::MemRange& range) {
+  auto map = [map_device_memory, &builder](const memalloc::Range& range) {
     if (range.type == memalloc::Type::kReserved ||
         (range.type == memalloc::Type::kPeripheral && !map_device_memory)) {
       return;
@@ -150,7 +150,7 @@ void CreateBootstrapPageTable() {
   //
   // We merge ranges of kFreeRam or extended type on the fly, mapping the
   // previously constructed range when we have hit a hole or the end.
-  constexpr auto normalize_range = [](const memalloc::MemRange& range) -> memalloc::MemRange {
+  constexpr auto normalize_range = [](const memalloc::Range& range) -> memalloc::Range {
     if (memalloc::IsExtendedType(range.type)) {
       auto normalized = range;
       normalized.type = memalloc::Type::kFreeRam;
@@ -159,8 +159,8 @@ void CreateBootstrapPageTable() {
     return range;
   };
 
-  std::optional<memalloc::MemRange> prev;
-  for (const memalloc::MemRange& raw_range : pool) {
+  std::optional<memalloc::Range> prev;
+  for (const memalloc::Range& raw_range : pool) {
     auto range = normalize_range(raw_range);
     if (!prev) {
       prev = range;

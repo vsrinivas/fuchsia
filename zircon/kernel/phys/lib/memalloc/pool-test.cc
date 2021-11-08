@@ -24,8 +24,8 @@ namespace {
 
 using namespace std::string_view_literals;
 
-using memalloc::MemRange;
 using memalloc::Pool;
+using memalloc::Range;
 using memalloc::Type;
 
 constexpr uint64_t kChunkSize = Pool::kBookkeepingChunkSize;
@@ -40,7 +40,7 @@ constexpr std::string_view kEmptyPrintOut =
     R"""(PREFIX: | Physical memory range                    | Size    | Type
 )""";
 
-void TestPoolInit(Pool& pool, cpp20::span<MemRange> input, bool init_error = false) {
+void TestPoolInit(Pool& pool, cpp20::span<Range> input, bool init_error = false) {
   auto status = pool.Init(std::array{input});
   if (init_error) {
     ASSERT_TRUE(status.is_error());
@@ -49,8 +49,8 @@ void TestPoolInit(Pool& pool, cpp20::span<MemRange> input, bool init_error = fal
   ASSERT_FALSE(status.is_error());
 }
 
-void TestPoolContents(Pool& pool, cpp20::span<const MemRange> expected) {
-  std::vector<const MemRange> actual(pool.begin(), pool.end());
+void TestPoolContents(Pool& pool, cpp20::span<const Range> expected) {
+  std::vector<const Range> actual(pool.begin(), pool.end());
   ASSERT_NO_FATAL_FAILURE(CompareRanges(expected, {actual}));
 }
 
@@ -81,13 +81,13 @@ void TestPoolAllocation(Pool& pool, Type type, uint64_t size, uint64_t alignment
   ASSERT_FALSE(result.is_error());
 
   // The resulting range should now be contained in one of the tracked ranges.
-  const MemRange contained = {
+  const Range contained = {
       .addr = std::move(result).value(),
       .size = size,
       .type = type,
   };
-  auto is_contained = [&pool](const MemRange& subrange) -> bool {
-    for (const MemRange& range : pool) {
+  auto is_contained = [&pool](const Range& subrange) -> bool {
+    for (const Range& range : pool) {
       if (range.addr <= subrange.addr && subrange.end() <= range.end()) {
         return range.type == subrange.type;
       }
@@ -105,7 +105,7 @@ void TestPoolFreeing(Pool& pool, uint64_t addr, uint64_t size, bool free_error =
   // weaker proposition that inclusive endpoints are tracked (and with expected
   // types).
   auto tracked_type = [&pool](uint64_t addr) -> std::optional<Type> {
-    for (const MemRange& range : pool) {
+    for (const Range& range : pool) {
       if (range.addr <= addr && addr < range.end()) {
         return range.type;
       }
@@ -165,7 +165,7 @@ TEST(MemallocPoolTests, NoInputMemory) {
 
 TEST(MemallocPoolTests, NoRam) {
   PoolContext ctx;
-  MemRange ranges[] = {
+  Range ranges[] = {
       // reserved: [0, kChunkSize)
       {
           .addr = 0,
@@ -188,7 +188,7 @@ TEST(MemallocPoolTests, NoRam) {
 TEST(MemallocPoolTests, TooLittleRam) {
   {
     PoolContext ctx;
-    MemRange ranges[] = {
+    Range ranges[] = {
         // RAM: [0, kChunkSize - 1) relative to kUsableMemoryStart
         {
             .addr = kUsableMemoryStart,
@@ -204,7 +204,7 @@ TEST(MemallocPoolTests, TooLittleRam) {
 
   {
     PoolContext ctx;
-    MemRange ranges[] = {
+    Range ranges[] = {
         // reserved: [0, kChunkSize) relative to kUsableMemoryStart
         {
             .addr = kUsableMemoryStart,
@@ -240,7 +240,7 @@ TEST(MemallocPoolTests, TooLittleRam) {
 TEST(MemallocPoolTests, NullPointerRegionIsAvoided) {
   {
     PoolContext ctx;
-    MemRange ranges[] = {
+    Range ranges[] = {
         // RAM: [0, kChunkSize)
         {
             .addr = 0,
@@ -256,7 +256,7 @@ TEST(MemallocPoolTests, NullPointerRegionIsAvoided) {
 
   {
     PoolContext ctx;
-    MemRange ranges[] = {
+    Range ranges[] = {
         // RAM: [kUsableMemoryStart - kChunkSize, kUsableMemoryStart)
         {
             .addr = kUsableMemoryStart - kChunkSize,
@@ -272,7 +272,7 @@ TEST(MemallocPoolTests, NullPointerRegionIsAvoided) {
 
   {
     PoolContext ctx;
-    MemRange ranges[] = {
+    Range ranges[] = {
         // RAM: [0, kUsableMemoryStart)
         {
             .addr = 0,
@@ -290,7 +290,7 @@ TEST(MemallocPoolTests, NullPointerRegionIsAvoided) {
 TEST(MemallocPoolTests, Bookkeeping) {
   {
     PoolContext ctx;
-    MemRange ranges[] = {
+    Range ranges[] = {
         // RAM: [0, kChunkSize) relative to kUsableMemoryStart
         {
             .addr = kUsableMemoryStart,
@@ -299,7 +299,7 @@ TEST(MemallocPoolTests, Bookkeeping) {
         },
     };
 
-    const MemRange expected[] = {
+    const Range expected[] = {
         // bookkeeping: [0, kChunkSize) relative to kUsableMemoryStart
         {
             .addr = kUsableMemoryStart,
@@ -320,7 +320,7 @@ PREFIX: | [0x0000000000010000, 0x0000000000011000) |      4k | bookkeeping
 
   {
     PoolContext ctx;
-    MemRange ranges[] = {
+    Range ranges[] = {
         // RAM: [0, kChunkSize) relative to kUsableMemoryStart
         {
             .addr = kUsableMemoryStart,
@@ -329,7 +329,7 @@ PREFIX: | [0x0000000000010000, 0x0000000000011000) |      4k | bookkeeping
         },
     };
 
-    const MemRange expected[] = {
+    const Range expected[] = {
         // bookkeeping: [0, kChunkSize) relative to kUsableMemoryStart
         {
             .addr = kUsableMemoryStart,
@@ -357,7 +357,7 @@ PREFIX: | [0x0000000000011000, 0x0000000000012000) |      4k | free RAM
 
   {
     PoolContext ctx;
-    MemRange ranges[] = {
+    Range ranges[] = {
         // reserved: [0, kChunkSize) relative to kUsableMemoryStart
         {
             .addr = kUsableMemoryStart,
@@ -372,7 +372,7 @@ PREFIX: | [0x0000000000011000, 0x0000000000012000) |      4k | free RAM
         },
     };
 
-    const MemRange expected[] = {
+    const Range expected[] = {
         // reserved: [0, kChunkSize) relative to kUsableMemoryStart
         {
             .addr = kUsableMemoryStart,
@@ -400,7 +400,7 @@ PREFIX: | [0x0000000000011000, 0x0000000000012000) |      4k | bookkeeping
 
   {
     PoolContext ctx;
-    MemRange ranges[] = {
+    Range ranges[] = {
         // RAM: [kChunkSize/2, 2*kChunkSize) relative to kUsableMemoryStart
         {
             .addr = kUsableMemoryStart + kChunkSize / 2,
@@ -409,7 +409,7 @@ PREFIX: | [0x0000000000011000, 0x0000000000012000) |      4k | bookkeeping
         },
     };
 
-    const MemRange expected[] = {
+    const Range expected[] = {
         // RAM: [kChunkSize/2, kChunkSize) relative to kUsableMemoryStart
         {
             .addr = kUsableMemoryStart + kChunkSize / 2,
@@ -437,7 +437,7 @@ PREFIX: | [0x0000000000011000, 0x0000000000012000) |      4k | bookkeeping
 
   {
     PoolContext ctx;
-    MemRange ranges[] = {
+    Range ranges[] = {
         // RAM: [0, 2*kChunkSize) relative to kUsableMemoryStart
         {
             .addr = kUsableMemoryStart,
@@ -458,7 +458,7 @@ PREFIX: | [0x0000000000011000, 0x0000000000012000) |      4k | bookkeeping
         },
     };
 
-    const MemRange expected[] = {
+    const Range expected[] = {
         // RAM: [0. kChunkSize/2) relative to kUsableMemoryStart
         {
             .addr = kUsableMemoryStart,
@@ -502,7 +502,7 @@ PREFIX: | [0x0000000000012000, 0x0000000000013000) |      4k | bookkeeping
 TEST(MemallocPoolTests, NullPointerRegionIsAutoPopulated) {
   {
     PoolContext ctx;
-    MemRange ranges[] = {
+    Range ranges[] = {
         // free RAM: [0, kUsableMemoryStart + kChunkSize)
         {
             .addr = 0,
@@ -511,7 +511,7 @@ TEST(MemallocPoolTests, NullPointerRegionIsAutoPopulated) {
         },
     };
 
-    const MemRange expected[] = {
+    const Range expected[] = {
         // null pointer region: [0, kUsableMemoryStart)
         {
             .addr = 0,
@@ -539,7 +539,7 @@ PREFIX: | [0x0000000000010000, 0x0000000000011000) |      4k | bookkeeping
 
   {
     PoolContext ctx;
-    MemRange ranges[] = {
+    Range ranges[] = {
         // free RAM: [0, kChunkSize)
         {
             .addr = 0,
@@ -572,7 +572,7 @@ PREFIX: | [0x0000000000010000, 0x0000000000011000) |      4k | bookkeeping
         },
     };
 
-    const MemRange expected[] = {
+    const Range expected[] = {
         // null pointer region: [0, kUsableMemoryStart)
         {
             .addr = 0,
@@ -629,7 +629,7 @@ PREFIX: | [0x0000000000010000, 0x0000000000011000) |      4k | bookkeeping
 
 TEST(MemallocPoolTests, GetContainingRange) {
   PoolContext ctx;
-  MemRange ranges[] = {
+  Range ranges[] = {
       // RAM: [0, 3*kChunkSize) relative to kUsableMemoryStart
       {
           .addr = kUsableMemoryStart,
@@ -638,7 +638,7 @@ TEST(MemallocPoolTests, GetContainingRange) {
       },
   };
 
-  const MemRange expected[] = {
+  const Range expected[] = {
       // bookkeeping: [0, kChunkSize) relative to kUsableMemoryStart
       {
           .addr = kUsableMemoryStart,
@@ -666,7 +666,7 @@ TEST(MemallocPoolTests, GetContainingRange) {
 
 TEST(MemallocPoolTests, NoResourcesAllocation) {
   PoolContext ctx;
-  MemRange ranges[] = {
+  Range ranges[] = {
       // free RAM: [kChunkSize, 3*kChunkSize) relative to kUsableMemoryStart
       {
           .addr = kUsableMemoryStart + kChunkSize,
@@ -674,7 +674,7 @@ TEST(MemallocPoolTests, NoResourcesAllocation) {
           .type = Type::kFreeRam,
       },
   };
-  const MemRange expected[] = {
+  const Range expected[] = {
       // bookkeeping: [0, kChunkSize) relative to kUsableMemoryStart
       {
           .addr = kUsableMemoryStart + kChunkSize,
@@ -714,7 +714,7 @@ TEST(MemallocPoolTests, NoResourcesAllocation) {
 }
 
 TEST(MemallocPoolTests, ExhaustiveAllocation) {
-  MemRange ranges[] = {
+  Range ranges[] = {
       // free RAM: [kChunkSize, 3*kChunkSize) relative to kUsableMemoryStart
       {
           .addr = kUsableMemoryStart + kChunkSize,
@@ -722,7 +722,7 @@ TEST(MemallocPoolTests, ExhaustiveAllocation) {
           .type = Type::kFreeRam,
       },
   };
-  const MemRange expected_before[] = {
+  const Range expected_before[] = {
       // bookkeeping: [0, kChunkSize) relative to kUsableMemoryStart
       {
           .addr = kUsableMemoryStart + kChunkSize,
@@ -736,7 +736,7 @@ TEST(MemallocPoolTests, ExhaustiveAllocation) {
           .type = Type::kFreeRam,
       },
   };
-  const MemRange expected_after[] = {
+  const Range expected_after[] = {
       // bookkeeping: [0, kChunkSize) relative to kUsableMemoryStart
       {
           .addr = kUsableMemoryStart + kChunkSize,
@@ -808,7 +808,7 @@ TEST(MemallocPoolTests, ExhaustiveAllocation) {
 
 TEST(MemallocPoolTests, Freeing) {
   PoolContext ctx;
-  MemRange ranges[] = {
+  Range ranges[] = {
       // RAM: [0, 2*kChunkSize) relative to kUsableMemoryStart
       {
           .addr = kUsableMemoryStart,
@@ -823,7 +823,7 @@ TEST(MemallocPoolTests, Freeing) {
       },
   };
 
-  const MemRange expected[] = {
+  const Range expected[] = {
       // bookkeeping: [0, kChunkSize) relative to kUsableMemoryStart
       {
           .addr = kUsableMemoryStart,
@@ -844,7 +844,7 @@ TEST(MemallocPoolTests, Freeing) {
       },
   };
 
-  const MemRange expected_after[] = {
+  const Range expected_after[] = {
       // bookkeeping: [0, kChunkSize) relative to kUsableMemoryStart
       {
           .addr = kUsableMemoryStart,
@@ -888,7 +888,7 @@ TEST(MemallocPoolTests, Freeing) {
 
 TEST(MemallocPoolTests, FreedAllocations) {
   PoolContext ctx;
-  MemRange ranges[] = {
+  Range ranges[] = {
       // free RAM: [0, 2*kChunkSize) relative to kUsableMemoryStart
       {
           .addr = kUsableMemoryStart,
@@ -896,7 +896,7 @@ TEST(MemallocPoolTests, FreedAllocations) {
           .type = Type::kFreeRam,
       },
   };
-  const MemRange expected[] = {
+  const Range expected[] = {
       // bookkeeping: [0, kChunkSize) relative to kUsableMemoryStart
       {
           .addr = kUsableMemoryStart,
@@ -945,7 +945,7 @@ TEST(MemallocPoolTests, FreedAllocations) {
 
 TEST(MemallocPoolTests, FreeRamSubrangeUpdates) {
   PoolContext ctx;
-  MemRange ranges[] = {
+  Range ranges[] = {
       // RAM: [0, 3*kChunkSize) relative to kUsableMemoryStart
       {
           .addr = kUsableMemoryStart,
@@ -981,7 +981,7 @@ TEST(MemallocPoolTests, FreeRamSubrangeUpdates) {
   ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));
 
   {
-    const MemRange expected[] = {
+    const Range expected[] = {
         // bookkeeping: [0, kChunkSize)
         {
             .addr = kUsableMemoryStart,
@@ -1027,7 +1027,7 @@ TEST(MemallocPoolTests, FreeRamSubrangeUpdates) {
     ASSERT_NO_FATAL_FAILURE(TestPoolFreeRamSubrangeUpdating(ctx.pool, Type::kPoolTestPayload,
                                                             kUsableMemoryStart, 3 * kChunkSize));
 
-    const MemRange expected[] = {
+    const Range expected[] = {
         // bookkeeping: [0, kChunkSize)
         {
             .addr = kUsableMemoryStart,
@@ -1079,7 +1079,7 @@ TEST(MemallocPoolTests, FreeRamSubrangeUpdates) {
     ASSERT_NO_FATAL_FAILURE(TestPoolFreeRamSubrangeUpdating(
         ctx.pool, Type::kPoolTestPayload, kUsableMemoryStart + 3 * kChunkSize, 3 * kChunkSize));
 
-    const MemRange expected[] = {
+    const Range expected[] = {
         // bookkeeping: [0, kChunkSize)
         {
             .addr = kUsableMemoryStart,
@@ -1126,7 +1126,7 @@ TEST(MemallocPoolTests, FreeRamSubrangeUpdates) {
     ASSERT_NO_FATAL_FAILURE(TestPoolFreeRamSubrangeUpdating(ctx.pool, Type::kPoolTestPayload,
                                                             kUsableMemoryStart, 7 * kChunkSize));
 
-    const MemRange expected[] = {
+    const Range expected[] = {
         // bookkeeping: [0, kChunkSize)
         {
             .addr = kUsableMemoryStart,
@@ -1172,7 +1172,7 @@ TEST(MemallocPoolTests, FreeRamSubrangeUpdates) {
 
 TEST(MemallocPoolTests, OutOfMemory) {
   PoolContext ctx;
-  MemRange ranges[] = {
+  Range ranges[] = {
       // free RAM: [0, 2*kChunkSize) relative to kUsableMemoryStart
       {
           .addr = kUsableMemoryStart,
@@ -1193,7 +1193,7 @@ TEST(MemallocPoolTests, OutOfMemory) {
   // Same for frees that subdivide ranges. In this case, we can free one byte
   // from any of the allocated ranges (which were two bytes each).
   {
-    auto it = std::find_if(ctx.pool.begin(), ctx.pool.end(), [](const MemRange& range) {
+    auto it = std::find_if(ctx.pool.begin(), ctx.pool.end(), [](const Range& range) {
       return range.type != Type::kPoolBookkeeping && range.type != Type::kFreeRam && range.size > 1;
     });
     ASSERT_NE(ctx.pool.end(), it);
@@ -1202,7 +1202,7 @@ TEST(MemallocPoolTests, OutOfMemory) {
 
   // Ditto for any weak allocations that result in subdivision.
   {
-    auto it = std::find_if(ctx.pool.begin(), ctx.pool.end(), [](const MemRange& range) {
+    auto it = std::find_if(ctx.pool.begin(), ctx.pool.end(), [](const Range& range) {
       return range.type == Type::kFreeRam && range.size > 1;
     });
     ASSERT_NE(ctx.pool.end(), it);

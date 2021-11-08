@@ -18,7 +18,7 @@
 
 namespace {
 
-using memalloc::MemRange;
+using memalloc::Range;
 
 // What our fuzzer should do.
 enum class Action {
@@ -29,7 +29,7 @@ enum class Action {
 };
 
 // Assumes that `ranges` is sorted.
-bool Contains(const std::vector<MemRange>& ranges, const MemRange& range) {
+bool Contains(const std::vector<Range>& ranges, const Range& range) {
   return std::binary_search(ranges.begin(), ranges.end(), range);
 }
 
@@ -37,15 +37,15 @@ bool Contains(const std::vector<MemRange>& ranges, const MemRange& range) {
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   FuzzedDataProvider provider(data, size);
-  std::vector<MemRange> ram, all;
+  std::vector<Range> ram, all;
 
   const Action action = provider.ConsumeEnum<Action>();
   std::vector<std::byte> bytes = provider.ConsumeRemainingBytes<std::byte>();
-  cpp20::span<MemRange> ranges = RangesFromBytes(bytes);
+  cpp20::span<Range> ranges = RangesFromBytes(bytes);
 
   // Whether we are to exercise FindNormalizedRamRanges().
   if (action == Action::kFindRam || action == Action::kFindBothAndCompare) {
-    auto find_ram = [&ram](const MemRange& range) {
+    auto find_ram = [&ram](const Range& range) {
       ram.push_back(range);
       return true;
     };
@@ -57,7 +57,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
   // Whether we are to exercise FindNormalizedRanges().
   if (action == Action::kFindAll || action == Action::kFindBothAndCompare) {
-    auto find_all = [&all](const MemRange& range) {
+    auto find_all = [&all](const Range& range) {
       all.push_back(range);
       return true;
     };
@@ -76,7 +76,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   // Whether we have exercised both FindNormalizedRamRanges() and
   // FindNormalizedRanges(), and now wish to compare the results.
   if (action == Action::kFindBothAndCompare) {
-    for (const MemRange& range : ram) {
+    for (const Range& range : ram) {
       ZX_ASSERT_MSG(Contains(all, range),
                     "normalized RAM range (%s) not found among all normalized "
                     "ranges:\n%s\noriginal ranges:\n%s",

@@ -100,7 +100,7 @@ constexpr bool IsExtendedType(Type type) {
 
 // A memory range type that is layout-compatible to zbi_mem_range_t, but with
 // the benefit of being able to use extended types.
-struct MemRange {
+struct Range {
   uint64_t addr;
   uint64_t size;
   Type type;
@@ -109,13 +109,13 @@ struct MemRange {
   // has been normalized to not overflow.
   constexpr uint64_t end() const { return addr + size; }
 
-  constexpr bool operator==(const MemRange& other) const {
+  constexpr bool operator==(const Range& other) const {
     return addr == other.addr && size == other.size && type == other.type;
   }
-  constexpr bool operator!=(const MemRange& other) const { return !(*this == other); }
+  constexpr bool operator!=(const Range& other) const { return !(*this == other); }
 
-  // Gives a lexicographic order on MemRange.
-  constexpr bool operator<(const MemRange& other) const {
+  // Gives a lexicographic order on Range.
+  constexpr bool operator<(const Range& other) const {
     return addr < other.addr || (addr == other.addr && size < other.size);
   }
 };
@@ -123,26 +123,25 @@ struct MemRange {
 // We have constrained Type so that the ZBI memory type's value space
 // identically embeds into the lower 2^32 values of Type; the upper 2^32 values
 // is reserved for Type's extensions. Accordingly, in order to coherently
-// recast a zbi_mem_range_t as a MemRange, the former's `reserved` field -
+// recast a zbi_mem_range_t as a Range, the former's `reserved` field -
 // which, layout-wise, corresponds to the upper half of Type - must be zeroed
 // out.
-cpp20::span<MemRange> AsMemRanges(cpp20::span<zbi_mem_range_t> ranges);
+cpp20::span<Range> AsRanges(cpp20::span<zbi_mem_range_t> ranges);
 
 namespace internal {
 
 // Effectively just a span and an iterator. This is used internally to iterate
 // over a variable number of range arrays.
-struct MemRangeIterationContext {
-  MemRangeIterationContext() = default;
+struct RangeIterationContext {
+  RangeIterationContext() = default;
 
   // Lexicographically sorts the ranges on construction.
-  explicit MemRangeIterationContext(cpp20::span<MemRange> ranges)
-      : ranges_(ranges), it_(ranges.begin()) {
+  explicit RangeIterationContext(cpp20::span<Range> ranges) : ranges_(ranges), it_(ranges.begin()) {
     std::sort(ranges_.begin(), ranges_.end());
   }
 
-  cpp20::span<MemRange> ranges_;
-  typename cpp20::span<MemRange>::iterator it_;
+  cpp20::span<Range> ranges_;
+  typename cpp20::span<Range>::iterator it_;
 };
 
 }  // namespace internal

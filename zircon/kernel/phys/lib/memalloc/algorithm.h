@@ -19,13 +19,13 @@
 namespace memalloc {
 
 // Inlined for phys-compatibility, where there is no ambient heap.
-using MemRangeCallback = fit::inline_function<bool(const MemRange&)>;
+using RangeCallback = fit::inline_function<bool(const Range&)>;
 
-// Serializes ranges in lexicographic order from a variable number of MemRange arrays.
-class MemRangeStream {
+// Serializes ranges in lexicographic order from a variable number of Range arrays.
+class RangeStream {
  public:
   // Assumes that each associated array is already in lexicographic ordered.
-  explicit MemRangeStream(cpp20::span<internal::MemRangeIterationContext> state) : state_(state) {
+  explicit RangeStream(cpp20::span<internal::RangeIterationContext> state) : state_(state) {
     ZX_DEBUG_ASSERT(std::all_of(state.begin(), state.end(), [](const auto& ctx) {
       return std::is_sorted(ctx.ranges_.begin(), ctx.ranges_.end());
     }));
@@ -33,7 +33,7 @@ class MemRangeStream {
 
   // Returns the next range in the stream, returning nullptr when all ranges
   // have been streamed (until the stream itself has been reset).
-  const MemRange* operator()();
+  const Range* operator()();
 
   size_t size() const {
     size_t size = 0;
@@ -53,7 +53,7 @@ class MemRangeStream {
   }
 
  private:
-  cpp20::span<internal::MemRangeIterationContext> state_;
+  cpp20::span<internal::RangeIterationContext> state_;
 };
 
 // Say a range among a set is "normalized" if it does not intersect with any of
@@ -67,16 +67,16 @@ class MemRangeStream {
 // This function runs in O(n*log(n)) time, where n is the total number of given
 // ranges.
 //
-void FindNormalizedRamRanges(MemRangeStream ranges, MemRangeCallback cb);
+void FindNormalizedRamRanges(RangeStream ranges, RangeCallback cb);
 
 // Used for streamlined testing.
-inline void FindNormalizedRamRanges(cpp20::span<MemRange> ranges, MemRangeCallback cb) {
-  internal::MemRangeIterationContext ctx(ranges);
-  FindNormalizedRamRanges(MemRangeStream({&ctx, 1}), std::move(cb));
+inline void FindNormalizedRamRanges(cpp20::span<Range> ranges, RangeCallback cb) {
+  internal::RangeIterationContext ctx(ranges);
+  FindNormalizedRamRanges(RangeStream({&ctx, 1}), std::move(cb));
 }
 
 // The size of tne void* scratch space needed for FindNormalizedRanges() below,
-// where `n` is the size of the input MemRangeStream.
+// where `n` is the size of the input RangeStream.
 constexpr size_t FindNormalizedRangesScratchSize(size_t n) { return 4 * n; }
 
 // A variant of the above algorithm that finds all of the normalized ranges in
@@ -86,15 +86,15 @@ constexpr size_t FindNormalizedRangesScratchSize(size_t n) { return 4 * n; }
 //
 // Ranges may overlap only if they are of the same type or one type is
 // kFreeRam; otherwise fitx::failed is returned.
-fitx::result<fitx::failed> FindNormalizedRanges(MemRangeStream ranges, cpp20::span<void*> scratch,
-                                                MemRangeCallback cb);
+fitx::result<fitx::failed> FindNormalizedRanges(RangeStream ranges, cpp20::span<void*> scratch,
+                                                RangeCallback cb);
 
 // Used for streamlined testing.
-inline fitx::result<fitx::failed> FindNormalizedRanges(cpp20::span<MemRange> ranges,
+inline fitx::result<fitx::failed> FindNormalizedRanges(cpp20::span<Range> ranges,
                                                        cpp20::span<void*> scratch,
-                                                       MemRangeCallback cb) {
-  internal::MemRangeIterationContext ctx(ranges);
-  return FindNormalizedRanges(MemRangeStream({&ctx, 1}), scratch, std::move(cb));
+                                                       RangeCallback cb) {
+  internal::RangeIterationContext ctx(ranges);
+  return FindNormalizedRanges(RangeStream({&ctx, 1}), scratch, std::move(cb));
 }
 
 }  // namespace memalloc

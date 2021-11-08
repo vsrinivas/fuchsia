@@ -20,7 +20,7 @@ constexpr uint64_t kMax = std::numeric_limits<uint64_t>::max();
 
 }  // namespace
 
-std::ostream& operator<<(std::ostream& stream, MemRange range) {
+std::ostream& operator<<(std::ostream& stream, Range range) {
   stream << ToString(range.type) << ": ";
   if (range.size == 0) {
     stream << "Ø";

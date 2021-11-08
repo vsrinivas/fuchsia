@@ -55,17 +55,17 @@ std::string_view ToString(Type type) {
   return "unknown"sv;
 }
 
-cpp20::span<MemRange> AsMemRanges(cpp20::span<zbi_mem_range_t> ranges) {
-  static_assert(std::is_standard_layout_v<MemRange>);
+cpp20::span<Range> AsRanges(cpp20::span<zbi_mem_range_t> ranges) {
+  static_assert(std::is_standard_layout_v<Range>);
   static_assert(std::is_standard_layout_v<zbi_mem_range_t>);
-  static_assert(offsetof(MemRange, addr) == offsetof(zbi_mem_range_t, paddr));
-  static_assert(offsetof(MemRange, size) == offsetof(zbi_mem_range_t, length));
-  static_assert(offsetof(MemRange, type) == offsetof(zbi_mem_range_t, type));
+  static_assert(offsetof(Range, addr) == offsetof(zbi_mem_range_t, paddr));
+  static_assert(offsetof(Range, size) == offsetof(zbi_mem_range_t, length));
+  static_assert(offsetof(Range, type) == offsetof(zbi_mem_range_t, type));
 
   for (zbi_mem_range_t& range : ranges) {
     range.reserved = 0;
   }
-  return {reinterpret_cast<MemRange*>(ranges.data()), ranges.size()};
+  return {reinterpret_cast<Range*>(ranges.data()), ranges.size()};
 }
 
 }  // namespace memalloc

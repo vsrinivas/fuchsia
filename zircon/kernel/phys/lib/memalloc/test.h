@@ -22,7 +22,7 @@
 #include <gtest/gtest.h>
 
 #include "algorithm.h"
-#include "ostream.h"  // Enables MemRange auto-stringification in gtest error messages
+#include "ostream.h"  // Enables Range auto-stringification in gtest error messages
 
 //
 // Shared test utilities.
@@ -40,14 +40,14 @@ struct PoolContext {
   });
 };
 
-inline std::string ToString(const memalloc::MemRange& range) {
+inline std::string ToString(const memalloc::Range& range) {
   std::stringstream ss;
   ss << range;
   return ss.str();
 }
 
-template <typename MemRangeIter>
-inline std::string ToString(MemRangeIter first, MemRangeIter last) {
+template <typename RangeIter>
+inline std::string ToString(RangeIter first, RangeIter last) {
   std::string s;
   for (auto it = first; it != last; ++it) {
     s += "  " + ToString(*it) + "\n";
@@ -55,22 +55,22 @@ inline std::string ToString(MemRangeIter first, MemRangeIter last) {
   return s;
 }
 
-inline std::string ToString(const std::vector<const memalloc::MemRange>& ranges) {
+inline std::string ToString(const std::vector<const memalloc::Range>& ranges) {
   return ToString(ranges.begin(), ranges.end());
 }
 
-inline std::string ToString(const cpp20::span<const memalloc::MemRange>& ranges) {
+inline std::string ToString(const cpp20::span<const memalloc::Range>& ranges) {
   return ToString(ranges.begin(), ranges.end());
 }
 
 template <size_t N>
-inline void Shuffle(memalloc::MemRange (&ranges)[N]) {
+inline void Shuffle(memalloc::Range (&ranges)[N]) {
   static std::default_random_engine engine{0xc0ffee};
   std::shuffle(std::begin(ranges), std::end(ranges), engine);
 }
 
-inline void CompareRanges(cpp20::span<const memalloc::MemRange> expected,
-                          cpp20::span<const memalloc::MemRange> actual) {
+inline void CompareRanges(cpp20::span<const memalloc::Range> expected,
+                          cpp20::span<const memalloc::Range> actual) {
   EXPECT_EQ(expected.size(), actual.size());
   size_t num_comparable = std::min(expected.size(), actual.size());
   for (size_t i = 0; i < num_comparable; ++i) {
@@ -87,12 +87,12 @@ inline void CompareRanges(cpp20::span<const memalloc::MemRange> expected,
   }
 }
 
-inline cpp20::span<memalloc::MemRange> RangesFromBytes(const std::vector<std::byte>& bytes) {
+inline cpp20::span<memalloc::Range> RangesFromBytes(const std::vector<std::byte>& bytes) {
   void* ptr = const_cast<void*>(static_cast<const void*>(bytes.data()));
   size_t space = bytes.size();
   for (size_t size = space; size > 0; --size) {
-    if (void* aligned = std::align(alignof(memalloc::MemRange), size, ptr, space); aligned) {
-      return {static_cast<memalloc::MemRange*>(aligned), size / sizeof(memalloc::MemRange)};
+    if (void* aligned = std::align(alignof(memalloc::Range), size, ptr, space); aligned) {
+      return {static_cast<memalloc::Range*>(aligned), size / sizeof(memalloc::Range)};
     }
   }
   return {};

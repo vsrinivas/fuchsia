@@ -19,7 +19,7 @@
 void MapUart(page_table::AddressSpaceBuilderInterface& builder, memalloc::Pool& pool) {
   // Meets the signature expected of uart::BasicIoProvider's constructor.
   auto mapper = [&pool, &builder ](uint64_t uart_mmio_base) -> volatile void* {
-    const memalloc::MemRange* containing = pool.GetContainingRange(uart_mmio_base);
+    const memalloc::Range* containing = pool.GetContainingRange(uart_mmio_base);
     if (!containing) {
       ZX_PANIC("UART registers not encoded among ZBI memory ranges");
     }

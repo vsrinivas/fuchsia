@@ -33,11 +33,11 @@ struct Allocation {
   constexpr uint64_t end() const { return addr + size; }
 };
 
-bool IsValidPoolInitInput(cpp20::span<memalloc::MemRange> ranges) {
+bool IsValidPoolInitInput(cpp20::span<memalloc::Range> ranges) {
   // The valid input spaces of Pool::Init() and FindNormalizedRanges()
   // coincide. Since the latter returns an error, we use that as a proxy to
   // vet inputs to the former (taking that it works as expected for granted).
-  constexpr auto noop = [](const memalloc::MemRange& range) { return true; };
+  constexpr auto noop = [](const memalloc::Range& range) { return true; };
   const size_t scratch_size = memalloc::FindNormalizedRangesScratchSize(ranges.size());
   auto scratch = std::make_unique<void*[]>(scratch_size);
   return memalloc::FindNormalizedRanges({ranges}, {scratch.get(), scratch_size}, noop).is_ok();
@@ -50,7 +50,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
   size_t num_range_bytes = provider.ConsumeIntegralInRange<size_t>(0, provider.remaining_bytes());
   std::vector<std::byte> bytes = provider.ConsumeBytes<std::byte>(num_range_bytes);
-  cpp20::span<memalloc::MemRange> ranges = RangesFromBytes(bytes);
+  cpp20::span<memalloc::Range> ranges = RangesFromBytes(bytes);
 
   if (!IsValidPoolInitInput(ranges)) {
     return 0;
