@@ -21,7 +21,6 @@ TEST(OutgoingToIncomingMessage, IovecMessage) {
       .type = FIDL_OUTGOING_MSG_TYPE_IOVEC,
       .iovec =
           {
-              .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
               .iovecs = iovecs,
               .num_iovecs = std::size(iovecs),
           },
@@ -54,7 +53,6 @@ TEST(OutgoingToIncomingMessage, Handles) {
       .type = FIDL_OUTGOING_MSG_TYPE_IOVEC,
       .iovec =
           {
-              .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
               .iovecs = iovecs,
               .num_iovecs = std::size(iovecs),
               .handles = &handle,
@@ -92,7 +90,6 @@ TEST(OutgoingToIncomingMessage, HandlesWrongType) {
       .type = FIDL_OUTGOING_MSG_TYPE_IOVEC,
       .iovec =
           {
-              .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
               .iovecs = iovecs,
               .num_iovecs = std::size(iovecs),
               .handles = &handle,
@@ -121,7 +118,6 @@ TEST(OutgoingToIncomingMessage, HandlesWrongRights) {
       .type = FIDL_OUTGOING_MSG_TYPE_IOVEC,
       .iovec =
           {
-              .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
               .iovecs = iovecs,
               .num_iovecs = std::size(iovecs),
               .handles = &handle,

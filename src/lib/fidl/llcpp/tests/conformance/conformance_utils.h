@@ -175,7 +175,6 @@ bool EncodeSuccess(fidl::internal::WireFormatVersion wire_format_version, FidlTy
       c_msg.iovec.iovecs = iovec_buffer.get();
       c_msg.iovec.num_iovecs = actual_iovecs;
       c_msg.iovec.handles = handle_buffer.get();
-      c_msg.iovec.transport_type = FIDL_TRANSPORT_TYPE_CHANNEL;
       c_msg.iovec.handle_metadata = handle_metadata_buffer.get();
       c_msg.iovec.num_handles = actual_handles;
 

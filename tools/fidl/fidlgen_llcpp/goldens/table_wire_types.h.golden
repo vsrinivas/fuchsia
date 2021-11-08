@@ -264,7 +264,7 @@ class TableWithAttributes::DecodedMessage final
   DecodedMessage(const fidl_incoming_msg_t* c_msg)
       : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
                        c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
-                       c_msg->num_handles, c_msg->transport_type) {}
+                       c_msg->num_handles) {}
 
   // Internal constructor for specifying a specific wire format version.
   DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
@@ -272,7 +272,7 @@ class TableWithAttributes::DecodedMessage final
       : DecodedMessage(wire_format_version,
                        reinterpret_cast<uint8_t*>(c_msg->bytes),
                        c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
-                       c_msg->num_handles, c_msg->transport_type) {}
+                       c_msg->num_handles) {}
 
   TableWithAttributes* PrimaryObject() {
     ZX_DEBUG_ASSERT(ok());
@@ -546,7 +546,7 @@ class SimpleTable::DecodedMessage final
   DecodedMessage(const fidl_incoming_msg_t* c_msg)
       : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
                        c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
-                       c_msg->num_handles, c_msg->transport_type) {}
+                       c_msg->num_handles) {}
 
   // Internal constructor for specifying a specific wire format version.
   DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
@@ -554,7 +554,7 @@ class SimpleTable::DecodedMessage final
       : DecodedMessage(wire_format_version,
                        reinterpret_cast<uint8_t*>(c_msg->bytes),
                        c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
-                       c_msg->num_handles, c_msg->transport_type) {}
+                       c_msg->num_handles) {}
 
   SimpleTable* PrimaryObject() {
     ZX_DEBUG_ASSERT(ok());
@@ -867,7 +867,7 @@ class ReverseOrdinalTable::DecodedMessage final
   DecodedMessage(const fidl_incoming_msg_t* c_msg)
       : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
                        c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
-                       c_msg->num_handles, c_msg->transport_type) {}
+                       c_msg->num_handles) {}
 
   // Internal constructor for specifying a specific wire format version.
   DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
@@ -875,7 +875,7 @@ class ReverseOrdinalTable::DecodedMessage final
       : DecodedMessage(wire_format_version,
                        reinterpret_cast<uint8_t*>(c_msg->bytes),
                        c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
-                       c_msg->num_handles, c_msg->transport_type) {}
+                       c_msg->num_handles) {}
 
   ReverseOrdinalTable* PrimaryObject() {
     ZX_DEBUG_ASSERT(ok());
@@ -1111,7 +1111,7 @@ class OlderSimpleTable::DecodedMessage final
   DecodedMessage(const fidl_incoming_msg_t* c_msg)
       : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
                        c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
-                       c_msg->num_handles, c_msg->transport_type) {}
+                       c_msg->num_handles) {}
 
   // Internal constructor for specifying a specific wire format version.
   DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
@@ -1119,7 +1119,7 @@ class OlderSimpleTable::DecodedMessage final
       : DecodedMessage(wire_format_version,
                        reinterpret_cast<uint8_t*>(c_msg->bytes),
                        c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
-                       c_msg->num_handles, c_msg->transport_type) {}
+                       c_msg->num_handles) {}
 
   OlderSimpleTable* PrimaryObject() {
     ZX_DEBUG_ASSERT(ok());
@@ -1432,7 +1432,7 @@ class NewerSimpleTable::DecodedMessage final
   DecodedMessage(const fidl_incoming_msg_t* c_msg)
       : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
                        c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
-                       c_msg->num_handles, c_msg->transport_type) {}
+                       c_msg->num_handles) {}
 
   // Internal constructor for specifying a specific wire format version.
   DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
@@ -1440,7 +1440,7 @@ class NewerSimpleTable::DecodedMessage final
       : DecodedMessage(wire_format_version,
                        reinterpret_cast<uint8_t*>(c_msg->bytes),
                        c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
-                       c_msg->num_handles, c_msg->transport_type) {}
+                       c_msg->num_handles) {}
 
   NewerSimpleTable* PrimaryObject() {
     ZX_DEBUG_ASSERT(ok());
@@ -1636,7 +1636,7 @@ class ExtensionTable::DecodedMessage final
   DecodedMessage(const fidl_incoming_msg_t* c_msg)
       : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
                        c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
-                       c_msg->num_handles, c_msg->transport_type) {}
+                       c_msg->num_handles) {}
 
   // Internal constructor for specifying a specific wire format version.
   DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
@@ -1644,7 +1644,7 @@ class ExtensionTable::DecodedMessage final
       : DecodedMessage(wire_format_version,
                        reinterpret_cast<uint8_t*>(c_msg->bytes),
                        c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
-                       c_msg->num_handles, c_msg->transport_type) {}
+                       c_msg->num_handles) {}
 
   ExtensionTable* PrimaryObject() {
     ZX_DEBUG_ASSERT(ok());
@@ -4344,7 +4344,7 @@ class SixtyFourOrdinalTable::DecodedMessage final
   DecodedMessage(const fidl_incoming_msg_t* c_msg)
       : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
                        c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
-                       c_msg->num_handles, c_msg->transport_type) {}
+                       c_msg->num_handles) {}
 
   // Internal constructor for specifying a specific wire format version.
   DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
@@ -4352,7 +4352,7 @@ class SixtyFourOrdinalTable::DecodedMessage final
       : DecodedMessage(wire_format_version,
                        reinterpret_cast<uint8_t*>(c_msg->bytes),
                        c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
-                       c_msg->num_handles, c_msg->transport_type) {}
+                       c_msg->num_handles) {}
 
   SixtyFourOrdinalTable* PrimaryObject() {
     ZX_DEBUG_ASSERT(ok());
@@ -4547,7 +4547,7 @@ class EmptyTable::DecodedMessage final
   DecodedMessage(const fidl_incoming_msg_t* c_msg)
       : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
                        c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
-                       c_msg->num_handles, c_msg->transport_type) {}
+                       c_msg->num_handles) {}
 
   // Internal constructor for specifying a specific wire format version.
   DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
@@ -4555,7 +4555,7 @@ class EmptyTable::DecodedMessage final
       : DecodedMessage(wire_format_version,
                        reinterpret_cast<uint8_t*>(c_msg->bytes),
                        c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
-                       c_msg->num_handles, c_msg->transport_type) {}
+                       c_msg->num_handles) {}
 
   EmptyTable* PrimaryObject() {
     ZX_DEBUG_ASSERT(ok());

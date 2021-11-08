@@ -88,6 +88,9 @@ class OutgoingMessage : public ::fidl::Result {
   // message. The handles in |c_msg| are owned by the returned |OutgoingMessage|
   // object.
   //
+  // Only the channel transport is supported for C messages. For other transports,
+  // use other constructors of |OutgoingMessage|.
+  //
   // The bytes must represent a transactional message.
   static OutgoingMessage FromEncodedCMessage(const fidl_outgoing_msg_t* c_msg);
 
@@ -114,7 +117,7 @@ class OutgoingMessage : public ::fidl::Result {
   zx_channel_iovec_t* iovecs() const { return iovec_message().iovecs; }
   uint32_t iovec_actual() const { return iovec_message().num_iovecs; }
   zx_handle_t* handles() const { return iovec_message().handles; }
-  fidl_transport_type transport_type() const { return iovec_message().transport_type; }
+  fidl_transport_type transport_type() const { return transport_type_; }
   void* handle_metadata() const { return iovec_message().handle_metadata; }
   uint32_t handle_actual() const { return iovec_message().num_handles; }
 
@@ -172,7 +175,7 @@ class OutgoingMessage : public ::fidl::Result {
     if (!ok()) {
       return;
     }
-    ZX_ASSERT(message_.iovec.transport_type == transport.type());
+    ZX_ASSERT(transport_type_ == transport.type());
     // TODO(fxbug.dev/85734) Support arbitrary transports.
     WriteImpl(transport.get<internal::ChannelTransport>()->get());
   }
@@ -191,7 +194,7 @@ class OutgoingMessage : public ::fidl::Result {
     if (!ok()) {
       return;
     }
-    ZX_ASSERT(message_.iovec.transport_type == transport.type());
+    ZX_ASSERT(transport_type_ == transport.type());
     // TODO(fxbug.dev/85734) Support arbitrary transports.
     CallImpl(FidlType::Type, transport.get<internal::ChannelTransport>()->get(), result_bytes,
              result_capacity, deadline);
@@ -242,6 +245,7 @@ class OutgoingMessage : public ::fidl::Result {
 
   using Result::SetResult;
 
+  fidl_transport_type transport_type_ = FIDL_TRANSPORT_TYPE_INVALID;
   fidl_outgoing_msg_t message_ = {};
   uint32_t iovec_capacity_ = 0;
   uint32_t handle_capacity_ = 0;
@@ -450,6 +454,7 @@ class IncomingMessage : public ::fidl::Result {
   void ReleaseHandles() { message_.num_handles = 0; }
 
   void MoveImpl(IncomingMessage&& other) noexcept {
+    transport_type_ = other.transport_type_;
     message_ = other.message_;
     other.ReleaseHandles();
   }
@@ -484,6 +489,7 @@ class IncomingMessage : public ::fidl::Result {
   // accordingly.
   void Validate();
 
+  fidl_transport_type transport_type_ = FIDL_TRANSPORT_TYPE_INVALID;
   fidl_incoming_msg_t message_;
   bool is_transactional_ = false;
 };

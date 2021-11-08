@@ -544,7 +544,6 @@ zx_status_t internal_fidl_decode_etc__v2__may_break(const fidl_type_t* type, voi
 
 zx_status_t fidl_decode_msg(const fidl_type_t* type, fidl_incoming_msg_t* msg,
                             const char** out_error_msg) {
-  ZX_ASSERT(msg->transport_type == FIDL_TRANSPORT_TYPE_CHANNEL);
   zx_handle_info_t handle_infos[ZX_CHANNEL_MAX_MSG_HANDLES];
   fidl_channel_handle_metadata_t* metadata =
       reinterpret_cast<fidl_channel_handle_metadata_t*>(msg->handle_metadata);

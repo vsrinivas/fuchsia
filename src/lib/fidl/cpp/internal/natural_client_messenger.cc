@@ -34,7 +34,6 @@ fidl::OutgoingMessage ConvertFromHLCPP(const fidl_type_t* type, HLCPPOutgoingMes
       .type = FIDL_OUTGOING_MSG_TYPE_BYTE,
       .byte =
           {
-              .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
               .bytes = message.bytes().data(),
               .handles = handles,
               .handle_metadata = handle_metadata,

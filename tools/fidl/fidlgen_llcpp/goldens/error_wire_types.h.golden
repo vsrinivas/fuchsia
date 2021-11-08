@@ -262,7 +262,7 @@ class ExampleFooResult::DecodedMessage final
   DecodedMessage(const fidl_incoming_msg_t* c_msg)
       : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
                        c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
-                       c_msg->num_handles, c_msg->transport_type) {}
+                       c_msg->num_handles) {}
 
   // Internal constructor for specifying a specific wire format version.
   DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
@@ -270,7 +270,7 @@ class ExampleFooResult::DecodedMessage final
       : DecodedMessage(wire_format_version,
                        reinterpret_cast<uint8_t*>(c_msg->bytes),
                        c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
-                       c_msg->num_handles, c_msg->transport_type) {}
+                       c_msg->num_handles) {}
 
   ExampleFooResult* PrimaryObject() {
     ZX_DEBUG_ASSERT(ok());
@@ -405,7 +405,7 @@ class ExampleFooResponse::DecodedMessage final
   DecodedMessage(const fidl_incoming_msg_t* c_msg)
       : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
                        c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
-                       c_msg->num_handles, c_msg->transport_type) {}
+                       c_msg->num_handles) {}
 
   // Internal constructor for specifying a specific wire format version.
   DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
@@ -413,7 +413,7 @@ class ExampleFooResponse::DecodedMessage final
       : DecodedMessage(wire_format_version,
                        reinterpret_cast<uint8_t*>(c_msg->bytes),
                        c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
-                       c_msg->num_handles, c_msg->transport_type) {}
+                       c_msg->num_handles) {}
 
   ExampleFooResponse* PrimaryObject() {
     ZX_DEBUG_ASSERT(ok());

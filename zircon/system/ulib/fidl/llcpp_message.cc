@@ -29,6 +29,7 @@ OutgoingMessage OutgoingMessage::FromEncodedCMessage(const fidl_outgoing_msg_t* 
 OutgoingMessage::OutgoingMessage(const fidl_outgoing_msg_t* c_msg)
     : fidl::Result(fidl::Result::Ok()) {
   ZX_ASSERT(c_msg);
+  transport_type_ = FIDL_TRANSPORT_TYPE_CHANNEL;
   switch (c_msg->type) {
     case FIDL_OUTGOING_MSG_TYPE_IOVEC: {
       message_ = *c_msg;
@@ -48,7 +49,6 @@ OutgoingMessage::OutgoingMessage(const fidl_outgoing_msg_t* c_msg)
           .type = FIDL_OUTGOING_MSG_TYPE_IOVEC,
           .iovec =
               {
-                  .transport_type = c_msg->byte.transport_type,
                   .iovecs = &converted_byte_message_iovec_,
                   .num_iovecs = 1,
                   .handles = c_msg->byte.handles,
@@ -70,7 +70,6 @@ OutgoingMessage::OutgoingMessage(const ::fidl::Result& failure)
     : fidl::Result(failure),
       message_({.type = FIDL_OUTGOING_MSG_TYPE_IOVEC,
                 .iovec = {
-                    .transport_type = FIDL_TRANSPORT_TYPE_INVALID,
                     .iovecs = nullptr,
                     .num_iovecs = 0,
                     .handles = nullptr,
@@ -82,10 +81,10 @@ OutgoingMessage::OutgoingMessage(const ::fidl::Result& failure)
 
 OutgoingMessage::OutgoingMessage(ConstructorArgs args)
     : fidl::Result(fidl::Result::Ok()),
+      transport_type_(args.transport_type),
       message_({
           .type = FIDL_OUTGOING_MSG_TYPE_IOVEC,
-          .iovec = {.transport_type = args.transport_type,
-                    .iovecs = args.iovecs,
+          .iovec = {.iovecs = args.iovecs,
                     .num_iovecs = 0,
                     .handles = args.handles,
                     .handle_metadata = args.handle_metadata,
@@ -108,6 +107,7 @@ OutgoingMessage::~OutgoingMessage() {
 
 fidl_outgoing_msg_t OutgoingMessage::ReleaseToEncodedCMessage() && {
   ZX_DEBUG_ASSERT(status() == ZX_OK);
+  ZX_ASSERT(transport_type() == FIDL_TRANSPORT_TYPE_CHANNEL);
   fidl_outgoing_msg_t result = message_;
   ReleaseHandles();
   return result;
@@ -310,7 +310,7 @@ IncomingMessage::IncomingMessage(fidl_transport_type transport_type, uint8_t* by
 }
 
 IncomingMessage IncomingMessage::FromEncodedCMessage(const fidl_incoming_msg_t* c_msg) {
-  return IncomingMessage(c_msg->transport_type, reinterpret_cast<uint8_t*>(c_msg->bytes),
+  return IncomingMessage(FIDL_TRANSPORT_TYPE_CHANNEL, reinterpret_cast<uint8_t*>(c_msg->bytes),
                          c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
                          c_msg->num_handles);
 }
@@ -325,8 +325,8 @@ IncomingMessage::IncomingMessage(fidl_transport_type transport_type, uint8_t* by
                                  uint32_t byte_actual, zx_handle_t* handles, void* handle_metadata,
                                  uint32_t handle_actual, SkipMessageHeaderValidationTag)
     : fidl::Result(fidl::Result::Ok()),
+      transport_type_(transport_type),
       message_{
-          .transport_type = transport_type,
           .bytes = bytes,
           .handles = handles,
           .handle_metadata = handle_metadata,
@@ -342,6 +342,7 @@ IncomingMessage::~IncomingMessage() { std::move(*this).CloseHandles(); }
 
 fidl_incoming_msg_t IncomingMessage::ReleaseToEncodedCMessage() && {
   ZX_DEBUG_ASSERT(status() == ZX_OK);
+  ZX_ASSERT(transport_type_ == FIDL_TRANSPORT_TYPE_CHANNEL);
   fidl_incoming_msg_t result = message_;
   ReleaseHandles();
   return result;
@@ -400,7 +401,7 @@ void IncomingMessage::Decode(internal::WireFormatVersion wire_format_version,
 
   fidl_trace(WillLLCPPDecode, message_type, bytes(), byte_actual(), handle_actual());
   const internal::CodingConfig* encoding_configuration =
-      internal::LookupTransportVTable(message_.transport_type)->encoding_configuration;
+      internal::LookupTransportVTable(transport_type_)->encoding_configuration;
   zx_status_t status = fidl::internal::DecodeEtc<FIDL_WIRE_FORMAT_VERSION_V2>(
       *encoding_configuration, message_type, message_.bytes, message_.num_bytes, message_.handles,
       message_.handle_metadata, message_.num_handles, error_address());

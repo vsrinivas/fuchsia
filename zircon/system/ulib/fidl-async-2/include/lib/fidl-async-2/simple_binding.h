@@ -478,7 +478,6 @@ class SimpleBinding {
     if (signal->observed & ZX_CHANNEL_READABLE) {
       for (uint64_t i = 0; i < signal->count; i++) {
         fidl_incoming_msg_t msg = {
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .bytes = bytes_,
             .handles = handles_,
             .handle_metadata = handle_metadata_,

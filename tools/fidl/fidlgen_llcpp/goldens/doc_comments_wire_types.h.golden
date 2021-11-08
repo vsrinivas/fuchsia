@@ -430,7 +430,7 @@ class Struct::DecodedMessage final
   DecodedMessage(const fidl_incoming_msg_t* c_msg)
       : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
                        c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
-                       c_msg->num_handles, c_msg->transport_type) {}
+                       c_msg->num_handles) {}
 
   // Internal constructor for specifying a specific wire format version.
   DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
@@ -438,7 +438,7 @@ class Struct::DecodedMessage final
       : DecodedMessage(wire_format_version,
                        reinterpret_cast<uint8_t*>(c_msg->bytes),
                        c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
-                       c_msg->num_handles, c_msg->transport_type) {}
+                       c_msg->num_handles) {}
 
   Struct* PrimaryObject() {
     ZX_DEBUG_ASSERT(ok());
@@ -675,7 +675,7 @@ class Table::DecodedMessage final
   DecodedMessage(const fidl_incoming_msg_t* c_msg)
       : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
                        c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
-                       c_msg->num_handles, c_msg->transport_type) {}
+                       c_msg->num_handles) {}
 
   // Internal constructor for specifying a specific wire format version.
   DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
@@ -683,7 +683,7 @@ class Table::DecodedMessage final
       : DecodedMessage(wire_format_version,
                        reinterpret_cast<uint8_t*>(c_msg->bytes),
                        c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
-                       c_msg->num_handles, c_msg->transport_type) {}
+                       c_msg->num_handles) {}
 
   Table* PrimaryObject() {
     ZX_DEBUG_ASSERT(ok());
@@ -887,7 +887,7 @@ class StrictUnion::DecodedMessage final
   DecodedMessage(const fidl_incoming_msg_t* c_msg)
       : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
                        c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
-                       c_msg->num_handles, c_msg->transport_type) {}
+                       c_msg->num_handles) {}
 
   // Internal constructor for specifying a specific wire format version.
   DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
@@ -895,7 +895,7 @@ class StrictUnion::DecodedMessage final
       : DecodedMessage(wire_format_version,
                        reinterpret_cast<uint8_t*>(c_msg->bytes),
                        c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
-                       c_msg->num_handles, c_msg->transport_type) {}
+                       c_msg->num_handles) {}
 
   StrictUnion* PrimaryObject() {
     ZX_DEBUG_ASSERT(ok());
@@ -1098,7 +1098,7 @@ class FlexibleUnion::DecodedMessage final
   DecodedMessage(const fidl_incoming_msg_t* c_msg)
       : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
                        c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
-                       c_msg->num_handles, c_msg->transport_type) {}
+                       c_msg->num_handles) {}
 
   // Internal constructor for specifying a specific wire format version.
   DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
@@ -1106,7 +1106,7 @@ class FlexibleUnion::DecodedMessage final
       : DecodedMessage(wire_format_version,
                        reinterpret_cast<uint8_t*>(c_msg->bytes),
                        c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
-                       c_msg->num_handles, c_msg->transport_type) {}
+                       c_msg->num_handles) {}
 
   FlexibleUnion* PrimaryObject() {
     ZX_DEBUG_ASSERT(ok());

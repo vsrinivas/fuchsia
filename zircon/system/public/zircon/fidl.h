@@ -482,10 +482,6 @@ typedef struct fidl_channel_handle_metadata {
 //
 // See fidl_outgoing_msg_iovec_t for a represention using iovec.
 typedef struct fidl_outgoing_msg_byte {
-  // Type identifier for the FIDL transport.
-  // This determines the type of the data in |handle_metadata|.
-  fidl_transport_type transport_type;
-
   // The bytes of the message.
   //
   // The bytes of the message might be in the encoded or decoded form.
@@ -501,9 +497,10 @@ typedef struct fidl_outgoing_msg_byte {
   fidl_handle_t* handles;
 
   // Array of metadata providing additional information on the handles.
-  // The type of data held in this array is determined by |transport_type|.
-  // In the case of the channel transport, this is an array of
-  // fidl_channel_handle_metadata.
+  // This is an array of fidl_channel_handle_metadata when representing C messages.
+  // The type is void* because it can hold other metadata types when used in LLCPP
+  // messages.
+  // TODO(fxbug.dev/85734) Assign a more appropriate type than void* here.
   //
   // See |num_handles| for the number of handles in the message.
   void* handle_metadata;
@@ -519,10 +516,6 @@ typedef struct fidl_outgoing_msg_byte {
 //
 // See fidl_outgoing_msg_byte_t for a represention using bytes.
 typedef struct fidl_outgoing_msg_iovec {
-  // Type identifier for the FIDL transport.
-  // This determines the type of the data in |handle_metadata|.
-  fidl_transport_type transport_type;
-
   // The output iovecs of the message.
   //
   // See |num_iovecs| for the number of iovecs in the message.
@@ -537,9 +530,10 @@ typedef struct fidl_outgoing_msg_iovec {
   fidl_handle_t* handles;
 
   // Array of metadata providing additional information on the handles.
-  // The type of data held in this array is determined by |transport_type|.
-  // In the case of the channel transport, this is an array of
-  // fidl_channel_handle_metadata.
+  // This is an array of fidl_channel_handle_metadata when representing C messages.
+  // The type is void* because it can hold other metadata types when used in LLCPP
+  // messages.
+  // TODO(fxbug.dev/85734) Assign a more appropriate type than void* here.
   //
   // See |num_handles| for the number of handles in the message.
   void* handle_metadata;
@@ -567,10 +561,6 @@ typedef struct fidl_outgoing_msg {
 
 // An incoming FIDL message.
 typedef struct fidl_incoming_msg {
-  // Type identifier for the FIDL transport.
-  // This determines the type of the data in |handle_metadata|.
-  fidl_transport_type transport_type;
-
   // The bytes of the message.
   //
   // The bytes of the message might be in the encoded or decoded form.
@@ -586,9 +576,10 @@ typedef struct fidl_incoming_msg {
   fidl_handle_t* handles;
 
   // Array of metadata providing additional information on the handles.
-  // The type of data held in this array is determined by |transport_type|.
-  // In the case of the channel transport, this is an array of
-  // fidl_channel_handle_metadata.
+  // This is an array of fidl_channel_handle_metadata when representing C messages.
+  // The type is void* because it can hold other metadata types when used in LLCPP
+  // messages.
+  // TODO(fxbug.dev/85734) Assign a more appropriate type than void* here.
   //
   // See |num_handles| for the number of handles in the message.
   void* handle_metadata;

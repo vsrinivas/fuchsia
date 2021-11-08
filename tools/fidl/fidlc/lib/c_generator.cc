@@ -1610,7 +1610,6 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
     file_ << kIndent << kIndent << ".byte = {\n";
     file_ << kIndent << kIndent << kIndent << ".bytes = _wr_bytes,\n";
     file_ << kIndent << kIndent << kIndent << ".handles = " << handle_value << ",\n";
-    file_ << kIndent << kIndent << kIndent << ".transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,\n";
     file_ << kIndent << kIndent << kIndent << ".handle_metadata = " << handle_metadata_value
           << ",\n";
     file_ << kIndent << kIndent << kIndent << ".num_bytes = _wr_num_bytes,\n";

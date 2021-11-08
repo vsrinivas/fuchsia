@@ -60,7 +60,6 @@ class RewriteTransaction : public fidl::Transaction {
         .type = FIDL_OUTGOING_MSG_TYPE_BYTE,
         .byte =
             {
-                .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
                 .bytes = real_msg_bytes,
                 .handles = real_msg_handles,
                 .handle_metadata = real_msg_handle_metadata,

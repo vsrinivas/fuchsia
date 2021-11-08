@@ -158,7 +158,6 @@ TEST_F(TransactionCountingTest, SingleTransactionInflightReplyShortMessage) {
         .type = FIDL_OUTGOING_MSG_TYPE_IOVEC,
         .iovec =
             {
-                .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
                 .iovecs = iovecs,
                 .num_iovecs = std::size(iovecs),
             },
@@ -203,7 +202,6 @@ TEST_F(TransactionCountingTest, SingleTransactionInflightReplyValidMessage) {
         .type = FIDL_OUTGOING_MSG_TYPE_IOVEC,
         .iovec =
             {
-                .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
                 .iovecs = iovecs,
                 .num_iovecs = std::size(iovecs),
             },
@@ -278,7 +276,6 @@ TEST_F(TransactionCountingTest, MultipleTransactionsInflight) {
         .type = FIDL_OUTGOING_MSG_TYPE_IOVEC,
         .iovec =
             {
-                .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
                 .iovecs = iovecs,
                 .num_iovecs = std::size(iovecs),
             },
@@ -301,7 +298,6 @@ TEST_F(TransactionCountingTest, MultipleTransactionsInflight) {
         .type = FIDL_OUTGOING_MSG_TYPE_IOVEC,
         .iovec =
             {
-                .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
                 .iovecs = iovecs,
                 .num_iovecs = std::size(iovecs),
             },

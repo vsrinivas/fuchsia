@@ -53,7 +53,6 @@ TEST(OutgoingMessage, ConstructFromCIovecMessage) {
       .type = FIDL_OUTGOING_MSG_TYPE_IOVEC,
       .iovec =
           {
-              .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
               .iovecs = &iovec,
               .num_iovecs = 1,
               .handles = &handle,
@@ -82,7 +81,6 @@ TEST(OutgoingMessage, ConstructFromCByteMessage) {
       .type = FIDL_OUTGOING_MSG_TYPE_BYTE,
       .byte =
           {
-              .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
               .bytes = bytes,
               .handles = &handle,
               .handle_metadata = &handle_metadata,
@@ -190,7 +188,6 @@ TEST(OutgoingMessage, OutgoingMessageBytesMatchIgnoreHandles) {
       .type = FIDL_OUTGOING_MSG_TYPE_IOVEC,
       .iovec =
           {
-              .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
               .iovecs = iovecs,
               .num_iovecs = std::size(iovecs),
               .handles = &handle,
@@ -286,7 +283,6 @@ TEST(OutgoingMessage, OutgoingMessageBytesMismatchIovecLength) {
       .type = FIDL_OUTGOING_MSG_TYPE_IOVEC,
       .iovec =
           {
-              .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
               .iovecs = iovecs_b,
               .num_iovecs = std::size(iovecs_b),
           },

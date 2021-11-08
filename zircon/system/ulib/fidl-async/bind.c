@@ -37,8 +37,6 @@ static zx_status_t fidl_reply(fidl_txn_t* txn, const fidl_outgoing_msg_t* msg) {
       fidl_message_header_t* hdr = (fidl_message_header_t*)msg->byte.bytes;
       hdr->txid = conn->txid;
       conn->txid = 0u;
-      ZX_ASSERT(msg->byte.num_handles == 0 ||
-                msg->byte.transport_type == FIDL_TRANSPORT_TYPE_CHANNEL);
       zx_handle_disposition_t handle_dispositions[ZX_CHANNEL_MAX_MSG_HANDLES];
       fidl_channel_handle_metadata_t* metadata =
           (fidl_channel_handle_metadata_t*)(msg->byte.handle_metadata);
@@ -66,8 +64,6 @@ static zx_status_t fidl_reply(fidl_txn_t* txn, const fidl_outgoing_msg_t* msg) {
       fidl_message_header_t* hdr = (fidl_message_header_t*)msg->iovec.iovecs[0].buffer;
       hdr->txid = conn->txid;
       conn->txid = 0u;
-      ZX_ASSERT(msg->byte.num_handles == 0 ||
-                msg->iovec.transport_type == FIDL_TRANSPORT_TYPE_CHANNEL);
       zx_handle_disposition_t handle_dispositions[ZX_CHANNEL_MAX_MSG_HANDLES];
       fidl_channel_handle_metadata_t* metadata =
           (fidl_channel_handle_metadata_t*)(msg->iovec.handle_metadata);
@@ -109,7 +105,6 @@ static void fidl_message_handler(async_dispatcher_t* dispatcher, async_wait_t* w
     fidl_channel_handle_metadata_t handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
     for (uint64_t i = 0; i < signal->count; i++) {
       fidl_incoming_msg_t msg = {
-          .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
           .bytes = bytes,
           .handles = handles,
           .handle_metadata = handle_metadata,
