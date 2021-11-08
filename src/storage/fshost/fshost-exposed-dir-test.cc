@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <dirent.h>
+#include <fcntl.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fidl/fuchsia.update.verify/cpp/wire.h>
 #include <fuchsia/io/cpp/fidl.h>

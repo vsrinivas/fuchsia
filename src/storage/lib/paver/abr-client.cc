@@ -6,6 +6,7 @@
 
 #include <dirent.h>
 #include <endian.h>
+#include <fcntl.h>
 #include <fidl/fuchsia.boot/cpp/wire.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>

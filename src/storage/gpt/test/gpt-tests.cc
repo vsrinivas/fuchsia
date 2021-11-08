@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ctype.h>
+#include <fcntl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <lib/cksum.h>
 #include <lib/fdio/cpp/caller.h>

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fcntl.h>
 #include <inttypes.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/io.h>

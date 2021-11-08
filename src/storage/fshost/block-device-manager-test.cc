@@ -4,6 +4,7 @@
 
 #include "src/storage/fshost/block-device-manager.h"
 
+#include <fcntl.h>
 #include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
 #include <sys/statfs.h>

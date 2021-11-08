@@ -4,6 +4,7 @@
 
 #include "src/sys/appmgr/storage_metrics.h"
 
+#include <fcntl.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fpromise/single_threaded_executor.h>
 #include <lib/gtest/real_loop_fixture.h>

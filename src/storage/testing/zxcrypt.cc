@@ -4,6 +4,7 @@
 
 #include "src/storage/testing/zxcrypt.h"
 
+#include <fcntl.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <ramdevice-client/ramdisk.h>

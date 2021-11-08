@@ -22,6 +22,8 @@
 #include <fidl/fuchsia.fs/cpp/wire.h>
 #endif  // __Fuchsia__
 
+#include <fcntl.h>
+
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/listnode.h>

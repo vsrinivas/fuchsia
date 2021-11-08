@@ -4,6 +4,7 @@
 
 #include "src/storage/fshost/copier.h"
 
+#include <fcntl.h>
 #include <unistd.h>
 #include <zircon/errors.h>
 

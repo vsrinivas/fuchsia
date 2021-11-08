@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <inttypes.h>
+#include <fcntl.h>
 #include <lib/debugdata/datasink.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <sys/stat.h>

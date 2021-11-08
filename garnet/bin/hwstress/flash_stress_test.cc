@@ -4,6 +4,7 @@
 
 #include "flash_stress.h"
 
+#include <fcntl.h>
 #include <fuchsia/hardware/block/cpp/fidl.h>
 #include <fuchsia/hardware/block/cpp/fidl_test_base.h>
 #include <lib/zx/fifo.h>

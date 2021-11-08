@@ -4,6 +4,7 @@
 
 #include "driver_loader.h"
 
+#include <fcntl.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/llcpp/connect_service.h>

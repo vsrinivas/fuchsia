@@ -4,6 +4,8 @@
 
 #include "src/devices/bin/driver_manager/base_package_resolver.h"
 
+#include <fcntl.h>
+
 #include "src/devices/bin/driver_manager/manifest_parser.h"
 #include "src/devices/lib/log/log.h"
 #include "src/zircon/lib/zircon/include/zircon/status.h"

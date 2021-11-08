@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fcntl.h>
+
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 

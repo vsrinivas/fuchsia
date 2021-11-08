@@ -4,6 +4,7 @@
 #ifndef SRC_DEVELOPER_FORENSICS_FEEDBACK_MIGRATION_UTILS_TESTS_DIRECTORY_MIGRATOR_STUBS_H_
 #define SRC_DEVELOPER_FORENSICS_FEEDBACK_MIGRATION_UTILS_TESTS_DIRECTORY_MIGRATOR_STUBS_H_
 
+#include <fcntl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_handle.h>

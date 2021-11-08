@@ -4,6 +4,7 @@
 
 #include "src/modular/lib/modular_config/modular_config.h"
 
+#include <fcntl.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/pseudo_file.h>
 

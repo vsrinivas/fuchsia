@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fcntl.h>
 #include <fidl/fuchsia.boot/cpp/wire.h>
 #include <fidl/fuchsia.kernel/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>

@@ -4,6 +4,7 @@
 
 #include "src/developer/forensics/last_reboot/reboot_watcher.h"
 
+#include <fcntl.h>
 #include <lib/fit/defer.h>
 
 #include <fbl/unique_fd.h>

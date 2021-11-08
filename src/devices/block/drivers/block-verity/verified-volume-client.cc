@@ -4,6 +4,7 @@
 
 #include "src/devices/block/drivers/block-verity/verified-volume-client.h"
 
+#include <fcntl.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block.verified/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>

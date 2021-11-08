@@ -4,6 +4,8 @@
 
 #include "src/sys/pkg/lib/far/cpp/archive_reader.h"
 
+#include <fcntl.h>
+
 #include <array>
 
 #include <fbl/unique_fd.h>

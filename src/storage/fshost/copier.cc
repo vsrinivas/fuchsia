@@ -5,6 +5,7 @@
 #include "src/storage/fshost/copier.h"
 
 #include <dirent.h>
+#include <fcntl.h>
 #include <lib/syslog/cpp/macros.h>
 #include <sys/stat.h>
 #include <sys/types.h>

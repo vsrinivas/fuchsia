@@ -4,6 +4,7 @@
 
 #include "src/developer/forensics/feedback/migration/utils/file_utils.h"
 
+#include <fcntl.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <vector>

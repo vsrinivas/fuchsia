@@ -4,6 +4,7 @@
 
 #include "src/storage/fshost/watcher.h"
 
+#include <fcntl.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/storage/fshost/block-device-manager.h"

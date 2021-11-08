@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <dirent.h>
+#include <fcntl.h>
 #include <fuchsia/boot/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
