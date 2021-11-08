@@ -101,7 +101,12 @@ zx_status_t UsbInterface::Create(zx_device_t* parent, UsbComposite* composite,
   usb_descriptor_header_t* header;
   while ((header = usb_desc_iter_peek(&header_iter)) != nullptr) {
     if (header->b_descriptor_type == USB_DT_INTERFACE) {
-      auto* intf_desc = reinterpret_cast<const usb_interface_descriptor_t*>(header);
+      const auto* intf_desc = reinterpret_cast<const usb_interface_descriptor_t*>(
+          usb_desc_iter_get_structure(&header_iter, sizeof(usb_interface_descriptor_t)));
+      if (!intf_desc) {
+        zxlogf(ERROR, "Malformed USB descriptor detected!");
+        return ZX_ERR_INTERNAL;
+      }
       if (intf_desc->b_alternate_setting == 0) {
         zx_status_t status = interface->ConfigureEndpoints(intf_desc->b_interface_number, 0);
         if (status != ZX_OK) {
@@ -188,11 +193,21 @@ zx_status_t UsbInterface::ConfigureEndpoints(uint8_t interface_id, uint8_t alt_s
   usb_descriptor_header_t* header;
   while ((header = usb_desc_iter_peek(&header_iter)) != nullptr) {
     if (header->b_descriptor_type == USB_DT_INTERFACE) {
-      auto* intf_desc = reinterpret_cast<const usb_interface_descriptor_t*>(header);
+      const auto* intf_desc = reinterpret_cast<const usb_interface_descriptor_t*>(
+          usb_desc_iter_get_structure(&header_iter, sizeof(usb_interface_descriptor_t)));
+      if (!intf_desc) {
+        zxlogf(ERROR, "Malformed USB descriptor detected!");
+        return ZX_ERR_INTERNAL;
+      }
       cur_interface = intf_desc->b_interface_number;
       enable_endpoints = (intf_desc->b_alternate_setting == alt_setting);
     } else if (header->b_descriptor_type == USB_DT_ENDPOINT && cur_interface == interface_id) {
-      usb_endpoint_descriptor_t* ep = (usb_endpoint_descriptor_t*)header;
+      auto* ep = reinterpret_cast<usb_endpoint_descriptor_t*>(
+          usb_desc_iter_get_structure(&header_iter, sizeof(usb_endpoint_descriptor_t)));
+      if (!ep) {
+        zxlogf(ERROR, "Malformed USB descriptor detected!");
+        return ZX_ERR_INTERNAL;
+      }
       auto ep_index = GetEndpointIndex(ep);
       interface_endpoints[ep_index] = true;
       if (enable_endpoints) {
@@ -333,7 +348,12 @@ size_t UsbInterface::UsbCompositeGetAdditionalDescriptorLength() {
   usb_descriptor_header_t* header;
   while ((header = usb_desc_iter_peek(&header_iter)) != nullptr) {
     if (header->b_descriptor_type == USB_DT_INTERFACE) {
-      usb_interface_descriptor_t* test_intf = (usb_interface_descriptor_t*)header;
+      auto* test_intf = reinterpret_cast<usb_interface_descriptor_t*>(
+          usb_desc_iter_get_structure(&header_iter, sizeof(usb_interface_descriptor_t)));
+      if (!test_intf) {
+        zxlogf(ERROR, "Malformed USB descriptor detected!");
+        return ZX_ERR_INTERNAL;
+      }
       // We are only interested in descriptors past the last stored descriptor
       // for the current interface.
       if (test_intf->b_alternate_setting == 0 &&
@@ -412,7 +432,12 @@ bool UsbInterface::ContainsInterface(uint8_t interface_id) {
   usb_descriptor_header_t* header;
   while ((header = usb_desc_iter_peek(&header_iter)) != nullptr) {
     if (header->b_descriptor_type == USB_DT_INTERFACE) {
-      auto* intf_desc = reinterpret_cast<const usb_interface_descriptor_t*>(header);
+      const auto* intf_desc = reinterpret_cast<const usb_interface_descriptor_t*>(
+          usb_desc_iter_get_structure(&header_iter, sizeof(usb_interface_descriptor_t)));
+      if (!intf_desc) {
+        zxlogf(ERROR, "Malformed USB descriptor detected!");
+        return false;
+      }
       if (intf_desc->b_interface_number == interface_id) {
         return true;
       }
