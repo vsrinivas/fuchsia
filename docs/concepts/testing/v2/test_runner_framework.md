@@ -490,6 +490,7 @@ Possible values of `fuchsia.test.type`:
 | ----- | ----------- |
 | `hermetic` | Hermetic realm |
 | `system` | Legacy non hermetic realm |
+| `cts` | [CTS test realm] |
 
 Below is the list of system capabilities provided to legacy non-hermetic tests:
 
@@ -568,6 +569,7 @@ Components in the test realm may play various roles in the test, as follows:
 [cf]: /docs/concepts/components/v2/
 [component-manifest]: /docs/concepts/components/v2/component_manifests.md
 [component-unit-tests]: /docs/development/components/build.md#unit-tests
+[CTS test realm]: /docs/development/testing/cts/test_realm.md
 [fidl-test-manager]: /sdk/fidl/fuchsia.test.manager/test_manager.fidl
 [fidl-test-suite]: /sdk/fidl/fuchsia.test/suite.fidl
 [ffx]: /docs/development/tools/ffx/overview.md

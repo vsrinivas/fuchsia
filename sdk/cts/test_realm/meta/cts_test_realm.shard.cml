@@ -1,3 +1,6 @@
+//
+// If you modify this file, update docs/development/testing/cts/test_realm.md.
+//
 {
     collections: [
         {
