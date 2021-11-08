@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    crate::{blob_location::BlobLocation, index::PackageIndex, pkgfs_inspect::PkgfsInspectState},
+    crate::{base_packages::BasePackages, index::PackageIndex, pkgfs_inspect::PkgfsInspectState},
     anyhow::{anyhow, Context as _, Error},
     argh::FromArgs,
     cobalt_sw_delivery_registry as metrics,
     fidl_fuchsia_update::CommitStatusProviderMarker,
-    fuchsia_async::Task,
+    fuchsia_async::{futures::try_join, Task},
     fuchsia_cobalt::{CobaltConnector, ConnectionType},
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect as finspect,
@@ -18,7 +18,7 @@ use {
     system_image::StaticPackages,
 };
 
-mod blob_location;
+mod base_packages;
 mod cache_service;
 mod compat;
 mod gc_service;
@@ -78,38 +78,28 @@ async fn main_inner() -> Result<(), Error> {
     let blobfs = blobfs::Client::open_from_namespace().context("error opening blobfs")?;
 
     let mut package_index = PackageIndex::new(index_node);
-    let (static_packages, _pkgfs_inspect, blob_location, _load_cache_packages) = {
-        let static_packages_fut = get_static_packages(&pkgfs_system);
 
-        let pkgfs_inspect_fut =
-            PkgfsInspectState::new(&pkgfs_system, inspector.root().create_child("pkgfs"));
+    let (_pkgfs_inspect, (), base_packages) = {
+        let pkgfs_inspect_fut = async {
+            Ok(PkgfsInspectState::new(&pkgfs_system, inspector.root().create_child("pkgfs")).await)
+        };
 
-        let blob_location_fut = BlobLocation::new(
+        let load_cache_packages_fut = async {
+            index::load_cache_packages(&mut package_index, &pkgfs_system, &pkgfs_versions)
+                .unwrap_or_else(|e| fx_log_err!("Failed to load cache packages: {:#}", anyhow!(e)))
+                .await;
+            Ok(())
+        };
+
+        let base_packages_fut = load_base_packages(
             &pkgfs_system,
             &pkgfs_versions,
-            inspector.root().create_child("blob-location"),
+            inspector.root().create_child("base-packages"),
+            ignore_system_image,
         );
 
-        let load_cache_packages_fut =
-            index::load_cache_packages(&mut package_index, &pkgfs_system, &pkgfs_versions)
-                .unwrap_or_else(|e| fx_log_err!("Failed to load cache packages: {:#}", anyhow!(e)));
-
-        future::join4(
-            static_packages_fut,
-            pkgfs_inspect_fut,
-            blob_location_fut,
-            load_cache_packages_fut,
-        )
-        .await
+        try_join!(pkgfs_inspect_fut, load_cache_packages_fut, base_packages_fut)?
     };
-
-    let mut _blob_location = None;
-    let mut system_image_blobs = None;
-
-    if !ignore_system_image {
-        _blob_location = Some(blob_location?);
-        system_image_blobs = Some(_blob_location.as_ref().unwrap().list_blobs().clone());
-    }
 
     let commit_status_provider =
         fuchsia_component::client::connect_to_protocol::<CommitStatusProviderMarker>()
@@ -133,7 +123,7 @@ async fn main_inner() -> Result<(), Error> {
     let cache_inspect_id = Arc::new(AtomicU32::new(0));
     let cache_inspect_node = inspector.root().create_child("fuchsia.pkg.PackageCache");
     let cache_get_node = Arc::new(cache_inspect_node.create_child("get"));
-    let system_image_blobs = Arc::new(system_image_blobs);
+    let base_packages = Arc::new(base_packages);
 
     let () = fs
         .for_each_concurrent(None, move |svc| {
@@ -146,7 +136,7 @@ async fn main_inner() -> Result<(), Error> {
                         pkgfs_needs.clone(),
                         Arc::clone(&package_index),
                         blobfs.clone(),
-                        Arc::clone(&static_packages),
+                        Arc::clone(&base_packages),
                         stream,
                         cobalt_sender.clone(),
                         Arc::clone(&cache_inspect_id),
@@ -165,7 +155,7 @@ async fn main_inner() -> Result<(), Error> {
                 IncomingService::SpaceManager(stream) => Task::spawn(
                     gc_service::serve(
                         blobfs.clone(),
-                        Arc::clone(&system_image_blobs),
+                        Arc::clone(&base_packages),
                         Arc::clone(&package_index),
                         commit_status_provider.clone(),
                         stream,
@@ -183,15 +173,30 @@ async fn main_inner() -> Result<(), Error> {
     Ok(())
 }
 
-// Deserializes the static packages list. Returns an empty StaticPackages on error.
-async fn get_static_packages(pkgfs_system: &pkgfs::system::Client) -> Arc<StaticPackages> {
-    Arc::new(get_static_packages_impl(pkgfs_system).await.unwrap_or_else(|e| {
-        fx_log_err!("Failed to load static packages, assumping empty: {:#}", anyhow!(e));
-        StaticPackages::empty()
-    }))
+async fn load_base_packages(
+    pkgfs_system: &pkgfs::system::Client,
+    pkgfs_versions: &pkgfs::versions::Client,
+    node: finspect::Node,
+    ignore_system_image: bool,
+) -> Result<Option<BasePackages>, Error> {
+    // Not all constructions with pkg-cache include a system image (any recovery implementation,
+    // for example, as it will be putting blobs into an empty blobfs).
+    if ignore_system_image {
+        fx_log_info!("Ignoring system image, so not loading base packages");
+        return Ok(None);
+    }
+
+    let static_packages = get_static_packages(pkgfs_system).await?;
+    let pkgfs_system_hash = pkgfs_system.hash().await.context("while getting system image hash")?;
+
+    let base_packages =
+        BasePackages::new(pkgfs_versions, static_packages, &pkgfs_system_hash, node)
+            .await
+            .context("loading base packages")?;
+    Ok(Some(base_packages))
 }
 
-async fn get_static_packages_impl(
+async fn get_static_packages(
     pkgfs_system: &pkgfs::system::Client,
 ) -> Result<StaticPackages, Error> {
     let file = pkgfs_system

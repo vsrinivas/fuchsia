@@ -46,6 +46,7 @@ async fn get_pkg_iterator(env: &TestEnv) -> PackageIndexIteratorProxy {
 async fn assert_base_packages_match(
     pkg_iterator: PackageIndexIteratorProxy,
     static_packages: &[&Package],
+    system_image_hash: Hash,
 ) {
     let expected_entries = static_packages.into_iter().map(|pkg| {
         let url = format!("fuchsia-pkg://fuchsia.com/{}", pkg.name());
@@ -53,7 +54,13 @@ async fn assert_base_packages_match(
         (url, merkle)
     });
 
-    verify_base_packages_iterator(pkg_iterator, expected_entries).await;
+    // We always expect the system_image package to be in the list of base packages.
+    let expected_entries_and_system_image = expected_entries.chain(std::iter::once((
+        String::from("fuchsia-pkg://fuchsia.com/system_image"),
+        system_image_hash,
+    )));
+
+    verify_base_packages_iterator(pkg_iterator, expected_entries_and_system_image).await;
 }
 
 async fn verify_base_packages_iterator(
@@ -62,6 +69,7 @@ async fn verify_base_packages_iterator(
 ) {
     loop {
         let chunk = pkg_iterator.next().await.unwrap();
+
         if chunk.is_empty() {
             break;
         }
@@ -96,7 +104,8 @@ async fn base_pkg_index_with_one_package() {
         .unwrap();
     let env = setup_test_env(&[&pkg]).await;
     let pkg_iterator = get_pkg_iterator(&env).await;
-    assert_base_packages_match(pkg_iterator, &[&pkg]).await;
+    assert_base_packages_match(pkg_iterator, &[&pkg], env.pkgfs.system_image_merkle().unwrap())
+        .await;
 }
 
 /// Verifies that the internal cache is not re-ordering packages based on sorting.
@@ -119,7 +128,12 @@ async fn base_pkg_index_verify_ordering() {
         .unwrap();
     let env = setup_test_env(&[&pkg_0, &pkg_1, &pkg_2]).await;
     let pkg_iterator = get_pkg_iterator(&env).await;
-    assert_base_packages_match(pkg_iterator, &[&pkg_0, &pkg_1, &pkg_2]).await;
+    assert_base_packages_match(
+        pkg_iterator,
+        &[&pkg_0, &pkg_1, &pkg_2],
+        env.pkgfs.system_image_merkle().unwrap(),
+    )
+    .await;
 }
 
 /// Verifies that the package index can be split across multiple chunks.
@@ -164,6 +178,12 @@ async fn base_pkg_index_verify_multiple_chunks() {
 
     let env = TestEnv::builder().pkgfs(pkgfs).build().await;
 
+    // We always expect the system_image package to be in the list of base packages.
+    let expected_entries_and_system_image = expected_entries.into_iter().chain(std::iter::once((
+        String::from("fuchsia-pkg://fuchsia.com/system_image"),
+        env.pkgfs.system_image_merkle().unwrap(),
+    )));
+
     let pkg_iterator = get_pkg_iterator(&env).await;
-    verify_base_packages_iterator(pkg_iterator, expected_entries.into_iter()).await;
+    verify_base_packages_iterator(pkg_iterator, expected_entries_and_system_image).await;
 }

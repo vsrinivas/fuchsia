@@ -56,7 +56,7 @@ async fn assert_base_blob_count(
     assert_data_tree!(
         hierarchy,
         root: contains {
-            "blob-location": {
+            "base-packages": {
                 "base-blobs": {
                     count: count,
                 }
@@ -415,10 +415,7 @@ async fn dynamic_index_package_hash_update() {
 
 #[fasync::run_singlethreaded(test)]
 async fn package_cache_get() {
-    async fn expect_and_return_inspect(
-        env: &TestEnv,
-        state: &'static str,
-    ) -> DiagnosticsHierarchy {
+    async fn expect_and_return_inspect(env: &TestEnv, state: &'static str) -> DiagnosticsHierarchy {
         let hierarchy = env
             .wait_for_and_return_inspect_state(tree_assertion!(
                 "root": contains {

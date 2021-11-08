@@ -174,6 +174,10 @@ impl PkgfsRamdisk {
         fdio::create_fd(self.root_dir_handle()?.into()).context("failed to create fd")
     }
 
+    pub fn system_image_merkle(&self) -> Option<Hash> {
+        self.args.system_image_merkle
+    }
+
     /// Shuts down the pkgfs server, returning a [`PkgfsRamdiskBuilder`] configured with the same
     /// backing blobfs and command line arguments.
     pub fn into_builder(self) -> Result<PkgfsRamdiskBuilder, Error> {

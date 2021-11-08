@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::base_packages::BasePackages,
     crate::index::PackageIndex,
     anyhow::{anyhow, Context, Error},
     fidl_fuchsia_space::{
@@ -10,16 +11,15 @@ use {
         ManagerRequestStream as SpaceManagerRequestStream,
     },
     fidl_fuchsia_update::CommitStatusProviderProxy,
-    fuchsia_hash::Hash,
     fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::{lock::Mutex, prelude::*},
-    std::{collections::HashSet, sync::Arc},
+    std::sync::Arc,
 };
 
 pub async fn serve(
     blobfs: blobfs::Client,
-    system_image_blobs: Arc<Option<HashSet<Hash>>>,
+    base_packages: Arc<Option<BasePackages>>,
     package_index: Arc<Mutex<PackageIndex>>,
     commit_status_provider: CommitStatusProviderProxy,
     mut stream: SpaceManagerRequestStream,
@@ -31,14 +31,14 @@ pub async fn serve(
 
     while let Some(event) = stream.try_next().await? {
         let SpaceManagerRequest::Gc { responder } = event;
-        responder.send(&mut gc(&blobfs, &system_image_blobs, &package_index, &event_pair).await)?;
+        responder.send(&mut gc(&blobfs, &base_packages, &package_index, &event_pair).await)?;
     }
     Ok(())
 }
 
 async fn gc(
     blobfs: &blobfs::Client,
-    system_image_blobs: &Arc<Option<HashSet<Hash>>>,
+    base_packages: &Arc<Option<BasePackages>>,
     package_index: &Arc<Mutex<PackageIndex>>,
     event_pair: &zx::EventPair,
 ) -> Result<(), SpaceErrorCode> {
@@ -70,9 +70,9 @@ async fn gc(
             eligible_blobs.remove(blob);
         });
 
-        // Blobs in the system image are immutable and ineligible for collection.
-        if system_image_blobs.is_some() {
-            system_image_blobs.as_ref().as_ref().unwrap().iter().for_each(|blob| {
+        // Blobs in base are immutable and ineligible for collection.
+        if let Some(base_packages) = &**base_packages {
+            base_packages.list_blobs().iter().for_each(|blob| {
                 eligible_blobs.remove(blob);
             });
         }

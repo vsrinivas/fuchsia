@@ -61,7 +61,7 @@ rustc_binary("bin") {
   ]
 
   sources = [
-    "src/blob_location.rs",
+    "src/base_packages.rs",
     "src/cache_service.rs",
     "src/compat.rs",
     "src/compat/pkgfs.rs",

@@ -23,8 +23,8 @@ pub struct Cache;
 pub type StaticPackages = PathHashMapping<Static>;
 pub type CachePackages = PathHashMapping<Cache>;
 
-/// A `PathHashMapping` reads and writes line-oriented "{package_path}={hash}\n" files, e.g. "data/static_packages"
-/// and "data/cache_packages".
+/// A `PathHashMapping` reads and writes line-oriented "{package_path}={hash}\n" files, e.g.
+/// "data/static_packages" and "data/cache_packages".
 #[derive(Debug, PartialEq, Eq)]
 pub struct PathHashMapping<T> {
     contents: Vec<(PackagePath, Hash)>,
@@ -32,7 +32,7 @@ pub struct PathHashMapping<T> {
 }
 
 impl<T> PathHashMapping<T> {
-    /// Reads the line-oriented "package-path=hash" static_packages file.
+    /// Reads the line-oriented "package-path=hash" static_packages or cache_packages file.
     /// Validates the package paths and hashes.
     pub fn deserialize(reader: impl io::Read) -> Result<Self, PathHashMappingError> {
         let reader = io::BufReader::new(reader);
@@ -69,17 +69,12 @@ impl<T> PathHashMapping<T> {
         self.contents.iter().find_map(|(n, hash)| if n == path { Some(*hash) } else { None })
     }
 
-    /// Create an empty mapping.
-    pub fn empty() -> Self {
-        Self { contents: vec![], phantom: PhantomData }
-    }
-
     /// Create a `PathHashMapping` from a `Vec` of `(PackagePath, Hash)` pairs.
     pub fn from_entries(entries: Vec<(PackagePath, Hash)>) -> Self {
         Self { contents: entries, phantom: PhantomData }
     }
 
-    /// Write a `static_packages` file.
+    /// Write a `static_packages` or `cache_packages` file.
     pub fn serialize(&self, mut writer: impl io::Write) -> Result<(), PathHashMappingError> {
         for entry in self.contents.iter() {
             writeln!(&mut writer, "{}={}", entry.0, entry.1)?;
