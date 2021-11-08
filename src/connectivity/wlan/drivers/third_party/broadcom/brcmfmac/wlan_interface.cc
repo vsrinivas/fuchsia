@@ -20,7 +20,6 @@
 #include <cstring>
 
 #include <ddk/hw/wlan/wlaninfo/c/banjo.h>
-#include <wlan/common/logging.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
