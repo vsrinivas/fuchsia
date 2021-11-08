@@ -5,7 +5,9 @@
 use {
     anyhow::{format_err, Error},
     bt_avdtp as avdtp,
-    fidl_fuchsia_bluetooth_bredr::{self as bredr, ChannelMode, ProfileDescriptor, ProfileProxy},
+    fidl_fuchsia_bluetooth_bredr::{
+        self as bredr, ChannelParameters, ProfileDescriptor, ProfileProxy,
+    },
     fuchsia_async as fasync,
     fuchsia_bluetooth::{
         detachable_map::{DetachableMap, DetachableWeak},
@@ -250,7 +252,7 @@ impl ConnectedPeers {
     pub fn try_connect(
         &self,
         id: PeerId,
-        channel_mode: ChannelMode,
+        channel_params: ChannelParameters,
     ) -> impl Future<Output = Result<Option<Channel>, Error>> {
         let proxy = self.profile.clone();
         let connected = self.is_connected(&id);
@@ -265,10 +267,7 @@ impl ConnectedPeers {
                     &mut id.into(),
                     &mut bredr::ConnectParameters::L2cap(bredr::L2capParameters {
                         psm: Some(bredr::PSM_AVDTP),
-                        parameters: Some(bredr::ChannelParameters {
-                            channel_mode: Some(channel_mode),
-                            ..bredr::ChannelParameters::EMPTY
-                        }),
+                        parameters: Some(channel_params),
                         ..bredr::L2capParameters::EMPTY
                     }),
                 )

@@ -334,14 +334,14 @@ impl StreamsBuilder {
 async fn connect_after_timeout(
     peer_id: PeerId,
     peers: Arc<Mutex<ConnectedPeers>>,
-    channel_mode: bredr::ChannelMode,
+    channel_parameters: bredr::ChannelParameters,
     initiator_delay: zx::Duration,
 ) {
     trace!("waiting {}ms before connecting to peer {}.", initiator_delay.into_millis(), peer_id);
     fuchsia_async::Timer::new(initiator_delay.after_now()).await;
 
     trace!("{}: trying to connect control channel..", peer_id);
-    let connect_fut = peers.lock().try_connect(peer_id.clone(), channel_mode);
+    let connect_fut = peers.lock().try_connect(peer_id.clone(), channel_parameters);
     let channel = match connect_fut.await {
         Err(e) => return warn!(?peer_id, "Failed to connect control channel: {:?}", e),
         Ok(None) => return warn!(?peer_id, "Control channel already connected"),
@@ -383,7 +383,7 @@ fn handle_services_found(
     peer_id: &PeerId,
     attributes: &[bredr::Attribute],
     peers: Arc<Mutex<ConnectedPeers>>,
-    channel_mode: bredr::ChannelMode,
+    channel_parameters: bredr::ChannelParameters,
     initiator_delay: Option<zx::Duration>,
 ) {
     let service_classes = find_service_classes(attributes);
@@ -417,7 +417,7 @@ fn handle_services_found(
         fasync::Task::local(connect_after_timeout(
             peer_id.clone(),
             peers.clone(),
-            channel_mode,
+            channel_parameters,
             initiator_delay,
         ))
         .detach();
@@ -481,10 +481,7 @@ fn setup_profiles(
     let mut profile = profile::ProfileClient::advertise(
         proxy,
         &mut service_defs[..],
-        bredr::ChannelParameters {
-            channel_mode: Some(config.channel_mode.clone()),
-            ..bredr::ChannelParameters::EMPTY
-        },
+        config.channel_parameters(),
     )?;
 
     const ATTRS: [u16; 4] = [
@@ -510,14 +507,13 @@ fn setup_profiles(
 /// be suspended immediately.
 const ACTIVE_STREAM_LIMIT: usize = 1;
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component]
 async fn main() -> Result<(), Error> {
     let config = A2dpConfiguration::load_default()?;
 
     let initiator_delay =
         if config.initiator_delay.into_millis() == 0 { None } else { Some(config.initiator_delay) };
 
-    fuchsia_syslog::init_with_tags(&["a2dp"]).expect("Can't init logger");
     fuchsia_trace_provider::trace_provider_create_with_fdio();
 
     // Check to see that we can encode SBC audio.
@@ -614,13 +610,13 @@ async fn main() -> Result<(), Error> {
         Ok(profile) => profile,
     };
 
-    handle_profile_events(profile, peers, config.channel_mode, initiator_delay).await
+    handle_profile_events(profile, peers, config.channel_parameters(), initiator_delay).await
 }
 
 async fn handle_profile_events(
     mut profile: impl Stream<Item = Result<profile::ProfileEvent, profile::Error>> + Unpin,
     peers: Arc<Mutex<ConnectedPeers>>,
-    channel_mode: bredr::ChannelMode,
+    channel_parameters: bredr::ChannelParameters,
     initiator_delay: Option<zx::Duration>,
 ) -> Result<(), Error> {
     while let Some(item) = profile.next().await {
@@ -647,7 +643,7 @@ async fn handle_profile_events(
                     &peer_id,
                     &attributes,
                     peers.clone(),
-                    channel_mode.clone(),
+                    channel_parameters.clone(),
                     initiator_delay,
                 );
             }
@@ -694,7 +690,7 @@ mod tests {
         (peers, stream)
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_at_least_one_profile_enabled() {
         let mut exec = fasync::TestExecutor::new().expect("executor should build");
         let (sender, _) = fake_cobalt_sender();
@@ -710,7 +706,7 @@ mod tests {
     }
 
     #[cfg(not(feature = "test_encoding"))]
-    #[test]
+    #[fuchsia::test]
     /// build_local_streams should fail because it can't start the SBC decoder, because
     /// MediaPlayer isn't available in the test environment.
     fn test_sbc_unavailable_error() {
@@ -725,7 +721,7 @@ mod tests {
     }
 
     #[cfg(feature = "test_encoding")]
-    #[test]
+    #[fuchsia::test]
     /// build local_streams should not include the AAC streams
     fn test_aac_switch() {
         let mut exec = fasync::TestExecutor::new().expect("executor should build");
@@ -762,7 +758,7 @@ mod tests {
         run_to_stalled(exec);
     }
 
-    #[test]
+    #[fuchsia::test]
     /// Tests that A2DP sink assumes the initiator role when a peer is found, but
     /// not connected, and the timeout completes.
     fn wait_to_initiate_success_with_no_connected_peer() {
@@ -788,7 +784,11 @@ mod tests {
             &peer_id,
             &attributes,
             peers.clone(),
-            bredr::ChannelMode::Basic,
+            bredr::ChannelParameters {
+                channel_mode: Some(bredr::ChannelMode::Basic),
+                max_rx_sdu_size: Some(crate::config::MAX_RX_SDU_SIZE),
+                ..bredr::ChannelParameters::EMPTY
+            },
             Some(DEFAULT_INITIATOR_DELAY),
         );
 
@@ -807,8 +807,20 @@ mod tests {
         let (_test, transport) = Channel::create();
         let request = exec.run_until_stalled(&mut prof_stream.next());
         match request {
-            Poll::Ready(Some(Ok(ProfileRequest::Connect { peer_id, responder, .. }))) => {
+            Poll::Ready(Some(Ok(ProfileRequest::Connect {
+                peer_id,
+                responder,
+                connection,
+                ..
+            }))) => {
                 assert_eq!(PeerId(1), peer_id.into());
+                match connection {
+                    bredr::ConnectParameters::L2cap(params) => assert_eq!(
+                        Some(crate::config::MAX_RX_SDU_SIZE),
+                        params.parameters.unwrap().max_rx_sdu_size
+                    ),
+                    x => panic!("Expected L2cap connection, got {:?}", x),
+                };
                 let channel = transport.try_into().unwrap();
                 responder.send(&mut Ok(channel)).expect("responder sends");
             }
@@ -821,7 +833,7 @@ mod tests {
         assert!(peers.lock().is_connected(&peer_id));
     }
 
-    #[test]
+    #[fuchsia::test]
     /// Tests that A2DP sink does not assume the initiator role when a peer connects
     /// before `INITIATOR_DELAY` timeout completes.
     fn wait_to_initiate_returns_early_with_connected_peer() {
@@ -847,7 +859,7 @@ mod tests {
             &peer_id,
             &attributes,
             peers.clone(),
-            bredr::ChannelMode::Basic,
+            bredr::ChannelParameters::EMPTY,
             Some(DEFAULT_INITIATOR_DELAY),
         );
 
@@ -881,7 +893,7 @@ mod tests {
     }
 
     #[cfg(not(feature = "test_encoding"))]
-    #[test]
+    #[fuchsia::test]
     fn test_encoding_fails_in_test_environment() {
         let mut exec = fasync::TestExecutor::new().expect("executor should build");
         let result = exec.run_singlethreaded(test_encode_sbc());
@@ -889,7 +901,7 @@ mod tests {
         assert!(result.is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_audio_mode_connection() {
         let mut exec = fasync::TestExecutor::new().expect("executor should build");
         let (peers, _profile_stream) = setup_connected_peers();
@@ -908,7 +920,7 @@ mod tests {
         assert_eq!(avdtp::EndpointType::Sink, peers.lock().preferred_direction());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn find_endpoint_directions_returns_expected_direction() {
         let empty = Vec::new();
         assert_eq!(find_endpoint_directions(empty), HashSet::new());

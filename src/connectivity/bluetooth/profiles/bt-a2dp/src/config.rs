@@ -18,6 +18,13 @@ pub const DEFAULT_CONFIG_FILE_PATH: &str = "/config/data/a2dp.config";
 pub(crate) const DEFAULT_DOMAIN: &str = "Bluetooth";
 pub(crate) const DEFAULT_INITIATOR_DELAY: zx::Duration = zx::Duration::from_millis(500);
 
+/// The MAX receive SDU size to ask the Profile Server when connecting or accepting a L2CAP
+/// connection.
+/// This is a compromise between packets containing more audio data and limiting retransmission
+/// cost in the case of a flaky link.  The current default fits within a single 3-DH5 packet after
+/// ACL and L2CAP headers are added.
+pub(crate) const MAX_RX_SDU_SIZE: u16 = 1014;
+
 #[derive(FromArgs, Default)]
 #[argh(description = "Bluetooth Advanced Audio Distribution Profile")]
 pub struct A2dpConfigurationArgs {
@@ -185,6 +192,15 @@ impl A2dpConfiguration {
             initiator_delay,
             ..self
         })
+    }
+
+    /// Returns the set of preferred channel parameters for outgoing and incoming L2CAP connections.
+    pub fn channel_parameters(&self) -> bredr::ChannelParameters {
+        bredr::ChannelParameters {
+            channel_mode: Some(self.channel_mode),
+            max_rx_sdu_size: Some(MAX_RX_SDU_SIZE),
+            ..bredr::ChannelParameters::EMPTY
+        }
     }
 
     pub fn from_config(path: &str) -> Result<Self, Error> {
@@ -365,5 +381,17 @@ mod tests {
         let config =
             A2dpConfiguration::from_reader(&no_avrcp_target[..]).expect("without avrcp-tg config");
         assert_eq!(true, config.enable_avrcp_target);
+    }
+
+    #[test]
+    fn generates_correct_parameters() {
+        let mut config = A2dpConfiguration::default();
+        assert_eq!(Some(MAX_RX_SDU_SIZE), config.channel_parameters().max_rx_sdu_size);
+        assert_eq!(Some(bredr::ChannelMode::Basic), config.channel_parameters().channel_mode);
+        config.channel_mode = bredr::ChannelMode::EnhancedRetransmission;
+        assert_eq!(
+            Some(bredr::ChannelMode::EnhancedRetransmission),
+            config.channel_parameters().channel_mode
+        );
     }
 }
