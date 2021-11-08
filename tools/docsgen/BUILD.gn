@@ -11,7 +11,7 @@ import("//build/python/python_host_test.gni")
 
 group("docsgen") {
   testonly = true
-  deps = [ ":gen_docs" ]
+  deps = [ ":generated_docs" ]
 }
 
 _dartdoc_transforms_script_target = "dartdoc_transforms"
@@ -273,25 +273,13 @@ compiled_action("invoke_cmldoc") {
 #     Type: path relative to reference docs repo root directory
 #
 
-build_api_module("gen_docs") {
-  testonly = true
-  data_keys = [ "generated_docset" ]
-  deps = [
-    ":dart_sdk_docs($host_toolchain)",
-    ":invoke_clidoc($host_toolchain)",
-    ":invoke_cmldoc($host_toolchain)",
-    ":invoke_fidldoc($host_toolchain)",
-    ":invoke_helpdoc($host_toolchain)",
-    "//bundles:create_all_drivers_doc",
-  ]
-}
-
 build_api_module("generated_docs") {
   testonly = true
   data_keys = [ "generated_docset" ]
   deps = [
     ":dart_sdk_docs($host_toolchain)",
     ":invoke_clidoc($host_toolchain)",
+    ":invoke_cmldoc($host_toolchain)",
     ":invoke_fidldoc($host_toolchain)",
     ":invoke_helpdoc($host_toolchain)",
     "//bundles:create_all_drivers_doc",
