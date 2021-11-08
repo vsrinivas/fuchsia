@@ -7,6 +7,7 @@ import("//build/cipd.gni")
 import("//build/components.gni")
 import("//build/dist/resource.gni")
 import("//build/drivers.gni")
+import("//third_party/openthread/openthread_upstream_version.gni")
 
 template("ot_radio_driver") {
   forward_variables_from(invoker,
@@ -15,8 +16,16 @@ template("ot_radio_driver") {
                            "firmware_type",
                            "firmware_config",
                          ])
-  firmware_name =
-      "ot-" + firmware_config + "-app-" + firmware_type + "-" + board + ".bin"
+  if (openthread_upstream_version ==
+      "c36c0e77a2465355bcf13bd7dc718d8c9aa6ff64" && firmware_config == "rcp" &&
+      board == "sherlock") {
+    firmware_name = "ot-" + firmware_config + "-app-" + firmware_type + "-" +
+                    board + "-c36c0e.bin"
+  } else {
+    firmware_name =
+        "ot-" + firmware_config + "-app-" + firmware_type + "-" + board + ".bin"
+  }
+
   if (!internal_access) {
     # Unused variable
     not_needed([ "firmware_name" ])
