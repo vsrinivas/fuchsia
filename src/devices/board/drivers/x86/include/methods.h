@@ -16,7 +16,6 @@
 #define ACPI_UUID_SIZE 16u
 
 // TODO(fxbug.dev/78349): delete these methods once users are in their own drivers.
-zx_status_t acpi_crt_call(ACPI_HANDLE dev_obj, uint64_t* out);
 
 // Call the ACPI _OSC method on a device object.
 //
@@ -29,7 +28,5 @@ zx_status_t acpi_crt_call(ACPI_HANDLE dev_obj, uint64_t* out);
 zx_status_t acpi_osc_call(ACPI_HANDLE dev_obj, const char* uuid_str, uint64_t revision,
                           size_t dword_cnt, uint32_t* dwords_in, uint32_t* dwords_out,
                           bool* bit_masked);
-zx_status_t acpi_psv_call(ACPI_HANDLE dev_obj, uint64_t* out);
-zx_status_t acpi_tmp_call(ACPI_HANDLE dev_obj, uint64_t* out);
 
 #endif  // SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_METHODS_H_

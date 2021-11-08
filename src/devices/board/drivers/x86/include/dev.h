@@ -15,7 +15,6 @@
 #define PWRSRC_HID_STRING "ACPI0003"
 #define GOOGLE_CROS_EC_HID_STRING "GOOG0004"
 #define GOOGLE_TBMC_HID_STRING "GOOG0006"
-#define DPTF_THERMAL_HID_STRING "INT3403"
 #define GPE_HID_STRING "ACPI0006"
 #define I8042_HID_STRING "PNP0303"
 #define RTC_HID_STRING "PNP0B00"
@@ -36,7 +35,6 @@ zx_status_t pwrbtn_init(zx_device_t* parent);
 zx_status_t pwrsrc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle);
 zx_status_t tbmc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle);
 zx_status_t cros_ec_lpc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle);
-zx_status_t thermal_init(zx_device_t* parent, ACPI_DEVICE_INFO* info, ACPI_HANDLE acpi_handle);
 zx_status_t lid_init(zx_device_t* parent, ACPI_HANDLE acpi_handle);
 
 #endif  // SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_DEV_H_

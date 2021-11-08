@@ -1,0 +1,68 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/components.gni")
+import("//build/drivers.gni")
+import("//build/test.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":intel-thermal-tests" ]
+}
+
+driver_bind_rules("bind") {
+  rules = "intel_thermal.bind"
+  header_output = "intel_thermal-bind.h"
+  bind_output = "intel_thermal.bindbc"
+  deps = [ "//src/devices/bind/fuchsia.acpi" ]
+}
+
+common_deps = [
+  ":bind",
+  "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_llcpp",
+  "//src/devices/lib/acpi",
+  "//src/devices/lib/driver",
+  "//src/lib/ddktl",
+  "//zircon/system/ulib/fbl",
+  "//zircon/system/ulib/inspect",
+  "//zircon/system/ulib/zx",
+]
+
+fuchsia_driver("driver") {
+  output_name = "intel-thermal"
+  sources = [ "intel_thermal.cc" ]
+  deps = common_deps
+}
+
+fuchsia_driver_component("component") {
+  component_name = "intel-thermal"
+  deps = [ ":driver" ]
+}
+
+fuchsia_system_package("intel-thermal") {
+  deps = [ ":component" ]
+
+  # Remove the line below when this package is only used by the system image.
+  allowed_in_extra_deps = true
+}
+
+test("intel-thermal-unit-tests") {
+  sources = [
+    "intel_thermal.cc",
+    "intel_thermal.h",
+    "unit-tests.cc",
+  ]
+  deps = common_deps + [
+           "//sdk/lib/inspect/testing/cpp:zxtest",
+           "//zircon/system/ulib/async-loop:async-loop-cpp",
+           "//src/devices/testing/mock-ddk",
+           "//zircon/system/ulib/zxtest",
+           "//src/devices/lib/acpi/mock:mock-acpi",
+         ]
+}
+
+fuchsia_unittest_package("intel-thermal-tests") {
+  deps = [ ":intel-thermal-unit-tests" ]
+}

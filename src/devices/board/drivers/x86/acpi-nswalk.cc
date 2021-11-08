@@ -36,7 +36,6 @@
 #include "src/devices/board/drivers/x86/acpi/resources.h"
 #include "src/devices/lib/iommu/iommu.h"
 #include "sysmem.h"
-#include "util.h"
 
 namespace {
 
@@ -251,8 +250,6 @@ zx_status_t publish_acpi_devices(acpi::Manager* manager, zx_device_t* platform_b
           tbmc_init(acpi_root, object);
         } else if (hid == GOOGLE_CROS_EC_HID_STRING) {
           cros_ec_lpc_init(acpi_root, object);
-        } else if (hid == DPTF_THERMAL_HID_STRING) {
-          thermal_init(acpi_root, info.get(), object);
         }
         return acpi::ok();
       });

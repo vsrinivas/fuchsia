@@ -99,7 +99,6 @@ fuchsia_driver("platform-bus-x86-driver") {
     "acpi-dev/dev-pwrbtn.cc",
     "acpi-dev/dev-pwrsrc.cc",
     "acpi-dev/dev-tbmc.cc",
-    "acpi-dev/dev-thermal.cc",
     "acpi-nswalk.cc",
     "debug.cc",
     "goldfish-control.cc",
@@ -109,7 +108,6 @@ fuchsia_driver("platform-bus-x86-driver") {
     "pciroot.cc",
     "power.cc",
     "sysmem.cc",
-    "util.cc",
     "x86-driver-tests.cc",
     "x86.cc",
     "x86.h",
@@ -142,7 +140,6 @@ fuchsia_driver("platform-bus-x86-driver") {
     "//sdk/fidl/fuchsia.hardware.acpi:fuchsia.hardware.acpi_llcpp",
     "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_c",
     "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_llcpp",
-    "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_c",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//src/devices/lib/driver",
@@ -246,34 +243,6 @@ test("x86-board-test") {
 bootfs_test("x86-board-bootfs-test") {
   name = "x86-board-test"
   deps = [ ":x86-board-test" ]
-}
-
-test("x86-thermal-test") {
-  sources = [
-    "acpi-dev/dev-thermal-test.cc",
-    "acpi-dev/dev-thermal.cc",
-    "acpi-dev/dev-thermal.h",
-  ]
-  configs += [ ":config" ]
-  deps = [
-    "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
-    "//sdk/lib/fdio",
-    "//src/devices/testing/fake_ddk",
-    "//src/lib/ddk",
-    "//src/lib/ddktl",
-    "//third_party/acpica",
-    "//zircon/system/ulib/async-loop",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/fidl-async",
-    "//zircon/system/ulib/zxtest",
-  ]
-}
-
-bootfs_test("x86-thermal-bootfs-test") {
-  name = "x86-thermal-test"
-  deps = [ ":x86-thermal-test" ]
 }
 
 test("x86-cros-ec-test") {

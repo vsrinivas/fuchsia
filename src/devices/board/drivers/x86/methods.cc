@@ -15,7 +15,6 @@
 #include <acpica/acuuid.h>
 
 #include "errors.h"
-#include "util.h"
 
 // TODO(fxbug.dev/78349): delete these methods once users are in separate drivers.
 static zx_status_t uuid_str_to_uint8_buf(const char* uuid_str, uint8_t* uuid) {
@@ -38,12 +37,6 @@ static zx_status_t uuid_str_to_uint8_buf(const char* uuid_str, uint8_t* uuid) {
   }
 
   return ZX_OK;
-}
-
-// Call the ACPI _CRT method to query critical shutdown temperature.
-zx_status_t acpi_crt_call(ACPI_HANDLE dev_obj, uint64_t* out) {
-  ACPI_STATUS status = acpi_evaluate_integer(dev_obj, "_CRT", out);
-  return acpi_to_zx_status(status);
 }
 
 enum {
@@ -123,17 +116,4 @@ zx_status_t acpi_osc_call(ACPI_HANDLE dev_obj, const char* uuid_str, uint64_t re
   *bit_masked = dwords_out[0] & OSC_RET_MASKED;
 
   return osc_bad_result(dwords_out[0]) ? ZX_ERR_INTERNAL : ZX_OK;
-}
-
-// Call the ACPI _PSV method to query the temperature OSPM will trigger
-// a cooling policy.
-zx_status_t acpi_psv_call(ACPI_HANDLE dev_obj, uint64_t* out) {
-  ACPI_STATUS status = acpi_evaluate_integer(dev_obj, "_PSV", out);
-  return acpi_to_zx_status(status);
-}
-
-// Call the ACPI _TMP method to query the temperaure of a thermal zone.
-zx_status_t acpi_tmp_call(ACPI_HANDLE dev_obj, uint64_t* out) {
-  ACPI_STATUS status = acpi_evaluate_integer(dev_obj, "_TMP", out);
-  return acpi_to_zx_status(status);
 }

@@ -115,7 +115,6 @@ group("tests") {
       "//src/devices/board/drivers/x86:x86-board-bootfs-test",
       "//src/devices/board/drivers/x86:x86-lid-bootfs-test",
       "//src/devices/board/drivers/x86:x86-pwrsrc-bootfs-test",
-      "//src/devices/board/drivers/x86:x86-thermal-bootfs-test",
       "//src/devices/board/drivers/x86/test:x86-board-bootfs-test",
       "//src/devices/lib/iommu:iommu-bootfs-test",
       "//src/zircon/tests/mtrace:mtrace-bootfs-test",

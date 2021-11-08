@@ -3,10 +3,16 @@
 # found in the LICENSE file.
 
 group("drivers") {
-  deps = [ "drivers/acpi-battery" ]
+  deps = [
+    "drivers/acpi-battery",
+    "drivers/intel-thermal",
+  ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ "drivers/acpi-battery:tests" ]
+  deps = [
+    "drivers/acpi-battery:tests",
+    "drivers/intel-thermal:tests",
+  ]
 }
