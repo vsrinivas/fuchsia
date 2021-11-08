@@ -8,7 +8,7 @@ mod list;
 
 pub use list::BoundedListNode;
 
-use fuchsia_inspect::Node;
+use fuchsia_inspect::{InspectType, Node};
 use fuchsia_inspect::{IntProperty, Property, StringReference};
 use fuchsia_zircon as zx;
 
@@ -81,6 +81,8 @@ impl TimeProperty {
         Property::set(&self.inner, timestamp.into_nanos());
     }
 }
+
+impl InspectType for TimeProperty {}
 
 #[cfg(test)]
 mod tests {
