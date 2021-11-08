@@ -6,8 +6,6 @@
 
 #include <lib/trace/event.h>
 
-#include <regex>
-
 #include "src/developer/memory/metrics/bucket_match.h"
 
 namespace memory {
