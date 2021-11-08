@@ -312,12 +312,11 @@ class BuildEnv(object):
     def find_device(self, device_name=None):
         """Returns the IPv6 address for a device."""
         cmd = [
-            self.abspath(self.fuchsia_dir, '.jiri_root/bin/fx'), 'device-finder'
+            self.abspath(self.fuchsia_dir, '.jiri_root/bin/fx'), 'ffx',
+            'target', 'list', '--format', 'a'
         ]
         if device_name:
-            cmd += ['resolve', '-device-limit', '1', device_name]
-        else:
-            cmd += ['list']
+            cmd += [device_name]
         try:
             addrs = self.host.create_process(cmd).check_output().strip()
         except subprocess.CalledProcessError as err:

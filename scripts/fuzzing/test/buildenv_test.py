@@ -200,24 +200,29 @@ class BuildEnvTest(TestCaseWithFactory):
 
         cmd = [
             self.buildenv.abspath('//.jiri_root/bin/fx'),
-            'device-finder',
-            'resolve',
-            '-device-limit',
-            '1',
+            'ffx',
+            'target',
+            'list',
+            '--format',
+            'a',
             device_name,
         ]
         self.set_outputs(cmd, addrs[:1])
         self.assertEqual(self.buildenv.find_device(device_name), addrs[0])
 
-        # No results from 'fx device-finder list'
+        # No results from 'fx ffx target list'
         self.assertError(
             lambda: self.buildenv.find_device(None), 'Unable to find device.',
             'Try "fx set-device".')
 
-        # Multiple results from `fx device-finder list`
+        # Multiple results from `fx ffx target list`
         cmd = [
-            self.buildenv.abspath('//.jiri_root/bin/fx'), 'device-finder',
-            'list'
+            self.buildenv.abspath('//.jiri_root/bin/fx'),
+            'ffx',
+            'target',
+            'list',
+            '--format',
+            'a',
         ]
         self.set_outputs(cmd, addrs)
         self.assertError(

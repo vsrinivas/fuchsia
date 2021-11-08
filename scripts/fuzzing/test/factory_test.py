@@ -64,8 +64,8 @@ class FactoryTest(TestCaseWithFactory):
         build_dir = self.buildenv.build_dir
         device_addr = '::1'
         cmd = [
-            self.buildenv.abspath('//.jiri_root/bin/fx'), 'device-finder',
-            'list'
+            self.buildenv.abspath('//.jiri_root/bin/fx'), 'ffx', 'target',
+            'list', '--format', 'a',
         ]
         self.set_outputs(cmd, [device_addr])
         self.host.touch(
@@ -82,8 +82,8 @@ class FactoryTest(TestCaseWithFactory):
         with self.host.open(device_file, 'w') as opened:
             opened.write(device_name + '\n')
         cmd = [
-            self.buildenv.abspath('//.jiri_root/bin/fx'), 'device-finder',
-            'resolve', '-device-limit', '1', device_name
+            self.buildenv.abspath('//.jiri_root/bin/fx'), 'ffx', 'target',
+            'list', '--format', 'a', device_name
         ]
         self.set_outputs(cmd, [device_addr])
         self.assertEqual(factory.device.addr, device_addr)
