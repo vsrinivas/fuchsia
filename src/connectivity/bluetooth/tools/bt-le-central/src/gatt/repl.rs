@@ -80,7 +80,7 @@ fn cmd_stream() -> (impl Stream<Item = String>, impl Sink<(), Error = SendError>
     let (mut cmd_sender, cmd_receiver) = channel(512);
     let (ack_sender, mut ack_receiver) = channel(512);
 
-    thread::spawn(move || -> Result<(), Error> {
+    let _ = thread::spawn(move || -> Result<(), Error> {
         let mut exec =
             fasync::LocalExecutor::new().context("error creating readline event loop")?;
 
@@ -110,7 +110,9 @@ fn cmd_stream() -> (impl Stream<Item = String>, impl Sink<(), Error = SendError>
                 }
                 // wait until processing thread is finished evaluating the last command
                 // before running the next loop in the repl
-                ack_receiver.next().await;
+                if ack_receiver.next().await.is_none() {
+                    return Ok(());
+                }
             }
         };
         exec.run_singlethreaded(fut)

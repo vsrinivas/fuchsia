@@ -174,7 +174,7 @@ fn main_res() -> Result<(), Error> {
         let snoop_svc = connect_to_protocol::<SnoopMarker>()
             .context("failed to connect to bluetooth snoop interface")?;
         let mut evt_stream = snoop_svc.take_event_stream();
-        match format {
+        let _ = match format {
             Format::Pcap => out.write(pcap_header().as_slice())?,
             Format::Pretty => 0,
         };
@@ -196,7 +196,7 @@ fn main_res() -> Result<(), Error> {
             if let Some(size) = truncate {
                 packet.payload.truncate(size);
             }
-            match format {
+            let _ = match format {
                 Format::Pcap => out.write(to_pcap_fmt(packet).as_slice())?,
                 Format::Pretty => out.write(to_pretty_fmt(packet).as_bytes())?,
             };

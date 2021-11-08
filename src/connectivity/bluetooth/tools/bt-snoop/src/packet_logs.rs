@@ -23,6 +23,7 @@ use {
         sync::Arc,
         time::Duration,
     },
+    tracing::warn,
 };
 
 use crate::{
@@ -134,7 +135,7 @@ impl PacketLogs {
             move || generate_lazy_values_for_packet_log(d.clone(), q.clone())
         });
 
-        self.device_logs.insert(device, (bounded_queue, bounded_queue_metrics));
+        let _ = self.device_logs.insert(device, (bounded_queue, bounded_queue_metrics));
 
         // Remove old log and its insertion order metadata if there are too many logs
         //
@@ -154,7 +155,9 @@ impl PacketLogs {
     fn drop_oldest(&mut self) -> Option<DeviceId> {
         if let Some(oldest_key) = self.insertion_order.pop_front() {
             // remove the bounded queue associated with the oldest DeviceId.
-            self.device_logs.remove(&oldest_key);
+            if self.device_logs.remove(&oldest_key).is_none() {
+                warn!("device log for {} was missing on drop", oldest_key);
+            }
             Some(oldest_key)
         } else {
             None
@@ -222,7 +225,10 @@ pub(crate) fn append_pcap<W: Write>(
         PacketType::Data => buffer.write_u8(PCAP_DATA)?,
         PacketType::Event => buffer.write_u8(PCAP_EVENT)?,
     }
-    buffer.write(&pkt.payload)?;
+    let written = buffer.write(&pkt.payload)?;
+    if written != pkt.payload.len() {
+        warn!("Couldn't write entire payload, only wrote {} < {}", written, pkt.payload.len());
+    }
     Ok(())
 }
 

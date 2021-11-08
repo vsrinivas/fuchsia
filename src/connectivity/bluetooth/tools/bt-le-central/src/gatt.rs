@@ -384,7 +384,7 @@ async fn do_write_chr<'a>(mut args: Vec<&'a str>, client: &'a GattClientPtr) -> 
 
     let without_response: bool = args[0] == "-w";
     if without_response {
-        args.remove(0);
+        let _ = args.remove(0);
     }
 
     let id: u64 = match parse_int(args[0]) {
@@ -428,7 +428,7 @@ async fn do_write_long_chr<'a>(
     }
 
     let reliable_mode: ReliableMode = if args[0] == "-r" {
-        args.remove(0);
+        let _ = args.remove(0);
         ReliableMode::Enabled
     } else {
         ReliableMode::Disabled

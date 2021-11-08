@@ -22,6 +22,7 @@ rustc_binary("bin") {
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-runtime",
@@ -35,10 +36,10 @@ rustc_binary("bin") {
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:itertools",
-    "//third_party/rust_crates:log",
     "//third_party/rust_crates:once_cell",
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:tracing",
   ]
 
   sources = [

@@ -33,6 +33,8 @@ rustc_binary("bin") {
     "src/main.rs",
     "src/types.rs",
   ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_shell_package("bt-fct-hci") {

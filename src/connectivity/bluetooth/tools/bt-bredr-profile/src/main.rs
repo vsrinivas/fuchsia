@@ -191,7 +191,7 @@ async fn remove_service(state: Arc<Mutex<ProfileState>>, args: &Vec<String>) -> 
     let service_id =
         args[0].parse::<u32>().map_err(|_| anyhow!("service-id must be a positive number"))?;
 
-    state.lock().await.services.remove(&service_id).ok_or(anyhow!("Unknown service"))?;
+    let _ = state.lock().await.services.remove(&service_id).ok_or(anyhow!("Unknown service"))?;
     Ok(())
 }
 
@@ -450,7 +450,7 @@ fn cmd_stream() -> (impl Stream<Item = String>, impl Sink<(), Error = SendError>
     let (mut cmd_sender, cmd_receiver) = channel(512);
     let (ack_sender, mut ack_receiver) = channel(512);
 
-    thread::spawn(move || -> Result<(), Error> {
+    let _ = thread::spawn(move || -> Result<(), Error> {
         let mut exec =
             fasync::LocalExecutor::new().context("error creating readline event loop")?;
 
@@ -479,7 +479,7 @@ fn cmd_stream() -> (impl Stream<Item = String>, impl Sink<(), Error = SendError>
                 }
 
                 // Wait for processing thread to finish evaluating last command.
-                if ack_receiver.next().await == None {
+                if ack_receiver.next().await.is_none() {
                     return Ok(());
                 }
             }

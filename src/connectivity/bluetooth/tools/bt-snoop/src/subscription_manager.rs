@@ -7,8 +7,8 @@ use {
     fidl::prelude::*,
     fidl_fuchsia_bluetooth_snoop::SnoopControlHandle,
     fuchsia_zircon as zx,
-    log::{trace, warn},
     std::{collections::HashMap, iter},
+    tracing::{trace, warn},
 };
 
 use crate::{snooper::SnoopPacket, ClientId, DeviceId};

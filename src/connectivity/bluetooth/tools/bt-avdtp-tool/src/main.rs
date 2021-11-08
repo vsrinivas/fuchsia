@@ -53,11 +53,11 @@ async fn peer_manager_listener(
 
                 match peer_map.write().entry(peer_id.value.to_string()) {
                     Entry::Occupied(mut entry) => {
-                        entry.insert(peer);
+                        let _ = entry.insert(peer);
                         println!("Known peer connected with id: {}", peer_id.value.to_string())
                     }
                     Entry::Vacant(entry) => {
-                        entry.insert(peer);
+                        let _ = entry.insert(peer);
                         println!(
                             "Inserted device into PeerFactoryMap with id: {}",
                             peer_id.value.to_string()
@@ -303,7 +303,7 @@ fn cmd_stream() -> (impl Stream<Item = String>, impl Sink<(), Error = SendError>
     let (mut cmd_sender, cmd_receiver) = channel(512);
     let (ack_sender, mut ack_receiver) = channel(512);
 
-    thread::spawn(move || -> Result<(), Error> {
+    let _ = thread::spawn(move || -> Result<(), Error> {
         let mut exec =
             fasync::LocalExecutor::new().context("error creating readline event loop")?;
 
@@ -332,7 +332,9 @@ fn cmd_stream() -> (impl Stream<Item = String>, impl Sink<(), Error = SendError>
                 }
                 // wait until processing thread is finished evaluating the last command
                 // before running the next loop in the repl
-                ack_receiver.next().await;
+                if ack_receiver.next().await.is_none() {
+                    return Ok(());
+                }
             }
         };
         exec.run_singlethreaded(fut)
@@ -361,11 +363,10 @@ async fn run_repl<'a>(peer_map: Arc<RwLock<PeerFactoryMap>>) -> Result<(), Error
     Ok(())
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component]
 async fn main() -> Result<(), Error> {
     let args: Options = argh::from_env();
 
-    fuchsia_syslog::init_with_tags(&["bt-avdtp-tool"]).expect("Can't init logger");
     // Launch the A2DP `profile` locally, and connect to the local service.
     let launcher_url = client::launcher().expect("Failed to launch bt-avdtp-tool service");
     let component = fuchsia_single_component_package_url!("bt-a2dp").to_string();
@@ -407,7 +408,7 @@ mod tests {
 
     use fidl::endpoints::create_proxy;
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     /// Tests parsing input arguments works successfully.
     /// Success case: The id provided exists, and the PeerControllerProxy is correctly returned.
     /// Error case: Invalid id, Error string + help message returned.
@@ -417,7 +418,7 @@ mod tests {
             create_proxy::<PeerControllerMarker>().expect("Failed to create peer endpoint");
 
         let supported_id = "123";
-        peer_map.insert(supported_id.to_string(), client_proxy.clone());
+        let _ = peer_map.insert(supported_id.to_string(), client_proxy.clone());
         let peer_map_obj = Arc::new(RwLock::new(peer_map));
 
         let invalid_id_args = ["2"];
@@ -430,7 +431,7 @@ mod tests {
         assert!(res.is_ok());
     }
 
-    #[test]
+    #[fuchsia::test]
     /// Tests parsing the help command works as intended.
     fn test_handle_help() {
         let invalid_cmd = ["foobar"];

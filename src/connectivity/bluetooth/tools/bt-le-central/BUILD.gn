@@ -36,6 +36,8 @@ rustc_binary("bin") {
     "src/gatt/types.rs",
     "src/main.rs",
   ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_shell_package("bt-le-central") {

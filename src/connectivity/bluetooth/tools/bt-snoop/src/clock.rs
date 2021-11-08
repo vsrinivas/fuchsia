@@ -20,7 +20,7 @@ pub async fn set_utc_clock() -> Result<(), Error> {
 
 /// Set the global clock after it has started running.
 async fn set_clock(clock: zx::Clock) -> Result<(), Error> {
-    fasync::OnSignals::new(&clock, zx::Signals::CLOCK_STARTED)
+    let _ = fasync::OnSignals::new(&clock, zx::Signals::CLOCK_STARTED)
         .await
         .context("Failed to wait on CLOCK_STARTED signal")?;
 

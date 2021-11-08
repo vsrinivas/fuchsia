@@ -28,20 +28,20 @@ fn do_scan(
 ) -> (Option<u64>, bool, impl Future<Output = Result<(), Error>>) {
     let mut opts = Options::new();
 
-    opts.optflag("h", "help", "");
+    let _ = opts.optflag("h", "help", "");
 
     // Options for scan/connection behavior.
-    opts.optopt(
+    let _ = opts.optopt(
         "s",
         "scan-count",
         "number of scan results to return before scanning is stopped",
         "SCAN_COUNT",
     );
-    opts.optflag("c", "connect", "connect to the first connectable scan result");
+    let _ = opts.optflag("c", "connect", "connect to the first connectable scan result");
 
     // Options for filtering scan results.
-    opts.optopt("n", "name-filter", "filter by device name", "NAME");
-    opts.optopt("u", "uuid-filter", "filter by UUID", "UUID");
+    let _ = opts.optopt("n", "name-filter", "filter by device name", "NAME");
+    let _ = opts.optopt("u", "uuid-filter", "filter by UUID", "UUID");
 
     let matches = match opts.parse(args) {
         Ok(m) => m,
@@ -139,7 +139,7 @@ async fn do_connect<'a>(state: CentralStatePtr, args: &'a [String]) -> Result<()
     }
 
     let mut opts = Options::new();
-    opts.optopt("u", "uuid", "only discover services that match UUID", "UUID");
+    let _ = opts.optopt("u", "uuid", "only discover services that match UUID", "UUID");
 
     let matches = opts.parse(&args[1..])?;
 

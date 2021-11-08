@@ -139,7 +139,7 @@ async fn test_packet_logs_inspect() {
 
     let id_1 = String::from("001");
 
-    packet_logs.add_device(id_1.clone());
+    assert!(packet_logs.add_device(id_1.clone()).is_none(), "shouldn't have evicted a log");
 
     let mut expected_data = vec![];
     write_pcap_header(&mut expected_data).expect("write to succeed");
@@ -250,7 +250,7 @@ fn test_handle_client_request() {
 
     // valid device returns no errors to a client subscribed to that device
     let (proxy, request_stream) = fidl_endpoints();
-    logs.add_device(String::new());
+    assert!(logs.add_device(String::new()).is_none(), "shouldn't have evicted a device log");
     let mut client_fut = proxy.start(true, Some(""));
     let _ = exec.run_until_stalled(&mut client_fut);
     let request = pump_request_stream(&mut exec, request_stream, ClientId(1));

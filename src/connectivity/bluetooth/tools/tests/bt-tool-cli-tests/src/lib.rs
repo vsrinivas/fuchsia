@@ -117,9 +117,9 @@ fn avrcp_controller_help_string() {
         .expect("unable to run AVRCP tool");
     let mut ret = String::new();
     let mut reader = BufReader::new(child.stdout_blocking());
-    reader.read_line(&mut ret).expect("Unable to read stdout");
-    reader.read_line(&mut ret).expect("Unable to read stdout");
-    reader.read_line(&mut ret).expect("Unable to read stdout");
+    for _ in 0..3 {
+        let _ = reader.read_line(&mut ret).expect("Unable to read stdout");
+    }
 
     assert!(ret.contains("Usage: "), "found: {}", ret);
     assert!(ret.contains("Bluetooth AVRCP Controller CLI"));
@@ -131,9 +131,9 @@ fn bt_snoop_cli_help_string() {
         .expect("unable to run bt-snoop-cli tool");
     let mut ret = String::new();
     let mut reader = BufReader::new(child.stdout_blocking());
-    reader.read_line(&mut ret).expect("Unable to read stdout");
-    reader.read_line(&mut ret).expect("Unable to read stdout");
-    reader.read_line(&mut ret).expect("Unable to read stdout");
+    for _ in 0..3 {
+        let _ = reader.read_line(&mut ret).expect("Unable to read stdout");
+    }
 
     assert!(ret.contains("Usage: "), "found: {}", ret);
     assert!(ret.contains("Snoop Bluetooth controller packets"), "found: {}", ret);

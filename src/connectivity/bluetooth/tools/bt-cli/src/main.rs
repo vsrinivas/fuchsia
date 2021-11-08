@@ -494,7 +494,7 @@ fn cmd_stream(
     let (mut cmd_sender, cmd_receiver) = channel(512);
     let (ack_sender, mut ack_receiver) = channel(512);
 
-    thread::spawn(move || -> Result<(), Error> {
+    let _ = thread::spawn(move || -> Result<(), Error> {
         let mut exec =
             fasync::LocalExecutor::new().context("error creating readline event loop")?;
 
@@ -524,7 +524,9 @@ fn cmd_stream(
                 }
                 // wait until processing thread is finished evaluating the last command
                 // before running the next loop in the repl
-                ack_receiver.next().await;
+                if ack_receiver.next().await.is_none() {
+                    return Ok(());
+                };
             }
         };
         exec.run_singlethreaded(fut)
@@ -543,11 +545,11 @@ async fn watch_peers(access_svc: AccessProxy, state: Arc<Mutex<State>>) -> Resul
                 print!("{}", CLEAR_LINE);
                 print_peer_state_updates(&state.lock(), &peer);
             }
-            state.lock().peers.insert(peer.id, peer);
+            let _ = state.lock().peers.insert(peer.id, peer);
         }
         for id in removed.into_iter() {
             let peer_id = PeerId::try_from(id).context("Malformed FIDL peer id")?;
-            state.lock().peers.remove(&peer_id);
+            let _ = state.lock().peers.remove(&peer_id);
         }
         first_loop = false;
     }
@@ -688,7 +690,7 @@ mod tests {
 
     fn state_with(p: Peer) -> State {
         let mut state = State::new();
-        state.peers.insert(p.id, p);
+        let _ = state.peers.insert(p.id, p);
         state
     }
 
@@ -722,11 +724,11 @@ mod tests {
     #[test]
     fn test_get_peers() {
         let mut state = State::new();
-        state.peers.insert(
+        let _ = state.peers.insert(
             PeerId(0xabcd),
             named_peer(PeerId(0xabcd), Address::Public([0xAB, 0x89, 0x67, 0x45, 0x23, 0x01]), None),
         );
-        state.peers.insert(
+        let _ = state.peers.insert(
             PeerId(0xbeef),
             named_peer(
                 PeerId(0xbeef),

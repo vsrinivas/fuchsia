@@ -20,13 +20,13 @@ use {
         select,
         stream::{FusedStream, FuturesUnordered, Stream, StreamExt, StreamFuture},
     },
-    log::{debug, error, info, trace, warn},
     std::{
         fmt,
         fs::File,
         path::{Path, PathBuf},
         time::Duration,
     },
+    tracing::{debug, error, info, trace, warn},
 };
 
 use crate::{
@@ -414,8 +414,8 @@ async fn run(
 ///
 /// Panics if syslog logger cannot be initialized
 fn init_logging(verbosity: u16) {
-    fuchsia_syslog::init_with_tags(&["bt-snoop"]).expect("Can't init logger");
     if verbosity > 1 {
+        fuchsia_trace_provider::trace_provider_create_with_fdio();
         fuchsia_syslog::set_severity(fuchsia_syslog::levels::TRACE);
     } else if verbosity > 0 {
         fuchsia_syslog::set_severity(fuchsia_syslog::levels::DEBUG);
@@ -424,11 +424,9 @@ fn init_logging(verbosity: u16) {
 }
 
 /// Parse program arguments, call the main loop, and log any unrecoverable errors.
-#[fasync::run_singlethreaded]
+#[fuchsia::component(logging_tags = ["bt-snoop"])]
 async fn main() {
     let args: Args = argh::from_env();
-
-    fuchsia_trace_provider::trace_provider_create_with_fdio();
     init_logging(args.verbosity);
 
     let mut fs = ServiceFs::new();
@@ -443,9 +441,9 @@ async fn main() {
 
     let config = SnoopConfig::from_args(args, config_inspect);
 
-    fs.dir("svc").add_fidl_service(|stream: SnoopRequestStream| stream);
+    let _ = fs.dir("svc").add_fidl_service(|stream: SnoopRequestStream| stream);
 
-    fs.take_and_serve_directory_handle().expect("serve ServiceFS directory");
+    let _ = fs.take_and_serve_directory_handle().expect("serve ServiceFS directory");
 
     // Set the UTC Clock if it becomes available.
     fasync::Task::local(set_utc_clock().unwrap_or_else(|e| {
