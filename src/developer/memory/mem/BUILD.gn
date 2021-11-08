@@ -32,8 +32,11 @@ core_shard("core_shard") {
   shard_file = "meta/mem.core_shard.cml"
 }
 
-# TODO(fxbug.dev/82741): legacy mem.cmx invoked by out-of-tree product tests
-# Delete the below when the bug is fixed
+# TODO(fxbug.dev/82741): legacy mem.cmx invoked by out-of-tree product tests.
+# TODO(fxbug.dev/82782): can't delete mem.cmx because it supports the current
+# `fx mem` use case. Reading stdout/stderr from v2 components via
+# `ffx component run` is not supported yet.
+# Delete the below when the bugs are fixed.
 fuchsia_component("mem_cmx") {
   component_name = "mem"
   manifest = "meta/mem.cmx"
