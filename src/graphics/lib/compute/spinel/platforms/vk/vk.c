@@ -168,7 +168,7 @@ struct spn_vk_pl
 #undef SPN_VK_DS_EXPAND_X
 #define SPN_VK_DS_EXPAND_X(ds_idx_, ds_id_, ...) SPN_VK_DSLB_CREATE(ds_id_, __VA_ARGS__)
 
-SPN_VK_DS_EXPAND();
+SPN_VK_DS_EXPAND()
 
 //
 // Create VkDescriptorSetLayoutCreateInfo structs
@@ -605,7 +605,7 @@ spn_vk_create(struct spn_vk_environment * const  environment,
   size_t const dutd_size = dutd_ds_offset + dutd_ds_size;
 
   // allocate the memory blob
-  void * dutd_base    = malloc(dutd_size);
+  void * dutd_base = malloc(dutd_size);
 
   // save the memory blob
   instance->dutdp.mem = dutd_base;

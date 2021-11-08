@@ -398,7 +398,7 @@
 #define SPN_VK_GLSL_DS_SURFACE(idx,mq_surface,surface_type)     \
   SPN_VK_GLSL_LAYOUT_IMAGE2D(SPN_VK_DS_ID_SURFACE,idx,          \
                              SPN_VK_BINDING_SURFACE,            \
-                             surface_type,surface);
+                             surface_type,surface)
 
 //
 // DESCRIPTOR SET: RECLAIM

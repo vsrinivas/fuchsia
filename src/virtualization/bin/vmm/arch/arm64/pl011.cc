@@ -15,9 +15,9 @@
 #include "src/virtualization/bin/vmm/guest.h"
 #include "src/virtualization/bin/vmm/zbi.h"
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 #include <libfdt.h>
-__END_CDECLS;
+__END_CDECLS
 
 // clang-format off
 

@@ -96,7 +96,7 @@ class DemuxRegisterIo : public ddk::MmioView {
   class name : public TypedRegisterBase<type, name, uint32_t> {        \
    public:                                                             \
     static auto Get() { return TypedRegisterAddr<name>((address)*4); } \
-  };
+  }
 
 #define REGISTER_NAME(name, type, address)                      \
   class name : public TypedRegisterBase<type, name, uint32_t> { \
@@ -146,16 +146,16 @@ REGISTER_NAME(DosSwReset3, DosRegisterIo, 0x3f34)
 DEFINE_REGISTER(DosGclkEn3, DosRegisterIo, 0x3f35);
 DEFINE_REGISTER(DosVdecMcrccStallCtrl, DosRegisterIo, 0x3f40);
 
-DEFINE_REGISTER(MbyMbx, DosRegisterIo, 0x0c07)
-DEFINE_REGISTER(H264BufferInfoData, DosRegisterIo, 0x0c22)
-DEFINE_REGISTER(H264BufferInfoIndex, DosRegisterIo, 0x0c24)
-DEFINE_REGISTER(H264CurrentPocIdxReset, DosRegisterIo, 0x0c30)
-DEFINE_REGISTER(LastSliceMvAddr, DosRegisterIo, 0x0c30)
+DEFINE_REGISTER(MbyMbx, DosRegisterIo, 0x0c07);
+DEFINE_REGISTER(H264BufferInfoData, DosRegisterIo, 0x0c22);
+DEFINE_REGISTER(H264BufferInfoIndex, DosRegisterIo, 0x0c24);
+DEFINE_REGISTER(H264CurrentPocIdxReset, DosRegisterIo, 0x0c30);
+DEFINE_REGISTER(LastSliceMvAddr, DosRegisterIo, 0x0c30);
 // Both registers are at the same location.
-DEFINE_REGISTER(LastMvy, DosRegisterIo, 0x0c32)
-DEFINE_REGISTER(H264CurrentPoc, DosRegisterIo, 0x0c32)
+DEFINE_REGISTER(LastMvy, DosRegisterIo, 0x0c32);
+DEFINE_REGISTER(H264CurrentPoc, DosRegisterIo, 0x0c32);
 
-DEFINE_REGISTER(H264CoMbWrAddr, DosRegisterIo, 0x0c38)
+DEFINE_REGISTER(H264CoMbWrAddr, DosRegisterIo, 0x0c38);
 REGISTER_NAME(H264CoMbRdAddr, DosRegisterIo, 0x0c39)
   DEF_FIELD(31, 30, pic_coding_struct);
   DEF_BIT(29, bottom);
@@ -166,10 +166,10 @@ REGISTER_NAME(H264CoMbRwCtl, DosRegisterIo, 0x0c3d)
   DEF_BIT(11, busy);
 };
 
-DEFINE_REGISTER(VldMemVififoStartPtr, DosRegisterIo, 0x0c40)
-DEFINE_REGISTER(VldMemVififoCurrPtr, DosRegisterIo, 0x0c41)
-DEFINE_REGISTER(VldMemVififoEndPtr, DosRegisterIo, 0x0c42)
-DEFINE_REGISTER(VldMemVififoBytesAvail, DosRegisterIo, 0x0c43)
+DEFINE_REGISTER(VldMemVififoStartPtr, DosRegisterIo, 0x0c40);
+DEFINE_REGISTER(VldMemVififoCurrPtr, DosRegisterIo, 0x0c41);
+DEFINE_REGISTER(VldMemVififoEndPtr, DosRegisterIo, 0x0c42);
+DEFINE_REGISTER(VldMemVififoBytesAvail, DosRegisterIo, 0x0c43);
 
 REGISTER_NAME(VldMemVififoControl, DosRegisterIo, 0x0c44)
   DEF_FIELD(23, 16, upper);
@@ -180,23 +180,23 @@ REGISTER_NAME(VldMemVififoControl, DosRegisterIo, 0x0c44)
   DEF_BIT(0, init);
 };
 
-DEFINE_REGISTER(VldMemVififoWP, DosRegisterIo, 0x0c45)
-DEFINE_REGISTER(VldMemVififoRP, DosRegisterIo, 0x0c46)
-DEFINE_REGISTER(VldMemVififoLevel, DosRegisterIo, 0x0c47)
+DEFINE_REGISTER(VldMemVififoWP, DosRegisterIo, 0x0c45);
+DEFINE_REGISTER(VldMemVififoRP, DosRegisterIo, 0x0c46);
+DEFINE_REGISTER(VldMemVififoLevel, DosRegisterIo, 0x0c47);
 REGISTER_NAME(VldMemVififoBufCntl, DosRegisterIo, 0x0c48)
     DEF_BIT(1, manual);
     DEF_BIT(0, init);
 };
-DEFINE_REGISTER(VldMemVififoWrapCount, DosRegisterIo, 0x0c51)
-DEFINE_REGISTER(VldMemVififoMemCtl, DosRegisterIo, 0x0c52)
-DEFINE_REGISTER(VldMemSwapAddr, DosRegisterIo, 0x0c55)
+DEFINE_REGISTER(VldMemVififoWrapCount, DosRegisterIo, 0x0c51);
+DEFINE_REGISTER(VldMemVififoMemCtl, DosRegisterIo, 0x0c52);
+DEFINE_REGISTER(VldMemSwapAddr, DosRegisterIo, 0x0c55);
 REGISTER_NAME(VldMemSwapCtrl, DosRegisterIo, 0x0c56)
   DEF_BIT(0, enable);
   DEF_BIT(1, save); // 0 means restore
   DEF_BIT(7, in_progress);
 };
 
-DEFINE_REGISTER(PowerCtlVld, DosRegisterIo, 0x0c08)
+DEFINE_REGISTER(PowerCtlVld, DosRegisterIo, 0x0c08);
 REGISTER_NAME(DosGenCtrl0, DosRegisterIo, 0x3f02)
   enum {
     kVdec = 0,
@@ -207,10 +207,10 @@ REGISTER_NAME(DosGenCtrl0, DosRegisterIo, 0x3f02)
   DEF_FIELD(2, 1, vbuf_rp_select);
 };
 
-DEFINE_REGISTER(McStatus0, DosRegisterIo, 0x0909)
-DEFINE_REGISTER(McCtrl1, DosRegisterIo, 0x090b)
-DEFINE_REGISTER(DblkCtrl, DosRegisterIo, 0x0951)
-DEFINE_REGISTER(DblkStatus, DosRegisterIo, 0x0953)
+DEFINE_REGISTER(McStatus0, DosRegisterIo, 0x0909);
+DEFINE_REGISTER(McCtrl1, DosRegisterIo, 0x090b);
+DEFINE_REGISTER(DblkCtrl, DosRegisterIo, 0x0951);
+DEFINE_REGISTER(DblkStatus, DosRegisterIo, 0x0953);
 REGISTER_NAME(MdecPicDcMuxCtrl, DosRegisterIo, 0x098d)
     DEF_BIT(31, bit31); // 1 for mmu enabled
 };
@@ -223,19 +223,19 @@ REGISTER_NAME(MdecPicDcCtrl, DosRegisterIo, 0x098e)
 
     DEF_BIT(31, bit31);
 };
-DEFINE_REGISTER(MdecPicDcStatus, DosRegisterIo, 0x098f)
+DEFINE_REGISTER(MdecPicDcStatus, DosRegisterIo, 0x098f);
 
-DEFINE_REGISTER(MdecSwReset, DosRegisterIo, 0x0984)
+DEFINE_REGISTER(MdecSwReset, DosRegisterIo, 0x0984);
 
-DEFINE_REGISTER(DbkrCanvasCtrl, DosRegisterIo, 0x9b0)
-DEFINE_REGISTER(DbkwCanvasCtrl, DosRegisterIo, 0x9b1)
-DEFINE_REGISTER(RecCanvasCtrl, DosRegisterIo, 0x9b2)
+DEFINE_REGISTER(DbkrCanvasCtrl, DosRegisterIo, 0x9b0);
+DEFINE_REGISTER(DbkwCanvasCtrl, DosRegisterIo, 0x9b1);
+DEFINE_REGISTER(RecCanvasCtrl, DosRegisterIo, 0x9b2);
 REGISTER_NAME(CurrCanvasCtrl, DosRegisterIo, 0x9b3)
   DEF_FIELD(31, 24, canvas_index);
   DEF_FIELD(15, 0, lower_canvas_index);
 };
 
-DEFINE_REGISTER(MdecPicDcThresh, DosRegisterIo, 0x9b8)
+DEFINE_REGISTER(MdecPicDcThresh, DosRegisterIo, 0x9b8);
 
 // AvScratch registers are used to communicate with the AMRISC coprocessor.
 class AvScratch : public TypedRegisterBase<DosRegisterIo, AvScratch, uint32_t> {
@@ -243,41 +243,41 @@ class AvScratch : public TypedRegisterBase<DosRegisterIo, AvScratch, uint32_t> {
     static auto Get(uint32_t i) { return AddrType((0x09c0 + i) * 4); }
 };
 
-DEFINE_REGISTER(AvScratch0, DosRegisterIo, 0x09c0)
-DEFINE_REGISTER(AvScratch1, DosRegisterIo, 0x09c1)
-DEFINE_REGISTER(AvScratch2, DosRegisterIo, 0x09c2)
-DEFINE_REGISTER(AvScratch3, DosRegisterIo, 0x09c3)
-DEFINE_REGISTER(AvScratch4, DosRegisterIo, 0x09c4)
-DEFINE_REGISTER(AvScratch5, DosRegisterIo, 0x09c5)
-DEFINE_REGISTER(AvScratch6, DosRegisterIo, 0x09c6)
-DEFINE_REGISTER(AvScratch7, DosRegisterIo, 0x09c7)
-DEFINE_REGISTER(AvScratch8, DosRegisterIo, 0x09c8)
-DEFINE_REGISTER(AvScratch9, DosRegisterIo, 0x09c9)
-DEFINE_REGISTER(AvScratchA, DosRegisterIo, 0x09ca)
-DEFINE_REGISTER(AvScratchB, DosRegisterIo, 0x09cb)
-DEFINE_REGISTER(AvScratchC, DosRegisterIo, 0x09cc)
-DEFINE_REGISTER(AvScratchD, DosRegisterIo, 0x09cd)
-DEFINE_REGISTER(AvScratchE, DosRegisterIo, 0x09ce)
-DEFINE_REGISTER(AvScratchF, DosRegisterIo, 0x09cf)
-DEFINE_REGISTER(AvScratchG, DosRegisterIo, 0x09d0)
-DEFINE_REGISTER(AvScratchH, DosRegisterIo, 0x09d1)
-DEFINE_REGISTER(AvScratchI, DosRegisterIo, 0x09d2)
-DEFINE_REGISTER(AvScratchJ, DosRegisterIo, 0x09d3)
-DEFINE_REGISTER(AvScratchK, DosRegisterIo, 0x09d4)
-DEFINE_REGISTER(AvScratchL, DosRegisterIo, 0x09d5)
-DEFINE_REGISTER(AvScratchM, DosRegisterIo, 0x09d6)
-DEFINE_REGISTER(AvScratchN, DosRegisterIo, 0x09d7)
+DEFINE_REGISTER(AvScratch0, DosRegisterIo, 0x09c0);
+DEFINE_REGISTER(AvScratch1, DosRegisterIo, 0x09c1);
+DEFINE_REGISTER(AvScratch2, DosRegisterIo, 0x09c2);
+DEFINE_REGISTER(AvScratch3, DosRegisterIo, 0x09c3);
+DEFINE_REGISTER(AvScratch4, DosRegisterIo, 0x09c4);
+DEFINE_REGISTER(AvScratch5, DosRegisterIo, 0x09c5);
+DEFINE_REGISTER(AvScratch6, DosRegisterIo, 0x09c6);
+DEFINE_REGISTER(AvScratch7, DosRegisterIo, 0x09c7);
+DEFINE_REGISTER(AvScratch8, DosRegisterIo, 0x09c8);
+DEFINE_REGISTER(AvScratch9, DosRegisterIo, 0x09c9);
+DEFINE_REGISTER(AvScratchA, DosRegisterIo, 0x09ca);
+DEFINE_REGISTER(AvScratchB, DosRegisterIo, 0x09cb);
+DEFINE_REGISTER(AvScratchC, DosRegisterIo, 0x09cc);
+DEFINE_REGISTER(AvScratchD, DosRegisterIo, 0x09cd);
+DEFINE_REGISTER(AvScratchE, DosRegisterIo, 0x09ce);
+DEFINE_REGISTER(AvScratchF, DosRegisterIo, 0x09cf);
+DEFINE_REGISTER(AvScratchG, DosRegisterIo, 0x09d0);
+DEFINE_REGISTER(AvScratchH, DosRegisterIo, 0x09d1);
+DEFINE_REGISTER(AvScratchI, DosRegisterIo, 0x09d2);
+DEFINE_REGISTER(AvScratchJ, DosRegisterIo, 0x09d3);
+DEFINE_REGISTER(AvScratchK, DosRegisterIo, 0x09d4);
+DEFINE_REGISTER(AvScratchL, DosRegisterIo, 0x09d5);
+DEFINE_REGISTER(AvScratchM, DosRegisterIo, 0x09d6);
+DEFINE_REGISTER(AvScratchN, DosRegisterIo, 0x09d7);
 
-DEFINE_REGISTER(MdecExtIfCfg0, DosRegisterIo, 0x09e4)
-DEFINE_REGISTER(MdecExtIfCfg1, DosRegisterIo, 0x09e5)
+DEFINE_REGISTER(MdecExtIfCfg0, DosRegisterIo, 0x09e4);
+DEFINE_REGISTER(MdecExtIfCfg1, DosRegisterIo, 0x09e5);
 
-DEFINE_REGISTER(Mpeg12Reg, DosRegisterIo, 0x0c01)
-DEFINE_REGISTER(PscaleCtrl, DosRegisterIo, 0x0911)
-DEFINE_REGISTER(PicHeadInfo, DosRegisterIo, 0x0c03)
-DEFINE_REGISTER(ViffBitCnt, DosRegisterIo, 0x0c1a)
-DEFINE_REGISTER(M4ControlReg, DosRegisterIo, 0x0c29)
-DEFINE_REGISTER(VdecAssistMbox1ClrReg, DosRegisterIo, 0x0075)
-DEFINE_REGISTER(VdecAssistMbox1Mask, DosRegisterIo, 0x0076)
+DEFINE_REGISTER(Mpeg12Reg, DosRegisterIo, 0x0c01);
+DEFINE_REGISTER(PscaleCtrl, DosRegisterIo, 0x0911);
+DEFINE_REGISTER(PicHeadInfo, DosRegisterIo, 0x0c03);
+DEFINE_REGISTER(ViffBitCnt, DosRegisterIo, 0x0c1a);
+DEFINE_REGISTER(M4ControlReg, DosRegisterIo, 0x0c29);
+DEFINE_REGISTER(VdecAssistMbox1ClrReg, DosRegisterIo, 0x0075);
+DEFINE_REGISTER(VdecAssistMbox1Mask, DosRegisterIo, 0x0076);
 
 REGISTER_NAME(VdecAssistCanvasBlk32, DosRegisterIo, 0x5)
   DEF_BIT(11, canvas_blk32_wr);
@@ -444,7 +444,7 @@ REGISTER_NAME(HevcdMppAnc2AxiTblConfAddr, DosRegisterIo, 0x3460)
   DEF_BIT(2, bit2);
 };
 DEFINE_REGISTER(HevcdMppAnc2AxiTblData, DosRegisterIo, 0x3464);
-REGISTER_NAME(HevcdMppAncCanvasAccconfigAddr, DosRegisterIo, 0x34c0);
+REGISTER_NAME(HevcdMppAncCanvasAccconfigAddr, DosRegisterIo, 0x34c0)
   DEF_BIT(0, bit0); // Probably signals a write.
   DEF_BIT(1, bit1);
   DEF_FIELD(15, 8, field15_8);
@@ -475,7 +475,7 @@ REGISTER_NAME(HevcDblkCfgB, DosRegisterIo, 0x350b)
   DEF_BIT(8, compressed_write_enable);
   DEF_BIT(9, uncompressed_write_enable);
 };
-DEFINE_REGISTER(HevcDblkCfgE, DosRegisterIo, 0x350e)
+DEFINE_REGISTER(HevcDblkCfgE, DosRegisterIo, 0x350e);
 
 REGISTER_NAME(HevcSaoCtrl1, DosRegisterIo, 0x3602)
   enum {
@@ -509,8 +509,8 @@ DEFINE_REGISTER(HevcCmHeaderStartAddr, DosRegisterIo, 0x3628);
 DEFINE_REGISTER(HevcCmHeaderLength, DosRegisterIo, 0x3629);
 DEFINE_REGISTER(HevcCmHeaderOffset, DosRegisterIo, 0x362b);
 
-DEFINE_REGISTER(HevcSaoMmuVh0Addr, DosRegisterIo, 0x363a)
-DEFINE_REGISTER(HevcSaoMmuVh1Addr, DosRegisterIo, 0x363b)
+DEFINE_REGISTER(HevcSaoMmuVh0Addr, DosRegisterIo, 0x363a);
+DEFINE_REGISTER(HevcSaoMmuVh1Addr, DosRegisterIo, 0x363b);
 
 DEFINE_REGISTER(HevcPscaleCtrl, DosRegisterIo, 0x3911);
 DEFINE_REGISTER(HevcDblkCtrl, DosRegisterIo, 0x3951);
@@ -565,7 +565,7 @@ DEFINE_REGISTER(Reset0Register, ResetRegisterIo, 0x1101 - 0x1100);
 REGISTER_NAME(Reset1Register, ResetRegisterIo, 0x1102 - 0x1100)
   DEF_BIT(8, parser);
 };
-DEFINE_REGISTER(FecInputControl, DemuxRegisterIo, 0x1602)
+DEFINE_REGISTER(FecInputControl, DemuxRegisterIo, 0x1602);
 
 REGISTER_NAME(TsHiuCtl, DemuxRegisterIo, 0x1625)
   DEF_BIT(7, use_hi_bsf_interface);
@@ -594,10 +594,10 @@ REGISTER_NAME(ParserConfig, ParserRegisterIo, 0x2965)
   DEF_FIELD(9, 8, pfifo_access_width);
   DEF_FIELD(7, 0, max_fetch_cycle);
 };
-DEFINE_REGISTER(PfifoWrPtr, ParserRegisterIo, 0x2966)
-DEFINE_REGISTER(PfifoRdPtr, ParserRegisterIo, 0x2967)
-DEFINE_REGISTER(ParserSearchPattern, ParserRegisterIo, 0x2969)
-DEFINE_REGISTER(ParserSearchMask, ParserRegisterIo, 0x296a)
+DEFINE_REGISTER(PfifoWrPtr, ParserRegisterIo, 0x2966);
+DEFINE_REGISTER(PfifoRdPtr, ParserRegisterIo, 0x2967);
+DEFINE_REGISTER(ParserSearchPattern, ParserRegisterIo, 0x2969);
+DEFINE_REGISTER(ParserSearchMask, ParserRegisterIo, 0x296a);
 
 REGISTER_NAME(ParserControl, ParserRegisterIo, 0x2960)
   enum {
@@ -611,10 +611,10 @@ REGISTER_NAME(ParserControl, ParserRegisterIo, 0x2960)
   DEF_FIELD(4, 0, command);
 };
 
-DEFINE_REGISTER(ParserVideoStartPtr, ParserRegisterIo, 0x2980)
-DEFINE_REGISTER(ParserVideoEndPtr, ParserRegisterIo, 0x2981)
-DEFINE_REGISTER(ParserVideoWp, ParserRegisterIo, 0x2982)
-DEFINE_REGISTER(ParserVideoRp, ParserRegisterIo, 0x2983)
+DEFINE_REGISTER(ParserVideoStartPtr, ParserRegisterIo, 0x2980);
+DEFINE_REGISTER(ParserVideoEndPtr, ParserRegisterIo, 0x2981);
+DEFINE_REGISTER(ParserVideoWp, ParserRegisterIo, 0x2982);
+DEFINE_REGISTER(ParserVideoRp, ParserRegisterIo, 0x2983);
 
 REGISTER_NAME(ParserEsControl, ParserRegisterIo, 0x2977)
   // Determines if the parser should swap around the endianness of the video output.
@@ -631,7 +631,7 @@ REGISTER_NAME(ParserIntEnable, ParserRegisterIo, 0x296b)
   DEF_BIT(15, host_en_fetch_complete);
 };
 
-DEFINE_REGISTER(ParserFetchAddr, ParserRegisterIo, 0x2961)
+DEFINE_REGISTER(ParserFetchAddr, ParserRegisterIo, 0x2961);
 REGISTER_NAME(ParserFetchCmd, ParserRegisterIo, 0x2962)
   DEF_FIELD(29, 27, fetch_endian);
   DEF_FIELD(26, 0, len);

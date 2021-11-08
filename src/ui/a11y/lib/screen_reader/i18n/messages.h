@@ -22,7 +22,7 @@ struct LocalizedMessage {
 
 #define DEF_MESSAGE(m_id, m_default_message)                           \
   inline constexpr ::a11y::i18n::LocalizedMessage m_id = {.id = #m_id, \
-                                                          .default_message = m_default_message};
+                                                          .default_message = m_default_message}
 
 // Spoken message that describes a heading. For example, an element with the ARIA role heading.
 DEF_MESSAGE(role_header, "Heading");

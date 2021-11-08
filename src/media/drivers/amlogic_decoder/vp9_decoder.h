@@ -64,7 +64,7 @@ class Vp9Decoder : public VideoDecoder {
     // StreamControl thread) to continue decoding for the same stream, with the current input packet
     // skipped, if the stream hasn't been obsoleted by the time this request reaches the
     // StreamControl thread.
-    virtual void AsyncResetStreamAfterCurrentFrame() { ZX_PANIC("not impemented"); };
+    virtual void AsyncResetStreamAfterCurrentFrame() { ZX_PANIC("not impemented"); }
   };
   enum class DecoderState {
     // In these two states the decoder is stopped because UpdateDecodeSize needs to be called. The

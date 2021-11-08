@@ -7,6 +7,6 @@
 
 namespace media {
 class DecryptConfig {};
-};  // namespace media
+}  // namespace media
 
 #endif

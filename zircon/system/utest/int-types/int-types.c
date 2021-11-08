@@ -112,7 +112,7 @@ static_assert(sizeof(size_t) == sizeof(void*), "");
 
 #define CHECK_MAX(type, TYPE)                                                                    \
   static_assert(IS_SIGNED(type) ? CHECK_MAX_SIGNED(type, TYPE) : CHECK_MAX_UNSIGNED(type, TYPE), \
-                "");
+                "")
 
 CHECK_MAX(int8_t, INT8);
 CHECK_MAX(int16_t, INT16);

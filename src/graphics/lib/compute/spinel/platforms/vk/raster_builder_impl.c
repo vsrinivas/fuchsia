@@ -443,7 +443,7 @@ spn_rbi_dispatch_drop(struct spn_raster_builder_impl * const impl)
   struct spn_ring * const ring = &impl->dispatches.ring;
 
   spn_ring_drop_1(ring);
-};
+}
 
 static void
 spn_rbi_dispatch_acquire(struct spn_raster_builder_impl * const impl)

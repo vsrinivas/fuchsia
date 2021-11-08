@@ -19,9 +19,9 @@
 #include "src/virtualization/bin/vmm/vcpu.h"
 #include "src/virtualization/bin/vmm/zbi.h"
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 #include <libfdt.h>
-__END_CDECLS;
+__END_CDECLS
 
 static constexpr uint32_t kGicv2Revision = 2;
 static constexpr uint32_t kGicv3Revision = 3;

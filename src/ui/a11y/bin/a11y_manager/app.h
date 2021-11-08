@@ -102,7 +102,7 @@ class App {
 
   // Sets the a11y manager to the given configuration. Visible for testing.
   void SetState(A11yManagerState newState);
-  A11yManagerState state() { return state_; };
+  A11yManagerState state() { return state_; }
 
   a11y::ScreenReader* screen_reader() { return screen_reader_.get(); }
 

@@ -392,7 +392,7 @@ TEST_SINGLE(Float64, Float64, f64, float64, kDoubleValue)
 TEST_DECODE_WIRE(TwoTuple, Complex, R"({"real":"1", "imaginary":"2"})",
                  "{ " + ValueToPretty("real", "int32", 1) + ", " +
                      ValueToPretty("imaginary", "int32", 2) + " }",
-                 1, 2);
+                 1, 2)
 
 TEST_DECODE_WIRE(StringInt, StringInt, R"({"s":"groucho", "i32":"4"})",
                  "{ " + ValueToPretty("s", "string", "groucho") + ", " +
@@ -411,20 +411,20 @@ std::vector<int32_t> two_param_vector = {1, 2};
 }  // namespace
 
 TEST_DECODE_WIRE(Array1, Array1, R"({"b_1":["1"]})",
-                 "{ b_1: array<#gre#int32#rst#> = [ #blu#1#rst# ] }", one_param_array);
+                 "{ b_1: array<#gre#int32#rst#> = [ #blu#1#rst# ] }", one_param_array)
 
 TEST_DECODE_WIRE(Array2, Array2, R"({"b_2":["1", "2"]})",
-                 "{ b_2: array<#gre#int32#rst#> = [ #blu#1#rst#, #blu#2#rst# ] }", two_param_array);
+                 "{ b_2: array<#gre#int32#rst#> = [ #blu#1#rst#, #blu#2#rst# ] }", two_param_array)
 
 TEST_DECODE_WIRE(NullVector, Vector, R"({"v_1": null})",
                  "{ v_1: vector<#gre#int32#rst#> = #red#null#rst# }", cpp17::nullopt)
 
 TEST_DECODE_WIRE(VectorOneElt, Vector, R"({"v_1":["1"]})",
-                 "{ v_1: vector<#gre#int32#rst#> = [ #blu#1#rst# ] }", one_param_vector);
+                 "{ v_1: vector<#gre#int32#rst#> = [ #blu#1#rst# ] }", one_param_vector)
 
 TEST_DECODE_WIRE(VectorTwoElt, Vector, R"({"v_1":["1", "2"]})",
                  "{ v_1: vector<#gre#int32#rst#> = [ #blu#1#rst#, #blu#2#rst# ] }",
-                 two_param_vector);
+                 two_param_vector)
 
 std::array<std::string, 2> TwoStringArrayFromVals(const std::string& v1, const std::string& v2) {
   std::array<std::string, 2> brother_array;
@@ -624,12 +624,12 @@ TEST_F(WireParserTest, BadBoolStruct) {
 
 TEST_DECODE_WIRE(NullableStruct, NullableStruct, R"({"p":null})",
                  "{ p: #gre#test.fidlcodec.examples/PrimitiveTypes#rst# = #red#null#rst# }",
-                 nullptr);
+                 nullptr)
 
 TEST_DECODE_WIRE(NullableStructAndInt, NullableStructAndInt, R"({"p":null, "i":"1"})",
                  "{ p: #gre#test.fidlcodec.examples/PrimitiveTypes#rst# = "
                  "#red#null#rst#, i: #gre#int32#rst# = #blu#1#rst# }",
-                 nullptr, 1);
+                 nullptr, 1)
 
 namespace {
 
@@ -688,7 +688,7 @@ TEST_DECODE_WIRE(SmallStruct, SmallStructAfterByte,
                  "    c: #gre#uint8#rst# = #blu#7#rst#\n"
                  "  }\n"
                  "}",
-                 1, SmallStructFromVals(2, 3, 4), SmallStructFromVals(5, 6, 7));
+                 1, SmallStructFromVals(2, 3, 4), SmallStructFromVals(5, 6, 7))
 
 namespace {
 
@@ -906,54 +906,54 @@ test::fidlcodec::examples::DataElement GetDataElement(int32_t i32, uint8_t u8) {
 }  // namespace
 
 TEST_DECODE_WIRE(UnionInt, Union, R"({"isu":{"variant_i":"42"}, "i" : "1"})",
-                 IntUnionIntPretty("IntStructUnion", 42, 1), GetIntUnion<isu>(42), 1);
+                 IntUnionIntPretty("IntStructUnion", 42, 1), GetIntUnion<isu>(42), 1)
 
 TEST_DECODE_WIRE(UnionStruct, Union,
                  R"({"isu":{"variant_tss":{"value1":"harpo","value2":"chico"}}, "i":"1"})",
                  StructUnionIntPretty("IntStructUnion", "harpo", "chico", 1),
-                 GetStructUnion<isu>("harpo", "chico"), 1);
+                 GetStructUnion<isu>("harpo", "chico"), 1)
 
 TEST_DECODE_WIRE(NullableUnionInt, NullableUnion, R"({"isu":{"variant_i":"42"}, "i" : "1"})",
-                 IntUnionIntPretty("IntStructUnion", 42, 1), GetIntUnionPtr<isu>(42), 1);
+                 IntUnionIntPretty("IntStructUnion", 42, 1), GetIntUnionPtr<isu>(42), 1)
 
 TEST_DECODE_WIRE(NullableUnionStruct, NullableUnion,
                  R"({"isu":{"variant_tss":{"value1":"harpo","value2":"chico"}}, "i":"1"})",
                  StructUnionIntPretty("IntStructUnion", "harpo", "chico", 1),
-                 GetStructUnionPtr<isu>("harpo", "chico"), 1);
+                 GetStructUnionPtr<isu>("harpo", "chico"), 1)
 
 TEST_DECODE_WIRE(NullableUnionIntFirstInt, NullableUnionIntFirst,
                  R"({"i" : "1", "isu":{"variant_i":"42"}})",
-                 IntIntUnionPretty("IntStructUnion", 1, 42), 1, GetIntUnionPtr<isu>(42));
+                 IntIntUnionPretty("IntStructUnion", 1, 42), 1, GetIntUnionPtr<isu>(42))
 
 TEST_DECODE_WIRE(NullableUnionIntFirstStruct, NullableUnionIntFirst,
                  R"({"i": "1", "isu":{"variant_tss":{"value1":"harpo","value2":"chico"}}})",
                  IntStructUnionPretty("IntStructUnion", 1, "harpo", "chico"), 1,
-                 GetStructUnionPtr<isu>("harpo", "chico"));
+                 GetStructUnionPtr<isu>("harpo", "chico"))
 
 TEST_DECODE_WIRE(XUnionInt, XUnion, R"({"isu":{"variant_i":"42"}, "i" : "1"})",
-                 IntUnionIntPretty("IntStructXunion", 42, 1), GetIntUnion<xisu>(42), 1);
+                 IntUnionIntPretty("IntStructXunion", 42, 1), GetIntUnion<xisu>(42), 1)
 
 TEST_DECODE_WIRE(XUnionStruct, XUnion,
                  R"({"isu":{"variant_tss":{"value1":"harpo","value2":"chico"}}, "i":"1"})",
                  StructUnionIntPretty("IntStructXunion", "harpo", "chico", 1),
-                 GetStructUnion<xisu>("harpo", "chico"), 1);
+                 GetStructUnion<xisu>("harpo", "chico"), 1)
 
 TEST_DECODE_WIRE(NullableXUnionInt, NullableXUnion, R"({"isu":{"variant_i":"42"}, "i" : "1"})",
-                 IntUnionIntPretty("IntStructXunion", 42, 1), GetIntUnionPtr<xisu>(42), 1);
+                 IntUnionIntPretty("IntStructXunion", 42, 1), GetIntUnionPtr<xisu>(42), 1)
 
 TEST_DECODE_WIRE(NullableXUnionStruct, NullableXUnion,
                  R"({"isu":{"variant_tss":{"value1":"harpo","value2":"chico"}}, "i":"1"})",
                  StructUnionIntPretty("IntStructXunion", "harpo", "chico", 1),
-                 GetStructUnionPtr<xisu>("harpo", "chico"), 1);
+                 GetStructUnionPtr<xisu>("harpo", "chico"), 1)
 
 TEST_DECODE_WIRE(NullableXUnionIntFirstInt, NullableXUnionIntFirst,
                  R"({"i" : "1", "isu":{"variant_i":"42"}})",
-                 IntIntUnionPretty("IntStructXunion", 1, 42), 1, GetIntUnionPtr<xisu>(42));
+                 IntIntUnionPretty("IntStructXunion", 1, 42), 1, GetIntUnionPtr<xisu>(42))
 
 TEST_DECODE_WIRE(NullableXUnionIntFirstStruct, NullableXUnionIntFirst,
                  R"({"i": "1", "isu":{"variant_tss":{"value1":"harpo","value2":"chico"}}})",
                  IntStructUnionPretty("IntStructXunion", 1, "harpo", "chico"), 1,
-                 GetStructUnionPtr<xisu>("harpo", "chico"));
+                 GetStructUnionPtr<xisu>("harpo", "chico"))
 
 TEST_DECODE_WIRE(
     RecursiveUnion, RecursiveUnion, R"({"e":{"alternatives":[{"int32":"-10"},{"uint8":"200"}]}})",
@@ -964,7 +964,7 @@ TEST_DECODE_WIRE(
     "    ]\n"
     "  }\n"
     "}",
-    GetDataElement(-10, 200));
+    GetDataElement(-10, 200))
 
 namespace {
 
@@ -1043,50 +1043,50 @@ std::string ShortUnionPretty(const std::string& name, const char* field, const c
 
 TEST_DECODE_WIRE(ShortUnion8, ShortUnion, R"({"u":{"variant_u8":"16"}, "i":"1"})",
                  ShortUnionPretty("U8U16Union", "variant_u8", "uint8", 16, 1),
-                 GetUInt8Union<uuu>(16), 1);
+                 GetUInt8Union<uuu>(16), 1)
 
 TEST_DECODE_WIRE(ShortUnionInlinedZero, ShortUnion, R"({"u":{"variant_u8":"0"}, "i":"1"})",
-                 ShortUnionPretty("U8U16Union", "variant_u8", "uint8", 0, 1),
-                 GetUInt8Union<uuu>(0), 1);
+                 ShortUnionPretty("U8U16Union", "variant_u8", "uint8", 0, 1), GetUInt8Union<uuu>(0),
+                 1)
 
 TEST_DECODE_WIRE(ShortUnion16, ShortUnion, R"({"u":{"variant_u16":"1024"}, "i":"1"})",
                  ShortUnionPretty("U8U16Union", "variant_u16", "uint16", 1024, 1),
-                 GetUInt16Union<uuu>(1024), 1);
+                 GetUInt16Union<uuu>(1024), 1)
 
 TEST_DECODE_WIRE(ShortUnionReserved8, ShortUnionReserved, R"({"u":{"variant_u8":"16"}, "i":"1"})",
                  ShortUnionPretty("U8U16UnionReserved", "variant_u8", "uint8", 16, 1),
-                 GetUInt8Union<uuur>(16), 1);
+                 GetUInt8Union<uuur>(16), 1)
 
 TEST_DECODE_WIRE(ShortUnionReserved16, ShortUnionReserved,
                  R"({"u":{"variant_u16":"1024"}, "i":"1"})",
                  ShortUnionPretty("U8U16UnionReserved", "variant_u16", "uint16", 1024, 1),
-                 GetUInt16Union<uuur>(1024), 1);
+                 GetUInt16Union<uuur>(1024), 1)
 
 TEST_DECODE_WIRE(ShortXUnion8, ShortXUnion, R"({"u":{"variant_u8":"16"}, "i":"1"})",
                  ShortUnionPretty("U8U16Xunion", "variant_u8", "uint8", 16, 1),
-                 GetUInt8Union<uux>(16), 1);
+                 GetUInt8Union<uux>(16), 1)
 
 TEST_DECODE_WIRE(ShortXUnion16, ShortXUnion, R"({"u":{"variant_u16":"1024"}, "i":"1"})",
                  ShortUnionPretty("U8U16Xunion", "variant_u16", "uint16", 1024, 1),
-                 GetUInt16Union<uux>(1024), 1);
+                 GetUInt16Union<uux>(1024), 1)
 
 // Enum Tests
 
 TEST_DECODE_WIRE(DefaultEnum, DefaultEnumMessage, R"({"ev":"X"})",
                  "{ ev: #gre#test.fidlcodec.examples/DefaultEnum#rst# = #blu#X#rst# }",
-                 test::fidlcodec::examples::DefaultEnum::X);
+                 test::fidlcodec::examples::DefaultEnum::X)
 TEST_DECODE_WIRE(I8Enum, I8EnumMessage, R"({"ev":"X"})",
                  "{ ev: #gre#test.fidlcodec.examples/I8Enum#rst# = #blu#X#rst# }",
-                 test::fidlcodec::examples::I8Enum::X);
+                 test::fidlcodec::examples::I8Enum::X)
 TEST_DECODE_WIRE(I16Enum, I16EnumMessage, R"({"ev":"X"})",
                  "{ ev: #gre#test.fidlcodec.examples/I16Enum#rst# = #blu#X#rst# }",
-                 test::fidlcodec::examples::I16Enum::X);
+                 test::fidlcodec::examples::I16Enum::X)
 TEST_DECODE_WIRE(I32Enum, I32EnumMessage, R"({"ev":"X"})",
                  "{ ev: #gre#test.fidlcodec.examples/I32Enum#rst# = #blu#X#rst# }",
-                 test::fidlcodec::examples::I32Enum::X);
+                 test::fidlcodec::examples::I32Enum::X)
 TEST_DECODE_WIRE(I64Enum, I64EnumMessage, R"({"ev":"X"})",
                  "{ ev: #gre#test.fidlcodec.examples/I64Enum#rst# = #blu#X#rst# }",
-                 test::fidlcodec::examples::I64Enum::X);
+                 test::fidlcodec::examples::I64Enum::X)
 
 // Bits Tests
 
@@ -1094,30 +1094,30 @@ TEST_DECODE_WIRE(DefaultBits, DefaultBitsMessage, R"({"v":"A|C"})",
                  "{ v: #gre#test.fidlcodec.examples/DefaultBits#rst# = #blu#A|C#rst# }",
                  static_cast<test::fidlcodec::examples::DefaultBits>(
                      static_cast<uint8_t>(test::fidlcodec::examples::DefaultBits::A) |
-                     static_cast<uint8_t>(test::fidlcodec::examples::DefaultBits::C)));
+                     static_cast<uint8_t>(test::fidlcodec::examples::DefaultBits::C)))
 TEST_DECODE_WIRE(I8Bits, I8BitsMessage, R"({"v":"A|D"})",
                  "{ v: #gre#test.fidlcodec.examples/I8Bits#rst# = #blu#A|D#rst# }",
                  static_cast<test::fidlcodec::examples::I8Bits>(
                      static_cast<uint8_t>(test::fidlcodec::examples::I8Bits::A) |
-                     static_cast<uint8_t>(test::fidlcodec::examples::I8Bits::D)));
+                     static_cast<uint8_t>(test::fidlcodec::examples::I8Bits::D)))
 TEST_DECODE_WIRE(I16Bits, I16BitsMessage, R"({"v":"B|C"})",
                  "{ v: #gre#test.fidlcodec.examples/I16Bits#rst# = #blu#B|C#rst# }",
                  static_cast<test::fidlcodec::examples::I16Bits>(
                      static_cast<uint16_t>(test::fidlcodec::examples::I16Bits::B) |
-                     static_cast<uint16_t>(test::fidlcodec::examples::I16Bits::C)));
+                     static_cast<uint16_t>(test::fidlcodec::examples::I16Bits::C)))
 TEST_DECODE_WIRE(I32Bits, I32BitsMessage, R"({"v":"B|D"})",
                  "{ v: #gre#test.fidlcodec.examples/I32Bits#rst# = #blu#B|D#rst# }",
                  static_cast<test::fidlcodec::examples::I32Bits>(
                      static_cast<uint32_t>(test::fidlcodec::examples::I32Bits::B) |
-                     static_cast<uint32_t>(test::fidlcodec::examples::I32Bits::D)));
+                     static_cast<uint32_t>(test::fidlcodec::examples::I32Bits::D)))
 TEST_DECODE_WIRE(I64Bits, I64BitsMessage, R"({"v":"C|D"})",
                  "{ v: #gre#test.fidlcodec.examples/I64Bits#rst# = #blu#C|D#rst# }",
                  static_cast<test::fidlcodec::examples::I64Bits>(
                      static_cast<uint64_t>(test::fidlcodec::examples::I64Bits::C) |
-                     static_cast<uint64_t>(test::fidlcodec::examples::I64Bits::D)));
+                     static_cast<uint64_t>(test::fidlcodec::examples::I64Bits::D)))
 TEST_DECODE_WIRE(EmptyDefaultBits, DefaultBitsMessage, R"({"v":"<none>"})",
                  "{ v: #gre#test.fidlcodec.examples/DefaultBits#rst# = #blu#<none>#rst# }",
-                 static_cast<test::fidlcodec::examples::DefaultBits>(0));
+                 static_cast<test::fidlcodec::examples::DefaultBits>(0))
 
 // Table Tests
 

@@ -47,6 +47,7 @@ openweave_adaptation_layer("adaptation") {
     "weave_inspector.h",
   ]
   deps = [ "//sdk/lib/syslog/cpp" ]
+  configs = [ "//build/config:Wno-extra-semi" ]
   public_configs = [ ":adaptation_config" ]
   public_deps = [
     "//sdk/fidl/fuchsia.bluetooth.le",
