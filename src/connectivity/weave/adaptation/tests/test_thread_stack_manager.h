@@ -28,6 +28,15 @@ class TestThreadStackManager final : public nl::Weave::DeviceLayer::ThreadStackM
     return is_thread_supported_.value_or(Impl::IsThreadSupported());
   }
 
+  // Simulate clearing Thread provision when overridden.
+  void ClearThreadProvision() override {
+    if (!is_thread_provisioned_.has_value()) {
+      Impl::ClearThreadProvision();
+    } else {
+      is_thread_provisioned_ = false;
+    }
+  }
+
   // Returns the thread interface name.
   std::string GetInterfaceName() const override { return kThreadInterfaceName; }
 

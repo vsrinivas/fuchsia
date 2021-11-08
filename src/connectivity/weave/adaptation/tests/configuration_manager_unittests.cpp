@@ -581,4 +581,11 @@ TEST_F(ConfigurationManagerTest, GetManufacturingDate) {
   EXPECT_EQ(day, 0);
 }
 
+TEST_F(ConfigurationManagerTest, FactoryReset_ClearThread) {
+  thread_delegate().set_is_thread_provisioned(true);
+  EXPECT_TRUE(ThreadStackMgrImpl()._IsThreadProvisioned());
+  ConfigurationMgr().InitiateFactoryReset();
+  EXPECT_FALSE(ThreadStackMgrImpl()._IsThreadProvisioned());
+}
+
 }  // namespace weave::adaptation::testing

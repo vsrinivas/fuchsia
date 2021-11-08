@@ -224,6 +224,7 @@ bool ConfigurationManagerDelegateImpl::CanFactoryReset() { return true; }
 
 void ConfigurationManagerDelegateImpl::InitiateFactoryReset() {
   EnvironmentConfig::FactoryResetConfig();
+  ThreadStackMgrImpl()._ClearThreadProvision();
 }
 
 WEAVE_ERROR ConfigurationManagerDelegateImpl::ReadPersistedStorageValue(Key key, uint32_t& value) {
