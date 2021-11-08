@@ -30,12 +30,24 @@ pub async fn handle_client_command(
                 donut_lib::restore_serialized_config(client_controller, serialized_config).await
             }
         },
+        arg_types::ClientSubcommand::Connect(id) => {
+            let id = wlan_policy::NetworkIdentifier::from(id);
+            donut_lib::handle_connect(client_controller, listener_stream, id).await
+        }
         arg_types::ClientSubcommand::List(arg_types::ListSavedNetworks {}) => {
             let saved_networks = donut_lib::handle_get_saved_networks(client_controller).await?;
             donut_lib::print_saved_networks(saved_networks)
         }
         arg_types::ClientSubcommand::Listen(arg_types::Listen {}) => {
             donut_lib::handle_listen(listener_stream).await
+        }
+        arg_types::ClientSubcommand::RemoveNetwork(config) => {
+            let network_config = wlan_policy::NetworkConfig::from(config);
+            donut_lib::handle_remove_network(client_controller, network_config).await
+        }
+        arg_types::ClientSubcommand::SaveNetwork(config) => {
+            let network_config = wlan_policy::NetworkConfig::from(config);
+            donut_lib::handle_save_network(client_controller, network_config).await
         }
         arg_types::ClientSubcommand::Scan(arg_types::Scan {}) => {
             let scan_results = donut_lib::handle_scan(client_controller).await?;

@@ -8,6 +8,8 @@ use {
     fidl_fuchsia_wlan_policy as wlan_policy,
 };
 
+pub mod args;
+
 /// Communicates with the client policy provider to get the components required to get a client
 /// controller.
 pub async fn get_client_controller(
