@@ -7,5 +7,5 @@ pub mod syscalls;
 pub mod types;
 pub mod waiting;
 
-pub use types::*;
 pub use signal_handling::*;
+pub use types::*;

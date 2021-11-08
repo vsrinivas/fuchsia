@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::fmt;
 use std::convert::TryFrom;
+use std::fmt;
 use std::hash::{Hash, Hasher};
 
-use crate::{error, errno};
 use crate::types::*;
+use crate::{errno, error};
 
 /// An unchecked signal represents a signal that has not been through verification, and may
 /// represent an invalid signal number.
@@ -167,4 +167,3 @@ impl fmt::Display for Signal {
         }
     }
 }
-

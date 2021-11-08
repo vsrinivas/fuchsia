@@ -96,7 +96,7 @@ impl SignalState {
     }
 
     /// Iterates over queued signals with the given number.
-    fn iter_queued_by_number(&self, signal: Signal) -> impl Iterator<Item=&SignalInfo> {
+    fn iter_queued_by_number(&self, signal: Signal) -> impl Iterator<Item = &SignalInfo> {
         self.queue.iter().filter(move |info| info.signal == signal)
     }
 
@@ -131,7 +131,9 @@ pub enum SignalDetail {
 }
 
 impl Default for SignalDetail {
-    fn default() -> Self { Self::None }
+    fn default() -> Self {
+        Self::None
+    }
 }
 
 #[cfg(test)]

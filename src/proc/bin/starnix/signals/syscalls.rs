@@ -171,10 +171,10 @@ fn send_unchecked_signal(task: &Task, unchecked_signal: &UncheckedSignal) -> Res
         return Ok(());
     }
 
-    send_signal(task, SignalInfo {
-        code: SI_USER,
-        ..SignalInfo::default(Signal::try_from(unchecked_signal)?)
-    });
+    send_signal(
+        task,
+        SignalInfo { code: SI_USER, ..SignalInfo::default(Signal::try_from(unchecked_signal)?) },
+    );
     Ok(())
 }
 

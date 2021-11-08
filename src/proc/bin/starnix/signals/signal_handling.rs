@@ -188,7 +188,8 @@ pub fn send_signal(task: &Task, siginfo: SignalInfo) {
     signal_state.enqueue(siginfo.clone());
 
     if !signal_state.is_blocked(siginfo.signal)
-        && action_for_signal(&siginfo, task.signal_actions.get(siginfo.signal)) != DeliveryAction::Ignore
+        && action_for_signal(&siginfo, task.signal_actions.get(siginfo.signal))
+            != DeliveryAction::Ignore
     {
         // Wake the task. Note that any potential signal handler will be executed before
         // the task returns from the suspend (from the perspective of user space).
