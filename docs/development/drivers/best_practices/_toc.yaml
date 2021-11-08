@@ -10,3 +10,5 @@ toc:
   path: /docs/development/drivers/best_practices/build.md
 - title: "Driver stack performance"
   path: /docs/development/drivers/best_practices/driver_stack_performance.md
+- title: "VMO Registration Pattern"
+  path: /docs/development/drivers/best_practices/vmo-registration-pattern.md
