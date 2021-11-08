@@ -4039,10 +4039,11 @@ void __ath10k_scan_finish(struct ath10k* ar) {
     case ATH10K_SCAN_RUNNING:
     case ATH10K_SCAN_ABORTING:
       if (!ar->scan.is_roc) {
-        wlan_hw_scan_result_t result = {.code = (ar->scan.state == ATH10K_SCAN_ABORTING)
-                                                    ? WLAN_HW_SCAN_ABORTED
-                                                    : WLAN_HW_SCAN_SUCCESS};
-        wlanmac_ifc_hw_scan_complete(&ar->wlanmac, &result);
+        // TODO(fxbug.dev/...): scan_id is ignored everywhere
+        uint64_t* scan_id = 0;
+        wlanmac_ifc_scan_complete(&ar->wlanmac, (ar->scan.state == ATH10K_SCAN_ABORTING)
+                                                    ? ZX_ERR_CANCELED
+                                  : ZX_OK, &scan_id);
       } else if (ar->scan.roc_notify) {
 #if 0   // NEEDS PORTING
             ieee80211_remain_on_channel_expired(ar->hw);
@@ -5505,47 +5506,40 @@ static void ath10k_mac_op_set_coverage_class(struct ieee80211_hw* hw, int16_t va
 
 #endif  // NEEDS PORTING
 
-static zx_status_t ath10k_mac_convert_scan_config(const wlan_hw_scan_config_t* scan_config,
+static zx_status_t ath10k_mac_convert_passive_scan_args(const wlanmac_passive_scan_args_t* passive_scan_args,
                                                   struct wmi_start_scan_arg* arg) {
-  if (scan_config->num_channels == 0) {
+  if (passive_scan_args->channel_list_size == 0) {
     ath10k_err("number of channels to scan must be non-zero\n");
     return ZX_ERR_INVALID_ARGS;
   }
-  if (scan_config->num_channels > countof(arg->channels)) {
-    ath10k_err("too many channels to scan: %u\n", scan_config->num_channels);
+  if (passive_scan_args->channel_list_size > countof(arg->channels)) {
+    ath10k_err("too many channels to scan: %zu\n", passive_scan_args->channel_list_size);
     return ZX_ERR_INVALID_ARGS;
   }
 
   memset(arg, 0, sizeof(*arg));
   ath10k_wmi_start_scan_init(arg);
-  if (scan_config->scan_type == WLAN_HW_SCAN_TYPE_PASSIVE) {
-    arg->scan_ctrl_flags |= WMI_SCAN_FLAG_PASSIVE;
-  }
-  arg->n_channels = scan_config->num_channels;
+  arg->scan_ctrl_flags |= WMI_SCAN_FLAG_PASSIVE;
+  arg->n_channels = passive_scan_args->channel_list_size;
 
-  for (size_t i = 0; i < scan_config->num_channels; ++i) {
+  for (size_t i = 0; i < passive_scan_args->channel_list_size; ++i) {
     const struct ath10k_channel* ath_chan;
-    if (ath10k_lookup_chan(scan_config->channels[i], &ath_chan) != ZX_OK) {
-      ath10k_err("invalid channel number %u\n", scan_config->channels[i]);
+    if (ath10k_lookup_chan(passive_scan_args->channel_list_buffer[i], &ath_chan) != ZX_OK) {
+      ath10k_err("invalid channel number %u\n", passive_scan_args->channel_list_buffer[i]);
       return ZX_ERR_INVALID_ARGS;
     }
     ZX_DEBUG_ASSERT(ath_chan->center_freq.cbw20 != 0);
     arg->channels[i] = ath_chan->center_freq.cbw20;
   }
-
-  if (scan_config->ssid.len > 0) {
-    arg->n_ssids = 1;
-    arg->ssids[0].len = scan_config->ssid.len;
-    arg->ssids[0].ssid = scan_config->ssid.data;
-  } else {
-    arg->n_ssids = 0;
-  }
+  
+  arg->n_ssids = 0;
+  
   return ZX_OK;
 }
 
-zx_status_t ath10k_mac_hw_scan(struct ath10k* ar, const wlan_hw_scan_config_t* scan_config) {
+zx_status_t ath10k_mac_passive_scan(struct ath10k* ar, const wlanmac_passive_scan_args_t* passive_scan_args, uint64_t* out_scan_id) {
   struct wmi_start_scan_arg arg;
-  zx_status_t ret = ath10k_mac_convert_scan_config(scan_config, &arg);
+  zx_status_t ret = ath10k_mac_convert_passive_scan_args(passive_scan_args, &arg);
   if (ret != ZX_OK) {
     return ret;
   }
@@ -5598,6 +5592,10 @@ exit:
   return ret;
 }
 
+zx_status_t ath10k_mac_active_scan(struct ath10k* ar, const wlanmac_active_scan_args_t* active_scan_args, uint64_t* out_scan_id) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+ 
 #if 0   // NEEDS PORTING
 
 static void ath10k_cancel_hw_scan(struct ieee80211_hw* hw,

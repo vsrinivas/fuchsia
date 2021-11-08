@@ -3339,9 +3339,14 @@ static zx_status_t ath10k_pci_clear_assoc(
   }
 }
 
-static zx_status_t ath10k_pci_start_hw_scan(void* ctx, const wlan_hw_scan_config_t* scan_config) {
+static zx_status_t ath10k_pci_start_passive_scan(void* ctx, const wlanmac_passive_scan_args_t* passive_scan_args, uint64_t* out_scan_id) {
   struct ath10k* ar = ctx;
-  return ath10k_mac_hw_scan(ar, scan_config);
+  return ath10k_mac_passive_scan(ar, passive_scan_args, out_scan_id);
+}
+
+static zx_status_t ath10k_pci_start_active_scan(void* ctx, const wlanmac_active_scan_args_t* active_scan_args, uint64_t* out_scan_id) {
+  struct ath10k* ar = ctx;
+  return ath10k_mac_active_scan(ar, active_scan_args, out_scan_id);
 }
 
 wlanmac_protocol_ops_t wlanmac_ops = {
@@ -3356,7 +3361,8 @@ wlanmac_protocol_ops_t wlanmac_ops = {
     .set_key = ath10k_pci_set_key,
     .configure_assoc = ath10k_pci_configure_assoc,
     .clear_assoc = ath10k_pci_clear_assoc,
-    .start_hw_scan = ath10k_pci_start_hw_scan,
+    .start_passive_scan = ath10k_pci_start_passive_scan,
+    .start_active_scan = ath10k_pci_start_active_scan,
 };
 
 static zx_status_t ath10k_pci_probe(void* ctx, zx_device_t* dev) {
