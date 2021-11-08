@@ -125,6 +125,8 @@
 
 #define LIB_ZXTEST_TEST_HAS_ERRORS zxtest::Runner::GetInstance()->CurrentTestHasFailures()
 
+#define LIB_ZXTEST_IS_SKIPPED zxtest::Runner::GetInstance()->IsSkipped()
+
 #define LIB_ZXTEST_ADD_INSTANTIATION_DEFAULT_NAME(arg1) \
   [](const auto info) -> std::string { return std::to_string(info.index); }
 

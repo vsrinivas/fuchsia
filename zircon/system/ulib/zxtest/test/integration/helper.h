@@ -31,11 +31,16 @@ void CheckAll();
 __BEGIN_CDECLS
 #define CHECKPOINT_REACHED true
 #define CHECKPOINT_NOT_REACHED false
-#define HAS_ERRORS true
-#define NO_ERRORS false
+#define HAS_ERRORS 1u
+#define NO_ERRORS 1u << 1
+#define SKIPPED 1u << 2
+#define NOT_SKIPPED 1u << 3
 
 #define CHECK_ERROR() ZX_ASSERT_MSG(LIB_ZXTEST_TEST_HAS_ERRORS, "Expected errors, non registered.");
 #define CHECK_NO_ERROR() ZX_ASSERT_MSG(!LIB_ZXTEST_TEST_HAS_ERRORS, "Unexpected errors.");
+#define CHECK_SKIPPED() \
+  ZX_ASSERT_MSG(LIB_ZXTEST_IS_SKIPPED, "Expected current test to be skipped.");
+#define CHECK_NOT_SKIPPED() ZX_ASSERT_MSG(!LIB_ZXTEST_IS_SKIPPED, "Unexpected skip.");
 
 typedef struct test_expectation {
   // Information of where the error happened.
@@ -48,21 +53,21 @@ typedef struct test_expectation {
   // Whether the checkpoint should be reached.
   bool checkpoint_reached_expected;
 
-  // Whether the test should have errors on exit.
-  bool expect_errors;
+  // Bitwise of what traits the test should have on exit. See: HAS_ERRORS, NO_ERRORS, etc.
+  uint32_t expectation;
 } test_expectation_t;
 
 // Verifies that the expectations set for the |expectation| are met.
 void verify_expectation(test_expectation_t* expectation);
 
 // Macros to capture context, and validate.
-#define TEST_EXPECTATION(checkpoint_reached_set, test_must_have_errors, err_desc) \
-  test_expectation_t _expectation __attribute__((cleanup(verify_expectation)));   \
-  _expectation.filename = __FILE__;                                               \
-  _expectation.line = __LINE__;                                                   \
-  _expectation.reason = err_desc;                                                 \
-  _expectation.expect_errors = test_must_have_errors;                             \
-  _expectation.checkpoint_reached_expected = checkpoint_reached_set;              \
+#define TEST_EXPECTATION(checkpoint_reached_set, test_flags, err_desc)          \
+  test_expectation_t _expectation __attribute__((cleanup(verify_expectation))); \
+  _expectation.filename = __FILE__;                                             \
+  _expectation.line = __LINE__;                                                 \
+  _expectation.reason = err_desc;                                               \
+  _expectation.expectation = test_flags;                                        \
+  _expectation.checkpoint_reached_expected = checkpoint_reached_set;            \
   _expectation.checkpoint_reached = false
 
 #define TEST_CHECKPOINT() _expectation.checkpoint_reached = true

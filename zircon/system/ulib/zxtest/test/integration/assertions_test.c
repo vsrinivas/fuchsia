@@ -897,10 +897,37 @@ TEST(ZxTestCAssertionTest, AssertSkip) {
   FAIL("Skip test did not skip");
   TEST_CHECKPOINT();
 }
+TEST(ZxTestCAssertionsTest, AssertNotSkipped) {
+  TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS | NOT_SKIPPED,
+                   "Test should not appear to be skipped.");
+  EXPECT_FALSE(LIB_ZXTEST_IS_SKIPPED);
+  TEST_CHECKPOINT();
+}
+
+TEST(ZxTestCAssertionsTest, AssertSkipIsSkipped) {
+  TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, NO_ERRORS | SKIPPED,
+                   "Test should appear to be skipped.");
+  ZXTEST_SKIP("Test skipped");
+  TEST_CHECKPOINT();
+}
+
+TEST(ZxTestCAssertionsTest, AssertSkipAfterError) {
+  TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS | SKIPPED,
+                   "Test should have an error while also being skipped.");
+  EXPECT_TRUE(false);
+  ZXTEST_SKIP("Test skipped");
+  TEST_CHECKPOINT();
+}
+
+void gets_skipped(void) { ZXTEST_SKIP("Skipping test"); }
+
+TEST(ZxTestCAssertionsTest, AssertSkipped) {
+  gets_skipped();
+  ZX_ASSERT_MSG(LIB_ZXTEST_IS_SKIPPED, "Test should have been skipped.");
+}
 
 TEST(ZxTestCAssertionTest, ScopedTrace) {
   TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS, "Failure should have happened.");
   SCOPED_TRACE("This is a trace.");
   FAIL();
-  TEST_CHECKPOINT();
 }

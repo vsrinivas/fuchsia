@@ -50,6 +50,9 @@ bool zxtest_runner_is_running(void);
 // current flow should abort.
 bool zxtest_runner_current_test_has_fatal_failures(void);
 
+// Returns true when the current test is skipped.
+bool zxtest_runner_current_test_is_skipped(void);
+
 // Returns true when the current test has registered any kind of failure.
 bool zxtest_runner_current_test_has_failures(void);
 
@@ -217,6 +220,7 @@ __END_CDECLS
   zxtest_runner_notify_assertion(desc, expected, expected_var, actual, actual_var, file, line,    \
                                  is_fatal)
 
+#define LIB_ZXTEST_IS_SKIPPED zxtest_runner_current_test_is_skipped()
 #define LIB_ZXTEST_TEST_HAS_ERRORS zxtest_runner_current_test_has_failures()
 #define LIB_ZXTEST_ABORT_IF_ERROR zxtest_runner_current_test_has_fatal_failures()
 #define LIB_ZXTEST_STRCMP(actual, expected) (strcmp(actual, expected) == 0)

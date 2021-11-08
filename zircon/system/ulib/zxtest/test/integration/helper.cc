@@ -31,9 +31,16 @@ void CheckAll() {
 void zxtest_add_check_function(void (*check)(void)) { zxtest::test::AddCheckFunction(check); }
 
 void verify_expectation(test_expectation_t* expectation) {
-  if (expectation->expect_errors) {
+  if (expectation->expectation & SKIPPED) {
+    CHECK_SKIPPED();
+  }
+  if (expectation->expectation & NOT_SKIPPED) {
+    CHECK_NOT_SKIPPED();
+  }
+  if (expectation->expectation & HAS_ERRORS) {
     CHECK_ERROR();
-  } else {
+  }
+  if (expectation->expectation & NO_ERRORS) {
     CHECK_NO_ERROR();
   }
   if (expectation->checkpoint_reached != expectation->checkpoint_reached_expected) {

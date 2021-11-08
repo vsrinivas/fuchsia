@@ -41,6 +41,9 @@ class TestDriverImpl final : public TestDriver, public LifecycleObserver {
   // Called when a test is skipped.
   void Skip() final;
 
+  // Return true if the test has been skipped.
+  bool IsSkipped() const { return status_ == TestStatus::kSkipped; }
+
   // Return true if the is allowed to continue execution.
   bool Continue() const final;
 
@@ -258,6 +261,9 @@ class Runner {
   // interested parties.  See NotifyAssertion above for more explanation as to why this is in
   // global scope.
   void SkipCurrent(const Message& message);
+
+  // Returns true if the current test is skipped.
+  bool IsSkipped() const { return test_driver_.IsSkipped(); }
 
   // Returns true if the current test should be aborted. This happens as a result of a fatal
   // failure.

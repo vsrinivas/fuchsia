@@ -77,6 +77,10 @@ bool zxtest_runner_current_test_has_failures(void) {
   return zxtest::Runner::GetInstance()->CurrentTestHasFailures();
 }
 
+bool zxtest_runner_current_test_is_skipped(void) {
+  return zxtest::Runner::GetInstance()->IsSkipped();
+}
+
 size_t _zxtest_print_int(int val, char* buffer, size_t buffer_size) {
   return snprintf(buffer, buffer_size, "%d", val);
 }
