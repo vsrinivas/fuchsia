@@ -73,7 +73,6 @@ impl DeviceStorageAccess for SetupController {
 
 #[async_trait]
 impl data_controller::Create for SetupController {
-    /// Creates the controller
     async fn create(client: ClientProxy) -> Result<Self, ControllerError> {
         Ok(Self { client })
     }

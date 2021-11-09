@@ -36,7 +36,6 @@ impl DeviceStorageAccess for DoNotDisturbController {
 
 #[async_trait]
 impl data_controller::Create for DoNotDisturbController {
-    /// Creates the controller
     async fn create(client: ClientProxy) -> Result<Self, ControllerError> {
         Ok(DoNotDisturbController { client })
     }

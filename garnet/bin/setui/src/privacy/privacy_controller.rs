@@ -36,7 +36,6 @@ impl DeviceStorageAccess for PrivacyController {
 
 #[async_trait]
 impl data_controller::Create for PrivacyController {
-    /// Creates the controller
     async fn create(client: ClientProxy) -> Result<Self, ControllerError> {
         Ok(PrivacyController { client })
     }

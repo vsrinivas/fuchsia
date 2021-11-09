@@ -223,7 +223,6 @@ impl<T> data_controller::Create for DisplayController<T>
 where
     T: BrightnessManager,
 {
-    /// Creates the controller
     async fn create(client: ClientProxy) -> Result<Self, ControllerError> {
         let brightness_manager = <T as BrightnessManager>::from_client(&client).await?;
         Ok(Self { client, brightness_manager })

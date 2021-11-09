@@ -43,7 +43,6 @@ impl DeviceStorageAccess for AccessibilityController {
 
 #[async_trait]
 impl data_controller::Create for AccessibilityController {
-    /// Creates the controller.
     async fn create(client: ClientProxy) -> Result<Self, ControllerError> {
         Ok(AccessibilityController { client })
     }

@@ -50,7 +50,6 @@ impl DeviceStorageAccess for IntlController {
 
 #[async_trait]
 impl data_controller::Create for IntlController {
-    /// Creates the controller
     async fn create(client: ClientProxy) -> Result<Self, ControllerError> {
         let time_zone_ids = IntlController::load_time_zones();
         Ok(IntlController { client, time_zone_ids })
