@@ -1630,14 +1630,18 @@ declare_args() {
 }
 
 # Whether profile instrumentation is enabled for collecting coverage.
-is_coverage = toolchain_variant.tags + [
-                "profile",
+is_coverage = select_variant + [
                 "coverage",
+                "coverage-rust",
+                "coverage-cts",
+                "profile",
               ] -
               [
-                "profile",
                 "coverage",
-              ] != toolchain_variant.tags
+                "coverage-rust",
+                "coverage-cts",
+                "profile",
+              ] != select_variant
 
 # Do this only once, in the default toolchain context.    Then
 # clang_toolchain_suite will just pass the results through to every
