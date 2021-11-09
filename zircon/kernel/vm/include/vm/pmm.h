@@ -26,6 +26,8 @@ typedef struct pmm_arena_info {
   size_t size;
 } pmm_arena_info_t;
 
+class PhysicalPageBorrowingConfig;
+
 #define PMM_ARENA_FLAG_LO_MEM \
   (0x1)  // this arena is contained within architecturally-defined 'low memory'
 
@@ -48,7 +50,7 @@ zx_status_t pmm_get_arena_info(size_t count, uint64_t i, pmm_arena_info_t* buffe
                                size_t buffer_size);
 
 // flags for allocation routines below
-#define PMM_ALLOC_FLAG_ANY (0 << 0)  // no restrictions on which arena to allocate from
+#define PMM_ALLOC_FLAG_ANY (0 << 0)     // no restrictions on which arena to allocate from
 #define PMM_ALLOC_FLAG_LO_MEM (1 << 0)  // allocate only from arenas marked LO_MEM
 // the caller can handle allocation failures with a delayed page_request_t request.
 #define PMM_ALLOC_DELAY_OK (1 << 1)
@@ -107,6 +109,9 @@ PageQueues* pmm_page_queues();
 
 // Return the Evictor.
 Evictor* pmm_evictor();
+
+// Return the singleton PhysicalPageBorrowingConfig.
+PhysicalPageBorrowingConfig* pmm_physical_page_borrowing_config();
 
 // virtual to physical
 paddr_t vaddr_to_paddr(const void* va);

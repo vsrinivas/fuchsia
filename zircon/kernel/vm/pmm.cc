@@ -134,6 +134,10 @@ PageQueues* pmm_page_queues() { return pmm_node.GetPageQueues(); }
 
 Evictor* pmm_evictor() { return pmm_node.GetEvictor(); }
 
+PhysicalPageBorrowingConfig* pmm_physical_page_borrowing_config() {
+  return pmm_node.GetPhysicalPageBorrowingConfig();
+}
+
 zx_status_t pmm_init_reclamation(const uint64_t* watermarks, uint8_t watermark_count,
                                  uint64_t debounce, void* context,
                                  mem_avail_state_updated_callback_t callback) {
