@@ -28,33 +28,33 @@ class ProxyBlockDevice : public BlockDevice {
  public:
   ProxyBlockDevice(BlockDevice* inner) : inner_(inner) {}
 
-  zx_status_t ReadBlock(uint64_t block_num, uint64_t block_size, void* block) const {
+  zx_status_t ReadBlock(uint64_t block_num, uint64_t block_size, void* block) const override {
     return inner_->ReadBlock(block_num, block_size, block);
   }
-  zx_status_t FifoTransaction(block_fifo_request_t* requests, size_t count) {
+  zx_status_t FifoTransaction(block_fifo_request_t* requests, size_t count) override {
     return inner_->FifoTransaction(requests, count);
   }
-  zx::status<std::string> GetDevicePath() const { return inner_->GetDevicePath(); }
-  zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const {
+  zx::status<std::string> GetDevicePath() const override { return inner_->GetDevicePath(); }
+  zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const override {
     return inner_->BlockGetInfo(out_info);
   }
-  zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out_vmoid) {
+  zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out_vmoid) override {
     return inner_->BlockAttachVmo(vmo, out_vmoid);
   }
 
   zx_status_t VolumeGetInfo(fuchsia_hardware_block_volume_VolumeManagerInfo* out_manager,
-                            fuchsia_hardware_block_volume_VolumeInfo* out_volume) const {
+                            fuchsia_hardware_block_volume_VolumeInfo* out_volume) const override {
     return inner_->VolumeGetInfo(out_manager, out_volume);
   }
   zx_status_t VolumeQuerySlices(const uint64_t* slices, size_t slices_count,
                                 fuchsia_hardware_block_volume_VsliceRange* out_ranges,
-                                size_t* out_ranges_count) const {
+                                size_t* out_ranges_count) const override {
     return inner_->VolumeQuerySlices(slices, slices_count, out_ranges, out_ranges_count);
   }
-  zx_status_t VolumeExtend(uint64_t offset, uint64_t length) {
+  zx_status_t VolumeExtend(uint64_t offset, uint64_t length) override {
     return inner_->VolumeExtend(offset, length);
   }
-  zx_status_t VolumeShrink(uint64_t offset, uint64_t length) {
+  zx_status_t VolumeShrink(uint64_t offset, uint64_t length) override {
     return inner_->VolumeShrink(offset, length);
   }
 
