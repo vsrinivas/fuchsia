@@ -23,11 +23,20 @@ mod tests {
         ///
         /// ## Heading 1-2
         #[allow(dead_code)]
-        field: i32,
+        field: Option<String>,
 
         /// Some more documentation!
         #[allow(dead_code)]
-        r#another: i32,
+        r#another: Vec<String>,
+
+        /// An optional vector.
+        #[allow(dead_code)]
+        optionvec: Option<Vec<ReferenceDocTestSubtype>>,
+    }
+
+    struct ReferenceDocTestSubtype {
+        #[allow(dead_code)]
+        hello: i32,
     }
 
     #[test]
@@ -42,9 +51,11 @@ This is a top-level comment.
 
 Hello.
 
-## Fields
+## Top-level keys
 
 ### `field` {#field}
+
+_`string` (optional)_
 
 A field.
 
@@ -59,7 +70,15 @@ Content 1
 
 ### `another` {#another}
 
+_array of `strings`_
+
 Some more documentation!
+
+### `optionvec` {#optionvec}
+
+_array of `objects` (optional)_
+
+An optional vector.
 
 "#
         );

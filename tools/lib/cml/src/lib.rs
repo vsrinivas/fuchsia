@@ -811,13 +811,12 @@ impl Right {
 
 #[derive(ReferenceDoc, Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
-/// A `.cml` file contains a single json5 object with keys listed below.
-///
-/// # String types
+/// A `.cml` file contains a single json5 object literal with the keys below.
 ///
 /// Where string values are expected, a list of valid values is generally documented.
-/// The following string value types are reused and are expected to follow specific
-/// rules.
+/// The following string value types are reused and must follow specific rules.
+///
+/// # String types
 ///
 /// ## Names {#names}
 ///
@@ -896,8 +895,7 @@ pub struct Document {
     /// The `children` section declares child component instances as described in
     /// [Child component instances][doc-children].
     ///
-    /// `children` is an array of objects where each object has the following
-    /// properties:
+    /// Keys:
     ///
     /// -   `name`: The name of the child component instance, which is a string of one
     ///     or more of the following characters: `a-z`, `0-9`, `_`, `.`, `-`. The name
@@ -949,8 +947,7 @@ pub struct Document {
     /// The `collections` section declares collections as described in
     /// [Component collections][doc-collections].
     ///
-    /// `collections` is an array of objects where each object has the following
-    /// properties:
+    /// Keys:
     ///
     /// -   `name`: The name of the component collection, which is a string of one or
     ///     more of the following characters: `a-z`, `0-9`, `_`, `.`, `-`. The name
@@ -982,8 +979,7 @@ pub struct Document {
     /// The `environments` section declares environments as described in
     /// [Environments][doc-environments].
     ///
-    /// `environments` is an array of objects where each object has the following
-    /// properties:
+    /// Keys:
     ///
     /// -   `name`: The name of the environment, which is a string of one or more of the
     ///     following characters: `a-z`, `0-9`, `_`, `.`, `-`. The name identifies this
@@ -1048,7 +1044,7 @@ pub struct Document {
     /// These capabilities often map to a node in the
     /// [outgoing directory][glossary.outgoing directory].
     ///
-    /// `capabilities` is an array of objects of any of the following types:
+    /// Each entry in `capabilities` must conform to one of the following schemas:
     ///
     /// -   [`protocol`](#capability-protocol)
     /// -   [`directory`](#capability-directory)
@@ -1135,7 +1131,7 @@ pub struct Document {
     /// and each capability must have a valid route through all components between
     /// this component and the capability's source.
     ///
-    /// `use` is an array of objects with the following properties:
+    /// Keys:
     ///
     /// -   A capability declaration, one of:
     ///     -   `protocol`: The [name](#name) of a protocol capability, or
@@ -1185,7 +1181,7 @@ pub struct Document {
     /// Declares the capabilities that are made available to the parent component or to the
     /// framework. It is valid to `expose` from `self` or from a child component.
     ///
-    /// `expose` is an array of objects with the following properties:
+    /// Keys:
     ///
     /// -   A [capability name](#name) or array of names, keyed to one of
     ///     the following typenames:
@@ -1242,7 +1238,7 @@ pub struct Document {
     /// Declares the capabilities that are made available to a [child component][doc-children]
     /// instance or a [child collection][doc-collections].
     ///
-    /// `offer` is an array of objects with the following properties:
+    /// Keys:
     ///
     /// -   A [capability name](#name) or array of names, keyed to one of
     ///     the following typenames:
@@ -1327,9 +1323,9 @@ pub struct Document {
     /// ```
     pub offer: Option<Vec<Offer>>,
 
-    /// A JSON object containing metadata that components may interpret for their own purposes. The
-    /// component framework enforces no schema for this section, but third parties may expect their
-    /// facets to adhere to a particular schema.
+    /// Contains metadata that components may interpret for their own purposes. The component
+    /// framework enforces no schema for this section, but third parties may expect their facets to
+    /// adhere to a particular schema.
     pub facets: Option<Map<String, Value>>,
 }
 

@@ -42,6 +42,6 @@ group("tests") {
 
   deps = [
     ":cml_test($host_toolchain)",
-    "macro:tests",
+    "macro:tests($host_toolchain)",
   ]
 }

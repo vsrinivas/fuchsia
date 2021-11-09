@@ -56,16 +56,83 @@ fn parse_reference_doc_attributes(
     Ok(ReferenceDocAttributes { doc, sections })
 }
 
+/// Parses the reference docs for a single field.
+///
+/// Has special casing for `Option<T>` and `Vec<T>`, allowing us to
+/// render the docs as `optional T` or `array of T` instead.
 fn parse_reference_doc_section_attributes(
     field: &syn::Field,
 ) -> Result<ReferenceDocSectionAttributes, syn::Error> {
+    let mut ty_path = expect_typepath(&field.ty);
+    let mut is_optional = false;
+    let mut is_vec = false;
+    if outer_type_ident_eq(&ty_path, "Option") {
+        is_optional = true;
+        ty_path = get_first_inner_type_from_generic(&ty_path).unwrap();
+    }
+    if outer_type_ident_eq(&ty_path, "Vec") {
+        is_vec = true;
+        ty_path = get_first_inner_type_from_generic(&ty_path).unwrap();
+    }
+
+    let ty = get_outer_type_without_generics(&ty_path);
     Ok(ReferenceDocSectionAttributes {
         name: get_field_name(field),
         doc: get_doc_attr(&field.attrs),
+        is_optional,
+        is_vec,
+        ty: ReferenceDocSectionType::new(&ty),
     })
 }
 
+/// Returns true if the outer type in `p` is equal to `str`. For example, for
+/// a type such as a::b::Option, this function will return true if `rhs == "Option"`.
+fn outer_type_ident_eq(p: &syn::TypePath, rhs: &str) -> bool {
+    p.path.segments.iter().last().unwrap().ident == rhs
+}
+
+/// Extracts a TypePath from a syn::Type, and panics for anything else.
+fn expect_typepath(ty: &syn::Type) -> &syn::TypePath {
+    match ty {
+        syn::Type::Path(path) => path,
+        _ => panic!("Not sure what to do with type: {:?}", ty),
+    }
+}
+
+/// Extracts the type ident string from a TypePath.
+fn get_outer_type_without_generics(path: &syn::TypePath) -> String {
+    let segments: Vec<_> = path.path.segments.iter().map(|seg| seg.ident.to_string()).collect();
+    segments.join("::")
+}
+
+/// Extracts the TypePath describing the contents of an AngleBracketed type.
+/// Example: Option<Vec<T>> will extract the Vec<T> portion.
+fn get_first_inner_type_from_generic(path: &syn::TypePath) -> Option<&syn::TypePath> {
+    let args = &path.path.segments.first().unwrap().arguments;
+    match &args {
+        syn::PathArguments::AngleBracketed(angle_bracketed_args) => {
+            if angle_bracketed_args.args.len() > 1 {
+                panic!("Found multiple inner types: {:?}", args)
+            }
+            let first = angle_bracketed_args.args.first().unwrap();
+            match &first {
+                syn::GenericArgument::Type(ty) => Some(expect_typepath(ty)),
+                _ => panic!("No inner type found"),
+            }
+        }
+        syn::PathArguments::Parenthesized(_) => {
+            panic!("Not sure what to do with path arguments: {:?}", args)
+        }
+        syn::PathArguments::None => None,
+    }
+}
+
 /// Attributes extracted from the `derive(ReferenceDoc)` macro.
+///
+/// The .cml reference documentation metadata is organized like so:
+///
+/// - Doc (top-level)
+///   - Sections (top-level keys of the .cml JSON object literal)
 #[derive(Debug)]
 struct ReferenceDocAttributes {
     doc: Option<String>,
@@ -78,6 +145,42 @@ struct ReferenceDocAttributes {
 struct ReferenceDocSectionAttributes {
     name: String,
     doc: Option<String>,
+    is_optional: bool,
+    is_vec: bool,
+    ty: ReferenceDocSectionType,
+}
+
+#[derive(Debug)]
+enum ReferenceDocSectionType {
+    String,           // JSON string
+    Object,           // JSON object with no schema
+    ObjectWithSchema, // JSON object with a schema
+}
+
+impl ReferenceDocSectionType {
+    fn new(s: &String) -> ReferenceDocSectionType {
+        if s == "Map" {
+            ReferenceDocSectionType::Object
+        } else if s == "String" {
+            ReferenceDocSectionType::String
+        } else {
+            ReferenceDocSectionType::ObjectWithSchema
+        }
+    }
+}
+
+impl fmt::Display for ReferenceDocSectionType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match &self {
+                ReferenceDocSectionType::String => "string",
+                ReferenceDocSectionType::Object => "object",
+                ReferenceDocSectionType::ObjectWithSchema => "object",
+            }
+        )
+    }
 }
 
 impl fmt::Display for ReferenceDocAttributes {
@@ -86,7 +189,7 @@ impl fmt::Display for ReferenceDocAttributes {
         let sections_str = v.join("");
         write!(
             f,
-            "# Component manifest (`.cml`) reference\n\n{}## Fields\n\n{}",
+            "# Component manifest (`.cml`) reference\n\n{}## Top-level keys\n\n{}",
             match &self.doc {
                 None => "".to_string(),
                 Some(s) => format!("{}\n\n", indent_all_markdown_headers_by(&s, 1)),
@@ -100,9 +203,13 @@ impl fmt::Display for ReferenceDocSectionAttributes {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "### `{}` {{#{}}}\n\n{}",
+            "### `{}` {{#{}}}\n\n_{}`{}{}`{}_\n\n{}",
             self.name,
             self.name,
+            if self.is_vec { "array of " } else { "" },
+            self.ty,
+            if self.is_vec { "s" } else { "" },
+            if self.is_optional { " (optional)" } else { "" },
             match &self.doc {
                 None => "".to_string(),
                 Some(s) => format!("{}\n\n", indent_all_markdown_headers_by(&s, 3)),
