@@ -149,6 +149,8 @@ bool TestThread::WaitForBlocked() {
     uint64_t actual, actual_count;
     if (zx_thread_.get_info(ZX_INFO_THREAD, &info, sizeof(info), &actual, &actual_count) != ZX_OK) {
       return false;
+    } else if (info.state == ZX_THREAD_STATE_DEAD) {
+      return false;
     } else if (info.state == ZX_THREAD_STATE_BLOCKED_PAGER) {
       return true;
     }

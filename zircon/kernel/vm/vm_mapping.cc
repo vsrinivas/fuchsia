@@ -499,7 +499,7 @@ namespace {
 
 class VmMappingCoalescer {
  public:
-  VmMappingCoalescer(VmMapping* mapping, vaddr_t base) TA_REQ(mapping->lock());
+  VmMappingCoalescer(VmMapping* mapping, vaddr_t base, uint mmu_flags) TA_REQ(mapping->lock());
   ~VmMappingCoalescer();
 
   // Add a page to the mapping run.  If this fails, the VmMappingCoalescer is
@@ -536,10 +536,11 @@ class VmMappingCoalescer {
   paddr_t phys_[16];
   size_t count_;
   bool aborted_;
+  const uint mmu_flags_;
 };
 
-VmMappingCoalescer::VmMappingCoalescer(VmMapping* mapping, vaddr_t base)
-    : mapping_(mapping), base_(base), count_(0), aborted_(false) {}
+VmMappingCoalescer::VmMappingCoalescer(VmMapping* mapping, vaddr_t base, uint mmu_flags)
+    : mapping_(mapping), base_(base), count_(0), aborted_(false), mmu_flags_(mmu_flags) {}
 
 VmMappingCoalescer::~VmMappingCoalescer() {
   // Make sure we've flushed or aborted
@@ -553,11 +554,10 @@ zx_status_t VmMappingCoalescer::Flush() {
     return ZX_OK;
   }
 
-  uint flags = mapping_->arch_mmu_flags_locked();
-  if (flags & ARCH_MMU_FLAG_PERM_RWX_MASK) {
+  if (mmu_flags_ & ARCH_MMU_FLAG_PERM_RWX_MASK) {
     size_t mapped;
     zx_status_t ret = mapping_->aspace()->arch_aspace().Map(
-        base_, phys_, count_, flags, ArchVmAspace::ExistingEntryAction::Error, &mapped);
+        base_, phys_, count_, mmu_flags_, ArchVmAspace::ExistingEntryAction::Error, &mapped);
     if (ret != ZX_OK) {
       TRACEF("error %d mapping %zu pages starting at va %#" PRIxPTR "\n", ret, count_, base_);
       aborted_ = true;
@@ -603,6 +603,13 @@ zx_status_t VmMapping::MapRangeLocked(size_t offset, size_t len, bool commit) {
     pf_flags |= VMM_PF_FLAG_SW_FAULT;
   }
 
+  // Compute mmu flags to use.
+  // Remove the write permission if this maps a vmo that supports dirty tracking, in order to
+  // trigger write permission faults when writes occur, enabling us to track when pages are dirtied.
+  const uint mmu_flags = (object_->is_dirty_tracked())
+                             ? (arch_mmu_flags_locked() & ~ARCH_MMU_FLAG_PERM_WRITE)
+                             : arch_mmu_flags_locked();
+
   // grab the lock for the vmo
   Guard<Mutex> object_guard{object_->lock()};
 
@@ -627,14 +634,14 @@ zx_status_t VmMapping::MapRangeLocked(size_t offset, size_t len, bool commit) {
   // iterate through the range, grabbing a page from the underlying object and
   // mapping it in
   size_t o;
-  VmMappingCoalescer coalescer(this, base_ + offset);
+  VmMappingCoalescer coalescer(this, base_ + offset, mmu_flags);
   __UNINITIALIZED VmObject::LookupInfo pages;
   for (o = offset; o < offset + len;) {
     uint64_t vmo_offset = object_offset_ + o;
 
     zx_status_t status;
     status = object_->LookupPagesLocked(
-        vmo_offset, pf_flags,
+        vmo_offset, pf_flags, VmObject::DirtyTrackingAction::None,
         ktl::min((offset + len - o) / PAGE_SIZE, VmObject::LookupInfo::kMaxPages), nullptr,
         &page_request, &pages);
     if (status != ZX_OK) {
@@ -818,8 +825,9 @@ zx_status_t VmMapping::PageFaultWithVmoCallback(
 
   // fault in or grab existing pages.
   __UNINITIALIZED VmObject::LookupInfo lookup_info;
-  zx_status_t status = object_->LookupPagesLocked(vmo_offset, pf_flags, max_pages, nullptr,
-                                                  page_request, &lookup_info);
+  zx_status_t status = object_->LookupPagesLocked(
+      vmo_offset, pf_flags, VmObject::DirtyTrackingAction::DirtyAllPagesOnWrite, max_pages, nullptr,
+      page_request, &lookup_info);
   if (status != ZX_OK) {
     // TODO(cpu): This trace was originally TRACEF() always on, but it fires if the
     // VMO was resized, rather than just when the system is running out of memory.
@@ -835,7 +843,8 @@ zx_status_t VmMapping::PageFaultWithVmoCallback(
 
   // if we read faulted, and lookup didn't say that this is always writable, then we map or modify
   // the page without any write permissions. This ensures we will fault again if a write is
-  // attempted so we can potentially replace this page with a copy or a new one.
+  // attempted so we can potentially replace this page with a copy or a new one, or update the
+  // page's dirty state.
   uint mmu_flags = arch_mmu_flags_;
   if (!(pf_flags & VMM_PF_FLAG_WRITE) && !lookup_info.writable) {
     // we read faulted, so only map with read permissions
