@@ -138,6 +138,7 @@ group("tests") {
     ":ffx-e2e-without-target($host_toolchain)",
     ":ffx_tests($host_toolchain)",
     "lib:tests($host_toolchain)",
+    "plugins/packaging:tests($host_toolchain)",
     "//src/developer/ffx/logger:tests($host_toolchain)",
   ]
 }

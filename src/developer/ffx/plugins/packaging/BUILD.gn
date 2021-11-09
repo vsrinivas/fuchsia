@@ -17,3 +17,8 @@ ffx_plugin("ffx_packaging") {
 
   args_sources = [ "src/args.rs" ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "repository:ffx_packaging_repository_test($host_toolchain)" ]
+}

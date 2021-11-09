@@ -51,7 +51,8 @@ impl Repository {
     }
 
     pub async fn default_repo() -> Result<Repository> {
-        let repo_dir = PathBuf::from(PACKAGE_REPO);
+        let prefix = PathBuf::from(std::env::var("HOME").unwrap_or_default());
+        let repo_dir = prefix.join(PACKAGE_REPO);
         Repository::new(repo_dir.clone(), repo_dir.join("blobs"))
     }
 
@@ -63,7 +64,7 @@ impl Repository {
 #[cfg(test)]
 mod test {
     #[cfg(target_os = "linux")]
-    use {crate::repository::Repository, anyhow::Result, std::path};
+    use {crate::repository::Repository, anyhow::Result, std::path::PathBuf};
 
     #[fuchsia_async::run_singlethreaded(test)]
     #[cfg(target_os = "linux")]
