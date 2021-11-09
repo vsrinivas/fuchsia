@@ -117,6 +117,7 @@ void AmlSdmmc::Inspect::Init(const pdev_device_info_t& device_info) {
   longest_window_start = root.CreateUint("longest_window_start", 0);
   longest_window_size = root.CreateUint("longest_window_size", 0);
   longest_window_adj_delay = root.CreateUint("longest_window_adj_delay", 0);
+  distance_to_failing_point = root.CreateUint("distance_to_failing_point", 0);
   tuning_method = root.CreateString("tuning_method", "none");
 }
 
@@ -1166,6 +1167,24 @@ uint32_t AmlSdmmc::max_delay() const {
   return board_config_.version_3 ? AmlSdmmcClock::kMaxDelay : AmlSdmmcClock::kMaxDelayV2;
 }
 
+inline uint32_t AbsDifference(uint32_t a, uint32_t b) { return a > b ? a - b : b - a; }
+
+uint32_t AmlSdmmc::DistanceToFailingPoint(TuneSettings point,
+                                          cpp20::span<const TuneResults> adj_delay_results) {
+  uint64_t results = adj_delay_results[point.adj_delay].results;
+  uint32_t min_distance = max_delay();
+  for (uint32_t i = 0; i <= max_delay(); i++, results >>= 1) {
+    if ((results & 1) == 0) {
+      const uint32_t distance = AbsDifference(i, point.delay);
+      if (distance < min_distance) {
+        min_distance = distance;
+      }
+    }
+  }
+
+  return min_distance;
+}
+
 zx_status_t AmlSdmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
   cpp20::span<const uint8_t> tuning_blk;
 
@@ -1200,14 +1219,36 @@ zx_status_t AmlSdmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
     AML_SDMMC_INFO("Tuning results [%02u]: %s", i, results.c_str());
   }
 
+  zx::status<TuneSettings> tuning_settings;
   if (board_config_.use_new_tuning) {
-    return PerformNewTuning({adj_delay_results, adj_delay_results + clk_div});
+    tuning_settings = PerformNewTuning({adj_delay_results, adj_delay_results + clk_div});
+  } else {
+    inspect_.tuning_method.Set("old");
+    tuning_settings = PerformOldTuning({adj_delay_results, adj_delay_results + clk_div});
   }
-  inspect_.tuning_method.Set("old");
-  return PerformOldTuning({adj_delay_results, adj_delay_results + clk_div});
+
+  if (tuning_settings.is_error()) {
+    SetAdjDelay(0);
+    SetDelayLines(0);
+    return tuning_settings.status_value();
+  }
+
+  SetAdjDelay(tuning_settings->adj_delay);
+  inspect_.adj_delay.Set(tuning_settings->adj_delay);
+
+  SetDelayLines(tuning_settings->delay);
+  inspect_.delay_lines.Set(tuning_settings->delay);
+
+  inspect_.distance_to_failing_point.Set(
+      DistanceToFailingPoint(*tuning_settings, adj_delay_results));
+
+  AML_SDMMC_INFO("Clock divider %u, adj delay %u, delay %u", clk_div, tuning_settings->adj_delay,
+                 tuning_settings->delay);
+  return ZX_OK;
 }
 
-zx_status_t AmlSdmmc::PerformNewTuning(cpp20::span<const TuneResults> adj_delay_results) {
+zx::status<AmlSdmmc::TuneSettings> AmlSdmmc::PerformNewTuning(
+    cpp20::span<const TuneResults> adj_delay_results) {
   TuneWindow largest_failing_window = {};
   uint32_t failing_adj_delay = 0;
   for (uint32_t i = 0; i < adj_delay_results.size(); i++) {
@@ -1231,13 +1272,6 @@ zx_status_t AmlSdmmc::PerformNewTuning(cpp20::span<const TuneResults> adj_delay_
   const uint32_t clk_div = AmlSdmmcClock::Get().ReadFrom(&mmio_).cfg_div();
   const uint32_t best_adj_delay = (failing_adj_delay + (clk_div / 2)) % clk_div;
 
-  // TODO(fxbug.dev/68436): Get rid if the old tuning method once we have confidence in the new one.
-  if (!adj_delay_results[best_adj_delay].all_passed()) {
-    AML_SDMMC_WARNING("New tuning may not have found a working point, falling back to old tuning");
-    inspect_.tuning_method.Set("old; new failed because the chosen adj_delay had failing delays");
-    return PerformOldTuning(adj_delay_results);
-  }
-
   // For even dividers adj_delay will be exactly 180 degrees phase shifted from the chosen point,
   // so set the delay lines to the middle of the largest failing window. For odd dividers just
   // choose the first failing delay value, and set adj_delay to as close as 180 degrees shifted as
@@ -1245,11 +1279,22 @@ zx_status_t AmlSdmmc::PerformNewTuning(cpp20::span<const TuneResults> adj_delay_
   const uint32_t best_delay =
       (clk_div % 2 == 0) ? largest_failing_window.middle() : largest_failing_window.start;
 
-  SetAdjDelay(best_adj_delay);
-  inspect_.adj_delay.Set(best_adj_delay);
+  const TuneSettings results{.adj_delay = best_adj_delay, .delay = best_delay};
 
-  SetDelayLines(best_delay);
-  inspect_.delay_lines.Set(best_delay);
+  // TODO(fxbug.dev/68436): Get rid if the old tuning method once we have confidence in the new one.
+  if (!adj_delay_results[best_adj_delay].all_passed()) {
+    const zx::status<TuneSettings> old_results = PerformOldTuning(adj_delay_results);
+    if (old_results.is_ok()) {
+      const uint32_t new_tuning_distance = DistanceToFailingPoint(results, adj_delay_results);
+      const uint32_t old_tuning_distance = DistanceToFailingPoint(*old_results, adj_delay_results);
+
+      if (new_tuning_distance < old_tuning_distance) {
+        AML_SDMMC_WARNING("New tuning was closer to a failing point, falling back to old tuning");
+        inspect_.tuning_method.Set("old; new was closer to a failing point");
+        return old_results;
+      }
+    }
+  }
 
   inspect_.longest_window_start.Set(largest_failing_window.start);
   inspect_.longest_window_size.Set(largest_failing_window.size);
@@ -1259,12 +1304,11 @@ zx_status_t AmlSdmmc::PerformNewTuning(cpp20::span<const TuneResults> adj_delay_
   AML_SDMMC_INFO("Largest failing window: adj_delay %u, delay start %u, size %u, middle %u",
                  failing_adj_delay, largest_failing_window.start, largest_failing_window.size,
                  largest_failing_window.middle());
-
-  AML_SDMMC_INFO("Clock divider %u, adj delay %u, delay %u", clk_div, best_adj_delay, best_delay);
-  return ZX_OK;
+  return zx::ok(results);
 }
 
-zx_status_t AmlSdmmc::PerformOldTuning(cpp20::span<const TuneResults> adj_delay_results) {
+zx::status<AmlSdmmc::TuneSettings> AmlSdmmc::PerformOldTuning(
+    cpp20::span<const TuneResults> adj_delay_results) {
   // The delay line values don't actually wrap, but treating them like they do is the current tuning
   // behavior. Preserve that behavior so as to not affect any of the devices that haven't been
   // switched over to the new tuning.
@@ -1283,12 +1327,11 @@ zx_status_t AmlSdmmc::PerformOldTuning(cpp20::span<const TuneResults> adj_delay_
   const TuneWindow adj_delay_window = ProcessTuningResultsWithWrapping(
       clk_div - 1,
       [&](uint32_t adj_delay) { return windows_with_wrapping[adj_delay].results.results & 1; });
-  AML_SDMMC_INFO("Tuning results: %s", adj_delay_window.results.ToString().c_str());
 
   if (adj_delay_window.size == 0) {
     AML_SDMMC_ERROR("No window found for any phase");
     inspect_.tuning_results.push_back(inspect_.root.CreateString("tuning_results", "failed"));
-    return ZX_ERR_IO;
+    return zx::error(ZX_ERR_IO);
   }
 
   const uint32_t best_adj_delay =
@@ -1298,22 +1341,16 @@ zx_status_t AmlSdmmc::PerformOldTuning(cpp20::span<const TuneResults> adj_delay_
   if (delay_window.size == 0) {
     AML_SDMMC_ERROR("No delay window found");
     inspect_.tuning_results.push_back(inspect_.root.CreateString("tuning_results", "failed"));
-    return ZX_ERR_IO;
+    return zx::error(ZX_ERR_IO);
   }
 
-  SetAdjDelay(best_adj_delay);
-  inspect_.adj_delay.Set(best_adj_delay);
-
   const uint32_t best_delay = delay_window.middle() % (max_delay() + 1);
-  SetDelayLines(best_delay);
-  inspect_.delay_lines.Set(best_delay);
 
   inspect_.longest_window_start.Set(delay_window.start);
   inspect_.longest_window_size.Set(delay_window.size);
   inspect_.longest_window_adj_delay.Set(best_adj_delay);
 
-  AML_SDMMC_INFO("Clock divider %u, adj delay %u, delay %u", clk_div, best_adj_delay, best_delay);
-  return ZX_OK;
+  return zx::ok(TuneSettings{.adj_delay = best_adj_delay, .delay = best_delay});
 }
 
 zx_status_t AmlSdmmc::SdmmcRegisterVmo(uint32_t vmo_id, uint8_t client_id, zx::vmo vmo,

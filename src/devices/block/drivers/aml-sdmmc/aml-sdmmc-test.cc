@@ -538,6 +538,11 @@ TEST_F(AmlSdmmcTest, DelayLineTuningNoWindowWrap) {
   const auto* max_delay = root->node().get_property<inspect::UintPropertyValue>("max_delay");
   ASSERT_NOT_NULL(max_delay);
   EXPECT_EQ(max_delay->value(), 64);
+
+  const auto* distance =
+      root->node().get_property<inspect::UintPropertyValue>("distance_to_failing_point");
+  ASSERT_NOT_NULL(distance);
+  EXPECT_EQ(distance->value(), 5);
 }
 
 TEST_F(AmlSdmmcTest, DelayLineTuningWindowWrap) {
@@ -593,6 +598,11 @@ TEST_F(AmlSdmmcTest, DelayLineTuningWindowWrap) {
   const auto* max_delay = root->node().get_property<inspect::UintPropertyValue>("max_delay");
   ASSERT_NOT_NULL(max_delay);
   EXPECT_EQ(max_delay->value(), 64);
+
+  const auto* distance =
+      root->node().get_property<inspect::UintPropertyValue>("distance_to_failing_point");
+  ASSERT_NOT_NULL(distance);
+  EXPECT_EQ(distance->value(), 13);
 }
 
 TEST_F(AmlSdmmcTest, DelayLineTuningAllFail) {
@@ -683,6 +693,11 @@ TEST_F(AmlSdmmcTest, NewDelayLineTuningAllPass) {
   ASSERT_NOT_NULL(tuning_results);
   EXPECT_STR_EQ(tuning_results->value(),
                 "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||");
+
+  const auto* distance =
+      root->node().get_property<inspect::UintPropertyValue>("distance_to_failing_point");
+  ASSERT_NOT_NULL(distance);
+  EXPECT_EQ(distance->value(), 63);
 }
 
 TEST_F(AmlSdmmcTest, NewDelayLineTuningFallBackToOld) {
@@ -715,8 +730,8 @@ TEST_F(AmlSdmmcTest, NewDelayLineTuningFallBackToOld) {
   auto delay1 = AmlSdmmcDelay1::Get().FromValue(0).WriteTo(&mmio_);
   auto delay2 = AmlSdmmcDelay2::Get().FromValue(0).WriteTo(&mmio_);
 
-  // The new tuning method should fail because no transfers failed. The old tuning method should be
-  // used as a fallback.
+  // The new tuning method should fail because the chosen adj_delay had some delay line failures.
+  // The old tuning method should be used as a fallback.
   EXPECT_OK(dut_->SdmmcPerformTuning(SD_SEND_TUNING_BLOCK));
 
   adjust.ReadFrom(&mmio_);
@@ -751,6 +766,81 @@ TEST_F(AmlSdmmcTest, NewDelayLineTuningFallBackToOld) {
   ASSERT_NOT_NULL(tuning_results);
   EXPECT_STR_EQ(tuning_results->value(),
                 "||||||||||||||||||||||||||||||||||||||||||||||||||--------------");
+
+  const auto* distance =
+      root->node().get_property<inspect::UintPropertyValue>("distance_to_failing_point");
+  ASSERT_NOT_NULL(distance);
+  EXPECT_EQ(distance->value(), 25);
+}
+
+TEST_F(AmlSdmmcTest, NewDelayLineTuningCheckOldUseNew) {
+  dut_->SetRequestResults(
+      // New tuning: adj_delay=2 delay=0 distance=32
+      // Old tuning: adj_delay=3 delay=31 distance=31
+      "----------------||||||||||||||||||||||||||||||||||||||||||||||||"
+      "-|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+      "||||||||||||||||||||||||||||||||-|||||||||||||||||||||||||||||||"
+      "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||--"
+      "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||");
+
+  dut_->set_board_config({
+      .supports_dma = true,
+      .min_freq = 400000,
+      .max_freq = 120000000,
+      .version_3 = true,
+      .prefs = 0,
+      .use_new_tuning = true,
+  });
+  ASSERT_OK(dut_->Init({}));
+
+  AmlSdmmcClock::Get().FromValue(0).set_cfg_div(5).WriteTo(&mmio_);
+  AmlSdmmcCfg::Get().ReadFrom(&mmio_).set_bus_width(AmlSdmmcCfg::kBusWidth4Bit).WriteTo(&mmio_);
+
+  auto adjust = AmlSdmmcAdjust::Get().FromValue(0).set_adj_delay(0x3f).WriteTo(&mmio_);
+  auto delay1 = AmlSdmmcDelay1::Get().FromValue(0).WriteTo(&mmio_);
+  auto delay2 = AmlSdmmcDelay2::Get().FromValue(0).WriteTo(&mmio_);
+
+  // The old tuning method should be checked because the chosen adj_delay had some delay line
+  // failures, but the new method should be used because it is further from a failing point.
+  EXPECT_OK(dut_->SdmmcPerformTuning(SD_SEND_TUNING_BLOCK));
+
+  adjust.ReadFrom(&mmio_);
+  delay1.ReadFrom(&mmio_);
+  delay2.ReadFrom(&mmio_);
+
+  EXPECT_EQ(adjust.adj_delay(), 2);
+  EXPECT_EQ(delay1.dly_0(), 0);
+  EXPECT_EQ(delay1.dly_1(), 0);
+  EXPECT_EQ(delay1.dly_2(), 0);
+  EXPECT_EQ(delay1.dly_3(), 0);
+  EXPECT_EQ(delay1.dly_4(), 0);
+  EXPECT_EQ(delay2.dly_5(), 0);
+  EXPECT_EQ(delay2.dly_6(), 0);
+  EXPECT_EQ(delay2.dly_7(), 0);
+  EXPECT_EQ(delay2.dly_8(), 0);
+  EXPECT_EQ(delay2.dly_9(), 0);
+
+  const auto* root = dut_->GetInspectRoot("-unknown");
+  ASSERT_NOT_NULL(root);
+
+  const auto* adj_delay = root->node().get_property<inspect::UintPropertyValue>("adj_delay");
+  ASSERT_NOT_NULL(adj_delay);
+  EXPECT_EQ(adj_delay->value(), 2);
+
+  const auto* delay_lines = root->node().get_property<inspect::UintPropertyValue>("delay_lines");
+  ASSERT_NOT_NULL(delay_lines);
+  EXPECT_EQ(delay_lines->value(), 0);
+
+  const auto* tuning_results =
+      root->node().get_property<inspect::StringPropertyValue>("tuning_results_adj_delay_2");
+  ASSERT_NOT_NULL(tuning_results);
+  EXPECT_STR_EQ(tuning_results->value(),
+                "||||||||||||||||||||||||||||||||-|||||||||||||||||||||||||||||||");
+
+  const auto* distance =
+      root->node().get_property<inspect::UintPropertyValue>("distance_to_failing_point");
+  ASSERT_NOT_NULL(distance);
+  EXPECT_EQ(distance->value(), 32);
 }
 
 TEST_F(AmlSdmmcTest, NewDelayLineTuningEvenDivider) {
@@ -818,6 +908,11 @@ TEST_F(AmlSdmmcTest, NewDelayLineTuningEvenDivider) {
   ASSERT_NOT_NULL(tuning_results);
   EXPECT_STR_EQ(tuning_results->value(),
                 "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||");
+
+  const auto* distance =
+      root->node().get_property<inspect::UintPropertyValue>("distance_to_failing_point");
+  ASSERT_NOT_NULL(distance);
+  EXPECT_EQ(distance->value(), 63);
 }
 
 TEST_F(AmlSdmmcTest, NewDelayLineTuningOddDivider) {
@@ -884,6 +979,11 @@ TEST_F(AmlSdmmcTest, NewDelayLineTuningOddDivider) {
   ASSERT_NOT_NULL(tuning_results);
   EXPECT_STR_EQ(tuning_results->value(),
                 "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||");
+
+  const auto* distance =
+      root->node().get_property<inspect::UintPropertyValue>("distance_to_failing_point");
+  ASSERT_NOT_NULL(distance);
+  EXPECT_EQ(distance->value(), 63);
 }
 
 TEST_F(AmlSdmmcTest, SetBusFreq) {

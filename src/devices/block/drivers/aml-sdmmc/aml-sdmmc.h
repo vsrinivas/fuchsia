@@ -112,6 +112,11 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
     uint32_t middle() const { return start + (size / 2); }
   };
 
+  struct TuneSettings {
+    uint32_t adj_delay = 0;
+    uint32_t delay = 0;
+  };
+
   // VMO metadata that needs to be stored in accordance with the SDMMC protocol.
   struct OwnedVmoInfo {
     uint64_t offset;
@@ -130,6 +135,7 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
     inspect::UintProperty longest_window_start;
     inspect::UintProperty longest_window_size;
     inspect::UintProperty longest_window_adj_delay;
+    inspect::UintProperty distance_to_failing_point;
     inspect::StringProperty tuning_method;
 
     void Init(const pdev_device_info_t& device_info);
@@ -137,8 +143,10 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
 
   using SdmmcVmoStore = vmo_store::VmoStore<vmo_store::HashTableStorage<uint32_t, OwnedVmoInfo>>;
 
-  zx_status_t PerformNewTuning(cpp20::span<const TuneResults> adj_delay_results);
-  zx_status_t PerformOldTuning(cpp20::span<const TuneResults> adj_delay_results);
+  uint32_t DistanceToFailingPoint(TuneSettings point,
+                                  cpp20::span<const TuneResults> adj_delay_results);
+  zx::status<TuneSettings> PerformNewTuning(cpp20::span<const TuneResults> adj_delay_results);
+  zx::status<TuneSettings> PerformOldTuning(cpp20::span<const TuneResults> adj_delay_results);
   zx_status_t TuningDoTransfer(uint8_t* tuning_res, size_t blk_pattern_size,
                                uint32_t tuning_cmd_idx);
   bool TuningTestSettings(cpp20::span<const uint8_t> tuning_blk, uint32_t tuning_cmd_idx);
