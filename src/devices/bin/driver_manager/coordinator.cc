@@ -1695,17 +1695,17 @@ uint32_t Coordinator::GetSuspendFlagsFromSystemPowerState(
     case statecontrol_fidl::wire::SystemPowerState::kFullyOn:
       return 0;
     case statecontrol_fidl::wire::SystemPowerState::kReboot:
-      return statecontrol_fidl::wire::kSuspendFlagReboot;
+      return DEVICE_SUSPEND_FLAG_REBOOT;
     case statecontrol_fidl::wire::SystemPowerState::kRebootBootloader:
-      return statecontrol_fidl::wire::kSuspendFlagRebootBootloader;
+      return DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER;
     case statecontrol_fidl::wire::SystemPowerState::kRebootRecovery:
-      return statecontrol_fidl::wire::kSuspendFlagRebootRecovery;
+      return DEVICE_SUSPEND_FLAG_REBOOT_RECOVERY;
     case statecontrol_fidl::wire::SystemPowerState::kPoweroff:
-      return statecontrol_fidl::wire::kSuspendFlagPoweroff;
+      return DEVICE_SUSPEND_FLAG_POWEROFF;
     case statecontrol_fidl::wire::SystemPowerState::kMexec:
-      return statecontrol_fidl::wire::kSuspendFlagMexec;
+      return DEVICE_SUSPEND_FLAG_MEXEC;
     case statecontrol_fidl::wire::SystemPowerState::kSuspendRam:
-      return statecontrol_fidl::wire::kSuspendFlagSuspendRam;
+      return DEVICE_SUSPEND_FLAG_SUSPEND_RAM;
     default:
       return 0;
   }

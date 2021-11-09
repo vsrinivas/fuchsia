@@ -5,16 +5,6 @@ library fuchsia.hardware.power.statecontrol;
 
 using zx;
 
-/// All available suspend flags.
-// TODO(fxbug.dev/42257): When all clients start using the system power state
-// these flags can be removed.
-const SUSPEND_FLAG_REBOOT uint32 = 0xdcdc0100;
-const SUSPEND_FLAG_REBOOT_BOOTLOADER uint32 = 0xdcdc0101;
-const SUSPEND_FLAG_REBOOT_RECOVERY uint32 = 0xdcdc0102;
-const SUSPEND_FLAG_POWEROFF uint32 = 0xdcdc0200;
-const SUSPEND_FLAG_MEXEC uint32 = 0xdcdc0300;
-const SUSPEND_FLAG_SUSPEND_RAM uint32 = 0xdcdc0400;
-
 // TODO(ravoorir): When the system power states are properly defined,
 // remove the suspend flags. For now, treat each suspend flag as a system
 // power state.

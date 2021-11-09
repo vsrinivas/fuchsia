@@ -50,12 +50,6 @@ enum/member fuchsia.hardware.power.statecontrol/RebootReason.SYSTEM_UPDATE 2
 enum/member fuchsia.hardware.power.statecontrol/RebootReason.USER_REQUEST 1
 enum/member fuchsia.hardware.power.statecontrol/RebootReason.ZBI_SWAP 9
 strict enum fuchsia.hardware.power.statecontrol/RebootReason uint32
-const fuchsia.hardware.power.statecontrol/SUSPEND_FLAG_MEXEC uint32 3705406208
-const fuchsia.hardware.power.statecontrol/SUSPEND_FLAG_POWEROFF uint32 3705405952
-const fuchsia.hardware.power.statecontrol/SUSPEND_FLAG_REBOOT uint32 3705405696
-const fuchsia.hardware.power.statecontrol/SUSPEND_FLAG_REBOOT_BOOTLOADER uint32 3705405697
-const fuchsia.hardware.power.statecontrol/SUSPEND_FLAG_REBOOT_RECOVERY uint32 3705405698
-const fuchsia.hardware.power.statecontrol/SUSPEND_FLAG_SUSPEND_RAM uint32 3705406464
 enum/member fuchsia.hardware.power.statecontrol/SystemPowerState.FULLY_ON 1
 enum/member fuchsia.hardware.power.statecontrol/SystemPowerState.MEXEC 6
 enum/member fuchsia.hardware.power.statecontrol/SystemPowerState.POWEROFF 5
