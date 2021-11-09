@@ -110,6 +110,13 @@ func (r *RunCommand) SetFlags(f *flag.FlagSet) {
 
 func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	ctx, cancel := context.WithTimeout(ctx, r.timeout)
+	go func() {
+		<-ctx.Done()
+		// Log the timeout for tefmocheck to detect it.
+		if ctx.Err() == context.DeadlineExceeded {
+			logger.Errorf(ctx, "%s (%s)", constants.CommandExceededTimeoutMsg, r.timeout)
+		}
+	}()
 	defer cancel()
 
 	opts := target.Options{

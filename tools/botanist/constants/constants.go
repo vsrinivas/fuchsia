@@ -13,6 +13,7 @@ const (
 	PackageRepoSetupErrorMsg  = "failed to set up a package repository"
 	SerialReadErrorMsg        = "error reading serial log line"
 	FailedToExtendFVMMsg      = "failed to extend fvm.blk"
+	CommandExceededTimeoutMsg = "Command exceeded timeout"
 
 	NodenameEnvKey     = "FUCHSIA_NODENAME"
 	SSHKeyEnvKey       = "FUCHSIA_SSH_KEY"

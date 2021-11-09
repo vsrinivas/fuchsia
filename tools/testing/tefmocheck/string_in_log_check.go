@@ -378,5 +378,11 @@ func infraToolLogChecks() []FailureModeCheck {
 			String: fmt.Sprintf("testrunner ERROR: %s", testrunnerconstants.FailedToRunSnapshotMsg),
 			Type:   swarmingOutputType,
 		},
+		// This error happens when `botanist run` exceeds its timeout, e.g.
+		// because many tests are taking too long.
+		&stringInLogCheck{
+			String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.CommandExceededTimeoutMsg),
+			Type:   swarmingOutputType,
+		},
 	}
 }
