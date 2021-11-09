@@ -838,7 +838,7 @@ Tells openweave to include files that require heap access.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:32](https://fuchsia.googlesource.com/third_party/openweave-core/+/bab8329235d34008be07376154ad6927e1af085e/config.gni#32)
+From [//third_party/openweave-core/config.gni:32](https://fuchsia.googlesource.com/third_party/openweave-core/+/6ed8f82ad49f1eb94e844c1b5084530fbb3ed6cd/config.gni#32)
 
 ### core_realm_package_name
 The following arguments are all used to configure the contents of the core
@@ -1867,38 +1867,38 @@ Tells inet to support additionally support async dns sockets.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:17](https://fuchsia.googlesource.com/third_party/openweave-core/+/bab8329235d34008be07376154ad6927e1af085e/config.gni#17)
+From [//third_party/openweave-core/config.gni:17](https://fuchsia.googlesource.com/third_party/openweave-core/+/6ed8f82ad49f1eb94e844c1b5084530fbb3ed6cd/config.gni#17)
 
 ### inet_want_endpoint_dns
 Tells inet to include support for the corresponding protocol.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:10](https://fuchsia.googlesource.com/third_party/openweave-core/+/bab8329235d34008be07376154ad6927e1af085e/config.gni#10)
+From [//third_party/openweave-core/config.gni:10](https://fuchsia.googlesource.com/third_party/openweave-core/+/6ed8f82ad49f1eb94e844c1b5084530fbb3ed6cd/config.gni#10)
 
 ### inet_want_endpoint_raw
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:11](https://fuchsia.googlesource.com/third_party/openweave-core/+/bab8329235d34008be07376154ad6927e1af085e/config.gni#11)
+From [//third_party/openweave-core/config.gni:11](https://fuchsia.googlesource.com/third_party/openweave-core/+/6ed8f82ad49f1eb94e844c1b5084530fbb3ed6cd/config.gni#11)
 
 ### inet_want_endpoint_tcp
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:12](https://fuchsia.googlesource.com/third_party/openweave-core/+/bab8329235d34008be07376154ad6927e1af085e/config.gni#12)
+From [//third_party/openweave-core/config.gni:12](https://fuchsia.googlesource.com/third_party/openweave-core/+/6ed8f82ad49f1eb94e844c1b5084530fbb3ed6cd/config.gni#12)
 
 ### inet_want_endpoint_tun
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:14](https://fuchsia.googlesource.com/third_party/openweave-core/+/bab8329235d34008be07376154ad6927e1af085e/config.gni#14)
+From [//third_party/openweave-core/config.gni:14](https://fuchsia.googlesource.com/third_party/openweave-core/+/6ed8f82ad49f1eb94e844c1b5084530fbb3ed6cd/config.gni#14)
 
 ### inet_want_endpoint_udp
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:13](https://fuchsia.googlesource.com/third_party/openweave-core/+/bab8329235d34008be07376154ad6927e1af085e/config.gni#13)
+From [//third_party/openweave-core/config.gni:13](https://fuchsia.googlesource.com/third_party/openweave-core/+/6ed8f82ad49f1eb94e844c1b5084530fbb3ed6cd/config.gni#13)
 
 ### is_analysis
 If set, the build will produce compilation analysis dumps, used for code
@@ -3382,7 +3382,7 @@ toolchain, so that recompilations with the new compiler can be triggered.
 When using the prebuilt, this is ignored and the CIPD instance ID of the
 prebuilt is used.
 
-**Current value (from the default):** `"xdQdkWTFjxXG74zjXc90ibQIKDVqOy6quqGknvqmZHIC"`
+**Current value (from the default):** `"DfpyoozG1hWbrwW2scJYKdLUZOjN5Mgp387i_inRmPsC"`
 
 From //build/rust/config.gni:30
 
@@ -4232,35 +4232,35 @@ Tells openweave to support legacy WDM mode.
 
 **Current value (from the default):** `false`
 
-From [//third_party/openweave-core/config.gni:29](https://fuchsia.googlesource.com/third_party/openweave-core/+/bab8329235d34008be07376154ad6927e1af085e/config.gni#29)
+From [//third_party/openweave-core/config.gni:29](https://fuchsia.googlesource.com/third_party/openweave-core/+/6ed8f82ad49f1eb94e844c1b5084530fbb3ed6cd/config.gni#29)
 
 ### weave_build_warm
 Tells openweave to build WARM libraries.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:26](https://fuchsia.googlesource.com/third_party/openweave-core/+/bab8329235d34008be07376154ad6927e1af085e/config.gni#26)
+From [//third_party/openweave-core/config.gni:26](https://fuchsia.googlesource.com/third_party/openweave-core/+/6ed8f82ad49f1eb94e844c1b5084530fbb3ed6cd/config.gni#26)
 
 ### weave_system_config_use_sockets
 Tells openweave components to use bsd-like sockets.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:7](https://fuchsia.googlesource.com/third_party/openweave-core/+/bab8329235d34008be07376154ad6927e1af085e/config.gni#7)
+From [//third_party/openweave-core/config.gni:7](https://fuchsia.googlesource.com/third_party/openweave-core/+/6ed8f82ad49f1eb94e844c1b5084530fbb3ed6cd/config.gni#7)
 
 ### weave_with_nlfaultinjection
 Tells openweave components to support fault injection.
 
 **Current value (from the default):** `false`
 
-From [//third_party/openweave-core/config.gni:20](https://fuchsia.googlesource.com/third_party/openweave-core/+/bab8329235d34008be07376154ad6927e1af085e/config.gni#20)
+From [//third_party/openweave-core/config.gni:20](https://fuchsia.googlesource.com/third_party/openweave-core/+/6ed8f82ad49f1eb94e844c1b5084530fbb3ed6cd/config.gni#20)
 
 ### weave_with_verhoeff
 Tells openweave to support Verhoeff checksum.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:23](https://fuchsia.googlesource.com/third_party/openweave-core/+/bab8329235d34008be07376154ad6927e1af085e/config.gni#23)
+From [//third_party/openweave-core/config.gni:23](https://fuchsia.googlesource.com/third_party/openweave-core/+/6ed8f82ad49f1eb94e844c1b5084530fbb3ed6cd/config.gni#23)
 
 ### with_live_usb
 Whether or not to include the live_usb component in the build.
