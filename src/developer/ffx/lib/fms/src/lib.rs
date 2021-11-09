@@ -67,16 +67,6 @@ impl Entries {
         self.data.get(name)
     }
 
-    /// Get first entry.
-    ///
-    /// Returns None if no entries exit.
-    /// TODO(fxbug.dev/81756) - Remove when not needed.
-    #[doc(hidden)]
-    #[deprecated(note = "Use `entries.iter().next()` instead.")]
-    pub fn first(&self) -> Option<&Metadata> {
-        self.data.iter().next().map(|(_, value)| value)
-    }
-
     /// Iterate over all entries.
     ///
     /// If the name is known, use `entry()` method instead since searching this
