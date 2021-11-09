@@ -10,7 +10,7 @@ use {
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_cobalt::CobaltEvent,
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, FileMarker, FileProxy},
-    fidl_fuchsia_io2::Operations,
+    fidl_fuchsia_io2::RW_STAR_DIR,
     fidl_fuchsia_pkg::{
         BlobIdIteratorMarker, BlobInfo, BlobInfoIteratorMarker, NeededBlobsMarker,
         NeededBlobsProxy, PackageCacheMarker, PackageCacheProxy, RetainedPackagesMarker,
@@ -22,8 +22,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
-        builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
-        RealmInstance,
+        ChildProperties, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
     },
     fuchsia_inspect::{reader::DiagnosticsHierarchy, testing::TreeAssertion},
     fuchsia_merkle::Hash,
@@ -351,86 +350,79 @@ where
 
         let fs_holder = Mutex::new(Some(fs));
 
-        let mut builder = RealmBuilder::new().await.unwrap();
+        let builder = RealmBuilder::new().await.unwrap();
         builder
-            .add_component("pkg_cache", ComponentSource::url("fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/pkg-cache.cm")).await.unwrap()
-            .add_component("system_update_committer", ComponentSource::url("fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/system-update-committer.cm")).await.unwrap()
-            .add_component("service_reflector", ComponentSource::mock(move |mock_handles| {
-                let mut rfs = fs_holder.lock().take().expect("mock component should only be launched once");
-                async {
-                    rfs.serve_connection(mock_handles.outgoing_dir.into_channel()).unwrap();
-                    fasync::Task::spawn(rfs.collect()).detach();
-                    Ok(())
-                }.boxed()
-            })).await.unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.logger.LogSink"),
-                source: RouteEndpoint::AboveRoot,
-                targets: vec![
+            .add_child("pkg_cache", "fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/pkg-cache.cm", ChildProperties::new()).await.unwrap()
+            .add_child("system_update_committer", "fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/system-update-committer.cm", ChildProperties::new()).await.unwrap()
+            .add_mock_child(
+                "service_reflector",
+                move |mock_handles| {
+                    let mut rfs = fs_holder.lock().take().expect("mock component should only be launched once");
+                    async {
+                        rfs.serve_connection(mock_handles.outgoing_dir.into_channel()).unwrap();
+                        fasync::Task::spawn(rfs.collect()).detach();
+                        Ok(())
+                    }.boxed()
+                },
+                ChildProperties::new()
+            ).await.unwrap()
+            .add_route(RouteBuilder::protocol("fuchsia.logger.LogSink")
+                .source(RouteEndpoint::AboveRoot)
+                .targets(vec![
                     RouteEndpoint::component("pkg_cache"),
                     RouteEndpoint::component("service_reflector"),
                     RouteEndpoint::component("system_update_committer"),
-                ],
-            }).unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.cobalt.LoggerFactory"),
-                source: RouteEndpoint::component("service_reflector"),
-                targets: vec![
+                ])
+            ).await.unwrap()
+            .add_route(RouteBuilder::protocol("fuchsia.cobalt.LoggerFactory")
+                .source(RouteEndpoint::component("service_reflector"))
+                .targets(vec![
                     RouteEndpoint::component("pkg_cache"),
-                ],
-            }).unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.tracing.provider.Registry"),
-                source: RouteEndpoint::component("service_reflector"),
-                targets: vec![
+                ])
+            ).await.unwrap()
+            .add_route(RouteBuilder::protocol("fuchsia.tracing.provider.Registry")
+                .source(RouteEndpoint::component("service_reflector"))
+                .targets(vec![
                     RouteEndpoint::component("pkg_cache"),
-                ],
-            }).unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.paver.Paver"),
-                source: RouteEndpoint::component("service_reflector"),
-                targets: vec![ RouteEndpoint::component("system_update_committer") ],
-            }).unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.update.verify.BlobfsVerifier"),
-                source: RouteEndpoint::component("service_reflector"),
-                targets: vec![ RouteEndpoint::component("system_update_committer") ],
-            }).unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::directory("pkgfs", "/pkgfs", Operations::Connect | Operations::Enumerate | Operations::Traverse | Operations::ReadBytes | Operations::WriteBytes | Operations::ModifyDirectory | Operations::GetAttributes | Operations::UpdateAttributes),
-                source: RouteEndpoint::component("service_reflector"),
-                targets: vec![ RouteEndpoint::component("pkg_cache") ],
-            }).unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::directory("blob", "/blob", Operations::Connect | Operations::Enumerate | Operations::Traverse | Operations::ReadBytes | Operations::WriteBytes | Operations::ModifyDirectory | Operations::GetAttributes | Operations::UpdateAttributes),
-                source: RouteEndpoint::component("service_reflector"),
-                targets: vec![ RouteEndpoint::component("pkg_cache") ],
-            }).unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.update.CommitStatusProvider"),
-                source: RouteEndpoint::component("system_update_committer"),
-                targets: vec![
+                ])
+            ).await.unwrap()
+            .add_route(RouteBuilder::protocol("fuchsia.paver.Paver")
+                .source(RouteEndpoint::component("service_reflector"))
+                .targets(vec![ RouteEndpoint::component("system_update_committer") ])
+            ).await.unwrap()
+            .add_route(RouteBuilder::protocol("fuchsia.update.verify.BlobfsVerifier")
+                .source(RouteEndpoint::component("service_reflector"))
+                .targets(vec![ RouteEndpoint::component("system_update_committer") ])
+            ).await.unwrap()
+            .add_route(RouteBuilder::directory("pkgfs", "/pkgfs", RW_STAR_DIR)
+                .source(RouteEndpoint::component("service_reflector"))
+                .targets(vec![ RouteEndpoint::component("pkg_cache") ])
+            ).await.unwrap()
+            .add_route(RouteBuilder::directory("blob", "/blob", RW_STAR_DIR)
+                .source(RouteEndpoint::component("service_reflector"))
+                .targets(vec![ RouteEndpoint::component("pkg_cache") ])
+            ).await.unwrap()
+            .add_route(RouteBuilder::protocol("fuchsia.update.CommitStatusProvider")
+                .source(RouteEndpoint::component("system_update_committer"))
+                .targets(vec![
                     RouteEndpoint::component("pkg_cache"), // offer
                     RouteEndpoint::AboveRoot, // expose
-                ],
-            }).unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.pkg.PackageCache"),
-                source: RouteEndpoint::component("pkg_cache"),
-                targets: vec![ RouteEndpoint::AboveRoot ],
-            }).unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.pkg.RetainedPackages"),
-                source: RouteEndpoint::component("pkg_cache"),
-                targets: vec![ RouteEndpoint::AboveRoot ],
-            }).unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.space.Manager"),
-                source: RouteEndpoint::component("pkg_cache"),
-                targets: vec![ RouteEndpoint::AboveRoot ],
-            }).unwrap();
+                ])
+            ).await.unwrap()
+            .add_route(RouteBuilder::protocol("fuchsia.pkg.PackageCache")
+                .source(RouteEndpoint::component("pkg_cache"))
+                .targets(vec![ RouteEndpoint::AboveRoot ])
+            ).await.unwrap()
+            .add_route(RouteBuilder::protocol("fuchsia.pkg.RetainedPackages")
+                .source(RouteEndpoint::component("pkg_cache"))
+                .targets(vec![ RouteEndpoint::AboveRoot ])
+            ).await.unwrap()
+            .add_route(RouteBuilder::protocol("fuchsia.space.Manager")
+                .source(RouteEndpoint::component("pkg_cache"))
+                .targets(vec![ RouteEndpoint::AboveRoot ])
+            ).await.unwrap();
 
-        let realm_instance = builder.build().create().await.unwrap();
+        let realm_instance = builder.build().await.unwrap();
 
         let proxies = Proxies {
             commit_status_provider: realm_instance

@@ -15,8 +15,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
-        builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
-        RealmInstance,
+        ChildProperties, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
     },
     fuchsia_pkg_testing::{make_epoch_json, make_packages_json},
     fuchsia_zircon::Status,
@@ -274,81 +273,80 @@ impl TestEnvBuilder {
         }
 
         let fs_holder = Mutex::new(Some(fs));
-        let mut builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
+        let builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
         builder
-            .add_eager_component("system_updater", ComponentSource::url("fuchsia-pkg://fuchsia.com/system-updater-integration-tests#meta/system-updater-isolated.cm")).await.unwrap()
-            .add_component("fake_capabilities", ComponentSource::mock(move |mock_handles| {
-                let mut rfs = fs_holder.lock().take().expect("mock component should only be launched once");
-                async {
-                    rfs.serve_connection(mock_handles.outgoing_dir.into_channel()).unwrap();
-                    fasync::Task::spawn(rfs.collect()).detach();
-                    Ok(())
-                }.boxed()
-            })).await.unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.logger.LogSink"),
-                source: RouteEndpoint::AboveRoot,
-                targets: vec![
+            .add_child(
+                "system_updater",
+                "fuchsia-pkg://fuchsia.com/system-updater-integration-tests#meta/system-updater-isolated.cm",
+                ChildProperties::new().eager(),
+            ).await.unwrap()
+            .add_mock_child(
+                "fake_capabilities",
+                move |mock_handles| {
+                    let mut rfs = fs_holder.lock().take().expect("mock component should only be launched once");
+                    async {
+                        rfs.serve_connection(mock_handles.outgoing_dir.into_channel()).unwrap();
+                        fasync::Task::spawn(rfs.collect()).detach();
+                        Ok(())
+                    }.boxed()
+                },
+                ChildProperties::new(),
+            ).await.unwrap()
+            .add_route(RouteBuilder::protocol("fuchsia.logger.LogSink")
+                .source(RouteEndpoint::AboveRoot)
+                .targets(vec![
                     RouteEndpoint::component("system_updater"),
-                ],
-            }).unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.update.installer.Installer"),
-                source: RouteEndpoint::component("system_updater"),
-                targets: vec![ RouteEndpoint::AboveRoot ],
-            }).unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.cobalt.LoggerFactory"),
-                source: RouteEndpoint::component("fake_capabilities"),
-                targets: vec![ RouteEndpoint::component("system_updater") ],
-            }).unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.paver.Paver"),
-                source: RouteEndpoint::component("fake_capabilities"),
-                targets: vec![ RouteEndpoint::component("system_updater") ],
-            }).unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.pkg.PackageCache"),
-                source: RouteEndpoint::component("fake_capabilities"),
-                targets: vec![ RouteEndpoint::component("system_updater") ],
-            }).unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.pkg.PackageResolver"),
-                source: RouteEndpoint::component("fake_capabilities"),
-                targets: vec![ RouteEndpoint::component("system_updater") ],
-            }).unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.pkg.RetainedPackages"),
-                source: RouteEndpoint::component("fake_capabilities"),
-                targets: vec![ RouteEndpoint::component("system_updater") ],
-            }).unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.space.Manager"),
-                source: RouteEndpoint::component("fake_capabilities"),
-                targets: vec![ RouteEndpoint::component("system_updater") ],
-            }).unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.hardware.power.statecontrol.Admin"),
-                source: RouteEndpoint::component("fake_capabilities"),
-                targets: vec![ RouteEndpoint::component("system_updater") ],
-            }).unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::directory("build-info", "/config/build-info", fio2::R_STAR_DIR),
-                source: RouteEndpoint::component("fake_capabilities"),
-                targets: vec! [ RouteEndpoint::component("system_updater") ],
-            }).unwrap();
+                ])
+            ).await.unwrap()
+            .add_route(RouteBuilder::protocol("fuchsia.update.installer.Installer")
+                .source(RouteEndpoint::component("system_updater"))
+                .targets(vec![ RouteEndpoint::AboveRoot ])
+            ).await.unwrap()
+            .add_route(RouteBuilder::protocol("fuchsia.cobalt.LoggerFactory")
+                .source(RouteEndpoint::component("fake_capabilities"))
+                .targets(vec![ RouteEndpoint::component("system_updater") ])
+            ).await.unwrap()
+            .add_route(RouteBuilder::protocol("fuchsia.paver.Paver")
+                .source(RouteEndpoint::component("fake_capabilities"))
+                .targets(vec![ RouteEndpoint::component("system_updater") ])
+            ).await.unwrap()
+            .add_route(RouteBuilder::protocol("fuchsia.pkg.PackageCache")
+                .source(RouteEndpoint::component("fake_capabilities"))
+                .targets(vec![ RouteEndpoint::component("system_updater") ])
+            ).await.unwrap()
+            .add_route(RouteBuilder::protocol("fuchsia.pkg.PackageResolver")
+                .source(RouteEndpoint::component("fake_capabilities"))
+                .targets(vec![ RouteEndpoint::component("system_updater") ])
+            ).await.unwrap()
+            .add_route(RouteBuilder::protocol("fuchsia.pkg.RetainedPackages")
+                .source(RouteEndpoint::component("fake_capabilities"))
+                .targets(vec![ RouteEndpoint::component("system_updater") ])
+            ).await.unwrap()
+            .add_route(RouteBuilder::protocol("fuchsia.space.Manager")
+                .source(RouteEndpoint::component("fake_capabilities"))
+                .targets(vec![ RouteEndpoint::component("system_updater") ])
+            ).await.unwrap()
+            .add_route(RouteBuilder::protocol("fuchsia.hardware.power.statecontrol.Admin")
+                .source(RouteEndpoint::component("fake_capabilities"))
+                .targets(vec![ RouteEndpoint::component("system_updater") ])
+            ).await.unwrap()
+            .add_route(RouteBuilder::directory("build-info", "/config/build-info", fio2::R_STAR_DIR)
+                .source(RouteEndpoint::component("fake_capabilities"))
+                .targets(vec! [ RouteEndpoint::component("system_updater") ])
+            ).await.unwrap();
 
         if mount_data {
             builder
-                .add_route(CapabilityRoute {
-                    capability: Capability::directory("data", "/data", fio2::RW_STAR_DIR),
-                    source: RouteEndpoint::component("fake_capabilities"),
-                    targets: vec![RouteEndpoint::component("system_updater")],
-                })
+                .add_route(
+                    RouteBuilder::directory("data", "/data", fio2::RW_STAR_DIR)
+                        .source(RouteEndpoint::component("fake_capabilities"))
+                        .targets(vec![RouteEndpoint::component("system_updater")]),
+                )
+                .await
                 .unwrap();
         }
 
-        let realm_instance = builder.build().create().await.unwrap();
+        let realm_instance = builder.build().await.unwrap();
 
         TestEnv {
             realm_instance,

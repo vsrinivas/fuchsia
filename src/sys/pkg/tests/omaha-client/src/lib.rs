@@ -21,8 +21,7 @@ use {
     fidl_fuchsia_update_installer_ext as installer, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
-        builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
-        RealmInstance,
+        ChildProperties, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
     },
     fuchsia_inspect::{
         assert_data_tree,
@@ -253,20 +252,21 @@ impl TestEnvBuilder {
         }
 
         let fs_holder = Mutex::new(Some(fs));
-        let mut builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
+        let builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
         builder
-            .add_eager_component("omaha_client_service", ComponentSource::url(OMAHA_CLIENT_CML))
+            .add_child("omaha_client_service", OMAHA_CLIENT_CML, ChildProperties::new().eager())
             .await
             .unwrap()
-            .add_eager_component(
+            .add_child(
                 "system_update_committer",
-                ComponentSource::url(SYSTEM_UPDATE_COMMITTER_CML),
+                SYSTEM_UPDATE_COMMITTER_CML,
+                ChildProperties::new().eager(),
             )
             .await
             .unwrap()
-            .add_component(
+            .add_mock_child(
                 "fake_capabilities",
-                ComponentSource::mock(move |mock_handles| {
+                move |mock_handles| {
                     let mut rfs = fs_holder
                         .lock()
                         .take()
@@ -277,260 +277,278 @@ impl TestEnvBuilder {
                         Ok(())
                     }
                     .boxed()
-                }),
+                },
+                ChildProperties::new(),
             )
             .await
             .unwrap()
-            .add_component("stash2", ComponentSource::url(STASH_CML))
+            .add_child("stash2", STASH_CML, ChildProperties::new())
             .await
             .unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::storage("data", "/data"),
-                source: RouteEndpoint::AboveRoot,
-                targets: vec![RouteEndpoint::component("stash2")],
-            })
+            .add_route(
+                RouteBuilder::storage("data", "/data")
+                    .source(RouteEndpoint::AboveRoot)
+                    .targets(vec![RouteEndpoint::component("stash2")]),
+            )
+            .await
             .unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::directory("config-data", "/config/data", fio2::R_STAR_DIR),
-                source: RouteEndpoint::component("fake_capabilities"),
-                targets: vec![
-                    RouteEndpoint::component("omaha_client_service"),
-                    RouteEndpoint::component("system_update_committer"),
-                ],
-            })
+            .add_route(
+                RouteBuilder::directory("config-data", "/config/data", fio2::R_STAR_DIR)
+                    .source(RouteEndpoint::component("fake_capabilities"))
+                    .targets(vec![
+                        RouteEndpoint::component("omaha_client_service"),
+                        RouteEndpoint::component("system_update_committer"),
+                    ]),
+            )
+            .await
             .unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::directory(
-                    "build-info",
-                    "/config/build-info",
-                    fio2::R_STAR_DIR,
-                ),
-                source: RouteEndpoint::component("fake_capabilities"),
-                targets: vec![RouteEndpoint::component("omaha_client_service")],
-            })
+            .add_route(
+                RouteBuilder::directory("build-info", "/config/build-info", fio2::R_STAR_DIR)
+                    .source(RouteEndpoint::component("fake_capabilities"))
+                    .targets(vec![RouteEndpoint::component("omaha_client_service")]),
+            )
+            .await
             .unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::directory(
-                    "root-ssl-certificates",
-                    "/config/ssl",
-                    fio2::R_STAR_DIR,
-                ),
-                source: RouteEndpoint::AboveRoot,
-                targets: vec![RouteEndpoint::component("omaha_client_service")],
-            })
+            .add_route(
+                RouteBuilder::directory("root-ssl-certificates", "/config/ssl", fio2::R_STAR_DIR)
+                    .source(RouteEndpoint::AboveRoot)
+                    .targets(vec![RouteEndpoint::component("omaha_client_service")]),
+            )
+            .await
             .unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.logger.LogSink"),
-                source: RouteEndpoint::AboveRoot,
-                targets: vec![
-                    RouteEndpoint::component("omaha_client_service"),
-                    RouteEndpoint::component("system_update_committer"),
-                    RouteEndpoint::component("stash2"),
-                ],
-            })
+            .add_route(
+                RouteBuilder::protocol("fuchsia.logger.LogSink")
+                    .source(RouteEndpoint::AboveRoot)
+                    .targets(vec![
+                        RouteEndpoint::component("omaha_client_service"),
+                        RouteEndpoint::component("system_update_committer"),
+                        RouteEndpoint::component("stash2"),
+                    ]),
+            )
+            .await
             .unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.ui.activity.Provider"),
-                source: RouteEndpoint::component("fake_capabilities"),
-                targets: vec![RouteEndpoint::component("omaha_client_service")],
-            })
+            .add_route(
+                RouteBuilder::protocol("fuchsia.ui.activity.Provider")
+                    .source(RouteEndpoint::component("fake_capabilities"))
+                    .targets(vec![RouteEndpoint::component("omaha_client_service")]),
+            )
+            .await
             .unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.paver.Paver"),
-                source: RouteEndpoint::component("fake_capabilities"),
-                targets: vec![
-                    RouteEndpoint::component("omaha_client_service"),
-                    RouteEndpoint::component("system_update_committer"),
-                ],
-            })
+            .add_route(
+                RouteBuilder::protocol("fuchsia.paver.Paver")
+                    .source(RouteEndpoint::component("fake_capabilities"))
+                    .targets(vec![
+                        RouteEndpoint::component("omaha_client_service"),
+                        RouteEndpoint::component("system_update_committer"),
+                    ]),
+            )
+            .await
             .unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.update.verify.BlobfsVerifier"),
-                source: RouteEndpoint::component("fake_capabilities"),
-                targets: vec![RouteEndpoint::component("system_update_committer")],
-            })
+            .add_route(
+                RouteBuilder::protocol("fuchsia.update.verify.BlobfsVerifier")
+                    .source(RouteEndpoint::component("fake_capabilities"))
+                    .targets(vec![RouteEndpoint::component("system_update_committer")]),
+            )
+            .await
             .unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.posix.socket.Provider"),
-                source: RouteEndpoint::AboveRoot,
-                targets: vec![
-                    RouteEndpoint::component("omaha_client_service"),
-                    RouteEndpoint::component("system_update_committer"),
-                ],
-            })
+            .add_route(
+                RouteBuilder::protocol("fuchsia.posix.socket.Provider")
+                    .source(RouteEndpoint::AboveRoot)
+                    .targets(vec![
+                        RouteEndpoint::component("omaha_client_service"),
+                        RouteEndpoint::component("system_update_committer"),
+                    ]),
+            )
+            .await
             .unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.net.name.Lookup"),
-                source: RouteEndpoint::AboveRoot,
-                targets: vec![
-                    RouteEndpoint::component("omaha_client_service"),
-                    RouteEndpoint::component("system_update_committer"),
-                ],
-            })
+            .add_route(
+                RouteBuilder::protocol("fuchsia.net.name.Lookup")
+                    .source(RouteEndpoint::AboveRoot)
+                    .targets(vec![
+                        RouteEndpoint::component("omaha_client_service"),
+                        RouteEndpoint::component("system_update_committer"),
+                    ]),
+            )
+            .await
             .unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.stash.Store2"),
-                source: RouteEndpoint::component("stash2"),
-                targets: vec![RouteEndpoint::component("omaha_client_service")],
-            })
+            .add_route(
+                RouteBuilder::protocol("fuchsia.stash.Store2")
+                    .source(RouteEndpoint::component("stash2"))
+                    .targets(vec![RouteEndpoint::component("omaha_client_service")]),
+            )
+            .await
             .unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.cobalt.LoggerFactory"),
-                source: RouteEndpoint::AboveRoot,
-                targets: vec![RouteEndpoint::component("omaha_client_service")],
-            })
+            .add_route(
+                RouteBuilder::protocol("fuchsia.cobalt.LoggerFactory")
+                    .source(RouteEndpoint::AboveRoot)
+                    .targets(vec![RouteEndpoint::component("omaha_client_service")]),
+            )
+            .await
             .unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.feedback.CrashReporter"),
-                source: RouteEndpoint::component("fake_capabilities"),
-                targets: vec![RouteEndpoint::component("omaha_client_service")],
-            })
+            .add_route(
+                RouteBuilder::protocol("fuchsia.feedback.CrashReporter")
+                    .source(RouteEndpoint::component("fake_capabilities"))
+                    .targets(vec![RouteEndpoint::component("omaha_client_service")]),
+            )
+            .await
             .unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.feedback.ComponentDataRegister"),
-                source: RouteEndpoint::component("fake_capabilities"),
-                targets: vec![RouteEndpoint::component("omaha_client_service")],
-            })
+            .add_route(
+                RouteBuilder::protocol("fuchsia.feedback.ComponentDataRegister")
+                    .source(RouteEndpoint::component("fake_capabilities"))
+                    .targets(vec![RouteEndpoint::component("omaha_client_service")]),
+            )
+            .await
             .unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.hardware.power.statecontrol.Admin"),
-                source: RouteEndpoint::component("fake_capabilities"),
-                targets: vec![
-                    RouteEndpoint::component("omaha_client_service"),
-                    RouteEndpoint::component("system_update_committer"),
-                ],
-            })
+            .add_route(
+                RouteBuilder::protocol("fuchsia.hardware.power.statecontrol.Admin")
+                    .source(RouteEndpoint::component("fake_capabilities"))
+                    .targets(vec![
+                        RouteEndpoint::component("omaha_client_service"),
+                        RouteEndpoint::component("system_update_committer"),
+                    ]),
+            )
+            .await
             .unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.pkg.PackageResolver"),
-                source: RouteEndpoint::component("fake_capabilities"),
-                targets: vec![RouteEndpoint::component("omaha_client_service")],
-            })
+            .add_route(
+                RouteBuilder::protocol("fuchsia.pkg.PackageResolver")
+                    .source(RouteEndpoint::component("fake_capabilities"))
+                    .targets(vec![RouteEndpoint::component("omaha_client_service")]),
+            )
+            .await
             .unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.pkg.rewrite.Engine"),
-                source: RouteEndpoint::component("fake_capabilities"),
-                targets: vec![RouteEndpoint::component("omaha_client_service")],
-            })
+            .add_route(
+                RouteBuilder::protocol("fuchsia.pkg.rewrite.Engine")
+                    .source(RouteEndpoint::component("fake_capabilities"))
+                    .targets(vec![RouteEndpoint::component("omaha_client_service")]),
+            )
+            .await
             .unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.pkg.RepositoryManager"),
-                source: RouteEndpoint::component("fake_capabilities"),
-                targets: vec![RouteEndpoint::component("omaha_client_service")],
-            })
+            .add_route(
+                RouteBuilder::protocol("fuchsia.pkg.RepositoryManager")
+                    .source(RouteEndpoint::component("fake_capabilities"))
+                    .targets(vec![RouteEndpoint::component("omaha_client_service")]),
+            )
+            .await
             .unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.update.CommitStatusProvider"),
-                source: RouteEndpoint::component("system_update_committer"),
-                targets: vec![
-                    RouteEndpoint::component("omaha_client_service"),
-                    RouteEndpoint::AboveRoot,
-                ],
-            })
+            .add_route(
+                RouteBuilder::protocol("fuchsia.update.CommitStatusProvider")
+                    .source(RouteEndpoint::component("system_update_committer"))
+                    .targets(vec![
+                        RouteEndpoint::component("omaha_client_service"),
+                        RouteEndpoint::AboveRoot,
+                    ]),
+            )
+            .await
             .unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.update.channel.Provider"),
-                source: RouteEndpoint::component("omaha_client_service"),
-                targets: vec![RouteEndpoint::AboveRoot],
-            })
+            .add_route(
+                RouteBuilder::protocol("fuchsia.update.channel.Provider")
+                    .source(RouteEndpoint::component("omaha_client_service"))
+                    .targets(vec![RouteEndpoint::AboveRoot]),
+            )
+            .await
             .unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.update.channelcontrol.ChannelControl"),
-                source: RouteEndpoint::component("omaha_client_service"),
-                targets: vec![RouteEndpoint::AboveRoot],
-            })
+            .add_route(
+                RouteBuilder::protocol("fuchsia.update.channelcontrol.ChannelControl")
+                    .source(RouteEndpoint::component("omaha_client_service"))
+                    .targets(vec![RouteEndpoint::AboveRoot]),
+            )
+            .await
             .unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.update.Manager"),
-                source: RouteEndpoint::component("omaha_client_service"),
-                targets: vec![RouteEndpoint::AboveRoot],
-            })
+            .add_route(
+                RouteBuilder::protocol("fuchsia.update.Manager")
+                    .source(RouteEndpoint::component("omaha_client_service"))
+                    .targets(vec![RouteEndpoint::AboveRoot]),
+            )
+            .await
             .unwrap();
 
         if use_real_system_updater {
             builder
-                .add_eager_component("system_updater", ComponentSource::url(SYSTEM_UPDATER_CML))
+                .add_child("system_updater", SYSTEM_UPDATER_CML, ChildProperties::new().eager())
                 .await
                 .unwrap()
-                .add_route(CapabilityRoute {
-                    capability: Capability::directory(
-                        "config-data",
-                        "/config/data",
-                        fio2::R_STAR_DIR,
-                    ),
-                    source: RouteEndpoint::component("fake_capabilities"),
-                    targets: vec![RouteEndpoint::component("system_updater")],
-                })
+                .add_route(
+                    RouteBuilder::directory("config-data", "/config/data", fio2::R_STAR_DIR)
+                        .source(RouteEndpoint::component("fake_capabilities"))
+                        .targets(vec![RouteEndpoint::component("system_updater")]),
+                )
+                .await
                 .unwrap()
-                .add_route(CapabilityRoute {
-                    capability: Capability::storage("data", "/data"),
-                    source: RouteEndpoint::AboveRoot,
-                    targets: vec![RouteEndpoint::component("system_updater")],
-                })
+                .add_route(
+                    RouteBuilder::storage("data", "/data")
+                        .source(RouteEndpoint::AboveRoot)
+                        .targets(vec![RouteEndpoint::component("system_updater")]),
+                )
+                .await
                 .unwrap()
-                .add_route(CapabilityRoute {
-                    capability: Capability::protocol("fuchsia.cobalt.LoggerFactory"),
-                    source: RouteEndpoint::AboveRoot,
-                    targets: vec![RouteEndpoint::component("system_updater")],
-                })
+                .add_route(
+                    RouteBuilder::protocol("fuchsia.cobalt.LoggerFactory")
+                        .source(RouteEndpoint::AboveRoot)
+                        .targets(vec![RouteEndpoint::component("system_updater")]),
+                )
+                .await
                 .unwrap()
-                .add_route(CapabilityRoute {
-                    capability: Capability::protocol("fuchsia.logger.LogSink"),
-                    source: RouteEndpoint::AboveRoot,
-                    targets: vec![RouteEndpoint::component("system_updater")],
-                })
+                .add_route(
+                    RouteBuilder::protocol("fuchsia.logger.LogSink")
+                        .source(RouteEndpoint::AboveRoot)
+                        .targets(vec![RouteEndpoint::component("system_updater")]),
+                )
+                .await
                 .unwrap()
-                .add_route(CapabilityRoute {
-                    capability: Capability::protocol("fuchsia.update.installer.Installer"),
-                    source: RouteEndpoint::component("system_updater"),
-                    targets: vec![RouteEndpoint::component("omaha_client_service")],
-                })
+                .add_route(
+                    RouteBuilder::protocol("fuchsia.update.installer.Installer")
+                        .source(RouteEndpoint::component("system_updater"))
+                        .targets(vec![RouteEndpoint::component("omaha_client_service")]),
+                )
+                .await
                 .unwrap()
-                .add_route(CapabilityRoute {
-                    capability: Capability::protocol("fuchsia.paver.Paver"),
-                    source: RouteEndpoint::component("fake_capabilities"),
-                    targets: vec![RouteEndpoint::component("system_updater")],
-                })
+                .add_route(
+                    RouteBuilder::protocol("fuchsia.paver.Paver")
+                        .source(RouteEndpoint::component("fake_capabilities"))
+                        .targets(vec![RouteEndpoint::component("system_updater")]),
+                )
+                .await
                 .unwrap()
-                .add_route(CapabilityRoute {
-                    capability: Capability::protocol("fuchsia.pkg.PackageCache"),
-                    source: RouteEndpoint::component("fake_capabilities"),
-                    targets: vec![RouteEndpoint::component("system_updater")],
-                })
+                .add_route(
+                    RouteBuilder::protocol("fuchsia.pkg.PackageCache")
+                        .source(RouteEndpoint::component("fake_capabilities"))
+                        .targets(vec![RouteEndpoint::component("system_updater")]),
+                )
+                .await
                 .unwrap()
-                .add_route(CapabilityRoute {
-                    capability: Capability::protocol("fuchsia.pkg.PackageResolver"),
-                    source: RouteEndpoint::component("fake_capabilities"),
-                    targets: vec![RouteEndpoint::component("system_updater")],
-                })
+                .add_route(
+                    RouteBuilder::protocol("fuchsia.pkg.PackageResolver")
+                        .source(RouteEndpoint::component("fake_capabilities"))
+                        .targets(vec![RouteEndpoint::component("system_updater")]),
+                )
+                .await
                 .unwrap()
-                .add_route(CapabilityRoute {
-                    capability: Capability::protocol("fuchsia.hardware.power.statecontrol.Admin"),
-                    source: RouteEndpoint::component("fake_capabilities"),
-                    targets: vec![RouteEndpoint::component("system_updater")],
-                })
+                .add_route(
+                    RouteBuilder::protocol("fuchsia.hardware.power.statecontrol.Admin")
+                        .source(RouteEndpoint::component("fake_capabilities"))
+                        .targets(vec![RouteEndpoint::component("system_updater")]),
+                )
+                .await
                 .unwrap()
-                .add_route(CapabilityRoute {
-                    capability: Capability::directory(
-                        "build-info",
-                        "/config/build-info",
-                        fio2::R_STAR_DIR,
-                    ),
-                    source: RouteEndpoint::component("fake_capabilities"),
-                    targets: vec![RouteEndpoint::component("system_updater")],
-                })
+                .add_route(
+                    RouteBuilder::directory("build-info", "/config/build-info", fio2::R_STAR_DIR)
+                        .source(RouteEndpoint::component("fake_capabilities"))
+                        .targets(vec![RouteEndpoint::component("system_updater")]),
+                )
+                .await
                 .unwrap();
         } else {
             builder
-                .add_route(CapabilityRoute {
-                    capability: Capability::protocol("fuchsia.update.installer.Installer"),
-                    source: RouteEndpoint::component("fake_capabilities"),
-                    targets: vec![RouteEndpoint::component("omaha_client_service")],
-                })
+                .add_route(
+                    RouteBuilder::protocol("fuchsia.update.installer.Installer")
+                        .source(RouteEndpoint::component("fake_capabilities"))
+                        .targets(vec![RouteEndpoint::component("omaha_client_service")]),
+                )
+                .await
                 .unwrap();
         }
 
-        let realm_instance = builder.build().create().await.unwrap();
+        let realm_instance = builder.build().await.unwrap();
         let channel_control = realm_instance
             .root
             .connect_to_protocol_at_exposed_dir::<ChannelControlMarker>()

@@ -15,7 +15,10 @@ use {
     fidl_fuchsia_io2 as fio2,
     fidl_fuchsia_pkg::{LocalMirrorMarker, LocalMirrorProxy},
     fuchsia_component::server::ServiceFs,
-    fuchsia_component_test::{builder::*, mock::MockHandles, RealmInstance},
+    fuchsia_component_test::{
+        mock::MockHandles, ChildProperties, RealmBuilder, RealmInstance, RouteBuilder,
+        RouteEndpoint,
+    },
     fuchsia_url::pkg_url::RepoUrl,
     fuchsia_zircon::Status,
     futures::{channel::oneshot, prelude::*},
@@ -68,21 +71,21 @@ impl TestEnvBuilder {
         const COMPONENT_UNDER_TEST: &str = "pkg-local-mirror";
         const USB_MOCK_COMPONENT: &str = "usb-source";
 
-        let mut builder = RealmBuilder::new().await.expect("created");
+        let builder = RealmBuilder::new().await.expect("created");
 
         // Create the component-under-test (pkg-local-mirror) child component.
         // This is the production component + manifest.
         builder
-            .add_eager_component(COMPONENT_UNDER_TEST, ComponentSource::url(PKG_LOCAL_MIRROR_URL))
+            .add_child(COMPONENT_UNDER_TEST, PKG_LOCAL_MIRROR_URL, ChildProperties::new().eager())
             .await
             .expect("component added");
 
         // Create a mock component that provides the mock `/usb` directory.
         // The `/usb` directory that is served is configured in this builder.
         builder
-            .add_component(
+            .add_mock_child(
                 USB_MOCK_COMPONENT,
-                ComponentSource::mock(move |h: MockHandles| {
+                move |h: MockHandles| {
                     let proxy = spawn_vfs(usb_dir.clone());
                     async move {
                         let mut fs = ServiceFs::new();
@@ -93,41 +96,45 @@ impl TestEnvBuilder {
                         Ok::<(), anyhow::Error>(())
                     }
                     .boxed()
-                }),
+                },
+                ChildProperties::new(),
             )
             .await
             .expect("mock component added");
 
         // Route the mock `/usb` directory from the mock source to the component-under-test.
         builder
-            .add_route(CapabilityRoute {
-                capability: Capability::directory("usb", "/usb", fio2::R_STAR_DIR),
-                source: RouteEndpoint::component(USB_MOCK_COMPONENT),
-                targets: vec![RouteEndpoint::component(COMPONENT_UNDER_TEST)],
-            })
+            .add_route(
+                RouteBuilder::directory("usb", "/usb", fio2::R_STAR_DIR)
+                    .source(RouteEndpoint::component(USB_MOCK_COMPONENT))
+                    .targets(vec![RouteEndpoint::component(COMPONENT_UNDER_TEST)]),
+            )
+            .await
             .expect("usb capability routed");
 
         // Route the component-under-test's public FIDL protocol so that it is
         // accessible by this test.
         builder
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.pkg.LocalMirror"),
-                source: RouteEndpoint::component(COMPONENT_UNDER_TEST),
-                targets: vec![RouteEndpoint::AboveRoot],
-            })
+            .add_route(
+                RouteBuilder::protocol("fuchsia.pkg.LocalMirror")
+                    .source(RouteEndpoint::component(COMPONENT_UNDER_TEST))
+                    .targets(vec![RouteEndpoint::AboveRoot]),
+            )
+            .await
             .expect("fuchsia.pkg.LocalMirror routed");
 
         // Route the logging protocol so that the component-under-test can be
         // debugged.
         builder
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.logger.LogSink"),
-                source: RouteEndpoint::AboveRoot,
-                targets: vec![RouteEndpoint::component(COMPONENT_UNDER_TEST)],
-            })
+            .add_route(
+                RouteBuilder::protocol("fuchsia.logger.LogSink")
+                    .source(RouteEndpoint::AboveRoot)
+                    .targets(vec![RouteEndpoint::component(COMPONENT_UNDER_TEST)]),
+            )
+            .await
             .expect("fuchsia.logger.LogSink routed");
 
-        TestEnv { instance: builder.build().create().await.expect("created") }
+        TestEnv { instance: builder.build().await.expect("created") }
     }
 }
 

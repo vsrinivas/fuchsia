@@ -26,8 +26,8 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
-        builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
-        RealmInstance, ScopedInstance, ScopedInstanceFactory,
+        ChildProperties, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint, ScopedInstance,
+        ScopedInstanceFactory,
     },
     fuchsia_merkle::{Hash, MerkleTree},
     fuchsia_pkg_testing::SystemImageBuilder,
@@ -442,149 +442,133 @@ where
 
         let fs_holder = Mutex::new(Some(fs));
 
-        let mut builder = RealmBuilder::new().await.unwrap();
+        let builder = RealmBuilder::new().await.unwrap();
         builder
-            .add_component("pkg_cache", ComponentSource::url("fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-cache.cm")).await.unwrap()
-            .add_component("system_update_committer", ComponentSource::url("fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/system-update-committer.cm")).await.unwrap()
-            .add_component("service_reflector", ComponentSource::mock(move |mock_handles| {
+            .add_child("pkg_cache", "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-cache.cm", ChildProperties::new()).await.unwrap()
+            .add_child("system_update_committer", "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/system-update-committer.cm", ChildProperties::new()).await.unwrap()
+            .add_mock_child("service_reflector", move |mock_handles| {
                 let mut rfs = fs_holder.lock().take().expect("mock component should only be launched once");
                 async {
                     rfs.serve_connection(mock_handles.outgoing_dir.into_channel()).unwrap();
                     let () = rfs.collect().await;
                     Ok::<(), anyhow::Error>(())
                 }.boxed()
-            })).await.unwrap()
-            .add_component("local_mirror", ComponentSource::url("fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-local-mirror.cm")).await.unwrap()
-            .add_component("pkg_resolver_wrapper", ComponentSource::url("fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-resolver-wrapper.cm")).await.unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.logger.LogSink"),
-                source: RouteEndpoint::AboveRoot,
-                targets: vec![
+            }, ChildProperties::new()).await.unwrap()
+            .add_child("local_mirror", "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-local-mirror.cm", ChildProperties::new()).await.unwrap()
+            .add_child("pkg_resolver_wrapper", "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-resolver-wrapper.cm", ChildProperties::new()).await.unwrap()
+            .add_route(RouteBuilder::protocol("fuchsia.logger.LogSink")
+                .source(RouteEndpoint::AboveRoot)
+                .targets(vec![
                     RouteEndpoint::component("pkg_cache"),
                     RouteEndpoint::component("system_update_committer"),
                     RouteEndpoint::component("local_mirror"),
                     RouteEndpoint::component("pkg_resolver_wrapper"),
-                ],
-            }).unwrap()
+                ])
+            ).await.unwrap()
 
             // Make sure pkg_resolver has network access as required by the hyper client shard
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.net.name.Lookup"),
-                source: RouteEndpoint::AboveRoot,
-                targets: vec![
+            .add_route(RouteBuilder::protocol("fuchsia.net.name.Lookup")
+                .source(RouteEndpoint::AboveRoot)
+                .targets(vec![
                     RouteEndpoint::component("pkg_resolver_wrapper"),
-                ],
-            }).unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.posix.socket.Provider"),
-                source: RouteEndpoint::AboveRoot,
-                targets: vec![
+                ])
+            ).await.unwrap()
+            .add_route(RouteBuilder::protocol("fuchsia.posix.socket.Provider")
+                .source(RouteEndpoint::AboveRoot)
+                .targets(vec![
                     RouteEndpoint::component("pkg_resolver_wrapper"),
-                ],
-            }).unwrap()
+                ])
+            ).await.unwrap()
 
             // Fill out the rest of the `use` stanzas for pkg_resolver and pkg_cache
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.boot.Arguments"),
-                source: RouteEndpoint::component("service_reflector"),
-                targets: vec![
+            .add_route(RouteBuilder::protocol("fuchsia.boot.Arguments")
+                .source(RouteEndpoint::component("service_reflector"))
+                .targets(vec![
                     RouteEndpoint::component("pkg_resolver_wrapper"),
-                ],
-            }).unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.cobalt.LoggerFactory"),
-                source: RouteEndpoint::component("service_reflector"),
-                targets: vec![
+                ])
+            ).await.unwrap()
+            .add_route(RouteBuilder::protocol("fuchsia.cobalt.LoggerFactory")
+                .source(RouteEndpoint::component("service_reflector"))
+                .targets(vec![
                     RouteEndpoint::component("pkg_cache"),
                     RouteEndpoint::component("pkg_resolver_wrapper"),
-                ],
-            }).unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.pkg.LocalMirror"),
-                source: RouteEndpoint::component("local_mirror"),
-                targets: vec![
+                ])
+            ).await.unwrap()
+            .add_route(RouteBuilder::protocol("fuchsia.pkg.LocalMirror")
+                .source(RouteEndpoint::component("local_mirror"))
+                .targets(vec![
                     RouteEndpoint::component("pkg_resolver_wrapper"),
-                ],
-            }).unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.pkg.PackageCache"),
-                source: RouteEndpoint::component("pkg_cache"),
-                targets: vec![
+                ])
+            ).await.unwrap()
+            .add_route(RouteBuilder::protocol("fuchsia.pkg.PackageCache")
+                .source(RouteEndpoint::component("pkg_cache"))
+                .targets(vec![
                     RouteEndpoint::component("pkg_resolver_wrapper"),
                     RouteEndpoint::AboveRoot,
-                ],
-            }).unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.tracing.provider.Registry"),
-                source: RouteEndpoint::component("service_reflector"),
-                targets: vec![
+                ])
+            ).await.unwrap()
+            .add_route(RouteBuilder::protocol("fuchsia.tracing.provider.Registry")
+                .source(RouteEndpoint::component("service_reflector"))
+                .targets(vec![
                     RouteEndpoint::component("pkg_cache"),
                     RouteEndpoint::component("pkg_resolver_wrapper"),
-                ],
-            }).unwrap()
+                ])
+            ).await.unwrap()
 
             // Route the Realm protocol from the pkg_resolver_wrapper so that
             // the test can control starting and stopping pkg-resolver.
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.component.Realm"),
-                source: RouteEndpoint::component("pkg_resolver_wrapper"),
-                targets: vec![
+            .add_route(RouteBuilder::protocol("fuchsia.component.Realm")
+                .source(RouteEndpoint::component("pkg_resolver_wrapper"))
+                .targets(vec![
                     RouteEndpoint::AboveRoot,
-                ],
-            }).unwrap()
+                ])
+            ).await.unwrap()
 
             // Directory routes
-            .add_route(CapabilityRoute {
-                capability: Capability::directory("pkgfs", "/pkgfs", fidl_fuchsia_io2::RW_STAR_DIR),
-                source: RouteEndpoint::component("service_reflector"),
-                targets: vec![
+            .add_route(RouteBuilder::directory("pkgfs", "/pkgfs", fidl_fuchsia_io2::RW_STAR_DIR)
+                .source(RouteEndpoint::component("service_reflector"))
+                .targets(vec![
                     RouteEndpoint::component("pkg_cache"),
-                ],
-            }).unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::directory("blob", "/blob", fidl_fuchsia_io2::RW_STAR_DIR),
-                source: RouteEndpoint::component("service_reflector"),
-                targets: vec![ RouteEndpoint::component("pkg_cache") ],
-            }).unwrap()
+                ])
+            ).await.unwrap()
+            .add_route(RouteBuilder::directory("blob", "/blob", fidl_fuchsia_io2::RW_STAR_DIR)
+                .source(RouteEndpoint::component("service_reflector"))
+                .targets(vec![ RouteEndpoint::component("pkg_cache") ])
+            ).await.unwrap()
             // route mock /usb to local_mirror
-            .add_route(CapabilityRoute {
-                capability: Capability::directory("usb", "/usb", fidl_fuchsia_io2::RW_STAR_DIR),
-                source: RouteEndpoint::component("service_reflector"),
-                targets: vec![ RouteEndpoint::component("local_mirror") ],
-            }).unwrap()
+            .add_route(RouteBuilder::directory("usb", "/usb", fidl_fuchsia_io2::RW_STAR_DIR)
+                .source(RouteEndpoint::component("service_reflector"))
+                .targets(vec![ RouteEndpoint::component("local_mirror") ])
+            ).await.unwrap()
 
-            .add_route(CapabilityRoute {
-                capability: Capability::directory("pkgfs-system", "/pkgfs/system", fidl_fuchsia_io2::R_STAR_DIR),
-                source: RouteEndpoint::component("service_reflector"),
-                targets: vec![
+            .add_route(RouteBuilder::directory("pkgfs-system", "/pkgfs/system", fidl_fuchsia_io2::R_STAR_DIR)
+                .source(RouteEndpoint::component("service_reflector"))
+                .targets(vec![
                     RouteEndpoint::component("pkg_resolver_wrapper"),
-                ],
-            }).unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::directory("config-data", "/config/data", fidl_fuchsia_io2::R_STAR_DIR),
-                source: RouteEndpoint::component("service_reflector"),
-                targets: vec![
+                ])
+            ).await.unwrap()
+            .add_route(RouteBuilder::directory("config-data", "/config/data", fidl_fuchsia_io2::R_STAR_DIR)
+                .source(RouteEndpoint::component("service_reflector"))
+                .targets(vec![
                     RouteEndpoint::component("pkg_resolver_wrapper"),
-                ],
-            }).unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::directory("root-ssl-certificates", "/config/ssl", fidl_fuchsia_io2::R_STAR_DIR),
-                source: RouteEndpoint::component("service_reflector"),
-                targets: vec![
+                ])
+            ).await.unwrap()
+            .add_route(RouteBuilder::directory("root-ssl-certificates", "/config/ssl", fidl_fuchsia_io2::R_STAR_DIR)
+                .source(RouteEndpoint::component("service_reflector"))
+                .targets(vec![
                     RouteEndpoint::component("pkg_resolver_wrapper"),
-                ],
-            }).unwrap()
+                ])
+            ).await.unwrap()
 
             // TODO(fxbug.dev/75658): Change to storage once convenient.
-            .add_route(CapabilityRoute {
-                capability: Capability::directory("data", "/data", fidl_fuchsia_io2::RW_STAR_DIR),
-                source: RouteEndpoint::component("service_reflector"),
-                targets: vec![
+            .add_route(RouteBuilder::directory("data", "/data", fidl_fuchsia_io2::RW_STAR_DIR)
+                .source(RouteEndpoint::component("service_reflector"))
+                .targets(vec![
                     RouteEndpoint::component("pkg_resolver_wrapper"),
-                ],
-            }).unwrap();
+                ])
+            ).await.unwrap();
 
-        let realm_instance = builder.build().create().await.unwrap();
+        let realm_instance = builder.build().await.unwrap();
 
         let realm = realm_instance
             .root
