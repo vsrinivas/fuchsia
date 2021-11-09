@@ -26,6 +26,8 @@ namespace wlan_internal = ::fuchsia::wlan::internal;
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 namespace wlan_stats = ::fuchsia::wlan::stats;
 
+using ::testing::_;
+using ::testing::ElementsAre;
 using ::testing::IsEmpty;
 using ::testing::IsNull;
 using ::testing::Matcher;
@@ -80,6 +82,24 @@ TEST(ConvertTest, ToFidlBssDescription) {
   EXPECT_EQ(fidl_desc.channel.secondary80, 0);
   EXPECT_EQ(fidl_desc.rssi_dbm, -40);
   EXPECT_EQ(fidl_desc.snr_db, 20);
+}
+
+TEST(ConvertTest, ToFidlCSsid) {
+  cssid_t out_cssid;
+
+  ::std::vector<uint8_t> empty_ssid = {};
+  out_cssid = {};
+  CloneIntoCSsid(empty_ssid, out_cssid);
+  ASSERT_EQ(out_cssid.len, 0);
+  ASSERT_THAT(out_cssid.data, ElementsAre(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+                                          _, _, _, _, _, _, _, _, _, _, _, _, _));
+
+  ::std::vector<uint8_t> nonempty_ssid = {'f', 'o', 'o'};
+  out_cssid = {};
+  CloneIntoCSsid(nonempty_ssid, out_cssid);
+  ASSERT_EQ(out_cssid.len, 3);
+  ASSERT_THAT(out_cssid.data, ElementsAre('f', 'o', 'o', _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+                                          _, _, _, _, _, _, _, _, _, _, _, _, _, _, _));
 }
 
 TEST(ConvertTest, ToFidlAssocInd) {

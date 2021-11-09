@@ -149,7 +149,7 @@ struct ClientTest : public ::testing::Test {
 
   // Go off channel. This assumes that any existing ensure-on-channel flag is already cleared
   void GoOffChannel(uint16_t beacon_periods) {
-    device.sme_->StartScan(CreateScanRequest(beacon_periods * kBeaconPeriodTu));
+    device.sme_->StartScan(CreatePassiveScanRequest(beacon_periods * kBeaconPeriodTu));
     client.RunUntilStalled();
     device.wlan_queue.erase(device.wlan_queue.begin());  // dequeue power-saving frame
   }

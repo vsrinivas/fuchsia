@@ -40,6 +40,7 @@ void ConvertSetKeyDescriptor(set_key_descriptor_t* key_desc,
                              const ::fuchsia::wlan::mlme::SetKeyDescriptor& fidl_key_desc);
 void ConvertDeleteKeyDescriptor(delete_key_descriptor_t* key_desc,
                                 const ::fuchsia::wlan::mlme::DeleteKeyDescriptor& fidl_key_desc);
+void CloneIntoCSsid(const ::std::vector<uint8_t>& ssid, cssid_t& out_cssid);
 ::fuchsia::wlan::internal::BssType ConvertBssType(uint8_t bss_type);
 ::fuchsia::wlan::common::ChannelBandwidth ConvertCBW(channel_bandwidth_t cbw);
 ::fuchsia::wlan::mlme::AuthenticationTypes ConvertAuthType(uint8_t auth_type);

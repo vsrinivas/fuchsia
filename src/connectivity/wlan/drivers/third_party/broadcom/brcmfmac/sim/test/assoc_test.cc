@@ -1012,15 +1012,16 @@ TEST_F(AssocTest, AssocWhileScanning) {
 
   env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
 
+  const uint8_t channels_list[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
   wlanif_scan_req_t scan_req = {
       .txn_id = 42,
-      .bss_type_selector = fuchsia_wlan_internal_BSS_TYPE_SELECTOR_ANY,
       .scan_type = WLAN_SCAN_TYPE_PASSIVE,
-      .num_channels = 11,
-      .channel_list = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},
-      .min_channel_time = 100,
+      .channels_list = channels_list,
+      .channels_count = 11,
+      .ssids_list = nullptr,
+      .ssids_count = 0,
+      .min_channel_time = 0,
       .max_channel_time = 100,
-      .num_ssids = 0,
   };
   client_ifc_.if_impl_ops_->start_scan(client_ifc_.if_impl_ctx_, &scan_req);
 

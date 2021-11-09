@@ -151,7 +151,7 @@ FV TypeCheckWlanFrame(Packet* pkt) {
 
 ::fuchsia::wlan::internal::BssDescription CreateBssDescription(
     bool rsn, wlan_channel_t channel = kBssChannel);
-::fuchsia::wlan::mlme::ScanRequest CreateScanRequest(uint32_t max_channel_time);
+::fuchsia::wlan::mlme::ScanRequest CreatePassiveScanRequest(uint32_t max_channel_time);
 ::fuchsia::wlan::mlme::StartRequest CreateStartRequest(bool protected_ap);
 ::fuchsia::wlan::mlme::StopRequest CreateStopRequest();
 ::fuchsia::wlan::mlme::JoinRequest CreateJoinRequest(bool rsn);

@@ -16,16 +16,22 @@
 
 #include <functional>
 #include <memory>
+#include <new>
 #include <optional>
 #include <tuple>
+#include <vector>
 
 #include <ddk/hw/wlan/ieee80211/c/banjo.h>
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace wlan_internal = ::fuchsia::wlan::internal;
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
+
+using ::testing::_;
+using ::testing::ElementsAre;
 
 bool multicast_promisc_enabled = false;
 
@@ -148,10 +154,27 @@ TEST(SmeChannel, Bound) {
 
   // Capture incoming scan request.
   proto_ops.start_scan = [](void* ctx, const wlanif_scan_req_t* req) {
-    SME_DEV(ctx)->scan_req = {{
-        .bss_type_selector = req->bss_type_selector,
-        .scan_type = req->scan_type,
-    }};
+    SME_DEV(ctx)->scan_req = *req;
+    if (SME_DEV(ctx)->scan_req->ssids_count == 0) {
+      return;
+    }
+
+    // Copy the dynamically allocated contents of wlanif_scan_req_t.
+    auto channels_list_begin = std::make_unique<uint8_t>(req->channels_count);
+    if (channels_list_begin == nullptr) {
+      FAIL();
+    }
+    memcpy(channels_list_begin.get(), req->channels_list, req->channels_count * sizeof(uint8_t));
+    SME_DEV(ctx)->scan_req->channels_list =
+        channels_list_begin.release();  // deleted at end of test
+
+    auto cssids_list_begin = std::unique_ptr<cssid_t, std::default_delete<cssid_t[]>>(
+        new (std::nothrow) cssid_t[req->ssids_count]);
+    if (cssids_list_begin == nullptr) {
+      FAIL();
+    }
+    memcpy(cssids_list_begin.get(), req->ssids_list, req->ssids_count * sizeof(cssid_t));
+    SME_DEV(ctx)->scan_req->ssids_list = cssids_list_begin.release();  // deleted at end of test
   };
 
   SmeChannelTestContext ctx;
@@ -168,20 +191,42 @@ TEST(SmeChannel, Bound) {
 
   // Send scan request to device.
   auto mlme_proxy = wlan_mlme::MLME_SyncProxy(std::move(ctx.mlme));
-  mlme_proxy.StartScan(wlan_mlme::ScanRequest{
-      .bss_type_selector = wlan_internal::BSS_TYPE_SELECTOR_INFRASTRUCTURE,
+  wlan_mlme::ScanRequest mlme_scan_request = {
+      .txn_id = 754,
       .scan_type = wlan_mlme::ScanTypes::PASSIVE,
-  });
+      .channel_list = {5},
+      .ssid_list = {{1, 2, 3}, {4, 5, 6, 7}},
+      .probe_delay = 0,  // probe_delay is ignored in wlanif since it is not generally a FullMAC
+                         // supported feature
+      .min_channel_time = 0,
+      .max_channel_time = 100,
+  };
+  mlme_proxy.StartScan(mlme_scan_request);
 
   // Wait for scan message to propagate through the system.
   ASSERT_TRUE(timeout_after(ZX_SEC(120), [&]() { return ctx.scan_req.has_value(); }));
 
   // Verify scan request.
   ASSERT_TRUE(ctx.scan_req.has_value());
-  ASSERT_EQ(ctx.scan_req->bss_type_selector,
-            fuchsia_wlan_internal_BSS_TYPE_SELECTOR_INFRASTRUCTURE);
+  ASSERT_EQ(ctx.scan_req->txn_id, 754u);
   ASSERT_EQ(ctx.scan_req->scan_type, WLAN_SCAN_TYPE_PASSIVE);
 
+  ASSERT_EQ(ctx.scan_req->channels_count, 1u);
+  ASSERT_EQ(ctx.scan_req->channels_list[0], 5u);
+  ASSERT_EQ(ctx.scan_req->ssids_count, 2u);
+  ASSERT_EQ(ctx.scan_req->ssids_list[0].len, 3);
+  ASSERT_THAT(ctx.scan_req->ssids_list[0].data,
+              ElementsAre(1, 2, 3, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+                          _, _, _, _, _, _, _));
+  ASSERT_EQ(ctx.scan_req->ssids_list[1].len, 4);
+  ASSERT_THAT(ctx.scan_req->ssids_list[1].data,
+              ElementsAre(4, 5, 6, 7, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+                          _, _, _, _, _, _, _));
+  ASSERT_EQ(ctx.scan_req->min_channel_time, 0u);
+  ASSERT_EQ(ctx.scan_req->max_channel_time, 100u);
+
+  delete const_cast<uint8_t*>(ctx.scan_req->channels_list);
+  free(const_cast<cssid_t*>(ctx.scan_req->ssids_list));
   device->Unbind();
 }
 

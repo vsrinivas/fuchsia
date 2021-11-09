@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_inspect::NumericProperty,
-    ieee80211::{Bssid, Ssid, WILDCARD_BSSID},
+    ieee80211::{Bssid, Ssid},
     log::warn,
     std::{
         collections::{hash_map, HashMap, HashSet},
@@ -218,33 +218,25 @@ fn convert_bss_map(
 fn new_scan_request(
     mlme_txn_id: u64,
     scan_request: fidl_sme::ScanRequest,
-    ssid: Ssid,
+    ssid_list: Vec<Ssid>,
     device_info: &fidl_mlme::DeviceInfo,
 ) -> fidl_mlme::ScanRequest {
     let scan_req = fidl_mlme::ScanRequest {
         txn_id: mlme_txn_id,
-        // All supported MLME drivers only support BSS_TYPE_SELECTOR_ANY
-        bss_type_selector: fidl_internal::BSS_TYPE_SELECTOR_ANY,
-        bssid: WILDCARD_BSSID.0,
-        ssid: ssid.into(),
         scan_type: fidl_mlme::ScanTypes::Passive,
         probe_delay: 0,
-        channel_list: Some(get_channels_to_scan(&device_info, &scan_request)),
+        channel_list: get_channels_to_scan(&device_info, &scan_request),
+        ssid_list: ssid_list.into_iter().map(Ssid::into).collect(),
         min_channel_time: PASSIVE_SCAN_CHANNEL_MS,
         max_channel_time: PASSIVE_SCAN_CHANNEL_MS,
-        ssid_list: None,
     };
     match scan_request {
         fidl_sme::ScanRequest::Active(active_scan_params) => fidl_mlme::ScanRequest {
             scan_type: fidl_mlme::ScanTypes::Active,
+            ssid_list: active_scan_params.ssids,
             probe_delay: ACTIVE_SCAN_PROBE_DELAY_MS,
             min_channel_time: ACTIVE_SCAN_CHANNEL_MS,
             max_channel_time: ACTIVE_SCAN_CHANNEL_MS,
-            ssid_list: if active_scan_params.ssids.len() > 0 {
-                Some(active_scan_params.ssids)
-            } else {
-                None
-            },
             ..scan_req
         },
         fidl_sme::ScanRequest::Passive(_) => scan_req,
@@ -256,7 +248,7 @@ fn new_discovery_scan_request<T>(
     discovery_scan: &DiscoveryScan<T>,
     device_info: &fidl_mlme::DeviceInfo,
 ) -> fidl_mlme::ScanRequest {
-    new_scan_request(mlme_txn_id, discovery_scan.scan_request.clone(), Ssid::empty(), device_info)
+    new_scan_request(mlme_txn_id, discovery_scan.scan_request.clone(), vec![], device_info)
 }
 
 /// Get channels to scan depending on device's capability and scan type. If scan type is passive,
@@ -548,8 +540,14 @@ mod tests {
             .enqueue_scan_to_discover(passive_discovery_scan(10))
             .expect("expected a ScanRequest");
 
+        println!("{:?}", req);
+        assert_eq!(req.txn_id, 1);
         assert_eq!(req.scan_type, fidl_mlme::ScanTypes::Passive);
-        assert_eq!(req.ssid, Vec::<u8>::new());
+        assert_eq!(req.channel_list, Vec::<u8>::new());
+        assert_eq!(req.ssid_list, Vec::<Vec<u8>>::new());
+        assert_eq!(req.probe_delay, 0);
+        assert_eq!(req.min_channel_time, 200);
+        assert_eq!(req.max_channel_time, 200);
     }
 
     #[test]
@@ -566,17 +564,16 @@ mod tests {
         let req = sched.enqueue_scan_to_discover(scan_cmd).expect("expected a ScanRequest");
 
         assert_eq!(req.scan_type, fidl_mlme::ScanTypes::Active);
-        assert_eq!(req.ssid, Vec::<u8>::new());
-        assert_eq!(req.ssid_list, None);
-        assert_eq!(req.channel_list, Some(vec![36, 165, 1]));
+        assert_eq!(req.channel_list, vec![36, 165, 1]);
+        assert_eq!(req.ssid_list, Vec::<Vec<u8>>::new());
     }
 
     #[test]
     fn test_active_discovery_scan_args_filled() {
         let device_info = device_info_with_channel(vec![1, 36, 165]);
         let mut sched: ScanScheduler<i32> = ScanScheduler::new(Arc::new(device_info));
-        let ssid1 = "ssid1".as_bytes().to_vec();
-        let ssid2 = "ssid2".as_bytes().to_vec();
+        let ssid1: Vec<u8> = Ssid::try_from("ssid1").unwrap().into();
+        let ssid2: Vec<u8> = Ssid::try_from("ssid2").unwrap().into();
         let scan_cmd = DiscoveryScan::new(
             10,
             fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
@@ -587,9 +584,8 @@ mod tests {
         let req = sched.enqueue_scan_to_discover(scan_cmd).expect("expected a ScanRequest");
 
         assert_eq!(req.scan_type, fidl_mlme::ScanTypes::Active);
-        assert_eq!(req.ssid, Vec::<u8>::new());
-        assert_eq!(req.ssid_list, Some(vec![ssid1, ssid2]));
-        assert_eq!(req.channel_list, Some(vec![1]));
+        assert_eq!(req.channel_list, vec![1]);
+        assert_eq!(req.ssid_list, vec![ssid1, ssid2]);
     }
 
     #[test]

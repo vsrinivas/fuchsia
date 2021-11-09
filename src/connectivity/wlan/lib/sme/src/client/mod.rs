@@ -28,8 +28,7 @@ use {
         wpa::get_legacy_wpa_association,
     },
     crate::{
-        clone_utils::clone_scan_request, responder::Responder, Config, InfoSink, InfoStream,
-        MlmeRequest, MlmeSink, MlmeStream,
+        responder::Responder, Config, InfoSink, InfoStream, MlmeRequest, MlmeSink, MlmeStream,
     },
     anyhow::{bail, format_err, Context as _},
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
@@ -592,9 +591,7 @@ impl ClientSme {
 
     fn send_scan_request(&mut self, req: Option<fidl_mlme::ScanRequest>) {
         if let Some(req) = req {
-            self.context
-                .info
-                .report_scan_started(clone_scan_request(&req), self.status().is_connected());
+            self.context.info.report_scan_started(req.clone(), self.status().is_connected());
             self.context.mlme_sink.send(MlmeRequest::Scan(req));
         }
     }

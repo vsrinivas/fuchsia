@@ -1211,15 +1211,12 @@ mod tests {
     fn scan_req() -> fidl_mlme::ScanRequest {
         fidl_mlme::ScanRequest {
             txn_id: 1337,
-            bss_type_selector: fidl_internal::BSS_TYPE_SELECTOR_ANY,
-            bssid: BSSID.0,
-            ssid: b"ssid".to_vec(),
             scan_type: fidl_mlme::ScanTypes::Passive,
+            channel_list: vec![SCAN_CHANNEL_PRIMARY],
+            ssid_list: vec![Ssid::try_from("ssid").unwrap().into()],
             probe_delay: 0,
-            channel_list: Some(vec![SCAN_CHANNEL_PRIMARY]),
             min_channel_time: 100,
             max_channel_time: 300,
-            ssid_list: None,
         }
     }
 
