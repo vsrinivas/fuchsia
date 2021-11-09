@@ -130,6 +130,14 @@ kernel_cmdline("ktrace.grpmask-0") {
   args = [ "ktrace.grpmask=0" ]
 }
 
+kernel_cmdline("kernel_active_aging_2_15_2") {
+  args = [
+    "kernel.page-scanner.min-aging-interval=2",
+    "kernel.page-scanner.max-aging-interval=15",
+    "kernel.page-scanner.active-ratio-multiplier=2",
+  ]
+}
+
 # Should only be visible on x64.
 if (target_cpu == "x64") {
   kernel_cmdline("kernel.serial--legacy") {
