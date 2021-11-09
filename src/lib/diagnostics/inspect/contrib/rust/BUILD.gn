@@ -12,29 +12,23 @@ rustc_library("fuchsia-inspect-contrib") {
   with_unit_tests = true
 
   deps = [
-    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
-    "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/diagnostics/persistence/fidl:persist-rustc",
-    "//src/lib/diagnostics/hierarchy/rust",
     "//src/lib/diagnostics/inspect/rust",
-    "//src/lib/diagnostics/reader/rust",
-    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
     "//src/lib/injectable-time",
     "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:derivative",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
-    "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:pin-utils",
-    "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:tracing",
   ]
 
-  test_deps = [ "//src/lib/fuchsia" ]
+  test_deps = [
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:pin-utils",
+  ]
 
   sources = [
     "src/auto_persist.rs",
