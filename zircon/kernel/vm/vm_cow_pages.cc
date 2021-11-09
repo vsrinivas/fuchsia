@@ -1260,7 +1260,7 @@ zx_status_t VmCowPages::AddNewPageLocked(uint64_t offset, vm_page_t* page, bool 
   }
 
   VmPageOrMarker p = VmPageOrMarker::Page(page);
-  zx_status_t status = AddPageLocked(&p, offset, false);
+  zx_status_t status = AddPageLocked(&p, offset, do_range_update);
 
   if (status != ZX_OK) {
     // Release the page from 'p', as we are returning failure 'page' is still owned by the caller.
