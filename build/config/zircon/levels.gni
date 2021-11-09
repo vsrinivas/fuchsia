@@ -15,5 +15,9 @@ declare_args() {
   # Zircon optimization level. Same acceptable values as `optimize`.
   # Note that this will be ignored, in favor of the global `optimize` variable
   # if the latter is one of: "none", "sanitizer", or "profile".
+  #
+  # "Default" optimization offers a good balance of size and speed,
+  # as measured by size comparisons of release builds and extensive microbenchmarks.
+  # See: https://fuchsia-review.googlesource.com/c/fuchsia/+/600221/comments/3a4855ec_cf46619c
   zircon_optimize = "default"
 }
