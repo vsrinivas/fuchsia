@@ -53,7 +53,11 @@ fdf_status_t fdf_dispatcher_create(uint32_t options, const char* scheduler_role,
 // Returns the asynchronous dispatch interface.
 async_dispatcher_t* fdf_dispatcher_get_async_dispatcher(fdf_dispatcher_t* dispatcher);
 
-// Destroys the dispatcher. Joins with all threads spawned by the dispatcher.
+// Removes all queued callbacks, and waits for all pending callbacks started by this
+// dispatcher to complete before returning. No new callbacks will be started once this returns.
+//
+// It is safe to call this from a callback started by this dispatcher, in which case
+// the dispatcher will be destroyed once the callback returns.
 void fdf_dispatcher_destroy(fdf_dispatcher_t* dispatcher);
 
 __END_CDECLS
