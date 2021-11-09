@@ -25,8 +25,6 @@
 #include <algorithm>
 #include <atomic>
 
-#include <wlan/common/phy.h>
-
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
 #include "bus.h"

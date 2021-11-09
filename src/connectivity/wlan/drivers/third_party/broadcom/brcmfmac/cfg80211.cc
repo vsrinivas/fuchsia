@@ -40,7 +40,6 @@
 #include <wifi/wifi-config.h>
 #include <wlan/common/ieee80211_codes.h>
 #include <wlan/common/macaddr.h>
-#include <wlan/common/phy.h>
 #include <wlan/protocol/ieee80211.h>
 #include <wlan/protocol/mac.h>
 
