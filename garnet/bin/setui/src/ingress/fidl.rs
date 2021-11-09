@@ -10,7 +10,8 @@ use crate::service::message::Delegate;
 use fidl_fuchsia_settings::{
     AccessibilityRequestStream, AudioRequestStream, DisplayRequestStream,
     DoNotDisturbRequestStream, FactoryResetRequestStream, InputRequestStream, IntlRequestStream,
-    LightRequestStream, NightModeRequestStream, PrivacyRequestStream, SetupRequestStream,
+    KeyboardRequestStream, LightRequestStream, NightModeRequestStream, PrivacyRequestStream,
+    SetupRequestStream,
 };
 use fuchsia_component::server::{ServiceFsDir, ServiceObj};
 use fuchsia_zircon;
@@ -34,6 +35,7 @@ pub enum Interface {
     FactoryReset,
     Input,
     Intl,
+    Keyboard,
     Light,
     NightMode,
     Privacy,
@@ -51,6 +53,7 @@ pub enum InterfaceSpec {
     FactoryReset,
     Input,
     Intl,
+    Keyboard,
     Light,
     NightMode,
     Privacy,
@@ -67,6 +70,7 @@ impl From<InterfaceSpec> for Interface {
             InterfaceSpec::FactoryReset => Interface::FactoryReset,
             InterfaceSpec::Input => Interface::Input,
             InterfaceSpec::Intl => Interface::Intl,
+            InterfaceSpec::Keyboard => Interface::Keyboard,
             InterfaceSpec::Light => Interface::Light,
             InterfaceSpec::NightMode => Interface::NightMode,
             InterfaceSpec::Privacy => Interface::Privacy,
@@ -155,6 +159,9 @@ impl Interface {
             Interface::Intl => {
                 vec![Dependency::Entity(Entity::Handler(SettingType::Intl))]
             }
+            Interface::Keyboard => {
+                vec![Dependency::Entity(Entity::Handler(SettingType::Keyboard))]
+            }
             Interface::Light => {
                 vec![Dependency::Entity(Entity::Handler(SettingType::Light))]
             }
@@ -222,6 +229,13 @@ impl Interface {
                         let _ = service_dir.add_fidl_service(move |stream: IntlRequestStream| {
                             seeder.seed(stream);
                         });
+                    }
+                    Interface::Keyboard => {
+                        let seeder = seeder.clone();
+                        let _ =
+                            service_dir.add_fidl_service(move |stream: KeyboardRequestStream| {
+                                seeder.seed(stream);
+                            });
                     }
                     Interface::Light => {
                         let _ = service_dir.add_fidl_service(move |stream: LightRequestStream| {

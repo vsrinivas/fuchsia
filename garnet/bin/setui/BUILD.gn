@@ -241,6 +241,7 @@ rustc_library("lib") {
     "src/tests/input_test_environment.rs",
     "src/tests/input_tests.rs",
     "src/tests/intl_tests.rs",
+    "src/tests/keyboard_tests.rs",
     "src/tests/light_sensor_tests.rs",
     "src/tests/light_tests.rs",
     "src/tests/media_buttons_agent_tests.rs",

@@ -28,6 +28,7 @@ use crate::input::input_controller::InputController;
 use crate::intl::intl_controller::IntlController;
 use crate::job::manager::Manager;
 use crate::job::source::Seeder;
+use crate::keyboard::keyboard_controller::KeyboardController;
 use crate::light::light_controller::LightController;
 use crate::message::MessageHubUtil;
 use crate::monitor::base as monitor_base;
@@ -616,6 +617,15 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             SettingType::Intl,
             IntlController,
             DataHandler::<IntlController>::spawn
+        );
+        // Keyboard
+        register_handler!(
+            components,
+            storage_factory,
+            factory_handle,
+            SettingType::Keyboard,
+            KeyboardController,
+            DataHandler::<KeyboardController>::spawn
         );
         // Do not disturb
         register_handler!(
