@@ -124,7 +124,8 @@ impl<'a, T: Read + Write + Seek + Send> Transaction<'a, T> {
         self.end_state.clone()
     }
 
-    /// Add a key to the transaction. The key is not actually added until commit() is called.
+    /// Add a key to the transaction. The key is not actually persisted until
+    /// `commit()` is called.
     pub fn add_key(&mut self, key: String) -> Result<(), SshKeyManagerError> {
         let entry = key.parse::<KeyEntry>()?;
         self.end_state.push(entry);
@@ -136,13 +137,14 @@ impl<'a, T: Read + Write + Seek + Send> Transaction<'a, T> {
         Ok(())
     }
 
-    /// Commit all the changes in this Transaction to the disk, or fail if the underlying
-    /// authorized_keys file was modified since the transaction started.
+    /// Commit all the changes in this `Transaction` to the disk, or fail if the
+    /// underlying authorized_keys file was modified since the transaction
+    /// started.
     pub async fn commit(mut self, manager: &dyn EventSender) -> Result<(), SshKeyManagerError> {
-        // We have to deal with the possibility that something else touched authorized_keys, even
-        // if it wasn't us.
-        // This isn't going to be perfect -- there's no way of guaranteeing that nothing will
-        // happen between load_keys() and write_keys() below, but this is better than
+        // We have to deal with the possibility that something else touched
+        // authorized_keys, even if it wasn't us. This isn't going to be perfect
+        // -- there's no way of guaranteeing that nothing will happen between
+        // `load_keys()` and `write_keys()` below, but this is better than
         // nothing.
         let current_state = self.load_keys().await?;
         if current_state != self.start_state {
@@ -225,7 +227,8 @@ impl<T: Read + Write + Seek + Send> SshKeyManager<T> {
     pub fn with_file(file: T) -> SshKeyManager<T> {
         SshKeyManager { authorized_keys: Mutex::new(file), watchers: Mutex::new(vec![]) }
     }
-    /// Begin a transaction.
+
+    /// Begin a `Transaction`.
     async fn begin<'a>(&'a self) -> Result<Transaction<'a, T>, SshKeyManagerError> {
         Transaction::new(self.authorized_keys.lock().await).await
     }
@@ -238,7 +241,7 @@ impl<T: Read + Write + Seek + Send> SshKeyManager<T> {
         Ok(())
     }
 
-    /// Start sending new WatchEvents to the given stream.
+    /// Start sending new `WatchEvent`s to the given stream.
     async fn start_watch(&self, stream: KeyWatcherRequestStream) -> Result<(), SshKeyManagerError> {
         let mut watcher_list = self.watchers.lock().await;
         let existing = self.get_cur_keys().await?;
@@ -249,7 +252,8 @@ impl<T: Read + Write + Seek + Send> SshKeyManager<T> {
     }
 
     #[cfg(test)]
-    /// Used for testing to make sure that all watchers have received all the KeyEvents.
+    /// Used for testing to make sure that all watchers have received all the
+    /// `KeyEvent`s.
     pub async fn assert_all_watchers_flushed(self) {
         let watcher_list = self.watchers.into_inner();
         let mut errors = std::collections::HashMap::new();
@@ -315,7 +319,7 @@ impl<T: Read + Write + Seek + Send> EventSender for SshKeyManager<T> {
         let mut watchers = self.watchers.lock().await;
         let mut cur_watchers = vec![];
         std::mem::swap(watchers.deref_mut(), &mut cur_watchers);
-        // clean up the watchers list as we go.
+        // Clean up the watchers list as we go.
         for watcher in cur_watchers.into_iter() {
             if watcher.is_done().await {
                 continue;
@@ -499,9 +503,9 @@ mod tests {
             Ok(())
         }
 
-        /// Validate that the events received by the KeyWatcher are as expected.
-        /// This assumes that any watchers _NOT_ owned by the SshKeyManagerTestEnv have been
-        /// flushed.
+        /// Validate that the events received by the `KeyWatcher` are as
+        /// expected. This assumes that any watchers _NOT_ owned by the
+        /// `SshKeyManagerTestEnv` have been flushed.
         async fn validate(self) {
             let mut received = vec![];
             for _expected in self.expected_events.iter() {
@@ -532,7 +536,7 @@ mod tests {
     async fn test_manager_existing_keys() {
         let env = SshKeyManagerTestEnv::new(&[
             "ssh-rsa key comment",
-            "ssh-dss key2 comment2",
+            "ssh-ed25519 key2 comment2",
             "# a line that's a comment",
             "invalid line",
         ]);
@@ -544,12 +548,15 @@ mod tests {
     async fn test_manager_add_keys() {
         let mut env = SshKeyManagerTestEnv::new(&[
             "ssh-rsa key comment",
-            "ssh-dss key2 comment2",
+            "ssh-ed25519 key2 comment2",
             "# a line that's a comment",
             "invalid line",
         ]);
 
-        env.add_key("invlaid key").await.expect_err("Adding key fails");
+        env.add_key("invalid key").await.expect_err("Adding key fails");
+        env.add_key("ssh-dss old-bad-key deprecated and removed")
+            .await
+            .expect_err("Adding DSA key fails");
         env.add_key("ssh-rsa valid_key valid key line").await.expect("Adding key succeeds");
 
         env.validate().await;

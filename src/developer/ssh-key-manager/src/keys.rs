@@ -17,15 +17,14 @@ pub enum ParseKeyError {
     InvalidKey,
 }
 
-/// See //third_party/openssh-portable/sshd.8
-const VALID_KEY_TYPES: [&str; 8] = [
+/// See //third_party/openssh-portable/sshd.8.
+const VALID_KEY_TYPES: [&str; 7] = [
     "sk-ecdsa-sha2-nistp256@openssh.com",
     "ecdsa-sha2-nistp256",
     "ecdsa-sha2-nistp384",
     "ecdsa-sha2-nistp521",
     "sk-ssh-ed25519@openssh.com",
     "ssh-ed25519",
-    "ssh-dss",
     "ssh-rsa",
 ];
 
@@ -34,10 +33,8 @@ fn is_valid_key_type(typ: &str) -> bool {
 }
 
 #[derive(Debug, Clone)]
-/// Represents a single SSH key. Some (minimal) validation occurs (e.g. ensuring the claimed key
-/// type is supported), but otherwise a key is largely opaque.
-/// Keys are equal so long as their "key type" and "key value" is valid. The comment and options
-/// are disregarded when comparisons are done.
+/// Represents a single SSH key. Some (minimal) validation occurs (e.g. ensuring
+/// the claimed key type is supported), but otherwise a key is largely opaque.
 pub struct KeyEntry {
     options: Option<String>,
     key_type: String,
@@ -45,9 +42,14 @@ pub struct KeyEntry {
     comment: Option<String>,
 }
 
+/// `KeyEntry`s are equal if their `key_type` and `key` are valid and equal. The
+/// comparison disregards the `comment` and `options` fields.
 impl PartialEq for KeyEntry {
     fn eq(&self, other: &KeyEntry) -> bool {
-        return self.key_type == other.key_type && self.key == other.key;
+        return is_valid_key_type(&self.key_type)
+            && is_valid_key_type(&self.key_type)
+            && self.key_type == other.key_type
+            && self.key == other.key;
     }
 }
 
@@ -63,22 +65,24 @@ impl FromStr for KeyEntry {
         }
 
         let parts: Vec<&str> = s.split(' ').collect();
-        // The sshd docs say that authorized_keys fields are space-separated, but in practice the
-        // tools seem to accept comments with multiple spaces in them.
+
+        // The sshd docs say that authorized_keys fields are space-separated,
+        // but in practice the tools seem to accept comments with multiple
+        // spaces in them.
         if parts.len() < 2 {
             return Err(ParseKeyError::WrongNumberOfFields);
         }
 
-        // This is fairly naive. We simply try and find a field that looks like a valid key type,
-        // and base our assumption on the rest of the line off that.
-        // We don't attempt to parse any of the other fields.
+        // This is fairly naive. We simply try and find a field that looks like
+        // a valid key type, and base our assumption on the rest of the line off
+        // that. We don't attempt to parse any of the other fields.
         let (options, key_type, key, comment_start) = if is_valid_key_type(parts[0]) {
-            // If the first field is a key type, the next field is key type, and the last field is
-            // comment.
+            // If the first field is a key type, the next field is the key, and
+            // the last field is the comment.
             (None, parts[0], parts[1], 2)
         } else if is_valid_key_type(parts[1]) {
-            // If the second field is a key type, there should be at least 3 fields: options,
-            // key-type, and key.
+            // If the second field is a key type, there should be at least 3
+            // fields: options, key type, and key.
             if parts.len() < 3 {
                 return Err(ParseKeyError::WrongNumberOfFields);
             }
@@ -86,6 +90,10 @@ impl FromStr for KeyEntry {
         } else {
             return Err(ParseKeyError::InvalidKeyType);
         };
+
+        // TODO(fxbug.dev/88280): Consider requiring reasonable key sizes.
+        // OpenSSH enforces a minimum size of 1024 bits for RSA, for example
+        // (which is still too low).
 
         let comment =
             if parts.len() > comment_start { Some(parts[comment_start..].join(" ")) } else { None };
@@ -116,9 +124,9 @@ mod string_tests {
 
     #[test]
     fn test_key_long_comment() {
-        let key = "options ssh-dss abcdefg comment and other text".parse::<KeyEntry>().unwrap();
+        let key = "options ssh-rsa abcdefg comment and other text".parse::<KeyEntry>().unwrap();
         assert_eq!(key.options.as_deref(), Some("options"));
-        assert_eq!(key.key_type, "ssh-dss");
+        assert_eq!(key.key_type, "ssh-rsa");
         assert_eq!(key.key, "abcdefg");
         assert_eq!(key.comment.as_deref(), Some("comment and other text"));
     }
@@ -126,7 +134,7 @@ mod string_tests {
     #[test]
     fn test_key_leading_fields() {
         assert_eq!(
-            "options word ssh-dss abcdefg".parse::<KeyEntry>().unwrap_err(),
+            "options word ssh-ed25519 abcdefg".parse::<KeyEntry>().unwrap_err(),
             ParseKeyError::InvalidKeyType
         );
     }
@@ -216,11 +224,41 @@ mod eq_tests {
         };
         let b = KeyEntry {
             options: None,
-            key_type: "ssh-dss".to_owned(),
+            key_type: "ecdsa-sha2-nistp256".to_owned(),
             key: "abc".to_owned(),
             comment: None,
         };
+        assert_ne!(a, b);
 
+        let a = KeyEntry {
+            options: None,
+            key_type: "ssh-rsa".to_owned(),
+            key: "abc".to_owned(),
+            comment: None,
+        };
+        let b = KeyEntry {
+            options: None,
+            key_type: "ssh-rsa".to_owned(),
+            key: "def".to_owned(),
+            comment: None,
+        };
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn test_eq_not_valid() {
+        let a = KeyEntry {
+            options: None,
+            key_type: "ssh-pumpkin".to_owned(),
+            key: "abc".to_owned(),
+            comment: None,
+        };
+        let b = KeyEntry {
+            options: None,
+            key_type: "ssh-pumpkin".to_owned(),
+            key: "abc".to_owned(),
+            comment: None,
+        };
         assert_ne!(a, b);
     }
 
