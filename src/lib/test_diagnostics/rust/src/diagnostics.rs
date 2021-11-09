@@ -338,22 +338,21 @@ mod tests {
                 match values.next() {
                     None => {
                         let result = responder.send(&mut Ok(vec![]));
-                        match empty_response_sent {
+                        // Because of pipelining, there are cases where it's okay for the
+                        // response to fail with a channel closed error
+                        match empty_response_sent || with_error {
                             false => {
                                 assert!(result.is_ok(), "send response");
                                 empty_response_sent = true;
                             }
-                            true => {
-                                // Because of pipelining, the channel may be open or closed
-                                // depending on the exact timing.
-                            }
+                            true => (),
                         }
                     }
                     Some(value) => {
                         if with_error {
-                            responder
-                                .send(&mut Err(ArchiveIteratorError::DataReadFailed))
-                                .expect("send error");
+                            // Because of pipelining, the channel may be open or closed
+                            // depending on timing, so ignore any errors.
+                            let _ = responder.send(&mut Err(ArchiveIteratorError::DataReadFailed));
                             continue;
                         }
                         let json_data = get_json_data(value);
