@@ -67,6 +67,10 @@ llcpp_wavl_tree_headers = [
   "lib/fidl/llcpp/internal/intrusive_container/wavl_tree_internal.h",
   "lib/fidl/llcpp/internal/intrusive_container/helper_macros.h",
 ]
+llcpp_wavl_tree_headers_with_include = []
+foreach(header, llcpp_wavl_tree_headers) {
+  llcpp_wavl_tree_headers_with_include += [ "include/" + header ]
+}
 
 if (is_fuchsia) {
   zx_library("fidl-llcpp") {
@@ -85,11 +89,6 @@ if (is_fuchsia) {
                     "lib/fidl/llcpp/envelope.h",
                     "lib/fidl/llcpp/extract_resource_on_destruction.h",
                     "lib/fidl/llcpp/arena.h",
-                    "lib/fidl/llcpp/internal/client_details.h",
-                    "lib/fidl/llcpp/internal/server_details.h",
-                    "lib/fidl/llcpp/internal/thread_checker.h",
-                    "lib/fidl/llcpp/internal/transport.h",
-                    "lib/fidl/llcpp/internal/transport_channel.h",
                     "lib/fidl/llcpp/message_storage.h",
                     "lib/fidl/llcpp/message.h",
                     "lib/fidl/llcpp/object_view.h",
@@ -105,7 +104,21 @@ if (is_fuchsia) {
                     "lib/fidl/llcpp/vector_view.h",
                     "lib/fidl/llcpp/wire_messaging.h",
                     "lib/fidl/llcpp/wire_types.h",
+                    "lib/fidl/llcpp/internal/client_details.h",
+                    "lib/fidl/llcpp/internal/server_details.h",
+                    "lib/fidl/llcpp/internal/thread_checker.h",
+                    "lib/fidl/llcpp/internal/transport.h",
+                    "lib/fidl/llcpp/internal/transport_channel.h",
                   ] + llcpp_wavl_tree_headers
+
+    sdk_non_public_headers =
+        [
+          "include/lib/fidl/llcpp/internal/client_details.h",
+          "include/lib/fidl/llcpp/internal/server_details.h",
+          "include/lib/fidl/llcpp/internal/thread_checker.h",
+          "include/lib/fidl/llcpp/internal/transport.h",
+          "include/lib/fidl/llcpp/internal/transport_channel.h",
+        ] + llcpp_wavl_tree_headers_with_include
 
     sources = [
       "llcpp_arena.cc",
@@ -166,8 +179,6 @@ if (is_fuchsia) {
                     "lib/fidl/llcpp/coding.h",
                     "lib/fidl/llcpp/envelope.h",
                     "lib/fidl/llcpp/arena.h",
-                    "lib/fidl/llcpp/internal/transport.h",
-                    "lib/fidl/llcpp/internal/transport_channel.h",
                     "lib/fidl/llcpp/message_storage.h",
                     "lib/fidl/llcpp/object_view.h",
                     "lib/fidl/llcpp/soft_migration.h",
@@ -175,7 +186,15 @@ if (is_fuchsia) {
                     "lib/fidl/llcpp/traits.h",
                     "lib/fidl/llcpp/vector_view.h",
                     "lib/fidl/llcpp/wire_types.h",
+                    "lib/fidl/llcpp/internal/transport.h",
+                    "lib/fidl/llcpp/internal/transport_channel.h",
                   ] + llcpp_wavl_tree_headers
+
+    sdk_non_public_headers =
+        [
+          "include/lib/fidl/llcpp/internal/transport.h",
+          "include/lib/fidl/llcpp/internal/transport_channel.h",
+        ] + llcpp_wavl_tree_headers_with_include
 
     sources = [
       "llcpp_arena.cc",
