@@ -13,7 +13,7 @@ namespace internal {
 namespace {
 
 #ifdef __Fuchsia__
-zx_status_t channel_write(fidl_handle_t handle, EncodeFlags encode_flags, const void* data,
+zx_status_t channel_write(fidl_handle_t handle, WriteOptions write_options, const void* data,
                           uint32_t data_count, const fidl_handle_t* handles,
                           const void* handle_metadata, uint32_t handles_count) {
   zx_handle_disposition_t hds[ZX_CHANNEL_MAX_MSG_HANDLES];
@@ -32,16 +32,21 @@ zx_status_t channel_write(fidl_handle_t handle, EncodeFlags encode_flags, const 
                               reinterpret_cast<zx_handle_disposition_t*>(hds), handles_count);
 }
 
-zx_status_t channel_read(fidl_handle_t handle, void* data, uint32_t data_capacity,
-                         fidl_handle_t* handles, void* handle_metadata, uint32_t handles_capacity,
-                         DecodeFlags* out_decode_flags, uint32_t* out_data_actual_count,
+zx_status_t channel_read(fidl_handle_t handle, ReadOptions read_options, void* data,
+                         uint32_t data_capacity, fidl_handle_t* handles, void* handle_metadata,
+                         uint32_t handles_capacity, uint32_t* out_data_actual_count,
                          uint32_t* out_handles_actual_count) {
-  *out_decode_flags = {};
+  uint32_t options = 0;
+  if (read_options.discardable) {
+    options |= ZX_CHANNEL_READ_MAY_DISCARD;
+  }
+
   *out_data_actual_count = 0;
   *out_handles_actual_count = 0;
   zx_handle_info_t his[ZX_CHANNEL_MAX_MSG_HANDLES];
-  zx_status_t status = zx_channel_read_etc(handle, 0, data, his, data_capacity, handles_capacity,
-                                           out_data_actual_count, out_handles_actual_count);
+  zx_status_t status =
+      zx_channel_read_etc(handle, options, data, his, data_capacity, handles_capacity,
+                          out_data_actual_count, out_handles_actual_count);
   fidl_channel_handle_metadata_t* metadata =
       static_cast<fidl_channel_handle_metadata_t*>(handle_metadata);
   for (uint32_t i = 0; i < *out_handles_actual_count; i++) {
@@ -54,10 +59,9 @@ zx_status_t channel_read(fidl_handle_t handle, void* data, uint32_t data_capacit
   return status;
 }
 
-zx_status_t channel_call(fidl_handle_t handle, EncodeFlags encode_flags, zx_time_t deadline,
-                         CallMethodArgs cargs, DecodeFlags* out_decode_flags,
-                         uint32_t* out_data_actual_count, uint32_t* out_handles_actual_count) {
-  *out_decode_flags = {};
+zx_status_t channel_call(fidl_handle_t handle, CallOptions call_options,
+                         const CallMethodArgs& cargs, uint32_t* out_data_actual_count,
+                         uint32_t* out_handles_actual_count) {
   zx_handle_disposition_t hds[ZX_CHANNEL_MAX_MSG_HANDLES];
   const fidl_channel_handle_metadata_t* wr_metadata =
       static_cast<const fidl_channel_handle_metadata_t*>(cargs.wr_handle_metadata);
@@ -81,8 +85,9 @@ zx_status_t channel_call(fidl_handle_t handle, EncodeFlags encode_flags, zx_time
       .rd_num_bytes = cargs.rd_data_capacity,
       .rd_num_handles = cargs.rd_handles_capacity,
   };
-  zx_status_t status = zx_channel_call_etc(handle, ZX_CHANNEL_WRITE_USE_IOVEC, deadline, &args,
-                                           out_data_actual_count, out_handles_actual_count);
+  zx_status_t status =
+      zx_channel_call_etc(handle, ZX_CHANNEL_WRITE_USE_IOVEC, call_options.deadline, &args,
+                          out_data_actual_count, out_handles_actual_count);
   fidl_channel_handle_metadata_t* rd_metadata =
       static_cast<fidl_channel_handle_metadata_t*>(cargs.rd_handle_metadata);
   for (uint32_t i = 0; i < *out_handles_actual_count; i++) {
@@ -94,8 +99,15 @@ zx_status_t channel_call(fidl_handle_t handle, EncodeFlags encode_flags, zx_time
   }
   return status;
 }
-void channel_close(fidl_handle_t handle) { zx_handle_close(handle); }
 #endif
+
+void channel_close(fidl_handle_t handle) {
+#ifdef __Fuchsia__
+  zx_handle_close(handle);
+#else
+  ZX_PANIC("zx_handle_close unsupported on host");
+#endif
+}
 
 }  // namespace
 
@@ -106,8 +118,8 @@ const TransportVTable ChannelTransport::VTable = {
     .write = channel_write,
     .read = channel_read,
     .call = channel_call,
-    .close = channel_close,
 #endif
+    .close = channel_close,
 };
 
 namespace {

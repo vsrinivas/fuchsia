@@ -56,7 +56,7 @@ extern "C" const fidl_type_t
       ::fidl::WireResponse<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                                LibfuzzerNeedsNonemptyProtocol>>(
       client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-      deadline);
+      fidl::CallOptions{.deadline = deadline});
   SetResult(outgoing);
 }
 namespace fidl_test_bindingsdenylist {

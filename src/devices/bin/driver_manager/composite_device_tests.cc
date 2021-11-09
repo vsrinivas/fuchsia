@@ -97,7 +97,7 @@ void CheckCreateCompositeDeviceReceived(
   zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
   fidl_channel_handle_metadata_t handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
   fidl::IncomingMessage msg =
-      fidl::MessageRead(controller.channel(), 0, fidl::BufferSpan(bytes, std::size(bytes)), handles,
+      fidl::MessageRead(controller.channel(), fidl::BufferSpan(bytes, std::size(bytes)), handles,
                         handle_metadata, ZX_CHANNEL_MAX_MSG_HANDLES);
   ASSERT_TRUE(msg.ok());
 

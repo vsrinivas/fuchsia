@@ -116,7 +116,7 @@ class OutgoingMessage : public ::fidl::Result {
 
   zx_channel_iovec_t* iovecs() const { return iovec_message().iovecs; }
   uint32_t iovec_actual() const { return iovec_message().num_iovecs; }
-  zx_handle_t* handles() const { return iovec_message().handles; }
+  fidl_handle_t* handles() const { return iovec_message().handles; }
   fidl_transport_type transport_type() const { return transport_vtable_->type; }
   void* handle_metadata() const { return iovec_message().handle_metadata; }
   uint32_t handle_actual() const { return iovec_message().num_handles; }
@@ -170,19 +170,11 @@ class OutgoingMessage : public ::fidl::Result {
 
   // Various helper functions for writing to other channel-like types.
 
-#ifdef __Fuchsia__
-  void Write(internal::AnyUnownedTransport transport) {
-    if (!ok()) {
-      return;
-    }
-    ZX_ASSERT(transport_type() == transport.type());
-    // TODO(fxbug.dev/85734) Support arbitrary transports.
-    WriteImpl(transport.get<internal::ChannelTransport>()->get());
-  }
+  void Write(internal::AnyUnownedTransport transport, WriteOptions options = {});
 
   template <typename TransportObject>
-  void Write(TransportObject&& transport) {
-    Write(internal::MakeAnyUnownedTransport(std::forward<TransportObject>(transport)));
+  void Write(TransportObject&& transport, WriteOptions options = {}) {
+    Write(internal::MakeAnyUnownedTransport(std::forward<TransportObject>(transport)), options);
   }
 
   // For requests with a response, uses zx_channel_call_etc to write the message.
@@ -190,24 +182,23 @@ class OutgoingMessage : public ::fidl::Result {
   // If the call succeed, |result_bytes| contains the decoded result.
   template <typename FidlType>
   void Call(internal::AnyUnownedTransport transport, uint8_t* result_bytes,
-            uint32_t result_capacity, zx_time_t deadline = ZX_TIME_INFINITE) {
-    if (!ok()) {
-      return;
-    }
-    ZX_ASSERT(transport_type() == transport.type());
-    // TODO(fxbug.dev/85734) Support arbitrary transports.
-    CallImpl(FidlType::Type, transport.get<internal::ChannelTransport>()->get(), result_bytes,
-             result_capacity, deadline);
+            uint32_t result_byte_capacity, fidl_handle_t* result_handles,
+            void* result_handle_metadata, uint32_t result_handle_capacity,
+            CallOptions options = {}) {
+    CallImpl(transport, FidlType::Type, result_bytes, result_byte_capacity, result_handles,
+             result_handle_metadata, result_handle_capacity, options);
   }
 
   template <typename FidlType, typename TransportObject>
-  void Call(TransportObject&& transport, uint8_t* result_bytes, uint32_t result_capacity,
-            zx_time_t deadline = ZX_TIME_INFINITE) {
+  void Call(TransportObject&& transport, uint8_t* result_bytes, uint32_t result_byte_capacity,
+            CallOptions options = {}) {
+    fidl_handle_t result_handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+    typename internal::AssociatedTransport<TransportObject>::HandleMetadata
+        result_handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
     Call<FidlType>(internal::MakeAnyUnownedTransport(std::forward<TransportObject>(transport)),
-                   result_bytes, result_capacity, deadline);
+                   result_bytes, result_byte_capacity, result_handles, result_handle_metadata,
+                   ZX_CHANNEL_MAX_MSG_HANDLES, options);
   }
-
-#endif
 
   bool is_transactional() const { return is_transactional_; }
 
@@ -217,12 +208,9 @@ class OutgoingMessage : public ::fidl::Result {
 
   void EncodeImpl(const fidl_type_t* message_type, void* data);
 
-#ifdef __Fuchsia__
-  void WriteImpl(zx_handle_t channel);
-
-  void CallImpl(const fidl_type_t* response_type, zx_handle_t channel, uint8_t* result_bytes,
-                uint32_t result_capacity, zx_time_t deadline);
-#endif
+  void CallImpl(internal::AnyUnownedTransport transport, const fidl_type_t* response_type,
+                uint8_t* result_bytes, uint32_t result_byte_capacity, fidl_handle_t* result_handles,
+                void* result_handle_metadata, uint32_t result_handle_capacity, CallOptions options);
 
   uint32_t iovec_capacity() const { return iovec_capacity_; }
   uint32_t handle_capacity() const { return handle_capacity_; }
@@ -502,17 +490,14 @@ class IncomingMessage : public ::fidl::Result {
   bool is_transactional_ = false;
 };
 
-#ifdef __Fuchsia__
-
 namespace internal {
 // Reads a message from |transport| using the |bytes_storage| and |handles_storage|
 // buffers as needed.
 //
 // Error information is embedded in the returned |IncomingMessage| when applicable.
-IncomingMessage MessageRead(internal::AnyUnownedTransport transport, uint32_t options,
-                            fidl::BufferSpan bytes_storage, zx_handle_t* handle_storage,
-                            const internal::TransportVTable* transport_vtable,
-                            void* handle_metadata_storage, uint32_t handle_capacity);
+IncomingMessage MessageRead(internal::AnyUnownedTransport transport, fidl::BufferSpan bytes_storage,
+                            fidl_handle_t* handle_storage, void* handle_metadata_storage,
+                            uint32_t handle_capacity, ReadOptions options = {});
 }  // namespace internal
 
 // Reads a message from |transport| using the |bytes_storage| and |handles_storage|
@@ -520,18 +505,15 @@ IncomingMessage MessageRead(internal::AnyUnownedTransport transport, uint32_t op
 //
 // Error information is embedded in the returned |IncomingMessage| when applicable.
 template <typename TransportObject>
-IncomingMessage MessageRead(TransportObject&& transport, uint32_t options,
-                            ::fidl::BufferSpan bytes_storage, zx_handle_t* handle_storage,
+IncomingMessage MessageRead(TransportObject&& transport, ::fidl::BufferSpan bytes_storage,
+                            fidl_handle_t* handle_storage,
                             typename internal::AssociatedTransport<TransportObject>::HandleMetadata*
                                 handle_metadata_storage,
-                            uint32_t handle_capacity) {
+                            uint32_t handle_capacity, ReadOptions options = {}) {
   return MessageRead(internal::MakeAnyUnownedTransport(std::forward<TransportObject>(transport)),
-                     options, bytes_storage, handle_storage,
-                     &internal::AssociatedTransport<TransportObject>::VTable,
-                     static_cast<void*>(handle_metadata_storage), handle_capacity);
+                     bytes_storage, handle_storage, static_cast<void*>(handle_metadata_storage),
+                     handle_capacity, options);
 }
-
-#endif  // __Fuchsia__
 
 namespace internal {
 

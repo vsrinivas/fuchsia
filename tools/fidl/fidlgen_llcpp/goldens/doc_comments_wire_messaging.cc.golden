@@ -107,9 +107,9 @@ fidl::WireSyncEventHandler<::fidl_test_doccomments::Interface>::HandleOneEvent(
   std::array<fidl_channel_handle_metadata_t, kHandleAllocSize>
       read_handle_metadata;
   ::fidl::IncomingMessage msg = ::fidl::MessageRead(
-      zx::unowned_channel(client_end.handle()), ZX_CHANNEL_READ_MAY_DISCARD,
-      read_storage.view(), read_handles.data(), read_handle_metadata.data(),
-      kHandleAllocSize);
+      zx::unowned_channel(client_end.handle()), read_storage.view(),
+      read_handles.data(), read_handle_metadata.data(), kHandleAllocSize,
+      ReadOptions{.discardable = true});
   if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
     // Message size is unexpectedly larger than calculated.
     // This can only be due to a newer version of the protocol defining a new

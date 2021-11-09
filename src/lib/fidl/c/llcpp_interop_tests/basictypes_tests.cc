@@ -196,7 +196,7 @@ TEST(BasicTypesTest, RawChannelCallStructWithTimeout) {
   encoded.GetOutgoingMessage()
       .Call<fidl::WireResponse<basictypes::TestInterface::ConsumeSimpleStruct>>(
           zx::unowned_channel(client.get()), response_storage, sizeof(response_storage),
-          ZX_TIME_INFINITE_PAST);
+          fidl::CallOptions{.deadline = ZX_TIME_INFINITE_PAST});
 
   ASSERT_EQ(encoded.status(), ZX_ERR_TIMED_OUT);
 

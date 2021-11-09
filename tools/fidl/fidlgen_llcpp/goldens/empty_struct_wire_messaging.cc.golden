@@ -111,7 +111,7 @@ namespace fidl_test_emptystruct {
   outgoing.Call<::fidl::WireResponse<
       ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>>(
       client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-      deadline);
+      fidl::CallOptions{.deadline = deadline});
   SetResult(outgoing);
 }
 namespace fidl_test_emptystruct {
@@ -402,9 +402,9 @@ fidl::WireSyncEventHandler<::fidl_test_emptystruct::EmptyProtocol>::
   std::array<fidl_channel_handle_metadata_t, kHandleAllocSize>
       read_handle_metadata;
   ::fidl::IncomingMessage msg = ::fidl::MessageRead(
-      zx::unowned_channel(client_end.handle()), ZX_CHANNEL_READ_MAY_DISCARD,
-      read_storage.view(), read_handles.data(), read_handle_metadata.data(),
-      kHandleAllocSize);
+      zx::unowned_channel(client_end.handle()), read_storage.view(),
+      read_handles.data(), read_handle_metadata.data(), kHandleAllocSize,
+      ReadOptions{.discardable = true});
   if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
     // Message size is unexpectedly larger than calculated.
     // This can only be due to a newer version of the protocol defining a new

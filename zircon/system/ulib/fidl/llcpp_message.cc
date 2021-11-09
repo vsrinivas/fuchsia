@@ -178,67 +178,45 @@ void OutgoingMessage::EncodeImpl(const fidl_type_t* message_type, void* data) {
   message_.iovec.num_iovecs = 1;
 }
 
-#ifdef __Fuchsia__
-void OutgoingMessage::WriteImpl(zx_handle_t channel) {
+void OutgoingMessage::Write(internal::AnyUnownedTransport transport, WriteOptions options) {
   if (!ok()) {
     return;
   }
-  zx_handle_disposition_t input_handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  fidl_channel_handle_metadata_t* metadata =
-      static_cast<fidl_channel_handle_metadata_t*>(handle_metadata());
-  for (uint32_t i = 0; i < handle_actual(); i++) {
-    input_handles[i] = {
-        .operation = ZX_HANDLE_OP_MOVE,
-        .handle = handles()[i],
-        .type = metadata[i].obj_type,
-        .rights = metadata[i].rights,
-        .result = ZX_OK,
-    };
-  }
-  zx_status_t status = zx_channel_write_etc(channel, ZX_CHANNEL_WRITE_USE_IOVEC, iovecs(),
-                                            iovec_actual(), input_handles, handle_actual());
+  ZX_ASSERT(transport_type() == transport.type());
+  zx_status_t status = transport.write(options, iovecs(), iovec_actual(), handles(),
+                                       handle_metadata(), handle_actual());
   ReleaseHandles();
   if (status != ZX_OK) {
     SetResult(fidl::Result::TransportError(status));
   }
 }
 
-void OutgoingMessage::CallImpl(const fidl_type_t* response_type, zx_handle_t channel,
-                               uint8_t* result_bytes, uint32_t result_capacity,
-                               zx_time_t deadline) {
+void OutgoingMessage::CallImpl(internal::AnyUnownedTransport transport,
+                               const fidl_type_t* response_type, uint8_t* result_bytes,
+                               uint32_t result_byte_capacity, fidl_handle_t* result_handles,
+                               void* result_handle_metadata, uint32_t result_handle_capacity,
+                               CallOptions options) {
   if (status() != ZX_OK) {
     return;
   }
-  zx_handle_disposition_t input_handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  fidl_channel_handle_metadata_t* metadata =
-      static_cast<fidl_channel_handle_metadata_t*>(handle_metadata());
-  for (uint32_t i = 0; i < handle_actual(); i++) {
-    input_handles[i] = {
-        .operation = ZX_HANDLE_OP_MOVE,
-        .handle = handles()[i],
-        .type = metadata[i].obj_type,
-        .rights = metadata[i].rights,
-        .result = ZX_OK,
-    };
-  }
+  ZX_ASSERT(transport_type() == transport.type());
 
-  zx_handle_info_t result_handles[ZX_CHANNEL_MAX_MSG_HANDLES];
   uint32_t actual_num_bytes = 0u;
   uint32_t actual_num_handles = 0u;
-  zx_channel_call_etc_args_t args = {
-      .wr_bytes = iovecs(),
-      .wr_handles = input_handles,
-      .rd_bytes = result_bytes,
+  internal::CallMethodArgs args = {
+      .wr_data = iovecs(),
+      .wr_handles = handles(),
+      .wr_handle_metadata = handle_metadata(),
+      .wr_data_count = iovec_actual(),
+      .wr_handles_count = handle_actual(),
+      .rd_data = result_bytes,
       .rd_handles = result_handles,
-      .wr_num_bytes = iovec_actual(),
-      .wr_num_handles = handle_actual(),
-      .rd_num_bytes = result_capacity,
-      .rd_num_handles = ZX_CHANNEL_MAX_MSG_HANDLES,
+      .rd_handle_metadata = result_handle_metadata,
+      .rd_data_capacity = result_byte_capacity,
+      .rd_handles_capacity = result_handle_capacity,
   };
 
-  zx_status_t status;
-  status = zx_channel_call_etc(channel, ZX_CHANNEL_WRITE_USE_IOVEC, deadline, &args,
-                               &actual_num_bytes, &actual_num_handles);
+  zx_status_t status = transport.call(options, args, &actual_num_bytes, &actual_num_handles);
   ReleaseHandles();
   if (status != ZX_OK) {
     SetResult(fidl::Result::TransportError(status));
@@ -259,7 +237,7 @@ void OutgoingMessage::CallImpl(const fidl_type_t* response_type, zx_handle_t cha
       return;
     }
 
-    if (actual_num_bytes > result_capacity) {
+    if (actual_num_bytes > result_byte_capacity) {
       SetResult(fidl::Result::DecodeError(ZX_ERR_BUFFER_TOO_SMALL,
                                           "transformed bytes exceeds message buffer capacity"));
       return;
@@ -267,16 +245,14 @@ void OutgoingMessage::CallImpl(const fidl_type_t* response_type, zx_handle_t cha
     memcpy(result_bytes, transformer_bytes.get(), actual_num_bytes);
   }
 
-  status =
-      internal_fidl_decode_etc__v2__may_break(response_type, result_bytes, actual_num_bytes,
-                                              result_handles, actual_num_handles, error_address());
+  status = internal::DecodeEtc<FIDL_WIRE_FORMAT_VERSION_V2>(
+      *transport.vtable()->encoding_configuration, response_type, result_bytes, actual_num_bytes,
+      result_handles, result_handle_metadata, actual_num_handles, error_address());
   if (status != ZX_OK) {
     SetResult(fidl::Result::DecodeError(status, *error_address()));
     return;
   }
 }
-
-#endif  // __Fuchsia__
 
 OutgoingMessage::CopiedBytes::CopiedBytes(const OutgoingMessage& msg) {
   uint32_t byte_count = 0;
@@ -418,38 +394,21 @@ void IncomingMessage::Validate() {
   }
 }
 
-#ifdef __Fuchsia__
-
 namespace internal {
-IncomingMessage MessageRead(internal::AnyUnownedTransport transport, uint32_t options,
-                            fidl::BufferSpan bytes_storage, zx_handle_t* handle_storage,
-                            const internal::TransportVTable* transport_vtable,
-                            void* handle_metadata_storage, uint32_t handle_capacity) {
-  // TODO(fxbug.dev/85734) Support abitrary transports.
-  ZX_ASSERT(transport_vtable->type == FIDL_TRANSPORT_TYPE_CHANNEL);
-  zx_handle_t channel = transport.get<internal::ChannelTransport>()->get();
-  zx_handle_info_t handle_infos[ZX_CHANNEL_MAX_MSG_HANDLES];
+IncomingMessage MessageRead(internal::AnyUnownedTransport transport, fidl::BufferSpan bytes_storage,
+                            zx_handle_t* handle_storage, void* handle_metadata_storage,
+                            uint32_t handle_capacity, ReadOptions options) {
   uint32_t num_bytes, num_handles;
   zx_status_t status =
-      zx_channel_read_etc(channel, options, bytes_storage.data, handle_infos,
-                          bytes_storage.capacity, handle_capacity, &num_bytes, &num_handles);
+      transport.read(options, bytes_storage.data, bytes_storage.capacity, handle_storage,
+                     handle_metadata_storage, handle_capacity, &num_bytes, &num_handles);
   if (status != ZX_OK) {
     return IncomingMessage(fidl::Result::TransportError(status));
   }
-  fidl_channel_handle_metadata_t* metadata =
-      reinterpret_cast<fidl_channel_handle_metadata_t*>(handle_metadata_storage);
-  for (uint32_t i = 0; i < num_handles; i++) {
-    handle_storage[i] = handle_infos[i].handle;
-    metadata[i] = {
-        .obj_type = handle_infos[i].type,
-        .rights = handle_infos[i].rights,
-    };
-  }
-  return IncomingMessage(bytes_storage.data, num_bytes, handle_storage, metadata, num_handles);
+  return IncomingMessage(transport.vtable(), bytes_storage.data, num_bytes, handle_storage,
+                         handle_metadata_storage, num_handles);
 }
 }  // namespace internal
-
-#endif  // __Fuchsia__
 
 OutgoingToIncomingMessage::OutgoingToIncomingMessage(OutgoingMessage& input)
     : incoming_message_(ConversionImpl(input, buf_bytes_, buf_handles_, buf_handle_metadata_)) {}

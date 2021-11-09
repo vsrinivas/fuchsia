@@ -71,8 +71,8 @@ void AsyncBinding::MessageHandler(zx_status_t dispatcher_status, const zx_packet
         handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
     for (uint64_t i = 0; i < signal->count; i++) {
       fidl_trace(WillLLCPPAsyncChannelRead);
-      IncomingMessage msg = fidl::MessageRead(zx::unowned_channel(handle()), 0, bytes.view(),
-                                              handles, handle_metadata, ZX_CHANNEL_MAX_MSG_HANDLES);
+      IncomingMessage msg = fidl::MessageRead(zx::unowned_channel(handle()), bytes.view(), handles,
+                                              handle_metadata, ZX_CHANNEL_MAX_MSG_HANDLES);
       if (!msg.ok()) {
         return PerformTeardown(fidl::UnbindInfo{msg});
       }

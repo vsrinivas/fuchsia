@@ -40,7 +40,7 @@ class FakeClientImpl : public fidl::internal::ClientBase {
   }
 
   fidl::IncomingMessage ReadFromServer() {
-    return fidl::MessageRead(endpoints_.server.channel(), 0,
+    return fidl::MessageRead(endpoints_.server.channel(),
                              fidl::BufferSpan(read_buffer_.data(), read_buffer_.size()), nullptr,
                              nullptr, 0);
   }

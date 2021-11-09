@@ -52,7 +52,7 @@ void SimpleBinding::MessageHandler(async_dispatcher_t* dispatcher, async_wait_t*
     for (uint64_t i = 0; i < signal->count; i++) {
       fidl_trace(WillLLCPPAsyncChannelRead);
       fidl::IncomingMessage msg = fidl::MessageRead(
-          zx::unowned_channel(wait->object), 0, fidl::BufferSpan(bytes, std::size(bytes)), handles,
+          zx::unowned_channel(wait->object), fidl::BufferSpan(bytes, std::size(bytes)), handles,
           handle_metadata, ZX_CHANNEL_MAX_MSG_HANDLES);
       if (!msg.ok())
         return;

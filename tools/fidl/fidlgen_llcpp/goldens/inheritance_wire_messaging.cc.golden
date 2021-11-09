@@ -36,7 +36,7 @@ extern "C" const fidl_type_t fidl_test_inheritance_superfooResponseTable;
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>>(
       client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-      deadline);
+      fidl::CallOptions{.deadline = deadline});
   SetResult(outgoing);
 }
 namespace fidl_test_inheritance {
@@ -335,7 +335,7 @@ extern "C" const fidl_type_t fidl_test_inheritance_subfooResponseTable;
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>>(
       client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-      deadline);
+      fidl::CallOptions{.deadline = deadline});
   SetResult(outgoing);
 }
 namespace fidl_test_inheritance {
