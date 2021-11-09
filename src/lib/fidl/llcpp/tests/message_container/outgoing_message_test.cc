@@ -14,21 +14,22 @@
 
 using fidl_testing::MessageChecker;
 
-TEST(OutgoingMessage, ConstructWithConstructorArgs) {
+TEST(OutgoingMessage, CreateWithConstructorArgs) {
   zx_channel_iovec_t iovecs[1];
   zx_handle_t handles[2];
   fidl_channel_handle_metadata_t handle_metadata[2];
   uint8_t backing_buffer[1];
-  fidl::OutgoingMessage msg(fidl::OutgoingMessage::ConstructorArgs{
-      .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-      .iovecs = iovecs,
-      .iovec_capacity = std::size(iovecs),
-      .handles = handles,
-      .handle_metadata = handle_metadata,
-      .handle_capacity = std::size(handles),
-      .backing_buffer = backing_buffer,
-      .backing_buffer_capacity = std::size(backing_buffer),
-  });
+  fidl::OutgoingMessage msg =
+      fidl::OutgoingMessage::CreateInternal(fidl::OutgoingMessage::ConstructorArgs{
+          .transport_vtable = &fidl::internal::ChannelTransport::VTable,
+          .iovecs = iovecs,
+          .iovec_capacity = std::size(iovecs),
+          .handles = handles,
+          .handle_metadata = handle_metadata,
+          .handle_capacity = std::size(handles),
+          .backing_buffer = backing_buffer,
+          .backing_buffer_capacity = std::size(backing_buffer),
+      });
   // Capacities are stored but not exposed. Actual sizes are zero initialized.
   EXPECT_EQ(0u, msg.iovec_actual());
   EXPECT_EQ(iovecs, msg.iovecs());

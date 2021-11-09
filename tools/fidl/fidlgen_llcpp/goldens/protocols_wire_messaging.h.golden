@@ -127,16 +127,17 @@ class ::fidl::WireRequest<::fidl_test_protocols::HandleRightsProtocol::
                               _backing_buffer, _backing_buffer_size, request) {}
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireRequest* request)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .handles = handles_,
-            .handle_metadata = handle_metadata_,
-            .handle_capacity = kHandleCapacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .handles = handles_,
+                .handle_metadata = handle_metadata_,
+                .handle_capacity = kHandleCapacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<WireRequest>(request);
   }
@@ -213,13 +214,14 @@ class ::fidl::WireRequest<::fidl_test_protocols::HandleRightsProtocol::
       ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>>::
       DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
   ~DecodedMessage() {
     if (ok() && (PrimaryObject() != nullptr)) {
       PrimaryObject()->_CloseHandles();
@@ -290,16 +292,17 @@ class ::fidl::WireRequest<::fidl_test_protocols::HandleRightsProtocol::
                               _backing_buffer, _backing_buffer_size, request) {}
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireRequest* request)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .handles = handles_,
-            .handle_metadata = handle_metadata_,
-            .handle_capacity = kHandleCapacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .handles = handles_,
+                .handle_metadata = handle_metadata_,
+                .handle_capacity = kHandleCapacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<WireRequest>(request);
   }
@@ -376,13 +379,14 @@ class ::fidl::WireRequest<
       ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>>::
       DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
   ~DecodedMessage() {
     if (ok() && (PrimaryObject() != nullptr)) {
       PrimaryObject()->_CloseHandles();
@@ -451,16 +455,17 @@ class ::fidl::WireResponse<::fidl_test_protocols::HandleRightsProtocol::
   }
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireResponse* response)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .handles = handles_,
-            .handle_metadata = handle_metadata_,
-            .handle_capacity = kHandleCapacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .handles = handles_,
+                .handle_metadata = handle_metadata_,
+                .handle_capacity = kHandleCapacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<::fidl::WireResponse<
         ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>>(response);
@@ -543,13 +548,14 @@ class ::fidl::WireResponse<
       ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>>::
       DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
   ~DecodedMessage() {
     if (ok() && (PrimaryObject() != nullptr)) {
       PrimaryObject()->_CloseHandles();
@@ -619,16 +625,17 @@ class ::fidl::WireResponse<
   }
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireResponse* response)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .handles = handles_,
-            .handle_metadata = handle_metadata_,
-            .handle_capacity = kHandleCapacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .handles = handles_,
+                .handle_metadata = handle_metadata_,
+                .handle_capacity = kHandleCapacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<::fidl::WireResponse<
         ::fidl_test_protocols::HandleRightsProtocol::AnEvent>>(response);
@@ -710,13 +717,14 @@ class ::fidl::WireResponse<
       ::fidl_test_protocols::HandleRightsProtocol::AnEvent>>::
       DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
   ~DecodedMessage() {
     if (ok() && (PrimaryObject() != nullptr)) {
       PrimaryObject()->_CloseHandles();
@@ -1280,13 +1288,14 @@ class ::fidl::WireRequest<
                               _backing_buffer, _backing_buffer_size, request) {}
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireRequest* request)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<WireRequest>(request);
   }
@@ -1366,13 +1375,14 @@ class ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
       ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
                               NoRequestNoResponse>>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
 
   ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
                           NoRequestNoResponse>*
@@ -1430,13 +1440,14 @@ class ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
                               _backing_buffer, _backing_buffer_size, request) {}
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireRequest* request)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<WireRequest>(request);
   }
@@ -1517,13 +1528,14 @@ class ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
       ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
                               NoRequestEmptyResponse>>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
 
   ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
                           NoRequestEmptyResponse>*
@@ -1582,13 +1594,14 @@ class ::fidl::WireResponse<
   }
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireResponse* response)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<::fidl::WireResponse<
         ::fidl_test_protocols::WithAndWithoutRequestResponse::
@@ -1677,13 +1690,14 @@ class ::fidl::WireResponse<
       ::fidl_test_protocols::WithAndWithoutRequestResponse::
           NoRequestEmptyResponse>>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
 
   ::fidl::WireResponse<::fidl_test_protocols::WithAndWithoutRequestResponse::
                            NoRequestEmptyResponse>*
@@ -1743,13 +1757,14 @@ class ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
                               _backing_buffer, _backing_buffer_size, request) {}
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireRequest* request)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<WireRequest>(request);
   }
@@ -1830,13 +1845,14 @@ class ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
       ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
                               NoRequestWithResponse>>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
 
   ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
                           NoRequestWithResponse>*
@@ -1897,13 +1913,14 @@ class ::fidl::WireResponse<
   }
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireResponse* response)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<::fidl::WireResponse<
         ::fidl_test_protocols::WithAndWithoutRequestResponse::
@@ -1993,13 +2010,14 @@ class ::fidl::WireResponse<
       ::fidl_test_protocols::WithAndWithoutRequestResponse::
           NoRequestWithResponse>>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
 
   ::fidl::WireResponse<::fidl_test_protocols::WithAndWithoutRequestResponse::
                            NoRequestWithResponse>*
@@ -2059,13 +2077,14 @@ class ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
                               _backing_buffer, _backing_buffer_size, request) {}
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireRequest* request)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<WireRequest>(request);
   }
@@ -2147,13 +2166,14 @@ class ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
       ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
                               WithRequestNoResponse>>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
 
   ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
                           WithRequestNoResponse>*
@@ -2214,13 +2234,14 @@ class ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
                               _backing_buffer, _backing_buffer_size, request) {}
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireRequest* request)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<WireRequest>(request);
   }
@@ -2302,13 +2323,14 @@ class ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
       ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
                               WithRequestEmptyResponse>>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
 
   ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
                           WithRequestEmptyResponse>*
@@ -2367,13 +2389,14 @@ class ::fidl::WireResponse<
   }
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireResponse* response)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<::fidl::WireResponse<
         ::fidl_test_protocols::WithAndWithoutRequestResponse::
@@ -2462,13 +2485,14 @@ class ::fidl::WireResponse<
       ::fidl_test_protocols::WithAndWithoutRequestResponse::
           WithRequestEmptyResponse>>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
 
   ::fidl::WireResponse<::fidl_test_protocols::WithAndWithoutRequestResponse::
                            WithRequestEmptyResponse>*
@@ -2532,13 +2556,14 @@ class ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
                               _backing_buffer, _backing_buffer_size, request) {}
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireRequest* request)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<WireRequest>(request);
   }
@@ -2620,13 +2645,14 @@ class ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
       ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
                               WithRequestWithResponse>>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
 
   ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
                           WithRequestWithResponse>*
@@ -2688,13 +2714,14 @@ class ::fidl::WireResponse<
   }
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireResponse* response)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<::fidl::WireResponse<
         ::fidl_test_protocols::WithAndWithoutRequestResponse::
@@ -2784,13 +2811,14 @@ class ::fidl::WireResponse<
       ::fidl_test_protocols::WithAndWithoutRequestResponse::
           WithRequestWithResponse>>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
 
   ::fidl::WireResponse<::fidl_test_protocols::WithAndWithoutRequestResponse::
                            WithRequestWithResponse>*
@@ -2848,13 +2876,14 @@ class ::fidl::WireResponse<
   }
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireResponse* response)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<::fidl::WireResponse<
         ::fidl_test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>>(
@@ -2943,13 +2972,14 @@ class ::fidl::WireResponse<
       ::fidl_test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>>::
       DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
 
   ::fidl::WireResponse<
       ::fidl_test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>*
@@ -3010,13 +3040,14 @@ class ::fidl::WireResponse<
   }
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireResponse* response)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<::fidl::WireResponse<
         ::fidl_test_protocols::WithAndWithoutRequestResponse::OnWithResponse>>(
@@ -3106,13 +3137,14 @@ class ::fidl::WireResponse<
       ::fidl_test_protocols::WithAndWithoutRequestResponse::OnWithResponse>>::
       DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
 
   ::fidl::WireResponse<
       ::fidl_test_protocols::WithAndWithoutRequestResponse::OnWithResponse>*
@@ -4475,13 +4507,14 @@ class ::fidl::WireRequest<
                               _backing_buffer, _backing_buffer_size, request) {}
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireRequest* request)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<WireRequest>(request);
   }
@@ -4559,13 +4592,14 @@ class ::fidl::WireRequest<
   using DecodedMessageBase<::fidl::WireRequest<
       ::fidl_test_protocols::Transitional::Request>>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
 
   ::fidl::WireRequest<::fidl_test_protocols::Transitional::Request>*
   PrimaryObject() {
@@ -4623,13 +4657,14 @@ class ::fidl::WireResponse<
   }
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireResponse* response)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<
         ::fidl::WireResponse<::fidl_test_protocols::Transitional::Request>>(
@@ -4712,13 +4747,14 @@ class ::fidl::WireResponse<
   using DecodedMessageBase<::fidl::WireResponse<
       ::fidl_test_protocols::Transitional::Request>>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
 
   ::fidl::WireResponse<::fidl_test_protocols::Transitional::Request>*
   PrimaryObject() {
@@ -4774,13 +4810,14 @@ class ::fidl::WireRequest<
                               _backing_buffer, _backing_buffer_size, request) {}
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireRequest* request)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<WireRequest>(request);
   }
@@ -4858,13 +4895,14 @@ class ::fidl::WireRequest<
   using DecodedMessageBase<::fidl::WireRequest<
       ::fidl_test_protocols::Transitional::OneWay>>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
 
   ::fidl::WireRequest<::fidl_test_protocols::Transitional::OneWay>*
   PrimaryObject() {
@@ -4920,13 +4958,14 @@ class ::fidl::WireResponse<
   }
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireResponse* response)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<
         ::fidl::WireResponse<::fidl_test_protocols::Transitional::Event>>(
@@ -5009,13 +5048,14 @@ class ::fidl::WireResponse<
   using DecodedMessageBase<::fidl::WireResponse<
       ::fidl_test_protocols::Transitional::Event>>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
 
   ::fidl::WireResponse<::fidl_test_protocols::Transitional::Event>*
   PrimaryObject() {
@@ -5480,13 +5520,14 @@ class ::fidl::WireRequest<::fidl_test_protocols::MethodWithUnion::UnionMethod>::
                               _backing_buffer, _backing_buffer_size, request) {}
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireRequest* request)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<WireRequest>(request);
   }
@@ -5564,13 +5605,14 @@ class ::fidl::WireRequest<
   using DecodedMessageBase<::fidl::WireRequest<
       ::fidl_test_protocols::MethodWithUnion::UnionMethod>>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
 
   ::fidl::WireRequest<::fidl_test_protocols::MethodWithUnion::UnionMethod>*
   PrimaryObject() {
@@ -5847,16 +5889,17 @@ class ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::ClientEnds>::
                               _backing_buffer, _backing_buffer_size, request) {}
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireRequest* request)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .handles = handles_,
-            .handle_metadata = handle_metadata_,
-            .handle_capacity = kHandleCapacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .handles = handles_,
+                .handle_metadata = handle_metadata_,
+                .handle_capacity = kHandleCapacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<WireRequest>(request);
   }
@@ -5932,13 +5975,14 @@ class ::fidl::WireRequest<
   using DecodedMessageBase<::fidl::WireRequest<
       ::fidl_test_protocols::WithProtocolEnds::ClientEnds>>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
   ~DecodedMessage() {
     if (ok() && (PrimaryObject() != nullptr)) {
       PrimaryObject()->_CloseHandles();
@@ -6010,16 +6054,17 @@ class ::fidl::WireResponse<
   }
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireResponse* response)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .handles = handles_,
-            .handle_metadata = handle_metadata_,
-            .handle_capacity = kHandleCapacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .handles = handles_,
+                .handle_metadata = handle_metadata_,
+                .handle_capacity = kHandleCapacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<::fidl::WireResponse<
         ::fidl_test_protocols::WithProtocolEnds::ClientEnds>>(response);
@@ -6100,13 +6145,14 @@ class ::fidl::WireResponse<
   using DecodedMessageBase<::fidl::WireResponse<
       ::fidl_test_protocols::WithProtocolEnds::ClientEnds>>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
   ~DecodedMessage() {
     if (ok() && (PrimaryObject() != nullptr)) {
       PrimaryObject()->_CloseHandles();
@@ -6178,16 +6224,17 @@ class ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::ServerEnds>::
                               _backing_buffer, _backing_buffer_size, request) {}
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireRequest* request)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .handles = handles_,
-            .handle_metadata = handle_metadata_,
-            .handle_capacity = kHandleCapacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .handles = handles_,
+                .handle_metadata = handle_metadata_,
+                .handle_capacity = kHandleCapacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<WireRequest>(request);
   }
@@ -6263,13 +6310,14 @@ class ::fidl::WireRequest<
   using DecodedMessageBase<::fidl::WireRequest<
       ::fidl_test_protocols::WithProtocolEnds::ServerEnds>>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
   ~DecodedMessage() {
     if (ok() && (PrimaryObject() != nullptr)) {
       PrimaryObject()->_CloseHandles();
@@ -6341,16 +6389,17 @@ class ::fidl::WireResponse<
   }
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireResponse* response)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .handles = handles_,
-            .handle_metadata = handle_metadata_,
-            .handle_capacity = kHandleCapacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .handles = handles_,
+                .handle_metadata = handle_metadata_,
+                .handle_capacity = kHandleCapacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<::fidl::WireResponse<
         ::fidl_test_protocols::WithProtocolEnds::ServerEnds>>(response);
@@ -6431,13 +6480,14 @@ class ::fidl::WireResponse<
   using DecodedMessageBase<::fidl::WireResponse<
       ::fidl_test_protocols::WithProtocolEnds::ServerEnds>>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
   ~DecodedMessage() {
     if (ok() && (PrimaryObject() != nullptr)) {
       PrimaryObject()->_CloseHandles();
@@ -6510,16 +6560,17 @@ class ::fidl::WireRequest<
                               _backing_buffer, _backing_buffer_size, request) {}
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireRequest* request)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .handles = handles_,
-            .handle_metadata = handle_metadata_,
-            .handle_capacity = kHandleCapacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .handles = handles_,
+                .handle_metadata = handle_metadata_,
+                .handle_capacity = kHandleCapacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<WireRequest>(request);
   }
@@ -6596,13 +6647,14 @@ class ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::
       ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>>::
       DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
   ~DecodedMessage() {
     if (ok() && (PrimaryObject() != nullptr)) {
       PrimaryObject()->_CloseHandles();
@@ -6676,16 +6728,17 @@ class ::fidl::WireResponse<
   }
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireResponse* response)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .handles = handles_,
-            .handle_metadata = handle_metadata_,
-            .handle_capacity = kHandleCapacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .handles = handles_,
+                .handle_metadata = handle_metadata_,
+                .handle_capacity = kHandleCapacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<::fidl::WireResponse<
         ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>>(
@@ -6770,13 +6823,14 @@ class ::fidl::WireResponse<::fidl_test_protocols::WithProtocolEnds::
       ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>>::
       DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
   ~DecodedMessage() {
     if (ok() && (PrimaryObject() != nullptr)) {
       PrimaryObject()->_CloseHandles();
@@ -7687,13 +7741,14 @@ class ::fidl::WireRequest<::fidl_test_protocols::ManyParameters::Fifteen>::
                               _backing_buffer, _backing_buffer_size, request) {}
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireRequest* request)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<WireRequest>(request);
   }
@@ -7771,13 +7826,14 @@ class ::fidl::WireRequest<
   using DecodedMessageBase<::fidl::WireRequest<
       ::fidl_test_protocols::ManyParameters::Fifteen>>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
 
   ::fidl::WireRequest<::fidl_test_protocols::ManyParameters::Fifteen>*
   PrimaryObject() {
@@ -8055,13 +8111,14 @@ class ::fidl::WireRequest<::fidl_test_protocols::WithErrorSyntax::
                               _backing_buffer, _backing_buffer_size, request) {}
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireRequest* request)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<WireRequest>(request);
   }
@@ -8140,13 +8197,14 @@ class ::fidl::WireRequest<
       ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>>::
       DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
 
   ::fidl::WireRequest<::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>*
   PrimaryObject() {
@@ -8211,13 +8269,14 @@ class ::fidl::WireResponse<::fidl_test_protocols::WithErrorSyntax::
   }
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireResponse* response)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<::fidl::WireResponse<
         ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>>(response);
@@ -8300,13 +8359,14 @@ class ::fidl::WireResponse<
       ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>>::
       DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
 
   ::fidl::WireResponse<
       ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>*
@@ -8363,13 +8423,14 @@ class ::fidl::WireRequest<::fidl_test_protocols::WithErrorSyntax::
                               _backing_buffer, _backing_buffer_size, request) {}
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireRequest* request)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<WireRequest>(request);
   }
@@ -8448,13 +8509,14 @@ class ::fidl::WireRequest<
       ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>>::
       DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
 
   ::fidl::WireRequest<::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>*
   PrimaryObject() {
@@ -8519,13 +8581,14 @@ class ::fidl::WireResponse<::fidl_test_protocols::WithErrorSyntax::
   }
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireResponse* response)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<::fidl::WireResponse<
         ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>>(response);
@@ -8608,13 +8671,14 @@ class ::fidl::WireResponse<
       ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>>::
       DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
 
   ::fidl::WireResponse<
       ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>*
@@ -8670,13 +8734,14 @@ class ::fidl::WireRequest<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>::
                               _backing_buffer, _backing_buffer_size, request) {}
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireRequest* request)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<WireRequest>(request);
   }
@@ -8754,13 +8819,14 @@ class ::fidl::WireRequest<
   using DecodedMessageBase<::fidl::WireRequest<
       ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
 
   ::fidl::WireRequest<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>*
   PrimaryObject() {
@@ -8824,13 +8890,14 @@ class ::fidl::WireResponse<
   }
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireResponse* response)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<::fidl::WireResponse<
         ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>>(response);
@@ -8913,13 +8980,14 @@ class ::fidl::WireResponse<
   using DecodedMessageBase<::fidl::WireResponse<
       ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
 
   ::fidl::WireResponse<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>*
   PrimaryObject() {
@@ -8975,13 +9043,14 @@ class ::fidl::WireRequest<::fidl_test_protocols::WithErrorSyntax::
                               _backing_buffer, _backing_buffer_size, request) {}
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireRequest* request)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<WireRequest>(request);
   }
@@ -9061,13 +9130,14 @@ class ::fidl::WireRequest<
       ::fidl_test_protocols::WithErrorSyntax::HandleInResult>>::
       DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
 
   ::fidl::WireRequest<::fidl_test_protocols::WithErrorSyntax::HandleInResult>*
   PrimaryObject() {
@@ -9134,16 +9204,17 @@ class ::fidl::WireResponse<::fidl_test_protocols::WithErrorSyntax::
   }
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireResponse* response)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .handles = handles_,
-            .handle_metadata = handle_metadata_,
-            .handle_capacity = kHandleCapacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .handles = handles_,
+                .handle_metadata = handle_metadata_,
+                .handle_capacity = kHandleCapacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<::fidl::WireResponse<
         ::fidl_test_protocols::WithErrorSyntax::HandleInResult>>(response);
@@ -9225,13 +9296,14 @@ class ::fidl::WireResponse<
       ::fidl_test_protocols::WithErrorSyntax::HandleInResult>>::
       DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
   ~DecodedMessage() {
     if (ok() && (PrimaryObject() != nullptr)) {
       PrimaryObject()->_CloseHandles();
@@ -10326,13 +10398,14 @@ class ::fidl::WireRequest<::fidl_test_protocols::DiscoverableProtocol::Method>::
                               _backing_buffer, _backing_buffer_size, request) {}
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireRequest* request)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<WireRequest>(request);
   }
@@ -10410,13 +10483,14 @@ class ::fidl::WireRequest<
   using DecodedMessageBase<::fidl::WireRequest<
       ::fidl_test_protocols::DiscoverableProtocol::Method>>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
 
   ::fidl::WireRequest<::fidl_test_protocols::DiscoverableProtocol::Method>*
   PrimaryObject() {
@@ -10698,13 +10772,14 @@ class ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodA>::
                               _backing_buffer, _backing_buffer_size, request) {}
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireRequest* request)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<WireRequest>(request);
   }
@@ -10782,13 +10857,14 @@ class ::fidl::WireRequest<
   using DecodedMessageBase<::fidl::WireRequest<
       ::fidl_test_protocols::ChannelProtocol::MethodA>>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
 
   ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodA>*
   PrimaryObject() {
@@ -10847,13 +10923,14 @@ class ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::EventA>::
   }
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireResponse* response)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<
         ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::EventA>>(
@@ -10936,13 +11013,14 @@ class ::fidl::WireResponse<
   using DecodedMessageBase<::fidl::WireResponse<
       ::fidl_test_protocols::ChannelProtocol::EventA>>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
 
   ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::EventA>*
   PrimaryObject() {
@@ -11002,13 +11080,14 @@ class ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodB>::
                               _backing_buffer, _backing_buffer_size, request) {}
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireRequest* request)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<WireRequest>(request);
   }
@@ -11086,13 +11165,14 @@ class ::fidl::WireRequest<
   using DecodedMessageBase<::fidl::WireRequest<
       ::fidl_test_protocols::ChannelProtocol::MethodB>>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
 
   ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodB>*
   PrimaryObject() {
@@ -11150,13 +11230,14 @@ class ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::MethodB>::
   }
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireResponse* response)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<
         ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::MethodB>>(
@@ -11239,13 +11320,14 @@ class ::fidl::WireResponse<
   using DecodedMessageBase<::fidl::WireResponse<
       ::fidl_test_protocols::ChannelProtocol::MethodB>>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
 
   ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::MethodB>*
   PrimaryObject() {
@@ -11305,16 +11387,17 @@ class ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::TakeHandle>::
                               _backing_buffer, _backing_buffer_size, request) {}
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireRequest* request)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .handles = handles_,
-            .handle_metadata = handle_metadata_,
-            .handle_capacity = kHandleCapacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .handles = handles_,
+                .handle_metadata = handle_metadata_,
+                .handle_capacity = kHandleCapacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<WireRequest>(request);
   }
@@ -11390,13 +11473,14 @@ class ::fidl::WireRequest<
   using DecodedMessageBase<::fidl::WireRequest<
       ::fidl_test_protocols::ChannelProtocol::TakeHandle>>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
   ~DecodedMessage() {
     if (ok() && (PrimaryObject() != nullptr)) {
       PrimaryObject()->_CloseHandles();
@@ -11457,13 +11541,14 @@ class ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::TakeHandle>::
   }
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireResponse* response)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<::fidl::WireResponse<
         ::fidl_test_protocols::ChannelProtocol::TakeHandle>>(response);
@@ -11545,13 +11630,14 @@ class ::fidl::WireResponse<
   using DecodedMessageBase<::fidl::WireResponse<
       ::fidl_test_protocols::ChannelProtocol::TakeHandle>>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
 
   ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::TakeHandle>*
   PrimaryObject() {
@@ -11613,16 +11699,17 @@ class ::fidl::WireRequest<
                               _backing_buffer, _backing_buffer_size, request) {}
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireRequest* request)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .handles = handles_,
-            .handle_metadata = handle_metadata_,
-            .handle_capacity = kHandleCapacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .handles = handles_,
+                .handle_metadata = handle_metadata_,
+                .handle_capacity = kHandleCapacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<WireRequest>(request);
   }
@@ -11700,13 +11787,14 @@ class ::fidl::WireRequest<
       ::fidl_test_protocols::ChannelProtocol::MutateSocket>>::
       DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
   ~DecodedMessage() {
     if (ok() && (PrimaryObject() != nullptr)) {
       PrimaryObject()->_CloseHandles();
@@ -11775,16 +11863,17 @@ class ::fidl::WireResponse<
   }
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireResponse* response)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .handles = handles_,
-            .handle_metadata = handle_metadata_,
-            .handle_capacity = kHandleCapacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = _iovec_capacity,
+                .handles = handles_,
+                .handle_metadata = handle_metadata_,
+                .handle_capacity = kHandleCapacity,
+                .backing_buffer = _backing_buffer,
+                .backing_buffer_capacity = _backing_buffer_size,
+            })) {
     ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<::fidl::WireResponse<
         ::fidl_test_protocols::ChannelProtocol::MutateSocket>>(response);
@@ -11866,13 +11955,14 @@ class ::fidl::WireResponse<
       ::fidl_test_protocols::ChannelProtocol::MutateSocket>>::
       DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_type, bytes, byte_actual, handles,
-                                    handle_metadata, handle_actual)) {}
+            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
+                                    handles, handle_metadata, handle_actual)) {}
   ~DecodedMessage() {
     if (ok() && (PrimaryObject() != nullptr)) {
       PrimaryObject()->_CloseHandles();

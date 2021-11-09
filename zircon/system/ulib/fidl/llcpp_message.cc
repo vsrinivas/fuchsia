@@ -5,7 +5,6 @@
 #include <lib/fidl/coding.h>
 #include <lib/fidl/internal.h>
 #include <lib/fidl/llcpp/coding.h>
-#include <lib/fidl/llcpp/internal/transport.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/trace.h>
 #include <lib/fidl/transformer.h>
@@ -29,7 +28,7 @@ OutgoingMessage OutgoingMessage::FromEncodedCMessage(const fidl_outgoing_msg_t* 
 OutgoingMessage::OutgoingMessage(const fidl_outgoing_msg_t* c_msg)
     : fidl::Result(fidl::Result::Ok()) {
   ZX_ASSERT(c_msg);
-  transport_type_ = FIDL_TRANSPORT_TYPE_CHANNEL;
+  transport_vtable_ = &internal::ChannelTransport::VTable;
   switch (c_msg->type) {
     case FIDL_OUTGOING_MSG_TYPE_IOVEC: {
       message_ = *c_msg;
@@ -81,7 +80,7 @@ OutgoingMessage::OutgoingMessage(const ::fidl::Result& failure)
 
 OutgoingMessage::OutgoingMessage(ConstructorArgs args)
     : fidl::Result(fidl::Result::Ok()),
-      transport_type_(args.transport_type),
+      transport_vtable_(args.transport_vtable),
       message_({
           .type = FIDL_OUTGOING_MSG_TYPE_IOVEC,
           .iovec = {.iovecs = args.iovecs,
@@ -149,11 +148,9 @@ void OutgoingMessage::EncodeImpl(const fidl_type_t* message_type, void* data) {
   }
   uint32_t num_iovecs_actual;
   uint32_t num_handles_actual;
-  const internal::CodingConfig* encoding_configuration =
-      internal::LookupTransportVTable(transport_type())->encoding_configuration;
   zx_status_t status = fidl::internal::EncodeIovecEtc<FIDL_WIRE_FORMAT_VERSION_V2>(
-      *encoding_configuration, message_type, data, iovecs(), iovec_capacity(), handles(),
-      handle_metadata(), handle_capacity(), backing_buffer(), backing_buffer_capacity(),
+      *transport_vtable_->encoding_configuration, message_type, data, iovecs(), iovec_capacity(),
+      handles(), handle_metadata(), handle_capacity(), backing_buffer(), backing_buffer_capacity(),
       &num_iovecs_actual, &num_handles_actual, error_address());
   if (status != ZX_OK) {
     SetResult(fidl::Result::EncodeError(status, *error_address()));
@@ -294,38 +291,26 @@ OutgoingMessage::CopiedBytes::CopiedBytes(const OutgoingMessage& msg) {
   }
 }
 
-IncomingMessage::IncomingMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles,
-                                 fidl_channel_handle_metadata_t* handle_metadata,
-                                 uint32_t handle_actual)
-    : IncomingMessage(FIDL_TRANSPORT_TYPE_CHANNEL, bytes, byte_actual, handles, handle_metadata,
-                      handle_actual) {}
-
-IncomingMessage::IncomingMessage(fidl_transport_type transport_type, uint8_t* bytes,
+IncomingMessage::IncomingMessage(const internal::TransportVTable* transport_vtable, uint8_t* bytes,
                                  uint32_t byte_actual, zx_handle_t* handles, void* handle_metadata,
                                  uint32_t handle_actual)
-    : IncomingMessage(transport_type, bytes, byte_actual, handles, handle_metadata, handle_actual,
+    : IncomingMessage(transport_vtable, bytes, byte_actual, handles, handle_metadata, handle_actual,
                       kSkipMessageHeaderValidation) {
   Validate();
   is_transactional_ = true;
 }
 
 IncomingMessage IncomingMessage::FromEncodedCMessage(const fidl_incoming_msg_t* c_msg) {
-  return IncomingMessage(FIDL_TRANSPORT_TYPE_CHANNEL, reinterpret_cast<uint8_t*>(c_msg->bytes),
-                         c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
-                         c_msg->num_handles);
+  return IncomingMessage(&internal::ChannelTransport::VTable,
+                         reinterpret_cast<uint8_t*>(c_msg->bytes), c_msg->num_bytes, c_msg->handles,
+                         c_msg->handle_metadata, c_msg->num_handles);
 }
 
-IncomingMessage::IncomingMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles,
-                                 fidl_channel_handle_metadata_t* handle_metadata,
-                                 uint32_t handle_actual, SkipMessageHeaderValidationTag)
-    : IncomingMessage(FIDL_TRANSPORT_TYPE_CHANNEL, bytes, byte_actual, handles, handle_metadata,
-                      handle_actual, kSkipMessageHeaderValidation) {}
-
-IncomingMessage::IncomingMessage(fidl_transport_type transport_type, uint8_t* bytes,
+IncomingMessage::IncomingMessage(const internal::TransportVTable* transport_vtable, uint8_t* bytes,
                                  uint32_t byte_actual, zx_handle_t* handles, void* handle_metadata,
                                  uint32_t handle_actual, SkipMessageHeaderValidationTag)
     : fidl::Result(fidl::Result::Ok()),
-      transport_type_(transport_type),
+      transport_vtable_(transport_vtable),
       message_{
           .bytes = bytes,
           .handles = handles,
@@ -342,7 +327,7 @@ IncomingMessage::~IncomingMessage() { std::move(*this).CloseHandles(); }
 
 fidl_incoming_msg_t IncomingMessage::ReleaseToEncodedCMessage() && {
   ZX_DEBUG_ASSERT(status() == ZX_OK);
-  ZX_ASSERT(transport_type_ == FIDL_TRANSPORT_TYPE_CHANNEL);
+  ZX_ASSERT(transport_vtable_->type == FIDL_TRANSPORT_TYPE_CHANNEL);
   fidl_incoming_msg_t result = message_;
   ReleaseHandles();
   return result;
@@ -400,11 +385,9 @@ void IncomingMessage::Decode(internal::WireFormatVersion wire_format_version,
   }
 
   fidl_trace(WillLLCPPDecode, message_type, bytes(), byte_actual(), handle_actual());
-  const internal::CodingConfig* encoding_configuration =
-      internal::LookupTransportVTable(transport_type_)->encoding_configuration;
   zx_status_t status = fidl::internal::DecodeEtc<FIDL_WIRE_FORMAT_VERSION_V2>(
-      *encoding_configuration, message_type, message_.bytes, message_.num_bytes, message_.handles,
-      message_.handle_metadata, message_.num_handles, error_address());
+      *transport_vtable_->encoding_configuration, message_type, message_.bytes, message_.num_bytes,
+      message_.handles, message_.handle_metadata, message_.num_handles, error_address());
   fidl_trace(DidLLCPPDecode);
   // Now the caller is responsible for the handles contained in `bytes()`.
   ReleaseHandles();
@@ -440,10 +423,10 @@ void IncomingMessage::Validate() {
 namespace internal {
 IncomingMessage MessageRead(internal::AnyUnownedTransport transport, uint32_t options,
                             fidl::BufferSpan bytes_storage, zx_handle_t* handle_storage,
-                            fidl_transport_type transport_type, void* handle_metadata_storage,
-                            uint32_t handle_capacity) {
+                            const internal::TransportVTable* transport_vtable,
+                            void* handle_metadata_storage, uint32_t handle_capacity) {
   // TODO(fxbug.dev/85734) Support abitrary transports.
-  ZX_ASSERT(transport_type == FIDL_TRANSPORT_TYPE_CHANNEL);
+  ZX_ASSERT(transport_vtable->type == FIDL_TRANSPORT_TYPE_CHANNEL);
   zx_handle_t channel = transport.get<internal::ChannelTransport>()->get();
   zx_handle_info_t handle_infos[ZX_CHANNEL_MAX_MSG_HANDLES];
   uint32_t num_bytes, num_handles;

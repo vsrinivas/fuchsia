@@ -270,8 +270,7 @@ bool DecodeSuccess(fidl::internal::WireFormatVersion wire_format_version, FidlTy
   }
   fidl::DecodedMessage<FidlType> decoded(
       wire_format_version, bytes.data(), static_cast<uint32_t>(bytes.size()), handles.data(),
-      handle_metadata.data(), static_cast<uint32_t>(handle_infos.size()),
-      FIDL_TRANSPORT_TYPE_CHANNEL);
+      handle_metadata.data(), static_cast<uint32_t>(handle_infos.size()));
   if (!decoded.ok()) {
     std::cout << "Decoding failed: " << decoded.error() << std::endl;
     return false;
@@ -297,8 +296,7 @@ bool DecodeFailure(fidl::internal::WireFormatVersion wire_format_version,
   }
   fidl::DecodedMessage<FidlType> decoded(
       wire_format_version, bytes.data(), static_cast<uint32_t>(bytes.size()), handles.data(),
-      handle_metadata.data(), static_cast<uint32_t>(handle_infos.size()),
-      FIDL_TRANSPORT_TYPE_CHANNEL);
+      handle_metadata.data(), static_cast<uint32_t>(handle_infos.size()));
   if (decoded.ok()) {
     std::cout << "Decoding unexpectedly succeeded" << std::endl;
     return false;

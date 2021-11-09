@@ -127,13 +127,14 @@ class UnionSize8Alignment4::UnownedEncodedMessage final {
   UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
                         uint32_t backing_buffer_size,
                         UnionSize8Alignment4* value)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = iovec_capacity,
-            .backing_buffer = backing_buffer,
-            .backing_buffer_capacity = backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = iovec_capacity,
+                .backing_buffer = backing_buffer,
+                .backing_buffer_capacity = backing_buffer_size,
+            })) {
     ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
     message_.Encode<UnionSize8Alignment4>(value);
   }
@@ -199,27 +200,29 @@ class UnionSize8Alignment4::DecodedMessage final
  public:
   using DecodedMessageBase<UnionSize8Alignment4>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
             ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(
-                transport_type, bytes, byte_actual, handles, handle_metadata,
+                transport_vtable, bytes, byte_actual, handles, handle_metadata,
                 handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
   // Internal constructor for specifying a specific wire format version.
-  DecodedMessage(
-      ::fidl::internal::WireFormatVersion wire_format_version, uint8_t* bytes,
-      uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
             wire_format_version,
             ::fidl::IncomingMessage(
-                transport_type, bytes, byte_actual, handles, handle_metadata,
+                transport_vtable, bytes, byte_actual, handles, handle_metadata,
                 handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
@@ -352,13 +355,14 @@ class UnionSize36Alignment4::UnownedEncodedMessage final {
   UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
                         uint32_t backing_buffer_size,
                         UnionSize36Alignment4* value)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = iovec_capacity,
-            .backing_buffer = backing_buffer,
-            .backing_buffer_capacity = backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = iovec_capacity,
+                .backing_buffer = backing_buffer,
+                .backing_buffer_capacity = backing_buffer_size,
+            })) {
     ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
     message_.Encode<UnionSize36Alignment4>(value);
   }
@@ -424,27 +428,29 @@ class UnionSize36Alignment4::DecodedMessage final
  public:
   using DecodedMessageBase<UnionSize36Alignment4>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
             ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(
-                transport_type, bytes, byte_actual, handles, handle_metadata,
+                transport_vtable, bytes, byte_actual, handles, handle_metadata,
                 handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
   // Internal constructor for specifying a specific wire format version.
-  DecodedMessage(
-      ::fidl::internal::WireFormatVersion wire_format_version, uint8_t* bytes,
-      uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
             wire_format_version,
             ::fidl::IncomingMessage(
-                transport_type, bytes, byte_actual, handles, handle_metadata,
+                transport_vtable, bytes, byte_actual, handles, handle_metadata,
                 handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
@@ -577,13 +583,14 @@ class UnionSize12Alignment4::UnownedEncodedMessage final {
   UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
                         uint32_t backing_buffer_size,
                         UnionSize12Alignment4* value)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = iovec_capacity,
-            .backing_buffer = backing_buffer,
-            .backing_buffer_capacity = backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = iovec_capacity,
+                .backing_buffer = backing_buffer,
+                .backing_buffer_capacity = backing_buffer_size,
+            })) {
     ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
     message_.Encode<UnionSize12Alignment4>(value);
   }
@@ -649,27 +656,29 @@ class UnionSize12Alignment4::DecodedMessage final
  public:
   using DecodedMessageBase<UnionSize12Alignment4>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
             ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(
-                transport_type, bytes, byte_actual, handles, handle_metadata,
+                transport_vtable, bytes, byte_actual, handles, handle_metadata,
                 handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
   // Internal constructor for specifying a specific wire format version.
-  DecodedMessage(
-      ::fidl::internal::WireFormatVersion wire_format_version, uint8_t* bytes,
-      uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
             wire_format_version,
             ::fidl::IncomingMessage(
-                transport_type, bytes, byte_actual, handles, handle_metadata,
+                transport_vtable, bytes, byte_actual, handles, handle_metadata,
                 handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
@@ -814,13 +823,14 @@ class UnionSize24Alignment8::UnownedEncodedMessage final {
   UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
                         uint32_t backing_buffer_size,
                         UnionSize24Alignment8* value)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = iovec_capacity,
-            .backing_buffer = backing_buffer,
-            .backing_buffer_capacity = backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = iovec_capacity,
+                .backing_buffer = backing_buffer,
+                .backing_buffer_capacity = backing_buffer_size,
+            })) {
     ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
     message_.Encode<UnionSize24Alignment8>(value);
   }
@@ -886,27 +896,29 @@ class UnionSize24Alignment8::DecodedMessage final
  public:
   using DecodedMessageBase<UnionSize24Alignment8>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
             ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(
-                transport_type, bytes, byte_actual, handles, handle_metadata,
+                transport_vtable, bytes, byte_actual, handles, handle_metadata,
                 handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
   // Internal constructor for specifying a specific wire format version.
-  DecodedMessage(
-      ::fidl::internal::WireFormatVersion wire_format_version, uint8_t* bytes,
-      uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
             wire_format_version,
             ::fidl::IncomingMessage(
-                transport_type, bytes, byte_actual, handles, handle_metadata,
+                transport_vtable, bytes, byte_actual, handles, handle_metadata,
                 handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
@@ -965,13 +977,14 @@ class SandwichUnionSize8Alignment4::UnownedEncodedMessage final {
   UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
                         uint32_t backing_buffer_size,
                         SandwichUnionSize8Alignment4* value)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = iovec_capacity,
-            .backing_buffer = backing_buffer,
-            .backing_buffer_capacity = backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = iovec_capacity,
+                .backing_buffer = backing_buffer,
+                .backing_buffer_capacity = backing_buffer_size,
+            })) {
     ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
     message_.Encode<SandwichUnionSize8Alignment4>(value);
   }
@@ -1036,27 +1049,29 @@ class SandwichUnionSize8Alignment4::DecodedMessage final
  public:
   using DecodedMessageBase<SandwichUnionSize8Alignment4>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
             ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(
-                transport_type, bytes, byte_actual, handles, handle_metadata,
+                transport_vtable, bytes, byte_actual, handles, handle_metadata,
                 handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
   // Internal constructor for specifying a specific wire format version.
-  DecodedMessage(
-      ::fidl::internal::WireFormatVersion wire_format_version, uint8_t* bytes,
-      uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
             wire_format_version,
             ::fidl::IncomingMessage(
-                transport_type, bytes, byte_actual, handles, handle_metadata,
+                transport_vtable, bytes, byte_actual, handles, handle_metadata,
                 handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
@@ -1115,13 +1130,14 @@ class SandwichUnionSize36Alignment4::UnownedEncodedMessage final {
   UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
                         uint32_t backing_buffer_size,
                         SandwichUnionSize36Alignment4* value)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = iovec_capacity,
-            .backing_buffer = backing_buffer,
-            .backing_buffer_capacity = backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = iovec_capacity,
+                .backing_buffer = backing_buffer,
+                .backing_buffer_capacity = backing_buffer_size,
+            })) {
     ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
     message_.Encode<SandwichUnionSize36Alignment4>(value);
   }
@@ -1186,27 +1202,29 @@ class SandwichUnionSize36Alignment4::DecodedMessage final
  public:
   using DecodedMessageBase<SandwichUnionSize36Alignment4>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
             ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(
-                transport_type, bytes, byte_actual, handles, handle_metadata,
+                transport_vtable, bytes, byte_actual, handles, handle_metadata,
                 handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
   // Internal constructor for specifying a specific wire format version.
-  DecodedMessage(
-      ::fidl::internal::WireFormatVersion wire_format_version, uint8_t* bytes,
-      uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
             wire_format_version,
             ::fidl::IncomingMessage(
-                transport_type, bytes, byte_actual, handles, handle_metadata,
+                transport_vtable, bytes, byte_actual, handles, handle_metadata,
                 handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
@@ -1265,13 +1283,14 @@ class SandwichUnionSize12Alignment4::UnownedEncodedMessage final {
   UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
                         uint32_t backing_buffer_size,
                         SandwichUnionSize12Alignment4* value)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = iovec_capacity,
-            .backing_buffer = backing_buffer,
-            .backing_buffer_capacity = backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = iovec_capacity,
+                .backing_buffer = backing_buffer,
+                .backing_buffer_capacity = backing_buffer_size,
+            })) {
     ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
     message_.Encode<SandwichUnionSize12Alignment4>(value);
   }
@@ -1336,27 +1355,29 @@ class SandwichUnionSize12Alignment4::DecodedMessage final
  public:
   using DecodedMessageBase<SandwichUnionSize12Alignment4>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
             ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(
-                transport_type, bytes, byte_actual, handles, handle_metadata,
+                transport_vtable, bytes, byte_actual, handles, handle_metadata,
                 handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
   // Internal constructor for specifying a specific wire format version.
-  DecodedMessage(
-      ::fidl::internal::WireFormatVersion wire_format_version, uint8_t* bytes,
-      uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
             wire_format_version,
             ::fidl::IncomingMessage(
-                transport_type, bytes, byte_actual, handles, handle_metadata,
+                transport_vtable, bytes, byte_actual, handles, handle_metadata,
                 handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
@@ -1413,13 +1434,14 @@ class StructSize16Alignment8::UnownedEncodedMessage final {
   UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
                         uint32_t backing_buffer_size,
                         StructSize16Alignment8* value)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = iovec_capacity,
-            .backing_buffer = backing_buffer,
-            .backing_buffer_capacity = backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = iovec_capacity,
+                .backing_buffer = backing_buffer,
+                .backing_buffer_capacity = backing_buffer_size,
+            })) {
     ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
     message_.Encode<StructSize16Alignment8>(value);
   }
@@ -1483,27 +1505,29 @@ class StructSize16Alignment8::DecodedMessage final
  public:
   using DecodedMessageBase<StructSize16Alignment8>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
             ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(
-                transport_type, bytes, byte_actual, handles, handle_metadata,
+                transport_vtable, bytes, byte_actual, handles, handle_metadata,
                 handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
   // Internal constructor for specifying a specific wire format version.
-  DecodedMessage(
-      ::fidl::internal::WireFormatVersion wire_format_version, uint8_t* bytes,
-      uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
             wire_format_version,
             ::fidl::IncomingMessage(
-                transport_type, bytes, byte_actual, handles, handle_metadata,
+                transport_vtable, bytes, byte_actual, handles, handle_metadata,
                 handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
@@ -1562,13 +1586,14 @@ class SandwichUnionSize24Alignment8::UnownedEncodedMessage final {
   UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
                         uint32_t backing_buffer_size,
                         SandwichUnionSize24Alignment8* value)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
-            .iovecs = iovecs_,
-            .iovec_capacity = iovec_capacity,
-            .backing_buffer = backing_buffer,
-            .backing_buffer_capacity = backing_buffer_size,
-        }) {
+      : message_(::fidl::OutgoingMessage::CreateInternal(
+            ::fidl::OutgoingMessage::ConstructorArgs{
+                .transport_vtable = &::fidl::internal::ChannelTransport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = iovec_capacity,
+                .backing_buffer = backing_buffer,
+                .backing_buffer_capacity = backing_buffer_size,
+            })) {
     ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
     message_.Encode<SandwichUnionSize24Alignment8>(value);
   }
@@ -1633,27 +1658,29 @@ class SandwichUnionSize24Alignment8::DecodedMessage final
  public:
   using DecodedMessageBase<SandwichUnionSize24Alignment8>::DecodedMessageBase;
 
-  DecodedMessage(
-      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
             ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(
-                transport_type, bytes, byte_actual, handles, handle_metadata,
+                transport_vtable, bytes, byte_actual, handles, handle_metadata,
                 handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
   // Internal constructor for specifying a specific wire format version.
-  DecodedMessage(
-      ::fidl::internal::WireFormatVersion wire_format_version, uint8_t* bytes,
-      uint32_t byte_actual, zx_handle_t* handles = nullptr,
-      void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_CHANNEL)
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_t* handles = nullptr,
+                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
+                 const ::fidl::internal::TransportVTable* transport_vtable =
+                     &::fidl::internal::ChannelTransport::VTable)
       : DecodedMessageBase(
             wire_format_version,
             ::fidl::IncomingMessage(
-                transport_type, bytes, byte_actual, handles, handle_metadata,
+                transport_vtable, bytes, byte_actual, handles, handle_metadata,
                 handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 

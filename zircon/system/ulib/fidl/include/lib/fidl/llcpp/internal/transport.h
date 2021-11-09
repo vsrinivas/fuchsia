@@ -206,8 +206,6 @@ struct AssociatedTransportImpl;
 template <typename TransportObject>
 using AssociatedTransport = typename AssociatedTransportImpl<std::decay_t<TransportObject>>::type;
 
-const TransportVTable* LookupTransportVTable(fidl_transport_type type);
-
 }  // namespace internal
 
 }  // namespace fidl

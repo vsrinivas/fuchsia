@@ -38,7 +38,14 @@ template <>
 struct AssociatedTransportImpl<zx::unowned_channel> {
   using type = ChannelTransport;
 };
+#endif
 
+template <>
+struct AssociatedTransportImpl<fidl_channel_handle_metadata_t> {
+  using type = ChannelTransport;
+};
+
+#ifdef __Fuchsia__
 static_assert(sizeof(fidl_handle_t) == sizeof(zx_handle_t));
 #endif
 
