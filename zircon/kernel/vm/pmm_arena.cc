@@ -128,7 +128,7 @@ static uint64_t Align(uint64_t offset, uint8_t alignment_log2, uint64_t first_al
 zx::status<uint64_t> PmmArena::FindLastNonFree(uint64_t offset, size_t count) const {
   uint64_t i = offset + count - 1;
   do {
-    if (!page_array_[i].is_free()) {
+    if (!page_array_[i].is_free() || page_array_[i].is_loaned()) {
       return zx::ok(i);
     }
   } while (i-- > offset);
