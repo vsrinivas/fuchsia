@@ -49,6 +49,7 @@ pub trait MlmeImpl {
     fn handle_mac_frame_rx(&mut self, bytes: &[u8], rx_info: banjo_wlan_mac::WlanRxInfo);
     fn handle_eth_frame_tx(&mut self, bytes: &[u8]) -> Result<(), Error>;
     fn handle_hw_indication(&mut self, ind: banjo_wlan_mac::WlanIndication);
+    fn handle_scan_complete(&mut self, status: zx::sys::zx_status_t, scan_id: u64);
     fn handle_timeout(&mut self, event_id: common::timer::EventId, event: Self::TimerEvent);
     fn access_device(&mut self) -> &mut Device;
 }
@@ -156,6 +157,8 @@ pub enum DriverEvent {
     // Requests transmission of an ethernet frame over the air.
     EthFrameTx { bytes: Vec<u8> },
     // A notification of some event from the vendor driver.
+    HwIndication { ind: banjo_wlan_mac::WlanIndication },
+    // Reports a scan is complete.
     ScanComplete { status: zx::Status, scan_id: u64 },
     // Reports the result of an attempted frame transmission.
     TxStatusReport { tx_status: banjo_wlan_mac::WlanTxStatus },

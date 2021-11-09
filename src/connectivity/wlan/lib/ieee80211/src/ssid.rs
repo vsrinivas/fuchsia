@@ -4,7 +4,7 @@
 
 use {
     arbitrary::Arbitrary,
-    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
+    banjo_fuchsia_wlan_ieee80211 as banjo_ieee80211, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
     std::{
         borrow::Cow,
         convert::{TryFrom, TryInto},
@@ -79,9 +79,9 @@ impl fmt::Display for Ssid {
     }
 }
 
-impl From<Ssid> for fidl_ieee80211::CSsid {
-    fn from(ssid: Ssid) -> fidl_ieee80211::CSsid {
-        let mut cssid = fidl_ieee80211::CSsid {
+impl From<Ssid> for banjo_ieee80211::CSsid {
+    fn from(ssid: Ssid) -> banjo_ieee80211::CSsid {
+        let mut cssid = banjo_ieee80211::CSsid {
             len: ssid.len() as u8,
             data: [0; fidl_ieee80211::MAX_SSID_BYTE_LEN as usize],
         };

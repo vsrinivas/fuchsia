@@ -144,6 +144,10 @@ impl crate::MlmeImpl for Ap {
     fn handle_hw_indication(&mut self, ind: banjo_wlan_mac::WlanIndication) {
         Self::handle_hw_indication(self, ind);
     }
+    fn handle_scan_complete(&mut self, _status: zx::sys::zx_status_t, _scan_id: u64) {
+        // TODO(fxbug.dev/...): scan complete silently ignored in AP
+        return;
+    }
     fn handle_timeout(&mut self, event_id: EventId, event: TimedEvent) {
         Self::handle_timed_event(self, event_id, event)
     }

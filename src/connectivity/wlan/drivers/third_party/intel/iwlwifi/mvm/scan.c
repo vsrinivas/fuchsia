@@ -42,7 +42,6 @@
 #include <zircon/status.h>
 #include <zircon/time.h>
 
-#include "out/atlas/x64-shared/gen/zircon/public/sysroot/cpp/include/zircon/errors.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-io.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/task.h"

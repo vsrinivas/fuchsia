@@ -118,13 +118,12 @@ impl crate::MlmeImpl for ClientMlme {
     fn handle_eth_frame_tx(&mut self, bytes: &[u8]) -> Result<(), anyhow::Error> {
         Self::on_eth_frame_tx(self, bytes).map_err(|e| e.into())
     }
-    fn handle_hw_indication(&mut self, ind: banjo_wlan_mac::WlanIndication) {
-        let hw_scan_status = match ind {
-            banjo_wlan_mac::WlanIndication::HW_SCAN_COMPLETE => banjo_wlan_mac::WlanHwScan::SUCCESS,
-            banjo_wlan_mac::WlanIndication::HW_SCAN_ABORTED => banjo_wlan_mac::WlanHwScan::ABORTED,
-            _ => return,
-        };
-        Self::handle_hw_scan_complete(self, hw_scan_status);
+    fn handle_hw_indication(&mut self, _ind: banjo_wlan_mac::WlanIndication) {
+        // TODO(fxbug.dev/...): All indications are unused
+        return;
+    }
+    fn handle_scan_complete(&mut self, status: zx::sys::zx_status_t, scan_id: u64) {
+        Self::handle_scan_complete(self, status, scan_id);
     }
     fn handle_timeout(&mut self, event_id: EventId, event: TimedEvent) {
         Self::handle_timed_event(self, event_id, event)
@@ -251,8 +250,8 @@ impl ClientMlme {
         );
     }
 
-    pub fn handle_hw_scan_complete(&mut self, status: banjo_wlan_mac::WlanHwScan) {
-        self.scanner.bind(&mut self.ctx).handle_hw_scan_complete(status);
+    pub fn handle_scan_complete(&mut self, status: zx::sys::zx_status_t, scan_id: u64) {
+        self.scanner.bind(&mut self.ctx).handle_scan_complete(status, scan_id);
     }
 
     fn on_sme_join(&mut self, req: fidl_mlme::JoinRequest) -> Result<(), Error> {
