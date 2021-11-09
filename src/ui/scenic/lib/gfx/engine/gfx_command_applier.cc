@@ -56,7 +56,10 @@
 #include "src/ui/scenic/lib/gfx/util/validate_eventpair.h"
 #include "src/ui/scenic/lib/gfx/util/wrap.h"
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <glm/ext.hpp>
+#pragma GCC diagnostic pop
 
 namespace {
 

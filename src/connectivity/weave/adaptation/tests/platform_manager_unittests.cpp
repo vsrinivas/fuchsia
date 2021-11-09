@@ -3,8 +3,11 @@
 // found in the LICENSE file.
 
 // clang-format off
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <Weave/DeviceLayer/PlatformManager.h>
 #include <Weave/DeviceLayer/internal/WeaveDeviceLayerInternal.h>
+#pragma GCC diagnostic pop
 // clang-format on
 
 #include <lib/gtest/test_loop_fixture.h>

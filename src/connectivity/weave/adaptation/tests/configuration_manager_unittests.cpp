@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 // clang-format off
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <Weave/DeviceLayer/internal/WeaveDeviceLayerInternal.h>
 #include <Weave/DeviceLayer/ConfigurationManager.h>
 #include <Weave/Core/WeaveKeyIds.h>
@@ -11,6 +13,7 @@
 
 #include <Weave/Core/WeaveVendorIdentifiers.hpp>
 #include <Weave/DeviceLayer/internal/GenericConfigurationManagerImpl.ipp>
+#pragma GCC diagnostic pop
 // clang-format on
 
 #include <lib/sys/cpp/testing/component_context_provider.h>

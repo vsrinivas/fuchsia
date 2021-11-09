@@ -40,8 +40,11 @@
 #include "src/ui/scenic/lib/scenic/util/print_event.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <glm/gtc/epsilon.hpp>
 #include <glm/gtx/string_cast.hpp>
+#pragma GCC diagnostic pop
 
 namespace scenic_impl {
 namespace gfx {
