@@ -1,3 +1,6 @@
 {
-    include: [ "//src/cobalt/bin/meta/base/cobalt_testapp_networked.shard.cml" ],
+    include: [
+        "//src/cobalt/bin/meta/base/cobalt_testapp_networked.shard.cml",
+        "//src/sys/test_manager/system-test.shard.cml",
+    ],
 }
