@@ -61,7 +61,7 @@ name "C" instead of the method name "B" for calculating the hash:
 Selectors can also be used to maintain backwards compatibility with the wire
 format in cases where developers wish to change the name of a method.
 
-## Library structure
+## Library Structure
 
 Grouping of FIDL declarations into FIDL libraries has two specific goals:
 
@@ -119,8 +119,8 @@ given a client end of the `fuchsia.media.StreamSource` protocol. However, FIDL
 is not designed and cannot be used to express access to the `fuchsia.logger`
 library, or prevent access the `fuchsia.ldsvc` library.
 
-Note: Finer grained access controls is possible, and can further reduce the
-granularity discussed to method level, or further with dynamic access control
+Note: Finer-grained access control is possible. You can further reduce the
+granularity discussed to method level or further with dynamic access control
 based on authentication schemes.
 
 ### The `fuchsia` namespace {#fuchsia-namespace}
@@ -175,10 +175,10 @@ elements may be used by importing libraries ("child libraries"), e.g `public` or
 The `internal` library component name is intended to be treated specially, and
 indicates a local restriction of visibility rules. For instance, a public
 declaration in the `fuchsia.net.dhcp.internal.foo` library might only be visible
-to it’s parent `fuchsia.net.dhcp`, or its siblings e.g.
+to its parent `fuchsia.net.dhcp`, or its siblings e.g.
 `fuchsia.net.dhcp.internal.bar`.
 
-### Using multi-words library components
+### Using multi-word library components
 
 While library names with components that join multiple words (e.g.
 `fuchsia.modular.storymodel`) are allowed, their use should be exceptional.
@@ -192,8 +192,8 @@ Should a library need to be versioned, a single version number should be
 suffixed e.g. `fuchsia.io2` or `fuchsia.something.something4.` Version numbers
 should not be multi-part, e.g. `fuchsia.io2.1` is not acceptable, and should
 instead be `fuchsia.io3`. Any library component may be versioned, though it is
-strongly discouraged to have multiple versioned components, e.g. `
-fuchsia.hardware.cpu2.ctrl` but not `fuchsia.hardware.cpu2.ctrl4`.
+strongly discouraged to have multiple versioned components, e.g.
+`fuchsia.hardware.cpu2.ctrl` but not `fuchsia.hardware.cpu2.ctrl4`.
 
 Version numbers should only indicate a more recent version of a library, rather
 than a materially different domain. As a counterexample, `fuchsia.input` library
@@ -210,10 +210,10 @@ types you used in your protocol definition.
 
 ### Be consistent
 
-Use consistent types for the same concept.  For example, use a uint32 or a int32
-for a particular concept consistently throughout your library.  If you create a
-struct for a concept, be consistent about using that struct to represent the
-concept.
+Use consistent types for the same concept.  For example, use a `uint32` or an
+`int32` for a particular concept consistently throughout your library.  If you
+create a `struct` for a concept, be consistent about using that struct to
+represent the concept.
 
 Ideally, types would be used consistently across library boundaries as well.
 Check related libraries for similar concepts and be consistent with those
@@ -240,7 +240,7 @@ reduces the cost of using structs to name important concepts.
 
 A Virtual Memory Object (VMO) is a kernel object that represents a contiguous
 region of virtual memory along with a logical size. Use this type to transfer
-memory in a FIDL message and use the ZX_PROP_VMO_CONTENT_SIZE property to track
+memory in a FIDL message and use the `ZX_PROP_VMO_CONTENT_SIZE` property to track
 the amount of data contained in the object.
 
 Note: This rubric previously recommended using the `fuchsia.mem.Buffer` type for
@@ -371,7 +371,7 @@ large ones.
 
 ### Avoid booleans if more states are possible
 
-When adding a boolean field, consider using an enum instead if the field could
+When adding a boolean field, consider using an `enum` instead if the field could
 be extended to represent additional states in the future. For example a boolean
 `is_gif` field might be better represented by
 
@@ -406,7 +406,7 @@ There are two patterns for methods that can return a result or an error:
    [optional value with error enum](#using-optional-value-with-error-enum)
    for cases when you need maximal performance.
 
-The performance difference between the [error syntax](#using-the-error-syntax)
+The performance differences between the [error syntax](#using-the-error-syntax)
 vs [optional value with error enum](#using-optional-value-with-error-enum) are
 small:
 
@@ -532,7 +532,7 @@ guide your decision making:
    `FrobinateResult` struct defined above contains values that are always null
    at the same time when `error` is not `MyError.OK`.
 
-### Should I use string or bytes?
+### Should I use `string` or `bytes`?
 
 In FIDL, `string` data must be valid UTF-8, which means strings can represent
 sequences of Unicode code points but cannot represent arbitrary binary data.  In
@@ -572,7 +572,7 @@ Use shared-memory primitives for blobs:
    time, or when it makes sense to process data before completely written or
    available.
 
-### Should I use vector or array?
+### Should I use `vector` or `array`?
 
 A `vector` is a variable-length sequence that is represented out-of-line in the
 wire format.  An `array` is a fixed-length sequence that is represented in-line
@@ -587,13 +587,13 @@ Use `array` for fixed-length data:
 
  * Use `array` for MAC addresses because a MAC address is always six bytes long.
 
-### Should I use a struct or a table?
+### Should I use a `struct` or a `table`?
 
 Both structs and tables represent an object with multiple named fields. The
 difference is that structs have a fixed layout in the wire format, which means
-they *cannot* be modified without breaking binary-compatibility. By contrast,
+they *cannot* be modified without breaking binary compatibility. By contrast,
 tables have a flexible layout in the wire format, which means fields *can* be
-added to a table over time without breaking binary-compatibility.
+added to a table over time without breaking binary compatibility.
 
 Use structs for performance-critical protocol elements or for protocol elements
 that are very unlikely to change in the future. For example, use a struct to
@@ -615,34 +615,30 @@ constant you have:
 3. Use `bits` for constants forming a group of flags, such as the capabilities
    of an interface: **WLAN**, **SYNTH**, and **LOOPBACK**.
 
-#### const
+#### `const`
 
-Use a `const` when there is a value that you wish to use symbolically
-rather than typing the value every time.
-The classical example is **PI** &mdash; it's often coded as a `const`
-because it's convenient to not have to type `3.141592653589` every time
-you want to use this value.
+Use a `const` when there is a value that you wish to use symbolically rather
+than typing the value every time. The classical example is **PI** &mdash; it's
+often coded as a `const` because it's convenient to not have to type
+`3.141592653589` every time you want to use this value.
 
-Alternatively, you may use a `const` when the value may change, but needs
-to otherwise be used consistently throughout.
-A maximum number of characters that can be supplied in a given field is
-a good example (e.g., **MAX_NAME_LEN**).
-By using a `const`, you centralize the definition of that number, and
-thus don't end up with different values throughout your code.
+Alternatively, you may use a `const` when the value may change, but needs to
+otherwise be used consistently throughout. A maximum number of characters that
+can be supplied in a given field is a good example (e.g., **MAX_NAME_LEN**). By
+using a `const`, you centralize the definition of that number, and thus don't
+end up with different values throughout your code.
 
-Another reason to choose `const` is that you can use it both to constrain
-a message, and then later on in code.
-For example:
+Another reason to choose `const` is that you can use it both to constrain a
+message, and then later on in code. For example:
 
 ```fidl
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="constants" %}
 
 ```
 
-You can then use the constant `MAX_BATCH_SIZE` in your code to assemble
-batches.
+You can then use the constant `MAX_BATCH_SIZE` in your code to assemble batches.
 
-#### enum {#enum}
+#### `enum` {#enum}
 
 Use an enum if the set of enumerated values is bounded and controlled by the
 Fuchsia project.  For example, the Fuchsia project defines the pointer event
@@ -654,7 +650,7 @@ people who will want to register new values will submit a patch to the Fuchsia
 source tree to register their values.  For example, texture formats need to be
 understood by the Fuchsia graphics drivers, which means new texture formats can
 be added by developers working on those drivers even if the set of texture
-formats is controlled by the graphics hardware vendors.  As a counter example,
+formats is controlled by the graphics hardware vendors.  As a counterexample,
 do not use an enum to represent HTTP methods because we cannot reasonably expect
 people who use novel HTTP methods to submit a patch to the Platform Source Tree.
 
@@ -680,15 +676,14 @@ instead was set because it is the default. For instance, the
 There are two cases where using the value `0` is appropriate:
 
   * The enum has a natural default, initial, or unknown state;
-
   * The enum defines an error code used in the
     [optional value with error enum](#using-optional-value-with-error-enum)
     pattern.
 
-#### bits
+#### `bits`
 
-If your protocol has a bitfield, represent its values using `bits` values
-(for details, see [`RFC-0025`: "Bit Flags."][rfc-0025])
+If your protocol has a bitfield, represent its values using `bits` values (for
+details, see [`RFC-0025`: "Bit Flags"][rfc-0025]).
 
 For example:
 
@@ -721,18 +716,18 @@ care and upfront planning.
 
 ### Should I use `strict` or `flexible`?
 
-Marking a type as [`flexible`][flexible-lang] makes it possible to handle data that is unknown
-to the current FIDL schema, and is recommended for types that may add or
-remove members in the future (e.g., configs, metadata, or errors). It is always
-possible to [soft transition][flexible-transition] between `strict` and
-`flexible` for an existing type. For types that accept the `strict`/`flexible`
-modifier (`bits`, `enum`, and `union`), such a modifier should always be
-specified rather than relying on defaults (e.g., always prefer `flexible bits
-...` to just `bits ...`).
+Marking a type as [`flexible`][flexible-lang] makes it possible to handle data
+that is unknown to the current FIDL schema, and is recommended for types that
+may add or remove members in the future (e.g., configs, metadata, or errors). It
+is always possible to [soft transition][flexible-transition] between `strict`
+and `flexible` for an existing type. For types that accept the
+`strict`/`flexible` modifier (`bits`, `enum`, and `union`), such a modifier
+should always be specified rather than relying on defaults (e.g., always prefer
+`flexible bits ...` to just `bits ...`).
 
 Using `strict` or `flexible` does not have any significant performance impact.
 
-### Handle Rights
+### Handle rights
 
 This section describes best practices for assigning rights constraints on
 handles in FIDL.
@@ -769,10 +764,10 @@ handle rights may offer. Additionally, `zx.rights.SAME_RIGHTS` makes the rights
 set dynamic, meaning that a process might receive fewer or greater rights than
 it actually needs.
 
-It is worth noting that `zx.rights.SAME_RIGHTS` is not the same as the
-defaults rights set for a type, e.g. `zx.DEFAULT_CHANNEL_RIGHTS`. While the
-former skips rights checks, the latter requires all normal rights for a given
-object type to be present.
+It is worth noting that `zx.rights.SAME_RIGHTS` is not the same as the defaults
+rights set for a type, e.g. `zx.DEFAULT_CHANNEL_RIGHTS`. While the former skips
+rights checks, the latter requires all normal rights for a given object type to
+be present.
 
 ## Good Design Patterns
 
@@ -822,9 +817,9 @@ between different failure modes that often should be handled in the same way.
 For example, the client should treat a service that fails immediately after
 establishing a connection in the same way as a service that cannot be reached in
 the first place.  In both situations, the service is unavailable and the client
-should either generate an error or find another way to accomplishing its task.
+should either generate an error or find another way to accomplish its task.
 
-### Flow Control
+### Flow control
 
 FIDL messages are buffered by the kernel.  If one endpoint produces more
 messages than the other endpoint consumes, the messages will accumulate in the
@@ -837,7 +832,7 @@ Flow control is a broad, complex topic, and there are a number of effective
 design patterns.  This section discusses some of the more popular flow control
 patterns but is not exhaustive. The patterns are listed in descending order of
 preference. If one of these patterns works well for a particular use case it
-should be used but if not protocols are free to use alternative flow control
+should be used. But if not, protocols are free to use alternative flow control
 mechanisms that are not listed below.
 
 #### Prefer pull to push
@@ -860,27 +855,27 @@ server using the _hanging get pattern_:
 
 In this pattern, the client sends a `WatchFoo` message but the server does not
 reply until it has new information to send to the client. The client consumes
-the foo and immediately sends another hanging get.  The client and server each
-do one unit of work per data item, which means neither gets ahead of the other.
+`foo` and immediately sends another hanging get.  The client and server each do
+one unit of work per data item, which means neither gets ahead of the other.
 
 The hanging get pattern works well when the set of data items being transferred
 is bounded in size and the server-side state is simple, but does not work well
 in situations where the client and server need to synchronize their work.
 
 For example, a server might implement the hanging get pattern for some mutable
-state foo using a "dirty" bit for each client. It would initialize this bit to
-true, clear it on each `WatchFoo` response, and set it on each change of foo.
+state `foo` using a "dirty" bit for each client. It would initialize this bit to
+true, clear it on each `WatchFoo` response, and set it on each change of `foo`.
 The server would only respond to a `WatchFoo` message when the dirty bit is set.
 
 Note: When consuming an API that provides hanging gets, be mindful of dropping
 pending requests, since the server implementation of the protocol is often
 stateful and can't be notified of dropped requests. This is especially easy to
-get wrong in Rust, see [Rust hanging get patterns][rust-hanging-get] for
+get wrong in Rust; see [Rust hanging get patterns][rust-hanging-get] for
 examples.
 
 #### Throttle push using acknowledgements
 
-One approach to providing flow control in protocols that use the push, is the
+One approach to providing flow control in protocols that use push is the
 _acknowledgment pattern_, in which the caller provides an acknowledgement
 response that the caller uses for flow control.  For example, consider this
 generic listener protocol:
@@ -921,14 +916,14 @@ times (rather than just once):
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="events-2" %}
 ```
 
-#### Throttle events using acknowledgements
+#### Throttle events using acknowledgements {#throttle-events-using-acknowledgements}
 
-If there is no a priori bound on the number of events, consider having the
+If there is no _a priori_ bound on the number of events, consider having the
 client acknowledge the events by sending a message.  This pattern is a more
-awkward version of the throttle push using acknowledgements pattern in which the
-roles of client and server are switched.  As in the other pattern, the server
-should throttle event production to match the rate at which the client consumes
-the events:
+awkward version of the [acknowledgement
+pattern](#throttle-events-using-acknowledgements) in which the roles of client
+and server are switched.  As in the other pattern, the server should throttle
+event production to match the rate at which the client consumes the events:
 
 ```fidl
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="ack-1" %}
@@ -972,7 +967,7 @@ submitting these messages, the client explicitly synchronizes with the server by
 calling a method such as `Commit` or `Flush` that has a reply.  The reply might
 be an empty message or might contain information about whether the submitted
 sequence succeeded.  In more sophisticated protocols, the one-way messages are
-represented as a union of command objects rather than individual method calls,
+represented as a union of command objects rather than individual method calls;
 see the _command union pattern_ below.
 
 Protocols that use feed-forward dataflow work well with optimistic error
@@ -993,7 +988,7 @@ Example:
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="feed-forward" %}
 ```
 
-### Privacy by Design
+### Privacy by design
 
 The client and server in a protocol frequently have access to different sets of
 sensitive data. Privacy or security problems can be caused by unintentionally
@@ -1107,7 +1102,8 @@ The client-assigned identifier pattern has some disadvantages.  For example,
 clients are more difficult to author because clients need to manage their own
 identifiers.  Developers commonly want to create a client library that provides
 an object-oriented facade for the service to hide the complexity of managing
-identifiers, which itself is an anti-pattern (see _client libraries_ below).
+identifiers, which itself is an antipattern (see [client
+libraries](#client-libraries) below).
 
 A strong signal that you should create a separate protocol instance to
 represent an object rather than using a client-assigned identifier is when you
@@ -1152,7 +1148,7 @@ reasonable amounts of data, but there are use cases for transmitting large (or
 even unbounded) amounts of data.  One way to transmit a large or unbounded
 amount of information is to use a _pagination pattern_.
 
-#### Paginating Writes
+#### Paginating writes
 
 A simple approach to paginating writes to the server is to let the client send
 data in multiple messages and then have a "finalize" method that causes the
@@ -1178,7 +1174,7 @@ Notice that `BarTransaction` does not need an `Abort` method.  The better
 approach to aborting the transaction is for the client to close the
 `BarTransaction` protocol.
 
-#### Paginating Reads
+#### Paginating reads
 
 A simple approach to paginating reads from the server is to let the server send
 multiple responses to a single request using events:
@@ -1217,7 +1213,7 @@ and the client returns the token to the server with each partial read:
 
 This pattern is especially attractive when the server can escrow all of its
 pagination state to the client and therefore no longer need to maintain
-paginations state at all.  The server should document whether the client can
+pagination state at all.  The server should document whether the client can
 persist the token and reuse it across instances of the protocol.  *Security
 note:* In either case, the server must validate the token supplied by the client
 to ensure that the client's access is limited to its own paginated results and
@@ -1267,10 +1263,10 @@ The _eventpair cancellation pattern_ solves this problem by having the client
 include one of the entangled events from a `zx::eventpair` as a parameter to the
 method.  The server then listens for `ZX_EVENTPAIR_PEER_CLOSED` and cancels the
 operation when that signal is asserted.  Using a `zx::eventpair` is better than
-using a `zx::event` or some other signal because the `zx::eventpair` approach
-implicitly handles the case where the client crashes or otherwise tears down
-because the `ZX_EVENTPAIR_PEER_CLOSED` is generated automatically by the kernel
-when the entangled event retained by the client is destroyed.
+using a `zx::event` or some other signal, because the `zx::eventpair` approach
+implicitly handles the case where the client crashes or otherwise tears down.
+The kernel generates `ZX_EVENTPAIR_PEER_CLOSED` when the entangled event
+retained by the client is destroyed.
 
 ### Empty protocols
 
