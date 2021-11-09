@@ -118,6 +118,7 @@ pub fn dispatch_syscall(
         mmap[6],
         mount[5],
         mprotect[3],
+        mremap[5],
         msync[3],
         munmap[2],
         nanosleep[2],

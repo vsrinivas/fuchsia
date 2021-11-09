@@ -181,6 +181,19 @@ pub fn sys_mprotect(
     Ok(SUCCESS)
 }
 
+pub fn sys_mremap(
+    current_task: &CurrentTask,
+    addr: UserAddress,
+    old_length: usize,
+    new_length: usize,
+    flags: u32,
+    new_addr: UserAddress,
+) -> Result<SyscallResult, Errno> {
+    let flags = MremapFlags::from_bits(flags).ok_or_else(|| errno!(EINVAL))?;
+    let addr = current_task.mm.remap(addr, old_length, new_length, flags, new_addr)?;
+    Ok(addr.into())
+}
+
 pub fn sys_munmap(
     current_task: &CurrentTask,
     addr: UserAddress,
@@ -525,5 +538,210 @@ mod tests {
             sys_msync(&current_task, addr + *PAGE_SIZE, *PAGE_SIZE as usize * 2, 0),
             Ok(SUCCESS)
         );
+    }
+
+    /// Shrinks an entire range.
+    #[test]
+    fn test_mremap_shrink_whole_range_from_end() {
+        let (_kernel, current_task) = create_kernel_and_task();
+
+        // Map 2 pages.
+        let addr = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE * 2);
+        fill_page(&current_task, addr, 'a');
+        fill_page(&current_task, addr + *PAGE_SIZE, 'b');
+
+        // Shrink the mapping from 2 to 1 pages.
+        assert_eq!(
+            remap_memory(
+                &current_task,
+                addr,
+                *PAGE_SIZE * 2,
+                *PAGE_SIZE,
+                0,
+                UserAddress::default()
+            ),
+            Ok(addr)
+        );
+
+        check_page_eq(&current_task, addr, 'a');
+        check_unmapped(&current_task, addr + *PAGE_SIZE);
+    }
+
+    /// Shrinks part of a range, introducing a hole in the middle.
+    #[test]
+    fn test_mremap_shrink_partial_range() {
+        let (_kernel, current_task) = create_kernel_and_task();
+
+        // Map 3 pages.
+        let addr = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE * 3);
+        fill_page(&current_task, addr, 'a');
+        fill_page(&current_task, addr + *PAGE_SIZE, 'b');
+        fill_page(&current_task, addr + *PAGE_SIZE * 2, 'c');
+
+        // Shrink the first 2 pages down to 1, creating a hole.
+        assert_eq!(
+            remap_memory(
+                &current_task,
+                addr,
+                *PAGE_SIZE * 2,
+                *PAGE_SIZE,
+                0,
+                UserAddress::default()
+            ),
+            Ok(addr)
+        );
+
+        check_page_eq(&current_task, addr, 'a');
+        check_unmapped(&current_task, addr + *PAGE_SIZE);
+        check_page_eq(&current_task, addr + *PAGE_SIZE * 2, 'c');
+    }
+
+    /// Shrinking doesn't care if the range specified spans multiple mappings.
+    #[test]
+    fn test_mremap_shrink_across_ranges() {
+        let (_kernel, current_task) = create_kernel_and_task();
+
+        // Map 3 pages, unmap the middle, then map the middle again. This will leave us with
+        // 3 contiguous mappings.
+        let addr = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE * 3);
+        assert_eq!(sys_munmap(&current_task, addr + *PAGE_SIZE, *PAGE_SIZE as usize), Ok(SUCCESS));
+        assert_eq!(map_memory(&current_task, addr + *PAGE_SIZE, *PAGE_SIZE), addr + *PAGE_SIZE);
+
+        fill_page(&current_task, addr, 'a');
+        fill_page(&current_task, addr + *PAGE_SIZE, 'b');
+        fill_page(&current_task, addr + *PAGE_SIZE * 2, 'c');
+
+        // Remap over all three mappings, shrinking to 1 page.
+        assert_eq!(
+            remap_memory(
+                &current_task,
+                addr,
+                *PAGE_SIZE * 3,
+                *PAGE_SIZE,
+                0,
+                UserAddress::default()
+            ),
+            Ok(addr)
+        );
+
+        check_page_eq(&current_task, addr, 'a');
+        check_unmapped(&current_task, addr + *PAGE_SIZE);
+        check_unmapped(&current_task, addr + *PAGE_SIZE * 2);
+    }
+
+    /// Grows a mapping in-place.
+    #[test]
+    fn test_mremap_grow_in_place() {
+        let (_kernel, current_task) = create_kernel_and_task();
+
+        // Map 3 pages, unmap the middle, leaving a hole.
+        let addr = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE * 3);
+        fill_page(&current_task, addr, 'a');
+        fill_page(&current_task, addr + *PAGE_SIZE, 'b');
+        fill_page(&current_task, addr + *PAGE_SIZE * 2, 'c');
+        assert_eq!(sys_munmap(&current_task, addr + *PAGE_SIZE, *PAGE_SIZE as usize), Ok(SUCCESS));
+
+        // Grow the first page in-place into the middle.
+        assert_eq!(
+            remap_memory(
+                &current_task,
+                addr,
+                *PAGE_SIZE,
+                *PAGE_SIZE * 2,
+                0,
+                UserAddress::default()
+            ),
+            Ok(addr)
+        );
+
+        check_page_eq(&current_task, addr, 'a');
+
+        // The middle page should be new, and not just pointing to the original middle page filled
+        // with 'b'.
+        check_page_ne(&current_task, addr + *PAGE_SIZE, 'b');
+
+        check_page_eq(&current_task, addr + *PAGE_SIZE * 2, 'c');
+    }
+
+    /// Tries to grow a set of pages that cannot fit, and forces a move.
+    #[test]
+    fn test_mremap_grow_maymove() {
+        let (_kernel, current_task) = create_kernel_and_task();
+
+        // Map 3 pages.
+        let addr = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE * 3);
+        fill_page(&current_task, addr, 'a');
+        fill_page(&current_task, addr + *PAGE_SIZE, 'b');
+        fill_page(&current_task, addr + *PAGE_SIZE * 2, 'c');
+
+        // Grow the first two pages by 1, forcing a move.
+        let new_addr = remap_memory(
+            &current_task,
+            addr,
+            *PAGE_SIZE * 2,
+            *PAGE_SIZE * 3,
+            MREMAP_MAYMOVE,
+            UserAddress::default(),
+        )
+        .expect("failed to mremap");
+
+        assert_ne!(new_addr, addr, "mremap did not move the mapping");
+
+        // The first two pages should have been moved.
+        check_unmapped(&current_task, addr);
+        check_unmapped(&current_task, addr + *PAGE_SIZE);
+
+        // The third page should still be present.
+        check_page_eq(&current_task, addr + *PAGE_SIZE * 2, 'c');
+
+        // The moved pages should have the same contents.
+        check_page_eq(&current_task, new_addr, 'a');
+        check_page_eq(&current_task, new_addr + *PAGE_SIZE, 'b');
+
+        // The newly grown page should not be the same as the original third page.
+        check_page_ne(&current_task, new_addr + *PAGE_SIZE * 2, 'c');
+    }
+
+    /// Shrinks a set of pages and move them to a fixed location.
+    #[test]
+    fn test_mremap_shrink_fixed() {
+        let (_kernel, current_task) = create_kernel_and_task();
+
+        // Map 2 pages which will act as the destination.
+        let dst_addr = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE * 2);
+        fill_page(&current_task, dst_addr, 'y');
+        fill_page(&current_task, dst_addr + *PAGE_SIZE, 'z');
+
+        // Map 3 pages.
+        let addr = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE * 3);
+        fill_page(&current_task, addr, 'a');
+        fill_page(&current_task, addr + *PAGE_SIZE, 'b');
+        fill_page(&current_task, addr + *PAGE_SIZE * 2, 'c');
+
+        // Shrink the first two pages and move them to overwrite the mappings at `dst_addr`.
+        let new_addr = remap_memory(
+            &current_task,
+            addr,
+            *PAGE_SIZE * 2,
+            *PAGE_SIZE,
+            MREMAP_MAYMOVE | MREMAP_FIXED,
+            dst_addr,
+        )
+        .expect("failed to mremap");
+
+        assert_eq!(new_addr, dst_addr, "mremap did not move the mapping");
+
+        // The first two pages should have been moved.
+        check_unmapped(&current_task, addr);
+        check_unmapped(&current_task, addr + *PAGE_SIZE);
+
+        // The third page should still be present.
+        check_page_eq(&current_task, addr + *PAGE_SIZE * 2, 'c');
+
+        // The first moved page should have the same contents.
+        check_page_eq(&current_task, new_addr, 'a');
+
+        // The second page should be part of the original dst mapping.
+        check_page_eq(&current_task, new_addr + *PAGE_SIZE, 'z');
     }
 }

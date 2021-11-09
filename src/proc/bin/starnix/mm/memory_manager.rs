@@ -19,9 +19,9 @@ use crate::logging::*;
 use crate::mm::vmo::round_up_to_system_page_size;
 use crate::mm::FutexTable;
 use crate::task::{EventHandler, Task, Waiter};
-use crate::types::*;
+use crate::types::{range_ext::RangeExt, *};
 use crate::vmex_resource::VMEX_RESOURCE;
-use crate::{errno, error, fd_impl_nonblocking, fd_impl_seekable, mode};
+use crate::{errno, error, fd_impl_nonblocking, fd_impl_seekable, mode, not_implemented};
 
 lazy_static! {
     pub static ref PAGE_SIZE: u64 = zx::system_get_page_size() as u64;
@@ -31,6 +31,14 @@ bitflags! {
     pub struct MappingOptions: u32 {
       const SHARED = 1;
       const ANONYMOUS = 2;
+    }
+}
+
+bitflags! {
+    pub struct MremapFlags: u32 {
+        const MAYMOVE = MREMAP_MAYMOVE;
+        const FIXED = MREMAP_FIXED;
+        const DONTUNMAP = MREMAP_DONTUNMAP;
     }
 }
 
@@ -127,7 +135,6 @@ pub enum DumpPolicy {
     /// Corresponds to SUID_DUMP_USER.
     USER,
 }
-
 struct MemoryManagerState {
     /// The VMAR in which userspace mappings occur.
     ///
@@ -170,6 +177,263 @@ impl MemoryManagerState {
         Ok(addr)
     }
 
+    fn remap(
+        &mut self,
+        old_addr: UserAddress,
+        old_length: usize,
+        new_length: usize,
+        flags: MremapFlags,
+        new_address: UserAddress,
+    ) -> Result<UserAddress, Errno> {
+        // MREMAP_FIXED moves a mapping, which requires MREMAP_MAYMOVE.
+        if flags.contains(MremapFlags::FIXED) && !flags.contains(MremapFlags::MAYMOVE) {
+            return error!(EINVAL);
+        }
+
+        // MREMAP_DONTUNMAP is always a move to a specific address,
+        // which requires MREMAP_FIXED. There is no resizing allowed either.
+        if flags.contains(MremapFlags::DONTUNMAP)
+            && (!flags.contains(MremapFlags::FIXED) || old_length != new_length)
+        {
+            return error!(EINVAL);
+        }
+
+        // In-place copies are invalid.
+        if !flags.contains(MremapFlags::MAYMOVE) && old_length == 0 {
+            return error!(ENOMEM);
+        }
+
+        // TODO(fxbug.dev/88262): Implement support for MREMAP_DONTUNMAP.
+        if flags.contains(MremapFlags::DONTUNMAP) {
+            not_implemented!("mremap flag MREMAP_DONTUNMAP not implemented");
+            return error!(EOPNOTSUPP);
+        }
+
+        if new_length == 0 {
+            return error!(EINVAL);
+        }
+
+        // Make sure old_addr is page-aligned.
+        if !old_addr.is_aligned(*PAGE_SIZE) {
+            return error!(EINVAL);
+        }
+
+        let old_length = round_up_to_system_page_size(old_length)?;
+        let new_length = round_up_to_system_page_size(new_length)?;
+
+        if !flags.contains(MremapFlags::FIXED) && old_length != 0 {
+            // We are not requested to remap to a specific address, so first we see if we can remap
+            // in-place. In-place copies (old_length == 0) are not allowed.
+            if let Some(new_address) = self.try_remap_in_place(old_addr, old_length, new_length)? {
+                return Ok(new_address);
+            }
+        }
+
+        // There is no space to grow in place, or there is an explicit request to move.
+        if flags.contains(MremapFlags::MAYMOVE) {
+            let dst_address =
+                if flags.contains(MremapFlags::FIXED) { Some(new_address) } else { None };
+            self.remap_move(old_addr, old_length, dst_address, new_length)
+        } else {
+            error!(ENOMEM)
+        }
+    }
+
+    /// Attempts to grow or shrink the mapping in-place. Returns `Ok(Some(addr))` if the remap was
+    /// successful. Returns `Ok(None)` if there was no space to grow.
+    fn try_remap_in_place(
+        &mut self,
+        old_addr: UserAddress,
+        old_length: usize,
+        new_length: usize,
+    ) -> Result<Option<UserAddress>, Errno> {
+        let old_range = old_addr..old_addr.checked_add(old_length).ok_or_else(|| errno!(EINVAL))?;
+        let new_range_in_place =
+            old_addr..old_addr.checked_add(new_length).ok_or_else(|| errno!(EINVAL))?;
+
+        if new_length <= old_length {
+            // Shrink the mapping in-place, which should always succeed.
+            // This is done by unmapping the extraneous region.
+            if new_length != old_length {
+                self.unmap(new_range_in_place.end, old_length - new_length)?;
+            }
+            return Ok(Some(old_addr));
+        }
+
+        if self.mappings.intersection(old_range.end..new_range_in_place.end).next().is_some() {
+            // There is some mapping in the growth range prevening an in-place growth.
+            return Ok(None);
+        }
+
+        // There is space to grow in-place. The old range must be one contiguous mapping.
+        let (original_range, mapping) = self.mappings.get(&old_addr).ok_or(errno!(EINVAL))?;
+        if old_range.end > original_range.end {
+            return error!(EFAULT);
+        }
+        let original_range = original_range.clone();
+        let original_mapping = mapping.clone();
+
+        // Compute the new length of the entire mapping once it has grown.
+        let final_length = (original_range.end - original_range.start) + (new_length - old_length);
+
+        if original_mapping.options.contains(MappingOptions::ANONYMOUS)
+            && !original_mapping.options.contains(MappingOptions::SHARED)
+        {
+            // As a special case for private, anonymous mappings, allocate more space in the
+            // VMO. FD-backed mappings have their backing memory handled by the file system.
+            let new_vmo_size = original_mapping
+                .vmo_offset
+                .checked_add(final_length as u64)
+                .ok_or(errno!(EINVAL))?;
+            original_mapping
+                .vmo
+                .set_size(new_vmo_size)
+                .map_err(MemoryManager::get_errno_for_map_err)?;
+            // Zero-out the pages that were added when growing. This is not necessary, but ensures
+            // correctness of our COW implementation. Ignore any errors.
+            let original_length = original_range.end - original_range.start;
+            let _ = original_mapping.vmo.op_range(
+                zx::VmoOp::ZERO,
+                original_mapping.vmo_offset + original_length as u64,
+                (final_length - original_length) as u64,
+            );
+        }
+
+        // Since the mapping is growing in-place, it must be mapped at the original address.
+        let vmar_flags = original_mapping.permissions
+            | unsafe {
+                zx::VmarFlags::from_bits_unchecked(zx::VmarFlagsExtended::SPECIFIC_OVERWRITE.bits())
+            };
+
+        // Re-map the original range, which may include pages before the requested range.
+        Ok(Some(self.map(
+            (original_range.start - self.user_vmar_info.base).ptr(),
+            original_mapping.vmo,
+            original_mapping.vmo_offset,
+            final_length,
+            vmar_flags,
+            original_mapping.options,
+            original_mapping.filename,
+        )?))
+    }
+
+    /// Grows or shrinks the mapping while moving it to a new destination. If `dst_addr` is `None`,
+    /// the kernel decides where to move the mapping.
+    fn remap_move(
+        &mut self,
+        src_addr: UserAddress,
+        src_length: usize,
+        dst_addr: Option<UserAddress>,
+        dst_length: usize,
+    ) -> Result<UserAddress, Errno> {
+        let src_range = src_addr..src_addr.checked_add(src_length).ok_or_else(|| errno!(EINVAL))?;
+        let (original_range, src_mapping) = self.mappings.get(&src_addr).ok_or(errno!(EINVAL))?;
+        let original_range = original_range.clone();
+        let src_mapping = src_mapping.clone();
+
+        if src_length == 0 && !src_mapping.options.contains(MappingOptions::SHARED) {
+            // src_length == 0 means that the mapping is to be copied. This behavior is only valid
+            // with MAP_SHARED mappings.
+            return error!(EINVAL);
+        }
+
+        let offset_into_original_range = (src_addr - original_range.start) as u64;
+        let dst_vmo_offset = src_mapping.vmo_offset + offset_into_original_range;
+
+        if let Some(dst_addr) = &dst_addr {
+            // The mapping is being moved to a specific address.
+            let dst_range =
+                *dst_addr..(dst_addr.checked_add(dst_length).ok_or_else(|| errno!(EINVAL))?);
+            if src_range.intersects(&dst_range) {
+                return error!(EINVAL);
+            }
+
+            // If the destination range is smaller than the source range, we must first shrink
+            // the source range in place. This must be done now and visible to processes, even if
+            // a later failure causes the remap operation to fail.
+            if src_length != 0 && src_length > dst_length {
+                self.unmap(src_addr + dst_length, src_length - dst_length)?;
+            }
+
+            // The destination range must be unmapped. This must be done now and visible to
+            // processes, even if a later failure causes the remap operation to fail.
+            self.unmap(*dst_addr, dst_length)?;
+        }
+
+        if src_range.end > original_range.end {
+            // The source range is not one contiguous mapping. This check must be done only after
+            // the source range is shrunk and the destination unmapped.
+            return error!(EFAULT);
+        }
+
+        // Get the destination address, which may be 0 if we are letting the kernel choose for us.
+        let (vmar_offset, vmar_flags) = if let Some(dst_addr) = &dst_addr {
+            (
+                (*dst_addr - self.user_vmar_info.base).ptr(),
+                src_mapping.permissions | zx::VmarFlags::SPECIFIC,
+            )
+        } else {
+            (0, src_mapping.permissions)
+        };
+
+        let new_address = if src_mapping.options.contains(MappingOptions::ANONYMOUS)
+            && !src_mapping.options.contains(MappingOptions::SHARED)
+        {
+            // This mapping is a private, anonymous mapping. Create a COW child VMO that covers
+            // the pages being moved and map that into the destination.
+            let child_vmo = src_mapping
+                .vmo
+                .create_child(
+                    zx::VmoChildOptions::SNAPSHOT | zx::VmoChildOptions::RESIZABLE,
+                    dst_vmo_offset,
+                    dst_length as u64,
+                )
+                .map_err(MemoryManager::get_errno_for_map_err)?;
+            if dst_length > src_length {
+                // The mapping has grown. Zero-out the pages that were "added" when growing the
+                // mapping. These pages might be pointing inside the parent VMO, in which case
+                // we want to zero them out to make them look like new pages. Since this is a COW
+                // child VMO, this will simply allocate new pages.
+                // This is not necessary, but ensures correctness of our COW implementation.
+                // Ignore any errors.
+                let _ = child_vmo.op_range(
+                    zx::VmoOp::ZERO,
+                    src_length as u64,
+                    (dst_length - src_length) as u64,
+                );
+            }
+            self.map(
+                vmar_offset,
+                Arc::new(child_vmo),
+                0,
+                dst_length,
+                vmar_flags,
+                src_mapping.options,
+                src_mapping.filename,
+            )?
+        } else {
+            // This mapping is backed by an FD, just map the range of the VMO covering the moved
+            // pages. If the VMO already had COW semantics, this preserves them.
+            self.map(
+                vmar_offset,
+                src_mapping.vmo,
+                dst_vmo_offset,
+                dst_length,
+                vmar_flags,
+                src_mapping.options,
+                src_mapping.filename,
+            )?
+        };
+
+        if src_length != 0 {
+            // Only unmap the source range if this is not a copy. It was checked earlier that
+            // this mapping is MAP_SHARED.
+            self.unmap(src_addr, src_length)?;
+        }
+
+        Ok(new_address)
+    }
+
     // The range to unmap can span multiple mappings, and can split mappings if
     // the range start or end falls in the middle of a mapping.
     //
@@ -195,20 +459,24 @@ impl MemoryManagerState {
         let end_addr = addr.checked_add(length).ok_or(errno!(EINVAL))?;
         let mut unmap_length = length;
 
-        // Find the ANONYMOUS mapping that will get its tail cut off by this unmap call.
+        // Find the private, anonymous mapping that will get its tail cut off by this unmap call.
         let truncated_head = match self.mappings.get(&addr) {
             Some((range, mapping))
-                if range.start != addr && mapping.options.contains(MappingOptions::ANONYMOUS) =>
+                if range.start != addr
+                    && mapping.options.contains(MappingOptions::ANONYMOUS)
+                    && !mapping.options.contains(MappingOptions::SHARED) =>
             {
                 Some((range.start..addr, mapping.clone()))
             }
             _ => None,
         };
 
-        // Find the mapping that will get its head cut off by this unmap call.
+        // Find the private, anonymous mapping that will get its head cut off by this unmap call.
         let truncated_tail = match self.mappings.get(&end_addr) {
             Some((range, mapping))
-                if range.end != end_addr && mapping.options.contains(MappingOptions::ANONYMOUS) =>
+                if range.end != end_addr
+                    && mapping.options.contains(MappingOptions::ANONYMOUS)
+                    && !mapping.options.contains(MappingOptions::SHARED) =>
             {
                 // We are going to make a child VMO of the remaining mapping and remap
                 // it, so we increase the range of the unmap call to include the tail.
@@ -533,6 +801,18 @@ impl MemoryManager {
         let vmar_offset = if addr.is_null() { 0 } else { addr - self.base_addr };
         let mut state = self.state.write();
         state.map(vmar_offset, vmo, vmo_offset, length, flags, options, filename)
+    }
+
+    pub fn remap(
+        &self,
+        addr: UserAddress,
+        old_length: usize,
+        new_length: usize,
+        flags: MremapFlags,
+        new_addr: UserAddress,
+    ) -> Result<UserAddress, Errno> {
+        let mut state = self.state.write();
+        state.remap(addr, old_length, new_length, flags, new_addr)
     }
 
     pub fn unmap(&self, addr: UserAddress, length: usize) -> Result<(), Errno> {

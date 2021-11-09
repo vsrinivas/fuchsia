@@ -61,7 +61,7 @@ gvisor_tests = [
   "mknod_test",
   "mmap_test",
 
-  # "mremap_test",
+  "mremap_test",
   "munmap_test",
   "open_create_test",
   "open_test",
