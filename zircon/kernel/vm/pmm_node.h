@@ -35,6 +35,7 @@ class PmmNode {
   zx_status_t AllocContiguous(size_t count, uint alloc_flags, uint8_t alignment_log2, paddr_t* pa,
                               list_node* list);
   void FreePage(vm_page* page);
+  // The list can be a combination of loaned and non-loaned pages.
   void FreeList(list_node* list);
 
   // delayed allocator routines
@@ -42,6 +43,15 @@ class PmmNode {
   bool ClearRequest(page_request_t* req);
   void SwapRequest(page_request_t* old, page_request_t* new_req);
 
+  // Contiguous page loaning routines
+  void BeginLoan(list_node* page_list);
+  void CancelLoan(paddr_t address, size_t count);
+  void EndLoan(paddr_t address, size_t count, list_node* page_list);
+  void DeleteLender(paddr_t address, size_t count);
+  bool IsLoaned(vm_page_t* page);
+
+  // For purposes of signalling memory pressure level, only free_list_ pages are counted, not
+  // free_loaned_list_ pages.
   zx_status_t InitReclamation(const uint64_t* watermarks, uint8_t watermark_count,
                               uint64_t debounce, void* context,
                               mem_avail_state_updated_callback_t callback);
@@ -50,6 +60,12 @@ class PmmNode {
   void InitRequestThread();
 
   uint64_t CountFreePages() const;
+  uint64_t CountLoanedFreePages() const;
+  uint64_t CountLoanCancelledPages() const;
+  // Not actually used and cancelled is still not free, since the page can't be allocated in that
+  // state.
+  uint64_t CountLoanedNotFreePages() const;
+  uint64_t CountLoanedPages() const;
   uint64_t CountTotalBytes() const;
 
   // printf free and overall state of the internal arenas
@@ -83,22 +99,24 @@ class PmmNode {
 
   PageQueues* GetPageQueues() { return &page_queues_; }
 
-  // Fill all free pages with a pattern and arm the checker.  See |PmmChecker|.
+  // Fill all free pages (both non-loaned and loaned) with a pattern and arm the checker.  See
+  // |PmmChecker|.
   //
   // This is a no-op if the checker is not enabled.  See |EnableFreePageFilling|
   void FillFreePagesAndArm();
 
-  // Synchronously walk the PMM's free list and validate each page.  This is an incredibly expensive
-  // operation and should only be used for debugging purposes.
+  // Synchronously walk the PMM's free list (and free loaned list) and validate each page.  This is
+  // an incredibly expensive operation and should only be used for debugging purposes.
   void CheckAllFreePages();
 
 #if __has_feature(address_sanitizer)
-  // Synchronously walk the PMM's free list and poison each page.
+  // Synchronously walk the PMM's free list (and free loaned list) and poison each page.
   void PoisonAllFreePages();
 #endif
 
   // Enable the free fill checker with the specified fill size and action, and begin filling freed
-  // pages going forward.  See |PmmChecker| for definition of fill size.
+  // pages (including freed loaned pages) going forward.  See |PmmChecker| for definition of fill
+  // size.
   //
   // Note, pages freed piror to calling this method will remain unfilled.  To fill them, call
   // |FillFreePagesAndArm|.
@@ -143,6 +161,30 @@ class PmmNode {
     }
   }
 
+  void IncrementFreeLoanedCountLocked(uint64_t amount) TA_REQ(lock_) {
+    free_loaned_count_.fetch_add(amount, ktl::memory_order_relaxed);
+  }
+  void DecrementFreeLoanedCountLocked(uint64_t amount) TA_REQ(lock_) {
+    DEBUG_ASSERT(free_loaned_count_.load(ktl::memory_order_relaxed) >= amount);
+    free_loaned_count_.fetch_sub(amount, ktl::memory_order_relaxed);
+  }
+
+  void IncrementLoanedCountLocked(uint64_t amount) TA_REQ(lock_) {
+    loaned_count_.fetch_add(amount, ktl::memory_order_relaxed);
+  }
+  void DecrementLoanedCountLocked(uint64_t amount) TA_REQ(lock_) {
+    DEBUG_ASSERT(loaned_count_.load(ktl::memory_order_relaxed) >= amount);
+    loaned_count_.fetch_sub(amount, ktl::memory_order_relaxed);
+  }
+
+  void IncrementLoanCancelledCountLocked(uint64_t amount) TA_REQ(lock_) {
+    loan_cancelled_count_.fetch_add(amount, ktl::memory_order_relaxed);
+  }
+  void DecrementLoanCancelledCountLocked(uint64_t amount) TA_REQ(lock_) {
+    DEBUG_ASSERT(loan_cancelled_count_.load(ktl::memory_order_relaxed) >= amount);
+    loan_cancelled_count_.fetch_sub(amount, ktl::memory_order_relaxed);
+  }
+
   bool InOomStateLocked() TA_REQ(lock_);
 
   void AllocPageHelperLocked(vm_page_t* page) TA_REQ(lock_);
@@ -150,6 +192,9 @@ class PmmNode {
   void AsanPoisonPage(vm_page_t*, uint8_t) TA_REQ(lock_);
 
   void AsanUnpoisonPage(vm_page_t*) TA_REQ(lock_);
+
+  template <typename F>
+  void ForPagesInPhysRangeLocked(paddr_t start, size_t count, F func) TA_REQ(lock_);
 
   fbl::Canary<fbl::magic("PNOD")> canary_;
 
@@ -160,10 +205,16 @@ class PmmNode {
   // as logic in the system relies on the free_count_ not changing whilst the lock is held, but also
   // be an atomic so it can be correctly read without the lock.
   ktl::atomic<uint64_t> free_count_ TA_GUARDED(lock_) = 0;
+  ktl::atomic<uint64_t> free_loaned_count_ TA_GUARDED(lock_) = 0;
+  ktl::atomic<uint64_t> loaned_count_ TA_GUARDED(lock_) = 0;
+  ktl::atomic<uint64_t> loan_cancelled_count_ TA_GUARDED(lock_) = 0;
 
   fbl::SizedDoublyLinkedList<PmmArena*> arena_list_ TA_GUARDED(lock_);
 
+  // Free pages where !loaned.
   list_node free_list_ TA_GUARDED(lock_) = LIST_INITIAL_VALUE(free_list_);
+  // Free pages where loaned && !loan_cancelled.
+  list_node free_loaned_list_ TA_GUARDED(lock_) = LIST_INITIAL_VALUE(free_loaned_list_);
 
   // List of pending requests.
   list_node_t request_list_ TA_GUARDED(lock_) = LIST_INITIAL_VALUE(request_list_);

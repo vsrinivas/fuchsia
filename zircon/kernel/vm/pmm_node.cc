@@ -26,6 +26,7 @@
 #include <vm/pmm_checker.h>
 #include <vm/stack_owned_loaned_pages_interval.h>
 
+#include "vm/pmm.h"
 #include "vm_priv.h"
 
 #define LOCAL_TRACE VM_GLOBAL_TRACE(0)
@@ -162,12 +163,17 @@ zx_status_t PmmNode::GetArenaInfo(size_t count, uint64_t i, pmm_arena_info_t* bu
 void PmmNode::AddFreePages(list_node* list) TA_NO_THREAD_SAFETY_ANALYSIS {
   LTRACEF("list %p\n", list);
 
+  uint64_t free_count = 0;
   vm_page *temp, *page;
   list_for_every_entry_safe (list, page, temp, vm_page, queue_node) {
     list_delete(&page->queue_node);
+    DEBUG_ASSERT(!page->loaned);
+    DEBUG_ASSERT(!page->loan_cancelled);
+    DEBUG_ASSERT(page->is_free());
     list_add_tail(&free_list_, &page->queue_node);
-    free_count_++;
+    ++free_count;
   }
+  free_count_.fetch_add(free_count);
   ASSERT(free_count_);
   free_pages_evt_.Signal();
 
@@ -183,6 +189,9 @@ void PmmNode::FillFreePagesAndArm() {
 
   vm_page* page;
   list_for_every_entry (&free_list_, page, vm_page, queue_node) { checker_.FillPattern(page); }
+  list_for_every_entry (&free_loaned_list_, page, vm_page, queue_node) {
+    checker_.FillPattern(page);
+  }
 
   // Now that every page has been filled, we can arm the checker.
   checker_.Arm();
@@ -197,8 +206,20 @@ void PmmNode::CheckAllFreePages() {
     return;
   }
 
+  uint64_t free_page_count = 0;
+  uint64_t free_loaned_page_count = 0;
   vm_page* page;
-  list_for_every_entry (&free_list_, page, vm_page, queue_node) { checker_.AssertPattern(page); }
+  list_for_every_entry (&free_list_, page, vm_page, queue_node) {
+    checker_.AssertPattern(page);
+    ++free_page_count;
+  }
+  list_for_every_entry (&free_loaned_list_, page, vm_page, queue_node) {
+    checker_.AssertPattern(page);
+    ++free_loaned_page_count;
+  }
+
+  ASSERT(free_page_count == free_count_.load(ktl::memory_order_relaxed));
+  ASSERT(free_loaned_page_count == free_loaned_count_.load(ktl::memory_order_relaxed));
 }
 
 #if __has_feature(address_sanitizer)
@@ -207,6 +228,9 @@ void PmmNode::PoisonAllFreePages() {
 
   vm_page* page;
   list_for_every_entry (&free_list_, page, vm_page, queue_node) {
+    AsanPoisonPage(page, kAsanPmmFreeMagic);
+  };
+  list_for_every_entry (&free_loaned_list_, page, vm_page, queue_node) {
     AsanPoisonPage(page, kAsanPmmFreeMagic);
   };
 }
@@ -260,14 +284,34 @@ zx_status_t PmmNode::AllocPage(uint alloc_flags, vm_page_t** page_out, paddr_t* 
     }
   }
 
-  vm_page* page = list_remove_head_type(&free_list_, vm_page, queue_node);
+  // If the caller sets PMM_ALLOC_FLAG_MUST_BORROW, the caller must also set
+  // PMM_ALLOC_FLAG_CAN_BORROW.
+  DEBUG_ASSERT(
+      !((alloc_flags & PMM_ALLOC_FLAG_MUST_BORROW) && !(alloc_flags & PMM_ALLOC_FLAG_CAN_BORROW)));
+  bool can_borrow = ppb_config_.enabled() && !!(alloc_flags & PMM_ALLOC_FLAG_CAN_BORROW);
+  bool must_borrow = can_borrow && !!(alloc_flags & PMM_ALLOC_FLAG_MUST_BORROW);
+
+  list_node* which_list;
+
+  if (can_borrow && (!list_is_empty(&free_loaned_list_) || must_borrow)) {
+    which_list = &free_loaned_list_;
+  } else {
+    which_list = &free_list_;
+  }
+
+  vm_page* page = list_remove_head_type(which_list, vm_page, queue_node);
   if (!page) {
     return fail_with(ZX_ERR_NO_MEMORY);
   }
 
+  DEBUG_ASSERT(can_borrow || !page->is_loaned());
   AllocPageHelperLocked(page);
 
-  DecrementFreeCountLocked(1);
+  if (which_list == &free_list_) {
+    DecrementFreeCountLocked(1);
+  } else {
+    DecrementFreeLoanedCountLocked(1);
+  }
 
   if (pa_out) {
     *pa_out = page->paddr();
@@ -298,37 +342,83 @@ zx_status_t PmmNode::AllocPages(size_t count, uint alloc_flags, list_node* list)
     return status;
   }
 
+  DEBUG_ASSERT(
+      !((alloc_flags & PMM_ALLOC_FLAG_MUST_BORROW) && !(alloc_flags & PMM_ALLOC_FLAG_CAN_BORROW)));
+  bool can_borrow = ppb_config_.enabled() && !!(alloc_flags & PMM_ALLOC_FLAG_CAN_BORROW);
+  bool must_borrow = can_borrow && !!(alloc_flags & PMM_ALLOC_FLAG_MUST_BORROW);
+
   AutoPreemptDisabler preempt_disable;
   Guard<Mutex> guard{&lock_};
 
-  if (unlikely(count > free_count_.load(ktl::memory_order_relaxed))) {
+  uint64_t free_count;
+  if (must_borrow) {
+    free_count = 0;
+  } else {
+    free_count = free_count_.load(ktl::memory_order_relaxed);
+  }
+  uint64_t available_count = free_count;
+  uint64_t free_loaned_count = 0;
+  if (can_borrow) {
+    free_loaned_count = free_loaned_count_.load(ktl::memory_order_relaxed);
+    available_count += free_loaned_count;
+  }
+  if (unlikely(count > available_count)) {
     return fail_with(ZX_ERR_NO_MEMORY);
   }
+  // Prefer to allocate from loaned, if allowed by this allocation.  If loaned is not allowed by
+  // this allocation, free_loaned_count will be zero here.
+  DEBUG_ASSERT(can_borrow || !free_loaned_count);
+  DEBUG_ASSERT(!must_borrow || !free_count);
+  uint64_t from_loaned_free = ktl::min(count, free_loaned_count);
+  uint64_t from_free = count - from_loaned_free;
 
-  DecrementFreeCountLocked(count);
+  DecrementFreeCountLocked(from_free);
 
   if (unlikely(InOomStateLocked())) {
     if (alloc_flags & PMM_ALLOC_DELAY_OK) {
-      IncrementFreeCountLocked(count);
+      IncrementFreeCountLocked(from_free);
       // TODO(stevensd): Differentiate 'cannot allocate now' from 'can never allocate'
       return fail_with(ZX_ERR_NO_MEMORY);
     }
   }
 
-  auto node = &free_list_;
-  while (count-- > 0) {
-    node = list_next(&free_list_, node);
-    AllocPageHelperLocked(containerof(node, vm_page, queue_node));
-  }
+  DecrementFreeLoanedCountLocked(from_loaned_free);
 
-  list_node tmp_list = LIST_INITIAL_VALUE(tmp_list);
-  list_split_after(&free_list_, node, &tmp_list);
-  if (list_is_empty(list)) {
-    list_move(&free_list_, list);
-  } else {
-    list_splice_after(&free_list_, list_peek_tail(list));
-  }
-  list_move(&tmp_list, &free_list_);
+  do {
+    DEBUG_ASSERT(count == from_loaned_free + from_free);
+    list_node* which_list;
+    size_t which_count;
+    if (can_borrow && !list_is_empty(&free_loaned_list_)) {
+      which_list = &free_loaned_list_;
+      which_count = from_loaned_free;
+      from_loaned_free = 0;
+    } else {
+      DEBUG_ASSERT(!must_borrow);
+      which_list = &free_list_;
+      which_count = from_free;
+      from_free = 0;
+    }
+    count -= which_count;
+
+    DEBUG_ASSERT(which_count > 0);
+    auto node = which_list;
+    while (which_count > 0) {
+      node = list_next(which_list, node);
+      DEBUG_ASSERT(can_borrow || !containerof(node, vm_page, queue_node)->is_loaned());
+      AllocPageHelperLocked(containerof(node, vm_page, queue_node));
+      --which_count;
+    }
+
+    list_node tmp_list = LIST_INITIAL_VALUE(tmp_list);
+    list_split_after(which_list, node, &tmp_list);
+    if (list_is_empty(list)) {
+      list_move(which_list, list);
+    } else {
+      list_splice_after(which_list, list_peek_tail(list));
+    }
+    list_move(&tmp_list, which_list);
+    DEBUG_ASSERT(count == from_loaned_free + from_free);
+  } while (count > 0);
 
   return ZX_OK;
 }
@@ -352,13 +442,18 @@ zx_status_t PmmNode::AllocRange(paddr_t address, size_t count, list_node* list) 
 
   // walk through the arenas, looking to see if the physical page belongs to it
   for (auto& a : arena_list_) {
-    while (allocated < count && a.address_in_arena(address)) {
+    for (; allocated < count && a.address_in_arena(address); address += PAGE_SIZE) {
       vm_page_t* page = a.FindSpecific(address);
       if (!page) {
         break;
       }
 
       if (!page->is_free()) {
+        break;
+      }
+
+      // We never allocate loaned pages for caller of AllocRange()
+      if (page->loaned) {
         break;
       }
 
@@ -369,7 +464,6 @@ zx_status_t PmmNode::AllocRange(paddr_t address, size_t count, list_node* list) 
       list_add_tail(list, &page->queue_node);
 
       allocated++;
-      address += PAGE_SIZE;
       DecrementFreeCountLocked(1);
     }
 
@@ -399,6 +493,7 @@ zx_status_t PmmNode::AllocContiguous(const size_t count, uint alloc_flags, uint8
     alignment_log2 = PAGE_SIZE_SHIFT;
   }
 
+  DEBUG_ASSERT(!(alloc_flags & (PMM_ALLOC_FLAG_CAN_BORROW | PMM_ALLOC_FLAG_MUST_BORROW)));
   // pa and list must be valid pointers
   DEBUG_ASSERT(pa);
   DEBUG_ASSERT(list);
@@ -417,6 +512,8 @@ zx_status_t PmmNode::AllocContiguous(const size_t count, uint alloc_flags, uint8
     // remove the pages from the run out of the free list
     for (size_t i = 0; i < count; i++, p++) {
       DEBUG_ASSERT_MSG(p->is_free(), "p %p state %u\n", p, static_cast<uint32_t>(p->state()));
+      // Loaned pages are never returned by FindFreeContiguous() above.
+      DEBUG_ASSERT(!p->loaned);
       DEBUG_ASSERT(list_in_list(&p->queue_node));
 
       list_delete(&p->queue_node);
@@ -432,6 +529,8 @@ zx_status_t PmmNode::AllocContiguous(const size_t count, uint alloc_flags, uint8
     return ZX_OK;
   }
 
+  // We could potentially move contents of non-pinned pages out of the way for critical contiguous
+  // allocations, but for now...
   LTRACEF("couldn't find run\n");
   return fail_with(ZX_ERR_NOT_FOUND);
 }
@@ -440,8 +539,8 @@ void PmmNode::FreePageHelperLocked(vm_page* page) {
   LTRACEF("page %p state %zu paddr %#" PRIxPTR "\n", page, VmPageStateIndex(page->state()),
           page->paddr());
 
-  DEBUG_ASSERT(page->state() != vm_page_state::OBJECT || page->object.pin_count == 0);
   DEBUG_ASSERT(!page->is_free());
+  DEBUG_ASSERT(page->state() != vm_page_state::OBJECT || page->object.pin_count == 0);
 
   // mark it free
   page->set_state(vm_page_state::FREE);
@@ -462,7 +561,7 @@ void PmmNode::FreePageHelperLocked(vm_page* page) {
   // setting FREE above and have a shorter comment here, but there's no actual need for the extra
   // "if", so we just let this "if" handle it (especially since this whole paragraph is a
   // hypothetical future since there aren't any overlapping fields yet as of this comment).
-  if (unlikely(page->object.is_stack_owned())) {
+  if (page->object.is_stack_owned()) {
     // Make FREE visible before lack of stack owner.
     ktl::atomic_thread_fence(ktl::memory_order_release);
     page->object.clear_stack_owner();
@@ -484,15 +583,27 @@ void PmmNode::FreePage(vm_page* page) {
 
   FreePageHelperLocked(page);
 
-  // add it to the free queue
-  if constexpr (!__has_feature(address_sanitizer)) {
-    list_add_head(&free_list_, &page->queue_node);
-  } else {
-    // If address sanitizer is enabled, put the page at the tail to maximize reuse distance.
-    list_add_tail(&free_list_, &page->queue_node);
+  list_node* which_list = nullptr;
+  if (!page->loaned) {
+    IncrementFreeCountLocked(1);
+    which_list = &free_list_;
+  } else if (!page->loan_cancelled) {
+    IncrementFreeLoanedCountLocked(1);
+    which_list = &free_loaned_list_;
   }
 
-  IncrementFreeCountLocked(1);
+  // Add the page to the appropriate free queue, unless loan_cancelled.  The loan_cancelled pages
+  // don't go in any free queue because they shouldn't get re-used until reclaimed by their
+  // underlying contiguous VMO or until that underlying contiguous VMO is deleted.
+  DEBUG_ASSERT(which_list || page->loan_cancelled);
+  if (which_list) {
+    if constexpr (!__has_feature(address_sanitizer)) {
+      list_add_head(which_list, &page->queue_node);
+    } else {
+      // If address sanitizer is enabled, put the page at the tail to maximize reuse distance.
+      list_add_tail(which_list, &page->queue_node);
+    }
+  }
 }
 
 void PmmNode::FreeListLocked(list_node* list) {
@@ -500,15 +611,32 @@ void PmmNode::FreeListLocked(list_node* list) {
 
   // process list backwards so the head is as hot as possible
   uint64_t count = 0;
-  for (vm_page* page = list_peek_tail_type(list, vm_page, queue_node); page != nullptr;
-       page = list_prev_type(list, &page->queue_node, vm_page, queue_node)) {
-    FreePageHelperLocked(page);
-    count++;
-  }
+  uint64_t loaned_count = 0;
+  list_node freed_loaned_list = LIST_INITIAL_VALUE(freed_loaned_list);
+  {  // scope page
+    vm_page* page = list_peek_tail_type(list, vm_page_t, queue_node);
+    while (page) {
+      FreePageHelperLocked(page);
+      vm_page_t* next_page = list_prev_type(list, &page->queue_node, vm_page_t, queue_node);
+      if (page->loaned) {
+        // Remove from |list| and possibly put on freed_loaned_list instead, to route to the correct
+        // free list, or no free list if loan_cancelled.
+        list_delete(&page->queue_node);
+        if (!page->loan_cancelled) {
+          list_add_head(&freed_loaned_list, &page->queue_node);
+          ++loaned_count;
+        }
+      } else {
+        count++;
+      }
+      page = next_page;
+    }
+  }  // end scope page
 
   if constexpr (!__has_feature(address_sanitizer)) {
-    // splice list at the head of free_list_
+    // splice list at the head of free_list_; free_loaned_list_.
     list_splice_after(list, &free_list_);
+    list_splice_after(&freed_loaned_list, &free_loaned_list_);
   } else {
     // If address sanitizer is enabled, put the pages at the tail to maximize reuse distance.
     if (!list_is_empty(&free_list_)) {
@@ -516,9 +644,15 @@ void PmmNode::FreeListLocked(list_node* list) {
     } else {
       list_splice_after(list, &free_list_);
     }
+    if (!list_is_empty(&free_loaned_list_)) {
+      list_splice_after(&freed_loaned_list, list_peek_tail(&free_loaned_list_));
+    } else {
+      list_splice_after(&freed_loaned_list, &free_loaned_list_);
+    }
   }
 
   IncrementFreeCountLocked(count);
+  IncrementFreeLoanedCountLocked(loaned_count);
 }
 
 void PmmNode::FreeList(list_node* list) {
@@ -531,6 +665,9 @@ void PmmNode::FreeList(list_node* list) {
 void PmmNode::AllocPages(uint alloc_flags, page_request_t* req) {
   kcounter_add(pmm_alloc_async, 1);
   DEBUG_ASSERT(Thread::Current::memory_allocation_state().IsEnabled());
+
+  // Allocation of loaned pages via this path is not yet supported.
+  DEBUG_ASSERT(!(alloc_flags & (PMM_ALLOC_FLAG_CAN_BORROW | PMM_ALLOC_FLAG_MUST_BORROW)));
 
   AutoPreemptDisabler preempt_disable;
   Guard<Mutex> guard{&lock_};
@@ -642,6 +779,25 @@ uint64_t PmmNode::CountFreePages() const TA_NO_THREAD_SAFETY_ANALYSIS {
   return free_count_.load(ktl::memory_order_relaxed);
 }
 
+uint64_t PmmNode::CountLoanedFreePages() const TA_NO_THREAD_SAFETY_ANALYSIS {
+  return free_loaned_count_.load(ktl::memory_order_relaxed);
+}
+
+uint64_t PmmNode::CountLoanedNotFreePages() const TA_NO_THREAD_SAFETY_ANALYSIS {
+  AutoPreemptDisabler preempt_disable;
+  Guard<Mutex> guard{&lock_};
+  return loaned_count_.load(ktl::memory_order_relaxed) -
+         free_loaned_count_.load(ktl::memory_order_relaxed);
+}
+
+uint64_t PmmNode::CountLoanedPages() const TA_NO_THREAD_SAFETY_ANALYSIS {
+  return loaned_count_.load(ktl::memory_order_relaxed);
+}
+
+uint64_t PmmNode::CountLoanCancelledPages() const TA_NO_THREAD_SAFETY_ANALYSIS {
+  return loan_cancelled_count_.load(ktl::memory_order_relaxed);
+}
+
 uint64_t PmmNode::CountTotalBytes() const TA_NO_THREAD_SAFETY_ANALYSIS {
   return arena_cumulative_size_;
 }
@@ -654,9 +810,13 @@ void PmmNode::DumpFree() const TA_NO_THREAD_SAFETY_ANALYSIS {
 void PmmNode::Dump(bool is_panic) const {
   // No lock analysis here, as we want to just go for it in the panic case without the lock.
   auto dump = [this]() TA_NO_THREAD_SAFETY_ANALYSIS {
-    printf("pmm node %p: free_count %zu (%zu bytes), total size %zu\n", this,
-           free_count_.load(ktl::memory_order_relaxed), free_count_ * PAGE_SIZE,
-           arena_cumulative_size_);
+    uint64_t free_count = free_count_.load(ktl::memory_order_relaxed);
+    uint64_t free_loaned_count = free_loaned_count_.load(ktl::memory_order_relaxed);
+    printf(
+        "pmm node %p: free_count %zu (%zu bytes), free_loaned_count: %zu (%zu bytes), total size "
+        "%zu\n",
+        this, free_count, free_count * PAGE_SIZE, free_loaned_count, free_loaned_count * PAGE_SIZE,
+        arena_cumulative_size_);
     for (auto& a : arena_list_) {
       a.Dump(false, false);
     }
@@ -819,3 +979,184 @@ void PmmNode::InitRequestThread() {
 }
 
 int64_t PmmNode::get_alloc_failed_count() { return pmm_alloc_failed.Value(); }
+
+void PmmNode::BeginLoan(list_node* page_list) {
+  DEBUG_ASSERT(page_list);
+  AutoPreemptDisabler preempt_disable;
+  Guard<Mutex> guard{&lock_};
+
+  uint64_t loaned_count = 0;
+  vm_page* page;
+  list_for_every_entry (page_list, page, vm_page, queue_node) {
+    DEBUG_ASSERT(!page->loaned);
+    DEBUG_ASSERT(!page->is_free());
+    page->loaned = true;
+    ++loaned_count;
+    DEBUG_ASSERT(!page->loan_cancelled);
+  }
+  IncrementLoanedCountLocked(loaned_count);
+
+  // Callers of BeginLoan() generally won't want the pages loaned to them; the intent is to loan to
+  // the rest of the system, so go ahead and free also.  Some callers will basically choose between
+  // pmm_begin_loan() and pmm_free().
+  FreeListLocked(page_list);
+}
+
+void PmmNode::CancelLoan(paddr_t address, size_t count) {
+  AutoPreemptDisabler preempt_disable;
+  Guard<Mutex> guard{&lock_};
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(address));
+  paddr_t end = address + count * PAGE_SIZE;
+  DEBUG_ASSERT(address <= end);
+
+  uint64_t loan_cancelled_count = 0;
+  uint64_t no_longer_free_loaned_count = 0;
+
+  ForPagesInPhysRangeLocked(address, count,
+                            [&loan_cancelled_count, &no_longer_free_loaned_count](vm_page_t* page) {
+                              // We can assert this because of PageSource's overlapping request
+                              // handling.
+                              DEBUG_ASSERT(page->is_loaned());
+                              bool was_cancelled = page->loan_cancelled;
+                              // We can assert this because of PageSource's overlapping request
+                              // handling.
+                              DEBUG_ASSERT(!was_cancelled);
+                              page->loan_cancelled = true;
+                              ++loan_cancelled_count;
+                              if (page->is_free()) {
+                                // Currently in free_loaned_list_.
+                                DEBUG_ASSERT(list_in_list(&page->queue_node));
+                                // Remove from free_loaned_list_ to prevent any new use until
+                                // after EndLoan.
+                                list_delete(&page->queue_node);
+                                no_longer_free_loaned_count++;
+                              }
+                            });
+
+  IncrementLoanCancelledCountLocked(loan_cancelled_count);
+  DecrementFreeLoanedCountLocked(no_longer_free_loaned_count);
+}
+
+void PmmNode::EndLoan(paddr_t address, size_t count, list_node* page_list) {
+  AutoPreemptDisabler preempt_disable;
+  Guard<Mutex> guard{&lock_};
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(address));
+  paddr_t end = address + count * PAGE_SIZE;
+  DEBUG_ASSERT(address <= end);
+
+  uint64_t loan_ended_count = 0;
+
+  ForPagesInPhysRangeLocked(address, count, [this, &page_list, &loan_ended_count](vm_page_t* page) {
+    AssertHeld(lock_);
+
+    // PageSource serializing such that there's only one request to PageProvider in flight at a time
+    // for any given page is the main reason we can assert these instead of needing to check these.
+    DEBUG_ASSERT(page->is_loaned());
+    DEBUG_ASSERT(page->is_loan_cancelled());
+    DEBUG_ASSERT(page->is_free());
+
+    // Already not in free_loaned_list_ (because loan_cancelled already).
+    DEBUG_ASSERT(!list_in_list(&page->queue_node));
+
+    page->loaned = false;
+    page->loan_cancelled = false;
+    ++loan_ended_count;
+
+    AllocPageHelperLocked(page);
+    list_add_tail(page_list, &page->queue_node);
+  });
+
+  DecrementLoanCancelledCountLocked(loan_ended_count);
+  DecrementLoanedCountLocked(loan_ended_count);
+}
+
+void PmmNode::DeleteLender(paddr_t address, size_t count) {
+  AutoPreemptDisabler preempt_disable;
+  Guard<Mutex> guard{&lock_};
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(address));
+  paddr_t end = address + count * PAGE_SIZE;
+  DEBUG_ASSERT(address <= end);
+  uint64_t removed_free_loaned_count = 0;
+  uint64_t added_free_count = 0;
+
+  uint64_t loan_ended_count = 0;
+  uint64_t loan_un_cancelled_count = 0;
+
+  ForPagesInPhysRangeLocked(address, count,
+                            [this, &removed_free_loaned_count, &loan_un_cancelled_count,
+                             &added_free_count, &loan_ended_count](vm_page_t* page) {
+                              DEBUG_ASSERT(page->loaned);
+                              if (page->is_free() && !page->loan_cancelled) {
+                                // Remove from free_loaned_list_.
+                                list_delete(&page->queue_node);
+                                ++removed_free_loaned_count;
+                              }
+                              if (page->loan_cancelled) {
+                                ++loan_un_cancelled_count;
+                              }
+                              if (page->is_free()) {
+                                // add it to the free queue
+                                if constexpr (!__has_feature(address_sanitizer)) {
+                                  list_add_head(&free_list_, &page->queue_node);
+                                } else {
+                                  // If address sanitizer is enabled, put the page at the tail to
+                                  // maximize reuse distance.
+                                  list_add_tail(&free_list_, &page->queue_node);
+                                }
+                                added_free_count++;
+                              }
+                              page->loan_cancelled = false;
+                              page->loaned = false;
+                              ++loan_ended_count;
+                            });
+
+  DecrementFreeLoanedCountLocked(removed_free_loaned_count);
+  IncrementFreeCountLocked(added_free_count);
+  DecrementLoanedCountLocked(loan_ended_count);
+  DecrementLoanCancelledCountLocked(loan_un_cancelled_count);
+}
+
+bool PmmNode::IsLoaned(vm_page_t* page) {
+  AutoPreemptDisabler preempt_disable;
+  Guard<Mutex> guard{&lock_};
+  return page->loaned;
+}
+
+template <typename F>
+void PmmNode::ForPagesInPhysRangeLocked(paddr_t start, size_t count, F func) {
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(start));
+  // We only intend ForPagesInRange() to be used after arenas have been added to the global
+  // pmm_node.
+  DEBUG_ASSERT(mp_get_active_mask() != 0);
+
+  if (unlikely(arena_list_.is_empty())) {
+    // We're in a unit test, using ManagedPmmNode which has no arenas.  So fall back to the global
+    // pmm_node (which has at least one arena) to find the actual vm_page_t for each page.
+    //
+    // TODO: Make ManagedPmmNode have a more real arena, possibly by allocating a contiguous VMO and
+    // creating an arena from that.
+    paddr_t end = start + count * PAGE_SIZE;
+    for (paddr_t iter = start; iter < end; iter += PAGE_SIZE) {
+      vm_page_t* page = paddr_to_vm_page(iter);
+      func(page);
+    }
+    return;
+  }
+
+  // We have at least one arena, so use arena_list_ directly.
+  paddr_t end = start + count * PAGE_SIZE;
+  DEBUG_ASSERT(start <= end);
+  paddr_t page_addr = start;
+  for (auto& a : arena_list_) {
+    for (; page_addr < end && a.address_in_arena(page_addr); page_addr += PAGE_SIZE) {
+      vm_page_t* page = a.FindSpecific(page_addr);
+      DEBUG_ASSERT(page);
+      DEBUG_ASSERT(page_addr == page->paddr());
+      func(page);
+    }
+    if (page_addr == end) {
+      break;
+    }
+  }
+  DEBUG_ASSERT(page_addr == end);
+}

@@ -29,6 +29,8 @@ class ManagedPmmNode {
     ZX_ASSERT(pmm_alloc_pages(kNumPages, 0, &list) == ZX_OK);
     vm_page_t* page;
     list_for_every_entry (&list, page, vm_page_t, queue_node) {
+      // TODO: Prevent this page state from allowing AllocContiguous() to potentially find a run of
+      // FREE pages involving some of these pages.
       page->set_state(vm_page_state::FREE);
     }
     node_.AddFreePages(&list);
@@ -128,6 +130,230 @@ static bool pmm_node_singlton_list_test() {
   EXPECT_EQ(1ul, list_length(&list), "pmm_alloc_pages a few pages list count");
 
   node.node().FreeList(&list);
+  END_TEST;
+}
+
+// Loans pages back to the PmmNode, allocates them as usable pages while loaned, cancels that loan,
+// reclaims the pages via "churn" (to FREE), ends the loan.
+static bool pmm_node_loan_borrow_cancel_reclaim_end() {
+  BEGIN_TEST;
+
+  // Required to stack-own loaned pages.  We don't care about minimizing the duration of this
+  // interval for this test.
+  __UNINITIALIZED StackOwnedLoanedPagesInterval raii_interval;
+
+  ManagedPmmNode node;
+  node.node().GetPhysicalPageBorrowingConfig()->set_enabled(true);
+
+  list_node list = LIST_INITIAL_VALUE(list);
+
+  constexpr uint64_t kLoanCount = ManagedPmmNode::kNumPages * 3 / 4;
+  constexpr uint64_t kNotLoanCount = ManagedPmmNode::kNumPages - kLoanCount;
+  paddr_t paddr[kLoanCount] = {};
+
+  zx_status_t status = node.node().AllocPages(kLoanCount, 0, &list);
+  EXPECT_EQ(ZX_OK, status, "pmm_alloc_pages a few pages");
+  EXPECT_EQ(kLoanCount, list_length(&list), "pmm_alloc_pages correct # pages");
+
+  uint32_t i = 0;
+  vm_page_t* page;
+  list_for_every_entry (&list, page, vm_page_t, queue_node) {
+    paddr[i] = page->paddr();
+    ++i;
+  }
+
+  list_for_every_entry (&list, page, vm_page_t, queue_node) {
+    EXPECT_FALSE(page->loaned);
+    EXPECT_FALSE(page->loan_cancelled);
+  }
+  node.node().BeginLoan(&list);
+  list_for_every_entry (&list, page, vm_page_t, queue_node) {
+    EXPECT_TRUE(page->loaned);
+    EXPECT_FALSE(page->loan_cancelled);
+  }
+
+  EXPECT_EQ(kLoanCount, node.node().CountLoanedPages());
+  EXPECT_EQ(kNotLoanCount, node.node().CountFreePages());
+  EXPECT_EQ(kLoanCount, node.node().CountLoanedFreePages());
+  EXPECT_EQ(0u, node.node().CountLoanCancelledPages());
+  EXPECT_EQ(0u, node.node().CountLoanedNotFreePages());
+
+  EXPECT_EQ(0u, list_length(&list));
+  status = node.node().AllocPages(kLoanCount,
+                                  PMM_ALLOC_FLAG_MUST_BORROW | PMM_ALLOC_FLAG_CAN_BORROW, &list);
+  EXPECT_EQ(ZX_OK, status, "pmm_alloc_pages PMM_ALLOC_FLAG_MUST_BORROW");
+  EXPECT_EQ(kLoanCount, list_length(&list));
+
+  list_for_every_entry (&list, page, vm_page_t, queue_node) {
+    for (i = 0; i < kLoanCount; ++i) {
+      if (paddr[i] == page->paddr()) {
+        break;
+      }
+    }
+    // match found
+    EXPECT_NE(kLoanCount, i);
+  }
+
+  list_for_every_entry (&list, page, vm_page_t, queue_node) {
+    EXPECT_TRUE(page->loaned);
+    EXPECT_FALSE(page->loan_cancelled);
+    node.node().CancelLoan(page->paddr(), 1);
+    EXPECT_TRUE(page->loaned);
+    EXPECT_TRUE(page->loan_cancelled);
+  }
+
+  EXPECT_EQ(kLoanCount, node.node().CountLoanedPages());
+  EXPECT_EQ(kNotLoanCount, node.node().CountFreePages());
+  EXPECT_EQ(0u, node.node().CountLoanedFreePages());
+  EXPECT_EQ(kLoanCount, node.node().CountLoanCancelledPages());
+  EXPECT_EQ(kLoanCount, node.node().CountLoanedNotFreePages());
+
+  node.node().FreeList(&list);
+
+  EXPECT_EQ(kLoanCount, node.node().CountLoanedPages());
+  EXPECT_EQ(kNotLoanCount, node.node().CountFreePages());
+  EXPECT_EQ(0u, node.node().CountLoanedFreePages());
+  EXPECT_EQ(kLoanCount, node.node().CountLoanCancelledPages());
+  // Still not free; loan_cancelled means the page can't be allocated.
+  EXPECT_EQ(kLoanCount, node.node().CountLoanedNotFreePages());
+
+  EXPECT_EQ(0u, list_length(&list));
+  status = node.node().AllocPages(kNotLoanCount + 1, PMM_ALLOC_FLAG_CAN_BORROW, &list);
+  EXPECT_EQ(ZX_ERR_NO_MEMORY, status, "try to allocate a loan_cancelled page");
+
+  EXPECT_EQ(0u, list_length(&list));
+  status = node.node().AllocPages(kNotLoanCount, PMM_ALLOC_FLAG_CAN_BORROW, &list);
+  EXPECT_EQ(ZX_OK, status, "allocate all the not-loaned pages");
+
+  list_for_every_entry (&list, page, vm_page_t, queue_node) {
+    EXPECT_FALSE(page->loaned);
+    for (i = 0; i < kLoanCount; ++i) {
+      if (paddr[i] == page->paddr()) {
+        break;
+      }
+    }
+    // match not found
+    EXPECT_EQ(kLoanCount, i);
+  }
+
+  node.node().FreeList(&list);
+
+  EXPECT_EQ(0u, list_length(&list));
+  list_node tmp_list = LIST_INITIAL_VALUE(tmp_list);
+  for (uint32_t j = 0; j < kLoanCount; ++j) {
+    EXPECT_EQ(0u, list_length(&tmp_list));
+    node.node().EndLoan(paddr[j], 1, &tmp_list);
+    EXPECT_EQ(1u, list_length(&tmp_list));
+    page = list_remove_head_type(&tmp_list, vm_page, queue_node);
+    EXPECT_EQ(paddr[j], page->paddr());
+    EXPECT_FALSE(page->loaned);
+    EXPECT_FALSE(page->loan_cancelled);
+    list_add_tail(&list, &page->queue_node);
+  }
+
+  node.node().FreeList(&list);
+
+  EXPECT_EQ(0u, node.node().CountLoanedPages());
+  EXPECT_EQ(ManagedPmmNode::kNumPages, node.node().CountFreePages());
+  EXPECT_EQ(0u, node.node().CountLoanedFreePages());
+  EXPECT_EQ(0u, node.node().CountLoanCancelledPages());
+  EXPECT_EQ(0u, node.node().CountLoanedNotFreePages());
+
+  EXPECT_EQ(0u, list_length(&list));
+  status = node.node().AllocPages(ManagedPmmNode::kNumPages, 0, &list);
+  EXPECT_EQ(ZX_OK, status, "allocate all pages");
+  EXPECT_EQ(ManagedPmmNode::kNumPages, list_length(&list));
+
+  list_for_every_entry (&list, page, vm_page_t, queue_node) {
+    EXPECT_FALSE(page->loaned);
+    EXPECT_FALSE(page->loan_cancelled);
+  }
+
+  node.node().FreeList(&list);
+
+  EXPECT_EQ(0u, node.node().CountLoanedPages());
+  EXPECT_EQ(ManagedPmmNode::kNumPages, node.node().CountFreePages());
+  EXPECT_EQ(0u, node.node().CountLoanedFreePages());
+  EXPECT_EQ(0u, node.node().CountLoanCancelledPages());
+  EXPECT_EQ(0u, node.node().CountLoanedNotFreePages());
+
+  END_TEST;
+}
+
+static bool pmm_node_loan_delete_lender() {
+  BEGIN_TEST;
+
+  // Required to stack-own loaned pages.  We don't care about minimizing the duration of this
+  // interval for this test.
+  __UNINITIALIZED StackOwnedLoanedPagesInterval raii_interval;
+
+  ManagedPmmNode node;
+  node.node().GetPhysicalPageBorrowingConfig()->set_enabled(true);
+
+  // Required to stack-own loaned pages.  We don't care about minimizing the duration of this
+  list_node list = LIST_INITIAL_VALUE(list);
+
+  constexpr uint64_t kLoanCount = ManagedPmmNode::kNumPages * 3 / 4;
+  paddr_t paddr[kLoanCount] = {};
+
+  // Check that DeleteLender() while loaned pages FREE works.
+
+  zx_status_t status = node.node().AllocPages(kLoanCount, 0, &list);
+  EXPECT_EQ(ZX_OK, status, "allocate kLoanCount pages");
+  EXPECT_EQ(kLoanCount, list_length(&list));
+
+  uint32_t i = 0;
+  vm_page_t* page;
+  list_for_every_entry (&list, page, vm_page_t, queue_node) {
+    paddr[i] = page->paddr();
+    ++i;
+  }
+
+  node.node().BeginLoan(&list);
+
+  for (uint32_t j = 0; j < kLoanCount; ++j) {
+    node.node().DeleteLender(paddr[j], 1);
+  }
+
+  EXPECT_EQ(0u, node.node().CountLoanedPages());
+  EXPECT_EQ(ManagedPmmNode::kNumPages, node.node().CountFreePages());
+  EXPECT_EQ(0u, node.node().CountLoanedFreePages());
+  EXPECT_EQ(0u, node.node().CountLoanCancelledPages());
+  EXPECT_EQ(0u, node.node().CountLoanedNotFreePages());
+
+  // Check that DeleteLender() while loaned pages used works.
+
+  EXPECT_EQ(0u, list_length(&list));
+  status = node.node().AllocPages(kLoanCount, 0, &list);
+  EXPECT_EQ(ZX_OK, status, "allocate kLoanCount pages");
+  EXPECT_EQ(kLoanCount, list_length(&list));
+
+  i = 0;
+  list_for_every_entry (&list, page, vm_page_t, queue_node) {
+    paddr[i] = page->paddr();
+    ++i;
+  }
+
+  node.node().BeginLoan(&list);
+
+  EXPECT_EQ(0u, list_length(&list));
+  status = node.node().AllocPages(kLoanCount,
+                                  PMM_ALLOC_FLAG_MUST_BORROW | PMM_ALLOC_FLAG_CAN_BORROW, &list);
+  EXPECT_EQ(ZX_OK, status, "allocate kLoanCount pages");
+  EXPECT_EQ(kLoanCount, list_length(&list));
+
+  for (uint32_t j = 0; j < kLoanCount; ++j) {
+    node.node().DeleteLender(paddr[j], 1);
+  }
+
+  node.node().FreeList(&list);
+
+  EXPECT_EQ(0u, node.node().CountLoanedPages());
+  EXPECT_EQ(ManagedPmmNode::kNumPages, node.node().CountFreePages());
+  EXPECT_EQ(0u, node.node().CountLoanedFreePages());
+  EXPECT_EQ(0u, node.node().CountLoanCancelledPages());
+  EXPECT_EQ(0u, node.node().CountLoanedNotFreePages());
+
   END_TEST;
 }
 
@@ -723,6 +949,7 @@ static bool pq_add_remove() {
 
   pq.Remove(&test_page);
   EXPECT_FALSE(pq.DebugPageIsWired(&test_page));
+  EXPECT_FALSE(pq.DebugPageIsUnswappable(&test_page));
   EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0}, 0, 0, 0, 0}));
 
   pq.SetUnswappable(&test_page);
@@ -812,6 +1039,17 @@ static bool pq_move_self_queue() {
   pq.MoveToWired(&test_page);
   EXPECT_TRUE(pq.DebugPageIsWired(&test_page));
   EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0}, 0, 0, 1, 0}));
+
+  pq.Remove(&test_page);
+  EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0}, 0, 0, 0, 0}));
+
+  pq.SetUnswappable(&test_page);
+  EXPECT_TRUE(pq.DebugPageIsUnswappable(&test_page));
+  EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0}, 0, 1, 0, 0}));
+
+  pq.MoveToUnswappable(&test_page);
+  EXPECT_TRUE(pq.DebugPageIsUnswappable(&test_page));
+  EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0}, 0, 1, 0, 0}));
 
   pq.Remove(&test_page);
   EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0}, 0, 0, 0, 0}));
@@ -1120,6 +1358,8 @@ VM_UNITTEST(pmm_smoke_test)
 VM_UNITTEST(pmm_alloc_contiguous_one_test)
 VM_UNITTEST(pmm_node_multi_alloc_test)
 VM_UNITTEST(pmm_node_singlton_list_test)
+VM_UNITTEST(pmm_node_loan_borrow_cancel_reclaim_end)
+VM_UNITTEST(pmm_node_loan_delete_lender)
 VM_UNITTEST(pmm_node_oversized_alloc_test)
 VM_UNITTEST(pmm_node_watermark_level_test)
 VM_UNITTEST(pmm_node_multi_watermark_level_test)

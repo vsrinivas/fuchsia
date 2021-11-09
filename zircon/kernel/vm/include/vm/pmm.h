@@ -54,6 +54,11 @@ zx_status_t pmm_get_arena_info(size_t count, uint64_t i, pmm_arena_info_t* buffe
 #define PMM_ALLOC_FLAG_LO_MEM (1 << 0)  // allocate only from arenas marked LO_MEM
 // the caller can handle allocation failures with a delayed page_request_t request.
 #define PMM_ALLOC_DELAY_OK (1 << 1)
+// The default (flag not set) is to not allocate a loaned page, so that we don't end up with loaned
+// pages allocated for arbitrary purposes that prevent us from getting the loaned page back quickly.
+#define PMM_ALLOC_FLAG_CAN_BORROW (1 << 2)
+// Require a loaned page, and fail to allocate if a loaned page isn't available.
+#define PMM_ALLOC_FLAG_MUST_BORROW (1 << 3)
 
 // Debugging flag that can be used to induce artificial delayed page allocation by randomly
 // rejecting some fraction of the synchronous allocations which have PMM_ALLOC_DELAY_OK set.
@@ -76,6 +81,34 @@ zx_status_t pmm_alloc_range(paddr_t address, size_t count, list_node* list) __NO
 // append the allocate page structures to the tail of the passed in list.
 zx_status_t pmm_alloc_contiguous(size_t count, uint alloc_flags, uint8_t align_log2, paddr_t* pa,
                                  list_node* list) __NONNULL((4, 5));
+
+// Mark contiguous pages as "loaned", and free the pages so they can be borrowed by page allocations
+// that specify PMM_ALLOC_FLAG_CAN_BORROW.  The caller must eventually call pmm_cancel_loan() +
+// pmm_end_loan(), or pmm_delete_lender(), on ranges that cover exactly all the loaned pages.
+void pmm_begin_loan(list_node* page_list);
+
+// All pages in the range must be currently loaned.  This call must be made before pmm_end_loan().
+// This call has no restrictions on whether the pages are presently in use or presently FREE.
+//
+// This call prevents the pages from being re-used for any new purpose until pmm_end_loan().  For
+// presently-FREE pages, this removes the pages from free_loaned_list_.  For presently-used pages,
+// this specifies that the page will not be added to free_loaned_list_ when later freed.  Once these
+// pages are all FREE (to be ensured by the caller via PhysicalPageProvider reclaim of the pages),
+// the loan can be ended with pmm_end_loan().
+void pmm_cancel_loan(paddr_t address, size_t count);
+
+// All the pages in the range must be currently loaned, and must be currently loan_cancelled, and
+// must be FREE.  End loaning of these contiguous pages, and return the pages via page_list as
+// non-loaned pages allocated by/for the caller.
+void pmm_end_loan(paddr_t address, size_t count, list_node* page_list);
+
+// All the pages in the range must be currently loaned.  Make the pages no longer loaned without
+// allocating them to the caller or changing the pages' current state().  This is used when deleting
+// a contiguous VMO which may have previously loaned pages.  After this, the pages are normal
+// (non-loaned) pages.
+void pmm_delete_lender(paddr_t address, size_t count);
+
+bool pmm_is_loaned(vm_page_t* page);
 
 // Fallback delayed allocation function if regular synchronous allocation fails. See
 // the page_request_t struct documentation for more details.
@@ -100,6 +133,19 @@ void pmm_free_page(vm_page_t* page) __NONNULL((1));
 
 // Return count of unallocated physical pages in system.
 uint64_t pmm_count_free_pages();
+
+// Return count of unallocated loaned physical pages in system.
+uint64_t pmm_count_loaned_free_pages();
+
+uint64_t pmm_count_loaned_used_pages();
+
+// Return count of loaned pages, including both allocated and unallocated.
+uint64_t pmm_count_loaned_pages();
+
+// Return count of pages which are presently loaned with the loan cancelled.  This is a transient
+// state so we shouldn't see a non-zero value persisting for long unless the system is constantly
+// seeing loan/cancel churn.
+uint64_t pmm_count_loan_cancelled_pages();
 
 // Return amount of physical memory in system, in bytes.
 uint64_t pmm_count_total_bytes();

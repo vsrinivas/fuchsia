@@ -105,6 +105,31 @@ zx_status_t pmm_alloc_contiguous(size_t count, uint alloc_flags, uint8_t alignme
   return pmm_node.AllocContiguous(count, alloc_flags, alignment_log2, pa, list);
 }
 
+void pmm_begin_loan(list_node* page_list) {
+  VM_KTRACE_DURATION(3, "pmm_begin_loan");
+  pmm_node.BeginLoan(page_list);
+}
+
+void pmm_cancel_loan(paddr_t address, size_t count) {
+  VM_KTRACE_DURATION(3, "pmm_cancel_loan");
+  pmm_node.CancelLoan(address, count);
+}
+
+void pmm_end_loan(paddr_t address, size_t count, list_node* page_list) {
+  VM_KTRACE_DURATION(3, "pmm_end_loan");
+  pmm_node.EndLoan(address, count, page_list);
+}
+
+void pmm_delete_lender(paddr_t address, size_t count) {
+  VM_KTRACE_DURATION(3, "pmm_delete_lender");
+  pmm_node.DeleteLender(address, count);
+}
+
+bool pmm_is_loaned(vm_page_t* page) {
+  VM_KTRACE_DURATION(3, "pmm_is_loaned");
+  return pmm_node.IsLoaned(page);
+}
+
 void pmm_alloc_pages(uint alloc_flags, page_request_t* req) {
   VM_KTRACE_DURATION(3, "pmm_alloc_pages");
   pmm_node.AllocPages(alloc_flags, req);
@@ -127,6 +152,14 @@ void pmm_free_page(vm_page* page) {
 }
 
 uint64_t pmm_count_free_pages() { return pmm_node.CountFreePages(); }
+
+uint64_t pmm_count_loaned_free_pages() { return pmm_node.CountLoanedFreePages(); }
+
+uint64_t pmm_count_loaned_used_pages() { return pmm_node.CountLoanedNotFreePages(); }
+
+uint64_t pmm_count_loaned_pages() { return pmm_node.CountLoanedPages(); }
+
+uint64_t pmm_count_loan_cancelled_pages() { return pmm_node.CountLoanCancelledPages(); }
 
 uint64_t pmm_count_total_bytes() { return pmm_node.CountTotalBytes(); }
 
