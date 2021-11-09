@@ -1365,14 +1365,7 @@ impl Document {
         merge_from_field!(self, other, collections);
         merge_from_field!(self, other, environments);
         self.merge_program(other, include_path)?;
-        // Facets aren't an actively used feature so we don't need to support them. Also,
-        // the merge policy for facets would be non-trivial because they can contain nested maps.
-        if let Some(_) = other.facets {
-            return Err(Error::validate(format!(
-                "facets found in manifest include, which are not supported: {}",
-                include_path.display()
-            )));
-        }
+        self.merge_facets(other, include_path)?;
         Ok(())
     }
 
@@ -1412,6 +1405,74 @@ impl Document {
         }
 
         Ok(())
+    }
+
+    fn merge_maps(
+        self_map: &mut Map<String, Value>,
+        include_map: &Map<String, Value>,
+        outer_key: &str,
+        include_path: &path::Path,
+    ) -> Result<(), Error> {
+        for (key, value) in include_map.iter() {
+            match self_map.get_mut(key) {
+                None => {
+                    // Key not present in self map, insert it from include map.
+                    self_map.insert(key.clone(), value.clone());
+                }
+                // Self and include maps share the same key
+                Some(Value::Object(self_nested_map)) => match value {
+                    // The include value is an object and can be recursively merged
+                    Value::Object(include_nested_map) => {
+                        let combined_key = format!("{}.{}", outer_key, key);
+
+                        // Recursively merge maps
+                        Self::merge_maps(
+                            self_nested_map,
+                            include_nested_map,
+                            &combined_key,
+                            include_path,
+                        )?;
+                    }
+                    _ => {
+                        // Cannot merge object and non-object
+                        return Err(Error::validate(format!(
+                            "manifest include had a conflicting `{}.{}`: {}",
+                            outer_key,
+                            key,
+                            include_path.display()
+                        )));
+                    }
+                },
+
+                _ => {
+                    // Cannot merge object and non-object
+                    return Err(Error::validate(format!(
+                        "manifest include had a conflicting `{}.{}`: {}",
+                        outer_key,
+                        key,
+                        include_path.display()
+                    )));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn merge_facets(
+        &mut self,
+        other: &mut Document,
+        include_path: &path::Path,
+    ) -> Result<(), Error> {
+        if let None = other.facets {
+            return Ok(());
+        }
+        if let None = self.facets {
+            self.facets = Some(Map::default());
+        }
+        let my_facets = self.facets.as_mut().unwrap();
+        let other_facets = other.facets.as_mut().unwrap();
+
+        Self::merge_maps(my_facets, other_facets, "facets", include_path)
     }
 
     pub fn includes(&self) -> Vec<String> {
@@ -2758,6 +2819,79 @@ mod tests {
             some.merge_from(&mut other, &path::Path::new("some/path")),
             Err(Error::Validate { schema_name: None, err, .. })
                 if err == format!("manifest include had a conflicting `program.{}`: some/path", field)
+        );
+    }
+
+    #[test_case(
+        document(json!({ "facets": { "my.key": "my.value" } })),
+        document(json!({ "facets": { "other.key": "other.value" } })),
+        document(json!({ "facets": { "my.key": "my.value",  "other.key": "other.value" } }))
+        ; "two separate keys"
+    )]
+    #[test_case(
+        document(json!({ "facets": { "my.key": "my.value" } })),
+        document(json!({ "facets": {} })),
+        document(json!({ "facets": { "my.key": "my.value" } }))
+        ; "empty other facet"
+    )]
+    #[test_case(
+        document(json!({ "facets": {} })),
+        document(json!({ "facets": { "other.key": "other.value" } })),
+        document(json!({ "facets": { "other.key": "other.value" } }))
+        ; "empty my facet"
+    )]
+    #[test_case(
+        document(json!({ "facets": { "key": { "type": "some_type" } } })),
+        document(json!({ "facets": { "key": { "runner": "some_runner"} } })),
+        document(json!({ "facets": { "key": { "type": "some_type", "runner": "some_runner" } } }))
+        ; "nested facet key"
+    )]
+    #[test_case(
+        document(json!({ "facets": { "key": { "type": "some_type", "nested_key": { "type": "new type" }}}})),
+        document(json!({ "facets": { "key": { "nested_key": { "runner": "some_runner" }} } })),
+        document(json!({ "facets": { "key": { "type": "some_type", "nested_key": { "runner": "some_runner", "type": "new type" }}}}))
+        ; "double nested facet key"
+    )]
+    fn test_merge_from_facets(mut my: Document, mut other: Document, expected: Document) {
+        my.merge_from(&mut other, &Path::new("some/path")).unwrap();
+        assert_eq!(my.facets, expected.facets);
+    }
+
+    #[test_case(
+        document(json!({ "facets": { "key": "my.value" }})),
+        document(json!({ "facets": { "key": "other.value" }})),
+        "facets.key"
+        ; "conflict first level keys"
+    )]
+    #[test_case(
+        document(json!({ "facets": { "key":  {"type": "cts" }}})),
+        document(json!({ "facets": { "key":  {"type": "system" }}})),
+        "facets.key.type"
+        ; "conflict second level keys"
+    )]
+    #[test_case(
+        document(json!({ "facets": { "key":  {"type": {"key": "value" }}}})),
+        document(json!({ "facets": { "key":  {"type": "system" }}})),
+        "facets.key.type"
+        ; "incompatible self nested type"
+    )]
+    #[test_case(
+        document(json!({ "facets": { "key":  {"type": "system" }}})),
+        document(json!({ "facets": { "key":  {"type":  {"key": "value" }}}})),
+        "facets.key.type"
+        ; "incompatible other nested type"
+    )]
+    #[test_case(
+        document(json!({ "facets": { "key":  {"type": {"key": "my.value" }}}})),
+        document(json!({ "facets": { "key":  {"type":  {"key": "some.value" }}}})),
+        "facets.key.type.key"
+        ; "conflict third level keys"
+    )]
+    fn test_merge_from_facet_error(mut my: Document, mut other: Document, field: &str) {
+        matches::assert_matches!(
+            my.merge_from(&mut other, &path::Path::new("some/path")),
+            Err(Error::Validate { schema_name: None, err, .. })
+                if err == format!("manifest include had a conflicting `{}`: some/path", field)
         );
     }
 }
