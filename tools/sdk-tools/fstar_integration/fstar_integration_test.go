@@ -24,12 +24,47 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/sdk-tools/sdkcommon"
 )
 
+type deviceInfo struct {
+	Label string            `json:"label"`
+	Child []deviceInfoChild `json:"child"`
+}
+
+type deviceInfoChild struct {
+	Label string `json:"label"`
+	// Use a interface because the value can be either bool, int, or string but will always be
+	// a string when the label is set to "target", the only label we care about.
+	Value interface{} `json:"value"`
+}
+
+const (
+	targetLabel = "target"
+	itemLabel   = "name"
+)
+
 type toolsPath struct {
 	ffxPath       string
 	ffxInstance   *ffxutil.FFXInstance
 	ffxConfigPath string // Used to make ffx isolated.
 	fconfigPath   string
 	fsshPath      string
+}
+
+func verifyFFXTargetShowOutputWithDeviceName(output []byte, expectedDeviceName string) (bool, error) {
+	var fullDeviceInfo []deviceInfo
+	err := json.Unmarshal(output, &fullDeviceInfo)
+	if err != nil {
+		return false, err
+	}
+	for _, ele := range fullDeviceInfo {
+		if ele.Label == targetLabel {
+			for _, item := range ele.Child {
+				if item.Label == itemLabel {
+					return item.Value.(string) == expectedDeviceName, nil
+				}
+			}
+		}
+	}
+	return false, fmt.Errorf("output json from 'ffx target show --json' is missing the target name label")
 }
 
 // findSubDir searches the root dir and returns the first path that matches dirName.
@@ -99,9 +134,15 @@ func setUp(t *testing.T) (toolsPath, error) {
 	return tools, nil
 }
 
+func resetBuffers(stdout, stderr *bytes.Buffer) {
+	stdout.Reset()
+	stderr.Reset()
+}
+
 func TestFSSH(t *testing.T) {
 	// In order to make sure the test cleans up the ffx instance, we capture SIGTERM until
-	// we ensured the ffx instance is cleaned up.
+	// we ensured the ffx instance is cleaned up. This is needed in a scenario where the test may exit
+	// unexpectedly in infra (similar to pressing Ctrl-C when running this test locally).
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer cancel()
 
@@ -109,7 +150,9 @@ func TestFSSH(t *testing.T) {
 	t.Cleanup(func() {
 		os.Unsetenv(sdkcommon.FFXIsolatedEnvKey)
 		if tools.ffxInstance != nil {
-			tools.ffxInstance.Stop()
+			if err := tools.ffxInstance.Stop(); err != nil {
+				t.Logf("FFX didn't stop the running daemon %s", err)
+			}
 		}
 	})
 
@@ -135,6 +178,9 @@ func TestFSSH(t *testing.T) {
 	ffxTargetListStderr := strings.TrimSpace(stderr.String())
 	deviceIP := strings.TrimSpace(stdout.String())
 
+	// sdkcommon.go runs ffx with this configuration (using the --config flag) to ensure
+	// that we are using the isolated ffx instance.
+	// TODO(fxbug.dev/88287): Migrate to use flag when sdkcommon.go supports it.
 	os.Setenv(sdkcommon.FFXIsolatedEnvKey, tools.ffxConfigPath)
 
 	if ffxTargetListStderr != "" {
@@ -203,5 +249,30 @@ func TestFSSH(t *testing.T) {
 	expectedOutput := "Hello World"
 	if sshOutputTrimmed != expectedOutput {
 		t.Errorf("fssh output doesn't match; Got: %s, want: %s", sshOutputTrimmed, expectedOutput)
+	}
+
+	// Reset the stdout and stderr buffers as they were previously used.
+	resetBuffers(stdout, stderr)
+
+	ffxTargetShowArgs := []string{"target", "show", "--json"}
+	t.Logf("Trying to get target information by running: ffx %s", ffxTargetShowArgs)
+	err = tools.ffxInstance.Run(ctx, ffxTargetShowArgs...)
+
+	if err != nil {
+		t.Fatalf("ffx target show returned unexpected error: %s", err)
+	}
+
+	ffxTargetShowErr := strings.TrimSpace(stderr.String())
+	if ffxTargetShowErr != "" {
+		t.Fatalf("ffx target show returned unexpected output to stderr: %s", ffxTargetShowErr)
+	}
+
+	isValid, err := verifyFFXTargetShowOutputWithDeviceName(stdout.Bytes(), deviceName)
+	if err != nil {
+		t.Errorf("verifyFFXTargetShowOutputWithDeviceName(%#v): got err %s", stdout.String(), err)
+	}
+
+	if !isValid {
+		t.Errorf("verifyFFXTargetShowOutputWithDeviceName(%#v): output doesn't contain the expected device name %s", stdout.String(), deviceName)
 	}
 }
