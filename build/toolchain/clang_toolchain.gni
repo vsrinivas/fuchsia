@@ -54,10 +54,6 @@ import("//build/toolchain/restat.gni")
 #   propagates_configs
 #     Optional: public_configs should escape this toolchain via deps
 #
-#   disable_rbe
-#     Optional: set to true to build locally, overriding the global
-#     `enable_rbe`.
-#
 template("clang_toolchain") {
   toolchain(target_name) {
     assert(defined(invoker.toolchain_cpu),
@@ -115,11 +111,7 @@ template("clang_toolchain") {
     # Configure Rust remote builds.
     _rustc_wrapper = ""
     _rust_concurrent_jobs = concurrent_jobs.local
-    _use_rbe = enable_rbe
-    if (defined(invoker.disable_rbe) && invoker.disable_rbe) {
-      _use_rbe = false
-    }
-    if (_use_rbe) {
+    if (enable_rbe) {
       assert(rbe_exec_strategy == "remote" || rbe_exec_strategy == "local",
              "Unsupported RBE exec_strategy: \"$rbe_exec_strategy\".")
       if (rbe_exec_strategy == "remote") {

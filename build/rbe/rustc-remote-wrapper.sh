@@ -24,6 +24,8 @@ $script [options] -- rustc-command...
 Options:
   --help|-h: print this help and exit
   --local: disable remote execution and run the original command locally.
+    The --remote-disable fake rust flag (passed after the -- ) has the same
+    effect, and is removed from the executed command.
   --verbose|-v: print debug information, including details about uploads.
   --dry-run: print remote execution command without executing (remote only).
 
@@ -233,6 +235,14 @@ EOF
     # This is the (likely prebuilt) rustc binary.
     */rustc) rustc="$opt" ;;
 
+    # This is equivalent to --local, but passed as a rustc flag,
+    # instead of wrapper script flag (before the -- ).
+    --remote-disable)
+      local_only=1
+      shift
+      continue
+      ;;
+
     # --remote-inputs signals to the remote action wrapper,
     # and not the actual rustc command.
     --remote-inputs=*)
@@ -241,7 +251,8 @@ EOF
       shift
       continue
       ;;
-    --remote-inputs) prev_opt=comma_remote_inputs
+    --remote-inputs)
+      prev_opt=comma_remote_inputs
       # Remove this from the actual command to be executed.
       shift
       continue

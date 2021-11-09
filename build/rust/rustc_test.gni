@@ -218,6 +218,11 @@ template("rustc_test_internal") {
                              "visibility",
                            ])
     inputs = _local_inputs
+    if (enable_rbe && !_use_rbe) {
+      # Disable RBE for this target through a fake rustflag,
+      # that is intercepted by rustc-remote-wrapper.sh.
+      rustflags += [ "--remote-disable" ]
+    }
     if (_use_rbe && _remote_rbe_inputs != []) {
       # Signal to rustc-remote-wrapper.sh that there are additional
       # inputs to upload.  This flag is stripped away from the eventual
