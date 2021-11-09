@@ -34,8 +34,10 @@ class PassThroughReadOnlyBlockDevice : public BlockDevice {
     return device_.BlockAttachVmo(vmo, out);
   }
 
-  zx_status_t VolumeQuery(fuchsia_hardware_block_volume_VolumeInfo* out_info) const override {
-    return device_.VolumeQuery(out_info);
+  zx_status_t VolumeGetInfo(
+      fuchsia_hardware_block_volume_VolumeManagerInfo* out_manager_info,
+      fuchsia_hardware_block_volume_VolumeInfo* out_volume_info) const override {
+    return device_.VolumeGetInfo(out_manager_info, out_volume_info);
   }
 
   zx_status_t VolumeQuerySlices(const uint64_t* slices, size_t slices_count,

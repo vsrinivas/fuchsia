@@ -5,41 +5,44 @@ library fuchsia.hardware.block.volume;
 using zx;
 using fuchsia.hardware.block.partition as partition;
 
-/// VolumeInfo describes characteristics of either a single Volume, or all
-/// Volumes combined.
-@for_deprecated_c_bindings
-type VolumeInfo = struct {
-    /// Size of a single slice, in bytes.
-    slice_size uint64;
-
-    /// Number of addressable slices.
-    vslice_count uint64;
-
-    /// Total number of allocatable slices.
-    pslice_total_count uint64;
-
-    /// Total number of currently allocated slices.
-    pslice_allocated_count uint64;
-};
-
-/// VolumeManagerInfo describes the properties of the existing volume manager.
-/// This properties are specific for the VolumeManager and are not specific
-/// to each Volume.
+/// VolumeManagerInfo describes the properties of the volume manager and not each individual volume.
 @for_deprecated_c_bindings
 type VolumeManagerInfo = struct {
     /// Size of a single slice, in bytes.
     slice_size uint64;
 
-    /// Size in bytes of the partition the VolumeManager is able to address with respect to the available space.
-    current_slice_count uint64;
+    /// Number of slices the volume manager is able use right now. This counts the
+    /// allocated_slice_count plus the number of available slices.
+    slice_count uint64;
 
-    /// The maximum capacity which the Volume Manager could grow to utilize, if the
-    /// partition containing the Volume Manager itself expands (i.e., the Volume Manager
-    /// is initialized on a GPT partition that has extended beyond the originally allocated
-    /// capacity).
-    /// This resize occurs automatically on initialization of the Volume Manager,
-    /// and adjusts the result of `current_slice_count` to reflect the currently usable size.
+    /// Number of slices currently assigned to partitions.
+    assigned_slice_count uint64;
+
+    /// The maximum capacity which the Volume Manager could grow to utilize if the partition
+    /// containing the Volume Manager itself expands (i.e., the Volume Manager is initialized on a
+    /// GPT partition that has extended beyond the originally allocated capacity). This value is
+    /// the number of entries reserved in the volume manager header and is not related to the size
+    /// of the physical device (which may be larger or smaller).
     maximum_slice_count uint64;
+
+    /// Largest value that can be used for a virtual slice number.
+    max_virtual_slice uint64;
+};
+
+@for_deprecated_c_bindings
+type VolumeInfo = struct {
+    /// Number of slices allocated to the volume.
+    partition_slice_count uint64;
+
+    /// Limit on the maximum size in bytes of this partition, if there is one. If the size of the
+    /// partition is not limited, this value will be 0. Partitions can grow into free slices
+    /// available in the volume manager as long as the total bytes are less than this.
+    ///
+    /// The partition may be larger than this limit if a smaller limit was applied after the
+    /// partition had already grown to the current size.
+    ///
+    /// See `VolumeManager.GetPartitionLimit()`
+    byte_limit uint64;
 };
 
 /// Indicates that the partition should be created as inactive, implying that it
@@ -62,12 +65,6 @@ protocol VolumeManager {
         flags uint32;
     }) -> (struct {
         status zx.status;
-    });
-
-    /// Gets slice size information about all volumes.
-    Query() -> (struct {
-        status zx.status;
-        info box<VolumeInfo>;
     });
 
     /// Gets the VolumeManagerInfo describing this instance of the `VolumeManager`.
@@ -102,6 +99,9 @@ protocol VolumeManager {
     /// is no limit and the partition can be extended as long as there is available space on the
     /// device.
     ///
+    /// The partition may be larger than this limit if a smaller limit was applied after the
+    /// partition had already grown to the current size.
+    ///
     /// Currently the partition limit is not persisted across reboots but this may change in the
     /// future.
     GetPartitionLimit(struct {
@@ -112,7 +112,9 @@ protocol VolumeManager {
     });
 
     /// Sets the allocation limit for the partition. Partitions can not be extended beyond their
-    /// allocation limit.
+    /// allocation limit. The partition limit will never shrink partitions so if this value is
+    /// less than the current partition size, it will keep the current size but prevent further
+    /// growth.
     ///
     /// The allocation limits are on the VolumeManager API rather than on the partition because
     /// they represent a higher capability level. These limits are designed to put guards on
@@ -158,12 +160,6 @@ type VsliceRange = struct {
 protocol Volume {
     compose partition.Partition;
 
-    /// Gets slice size information about the parent volume.
-    Query() -> (struct {
-        status zx.status;
-        info box<VolumeInfo>;
-    });
-
     /// Returns the number of contiguous allocated (or unallocated) vslices
     /// starting from each vslice.
     ///
@@ -174,6 +170,13 @@ protocol Volume {
         status zx.status;
         response array<VsliceRange, MAX_SLICE_REQUESTS>;
         response_count uint64;
+    });
+
+    /// Returns the information about this volume and the volume manager it is embedded in.
+    GetVolumeInfo() -> (struct {
+        status zx.status;
+        manager box<VolumeManagerInfo>;
+        volume box<VolumeInfo>;
     });
 
     /// Extends the mapping of this partition.

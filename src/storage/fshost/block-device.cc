@@ -940,7 +940,7 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
   fidl::UnownedClientEnd<fuchsia_hardware_block_volume::Volume> volume_client(
       device.channel().borrow());
 
-  auto query_result = fidl::WireCall(volume_client)->Query();
+  auto query_result = fidl::WireCall(volume_client)->GetVolumeInfo();
   if (query_result.status() != ZX_OK) {
     FX_LOGS(ERROR) << "Unable to query FVM information: "
                    << zx_status_get_string(query_result.status());
@@ -954,7 +954,7 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
     return query_response->status;
   }
 
-  const uint64_t slice_size = query_response->info->slice_size;
+  const uint64_t slice_size = query_response->manager->slice_size;
 
   // Free all the existing slices.
   mounter_->inspect_manager().LogMinfsUpgradeProgress(
@@ -1004,7 +1004,7 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
       device_config_->ReadUint64OptionValue(Config::kMinfsMaxBytes, 0) / slice_size - 1;
 
   if (slice_count < 0) {
-    auto query_result = fidl::WireCall(volume_client)->Query();
+    auto query_result = fidl::WireCall(volume_client)->GetVolumeInfo();
     if (query_result.status() != ZX_OK)
       return query_result.status();
     const auto* response = query_result.Unwrap();
@@ -1014,7 +1014,7 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
     // FVM's space (thus limiting blobfs growth).  24 MiB should be enough.
     slice_count =
         std::min(24 * 1024 * 1024 / slice_size - 1,
-                 response->info->pslice_total_count - response->info->pslice_allocated_count);
+                 response->manager->slice_count - response->manager->assigned_slice_count);
   }
 
   auto extend_result =

@@ -524,7 +524,7 @@ TEST(FakeBlockDeviceTest, TrimSucceedsIfSupported) {
   EXPECT_EQ(device.FifoTransaction(&request, 1), ZX_OK);
 }
 
-TEST(FakeFVMBlockDeviceTest, QueryVolume) {
+TEST(FakeFVMBlockDeviceTest, GetVolumeInfo) {
   std::unique_ptr<BlockDevice> device = std::make_unique<FakeFVMBlockDevice>(
       kBlockCountDefault, kBlockSizeDefault, kSliceSizeDefault, kSliceCountDefault);
   {
@@ -535,10 +535,11 @@ TEST(FakeFVMBlockDeviceTest, QueryVolume) {
   }
 
   {
-    fuchsia_hardware_block_volume_VolumeInfo info = {};
-    ASSERT_OK(device->VolumeQuery(&info));
-    EXPECT_EQ(kSliceSizeDefault, info.slice_size);
-    EXPECT_EQ(1, info.pslice_allocated_count);
+    fuchsia_hardware_block_volume_VolumeManagerInfo manager_info = {};
+    fuchsia_hardware_block_volume_VolumeInfo volume_info = {};
+    ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
+    EXPECT_EQ(kSliceSizeDefault, manager_info.slice_size);
+    EXPECT_EQ(1, manager_info.assigned_slice_count);
   }
 }
 
@@ -584,13 +585,14 @@ TEST(FakeFVMBlockDeviceTest, ExtendNoOp) {
   std::unique_ptr<BlockDevice> device = std::make_unique<FakeFVMBlockDevice>(
       kBlockCountDefault, kBlockSizeDefault, kSliceSizeDefault, kSliceCountDefault);
 
-  fuchsia_hardware_block_volume_VolumeInfo info = {};
-  ASSERT_OK(device->VolumeQuery(&info));
-  EXPECT_EQ(1, info.pslice_allocated_count);
+  fuchsia_hardware_block_volume_VolumeManagerInfo manager_info = {};
+  fuchsia_hardware_block_volume_VolumeInfo volume_info = {};
+  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
+  EXPECT_EQ(1, manager_info.assigned_slice_count);
 
   ASSERT_OK(device->VolumeExtend(0, 0));
-  ASSERT_OK(device->VolumeQuery(&info));
-  EXPECT_EQ(1, info.pslice_allocated_count);
+  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
+  EXPECT_EQ(1, manager_info.assigned_slice_count);
 
   uint64_t starts = 0;
   uint64_t lengths = 1;
@@ -601,13 +603,14 @@ TEST(FakeFVMBlockDeviceTest, ExtendOverlappingSameStart) {
   std::unique_ptr<BlockDevice> device = std::make_unique<FakeFVMBlockDevice>(
       kBlockCountDefault, kBlockSizeDefault, kSliceSizeDefault, kSliceCountDefault);
 
-  fuchsia_hardware_block_volume_VolumeInfo info = {};
-  ASSERT_OK(device->VolumeQuery(&info));
-  EXPECT_EQ(1, info.pslice_allocated_count);
+  fuchsia_hardware_block_volume_VolumeManagerInfo manager_info = {};
+  fuchsia_hardware_block_volume_VolumeInfo volume_info = {};
+  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
+  EXPECT_EQ(1, manager_info.assigned_slice_count);
 
   ASSERT_OK(device->VolumeExtend(0, 2));
-  ASSERT_OK(device->VolumeQuery(&info));
-  EXPECT_EQ(2, info.pslice_allocated_count);
+  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
+  EXPECT_EQ(2, manager_info.assigned_slice_count);
 
   uint64_t starts = 0;
   uint64_t lengths = 2;
@@ -618,13 +621,14 @@ TEST(FakeFVMBlockDeviceTest, ExtendOverlappingDifferentStart) {
   std::unique_ptr<BlockDevice> device = std::make_unique<FakeFVMBlockDevice>(
       kBlockCountDefault, kBlockSizeDefault, kSliceSizeDefault, kSliceCountDefault);
 
-  fuchsia_hardware_block_volume_VolumeInfo info = {};
-  ASSERT_OK(device->VolumeQuery(&info));
-  EXPECT_EQ(1, info.pslice_allocated_count);
+  fuchsia_hardware_block_volume_VolumeManagerInfo manager_info = {};
+  fuchsia_hardware_block_volume_VolumeInfo volume_info = {};
+  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
+  EXPECT_EQ(1, manager_info.assigned_slice_count);
 
   ASSERT_OK(device->VolumeExtend(1, 2));
-  ASSERT_OK(device->VolumeQuery(&info));
-  EXPECT_EQ(3, info.pslice_allocated_count);
+  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
+  EXPECT_EQ(3, manager_info.assigned_slice_count);
 
   uint64_t starts = 0;
   uint64_t lengths = 3;
@@ -635,13 +639,14 @@ TEST(FakeFVMBlockDeviceTest, ExtendNonOverlapping) {
   std::unique_ptr<BlockDevice> device = std::make_unique<FakeFVMBlockDevice>(
       kBlockCountDefault, kBlockSizeDefault, kSliceSizeDefault, kSliceCountDefault);
 
-  fuchsia_hardware_block_volume_VolumeInfo info = {};
-  ASSERT_OK(device->VolumeQuery(&info));
-  EXPECT_EQ(1, info.pslice_allocated_count);
+  fuchsia_hardware_block_volume_VolumeManagerInfo manager_info = {};
+  fuchsia_hardware_block_volume_VolumeInfo volume_info = {};
+  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
+  EXPECT_EQ(1, manager_info.assigned_slice_count);
 
   ASSERT_OK(device->VolumeExtend(2, 2));
-  ASSERT_OK(device->VolumeQuery(&info));
-  EXPECT_EQ(3, info.pslice_allocated_count);
+  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
+  EXPECT_EQ(3, manager_info.assigned_slice_count);
 
   uint64_t starts[2] = {0, 2};
   uint64_t lengths[2] = {1, 2};
@@ -652,26 +657,28 @@ TEST(FakeFVMBlockDeviceTest, ShrinkNoOp) {
   std::unique_ptr<BlockDevice> device = std::make_unique<FakeFVMBlockDevice>(
       kBlockCountDefault, kBlockSizeDefault, kSliceSizeDefault, kSliceCountDefault);
 
-  fuchsia_hardware_block_volume_VolumeInfo info = {};
-  ASSERT_OK(device->VolumeQuery(&info));
-  EXPECT_EQ(1, info.pslice_allocated_count);
+  fuchsia_hardware_block_volume_VolumeManagerInfo manager_info = {};
+  fuchsia_hardware_block_volume_VolumeInfo volume_info = {};
+  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
+  EXPECT_EQ(1, manager_info.assigned_slice_count);
 
   ASSERT_OK(device->VolumeShrink(0, 0));
-  ASSERT_OK(device->VolumeQuery(&info));
-  EXPECT_EQ(1, info.pslice_allocated_count);
+  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
+  EXPECT_EQ(1, manager_info.assigned_slice_count);
 }
 
 TEST(FakeFVMBlockDeviceTest, ShrinkInvalid) {
   std::unique_ptr<BlockDevice> device = std::make_unique<FakeFVMBlockDevice>(
       kBlockCountDefault, kBlockSizeDefault, kSliceSizeDefault, kSliceCountDefault);
 
-  fuchsia_hardware_block_volume_VolumeInfo info = {};
-  ASSERT_OK(device->VolumeQuery(&info));
-  EXPECT_EQ(1, info.pslice_allocated_count);
+  fuchsia_hardware_block_volume_VolumeManagerInfo manager_info = {};
+  fuchsia_hardware_block_volume_VolumeInfo volume_info = {};
+  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
+  EXPECT_EQ(1, manager_info.assigned_slice_count);
 
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, device->VolumeShrink(100, 5));
-  ASSERT_OK(device->VolumeQuery(&info));
-  EXPECT_EQ(1, info.pslice_allocated_count);
+  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
+  EXPECT_EQ(1, manager_info.assigned_slice_count);
 }
 
 // [0, 0) -> Extend
@@ -681,17 +688,18 @@ TEST(FakeFVMBlockDeviceTest, ExtendThenShrinkSubSection) {
   std::unique_ptr<BlockDevice> device = std::make_unique<FakeFVMBlockDevice>(
       kBlockCountDefault, kBlockSizeDefault, kSliceSizeDefault, kSliceCountDefault);
 
-  fuchsia_hardware_block_volume_VolumeInfo info = {};
-  ASSERT_OK(device->VolumeQuery(&info));
-  EXPECT_EQ(1, info.pslice_allocated_count);
+  fuchsia_hardware_block_volume_VolumeManagerInfo manager_info = {};
+  fuchsia_hardware_block_volume_VolumeInfo volume_info = {};
+  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
+  EXPECT_EQ(1, manager_info.assigned_slice_count);
 
   ASSERT_OK(device->VolumeExtend(1, 10));
-  ASSERT_OK(device->VolumeQuery(&info));
-  EXPECT_EQ(11, info.pslice_allocated_count);
+  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
+  EXPECT_EQ(11, manager_info.assigned_slice_count);
 
   ASSERT_OK(device->VolumeShrink(1, 10));
-  ASSERT_OK(device->VolumeQuery(&info));
-  EXPECT_EQ(1, info.pslice_allocated_count);
+  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
+  EXPECT_EQ(1, manager_info.assigned_slice_count);
 
   uint64_t starts[1] = {0};
   uint64_t lengths[1] = {1};
@@ -706,23 +714,24 @@ TEST(FakeFVMBlockDeviceTest, ExtendThenShrinkPartialOverlap) {
   std::unique_ptr<BlockDevice> device = std::make_unique<FakeFVMBlockDevice>(
       kBlockCountDefault, kBlockSizeDefault, kSliceSizeDefault, kSliceCountDefault);
 
-  fuchsia_hardware_block_volume_VolumeInfo info = {};
-  ASSERT_OK(device->VolumeQuery(&info));
-  EXPECT_EQ(1, info.pslice_allocated_count);
+  fuchsia_hardware_block_volume_VolumeManagerInfo manager_info = {};
+  fuchsia_hardware_block_volume_VolumeInfo volume_info = {};
+  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
+  EXPECT_EQ(1, manager_info.assigned_slice_count);
 
   ASSERT_OK(device->VolumeExtend(5, 10));
-  ASSERT_OK(device->VolumeQuery(&info));
-  EXPECT_EQ(11, info.pslice_allocated_count);
+  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
+  EXPECT_EQ(11, manager_info.assigned_slice_count);
 
   // One slice overlaps, one doesn't.
   ASSERT_OK(device->VolumeShrink(4, 2));
-  ASSERT_OK(device->VolumeQuery(&info));
-  EXPECT_EQ(10, info.pslice_allocated_count);
+  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
+  EXPECT_EQ(10, manager_info.assigned_slice_count);
 
   // One slice overlaps, one doesn't.
   ASSERT_OK(device->VolumeShrink(14, 2));
-  ASSERT_OK(device->VolumeQuery(&info));
-  EXPECT_EQ(9, info.pslice_allocated_count);
+  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
+  EXPECT_EQ(9, manager_info.assigned_slice_count);
 
   uint64_t starts[2] = {0, 6};
   uint64_t lengths[2] = {1, 8};
@@ -736,17 +745,18 @@ TEST(FakeFVMBlockDeviceTest, ExtendThenShrinkTotal) {
   std::unique_ptr<BlockDevice> device = std::make_unique<FakeFVMBlockDevice>(
       kBlockCountDefault, kBlockSizeDefault, kSliceSizeDefault, kSliceCountDefault);
 
-  fuchsia_hardware_block_volume_VolumeInfo info = {};
-  ASSERT_OK(device->VolumeQuery(&info));
-  EXPECT_EQ(1, info.pslice_allocated_count);
+  fuchsia_hardware_block_volume_VolumeManagerInfo manager_info = {};
+  fuchsia_hardware_block_volume_VolumeInfo volume_info = {};
+  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
+  EXPECT_EQ(1, manager_info.assigned_slice_count);
 
   ASSERT_OK(device->VolumeExtend(5, 10));
-  ASSERT_OK(device->VolumeQuery(&info));
-  EXPECT_EQ(11, info.pslice_allocated_count);
+  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
+  EXPECT_EQ(11, manager_info.assigned_slice_count);
 
   ASSERT_OK(device->VolumeShrink(5, 10));
-  ASSERT_OK(device->VolumeQuery(&info));
-  EXPECT_EQ(1, info.pslice_allocated_count);
+  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
+  EXPECT_EQ(1, manager_info.assigned_slice_count);
 
   uint64_t starts[1] = {0};
   uint64_t lengths[1] = {1};
@@ -760,17 +770,18 @@ TEST(FakeFVMBlockDeviceTest, ExtendThenShrinkToSplit) {
   std::unique_ptr<BlockDevice> device = std::make_unique<FakeFVMBlockDevice>(
       kBlockCountDefault, kBlockSizeDefault, kSliceSizeDefault, kSliceCountDefault);
 
-  fuchsia_hardware_block_volume_VolumeInfo info = {};
-  ASSERT_OK(device->VolumeQuery(&info));
-  EXPECT_EQ(1, info.pslice_allocated_count);
+  fuchsia_hardware_block_volume_VolumeManagerInfo manager_info = {};
+  fuchsia_hardware_block_volume_VolumeInfo volume_info = {};
+  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
+  EXPECT_EQ(1, manager_info.assigned_slice_count);
 
   ASSERT_OK(device->VolumeExtend(5, 10));
-  ASSERT_OK(device->VolumeQuery(&info));
-  EXPECT_EQ(11, info.pslice_allocated_count);
+  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
+  EXPECT_EQ(11, manager_info.assigned_slice_count);
 
   ASSERT_OK(device->VolumeShrink(7, 2));
-  ASSERT_OK(device->VolumeQuery(&info));
-  EXPECT_EQ(9, info.pslice_allocated_count);
+  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
+  EXPECT_EQ(9, manager_info.assigned_slice_count);
 
   uint64_t starts[3] = {0, 5, 9};
   uint64_t lengths[3] = {1, 2, 6};
@@ -787,26 +798,27 @@ TEST(FakeFVMBlockDeviceTest, OverallocateSlices) {
   std::unique_ptr<BlockDevice> device = std::make_unique<FakeFVMBlockDevice>(
       kBlockCountDefault, kBlockSizeDefault, kSliceSizeDefault, kSliceCapacity);
 
-  fuchsia_hardware_block_volume_VolumeInfo info = {};
-  ASSERT_OK(device->VolumeQuery(&info));
-  EXPECT_EQ(1, info.pslice_allocated_count);
-  EXPECT_EQ(kSliceCapacity, info.pslice_total_count);
+  fuchsia_hardware_block_volume_VolumeManagerInfo manager_info = {};
+  fuchsia_hardware_block_volume_VolumeInfo volume_info = {};
+  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
+  EXPECT_EQ(1, manager_info.assigned_slice_count);
+  EXPECT_EQ(kSliceCapacity, manager_info.slice_count);
 
   // Allocate all slices.
-  ASSERT_OK(device->VolumeExtend(1, info.pslice_total_count - info.pslice_allocated_count));
-  ASSERT_OK(device->VolumeQuery(&info));
-  EXPECT_EQ(kSliceCapacity, info.pslice_allocated_count);
+  ASSERT_OK(device->VolumeExtend(1, manager_info.slice_count - manager_info.assigned_slice_count));
+  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
+  EXPECT_EQ(kSliceCapacity, manager_info.assigned_slice_count);
 
   // We cannot allocate more slices without remaining space.
   ASSERT_EQ(ZX_ERR_NO_SPACE, device->VolumeExtend(kSliceCapacity, 1));
 
   // However, if we shrink an earlier slice, we can re-allocate.
   ASSERT_OK(device->VolumeShrink(kSliceCapacity - 1, 1));
-  ASSERT_OK(device->VolumeQuery(&info));
-  EXPECT_EQ(kSliceCapacity - 1, info.pslice_allocated_count);
+  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
+  EXPECT_EQ(kSliceCapacity - 1, manager_info.assigned_slice_count);
   ASSERT_OK(device->VolumeExtend(kSliceCapacity, 1));
-  ASSERT_OK(device->VolumeQuery(&info));
-  EXPECT_EQ(kSliceCapacity, info.pslice_allocated_count);
+  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
+  EXPECT_EQ(kSliceCapacity, manager_info.assigned_slice_count);
 
   uint64_t starts[2] = {0, kSliceCapacity};
   uint64_t lengths[2] = {kSliceCapacity - 1, 1};
@@ -820,15 +832,16 @@ TEST(FakeFVMBlockDeviceTest, PartialOverallocateSlices) {
   std::unique_ptr<BlockDevice> device = std::make_unique<FakeFVMBlockDevice>(
       kBlockCountDefault, kBlockSizeDefault, kSliceSizeDefault, kSliceCapacity);
 
-  fuchsia_hardware_block_volume_VolumeInfo info = {};
-  ASSERT_OK(device->VolumeQuery(&info));
-  EXPECT_EQ(1, info.pslice_allocated_count);
-  EXPECT_EQ(kSliceCapacity, info.pslice_total_count);
+  fuchsia_hardware_block_volume_VolumeManagerInfo manager_info = {};
+  fuchsia_hardware_block_volume_VolumeInfo volume_info = {};
+  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
+  EXPECT_EQ(1, manager_info.assigned_slice_count);
+  EXPECT_EQ(kSliceCapacity, manager_info.slice_count);
 
   // Allocating too many slices up front should not allocate any slices.
-  ASSERT_EQ(ZX_ERR_NO_SPACE, device->VolumeExtend(1, info.pslice_total_count));
-  ASSERT_OK(device->VolumeQuery(&info));
-  EXPECT_EQ(1, info.pslice_allocated_count);
+  ASSERT_EQ(ZX_ERR_NO_SPACE, device->VolumeExtend(1, manager_info.slice_count));
+  ASSERT_OK(device->VolumeGetInfo(&manager_info, &volume_info));
+  EXPECT_EQ(1, manager_info.assigned_slice_count);
 
   uint64_t starts[1] = {0};
   uint64_t lengths[1] = {1};

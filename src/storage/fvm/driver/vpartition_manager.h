@@ -38,7 +38,7 @@
 
 namespace fvm {
 
-using fuchsia_hardware_block_volume::wire::VolumeInfo;
+using fuchsia_hardware_block_volume::wire::VolumeManagerInfo;
 
 // Forward declaration
 class VPartitionManager;
@@ -78,8 +78,9 @@ class VPartitionManager : public ManagerDeviceType {
   zx_status_t FreeSlices(VPartition* vp, size_t vslice_start, size_t count) TA_EXCL(lock_);
 
   // Returns global information about the FVM.
-  void QueryInternal(VolumeInfo* info) TA_EXCL(lock_);
+  void GetInfoInternal(VolumeManagerInfo* info) TA_EXCL(lock_);
 
+  uint64_t GetPartitionLimitInternal(size_t index) const;
   zx_status_t GetPartitionLimitInternal(const uint8_t* guid, uint64_t* byte_count) const;
   zx_status_t SetPartitionLimitInternal(const uint8_t* guid, uint64_t byte_count);
   zx_status_t SetPartitionNameInternal(const uint8_t* guid, std::string_view name);
@@ -114,7 +115,6 @@ class VPartitionManager : public ManagerDeviceType {
  private:
   void AllocatePartition(AllocatePartitionRequestView request,
                          AllocatePartitionCompleter::Sync& completer) override;
-  void Query(QueryRequestView request, QueryCompleter::Sync& completer) override;
   void GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) override;
   void Activate(ActivateRequestView request, ActivateCompleter::Sync& completer) override;
   void GetPartitionLimit(GetPartitionLimitRequestView request,

@@ -194,12 +194,13 @@ zx_status_t DdkVolume::GetFvmSliceSize(uint64_t* out) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  parent_volume_info_t info;
-  if ((rc = block_volume_query(&proto, &info)) != ZX_OK) {
+  volume_manager_info_t manager_info;
+  volume_info_t volume_info;
+  if ((rc = block_volume_get_info(&proto, &manager_info, &volume_info)) != ZX_OK) {
     return rc;
   }
 
-  *out = info.slice_size;
+  *out = manager_info.slice_size;
   return ZX_OK;
 }
 

@@ -70,9 +70,9 @@ TEST_F(FvmVolumeManagerApiTest, GetInfoNonPreallocatedMetadata) {
   // Check API returns the correct information for a non preallocated FVM.
   EXPECT_EQ(kExpectedFormat.slice_size, result->info->slice_size);
   // Less or equal, because the metadata size is rounded to the nearest block boundary.
-  EXPECT_LE(result->info->current_slice_count, result->info->maximum_slice_count);
+  EXPECT_LE(result->info->slice_count, result->info->maximum_slice_count);
   EXPECT_EQ(kExpectedFormat.GetMaxAllocationTableEntriesForDiskSize(kBlockSize * kBlockCount),
-            result->info->current_slice_count);
+            result->info->slice_count);
   EXPECT_EQ(kExpectedFormat.GetAllocationTableAllocatedEntryCount(),
             result->info->maximum_slice_count);
 }
@@ -101,13 +101,15 @@ TEST_F(FvmVolumeManagerApiTest, GetInfoWithPreallocatedMetadata) {
   // Check API returns the correct information for a preallocated FVM.
   EXPECT_EQ(kExpectedFormat.slice_size, result->info->slice_size);
   // Less than because we picked sizes that enforce a difference.
-  EXPECT_LT(result->info->current_slice_count, result->info->maximum_slice_count);
-  EXPECT_EQ(kExpectedFormat.pslice_count, result->info->current_slice_count);
+  EXPECT_LT(result->info->slice_count, result->info->maximum_slice_count);
+  EXPECT_EQ(kExpectedFormat.pslice_count, result->info->slice_count);
   EXPECT_EQ(kExpectedFormat.GetAllocationTableAllocatedEntryCount(),
             result->info->maximum_slice_count);
+  EXPECT_EQ(0, result->info->assigned_slice_count);
 }
 
-// Tests that the maximum extents apply to partition growth properly.
+// Tests that the maximum extents apply to partition growth properly. This also tests the
+// basics of the GetVolumeInfo() call.
 TEST_F(FvmVolumeManagerApiTest, PartitionLimit) {
   constexpr uint64_t kBlockCount = (50 * kSliceSize) / kBlockSize;
   constexpr uint64_t kMaxBlockCount = 1024 * kSliceSize / kBlockSize;
@@ -119,6 +121,9 @@ TEST_F(FvmVolumeManagerApiTest, PartitionLimit) {
   std::unique_ptr<FvmAdapter> fvm = FvmAdapter::CreateGrowable(
       devmgr_->devfs_root(), kBlockSize, kBlockCount, kMaxBlockCount, kSliceSize, ramdisk.get());
   ASSERT_TRUE(fvm);
+
+  const fvm::Header kExpectedFormat = fvm::Header::FromGrowableDiskSize(
+      fvm::kMaxUsablePartitions, kBlockSize * kBlockCount, kBlockSize * kMaxBlockCount, kSliceSize);
 
   // Type GUID for partition.
   fuchsia_hardware_block_partition::wire::Guid type_guid;
@@ -142,6 +147,27 @@ TEST_F(FvmVolumeManagerApiTest, PartitionLimit) {
   ASSERT_OK(alloc_result.status(), "Transport layer error");
   ASSERT_OK(alloc_result->status, "Service returned error.");
 
+  // Find the partition we just created. Should be "<ramdisk-path>/fvm/<name>-p-1/block"
+  fbl::unique_fd volume_fd;
+  std::string device_name(ramdisk->path());
+  device_name.append("/fvm/");
+  device_name.append(kPartitionName);
+  device_name.append("-p-1/block");
+  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(devmgr_->devfs_root(),
+                                                          device_name.c_str(), &volume_fd));
+  fdio_cpp::UnownedFdioCaller volume(volume_fd.get());
+
+  // Query the volume to check its information.
+  fidl::WireResult<Volume::GetVolumeInfo> get_info =
+      fidl::WireCall<Volume>(volume.channel()->borrow())->GetVolumeInfo();
+  ASSERT_OK(get_info.status(), "Transport error");
+  ASSERT_OK(get_info->status, "Expected GetVolumeInfo() call to succeed.");
+  EXPECT_EQ(kSliceSize, get_info->manager->slice_size);
+  EXPECT_EQ(kExpectedFormat.pslice_count, get_info->manager->slice_count);
+  EXPECT_EQ(1u, get_info->manager->assigned_slice_count);
+  EXPECT_EQ(1u, get_info->volume->partition_slice_count);
+  EXPECT_EQ(0u, get_info->volume->byte_limit);
+
   // That partition's initial limit should be 0 (no limit).
   fidl::WireResult<VolumeManager::GetPartitionLimit> get_result =
       fidl::WireCall<VolumeManager>(fvm->device()->channel())->GetPartitionLimit(guid);
@@ -162,22 +188,23 @@ TEST_F(FvmVolumeManagerApiTest, PartitionLimit) {
   ASSERT_OK(get_result2->status, "Service returned error.");
   EXPECT_EQ(get_result2->byte_count, kSliceSize * 2, "Expected the limit we set.");
 
-  // Find the partition we just created. Should be "<ramdisk-path>/fvm/<name>-p-1/block"
-  fbl::unique_fd volume_fd;
-  std::string device_name(ramdisk->path());
-  device_name.append("/fvm/");
-  device_name.append(kPartitionName);
-  device_name.append("-p-1/block");
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(devmgr_->devfs_root(),
-                                                          device_name.c_str(), &volume_fd));
-  fdio_cpp::UnownedFdioCaller volume(volume_fd.get());
-
   // Try to expand it by one slice. Since the initial size was one slice and the limit is two, this
   // should succeed.
   fidl::WireResult<Volume::Extend> good_extend =
       fidl::WireCall<Volume>(volume.channel()->borrow())->Extend(100, 1);
   ASSERT_OK(good_extend.status(), "Transport error");
   ASSERT_OK(good_extend->status, "Expected Expand() call to succeed.");
+
+  // Query the volume to check its information.
+  fidl::WireResult<Volume::GetVolumeInfo> get_info2 =
+      fidl::WireCall<Volume>(volume.channel()->borrow())->GetVolumeInfo();
+  ASSERT_OK(get_info2.status(), "Transport error");
+  ASSERT_OK(get_info2->status, "Expected GetVolumeInfo() call to succeed.");
+  EXPECT_EQ(kSliceSize, get_info2->manager->slice_size);
+  EXPECT_EQ(kExpectedFormat.pslice_count, get_info2->manager->slice_count);
+  EXPECT_EQ(2u, get_info2->manager->assigned_slice_count);
+  EXPECT_EQ(2u, get_info2->volume->partition_slice_count);
+  EXPECT_EQ(kSliceSize * 2, get_info2->volume->byte_limit);
 
   // Adding a third slice should fail since it's already at the max size.
   fidl::WireResult<Volume::Extend> bad_extend =

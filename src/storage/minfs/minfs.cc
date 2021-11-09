@@ -93,16 +93,17 @@ void FreeSlices(const Superblock* info, block_client::BlockDevice* device) {
 // Checks all slices against the block device. May shrink the partition.
 zx_status_t CheckSlices(const Superblock* info, size_t blocks_per_slice,
                         block_client::BlockDevice* device, bool repair_slices) {
-  fuchsia_hardware_block_volume_VolumeInfo fvm_info;
-  zx_status_t status = device->VolumeQuery(&fvm_info);
+  fuchsia_hardware_block_volume_VolumeManagerInfo manager_info;
+  fuchsia_hardware_block_volume_VolumeInfo volume_info;
+  zx_status_t status = device->VolumeGetInfo(&manager_info, &volume_info);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "unable to query FVM :" << status;
     return ZX_ERR_UNAVAILABLE;
   }
 
-  if (info->slice_size != fvm_info.slice_size) {
+  if (info->slice_size != manager_info.slice_size) {
     FX_LOGS(ERROR) << "slice size " << info->slice_size << " did not match expected size "
-                   << fvm_info.slice_size;
+                   << manager_info.slice_size;
     return ZX_ERR_BAD_STATE;
   }
 
@@ -184,12 +185,13 @@ zx_status_t BlockingSync(fs::Journal* journal) {
 // will do nothing.
 zx_status_t CreateFvmData(const MountOptions& options, Superblock* info,
                           block_client::BlockDevice* device) {
-  fuchsia_hardware_block_volume_VolumeInfo fvm_info;
-  if (device->VolumeQuery(&fvm_info) != ZX_OK) {
+  fuchsia_hardware_block_volume_VolumeManagerInfo manager_info;
+  fuchsia_hardware_block_volume_VolumeInfo volume_info;
+  if (device->VolumeGetInfo(&manager_info, &volume_info) != ZX_OK) {
     return ZX_OK;
   }
 
-  info->slice_size = static_cast<uint32_t>(fvm_info.slice_size);
+  info->slice_size = static_cast<uint32_t>(manager_info.slice_size);
   SetMinfsFlagFvm(*info);
 
   if (info->slice_size % info->BlockSize()) {
@@ -709,11 +711,12 @@ Minfs::~Minfs() {
 }
 
 #ifdef __Fuchsia__
-zx_status_t Minfs::FVMQuery(fuchsia_hardware_block_volume_VolumeInfo* info) const {
+zx_status_t Minfs::FVMQuery(fuchsia_hardware_block_volume_VolumeManagerInfo* info) const {
   if (!(Info().flags & kMinfsFlagFVM)) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  return bc_->device()->VolumeQuery(info);
+  fuchsia_hardware_block_volume_VolumeInfo volume;
+  return bc_->device()->VolumeGetInfo(info, &volume);
 }
 #endif
 
@@ -1454,9 +1457,9 @@ zx_status_t Minfs::GetFilesystemInfo(fidl::AnyArena& allocator,
   if (fs_id_.duplicate(ZX_RIGHTS_BASIC, &fs_id_copy) == ZX_OK)
     out.set_fs_id(std::move(fs_id_copy));
 
-  fuchsia_hardware_block_volume_VolumeInfo fvm_info;
+  fuchsia_hardware_block_volume_VolumeManagerInfo fvm_info;
   if (FVMQuery(&fvm_info) == ZX_OK) {
-    uint64_t free_slices = fvm_info.pslice_total_count - fvm_info.pslice_allocated_count;
+    uint64_t free_slices = fvm_info.slice_count - fvm_info.assigned_slice_count;
     out.set_free_shared_pool_bytes(allocator, fvm_info.slice_size * free_slices);
   }
 

@@ -5,16 +5,44 @@ library fuchsia.hardware.block.volume;
 
 using zx;
 
-/// Information about the parent device of the current volume.
-type ParentVolumeInfo = struct {
-    /// The size of a single slice, in bytes.
+/// VolumeManagerInfo describes the properties of the volume manager and not each individual volume.
+@for_deprecated_c_bindings
+type VolumeManagerInfo = struct {
+    /// Size of a single slice, in bytes.
     slice_size uint64;
-    /// The number of addressable slices within a volume.
-    virtual_slice_count uint64;
-    /// The total number of slices which are allocatable.
-    physical_slice_count_total uint64;
-    /// The total number of slices which are allocated.
-    physical_slice_count_used uint64;
+
+    /// Number of slices the volume manager is able use right now. This counts the
+    /// allocated_slice_count plus the number of available slices.
+    slice_count uint64;
+
+    /// Number of slices currently assigned to partitions.
+    assigned_slice_count uint64;
+
+    /// The maximum capacity which the Volume Manager could grow to utilize if the partition
+    /// containing the Volume Manager itself expands (i.e., the Volume Manager is initialized on a
+    /// GPT partition that has extended beyond the originally allocated capacity). This value is
+    /// the number of entries reserved in the volume manager header and is not related to the size
+    /// of the physical device (which may be larger or smaller).
+    maximum_slice_count uint64;
+
+    /// Largest value that can be used for a virtual slice number.
+    max_virtual_slice uint64;
+};
+
+@for_deprecated_c_bindings
+type VolumeInfo = struct {
+    /// Number of slices allocated to the volume.
+    partition_slice_count uint64;
+
+    /// Limit on the maximum size in bytes of this partition, if there is one. If the size of the
+    /// partition is not limited, this value will be 0. Partitions can grow into free slices
+    /// available in the volume manager as long as the total bytes are less than this.
+    ///
+    /// The partition may be larger than this limit if a smaller limit was applied after the
+    /// partition had already grown to the current size.
+    ///
+    /// See `VolumeManager.GetPartitionLimit()`
+    byte_limit uint64;
 };
 
 /// Describes an region within a Volume. Both units are in "slices".
@@ -50,10 +78,11 @@ protocol BlockVolume {
         status zx.status;
     });
 
-    /// Acquire slice size information about the parent volume.
-    Query() -> (struct {
+    // Returns the information about the volume manager 
+    GetInfo() -> (struct {
         status zx.status;
-        info ParentVolumeInfo;
+        manager VolumeManagerInfo;
+        volume VolumeInfo;
     });
 
     /// Returns the number of contiguous slices from a collection

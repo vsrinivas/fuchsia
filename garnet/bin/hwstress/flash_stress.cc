@@ -295,14 +295,14 @@ bool StressFlash(StatusLine* status, const CommandLineArgs& args, zx::duration d
   }
 
   // Calculate available space and number of slices needed.
-  fuchsia_hardware_block_volume_VolumeInfo fvm_info;
+  fuchsia_hardware_block_volume_VolumeManagerInfo fvm_info;
   if (fvm_query(fvm_fd.get(), &fvm_info) != ZX_OK) {
     status->Log("Error: Could not get FVM info\n");
     return false;
   }
 
   // Default to using all available disk space.
-  uint64_t slices_available = fvm_info.pslice_total_count - fvm_info.pslice_allocated_count;
+  uint64_t slices_available = fvm_info.slice_count - fvm_info.assigned_slice_count;
   uint64_t bytes_to_test = slices_available * fvm_info.slice_size -
                            RoundUp(kMinFvmFreeSpace, fvm_info.slice_size) - kMinPartitionFreeSpace;
 

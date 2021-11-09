@@ -391,7 +391,7 @@ zx_status_t FvmAdapter::Rebind(fbl::Vector<VPartitionAdapter*> vpartitions) {
   return ZX_OK;
 }
 
-zx_status_t FvmAdapter::Query(VolumeInfo* info) const { return fvm_query(fd(), info); }
+zx_status_t FvmAdapter::Query(VolumeManagerInfo* info) const { return fvm_query(fd(), info); }
 
 fbl::Array<uint8_t> MakeRandomBuffer(size_t size, unsigned int* seed) {
   fbl::Array data(new uint8_t[size], size);
@@ -403,10 +403,10 @@ fbl::Array<uint8_t> MakeRandomBuffer(size_t size, unsigned int* seed) {
   return data;
 }
 
-bool IsConsistentAfterGrowth(const VolumeInfo& before, const VolumeInfo& after) {
+bool IsConsistentAfterGrowth(const VolumeManagerInfo& before, const VolumeManagerInfo& after) {
   // Frowing a FVM should not allocate any slices nor should it change the slice size.
   return before.slice_size == after.slice_size &&
-         before.pslice_allocated_count == after.pslice_allocated_count;
+         before.assigned_slice_count == after.assigned_slice_count;
 }
 
 }  // namespace fvm

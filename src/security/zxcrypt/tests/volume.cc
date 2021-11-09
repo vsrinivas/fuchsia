@@ -46,15 +46,17 @@ void VolumeCreate(const fbl::unique_fd& fd, const fbl::unique_fd& devfs_root,
   ASSERT_EQ(status, ZX_OK);
 
   if (fvm) {
-    fuchsia_hardware_block_volume_VolumeInfo fvm_info;
-    ASSERT_OK(
-        fuchsia_hardware_block_volume_VolumeQuery(caller.borrow_channel(), &status, &fvm_info));
+    fuchsia_hardware_block_volume_VolumeManagerInfo manager_info;
+    fuchsia_hardware_block_volume_VolumeInfo volume_info;
+    ASSERT_OK(fuchsia_hardware_block_volume_VolumeGetVolumeInfo(caller.borrow_channel(), &status,
+                                                                &manager_info, &volume_info));
     ASSERT_OK(status);
 
-    snprintf(
-        err, sizeof(err),
-        "details: block size=%" PRIu32 ", block count=%" PRIu64 ", slice size=%zu, slice count=%zu",
-        block_info.block_size, block_info.block_count, fvm_info.slice_size, fvm_info.vslice_count);
+    snprintf(err, sizeof(err),
+             "details: block size=%" PRIu32 ", block count=%" PRIu64
+             ", slice size=%zu, slice count=%zu",
+             block_info.block_size, block_info.block_count, manager_info.slice_size,
+             manager_info.slice_count);
   } else {
     snprintf(err, sizeof(err), "details: block size=%" PRIu32 ", block count=%" PRIu64,
              block_info.block_size, block_info.block_count);

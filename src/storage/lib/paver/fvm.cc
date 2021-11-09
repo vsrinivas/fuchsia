@@ -51,7 +51,6 @@ namespace partition = fuchsia_hardware_block_partition;
 namespace volume = fuchsia_hardware_block_volume;
 namespace device = fuchsia_device;
 
-using fuchsia_hardware_block_volume::wire::VolumeInfo;
 using fuchsia_hardware_block_volume::wire::VolumeManagerInfo;
 
 // The number of additional slices a partition will need to become
@@ -677,18 +676,18 @@ zx::status<> FvmStreamPartitions(const fbl::unique_fd& devfs_root,
   }
 
   // Contend with issues from an image that may be too large for this device.
-  VolumeInfo info;
-  status = zx::make_status(
-      fvm_query(fvm_fd.get(), reinterpret_cast<fuchsia_hardware_block_volume_VolumeInfo*>(&info)));
+  VolumeManagerInfo info;
+  status = zx::make_status(fvm_query(
+      fvm_fd.get(), reinterpret_cast<fuchsia_hardware_block_volume_VolumeManagerInfo*>(&info)));
   if (status.is_error()) {
     ERROR("Failed to acquire FVM info: %s\n", status.status_string());
     return status.take_error();
   }
-  size_t free_slices = info.pslice_total_count - info.pslice_allocated_count;
-  if (info.pslice_total_count < requested_slices) {
+  size_t free_slices = info.slice_count - info.assigned_slice_count;
+  if (info.slice_count < requested_slices) {
     char buf[256];
     snprintf(buf, sizeof(buf), "Image size (%zu) > Storage size (%zu)",
-             requested_slices * hdr->slice_size, info.pslice_total_count * hdr->slice_size);
+             requested_slices * hdr->slice_size, info.slice_count * hdr->slice_size);
     Warn(buf, "Image is too large to be paved to device");
     return zx::error(ZX_ERR_NO_SPACE);
   }

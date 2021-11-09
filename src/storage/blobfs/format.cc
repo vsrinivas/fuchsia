@@ -26,14 +26,15 @@ namespace {
 
 using ::block_client::BlockDevice;
 
-std::optional<fuchsia_hardware_block_volume_VolumeInfo> TryGetVolumeInfo(
+std::optional<fuchsia_hardware_block_volume_VolumeManagerInfo> TryGetVolumeManagerInfo(
     const BlockDevice& device) {
-  fuchsia_hardware_block_volume_VolumeInfo fvm_info = {};
-  zx_status_t status = device.VolumeQuery(&fvm_info);
+  fuchsia_hardware_block_volume_VolumeManagerInfo fvm_manager_info = {};
+  fuchsia_hardware_block_volume_VolumeInfo volume_info = {};
+  zx_status_t status = device.VolumeGetInfo(&fvm_manager_info, &volume_info);
   if (status != ZX_OK) {
     return std::nullopt;
   }
-  return fvm_info;
+  return fvm_manager_info;
 }
 
 // Generates a superblock that will cover the entire device described by |block_info|.
@@ -53,9 +54,9 @@ zx::status<Superblock> FormatSuperblock(const fuchsia_hardware_block_BlockInfo& 
 
 // Generates a FVM-aware superblock with the minimum number of slices reserved for each metadata
 // region.
-zx::status<Superblock> FormatSuperblockFVM(BlockDevice* device,
-                                           const fuchsia_hardware_block_volume_VolumeInfo& fvm_info,
-                                           const FilesystemOptions& options) {
+zx::status<Superblock> FormatSuperblockFVM(
+    BlockDevice* device, const fuchsia_hardware_block_volume_VolumeManagerInfo& fvm_info,
+    const FilesystemOptions& options) {
   // Initialize the superblock with no blocks for now. This'll set many of the fields (mostly
   // block_counts) into invalid states, but we'll correct these later after we've allocated slices
   // for the various metadata regions.
@@ -293,7 +294,7 @@ zx_status_t FormatFilesystem(BlockDevice* device, const FilesystemOptions& optio
   }
 
   zx::status<Superblock> superblock_or;
-  if (auto maybe_volume_info = TryGetVolumeInfo(*device); maybe_volume_info.has_value()) {
+  if (auto maybe_volume_info = TryGetVolumeManagerInfo(*device); maybe_volume_info.has_value()) {
     superblock_or = FormatSuperblockFVM(device, maybe_volume_info.value(), options);
   } else {
     superblock_or = FormatSuperblock(block_info, options);

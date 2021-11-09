@@ -239,8 +239,9 @@ TEST(RemoteBlockDeviceTest, VolumeManagerOrdinals) {
   // Querying the volume returns an error; the device doesn't implement
   // any FVM protocols. However, VolumeQuery utilizes a distinct
   // channel, so the connection should remain open.
+  fuchsia_hardware_block_volume_VolumeManagerInfo manager_info;
   fuchsia_hardware_block_volume_VolumeInfo volume_info;
-  EXPECT_EQ(ZX_ERR_PEER_CLOSED, device->VolumeQuery(&volume_info));
+  EXPECT_EQ(ZX_ERR_PEER_CLOSED, device->VolumeGetInfo(&manager_info, &volume_info));
 
   // Other block functions still function correctly.
   fuchsia_hardware_block_BlockInfo block_info;

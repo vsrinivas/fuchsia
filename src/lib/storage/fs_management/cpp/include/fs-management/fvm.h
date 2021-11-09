@@ -43,7 +43,7 @@ int fvm_allocate_partition(int fvm_fd, const alloc_req_t* request);
 int fvm_allocate_partition_with_devfs(int devfs_root_fd, int fvm_fd, const alloc_req_t* request);
 
 // Query the volume manager for info.
-zx_status_t fvm_query(int fvm_fd, fuchsia_hardware_block_volume_VolumeInfo* out);
+zx_status_t fvm_query(int fvm_fd, fuchsia_hardware_block_volume_VolumeManagerInfo* out);
 
 // A set of optional matchers for |open_partition| and friends.
 // At least one must be specified.

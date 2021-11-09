@@ -74,7 +74,7 @@ namespace {
 
 namespace fio = fuchsia_io;
 
-using volume_info_t = fuchsia_hardware_block_volume_VolumeInfo;
+using VolumeManagerInfo = fuchsia_hardware_block_volume_VolumeManagerInfo;
 
 constexpr char kTmpfsPath[] = "/fvm-tmp";
 constexpr char kMountPath[] = "/fvm-tmp/minfs_test_mountpath";
@@ -206,17 +206,17 @@ void FvmTest::FVMRebind(const partition_entry_t* entries, size_t entry_count) {
 
 void FVMCheckSliceSize(const fbl::unique_fd& fd, size_t expected_slice_size) {
   ASSERT_TRUE(fd);
-  volume_info_t volume_info;
+  VolumeManagerInfo volume_info;
   ASSERT_EQ(fvm_query(fd.get(), &volume_info), ZX_OK, "Failed to query fvm\n");
   ASSERT_EQ(expected_slice_size, volume_info.slice_size, "Unexpected slice size\n");
 }
 
 void FVMCheckAllocatedCount(const fbl::unique_fd& fd, size_t expected_allocated,
                             size_t expected_total) {
-  volume_info_t volume_info;
+  VolumeManagerInfo volume_info;
   ASSERT_EQ(fvm_query(fd.get(), &volume_info), ZX_OK);
-  ASSERT_EQ(volume_info.pslice_total_count, expected_total);
-  ASSERT_EQ(volume_info.pslice_allocated_count, expected_allocated);
+  ASSERT_EQ(volume_info.slice_count, expected_total);
+  ASSERT_EQ(volume_info.assigned_slice_count, expected_allocated);
 }
 
 enum class ValidationResult {
@@ -661,7 +661,7 @@ TEST_F(FvmTest, TestVPartitionExtend) {
   fbl::unique_fd fd = fvm_device();
   ASSERT_TRUE(fd);
 
-  volume_info_t volume_info;
+  VolumeManagerInfo volume_info;
   ASSERT_EQ(fvm_query(fd.get(), &volume_info), ZX_OK);
   size_t slice_size = volume_info.slice_size;
   constexpr uint64_t kDiskSize = kBlockSize * kBlockCount;
@@ -833,7 +833,7 @@ TEST_F(FvmTest, TestVPartitionShrink) {
   fbl::unique_fd fd(fvm_device());
   ASSERT_TRUE(fd);
 
-  volume_info_t volume_info;
+  VolumeManagerInfo volume_info;
   ASSERT_EQ(fvm_query(fd.get(), &volume_info), ZX_OK);
   size_t slice_size = volume_info.slice_size;
   const size_t kDiskSize = kBlockSize * kBlockCount;
@@ -956,7 +956,7 @@ TEST_F(FvmTest, TestVPartitionSplit) {
   fbl::unique_fd fd(fvm_device());
   ASSERT_TRUE(fd);
 
-  volume_info_t volume_info;
+  VolumeManagerInfo volume_info;
   ASSERT_EQ(fvm_query(fd.get(), &volume_info), ZX_OK);
   size_t slice_size = volume_info.slice_size;
   size_t slices_left = UsableSlicesCount(kBlockSize * kBlockCount, kSliceSize);
@@ -1196,7 +1196,7 @@ TEST_F(FvmTest, TestVPartitionQuery) {
       ZX_OK);
   ASSERT_EQ(status, ZX_OK);
 
-  volume_info_t volume_info;
+  VolumeManagerInfo volume_info;
   ASSERT_EQ(fvm_query(fd.get(), &volume_info), ZX_OK);
 
   // Query various vslice ranges
@@ -1225,7 +1225,7 @@ TEST_F(FvmTest, TestVPartitionQuery) {
   ASSERT_TRUE(ranges[2].allocated);
   ASSERT_EQ(ranges[2].count, 10);
   ASSERT_FALSE(ranges[3].allocated);
-  ASSERT_EQ(ranges[3].count, volume_info.vslice_count - 50);
+  ASSERT_EQ(ranges[3].count, volume_info.max_virtual_slice - 50);
   ASSERT_TRUE(ranges[4].allocated);
   ASSERT_EQ(ranges[4].count, 5);
   ASSERT_FALSE(ranges[5].allocated);
@@ -1253,13 +1253,13 @@ TEST_F(FvmTest, TestVPartitionQuery) {
   ASSERT_TRUE(ranges[2].allocated);
   ASSERT_EQ(ranges[2].count, 10);
   ASSERT_FALSE(ranges[3].allocated);
-  ASSERT_EQ(ranges[3].count, volume_info.vslice_count - 50);
+  ASSERT_EQ(ranges[3].count, volume_info.max_virtual_slice - 50);
   ASSERT_TRUE(ranges[4].allocated);
   ASSERT_EQ(ranges[4].count, 5);
   ASSERT_TRUE(ranges[5].allocated);
   ASSERT_EQ(ranges[5].count, 15);
 
-  start_slices[0] = volume_info.vslice_count + 1;
+  start_slices[0] = volume_info.max_virtual_slice + 1;
   ASSERT_EQ(fuchsia_hardware_block_volume_VolumeQuerySlices(partition_channel->get(), start_slices,
                                                             std::size(start_slices), &status,
                                                             ranges, &actual_ranges_count),
@@ -1279,7 +1279,7 @@ TEST_F(FvmTest, TestSliceAccessContiguous) {
   fbl::unique_fd fd = fvm_device();
   ASSERT_TRUE(fd);
 
-  volume_info_t volume_info;
+  VolumeManagerInfo volume_info;
   ASSERT_EQ(fvm_query(fd.get(), &volume_info), ZX_OK);
   size_t slice_size = volume_info.slice_size;
 
@@ -1350,7 +1350,7 @@ TEST_F(FvmTest, TestSliceAccessMany) {
   fbl::unique_fd fd(fvm_device());
   ASSERT_TRUE(fd);
 
-  volume_info_t volume_info;
+  VolumeManagerInfo volume_info;
   ASSERT_EQ(fvm_query(fd.get(), &volume_info), ZX_OK);
   ASSERT_EQ(volume_info.slice_size, kSliceSize);
 
@@ -1432,7 +1432,7 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousPhysical) {
   fbl::unique_fd fd(fvm_device());
   ASSERT_TRUE(fd);
 
-  volume_info_t volume_info;
+  VolumeManagerInfo volume_info;
   ASSERT_EQ(fvm_query(fd.get(), &volume_info), ZX_OK);
 
   alloc_req_t request;
@@ -1578,7 +1578,7 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousVirtual) {
   fbl::unique_fd fd = fvm_device();
   ASSERT_TRUE(fd);
 
-  volume_info_t volume_info;
+  VolumeManagerInfo volume_info;
   ASSERT_EQ(fvm_query(fd.get(), &volume_info), ZX_OK);
 
   alloc_req_t request;
@@ -1673,7 +1673,7 @@ TEST_F(FvmTest, TestPersistenceSimple) {
   size_t slices_left = UsableSlicesCount(kDiskSize, kSliceSize);
   const uint64_t kSliceCount = slices_left;
 
-  volume_info_t volume_info;
+  VolumeManagerInfo volume_info;
   ASSERT_EQ(fvm_query(fd.get(), &volume_info), ZX_OK);
 
   // Allocate one VPart
@@ -1954,7 +1954,7 @@ TEST_F(FvmTest, TestCorruptMount) {
   fbl::unique_fd fd = fvm_device();
   ASSERT_TRUE(fd);
 
-  volume_info_t volume_info;
+  VolumeManagerInfo volume_info;
   ASSERT_EQ(fvm_query(fd.get(), &volume_info), ZX_OK);
   ASSERT_EQ(kSliceSize, volume_info.slice_size);
 
@@ -2160,7 +2160,7 @@ TEST_F(FvmTest, TestMounting) {
   fbl::unique_fd fd = fvm_device();
   ASSERT_TRUE(fd);
 
-  volume_info_t volume_info;
+  VolumeManagerInfo volume_info;
   ASSERT_EQ(fvm_query(fd.get(), &volume_info), ZX_OK);
 
   // Allocate one VPart
@@ -2215,7 +2215,7 @@ TEST_F(FvmTest, TestMkfs) {
   fbl::unique_fd fd = fvm_device();
   ASSERT_TRUE(fd);
 
-  volume_info_t volume_info;
+  VolumeManagerInfo volume_info;
   ASSERT_EQ(fvm_query(fd.get(), &volume_info), ZX_OK);
 
   // Allocate one VPart.
@@ -2296,7 +2296,7 @@ TEST_F(FvmTest, TestCorruptionOk) {
   fbl::unique_fd ramdisk_fd = ramdisk_device();
   ASSERT_TRUE(ramdisk_fd);
 
-  volume_info_t volume_info;
+  VolumeManagerInfo volume_info;
   ASSERT_EQ(fvm_query(fd.get(), &volume_info), ZX_OK);
 
   // Allocate one VPart (writes to backup)
@@ -2379,7 +2379,7 @@ TEST_F(FvmTest, TestCorruptionRegression) {
   fbl::unique_fd ramdisk_fd = ramdisk_device();
   ASSERT_TRUE(ramdisk_fd);
 
-  volume_info_t volume_info;
+  VolumeManagerInfo volume_info;
   ASSERT_EQ(fvm_query(fd.get(), &volume_info), ZX_OK);
   size_t slice_size = volume_info.slice_size;
 

@@ -88,7 +88,9 @@ class FakeBlockDevice : public BlockDevice {
 
   zx::status<std::string> GetDevicePath() const override { return zx::error(ZX_ERR_NOT_SUPPORTED); }
 
-  zx_status_t VolumeQuery(fuchsia_hardware_block_volume_VolumeInfo* out_info) const override {
+  zx_status_t VolumeGetInfo(
+      fuchsia_hardware_block_volume_VolumeManagerInfo* out_manager_info,
+      fuchsia_hardware_block_volume_VolumeInfo* out_volume_info) const override {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -155,7 +157,8 @@ class FakeFVMBlockDevice : public FakeBlockDevice {
                      uint64_t slice_capacity);
 
   zx_status_t FifoTransaction(block_fifo_request_t* requests, size_t count) final;
-  zx_status_t VolumeQuery(fuchsia_hardware_block_volume_VolumeInfo* out_info) const final;
+  zx_status_t VolumeGetInfo(fuchsia_hardware_block_volume_VolumeManagerInfo* out_manager_info,
+                            fuchsia_hardware_block_volume_VolumeInfo* out_volume_info) const final;
   zx_status_t VolumeQuerySlices(const uint64_t* slices, size_t slices_count,
                                 fuchsia_hardware_block_volume_VsliceRange* out_ranges,
                                 size_t* out_ranges_count) const final;
@@ -165,10 +168,8 @@ class FakeFVMBlockDevice : public FakeBlockDevice {
  private:
   mutable fbl::Mutex fvm_lock_ = {};
 
-  const uint64_t slice_size_;
-  const uint64_t vslice_count_;
-  uint64_t pslice_total_count_ __TA_GUARDED(fvm_lock_) = 0;
-  uint64_t pslice_allocated_count_ __TA_GUARDED(fvm_lock_) = 0;
+  fuchsia_hardware_block_volume_VolumeManagerInfo manager_info_ __TA_GUARDED(fvm_lock_) = {};
+  fuchsia_hardware_block_volume_VolumeInfo volume_info_ __TA_GUARDED(fvm_lock_) = {};
 
   // Start Slice -> Range.
   std::map<uint64_t, range::Range<uint64_t>> extents_ __TA_GUARDED(fvm_lock_);

@@ -472,12 +472,16 @@ zx_status_t VPartition::BlockVolumeShrink(const slice_extent_t* extent) {
   return mgr_->FreeSlices(this, extent->offset, extent->length);
 }
 
-zx_status_t VPartition::BlockVolumeQuery(parent_volume_info_t* out_info) {
-  // TODO(smklein): Ensure Banjo (parent_volume_info_t) and FIDL (volume_info_t)
-  // are aligned.
-  static_assert(sizeof(parent_volume_info_t) == sizeof(VolumeInfo), "Info Mismatch");
-  VolumeInfo* info = reinterpret_cast<VolumeInfo*>(out_info);
-  mgr_->QueryInternal(info);
+zx_status_t VPartition::BlockVolumeGetInfo(volume_manager_info_t* out_manager,
+                                           volume_info_t* out_volume) {
+  // TODO(smklein): Ensure Banjo (volume_manager_info_t) and FIDL (volume_info_t) are aligned.
+  static_assert(sizeof(volume_manager_info_t) == sizeof(VolumeManagerInfo), "Info Mismatch");
+  VolumeManagerInfo* info = reinterpret_cast<VolumeManagerInfo*>(out_manager);
+  mgr_->GetInfoInternal(info);
+
+  fbl::AutoLock lock(&lock_);
+  out_volume->partition_slice_count = NumSlicesLocked();
+  out_volume->byte_limit = mgr_->GetPartitionLimitInternal(entry_index_);
   return ZX_OK;
 }
 

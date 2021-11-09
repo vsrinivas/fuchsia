@@ -217,7 +217,7 @@ class Minfs :
   [[nodiscard]] zx_status_t InitializeUnjournalledWriteback();
 
   // Queries the superblock flags for FVM as well as underlying FVM, if it exists.
-  [[nodiscard]] zx_status_t FVMQuery(fuchsia_hardware_block_volume_VolumeInfo* info) const;
+  [[nodiscard]] zx_status_t FVMQuery(fuchsia_hardware_block_volume_VolumeManagerInfo* info) const;
 #endif
 
   // instantiate a vnode from an inode

@@ -102,7 +102,7 @@ class BlockDevice : public BlockDeviceType,
   zx_status_t FidlPartitionGetTypeGuid(fidl_txn_t* txn);
   zx_status_t FidlPartitionGetInstanceGuid(fidl_txn_t* txn);
   zx_status_t FidlPartitionGetName(fidl_txn_t* txn);
-  zx_status_t FidlVolumeQuery(fidl_txn_t* txn);
+  zx_status_t FidlVolumeGetVolumeInfo(fidl_txn_t* txn);
   zx_status_t FidlVolumeQuerySlices(const uint64_t* start_slices_data, size_t start_slices_count,
                                     fidl_txn_t* txn);
   zx_status_t FidlVolumeExtend(uint64_t start_slice, uint64_t slice_count, fidl_txn_t* txn);
@@ -157,8 +157,8 @@ class BlockDevice : public BlockDeviceType,
         .GetTypeGuid = Binder::BindMember<&BlockDevice::FidlPartitionGetTypeGuid>,
         .GetInstanceGuid = Binder::BindMember<&BlockDevice::FidlPartitionGetInstanceGuid>,
         .GetName = Binder::BindMember<&BlockDevice::FidlPartitionGetName>,
-        .Query = Binder::BindMember<&BlockDevice::FidlVolumeQuery>,
         .QuerySlices = Binder::BindMember<&BlockDevice::FidlVolumeQuerySlices>,
+        .GetVolumeInfo = Binder::BindMember<&BlockDevice::FidlVolumeGetVolumeInfo>,
         .Extend = Binder::BindMember<&BlockDevice::FidlVolumeExtend>,
         .Shrink = Binder::BindMember<&BlockDevice::FidlVolumeShrink>,
         .Destroy = Binder::BindMember<&BlockDevice::FidlVolumeDestroy>,
@@ -494,13 +494,18 @@ zx_status_t BlockDevice::FidlPartitionGetName(fidl_txn_t* txn) {
                                                                  out_name_length);
 }
 
-zx_status_t BlockDevice::FidlVolumeQuery(fidl_txn_t* txn) {
-  fuchsia_hardware_block_volume_VolumeInfo info;
-  static_assert(sizeof(parent_volume_info_t) == sizeof(info), "Mismatched volume info");
+zx_status_t BlockDevice::FidlVolumeGetVolumeInfo(fidl_txn_t* txn) {
+  fuchsia_hardware_block_volume_VolumeManagerInfo manager_info;
+  fuchsia_hardware_block_volume_VolumeInfo volume_info;
+  static_assert(sizeof(volume_manager_info_t) == sizeof(manager_info), "Mismatched volume info");
+  static_assert(sizeof(volume_info_t) == sizeof(volume_info), "Mismatched volume info");
   zx_status_t status =
-      parent_volume_protocol_.Query(reinterpret_cast<parent_volume_info_t*>(&info));
-  return fuchsia_hardware_block_volume_VolumeQuery_reply(txn, status,
-                                                         status != ZX_OK ? nullptr : &info);
+      parent_volume_protocol_.GetInfo(reinterpret_cast<volume_manager_info_t*>(&manager_info),
+                                      reinterpret_cast<volume_info_t*>(&volume_info));
+  if (status != ZX_OK)
+    return fuchsia_hardware_block_volume_VolumeGetVolumeInfo_reply(txn, status, nullptr, nullptr);
+  return fuchsia_hardware_block_volume_VolumeGetVolumeInfo_reply(txn, status, &manager_info,
+                                                                 &volume_info);
 }
 
 zx_status_t BlockDevice::FidlVolumeQuerySlices(const uint64_t* start_slices_data,

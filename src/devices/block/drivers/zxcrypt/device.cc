@@ -222,18 +222,24 @@ zx_status_t Device::BlockVolumeShrink(const slice_extent_t* extent) {
   return info_.volume_protocol.Shrink(&modified);
 }
 
-zx_status_t Device::BlockVolumeQuery(parent_volume_info_t* out_info) {
+zx_status_t Device::BlockVolumeGetInfo(volume_manager_info_t* out_manager,
+                                       volume_info_t* out_volume) {
   if (!info_.volume_protocol.is_valid()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  zx_status_t status = info_.volume_protocol.Query(out_info);
+
+  zx_status_t status = info_.volume_protocol.GetInfo(out_manager, out_volume);
   if (status != ZX_OK) {
     return status;
   }
 
-  out_info->virtual_slice_count -= info_.reserved_slices;
-  out_info->physical_slice_count_total -= info_.reserved_slices;
-  out_info->physical_slice_count_used -= info_.reserved_slices;
+  out_manager->max_virtual_slice -= info_.reserved_slices;
+  out_manager->slice_count -= info_.reserved_slices;
+  out_manager->assigned_slice_count -= info_.reserved_slices;
+
+  out_volume->partition_slice_count -= info_.reserved_slices;
+  if (out_volume->byte_limit)
+    out_volume->byte_limit -= info_.reserved_slices * out_manager->slice_size;
 
   return ZX_OK;
 }

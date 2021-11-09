@@ -20,11 +20,11 @@
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
-#include "src/storage/fvm/format.h"
 #include "src/security/fcrypto/bytes.h"
 #include "src/security/fcrypto/cipher.h"
-#include "src/security/zxcrypt/volume.h"
 #include "src/security/zxcrypt/tests/test-device.h"
+#include "src/security/zxcrypt/volume.h"
+#include "src/storage/fvm/format.h"
 
 namespace zxcrypt {
 namespace testing {
@@ -92,22 +92,26 @@ void TestBlockFvmQuery(Volume::Version version, bool fvm) {
   auto zxcrypt = device.zxcrypt_channel();
 
   zx_status_t status;
-  fuchsia_hardware_block_volume_VolumeInfo parent_fvm, zxcrypt_fvm;
+  fuchsia_hardware_block_volume_VolumeManagerInfo parent_fvm, zxcrypt_fvm;
+  fuchsia_hardware_block_volume_VolumeInfo parent_volume, zxcrypt_volume;
   if (!fvm) {
     // Send FVM query to non-FVM device.
-    EXPECT_EQ(fuchsia_hardware_block_volume_VolumeQuery(zxcrypt->get(), &status, &zxcrypt_fvm),
+    EXPECT_EQ(fuchsia_hardware_block_volume_VolumeGetVolumeInfo(zxcrypt->get(), &status,
+                                                                &zxcrypt_fvm, &zxcrypt_volume),
               ZX_OK);
     EXPECT_EQ(status, ZX_ERR_NOT_SUPPORTED);
   } else {
     // Get the zxcrypt info.
-    EXPECT_EQ(fuchsia_hardware_block_volume_VolumeQuery(parent->get(), &status, &parent_fvm),
+    EXPECT_EQ(fuchsia_hardware_block_volume_VolumeGetVolumeInfo(parent->get(), &status, &parent_fvm,
+                                                                &parent_volume),
               ZX_OK);
     EXPECT_EQ(status, ZX_OK);
-    EXPECT_EQ(fuchsia_hardware_block_volume_VolumeQuery(zxcrypt->get(), &status, &zxcrypt_fvm),
+    EXPECT_EQ(fuchsia_hardware_block_volume_VolumeGetVolumeInfo(zxcrypt->get(), &status,
+                                                                &zxcrypt_fvm, &parent_volume),
               ZX_OK);
     EXPECT_EQ(status, ZX_OK);
     EXPECT_EQ(parent_fvm.slice_size, zxcrypt_fvm.slice_size);
-    EXPECT_EQ(parent_fvm.vslice_count, zxcrypt_fvm.vslice_count + device.reserved_slices());
+    EXPECT_EQ(parent_fvm.slice_count, zxcrypt_fvm.slice_count + device.reserved_slices());
   }
 }
 DEFINE_EACH_DEVICE(ZxcryptTest, TestBlockFvmQuery)
@@ -490,11 +494,14 @@ void TestWriteAfterFvmExtend(Volume::Version version) {
   EXPECT_NE(device.write(n, one), one_s);
 
   zx_status_t status;
-  fuchsia_hardware_block_volume_VolumeInfo info;
-  ASSERT_EQ(fuchsia_hardware_block_volume_VolumeQuery(zxcrypt->get(), &status, &info), ZX_OK);
+  fuchsia_hardware_block_volume_VolumeManagerInfo manager_info;
+  fuchsia_hardware_block_volume_VolumeInfo volume_info;
+  ASSERT_EQ(fuchsia_hardware_block_volume_VolumeGetVolumeInfo(zxcrypt->get(), &status,
+                                                              &manager_info, &volume_info),
+            ZX_OK);
   ASSERT_EQ(status, ZX_OK);
 
-  uint64_t offset = device.size() / info.slice_size;
+  uint64_t offset = device.size() / manager_info.slice_size;
   uint64_t length = 1;
 
   ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(zxcrypt->get(), offset, length, &status),

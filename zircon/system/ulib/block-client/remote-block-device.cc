@@ -95,8 +95,9 @@ zx_status_t RemoteBlockDevice::BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid
   return status;
 }
 
-zx_status_t RemoteBlockDevice::VolumeQuery(
-    fuchsia_hardware_block_volume_VolumeInfo* out_info) const {
+zx_status_t RemoteBlockDevice::VolumeGetInfo(
+    fuchsia_hardware_block_volume_VolumeManagerInfo* out_manager_info,
+    fuchsia_hardware_block_volume_VolumeInfo* out_volume_info) const {
   // Querying may be used to confirm if the underlying connection is capable of
   // communicating the FVM protocol. Clone the connection, since if the block
   // device does NOT speak the Volume protocol, the connection is terminated.
@@ -111,8 +112,8 @@ zx_status_t RemoteBlockDevice::VolumeQuery(
     return result.status();
   }
 
-  zx_status_t io_status =
-      fuchsia_hardware_block_volume_VolumeQuery(connection.get(), &status, out_info);
+  zx_status_t io_status = fuchsia_hardware_block_volume_VolumeGetVolumeInfo(
+      connection.get(), &status, out_manager_info, out_volume_info);
   if (io_status != ZX_OK) {
     return io_status;
   }

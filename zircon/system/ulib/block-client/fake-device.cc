@@ -256,13 +256,18 @@ zx_status_t FakeBlockDevice::BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* 
 
 FakeFVMBlockDevice::FakeFVMBlockDevice(uint64_t block_count, uint32_t block_size,
                                        uint64_t slice_size, uint64_t slice_capacity)
-    : FakeBlockDevice(block_count, block_size),
-      slice_size_(slice_size),
-      vslice_count_(fvm::kMaxVSlices) {
+    : FakeBlockDevice(block_count, block_size) {
+  fbl::AutoLock lock(&fvm_lock_);
+  manager_info_.slice_size = slice_size;
+  manager_info_.slice_count = slice_capacity;
+  manager_info_.assigned_slice_count = 1;
+  manager_info_.max_virtual_slice = fvm::kMaxVSlices;
+
+  volume_info_.partition_slice_count = manager_info_.assigned_slice_count;
+  volume_info_.byte_limit = 0;
+
   extents_.emplace(0, range::Range<uint64_t>(0, 1));
-  pslice_allocated_count_++;
-  ZX_ASSERT(slice_capacity >= pslice_allocated_count_);
-  pslice_total_count_ = slice_capacity;
+  ZX_ASSERT(slice_capacity >= manager_info_.assigned_slice_count);
 }
 
 zx_status_t FakeFVMBlockDevice::FifoTransaction(block_fifo_request_t* requests, size_t count) {
@@ -273,10 +278,12 @@ zx_status_t FakeFVMBlockDevice::FifoTransaction(block_fifo_request_t* requests, 
 
   fuchsia_hardware_block_BlockInfo info = {};
   ZX_ASSERT(BlockGetInfo(&info) == ZX_OK);
-  ZX_ASSERT_MSG(slice_size_ >= info.block_size, "Slice size must be larger than block size");
-  ZX_ASSERT_MSG(slice_size_ % info.block_size == 0, "Slice size not divisible by block size");
+  ZX_ASSERT_MSG(manager_info_.slice_size >= info.block_size,
+                "Slice size must be larger than block size");
+  ZX_ASSERT_MSG(manager_info_.slice_size % info.block_size == 0,
+                "Slice size not divisible by block size");
 
-  size_t blocks_per_slice = slice_size_ / info.block_size;
+  size_t blocks_per_slice = manager_info_.slice_size / info.block_size;
 
   // Validate that the operation acts on valid slices before sending it to the underlying
   // mock device.
@@ -311,13 +318,12 @@ zx_status_t FakeFVMBlockDevice::FifoTransaction(block_fifo_request_t* requests, 
   return FakeBlockDevice::FifoTransaction(requests, count);
 }
 
-zx_status_t FakeFVMBlockDevice::VolumeQuery(
-    fuchsia_hardware_block_volume_VolumeInfo* out_info) const {
+zx_status_t FakeFVMBlockDevice::VolumeGetInfo(
+    fuchsia_hardware_block_volume_VolumeManagerInfo* out_manager_info,
+    fuchsia_hardware_block_volume_VolumeInfo* out_volume_info) const {
   fbl::AutoLock lock(&fvm_lock_);
-  out_info->slice_size = slice_size_;
-  out_info->vslice_count = vslice_count_;
-  out_info->pslice_total_count = pslice_total_count_;
-  out_info->pslice_allocated_count = pslice_allocated_count_;
+  *out_manager_info = manager_info_;
+  *out_volume_info = volume_info_;
   return ZX_OK;
 }
 
@@ -328,7 +334,7 @@ zx_status_t FakeFVMBlockDevice::VolumeQuerySlices(
   fbl::AutoLock lock(&fvm_lock_);
   for (size_t i = 0; i < slices_count; i++) {
     uint64_t slice_start = slices[i];
-    if (slice_start >= vslice_count_) {
+    if (slice_start >= manager_info_.max_virtual_slice) {
       // Out-of-range.
       return ZX_ERR_OUT_OF_RANGE;
     }
@@ -348,7 +354,7 @@ zx_status_t FakeFVMBlockDevice::VolumeQuerySlices(
 
       extent++;
       if (extent == extents_.end()) {
-        out_ranges[*out_ranges_count].count = vslice_count_ - slice_start;
+        out_ranges[*out_ranges_count].count = manager_info_.max_virtual_slice - slice_start;
       } else {
         out_ranges[*out_ranges_count].count = extent->second.Start() - slice_start;
       }
@@ -360,7 +366,7 @@ zx_status_t FakeFVMBlockDevice::VolumeQuerySlices(
 
 zx_status_t FakeFVMBlockDevice::VolumeExtend(uint64_t offset, uint64_t length) {
   fbl::AutoLock lock(&fvm_lock_);
-  if (offset + length > vslice_count_) {
+  if (offset + length > manager_info_.max_virtual_slice) {
     return ZX_ERR_OUT_OF_RANGE;
   }
   if (length == 0) {
@@ -386,7 +392,7 @@ zx_status_t FakeFVMBlockDevice::VolumeExtend(uint64_t offset, uint64_t length) {
     }
   }
 
-  if (new_slices > pslice_total_count_ - pslice_allocated_count_) {
+  if (new_slices > manager_info_.slice_count - manager_info_.assigned_slice_count) {
     return ZX_ERR_NO_SPACE;
   }
 
@@ -395,14 +401,15 @@ zx_status_t FakeFVMBlockDevice::VolumeExtend(uint64_t offset, uint64_t length) {
     extents_.erase(start);
   }
   extents_.emplace(extension.Start(), extension);
-  pslice_allocated_count_ += new_slices;
-  ResizeDeviceToAtLeast(extension.End() * slice_size_);
+  manager_info_.assigned_slice_count += new_slices;
+  volume_info_.partition_slice_count = manager_info_.assigned_slice_count;
+  ResizeDeviceToAtLeast(extension.End() * manager_info_.slice_size);
   return ZX_OK;
 }
 
 zx_status_t FakeFVMBlockDevice::VolumeShrink(uint64_t offset, uint64_t length) {
   fbl::AutoLock lock(&fvm_lock_);
-  if (offset + length > vslice_count_) {
+  if (offset + length > manager_info_.max_virtual_slice) {
     return ZX_ERR_OUT_OF_RANGE;
   }
   if (length == 0) {
@@ -456,8 +463,9 @@ zx_status_t FakeFVMBlockDevice::VolumeShrink(uint64_t offset, uint64_t length) {
   if (erased_blocks == 0) {
     return ZX_ERR_INVALID_ARGS;
   }
-  ZX_ASSERT(pslice_allocated_count_ >= erased_blocks);
-  pslice_allocated_count_ -= erased_blocks;
+  ZX_ASSERT(manager_info_.assigned_slice_count >= erased_blocks);
+  manager_info_.assigned_slice_count -= erased_blocks;
+  volume_info_.partition_slice_count = manager_info_.assigned_slice_count;
   return ZX_OK;
 }
 

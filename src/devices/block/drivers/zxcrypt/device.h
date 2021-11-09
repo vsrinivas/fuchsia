@@ -74,7 +74,7 @@ class Device final : public DeviceType,
   // ddk:::VolumeProtocol methods; see fuchsia/hardware/block/volume/cpp/banjo.h
   zx_status_t BlockVolumeExtend(const slice_extent_t* extent);
   zx_status_t BlockVolumeShrink(const slice_extent_t* extent);
-  zx_status_t BlockVolumeQuery(parent_volume_info_t* out_info);
+  zx_status_t BlockVolumeGetInfo(volume_manager_info_t* out_manager, volume_info_t* out_volume);
   zx_status_t BlockVolumeQuerySlices(const uint64_t* start_list, size_t start_count,
                                      slice_region_t* out_responses_list, size_t responses_count,
                                      size_t* out_responses_actual);

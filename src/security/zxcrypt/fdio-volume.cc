@@ -182,9 +182,10 @@ zx_status_t FdioVolume::GetFvmSliceSize(uint64_t* out) {
   // this call, we clone the channel.
   zx::channel channel(fdio_service_clone(caller.borrow_channel()));
 
+  fuchsia_hardware_block_volume_VolumeManagerInfo manager_info;
   fuchsia_hardware_block_volume_VolumeInfo volume_info;
-  if ((rc = fuchsia_hardware_block_volume_VolumeQuery(channel.get(), &call_status, &volume_info)) !=
-      ZX_OK) {
+  if ((rc = fuchsia_hardware_block_volume_VolumeGetVolumeInfo(
+           channel.get(), &call_status, &manager_info, &volume_info)) != ZX_OK) {
     if (rc == ZX_ERR_PEER_CLOSED) {
       // The channel being closed here means that the thing at the other
       // end of this channel does not speak the FVM protocol, and has
@@ -198,7 +199,7 @@ zx_status_t FdioVolume::GetFvmSliceSize(uint64_t* out) {
     return call_status;
   }
 
-  *out = volume_info.slice_size;
+  *out = manager_info.slice_size;
   return ZX_OK;
 }
 

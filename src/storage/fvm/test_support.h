@@ -27,7 +27,7 @@
 namespace fvm {
 
 // Alias for simplicity in testing.
-using VolumeInfo = fuchsia_hardware_block_volume_VolumeInfo;
+using VolumeManagerInfo = fuchsia_hardware_block_volume_VolumeManagerInfo;
 using RamdiskClient = ramdisk_client_t;
 
 constexpr uint64_t kPathMax = PATH_MAX;
@@ -237,7 +237,7 @@ class FvmAdapter : public DeviceRef {
   zx_status_t Rebind(fbl::Vector<VPartitionAdapter*> vpartitions);
 
   // Queries the FVM device and sets |out_info|.
-  zx_status_t Query(VolumeInfo* out_info) const;
+  zx_status_t Query(VolumeManagerInfo* out_info) const;
 
   // Returns a reference to the underlying device.
   const DeviceRef* device() const { return this; }
@@ -258,7 +258,7 @@ fbl::Array<uint8_t> MakeRandomBuffer(size_t size, unsigned int* seed);
 
 // Returns true if the invariants of the fvm volumes are the same (same slize_size, same allocated
 // count).
-bool IsConsistentAfterGrowth(const VolumeInfo& before, const VolumeInfo& after);
+bool IsConsistentAfterGrowth(const VolumeManagerInfo& before, const VolumeManagerInfo& after);
 
 }  // namespace fvm
 

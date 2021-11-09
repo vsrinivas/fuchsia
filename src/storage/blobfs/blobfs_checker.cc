@@ -202,14 +202,15 @@ zx_status_t CheckFvmConsistency(const Superblock* info, BlockDevice* device, boo
     return ZX_OK;
   }
 
-  fuchsia_hardware_block_volume_VolumeInfo fvm_info;
-  zx_status_t status = device->VolumeQuery(&fvm_info);
+  fuchsia_hardware_block_volume_VolumeManagerInfo manager_info;
+  fuchsia_hardware_block_volume_VolumeInfo volume_info;
+  zx_status_t status = device->VolumeGetInfo(&manager_info, &volume_info);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Unable to query FVM, status: " << zx_status_get_string(status);
     return status;
   }
 
-  if (info->slice_size != fvm_info.slice_size) {
+  if (info->slice_size != manager_info.slice_size) {
     FX_LOGS(ERROR) << "Slice size did not match expected";
     return ZX_ERR_BAD_STATE;
   }

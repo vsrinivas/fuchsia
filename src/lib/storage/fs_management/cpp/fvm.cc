@@ -97,7 +97,7 @@ constexpr char kBlockDevRelativePath[] = "class/block/";
 // path: The path to the FVM device. Relative to |devfs_root_fd| if supplied.
 zx_status_t DestroyFVMAndWait(int devfs_root_fd, fbl::unique_fd parent_fd, fbl::unique_fd driver_fd,
                               const char* path) {
-  fuchsia_hardware_block_volume_VolumeInfo volume_info;
+  fuchsia_hardware_block_volume_VolumeManagerInfo volume_info;
   zx_status_t status = fvm_query(driver_fd.get(), &volume_info);
   if (status != ZX_OK) {
     return ZX_ERR_WRONG_TYPE;
@@ -374,19 +374,19 @@ int fvm_allocate_partition_with_devfs(int devfs_root_fd, int fvm_fd, const alloc
 }
 
 __EXPORT
-zx_status_t fvm_query(int fvm_fd, fuchsia_hardware_block_volume_VolumeInfo* out) {
+zx_status_t fvm_query(int fvm_fd, fuchsia_hardware_block_volume_VolumeManagerInfo* out) {
   fdio_cpp::UnownedFdioCaller caller(fvm_fd);
 
   auto response =
       fidl::WireCall(fidl::UnownedClientEnd<fuchsia_hardware_block_volume::VolumeManager>(
                          caller.borrow_channel()))
-          ->Query();
+          ->GetInfo();
 
   if (response.status() != ZX_OK)
     return response.status();
   if (response->status != ZX_OK)
     return response->status;
-  *out = reinterpret_cast<fuchsia_hardware_block_volume_VolumeInfo&>(*response->info);
+  *out = reinterpret_cast<fuchsia_hardware_block_volume_VolumeManagerInfo&>(*response->info);
   return ZX_OK;
 }
 

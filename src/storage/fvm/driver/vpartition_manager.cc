@@ -649,14 +649,22 @@ zx_status_t VPartitionManager::FreeSlicesLocked(VPartition* vp, uint64_t vslice_
   return status;
 }
 
-void VPartitionManager::QueryInternal(VolumeInfo* info) {
+void VPartitionManager::GetInfoInternal(VolumeManagerInfo* info) {
+  fbl::AutoLock lock(&lock_);
+
   info->slice_size = slice_size_;
-  info->vslice_count = VSliceMax();
-  {
-    fbl::AutoLock lock(&lock_);
-    info->pslice_total_count = GetHeaderLocked()->pslice_count;
-    info->pslice_allocated_count = pslice_allocated_count_;
-  }
+  info->slice_count = GetHeaderLocked()->pslice_count;
+  info->assigned_slice_count = pslice_allocated_count_;
+  info->maximum_slice_count = GetHeaderLocked()->GetAllocationTableAllocatedEntryCount();
+  info->max_virtual_slice = VSliceMax();
+}
+
+uint64_t VPartitionManager::GetPartitionLimitInternal(size_t index) const {
+  ZX_DEBUG_ASSERT(index >= 1);
+  ZX_DEBUG_ASSERT(index < fvm::kMaxVPartitions);
+
+  fbl::AutoLock lock(&lock_);
+  return max_partition_sizes_[index];
 }
 
 zx_status_t VPartitionManager::GetPartitionLimitInternal(const uint8_t* guid,
@@ -848,24 +856,10 @@ void VPartitionManager::AllocatePartition(AllocatePartitionRequestView request,
   completer.Reply(status);
 }
 
-void VPartitionManager::Query(QueryRequestView request, QueryCompleter::Sync& completer) {
-  fidl::Arena allocator;
-  fidl::ObjectView<fuchsia_hardware_block_volume::wire::VolumeInfo> info(allocator);
-  QueryInternal(info.get());
-  completer.Reply(ZX_OK, info);
-}
-
 void VPartitionManager::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
   fidl::Arena allocator;
   fidl::ObjectView<fuchsia_hardware_block_volume::wire::VolumeManagerInfo> info(allocator);
-
-  {
-    fbl::AutoLock lock(&lock_);
-    info->slice_size = slice_size_;
-    info->current_slice_count =
-        GetHeaderLocked()->GetMaxAllocationTableEntriesForDiskSize(DiskSize());
-    info->maximum_slice_count = GetHeaderLocked()->GetAllocationTableAllocatedEntryCount();
-  }
+  GetInfoInternal(info.get());
   completer.Reply(ZX_OK, info);
 }
 

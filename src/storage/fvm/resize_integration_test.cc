@@ -51,10 +51,10 @@ void GrowFvm(const fbl::unique_fd& devfs_root, const GrowParams& params, Ramdisk
   ASSERT_TRUE(vpartition);
 
   // Get current state of the FVM.
-  VolumeInfo before_grow_info;
+  VolumeManagerInfo before_grow_info;
   ASSERT_OK(fvm_adapter->Query(&before_grow_info));
   ASSERT_EQ(kSliceSize, before_grow_info.slice_size);
-  ASSERT_EQ(kPartitionSliceCount, before_grow_info.pslice_allocated_count);
+  ASSERT_EQ(kPartitionSliceCount, before_grow_info.assigned_slice_count);
 
   unsigned int initial_seed = params.seed;
   auto random_data = MakeRandomBuffer(kDataSize, &initial_seed);
@@ -67,17 +67,17 @@ void GrowFvm(const fbl::unique_fd& devfs_root, const GrowParams& params, Ramdisk
   ASSERT_OK(fvm_adapter->Rebind({vpartition.get()}));
 
   // Get stats after growth.
-  VolumeInfo after_grow_info;
+  VolumeManagerInfo after_grow_info;
   ASSERT_OK(fvm_adapter->Query(&after_grow_info));
   ASSERT_TRUE(IsConsistentAfterGrowth(before_grow_info, after_grow_info));
-  ASSERT_EQ(params.format.pslice_count, after_grow_info.pslice_total_count);
+  ASSERT_EQ(params.format.pslice_count, after_grow_info.slice_count);
   // Data should still be present.
   ASSERT_NO_FATAL_FAILURES(vpartition->CheckContentsAt(random_data, 0));
 
   // Verify new slices can be allocated, written to and read from.
   if (params.validate_new_slices) {
     ASSERT_OK(vpartition->Extend(kPartitionSliceCount,
-                                 after_grow_info.pslice_total_count - kPartitionSliceCount));
+                                 after_grow_info.slice_count - kPartitionSliceCount));
 
     auto random_data_2 = MakeRandomBuffer(kDataSize, &initial_seed);
     uint64_t offset = (params.format.pslice_count - 1) * kSliceSize;

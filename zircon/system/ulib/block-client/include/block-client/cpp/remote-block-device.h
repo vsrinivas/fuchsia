@@ -35,7 +35,8 @@ class RemoteBlockDevice final : public BlockDevice {
   zx::status<std::string> GetDevicePath() const final;
   zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const final;
   zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out_vmoid) final;
-  zx_status_t VolumeQuery(fuchsia_hardware_block_volume_VolumeInfo* out_info) const final;
+  zx_status_t VolumeGetInfo(fuchsia_hardware_block_volume_VolumeManagerInfo* out_manager_info,
+                            fuchsia_hardware_block_volume_VolumeInfo* out_volume_info) const final;
   zx_status_t VolumeQuerySlices(const uint64_t* slices, size_t slices_count,
                                 fuchsia_hardware_block_volume_VsliceRange* out_ranges,
                                 size_t* out_ranges_count) const final;

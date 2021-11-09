@@ -42,8 +42,9 @@ class ProxyBlockDevice : public BlockDevice {
     return inner_->BlockAttachVmo(vmo, out_vmoid);
   }
 
-  zx_status_t VolumeQuery(fuchsia_hardware_block_volume_VolumeInfo* out_info) const {
-    return inner_->VolumeQuery(out_info);
+  zx_status_t VolumeGetInfo(fuchsia_hardware_block_volume_VolumeManagerInfo* out_manager,
+                            fuchsia_hardware_block_volume_VolumeInfo* out_volume) const {
+    return inner_->VolumeGetInfo(out_manager, out_volume);
   }
   zx_status_t VolumeQuerySlices(const uint64_t* slices, size_t slices_count,
                                 fuchsia_hardware_block_volume_VsliceRange* out_ranges,

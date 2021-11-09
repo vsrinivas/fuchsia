@@ -673,15 +673,18 @@ TEST(StatvfsTestCase, StatvfsTest) {
 }
 
 void GetPartitionSliceCount(const zx::unowned_channel& channel, size_t* out_count) {
-  fuchsia_hardware_block_volume_VolumeInfo fvm_info;
+  fuchsia_hardware_block_volume_VolumeManagerInfo fvm_info;
+  fuchsia_hardware_block_volume_VolumeInfo volume_info;
   zx_status_t status;
-  ASSERT_EQ(fuchsia_hardware_block_volume_VolumeQuery(channel->get(), &status, &fvm_info), ZX_OK);
+  ASSERT_EQ(fuchsia_hardware_block_volume_VolumeGetVolumeInfo(channel->get(), &status, &fvm_info,
+                                                              &volume_info),
+            ZX_OK);
   ASSERT_EQ(status, ZX_OK);
 
   size_t allocated_slices = 0;
   uint64_t start_slices[1];
   start_slices[0] = 0;
-  while (start_slices[0] < fvm_info.vslice_count) {
+  while (start_slices[0] < fvm_info.max_virtual_slice) {
     fuchsia_hardware_block_volume_VsliceRange
         ranges[fuchsia_hardware_block_volume_MAX_SLICE_REQUESTS];
     size_t actual_ranges_count;
@@ -696,6 +699,9 @@ void GetPartitionSliceCount(const zx::unowned_channel& channel, size_t* out_coun
       allocated_slices += ranges[0].count;
     }
   }
+
+  // The two methods of getting the partition slice count should agree.
+  EXPECT_EQ(volume_info.partition_slice_count, allocated_slices);
 
   *out_count = allocated_slices;
 }
