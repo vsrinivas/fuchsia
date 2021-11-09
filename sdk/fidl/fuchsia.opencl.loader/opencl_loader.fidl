@@ -1,0 +1,44 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.opencl.loader;
+
+using zx;
+
+type Features = flexible bits {
+    /// Implements Get().
+    GET = 1;
+    /// Implements ConnectToDeviceFs().
+    CONNECT_TO_DEVICE_FS = 2;
+};
+
+type ConnectToManifestOptions = flexible bits {
+    /// Wait for the loader to finish processing current ICD loading/unloading
+    /// operations before completing the connection.
+    WAIT_FOR_IDLE = 1;
+};
+
+/// Service to provide opencl libraries to the loader.
+@discoverable
+protocol Loader {
+    /// Requests a client driver library with the given name from the opencl loader
+    /// service. Returns a VMO suitable for loading as a dynamic library on
+    /// success, a null handle on failure.
+    Get(struct {
+        name string:64;
+    }) -> (resource struct {
+        lib zx.handle:<VMO, optional>;
+    });
+
+    /// Connects to a FS serving fuchsia.io containing all device nodes
+    /// potentially relevant to ICDs.  /dev/<devname> will be served under
+    /// <devname> in this directory.
+    ConnectToDeviceFs(resource struct {
+        channel zx.handle:CHANNEL;
+    });
+
+    /// Returns the set of features the loader service supports.
+    GetSupportedFeatures() -> (struct {
+        features Features;
+    });
+};
