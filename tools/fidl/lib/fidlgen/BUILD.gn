@@ -16,7 +16,7 @@ go_library("fidlgen") {
     "strings.go",
     "templates.go",
     "types.go",
-    "wire_file_if_changed.go",
+    "write_file_if_changed.go",
   ]
 }
 
