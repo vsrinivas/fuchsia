@@ -13,10 +13,15 @@ if (is_host) {
       "//third_party/rust_crates:serde_json",
     ]
     deps = [
+      "//build/sdk/meta:rust",
+      "//src/developer/ffx/lib/fms",
       "//src/developer/ffx/plugins/emulator/common:lib",
       "//src/developer/ffx/plugins/emulator/engines:ffx_emulator_engines",
     ]
     args_sources = [ "src/args.rs" ]
-    sources = [ "src/lib.rs" ]
+    sources = [
+      "src/lib.rs",
+      "src/pbm.rs",
+    ]
   }
 }
