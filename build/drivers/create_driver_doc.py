@@ -29,7 +29,7 @@ def main():
         'short_description': '',
         'manufacturer': '',
         'families': '',
-        'platforms': '',
+        'models': '',
         'areas': '',
         'path': args.driver_path
     }
@@ -38,7 +38,7 @@ def main():
         documentation['short_description'] = doc_contents['short_description']
         documentation['manufacturer'] = doc_contents['manufacturer']
         documentation['families'] = doc_contents['families']
-        documentation['platforms'] = doc_contents['platforms']
+        documentation['models'] = doc_contents['models']
         documentation['areas'] = doc_contents['areas']
 
     json.dump(documentation, args.doc_output)

@@ -47,6 +47,7 @@ fuchsia_driver("hdmi-audio-codec-driver") {
 fuchsia_driver_component("hdmi-audio-codec") {
   component_name = "hdmi-audio-codec"
   deps = [ ":hdmi-audio-codec-driver" ]
+  documentation = "hdmi-audio-codec-driver-info.json"
 }
 
 group("tests") {

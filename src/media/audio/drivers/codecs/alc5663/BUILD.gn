@@ -51,6 +51,7 @@ fuchsia_driver("alc5663-driver") {
 fuchsia_driver_component("alc5663") {
   component_name = "alc5663"
   deps = [ ":alc5663-driver" ]
+  documentation = "alc5663-driver-info.json"
 }
 
 group("tests") {

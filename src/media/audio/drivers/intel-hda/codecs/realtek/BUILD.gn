@@ -44,6 +44,7 @@ fuchsia_driver("realtek-audio-codec-driver") {
 fuchsia_driver_component("realtek-audio-codec") {
   component_name = "realtek-audio-codec"
   deps = [ ":realtek-audio-codec-driver" ]
+  documentation = "realtek-audio-codec-driver-info.json"
 }
 
 group("tests") {

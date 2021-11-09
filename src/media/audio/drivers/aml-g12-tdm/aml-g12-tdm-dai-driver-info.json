@@ -1,5 +1,5 @@
 {
-  "short_description": "AMLogic g12 audio subsystem TDM driver",
+  "short_description": "AMLogic g12 audio subsystem DAI TDM driver",
   "manufacturer": "AMLogic",
   "families": [
     "g12"

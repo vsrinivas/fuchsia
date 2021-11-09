@@ -110,6 +110,7 @@ fuchsia_driver("intel-hda-driver") {
 fuchsia_driver_component("intel-hda") {
   component_name = "intel-hda"
   deps = [ ":intel-hda-driver" ]
+  documentation = "intel-hda-driver-info.json"
 }
 
 test("controller_test") {

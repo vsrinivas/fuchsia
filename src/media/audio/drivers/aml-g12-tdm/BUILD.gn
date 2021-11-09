@@ -105,6 +105,7 @@ fuchsia_driver("aml-g12-tdm-dai-driver") {
 fuchsia_driver_component("aml-g12-tdm-dai") {
   component_name = "aml-g12-tdm-dai"
   deps = [ ":aml-g12-tdm-dai-driver" ]
+  documentation = "aml-g12-tdm-dai-driver-info.json"
 }
 
 group("tests") {
