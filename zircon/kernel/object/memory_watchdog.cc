@@ -213,6 +213,7 @@ void MemoryWatchdog::WorkerThread() {
 
     if (IsSignalDue(idx, time_now)) {
       printf("memory-pressure: memory availability state - %s\n", PressureLevelToString(idx));
+      pmm_page_queues()->Dump();
 
       if (IsEvictionRequired(idx)) {
         // Clear any previous eviction trigger. Once Cancel completes we know that we will not race
