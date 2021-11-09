@@ -4,7 +4,7 @@
 # found in the LICENSE file.
 """Generate FIDL reference docs for one or more Fuchsia packages.
 
-This script uses fidldoc which documents FIDL libraries passed in via 
+This script uses fidldoc which documents FIDL libraries passed in via
 a .txt file.
 """
 
@@ -23,7 +23,7 @@ def walk_rmtree(directory):
     subdirectories. See https://fxbug.dev/74084.
 
     Args:
-        directory: path to directory which should have tree removed. 
+        directory: path to directory which should have tree removed.
     """
     for root, dirs, files in os.walk(directory, topdown=False):
         for file in files:
@@ -49,7 +49,7 @@ def run_fidl_doc(build_dir, out_dir, fidl_files, zipped_result=False):
     out_fidl = os.path.join(out_dir, 'fidldoc')
     gen_fidl = subprocess.run(
         [
-            fidldoc_path, "--verbose", "--path", "reference/fidl/", "--out",
+            fidldoc_path, "--verbose", "--path", "/reference/fidl/", "--out",
             out_fidl
         ] + fidl_files)
 

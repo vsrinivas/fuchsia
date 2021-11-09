@@ -33,6 +33,6 @@ class GenReferenceDocsTest(unittest.TestCase):
             gen_fidldocs.run_fidl_doc(build_dir, out_dir, mock_files)
             mock_run.assert_called_once_with(
                 [
-                    fidldoc_path, "--verbose", "--path", "reference/fidl/",
+                    fidldoc_path, "--verbose", "--path", "/reference/fidl/",
                     "--out", out_fidl
                 ] + mock_files)
