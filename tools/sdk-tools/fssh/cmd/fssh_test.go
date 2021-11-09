@@ -48,6 +48,8 @@ func TestMain(t *testing.T) {
 	tests := []struct {
 		args                []string
 		deviceConfiguration string
+		defaultConfigDevice string
+		ffxDefaultDevice    string
 		ffxTargetList       string
 		ffxTargetDefault    string
 		expectedIPAddress   string
@@ -80,7 +82,7 @@ func TestMain(t *testing.T) {
 		// Test case fconfig default device.
 		{
 			args: []string{os.Args[0], "-data-path", dataDir},
-			deviceConfiguration: `{
+			deviceConfiguration: `{ "_DEFAULT_DEVICE_":"remote-target-name",
 		"remote-target-name":{
 			"bucket":"fuchsia-bucket",
 			"device-ip":"::1f",
@@ -91,17 +93,17 @@ func TestMain(t *testing.T) {
 			"ssh-port":"2202",
 			"default": "true"}
 		}`,
-			ffxTargetDefault:   "remote-target-name",
-			expectedIPAddress:  "::1f",
-			expectedPort:       "2202",
-			expectedSSHArgs:    "",
-			expectedSSHConfig:  filepath.Join(dataDir, "sshconfig"),
-			expectedPrivateKey: "",
+			defaultConfigDevice: "\"remote-target-name\"",
+			expectedIPAddress:   "::1f",
+			expectedPort:        "2202",
+			expectedSSHArgs:     "",
+			expectedSSHConfig:   filepath.Join(dataDir, "sshconfig"),
+			expectedPrivateKey:  "",
 		},
 		// Test case fconfig non-default device with --device-name
 		{
 			args: []string{os.Args[0], "-data-path", dataDir, "--device-name", "test-target-name"},
-			deviceConfiguration: `{
+			deviceConfiguration: `{ "_DEFAULT_DEVICE_":"remote-target-name",
 				"remote-target-name":{
 					"bucket":"fuchsia-bucket",
 					"device-ip":"::1f",
@@ -121,12 +123,12 @@ func TestMain(t *testing.T) {
 						"ssh-port":"",
 						"default": "true"}
 				}`,
-			ffxTargetDefault:   "remote-target-name",
-			expectedIPAddress:  "::ff",
-			expectedPort:       "",
-			expectedSSHArgs:    "",
-			expectedSSHConfig:  filepath.Join(dataDir, "sshconfig"),
-			expectedPrivateKey: "",
+			defaultConfigDevice: "\"remote-target-name\"",
+			expectedIPAddress:   "::ff",
+			expectedPort:        "",
+			expectedSSHArgs:     "",
+			expectedSSHConfig:   filepath.Join(dataDir, "sshconfig"),
+			expectedPrivateKey:  "",
 		},
 	}
 
@@ -139,6 +141,7 @@ func TestMain(t *testing.T) {
 			os.Setenv("_EXPECTED_SSHCONFIG", test.expectedSSHConfig)
 			os.Setenv("_EXPECTED_PRIVKEY", test.expectedPrivateKey)
 			os.Setenv("_FAKE_FFX_DEVICE_CONFIG_DATA", test.deviceConfiguration)
+			os.Setenv("_FAKE_FFX_DEVICE_CONFIG_DEFAULT_DEVICE", test.defaultConfigDevice)
 			os.Setenv("_FAKE_FFX_TARGET_DEFAULT", test.ffxTargetDefault)
 			os.Setenv("_FAKE_FFX_TARGET_LIST", test.ffxTargetList)
 			flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
@@ -324,9 +327,15 @@ func TestFakeFFX(t *testing.T) {
 			os.Exit(0)
 		}
 	} else if strings.HasSuffix(args[0], "ffx") && args[1] == "config" && args[2] == "get" {
-		if len(args) > 3 && args[3] == "DeviceConfiguration" {
-			fmt.Printf(os.Getenv("_FAKE_FFX_DEVICE_CONFIG_DATA"))
-			os.Exit(0)
+		if len(args) > 3 {
+			if args[3] == "DeviceConfiguration" {
+				fmt.Printf(os.Getenv("_FAKE_FFX_DEVICE_CONFIG_DATA"))
+				os.Exit(0)
+			} else if args[3] == "DeviceConfiguration._DEFAULT_DEVICE_" {
+				fmt.Printf(os.Getenv("_FAKE_FFX_DEVICE_CONFIG_DEFAULT_DEVICE"))
+				os.Exit(0)
+			}
+
 		}
 	} else if strings.HasSuffix(args[0], "ffx") && args[1] == "target" && args[2] == "default" && args[3] == "get" {
 		fmt.Printf("%v\n", os.Getenv("_FAKE_FFX_TARGET_DEFAULT"))
