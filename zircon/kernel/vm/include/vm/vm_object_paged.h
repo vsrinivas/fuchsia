@@ -149,8 +149,11 @@ class VmObjectPaged final : public VmObject {
   zx_status_t SupplyPages(uint64_t offset, uint64_t len, VmPageSpliceList* pages) override;
   zx_status_t FailPageRequests(uint64_t offset, uint64_t len, zx_status_t error_status) override {
     Guard<Mutex> guard{&lock_};
-
     return cow_pages_locked()->FailPageRequestsLocked(offset, len, error_status);
+  }
+  zx_status_t DirtyPages(uint64_t offset, uint64_t len) override {
+    Guard<Mutex> guard{&lock_};
+    return cow_pages_locked()->DirtyPagesLocked(offset, len);
   }
 
   void Dump(uint depth, bool verbose) override {

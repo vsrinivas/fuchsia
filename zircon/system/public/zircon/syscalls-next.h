@@ -39,6 +39,9 @@ __END_CDECLS
 // VM Object creation options
 #define ZX_VMO_TRAP_DIRTY ((uint32_t)1u << 3)
 
+// Pager opcodes
+#define ZX_PAGER_OP_DIRTY ((uint32_t)2u)
+
 // zx_packet_page_request_t::command
 #define ZX_PAGER_VMO_DIRTY ((uint16_t)2)
 

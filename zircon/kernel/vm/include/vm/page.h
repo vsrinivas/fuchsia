@@ -264,8 +264,6 @@ struct vm_page {
       // Field should be modified by the setters and getters to allow for future encoding changes.
       uint64_t page_offset_priv;
 
-      // offset 0x28
-
       uint64_t get_page_offset() const { return page_offset_priv; }
 
       void set_page_offset(uint64_t page_offset) { page_offset_priv = page_offset; }
@@ -275,14 +273,14 @@ struct vm_page {
       // Identifies which queue this page is in.
       uint8_t page_queue_priv;
 
-      // offset 0x29
-
       ktl::atomic_ref<uint8_t> get_page_queue_ref() {
         return ktl::atomic_ref<uint8_t>(page_queue_priv);
       }
       ktl::atomic_ref<const uint8_t> get_page_queue_ref() const {
         return ktl::atomic_ref<const uint8_t>(page_queue_priv);
       }
+
+      // offset 0x29
 
 #define VM_PAGE_OBJECT_PIN_COUNT_BITS 5
 #define VM_PAGE_OBJECT_MAX_PIN_COUNT ((1ul << VM_PAGE_OBJECT_PIN_COUNT_BITS) - 1)
@@ -300,11 +298,13 @@ struct vm_page {
       // be moved into the child instead of setting the second bit.
       uint8_t cow_left_split : 1;
       uint8_t cow_right_split : 1;
-
       // Hint for whether the page is always needed and should not be considered for reclamation
       // under memory pressure (unless the kernel decides to override hints for some reason).
       uint8_t always_need : 1;
-
+      // Whether the page is dirty and its contents need to written back to the page source at some
+      // point. Used for pages backed by a user pager.
+      uint8_t dirty : 1;
+      uint8_t padding : 7;
       // This struct has no type name and exists inside an unpacked parent and so it really doesn't
       // need to have any padding. By making it packed we allow the next outer variables, to use
       // space we would have otherwise wasted in padding, without breaking alignment rules.
@@ -322,12 +322,12 @@ struct vm_page {
   };
   using object_t = decltype(object);
 
-  // offset 0x2a
+  // offset 0x2b
 
   // logically private; use |state()| and |set_state()|
   ktl::atomic<vm_page_state> state_priv;
 
-  // offset 0x2b
+  // offset 0x2c
 
   // If true, this page is "loaned" in the sense of being loaned from a contiguous VMO (via
   // decommit) to Zircon.  If the original contiguous VMO is deleted, this page will no longer be
@@ -346,7 +346,7 @@ struct vm_page {
   // This padding is inserted here to make sizeof(vm_page) a multiple of 8 and help validate that
   // all commented offsets were indeed correct.
   uint8_t padding_bits : 6;
-  char padding_bytes[4];
+  char padding_bytes[3];
 
   // helper routines
   bool is_free() const { return state() == vm_page_state::FREE; }
@@ -423,11 +423,11 @@ static_assert(offsetof(vm_page_t, object.page_queue_priv) %
               0);
 static_assert(offsetof(vm_page_t, object.page_queue_priv) % alignof(uint8_t) == 0);
 
-static_assert(offsetof(vm_page_t, state_priv) == 0x2a);
+static_assert(offsetof(vm_page_t, state_priv) == 0x2b);
 static_assert(offsetof(vm_page_t, state_priv) % alignof(decltype(vm_page_t::state_priv)) == 0);
 static_assert(offsetof(vm_page_t, state_priv) % alignof(ktl::atomic<vm_page_state>) == 0);
 
-static_assert(offsetof(vm_page_t, padding_bytes) == 0x2c);
+static_assert(offsetof(vm_page_t, padding_bytes) == 0x2d);
 
 // assert that the page structure isn't growing uncontrollably
 static_assert(sizeof(vm_page) == 0x30);

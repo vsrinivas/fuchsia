@@ -145,6 +145,10 @@ class PageSource : public fbl::RefCounted<PageSource> {
   zx_status_t RequestDirtyTransition(PageRequest* request, uint64_t offset, uint64_t len,
                                      VmoDebugInfo vmo_debug_info);
 
+  // Updates the request tracking metadata to account for pages [offset, offset + len) having
+  // been dirtied in the owning VMO.
+  void OnPagesDirtied(uint64_t offset, uint64_t len);
+
   // Detaches the source from the VMO. All future calls into the page source will fail. All
   // pending read transactions are aborted. Pending flush transactions will still
   // be serviced.
@@ -212,6 +216,11 @@ class PageSource : public fbl::RefCounted<PageSource> {
   // Wakes up the given PageRequest and all overlapping requests, with an optional |status|.
   void CompleteRequestLocked(PageRequest* request, zx_status_t status = ZX_OK)
       TA_REQ(page_source_mtx_);
+
+  // Helper that updates request tracking metadata to resolve requests of |type| in the range
+  // [offset, offset + len).
+  void ResolveRequests(page_request_type type, uint64_t offset, uint64_t len)
+      TA_EXCL(page_source_mtx_);
 
   // Removes |request| from any internal tracking. Called by a PageRequest if
   // it needs to abort itself.
