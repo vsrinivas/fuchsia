@@ -25,7 +25,6 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"go.fuchsia.dev/fuchsia/tools/lib/runner"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
-	"go.fuchsia.dev/fuchsia/tools/serial"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 	"go.fuchsia.dev/fuchsia/tools/testing/testrunner/constants"
 	"golang.org/x/crypto/ssh"
@@ -91,11 +90,6 @@ type dataSinkCopier interface {
 	Copy(sinks []runtests.DataSinkReference, localDir string) (runtests.DataSinkMap, error)
 	Reconnect() error
 	Close() error
-}
-
-// For testability
-type serialClient interface {
-	runDiagnostics(ctx context.Context) error
 }
 
 // subprocessTester executes tests in local subprocesses.
@@ -231,22 +225,6 @@ func (t *subprocessTester) Close() error {
 	return nil
 }
 
-type serialSocket struct {
-	socketPath string
-}
-
-func (s *serialSocket) runDiagnostics(ctx context.Context) error {
-	if s.socketPath == "" {
-		return fmt.Errorf("serialSocketPath not set")
-	}
-	socket, err := serial.NewSocket(ctx, s.socketPath)
-	if err != nil {
-		return fmt.Errorf("newSerialSocket failed: %v", err)
-	}
-	defer socket.Close()
-	return serial.RunDiagnostics(ctx, socket)
-}
-
 // fuchsiaSSHTester executes fuchsia tests over an SSH connection.
 type fuchsiaSSHTester struct {
 	client                      sshClient
@@ -255,7 +233,7 @@ type fuchsiaSSHTester struct {
 	localOutputDir              string
 	perTestTimeout              time.Duration
 	connectionErrorRetryBackoff retry.Backoff
-	serialSocket                serialClient
+	serialSocketPath            string
 }
 
 // newFuchsiaSSHTester returns a fuchsiaSSHTester associated to a fuchsia
@@ -297,8 +275,53 @@ func newFuchsiaSSHTester(ctx context.Context, addr net.IPAddr, sshKeyFile, local
 		localOutputDir:              localOutputDir,
 		perTestTimeout:              perTestTimeout,
 		connectionErrorRetryBackoff: retry.NewConstantBackoff(time.Second),
-		serialSocket:                &serialSocket{serialSocketPath},
+		serialSocketPath:            serialSocketPath,
 	}, nil
+}
+
+func asSerialCmd(cmd []string) string {
+	// The UART kernel driver expects a command to be followed by \r\n.
+	// Send a leading \r\n for all commands as there may be characters in the buffer already
+	// that we need to clear first.
+	return fmt.Sprintf("\r\n%s\r\n", strings.Join(cmd, " "))
+}
+
+type serialDiagnosticCmd struct {
+	cmd           []string
+	sleepDuration time.Duration
+}
+
+var serialDiagnosticCmds = []serialDiagnosticCmd{
+	{[]string{"k", "threadload"}, 200 * time.Millisecond}, // Turn on threadload
+	{[]string{"k", "threadq"}, 5 * time.Second},           // Turn on threadq and wait 5 sec
+	{[]string{"k", "cpu", "sev"}, 5 * time.Second},        // Send a SEV and wait 5 sec
+	{[]string{"k", "threadload"}, 200 * time.Millisecond}, // Turn off threadload
+	{[]string{"k", "threadq"}, 0},                         // Turn off threadq
+}
+
+func (t *fuchsiaSSHTester) runSerialDiagnostics(ctx context.Context) error {
+	if t.serialSocketPath == "" {
+		return fmt.Errorf("serialSocketPath not set")
+	}
+	logger.Debugf(ctx, "attempting to run diagnostics over serial")
+	socket, err := newSerialSocket(ctx, t.serialSocketPath)
+	if err != nil {
+		return fmt.Errorf("newSerialSocket failed: %v", err)
+	}
+	defer socket.Close()
+	for _, cmd := range serialDiagnosticCmds {
+		logger.Debugf(ctx, "running over serial: %v", cmd.cmd)
+
+		if _, err := io.WriteString(socket, asSerialCmd(cmd.cmd)); err != nil {
+			return fmt.Errorf("failed to write to serial socket: %v", err)
+		}
+
+		if cmd.sleepDuration > 0 {
+			logger.Debugf(ctx, "sleeping for %v", cmd.sleepDuration)
+			time.Sleep(cmd.sleepDuration)
+		}
+	}
+	return nil
 }
 
 func (t *fuchsiaSSHTester) reconnect(ctx context.Context) error {
@@ -370,7 +393,7 @@ func (t *fuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdo
 	testErr := t.runSSHCommandWithRetry(ctx, command, stdout, stderr)
 
 	if sshutil.IsConnectionError(testErr) {
-		if err := t.serialSocket.runDiagnostics(ctx); err != nil {
+		if err := t.runSerialDiagnostics(ctx); err != nil {
 			logger.Warningf(ctx, "failed to run serial diagnostics: %v", err)
 		}
 		return nil, testErr
@@ -446,8 +469,25 @@ type fuchsiaSerialTester struct {
 	localOutputDir string
 }
 
+func newSerialSocket(ctx context.Context, path string) (io.ReadWriteCloser, error) {
+	socket, err := net.Dial("unix", path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open serial socket connection: %v", err)
+	}
+	// Trigger a new cursor print by sending a newline. This may do nothing if the
+	// system was not ready to process input, but in that case it will print a
+	// new cursor anyways when it is ready to receive input.
+	io.WriteString(socket, asSerialCmd([]string{}))
+	// Look for the cursor, which should indicate that the console is ready for input.
+	m := iomisc.NewMatchingReader(socket, [][]byte{[]byte(serialConsoleCursor)})
+	if _, err = iomisc.ReadUntilMatch(ctx, m); err != nil {
+		return nil, fmt.Errorf("failed to find cursor: %v", err)
+	}
+	return socket, nil
+}
+
 func newFuchsiaSerialTester(ctx context.Context, serialSocketPath string, perTestTimeout time.Duration) (*fuchsiaSerialTester, error) {
-	socket, err := serial.NewSocket(ctx, serialSocketPath)
+	socket, err := newSerialSocket(ctx, serialSocketPath)
 	if err != nil {
 		return nil, err
 	}
@@ -479,6 +519,7 @@ func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, _
 	if err != nil {
 		return nil, err
 	}
+	cmd := asSerialCmd(command)
 	logger.Debugf(ctx, "starting: %v", command)
 
 	// If a single read from the socket includes both the bytes that indicate the test started and the bytes
@@ -487,7 +528,7 @@ func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, _
 	lastWrite := &lastWriteSaver{}
 	startedReader := iomisc.NewMatchingReader(io.TeeReader(t.socket, lastWrite), [][]byte{[]byte(runtests.StartedSignature + test.Name)})
 	for ctx.Err() == nil {
-		if err := serial.RunCommands(ctx, t.socket, []serial.Command{{command, 0}}); err != nil {
+		if _, err := io.WriteString(t.socket, cmd); err != nil {
 			return nil, fmt.Errorf("failed to write to serial socket: %v", err)
 		}
 		startedCtx, cancel := newTestStartedContext(ctx)
