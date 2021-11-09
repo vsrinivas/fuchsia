@@ -162,7 +162,6 @@
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
-                "fuchsia.vulkan.loader.Loader",
             ],
             from: "parent",
             to: "#tests",
