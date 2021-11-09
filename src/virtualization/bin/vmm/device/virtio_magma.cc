@@ -143,8 +143,7 @@ zx_status_t VirtioMagma::HandleCommandDescriptors(VirtioDescriptor* request_desc
           *reinterpret_cast<virtio_magma_read_notification_channel2_ctrl_t*>(request_desc->addr);
       virtio_magma_read_notification_channel2_resp_t response{};
 
-      // TODO(fxbug.dev/83668) - check for sizeof(response) + request_copy.buffer_size
-      if (response_desc->len < sizeof(response)) {
+      if (response_desc->len < sizeof(response) + request_copy.buffer_size) {
         FX_LOGS(ERROR)
             << "VIRTIO_MAGMA_CMD_READ_NOTIFICATION_CHANNEL2: response descriptor too small";
         return ZX_ERR_INVALID_ARGS;
