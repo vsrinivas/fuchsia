@@ -80,7 +80,7 @@ pub fn derive_checked_vec(input: TokenStream) -> TokenStream {
 /// - `inner_type` (required): The `T` of `OneOrMany<T>`.
 /// - `min_length`: The minimum length of the vector.
 /// - `unique_items`: If true, all elements of the vector must be unique. Requires `T` to
-///   implemente the `Hash` trait.
+///   implement the `Hash` trait.
 ///
 /// Example:
 ///
