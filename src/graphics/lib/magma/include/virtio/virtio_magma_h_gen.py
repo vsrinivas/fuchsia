@@ -117,8 +117,7 @@ def includes():
     else:
         return (
             '#include <linux/virtio_ids.h>\n'
-            '#include <linux/virtio_config.h>\n'
-            '#include <linux/virtmagma.h>\n')
+            '#include <linux/virtio_config.h>\n')
 
 
 # Extract the non-"magma_" portion of the name of an export
