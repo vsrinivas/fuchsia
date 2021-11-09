@@ -54,11 +54,11 @@ Inspect. Some examples include:
 
 - {Rust}
 
-[fuchsia-inspect crate documentation](https://fuchsia-docs.firebaseapp.com/cpp/inspect/index.html)
+[fuchsia-inspect crate documentation](https://fuchsia-docs.firebaseapp.com/rust/fuchsia_inspect/index.html)
 
 - {Dart}
 
-[fuchsia_inspect dart package documentation](https://fuchsia-docs.firebaseapp.com/cpp/inspect/index.html)
+[fuchsia_inspect dart package documentation](https://fuchsia.dev/reference/dart/package-fuchsia_inspect_inspect/package-fuchsia_inspect_inspect-library)
 
 ## Codelab
 
