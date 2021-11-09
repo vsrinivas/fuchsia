@@ -10,7 +10,6 @@ extend uint fuchsia.BIND_PLATFORM_DEV_VID {
 
 extend uint fuchsia.BIND_PLATFORM_DEV_PID {
   PBUS_TEST = 0x01,
-  INTEGRATION = 0x02,
   USB_VBUS = 0x03,
   HIDCTL = 0x04,
   VCAMERA = 0x05,

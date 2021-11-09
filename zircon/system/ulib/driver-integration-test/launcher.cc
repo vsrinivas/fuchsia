@@ -23,7 +23,7 @@ namespace {
 const zbi_platform_id_t kPlatformId = []() {
   zbi_platform_id_t plat_id = {};
   plat_id.vid = PDEV_VID_TEST;
-  plat_id.pid = PDEV_PID_INTEGRATION_TEST;
+  plat_id.pid = PDEV_PID_PBUS_TEST;
   strcpy(plat_id.board_name, "driver-integration-test");
   return plat_id;
 }();

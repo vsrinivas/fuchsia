@@ -242,7 +242,6 @@ __BEGIN_CDECLS
 // Test
 #define PDEV_VID_TEST               0x11
 #define PDEV_PID_PBUS_TEST          0x01
-#define PDEV_PID_INTEGRATION_TEST   0x02
 #define PDEV_PID_USB_VBUS_TEST      0x03
 #define PDEV_PID_HIDCTL_TEST        0x04
 #define PDEV_PID_VCAMERA_TEST       0x05
