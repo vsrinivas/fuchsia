@@ -4,6 +4,7 @@
 
 #include "src/media/audio/drivers/test/test_base.h"
 
+#include <fcntl.h>
 #include <fuchsia/hardware/audio/cpp/fidl.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>

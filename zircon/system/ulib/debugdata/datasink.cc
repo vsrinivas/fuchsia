@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <inttypes.h>
 #include <fcntl.h>
+#include <inttypes.h>
 #include <lib/debugdata/datasink.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <sys/stat.h>
