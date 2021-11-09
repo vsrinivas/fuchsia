@@ -44,6 +44,7 @@ board_recovery_bootfs_labels += _common_bootfs_deps
 # device at all times. To avoid unintentionally breaking remote workflows,
 # we permit multiple GPT devices.
 board_bootfs_labels += [ "//src/storage/fshost:gpt_all" ]
+board_zedboot_bootfs_labels += [ "//src/storage/fshost:default_config" ]
 
 board_bootfs_labels -= [ "//src/power/power-manager:base_config" ]
 board_bootfs_labels += [ "//src/power/power-manager:chromebook_config" ]

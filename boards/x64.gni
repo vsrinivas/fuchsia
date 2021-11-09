@@ -17,6 +17,7 @@ board_zedboot_bootfs_labels += _bootfs_deps
 # device at all times. To avoid unintentionally breaking remote workflows,
 # we permit multiple GPT devices.
 board_bootfs_labels += [ "//src/storage/fshost:gpt_all" ]
+board_zedboot_bootfs_labels += [ "//src/storage/fshost:default_config" ]
 
 use_vbmeta = true
 build_uefi_disk = true
