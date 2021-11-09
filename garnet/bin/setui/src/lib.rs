@@ -68,6 +68,7 @@ mod hanging_get_handler;
 mod input;
 mod intl;
 mod job;
+mod keyboard;
 mod light;
 mod night_mode;
 mod policy;

@@ -156,11 +156,15 @@ struct fuchsia.settings/Intl_Set_Response
 union/member fuchsia.settings/Intl_Set_Result.err fuchsia.settings/Error
 union/member fuchsia.settings/Intl_Set_Result.response fuchsia.settings/Intl_Set_Response
 strict union fuchsia.settings/Intl_Set_Result
-protocol/member fuchsia.settings/Keyboard.Set(fuchsia.settings/KeyboardSettings settings) -> ()
+protocol/member fuchsia.settings/Keyboard.Set(fuchsia.settings/KeyboardSettings settings) -> (fuchsia.settings/KeyboardSet_Set_Result result)
 protocol/member fuchsia.settings/Keyboard.Watch() -> (fuchsia.settings/KeyboardSettings settings)
 protocol fuchsia.settings/Keyboard
-protocol/member fuchsia.settings/KeyboardSet.Set(fuchsia.settings/KeyboardSettings settings) -> ()
+protocol/member fuchsia.settings/KeyboardSet.Set(fuchsia.settings/KeyboardSettings settings) -> (fuchsia.settings/KeyboardSet_Set_Result result)
 protocol fuchsia.settings/KeyboardSet
+struct fuchsia.settings/KeyboardSet_Set_Response
+union/member fuchsia.settings/KeyboardSet_Set_Result.err fuchsia.settings/Error
+union/member fuchsia.settings/KeyboardSet_Set_Result.response fuchsia.settings/KeyboardSet_Set_Response
+strict union fuchsia.settings/KeyboardSet_Set_Result
 table/member fuchsia.settings/KeyboardSettings.keymap fuchsia.input/KeymapId
 table fuchsia.settings/KeyboardSettings
 protocol/member fuchsia.settings/KeyboardWatch.Watch() -> (fuchsia.settings/KeyboardSettings settings)

@@ -11,6 +11,7 @@ use crate::handler::setting_handler::ControllerError;
 use crate::input::types::InputDevice;
 use crate::input::{MediaButtons, VolumeGain};
 use crate::intl::types::IntlInfo;
+use crate::keyboard::types::KeyboardInfo;
 use crate::light::types::LightState;
 use crate::night_mode::types::NightModeInfo;
 use crate::payload_convert;
@@ -114,6 +115,9 @@ generate_inspect! {
 
         // Intl requests.
         SetIntlInfo(IntlInfo),
+
+        // Keyboard requests.
+        SetKeyboardInfo(KeyboardInfo),
 
         // Light requests.
         SetLightGroupValue(String, Vec<LightState>),

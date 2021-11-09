@@ -27,6 +27,7 @@ use crate::handler::device_storage::{DeviceStorageConvertible, DeviceStorageFact
 use crate::handler::setting_handler::persist::UpdateState;
 use crate::input::types::InputInfoSources;
 use crate::intl::types::IntlInfo;
+use crate::keyboard::types::KeyboardInfo;
 use crate::light::types::LightInfo;
 use crate::message::base::{MessageEvent, MessengerType};
 use crate::message::receptor::Receptor;
@@ -181,6 +182,7 @@ into_storage_info!(LightInfo => SettingInfo);
 into_storage_info!(DoNotDisturbInfo => SettingInfo);
 into_storage_info!(InputInfoSources => SettingInfo);
 into_storage_info!(IntlInfo => SettingInfo);
+into_storage_info!(KeyboardInfo => SettingInfo);
 into_storage_info!(NightModeInfo => SettingInfo);
 into_storage_info!(PrivacyInfo => SettingInfo);
 into_storage_info!(SetupInfo => SettingInfo);
@@ -269,6 +271,7 @@ where
                     }
                     SettingType::Input => self.read::<InputInfoSources>(nonce, responder).await,
                     SettingType::Intl => self.read::<IntlInfo>(nonce, responder).await,
+                    SettingType::Keyboard => self.read::<KeyboardInfo>(nonce, responder).await,
                     SettingType::Light => self.read::<LightInfo>(nonce, responder).await,
                     SettingType::LightSensor => {
                         panic!("SettingType::LightSensor does not support storage")
@@ -299,6 +302,7 @@ where
                     SettingInfo::FactoryReset(info) => self.write(info, flush, responder).await,
                     SettingInfo::Input(info) => self.write(info, flush, responder).await,
                     SettingInfo::Intl(info) => self.write(info, flush, responder).await,
+                    SettingInfo::Keyboard(info) => self.write(info, flush, responder).await,
                     SettingInfo::Light(info) => self.write(info, flush, responder).await,
                     SettingInfo::LightSensor(_) => {
                         panic!("SettingInfo::LightSensor does not support storage")

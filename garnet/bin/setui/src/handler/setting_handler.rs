@@ -370,6 +370,7 @@ pub mod persist {
 
         #[async_trait]
         pub(crate) trait Create: Sized {
+            /// Creates the controller.
             async fn create(handler: ClientProxy) -> Result<Self, ControllerError>;
         }
     }
