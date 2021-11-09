@@ -3,9 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{bail, Context, Result},
+    anyhow::{anyhow, bail, Context, Result},
     errors::ffx_error,
-    ffx_config::get,
     glob::glob as _glob,
     serde::{Deserialize, Serialize},
     std::{
@@ -21,28 +20,55 @@ pub fn global_symbol_index_path() -> Result<String> {
 
 // Ensures that symbols in sdk.root are registered in the global symbol index.
 pub async fn ensure_symbol_index_registered() -> Result<()> {
-    let sdk_root: PathBuf = get("sdk.root").await?;
-    let sdk_type: Option<String> = get("sdk.type").await?;
+    let sdk = ffx_config::get_sdk().await?;
 
-    if let Some(s) = sdk_type {
-        if s == "in-tree" {
-            let path = sdk_root.join(".symbol-index.json");
-            if !path.exists() {
-                bail!("Required {:?} doesn't exist", path);
-            }
-            let path_str = path.display().to_string();
-            let symbol_index_path = global_symbol_index_path()?;
-            let mut index = SymbolIndex::load(&symbol_index_path).unwrap_or(SymbolIndex::new());
-            if !index.includes.contains(&path_str) {
-                index.includes.push(path_str);
-                index.save(&symbol_index_path)?;
-            }
-            return Ok(());
+    let mut symbol_index_path_str: Option<String> = None;
+    let mut default_symbol_server: Option<&'static str> = None;
+    if sdk.get_version() == &ffx_config::sdk::SdkVersion::InTree {
+        let symbol_index_path = sdk.get_path_prefix().join(".symbol-index.json");
+        if !symbol_index_path.exists() {
+            bail!("Required {:?} doesn't exist", symbol_index_path);
         }
+        symbol_index_path_str = Some(
+            symbol_index_path
+                .into_os_string()
+                .into_string()
+                .map_err(|s| anyhow!("Cannot convert OsString {:?} into String", s))?,
+        );
+    } else {
+        let symbol_index_path = sdk.get_path_prefix().join("data/config/symbol-index/config.json");
+        if symbol_index_path.exists() {
+            // It's allowed that SDK do not provide a symbol-index config.
+            symbol_index_path_str = Some(
+                symbol_index_path
+                    .into_os_string()
+                    .into_string()
+                    .map_err(|s| anyhow!("Cannot convert OsString {:?} into String", s))?,
+            );
+        }
+        // The default symbol server is only needed for SDK users.
+        default_symbol_server = Some("gs://fuchsia-artifacts/debug");
     }
 
-    // TODO: handle the out-of-tree case once the SDK provides a symbol-index.json.
-    Ok(())
+    let global_symbol_index = global_symbol_index_path()?;
+    let mut index = SymbolIndex::load(&global_symbol_index).unwrap_or(SymbolIndex::new());
+    let mut needs_save = false;
+    if let Some(path) = symbol_index_path_str {
+        if !index.includes.contains(&path) {
+            index.includes.push(path);
+            needs_save = true;
+        }
+    }
+    if let Some(server) = default_symbol_server {
+        if !index.gcs_flat.iter().any(|gcs_flat| gcs_flat.url == server) {
+            index.gcs_flat.push(GcsFlat { url: server.to_owned(), require_authentication: false });
+            needs_save = true;
+        }
+    }
+    if needs_save {
+        index.save(&global_symbol_index)?;
+    }
+    return Ok(());
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -163,7 +189,7 @@ impl SymbolIndex {
 /// If the relative is actually absolute, return it directly. The base directory could be either
 /// an absolute path or a relative path.
 ///
-/// Unlink std::fs::canonicalize, this method does not require paths to exist and it does not
+/// Unlike std::fs::canonicalize, this method does not require paths to exist and it does not
 /// resolve symbolic links.
 pub fn resolve_path(base: &Path, relative: &str) -> String {
     let mut path = base.to_owned();
