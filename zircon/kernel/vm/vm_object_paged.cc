@@ -957,6 +957,7 @@ zx_status_t VmObjectPaged::ReadWriteInternalLocked(uint64_t offset, size_t len, 
     // fault in the page(s)
     zx_status_t status = LookupPagesLocked(
         first_page_offset, VMM_PF_FLAG_SW_FAULT | (write ? VMM_PF_FLAG_WRITE : 0),
+        VmObject::DirtyTrackingAction::DirtyAllPagesOnWrite,
         ktl::min(max_pages, LookupInfo::kMaxPages), nullptr, &page_request, &pages);
     if (status == ZX_ERR_SHOULD_WAIT) {
       // Must block on asynchronous page requests whilst not holding the lock.

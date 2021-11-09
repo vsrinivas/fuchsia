@@ -1658,7 +1658,8 @@ void VmCowPages::UpdateOnAccessLocked(vm_page_t* page, uint pf_flags) {
 // this function may allocate from.  This function will need at most one entry,
 // and will not fail if |alloc_list| is a non-empty list, faulting in was requested,
 // and offset is in range.
-zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags, uint64_t max_out_pages,
+zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
+                                          DirtyTrackingAction mark_dirty, uint64_t max_out_pages,
                                           list_node* alloc_list, LazyPageRequest* page_request,
                                           LookupInfo* out) {
   VM_KTRACE_DURATION(2, "VmCowPages::LookupPagesLocked", page_attribution_user_id_, offset);
@@ -1686,8 +1687,8 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags, uint64
     uint64_t parent_offset;
     VmCowPages* parent = PagedParentOfSliceLocked(&parent_offset);
     AssertHeld(parent->lock_);
-    return parent->LookupPagesLocked(offset + parent_offset, pf_flags, max_out_pages, alloc_list,
-                                     page_request, out);
+    return parent->LookupPagesLocked(offset + parent_offset, pf_flags, mark_dirty, max_out_pages,
+                                     alloc_list, page_request, out);
   }
 
   // Ensure we're adding pages to an empty list so we don't risk overflowing it.
@@ -1730,16 +1731,24 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags, uint64
     // return it straight away, collecting any additional pages if possible.
     vm_page_t* p = page_or_mark->Page();
     UpdateOnAccessLocked(p, pf_flags);
-    out->writable = true;
+
+    // This is writable if either of these conditions is true:
+    // 1) This is a write fault.
+    // 2) This is a read fault and we do not need to do dirty tracking, i.e. it is fine to retain
+    // the write permission on mappings since we don't need to generate a permission fault. We only
+    // need to dirty track pages owned by a root pager-backed VMO.
+    out->writable = pf_flags & VMM_PF_FLAG_WRITE || !page_source_;
+
     out->add_page(p->paddr());
     if (max_out_pages > 1) {
       collect_pages(this, offset + PAGE_SIZE, (max_out_pages - 1) * PAGE_SIZE);
     }
-    // If we're writing to a root VMO backed by a pager, we'll need to mark pages Dirty so that they
-    // can be written back later. This is the only path that can result in such a write; if the page
-    // was not present, we would have already blocked on a read request the first time, and ended up
-    // here when unblocked, at which point the page would be present.
-    if (pf_flags & VMM_PF_FLAG_WRITE && page_source_) {
+    // If we're writing to a root VMO backed by a pager, we might need to mark pages Dirty so that
+    // they can be written back later. This is the only path that can result in such a write; if the
+    // page was not present, we would have already blocked on a read request the first time, and
+    // ended up here when unblocked, at which point the page would be present.
+    if (pf_flags & VMM_PF_FLAG_WRITE && page_source_ &&
+        mark_dirty == DirtyTrackingAction::DirtyAllPagesOnWrite) {
       zx_status_t status = PrepareForWriteLocked(page_request, offset, out->num_pages * PAGE_SIZE);
       if (status != ZX_OK) {
         // No pages to return.
@@ -1974,7 +1983,9 @@ zx_status_t VmCowPages::CommitRangeLocked(uint64_t offset, uint64_t len, uint64_
     if (!p || !p->IsPage()) {
       // Check if our parent has the page
       const uint flags = VMM_PF_FLAG_SW_FAULT | VMM_PF_FLAG_WRITE;
-      zx_status_t res = LookupPagesLocked(offset, flags, 1, &page_list, page_request, &lookup_info);
+      // A commit does not imply that pages are being dirtied, they are just being populated.
+      zx_status_t res = LookupPagesLocked(offset, flags, DirtyTrackingAction::None, 1, &page_list,
+                                          page_request, &lookup_info);
       if (unlikely(res == ZX_ERR_SHOULD_WAIT)) {
         // We can end up here in two cases:
         // 1. We were in batch mode but had to terminate the batch early.
@@ -2464,7 +2475,8 @@ void VmCowPages::PromoteRangeForReclamationLocked(uint64_t offset, uint64_t len)
     // to look up the page in the child, instead of just forwarding the entire range lookup to the
     // parent, because we do NOT want to hint pages in the parent that have already been forked in
     // the child. That is, we need to first lookup the page and then check for ownership.
-    zx_status_t status = LookupPagesLocked(start_offset, 0, 1, nullptr, nullptr, &lookup);
+    zx_status_t status =
+        LookupPagesLocked(start_offset, 0, DirtyTrackingAction::None, 1, nullptr, nullptr, &lookup);
     // Successfully found an existing page.
     if (status == ZX_OK) {
       DEBUG_ASSERT(lookup.num_pages == 1);
@@ -2504,7 +2516,8 @@ void VmCowPages::ProtectRangeFromReclamationLocked(uint64_t offset, uint64_t len
     // NOT want to hint pages in the parent that have already been forked in the child. That is, we
     // need to first lookup the page and then check for ownership.
     zx_status_t status =
-        LookupPagesLocked(start_offset, VMM_PF_FLAG_SW_FAULT, 1, nullptr, &page_request, &lookup);
+        LookupPagesLocked(start_offset, VMM_PF_FLAG_SW_FAULT, DirtyTrackingAction::None, 1, nullptr,
+                          &page_request, &lookup);
 
     // We need to wait for the page to be faulted in. We will drop the lock as we wait.
     if (status == ZX_ERR_SHOULD_WAIT) {
