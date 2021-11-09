@@ -1,6 +1,7 @@
 {
     include: [
         "//src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
+        "//src/sys/test_manager/system-test.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
         "syslog/client.shard.cml",
     ],
@@ -14,7 +15,4 @@
             to: [ "#fuchsia_component_test_collection" ],
         },
     ],
-    facets: {
-        "fuchsia.test": { type: "system" },
-    },
 }

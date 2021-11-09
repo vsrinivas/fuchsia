@@ -1,9 +1,9 @@
 {
-    include: [ "//src/sys/test_runners/rust/tests/meta/common.shard.cml" ],
+    include: [
+        "//src/sys/test_manager/system-test.shard.cml",
+        "//src/sys/test_runners/rust/tests/meta/common.shard.cml",
+    ],
     program: {
         binary: "bin/rust_runner_stress_test",
-    },
-    facets: {
-        "fuchsia.test": { type: "system" },
     },
 }
