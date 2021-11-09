@@ -1114,19 +1114,40 @@ type MyEnum_Abcdefghij = enum : uint32 {
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
-TEST(NewFormatterTests, DISABLED_EnumMemberless) {
+TEST(NewFormatterTests, EnumMemberless) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(
 library foo.bar;
 
-type EmptyFlexibleEnum = flexible enum:uint32{};
+type EmptyEnum = strict enum:uint8{};
 )FIDL";
 
   // ---------------40---------------- |
   std::string formatted = R"FIDL(
 library foo.bar;
 
-type EmptyFlexibleEnum = flexible enum : uint32 {};
+type EmptyEnum = strict enum : uint8 {};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
+}
+
+TEST(NewFormatterTests, EnumMemberlessCommentAfterColon) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+type EmptyEnum = strict enum:// Comment
+uint8{};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+type EmptyEnum = strict enum : // Comment
+        uint8 {};
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));

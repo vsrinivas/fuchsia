@@ -653,7 +653,21 @@ void SpanSequenceTreeVisitor::OnLayout(const std::unique_ptr<raw::Layout>& eleme
 
   // Special case: an empty layout (ex: `struct {}`) should always be atomic.
   if (element->members.empty()) {
-    const auto builder = SpanBuilder<AtomicSpanSequence>(this, *element);
+    if (element->subtype_ctor) {
+      const auto subtype_builder =
+          SpanBuilder<AtomicSpanSequence>(this, element->subtype_ctor->start_);
+      auto postscript = IngestUpToAndIncludingTokenKind(Token::Kind::kRightCurly);
+      if (postscript.has_value())
+        building_.top().push_back(std::move(postscript.value()));
+
+      // By default, `:` tokens do not have a space following the token.  However, in the case of
+      // sub-typed bits/enum like `handle : uint32 {...`, we need to add this space in. We can do
+      // this by adding spaces between every child of the first element of the SpanSequence
+      // currently being built.
+      SetSpacesBetweenChildren(building_.top(), true);
+    } else {
+      const auto builder = SpanBuilder<AtomicSpanSequence>(this, *element);
+    }
     return;
   }
 

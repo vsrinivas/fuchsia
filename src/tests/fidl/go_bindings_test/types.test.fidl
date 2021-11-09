@@ -30,7 +30,7 @@ type FlexibleEnum = flexible enum {
     MEMBER_CUSTOM_UNKNOWN = 89;
 };
 
-type EmptyFlexibleEnum = flexible enum :uint32 {};
+type EmptyFlexibleEnum = flexible enum : uint32 {};
 
 type SimpleTable = table {
     1: x int64;

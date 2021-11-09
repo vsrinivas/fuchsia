@@ -27,7 +27,7 @@ type FlexibleAnimal = flexible enum : int32 {
     FROG = 2;
 };
 
-type FlexibleEmptyEnum = flexible enum :int32 {};
+type FlexibleEmptyEnum = flexible enum : int32 {};
 
 type Coordinate = struct {
     x uint8;
