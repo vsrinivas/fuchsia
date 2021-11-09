@@ -79,6 +79,20 @@ impl fmt::Display for Ssid {
     }
 }
 
+impl From<Ssid> for fidl_ieee80211::CSsid {
+    fn from(ssid: Ssid) -> fidl_ieee80211::CSsid {
+        let mut cssid = fidl_ieee80211::CSsid {
+            len: ssid.len() as u8,
+            data: [0; fidl_ieee80211::MAX_SSID_BYTE_LEN as usize],
+        };
+        ssid.iter().enumerate().for_each(|(i, byte)| {
+            // Ssid never exceeds fidl_ieee80211::MAX_SSID_BYTE_LEN bytes, so this assignment will never panic
+            cssid.data[i] = *byte
+        });
+        cssid
+    }
+}
+
 impl From<Ssid> for String {
     fn from(ssid: Ssid) -> String {
         ssid.to_string()
