@@ -20,7 +20,7 @@ from rust import FUCHSIA_BUILD_DIR, HOST_PLATFORM, PREBUILT_THIRD_PARTY_DIR
 def main():
     args = parse_args()
     build_dir = Path(args.out_dir) if args.out_dir else FUCHSIA_BUILD_DIR
-    generated_file = build_dir / "gen" / "build" / "rust" / "rust_target_mapping.json"
+    generated_file = build_dir / "clippy_target_mapping.json"
 
     if args.all:
         clippy_targets = get_targets(generated_file, set(), build_dir, get_all=True)

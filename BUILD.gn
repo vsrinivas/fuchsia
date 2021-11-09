@@ -108,6 +108,7 @@ build_api_module("api") {
     ":binaries",
     ":build_info",
     ":checkout_artifacts",
+    ":clippy_target_mapping",
     ":fuzzers",
     ":generated_sources",
     ":images",
@@ -933,6 +934,26 @@ group("rbe_config.metadata") {
       },
     ]
   }
+}
+
+# Provides a mapping from rust source files to their corresponding clippy targets.
+# See `//build/rust/clippy.gni` and `//tools/devshell/contrib/lib/rust/clippy.py`
+# for more details.
+#
+# Type: list(scope)
+#
+#   clippy
+#     - Required: The label of a clippy target.
+#     - Type: label_with_toolchain
+#
+#   src
+#     - Required: The list of rust source files for that target.
+#     - Type: List[path] (all relative to $root_build_dir)
+#
+build_api_module("clippy_target_mapping") {
+  testonly = true
+  data_keys = [ "rust_source_map" ]
+  deps = [ "//:default" ]
 }
 
 # Check that all of the drivers included in the image and packages.
