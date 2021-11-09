@@ -1,0 +1,13 @@
+{
+  "include": [
+    "syslog/client.shard.cmx"
+  ],
+  "program": {
+    "binary": "test/storage-volume-image-adapter-test"
+  },
+  "sandbox": {
+    "features": [
+      "isolated-temp"
+    ]
+  }
+}

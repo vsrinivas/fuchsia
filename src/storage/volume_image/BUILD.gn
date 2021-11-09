@@ -67,10 +67,30 @@ source_set("volume-descriptor-test") {
 test("storage-volume-image-test") {
   deps = [
     ":volume-descriptor-test",
-    "adapter:adapter-tests",
     "ftl:tests",
     "fvm:fvm-test",
     "serialization:tests",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+
+  if (is_fuchsia) {
+    deps += [ "//sdk/lib/fdio" ]
+  }
+}
+
+test("storage-volume-image-adapter-test") {
+  deps = [
+    "adapter:adapter-tests",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+
+  if (is_fuchsia) {
+    deps += [ "//sdk/lib/fdio" ]
+  }
+}
+
+test("storage-volume-image-utils-test") {
+  deps = [
     "utils:tests",
     "//src/lib/fxl/test:gtest_main",
   ]
@@ -106,7 +126,6 @@ fuchsia_component("storage-volume-image-test-component") {
   deps = [
     ":serialization-schemas",
     ":storage-volume-image-test",
-    "adapter:adapter-test-images",
   ]
   testonly = true
 }
@@ -117,10 +136,25 @@ fuchsia_component("storage-volume-image-integration-test-component") {
   testonly = true
 }
 
+fuchsia_unittest_component("storage-volume-image-adapter-test-component") {
+  manifest = "meta/storage-volume-image-adapter-test.cmx"
+  deps = [
+    ":storage-volume-image-adapter-test",
+    "adapter:adapter-test-images",
+  ]
+}
+
+fuchsia_unittest_component("storage-volume-image-utils-test-component") {
+  manifest = "meta/storage-volume-image-utils-test.cmx"
+  deps = [ ":storage-volume-image-utils-test" ]
+}
+
 fuchsia_test_package("storage-volume-image-tests") {
   test_components = [
     ":storage-volume-image-test-component",
+    ":storage-volume-image-adapter-test-component",
     ":storage-volume-image-integration-test-component",
+    ":storage-volume-image-utils-test-component",
   ]
 }
 
