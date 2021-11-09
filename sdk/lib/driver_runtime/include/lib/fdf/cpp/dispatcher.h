@@ -40,6 +40,8 @@ class Dispatcher {
   // |scheduler_role| is a hint. It may or not impact the priority the work scheduler against the
   // dispatcher is handled at. It may or may not impact the ability for other drivers to share
   // zircon threads with the dispatcher.
+  //
+  // This must be called from a thread managed by the driver runtime.
   static zx::status<Dispatcher> Create(uint32_t options, cpp17::string_view scheduler_role) {
     fdf_dispatcher_t* dispatcher;
     zx_status_t status =

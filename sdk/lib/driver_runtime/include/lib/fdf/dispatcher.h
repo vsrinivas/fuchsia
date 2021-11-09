@@ -47,6 +47,8 @@ typedef struct fdf_dispatcher fdf_dispatcher_t;
 // |scheduler_role_len | is the length of the string, without including the terminating
 // NULL character.
 // TODO(fxb/85946): currently |scheduler_role| is not implemented.
+//
+// This must be called from a thread managed by the driver runtime.
 fdf_status_t fdf_dispatcher_create(uint32_t options, const char* scheduler_role,
                                    size_t scheduler_role_len, fdf_dispatcher_t** dispatcher);
 

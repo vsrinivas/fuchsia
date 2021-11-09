@@ -4,10 +4,12 @@
 
 #include <lib/fdf/arena.h>
 #include <lib/fdf/channel.h>
+#include <lib/fdf/dispatcher.h>
 #include <lib/fdf/internal.h>
 
 #include "src/devices/bin/driver_runtime/arena.h"
 #include "src/devices/bin/driver_runtime/channel.h"
+#include "src/devices/bin/driver_runtime/dispatcher.h"
 #include "src/devices/bin/driver_runtime/driver_context.h"
 #include "src/devices/bin/driver_runtime/handle.h"
 
@@ -92,6 +94,26 @@ __EXPORT void fdf_handle_close(fdf_handle_t channel_handle) {
   // Drop the handle.
   handle->TakeOwnership();
 }
+
+// fdf_dispatcher_t interface
+__EXPORT fdf_status_t fdf_dispatcher_create(uint32_t options, const char* scheduler_role,
+                                            size_t scheduler_role_len,
+                                            fdf_dispatcher_t** out_dispatcher) {
+  std::unique_ptr<driver_runtime::Dispatcher> dispatcher;
+  fdf_status_t status =
+      driver_runtime::Dispatcher::Create(options, scheduler_role, scheduler_role_len, &dispatcher);
+  if (status != ZX_OK) {
+    return status;
+  }
+  *out_dispatcher = static_cast<fdf_dispatcher_t*>(dispatcher.release());
+  return ZX_OK;
+}
+
+__EXPORT async_dispatcher_t* fdf_dispatcher_get_async_dispatcher(fdf_dispatcher_t* dispatcher) {
+  return dispatcher->GetAsyncDispatcher();
+}
+
+__EXPORT void fdf_dispatcher_destroy(fdf_dispatcher_t* dispatcher) { return dispatcher->Destroy(); }
 
 __EXPORT void fdf_internal_push_driver(const void* driver) { driver_context::PushDriver(driver); }
 

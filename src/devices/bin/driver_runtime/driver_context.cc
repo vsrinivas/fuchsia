@@ -39,4 +39,6 @@ bool IsDriverInCallStack(const void* driver) {
   return false;
 }
 
+bool IsCallStackEmpty() { return g_driver_call_stack.empty(); }
+
 }  // namespace driver_context

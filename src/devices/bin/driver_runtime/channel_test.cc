@@ -4,6 +4,7 @@
 
 #include "src/devices/bin/driver_runtime/channel.h"
 
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/fdf/cpp/channel_read.h>
 #include <lib/fit/defer.h>
 #include <lib/sync/completion.h>
@@ -15,24 +16,22 @@
 
 #include "src/devices/bin/driver_runtime/arena.h"
 #include "src/devices/bin/driver_runtime/dispatcher.h"
+#include "src/devices/bin/driver_runtime/driver_context.h"
 #include "src/devices/bin/driver_runtime/handle.h"
+#include "src/devices/bin/driver_runtime/runtime_test_case.h"
 #include "src/devices/bin/driver_runtime/test_utils.h"
 
-class ChannelTest : public zxtest::Test {
+class ChannelTest : public RuntimeTestCase {
  protected:
-  ChannelTest() {}
+  ChannelTest() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
   void SetUp() override;
   void TearDown() override;
 
   // Registers a wait_async request on |ch| and blocks until it is ready for reading.
-  void WaitUntilReadReady(fdf_handle_t ch);
-
-  // Reads a message from |ch| and asserts that it matches the wanted parameters.
-  // If |out_arena| is provided, it will be populated with the transferred arena.
-  void AssertRead(fdf_handle_t ch, void* want_data, size_t want_num_bytes,
-                  zx_handle_t* want_handles, uint32_t want_num_handles,
-                  fdf_arena_t** out_arena = nullptr);
+  void WaitUntilReadReady(fdf_handle_t ch) {
+    return RuntimeTestCase::WaitUntilReadReady(ch, fdf_dispatcher_);
+  }
 
   // Allocates and populates an array of size |size|, containing test data. The array is owned by
   // |arena|.
@@ -45,6 +44,7 @@ class ChannelTest : public zxtest::Test {
 
   fdf_arena_t* arena_;
 
+  async::Loop loop_;
   std::unique_ptr<driver_runtime::Dispatcher> dispatcher_;
   // Type casted version of |dispatcher_|.
   fdf_dispatcher_t* fdf_dispatcher_;
@@ -54,8 +54,14 @@ void ChannelTest::SetUp() {
   ASSERT_EQ(ZX_OK, fdf_channel_create(0, &local_, &remote_));
   ASSERT_EQ(ZX_OK, fdf_arena::Create(0, "arena", 0, &arena_));
 
-  ASSERT_EQ(ZX_OK, fdf_dispatcher::Create(0, "", 0, false, &dispatcher_));
+  ASSERT_EQ(ZX_OK, driver_runtime::Dispatcher::CreateWithLoop(
+                       FDF_DISPATCHER_OPTION_UNSYNCHRONIZED, "scheduler_role", 0,
+                       CreateFakeDriver(), &loop_, &dispatcher_));
+
   fdf_dispatcher_ = static_cast<fdf_dispatcher_t*>(dispatcher_.get());
+
+  // Pretend all calls are non-reentrant so we don't have to worry about threading.
+  driver_context::PushDriver(CreateFakeDriver());
 }
 
 void ChannelTest::TearDown() {
@@ -69,50 +75,8 @@ void ChannelTest::TearDown() {
     arena_->Destroy();
   }
   ASSERT_EQ(0, driver_runtime::gHandleTableArena.num_allocated());
-}
 
-void ChannelTest::WaitUntilReadReady(fdf_handle_t ch) {
-  sync_completion_t read_completion;
-  auto channel_read_ = std::make_unique<fdf::ChannelRead>(
-      ch, 0 /* options */,
-      [&read_completion](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read,
-                         fdf_status_t status) { sync_completion_signal(&read_completion); });
-  ASSERT_OK(channel_read_->Begin(fdf_dispatcher_));
-  sync_completion_wait(&read_completion, ZX_TIME_INFINITE);
-}
-
-void ChannelTest::AssertRead(fdf_handle_t ch, void* want_data, size_t want_num_bytes,
-                             zx_handle_t* want_handles, uint32_t want_num_handles,
-                             fdf_arena_t** out_arena) {
-  fdf_arena_t* arena;
-  void* read_data;
-  uint32_t num_bytes;
-  zx_handle_t* handles;
-  uint32_t num_handles;
-  ASSERT_EQ(ZX_OK, fdf_channel_read(ch, 0, &arena, &read_data, &num_bytes, &handles, &num_handles));
-
-  ASSERT_EQ(num_bytes, want_num_bytes);
-  if (want_num_bytes > 0) {
-    ASSERT_NOT_NULL(arena);
-    ASSERT_TRUE(arena->Contains(read_data, num_bytes));
-    ASSERT_EQ(0, memcmp(want_data, read_data, want_num_bytes));
-  }
-  ASSERT_EQ(num_handles, want_num_handles);
-  if (want_num_handles > 0) {
-    ASSERT_NOT_NULL(arena);
-    ASSERT_TRUE(arena->Contains(handles, num_handles * sizeof(fdf_handle_t)));
-    ASSERT_EQ(0, memcmp(want_handles, handles, want_num_handles * sizeof(fdf_handle_t)));
-  }
-  if (arena) {
-    if (out_arena) {
-      *out_arena = arena;
-    } else {
-      arena->Destroy();
-    }
-  } else {
-    ASSERT_NULL(read_data);
-    ASSERT_NULL(handles);
-  }
+  driver_context::PopDriver();
 }
 
 void ChannelTest::AllocateTestData(fdf_arena_t* arena, size_t size, void** out_data) {
@@ -324,9 +288,12 @@ TEST_F(ChannelTest, CloseSignalsPeerClosed) {
 // Tests that we get a read call back if we had registered a read wait,
 // and we close the channel.
 TEST_F(ChannelTest, UnsyncDispatcherCallbackOnClose) {
+  loop_.StartThread();
+
   std::unique_ptr<driver_runtime::Dispatcher> async_dispatcher;
-  ASSERT_EQ(ZX_OK, fdf_dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED, "", 0, false,
-                                          &async_dispatcher));
+  ASSERT_EQ(ZX_OK, driver_runtime::Dispatcher::CreateWithLoop(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED,
+                                                              "", 0, CreateFakeDriver(), &loop_,
+                                                              &async_dispatcher));
 
   sync_completion_t read_completion;
   auto channel_read = std::make_unique<fdf::ChannelRead>(
@@ -342,13 +309,22 @@ TEST_F(ChannelTest, UnsyncDispatcherCallbackOnClose) {
   remote_ = ZX_HANDLE_INVALID;  // Set this so the destructor doesn't try to close it again.
 
   sync_completion_wait(&read_completion, ZX_TIME_INFINITE);
+
+  loop_.Quit();
+  loop_.JoinThreads();
 }
 
 TEST_F(ChannelTest, CancelSynchronousDispatcherCallbackOnClose) {
+  const void* driver = CreateFakeDriver();
   std::unique_ptr<driver_runtime::Dispatcher> sync_dispatcher;
-  ASSERT_EQ(ZX_OK, fdf_dispatcher::Create(0, "", 0, true /* use_async_loop */, &sync_dispatcher));
+  ASSERT_EQ(ZX_OK,
+            driver_runtime::Dispatcher::CreateWithLoop(0, "", 0, driver, &loop_, &sync_dispatcher));
 
   ASSERT_EQ(ZX_OK, fdf_channel_write(local_, 0, arena_, nullptr, 0, nullptr, 0));
+
+  // Make the read reentrant so that the callback will be queued on the async loop.
+  driver_context::PushDriver(driver);
+  auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
 
   // Since there is a pending message, this should queue a callback on the dispatcher.
   sync_completion_t read_completion;

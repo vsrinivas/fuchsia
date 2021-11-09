@@ -23,6 +23,9 @@ const void* GetCurrentDriver();
 // Returns whether |driver| is in the thread's current call stack.
 bool IsDriverInCallStack(const void* driver);
 
+// Returns whether the thread's current call stack is empty.
+bool IsCallStackEmpty();
+
 }  // namespace driver_context
 
 #endif  // SRC_DEVICES_BIN_DRIVER_RUNTIME_DRIVER_CONTEXT_H_

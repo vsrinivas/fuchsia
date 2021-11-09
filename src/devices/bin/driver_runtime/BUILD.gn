@@ -26,7 +26,11 @@ source_set("driver_runtime_impl") {
     "message_packet.cc",
   ]
   public_configs = [ ":include" ]
-  public_deps = [ "//sdk/lib/driver_runtime" ]
+  public_deps = [
+    "//sdk/lib/driver_runtime",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
   deps = [
     "//sdk/lib/driver_runtime:driver_runtime_internal",
     "//src/devices/lib/log",
@@ -46,8 +50,10 @@ test("driver_runtime_test") {
   sources = [
     "arena_test.cc",
     "channel_test.cc",
+    "dispatcher_test.cc",
     "driver_context_test.cc",
     "handle_test.cc",
+    "runtime_test_case.cc",
   ]
   deps = [
     ":driver_runtime_impl",
