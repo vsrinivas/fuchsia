@@ -395,6 +395,22 @@ impl Hub {
         Ok(())
     }
 
+    fn add_instance_id_file(
+        directory: Directory,
+        target_moniker: &AbsoluteMoniker,
+        target: WeakComponentInstance,
+    ) -> Result<(), ModelError> {
+        trace::duration!("component_manager", "hub:add_instance_id_file");
+        if let Some(instance_id) = target.upgrade()?.instance_id() {
+            directory.add_node(
+                "instance_id",
+                read_only_static(instance_id.to_string().into_bytes()),
+                &target_moniker,
+            )?;
+        };
+        Ok(())
+    }
+
     async fn on_resolved_async<'a>(
         &self,
         target_moniker: &AbsoluteMoniker,
@@ -432,6 +448,8 @@ impl Hub {
             target_moniker,
             target.clone(),
         )?;
+
+        Self::add_instance_id_file(resolved_directory.clone(), target_moniker, target.clone())?;
 
         instance.directory.add_node("resolved", resolved_directory, &target_moniker)?;
 
@@ -693,6 +711,7 @@ mod tests {
             OPEN_RIGHT_WRITABLE,
         },
         moniker::PartialAbsoluteMoniker,
+        routing_test_helpers::component_id_index::make_index_file,
         std::{convert::TryFrom, path::Path},
         vfs::{
             directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
@@ -750,18 +769,25 @@ mod tests {
         root_component_url: String,
         components: Vec<ComponentDescriptor>,
     ) -> (Arc<Model>, Arc<Mutex<BuiltinEnvironment>>, DirectoryProxy) {
-        start_component_manager_with_hub_and_hooks(root_component_url, components, vec![]).await
+        start_component_manager_with_options(root_component_url, components, vec![], None).await
     }
 
-    async fn start_component_manager_with_hub_and_hooks(
+    async fn start_component_manager_with_options(
         root_component_url: String,
         components: Vec<ComponentDescriptor>,
         additional_hooks: Vec<HooksRegistration>,
+        index_file_path: Option<String>,
     ) -> (Arc<Model>, Arc<Mutex<BuiltinEnvironment>>, DirectoryProxy) {
         let resolved_root_component_url = format!("{}_resolved", root_component_url);
         let decls = components.iter().map(|c| (c.name, c.decl.clone())).collect();
+
         let TestModelResult { model, builtin_environment, mock_runner, .. } =
-            TestEnvironmentBuilder::new().set_components(decls).build().await;
+            TestEnvironmentBuilder::new()
+                .set_components(decls)
+                .set_component_id_index_path(index_file_path)
+                .build()
+                .await;
+
         for component in components.into_iter() {
             if let Some(host_fn) = component.host_fn {
                 mock_runner.add_host_fn(&resolved_root_component_url, host_fn);
@@ -869,7 +895,7 @@ mod tests {
     async fn hub_test_hook_interception() {
         let root_component_url = "test:///root".to_string();
         let hub_injection_test_hook = Arc::new(HubInjectionTestHook::new());
-        let (_model, _builtin_environment, hub_proxy) = start_component_manager_with_hub_and_hooks(
+        let (_model, _builtin_environment, hub_proxy) = start_component_manager_with_options(
             root_component_url.clone(),
             vec![ComponentDescriptor {
                 name: "root",
@@ -888,6 +914,7 @@ mod tests {
                 runtime_host_fn: None,
             }],
             hub_injection_test_hook.hooks(),
+            None,
         )
         .await;
 
@@ -1010,6 +1037,73 @@ mod tests {
             ],
             list_directory(&hub_dir).await
         );
+    }
+
+    #[fuchsia::test]
+    async fn hub_instance_id_in_resolved() {
+        // Create index.
+        let iid = format!("1234{}", "5".repeat(60));
+        let index_file = make_index_file(component_id_index::Index {
+            instances: vec![component_id_index::InstanceIdEntry {
+                instance_id: Some(iid.clone()),
+                appmgr_moniker: None,
+                moniker: Some(
+                    PartialAbsoluteMoniker::parse_string_without_instances("/a").unwrap(),
+                ),
+            }],
+            ..component_id_index::Index::default()
+        })
+        .unwrap();
+
+        let root_component_url = "test:///root".to_string();
+        let (model, _builtin_environment, hub_proxy) = start_component_manager_with_options(
+            root_component_url.clone(),
+            vec![
+                ComponentDescriptor {
+                    name: "root",
+                    decl: ComponentDeclBuilder::new()
+                        .add_lazy_child("a")
+                        .use_(UseDecl::Directory(UseDirectoryDecl {
+                            dependency_type: DependencyType::Strong,
+                            source: UseSource::Framework,
+                            source_name: "hub".into(),
+                            target_path: CapabilityPath::try_from("/hub").unwrap(),
+                            rights: *rights::READ_RIGHTS,
+                            subdir: Some("resolved".into()),
+                        }))
+                        .build(),
+                    host_fn: None,
+                    runtime_host_fn: None,
+                },
+                ComponentDescriptor {
+                    name: "a",
+                    decl: component_decl_with_test_runner(),
+                    host_fn: None,
+                    runtime_host_fn: None,
+                },
+            ],
+            vec![],
+            index_file.path().to_str().map(str::to_string),
+        )
+        .await;
+
+        // Binding will resolve the component and cause the instance id to be written.
+        model
+            .bind(
+                &PartialAbsoluteMoniker::parse_string_without_instances("/a").unwrap(),
+                &BindReason::Debug,
+            )
+            .await
+            .unwrap();
+        let resolved_dir = io_util::open_directory(
+            &hub_proxy,
+            &Path::new("children/a/resolved"),
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+        )
+        .expect("Failed to open directory");
+
+        // Confirm that the instance_id is read and written to file in resolved directory.
+        assert_eq!(iid, read_file(&resolved_dir, "instance_id").await);
     }
 
     #[fuchsia::test]

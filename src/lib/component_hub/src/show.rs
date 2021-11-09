@@ -9,6 +9,7 @@ use {
     futures::future::{join, join_all, BoxFuture},
     futures::FutureExt,
     moniker::{AbsoluteMonikerBase, ChildMonikerBase, PartialAbsoluteMoniker, PartialChildMoniker},
+    routing::component_id_index::ComponentInstanceId,
 };
 
 #[cfg(feature = "serde")]
@@ -403,6 +404,7 @@ impl std::fmt::Display for Execution {
 pub struct Resolved {
     pub incoming_capabilities: Vec<String>,
     pub exposed_capabilities: Vec<String>,
+    pub instance_id: Option<ComponentInstanceId>,
 }
 
 impl Resolved {
@@ -417,7 +419,9 @@ impl Resolved {
             get_capabilities(expose_dir).await?
         };
 
-        Ok(Self { incoming_capabilities, exposed_capabilities })
+        let instance_id = resolved_dir.read_file("instance_id").await.ok();
+
+        Ok(Self { incoming_capabilities, exposed_capabilities, instance_id })
     }
 
     async fn parse_cmx(hub_dir: &Directory) -> Result<Self> {
@@ -426,12 +430,15 @@ impl Resolved {
             get_capabilities(in_dir).await?
         };
 
-        Ok(Self { incoming_capabilities, exposed_capabilities: vec![] })
+        Ok(Self { incoming_capabilities, exposed_capabilities: vec![], instance_id: None })
     }
 }
 
 impl std::fmt::Display for Resolved {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(instance_id) = &self.instance_id {
+            writeln!(f, "Instance ID: {}", instance_id)?;
+        }
         writeln!(f, "Incoming Capabilities ({}):", self.incoming_capabilities.len())?;
         for capability in &self.incoming_capabilities {
             writeln!(f, "{}{}", SPACER, capability)?;
@@ -770,6 +777,63 @@ mod tests {
         //       |- dev
         //    |- expose
         //       |- minfs
+        //    |- instance_id
+        fs::create_dir(root.join("children")).unwrap();
+        File::create(root.join("component_type")).unwrap().write_all("static".as_bytes()).unwrap();
+        File::create(root.join("url"))
+            .unwrap()
+            .write_all("fuchsia-pkg://fuchsia.com/stash#meta/stash.cm".as_bytes())
+            .unwrap();
+        fs::create_dir_all(root.join("resolved/use/dev")).unwrap();
+        fs::create_dir_all(root.join("resolved/expose/minfs")).unwrap();
+        File::create(root.join("resolved/instance_id"))
+            .unwrap()
+            .write_all("abc".as_bytes())
+            .unwrap();
+
+        let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
+        let components = find_components("stash".to_string(), hub_dir).await.unwrap();
+
+        assert_eq!(components.len(), 1);
+        let component = &components[0];
+        assert_eq!(component.url, "fuchsia-pkg://fuchsia.com/stash#meta/stash.cm");
+
+        assert!(component.resolved.is_some());
+        let resolved = component.resolved.as_ref().unwrap();
+
+        let instance_id = &resolved.instance_id;
+        assert_eq!(instance_id, &Some("abc".to_string()));
+
+        let incoming_capabilities = &resolved.incoming_capabilities;
+        assert_eq!(incoming_capabilities.len(), 1);
+
+        let incoming_capability = &incoming_capabilities[0];
+        assert_eq!(incoming_capability, "dev");
+
+        let exposed_capabilities = &resolved.exposed_capabilities;
+        assert_eq!(exposed_capabilities.len(), 1);
+
+        let exposed_capability = &exposed_capabilities[0];
+        assert_eq!(exposed_capability, "minfs");
+
+        assert!(component.execution.is_none());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn resolved_cml_without_instance_id() {
+        let test_dir = TempDir::new_in("/tmp").unwrap();
+        let root = test_dir.path();
+
+        // Create the following structure
+        // .
+        // |- children
+        // |- component_type
+        // |- url
+        // |- resolved
+        //    |- use
+        //       |- dev
+        //    |- expose
+        //       |- minfs
         fs::create_dir(root.join("children")).unwrap();
         File::create(root.join("component_type")).unwrap().write_all("static".as_bytes()).unwrap();
         File::create(root.join("url"))
@@ -789,19 +853,8 @@ mod tests {
         assert!(component.resolved.is_some());
         let resolved = component.resolved.as_ref().unwrap();
 
-        let incoming_capabilities = &resolved.incoming_capabilities;
-        assert_eq!(incoming_capabilities.len(), 1);
-
-        let incoming_capability = &incoming_capabilities[0];
-        assert_eq!(incoming_capability, "dev");
-
-        let exposed_capabilities = &resolved.exposed_capabilities;
-        assert_eq!(exposed_capabilities.len(), 1);
-
-        let exposed_capability = &exposed_capabilities[0];
-        assert_eq!(exposed_capability, "minfs");
-
-        assert!(component.execution.is_none());
+        let instance_id = &resolved.instance_id;
+        assert!(instance_id.is_none());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -1028,6 +1081,9 @@ mod tests {
 
         let incoming_capabilities = &resolved.incoming_capabilities;
         assert_eq!(incoming_capabilities.len(), 1);
+
+        let instance_id = &resolved.instance_id;
+        assert!(instance_id.is_none());
 
         let incoming_capability = &incoming_capabilities[0];
         assert_eq!(incoming_capability, "pkg");

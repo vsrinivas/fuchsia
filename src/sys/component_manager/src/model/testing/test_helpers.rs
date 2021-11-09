@@ -298,6 +298,7 @@ pub struct TestEnvironmentBuilder {
     components: Vec<(&'static str, ComponentDecl)>,
     runtime_config: RuntimeConfig,
     enable_hub: bool,
+    component_id_index_path: Option<String>,
 }
 
 impl TestEnvironmentBuilder {
@@ -307,6 +308,7 @@ impl TestEnvironmentBuilder {
             components: vec![],
             runtime_config: Default::default(),
             enable_hub: true,
+            component_id_index_path: None,
         }
     }
 
@@ -317,6 +319,11 @@ impl TestEnvironmentBuilder {
 
     pub fn set_components(mut self, components: Vec<(&'static str, ComponentDecl)>) -> Self {
         self.components = components;
+        self
+    }
+
+    pub fn set_component_id_index_path(mut self, index: Option<String>) -> Self {
+        self.component_id_index_path = index;
         self
     }
 
@@ -350,6 +357,7 @@ impl TestEnvironmentBuilder {
             name: TEST_RUNNER_NAME.into(),
             source_path: None,
         }));
+        self.runtime_config.component_id_index_path = self.component_id_index_path;
 
         let builtin_environment = Arc::new(Mutex::new(
             BuiltinEnvironmentBuilder::new()

@@ -12,6 +12,7 @@ rustc_library("routing") {
   edition = "2018"
 
   visibility = [
+    "//src/lib/component_hub/*",
     "//src/security/scrutiny/lib/plugins/*",
     "//src/sys/component_manager/*",
     "//src/sys/lib/cm_rust/testing:*",
