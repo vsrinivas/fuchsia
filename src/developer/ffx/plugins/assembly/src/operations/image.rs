@@ -4,9 +4,10 @@
 
 use crate::base_package::{construct_base_package, BasePackage};
 use crate::blobfs::construct_blobfs;
-use crate::config::{from_reader, BoardConfig, PartialProductConfig, ProductConfig};
+use crate::config::{BoardConfig, PartialProductConfig, ProductConfig};
 use crate::fvm::{construct_fvm, Fvms};
 use crate::update_package::{construct_update, UpdatePackage};
+use crate::util::from_reader;
 use crate::vbmeta::construct_vbmeta;
 use crate::zbi::{construct_zbi, vendor_sign_zbi};
 

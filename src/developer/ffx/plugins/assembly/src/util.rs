@@ -2,23 +2,37 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use fuchsia_pkg::PackageManifest;
 use std::fs::File;
-use std::io::BufReader;
+use std::io::{BufReader, Read};
 use std::path::Path;
 
+/// Parse a PackageManifest from a path to a JSON file.
 pub fn pkg_manifest_from_path(path: impl AsRef<Path>) -> Result<PackageManifest> {
     let manifest_file = File::open(path)?;
     let pkg_manifest_reader = BufReader::new(manifest_file);
     serde_json::from_reader(pkg_manifest_reader).map_err(Into::into)
 }
 
+/// Deserialize an instance of type T from an IO stream of JSON5.
+pub fn from_reader<R, T>(reader: &mut R) -> Result<T>
+where
+    R: Read,
+    T: serde::de::DeserializeOwned,
+{
+    let mut data = String::default();
+    reader.read_to_string(&mut data).context("Cannot read the config")?;
+    serde_json5::from_str(&data).context("Cannot parse the config")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use fuchsia_hash::Hash;
+    use serde::Deserialize;
     use serde_json::json;
+    use std::io::Cursor;
     use std::str::FromStr;
     use tempfile::NamedTempFile;
 
@@ -62,5 +76,29 @@ mod tests {
                 .unwrap()
         );
         assert_eq!(blobs[0].size, 1);
+    }
+
+    #[test]
+    fn reader_valid_json5() {
+        #[derive(Deserialize)]
+        struct MyStruct {
+            key1: String,
+        }
+
+        let json5: String = r#"{key1: "value1",}"#.to_string();
+        let mut cursor = Cursor::new(json5);
+        let value: MyStruct = from_reader(&mut cursor).unwrap();
+        assert_eq!(value.key1, "value1");
+    }
+
+    #[test]
+    fn reader_invalid_json5() {
+        #[derive(Deserialize)]
+        #[serde(deny_unknown_fields)]
+        struct MyStruct {}
+        let json5: String = r#"{key1: "value1",}"#.to_string();
+        let mut cursor = Cursor::new(json5);
+        let value: Result<MyStruct> = from_reader(&mut cursor);
+        assert!(value.is_err());
     }
 }

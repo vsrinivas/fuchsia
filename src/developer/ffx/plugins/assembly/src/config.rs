@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Result};
 use assembly_fvm::FilesystemAttributes;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
-use std::io::Read;
 use std::path::PathBuf;
 
 /// The set of information that defines a fuchsia product.  All fields are
@@ -527,19 +526,10 @@ pub struct RecoveryConfig {
     pub vbmeta: Option<PathBuf>,
 }
 
-pub fn from_reader<R, T>(reader: &mut R) -> Result<T>
-where
-    R: Read,
-    T: serde::de::DeserializeOwned,
-{
-    let mut data = String::default();
-    reader.read_to_string(&mut data).context("Cannot read the config")?;
-    serde_json5::from_str(&data).context("Cannot parse the config")
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::util::from_reader;
     use matches::assert_matches;
     use serde_json::json;
     use std::path::Path;
