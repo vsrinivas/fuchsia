@@ -2,5 +2,6 @@ include /src/fidl/OWNERS
 
 per-file linting_exceptions.gni=shayba@google.com
 per-file linting_exceptions.gni=phosek@google.com
+per-file gen_fidldocs.py,gen_fidldocs_test.py=mangini@google.com,theosiu@google.com
 
 # COMPONENT: Build

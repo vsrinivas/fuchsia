@@ -49,7 +49,7 @@ def run_fidl_doc(build_dir, out_dir, fidl_files, zipped_result=False):
     out_fidl = os.path.join(out_dir, 'fidldoc')
     gen_fidl = subprocess.run(
         [
-            fidldoc_path, "--verbose", "--path", "reference/fidl", "--out",
+            fidldoc_path, "--verbose", "--path", "reference/fidl/", "--out",
             out_fidl
         ] + fidl_files)
 
