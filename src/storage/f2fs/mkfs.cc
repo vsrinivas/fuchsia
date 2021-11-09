@@ -558,7 +558,7 @@ zx_status_t MkfsWorker::WriteCheckPointPack() {
 
   for (uint32_t i = 0; i < super_block_.cp_payload; ++i) {
     ++cp_segment_block_num;
-    auto zero_buffer = FsBlock{};
+    FsBlock zero_buffer;
     if (zx_status_t ret = WriteToDisk(zero_buffer, cp_segment_block_num); ret != ZX_OK) {
       FX_LOGS(ERROR) << "Error: While zeroing out the sit bitmap area on disk!!!";
       return ret;
@@ -663,15 +663,6 @@ zx_status_t MkfsWorker::WriteCheckPointPack() {
     return ret;
   }
 
-  for (uint32_t i = 0; i < super_block_.cp_payload; ++i) {
-    ++cp_segment_block_num;
-    auto zero_buffer = FsBlock{};
-    if (zx_status_t ret = WriteToDisk(zero_buffer, cp_segment_block_num); ret != ZX_OK) {
-      FX_LOGS(ERROR) << "Error: While zeroing out the sit bitmap area on disk!!!";
-      return ret;
-    }
-  }
-
   // 9. cp pages of check point pack 2
   // Initiatialize other checkpoint pack with version zero
   checkpoint->checkpoint_ver = 0;
@@ -684,6 +675,15 @@ zx_status_t MkfsWorker::WriteCheckPointPack() {
   if (zx_status_t ret = WriteToDisk(checkpoint_block, cp_segment_block_num); ret != ZX_OK) {
     FX_LOGS(ERROR) << "Error: While writing the checkpoint to disk!!!";
     return ret;
+  }
+
+  for (uint32_t i = 0; i < super_block_.cp_payload; ++i) {
+    ++cp_segment_block_num;
+    FsBlock zero_buffer;
+    if (zx_status_t ret = WriteToDisk(zero_buffer, cp_segment_block_num); ret != ZX_OK) {
+      FX_LOGS(ERROR) << "Error: While zeroing out the sit bitmap area on disk!!!";
+      return ret;
+    }
   }
 
   cp_segment_block_num +=
