@@ -11,7 +11,7 @@ use {
         },
         object_handle::{ObjectHandle, ObjectProperties},
         object_store::{
-            record::{
+            object_record::{
                 ObjectAttributes, ObjectItem, ObjectKey, ObjectKeyData, ObjectKind, ObjectValue,
                 Timestamp,
             },
@@ -32,7 +32,7 @@ use {
 };
 
 // ObjectDescriptor is exposed in Directory::lookup.
-pub use crate::object_store::record::ObjectDescriptor;
+pub use crate::object_store::object_record::ObjectDescriptor;
 
 /// A directory stores name to child object mappings.
 pub struct Directory<S> {
@@ -501,7 +501,7 @@ mod tests {
                 crypt::InsecureCrypt,
                 directory::{replace_child, Directory, ReplacedChild},
                 filesystem::{Filesystem, FxFilesystem, Mutations, SyncOptions},
-                record::Timestamp,
+                object_record::Timestamp,
                 transaction::{Options, TransactionHandler},
                 HandleOptions, ObjectDescriptor, ObjectStore,
             },

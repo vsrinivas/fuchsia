@@ -14,9 +14,10 @@ use {
             crypt::UnwrappedKeys,
             journal::fletcher64,
             object_manager::ObjectManager,
-            record::{
-                Checksums, ExtentKey, ExtentValue, ObjectAttributes, ObjectItem, ObjectKey,
-                ObjectKind, ObjectValue, Timestamp,
+            extent_record::{
+                Checksums, ExtentKey, ExtentValue},
+            object_record::{
+                ObjectAttributes, ObjectItem, ObjectKey, ObjectKind, ObjectValue, Timestamp,
             },
             transaction::{
                 self, AssocObj, AssociatedObject, LockKey, Mutation, ObjectStoreMutation, Options,
@@ -1068,7 +1069,8 @@ mod tests {
             object_store::{
                 crypt::InsecureCrypt,
                 filesystem::{Filesystem, FxFilesystem, Mutations, OpenFxFilesystem},
-                record::{ExtentKey, ObjectKey, ObjectKeyData, ObjectValue, Timestamp},
+                extent_record::ExtentKey,
+                object_record::{ObjectKey, ObjectKeyData, ObjectValue, Timestamp},
                 transaction::{Options, TransactionHandler},
                 HandleOptions, ObjectStore, StoreObjectHandle,
             },

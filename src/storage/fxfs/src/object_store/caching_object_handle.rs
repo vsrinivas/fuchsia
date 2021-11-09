@@ -10,7 +10,7 @@ use {
         },
         object_store::{
             allocator::{self},
-            record::Timestamp,
+            object_record::Timestamp,
             transaction::{LockKey, Options, TRANSACTION_METADATA_MAX_AMOUNT},
             writeback_cache::{StorageReservation, WritebackCache},
             AssocObj, HandleOwner, Mutation, ObjectKey, ObjectStore, ObjectValue,
@@ -357,7 +357,8 @@ mod tests {
             object_store::{
                 crypt::InsecureCrypt,
                 filesystem::{Filesystem, FxFilesystem, OpenFxFilesystem},
-                record::{ExtentKey, ObjectKey, ObjectValue, Timestamp},
+                extent_record::ExtentKey,
+                object_record::{ObjectKey, ObjectValue, Timestamp},
                 transaction::{Options, TransactionHandler},
                 CachingObjectHandle, HandleOptions, ObjectStore,
             },

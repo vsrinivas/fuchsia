@@ -17,7 +17,7 @@ use {
                 errors::{FsckError, FsckFatal, FsckWarning},
                 fsck_with_options, FsckOptions,
             },
-            record::ObjectDescriptor,
+            object_record::ObjectDescriptor,
             transaction::{self, Options, TransactionHandler},
             HandleOptions, ObjectStore,
         },

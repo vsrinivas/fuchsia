@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+/// The allocator code is responsible for handing out extents of a requested size when asked.
 mod allocator;
 pub mod caching_object_handle;
 mod constants;
@@ -14,7 +15,8 @@ mod graveyard;
 mod journal;
 mod merge;
 pub mod object_manager;
-mod record;
+mod extent_record;
+mod object_record;
 pub mod store_object_handle;
 #[cfg(test)]
 mod testing;
@@ -28,7 +30,7 @@ mod writeback_cache;
 pub use caching_object_handle::CachingObjectHandle;
 pub use directory::Directory;
 pub use filesystem::FxFilesystem;
-pub use record::{ObjectDescriptor, Timestamp};
+pub use object_record::{ObjectDescriptor, Timestamp};
 pub use store_object_handle::StoreObjectHandle;
 
 use {
@@ -45,9 +47,11 @@ use {
             filesystem::{ApplyMode, Filesystem, Mutations},
             journal::checksum_list::ChecksumList,
             object_manager::{ObjectManager, ReservationUpdate},
-            record::{
-                Checksums, EncryptionKeys, ExtentKey, ExtentValue, ObjectKey, ObjectKind,
-                ObjectValue, DEFAULT_DATA_ATTRIBUTE_ID,
+            object_record::{
+                EncryptionKeys, ObjectKey, ObjectKind, ObjectValue,
+            },
+            extent_record::{
+                Checksums, ExtentKey, ExtentValue, DEFAULT_DATA_ATTRIBUTE_ID,
             },
             store_object_handle::DirectWriter,
             transaction::{
@@ -1130,7 +1134,8 @@ mod tests {
                 directory::Directory,
                 filesystem::{Filesystem, FxFilesystem, Mutations, OpenFxFilesystem, SyncOptions},
                 fsck::fsck,
-                record::{ExtentKey, ExtentValue, ObjectKey, ObjectValue},
+                extent_record::{ExtentKey, ExtentValue},
+                object_record::{ObjectKey, ObjectValue},
                 transaction::{Options, TransactionHandler},
                 HandleOptions, ObjectStore,
             },

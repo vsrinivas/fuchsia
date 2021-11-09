@@ -7,7 +7,7 @@ use {
         errors::FxfsError,
         lsm_tree::types::ItemRef,
         object_handle::{ObjectHandle, ReadObjectHandle},
-        object_store::record::{ExtentKey, ExtentValue, DEFAULT_DATA_ATTRIBUTE_ID},
+        object_store::extent_record::{ExtentKey, ExtentValue, DEFAULT_DATA_ATTRIBUTE_ID},
     },
     anyhow::{anyhow, bail, Error},
     async_trait::async_trait,

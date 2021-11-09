@@ -13,7 +13,7 @@ use {
     rand::RngCore,
 };
 
-pub use crate::object_store::record::AES256XTSKeys;
+pub use crate::object_store::object_record::AES256XTSKeys;
 
 // This structure stores unwrapped keys. For now, the format used just makes it convenient for the
 // simple XOR scheme we are using, but going forward, this can take whatever form is suitable.

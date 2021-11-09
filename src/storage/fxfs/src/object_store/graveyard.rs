@@ -11,7 +11,7 @@ use {
             types::{ItemRef, LayerIterator},
         },
         object_store::{
-            record::{
+            object_record::{
                 ObjectAttributes, ObjectItem, ObjectKey, ObjectKeyData, ObjectKind, ObjectValue,
                 Timestamp,
             },

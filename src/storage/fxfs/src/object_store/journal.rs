@@ -41,7 +41,7 @@ use {
                 writer::JournalWriter,
             },
             object_manager::ObjectManager,
-            record::{ExtentKey, DEFAULT_DATA_ATTRIBUTE_ID},
+            extent_record::{ExtentKey, DEFAULT_DATA_ATTRIBUTE_ID},
             transaction::{AssocObj, ExtentMutation, Mutation, Options, Transaction, TxnMutation},
             HandleOptions, ObjectStore, StoreObjectHandle,
         },

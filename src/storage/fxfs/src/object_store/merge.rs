@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    super::record::{ExtentKey, ExtentValue, ObjectKey, ObjectKeyData, ObjectValue},
+    super::extent_record::{ExtentKey, ExtentValue},
+    super::object_record::{ObjectKey, ObjectKeyData, ObjectValue},
     crate::lsm_tree::{
         merge::{
             ItemOp::{Discard, Keep, Replace},
@@ -192,9 +193,10 @@ mod tests {
                 types::{Item, LayerIterator, MergeableKey, Value},
                 LSMTree,
             },
-            object_store::record::{
-                Checksums, EncryptionKeys, ExtentKey, ExtentValue, ObjectKey, ObjectValue,
-                Timestamp,
+            object_store::extent_record::{
+                Checksums, ExtentKey, ExtentValue },
+            object_store::object_record::{
+                EncryptionKeys, ObjectKey, ObjectValue, Timestamp,
             },
         },
         anyhow::Error,

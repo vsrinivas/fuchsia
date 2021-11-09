@@ -10,7 +10,8 @@ use {
         object_store::{
             allocator::{AllocatorItem, Reservation},
             object_manager::{reserved_space_from_journal_usage, ObjectManager},
-            record::{ExtentKey, ExtentValue, ObjectItem, ObjectKey, ObjectValue},
+            extent_record::{ExtentKey, ExtentValue},
+            object_record::{ObjectItem, ObjectKey, ObjectValue},
         },
     },
     anyhow::Error,
