@@ -121,11 +121,11 @@ func (c *compiler) compileStruct(val fidlgen.Struct) *Struct {
 		// e.g. ::fidl::test::dangerous::struct::types::camel::Interface gives an
 		// "expected unqualified-id" error because of "struct".
 		// There isn't an easily accessible dangerous identifiers list to replace identifiers.
-		if strings.Contains(member.Type.Natural.String(), "::fidl::test::dangerous::") {
+		if strings.Contains(member.Type.HLCPP.String(), "::fidl::test::dangerous::") {
 			memcpyCompatibleDepMap = nil
 			break
 		}
-		memcpyCompatibleDepMap[member.Type.Natural.String()] = struct{}{}
+		memcpyCompatibleDepMap[member.Type.HLCPP.String()] = struct{}{}
 	}
 	for decl := range memcpyCompatibleDepMap {
 		r.FullDeclMemcpyCompatibleDeps = append(r.FullDeclMemcpyCompatibleDeps, decl)

@@ -289,7 +289,7 @@ func (r *Root) Namespace() namespace {
 	switch currentVariant {
 	case noVariant:
 		fidlgen.TemplateFatalf("Called Root.Namespace() when currentVariant isn't set.\n")
-	case naturalVariant:
+	case hlcppVariant:
 		return naturalNamespace(r.Library)
 	case unifiedVariant, wireVariant:
 		return unifiedNamespace(r.Library)
@@ -437,7 +437,7 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 		// here and below. We reserve the flexibility to specify different names
 		// in the future.
 		r.nameVariants = nameVariants{
-			Natural: makeName("std::array").arrayTemplate(t.Natural, *val.ElementCount),
+			HLCPP:   makeName("std::array").arrayTemplate(t.HLCPP, *val.ElementCount),
 			Unified: makeName("std::array").arrayTemplate(t.Unified, *val.ElementCount),
 			Wire:    makeName("fidl::Array").arrayTemplate(t.Wire, *val.ElementCount),
 		}
@@ -451,10 +451,10 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 	case fidlgen.VectorType:
 		t := c.compileType(*val.ElementType)
 		if val.Nullable {
-			r.nameVariants.Natural = makeName("fidl::VectorPtr").template(t.Natural)
+			r.nameVariants.HLCPP = makeName("fidl::VectorPtr").template(t.HLCPP)
 			r.nameVariants.Unified = makeName("fidl::VectorPtr").template(t.Unified)
 		} else {
-			r.nameVariants.Natural = makeName("std::vector").template(t.Natural)
+			r.nameVariants.HLCPP = makeName("std::vector").template(t.HLCPP)
 			r.nameVariants.Unified = makeName("std::vector").template(t.Unified)
 		}
 		r.nameVariants.Wire = makeName("fidl::VectorView").template(t.Wire)
@@ -466,11 +466,11 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 		r.ElementType = &t
 	case fidlgen.StringType:
 		if val.Nullable {
-			r.Natural = makeName("fidl::StringPtr")
+			r.HLCPP = makeName("fidl::StringPtr")
 		} else {
-			r.Natural = makeName("std::string")
+			r.HLCPP = makeName("std::string")
 		}
-		r.Unified = r.Natural
+		r.Unified = r.HLCPP
 		r.Wire = makeName("fidl::StringView")
 		r.WireFamily = FamilyKinds.String
 		r.NeedsDtor = true
@@ -485,7 +485,7 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 	case fidlgen.RequestType:
 		p := c.compileNameVariants(val.RequestSubtype)
 		r.nameVariants = nameVariants{
-			Natural: makeName("fidl::InterfaceRequest").template(p.Natural),
+			HLCPP:   makeName("fidl::InterfaceRequest").template(p.HLCPP),
 			Unified: makeName("fidl::InterfaceRequest").template(p.Unified),
 			Wire:    makeName("fidl::ServerEnd").template(p.Wire),
 		}
@@ -506,7 +506,7 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 		declType := declInfo.Type
 		if declType == fidlgen.ProtocolDeclType {
 			r.nameVariants = nameVariants{
-				Natural: makeName("fidl::InterfaceHandle").template(name.Natural),
+				HLCPP:   makeName("fidl::InterfaceHandle").template(name.HLCPP),
 				Unified: makeName("fidl::InterfaceHandle").template(name.Unified),
 				Wire:    makeName("fidl::ClientEnd").template(name.Wire),
 			}
@@ -547,7 +547,7 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 			}
 
 			if val.Nullable {
-				r.nameVariants.Natural = makeName("std::unique_ptr").template(name.Natural)
+				r.nameVariants.HLCPP = makeName("std::unique_ptr").template(name.HLCPP)
 				r.nameVariants.Unified = makeName("std::unique_ptr").template(name.Unified)
 				if declType == fidlgen.UnionDeclType {
 					r.nameVariants.Wire = name.Wire

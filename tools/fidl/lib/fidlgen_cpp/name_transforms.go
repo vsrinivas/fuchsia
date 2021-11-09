@@ -48,7 +48,7 @@ type declarationContext struct {
 
 func (ctx declarationContext) transform(id fidlgen.CompoundIdentifier) nameVariants {
 	return nameVariants{
-		Natural: ctx.transforms.natural(id, ctx.NameContext),
+		HLCPP:   ctx.transforms.natural(id, ctx.NameContext),
 		Unified: ctx.transforms.unified(id, ctx.NameContext),
 		Wire:    ctx.transforms.wire(id, ctx.NameContext),
 	}
@@ -81,7 +81,7 @@ func (ctx memberContext) makeName(n string) name {
 func (ctx memberContext) transform(id fidlgen.Identifier) nameVariants {
 	n := string(id)
 	return nameVariants{
-		Natural: ctx.makeName(ctx.transforms.natural.apply(n)),
+		HLCPP:   ctx.makeName(ctx.transforms.natural.apply(n)),
 		Unified: ctx.makeName(ctx.transforms.unified.apply(n)),
 		Wire:    ctx.makeName(ctx.transforms.wire.apply(n)),
 	}

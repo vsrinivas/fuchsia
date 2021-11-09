@@ -16,12 +16,12 @@ import (
 //
 
 type ConstantValue struct {
-	Natural string
-	Wire    string
+	HLCPP string
+	Wire  string
 }
 
 func (cv ConstantValue) IsSet() bool {
-	return cv.Natural != "" && cv.Wire != ""
+	return cv.HLCPP != "" && cv.Wire != ""
 }
 
 func (cv ConstantValue) String() string {
@@ -29,13 +29,13 @@ func (cv ConstantValue) String() string {
 	case noVariant:
 		fidlgen.TemplateFatalf(
 			"Called ConstantValue.String() on %s/%s when currentVariant isn't set.\n",
-			cv.Natural, cv.Wire)
-	case naturalVariant:
-		return string(cv.Natural)
+			cv.HLCPP, cv.Wire)
+	case hlcppVariant:
+		return string(cv.HLCPP)
 	case wireVariant:
 		return string(cv.Wire)
 	case unifiedVariant:
-		return string(cv.Natural)
+		return string(cv.HLCPP)
 	}
 	panic("not reached")
 }
@@ -44,16 +44,16 @@ func (c *compiler) compileConstant(val fidlgen.Constant, t *Type, typ fidlgen.Ty
 	switch val.Kind {
 	case fidlgen.IdentifierConstant:
 		n := c.compileNameVariants(val.Identifier)
-		return ConstantValue{Natural: n.Natural.String(), Wire: n.Wire.String()}
+		return ConstantValue{HLCPP: n.HLCPP.String(), Wire: n.Wire.String()}
 	case fidlgen.LiteralConstant:
 		lit := c.compileLiteral(val.Literal, typ)
-		return ConstantValue{Natural: lit, Wire: lit}
+		return ConstantValue{HLCPP: lit, Wire: lit}
 	case fidlgen.BinaryOperator:
 		return ConstantValue{
-			Natural: fmt.Sprintf("static_cast<%s>(%s)", t.nameVariants.Natural, val.Value),
-			Wire:    fmt.Sprintf("static_cast<%s>(%s)", t.nameVariants.Wire, val.Value),
+			HLCPP: fmt.Sprintf("static_cast<%s>(%s)", t.nameVariants.HLCPP, val.Value),
+			Wire:  fmt.Sprintf("static_cast<%s>(%s)", t.nameVariants.Wire, val.Value),
 		}
-		// return ConstantValue{Natural: naturalVal, Wire: wireVal}
+		// return ConstantValue{HLCPP: naturalVal, Wire: wireVal}
 	default:
 		panic(fmt.Sprintf("unknown constant kind: %v", val.Kind))
 	}

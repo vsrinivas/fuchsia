@@ -8,13 +8,13 @@
 {{ EnsureNamespace . }}
 
 {{- .Docs }}
-using {{ .Name }} = {{ .Natural }};
+using {{ .Name }} = {{ .HLCPP }};
 
 {{- /* Natural types strict bits is a simple enum class, hence the mask is
        stored on-the-side in the form of an extra constant. */}}
 {{- if Eq .Kind Kinds.Bits }}
 {{- if .IsStrict }}
-const static {{ .Name }} {{ .MaskName.Name }} = {{ .MaskName.Natural }};
+const static {{ .Name }} {{ .MaskName.Name }} = {{ .MaskName.HLCPP }};
 {{- end }}
 {{- end }}
 {{ end }}

@@ -111,12 +111,12 @@ var commonTemplateFuncs = template.FuncMap{
 	"EnsureNamespace": ensureNamespace,
 	"EndOfFile":       endOfFile,
 
-	// UseNatural sets the template engine to default to the "natural" domain object
+	// UseHLCPP sets the template engine to default to the "hlcpp" domain object
 	// namespace, when printing nameVariants.
 	//
-	// Example of Natural type name: "fuchsia::library::MyType".
-	"UseNatural": func() string {
-		currentVariant = naturalVariant
+	// Example of HLCPP type name: "fuchsia::library::MyType".
+	"UseHLCPP": func() string {
+		currentVariant = hlcppVariant
 		return ""
 	},
 

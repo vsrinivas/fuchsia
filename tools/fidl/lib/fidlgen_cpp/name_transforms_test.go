@@ -42,7 +42,7 @@ func TestBitsMemberContext(t *testing.T) {
 	assertEqual(t,
 		bitsMemberContext.transform(fidlgen.Identifier("foo")),
 		nameVariants{
-			Natural: makeName("foo"),
+			HLCPP:   makeName("foo"),
 			Unified: makeName("foo"),
 			Wire:    makeName("kFoo"),
 		})
@@ -50,7 +50,7 @@ func TestBitsMemberContext(t *testing.T) {
 	assertEqual(t,
 		bitsMemberContext.transform(fidlgen.Identifier("FOO_BAR")),
 		nameVariants{
-			Natural: makeName("FOO_BAR"),
+			HLCPP:   makeName("FOO_BAR"),
 			Unified: makeName("FOO_BAR"),
 			Wire:    makeName("kFooBar"),
 		})
@@ -58,7 +58,7 @@ func TestBitsMemberContext(t *testing.T) {
 	assertEqual(t,
 		bitsMemberContext.transform(fidlgen.Identifier("kFoo")),
 		nameVariants{
-			Natural: makeName("kFoo"),
+			HLCPP:   makeName("kFoo"),
 			Unified: makeName("kFoo"),
 			Wire:    makeName("kFoo"),
 		})
@@ -66,7 +66,7 @@ func TestBitsMemberContext(t *testing.T) {
 	assertEqual(t,
 		bitsMemberContext.transform(fidlgen.Identifier("switch")),
 		nameVariants{
-			Natural: makeName("switch_"),
+			HLCPP:   makeName("switch_"),
 			Unified: makeName("switch_"),
 			Wire:    makeName("kSwitch"),
 		})
@@ -74,7 +74,7 @@ func TestBitsMemberContext(t *testing.T) {
 	assertEqual(t,
 		bitsMemberContext.transform(fidlgen.Identifier("mask")),
 		nameVariants{
-			Natural: makeName("mask"),
+			HLCPP:   makeName("mask"),
 			Unified: makeName("mask"),
 			Wire:    makeName("kMask_"),
 		})
@@ -87,7 +87,7 @@ func TestEnumMemberContext(t *testing.T) {
 	assertEqual(t,
 		enumMemberContext.transform(fidlgen.Identifier("foo")),
 		nameVariants{
-			Natural: makeName("foo"),
+			HLCPP:   makeName("foo"),
 			Unified: makeName("foo"),
 			Wire:    makeName("kFoo"),
 		})
@@ -95,7 +95,7 @@ func TestEnumMemberContext(t *testing.T) {
 	assertEqual(t,
 		enumMemberContext.transform(fidlgen.Identifier("FOO_BAR")),
 		nameVariants{
-			Natural: makeName("FOO_BAR"),
+			HLCPP:   makeName("FOO_BAR"),
 			Unified: makeName("FOO_BAR"),
 			Wire:    makeName("kFooBar"),
 		})
@@ -103,7 +103,7 @@ func TestEnumMemberContext(t *testing.T) {
 	assertEqual(t,
 		enumMemberContext.transform(fidlgen.Identifier("kFoo")),
 		nameVariants{
-			Natural: makeName("kFoo"),
+			HLCPP:   makeName("kFoo"),
 			Unified: makeName("kFoo"),
 			Wire:    makeName("kFoo"),
 		})
@@ -111,7 +111,7 @@ func TestEnumMemberContext(t *testing.T) {
 	assertEqual(t,
 		enumMemberContext.transform(fidlgen.Identifier("switch")),
 		nameVariants{
-			Natural: makeName("switch_"),
+			HLCPP:   makeName("switch_"),
 			Unified: makeName("switch_"),
 			Wire:    makeName("kSwitch"),
 		})
@@ -119,7 +119,7 @@ func TestEnumMemberContext(t *testing.T) {
 	assertEqual(t,
 		enumMemberContext.transform(fidlgen.Identifier("mask")),
 		nameVariants{
-			Natural: makeName("mask"),
+			HLCPP:   makeName("mask"),
 			Unified: makeName("mask"),
 			Wire:    makeName("kMask"),
 		})
@@ -132,7 +132,7 @@ func TestStructMemberContext(t *testing.T) {
 	assertEqual(t,
 		structMemberContext.transform(fidlgen.Identifier("foo")),
 		nameVariants{
-			Natural: makeName("foo"),
+			HLCPP:   makeName("foo"),
 			Unified: makeName("foo"),
 			Wire:    makeName("foo"),
 		})
@@ -140,7 +140,7 @@ func TestStructMemberContext(t *testing.T) {
 	assertEqual(t,
 		structMemberContext.transform(fidlgen.Identifier("FOO_BAR")),
 		nameVariants{
-			Natural: makeName("FOO_BAR"),
+			HLCPP:   makeName("FOO_BAR"),
 			Unified: makeName("FOO_BAR"),
 			Wire:    makeName("foo_bar"),
 		})
@@ -148,7 +148,7 @@ func TestStructMemberContext(t *testing.T) {
 	assertEqual(t,
 		structMemberContext.transform(fidlgen.Identifier("FooBar")),
 		nameVariants{
-			Natural: makeName("FooBar"),
+			HLCPP:   makeName("FooBar"),
 			Unified: makeName("FooBar"),
 			Wire:    makeName("foo_bar"),
 		})
@@ -156,7 +156,7 @@ func TestStructMemberContext(t *testing.T) {
 	assertEqual(t,
 		structMemberContext.transform(fidlgen.Identifier("switch")),
 		nameVariants{
-			Natural: makeName("switch_"),
+			HLCPP:   makeName("switch_"),
 			Unified: makeName("switch_"),
 			Wire:    makeName("switch_"),
 		})
@@ -169,7 +169,7 @@ func TestTableMemberContext(t *testing.T) {
 	assertEqual(t,
 		tableMemberContext.transform(fidlgen.Identifier("foo")),
 		nameVariants{
-			Natural: makeName("foo"),
+			HLCPP:   makeName("foo"),
 			Unified: makeName("foo"),
 			Wire:    makeName("foo"),
 		})
@@ -177,7 +177,7 @@ func TestTableMemberContext(t *testing.T) {
 	assertEqual(t,
 		tableMemberContext.transform(fidlgen.Identifier("FOO_BAR")),
 		nameVariants{
-			Natural: makeName("FOO_BAR"),
+			HLCPP:   makeName("FOO_BAR"),
 			Unified: makeName("FOO_BAR"),
 			Wire:    makeName("foo_bar"),
 		})
@@ -185,7 +185,7 @@ func TestTableMemberContext(t *testing.T) {
 	assertEqual(t,
 		tableMemberContext.transform(fidlgen.Identifier("FooBar")),
 		nameVariants{
-			Natural: makeName("FooBar"),
+			HLCPP:   makeName("FooBar"),
 			Unified: makeName("FooBar"),
 			Wire:    makeName("foo_bar"),
 		})
@@ -193,7 +193,7 @@ func TestTableMemberContext(t *testing.T) {
 	assertEqual(t,
 		tableMemberContext.transform(fidlgen.Identifier("switch")),
 		nameVariants{
-			Natural: makeName("switch_"),
+			HLCPP:   makeName("switch_"),
 			Unified: makeName("switch_"),
 			Wire:    makeName("switch_"),
 		})
@@ -206,7 +206,7 @@ func TestUnionMemberContext(t *testing.T) {
 	assertEqual(t,
 		unionMemberContext.transform(fidlgen.Identifier("foo")),
 		nameVariants{
-			Natural: makeName("foo"),
+			HLCPP:   makeName("foo"),
 			Unified: makeName("foo"),
 			Wire:    makeName("foo"),
 		})
@@ -214,7 +214,7 @@ func TestUnionMemberContext(t *testing.T) {
 	assertEqual(t,
 		unionMemberContext.transform(fidlgen.Identifier("FOO_BAR")),
 		nameVariants{
-			Natural: makeName("FOO_BAR"),
+			HLCPP:   makeName("FOO_BAR"),
 			Unified: makeName("FOO_BAR"),
 			Wire:    makeName("foo_bar"),
 		})
@@ -222,7 +222,7 @@ func TestUnionMemberContext(t *testing.T) {
 	assertEqual(t,
 		unionMemberContext.transform(fidlgen.Identifier("FooBar")),
 		nameVariants{
-			Natural: makeName("FooBar"),
+			HLCPP:   makeName("FooBar"),
 			Unified: makeName("FooBar"),
 			Wire:    makeName("foo_bar"),
 		})
@@ -230,7 +230,7 @@ func TestUnionMemberContext(t *testing.T) {
 	assertEqual(t,
 		unionMemberContext.transform(fidlgen.Identifier("switch")),
 		nameVariants{
-			Natural: makeName("switch_"),
+			HLCPP:   makeName("switch_"),
 			Unified: makeName("switch_"),
 			Wire:    makeName("switch_"),
 		})
@@ -242,7 +242,7 @@ func TestUnionMemberTagContext(t *testing.T) {
 	assertEqual(t,
 		unionMemberTagContext.transform(fidlgen.Identifier("foo")),
 		nameVariants{
-			Natural: makeName("kFoo"),
+			HLCPP:   makeName("kFoo"),
 			Unified: makeName("kFoo"),
 			Wire:    makeName("kFoo"),
 		})
@@ -250,7 +250,7 @@ func TestUnionMemberTagContext(t *testing.T) {
 	assertEqual(t,
 		unionMemberTagContext.transform(fidlgen.Identifier("FOO_BAR")),
 		nameVariants{
-			Natural: makeName("kFooBar"),
+			HLCPP:   makeName("kFooBar"),
 			Unified: makeName("kFooBar"),
 			Wire:    makeName("kFooBar"),
 		})
@@ -258,7 +258,7 @@ func TestUnionMemberTagContext(t *testing.T) {
 	assertEqual(t,
 		unionMemberTagContext.transform(fidlgen.Identifier("FooBar")),
 		nameVariants{
-			Natural: makeName("kFooBar"),
+			HLCPP:   makeName("kFooBar"),
 			Unified: makeName("kFooBar"),
 			Wire:    makeName("kFooBar"),
 		})
@@ -266,7 +266,7 @@ func TestUnionMemberTagContext(t *testing.T) {
 	assertEqual(t,
 		unionMemberTagContext.transform(fidlgen.Identifier("switch")),
 		nameVariants{
-			Natural: makeName("kSwitch"),
+			HLCPP:   makeName("kSwitch"),
 			Unified: makeName("kSwitch"),
 			Wire:    makeName("kSwitch"),
 		})
@@ -279,7 +279,7 @@ func TestMethodNameContext(t *testing.T) {
 	assertEqual(t,
 		methodNameContext.transform(fidlgen.Identifier("foo")),
 		nameVariants{
-			Natural: makeName("foo"),
+			HLCPP:   makeName("foo"),
 			Unified: makeName("foo"),
 			Wire:    makeName("Foo"),
 		})
@@ -287,7 +287,7 @@ func TestMethodNameContext(t *testing.T) {
 	assertEqual(t,
 		methodNameContext.transform(fidlgen.Identifier("FOO_BAR")),
 		nameVariants{
-			Natural: makeName("FOO_BAR"),
+			HLCPP:   makeName("FOO_BAR"),
 			Unified: makeName("FOO_BAR"),
 			Wire:    makeName("FooBar"),
 		})
@@ -295,7 +295,7 @@ func TestMethodNameContext(t *testing.T) {
 	assertEqual(t,
 		methodNameContext.transform(fidlgen.Identifier("FooBar")),
 		nameVariants{
-			Natural: makeName("FooBar"),
+			HLCPP:   makeName("FooBar"),
 			Unified: makeName("FooBar"),
 			Wire:    makeName("FooBar"),
 		})
@@ -303,7 +303,7 @@ func TestMethodNameContext(t *testing.T) {
 	assertEqual(t,
 		methodNameContext.transform(fidlgen.Identifier("switch")),
 		nameVariants{
-			Natural: makeName("switch_"),
+			HLCPP:   makeName("switch_"),
 			Unified: makeName("switch_"),
 			Wire:    makeName("Switch"),
 		})
@@ -316,7 +316,7 @@ func TestServiceMemberContext(t *testing.T) {
 	assertEqual(t,
 		serviceMemberContext.transform(fidlgen.Identifier("foo")),
 		nameVariants{
-			Natural: makeName("foo"),
+			HLCPP:   makeName("foo"),
 			Unified: makeName("foo"),
 			Wire:    makeName("foo"),
 		})
@@ -324,7 +324,7 @@ func TestServiceMemberContext(t *testing.T) {
 	assertEqual(t,
 		serviceMemberContext.transform(fidlgen.Identifier("FOO_BAR")),
 		nameVariants{
-			Natural: makeName("FOO_BAR"),
+			HLCPP:   makeName("FOO_BAR"),
 			Unified: makeName("FOO_BAR"),
 			Wire:    makeName("foo_bar"),
 		})
@@ -332,7 +332,7 @@ func TestServiceMemberContext(t *testing.T) {
 	assertEqual(t,
 		serviceMemberContext.transform(fidlgen.Identifier("FooBar")),
 		nameVariants{
-			Natural: makeName("FooBar"),
+			HLCPP:   makeName("FooBar"),
 			Unified: makeName("FooBar"),
 			Wire:    makeName("foo_bar"),
 		})
@@ -340,7 +340,7 @@ func TestServiceMemberContext(t *testing.T) {
 	assertEqual(t,
 		serviceMemberContext.transform(fidlgen.Identifier("switch")),
 		nameVariants{
-			Natural: makeName("switch_"),
+			HLCPP:   makeName("switch_"),
 			Unified: makeName("switch_"),
 			Wire:    makeName("switch_"),
 		})
@@ -353,7 +353,7 @@ func TestConstantContext(t *testing.T) {
 	assertEqual(t,
 		constantContext.transform(parseIdent("fidl.test/foo")),
 		nameVariants{
-			Natural: makeName("fidl::test::foo"),
+			HLCPP:   makeName("fidl::test::foo"),
 			Unified: makeName("fidl_test::foo"),
 			Wire:    makeName("fidl_test::wire::kFoo"),
 		})
@@ -361,7 +361,7 @@ func TestConstantContext(t *testing.T) {
 	assertEqual(t,
 		constantContext.transform(parseIdent("fidl.test/FOO_BAR")),
 		nameVariants{
-			Natural: makeName("fidl::test::FOO_BAR"),
+			HLCPP:   makeName("fidl::test::FOO_BAR"),
 			Unified: makeName("fidl_test::FOO_BAR"),
 			Wire:    makeName("fidl_test::wire::kFooBar"),
 		})
@@ -369,7 +369,7 @@ func TestConstantContext(t *testing.T) {
 	assertEqual(t,
 		constantContext.transform(parseIdent("fidl.test/kFoo")),
 		nameVariants{
-			Natural: makeName("fidl::test::kFoo"),
+			HLCPP:   makeName("fidl::test::kFoo"),
 			Unified: makeName("fidl_test::kFoo"),
 			Wire:    makeName("fidl_test::wire::kFoo"),
 		})
@@ -377,7 +377,7 @@ func TestConstantContext(t *testing.T) {
 	assertEqual(t,
 		constantContext.transform(parseIdent("fidl.test/switch")),
 		nameVariants{
-			Natural: makeName("fidl::test::switch_"),
+			HLCPP:   makeName("fidl::test::switch_"),
 			Unified: makeName("fidl_test::switch_"),
 			Wire:    makeName("fidl_test::wire::kSwitch"),
 		})
@@ -390,7 +390,7 @@ func TestTypeContext(t *testing.T) {
 	assertEqual(t,
 		typeContext.transform(parseIdent("fidl.test/foo")),
 		nameVariants{
-			Natural: makeName("fidl::test::foo"),
+			HLCPP:   makeName("fidl::test::foo"),
 			Unified: makeName("fidl_test::foo"),
 			Wire:    makeName("fidl_test::wire::Foo"),
 		})
@@ -398,7 +398,7 @@ func TestTypeContext(t *testing.T) {
 	assertEqual(t,
 		typeContext.transform(parseIdent("fidl.test/Foo")),
 		nameVariants{
-			Natural: makeName("fidl::test::Foo"),
+			HLCPP:   makeName("fidl::test::Foo"),
 			Unified: makeName("fidl_test::Foo"),
 			Wire:    makeName("fidl_test::wire::Foo"),
 		})
@@ -406,7 +406,7 @@ func TestTypeContext(t *testing.T) {
 	assertEqual(t,
 		typeContext.transform(parseIdent("fidl.test/FidlType")),
 		nameVariants{
-			Natural: makeName("fidl::test::FidlType_"),
+			HLCPP:   makeName("fidl::test::FidlType_"),
 			Unified: makeName("fidl_test::FidlType_"),
 			Wire:    makeName("fidl_test::wire::FidlType_"),
 		})
@@ -414,7 +414,7 @@ func TestTypeContext(t *testing.T) {
 	assertEqual(t,
 		typeContext.transform(parseIdent("fidl.test/FOO_BAR")),
 		nameVariants{
-			Natural: makeName("fidl::test::FOO_BAR"),
+			HLCPP:   makeName("fidl::test::FOO_BAR"),
 			Unified: makeName("fidl_test::FOO_BAR"),
 			Wire:    makeName("fidl_test::wire::FooBar"),
 		})
@@ -422,7 +422,7 @@ func TestTypeContext(t *testing.T) {
 	assertEqual(t,
 		typeContext.transform(parseIdent("fidl.test/switch")),
 		nameVariants{
-			Natural: makeName("fidl::test::switch_"),
+			HLCPP:   makeName("fidl::test::switch_"),
 			Unified: makeName("fidl_test::switch_"),
 			Wire:    makeName("fidl_test::wire::Switch"),
 		})
@@ -435,7 +435,7 @@ func TestServiceContext(t *testing.T) {
 	assertEqual(t,
 		serviceContext.transform(parseIdent("fidl.test/foo")),
 		nameVariants{
-			Natural: makeName("fidl::test::foo"),
+			HLCPP:   makeName("fidl::test::foo"),
 			Unified: makeName("fidl::test::foo"),
 			Wire:    makeName("fidl_test::Foo"),
 		})
@@ -443,7 +443,7 @@ func TestServiceContext(t *testing.T) {
 	assertEqual(t,
 		serviceContext.transform(parseIdent("fidl.test/Foo")),
 		nameVariants{
-			Natural: makeName("fidl::test::Foo"),
+			HLCPP:   makeName("fidl::test::Foo"),
 			Unified: makeName("fidl::test::Foo"),
 			Wire:    makeName("fidl_test::Foo"),
 		})
@@ -451,7 +451,7 @@ func TestServiceContext(t *testing.T) {
 	assertEqual(t,
 		serviceContext.transform(parseIdent("fidl.test/FidlType")),
 		nameVariants{
-			Natural: makeName("fidl::test::FidlType_"),
+			HLCPP:   makeName("fidl::test::FidlType_"),
 			Unified: makeName("fidl::test::FidlType_"),
 			Wire:    makeName("fidl_test::FidlType_"),
 		})
@@ -459,7 +459,7 @@ func TestServiceContext(t *testing.T) {
 	assertEqual(t,
 		serviceContext.transform(parseIdent("fidl.test/FOO_BAR")),
 		nameVariants{
-			Natural: makeName("fidl::test::FOO_BAR"),
+			HLCPP:   makeName("fidl::test::FOO_BAR"),
 			Unified: makeName("fidl::test::FOO_BAR"),
 			Wire:    makeName("fidl_test::FooBar"),
 		})
@@ -467,7 +467,7 @@ func TestServiceContext(t *testing.T) {
 	assertEqual(t,
 		serviceContext.transform(parseIdent("fidl.test/switch")),
 		nameVariants{
-			Natural: makeName("fidl::test::switch_"),
+			HLCPP:   makeName("fidl::test::switch_"),
 			Unified: makeName("fidl::test::switch_"),
 			Wire:    makeName("fidl_test::Switch"),
 		})
@@ -480,7 +480,7 @@ func TestProtocolContext(t *testing.T) {
 	assertEqual(t,
 		protocolContext.transform(parseIdent("fidl.test/foo")),
 		nameVariants{
-			Natural: makeName("fidl::test::foo"),
+			HLCPP:   makeName("fidl::test::foo"),
 			Unified: makeName("fidl::test::foo"),
 			Wire:    makeName("fidl_test::Foo"),
 		})
@@ -488,7 +488,7 @@ func TestProtocolContext(t *testing.T) {
 	assertEqual(t,
 		protocolContext.transform(parseIdent("fidl.test/Foo")),
 		nameVariants{
-			Natural: makeName("fidl::test::Foo"),
+			HLCPP:   makeName("fidl::test::Foo"),
 			Unified: makeName("fidl::test::Foo"),
 			Wire:    makeName("fidl_test::Foo"),
 		})
@@ -496,7 +496,7 @@ func TestProtocolContext(t *testing.T) {
 	assertEqual(t,
 		protocolContext.transform(parseIdent("fidl.test/FidlType")),
 		nameVariants{
-			Natural: makeName("fidl::test::FidlType_"),
+			HLCPP:   makeName("fidl::test::FidlType_"),
 			Unified: makeName("fidl::test::FidlType_"),
 			Wire:    makeName("fidl_test::FidlType_"),
 		})
@@ -504,7 +504,7 @@ func TestProtocolContext(t *testing.T) {
 	assertEqual(t,
 		protocolContext.transform(parseIdent("fidl.test/FOO_BAR")),
 		nameVariants{
-			Natural: makeName("fidl::test::FOO_BAR"),
+			HLCPP:   makeName("fidl::test::FOO_BAR"),
 			Unified: makeName("fidl::test::FOO_BAR"),
 			Wire:    makeName("fidl_test::FooBar"),
 		})
@@ -512,7 +512,7 @@ func TestProtocolContext(t *testing.T) {
 	assertEqual(t,
 		protocolContext.transform(parseIdent("fidl.test/switch")),
 		nameVariants{
-			Natural: makeName("fidl::test::switch_"),
+			HLCPP:   makeName("fidl::test::switch_"),
 			Unified: makeName("fidl::test::switch_"),
 			Wire:    makeName("fidl_test::Switch"),
 		})

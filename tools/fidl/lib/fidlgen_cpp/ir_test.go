@@ -29,12 +29,12 @@ protocol P {
 	assertEqual(t, len(m.RequestArgs), 2)
 
 	ty := m.RequestArgs[0].Type
-	expectEqual(t, ty.Natural.String(), "::std::array<::std::unique_ptr<::foo::bar::U>, 3>")
+	expectEqual(t, ty.HLCPP.String(), "::std::array<::std::unique_ptr<::foo::bar::U>, 3>")
 	expectEqual(t, ty.Wire.String(), "::fidl::Array<::foo_bar::wire::U, 3>")
 	expectEqual(t, ty.Unified.String(), "::std::array<::std::unique_ptr<::foo_bar::U>, 3>")
 
 	ty = m.RequestArgs[1].Type
-	expectEqual(t, ty.Natural.String(), "::std::vector<::fidl::InterfaceHandle<::foo::bar::P>>")
+	expectEqual(t, ty.HLCPP.String(), "::std::vector<::fidl::InterfaceHandle<::foo::bar::P>>")
 	expectEqual(t, ty.Wire.String(), "::fidl::VectorView<::fidl::ClientEnd<::foo_bar::P>>")
 	// TODO(fxbug.dev/72980): Switch to ClientEnd/ServerEnd and underscore namespace when
 	// corresponding endpoint types can easily convert into each other.
@@ -43,7 +43,7 @@ protocol P {
 
 func makeTestName(s string) nameVariants {
 	return nameVariants{
-		Natural: makeName("example::" + s),
+		HLCPP:   makeName("example::" + s),
 		Unified: makeName("example::" + s),
 		Wire:    makeName("example::wire::" + s),
 	}

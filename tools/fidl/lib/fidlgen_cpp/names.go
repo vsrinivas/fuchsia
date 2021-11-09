@@ -20,7 +20,7 @@ type variant string
 
 const (
 	noVariant      variant = ""
-	naturalVariant variant = "natural"
+	hlcppVariant   variant = "hlcpp"
 	unifiedVariant variant = "unified"
 	wireVariant    variant = "wire"
 
@@ -74,10 +74,10 @@ func (ns namespace) member(n string) name {
 // type name, but some types are not declared in the generated code (e.g. zx::vmo),
 // or are non-nominal (e.g. std::vector<FooBarDecl>).
 type nameVariants struct {
-	Natural name
+	HLCPP name
 
-	// Unified is like Natural, except it consists of type aliases, declared in
-	// the unified bindings, to natural types. For example, the Natural name
+	// Unified is like HLCPP, except it consists of type aliases, declared in
+	// the unified bindings, to natural types. For example, the HLCPP name
 	//
 	//     fuchsia::my::lib::FooStruct
 	//
@@ -85,7 +85,7 @@ type nameVariants struct {
 	//
 	//     fuchsia_my_lib::FooStruct.
 	//
-	// Similarly, if Natural is
+	// Similarly, if HLCPP is
 	//
 	//     std::array<std::unique_ptr<fuchsia::my::lib::FooStruct>, 5>
 	//
@@ -94,16 +94,16 @@ type nameVariants struct {
 	//     std::array<std::unique_ptr<fuchsia_my_lib::FooStruct>, 5>.
 	//
 	// In case of client and server protocol endpoints, there is no alias,
-	// and Unified is the same as Natural.
+	// and Unified is the same as HLCPP.
 	Unified name
 
 	Wire name
 }
 
-// commonNameVariants returns a nameVariants with the same Name for both Wire and Natural variants.
+// commonNameVariants returns a nameVariants with the same Name for both Wire and HLCPP variants.
 func commonNameVariants(decl name) nameVariants {
 	return nameVariants{
-		Natural: decl,
+		HLCPP:   decl,
 		Unified: decl,
 		Wire:    decl,
 	}
@@ -113,9 +113,9 @@ func (dn nameVariants) String() string {
 	switch currentVariant {
 	case noVariant:
 		fidlgen.TemplateFatalf("Called nameVariants.String() on %s/%s when currentVariant isn't set.\n",
-			dn.Natural, dn.Wire)
-	case naturalVariant:
-		return dn.Natural.String()
+			dn.HLCPP, dn.Wire)
+	case hlcppVariant:
+		return dn.HLCPP.String()
 	case unifiedVariant:
 		return dn.Unified.String()
 	case wireVariant:
@@ -130,9 +130,9 @@ func (dn nameVariants) Name() string {
 	switch currentVariant {
 	case noVariant:
 		fidlgen.TemplateFatalf("Called nameVariants.Name() on %s/%s when currentVariant isn't set.\n",
-			dn.Natural, dn.Wire)
-	case naturalVariant:
-		return dn.Natural.Name()
+			dn.HLCPP, dn.Wire)
+	case hlcppVariant:
+		return dn.HLCPP.Name()
 	case unifiedVariant:
 		return dn.Unified.Name()
 	case wireVariant:
@@ -144,9 +144,9 @@ func (dn nameVariants) Name() string {
 func (dn nameVariants) Self() string {
 	switch currentVariant {
 	case noVariant:
-		fidlgen.TemplateFatalf("Called nameVariants.Self() on %s/%s when currentVariant isn't set.\n", dn.Natural, dn.Wire)
-	case naturalVariant:
-		return dn.Natural.Self()
+		fidlgen.TemplateFatalf("Called nameVariants.Self() on %s/%s when currentVariant isn't set.\n", dn.HLCPP, dn.Wire)
+	case hlcppVariant:
+		return dn.HLCPP.Self()
 	case unifiedVariant:
 		return dn.Unified.Self()
 	case wireVariant:
@@ -158,9 +158,9 @@ func (dn nameVariants) Self() string {
 func (dn nameVariants) NoLeading() string {
 	switch currentVariant {
 	case noVariant:
-		fidlgen.TemplateFatalf("Called nameVariants.NoLeading() on %s/%s when currentVariant isn't set.\n", dn.Natural, dn.Wire)
-	case naturalVariant:
-		return dn.Natural.NoLeading()
+		fidlgen.TemplateFatalf("Called nameVariants.NoLeading() on %s/%s when currentVariant isn't set.\n", dn.HLCPP, dn.Wire)
+	case hlcppVariant:
+		return dn.HLCPP.NoLeading()
 	case unifiedVariant:
 		return dn.Unified.NoLeading()
 	case wireVariant:
@@ -173,9 +173,9 @@ func (dn nameVariants) Namespace() namespace {
 	switch currentVariant {
 	case noVariant:
 		fidlgen.TemplateFatalf("Called nameVariants.Namespace() on %s/%s when currentVariant isn't set.\n",
-			dn.Natural, dn.Wire)
-	case naturalVariant:
-		return dn.Natural.Namespace()
+			dn.HLCPP, dn.Wire)
+	case hlcppVariant:
+		return dn.HLCPP.Namespace()
 	case unifiedVariant:
 		return dn.Unified.Namespace()
 	case wireVariant:
@@ -187,7 +187,7 @@ func (dn nameVariants) Namespace() namespace {
 // appendName returns a new nameVariants with an suffix appended to the name portions.
 func (dn nameVariants) appendName(suffix string) nameVariants {
 	return nameVariants{
-		Natural: dn.Natural.appendName(suffix),
+		HLCPP:   dn.HLCPP.appendName(suffix),
 		Unified: dn.Unified.appendName(suffix),
 		Wire:    dn.Wire.appendName(suffix),
 	}
@@ -196,7 +196,7 @@ func (dn nameVariants) appendName(suffix string) nameVariants {
 // prependName returns a new nameVariants with an prefix prepended to the name portions.
 func (dn nameVariants) prependName(prefix string) nameVariants {
 	return nameVariants{
-		Natural: dn.Natural.prependName(prefix),
+		HLCPP:   dn.HLCPP.prependName(prefix),
 		Unified: dn.Unified.prependName(prefix),
 		Wire:    dn.Wire.prependName(prefix),
 	}
@@ -205,7 +205,7 @@ func (dn nameVariants) prependName(prefix string) nameVariants {
 // appendNamespace returns a new nameVariants with additional C++ namespace components appended.
 func (dn nameVariants) appendNamespace(c string) nameVariants {
 	return nameVariants{
-		Natural: dn.Natural.appendNamespace(c),
+		HLCPP:   dn.HLCPP.appendNamespace(c),
 		Unified: dn.Unified.appendNamespace(c),
 		Wire:    dn.Wire.appendNamespace(c),
 	}
@@ -214,7 +214,7 @@ func (dn nameVariants) appendNamespace(c string) nameVariants {
 // nest returns a new name for a class nested inside the existing name.
 func (dn nameVariants) nest(c string) nameVariants {
 	return nameVariants{
-		Natural: dn.Natural.nest(c),
+		HLCPP:   dn.HLCPP.nest(c),
 		Unified: dn.Unified.nest(c),
 		Wire:    dn.Wire.nest(c),
 	}
@@ -222,8 +222,8 @@ func (dn nameVariants) nest(c string) nameVariants {
 
 // nestVariants returns a new name for a class nested inside the existing name.
 func (dn nameVariants) nestVariants(v nameVariants) nameVariants {
-	if len(v.Natural.Namespace()) != 0 {
-		panic(fmt.Sprintf("Can't nest a name with a namespace: %v", v.Natural.String()))
+	if len(v.HLCPP.Namespace()) != 0 {
+		panic(fmt.Sprintf("Can't nest a name with a namespace: %v", v.HLCPP.String()))
 	}
 	if len(v.Unified.Namespace()) != 0 {
 		panic(fmt.Sprintf("Can't nest a name with a namespace: %v", v.Unified.String()))
@@ -232,7 +232,7 @@ func (dn nameVariants) nestVariants(v nameVariants) nameVariants {
 		panic(fmt.Sprintf("Can't nest a name with a namespace: %v", v.Wire.String()))
 	}
 	return nameVariants{
-		Natural: dn.Natural.nest(v.Natural.Name()),
+		HLCPP:   dn.HLCPP.nest(v.HLCPP.Name()),
 		Unified: dn.Unified.nest(v.Unified.Name()),
 		Wire:    dn.Wire.nest(v.Wire.Name()),
 	}

@@ -93,7 +93,7 @@ func (c *compiler) compileUnion(val fidlgen.Union) *Union {
 			Ordinal:           uint64(mem.Ordinal),
 			Type:              c.compileType(mem.Type),
 			nameVariants:      name,
-			StorageName:       name.appendName("_").Natural,
+			StorageName:       name.appendName("_").HLCPP,
 			TagName:           u.TagEnum.nestVariants(tag),
 			WireOrdinalName:   u.WireOrdinalEnum.nest(tag.Wire.Name()),
 			Offset:            mem.Offset,
@@ -117,7 +117,7 @@ func (c *compiler) compileResult(s *Struct, m *fidlgen.Method) *Result {
 	var memberTypeNames []name
 	if !s.isEmptyStruct {
 		for _, sm := range s.Members {
-			memberTypeNames = append(memberTypeNames, sm.Type.Natural)
+			memberTypeNames = append(memberTypeNames, sm.Type.HLCPP)
 			result.ValueMembers = append(result.ValueMembers, sm.AsParameter())
 		}
 	}
@@ -126,7 +126,7 @@ func (c *compiler) compileResult(s *Struct, m *fidlgen.Method) *Result {
 	if len(memberTypeNames) == 0 {
 		result.ValueDecl = makeName("void")
 	} else if len(memberTypeNames) == 1 {
-		result.ValueDecl = s.Members[0].Type.Natural
+		result.ValueDecl = s.Members[0].Type.HLCPP
 	} else {
 		result.ValueDecl = result.ValueTupleDecl
 	}

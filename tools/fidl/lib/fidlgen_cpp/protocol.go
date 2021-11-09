@@ -53,7 +53,7 @@ type hlMessagingDetails struct {
 }
 
 func compileHlMessagingDetails(protocol nameVariants) hlMessagingDetails {
-	p := protocol.Natural
+	p := protocol.HLCPP
 	stub := p.appendName("_Stub")
 	return hlMessagingDetails{
 		ProtocolMarker:        p,
@@ -224,8 +224,8 @@ func (*Protocol) Kind() declKind {
 var _ Kinded = (*Protocol)(nil)
 var _ namespaced = (*Protocol)(nil)
 
-func (p Protocol) NaturalType() string {
-	return p.Natural.String()
+func (p Protocol) HLCPPType() string {
+	return p.HLCPP.String()
 }
 
 func (p Protocol) WireType() string {
@@ -464,13 +464,13 @@ func newMethod(inner methodInner, hl hlMessagingDetails, wire wireTypeNames) Met
 		callbackType = &callbackName
 	}
 	ordinalName := fmt.Sprintf("k%s_%s_Ordinal",
-		inner.protocolName.Natural.Name(), inner.Natural.Name())
+		inner.protocolName.HLCPP.Name(), inner.HLCPP.Name())
 
 	m := Method{
 		methodInner: inner,
 		OrdinalName: nameVariants{
-			Natural: inner.protocolName.Natural.Namespace().append("internal").member(ordinalName),
-			Wire:    inner.protocolName.Wire.Namespace().member(ordinalName),
+			HLCPP: inner.protocolName.HLCPP.Namespace().append("internal").member(ordinalName),
+			Wire:  inner.protocolName.Wire.Namespace().member(ordinalName),
 		},
 		Request: newMessage(messageInner{
 			TypeShapeV1:     inner.requestTypeShapeV1,
@@ -486,9 +486,9 @@ func newMethod(inner methodInner, hl hlMessagingDetails, wire wireTypeNames) Met
 		}, inner.ResponseArgs, wire, messageDirectionResponse),
 		CallbackType: callbackType,
 		ResponseHandlerType: fmt.Sprintf("%s_%s_ResponseHandler",
-			inner.protocolName.Natural.Name(), inner.Natural.Name()),
+			inner.protocolName.HLCPP.Name(), inner.HLCPP.Name()),
 		ResponderType: fmt.Sprintf("%s_%s_Responder",
-			inner.protocolName.Natural.Name(), inner.Natural.Name()),
+			inner.protocolName.HLCPP.Name(), inner.HLCPP.Name()),
 		Protocol: nil,
 	}
 	return m

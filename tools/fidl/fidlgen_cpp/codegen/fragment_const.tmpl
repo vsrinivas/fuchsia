@@ -11,14 +11,14 @@
 {{- if .Extern }}
 extern {{ .Decorator }} {{ .Type }} {{ .Name }};
 {{- else }}
-{{ .Decorator }} {{ .Type }} {{ .Name }} = {{ .Natural }};
+{{ .Decorator }} {{ .Type }} {{ .Name }} = {{ .HLCPP }};
 {{- end }}
 {{- end }}
 
 {{- define "ConstDefinition" }}
 {{- if .Extern }}
 {{ EnsureNamespace "::" }}
-{{ .Decorator }} {{ .Type }} {{ . }} = {{ .Natural }};
+{{ .Decorator }} {{ .Type }} {{ . }} = {{ .HLCPP }};
 {{- end }}
 {{- end }}
 
