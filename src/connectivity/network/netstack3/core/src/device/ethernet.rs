@@ -30,7 +30,8 @@ use packet_formats::ethernet::{
 };
 use specialize_ip_macro::specialize_ip_address;
 
-use crate::context::{DualStateContext, FrameContext, InstantContext, StateContext, TimerHandler};
+use crate::assert_empty;
+use crate::context::{DualStateContext, FrameContext, StateContext, TimerHandler};
 use crate::data_structures::ref_counted_hash_map::{InsertResult, RefCountedHashSet, RemoveResult};
 use crate::device::arp::{
     self, ArpContext, ArpDeviceIdContext, ArpFrameMetadata, ArpState, ArpTimerId,
@@ -46,7 +47,6 @@ use crate::ip::gmp::mld::{MldContext, MldFrameMetadata, MldGroupState, MldReport
 use crate::ip::gmp::{GmpHandler, GroupJoinResult, GroupLeaveResult, MulticastGroupSet};
 #[cfg(test)]
 use crate::Ctx;
-use crate::{assert_empty, Instant};
 
 const ETHERNET_MAX_PENDING_FRAMES: usize = 10;
 
@@ -69,7 +69,7 @@ pub(crate) trait EthernetIpDeviceContext:
     IpDeviceContext<
     EthernetLinkDevice,
     EthernetTimerId<<Self as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
-    EthernetDeviceState<<Self as InstantContext>::Instant>,
+    EthernetDeviceState,
 >
 {
 }
@@ -78,7 +78,7 @@ impl<
         C: IpDeviceContext<
             EthernetLinkDevice,
             EthernetTimerId<<C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
-            EthernetDeviceState<<C as InstantContext>::Instant>,
+            EthernetDeviceState,
         >,
     > EthernetIpDeviceContext for C
 {
@@ -90,7 +90,7 @@ pub(super) trait BufferEthernetIpDeviceContext<B: BufferMut>:
     BufferIpDeviceContext<
     EthernetLinkDevice,
     EthernetTimerId<<Self as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
-    EthernetDeviceState<<Self as InstantContext>::Instant>,
+    EthernetDeviceState,
     B,
 >
 {
@@ -101,7 +101,7 @@ impl<
         C: BufferIpDeviceContext<
             EthernetLinkDevice,
             EthernetTimerId<<C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
-            EthernetDeviceState<<C as InstantContext>::Instant>,
+            EthernetDeviceState,
             B,
         >,
     > BufferEthernetIpDeviceContext<B> for C
@@ -229,7 +229,7 @@ impl EthernetDeviceStateBuilder {
     }
 
     /// Build the `EthernetDeviceState` from this builder.
-    pub(super) fn build<I: Instant>(self) -> EthernetDeviceState<I> {
+    pub(super) fn build(self) -> EthernetDeviceState {
         EthernetDeviceState {
             mac: self.mac,
             mtu: self.mtu,
@@ -244,7 +244,7 @@ impl EthernetDeviceStateBuilder {
 }
 
 /// The state associated with an Ethernet device.
-pub(crate) struct EthernetDeviceState<I: Instant> {
+pub(crate) struct EthernetDeviceState {
     /// Mac address of the device this state is for.
     mac: Mac,
 
@@ -263,7 +263,7 @@ pub(crate) struct EthernetDeviceState<I: Instant> {
     ipv4_arp: ArpState<EthernetLinkDevice, Ipv4Addr>,
 
     /// (IPv6) NDP state.
-    ndp: ndp::NdpState<EthernetLinkDevice, I>,
+    ndp: ndp::NdpState<EthernetLinkDevice>,
 
     // pending_frames stores a list of serialized frames indexed by their
     // destination IP addresses. The frames contain an entire EthernetFrame
@@ -276,7 +276,7 @@ pub(crate) struct EthernetDeviceState<I: Instant> {
     promiscuous_mode: bool,
 }
 
-impl<I: Instant> EthernetDeviceState<I> {
+impl EthernetDeviceState {
     /// Adds a pending frame `frame` associated with `local_addr` to the list of
     /// pending frames in the current device state.
     ///
@@ -1246,17 +1246,12 @@ impl<C: EthernetIpDeviceContext> ArpContext<EthernetLinkDevice, Ipv4Addr> for C 
     }
 }
 
-impl<C: EthernetIpDeviceContext> StateContext<NdpState<EthernetLinkDevice, C::Instant>, C::DeviceId>
-    for C
-{
-    fn get_state_with(&self, id: C::DeviceId) -> &NdpState<EthernetLinkDevice, C::Instant> {
+impl<C: EthernetIpDeviceContext> StateContext<NdpState<EthernetLinkDevice>, C::DeviceId> for C {
+    fn get_state_with(&self, id: C::DeviceId) -> &NdpState<EthernetLinkDevice> {
         &self.get_state_with(id).link().ndp
     }
 
-    fn get_state_mut_with(
-        &mut self,
-        id: C::DeviceId,
-    ) -> &mut NdpState<EthernetLinkDevice, C::Instant> {
+    fn get_state_mut_with(&mut self, id: C::DeviceId) -> &mut NdpState<EthernetLinkDevice> {
         &mut self.get_state_mut_with(id).link_mut().ndp
     }
 }
@@ -1632,7 +1627,7 @@ mod tests {
     use crate::{assert_empty, Ipv4StateBuilder, Ipv6StateBuilder, StackStateBuilder};
 
     struct DummyEthernetCtx {
-        state: IpLinkDeviceState<DummyInstant, EthernetDeviceState<DummyInstant>>,
+        state: IpLinkDeviceState<DummyInstant, EthernetDeviceState>,
     }
 
     impl DummyEthernetCtx {
@@ -1651,7 +1646,7 @@ mod tests {
 
     impl
         DualStateContext<
-            IpLinkDeviceState<DummyInstant, EthernetDeviceState<DummyInstant>>,
+            IpLinkDeviceState<DummyInstant, EthernetDeviceState>,
             FakeCryptoRng<XorShiftRng>,
             DummyDeviceId,
         > for DummyCtx
@@ -1660,10 +1655,8 @@ mod tests {
             &self,
             _id0: DummyDeviceId,
             _id1: (),
-        ) -> (
-            &IpLinkDeviceState<DummyInstant, EthernetDeviceState<DummyInstant>>,
-            &FakeCryptoRng<XorShiftRng>,
-        ) {
+        ) -> (&IpLinkDeviceState<DummyInstant, EthernetDeviceState>, &FakeCryptoRng<XorShiftRng>)
+        {
             let (state, rng) = self.get_states_with((), ());
             (&state.state, rng)
         }
@@ -1673,7 +1666,7 @@ mod tests {
             _id0: DummyDeviceId,
             _id1: (),
         ) -> (
-            &mut IpLinkDeviceState<DummyInstant, EthernetDeviceState<DummyInstant>>,
+            &mut IpLinkDeviceState<DummyInstant, EthernetDeviceState>,
             &mut FakeCryptoRng<XorShiftRng>,
         ) {
             let (state, rng) = self.get_states_mut_with((), ());
@@ -1689,12 +1682,8 @@ mod tests {
         type DeviceId = DummyDeviceId;
     }
 
-    impl
-        IpDeviceContext<
-            EthernetLinkDevice,
-            EthernetTimerId<DummyDeviceId>,
-            EthernetDeviceState<DummyInstant>,
-        > for DummyCtx
+    impl IpDeviceContext<EthernetLinkDevice, EthernetTimerId<DummyDeviceId>, EthernetDeviceState>
+        for DummyCtx
     {
         fn is_router_device<I: Ip>(&self, _device: DummyDeviceId) -> bool {
             unimplemented!()
@@ -1740,7 +1729,7 @@ mod tests {
             DUMMY_CONFIG_V4.local_mac,
             Ipv6::MINIMUM_LINK_MTU.into(),
         )
-        .build::<DummyInstant>();
+        .build();
         let ip = IpAddr::V4(DUMMY_CONFIG_V4.local_ip.get());
         assert_matches!(state.add_pending_frame(ip, Buf::new(vec![1], ..)), None);
         assert_matches!(state.add_pending_frame(ip, Buf::new(vec![2], ..)), None);

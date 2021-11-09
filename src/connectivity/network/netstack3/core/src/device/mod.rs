@@ -20,7 +20,7 @@ use net_types::ethernet::Mac;
 use net_types::ip::{
     AddrSubnet, Ip, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Ipv6SourceAddr,
 };
-use net_types::{LinkLocalUnicastAddr, MulticastAddr, SpecifiedAddr, UnicastAddr, Witness};
+use net_types::{MulticastAddr, SpecifiedAddr, UnicastAddr, Witness};
 use packet::{Buf, BufferMut, EmptyBuf, Serializer};
 use packet_formats::icmp::{mld::MldPacket, ndp::NdpPacket};
 use specialize_ip_macro::specialize_ip_address;
@@ -89,11 +89,8 @@ pub(crate) trait IpDeviceContext<D: LinkDevice, TimerId, State>:
 }
 
 impl<D: EventDispatcher>
-    IpDeviceContext<
-        EthernetLinkDevice,
-        EthernetTimerId<EthernetDeviceId>,
-        EthernetDeviceState<D::Instant>,
-    > for Ctx<D>
+    IpDeviceContext<EthernetLinkDevice, EthernetTimerId<EthernetDeviceId>, EthernetDeviceState>
+    for Ctx<D>
 {
     fn is_router_device<I: Ip>(&self, device: EthernetDeviceId) -> bool {
         is_router_device::<_, I>(self, device.into())
@@ -145,17 +142,14 @@ impl<B: BufferMut, D: BufferDispatcher<B>>
 }
 
 impl<D: EventDispatcher>
-    DualStateContext<
-        IpLinkDeviceState<D::Instant, EthernetDeviceState<D::Instant>>,
-        D::Rng,
-        EthernetDeviceId,
-    > for Ctx<D>
+    DualStateContext<IpLinkDeviceState<D::Instant, EthernetDeviceState>, D::Rng, EthernetDeviceId>
+    for Ctx<D>
 {
     fn get_states_with(
         &self,
         id0: EthernetDeviceId,
         _id1: (),
-    ) -> (&IpLinkDeviceState<D::Instant, EthernetDeviceState<D::Instant>>, &D::Rng) {
+    ) -> (&IpLinkDeviceState<D::Instant, EthernetDeviceState>, &D::Rng) {
         (self.state().device.ethernet.get(id0.0).unwrap().device(), self.dispatcher().rng())
     }
 
@@ -163,7 +157,7 @@ impl<D: EventDispatcher>
         &mut self,
         id0: EthernetDeviceId,
         _id1: (),
-    ) -> (&mut IpLinkDeviceState<D::Instant, EthernetDeviceState<D::Instant>>, &mut D::Rng) {
+    ) -> (&mut IpLinkDeviceState<D::Instant, EthernetDeviceState>, &mut D::Rng) {
         let (state, dispatcher) = self.state_and_dispatcher();
         (state.device.ethernet.get_mut(id0.0).unwrap().device_mut(), dispatcher.rng_mut())
     }
@@ -389,7 +383,7 @@ impl DeviceStateBuilder {
 
 /// The state associated with the device layer.
 pub(crate) struct DeviceLayerState<I: Instant> {
-    ethernet: IdMap<DeviceState<IpLinkDeviceState<I, EthernetDeviceState<I>>>>,
+    ethernet: IdMap<DeviceState<IpLinkDeviceState<I, EthernetDeviceState>>>,
     default_ndp_configs: ndp::NdpConfigurations,
 }
 
@@ -788,23 +782,7 @@ pub fn initialize_device<D: EventDispatcher>(ctx: &mut Ctx<D>, device: DeviceId)
     // All nodes should join the all-nodes multicast group.
     join_ip_multicast(ctx, device, Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS);
 
-    if self::is_router_device::<_, Ipv6>(ctx, device) {
-        // If the device is operating as a router, and it is configured to be an
-        // advertising interface, start sending periodic router advertisements.
-        if get_ndp_configurations(ctx, device)
-            .get_router_configurations()
-            .get_should_send_advertisements()
-        {
-            match device.protocol {
-                DeviceProtocol::Ethernet => {
-                    <Ctx<_> as NdpHandler<EthernetLinkDevice>>::start_advertising_interface(
-                        ctx,
-                        device.id.into(),
-                    )
-                }
-            }
-        }
-    } else {
+    if !self::is_router_device::<_, Ipv6>(ctx, device) {
         // RFC 4861 section 6.3.7, it implies only a host sends router
         // solicitation messages.
         match device.protocol {
@@ -1165,19 +1143,6 @@ pub(crate) fn get_ipv6_hop_limit<D: EventDispatcher>(ctx: &Ctx<D>, device: Devic
     }
 }
 
-/// Gets the IPv6 link-local address associated with this device.
-// TODO(brunodalbo) when our device model allows for multiple IPs we can have
-// a single function go get all the IP addresses associated with a device, which
-// would be cleaner and remove the need for this function.
-pub fn get_ipv6_link_local_addr<D: EventDispatcher>(
-    ctx: &Ctx<D>,
-    device: DeviceId,
-) -> Option<LinkLocalUnicastAddr<Ipv6Addr>> {
-    match device.protocol {
-        DeviceProtocol::Ethernet => self::ethernet::get_ipv6_link_local_addr(ctx, device.id.into()),
-    }
-}
-
 /// Determine if an IP Address is considered tentative on a device.
 ///
 /// Returns `true` if the address is tentative on a device; `false` otherwise.
@@ -1322,23 +1287,6 @@ fn set_ipv6_routing_enabled<D: EventDispatcher>(ctx: &mut Ctx<D>, device: Device
             // Now that `device` is a router, join the all-routers multicast
             // group.
             join_ip_multicast(ctx, device, Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS);
-
-            // If `device` has a link-local address, and is configured to be an
-            // advertising interface, start advertising.
-            if get_ipv6_link_local_addr(ctx, device).is_some()
-                && get_ndp_configurations(ctx, device)
-                    .get_router_configurations()
-                    .get_should_send_advertisements()
-            {
-                match device.protocol {
-                    DeviceProtocol::Ethernet => {
-                        <Ctx<_> as NdpHandler<EthernetLinkDevice>>::start_advertising_interface(
-                            ctx,
-                            device.id.into(),
-                        )
-                    }
-                }
-            }
         }
     } else {
         trace!("set_ipv6_routing_enabled: disabling IPv6 routing for device {:?}", device);
@@ -1349,24 +1297,6 @@ fn set_ipv6_routing_enabled<D: EventDispatcher>(ctx: &mut Ctx<D>, device: Device
         // before, then we would still be considered a host, so we wouldn't have
         // any periodic router advertisements to stop.
         if ip_routing {
-            // Make sure that the device was configured to send advertisements
-            // before stopping it. If it was never configured to stop
-            // advertisements, there should be nothing to stop.
-            if get_ipv6_link_local_addr(ctx, device).is_some()
-                && get_ndp_configurations(ctx, device)
-                    .get_router_configurations()
-                    .get_should_send_advertisements()
-            {
-                match device.protocol {
-                    DeviceProtocol::Ethernet => {
-                        <Ctx<_> as NdpHandler<EthernetLinkDevice>>::stop_advertising_interface(
-                            ctx,
-                            device.id.into(),
-                        )
-                    }
-                }
-            }
-
             // Now that `device` is a host, leave the all-routers multicast
             // group.
             leave_ip_multicast(ctx, device, Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS);
@@ -1487,6 +1417,7 @@ pub fn set_ndp_configurations<D: EventDispatcher>(
 }
 
 /// Gets the NDP Configurations for a `device`.
+#[cfg(test)]
 pub fn get_ndp_configurations<D: EventDispatcher>(
     ctx: &Ctx<D>,
     device: DeviceId,

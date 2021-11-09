@@ -1117,30 +1117,6 @@ where
         .map(|t| t.max(self.current_time))
     }
 
-    /// Runs the dummy network for `duration` time.
-    ///
-    /// Runs `step` until `duration` time has passed since the call of
-    /// `run_for`.
-    pub(crate) fn run_for(&mut self, duration: Duration) {
-        let start_time = self.current_time;
-        let end_time = start_time + duration;
-
-        while let Some(next_step) = self.next_step() {
-            if next_step <= end_time {
-                assert!(!self.step().is_idle());
-                assert!(self.current_time <= end_time);
-            } else {
-                break;
-            }
-        }
-
-        // Move time to the end time.
-        self.current_time = end_time;
-        for (_, ctx) in self.contexts.iter_mut() {
-            ctx.dispatcher.current_time = end_time;
-        }
-    }
-
     /// Runs the dummy network simulation until it is starved of events.
     ///
     /// Runs `step` until it returns a `StepResult` where `is_idle` is `true` or
