@@ -62,7 +62,9 @@ impl RootDir {
         let meta_far = blobfs.open_blob_for_read_no_describe(&hash).map_err(Error::OpenMetaFar)?;
 
         let reader = io_util::file::AsyncFile::from_proxy(Clone::clone(&meta_far));
-        let mut async_reader = AsyncReader::new(reader).await.map_err(Error::ArchiveReader)?;
+        let mut async_reader = AsyncReader::new(io_util::file::BufferedAsyncReadAt::new(reader))
+            .await
+            .map_err(Error::ArchiveReader)?;
         let reader_list = async_reader.list();
 
         let mut meta_files = HashMap::with_capacity(reader_list.size_hint().0);

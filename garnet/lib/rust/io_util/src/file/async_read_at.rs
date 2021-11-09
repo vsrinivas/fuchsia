@@ -20,9 +20,13 @@ use {
 };
 
 /// Trait for reading at a given offset asynchronously.
-/// This is basically futures::io::AsyncRead with an extra offset.
+/// This is basically `futures::io::AsyncRead` with an extra offset.
 pub trait AsyncReadAt {
-    /// Attempt to read at `offset` into `buf`, on success returns the number of bytes read.
+    /// Attempt to read at most `buf.len()` bytes starting at `offset` into `buf`. On success
+    /// returns the number of bytes read.
+    /// Contents of `buf` are only altered on success.
+    /// Reads of more than zero but fewer than `buf.len()` bytes do NOT indicate EOF.
+    /// Reads of zero bytes only occur if `buf.len() == 0` or EOF.
     fn poll_read_at(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,

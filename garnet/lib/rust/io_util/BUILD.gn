@@ -19,7 +19,9 @@ rustc_library("io_util") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:pin-project",
     "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:static_assertions",
     "//third_party/rust_crates:thiserror",
   ]
 
@@ -35,6 +37,7 @@ rustc_library("io_util") {
     "src/file/async_read_at.rs",
     "src/file/async_read_at_ext.rs",
     "src/file/async_reader.rs",
+    "src/file/buffered_async_read_at.rs",
     "src/lib.rs",
     "src/node.rs",
   ]

@@ -20,6 +20,8 @@ mod async_read_at;
 pub use async_read_at::{Adapter, AsyncFile, AsyncGetSize, AsyncGetSizeExt, AsyncReadAt};
 mod async_read_at_ext;
 pub use async_read_at_ext::AsyncReadAtExt;
+mod buffered_async_read_at;
+pub use buffered_async_read_at::BufferedAsyncReadAt;
 
 #[cfg(target_os = "fuchsia")]
 use {
