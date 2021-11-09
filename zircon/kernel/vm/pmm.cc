@@ -509,6 +509,32 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
   return ZX_OK;
 }
 
+void pmm_print_ppb_stats() {
+  uint64_t free_pages = pmm_count_free_pages();
+  uint64_t loaned_free_pages = pmm_count_loaned_free_pages();
+  uint64_t loaned_pages = pmm_count_loaned_pages();
+  uint64_t loan_cancelled_pages = pmm_count_loan_cancelled_pages();
+  uint64_t total_bytes = pmm_count_total_bytes();
+  uint64_t used_loaned_pages = pmm_count_loaned_used_pages();
+  printf(
+      "PPB stats:\n"
+      "  free pages: %" PRIu64 " free MiB: %" PRIu64
+      "\n"
+      "  loaned free pages: %" PRIu64 " loaned free MiB: %" PRIu64
+      "\n"
+      "  loaned pages: %" PRIu64 " loaned MiB: %" PRIu64
+      "\n"
+      "  used loaned pages: %" PRIu64 " used loaned MiB: %" PRIu64
+      "\n"
+      "  loan cancelled pages: %" PRIu64 " loan cancelled MIB: %" PRIu64
+      "\n"
+      "  total physical pages: %" PRIu64 " total MiB: %" PRIu64 "\n",
+      free_pages, free_pages * PAGE_SIZE / MB, loaned_free_pages,
+      loaned_free_pages * PAGE_SIZE / MB, loaned_pages, loaned_pages * PAGE_SIZE / MB,
+      used_loaned_pages, used_loaned_pages * PAGE_SIZE / MB, loan_cancelled_pages,
+      loan_cancelled_pages * PAGE_SIZE / MB, total_bytes / PAGE_SIZE, total_bytes / MB);
+}
+
 STATIC_COMMAND_START
 STATIC_COMMAND_MASKED("pmm", "physical memory manager", &cmd_pmm, CMD_AVAIL_ALWAYS)
 STATIC_COMMAND_END(pmm)
