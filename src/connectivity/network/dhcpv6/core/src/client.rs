@@ -423,6 +423,18 @@ fn compute_preferred_address_count(
     })
 }
 
+// Calculates the elapsed time since `start_time`, in centiseconds.
+fn elapsed_time_in_centisecs(start_time: Instant) -> u16 {
+    u16::try_from(
+        Instant::now()
+            .duration_since(start_time)
+            .as_millis()
+            .checked_div(ELAPSED_TIME_DENOMINATOR)
+            .expect("division should succeed, denominator is non-zero"),
+    )
+    .unwrap_or(u16::MAX)
+}
+
 /// Provides methods for handling state transitions from server discovery
 /// state.
 #[derive(Debug)]
@@ -508,14 +520,7 @@ impl ServerDiscovery {
 
         let elapsed_time = match self.first_solicit_time {
             None => 0,
-            Some(first_solicit_time) => u16::try_from(
-                Instant::now()
-                    .duration_since(first_solicit_time)
-                    .as_millis()
-                    .checked_div(ELAPSED_TIME_DENOMINATOR)
-                    .expect("division should succeed"),
-            )
-            .unwrap_or(u16::MAX),
+            Some(first_solicit_time) => elapsed_time_in_centisecs(first_solicit_time),
         };
         options.push(v6::DhcpOption::ElapsedTime(elapsed_time));
 
