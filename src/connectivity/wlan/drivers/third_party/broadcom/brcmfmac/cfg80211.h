@@ -391,7 +391,7 @@ enum brcmf_disconnect_mode {
 struct brcmf_cfg80211_info {
   struct brcmf_cfg80211_conf* conf;
   struct brcmf_btcoex_info* btcoex;
-  const wlanif_scan_req_t* scan_request;
+  bool ongoing_scan;
   mtx_t usr_sync;
   struct wl_cfg80211_bss_info* bss_info;
   struct brcmf_cfg80211_connect_info conn_info;
