@@ -18,23 +18,8 @@ pub enum Error {
     #[error(transparent)]
     Io(#[from] std::io::Error),
 
-    #[error("Selectors require a tree selector")]
-    MissingTreeSelector,
-
-    #[error("Selectors require a component selector")]
-    MissingComponentSelector,
-
-    #[error("Component selectors require at least one segment")]
-    EmptyComponentSelector,
-
-    #[error("String selectors must be string patterns or exact matches")]
-    InvalidStringSelector,
-
     #[error("Selector arguments must be structured or raw")]
     InvalidSelectorArgument,
-
-    #[error("Subtree selectors must have non-empty node_path vector")]
-    EmptySubtreeSelector,
 
     #[error("Property selectors must have non-empty node_path vector")]
     EmptyPropertySelectorNodePath,
@@ -42,17 +27,38 @@ pub enum Error {
     #[error("TreeSelector only supports property and subtree selection.")]
     InvalidTreeSelector,
 
-    #[error("String patterns cannot be empty.")]
-    EmptyStringPattern,
-
-    #[error("String pattern '{0}' failed verification. Errors: {1:?}")]
-    InvalidStringPattern(String, Vec<StringPatternError>),
-
     #[error("Recursive wildcards aren't allowed in this position")]
     RecursiveWildcardNotAllowed,
 
     #[error("Selecter fails verification due to unmatched escape character")]
     UnmatchedEscapeCharacter,
+
+    #[error(transparent)]
+    Validation(#[from] ValidationError),
+}
+
+#[derive(Debug, Error)]
+pub enum ValidationError {
+    #[error("Component selectors require at least one segment")]
+    EmptyComponentSelector,
+
+    #[error("Subtree selectors must have non-empty node_path vector")]
+    EmptySubtreeSelector,
+
+    #[error("String selectors must be string patterns or exact matches")]
+    InvalidStringSelector,
+
+    #[error("String pattern '{0}' failed verification. Errors: {1:?}")]
+    InvalidStringPattern(String, Vec<StringPatternError>),
+
+    #[error("Selectors require a tree selector")]
+    MissingTreeSelector,
+
+    #[error("Selectors require a component selector")]
+    MissingComponentSelector,
+
+    #[error("String patterns cannot be empty.")]
+    EmptyStringPattern,
 }
 
 #[derive(Debug)]

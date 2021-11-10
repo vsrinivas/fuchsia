@@ -33,6 +33,7 @@ rustc_library("selectors") {
     "src/selector_evaluator.rs",
     "src/selectors.rs",
     "src/types.rs",
+    "src/validate.rs",
   ]
 }
 

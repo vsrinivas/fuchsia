@@ -7,6 +7,8 @@ mod parser;
 mod selector_evaluator;
 mod selectors;
 mod types;
+mod validate;
 
 pub use error::*;
 pub use selectors::*;
+pub use validate::*;

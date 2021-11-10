@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{error::*, parser};
+use crate::{error::*, parser, validate::*};
 use anyhow::{self, format_err};
 use fidl_fuchsia_diagnostics::{
     self, ComponentSelector, PropertySelector, Selector, SelectorArgument, StringSelector,
     StringSelectorUnknown, SubtreeSelector, TreeSelector,
 };
-use lazy_static::lazy_static;
-use regex::{Regex, RegexSet};
+use regex::Regex;
 use regex_syntax;
 use std::borrow::Borrow;
 use std::fs;
@@ -64,174 +63,15 @@ pub fn contains_recursive_glob(component_selector: &ComponentSelector) -> bool {
     }
 }
 
-/// Validates a string pattern used in either a PropertySelector or a
-/// PathSelectorNode.
-/// string patterns:
-///    1) Require that the string not be empty.
-///    2) Require that the string not contain any
-///       glob symbols.
-///    3) Require that any escape characters have a matching character they
-///       are escaping.
-///    4) Require that there are no unescaped selector delimiters, `:`,
-///       or unescaped path delimiters, `/`.
-fn validate_string_pattern(string_pattern: &str) -> Result<(), Error> {
-    lazy_static! {
-        static ref STRING_PATTERN_VALIDATOR: RegexSet = RegexSet::new(&[
-            // No glob expressions allowed.
-            r#"([^\\]\*\*|^\*\*)"#,
-            // No unescaped selector delimiters allowed.
-            r#"([^\\]:|^:)"#,
-            // No unescaped path delimiters allowed.
-            r#"([^\\]/|^/)"#,
-        ]).unwrap();
-    }
-    if string_pattern.is_empty() {
-        return Err(Error::EmptyStringPattern);
-    }
-
-    let validator_matches = STRING_PATTERN_VALIDATOR.matches(string_pattern);
-    if validator_matches.matched_any() {
-        let mut errors = vec![];
-        if validator_matches.matched(0) {
-            errors.push(StringPatternError::UnescapedGlob);
-        }
-        if validator_matches.matched(1) {
-            errors.push(StringPatternError::UnescapedColon);
-        }
-        if validator_matches.matched(2) {
-            errors.push(StringPatternError::UnescapedForwardSlash);
-        }
-        return Err(Error::InvalidStringPattern(string_pattern.to_string(), errors));
-    }
-    Ok(())
-}
-
-fn validate_string_selector_allow_recursive_glob(
-    string_selector: &StringSelector,
-) -> Result<(), Error> {
-    match string_selector {
-        StringSelector::StringPattern(pattern) if pattern == RECURSIVE_WILDCARD_SYMBOL_STR => {
-            Ok(())
-        }
-        _ => validate_string_selector(string_selector),
-    }
-}
-
-fn validate_string_selector(string_selector: &StringSelector) -> Result<(), Error> {
-    match string_selector {
-        StringSelector::StringPattern(pattern) => validate_string_pattern(pattern),
-        //TODO(fxbug.dev/4601): What do we need to validate against exact matches?
-        StringSelector::ExactMatch(_) => Ok(()),
-        _ => Err(Error::InvalidStringSelector),
-    }
-}
-
-/// Validates all PathSelectorNodes within `path_selection_vector`.
-/// PathSelectorNodes:
-///     1) Require that all elements of the vector are valid per
-///        Selectors::validate_string_pattern specification.
-///     2) Require a non-empty vector.
-fn validate_tree_path_selection_vector(
-    path_selection_vector: &[StringSelector],
-) -> Result<(), Error> {
-    for path_selection_node in path_selection_vector {
-        validate_string_selector(path_selection_node)?;
-    }
-    Ok(())
-}
-
-fn validate_component_path_selection_vector(
-    path_selection_vector: &[StringSelector],
-) -> Result<(), Error> {
-    let last_idx = path_selection_vector.len() - 1;
-    for path_selection_node in path_selection_vector[..last_idx].iter() {
-        validate_string_selector(path_selection_node)?;
-    }
-    validate_string_selector_allow_recursive_glob(&path_selection_vector[last_idx])
-}
-
-/// Validates a TreeSelector:
-/// TreeSelectors:
-///    1) Require a present node_path selector field.
-///    2) Require that all entries within the node_path are valid per
-///       Selectors::validate_node_path specification.
-///    3) Require that the target_properties field, if it is present,
-///       is valid per Selectors::validate_string_pattern specification.
-fn validate_tree_selector(tree_selector: &TreeSelector) -> Result<(), Error> {
-    match tree_selector {
-        TreeSelector::SubtreeSelector(subtree_selector) => {
-            if subtree_selector.node_path.is_empty() {
-                return Err(Error::EmptySubtreeSelector);
-            }
-            validate_tree_path_selection_vector(&subtree_selector.node_path)?;
-        }
-        TreeSelector::PropertySelector(property_selector) => {
-            if property_selector.node_path.is_empty() {
-                return Err(Error::EmptyPropertySelectorNodePath);
-            }
-
-            validate_tree_path_selection_vector(&property_selector.node_path)?;
-
-            match &property_selector.target_properties {
-                StringSelector::StringPattern(pattern) => match validate_string_pattern(pattern) {
-                    Ok(_) => {}
-                    Err(e) => {
-                        return Err(e);
-                    }
-                },
-                StringSelector::ExactMatch(_) => {
-                    // TODO(fxbug.dev/4601): What do we need to validate for exact match strings?
-                }
-                _ => {
-                    return Err(Error::InvalidStringSelector);
-                }
-            }
-        }
-        _ => return Err(Error::InvalidTreeSelector),
-    }
-
-    Ok(())
-}
-
-/// Validates a ComponentSelector:
-/// ComponentSelectors:
-///    1) Require a present component_moniker field.
-///    2) Require that all entries within the component_moniker vector are valid per
-///       Selectors::validate_node_path specification.
-fn validate_component_selector(component_selector: &ComponentSelector) -> Result<(), Error> {
-    match &component_selector.moniker_segments {
-        Some(moniker) => {
-            if moniker.is_empty() {
-                return Err(Error::EmptyComponentSelector);
-            }
-
-            validate_component_path_selection_vector(moniker)
-        }
-        None => Err(Error::EmptyComponentSelector),
-    }
-}
-
 /// Extracts and validates or parses a selector from a `SelectorArgument`.
 pub fn take_from_argument(arg: SelectorArgument) -> Result<Selector, Error> {
     match arg {
         SelectorArgument::StructuredSelector(s) => {
-            validate_selector(&s)?;
+            s.validate()?;
             Ok(s)
         }
         SelectorArgument::RawSelector(r) => parse_selector(&r),
         _ => Err(Error::InvalidSelectorArgument),
-    }
-}
-
-pub fn validate_selector(selector: &Selector) -> Result<(), Error> {
-    match (&selector.component_selector, &selector.tree_selector) {
-        (Some(component_selector), Some(tree_selector)) => {
-            validate_component_selector(component_selector)?;
-            validate_tree_selector(tree_selector)?;
-            Ok(())
-        }
-        (None, _) => Err(Error::MissingComponentSelector),
-        (_, None) => Err(Error::MissingTreeSelector),
     }
 }
 
@@ -584,7 +424,7 @@ pub fn match_component_moniker_against_selector<T>(
 where
     T: AsRef<str> + std::string::ToString,
 {
-    validate_selector(selector)?;
+    selector.validate()?;
 
     if moniker.is_empty() {
         return Err(format_err!(
@@ -620,7 +460,7 @@ where
         .iter()
         .map(|selector| {
             let component_selector = selector.borrow();
-            validate_selector(component_selector)?;
+            component_selector.validate()?;
             Ok(component_selector)
         })
         .collect::<Result<Vec<&Selector>, anyhow::Error>>();
@@ -657,7 +497,7 @@ where
         .iter()
         .map(|selector| {
             let component_selector = selector.borrow();
-            validate_component_selector(component_selector)?;
+            component_selector.validate()?;
             Ok(component_selector)
         })
         .collect::<Result<Vec<&ComponentSelector>, anyhow::Error>>();
@@ -680,7 +520,7 @@ where
 /// simply "moniker" you will likely see "moniker:root" as many clients implicitly append "root" if
 /// it is not present (e.g. iquery).
 pub fn selector_to_string(selector: Selector) -> Result<String, anyhow::Error> {
-    validate_selector(&selector)?;
+    selector.validate()?;
 
     let component_selector =
         selector.component_selector.ok_or_else(|| format_err!("component selector missing"))?;
@@ -980,110 +820,6 @@ a:b:c
                 }
                 _ => unreachable!(),
             }
-        }
-    }
-
-    lazy_static! {
-        static ref SHARED_PASSING_TEST_CASES: Vec<(Vec<&'static str>, &'static str)> = {
-            vec![
-                (vec![r#"abc"#, r#"def"#, r#"g"#], r#"bob"#),
-                (vec![r#"\**"#], r#"\**"#),
-                (vec![r#"\/"#], r#"\/"#),
-                (vec![r#"\:"#], r#"\:"#),
-                (vec![r#"asda\\\:"#], r#"a"#),
-                (vec![r#"asda*"#], r#"a"#),
-            ]
-        };
-        static ref SHARED_FAILING_TEST_CASES: Vec<(Vec<&'static str>, &'static str)> = {
-            vec![
-                // Slashes aren't allowed in path nodes.
-                (vec![r#"/"#], r#"a"#),
-                // Colons aren't allowed in path nodes.
-                (vec![r#":"#], r#"a"#),
-                // Checking that path nodes ending with offlimits
-                // chars are still identified.
-                (vec![r#"asdasd:"#], r#"a"#),
-                (vec![r#"a**"#], r#"a"#),
-                // Checking that path nodes starting with offlimits
-                // chars are still identified.
-                (vec![r#":asdasd"#], r#"a"#),
-                (vec![r#"**a"#], r#"a"#),
-                // Neither moniker segments nor node paths
-                // are allowed to be empty.
-                (vec![], r#"bob"#),
-            ]
-        };
-    }
-
-    #[fuchsia::test]
-    fn tree_selector_validator_test() {
-        let unique_failing_test_cases = vec![
-            // All failing validators due to property selectors are
-            // unique since the component validator doesnt look at them.
-            (vec![r#"a"#], r#"**"#),
-            (vec![r#"a"#], r#"/"#),
-        ];
-
-        fn create_tree_selector(node_path: &Vec<&str>, property: &str) -> TreeSelector {
-            let node_path = node_path
-                .iter()
-                .map(|path_node_str| StringSelector::StringPattern(path_node_str.to_string()))
-                .collect::<Vec<StringSelector>>();
-            let target_properties = StringSelector::StringPattern(property.to_string());
-            TreeSelector::PropertySelector(PropertySelector { node_path, target_properties })
-        }
-
-        for (node_path, property) in SHARED_PASSING_TEST_CASES.iter() {
-            let tree_selector = create_tree_selector(node_path, property);
-            assert!(validate_tree_selector(&tree_selector).is_ok());
-        }
-
-        for (node_path, property) in SHARED_FAILING_TEST_CASES.iter() {
-            let tree_selector = create_tree_selector(node_path, property);
-            assert!(
-                validate_tree_selector(&tree_selector).is_err(),
-                "Failed to validate tree selector: {:?}",
-                tree_selector
-            );
-        }
-
-        for (node_path, property) in unique_failing_test_cases.iter() {
-            let tree_selector = create_tree_selector(node_path, property);
-            assert!(
-                validate_tree_selector(&tree_selector).is_err(),
-                "Failed to validate tree selector: {:?}",
-                tree_selector
-            );
-        }
-    }
-
-    #[fuchsia::test]
-    fn component_selector_validator_test() {
-        fn create_component_selector(component_moniker: &Vec<&str>) -> ComponentSelector {
-            let mut component_selector = ComponentSelector::EMPTY;
-            component_selector.moniker_segments = Some(
-                component_moniker
-                    .into_iter()
-                    .map(|path_node_str| StringSelector::StringPattern(path_node_str.to_string()))
-                    .collect::<Vec<StringSelector>>(),
-            );
-            component_selector
-        }
-
-        for (component_moniker, _) in SHARED_PASSING_TEST_CASES.iter() {
-            let component_selector = create_component_selector(component_moniker);
-
-            assert!(validate_component_selector(&component_selector).is_ok());
-        }
-
-        for (component_moniker, _) in SHARED_FAILING_TEST_CASES.iter() {
-            let component_selector = create_component_selector(component_moniker);
-
-            assert!(
-                validate_component_selector(&component_selector).is_err(),
-                "Failed to validate component selector: {:?}",
-                component_selector
-            );
         }
     }
 

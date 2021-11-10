@@ -15,7 +15,7 @@ use {
     num_derive::{FromPrimitive, ToPrimitive},
     num_traits::bounds::Bounded,
     regex::RegexSet,
-    selectors,
+    selectors::{self, ValidateExt},
     serde::Deserialize,
     std::{
         borrow::Borrow,
@@ -709,7 +709,7 @@ impl<T: Borrow<Selector>> TryFrom<&[T]> for InspectHierarchyMatcher {
             .iter()
             .map(|selector| {
                 let component_selector = selector.borrow();
-                selectors::validate_selector(component_selector).map_err(Error::Selectors)?;
+                component_selector.validate().map_err(|e| Error::Selectors(e.into()))?;
 
                 // Unwrapping is safe here since we validate the selector above.
                 match component_selector.tree_selector.as_ref().unwrap() {
