@@ -34,7 +34,6 @@
 #include "src/developer/memory/metrics/printer.h"
 #include "src/developer/memory/monitor/high_water.h"
 #include "src/developer/memory/monitor/memory_metrics_registry.cb.h"
-#include "src/developer/memory/monitor/pressure_observer.h"
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fxl/command_line.h"
@@ -522,17 +521,6 @@ void Monitor::GetDigest(const memory::Capture& capture, memory::Digest* digest) 
 }
 
 void Monitor::PressureLevelChanged(Level level) {
-  if (level == kImminentOOM) {
-    // Force the current state to be written as the high_waters. Later is better.
-    memory::Capture c;
-    auto s = Capture::GetCapture(&c, capture_state_, KMEM);
-    if (s == ZX_OK) {
-      high_water_->RecordHighWater(c);
-      high_water_->RecordHighWaterDigest(c);
-    } else {
-      FX_LOGS(ERROR) << "Error getting capture: " << zx_status_get_string(s);
-    }
-  }
   if (level == level_) {
     return;
   }

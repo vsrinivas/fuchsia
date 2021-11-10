@@ -4,10 +4,8 @@
 
 #include "src/developer/memory/monitor/high_water.h"
 
-#include <fcntl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/syslog/cpp/macros.h>
-#include <unistd.h>
 #include <zircon/status.h>
 
 #include <fstream>
@@ -50,32 +48,20 @@ HighWater::HighWater(const std::string& dir, zx::duration poll_frequency,
 void HighWater::RecordHighWater(const Capture& capture) {
   Summary s(capture, &namer_);
   std::ofstream out;
-  auto path = files::JoinPath(dir_, kLatest);
-  out.open(path);
+  out.open(files::JoinPath(dir_, kLatest));
   Printer p(out);
   p.PrintSummary(s, VMO, memory::SORTED);
   out.close();
-
-  // Force a sync to filesystem.
-  auto out_fd = open(path.c_str(), O_WRONLY);
-  fsync(out_fd);
-  close(out_fd);
 }
 
 void HighWater::RecordHighWaterDigest(const Capture& capture) {
   Digest digest;
   digest_cb_(capture, &digest);
   std::ofstream out;
-  auto path = files::JoinPath(dir_, kLatestDigest);
-  out.open(path);
+  out.open(files::JoinPath(dir_, kLatestDigest));
   Printer p(out);
   p.PrintDigest(digest);
   out.close();
-
-  // Force a sync to filesystem.
-  auto out_fd = open(path.c_str(), O_WRONLY);
-  fsync(out_fd);
-  close(out_fd);
 }
 
 std::string HighWater::GetHighWater() const { return GetFile(kLatest); }
