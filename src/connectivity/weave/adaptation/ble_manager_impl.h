@@ -90,7 +90,7 @@ class BLEManagerImpl final : public BLEManager,
   bool SendReadResponse(BLE_CONNECTION_OBJECT conId, BLE_READ_REQUEST_CONTEXT requestContext,
                         const WeaveBleUUID *svcId, const WeaveBleUUID *charId) override {
     return false;
-  };
+  }
 
   // ===== Members that implement virtual methods on BleApplicationDelegate.
 

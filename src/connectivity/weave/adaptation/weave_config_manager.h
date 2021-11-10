@@ -8,7 +8,6 @@
 #include <string>
 
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <Weave/Core/WeaveError.h>
 #include <Weave/DeviceLayer/WeaveDeviceError.h>
 #pragma GCC diagnostic pop

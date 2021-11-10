@@ -6,7 +6,6 @@
 #define SRC_CONNECTIVITY_WEAVE_ADAPTATION_NETWORK_PROVISIONING_SERVER_IMPL_H_
 
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <Weave/DeviceLayer/internal/GenericNetworkProvisioningServerImpl.h>
 #pragma GCC diagnostic pop
 

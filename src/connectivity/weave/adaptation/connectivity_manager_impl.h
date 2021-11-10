@@ -5,7 +5,6 @@
 #define SRC_CONNECTIVITY_WEAVE_ADAPTATION_CONNECTIVITY_MANAGER_IMPL_H_
 
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <Weave/DeviceLayer/ConnectivityManager.h>
 #include <Weave/DeviceLayer/internal/GenericConnectivityManagerImpl.h>
 #if WEAVE_DEVICE_CONFIG_ENABLE_WOBLE

@@ -12,7 +12,6 @@
 
 // clang-format off
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <Weave/DeviceLayer/PlatformManager.h>
 #include <Weave/DeviceLayer/ConfigurationManager.h>
 #pragma GCC diagnostic pop

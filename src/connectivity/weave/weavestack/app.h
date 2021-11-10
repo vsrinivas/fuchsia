@@ -15,7 +15,6 @@
 #include <memory>
 
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <Weave/Core/WeaveError.h>
 #pragma GCC diagnostic pop
 #include <src/lib/fsl/tasks/fd_waiter.h>

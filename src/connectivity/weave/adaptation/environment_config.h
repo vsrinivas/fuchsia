@@ -5,7 +5,6 @@
 #define SRC_CONNECTIVITY_WEAVE_ADAPTATION_ENVIRONMENT_CONFIG_H_
 
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <Weave/DeviceLayer/internal/WeaveDeviceLayerInternal.h>
 #pragma GCC diagnostic pop
 

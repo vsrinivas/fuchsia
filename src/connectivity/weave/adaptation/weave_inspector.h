@@ -7,7 +7,6 @@
 #include <lib/sys/inspect/cpp/component.h>
 
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <Weave/DeviceLayer/PlatformManager.h>
 #pragma GCC diagnostic pop
 

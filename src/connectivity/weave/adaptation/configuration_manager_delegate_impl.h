@@ -11,7 +11,6 @@
 #include <lib/sys/cpp/component_context.h>
 
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <Weave/DeviceLayer/ConfigurationManager.h>
 #pragma GCC diagnostic pop
 
