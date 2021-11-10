@@ -52,7 +52,7 @@
 #define BRCMF_DISCONNECT_TIMER_DUR_MS     ZX_MSEC(50) /* disconnect timer dur */
 #define BRCMF_SIGNAL_REPORT_TIMER_DUR_MS  ZX_MSEC(1000) /* Signal report dur */
 #define BRCMF_AP_START_TIMER_DUR_MS       ZX_MSEC(1000) /* AP start timer dur */
-#define BRCMF_CONNECT_TIMER_DUR_MS        ZX_MSEC(1500) /*connect timer dur*/
+#define BRCMF_CONNECT_TIMER_DUR_MS        ZX_MSEC(3000) /*connect timer dur*/
 #define BRCMF_CONNECT_LOG_DUR             ZX_SEC(30) /* 30 seconds */
 // Connect log will be printed out in the Signal report timer handler every 5 minutes.
 #define BRCMF_CONNECT_LOG_COUNT           (BRCMF_CONNECT_LOG_DUR / BRCMF_SIGNAL_REPORT_TIMER_DUR_MS)

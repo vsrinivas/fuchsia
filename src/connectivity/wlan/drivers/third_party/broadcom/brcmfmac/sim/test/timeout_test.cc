@@ -87,11 +87,19 @@ TEST_F(TimeoutTest, AssocTimeout) {
 
   client_ifc_.AssociateWith(ap, zx::msec(10));
 
+  // Check 500 ms before connection timer is expected to fire
+  static constexpr zx::duration kTempDuration =
+      zx::duration(BRCMF_CONNECT_TIMER_DUR_MS - ZX_MSEC(500));
+  env_->Run(kTempDuration);
+  // Assoc attempts should be 1 but assoc results should be 0.
+  EXPECT_EQ(client_ifc_.stats_.assoc_attempts, 1U);
+  const auto assoc_results = &client_ifc_.stats_.assoc_results;
+  EXPECT_EQ(assoc_results->size(), 0U);
+  // run for the reminder of the test duration
   env_->Run(kTestDuration);
 
   // Receiving assoc_resp in SME with error status.
   EXPECT_EQ(client_ifc_.stats_.assoc_attempts, 1U);
-  const auto assoc_results = &client_ifc_.stats_.assoc_results;
   EXPECT_EQ(assoc_results->size(), 1U);
   EXPECT_EQ(assoc_results->front().result_code, STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
 }
