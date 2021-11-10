@@ -6,6 +6,10 @@ group("driver") {
   deps = [ "//src/devices/bin/driver_host:driver" ]
 }
 
+group("driver_runtime") {
+  deps = [ "//src/devices/bin/driver_runtime" ]
+}
+
 group("tests") {
   testonly = true
 }

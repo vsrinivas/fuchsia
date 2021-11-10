@@ -3,6 +3,7 @@ libclang_rt.asan.so
 libcrypto.so
 libc.so
 libdriver.so
+libdriver_runtime.so
 libfdio.so
 libssl.so
 libsyslog.so

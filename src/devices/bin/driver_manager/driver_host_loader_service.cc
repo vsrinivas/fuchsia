@@ -13,12 +13,25 @@ namespace {
 
 // TODO(fxbug.dev/75983): Read this list from a config file instead of having an array.
 constexpr std::array kDriverAllowlist{
-    "libsyslog-compat.so", "libdriver.so",         "libasync-default.so",
-    "libclang_rt.asan.so", "libcrypto.so",         "libc.so",
-    "libdriver.so",        "libfdio.so",           "libssl.so",
-    "libsyslog.so",        "libtrace-engine.so",   "libbackend_fuchsia_globals.so",
-    "libzircon.so",        "libtee-client-api.so", "ld.so.1",
-    "libc++.so.2",         "libc++abi.so.1",       "libunwind.so.1",
+    "libsyslog-compat.so",
+    "libdriver.so",
+    "libasync-default.so",
+    "libclang_rt.asan.so",
+    "libcrypto.so",
+    "libc.so",
+    "libdriver.so",
+    "libdriver_runtime.so",
+    "libfdio.so",
+    "libssl.so",
+    "libsyslog.so",
+    "libtrace-engine.so",
+    "libbackend_fuchsia_globals.so",
+    "libzircon.so",
+    "libtee-client-api.so",
+    "ld.so.1",
+    "libc++.so.2",
+    "libc++abi.so.1",
+    "libunwind.so.1",
 };
 
 // Check if the driver is in the allowlist.
