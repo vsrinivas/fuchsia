@@ -9,6 +9,7 @@ go_library("clock") {
   sources = [
     "clock.go",
     "clock_test.go",
+    "doc.go",
   ]
 }
 

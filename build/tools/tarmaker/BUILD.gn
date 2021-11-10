@@ -10,6 +10,7 @@ go_library("lib") {
   sources = [
     "main.go",
     "pargzip.go",
+    "pargzip_test.go",
   ]
 }
 

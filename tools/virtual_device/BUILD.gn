@@ -11,6 +11,7 @@ go_library("virtual_device") {
     "aemu.go",
     "common.go",
     "common_test.go",
+    "doc.go",
     "qemu.go",
     "qemu_test.go",
   ]

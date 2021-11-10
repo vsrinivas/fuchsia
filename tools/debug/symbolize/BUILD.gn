@@ -21,6 +21,7 @@ go_library("symbolize_lib") {
     "mapstore.go",
     "mock_elf_test.go",
     "parser.go",
+    "parser_test.go",
     "pipeline.go",
     "presenter.go",
     "regextokenizer.go",
