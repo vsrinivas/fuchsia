@@ -44,7 +44,7 @@ fuchsia_component("pkgdir-integration-test") {
 fuchsia_component("test-root") {
   testonly = true
   manifest = "meta/test-root.cml"
-  deps = [ "//src/storage/testing:driver_test_realm" ]
+  deps = [ "//src/storage/testing:storage_driver_test_realm" ]
 }
 
 fuchsia_test_package("pkgdir-integration-tests") {

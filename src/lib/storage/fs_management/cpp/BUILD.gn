@@ -99,7 +99,7 @@ test("fs-management-test") {
     "//src/storage/gpt",
     "//src/storage/memfs",
     "//src/storage/memfs:memfs-cpp",
-    "//src/storage/testing:driver_test_realm",
+    "//src/storage/testing:storage_driver_test_realm",
     "//src/storage/testing:storage_driver_test_support",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/async",

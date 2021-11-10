@@ -8,7 +8,7 @@ template("storage_driver_test_realm_v2_component") {
   fuchsia_unittest_component(target_name) {
     forward_variables_from(invoker, "*")
     deps += [
-      "//src/storage/testing:driver_test_realm",
+      "//src/storage/testing:storage_driver_test_realm",
       "//src/storage/testing:storage_test_includes",
     ]
   }

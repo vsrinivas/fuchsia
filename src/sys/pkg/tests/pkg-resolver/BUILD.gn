@@ -742,7 +742,7 @@ fuchsia_test_package("pkg-resolver-integration-tests") {
     ":empty-repo",
 
     # For ramdisk devices, needed to back blobfs (which in turn backs pkgfs and pkg-cache)
-    "//src/storage/testing:driver_test_realm",
+    "//src/storage/testing:storage_driver_test_realm",
     "//src/sys/pkg/bin/pkg-cache:component",
     "//src/sys/pkg/bin/pkg-local-mirror",
 

@@ -1,5 +1,6 @@
 {
     include: [
+        "//src/storage/testing/driver_test_realm/meta/client.shard.cml",
         "//src/sys/test_runners/gtest/default.shard.cml",
         "inspect/client.shard.cml",
         "syslog/client.shard.cml",
@@ -7,13 +8,6 @@
     program: {
         binary: "test/integration_test",
     },
-    children: [
-        {
-            name: "driver-test-realm",
-            url: "#meta/storage_driver_test_realm.cm",
-            startup: "eager",
-        },
-    ],
     use: [
         {
             protocol: [
@@ -28,23 +22,6 @@
                 "rw*",
             ],
             path: "/tmp",
-        },
-        {
-            directory: "dev",
-            from: "#driver-test-realm",
-            rights: [ "r*" ],
-            path: "/dev",
-        },
-    ],
-    offer: [
-        {
-            protocol: [
-                "fuchsia.logger.LogSink",
-                "fuchsia.process.Launcher",
-                "fuchsia.sys.Launcher",
-            ],
-            from: "parent",
-            to: "#driver-test-realm",
         },
     ],
 }

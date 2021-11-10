@@ -1,5 +1,6 @@
 {
     include: [
+        "//src/storage/testing/driver_test_realm/meta/client.shard.cml",
         "//src/sys/test_runners/gtest/default.shard.cml",
         "//src/sys/test_runners/tmp_storage.shard.cml",
         "inspect/client.shard.cml",
@@ -8,36 +9,12 @@
     program: {
         binary: "test/fvm_extractor_unit_test",
     },
-    children: [
-        {
-            name: "driver-test-realm",
-            url: "#meta/storage_driver_test_realm.cm",
-            startup: "eager",
-        },
-    ],
     use: [
         {
             protocol: [
                 "fuchsia.process.Launcher",
                 "fuchsia.sys.Launcher",
             ],
-        },
-        {
-            directory: "dev",
-            from: "#driver-test-realm",
-            rights: [ "r*" ],
-            path: "/dev",
-        },
-    ],
-    offer: [
-        {
-            protocol: [
-                "fuchsia.logger.LogSink",
-                "fuchsia.process.Launcher",
-                "fuchsia.sys.Launcher",
-            ],
-            from: "parent",
-            to: "#driver-test-realm",
         },
     ],
 }

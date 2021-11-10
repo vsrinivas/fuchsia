@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [
-        "//sdk/lib/driver_test_realm/meta/client.shard.cml",
-        "//sdk/lib/driver_test_realm/platform/meta/client.shard.cml",
-    ],
+    include: [ "//src/storage/testing/driver_test_realm/meta/client.shard.cml" ],
     children: [
         {
             name: "pkg_harness",
@@ -19,7 +16,7 @@
     offer: [
         {
             directory: "dev",
-            from: "#driver_test_realm",
+            from: "#storage_driver_test_realm",
             to: [ "#pkg_harness" ],
         },
         {

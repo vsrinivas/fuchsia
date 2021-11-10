@@ -1,0 +1,42 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/test.gni")
+import("//tools/cmc/build/expect_includes.gni")
+
+group("driver_test_realm") {
+  testonly = true
+  deps = [
+    ":client_includes",
+    ":component",
+    "//src/devices/bus/drivers/platform",
+    "//src/storage/testing:storage_drivers",
+  ]
+}
+
+expect_includes("client_includes") {
+  includes = [ "meta/client.shard.cml" ]
+}
+
+executable("bin") {
+  testonly = true
+  output_name = "storage_driver_test_realm"
+  sources = [ "storage_driver_test_realm.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_llcpp",
+    "//src/devices/lib/device-watcher/cpp",
+    "//zircon/system/ulib/service:service-llcpp",
+  ]
+}
+
+fuchsia_component("component") {
+  testonly = true
+  component_name = "storage_driver_test_realm"
+  manifest = "meta/storage_driver_test_realm.cml"
+  deps = [
+    ":bin",
+    "//sdk/lib/driver_test_realm",
+  ]
+}

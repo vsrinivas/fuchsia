@@ -3,10 +3,9 @@
 // found in the LICENSE file.
 {
     include: [
-        "//sdk/lib/driver_test_realm/meta/client.shard.cml",
-        "//sdk/lib/driver_test_realm/platform/meta/client.shard.cml",
         "//sdk/lib/inspect/client.shard.cml",
         "//sdk/lib/syslog/client.shard.cml",
+        "//src/storage/testing/driver_test_realm/meta/client.shard.cml",
         "//src/sys/test_runners/gtest/default.shard.cml",
     ],
     program: {
