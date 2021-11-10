@@ -29,6 +29,8 @@ rustc_library("lib") {
   with_unit_tests = true
   deps = [
     "//sdk/fidl/fuchsia.accessibility:fuchsia.accessibility-rustc",
+    "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
+    "//sdk/fidl/fuchsia.input.keymap:fuchsia.input.keymap-rustc",
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
@@ -64,12 +66,14 @@ rustc_library("lib") {
     "src/interface_tests/factory_reset_tests.rs",
     "src/interface_tests/input_tests.rs",
     "src/interface_tests/intl_tests.rs",
+    "src/interface_tests/keyboard_tests.rs",
     "src/interface_tests/light_tests.rs",
     "src/interface_tests/night_mode_tests.rs",
     "src/interface_tests/privacy_tests.rs",
     "src/interface_tests/setup_tests.rs",
     "src/interface_tests/volume_policy_tests.rs",
     "src/intl.rs",
+    "src/keyboard.rs",
     "src/lib.rs",
     "src/light.rs",
     "src/night_mode.rs",

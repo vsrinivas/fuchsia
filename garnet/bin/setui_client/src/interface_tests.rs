@@ -6,7 +6,8 @@ use fidl_fuchsia_media::AudioRenderUsage;
 use fidl_fuchsia_settings::{
     AccessibilityRequestStream, AudioRequestStream, DisplayRequestStream,
     DoNotDisturbRequestStream, FactoryResetRequestStream, InputRequestStream, IntlRequestStream,
-    LightRequestStream, NightModeRequestStream, PrivacyRequestStream, SetupRequestStream,
+    KeyboardRequestStream, LightRequestStream, NightModeRequestStream, PrivacyRequestStream,
+    SetupRequestStream,
 };
 use fidl_fuchsia_settings_policy::VolumePolicyControllerRequestStream;
 
@@ -18,6 +19,7 @@ enum Services {
     FactoryReset(FactoryResetRequestStream),
     Input(InputRequestStream),
     Intl(IntlRequestStream),
+    Keyboard(KeyboardRequestStream),
     Light(LightRequestStream),
     NightMode(NightModeRequestStream),
     Privacy(PrivacyRequestStream),
@@ -170,6 +172,7 @@ mod do_not_disturb_tests;
 mod factory_reset_tests;
 mod input_tests;
 mod intl_tests;
+mod keyboard_tests;
 mod light_tests;
 mod night_mode_tests;
 mod privacy_tests;

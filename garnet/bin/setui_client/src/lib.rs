@@ -14,6 +14,7 @@ pub mod do_not_disturb;
 pub mod factory_reset;
 pub mod input;
 pub mod intl;
+pub mod keyboard;
 pub mod light;
 pub mod night_mode;
 pub mod privacy;
@@ -47,6 +48,7 @@ pub enum SettingClientSubcommands {
     // For simplicity, currently only supports setting one input device at a time.
     Input2(InputDeviceOptions),
     Intl(Intl),
+    Keyboard(Keyboard),
     Light(LightGroup),
     NightMode(NightMode),
     Privacy(Privacy),
@@ -272,6 +274,15 @@ pub struct Intl {
     #[argh(switch)]
     /// if set, this flag will set locales as an empty list. Overrides the locales arguments
     clear_locales: bool,
+}
+
+#[derive(FromArgs, Debug)]
+#[argh(subcommand, name = "keyboard")]
+/// get or set keyboard settings
+pub struct Keyboard {
+    /// keymap selection for the keyboard. Valid options are UsQwerty, FrAzerty, and UsDvorak.
+    #[argh(option, short = 'k', from_str_fn(str_to_keymap))]
+    keymap: Option<fidl_fuchsia_input::KeymapId>,
 }
 
 #[derive(FromArgs, Debug, Clone)]
@@ -565,6 +576,15 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             )
             .await?;
         }
+        SettingClientSubcommands::Keyboard(Keyboard { keymap }) => {
+            let keyboard_service = connect_to_protocol::<fidl_fuchsia_settings::KeyboardMarker>()
+                .context("Failed to connect to keyboard service")?;
+            utils::handle_mixed_result(
+                "Keyboard",
+                keyboard::command(keyboard_service, keymap).await,
+            )
+            .await?;
+        }
     }
     Ok(())
 }
@@ -793,6 +813,16 @@ fn str_to_audio_source(
         }
         _ => Err(String::from("Couldn't parse audio source type")),
     }
+}
+
+/// Converts a single string of keymap id value into a fidl_fuchsia_input::KeymapId.
+fn str_to_keymap(src: &str) -> Result<fidl_fuchsia_input::KeymapId, String> {
+    Ok(match src.to_lowercase().as_str() {
+        "usqwerty" => fidl_fuchsia_input::KeymapId::UsQwerty,
+        "frazerty" => fidl_fuchsia_input::KeymapId::FrAzerty,
+        "usdvorak" => fidl_fuchsia_input::KeymapId::UsDvorak,
+        _ => return Err(String::from("Couldn't parse keymap id.")),
+    })
 }
 
 #[cfg(test)]
