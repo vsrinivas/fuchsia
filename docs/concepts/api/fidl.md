@@ -61,7 +61,7 @@ name "C" instead of the method name "B" for calculating the hash:
 Selectors can also be used to maintain backwards compatibility with the wire
 format in cases where developers wish to change the name of a method.
 
-## Library Structure
+## Library structure
 
 Grouping of FIDL declarations into FIDL libraries has two specific goals:
 
@@ -371,7 +371,7 @@ large ones.
 
 ### Avoid booleans if more states are possible
 
-When adding a boolean field, consider using an `enum` instead if the field could
+When adding a boolean field, consider using an enum instead if the field could
 be extended to represent additional states in the future. For example a boolean
 `is_gif` field might be better represented by
 
@@ -615,7 +615,7 @@ constant you have:
 3. Use `bits` for constants forming a group of flags, such as the capabilities
    of an interface: **WLAN**, **SYNTH**, and **LOOPBACK**.
 
-#### `const`
+#### const
 
 Use a `const` when there is a value that you wish to use symbolically rather
 than typing the value every time. The classical example is **PI** &mdash; it's
@@ -638,7 +638,7 @@ message, and then later on in code. For example:
 
 You can then use the constant `MAX_BATCH_SIZE` in your code to assemble batches.
 
-#### `enum` {#enum}
+#### enum {#enum}
 
 Use an enum if the set of enumerated values is bounded and controlled by the
 Fuchsia project.  For example, the Fuchsia project defines the pointer event
@@ -680,7 +680,7 @@ There are two cases where using the value `0` is appropriate:
     [optional value with error enum](#using-optional-value-with-error-enum)
     pattern.
 
-#### `bits`
+#### bits
 
 If your protocol has a bitfield, represent its values using `bits` values (for
 details, see [`RFC-0025`: "Bit Flags"][rfc-0025]).
@@ -918,9 +918,9 @@ times (rather than just once):
 
 #### Throttle events using acknowledgements {#throttle-events-using-acknowledgements}
 
-If there is no _a priori_ bound on the number of events, consider having the
-client acknowledge the events by sending a message.  This pattern is a more
-awkward version of the [acknowledgement
+If there is no known bound on the number of events ahead of time, consider
+having the client acknowledge the events by sending a message.  This pattern is
+a more awkward version of the [acknowledgement
 pattern](#throttle-events-using-acknowledgements) in which the roles of client
 and server are switched.  As in the other pattern, the server should throttle
 event production to match the rate at which the client consumes the events:
