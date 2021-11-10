@@ -252,6 +252,7 @@ group("cmx_allowlist") {
     "//src/sys/tools/run/*",
     "//src/sys/tools/run/test/*",
     "//src/sys/tools/stash_ctl/*",
+    "//src/testing/fidl/*",
     "//src/testing/loadbench/*",
     "//src/testing/sl4f/*",
     "//src/tests/benchmarks/*",

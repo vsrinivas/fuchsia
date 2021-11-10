@@ -12,7 +12,7 @@ async fn main() -> Result<(), Error> {
     let launcher = launcher().context("Failed to open launcher service")?;
     let app = launch(
         &launcher,
-        "fuchsia-pkg://fuchsia.com/echo-integration-test#meta/echo-server.cmx".to_string(),
+        "fuchsia-pkg://fuchsia.com/echo-integration-test#meta/echo_server.cmx".to_string(),
         None,
     )
     .context("Failed to launch echo service")?;

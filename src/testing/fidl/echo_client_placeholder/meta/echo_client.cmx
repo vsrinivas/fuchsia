@@ -1,0 +1,14 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/echo_client_placeholder"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Launcher",
+            "test.placeholders.Echo"
+        ]
+    }
+}
