@@ -5,9 +5,11 @@
 use {
     crate::{
         object_handle::ObjectHandle,
-        object_store::journal::{fletcher64, Checksum, JournalCheckpoint},
+        object_store::{
+            journal::{fletcher64, Checksum, JournalCheckpoint},
+            serialize_into,
+        },
     },
-    bincode::serialize_into,
     byteorder::{LittleEndian, WriteBytesExt},
     serde::Serialize,
     std::{cmp::min, io::Write},
@@ -135,10 +137,12 @@ mod tests {
         super::JournalWriter,
         crate::{
             object_handle::{ObjectHandle, ReadObjectHandle, WriteObjectHandle},
-            object_store::journal::{fletcher64, Checksum, JournalCheckpoint},
+            object_store::{
+                deserialize_from,
+                journal::{fletcher64, Checksum, JournalCheckpoint},
+            },
             testing::fake_object::{FakeObject, FakeObjectHandle},
         },
-        bincode::deserialize_from,
         byteorder::{ByteOrder, LittleEndian},
         fuchsia_async as fasync,
         std::sync::Arc,

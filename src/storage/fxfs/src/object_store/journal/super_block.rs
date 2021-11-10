@@ -8,20 +8,20 @@ use {
         object_store::{
             allocator::Reservation,
             constants::{SUPER_BLOCK_A_OBJECT_ID, SUPER_BLOCK_B_OBJECT_ID},
+            extent_record::{ExtentKey, ExtentValue},
             journal::{
                 handle::Handle,
                 reader::{JournalReader, ReadResult},
                 writer::JournalWriter,
                 JournalCheckpoint,
             },
-            extent_record::{ExtentKey, ExtentValue},
-            object_record::{ObjectItem},
+            object_record::ObjectItem,
+            serialize_into,
             transaction::Options,
             ObjectStore, StoreObjectHandle,
         },
     },
     anyhow::{bail, Error},
-    bincode::serialize_into,
     serde::{Deserialize, Serialize},
     std::{
         collections::HashMap,

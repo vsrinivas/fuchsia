@@ -5,10 +5,12 @@
 use {
     crate::{
         object_handle::{ObjectHandle, ReadObjectHandle},
-        object_store::journal::{fletcher64, Checksum, JournalCheckpoint, RESET_XOR},
+        object_store::{
+            deserialize_from,
+            journal::{fletcher64, Checksum, JournalCheckpoint, RESET_XOR},
+        },
     },
     anyhow::{bail, Error},
-    bincode::deserialize_from,
     byteorder::{ByteOrder, LittleEndian},
     serde::Deserialize,
 };
