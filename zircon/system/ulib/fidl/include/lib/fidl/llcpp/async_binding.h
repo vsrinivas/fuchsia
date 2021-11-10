@@ -396,7 +396,7 @@ class AsyncClientBinding final : public AsyncBinding {
 
   virtual ~AsyncClientBinding() = default;
 
-  std::shared_ptr<fidl::internal::AnyTransport> GetChannel() const { return transport_; }
+  std::shared_ptr<fidl::internal::AnyTransport> GetTransport() const { return transport_; }
 
  private:
   AsyncClientBinding(async_dispatcher_t* dispatcher,

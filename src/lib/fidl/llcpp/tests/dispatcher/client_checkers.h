@@ -16,9 +16,9 @@ namespace fidl_testing {
 
 class ClientBaseChecker {
  public:
-  static std::shared_ptr<fidl::internal::AnyTransport> GetChannel(
+  static std::shared_ptr<fidl::internal::AnyTransport> GetTransport(
       fidl::internal::ClientBase* client_base) {
-    return client_base->GetChannel();
+    return client_base->GetTransport();
   }
 };
 

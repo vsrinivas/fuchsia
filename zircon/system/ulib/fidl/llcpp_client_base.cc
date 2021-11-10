@@ -94,7 +94,7 @@ void ClientBase::ReleaseResponseContexts(fidl::UnbindInfo info) {
 }
 
 void ClientBase::SendTwoWay(::fidl::OutgoingMessage& message, ResponseContext* context) {
-  if (auto transport = GetChannel()) {
+  if (auto transport = GetTransport()) {
     PrepareAsyncTxn(context);
     message.set_txid(context->Txid());
     message.Write(*transport);
@@ -109,7 +109,7 @@ void ClientBase::SendTwoWay(::fidl::OutgoingMessage& message, ResponseContext* c
 }
 
 fidl::Result ClientBase::SendOneWay(::fidl::OutgoingMessage& message) {
-  if (auto transport = GetChannel()) {
+  if (auto transport = GetTransport()) {
     message.set_txid(0);
     message.Write(*transport);
     if (!message.ok()) {

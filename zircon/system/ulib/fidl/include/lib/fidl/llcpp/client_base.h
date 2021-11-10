@@ -197,7 +197,7 @@ class ClientBase {
   template <typename Callable>
   auto MakeSyncCallWith(Callable&& sync_call) {
     using ReturnType = typename fit::callable_traits<Callable>::return_type;
-    std::shared_ptr<AnyTransport> transport = GetChannel();
+    std::shared_ptr<AnyTransport> transport = GetTransport();
     if (!transport) {
       return ReturnType(fidl::Result::Unbound());
     }
@@ -307,9 +307,9 @@ class ClientBase {
   // (e.g. dispatcher shutting down), notify it synchronously as a last resort.
   void TryAsyncDeliverError(::fidl::Result error, ResponseContext* context);
 
-  std::shared_ptr<AnyTransport> GetChannel() {
+  std::shared_ptr<AnyTransport> GetTransport() {
     if (auto binding = binding_.lock()) {
-      return binding->GetChannel();
+      return binding->GetTransport();
     }
     return nullptr;
   }

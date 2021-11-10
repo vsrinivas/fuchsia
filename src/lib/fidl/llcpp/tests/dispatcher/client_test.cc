@@ -275,7 +275,7 @@ TEST(ClientBindingTestCase, UnbindWhileActiveChannelRefs) {
 
   // Create a strong reference to the channel.
   using ::fidl_testing::ClientBaseChecker;
-  std::shared_ptr channel = ClientBaseChecker::GetChannel(&*client);
+  std::shared_ptr channel = ClientBaseChecker::GetTransport(&*client);
 
   // |AsyncTeardown| and the teardown notification should not be blocked by the
   // channel reference.
