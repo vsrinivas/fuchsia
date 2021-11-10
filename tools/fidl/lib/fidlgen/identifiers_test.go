@@ -5,6 +5,7 @@
 package fidlgen
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -124,5 +125,22 @@ func TestNamesCanBeUsedAsKeyTypes(t *testing.T) {
 	byDeclarationName[MustReadName("fuchsia.ui/Something")] = struct{}{}
 	if _, ok := byDeclarationName[MustReadName("fuchsia.ui/Something")]; !ok {
 		t.Errorf("incorrect lookup by declaration name")
+	}
+}
+
+func TestNamesStringer(t *testing.T) {
+	cases := []struct {
+		val      fmt.Stringer
+		expected string
+	}{
+		{MustReadLibraryName("fuchsia.ui.gfx"), "fuchsia.ui.gfx"},
+		{MustReadName("fuchsia.ui/Something"), "fuchsia.ui/Something"},
+		{MustReadName("fuchsia.ui/SomeProtocol.SomeMethod"), "fuchsia.ui/SomeProtocol.SomeMethod"},
+	}
+	for _, ex := range cases {
+		actual := ex.val.String()
+		if actual != ex.expected {
+			t.Errorf("%+v: expected=%s, actual=%s", ex.val, ex.expected, actual)
+		}
 	}
 }

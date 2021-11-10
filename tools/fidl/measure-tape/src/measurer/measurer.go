@@ -102,9 +102,9 @@ func (m *Measurer) MeasuringTapeFor(targetType string) (*MeasuringTape, error) {
 	if err != nil {
 		return nil, err
 	}
-	kd, ok := m.lookup(name)
-	if !ok {
-		return nil, fmt.Errorf("no declaration %s, you may be missing a JSON IR", targetType)
+	kd, err := m.lookup(name)
+	if err != nil {
+		return nil, err
 	}
 	return m.createMeasuringTape(kd)
 }
@@ -188,7 +188,10 @@ func (m *Measurer) createStructMeasuringTape(decl fidlgen.Struct) (*MeasuringTap
 		// all primitives including bits & enums are sized as part of the inline cost
 		// string/vector have 8 bytes as part of inline cost, rest is out-of-line (so needs a measuring tape)
 		// others
-		memberDecl := m.toDecl(member.Type)
+		memberDecl, err := m.toDecl(member.Type)
+		if err != nil {
+			return nil, err
+		}
 		memberMt, err := m.createMeasuringTape(memberDecl)
 		if err != nil {
 			return nil, err
@@ -213,7 +216,10 @@ func (m *Measurer) createStructMeasuringTape(decl fidlgen.Struct) (*MeasuringTap
 func (m *Measurer) createTableMeasuringTape(decl fidlgen.Table) (*MeasuringTape, error) {
 	var membersMt []measuringTapeMember
 	for _, member := range decl.SortedMembersNoReserved() {
-		memberDecl := m.toDecl(member.Type)
+		memberDecl, err := m.toDecl(member.Type)
+		if err != nil {
+			return nil, err
+		}
 		memberMt, err := m.createMeasuringTape(memberDecl)
 		if err != nil {
 			return nil, err
@@ -241,7 +247,10 @@ func (m *Measurer) createUnionMeasuringTape(decl fidlgen.Union) (*MeasuringTape,
 		if member.Reserved {
 			continue
 		}
-		memberDecl := m.toDecl(member.Type)
+		memberDecl, err := m.toDecl(member.Type)
+		if err != nil {
+			return nil, err
+		}
 		memberMt, err := m.createMeasuringTape(memberDecl)
 		if err != nil {
 			return nil, err
@@ -282,69 +291,77 @@ type arrayDecl struct {
 	elementDecl  keyedDecl
 }
 
-func (m *Measurer) toDecl(typ fidlgen.Type) keyedDecl {
+func (m *Measurer) toDecl(typ fidlgen.Type) (keyedDecl, error) {
 	switch typ.Kind {
 	case fidlgen.ArrayType:
+		elementDecl, err := m.toDecl(*typ.ElementType)
+		if err != nil {
+			return keyedDecl{}, err
+		}
 		return keyedDecl{
 			decl: arrayDecl{
 				elementCount: *typ.ElementCount,
-				elementDecl:  m.toDecl(*typ.ElementType),
+				elementDecl:  elementDecl,
 			},
-		}
+		}, nil
 	case fidlgen.VectorType:
+		elementDecl, err := m.toDecl(*typ.ElementType)
+		if err != nil {
+			return keyedDecl{}, err
+		}
 		return keyedDecl{
 			nullable: typ.Nullable,
 			decl: vectorDecl{
-				elementDecl: m.toDecl(*typ.ElementType),
+				elementDecl: elementDecl,
 			},
-		}
+		}, nil
 	case fidlgen.StringType:
 		return keyedDecl{
 			nullable: typ.Nullable,
 			decl:     stringDecl{},
-		}
+		}, nil
 	case fidlgen.HandleType:
 		fallthrough
 	case fidlgen.RequestType:
 		return keyedDecl{
 			decl:     handleDecl{},
 			nullable: typ.Nullable,
-		}
+		}, nil
 	case fidlgen.PrimitiveType:
 		return keyedDecl{
 			decl: primitiveDecl{size: toSize(typ.PrimitiveSubtype)},
-		}
+		}, nil
 	case fidlgen.IdentifierType:
-		kd, ok := m.lookup(fidlgen.MustReadName(string(typ.Identifier)))
-		if !ok {
-			panic(typ)
+		kd, err := m.lookup(fidlgen.MustReadName(string(typ.Identifier)))
+		if err != nil {
+			return keyedDecl{}, err
 		}
 		kd.nullable = typ.Nullable
-		return kd
+		return kd, nil
 	default:
 		panic("unreachable")
 	}
 }
 
-func (m *Measurer) lookup(name fidlgen.Name) (keyedDecl, bool) {
+func (m *Measurer) lookup(name fidlgen.Name) (keyedDecl, error) {
 	root, ok := m.roots[name.LibraryName()]
 	if !ok {
-		return keyedDecl{}, false
+		return keyedDecl{}, fmt.Errorf("missing definition for %s, you may be missing a JSON IR", name)
 	}
 	fqn := name.FullyQualifiedName()
 	for _, decl := range root.Structs {
 		if name := string(decl.Name); name == fqn {
-			return keyedDecl{key: fqn, decl: decl}, true
+			return keyedDecl{key: fqn, decl: decl}, nil
 		}
 	}
 	for _, decl := range root.Tables {
 		if name := string(decl.Name); name == fqn {
-			return keyedDecl{key: fqn, decl: decl}, true
+			return keyedDecl{key: fqn, decl: decl}, nil
 		}
 	}
 	for _, decl := range root.Unions {
 		if name := string(decl.Name); name == fqn {
-			return keyedDecl{key: fqn, decl: decl}, true
+			return keyedDecl{key: fqn, decl: decl}, nil
 		}
 	}
 	for _, decl := range root.Enums {
@@ -352,7 +369,7 @@ func (m *Measurer) lookup(name fidlgen.Name) (keyedDecl, bool) {
 			return keyedDecl{
 				key:  fqn,
 				decl: primitiveDecl{size: toSize(decl.Type)},
-			}, true
+			}, nil
 		}
 	}
 	for _, decl := range root.Bits {
@@ -360,15 +377,15 @@ func (m *Measurer) lookup(name fidlgen.Name) (keyedDecl, bool) {
 			return keyedDecl{
 				key:  fqn,
 				decl: primitiveDecl{size: toSize(decl.Type.PrimitiveSubtype)},
-			}, true
+			}, nil
 		}
 	}
 	for _, decl := range root.Protocols {
 		if name := string(decl.Name); name == fqn {
-			return keyedDecl{key: fqn, decl: handleDecl{}}, true
+			return keyedDecl{key: fqn, decl: handleDecl{}}, nil
 		}
 	}
-	return keyedDecl{}, false
+	panic(fmt.Sprintf("unreachable: %s does not refer to a type", name))
 }
 
 func toSize(subtype fidlgen.PrimitiveSubtype) int {

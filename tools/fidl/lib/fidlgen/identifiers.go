@@ -16,6 +16,10 @@ type LibraryName struct {
 	fqn string
 }
 
+func (name LibraryName) String() string {
+	return name.fqn
+}
+
 // Parts returns the library name in parts, e.g. `fuchsia`, `mem` or
 // `fuchsia`, `ui`, `scenic`.
 func (name LibraryName) Parts() []string {
@@ -35,6 +39,10 @@ func (name LibraryName) FullyQualifiedName() string {
 type Name struct {
 	libraryName LibraryName
 	declName    string
+}
+
+func (name Name) String() string {
+	return fmt.Sprintf("%s/%s", name.libraryName, name.declName)
 }
 
 // LibraryName returns the library name, e.g. `fuchsia.mem`.
