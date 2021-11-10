@@ -8,7 +8,6 @@
     },
     "sandbox": {
         "dev": [
-            "class/display-controller",
             "class/gpu",
             "class/gpu-performance-counters"
         ]

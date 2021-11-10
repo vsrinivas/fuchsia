@@ -8,10 +8,5 @@
             "-offscreen"
         ],
         "binary": "bin/cmd-buf-benchmark"
-    },
-    "sandbox": {
-        "dev": [
-            "class/display-controller"
-        ]
     }
 }
