@@ -1,0 +1,65 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/test.gni")
+
+source_set("stream_io") {
+  public = [
+    "buffer_collection.h",
+    "input.h",
+    "output.h",
+    "packet.h",
+    "payload_buffer.h",
+  ]
+
+  sources = [ "buffer_collection.cc" ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.media2",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/media/vnext/lib/stream_sink",
+    "//src/media/vnext/lib/threads",
+    "//zircon/system/ulib/async",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/sync",
+  ]
+
+  deps = [ "//src/lib/fostr/fidl/fuchsia.media2" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":stream_io_unittests" ]
+}
+
+test("stream_io_unittests_bin") {
+  testonly = true
+
+  output_name = "stream_io_unittests"
+
+  sources = [
+    "test/buffer_collection_unittests.cc",
+    "test/fake_buffer_provider.cc",
+    "test/fake_buffer_provider.h",
+    "test/input_unittests.cc",
+    "test/output_unittests.cc",
+  ]
+
+  deps = [
+    ":stream_io",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_unittest_package("stream_io_unittests") {
+  package_name = "stream_io_unittests"
+  deps = [ ":stream_io_unittests_bin" ]
+}
