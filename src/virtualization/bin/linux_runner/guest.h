@@ -138,7 +138,7 @@ class Guest : public vm_tools::StartupListener::Service,
   void CreateComponent(AppLaunchRequest request,
                        fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view, uint32_t id);
   void OnComponentTerminated(uint32_t id);
-  void CreateTerminalComponent(AppLaunchRequest app);
+  void CreateTerminalComponent(AppLaunchRequest app, std::vector<std::string> args);
 
   async_dispatcher_t* async_;
   async::Executor executor_;
@@ -163,6 +163,7 @@ class Guest : public vm_tools::StartupListener::Service,
   // returned by requesting a null app URI (linux://).
   using BackgroundView = std::pair<uint32_t, fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider>>;
   std::deque<BackgroundView> background_views_;
+  std::deque<vm_tools::container::OpenTerminalRequest> background_terms_;
   std::unordered_map<uint32_t, std::unique_ptr<LinuxComponent>> components_;
   std::unordered_map<uint32_t, std::unique_ptr<LinuxComponent>> terminals_;
   fuchsia::sys::LauncherPtr launcher_;

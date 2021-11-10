@@ -717,19 +717,14 @@ grpc::Status Guest::OpenTerminal(grpc::ServerContext* context,
   TRACE_DURATION("linux_runner", "Guest::OpenTerminal");
   FX_LOGS(INFO) << "Open Terminal";
 
-  if (request->params_size() != 0) {
-    FX_LOGS(WARNING) << "OpenTerminal with args not yet supported";
-    return grpc::Status::OK;
-  }
-
-  executor_.schedule_task(fpromise::make_promise([this]() {
+  executor_.schedule_task(fpromise::make_promise([this, request = *request]() {
     auto it = dispatched_requests_.begin();
     if (it == dispatched_requests_.end()) {
-      FX_LOGS(WARNING) << "Guest-initiated OpenTerminal not yet supported";
+      background_terms_.emplace_back(std::move(request));
       return;
     }
-
-    CreateTerminalComponent(std::move(*it));
+    std::vector<std::string> args{request.params().begin(), request.params().end()};
+    CreateTerminalComponent(std::move(*it), std::move(args));
     dispatched_requests_.erase(it);
   }));
 
@@ -780,15 +775,20 @@ void Guest::Launch(AppLaunchRequest request) {
   // We'll need to come up with a more proper solution, but this allows us to at least do some
   // testing of these views for the time being.
   if (request.application.resolved_url == kLinuxUriScheme) {
-    auto it = background_views_.begin();
-    if (it == background_views_.end()) {
+    if (!background_views_.empty()) {
+      FX_LOGS(INFO) << "Found background view";
+      auto [id, view] = std::move(background_views_.front());
+      background_views_.pop_front();
+      CreateComponent(std::move(request), view.Bind(), id);
+    } else if (!background_terms_.empty()) {
+      FX_LOGS(INFO) << "Found background term";
+      auto term = std::move(background_terms_.front());
+      background_terms_.pop_front();
+      std::vector<std::string> args{term.params().begin(), term.params().end()};
+      CreateTerminalComponent(std::move(request), std::move(args));
+    } else {
       dispatched_requests_.push_back(std::move(request));
-      return;
     }
-    FX_LOGS(INFO) << "Found background view";
-    uint32_t id = it->first;
-    CreateComponent(std::move(request), it->second.Bind(), id);
-    background_views_.erase(it);
     return;
   }
 
@@ -872,7 +872,7 @@ void Guest::CreateComponent(AppLaunchRequest request,
 
 void Guest::OnComponentTerminated(uint32_t id) { components_.erase(id); }
 
-void Guest::CreateTerminalComponent(AppLaunchRequest app) {
+void Guest::CreateTerminalComponent(AppLaunchRequest app, std::vector<std::string> args) {
   TRACE_DURATION("linux_runner", "Guest::CreateTerminalComponent");
   static uint32_t next_term_id = 1;
   const auto term_id = next_term_id++;
@@ -885,7 +885,7 @@ void Guest::CreateTerminalComponent(AppLaunchRequest app) {
   zx::channel app_dir_request = std::move(app.startup_info.launch_info.directory_request);
   fuchsia::sys::LaunchInfo launch_info = std::move(app.startup_info.launch_info);
   launch_info.url = kVshTerminalComponent;
-  launch_info.arguments = std::vector<std::string>{};
+  launch_info.arguments = std::move(args);  // appended to the existing vsh-terminal.cmx arguments.
   launch_info.directory_request = vsh_svc_dir.NewRequest().TakeChannel();
   launcher_->CreateComponent(std::move(launch_info), vsh_controller.NewRequest());
 
