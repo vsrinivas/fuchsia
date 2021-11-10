@@ -1,6 +1,8 @@
+# For help with compliance or open source policy, see the contacts in README.md.
+# If you are having a technical issue with the check-licenses tool that cannot
+# be resolved by http://go/fuchsia-licenses-playbook, contact the owners below.
 jcecil@google.com
 gridman@google.com
-omerlevran@google.com
 seancuff@google.com
 
 # COMPONENT: LicenseReview
