@@ -58,11 +58,7 @@ impl BufferSource for MemBufferSource {
             panic!("Invalid range {:?} (BufferSource is {} bytes)", range, self.size());
         }
         assert!(range.start % std::mem::align_of::<u8>() == 0);
-        let data = (&mut *self.data.get())[..].as_mut_ptr();
-        std::slice::from_raw_parts_mut(
-            (data as usize + range.start) as *mut u8,
-            range.end - range.start,
-        )
+        &mut (&mut *self.data.get())[range.start..range.end]
     }
 
     fn as_any(&self) -> &dyn Any {
