@@ -61,6 +61,8 @@ impl Waiter {
     ///
     /// If the wait is interrupted (see interrupt), this function returns
     /// EINTR.
+    ///
+    /// TODO(tbodt): make current_task into an &CurrentTask
     pub fn wait(self: &Arc<Self>, current_task: &Task) -> Result<(), Errno> {
         self.wait_until(current_task, zx::Time::INFINITE)
     }

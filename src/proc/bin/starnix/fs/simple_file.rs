@@ -52,17 +52,17 @@ impl FileOps for ByteVecFile {
     fn read_at(
         &self,
         _file: &FileObject,
-        task: &Task,
+        current_task: &CurrentTask,
         offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        task.mm.write_all(data, &self.0[offset..])
+        current_task.mm.write_all(data, &self.0[offset..])
     }
 
     fn write_at(
         &self,
         _file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         _offset: usize,
         _data: &[UserBuffer],
     ) -> Result<usize, Errno> {

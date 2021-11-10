@@ -22,11 +22,8 @@ use crate::device::wayland::BufferCollectionFile;
 use crate::errno;
 use crate::fs::buffers::*;
 use crate::fs::socket::*;
-use crate::fs::FsString;
 use crate::fs::*;
-use crate::task::WaitCallback;
-use crate::task::Waiter;
-use crate::task::{Kernel, Task};
+use crate::task::{CurrentTask, Kernel, WaitCallback, Waiter};
 use crate::types::*;
 
 /// The services that are exposed in the component's outgoing directory by the wayland server.
@@ -50,14 +47,14 @@ enum ExposedServices {
 /// - `display_path`: The path at which the wayland display socket is created.
 /// - `device_path`: The path at which the `DMABuf` file is created.
 pub fn serve_wayland(
-    task: &Task,
+    current_task: &CurrentTask,
     display_path: FsString,
     device_path: FsString,
 ) -> Result<(), Errno> {
-    let display_socket = create_display_socket(task, display_path)?;
-    create_device_file(task, device_path)?;
+    let display_socket = create_display_socket(current_task, display_path)?;
+    create_device_file(current_task, device_path)?;
 
-    let kernel = task.thread_group.kernel.clone();
+    let kernel = current_task.thread_group.kernel.clone();
     let outgoing_dir_channel = kernel.outgoing_dir.lock().take().ok_or(errno!(EINVAL))?;
 
     // Add `ViewProvider` to the exposed services of the component, and then serve the

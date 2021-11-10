@@ -21,13 +21,23 @@ pub struct SocketFile {
 impl FileOps for SocketFile {
     fd_impl_nonseekable!();
 
-    fn read(&self, file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
-        self.recvmsg(task, file, data, SocketMessageFlags::empty(), None)
+    fn read(
+        &self,
+        file: &FileObject,
+        current_task: &CurrentTask,
+        data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        self.recvmsg(current_task, file, data, SocketMessageFlags::empty(), None)
             .map(|info| info.bytes_read)
     }
 
-    fn write(&self, file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
-        self.sendmsg(task, file, data, None, None, SocketMessageFlags::empty())
+    fn write(
+        &self,
+        file: &FileObject,
+        current_task: &CurrentTask,
+        data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        self.sendmsg(current_task, file, data, None, None, SocketMessageFlags::empty())
     }
 
     fn wait_async(
@@ -65,7 +75,7 @@ impl SocketFile {
     /// - `control_bytes`: Control message bytes to write to the socket.
     pub fn sendmsg(
         &self,
-        task: &Task,
+        current_task: &CurrentTask,
         file: &FileObject,
         data: &[UserBuffer],
         mut dest_address: Option<SocketAddress>,
@@ -80,7 +90,7 @@ impl SocketFile {
 
         let mut op = || {
             let bytes_written = match self.socket.write(
-                task,
+                current_task,
                 &mut user_buffers,
                 &mut dest_address,
                 &mut ancillary_data,
@@ -107,7 +117,7 @@ impl SocketFile {
             op()
         } else {
             let deadline = self.socket.get_send_timeout().map(zx::Time::after);
-            file.blocking_op(task, op, FdEvents::POLLOUT | FdEvents::POLLHUP, deadline)
+            file.blocking_op(current_task, op, FdEvents::POLLOUT | FdEvents::POLLHUP, deadline)
         }
     }
 
@@ -121,7 +131,7 @@ impl SocketFile {
     /// Returns the number of bytes read, as well as any control message that was encountered.
     pub fn recvmsg(
         &self,
-        task: &Task,
+        current_task: &CurrentTask,
         file: &FileObject,
         data: &[UserBuffer],
         flags: SocketMessageFlags,
@@ -131,14 +141,14 @@ impl SocketFile {
 
         let op = || {
             let mut user_buffers = UserBufferIterator::new(data);
-            self.socket.read(task, &mut user_buffers, flags)
+            self.socket.read(current_task, &mut user_buffers, flags)
         };
         if flags.contains(SocketMessageFlags::DONTWAIT) {
             op()
         } else {
             let deadline =
                 deadline.or_else(|| self.socket.get_receive_timeout().map(zx::Time::after));
-            file.blocking_op(task, op, FdEvents::POLLIN | FdEvents::POLLHUP, deadline)
+            file.blocking_op(current_task, op, FdEvents::POLLIN | FdEvents::POLLHUP, deadline)
         }
     }
 }

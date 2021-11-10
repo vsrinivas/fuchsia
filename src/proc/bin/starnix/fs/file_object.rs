@@ -42,25 +42,35 @@ pub trait FileOps: Send + Sync + AsAny {
 
     /// Read from the file without an offset. If your file is seekable, consider implementing this
     /// with fd_impl_seekable.
-    fn read(&self, file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno>;
+    fn read(
+        &self,
+        file: &FileObject,
+        current_task: &CurrentTask,
+        data: &[UserBuffer],
+    ) -> Result<usize, Errno>;
     /// Read from the file at an offset. If your file is seekable, consider implementing this with
     /// fd_impl_nonseekable!.
     fn read_at(
         &self,
         file: &FileObject,
-        task: &Task,
+        current_task: &CurrentTask,
         offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno>;
     /// Write to the file without an offset. If your file is seekable, consider implementing this
     /// with fd_impl_seekable!.
-    fn write(&self, file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno>;
+    fn write(
+        &self,
+        file: &FileObject,
+        current_task: &CurrentTask,
+        data: &[UserBuffer],
+    ) -> Result<usize, Errno>;
     /// Write to the file at a offset. If your file is nonseekable, consider implementing this with
     /// fd_impl_nonseekable!.
     fn write_at(
         &self,
         file: &FileObject,
-        task: &Task,
+        current_task: &CurrentTask,
         offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno>;
@@ -69,7 +79,7 @@ pub trait FileOps: Send + Sync + AsAny {
     fn seek(
         &self,
         file: &FileObject,
-        task: &Task,
+        current_task: &CurrentTask,
         offset: off_t,
         whence: SeekOrigin,
     ) -> Result<off_t, Errno>;
@@ -80,7 +90,7 @@ pub trait FileOps: Send + Sync + AsAny {
     fn get_vmo(
         &self,
         _file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         _prot: zx::VmarFlags,
     ) -> Result<zx::Vmo, Errno> {
         error!(ENODEV)
@@ -89,7 +99,7 @@ pub trait FileOps: Send + Sync + AsAny {
     fn readdir(
         &self,
         _file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         _sink: &mut dyn DirentSink,
     ) -> Result<(), Errno> {
         error!(ENOTDIR)
@@ -111,7 +121,7 @@ pub trait FileOps: Send + Sync + AsAny {
     fn ioctl(
         &self,
         _file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         request: u32,
         _in_addr: UserAddress,
         _out_addr: UserAddress,
@@ -122,7 +132,7 @@ pub trait FileOps: Send + Sync + AsAny {
     fn fcntl(
         &self,
         _file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         _cmd: u32,
         _arg: u64,
     ) -> Result<SyscallResult, Errno> {
@@ -138,7 +148,7 @@ macro_rules! fd_impl_nonseekable {
         fn read_at(
             &self,
             _file: &FileObject,
-            _task: &Task,
+            _current_task: &CurrentTask,
             _offset: usize,
             _data: &[UserBuffer],
         ) -> Result<usize, Errno> {
@@ -147,7 +157,7 @@ macro_rules! fd_impl_nonseekable {
         fn write_at(
             &self,
             _file: &FileObject,
-            _task: &Task,
+            _current_task: &CurrentTask,
             _offset: usize,
             _data: &[UserBuffer],
         ) -> Result<usize, Errno> {
@@ -156,7 +166,7 @@ macro_rules! fd_impl_nonseekable {
         fn seek(
             &self,
             _file: &FileObject,
-            _task: &Task,
+            _current_task: &CurrentTask,
             _offset: off_t,
             _whence: SeekOrigin,
         ) -> Result<off_t, Errno> {
@@ -173,32 +183,32 @@ macro_rules! fd_impl_seekable {
         fn read(
             &self,
             file: &FileObject,
-            task: &Task,
+            current_task: &CurrentTask,
             data: &[UserBuffer],
         ) -> Result<usize, Errno> {
             let mut offset = file.offset.lock();
-            let size = self.read_at(file, task, *offset as usize, data)?;
+            let size = self.read_at(file, current_task, *offset as usize, data)?;
             *offset += size as off_t;
             Ok(size)
         }
         fn write(
             &self,
             file: &FileObject,
-            task: &Task,
+            current_task: &CurrentTask,
             data: &[UserBuffer],
         ) -> Result<usize, Errno> {
             let mut offset = file.offset.lock();
             if file.flags().contains(OpenFlags::APPEND) {
                 *offset = file.node().info().size as off_t;
             }
-            let size = self.write_at(file, task, *offset as usize, data)?;
+            let size = self.write_at(file, current_task, *offset as usize, data)?;
             *offset += size as off_t;
             Ok(size)
         }
         fn seek(
             &self,
             file: &FileObject,
-            _task: &Task,
+            _current_task: &CurrentTask,
             offset: off_t,
             whence: SeekOrigin,
         ) -> Result<off_t, Errno> {
@@ -229,7 +239,7 @@ macro_rules! fd_impl_directory {
         fn read(
             &self,
             _file: &FileObject,
-            _task: &Task,
+            _current_task: &CurrentTask,
             _data: &[UserBuffer],
         ) -> Result<usize, Errno> {
             error!(EISDIR)
@@ -238,7 +248,7 @@ macro_rules! fd_impl_directory {
         fn read_at(
             &self,
             _file: &FileObject,
-            _task: &Task,
+            _current_task: &CurrentTask,
             _offset: usize,
             _data: &[UserBuffer],
         ) -> Result<usize, Errno> {
@@ -248,7 +258,7 @@ macro_rules! fd_impl_directory {
         fn write(
             &self,
             _file: &FileObject,
-            _task: &Task,
+            _current_task: &CurrentTask,
             _data: &[UserBuffer],
         ) -> Result<usize, Errno> {
             error!(EISDIR)
@@ -257,7 +267,7 @@ macro_rules! fd_impl_directory {
         fn write_at(
             &self,
             _file: &FileObject,
-            _task: &Task,
+            _current_task: &CurrentTask,
             _offset: usize,
             _data: &[UserBuffer],
         ) -> Result<usize, Errno> {
@@ -300,13 +310,18 @@ impl OPathOps {
 impl FileOps for OPathOps {
     fd_impl_nonblocking!();
 
-    fn read(&self, _file: &FileObject, _task: &Task, _data: &[UserBuffer]) -> Result<usize, Errno> {
+    fn read(
+        &self,
+        _file: &FileObject,
+        _current_task: &CurrentTask,
+        _data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
         error!(EBADF)
     }
     fn read_at(
         &self,
         _file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         _offset: usize,
         _data: &[UserBuffer],
     ) -> Result<usize, Errno> {
@@ -315,7 +330,7 @@ impl FileOps for OPathOps {
     fn write(
         &self,
         _file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         _data: &[UserBuffer],
     ) -> Result<usize, Errno> {
         error!(EBADF)
@@ -323,7 +338,7 @@ impl FileOps for OPathOps {
     fn write_at(
         &self,
         _file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         _offset: usize,
         _data: &[UserBuffer],
     ) -> Result<usize, Errno> {
@@ -332,7 +347,7 @@ impl FileOps for OPathOps {
     fn seek(
         &self,
         _file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         _offset: off_t,
         _whence: SeekOrigin,
     ) -> Result<off_t, Errno> {
@@ -341,7 +356,7 @@ impl FileOps for OPathOps {
     fn get_vmo(
         &self,
         _file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         _prot: zx::VmarFlags,
     ) -> Result<zx::Vmo, Errno> {
         error!(EBADF)
@@ -349,7 +364,7 @@ impl FileOps for OPathOps {
     fn readdir(
         &self,
         _file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         _sink: &mut dyn DirentSink,
     ) -> Result<(), Errno> {
         error!(EBADF)
@@ -358,7 +373,7 @@ impl FileOps for OPathOps {
     fn ioctl(
         &self,
         _file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         _request: u32,
         _in_addr: UserAddress,
         _out_addr: UserAddress,
@@ -369,7 +384,7 @@ impl FileOps for OPathOps {
     fn fcntl(
         &self,
         _file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         _cmd: u32,
         _arg: u64,
     ) -> Result<SyscallResult, Errno> {
@@ -464,7 +479,7 @@ impl FileObject {
 
     pub fn blocking_op<T, Op>(
         &self,
-        task: &Task,
+        current_task: &CurrentTask,
         mut op: Op,
         events: FdEvents,
         deadline: Option<zx::Time>,
@@ -482,50 +497,55 @@ impl FileObject {
             self.ops().wait_async(self, &waiter, events, WaitCallback::none());
             match op() {
                 Err(errno) if errno == EAGAIN => waiter
-                    .wait_until(task, deadline.unwrap_or(zx::Time::INFINITE))
+                    .wait_until(current_task, deadline.unwrap_or(zx::Time::INFINITE))
                     .map_err(|e| if e == ETIMEDOUT { errno!(EAGAIN) } else { e })?,
                 result => return result,
             }
         }
     }
 
-    pub fn read(&self, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
+    pub fn read(&self, current_task: &CurrentTask, data: &[UserBuffer]) -> Result<usize, Errno> {
         if !self.can_read() {
             return error!(EBADF);
         }
         self.blocking_op(
-            task,
-            || self.ops().read(self, task, data),
+            current_task,
+            || self.ops().read(self, current_task, data),
             FdEvents::POLLIN | FdEvents::POLLHUP,
             None,
         )
     }
 
-    pub fn read_at(&self, task: &Task, offset: usize, data: &[UserBuffer]) -> Result<usize, Errno> {
+    pub fn read_at(
+        &self,
+        current_task: &CurrentTask,
+        offset: usize,
+        data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
         if !self.can_read() {
             return error!(EBADF);
         }
         self.blocking_op(
-            task,
-            || self.ops().read_at(self, task, offset, data),
+            current_task,
+            || self.ops().read_at(self, current_task, offset, data),
             FdEvents::POLLIN | FdEvents::POLLHUP,
             None,
         )
     }
 
-    pub fn write(&self, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
+    pub fn write(&self, current_task: &CurrentTask, data: &[UserBuffer]) -> Result<usize, Errno> {
         if !self.can_write() {
             return error!(EBADF);
         }
         self.blocking_op(
-            task,
+            current_task,
             || {
                 if self.flags().contains(OpenFlags::APPEND) {
                     let _guard = self.node().append_lock.write();
-                    self.ops().write(self, task, data)
+                    self.ops().write(self, current_task, data)
                 } else {
                     let _guard = self.node().append_lock.read();
-                    self.ops().write(self, task, data)
+                    self.ops().write(self, current_task, data)
                 }
             },
             FdEvents::POLLOUT | FdEvents::POLLHUP,
@@ -535,7 +555,7 @@ impl FileObject {
 
     pub fn write_at(
         &self,
-        task: &Task,
+        current_task: &CurrentTask,
         offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
@@ -543,21 +563,30 @@ impl FileObject {
             return error!(EBADF);
         }
         self.blocking_op(
-            task,
+            current_task,
             || {
                 let _guard = self.node().append_lock.read();
-                self.ops().write_at(self, task, offset, data)
+                self.ops().write_at(self, current_task, offset, data)
             },
             FdEvents::POLLOUT | FdEvents::POLLHUP,
             None,
         )
     }
 
-    pub fn seek(&self, task: &Task, offset: off_t, whence: SeekOrigin) -> Result<off_t, Errno> {
-        self.ops().seek(self, task, offset, whence)
+    pub fn seek(
+        &self,
+        current_task: &CurrentTask,
+        offset: off_t,
+        whence: SeekOrigin,
+    ) -> Result<off_t, Errno> {
+        self.ops().seek(self, current_task, offset, whence)
     }
 
-    pub fn get_vmo(&self, task: &Task, prot: zx::VmarFlags) -> Result<zx::Vmo, Errno> {
+    pub fn get_vmo(
+        &self,
+        current_task: &CurrentTask,
+        prot: zx::VmarFlags,
+    ) -> Result<zx::Vmo, Errno> {
         if prot.contains(zx::VmarFlags::PERM_READ) && !self.can_read() {
             return error!(EACCES);
         }
@@ -565,11 +594,15 @@ impl FileObject {
             return error!(EACCES);
         }
         // TODO: Check for PERM_EXECUTE by checking whether the filesystem is mounted as noexec.
-        self.ops().get_vmo(self, task, prot)
+        self.ops().get_vmo(self, current_task, prot)
     }
 
-    pub fn readdir(&self, task: &Task, sink: &mut dyn DirentSink) -> Result<(), Errno> {
-        match self.ops().readdir(self, task, sink) {
+    pub fn readdir(
+        &self,
+        current_task: &CurrentTask,
+        sink: &mut dyn DirentSink,
+    ) -> Result<(), Errno> {
+        match self.ops().readdir(self, current_task, sink) {
             // The ENOSPC we catch here is generated by DirentSink::add. We
             // return the error to the caller only if we didn't have space for
             // the first directory entry.
@@ -586,16 +619,21 @@ impl FileObject {
 
     pub fn ioctl(
         &self,
-        task: &Task,
+        current_task: &CurrentTask,
         request: u32,
         in_addr: UserAddress,
         out_addr: UserAddress,
     ) -> Result<SyscallResult, Errno> {
-        self.ops().ioctl(self, task, request, in_addr, out_addr)
+        self.ops().ioctl(self, current_task, request, in_addr, out_addr)
     }
 
-    pub fn fcntl(&self, task: &Task, cmd: u32, arg: u64) -> Result<SyscallResult, Errno> {
-        self.ops().fcntl(self, task, cmd, arg)
+    pub fn fcntl(
+        &self,
+        current_task: &CurrentTask,
+        cmd: u32,
+        arg: u64,
+    ) -> Result<SyscallResult, Errno> {
+        self.ops().fcntl(self, current_task, cmd, arg)
     }
 
     pub fn update_file_flags(&self, value: OpenFlags, mask: OpenFlags) {

@@ -5,7 +5,7 @@
 use ext4_read_only::parser::Parser as ExtParser;
 use ext4_read_only::readers::{self as ext4_readers, VmoReader as ExtVmoReader};
 use ext4_read_only::structs as ext_structs;
-use fuchsia_zircon::{self as zx};
+use fuchsia_zircon as zx;
 use once_cell::sync::OnceCell;
 use std::collections::BTreeMap;
 use std::mem::size_of_val;
@@ -19,7 +19,7 @@ use crate::fd_impl_directory;
 use crate::fd_impl_nonblocking;
 use crate::fs_node_impl_symlink;
 use crate::logging::impossible_error;
-use crate::task::{EventHandler, Task, Waiter};
+use crate::task::{CurrentTask, EventHandler, Waiter};
 use crate::types::*;
 
 pub struct ExtFilesystem {
@@ -136,7 +136,11 @@ struct ExtSymlink {
 impl FsNodeOps for ExtSymlink {
     fs_node_impl_symlink!();
 
-    fn readlink(&self, _node: &FsNode, _task: &Task) -> Result<SymlinkTarget, Errno> {
+    fn readlink(
+        &self,
+        _node: &FsNode,
+        _current_task: &CurrentTask,
+    ) -> Result<SymlinkTarget, Errno> {
         let data = self.inner.fs().parser.read_data(self.inner.inode_num).map_err(ext_error)?;
         Ok(SymlinkTarget::Path(data))
     }
@@ -153,7 +157,7 @@ impl FileOps for ExtDirFileObject {
     fn seek(
         &self,
         file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         offset: off_t,
         whence: SeekOrigin,
     ) -> Result<off_t, Errno> {
@@ -163,7 +167,7 @@ impl FileOps for ExtDirFileObject {
     fn readdir(
         &self,
         file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         sink: &mut dyn DirentSink,
     ) -> Result<(), Errno> {
         let mut offset = file.offset.lock();

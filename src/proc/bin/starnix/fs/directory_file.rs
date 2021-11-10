@@ -87,7 +87,7 @@ impl FileOps for MemoryDirectoryFile {
     fn seek(
         &self,
         file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         offset: off_t,
         whence: SeekOrigin,
     ) -> Result<off_t, Errno> {
@@ -131,7 +131,7 @@ impl FileOps for MemoryDirectoryFile {
     fn readdir(
         &self,
         file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         sink: &mut dyn DirentSink,
     ) -> Result<(), Errno> {
         let mut offset = file.offset.lock();

@@ -10,7 +10,7 @@ use crate::fs::FdEvents;
 use crate::fs::FileObject;
 use crate::fs::FileOps;
 use crate::fs::SeekOrigin;
-use crate::task::{EventHandler, Task, Waiter};
+use crate::task::{CurrentTask, EventHandler, Waiter};
 use crate::types::*;
 use std::sync::Arc;
 
@@ -21,14 +21,19 @@ impl FileOps for NullFile {
     fd_impl_nonseekable!();
     fd_impl_nonblocking!();
 
-    fn read(&self, _file: &FileObject, _task: &Task, _data: &[UserBuffer]) -> Result<usize, Errno> {
+    fn read(
+        &self,
+        _file: &FileObject,
+        _current_task: &CurrentTask,
+        _data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
         error!(EINVAL)
     }
 
     fn write(
         &self,
         _file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         _data: &[UserBuffer],
     ) -> Result<usize, Errno> {
         error!(EINVAL)

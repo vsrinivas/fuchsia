@@ -228,7 +228,7 @@ fn parse_numbered_handles(
 
 fn create_filesystem_from_spec<'a>(
     kernel: &Arc<Kernel>,
-    task: Option<&Task>,
+    task: Option<&CurrentTask>,
     pkg: &fio::DirectorySynchronousProxy,
     spec: &'a str,
 ) -> Result<(&'a [u8], WhatToMount), Error> {

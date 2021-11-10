@@ -4,7 +4,7 @@
 
 use super::*;
 use crate::fs_node_impl_symlink;
-use crate::task::Task;
+use crate::task::CurrentTask;
 use crate::types::*;
 
 /// A node that represents a symlink to another node.
@@ -22,7 +22,11 @@ impl SymlinkNode {
 impl FsNodeOps for SymlinkNode {
     fs_node_impl_symlink!();
 
-    fn readlink(&self, _node: &FsNode, _task: &Task) -> Result<SymlinkTarget, Errno> {
+    fn readlink(
+        &self,
+        _node: &FsNode,
+        _current_task: &CurrentTask,
+    ) -> Result<SymlinkTarget, Errno> {
         Ok(SymlinkTarget::Path(self.target.clone()))
     }
 }

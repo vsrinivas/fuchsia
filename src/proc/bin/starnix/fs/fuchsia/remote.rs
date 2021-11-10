@@ -160,17 +160,17 @@ impl FsNodeOps for RemoteNode {
     }
 }
 
-fn zxio_read(zxio: &Zxio, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
+fn zxio_read(zxio: &Zxio, current_task: &CurrentTask, data: &[UserBuffer]) -> Result<usize, Errno> {
     let total = UserBuffer::get_total_length(data);
     let mut bytes = vec![0u8; total];
     let actual = zxio.read(&mut bytes).map_err(|status| from_status_like_fdio!(status))?;
-    task.mm.write_all(data, &bytes[0..actual])?;
+    current_task.mm.write_all(data, &bytes[0..actual])?;
     Ok(actual)
 }
 
 fn zxio_read_at(
     zxio: &Zxio,
-    task: &Task,
+    current_task: &CurrentTask,
     offset: usize,
     data: &[UserBuffer],
 ) -> Result<usize, Errno> {
@@ -178,27 +178,31 @@ fn zxio_read_at(
     let mut bytes = vec![0u8; total];
     let actual =
         zxio.read_at(offset as u64, &mut bytes).map_err(|status| from_status_like_fdio!(status))?;
-    task.mm.write_all(data, &bytes[0..actual])?;
+    current_task.mm.write_all(data, &bytes[0..actual])?;
     Ok(actual)
 }
 
-fn zxio_write(zxio: &Zxio, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
+fn zxio_write(
+    zxio: &Zxio,
+    current_task: &CurrentTask,
+    data: &[UserBuffer],
+) -> Result<usize, Errno> {
     let total = UserBuffer::get_total_length(data);
     let mut bytes = vec![0u8; total];
-    task.mm.read_all(data, &mut bytes)?;
+    current_task.mm.read_all(data, &mut bytes)?;
     let actual = zxio.write(&bytes).map_err(|status| from_status_like_fdio!(status))?;
     Ok(actual)
 }
 
 fn zxio_write_at(
     zxio: &Zxio,
-    task: &Task,
+    current_task: &CurrentTask,
     offset: usize,
     data: &[UserBuffer],
 ) -> Result<usize, Errno> {
     let total = UserBuffer::get_total_length(data);
     let mut bytes = vec![0u8; total];
-    task.mm.read_all(data, &mut bytes)?;
+    current_task.mm.read_all(data, &mut bytes)?;
     let actual =
         zxio.write_at(offset as u64, &bytes).map_err(|status| from_status_like_fdio!(status))?;
     Ok(actual)
@@ -298,7 +302,7 @@ impl FileOps for RemoteDirectoryObject {
     fn seek(
         &self,
         file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         offset: off_t,
         whence: SeekOrigin,
     ) -> Result<off_t, Errno> {
@@ -352,7 +356,7 @@ impl FileOps for RemoteDirectoryObject {
     fn readdir(
         &self,
         file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         sink: &mut dyn DirentSink,
     ) -> Result<(), Errno> {
         // It is important to acquire the lock to the offset before the context,
@@ -396,27 +400,27 @@ impl FileOps for RemoteFileObject {
     fn read_at(
         &self,
         _file: &FileObject,
-        task: &Task,
+        current_task: &CurrentTask,
         offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        zxio_read_at(&self.zxio, task, offset, data)
+        zxio_read_at(&self.zxio, current_task, offset, data)
     }
 
     fn write_at(
         &self,
         _file: &FileObject,
-        task: &Task,
+        current_task: &CurrentTask,
         offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        zxio_write_at(&self.zxio, task, offset, data)
+        zxio_write_at(&self.zxio, current_task, offset, data)
     }
 
     fn get_vmo(
         &self,
         _file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         mut prot: zx::VmarFlags,
     ) -> Result<zx::Vmo, Errno> {
         let has_execute = prot.contains(zx::VmarFlags::PERM_EXECUTE);
@@ -461,12 +465,22 @@ impl RemotePipeObject {
 impl FileOps for RemotePipeObject {
     fd_impl_nonseekable!();
 
-    fn read(&self, _file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
-        zxio_read(&self.zxio, task, data)
+    fn read(
+        &self,
+        _file: &FileObject,
+        current_task: &CurrentTask,
+        data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        zxio_read(&self.zxio, current_task, data)
     }
 
-    fn write(&self, _file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
-        zxio_write(&self.zxio, task, data)
+    fn write(
+        &self,
+        _file: &FileObject,
+        current_task: &CurrentTask,
+        data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        zxio_write(&self.zxio, current_task, data)
     }
 
     fn wait_async(
@@ -505,15 +519,15 @@ mod test {
         let root = ns.root();
         let mut context = LookupContext::default();
         assert_eq!(
-            root.lookup_child(&mut context, &current_task, b"nib").err(),
+            root.lookup_child(&current_task, &mut context, b"nib").err(),
             Some(errno!(ENOENT))
         );
         let mut context = LookupContext::default();
-        root.lookup_child(&mut context, &current_task, b"lib").unwrap();
+        root.lookup_child(&current_task, &mut context, b"lib").unwrap();
 
         let mut context = LookupContext::default();
         let _test_file = root
-            .lookup_child(&mut context, &current_task, b"bin/hello_starnix")?
+            .lookup_child(&current_task, &mut context, b"bin/hello_starnix")?
             .open(OpenFlags::RDONLY)?;
         Ok(())
     }

@@ -19,8 +19,7 @@ use super::tmpfs::TmpFs;
 use super::*;
 use crate::error;
 use crate::selinux::selinux_fs;
-use crate::task::Kernel;
-use crate::task::Task;
+use crate::task::{CurrentTask, Kernel};
 use crate::types::*;
 
 /// A mount namespace.
@@ -254,8 +253,8 @@ impl NamespaceNode {
     /// Traverse down a parent-to-child link in the namespace.
     pub fn lookup_child(
         &self,
+        current_task: &CurrentTask,
         context: &mut LookupContext,
-        task: &Task,
         basename: &FsStr,
     ) -> Result<NamespaceNode, Errno> {
         if !self.entry.node.is_dir() {
@@ -277,14 +276,14 @@ impl NamespaceNode {
                             return error!(ELOOP);
                         }
                         context.remaining_follows -= 1;
-                        child = match child.entry.node.readlink(task)? {
+                        child = match child.entry.node.readlink(current_task)? {
                             SymlinkTarget::Path(link_target) => {
                                 let link_directory = if link_target[0] == b'/' {
-                                    task.fs.root.clone()
+                                    current_task.fs.root.clone()
                                 } else {
                                     self.clone()
                                 };
-                                task.lookup_path(context, link_directory, &link_target)?
+                                current_task.lookup_path(context, link_directory, &link_target)?
                             }
                             SymlinkTarget::Node(node) => node,
                         }
@@ -436,18 +435,18 @@ mod test {
         let mut context = LookupContext::default();
         let dev = ns
             .root()
-            .lookup_child(&mut context, &current_task, b"dev")
+            .lookup_child(&current_task, &mut context, b"dev")
             .expect("failed to lookup dev");
         dev.mount(WhatToMount::Fs(dev_fs)).expect("failed to mount dev root node");
 
         let mut context = LookupContext::default();
         let dev = ns
             .root()
-            .lookup_child(&mut context, &current_task, b"dev")
+            .lookup_child(&current_task, &mut context, b"dev")
             .expect("failed to lookup dev");
         let mut context = LookupContext::default();
         let pts =
-            dev.lookup_child(&mut context, &current_task, b"pts").expect("failed to lookup pts");
+            dev.lookup_child(&current_task, &mut context, b"pts").expect("failed to lookup pts");
         let pts_parent = pts.parent().ok_or(errno!(ENOENT)).expect("failed to get parent of pts");
         assert!(Arc::ptr_eq(&pts_parent.entry, &dev.entry));
 
@@ -470,23 +469,23 @@ mod test {
         let mut context = LookupContext::default();
         let dev = ns
             .root()
-            .lookup_child(&mut context, &current_task, b"dev")
+            .lookup_child(&current_task, &mut context, b"dev")
             .expect("failed to lookup dev");
         dev.mount(WhatToMount::Fs(dev_fs)).expect("failed to mount dev root node");
         let mut context = LookupContext::default();
         let new_dev = ns
             .root()
-            .lookup_child(&mut context, &current_task, b"dev")
+            .lookup_child(&current_task, &mut context, b"dev")
             .expect("failed to lookup dev again");
         assert!(!Arc::ptr_eq(&dev.entry, &new_dev.entry));
         assert_ne!(&dev, &new_dev);
 
         let mut context = LookupContext::default();
         let _new_pts = new_dev
-            .lookup_child(&mut context, &current_task, b"pts")
+            .lookup_child(&current_task, &mut context, b"pts")
             .expect("failed to lookup pts");
         let mut context = LookupContext::default();
-        assert!(dev.lookup_child(&mut context, &current_task, b"pts").is_err());
+        assert!(dev.lookup_child(&current_task, &mut context, b"pts").is_err());
 
         Ok(())
     }
@@ -505,18 +504,18 @@ mod test {
         let mut context = LookupContext::default();
         let dev = ns
             .root()
-            .lookup_child(&mut context, &current_task, b"dev")
+            .lookup_child(&current_task, &mut context, b"dev")
             .expect("failed to lookup dev");
         dev.mount(WhatToMount::Fs(dev_fs)).expect("failed to mount dev root node");
 
         let mut context = LookupContext::default();
         let dev = ns
             .root()
-            .lookup_child(&mut context, &current_task, b"dev")
+            .lookup_child(&current_task, &mut context, b"dev")
             .expect("failed to lookup dev");
         let mut context = LookupContext::default();
         let pts =
-            dev.lookup_child(&mut context, &current_task, b"pts").expect("failed to lookup pts");
+            dev.lookup_child(&current_task, &mut context, b"pts").expect("failed to lookup pts");
 
         assert_eq!(b"/".to_vec(), ns.root().path());
         assert_eq!(b"/dev".to_vec(), dev.path());

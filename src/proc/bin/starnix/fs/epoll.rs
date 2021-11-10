@@ -221,13 +221,18 @@ impl FileOps for EpollFileObject {
     fn write(
         &self,
         _file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         _data: &[UserBuffer],
     ) -> Result<usize, Errno> {
         error!(EINVAL)
     }
 
-    fn read(&self, _file: &FileObject, _task: &Task, _data: &[UserBuffer]) -> Result<usize, Errno> {
+    fn read(
+        &self,
+        _file: &FileObject,
+        _current_task: &CurrentTask,
+        _data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
         error!(EINVAL)
     }
 

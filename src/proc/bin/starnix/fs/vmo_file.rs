@@ -11,7 +11,7 @@ use std::sync::Arc;
 use super::*;
 use crate::logging::impossible_error;
 use crate::mm::vmo::round_up_to_system_page_size;
-use crate::task::{EventHandler, Task, Waiter};
+use crate::task::{CurrentTask, EventHandler, Waiter};
 use crate::types::*;
 use crate::vmex_resource::VMEX_RESOURCE;
 use crate::{errno, error, fd_impl_nonblocking, fd_impl_seekable, fs_node_impl_xattr_delegate};
@@ -92,7 +92,7 @@ impl VmoFileObject {
     pub fn read_at(
         vmo: &Arc<zx::Vmo>,
         file: &FileObject,
-        task: &Task,
+        current_task: &CurrentTask,
         offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
@@ -107,7 +107,7 @@ impl VmoFileObject {
         let mut buf = vec![0u8; to_read];
         vmo.read(&mut buf[..], offset as u64).map_err(|_| errno!(EIO))?;
         // TODO(steveaustin) - write_each might might be more efficient
-        task.mm.write_all(data, &mut buf[..])?;
+        current_task.mm.write_all(data, &mut buf[..])?;
         // TODO(steveaustin) - omit updating time_access to allow info to be immutable
         // and thus allow simultaneous reads.
         info.time_access = fuchsia_runtime::utc_time();
@@ -117,7 +117,7 @@ impl VmoFileObject {
     pub fn write_at(
         vmo: &Arc<zx::Vmo>,
         file: &FileObject,
-        task: &Task,
+        current_task: &CurrentTask,
         offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
@@ -138,7 +138,7 @@ impl VmoFileObject {
         }
 
         let mut buf = vec![0u8; want_write];
-        task.mm.read_all(data, &mut buf[..])?;
+        current_task.mm.read_all(data, &mut buf[..])?;
         vmo.write(&mut buf[..], offset as u64).map_err(|_| errno!(EIO))?;
         if update_content_size {
             info.size = write_end;
@@ -152,7 +152,7 @@ impl VmoFileObject {
     pub fn get_vmo(
         vmo: &Arc<zx::Vmo>,
         _file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         prot: zx::VmarFlags,
     ) -> Result<zx::Vmo, Errno> {
         let mut vmo = vmo.duplicate_handle(zx::Rights::SAME_RIGHTS).map_err(impossible_error)?;
@@ -170,29 +170,29 @@ impl FileOps for VmoFileObject {
     fn read_at(
         &self,
         file: &FileObject,
-        task: &Task,
+        current_task: &CurrentTask,
         offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        VmoFileObject::read_at(&self.vmo, file, task, offset, data)
+        VmoFileObject::read_at(&self.vmo, file, current_task, offset, data)
     }
 
     fn write_at(
         &self,
         file: &FileObject,
-        task: &Task,
+        current_task: &CurrentTask,
         offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        VmoFileObject::write_at(&self.vmo, file, task, offset, data)
+        VmoFileObject::write_at(&self.vmo, file, current_task, offset, data)
     }
 
     fn get_vmo(
         &self,
         file: &FileObject,
-        task: &Task,
+        current_task: &CurrentTask,
         prot: zx::VmarFlags,
     ) -> Result<zx::Vmo, Errno> {
-        VmoFileObject::get_vmo(&self.vmo, file, task, prot)
+        VmoFileObject::get_vmo(&self.vmo, file, current_task, prot)
     }
 }

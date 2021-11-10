@@ -12,7 +12,7 @@ use crate::error;
 use crate::fd_impl_nonblocking;
 use crate::fd_impl_seekable;
 use crate::fs::*;
-use crate::task::{EventHandler, Kernel, Task, Waiter};
+use crate::task::{CurrentTask, EventHandler, Kernel, Waiter};
 use crate::types::*;
 
 pub struct BufferCollectionFile {
@@ -48,29 +48,29 @@ impl FileOps for BufferCollectionFile {
     fn read_at(
         &self,
         file: &FileObject,
-        task: &Task,
+        current_task: &CurrentTask,
         offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        VmoFileObject::read_at(&self.vmo, file, task, offset, data)
+        VmoFileObject::read_at(&self.vmo, file, current_task, offset, data)
     }
 
     fn write_at(
         &self,
         file: &FileObject,
-        task: &Task,
+        current_task: &CurrentTask,
         offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        VmoFileObject::write_at(&self.vmo, file, task, offset, data)
+        VmoFileObject::write_at(&self.vmo, file, current_task, offset, data)
     }
 
     fn get_vmo(
         &self,
         file: &FileObject,
-        task: &Task,
+        current_task: &CurrentTask,
         prot: zx::VmarFlags,
     ) -> Result<zx::Vmo, Errno> {
-        VmoFileObject::get_vmo(&self.vmo, file, task, prot)
+        VmoFileObject::get_vmo(&self.vmo, file, current_task, prot)
     }
 }

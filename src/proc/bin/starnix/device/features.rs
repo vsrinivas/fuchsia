@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use crate::device::wayland::serve_wayland;
-use crate::task::Task;
+use crate::task::CurrentTask;
 use crate::types::*;
 
 /// Parses and runs the features from the provided "program strvec."
-pub fn run_features<'a>(entries: &'a Vec<String>, task: &Task) -> Result<(), Errno> {
+pub fn run_features<'a>(entries: &'a Vec<String>, current_task: &CurrentTask) -> Result<(), Errno> {
     for entry in entries {
         match entry.as_str() {
             "wayland" => {
@@ -15,7 +15,7 @@ pub fn run_features<'a>(entries: &'a Vec<String>, task: &Task) -> Result<(), Err
                 // to wayland-0 and wayland-1. In the future this will need to match the environment
                 // variables set for the component.
                 serve_wayland(
-                    task,
+                    current_task,
                     b"/data/tmp/wayland-0".to_vec(),
                     b"/data/tmp/wayland-1".to_vec(),
                 )?;

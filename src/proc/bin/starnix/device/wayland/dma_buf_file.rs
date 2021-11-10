@@ -21,7 +21,7 @@ use crate::fd_impl_nonseekable;
 use crate::fs::*;
 use crate::mm::vmo::round_up_to_increment;
 use crate::syscalls::*;
-use crate::task::{EventHandler, Task, Waiter};
+use crate::task::{EventHandler, Waiter};
 use crate::types::*;
 
 pub struct DmaBufNode {}
@@ -102,7 +102,7 @@ impl DmaBufFile {
     /// descriptor.
     fn allocate_dma_buffer(
         &self,
-        task: &Task,
+        current_task: &CurrentTask,
         buffer_allocation_args: &DmaBufAllocationArgs,
     ) -> Result<DmaBufAllocationArgs, Errno> {
         let buffer_collection_proxy = self.allocate_shared_collection()?;
@@ -118,7 +118,7 @@ impl DmaBufFile {
         )?;
 
         let fd = self.create_buffer_collection_file(
-            task,
+            current_task,
             buffer_collection_info,
             buffer_collection_import_token,
         )?;
@@ -229,14 +229,14 @@ impl DmaBufFile {
     /// Returns the `FdNumber` of the created file.
     fn create_buffer_collection_file(
         &self,
-        task: &Task,
+        current_task: &CurrentTask,
         mut buffer_collection_info: fsysmem::BufferCollectionInfo2,
         buffer_collection_import_token: fuicomp::BufferCollectionImportToken,
     ) -> Result<FdNumber, Errno> {
         let vmo = Arc::new(buffer_collection_info.buffers[0].vmo.take().ok_or(errno!(EINVAL))?);
-        task.files.add_with_flags(
+        current_task.files.add_with_flags(
             BufferCollectionFile::new(
-                &task.thread_group.kernel,
+                &current_task.thread_group.kernel,
                 buffer_collection_import_token,
                 vmo,
             )?,
@@ -252,7 +252,7 @@ impl FileOps for DmaBufFile {
     fn ioctl(
         &self,
         _file: &FileObject,
-        task: &Task,
+        current_task: &CurrentTask,
         _request: u32,
         in_addr: UserAddress,
         _out_addr: UserAddress,
@@ -261,21 +261,26 @@ impl FileOps for DmaBufFile {
         // There are some macros for parsing request in the wayland demo that will need to be
         // matched here.
         let mut allocation_args = DmaBufAllocationArgs::default();
-        task.mm.read_object(UserRef::new(in_addr), &mut allocation_args)?;
-        let mut result = self.allocate_dma_buffer(task, &allocation_args)?;
-        task.mm.write_object(UserRef::new(in_addr), &mut result)?;
+        current_task.mm.read_object(UserRef::new(in_addr), &mut allocation_args)?;
+        let mut result = self.allocate_dma_buffer(current_task, &allocation_args)?;
+        current_task.mm.write_object(UserRef::new(in_addr), &mut result)?;
 
         Ok(SUCCESS)
     }
 
-    fn read(&self, _file: &FileObject, _task: &Task, _data: &[UserBuffer]) -> Result<usize, Errno> {
+    fn read(
+        &self,
+        _file: &FileObject,
+        _current_task: &CurrentTask,
+        _data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
         error!(EINVAL)
     }
 
     fn write(
         &self,
         _file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         _data: &[UserBuffer],
     ) -> Result<usize, Errno> {
         error!(EINVAL)

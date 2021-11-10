@@ -69,9 +69,14 @@ fn query_events_internal(inner: &EventFdInner) -> FdEvents {
 impl FileOps for EventFdFileObject {
     fd_impl_nonseekable!();
 
-    fn write(&self, _file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
+    fn write(
+        &self,
+        _file: &FileObject,
+        current_task: &CurrentTask,
+        data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
         let mut written_data = [0; DATA_SIZE];
-        if task.mm.read_all(data, &mut written_data)? < DATA_SIZE {
+        if current_task.mm.read_all(data, &mut written_data)? < DATA_SIZE {
             return error!(EINVAL);
         }
         let add_value = u64::from_ne_bytes(written_data);
@@ -92,7 +97,12 @@ impl FileOps for EventFdFileObject {
         Ok(DATA_SIZE)
     }
 
-    fn read(&self, _file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
+    fn read(
+        &self,
+        _file: &FileObject,
+        current_task: &CurrentTask,
+        data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
         if UserBuffer::get_total_length(data) < DATA_SIZE {
             return error!(EINVAL);
         }
@@ -113,7 +123,7 @@ impl FileOps for EventFdFileObject {
                 1
             }
         };
-        task.mm.write_all(data, &return_value.to_ne_bytes())?;
+        current_task.mm.write_all(data, &return_value.to_ne_bytes())?;
         inner.wait_queue.notify_mask(FdEvents::POLLOUT.mask());
 
         Ok(DATA_SIZE)

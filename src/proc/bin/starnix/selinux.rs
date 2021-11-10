@@ -34,7 +34,7 @@ impl FileOps for SeLoad {
     fn write_at(
         &self,
         _file: &FileObject,
-        task: &Task,
+        current_task: &CurrentTask,
         offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
@@ -43,7 +43,7 @@ impl FileOps for SeLoad {
         }
         let size = UserBuffer::get_total_length(data);
         let mut buf = vec![0u8; size];
-        task.mm.read_all(&data, &mut buf)?;
+        current_task.mm.read_all(&data, &mut buf)?;
         log::info!("got selinux policy, length {}, ignoring", size);
         Ok(size)
     }
@@ -51,7 +51,7 @@ impl FileOps for SeLoad {
     fn read_at(
         &self,
         _file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         _offset: usize,
         _data: &[UserBuffer],
     ) -> Result<usize, Errno> {
@@ -67,7 +67,7 @@ impl FileOps for SeEnforce {
     fn write_at(
         &self,
         _file: &FileObject,
-        task: &Task,
+        current_task: &CurrentTask,
         offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
@@ -76,7 +76,7 @@ impl FileOps for SeEnforce {
         }
         let size = UserBuffer::get_total_length(data);
         let mut buf = vec![0u8; size];
-        task.mm.read_all(&data, &mut buf)?;
+        current_task.mm.read_all(&data, &mut buf)?;
         let enforce = parse_int(&buf)?;
         log::info!("setenforce: {}", enforce);
         Ok(size)
@@ -84,7 +84,7 @@ impl FileOps for SeEnforce {
     fn read_at(
         &self,
         _file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         _offset: usize,
         _data: &[UserBuffer],
     ) -> Result<usize, Errno> {
@@ -100,7 +100,7 @@ impl FileOps for SeCheckReqProt {
     fn write_at(
         &self,
         _file: &FileObject,
-        task: &Task,
+        current_task: &CurrentTask,
         offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
@@ -109,7 +109,7 @@ impl FileOps for SeCheckReqProt {
         }
         let size = UserBuffer::get_total_length(data);
         let mut buf = vec![0u8; size];
-        task.mm.read_all(&data, &mut buf)?;
+        current_task.mm.read_all(&data, &mut buf)?;
         let checkreqprot = parse_int(&buf)?;
         log::info!("checkreqprot: {}", checkreqprot);
         Ok(size)
@@ -117,7 +117,7 @@ impl FileOps for SeCheckReqProt {
     fn read_at(
         &self,
         _file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         _offset: usize,
         _data: &[UserBuffer],
     ) -> Result<usize, Errno> {

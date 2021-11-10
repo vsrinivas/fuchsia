@@ -139,8 +139,12 @@ impl elf_load::Mapper for Mapper<'_> {
     }
 }
 
-fn load_elf(task: &Task, elf: &FileHandle, mm: &MemoryManager) -> Result<LoadedElf, Errno> {
-    let vmo = elf.get_vmo(task, zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_EXECUTE)?;
+fn load_elf(
+    current_task: &CurrentTask,
+    elf: &FileHandle,
+    mm: &MemoryManager,
+) -> Result<LoadedElf, Errno> {
+    let vmo = elf.get_vmo(current_task, zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_EXECUTE)?;
     let headers = elf_parse::Elf64Headers::from_vmo(&vmo).map_err(elf_parse_error_to_errno)?;
     let elf_info = elf_load::loaded_elf_info(&headers);
     let file_base = match headers.file_header().elf_type() {
@@ -172,12 +176,12 @@ impl ThreadStartInfo {
 }
 
 pub fn load_executable(
-    task: &Task,
+    current_task: &CurrentTask,
     executable: FileHandle,
     argv: &Vec<CString>,
     environ: &Vec<CString>,
 ) -> Result<ThreadStartInfo, Errno> {
-    let main_elf = load_elf(task, &executable, &task.mm)?;
+    let main_elf = load_elf(current_task, &executable, &current_task.mm)?;
     let interp_elf = if let Some(interp_hdr) = main_elf
         .headers
         .program_header_with_type(elf_parse::SegmentType::Interp)
@@ -192,8 +196,8 @@ pub fn load_executable(
             .map_err(|_| errno!(EINVAL))?
             .to_str()
             .map_err(|_| errno!(EINVAL))?;
-        let interp_file = task.open_file(interp.as_bytes(), OpenFlags::RDONLY)?;
-        Some(load_elf(task, &interp_file, &task.mm)?)
+        let interp_file = current_task.open_file(interp.as_bytes(), OpenFlags::RDONLY)?;
+        Some(load_elf(current_task, &interp_file, &current_task.mm)?)
     } else {
         None
     };
@@ -211,7 +215,7 @@ pub fn load_executable(
         .as_ref()
         .set_name(CStr::from_bytes_with_nul(b"[stack]\0").unwrap())
         .map_err(impossible_error)?;
-    let stack_base = task.mm.map(
+    let stack_base = current_task.mm.map(
         UserAddress::default(),
         Arc::clone(&stack_vmo),
         0,
@@ -222,7 +226,7 @@ pub fn load_executable(
     )?;
     let stack = stack_base + (stack_size - 8);
 
-    let creds = task.creds.read();
+    let creds = current_task.creds.read();
     let auxv = vec![
         (AT_UID, creds.uid as u64),
         (AT_EUID, creds.euid as u64),
@@ -284,9 +288,9 @@ mod tests {
         assert_eq!(stack_start_addr, original_stack_start_addr - payload_size);
     }
 
-    fn exec_hello_starnix(task: &Task) -> Result<(), Errno> {
+    fn exec_hello_starnix(current_task: &CurrentTask) -> Result<(), Errno> {
         let argv = vec![CString::new("bin/hello_starnix").unwrap()];
-        task.exec(&argv[0], &argv, &&vec![])?;
+        current_task.exec(&argv[0], &argv, &&vec![])?;
         Ok(())
     }
 

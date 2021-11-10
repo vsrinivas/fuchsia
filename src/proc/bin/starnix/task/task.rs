@@ -40,44 +40,6 @@ pub struct CurrentTask {
     _not_sync: std::marker::PhantomData<std::cell::UnsafeCell<()>>,
 }
 
-impl CurrentTask {
-    fn new(task: Task) -> CurrentTask {
-        CurrentTask {
-            task: Arc::new(task),
-            registers: zx::sys::zx_thread_state_general_regs_t::default(),
-            _not_sync: PhantomData,
-        }
-    }
-
-    pub fn kernel(&self) -> &Arc<Kernel> {
-        &self.task.thread_group.kernel
-    }
-
-    pub fn task_arc_clone(&self) -> Arc<Task> {
-        Arc::clone(&self.task)
-    }
-
-    /// Sets the task's signal mask to `signal_mask` and runs `wait_function`.
-    ///
-    /// Signals are dequeued prior to the original signal mask being restored.
-    ///
-    /// The returned result is the result returned from the wait function.
-    pub fn wait_with_temporary_mask<F, T>(
-        &mut self,
-        signal_mask: u64,
-        wait_function: F,
-    ) -> Result<T, Errno>
-    where
-        F: FnOnce(&CurrentTask) -> Result<T, Errno>,
-    {
-        let old_mask = self.signals.write().set_signal_mask(signal_mask);
-        let wait_result = wait_function(self);
-        dequeue_signal(self);
-        self.signals.write().set_signal_mask(old_mask);
-        wait_result
-    }
-}
-
 impl std::ops::Drop for CurrentTask {
     fn drop(&mut self) {
         self.task.destroy();
@@ -415,46 +377,6 @@ impl Task {
         Ok(child)
     }
 
-    pub fn exec(
-        &self,
-        path: &CStr,
-        argv: &Vec<CString>,
-        environ: &Vec<CString>,
-    ) -> Result<ThreadStartInfo, Errno> {
-        let executable = self.open_file(path.to_bytes(), OpenFlags::RDONLY)?;
-        *self.executable_node.write() = Some(executable.name.clone());
-
-        // TODO: Implement #!interpreter [optional-arg]
-
-        // TODO: All threads other than the calling thread are destroyed.
-
-        // TODO: The dispositions of any signals that are being caught are
-        //       reset to the default.
-
-        self.signals.write().alt_stack = None;
-
-        self.mm.exec().map_err(|status| from_status_like_fdio!(status))?;
-
-        // TODO: The file descriptor table is unshared, undoing the effect of
-        //       the CLONE_FILES flag of clone(2).
-        //
-        // To make this work, we can put the files in an RwLock and then cache
-        // a reference to the files on the CurrentTask. That will let
-        // functions that have CurrentTask access the FdTable without
-        // needing to grab the read-lock.
-        //
-        // For now, we do not implement that behavior.
-        self.files.exec();
-
-        // TODO: POSIX timers are not preserved.
-
-        // TODO: The termination signal is reset to SIGCHLD.
-
-        self.thread_group.set_name(path)?;
-        *self.command.write() = path.to_owned();
-        Ok(load_executable(self, executable, argv, environ)?)
-    }
-
     /// If needed, clear the child tid for this task.
     ///
     /// Userspace can ask us to clear the child tid and issue a futex wake at
@@ -503,6 +425,121 @@ impl Task {
         Ok((dir, path))
     }
 
+    pub fn get_task(&self, pid: pid_t) -> Option<Arc<Task>> {
+        self.thread_group.kernel.pids.read().get_task(pid)
+    }
+
+    pub fn get_pid(&self) -> pid_t {
+        self.thread_group.leader
+    }
+
+    pub fn get_sid(&self) -> pid_t {
+        self.shell_job_control.sid
+    }
+
+    pub fn get_tid(&self) -> pid_t {
+        self.id
+    }
+
+    pub fn get_pgrp(&self) -> pid_t {
+        // TODO: Implement process groups.
+        1
+    }
+
+    pub fn as_ucred(&self) -> ucred {
+        let creds = self.creds.read();
+        ucred { pid: self.get_pid(), uid: creds.uid, gid: creds.gid }
+    }
+
+    /// Returns whether or not the task has the given `capability`.
+    ///
+    // TODO(lindkvist): This should do a proper check for the capability in the namespace.
+    // TODO(lindkvist): `capability` should be a type, just like we do for signals.
+    pub fn has_capability(&self, _capability: u32) -> bool {
+        false
+    }
+
+    pub fn can_signal(&self, target: &Task, unchecked_signal: &UncheckedSignal) -> bool {
+        // If both the tasks share a thread group the signal can be sent. This is not documented
+        // in kill(2) because kill does not support task-level granularity in signal sending.
+        if self.thread_group == target.thread_group {
+            return true;
+        }
+
+        if self.has_capability(CAP_KILL) {
+            return true;
+        }
+
+        if self.creds.read().has_same_uid(&target.creds.read()) {
+            return true;
+        }
+
+        // TODO(lindkvist): This check should also verify that the sessions are the same.
+        if Signal::try_from(unchecked_signal) == Ok(SIGCONT) {
+            return true;
+        }
+
+        false
+    }
+
+    pub fn as_zombie(&self) -> ZombieTask {
+        ZombieTask { id: self.id, parent: self.parent, exit_code: *self.exit_code.lock() }
+    }
+
+    /// Removes and returns any zombie task with the specified `pid`, if such a zombie exists.
+    pub fn get_zombie_child(&self, selector: TaskSelector) -> Option<ZombieTask> {
+        let mut zombie_children = self.zombie_children.lock();
+        match selector {
+            TaskSelector::Any => zombie_children.pop(),
+            TaskSelector::Pid(pid) => zombie_children
+                .iter()
+                .position(|zombie| zombie.id == pid)
+                .map(|pos| zombie_children.remove(pos)),
+        }
+    }
+
+    fn remove_child(&self, pid: pid_t) {
+        self.children.write().remove(&pid);
+    }
+}
+
+impl CurrentTask {
+    fn new(task: Task) -> CurrentTask {
+        CurrentTask {
+            task: Arc::new(task),
+            registers: zx::sys::zx_thread_state_general_regs_t::default(),
+            _not_sync: PhantomData,
+        }
+    }
+
+    pub fn kernel(&self) -> &Arc<Kernel> {
+        &self.task.thread_group.kernel
+    }
+
+    pub fn task_arc_clone(&self) -> Arc<Task> {
+        Arc::clone(&self.task)
+    }
+
+    /// Sets the task's signal mask to `signal_mask` and runs `wait_function`.
+    ///
+    /// Signals are dequeued prior to the original signal mask being restored.
+    ///
+    /// The returned result is the result returned from the wait function.
+    pub fn wait_with_temporary_mask<F, T>(
+        &mut self,
+        signal_mask: u64,
+        wait_function: F,
+    ) -> Result<T, Errno>
+    where
+        F: FnOnce(&CurrentTask) -> Result<T, Errno>,
+    {
+        let old_mask = self.signals.write().set_signal_mask(signal_mask);
+        let wait_result = wait_function(self);
+        dequeue_signal(self);
+        self.signals.write().set_signal_mask(old_mask);
+        wait_result
+    }
+
     /// A convenient wrapper for opening files relative to FdNumber::AT_FDCWD.
     ///
     /// Returns a FileHandle but does not install the FileHandle in the FdTable
@@ -540,7 +577,7 @@ impl Task {
         let must_create = flags.contains(OpenFlags::CREAT) && flags.contains(OpenFlags::EXCL);
 
         let mut child_context = context.with(SymlinkMode::NoFollow);
-        match parent.lookup_child(&mut child_context, self, basename) {
+        match parent.lookup_child(self, &mut child_context, basename) {
             Ok(name) => {
                 if name.entry.node.info().mode.is_lnk() {
                     if context.symlink_mode == SymlinkMode::NoFollow
@@ -706,7 +743,7 @@ impl Task {
         let mut it = path.split(|c| *c == b'/');
         let mut current_path_component = it.next().unwrap_or(b"");
         while let Some(next_path_component) = it.next() {
-            current_node = current_node.lookup_child(context, self, current_path_component)?;
+            current_node = current_node.lookup_child(self, context, current_path_component)?;
             current_path_component = next_path_component;
         }
         Ok((current_node, current_path_component))
@@ -725,7 +762,7 @@ impl Task {
         path: &FsStr,
     ) -> Result<NamespaceNode, Errno> {
         let (parent, basename) = self.lookup_parent(context, dir, path)?;
-        parent.lookup_child(context, self, basename)
+        parent.lookup_child(self, context, basename)
     }
 
     /// Lookup a namespace node starting at the root directory.
@@ -736,81 +773,44 @@ impl Task {
         self.lookup_path(&mut context, self.fs.root.clone(), path)
     }
 
-    pub fn get_task(&self, pid: pid_t) -> Option<Arc<Task>> {
-        self.thread_group.kernel.pids.read().get_task(pid)
-    }
+    pub fn exec(
+        &self,
+        path: &CStr,
+        argv: &Vec<CString>,
+        environ: &Vec<CString>,
+    ) -> Result<ThreadStartInfo, Errno> {
+        let executable = self.open_file(path.to_bytes(), OpenFlags::RDONLY)?;
+        *self.executable_node.write() = Some(executable.name.clone());
 
-    pub fn get_pid(&self) -> pid_t {
-        self.thread_group.leader
-    }
+        // TODO: Implement #!interpreter [optional-arg]
 
-    pub fn get_sid(&self) -> pid_t {
-        self.shell_job_control.sid
-    }
+        // TODO: All threads other than the calling thread are destroyed.
 
-    pub fn get_tid(&self) -> pid_t {
-        self.id
-    }
+        // TODO: The dispositions of any signals that are being caught are
+        //       reset to the default.
 
-    pub fn get_pgrp(&self) -> pid_t {
-        // TODO: Implement process groups.
-        1
-    }
+        self.signals.write().alt_stack = None;
 
-    pub fn as_ucred(&self) -> ucred {
-        let creds = self.creds.read();
-        ucred { pid: self.get_pid(), uid: creds.uid, gid: creds.gid }
-    }
+        self.mm.exec().map_err(|status| from_status_like_fdio!(status))?;
 
-    /// Returns whether or not the task has the given `capability`.
-    ///
-    // TODO(lindkvist): This should do a proper check for the capability in the namespace.
-    // TODO(lindkvist): `capability` should be a type, just like we do for signals.
-    pub fn has_capability(&self, _capability: u32) -> bool {
-        false
-    }
+        // TODO: The file descriptor table is unshared, undoing the effect of
+        //       the CLONE_FILES flag of clone(2).
+        //
+        // To make this work, we can put the files in an RwLock and then cache
+        // a reference to the files on the CurrentTask. That will let
+        // functions that have CurrentTask access the FdTable without
+        // needing to grab the read-lock.
+        //
+        // For now, we do not implement that behavior.
+        self.files.exec();
 
-    pub fn can_signal(&self, target: &Task, unchecked_signal: &UncheckedSignal) -> bool {
-        // If both the tasks share a thread group the signal can be sent. This is not documented
-        // in kill(2) because kill does not support task-level granularity in signal sending.
-        if self.thread_group == target.thread_group {
-            return true;
-        }
+        // TODO: POSIX timers are not preserved.
 
-        if self.has_capability(CAP_KILL) {
-            return true;
-        }
+        // TODO: The termination signal is reset to SIGCHLD.
 
-        if self.creds.read().has_same_uid(&target.creds.read()) {
-            return true;
-        }
-
-        // TODO(lindkvist): This check should also verify that the sessions are the same.
-        if Signal::try_from(unchecked_signal) == Ok(SIGCONT) {
-            return true;
-        }
-
-        false
-    }
-
-    pub fn as_zombie(&self) -> ZombieTask {
-        ZombieTask { id: self.id, parent: self.parent, exit_code: *self.exit_code.lock() }
-    }
-
-    /// Removes and returns any zombie task with the specified `pid`, if such a zombie exists.
-    pub fn get_zombie_child(&self, selector: TaskSelector) -> Option<ZombieTask> {
-        let mut zombie_children = self.zombie_children.lock();
-        match selector {
-            TaskSelector::Any => zombie_children.pop(),
-            TaskSelector::Pid(pid) => zombie_children
-                .iter()
-                .position(|zombie| zombie.id == pid)
-                .map(|pos| zombie_children.remove(pos)),
-        }
-    }
-
-    fn remove_child(&self, pid: pid_t) {
-        self.children.write().remove(&pid);
+        self.thread_group.set_name(path)?;
+        *self.command.write() = path.to_owned();
+        Ok(load_executable(self, executable, argv, environ)?)
     }
 }
 

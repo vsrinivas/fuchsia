@@ -18,7 +18,7 @@ use crate::fs::*;
 use crate::logging::*;
 use crate::mm::vmo::round_up_to_system_page_size;
 use crate::mm::FutexTable;
-use crate::task::{EventHandler, Task, Waiter};
+use crate::task::{CurrentTask, EventHandler, Task, Waiter};
 use crate::types::{range_ext::RangeExt, *};
 use crate::vmex_resource::VMEX_RESOURCE;
 use crate::{errno, error, fd_impl_nonblocking, fd_impl_seekable, mode, not_implemented};
@@ -1064,7 +1064,7 @@ impl FileOps for ProcMapsFile {
     fn read_at(
         &self,
         _file: &FileObject,
-        task: &Task,
+        current_task: &CurrentTask,
         offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
@@ -1102,13 +1102,13 @@ impl FileOps for ProcMapsFile {
             }
             Ok(None)
         };
-        seq.read_at(task, iter, offset, data)
+        seq.read_at(current_task, iter, offset, data)
     }
 
     fn write_at(
         &self,
         _file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         _offset: usize,
         _data: &[UserBuffer],
     ) -> Result<usize, Errno> {

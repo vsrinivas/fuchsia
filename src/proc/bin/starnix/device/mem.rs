@@ -28,23 +28,23 @@ macro_rules! fd_impl_seekless {
         fn read(
             &self,
             file: &FileObject,
-            task: &Task,
+            current_task: &CurrentTask,
             data: &[UserBuffer],
         ) -> Result<usize, Errno> {
-            self.read_at(file, task, 0, data)
+            self.read_at(file, current_task, 0, data)
         }
         fn write(
             &self,
             file: &FileObject,
-            task: &Task,
+            current_task: &CurrentTask,
             data: &[UserBuffer],
         ) -> Result<usize, Errno> {
-            self.write_at(file, task, 0, data)
+            self.write_at(file, current_task, 0, data)
         }
         fn seek(
             &self,
             _file: &FileObject,
-            _task: &Task,
+            _current_task: &CurrentTask,
             _offset: off_t,
             _whence: SeekOrigin,
         ) -> Result<off_t, Errno> {
@@ -66,7 +66,7 @@ impl FileOps for DevNull {
     fn write_at(
         &self,
         _file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         _offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
@@ -76,7 +76,7 @@ impl FileOps for DevNull {
     fn read_at(
         &self,
         _file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         _offset: usize,
         _data: &[UserBuffer],
     ) -> Result<usize, Errno> {
@@ -97,7 +97,7 @@ impl FileOps for DevZero {
     fn write_at(
         &self,
         _file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         _offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
@@ -107,12 +107,12 @@ impl FileOps for DevZero {
     fn read_at(
         &self,
         _file: &FileObject,
-        task: &Task,
+        current_task: &CurrentTask,
         _offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
         let mut actual = 0;
-        task.mm.write_each(data, |bytes| {
+        current_task.mm.write_each(data, |bytes| {
             actual += bytes.len();
             Ok(bytes)
         })?;
@@ -133,7 +133,7 @@ impl FileOps for DevFull {
     fn write_at(
         &self,
         _file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         _offset: usize,
         _data: &[UserBuffer],
     ) -> Result<usize, Errno> {
@@ -143,12 +143,12 @@ impl FileOps for DevFull {
     fn read_at(
         &self,
         _file: &FileObject,
-        task: &Task,
+        current_task: &CurrentTask,
         _offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
         let mut actual = 0;
-        task.mm.write_each(data, |bytes| {
+        current_task.mm.write_each(data, |bytes| {
             actual += bytes.len();
             Ok(bytes)
         })?;
@@ -170,7 +170,7 @@ impl FileOps for DevRandom {
     fn write_at(
         &self,
         _file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         _offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
@@ -180,12 +180,12 @@ impl FileOps for DevRandom {
     fn read_at(
         &self,
         _file: &FileObject,
-        task: &Task,
+        current_task: &CurrentTask,
         _offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
         let mut actual = 0;
-        task.mm.write_each(data, |bytes| {
+        current_task.mm.write_each(data, |bytes| {
             actual += bytes.len();
             cprng_draw(bytes);
             Ok(bytes)
@@ -207,7 +207,7 @@ impl FileOps for DevKmsg {
     fn read_at(
         &self,
         _file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         _offset: usize,
         _data: &[UserBuffer],
     ) -> Result<usize, Errno> {
@@ -217,13 +217,13 @@ impl FileOps for DevKmsg {
     fn write_at(
         &self,
         _file: &FileObject,
-        task: &Task,
+        current_task: &CurrentTask,
         _offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
         let total = UserBuffer::get_total_length(data);
         let mut bytes = vec![0; total];
-        task.mm.read_all(data, &mut bytes)?;
+        current_task.mm.read_all(data, &mut bytes)?;
         log::info!(target: "kmsg", "{}", String::from_utf8_lossy(&bytes).trim_end_matches('\n'));
         Ok(total)
     }

@@ -128,7 +128,7 @@ impl Pipe {
 
     pub fn read(
         &mut self,
-        task: &Task,
+        current_task: &CurrentTask,
         user_buffers: &mut UserBufferIterator<'_>,
     ) -> Result<usize, Errno> {
         // If there isn't any data to read from the pipe, then the behavior
@@ -143,12 +143,12 @@ impl Pipe {
             return error!(EAGAIN);
         }
 
-        self.messages.read_stream(task, user_buffers).map(|info| info.bytes_read)
+        self.messages.read_stream(current_task, user_buffers).map(|info| info.bytes_read)
     }
 
     pub fn write(
         &mut self,
-        task: &Task,
+        current_task: &CurrentTask,
         user_buffers: &mut UserBufferIterator<'_>,
     ) -> Result<usize, Errno> {
         if !self.had_reader {
@@ -156,7 +156,7 @@ impl Pipe {
         }
 
         if self.reader_count == 0 {
-            send_signal(task, SignalInfo::default(SIGPIPE));
+            send_signal(&current_task, SignalInfo::default(SIGPIPE));
             return error!(EPIPE);
         }
 
@@ -164,7 +164,7 @@ impl Pipe {
             return error!(EAGAIN);
         }
 
-        self.messages.write_stream(task, user_buffers, None, &mut None)
+        self.messages.write_stream(&current_task, user_buffers, None, &mut None)
     }
 
     fn query_events(&self) -> FdEvents {
@@ -195,7 +195,7 @@ impl Pipe {
     fn fcntl(
         &mut self,
         _file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         cmd: u32,
         arg: u64,
     ) -> Result<SyscallResult, Errno> {
@@ -212,7 +212,7 @@ impl Pipe {
     fn ioctl(
         &self,
         _file: &FileObject,
-        task: &Task,
+        current_task: &CurrentTask,
         request: u32,
         in_addr: UserAddress,
         _out_addr: UserAddress,
@@ -221,7 +221,7 @@ impl Pipe {
             FIONREAD => {
                 let addr = UserRef::<i32>::new(in_addr);
                 let value: i32 = self.messages.len().try_into().map_err(|_| errno!(EINVAL))?;
-                task.mm.write_object(addr, &value)?;
+                current_task.mm.write_object(addr, &value)?;
                 Ok(SUCCESS)
             }
             _ => default_ioctl(request),
@@ -282,25 +282,35 @@ impl FileOps for PipeFileObject {
         }
     }
 
-    fn read(&self, _file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
+    fn read(
+        &self,
+        _file: &FileObject,
+        current_task: &CurrentTask,
+        data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
         let mut user_buffers = UserBufferIterator::new(data);
         let mut pipe = self.pipe.lock();
-        let actual = pipe.read(task, &mut user_buffers)?;
+        let actual = pipe.read(&current_task, &mut user_buffers)?;
         if actual > 0 {
             pipe.waiters.notify_events(FdEvents::POLLOUT);
         }
         Ok(actual)
     }
 
-    fn write(&self, file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
+    fn write(
+        &self,
+        file: &FileObject,
+        current_task: &CurrentTask,
+        data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
         let requested = UserBuffer::get_total_length(data);
         let mut actual = 0;
         let mut user_buffers = UserBufferIterator::new(data);
         file.blocking_op(
-            task,
+            current_task,
             || {
                 let mut pipe = self.pipe.lock();
-                actual += match pipe.write(task, &mut user_buffers) {
+                actual += match pipe.write(current_task, &mut user_buffers) {
                     Ok(chunk) => {
                         if chunk > 0 {
                             pipe.waiters.notify_events(FdEvents::POLLIN);
@@ -344,21 +354,21 @@ impl FileOps for PipeFileObject {
     fn fcntl(
         &self,
         file: &FileObject,
-        task: &Task,
+        current_task: &CurrentTask,
         cmd: u32,
         arg: u64,
     ) -> Result<SyscallResult, Errno> {
-        self.pipe.lock().fcntl(file, task, cmd, arg)
+        self.pipe.lock().fcntl(file, current_task, cmd, arg)
     }
 
     fn ioctl(
         &self,
         file: &FileObject,
-        task: &Task,
+        current_task: &CurrentTask,
         request: u32,
         in_addr: UserAddress,
         out_addr: UserAddress,
     ) -> Result<SyscallResult, Errno> {
-        self.pipe.lock().ioctl(file, task, request, in_addr, out_addr)
+        self.pipe.lock().ioctl(file, current_task, request, in_addr, out_addr)
     }
 }

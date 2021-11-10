@@ -126,7 +126,12 @@ impl TimerFile {
 
 impl FileOps for TimerFile {
     fd_impl_nonseekable!();
-    fn write(&self, file: &FileObject, _task: &Task, _data: &[UserBuffer]) -> Result<usize, Errno> {
+    fn write(
+        &self,
+        file: &FileObject,
+        _current_task: &CurrentTask,
+        _data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
         // The expected error seems to vary depending on the open flags..
         if file.flags().contains(OpenFlags::NONBLOCK) {
             error!(EINVAL)
@@ -135,7 +140,12 @@ impl FileOps for TimerFile {
         }
     }
 
-    fn read(&self, _file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
+    fn read(
+        &self,
+        _file: &FileObject,
+        current_task: &CurrentTask,
+        data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
         let mut deadline_interval = self.deadline_interval.lock();
         let (deadline, interval) = *deadline_interval;
 
@@ -175,7 +185,7 @@ impl FileOps for TimerFile {
         };
 
         let bytes = count.as_bytes();
-        task.mm.write_all(data, bytes)?;
+        current_task.mm.write_all(data, bytes)?;
         Ok(bytes.len())
     }
 

@@ -7,7 +7,7 @@ use std::sync::Arc;
 use crate::fs::*;
 use crate::mm::ProcMapsFile;
 use crate::mode;
-use crate::task::{EventHandler, Task, Waiter};
+use crate::task::{CurrentTask, EventHandler, Task, Waiter};
 use crate::types::*;
 use crate::{errno, error, fd_impl_directory, fd_impl_nonblocking, fs_node_impl_symlink};
 
@@ -63,7 +63,7 @@ impl FileOps for PidDirectoryFileOps {
     fn seek(
         &self,
         file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         offset: off_t,
         whence: SeekOrigin,
     ) -> Result<off_t, Errno> {
@@ -73,7 +73,7 @@ impl FileOps for PidDirectoryFileOps {
     fn readdir(
         &self,
         file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         sink: &mut dyn DirentSink,
     ) -> Result<(), Errno> {
         let mut offset = file.offset.lock();
@@ -202,7 +202,7 @@ impl FileOps for FdDirectoryFileOps {
     fn seek(
         &self,
         file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         offset: off_t,
         whence: SeekOrigin,
     ) -> Result<off_t, Errno> {
@@ -212,7 +212,7 @@ impl FileOps for FdDirectoryFileOps {
     fn readdir(
         &self,
         file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         sink: &mut dyn DirentSink,
     ) -> Result<(), Errno> {
         let mut offset = file.offset.lock();
@@ -252,7 +252,11 @@ impl ExeSymlink {
 impl FsNodeOps for ExeSymlink {
     fs_node_impl_symlink!();
 
-    fn readlink(&self, _node: &FsNode, _task: &Task) -> Result<SymlinkTarget, Errno> {
+    fn readlink(
+        &self,
+        _node: &FsNode,
+        _current_task: &CurrentTask,
+    ) -> Result<SymlinkTarget, Errno> {
         if let Some(node) = &*self.task.executable_node.read() {
             Ok(SymlinkTarget::Node(node.clone()))
         } else {
@@ -283,7 +287,11 @@ impl FdSymlink {
 impl FsNodeOps for FdSymlink {
     fs_node_impl_symlink!();
 
-    fn readlink(&self, _node: &FsNode, _task: &Task) -> Result<SymlinkTarget, Errno> {
+    fn readlink(
+        &self,
+        _node: &FsNode,
+        _current_task: &CurrentTask,
+    ) -> Result<SymlinkTarget, Errno> {
         let file = self.task.files.get(self.fd).map_err(|_| errno!(ENOENT))?;
         Ok(SymlinkTarget::Node(file.name.clone()))
     }

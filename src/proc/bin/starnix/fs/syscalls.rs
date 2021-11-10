@@ -188,20 +188,25 @@ pub fn sys_statfs(
 ///
 /// Reads user_path from user memory and then calls through to Task::open_file_at.
 fn open_file_at(
-    task: &Task,
+    current_task: &CurrentTask,
     dir_fd: FdNumber,
     user_path: UserCString,
     flags: u32,
     mode: FileMode,
 ) -> Result<FileHandle, Errno> {
     let mut buf = [0u8; PATH_MAX as usize];
-    let path = task.mm.read_c_string(user_path, &mut buf)?;
-    strace!(task, "open_file_at(dir_fd={}, path={:?})", dir_fd, String::from_utf8_lossy(path));
-    task.open_file_at(dir_fd, path, OpenFlags::from_bits_truncate(flags), mode)
+    let path = current_task.mm.read_c_string(user_path, &mut buf)?;
+    strace!(
+        current_task,
+        "open_file_at(dir_fd={}, path={:?})",
+        dir_fd,
+        String::from_utf8_lossy(path)
+    );
+    current_task.open_file_at(dir_fd, path, OpenFlags::from_bits_truncate(flags), mode)
 }
 
-pub fn lookup_parent_at<T, F>(
-    task: &Task,
+fn lookup_parent_at<T, F>(
+    current_task: &CurrentTask,
     dir_fd: FdNumber,
     user_path: UserCString,
     callback: F,
@@ -210,12 +215,17 @@ where
     F: Fn(NamespaceNode, &FsStr) -> Result<T, Errno>,
 {
     let mut buf = [0u8; PATH_MAX as usize];
-    let path = task.mm.read_c_string(user_path, &mut buf)?;
-    strace!(task, "lookup_parent_at(dir_fd={}, path={:?})", dir_fd, String::from_utf8_lossy(path));
+    let path = current_task.mm.read_c_string(user_path, &mut buf)?;
+    strace!(
+        current_task,
+        "lookup_parent_at(dir_fd={}, path={:?})",
+        dir_fd,
+        String::from_utf8_lossy(path)
+    );
     if path.is_empty() {
         return error!(ENOENT);
     }
-    let (parent, basename) = task.lookup_parent_at(dir_fd, path)?;
+    let (parent, basename) = current_task.lookup_parent_at(dir_fd, path)?;
     callback(parent, basename)
 }
 
@@ -235,24 +245,24 @@ impl Default for LookupOptions {
 }
 
 fn lookup_at(
-    task: &Task,
+    current_task: &CurrentTask,
     dir_fd: FdNumber,
     user_path: UserCString,
     options: LookupOptions,
 ) -> Result<NamespaceNode, Errno> {
     let mut buf = [0u8; PATH_MAX as usize];
-    let path = task.mm.read_c_string(user_path, &mut buf)?;
-    strace!(task, "lookup_at(dir_fd={}, path={:?})", dir_fd, String::from_utf8_lossy(path));
+    let path = current_task.mm.read_c_string(user_path, &mut buf)?;
+    strace!(current_task, "lookup_at(dir_fd={}, path={:?})", dir_fd, String::from_utf8_lossy(path));
     if path.is_empty() {
         if options.allow_empty_path {
-            let (node, _) = task.resolve_dir_fd(dir_fd, path)?;
+            let (node, _) = current_task.resolve_dir_fd(dir_fd, path)?;
             return Ok(node);
         }
         return error!(ENOENT);
     }
-    let (parent, basename) = task.lookup_parent_at(dir_fd, path)?;
+    let (parent, basename) = current_task.lookup_parent_at(dir_fd, path)?;
     let mut context = LookupContext::new(options.symlink_mode);
-    parent.lookup_child(&mut context, task, basename)
+    parent.lookup_child(current_task, &mut context, basename)
 }
 
 pub fn sys_openat(
@@ -284,7 +294,7 @@ pub fn sys_faccessat(
     }
 
     let name = lookup_at(
-        &current_task,
+        current_task,
         dir_fd,
         user_path,
         LookupOptions { allow_empty_path: false, symlink_mode: SymlinkMode::NoFollow },
@@ -341,7 +351,7 @@ pub fn sys_chdir(
     current_task: &CurrentTask,
     user_path: UserCString,
 ) -> Result<SyscallResult, Errno> {
-    let name = lookup_at(&current_task, FdNumber::AT_FDCWD, user_path, LookupOptions::default())?;
+    let name = lookup_at(current_task, FdNumber::AT_FDCWD, user_path, LookupOptions::default())?;
     if !name.entry.node.is_dir() {
         return error!(ENOTDIR);
     }
@@ -396,7 +406,7 @@ pub fn sys_newfstatat(
             SymlinkMode::Follow
         },
     };
-    let name = lookup_at(&current_task, dir_fd, user_path, options)?;
+    let name = lookup_at(current_task, dir_fd, user_path, options)?;
     let result = name.entry.node.stat()?;
     current_task.mm.write_object(buffer, &result)?;
     Ok(SUCCESS)
@@ -409,7 +419,7 @@ pub fn sys_readlinkat(
     buffer: UserAddress,
     buffer_size: usize,
 ) -> Result<SyscallResult, Errno> {
-    let entry = lookup_parent_at(&current_task, dir_fd, user_path, |parent, basename| {
+    let entry = lookup_parent_at(current_task, dir_fd, user_path, |parent, basename| {
         let stat = parent.entry.node.stat()?;
         // TODO(security): This check is obviously not correct, and should be updated once
         // we have an auth system.
@@ -417,7 +427,7 @@ pub fn sys_readlinkat(
             return error!(EACCES);
         }
         let mut context = LookupContext::new(SymlinkMode::NoFollow);
-        Ok(parent.lookup_child(&mut context, &current_task, basename)?.entry)
+        Ok(parent.lookup_child(&current_task, &mut context, basename)?.entry)
     })?;
 
     let target = match entry.node.readlink(&current_task)? {
@@ -446,7 +456,7 @@ pub fn sys_truncate(
     length: off_t,
 ) -> Result<SyscallResult, Errno> {
     let length = length.try_into().map_err(|_| errno!(EINVAL))?;
-    let name = lookup_at(&current_task, FdNumber::AT_FDCWD, user_path, LookupOptions::default())?;
+    let name = lookup_at(current_task, FdNumber::AT_FDCWD, user_path, LookupOptions::default())?;
     // TODO: Check for writability.
     name.entry.node.truncate(length)?;
     Ok(SUCCESS)
@@ -471,7 +481,7 @@ pub fn sys_mkdirat(
     mode: FileMode,
 ) -> Result<SyscallResult, Errno> {
     let mode = current_task.fs.apply_umask(mode & FileMode::ALLOW_ALL);
-    lookup_parent_at(&current_task, dir_fd, user_path, |parent, basename| {
+    lookup_parent_at(current_task, dir_fd, user_path, |parent, basename| {
         parent.create_node(basename, FileMode::IFDIR | mode, DeviceType::NONE)
     })?;
     Ok(SUCCESS)
@@ -494,7 +504,7 @@ pub fn sys_mknodat(
         _ => return error!(EINVAL),
     };
     let mode = file_type | current_task.fs.apply_umask(mode & FileMode::ALLOW_ALL);
-    lookup_parent_at(&current_task, dir_fd, user_path, |parent, basename| {
+    lookup_parent_at(current_task, dir_fd, user_path, |parent, basename| {
         parent.create_node(basename, mode, dev)
     })?;
     Ok(SUCCESS)
@@ -522,11 +532,11 @@ pub fn sys_linkat(
             SymlinkMode::NoFollow
         },
     };
-    let target = lookup_at(&current_task, old_dir_fd, old_user_path, options)?;
+    let target = lookup_at(current_task, old_dir_fd, old_user_path, options)?;
     if target.entry.node.is_dir() {
         return error!(EPERM);
     }
-    lookup_parent_at(&current_task, new_dir_fd, new_user_path, |parent, basename| {
+    lookup_parent_at(current_task, new_dir_fd, new_user_path, |parent, basename| {
         if !NamespaceNode::mount_eq(&target, &parent) {
             return error!(EXDEV);
         }
@@ -547,7 +557,7 @@ pub fn sys_unlinkat(
     }
     let kind =
         if flags & AT_REMOVEDIR != 0 { UnlinkKind::Directory } else { UnlinkKind::NonDirectory };
-    lookup_parent_at(&current_task, dir_fd, user_path, |parent, basename| {
+    lookup_parent_at(current_task, dir_fd, user_path, |parent, basename| {
         parent.unlink(basename, kind)
     })?;
     Ok(SUCCESS)
@@ -561,7 +571,7 @@ pub fn sys_renameat(
     new_user_path: UserCString,
 ) -> Result<SyscallResult, Errno> {
     let lookup = |dir_fd, user_path| {
-        lookup_parent_at(&current_task, dir_fd, user_path, |parent, basename| {
+        lookup_parent_at(current_task, dir_fd, user_path, |parent, basename| {
             Ok((parent, basename.to_vec()))
         })
     };
@@ -599,7 +609,7 @@ pub fn sys_fchmodat(
     if mode & FileMode::IFMT != FileMode::EMPTY {
         return error!(EINVAL);
     }
-    let name = lookup_at(&current_task, dir_fd, user_path, LookupOptions::default())?;
+    let name = lookup_at(current_task, dir_fd, user_path, LookupOptions::default())?;
     name.entry.node.chmod(mode);
     Ok(SUCCESS)
 }
@@ -750,7 +760,7 @@ pub fn sys_symlinkat(
         return error!(ENOENT);
     }
 
-    lookup_parent_at(&current_task, new_dir_fd, user_path, |parent, basename| {
+    lookup_parent_at(current_task, new_dir_fd, user_path, |parent, basename| {
         let stat = parent.entry.node.stat()?;
         if stat.st_mode & S_IWUSR == 0 {
             return error!(EACCES);

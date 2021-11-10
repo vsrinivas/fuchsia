@@ -93,7 +93,7 @@ impl FileOps for DirectoryFileOps {
     fn seek(
         &self,
         file: &FileObject,
-        _task: &Task,
+        _current_task: &CurrentTask,
         offset: off_t,
         whence: SeekOrigin,
     ) -> Result<off_t, Errno> {
@@ -103,7 +103,7 @@ impl FileOps for DirectoryFileOps {
     fn readdir(
         &self,
         file: &FileObject,
-        task: &Task,
+        current_task: &CurrentTask,
         sink: &mut dyn DirentSink,
     ) -> Result<(), Errno> {
         let mut offset = file.offset.lock();
@@ -135,7 +135,7 @@ impl FileOps for DirectoryFileOps {
         // Adjust the offset to account for the other nodes in the directory.
         let adjusted_offset = (*offset - pid_offset as i64) as usize;
         // Sort the pids, to keep the traversal order consistent.
-        let mut pids = task.thread_group.kernel.pids.read().task_ids();
+        let mut pids = current_task.thread_group.kernel.pids.read().task_ids();
         pids.sort();
 
         // The adjusted offset is used to figure out which task directories are to be listed.
@@ -170,7 +170,7 @@ impl SelfSymlink {
 impl FsNodeOps for SelfSymlink {
     fs_node_impl_symlink!();
 
-    fn readlink(&self, _node: &FsNode, task: &Task) -> Result<SymlinkTarget, Errno> {
-        Ok(SymlinkTarget::Path(format!("{}", task.id).as_bytes().to_vec()))
+    fn readlink(&self, _node: &FsNode, current_task: &CurrentTask) -> Result<SymlinkTarget, Errno> {
+        Ok(SymlinkTarget::Path(format!("{}", current_task.id).as_bytes().to_vec()))
     }
 }
