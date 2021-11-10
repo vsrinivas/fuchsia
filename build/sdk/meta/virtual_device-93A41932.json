@@ -25,12 +25,12 @@
                             }
                         },
                         {
-                            "$ref": "hardware-f6f47515.json#/definitions/requirements"
+                            "$ref": "#/definitions/wip"
                         }
                     ],
                     "required": [
-                        "hardware",
                         "type",
+                        "wip",
                         "name"
                     ]
                 }
@@ -38,6 +38,12 @@
             "type": "object"
         }
     ],
+    "definitions": {
+        "wip": {
+            "description": "Work in progress, unchecked by json-schema",
+            "type": "object"
+        }
+    },
     "description": "A virtual device specification.",
     "id": "http://fuchsia.com/schemas/sdk/virtual_device-93A41932.json",
     "type": "object"

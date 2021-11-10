@@ -1,10 +1,16 @@
 {
     "data": {
         "description": "A virtual arm64 device",
-        "hardware": {
+        "wip": {
             "cpu": {
                 "arch": "arm64"
-            }
+            },
+            "audio": true,
+            "pointing_device": "touch",
+            "window_width": 1280,
+            "window_height": 800,
+            "ram_mb": 8192,
+            "image_size": "2G"
         },
         "name": "virtual-arm64",
         "type": "virtual_device"

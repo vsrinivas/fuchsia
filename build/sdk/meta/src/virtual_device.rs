@@ -17,11 +17,16 @@ pub struct Cpu {
 }
 
 /// Specifics for a given platform.
+/// Work in progress properties, unchecked by json-schema.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-#[serde(deny_unknown_fields)]
-pub struct Hardware {
-    /// Details of the Central Processing Unit (CPU).
+pub struct Wip {
     cpu: Cpu,
+    audio: bool,
+    pointing_device: String,
+    window_width: u32,
+    window_height: u32,
+    ram_mb: u64,
+    image_size: String,
 }
 
 /// Description of a virtual (rather than physical) hardware device.
@@ -44,7 +49,9 @@ pub struct VirtualDeviceV1 {
     pub kind: ElementType,
 
     /// Details about the properties of the device.
-    pub hardware: Hardware,
+    /// Work in progress properties, unchecked by json-schema. May be renamed
+    /// to virtual_hardware or similar in the future.
+    pub wip: Wip,
 }
 
 impl JsonObject for Envelope<VirtualDeviceV1> {
@@ -66,10 +73,16 @@ mod tests {
             "data": {
                 "name": "generic-x64",
                 "type": "virtual_device" ,
-                "hardware": {
-                   "cpu": {
-                       "arch": "x64"
-                   }
+                "wip": {
+                    "cpu": {
+                        "arch": "x64"
+                    },
+                    "audio": true,
+                    "pointing_device": "touch",
+                    "window_width": 1280,
+                    "window_height": 800,
+                    "ram_mb": 8192,
+                    "image_size": "2G"
                 }
             }
         }
@@ -86,10 +99,16 @@ mod tests {
             "data": {
                 "name": "generic-x64",
                 "type": "cc_prebuilt_library",
-                "hardware": {
-                   "cpu": {
-                       "arch": "x64"
-                   }
+                "wip": {
+                    "cpu": {
+                        "arch": "x64"
+                    },
+                    "audio": true,
+                    "pointing_device": "touch",
+                    "window_width": 1280,
+                    "window_height": 800,
+                    "ram_mb": 8192,
+                    "image_size": "2G"
                 }
             }
         }

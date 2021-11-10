@@ -1,20 +1,19 @@
 {
-	"audio": true,
-	"pointing_device": "touch",
-	"window_width": 1280,
-	"window_height": 800,
-	"ram_mb": 8192,
-	"image_size": "2G",
-	"port_map": {
-		"ports": [
-			{
-				"guest_port": 22,
-				"host_port": 8022
-			},
-			{
-				"guest_port": 2345,
-				"host_port": 2345
-			}
-		]
-	}
+    "data": {
+        "description": "A virtual x64 device",
+        "wip": {
+            "cpu": {
+                "arch": "x64"
+            },
+            "audio": true,
+            "pointing_device": "touch",
+            "window_width": 1280,
+            "window_height": 800,
+            "ram_mb": 8192,
+            "image_size": "2G"
+        },
+        "name": "qemu-x64",
+        "type": "virtual_device"
+    },
+    "schema_id": "http://fuchsia.com/schemas/sdk/virtual_device-93A41932.json"
 }

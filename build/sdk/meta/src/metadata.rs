@@ -215,10 +215,16 @@ mod tests {
             "data": {
                 "name": "generic-x64",
                 "type": "virtual_device",
-                "hardware": {
+                "wip": {
                    "cpu": {
                        "arch": "x64"
-                   }
+                   },
+                   "audio": true,
+                   "pointing_device": "touch",
+                   "window_width": 1280,
+                   "window_height": 800,
+                   "ram_mb": 8192,
+                   "image_size": "2G"
                 }
             }
         }
