@@ -80,6 +80,31 @@ export RBE_proxy_log_dir="$reproxy_tmpdir"
 # rbe_metrics.{pb,txt} appears in -output_dir
 export RBE_output_dir="$reproxy_tmpdir"
 
+gcloud="$(which gcloud)" || {
+  cat <<EOF
+\`gcloud\` command not found.
+\`gcloud\` can be installed from the Cloud SDK:
+
+  http://go/cloud-sdk#installing-and-using-the-cloud-sdk
+
+EOF
+  exit 1
+}
+
+# Check authentication first.
+# Instruct user to authenticate if needed.
+"$gcloud" auth list 2>&1 | grep -q "$USER@google.com" || {
+  cat <<EOF
+Did not find credentialed account (\`gcloud auth list\`): $USER@google.com.
+
+To authenticate, run:
+
+  gcloud auth login --update-adc --no-launch-browser
+
+EOF
+  exit 1
+}
+
 # Use the same config for bootstrap as for reproxy
 "$bootstrap" --re_proxy="$reproxy" --cfg="$reproxy_cfg" "${bootstrap_options[@]}"
 # b/188923283 -- added --cfg to shut down properly
