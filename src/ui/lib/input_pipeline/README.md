@@ -18,7 +18,7 @@ To add `input` to your build, append `--with //src/ui/lib/input_pipeline` to the
 Unit tests for `input_pipeline` are available in the `input_pipeline_lib_tests` package.
 
 ```shell
-$ fx test input_pipeline_tests
+$ fx test input_pipeline_lib_tests
 ```
 
 ## Source layout
