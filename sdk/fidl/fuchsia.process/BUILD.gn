@@ -14,5 +14,6 @@ fidl("fuchsia.process") {
   public_deps = [
     "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.ldsvc",
+    "//zircon/vdso/zx",
   ]
 }
