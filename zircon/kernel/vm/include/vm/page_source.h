@@ -54,8 +54,10 @@ class PageProvider : public fbl::RefCounted<PageProvider> {
   // After OnClose is called, no more calls will be made except for ::WaitOnEvent.
   virtual void OnClose() = 0;
 
-  // Waits on an |event| associated with a page request.
-  virtual zx_status_t WaitOnEvent(Event* event) = 0;
+  // Instructs the page provider to wait till the request is completed (either successfully or with
+  // an error). The event does not need to be waited on, but the caller can assume that once this
+  // method returns the request has completed.
+  virtual zx_status_t WaitForRequest(const page_request_t* request, Event* event) = 0;
 
   // Dumps relevant state for debugging purposes.
   virtual void Dump() = 0;
@@ -216,6 +218,10 @@ class PageSource : public fbl::RefCounted<PageSource> {
   // Wakes up the given PageRequest and all overlapping requests, with an optional |status|.
   void CompleteRequestLocked(PageRequest* request, zx_status_t status = ZX_OK)
       TA_REQ(page_source_mtx_);
+
+  // Unlocked version of CompleteRequestLocked that will complete a request if it has not already
+  // been completed.
+  void CompleteRequest(PageRequest* request, zx_status_t status = ZX_OK);
 
   // Helper that updates request tracking metadata to resolve requests of |type| in the range
   // [offset, offset + len).

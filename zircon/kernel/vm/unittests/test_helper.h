@@ -107,7 +107,9 @@ class StubPageProvider : public PageProvider {
   }
   void OnDetach() override {}
   void OnClose() override {}
-  zx_status_t WaitOnEvent(Event* event) override { panic("Not implemented\n"); }
+  zx_status_t WaitForRequest(const page_request_t* request, Event* event) override {
+    panic("Not implemented\n");
+  }
   void Dump() override {}
   bool SupportsPageRequestType(page_request_type type) const override {
     return type == page_request_type::READ;
