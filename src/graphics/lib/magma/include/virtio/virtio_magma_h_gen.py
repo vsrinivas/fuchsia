@@ -210,13 +210,9 @@ def format_struct(export, ctrl):
     name = 'virtio_magma_' + get_name(export) + '_' + (
         'ctrl' if ctrl else 'resp')
     ret = ''
-    if fuchsia:
-        ret += 'typedef '
+    ret += 'typedef '
     ret += 'struct ' + name + ' {\n'
-    if fuchsia:
-        ret += tab + 'virtio_magma_ctrl_hdr_t hdr;\n'
-    else:
-        ret += tab + 'struct virtio_magma_ctrl_hdr hdr;\n'
+    ret += tab + 'virtio_magma_ctrl_hdr_t hdr;\n'
     for argument in export['arguments']:
         # Include this argument iff out and resp or !out and ctrl
         use = False
@@ -236,7 +232,7 @@ def format_struct(export, ctrl):
     if fuchsia:
         ret += '} __PACKED ' + name + '_t;\n'
     else:
-        ret += '} __attribute((packed));\n'
+        ret += '} __attribute((packed)) ' + name + '_t;\n'
     return ret
 
 
@@ -244,14 +240,13 @@ def config_type():
     global fuchsia
     global tab
     ret = ''
-    if fuchsia:
-        ret += 'typedef '
+    ret += 'typedef '
     ret += 'struct virtio_magma_config {\n'
     ret += tab + wire_format('uint64_t') + ' dummy;\n'
     if fuchsia:
         ret += '} __PACKED virtio_magma_config_t;\n'
     else:
-        ret += '} __attribute((packed));\n'
+        ret += '} __attribute((packed)) virtio_magma_config_t;\n'
     return ret
 
 
@@ -260,15 +255,14 @@ def ctrl_hdr():
     global fuchsia
     global tab
     ret = ''
-    if fuchsia:
-        ret += 'typedef '
+    ret += 'typedef '
     ret += 'struct virtio_magma_ctrl_hdr {\n'
     ret += tab + wire_format('uint32_t') + ' type;\n'
     ret += tab + wire_format('uint32_t') + ' flags;\n'
     if fuchsia:
         ret += '} __PACKED virtio_magma_ctrl_hdr_t;\n'
     else:
-        ret += '} __attribute((packed));\n'
+        ret += '} __attribute((packed)) virtio_magma_ctrl_hdr_t;\n'
     return ret
 
 

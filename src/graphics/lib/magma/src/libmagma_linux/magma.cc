@@ -150,7 +150,7 @@ magma_status_t magma_virt_create_image(magma_connection_t connection,
     .create_info_size = sizeof(magma_image_create_info_t),
   };
 
-  virtio_magma_virt_create_image_ctrl request{
+  virtio_magma_virt_create_image_ctrl_t request{
       .hdr =
           {
               .type = VIRTIO_MAGMA_CMD_VIRT_CREATE_IMAGE,
@@ -158,7 +158,7 @@ magma_status_t magma_virt_create_image(magma_connection_t connection,
       .connection = reinterpret_cast<uintptr_t>(connection_wrapped->Object()),
       .create_info = reinterpret_cast<uintptr_t>(&wrapper),
   };
-  virtio_magma_virt_create_image_resp response{};
+  virtio_magma_virt_create_image_resp_t response{};
 
   if (!virtmagma_send_command(connection_wrapped->Parent(), &request, sizeof(request), &response,
                               sizeof(response))) {
@@ -193,7 +193,7 @@ magma_status_t magma_virt_get_image_info(magma_connection_t connection, magma_bu
     .image_info_size = sizeof(magma_image_info_t),
   };
 
-  virtio_magma_virt_get_image_info_ctrl request{
+  virtio_magma_virt_get_image_info_ctrl_t request{
       .hdr =
           {
               .type = VIRTIO_MAGMA_CMD_VIRT_GET_IMAGE_INFO,
@@ -202,7 +202,7 @@ magma_status_t magma_virt_get_image_info(magma_connection_t connection, magma_bu
       .image = image_wrapped->Object(),
       .image_info_out = reinterpret_cast<uintptr_t>(&wrapper),
   };
-  virtio_magma_virt_get_image_info_resp response{};
+  virtio_magma_virt_get_image_info_resp_t response{};
 
   if (!virtmagma_send_command(connection_wrapped->Parent(), &request, sizeof(request), &response,
                               sizeof(response))) {
