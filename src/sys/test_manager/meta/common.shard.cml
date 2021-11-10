@@ -159,6 +159,7 @@
                 "fuchsia.kernel.RootJobForInspect",
                 "fuchsia.kernel.Stats",
                 "fuchsia.kernel.VmexResource",
+                "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",
