@@ -98,13 +98,8 @@ template("generate_chromium_targets") {
   }
 
   generate_package_flavors_and_config("web_engine") {
-    # TODO(crbug.com/1148608): Remove else condition when m97 becomes release.
-    if (use_chromium_canary) {
-      prebuilt_archive_base_path = "${prebuilt_archive_root_path}/${target_name}${invoker.archive_path_suffix}"
-    } else {
-      prebuilt_archive_base_path =
-          "${prebuilt_archive_root_path}/chromium${invoker.archive_path_suffix}"
-    }
+    prebuilt_archive_base_path = "${prebuilt_archive_root_path}/${target_name}${invoker.archive_path_suffix}"
+
     custom_package_path = "${build_output_gen_base_path}/fuchsia/engine/${target_name}/${target_name}.far"
     selections = package_flavor_selections
 
@@ -138,13 +133,8 @@ template("generate_chromium_targets") {
   }
 
   generate_package_flavors_and_config("web_runner") {
-    # TODO(crbug.com/1148608): Remove else condition when m97 becomes release.
-    if (use_chromium_canary) {
-      prebuilt_archive_base_path = "${prebuilt_archive_root_path}/${target_name}${invoker.archive_path_suffix}"
-    } else {
-      prebuilt_archive_base_path =
-          "${prebuilt_archive_root_path}/chromium${invoker.archive_path_suffix}"
-    }
+    prebuilt_archive_base_path = "${prebuilt_archive_root_path}/${target_name}${invoker.archive_path_suffix}"
+
     custom_package_path = "${build_output_gen_base_path}/fuchsia/runners/${target_name}/${target_name}.far"
     selections = package_flavor_selections
 
@@ -178,17 +168,15 @@ template("generate_chromium_targets") {
   # TODO(fxbug.dev/71642): Migrate the uses of this variable below to
   # generate_pkg_and_config.gni. A simple function with a Boolean could be sufficient.
   if (use_chromium_canary) {
-    canary_suffix = "_latest"
+    flavor_suffix = "_latest"
+  } else {
+    flavor_suffix = ""
   }
 
   if (is_host) {
     copy("chromedriver") {
       outputs = [ "${host_tools_dir}/chromedriver" ]
-      if (use_chromium_canary) {
-        sources = [ "${prebuilt_archive_root_path}/chromedriver${invoker.archive_path_suffix}${canary_suffix}/linux-x64/chromedriver" ]
-      } else {
-        sources = [ "${prebuilt_archive_root_path}/chromedriver${invoker.archive_path_suffix}/linux-x64/chromedriver" ]
-      }
+      sources = [ "${prebuilt_archive_root_path}/chromedriver${invoker.archive_path_suffix}${flavor_suffix}/linux-x64/chromedriver" ]
     }
   } else {
     # Prebuilt FAR tests
@@ -197,12 +185,7 @@ template("generate_chromium_targets") {
       nuc_env,
     ]
 
-    # TODO(crbug.com/1148608): Change directory path when m97 becomes release.
-    if (use_chromium_canary) {
-      archive_dir = "${prebuilt_archive_root_path}/web_engine_tests${invoker.archive_path_suffix}${canary_suffix}/arch/${target_cpu}"
-    } else {
-      archive_dir = "${prebuilt_archive_root_path}/chromium_tests${invoker.archive_path_suffix}/arch/${target_cpu}"
-    }
+    archive_dir = "${prebuilt_archive_root_path}/web_engine_tests${invoker.archive_path_suffix}${flavor_suffix}/arch/${target_cpu}"
 
     # The specific tests binaries are specified by the "tests" target in
     # https://source.chromium.org/chromium/chromium/src/+/main:fuchsia/cipd/BUILD.gn.
