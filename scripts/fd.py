@@ -1,14 +1,12 @@
-#!/usr/bin/env fuchsia-vendored-python
 # Copyright 2017 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """fd.py is a fascinating directory changer to save your time in typing.
 
-Use shell function "fd()" to enable autocompletion.
-Use "fd.py" directly for without autocompletion.
+fd.py is intended to be used through shell function "fd()" in fx-env.sh.
 
 See examples by
-$ fd.py --help
+$ fd --help
 
 fd stores two helper files, fd.txt and fd.pickle in $FUCHSIA_DIR/out/.
 If that directory does not exists, fd will create one.

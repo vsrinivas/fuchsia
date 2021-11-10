@@ -115,7 +115,7 @@ function __fx_env_main() {
     local fd_python
     local dest
     fd_python="${FUCHSIA_DIR}/scripts/fd.py"
-    dest=$(eval ${fd_python} "$@")
+    dest=$(python3 ${fd_python} "$@")
     cd -- "${dest}"
   }
 
