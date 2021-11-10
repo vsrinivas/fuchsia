@@ -111,25 +111,22 @@ class WiFiService implements TaskService {
         .listen((_) {});
   }
 
-  List<NetworkInformation> get scannedNetworks => _scannedNetworks
-      .map((network) => NetworkInformation(
-          name: nameFromScannedNetwork(network),
-          compatible: compatibleFromScannedNetwork(network),
-          icon: iconFromScannedNetwork(network)))
-      .toList();
+  // TODO(cwhitten): simplify to _scannedNetworks.map(NetworkInformation.fromScanResult).toList();
+  // once passing named contructors is supported by dart.
+  List<NetworkInformation> get scannedNetworks =>
+      networkInformationFromScannedNetworks(_scannedNetworks);
+
+  List<NetworkInformation> networkInformationFromScannedNetworks(
+      Set<policy.ScanResult> networks) {
+    var networkInformationList = <NetworkInformation>[];
+    for (var network in networks) {
+      networkInformationList.add(NetworkInformation.fromScanResult(network));
+    }
+    return networkInformationList;
+  }
 
   String nameFromScannedNetwork(policy.ScanResult network) {
     return utf8.decode(network.id!.ssid.toList());
-  }
-
-  IconData iconFromScannedNetwork(policy.ScanResult network) {
-    return network.id!.type == policy.SecurityType.none
-        ? Icons.signal_wifi_4_bar
-        : Icons.wifi_lock;
-  }
-
-  bool compatibleFromScannedNetwork(policy.ScanResult network) {
-    return network.compatibility == policy.Compatibility.supported;
   }
 
   Future<void> connectToWPA2Network(String password) async {
@@ -218,21 +215,18 @@ class WiFiService implements TaskService {
     }
   }
 
-  List<NetworkInformation> get savedNetworks => _savedNetworks
-      .map((network) => NetworkInformation(
-          name: nameFromNetworkConfig(network),
-          compatible: true,
-          icon: iconFromNetworkConfig(network)))
-      .toList();
+  // TODO(cwhitten): simplify to _savedNetworks.map(NetworkInformation.fromNetworkConfig).toList();
+  // once passing named contructors is supported by dart.
+  List<NetworkInformation> get savedNetworks =>
+      networkInformationFromSavedNetworks(_savedNetworks);
 
-  String nameFromNetworkConfig(policy.NetworkConfig network) {
-    return utf8.decode(network.id!.ssid.toList());
-  }
-
-  IconData iconFromNetworkConfig(policy.NetworkConfig network) {
-    return network.id!.type == policy.SecurityType.none
-        ? Icons.signal_wifi_4_bar
-        : Icons.wifi_lock;
+  List<NetworkInformation> networkInformationFromSavedNetworks(
+      Set<policy.NetworkConfig> networks) {
+    var networkInformationList = <NetworkInformation>[];
+    for (var network in networks) {
+      networkInformationList.add(NetworkInformation.fromNetworkConfig(network));
+    }
+    return networkInformationList;
   }
 }
 
@@ -279,12 +273,46 @@ class ClientStateUpdatesMonitor extends policy.ClientStateUpdates {
 
 /// Network information needed for UI
 class NetworkInformation {
-  String name;
-  bool compatible;
-  IconData icon;
+  // String representation of SSID
+  String? _name;
+  // If network is able to be connected to
+  bool _compatible = false;
+  // Security type of network
+  policy.SecurityType? _securityType;
 
-  NetworkInformation(
-      {this.name = '',
-      this.compatible = false,
-      this.icon = Icons.signal_wifi_4_bar});
+  // Constructor for network config
+  NetworkInformation.fromNetworkConfig(policy.NetworkConfig networkConfig) {
+    _name = networkConfig.id?.ssid.toList() != null
+        ? utf8.decode(networkConfig.id!.ssid.toList())
+        : null;
+    _compatible = true;
+    _securityType = networkConfig.id?.type;
+  }
+
+  // Constructor for scan result
+  NetworkInformation.fromScanResult(policy.ScanResult scanResult) {
+    _name = scanResult.id?.ssid.toList() != null
+        ? utf8.decode(scanResult.id!.ssid.toList())
+        : null;
+    _compatible = scanResult.compatibility == policy.Compatibility.supported;
+    _securityType = scanResult.id?.type;
+  }
+
+  String get name => _name ?? '';
+
+  bool get compatible => _compatible;
+
+  IconData get icon => _securityType == policy.SecurityType.none
+      ? Icons.signal_wifi_4_bar
+      : Icons.wifi_lock;
+
+  bool get isOpen => _securityType == policy.SecurityType.none;
+
+  bool get isWEP => _securityType == policy.SecurityType.wep;
+
+  bool get isWPA => _securityType == policy.SecurityType.wpa;
+
+  bool get isWPA2 => _securityType == policy.SecurityType.wpa2;
+
+  bool get isWPA3 => _securityType == policy.SecurityType.wpa3;
 }
