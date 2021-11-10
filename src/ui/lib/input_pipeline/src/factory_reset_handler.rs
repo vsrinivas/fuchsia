@@ -262,11 +262,15 @@ impl FactoryResetHandler {
         Timer::new(Time::after(BUTTON_TIMEOUT)).await;
 
         // Make sure the buttons are still held
-        if let FactoryResetState::ButtonCountdown { deadline: state_deadline } =
-            self.factory_reset_state()
-        {
-            if state_deadline == deadline {
+        match self.factory_reset_state() {
+            FactoryResetState::ButtonCountdown { deadline: state_deadline }
+                if state_deadline == deadline =>
+            {
+                // Proceed with reset.
                 self.start_reset_countdown().await?;
+            }
+            _ => {
+                tracing::info!("Factory reset request cancelled");
             }
         }
 
@@ -283,11 +287,15 @@ impl FactoryResetHandler {
         Timer::new(Time::after(RESET_TIMEOUT)).await;
 
         // Make sure the buttons are still held
-        if let FactoryResetState::ResetCountdown { deadline: state_deadline } =
-            self.factory_reset_state()
-        {
-            if state_deadline == deadline {
+        match self.factory_reset_state() {
+            FactoryResetState::ResetCountdown { deadline: state_deadline }
+                if state_deadline == deadline =>
+            {
+                // Proceed with reset.
                 self.reset().await?;
+            }
+            _ => {
+                tracing::info!("Factory reset request cancelled");
             }
         }
 
