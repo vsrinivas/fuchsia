@@ -20,6 +20,11 @@ config("compiler") {
     assert(false, "Unsupported architecture")
   }
 
+  # Pass the target API level to the compiler if specified.
+  if (fuchsia_target_api_level != -1) {
+    cflags += [ "-ffuchsia-api-level=${fuchsia_target_api_level}" ]
+  }
+
   # Add libfdio by default. This may change in future versions
   # in order to move away from POSIX applications and towards
   # the Fuchsia programming model.

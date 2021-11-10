@@ -49,6 +49,8 @@ def main(args_list=None):
         "--sources", help="List of FIDL source files", nargs="*")
     parser.add_argument(
         "--dep-libraries", help="List of dependent libraries", nargs="*")
+    parser.add_argument(
+        "--target-api-level", help="The target Fuchsia API level", type=int)
     if args_list:
         args = parser.parse_args(args_list)
     else:
@@ -77,6 +79,8 @@ def main(args_list=None):
 
     if args.name:
         response_file.append("--name %s" % args.name)
+
+    # TODO(fxb/88338): Append the target API level if specified.
 
     response_file.extend(
         ["--files %s" % library for library in target_libraries])

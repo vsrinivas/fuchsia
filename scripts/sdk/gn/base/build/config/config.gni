@@ -44,3 +44,11 @@ if (fuchsia_sdk_id == "") {
   _meta = read_file(fuchsia_sdk_manifest_file, "json")
   fuchsia_sdk_id = _meta.id
 }
+
+declare_args() {
+  # The target API level for this repository. Embedders should override this
+  # value to specify the API level the packages produced from this repository
+  # should be targeting, e.g. in their top-level //.gn file. A value of -1
+  # means that no API level will be passed to the tools that consumes it.
+  fuchsia_target_api_level = -1
+}

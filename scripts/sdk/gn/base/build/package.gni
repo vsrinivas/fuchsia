@@ -180,6 +180,8 @@ template("fuchsia_package") {
     metadata = {
       ids_txt_paths = [ _build_ids_file ]
     }
+
+    # TODO(fxb/88338): Append the target API level if specified.
   }
 
   # Creates a Fuchsia metadata package.

@@ -84,6 +84,14 @@ template("fidl_library") {
              "--sources",
            ] + rebase_path(sources, root_build_dir)
 
+    # Pass the target API level if it has been specified.
+    if (fuchsia_target_api_level != -1) {
+      args += [
+        "--target-api-level",
+        "${fuchsia_target_api_level}",
+      ]
+    }
+
     if (defined(invoker.deps) || defined(invoker.public_deps)) {
       merged_deps = []
 
