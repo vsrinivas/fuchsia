@@ -12,46 +12,40 @@ namespace f2fs {
 namespace {
 
 TEST(CompatibilityTest, SimpleMkfsFsckTest) {
-  uint64_t kBlockCount = 819200;
-  uint64_t kDiskSize = kBlockCount * kDefaultSectorSize;
+  uint64_t block_count = 819200;
+  uint64_t disk_size = block_count * kDefaultSectorSize;
 
   std::string test_file_format = "f2fs_mkfs_fsck.XXXXXX";
 
   // Get test file
   std::string test_path = GenerateTestPath(test_file_format);
   auto fd = fbl::unique_fd(mkstemp(test_path.data()));
-  ftruncate(fd.get(), kDiskSize);
+  ftruncate(fd.get(), disk_size);
 
   // mkfs on host
-  std::string command = "mkfs.f2fs ";
-  command.append(test_path);
-  ASSERT_EQ(system(command.c_str()), 0);
+  std::unique_ptr<CompatibilityTestOperator> host_operator(new HostOperator(test_path, ""));
+  host_operator->Mkfs();
 
   // fsck on Fuchsia
-  std::unique_ptr<Bcache> bcache;
-  ASSERT_EQ(Bcache::Create(std::move(fd), kBlockCount, &bcache), ZX_OK);
-  ASSERT_EQ(Fsck(std::move(bcache)), ZX_OK);
+  std::unique_ptr<CompatibilityTestOperator> target_operator(
+      new TargetOperator(test_path, std::move(fd), block_count));
+  target_operator->Fsck();
 
   // Get test file
   std::string test_path2 = GenerateTestPath(test_file_format);
   auto fd2 = fbl::unique_fd(mkstemp(test_path2.data()));
-  ftruncate(fd2.get(), kDiskSize);
+  ftruncate(fd2.get(), disk_size);
 
   // mkfs on Fuchsia
-  std::unique_ptr<Bcache> bcache2;
-  ASSERT_EQ(Bcache::Create(std::move(fd2), kBlockCount, &bcache2), ZX_OK);
-  MkfsOptions mkfs_options;
-  MkfsWorker mkfs(std::move(bcache2), mkfs_options);
-  auto ret = mkfs.DoMkfs();
-  ASSERT_EQ(ret.is_error(), false);
+  target_operator.reset(new TargetOperator(test_path2, std::move(fd2), block_count));
+  target_operator->Mkfs();
 
   // fsck on host
-  command = "fsck.f2fs ";
-  command.append(test_path2);
-  ASSERT_EQ(system(command.c_str()), 0);
+  host_operator.reset(new HostOperator(test_path2, ""));
+  host_operator->Fsck();
 
   // Remove test files
-  command = "rm ";
+  std::string command = "rm ";
   command.append(test_path);
   command.append(" ");
   command.append(test_path2);
@@ -59,46 +53,40 @@ TEST(CompatibilityTest, SimpleMkfsFsckTest) {
 }
 
 TEST(CompatibilityTest, LargeDeviceMkfsFsckTest) {
-  uint64_t kBlockCount = uint64_t{4} * 1024 * 1024 * 1024 * 1024 / kDefaultSectorSize;  // 4TB
-  uint64_t kDiskSize = kBlockCount * kDefaultSectorSize;
+  uint64_t block_count = uint64_t{4} * 1024 * 1024 * 1024 * 1024 / kDefaultSectorSize;  // 4TB
+  uint64_t disk_size = block_count * kDefaultSectorSize;
 
   std::string test_file_format = "f2fs_mkfs_fsck.XXXXXX";
 
   // Get test file
   std::string test_path = GenerateTestPath(test_file_format);
   auto fd = fbl::unique_fd(mkstemp(test_path.data()));
-  ftruncate(fd.get(), kDiskSize);
+  ftruncate(fd.get(), disk_size);
 
   // mkfs on host
-  std::string command = "mkfs.f2fs ";
-  command.append(test_path);
-  ASSERT_EQ(system(command.c_str()), 0);
+  std::unique_ptr<CompatibilityTestOperator> host_operator(new HostOperator(test_path, ""));
+  host_operator->Mkfs();
 
   // fsck on Fuchsia
-  std::unique_ptr<Bcache> bcache;
-  ASSERT_EQ(Bcache::Create(std::move(fd), kBlockCount, &bcache), ZX_OK);
-  ASSERT_EQ(Fsck(std::move(bcache)), ZX_OK);
+  std::unique_ptr<CompatibilityTestOperator> target_operator(
+      new TargetOperator(test_path, std::move(fd), block_count));
+  target_operator->Fsck();
 
   // Get test file
   std::string test_path2 = GenerateTestPath(test_file_format);
   auto fd2 = fbl::unique_fd(mkstemp(test_path2.data()));
-  ftruncate(fd2.get(), kDiskSize);
+  ftruncate(fd2.get(), disk_size);
 
   // mkfs on Fuchsia
-  std::unique_ptr<Bcache> bcache2;
-  ASSERT_EQ(Bcache::Create(std::move(fd2), kBlockCount, &bcache2), ZX_OK);
-  MkfsOptions mkfs_options;
-  MkfsWorker mkfs(std::move(bcache2), mkfs_options);
-  auto ret = mkfs.DoMkfs();
-  ASSERT_EQ(ret.is_error(), false);
+  target_operator.reset(new TargetOperator(test_path2, std::move(fd2), block_count));
+  target_operator->Mkfs();
 
   // fsck on host
-  command = "fsck.f2fs ";
-  command.append(test_path2);
-  ASSERT_EQ(system(command.c_str()), 0);
+  host_operator.reset(new HostOperator(test_path2, ""));
+  host_operator->Fsck();
 
   // Remove test files
-  command = "rm ";
+  std::string command = "rm ";
   command.append(test_path);
   command.append(" ");
   command.append(test_path2);

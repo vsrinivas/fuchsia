@@ -16,23 +16,6 @@ namespace {
 constexpr uint64_t kBlockCount = 819200;  // 400MB
 const std::string kTestFileFormat = "f2fs_file.XXXXXX";
 
-zx::status<struct stat> EmulateStat(const fbl::RefPtr<fs::Vnode> vn) {
-  fs::VnodeAttributes vn_attr;
-  if (zx_status_t status = vn->GetAttributes(&vn_attr); status != ZX_OK) {
-    return zx::error(status);
-  }
-  struct stat ret {};
-  ret.st_ino = vn_attr.inode;
-  ret.st_mode = static_cast<mode_t>(vn_attr.mode);
-  ret.st_nlink = vn_attr.link_count;
-  ret.st_size = vn_attr.content_size;
-  ret.st_ctim.tv_sec = vn_attr.creation_time / ZX_SEC(1);
-  ret.st_ctim.tv_nsec = vn_attr.creation_time % ZX_SEC(1);
-  ret.st_mtim.tv_sec = vn_attr.modification_time / ZX_SEC(1);
-  ret.st_mtim.tv_nsec = vn_attr.modification_time % ZX_SEC(1);
-  return zx::ok(ret);
-}
-
 void CompareStat(const struct stat &a, const struct stat &b) {
   EXPECT_EQ(a.st_ino, b.st_ino);
   EXPECT_EQ(a.st_mode, b.st_mode);
@@ -48,11 +31,15 @@ class GeneralCompatibilityTest : public testing::Test {
     uint64_t kDiskSize = kBlockCount * kDefaultSectorSize;
 
     test_image_path_ = GenerateTestPath(kTestFileFormat);
-    test_image_fd_ = fbl::unique_fd(mkstemp(test_image_path_.data()));
+    fbl::unique_fd test_image_fd_ = fbl::unique_fd(mkstemp(test_image_path_.data()));
     ftruncate(test_image_fd_.get(), kDiskSize);
 
     mount_directory_ = GenerateTestPath(kTestFileFormat);
     mkdtemp(mount_directory_.data());
+
+    host_operator_.reset(new HostOperator(test_image_path_, mount_directory_));
+    target_operator_.reset(
+        new TargetOperator(test_image_path_, std::move(test_image_fd_), kBlockCount));
   }
 
   ~GeneralCompatibilityTest() {
@@ -62,31 +49,25 @@ class GeneralCompatibilityTest : public testing::Test {
 
  protected:
   std::string test_image_path_;
-  fbl::unique_fd test_image_fd_;
   std::string mount_directory_;
+
+  std::unique_ptr<HostOperator> host_operator_;
+  std::unique_ptr<TargetOperator> target_operator_;
 };
 
 TEST_F(GeneralCompatibilityTest, WriteVerifyHostToFuchsia) {
   constexpr uint32_t kVerifyPatternSize = 1024 * 1024 * 100;  // 100MB
 
-  ASSERT_EQ(system(std::string("mkfs.f2fs ").append(test_image_path_).c_str()), 0);
-
   {
-    ASSERT_EQ(system(std::string("mount -t f2fs ")
-                         .append(test_image_path_)
-                         .append(" -o noinline_data,noinline_xattr ")
-                         .append(mount_directory_)
-                         .c_str()),
-              0);
+    host_operator_->Mkfs();
+    host_operator_->Mount();
 
-    auto umount = fit::defer(
-        [&] { ASSERT_EQ(system(std::string("umount ").append(mount_directory_).c_str()), 0); });
+    auto umount = fit::defer([&] { host_operator_->Unmount(); });
 
-    ASSERT_EQ(mkdir(std::string(mount_directory_).append("/alpha").c_str(), 0755), 0);
+    host_operator_->Mkdir("/alpha", 0755);
 
-    std::string bravo = std::string(mount_directory_).append("/alpha/bravo");
-    auto bravo_fd = fbl::unique_fd(open(bravo.c_str(), O_RDWR | O_CREAT, 0644));
-    ASSERT_GT(bravo_fd.get(), 0);
+    auto bravo_file = host_operator_->Open("/alpha/bravo", O_RDWR | O_CREAT, 0644);
+    ASSERT_TRUE(bravo_file->is_valid());
 
     uint32_t input[kBlockSize / sizeof(uint32_t)];
     // write to bravo with offset pattern
@@ -94,41 +75,27 @@ TEST_F(GeneralCompatibilityTest, WriteVerifyHostToFuchsia) {
       for (uint32_t j = 0; j < sizeof(input) / sizeof(uint32_t); ++j) {
         input[j] = CpuToLe(j);
       }
-      ASSERT_EQ(write(bravo_fd.get(), input, sizeof(input)), static_cast<ssize_t>(sizeof(input)));
+      ASSERT_EQ(bravo_file->Write(input, sizeof(input)), static_cast<ssize_t>(sizeof(input)));
     }
   }
 
   // verify on Fuchsia
   {
-    auto result = CreateFsAndRootFromImage(MountOptions{}, std::move(test_image_fd_), kBlockCount);
-    ASSERT_TRUE(result.is_ok());
-    auto fs = std::move(result->first);
-    auto root_dir = result->second;
+    target_operator_->Fsck();
+    target_operator_->Mount();
 
-    auto umount = fit::defer([&] {
-      ASSERT_EQ(root_dir->Close(), ZX_OK);
-      fs->PutSuper();
-    });
+    auto umount = fit::defer([&] { target_operator_->Unmount(); });
 
-    fbl::RefPtr<fs::Vnode> vn = nullptr;
-    ASSERT_EQ(root_dir->Lookup("alpha", &vn), ZX_OK);
-    auto alpha = fbl::RefPtr<Dir>::Downcast(std::move(vn));
-
-    ASSERT_EQ(alpha->Lookup("bravo", &vn), ZX_OK);
-    auto bravo = fbl::RefPtr<File>::Downcast(std::move(vn));
+    auto bravo_file = target_operator_->Open("/alpha/bravo", O_RDWR, 0644);
+    ASSERT_TRUE(bravo_file->is_valid());
 
     uint32_t buffer[kBlockSize / sizeof(uint32_t)];
-    size_t read_len;
-    size_t offset = 0;
-
     for (uint32_t i = 0; i < kVerifyPatternSize / sizeof(buffer); ++i) {
-      ASSERT_EQ(bravo->Read(buffer, sizeof(buffer), offset, &read_len), ZX_OK);
-      ASSERT_EQ(read_len, sizeof(buffer));
+      ASSERT_EQ(bravo_file->Read(buffer, sizeof(buffer)), static_cast<ssize_t>(sizeof(buffer)));
 
       for (uint32_t j = 0; j < sizeof(buffer) / sizeof(uint32_t); ++j) {
         ASSERT_EQ(buffer[j], LeToCpu(j));
       }
-      offset += read_len;
     }
   }
 }
@@ -136,85 +103,68 @@ TEST_F(GeneralCompatibilityTest, WriteVerifyHostToFuchsia) {
 TEST_F(GeneralCompatibilityTest, VerifyAttributesHostToFuchsia) {
   std::vector<std::pair<std::string, struct stat>> test_set{};
 
-  ASSERT_EQ(system(std::string("mkfs.f2fs ").append(test_image_path_).c_str()), 0);
   {
-    ASSERT_EQ(system(std::string("mount -t f2fs ")
-                         .append(test_image_path_)
-                         .append(" -o noinline_data,noinline_xattr ")
-                         .append(mount_directory_)
-                         .c_str()),
-              0);
+    host_operator_->Mkfs();
+    host_operator_->Mount();
 
-    auto umount = fit::defer(
-        [&] { ASSERT_EQ(system(std::string("umount ").append(mount_directory_).c_str()), 0); });
+    auto umount = fit::defer([&] { host_operator_->Unmount(); });
 
-    ASSERT_EQ(mkdir(std::string(mount_directory_).append("/alpha").c_str(), 0755), 0);
+    host_operator_->Mkdir("/alpha", 0755);
 
     for (mode_t mode = 0; mode <= (S_IRWXU | S_IRWXG | S_IRWXO); ++mode) {
       struct stat file_stat {};
-      std::string child = std::string(mount_directory_).append("/alpha/").append(kTestFileFormat);
-      auto child_fd = fbl::unique_fd(mkstemp(child.data()));
-      ASSERT_GT(child_fd.get(), 0);
-      ASSERT_EQ(fchmod(child_fd.get(), mode), 0);
-      ASSERT_EQ(fstat(child_fd.get(), &file_stat), 0);
+      std::string child_absolute =
+          host_operator_->GetAbsolutePath(std::string("/alpha/").append(kTestFileFormat));
+      std::unique_ptr<HostTestFile> child_file(new HostTestFile(mkstemp(child_absolute.data())));
+      ASSERT_TRUE(child_file->is_valid());
 
-      test_set.push_back({basename(child.c_str()), file_stat});
+      ASSERT_EQ(child_file->Fchmod(mode), 0);
+      ASSERT_EQ(child_file->Fstat(&file_stat), 0);
+
+      std::string child = child_absolute.substr(mount_directory_.length());
+      test_set.push_back({child, file_stat});
     }
   }
 
   // verify on Fuchsia
   {
-    auto result = CreateFsAndRootFromImage(MountOptions{}, std::move(test_image_fd_), kBlockCount);
-    ASSERT_TRUE(result.is_ok());
-    auto fs = std::move(result->first);
-    auto root_dir = result->second;
+    target_operator_->Fsck();
+    target_operator_->Mount();
 
-    auto umount = fit::defer([&] {
-      ASSERT_EQ(root_dir->Close(), ZX_OK);
-      fs->PutSuper();
-    });
-
-    fbl::RefPtr<fs::Vnode> vn = nullptr;
-    ASSERT_EQ(root_dir->Lookup("alpha", &vn), ZX_OK);
-    auto alpha = fbl::RefPtr<Dir>::Downcast(std::move(vn));
+    auto umount = fit::defer([&] { target_operator_->Unmount(); });
 
     for (auto [name, host_stat] : test_set) {
-      ASSERT_EQ(alpha->Lookup(name.c_str(), &vn), ZX_OK);
-      auto child = fbl::RefPtr<Dir>::Downcast(std::move(vn));
-      auto child_stat = EmulateStat(child);
-      ASSERT_TRUE(child_stat.is_ok());
-      CompareStat(*child_stat, host_stat);
+      auto child_file = target_operator_->Open(name, O_RDONLY, 0644);
+      ASSERT_TRUE(child_file->is_valid());
+
+      struct stat child_stat {};
+      ASSERT_EQ(child_file->Fstat(&child_stat), 0);
+      CompareStat(child_stat, host_stat);
     }
   }
 }
 
 TEST_F(GeneralCompatibilityTest, TruncateHostToFuchsia) {
   constexpr uint32_t kVerifyPatternSize = 1024 * 1024 * 100;  // 100MB
-  constexpr uint64_t kTruncateSize = 64 * 1024;               // 64KB
+  constexpr off_t kTruncateSize = 64 * 1024;                  // 64KB
 
-  ASSERT_EQ(system(std::string("mkfs.f2fs ").append(test_image_path_).c_str()), 0);
+  constexpr std::string_view extend_file_path = "/alpha/extend";
+  constexpr std::string_view shrink_file_path = "/alpha/shrink";
 
   {
-    ASSERT_EQ(system(std::string("mount -t f2fs ")
-                         .append(test_image_path_)
-                         .append(" -o noinline_data,noinline_xattr ")
-                         .append(mount_directory_)
-                         .c_str()),
-              0);
+    host_operator_->Mkfs();
+    host_operator_->Mount();
 
-    auto umount = fit::defer(
-        [&] { ASSERT_EQ(system(std::string("umount ").append(mount_directory_).c_str()), 0); });
+    auto umount = fit::defer([&] { host_operator_->Unmount(); });
 
-    ASSERT_EQ(mkdir(std::string(mount_directory_).append("/alpha").c_str(), 0755), 0);
+    host_operator_->Mkdir("/alpha", 0755);
 
-    std::string extend = std::string(mount_directory_).append("/alpha/extend");
-    auto extend_fd = fbl::unique_fd(open(extend.c_str(), O_RDWR | O_CREAT, 0755));
-    ASSERT_GT(extend_fd.get(), 0);
-    ASSERT_EQ(ftruncate(extend_fd.get(), kTruncateSize), 0);
+    auto extend_file = host_operator_->Open(extend_file_path, O_RDWR | O_CREAT, 0755);
+    ASSERT_TRUE(extend_file->is_valid());
+    ASSERT_EQ(extend_file->Ftruncate(kTruncateSize), 0);
 
-    std::string shrink = std::string(mount_directory_).append("/alpha/shrink");
-    auto shrink_fd = fbl::unique_fd(open(shrink.c_str(), O_RDWR | O_CREAT, 0755));
-    ASSERT_GT(shrink_fd.get(), 0);
+    auto shrink_file = host_operator_->Open(shrink_file_path, O_RDWR | O_CREAT, 0755);
+    ASSERT_TRUE(shrink_file->is_valid());
 
     uint32_t input[kBlockSize / sizeof(uint32_t)];
     // write with offset pattern
@@ -222,62 +172,49 @@ TEST_F(GeneralCompatibilityTest, TruncateHostToFuchsia) {
       for (uint32_t j = 0; j < sizeof(input) / sizeof(uint32_t); ++j) {
         input[j] = CpuToLe(j);
       }
-      ASSERT_EQ(write(shrink_fd.get(), input, sizeof(input)), static_cast<ssize_t>(sizeof(input)));
+      ASSERT_EQ(shrink_file->Write(input, sizeof(input)), static_cast<ssize_t>(sizeof(input)));
     }
 
-    ASSERT_EQ(ftruncate(shrink_fd.get(), kTruncateSize), 0);
+    ASSERT_EQ(shrink_file->Ftruncate(kTruncateSize), 0);
   }
 
   // verify on Fuchsia
   {
-    auto result = CreateFsAndRootFromImage(MountOptions{}, std::move(test_image_fd_), kBlockCount);
-    ASSERT_TRUE(result.is_ok());
-    auto fs = std::move(result->first);
-    auto root_dir = result->second;
+    target_operator_->Fsck();
+    target_operator_->Mount();
 
-    auto umount = fit::defer([&] {
-      ASSERT_EQ(root_dir->Close(), ZX_OK);
-      fs->PutSuper();
-    });
+    auto umount = fit::defer([&] { target_operator_->Unmount(); });
 
-    fbl::RefPtr<fs::Vnode> vn = nullptr;
-    ASSERT_EQ(root_dir->Lookup("alpha", &vn), ZX_OK);
-    auto alpha = fbl::RefPtr<Dir>::Downcast(std::move(vn));
+    auto extend_file = target_operator_->Open(extend_file_path, O_RDWR | O_CREAT, 0755);
+    ASSERT_TRUE(extend_file->is_valid());
 
-    ASSERT_EQ(alpha->Lookup("extend", &vn), ZX_OK);
-    auto extend = fbl::RefPtr<File>::Downcast(std::move(vn));
-    fs::VnodeAttributes extend_attr;
-    ASSERT_EQ(extend->GetAttributes(&extend_attr), ZX_OK);
-    EXPECT_EQ(extend_attr.content_size, kTruncateSize);
+    struct stat extend_file_stat {};
+    ASSERT_EQ(extend_file->Fstat(&extend_file_stat), 0);
+    ASSERT_EQ(extend_file_stat.st_size, kTruncateSize);
+
     uint32_t buffer[kBlockSize / sizeof(uint32_t)];
-    size_t read_len;
-    size_t offset = 0;
 
     for (uint32_t i = 0; i < kTruncateSize / sizeof(buffer); ++i) {
-      ASSERT_EQ(extend->Read(buffer, sizeof(buffer), offset, &read_len), ZX_OK);
-      ASSERT_EQ(read_len, sizeof(buffer));
+      ASSERT_EQ(extend_file->Read(buffer, sizeof(buffer)), static_cast<ssize_t>(sizeof(buffer)));
 
       for (uint32_t j = 0; j < sizeof(buffer) / sizeof(uint32_t); ++j) {
         ASSERT_EQ(buffer[j], static_cast<uint32_t>(0));
       }
-      offset += read_len;
     }
 
-    ASSERT_EQ(alpha->Lookup("shrink", &vn), ZX_OK);
-    auto shrink = fbl::RefPtr<File>::Downcast(std::move(vn));
-    fs::VnodeAttributes shrink_attr;
-    ASSERT_EQ(shrink->GetAttributes(&shrink_attr), ZX_OK);
-    EXPECT_EQ(shrink_attr.content_size, kTruncateSize);
-    offset = 0;
+    auto shrink_file = target_operator_->Open(shrink_file_path, O_RDWR | O_CREAT, 0755);
+    ASSERT_TRUE(shrink_file->is_valid());
+
+    struct stat shrink_file_stat {};
+    ASSERT_EQ(shrink_file->Fstat(&shrink_file_stat), 0);
+    ASSERT_EQ(shrink_file_stat.st_size, kTruncateSize);
 
     for (uint32_t i = 0; i < kTruncateSize / sizeof(buffer); ++i) {
-      ASSERT_EQ(shrink->Read(buffer, sizeof(buffer), offset, &read_len), ZX_OK);
-      ASSERT_EQ(read_len, sizeof(buffer));
+      ASSERT_EQ(shrink_file->Read(buffer, sizeof(buffer)), static_cast<ssize_t>(sizeof(buffer)));
 
       for (uint32_t j = 0; j < sizeof(buffer) / sizeof(uint32_t); ++j) {
         ASSERT_EQ(buffer[j], LeToCpu(j));
       }
-      offset += read_len;
     }
   }
 }
