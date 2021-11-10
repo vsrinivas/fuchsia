@@ -403,9 +403,9 @@ class VmCowPages final
       TA_REQ(lock_);
 
   // LookupPagesLocked helper function that 'forks' the page at |offset| of the current vmo. If
-  // this function successfully inserts a page into |offset| of the current vmo, it returns
-  // a pointer to the corresponding vm_page_t struct. The only failure condition is memory
-  // allocation failure, in which case this function returns null.
+  // this function successfully inserts a page into |offset| of the current vmo, it returns ZX_OK
+  // and populates |out_page|. If a |page_request| is provided and ZX_ERR_SHOULD_WAIT is returned
+  // then this indicates a transient failure that should be resolved by waiting on the page_request.
   //
   // The source page that is being forked has already been calculated - it is |page|, which
   // is currently in |page_owner| at offset |owner_offset|.
@@ -428,8 +428,9 @@ class VmCowPages final
   //
   // |page| must not be the zero-page, as there is no need to do the complex page
   // fork logic to reduce memory consumption in that case.
-  vm_page_t* CloneCowPageLocked(uint64_t offset, list_node_t* alloc_list, VmCowPages* page_owner,
-                                vm_page_t* page, uint64_t owner_offset) TA_REQ(lock_);
+  zx_status_t CloneCowPageLocked(uint64_t offset, list_node_t* alloc_list, VmCowPages* page_owner,
+                                 vm_page_t* page, uint64_t owner_offset,
+                                 LazyPageRequest* page_request, vm_page_t** out_page) TA_REQ(lock_);
 
   // This is an optimized wrapper around CloneCowPageLocked for when an initial content page needs
   // to be forked to preserve the COW invariant, but you know you are immediately going to overwrite

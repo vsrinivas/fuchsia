@@ -73,8 +73,8 @@ void InitializeVmPage(vm_page_t* p) {
 }
 
 // Allocates a new page and populates it with the data at |parent_paddr|.
-bool AllocateCopyPage(uint32_t pmm_alloc_flags, paddr_t parent_paddr, list_node_t* alloc_list,
-                      vm_page_t** clone) {
+zx_status_t AllocateCopyPage(uint32_t pmm_alloc_flags, paddr_t parent_paddr,
+                             list_node_t* alloc_list, vm_page_t** clone) {
   paddr_t pa_clone;
   vm_page_t* p_clone = nullptr;
   if (alloc_list) {
@@ -85,11 +85,11 @@ bool AllocateCopyPage(uint32_t pmm_alloc_flags, paddr_t parent_paddr, list_node_
   }
   if (!p_clone) {
     zx_status_t status = pmm_alloc_page(pmm_alloc_flags, &p_clone, &pa_clone);
-    if (!p_clone) {
-      DEBUG_ASSERT(status == ZX_ERR_NO_MEMORY);
-      return false;
+    if (status != ZX_OK) {
+      DEBUG_ASSERT(!p_clone);
+      return status;
     }
-    DEBUG_ASSERT(status == ZX_OK);
+    DEBUG_ASSERT(p_clone);
   }
 
   InitializeVmPage(p_clone);
@@ -109,7 +109,7 @@ bool AllocateCopyPage(uint32_t pmm_alloc_flags, paddr_t parent_paddr, list_node_
 
   *clone = p_clone;
 
-  return true;
+  return ZX_OK;
 }
 
 bool SlotHasPinnedPage(VmPageOrMarker* slot) {
@@ -1325,9 +1325,10 @@ bool VmCowPages::IsUniAccessibleLocked(vm_page_t* page, uint64_t offset) const {
   return false;
 }
 
-vm_page_t* VmCowPages::CloneCowPageLocked(uint64_t offset, list_node_t* alloc_list,
-                                          VmCowPages* page_owner, vm_page_t* page,
-                                          uint64_t owner_offset) {
+zx_status_t VmCowPages::CloneCowPageLocked(uint64_t offset, list_node_t* alloc_list,
+                                           VmCowPages* page_owner, vm_page_t* page,
+                                           uint64_t owner_offset, LazyPageRequest* page_request,
+                                           vm_page_t** out_page) {
   DEBUG_ASSERT(page != vm_get_zero_page());
   DEBUG_ASSERT(parent_);
 
@@ -1359,7 +1360,7 @@ vm_page_t* VmCowPages::CloneCowPageLocked(uint64_t offset, list_node_t* alloc_li
   // across loop iterations.
   vm_page_t* target_page = page;
 
-  bool alloc_failure = false;
+  zx_status_t alloc_status = ZX_OK;
 
   // As long as we're simply migrating |page|, there's no need to update any vmo mappings, since
   // that means the other side of the clone tree has already covered |page| and the current side
@@ -1399,9 +1400,8 @@ vm_page_t* VmCowPages::CloneCowPageLocked(uint64_t offset, list_node_t* alloc_li
     } else {
       // Otherwise we need to fork the page.
       vm_page_t* cover_page;
-      alloc_failure = !AllocateCopyPage(pmm_alloc_flags_, page->paddr(), alloc_list, &cover_page);
-      if (unlikely(alloc_failure)) {
-        // TODO: plumb through PageRequest once anonymous page source is implemented.
+      alloc_status = AllocateCopyPage(pmm_alloc_flags_, page->paddr(), alloc_list, &cover_page);
+      if (alloc_status != ZX_OK) {
         break;
       }
 
@@ -1442,12 +1442,15 @@ vm_page_t* VmCowPages::CloneCowPageLocked(uint64_t offset, list_node_t* alloc_li
       }
     }
   } while (cur != this);
-  DEBUG_ASSERT(alloc_failure || cur_offset == offset);
+  DEBUG_ASSERT(alloc_status != ZX_OK || cur_offset == offset);
 
-  if (unlikely(alloc_failure)) {
-    return nullptr;
+  if (unlikely(alloc_status != ZX_OK)) {
+    *out_page = nullptr;
+    // TODO: plumb through PageRequest once anonymous page source is implemented.
+    return ZX_ERR_NO_MEMORY;
   } else {
-    return target_page;
+    *out_page = target_page;
+    return ZX_OK;
   }
 }
 
@@ -1471,10 +1474,10 @@ zx_status_t VmCowPages::CloneCowPageAsZeroLocked(uint64_t offset, list_node_t* f
   AssertHeld(parent_->lock_);
   if (page_owner != parent_.get()) {
     // Do not pass our freed_list here as this wants an alloc_list to allocate from.
-    page = parent_->CloneCowPageLocked(offset + parent_offset_, nullptr, page_owner, page,
-                                       owner_offset);
-    if (page == nullptr) {
-      return ZX_ERR_NO_MEMORY;
+    zx_status_t result = parent_->CloneCowPageLocked(offset + parent_offset_, nullptr, page_owner,
+                                                     page, owner_offset, nullptr, &page);
+    if (result != ZX_OK) {
+      return result;
     }
   }
 
@@ -1856,7 +1859,9 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
     // If the vmo isn't hidden, we can't move the page. If the page is the zero
     // page, there's no need to try to move the page. In either case, we need to
     // allocate a writable page for this vmo.
-    if (!AllocateCopyPage(pmm_alloc_flags_, p->paddr(), alloc_list, &res_page)) {
+    zx_status_t alloc_status =
+        AllocateCopyPage(pmm_alloc_flags_, p->paddr(), alloc_list, &res_page);
+    if (unlikely(alloc_status != ZX_OK)) {
       return ZX_ERR_NO_MEMORY;
     }
     VmPageOrMarker insert = VmPageOrMarker::Page(res_page);
@@ -1895,9 +1900,10 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
     }
   } else {
     // We need a writable page; let ::CloneCowPageLocked handle inserting one.
-    res_page = CloneCowPageLocked(offset, alloc_list, page_owner, p, owner_offset);
-    if (res_page == nullptr) {
-      return ZX_ERR_NO_MEMORY;
+    zx_status_t result =
+        CloneCowPageLocked(offset, alloc_list, page_owner, p, owner_offset, nullptr, &res_page);
+    if (result != ZX_OK) {
+      return result;
     }
     VMO_VALIDATION_ASSERT(DebugValidatePageSplitsHierarchyLocked());
   }
@@ -2388,8 +2394,10 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
       vm_page_t* p;
       free_any_pages();
       // Do not pass our freed_list here as this takes an |alloc_list| list to allocate from.
-      bool result = AllocateCopyPage(pmm_alloc_flags_, vm_get_zero_page_paddr(), nullptr, &p);
-      if (!result) {
+      zx_status_t alloc_status =
+          AllocateCopyPage(pmm_alloc_flags_, vm_get_zero_page_paddr(), nullptr, &p);
+      if (alloc_status != ZX_OK) {
+        DEBUG_ASSERT(alloc_status == ZX_ERR_NO_MEMORY);
         return ZX_ERR_NO_MEMORY;
       }
       SetNotWired(p, offset);
