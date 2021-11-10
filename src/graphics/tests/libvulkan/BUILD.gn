@@ -80,11 +80,30 @@ fuchsia_component("libvulkan_test_driver") {
   manifest = "meta/libvulkan_test_driver.cml"
 }
 
+fuchsia_component("libvulkan_test_hermetic_driver") {
+  testonly = true
+  component_name = "libvulkan_test_hermetic_driver"
+  deps = [
+    ":libvulkan_test_bin",
+    "//src/lib/vulkan/validation_layers",
+  ]
+
+  manifest = "meta/libvulkan_test_hermetic_driver.cml"
+}
+
 fuchsia_component("libvulkan_test_cmp") {
   testonly = true
   component_name = "libvulkan_test"
 
   manifest = "meta/libvulkan_test.cml"
+}
+
+# This tests that it's possible to load a hermetic ICD using VK_ICD_FILENAMES.
+fuchsia_component("libvulkan_test_hermetic_cmp") {
+  testonly = true
+  component_name = "libvulkan_test_hermetic"
+
+  manifest = "meta/libvulkan_test_hermetic.cml"
 }
 
 fuchsia_component("fake_vulkan_loader") {
@@ -97,11 +116,15 @@ fuchsia_component("fake_vulkan_loader") {
 
 fuchsia_test_package("libvulkan-test") {
   package_name = "libvulkan_test"
-  test_components = [ ":libvulkan_test_cmp" ]
+  test_components = [
+    ":libvulkan_test_cmp",
+    ":libvulkan_test_hermetic_cmp",
+  ]
   deps = [
     ":fake_vulkan_loader",
     ":libvulkan_fake",
     ":libvulkan_test_driver",
+    ":libvulkan_test_hermetic_driver",
   ]
 }
 

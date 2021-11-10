@@ -146,25 +146,28 @@ vk_icdInitializeOpenInNamespaceCallback(PFN_vkOpenInNamespaceAddr open_in_namesp
   zx::channel server_end, client_end;
   zx::channel::create(0, &server_end, &client_end);
 
-  // ConnectToDeviceFs in the service provider should connect the device fs to /pkg/data.
-  VkResult result =
-      open_in_namespace_addr("/loader-gpu-devices/libvulkan_fake.json", server_end.release());
-  if (result != VK_SUCCESS) {
-    fprintf(stderr, "Opening libvulkan_fake.json failed with error %d\n", result);
-    return;
-  }
+  // A hermetic ICD shouldn't try to access to anything from the loader service.
+  if (!getenv("HERMETIC_ICD")) {
+    // ConnectToDeviceFs in the service provider should connect the device fs to /pkg/data.
+    VkResult result =
+        open_in_namespace_addr("/loader-gpu-devices/libvulkan_fake.json", server_end.release());
+    if (result != VK_SUCCESS) {
+      fprintf(stderr, "Opening libvulkan_fake.json failed with error %d\n", result);
+      return;
+    }
 
-  fdio_t* fdio;
-  zx_status_t status = fdio_create(client_end.release(), &fdio);
-  if (status != ZX_OK) {
-    fprintf(stderr, "fdio create failed with status %d\n", status);
-    return;
-  }
+    fdio_t* fdio;
+    zx_status_t status = fdio_create(client_end.release(), &fdio);
+    if (status != ZX_OK) {
+      fprintf(stderr, "fdio create failed with status %d\n", status);
+      return;
+    }
 
-  int fd = fdio_bind_to_fd(fdio, -1, 0);
-  if (fd < 0) {
-    fprintf(stderr, "fdio_bind_to_fd failed\n");
-    return;
+    int fd = fdio_bind_to_fd(fdio, -1, 0);
+    if (fd < 0) {
+      fprintf(stderr, "fdio_bind_to_fd failed\n");
+      return;
+    }
   }
 
   open_in_namespace_callback_initialized = true;

@@ -1,0 +1,16 @@
+{
+    include: [
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/libvulkan_test",
+        environ: [
+            "VK_ICD_FILENAMES=/pkg/data/manifest/libvulkan_fake.json",
+            "VK_LOADER_DEBUG=all",
+
+            // A hermetic ICD shouldn't try to access to anything from the loader service.
+            "HERMETIC_ICD=yes",
+        ],
+    },
+}
