@@ -19,6 +19,7 @@ rustc_binary("cmc") {
     "//src/lib/directed_graph",
     "//src/lib/fidl/rust/fidl",
     "//src/sys/lib/cm_json",
+    "//src/sys/lib/cm_rust",
     "//src/sys/lib/cm_types",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:clap",

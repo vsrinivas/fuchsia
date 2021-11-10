@@ -11,6 +11,8 @@
 pub mod error;
 pub mod one_or_many;
 pub mod reference_doc;
+
+#[allow(unused)] // A test-only macro is defined outside of a test builds.
 pub mod translate;
 
 use {
@@ -36,7 +38,16 @@ pub use cm_types::{
     StartupMode, StorageId, Url,
 };
 
-pub use translate::compile;
+// Default to fsys for the moment until all clients have been migrated.
+pub use translate::fsys::compile;
+
+pub mod fsys {
+    pub use crate::translate::fsys::compile;
+}
+
+pub mod fdecl {
+    pub use crate::translate::fdecl::compile;
+}
 
 lazy_static! {
     static ref DEFAULT_EVENT_STREAM_NAME: Name = "EventStream".parse().unwrap();

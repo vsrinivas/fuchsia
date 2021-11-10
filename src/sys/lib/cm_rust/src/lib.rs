@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#[allow(dead_code)]
+pub mod convert;
+
 use {
     cm_fidl_validator,
     cm_rust_derive::{
@@ -1025,6 +1028,12 @@ impl From<&str> for CapabilityName {
 impl From<String> for CapabilityName {
     fn from(name: String) -> CapabilityName {
         CapabilityName(name)
+    }
+}
+
+impl From<cm_types::Name> for CapabilityName {
+    fn from(name: cm_types::Name) -> CapabilityName {
+        name.as_str().into()
     }
 }
 

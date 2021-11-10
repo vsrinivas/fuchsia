@@ -202,6 +202,12 @@ pub enum Commands {
         /// If specified, the program.runner field will be set to this value. This option is
         /// EXPERIMENTAL and subject to removal without warning.
         experimental_force_runner: Option<String>,
+
+        #[structopt(long = "experimental-sdk-output")]
+        /// Compile manifest into `fuchsia.component.decl.Component` decl type.
+        ///
+        /// This option is EXPERIMENTAL and subject to removal without warning.
+        experimental_sdk_output: bool,
     },
 
     #[structopt(name = "print-cml-reference")]

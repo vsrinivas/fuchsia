@@ -17,6 +17,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use structopt::StructOpt;
 
+#[allow(unused)] // A test-only macro is defined on all builds.
 mod compile;
 mod features;
 mod format;
@@ -100,6 +101,7 @@ fn run_cmc() -> Result<(), Error> {
             includeroot,
             features,
             experimental_force_runner,
+            experimental_sdk_output,
         } => {
             path_exists(&file)?;
             compile::compile(
@@ -110,6 +112,7 @@ fn run_cmc() -> Result<(), Error> {
                 &includeroot,
                 &features.into(),
                 &experimental_force_runner,
+                experimental_sdk_output,
             )?
         }
         opts::Commands::PrintReferenceDocs { output } => {

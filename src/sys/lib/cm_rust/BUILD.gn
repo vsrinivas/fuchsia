@@ -23,7 +23,10 @@ rustc_library("cm_rust") {
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:thiserror",
   ]
-  sources = [ "src/lib.rs" ]
+  sources = [
+    "src/convert.rs",
+    "src/lib.rs",
+  ]
 
   # Some host tools use serde to serialize/deserialize cm_rust types. This
   # dependency is guarded in code via #[cfg(feature = "serde")] and
