@@ -24,12 +24,16 @@ use {
     net_declare::fidl_ip_v6,
     net_types::ip::IpAddress,
     parking_lot::RwLock,
-    std::collections::VecDeque,
+    std::collections::{HashMap, VecDeque},
     std::convert::TryFrom,
+    std::hash::{Hash, Hasher},
     std::net::IpAddr,
     std::rc::Rc,
     std::sync::Arc,
-    trust_dns_proto::rr::{domain::IntoName, TryParseIp},
+    trust_dns_proto::{
+        op::ResponseCode,
+        rr::{domain::IntoName, TryParseIp},
+    },
     trust_dns_resolver::{
         config::{
             LookupIpStrategy, NameServerConfig, NameServerConfigGroup, Protocol, ResolverConfig,
@@ -114,13 +118,44 @@ impl QueryStats {
     }
 }
 
+#[derive(Debug, PartialEq, Eq)]
+struct HashableResponseCode {
+    response_code: ResponseCode,
+}
+
+impl Hash for HashableResponseCode {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        let HashableResponseCode { response_code } = self;
+        u16::from(*response_code).hash(state)
+    }
+}
+
+impl From<ResponseCode> for HashableResponseCode {
+    fn from(response_code: ResponseCode) -> Self {
+        HashableResponseCode { response_code }
+    }
+}
+
+#[derive(Default, Debug, PartialEq)]
+struct NoRecordsFoundStats {
+    response_code_counts: HashMap<HashableResponseCode, u64>,
+}
+
+impl NoRecordsFoundStats {
+    fn increment(&mut self, response_code: &ResponseCode) {
+        let NoRecordsFoundStats { response_code_counts } = self;
+        let count = response_code_counts.entry((*response_code).into()).or_insert(0);
+        *count += 1;
+    }
+}
+
 /// Stats about queries that failed due to an internal trust-dns error.
 /// These counters map to variants of
 /// [`trust_dns_resolver::error::ResolveErrorKind`].
 #[derive(Default, Debug, PartialEq)]
 struct FailureStats {
     message: u64,
-    no_records_found: u64,
+    no_records_found: NoRecordsFoundStats,
     io: u64,
     proto: u64,
     timeout: u64,
@@ -142,9 +177,9 @@ impl FailureStats {
                 query: _,
                 soa: _,
                 negative_ttl: _,
-                response_code: _,
+                response_code,
                 trusted: _,
-            } => *no_records_found += 1,
+            } => no_records_found.increment(response_code),
             ResolveErrorKind::Io(error) => {
                 let _: &std::io::Error = error;
                 *io += 1
@@ -872,13 +907,19 @@ fn add_query_stats_inspect(
                     *failure_elapsed_time,
                     *failure_count,
                 );
-                let FailureStats { message, no_records_found, io, proto, timeout } = failure_stats;
+                let FailureStats { message, no_records_found: NoRecordsFoundStats { response_code_counts }, io, proto, timeout } = failure_stats;
                 let errors = child.create_child("errors");
                 let () = errors.record_uint("Message", *message);
-                let () = errors.record_uint("NoRecordsFound", *no_records_found);
                 let () = errors.record_uint("Io", *io);
                 let () = errors.record_uint("Proto", *proto);
                 let () = errors.record_uint("Timeout", *timeout);
+
+                let no_records_found_response_codes = errors.create_child("NoRecordsFoundResponseCodeCounts");
+                for (HashableResponseCode { response_code }, count) in response_code_counts {
+                  let () = no_records_found_response_codes.record_uint(format!("{:?}", response_code), *count);
+                }
+                let () = errors.record(no_records_found_response_codes);
+
                 let () = child.record(errors);
 
                 let () = node.root().record(child);
@@ -1604,7 +1645,7 @@ mod tests {
                     average_success_duration_micros: NonZeroUintProperty,
                     errors: {
                         Message: 0u64,
-                        NoRecordsFound: 0u64,
+                        NoRecordsFoundResponseCodeCounts: {},
                         Io: 0u64,
                         Proto: 0u64,
                         Timeout: 0u64,
@@ -1667,7 +1708,7 @@ mod tests {
                 ).unwrap() / 2,
                 errors: {
                     Message: 0u64,
-                    NoRecordsFound: 0u64,
+                    NoRecordsFoundResponseCodeCounts: {},
                     Io: 0u64,
                     Proto: 0u64,
                     Timeout: 0u64,
@@ -1713,10 +1754,73 @@ mod tests {
                     ).unwrap(),
                     errors: {
                         Message: 0u64,
-                        NoRecordsFound: 0u64,
+                        NoRecordsFoundResponseCodeCounts: {},
                         Io: 0u64,
                         Proto: 0u64,
                         Timeout: FAILED_QUERY_COUNT,
+                    },
+                },
+            }
+        });
+    }
+
+    #[test]
+    fn test_query_stats_inspect_no_records_found() {
+        let mut exec = fasync::TestExecutor::new_with_fake_time().unwrap();
+        const START_NANOS: i64 = 1_234_567;
+        let () = exec.set_fake_time(fasync::Time::from_nanos(START_NANOS));
+
+        let env = TestEnvironment::new();
+        let inspector = fuchsia_inspect::Inspector::new();
+        let _query_stats_inspect_node =
+            add_query_stats_inspect(inspector.root(), env.stats.clone());
+        const FAILED_QUERY_COUNT: u64 = 10;
+        const FAILED_QUERY_DURATION: zx::Duration = zx::Duration::from_millis(500);
+
+        let mut run_fake_no_records_lookup = |response_code: ResponseCode| {
+            run_fake_lookup(
+                &mut exec,
+                env.stats.clone(),
+                Some(ResolveErrorKind::NoRecordsFound {
+                    query: Box::new(Query::default()),
+                    soa: None,
+                    negative_ttl: None,
+                    response_code,
+                    trusted: false,
+                }),
+                FAILED_QUERY_DURATION,
+            )
+        };
+
+        for _ in 0..FAILED_QUERY_COUNT {
+            let () = run_fake_no_records_lookup(ResponseCode::NXDomain);
+            let () = run_fake_no_records_lookup(ResponseCode::Refused);
+            let () = run_fake_no_records_lookup(4096.into());
+            let () = run_fake_no_records_lookup(4097.into());
+        }
+
+        assert_data_tree!(inspector, root:{
+            query_stats: {
+                "window 1": {
+                    start_time_nanos: u64::try_from(
+                        START_NANOS + FAILED_QUERY_DURATION.into_nanos()
+                    ).unwrap(),
+                    successful_queries: 0u64,
+                    failed_queries: FAILED_QUERY_COUNT * 4,
+                    average_failure_duration_micros: u64::try_from(
+                        FAILED_QUERY_DURATION.into_micros()
+                    ).unwrap(),
+                    errors: {
+                        Message: 0u64,
+                        NoRecordsFoundResponseCodeCounts: {
+                          NXDomain: FAILED_QUERY_COUNT,
+                          Refused: FAILED_QUERY_COUNT,
+                          "Unknown(4096)": FAILED_QUERY_COUNT,
+                          "Unknown(4097)": FAILED_QUERY_COUNT,
+                        },
+                        Io: 0u64,
+                        Proto: 0u64,
+                        Timeout: 0u64,
                     },
                 },
             }
@@ -1764,7 +1868,7 @@ mod tests {
                 average_success_duration_micros: u64::try_from(DELAY.into_micros()).unwrap(),
                 errors: {
                     Message: 0u64,
-                    NoRecordsFound: 0u64,
+                    NoRecordsFoundResponseCodeCounts: {},
                     Io: 0u64,
                     Proto: 0u64,
                     Timeout: 0u64,
@@ -1908,23 +2012,38 @@ mod tests {
                     query: Box::new(Query::default()),
                     soa: None,
                     negative_ttl: None,
-                    response_code: trust_dns_proto::op::ResponseCode::Refused,
+                    response_code: ResponseCode::Refused,
                     trusted: false,
                 },
-                FailureStats { message: 2, no_records_found: 1, ..Default::default() },
+                FailureStats {
+                    message: 2,
+                    no_records_found: NoRecordsFoundStats {
+                        response_code_counts: [(ResponseCode::Refused.into(), 1)].into(),
+                    },
+                    ..Default::default()
+                },
             ),
             (
                 ResolveErrorKind::Io(std::io::Error::new(
                     std::io::ErrorKind::NotFound,
                     anyhow!("foo"),
                 )),
-                FailureStats { message: 2, no_records_found: 1, io: 1, ..Default::default() },
+                FailureStats {
+                    message: 2,
+                    no_records_found: NoRecordsFoundStats {
+                        response_code_counts: [(ResponseCode::Refused.into(), 1)].into(),
+                    },
+                    io: 1,
+                    ..Default::default()
+                },
             ),
             (
                 ResolveErrorKind::Proto(ProtoError::from("foo")),
                 FailureStats {
                     message: 2,
-                    no_records_found: 1,
+                    no_records_found: NoRecordsFoundStats {
+                        response_code_counts: [(ResponseCode::Refused.into(), 1)].into(),
+                    },
                     io: 1,
                     proto: 1,
                     ..Default::default()
@@ -1932,7 +2051,59 @@ mod tests {
             ),
             (
                 ResolveErrorKind::Timeout,
-                FailureStats { message: 2, no_records_found: 1, io: 1, proto: 1, timeout: 1 },
+                FailureStats {
+                    message: 2,
+                    no_records_found: NoRecordsFoundStats {
+                        response_code_counts: [(ResponseCode::Refused.into(), 1)].into(),
+                    },
+                    io: 1,
+                    proto: 1,
+                    timeout: 1,
+                },
+            ),
+            (
+                ResolveErrorKind::NoRecordsFound {
+                    query: Box::new(Query::default()),
+                    soa: None,
+                    negative_ttl: None,
+                    response_code: ResponseCode::NXDomain,
+                    trusted: false,
+                },
+                FailureStats {
+                    message: 2,
+                    no_records_found: NoRecordsFoundStats {
+                        response_code_counts: [
+                            (ResponseCode::NXDomain.into(), 1),
+                            (ResponseCode::Refused.into(), 1),
+                        ]
+                        .into(),
+                    },
+                    io: 1,
+                    proto: 1,
+                    timeout: 1,
+                },
+            ),
+            (
+                ResolveErrorKind::NoRecordsFound {
+                    query: Box::new(Query::default()),
+                    soa: None,
+                    negative_ttl: None,
+                    response_code: ResponseCode::NXDomain,
+                    trusted: false,
+                },
+                FailureStats {
+                    message: 2,
+                    no_records_found: NoRecordsFoundStats {
+                        response_code_counts: [
+                            (ResponseCode::NXDomain.into(), 2),
+                            (ResponseCode::Refused.into(), 1),
+                        ]
+                        .into(),
+                    },
+                    io: 1,
+                    proto: 1,
+                    timeout: 1,
+                },
             ),
         ][..]
         {
