@@ -142,7 +142,7 @@ class OtStackApp : public fidl::WireSyncEventHandler<fidl_spinel::Device> {
   std::unique_ptr<OtStackCallBackImpl> lowpan_spinel_ptr_ = nullptr;
   uint32_t radio_inbound_allowance_ = 0;
   uint32_t radio_inbound_cnt = 0;
-  uint32_t radio_outbound_allowance_ __TA_GUARDED(radio_ctrl_flow_mtx_);
+  uint32_t radio_outbound_allowance_ __TA_GUARDED(radio_q_mtx_);
   uint32_t radio_outbound_cnt = 0;
   uint32_t client_inbound_allowance_ = 0;
   uint32_t client_inbound_cnt = 0;
@@ -150,11 +150,11 @@ class OtStackApp : public fidl::WireSyncEventHandler<fidl_spinel::Device> {
   uint32_t client_outbound_cnt = 0;
 
   fbl::Mutex radio_q_mtx_;
-  fbl::Mutex radio_ctrl_flow_mtx_;
 
   std::list<std::vector<uint8_t>> radio_inbound_queue_ __TA_GUARDED(radio_q_mtx_);
   std::list<std::vector<uint8_t>> client_outbound_queue_;
   std::list<std::vector<uint8_t>> client_inbound_queue_;
+  std::vector<uint8_t> radio_outbound_frame_ __TA_GUARDED(radio_q_mtx_);
 
   std::optional<void*> ot_instance_ptr_ = nullptr;
   bool is_test_env_;

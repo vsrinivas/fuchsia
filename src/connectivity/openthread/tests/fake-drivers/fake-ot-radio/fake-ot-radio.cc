@@ -87,9 +87,9 @@ void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::Open(OpenRequestView request
                                                          OpenCompleter::Sync& completer) {
   zx_status_t res = ot_radio_obj_.Reset();
   if (res == ZX_OK) {
-    zxlogf(DEBUG, "open succeed, returning");
     ot_radio_obj_.power_status_ = OT_SPINEL_DEVICE_ON;
     (*ot_radio_obj_.fidl_binding_)->OnReadyForSendFrames(kRadioboundAllowanceInit);
+    zxlogf(DEBUG, "OnReadyForSendFrames(kRadioboundAllowanceInit) sent");
     ot_radio_obj_.clientbound_allowance_ = 0;
     ot_radio_obj_.radiobound_allowance_ = kRadioboundAllowanceInit;
     ot_radio_obj_.clientbound_cnt_ = 0;
@@ -148,6 +148,7 @@ void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::SendFrame(SendFrameRequestVi
 
     if ((ot_radio_obj_.radiobound_cnt_ & 1) == 0) {
       (*ot_radio_obj_.fidl_binding_)->OnReadyForSendFrames(kRadioboundAllowanceInc);
+      zxlogf(DEBUG, "OnReadyForSendFrames(kRadioboundAllowanceInc) sent");
       ot_radio_obj_.radiobound_allowance_ += kRadioboundAllowanceInc;
     }
   }
@@ -196,6 +197,11 @@ zx_status_t FakeOtRadioDevice::Reset() {
   std::queue<std::vector<uint8_t>> empty_clientbound_queue;
   std::swap(clientbound_queue_, empty_clientbound_queue);
   lock_in.release();
+
+  fbl::AutoLock lock_out(&radiobound_lock_);
+  std::queue<std::vector<uint8_t>> empty_radiobound_queue;
+  std::swap(radiobound_queue_, empty_radiobound_queue);
+  lock_out.release();
 
   zx::nanosleep(zx::deadline_after(zx::msec(kResetMsDelay)));
 
