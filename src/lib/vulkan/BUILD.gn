@@ -53,6 +53,14 @@ group("headers") {
   public_deps = [ "//third_party/Vulkan-Headers:vulkan_headers" ]
 }
 
+group("tests") {
+  testonly = true
+  deps = [ ":loader_and_validation_tests" ]
+
+  # Ensure loader builds for Linux x64
+  deps += [ ":vulkan_headers_and_loader(//build/toolchain:linux_x64-shared)" ]
+}
+
 # Tests for the Vulkan loader and validation layers.
 group("loader_and_validation_tests") {
   testonly = true

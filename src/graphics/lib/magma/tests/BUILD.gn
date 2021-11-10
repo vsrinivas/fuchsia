@@ -31,6 +31,9 @@ group("tests") {
       "//src/graphics/drivers/intel-gen/icd:mesa_integration_tests",
       "//src/graphics/drivers/intel-gen/icd:mesa_unit_tests",
     ]
+
+    # Ensure that Mesa/Anvil builds for Linux
+    public_deps += [ "//third_party/mesa/src/intel/vulkan:vulkan_intel(//build/toolchain:linux_x64-shared)" ]
   }
 
   # Ensure the test MSDs are built even when not deployed

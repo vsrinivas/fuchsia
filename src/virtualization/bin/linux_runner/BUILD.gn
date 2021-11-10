@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//src/graphics/lib/gbm/gbm.gni")
 import("//src/virtualization/buildtools/linux_paths.gni")
 import("//src/virtualization/buildtools/romfs_image.gni")
 
@@ -105,34 +104,11 @@ source_set("lib") {
   }
 }
 
-icd_filename = "libvulkan_intel.so"
-icd_manifest = "${target_gen_dir}/magma.json"
-
-action("icd_manifest") {
-  visibility = [ ":*" ]
-  script = "//src/graphics/lib/magma/scripts/gen_icd_manifest.sh"
-  args = [
-    "${icd_filename}",
-    rebase_path(icd_manifest, root_build_dir),
-  ]
-  outputs = [ icd_manifest ]
-}
-
 romfs_image("extras") {
-  deps = [
-    ":icd_manifest",
-    "//src/lib/vulkan:vulkan_headers_and_loader(${linux_lib_toolchain})",
-  ]
-
-  inputs = [
-    "${icd_manifest}",
-    "${linux_lib_path}/libvulkan.so.1",  # Vulkan Loader
-  ]
-
   if (linux_runner_extras_tests) {
     testonly = true
 
-    deps += [
+    deps = [
       "//src/graphics/examples:vkcube-on-wayland(${linux_exe_toolchain})",
       "//src/graphics/lib/compute/radix_sort/platforms/vk/tests(${linux_exe_toolchain})",
       "//src/graphics/lib/compute/tools/bench/platforms/vk:bench-vk(${linux_exe_toolchain})",
@@ -143,7 +119,7 @@ romfs_image("extras") {
       "//src/lib/vulkan:vulkaninfo(${linux_exe_toolchain})",
     ]
 
-    inputs += [
+    inputs = [
       "${linux_exe_path}/virtmagma_unit_tests_linux",
       "${linux_exe_path}/virtmagma_vulkan_unit_tests",
       "${linux_exe_path}/virtmagma_conformance_tests",
@@ -154,25 +130,7 @@ romfs_image("extras") {
       "${linux_exe_path}/bench-vk",
     ]
 
-    if (current_cpu == "x64") {
-      deps += [
-        "//src/graphics/lib/gbm",
-        "//src/graphics/tests/vkgbm(${linux_exe_toolchain})",
-      ]
-
-      inputs += [
-        "${linux_exe_path}/vkgbm",
-        "${gbm_lib_path}",
-      ]
-    }
-
     inputs += linux_runner_user_extras
-  }
-
-  if (current_cpu == "x64") {
-    deps += [ "//third_party/mesa/src/intel/vulkan:vulkan_intel(${linux_lib_toolchain})" ]
-
-    inputs += [ "${linux_lib_path}/${icd_filename}" ]
   }
 
   output = extras_image
