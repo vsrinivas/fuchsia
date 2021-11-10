@@ -31,6 +31,8 @@ rustc_library("test-call-manager") {
   test_deps = [ "//src/lib/fuchsia" ]
 
   sources = [ "src/lib.rs" ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_unittest_package("test-call-manager-tests") {

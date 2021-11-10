@@ -424,14 +424,14 @@ impl TestCallManager {
             };
             if let Ok(()) = responder.send(next_call) {
                 let task = fasync::Task::local(self.clone().manage_call(peer_id, call_id, stream));
-                peer.call_tasks.insert(call_id, task);
+                let _ = peer.call_tasks.insert(call_id, task);
                 state.peer_id = Some(peer_id);
             }
         } else {
             inner.unreported_calls.push_back(call_id);
         }
 
-        inner.calls.insert(call_id, state);
+        let _ = inner.calls.insert(call_id, state);
         Ok(call_id)
     }
 
@@ -571,7 +571,7 @@ impl TestCallManager {
                 let res = peer.call_responder.take().expect("just put here").send(next_call);
                 if let Ok(()) = res {
                     let task = fasync::Task::local(self.manage_call(id, cid, stream));
-                    peer.call_tasks.insert(cid, task);
+                    let _ = peer.call_tasks.insert(cid, task);
                     inner.calls.get_mut(&cid).expect("still here").peer_id = Some(id);
                 }
                 break;
@@ -799,12 +799,12 @@ impl TestCallManager {
             fx_log_info!("Handling Peer: {:?}", id);
             {
                 let mut inner = self.inner.lock().await;
-                inner.peers.insert(id, PeerState::default());
+                let _ = inner.peers.insert(id, PeerState::default());
                 inner.active_peer = Some(id);
             }
 
             let task = fasync::Task::spawn(self.clone().manage_peer(id, stream));
-            peers.insert(id, task);
+            let _ = peers.insert(id, task);
             let _ = responder.send();
         }
         Ok(())
@@ -882,8 +882,12 @@ impl TestCallManager {
 
         // Cleanup before exiting call task
         let mut inner = self.inner.lock().await;
-        inner.calls.get_mut(&call_id).map(|call| call.peer_id = None);
-        inner.peers.get_mut(&peer_id).map(|peer| peer.call_tasks.remove(&call_id));
+        if let Some(call) = inner.calls.get_mut(&call_id) {
+            call.peer_id = None
+        }
+        if let Some(peer) = inner.peers.get_mut(&peer_id) {
+            let _ = peer.call_tasks.remove(&call_id);
+        }
     }
 
     /// Request that the active peer's speaker gain be set to `value`.
@@ -934,11 +938,13 @@ impl TestCallManager {
         let mut inner = self.inner.lock().await;
 
         // Update network state
-        network
-            .service_available
-            .map(|update| inner.manager.network.service_available = Some(update));
-        network.signal_strength.map(|update| inner.manager.network.signal_strength = Some(update));
-        network.roaming.map(|update| inner.manager.network.roaming = Some(update));
+        let last_net = std::mem::replace(&mut inner.manager.network, NetworkInformation::EMPTY);
+        inner.manager.network = NetworkInformation {
+            service_available: network.service_available.or(last_net.service_available),
+            signal_strength: network.signal_strength.or(last_net.signal_strength),
+            roaming: network.roaming.or(last_net.roaming),
+            ..last_net
+        };
         let current_network = inner.manager.network.clone();
 
         for peer in inner.peers.values_mut() {
