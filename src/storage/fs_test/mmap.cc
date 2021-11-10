@@ -30,11 +30,68 @@ using ::testing::_;
 
 using MmapTest = FilesystemTest;
 
-// Certain filesystems delay creation of internal structures
-// until the file is initially accessed. Test that we can
-// actually mmap properly before the file has otherwise been
-// accessed.
-TEST_P(MmapTest, Empty) {
+// Tests which require MAP_SHARED to propagate writes to/from both the mapped region and
+// the underlying file.
+using MmapSharedWriteTest = FilesystemTest;
+
+enum class DeathTestOp {
+  Read,
+  Write,
+  ReadAfterUnmap,
+  WriteAfterUnmap,
+};
+
+// Helper function for death tests.
+void mmap_crash(const std::string& path, int prot, int flags, DeathTestOp rw) {
+  fbl::unique_fd fd(open(path.c_str(), O_RDWR));
+  ASSERT_TRUE(fd);
+  void* addr = mmap(nullptr, PAGE_SIZE, prot, flags, fd.get(), 0);
+  ASSERT_NE(addr, MAP_FAILED);
+  ASSERT_EQ(close(fd.release()), 0);
+
+  switch (rw) {
+    case DeathTestOp::Read:
+      ASSERT_DEATH([[maybe_unused]] int v = *static_cast<volatile int*>(addr), _);
+      ASSERT_EQ(munmap(addr, PAGE_SIZE), 0);
+      break;
+    case DeathTestOp::Write:
+      ASSERT_DEATH(*static_cast<int*>(addr) = 5, _);
+      ASSERT_EQ(munmap(addr, PAGE_SIZE), 0);
+      break;
+    case DeathTestOp::ReadAfterUnmap:
+      ASSERT_DEATH(
+          {
+            // Perform the munmap here as ASSERT_DEATH creates a thread and performs allocations,
+            // which could then reuse the slot we just unmapped. As there are no other active
+            // threads performing allocations in these tests, unmapping here should prevent any
+            // races between the unmap and the access.
+            munmap(addr, PAGE_SIZE);
+            [[maybe_unused]] int v = *static_cast<volatile int*>(addr);
+          },
+          _);
+      break;
+    case DeathTestOp::WriteAfterUnmap:
+      ASSERT_DEATH(
+          {
+            // Perform the munmap here as ASSERT_DEATH creates a thread and performs allocations,
+            // which could then reuse the slot we just unmapped. As there are no other active
+            // threads performing allocations in these tests, unmapping here should prevent any
+            // races between the unmap and the access.
+            munmap(addr, PAGE_SIZE);
+            *static_cast<int*>(addr) = 5;
+          },
+          _);
+      break;
+  }
+}
+
+// Certain filesystems delay creation of internal structures until the file is initially accessed.
+// Test that we can actually mmap properly before the file has otherwise been accessed. This test
+// relies on size changes being tracked in the underlying file.
+//
+// Tracking size changes is NOT required by the POSIX standard, and it is expected that not all
+// Fuchsia filesystems will support that - thus, this test may need to be updated or removed.
+TEST_P(MmapSharedWriteTest, Empty) {
   const std::string filename = GetPath("mmap_empty");
   fbl::unique_fd fd(open(filename.c_str(), O_RDWR | O_CREAT | O_EXCL));
   ASSERT_TRUE(fd);
@@ -50,9 +107,40 @@ TEST_P(MmapTest, Empty) {
   ASSERT_EQ(unlink(filename.c_str()), 0);
 }
 
-// Test that a file's writes are properly propagated to
-// a read-only buffer.
+// Test that file writes are propagated to a shared read-only buffer, excluding size changes.
 TEST_P(MmapTest, Readable) {
+  const std::string filename = GetPath("mmap_readable");
+  fbl::unique_fd fd(open(filename.c_str(), O_RDWR | O_CREAT | O_EXCL));
+  ASSERT_TRUE(fd);
+
+  char tmp1[] = "this is a temporary buffer";
+  char tmp2[] = "and this is a secondary buffer";
+  static_assert(sizeof(tmp2) >= sizeof(tmp1), "Size of tmp2 must be >= size of tmp1!");
+  ASSERT_EQ(write(fd.get(), tmp1, sizeof(tmp1)), static_cast<ssize_t>(sizeof(tmp1)));
+
+  // Demonstrate that a simple buffer can be mapped
+  void* addr = mmap(nullptr, PAGE_SIZE, PROT_READ, MAP_SHARED, fd.get(), 0);
+  ASSERT_NE(addr, MAP_FAILED);
+  ASSERT_EQ(memcmp(addr, tmp1, sizeof(tmp1)), 0);
+
+  // Show that if we overwrite part of the file, the mapping is also updated within the originally
+  // mapped region.
+  ASSERT_EQ(lseek(fd.get(), 0, SEEK_SET), 0);
+  ASSERT_EQ(write(fd.get(), tmp2, sizeof(tmp2)), static_cast<ssize_t>(sizeof(tmp2)));
+  // We only compare sizeof(tmp1) bytes, not sizeof(tmp2), as not all implementations track size
+  // changes (and the POSIX standard does not mandate it).
+  ASSERT_EQ(memcmp(addr, tmp2, sizeof(tmp1)), 0);
+
+  ASSERT_EQ(munmap(addr, PAGE_SIZE), 0);
+  ASSERT_EQ(close(fd.release()), 0);
+  ASSERT_EQ(unlink(filename.c_str()), 0);
+}
+
+// Test that a file's writes are properly propagated to a read-only buffer, including size changes.
+//
+// Tracking size changes is NOT required by the POSIX standard, and it is expected that not all
+// Fuchsia filesystems will support that - thus, this test may need to be updated or removed.
+TEST_P(MmapSharedWriteTest, ReadableSizeChange) {
   const std::string filename = GetPath("mmap_readable");
   fbl::unique_fd fd(open(filename.c_str(), O_RDWR | O_CREAT | O_EXCL));
   ASSERT_TRUE(fd);
@@ -66,8 +154,7 @@ TEST_P(MmapTest, Readable) {
   ASSERT_NE(addr, MAP_FAILED);
   ASSERT_EQ(memcmp(addr, tmp1, sizeof(tmp1)), 0);
 
-  // Show that if we keep writing to the file, the mapping
-  // is also updated
+  // Show that if we keep writing to the file, the mapping is also updated
   ASSERT_EQ(write(fd.get(), tmp2, sizeof(tmp2)), static_cast<ssize_t>(sizeof(tmp2)));
   void* addr2 = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(addr) + sizeof(tmp1));
   ASSERT_EQ(memcmp(addr2, tmp2, sizeof(tmp2)), 0);
@@ -80,9 +167,11 @@ TEST_P(MmapTest, Readable) {
   ASSERT_EQ(unlink(filename.c_str()), 0);
 }
 
-// Test that a mapped buffer's writes are properly propagated
-// to the file.
-TEST_P(MmapTest, Writable) {
+// Test that a mapped buffer's writes are properly propagated to the file.
+//
+// Tracking size changes is NOT required by the POSIX standard, and it is expected that not all
+// Fuchsia filesystems will support that - thus, this test may need to be updated in the future.
+TEST_P(MmapSharedWriteTest, Writable) {
   const std::string filename = GetPath("mmap_writable");
   fbl::unique_fd fd(open(filename.c_str(), O_RDWR | O_CREAT | O_EXCL));
   ASSERT_TRUE(fd);
@@ -156,8 +245,8 @@ TEST_P(MmapTest, Unlinked) {
   ASSERT_EQ(munmap(addr, PAGE_SIZE), 0);
 }
 
-// Test that MAP_SHARED propagates updates to the file
-TEST_P(MmapTest, Shared) {
+// Test that MAP_SHARED propagates updates to the file.
+TEST_P(MmapSharedWriteTest, Shared) {
   const std::string filename = GetPath("mmap_shared");
   fbl::unique_fd fd(open(filename.c_str(), O_RDWR | O_CREAT | O_EXCL));
   ASSERT_TRUE(fd);
@@ -272,8 +361,8 @@ TEST_P(MmapTest, BadPermissions) {
   fbl::unique_fd fd(open(myfile.c_str(), O_RDWR | O_CREAT | O_EXCL));
   ASSERT_TRUE(fd);
   ASSERT_EQ(close(fd.release()), 0);
-  // Test all cases of MAP_PRIVATE and MAP_SHARED which require
-  // a readable file.
+  // Test all cases of MAP_PRIVATE + PROT_WRITE and MAP_SHARED + PROT_READ which require a
+  // readable file.
   fd.reset(open(myfile.c_str(), O_WRONLY));
   ASSERT_TRUE(fd);
   ASSERT_EQ(mmap(nullptr, PAGE_SIZE, PROT_READ, MAP_PRIVATE, fd.get(), 0), MAP_FAILED);
@@ -288,6 +377,19 @@ TEST_P(MmapTest, BadPermissions) {
   ASSERT_EQ(mmap(nullptr, PAGE_SIZE, PROT_READ, MAP_SHARED, fd.get(), 0), MAP_FAILED);
   ASSERT_EQ(errno, EACCES);
   errno = 0;
+  ASSERT_EQ(close(fd.release()), 0);
+
+  ASSERT_EQ(unlink(myfile.c_str()), 0);
+}
+
+TEST_P(MmapSharedWriteTest, BadPermissions) {
+  const std::string myfile = GetPath("myfile");
+  fbl::unique_fd fd(open(myfile.c_str(), O_RDWR | O_CREAT | O_EXCL));
+  ASSERT_TRUE(fd);
+  ASSERT_EQ(close(fd.release()), 0);
+  // Test all cases of MAP_SHARED + PROT_WRITE which require a readable file.
+  fd.reset(open(myfile.c_str(), O_WRONLY));
+  ASSERT_TRUE(fd);
   ASSERT_EQ(mmap(nullptr, PAGE_SIZE, PROT_WRITE, MAP_SHARED, fd.get(), 0), MAP_FAILED);
   ASSERT_EQ(errno, EACCES);
   errno = 0;
@@ -318,7 +420,9 @@ TEST_P(MmapTest, BadPermissions) {
   ASSERT_EQ(unlink(myfile.c_str()), 0);
 }
 
-TEST_P(MmapTest, TruncateAccess) {
+// Tracking size changes is NOT required by the POSIX standard, and it is expected that not all
+// Fuchsia filesystems will support that - thus, this test may need to be updated or removed.
+TEST_P(MmapSharedWriteTest, TruncateAccess) {
   const std::string mmap_truncate = GetPath("mmap_truncate");
   fbl::unique_fd fd(open(mmap_truncate.c_str(), O_CREAT | O_RDWR));
   ASSERT_TRUE(fd);
@@ -354,7 +458,9 @@ TEST_P(MmapTest, TruncateAccess) {
   ASSERT_EQ(unlink(mmap_truncate.c_str()), 0);
 }
 
-TEST_P(MmapTest, TruncateExtend) {
+// Tracking size changes is NOT required by the POSIX standard, and it is expected that not all
+// Fuchsia filesystems will support that - thus, this test may need to be updated or removed.
+TEST_P(MmapSharedWriteTest, TruncateExtend) {
   const std::string mmap_truncate_extend = GetPath("mmap_truncate_extend");
   fbl::unique_fd fd(open(mmap_truncate_extend.c_str(), O_CREAT | O_RDWR));
   ASSERT_TRUE(fd);
@@ -395,7 +501,9 @@ TEST_P(MmapTest, TruncateExtend) {
   ASSERT_EQ(unlink(mmap_truncate_extend.c_str()), 0);
 }
 
-TEST_P(MmapTest, TruncateWriteExtend) {
+// Tracking size changes is NOT required by the POSIX standard, and it is expected that not all
+// Fuchsia filesystems will support that - thus, this test may need to be updated or removed.
+TEST_P(MmapSharedWriteTest, TruncateWriteExtend) {
   const std::string mmap_write_extend = GetPath("mmap_write_extend");
   fbl::unique_fd fd(open(mmap_write_extend.c_str(), O_CREAT | O_RDWR));
   ASSERT_TRUE(fd);
@@ -439,61 +547,7 @@ TEST_P(MmapTest, TruncateWriteExtend) {
   ASSERT_EQ(unlink(mmap_write_extend.c_str()), 0);
 }
 
-class MmapDeathTest : public FilesystemTest {
- protected:
-  enum RW {
-    Read,
-    Write,
-    ReadAfterUnmap,
-    WriteAfterUnmap,
-  };
-
-  void mmap_crash(int prot, int flags, RW rw) {
-    const std::string inaccessible = GetPath("inaccessible");
-    fbl::unique_fd fd(open(inaccessible.c_str(), O_RDWR));
-    ASSERT_TRUE(fd);
-    void* addr = mmap(nullptr, PAGE_SIZE, prot, flags, fd.get(), 0);
-    ASSERT_NE(addr, MAP_FAILED);
-    ASSERT_EQ(close(fd.release()), 0);
-
-    switch (rw) {
-      case RW::Read:
-        ASSERT_DEATH([[maybe_unused]] int v = *static_cast<volatile int*>(addr), _);
-        ASSERT_EQ(munmap(addr, PAGE_SIZE), 0);
-        break;
-      case RW::Write:
-        ASSERT_DEATH(*static_cast<int*>(addr) = 5, _);
-        ASSERT_EQ(munmap(addr, PAGE_SIZE), 0);
-        break;
-      case RW::ReadAfterUnmap:
-        ASSERT_DEATH(
-            {
-              // Perform the munmap here as ASSERT_DEATH creates a thread and performs allocations,
-              // which could then reuse the slot we just unmapped. As there are no other active
-              // threads performing allocations in these tests, unmapping here should prevent any
-              // races between the unmap and the access.
-              munmap(addr, PAGE_SIZE);
-              [[maybe_unused]] int v = *static_cast<volatile int*>(addr);
-            },
-            _);
-        break;
-      case RW::WriteAfterUnmap:
-        ASSERT_DEATH(
-            {
-              // Perform the munmap here as ASSERT_DEATH creates a thread and performs allocations,
-              // which could then reuse the slot we just unmapped. As there are no other active
-              // threads performing allocations in these tests, unmapping here should prevent any
-              // races between the unmap and the access.
-              munmap(addr, PAGE_SIZE);
-              *static_cast<int*>(addr) = 5;
-            },
-            _);
-        break;
-    }
-  }
-};
-
-TEST_P(MmapDeathTest, Death) {
+TEST_P(MmapTest, Death) {
   const std::string inaccessible = GetPath("inaccessible");
   fbl::unique_fd fd(open(inaccessible.c_str(), O_RDWR | O_CREAT));
   ASSERT_TRUE(fd);
@@ -502,23 +556,26 @@ TEST_P(MmapDeathTest, Death) {
   ASSERT_EQ(close(fd.release()), 0);
 
   // Crashes while mapped
-  mmap_crash(PROT_READ, MAP_PRIVATE, Write);
-  mmap_crash(PROT_READ, MAP_SHARED, Write);
+  mmap_crash(inaccessible, PROT_READ, MAP_PRIVATE, DeathTestOp::Write);
+  mmap_crash(inaccessible, PROT_READ, MAP_SHARED, DeathTestOp::Write);
+
   // Write-only is not possible
-  mmap_crash(PROT_NONE, MAP_SHARED, Read);
-  mmap_crash(PROT_NONE, MAP_SHARED, Write);
+  mmap_crash(inaccessible, PROT_NONE, MAP_SHARED, DeathTestOp::Read);
+  mmap_crash(inaccessible, PROT_NONE, MAP_SHARED, DeathTestOp::Write);
+  mmap_crash(inaccessible, PROT_NONE, MAP_SHARED, DeathTestOp::WriteAfterUnmap);
 
   // Crashes after unmapped
-  mmap_crash(PROT_READ, MAP_PRIVATE, ReadAfterUnmap);
-  mmap_crash(PROT_READ, MAP_SHARED, ReadAfterUnmap);
-  mmap_crash(PROT_WRITE | PROT_READ, MAP_PRIVATE, WriteAfterUnmap);
-  mmap_crash(PROT_WRITE | PROT_READ, MAP_SHARED, WriteAfterUnmap);
-  mmap_crash(PROT_NONE, MAP_SHARED, WriteAfterUnmap);
+  mmap_crash(inaccessible, PROT_READ, MAP_PRIVATE, DeathTestOp::ReadAfterUnmap);
+  mmap_crash(inaccessible, PROT_READ, MAP_SHARED, DeathTestOp::ReadAfterUnmap);
+  mmap_crash(inaccessible, PROT_WRITE | PROT_READ, MAP_PRIVATE, DeathTestOp::WriteAfterUnmap);
+  if (fs().GetTraits().supports_mmap_shared_write) {
+    mmap_crash(inaccessible, PROT_WRITE | PROT_READ, MAP_SHARED, DeathTestOp::WriteAfterUnmap);
+  }
 
   ASSERT_EQ(unlink(inaccessible.c_str()), 0);
 }
 
-std::vector<TestFilesystemOptions> GetTestCombinations() {
+std::vector<TestFilesystemOptions> GetMmapTestCombinations() {
   return MapAndFilterAllTestFilesystems(
       [](const TestFilesystemOptions& options) -> std::optional<TestFilesystemOptions> {
         if (options.filesystem->GetTraits().supports_mmap) {
@@ -529,15 +586,27 @@ std::vector<TestFilesystemOptions> GetTestCombinations() {
       });
 }
 
-INSTANTIATE_TEST_SUITE_P(/*no prefix*/, MmapTest, testing::ValuesIn(GetTestCombinations()),
+std::vector<TestFilesystemOptions> GetMmapSharedWriteTestCombinations() {
+  return MapAndFilterAllTestFilesystems(
+      [](const TestFilesystemOptions& options) -> std::optional<TestFilesystemOptions> {
+        if (options.filesystem->GetTraits().supports_mmap_shared_write) {
+          return options;
+        } else {
+          return std::nullopt;
+        }
+      });
+}
+
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, MmapTest, testing::ValuesIn(GetMmapTestCombinations()),
                          testing::PrintToStringParamName());
 
 GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(MmapTest);
 
-INSTANTIATE_TEST_SUITE_P(/*no prefix*/, MmapDeathTest, testing::ValuesIn(GetTestCombinations()),
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, MmapSharedWriteTest,
+                         testing::ValuesIn(GetMmapSharedWriteTestCombinations()),
                          testing::PrintToStringParamName());
 
-GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(MmapDeathTest);
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(MmapSharedWriteTest);
 
 }  // namespace
 }  // namespace fs_test

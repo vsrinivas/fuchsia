@@ -73,6 +73,7 @@ class MemfsFilesystem : public fs_test::FilesystemImpl<MemfsFilesystem> {
         .timestamp_granularity = zx::nsec(1),
         .supports_hard_links = true,
         .supports_mmap = true,
+        .supports_mmap_shared_write = true,
         .supports_resize = false,
         .max_file_size = 512 * 1024 * 1024,
         .in_memory = true,

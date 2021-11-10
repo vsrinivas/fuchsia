@@ -26,6 +26,8 @@ zx::status<std::unique_ptr<JsonFilesystem>> JsonFilesystem::NewFilesystem(
           .timestamp_granularity = zx::nsec(config["timestamp_granularity"].GetInt64()),
           .supports_hard_links = ConfigGetOrDefault<bool>(config, "supports_hard_links", false),
           .supports_mmap = ConfigGetOrDefault<bool>(config, "supports_mmap", false),
+          .supports_mmap_shared_write =
+              ConfigGetOrDefault<bool>(config, "supports_mmap_shared_write", false),
           .supports_resize = ConfigGetOrDefault<bool>(config, "supports_resize", false),
           .max_file_size = ConfigGetOrDefault<int64_t>(config, "max_file_size",
                                                        std::numeric_limits<int64_t>::max()),

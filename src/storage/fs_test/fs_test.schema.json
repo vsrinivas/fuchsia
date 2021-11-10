@@ -134,6 +134,11 @@
             "description": "True if mmap is supported",
             "type": "boolean"
         },
+        "supports_mmap_shared_write": {
+            "default": false,
+            "description": "True if mmap supports PROT_WRITE + MAP_SHARED, and propagates writes from the mapped region to the underlying file (implies size changes are tracked)",
+            "type": "boolean"
+        },
         "supports_resize": {
             "default": false,
             "description": "True if the filesystem can expand in size when used within a volume manager like FVM",

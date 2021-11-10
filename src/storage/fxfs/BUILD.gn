@@ -185,6 +185,8 @@ fs_test_config("fxfs") {
   timestamp_granularity = 1
   supports_hard_links = true
   supports_resize = true
+  supports_mmap = true
+  supports_mmap_shared_write = false
   max_file_size = 9223372036854775807
 
   options = [

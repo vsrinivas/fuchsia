@@ -118,6 +118,7 @@ class Filesystem {
     zx::duration timestamp_granularity = zx::nsec(1);
     bool supports_hard_links = true;
     bool supports_mmap = false;
+    bool supports_mmap_shared_write = false;
     bool supports_resize = false;
     int64_t max_file_size = std::numeric_limits<int64_t>::max();
     bool in_memory = false;

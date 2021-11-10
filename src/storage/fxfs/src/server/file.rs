@@ -256,20 +256,8 @@ impl FxFile {
 
     // Called by the pager to indicate there are no more VMO references.
     pub fn on_zero_children(&self) {
-        // Drop the open count that we took in get_pageable_vmo.
+        // Drop the open count that we took in `get_buffer`.
         self.open_count_sub_one();
-    }
-
-    // Returns a VMO handle that supports paging.
-    pub fn get_pageable_vmo(self: &Arc<Self>) -> Result<zx::Vmo, Error> {
-        let vmo = self.handle.data_buffer().vmo();
-        let vmo =
-            vmo.create_child(zx::VmoChildOptions::SNAPSHOT_AT_LEAST_ON_WRITE, 0, vmo.get_size()?)?;
-        if self.handle.owner().pager().start_servicing(self.object_id())? {
-            // Take an open count so that we keep this object alive if it is unlinked.
-            self.open_count_add_one();
-        }
-        Ok(vmo)
     }
 
     pub async fn flush(&self) -> Result<(), Error> {
@@ -377,9 +365,41 @@ impl File for FxFile {
         Ok(())
     }
 
-    async fn get_buffer(&self, _flags: u32) -> Result<Buffer, Status> {
-        log::error!("get_buffer not implemented");
-        Err(Status::NOT_SUPPORTED)
+    // Returns a VMO handle that supports paging.
+    async fn get_buffer(&self, flags: u32) -> Result<Buffer, Status> {
+        // We do not support exact/duplicate sharing mode.
+        if flags & fio::VMO_FLAG_EXACT != 0 {
+            log::error!("get_buffer does not support exact sharing mode!");
+            return Err(Status::NOT_SUPPORTED);
+        }
+        // We only support the combination of VMO_FLAG_WRITE when a private COW clone is
+        // explicitly specified.  This implicitly restricts any mmap call that attempts
+        // to use MAP_SHARED + PROT_WRITE.
+        if flags & fio::VMO_FLAG_WRITE != 0 && flags & fio::VMO_FLAG_PRIVATE == 0 {
+            log::error!("get_buffer only supports VMO_FLAG_WRITE with VMO_FLAG_PRIVATE!");
+            return Err(Status::NOT_SUPPORTED);
+        }
+        // We do not support executable VMO handles.
+        if flags & fio::VMO_FLAG_EXEC != 0 {
+            log::error!("get_buffer does not support execute rights!");
+            return Err(Status::NOT_SUPPORTED);
+        }
+
+        let vmo = self.handle.data_buffer().vmo();
+        let size = vmo.get_size()?;
+
+        let mut child_options = zx::VmoChildOptions::SNAPSHOT_AT_LEAST_ON_WRITE;
+        // By default, SNAPSHOT includes WRITE, so we explicitly remove it if not required.
+        if flags & fio::VMO_FLAG_WRITE == 0 {
+            child_options |= zx::VmoChildOptions::NO_WRITE
+        }
+
+        let child_vmo = vmo.create_child(child_options, 0, size)?;
+        if self.handle.owner().pager().start_servicing(self.object_id()).map_err(map_to_status)? {
+            // Take an open count so that we keep this object alive if it is unlinked.
+            self.open_count_add_one();
+        }
+        Ok(Buffer { vmo: child_vmo, size })
     }
 
     async fn get_size(&self) -> Result<u64, Status> {

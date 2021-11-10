@@ -18,6 +18,7 @@ class BlobfsFilesystem : public FilesystemImplWithDefaultMake<BlobfsFilesystem> 
         .timestamp_granularity = zx::nsec(1),
         .supports_hard_links = false,
         .supports_mmap = true,
+        .supports_mmap_shared_write = false,
         .supports_resize = false,
         .max_file_size = blobfs::kBlobfsMaxFileSize,
         .in_memory = false,
