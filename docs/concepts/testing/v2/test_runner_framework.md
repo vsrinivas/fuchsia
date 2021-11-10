@@ -1,5 +1,8 @@
 # The Fuchsia Test Runner Framework
 
+{# To see the fully rendered includecode file on this page,
+  see the published page at https://fuchsia.dev/fuchsia-src/concepts/testing/v2/test_runner_framework #}
+
 <<../../components/_v2_banner.md>>
 
 ## Integrating testing frameworks with the Component Framework
@@ -467,21 +470,26 @@ non-hermetic "system" realm as shown below.
         // Select the appropriate test runner shard here:
         // rust, gtest, go, etc.
         "//src/sys/test_runners/rust/default.shard.cml",
+
+        // This includes the facet which marks the test type as "system".
+        {{ '<strong>' }}"//src/sys/test_manager/system-test.shard.cml",{{ '</strong>' }}
     ],
     program: {
         binary: "bin/my_component_test",
     },
-    {{ '<strong>' }}facets: {
-        "fuchsia.test": {
-            type: "system"
-        },
-    },
+    {{ '<strong>' }}
     use: [
         {
             protocol: [ "fuchsia.sysmem.Allocator" ],
         },
     ],{{ '</strong>' }}
 }
+```
+
+The shard includes following facet in the manifest file:
+
+```json5
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/sys/test_manager/system-test.shard.cml" %}
 ```
 
 Possible values of `fuchsia.test.type`:
