@@ -18,7 +18,8 @@ CONFORMANCE_IR="${FUCHSIA_BUILD_DIR}/fidling/gen/src/tests/fidl/conformance_suit
 # NOTE change `linux-x64` to `mac-x64` if running on a mac
 RUSTFMT="$FUCHSIA_DIR/prebuilt/third_party/rust/linux-x64/bin/rustfmt"
 
-fx-command-run build || ( \
+# only rebuild the generator binary so we can run the script when the tests don't build
+fx-command-run build host_x64/dynfidl_conformance_test_from_fidl_ir || ( \
   fx-error "Failed to build."; \
   exit 1
 )
