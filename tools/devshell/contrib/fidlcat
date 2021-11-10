@@ -270,9 +270,9 @@ while [[ $# -gt 0 ]]; do
     arguments+=("--format=none")
   elif equal_argument "$1" "--format" "<output>"; then
     arguments+=("$1")
-  elif equal_argument "$1" "--with" "<option>"; then
-    arguments+=("$1")
   elif [[ $1 == "--with-process-info" ]]; then
+    arguments+=("$1")
+  elif equal_argument "$1" "--with" "<option>"; then
     arguments+=("$1")
   elif equal_argument "$1" "--stack" "<value>"; then
     arguments+=("$1")
