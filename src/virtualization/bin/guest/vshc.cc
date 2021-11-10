@@ -210,7 +210,7 @@ class ConsoleOut {
 
 }  // namespace
 
-static bool init_shell(const zx::socket& usock, bool enter_container) {
+static bool init_shell(const zx::socket& usock, std::vector<std::string> args) {
   vm_tools::vsh::SetupConnectionRequest conn_req;
   vm_tools::vsh::SetupConnectionResponse conn_resp;
 
@@ -224,14 +224,8 @@ static bool init_shell(const zx::socket& usock, bool enter_container) {
   // instead)
   conn_req.set_command("");
   conn_req.clear_argv();
-  if (enter_container) {
-    conn_req.add_argv("lxc");
-    conn_req.add_argv("exec");
-    conn_req.add_argv("buster");
-    conn_req.add_argv("--");
-    conn_req.add_argv("login");
-    conn_req.add_argv("-f");
-    conn_req.add_argv("machina");
+  for (const auto& arg : args) {
+    conn_req.add_argv(arg);
   }
 
   auto env = conn_req.mutable_env();
@@ -275,8 +269,8 @@ static bool init_shell(const zx::socket& usock, bool enter_container) {
 }
 
 zx_status_t handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t> o_cid,
-                       std::optional<uint32_t> o_port, bool enter_container, async::Loop* loop,
-                       sys::ComponentContext* context) {
+                       std::optional<uint32_t> o_port, std::vector<std::string> args,
+                       async::Loop* loop, sys::ComponentContext* context) {
   uint32_t env_id, cid, port = o_port.value_or(vsh::kVshPort);
 
   // Connect to the manager.
@@ -339,17 +333,20 @@ zx_status_t handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t>
     return status;
   }
 
+  // Helper injection is likely undesirable if we aren't connecting to the default VM login shell.
+  bool inject_helper = args.empty();
+
   // Now |socket| is a zircon socket plumbed to a port on the guest's vsock
   // interface. The vshd service is hopefully on the other end of this pipe.
   // We communicate with the service via protobuf messages.
-  if (!init_shell(socket, enter_container)) {
+  if (!init_shell(socket, std::move(args))) {
     std::cerr << "vsh SetupConnection failed.";
     return ZX_ERR_INTERNAL;
   }
   // Reset the TTY when the connection closes.
   auto cleanup = fit::defer([]() { reset_tty(); });
 
-  if (!enter_container) {
+  if (inject_helper) {
     // Directly inject some helper functions for connecting to container.
     // This sleep below is to give bash some time to start after being `exec`d.
     // Otherwise the input will be duplicated in the output stream.

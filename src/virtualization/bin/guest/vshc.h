@@ -19,7 +19,7 @@ std::pair<int, int> init_tty(void);
 void reset_tty(void);
 
 zx_status_t handle_vsh(std::optional<uint32_t> env_id, std::optional<uint32_t> cid,
-                       std::optional<uint32_t> port, bool enter_container, async::Loop* loop,
-                       sys::ComponentContext* context);
+                       std::optional<uint32_t> port, std::vector<std::string> args,
+                       async::Loop* loop, sys::ComponentContext* context);
 
 #endif  // SRC_VIRTUALIZATION_BIN_GUEST_VSHC_H_

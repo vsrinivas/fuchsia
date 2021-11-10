@@ -33,7 +33,7 @@ static void usage() {
             << "  serial        <env_id> <cid>\n"
             << "  socat         <env_id> <cid> <port>\n"
             << "  socat-listen  <env_id> <host-port>\n"
-            << "  vsh           [-c] [<env_id> [<cid> [<port>]]]\n";
+            << "  vsh           [<env_id> [<cid> [<port>]]] [-c [<arg>...]]\n";
 }
 
 template <class T>
@@ -130,13 +130,29 @@ static bool parse_args(int argc, const char** argv, async::Loop* loop,
     *func = [env_id, host_port, loop, context]() -> zx_status_t {
       return handle_socat_listen(env_id, host_port, loop, context);
     };
-  } else if (cmd == "vsh" && (argc >= 1 && argc <= 5)) {
-    bool enter_container = false;
-    if (argc > 1 && std::string_view{argv[1]} == "-c") {
-      enter_container = true;
-      argc -= 1;
-      argv += 1;
+  } else if (cmd == "vsh") {
+    std::vector<std::string> args;
+    int args_start = argc;
+    bool found_container_args = false;
+    for (int i = 1; i < argc; i++) {
+      if (found_container_args) {
+        args.push_back(argv[i]);
+      } else if (std::string_view{argv[i]} == "-c") {
+        args_start = i;
+        found_container_args = true;
+      }
     }
+
+    if (found_container_args) {
+      if (args.empty()) {
+        args = {"lxc", "exec", "buster", "--", "login", "-f", "machina"};
+      } else {
+        args.insert(args.begin(), {"lxc", "exec", "buster", "--"});
+      }
+    }
+
+    // Truncate the effective argv under later consideration.
+    argc = args_start;
 
     std::optional<uint32_t> env_id, cid, port;
     bool success = true;
@@ -163,8 +179,8 @@ static bool parse_args(int argc, const char** argv, async::Loop* loop,
       return false;
     }
 
-    *func = [env_id, cid, port, enter_container, loop, context]() -> zx_status_t {
-      return handle_vsh(env_id, cid, port, enter_container, loop, context);
+    *func = [env_id, cid, port, args, loop, context]() -> zx_status_t {
+      return handle_vsh(env_id, cid, port, args, loop, context);
     };
   } else {
     return false;
