@@ -14,6 +14,7 @@ use {
         mkfs, mount,
         object_store::{
             crypt::{Crypt, InsecureCrypt},
+            filesystem::OpenOptions,
             fsck::fsck,
         },
         remote_crypt::RemoteCrypt,
@@ -108,8 +109,9 @@ async fn main() -> Result<(), Error> {
             server.run(zx::Channel::from(startup_handle)).await
         }
         TopLevel { nested: SubCommand::Fsck(_) } => {
-            let fs = mount::mount_read_only(
+            let fs = mount::mount_with_options(
                 DeviceHolder::new(BlockDevice::new(Box::new(client), true).await?),
+                OpenOptions { read_only: true, ..Default::default() },
                 crypt,
             )
             .await?;

@@ -16,7 +16,7 @@ use {
             ObjectStore,
         },
     },
-    anyhow::Error,
+    anyhow::{Context, Error},
     once_cell::sync::OnceCell,
     std::{
         collections::{hash_map::Entry, HashMap},
@@ -204,7 +204,7 @@ impl ObjectManager {
     pub async fn open_stores(&self) -> Result<(), Error> {
         for store_id in self.store_object_ids() {
             let store = self.inner.read().unwrap().stores.get(&store_id).unwrap().clone();
-            store.open().await?;
+            store.open().await.context(format!("Failed to open store {}", store_id))?;
         }
         Ok(())
     }

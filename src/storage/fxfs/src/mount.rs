@@ -5,7 +5,7 @@
 use {
     crate::object_store::{
         crypt::Crypt,
-        filesystem::{FxFilesystem, OpenFxFilesystem},
+        filesystem::{FxFilesystem, OpenFxFilesystem, OpenOptions},
     },
     anyhow::Error,
     std::sync::Arc,
@@ -17,10 +17,11 @@ pub async fn mount(device: DeviceHolder, crypt: Arc<dyn Crypt>) -> Result<OpenFx
     Ok(fs)
 }
 
-pub async fn mount_read_only(
+pub async fn mount_with_options(
     device: DeviceHolder,
+    options: OpenOptions,
     crypt: Arc<dyn Crypt>,
 ) -> Result<OpenFxFilesystem, Error> {
-    let fs = FxFilesystem::open_read_only(device, crypt).await?;
+    let fs = FxFilesystem::open_with_options(device, options, crypt).await?;
     Ok(fs)
 }

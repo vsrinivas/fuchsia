@@ -467,7 +467,10 @@ impl Journal {
         }
 
         // Validate the checksums.
-        let valid_to = checksum_list.verify(device.as_ref(), valid_to).await?;
+        let valid_to = checksum_list
+            .verify(device.as_ref(), valid_to)
+            .await
+            .context("Failed to validate checksums")?;
 
         // Apply the mutations.
         let last_checkpoint = if transactions.is_empty() {
@@ -502,7 +505,11 @@ impl Journal {
                 super_block.journal_object_id,
                 journal_handle_options(),
             )
-            .await?;
+            .await
+            .context(format!(
+                "Failed to open journal file (object id: {}",
+                super_block.journal_object_id
+            ))?;
             let _ = self.handle.set(handle);
             let mut inner = self.inner.lock().unwrap();
             let mut reader_checkpoint = reader.journal_file_checkpoint();
@@ -534,7 +541,6 @@ impl Journal {
         } else {
             log::info!("replayed to {}", reader.journal_file_checkpoint().file_offset);
         }
-        self.objects.open_stores().await?;
         Ok(())
     }
 

@@ -12,17 +12,18 @@ use {
             },
             crypt::InsecureCrypt,
             directory::Directory,
-            filesystem::{Filesystem, FxFilesystem, OpenFxFilesystem},
+            filesystem::{Filesystem, FxFilesystem, Mutations, OpenFxFilesystem, OpenOptions},
             fsck::{
                 errors::{FsckError, FsckFatal, FsckWarning},
                 fsck_with_options, FsckOptions,
             },
             object_record::ObjectDescriptor,
             transaction::{self, Options, TransactionHandler},
+            volume::create_root_volume,
             HandleOptions, ObjectStore,
         },
     },
-    anyhow::Error,
+    anyhow::{Context, Error},
     fuchsia_async as fasync,
     matches::assert_matches,
     std::{
@@ -55,8 +56,15 @@ impl FsckTest {
         fs.close().await.expect("Failed to close FS");
         let device = fs.take_device().await;
         device.reopen();
-        self.filesystem =
-            Some(FxFilesystem::open_read_only(device, Arc::new(InsecureCrypt::new())).await?);
+        self.filesystem = Some(
+            FxFilesystem::open_with_options(
+                device,
+                OpenOptions { read_only: true, ..Default::default() },
+                Arc::new(InsecureCrypt::new()),
+            )
+            .await
+            .context("Failed to open FS")?,
+        );
         Ok(())
     }
     async fn run(&self, halt_on_warning: bool) -> Result<(), Error> {
@@ -257,4 +265,94 @@ async fn test_too_few_object_refs() {
     test.remount().await.expect("Remount failed");
     test.run(false).await.expect("Fsck should succeed");
     assert_matches!(test.errors()[..], [FsckError::Warning(FsckWarning::OrphanedObject(..))]);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_missing_extent_tree_layer_file() {
+    let mut test = FsckTest::new().await;
+
+    {
+        let fs = test.filesystem();
+        let root_volume = create_root_volume(&fs).await.unwrap();
+        let volume = root_volume.new_volume("vol").await.unwrap();
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        ObjectStore::create_object(&volume, &mut transaction, HandleOptions::default(), Some(0))
+            .await
+            .expect("create_object failed");
+        transaction.commit().await.expect("commit failed");
+        volume.flush().await.expect("Flush store failed");
+        let id = {
+            let layers = volume.extent_tree().immutable_layer_set();
+            assert!(!layers.layers.is_empty());
+            layers.layers[0].handle().unwrap().object_id()
+        };
+        fs.root_store()
+            .tombstone(id, transaction::Options::default())
+            .await
+            .expect("tombstone failed");
+    }
+
+    test.remount().await.expect("Remount failed");
+    test.run(false).await.expect_err("Fsck should fail");
+    assert_matches!(test.errors()[..], [FsckError::Fatal(FsckFatal::MissingLayerFile(..))]);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_missing_object_tree_layer_file() {
+    let mut test = FsckTest::new().await;
+
+    {
+        let fs = test.filesystem();
+        let root_volume = create_root_volume(&fs).await.unwrap();
+        let volume = root_volume.new_volume("vol").await.unwrap();
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        ObjectStore::create_object(&volume, &mut transaction, HandleOptions::default(), Some(0))
+            .await
+            .expect("create_object failed");
+        transaction.commit().await.expect("commit failed");
+        volume.flush().await.expect("Flush store failed");
+        let id = {
+            let layers = volume.tree().immutable_layer_set();
+            assert!(!layers.layers.is_empty());
+            layers.layers[0].handle().unwrap().object_id()
+        };
+        fs.root_store()
+            .tombstone(id, transaction::Options::default())
+            .await
+            .expect("tombstone failed");
+    }
+
+    test.remount().await.expect("Remount failed");
+    test.run(false).await.expect_err("Fsck should fail");
+    assert_matches!(test.errors()[..], [FsckError::Fatal(FsckFatal::MissingLayerFile(..))]);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_missing_object_store_handle() {
+    let mut test = FsckTest::new().await;
+
+    {
+        let fs = test.filesystem();
+        let root_volume = create_root_volume(&fs).await.unwrap();
+        let store_id = {
+            let volume = root_volume.new_volume("vol").await.unwrap();
+            volume.store_object_id()
+        };
+        fs.root_store()
+            .tombstone(store_id, transaction::Options::default())
+            .await
+            .expect("tombstone failed");
+    }
+
+    test.remount().await.expect("Remount failed");
+    test.run(false).await.expect_err("Fsck should fail");
+    assert_matches!(test.errors()[..], [FsckError::Fatal(FsckFatal::MissingStoreInfo(..))]);
 }

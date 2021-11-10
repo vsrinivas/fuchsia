@@ -20,7 +20,7 @@ use {
             ObjectStore,
         },
     },
-    anyhow::Error,
+    anyhow::{Context, Error},
     async_trait::async_trait,
     fuchsia_async as fasync,
     futures::channel::oneshot::{channel, Sender},
@@ -205,7 +205,7 @@ impl FxFilesystem {
         Ok(filesystem.into())
     }
 
-    async fn open_with_options(
+    pub async fn open_with_options(
         device: DeviceHolder,
         options: OpenOptions,
         crypt: Arc<dyn Crypt>,
@@ -229,10 +229,10 @@ impl FxFilesystem {
         if !options.read_only {
             // See comment in JournalRecord::DidFlushDevice for why we need to flush the device
             // before replay.
-            device.flush().await?;
+            device.flush().await.context("Device flush failed")?;
         }
         filesystem.device.set(device).unwrap_or_else(|_| unreachable!());
-        filesystem.journal.replay(filesystem.clone()).await?;
+        filesystem.journal.replay(filesystem.clone()).await.context("Journal replay failed")?;
         if !options.read_only {
             if let Some(graveyard) = filesystem.objects.graveyard() {
                 // Purge the graveyard of old entries in a background task; once that's done the
@@ -247,14 +247,7 @@ impl FxFilesystem {
         device: DeviceHolder,
         crypt: Arc<dyn Crypt>,
     ) -> Result<OpenFxFilesystem, Error> {
-        Self::open_with_options(device, OpenOptions { trace: false, read_only: false }, crypt).await
-    }
-
-    pub async fn open_read_only(
-        device: DeviceHolder,
-        crypt: Arc<dyn Crypt>,
-    ) -> Result<OpenFxFilesystem, Error> {
-        Self::open_with_options(device, OpenOptions { trace: false, read_only: true }, crypt).await
+        Self::open_with_options(device, OpenOptions::default(), crypt).await
     }
 
     pub fn root_parent_store(&self) -> Arc<ObjectStore> {

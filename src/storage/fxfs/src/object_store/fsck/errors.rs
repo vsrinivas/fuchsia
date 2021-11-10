@@ -70,6 +70,8 @@ impl From<ItemRef<'_, AllocatorKey, AllocatorValue>> for Allocation {
 pub enum FsckFatal {
     MalformedGraveyard,
     MalformedStore(u64),
+    MissingStoreInfo(u64),
+    MissingLayerFile(u64, u64),
     AllocationMismatch(Allocation, Allocation),
     AllocatedBytesMismatch(u64, u64),
     MissingAllocation(Allocation),
@@ -86,6 +88,15 @@ impl FsckFatal {
             }
             FsckFatal::MalformedStore(id) => {
                 format!("Object store {} is malformed; root store is inconsistent", id)
+            }
+            FsckFatal::MissingStoreInfo(id) => {
+                format!("Object store {} has no store info object", id)
+            }
+            FsckFatal::MissingLayerFile(store_id, layer_file_id) => {
+                format!(
+                    "Object store {} requires layer file {} which is missing",
+                    store_id, layer_file_id
+                )
             }
             FsckFatal::AllocationMismatch(expected, actual) => {
                 format!("Expected allocation {:?} but found allocation {:?}", expected, actual)

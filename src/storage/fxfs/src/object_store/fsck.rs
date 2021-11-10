@@ -8,6 +8,7 @@ use {
             skip_list_layer::SkipListLayer,
             types::{Item, ItemRef, Layer, LayerIterator, MutableLayer},
         },
+        object_handle::{ObjectHandle, ObjectHandleExt},
         object_store::{
             allocator::{
                 self, Allocator, AllocatorKey, AllocatorValue, CoalescingIterator, SimpleAllocator,
@@ -20,10 +21,11 @@ use {
             object_record::{ObjectKey, ObjectKeyData, ObjectKind, ObjectValue},
             transaction::{LockKey, TransactionHandler},
             volume::root_volume,
-            ObjectStore,
+            HandleOptions, ObjectStore, StoreInfo, MAX_STORE_INFO_SERIALIZED_SIZE,
         },
     },
     anyhow::{anyhow, Context, Error},
+    bincode::deserialize_from,
     futures::try_join,
     std::{
         collections::hash_map::{Entry, HashMap},
@@ -111,13 +113,8 @@ pub async fn fsck_with_options<F: Fn(&FsckError)>(
 
         // TODO(csuter): We could maybe iterate over stores concurrently.
         while let Some((_, store_id, _)) = iter.get() {
-            let store = object_manager
-                .open_store(store_id)
-                .await
-                .context(format!("Unable to open store {}", store_id))?;
-            fsck.scan_store(&store, &store.root_objects(), &graveyard).await?;
-            let mut parent_objects = store.parent_objects();
-            root_store_root_objects.append(&mut parent_objects);
+            fsck.check_child_store(&filesystem, &graveyard, store_id, &mut root_store_root_objects)
+                .await?;
             iter.advance().await?;
         }
     }
@@ -202,7 +199,67 @@ impl<F: Fn(&FsckError)> Fsck<F> {
         Err(anyhow!(format!("{:?}", error)))
     }
 
-    pub async fn scan_store(
+    async fn check_child_store(
+        &self,
+        filesystem: &FxFilesystem,
+        graveyard: &Graveyard,
+        store_id: u64,
+        root_store_root_objects: &mut Vec<u64>,
+    ) -> Result<(), Error> {
+        let root_store = filesystem.root_store();
+        match filesystem.object_manager().open_store(store_id).await {
+            Ok(store) => {
+                self.scan_store(&store, &store.root_objects(), graveyard).await?;
+                let mut parent_objects = store.parent_objects();
+                root_store_root_objects.append(&mut parent_objects);
+                Ok(())
+            }
+            Err(e) => {
+                // Try to find out more about why the store failed to open.
+                let handle = self.assert(
+                    ObjectStore::open_object(&root_store, store_id, HandleOptions::default()).await,
+                    FsckFatal::MissingStoreInfo(store_id),
+                )?;
+                let layer_file_object_ids = {
+                    let info = if handle.get_size() > 0 {
+                        let serialized_info =
+                            handle.contents(MAX_STORE_INFO_SERIALIZED_SIZE).await?;
+                        self.assert(
+                            deserialize_from(&serialized_info[..])
+                                .context("Failed to deserialize StoreInfo"),
+                            FsckFatal::MalformedStore(store_id),
+                        )?
+                    } else {
+                        // The store_info will be absent for a newly created and empty object store.
+                        StoreInfo::default()
+                    };
+                    // We don't replay the store ReplayInfo here, since it doesn't affect what we
+                    // want to check (mainly the existence of the layer files).  If that changes,
+                    // we'll need to update this.
+                    let mut object_ids = vec![];
+                    object_ids.extend_from_slice(&info.object_tree_layers[..]);
+                    object_ids.extend_from_slice(&info.extent_tree_layers[..]);
+                    object_ids
+                };
+                for layer_file_object_id in layer_file_object_ids {
+                    self.assert(
+                        ObjectStore::open_object(
+                            &root_store,
+                            layer_file_object_id,
+                            HandleOptions::default(),
+                        )
+                        .await,
+                        FsckFatal::MissingLayerFile(store_id, layer_file_object_id),
+                    )?;
+                    // TODO(fxbug.dev/87381): Check the individual layers files.
+                }
+                log::warn!("Object store failed to open but no issues were detected by fsck.");
+                Err(e)
+            }
+        }
+    }
+
+    async fn scan_store(
         &self,
         store: &ObjectStore,
         root_objects: &[u64],

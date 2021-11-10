@@ -122,6 +122,8 @@ pub struct HandleOptions {
 // Whilst we are replaying the store, we need to keep track of changes to StoreInfo that arise from
 // mutations in the journal stream that don't include all the fields in StoreInfo.  After replay has
 // finished, we load the full store information and merge it with the deltas here.
+// NOTE: While changing this struct, make sure to also update fsck::Fsck::check_child_store if
+// needed, which currently doesn't bother replaying this information.
 #[derive(Debug, Default)]
 struct ReplayInfo {
     last_object_id: u64,
@@ -679,7 +681,8 @@ impl ObjectStore {
         for object_id in object_tree_layer_object_ids {
             let handle = CachingObjectHandle::new(
                 ObjectStore::open_object(&parent_store, object_id, HandleOptions::default())
-                    .await?,
+                    .await
+                    .context(format!("Failed to open object tree layer file {}", object_id))?,
             );
             total_size += handle.get_size();
             handles.push(handle);
@@ -690,7 +693,8 @@ impl ObjectStore {
         for object_id in extent_tree_layer_object_ids {
             let handle = CachingObjectHandle::new(
                 ObjectStore::open_object(&parent_store, object_id, HandleOptions::default())
-                    .await?,
+                    .await
+                    .context(format!("Failed to open extent tree layer file {}", object_id))?,
             );
             total_size += handle.get_size();
             handles.push(handle);
