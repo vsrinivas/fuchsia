@@ -19,7 +19,7 @@ pub async fn restart_impl<W: std::io::Write>(
     _cmd: SessionRestartCommand,
     writer: &mut W,
 ) -> Result<()> {
-    writeln!(writer, "Restart the current session")?;
+    writeln!(writer, "Restarting the current session")?;
     restarter_proxy.restart().await?.map_err(|err| format_err!("{:?}", err))
 }
 
@@ -40,6 +40,6 @@ mod test {
         let result = restart_impl(proxy, restart_cmd, &mut writer).await;
         assert!(result.is_ok());
         let output = String::from_utf8(writer).unwrap();
-        assert_eq!(output, "Restart the current session\n");
+        assert_eq!(output, "Restarting the current session\n");
     }
 }
