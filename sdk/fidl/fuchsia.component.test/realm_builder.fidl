@@ -10,6 +10,7 @@ using fuchsia.component.runner;
 using fuchsia.component.types;
 using fuchsia.io;
 using fuchsia.io2;
+using fuchsia.url;
 
 type RealmBuilderError = strict enum : uint32 {
     /// An attempt was made to interact with a component declaration for a
@@ -255,4 +256,301 @@ protocol RealmBuilder {
     -> OnMockStopRequest(struct {
         mock_id string:MAX_MOCK_ID_LENGTH;
     });
+};
+
+/// This protocol can be used to instruct the Realm Builder Server to begin
+/// creating a new realm.
+@discoverable
+protocol RealmBuilderFactory {
+    /// Creates a new RealmBuilder. The client end of `realm_server_end` can be
+    /// used to mutate the realm that is being constructed, by doing things such
+    /// as adding new children to the realm or adding capability routes between
+    /// them. The client end of `builder_server_end` is used to finalize the
+    /// realm, after which point it can be launched in a collection.
+    Create(resource struct {
+        pkg_dir_handle client_end:fuchsia.io.Directory;
+        realm_server_end server_end:Realm;
+        builder_server_end server_end:Builder;
+    }) -> ();
+};
+
+/// Errors that may be returned by the `Realm` and `Builder` protocols.
+///
+/// Will be renamed to `RealmBuilderError` once the other definition under this
+/// name earlier in this file is removed.
+type RealmBuilderError2 = strict enum : uint32 {
+    /// Child cannot be added to the realm, as there is already a child in the
+    /// realm with that name.
+    CHILD_ALREADY_EXISTS = 0;
+
+    /// A legacy component URL was given to `AddChild`, or a modern component
+    /// url was given to `AddLegacyChild`.
+    INVALID_MANIFEST_EXTENSION = 1;
+
+    /// A component declaration failed validation.
+    INVALID_COMPONENT_DECL = 2;
+
+    /// The referenced child does not exist.
+    NO_SUCH_CHILD = 3;
+
+    /// The component declaration for the referenced child cannot be viewed nor
+    /// manipulated by RealmBuilder, because the child was added to the realm
+    /// using an URL that was neither a relative nor a legacy URL.
+    CHILD_DECL_NOT_VISIBLE = 4;
+
+    /// The source does not exist.
+    NO_SUCH_SOURCE = 5;
+
+    /// A target does not exist.
+    NO_SUCH_TARGET = 6;
+
+    /// The `capabilities` field is empty.
+    CAPABILITIES_EMPTY = 7;
+
+    /// The `targets` field is empty.
+    TARGETS_EMPTY = 8;
+
+    /// The `from` value is equal to one of the elements in `to`.
+    SOURCE_AND_TARGET_MATCH = 9;
+
+    /// The test package does not contain the component declaration referenced
+    /// by a relative URL.
+    DECL_NOT_FOUND = 10;
+
+    /// Encountered an I/O error when attempting to read a component declaration
+    /// referenced by a relative URL from the test package.
+    DECL_READ_ERROR = 11;
+
+    /// A component declaration's `children` field already contains children
+    /// that the builder has been instructed to add.
+    DUPLICATE_CHILD_DECLARATION_DURING_BUILD = 12;
+};
+
+protocol Builder {
+    /// Assembles the realm being constructed and returns the URL for the root
+    /// component in the realm, which may then be used to create a new component
+    /// in any collection where fuchsia-test-component is properly set up. Once
+    /// this is called, any Realm channels for the realm will no longer be
+    /// usable. The `runner` argument must be provided if the `AddLocalChild`
+    /// function has been used in this realm, as this runner channel will be
+    /// used to inform the client when to start and stop running any local
+    /// component implementations.
+    ///
+    /// Errors:
+    /// - `DUPLICATE_CHILD_DECLARATION_DURING_BUILD`: A component declaration's
+    ///   `children` field already contains children that the builder has been
+    ///   instructed to add.
+    /// - `INVALID_COMPONENT_DECL`: A component declaration failed validaiton.
+    Build(resource struct {
+        runner client_end:fuchsia.component.runner.ComponentRunner;
+    }) -> (struct {
+        root_component_url string:fuchsia.component.types.MAX_URL_LENGTH;
+    }) error RealmBuilderError2;
+};
+
+/// A capability that can be routed around a realm using `AddRoute`.
+///
+/// Will be renamed to `Capability` once the other definition under this name
+/// earlier in this file is removed.
+type Capability2 = flexible union {
+    1: protocol Protocol;
+    2: directory Directory;
+};
+
+/// A protocol capability
+type Protocol = table {
+    1: name fuchsia.component.name;
+    2: as fuchsia.component.name; // optional
+    3: type fuchsia.component.decl.DependencyType; // optional
+};
+
+/// A directory capability
+type Directory = table {
+    1: name fuchsia.component.name;
+    2: as fuchsia.component.name; // optional
+    3: type fuchsia.component.decl.DependencyType; // optional
+    4: rights fuchsia.io2.Rights; // optional
+    5: subdir string:fuchsia.component.MAX_PATH_LENGTH; // optional
+};
+
+/// Properties that may be set on a child when it is added to a realm
+type ChildOptions = flexible union {
+    1: startup fuchsia.component.decl.StartupMode;
+    2: environment fuchsia.component.name;
+    3: on_terminate fuchsia.component.decl.OnTerminate;
+};
+
+protocol Realm {
+    /// Adds a component to the realm.
+    ///
+    /// Errors:
+    /// - `CHILD_ALREADY_EXISTS`: this realm already contains a child with the
+    ///   given name.
+    /// - `INVALID_MANIFEST_EXTENSION`: `url` ends with `.cmx`, and thus should
+    ///   be used with `AddLegacyChild` instead of `AddChild`.
+    /// - `DECL_NOT_FOUND`: The test package does not contain the component
+    ///   declaration referenced by a relative URL.
+    /// - `DECL_READ_ERROR`: Encountered an I/O error when attempting to read a
+    ///   component declaration referenced by a relative URL from the test
+    ///   package.
+    AddChild(struct {
+        /// The name of the child that is being added.
+        name fuchsia.component.name;
+
+        /// The component's URL.
+        url fuchsia.url.Url;
+
+        /// Additional properties for the child.
+        properties ChildOptions;
+    }) -> (struct {}) error RealmBuilderError2;
+
+    /// Adds a [legacy
+    /// component](https://fuchsia.dev/fuchsia-src/concepts/components/v1) to
+    /// the realm. When the component is launched, RealmBuilder will reach out
+    /// to appmgr to assist with launching the component, and the component will
+    /// be able to utilize all of the features of the legacy component
+    /// framework. Note that _only_ protocol capabilities may be routed to this
+    /// component. Capabilities of any other type (such as a directory) are
+    /// unsupported for legacy components launched by RealmBuilder, and this
+    /// legacy component should instead use the CMX features to access things
+    /// such as storage.
+    ///
+    /// Errors:
+    /// - `CHILD_ALREADY_EXISTS`: this realm already contains a child with the
+    ///   given name.
+    /// - `INVALID_MANIFEST_EXTENSION`: `url` does not end with `.cmx`, and thus
+    ///   should be used with `AddChild` instead of `AddLegacyChild`.
+    AddLegacyChild(struct {
+        /// The name of the child that is being added.
+        name fuchsia.component.name;
+
+        /// The component's legacy URL (commonly ends with `.cmx`).
+        legacy_url fuchsia.url.Url;
+
+        /// Additional properties for the child.
+        properties ChildOptions;
+    }) -> (struct {}) error RealmBuilderError2;
+
+    /// Adds a component to this realm whose declaration is set to `decl`. When
+    /// launched, the component will share the test package as its package
+    /// directory, and may access any resources from it.
+    ///
+    /// Errors:
+    /// - `CHILD_ALREADY_EXISTS`: this realm already contains a child with the
+    ///   given name.
+    /// - `INVALID_COMPONENT_DECL`: `decl` failed validation.
+    AddChildFromDecl(struct {
+        /// The name of the child that is being added.
+        name fuchsia.component.name;
+
+        /// The component's declaration.
+        decl fuchsia.component.decl.Component;
+
+        /// Additional properties for the child.
+        properties ChildOptions;
+    }) -> (struct {}) error RealmBuilderError2;
+
+    /// Adds a component to the realm whose implementation will be provided by
+    /// the client. When this component should be started, the runner channel
+    /// passed into `Build` will receive a start request for a component whose
+    /// `ProgramDecl` contains the relative moniker from the root of the
+    /// constructed realm for the child that is to be run under the `program`
+    /// key `LOCAL_COMPONENT_NAME`.
+    ///
+    /// Errors:
+    /// - `CHILD_ALREADY_EXISTS`: this realm already contains a child with the
+    ///   given name.
+    AddLocalChild(struct {
+        /// The name of the child that is being added.
+        name fuchsia.component.name;
+
+        /// Additional properties for the child.
+        properties ChildOptions:optional;
+    }) -> (struct {}) error RealmBuilderError2;
+
+    /// Adds a child realm which can be built with the client end of
+    /// `child_realm`.
+    ///
+    /// Errors:
+    /// - `CHILD_ALREADY_EXISTS`: this realm already contains a child with the
+    ///   given name.
+    AddChildRealm(resource struct {
+        /// The name of the child realm that is being added.
+        name fuchsia.component.name;
+
+        /// Additional properties for the child.
+        properties ChildOptions:optional;
+
+        /// The server end of the `Realm` channel that will be used to build the
+        /// sub-realm.
+        child_realm server_end:Realm;
+    }) -> (struct {}) error RealmBuilderError2;
+
+    /// Returns the component decl for the given component. `name` must refer to
+    /// a component that is one of the following:
+    ///
+    /// - A component with a local implementation
+    /// - A legacy component
+    /// - A component added with a relative URL
+    /// - An automatically generated realm (ex: the root)
+    ///
+    /// Errors:
+    /// - `NO_SUCH_CHILD`: This realm does not contain a child with the given
+    ///   name.
+    /// - `CHILD_DECL_NOT_VISIBLE`: The component decl cannot be fetched for
+    ///   the referenced child, because the child was added to the realm using
+    ///   an absolute (not-relative) and modern (not legacy) URL.
+    GetComponentDecl(struct {
+        /// The name of the component whose declaration is being retrieved.
+        name fuchsia.component.name;
+    }) -> (struct {
+        component_decl fuchsia.component.decl.Component;
+    }) error RealmBuilderError2;
+
+    /// Replaces the component decl for the given component. `name` must
+    /// refer to a component that is one of the following:
+    ///
+    /// - A component with a local implementation
+    /// - A legacy component
+    /// - A component added with a relative URL
+    /// - An automatically generated realm (ex: the root)
+    ///
+    ///
+    /// Errors:
+    /// - `NO_SUCH_CHILD`: This realm does not contain a child with the given
+    ///   name.
+    /// - `CHILD_DECL_NOT_VISIBLE`: The component decl cannot be manipulated for
+    ///   the referenced child, because the child was added to the realm using
+    ///   an absolute (not relative) and modern (not legacy) URL.
+    ReplaceComponentDecl(struct {
+        /// The name of the component whose declaration is being replaced.
+        name fuchsia.component.name;
+
+        /// The new component declaration for `name`.
+        component_decl fuchsia.component.decl.Component;
+    }) -> (struct {}) error RealmBuilderError2;
+
+    /// Mutates component manifests in the realm such that every component in
+    /// `to` will have a valid capability route for each item in `capabilities`
+    /// provided by `from`.
+    ///
+    /// Errors:
+    /// - `NO_SUCH_SOURCE`: `from` references a non-existent child.
+    /// - `NO_SUCH_TARGET`: `to` references a non-existent child.
+    /// - `CAPABILITIES_EMPTY`: `capabilities` is empty.
+    /// - `TARGETS_EMPTY`: `to` is empty.
+    /// - `SOURCE_AND_TARGET_MATCH`: `from` is equal to one of the elements in
+    ///   `to`.
+    /// - `INVALID_COMPONENT_DECL`: The requested route caused one of the
+    ///   involved manifests to fail validation.
+    AddRoute(struct {
+        /// The capabilities that are to be routed.
+        capabilities vector<Capability2>:MAX;
+
+        /// The location where the elements of `capabilities` are available.
+        from fuchsia.component.decl.Ref;
+
+        /// The locations that should be able to access `capabilities`.
+        to vector<fuchsia.component.decl.Ref>:MAX;
+    }) -> (struct {}) error RealmBuilderError2;
 };

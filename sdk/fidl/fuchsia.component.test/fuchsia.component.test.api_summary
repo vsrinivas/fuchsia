@@ -1,18 +1,38 @@
 struct fuchsia.component.test/AboveRoot
+protocol/member fuchsia.component.test/Builder.Build(fuchsia.component.runner/ComponentRunner runner) -> (fuchsia.component.test/Builder_Build_Result result)
+protocol fuchsia.component.test/Builder
+struct/member fuchsia.component.test/Builder_Build_Response.root_component_url string:4096
+struct fuchsia.component.test/Builder_Build_Response
+union/member fuchsia.component.test/Builder_Build_Result.err fuchsia.component.test/RealmBuilderError2
+union/member fuchsia.component.test/Builder_Build_Result.response fuchsia.component.test/Builder_Build_Response
+strict union fuchsia.component.test/Builder_Build_Result
 union/member fuchsia.component.test/Capability.directory fuchsia.component.test/DirectoryCapability
 union/member fuchsia.component.test/Capability.protocol fuchsia.component.test/ProtocolCapability
 union/member fuchsia.component.test/Capability.storage fuchsia.component.test/StorageCapability
 flexible union fuchsia.component.test/Capability
+union/member fuchsia.component.test/Capability2.directory fuchsia.component.test/Directory
+union/member fuchsia.component.test/Capability2.protocol fuchsia.component.test/Protocol
+flexible union fuchsia.component.test/Capability2
 table/member fuchsia.component.test/CapabilityRoute.capability fuchsia.component.test/Capability
 table/member fuchsia.component.test/CapabilityRoute.force_route bool
 table/member fuchsia.component.test/CapabilityRoute.source fuchsia.component.test/RouteEndpoint
 table/member fuchsia.component.test/CapabilityRoute.targets vector<fuchsia.component.test/RouteEndpoint>:100
 table fuchsia.component.test/CapabilityRoute
+union/member fuchsia.component.test/ChildOptions.environment string:100
+union/member fuchsia.component.test/ChildOptions.on_terminate fuchsia.component.decl/OnTerminate
+union/member fuchsia.component.test/ChildOptions.startup fuchsia.component.decl/StartupMode
+flexible union fuchsia.component.test/ChildOptions
 union/member fuchsia.component.test/Component.decl fuchsia.component.decl/Component
 union/member fuchsia.component.test/Component.legacy_url string:4096
 union/member fuchsia.component.test/Component.url string:4096
 flexible union fuchsia.component.test/Component
 struct fuchsia.component.test/Debug
+table/member fuchsia.component.test/Directory.as string:100
+table/member fuchsia.component.test/Directory.name string:100
+table/member fuchsia.component.test/Directory.rights fuchsia.io2/Operations
+table/member fuchsia.component.test/Directory.subdir string:1024
+table/member fuchsia.component.test/Directory.type fuchsia.component.decl/DependencyType
+table fuchsia.component.test/Directory
 table/member fuchsia.component.test/DirectoryCapability.name string:100
 table/member fuchsia.component.test/DirectoryCapability.path string:1024
 table/member fuchsia.component.test/DirectoryCapability.rights fuchsia.io2/Operations
@@ -22,8 +42,21 @@ const fuchsia.component.test/MAX_MOCK_ID_LENGTH uint32 1000
 table/member fuchsia.component.test/MockComponentStartInfo.ns vector<fuchsia.component.runner/ComponentNamespaceEntry>:32
 table/member fuchsia.component.test/MockComponentStartInfo.outgoing_dir server_end:fuchsia.io/Directory
 resource table fuchsia.component.test/MockComponentStartInfo
+table/member fuchsia.component.test/Protocol.as string:100
+table/member fuchsia.component.test/Protocol.name string:100
+table/member fuchsia.component.test/Protocol.type fuchsia.component.decl/DependencyType
+table fuchsia.component.test/Protocol
 table/member fuchsia.component.test/ProtocolCapability.name string:100
 table fuchsia.component.test/ProtocolCapability
+protocol/member fuchsia.component.test/Realm.AddChild(string:100 name,string:4096 url,fuchsia.component.test/ChildOptions properties) -> (fuchsia.component.test/Realm_AddChild_Result result)
+protocol/member fuchsia.component.test/Realm.AddChildFromDecl(string:100 name,fuchsia.component.decl/Component decl,fuchsia.component.test/ChildOptions properties) -> (fuchsia.component.test/Realm_AddChildFromDecl_Result result)
+protocol/member fuchsia.component.test/Realm.AddChildRealm(string:100 name,fuchsia.component.test/ChildOptions:optional properties,server_end:fuchsia.component.test/Realm child_realm) -> (fuchsia.component.test/Realm_AddChildRealm_Result result)
+protocol/member fuchsia.component.test/Realm.AddLegacyChild(string:100 name,string:4096 legacy_url,fuchsia.component.test/ChildOptions properties) -> (fuchsia.component.test/Realm_AddLegacyChild_Result result)
+protocol/member fuchsia.component.test/Realm.AddLocalChild(string:100 name,fuchsia.component.test/ChildOptions:optional properties) -> (fuchsia.component.test/Realm_AddLocalChild_Result result)
+protocol/member fuchsia.component.test/Realm.AddRoute(vector<fuchsia.component.test/Capability2> capabilities,fuchsia.component.decl/Ref from,vector<fuchsia.component.decl/Ref> to) -> (fuchsia.component.test/Realm_AddRoute_Result result)
+protocol/member fuchsia.component.test/Realm.GetComponentDecl(string:100 name) -> (fuchsia.component.test/Realm_GetComponentDecl_Result result)
+protocol/member fuchsia.component.test/Realm.ReplaceComponentDecl(string:100 name,fuchsia.component.decl/Component component_decl) -> (fuchsia.component.test/Realm_ReplaceComponentDecl_Result result)
+protocol fuchsia.component.test/Realm
 protocol/member fuchsia.component.test/RealmBuilder.Commit() -> (fuchsia.component.test/RealmBuilder_Commit_Result result)
 protocol/member fuchsia.component.test/RealmBuilder.Contains(string:4096 moniker) -> (bool exists)
 protocol/member fuchsia.component.test/RealmBuilder.GetComponentDecl(string:4096 moniker) -> (fuchsia.component.test/RealmBuilder_GetComponentDecl_Result result)
@@ -55,6 +88,22 @@ enum/member fuchsia.component.test/RealmBuilderError.STORAGE_SOURCE_INVALID 12
 enum/member fuchsia.component.test/RealmBuilderError.UNABLE_TO_EXPOSE 11
 enum/member fuchsia.component.test/RealmBuilderError.VALIDATION_ERROR 10
 strict enum fuchsia.component.test/RealmBuilderError uint32
+enum/member fuchsia.component.test/RealmBuilderError2.CAPABILITIES_EMPTY 7
+enum/member fuchsia.component.test/RealmBuilderError2.CHILD_ALREADY_EXISTS 0
+enum/member fuchsia.component.test/RealmBuilderError2.CHILD_DECL_NOT_VISIBLE 4
+enum/member fuchsia.component.test/RealmBuilderError2.DECL_NOT_FOUND 10
+enum/member fuchsia.component.test/RealmBuilderError2.DECL_READ_ERROR 11
+enum/member fuchsia.component.test/RealmBuilderError2.DUPLICATE_CHILD_DECLARATION_DURING_BUILD 12
+enum/member fuchsia.component.test/RealmBuilderError2.INVALID_COMPONENT_DECL 2
+enum/member fuchsia.component.test/RealmBuilderError2.INVALID_MANIFEST_EXTENSION 1
+enum/member fuchsia.component.test/RealmBuilderError2.NO_SUCH_CHILD 3
+enum/member fuchsia.component.test/RealmBuilderError2.NO_SUCH_SOURCE 5
+enum/member fuchsia.component.test/RealmBuilderError2.NO_SUCH_TARGET 6
+enum/member fuchsia.component.test/RealmBuilderError2.SOURCE_AND_TARGET_MATCH 9
+enum/member fuchsia.component.test/RealmBuilderError2.TARGETS_EMPTY 8
+strict enum fuchsia.component.test/RealmBuilderError2 uint32
+protocol/member fuchsia.component.test/RealmBuilderFactory.Create(fuchsia.io/Directory pkg_dir_handle,server_end:fuchsia.component.test/Realm realm_server_end,server_end:fuchsia.component.test/Builder builder_server_end) -> ()
+protocol fuchsia.component.test/RealmBuilderFactory
 struct/member fuchsia.component.test/RealmBuilder_Commit_Response.root_component_url string:4096
 struct fuchsia.component.test/RealmBuilder_Commit_Response
 union/member fuchsia.component.test/RealmBuilder_Commit_Result.err fuchsia.component.test/RealmBuilderError
@@ -86,6 +135,39 @@ struct fuchsia.component.test/RealmBuilder_SetMockComponent_Response
 union/member fuchsia.component.test/RealmBuilder_SetMockComponent_Result.err fuchsia.component.test/RealmBuilderError
 union/member fuchsia.component.test/RealmBuilder_SetMockComponent_Result.response fuchsia.component.test/RealmBuilder_SetMockComponent_Response
 strict union fuchsia.component.test/RealmBuilder_SetMockComponent_Result
+struct fuchsia.component.test/Realm_AddChildFromDecl_Response
+union/member fuchsia.component.test/Realm_AddChildFromDecl_Result.err fuchsia.component.test/RealmBuilderError2
+union/member fuchsia.component.test/Realm_AddChildFromDecl_Result.response fuchsia.component.test/Realm_AddChildFromDecl_Response
+strict union fuchsia.component.test/Realm_AddChildFromDecl_Result
+struct fuchsia.component.test/Realm_AddChildRealm_Response
+union/member fuchsia.component.test/Realm_AddChildRealm_Result.err fuchsia.component.test/RealmBuilderError2
+union/member fuchsia.component.test/Realm_AddChildRealm_Result.response fuchsia.component.test/Realm_AddChildRealm_Response
+strict union fuchsia.component.test/Realm_AddChildRealm_Result
+struct fuchsia.component.test/Realm_AddChild_Response
+union/member fuchsia.component.test/Realm_AddChild_Result.err fuchsia.component.test/RealmBuilderError2
+union/member fuchsia.component.test/Realm_AddChild_Result.response fuchsia.component.test/Realm_AddChild_Response
+strict union fuchsia.component.test/Realm_AddChild_Result
+struct fuchsia.component.test/Realm_AddLegacyChild_Response
+union/member fuchsia.component.test/Realm_AddLegacyChild_Result.err fuchsia.component.test/RealmBuilderError2
+union/member fuchsia.component.test/Realm_AddLegacyChild_Result.response fuchsia.component.test/Realm_AddLegacyChild_Response
+strict union fuchsia.component.test/Realm_AddLegacyChild_Result
+struct fuchsia.component.test/Realm_AddLocalChild_Response
+union/member fuchsia.component.test/Realm_AddLocalChild_Result.err fuchsia.component.test/RealmBuilderError2
+union/member fuchsia.component.test/Realm_AddLocalChild_Result.response fuchsia.component.test/Realm_AddLocalChild_Response
+strict union fuchsia.component.test/Realm_AddLocalChild_Result
+struct fuchsia.component.test/Realm_AddRoute_Response
+union/member fuchsia.component.test/Realm_AddRoute_Result.err fuchsia.component.test/RealmBuilderError2
+union/member fuchsia.component.test/Realm_AddRoute_Result.response fuchsia.component.test/Realm_AddRoute_Response
+strict union fuchsia.component.test/Realm_AddRoute_Result
+struct/member fuchsia.component.test/Realm_GetComponentDecl_Response.component_decl fuchsia.component.decl/Component
+struct fuchsia.component.test/Realm_GetComponentDecl_Response
+union/member fuchsia.component.test/Realm_GetComponentDecl_Result.err fuchsia.component.test/RealmBuilderError2
+union/member fuchsia.component.test/Realm_GetComponentDecl_Result.response fuchsia.component.test/Realm_GetComponentDecl_Response
+strict union fuchsia.component.test/Realm_GetComponentDecl_Result
+struct fuchsia.component.test/Realm_ReplaceComponentDecl_Response
+union/member fuchsia.component.test/Realm_ReplaceComponentDecl_Result.err fuchsia.component.test/RealmBuilderError2
+union/member fuchsia.component.test/Realm_ReplaceComponentDecl_Result.response fuchsia.component.test/Realm_ReplaceComponentDecl_Response
+strict union fuchsia.component.test/Realm_ReplaceComponentDecl_Result
 union/member fuchsia.component.test/RouteEndpoint.above_root fuchsia.component.test/AboveRoot
 union/member fuchsia.component.test/RouteEndpoint.component string:1024
 union/member fuchsia.component.test/RouteEndpoint.debug fuchsia.component.test/Debug

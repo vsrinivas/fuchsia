@@ -14,6 +14,7 @@ fidl("fuchsia.component.test") {
     "//sdk/fidl/fuchsia.component.types",
     "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.io2",
+    "//sdk/fidl/fuchsia.url",
   ]
 
   sources = [ "realm_builder.fidl" ]
