@@ -6,11 +6,17 @@
 #define LIB_FIDL_LLCPP_INTERNAL_TRANSPORT_H_
 
 #include <lib/fidl/coding.h>
+#include <lib/fidl/llcpp/result.h>
+#include <lib/fit/function.h>
 #include <zircon/assert.h>
 #include <zircon/fidl.h>
 
 #include <cstdint>
 #include <type_traits>
+
+#ifdef __Fuchsia__
+#include <lib/async/dispatcher.h>
+#endif
 
 namespace fidl {
 
@@ -27,6 +33,8 @@ struct CallOptions {
   zx_time_t deadline = ZX_TIME_INFINITE;
 };
 
+class IncomingMessage;
+
 namespace internal {
 
 struct CallMethodArgs {
@@ -42,6 +50,92 @@ struct CallMethodArgs {
   uint32_t rd_data_capacity;
   uint32_t rd_handles_capacity;
 };
+
+// Generic interface for waiting on a transport (for new messages, peer close, etc).
+// This is created by |create_waiter| in |TransportVTable|.
+struct TransportWaiter {
+  // Begin waiting. Invokes the success or failure handler when the wait completes.
+  //
+  // Exactly one of the wait's handlers will be invoked exactly once per Begin() call
+  // unless the wait is canceled. When the dispatcher is shutting down (being destroyed),
+  // the handlers of all remaining waits will be invoked with a status of |ZX_ERR_CANCELED|.
+  //
+  // Returns |ZX_OK| if the wait was successfully begun.
+  // Returns |ZX_ERR_ACCESS_DENIED| if the object does not have |ZX_RIGHT_WAIT|.
+  // Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down.
+  // Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
+  //
+  // This operation is thread-safe.
+  virtual zx_status_t Begin() = 0;
+
+  // Cancels any wait started on the waiter.
+  //
+  // If successful, the wait's handler will not run.
+  //
+  // Returns |ZX_OK| if the wait was pending and it has been successfully
+  // canceled; its handler will not run again and can be released immediately.
+  // Returns |ZX_ERR_NOT_FOUND| if there was no pending wait either because it
+  // already completed, had not been started, or its completion packet has been
+  // dequeued from the port and is pending delivery to its handler (perhaps on
+  // another thread).
+  // Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
+  //
+  // This operation is thread-safe.
+  virtual zx_status_t Cancel() = 0;
+
+  virtual ~TransportWaiter() = default;
+};
+
+// Storage for |TransportWaiter|.
+// This avoids heap allocation while using a virtual waiter interface.
+// |kCapacity| must be larger than the sizes of all of the individual transport waiters.
+class AnyTransportWaiter {
+  static constexpr size_t kCapacity = 128ull;
+  static constexpr size_t kAlignment = 16ull;
+
+ public:
+  AnyTransportWaiter() = default;
+  AnyTransportWaiter(const AnyTransportWaiter& any_transport_waiter) = delete;
+  AnyTransportWaiter(AnyTransportWaiter&& any_transport_waiter) = delete;
+  AnyTransportWaiter& operator=(const AnyTransportWaiter&&) = delete;
+  AnyTransportWaiter& operator=(AnyTransportWaiter&&) = delete;
+
+  ~AnyTransportWaiter() { reset(); }
+
+  template <typename T, typename... Args>
+  T& emplace(Args&&... args) {
+    static_assert(std::is_base_of<TransportWaiter, T>::value, "only stores TransportWaiters");
+    static_assert(sizeof(T) <= kCapacity,
+                  "type does not fit inside waiter storage, consider increase the storage limit");
+    static_assert(alignof(T) <= kAlignment, "type has stricter alignment constraints than storage");
+
+    reset();
+
+    is_assigned = true;
+    return *new (&storage) T(std::forward<Args>(args)...);
+  }
+
+  TransportWaiter* operator->() {
+    ZX_DEBUG_ASSERT(is_assigned);
+    return reinterpret_cast<TransportWaiter*>(&storage);
+  }
+
+ private:
+  void reset() {
+    if (is_assigned) {
+      reinterpret_cast<TransportWaiter*>(&storage)->~TransportWaiter();
+    }
+  }
+
+  std::aligned_storage_t<kCapacity, kAlignment> storage;
+  bool is_assigned = false;
+};
+
+// Function receiving notification of successful waits on a TransportWaiter.
+using TransportWaitSuccessHandler = fit::inline_function<void(fidl::IncomingMessage&)>;
+
+// Function receiving notification of failing waits on a TransportWaiter.
+using TransportWaitFailureHandler = fit::inline_function<void(UnbindInfo)>;
 
 // An instance of TransportVTable contains function definitions to implement transport-specific
 // functionality.
@@ -69,6 +163,16 @@ struct TransportVTable {
   zx_status_t (*call)(fidl_handle_t handle, CallOptions options, const CallMethodArgs& cargs,
                       uint32_t* out_data_actual_count, uint32_t* out_handles_actual_count);
 
+#ifdef __Fuchsia__
+  // Create a waiter object to wait for messages on the transport.
+  // No waits are started initially on the waiter. Call Begin() to start waiting.
+  // The waiter object is output into |any_transport_waiter|.
+  zx_status_t (*create_waiter)(fidl_handle_t handle, async_dispatcher_t* dispatcher,
+                               TransportWaitSuccessHandler success_handler,
+                               TransportWaitFailureHandler failure_handler,
+                               AnyTransportWaiter& any_transport_waiter);
+#endif
+
   // Close the handle.
   void (*close)(fidl_handle_t);
 };
@@ -94,6 +198,8 @@ class AnyUnownedTransport {
     return typename Transport::UnownedType(handle_);
   }
 
+  bool is_valid() const { return handle_ != FIDL_HANDLE_INVALID; }
+
   const TransportVTable* vtable() const { return vtable_; }
 
   fidl_handle_t handle() const { return handle_; }
@@ -118,6 +224,16 @@ class AnyUnownedTransport {
                    uint32_t* out_data_actual_count, uint32_t* out_handles_actual_count) const {
     return vtable_->call(handle_, options, cargs, out_data_actual_count, out_handles_actual_count);
   }
+
+#ifdef __Fuchsia__
+  zx_status_t create_waiter(async_dispatcher_t* dispatcher,
+                            TransportWaitSuccessHandler success_handler,
+                            TransportWaitFailureHandler failure_handler,
+                            AnyTransportWaiter& any_transport_waiter) const {
+    return vtable_->create_waiter(handle_, dispatcher, std::move(success_handler),
+                                  std::move(failure_handler), any_transport_waiter);
+  }
+#endif
 
  private:
   friend class AnyTransport;
@@ -172,6 +288,8 @@ class AnyTransport {
     return typename Transport::OwnedType(temp);
   }
 
+  bool is_valid() const { return handle_ != FIDL_HANDLE_INVALID; }
+
   const TransportVTable* vtable() const { return vtable_; }
 
   fidl_handle_t handle() const { return handle_; }
@@ -196,6 +314,16 @@ class AnyTransport {
                    uint32_t* out_data_actual_count, uint32_t* out_handles_actual_count) const {
     return vtable_->call(handle_, options, cargs, out_data_actual_count, out_handles_actual_count);
   }
+
+#ifdef __Fuchsia__
+  zx_status_t create_waiter(async_dispatcher_t* dispatcher,
+                            TransportWaitSuccessHandler success_handler,
+                            TransportWaitFailureHandler failure_handler,
+                            AnyTransportWaiter& any_transport_waiter) const {
+    return vtable_->create_waiter(handle_, dispatcher, std::move(success_handler),
+                                  std::move(failure_handler), any_transport_waiter);
+  }
+#endif
 
  private:
   explicit constexpr AnyTransport(const TransportVTable* vtable, fidl_handle_t handle)

@@ -9,6 +9,7 @@ group("tests") {
     "dispatcher",
     "integration",
     "message_container",
+    "transport",
     "wire_types",
   ]
 }

@@ -68,7 +68,7 @@ struct DispatchError {
 // APIs typically promote a corresponding |std::weak_ptr| briefly when they need
 // to write to the transport, and gracefully report an *unbound* error if the
 // binding has been destroyed.
-class AsyncBinding : private async_wait_t, public std::enable_shared_from_this<AsyncBinding> {
+class AsyncBinding : public std::enable_shared_from_this<AsyncBinding> {
  public:
   ~AsyncBinding() __TA_EXCLUDES(lock_) = default;
 
@@ -121,12 +121,8 @@ class AsyncBinding : private async_wait_t, public std::enable_shared_from_this<A
     StartTeardownWithInfo(std::move(calling_ref), ::fidl::UnbindInfo::Unbind());
   }
 
-  // TODO(fxbug.dev/85734) Remove dependency on async_wait_t.
-  zx_handle_t handle() const { return async_wait_t::object; }
-
  protected:
-  AsyncBinding(async_dispatcher_t* dispatcher,
-               const internal::AnyUnownedTransport& borrowed_transport,
+  AsyncBinding(async_dispatcher_t* dispatcher, internal::AnyUnownedTransport transport,
                ThreadingPolicy threading_policy);
 
   // |InitKeepAlive| must be called after a concrete subclass is constructed
@@ -136,14 +132,11 @@ class AsyncBinding : private async_wait_t, public std::enable_shared_from_this<A
     keep_alive_ = shared_from_this();
   }
 
-  static void OnMessage(async_dispatcher_t* dispatcher, async_wait_t* wait, zx_status_t status,
-                        const zx_packet_signal_t* signal) {
-    static_cast<AsyncBinding*>(wait)->MessageHandler(status, signal);
-  }
-
   // Common message handling entrypoint shared by both client and server bindings.
-  void MessageHandler(zx_status_t status, const zx_packet_signal_t* signal)
-      __TA_EXCLUDES(thread_checker_) __TA_EXCLUDES(lock_);
+  void MessageHandler(fidl::IncomingMessage& msg) __TA_EXCLUDES(thread_checker_)
+      __TA_EXCLUDES(lock_);
+
+  void WaitFailureHandler(UnbindInfo info) __TA_EXCLUDES(thread_checker_) __TA_EXCLUDES(lock_);
 
   // Dispatches a generic incoming message.
   //
@@ -221,6 +214,13 @@ class AsyncBinding : private async_wait_t, public std::enable_shared_from_this<A
       __TA_REQUIRES(thread_checker_) = 0;
 
   async_dispatcher_t* dispatcher_ = nullptr;
+
+  // The bound transport.
+  AnyUnownedTransport transport_;
+
+  // Storage for a |TransportWaiter|, which waits for messages and calls back
+  // into |AsyncBinding| when they are received, or if the channel is closed.
+  AnyTransportWaiter any_transport_waiter_;
 
   // A circular reference that represents the dispatcher ownership of the
   // |AsyncBinding|. When |lifecycle_| is |Lifecycle::Bound|, all mutations of

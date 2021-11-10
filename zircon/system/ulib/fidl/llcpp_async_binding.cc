@@ -44,67 +44,48 @@ bool DispatchError::RequiresImmediateTeardown() {
 }
 
 AsyncBinding::AsyncBinding(async_dispatcher_t* dispatcher,
-                           const fidl::internal::AnyUnownedTransport& transport,
+                           fidl::internal::AnyUnownedTransport transport,
                            ThreadingPolicy threading_policy)
-    : async_wait_t({{ASYNC_STATE_INIT},
-                    &AsyncBinding::OnMessage,
-                    transport.get<fidl::internal::ChannelTransport>()->get(),
-                    ZX_CHANNEL_PEER_CLOSED | ZX_CHANNEL_READABLE,
-                    0}),
-      dispatcher_(dispatcher),
-      thread_checker_(threading_policy) {
+    : dispatcher_(dispatcher), transport_(transport), thread_checker_(threading_policy) {
   ZX_ASSERT(dispatcher_);
-  ZX_ASSERT(handle() != ZX_HANDLE_INVALID);
+  ZX_ASSERT(transport_.is_valid());
+  transport_.create_waiter(
+      dispatcher, [this](fidl::IncomingMessage& msg) { this->MessageHandler(msg); },
+      [this](UnbindInfo info) { this->WaitFailureHandler(info); }, any_transport_waiter_);
 }
 
-void AsyncBinding::MessageHandler(zx_status_t dispatcher_status, const zx_packet_signal_t* signal) {
+void AsyncBinding::MessageHandler(fidl::IncomingMessage& msg) {
   ScopedThreadGuard guard(thread_checker_);
   ZX_ASSERT(keep_alive_);
 
-  if (dispatcher_status != ZX_OK)
-    return PerformTeardown(UnbindInfo::DispatcherError(dispatcher_status));
+  // Flag indicating whether this thread still has access to the binding.
+  bool next_wait_begun_early = false;
+  // Dispatch the message.
+  cpp17::optional<DispatchError> maybe_error = Dispatch(msg, &next_wait_begun_early);
+  // If |next_wait_begun_early| is true, then the interest for the next
+  // message had been eagerly registered in the method handler, and another
+  // thread may already be running |MessageHandler|. We should exit without
+  // attempting to register yet another wait or attempting to modify the
+  // binding state here.
+  if (next_wait_begun_early)
+    return;
 
-  if (signal->observed & ZX_CHANNEL_READABLE) {
-    FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT InlineMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes;
-    FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-    FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT fidl_channel_handle_metadata_t
-        handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
-    for (uint64_t i = 0; i < signal->count; i++) {
-      fidl_trace(WillLLCPPAsyncChannelRead);
-      IncomingMessage msg = fidl::MessageRead(zx::unowned_channel(handle()), bytes.view(), handles,
-                                              handle_metadata, ZX_CHANNEL_MAX_MSG_HANDLES);
-      if (!msg.ok()) {
-        return PerformTeardown(fidl::UnbindInfo{msg});
-      }
-      fidl_trace(DidLLCPPAsyncChannelRead, nullptr /* type */, bytes.data(), msg.byte_actual(),
-                 msg.handle_actual());
-
-      // Flag indicating whether this thread still has access to the binding.
-      bool next_wait_begun_early = false;
-      // Dispatch the message.
-      cpp17::optional<DispatchError> maybe_error = Dispatch(msg, &next_wait_begun_early);
-      // If |next_wait_begun_early| is true, then the interest for the next
-      // message had been eagerly registered in the method handler, and another
-      // thread may already be running |MessageHandler|. We should exit without
-      // attempting to register yet another wait or attempting to modify the
-      // binding state here.
-      if (next_wait_begun_early)
-        return;
-
-      // If there was any error enabling dispatch or an unexpected message, destroy the binding.
-      if (maybe_error) {
-        if (maybe_error->RequiresImmediateTeardown()) {
-          return PerformTeardown(maybe_error->info);
-        }
-      }
+  // If there was any error enabling dispatch or an unexpected message, destroy the binding.
+  if (maybe_error) {
+    if (maybe_error->RequiresImmediateTeardown()) {
+      return PerformTeardown(maybe_error->info);
     }
-
-    if (CheckForTeardownAndBeginNextWait() != ZX_OK)
-      return PerformTeardown(cpp17::nullopt);
-  } else {
-    ZX_ASSERT(signal->observed & ZX_CHANNEL_PEER_CLOSED);
-    return PerformTeardown(UnbindInfo::PeerClosed(ZX_ERR_PEER_CLOSED));
   }
+
+  if (CheckForTeardownAndBeginNextWait() != ZX_OK)
+    return PerformTeardown(cpp17::nullopt);
+}
+
+void AsyncBinding::WaitFailureHandler(UnbindInfo info) {
+  ScopedThreadGuard guard(thread_checker_);
+  ZX_ASSERT(keep_alive_);
+
+  return PerformTeardown(info);
 }
 
 void AsyncBinding::BeginFirstWait() {
@@ -112,7 +93,7 @@ void AsyncBinding::BeginFirstWait() {
   {
     std::scoped_lock lock(lock_);
     ZX_ASSERT(lifecycle_.Is(Lifecycle::kCreated));
-    status = async_begin_wait(dispatcher_, this);
+    status = any_transport_waiter_->Begin();
     if (status == ZX_OK) {
       lifecycle_.TransitionToBound();
       return;
@@ -162,7 +143,7 @@ zx_status_t AsyncBinding::CheckForTeardownAndBeginNextWait() {
       return ZX_ERR_CANCELED;
 
     case Lifecycle::kBound: {
-      zx_status_t status = async_begin_wait(dispatcher_, this);
+      zx_status_t status = any_transport_waiter_->Begin();
       if (status != ZX_OK)
         lifecycle_.TransitionToMustTeardown(fidl::UnbindInfo::DispatcherError(status));
       return status;
@@ -291,7 +272,7 @@ auto AsyncBinding::StartTeardownWithInfo(std::shared_ptr<AsyncBinding>&& calling
     if (lifecycle_.DidBecomeBound()) {
       // Attempt to cancel the current message handler. On failure, the message
       // handler is driving/will drive the teardown process.
-      zx_status_t status = async_cancel_wait(dispatcher_, this);
+      zx_status_t status = any_transport_waiter_->Cancel();
       ZX_DEBUG_ASSERT(status == ZX_OK || status == ZX_ERR_NOT_FOUND);
       message_handler_pending->Set(status != ZX_OK);
     } else {
