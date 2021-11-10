@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::types::*;
+use crate::{
+    error::Error,
+    types::*,
+    validate::{ValidateComponentSelectorExt, ValidateExt},
+};
 use nom::{
     self,
     branch::alt,
@@ -349,15 +353,11 @@ fn metadata_selector(input: &str) -> IResult<&str, MetadataSelector<'_>> {
 /// Parses a tree selector, which is a node selector and an optional property selector.
 fn tree_selector(input: &str) -> IResult<&str, TreeSelector<'_>> {
     let esc = escaped(none_of(":/\\ \t\n"), '\\', one_of("* \t/:\\"));
-    let (rest, node_segments) =
-        verify(separated_nonempty_list(tag("/"), &esc), |segments: &Vec<&str>| {
-            !segments.iter().any(|s| s.contains("**"))
-        })(input)?;
+    let (rest, node_segments) = separated_nonempty_list(tag("/"), &esc)(input)?;
     let (rest, property_segment) = if peek::<&str, _, (&str, ErrorKind), _>(tag(":"))(rest).is_ok()
     {
         let (rest, _) = tag(":")(rest)?;
-        let (rest, property) =
-            verify(esc, |value: &str| !value.is_empty() && !value.contains("**"))(rest)?;
+        let (rest, property) = verify(esc, |value: &str| !value.is_empty())(rest)?;
         (rest, Some(property))
     } else {
         (rest, None)
@@ -378,23 +378,8 @@ fn component_selector(input: &str) -> IResult<&str, ComponentSelector<'_>> {
         '\\',
         tag(":"),
     );
-    let (rest, segments) = verify(
-        separated_nonempty_list(tag("/"), recognize(accepted_characters)),
-        |segments: &Vec<&str>| {
-            // TODO: it's probably possible to write this more cleanly as a combinator.
-            segments.iter().enumerate().all(|(i, segment)| {
-                if segment.contains("**") {
-                    if i == segments.len() - 1 {
-                        // The last segment can be the recursive glob, but nothing else.
-                        return *segment == "**";
-                    }
-                    // Other segments aren't allowed to contain recursive globs.
-                    return false;
-                }
-                true
-            })
-        },
-    )(input)?;
+    let (rest, segments) =
+        separated_nonempty_list(tag("/"), recognize(accepted_characters))(input)?;
     Ok((rest, ComponentSelector { segments: segments.into_iter().map(|s| s.into()).collect() }))
 }
 
@@ -432,38 +417,48 @@ fn do_parse_selector<'a>(
 }
 
 /// Parses the input into a `Selector`.
-pub fn selector(input: &str) -> Result<Selector<'_>, (&str, ErrorKind)> {
+pub fn selector(input: &str) -> Result<Selector<'_>, Error> {
     let result = complete(all_consuming(do_parse_selector(/*allow_inline_comment=*/ false)))(input);
     match result {
-        Ok((_, s)) => Ok(s),
-        Err(nom::Err::Error(e) | nom::Err::Failure(e)) => Err(e),
+        Ok((_, selector)) => {
+            selector.validate()?;
+            Ok(selector)
+        }
+        Err(nom::Err::Error(e) | nom::Err::Failure(e)) => Err(e.into()),
         _ => unreachable!("through the complete combinator we get rid of Incomplete"),
     }
 }
 
 /// Parses the input into a `ComponentSelector` ignoring any whitespace around the component
 /// selector.
-pub fn consuming_component_selector(
-    input: &str,
-) -> Result<ComponentSelector<'_>, (&str, ErrorKind)> {
+pub fn consuming_component_selector(input: &str) -> Result<ComponentSelector<'_>, Error> {
     let result =
         nom::combinator::all_consuming(pair(spaced(component_selector), multispace0))(input);
     match result {
-        Ok((_, (selector, _))) => Ok(selector),
-        Err(nom::Err::Error(e) | nom::Err::Failure(e)) => Err(e),
+        Ok((_, (component_selector, _))) => {
+            component_selector.validate()?;
+            Ok(component_selector)
+        }
+        Err(nom::Err::Error(e) | nom::Err::Failure(e)) => Err(e.into()),
         _ => unreachable!("through the complete combinator we get rid of Incomplete"),
     }
 }
 
 /// Parses the given input line into a Selector or None.
-pub fn selector_or_comment(input: &str) -> Result<Option<Selector<'_>>, (&str, ErrorKind)> {
+pub fn selector_or_comment(input: &str) -> Result<Option<Selector<'_>>, Error> {
     let result = complete(all_consuming(alt((
         map(comment, |_| None),
         map(do_parse_selector(/*allow_inline_comment=*/ true), |s| Some(s)),
     ))))(input);
     match result {
-        Ok((_, maybe_selector)) => Ok(maybe_selector),
-        Err(nom::Err::Error(e) | nom::Err::Failure(e)) => Err(e),
+        Ok((_, maybe_selector)) => match maybe_selector {
+            None => Ok(None),
+            Some(selector) => {
+                selector.validate()?;
+                Ok(Some(selector))
+            }
+        },
+        Err(nom::Err::Error(e) | nom::Err::Failure(e)) => Err(e.into()),
         _ => unreachable!("through the complete combinator we get rid of Incomplete"),
     }
 }
@@ -569,7 +564,7 @@ mod tests {
             "a$c/d",
         ];
         for test_string in test_vector {
-            let component_selector_result = all_consuming(component_selector)(test_string);
+            let component_selector_result = consuming_component_selector(test_string);
             assert!(component_selector_result.is_err(), "expected '{}' to fail", test_string);
         }
     }
@@ -630,7 +625,9 @@ mod tests {
             "a*b:\tc",
         ];
         for string in test_vector {
-            assert!(all_consuming(tree_selector)(string).is_err(), "{} should fail", string);
+            // prepend a placeholder component selector so that we exercise the validation code.
+            let test_selector = format!("a:{}", string);
+            assert!(selector(&test_selector).is_err(), "{} should fail", test_selector);
         }
     }
 

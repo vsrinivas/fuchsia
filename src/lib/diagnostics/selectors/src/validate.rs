@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::error::{StringPatternError, ValidationError};
+use crate::{
+    error::{StringPatternError, ValidationError},
+    types,
+};
 use fidl_fuchsia_diagnostics as fdiagnostics;
 use lazy_static::lazy_static;
 use regex::RegexSet;
@@ -209,6 +212,55 @@ impl StringSelector for fdiagnostics::StringSelector {
     fn pattern(&self) -> Option<&str> {
         match self {
             Self::StringPattern(s) => Some(s),
+            _ => None,
+        }
+    }
+}
+
+impl<'a> Selector for types::Selector<'a> {
+    type Component = types::ComponentSelector<'a>;
+    type Tree = types::TreeSelector<'a>;
+
+    fn component(&self) -> Option<&Self::Component> {
+        Some(&self.component)
+    }
+
+    fn tree(&self) -> Option<&Self::Tree> {
+        Some(&self.tree)
+    }
+}
+
+impl<'a> ComponentSelector for types::ComponentSelector<'a> {
+    type Segment = types::Segment<'a>;
+
+    fn segments(&self) -> Option<&[Self::Segment]> {
+        Some(&self.segments[..])
+    }
+}
+
+impl<'a> TreeSelector for types::TreeSelector<'a> {
+    type Segment = types::Segment<'a>;
+
+    fn node_path(&self) -> Option<&[Self::Segment]> {
+        Some(&self.node)
+    }
+
+    fn property(&self) -> Option<&Self::Segment> {
+        self.property.as_ref()
+    }
+}
+
+impl<'a> StringSelector for types::Segment<'a> {
+    fn exact_match(&self) -> Option<&str> {
+        match self {
+            Self::ExactMatch(s) => Some(s),
+            _ => None,
+        }
+    }
+
+    fn pattern(&self) -> Option<&str> {
+        match self {
+            Self::Pattern(s) => Some(s),
             _ => None,
         }
     }
