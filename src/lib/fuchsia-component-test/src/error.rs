@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{builder, event, Moniker},
+    crate::{event, Moniker},
     anyhow, cm_rust, fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_test as ftest,
     thiserror::{self, Error},
 };
@@ -60,12 +60,6 @@ pub enum BuilderError {
 
     #[error("can't override {} in the realm because that component doesn't exist", _0)]
     ComponentDoesNotExist(Moniker),
-
-    #[error("can't route a capability to the same place it comes from: {:?}", _0)]
-    RouteSourceAndTargetMatch(builder::CapabilityRoute),
-
-    #[error("failed to add route because {:?} is already being offered by {:?} to {:?} from {:?}", _0.capability, _1, _2, _3)]
-    ConflictingOffers(builder::CapabilityRoute, Moniker, cm_rust::OfferTarget, String),
 }
 
 #[derive(Debug, Error)]

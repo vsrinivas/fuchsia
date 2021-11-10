@@ -52,7 +52,6 @@ rustc_library("fuchsia-component-test-lib") {
   ]
 
   sources = [
-    "src/builder.rs",
     "src/error.rs",
     "src/event.rs",
     "src/lib.rs",
