@@ -26,10 +26,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:log",
   ]
 
-  non_rust_deps = [
-    "//tools/symbol-index:symbol-index($host_toolchain)",
-    "//tools/symbolizer:symbolizer($host_toolchain)",
-  ]
+  data_deps = [ "//tools/symbolizer:symbolizer($host_toolchain)" ]
 
   sources = [
     "src/lib.rs",

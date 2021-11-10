@@ -279,6 +279,10 @@ template("rustc_test_internal") {
 #
 #   non_rust_deps (optional)
 #     List of non-rust_library GN targets on which this crate depends.
+#     Obsolete. Please use deps instead.
+#
+#   data_deps (optional)
+#     List of GN targets that are only needed at runtime.
 #
 #   test_environments (optional)
 #     What environments the unit test should target. Only used here
@@ -286,7 +290,7 @@ template("rustc_test_internal") {
 #     environment (as a function of $current_os).
 #     See environments parameter on //build/testing/test_spec.gni for more
 #     details.
-
+#
 #   args (optional)
 #     List of flags to pass directly to the test binary, e.g.
 #     ["--nocapture"].

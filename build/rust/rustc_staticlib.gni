@@ -54,6 +54,10 @@ import("//build/toolchain/rbe.gni")
 #
 #   non_rust_deps (optional)
 #     List of non-rust_library GN targets on which this crate depends.
+#     Obsolete. Please use deps instead.
+#
+#   data_deps (optional)
+#     List of GN targets that are only needed at runtime.
 #
 #   with_unit_tests (optional)
 #     Builds unit tests associated with the binary. This will create a
@@ -165,8 +169,9 @@ template("rustc_staticlib") {
 
     sources = _sources
 
+    # TODO(https://fxbug.dev/43781) remove "non_rust_deps"
     if (defined(invoker.non_rust_deps)) {
-      data_deps = invoker.non_rust_deps
+      deps += invoker.non_rust_deps
     }
 
     configs = []
@@ -217,8 +222,12 @@ template("rustc_staticlib") {
   }
 
   group(group_target) {
-    forward_variables_from(invoker, [ "testonly" ])
-    forward_variables_from(invoker, [ "visibility" ])
+    forward_variables_from(invoker,
+                           [
+                             "data_deps",
+                             "testonly",
+                             "visibility",
+                           ])
     public_deps = [
       ":$header_target",
       ":$rustc_target",

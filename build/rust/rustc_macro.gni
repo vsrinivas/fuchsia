@@ -45,6 +45,13 @@ import("//build/toolchain/restat.gni")
 #     Third party crates can be included through paths like
 #     "//third_party/rust_crates:<cratename>".
 #
+#   non_rust_deps (optional)
+#     List of non-rust_library GN targets on which this crate depends.
+#     Obsolete. Please use deps instead.
+#
+#   data_deps (optional)
+#     List of GN targets that are only needed at runtime.
+#
 #   source_root (optional)
 #     Location of the crate root (e.g. `src/main.rs` or `src/lib.rs`).
 #     This defaults to `./src/main.rs` for binaries and `./src/lib.rs` for libraries,
@@ -155,8 +162,9 @@ template("rustc_macro") {
         deps += invoker.deps
       }
 
+      # TODO(https://fxbug.dev/43781) remove "non_rust_deps"
       if (defined(invoker.non_rust_deps)) {
-        data_deps = invoker.non_rust_deps
+        deps += invoker.non_rust_deps
       }
 
       sources = _sources
@@ -168,6 +176,7 @@ template("rustc_macro") {
 
       forward_variables_from(invoker,
                              [
+                               "data_deps",
                                "inputs",
                                "output_dir",
                                "testonly",

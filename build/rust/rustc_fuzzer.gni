@@ -29,6 +29,7 @@ import("//build/toolchain/rbe.gni")
 #
 #   version
 #   edition
+#   data_deps
 #   deps
 #   source_root
 #   enforce_source_listing

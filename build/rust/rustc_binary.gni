@@ -67,6 +67,10 @@ import("//build/toolchain/rbe.gni")
 #
 #   non_rust_deps (optional)
 #     List of non-rust_library GN targets on which this crate depends.
+#     Obsolete. Please use deps instead.
+#
+#   data_deps (optional)
+#     List of GN targets that are only needed at runtime.
 #
 #   with_unit_tests (optional)
 #     Builds unit tests associated with the binary. This will create a
@@ -295,6 +299,7 @@ template("rustc_binary") {
     # pass through these variables unmodified
     forward_variables_from(invoker,
                            [
+                             "data_deps",
                              "exclude_toolchain_tags",
                              "output_dir",
                              "output_extension",

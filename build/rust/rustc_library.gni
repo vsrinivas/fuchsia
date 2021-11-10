@@ -51,6 +51,10 @@ import("//build/toolchain/rbe.gni")
 #
 #   non_rust_deps (optional)
 #     List of non-rust_library GN targets on which this crate depends.
+#     Obsolete. Please use deps instead.
+#
+#   data_deps (optional)
+#     List of GN targets that are only needed at runtime.
 #
 #   with_unit_tests (optional)
 #     Builds unit tests associated with the binary. This will create a
@@ -216,6 +220,7 @@ template("rustc_library") {
       deps += invoker.deps
     }
 
+    # TODO(https://fxbug.dev/43781) remove "non_rust_deps"
     if (defined(invoker.non_rust_deps)) {
       deps += invoker.non_rust_deps
     }
@@ -231,6 +236,7 @@ template("rustc_library") {
 
     forward_variables_from(invoker,
                            [
+                             "data_deps",
                              "output_dir",
                              "testonly",
                              "visibility",
@@ -262,6 +268,9 @@ template("rustc_library") {
             }
           },
         ]
+
+        # Avoid walking into data_deps when checking component manifest expected includes.
+        expect_includes_barrier = deps
       }
     }
   }
