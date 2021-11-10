@@ -830,6 +830,9 @@ impl Right {
 /// -   A [static child instance][doc-static-children] whose name is
 ///     `<name>`, or
 /// -   A [collection][doc-collections] whose name is `<name>`.
+///
+/// [doc-static-children]: /docs/concepts/components/v2/realms.md#static-children
+/// [doc-collections]: /docs/concepts/components/v2/realms.md#collections
 pub struct Document {
     /// The optional `include` property describes zero or more other component manifest
     /// files to be merged into this component manifest. For example:
@@ -880,7 +883,7 @@ pub struct Document {
     /// },
     /// ```
     ///
-    /// For a complete list of properties, see: [ELF Runner](elf_runner.md)
+    /// For a complete list of properties, see: [ELF Runner](/docs/concepts/components/v2/elf_runner.md)
     ///
     /// # Other runners {#other-runners}
     ///
@@ -938,10 +941,10 @@ pub struct Document {
     /// ],
     /// ```
     ///
-    /// [doc-children]: realms.md#child-component-instances
+    /// [doc-children]: /docs/concepts/components/v2/realms.md#child-component-instances
     /// [component-url]: /docs/concepts/components/component_urls.md
-    /// [doc-eager]: lifecycle.md#eager_binding
-    /// [doc-reboot-on-terminate]: termination_policies.md#reboot-on-terminate
+    /// [doc-eager]: /docs/concepts/components/v2/lifecycle.md#eager_binding
+    /// [doc-reboot-on-terminate]: /docs/concepts/components/v2/termination_policies.md#reboot-on-terminate
     pub children: Option<Vec<Child>>,
 
     /// The `collections` section declares collections as described in
@@ -972,8 +975,6 @@ pub struct Document {
     ///     },
     /// ],
     /// ```
-    ///
-    /// [doc-collections]: realms.md#collections
     pub collections: Option<Vec<Collection>>,
 
     /// The `environments` section declares environments as described in
@@ -1034,7 +1035,7 @@ pub struct Document {
     /// ],
     /// ```
     ///
-    /// [doc-environments]: environments.md
+    /// [doc-environments]: /docs/concepts/components/v2/environments.md
     pub environments: Option<Vec<Environment>>,
 
     /// The `capabilities` section defines capabilities that are provided by this component.
@@ -1175,7 +1176,8 @@ pub struct Document {
     /// ],
     /// ```
     ///
-    /// [fidl-environment-decl]: /sdk/fidl/fuchsia.sys2/decls/environment_decl.fidl
+    /// [fidl-environment-decl]: /reference/fidl/fuchsia.component.decl#Environment
+    /// [glossary.namespace]: /docs/glossary/README.md#namespace
     pub r#use: Option<Vec<Use>>,
 
     /// Declares the capabilities that are made available to the parent component or to the
