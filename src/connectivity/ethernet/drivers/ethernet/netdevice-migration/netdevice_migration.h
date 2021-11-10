@@ -10,6 +10,8 @@
 #include <fuchsia/hardware/network/device/cpp/banjo.h>
 #include <zircon/system/public/zircon/compiler.h>
 
+#include <queue>
+
 #include <ddktl/device.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
@@ -19,7 +21,7 @@
 
 namespace netdevice_migration {
 
-using NetdeviceMigrationVmoStore = vmo_store::VmoStore<vmo_store::SlabStorage<uint8_t>>;
+using NetdeviceMigrationVmoStore = vmo_store::VmoStore<vmo_store::SlabStorage<uint32_t>>;
 
 class NetdeviceMigration;
 using DeviceType = ddk::Device<NetdeviceMigration>;
@@ -43,47 +45,38 @@ class NetdeviceMigration : public DeviceType,
   void DdkRelease();
 
   // For EthernetIfcProtocol.
-  void EthernetIfcStatus(uint32_t status) __TA_EXCLUDES(lock_);
-  void EthernetIfcRecv(const uint8_t* data_buffer, size_t data_size, uint32_t flags);
+  void EthernetIfcStatus(uint32_t status) __TA_EXCLUDES(status_lock_);
+  void EthernetIfcRecv(const uint8_t* data_buffer, size_t data_size, uint32_t flags)
+      __TA_EXCLUDES(rx_lock_) __TA_EXCLUDES(vmo_lock_);
 
   // For NetworkDeviceImplProtocol.
   zx_status_t NetworkDeviceImplInit(const network_device_ifc_protocol_t* iface);
   void NetworkDeviceImplStart(network_device_impl_start_callback callback, void* cookie)
-      __TA_EXCLUDES(lock_);
+      __TA_EXCLUDES(tx_lock_) __TA_EXCLUDES(rx_lock_);
   void NetworkDeviceImplStop(network_device_impl_stop_callback callback, void* cookie)
-      __TA_EXCLUDES(lock_);
+      __TA_EXCLUDES(tx_lock_) __TA_EXCLUDES(rx_lock_);
   void NetworkDeviceImplGetInfo(device_info_t* out_info);
   void NetworkDeviceImplQueueTx(const tx_buffer_t* buffers_list, size_t buffers_count);
-  void NetworkDeviceImplQueueRxSpace(const rx_space_buffer_t* buffers_list, size_t buffers_count);
+  void NetworkDeviceImplQueueRxSpace(const rx_space_buffer_t* buffers_list, size_t buffers_count)
+      __TA_EXCLUDES(rx_lock_);
   void NetworkDeviceImplPrepareVmo(uint8_t id, zx::vmo vmo) __TA_EXCLUDES(vmo_lock_);
   void NetworkDeviceImplReleaseVmo(uint8_t id) __TA_EXCLUDES(vmo_lock_);
   void NetworkDeviceImplSetSnoop(bool snoop);
 
   // For NetworkPortProtocol.
   void NetworkPortGetInfo(port_info_t* out_info);
-  void NetworkPortGetStatus(port_status_t* out_status) __TA_EXCLUDES(lock_);
+  void NetworkPortGetStatus(port_status_t* out_status) __TA_EXCLUDES(status_lock_);
   void NetworkPortSetActive(bool active);
   void NetworkPortGetMac(mac_addr_protocol_t* out_mac_ifc);
   void NetworkPortRemoved();
-
-  // Returns true iff the driver is ready to send and receive frames.
-  bool IsStarted() __TA_EXCLUDES(lock_);
-  const ethernet_ifc_protocol_t& EthernetIfcProto() const { return ethernet_ifc_proto_; }
-  const zx::bti& Bti() const { return eth_bti_; }
-  template <typename T, typename F>
-  T WithVmoStore(F fn) __TA_EXCLUDES(vmo_lock_) {
-    fbl::AutoLock lock(&vmo_lock_);
-    NetdeviceMigrationVmoStore& vmo_store = vmo_store_;
-    return fn(vmo_store);
-  }
 
  private:
   // Equivalent to generic ethernet driver FIFO depth; see
   // eth::EthDev::kFifoDepth in //src/connectivity/ethernet/drivers/ethernet/ethernet.h.
   static constexpr uint32_t kFifoDepth = 256;
 
-  NetdeviceMigration(zx_device_t* parent, ddk::EthernetImplProtocolClient ethernet, zx::bti eth_bti,
-                     vmo_store::Options opts)
+  NetdeviceMigration(zx_device_t* parent, ddk::EthernetImplProtocolClient ethernet, uint32_t mtu,
+                     zx::bti eth_bti, vmo_store::Options opts)
       : DeviceType(parent),
         ethernet_(ethernet),
         ethernet_ifc_proto_({&ethernet_ifc_protocol_ops_, this}),
@@ -99,6 +92,8 @@ class NetdeviceMigration : public DeviceType,
             // a page size to guarantee compatibility."
             .max_buffer_length = ZX_PAGE_SIZE / 2,
             .buffer_alignment = ZX_PAGE_SIZE,
+            // Ensures that an rx buffer will always be large enough to the ethernet MTU.
+            .min_rx_buffer_length = mtu,
         }),
         vmo_store_(opts) {}
 
@@ -109,12 +104,22 @@ class NetdeviceMigration : public DeviceType,
   const zx::bti eth_bti_;
   const device_info_t info_;
 
-  fbl::Mutex lock_;
-  bool started_ __TA_GUARDED(lock_) = false;
-  fuchsia_hardware_network::wire::StatusFlags port_status_flags_ __TA_GUARDED(lock_);
+  std::mutex status_lock_;
+  fuchsia_hardware_network::wire::StatusFlags port_status_flags_ __TA_GUARDED(status_lock_);
 
-  network::SharedLock vmo_lock_;
+  std::mutex tx_lock_ __TA_ACQUIRED_BEFORE(rx_lock_, vmo_lock_);
+  bool tx_started_ __TA_GUARDED(tx_lock_) = false;
+
+  std::mutex rx_lock_ __TA_ACQUIRED_AFTER(tx_lock_) __TA_ACQUIRED_BEFORE(vmo_lock_);
+  bool rx_started_ __TA_GUARDED(rx_lock_) = false;
+  // Use a queue to enforce FIFO ordering. With LIFO ordering, some buffers will sit unused unless
+  // the driver hits buffer starvation, which could obscure bugs related to malformed buffers.
+  std::queue<rx_space_buffer_t> rx_spaces_ __TA_GUARDED(rx_lock_);
+
+  network::SharedLock vmo_lock_ __TA_ACQUIRED_AFTER(rx_lock_, tx_lock_);
   NetdeviceMigrationVmoStore vmo_store_ __TA_GUARDED(vmo_lock_);
+
+  friend class NetdeviceMigrationTestHelper;
 };
 
 }  // namespace netdevice_migration

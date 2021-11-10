@@ -61,6 +61,7 @@ test("unit-tests") {
     ":src",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/mock-ddk",
+    "//src/lib/fxl",
     "//src/lib/testing/predicates",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",

@@ -8,6 +8,8 @@
 #include <lib/ddk/debug.h>
 #include <zircon/system/public/zircon/assert.h>
 
+#include <algorithm>
+
 #include <fbl/alloc_checker.h>
 
 #include "src/connectivity/ethernet/drivers/ethernet/netdevice-migration/netdevice_migration_bind.h"
@@ -77,7 +79,7 @@ zx::status<std::unique_ptr<NetdeviceMigration>> NetdeviceMigration::Create(zx_de
   }
   fbl::AllocChecker ac;
   auto netdevm = std::unique_ptr<NetdeviceMigration>(
-      new (&ac) NetdeviceMigration(dev, ethernet, std::move(eth_bti), opts));
+      new (&ac) NetdeviceMigration(dev, ethernet, eth_info.mtu, std::move(eth_bti), opts));
   if (!ac.check()) {
     return zx::error(ZX_ERR_NO_MEMORY);
   }
@@ -100,12 +102,12 @@ zx_status_t NetdeviceMigration::DeviceAdd() {
 
 void NetdeviceMigration::DdkRelease() { delete this; }
 
-void NetdeviceMigration::EthernetIfcStatus(uint32_t status) __TA_EXCLUDES(lock_) {
+void NetdeviceMigration::EthernetIfcStatus(uint32_t status) __TA_EXCLUDES(status_lock_) {
   port_status_t port_status = {
       .mtu = ETH_MTU_SIZE,
   };
   {
-    fbl::AutoLock lock(&lock_);
+    std::lock_guard lock(status_lock_);
     port_status_flags_ = ToStatusFlags(status);
     port_status.flags = status;
   }
@@ -113,7 +115,41 @@ void NetdeviceMigration::EthernetIfcStatus(uint32_t status) __TA_EXCLUDES(lock_)
 }
 
 void NetdeviceMigration::EthernetIfcRecv(const uint8_t* data_buffer, size_t data_size,
-                                         uint32_t flags) {}
+                                         uint32_t flags) __TA_EXCLUDES(rx_lock_, vmo_lock_) {
+  std::lock_guard rx_lock(rx_lock_);
+  if (rx_spaces_.empty()) {
+    zxlogf(ERROR,
+           "netdevice-migration: received ethernet frames without any queued rx buffers; frame "
+           "dropped");
+    return;
+  }
+  const rx_space_buffer_t& space = rx_spaces_.front();
+  rx_spaces_.pop();
+  // Bounds check the incoming frame to verify that the ethernet driver respects the MTU.
+  if (data_size > space.region.length) {
+    zxlogf(ERROR,
+           "netdevice-migration: received ethernet frame larger than rx buffer length, %zu > %lu",
+           data_size, space.region.length);
+    DdkAsyncRemove();
+    return;
+  }
+  {
+    fbl::AutoLock vmo_lock(&vmo_lock_);
+    auto* vmo = vmo_store_.GetVmo(space.region.vmo);
+    cpp20::span<uint8_t> vmo_view = vmo->data();
+    std::copy_n(data_buffer, data_size, vmo_view.begin() + space.region.offset);
+  }
+  rx_buffer_part_t part = {
+      .id = space.id,
+      .offset = 0,
+      .length = static_cast<uint32_t>(data_size),
+  };
+  rx_buffer_t buf = {
+      .data_list = &part,
+      .data_count = 1,
+  };
+  netdevice_.CompleteRx(&buf, 1);
+}
 
 zx_status_t NetdeviceMigration::NetworkDeviceImplInit(const network_device_ifc_protocol_t* iface) {
   if (netdevice_.is_valid()) {
@@ -125,10 +161,11 @@ zx_status_t NetdeviceMigration::NetworkDeviceImplInit(const network_device_ifc_p
 }
 
 void NetdeviceMigration::NetworkDeviceImplStart(network_device_impl_start_callback callback,
-                                                void* cookie) __TA_EXCLUDES(lock_) {
+                                                void* cookie) __TA_EXCLUDES(tx_lock_, rx_lock_) {
   {
-    fbl::AutoLock lock(&lock_);
-    if (started_) {
+    std::lock_guard tx_lock(tx_lock_);
+    std::lock_guard rx_lock(rx_lock_);
+    if (tx_started_ || rx_started_) {
       zxlogf(WARNING, "netdevice-migration: device already started\n");
       callback(cookie, ZX_ERR_ALREADY_BOUND);
       return;
@@ -144,18 +181,23 @@ void NetdeviceMigration::NetworkDeviceImplStart(network_device_impl_start_callba
     return;
   }
   {
-    fbl::AutoLock lock(&lock_);
-    started_ = true;
+    std::lock_guard tx_lock(tx_lock_);
+    std::lock_guard rx_lock(rx_lock_);
+    tx_started_ = true;
+    rx_started_ = true;
   }
   callback(cookie, ZX_OK);
 }
 
 void NetdeviceMigration::NetworkDeviceImplStop(network_device_impl_stop_callback callback,
-                                               void* cookie) __TA_EXCLUDES(lock_) {
+                                               void* cookie) __TA_EXCLUDES(tx_lock_)
+    __TA_EXCLUDES(rx_lock_) {
   ethernet_.Stop();
   {
-    fbl::AutoLock lock(&lock_);
-    started_ = false;
+    std::lock_guard tx_lock(tx_lock_);
+    std::lock_guard rx_lock(rx_lock_);
+    tx_started_ = false;
+    rx_started_ = false;
   }
   callback(cookie);
 }
@@ -166,7 +208,47 @@ void NetdeviceMigration::NetworkDeviceImplQueueTx(const tx_buffer_t* buffers_lis
                                                   size_t buffers_count) {}
 
 void NetdeviceMigration::NetworkDeviceImplQueueRxSpace(const rx_space_buffer_t* buffers_list,
-                                                       size_t buffers_count) {}
+                                                       size_t buffers_count)
+    __TA_EXCLUDES(rx_lock_) {
+  std::lock_guard rx_lock(rx_lock_);
+  if (size_t total_rx_buffers = rx_spaces_.size() + buffers_count;
+      total_rx_buffers > info_.rx_depth) {
+    // Client has violated API contract: "The total number of outstanding rx buffers given to a
+    // device will never exceed the reported [`DeviceInfo.rx_depth`] value."
+    zxlogf(ERROR, "netdevice-migration: total received rx buffers %ld > rx_depth %d",
+           total_rx_buffers, info_.rx_depth);
+    DdkAsyncRemove();
+    return;
+  }
+  cpp20::span buffers(buffers_list, buffers_count);
+  if (!rx_started_) {
+    zxlogf(ERROR, "netdevice-migration: rx buffers queued before start call");
+    for (const rx_space_buffer_t& space : buffers) {
+      rx_buffer_part_t part = {
+          .id = space.id,
+          .length = 0,
+      };
+      rx_buffer_t buf = {
+          .data_list = &part,
+          .data_count = 1,
+      };
+      netdevice_.CompleteRx(&buf, 1);
+    }
+    return;
+  }
+  for (const rx_space_buffer_t& space : buffers) {
+    if (space.region.length < info_.min_rx_buffer_length ||
+        space.region.length > info_.max_buffer_length) {
+      zxlogf(
+          ERROR,
+          "netdevice-migration: rx buffer queued with length %ld, outside valid range [%du, %du]",
+          space.region.length, info_.min_rx_buffer_length, info_.max_buffer_length);
+      DdkAsyncRemove();
+      return;
+    }
+    rx_spaces_.push(space);
+  }
+}
 
 void NetdeviceMigration::NetworkDeviceImplPrepareVmo(uint8_t id, zx::vmo vmo)
     __TA_EXCLUDES(vmo_lock_) {
@@ -195,8 +277,9 @@ void NetdeviceMigration::NetworkDeviceImplSetSnoop(bool snoop) {}
 
 void NetdeviceMigration::NetworkPortGetInfo(port_info_t* out_info) { *out_info = {}; }
 
-void NetdeviceMigration::NetworkPortGetStatus(port_status_t* out_status) __TA_EXCLUDES(lock_) {
-  fbl::AutoLock lock(&lock_);
+void NetdeviceMigration::NetworkPortGetStatus(port_status_t* out_status)
+    __TA_EXCLUDES(status_lock_) {
+  std::lock_guard lock(status_lock_);
   *out_status = {
       .mtu = ETH_MTU_SIZE,
       .flags = static_cast<uint32_t>(port_status_flags_),
@@ -208,11 +291,6 @@ void NetdeviceMigration::NetworkPortSetActive(bool active) {}
 void NetdeviceMigration::NetworkPortGetMac(mac_addr_protocol_t* out_mac_ifc) { *out_mac_ifc = {}; }
 
 void NetdeviceMigration::NetworkPortRemoved() {}
-
-bool NetdeviceMigration::IsStarted() __TA_EXCLUDES(lock_) {
-  fbl::AutoLock lock(&lock_);
-  return started_;
-}
 
 static zx_driver_ops_t netdevice_migration_driver_ops = []() -> zx_driver_ops_t {
   return {
