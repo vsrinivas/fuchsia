@@ -3833,18 +3833,6 @@ void SyscallDecoderDispatcher::Populate() {
   }
 
   {
-    Syscall* zx_socket_shutdown = Add("zx_socket_shutdown", SyscallReturnType::kStatus);
-    // Arguments
-    auto handle = zx_socket_shutdown->Argument<zx_handle_t>(SyscallType::kHandle);
-    auto options = zx_socket_shutdown->Argument<uint32_t>(SyscallType::kSocketShutdownOptions);
-    // Inputs
-    zx_socket_shutdown->Input<zx_handle_t>("handle",
-                                           std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
-    zx_socket_shutdown->Input<uint32_t>("options",
-                                        std::make_unique<ArgumentAccess<uint32_t>>(options));
-  }
-
-  {
     Syscall* zx_socket_set_disposition =
         Add("zx_socket_set_disposition", SyscallReturnType::kStatus);
     // Arguments

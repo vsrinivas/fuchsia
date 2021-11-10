@@ -124,7 +124,7 @@ zx_status_t Transceiver::Transmit(Input input, FidlInput* out_fidl_input) {
   receiver.size = input.size();
   auto status = zx::socket::create(ZX_SOCKET_STREAM, &sender, &receiver.socket);
   FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
-  receiver.socket.shutdown(ZX_SOCKET_SHUTDOWN_WRITE);
+  receiver.socket.set_disposition(ZX_SOCKET_DISPOSITION_WRITE_DISABLED, 0);
   FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
   status = Pend(std::make_unique<Request>(std::move(input), std::move(sender)));
   if (status == ZX_OK) {

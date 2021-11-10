@@ -121,8 +121,6 @@ std::string_view TypeName(SyscallType type) {
       return "zx_socket_create_options_t";
     case SyscallType::kSocketReadOptions:
       return "zx_socket_read_options_t";
-    case SyscallType::kSocketShutdownOptions:
-      return "zx_socket_shutdown_options_t";
     case SyscallType::kSocketDisposition:
       return "zx_socket_disposition_t";
     case SyscallType::kStatus:

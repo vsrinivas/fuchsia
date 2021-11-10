@@ -900,24 +900,6 @@ void PrettyPrinter::DisplaySocketReadOptions(uint32_t options) {
   }
 }
 
-#define SocketShutdownOptionsCase(name) \
-  if ((options & (name)) == (name)) {   \
-    *this << separator << #name;        \
-    separator = " | ";                  \
-  }
-
-void PrettyPrinter::DisplaySocketShutdownOptions(uint32_t options) {
-  *this << Blue;
-  if (options == 0) {
-    *this << "0" << ResetColor;
-    return;
-  }
-  const char* separator = "";
-  SocketShutdownOptionsCase(ZX_SOCKET_SHUTDOWN_WRITE);
-  SocketShutdownOptionsCase(ZX_SOCKET_SHUTDOWN_READ);
-  *this << ResetColor;
-}
-
 #define SocketDispositionCase(name)       \
   if ((disposition & (name)) == (name)) { \
     disposition ^= name;                  \

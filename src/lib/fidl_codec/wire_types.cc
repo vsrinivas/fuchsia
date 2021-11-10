@@ -466,8 +466,6 @@ std::string Uint32Type::Name() const {
       return "zx.socket_create_options";
     case Kind::kSocketReadOptions:
       return "zx.socket_read_options";
-    case Kind::kSocketShutdownOptions:
-      return "zx.socket_shutdown_options";
     case Kind::kSocketDisposition:
       return "zx.socket_disposition";
     case Kind::kStatus:
@@ -594,9 +592,6 @@ void Uint32Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
         break;
       case Kind::kSocketReadOptions:
         printer.DisplaySocketReadOptions(static_cast<uint32_t>(absolute));
-        break;
-      case Kind::kSocketShutdownOptions:
-        printer.DisplaySocketShutdownOptions(static_cast<uint32_t>(absolute));
         break;
       case Kind::kSocketDisposition:
         printer.DisplaySocketDisposition(static_cast<uint32_t>(absolute));

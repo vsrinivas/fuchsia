@@ -23,8 +23,10 @@ class Socket extends _HandleWrapper<Socket> {
   static const int DATAGRAM = ZX.SOCKET_DATAGRAM;
 
   // Write options
-  static const int SHUTDOWN_READ = ZX.SOCKET_SHUTDOWN_READ;
-  static const int SHUTDOWN_WRITE = ZX.SOCKET_SHUTDOWN_WRITE;
+  static const int DISPOSITION_WRITE_DISABLED =
+      ZX.SOCKET_DISPOSITION_WRITE_DISABLED;
+  static const int DISPOSITION_WRITE_ENABLED =
+      ZX.SOCKET_DISPOSITION_WRITE_ENABLED;
 
   WriteResult write(ByteData data, [int options = 0]) {
     if (handle == null) {

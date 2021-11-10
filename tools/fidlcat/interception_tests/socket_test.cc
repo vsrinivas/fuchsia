@@ -208,50 +208,6 @@ SOCKET_READ_STRING_DISPLAY_TEST(
     "actual: \x1B[32msize\x1B[0m = \x1B[34m5\x1B[0m/\x1B[34m1024\x1B[0m)\n"
     "    buffer: \x1B[32mvector<uint8>\x1B[0m = \x1B[31m\"hello\"\x1B[0m\n")
 
-// zx_socket_shutdown tests.
-
-std::unique_ptr<SystemCallTest> ZxSocketShutdown(int64_t result, std::string_view result_name,
-                                                 zx_handle_t handle, uint32_t options) {
-  auto value = std::make_unique<SystemCallTest>("zx_socket_shutdown", result, result_name);
-  value->AddInput(handle);
-  value->AddInput(options);
-  return value;
-}
-
-#define SOCKET_SHUTDOWN_DISPLAY_TEST_CONTENT(result, options, expected) \
-  PerformDisplayTest("$plt(zx_socket_shutdown)",                        \
-                     ZxSocketShutdown(result, #result, kHandle, options), expected)
-
-#define SOCKET_SHUTDOWN_DISPLAY_TEST(name, errno, options, expected) \
-  TEST_F(InterceptionWorkflowTestX64, name) {                        \
-    SOCKET_SHUTDOWN_DISPLAY_TEST_CONTENT(errno, options, expected);  \
-  }                                                                  \
-  TEST_F(InterceptionWorkflowTestArm, name) {                        \
-    SOCKET_SHUTDOWN_DISPLAY_TEST_CONTENT(errno, options, expected);  \
-  }
-
-SOCKET_SHUTDOWN_DISPLAY_TEST(ZxSocketShutdownRead, ZX_OK, ZX_SOCKET_SHUTDOWN_READ,
-                             "\n"
-                             "\x1B[32m0.000000\x1B[0m "
-                             "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
-                             "zx_socket_shutdown("
-                             "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
-                             "options: \x1B[32mzx.socket_shutdown_options\x1B[0m = "
-                             "\x1B[34mZX_SOCKET_SHUTDOWN_READ\x1B[0m)\n"
-                             "\x1B[32m0.000000\x1B[0m "
-                             "  -> \x1B[32mZX_OK\x1B[0m\n")
-
-SOCKET_SHUTDOWN_DISPLAY_TEST(ZxSocketShutdownWrite, ZX_OK, ZX_SOCKET_SHUTDOWN_WRITE,
-                             "\n"
-                             "\x1B[32m0.000000\x1B[0m "
-                             "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
-                             "zx_socket_shutdown("
-                             "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
-                             "options: \x1B[32mzx.socket_shutdown_options\x1B[0m = "
-                             "\x1B[34mZX_SOCKET_SHUTDOWN_WRITE\x1B[0m)\n"
-                             "\x1B[32m0.000000\x1B[0m "
-                             "  -> \x1B[32mZX_OK\x1B[0m\n")
-
 std::unique_ptr<SystemCallTest> ZxSocketSetDisposition(int64_t result, std::string_view result_name,
                                                        zx_handle_t handle, uint32_t disposition,
                                                        uint32_t disposition_peer) {
