@@ -176,12 +176,10 @@ class ::fidl::WireRequest<::fidl_test_error::Example::Foo>::DecodedMessage final
 
   DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                  zx_handle_t* handles = nullptr,
-                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-                 const ::fidl::internal::TransportVTable* transport_vtable =
-                     &::fidl::internal::ChannelTransport::VTable)
-      : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
-                                    handles, handle_metadata, handle_actual)) {}
+                 fidl_channel_handle_metadata_t* handle_metadata = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(::fidl::IncomingMessage::Create(
+            bytes, byte_actual, handles, handle_metadata, handle_actual)) {}
 
   ::fidl::WireRequest<::fidl_test_error::Example::Foo>* PrimaryObject() {
     ZX_DEBUG_ASSERT(ok());
@@ -328,12 +326,10 @@ class ::fidl::WireResponse<::fidl_test_error::Example::Foo>::DecodedMessage
 
   DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                  zx_handle_t* handles = nullptr,
-                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-                 const ::fidl::internal::TransportVTable* transport_vtable =
-                     &::fidl::internal::ChannelTransport::VTable)
-      : DecodedMessageBase(
-            ::fidl::IncomingMessage(transport_vtable, bytes, byte_actual,
-                                    handles, handle_metadata, handle_actual)) {}
+                 fidl_channel_handle_metadata_t* handle_metadata = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(::fidl::IncomingMessage::Create(
+            bytes, byte_actual, handles, handle_metadata, handle_actual)) {}
 
   ::fidl::WireResponse<::fidl_test_error::Example::Foo>* PrimaryObject() {
     ZX_DEBUG_ASSERT(ok());

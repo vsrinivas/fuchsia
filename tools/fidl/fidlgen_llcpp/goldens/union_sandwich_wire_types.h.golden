@@ -202,33 +202,31 @@ class UnionSize8Alignment4::DecodedMessage final
 
   DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                  zx_handle_t* handles = nullptr,
-                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-                 const ::fidl::internal::TransportVTable* transport_vtable =
-                     &::fidl::internal::ChannelTransport::VTable)
+                 fidl_channel_handle_metadata_t* handle_metadata = nullptr,
+                 uint32_t handle_actual = 0)
       : DecodedMessageBase(
             ::fidl::internal::kLLCPPEncodedWireFormatVersion,
-            ::fidl::IncomingMessage(
-                transport_vtable, bytes, byte_actual, handles, handle_metadata,
-                handle_actual,
+            ::fidl::IncomingMessage::Create(
+                bytes, byte_actual, handles, handle_metadata, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
   // Internal constructor for specifying a specific wire format version.
   DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
                  uint8_t* bytes, uint32_t byte_actual,
                  zx_handle_t* handles = nullptr,
-                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-                 const ::fidl::internal::TransportVTable* transport_vtable =
-                     &::fidl::internal::ChannelTransport::VTable)
+                 fidl_channel_handle_metadata_t* handle_metadata = nullptr,
+                 uint32_t handle_actual = 0)
       : DecodedMessageBase(
             wire_format_version,
-            ::fidl::IncomingMessage(
-                transport_vtable, bytes, byte_actual, handles, handle_metadata,
-                handle_actual,
+            ::fidl::IncomingMessage::Create(
+                bytes, byte_actual, handles, handle_metadata, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
   DecodedMessage(const fidl_incoming_msg_t* c_msg)
       : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
-                       c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
+                       c_msg->num_bytes, c_msg->handles,
+                       static_cast<fidl_channel_handle_metadata_t*>(
+                           c_msg->handle_metadata),
                        c_msg->num_handles) {}
 
   // Internal constructor for specifying a specific wire format version.
@@ -236,7 +234,9 @@ class UnionSize8Alignment4::DecodedMessage final
                  const fidl_incoming_msg_t* c_msg)
       : DecodedMessage(wire_format_version,
                        reinterpret_cast<uint8_t*>(c_msg->bytes),
-                       c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
+                       c_msg->num_bytes, c_msg->handles,
+                       static_cast<fidl_channel_handle_metadata_t*>(
+                           c_msg->handle_metadata),
                        c_msg->num_handles) {}
 
   UnionSize8Alignment4* PrimaryObject() {
@@ -430,33 +430,31 @@ class UnionSize36Alignment4::DecodedMessage final
 
   DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                  zx_handle_t* handles = nullptr,
-                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-                 const ::fidl::internal::TransportVTable* transport_vtable =
-                     &::fidl::internal::ChannelTransport::VTable)
+                 fidl_channel_handle_metadata_t* handle_metadata = nullptr,
+                 uint32_t handle_actual = 0)
       : DecodedMessageBase(
             ::fidl::internal::kLLCPPEncodedWireFormatVersion,
-            ::fidl::IncomingMessage(
-                transport_vtable, bytes, byte_actual, handles, handle_metadata,
-                handle_actual,
+            ::fidl::IncomingMessage::Create(
+                bytes, byte_actual, handles, handle_metadata, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
   // Internal constructor for specifying a specific wire format version.
   DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
                  uint8_t* bytes, uint32_t byte_actual,
                  zx_handle_t* handles = nullptr,
-                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-                 const ::fidl::internal::TransportVTable* transport_vtable =
-                     &::fidl::internal::ChannelTransport::VTable)
+                 fidl_channel_handle_metadata_t* handle_metadata = nullptr,
+                 uint32_t handle_actual = 0)
       : DecodedMessageBase(
             wire_format_version,
-            ::fidl::IncomingMessage(
-                transport_vtable, bytes, byte_actual, handles, handle_metadata,
-                handle_actual,
+            ::fidl::IncomingMessage::Create(
+                bytes, byte_actual, handles, handle_metadata, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
   DecodedMessage(const fidl_incoming_msg_t* c_msg)
       : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
-                       c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
+                       c_msg->num_bytes, c_msg->handles,
+                       static_cast<fidl_channel_handle_metadata_t*>(
+                           c_msg->handle_metadata),
                        c_msg->num_handles) {}
 
   // Internal constructor for specifying a specific wire format version.
@@ -464,7 +462,9 @@ class UnionSize36Alignment4::DecodedMessage final
                  const fidl_incoming_msg_t* c_msg)
       : DecodedMessage(wire_format_version,
                        reinterpret_cast<uint8_t*>(c_msg->bytes),
-                       c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
+                       c_msg->num_bytes, c_msg->handles,
+                       static_cast<fidl_channel_handle_metadata_t*>(
+                           c_msg->handle_metadata),
                        c_msg->num_handles) {}
 
   UnionSize36Alignment4* PrimaryObject() {
@@ -658,33 +658,31 @@ class UnionSize12Alignment4::DecodedMessage final
 
   DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                  zx_handle_t* handles = nullptr,
-                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-                 const ::fidl::internal::TransportVTable* transport_vtable =
-                     &::fidl::internal::ChannelTransport::VTable)
+                 fidl_channel_handle_metadata_t* handle_metadata = nullptr,
+                 uint32_t handle_actual = 0)
       : DecodedMessageBase(
             ::fidl::internal::kLLCPPEncodedWireFormatVersion,
-            ::fidl::IncomingMessage(
-                transport_vtable, bytes, byte_actual, handles, handle_metadata,
-                handle_actual,
+            ::fidl::IncomingMessage::Create(
+                bytes, byte_actual, handles, handle_metadata, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
   // Internal constructor for specifying a specific wire format version.
   DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
                  uint8_t* bytes, uint32_t byte_actual,
                  zx_handle_t* handles = nullptr,
-                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-                 const ::fidl::internal::TransportVTable* transport_vtable =
-                     &::fidl::internal::ChannelTransport::VTable)
+                 fidl_channel_handle_metadata_t* handle_metadata = nullptr,
+                 uint32_t handle_actual = 0)
       : DecodedMessageBase(
             wire_format_version,
-            ::fidl::IncomingMessage(
-                transport_vtable, bytes, byte_actual, handles, handle_metadata,
-                handle_actual,
+            ::fidl::IncomingMessage::Create(
+                bytes, byte_actual, handles, handle_metadata, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
   DecodedMessage(const fidl_incoming_msg_t* c_msg)
       : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
-                       c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
+                       c_msg->num_bytes, c_msg->handles,
+                       static_cast<fidl_channel_handle_metadata_t*>(
+                           c_msg->handle_metadata),
                        c_msg->num_handles) {}
 
   // Internal constructor for specifying a specific wire format version.
@@ -692,7 +690,9 @@ class UnionSize12Alignment4::DecodedMessage final
                  const fidl_incoming_msg_t* c_msg)
       : DecodedMessage(wire_format_version,
                        reinterpret_cast<uint8_t*>(c_msg->bytes),
-                       c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
+                       c_msg->num_bytes, c_msg->handles,
+                       static_cast<fidl_channel_handle_metadata_t*>(
+                           c_msg->handle_metadata),
                        c_msg->num_handles) {}
 
   UnionSize12Alignment4* PrimaryObject() {
@@ -898,33 +898,31 @@ class UnionSize24Alignment8::DecodedMessage final
 
   DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                  zx_handle_t* handles = nullptr,
-                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-                 const ::fidl::internal::TransportVTable* transport_vtable =
-                     &::fidl::internal::ChannelTransport::VTable)
+                 fidl_channel_handle_metadata_t* handle_metadata = nullptr,
+                 uint32_t handle_actual = 0)
       : DecodedMessageBase(
             ::fidl::internal::kLLCPPEncodedWireFormatVersion,
-            ::fidl::IncomingMessage(
-                transport_vtable, bytes, byte_actual, handles, handle_metadata,
-                handle_actual,
+            ::fidl::IncomingMessage::Create(
+                bytes, byte_actual, handles, handle_metadata, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
   // Internal constructor for specifying a specific wire format version.
   DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
                  uint8_t* bytes, uint32_t byte_actual,
                  zx_handle_t* handles = nullptr,
-                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-                 const ::fidl::internal::TransportVTable* transport_vtable =
-                     &::fidl::internal::ChannelTransport::VTable)
+                 fidl_channel_handle_metadata_t* handle_metadata = nullptr,
+                 uint32_t handle_actual = 0)
       : DecodedMessageBase(
             wire_format_version,
-            ::fidl::IncomingMessage(
-                transport_vtable, bytes, byte_actual, handles, handle_metadata,
-                handle_actual,
+            ::fidl::IncomingMessage::Create(
+                bytes, byte_actual, handles, handle_metadata, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
   DecodedMessage(const fidl_incoming_msg_t* c_msg)
       : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
-                       c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
+                       c_msg->num_bytes, c_msg->handles,
+                       static_cast<fidl_channel_handle_metadata_t*>(
+                           c_msg->handle_metadata),
                        c_msg->num_handles) {}
 
   // Internal constructor for specifying a specific wire format version.
@@ -932,7 +930,9 @@ class UnionSize24Alignment8::DecodedMessage final
                  const fidl_incoming_msg_t* c_msg)
       : DecodedMessage(wire_format_version,
                        reinterpret_cast<uint8_t*>(c_msg->bytes),
-                       c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
+                       c_msg->num_bytes, c_msg->handles,
+                       static_cast<fidl_channel_handle_metadata_t*>(
+                           c_msg->handle_metadata),
                        c_msg->num_handles) {}
 
   UnionSize24Alignment8* PrimaryObject() {
@@ -1051,33 +1051,31 @@ class SandwichUnionSize8Alignment4::DecodedMessage final
 
   DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                  zx_handle_t* handles = nullptr,
-                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-                 const ::fidl::internal::TransportVTable* transport_vtable =
-                     &::fidl::internal::ChannelTransport::VTable)
+                 fidl_channel_handle_metadata_t* handle_metadata = nullptr,
+                 uint32_t handle_actual = 0)
       : DecodedMessageBase(
             ::fidl::internal::kLLCPPEncodedWireFormatVersion,
-            ::fidl::IncomingMessage(
-                transport_vtable, bytes, byte_actual, handles, handle_metadata,
-                handle_actual,
+            ::fidl::IncomingMessage::Create(
+                bytes, byte_actual, handles, handle_metadata, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
   // Internal constructor for specifying a specific wire format version.
   DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
                  uint8_t* bytes, uint32_t byte_actual,
                  zx_handle_t* handles = nullptr,
-                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-                 const ::fidl::internal::TransportVTable* transport_vtable =
-                     &::fidl::internal::ChannelTransport::VTable)
+                 fidl_channel_handle_metadata_t* handle_metadata = nullptr,
+                 uint32_t handle_actual = 0)
       : DecodedMessageBase(
             wire_format_version,
-            ::fidl::IncomingMessage(
-                transport_vtable, bytes, byte_actual, handles, handle_metadata,
-                handle_actual,
+            ::fidl::IncomingMessage::Create(
+                bytes, byte_actual, handles, handle_metadata, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
   DecodedMessage(const fidl_incoming_msg_t* c_msg)
       : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
-                       c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
+                       c_msg->num_bytes, c_msg->handles,
+                       static_cast<fidl_channel_handle_metadata_t*>(
+                           c_msg->handle_metadata),
                        c_msg->num_handles) {}
 
   // Internal constructor for specifying a specific wire format version.
@@ -1085,7 +1083,9 @@ class SandwichUnionSize8Alignment4::DecodedMessage final
                  const fidl_incoming_msg_t* c_msg)
       : DecodedMessage(wire_format_version,
                        reinterpret_cast<uint8_t*>(c_msg->bytes),
-                       c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
+                       c_msg->num_bytes, c_msg->handles,
+                       static_cast<fidl_channel_handle_metadata_t*>(
+                           c_msg->handle_metadata),
                        c_msg->num_handles) {}
 
   SandwichUnionSize8Alignment4* PrimaryObject() {
@@ -1204,33 +1204,31 @@ class SandwichUnionSize36Alignment4::DecodedMessage final
 
   DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                  zx_handle_t* handles = nullptr,
-                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-                 const ::fidl::internal::TransportVTable* transport_vtable =
-                     &::fidl::internal::ChannelTransport::VTable)
+                 fidl_channel_handle_metadata_t* handle_metadata = nullptr,
+                 uint32_t handle_actual = 0)
       : DecodedMessageBase(
             ::fidl::internal::kLLCPPEncodedWireFormatVersion,
-            ::fidl::IncomingMessage(
-                transport_vtable, bytes, byte_actual, handles, handle_metadata,
-                handle_actual,
+            ::fidl::IncomingMessage::Create(
+                bytes, byte_actual, handles, handle_metadata, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
   // Internal constructor for specifying a specific wire format version.
   DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
                  uint8_t* bytes, uint32_t byte_actual,
                  zx_handle_t* handles = nullptr,
-                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-                 const ::fidl::internal::TransportVTable* transport_vtable =
-                     &::fidl::internal::ChannelTransport::VTable)
+                 fidl_channel_handle_metadata_t* handle_metadata = nullptr,
+                 uint32_t handle_actual = 0)
       : DecodedMessageBase(
             wire_format_version,
-            ::fidl::IncomingMessage(
-                transport_vtable, bytes, byte_actual, handles, handle_metadata,
-                handle_actual,
+            ::fidl::IncomingMessage::Create(
+                bytes, byte_actual, handles, handle_metadata, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
   DecodedMessage(const fidl_incoming_msg_t* c_msg)
       : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
-                       c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
+                       c_msg->num_bytes, c_msg->handles,
+                       static_cast<fidl_channel_handle_metadata_t*>(
+                           c_msg->handle_metadata),
                        c_msg->num_handles) {}
 
   // Internal constructor for specifying a specific wire format version.
@@ -1238,7 +1236,9 @@ class SandwichUnionSize36Alignment4::DecodedMessage final
                  const fidl_incoming_msg_t* c_msg)
       : DecodedMessage(wire_format_version,
                        reinterpret_cast<uint8_t*>(c_msg->bytes),
-                       c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
+                       c_msg->num_bytes, c_msg->handles,
+                       static_cast<fidl_channel_handle_metadata_t*>(
+                           c_msg->handle_metadata),
                        c_msg->num_handles) {}
 
   SandwichUnionSize36Alignment4* PrimaryObject() {
@@ -1357,33 +1357,31 @@ class SandwichUnionSize12Alignment4::DecodedMessage final
 
   DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                  zx_handle_t* handles = nullptr,
-                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-                 const ::fidl::internal::TransportVTable* transport_vtable =
-                     &::fidl::internal::ChannelTransport::VTable)
+                 fidl_channel_handle_metadata_t* handle_metadata = nullptr,
+                 uint32_t handle_actual = 0)
       : DecodedMessageBase(
             ::fidl::internal::kLLCPPEncodedWireFormatVersion,
-            ::fidl::IncomingMessage(
-                transport_vtable, bytes, byte_actual, handles, handle_metadata,
-                handle_actual,
+            ::fidl::IncomingMessage::Create(
+                bytes, byte_actual, handles, handle_metadata, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
   // Internal constructor for specifying a specific wire format version.
   DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
                  uint8_t* bytes, uint32_t byte_actual,
                  zx_handle_t* handles = nullptr,
-                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-                 const ::fidl::internal::TransportVTable* transport_vtable =
-                     &::fidl::internal::ChannelTransport::VTable)
+                 fidl_channel_handle_metadata_t* handle_metadata = nullptr,
+                 uint32_t handle_actual = 0)
       : DecodedMessageBase(
             wire_format_version,
-            ::fidl::IncomingMessage(
-                transport_vtable, bytes, byte_actual, handles, handle_metadata,
-                handle_actual,
+            ::fidl::IncomingMessage::Create(
+                bytes, byte_actual, handles, handle_metadata, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
   DecodedMessage(const fidl_incoming_msg_t* c_msg)
       : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
-                       c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
+                       c_msg->num_bytes, c_msg->handles,
+                       static_cast<fidl_channel_handle_metadata_t*>(
+                           c_msg->handle_metadata),
                        c_msg->num_handles) {}
 
   // Internal constructor for specifying a specific wire format version.
@@ -1391,7 +1389,9 @@ class SandwichUnionSize12Alignment4::DecodedMessage final
                  const fidl_incoming_msg_t* c_msg)
       : DecodedMessage(wire_format_version,
                        reinterpret_cast<uint8_t*>(c_msg->bytes),
-                       c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
+                       c_msg->num_bytes, c_msg->handles,
+                       static_cast<fidl_channel_handle_metadata_t*>(
+                           c_msg->handle_metadata),
                        c_msg->num_handles) {}
 
   SandwichUnionSize12Alignment4* PrimaryObject() {
@@ -1507,33 +1507,31 @@ class StructSize16Alignment8::DecodedMessage final
 
   DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                  zx_handle_t* handles = nullptr,
-                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-                 const ::fidl::internal::TransportVTable* transport_vtable =
-                     &::fidl::internal::ChannelTransport::VTable)
+                 fidl_channel_handle_metadata_t* handle_metadata = nullptr,
+                 uint32_t handle_actual = 0)
       : DecodedMessageBase(
             ::fidl::internal::kLLCPPEncodedWireFormatVersion,
-            ::fidl::IncomingMessage(
-                transport_vtable, bytes, byte_actual, handles, handle_metadata,
-                handle_actual,
+            ::fidl::IncomingMessage::Create(
+                bytes, byte_actual, handles, handle_metadata, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
   // Internal constructor for specifying a specific wire format version.
   DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
                  uint8_t* bytes, uint32_t byte_actual,
                  zx_handle_t* handles = nullptr,
-                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-                 const ::fidl::internal::TransportVTable* transport_vtable =
-                     &::fidl::internal::ChannelTransport::VTable)
+                 fidl_channel_handle_metadata_t* handle_metadata = nullptr,
+                 uint32_t handle_actual = 0)
       : DecodedMessageBase(
             wire_format_version,
-            ::fidl::IncomingMessage(
-                transport_vtable, bytes, byte_actual, handles, handle_metadata,
-                handle_actual,
+            ::fidl::IncomingMessage::Create(
+                bytes, byte_actual, handles, handle_metadata, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
   DecodedMessage(const fidl_incoming_msg_t* c_msg)
       : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
-                       c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
+                       c_msg->num_bytes, c_msg->handles,
+                       static_cast<fidl_channel_handle_metadata_t*>(
+                           c_msg->handle_metadata),
                        c_msg->num_handles) {}
 
   // Internal constructor for specifying a specific wire format version.
@@ -1541,7 +1539,9 @@ class StructSize16Alignment8::DecodedMessage final
                  const fidl_incoming_msg_t* c_msg)
       : DecodedMessage(wire_format_version,
                        reinterpret_cast<uint8_t*>(c_msg->bytes),
-                       c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
+                       c_msg->num_bytes, c_msg->handles,
+                       static_cast<fidl_channel_handle_metadata_t*>(
+                           c_msg->handle_metadata),
                        c_msg->num_handles) {}
 
   StructSize16Alignment8* PrimaryObject() {
@@ -1660,33 +1660,31 @@ class SandwichUnionSize24Alignment8::DecodedMessage final
 
   DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                  zx_handle_t* handles = nullptr,
-                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-                 const ::fidl::internal::TransportVTable* transport_vtable =
-                     &::fidl::internal::ChannelTransport::VTable)
+                 fidl_channel_handle_metadata_t* handle_metadata = nullptr,
+                 uint32_t handle_actual = 0)
       : DecodedMessageBase(
             ::fidl::internal::kLLCPPEncodedWireFormatVersion,
-            ::fidl::IncomingMessage(
-                transport_vtable, bytes, byte_actual, handles, handle_metadata,
-                handle_actual,
+            ::fidl::IncomingMessage::Create(
+                bytes, byte_actual, handles, handle_metadata, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
   // Internal constructor for specifying a specific wire format version.
   DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
                  uint8_t* bytes, uint32_t byte_actual,
                  zx_handle_t* handles = nullptr,
-                 void* handle_metadata = nullptr, uint32_t handle_actual = 0,
-                 const ::fidl::internal::TransportVTable* transport_vtable =
-                     &::fidl::internal::ChannelTransport::VTable)
+                 fidl_channel_handle_metadata_t* handle_metadata = nullptr,
+                 uint32_t handle_actual = 0)
       : DecodedMessageBase(
             wire_format_version,
-            ::fidl::IncomingMessage(
-                transport_vtable, bytes, byte_actual, handles, handle_metadata,
-                handle_actual,
+            ::fidl::IncomingMessage::Create(
+                bytes, byte_actual, handles, handle_metadata, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
   DecodedMessage(const fidl_incoming_msg_t* c_msg)
       : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
-                       c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
+                       c_msg->num_bytes, c_msg->handles,
+                       static_cast<fidl_channel_handle_metadata_t*>(
+                           c_msg->handle_metadata),
                        c_msg->num_handles) {}
 
   // Internal constructor for specifying a specific wire format version.
@@ -1694,7 +1692,9 @@ class SandwichUnionSize24Alignment8::DecodedMessage final
                  const fidl_incoming_msg_t* c_msg)
       : DecodedMessage(wire_format_version,
                        reinterpret_cast<uint8_t*>(c_msg->bytes),
-                       c_msg->num_bytes, c_msg->handles, c_msg->handle_metadata,
+                       c_msg->num_bytes, c_msg->handles,
+                       static_cast<fidl_channel_handle_metadata_t*>(
+                           c_msg->handle_metadata),
                        c_msg->num_handles) {}
 
   SandwichUnionSize24Alignment8* PrimaryObject() {

@@ -297,10 +297,11 @@ class IncomingMessage : public ::fidl::Result {
   // The bytes must represent a transactional message. See
   // https://fuchsia.dev/fuchsia-src/reference/fidl/language/wire-format?hl=en#transactional-messages
   template <typename HandleMetadata>
-  IncomingMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles,
-                  HandleMetadata* handle_metadata, uint32_t handle_actual)
-      : IncomingMessage(&internal::AssociatedTransport<HandleMetadata>::VTable, bytes, byte_actual,
-                        handles, handle_metadata, handle_actual) {}
+  static IncomingMessage Create(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles,
+                                HandleMetadata* handle_metadata, uint32_t handle_actual) {
+    return Create<typename internal::AssociatedTransport<HandleMetadata>>(
+        bytes, byte_actual, handles, handle_metadata, handle_actual);
+  }
 
   // Creates an object which can manage a FIDL message. Allocated memory is not owned by
   // the |IncomingMessage|, but handles are owned by it and cleaned up when the
@@ -308,9 +309,12 @@ class IncomingMessage : public ::fidl::Result {
   //
   // The bytes must represent a transactional message. See
   // https://fuchsia.dev/fuchsia-src/reference/fidl/language/wire-format?hl=en#transactional-messages
-  IncomingMessage(const internal::TransportVTable* transport_vtable, uint8_t* bytes,
-                  uint32_t byte_actual, zx_handle_t* handles, void* handle_metadata,
-                  uint32_t handle_actual);
+  template <typename Transport>
+  static IncomingMessage Create(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles,
+                                void* handle_metadata, uint32_t handle_actual) {
+    return IncomingMessage(&Transport::VTable, bytes, byte_actual, handles, handle_metadata,
+                           handle_actual);
+  }
 
   // Creates an |IncomingMessage| from a C |fidl_incoming_msg_t| already in
   // encoded form. This should only be used when interfacing with C APIs.
@@ -333,11 +337,12 @@ class IncomingMessage : public ::fidl::Result {
   // using the constructor in |FidlType::DecodedMessage|, which delegates
   // here appropriately.
   template <typename HandleMetadata>
-  IncomingMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles,
-                  HandleMetadata* handle_metadata, uint32_t handle_actual,
-                  SkipMessageHeaderValidationTag)
-      : IncomingMessage(&internal::AssociatedTransport<HandleMetadata>::VTable, bytes, byte_actual,
-                        handles, handle_metadata, handle_actual, kSkipMessageHeaderValidation) {}
+  static IncomingMessage Create(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles,
+                                HandleMetadata* handle_metadata, uint32_t handle_actual,
+                                SkipMessageHeaderValidationTag) {
+    return Create<internal::AssociatedTransport<HandleMetadata>>(
+        bytes, byte_actual, handles, handle_metadata, handle_actual, kSkipMessageHeaderValidation);
+  }
 
   // An overload for when the bytes do not represent a transactional message.
   //
@@ -345,15 +350,19 @@ class IncomingMessage : public ::fidl::Result {
   // FIDL types that are not transactional messages (e.g. tables), consider
   // using the constructor in |FidlType::DecodedMessage|, which delegates
   // here appropriately.
-  IncomingMessage(const internal::TransportVTable* transport_vtable, uint8_t* bytes,
-                  uint32_t byte_actual, zx_handle_t* handles, void* handle_metadata,
-                  uint32_t handle_actual, SkipMessageHeaderValidationTag);
+  template <typename Transport>
+  static IncomingMessage Create(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles,
+                                void* handle_metadata, uint32_t handle_actual,
+                                SkipMessageHeaderValidationTag) {
+    return IncomingMessage(&Transport::VTable, bytes, byte_actual, handles, handle_metadata,
+                           handle_actual, kSkipMessageHeaderValidation);
+  }
 
   // Creates an empty incoming message representing an error (e.g. failed to read from
   // a channel).
   //
   // |failure| must contain an error result.
-  explicit IncomingMessage(const ::fidl::Result& failure);
+  static IncomingMessage Create(const ::fidl::Result& failure) { return IncomingMessage(failure); }
 
   IncomingMessage(const IncomingMessage&) = delete;
   IncomingMessage& operator=(const IncomingMessage&) = delete;
@@ -409,6 +418,14 @@ class IncomingMessage : public ::fidl::Result {
   void CloseHandles() &&;
 
  private:
+  explicit IncomingMessage(const ::fidl::Result& failure);
+  IncomingMessage(const internal::TransportVTable* transport_vtable, uint8_t* bytes,
+                  uint32_t byte_actual, zx_handle_t* handles, void* handle_metadata,
+                  uint32_t handle_actual);
+  IncomingMessage(const internal::TransportVTable* transport_vtable, uint8_t* bytes,
+                  uint32_t byte_actual, zx_handle_t* handles, void* handle_metadata,
+                  uint32_t handle_actual, SkipMessageHeaderValidationTag);
+
   // Only |fidl::DecodedMessage<T>| instances may decode this message.
   template <typename T>
   friend class internal::DecodedMessageBase;
@@ -490,16 +507,6 @@ class IncomingMessage : public ::fidl::Result {
   bool is_transactional_ = false;
 };
 
-namespace internal {
-// Reads a message from |transport| using the |bytes_storage| and |handles_storage|
-// buffers as needed.
-//
-// Error information is embedded in the returned |IncomingMessage| when applicable.
-IncomingMessage MessageRead(internal::AnyUnownedTransport transport, fidl::BufferSpan bytes_storage,
-                            fidl_handle_t* handle_storage, void* handle_metadata_storage,
-                            uint32_t handle_capacity, ReadOptions options = {});
-}  // namespace internal
-
 // Reads a message from |transport| using the |bytes_storage| and |handles_storage|
 // buffers as needed.
 //
@@ -510,9 +517,17 @@ IncomingMessage MessageRead(TransportObject&& transport, ::fidl::BufferSpan byte
                             typename internal::AssociatedTransport<TransportObject>::HandleMetadata*
                                 handle_metadata_storage,
                             uint32_t handle_capacity, ReadOptions options = {}) {
-  return MessageRead(internal::MakeAnyUnownedTransport(std::forward<TransportObject>(transport)),
-                     bytes_storage, handle_storage, static_cast<void*>(handle_metadata_storage),
-                     handle_capacity, options);
+  auto type_erased_transport =
+      internal::MakeAnyUnownedTransport(std::forward<TransportObject>(transport));
+  uint32_t num_bytes, num_handles;
+  zx_status_t status = type_erased_transport.read(
+      options, bytes_storage.data, bytes_storage.capacity, handle_storage, handle_metadata_storage,
+      handle_capacity, &num_bytes, &num_handles);
+  if (status != ZX_OK) {
+    return IncomingMessage::Create(fidl::Result::TransportError(status));
+  }
+  return IncomingMessage::Create(bytes_storage.data, num_bytes,
+                                 handle_storage, handle_metadata_storage, num_handles);
 }
 
 namespace internal {

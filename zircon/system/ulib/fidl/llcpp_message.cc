@@ -394,22 +394,6 @@ void IncomingMessage::Validate() {
   }
 }
 
-namespace internal {
-IncomingMessage MessageRead(internal::AnyUnownedTransport transport, fidl::BufferSpan bytes_storage,
-                            zx_handle_t* handle_storage, void* handle_metadata_storage,
-                            uint32_t handle_capacity, ReadOptions options) {
-  uint32_t num_bytes, num_handles;
-  zx_status_t status =
-      transport.read(options, bytes_storage.data, bytes_storage.capacity, handle_storage,
-                     handle_metadata_storage, handle_capacity, &num_bytes, &num_handles);
-  if (status != ZX_OK) {
-    return IncomingMessage(fidl::Result::TransportError(status));
-  }
-  return IncomingMessage(transport.vtable(), bytes_storage.data, num_bytes, handle_storage,
-                         handle_metadata_storage, num_handles);
-}
-}  // namespace internal
-
 OutgoingToIncomingMessage::OutgoingToIncomingMessage(OutgoingMessage& input)
     : incoming_message_(ConversionImpl(input, buf_bytes_, buf_handles_, buf_handle_metadata_)) {}
 
@@ -430,7 +414,7 @@ IncomingMessage OutgoingToIncomingMessage::ConversionImpl(
 
   if (num_handles > ZX_CHANNEL_MAX_MSG_HANDLES) {
     FidlHandleCloseMany(handles, num_handles);
-    return fidl::IncomingMessage(fidl::Result::EncodeError(ZX_ERR_OUT_OF_RANGE));
+    return fidl::IncomingMessage::Create(fidl::Result::EncodeError(ZX_ERR_OUT_OF_RANGE));
   }
 
   // Note: it may be possible to remove these allocations.
@@ -444,7 +428,7 @@ IncomingMessage OutgoingToIncomingMessage::ConversionImpl(
     if (status != ZX_OK) {
       FidlHandleCloseMany(handles, num_handles);
       FidlHandleCloseMany(buf_handles.get(), num_handles);
-      return fidl::IncomingMessage(fidl::Result::EncodeError(status));
+      return fidl::IncomingMessage::Create(fidl::Result::EncodeError(status));
     }
     buf_handles[i] = handles[i];
     buf_handle_metadata[i] = handle_metadata[i];
@@ -454,16 +438,16 @@ IncomingMessage OutgoingToIncomingMessage::ConversionImpl(
   if (buf_bytes.size() > ZX_CHANNEL_MAX_MSG_BYTES) {
     FidlHandleCloseMany(handles, num_handles);
     FidlHandleCloseMany(buf_handles.get(), num_handles);
-    return fidl::IncomingMessage(fidl::Result::EncodeError(ZX_ERR_INVALID_ARGS));
+    return fidl::IncomingMessage::Create(fidl::Result::EncodeError(ZX_ERR_INVALID_ARGS));
   }
 
   if (input.is_transactional()) {
-    return fidl::IncomingMessage(buf_bytes.data(), buf_bytes.size(), buf_handles.get(),
-                                 buf_handle_metadata.get(), num_handles);
+    return fidl::IncomingMessage::Create(buf_bytes.data(), buf_bytes.size(), buf_handles.get(),
+                                         buf_handle_metadata.get(), num_handles);
   }
-  return fidl::IncomingMessage(buf_bytes.data(), buf_bytes.size(), buf_handles.get(),
-                               buf_handle_metadata.get(), num_handles,
-                               fidl::IncomingMessage::kSkipMessageHeaderValidation);
+  return fidl::IncomingMessage::Create(buf_bytes.data(), buf_bytes.size(), buf_handles.get(),
+                                       buf_handle_metadata.get(), num_handles,
+                                       fidl::IncomingMessage::kSkipMessageHeaderValidation);
 }
 
 }  // namespace fidl

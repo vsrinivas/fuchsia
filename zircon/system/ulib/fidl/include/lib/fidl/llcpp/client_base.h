@@ -139,7 +139,7 @@ class ResponseContext : public fidl::internal_wavl::WAVLTreeContainable<Response
   virtual cpp17::optional<fidl::UnbindInfo> OnRawResult(::fidl::IncomingMessage&& result) = 0;
 
   // A helper around |OnRawResult| to directly notify an error to the context.
-  void OnError(::fidl::Result error) { OnRawResult(::fidl::IncomingMessage(error)); }
+  void OnError(::fidl::Result error) { OnRawResult(::fidl::IncomingMessage::Create(error)); }
 
  private:
   friend class ResponseContextAsyncErrorTask<ResponseContext>;
