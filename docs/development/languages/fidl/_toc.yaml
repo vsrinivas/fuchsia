@@ -72,3 +72,4 @@ toc:
       path: /docs/development/languages/fidl/tutorials/dart/topics/request-pipelining.md
   - title: "C"
     path: /docs/development/languages/fidl/tutorials/tutorial-c.md
+    status: deprecated
