@@ -170,7 +170,8 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
         let (aligned, mut transfer_buf) = self.align_buffer(offset, buf).await?;
 
         if let Some(keys) = &self.keys {
-            keys.encrypt(aligned.start, transfer_buf.as_mut_slice());
+            // TODO(ripper): Support key_id != 0.
+            keys.encrypt(aligned.start, 0, transfer_buf.as_mut_slice())?;
         }
 
         self.write_aligned(
@@ -330,7 +331,8 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
             for r in ranges {
                 let l = r.end - r.start;
                 let (head, tail) = slice.split_at_mut(l as usize);
-                keys.encrypt(r.start, head);
+                // TODO(ripper): Support key_id != 0.
+                keys.encrypt(r.start, 0, head)?;
                 slice = tail;
             }
         }

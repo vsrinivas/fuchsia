@@ -15,8 +15,12 @@ use {
 
 pub use crate::object_store::object_record::AES256XTSKeys;
 
-// This structure stores unwrapped keys. For now, the format used just makes it convenient for the
-// simple XOR scheme we are using, but going forward, this can take whatever form is suitable.
+/// The `Crypt` trait is used to wrap and unwrap `AES256XTSKeys` into `UnwrappedKeys`.
+///
+/// Unwrapped keys contain the actual keydata used to encrypt and decrypt content.
+///
+/// For now, the format used just makes it convenient for the simple XOR scheme we are
+/// using, but going forward, this can take whatever form is suitable.
 pub struct UnwrappedKeys {
     keys: Vec<(u64, [u64; 4])>,
 }
@@ -49,8 +53,11 @@ impl UnwrappedKeys {
         }
     }
 
-    /// Decrypt the data in buffer.  `key_id` specifies which of the unwrapped keys to use.
-    /// `offset` is the tweak.
+    /// Decrypt the data in `buffer` using `UnwrappedKeys`.
+    ///
+    /// * `offset` is the tweak.
+    /// * `key_id` specifies which of the unwrapped keys to use.
+    /// * `buffer` is mutated in-place.
     pub fn decrypt(&self, offset: u64, key_id: u64, buffer: &mut [u8]) -> Result<(), Error> {
         trace_duration!("decrypt");
         self.xor(
@@ -61,15 +68,27 @@ impl UnwrappedKeys {
         Ok(())
     }
 
-    /// Encrypts data in the buffer.  The first key in the unwrapped keys will be used.  `offset` is
-    /// the tweak.
-    pub fn encrypt(&self, offset: u64, buffer: &mut [u8]) {
+    /// Encrypts data in the `buffer` using `UnwrappedKeys`.
+    ///
+    /// * `offset` is the tweak.
+    /// * `key_id` specifies which of the unwrapped keys to use.
+    /// * `buffer` is mutated in-place.
+    pub fn encrypt(&self, offset: u64, key_id: u64, buffer: &mut [u8]) -> Result<(), Error> {
         trace_duration!("encrypt");
         // For now, always use the first key.
-        self.xor(offset, buffer, &self.keys[0].1);
+        self.xor(
+            offset,
+            buffer,
+            &self.keys.iter().find(|(id, _)| *id == key_id).ok_or(anyhow!("Key not found"))?.1,
+        );
+        Ok(())
     }
 }
 
+/// An interface trait with the ability to wrap and unwrap AES256XTS formatted encryption keys.
+///
+/// Note that existence of this trait does not imply that an object will **securely**
+/// wrap and unwrap keys; rather just that it presents an interface for wrapping operations.
 #[async_trait]
 pub trait Crypt: Send + Sync {
     /// `owner` is intended to be used such that when the key is wrapped, it appears to be different
@@ -86,8 +105,12 @@ pub trait Crypt: Send + Sync {
     async fn unwrap_keys(&self, keys: &AES256XTSKeys, owner: u64) -> Result<UnwrappedKeys, Error>;
 }
 
+/// This struct provides the `Crypt` trait without any strong security.
+///
+/// It is intended for use only in test code where actual security is inconsequential.
 pub struct InsecureCrypt {}
 
+/// Used by `InsecureCrypt` as an extremely weak form of 'encryption'.
 const WRAP_XOR: u64 = 0x012345678abcdef;
 
 impl InsecureCrypt {

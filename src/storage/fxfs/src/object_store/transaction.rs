@@ -32,6 +32,11 @@ use {
     },
 };
 
+/// `Options` are provided to types that expose the `TransactionHandler` trait.
+///
+/// This allows for allow special handling of certain transactions such as deletes and the
+/// extension of Journal extents. For most other use cases it is appropriate to use
+/// `default()` here.
 #[derive(Clone, Copy, Default)]
 pub struct Options<'a> {
     /// If true, don't check for low journal space.  This should be true for any transactions that
