@@ -52,7 +52,7 @@ pub use file_system::FileSystemRepository;
 pub use http_repository::package_download;
 pub use manager::RepositoryManager;
 pub use pm::PmRepository;
-pub use server::{listen_addr, ConnectionStream, RepositoryServer, RepositoryServerBuilder};
+pub use server::{ConnectionStream, RepositoryServer, RepositoryServerBuilder};
 use tuf::metadata::VirtualTargetPath;
 
 /// A unique ID which is given to every repository.

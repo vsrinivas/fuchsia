@@ -16,6 +16,15 @@ const CONFIG_KEY_REGISTRATIONS: &str = "repository.registrations";
 const CONFIG_KEY_DEFAULT_REPOSITORY: &str = "repository.default";
 const ESCAPE_SET: &AsciiSet = &CONTROLS.add(b'%').add(b'.');
 
+/// Return the repository server address.
+pub async fn repository_listen_addr() -> Result<Option<std::net::SocketAddr>> {
+    if let Some(address) = ffx_config::get::<Option<String>, _>("repository.server.listen").await? {
+        Ok(Some(address.parse::<std::net::SocketAddr>()?))
+    } else {
+        Ok(None)
+    }
+}
+
 fn repository_query(repo_name: &str) -> String {
     let repo_name = percent_encode(repo_name.as_bytes(), ESCAPE_SET);
     format!("{}.{}", CONFIG_KEY_REPOSITORIES, repo_name)

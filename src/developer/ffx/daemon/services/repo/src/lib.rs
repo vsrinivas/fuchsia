@@ -24,8 +24,9 @@ use {
         FutureExt as _, StreamExt as _,
     },
     itertools::Itertools as _,
-    pkg::repository::{
-        self, listen_addr, ConnectionStream, Repository, RepositoryManager, RepositoryServer,
+    pkg::{
+        config as pkg_config,
+        repository::{self, ConnectionStream, Repository, RepositoryManager, RepositoryServer},
     },
     services::prelude::*,
     std::{
@@ -196,11 +197,18 @@ async fn register_target(
         bridge::RepositoryError::InternalError
     })?;
 
-    let listen_addr =
-        ffx_config::get::<String, _>("repository.server.listen").await.map_err(|e| {
-            log::error!("failed to get listen addr from config: {:?}", e);
-            bridge::RepositoryError::InternalError
-        })?;
+    let listen_addr = match pkg_config::repository_listen_addr().await {
+        Ok(Some(listen_addr)) => listen_addr,
+        Ok(None) => {
+            log::error!("repository server is not running");
+            return Err(bridge::RepositoryError::InternalError);
+        }
+        Err(err) => {
+            log::error!("failed to get listen addr from config: {:?}", err);
+            return Err(bridge::RepositoryError::InternalError);
+        }
+    };
+
     let config = repo
         .get_config(
             &format!("{}/{}", listen_addr, repo.name()),
@@ -853,13 +861,13 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlService for Repo<T
     async fn start(&mut self, cx: &Context) -> Result<(), anyhow::Error> {
         log::info!("Starting repository service");
 
-        match listen_addr().await {
+        match pkg_config::repository_listen_addr().await {
             Ok(Some(addr)) => {
                 let mut inner = self.inner.write().await;
                 inner.server = ServerState::Stopped(addr);
             }
             Ok(None) => {
-                log::warn!("repository.server.listen_addr not configured, not starting server");
+                log::warn!("repository.server.listen address not configured, not starting server");
             }
             Err(err) => {
                 log::warn!("Failed to read server address from config: {:#?}", err);
@@ -957,7 +965,19 @@ impl TargetEventHandler {
         Self { cx, inner, target }
     }
 
-    fn spawn_tunnel(&self, source_nodename: &str) {
+    async fn spawn_tunnel(&self, source_nodename: &str) {
+        let listen_addr = match pkg_config::repository_listen_addr().await {
+            Ok(Some(listen_addr)) => listen_addr,
+            Ok(None) => {
+                // Don't try to create a tunnel if the repository is not configured to run.
+                return;
+            }
+            Err(err) => {
+                log::error!("unable to look up repositry.server.listen from config: {:#}", err);
+                return;
+            }
+        };
+
         let cx = self.cx.clone();
         let inner = Arc::clone(&self.inner);
         let source_nodename = source_nodename.to_owned();
@@ -965,10 +985,9 @@ impl TargetEventHandler {
         fasync::Task::local(async move {
             let source_nodename_rcs = source_nodename.clone();
             let result = async move {
-                let listen_addr = ffx_config::get::<String, _>("repository.server.listen").await?;
                 let rc = cx.open_remote_control(Some(source_nodename_rcs)).await?;
                 let (client, server) = fidl::endpoints::create_endpoints()?;
-                rc.reverse_tcp(&mut SocketAddressExt(listen_addr.parse()?).into(), client)
+                rc.reverse_tcp(&mut SocketAddressExt(listen_addr).into(), client)
                     .await?
                     .map_err(|x| anyhow::anyhow!("{:?}", x))?;
                 Ok::<_, anyhow::Error>(server.into_stream()?)
@@ -1032,7 +1051,7 @@ impl EventHandler<TargetEvent> for TargetEventHandler {
             return Ok(EventStatus::Waiting);
         };
 
-        self.spawn_tunnel(&source_nodename);
+        self.spawn_tunnel(&source_nodename).await;
 
         // Find any saved registrations for this target and register them on the device.
         for (repo_name, targets) in pkg::config::get_registrations().await {

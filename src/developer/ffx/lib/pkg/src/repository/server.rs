@@ -43,14 +43,6 @@ const PARSE_RETRY_DELAY: Duration = Duration::from_micros(100);
 
 type SseResponseCreatorMap = RwLock<HashMap<RepositoryId, Arc<SseResponseCreator>>>;
 
-pub async fn listen_addr() -> Result<Option<std::net::SocketAddr>> {
-    if let Some(address) = ffx_config::get::<Option<String>, _>("repository.server.listen").await? {
-        Ok(Some(address.parse::<std::net::SocketAddr>()?))
-    } else {
-        Ok(None)
-    }
-}
-
 /// RepositoryManager represents the web server that serves [Repositories](Repository) to a target.
 pub struct RepositoryServer {
     local_addr: SocketAddr,
