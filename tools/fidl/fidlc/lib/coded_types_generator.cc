@@ -21,15 +21,49 @@ coded::MemcpyCompatibility ComputeMemcpyCompatibility(const flat::Type* type) {
 }
 
 CodedTypesGenerator::FlattenedStructMember::FlattenedStructMember(const flat::StructMember& member)
-    : type(member.type_ctor->type),
-      name(member.name),
-      inline_size_v1(member.typeshape(WireFormat::kV1NoEe).InlineSize()),
-      inline_size_v2(member.typeshape(WireFormat::kV2).InlineSize()),
-      offset_v1(member.fieldshape(WireFormat::kV1NoEe).Offset()),
-      offset_v2(member.fieldshape(WireFormat::kV2).Offset()),
-      padding(member.fieldshape(WireFormat::kV1NoEe).Padding()) {
+    : FlattenedStructMember(
+          member.type_ctor->type, member.name, member.typeshape(WireFormat::kV1NoEe),
+          member.typeshape(WireFormat::kV2), member.fieldshape(WireFormat::kV1NoEe),
+          member.fieldshape(WireFormat::kV2)) {
   assert(padding == member.fieldshape(WireFormat::kV2).Padding());
 }
+
+CodedTypesGenerator::FlattenedStructMember
+CodedTypesGenerator::FlattenedStructMember::PrependTransactionHeader() const {
+  return FlattenedStructMember{
+      type,
+      name,
+      inline_size_v1,
+      inline_size_v2,
+      offset_v1 + kSizeOfTransactionHeader,
+      offset_v2 + kSizeOfTransactionHeader,
+      padding,
+  };
+}
+
+CodedTypesGenerator::FlattenedStructMember::FlattenedStructMember(
+    const flat::Type* type, SourceSpan name, fidl::TypeShape typeshape_v1,
+    fidl::TypeShape typeshape_v2, fidl::FieldShape fieldshape_v1, fidl::FieldShape fieldshape_v2)
+    : type(type),
+      name(name),
+      inline_size_v1(typeshape_v1.InlineSize()),
+      inline_size_v2(typeshape_v2.InlineSize()),
+      offset_v1(fieldshape_v1.Offset()),
+      offset_v2(fieldshape_v2.Offset()),
+      padding(fieldshape_v1.Padding()) {
+  assert(padding == fieldshape_v2.Padding());
+}
+
+CodedTypesGenerator::FlattenedStructMember::FlattenedStructMember(
+    const flat::Type* type, SourceSpan name, uint32_t inline_size_v1, uint32_t inline_size_v2,
+    uint32_t offset_v1, uint32_t offset_v2, uint32_t padding)
+    : type(type),
+      name(name),
+      inline_size_v1(inline_size_v1),
+      inline_size_v2(inline_size_v2),
+      offset_v1(offset_v1),
+      offset_v2(offset_v2),
+      padding(padding) {}
 
 std::vector<CodedTypesGenerator::FlattenedStructMember> CodedTypesGenerator::FlattenedStructMembers(
     const flat::Struct& input) {
@@ -311,7 +345,8 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
                  "cannot process empty message payloads");
 
           if (message) {
-            for (const auto& parameter : FlattenedStructMembers(*message)) {
+            for (const auto& no_header_parameter : FlattenedStructMembers(*message)) {
+              const auto parameter = no_header_parameter.PrependTransactionHeader();
               auto coded_parameter_type =
                   CompileType(parameter.type, coded::CodingContext::kOutsideEnvelope);
               if (!coded_parameter_type->is_noop) {
@@ -494,10 +529,13 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
           assert((!message || (message && !message->members.empty())) &&
                  "cannot process empty message payloads");
 
-          auto typeshape_v1 = message != nullptr ? message->typeshape(WireFormat::kV1NoEe)
-                                                 : TypeShape::ForEmptyPayload();
-          auto typeshape_v2 = message != nullptr ? message->typeshape(WireFormat::kV2)
-                                                 : TypeShape::ForEmptyPayload();
+          auto typeshape_v1 =
+              message != nullptr
+                  ? message->typeshape(WireFormat::kV1NoEe).PrependTransactionHeader()
+                  : TypeShape::ForEmptyPayload();
+          auto typeshape_v2 = message != nullptr
+                                  ? message->typeshape(WireFormat::kV2).PrependTransactionHeader()
+                                  : TypeShape::ForEmptyPayload();
           protocol_messages.push_back(std::make_unique<coded::MessageType>(
               std::move(message_name), std::vector<coded::StructElement>(),
               typeshape_v1.InlineSize(), typeshape_v2.InlineSize(), typeshape_v1.HasEnvelope(),
@@ -530,13 +568,13 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
       if (struct_decl->is_request_or_response)
         break;
       std::string struct_name = NameCodedName(struct_decl->name);
-      named_coded_types_.emplace(
-          decl->name, std::make_unique<coded::StructType>(
-                          std::move(struct_name), std::vector<coded::StructElement>(),
-                          struct_decl->typeshape(WireFormat::kV1NoEe).InlineSize(),
-                          struct_decl->typeshape(WireFormat::kV2).InlineSize(),
-                          struct_decl->typeshape(fidl::WireFormat::kV1NoEe).HasEnvelope(),
-                          NameFlatName(struct_decl->name)));
+      auto typeshape_v1 = struct_decl->typeshape(WireFormat::kV1NoEe);
+      auto typeshape_v2 = struct_decl->typeshape(WireFormat::kV2);
+      named_coded_types_.emplace(decl->name,
+                                 std::make_unique<coded::StructType>(
+                                     std::move(struct_name), std::vector<coded::StructElement>(),
+                                     typeshape_v1.InlineSize(), typeshape_v2.InlineSize(),
+                                     typeshape_v1.HasEnvelope(), NameFlatName(struct_decl->name)));
       break;
     }
     case flat::Decl::Kind::kUnion: {

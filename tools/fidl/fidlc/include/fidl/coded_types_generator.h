@@ -40,7 +40,10 @@ class CodedTypesGenerator {
 
   // Representation of the fields of a struct member after it has been flattened.
   struct FlattenedStructMember {
-    FlattenedStructMember(const flat::StructMember& member);
+    explicit FlattenedStructMember(const flat::StructMember& member);
+
+    FlattenedStructMember PrependTransactionHeader() const;
+
     const flat::Type* type;
     const SourceSpan name;
     const uint32_t inline_size_v1;
@@ -48,6 +51,15 @@ class CodedTypesGenerator {
     uint32_t offset_v1;
     uint32_t offset_v2;
     uint32_t padding;
+
+   private:
+    FlattenedStructMember(const flat::Type* type, SourceSpan name, fidl::TypeShape typeshape_v1,
+                          fidl::TypeShape typeshape_v2, fidl::FieldShape fieldshape_v1,
+                          fidl::FieldShape fieldshape_v2);
+
+    FlattenedStructMember(const flat::Type* type, SourceSpan name, uint32_t inline_size_v1,
+                          uint32_t inline_size_v2, uint32_t offset_v1, uint32_t offset_v2,
+                          uint32_t padding);
   };
 
   // Flatten a list of flat-AST struct members by recursively descending and expanding.

@@ -57,13 +57,11 @@ static_assert(numeric_limits<DataSize>::max() == numeric_limits<uint32_t>::max()
 
 namespace {
 
+constexpr uint32_t kHandleSize = 4;
+
 namespace flat = fidl::flat;
 namespace types = fidl::types;
 using WireFormat = fidl::WireFormat;
-
-constexpr uint32_t kSizeOfTransactionHeader = 16;
-constexpr uint32_t kAlignmentOfTransactionHeader = 8;
-constexpr uint32_t kHandleSize = 4;
 
 DataSize UnalignedSize(const flat::Object& object, const WireFormat wire_format);
 DataSize UnalignedSize(const flat::Object* object, const WireFormat wire_format);
@@ -151,10 +149,8 @@ class UnalignedSizeVisitor final : public TypeShapeVisitor<DataSize> {
           case flat::Decl::Kind::kUnion:
             switch (wire_format()) {
               case WireFormat::kV1NoEe:
-              case WireFormat::kV1Header:
                 return DataSize(24);
               case WireFormat::kV2:
-              case WireFormat::kV2Header:
                 return DataSize(16);
             }
           case flat::Decl::Kind::kBits:
@@ -188,10 +184,6 @@ class UnalignedSizeVisitor final : public TypeShapeVisitor<DataSize> {
 
   std::any Visit(const flat::Struct& object) override {
     DataSize size = 0;
-    if (object.is_request_or_response && wire_format() != WireFormat::kV1Header &&
-        wire_format() != WireFormat::kV2Header) {
-      size += kSizeOfTransactionHeader;
-    }
     if (object.members.empty()) {
       return DataSize(1 + size);
     }
@@ -222,10 +214,8 @@ class UnalignedSizeVisitor final : public TypeShapeVisitor<DataSize> {
   std::any Visit(const flat::Union& object) override {
     switch (wire_format()) {
       case WireFormat::kV1NoEe:
-      case WireFormat::kV1Header:
         return DataSize(24);
       case WireFormat::kV2:
-      case WireFormat::kV2Header:
         return DataSize(16);
     }
   }
@@ -310,7 +300,7 @@ class AlignmentVisitor final : public TypeShapeVisitor<DataSize> {
       // which changed method ordinals from 32 to 64 bits. Before FTP-029, the assumed alignment was
       // 4, but in practice, all FIDL bindings and typeshape calculation code were assuming a
       // minimum alignment of 8.)
-      return DataSize(kAlignmentOfTransactionHeader);
+      return DataSize(fidl::kAlignmentOfTransactionHeader);
     }
 
     if (object.members.empty()) {
@@ -736,7 +726,7 @@ class MaxOutOfLineVisitor final : public TypeShapeVisitor<DataSize> {
     DataSize max_out_of_line = 0;
 
     for (const auto& member : object.members) {
-      if (wire_format() == WireFormat::kV2 || wire_format() == WireFormat::kV2Header) {
+      if (wire_format() == WireFormat::kV2) {
         if (UnalignedSize(member, wire_format()) <= 4) {
           continue;
         }
@@ -763,11 +753,9 @@ class MaxOutOfLineVisitor final : public TypeShapeVisitor<DataSize> {
     DataSize envelope_size = 0;
     switch (wire_format()) {
       case WireFormat::kV1NoEe:
-      case WireFormat::kV1Header:
         envelope_size = 16;
         break;
       case WireFormat::kV2:
-      case WireFormat::kV2Header:
         envelope_size = 8;
         break;
     }
@@ -786,7 +774,7 @@ class MaxOutOfLineVisitor final : public TypeShapeVisitor<DataSize> {
     DataSize max_out_of_line = 0;
 
     for (const auto& member : object.members) {
-      if (wire_format() == WireFormat::kV2 || wire_format() == WireFormat::kV2Header) {
+      if (wire_format() == WireFormat::kV2) {
         if (UnalignedSize(member, wire_format()) <= 4) {
           continue;
         }
@@ -1223,6 +1211,13 @@ TypeShape TypeShape::ForEmptyPayload() {
   return TypeShape(kSizeOfTransactionHeader, kAlignmentOfTransactionHeader);
 }
 
+TypeShape TypeShape::PrependTransactionHeader() const {
+  TypeShape typeshape = *this;
+  typeshape.inline_size += kSizeOfTransactionHeader;
+  typeshape.alignment = std::max(typeshape.alignment, kAlignmentOfTransactionHeader);
+  return typeshape;
+}
+
 FieldShape::FieldShape(const flat::StructMember& member, const WireFormat wire_format) {
   assert(member.parent);
   const flat::Struct& parent = *member.parent;
@@ -1231,11 +1226,6 @@ FieldShape::FieldShape(const flat::StructMember& member, const WireFormat wire_f
   // called.
   assert(parent.members.size());
   const std::vector<flat::StructMember>& members = parent.members;
-
-  if (parent.is_request_or_response && wire_format != WireFormat::kV1Header &&
-      wire_format != WireFormat::kV2Header) {
-    offset += kSizeOfTransactionHeader;
-  }
 
   for (size_t i = 0; i < members.size(); i++) {
     const flat::StructMember* it = &members.at(i);
@@ -1266,5 +1256,11 @@ FieldShape::FieldShape(const flat::UnionMemberUsed& member, const WireFormat wir
     : offset(0u),
       padding(
           ::Padding(UnalignedSize(member, wire_format), Alignment(member.parent, wire_format))) {}
+
+FieldShape FieldShape::PrependTransactionHeader() const {
+  FieldShape fieldshape = *this;
+  fieldshape.offset += kSizeOfTransactionHeader;
+  return fieldshape;
+}
 
 }  // namespace fidl

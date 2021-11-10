@@ -11,6 +11,9 @@
 // organization.
 namespace fidl {
 
+constexpr uint32_t kSizeOfTransactionHeader = 16;
+constexpr uint32_t kAlignmentOfTransactionHeader = 8;
+
 namespace flat {
 
 struct Object;
@@ -21,15 +24,14 @@ struct UnionMemberUsed;
 }  // namespace flat
 
 enum class WireFormat {
-  kV1NoEe,    // The v1-no-ee wire format, where "union" is an extensible union on-the-wire,
-              // but without efficient envelope support.
-  kV1Header,  // The v1 wire format, except where request and response structs do not receive
-              // any special treatment (e.g. having their size increased by 16 for the transactional
-              // header)
-  kV2,        // The v2 wire format, using efficient envelopes.
-  kV2Header,  // The v2 wire format, except where request and response structs do not receive
-              // any special treatment (e.g. having their size increased by 16 for the transactional
-              // header)
+  kV1NoEe,  // The v1-no-ee wire format, where "union" is an extensible union on-the-wire,
+            // but without efficient envelope support. Request and response structs do not receive
+            // any special treatment (e.g. having their size increased by 16 for the transactional
+            // header).
+
+  kV2,  // The v2 wire format, using efficient envelopes. Request and response structs do not
+        // receive any special treatment (e.g. having their size increased by 16 for the
+        // transactional header).
 };
 
 struct TypeShape {
@@ -78,6 +80,9 @@ struct TypeShape {
   // with no payload body.
   static TypeShape ForEmptyPayload();
 
+  // Returns another TypeShape as if the type had an extra transaction header.
+  TypeShape PrependTransactionHeader() const;
+
  private:
   explicit TypeShape(uint32_t inline_size, uint32_t alignment)
       : inline_size(inline_size),
@@ -108,6 +113,9 @@ struct FieldShape {
 
   void SetOffset(uint32_t updated_offset) { offset = updated_offset; }
   void SetPadding(uint32_t updated_padding) { padding = updated_padding; }
+
+  // Returns another FieldShape whose offsets accounts for an extra transaction header.
+  FieldShape PrependTransactionHeader() const;
 
   uint32_t offset = 0;
   uint32_t padding = 0;

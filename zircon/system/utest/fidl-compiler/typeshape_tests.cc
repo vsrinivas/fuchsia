@@ -61,23 +61,21 @@ void CheckTypeShape(const fidl::flat::Object* actual, Expected expected_v1_no_ee
                     Expected expected_v1_header, Expected expected_v2,
                     Expected expected_v2_header) {
   ASSERT_NO_FAILURES(
-      CheckTypeShape(fidl::TypeShape(actual, fidl::WireFormat::kV1NoEe), expected_v1_no_ee));
+      CheckTypeShape(fidl::TypeShape(actual, fidl::WireFormat::kV1NoEe).PrependTransactionHeader(),
+                     expected_v1_no_ee));
   ASSERT_NO_FAILURES(
-      CheckTypeShape(fidl::TypeShape(actual, fidl::WireFormat::kV1Header), expected_v1_header));
-  ASSERT_NO_FAILURES(CheckTypeShape(fidl::TypeShape(actual, fidl::WireFormat::kV2), expected_v2));
+      CheckTypeShape(fidl::TypeShape(actual, fidl::WireFormat::kV1NoEe), expected_v1_header));
+  ASSERT_NO_FAILURES(CheckTypeShape(
+      fidl::TypeShape(actual, fidl::WireFormat::kV2).PrependTransactionHeader(), expected_v2));
   ASSERT_NO_FAILURES(
-      CheckTypeShape(fidl::TypeShape(actual, fidl::WireFormat::kV2Header), expected_v2_header));
+      CheckTypeShape(fidl::TypeShape(actual, fidl::WireFormat::kV2), expected_v2_header));
 }
 
 void CheckTypeShape(const fidl::flat::Object* actual, Expected expected_v1_no_ee,
                     Expected expected_v2) {
   ASSERT_NO_FAILURES(
       CheckTypeShape(fidl::TypeShape(actual, fidl::WireFormat::kV1NoEe), expected_v1_no_ee));
-  ASSERT_NO_FAILURES(
-      CheckTypeShape(fidl::TypeShape(actual, fidl::WireFormat::kV1Header), expected_v1_no_ee));
   ASSERT_NO_FAILURES(CheckTypeShape(fidl::TypeShape(actual, fidl::WireFormat::kV2), expected_v2));
-  ASSERT_NO_FAILURES(
-      CheckTypeShape(fidl::TypeShape(actual, fidl::WireFormat::kV2Header), expected_v2));
 }
 
 void CheckTypeShape(const fidl::flat::Object* actual, Expected expected) {
@@ -2326,6 +2324,106 @@ type Empty = struct {};
                                     }));
 }
 
+TEST(TypeshapeTests, GoodSimpleRequest) {
+  TestLibrary library(R"FIDL(library example;
+
+protocol Test {
+    Method(struct { a int16; b int16; });
+};
+)FIDL");
+  ASSERT_COMPILED(library);
+
+  auto protocol = library.LookupProtocol("Test");
+  ASSERT_NOT_NULL(protocol);
+  ASSERT_EQ(protocol->methods.size(), 1);
+  auto& method = protocol->methods[0];
+  auto method_request = method.maybe_request_payload;
+  EXPECT_EQ(method.has_request, true);
+  ASSERT_NOT_NULL(method_request);
+
+  ASSERT_NO_FAILURES(CheckTypeShape(method_request,
+                                    Expected{
+                                        .inline_size = 24,
+                                        .alignment = 8,
+                                        .max_handles = 0,
+                                        .has_padding = true,
+                                    },
+                                    Expected{
+                                        .inline_size = 8,
+                                        .alignment = 8,
+                                        .max_handles = 0,
+                                        .has_padding = true,
+                                    },
+                                    Expected{
+                                        .inline_size = 24,
+                                        .alignment = 8,
+                                        .max_handles = 0,
+                                        .has_padding = true,
+                                    },
+                                    Expected{
+                                        .inline_size = 8,
+                                        .alignment = 8,
+                                        .max_handles = 0,
+                                        .has_padding = true,
+                                    }));
+
+  ASSERT_EQ(method_request->members.size(), 2);
+  ASSERT_NO_FAILURES(
+      CheckFieldShape(method_request->members[0], ExpectedField{.offset = 0, .padding = 0}));
+  ASSERT_NO_FAILURES(
+      CheckFieldShape(method_request->members[1], ExpectedField{.offset = 2, .padding = 4}));
+}
+
+TEST(TypeshapeTests, GoodSimpleResponse) {
+  TestLibrary library(R"FIDL(library example;
+
+protocol Test {
+    Method() -> (struct { a int16; b int16; });
+};
+)FIDL");
+  ASSERT_COMPILED(library);
+
+  auto protocol = library.LookupProtocol("Test");
+  ASSERT_NOT_NULL(protocol);
+  ASSERT_EQ(protocol->methods.size(), 1);
+  auto& method = protocol->methods[0];
+  auto method_response = method.maybe_response_payload;
+  EXPECT_EQ(method.has_response, true);
+  ASSERT_NOT_NULL(method_response);
+
+  ASSERT_NO_FAILURES(CheckTypeShape(method_response,
+                                    Expected{
+                                        .inline_size = 24,
+                                        .alignment = 8,
+                                        .max_handles = 0,
+                                        .has_padding = true,
+                                    },
+                                    Expected{
+                                        .inline_size = 8,
+                                        .alignment = 8,
+                                        .max_handles = 0,
+                                        .has_padding = true,
+                                    },
+                                    Expected{
+                                        .inline_size = 24,
+                                        .alignment = 8,
+                                        .max_handles = 0,
+                                        .has_padding = true,
+                                    },
+                                    Expected{
+                                        .inline_size = 8,
+                                        .alignment = 8,
+                                        .max_handles = 0,
+                                        .has_padding = true,
+                                    }));
+
+  ASSERT_EQ(method_response->members.size(), 2);
+  ASSERT_NO_FAILURES(
+      CheckFieldShape(method_response->members[0], ExpectedField{.offset = 0, .padding = 0}));
+  ASSERT_NO_FAILURES(
+      CheckFieldShape(method_response->members[1], ExpectedField{.offset = 2, .padding = 4}));
+}
+
 TEST(TypeshapeTests, GoodRecursiveRequest) {
   TestLibrary library(R"FIDL(library example;
 
@@ -2387,7 +2485,7 @@ protocol MessagePort {
                                     }));
   ASSERT_EQ(post_message_request->members.size(), 1);
   ASSERT_NO_FAILURES(
-      CheckFieldShape(post_message_request->members[0], ExpectedField{.offset = 16, .padding = 4}));
+      CheckFieldShape(post_message_request->members[0], ExpectedField{.offset = 0, .padding = 4}));
 }
 
 TEST(TypeshapeTests, GoodRecursiveOptRequest) {
