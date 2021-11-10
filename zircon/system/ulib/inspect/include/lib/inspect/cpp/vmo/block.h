@@ -6,9 +6,11 @@
 #define LIB_INSPECT_CPP_VMO_BLOCK_H_
 
 #include <lib/inspect/cpp/vmo/limits.h>
+#include <lib/stdcompat/optional.h>
 #include <zircon/types.h>
 
 #include <algorithm>
+#include <cstdint>
 #include <type_traits>
 
 namespace inspect {
@@ -202,8 +204,27 @@ constexpr size_t PayloadCapacity(BlockOrder order) {
   return OrderToSize(order) - sizeof(Block::header);
 }
 
-constexpr size_t ArrayCapacity(BlockOrder order) {
-  return (OrderToSize(order) - sizeof(Block::header) - sizeof(Block::payload)) / sizeof(uint64_t);
+constexpr cpp17::optional<size_t> SizeForArrayPayload(const BlockType payload_type) {
+  switch (payload_type) {
+    case BlockType::kIntValue:
+    case BlockType::kUintValue:
+    case BlockType::kDoubleValue:
+      return {sizeof(uint64_t)};
+    case BlockType::kStringReference:
+      return {sizeof(uint32_t)};
+
+    default:
+      return {};
+  }
+}
+
+constexpr cpp17::optional<size_t> ArrayCapacity(BlockOrder order, BlockType type) {
+  const auto size = SizeForArrayPayload(type);
+  if (size.has_value()) {
+    return (OrderToSize(order) - sizeof(Block::header) - sizeof(Block::payload)) / size.value();
+  }
+
+  return {};
 }
 
 constexpr size_t BlockSizeForPayload(size_t payload_size) {
@@ -225,12 +246,27 @@ constexpr T* GetArraySlot(B* block, size_t index) {
     return nullptr;
   }
 
-  if (index > ArrayCapacity(GetOrder(block))) {
+  const auto capacity = ArrayCapacity(
+      GetOrder(block), ArrayBlockPayload::EntryType::Get<BlockType>(block->payload.u64));
+  if (!capacity.has_value()) {
+    return nullptr;
+  }
+
+  if (index > capacity.value()) {
     return nullptr;
   }
 
   T* arr = reinterpret_cast<T*>(&block->payload);
-  return arr + index + 1 /* skip inline payload */;
+  return arr + index + (sizeof(uint64_t) / sizeof(T)) /* skip inline payload */;
+}
+
+inline cpp17::optional<BlockIndex> GetArraySlotForString(const Block* block, size_t index) {
+  const auto* tmp = GetArraySlot<const uint32_t>(block, index);
+  if (tmp == nullptr) {
+    return {};
+  }
+
+  return static_cast<const BlockIndex>(*tmp);
 }
 
 constexpr size_t kMaxPayloadSize = kMaxOrderSize - sizeof(Block::header);

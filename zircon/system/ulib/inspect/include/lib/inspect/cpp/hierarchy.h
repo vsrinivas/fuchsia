@@ -258,6 +258,7 @@ enum class PropertyFormat : uint8_t {
   kString = 7,
   kBytes = 8,
   kBool = 9,
+  kStringArray = 10,
 };
 
 using IntPropertyValue = internal::Value<int64_t, static_cast<size_t>(PropertyFormat::kInt)>;
@@ -267,6 +268,8 @@ using BoolPropertyValue = internal::Value<bool, static_cast<size_t>(PropertyForm
 using IntArrayValue = internal::Array<int64_t, static_cast<size_t>(PropertyFormat::kIntArray)>;
 using UintArrayValue = internal::Array<uint64_t, static_cast<size_t>(PropertyFormat::kUintArray)>;
 using DoubleArrayValue = internal::Array<double, static_cast<size_t>(PropertyFormat::kDoubleArray)>;
+using StringArrayValue =
+    internal::Array<std::string, static_cast<size_t>(PropertyFormat::kStringArray)>;
 using StringPropertyValue =
     internal::Value<std::string, static_cast<size_t>(PropertyFormat::kString)>;
 using ByteVectorPropertyValue =
@@ -276,7 +279,7 @@ using ByteVectorPropertyValue =
 using PropertyValue = internal::NamedValue<
     cpp17::variant<cpp17::monostate, IntPropertyValue, UintPropertyValue, DoublePropertyValue,
                    IntArrayValue, UintArrayValue, DoubleArrayValue, StringPropertyValue,
-                   ByteVectorPropertyValue, BoolPropertyValue>,
+                   ByteVectorPropertyValue, BoolPropertyValue, StringArrayValue>,
     PropertyFormat>;
 
 // A Node parsed from a Hierarchy.

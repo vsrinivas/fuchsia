@@ -109,7 +109,12 @@ void AutoGenerationIncrement::Release(Block* block) {
 template <typename NumericType, typename WrapperType, BlockType BlockTypeValue>
 WrapperType State::InnerCreateArray(BorrowedStringValue name, BlockIndex parent, size_t slots,
                                     ArrayBlockFormat format) {
-  size_t block_size_needed = slots * sizeof(NumericType) + kMinOrderSize;
+  const auto size_of_payload_type = SizeForArrayPayload(BlockTypeValue);
+  if (!size_of_payload_type.has_value()) {
+    return WrapperType();
+  }
+
+  size_t block_size_needed = slots * size_of_payload_type.value() + kMinOrderSize;
   ZX_DEBUG_ASSERT_MSG(block_size_needed <= kMaxOrderSize,
                       "The requested array size cannot fit in a block");
   if (block_size_needed > kMaxOrderSize) {

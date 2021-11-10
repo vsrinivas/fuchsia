@@ -6,6 +6,7 @@
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/reader.h>
+#include <lib/inspect/cpp/vmo/block.h>
 
 #include <condition_variable>
 #include <cstdint>
@@ -22,6 +23,8 @@ using inspect::Inspector;
 using inspect::MissingValueReason;
 using inspect::Node;
 using inspect::Snapshot;
+using inspect::StringArrayValue;
+using inspect::internal::ArrayBlockPayload;
 using inspect::internal::Block;
 using inspect::internal::BlockType;
 using inspect::internal::ExtentBlockFields;
@@ -101,6 +104,48 @@ TEST(Reader, InterpretInlineStringReferences) {
   EXPECT_EQ(1u, result.value().node().properties().size());
   EXPECT_EQ("a", result.value().children().at(0).node().name());
   EXPECT_EQ("a", result.value().node().properties().at(0).name());
+}
+
+TEST(Reader, InterpretStringArrays) {
+  std::vector<uint8_t> buf(128);
+  MakeHeader(&buf);
+  auto name = std::make_pair("n", uint32_t(1));
+  auto zero = std::make_pair("0", uint32_t(2));
+  auto one = std::make_pair("1", uint32_t(3));
+  auto two = std::make_pair("2", uint32_t(4));
+
+  MakeStringReference(name.second, name.first, 0, 1, &buf);
+  MakeStringReference(zero.second, zero.first, 0, 1, &buf);
+  MakeStringReference(one.second, one.first, 0, 1, &buf);
+  MakeStringReference(two.second, two.first, 0, 1, &buf);
+
+  Block* string_array = reinterpret_cast<Block*>(buf.data() + kMinOrderSize * 5);
+  string_array->header =
+      ValueBlockFields::Type::Make(BlockType::kArrayValue) | ValueBlockFields::Order::Make(1) |
+      ValueBlockFields::NameIndex::Make(name.second) | ValueBlockFields::ParentIndex::Make(0);
+  string_array->payload.u64 =
+      ArrayBlockPayload::EntryType::Make(BlockType::kStringReference) |
+      ArrayBlockPayload::Flags::Make(inspect::internal::ArrayBlockFormat::kDefault) |
+      ArrayBlockPayload::Count::Make(4);
+
+  uint32_t indexes[] = {zero.second, one.second, two.second};
+  memcpy(string_array->payload_ptr() + 8, indexes, 3 * sizeof(uint32_t));
+
+  auto result = inspect::ReadFromBuffer(std::move(buf));
+  EXPECT_TRUE(result.is_ok());
+  auto& root_node = result.value().node();
+
+  EXPECT_EQ(1u, root_node.properties().size());
+
+  auto& array_prop = root_node.properties()[0];
+  std::vector<std::string> expected_data = {zero.first, one.first, two.first, ""};
+  auto& actual_data = array_prop.Get<StringArrayValue>().value();
+  EXPECT_EQ(name.first, array_prop.name());
+  ASSERT_EQ(expected_data.size(), actual_data.size());
+
+  for (size_t i = 0; i < expected_data.size(); ++i) {
+    EXPECT_EQ(expected_data[i], actual_data[i]);
+  }
 }
 
 TEST(Reader, InterpretStringReferences) {

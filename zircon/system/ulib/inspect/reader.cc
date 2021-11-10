@@ -386,8 +386,8 @@ void Reader::InnerParseNumericProperty(ParsedNode* parent, const Block* block) {
           PropertyValue(std::move(name.value()), BoolPropertyValue(block->payload.u64)));
       return;
     case BlockType::kArrayValue: {
-      auto entry_type = ArrayBlockPayload::EntryType::Get<BlockType>(block->payload.u64);
-      auto count = ArrayBlockPayload::Count::Get<uint8_t>(block->payload.u64);
+      const auto entry_type = ArrayBlockPayload::EntryType::Get<BlockType>(block->payload.u64);
+      const auto count = ArrayBlockPayload::Count::Get<uint8_t>(block->payload.u64);
       if (GetArraySlot<const int64_t>(block, count - 1) == nullptr) {
         // Block does not store the entire array.
         return;
@@ -398,22 +398,47 @@ void Reader::InnerParseNumericProperty(ParsedNode* parent, const Block* block) {
 
       if (entry_type == BlockType::kIntValue) {
         std::vector<int64_t> values;
+        values.reserve(count);
         std::copy(GetArraySlot<const int64_t>(block, 0), GetArraySlot<const int64_t>(block, count),
                   std::back_inserter(values));
+
         parent_node->add_property(
             PropertyValue(std::move(name.value()), IntArrayValue(std::move(values), array_format)));
       } else if (entry_type == BlockType::kUintValue) {
         std::vector<uint64_t> values;
+        values.reserve(count);
         std::copy(GetArraySlot<const uint64_t>(block, 0),
                   GetArraySlot<const uint64_t>(block, count), std::back_inserter(values));
+
         parent_node->add_property(PropertyValue(std::move(name.value()),
                                                 UintArrayValue(std::move(values), array_format)));
       } else if (entry_type == BlockType::kDoubleValue) {
         std::vector<double> values;
+        values.reserve(count);
         std::copy(GetArraySlot<const double>(block, 0), GetArraySlot<const double>(block, count),
                   std::back_inserter(values));
+
         parent_node->add_property(PropertyValue(std::move(name.value()),
                                                 DoubleArrayValue(std::move(values), array_format)));
+      } else if (entry_type == BlockType::kStringReference) {
+        std::vector<std::string> values(count);
+        for (auto i = 0; i < count; i++) {
+          const auto value_index = GetArraySlotForString(block, i);
+          if (!value_index.has_value()) {
+            continue;
+          }
+
+          auto read_string =
+              LoadStringReference(internal::GetBlock(&snapshot_, value_index.value()));
+          if (!read_string.has_value()) {
+            continue;
+          }
+
+          values.at(i) = std::move(read_string.value());
+        }
+
+        parent_node->add_property(PropertyValue(std::move(name.value()),
+                                                StringArrayValue(std::move(values), array_format)));
       }
       return;
     }
