@@ -1,0 +1,3 @@
+// TODO(fxbug.dev/67858): Change strings to integers and add more declarations to this file.
+@available(added="1", deprecated="2", removed="3")
+library fidl.test.versions;

@@ -35,3 +35,4 @@ type_aliases.go.golden
 union.go.golden
 union_sandwich.go.golden
 vectors.go.golden
+versions.go.golden

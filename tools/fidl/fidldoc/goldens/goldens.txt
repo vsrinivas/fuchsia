@@ -39,3 +39,4 @@ type_aliases.md.golden
 union.md.golden
 union_sandwich.md.golden
 vectors.md.golden
+versions.md.golden

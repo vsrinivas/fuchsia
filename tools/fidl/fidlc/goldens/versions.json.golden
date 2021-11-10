@@ -1,0 +1,90 @@
+{
+  "version": "0.0.1",
+  "name": "fidl.test.versions",
+  "maybe_attributes": [
+    {
+      "name": "available",
+      "arguments": [
+        {
+          "name": "added",
+          "type": "string",
+          "value": {
+            "kind": "literal",
+            "value": "1",
+            "expression": "\"1\"",
+            "literal": {
+              "kind": "string",
+              "value": "1",
+              "expression": "\"1\""
+            }
+          },
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+            "line": 2,
+            "column": 12,
+            "length": 9
+          }
+        },
+        {
+          "name": "deprecated",
+          "type": "string",
+          "value": {
+            "kind": "literal",
+            "value": "2",
+            "expression": "\"2\"",
+            "literal": {
+              "kind": "string",
+              "value": "2",
+              "expression": "\"2\""
+            }
+          },
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+            "line": 2,
+            "column": 23,
+            "length": 14
+          }
+        },
+        {
+          "name": "removed",
+          "type": "string",
+          "value": {
+            "kind": "literal",
+            "value": "3",
+            "expression": "\"3\"",
+            "literal": {
+              "kind": "string",
+              "value": "3",
+              "expression": "\"3\""
+            }
+          },
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+            "line": 2,
+            "column": 39,
+            "length": 11
+          }
+        }
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+        "line": 2,
+        "column": 1,
+        "length": 50
+      }
+    }
+  ],
+  "library_dependencies": [],
+  "bits_declarations": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "experimental_resource_declarations": [],
+  "interface_declarations": [],
+  "service_declarations": [],
+  "struct_declarations": [],
+  "table_declarations": [],
+  "union_declarations": [],
+  "type_alias_declarations": [],
+  "declaration_order": [],
+  "declarations": {}
+}

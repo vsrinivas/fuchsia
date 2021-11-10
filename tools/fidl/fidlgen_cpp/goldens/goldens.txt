@@ -70,3 +70,5 @@ union_sandwich.cc.golden
 union_sandwich.h.golden
 vectors.cc.golden
 vectors.h.golden
+versions.cc.golden
+versions.h.golden

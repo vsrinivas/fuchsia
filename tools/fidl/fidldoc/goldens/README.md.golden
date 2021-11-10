@@ -161,6 +161,10 @@
     <td><a href="fidl.test.vectors/index">fidl.test.vectors</a></td>
     <td></td>
 </tr>
+<tr>
+    <td><a href="fidl.test.versions/index">fidl.test.versions</a></td>
+    <td></td>
+</tr>
 </tbody>
 </table>
 

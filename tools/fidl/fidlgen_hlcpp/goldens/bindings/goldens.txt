@@ -106,3 +106,6 @@ union_test_base.h.golden
 vectors.cc.golden
 vectors.h.golden
 vectors_test_base.h.golden
+versions.cc.golden
+versions.h.golden
+versions_test_base.h.golden

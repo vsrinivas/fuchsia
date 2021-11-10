@@ -72,3 +72,5 @@ union_sandwich_test.dart.golden
 union_test.dart.golden
 vectors_async.dart.golden
 vectors_test.dart.golden
+versions_async.dart.golden
+versions_test.dart.golden

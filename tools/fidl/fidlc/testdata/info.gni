@@ -516,6 +516,14 @@ fidl_testdata_info = [
       "fidlgen_libfuzzer",
     ]
   },
+  {
+    name = "versions"
+    target = "//tools/fidl/fidlc/testdata:fidl.test.versions"
+    denylist = [
+      # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
+      "fidlgen_libfuzzer",
+    ]
+  },
 ]
 
 # Add computed properties.

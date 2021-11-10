@@ -35,3 +35,4 @@ type_aliases.rs.golden
 union.rs.golden
 union_sandwich.rs.golden
 vectors.rs.golden
+versions.rs.golden

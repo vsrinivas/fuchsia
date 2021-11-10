@@ -79,3 +79,5 @@ toc:
     path: /fidl.test.unionsandwich
   - title: fidl.test.vectors
     path: /fidl.test.vectors
+  - title: fidl.test.versions
+    path: /fidl.test.versions

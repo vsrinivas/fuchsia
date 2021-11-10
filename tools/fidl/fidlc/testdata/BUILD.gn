@@ -35,6 +35,7 @@ standalone_libraries = [
   "union.test.fidl",
   "union_sandwich.test.fidl",
   "vectors.test.fidl",
+  "versions.test.fidl",
 ]
 
 foreach(filename, standalone_libraries) {

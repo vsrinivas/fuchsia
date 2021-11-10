@@ -74,3 +74,5 @@ union_sandwich.json.golden
 union_sandwich.tables.c.golden
 vectors.json.golden
 vectors.tables.c.golden
+versions.json.golden
+versions.tables.c.golden

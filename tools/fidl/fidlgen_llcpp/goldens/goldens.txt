@@ -250,3 +250,10 @@ vectors_wire_messaging.cc.golden
 vectors_wire_messaging.h.golden
 vectors_wire_types.cc.golden
 vectors_wire_types.h.golden
+versions.h.golden
+versions_markers.h.golden
+versions_test_base.h.golden
+versions_wire_messaging.cc.golden
+versions_wire_messaging.h.golden
+versions_wire_types.cc.golden
+versions_wire_types.h.golden
