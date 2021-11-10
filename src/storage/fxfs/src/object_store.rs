@@ -9,13 +9,13 @@ mod constants;
 pub mod crypt;
 pub mod data_buffer;
 pub mod directory;
+mod extent_record;
 pub mod filesystem;
 pub mod fsck;
 mod graveyard;
 mod journal;
 mod merge;
 pub mod object_manager;
-mod extent_record;
 mod object_record;
 pub mod store_object_handle;
 #[cfg(test)]
@@ -44,15 +44,11 @@ use {
         object_handle::{ObjectHandle, ObjectHandleExt, INVALID_OBJECT_ID},
         object_store::{
             data_buffer::{DataBuffer, MemDataBuffer},
+            extent_record::{Checksums, ExtentKey, ExtentValue, DEFAULT_DATA_ATTRIBUTE_ID},
             filesystem::{ApplyMode, Filesystem, Mutations},
             journal::checksum_list::ChecksumList,
             object_manager::{ObjectManager, ReservationUpdate},
-            object_record::{
-                EncryptionKeys, ObjectKey, ObjectKind, ObjectValue,
-            },
-            extent_record::{
-                Checksums, ExtentKey, ExtentValue, DEFAULT_DATA_ATTRIBUTE_ID,
-            },
+            object_record::{EncryptionKeys, ObjectKey, ObjectKind, ObjectValue},
             store_object_handle::DirectWriter,
             transaction::{
                 AssocObj, AssociatedObject, ExtentMutation, Mutation, NoOrd, ObjectStoreMutation,
@@ -243,7 +239,7 @@ pub struct ObjectStore {
     parent_store: Option<Arc<ObjectStore>>,
     store_object_id: u64,
     device: Arc<dyn Device>,
-    block_size: u32,
+    block_size: u64,
     filesystem: Weak<dyn Filesystem>,
     store_info: Mutex<StoreOrReplayInfo>,
     tree: LSMTree<ObjectKey, ObjectValue>,
@@ -294,7 +290,7 @@ impl ObjectStore {
         &self.device
     }
 
-    pub fn block_size(&self) -> u32 {
+    pub fn block_size(&self) -> u64 {
         self.block_size
     }
 
@@ -1136,9 +1132,9 @@ mod tests {
             object_store::{
                 crypt::InsecureCrypt,
                 directory::Directory,
+                extent_record::{ExtentKey, ExtentValue},
                 filesystem::{Filesystem, FxFilesystem, Mutations, OpenFxFilesystem, SyncOptions},
                 fsck::fsck,
-                extent_record::{ExtentKey, ExtentValue},
                 object_record::{ObjectKey, ObjectValue},
                 transaction::{Options, TransactionHandler},
                 HandleOptions, ObjectStore,

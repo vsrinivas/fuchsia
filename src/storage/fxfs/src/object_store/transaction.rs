@@ -9,8 +9,8 @@ use {
         object_handle::INVALID_OBJECT_ID,
         object_store::{
             allocator::{AllocatorItem, Reservation},
-            object_manager::{reserved_space_from_journal_usage, ObjectManager},
             extent_record::{ExtentKey, ExtentValue},
+            object_manager::{reserved_space_from_journal_usage, ObjectManager},
             object_record::{ObjectItem, ObjectKey, ObjectValue},
         },
     },

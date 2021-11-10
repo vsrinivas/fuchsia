@@ -243,10 +243,7 @@ impl ObjectItem {
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::ObjectKey,
-        crate::lsm_tree::types::{NextKey},
-    };
+    use {super::ObjectKey, crate::lsm_tree::types::NextKey};
 
     // TODO(ripper): Tests similar to extent_record.rs
 
@@ -255,4 +252,3 @@ mod tests {
         assert!(ObjectKey::object(1).next_key().is_none());
     }
 }
-

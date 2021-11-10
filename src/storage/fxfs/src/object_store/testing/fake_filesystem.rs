@@ -68,7 +68,7 @@ impl Filesystem for FakeFilesystem {
         Ok(())
     }
 
-    fn block_size(&self) -> u32 {
+    fn block_size(&self) -> u64 {
         4096
     }
 

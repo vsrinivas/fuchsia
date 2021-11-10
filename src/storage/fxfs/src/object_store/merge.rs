@@ -193,11 +193,8 @@ mod tests {
                 types::{Item, LayerIterator, MergeableKey, Value},
                 LSMTree,
             },
-            object_store::extent_record::{
-                Checksums, ExtentKey, ExtentValue },
-            object_store::object_record::{
-                EncryptionKeys, ObjectKey, ObjectValue, Timestamp,
-            },
+            object_store::extent_record::{Checksums, ExtentKey, ExtentValue},
+            object_store::object_record::{EncryptionKeys, ObjectKey, ObjectValue, Timestamp},
         },
         anyhow::Error,
         fuchsia_async as fasync,

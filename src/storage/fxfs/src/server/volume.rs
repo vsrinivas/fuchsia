@@ -342,7 +342,7 @@ impl FilesystemRename for FxVolume {
 
 impl Filesystem for FxVolume {
     fn block_size(&self) -> u32 {
-        self.store.block_size()
+        self.store.block_size().try_into().unwrap()
     }
 }
 

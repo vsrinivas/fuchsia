@@ -255,7 +255,7 @@ impl Inner {
 
 // Returns an page-aligned range and applies read-ahead.  The range will not be extended past
 // `limit`.
-fn align_range(mut range: Range<u64>, block_size: u32, limit: u64) -> Range<u64> {
+fn align_range(mut range: Range<u64>, block_size: u64, limit: u64) -> Range<u64> {
     // Align the start to the page boundary rather than the block boundary because the preceding
     // page might already be present.
     range.start = round_down(range.start, PAGE_SIZE);
@@ -502,7 +502,7 @@ impl MemDataBuffer {
             // read to finish...
             match result {
                 Left(read_key) => {
-                    let block_size = std::cmp::max(source.block_size(), PAGE_SIZE as u32);
+                    let block_size = std::cmp::max(source.block_size(), PAGE_SIZE);
                     return self
                         .read_some(
                             round_down(offset, block_size)..offset + PAGE_SIZE,
@@ -626,7 +626,7 @@ impl DataBuffer for MemDataBuffer {
 
             let Inner { pages, readers, buf, .. } = &mut *inner;
             let mut last_offset = offset;
-            let block_size = std::cmp::max(source.block_size(), PAGE_SIZE as u32);
+            let block_size = std::cmp::max(source.block_size().into(), PAGE_SIZE);
             let aligned_start = round_down(offset, block_size);
             let mut readahead_limit = buf.len() as u64;
             for page in pages.range(aligned_start..) {
@@ -917,8 +917,8 @@ mod tests {
             unreachable!();
         }
 
-        fn block_size(&self) -> u32 {
-            self.device.block_size()
+        fn block_size(&self) -> u64 {
+            self.device.block_size().into()
         }
 
         fn allocate_buffer(&self, size: usize) -> Buffer<'_> {

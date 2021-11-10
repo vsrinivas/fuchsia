@@ -12,10 +12,9 @@ use {
         },
         object_store::{
             crypt::UnwrappedKeys,
+            extent_record::{Checksums, ExtentKey, ExtentValue},
             journal::fletcher64,
             object_manager::ObjectManager,
-            extent_record::{
-                Checksums, ExtentKey, ExtentValue},
             object_record::{
                 ObjectAttributes, ObjectItem, ObjectKey, ObjectKind, ObjectValue, Timestamp,
             },
@@ -124,7 +123,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
         offset: u64,
         buf: BufferRef<'_>,
     ) -> Result<(std::ops::Range<u64>, Buffer<'_>), Error> {
-        let block_size = u64::from(self.block_size());
+        let block_size = self.block_size();
         let end = offset + buf.len() as u64;
         let aligned =
             round_down(offset, block_size)..round_up(end, block_size).ok_or(FxfsError::TooBig)?;
@@ -202,7 +201,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
         let mut checksums = Vec::new();
         try_join!(self.store().device.write(device_offset, buf), async {
             if compute_checksum {
-                let block_size = u64::from(self.block_size());
+                let block_size = self.block_size();
                 for chunk in buf.as_slice().chunks_exact(block_size as usize) {
                     checksums.push(fletcher64(chunk, 0));
                 }
@@ -218,7 +217,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
         transaction: &mut Transaction<'_>,
         range: Range<u64>,
     ) -> Result<u64, Error> {
-        let block_size = u64::from(self.block_size());
+        let block_size = self.block_size();
         assert_eq!(range.start % block_size, 0);
         assert_eq!(range.end % block_size, 0);
         if range.start == range.end {
@@ -322,7 +321,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
         if buf.is_empty() {
             return Ok(());
         }
-        let block_size = u64::from(self.block_size());
+        let block_size = self.block_size();
         let store = self.store();
         let store_id = store.store_object_id;
 
@@ -547,7 +546,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
             );
         }
         if size < old_size {
-            let block_size = self.block_size().into();
+            let block_size = self.block_size();
             let aligned_size = round_up(size, block_size).ok_or(FxfsError::TooBig)?;
             self.zero(
                 transaction,
@@ -591,7 +590,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
         transaction: &mut Transaction<'a>,
         mut file_range: Range<u64>,
     ) -> Result<Vec<Range<u64>>, Error> {
-        assert_eq!(file_range.length() % self.block_size() as u64, 0);
+        assert_eq!(file_range.length() % self.block_size(), 0);
         assert!(self.keys.is_none());
         let mut ranges = Vec::new();
         let tree = &self.store().extent_tree;
@@ -780,7 +779,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
         self.store().device.allocate_buffer(size)
     }
 
-    fn block_size(&self) -> u32 {
+    fn block_size(&self) -> u64 {
         self.store().block_size()
     }
 
@@ -1070,8 +1069,8 @@ mod tests {
             },
             object_store::{
                 crypt::InsecureCrypt,
-                filesystem::{Filesystem, FxFilesystem, Mutations, OpenFxFilesystem},
                 extent_record::ExtentKey,
+                filesystem::{Filesystem, FxFilesystem, Mutations, OpenFxFilesystem},
                 object_record::{ObjectKey, ObjectKeyData, ObjectValue, Timestamp},
                 transaction::{Options, TransactionHandler},
                 HandleOptions, ObjectStore, StoreObjectHandle,

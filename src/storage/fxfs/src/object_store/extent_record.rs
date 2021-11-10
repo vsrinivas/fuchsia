@@ -300,4 +300,3 @@ mod tests {
         assert_eq!(ExtentKey::new(1, 0, 50..200).cmp_upper_bound(&next_key), Ordering::Greater);
     }
 }
-

@@ -19,6 +19,7 @@ use {
     async_trait::async_trait,
     std::{
         cmp::min,
+        convert::TryInto,
         sync::{Arc, Mutex},
         vec::Vec,
     },
@@ -135,8 +136,10 @@ impl ObjectHandle for FakeObjectHandle {
         0
     }
 
-    fn block_size(&self) -> u32 {
-        self.allocator.block_size() as u32
+    fn block_size(&self) -> u64 {
+        // TODO(ripper): Allocator block_size() returns usize but everything elses seems to use
+        // u64. We should standardize on one.
+        self.allocator.block_size().try_into().unwrap()
     }
 
     fn get_size(&self) -> u64 {

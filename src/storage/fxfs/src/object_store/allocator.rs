@@ -314,7 +314,7 @@ const MAX_ALLOCATOR_INFO_SERIALIZED_SIZE: usize = 131072;
 // the size).  This is a very naiive implementation.
 pub struct SimpleAllocator {
     filesystem: Weak<dyn Filesystem>,
-    block_size: u32,
+    block_size: u64,
     device_size: u64,
     object_id: u64,
     tree: LSMTree<AllocatorKey, AllocatorValue>,
@@ -497,7 +497,7 @@ impl Allocator for SimpleAllocator {
         transaction: &mut Transaction<'_>,
         mut len: u64,
     ) -> Result<Range<u64>, Error> {
-        assert_eq!(len % self.block_size as u64, 0);
+        assert_eq!(len % self.block_size, 0);
 
         let hold = if let Some(reservation) = transaction.allocator_reservation {
             Left(reservation.hold(len)?)
@@ -1246,30 +1246,21 @@ mod tests {
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
         let mut device_ranges = Vec::new();
         device_ranges.push(
-            allocator
-                .allocate(&mut transaction, fs.block_size() as u64)
-                .await
-                .expect("allocate failed"),
+            allocator.allocate(&mut transaction, fs.block_size()).await.expect("allocate failed"),
         );
-        assert_eq!(device_ranges.last().unwrap().length(), fs.block_size() as u64);
+        assert_eq!(device_ranges.last().unwrap().length(), fs.block_size());
         device_ranges.push(
-            allocator
-                .allocate(&mut transaction, fs.block_size() as u64)
-                .await
-                .expect("allocate failed"),
+            allocator.allocate(&mut transaction, fs.block_size()).await.expect("allocate failed"),
         );
-        assert_eq!(device_ranges.last().unwrap().length(), fs.block_size() as u64);
+        assert_eq!(device_ranges.last().unwrap().length(), fs.block_size());
         assert_eq!(overlap(&device_ranges[0], &device_ranges[1]), 0);
         transaction.commit().await.expect("commit failed");
         let mut transaction =
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
         device_ranges.push(
-            allocator
-                .allocate(&mut transaction, fs.block_size() as u64)
-                .await
-                .expect("allocate failed"),
+            allocator.allocate(&mut transaction, fs.block_size()).await.expect("allocate failed"),
         );
-        assert_eq!(device_ranges[2].length(), fs.block_size() as u64);
+        assert_eq!(device_ranges[2].length(), fs.block_size());
         assert_eq!(overlap(&device_ranges[0], &device_ranges[2]), 0);
         assert_eq!(overlap(&device_ranges[1], &device_ranges[2]), 0);
         transaction.commit().await.expect("commit failed");
@@ -1282,11 +1273,9 @@ mod tests {
         let (fs, allocator, _) = test_fs().await;
         let mut transaction =
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
-        let device_range1 = allocator
-            .allocate(&mut transaction, fs.block_size() as u64)
-            .await
-            .expect("allocate failed");
-        assert_eq!(device_range1.length(), fs.block_size() as u64);
+        let device_range1 =
+            allocator.allocate(&mut transaction, fs.block_size()).await.expect("allocate failed");
+        assert_eq!(device_range1.length(), fs.block_size());
         transaction.commit().await.expect("commit failed");
 
         let mut transaction =
@@ -1303,18 +1292,15 @@ mod tests {
         let mut transaction =
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
         let mut device_ranges = Vec::new();
-        device_ranges.push(0..fs.block_size() as u64);
+        device_ranges.push(0..fs.block_size());
         allocator
             .mark_allocated(&mut transaction, device_ranges.last().unwrap().clone())
             .await
             .expect("mark_allocated failed");
         device_ranges.push(
-            allocator
-                .allocate(&mut transaction, fs.block_size() as u64)
-                .await
-                .expect("allocate failed"),
+            allocator.allocate(&mut transaction, fs.block_size()).await.expect("allocate failed"),
         );
-        assert_eq!(device_ranges.last().unwrap().length(), fs.block_size() as u64);
+        assert_eq!(device_ranges.last().unwrap().length(), fs.block_size());
         assert_eq!(overlap(&device_ranges[0], &device_ranges[1]), 0);
         transaction.commit().await.expect("commit failed");
 
@@ -1330,22 +1316,13 @@ mod tests {
         fs.object_manager().register_graveyard(graveyard);
         let mut device_ranges = Vec::new();
         device_ranges.push(
-            allocator
-                .allocate(&mut transaction, fs.block_size() as u64)
-                .await
-                .expect("allocate failed"),
+            allocator.allocate(&mut transaction, fs.block_size()).await.expect("allocate failed"),
         );
         device_ranges.push(
-            allocator
-                .allocate(&mut transaction, fs.block_size() as u64)
-                .await
-                .expect("allocate failed"),
+            allocator.allocate(&mut transaction, fs.block_size()).await.expect("allocate failed"),
         );
         device_ranges.push(
-            allocator
-                .allocate(&mut transaction, fs.block_size() as u64)
-                .await
-                .expect("allocate failed"),
+            allocator.allocate(&mut transaction, fs.block_size()).await.expect("allocate failed"),
         );
         transaction.commit().await.expect("commit failed");
 
@@ -1361,10 +1338,7 @@ mod tests {
         let mut transaction =
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
         device_ranges.push(
-            allocator
-                .allocate(&mut transaction, fs.block_size() as u64)
-                .await
-                .expect("allocate failed"),
+            allocator.allocate(&mut transaction, fs.block_size()).await.expect("allocate failed"),
         );
         for r in &device_ranges[..3] {
             assert_eq!(overlap(r, device_ranges.last().unwrap()), 0);
@@ -1382,10 +1356,7 @@ mod tests {
                 .new_transaction(&[], Options::default())
                 .await
                 .expect("new_transaction failed");
-            allocator
-                .allocate(&mut transaction, fs.block_size() as u64)
-                .await
-                .expect("allocate failed")
+            allocator.allocate(&mut transaction, fs.block_size()).await.expect("allocate failed")
         };
         // After dropping the transaction and attempting to allocate again, we should end up with
         // the same range because the reservation should have been released.
@@ -1395,10 +1366,7 @@ mod tests {
             .await
             .expect("new_transaction failed");
         assert_eq!(
-            allocator
-                .allocate(&mut transaction, fs.block_size() as u64)
-                .await
-                .expect("allocate failed"),
+            allocator.allocate(&mut transaction, fs.block_size()).await.expect("allocate failed"),
             allocated_range
         );
     }
@@ -1409,7 +1377,7 @@ mod tests {
         assert_eq!(allocator.get_allocated_bytes(), 0);
 
         // Verify allocated_bytes reflects allocation changes.
-        let allocated_bytes = fs.block_size() as u64;
+        let allocated_bytes = fs.block_size();
         let allocated_range = {
             let mut transaction = fs
                 .clone()
@@ -1431,10 +1399,7 @@ mod tests {
                 .new_transaction(&[], Options::default())
                 .await
                 .expect("new_transaction failed");
-            allocator
-                .allocate(&mut transaction, fs.block_size() as u64)
-                .await
-                .expect("allocate failed");
+            allocator.allocate(&mut transaction, fs.block_size()).await.expect("allocate failed");
 
             // Prior to commiiting, the count of allocated bytes shouldn't change.
             assert_eq!(allocator.get_allocated_bytes(), allocated_bytes);

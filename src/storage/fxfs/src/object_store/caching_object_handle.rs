@@ -138,7 +138,7 @@ impl<S: HandleOwner> ObjectHandle for CachingObjectHandle<S> {
         self.handle.allocate_buffer(size)
     }
 
-    fn block_size(&self) -> u32 {
+    fn block_size(&self) -> u64 {
         self.handle.block_size()
     }
 
@@ -356,8 +356,8 @@ mod tests {
             object_handle::{GetProperties, ObjectHandle, ReadObjectHandle, WriteObjectHandle},
             object_store::{
                 crypt::InsecureCrypt,
-                filesystem::{Filesystem, FxFilesystem, OpenFxFilesystem},
                 extent_record::ExtentKey,
+                filesystem::{Filesystem, FxFilesystem, OpenFxFilesystem},
                 object_record::{ObjectKey, ObjectValue, Timestamp},
                 transaction::{Options, TransactionHandler},
                 CachingObjectHandle, HandleOptions, ObjectStore,

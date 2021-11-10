@@ -90,8 +90,8 @@ impl ObjectHandle for Handle {
         self.device.allocate_buffer(size)
     }
 
-    fn block_size(&self) -> u32 {
-        self.device.block_size()
+    fn block_size(&self) -> u64 {
+        self.device.block_size().into()
     }
 
     fn get_size(&self) -> u64 {

@@ -140,7 +140,7 @@ impl<'tree, K: MergeableKey, V: Value> LSMTree<K, V> {
         &self,
         mut iterator: impl LayerIterator<K, V>,
         writer: impl WriteBytes + Send,
-        block_size: u32,
+        block_size: u64,
     ) -> Result<(), Error> {
         trace_duration!("LSMTree::compact_with_iterator");
         let mut writer = SimplePersistentLayerWriter::new(writer, block_size);

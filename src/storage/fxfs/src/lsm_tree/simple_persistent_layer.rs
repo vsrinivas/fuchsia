@@ -28,7 +28,7 @@ use {
 /// there is a 64k item limit per block.
 pub struct SimplePersistentLayer {
     object_handle: Arc<dyn ReadObjectHandle>,
-    block_size: u32,
+    block_size: u64,
     size: u64,
     close_event: Mutex<Option<Event>>,
 }
@@ -86,7 +86,7 @@ impl<'iter, K: Key, V: Value> LayerIterator<K, V> for Iterator<'iter, K, V> {
                 );
             }
             self.reader = Some(reader);
-            self.pos += self.layer.block_size as u64;
+            self.pos += self.layer.block_size;
             self.item_index = 0;
         }
         self.item = Some(
@@ -107,7 +107,7 @@ impl SimplePersistentLayer {
     /// SimplePersistentLayerWriter.
     pub async fn open(
         object_handle: impl ReadObjectHandle + 'static,
-        block_size: u32,
+        block_size: u64,
     ) -> Result<Arc<Self>, Error> {
         let size = object_handle.get_size();
         Ok(Arc::new(SimplePersistentLayer {
@@ -210,7 +210,7 @@ impl<K: Key, V: Value> Layer<K, V> for SimplePersistentLayer {
 // -- Writer support --
 
 pub struct SimplePersistentLayerWriter<W> {
-    block_size: u32,
+    block_size: u64,
     buf: Vec<u8>,
     writer: W,
     item_count: u16,
@@ -219,7 +219,7 @@ pub struct SimplePersistentLayerWriter<W> {
 impl<W: WriteBytes> SimplePersistentLayerWriter<W> {
     /// Creates a new writer that will serialize items to the object accessible via |object_handle|
     /// (which provdes a write interface to the object).
-    pub fn new(writer: W, block_size: u32) -> Self {
+    pub fn new(writer: W, block_size: u64) -> Self {
         SimplePersistentLayerWriter { block_size, buf: vec![0; 2], writer, item_count: 0 }
     }
 
@@ -289,7 +289,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_iterate_after_write() {
-        const BLOCK_SIZE: u32 = 512;
+        const BLOCK_SIZE: u64 = 512;
         const ITEM_COUNT: i32 = 10000;
 
         let handle = FakeObjectHandle::new(Arc::new(FakeObject::new()));
@@ -312,7 +312,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_seek_after_write() {
-        const BLOCK_SIZE: u32 = 512;
+        const BLOCK_SIZE: u64 = 512;
         const ITEM_COUNT: i32 = 10000;
 
         let handle = FakeObjectHandle::new(Arc::new(FakeObject::new()));
@@ -343,7 +343,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_seek_unbounded() {
-        const BLOCK_SIZE: u32 = 512;
+        const BLOCK_SIZE: u64 = 512;
         const ITEM_COUNT: i32 = 10000;
 
         let handle = FakeObjectHandle::new(Arc::new(FakeObject::new()));
@@ -367,7 +367,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_zero_items() {
-        const BLOCK_SIZE: u32 = 512;
+        const BLOCK_SIZE: u64 = 512;
 
         let handle = FakeObjectHandle::new(Arc::new(FakeObject::new()));
         {
@@ -386,7 +386,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_large_block_size() {
         // Large enough such that we hit the 64k item limit.
-        const BLOCK_SIZE: u32 = 2097152;
+        const BLOCK_SIZE: u64 = 2097152;
         const ITEM_COUNT: i32 = 70000;
 
         let handle = FakeObjectHandle::new(Arc::new(FakeObject::new()));
@@ -410,7 +410,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_seek_bound_excluded() {
-        const BLOCK_SIZE: u32 = 512;
+        const BLOCK_SIZE: u64 = 512;
         const ITEM_COUNT: i32 = 10000;
 
         let handle = FakeObjectHandle::new(Arc::new(FakeObject::new()));

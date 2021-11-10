@@ -37,6 +37,7 @@ use {
     fuchsia_zircon::Status,
     std::{
         any::Any,
+        convert::TryInto,
         sync::{Arc, Mutex},
     },
     vfs::{
@@ -636,7 +637,7 @@ impl Directory for FxDirectory {
             used_nodes: store.object_count(),
             free_shared_pool_bytes: 0,
             fs_id: 0, // TODO(csuter)
-            block_size: info.block_size,
+            block_size: info.block_size.try_into().unwrap(),
             max_filename_size: MAX_FILENAME as u32,
             fs_type: FsType::Fxfs.into_primitive(),
             padding: 0,

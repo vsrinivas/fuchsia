@@ -25,7 +25,7 @@ pub trait ObjectHandle: Send + Sync + 'static {
 
     /// Returns the filesystem block size, which should be at least as big as the device block size,
     /// but not necessarily the same.
-    fn block_size(&self) -> u32;
+    fn block_size(&self) -> u64;
 
     /// Allocates a buffer for doing I/O (read and write) for the object.
     fn allocate_buffer(&self, size: usize) -> Buffer<'_>;

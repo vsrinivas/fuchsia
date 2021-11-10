@@ -25,6 +25,7 @@ use {
     fuchsia_async as fasync,
     futures::channel::oneshot::{channel, Sender},
     once_cell::sync::OnceCell,
+    std::convert::TryInto,
     std::sync::{
         atomic::{self, AtomicBool},
         Arc, Mutex,
@@ -32,7 +33,7 @@ use {
     storage_device::{Device, DeviceHolder},
 };
 
-pub const MIN_BLOCK_SIZE: u32 = 4096;
+pub const MIN_BLOCK_SIZE: u64 = 4096;
 
 pub struct Info {
     pub total_bytes: u64,
@@ -58,7 +59,7 @@ pub trait Filesystem: TransactionHandler {
     async fn sync(&self, options: SyncOptions<'_>) -> Result<(), Error>;
 
     /// Returns the filesystem block size.
-    fn block_size(&self) -> u32;
+    fn block_size(&self) -> u64;
 
     /// Returns filesystem information.
     fn get_info(&self) -> Info;
@@ -158,7 +159,7 @@ impl std::ops::Deref for OpenFxFilesystem {
 
 pub struct FxFilesystem {
     device: OnceCell<DeviceHolder>,
-    block_size: u32,
+    block_size: u64,
     objects: Arc<ObjectManager>,
     journal: Journal,
     lock_manager: LockManager,
@@ -182,7 +183,7 @@ impl FxFilesystem {
     ) -> Result<OpenFxFilesystem, Error> {
         let objects = Arc::new(ObjectManager::new());
         let journal = Journal::new(objects.clone());
-        let block_size = std::cmp::max(device.block_size(), MIN_BLOCK_SIZE);
+        let block_size = std::cmp::max(device.block_size().into(), MIN_BLOCK_SIZE);
         assert_eq!(block_size % MIN_BLOCK_SIZE, 0);
         let filesystem = Arc::new(FxFilesystem {
             device: OnceCell::new(),
@@ -212,7 +213,7 @@ impl FxFilesystem {
     ) -> Result<OpenFxFilesystem, Error> {
         let objects = Arc::new(ObjectManager::new());
         let journal = Journal::new(objects.clone());
-        let block_size = std::cmp::max(device.block_size(), MIN_BLOCK_SIZE);
+        let block_size = std::cmp::max(device.block_size().into(), MIN_BLOCK_SIZE);
         assert_eq!(block_size % MIN_BLOCK_SIZE, 0);
         let filesystem = Arc::new(FxFilesystem {
             device: OnceCell::new(),
@@ -361,7 +362,7 @@ impl Filesystem for FxFilesystem {
         self.journal.sync(options).await.map(|_| ())
     }
 
-    fn block_size(&self) -> u32 {
+    fn block_size(&self) -> u64 {
         self.block_size
     }
 
@@ -369,7 +370,7 @@ impl Filesystem for FxFilesystem {
         Info {
             total_bytes: self.device.get().unwrap().size(),
             used_bytes: self.object_manager().allocator().get_used_bytes(),
-            block_size: self.block_size(),
+            block_size: self.block_size().try_into().unwrap(),
         }
     }
 
