@@ -18,10 +18,10 @@ use {
     fixture::fixture,
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::{Channel, Uuid},
-    fuchsia_component_test::builder::Capability,
+    fuchsia_component_test::RouteBuilder,
     fuchsia_zircon as zx,
     futures::{join, stream::StreamExt, TryFutureExt},
-    mock_piconet_client_v2::{PiconetHarness, PiconetMember},
+    mock_piconet_client_v2::{BtProfileComponent, PiconetHarness, PiconetMember},
     std::convert::TryInto,
 };
 
@@ -33,7 +33,7 @@ const SDP_SUPPORTED_FEATURES: u16 = 0x0311;
 const MOCK_PEER_NAME: &str = "mock-peer";
 
 struct AvrcpIntegrationTest {
-    avrcp_observer: mock_piconet_client::v2::BtProfileComponent,
+    avrcp_observer: BtProfileComponent,
     mock_peer: PiconetMember,
     test_realm: fuchsia_component_test::RealmInstance,
 }
@@ -48,7 +48,7 @@ impl AvrcpIntegrationTest {
                 AVRCP_URL_V2.to_string(),
                 None,
                 vec![],
-                vec![Capability::protocol(PeerManagerMarker::PROTOCOL_NAME)],
+                vec![RouteBuilder::protocol(PeerManagerMarker::PROTOCOL_NAME)],
             )
             .await
             .unwrap();
@@ -384,7 +384,7 @@ async fn avrcp_remote_receives_set_absolute_volume_request(mut tf: AvrcpIntegrat
         .await
         .unwrap()
         .expect("Error registering AVH");
-    fasync::Task::spawn(avh_fut).detach();
+    let _avh_task = fasync::Task::spawn(avh_fut);
 
     // Get controller for mock peer
     let (c_proxy, c_server) = create_proxy::<ControllerMarker>().unwrap();
