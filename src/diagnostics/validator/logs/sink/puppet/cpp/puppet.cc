@@ -145,6 +145,9 @@ class Puppet : public fuchsia::validate::logs::LogSinkPuppet {
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   Puppet puppet(sys::ComponentContext::CreateAndServeOutgoingDirectory());
-  FX_LOGS(INFO) << "Puppet started.";
+  // Note: This puppet is ran by a runner that
+  // uses --test-invalid-unicode, which isn't directly passed to this puppet
+  // but tells the Rust puppet runner that we are sending invalid UTF-8.
+  FX_LOGS(INFO) << "Puppet started.\xc3\x28";
   loop.Run();
 }

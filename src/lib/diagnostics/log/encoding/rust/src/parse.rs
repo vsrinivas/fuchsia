@@ -14,7 +14,7 @@ use nom::{
     number::complete::{le_f64, le_i64, le_u64},
     Err, IResult,
 };
-use std::convert::TryFrom;
+use std::{borrow::Cow, cell::RefCell, convert::TryFrom, rc::Rc};
 use thiserror::Error;
 
 pub(crate) type ParseResult<'a, T> = IResult<&'a [u8], T, ParseError>;
@@ -27,6 +27,17 @@ pub fn parse_record(buf: &[u8]) -> Result<(Record, &[u8]), ParseError> {
         Err(Err::Incomplete(n)) => Err(ParseError::Incomplete(n)),
         Err(Err::Error(e)) | Err(Err::Failure(e)) => Err(e),
     }
+}
+
+/// Internal parser state.
+/// Used to support handling of invalid utf-8 in msg fields.
+enum ParseState {
+    /// Initial parsing state
+    Initial,
+    /// We're in a message
+    InMessage,
+    /// We're in arguments (no special Unicode treatment)
+    InArguments,
 }
 
 pub(crate) fn try_parse_record(buf: &[u8]) -> ParseResult<'_, Record> {
@@ -48,7 +59,9 @@ pub(crate) fn try_parse_record(buf: &[u8]) -> ParseResult<'_, Record> {
         .ok_or(nom::Err::Failure(ParseError::Unsupported))?;
 
     let (after_record, args_buf) = take(remaining_record_len)(var_len)?;
-    let (_, arguments) = many0(parse_argument)(args_buf)?;
+    let state = Rc::new(RefCell::new(ParseState::Initial));
+    let (_, arguments) =
+        many0(|input| parse_argument_internal(input, &mut state.borrow_mut()))(args_buf)?;
 
     Ok((after_record, Record { timestamp, severity, arguments }))
 }
@@ -60,12 +73,26 @@ fn parse_header(buf: &[u8]) -> ParseResult<'_, Header> {
     Ok((after, header))
 }
 
-pub(super) fn parse_argument(buf: &[u8]) -> ParseResult<'_, Argument> {
+/// Parses an argument
+pub fn parse_argument(buf: &[u8]) -> ParseResult<'_, Argument> {
+    let mut state = ParseState::Initial;
+    parse_argument_internal(buf, &mut state)
+}
+
+fn parse_argument_internal<'a, 'b>(
+    buf: &'a [u8],
+    state: &'b mut ParseState,
+) -> ParseResult<'a, Argument> {
     let (after_header, header) = parse_header(buf)?;
     let arg_ty = ArgType::try_from(header.raw_type()).map_err(nom::Err::Failure)?;
 
-    let (after_name, name) = string_ref(header.name_ref(), after_header)?;
-
+    let (after_name, name) = string_ref(header.name_ref(), after_header, false)?;
+    match (&state, &name) {
+        (ParseState::Initial, StringRef::Inline(Cow::Borrowed("message"))) => {
+            *state = ParseState::InMessage;
+        }
+        _ => {}
+    }
     let (value, after_value) = match arg_ty {
         ArgType::Null => (Value::UnsignedInt(1), after_name),
         ArgType::I64 => {
@@ -81,18 +108,26 @@ pub(super) fn parse_argument(buf: &[u8]) -> ParseResult<'_, Argument> {
             (Value::Floating(n), rem)
         }
         ArgType::String => {
-            let (rem, s) = string_ref(header.value_ref(), after_name)?;
+            let (rem, s) =
+                string_ref(header.value_ref(), after_name, matches!(state, ParseState::InMessage))?;
             (Value::Text(s.to_string()), rem)
         }
         ArgType::Pointer | ArgType::Koid | ArgType::I32 | ArgType::U32 => {
             return Err(Err::Failure(ParseError::Unsupported))
         }
     };
+    if matches!(state, ParseState::InMessage) {
+        *state = ParseState::InArguments;
+    }
 
     Ok((after_value, Argument { name: name.to_string(), value }))
 }
 
-fn string_ref(ref_mask: u16, buf: &[u8]) -> ParseResult<'_, StringRef<'_>> {
+fn string_ref(
+    ref_mask: u16,
+    buf: &[u8],
+    support_invalid_utf8: bool,
+) -> ParseResult<'_, StringRef<'_>> {
     Ok(if ref_mask == 0 {
         (buf, StringRef::Empty)
     } else if (ref_mask & 1 << 15) == 0 {
@@ -101,11 +136,23 @@ fn string_ref(ref_mask: u16, buf: &[u8]) -> ParseResult<'_, StringRef<'_>> {
         // zero out the top bit
         let name_len = (ref_mask & !(1 << 15)) as usize;
         let (after_name, name) = take(name_len)(buf)?;
-        let name = std::str::from_utf8(name).map_err(|e| nom::Err::Error(ParseError::from(e)))?;
-
+        let parsed;
+        if support_invalid_utf8 {
+            parsed = match std::str::from_utf8(name) {
+                Ok(valid) => Cow::Borrowed(valid),
+                Err(_) => Cow::Owned(format!(
+                    "INVALID UTF-8 SEE https://fxbug.dev/88259, message may be corrupted: {}",
+                    String::from_utf8_lossy(name)
+                )),
+            };
+        } else {
+            parsed = Cow::Borrowed(
+                std::str::from_utf8(name).map_err(|e| nom::Err::Error(ParseError::from(e)))?,
+            );
+        }
         let (_padding, after_padding) = after_name.split_at(after_name.len() % 8);
 
-        (after_padding, StringRef::Inline(name))
+        (after_padding, StringRef::Inline(parsed))
     })
 }
 

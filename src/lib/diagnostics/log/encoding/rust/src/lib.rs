@@ -7,7 +7,7 @@
 #![warn(clippy::all, missing_docs)]
 
 use bitfield::bitfield;
-use std::convert::TryFrom;
+use std::{borrow::Cow, convert::TryFrom};
 use tracing::{Level, Metadata};
 
 pub use fidl_fuchsia_diagnostics::Severity;
@@ -92,7 +92,7 @@ impl TryFrom<u8> for ArgType {
 #[derive(Clone)]
 enum StringRef<'a> {
     Empty,
-    Inline(&'a str),
+    Inline(Cow<'a, str>),
 }
 
 impl<'a> StringRef<'a> {
@@ -106,7 +106,7 @@ impl<'a> StringRef<'a> {
     fn for_str(string: &'a str) -> Self {
         match string.len() {
             0 => StringRef::Empty,
-            _ => StringRef::Inline(string),
+            _ => StringRef::Inline(Cow::Borrowed(string)),
         }
     }
 }
@@ -115,7 +115,7 @@ impl<'a> Into<String> for StringRef<'a> {
     fn into(self) -> String {
         match self {
             StringRef::Empty => String::new(),
-            StringRef::Inline(s) => s.to_owned(),
+            StringRef::Inline(s) => s.to_string(),
         }
     }
 }

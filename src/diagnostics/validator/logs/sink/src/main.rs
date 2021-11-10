@@ -47,16 +47,32 @@ struct Opt {
     /// messages with this tag will be ignored. can be repeated.
     #[argh(option, long = "ignore-tag")]
     ignored_tags: Vec<String>,
+    /// if true, invalid unicode will be generated in the initial puppet started message.
+    #[argh(switch, long = "test-invalid-unicode")]
+    test_invalid_unicode: bool,
 }
 
 #[fuchsia::component]
 async fn main() -> Result<(), Error> {
-    let Opt { puppet_url, new_file_line_rules, test_printf, test_stop_listener, ignored_tags } =
-        argh::from_env();
-    Puppet::launch(&puppet_url, new_file_line_rules, test_printf, test_stop_listener, ignored_tags)
-        .await?
-        .test()
-        .await
+    let Opt {
+        puppet_url,
+        new_file_line_rules,
+        test_printf,
+        test_stop_listener,
+        ignored_tags,
+        test_invalid_unicode,
+    } = argh::from_env();
+    Puppet::launch(
+        &puppet_url,
+        new_file_line_rules,
+        test_printf,
+        test_stop_listener,
+        test_invalid_unicode,
+        ignored_tags,
+    )
+    .await?
+    .test()
+    .await
 }
 
 struct Puppet {
@@ -76,6 +92,7 @@ impl Puppet {
         new_file_line_rules: bool,
         has_structured_printf: bool,
         supports_stopping_listener: bool,
+        test_invalid_unicode: bool,
         ignored_tags: Vec<String>,
     ) -> Result<Self, Error> {
         let mut fs = ServiceFs::new();
@@ -125,13 +142,21 @@ impl Puppet {
                 new_file_line_rules,
                 ignored_tags: ignored_tags.into_iter().map(Value::Text).collect(),
             };
-
-            assert_eq!(
-                puppet.read_record(new_file_line_rules).await?.unwrap(),
-                RecordAssertion::new(&puppet.info, Severity::Info, new_file_line_rules)
-                    .add_string("message", "Puppet started.")
-                    .build(puppet.start_time..zx::Time::get_monotonic())
-            );
+            if test_invalid_unicode {
+                assert_eq!(
+                    puppet.read_record(new_file_line_rules).await?.unwrap(),
+                    RecordAssertion::new(&puppet.info, Severity::Info, new_file_line_rules)
+                        .add_string("message", "INVALID UTF-8 SEE https://fxbug.dev/88259, message may be corrupted: Puppet started.�(")
+                        .build(puppet.start_time..zx::Time::get_monotonic())
+                );
+            } else {
+                assert_eq!(
+                    puppet.read_record(new_file_line_rules).await?.unwrap(),
+                    RecordAssertion::new(&puppet.info, Severity::Info, new_file_line_rules)
+                        .add_string("message", "Puppet started.")
+                        .build(puppet.start_time..zx::Time::get_monotonic())
+                );
+            }
             if has_structured_printf {
                 assert_printf_record(&mut puppet, new_file_line_rules).await?;
             }

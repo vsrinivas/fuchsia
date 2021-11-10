@@ -10,7 +10,6 @@ use diagnostics_data::{LogsData, Severity};
 use diagnostics_message::{LoggerMessage, METADATA_SIZE};
 use fuchsia_zircon as zx;
 use std::{convert::TryInto, sync::Arc};
-use tracing::warn;
 
 #[derive(Debug)]
 pub struct StoredMessage {
@@ -48,9 +47,11 @@ impl StoredMessage {
         let data_len = record.datalen as usize;
 
         let mut contents = match std::str::from_utf8(&record.data[0..data_len]) {
-            Err(e) => {
-                warn!(?e, "Received non-UTF8 from the debuglog.");
-                return None;
+            Err(_) => {
+                format!(
+                    "INVALID UTF-8 SEE https://fxbug.dev/88259, message may be corrupted: {}",
+                    String::from_utf8_lossy(&record.data[0..data_len]).to_string()
+                )
             }
             Ok(utf8) => {
                 let boxed_utf8: Box<str> = utf8.into();
@@ -63,14 +64,14 @@ impl StoredMessage {
 
         // TODO(fxbug.dev/32998): Once we support structured logs we won't need this
         // hack to match a string in klogs.
-        const MAX_STRING_SEARCH_SIZE: usize = 100;
+        const MAX_STRING_SEARCH_SIZE: usize = 170;
         let last = contents
             .char_indices()
             .nth(MAX_STRING_SEARCH_SIZE)
             .map(|(i, _)| i)
             .unwrap_or(contents.len());
 
-        // Don't look beyond the 100th character in the substring to limit the cost
+        // Don't look beyond the 170th character in the substring to limit the cost
         // of the substring search operation.
         let early_contents = &contents[..last];
 

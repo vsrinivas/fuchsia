@@ -19,7 +19,6 @@ use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon as zx;
 use futures::stream::{unfold, Stream, TryStreamExt};
 use lazy_static::lazy_static;
-use tracing::warn;
 
 pub const KERNEL_URL: &str = "fuchsia-boot://kernel";
 lazy_static! {
@@ -124,9 +123,11 @@ pub fn convert_debuglog_to_log_message(record: &zx::sys::zx_log_record_t) -> Opt
     let data_len = record.datalen as usize;
 
     let mut contents = match std::str::from_utf8(&record.data[0..data_len]) {
-        Err(e) => {
-            warn!(?e, "Received non-UTF8 from the debuglog.");
-            return None;
+        Err(_) => {
+            format!(
+                "INVALID UTF-8 SEE https://fxbug.dev/88259, message may be corrupted: {}",
+                String::from_utf8_lossy(&record.data[0..data_len]).to_string()
+            )
         }
         Ok(utf8) => {
             let boxed_utf8: Box<str> = utf8.into();
@@ -260,7 +261,11 @@ mod tests {
 
         // invalid utf-8
         let klog = TestDebugEntry::new(b"\x00\x9f\x92");
-        assert!(convert_debuglog_to_log_message(&klog.record).is_none());
+        assert!(convert_debuglog_to_log_message(&klog.record)
+            .unwrap()
+            .msg()
+            .unwrap()
+            .contains("INVALID UTF-8 SEE https://fxbug.dev/88259, message may be corrupted: "));
     }
 
     #[fasync::run_until_stalled(test)]
@@ -302,7 +307,7 @@ mod tests {
 
         debug_log.enqueue_read_fail(zx::Status::SHOULD_WAIT);
         let mut log_bridge = DebugLogBridge::create(debug_log);
-        assert!(log_bridge.existing_logs().await.unwrap().is_empty());
+        assert!(!log_bridge.existing_logs().await.unwrap().is_empty());
     }
 
     #[fasync::run_until_stalled(test)]
@@ -319,7 +324,7 @@ mod tests {
         let log_message = log_stream.try_next().await.unwrap().unwrap();
         assert_eq!(log_message.msg().unwrap(), "second test log");
 
-        // Unprocessable logs should be skipped.
+        // Unprocessable logs should NOT be skipped.
         let debug_log = TestDebugLog::new();
         // This is a malformed record because the message contains invalid UTF8.
         let malformed_klog = TestDebugEntry::new(b"\x80");
@@ -330,7 +335,10 @@ mod tests {
         let mut log_stream = Box::pin(log_bridge.listen());
         let log_message =
             log_stream.try_next().await.unwrap().unwrap().parse(&*KERNEL_IDENTITY).unwrap();
-        assert_eq!(log_message.msg().unwrap(), "test log");
+        assert_eq!(
+            log_message.msg().unwrap(),
+            "INVALID UTF-8 SEE https://fxbug.dev/88259, message may be corrupted: �"
+        );
     }
 
     #[fasync::run_until_stalled(test)]
