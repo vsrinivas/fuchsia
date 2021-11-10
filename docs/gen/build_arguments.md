@@ -2199,13 +2199,13 @@ built and mounted inside the container at /mnt/chromeos.
 
 **Current value (from the default):** `true`
 
-From //src/virtualization/bin/linux_runner/BUILD.gn:23
+From //src/virtualization/bin/linux_runner/BUILD.gn:22
 
 ### linux_runner_gateway
 
 **Current value (from the default):** `"10.0.0.1"`
 
-From //src/virtualization/bin/linux_runner/BUILD.gn:18
+From //src/virtualization/bin/linux_runner/BUILD.gn:17
 
 ### linux_runner_ip
 Default values for the guest network configuration.
@@ -2217,27 +2217,27 @@ See //src/virtualization/bin/vmm/device/virtio_net.cc for more details.
 
 **Current value (from the default):** `"10.0.0.2"`
 
-From //src/virtualization/bin/linux_runner/BUILD.gn:17
+From //src/virtualization/bin/linux_runner/BUILD.gn:16
 
 ### linux_runner_netmask
 
 **Current value (from the default):** `"255.255.255.0"`
 
-From //src/virtualization/bin/linux_runner/BUILD.gn:19
+From //src/virtualization/bin/linux_runner/BUILD.gn:18
 
 ### linux_runner_stateful_image_path
 Point this to the location of a prebuilt stateful image
 
 **Current value (from the default):** `""`
 
-From //src/virtualization/bin/linux_runner/BUILD.gn:34
+From //src/virtualization/bin/linux_runner/BUILD.gn:33
 
 ### linux_runner_user_extras
 Point this to the location of external files to be included as extras
 
 **Current value (from the default):** `[]`
 
-From //src/virtualization/bin/linux_runner/BUILD.gn:31
+From //src/virtualization/bin/linux_runner/BUILD.gn:30
 
 ### linux_runner_volatile_block
 If `true`, all block devices that would normally load as READ_WRITE will
@@ -2246,7 +2246,7 @@ the linux kernel as crashes and panics can sometimes corrupt the images.
 
 **Current value (from the default):** `false`
 
-From //src/virtualization/bin/linux_runner/BUILD.gn:28
+From //src/virtualization/bin/linux_runner/BUILD.gn:27
 
 ### local_bench
 Used to enable local benchmarking/fine-tuning when running benchmarks
@@ -3934,12 +3934,6 @@ otherwise the most recently validated version is used.
 **Current value (from the default):** `false`
 
 From //src/chromium/build_args.gni:14
-
-### use_custom_gbm
-
-**Current value (from the default):** `false`
-
-From //src/graphics/lib/gbm/gbm.gni:6
 
 ### use_goma
 Set to true to enable distributed compilation using Goma.
