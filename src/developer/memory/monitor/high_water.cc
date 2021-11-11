@@ -11,6 +11,7 @@
 #include <zircon/status.h>
 
 #include <fstream>
+#include <mutex>
 
 #include <src/lib/files/file.h>
 #include <src/lib/files/path.h>
@@ -48,6 +49,7 @@ HighWater::HighWater(const std::string& dir, zx::duration poll_frequency,
 }
 
 void HighWater::RecordHighWater(const Capture& capture) {
+  std::lock_guard<std::mutex> lock(mutex_);
   Summary s(capture, &namer_);
   std::ofstream out;
   auto path = files::JoinPath(dir_, kLatest);
@@ -63,6 +65,7 @@ void HighWater::RecordHighWater(const Capture& capture) {
 }
 
 void HighWater::RecordHighWaterDigest(const Capture& capture) {
+  std::lock_guard<std::mutex> lock(mutex_);
   Digest digest;
   digest_cb_(capture, &digest);
   std::ofstream out;
@@ -78,12 +81,13 @@ void HighWater::RecordHighWaterDigest(const Capture& capture) {
   close(out_fd);
 }
 
-std::string HighWater::GetHighWater() const { return GetFile(kLatest); }
-std::string HighWater::GetPreviousHighWater() const { return GetFile(kPrevious); }
-std::string HighWater::GetHighWaterDigest() const { return GetFile(kLatestDigest); }
-std::string HighWater::GetPreviousHighWaterDigest() const { return GetFile(kPreviousDigest); }
+std::string HighWater::GetHighWater() { return GetFile(kLatest); }
+std::string HighWater::GetPreviousHighWater() { return GetFile(kPrevious); }
+std::string HighWater::GetHighWaterDigest() { return GetFile(kLatestDigest); }
+std::string HighWater::GetPreviousHighWaterDigest() { return GetFile(kPreviousDigest); }
 
-std::string HighWater::GetFile(const char* filename) const {
+std::string HighWater::GetFile(const char* filename) {
+  std::lock_guard<std::mutex> lock(mutex_);
   std::string file;
   if (files::ReadFileToString(files::JoinPath(dir_, filename), &file)) {
     return file;

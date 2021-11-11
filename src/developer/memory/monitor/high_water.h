@@ -27,17 +27,18 @@ class HighWater {
 
   void RecordHighWater(const memory::Capture& capture);
   void RecordHighWaterDigest(const memory::Capture& capture);
-  std::string GetHighWater() const;
-  std::string GetPreviousHighWater() const;
-  std::string GetHighWaterDigest() const;
-  std::string GetPreviousHighWaterDigest() const;
+  std::string GetHighWater();
+  std::string GetPreviousHighWater();
+  std::string GetHighWaterDigest();
+  std::string GetPreviousHighWaterDigest();
 
  private:
-  std::string GetFile(const char* filename) const;
+  std::string GetFile(const char* filename);
   const std::string dir_;
   memory::Watcher watcher_;
   memory::Namer namer_;
   DigestCb digest_cb_;
+  std::mutex mutex_;
   FXL_DISALLOW_COPY_AND_ASSIGN(HighWater);
 };
 
