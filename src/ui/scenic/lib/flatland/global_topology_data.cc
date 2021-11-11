@@ -120,7 +120,6 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
         FLATLAND_VERBOSE_LOG << "GlobalTopologyData link doesn't exist for handle "
                              << current_entry.handle << ", skipping ";
 
-        // TODO(fxbug.dev/86354): add test to verify this properly handles the "last child" case.
         if (parent_counts.back().children_left == 0) {
           parent_counts.pop_back();
         }
@@ -134,7 +133,6 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
         FLATLAND_VERBOSE_LOG << "GlobalTopologyData link doesn't exist for instance_id "
                              << link_kv->second.GetInstanceId() << ", skipping";
 
-        // TODO(fxbug.dev/86354): add test to verify this properly handles the "last child" case.
         if (parent_counts.back().children_left == 0) {
           parent_counts.pop_back();
         }
@@ -152,7 +150,6 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
                                 "existing UberStruct ("
                              << new_vector[0].handle << " vs. " << link_kv->second << "), skipping";
 
-        // TODO(fxbug.dev/86354): add test to verify this properly handles the "last child" case.
         if (parent_counts.back().children_left == 0) {
           parent_counts.pop_back();
         }

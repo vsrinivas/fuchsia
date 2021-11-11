@@ -359,6 +359,137 @@ TEST(GlobalTopologyDataTest, ViewTreeSnapshot) {
   }
 }
 
+/// The following 3 unit tests test edgecases where there is only a single child for
+/// a given transform node, and where that child is a link and there is some issue
+/// with how the link is set up (e.g. missing uber struct, link not created, wrong
+/// link handle provided, etc). These tests are meant to ensure that the function
+/// ComputeGlobalTopologyData() properly decrements the number of child nodes that
+/// a given handle has in this particular setup.
+
+// If the link doesn't exist, skip the link handle.
+TEST(GlobalTopologyDataTest, LastChildEdgeCase_NoLink) {
+  UberStruct::InstanceMap uber_structs;
+  GlobalTopologyData::LinkTopologyMap links;
+
+  auto link_2 = GetLinkHandle(2);
+
+  // The link is the middle child in the topology.
+  TransformGraph::TopologyVector vectors[] = {{{{1, 0}, /*One too few*/ 2},
+                                               {{1, 1}, 0},
+                                               {link_2, 0},
+                                               {{1, 2}, 0}},  // 1:0   - 1:1
+                                                              //    \  - 0:2 (Broken Link)
+                                                              //     \ - 1:2
+                                                              //
+                                              {{{2, 0}, 1}, {{2, 1}, 0}}};  // 2:0 - 2:1
+
+  // Since we are purposefully not creating the link, the global topology
+  // should just be the following:
+  // 1:0 - 1:1
+  GlobalTopologyData::TopologyVector expected_topology = {{1, 0}, {1, 1}, {1, 2}};
+  GlobalTopologyData::ChildCountVector expected_child_counts = {1, 0, 0};
+  GlobalTopologyData::ParentIndexVector expected_parent_indices = {0, 0, 0};
+
+  auto uber_struct = std::make_unique<UberStruct>();
+  uber_struct->local_topology = vectors[0];
+  uber_structs[vectors[0][0].handle.GetInstanceId()] = std::move(uber_struct);
+
+  uber_struct = std::make_unique<UberStruct>();
+  uber_struct->local_topology = vectors[1];
+  uber_structs[vectors[1][0].handle.GetInstanceId()] = std::move(uber_struct);
+
+  auto output =
+      GlobalTopologyData::ComputeGlobalTopologyData(uber_structs, links, kLinkInstanceId, {1, 0});
+  CHECK_GLOBAL_TOPOLOGY_DATA(output, 0u);
+
+  EXPECT_THAT(output.topology_vector, ::testing::ElementsAreArray(expected_topology));
+  EXPECT_THAT(output.child_counts, ::testing::ElementsAreArray(expected_child_counts));
+  EXPECT_THAT(output.parent_indices, ::testing::ElementsAreArray(expected_parent_indices));
+}
+
+TEST(GlobalTopologyDataTest, LinkEdgeCaseTest2_NoUberStruct) {
+  UberStruct::InstanceMap uber_structs;
+  GlobalTopologyData::LinkTopologyMap links;
+
+  auto link_2 = GetLinkHandle(2);
+
+  // The link is the middle child in the topology.
+  TransformGraph::TopologyVector vectors[] = {
+      {{{1, 0}, /*One too few*/ 2}, {{1, 1}, 0}, {link_2, 0}, {{1, 2}, 0}},  // 1:0   - 1:1
+                                                                             //    \  - 0:2
+                                                                             //     \ - 1:2
+                                                                             //
+      {{{2, 0}, 1}, {{2, 1}, 0}}};                                           // 2:0 - 2:1
+
+  // Explicitly make the link.
+  MakeLink(links, 2);  // 0:2 - 2:0
+
+  auto uber_struct = std::make_unique<UberStruct>();
+  uber_struct->local_topology = vectors[0];
+  uber_structs[vectors[0][0].handle.GetInstanceId()] = std::move(uber_struct);
+
+  /** Specifically do not create the uber_struct for the 2nd flatland instance
+    uber_struct = std::make_unique<UberStruct>();
+    uber_struct->local_topology = vectors[1];
+    uber_structs[vectors[1][0].handle.GetInstanceId()] = std::move(uber_struct);
+  **/
+
+  // Since we are purposefully not creating the second uber struct, the global topology
+  // should just be the following:
+  // 1:0 - 1:1
+  GlobalTopologyData::TopologyVector expected_topology = {{1, 0}, {1, 1}, {1, 2}};
+  GlobalTopologyData::ChildCountVector expected_child_counts = {1, 0, 0};
+  GlobalTopologyData::ParentIndexVector expected_parent_indices = {0, 0, 0};
+
+  auto output =
+      GlobalTopologyData::ComputeGlobalTopologyData(uber_structs, links, kLinkInstanceId, {1, 0});
+  CHECK_GLOBAL_TOPOLOGY_DATA(output, 0u);
+
+  EXPECT_THAT(output.topology_vector, ::testing::ElementsAreArray(expected_topology));
+  EXPECT_THAT(output.child_counts, ::testing::ElementsAreArray(expected_child_counts));
+  EXPECT_THAT(output.parent_indices, ::testing::ElementsAreArray(expected_parent_indices));
+}
+
+TEST(GlobalTopologyDataTest, LinkEdgeCaseTest3_WrongHandle) {
+  UberStruct::InstanceMap uber_structs;
+  GlobalTopologyData::LinkTopologyMap links;
+
+  auto link_2 = GetLinkHandle(2);
+
+  // The link is the middle child in the topology.
+  TransformGraph::TopologyVector vectors[] = {
+      {{{1, 0}, /*One too few*/ 2}, {{1, 1}, 0}, {link_2, 0}, {{1, 2}, 0}},  // 1:0   - 1:1
+                                                                             //    \  - 0:2
+                                                                             //     \ - 1:2
+                                                                             //
+      {{{2, 0}, 1}, {{2, 1}, 0}}};                                           // 2:0 - 2:1
+
+  // Explicitly make the link, but give it the wrong handle
+  MakeLink(links, /*wrong*/ 3);
+
+  auto uber_struct = std::make_unique<UberStruct>();
+  uber_struct->local_topology = vectors[0];
+  uber_structs[vectors[0][0].handle.GetInstanceId()] = std::move(uber_struct);
+
+  uber_struct = std::make_unique<UberStruct>();
+  uber_struct->local_topology = vectors[1];
+  uber_structs[vectors[1][0].handle.GetInstanceId()] = std::move(uber_struct);
+
+  // Since we gave the wrong link handle, the topology should just be:
+  // 1:0 - 1:1
+  GlobalTopologyData::TopologyVector expected_topology = {{1, 0}, {1, 1}, {1, 2}};
+  GlobalTopologyData::ChildCountVector expected_child_counts = {1, 0, 0};
+  GlobalTopologyData::ParentIndexVector expected_parent_indices = {0, 0, 0};
+
+  auto output =
+      GlobalTopologyData::ComputeGlobalTopologyData(uber_structs, links, kLinkInstanceId, {1, 0});
+  CHECK_GLOBAL_TOPOLOGY_DATA(output, 0u);
+
+  EXPECT_THAT(output.topology_vector, ::testing::ElementsAreArray(expected_topology));
+  EXPECT_THAT(output.child_counts, ::testing::ElementsAreArray(expected_child_counts));
+  EXPECT_THAT(output.parent_indices, ::testing::ElementsAreArray(expected_parent_indices));
+}
+
 #undef CHECK_GLOBAL_TOPOLOGY_DATA
 
 }  // namespace test
