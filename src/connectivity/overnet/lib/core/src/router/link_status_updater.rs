@@ -21,6 +21,15 @@ pub(crate) type LinkStateReceiver =
 
 type LinkStatusMap = HashMap<NodeLinkId, (NodeId, Option<Duration>)>;
 
+/// The link status updater handles changes to the status of links. "Status" here means whether the
+/// link is up or down, as well as the current ping time of the link as used for routing.
+///
+/// The [`LinkStateReceiver`] is a channel that will give us an [`Observer`] for each new link as it
+/// is connected. The `Observer` contains an `Option<Duration>` where the duration given is the RTT
+/// of that link. The option becomes `None` if the link becomes disconnected.
+///
+/// The link state is updated into the `observable` argument, which contains a `BTreeMap`
+/// associating node IDs to information about the link to that node.
 pub(crate) async fn run_link_status_updater(
     observable: Observable<BTreeMap<NodeId, LinkMetrics>>,
     receiver: LinkStateReceiver,
@@ -32,6 +41,8 @@ pub(crate) async fn run_link_status_updater(
     Ok(())
 }
 
+/// Continually condenses updates about the status of active links into an
+/// `Observable<LinkStatusMap>`.
 async fn collate(receiver: LinkStateReceiver, link_status: Observable<LinkStatusMap>) {
     let link_status = &link_status;
     receiver
@@ -52,6 +63,8 @@ async fn collate(receiver: LinkStateReceiver, link_status: Observable<LinkStatus
         .await
 }
 
+/// Continually condenses a map of the status of all links into a map giving the status of the best
+/// available link by which to reach each node.
 async fn reduce(
     mut link_status_observer: Observer<LinkStatusMap>,
     observable: Observable<BTreeMap<NodeId, LinkMetrics>>,

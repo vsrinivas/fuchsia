@@ -258,10 +258,93 @@ impl Routes {
         while let Some(links) = link_state.next().await {
             self.db
                 .edit(|db| {
+                    // Remove routes that depend on links which are no longer present.
+                    db.routes.retain(|r| links.contains_key(&r.via));
+
                     db.links = links;
                 })
                 .await;
-            //Timer::new(Duration::from_millis(600)).await;
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use futures::FutureExt;
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_merge_links_removes_routes() {
+        const NODE_ID: u64 = 42;
+        const FOREIGN_NODE_ID: u64 = 23;
+        const UNRELATED_NODE_ID: u64 = 82;
+        const NODE_LINK_ID: u64 = 99;
+
+        let routes = Arc::new(Routes::new());
+        routes
+            .db
+            .edit(|db| {
+                db.links.insert(
+                    NodeId(NODE_ID),
+                    LinkMetrics { round_trip_time: None, node_link_id: NodeLinkId(NODE_LINK_ID) },
+                );
+                db.links.insert(
+                    NodeId(UNRELATED_NODE_ID),
+                    LinkMetrics { round_trip_time: None, node_link_id: NodeLinkId(NODE_LINK_ID) },
+                );
+                db.routes.push(Route {
+                    destination: NodeId(FOREIGN_NODE_ID),
+                    via: NodeId(NODE_ID),
+                    received_metrics: ReceivedMetrics {
+                        round_trip_time: None,
+                        intermediate_hops: Vec::new(),
+                    },
+                });
+                db.routes.push(Route {
+                    destination: NodeId(FOREIGN_NODE_ID),
+                    via: NodeId(UNRELATED_NODE_ID),
+                    received_metrics: ReceivedMetrics {
+                        round_trip_time: None,
+                        intermediate_hops: Vec::new(),
+                    },
+                });
+            })
+            .await;
+
+        let mut updated = BTreeMap::new();
+        updated.insert(
+            NodeId(UNRELATED_NODE_ID),
+            LinkMetrics { round_trip_time: None, node_link_id: NodeLinkId(NODE_LINK_ID) },
+        );
+
+        let link_state = Observable::new(updated);
+
+        let _merger = Task::spawn(Arc::clone(&routes).merge_links(link_state.new_observer()));
+
+        let mut observer = routes.db.new_observer();
+        let mut timeout = fuchsia_async::Timer::new(std::time::Duration::from_secs(5)).fuse();
+
+        while let Some(mut db) = futures::select! {
+            res = observer.next().fuse() => res,
+            _ = timeout => None,
+        } {
+            if db.links.len() > 1 {
+                // Assume we've seen an update for the initial values, before the merger's done its
+                // thing.
+                assert!(db.routes.len() > 1);
+                continue;
+            }
+
+            assert_eq!(1, db.links.len());
+            assert_eq!(1, db.routes.len());
+            let route = db.routes.pop().unwrap();
+
+            assert!(db.links.contains_key(&NodeId(UNRELATED_NODE_ID)));
+            assert_eq!(NodeId(UNRELATED_NODE_ID), route.via);
+
+            return;
+        }
+
+        panic!("Timed out waiting for route db update");
     }
 }
