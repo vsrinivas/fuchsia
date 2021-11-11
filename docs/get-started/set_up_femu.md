@@ -87,6 +87,14 @@ enable KVM.
 
 ## 4. Start FEMU {#start-femu}
 
+Before you start the Fuchsia emulator, make sure you start the package server in another terminal:
+
+Note: Alternatively you can background the `fx serve` process.
+
+```posix-terminal
+fx serve
+```
+
 Start the Fuchsia emulator on your machine.
 
 * {Linux}
