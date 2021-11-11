@@ -418,45 +418,64 @@ impl<'a> ScanResult<'a> {
         let name_index = block.name_index()?;
         let name = self.get_name(name_index).ok_or(ReaderError::ParseName(name_index))?;
         let parent_index = block.parent_index()?;
-        let parent = get_or_create_scanned_node!(self.parsed_nodes, parent_index);
         let array_slots = block.array_slots()?;
-        if utils::array_capacity(block.order()) < array_slots {
+        if utils::array_capacity(block.order(), block.array_entry_type()?).unwrap() < array_slots {
             return Err(ReaderError::AttemptedToReadTooManyArraySlots(block.index()));
         }
         let value_indexes = 0..array_slots;
-        match block.array_entry_type().map_err(ReaderError::VmoFormat)? {
+        let parsed_property = match block.array_entry_type().map_err(ReaderError::VmoFormat)? {
             BlockType::IntValue => {
                 let values = value_indexes
                     .map(|i| block.array_get_int_slot(i).unwrap())
                     .collect::<Vec<i64>>();
-                parent.partial_hierarchy.properties.push(Property::IntArray(
+                Property::IntArray(
                     name,
                     ArrayContent::new(values, block.array_format().unwrap())
                         .map_err(ReaderError::Hierarchy)?,
-                ));
+                )
             }
             BlockType::UintValue => {
                 let values = value_indexes
                     .map(|i| block.array_get_uint_slot(i).unwrap())
                     .collect::<Vec<u64>>();
-                parent.partial_hierarchy.properties.push(Property::UintArray(
+                Property::UintArray(
                     name,
                     ArrayContent::new(values, block.array_format().unwrap())
                         .map_err(ReaderError::Hierarchy)?,
-                ));
+                )
             }
             BlockType::DoubleValue => {
                 let values = value_indexes
                     .map(|i| block.array_get_double_slot(i).unwrap())
                     .collect::<Vec<f64>>();
-                parent.partial_hierarchy.properties.push(Property::DoubleArray(
+                Property::DoubleArray(
                     name,
                     ArrayContent::new(values, block.array_format().unwrap())
                         .map_err(ReaderError::Hierarchy)?,
-                ));
+                )
+            }
+            BlockType::StringReference => {
+                let values = value_indexes
+                    .map(|i| {
+                        let string_idx = block.array_get_string_index_slot(i).unwrap();
+                        // default initialize unset values -- 0 index is never a string, it is always
+                        // the header block
+                        if string_idx == 0 {
+                            return String::new();
+                        }
+
+                        let block = self.snapshot.get_block(string_idx).unwrap();
+                        self.load_string_reference(block).unwrap()
+                    })
+                    .collect::<Vec<String>>();
+                Property::StringList(name, values)
             }
             t => return Err(ReaderError::UnexpectedArrayEntryFormat(t)),
-        }
+        };
+
+        let parent = get_or_create_scanned_node!(self.parsed_nodes, parent_index);
+        parent.partial_hierarchy.properties.push(parsed_property);
+
         Ok(())
     }
 
@@ -549,6 +568,126 @@ mod tests {
                 abc: 5i64,
             },
             abcdefg: false,
+        });
+    }
+
+    // TODO: these string array tests are awful right now, but they are refactored in the next CL
+    //          to use the more ergonomic writer API.
+
+    #[fuchsia::test]
+    async fn read_string_array() {
+        let inspector = Inspector::new();
+        let root = inspector.root();
+
+        let one: String = "1".into();
+        let two: String = "two".into();
+        let three: String = "three three three".into();
+        let four: String = "fourth".into();
+
+        let child = root.create_child("padding");
+        let child_child = child.create_int("array", 0);
+        let child_child_block = child_child.get_block().unwrap();
+        let name_idx = child_child_block.name_index().unwrap();
+
+        inspector
+            .state()
+            .unwrap()
+            .try_lock()
+            .unwrap()
+            .heap()
+            .get_block(name_idx)
+            .unwrap()
+            .increment_string_reference_count()
+            .unwrap();
+
+        let child1 = root.create_int(one.clone(), 0);
+        let one_idx = child1.get_block().unwrap().name_index().unwrap();
+        let child2 = root.create_int(two.clone(), 0);
+        let two_idx = child2.get_block().unwrap().name_index().unwrap();
+        let child3 = root.create_int(three.clone(), 0);
+        let three_idx = child3.get_block().unwrap().name_index().unwrap();
+        let child4 = root.create_int(four.clone(), 0);
+        let four_idx = child4.get_block().unwrap().name_index().unwrap();
+
+        let node = root.create_double_array("", 50);
+        let node_block = node.get_block().unwrap();
+        node_block.become_free(0);
+        node_block.become_reserved().unwrap();
+        node_block
+            .become_array_value(4, ArrayFormat::Default, BlockType::StringReference, name_idx, 0)
+            .unwrap();
+
+        node_block.array_set_string_slot(0, one_idx).unwrap();
+        node_block.array_set_string_slot(1, two_idx).unwrap();
+        node_block.array_set_string_slot(2, three_idx).unwrap();
+        node_block.array_set_string_slot(3, four_idx).unwrap();
+
+        let result = read(&inspector).await.unwrap();
+        assert_data_tree!(result, root: {
+            padding: {
+                array: 0i64,
+            },
+            "1": 0i64,
+            two: 0i64,
+            "three three three": 0i64,
+            fourth: 0i64,
+            array: vec![one, two, three, four],
+        });
+    }
+
+    #[fuchsia::test]
+    async fn read_unset_string_array() {
+        let inspector = Inspector::new();
+        let root = inspector.root();
+
+        let one: String = "1".into();
+        let two: String = "two".into();
+        let four: String = "fourth".into();
+
+        let child = root.create_child("padding");
+        let child_child = child.create_int("array", 0);
+        let child_child_block = child_child.get_block().unwrap();
+        let name_idx = child_child_block.name_index().unwrap();
+
+        inspector
+            .state()
+            .unwrap()
+            .try_lock()
+            .unwrap()
+            .heap()
+            .get_block(name_idx)
+            .unwrap()
+            .increment_string_reference_count()
+            .unwrap();
+
+        let child1 = root.create_int(one.clone(), 0);
+        let one_idx = child1.get_block().unwrap().name_index().unwrap();
+        let child2 = root.create_int(two.clone(), 0);
+        let two_idx = child2.get_block().unwrap().name_index().unwrap();
+        let child4 = root.create_int(four.clone(), 0);
+        let four_idx = child4.get_block().unwrap().name_index().unwrap();
+
+        let node = root.create_double_array("", 50);
+        let node_block = node.get_block().unwrap();
+        node_block.become_free(0);
+        node_block.become_reserved().unwrap();
+        node_block
+            .become_array_value(4, ArrayFormat::Default, BlockType::StringReference, name_idx, 0)
+            .unwrap();
+
+        node_block.array_set_string_slot(0, one_idx).unwrap();
+        node_block.array_set_string_slot(1, two_idx).unwrap();
+        node_block.array_set_string_slot(3, four_idx).unwrap();
+
+        let result = read(&inspector).await.unwrap();
+        assert_data_tree!(result, root: {
+            "padding": {
+                "array": 0i64,
+            },
+            "1": 0i64,
+            "two": 0i64,
+            "fourth": 0i64,
+            "array": vec![one, two, "".into(), four],
         });
     }
 

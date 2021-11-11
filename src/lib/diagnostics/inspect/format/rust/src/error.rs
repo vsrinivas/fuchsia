@@ -34,8 +34,8 @@ pub enum Error {
     #[error("Name is not utf8")]
     NameNotUtf8,
 
-    #[error("Expected a numeric entry type for the array at index {0}")]
-    NonNumericArrayType(u32),
+    #[error("Expected a valid entry type for the array at index {0}")]
+    InvalidArrayType(u32),
 
     #[error("Invalid block type. Expected: {0}, actual: {1}")]
     UnexpectedBlockType(BlockType, BlockType),

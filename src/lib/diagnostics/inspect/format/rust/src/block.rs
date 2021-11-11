@@ -17,6 +17,7 @@ use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::{FromPrimitive, ToPrimitive};
 use std::{
     cmp::min,
+    convert::TryInto,
     sync::atomic::{fence, Ordering},
 };
 
@@ -165,10 +166,25 @@ impl<T: ReadableBlockContainer> Block<T> {
         let array_type_raw = self.read_payload().array_entry_type();
         let array_type = BlockType::from_u8(array_type_raw)
             .ok_or_else(|| Error::InvalidBlockTypeNumber(self.index(), array_type_raw))?;
-        if !array_type.is_numeric_value() {
-            return Err(Error::NonNumericArrayType(self.index()));
+        if !array_type.is_valid_for_array() {
+            return Err(Error::InvalidArrayType(self.index()));
         }
         Ok(array_type)
+    }
+
+    pub fn array_get_string_index_slot(&self, slot_index: usize) -> Result<u32, Error> {
+        self.check_array_entry_type(BlockType::StringReference)?;
+        self.check_array_index(slot_index)?;
+        let entry_type_size: usize = self
+            .array_entry_type()?
+            .array_element_size()
+            .ok_or(Error::InvalidArrayType(self.index()))?;
+        let mut bytes = vec![0u8; entry_type_size];
+        self.container.read_bytes(
+            utils::offset_for_index(self.index + 1) + slot_index * entry_type_size,
+            &mut bytes,
+        );
+        Ok(u32::from_le_bytes(bytes.try_into().unwrap()))
     }
 
     /// Gets the value of an int ARRAY_VALUE slot.
@@ -228,6 +244,22 @@ impl<T: ReadableBlockContainer> Block<T> {
             }
         }
         Ok(())
+    }
+
+    fn check_array_format(
+        &self,
+        entry_type: BlockType,
+        format_type: &ArrayFormat,
+    ) -> Result<(), Error> {
+        if !entry_type.is_valid_for_array() {
+            return Err(Error::InvalidArrayType(self.index()));
+        }
+
+        match (entry_type, format_type) {
+            (BlockType::StringReference, ArrayFormat::Default) => Ok(()),
+            (BlockType::StringReference, _) => Err(Error::InvalidArrayType(self.index())),
+            _ => Ok(()),
+        }
     }
 
     /// Ensure that the index is within the array bounds.
@@ -311,6 +343,17 @@ impl<T: ReadableBlockContainer> Block<T> {
             let self_type = self.read_header().block_type();
             return self.check_type_eq(self_type, block_type);
         }
+        Ok(())
+    }
+
+    fn check_type_at(&self, index_to_check: u32, block_type: BlockType) -> Result<(), Error> {
+        if cfg!(debug_assertions) {
+            let mut fill = [0u8; constants::MIN_ORDER_SIZE];
+            self.container.read_bytes(utils::offset_for_index(index_to_check), &mut fill);
+            let block = Block::new(&fill[..], 0);
+            return block.check_type(block_type);
+        }
+
         Ok(())
     }
 
@@ -532,11 +575,11 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
         name_index: u32,
         parent_index: u32,
     ) -> Result<(), Error> {
-        if !entry_type.is_numeric_value() {
-            return Err(Error::NonNumericArrayType(self.index()));
-        }
+        self.check_array_format(entry_type, &format)?;
         let order = self.order();
-        let max_capacity = utils::array_capacity(order);
+        let max_capacity = utils::array_capacity(order, entry_type)
+            .ok_or(Error::InvalidArrayType(self.index()))?;
+
         if slots > max_capacity {
             return Err(Error::array_capacity_exceeded(slots, order, max_capacity));
         }
@@ -549,12 +592,39 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
         Ok(())
     }
 
+    fn array_entry_type_size(&self) -> Result<usize, Error> {
+        self.array_entry_type().map(|block_type| {
+            block_type.array_element_size().ok_or(Error::InvalidArrayType(self.index()))
+        })?
+    }
+
     /// Sets all values of the array to zero starting on `start_slot_index` (inclusive).
     pub fn array_clear(&self, start_slot_index: usize) -> Result<(), Error> {
         let array_slots = self.array_slots()? - start_slot_index;
-        let values = vec![0u8; array_slots * 8]; // *8 given that it's 64bit values
-        self.container
-            .write_bytes(utils::offset_for_index(self.index + 1) + start_slot_index * 8, &values);
+        let type_size = self.array_entry_type_size()?;
+        let values = vec![0u8; array_slots * type_size];
+        self.container.write_bytes(
+            utils::offset_for_index(self.index + 1) + start_slot_index * type_size,
+            &values,
+        );
+        Ok(())
+    }
+
+    /// Sets the value of a string ARRAY_VALUE block.
+    /// Note: this is hidden because the writers and readers are not fully developed yet.
+    /// At this point, the function is mainly available for writing tests in other crates.
+    #[doc(hidden)]
+    pub fn array_set_string_slot(&self, slot_index: usize, string_index: u32) -> Result<(), Error> {
+        self.check_array_entry_type(BlockType::StringReference)?;
+        self.check_array_index(slot_index)?;
+        self.check_type_at(string_index, BlockType::StringReference)?;
+
+        let type_size = self.array_entry_type_size()?;
+        self.container.write_bytes(
+            utils::offset_for_index(self.index + 1) + slot_index * type_size,
+            &string_index.to_le_bytes(),
+        );
+
         Ok(())
     }
 
@@ -562,8 +632,9 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
     pub fn array_set_int_slot(&self, slot_index: usize, value: i64) -> Result<(), Error> {
         self.check_array_entry_type(BlockType::IntValue)?;
         self.check_array_index(slot_index)?;
+        let type_size = self.array_entry_type_size()?;
         self.container.write_bytes(
-            utils::offset_for_index(self.index + 1) + slot_index * 8,
+            utils::offset_for_index(self.index + 1) + slot_index * type_size,
             &value.to_le_bytes(),
         );
         Ok(())
@@ -573,8 +644,9 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
     pub fn array_set_double_slot(&self, slot_index: usize, value: f64) -> Result<(), Error> {
         self.check_array_entry_type(BlockType::DoubleValue)?;
         self.check_array_index(slot_index)?;
+        let type_size = self.array_entry_type_size()?;
         self.container.write_bytes(
-            utils::offset_for_index(self.index + 1) + slot_index * 8,
+            utils::offset_for_index(self.index + 1) + slot_index * type_size,
             &value.to_bits().to_le_bytes(),
         );
         Ok(())
@@ -584,8 +656,9 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
     pub fn array_set_uint_slot(&self, slot_index: usize, value: u64) -> Result<(), Error> {
         self.check_array_entry_type(BlockType::UintValue)?;
         self.check_array_index(slot_index)?;
+        let type_size = self.array_entry_type_size()?;
         self.container.write_bytes(
-            utils::offset_for_index(self.index + 1) + slot_index * 8,
+            utils::offset_for_index(self.index + 1) + slot_index * type_size,
             &value.to_le_bytes(),
         );
         Ok(())
@@ -1486,6 +1559,80 @@ mod tests {
         assert!(block.become_name("abcdefghijklmnopqrstu😀").is_ok());
         assert_eq!(block.name_contents().unwrap(), "abcdefghijklmnopqrstu");
         assert_eq!(container[31], 0);
+    }
+
+    #[fuchsia::test]
+    fn test_invalid_type_for_array() {
+        let mut container = [0u8; 2048];
+        container[24..].fill(14u8);
+        let block = get_reserved(&container);
+
+        assert!(block
+            .become_array_value(4, ArrayFormat::LinearHistogram, BlockType::StringReference, 0, 0)
+            .is_err());
+
+        for block_type in BlockType::all() {
+            if block_type.is_valid_for_array() {
+                continue;
+            }
+
+            assert!(block.become_array_value(4, ArrayFormat::Default, block_type, 0, 0).is_err());
+            assert!(block
+                .become_array_value(4, ArrayFormat::LinearHistogram, block_type, 0, 0)
+                .is_err());
+            assert!(block
+                .become_array_value(4, ArrayFormat::ExponentialHistogram, block_type, 0, 0)
+                .is_err());
+        }
+    }
+
+    // In this test, we actually don't care about generating string reference
+    // blocks at all. That is tested elsewhere. All we care about is that the indexes
+    // put in a certain slot come out of the slot correctly. Indexes are u32, so
+    // for simplicity this test just uses meaningless numbers instead of creating actual
+    // indexable string reference values.
+    #[fuchsia::test]
+    fn test_string_arrays() {
+        let mut container = [0u8; 2048];
+        container[48..].fill(14u8);
+
+        let block = get_reserved(&container);
+        let parent_index = 0u32;
+        let name_index = 1u32;
+        assert!(block
+            .become_array_value(
+                4,
+                ArrayFormat::Default,
+                BlockType::StringReference,
+                name_index,
+                parent_index
+            )
+            .is_ok());
+
+        for i in 0..4 {
+            assert!(block.array_set_string_slot(i, (i + 4) as u32).is_ok())
+        }
+
+        for i in 0..4 {
+            let read_index = block.array_get_string_index_slot(i).unwrap();
+            assert_eq!(read_index, (i + 4) as u32);
+        }
+
+        assert_eq!(
+            container[..8],
+            [
+                0x01, 0x0b, 0x00, /* parent */
+                0x00, 0x00, 0x01, /* name_index */
+                0x00, 0x00
+            ]
+        );
+        assert_eq!(container[8..16], [0x0E, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        for i in 0..4 {
+            assert_eq!(
+                container[(16 + (i * 4))..((16 + (i * 4)) + 4)],
+                [(i as u8 + 4), 0x00, 0x00, 0x00]
+            );
+        }
     }
 
     #[fuchsia::test]

@@ -100,6 +100,22 @@ impl BlockType {
         }
     }
 
+    pub fn is_valid_for_array(&self) -> bool {
+        matches!(*self, BlockType::StringReference) || self.is_numeric_value()
+    }
+
+    /// The number of bytes an element requires.
+    /// Returns `None` if `!self.is_valid_for_array()`.
+    pub fn array_element_size(&self) -> Option<usize> {
+        if self.is_numeric_value() {
+            Some(std::mem::size_of::<u64>())
+        } else if matches!(self, BlockType::StringReference) {
+            Some(std::mem::size_of::<u32>())
+        } else {
+            None
+        }
+    }
+
     /// Returns an array of all the types.
     #[cfg(test)]
     pub fn all() -> [BlockType; 15] {

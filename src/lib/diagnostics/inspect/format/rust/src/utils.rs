@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::constants;
+use crate::BlockType;
 use num_traits::ToPrimitive;
 use std::cmp::{max, min};
 
@@ -44,9 +45,11 @@ pub fn payload_size_for_order(order: usize) -> usize {
 }
 
 /// Get the array capacity size for the given |order|.
-pub fn array_capacity(order: usize) -> usize {
-    (order_to_size(order)
-        - constants::HEADER_SIZE_BYTES
-        - constants::ARRAY_PAYLOAD_METADATA_SIZE_BYTES)
-        / std::mem::size_of::<u64>()
+pub fn array_capacity(order: usize, entry_type: BlockType) -> Option<usize> {
+    entry_type.array_element_size().map(|size| {
+        (order_to_size(order)
+            - constants::HEADER_SIZE_BYTES
+            - constants::ARRAY_PAYLOAD_METADATA_SIZE_BYTES)
+            / size
+    })
 }
