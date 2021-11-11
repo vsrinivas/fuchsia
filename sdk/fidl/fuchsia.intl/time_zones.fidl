@@ -90,7 +90,6 @@ protocol TimeZones {
     }) error TimeZonesError;
 
     /// Retrieves details about a time zone at a specified one.
-    @transitional("Not yet implemented")
     GetTimeZoneInfo(struct {
         /// The time zone ID for which to retrieve information.
         time_zone_id TimeZoneId;
