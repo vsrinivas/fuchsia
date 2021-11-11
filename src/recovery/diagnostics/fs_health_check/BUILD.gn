@@ -1,0 +1,42 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/config.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("bin") {
+  output_name = "fs_health_check"
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//sdk/fidl/fuchsia.recovery:fuchsia.recovery-rustc",
+    "//src/lib/fuchsia-async",
+    "//src/lib/syslog/rust:syslog",
+    "//src/sys/pkg/lib/forced-fdr",
+    "//third_party/rust_crates:anyhow",
+  ]
+
+  sources = [ "src/main.rs" ]
+}
+
+fuchsia_component("fs-health-check-cmp") {
+  deps = [ ":bin" ]
+  manifest = "meta/fs_health_check.cmx"
+  component_name = "fs-health-check"
+}
+
+fuchsia_package("fs-health-check") {
+  deps = [
+    ":config",
+    ":fs-health-check-cmp",
+  ]
+}
+
+config_data("config") {
+  for_pkg = "sysmgr"
+  outputs = [ "fs-health-check.config" ]
+  sources = [ "sysmgr.config" ]
+}

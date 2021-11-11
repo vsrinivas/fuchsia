@@ -191,6 +191,7 @@ group("cmx_allowlist") {
     "//src/power/power-manager/*",
     "//src/power/testing/thermal-test-control/*",
     "//src/power/thermd/*",
+    "//src/recovery/diagnostics/fs_health_check/*",
     "//src/recovery/factory-reset-trigger/*",
     "//src/recovery/factory_reset/*",
     "//src/recovery/integration/*",

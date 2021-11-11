@@ -1,0 +1,14 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/fs_health_check"
+    },
+    "sandbox": {
+        "features": [],
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
