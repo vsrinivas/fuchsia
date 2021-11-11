@@ -28,9 +28,9 @@ def main():
     documentation = {
         'short_description': '',
         'manufacturer': '',
-        'families': '',
-        'models': '',
-        'areas': '',
+        'families': [],
+        'models': [],
+        'areas': [],
         'path': args.driver_path
     }
     if (args.doc_input):
