@@ -48,6 +48,7 @@ const MAX_ICD_COUNT uint64 = 8;
 
 type IcdFlags = flexible bits : uint32 {
     SUPPORTS_VULKAN = 1;
+    SUPPORTS_OPENCL = 2;
 };
 
 /// Information about an ICD implementation that can be used with a Magma device.

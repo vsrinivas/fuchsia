@@ -27,6 +27,7 @@ union/member fuchsia.gpu.magma/Device_QueryReturnsBuffer_Result.err fuchsia.gpu.
 union/member fuchsia.gpu.magma/Device_QueryReturnsBuffer_Result.response fuchsia.gpu.magma/Device_QueryReturnsBuffer_Response
 resource strict union fuchsia.gpu.magma/Device_QueryReturnsBuffer_Result
 bits/member fuchsia.gpu.magma/IcdFlags.SUPPORTS_VULKAN 1
+bits/member fuchsia.gpu.magma/IcdFlags.SUPPORTS_OPENCL 2
 flexible bits fuchsia.gpu.magma/IcdFlags uint32
 table/member fuchsia.gpu.magma/IcdInfo.component_url string:4096
 table/member fuchsia.gpu.magma/IcdInfo.flags fuchsia.gpu.magma/IcdFlags
