@@ -250,7 +250,13 @@ func (b *equalityCheckBuilder) visitList(actualExpr string, expectedValue []gidl
 		b.assertEquals(fmt.Sprintf("%s.size()", actualVar), fmt.Sprintf("%d", len(expectedValue)))
 	}
 	for i, item := range expectedValue {
-		b.visit(fmt.Sprintf("%s[%d]", actualVar, i), item, decl.Elem())
+		lhs := fmt.Sprintf("%s[%d]", actualVar, i)
+		switch item.(type) {
+		case bool:
+			// prevents `error: no viable conversion from '__bit_iterator<std::vector<bool>, false>' to 'const void *'`
+			lhs = fmt.Sprintf("bool(%s)", lhs)
+		}
+		b.visit(lhs, item, decl.Elem())
 	}
 }
 

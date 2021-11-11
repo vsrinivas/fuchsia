@@ -7,3 +7,19 @@ library conformance;
 type VectorWrapper = struct {
     v vector<uint8>;
 };
+
+type VectorOfStrings = struct {
+    v vector<string>;
+};
+
+type LotsOfVectors = struct {
+    v1 vector<uint16>;
+    v2 vector<uint32>;
+    v3 vector<uint64>;
+    v4 vector<string>;
+    v5 vector<int8>;
+    v6 vector<int16>;
+    v7 vector<int32>;
+    v8 vector<int64>;
+    v9 vector<bool>;
+};

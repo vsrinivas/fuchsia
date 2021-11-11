@@ -57,3 +57,114 @@ decode_failure("VectorCountExceedsRemainingMessageSize") {
     },
     err = TOO_FEW_BYTES,
 }
+
+success("VectorOfStrings_AFewStrings") {
+    value = VectorOfStrings {
+        v: [
+            "hello, world!",
+            "this is fine",
+            "bbbbbbbb",
+            "aaa",
+        ],
+    },
+    bytes = {
+        v1, v2 = [
+            // vector primary object's length, presence indicator
+            num(4):8, repeat(0xff):8,
+
+            // v[0] length, presence
+            num(13):8, repeat(0xff):8,
+
+            // v[1] length, presence
+            num(12):8, repeat(0xff):8,
+
+            // v[2] length, presence
+            num(8):8, repeat(0xff):8,
+
+            // v[3] length, presence
+            num(3):8, repeat(0xff):8,
+
+            // v[0] "hello, world!"
+            0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x2c, 0x20, 0x77,
+            0x6f, 0x72, 0x6c, 0x64, 0x21, padding:3,
+
+            // v[1] "this is fine"
+            0x74, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20,
+            0x66, 0x69, 0x6e, 0x65, padding:4,
+
+            // v[2] "bbbbbbbb"
+            repeat(0x62):8,
+
+            // v[3] "aaa"
+            0x61, 0x61, 0x61, padding:5
+        ]
+    }
+}
+
+success("LotsOfVectors_AFewVectors") {
+    value = LotsOfVectors {
+        v1: [1, 2],
+        v2: [3, 3],
+        v3: [5, 6, 7, 8],
+        v4: ["hello, world!", "this is fine", "aaa"],
+        v5: [-1, -2],
+        v6: [-3, -4, -5],
+        v7: [-6, -7, -8, -9],
+        v8: [-10],
+        v9: [true, false, true],
+    },
+    bytes = {
+        v1, v2 = [
+            // vector lengths & presences
+            num(2):8, repeat(0xff):8, // v1
+            num(2):8, repeat(0xff):8, // v2
+            num(4):8, repeat(0xff):8, // v3
+            num(3):8, repeat(0xff):8, // v4
+            num(2):8, repeat(0xff):8, // v5
+            num(3):8, repeat(0xff):8, // v6
+            num(4):8, repeat(0xff):8, // v7
+            num(1):8, repeat(0xff):8, // v8
+            num(3):8, repeat(0xff):8, // v9
+
+            // v1 contents + padding
+            num(1):2, num(2):2, padding:4,
+
+            // v2 contents
+            num(3):4, num(3):4,
+
+            // v3 contents
+            num(5):8, num(6):8, num(7):8, num(8):8,
+
+            // v4 lengths and presences
+            num(13):8, repeat(0xff):8, // v4[0]
+            num(12):8, repeat(0xff):8, // v4[1]
+            num(3):8, repeat(0xff):8, // v4[2]
+
+            // v4[0] "hello, world!"
+            0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x2c, 0x20, 0x77,
+            0x6f, 0x72, 0x6c, 0x64, 0x21, padding:3,
+
+            // v4[1] "this is fine"
+            0x74, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20,
+            0x66, 0x69, 0x6e, 0x65, padding:4,
+
+            // v4[2] "aaa"
+            0x61, 0x61, 0x61, padding:5,
+
+            // v5 contents
+            num(-1):1, num(-2):1, padding:6,
+
+            // v6 contents
+            num(-3):2, num(-4):2, num(-5):2, padding:2,
+
+            // v7 contents
+            num(-6):4, num(-7):4, num(-8):4, num(-9):4,
+
+            // v8 contents
+            num(-10):8,
+
+            // v9 contents
+            0x01, 0x00, 0x01, padding:5,
+        ]
+    }
+}
