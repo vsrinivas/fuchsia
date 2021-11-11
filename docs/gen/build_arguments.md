@@ -54,7 +54,7 @@ Set to true to enable legacy data partition names.
 
 **Current value (from the default):** `true`
 
-From //src/storage/fshost/BUILD.gn:42
+From //src/storage/fshost/generated_fshost_config.gni:38
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -245,7 +245,7 @@ Pass the empty string for no limit.
 
 **Current value (from the default):** `""`
 
-From //src/storage/fshost/BUILD.gn:17
+From //src/storage/fshost/generated_fshost_config.gni:13
 
 ### blobfs_page_in_metrics_recording
 Set this to true when configuring gn args to enable blobfs page-in
@@ -838,7 +838,7 @@ Tells openweave to include files that require heap access.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:32](https://fuchsia.googlesource.com/third_party/openweave-core/+/e8815bcdccdb198f155319105e73b5ae1208feff/config.gni#32)
+From [//third_party/openweave-core/config.gni:32](https://fuchsia.googlesource.com/third_party/openweave-core/+/d66425a28c661b365e2d538fda74063d1f16ff0b/config.gni#32)
 
 ### core_realm_package_name
 The following arguments are all used to configure the contents of the core
@@ -1081,11 +1081,10 @@ From //build/config/compiler.gni:67
 
 ### enable_api_diff
 Detect dart API changes
-TODO(fxbug.dev/36723, fxbug.dev/6623) Remove this flag once issues are resolved
 
 **Current value (from the default):** `false`
 
-From //build/dart/dart_library.gni:23
+From //build/dart/dart_library.gni:22
 
 ### enable_dart_analysis
 Enable all dart analysis
@@ -1264,7 +1263,7 @@ corrupted. Setting this flag to true helps debugging corruptions.
 
 **Current value (from the default):** `false`
 
-From //src/storage/fshost/BUILD.gn:33
+From //src/storage/fshost/generated_fshost_config.gni:29
 
 ### f2fs_force_ssr
 Enforce every allocation in a ssr manner [for test]
@@ -1421,14 +1420,14 @@ debug issues.
 
 **Current value (from the default):** `true`
 
-From //src/storage/fshost/BUILD.gn:29
+From //src/storage/fshost/generated_fshost_config.gni:25
 
 ### fshost_watch_for_nand
 Make fshost watch for NAND devices.
 
 **Current value (from the default):** `false`
 
-From //src/storage/fshost/BUILD.gn:45
+From //src/storage/fshost/generated_fshost_config.gni:41
 
 ### fuchsia_async_trace_level_logging
 Determines whether the fuchsia_async library used by many Rust targets will be compiled
@@ -1867,38 +1866,38 @@ Tells inet to support additionally support async dns sockets.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:17](https://fuchsia.googlesource.com/third_party/openweave-core/+/e8815bcdccdb198f155319105e73b5ae1208feff/config.gni#17)
+From [//third_party/openweave-core/config.gni:17](https://fuchsia.googlesource.com/third_party/openweave-core/+/d66425a28c661b365e2d538fda74063d1f16ff0b/config.gni#17)
 
 ### inet_want_endpoint_dns
 Tells inet to include support for the corresponding protocol.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:10](https://fuchsia.googlesource.com/third_party/openweave-core/+/e8815bcdccdb198f155319105e73b5ae1208feff/config.gni#10)
+From [//third_party/openweave-core/config.gni:10](https://fuchsia.googlesource.com/third_party/openweave-core/+/d66425a28c661b365e2d538fda74063d1f16ff0b/config.gni#10)
 
 ### inet_want_endpoint_raw
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:11](https://fuchsia.googlesource.com/third_party/openweave-core/+/e8815bcdccdb198f155319105e73b5ae1208feff/config.gni#11)
+From [//third_party/openweave-core/config.gni:11](https://fuchsia.googlesource.com/third_party/openweave-core/+/d66425a28c661b365e2d538fda74063d1f16ff0b/config.gni#11)
 
 ### inet_want_endpoint_tcp
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:12](https://fuchsia.googlesource.com/third_party/openweave-core/+/e8815bcdccdb198f155319105e73b5ae1208feff/config.gni#12)
+From [//third_party/openweave-core/config.gni:12](https://fuchsia.googlesource.com/third_party/openweave-core/+/d66425a28c661b365e2d538fda74063d1f16ff0b/config.gni#12)
 
 ### inet_want_endpoint_tun
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:14](https://fuchsia.googlesource.com/third_party/openweave-core/+/e8815bcdccdb198f155319105e73b5ae1208feff/config.gni#14)
+From [//third_party/openweave-core/config.gni:14](https://fuchsia.googlesource.com/third_party/openweave-core/+/d66425a28c661b365e2d538fda74063d1f16ff0b/config.gni#14)
 
 ### inet_want_endpoint_udp
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:13](https://fuchsia.googlesource.com/third_party/openweave-core/+/e8815bcdccdb198f155319105e73b5ae1208feff/config.gni#13)
+From [//third_party/openweave-core/config.gni:13](https://fuchsia.googlesource.com/third_party/openweave-core/+/d66425a28c661b365e2d538fda74063d1f16ff0b/config.gni#13)
 
 ### is_analysis
 If set, the build will produce compilation analysis dumps, used for code
@@ -2471,7 +2470,7 @@ Pass the empty string for no limit.
 
 **Current value (from the default):** `""`
 
-From //src/storage/fshost/BUILD.gn:24
+From //src/storage/fshost/generated_fshost_config.gni:20
 
 ### minfs_product_maximum_bytes
 
@@ -2490,7 +2489,7 @@ List of files and directories that don't need to be preserved when resizing minf
 
 **Current value (from the default):** `[]`
 
-From //src/storage/fshost/BUILD.gn:48
+From //src/storage/fshost/generated_fshost_config.gni:44
 
 ### mini_chromium_is_chromeos_ash
 
@@ -3891,7 +3890,7 @@ From //BUILD.gn:55
 
 **Current value (from the default):** `false`
 
-From //src/storage/fshost/BUILD.gn:39
+From //src/storage/fshost/generated_fshost_config.gni:35
 
 ### unstable_feature_use_fxfs
 This flag isn't stable yet, don't use it.
@@ -3900,7 +3899,7 @@ migrated in-place to fxfs/f2fs when fshost mounts it.
 
 **Current value (from the default):** `false`
 
-From //src/storage/fshost/BUILD.gn:38
+From //src/storage/fshost/generated_fshost_config.gni:34
 
 ### update_kernels
 (deprecated) List of kernel images to include in the update (OTA) package.
@@ -4226,35 +4225,35 @@ Tells openweave to support legacy WDM mode.
 
 **Current value (from the default):** `false`
 
-From [//third_party/openweave-core/config.gni:29](https://fuchsia.googlesource.com/third_party/openweave-core/+/e8815bcdccdb198f155319105e73b5ae1208feff/config.gni#29)
+From [//third_party/openweave-core/config.gni:29](https://fuchsia.googlesource.com/third_party/openweave-core/+/d66425a28c661b365e2d538fda74063d1f16ff0b/config.gni#29)
 
 ### weave_build_warm
 Tells openweave to build WARM libraries.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:26](https://fuchsia.googlesource.com/third_party/openweave-core/+/e8815bcdccdb198f155319105e73b5ae1208feff/config.gni#26)
+From [//third_party/openweave-core/config.gni:26](https://fuchsia.googlesource.com/third_party/openweave-core/+/d66425a28c661b365e2d538fda74063d1f16ff0b/config.gni#26)
 
 ### weave_system_config_use_sockets
 Tells openweave components to use bsd-like sockets.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:7](https://fuchsia.googlesource.com/third_party/openweave-core/+/e8815bcdccdb198f155319105e73b5ae1208feff/config.gni#7)
+From [//third_party/openweave-core/config.gni:7](https://fuchsia.googlesource.com/third_party/openweave-core/+/d66425a28c661b365e2d538fda74063d1f16ff0b/config.gni#7)
 
 ### weave_with_nlfaultinjection
 Tells openweave components to support fault injection.
 
 **Current value (from the default):** `false`
 
-From [//third_party/openweave-core/config.gni:20](https://fuchsia.googlesource.com/third_party/openweave-core/+/e8815bcdccdb198f155319105e73b5ae1208feff/config.gni#20)
+From [//third_party/openweave-core/config.gni:20](https://fuchsia.googlesource.com/third_party/openweave-core/+/d66425a28c661b365e2d538fda74063d1f16ff0b/config.gni#20)
 
 ### weave_with_verhoeff
 Tells openweave to support Verhoeff checksum.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:23](https://fuchsia.googlesource.com/third_party/openweave-core/+/e8815bcdccdb198f155319105e73b5ae1208feff/config.gni#23)
+From [//third_party/openweave-core/config.gni:23](https://fuchsia.googlesource.com/third_party/openweave-core/+/d66425a28c661b365e2d538fda74063d1f16ff0b/config.gni#23)
 
 ### with_live_usb
 Whether or not to include the live_usb component in the build.
