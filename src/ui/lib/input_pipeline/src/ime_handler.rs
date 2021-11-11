@@ -5,7 +5,7 @@
 use {
     crate::input_device,
     crate::input_handler::InputHandler,
-    crate::keyboard,
+    crate::keyboard_binding,
     anyhow::Error,
     async_trait::async_trait,
     fidl_fuchsia_ui_input3 as fidl_ui_input3,
@@ -105,7 +105,7 @@ impl ImeHandler {
 /// * `modifier_state`: The state of the monitored modifier keys (e.g. Shift, or CapsLock).
 ///   Used to determine, for example, whether a key press results in an `a` or an `A`.
 fn create_key_event(
-    event: &keyboard::KeyboardEvent,
+    event: &keyboard_binding::KeyboardEvent,
     event_time: input_device::EventTime,
     modifier_state: &keymaps::ModifierState,
 ) -> fidl_ui_input3::KeyEvent {
@@ -132,8 +132,9 @@ fn create_key_event(
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::keyboard, crate::testing_utilities, fidl_fuchsia_input as fidl_input,
-        fidl_fuchsia_ui_input3 as fidl_ui_input3, fuchsia_async as fasync, futures::StreamExt,
+        super::*, crate::keyboard_binding, crate::testing_utilities,
+        fidl_fuchsia_input as fidl_input, fidl_fuchsia_ui_input3 as fidl_ui_input3,
+        fuchsia_async as fasync, futures::StreamExt,
     };
 
     fn handle_events(ime_handler: Rc<ImeHandler>, events: Vec<input_device::InputEvent>) {
@@ -189,10 +190,9 @@ mod tests {
         let ime_handler =
             ImeHandler::new_handler(proxy).await.expect("Failed to create ImeHandler.");
 
-        let device_descriptor =
-            input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
-                keys: vec![fidl_input::Key::A],
-            });
+        let device_descriptor = input_device::InputDeviceDescriptor::Keyboard(
+            keyboard_binding::KeyboardDeviceDescriptor { keys: vec![fidl_input::Key::A] },
+        );
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
         let input_events = vec![testing_utilities::create_keyboard_event(
             fidl_input::Key::A,
@@ -224,10 +224,9 @@ mod tests {
         let ime_handler =
             ImeHandler::new_handler(proxy).await.expect("Failed to create ImeHandler.");
 
-        let device_descriptor =
-            input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
-                keys: vec![fidl_input::Key::A],
-            });
+        let device_descriptor = input_device::InputDeviceDescriptor::Keyboard(
+            keyboard_binding::KeyboardDeviceDescriptor { keys: vec![fidl_input::Key::A] },
+        );
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
         let input_events = vec![testing_utilities::create_keyboard_event(
             fidl_input::Key::A,
@@ -258,10 +257,11 @@ mod tests {
         let ime_handler =
             ImeHandler::new_handler(proxy).await.expect("Failed to create ImeHandler.");
 
-        let device_descriptor =
-            input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
+        let device_descriptor = input_device::InputDeviceDescriptor::Keyboard(
+            keyboard_binding::KeyboardDeviceDescriptor {
                 keys: vec![fidl_input::Key::A, fidl_input::Key::B],
-            });
+            },
+        );
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
         let input_events: Vec<input_device::InputEvent> = vec![
             testing_utilities::create_keyboard_event(
@@ -344,10 +344,11 @@ mod tests {
         let ime_handler =
             ImeHandler::new_handler(proxy).await.expect("Failed to create ImeHandler.");
 
-        let device_descriptor =
-            input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
+        let device_descriptor = input_device::InputDeviceDescriptor::Keyboard(
+            keyboard_binding::KeyboardDeviceDescriptor {
                 keys: vec![fidl_input::Key::A, fidl_input::Key::CapsLock],
-            });
+            },
+        );
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
         let input_events: Vec<input_device::InputEvent> = vec![
             testing_utilities::create_keyboard_event(
@@ -413,14 +414,15 @@ mod tests {
         let ime_handler =
             ImeHandler::new_handler(proxy).await.expect("Failed to create ImeHandler.");
 
-        let device_descriptor =
-            input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
+        let device_descriptor = input_device::InputDeviceDescriptor::Keyboard(
+            keyboard_binding::KeyboardDeviceDescriptor {
                 keys: vec![
                     fidl_input::Key::Enter,
                     fidl_input::Key::Tab,
                     fidl_input::Key::Backspace,
                 ],
-            });
+            },
+        );
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
         let input_events: Vec<input_device::InputEvent> = vec![
             testing_utilities::create_keyboard_event(
@@ -493,14 +495,15 @@ mod tests {
         let ime_handler =
             ImeHandler::new_handler(proxy).await.expect("Failed to create ImeHandler.");
 
-        let device_descriptor =
-            input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
+        let device_descriptor = input_device::InputDeviceDescriptor::Keyboard(
+            keyboard_binding::KeyboardDeviceDescriptor {
                 keys: vec![
                     fidl_input::Key::Enter,
                     fidl_input::Key::Tab,
                     fidl_input::Key::Backspace,
                 ],
-            });
+            },
+        );
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
         let input_events: Vec<input_device::InputEvent> =
             vec![testing_utilities::create_keyboard_event(
@@ -533,10 +536,11 @@ mod tests {
         let ime_handler =
             ImeHandler::new_handler(proxy).await.expect("Failed to create ImeHandler.");
 
-        let device_descriptor =
-            input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
+        let device_descriptor = input_device::InputDeviceDescriptor::Keyboard(
+            keyboard_binding::KeyboardDeviceDescriptor {
                 keys: vec![fidl_input::Key::LeftCtrl, fidl_input::Key::Tab],
-            });
+            },
+        );
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
         let input_events: Vec<input_device::InputEvent> = vec![
             testing_utilities::create_keyboard_event(
@@ -602,10 +606,11 @@ mod tests {
         let ime_handler =
             ImeHandler::new_handler(proxy).await.expect("Failed to create ImeHandler.");
 
-        let device_descriptor =
-            input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
+        let device_descriptor = input_device::InputDeviceDescriptor::Keyboard(
+            keyboard_binding::KeyboardDeviceDescriptor {
                 keys: vec![fidl_input::Key::LeftCtrl, fidl_input::Key::Tab],
-            });
+            },
+        );
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
         let input_events: Vec<input_device::InputEvent> = vec![
             testing_utilities::create_keyboard_event(

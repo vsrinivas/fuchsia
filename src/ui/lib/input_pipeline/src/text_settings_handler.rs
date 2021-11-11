@@ -14,11 +14,11 @@ use futures::{TryFutureExt, TryStreamExt};
 use std::cell::RefCell;
 use std::rc::Rc;
 
-/// The text settings handler instance. Refer to as `text_settings::Handler`.
+/// The text settings handler instance. Refer to as `text_settings_handler::TextSettingsHandler`.
 /// Its task is to decorate an input event with the keymap identifier.  The instance can
 /// be freely cloned, each clone is thread-safely sharing data with others.
 #[derive(Debug)]
-pub struct Handler {
+pub struct TextSettingsHandler {
     /// Stores the currently active keymap identifier, if present.  Wrapped
     /// in an refcell as it can be changed out of band through
     /// `fuchsia.input.keymap.Configuration/SetLayout`.
@@ -26,7 +26,7 @@ pub struct Handler {
 }
 
 #[async_trait(?Send)]
-impl InputHandler for Handler {
+impl InputHandler for TextSettingsHandler {
     async fn handle_input_event(
         self: Rc<Self>,
         input_event: input_device::InputEvent,
@@ -65,12 +65,12 @@ impl InputHandler for Handler {
     }
 }
 
-impl Handler {
+impl TextSettingsHandler {
     /// Creates a new text settings handler instance.
     /// `initial` contains the desired initial keymap value to be served.
     /// Usually you want this to be `None`.
     pub fn new(initial: Option<finput::KeymapId>) -> Rc<Self> {
-        Rc::new(Handler { keymap_id: RefCell::new(initial) })
+        Rc::new(Self { keymap_id: RefCell::new(initial) })
     }
 
     /// Processes requests for keymap change from `stream`.
@@ -118,14 +118,14 @@ mod tests {
     use super::*;
 
     use crate::input_device;
-    use crate::keyboard;
+    use crate::keyboard_binding;
     use crate::testing_utilities;
     use fidl_fuchsia_input;
     use fidl_fuchsia_ui_input3;
     use fuchsia_async as fasync;
 
     fn get_fake_descriptor() -> input_device::InputDeviceDescriptor {
-        input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
+        input_device::InputDeviceDescriptor::Keyboard(keyboard_binding::KeyboardDeviceDescriptor {
             keys: vec![],
         })
     }
@@ -165,7 +165,7 @@ mod tests {
             },
         ];
         for test in tests {
-            let handler = Handler::new(test.keymap_id.clone());
+            let handler = TextSettingsHandler::new(test.keymap_id.clone());
             let expected = get_fake_key_event(test.expected.clone());
             let result = handler.handle_input_event(get_fake_key_event(None)).await;
             assert_eq!(vec![expected], result, "for: {:?}", &test);
@@ -174,7 +174,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn config_call_processing() {
-        let handler = Handler::new(None);
+        let handler = TextSettingsHandler::new(None);
 
         let (client_end, server_end) =
             fidl::endpoints::create_proxy_and_stream::<fkeymap::ConfigurationMarker>().unwrap();

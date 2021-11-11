@@ -98,7 +98,7 @@ async fn handle_key_event(
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::keyboard, crate::testing_utilities,
+        super::*, crate::keyboard_binding, crate::testing_utilities,
         fidl_fuchsia_ui_input3 as fidl_ui_input3, fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::StreamExt,
     };
@@ -140,10 +140,9 @@ mod tests {
         event_time: input_device::EventTime,
         shortcut_handler: Rc<ShortcutHandler>,
     ) -> Vec<input_device::InputEvent> {
-        let device_descriptor =
-            input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
-                keys: vec![pressed_key3],
-            });
+        let device_descriptor = input_device::InputDeviceDescriptor::Keyboard(
+            keyboard_binding::KeyboardDeviceDescriptor { keys: vec![pressed_key3] },
+        );
         let input_event = testing_utilities::create_keyboard_event(
             pressed_key3,
             fidl_fuchsia_ui_input3::KeyEventType::Pressed,
@@ -162,10 +161,9 @@ mod tests {
         event_time: input_device::EventTime,
         shortcut_handler: Rc<ShortcutHandler>,
     ) -> Vec<input_device::InputEvent> {
-        let device_descriptor =
-            input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
-                keys: vec![released_key3],
-            });
+        let device_descriptor = input_device::InputDeviceDescriptor::Keyboard(
+            keyboard_binding::KeyboardDeviceDescriptor { keys: vec![released_key3] },
+        );
         let input_event = testing_utilities::create_keyboard_event(
             released_key3,
             fidl_fuchsia_ui_input3::KeyEventType::Released,
@@ -188,10 +186,9 @@ mod tests {
         let was_handled = press_key(key3, modifiers, event_time, shortcut_handler).await;
         assert_eq!(was_handled.len(), 1);
 
-        let device_descriptor =
-            input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
-                keys: vec![key3],
-            });
+        let device_descriptor = input_device::InputDeviceDescriptor::Keyboard(
+            keyboard_binding::KeyboardDeviceDescriptor { keys: vec![key3] },
+        );
         let input_event = testing_utilities::create_keyboard_event(
             key3,
             fidl_fuchsia_ui_input3::KeyEventType::Pressed,
@@ -230,10 +227,9 @@ mod tests {
         let was_handled = release_key(key3, modifiers, event_time, shortcut_handler).await;
         assert_eq!(was_handled.len(), 1);
 
-        let device_descriptor =
-            input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
-                keys: vec![key3],
-            });
+        let device_descriptor = input_device::InputDeviceDescriptor::Keyboard(
+            keyboard_binding::KeyboardDeviceDescriptor { keys: vec![key3] },
+        );
         let input_event = testing_utilities::create_keyboard_event(
             key3,
             fidl_fuchsia_ui_input3::KeyEventType::Released,

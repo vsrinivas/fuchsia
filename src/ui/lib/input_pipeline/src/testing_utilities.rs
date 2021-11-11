@@ -5,7 +5,9 @@
 #[cfg(test)]
 use {
     crate::utils::Position,
-    crate::{consumer_controls, input_device, keyboard, mouse, touch},
+    crate::{
+        consumer_controls_binding, input_device, keyboard_binding, mouse_binding, touch_binding,
+    },
     fidl_fuchsia_input_report as fidl_input_report, fidl_fuchsia_ui_input as fidl_ui_input,
     fidl_fuchsia_ui_input3 as fidl_ui_input3, fidl_fuchsia_ui_pointerinjector as pointerinjector,
     fuchsia_zircon as zx,
@@ -47,7 +49,7 @@ pub fn create_keyboard_input_report(
     }
 }
 
-/// Creates a [`keyboard::KeyboardEvent`] with the provided keys and meaning.
+/// Creates a [`keyboard_binding::KeyboardEvent`] with the provided keys and meaning.
 ///
 /// # Parameters
 /// - `key`: The input3 key which changed state.
@@ -66,7 +68,7 @@ pub fn create_keyboard_event_with_key_meaning(
     key_meaning: Option<fidl_fuchsia_ui_input3::KeyMeaning>,
 ) -> input_device::InputEvent {
     input_device::InputEvent {
-        device_event: input_device::InputDeviceEvent::Keyboard(keyboard::KeyboardEvent {
+        device_event: input_device::InputDeviceEvent::Keyboard(keyboard_binding::KeyboardEvent {
             key,
             event_type,
             modifiers,
@@ -78,7 +80,7 @@ pub fn create_keyboard_event_with_key_meaning(
     }
 }
 
-/// Creates a [`keyboard::KeyboardEvent`] with the provided keys.
+/// Creates a [`keyboard_binding::KeyboardEvent`] with the provided keys.
 ///
 /// # Parameters
 /// - `key`: The input3 key which changed state.
@@ -121,7 +123,7 @@ pub fn create_fake_input_event(event_time: input_device::EventTime) -> input_dev
 #[cfg(test)]
 pub fn consumer_controls_device_descriptor() -> input_device::InputDeviceDescriptor {
     input_device::InputDeviceDescriptor::ConsumerControls(
-        consumer_controls::ConsumerControlsDeviceDescriptor {
+        consumer_controls_binding::ConsumerControlsDeviceDescriptor {
             buttons: vec![
                 fidl_input_report::ConsumerControlButton::CameraDisable,
                 fidl_input_report::ConsumerControlButton::FactoryReset,
@@ -159,7 +161,7 @@ pub fn create_consumer_control_input_report(
     }
 }
 
-/// Creates a [`consumer_controls::ConsumerControlsEvent`] with the provided parameters.
+/// Creates a [`consumer_controls_binding::ConsumerControlsEvent`] with the provided parameters.
 ///
 /// # Parameters
 /// - `pressed_buttons`: The buttons to report in the event.
@@ -173,7 +175,7 @@ pub fn create_consumer_controls_event(
 ) -> input_device::InputEvent {
     input_device::InputEvent {
         device_event: input_device::InputDeviceEvent::ConsumerControls(
-            consumer_controls::ConsumerControlsEvent::new(pressed_buttons),
+            consumer_controls_binding::ConsumerControlsEvent::new(pressed_buttons),
         ),
         device_descriptor: device_descriptor.clone(),
         event_time,
@@ -190,7 +192,7 @@ pub fn create_consumer_controls_event(
 /// - `event_time`: The time of event.
 #[cfg(test)]
 pub fn create_mouse_input_report(
-    location: mouse::MouseLocation,
+    location: mouse_binding::MouseLocation,
     buttons: Vec<u8>,
     event_time: i64,
 ) -> fidl_input_report::InputReport {
@@ -199,19 +201,19 @@ pub fn create_mouse_input_report(
         keyboard: None,
         mouse: Some(fidl_input_report::MouseInputReport {
             movement_x: match location {
-                mouse::MouseLocation::Relative(Position { x, .. }) => Some(x as i64),
+                mouse_binding::MouseLocation::Relative(Position { x, .. }) => Some(x as i64),
                 _ => None,
             },
             movement_y: match location {
-                mouse::MouseLocation::Relative(Position { y, .. }) => Some(y as i64),
+                mouse_binding::MouseLocation::Relative(Position { y, .. }) => Some(y as i64),
                 _ => None,
             },
             position_x: match location {
-                mouse::MouseLocation::Absolute(Position { x, .. }) => Some(x as i64),
+                mouse_binding::MouseLocation::Absolute(Position { x, .. }) => Some(x as i64),
                 _ => None,
             },
             position_y: match location {
-                mouse::MouseLocation::Absolute(Position { y, .. }) => Some(y as i64),
+                mouse_binding::MouseLocation::Absolute(Position { y, .. }) => Some(y as i64),
                 _ => None,
             },
             scroll_h: None,
@@ -227,7 +229,7 @@ pub fn create_mouse_input_report(
     }
 }
 
-/// Creates a [`mouse::MouseEvent`] with the provided parameters.
+/// Creates a [`mouse_binding::MouseEvent`] with the provided parameters.
 ///
 /// # Parameters
 /// - `location`: The mouse location to report in the event.
@@ -237,14 +239,14 @@ pub fn create_mouse_input_report(
 /// - `device_descriptor`: The device descriptor to add to the event.
 #[cfg(test)]
 pub fn create_mouse_event(
-    location: mouse::MouseLocation,
+    location: mouse_binding::MouseLocation,
     phase: fidl_ui_input::PointerEventPhase,
-    buttons: HashSet<mouse::MouseButton>,
+    buttons: HashSet<mouse_binding::MouseButton>,
     event_time: input_device::EventTime,
     device_descriptor: &input_device::InputDeviceDescriptor,
 ) -> input_device::InputEvent {
     input_device::InputEvent {
-        device_event: input_device::InputDeviceEvent::Mouse(mouse::MouseEvent::new(
+        device_event: input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent::new(
             location, phase, buttons,
         )),
         device_descriptor: device_descriptor.clone(),
@@ -279,11 +281,11 @@ pub fn create_touch_input_report(
 }
 
 #[cfg(test)]
-pub fn create_touch_contact(id: u32, position: Position) -> touch::TouchContact {
-    touch::TouchContact { id, position, pressure: None, contact_size: None }
+pub fn create_touch_contact(id: u32, position: Position) -> touch_binding::TouchContact {
+    touch_binding::TouchContact { id, position, pressure: None, contact_size: None }
 }
 
-/// Creates a [`touch::TouchEvent`] with the provided parameters.
+/// Creates a [`touch_binding::TouchEvent`] with the provided parameters.
 ///
 /// # Parameters
 /// - `contacts`: The contacts in the touch report.
@@ -291,7 +293,7 @@ pub fn create_touch_contact(id: u32, position: Position) -> touch::TouchContact 
 /// - `device_descriptor`: The device descriptor to add to the event.
 #[cfg(test)]
 pub fn create_touch_event(
-    mut contacts: HashMap<fidl_ui_input::PointerEventPhase, Vec<touch::TouchContact>>,
+    mut contacts: HashMap<fidl_ui_input::PointerEventPhase, Vec<touch_binding::TouchContact>>,
     event_time: input_device::EventTime,
     device_descriptor: &input_device::InputDeviceDescriptor,
 ) -> input_device::InputEvent {
@@ -310,7 +312,7 @@ pub fn create_touch_event(
         contacts.get(&fidl_ui_input::PointerEventPhase::Remove).unwrap().clone(),
     };
     input_device::InputEvent {
-        device_event: input_device::InputDeviceEvent::Touch(touch::TouchEvent {
+        device_event: input_device::InputDeviceEvent::Touch(touch_binding::TouchEvent {
             contacts,
             injector_contacts,
         }),
@@ -329,7 +331,7 @@ pub fn create_touch_event(
 #[cfg(test)]
 pub fn create_touch_pointer_sample_event(
     phase: pointerinjector::EventPhase,
-    contact: &touch::TouchContact,
+    contact: &touch_binding::TouchContact,
     position: crate::utils::Position,
     event_time: input_device::EventTime,
 ) -> pointerinjector::Event {

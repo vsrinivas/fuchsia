@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    ::input_pipeline::text_settings,
+    ::input_pipeline::text_settings_handler,
     anyhow::Error,
     fidl::prelude::*,
     fidl_fuchsia_input_injection::InputDeviceRegistryRequestStream,
@@ -64,7 +64,7 @@ async fn main() -> Result<(), Error> {
 
     // text_handler is used to attach keymap and text editing settings to the input events.
     // It also listens to configuration.
-    let text_handler = text_settings::Handler::new(None);
+    let text_handler = text_settings_handler::TextSettingsHandler::new(None);
 
     fx_log_info!("Instantiating SceneManager, use_flatland: {:?}", use_flatland);
 
@@ -174,7 +174,7 @@ pub async fn handle_scene_manager_request_stream(
     input_device_registry_request_stream_receiver: futures::channel::mpsc::UnboundedReceiver<
         InputDeviceRegistryRequestStream,
     >,
-    text_handler: Rc<text_settings::Handler>,
+    text_handler: Rc<text_settings_handler::TextSettingsHandler>,
     inspect_root: Rc<inspect::Node>,
 ) {
     if let Ok(input_pipeline) = input_pipeline::handle_input(

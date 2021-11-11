@@ -5,7 +5,7 @@
 use {
     crate::input_device,
     crate::input_handler::InputHandler,
-    crate::touch,
+    crate::touch_binding,
     crate::utils::{Position, Size},
     anyhow::Error,
     async_trait::async_trait,
@@ -89,7 +89,7 @@ impl TouchInjectorHandler {
     /// Creates a new touch handler that holds touch pointer injectors.
     /// The caller is expected to spawn a task to continually watch for updates to the viewport.
     /// Example:
-    /// let handler = TouchInjectorHandler::new(display_size).await.expect("Error");
+    /// let handler = TouchInjectorHandler::new(display_size).await?;
     /// fasync::Task::local(handler.clone().watch_viewport()).detach();
     ///
     /// # Parameters
@@ -107,7 +107,7 @@ impl TouchInjectorHandler {
     /// Creates a new touch handler that holds touch pointer injectors.
     /// The caller is expected to spawn a task to continually watch for updates to the viewport.
     /// Example:
-    /// let handler = TouchInjectorHandler::new_handler(None, None, display_size).await?;
+    /// let handler = TouchInjectorHandler::new_with_config_proxy(config_proxy, display_size).await?;
     /// fasync::Task::local(handler.clone().watch_viewport()).detach();
     ///
     /// # Parameters
@@ -150,7 +150,7 @@ impl TouchInjectorHandler {
         let (context_view_ref, target_view_ref) = configuration_proxy.get_view_refs().await?;
 
         // Continuously watch for viewport updates.
-        let handler = Rc::new(TouchInjectorHandler {
+        let handler = Rc::new(Self {
             inner: Mutex::new(TouchInjectorHandlerInner {
                 viewport: None,
                 injectors: HashMap::new(),
@@ -172,7 +172,7 @@ impl TouchInjectorHandler {
     /// - `touch_descriptor`: The descriptor of the new touch device.
     async fn ensure_injector_registered(
         self: &Rc<Self>,
-        touch_descriptor: &touch::TouchDeviceDescriptor,
+        touch_descriptor: &touch_binding::TouchDeviceDescriptor,
     ) {
         let mut inner = self.inner.lock().await;
         if inner.injectors.contains_key(&touch_descriptor.device_id) {
@@ -219,8 +219,8 @@ impl TouchInjectorHandler {
     /// - `event_time`: The time in nanoseconds when the event was first recorded.
     async fn handle_touch_event(
         &self,
-        touch_event: &touch::TouchEvent,
-        touch_descriptor: &touch::TouchDeviceDescriptor,
+        touch_event: &touch_binding::TouchEvent,
+        touch_descriptor: &touch_binding::TouchDeviceDescriptor,
         event_time: input_device::EventTime,
     ) {
         // The order in which events are sent to clients.
@@ -232,7 +232,7 @@ impl TouchInjectorHandler {
 
         let mut events: Vec<pointerinjector::Event> = vec![];
         for phase in ordered_phases {
-            let contacts: Vec<touch::TouchContact> = touch_event
+            let contacts: Vec<touch_binding::TouchContact> = touch_event
                 .injector_contacts
                 .get(&phase)
                 .map_or(vec![], |contacts| contacts.to_owned());
@@ -268,8 +268,8 @@ impl TouchInjectorHandler {
     /// - `event_time`: The time in nanoseconds when the event was first recorded.
     fn create_pointer_sample_event(
         phase: pointerinjector::EventPhase,
-        contact: &touch::TouchContact,
-        touch_descriptor: &touch::TouchDeviceDescriptor,
+        contact: &touch_binding::TouchContact,
+        touch_descriptor: &touch_binding::TouchDeviceDescriptor,
         display_size: &Size,
         event_time: input_device::EventTime,
     ) -> pointerinjector::Event {
@@ -308,8 +308,8 @@ impl TouchInjectorHandler {
     /// # Returns
     /// (x, y) coordinates.
     fn display_coordinate_from_contact(
-        contact: &touch::TouchContact,
-        touch_descriptor: &touch::TouchDeviceDescriptor,
+        contact: &touch_binding::TouchContact,
+        touch_descriptor: &touch_binding::TouchDeviceDescriptor,
         display_size: &Size,
     ) -> Position {
         if let Some(contact_descriptor) = touch_descriptor.contacts.first() {
@@ -389,9 +389,9 @@ mod tests {
 
     /// Returns an |input_device::InputDeviceDescriptor::TouchDescriptor|.
     fn get_touch_device_descriptor() -> input_device::InputDeviceDescriptor {
-        input_device::InputDeviceDescriptor::Touch(touch::TouchDeviceDescriptor {
+        input_device::InputDeviceDescriptor::Touch(touch_binding::TouchDeviceDescriptor {
             device_id: 1,
-            contacts: vec![touch::ContactDeviceDescriptor {
+            contacts: vec![touch_binding::ContactDeviceDescriptor {
                 x_range: fidl_input_report::Range { min: 0, max: 100 },
                 y_range: fidl_input_report::Range { min: 0, max: 100 },
                 pressure_range: None,

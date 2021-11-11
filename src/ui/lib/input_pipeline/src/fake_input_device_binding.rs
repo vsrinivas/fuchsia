@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::input_device, crate::keyboard, async_trait::async_trait, futures::channel::mpsc::Sender,
+    crate::input_device, crate::keyboard_binding, async_trait::async_trait,
+    futures::channel::mpsc::Sender,
 };
 
 /// A fake [`InputDeviceBinding`] for testing.
@@ -22,7 +23,7 @@ impl FakeInputDeviceBinding {
 #[async_trait]
 impl input_device::InputDeviceBinding for FakeInputDeviceBinding {
     fn get_device_descriptor(&self) -> input_device::InputDeviceDescriptor {
-        input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
+        input_device::InputDeviceDescriptor::Keyboard(keyboard_binding::KeyboardDeviceDescriptor {
             keys: vec![],
         })
     }

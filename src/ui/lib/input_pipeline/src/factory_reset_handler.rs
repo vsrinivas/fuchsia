@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::consumer_controls::ConsumerControlsEvent,
+    crate::consumer_controls_binding::ConsumerControlsEvent,
     crate::input_device,
     crate::input_handler::InputHandler,
     anyhow::{anyhow, Context as _, Error},
@@ -387,7 +387,7 @@ impl InputHandler for FactoryResetHandler {
 mod tests {
     use {
         super::*,
-        crate::consumer_controls::ConsumerControlsDeviceDescriptor,
+        crate::consumer_controls_binding::ConsumerControlsDeviceDescriptor,
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_recovery_policy::{DeviceMarker, DeviceProxy},
         fidl_fuchsia_recovery_ui::{FactoryResetCountdownMarker, FactoryResetCountdownProxy},

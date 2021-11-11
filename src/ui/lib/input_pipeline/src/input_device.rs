@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{consumer_controls, keyboard, mouse, touch},
+    crate::{consumer_controls_binding, keyboard_binding, mouse_binding, touch_binding},
     anyhow::{format_err, Error},
     async_trait::async_trait,
     async_utils::hanging_get::client::HangingGetStream,
@@ -49,10 +49,10 @@ pub struct InputEvent {
 /// for their device.
 #[derive(Clone, Debug, PartialEq)]
 pub enum InputDeviceEvent {
-    Keyboard(keyboard::KeyboardEvent),
-    ConsumerControls(consumer_controls::ConsumerControlsEvent),
-    Mouse(mouse::MouseEvent),
-    Touch(touch::TouchEvent),
+    Keyboard(keyboard_binding::KeyboardEvent),
+    ConsumerControls(consumer_controls_binding::ConsumerControlsEvent),
+    Mouse(mouse_binding::MouseEvent),
+    Touch(touch_binding::TouchEvent),
     #[cfg(test)]
     Fake,
 }
@@ -68,10 +68,10 @@ pub enum InputDeviceEvent {
 /// lifetime of a device binding.
 #[derive(Clone, Debug, PartialEq)]
 pub enum InputDeviceDescriptor {
-    Keyboard(keyboard::KeyboardDeviceDescriptor),
-    ConsumerControls(consumer_controls::ConsumerControlsDeviceDescriptor),
-    Mouse(mouse::MouseDeviceDescriptor),
-    Touch(touch::TouchDeviceDescriptor),
+    Keyboard(keyboard_binding::KeyboardDeviceDescriptor),
+    ConsumerControls(consumer_controls_binding::ConsumerControlsDeviceDescriptor),
+    Mouse(mouse_binding::MouseDeviceDescriptor),
+    Touch(touch_binding::TouchDeviceDescriptor),
     #[cfg(test)]
     Fake,
 }
@@ -204,18 +204,21 @@ pub async fn get_device_binding(
 ) -> Result<Box<dyn InputDeviceBinding>, Error> {
     match device_type {
         InputDeviceType::ConsumerControls => Ok(Box::new(
-            consumer_controls::ConsumerControlsBinding::new(device_proxy, input_event_sender)
-                .await?,
+            consumer_controls_binding::ConsumerControlsBinding::new(
+                device_proxy,
+                input_event_sender,
+            )
+            .await?,
         )),
         InputDeviceType::Mouse => Ok(Box::new(
-            mouse::MouseBinding::new(device_proxy, device_id, input_event_sender).await?,
+            mouse_binding::MouseBinding::new(device_proxy, device_id, input_event_sender).await?,
         )),
         InputDeviceType::Touch => Ok(Box::new(
-            touch::TouchBinding::new(device_proxy, device_id, input_event_sender).await?,
+            touch_binding::TouchBinding::new(device_proxy, device_id, input_event_sender).await?,
         )),
-        InputDeviceType::Keyboard => {
-            Ok(Box::new(keyboard::KeyboardBinding::new(device_proxy, input_event_sender).await?))
-        }
+        InputDeviceType::Keyboard => Ok(Box::new(
+            keyboard_binding::KeyboardBinding::new(device_proxy, input_event_sender).await?,
+        )),
     }
 }
 

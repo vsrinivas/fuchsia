@@ -5,7 +5,7 @@
 use {
     crate::input_device,
     crate::input_handler::InputHandler,
-    crate::touch,
+    crate::touch_binding,
     crate::utils::{Position, Size},
     anyhow::{format_err, Error},
     async_trait::async_trait,
@@ -15,7 +15,7 @@ use {
 };
 
 /// An input handler that parses touch events and forwards them to Scenic.
-pub struct TouchHandler {
+pub struct GfxTouchHandler {
     /// The Scenic session to send events to.
     scenic_session: scenic::SessionPtr,
 
@@ -29,7 +29,7 @@ pub struct TouchHandler {
 }
 
 #[async_trait(?Send)]
-impl InputHandler for TouchHandler {
+impl InputHandler for GfxTouchHandler {
     async fn handle_input_event(
         self: Rc<Self>,
         input_event: input_device::InputEvent,
@@ -51,7 +51,7 @@ impl InputHandler for TouchHandler {
     }
 }
 
-impl TouchHandler {
+impl GfxTouchHandler {
     /// Creates a new touch handler that sends events to the given Scenic session.
     ///
     /// # Parameters
@@ -70,7 +70,7 @@ impl TouchHandler {
         if display_size == Size::zero() {
             Err(format_err!("Display height: {} and width: {} are required to be non-zero."))
         } else {
-            Ok(Rc::new(TouchHandler { scenic_session, scenic_compositor_id, display_size }))
+            Ok(Rc::new(Self { scenic_session, scenic_compositor_id, display_size }))
         }
     }
 
@@ -82,8 +82,8 @@ impl TouchHandler {
     /// - `event_time`: The time in nanoseconds when the event was first recorded.
     fn handle_touch_event(
         &self,
-        touch_event: touch::TouchEvent,
-        touch_descriptor: touch::TouchDeviceDescriptor,
+        touch_event: touch_binding::TouchEvent,
+        touch_descriptor: touch_binding::TouchDeviceDescriptor,
         event_time: input_device::EventTime,
     ) {
         // The order in which events are sent to clients.
@@ -97,7 +97,7 @@ impl TouchHandler {
 
         let mut locked_session = self.scenic_session.lock();
         for phase in ordered_phases {
-            let contacts: Vec<touch::TouchContact> =
+            let contacts: Vec<touch_binding::TouchContact> =
                 touch_event.contacts.get(&phase).map_or(vec![], |contacts| contacts.to_vec());
             for contact in contacts {
                 let command = self.create_pointer_input_command(
@@ -122,8 +122,8 @@ impl TouchHandler {
     fn create_pointer_input_command(
         &self,
         phase: fidl_ui_input::PointerEventPhase,
-        contact: touch::TouchContact,
-        touch_descriptor: &touch::TouchDeviceDescriptor,
+        contact: touch_binding::TouchContact,
+        touch_descriptor: &touch_binding::TouchDeviceDescriptor,
         event_time: input_device::EventTime,
     ) -> fidl_ui_scenic::Command {
         let position = self.device_coordinate_from_contact(&contact, &touch_descriptor);
@@ -161,8 +161,8 @@ impl TouchHandler {
     /// (x, y) coordinates.
     fn device_coordinate_from_contact(
         &self,
-        contact: &touch::TouchContact,
-        touch_descriptor: &touch::TouchDeviceDescriptor,
+        contact: &touch_binding::TouchContact,
+        touch_descriptor: &touch_binding::TouchDeviceDescriptor,
     ) -> Position {
         if let Some(contact_descriptor) = touch_descriptor.contacts.first() {
             let range = Position {
@@ -200,9 +200,9 @@ mod tests {
 
     /// Returns an TouchDescriptor.
     fn get_touch_device_descriptor() -> input_device::InputDeviceDescriptor {
-        input_device::InputDeviceDescriptor::Touch(touch::TouchDeviceDescriptor {
+        input_device::InputDeviceDescriptor::Touch(touch_binding::TouchDeviceDescriptor {
             device_id: 1,
-            contacts: vec![touch::ContactDeviceDescriptor {
+            contacts: vec![touch_binding::ContactDeviceDescriptor {
                 x_range: fidl_input_report::Range { min: 0, max: 100 },
                 y_range: fidl_input_report::Range { min: 0, max: 100 },
                 pressure_range: None,
@@ -287,13 +287,13 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<fidl_ui_scenic::SessionMarker>()
                 .expect("Failed to create ScenicProxy and stream.");
         let scenic_session: scenic::SessionPtr = scenic::Session::new(session_proxy);
-        let touch_handler = TouchHandler::new(
+        let touch_handler = GfxTouchHandler::new(
             scenic_session.clone(),
             SCENIC_COMPOSITOR_ID,
             Size { width: SCENIC_DISPLAY_WIDTH, height: SCENIC_DISPLAY_HEIGHT },
         )
         .await
-        .expect("Failed to create TouchHandler.");
+        .expect("Failed to create GfxTouchHandler.");
 
         let descriptor = get_touch_device_descriptor();
         let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
@@ -338,13 +338,13 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<fidl_ui_scenic::SessionMarker>()
                 .expect("Failed to create ScenicProxy and stream.");
         let scenic_session: scenic::SessionPtr = scenic::Session::new(session_proxy);
-        let touch_handler = TouchHandler::new(
+        let touch_handler = GfxTouchHandler::new(
             scenic_session.clone(),
             SCENIC_COMPOSITOR_ID,
             Size { width: SCENIC_DISPLAY_WIDTH, height: SCENIC_DISPLAY_HEIGHT },
         )
         .await
-        .expect("Failed to create TouchHandler.");
+        .expect("Failed to create GfxTouchHandler.");
 
         let descriptor = get_touch_device_descriptor();
         let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
@@ -389,13 +389,13 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<fidl_ui_scenic::SessionMarker>()
                 .expect("Failed to create ScenicProxy and stream.");
         let scenic_session: scenic::SessionPtr = scenic::Session::new(session_proxy);
-        let touch_handler = TouchHandler::new(
+        let touch_handler = GfxTouchHandler::new(
             scenic_session.clone(),
             SCENIC_COMPOSITOR_ID,
             Size { width: SCENIC_DISPLAY_WIDTH, height: SCENIC_DISPLAY_HEIGHT },
         )
         .await
-        .expect("Failed to create TouchHandler.");
+        .expect("Failed to create GfxTouchHandler.");
 
         let descriptor = get_touch_device_descriptor();
         let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;

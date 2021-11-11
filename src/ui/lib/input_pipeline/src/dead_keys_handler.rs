@@ -37,7 +37,7 @@
 
 use crate::input_device::{EventTime, InputDeviceDescriptor, InputDeviceEvent, InputEvent};
 use crate::input_handler::InputHandler;
-use crate::keyboard::KeyboardEvent;
+use crate::keyboard_binding::KeyboardEvent;
 use async_trait::async_trait;
 use core::fmt;
 use fidl_fuchsia_ui_input3::{KeyEventType, KeyMeaning};
@@ -1151,7 +1151,11 @@ mod tests {
                         KeyEventType::Released,
                         Some(KeyMeaning::Codepoint(CIRCUMFLEX as u32)),
                     ),
-                    new_event(Key::LeftShift, KeyEventType::Pressed, Some(KeyMeaning::Codepoint(0))),
+                    new_event(
+                        Key::LeftShift,
+                        KeyEventType::Pressed,
+                        Some(KeyMeaning::Codepoint(0)),
+                    ),
                     new_event(
                         Key::A,
                         KeyEventType::Pressed,
@@ -1162,7 +1166,11 @@ mod tests {
                         KeyEventType::Released,
                         Some(KeyMeaning::Codepoint('A' as u32)),
                     ),
-                    new_event(Key::LeftShift, KeyEventType::Released, Some(KeyMeaning::Codepoint(0))),
+                    new_event(
+                        Key::LeftShift,
+                        KeyEventType::Released,
+                        Some(KeyMeaning::Codepoint(0)),
+                    ),
                 ],
                 expected: vec![
                     new_event(Key::Key5, KeyEventType::Pressed, ZERO_CP),
@@ -1182,7 +1190,11 @@ mod tests {
                         KeyEventType::Released,
                         Some(KeyMeaning::Codepoint('Â' as u32)),
                     ),
-                    new_event(Key::LeftShift, KeyEventType::Released, Some(KeyMeaning::Codepoint(0))),
+                    new_event(
+                        Key::LeftShift,
+                        KeyEventType::Released,
+                        Some(KeyMeaning::Codepoint(0)),
+                    ),
                 ],
             },
         ];

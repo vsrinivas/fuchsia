@@ -4,7 +4,7 @@
 
 use {
     crate::input_handler::InputHandler,
-    crate::{consumer_controls, input_device},
+    crate::{consumer_controls_binding, input_device},
     anyhow::{Context, Error},
     async_trait::async_trait,
     fidl_fuchsia_input_report as fidl_input_report, fidl_fuchsia_ui_input as fidl_ui_input,
@@ -118,7 +118,7 @@ impl MediaButtonsHandler {
     /// # Parameters
     /// -  `event`: The MediaButtonEvent to create a MediaButtonsEvent from.
     fn create_media_buttons_event(
-        event: consumer_controls::ConsumerControlsEvent,
+        event: consumer_controls_binding::ConsumerControlsEvent,
     ) -> fidl_ui_input::MediaButtonsEvent {
         let mut new_event = fidl_ui_input::MediaButtonsEvent {
             volume: Some(0),

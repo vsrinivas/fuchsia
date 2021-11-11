@@ -4,32 +4,32 @@
 
 //! Implements applying keymaps to hardware keyboard key events.
 //!
-//! See [Handler] for details.
+//! See [KeymapHandler] for details.
 
 use crate::input_device;
 use crate::input_handler::InputHandler;
-use crate::keyboard;
+use crate::keyboard_binding;
 use async_trait::async_trait;
 use fuchsia_syslog::fx_log_debug;
 use keymaps;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-/// `Handler` applies a keymap to a keyboard event, resolving each key press
+/// `KeymapHandler` applies a keymap to a keyboard event, resolving each key press
 /// to a sequence of Unicode code points.  This allows basic keymap application,
 /// but does not lend itself to generalized text editing.
 ///
-/// Create a new one with [Handler::new].
+/// Create a new one with [KeymapHandler::new].
 #[derive(Debug, Default)]
-pub struct Handler {
+pub struct KeymapHandler {
     /// Tracks the state of the modifier keys.
     modifier_state: RefCell<keymaps::ModifierState>,
 }
 
-/// This trait implementation allows the [Handler] to be hooked up into the input
+/// This trait implementation allows the [KeymapHandler] to be hooked up into the input
 /// pipeline.
 #[async_trait(?Send)]
-impl InputHandler for Handler {
+impl InputHandler for KeymapHandler {
     async fn handle_input_event(
         self: Rc<Self>,
         input_event: input_device::InputEvent,
@@ -47,7 +47,7 @@ impl InputHandler for Handler {
     }
 }
 
-impl Handler {
+impl KeymapHandler {
     /// Creates a new instance of the keymap handler.
     pub fn new() -> Rc<Self> {
         Rc::new(Default::default())
@@ -56,7 +56,7 @@ impl Handler {
     /// Attaches a key meaning to each passing keyboard event.
     fn process_keyboard_event(
         self: &Rc<Self>,
-        event: keyboard::KeyboardEvent,
+        event: keyboard_binding::KeyboardEvent,
         device_descriptor: input_device::InputDeviceDescriptor,
         event_time: input_device::EventTime,
     ) -> Vec<input_device::InputEvent> {
@@ -87,7 +87,7 @@ impl Handler {
 mod tests {
     use super::*;
 
-    use crate::{consumer_controls, testing_utilities};
+    use crate::{consumer_controls_binding, testing_utilities};
     use fuchsia_async as fasync;
 
     // A mod-specific version of `testing_utilities::create_keyboard_event`.
@@ -96,10 +96,11 @@ mod tests {
         event_type: fidl_fuchsia_ui_input3::KeyEventType,
         keymap: Option<String>,
     ) -> input_device::InputEvent {
-        let device_descriptor =
-            input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
+        let device_descriptor = input_device::InputDeviceDescriptor::Keyboard(
+            keyboard_binding::KeyboardDeviceDescriptor {
                 keys: vec![fidl_fuchsia_input::Key::A, fidl_fuchsia_input::Key::B],
-            });
+            },
+        );
         let (_, event_time_u64) = testing_utilities::event_times();
         testing_utilities::create_keyboard_event(
             key,
@@ -149,7 +150,9 @@ mod tests {
                     vec![],
                     0,
                     &input_device::InputDeviceDescriptor::ConsumerControls(
-                        consumer_controls::ConsumerControlsDeviceDescriptor { buttons: vec![] },
+                        consumer_controls_binding::ConsumerControlsDeviceDescriptor {
+                            buttons: vec![],
+                        },
                     ),
                 )],
                 expected: vec![None],
@@ -195,7 +198,7 @@ mod tests {
         ];
         for test in &tests {
             let mut actual: Vec<Option<fidl_fuchsia_ui_input3::KeyMeaning>> = vec![];
-            let handler = Handler::new();
+            let handler = KeymapHandler::new();
             for event in &test.events {
                 let mut result = handler
                     .clone()

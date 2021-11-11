@@ -14,7 +14,7 @@ use std::rc::Rc;
 /// may be exposed in the metrics.  No PII information should ever be exposed
 /// this way.
 #[derive(Debug)]
-pub struct Handler {
+pub struct InspectHandler {
     /// A function that obtains the current timestamp.
     now: fn() -> zx::Time,
     /// A node that contains the statistics about this particular handler.
@@ -30,7 +30,7 @@ pub struct Handler {
 }
 
 #[async_trait(?Send)]
-impl InputHandler for Handler {
+impl InputHandler for InspectHandler {
     async fn handle_input_event(
         self: Rc<Self>,
         input_event: input_device::InputEvent,
@@ -42,12 +42,12 @@ impl InputHandler for Handler {
     }
 }
 
-impl Handler {
+impl InspectHandler {
     /// Creates a new inspect handler instance.
     ///
     /// `node` is the inspect node that will receive the stats.
     pub fn new(node: inspect::Node) -> Rc<Self> {
-        Handler::new_with_now(node, zx::Time::get_monotonic)
+        Self::new_with_now(node, zx::Time::get_monotonic)
     }
 
     /// Creates a new inspect handler instance, using `now` to supply the current timestamp.
@@ -83,7 +83,7 @@ mod tests {
         let root = inspector.root();
         let test_node = root.create_child("test_node");
 
-        let handler = super::Handler::new_with_now(test_node, fixed_now);
+        let handler = super::InspectHandler::new_with_now(test_node, fixed_now);
         assert_data_tree!(inspector, root: {
             test_node: {
                 events_count: 0u64,

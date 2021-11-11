@@ -16,9 +16,9 @@ use {
         ime_handler::ImeHandler,
         input_device,
         input_pipeline::{InputDeviceBindingHashMap, InputPipeline, InputPipelineAssembly},
-        keymap,
+        keymap_handler,
         shortcut_handler::ShortcutHandler,
-        text_settings,
+        text_settings_handler,
         touch_injector_handler::TouchInjectorHandler,
     },
     scene_management::{self, SceneManager},
@@ -44,7 +44,7 @@ pub async fn handle_input(
     input_device_registry_request_stream_receiver: futures::channel::mpsc::UnboundedReceiver<
         InputDeviceRegistryRequestStream,
     >,
-    text_settings_handler: Rc<text_settings::Handler>,
+    text_settings_handler: Rc<text_settings_handler::TextSettingsHandler>,
     node: &inspect::Node,
 ) -> Result<InputPipeline, Error> {
     let input_pipeline = InputPipeline::new(
@@ -104,7 +104,7 @@ async fn add_flatland_touch_handler(
 async fn build_input_pipeline_assembly(
     use_flatland: bool,
     scene_manager: Arc<Mutex<Box<dyn SceneManager>>>,
-    text_settings_handler: Rc<text_settings::Handler>,
+    text_settings_handler: Rc<text_settings_handler::TextSettingsHandler>,
     node: &inspect::Node,
 ) -> InputPipelineAssembly {
     let mut assembly = InputPipelineAssembly::new();
@@ -150,12 +150,12 @@ fn add_inspect_handler(
     node: inspect::Node,
     assembly: InputPipelineAssembly,
 ) -> InputPipelineAssembly {
-    assembly.add_handler(input_pipeline::inspect::Handler::new(node))
+    assembly.add_handler(input_pipeline::inspect_handler::InspectHandler::new(node))
 }
 
 /// Hooks up the text settings handler.
 fn add_text_settings_handler(
-    text_settings_handler: Rc<text_settings::Handler>,
+    text_settings_handler: Rc<text_settings_handler::TextSettingsHandler>,
     assembly: InputPipelineAssembly,
 ) -> InputPipelineAssembly {
     assembly.add_handler(text_settings_handler)
@@ -165,7 +165,7 @@ fn add_text_settings_handler(
 /// be added as well to support keymapping.  Otherwise, it defaults to applying
 /// the US QWERTY keymap.
 fn add_keymap_handler(assembly: InputPipelineAssembly) -> InputPipelineAssembly {
-    assembly.add_handler(keymap::Handler::new())
+    assembly.add_handler(keymap_handler::KeymapHandler::new())
 }
 
 async fn add_shortcut_handler(mut assembly: InputPipelineAssembly) -> InputPipelineAssembly {

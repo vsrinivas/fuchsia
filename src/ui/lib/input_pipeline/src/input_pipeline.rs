@@ -449,7 +449,7 @@ mod tests {
         crate::fake_input_device_binding,
         crate::fake_input_handler,
         crate::input_device::{self, InputDeviceBinding},
-        crate::mouse,
+        crate::mouse_binding,
         crate::utils::Position,
         fidl::endpoints::{create_proxy, create_proxy_and_stream, create_request_stream},
         fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
@@ -472,13 +472,13 @@ mod tests {
         let mut rng = rand::thread_rng();
         let offset = Position { x: rng.gen_range(0, 10) as f32, y: rng.gen_range(0, 10) as f32 };
         let input_event = input_device::InputEvent {
-            device_event: input_device::InputDeviceEvent::Mouse(mouse::MouseEvent::new(
-                mouse::MouseLocation::Relative(offset),
+            device_event: input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent::new(
+                mouse_binding::MouseLocation::Relative(offset),
                 fidl_ui_input::PointerEventPhase::Move,
                 HashSet::new(),
             )),
             device_descriptor: input_device::InputDeviceDescriptor::Mouse(
-                mouse::MouseDeviceDescriptor {
+                mouse_binding::MouseDeviceDescriptor {
                     device_id: 1,
                     absolute_x_range: None,
                     absolute_y_range: None,
@@ -703,7 +703,7 @@ mod tests {
         assert!(boxed_mouse_binding.is_some());
         assert_eq!(
             boxed_mouse_binding.unwrap().get_device_descriptor(),
-            input_device::InputDeviceDescriptor::Mouse(mouse::MouseDeviceDescriptor {
+            input_device::InputDeviceDescriptor::Mouse(mouse_binding::MouseDeviceDescriptor {
                 device_id: 1,
                 absolute_x_range: None,
                 absolute_y_range: None
