@@ -42,6 +42,11 @@
             from: "#starnix_runner",
             to: [ "#starnix_test_runner" ],
         },
+        {
+            directory: "dev-gpu",
+            from: "parent",
+            to: "#starnix_runner",
+        },
     ],
     expose: [
         {

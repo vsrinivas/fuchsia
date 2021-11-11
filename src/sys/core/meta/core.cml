@@ -820,7 +820,10 @@
             directory: "dev",
             from: "parent",
             as: "dev-gpu",
-            to: "#vulkan_loader",
+            to: [
+                "#starnix_manager",
+                "#vulkan_loader",
+            ],
             subdir: "class/gpu",
         },
         {

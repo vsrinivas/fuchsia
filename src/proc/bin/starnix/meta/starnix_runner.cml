@@ -19,6 +19,11 @@
     ],
     use: [
         {
+            directory: "dev-gpu",
+            rights: [ "rw*" ],
+            path: "/dev/class/gpu",
+        },
+        {
             protocol: [
                 // Note that this is the parent's realm. This is used to create children in
                 // starnix_manager's collection.

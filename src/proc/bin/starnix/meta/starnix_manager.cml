@@ -39,6 +39,11 @@
             from: "parent",
             to: "#playground",
         },
+        {
+            directory: "dev-gpu",
+            from: "parent",
+            to: "#starnix_runner",
+        },
     ],
     expose: [
         {

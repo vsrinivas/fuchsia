@@ -414,6 +414,7 @@
             directory: "dev-gpu",
             from: "parent",
             to: [
+                "#starnix_test_runner",
                 "#system-tests",
                 "#tests",
             ],
