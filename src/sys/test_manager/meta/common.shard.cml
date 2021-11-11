@@ -159,7 +159,6 @@
                 "fuchsia.boot.ReadOnlyLog",
                 "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.kernel.VmexResource",
-                "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",
