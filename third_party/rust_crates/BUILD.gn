@@ -594,10 +594,6 @@ group("rouille") {
   deps = [ ":rouille-v3_0_0" ]
 }
 
-group("rust-crypto") {
-  deps = [ ":rust-crypto-v0_2_36" ]
-}
-
 if (current_os == "fuchsia") {
   group("rust_icu_common") {
     deps = [ ":rust_icu_common-v1_0_3" ]
@@ -7574,29 +7570,6 @@ rust_library("quote-v1_0_7") {
   ]
 }
 
-rust_library("rand-v0_3_23") {
-  crate_name = "rand"
-  crate_root = "//third_party/rust_crates/vendor/rand-0.3.23/src/lib.rs"
-  output_name = "rand-2c666fe219af820b"
-  configs -= [
-    "//build/config/rust:edition_2018",
-    "//build/config/rust:2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":libc-v0_2_101" ]
-  deps += [ ":rand-v0_4_6" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=2c666fe219af820b",
-    "-Cextra-filename=-2c666fe219af820b",
-  ]
-}
-
 rust_library("rand-v0_4_6") {
   crate_name = "rand"
   crate_root = "//third_party/rust_crates/vendor/rand-0.4.6/src/lib.rs"
@@ -8421,31 +8394,6 @@ rust_library("rouille-v3_0_0") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"deflate\"",
     "--cfg=feature=\"gzip\"",
-  ]
-}
-
-rust_library("rust-crypto-v0_2_36") {
-  crate_name = "crypto"
-  crate_root = "//third_party/rust_crates/mirrors/rust-crypto/src/lib.rs"
-  output_name = "crypto-6b666b5d7cfb935b"
-  configs -= [
-    "//build/config/rust:edition_2018",
-    "//build/config/rust:2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":libc-v0_2_101" ]
-  deps += [ ":rand-v0_3_23" ]
-  deps += [ ":rustc-serialize-v0_3_24" ]
-  deps += [ ":time-v0_1_42" ]
-  deps += [ "//third_party/rust_crates/compat/rust-crypto" ]
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=6b666b5d7cfb935b",
-    "-Cextra-filename=-6b666b5d7cfb935b",
   ]
 }
 

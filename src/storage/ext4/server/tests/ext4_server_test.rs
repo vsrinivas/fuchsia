@@ -6,7 +6,6 @@
 
 use {
     anyhow::Error,
-    crypto::{digest::Digest, sha2::Sha256},
     fdio::{SpawnAction, SpawnOptions},
     fidl_fuchsia_io::{DirectoryMarker, OPEN_RIGHT_READABLE},
     fidl_fuchsia_mem::Buffer,
@@ -20,6 +19,7 @@ use {
     matches::assert_matches,
     ramdevice_client::RamdiskClient,
     remote_block_device::{BlockClient, RemoteBlockClient},
+    sha2::{Digest, Sha256},
     std::collections::HashMap,
     std::io::{self, Read, Seek},
     std::path::PathBuf,
@@ -108,8 +108,8 @@ async fn ext4_server_mounts_block_device(
             io_util::OPEN_RIGHT_READABLE,
         )?;
         let mut hasher = Sha256::new();
-        hasher.input(&io_util::read_file_bytes(&file).await?);
-        assert_eq!(expected_hash, hasher.result_str().as_str());
+        hasher.update(&io_util::read_file_bytes(&file).await?);
+        assert_eq!(*expected_hash, hex::encode(hasher.finalize()));
     }
 
     Ok(())
