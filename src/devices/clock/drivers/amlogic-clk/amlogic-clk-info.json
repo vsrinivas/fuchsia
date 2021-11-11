@@ -1,0 +1,15 @@
+{
+    "short_description": "AMLogic clock subsystem driver",
+    "manufacturer": "AMLogic",
+    "families": [
+        "axg",
+        "gxl",
+        "g12a",
+        "g12b",
+        "sm1"
+    ],
+    "models": [],
+    "areas": [
+        "Clock"
+    ]
+}
