@@ -709,4 +709,55 @@ TEST_F(NetDeviceTest, TestPortInfoInvalidPort) {
   ASSERT_STATUS(response->status_value(), ZX_ERR_NOT_FOUND);
 }
 
+// Guards against a regression where in-flight tx and rx frames could cause a
+// page fault when the device is closed.
+TEST_F(NetDeviceTest, CancelsWaitOnTeardown) {
+  auto tun_device_result = OpenTunDeviceAndPort();
+  ASSERT_OK(tun_device_result.status_value());
+  auto& [tun_device, tun_port] = tun_device_result.value();
+  std::unique_ptr<NetworkDeviceClient> client;
+  ASSERT_OK(tun_device->GetDevice(CreateClientRequest(&client)).status());
+
+  ASSERT_OK(StartSession(*client));
+  ASSERT_OK(AttachPort(*client));
+
+  // Generate some rx and tx traffic.
+  for (size_t i = 0; i < 10; i++) {
+    // NB: Not a constant because FromExternal doesn't like constant pointers.
+    uint8_t kSendData[] = {1, 2, 3};
+    tun::wire::Frame frame(alloc_);
+    frame.set_frame_type(netdev::wire::FrameType::kEthernet);
+    frame.set_data(alloc_, fidl::VectorView<uint8_t>::FromExternal(kSendData, countof(kSendData)));
+    frame.set_port(kPortId);
+    tun_device->WriteFrame(std::move(frame),
+                           [](fidl::WireResponse<tun::Device::WriteFrame>* response) {
+                             const tun::wire::DeviceWriteFrameResult& result = response->result;
+                             zx_status_t status = [&result]() {
+                               switch (result.which()) {
+                                 case tun::wire::DeviceWriteFrameResult::Tag::kResponse:
+                                   return ZX_OK;
+                                 case tun::wire::DeviceWriteFrameResult::Tag::kErr:
+                                   return result.err();
+                               }
+                             }();
+                             EXPECT_OK(status);
+                           });
+    auto tx = client->AllocTx();
+    ASSERT_TRUE(tx.is_valid());
+    tx.data().SetFrameType(fuchsia_hardware_network::wire::FrameType::kEthernet);
+    tx.data().SetPortId(kPortId);
+    ASSERT_EQ(tx.data().Write(kSendData, countof(kSendData)), countof(kSendData));
+    ASSERT_OK(tx.Send());
+  }
+
+  std::optional<zx_status_t> err;
+  client->SetErrorCallback([&err](zx_status_t status) { err = status; });
+  // Drop the device, wait for termination, then run the loop until idle.
+  tun_port.AsyncTeardown();
+  tun_device.AsyncTeardown();
+  ASSERT_TRUE(RunLoopUntilOrFailure([&err]() { return err.has_value(); }));
+  ASSERT_STATUS(err.value(), ZX_ERR_PEER_CLOSED);
+  RunLoopUntilIdle();
+}
+
 }  // namespace

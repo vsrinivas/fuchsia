@@ -531,7 +531,8 @@ zx::status<netdev::wire::SessionInfo> NetworkDeviceClient::MakeSessionInfo(fidl:
 }
 
 buffer_descriptor_t* NetworkDeviceClient::descriptor(uint16_t idx) {
-  ZX_ASSERT(idx < descriptor_count_);
+  ZX_ASSERT_MSG(idx < descriptor_count_, "invalid index %d, want < %d", idx, descriptor_count_);
+  ZX_ASSERT_MSG(descriptors_.start() != nullptr, "descriptors not mapped");
   return reinterpret_cast<buffer_descriptor_t*>(static_cast<uint8_t*>(descriptors_.start()) +
                                                 session_config_.descriptor_length * idx);
 }
@@ -644,6 +645,21 @@ void NetworkDeviceClient::ErrorTeardown(zx_status_t err) {
   descriptors_.Unmap();
   descriptors_vmo_.reset();
   session_ = {};
+  auto cancel_wait = [](async::WaitBase& wait, const char* name) {
+    zx_status_t status = wait.Cancel();
+    switch (status) {
+      case ZX_OK:
+      case ZX_ERR_NOT_FOUND:
+        break;
+      default:
+        FX_PLOGS(ERROR, status) << "failed to cancel" << name;
+    }
+  };
+  cancel_wait(tx_wait_, "tx_wait");
+  cancel_wait(rx_wait_, "rx_wait");
+  cancel_wait(tx_writable_wait_, "tx_writable_wait");
+  cancel_wait(rx_writable_wait_, "rx_writable_wait");
+
   if (err_callback_) {
     err_callback_(err);
   }
