@@ -87,8 +87,8 @@ and code written for both Posix and Fuchsia may still have
 Zircon does not have fork or exec. Instead, process creation is
 provided by [fdio](/sdk/lib/fdio). While Zircon has Process and
 Thread objects, these are pretty raw and know nothing about
-ELF. The `fdio_spawn` function family knows how to turn an ELF and some initial
-state into a running process.
+ELF. The `fdio_spawn` function family knows how to turn an ELF binary and some
+initial state into a running process.
 
 
 [zircon-concepts-message-passing]: /docs/concepts/kernel/concepts.md#message-passing-sockets-and-channels
