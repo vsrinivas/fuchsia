@@ -995,19 +995,23 @@
             },
             "properties": {
                 "column": {
+                    "description": "One-based column number, counting in bytes",
                     "maximum": 4294967295,
                     "minimum": 1,
                     "type": "integer"
                 },
                 "filename": {
+                    "description": "Path to the file",
                     "type": "string"
                 },
                 "length": {
+                    "description": "Length of the location, counting in bytes",
                     "maximum": 4294967295,
                     "minimum": 0,
                     "type": "integer"
                 },
                 "line": {
+                    "description": "One-based line number in the file",
                     "maximum": 4294967295,
                     "minimum": 1,
                     "type": "integer"
