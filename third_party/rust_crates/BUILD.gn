@@ -674,6 +674,10 @@ group("scopeguard") {
   deps = [ ":scopeguard-v1_1_0" ]
 }
 
+group("scrypt") {
+  deps = [ ":scrypt-v0_8_0" ]
+}
+
 group("semver") {
   deps = [ ":semver-v0_9_0" ]
 }
@@ -1698,6 +1702,29 @@ rust_library("base64-v0_9_3") {
     "--edition=2015",
     "-Cmetadata=4feaf160d10ad83f",
     "-Cextra-filename=-4feaf160d10ad83f",
+  ]
+}
+
+rust_library("base64ct-v1_0_1") {
+  crate_name = "base64ct"
+  crate_root = "//third_party/rust_crates/vendor/base64ct/src/lib.rs"
+  output_name = "base64ct-3a2b8ecee00a4872"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=3a2b8ecee00a4872",
+    "-Cextra-filename=-3a2b8ecee00a4872",
+    "--cfg=feature=\"alloc\"",
+    "--cfg=feature=\"std\"",
   ]
 }
 
@@ -2932,6 +2959,29 @@ rust_library("crossterm_winapi-v0_7_0") {
     "--edition=2015",
     "-Cmetadata=e4d128a29a118570",
     "-Cextra-filename=-e4d128a29a118570",
+  ]
+}
+
+rust_library("crypto-mac-v0_11_1") {
+  crate_name = "crypto_mac"
+  crate_root = "//third_party/rust_crates/vendor/crypto-mac/src/lib.rs"
+  output_name = "crypto_mac-c61aae76717eb909"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":generic-array-v0_14_4" ]
+  deps += [ ":subtle-v2_4_1" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=c61aae76717eb909",
+    "-Cextra-filename=-c61aae76717eb909",
   ]
 }
 
@@ -4528,6 +4578,29 @@ rust_library("hex-v0_3_2") {
     "--edition=2015",
     "-Cmetadata=67ad4b3000c63154",
     "-Cextra-filename=-67ad4b3000c63154",
+  ]
+}
+
+rust_library("hmac-v0_11_0") {
+  crate_name = "hmac"
+  crate_root = "//third_party/rust_crates/vendor/hmac/src/lib.rs"
+  output_name = "hmac-249a5a2d4f454c6b"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":crypto-mac-v0_11_1" ]
+  deps += [ ":digest-v0_9_0" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=249a5a2d4f454c6b",
+    "-Cextra-filename=-249a5a2d4f454c6b",
   ]
 }
 
@@ -6398,6 +6471,33 @@ rust_library("parking_lot_core-v0_8_3") {
   }
 }
 
+rust_library("password-hash-v0_3_2") {
+  crate_name = "password_hash"
+  crate_root = "//third_party/rust_crates/vendor/password-hash/src/lib.rs"
+  output_name = "password_hash-7b700086e6c6a6b4"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":base64ct-v1_0_1" ]
+  deps += [ ":rand_core-v0_6_3" ]
+  deps += [ ":subtle-v2_4_1" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=7b700086e6c6a6b4",
+    "-Cextra-filename=-7b700086e6c6a6b4",
+    "--cfg=feature=\"alloc\"",
+    "--cfg=feature=\"rand_core\"",
+    "--cfg=feature=\"std\"",
+  ]
+}
+
 rust_proc_macro("paste-v1_0_0") {
   crate_name = "paste"
   crate_root = "//third_party/rust_crates/vendor/paste/src/lib.rs"
@@ -6437,6 +6537,28 @@ rust_library("pathdiff-v0_2_0") {
     "--edition=2015",
     "-Cmetadata=57152bbe2df0a861",
     "-Cextra-filename=-57152bbe2df0a861",
+  ]
+}
+
+rust_library("pbkdf2-v0_9_0") {
+  crate_name = "pbkdf2"
+  crate_root = "//third_party/rust_crates/vendor/pbkdf2/src/lib.rs"
+  output_name = "pbkdf2-d4e78de98937c7ae"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":crypto-mac-v0_11_1" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=d4e78de98937c7ae",
+    "-Cextra-filename=-d4e78de98937c7ae",
   ]
 }
 
@@ -8843,6 +8965,29 @@ rust_library("safemem-v0_3_0") {
   ]
 }
 
+rust_library("salsa20-v0_8_1") {
+  crate_name = "salsa20"
+  crate_root = "//third_party/rust_crates/vendor/salsa20/src/lib.rs"
+  output_name = "salsa20-150961e3add0052"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":cipher-v0_3_0" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=150961e3add0052",
+    "-Cextra-filename=-150961e3add0052",
+    "--cfg=feature=\"expose-core\"",
+  ]
+}
+
 rust_library("same-file-v1_0_4") {
   crate_name = "same_file"
   crate_root = "//third_party/rust_crates/ask2patch/same-file/src/lib.rs"
@@ -8931,6 +9076,36 @@ rust_library("scopeguard-v1_1_0") {
     "-Cextra-filename=-6ef302a7f864fbb3",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"use_std\"",
+  ]
+}
+
+rust_library("scrypt-v0_8_0") {
+  crate_name = "scrypt"
+  crate_root = "//third_party/rust_crates/vendor/scrypt/src/lib.rs"
+  output_name = "scrypt-1834e042454c996"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":hmac-v0_11_0" ]
+  deps += [ ":password-hash-v0_3_2" ]
+  deps += [ ":pbkdf2-v0_9_0" ]
+  deps += [ ":salsa20-v0_8_1" ]
+  deps += [ ":sha2-v0_9_8" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=1834e042454c996",
+    "-Cextra-filename=-1834e042454c996",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"password-hash\"",
+    "--cfg=feature=\"simple\"",
+    "--cfg=feature=\"std\"",
   ]
 }
 
