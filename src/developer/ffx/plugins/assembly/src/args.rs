@@ -21,6 +21,7 @@ pub struct AssemblyCommand {
 #[argh(subcommand)]
 pub enum OperationClass {
     Image(ImageArgs),
+    CreateUpdate(CreateUpdateArgs),
     ConfigData(ConfigDataArgs),
 }
 
@@ -45,6 +46,56 @@ pub struct ImageArgs {
     pub outdir: PathBuf,
 
     /// the directory to write generated intermediate files to.
+    #[argh(option)]
+    pub gendir: Option<PathBuf>,
+}
+
+/// construct an UpdatePackage using images and package.
+#[derive(Debug, FromArgs, PartialEq)]
+#[argh(subcommand, name = "create-update")]
+pub struct CreateUpdateArgs {
+    /// path to a packages manifest, which specifies what packages to update.
+    #[argh(option)]
+    pub packages: Option<PathBuf>,
+
+    /// path to a partitions config, which specifies where in the partition
+    /// table the images are put.
+    #[argh(option)]
+    pub partitions: PathBuf,
+
+    /// path to an images manifest, which specifies images to put in slot A.
+    #[argh(option)]
+    pub system_a: Option<PathBuf>,
+
+    /// path to an images manifest, which specifies images to put in slot R.
+    #[argh(option)]
+    pub system_r: Option<PathBuf>,
+
+    /// name of the board.
+    /// Fuchsia will reject an Update Package with a different board name.
+    #[argh(option)]
+    pub board_name: String,
+
+    /// file containing the version of the Fuchsia system.
+    #[argh(option)]
+    pub version_file: PathBuf,
+
+    /// backstop OTA version.
+    /// Fuchsia will reject updates with a lower epoch.
+    #[argh(option)]
+    pub epoch: u64,
+
+    /// name to give the Update Package.
+    /// This is currently only used by OTA tests to allow publishing multiple
+    /// update packages to the same amber repository without naming collisions.
+    #[argh(option)]
+    pub update_package_name: Option<String>,
+
+    /// directory to write the UpdatePackage.
+    #[argh(option)]
+    pub outdir: PathBuf,
+
+    /// directory to write intermediate files.
     #[argh(option)]
     pub gendir: Option<PathBuf>,
 }

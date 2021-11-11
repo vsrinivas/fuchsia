@@ -7,5 +7,7 @@
 //! Library for constructing the Update Package.
 
 mod update_package;
+mod update_package2;
 
 pub use update_package::UpdatePackageBuilder;
+pub use update_package2::{Slot, UpdatePackageBuilder2};

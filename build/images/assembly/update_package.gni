@@ -1,0 +1,120 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/developer/ffx/build/ffx_action.gni")
+
+template("update_package") {
+  assert(defined(invoker.partitions), "Need to define partitions")
+  assert(defined(invoker.board_name), "Need to define board_name")
+  assert(defined(invoker.version_file), "Need to define version_file")
+  assert(defined(invoker.epoch), "Need to define epoch")
+
+  labels = {
+    ffx_tool = "//src/developer/ffx:ffx_bin($host_toolchain)"
+  }
+
+  files = {
+    outdir = "$target_out_dir/$target_name"
+    gendir = "$outdir/gen"
+    depfile_path = "$outdir.d"
+    update_package = "$outdir/update.far"
+    update_package_manifest = "$outdir/update_package_manifest.json"
+    update_meta_package = "$gendir/update/meta/package"
+    board = "$gendir/board"
+    epoch = "$gendir/epoch.json"
+    packages = "$gendir/packages.json"
+  }
+
+  action("$target_name") {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                             "visibility",
+                           ])
+    if (!defined(deps)) {
+      deps = []
+    }
+    depfile = files.depfile_path
+
+    # Compute the path to the ffx host tool.
+    ffx_out_dir = get_label_info(labels.ffx_tool, "root_out_dir")
+    ffx_path = "$ffx_out_dir/ffx"
+    deps += [ labels.ffx_tool ]
+
+    script = "//build/images/assembly/update_package.py"
+    args = [
+      "--ffx-path",
+      rebase_path(ffx_path, root_build_dir),
+      "--depfile",
+      rebase_path(files.depfile_path, root_build_dir),
+      "--partitions",
+      rebase_path(invoker.partitions, root_build_dir),
+      "--outdir",
+      rebase_path(files.outdir, root_build_dir),
+      "--gendir",
+      rebase_path(files.gendir, root_build_dir),
+      "--board-name",
+      invoker.board_name,
+      "--epoch",
+      invoker.epoch,
+      "--version-file",
+      rebase_path(invoker.version_file, root_build_dir),
+    ]
+
+    outputs = [
+      files.update_package,
+      files.update_package_manifest,
+      files.update_meta_package,
+      files.board,
+      files.epoch,
+      files.packages,
+    ]
+
+    inputs = [
+      ffx_path,
+      invoker.partitions,
+      invoker.version_file,
+    ]
+
+    if (defined(invoker.packages)) {
+      args += [
+        "--packages",
+        rebase_path(invoker.packages, root_build_dir),
+      ]
+      inputs += [ invoker.packages ]
+    }
+
+    if (defined(invoker.system_a)) {
+      args += [
+        "--system-a",
+        rebase_path(invoker.system_a, root_build_dir),
+      ]
+      inputs += [ invoker.system_a ]
+    }
+
+    if (defined(invoker.system_b)) {
+      args += [
+        "--system-b",
+        rebase_path(invoker.system_b, root_build_dir),
+      ]
+      inputs += [ invoker.system_b ]
+    }
+
+    if (defined(invoker.system_r)) {
+      args += [
+        "--system-r",
+        rebase_path(invoker.system_r, root_build_dir),
+      ]
+      inputs += [ invoker.system_r ]
+    }
+
+    if (defined(invoker.name)) {
+      args += [
+        "--update-package-name",
+        invoker.name,
+      ]
+    }
+  }
+}

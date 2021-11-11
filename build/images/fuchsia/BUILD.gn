@@ -3,8 +3,10 @@
 # found in the LICENSE file.
 
 import("//build/images/assemble_system.gni")
+import("//build/images/assembly/update_package.gni")
 import("//build/images/vboot/vboot.gni")
 import("//build/security.gni")
+import("//build/testing/verify_files_match.gni")
 
 assert(current_toolchain == target_toolchain)
 
@@ -165,7 +167,13 @@ if (include_fvm_blob_sparse) {
 
 group("fuchsia") {
   testonly = fuchsia_zbi_testonly
-  public_deps = [ ":fuchsia_assembly" ]
+  public_deps = [
+    ":fuchsia_assembly",
+    ":update",
+    ":update_matches",
+    ":update_prime",
+    ":update_prime_matches",
+  ]
   if (!bootfs_only) {
     public_deps += [ ":copy_blobfs" ]
   }
@@ -402,6 +410,44 @@ assemble_system("fuchsia_assembly") {
   }
 }
 
+update_package("update") {
+  files = {
+    _fuchsia_out =
+        get_label_info(":fuchsia_assembly", "target_out_dir") + "/fuchsia"
+    _recovery_out = get_label_info(recovery_label, "target_out_dir") + "/" +
+                    get_label_info(recovery_label, "name")
+    fuchsia_partitions = "${_fuchsia_out}_partitions.json"
+    fuchsia_packages = "${_fuchsia_out}/gen/packages.json"
+    fuchsia_images = "${_fuchsia_out}/images.json"
+    recovery_images = "${_recovery_out}/images.json"
+  }
+
+  testonly = fuchsia_zbi_testonly
+  deps = [
+    ":fuchsia_assembly",
+    "//build/info:latest-commit-date",
+    recovery_label,
+  ]
+  partitions = files.fuchsia_partitions
+  packages = files.fuchsia_packages
+  system_a = files.fuchsia_images
+  system_r = files.recovery_images
+  board_name = board_name
+  version_file = build_info_files.version
+  epoch = "0"
+}
+
+verify_files_match("update_matches") {
+  testonly = fuchsia_zbi_testonly
+  first = "$root_out_dir/obj/build/images/fuchsia/fuchsia/update.far"
+  second = "$root_out_dir/obj/build/images/fuchsia/update/update.far"
+
+  deps = [
+    ":fuchsia_assembly",
+    ":update",
+  ]
+}
+
 ##################################################
 # Fuchsia Prime
 ##################################################
@@ -441,6 +487,45 @@ assemble_system("fuchsia_prime") {
       package_output_manifests += [ files.base_package_manifest ]
     }
   }
+}
+
+update_package("update_prime") {
+  files = {
+    _fuchsia_out =
+        get_label_info(":fuchsia_prime", "target_out_dir") + "/fuchsia_prime"
+    _recovery_out = get_label_info(recovery_label, "target_out_dir") + "/" +
+                    get_label_info(recovery_label, "name")
+    fuchsia_partitions = "${_fuchsia_out}_partitions.json"
+    fuchsia_packages = "${_fuchsia_out}/gen/packages.json"
+    fuchsia_images = "${_fuchsia_out}/images.json"
+    recovery_images = "${_recovery_out}/images.json"
+  }
+
+  testonly = fuchsia_zbi_testonly
+  deps = [
+    ":fuchsia_prime",
+    "//build/info:latest-commit-date",
+    recovery_label,
+  ]
+  name = "update_prime"
+  partitions = files.fuchsia_partitions
+  packages = files.fuchsia_packages
+  system_a = files.fuchsia_images
+  system_r = files.recovery_images
+  board_name = board_name
+  version_file = build_info_files.version
+  epoch = "0"
+}
+
+verify_files_match("update_prime_matches") {
+  testonly = fuchsia_zbi_testonly
+  first = "$root_out_dir/obj/build/images/fuchsia/fuchsia_prime/update.far"
+  second = "$root_out_dir/obj/build/images/fuchsia/update_prime/update.far"
+
+  deps = [
+    ":fuchsia_prime",
+    ":update_prime",
+  ]
 }
 
 ##################################################

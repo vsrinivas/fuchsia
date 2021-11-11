@@ -22,6 +22,7 @@ pub async fn assembly(cmd: AssemblyCommand) -> Result<()> {
     // Dispatch to the correct operation based on the command.
     match cmd.op_class {
         OperationClass::Image(args) => operations::image::assemble(args),
+        OperationClass::CreateUpdate(args) => operations::create_update::create_update(args),
         OperationClass::ConfigData(args) => operations::config_data::create_config_data(args),
     }
 }
