@@ -29,7 +29,7 @@ impl FutexTable {
     /// See FUTEX_WAIT.
     pub fn wait(
         &self,
-        task: &Task,
+        current_task: &CurrentTask,
         addr: UserAddress,
         value: u32,
         mask: u32,
@@ -42,14 +42,14 @@ impl FutexTable {
             let waiters = self.get_waiters(addr);
             let mut waiters = waiters.lock();
             // TODO: This read should be atomic.
-            task.mm.read_object(user_current, &mut current)?;
+            current_task.mm.read_object(user_current, &mut current)?;
             if current != value {
                 return Ok(());
             }
 
             waiters.wait_async_mask(&waiter, mask, WaitCallback::none());
         }
-        waiter.wait_until(task, deadline)
+        waiter.wait_until(current_task, deadline)
     }
 
     /// Wake the given number of waiters on futex at the given address.

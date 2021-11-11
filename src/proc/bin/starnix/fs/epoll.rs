@@ -128,7 +128,7 @@ impl EpollFileObject {
     /// Blocking wait on all waited upon events with a timeout.
     pub fn wait(
         &self,
-        current_task: &Task,
+        current_task: &CurrentTask,
         max_events: i32,
         timeout: i32,
     ) -> Result<Vec<EpollEvent>, Errno> {

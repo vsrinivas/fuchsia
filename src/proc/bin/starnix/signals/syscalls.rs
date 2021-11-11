@@ -336,7 +336,7 @@ pub fn sys_waitid(
             // wait_on_pid returns None if the task was not waited on. In that case, no siginfo is
             // returned.
             if let Some(zombie_task) =
-                wait_on_pid(&current_task, TaskSelector::Pid(id), (options & WNOHANG) == 0)?
+                wait_on_pid(current_task, TaskSelector::Pid(id), (options & WNOHANG) == 0)?
             {
                 let status = exit_code_to_status(zombie_task.exit_code);
 
@@ -373,7 +373,7 @@ pub fn sys_wait4(
         return error!(ENOSYS);
     };
 
-    if let Some(zombie_task) = wait_on_pid(&current_task, selector, (options & WNOHANG) == 0)? {
+    if let Some(zombie_task) = wait_on_pid(current_task, selector, (options & WNOHANG) == 0)? {
         let status = exit_code_to_status(zombie_task.exit_code);
 
         if !user_rusage.is_null() {

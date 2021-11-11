@@ -1050,9 +1050,9 @@ fn poll(
     }
 
     let mask = mask.unwrap_or_else(|| current_task.signals.read().mask);
-    let task = current_task.task_arc_clone();
-    let ready_fds = current_task
-        .wait_with_temporary_mask(mask, |_| epoll_file.wait(&task, num_fds, timeout))?;
+    let ready_fds = current_task.wait_with_temporary_mask(mask, |current_task| {
+        epoll_file.wait(current_task, num_fds, timeout)
+    })?;
 
     for event in &ready_fds {
         pollfds[event.data as usize].revents = event.events as i16;

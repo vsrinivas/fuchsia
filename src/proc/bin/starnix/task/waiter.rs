@@ -5,7 +5,7 @@
 use crate::error;
 use crate::fs::FdEvents;
 use crate::logging::*;
-use crate::task::Task;
+use crate::task::CurrentTask;
 use crate::types::Errno;
 use crate::types::*;
 use fuchsia_zircon as zx;
@@ -61,9 +61,7 @@ impl Waiter {
     ///
     /// If the wait is interrupted (see interrupt), this function returns
     /// EINTR.
-    ///
-    /// TODO(tbodt): make current_task into an &CurrentTask
-    pub fn wait(self: &Arc<Self>, current_task: &Task) -> Result<(), Errno> {
+    pub fn wait(self: &Arc<Self>, current_task: &CurrentTask) -> Result<(), Errno> {
         self.wait_until(current_task, zx::Time::INFINITE)
     }
 
@@ -73,7 +71,7 @@ impl Waiter {
     /// EINTR.
     pub fn wait_until(
         self: &Arc<Self>,
-        current_task: &Task,
+        current_task: &CurrentTask,
         deadline: zx::Time,
     ) -> Result<(), Errno> {
         {

@@ -14,7 +14,7 @@ use crate::types::*;
 /// - `pid`: The id of the task to wait on.
 /// - `should_hang`: Whether or not `task` should hang if the waited on task has not yet exited.
 pub fn wait_on_pid(
-    current_task: &Task,
+    current_task: &CurrentTask,
     selector: TaskSelector,
     should_hang: bool,
 ) -> Result<Option<ZombieTask>, Errno> {
