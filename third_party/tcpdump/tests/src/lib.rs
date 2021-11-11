@@ -67,10 +67,7 @@ async fn version_test() {
     let mut stdout_reader =
         BufReader::new(fasync::Socket::from_socket(stdout_reader).expect("async socket stdout"));
 
-    let mut patterns = vec![
-        "tcpdump version tcpdump-4.99.0 (2fef164426273c4c610a3c060b7990db0e99914d)",
-        "libpcap version libpcap-1.10.1 (c7642e2cc0c5bd65754685b160d25dc23c76c6bd)",
-    ];
+    let mut patterns = vec!["tcpdump version 4.99.0", "libpcap version 1.10.1"];
 
     while !patterns.is_empty() {
         let mut stdout = String::new();
