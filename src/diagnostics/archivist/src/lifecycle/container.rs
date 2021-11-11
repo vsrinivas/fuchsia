@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::{container::ComponentIdentity, inspect::container::InspectArtifactsContainer},
+    crate::{
+        container::ComponentIdentity, inspect::container::InspectArtifactsContainer,
+        logs::container::LogsArtifactsContainer,
+    },
     diagnostics_data::{self as schema, LifecycleType},
     diagnostics_hierarchy::{hierarchy, DiagnosticsHierarchy},
     fuchsia_zircon as zx,
@@ -41,6 +44,18 @@ impl LifecycleDataContainer {
             payload: None,
             event_timestamp: artifact.event_timestamp,
             lifecycle_type: LifecycleType::DiagnosticsReady,
+        }
+    }
+
+    pub fn from_logs_sink_connected_artifact(
+        artifact: &LogsArtifactsContainer,
+        identity: Arc<ComponentIdentity>,
+    ) -> Self {
+        LifecycleDataContainer {
+            identity,
+            payload: None,
+            event_timestamp: artifact.event_timestamp,
+            lifecycle_type: LifecycleType::LogSinkConnected,
         }
     }
 
