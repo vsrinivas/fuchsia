@@ -411,6 +411,13 @@ class SocketOptsTest : public SocketKindTest {
         .option = SO_NO_CHECK,
     };
   }
+
+  static SockOption GetTimestamp() {
+    return {
+        .level = SOL_SOCKET,
+        .option = SO_TIMESTAMP,
+    };
+  }
 };
 
 // The SocketOptsTest is adapted from gvisor/tests/syscalls/linux/socket_ip_unbound.cc
@@ -1320,6 +1327,44 @@ TEST_P(SocketOptsTest, SetNoChecksum) {
   ASSERT_TRUE(s = NewSocket()) << strerror(errno);
 
   SockOption t = GetNoChecksum();
+  ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOn, sizeof(kSockOptOn)), 0)
+      << strerror(errno);
+
+  int get = -1;
+  socklen_t get_len = sizeof(get);
+  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
+  EXPECT_EQ(get_len, sizeof(get));
+  EXPECT_EQ(get, kSockOptOn);
+
+  ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOff, sizeof(kSockOptOff)), 0)
+      << strerror(errno);
+
+  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
+  EXPECT_EQ(get_len, sizeof(get));
+  EXPECT_EQ(get, kSockOptOff);
+
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
+TEST_P(SocketOptsTest, TimestampDefault) {
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  int get = -1;
+  socklen_t get_len = sizeof(get);
+  SockOption t = GetTimestamp();
+  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
+  EXPECT_EQ(get_len, sizeof(get));
+  EXPECT_EQ(get, kSockOptOff);
+
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
+TEST_P(SocketOptsTest, SetTimestamp) {
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  SockOption t = GetTimestamp();
   ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOn, sizeof(kSockOptOn)), 0)
       << strerror(errno);
 
