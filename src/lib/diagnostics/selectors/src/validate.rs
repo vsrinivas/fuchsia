@@ -4,7 +4,10 @@
 
 use crate::{
     error::{StringPatternError, ValidationError},
-    types,
+    types::{
+        self, ComparisonOperator, FilterExpression, Identifier, InclusionOperator, OneOrMany,
+        Operator, Value,
+    },
 };
 use fidl_fuchsia_diagnostics as fdiagnostics;
 use lazy_static::lazy_static;
@@ -110,19 +113,91 @@ impl<T: TreeSelector> ValidateTreeSelectorExt for T {
 impl<T: MetadataSelector> ValidateMetadataSelectorExt for T {
     fn validate(&self) -> Result<(), ValidationError> {
         for filter in self.filters() {
-            let operator = filter.operator();
-            let value = filter.value();
-            if !filter.identifier.can_be_used_with_operator(&operator) {
-                return Err(ValidationError::InvalidOperator(filter.identifier.clone(), operator));
-            }
-            if !filter.identifier.can_be_used_with_value_type(&value) {
-                return Err(ValidationError::InvalidValueType(
-                    filter.identifier.clone(),
-                    value.ty(),
-                ));
-            }
+            filter.validate_identifier_and_operator()?;
+            filter.validate_identifier_and_value()?;
+            filter.validate_operator_and_value()?;
         }
         Ok(())
+    }
+}
+
+// This macro is purely a utility fo validating that all the values in the given `$one_or_many` are
+// of a given type.
+macro_rules! match_one_or_many_value {
+    ($one_or_many:ident, $variant:pat) => {
+        match $one_or_many {
+            OneOrMany::One($variant) => true,
+            OneOrMany::Many(values) => values.iter().all(|value| matches!(value, $variant)),
+            _ => false,
+        }
+    };
+}
+
+impl FilterExpression<'_> {
+    /// Validates that all the values are of a type that can be used in an operation with this
+    /// identifier.
+    fn validate_identifier_and_value(&self) -> Result<(), ValidationError> {
+        let is_valid = match (&self.identifier, &self.value) {
+            (Identifier::Filename | Identifier::LifecycleEventType | Identifier::Tags, value) => {
+                match_one_or_many_value!(value, Value::StringLiteral(_))
+            }
+            (
+                Identifier::Pid | Identifier::Tid | Identifier::LineNumber | Identifier::Timestamp,
+                value,
+            ) => {
+                match_one_or_many_value!(value, Value::Number(_))
+            }
+            // TODO(fxbug.dev/86962): it should also be possible to compare severities with a fixed
+            // set of numbers.
+            (Identifier::Severity, value) => {
+                match_one_or_many_value!(value, Value::Severity(_))
+            }
+        };
+        if is_valid {
+            Ok(())
+        } else {
+            Err(ValidationError::InvalidValueType(self.identifier.clone(), self.value.ty()))
+        }
+    }
+
+    /// Validates that this identifier can be used in an operation defined by the given `operator`.
+    fn validate_identifier_and_operator(&self) -> Result<(), ValidationError> {
+        match (&self.identifier, &self.operator) {
+            (
+                Identifier::Filename
+                | Identifier::LifecycleEventType
+                | Identifier::Pid
+                | Identifier::Tid
+                | Identifier::LineNumber
+                | Identifier::Severity,
+                Operator::Comparison(ComparisonOperator::Equal)
+                | Operator::Comparison(ComparisonOperator::NotEq)
+                | Operator::Inclusion(InclusionOperator::In),
+            ) => Ok(()),
+            (Identifier::Severity | Identifier::Timestamp, Operator::Comparison(_)) => Ok(()),
+            (
+                Identifier::Tags,
+                Operator::Inclusion(InclusionOperator::HasAny | InclusionOperator::HasAll),
+            ) => Ok(()),
+            _ => Err(ValidationError::InvalidOperator(
+                self.identifier.clone(),
+                self.operator.clone(),
+            )),
+        }
+    }
+
+    fn validate_operator_and_value(&self) -> Result<(), ValidationError> {
+        // Validate the operation can be used with the type of value.
+        match (&self.operator, &self.value) {
+            (Operator::Inclusion(_), OneOrMany::Many(_)) => Ok(()),
+            (Operator::Inclusion(InclusionOperator::HasAny), OneOrMany::One(_)) => Ok(()),
+            (Operator::Inclusion(InclusionOperator::HasAll), OneOrMany::One(_)) => Ok(()),
+            (Operator::Comparison(_), OneOrMany::One(_)) => Ok(()),
+            (Operator::Inclusion(InclusionOperator::In), OneOrMany::One(_))
+            | (Operator::Comparison(_), OneOrMany::Many(_)) => {
+                Err(ValidationError::InvalidOperatorRhs(self.operator.clone(), self.value.ty()))
+            }
+        }
     }
 }
 

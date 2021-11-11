@@ -12,9 +12,7 @@ use nom::{
     branch::alt,
     bytes::complete::{escaped, is_not, tag, take_while, take_while1},
     character::complete::{alphanumeric1, char, digit1, hex_digit1, multispace0, none_of, one_of},
-    combinator::{
-        all_consuming, complete, cond, map, map_opt, map_res, opt, peek, recognize, verify,
-    },
+    combinator::{all_consuming, complete, cond, map, map_res, opt, peek, recognize, verify},
     error::{ErrorKind, ParseError},
     multi::{many0, separated_nonempty_list},
     sequence::{delimited, pair, preceded, tuple},
@@ -264,17 +262,19 @@ fn list_of_values(input: &str) -> IResult<&str, Vec<Value<'_>>> {
 /// Parses a single filter expression in a metadata selector.
 fn filter_expression(input: &str) -> IResult<&str, FilterExpression<'_>> {
     let (rest, identifier) = spaced(identifier)(input)?;
-    let (rest, op) = spaced(operator)(rest)?;
-    let (rest, op) = map_opt(
+    let (rest, operator) = spaced(operator)(rest)?;
+    let (rest, value) =
+        // TODO(fxbug.dev/86960): similar to severities, we can probably have reserved values
+        // for lifecycle event types.
+        // TODO(fxbug.dev/86961): support time diferences (1h30m, 30s, etc) instead of only
+        // timestamp comparison.
         spaced(alt((
             map(number, move |n| OneOrMany::One(Value::Number(n))),
             map(severity_sym, move |s| OneOrMany::One(Value::Severity(s))),
             map(string_literal, move |s| OneOrMany::One(Value::StringLiteral(s))),
             map(list_of_values, OneOrMany::Many),
-        ))),
-        move |one_or_many| Operation::maybe_new(op, one_or_many),
-    )(rest)?;
-    Ok((rest, FilterExpression { identifier, op }))
+        )))(rest)?;
+    Ok((rest, FilterExpression { identifier, operator, value }))
 }
 
 /// Parses a metadata selector.
@@ -614,17 +614,16 @@ mod tests {
                 metadata: Some(MetadataSelector::new(vec![
                     FilterExpression {
                         identifier: Identifier::Filename,
-                        op: Operation::Comparison(
-                            ComparisonOperator::Equal,
-                            Value::StringLiteral("baz")
-                        ),
+                        operator: Operator::Comparison(ComparisonOperator::Equal),
+                        value: OneOrMany::One(Value::StringLiteral("baz")),
                     },
                     FilterExpression {
                         identifier: Identifier::Severity,
-                        op: Operation::Inclusion(
-                            InclusionOperator::In,
-                            vec![Value::Severity(Severity::Info), Value::Severity(Severity::Error)]
-                        ),
+                        operator: Operator::Inclusion(InclusionOperator::In),
+                        value: OneOrMany::Many(vec![
+                            Value::Severity(Severity::Info),
+                            Value::Severity(Severity::Error)
+                        ])
                     },
                 ])),
             }
@@ -669,7 +668,8 @@ mod tests {
                 },
                 metadata: Some(MetadataSelector::new(vec![FilterExpression {
                     identifier: Identifier::Pid,
-                    op: Operation::Comparison(ComparisonOperator::Equal, Value::Number(123)),
+                    operator: Operator::Comparison(ComparisonOperator::Equal),
+                    value: OneOrMany::One(Value::Number(123)),
                 },])),
             }
         );
@@ -849,16 +849,15 @@ mod tests {
     fn parse_filter_expression() {
         let expected = FilterExpression {
             identifier: Identifier::Pid,
-            op: Operation::Comparison(ComparisonOperator::Equal, Value::Number(123)),
+            operator: Operator::Comparison(ComparisonOperator::Equal),
+            value: OneOrMany::One(Value::Number(123)),
         };
         assert_eq!(expected, test_filter_expr!("pid = 123").unwrap());
 
         let expected = FilterExpression {
             identifier: Identifier::Severity,
-            op: Operation::Comparison(
-                ComparisonOperator::GreaterEq,
-                Value::Severity(Severity::Info),
-            ),
+            operator: Operator::Comparison(ComparisonOperator::GreaterEq),
+            value: OneOrMany::One(Value::Severity(Severity::Info)),
         };
         assert_eq!(expected, test_filter_expr!("severity>=info").unwrap());
 
@@ -869,26 +868,26 @@ mod tests {
         // The inclusion operator HAS can be used with lists and single values.
         let expected = FilterExpression {
             identifier: Identifier::Tags,
-            op: Operation::Inclusion(
-                InclusionOperator::HasAny,
-                vec![Value::StringLiteral("foo"), Value::StringLiteral("bar")],
-            ),
+            operator: Operator::Inclusion(InclusionOperator::HasAny),
+            value: OneOrMany::Many(vec![Value::StringLiteral("foo"), Value::StringLiteral("bar")]),
         };
         assert_eq!(expected, test_filter_expr!("tags HAS ANY [\"foo\", \"bar\"]").unwrap());
 
         let expected = FilterExpression {
             identifier: Identifier::Tags,
-            op: Operation::Inclusion(InclusionOperator::HasAny, vec![Value::StringLiteral("foo")]),
+            operator: Operator::Inclusion(InclusionOperator::HasAny),
+            value: OneOrMany::One(Value::StringLiteral("foo")),
         };
         assert_eq!(expected, test_filter_expr!("tags has any \"foo\"").unwrap());
 
         // The inclusion operator IN can only be used with lists.
         let expected = FilterExpression {
             identifier: Identifier::LifecycleEventType,
-            op: Operation::Inclusion(
-                InclusionOperator::In,
-                vec![Value::StringLiteral("started"), Value::StringLiteral("stopped")],
-            ),
+            operator: Operator::Inclusion(InclusionOperator::In),
+            value: OneOrMany::Many(vec![
+                Value::StringLiteral("started"),
+                Value::StringLiteral("stopped"),
+            ]),
         };
         assert_eq!(
             expected,
@@ -901,19 +900,22 @@ mod tests {
     fn filename_operations() {
         let expected = FilterExpression {
             identifier: Identifier::Filename,
-            op: Operation::Inclusion(InclusionOperator::In, vec![Value::StringLiteral("foo.rs")]),
+            operator: Operator::Inclusion(InclusionOperator::In),
+            value: OneOrMany::Many(vec![Value::StringLiteral("foo.rs")]),
         };
         assert_eq!(expected, test_filter_expr!("filename in [\"foo.rs\"]").unwrap());
 
         let expected = FilterExpression {
             identifier: Identifier::Filename,
-            op: Operation::Comparison(ComparisonOperator::Equal, Value::StringLiteral("foo.rs")),
+            operator: Operator::Comparison(ComparisonOperator::Equal),
+            value: OneOrMany::One(Value::StringLiteral("foo.rs")),
         };
         assert_eq!(expected, test_filter_expr!("filename = \"foo.rs\"").unwrap());
 
         let expected = FilterExpression {
             identifier: Identifier::Filename,
-            op: Operation::Comparison(ComparisonOperator::NotEq, Value::StringLiteral("foo.rs")),
+            operator: Operator::Comparison(ComparisonOperator::NotEq),
+            value: OneOrMany::One(Value::StringLiteral("foo.rs")),
         };
         assert_eq!(expected, test_filter_expr!("filename != \"foo.rs\"").unwrap());
 
@@ -929,19 +931,22 @@ mod tests {
     fn lifecycle_event_type_operations() {
         let expected = FilterExpression {
             identifier: Identifier::LifecycleEventType,
-            op: Operation::Inclusion(InclusionOperator::In, vec![Value::StringLiteral("stopped")]),
+            operator: Operator::Inclusion(InclusionOperator::In),
+            value: OneOrMany::Many(vec![Value::StringLiteral("stopped")]),
         };
         assert_eq!(expected, test_filter_expr!("lifecycle_event_type in [\"stopped\"]").unwrap());
 
         let expected = FilterExpression {
             identifier: Identifier::LifecycleEventType,
-            op: Operation::Comparison(ComparisonOperator::Equal, Value::StringLiteral("stopped")),
+            operator: Operator::Comparison(ComparisonOperator::Equal),
+            value: OneOrMany::One(Value::StringLiteral("stopped")),
         };
         assert_eq!(expected, test_filter_expr!("lifecycle_event_type = \"stopped\"").unwrap());
 
         let expected = FilterExpression {
             identifier: Identifier::LifecycleEventType,
-            op: Operation::Comparison(ComparisonOperator::NotEq, Value::StringLiteral("stopped")),
+            operator: Operator::Comparison(ComparisonOperator::NotEq),
+            value: OneOrMany::One(Value::StringLiteral("stopped")),
         };
         assert_eq!(expected, test_filter_expr!("lifecycle_event_type != \"stopped\"").unwrap());
 
@@ -966,10 +971,8 @@ mod tests {
         ] {
             let expected = FilterExpression {
                 identifier: identifier.clone(),
-                op: Operation::Inclusion(
-                    InclusionOperator::In,
-                    vec![Value::Number(100), Value::Number(200)],
-                ),
+                operator: Operator::Inclusion(InclusionOperator::In),
+                value: OneOrMany::Many(vec![Value::Number(100), Value::Number(200)]),
             };
             assert_eq!(
                 expected,
@@ -978,13 +981,15 @@ mod tests {
 
             let expected = FilterExpression {
                 identifier: identifier.clone(),
-                op: Operation::Comparison(ComparisonOperator::Equal, Value::Number(123)),
+                operator: Operator::Comparison(ComparisonOperator::Equal),
+                value: OneOrMany::One(Value::Number(123)),
             };
             assert_eq!(expected, test_filter_expr!(&format!("{} = 123", identifier_str)).unwrap());
 
             let expected = FilterExpression {
                 identifier: identifier.clone(),
-                op: Operation::Comparison(ComparisonOperator::NotEq, Value::Number(123)),
+                operator: Operator::Comparison(ComparisonOperator::NotEq),
+                value: OneOrMany::One(Value::Number(123)),
             };
             assert_eq!(expected, test_filter_expr!(&format!("{} != 123", identifier_str)).unwrap());
 
@@ -1004,10 +1009,8 @@ mod tests {
         {
             let expected = FilterExpression {
                 identifier: Identifier::Tags,
-                op: Operation::Inclusion(
-                    operator,
-                    vec![Value::StringLiteral("a"), Value::StringLiteral("b")],
-                ),
+                operator: Operator::Inclusion(operator),
+                value: OneOrMany::Many(vec![Value::StringLiteral("a"), Value::StringLiteral("b")]),
             };
             assert_eq!(
                 expected,
@@ -1036,7 +1039,8 @@ mod tests {
         ] {
             let expected = FilterExpression {
                 identifier: Identifier::Timestamp,
-                op: Operation::Comparison(operator, Value::Number(123)),
+                operator: Operator::Comparison(operator),
+                value: OneOrMany::One(Value::Number(123)),
             };
             assert_eq!(
                 expected,
@@ -1060,7 +1064,8 @@ mod tests {
         ] {
             let expected = FilterExpression {
                 identifier: Identifier::Severity,
-                op: Operation::Comparison(operator, Value::Severity(Severity::Info)),
+                operator: Operator::Comparison(operator),
+                value: OneOrMany::One(Value::Severity(Severity::Info)),
             };
             assert_eq!(
                 expected,
@@ -1070,10 +1075,11 @@ mod tests {
 
         let expected = FilterExpression {
             identifier: Identifier::Severity,
-            op: Operation::Inclusion(
-                InclusionOperator::In,
-                vec![Value::Severity(Severity::Info), Value::Severity(Severity::Error)],
-            ),
+            operator: Operator::Inclusion(InclusionOperator::In),
+            value: OneOrMany::Many(vec![
+                Value::Severity(Severity::Info),
+                Value::Severity(Severity::Error),
+            ]),
         };
         assert_eq!(expected, test_filter_expr!("severity in [info, error]").unwrap());
 
@@ -1085,7 +1091,8 @@ mod tests {
     fn allowed_severity_types() {
         let expected = FilterExpression {
             identifier: Identifier::Severity,
-            op: Operation::Comparison(ComparisonOperator::Equal, Value::Severity(Severity::Info)),
+            operator: Operator::Comparison(ComparisonOperator::Equal),
+            value: OneOrMany::One(Value::Severity(Severity::Info)),
         };
         assert_eq!(expected, test_filter_expr!("severity = info").unwrap());
         assert!(test_filter_expr!("severity = 2").is_err());
@@ -1102,7 +1109,8 @@ mod tests {
         ] {
             let expected = FilterExpression {
                 identifier,
-                op: Operation::Comparison(ComparisonOperator::Equal, Value::Number(42)),
+                operator: Operator::Comparison(ComparisonOperator::Equal),
+                value: OneOrMany::One(Value::Number(42)),
             };
             assert_eq!(expected, test_filter_expr!(&format!("{} = 42", name)).unwrap());
             assert!(test_filter_expr!(&format!("{} = info", name)).is_err());
@@ -1118,7 +1126,8 @@ mod tests {
         ] {
             let expected = FilterExpression {
                 identifier,
-                op: Operation::Comparison(ComparisonOperator::Equal, Value::StringLiteral("foo")),
+                operator: Operator::Comparison(ComparisonOperator::Equal),
+                value: OneOrMany::One(Value::StringLiteral("foo")),
             };
             assert_eq!(expected, test_filter_expr!(&format!("{} = \"foo\"", name)).unwrap());
             assert!(test_filter_expr!(&format!("{} = info", name)).is_err());
@@ -1127,10 +1136,8 @@ mod tests {
 
         let expected = FilterExpression {
             identifier: Identifier::Tags,
-            op: Operation::Inclusion(
-                InclusionOperator::HasAny,
-                vec![Value::StringLiteral("a"), Value::StringLiteral("b")],
-            ),
+            operator: Operator::Inclusion(InclusionOperator::HasAny),
+            value: OneOrMany::Many(vec![Value::StringLiteral("a"), Value::StringLiteral("b")]),
         };
         assert_eq!(expected, test_filter_expr!("tags has any [\"a\", \"b\"]").unwrap());
         assert!(test_filter_expr!("tags has any [info, error]").is_err());
@@ -1142,28 +1149,26 @@ mod tests {
         let expected = MetadataSelector::new(vec![
             FilterExpression {
                 identifier: Identifier::LineNumber,
-                op: Operation::Comparison(ComparisonOperator::Equal, Value::Number(10)),
+                operator: Operator::Comparison(ComparisonOperator::Equal),
+                value: OneOrMany::One(Value::Number(10)),
             },
             FilterExpression {
                 identifier: Identifier::Filename,
-                op: Operation::Inclusion(
-                    InclusionOperator::In,
-                    vec![Value::StringLiteral("foo.rs")],
-                ),
+                operator: Operator::Inclusion(InclusionOperator::In),
+                value: OneOrMany::Many(vec![Value::StringLiteral("foo.rs")]),
             },
             FilterExpression {
                 identifier: Identifier::Severity,
-                op: Operation::Comparison(
-                    ComparisonOperator::LessEq,
-                    Value::Severity(Severity::Error),
-                ),
+                operator: Operator::Comparison(ComparisonOperator::LessEq),
+                value: OneOrMany::One(Value::Severity(Severity::Error)),
             },
             FilterExpression {
                 identifier: Identifier::Tags,
-                op: Operation::Inclusion(
-                    InclusionOperator::HasAll,
-                    vec![Value::StringLiteral("foo"), Value::StringLiteral("bar")],
-                ),
+                operator: Operator::Inclusion(InclusionOperator::HasAll),
+                value: OneOrMany::Many(vec![
+                    Value::StringLiteral("foo"),
+                    Value::StringLiteral("bar"),
+                ]),
             },
         ]);
         assert_eq!(
@@ -1177,7 +1182,8 @@ mod tests {
         // Requires >= 1 filters.
         let expected = MetadataSelector::new(vec![FilterExpression {
             identifier: Identifier::Timestamp,
-            op: Operation::Comparison(ComparisonOperator::Greater, Value::Number(123)),
+            operator: Operator::Comparison(ComparisonOperator::Greater),
+            value: OneOrMany::One(Value::Number(123)),
         }]);
         assert_eq!(Ok(("", expected)), metadata_selector("WHERE timestamp > 123"));
         assert!(metadata_selector("where").is_err());

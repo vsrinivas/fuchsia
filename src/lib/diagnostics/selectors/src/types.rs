@@ -29,68 +29,6 @@ pub enum Identifier {
     Timestamp,
 }
 
-// This macro is purely a utility fo validating that all the values in the given `$one_or_many` are
-// of a given type.
-macro_rules! match_one_or_many_value {
-    ($one_or_many:ident, $variant:pat) => {
-        match $one_or_many {
-            OneOrMany::One($variant) => true,
-            OneOrMany::Many(values) => values.iter().all(|value| matches!(value, $variant)),
-            _ => false,
-        }
-    };
-}
-
-impl Identifier {
-    /// Validates that all the values are of a type that can be used in an operation with this
-    /// identifier.
-    pub(crate) fn can_be_used_with_value_type(&self, value: &OneOrMany<Value<'_>>) -> bool {
-        match (self, value) {
-            (Identifier::Filename | Identifier::LifecycleEventType | Identifier::Tags, value) => {
-                match_one_or_many_value!(value, Value::StringLiteral(_))
-            }
-            // TODO(fxbug.dev/86960): similar to severities, we can probably have reserved values
-            // for lifecycle event types.
-            // TODO(fxbug.dev/86961): support time diferences (1h30m, 30s, etc) instead of only
-            // timestamp comparison.
-            (
-                Identifier::Pid | Identifier::Tid | Identifier::LineNumber | Identifier::Timestamp,
-                value,
-            ) => {
-                match_one_or_many_value!(value, Value::Number(_))
-            }
-            // TODO(fxbug.dev/86962): it should also be possible to compare severities with a fixed
-            // set of numbers.
-            (Identifier::Severity, value) => {
-                match_one_or_many_value!(value, Value::Severity(_))
-            }
-        }
-    }
-
-    /// Validates that this identifier can be used in an operation defined by the given `operator`.
-    pub(crate) fn can_be_used_with_operator(&self, operator: &Operator) -> bool {
-        match (self, &operator) {
-            (
-                Identifier::Filename
-                | Identifier::LifecycleEventType
-                | Identifier::Pid
-                | Identifier::Tid
-                | Identifier::LineNumber
-                | Identifier::Severity,
-                Operator::Comparison(ComparisonOperator::Equal)
-                | Operator::Comparison(ComparisonOperator::NotEq)
-                | Operator::Inclusion(InclusionOperator::In),
-            ) => true,
-            (Identifier::Severity | Identifier::Timestamp, Operator::Comparison(_)) => true,
-            (
-                Identifier::Tags,
-                Operator::Inclusion(InclusionOperator::HasAny | InclusionOperator::HasAll),
-            ) => true,
-            _ => false,
-        }
-    }
-}
-
 /// Supported comparison operators.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ComparisonOperator {
@@ -142,16 +80,9 @@ pub enum ValueType {
     Number,
 }
 
-/// A valid operation and the right hand side of it.
-#[derive(Debug, Eq, PartialEq)]
-pub enum Operation<'a> {
-    Comparison(ComparisonOperator, Value<'a>),
-    Inclusion(InclusionOperator, Vec<Value<'a>>),
-}
-
 /// Holds a single value or a vector of values of type `T`.
-#[derive(Debug)]
-pub enum OneOrMany<T: Debug> {
+#[derive(Debug, Eq, PartialEq)]
+pub enum OneOrMany<T: Debug + Eq + PartialEq> {
     One(T),
     Many(Vec<T>),
 }
@@ -165,49 +96,12 @@ impl OneOrMany<Value<'_>> {
     }
 }
 
-impl<'a> Operation<'a> {
-    pub(crate) fn maybe_new(op: Operator, value: OneOrMany<Value<'a>>) -> Option<Self> {
-        // Validate the operation can be used with the type of value.
-        match (op, value) {
-            (Operator::Inclusion(op), OneOrMany::Many(values)) => {
-                Some(Operation::Inclusion(op, values))
-            }
-            (Operator::Inclusion(o @ InclusionOperator::HasAny), OneOrMany::One(value)) => {
-                Some(Operation::Inclusion(o, vec![value]))
-            }
-            (Operator::Inclusion(o @ InclusionOperator::HasAll), OneOrMany::One(value)) => {
-                Some(Operation::Inclusion(o, vec![value]))
-            }
-            (Operator::Comparison(op), OneOrMany::One(value)) => {
-                Some(Operation::Comparison(op, value))
-            }
-            (Operator::Inclusion(InclusionOperator::In), OneOrMany::One(_))
-            | (Operator::Comparison(_), OneOrMany::Many(_)) => None,
-        }
-    }
-}
-
 /// A single filter expression in a metadata selector.
 #[derive(Debug, Eq, PartialEq)]
 pub struct FilterExpression<'a> {
     pub identifier: Identifier,
-    pub op: Operation<'a>,
-}
-
-impl FilterExpression<'_> {
-    pub(crate) fn operator(&self) -> Operator {
-        match self.op {
-            Operation::Comparison(operator, _) => Operator::Comparison(operator.clone()),
-            Operation::Inclusion(operator, _) => Operator::Inclusion(operator.clone()),
-        }
-    }
-
-    pub(crate) fn value(&self) -> OneOrMany<Value<'_>> {
-        match &self.op {
-            Operation::Comparison(_, value) => OneOrMany::One(value.clone()),
-            Operation::Inclusion(_, values) => OneOrMany::Many(values.clone()),
-        }
-    }
+    pub operator: Operator,
+    pub value: OneOrMany<Value<'a>>,
 }
 
 /// Represents a  metadata selector, which consists of a list of filters.

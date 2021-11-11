@@ -66,6 +66,9 @@ pub enum ValidationError {
 
     #[error("Value {1:?} cannot be used with identifier {0:?}")]
     InvalidValueType(Identifier, OneOrMany<ValueType>),
+
+    #[error("Value {1:?} cannot be used with operator {0:?}")]
+    InvalidOperatorRhs(Operator, OneOrMany<ValueType>),
 }
 
 #[derive(Debug)]
