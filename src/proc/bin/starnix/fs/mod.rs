@@ -47,6 +47,7 @@ pub mod devpts;
 pub mod eventfd;
 pub mod ext4;
 pub mod fuchsia;
+pub mod ioctls;
 pub mod memfd;
 pub mod path;
 pub mod pipe;
