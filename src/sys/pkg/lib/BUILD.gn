@@ -29,6 +29,7 @@ group("lib") {
     "system-image",
     "update-package",
     "version",
+    "version-history",
   ]
 }
 
@@ -61,5 +62,6 @@ group("tests") {
     "tuf:tests",
     "update-package:tests",
     "version:tests",
+    "version-history:tests",
   ]
 }

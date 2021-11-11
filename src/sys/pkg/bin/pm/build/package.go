@@ -6,6 +6,7 @@ package build
 
 import (
 	"bufio"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -19,6 +20,8 @@ import (
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/far/go"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/merkle"
 )
+
+const abiRevisionKey string = "meta/fuchsia.abi/abi-revision"
 
 // PackageManifest is the json structure representation of a full package
 // manifest.
@@ -62,9 +65,12 @@ func Init(cfg *Config) error {
 func Update(cfg *Config) error {
 	metadir := filepath.Join(cfg.OutputDir, "meta")
 	os.MkdirAll(metadir, os.ModePerm)
-
 	manifest, err := cfg.Manifest()
 	if err != nil {
+		return err
+	}
+
+	if err := writeABIRevision(cfg, manifest); err != nil {
 		return err
 	}
 
@@ -145,6 +151,29 @@ func Update(cfg *Config) error {
 
 	return ioutil.WriteFile(contentsPath,
 		[]byte(contents.String()), os.ModePerm)
+}
+
+func writeABIRevision(cfg *Config, manifest *Manifest) error {
+	// FIXME(): We can stop treating the ABI revision as optional once the
+	// ecosystem has migrated to specifying it everywhere.
+	if cfg.PkgABIRevision == 0 {
+		return nil
+	}
+
+	abiDir := filepath.Join(cfg.OutputDir, "meta", "fuchsia.abi")
+	os.MkdirAll(abiDir, os.ModePerm)
+
+	b := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b, cfg.PkgABIRevision)
+
+	path := filepath.Join(abiDir, "abi-revision")
+	if err := ioutil.WriteFile(path, b, os.ModePerm); err != nil {
+		return err
+	}
+
+	manifest.Paths[abiRevisionKey] = path
+
+	return nil
 }
 
 // ErrRequiredFileMissing is returned by operations when the operation depends

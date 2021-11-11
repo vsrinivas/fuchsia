@@ -16,6 +16,7 @@ go_library("pm_lib") {
     "//src/sys/pkg/lib/merkle",
     "//src/sys/pkg/lib/repo",
     "//src/sys/pkg/lib/sse",
+    "//src/sys/pkg/lib/version-history",
     "//third_party/golibs:github.com/dustin/go-humanize",
     "//third_party/golibs:github.com/fsnotify/fsnotify",
     "//third_party/golibs:github.com/theupdateframework/go-tuf",

@@ -11,18 +11,21 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pkg"
+	versionHistory "go.fuchsia.dev/fuchsia/src/sys/pkg/lib/version-history"
 )
 
 // Config contains global build configuration for other build commands
 type Config struct {
-	OutputDir    string
-	ManifestPath string
-	KeyPath      string
-	TempDir      string
-	PkgName      string
-	PkgVersion   string
+	OutputDir      string
+	ManifestPath   string
+	KeyPath        string
+	TempDir        string
+	PkgName        string
+	PkgVersion     string
+	PkgABIRevision uint64
 
 	// the manifest is memoized lazily, on the first call to Manifest()
 	manifest *Manifest
@@ -31,12 +34,13 @@ type Config struct {
 // NewConfig initializes a new configuration with conventional defaults
 func NewConfig() *Config {
 	cfg := &Config{
-		OutputDir:    ".",
-		ManifestPath: ".",
-		KeyPath:      "",
-		TempDir:      os.TempDir(),
-		PkgName:      "",
-		PkgVersion:   "0",
+		OutputDir:      ".",
+		ManifestPath:   ".",
+		KeyPath:        "",
+		TempDir:        os.TempDir(),
+		PkgName:        "",
+		PkgVersion:     "0",
+		PkgABIRevision: 0,
 	}
 	return cfg
 }
@@ -50,12 +54,13 @@ func TestConfig() *Config {
 		panic(err)
 	}
 	cfg := &Config{
-		OutputDir:    filepath.Join(d, "output"),
-		ManifestPath: filepath.Join(d, "manifest"),
-		KeyPath:      filepath.Join(d, "key"),
-		TempDir:      filepath.Join(d, "tmp"),
-		PkgName:      "testpackage",
-		PkgVersion:   "0",
+		OutputDir:      filepath.Join(d, "output"),
+		ManifestPath:   filepath.Join(d, "manifest"),
+		KeyPath:        filepath.Join(d, "key"),
+		TempDir:        filepath.Join(d, "tmp"),
+		PkgName:        "testpackage",
+		PkgVersion:     "0",
+		PkgABIRevision: 0,
 	}
 	for _, d := range []string{cfg.OutputDir, cfg.TempDir} {
 		os.MkdirAll(d, os.ModePerm)
@@ -71,6 +76,44 @@ func (c *Config) InitFlags(fs *flag.FlagSet) {
 	fs.StringVar(&c.TempDir, "t", c.TempDir, "temporary directory")
 	fs.StringVar(&c.PkgName, "n", c.PkgName, "name of the packages")
 	fs.StringVar(&c.PkgVersion, "version", c.PkgVersion, "version of the packages")
+	fs.Func("api-level", "package API level", func(value string) error {
+		if c.PkgABIRevision != 0 {
+			return fmt.Errorf("cannot specify both --api-level and --abi-revision")
+		}
+
+		apiLevel, err := strconv.ParseUint(value, 0, 64)
+		if err != nil {
+			return err
+		}
+
+		for _, version := range versionHistory.Versions() {
+			if version.APILevel == apiLevel {
+				c.PkgABIRevision = version.ABIRevision
+				return nil
+			}
+		}
+
+		return fmt.Errorf("API level %d is not defined in the SDK", apiLevel)
+	})
+	fs.Func("abi-revision", "package ABI revision", func(value string) error {
+		if c.PkgABIRevision != 0 {
+			return fmt.Errorf("cannot specify both --api-level and --abi-revision")
+		}
+
+		abiRevision, err := strconv.ParseUint(value, 0, 64)
+		if err != nil {
+			return err
+		}
+
+		for _, version := range versionHistory.Versions() {
+			if version.ABIRevision == abiRevision {
+				c.PkgABIRevision = abiRevision
+				return nil
+			}
+		}
+
+		return fmt.Errorf("ABI Revision %d is not defined in the SDK", abiRevision)
+	})
 }
 
 // Manifest initializes and returns the configured manifest. The manifest may be
