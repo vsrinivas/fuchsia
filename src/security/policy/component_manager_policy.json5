@@ -137,7 +137,7 @@
                     "/bootstrap/netsvc",
                     "/core",
                     "/core/memory_monitor",
-                    "/core/test_manager/tests:**",
+                    "/core/test_manager/system-tests:**",
                 ],
             },
             {
@@ -174,7 +174,12 @@
                     "/core/debug_serial",
                     "/core/starnix_manager/starnix_runner",
                     "/core/test_manager/starnix_test_runner/starnix_runner",
+
+                    // TODO(https://fxbug.dev/76568): Remove this from the list
+                    // once we remove non-hermetic tests using VmexResource from this
+                    // collection.
                     "/core/test_manager/tests:**",
+                    "/core/test_manager/system-tests:**",
                 ],
             },
             {
