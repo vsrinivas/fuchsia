@@ -418,7 +418,7 @@ update_package("update") {
     _recovery_out = get_label_info(recovery_label, "target_out_dir") + "/" +
                     get_label_info(recovery_label, "name")
     fuchsia_partitions = "${_fuchsia_out}_partitions.json"
-    fuchsia_packages = "${_fuchsia_out}/gen/packages.json"
+    fuchsia_packages = "${_fuchsia_out}/packages.json"
     fuchsia_images = "${_fuchsia_out}/images.json"
     recovery_images = "${_recovery_out}/images.json"
   }
@@ -497,7 +497,7 @@ update_package("update_prime") {
     _recovery_out = get_label_info(recovery_label, "target_out_dir") + "/" +
                     get_label_info(recovery_label, "name")
     fuchsia_partitions = "${_fuchsia_out}_partitions.json"
-    fuchsia_packages = "${_fuchsia_out}/gen/packages.json"
+    fuchsia_packages = "${_fuchsia_out}/packages.json"
     fuchsia_images = "${_fuchsia_out}/images.json"
     recovery_images = "${_recovery_out}/images.json"
   }

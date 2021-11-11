@@ -239,6 +239,7 @@ template("assemble_system") {
     fvm_fastboot = "${outdir}/fvm.fastboot.blk"
     update_package_manifest = "${outdir}/update_package_manifest.json"
     base_package_manifest = "${outdir}/base_package_manifest.json"
+    packages = "${outdir}/packages.json"
 
     zbi_manifest = "${gendir}/zbi.json"
     blobfs_manifest = "${gendir}/blob.manifest"
@@ -247,7 +248,7 @@ template("assemble_system") {
     cache_packages = "${gendir}/data/cache_packages"
     base_meta_package = "${gendir}/system_image/meta/package"
     update_meta_package = "${gendir}/update/meta/package"
-    packages = "${gendir}/packages.json"
+    old_packages = "${gendir}/packages.json"
     images_manifest = "${outdir}/images.json"
     assembly_inputs = "${outdir}/assembly_inputs.json"
 
@@ -590,12 +591,12 @@ template("assemble_system") {
       files.product_config,
     ]
 
-    # zbi outputs
     outputs = [
       files.zbi,
       files.zbi_manifest,
       files.update_package,
       files.packages,
+      files.old_packages,
       files.images_manifest,
     ]
 

@@ -7,16 +7,20 @@ use crate::blobfs::construct_blobfs;
 use crate::config::{BoardConfig, PartialProductConfig, ProductConfig};
 use crate::fvm::{construct_fvm, Fvms};
 use crate::update_package::{construct_update, UpdatePackage};
-use crate::util::from_reader;
+use crate::util::{from_reader, pkg_manifest_from_path};
 use crate::vbmeta::construct_vbmeta;
 use crate::zbi::{construct_zbi, vendor_sign_zbi};
 
 use anyhow::{Context, Result};
 use assembly_images_manifest::{Image, ImagesManifest};
+use assembly_update_packages_manifest::UpdatePackagesManifest;
 use ffx_assembly_args::ImageArgs;
 use ffx_config::get_sdk;
+use fuchsia_pkg::PackagePath;
 use futures::executor::block_on;
 use log::info;
+use serde_json::ser;
+use std::collections::BTreeSet;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
@@ -138,6 +142,9 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
     serde_json::to_writer(images_json, &images_manifest)
         .context("Failed to write to images.json")?;
 
+    info!("Creating the packages manifest");
+    create_package_manifest(&outdir, &board, &product, base_package.as_ref())?;
+
     info!("Creating the update package");
     let _update_package: UpdatePackage = construct_update(
         &outdir,
@@ -150,6 +157,36 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
     )?;
 
     Ok(())
+}
+
+fn create_package_manifest(
+    outdir: impl AsRef<Path>,
+    board: &BoardConfig,
+    product: &ProductConfig,
+    base_package: Option<&BasePackage>,
+) -> Result<()> {
+    let packages_path = outdir.as_ref().join("packages.json");
+    let packages_file = File::create(&packages_path).context("Failed to create packages.json")?;
+    let mut packages_manifest = UpdatePackagesManifest::V1(BTreeSet::new());
+    let mut add_packages_to_update = |packages: &Vec<PathBuf>| -> Result<()> {
+        for package_path in packages {
+            let manifest = pkg_manifest_from_path(package_path)?;
+            packages_manifest.add_by_manifest(manifest)?;
+        }
+        Ok(())
+    };
+    add_packages_to_update(&product.base)?;
+    add_packages_to_update(&product.cache)?;
+    if let Some(base_package) = &base_package {
+        packages_manifest.add(
+            PackagePath::from_name_and_variant(
+                board.base_package_name.parse().context("parse package name")?,
+                "0".parse().context("parse package variant")?,
+            ),
+            base_package.merkle,
+        )?;
+    }
+    Ok(ser::to_writer(packages_file, &packages_manifest)?)
 }
 
 fn read_configs(
