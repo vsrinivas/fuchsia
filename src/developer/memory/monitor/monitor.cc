@@ -24,6 +24,7 @@
 #include <iostream>
 #include <iterator>
 #include <memory>
+#include <mutex>
 
 #include <soc/aml-common/aml-ram.h>
 #include <trace-vthread/event_vthread.h>
@@ -518,6 +519,7 @@ zx_status_t Monitor::GetCapture(memory::Capture* capture) {
 }
 
 void Monitor::GetDigest(const memory::Capture& capture, memory::Digest* digest) {
+  std::lock_guard<std::mutex> lock(digester_mutex_);
   digester_->Digest(capture, digest);
 }
 
@@ -525,7 +527,7 @@ void Monitor::PressureLevelChanged(Level level) {
   if (level == kImminentOOM) {
     // Force the current state to be written as the high_waters. Later is better.
     memory::Capture c;
-    auto s = Capture::GetCapture(&c, capture_state_, KMEM);
+    auto s = GetCapture(&c);
     if (s == ZX_OK) {
       high_water_->RecordHighWater(c);
       high_water_->RecordHighWaterDigest(c);

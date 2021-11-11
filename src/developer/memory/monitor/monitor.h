@@ -91,6 +91,7 @@ class Monitor : public fuchsia::memory::Monitor {
   std::unique_ptr<PressureNotifier> pressure_notifier_;
   std::unique_ptr<MemoryDebugger> memory_debugger_;
   std::unique_ptr<memory::Digester> digester_;
+  std::mutex digester_mutex_;
   fuchsia::hardware::ram::metrics::DevicePtr ram_device_;
   uint64_t pending_bandwidth_measurements_ = 0;
   Level level_;
