@@ -20,16 +20,16 @@ namespace fidl_test_union {
 class TestProtocol;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestMessageTable;
+    fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseMessageTable;
+    fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestMessageTable;
+    fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseMessageTable;
+    fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
 
 }  // namespace fidl_test_union
 #ifdef __Fuchsia__
@@ -228,7 +228,7 @@ struct ::fidl::WireResponse<::fidl_test_union::TestProtocol::
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_union::
-          fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseMessageTable;
+          fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   static constexpr uint32_t PrimarySizeV1 = 40;
@@ -547,7 +547,7 @@ struct ::fidl::WireResponse<::fidl_test_union::TestProtocol::
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_union::
-          fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseMessageTable;
+          fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   static constexpr uint32_t PrimarySizeV1 = 40;

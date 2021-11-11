@@ -10,19 +10,19 @@ namespace fidl_test_errorsyntax {
         8210161374538322484lu;
 
 extern "C" const fidl_type_t
-    fidl_test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailRequestMessageTable;
+    fidl_test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailRequestTable;
 
 extern "C" const fidl_type_t
-    fidl_test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailResponseMessageTable;
+    fidl_test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailResponseTable;
 
 [[maybe_unused]] constexpr uint64_t
     kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal = 7435809829353441431lu;
 
 extern "C" const fidl_type_t
-    fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestMessageTable;
+    fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
 
 extern "C" const fidl_type_t
-    fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailResponseMessageTable;
+    fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailResponseTable;
 #ifdef __Fuchsia__
 }  // namespace fidl_test_errorsyntax
 ::fidl::WireResult<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::

@@ -633,7 +633,7 @@ typedef struct admin_resp {
       return status;                                                                             \
     }                                                                                            \
                                                                                                  \
-    alignas(FIDL_ALIGNMENT) fuchsia_hardware_power_statecontrol_Admin##name##RequestMessage msg; \
+    alignas(FIDL_ALIGNMENT) fuchsia_hardware_power_statecontrol_Admin##name##Request msg;        \
     fidl_init_txn_header(&msg.hdr, 0, fuchsia_hardware_power_statecontrol_Admin##name##Ordinal); \
                                                                                                  \
     const char* errs;                                                                            \
@@ -641,8 +641,8 @@ typedef struct admin_resp {
     uint32_t actual_handle_count;                                                                \
                                                                                                  \
     zx_status_t call_status =                                                                    \
-        fidl_encode(&fuchsia_hardware_power_statecontrol_Admin##name##RequestMessageTable,       \
-                    msg_handle, sizeof(msg), NULL, 0, &actual_handle_count, &errs);              \
+        fidl_encode(&fuchsia_hardware_power_statecontrol_Admin##name##RequestTable, msg_handle,  \
+                    sizeof(msg), NULL, 0, &actual_handle_count, &errs);                          \
     if (call_status != ZX_OK) {                                                                  \
       return -1;                                                                                 \
     }                                                                                            \
@@ -653,8 +653,7 @@ typedef struct admin_resp {
     call_args.wr_handles = NULL;                                                                 \
     call_args.rd_bytes = (void*)&resp;                                                           \
     call_args.rd_handles = NULL;                                                                 \
-    call_args.wr_num_bytes =                                                                     \
-        sizeof(fuchsia_hardware_power_statecontrol_Admin##name##RequestMessage);                 \
+    call_args.wr_num_bytes = sizeof(fuchsia_hardware_power_statecontrol_Admin##name##Request);   \
     call_args.wr_num_handles = 0;                                                                \
     call_args.rd_num_bytes = sizeof(resp);                                                       \
     call_args.rd_num_handles = 0;                                                                \
@@ -697,7 +696,7 @@ static int send_Reboot() {
     return status;
   }
 
-  alignas(FIDL_ALIGNMENT) fuchsia_hardware_power_statecontrol_AdminRebootRequestMessage msg;
+  alignas(FIDL_ALIGNMENT) fuchsia_hardware_power_statecontrol_AdminRebootRequest msg;
   fidl_init_txn_header(&msg.hdr, 0, fuchsia_hardware_power_statecontrol_AdminRebootOrdinal);
   msg.reason = fuchsia_hardware_power_statecontrol_RebootReason_USER_REQUEST;
 
@@ -706,7 +705,7 @@ static int send_Reboot() {
   uint32_t actual_handle_count;
 
   zx_status_t call_status =
-      fidl_encode(&fuchsia_hardware_power_statecontrol_AdminRebootRequestMessageTable, msg_handle,
+      fidl_encode(&fuchsia_hardware_power_statecontrol_AdminRebootRequestTable, msg_handle,
                   sizeof(msg), NULL, 0, &actual_handle_count, &errs);
   if (call_status != ZX_OK) {
     return -1;
@@ -718,7 +717,7 @@ static int send_Reboot() {
   call_args.wr_handles = NULL;
   call_args.rd_bytes = (void*)&resp;
   call_args.rd_handles = NULL;
-  call_args.wr_num_bytes = sizeof(fuchsia_hardware_power_statecontrol_AdminRebootRequestMessage);
+  call_args.wr_num_bytes = sizeof(fuchsia_hardware_power_statecontrol_AdminRebootRequest);
   call_args.wr_num_handles = 0;
   call_args.rd_num_bytes = sizeof(resp);
   call_args.rd_num_handles = 0;

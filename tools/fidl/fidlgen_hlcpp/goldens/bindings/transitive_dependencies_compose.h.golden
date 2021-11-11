@@ -23,7 +23,7 @@ using TopHandle = ::fidl::InterfaceHandle<Top>;
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_transitivedependenciescompose_TopGetFooRequestMessageTable;
+    fidl_test_transitivedependenciescompose_TopGetFooRequestTable;
 
 }  // namespace _internal
 class Top_RequestEncoder {
@@ -46,7 +46,7 @@ class Top_RequestEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::fidl::test::transitivedependenciescompose::_internal::
-            fidl_test_transitivedependenciescompose_TopGetFooRequestMessageTable,
+            fidl_test_transitivedependenciescompose_TopGetFooRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -55,7 +55,7 @@ class Top_RequestEncoder {
 };
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_transitivedependenciescompose_TopGetFooResponseMessageTable;
+    fidl_test_transitivedependenciescompose_TopGetFooResponseTable;
 
 }  // namespace _internal
 class Top_ResponseEncoder {
@@ -82,7 +82,7 @@ class Top_ResponseEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::fidl::test::transitivedependenciescompose::_internal::
-            fidl_test_transitivedependenciescompose_TopGetFooResponseMessageTable,
+            fidl_test_transitivedependenciescompose_TopGetFooResponseTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();

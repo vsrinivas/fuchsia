@@ -10,20 +10,20 @@ namespace fidl_test_union {
         8393311445612289086lu;
 
 extern "C" const fidl_type_t
-    fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestMessageTable;
+    fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
 
 extern "C" const fidl_type_t
-    fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseMessageTable;
+    fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
 
 [[maybe_unused]] constexpr uint64_t
     kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal =
         6296412872266712530lu;
 
 extern "C" const fidl_type_t
-    fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestMessageTable;
+    fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable;
 
 extern "C" const fidl_type_t
-    fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseMessageTable;
+    fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
 #ifdef __Fuchsia__
 }  // namespace fidl_test_union
 ::fidl::WireResult<::fidl_test_union::TestProtocol::

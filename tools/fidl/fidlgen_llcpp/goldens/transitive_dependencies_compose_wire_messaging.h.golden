@@ -23,10 +23,10 @@ namespace fidl_test_transitivedependenciescompose {
 class Top;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_transitivedependenciescompose_TopGetFooRequestMessageTable;
+    fidl_test_transitivedependenciescompose_TopGetFooRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_transitivedependenciescompose_TopGetFooResponseMessageTable;
+    fidl_test_transitivedependenciescompose_TopGetFooResponseTable;
 
 }  // namespace fidl_test_transitivedependenciescompose
 #ifdef __Fuchsia__
@@ -219,7 +219,7 @@ struct ::fidl::WireResponse<
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_transitivedependenciescompose::
-          fidl_test_transitivedependenciescompose_TopGetFooResponseMessageTable;
+          fidl_test_transitivedependenciescompose_TopGetFooResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;

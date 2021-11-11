@@ -184,10 +184,10 @@ void TapDevice::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
   size_t length = op.operation()->data_size;
   ZX_DEBUG_ASSERT(length <= mtu_);
 
-  FIDL_ALIGNDECL uint8_t temp_buff[sizeof(fuchsia_hardware_ethertap_TapDeviceOnFrameEventMessage) +
+  FIDL_ALIGNDECL uint8_t temp_buff[sizeof(fuchsia_hardware_ethertap_TapDeviceOnFrameEvent) +
                                    FIDL_ALIGN(fuchsia_hardware_ethertap_MAX_MTU)];
   fidl::Builder builder(temp_buff, sizeof(temp_buff));
-  auto* event = builder.New<fuchsia_hardware_ethertap_TapDeviceOnFrameEventMessage>();
+  auto* event = builder.New<fuchsia_hardware_ethertap_TapDeviceOnFrameEvent>();
   fidl_init_txn_header(&event->hdr, FIDL_TXID_NO_RESPONSE,
                        fuchsia_hardware_ethertap_TapDeviceOnFrameOrdinal);
   event->data.count = length;
@@ -197,7 +197,7 @@ void TapDevice::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
 
   const char* err = nullptr;
   fidl::HLCPPOutgoingMessage msg(builder.Finalize(), fidl::HandleDispositionPart());
-  auto status = msg.Encode(&fuchsia_hardware_ethertap_TapDeviceOnFrameEventMessageTable, &err);
+  auto status = msg.Encode(&fuchsia_hardware_ethertap_TapDeviceOnFrameEventTable, &err);
   if (status != ZX_OK) {
     zxlogf(ERROR, "ethertap: EthernetImplQueueTx error encoding: %d %s", status, err);
   } else {
@@ -222,11 +222,10 @@ zx_status_t TapDevice::EthernetImplSetParam(uint32_t param, int32_t value, const
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  FIDL_ALIGNDECL uint8_t
-      temp_buff[sizeof(fuchsia_hardware_ethertap_TapDeviceOnReportParamsEventMessage) +
-                FIDL_ALIGN(fuchsia_hardware_ethertap_MAX_PARAM_DATA)];
+  FIDL_ALIGNDECL uint8_t temp_buff[sizeof(fuchsia_hardware_ethertap_TapDeviceOnReportParamsEvent) +
+                                   FIDL_ALIGN(fuchsia_hardware_ethertap_MAX_PARAM_DATA)];
   fidl::Builder builder(temp_buff, sizeof(temp_buff));
-  auto* event = builder.New<fuchsia_hardware_ethertap_TapDeviceOnReportParamsEventMessage>();
+  auto* event = builder.New<fuchsia_hardware_ethertap_TapDeviceOnReportParamsEvent>();
   fidl_init_txn_header(&event->hdr, FIDL_TXID_NO_RESPONSE,
                        fuchsia_hardware_ethertap_TapDeviceOnReportParamsOrdinal);
 
@@ -268,8 +267,7 @@ zx_status_t TapDevice::EthernetImplSetParam(uint32_t param, int32_t value, const
 
   const char* err = nullptr;
   fidl::HLCPPOutgoingMessage msg(builder.Finalize(), fidl::HandleDispositionPart());
-  auto status =
-      msg.Encode(&fuchsia_hardware_ethertap_TapDeviceOnReportParamsEventMessageTable, &err);
+  auto status = msg.Encode(&fuchsia_hardware_ethertap_TapDeviceOnReportParamsEventTable, &err);
   if (status != ZX_OK) {
     zxlogf(ERROR, "ethertap: EthernetImplSetParam error encoding: %d %s", status, err);
   } else {

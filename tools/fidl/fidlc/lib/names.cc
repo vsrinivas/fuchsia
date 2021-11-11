@@ -467,13 +467,13 @@ std::string NameMessage(std::string_view method_name, types::MessageKind kind) {
   std::string message_name(method_name);
   switch (kind) {
     case types::MessageKind::kRequest:
-      message_name += "RequestMessage";
+      message_name += "Request";
       break;
     case types::MessageKind::kResponse:
-      message_name += "ResponseMessage";
+      message_name += "Response";
       break;
     case types::MessageKind::kEvent:
-      message_name += "EventMessage";
+      message_name += "Event";
       break;
   }
   return message_name;

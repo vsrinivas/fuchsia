@@ -21,11 +21,10 @@ class Super;
 
 class Sub;
 
-__LOCAL extern "C" const fidl_type_t
-    fidl_test_inheritance_superfooRequestMessageTable;
+__LOCAL extern "C" const fidl_type_t fidl_test_inheritance_superfooRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_inheritance_superfooResponseMessageTable;
+    fidl_test_inheritance_superfooResponseTable;
 
 }  // namespace fidl_test_inheritance
 #ifdef __Fuchsia__
@@ -62,8 +61,7 @@ struct ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo> final {
   WireRequest() { _InitHeader(); }
 
   static constexpr const fidl_type_t* Type =
-      &::fidl_test_inheritance::
-          fidl_test_inheritance_superfooRequestMessageTable;
+      &::fidl_test_inheritance::fidl_test_inheritance_superfooRequestTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   static constexpr uint32_t PrimarySizeV1 = 32;
@@ -208,8 +206,7 @@ struct ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo> final {
   WireResponse() { _InitHeader(); }
 
   static constexpr const fidl_type_t* Type =
-      &::fidl_test_inheritance::
-          fidl_test_inheritance_superfooResponseMessageTable;
+      &::fidl_test_inheritance::fidl_test_inheritance_superfooResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -615,11 +612,9 @@ class ::fidl::WireServer<::fidl_test_inheritance::Super>
 #endif  // __Fuchsia__
 
 namespace fidl_test_inheritance {
-__LOCAL extern "C" const fidl_type_t
-    fidl_test_inheritance_subfooRequestMessageTable;
+__LOCAL extern "C" const fidl_type_t fidl_test_inheritance_subfooRequestTable;
 
-__LOCAL extern "C" const fidl_type_t
-    fidl_test_inheritance_subfooResponseMessageTable;
+__LOCAL extern "C" const fidl_type_t fidl_test_inheritance_subfooResponseTable;
 
 }  // namespace fidl_test_inheritance
 #ifdef __Fuchsia__
@@ -656,7 +651,7 @@ struct ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo> final {
   WireRequest() { _InitHeader(); }
 
   static constexpr const fidl_type_t* Type =
-      &::fidl_test_inheritance::fidl_test_inheritance_subfooRequestMessageTable;
+      &::fidl_test_inheritance::fidl_test_inheritance_subfooRequestTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   static constexpr uint32_t PrimarySizeV1 = 32;
@@ -800,8 +795,7 @@ struct ::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo> final {
   WireResponse() { _InitHeader(); }
 
   static constexpr const fidl_type_t* Type =
-      &::fidl_test_inheritance::
-          fidl_test_inheritance_subfooResponseMessageTable;
+      &::fidl_test_inheritance::fidl_test_inheritance_subfooResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;

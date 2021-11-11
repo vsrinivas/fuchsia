@@ -61,10 +61,10 @@ _fuchsia_debugdata_DebugDataPublish(zx_handle_t debug_data_channel, const char* 
     _zx_handle_close(data);
     return ZX_ERR_INVALID_ARGS;
   }
-  FIDL_ALIGNDECL char wr_bytes[sizeof(fuchsia_debugdata_DebugDataPublishRequestMessage) +
-                               fuchsia_debugdata_MAX_NAME] = {};
-  fuchsia_debugdata_DebugDataPublishRequestMessage* request =
-      (fuchsia_debugdata_DebugDataPublishRequestMessage*)wr_bytes;
+  FIDL_ALIGNDECL char
+      wr_bytes[sizeof(fuchsia_debugdata_DebugDataPublishRequest) + fuchsia_debugdata_MAX_NAME] = {};
+  fuchsia_debugdata_DebugDataPublishRequest* request =
+      (fuchsia_debugdata_DebugDataPublishRequest*)wr_bytes;
   // TODO(fxbug.dev/38643) use fidl_init_txn_header once it is inline
   memset(&request->hdr, 0, sizeof(request->hdr));
   request->hdr.magic_number = kFidlWireFormatMagicNumberInitial;
@@ -77,11 +77,10 @@ _fuchsia_debugdata_DebugDataPublish(zx_handle_t debug_data_channel, const char* 
   zx_handle_t handles[2] = {data, vmo_token};
 
   memcpy(&wr_bytes[sizeof(*request)], data_sink_data, data_sink_size);
-  return _zx_channel_write(
-      debug_data_channel, 0u, wr_bytes,
-      static_cast<uint32_t>(sizeof(fuchsia_debugdata_DebugDataPublishRequestMessage) +
-                            FIDL_ALIGN(data_sink_size)),
-      handles, std::size(handles));
+  return _zx_channel_write(debug_data_channel, 0u, wr_bytes,
+                           static_cast<uint32_t>(sizeof(fuchsia_debugdata_DebugDataPublishRequest) +
+                                                 FIDL_ALIGN(data_sink_size)),
+                           handles, std::size(handles));
 }
 
 #if __has_feature(address_sanitizer)
@@ -93,10 +92,10 @@ _fuchsia_debugdata_DebugDataLoadConfig(zx_handle_t channel, const char* config_n
   if (config_name_size > fuchsia_debugdata_MAX_NAME) {
     return ZX_ERR_INVALID_ARGS;
   }
-  FIDL_ALIGNDECL char wr_bytes[sizeof(fuchsia_debugdata_DebugDataLoadConfigRequestMessage) +
+  FIDL_ALIGNDECL char wr_bytes[sizeof(fuchsia_debugdata_DebugDataLoadConfigRequest) +
                                fuchsia_debugdata_MAX_NAME] = {};
-  fuchsia_debugdata_DebugDataLoadConfigRequestMessage* request =
-      (fuchsia_debugdata_DebugDataLoadConfigRequestMessage*)wr_bytes;
+  fuchsia_debugdata_DebugDataLoadConfigRequest* request =
+      (fuchsia_debugdata_DebugDataLoadConfigRequest*)wr_bytes;
   // TODO(fxbug.dev/38643) use fidl_init_txn_header once it is inline
   memset(&request->hdr, 0, sizeof(request->hdr));
   request->hdr.magic_number = kFidlWireFormatMagicNumberInitial;
@@ -104,17 +103,16 @@ _fuchsia_debugdata_DebugDataLoadConfig(zx_handle_t channel, const char* config_n
   request->config_name.data = (char*)FIDL_ALLOC_PRESENT;
   request->config_name.size = config_name_size;
   memcpy(&wr_bytes[sizeof(*request)], config_name_data, config_name_size);
-  FIDL_ALIGNDECL char rd_bytes[sizeof(fuchsia_debugdata_DebugDataLoadConfigResponseMessage)];
+  FIDL_ALIGNDECL char rd_bytes[sizeof(fuchsia_debugdata_DebugDataLoadConfigResponse)];
   zx_channel_call_args_t args = {
       .wr_bytes = wr_bytes,
       .wr_handles = nullptr,
       .rd_bytes = rd_bytes,
       .rd_handles = out_config,
-      .wr_num_bytes =
-          static_cast<uint32_t>(sizeof(fuchsia_debugdata_DebugDataLoadConfigRequestMessage) +
-                                FIDL_ALIGN(config_name_size)),
+      .wr_num_bytes = static_cast<uint32_t>(sizeof(fuchsia_debugdata_DebugDataLoadConfigRequest) +
+                                            FIDL_ALIGN(config_name_size)),
       .wr_num_handles = 0,
-      .rd_num_bytes = sizeof(fuchsia_debugdata_DebugDataLoadConfigResponseMessage),
+      .rd_num_bytes = sizeof(fuchsia_debugdata_DebugDataLoadConfigResponse),
       .rd_num_handles = 1,
   };
   uint32_t actual_bytes = 0u;

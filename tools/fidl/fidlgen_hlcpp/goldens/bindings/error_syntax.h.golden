@@ -222,10 +222,10 @@ using ExampleUseOfErrorSyntax_CallWhichMayFail_ResultPtr =
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailRequestMessageTable;
+    fidl_test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestMessageTable;
+    fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
 
 }  // namespace _internal
 class ExampleUseOfErrorSyntax_RequestEncoder {
@@ -252,7 +252,7 @@ class ExampleUseOfErrorSyntax_RequestEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::fidl::test::errorsyntax::_internal::
-            fidl_test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailRequestMessageTable,
+            fidl_test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -280,7 +280,7 @@ class ExampleUseOfErrorSyntax_RequestEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::fidl::test::errorsyntax::_internal::
-            fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestMessageTable,
+            fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -289,10 +289,10 @@ class ExampleUseOfErrorSyntax_RequestEncoder {
 };
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailResponseMessageTable;
+    fidl_test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailResponseMessageTable;
+    fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailResponseTable;
 
 }  // namespace _internal
 class ExampleUseOfErrorSyntax_ResponseEncoder {
@@ -321,7 +321,7 @@ class ExampleUseOfErrorSyntax_ResponseEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::fidl::test::errorsyntax::_internal::
-            fidl_test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailResponseMessageTable,
+            fidl_test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailResponseTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
@@ -350,7 +350,7 @@ class ExampleUseOfErrorSyntax_ResponseEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::fidl::test::errorsyntax::_internal::
-            fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailResponseMessageTable,
+            fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailResponseTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();

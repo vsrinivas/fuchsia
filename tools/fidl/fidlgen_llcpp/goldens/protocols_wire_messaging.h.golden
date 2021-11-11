@@ -36,22 +36,22 @@ class DiscoverableProtocol;
 class ChannelProtocol;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_HandleRightsProtocolNoResponseMethodRequestMessageTable;
+    fidl_test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_HandleRightsProtocolNoResponseMethodResponseMessageTable;
+    fidl_test_protocols_HandleRightsProtocolNoResponseMethodResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_HandleRightsProtocolResponseMethodRequestMessageTable;
+    fidl_test_protocols_HandleRightsProtocolResponseMethodRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_HandleRightsProtocolResponseMethodResponseMessageTable;
+    fidl_test_protocols_HandleRightsProtocolResponseMethodResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_HandleRightsProtocolAnEventRequestMessageTable;
+    fidl_test_protocols_HandleRightsProtocolAnEventRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_HandleRightsProtocolAnEventEventMessageTable;
+    fidl_test_protocols_HandleRightsProtocolAnEventEventTable;
 
 }  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
@@ -96,7 +96,7 @@ struct ::fidl::WireRequest<
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_protocols::
-          fidl_test_protocols_HandleRightsProtocolNoResponseMethodRequestMessageTable;
+          fidl_test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -257,7 +257,7 @@ struct ::fidl::WireRequest<
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_protocols::
-          fidl_test_protocols_HandleRightsProtocolResponseMethodRequestMessageTable;
+          fidl_test_protocols_HandleRightsProtocolResponseMethodRequestTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -419,7 +419,7 @@ struct ::fidl::WireResponse<
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_protocols::
-          fidl_test_protocols_HandleRightsProtocolResponseMethodResponseMessageTable;
+          fidl_test_protocols_HandleRightsProtocolResponseMethodResponseTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -586,7 +586,7 @@ struct ::fidl::WireResponse<
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_protocols::
-          fidl_test_protocols_HandleRightsProtocolAnEventEventMessageTable;
+          fidl_test_protocols_HandleRightsProtocolAnEventEventTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -1162,52 +1162,52 @@ class ::fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>
 
 namespace fidl_test_protocols {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseRequestMessageTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseResponseMessageTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestMessageTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseMessageTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseRequestMessageTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseMessageTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestMessageTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseResponseMessageTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestMessageTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseMessageTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestMessageTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseMessageTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseOnEmptyResponseRequestMessageTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseOnEmptyResponseRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseOnEmptyResponseEventMessageTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseOnEmptyResponseEventTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseRequestMessageTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseEventMessageTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseEventTable;
 
 }  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
@@ -1865,7 +1865,7 @@ struct ::fidl::WireResponse<
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_protocols::
-          fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseMessageTable;
+          fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   static constexpr uint32_t PrimarySizeV1 = 32;
@@ -2028,7 +2028,7 @@ struct ::fidl::WireRequest<
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_protocols::
-          fidl_test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestMessageTable;
+          fidl_test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   static constexpr uint32_t PrimarySizeV1 = 32;
@@ -2183,7 +2183,7 @@ struct ::fidl::WireRequest<
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_protocols::
-          fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestMessageTable;
+          fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   static constexpr uint32_t PrimarySizeV1 = 32;
@@ -2498,7 +2498,7 @@ struct ::fidl::WireRequest<
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_protocols::
-          fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestMessageTable;
+          fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   static constexpr uint32_t PrimarySizeV1 = 32;
@@ -2656,7 +2656,7 @@ struct ::fidl::WireResponse<
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_protocols::
-          fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseMessageTable;
+          fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   static constexpr uint32_t PrimarySizeV1 = 32;
@@ -2978,7 +2978,7 @@ struct ::fidl::WireResponse<
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_protocols::
-          fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseEventMessageTable;
+          fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseEventTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   static constexpr uint32_t PrimarySizeV1 = 32;
@@ -4387,22 +4387,22 @@ class ::fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>
 
 namespace fidl_test_protocols {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_TransitionalRequestRequestMessageTable;
+    fidl_test_protocols_TransitionalRequestRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_TransitionalRequestResponseMessageTable;
+    fidl_test_protocols_TransitionalRequestResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_TransitionalOneWayRequestMessageTable;
+    fidl_test_protocols_TransitionalOneWayRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_TransitionalOneWayResponseMessageTable;
+    fidl_test_protocols_TransitionalOneWayResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_TransitionalEventRequestMessageTable;
+    fidl_test_protocols_TransitionalEventRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_TransitionalEventEventMessageTable;
+    fidl_test_protocols_TransitionalEventEventTable;
 
 }  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
@@ -4443,7 +4443,7 @@ struct ::fidl::WireRequest<::fidl_test_protocols::Transitional::Request> final {
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_protocols::
-          fidl_test_protocols_TransitionalRequestRequestMessageTable;
+          fidl_test_protocols_TransitionalRequestRequestTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -4592,7 +4592,7 @@ struct ::fidl::WireResponse<::fidl_test_protocols::Transitional::Request>
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_protocols::
-          fidl_test_protocols_TransitionalRequestResponseMessageTable;
+          fidl_test_protocols_TransitionalRequestResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -4744,7 +4744,7 @@ struct ::fidl::WireRequest<::fidl_test_protocols::Transitional::OneWay> final {
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_protocols::
-          fidl_test_protocols_TransitionalOneWayRequestMessageTable;
+          fidl_test_protocols_TransitionalOneWayRequestTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -4889,8 +4889,7 @@ struct ::fidl::WireResponse<::fidl_test_protocols::Transitional::Event> final {
   WireResponse() { _InitHeader(); }
 
   static constexpr const fidl_type_t* Type =
-      &::fidl_test_protocols::
-          fidl_test_protocols_TransitionalEventEventMessageTable;
+      &::fidl_test_protocols::fidl_test_protocols_TransitionalEventEventTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -5404,10 +5403,10 @@ class ::fidl::WireServer<::fidl_test_protocols::Transitional>
 
 namespace fidl_test_protocols {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_MethodWithUnionUnionMethodRequestMessageTable;
+    fidl_test_protocols_MethodWithUnionUnionMethodRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_MethodWithUnionUnionMethodResponseMessageTable;
+    fidl_test_protocols_MethodWithUnionUnionMethodResponseTable;
 
 }  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
@@ -5451,7 +5450,7 @@ struct ::fidl::WireRequest<::fidl_test_protocols::MethodWithUnion::UnionMethod>
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_protocols::
-          fidl_test_protocols_MethodWithUnionUnionMethodRequestMessageTable;
+          fidl_test_protocols_MethodWithUnionUnionMethodRequestTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   static constexpr uint32_t PrimarySizeV1 = 40;
@@ -5752,22 +5751,22 @@ class ::fidl::WireServer<::fidl_test_protocols::MethodWithUnion>
 
 namespace fidl_test_protocols {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithProtocolEndsClientEndsRequestMessageTable;
+    fidl_test_protocols_WithProtocolEndsClientEndsRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithProtocolEndsClientEndsResponseMessageTable;
+    fidl_test_protocols_WithProtocolEndsClientEndsResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithProtocolEndsServerEndsRequestMessageTable;
+    fidl_test_protocols_WithProtocolEndsServerEndsRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithProtocolEndsServerEndsResponseMessageTable;
+    fidl_test_protocols_WithProtocolEndsServerEndsResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithProtocolEndsStructContainingEndsRequestMessageTable;
+    fidl_test_protocols_WithProtocolEndsStructContainingEndsRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithProtocolEndsStructContainingEndsResponseMessageTable;
+    fidl_test_protocols_WithProtocolEndsStructContainingEndsResponseTable;
 
 }  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
@@ -5815,7 +5814,7 @@ struct ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::ClientEnds>
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_protocols::
-          fidl_test_protocols_WithProtocolEndsClientEndsRequestMessageTable;
+          fidl_test_protocols_WithProtocolEndsClientEndsRequestTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -5978,7 +5977,7 @@ struct ::fidl::WireResponse<::fidl_test_protocols::WithProtocolEnds::ClientEnds>
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_protocols::
-          fidl_test_protocols_WithProtocolEndsClientEndsResponseMessageTable;
+          fidl_test_protocols_WithProtocolEndsClientEndsResponseTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -6146,7 +6145,7 @@ struct ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::ServerEnds>
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_protocols::
-          fidl_test_protocols_WithProtocolEndsServerEndsRequestMessageTable;
+          fidl_test_protocols_WithProtocolEndsServerEndsRequestTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -6309,7 +6308,7 @@ struct ::fidl::WireResponse<::fidl_test_protocols::WithProtocolEnds::ServerEnds>
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_protocols::
-          fidl_test_protocols_WithProtocolEndsServerEndsResponseMessageTable;
+          fidl_test_protocols_WithProtocolEndsServerEndsResponseTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -6477,7 +6476,7 @@ struct ::fidl::WireRequest<
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_protocols::
-          fidl_test_protocols_WithProtocolEndsStructContainingEndsRequestMessageTable;
+          fidl_test_protocols_WithProtocolEndsStructContainingEndsRequestTable;
   static constexpr uint32_t MaxNumHandles = 4;
   static constexpr uint32_t PrimarySize = 32;
   static constexpr uint32_t PrimarySizeV1 = 32;
@@ -6644,7 +6643,7 @@ struct ::fidl::WireResponse<
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_protocols::
-          fidl_test_protocols_WithProtocolEndsStructContainingEndsResponseMessageTable;
+          fidl_test_protocols_WithProtocolEndsStructContainingEndsResponseTable;
   static constexpr uint32_t MaxNumHandles = 4;
   static constexpr uint32_t PrimarySize = 32;
   static constexpr uint32_t PrimarySizeV1 = 32;
@@ -7580,10 +7579,10 @@ class ::fidl::WireServer<::fidl_test_protocols::WithProtocolEnds>
 
 namespace fidl_test_protocols {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_ManyParametersFifteenRequestMessageTable;
+    fidl_test_protocols_ManyParametersFifteenRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_ManyParametersFifteenResponseMessageTable;
+    fidl_test_protocols_ManyParametersFifteenResponseTable;
 
 }  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
@@ -7658,7 +7657,7 @@ struct ::fidl::WireRequest<::fidl_test_protocols::ManyParameters::Fifteen>
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_protocols::
-          fidl_test_protocols_ManyParametersFifteenRequestMessageTable;
+          fidl_test_protocols_ManyParametersFifteenRequestTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   static constexpr uint32_t PrimarySizeV1 = 32;
@@ -7963,28 +7962,28 @@ class ::fidl::WireServer<::fidl_test_protocols::ManyParameters>
 
 namespace fidl_test_protocols {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithErrorSyntaxResponseAsStructRequestMessageTable;
+    fidl_test_protocols_WithErrorSyntaxResponseAsStructRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithErrorSyntaxResponseAsStructResponseMessageTable;
+    fidl_test_protocols_WithErrorSyntaxResponseAsStructResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveRequestMessageTable;
+    fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseMessageTable;
+    fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithErrorSyntaxErrorAsEnumRequestMessageTable;
+    fidl_test_protocols_WithErrorSyntaxErrorAsEnumRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithErrorSyntaxErrorAsEnumResponseMessageTable;
+    fidl_test_protocols_WithErrorSyntaxErrorAsEnumResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithErrorSyntaxHandleInResultRequestMessageTable;
+    fidl_test_protocols_WithErrorSyntaxHandleInResultRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithErrorSyntaxHandleInResultResponseMessageTable;
+    fidl_test_protocols_WithErrorSyntaxHandleInResultResponseTable;
 
 }  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
@@ -8181,7 +8180,7 @@ struct ::fidl::WireResponse<
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_protocols::
-          fidl_test_protocols_WithErrorSyntaxResponseAsStructResponseMessageTable;
+          fidl_test_protocols_WithErrorSyntaxResponseAsStructResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   static constexpr uint32_t PrimarySizeV1 = 40;
@@ -8489,7 +8488,7 @@ struct ::fidl::WireResponse<
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_protocols::
-          fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseMessageTable;
+          fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   static constexpr uint32_t PrimarySizeV1 = 40;
@@ -8793,7 +8792,7 @@ struct ::fidl::WireResponse<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_protocols::
-          fidl_test_protocols_WithErrorSyntaxErrorAsEnumResponseMessageTable;
+          fidl_test_protocols_WithErrorSyntaxErrorAsEnumResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   static constexpr uint32_t PrimarySizeV1 = 40;
@@ -9103,7 +9102,7 @@ struct ::fidl::WireResponse<
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_protocols::
-          fidl_test_protocols_WithErrorSyntaxHandleInResultResponseMessageTable;
+          fidl_test_protocols_WithErrorSyntaxHandleInResultResponseTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 32;
   static constexpr uint32_t PrimarySizeV1 = 40;
@@ -10252,10 +10251,10 @@ class ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>
 
 namespace fidl_test_protocols {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_DiscoverableProtocolMethodRequestMessageTable;
+    fidl_test_protocols_DiscoverableProtocolMethodRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_DiscoverableProtocolMethodResponseMessageTable;
+    fidl_test_protocols_DiscoverableProtocolMethodResponseTable;
 
 }  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
@@ -10599,34 +10598,34 @@ class ::fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>
 
 namespace fidl_test_protocols {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolMethodARequestMessageTable;
+    fidl_test_protocols_ChannelProtocolMethodARequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolMethodAResponseMessageTable;
+    fidl_test_protocols_ChannelProtocolMethodAResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolEventARequestMessageTable;
+    fidl_test_protocols_ChannelProtocolEventARequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolEventAEventMessageTable;
+    fidl_test_protocols_ChannelProtocolEventAEventTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolMethodBRequestMessageTable;
+    fidl_test_protocols_ChannelProtocolMethodBRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolMethodBResponseMessageTable;
+    fidl_test_protocols_ChannelProtocolMethodBResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolTakeHandleRequestMessageTable;
+    fidl_test_protocols_ChannelProtocolTakeHandleRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolTakeHandleResponseMessageTable;
+    fidl_test_protocols_ChannelProtocolTakeHandleResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolMutateSocketRequestMessageTable;
+    fidl_test_protocols_ChannelProtocolMutateSocketRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolMutateSocketResponseMessageTable;
+    fidl_test_protocols_ChannelProtocolMutateSocketResponseTable;
 
 }  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
@@ -10669,7 +10668,7 @@ struct ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodA>
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_protocols::
-          fidl_test_protocols_ChannelProtocolMethodARequestMessageTable;
+          fidl_test_protocols_ChannelProtocolMethodARequestTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   static constexpr uint32_t PrimarySizeV1 = 32;
@@ -10817,7 +10816,7 @@ struct ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::EventA>
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_protocols::
-          fidl_test_protocols_ChannelProtocolEventAEventMessageTable;
+          fidl_test_protocols_ChannelProtocolEventAEventTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   static constexpr uint32_t PrimarySizeV1 = 32;
@@ -10971,7 +10970,7 @@ struct ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodB>
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_protocols::
-          fidl_test_protocols_ChannelProtocolMethodBRequestMessageTable;
+          fidl_test_protocols_ChannelProtocolMethodBRequestTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   static constexpr uint32_t PrimarySizeV1 = 32;
@@ -11120,7 +11119,7 @@ struct ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::MethodB>
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_protocols::
-          fidl_test_protocols_ChannelProtocolMethodBResponseMessageTable;
+          fidl_test_protocols_ChannelProtocolMethodBResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -11275,7 +11274,7 @@ struct ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::TakeHandle>
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_protocols::
-          fidl_test_protocols_ChannelProtocolTakeHandleRequestMessageTable;
+          fidl_test_protocols_ChannelProtocolTakeHandleRequestTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -11580,7 +11579,7 @@ struct ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MutateSocket>
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_protocols::
-          fidl_test_protocols_ChannelProtocolMutateSocketRequestMessageTable;
+          fidl_test_protocols_ChannelProtocolMutateSocketRequestTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -11743,7 +11742,7 @@ struct ::fidl::WireResponse<
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_protocols::
-          fidl_test_protocols_ChannelProtocolMutateSocketResponseMessageTable;
+          fidl_test_protocols_ChannelProtocolMutateSocketResponseTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;

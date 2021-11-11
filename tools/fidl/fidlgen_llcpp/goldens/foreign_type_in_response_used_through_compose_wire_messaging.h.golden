@@ -23,10 +23,10 @@ namespace fidl_test_foreigntypeinresponseusedthroughcompose {
 class Top;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestMessageTable;
+    fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseMessageTable;
+    fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseTable;
 
 }  // namespace fidl_test_foreigntypeinresponseusedthroughcompose
 #ifdef __Fuchsia__
@@ -222,7 +222,7 @@ struct ::fidl::WireResponse<
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_foreigntypeinresponseusedthroughcompose::
-          fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseMessageTable;
+          fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;

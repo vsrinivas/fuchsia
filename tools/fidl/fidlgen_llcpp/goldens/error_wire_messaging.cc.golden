@@ -8,9 +8,9 @@ namespace fidl_test_error {
 [[maybe_unused]] constexpr uint64_t kExample_foo_Ordinal =
     6333213382893778862lu;
 
-extern "C" const fidl_type_t fidl_test_error_ExamplefooRequestMessageTable;
+extern "C" const fidl_type_t fidl_test_error_ExamplefooRequestTable;
 
-extern "C" const fidl_type_t fidl_test_error_ExamplefooResponseMessageTable;
+extern "C" const fidl_type_t fidl_test_error_ExamplefooResponseTable;
 #ifdef __Fuchsia__
 }  // namespace fidl_test_error
 ::fidl::WireResult<::fidl_test_error::Example::Foo>::WireResult(

@@ -22,10 +22,10 @@ namespace fidl_test_nullable {
 class SimpleProtocol;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_nullable_SimpleProtocolAddRequestMessageTable;
+    fidl_test_nullable_SimpleProtocolAddRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_nullable_SimpleProtocolAddResponseMessageTable;
+    fidl_test_nullable_SimpleProtocolAddResponseTable;
 
 }  // namespace fidl_test_nullable
 #ifdef __Fuchsia__
@@ -66,8 +66,7 @@ struct ::fidl::WireRequest<::fidl_test_nullable::SimpleProtocol::Add> final {
   WireRequest() { _InitHeader(); }
 
   static constexpr const fidl_type_t* Type =
-      &::fidl_test_nullable::
-          fidl_test_nullable_SimpleProtocolAddRequestMessageTable;
+      &::fidl_test_nullable::fidl_test_nullable_SimpleProtocolAddRequestTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -214,8 +213,7 @@ struct ::fidl::WireResponse<::fidl_test_nullable::SimpleProtocol::Add> final {
   WireResponse() { _InitHeader(); }
 
   static constexpr const fidl_type_t* Type =
-      &::fidl_test_nullable::
-          fidl_test_nullable_SimpleProtocolAddResponseMessageTable;
+      &::fidl_test_nullable::fidl_test_nullable_SimpleProtocolAddResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;

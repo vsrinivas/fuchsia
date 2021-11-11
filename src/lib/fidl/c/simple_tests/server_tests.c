@@ -32,7 +32,7 @@ TEST(ServerTests, dispatch_test) {
       .Echo = echo,
   };
 
-  fidl_test_echo_EchoEchoRequestMessage request;
+  fidl_test_echo_EchoEchoRequest request;
   memset(&request, 0, sizeof(request));
   zx_txid_t txid = 42;
   fidl_init_txn_header(&request.hdr, txid, fidl_test_echo_EchoEchoOrdinal);
@@ -131,7 +131,7 @@ typedef struct my_connection {
 static zx_status_t reply_handler(fidl_txn_t* txn, const fidl_outgoing_msg_t* msg) {
   ZX_ASSERT(msg->type == FIDL_OUTGOING_MSG_TYPE_BYTE);
   my_connection_t* my_txn = (my_connection_t*)txn;
-  EXPECT_EQ(sizeof(fidl_test_echo_EchoEchoResponseMessage), msg->byte.num_bytes, "");
+  EXPECT_EQ(sizeof(fidl_test_echo_EchoEchoResponse), msg->byte.num_bytes, "");
   EXPECT_EQ(0u, msg->byte.num_handles, "");
 
   fidl_message_header_t* hdr = (fidl_message_header_t*)msg->byte.bytes;
@@ -162,7 +162,7 @@ TEST(ServerTests, error_test) {
       .Echo = return_async,
   };
 
-  fidl_test_echo_EchoEchoRequestMessage request;
+  fidl_test_echo_EchoEchoRequest request;
   memset(&request, 0, sizeof(request));
   zx_txid_t txid = 42;
   fidl_init_txn_header(&request.hdr, txid, fidl_test_echo_EchoEchoOrdinal);
@@ -205,7 +205,7 @@ TEST(ServerTests, incompatible_magic_test) {
       .Echo = return_async,
   };
 
-  fidl_test_echo_EchoEchoRequestMessage request;
+  fidl_test_echo_EchoEchoRequest request;
   memset(&request, 0, sizeof(request));
   zx_txid_t txid = 42;
   fidl_init_txn_header(&request.hdr, txid, fidl_test_echo_EchoEchoOrdinal);

@@ -1339,10 +1339,10 @@ using OlderSimpleUnionPtr = ::std::unique_ptr<OlderSimpleUnion>;
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestMessageTable;
+    fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestMessageTable;
+    fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable;
 
 }  // namespace _internal
 class TestProtocol_RequestEncoder {
@@ -1366,7 +1366,7 @@ class TestProtocol_RequestEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::fidl::test::union_::_internal::
-            fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestMessageTable,
+            fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1391,7 +1391,7 @@ class TestProtocol_RequestEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::fidl::test::union_::_internal::
-            fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestMessageTable,
+            fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1400,10 +1400,10 @@ class TestProtocol_RequestEncoder {
 };
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseMessageTable;
+    fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseMessageTable;
+    fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
 
 }  // namespace _internal
 class TestProtocol_ResponseEncoder {
@@ -1432,7 +1432,7 @@ class TestProtocol_ResponseEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::fidl::test::union_::_internal::
-            fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseMessageTable,
+            fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
@@ -1460,7 +1460,7 @@ class TestProtocol_ResponseEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::fidl::test::union_::_internal::
-            fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseMessageTable,
+            fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();

@@ -46,10 +46,10 @@ using EmptyPtr = ::std::unique_ptr<Empty>;
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_emptystruct_EmptyProtocolSendRequestMessageTable;
+    fidl_test_emptystruct_EmptyProtocolSendRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_emptystruct_EmptyProtocolSendAndReceiveRequestMessageTable;
+    fidl_test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
 
 }  // namespace _internal
 class EmptyProtocol_RequestEncoder {
@@ -75,7 +75,7 @@ class EmptyProtocol_RequestEncoder {
 
     fidl_trace(DidHLCPPEncode,
                &::fidl::test::emptystruct::_internal::
-                   fidl_test_emptystruct_EmptyProtocolSendRequestMessageTable,
+                   fidl_test_emptystruct_EmptyProtocolSendRequestTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -103,7 +103,7 @@ class EmptyProtocol_RequestEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::fidl::test::emptystruct::_internal::
-            fidl_test_emptystruct_EmptyProtocolSendAndReceiveRequestMessageTable,
+            fidl_test_emptystruct_EmptyProtocolSendAndReceiveRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -112,10 +112,10 @@ class EmptyProtocol_RequestEncoder {
 };
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_emptystruct_EmptyProtocolReceiveEventMessageTable;
+    fidl_test_emptystruct_EmptyProtocolReceiveEventTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_emptystruct_EmptyProtocolSendAndReceiveResponseMessageTable;
+    fidl_test_emptystruct_EmptyProtocolSendAndReceiveResponseTable;
 
 }  // namespace _internal
 class EmptyProtocol_ResponseEncoder {
@@ -141,7 +141,7 @@ class EmptyProtocol_ResponseEncoder {
 
     fidl_trace(DidHLCPPEncode,
                &::fidl::test::emptystruct::_internal::
-                   fidl_test_emptystruct_EmptyProtocolReceiveEventMessageTable,
+                   fidl_test_emptystruct_EmptyProtocolReceiveEventTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
@@ -168,7 +168,7 @@ class EmptyProtocol_ResponseEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::fidl::test::emptystruct::_internal::
-            fidl_test_emptystruct_EmptyProtocolSendAndReceiveResponseMessageTable,
+            fidl_test_emptystruct_EmptyProtocolSendAndReceiveResponseTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();

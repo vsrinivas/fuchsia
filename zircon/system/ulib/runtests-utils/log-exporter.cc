@@ -198,8 +198,7 @@ int LogExporter::LogMessage(fuchsia_logger_LogMessage* log_message) {
 
 zx_status_t LogExporter::Log(fidl::HLCPPIncomingMessage message) {
   const char* error_msg = nullptr;
-  zx_status_t status =
-      message.Decode(&fuchsia_logger_LogListenerSafeLogRequestMessageTable, &error_msg);
+  zx_status_t status = message.Decode(&fuchsia_logger_LogListenerSafeLogRequestTable, &error_msg);
   if (status != ZX_OK) {
     fprintf(stderr, "log-listener: error: Log: %s\n", error_msg);
     return status;
@@ -211,7 +210,7 @@ zx_status_t LogExporter::Log(fidl::HLCPPIncomingMessage message) {
     return ZX_OK;
   }
 
-  fuchsia_logger_LogListenerSafeLogManyResponseMessage response;
+  fuchsia_logger_LogListenerSafeLogManyResponse response;
   memset(&response, 0, sizeof(response));
   fidl_init_txn_header(&response.hdr, message.txid(), message.ordinal());
   return channel_.write(0, &response, sizeof(response), nullptr, 0);
@@ -220,7 +219,7 @@ zx_status_t LogExporter::Log(fidl::HLCPPIncomingMessage message) {
 zx_status_t LogExporter::LogMany(fidl::HLCPPIncomingMessage message) {
   const char* error_msg = nullptr;
   zx_status_t status =
-      message.Decode(&fuchsia_logger_LogListenerSafeLogManyRequestMessageTable, &error_msg);
+      message.Decode(&fuchsia_logger_LogListenerSafeLogManyRequestTable, &error_msg);
   if (status != ZX_OK) {
     fprintf(stderr, "log-listener: error: LogMany: %s\n", error_msg);
     return status;
@@ -235,7 +234,7 @@ zx_status_t LogExporter::LogMany(fidl::HLCPPIncomingMessage message) {
     }
   }
 
-  fuchsia_logger_LogListenerSafeLogManyResponseMessage response;
+  fuchsia_logger_LogListenerSafeLogManyResponse response;
   memset(&response, 0, sizeof(response));
   fidl_init_txn_header(&response.hdr, message.txid(), message.ordinal());
   return channel_.write(0, &response, sizeof(response), nullptr, 0);
@@ -301,7 +300,7 @@ std::unique_ptr<LogExporter> LaunchLogExporter(const std::string_view syslog_pat
     *error = CREATE_CHANNEL;
     return nullptr;
   }
-  fuchsia_logger_LogListenSafeRequestMessage req = {};
+  fuchsia_logger_LogListenSafeRequest req = {};
   fidl_init_txn_header(&req.hdr, 0, fuchsia_logger_LogListenSafeOrdinal);
   req.log_listener = FIDL_HANDLE_PRESENT;
   zx_handle_t listener_handle = listener.release();

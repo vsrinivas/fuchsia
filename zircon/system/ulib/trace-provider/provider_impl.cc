@@ -129,15 +129,13 @@ bool TraceProviderImpl::Connection::DecodeAndDispatch(uint8_t* buffer, uint32_t 
   uint64_t ordinal = hdr->ordinal;
   switch (ordinal) {
     case fuchsia_tracing_provider_ProviderInitializeOrdinal: {
-      zx_status_t status =
-          fidl_decode_etc(&fuchsia_tracing_provider_ProviderInitializeRequestMessageTable, buffer,
-                          num_bytes, handles, num_handles, nullptr);
+      zx_status_t status = fidl_decode_etc(&fuchsia_tracing_provider_ProviderInitializeRequestTable,
+                                           buffer, num_bytes, handles, num_handles, nullptr);
       if (status != ZX_OK) {
         return false;
       }
 
-      auto request =
-          reinterpret_cast<fuchsia_tracing_provider_ProviderInitializeRequestMessage*>(buffer);
+      auto request = reinterpret_cast<fuchsia_tracing_provider_ProviderInitializeRequest*>(buffer);
       const fuchsia_tracing_provider_ProviderConfig& config = request->config;
       auto buffering_mode = config.buffering_mode;
       auto buffer = zx::vmo(config.buffer);
@@ -166,15 +164,13 @@ bool TraceProviderImpl::Connection::DecodeAndDispatch(uint8_t* buffer, uint32_t 
       return true;
     }
     case fuchsia_tracing_provider_ProviderStartOrdinal: {
-      zx_status_t status =
-          fidl_decode_etc(&fuchsia_tracing_provider_ProviderStartRequestMessageTable, buffer,
-                          num_bytes, handles, num_handles, nullptr);
+      zx_status_t status = fidl_decode_etc(&fuchsia_tracing_provider_ProviderStartRequestTable,
+                                           buffer, num_bytes, handles, num_handles, nullptr);
       if (status != ZX_OK) {
         return false;
       }
 
-      auto request =
-          reinterpret_cast<fuchsia_tracing_provider_ProviderStartRequestMessage*>(buffer);
+      auto request = reinterpret_cast<fuchsia_tracing_provider_ProviderStartRequest*>(buffer);
       const fuchsia_tracing_provider_StartOptions& options = request->options;
       trace_start_mode_t start_mode;
       switch (options.buffer_disposition) {
@@ -199,9 +195,8 @@ bool TraceProviderImpl::Connection::DecodeAndDispatch(uint8_t* buffer, uint32_t 
       return true;
     }
     case fuchsia_tracing_provider_ProviderStopOrdinal: {
-      zx_status_t status =
-          fidl_decode_etc(&fuchsia_tracing_provider_ProviderStopRequestMessageTable, buffer,
-                          num_bytes, handles, num_handles, nullptr);
+      zx_status_t status = fidl_decode_etc(&fuchsia_tracing_provider_ProviderStopRequestTable,
+                                           buffer, num_bytes, handles, num_handles, nullptr);
       if (status != ZX_OK) {
         return false;
       }
@@ -210,9 +205,8 @@ bool TraceProviderImpl::Connection::DecodeAndDispatch(uint8_t* buffer, uint32_t 
       return true;
     }
     case fuchsia_tracing_provider_ProviderTerminateOrdinal: {
-      zx_status_t status =
-          fidl_decode_etc(&fuchsia_tracing_provider_ProviderTerminateRequestMessageTable, buffer,
-                          num_bytes, handles, num_handles, nullptr);
+      zx_status_t status = fidl_decode_etc(&fuchsia_tracing_provider_ProviderTerminateRequestTable,
+                                           buffer, num_bytes, handles, num_handles, nullptr);
       if (status != ZX_OK) {
         return false;
       }

@@ -18,7 +18,7 @@ namespace test {
 namespace inheritancewithrecursivedecl {
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_inheritancewithrecursivedecl_ParentFirstRequestMessageTable;
+    fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable;
 
 }  // namespace _internal
 Parent::~Parent() = default;
@@ -30,7 +30,7 @@ const fidl_type_t* ::fidl::test::inheritancewithrecursivedecl::
         kParent_First_Ordinal:
       *out_needs_response = false;
       return &::fidl::test::inheritancewithrecursivedecl::_internal::
-          fidl_test_inheritancewithrecursivedecl_ParentFirstRequestMessageTable;
+          fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -73,7 +73,7 @@ void Parent_Proxy::First(
                                internal::kParent_First_Ordinal);
   controller_->Send(
       &::fidl::test::inheritancewithrecursivedecl::_internal::
-          fidl_test_inheritancewithrecursivedecl_ParentFirstRequestMessageTable,
+          fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable,
       ::fidl::test::inheritancewithrecursivedecl::Parent_RequestEncoder::First(
           &_encoder, &request),
       nullptr);
@@ -143,7 +143,7 @@ zx_status_t Parent_SyncProxy::First(
                                internal::kParent_First_Ordinal);
   return proxy_.Send(
       &::fidl::test::inheritancewithrecursivedecl::_internal::
-          fidl_test_inheritancewithrecursivedecl_ParentFirstRequestMessageTable,
+          fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable,
       ::fidl::test::inheritancewithrecursivedecl::Parent_RequestEncoder::First(
           &_encoder, &request));
 }
@@ -159,10 +159,10 @@ namespace test {
 namespace inheritancewithrecursivedecl {
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_inheritancewithrecursivedecl_ChildFirstRequestMessageTable;
+    fidl_test_inheritancewithrecursivedecl_ChildFirstRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_inheritancewithrecursivedecl_ChildSecondRequestMessageTable;
+    fidl_test_inheritancewithrecursivedecl_ChildSecondRequestTable;
 
 }  // namespace _internal
 Child::~Child() = default;
@@ -174,12 +174,12 @@ const fidl_type_t* ::fidl::test::inheritancewithrecursivedecl::
         kChild_First_Ordinal:
       *out_needs_response = false;
       return &::fidl::test::inheritancewithrecursivedecl::_internal::
-          fidl_test_inheritancewithrecursivedecl_ChildFirstRequestMessageTable;
+          fidl_test_inheritancewithrecursivedecl_ChildFirstRequestTable;
     case ::fidl::test::inheritancewithrecursivedecl::internal::
         kChild_Second_Ordinal:
       *out_needs_response = false;
       return &::fidl::test::inheritancewithrecursivedecl::_internal::
-          fidl_test_inheritancewithrecursivedecl_ChildSecondRequestMessageTable;
+          fidl_test_inheritancewithrecursivedecl_ChildSecondRequestTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -222,7 +222,7 @@ void Child_Proxy::First(
                                internal::kChild_First_Ordinal);
   controller_->Send(
       &::fidl::test::inheritancewithrecursivedecl::_internal::
-          fidl_test_inheritancewithrecursivedecl_ChildFirstRequestMessageTable,
+          fidl_test_inheritancewithrecursivedecl_ChildFirstRequestTable,
       ::fidl::test::inheritancewithrecursivedecl::Child_RequestEncoder::First(
           &_encoder, &request),
       nullptr);
@@ -234,7 +234,7 @@ void Child_Proxy::Second(
                                internal::kChild_Second_Ordinal);
   controller_->Send(
       &::fidl::test::inheritancewithrecursivedecl::_internal::
-          fidl_test_inheritancewithrecursivedecl_ChildSecondRequestMessageTable,
+          fidl_test_inheritancewithrecursivedecl_ChildSecondRequestTable,
       ::fidl::test::inheritancewithrecursivedecl::Child_RequestEncoder::Second(
           &_encoder, &request),
       nullptr);
@@ -313,7 +313,7 @@ zx_status_t Child_SyncProxy::First(
                                internal::kChild_First_Ordinal);
   return proxy_.Send(
       &::fidl::test::inheritancewithrecursivedecl::_internal::
-          fidl_test_inheritancewithrecursivedecl_ChildFirstRequestMessageTable,
+          fidl_test_inheritancewithrecursivedecl_ChildFirstRequestTable,
       ::fidl::test::inheritancewithrecursivedecl::Child_RequestEncoder::First(
           &_encoder, &request));
 }
@@ -325,7 +325,7 @@ zx_status_t Child_SyncProxy::Second(
                                internal::kChild_Second_Ordinal);
   return proxy_.Send(
       &::fidl::test::inheritancewithrecursivedecl::_internal::
-          fidl_test_inheritancewithrecursivedecl_ChildSecondRequestMessageTable,
+          fidl_test_inheritancewithrecursivedecl_ChildSecondRequestTable,
       ::fidl::test::inheritancewithrecursivedecl::Child_RequestEncoder::Second(
           &_encoder, &request));
 }

@@ -449,13 +449,13 @@ func newMethod(inner methodInner, hl hlMessagingDetails, wire wireTypeNames) Met
 	hlCodingTableBase := hl.ProtocolMarker.Namespace().append("_internal").member(inner.baseCodingTableName)
 	wireCodingTableBase := wire.WireProtocolMarker.Namespace().member(inner.baseCodingTableName)
 
-	hlRequestCodingTable := hlCodingTableBase.appendName("RequestMessageTable")
-	wireRequestCodingTable := wireCodingTableBase.appendName("RequestMessageTable")
-	hlResponseCodingTable := hlCodingTableBase.appendName("ResponseMessageTable")
-	wireResponseCodingTable := wireCodingTableBase.appendName("ResponseMessageTable")
+	hlRequestCodingTable := hlCodingTableBase.appendName("RequestTable")
+	wireRequestCodingTable := wireCodingTableBase.appendName("RequestTable")
+	hlResponseCodingTable := hlCodingTableBase.appendName("ResponseTable")
+	wireResponseCodingTable := wireCodingTableBase.appendName("ResponseTable")
 	if !inner.HasRequest {
-		hlResponseCodingTable = hlCodingTableBase.appendName("EventMessageTable")
-		wireResponseCodingTable = wireCodingTableBase.appendName("EventMessageTable")
+		hlResponseCodingTable = hlCodingTableBase.appendName("EventTable")
+		wireResponseCodingTable = wireCodingTableBase.appendName("EventTable")
 	}
 
 	var callbackType *nameVariants = nil

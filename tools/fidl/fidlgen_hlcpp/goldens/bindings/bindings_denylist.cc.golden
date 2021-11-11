@@ -18,10 +18,10 @@ namespace test {
 namespace bindingsdenylist {
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestMessageTable;
+    fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseMessageTable;
+    fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseTable;
 
 }  // namespace _internal
 OnlyLibfuzzerAndDeps::~OnlyLibfuzzerAndDeps() = default;
@@ -34,7 +34,7 @@ const fidl_type_t* ::fidl::test::bindingsdenylist::
         kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal:
       *out_needs_response = true;
       return &::fidl::test::bindingsdenylist::_internal::
-          fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestMessageTable;
+          fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -47,7 +47,7 @@ const fidl_type_t* OnlyLibfuzzerAndDeps_ResponseDecoder::GetType(
     case ::fidl::test::bindingsdenylist::internal::
         kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal:
       return &::fidl::test::bindingsdenylist::_internal::
-          fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseMessageTable;
+          fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseTable;
     default:
       return nullptr;
   }
@@ -92,7 +92,7 @@ OnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_ResponseHandler(
         return ZX_OK;
       },
       &::fidl::test::bindingsdenylist::_internal::
-          fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseMessageTable);
+          fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseTable);
 }
 
 }  // namespace
@@ -103,7 +103,7 @@ void OnlyLibfuzzerAndDeps_Proxy::LibfuzzerNeedsNonemptyProtocol(
           kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal);
   controller_->Send(
       &::fidl::test::bindingsdenylist::_internal::
-          fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestMessageTable,
+          fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestTable,
       ::fidl::test::bindingsdenylist::OnlyLibfuzzerAndDeps_RequestEncoder::
           LibfuzzerNeedsNonemptyProtocol(&_encoder),
       OnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_ResponseHandler(
@@ -133,7 +133,7 @@ class OnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Responder final {
             kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal);
     response_.Send(
         &::fidl::test::bindingsdenylist::_internal::
-            fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseMessageTable,
+            fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseTable,
         ::fidl::test::bindingsdenylist::OnlyLibfuzzerAndDeps_ResponseEncoder::
             LibfuzzerNeedsNonemptyProtocol(&_encoder));
   }
@@ -201,9 +201,9 @@ zx_status_t OnlyLibfuzzerAndDeps_SyncProxy::LibfuzzerNeedsNonemptyProtocol() {
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
       &::fidl::test::bindingsdenylist::_internal::
-          fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestMessageTable,
+          fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestTable,
       &::fidl::test::bindingsdenylist::_internal::
-          fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseMessageTable,
+          fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseTable,
       ::fidl::test::bindingsdenylist::OnlyLibfuzzerAndDeps_RequestEncoder::
           LibfuzzerNeedsNonemptyProtocol(&_encoder),
       &response_);

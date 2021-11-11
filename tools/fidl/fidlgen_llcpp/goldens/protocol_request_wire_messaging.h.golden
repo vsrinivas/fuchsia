@@ -22,28 +22,28 @@ class Parent;
 class Child;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocolrequest_ParentGetChildRequestMessageTable;
+    fidl_test_protocolrequest_ParentGetChildRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocolrequest_ParentGetChildResponseMessageTable;
+    fidl_test_protocolrequest_ParentGetChildResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocolrequest_ParentGetChildRequestRequestMessageTable;
+    fidl_test_protocolrequest_ParentGetChildRequestRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocolrequest_ParentGetChildRequestResponseMessageTable;
+    fidl_test_protocolrequest_ParentGetChildRequestResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocolrequest_ParentTakeChildRequestMessageTable;
+    fidl_test_protocolrequest_ParentTakeChildRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocolrequest_ParentTakeChildResponseMessageTable;
+    fidl_test_protocolrequest_ParentTakeChildResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocolrequest_ParentTakeChildRequestRequestMessageTable;
+    fidl_test_protocolrequest_ParentTakeChildRequestRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocolrequest_ParentTakeChildRequestResponseMessageTable;
+    fidl_test_protocolrequest_ParentTakeChildRequestResponseTable;
 
 }  // namespace fidl_test_protocolrequest
 #ifdef __Fuchsia__
@@ -237,7 +237,7 @@ struct ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_protocolrequest::
-          fidl_test_protocolrequest_ParentGetChildResponseMessageTable;
+          fidl_test_protocolrequest_ParentGetChildResponseTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -554,7 +554,7 @@ struct ::fidl::WireResponse<
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_protocolrequest::
-          fidl_test_protocolrequest_ParentGetChildRequestResponseMessageTable;
+          fidl_test_protocolrequest_ParentGetChildRequestResponseTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -723,7 +723,7 @@ struct ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_protocolrequest::
-          fidl_test_protocolrequest_ParentTakeChildRequestMessageTable;
+          fidl_test_protocolrequest_ParentTakeChildRequestTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -886,7 +886,7 @@ struct ::fidl::WireRequest<
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_protocolrequest::
-          fidl_test_protocolrequest_ParentTakeChildRequestRequestMessageTable;
+          fidl_test_protocolrequest_ParentTakeChildRequestRequestTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;

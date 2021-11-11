@@ -638,10 +638,10 @@ void FlexibleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_doccomments_InterfaceMethodRequestMessageTable;
+    fidl_test_doccomments_InterfaceMethodRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_doccomments_InterfaceOnEventEventMessageTable;
+    fidl_test_doccomments_InterfaceOnEventEventTable;
 
 }  // namespace _internal
 Interface::~Interface() = default;
@@ -652,7 +652,7 @@ const fidl_type_t* ::fidl::test::doccomments::Interface_RequestDecoder::GetType(
     case ::fidl::test::doccomments::internal::kInterface_Method_Ordinal:
       *out_needs_response = false;
       return &::fidl::test::doccomments::_internal::
-          fidl_test_doccomments_InterfaceMethodRequestMessageTable;
+          fidl_test_doccomments_InterfaceMethodRequestTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -663,7 +663,7 @@ const fidl_type_t* Interface_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case ::fidl::test::doccomments::internal::kInterface_OnEvent_Ordinal:
       return &::fidl::test::doccomments::_internal::
-          fidl_test_doccomments_InterfaceOnEventEventMessageTable;
+          fidl_test_doccomments_InterfaceOnEventEventTable;
     default:
       return nullptr;
   }
@@ -689,15 +689,15 @@ zx_status_t Interface_Proxy::Dispatch_(::fidl::HLCPPIncomingMessage message) {
         break;
       }
       const char* error_msg = nullptr;
-      status = message.Decode(
-          &::fidl::test::doccomments::_internal::
-              fidl_test_doccomments_InterfaceOnEventEventMessageTable,
-          &error_msg);
+      status =
+          message.Decode(&::fidl::test::doccomments::_internal::
+                             fidl_test_doccomments_InterfaceOnEventEventTable,
+                         &error_msg);
       if (status != ZX_OK) {
         FIDL_REPORT_DECODING_ERROR(
             message,
             &::fidl::test::doccomments::_internal::
-                fidl_test_doccomments_InterfaceOnEventEventMessageTable,
+                fidl_test_doccomments_InterfaceOnEventEventTable,
             error_msg);
         break;
       }
@@ -717,7 +717,7 @@ void Interface_Proxy::Method() {
       ::fidl::test::doccomments::internal::kInterface_Method_Ordinal);
   controller_->Send(
       &::fidl::test::doccomments::_internal::
-          fidl_test_doccomments_InterfaceMethodRequestMessageTable,
+          fidl_test_doccomments_InterfaceMethodRequestTable,
       ::fidl::test::doccomments::Interface_RequestEncoder::Method(&_encoder),
       nullptr);
 }
@@ -776,7 +776,7 @@ void Interface_Stub::OnEvent() {
       ::fidl::test::doccomments::internal::kInterface_OnEvent_Ordinal);
   sender_()->Send(
       &::fidl::test::doccomments::_internal::
-          fidl_test_doccomments_InterfaceOnEventEventMessageTable,
+          fidl_test_doccomments_InterfaceOnEventEventTable,
       ::fidl::test::doccomments::Interface_ResponseEncoder::OnEvent(&_encoder));
 }
 
@@ -790,7 +790,7 @@ zx_status_t Interface_SyncProxy::Method() {
       ::fidl::test::doccomments::internal::kInterface_Method_Ordinal);
   return proxy_.Send(
       &::fidl::test::doccomments::_internal::
-          fidl_test_doccomments_InterfaceMethodRequestMessageTable,
+          fidl_test_doccomments_InterfaceMethodRequestTable,
       ::fidl::test::doccomments::Interface_RequestEncoder::Method(&_encoder));
 }
 #endif  // __Fuchsia__

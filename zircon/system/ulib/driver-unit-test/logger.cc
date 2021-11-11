@@ -39,13 +39,13 @@ zx_status_t Logger::SendLogMessage(const char* log_msg) {
   size_t log_msg_size =
       std::min(strlen(log_msg), static_cast<size_t>(fuchsia_driver_test_logger_LOG_MESSAGE_MAX));
 
-  uint32_t len = static_cast<uint32_t>(
-      sizeof(fuchsia_driver_test_logger_LoggerLogMessageRequestMessage) + FIDL_ALIGN(log_msg_size));
+  uint32_t len = static_cast<uint32_t>(sizeof(fuchsia_driver_test_logger_LoggerLogMessageRequest) +
+                                       FIDL_ALIGN(log_msg_size));
 
   FIDL_ALIGNDECL char buf[len];
   fidl::Builder builder(buf, len);
 
-  auto* req = builder.New<fuchsia_driver_test_logger_LoggerLogMessageRequestMessage>();
+  auto* req = builder.New<fuchsia_driver_test_logger_LoggerLogMessageRequest>();
   fidl_init_txn_header(&req->hdr, FIDL_TXID_NO_RESPONSE,
                        fuchsia_driver_test_logger_LoggerLogMessageOrdinal);
 
@@ -56,7 +56,7 @@ zx_status_t Logger::SendLogMessage(const char* log_msg) {
 
   fidl::HLCPPOutgoingMessage msg(builder.Finalize(), fidl::HandleDispositionPart());
   const char* err = nullptr;
-  auto status = msg.Encode(&fuchsia_driver_test_logger_LoggerLogMessageRequestMessageTable, &err);
+  auto status = msg.Encode(&fuchsia_driver_test_logger_LoggerLogMessageRequestTable, &err);
   if (status != ZX_OK) {
     return status;
   }
@@ -68,14 +68,13 @@ zx_status_t Logger::SendLogTestCase() {
       std::min(strlen(test_case_name_.c_str()),
                static_cast<size_t>(fuchsia_driver_test_logger_TEST_CASE_NAME_MAX));
 
-  uint32_t len =
-      static_cast<uint32_t>(sizeof(fuchsia_driver_test_logger_LoggerLogTestCaseRequestMessage) +
-                            FIDL_ALIGN(test_name_size));
+  uint32_t len = static_cast<uint32_t>(sizeof(fuchsia_driver_test_logger_LoggerLogTestCaseRequest) +
+                                       FIDL_ALIGN(test_name_size));
 
   FIDL_ALIGNDECL char buf[len];
   fidl::Builder builder(buf, len);
 
-  auto* req = builder.New<fuchsia_driver_test_logger_LoggerLogTestCaseRequestMessage>();
+  auto* req = builder.New<fuchsia_driver_test_logger_LoggerLogTestCaseRequest>();
   fidl_init_txn_header(&req->hdr, FIDL_TXID_NO_RESPONSE,
                        fuchsia_driver_test_logger_LoggerLogTestCaseOrdinal);
 
@@ -90,7 +89,7 @@ zx_status_t Logger::SendLogTestCase() {
 
   fidl::HLCPPOutgoingMessage msg(builder.Finalize(), fidl::HandleDispositionPart());
   const char* err = nullptr;
-  auto status = msg.Encode(&fuchsia_driver_test_logger_LoggerLogTestCaseRequestMessageTable, &err);
+  auto status = msg.Encode(&fuchsia_driver_test_logger_LoggerLogTestCaseRequestTable, &err);
   if (status != ZX_OK) {
     return status;
   }

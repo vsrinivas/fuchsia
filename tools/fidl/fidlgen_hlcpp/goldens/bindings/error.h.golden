@@ -174,8 +174,7 @@ using Example_foo_ResultPtr = ::std::unique_ptr<Example_foo_Result>;
 #ifdef __Fuchsia__
 
 namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    fidl_test_error_ExamplefooRequestMessageTable;
+__LOCAL extern "C" const fidl_type_t fidl_test_error_ExamplefooRequestTable;
 
 }  // namespace _internal
 class Example_RequestEncoder {
@@ -199,18 +198,17 @@ class Example_RequestEncoder {
       ::fidl::Encode(_encoder, s, 16);
     }
 
-    fidl_trace(DidHLCPPEncode,
-               &::fidl::test::error::_internal::
-                   fidl_test_error_ExamplefooRequestMessageTable,
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
+    fidl_trace(
+        DidHLCPPEncode,
+        &::fidl::test::error::_internal::fidl_test_error_ExamplefooRequestTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
 };
 namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    fidl_test_error_ExamplefooResponseMessageTable;
+__LOCAL extern "C" const fidl_type_t fidl_test_error_ExamplefooResponseTable;
 
 }  // namespace _internal
 class Example_ResponseEncoder {
@@ -237,7 +235,7 @@ class Example_ResponseEncoder {
 
     fidl_trace(DidHLCPPEncode,
                &::fidl::test::error::_internal::
-                   fidl_test_error_ExamplefooResponseMessageTable,
+                   fidl_test_error_ExamplefooResponseTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
     return _encoder->GetMessage();

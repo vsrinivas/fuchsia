@@ -10,10 +10,10 @@ namespace fidl_test_bindingsdenylist {
         2054945783954685224lu;
 
 extern "C" const fidl_type_t
-    fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestMessageTable;
+    fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestTable;
 
 extern "C" const fidl_type_t
-    fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseMessageTable;
+    fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseTable;
 #ifdef __Fuchsia__
 }  // namespace fidl_test_bindingsdenylist
 ::fidl::WireResult<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::

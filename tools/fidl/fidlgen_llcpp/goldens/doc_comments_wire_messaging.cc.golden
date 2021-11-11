@@ -8,20 +8,16 @@ namespace fidl_test_doccomments {
 [[maybe_unused]] constexpr uint64_t kInterface_Method_Ordinal =
     6649887292072346213lu;
 
-extern "C" const fidl_type_t
-    fidl_test_doccomments_InterfaceMethodRequestMessageTable;
+extern "C" const fidl_type_t fidl_test_doccomments_InterfaceMethodRequestTable;
 
-extern "C" const fidl_type_t
-    fidl_test_doccomments_InterfaceMethodResponseMessageTable;
+extern "C" const fidl_type_t fidl_test_doccomments_InterfaceMethodResponseTable;
 
 [[maybe_unused]] constexpr uint64_t kInterface_OnEvent_Ordinal =
     3999525675942213370lu;
 
-extern "C" const fidl_type_t
-    fidl_test_doccomments_InterfaceOnEventRequestMessageTable;
+extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventRequestTable;
 
-extern "C" const fidl_type_t
-    fidl_test_doccomments_InterfaceOnEventEventMessageTable;
+extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventEventTable;
 #ifdef __Fuchsia__
 }  // namespace fidl_test_doccomments
 ::fidl::WireResult<::fidl_test_doccomments::Interface::Method>::WireResult(

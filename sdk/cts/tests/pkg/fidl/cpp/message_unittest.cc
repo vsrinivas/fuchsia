@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/test/handles/cpp/fidl.h>
 #include <lib/fidl/cpp/builder.h>
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/cpp/message_builder.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 
+#include <fidl/test/handles/cpp/fidl.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -111,7 +111,7 @@ TEST(MessageBuilder, BasicTests) {
   // Note: |MessageBuilder| takes a coding table which is strictly speaking
   // internal API.
   fidl::MessageBuilder builder(
-      &fidl::test::handles::_internal::fidl_test_handles_FooBarRequestMessageTable);
+      &fidl::test::handles::_internal::fidl_test_handles_FooBarRequestTable);
   builder.header()->txid = 5u;
   builder.header()->ordinal = 42u;
 

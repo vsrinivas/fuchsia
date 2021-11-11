@@ -412,7 +412,7 @@ constexpr uint32_t EXAMPLE_CONST = 0u;
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_placementofattributes_ExampleProtocolMethodRequestMessageTable;
+    fidl_test_placementofattributes_ExampleProtocolMethodRequestTable;
 
 }  // namespace _internal
 class ExampleProtocol_RequestEncoder {
@@ -439,7 +439,7 @@ class ExampleProtocol_RequestEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::fidl::test::placementofattributes::_internal::
-            fidl_test_placementofattributes_ExampleProtocolMethodRequestMessageTable,
+            fidl_test_placementofattributes_ExampleProtocolMethodRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 

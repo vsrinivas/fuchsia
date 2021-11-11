@@ -7,9 +7,9 @@
 namespace fidl_test_inheritance {
 [[maybe_unused]] constexpr uint64_t ksuper_foo_Ordinal = 4999045011615110827lu;
 
-extern "C" const fidl_type_t fidl_test_inheritance_superfooRequestMessageTable;
+extern "C" const fidl_type_t fidl_test_inheritance_superfooRequestTable;
 
-extern "C" const fidl_type_t fidl_test_inheritance_superfooResponseMessageTable;
+extern "C" const fidl_type_t fidl_test_inheritance_superfooResponseTable;
 #ifdef __Fuchsia__
 }  // namespace fidl_test_inheritance
 ::fidl::WireResult<::fidl_test_inheritance::Super::Foo>::WireResult(
@@ -306,9 +306,9 @@ void ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>::_InitHeader() {
 namespace fidl_test_inheritance {
 [[maybe_unused]] constexpr uint64_t ksub_foo_Ordinal = 4999045011615110827lu;
 
-extern "C" const fidl_type_t fidl_test_inheritance_subfooRequestMessageTable;
+extern "C" const fidl_type_t fidl_test_inheritance_subfooRequestTable;
 
-extern "C" const fidl_type_t fidl_test_inheritance_subfooResponseMessageTable;
+extern "C" const fidl_type_t fidl_test_inheritance_subfooResponseTable;
 #ifdef __Fuchsia__
 }  // namespace fidl_test_inheritance
 ::fidl::WireResult<::fidl_test_inheritance::Sub::Foo>::WireResult(
