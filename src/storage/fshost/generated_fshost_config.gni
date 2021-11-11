@@ -1,0 +1,162 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+declare_args() {
+  # blobfs_maximum_runtime_bytes is an upper bound on the partition size on the device. Partitions
+  # can grow as needed if there are extra slices available in FVM. This limit prevents the blobfs
+  # partition from taking too much space away from other uses.
+  #
+  # Pass the empty string for no limit.
+  blobfs_maximum_runtime_bytes = ""
+
+  # minfs_maximum_runtime_bytes is an upper bound on the partition size on the device. Partitions
+  # can grow as needed if there are extra slices available in FVM. This limit prevents the minfs
+  # partition from taking too much space away from other uses.
+  #
+  # Pass the empty string for no limit.
+  minfs_maximum_runtime_bytes = ""
+
+  # If format_minfs_on_corruption is true (the default), fshost formats minfs partition on finding
+  # it corrupted.  Set to false to keep the devices in a corrupted state which might be of help to
+  # debug issues.
+  format_minfs_on_corruption = true
+
+  # If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
+  # corrupted. Setting this flag to true helps debugging corruptions.
+  extract_minfs_metadata_on_corruption = false
+
+  # This flag isn't stable yet, don't use it.
+  # Set to true to enable fxfs/f2fs instead of minfs.  If set, any existing minfs partition will be
+  # migrated in-place to fxfs/f2fs when fshost mounts it.
+  unstable_feature_use_fxfs = false
+  unstable_feature_use_f2fs = false
+
+  # Set to true to enable legacy data partition names.
+  allow_legacy_data_partition_names = true
+
+  # Make fshost watch for NAND devices.
+  fshost_watch_for_nand = false
+
+  # List of files and directories that don't need to be preserved when resizing minfs.
+  minfs_resize_excluded_paths = []
+}
+
+# Generates an fshost config file that will appear in config/fshost. If no configuration file is
+# present, a default config is used (see block-device-manager.cc).
+#
+# Some of the configuration settings are build args, and some are parameters passed in to the
+# template by the invoker. A few allow overriding by the invoker but fall back to the global build
+# arg.
+#
+# Parameters:
+#
+#   no_minfs_zxcrypt (optional; default: false)
+#     [boolean] If set, fshost will look for a data partition that doesn't have zxcrypt set up, and
+#     instead has minfs directly on the device. This option will cause production builds to fail.
+#
+#   fvm_ramdisk (optional; default: false)
+#     [boolean] If set, fshost will bind the fvm driver to the first ramdisk it finds that looks
+#     like an fvm partition, and uses it to back the system blobfs and minfs partitions. It will
+#     still look for and bind an on-disk fvm, but it doesn't use it for anything.
+#
+#   gpt_all (optional; default: false)
+#     [boolean] If set, fshost will bind gpt to every block device it finds that looks like gpt,
+#     instead of just the first one it finds. This option will cause production builds to fail.
+#
+#   minfs_maximum_runtime_bytes_override (optional)
+#     [string] If set, this option overrides the global build arg for minfs_maximum_runtime_bytes.
+#     See the related global build arg for more information.
+#
+#   use_default_loader (optional; default: false)
+#     [boolean] If set, use the system default loader service. Otherwise, fshost sets up it's own
+#     loader service.
+#
+#   sandbox_decompression (optional; default: true)
+#     [boolean] Use the sandboxed decompressor for blobfs decompression, instead of doing
+#     decompression in-process.
+#
+#   apply_limits_to_ramdisk (optional; default: false)
+#     [boolean] If set, apply the global build args for blobfs_maximum_runtime_bytes and
+#     minfs_maximum_runtime_bytes to filesystems in ramdisks. By default, these limits only apply
+#     to on-disk filesystems.
+#
+#   check_filesystems (optional; default: false)
+#     [boolean] If set, run a filesystem check on minfs before mounting it. fshost never performs
+#     checks on any other filesystem. If not provided, this check can also be enabled by a kernel
+#     command line argument (it can't be disabled via one).
+#
+template("generated_fshost_config") {
+  generated_resource(target_name) {
+    contents = [ "default" ]
+    deps = []
+
+    # Template arguments
+    if (defined(invoker.no_minfs_zxcrypt) && invoker.no_minfs_zxcrypt) {
+      contents += [ "no-zxcrypt" ]
+      deps += [ "//build/validate:non_production_tag" ]
+    }
+    if (defined(invoker.fvm_ramdisk) && invoker.fvm_ramdisk) {
+      contents += [
+        "fvm-ramdisk",
+        "zxcrypt-non-ramdisk",
+      ]
+    }
+    if (defined(invoker.gpt_all) && invoker.gpt_all) {
+      contents += [ "gpt-all" ]
+      deps += [ "//build/validate:non_production_tag" ]
+    }
+    if (defined(invoker.use_default_loader) && invoker.use_default_loader) {
+      contents += [ "use-default-loader" ]
+    }
+    if (!defined(invoker.sandbox_decompression) ||
+        !invoker.sandbox_decompression) {
+      contents += [ "sandbox-decompression" ]
+    }
+    if (defined(invoker.apply_limits_to_ramdisk) &&
+        invoker.apply_limits_to_ramdisk) {
+      contents += [ "apply-limits-to-ramdisk" ]
+    }
+    if (defined(invoker.check_filesystems) && invoker.check_filesystems) {
+      contents += [ "check-filesystems" ]
+    }
+
+    # Build args
+    if (blobfs_maximum_runtime_bytes != "") {
+      contents += [ "blobfs-max-bytes=$blobfs_maximum_runtime_bytes" ]
+    }
+    if (defined(invoker.minfs_maximum_runtime_bytes_override)) {
+      # This can be overridden by the invoker but defaults to the file one if undefined.
+      contents +=
+          [ "minfs-max-bytes=${invoker.minfs_maximum_runtime_bytes_override}" ]
+    } else if (minfs_maximum_runtime_bytes != "") {
+      contents += [ "minfs-max-bytes=$minfs_maximum_runtime_bytes" ]
+    }
+    if (!format_minfs_on_corruption) {
+      contents += [ "-format-minfs-on-corruption" ]
+    }
+    if (invoker.unstable_feature_use_fxfs) {
+      contents += [
+        "data-filesystem-binary-path=/pkg/bin/fxfs",
+        "data-filesystem-uses-crypt",
+      ]
+    } else if (invoker.unstable_feature_use_f2fs) {
+      contents += [ "data-filesystem-binary-path=/pkg/bin/f2fs" ]
+    }
+    if (invoker.allow_legacy_data_partition_names) {
+      contents += [ "allow-legacy-data-partition-names" ]
+    }
+    if (fshost_watch_for_nand) {
+      contents += [ "nand" ]
+    }
+    if (minfs_resize_excluded_paths != []) {
+      contents += [ "minfs-resize-excluded-paths=" +
+                    string_join(",", minfs_resize_excluded_paths) ]
+    }
+
+    output_conversion = "list lines"
+    outputs = [ "config/fshost" ]
+  }
+}

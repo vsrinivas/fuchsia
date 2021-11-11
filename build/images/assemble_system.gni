@@ -411,7 +411,7 @@ template("assemble_system") {
     }
 
     if (embed_fvm_in_zbi) {
-      bootfs_labels += [ "//src/storage/fshost:minfs_ramdisk" ]
+      bootfs_labels += [ "//src/storage/fshost:fvm_ramdisk" ]
     }
     extra_base_deps = system_image_deps
 
