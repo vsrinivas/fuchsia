@@ -42,6 +42,7 @@ if (is_host) {
       "driver-default/BUILD.gn.tmpl-cpp",
       "driver-default/README.md.tmpl",
       "driver-default/unit-tests.cc.tmpl-cpp",
+      "driver-default/{{snake_case PROJECT_NAME}}-info.json.tmpl-cpp",
       "driver-default/{{snake_case PROJECT_NAME}}.bind.tmpl-cpp",
       "driver-default/{{snake_case PROJECT_NAME}}.cc.tmpl-cpp",
       "driver-default/{{snake_case PROJECT_NAME}}.h.tmpl-cpp",

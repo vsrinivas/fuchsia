@@ -41,7 +41,7 @@ This will create the directory `<PATH>` containing an empty driver where the
 last segment of `<PATH>` is the driver name and GN target name. After this
 command is run, the following steps need to be followed:
 
-1) Include the `fuchsia_driver_component` or `driver_package` build target in the correct
+1. Include the `fuchsia_driver_component` or `driver_package` build target in the correct
 place to get your driver included into the system.
 - For packaged drivers the
 `driver_package` build target should be added to the relevant board file in
@@ -49,10 +49,11 @@ place to get your driver included into the system.
 - For boot drivers the `fuchsia_driver_component` build target should be added to the
 relevant board file in `//boards` or `//vendor/<foo>/boards` to the
 `board_bootfs_labels` GN argument.
-2) Include the `tests` build target in the
+1. Include the `tests` build target in the
 `<PATH>:tests` build target to get your tests included in CQ.
-3) Add proper bind
-rules in `<NAME>.bind`. 4) Write the functionality for the driver.
+1. Add proper bind rules in `<NAME>.bind`.
+1. Add driver information in `<NAME>-info.json`.
+1. Write the functionality for the driver.
 
 ## Declaring a driver
 

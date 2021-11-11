@@ -142,6 +142,7 @@ golden_test("my-driver-cpp") {
     "my-driver-cpp/my_driver_cpp.h",
     "my-driver-cpp/my_driver_cpp.bind",
     "my-driver-cpp/my_driver_cpp.cc",
+    "my-driver-cpp/my_driver_cpp-info.json",
     "my-driver-cpp/unit-tests.cc",
   ]
 }

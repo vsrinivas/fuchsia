@@ -23,11 +23,3 @@ named appropriately and include a drivers folder under it.
 As with any other code in Fuchsia an OWNER must approve the addition
 of a new driver. The OWNERS file to check for approval depends on the
 location where the driver is added.
-
-## Metadata
-
-When adding a driver to the Fuchsia tree, a new entry must be created
-within [_drivers.yaml](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/docs/reference/hardware/_drivers.yaml)
-including a short description, location and several other fields. See
-[_drivers.yaml](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/docs/reference/hardware/_drivers.yaml)
-for more information.

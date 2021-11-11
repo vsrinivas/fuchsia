@@ -48,6 +48,7 @@ fuchsia_driver("driver") {
 fuchsia_driver_component("component") {
   component_name = "my-driver-cpp"
   deps = [ ":driver" ]
+  info = "my_driver_cpp-info.json"
 }
 
 fuchsia_system_package("pkg") {
