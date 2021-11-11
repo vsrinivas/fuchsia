@@ -2,20 +2,20 @@
     {
         "data_source": "Logs",
         "metadata": {
-            "component_url": "#meta/framework-intermediary.cm",
+            "component_url": "#meta/realm_builder_server.cm",
             "dropped": 0,
             "line": 0,
             "pid": "PID",
             "severity": "INFO",
-            "size_bytes": 240,
+            "size_bytes": 192,
             "tags": [
-                "fuchsia_component_test_framework_intermediary",
-                "fuchsia_component_test_framework_intermediary"
+                "realm_builder_server",
+                "realm_builder_server"
             ],
             "tid": "TID",
             "timestamp": "TIMESTAMP"
         },
-        "moniker": "fuchsia_component_test_framework_intermediary",
+        "moniker": "realm_builder_server",
         "payload": {
             "root": {
                 "message": {

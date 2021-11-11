@@ -2,7 +2,7 @@
     include: [ "syslog/client.shard.cml" ],
     program: {
         runner: "elf",
-        binary: "bin/fuchsia_component_test_framework_intermediary",
+        binary: "bin/realm_builder_server",
     },
     capabilities: [
         {

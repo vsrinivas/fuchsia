@@ -19,7 +19,7 @@ pub enum Error {
     #[error("error encountered while assembling realm")]
     Event(#[from] EventError),
 
-    #[error("an internal error was encountered while working with the framework intermediary")]
+    #[error("an internal error was encountered while working with the realm builder server")]
     FidlError(#[from] fidl::Error),
 
     #[error("failed to set component decl for {0}: {1:?}")]
@@ -64,7 +64,7 @@ pub enum BuilderError {
 
 #[derive(Debug, Error)]
 pub enum RealmError {
-    #[error("failed to bind to the framework intermediary: {:?}", _0)]
+    #[error("failed to bind to the realm builder server: {:?}", _0)]
     FailedBindToRealmBuilder(fcomponent::Error),
 
     #[error("failed to use fuchsia.component.Realm: {:?}", _0)]
@@ -76,10 +76,10 @@ pub enum RealmError {
     #[error("failed to connect to fuchsia.component.Realm: {:?}", _0)]
     ConnectToRealmService(anyhow::Error),
 
-    #[error("failed to connect to the framework intermediary: {:?}", _0)]
+    #[error("failed to connect to the realm builder server: {:?}", _0)]
     ConnectToRealmBuilderService(anyhow::Error),
 
-    #[error("failed to use the framework intermediary: {:?}", _0)]
+    #[error("failed to use the realm builder server: {:?}", _0)]
     FailedToUseRealmBuilder(fidl::Error),
 
     #[error("failed to create child component: {:?}", _0)]

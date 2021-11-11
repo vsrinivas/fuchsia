@@ -243,7 +243,7 @@ impl<'a> CommandAssertion<'a> {
                     val.starts_with("/")
                         || val.starts_with("./")
                         || val.ends_with("archivist")
-                        || val == "fuchsia_component_test_framework_intermediary"
+                        || val == "realm_builder_server"
                         || val.starts_with(&format!(
                             "fuchsia_component_test_collection\\:{}",
                             self.instance_child_name

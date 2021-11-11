@@ -1,0 +1,9 @@
+{
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/realm_builder_server_bin_test",
+    },
+}

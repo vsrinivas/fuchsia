@@ -1,9 +1,0 @@
-{
-    include: [
-        "syslog/client.shard.cml",
-        "//src/sys/test_runners/rust/default.shard.cml",
-    ],
-    program: {
-        binary: "bin/fuchsia_component_test_framework_intermediary_bin_test",
-    },
-}

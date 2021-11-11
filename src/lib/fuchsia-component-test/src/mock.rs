@@ -116,7 +116,7 @@ impl From<ftest::MockComponentStartInfo> for MockHandles {
 pub struct MocksRunner {
     pub(crate) mocks: Arc<Mutex<HashMap<String, Mock>>>,
 
-    // We want the async task handling run requests from the framework intermediary to run as long
+    // We want the async task handling run requests from the realm builder server to run as long
     // as this MocksRunner is alive, so hold on to the task for it in this struct.
     //
     // This is in an option because we want to be able to take this task during
@@ -151,7 +151,7 @@ impl MocksRunner {
         fasync::Task::local(async move {
             if let Err(e) = Self::handle_event_stream(mocks, event_stream).await {
                 error!(
-                    "error encountered while handling framework intermediary event stream: {:?}",
+                    "error encountered while handling realm builder server event stream: {:?}",
                     e
                 );
             }

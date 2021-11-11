@@ -97,7 +97,7 @@ fuchsia_test_package("scene_manager_tests") {
   deps = [
     ":scene_manager_component",
     "//src/cobalt/bin/testing/mock_cobalt:component_v2",
-    "//src/lib/fuchsia-component-test/framework_intermediary:fuchsia-component-test",
+    "//src/lib/fuchsia-component-test/realm_builder_server:fuchsia-component-test",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
   ]
 }

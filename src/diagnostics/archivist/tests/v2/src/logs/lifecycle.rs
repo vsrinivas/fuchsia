@@ -119,7 +119,7 @@ async fn test_logs_with_hanging_log_connector() {
     check_message(&moniker, subscription.next().await.unwrap());
     // Trigger a response to the TakeLogConnectionListener request that is hanging for
     // the purposes of the test and ensure the archivist received it so we don't see a PEER_CLOSED
-    // in the fuchshia_component_test intermediary component.
+    // in the realm builder server component.
     before_response_snd.send(()).await.unwrap();
     after_response_recv.next().await.unwrap();
 }

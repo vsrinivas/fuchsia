@@ -4,8 +4,8 @@
     include: [ "syslog/client.shard.cml" ],
     children: [
         {
-            name: "fuchsia_component_test_framework_intermediary",
-            url: "#meta/framework-intermediary.cm",
+            name: "realm_builder_server",
+            url: "#meta/realm_builder_server.cm",
         },
     ],
     collections: [
@@ -25,7 +25,7 @@
         {
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
-            to: [ "#fuchsia_component_test_framework_intermediary" ],
+            to: [ "#realm_builder_server" ],
         },
 
         // [START collection_offers]
@@ -46,20 +46,20 @@
                 "fuchsia.sys.Loader",
             ],
             from: "parent",
-            to: [ "#fuchsia_component_test_framework_intermediary" ],
+            to: [ "#realm_builder_server" ],
         },
 
         // These protocols are used by any nested component managers to
         // proxy resolve and runner requests to realm builder
         {
             protocol: "fuchsia.component.runner.ComponentRunner",
-            from: "#fuchsia_component_test_framework_intermediary",
+            from: "#realm_builder_server",
             as: "fuchsia.component.runner.RealmBuilder",
             to: [ "#fuchsia_component_test_collection" ],
         },
         {
             protocol: "fuchsia.sys2.ComponentResolver",
-            from: "#fuchsia_component_test_framework_intermediary",
+            from: "#realm_builder_server",
             as: "fuchsia.component.resolver.RealmBuilder",
             to: [ "#fuchsia_component_test_collection" ],
         },
@@ -71,13 +71,13 @@
             runners: [
                 {
                     runner: "realm_builder",
-                    from: "#fuchsia_component_test_framework_intermediary",
+                    from: "#realm_builder_server",
                 },
             ],
             resolvers: [
                 {
                     resolver: "realm_builder_resolver",
-                    from: "#fuchsia_component_test_framework_intermediary",
+                    from: "#realm_builder_server",
                     scheme: "realm-builder",
                 },
             ],

@@ -39,8 +39,7 @@ lazy_static! {
 
 #[fasync::run_singlethreaded()]
 async fn main() {
-    syslog::init_with_tags(&["fuchsia_component_test_framework_intermediary"])
-        .expect("failed to init logging");
+    syslog::init_with_tags(&["realm_builder_server"]).expect("failed to init logging");
     info!("started");
 
     let mut fs = fserver::ServiceFs::new_local();
@@ -58,7 +57,7 @@ async fn main() {
         let runner = runner.clone();
         fasync::Task::local(async move {
             if let Err(e) = handle_realm_builder_stream(stream, registry, runner).await {
-                error!("error encountered while running framework intermediary service: {:?}", e);
+                error!("error encountered while running realm builder service: {:?}", e);
             }
         })
         .detach();
@@ -334,11 +333,11 @@ impl RealmNode {
 
     /// Returns true if the component exists in this realm.
     fn contains(&mut self, moniker: Moniker) -> bool {
-        // The root node is an edge case. If the client hasn't set or modified the root
-        // component in any way it should expect the intermediary to state that the root
-        // component doesn't exist yet, but in this implementation the root node _always_
-        // exists. If we're checking for the root component and we're equal to the default
-        // RealmNode (aka there are no children and our decl is empty), then we return false.
+        // The root node is an edge case. If the client hasn't set or modified the root component
+        // in any way it should expect the server to state that the root component doesn't exist
+        // yet, but in this implementation the root node _always_ exists. If we're checking for the
+        // root component and we're equal to the default RealmNode (aka there are no children and
+        // our decl is empty), then we return false.
         if moniker.is_root() && self == &mut RealmNode::default() {
             return false;
         }
@@ -1962,9 +1961,9 @@ mod tests {
                             target_name: "foo".into(),
                         })],
                         children: vec![
-                                // Mock children aren't inserted into the decls at this point, as their
-                                // URLs are unknown until registration with the framework intermediary,
-                                // and that happens during Realm::create
+                            // Mock children aren't inserted into the decls at this point, as their
+                            // URLs are unknown until registration with the realm builder server
+                            // and that happens during Realm::create
                         ],
                         ..cm_rust::ComponentDecl::default()
                     },
@@ -2087,7 +2086,7 @@ mod tests {
                         })],
                         children: vec![
                             // Mock children aren't inserted into the decls at this point, as their
-                            // URLs are unknown until registration with the framework intermediary,
+                            // URLs are unknown until registration with the realm builder server,
                             // and that happens during Realm::create
                         ],
                         ..cm_rust::ComponentDecl::default()
@@ -2168,7 +2167,7 @@ mod tests {
                     cm_rust::ComponentDecl {
                         children: vec![
                             // Mock children aren't inserted into the decls at this point, as their
-                            // URLs are unknown until registration with the framework intermediary,
+                            // URLs are unknown until registration with the realm builder server,
                             // and that happens during Realm::create
                         ],
                         ..cm_rust::ComponentDecl::default()
@@ -2277,7 +2276,7 @@ mod tests {
                         ],
                         children: vec![
                             // Mock children aren't inserted into the decls at this point, as their
-                            // URLs are unknown until registration with the framework intermediary,
+                            // URLs are unknown until registration with the realm builder server,
                             // and that happens during Realm::create
                             cm_rust::ChildDecl {
                                 name: "a".to_string(),
@@ -2516,8 +2515,8 @@ mod tests {
                         ],
                         children: vec![
                             // Generated children aren't inserted into the decls at this point, as
-                            // their URLs are unknown until registration with the framework
-                            // intermediary, and that happens during Realm::create
+                            // their URLs are unknown until registration with the realm builder
+                            // server, and that happens during Realm::create
                         ],
                         ..cm_rust::ComponentDecl::default()
                     },
@@ -2642,9 +2641,9 @@ mod tests {
                     "",
                     cm_rust::ComponentDecl {
                         children: vec![
-                                // Mock children aren't inserted into the decls at this point, as their
-                                // URLs are unknown until registration with the framework intermediary,
-                                // and that happens during Realm::create
+                            // Mock children aren't inserted into the decls at this point, as their
+                            // URLs are unknown until registration with the realm builder server,
+                            // and that happens during Realm::create
                         ],
                         ..cm_rust::ComponentDecl::default()
                     },
@@ -2712,7 +2711,7 @@ mod tests {
                     cm_rust::ComponentDecl {
                         children: vec![
                             // Mock children aren't inserted into the decls at this point, as their
-                            // URLs are unknown until registration with the framework intermediary,
+                            // URLs are unknown until registration with the realm builder server,
                             // and that happens during Realm::create
                         ],
                         ..cm_rust::ComponentDecl::default()
@@ -2729,7 +2728,7 @@ mod tests {
                         })],
                         children: vec![
                             // Mock children aren't inserted into the decls at this point, as their
-                            // URLs are unknown until registration with the framework intermediary,
+                            // URLs are unknown until registration with the realm builder server,
                             // and that happens during Realm::create
                         ],
                         ..cm_rust::ComponentDecl::default()
@@ -2791,7 +2790,7 @@ mod tests {
                     cm_rust::ComponentDecl {
                         children: vec![
                             // Mock children aren't inserted into the decls at this point, as their
-                            // URLs are unknown until registration with the framework intermediary,
+                            // URLs are unknown until registration with the realm builder server,
                             // and that happens during Realm::create
                         ],
                         ..cm_rust::ComponentDecl::default()
@@ -2808,7 +2807,7 @@ mod tests {
                         })],
                         children: vec![
                             // Mock children aren't inserted into the decls at this point, as their
-                            // URLs are unknown until registration with the framework intermediary,
+                            // URLs are unknown until registration with the realm builder server,
                             // and that happens during Realm::create
                         ],
                         ..cm_rust::ComponentDecl::default()
@@ -2825,7 +2824,7 @@ mod tests {
                         })],
                         children: vec![
                             // Mock children aren't inserted into the decls at this point, as their
-                            // URLs are unknown until registration with the framework intermediary,
+                            // URLs are unknown until registration with the realm builder server,
                             // and that happens during Realm::create
                         ],
                         ..cm_rust::ComponentDecl::default()

@@ -51,13 +51,13 @@
                 },
                 {
                     runner: "realm_builder",
-                    from: "#fuchsia_component_test_framework_intermediary",
+                    from: "#realm_builder_server",
                 },
             ],
             resolvers: [
                 {
                     resolver: "realm_builder_resolver",
-                    from: "#fuchsia_component_test_framework_intermediary",
+                    from: "#realm_builder_server",
                     scheme: "realm-builder",
                 },
             ],

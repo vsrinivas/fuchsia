@@ -166,7 +166,7 @@ group("test_manager") {
   testonly = true
   deps = [
     ":test_manager_pkg",
-    "//src/lib/fuchsia-component-test/framework_intermediary:fuchsia-component-test",
+    "//src/lib/fuchsia-component-test/realm_builder_server:fuchsia-component-test",
     "//src/sys/test_runners",
     "//src/sys/universe-resolver",
   ]

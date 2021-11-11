@@ -30,7 +30,7 @@ namespace testing {
 namespace {
 
 constexpr char kCollectionName[] = "fuchsia_component_test_collection";
-constexpr char kFrameworkIntermediaryChildName[] = "fuchsia_component_test_framework_intermediary";
+constexpr char kFrameworkIntermediaryChildName[] = "realm_builder_server";
 
 void PanicIfMonikerBad(Moniker& moniker) {
   if (!moniker.path.empty()) {

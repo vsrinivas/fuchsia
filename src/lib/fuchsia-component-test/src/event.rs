@@ -79,7 +79,7 @@ impl RealmBuilder {
     // it (the latter happens when something is behind a `ChildDecl`).
     async fn is_mutable(&self, moniker: Moniker) -> Result<bool, Error> {
         // We need to check if the target is mutable or immutable. We could just see if
-        // `get_decl` succeeds, but if it's immutable then the intermediary will log that an
+        // `get_decl` succeeds, but if it's immutable then the server will log that an
         // error occurred. Get the parent decl and check its ChildDecls, we can't mutate this
         // node if it's behind a child decl.
         Ok(moniker.is_root()
@@ -103,7 +103,7 @@ async fn add_event_route_from_above_root(
 
     if realm.contains(target_moniker.clone()).await? {
         // We need to check if the target is mutable or immutable. We could just see if
-        // `get_decl` succeeds, but if it's immutable then the intermediary will log that an
+        // `get_decl` succeeds, but if it's immutable then the server will log that an
         // error occurred. Get the parent decl and check its ChildDecls, we can't mutate this
         // node if it's behind a child decl.
         if realm.is_mutable(target_moniker.clone()).await? {
@@ -161,7 +161,7 @@ async fn add_event_route_between_components(
 
     if realm.contains(target_moniker.clone()).await? {
         // We need to check if the target is mutable or immutable. We could just see if
-        // `get_decl` succeeds, but if it's immutable then the intermediary will log that an
+        // `get_decl` succeeds, but if it's immutable then the server will log that an
         // error occurred. Get the parent decl and check its ChildDecls, we can't mutate this
         // node if it's behind a child decl.
         if realm.is_mutable(target_moniker.clone()).await? {
@@ -394,9 +394,9 @@ mod tests {
                             }),
                         ],
                         children: vec![
-                                // Mock children aren't inserted into the decls at this point, as
-                                // their URLs are unknown until registration with the framework
-                                // intermediary, and that happens during Realm::create
+                            // Mock children aren't inserted into the decls at this point, as
+                            // their URLs are unknown until registration with the realm builder
+                            // server, and that happens during Realm::create
                         ],
                         ..ComponentDecl::default()
                     },
@@ -447,9 +447,9 @@ mod tests {
                             }),
                         ],
                         children: vec![
-                                // Mock children aren't inserted into the decls at this point, as
-                                // their URLs are unknown until registration with the framework
-                                // intermediary, and that happens during Realm::create
+                            // Mock children aren't inserted into the decls at this point, as
+                            // their URLs are unknown until registration with the realm builder
+                            // server, and that happens during Realm::create
                         ],
                         ..ComponentDecl::default()
                     },

@@ -11,7 +11,7 @@ group("fuchsia-component-test") {
   deps = [
     ":fuchsia-component-test-lib",
     ":includes",
-    "framework_intermediary:fuchsia_component_test_framework_intermediary_component",
+    "realm_builder_server:realm_builder_server_component",
   ]
 }
 
@@ -59,7 +59,7 @@ rustc_library("fuchsia-component-test-lib") {
   ]
 
   test_deps = [
-    "framework_intermediary:fuchsia_component_test_framework_intermediary_component",
+    "realm_builder_server:realm_builder_server_component",
     "//examples/components/routing/fidl:echo-rustc",
     "//third_party/rust_crates:matches",
   ]
@@ -78,8 +78,8 @@ group("tests") {
   testonly = true
   deps = [
     ":fuchsia_component_test_unittests",
-    "framework_intermediary:fuchsia-component-test",
-    "framework_intermediary:realm_builder_framework_intermediary_unit_tests",
+    "realm_builder_server:fuchsia-component-test",
+    "realm_builder_server:realm_builder_server_unit_tests",
     "tests",
   ]
 }

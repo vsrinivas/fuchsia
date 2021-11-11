@@ -28,8 +28,7 @@ use {
 
 /// The default name of the child component collection that contains built topologies.
 pub const DEFAULT_COLLECTION_NAME: &'static str = "fuchsia_component_test_collection";
-const FRAMEWORK_INTERMEDIARY_CHILD_NAME: &'static str =
-    "fuchsia_component_test_framework_intermediary";
+const REALM_BUILDER_SERVER_CHILD_NAME: &'static str = "realm_builder_server";
 
 pub mod error;
 mod event;
@@ -549,7 +548,7 @@ impl RealmBuilder {
         realm_proxy
             .open_exposed_dir(
                 &mut fdecl::ChildRef {
-                    name: FRAMEWORK_INTERMEDIARY_CHILD_NAME.to_string(),
+                    name: REALM_BUILDER_SERVER_CHILD_NAME.to_string(),
                     collection: None,
                 },
                 exposed_dir_server_end,
@@ -821,7 +820,7 @@ impl RealmBuilder {
         // component manager and give that component manager this root URL. That flag is set with
         // command line arguments, so we can't just launch an unmodified component manager.
         //
-        // Open a new connection to the framework intermediary to begin creating a new realm. This
+        // Open a new connection to the realm builder server to begin creating a new realm. This
         // new realm will hold a single component: component manager. We will modify its manifest
         // such that the root component URL is set to the root_url we just obtained, and the nested
         // component manager will then fetch the manifest from realm builder itself.
