@@ -3,10 +3,6 @@
 This doc will guide you through some of the features of `ffx`. For an overview
 of the design and components of `ffx`, see [the ffx overview](/docs/development/tools/ffx/overview.md).
 
-Warning: **`ffx` is currently in alpha. Its APIs, command-line surface, and
-documentation are subject to change.**
-
-
 ## Contacting the ffx team
 
 If you discover possible bugs or have questions or suggestions,
