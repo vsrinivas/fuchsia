@@ -177,12 +177,13 @@ zx_status_t FsckWorker::CheckNodeBlock(Inode *inode, nid_t nid, FileType ftype, 
     ++fsck_.result.valid_node_count;
   }
 
-  FsBlock fs_block;
-  ZX_ASSERT(ReadBlock(fs_block, node_info.blk_addr) == ZX_OK);
+  // Stack allocation may cause stack overflow due to recursive call structure.
+  auto fs_block = std::make_unique<FsBlock>();
+  ZX_ASSERT(ReadBlock(*fs_block, node_info.blk_addr) == ZX_OK);
 #ifdef __Fuchsia__
-  node_block = reinterpret_cast<Node *>(fs_block.GetData().data());
+  node_block = reinterpret_cast<Node *>(fs_block->GetData().data());
 #else   // __Fuchsia__
-  node_block = reinterpret_cast<Node *>(fs_block.GetData());
+  node_block = reinterpret_cast<Node *>(fs_block->GetData());
 #endif  // __Fuchsia__
   ZX_ASSERT_MSG(nid == LeToCpu(node_block->footer.nid),
                 "nid[0x%x] blk_addr[0x%x] footer.nid[0x%x]\n", nid, node_info.blk_addr,
@@ -516,12 +517,12 @@ void FsckWorker::CheckDentryBlock(uint32_t block_address, uint32_t &child_count,
                                   uint32_t &child_files, int last_block) {
   DentryBlock *de_blk;
 
-  FsBlock fs_block;
-  ZX_ASSERT(ReadBlock(fs_block, block_address) == ZX_OK);
+  auto fs_block = std::make_unique<FsBlock>();
+  ZX_ASSERT(ReadBlock(*fs_block, block_address) == ZX_OK);
 #ifdef __Fuchsia__
-  de_blk = reinterpret_cast<DentryBlock *>(fs_block.GetData().data());
+  de_blk = reinterpret_cast<DentryBlock *>(fs_block->GetData().data());
 #else   // __Fuchsia__
-  de_blk = reinterpret_cast<DentryBlock *>(fs_block.GetData());
+  de_blk = reinterpret_cast<DentryBlock *>(fs_block->GetData());
 #endif  // __Fuchsia__
 
   CheckDentries(child_count, child_files, last_block, de_blk->dentry_bitmap, de_blk->dentry,
@@ -565,7 +566,7 @@ zx_status_t FsckWorker::CheckDataBlock(Inode *inode, uint32_t block_address, uin
 void FsckWorker::CheckOrphanNode() {
   uint32_t block_count = 0;
   block_t start_blk, orphan_blkaddr;
-  FsBlock fs_block;
+  auto fs_block = std::make_unique<FsBlock>();
 
   if (!IsSetCkptFlags(&superblock_info_.GetCheckpoint(), kCpOrphanPresentFlag)) {
     return;
@@ -576,11 +577,11 @@ void FsckWorker::CheckOrphanNode() {
   orphan_blkaddr = superblock_info_.StartSumAddr() - 1;
 
   for (block_t i = 0; i < orphan_blkaddr; ++i) {
-    ZX_ASSERT(ReadBlock(fs_block, start_blk + i) == ZX_OK);
+    ZX_ASSERT(ReadBlock(*fs_block, start_blk + i) == ZX_OK);
 #ifdef __Fuchsia__
-    OrphanBlock *orphan_block = reinterpret_cast<OrphanBlock *>(fs_block.GetData().data());
+    OrphanBlock *orphan_block = reinterpret_cast<OrphanBlock *>(fs_block->GetData().data());
 #else   // __Fuchsia__
-    OrphanBlock *orphan_block = reinterpret_cast<OrphanBlock *>(fs_block.GetData());
+    OrphanBlock *orphan_block = reinterpret_cast<OrphanBlock *>(fs_block->GetData());
 #endif  // __Fuchsia__
 
     for (block_t j = 0; j < LeToCpu(orphan_block->entry_count); ++j) {
@@ -928,7 +929,7 @@ zx_status_t FsckWorker::SanityCheckRawSuper(const Superblock *raw_super) {
 }
 
 zx_status_t FsckWorker::ValidateSuperblock(block_t block) {
-  std::shared_ptr<Superblock> sb(new Superblock());
+  auto sb = std::make_shared<Superblock>();
   zx_status_t ret = ZX_OK;
   if (ret = LoadSuperblock(bc_.get(), sb.get()); ret != ZX_OK) {
     return ret;
@@ -965,7 +966,8 @@ void FsckWorker::InitSuperblockInfo() {
 
 zx::status<std::pair<std::unique_ptr<FsBlock>, uint64_t>> FsckWorker::ValidateCheckpoint(
     block_t cp_addr) {
-  std::unique_ptr<FsBlock> cp_page_1(new FsBlock()), cp_page_2(new FsBlock());
+  auto cp_page_1 = std::make_unique<FsBlock>();
+  auto cp_page_2 = std::make_unique<FsBlock>();
   Checkpoint *cp_block;
   block_t blk_size = superblock_info_.GetBlocksize();
   uint64_t cur_version = 0, pre_version = 0;
@@ -1172,26 +1174,26 @@ void FsckWorker::ResetCurseg(CursegType type, int modified) {
 zx_status_t FsckWorker::ReadCompactedSummaries() {
   Checkpoint &ckpt = superblock_info_.GetCheckpoint();
   block_t start;
-  FsBlock fs_block;
+  auto fs_block = std::make_unique<FsBlock>();
   uint32_t offset;
   CursegInfo *curseg;
 
   start = StartSummaryBlock();
 
-  ReadBlock(fs_block, start++);
+  ReadBlock(*fs_block, start++);
 
   curseg = segment_manager_->CURSEG_I(CursegType::kCursegHotData);
 #ifdef __Fuchsia__
-  memcpy(&curseg->sum_blk->n_nats, fs_block.GetData().data(), kSumJournalSize);
+  memcpy(&curseg->sum_blk->n_nats, fs_block->GetData().data(), kSumJournalSize);
 #else   // __Fuchsia__
-  memcpy(&curseg->sum_blk->n_nats, fs_block.GetData(), kSumJournalSize);
+  memcpy(&curseg->sum_blk->n_nats, fs_block->GetData(), kSumJournalSize);
 #endif  // __Fuchsia__
 
   curseg = segment_manager_->CURSEG_I(CursegType::kCursegColdData);
 #ifdef __Fuchsia__
-  memcpy(&curseg->sum_blk->n_sits, fs_block.GetData().data() + kSumJournalSize, kSumJournalSize);
+  memcpy(&curseg->sum_blk->n_sits, fs_block->GetData().data() + kSumJournalSize, kSumJournalSize);
 #else   // __Fuchsia__
-  memcpy(&curseg->sum_blk->n_sits, fs_block.GetData() + kSumJournalSize, kSumJournalSize);
+  memcpy(&curseg->sum_blk->n_sits, fs_block->GetData() + kSumJournalSize, kSumJournalSize);
 #endif  // __Fuchsia__
 
   offset = 2 * kSumJournalSize;
@@ -1215,9 +1217,9 @@ zx_status_t FsckWorker::ReadCompactedSummaries() {
     for (uint32_t j = 0; j < blk_off; ++j) {
       Summary *s;
 #ifdef __Fuchsia__
-      s = (Summary *)(fs_block.GetData().data() + offset);
+      s = (Summary *)(fs_block->GetData().data() + offset);
 #else   // __Fuchsia__
-      s = (Summary *)(fs_block.GetData() + offset);
+      s = (Summary *)(fs_block->GetData() + offset);
 #endif  // __Fuchsia__
       curseg->sum_blk->entries[j] = *s;
       offset += kSummarySize;
@@ -1225,11 +1227,11 @@ zx_status_t FsckWorker::ReadCompactedSummaries() {
         continue;
       }
 #ifdef __Fuchsia__
-      memset(fs_block.GetData().data(), 0, kPageSize);
+      memset(fs_block->GetData().data(), 0, kPageSize);
 #else   // __Fuchsia__
-      memset(fs_block.GetData(), 0, kPageSize);
+      memset(fs_block->GetData(), 0, kPageSize);
 #endif  // __Fuchsia__
-      ReadBlock(fs_block, start++);
+      ReadBlock(*fs_block, start++);
       offset = 0;
     }
   }
@@ -1240,18 +1242,18 @@ zx_status_t FsckWorker::ReadCompactedSummaries() {
 zx_status_t FsckWorker::RestoreNodeSummary(uint32_t segno, SummaryBlock &summary_block) {
   Node *node_block;
   block_t addr;
-  FsBlock fs_block;
+  auto fs_block = std::make_unique<FsBlock>();
 
   // scan the node segment
   addr = segment_manager_->StartBlock(segno);
   for (uint32_t i = 0; i < superblock_info_.GetBlocksPerSeg(); ++i, ++addr) {
-    if (ReadBlock(fs_block, addr)) {
+    if (ReadBlock(*fs_block, addr)) {
       break;
     }
 #ifdef __Fuchsia__
-    node_block = reinterpret_cast<Node *>(fs_block.GetData().data());
+    node_block = reinterpret_cast<Node *>(fs_block->GetData().data());
 #else   // __Fuchsia__
-    node_block = reinterpret_cast<Node *>(fs_block.GetData());
+    node_block = reinterpret_cast<Node *>(fs_block->GetData());
 #endif  // __Fuchsia__
     summary_block.entries[i].nid = node_block->footer.nid;
   }
@@ -1260,7 +1262,7 @@ zx_status_t FsckWorker::RestoreNodeSummary(uint32_t segno, SummaryBlock &summary
 
 zx_status_t FsckWorker::ReadNormalSummaries(CursegType type) {
   Checkpoint &ckpt = superblock_info_.GetCheckpoint();
-  FsBlock fs_block;
+  auto fs_block = std::make_unique<FsBlock>();
   SummaryBlock *summary_block;
   CursegInfo *curseg;
   unsigned short blk_off;
@@ -1287,11 +1289,11 @@ zx_status_t FsckWorker::ReadNormalSummaries(CursegType type) {
     }
   }
 
-  ReadBlock(fs_block, block_address);
+  ReadBlock(*fs_block, block_address);
 #ifdef __Fuchsia__
-  summary_block = reinterpret_cast<SummaryBlock *>(fs_block.GetData().data());
+  summary_block = reinterpret_cast<SummaryBlock *>(fs_block->GetData().data());
 #else   // __Fuchsia__
-  summary_block = reinterpret_cast<SummaryBlock *>(fs_block.GetData());
+  summary_block = reinterpret_cast<SummaryBlock *>(fs_block->GetData());
 #endif  // __Fuchsia__
 
   if (segment_manager_->IsNodeSeg(type)) {
@@ -1357,7 +1359,7 @@ std::unique_ptr<FsBlock> FsckWorker::GetCurrentSitPage(uint32_t segno) {
   SitInfo &sit_i = segment_manager_->GetSitInfo();
   uint32_t offset = segment_manager_->SitBlockOffset(segno);
   block_t block_address = sit_i.sit_base_addr + offset;
-  std::unique_ptr<FsBlock> sit_block(new FsBlock());
+  auto sit_block = std::make_unique<FsBlock>();
 
   CheckSegmentRange(segno);
 
@@ -1405,7 +1407,7 @@ SegmentEntry &FsckWorker::GetSegmentEntry(uint32_t segno) {
 }
 
 std::pair<std::unique_ptr<FsBlock>, SegType> FsckWorker::GetSumBlockInfo(uint32_t segno) {
-  std::unique_ptr<FsBlock> summary_block(new FsBlock());
+  auto summary_block = std::make_unique<FsBlock>();
   Checkpoint &ckpt = superblock_info_.GetCheckpoint();
   CursegInfo *curseg;
   block_t ssa_blk;
@@ -1500,12 +1502,12 @@ zx::status<RawNatEntry> FsckWorker::GetNatEntry(nid_t nid) {
     block_addr += superblock_info_.GetBlocksPerSeg();
   }
 
-  FsBlock fs_block;
-  ZX_ASSERT(ReadBlock(fs_block, block_addr) == ZX_OK);
+  auto fs_block = std::make_unique<FsBlock>();
+  ZX_ASSERT(ReadBlock(*fs_block, block_addr) == ZX_OK);
 #ifdef __Fuchsia__
-  NatBlock *nat_block = reinterpret_cast<NatBlock *>(fs_block.GetData().data());
+  NatBlock *nat_block = reinterpret_cast<NatBlock *>(fs_block->GetData().data());
 #else   // __Fuchsia__
-  NatBlock *nat_block = reinterpret_cast<NatBlock *>(fs_block.GetData());
+  NatBlock *nat_block = reinterpret_cast<NatBlock *>(fs_block->GetData());
 #endif  // __Fuchsia__
 
   memcpy(&raw_nat, &nat_block->entries[entry_off], sizeof(RawNatEntry));
@@ -1673,12 +1675,12 @@ void FsckWorker::BuildNatAreaBitmap() {
       block_addr += superblock_info_.GetBlocksPerSeg();
     }
 
-    FsBlock fs_block;
-    ZX_ASSERT(ReadBlock(fs_block, block_addr) == ZX_OK);
+    auto fs_block = std::make_unique<FsBlock>();
+    ZX_ASSERT(ReadBlock(*fs_block, block_addr) == ZX_OK);
 #ifdef __Fuchsia__
-    NatBlock *nat_block = reinterpret_cast<NatBlock *>(fs_block.GetData().data());
+    NatBlock *nat_block = reinterpret_cast<NatBlock *>(fs_block->GetData().data());
 #else   // __Fuchsia__
-    NatBlock *nat_block = reinterpret_cast<NatBlock *>(fs_block.GetData());
+    NatBlock *nat_block = reinterpret_cast<NatBlock *>(fs_block->GetData());
 #endif  // __Fuchsia__
 
     nid = block_off * kNatEntryPerBlock;

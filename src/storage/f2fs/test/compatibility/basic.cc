@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <lib/fit/defer.h>
 #include <sys/stat.h>
+#include <vector>
 
 #include <gtest/gtest.h>
 
@@ -219,5 +220,68 @@ TEST_F(GeneralCompatibilityTest, TruncateHostToFuchsia) {
   }
 }
 
-}  // namespace
-}  // namespace f2fs
+TEST_F(GeneralCompatibilityTest, DirWidthTestHostToFuchsia) {
+  // Maximum number of directories on linux. It depends on disk image size.
+  // TODO: To make HostOperator::Mkdir return success/fail instead of using ASSERT
+  constexpr int kDirWidth = 37791;
+  {
+    host_operator_->Mkfs();
+    host_operator_->Mount();
+
+    auto umount = fit::defer([&] { host_operator_->Unmount(); });
+
+    for (int width = 0; width < kDirWidth; ++width) {
+      std::string dir_name = std::string("/").append(std::to_string(width));
+      host_operator_->Mkdir(dir_name, 0644);
+    }
+  }
+
+  // verify on Fuchsia
+  {
+    target_operator_->Fsck();
+    target_operator_->Mount();
+
+    auto umount = fit::defer([&] { target_operator_->Unmount(); });
+
+    for (int width = 0; width < kDirWidth; ++width) {
+      std::string dir_name = std::string("/").append(std::to_string(width));
+      auto file = target_operator_->Open(dir_name, O_RDONLY | O_DIRECTORY, 0644);
+      ASSERT_TRUE(file->is_valid());
+    }
+  }
+}
+
+TEST_F(GeneralCompatibilityTest, DirDepthTestHostToFuchsia) {
+  // Maximum depth of directories on linux. It doesn't depend on disk image size.
+  constexpr int kDirDepth = 1035;
+  {
+    host_operator_->Mkfs();
+    host_operator_->Mount();
+
+    auto umount = fit::defer([&] { host_operator_->Unmount(); });
+
+    std::string dir_name;
+    for (int depth = 0; depth < kDirDepth; ++depth) {
+      dir_name.append("/").append(std::to_string(depth));
+      host_operator_->Mkdir(dir_name, 0644);
+    }
+  }
+
+  // verify on Fuchsia
+  {
+    target_operator_->Fsck();
+    target_operator_->Mount();
+
+    auto umount = fit::defer([&] { target_operator_->Unmount(); });
+
+    std::string dir_name;
+    for (int depth = 0; depth < kDirDepth; ++depth) {
+      dir_name.append("/").append(std::to_string(depth));
+      auto file = target_operator_->Open(dir_name, O_RDONLY | O_DIRECTORY, 0644);
+      ASSERT_TRUE(file->is_valid());
+    }
+  }
+}
+
+} // namespace
+} // namespace f2fs
