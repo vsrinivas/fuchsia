@@ -10,8 +10,8 @@
 {%- set drivers_metadata_file = "_drivers.yaml" %}
 {%- set areas_yaml_file = "_drivers_areas.yaml" %}
 
-{%- set drivers | yamlloads %}
-{% include "docs/reference/hardware/_drivers.yaml" %}
+{%- set drivers | jsonloads %}
+{% include "reference/drivers/all_drivers_doc.json" %}
 {%- endset %}
 
 {%- set areas | yamlloads %}

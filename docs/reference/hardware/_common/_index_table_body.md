@@ -1,26 +1,35 @@
   <tr class = "driver">
+    {%- if driver.short_description != '' %}
     <td><p>{{ driver.short_description }}<a name="{{ driver.short_description|replace(" ", "-")|replace("(", "")|replace(")", "")|lower() }}"></a></p><h3 class="add-link" style="display:none">{{ driver.short_description }}</h3></td>
+    {%- elif driver.path != '' %}
+      {%- for index in range(driver.path|length - 1) -%}
+        {% if driver.path[index] == '/' %}
+          {% set pathmark = index %}
+        {% endif %}
+      {%- endfor -%}
+      {% set drivername = [] %}
+      {%- for index in range(pathmark + 1, driver.path|length) -%}
+      {% do drivername.append(driver.path[index]) %}
+      {%- endfor -%}
+      <td><p>{{drivername|join|capitalize}}<a name="{{ drivername|join|replace(" ", "-")|replace("(", "")|replace(")", "")|lower() }}"></a></p><h3 class="add-link" style="display:none">{{ drivername|join|capitalize }}</h3></td>
+    {% else %}
+    <td><p>No short description</p></td>
+    {% endif %}
     <td>
       <table class = "nested responsive">
         <colgroup>
         <col width="10%">
       </colgroup>
         <tbody class="list">
-          {%- if driver.vendor != [''] %}
+          {%- if driver.manufacturer %}
           <tr>
-            <td>Vendor</td>
-            <td>
-              <ul class="comma-list">
-                {%- for vend in driver.vendor %}
-                <li>{{ vend|capitalize() }}</li>
-                {%- endfor %}
-              </ul>
-            </td>
+            <td>Manufacturer</td>
+            <td>{{ driver.manufacturer |capitalize() }}</td>
           </tr>
           {%- endif %}
-          {%- if driver.families != [''] %}
+          {%- if driver.families %}
           <tr>
-            <td>Family</td>
+            <td>Families</td>
             <td>
               <ul class="comma-list">
                 {%- for fam in driver.families %}
@@ -30,9 +39,9 @@
             </td>
           </tr>
           {%- endif %}
-          {%- if driver.areas != [''] %}
+          {%- if driver.areas %}
           <tr>
-            <td>Area</td>
+            <td>Areas</td>
             <td>
               <ul class="comma-list">
                 {%- for area in driver.areas %}
@@ -42,19 +51,19 @@
             </td>
           </tr>
           {%- endif %}
-          {%- if driver.platforms != [''] %}
+          {%- if driver.models %}
           <tr>
-            <td>Platform</td>
+            <td>Models</td>
             <td>
               <ul class="comma-list">
-                {%- for plat in driver.platforms %}
-                <li>{{ plat|capitalize() }}</li>
+                {%- for mod in driver.models %}
+                <li>{{ mod|capitalize() }}</li>
                 {%- endfor %}
               </ul>
             </td>
           </tr>
           {%- endif %}
-          {%- if driver.path != '' %}
+          {%- if driver.path %}
           <tr>
             <td>Path</td>
           {%- if driver.path|first in 's' %}

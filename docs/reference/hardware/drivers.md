@@ -5,7 +5,7 @@
 {% comment %}
 The list of Fuchsia drivers is generated from the information in the following
 files:
-/docs/reference/hardware/_drivers.yaml
+https://fuchsia.dev/reference/drivers/all_drivers_doc.json
 
 Since this page is generated from on a template, the full page is best viewed at
 http://www.fuchsia.dev/fuchsia-src/reference/hardware/drivers
@@ -17,7 +17,7 @@ http://www.fuchsia.dev/fuchsia-src/reference/hardware/drivers
 <form id="filter-checkboxes-reset">
   {%- for area in areas %}
     {%- set found=false %}
-    {%- for driver in drivers %}
+    {%- for driver in drivers.drivers_documentation %}
         {%- for drivera in driver.areas %}
           {%- if drivera == area %}
             {%- set found=true %}
@@ -40,7 +40,7 @@ http://www.fuchsia.dev/fuchsia-src/reference/hardware/drivers
   <devsite-filter match="all" checkbox-form-id="filter-checkboxes-reset" sortable="0">
   <input type="text" placeholder="Find a driver" column="all">
 {% include "docs/reference/hardware/_common/_index_table_header.md" %}
-{%- for driver in drivers | sort(attribute='short_description') %}
+{%- for driver in drivers.drivers_documentation | sort(attribute='short_description') %}
         {% include "docs/reference/hardware/_common/_index_table_body.md" %}
 {%- endfor %}
 {% include "docs/reference/hardware/_common/_index_table_footer.md" %}
