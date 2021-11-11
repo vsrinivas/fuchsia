@@ -63,6 +63,7 @@ void main() {
     const blue = 0xffff0000; // (0xAABBGGRR)
     Map<int, int> histogram;
 
+    await Future.delayed(Duration(seconds: 3));
     final isBlue = await ermine.waitFor(() async {
       print('Take a screenshot...');
       final screenshot = await ermine.screenshot(Rectangle(500, 500, 100, 100));
@@ -73,7 +74,7 @@ void main() {
         return true;
       }
       return false;
-    }, timeout: Duration(seconds: 60));
+    }, timeout: Duration(minutes: 2));
 
     expect(isBlue, isTrue);
 
@@ -88,5 +89,5 @@ void main() {
     await ermine.driver.waitUntilNoTransientCallbacks();
     expect(await ermine.waitForViewAbsent(testserverUrl), true);
     print('Closed test server');
-  });
+  }, timeout: Timeout(Duration(minutes: 3)));
 }
