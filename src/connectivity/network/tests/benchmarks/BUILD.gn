@@ -33,7 +33,7 @@ fuchsia_unittest_package("socket-benchmarks-package") {
 group("tests") {
   testonly = true
   deps = [ ":socket-benchmarks-package" ]
-  if (is_linux) {
+  if (host_os == "linux") {
     deps += [ ":socket_benchmarks($host_toolchain)" ]
   }
 }

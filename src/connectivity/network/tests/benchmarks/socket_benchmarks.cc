@@ -10,6 +10,7 @@
 #include <sys/socket.h>
 
 #include <array>
+#include <iostream>
 
 #include <fbl/unique_fd.h>
 #include <perftest/perftest.h>
@@ -26,6 +27,7 @@ class AddrStorage {
  public:
   static_assert(std::is_same_v<T, sockaddr_in> || std::is_same_v<T, sockaddr_in6>);
   sockaddr* as_sockaddr() { return reinterpret_cast<sockaddr*>(&addr); }
+  const sockaddr* as_sockaddr() const { return reinterpret_cast<const sockaddr*>(&addr); }
   socklen_t socklen() const { return sizeof(addr); }
   T addr;
 };
@@ -188,7 +190,7 @@ bool PingLatency(perftest::RepeatState* state) {
 
   fbl::unique_fd sock;
   CHECK_TRUE_ERRNO(sock = fbl::unique_fd(socket(Ip::kFamily, SOCK_DGRAM, Ip::kIpProtoIcmp)));
-  Addr sockaddr = Ip::loopback();
+  const Addr sockaddr = Ip::loopback();
   CHECK_ZERO_ERRNO(connect(sock.get(), sockaddr.as_sockaddr(), sockaddr.socklen()));
 
   struct {
@@ -277,13 +279,27 @@ void RegisterTests() {
                            UdpWriteRead<Ipv6>, message_size);
   }
 
-  constexpr char kPingTestNameFmt[] = "PingLatency/%s";
-  perftest::RegisterTest(
-      fxl::StringPrintf(kPingTestNameFmt, network_to_string(Network::kIpv4)).c_str(),
-      PingLatency<Ipv4>);
-  perftest::RegisterTest(
-      fxl::StringPrintf(kPingTestNameFmt, network_to_string(Network::kIpv6)).c_str(),
-      PingLatency<Ipv6>);
+  [&network_to_string]() {
+#if !defined(__Fuchsia__)
+    // When running on not-Fuchsia, we may not be permitted to create ICMP sockets.
+    if (int fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP); fd < 0) {
+      if (errno == EACCES) {
+        std::cout << "ICMP sockets are not permitted; skipping ping benchmarks" << std::endl;
+        return;
+      }
+    } else {
+      CHECK_ZERO_ERRNO(close(fd));
+    }
+#endif
+
+    constexpr char kPingTestNameFmt[] = "PingLatency/%s";
+    perftest::RegisterTest(
+        fxl::StringPrintf(kPingTestNameFmt, network_to_string(Network::kIpv4)).c_str(),
+        PingLatency<Ipv4>);
+    perftest::RegisterTest(
+        fxl::StringPrintf(kPingTestNameFmt, network_to_string(Network::kIpv6)).c_str(),
+        PingLatency<Ipv6>);
+  }();
 }
 
 PERFTEST_CTOR(RegisterTests)
