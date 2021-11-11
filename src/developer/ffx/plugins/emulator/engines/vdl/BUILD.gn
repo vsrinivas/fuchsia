@@ -7,7 +7,6 @@ import("//build/rust/rustc_library.gni")
 
 if (is_host) {
   rustc_library("ffx_emulator_engines_vdl_args") {
-    name = "ffx_emulator_engines_vdl_args"
     with_unit_tests = true
     edition = "2018"
     sources = [ "src/args.rs" ]
@@ -25,7 +24,6 @@ if (is_host) {
   # not fit our new design pattern, so don't copy it if you're trying to add
   # a new engine or features.
   rustc_library("ffx_emulator_engines_vdl") {
-    name = "ffx_emulator_engines_vdl"
     with_unit_tests = true
     edition = "2018"
     sources = [
@@ -51,7 +49,7 @@ if (is_host) {
       "//src/developer/ffx/lib/errors:lib",
       "//src/developer/ffx/lib/fms",
       "//src/developer/ffx/lib/port_picker",
-      "//src/developer/ffx/plugins/emulator/common:lib",
+      "//src/developer/ffx/plugins/emulator/common:ffx_emulator_common",
       "//src/developer/ffx/plugins/emulator/config_types:ffx_emulator_config",
       "//src/developer/ffx/plugins/emulator/shutdown:ffx_emulator_shutdown_args",
       "//src/developer/ffx/plugins/emulator/start:ffx_emulator_start_args",

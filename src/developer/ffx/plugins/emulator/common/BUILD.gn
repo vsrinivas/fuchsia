@@ -6,8 +6,7 @@ import("//build/components.gni")
 import("//build/rust/rustc_library.gni")
 
 if (is_host) {
-  rustc_library("lib") {
-    name = "ffx_emulator_common"
+  rustc_library("ffx_emulator_common") {
     with_unit_tests = true
     edition = "2018"
     sources = [
@@ -24,6 +23,6 @@ if (is_host) {
 
   group("tests") {
     testonly = true
-    deps = [ ":lib_test($host_toolchain)" ]
+    deps = [ ":ffx_emulator_common_test($host_toolchain)" ]
   }
 }
