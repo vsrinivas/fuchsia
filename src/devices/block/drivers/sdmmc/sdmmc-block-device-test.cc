@@ -1100,6 +1100,44 @@ TEST_F(SdmmcBlockDeviceTest, ProbeUsesPrefsHsDdr) {
   EXPECT_EQ(sdmmc_.timing(), SDMMC_TIMING_HSDDR);
 }
 
+TEST_F(SdmmcBlockDeviceTest, ProbeHs400) {
+  sdmmc_.set_command_callback(MMC_SEND_EXT_CSD, [](sdmmc_req_t* req) {
+    uint8_t* const ext_csd = reinterpret_cast<uint8_t*>(req->virt_buffer);
+    ext_csd[MMC_EXT_CSD_DEVICE_TYPE] = 0b0101'0110;  // Card supports HS200/400, HS/DDR.
+    ext_csd[MMC_EXT_CSD_PARTITION_SWITCH_TIME] = 0;
+    ext_csd[MMC_EXT_CSD_GENERIC_CMD6_TIME] = 0;
+  });
+
+  uint32_t timing = MMC_EXT_CSD_HS_TIMING_LEGACY;
+  sdmmc_.set_command_callback(SDMMC_SEND_STATUS, [&](sdmmc_req_t* req) {
+    // SDMMC_SEND_STATUS is the first command sent to the card after MMC_SWITCH. When initializing
+    // HS400 mode the host sets the card timing to HS200 and then to HS, and should change the
+    // timing and frequency on the host before issuing SDMMC_SEND_STATUS.
+    if (timing == MMC_EXT_CSD_HS_TIMING_HS) {
+      EXPECT_EQ(sdmmc_.timing(), SDMMC_TIMING_HS);
+      EXPECT_LE(sdmmc_.bus_freq(), 52'000'000);
+    }
+  });
+
+  sdmmc_.set_command_callback(MMC_SWITCH, [&](sdmmc_req_t* req) {
+    const uint32_t index = (req->arg >> 16) & 0xff;
+    if (index == MMC_EXT_CSD_HS_TIMING) {
+      const uint32_t value = (req->arg >> 8) & 0xff;
+      EXPECT_GE(value, MMC_EXT_CSD_HS_TIMING_LEGACY);
+      EXPECT_LE(value, MMC_EXT_CSD_HS_TIMING_HS400);
+      timing = value;
+    }
+  });
+
+  sdmmc_.set_host_info({.prefs = 0});
+
+  SdmmcBlockDevice dut(parent_.get(), SdmmcDevice(sdmmc_.GetClient()));
+  EXPECT_OK(dut.Init());
+  EXPECT_OK(dut.ProbeMmc());
+
+  EXPECT_EQ(sdmmc_.timing(), SDMMC_TIMING_HS400);
+}
+
 TEST_F(SdmmcBlockDeviceTest, ProbeSd) {
   sdmmc_.set_command_callback(SD_SEND_IF_COND,
                               [](sdmmc_req_t* req) { req->response[0] = req->arg & 0xfff; });

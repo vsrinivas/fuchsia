@@ -97,6 +97,7 @@ test("sdmmc-test-bin") {
     "//sdk/banjo/fuchsia.hardware.sdmmc:fuchsia.hardware.sdmmc_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.rpmb:fuchsia.hardware.rpmb_llcpp",
     "//sdk/fidl/fuchsia.hardware.sdio:fuchsia.hardware.sdio_llcpp",
+    "//sdk/lib/fit",
     "//sdk/lib/inspect/testing/cpp:zxtest",
     "//src/devices/block/lib/sdio",
     "//src/devices/block/lib/sdmmc",

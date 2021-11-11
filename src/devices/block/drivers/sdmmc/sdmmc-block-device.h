@@ -181,9 +181,14 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType {
   zx_status_t WaitForTran();
 
   zx_status_t MmcDoSwitch(uint8_t index, uint8_t value);
+  zx_status_t MmcWaitForSwitch(uint8_t index, uint8_t value);
   zx_status_t MmcSetBusWidth(sdmmc_bus_width_t bus_width, uint8_t mmc_ext_csd_bus_width);
   sdmmc_bus_width_t MmcSelectBusWidth();
+  // The host is expected to switch the timing from HS200 to HS as part of HS400 initialization.
+  // Checking the status of the switch requires special handling to avoid a temporary mismatch
+  // between the host and device timings.
   zx_status_t MmcSwitchTiming(sdmmc_timing_t new_timing);
+  zx_status_t MmcSwitchTimingHs200ToHs();
   zx_status_t MmcSwitchFreq(uint32_t new_freq);
   zx_status_t MmcDecodeExtCsd();
   bool MmcSupportsHs();

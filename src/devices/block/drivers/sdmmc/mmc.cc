@@ -85,6 +85,10 @@ zx_status_t SdmmcBlockDevice::MmcDoSwitch(uint8_t index, uint8_t value) {
     return st;
   }
 
+  return MmcWaitForSwitch(index, value);
+}
+
+zx_status_t SdmmcBlockDevice::MmcWaitForSwitch(uint8_t index, uint8_t value) {
   // The GENERIC_CMD6_TIME field defines a maximum timeout value for CMD6 in tens of milliseconds.
   // There does not appear to be any other way to check the status of CMD6, so just sleep for the
   // maximum required time before issuing CMD13.
@@ -98,7 +102,7 @@ zx_status_t SdmmcBlockDevice::MmcDoSwitch(uint8_t index, uint8_t value) {
 
   // Check status after MMC_SWITCH
   uint32_t resp;
-  st = ZX_ERR_BAD_STATE;
+  zx_status_t st = ZX_ERR_BAD_STATE;
   for (uint32_t i = 0; i < kSwitchStatusRetries && st != ZX_OK; i++) {
     st = sdmmc_.SdmmcSendStatus(&resp);
   }
@@ -188,6 +192,32 @@ zx_status_t SdmmcBlockDevice::MmcSwitchTiming(sdmmc_timing_t new_timing) {
 
   timing_ = new_timing;
   return st;
+}
+
+zx_status_t SdmmcBlockDevice::MmcSwitchTimingHs200ToHs() {
+  zx_status_t st = sdmmc_.MmcSwitch(MMC_EXT_CSD_HS_TIMING, MMC_EXT_CSD_HS_TIMING_HS);
+  if (st != ZX_OK) {
+    zxlogf(ERROR, "failed to MMC_SWITCH (0x%x=%d), retcode = %d", MMC_EXT_CSD_HS_TIMING,
+           MMC_EXT_CSD_HS_TIMING_HS, st);
+    return st;
+  }
+
+  // The host must switch to HS timing/frequency before checking the status of MMC_SWITCH command.
+  if ((st = sdmmc_.host().SetTiming(SDMMC_TIMING_HS)) != ZX_OK) {
+    zxlogf(ERROR, "failed to switch host timing to %d", SDMMC_TIMING_HS);
+    return st;
+  }
+
+  if ((st = MmcSwitchFreq(kFreq52MHz)) != ZX_OK) {
+    return st;
+  }
+
+  if ((st = MmcWaitForSwitch(MMC_EXT_CSD_HS_TIMING, MMC_EXT_CSD_HS_TIMING_HS)) != ZX_OK) {
+    return st;
+  }
+
+  timing_ = SDMMC_TIMING_HS;
+  return ZX_OK;
 }
 
 zx_status_t SdmmcBlockDevice::MmcSwitchFreq(uint32_t new_freq) {
@@ -333,11 +363,7 @@ zx_status_t SdmmcBlockDevice::ProbeMmc() {
 
       if (MmcSupportsHs400() && bus_width_ == SDMMC_BUS_WIDTH_EIGHT &&
           !(sdmmc_.host_info().prefs & SDMMC_HOST_PREFS_DISABLE_HS400)) {
-        if ((st = MmcSwitchTiming(SDMMC_TIMING_HS)) != ZX_OK) {
-          return st;
-        }
-
-        if ((st = MmcSwitchFreq(kFreq52MHz)) != ZX_OK) {
+        if ((st = MmcSwitchTimingHs200ToHs()) != ZX_OK) {
           return st;
         }
 

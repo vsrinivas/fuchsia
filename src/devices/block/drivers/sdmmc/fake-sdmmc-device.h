@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/sdio/cpp/banjo.h>
 #include <fuchsia/hardware/sdmmc/cpp/banjo.h>
 #include <lib/ddk/binding.h>
+#include <lib/fit/function.h>
 #include <lib/stdcompat/span.h>
 
 #include <array>
@@ -23,7 +24,7 @@ namespace sdmmc {
 class FakeSdmmcDevice : public ddk::SdmmcProtocol<FakeSdmmcDevice> {
  public:
   using Command = uint32_t;
-  using CommandCallback = void (*)(sdmmc_req_t*);
+  using CommandCallback = fit::function<void(sdmmc_req_t*)>;
 
   static constexpr uint32_t kBadRegionStart = 0x0bad00;
   static constexpr uint32_t kBadRegionMask = 0x0fff00;
@@ -97,7 +98,7 @@ class FakeSdmmcDevice : public ddk::SdmmcProtocol<FakeSdmmcDevice> {
   void TriggerInBandInterrupt() const;
 
   void set_command_callback(Command command, CommandCallback callback) {
-    command_callbacks_[command] = callback;
+    command_callbacks_[command] = std::move(callback);
   }
 
   void set_set_signal_voltage_status(zx_status_t status) { set_signal_voltage_status_ = status; }
