@@ -3,16 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        file::FileResolver,
-        manifest::{
-            crypto::unlock_device, finish, flash_bootloader, flash_product, is_locked, lock_device,
-            v1::FlashManifest as FlashManifestV1, verify_hardware, Flash, MISSING_PRODUCT,
-        },
-    },
+    crate::manifest::v1::FlashManifest as FlashManifestV1,
     anyhow::Result,
     async_trait::async_trait,
     errors::ffx_bail,
+    ffx_fastboot_common::{
+        crypto::unlock_device, file::FileResolver, finish, flash_bootloader, flash_product,
+        is_locked, lock_device, verify_hardware, Flash, MISSING_PRODUCT,
+    },
     ffx_flash_args::FlashCommand,
     fidl_fuchsia_developer_bridge::FastbootProxy,
     serde::{Deserialize, Serialize},

@@ -4,10 +4,8 @@
 
 use {
     crate::{
-        file::FileResolver,
-        manifest::{
-            done_time, handle_upload_progress_for_staging, is_locked, map_fidl_error, UNLOCK_ERR,
-        },
+        done_time, file::FileResolver, handle_upload_progress_for_staging, is_locked,
+        map_fidl_error, UNLOCK_ERR,
     },
     anyhow::{anyhow, bail, Result},
     async_fs::OpenOptions,
@@ -164,7 +162,7 @@ impl UnlockCredentials {
     }
 }
 
-pub(crate) async fn unlock_device<W: Write, F: FileResolver + Sync>(
+pub async fn unlock_device<W: Write, F: FileResolver + Sync>(
     writer: &mut W,
     file_resolver: &mut F,
     creds: &Vec<String>,

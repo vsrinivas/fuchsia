@@ -93,6 +93,9 @@ template("ffx") {
       "config:tests",
       "core:tests",
       "daemon:tests",
+
+      # Add plugins with common library tests
+      "plugins/target:tests",
     ]
   }
 }

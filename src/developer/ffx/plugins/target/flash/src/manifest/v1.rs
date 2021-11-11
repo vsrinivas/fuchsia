@@ -3,16 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        file::FileResolver,
-        manifest::{
-            flash_and_reboot, is_locked, Flash, Partition as PartitionTrait,
-            Product as ProductTrait, MISSING_PRODUCT, UNLOCK_ERR,
-        },
-    },
     anyhow::Result,
     async_trait::async_trait,
     errors::ffx_bail,
+    ffx_fastboot_common::{
+        file::FileResolver, flash_and_reboot, is_locked, Flash, Partition as PartitionTrait,
+        Product as ProductTrait, MISSING_PRODUCT, UNLOCK_ERR,
+    },
     ffx_flash_args::{FlashCommand, OemFile},
     fidl_fuchsia_developer_bridge::FastbootProxy,
     serde::{Deserialize, Serialize},

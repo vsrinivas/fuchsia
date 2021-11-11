@@ -14,7 +14,6 @@ use {
     std::path::Path,
 };
 
-mod file;
 mod manifest;
 
 const SSH_OEM_COMMAND: &str = "add-staged-bootloader-file ssh.authorized_keys";
@@ -90,7 +89,7 @@ pub async fn flash_plugin_impl<W: Write>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::file::FileResolver;
+    use ffx_fastboot_common::file::FileResolver;
     use fidl_fuchsia_developer_bridge::FastbootRequest;
     use std::default::Default;
     use std::path::PathBuf;

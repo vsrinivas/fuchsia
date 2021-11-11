@@ -3,18 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        file::FileResolver,
-        manifest::{
-            v1::{
-                FlashManifest as FlashManifestV1, Partition as PartitionV1, Product as ProductV1,
-            },
-            v2::FlashManifest as FlashManifestV2,
-            Flash,
-        },
+    crate::manifest::{
+        v1::{FlashManifest as FlashManifestV1, Partition as PartitionV1, Product as ProductV1},
+        v2::FlashManifest as FlashManifestV2,
+        Flash,
     },
     anyhow::Result,
     async_trait::async_trait,
+    ffx_fastboot_common::file::FileResolver,
     ffx_flash_args::{FlashCommand, OemFile},
     fidl_fuchsia_developer_bridge::FastbootProxy,
     serde::{Deserialize, Serialize},
