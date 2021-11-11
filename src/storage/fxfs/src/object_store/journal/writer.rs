@@ -44,9 +44,13 @@ impl JournalWriter {
     }
 
     /// Serializes a new journal record to the journal stream.
-    pub fn write_record<T: Serialize>(&mut self, record: &T) {
-        serialize_into(&mut *self, record).unwrap() // Our write implementation cannot fail at the
-                                                    // moment.
+    pub fn write_record<T: Serialize + std::fmt::Debug>(&mut self, record: &T) {
+        let buf_len = self.buf.len();
+        serialize_into(&mut *self, record).unwrap(); // Our write implementation cannot fail at the
+                                                     // moment.
+
+        // For now, our reader cannot handle records that are bigger than a block.
+        assert!(self.buf.len() - buf_len <= self.block_size, "{:?}", record);
     }
 
     /// Pads from the current offset in the buffer to the end of the block.

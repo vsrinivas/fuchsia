@@ -69,9 +69,8 @@ impl<S: HandleOwner> CachingObjectHandle<S> {
         Ok(buffer)
     }
 
-    /// Returns the minimum size the object has been since the last flush.
-    pub fn min_size(&self) -> u64 {
-        self.cache.min_size()
+    pub fn uncached_size(&self) -> u64 {
+        self.handle.get_size()
     }
 
     pub async fn write_or_append_cached(
@@ -87,6 +86,13 @@ impl<S: HandleOwner> CachingObjectHandle<S> {
                 self.handle.attribute_id,
             )])
             .await;
+
+        if self.cache.dirty_bytes() >= FLUSH_BATCH_SIZE {
+            self.flush_impl(/* take_lock: */ false).await?;
+        } else {
+            self.flush_metadata().await?;
+        }
+
         let time = Timestamp::now().into();
         let len = buf.len();
         self.cache
@@ -100,6 +106,150 @@ impl<S: HandleOwner> CachingObjectHandle<S> {
             )
             .await?;
         Ok(len as u64)
+    }
+
+    async fn flush_impl(&self, take_lock: bool) -> Result<(), Error> {
+        let bs = self.block_size() as u64;
+        let fs = self.store().filesystem();
+        let store_object_id = self.store().store_object_id;
+        let reservation = allocator::Reservation::new(self.store().allocator(), 0);
+
+        // Whilst we are calling take_flushable we need to guard against changes to the cache so
+        // that we can grab a snapshot, so we take the cached_write lock and then we can drop it
+        // after take_flushable returns.
+        let cached_write_lock = if take_lock {
+            Some(
+                fs.transaction_lock(&[LockKey::cached_write(
+                    store_object_id,
+                    self.handle.object_id,
+                    self.handle.attribute_id,
+                )])
+                .await,
+            )
+        } else {
+            None
+        };
+
+        // We must flush metadata first here in case the file shrank since we don't do anything
+        // to handle shrinking a file below.
+        self.flush_metadata().await?;
+
+        // We use the transaction lock here to make sure that flush calls are correctly sequenced,
+        // i.e. that we commit transactions in the same order to which take_flushable was executed.
+        let locks = fs
+            .transaction_lock(&[LockKey::object_attribute(
+                store_object_id,
+                self.handle.object_id,
+                self.handle.attribute_id,
+            )])
+            .await;
+
+        // We want to make sure the transaction goes out of scope *after* flushable is dropped
+        // because we need to drop flushable before dropping the locks.
+        let mut transaction;
+
+        let mut flushable = self.cache.take_flushable(
+            bs,
+            self.handle.get_size(),
+            |size| self.allocate_buffer(size),
+            self,
+            &reservation,
+        );
+
+        if flushable.data.is_none() && flushable.metadata.is_none() {
+            return Ok(());
+        }
+
+        std::mem::drop(cached_write_lock);
+
+        transaction = fs
+            .clone()
+            .new_transaction_with_locks(
+                locks,
+                Options {
+                    // If there is no data then the reservation won't have any space for the
+                    // transaction. Since it should only be for file size or metadata changes,
+                    // we should be able to borrow metadata space.
+                    borrow_metadata_space: flushable.data.is_none(),
+                    skip_journal_checks: self.handle.options.skip_journal_checks,
+                    allocator_reservation: Some(&reservation),
+                    ..Default::default()
+                },
+            )
+            .await?;
+
+        if self.handle.trace.load(atomic::Ordering::Relaxed) {
+            log::info!("{}.{} F {:?}", store_object_id, self.handle.object_id, flushable);
+        }
+
+        if let Some(metadata) = flushable.metadata.as_ref() {
+            if let Some(content_size) = metadata.content_size {
+                transaction.add_with_object(
+                    store_object_id,
+                    Mutation::replace_or_insert_object(
+                        ObjectKey::attribute(self.handle.object_id, self.handle.attribute_id),
+                        ObjectValue::attribute(content_size),
+                    ),
+                    AssocObj::Borrowed(&self.handle),
+                );
+                self.handle
+                    .write_timestamps(
+                        &mut transaction,
+                        metadata.creation_time.map(|t| t.into()),
+                        metadata.modification_time.map(|t| t.into()),
+                    )
+                    .await?;
+            }
+        }
+
+        if let Some(data) = flushable.data.as_mut() {
+            self.handle.multi_write(&mut transaction, &data.ranges, data.buffer.as_mut()).await?;
+        }
+
+        transaction
+            .commit_with_callback(|_| {
+                self.cache.complete_flush(flushable);
+            })
+            .await
+            .context("Failed to commit transaction")?;
+
+        Ok(())
+    }
+
+    // Tries to flush metadata.  It is important that this is done *before* any operation that
+    // increases the size of the file because otherwise there are races that can cause reads to
+    // return the wrong data. Consider the following scenario:
+    //
+    //   1. File is 10,000 bytes.
+    //   2. File is shrunk to 200 bytes.
+    //   3. File grows back to 10,000 bytes.
+    //
+    // If a read takes place after #3, it is important that the bytes between 200 and 10,000 are
+    // zeroed.  If metadata is not flushed between 2 & 3, then the read will be fulfilled as if it
+    // occurs prior to 2.
+    async fn flush_metadata(&self) -> Result<(), Error> {
+        let flushable = self.cache.take_flushable_metadata(self.handle.get_size());
+        if let Some(metadata) = flushable.metadata.as_ref() {
+            let mut transaction = self
+                .handle
+                .new_transaction_with_options(Options {
+                    borrow_metadata_space: true,
+                    ..Default::default()
+                })
+                .await?;
+            if let Some(size) = metadata.content_size {
+                self.handle.truncate(&mut transaction, size).await?;
+            }
+            self.handle
+                .write_timestamps(
+                    &mut transaction,
+                    metadata.creation_time.map(|t| t.into()),
+                    metadata.modification_time.map(|t| t.into()),
+                )
+                .await?;
+            transaction.commit_with_callback(|_| self.cache.complete_flush(flushable)).await?;
+        }
+        Ok(())
     }
 }
 
@@ -186,7 +336,17 @@ impl<S: HandleOwner> WriteObjectHandle for CachingObjectHandle<S> {
                 self.handle.attribute_id,
             )])
             .await;
+
+        if size > self.cache.content_size() {
+            // If we're trying to grow after we previously shrunk, we need to shrink now.
+            self.flush_metadata().await?;
+        }
         self.cache.resize(size, self.block_size() as u64, self).await?;
+        // Try and resize immediately, but since we successfully resized the cache, don't propagate
+        // errors here.
+        if let Err(e) = self.flush_metadata().await {
+            log::warn!("Failed to flush after resize: {:?}", e);
+        }
         Ok(())
     }
 
@@ -208,142 +368,7 @@ impl<S: HandleOwner> WriteObjectHandle for CachingObjectHandle<S> {
     }
 
     async fn flush(&self) -> Result<(), Error> {
-        let bs = self.block_size() as u64;
-        let fs = self.store().filesystem();
-        let store_object_id = self.store().store_object_id;
-        let mut flush_progress_offset = Some(0);
-        while let Some(progress_offset) = flush_progress_offset.as_ref() {
-            // Whilst we are calling take_flushable_data we need to guard against changes to the
-            // cache so that we can grab a snapshot, so we take the cached_write lock and then we
-            // can drop it after take_flushable_data returns.
-            let cached_write_lock = fs
-                .transaction_lock(&[LockKey::cached_write(
-                    store_object_id,
-                    self.handle.object_id,
-                    self.handle.attribute_id,
-                )])
-                .await;
-            // We use the transaction lock here to make sure that flush calls are correctly
-            // sequenced, i.e. that we commit transactions in the same order to which
-            // take_flushable_data was executed.
-            let locks = fs
-                .transaction_lock(&[LockKey::object_attribute(
-                    store_object_id,
-                    self.handle.object_id,
-                    self.handle.attribute_id,
-                )])
-                .await;
-
-            let reservation = allocator::Reservation::new(self.store().allocator(), 0);
-
-            // We want to make sure the transaction goes out of scope *after* flushable is dropped
-            // because we need to drop flushable before dropping the locks.
-            let mut transaction;
-
-            let mut flushable = self.cache.take_flushable_data(
-                bs,
-                self.handle.get_size(),
-                |size| self.allocate_buffer(size),
-                self,
-                &reservation,
-                *progress_offset,
-                FLUSH_BATCH_SIZE,
-            );
-            std::mem::drop(cached_write_lock);
-            if self.handle.trace.load(atomic::Ordering::Relaxed) {
-                log::info!("{}.{} F {:?}", store_object_id, self.handle.object_id, flushable);
-            }
-            if !flushable.has_data() {
-                // If there's no data to flush, we just need to flush the metadata.
-                if !flushable.has_metadata() {
-                    return Ok(());
-                }
-                // For metadata-only transactions, we can borrow metadata space, since truncating
-                // can only make the object smaller and updating the object's metadata shouldn't
-                // increase its size.
-                transaction = fs
-                    .clone()
-                    .new_transaction_with_locks(
-                        locks,
-                        Options {
-                            skip_journal_checks: self.handle.options.skip_journal_checks,
-                            borrow_metadata_space: true,
-                            ..Default::default()
-                        },
-                    )
-                    .await?;
-                if let Some(content_size) = flushable.metadata.content_size {
-                    self.handle.truncate(&mut transaction, content_size).await?;
-                }
-                self.handle
-                    .write_timestamps(
-                        &mut transaction,
-                        flushable.metadata.creation_time.map(|t| t.into()),
-                        flushable.metadata.modification_time.map(|t| t.into()),
-                    )
-                    .await?;
-                transaction.commit_with_callback(|_| self.cache.complete_flush(flushable)).await?;
-                return Ok(());
-            }
-
-            transaction = fs
-                .clone()
-                .new_transaction_with_locks(
-                    locks,
-                    Options {
-                        skip_journal_checks: self.handle.options.skip_journal_checks,
-                        allocator_reservation: Some(&reservation),
-                        ..Default::default()
-                    },
-                )
-                .await?;
-
-            let (ranges, buffer) = flushable.data();
-            self.handle.multi_write(&mut transaction, ranges, buffer).await?;
-
-            if let Some(content_size) = flushable.metadata.content_size {
-                // TODO(jfsulliv): We also need to zero the last block here, but this is tricky to
-                // deal with, since a txn_write might conflict with the write of the last block.
-                let old_size = self.handle.get_size();
-                if content_size < old_size {
-                    let aligned_size = round_up(content_size, bs).ok_or(FxfsError::TooBig)?;
-                    self.handle
-                        .zero(
-                            &mut transaction,
-                            aligned_size
-                                ..round_up(old_size, bs).ok_or(
-                                    anyhow!(FxfsError::Inconsistent).context("flush: Bad size"),
-                                )?,
-                        )
-                        .await?;
-                }
-                transaction.add_with_object(
-                    store_object_id,
-                    Mutation::replace_or_insert_object(
-                        ObjectKey::attribute(self.handle.object_id, self.handle.attribute_id),
-                        ObjectValue::attribute(content_size),
-                    ),
-                    AssocObj::Borrowed(&self.handle),
-                );
-            }
-
-            self.handle
-                .write_timestamps(
-                    &mut transaction,
-                    flushable.metadata.creation_time.map(|t| t.into()),
-                    flushable.metadata.modification_time.map(|t| t.into()),
-                )
-                .await?;
-
-            flush_progress_offset = flushable.flush_progress_offset().clone();
-            transaction
-                .commit_with_callback(|_| {
-                    self.cache.complete_flush(flushable);
-                })
-                .await
-                .context("Failed to commit transaction")?;
-        }
-        Ok(())
+        self.flush_impl(/* take_lock: */ true).await
     }
 }
 
@@ -587,10 +612,8 @@ mod tests {
         let allocator = fs.allocator();
         let allocated_before_truncate = allocator.get_allocated_bytes();
         object.truncate(fs.block_size() as u64).await.expect("truncate failed");
-        let allocated_before_flush = allocator.get_allocated_bytes();
         object.flush().await.expect("flush failed");
         let allocated_after = allocator.get_allocated_bytes();
-        assert_eq!(allocated_before_truncate, allocated_before_flush);
         assert!(
             allocated_after < allocated_before_truncate,
             "before = {} after = {}",

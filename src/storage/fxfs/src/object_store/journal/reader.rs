@@ -249,7 +249,7 @@ mod tests {
 
     const TEST_BLOCK_SIZE: u64 = 512;
 
-    async fn write_items<T: Serialize>(handle: FakeObjectHandle, items: &[T]) {
+    async fn write_items<T: Serialize + std::fmt::Debug>(handle: FakeObjectHandle, items: &[T]) {
         let mut writer = JournalWriter::new(TEST_BLOCK_SIZE as usize, 0);
         for item in items {
             writer.write_record(item);

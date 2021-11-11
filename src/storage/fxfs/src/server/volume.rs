@@ -36,7 +36,7 @@ use {
     },
 };
 
-pub static DEFAULT_FLUSH_PERIOD: Duration = Duration::from_secs(20);
+pub const DEFAULT_FLUSH_PERIOD: Duration = Duration::from_secs(20);
 
 /// FxVolume represents an opened volume. It is also a (weak) cache for all opened Nodes within the
 /// volume.

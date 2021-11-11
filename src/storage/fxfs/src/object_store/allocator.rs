@@ -486,6 +486,15 @@ impl SimpleAllocator {
     }
 }
 
+impl Drop for SimpleAllocator {
+    fn drop(&mut self) {
+        let inner = self.inner.lock().unwrap();
+        // Uncommitted and reserved should be released back using RAII, so they should be zero.
+        assert_eq!(inner.uncommitted_allocated_bytes, 0);
+        assert_eq!(inner.reserved_bytes, 0);
+    }
+}
+
 #[async_trait]
 impl Allocator for SimpleAllocator {
     fn object_id(&self) -> u64 {

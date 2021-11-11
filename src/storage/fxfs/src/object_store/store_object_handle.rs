@@ -292,9 +292,8 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
         if buf.is_empty() {
             return Ok(());
         }
-
         let (aligned, mut transfer_buf) = self.align_buffer(offset, buf).await?;
-
+        self.multi_write(transaction, &[aligned], transfer_buf.as_mut()).await?;
         if offset + buf.len() as u64 > self.txn_get_size(transaction) {
             transaction.add_with_object(
                 self.store().store_object_id,
@@ -305,8 +304,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
                 AssocObj::Borrowed(self),
             );
         }
-
-        self.multi_write(transaction, &[aligned], transfer_buf.as_mut()).await
+        Ok(())
     }
 
     // Writes to multiple ranges with data provided in `buf`.  The buffer can be modified in place
@@ -402,8 +400,12 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
             },
             async {
                 let mut deallocated = 0;
+                let aligned_size = round_up(self.txn_get_size(transaction), block_size)
+                    .ok_or(anyhow!(FxfsError::Inconsistent).context("flush: Bad size"))?;
                 for r in ranges {
-                    deallocated += self.deallocate_old_extents(transaction, r.clone()).await?;
+                    if r.start < aligned_size {
+                        deallocated += self.deallocate_old_extents(transaction, r.clone()).await?;
+                    }
                 }
                 Result::<_, Error>::Ok(deallocated)
             }

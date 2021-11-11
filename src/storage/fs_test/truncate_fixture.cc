@@ -33,7 +33,7 @@ void FillFile(int fd, uint8_t* u8, ssize_t new_len, ssize_t old_len) {
     ASSERT_EQ(lseek(fd, old_len, SEEK_SET), old_len);
     ASSERT_EQ(read(fd, readbuf.get(), new_len - old_len), new_len - old_len);
     for (ssize_t n = 0; n < (new_len - old_len); n++) {
-      ASSERT_EQ(readbuf[n], 0);
+      ASSERT_EQ(readbuf[n], 0) << "old_len=" << old_len << ", new_len=" << new_len << ", n=" << n;
     }
     // Overwrite those zeroes with the contents of u8
     ASSERT_EQ(lseek(fd, old_len, SEEK_SET), old_len);
@@ -115,7 +115,7 @@ TEST_P(LargeTruncateTest, RepeatedlyWritingAndTruncatingLargeFileSucceeds) {
   ASSERT_TRUE(ac.check());
 
   unsigned seed = static_cast<unsigned>(zx_ticks_get());
-  std::cout << "Truncate test using seed: " << seed;
+  std::cout << "Truncate test using seed: " << seed << std::endl;
   srand(seed);
   for (unsigned n = 0; n < buffer_size(); n++) {
     buf[n] = static_cast<uint8_t>(rand_r(&seed));

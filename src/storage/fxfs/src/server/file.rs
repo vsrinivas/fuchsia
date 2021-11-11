@@ -188,12 +188,12 @@ impl FxFile {
         static ZERO_VMO: Lazy<zx::Vmo> = Lazy::new(|| zx::Vmo::create(ZERO_VMO_SIZE).unwrap());
 
         let vmo = self.vmo();
-        // We have to check the VMO's size as well as min_size from the handle because min_size gets
+        // We have to check the VMO's size as well as size from the handle because the object gets
         // updated *after* the VMO's size changes and whilst the kernel locking will mean that this
         // request is guaranteed to be within bounds, with read-ahead, we need to be careful not to
         // extend the range so that it's out-of-bounds.
         let aligned_size = std::cmp::min(
-            round_up(self.handle.min_size(), zx::system_get_page_size()).unwrap(),
+            round_up(self.handle.uncached_size(), zx::system_get_page_size()).unwrap(),
             vmo.get_size().unwrap(),
         );
         let mut offset = std::cmp::max(range.start, aligned_size);

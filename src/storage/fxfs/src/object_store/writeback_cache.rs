@@ -17,7 +17,7 @@ use {
     std::ops::Range,
     std::sync::Mutex,
     std::time::Duration,
-    storage_device::buffer::{Buffer, MutableBufferRef},
+    storage_device::buffer::Buffer,
 };
 
 // This module contains an implementation of a writeback cache.
@@ -39,14 +39,14 @@ use {
 // For either of the Dirty states, the cache will have a backing storage reservation for that chunk.
 // (While Flushing, there's also a reservation held by the flush task.)
 //
-// # Truncating
+// # Resizing
 //
-// Truncates which extend the cache will result in all of the new pages being Clean and immediately
+// Extending the cache will result in all of the new pages being Clean and immediately
 // cache-readable (the cache may, in fact, be sparse).
 //
-// Truncates which shrink the cache will clear any of the affected ranges (even those which are
-// Dirty or Flushing). If an in-progress flush is affected by the truncate, the flush will still
-// write out the truncated ranges, and they will be deleted on the next flush.
+// Shrinking the cache will clear any of the affected ranges (even those which are Dirty or
+// Flushing). If an in-progress flush is affected by the truncate, the flush will still write out
+// the truncated ranges, and they will be deleted on the next flush.
 //
 // # Flushing
 //
@@ -56,10 +56,6 @@ use {
 
 /// When reading into the cache, this is the minimum granularity that we load data at.
 pub const CACHE_READ_AHEAD_SIZE: u64 = 32_768;
-
-// When flushing, the maximum number of independent ranges that will be returned.  This is used to
-// limit the size of transactions.
-const MAX_FLUSH_RANGE_COUNT: usize = 50;
 
 /// StorageReservation should be implemented by filesystems to provide in-memory reservation of
 /// blocks for pending writes.
@@ -129,11 +125,6 @@ impl AsRef<Range<u64>> for CachedRange {
 struct Inner {
     intervals: IntervalTree<CachedRange, u64>,
 
-    // We keep track of the changed content size separately from `data` because the size managed by
-    // `data` is modified under different locks.  When flushing, we need to capture a size that is
-    // consistent with `intervals`.
-    content_size: Option<u64>,
-
     // Number of dirty bytes so far, excluding those which are in the midst of a flush.  Every dirty
     // byte must have a byte reserved for it to be written back, plus some extra reservation made
     // for transaction overhead.
@@ -142,53 +133,45 @@ struct Inner {
     creation_time: Option<Duration>,
 
     modification_time: Option<Duration>,
-
-    // Holds the minimum size the object has been since the last flush. To understand why this is
-    // required, consider a file that is 10,000 bytes in size. Imagine this file is truncated and
-    // then extended back to 10,000 bytes without being flushed. If there is now a page request for
-    // the file, we need to know that the file was truncated because we need to return zeroes. Since
-    // the file hasn't been flushed, the object will still have its original size on disk, hence the
-    // need for `min_size`.
-    min_size: u64,
-
-    // If set, the minimum size as it was when take_flushable_data was called.
-    flushing_min_size: Option<u64>,
 }
 
 impl Inner {
-    fn complete_flush<'a>(
-        &mut self,
-        ranges: Vec<Range<u64>>,
-        reservation: &allocator::Reservation,
-        reserver: &dyn StorageReservation,
-        completed: bool,
-    ) {
-        let dirty_bytes_before = self.dirty_bytes;
-        for range in ranges {
+    fn complete_flush(&mut self, data: FlushableData<'_, '_>, completed: bool) {
+        let mut dirty_bytes = 0;
+        for range in data.ranges {
             let removed =
                 self.intervals.remove_matching_interval(&range, |i| i.is_flushing()).unwrap();
-            for mut interval in removed {
-                if !completed {
+            if !completed {
+                for mut interval in removed {
                     interval.state = CacheState::Dirty;
                     self.intervals.add_interval(&interval).unwrap();
-                    self.dirty_bytes += interval.range.end - interval.range.start;
+                    dirty_bytes += interval.range.end - interval.range.start;
                 }
             }
         }
-        // TODO(csuter): When we get to the point where pages can be discarded, we need to clear
-        // this *after* a successful flush but *before* the pages are marked discardable.
-        let flushing_min_size = self.flushing_min_size.take().unwrap();
-        if !completed {
-            if flushing_min_size < self.min_size {
-                // TODO(csuter): Add test for this case.
-                self.min_size = flushing_min_size;
-            }
+        if dirty_bytes > 0 {
             // If we didn't complete the flush, take back whatever reservation we'll need for
             // another attempt.
-            let reserved_before = reserver.reservation_needed(dirty_bytes_before);
-            let needed_reservation = reserver.reservation_needed(self.dirty_bytes);
+            let reserved_before = data.reserver.reservation_needed(self.dirty_bytes);
+            self.dirty_bytes += dirty_bytes;
+            let needed_reservation = data.reserver.reservation_needed(self.dirty_bytes);
             let delta = needed_reservation.checked_sub(reserved_before).unwrap();
-            assert_eq!(reservation.take_some(delta), delta);
+            assert_eq!(data.reservation.take_some(delta), delta);
+        }
+    }
+
+    fn take_metadata(&mut self, content_size: Option<u64>) -> Option<FlushableMetadata> {
+        if content_size.is_some()
+            || self.creation_time.is_some()
+            || self.modification_time.is_some()
+        {
+            Some(FlushableMetadata {
+                content_size,
+                creation_time: self.creation_time.take(),
+                modification_time: self.modification_time.take(),
+            })
+        } else {
+            None
         }
     }
 }
@@ -210,79 +193,60 @@ pub struct FlushableMetadata {
     pub modification_time: Option<Duration>,
 }
 
-impl FlushableMetadata {
-    pub fn has_updates(&self) -> bool {
-        self.content_size.is_some()
-            || self.creation_time.is_some()
-            || self.modification_time.is_some()
-    }
+pub struct FlushableData<'a, 'b> {
+    pub reservation: &'a allocator::Reservation,
+    pub reserver: &'a dyn StorageReservation,
+    pub ranges: Vec<Range<u64>>,
+    pub buffer: Buffer<'b>,
 }
 
-pub struct FlushableData<'a, 'b, B: DataBuffer> {
-    pub metadata: FlushableMetadata,
-    // TODO(jfsulliv): Create a VFS version of this so that we don't need to depend on fxfs code.
-    // (That will require porting fxfs to use the VFS version.)
-    reservation: &'b allocator::Reservation,
-    reserver: &'b dyn StorageReservation,
-    ranges: Vec<Range<u64>>,
-    flush_progress_offset: Option<u64>,
-    cache: Option<&'b WritebackCache<B>>,
-    pub buffer: Buffer<'a>,
-}
-
-impl<B: DataBuffer> std::fmt::Debug for FlushableData<'_, '_, B> {
+impl std::fmt::Debug for FlushableData<'_, '_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("FlushableData")
-            .field("metadata", &self.metadata)
             .field("reservation", &self.reservation)
             .field("ranges", &self.ranges)
             .finish()
     }
 }
 
-impl<'a, 'b, B: DataBuffer> FlushableData<'a, 'b, B> {
-    pub fn data(&mut self) -> (&[Range<u64>], MutableBufferRef<'_>) {
-        (&self.ranges, self.buffer.as_mut())
-    }
-    pub fn has_data(&self) -> bool {
-        !self.ranges.is_empty()
-    }
-    pub fn has_metadata(&self) -> bool {
-        self.metadata.has_updates()
-    }
-    /// Returns the progress offset for flushing.  If this is Some, there's more data to flush, and
-    /// the caller should attempt to flush that data on a new iteration (passing in the offset).
-    pub fn flush_progress_offset(&self) -> &Option<u64> {
-        &self.flush_progress_offset
-    }
+impl FlushableData<'_, '_> {
     #[cfg(test)]
     fn dirty_bytes(&self) -> u64 {
         self.ranges.iter().map(|r| r.end - r.start).sum()
     }
 }
 
-impl<'a, 'b, B: DataBuffer> Drop for FlushableData<'a, 'b, B> {
+pub struct Flushable<'a, 'b, B: DataBuffer> {
+    cache: &'a WritebackCache<B>,
+    pub metadata: Option<FlushableMetadata>,
+    pub data: Option<FlushableData<'a, 'b>>,
+}
+
+impl<B: DataBuffer> std::fmt::Debug for Flushable<'_, '_, B> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Flushable")
+            .field("metadata", &self.metadata)
+            .field("data", &self.data)
+            .finish()
+    }
+}
+
+impl<B: DataBuffer> Drop for Flushable<'_, '_, B> {
     fn drop(&mut self) {
-        if let Some(cache) = self.cache {
-            {
-                let mut inner = cache.inner.lock().unwrap();
-                if self.metadata.creation_time.is_some() && inner.creation_time.is_none() {
-                    inner.creation_time = self.metadata.creation_time;
-                }
-                if self.metadata.modification_time.is_some() && inner.modification_time.is_none() {
-                    inner.modification_time = self.metadata.modification_time;
-                }
+        if self.metadata.is_none() && self.data.is_none() {
+            return;
+        }
+        let mut inner = self.cache.inner.lock().unwrap();
+        if let Some(metadata) = self.metadata.take() {
+            if metadata.creation_time.is_some() && inner.creation_time.is_none() {
+                inner.creation_time = metadata.creation_time;
             }
-            let mut inner = cache.inner.lock().unwrap();
-            inner.complete_flush(
-                std::mem::take(&mut self.ranges),
-                self.reservation,
-                self.reserver,
-                false,
-            );
-            if inner.content_size.is_none() {
-                inner.content_size = self.metadata.content_size;
+            if metadata.modification_time.is_some() && inner.modification_time.is_none() {
+                inner.modification_time = metadata.modification_time;
             }
+        }
+        if let Some(data) = self.data.take() {
+            inner.complete_flush(data, false);
         }
     }
 }
@@ -313,12 +277,9 @@ impl<B: DataBuffer> WritebackCache<B> {
         Self {
             inner: Mutex::new(Inner {
                 intervals: IntervalTree::new(),
-                content_size: None,
                 dirty_bytes: 0,
                 creation_time: None,
                 modification_time: None,
-                min_size: data.size(),
-                flushing_min_size: None,
             }),
             data,
         }
@@ -326,12 +287,12 @@ impl<B: DataBuffer> WritebackCache<B> {
 
     pub fn cleanup(&self, reserve: &dyn StorageReservation) {
         let mut inner = self.inner.lock().unwrap();
-        let reserved = reserve.reservation_needed(inner.dirty_bytes);
-        if reserved > 0 {
+        if inner.dirty_bytes > 0 {
             // Let the RAII wrapper give back the reserved bytes.
-            let _reservation = reserve.wrap_reservation(reserved);
+            let _reservation =
+                reserve.wrap_reservation(reserve.reservation_needed(inner.dirty_bytes));
+            inner.dirty_bytes = 0;
         }
-        inner.dirty_bytes = 0;
         inner.intervals.remove_interval(&(0..u64::MAX)).unwrap();
     }
 
@@ -349,9 +310,8 @@ impl<B: DataBuffer> WritebackCache<B> {
         self.data.size()
     }
 
-    pub fn min_size(&self) -> u64 {
-        let inner = self.inner.lock().unwrap();
-        inner.flushing_min_size.map(|s| std::cmp::min(s, inner.min_size)).unwrap_or(inner.min_size)
+    pub fn dirty_bytes(&self) -> u64 {
+        self.inner.lock().unwrap().dirty_bytes
     }
 
     /// This is not thread-safe; the caller is responsible for making sure that only one thread is
@@ -365,27 +325,22 @@ impl<B: DataBuffer> WritebackCache<B> {
         ensure!(size <= i64::MAX as u64, FxfsError::TooBig);
         {
             let mut inner = self.inner.lock().unwrap();
-            let old_size = *inner.content_size.as_ref().unwrap_or(&(self.data.size() as u64));
+            let old_size = self.content_size();
             let aligned_size = round_up(size, block_size).unwrap();
             if size < old_size {
                 let removed = inner.intervals.remove_interval(&(aligned_size..u64::MAX)).unwrap();
-                let reserved_before = reserver.reservation_needed(inner.dirty_bytes);
+                let mut dirty_bytes = 0;
                 for interval in removed {
                     if let CacheState::Dirty = interval.state {
-                        inner.dirty_bytes = inner
-                            .dirty_bytes
-                            .checked_sub(interval.range.end - interval.range.start)
-                            .unwrap();
+                        dirty_bytes += interval.range.end - interval.range.start;
                     }
                 }
-                let reserved_after = reserver.reservation_needed(inner.dirty_bytes);
-                if reserved_after < reserved_before {
-                    // Give back whatever reservation we no longer need.
-                    let _ = reserver.wrap_reservation(reserved_before - reserved_after);
+                let before = reserver.reservation_needed(inner.dirty_bytes);
+                inner.dirty_bytes = inner.dirty_bytes.checked_sub(dirty_bytes).unwrap();
+                let needed = reserver.reservation_needed(inner.dirty_bytes);
+                if needed < before {
+                    let _ = reserver.wrap_reservation(before - needed);
                 }
-            }
-            if size != old_size {
-                inner.content_size = Some(size);
             }
         }
 
@@ -397,21 +352,6 @@ impl<B: DataBuffer> WritebackCache<B> {
         // the interval tree at once.
         self.data.resize(size).await;
 
-        // We must update min_size *after* we've resized the buffer since if we do it beforehand, we
-        // might end up servicing page requests that are expected to succeed for the old size, but
-        // because min_size has changed, it'll return zeroed data when rather than actually issue a
-        // read.  It's safe to change this afterwards because any page requests that the kernel
-        // handles should already be shortened and min_size only exists for the case where the VMO
-        // grows again later, which can't happen because the caller should be holding a lock.  This
-        // doesn't need to be synchronized with `content_size` because it's used to handle races
-        // with between shrinking and page-ins; unlike `content_size`, it isn't used for flushing.
-
-        // TODO(csuter): When we support discardable pages, this will need to be updated *after* a
-        // successful flush but *before* pages are marked as discardable.
-        let mut inner = self.inner.lock().unwrap();
-        if size < inner.min_size {
-            inner.min_size = size;
-        }
         Ok(())
     }
 
@@ -519,8 +459,9 @@ impl<B: DataBuffer> WritebackCache<B> {
                 current_offset = next_end;
                 i += 1;
             }
-            let reservation_needed = reserver.reservation_needed(inner.dirty_bytes + dirtied_bytes)
-                - reserver.reservation_needed(inner.dirty_bytes);
+            // This needs to be the worst-case amount to reserve, which means just using
+            // dirtied_bytes here. We'll adjust this down if necessary later.
+            let reservation_needed = reserver.reservation_needed(dirtied_bytes);
             reservation = if reservation_needed > 0 {
                 Some(reserver.reserve(reservation_needed)?)
             } else {
@@ -534,20 +475,16 @@ impl<B: DataBuffer> WritebackCache<B> {
 
         // After this point, we're committing changes, so nothing should fail.
         let mut inner = self.inner.lock().unwrap();
-        let end = offset + buf.len() as u64;
-        if end > size {
-            inner.content_size = Some(end);
-        }
         for interval in dirtied_intervals {
             assert!(interval.range.start % block_size == 0);
             assert!(interval.range.end % block_size == 0);
             inner.intervals.add_interval(&interval).unwrap();
         }
-        if let Some(reservation) = reservation {
-            // The cache implicitly owns the reservation in dirty_bytes.
-            reservation.take();
+        if dirtied_bytes > 0 {
+            let before = reserver.reservation_needed(inner.dirty_bytes);
+            inner.dirty_bytes += dirtied_bytes;
+            reservation.unwrap().take_some(reserver.reservation_needed(inner.dirty_bytes) - before);
         }
-        inner.dirty_bytes += dirtied_bytes;
         inner.modification_time = current_time;
         Ok(())
     }
@@ -557,73 +494,47 @@ impl<B: DataBuffer> WritebackCache<B> {
     /// to the caller in block-aligned ranges.  If there's already an ongoing flush, the caller
     /// receives an Event that resolves when the other flush is complete.  This is not thread-safe
     /// with respect to cache mutations; the caller must ensure that no changes can be made to the
-    /// cache for the duration of this call.
-    pub fn take_flushable_data<'a, 'b, F>(
-        &'b self,
+    /// cache for the duration of this call.  The content size returned will only ever increase the
+    /// size of the object.  Truncation must be dealt with by calling take_flushable_metadata.
+    pub fn take_flushable<'a, F>(
+        &'a self,
         block_size: u64,
         last_known_size: u64,
         allocate_buffer: F,
-        reserver: &'b dyn StorageReservation,
-        reservation: &'b allocator::Reservation,
-        progress_offset: u64,
-        limit: u64,
-    ) -> FlushableData<'a, 'b, B>
+        reserver: &'a dyn StorageReservation,
+        reservation: &'a allocator::Reservation,
+    ) -> Flushable<'_, 'a, B>
     where
         F: Fn(usize) -> Buffer<'a>,
     {
-        // TODO(jfsulliv): Support using a single shared transfer buffer for all pending data.
         let mut inner = self.inner.lock().unwrap();
-        assert!(inner.flushing_min_size.is_none()); // Ensure a flush isn't currently in-progress.
 
-        let size = *inner.content_size.as_ref().unwrap_or(&(self.data.size() as u64));
+        let size = self.data.size();
         let intervals = inner.intervals.remove_interval(&(0..u64::MAX)).unwrap();
 
         let mut bytes_to_flush = 0;
-        let mut flush_progress_offset =
-            if progress_offset > 0 { Some(progress_offset) } else { None };
         let mut ranges = vec![];
-        let mut i = 0;
-        while let Some(mut interval) = intervals.get(i).cloned() {
+        for mut interval in intervals {
             assert!(interval.range.start % block_size == 0);
             assert!(interval.range.end % block_size == 0);
-            if let CacheState::Dirty = &interval.state {
-            } else {
-                panic!("Unexpected interval {:?}", interval);
-            }
+            assert!(!interval.is_flushing(), "Unexpected interval {:?}", interval);
 
-            let interval_end = std::cmp::min(size, interval.range.end);
-            let end = std::cmp::min(interval_end, interval.range.start + limit - bytes_to_flush);
-
-            if end < interval_end {
-                // If we only flushed part of the interval due to limit being hit,
-                // re-insert the tail of the interval.
-                let mut interval_tail = interval.clone();
-                interval_tail.range.start = round_down(end, block_size);
-                inner.intervals.add_interval(&interval_tail).unwrap();
-
-                interval.state = CacheState::Flushing;
-                interval.range.end = end;
-                inner.intervals.add_interval(&interval).unwrap();
-            } else {
-                interval.state = CacheState::Flushing;
-                inner.intervals.add_interval(&interval).unwrap();
-            }
-            ranges.push(interval.range.clone());
-
-            flush_progress_offset =
-                if i == intervals.len() - 1 && end == interval_end { None } else { Some(end) };
-            i += 1;
-
+            interval.state = CacheState::Flushing;
+            inner.intervals.add_interval(&interval).unwrap();
             bytes_to_flush += interval.range.end - interval.range.start;
-            if bytes_to_flush >= limit || ranges.len() >= MAX_FLUSH_RANGE_COUNT {
-                break;
-            }
+            ranges.push(interval.range);
         }
-        for interval in &intervals[i..] {
-            // Add back any intervals we skipped flushing.
-            inner.intervals.add_interval(interval).unwrap();
+
+        let content_size = if size > last_known_size { Some(size) } else { None };
+        let metadata = inner.take_metadata(content_size);
+
+        if bytes_to_flush == 0 {
+            return Flushable { cache: self, metadata, data: None };
         }
-        inner.dirty_bytes = inner.dirty_bytes.checked_sub(bytes_to_flush).unwrap();
+
+        // Transfer reserved bytes into the supplied reservation.
+        reservation.add(reserver.reservation_needed(inner.dirty_bytes));
+        inner.dirty_bytes = 0;
 
         let mut buffer = allocate_buffer(bytes_to_flush as usize);
         let mut slice = buffer.as_mut_slice();
@@ -633,51 +544,32 @@ impl<B: DataBuffer> WritebackCache<B> {
             slice = tail;
         }
 
-        let content_size = if let Some(offset) = flush_progress_offset {
-            // If this is a partial flush, we can only update the content size as far as the data
-            // we've flushed, and only update it if that size was an increase (otherwise this would
-            // appear to be a false truncation).
-            if offset > last_known_size {
-                Some(offset)
-            } else {
-                None
-            }
-        } else {
-            inner.content_size.take()
-        };
-        let metadata = FlushableMetadata {
-            content_size,
-            creation_time: std::mem::take(&mut inner.creation_time),
-            modification_time: std::mem::take(&mut inner.modification_time),
-        };
-
-        inner.flushing_min_size = Some(inner.min_size);
-        if let Some(s) = inner.content_size {
-            inner.min_size = s;
-        }
-
-        let bytes_reserved = reserver.reservation_needed(bytes_to_flush);
-        reservation.add(bytes_reserved);
-        FlushableData {
+        Flushable {
+            cache: self,
             metadata,
-            reservation: &reservation,
-            reserver,
-            ranges,
-            buffer,
-            flush_progress_offset,
-            cache: Some(self),
+            data: Some(FlushableData { reservation: &reservation, reserver, ranges, buffer }),
+        }
+    }
+
+    // Returns any cached metadata that needs to be flushed.  This will only capture changes in
+    // content size that shrink the file from it's last recorded/uncached size; `take_flushable`
+    // handles the case where the file has grown.
+    pub fn take_flushable_metadata<'a>(&'a self, last_known_size: u64) -> Flushable<'_, 'a, B> {
+        let mut inner = self.inner.lock().unwrap();
+        let size = self.data.size();
+        Flushable {
+            cache: self,
+            metadata: inner.take_metadata(if size < last_known_size { Some(size) } else { None }),
+            data: None,
         }
     }
 
     /// Indicates that a flush was successful.
-    pub fn complete_flush<'a>(&self, mut flushed: FlushableData<'a, '_, B>) {
-        flushed.cache = None; // We don't need to clean up on drop any more.
-        self.inner.lock().unwrap().complete_flush(
-            std::mem::take(&mut flushed.ranges),
-            flushed.reservation,
-            flushed.reserver,
-            true,
-        );
+    pub fn complete_flush<'a>(&self, mut flushed: Flushable<'a, '_, B>) {
+        flushed.metadata.take();
+        if let Some(data) = flushed.data.take() {
+            self.inner.lock().unwrap().complete_flush(data, true);
+        }
     }
 
     /// Sets the cached timestamp values.  The filesystem should provide values which are truncated
@@ -688,7 +580,7 @@ impl<B: DataBuffer> WritebackCache<B> {
         creation_time: Option<Duration>,
         modification_time: Option<Duration>,
     ) {
-        if let (None, None) = (creation_time.as_ref(), modification_time.as_ref()) {
+        if creation_time.is_none() && modification_time.is_none() {
             return;
         }
         let mut inner = self.inner.lock().unwrap();
@@ -705,11 +597,10 @@ impl<B: DataBuffer> WritebackCache<B> {
 #[cfg(test)]
 mod tests {
     use {
-        super::{FlushableData, StorageReservation, WritebackCache},
+        super::{Flushable, FlushableData, StorageReservation, WritebackCache},
         crate::{
             object_store::{
                 allocator::{Allocator, Reservation},
-                caching_object_handle::FLUSH_BATCH_SIZE,
                 data_buffer::MemDataBuffer,
                 filesystem::Mutations,
                 journal::checksum_list::ChecksumList,
@@ -735,7 +626,17 @@ mod tests {
         storage_device::buffer_allocator::{BufferAllocator, MemBufferSource},
     };
 
-    struct FakeReserverInner(Mutex<u64>);
+    struct FakeReserverInner {
+        amount: Mutex<u64>,
+        limit: u64,
+    }
+
+    impl Drop for FakeReserverInner {
+        fn drop(&mut self) {
+            assert_eq!(*self.amount.lock().unwrap(), self.limit);
+        }
+    }
+
     struct FakeReserver {
         inner: Arc<FakeReserverInner>,
         granularity: u64,
@@ -753,13 +654,14 @@ mod tests {
             flush_limit: u64,
         ) -> Self {
             Self {
-                inner: Arc::new(FakeReserverInner(Mutex::new(amount))),
+                inner: Arc::new(FakeReserverInner { amount: Mutex::new(amount), limit: amount }),
                 granularity,
                 sync_overhead,
                 flush_limit,
             }
         }
     }
+
     impl StorageReservation for FakeReserver {
         fn reservation_needed(&self, mut amount: u64) -> u64 {
             amount = round_up(amount, self.granularity).unwrap();
@@ -832,7 +734,7 @@ mod tests {
 
         fn reserve(self: Arc<Self>, amount: u64) -> Option<Reservation> {
             {
-                let mut inner = self.0.lock().unwrap();
+                let mut inner = self.amount.lock().unwrap();
                 if *inner < amount {
                     return None;
                 } else {
@@ -847,8 +749,9 @@ mod tests {
         }
 
         fn release_reservation(&self, amount: u64) {
-            let mut inner = self.0.lock().unwrap();
+            let mut inner = self.amount.lock().unwrap();
             *inner += amount;
+            assert!(*inner <= self.limit);
         }
 
         fn get_allocated_bytes(&self) -> u64 {
@@ -871,10 +774,7 @@ mod tests {
 
     #[derive(Debug)]
     struct ExpectedRange(u64, Vec<u8>);
-    fn check_data_matches(
-        actual: &FlushableData<'_, '_, MemDataBuffer>,
-        expected: &[ExpectedRange],
-    ) {
+    fn check_data_matches(actual: &FlushableData<'_, '_>, expected: &[ExpectedRange]) {
         if actual.ranges.len() != expected.len() {
             panic!("Expected {} ranges, got {} ranges", expected.len(), actual.ranges.len());
         }
@@ -954,17 +854,16 @@ mod tests {
             .expect("write failed");
         {
             let reservation = reserver.wrap_reservation(0);
-            let flushable = cache.take_flushable_data(
+            let flushable = cache.take_flushable(
                 512,
                 0,
                 |size| allocator.allocate_buffer(size),
                 &reserver,
                 &reservation,
-                0,
-                FLUSH_BATCH_SIZE,
             );
-            assert_eq!(flushable.dirty_bytes(), 512);
-            assert_eq!(flushable.ranges.len(), 1);
+            let data = flushable.data.as_ref().expect("no data");
+            assert_eq!(data.dirty_bytes(), 512);
+            assert_eq!(data.ranges.len(), 1);
             cache.complete_flush(flushable);
         }
 
@@ -978,16 +877,14 @@ mod tests {
 
         // Ensure neither regions were marked dirty, i.e. the tree state wasn't affected.
         let reservation = reserver.wrap_reservation(0);
-        let flushable = cache.take_flushable_data(
+        let flushable = cache.take_flushable(
             512,
             0,
             |size| allocator.allocate_buffer(size),
             &reserver,
             &reservation,
-            0,
-            FLUSH_BATCH_SIZE,
         );
-        check_data_matches(&flushable, &[]);
+        assert_matches!(flushable.data, None);
         cache.complete_flush(flushable);
         cache.cleanup(&reserver);
     }
@@ -1016,24 +913,23 @@ mod tests {
 
         // Only the first blocks should need a flush.
         let reservation = reserver.wrap_reservation(0);
-        let flushable = cache.take_flushable_data(
+        let flushable = cache.take_flushable(
             512,
             0,
             |size| allocator.allocate_buffer(size),
             &reserver,
             &reservation,
-            0,
-            FLUSH_BATCH_SIZE,
         );
+        let data = flushable.data.as_ref().expect("no data");
         check_data_matches(
-            &flushable,
+            &data,
             &[ExpectedRange(0, {
                 let mut data = vec![0u8; 512];
                 data[0] = 123u8;
                 data
             })],
         );
-        assert_eq!(flushable.metadata.content_size, Some(1000));
+        assert_eq!(flushable.metadata.as_ref().expect("no metadata").content_size, Some(1000));
         cache.complete_flush(flushable);
         cache.cleanup(&reserver);
     }
@@ -1056,25 +952,24 @@ mod tests {
 
         // The resize should have truncated the pending writes.
         let reservation = reserver.wrap_reservation(0);
-        let flushable = cache.take_flushable_data(
+        let flushable = cache.take_flushable(
             512,
             0,
             |size| allocator.allocate_buffer(size),
             &reserver,
             &reservation,
-            0,
-            FLUSH_BATCH_SIZE,
         );
-        assert_eq!(flushable.dirty_bytes(), 1024);
+        let data = flushable.data.as_ref().expect("no data");
+        assert_eq!(data.dirty_bytes(), 1024);
         check_data_matches(
-            &flushable,
+            data,
             &[ExpectedRange(0, {
                 let mut data = vec![0; 1024];
                 data[..1000].fill(123);
                 data
             })],
         );
-        assert_eq!(flushable.metadata.content_size, Some(1000));
+        assert_eq!(flushable.metadata.as_ref().expect("no metadata").content_size, Some(1000));
         cache.complete_flush(flushable);
         cache.cleanup(&reserver);
     }
@@ -1086,18 +981,16 @@ mod tests {
         let cache = WritebackCache::new(MemDataBuffer::new(0));
 
         let reservation = reserver.wrap_reservation(0);
-        let data = cache.take_flushable_data(
-            512,
-            0,
-            |size| allocator.allocate_buffer(size),
-            &reserver,
-            &reservation,
-            0,
-            FLUSH_BATCH_SIZE,
+        assert_matches!(
+            cache.take_flushable(
+                512,
+                0,
+                |size| allocator.allocate_buffer(size),
+                &reserver,
+                &reservation,
+            ),
+            Flushable { data: None, metadata: None, .. }
         );
-        assert_eq!(data.ranges.len(), 0);
-        assert!(!data.metadata.has_updates());
-        cache.complete_flush(data);
         cache.cleanup(&reserver);
     }
 
@@ -1131,15 +1024,14 @@ mod tests {
             .await
             .expect("write failed");
         let reservation = reserver.wrap_reservation(0);
-        let data = cache.take_flushable_data(
+        let flushable = cache.take_flushable(
             512,
             0,
             |size| allocator.allocate_buffer(size),
             &reserver,
             &reservation,
-            0,
-            FLUSH_BATCH_SIZE,
         );
+        let data = flushable.data.as_ref().expect("no data");
         assert_eq!(data.dirty_bytes(), 2048 + 512 + 1024);
         check_data_matches(
             &data,
@@ -1158,9 +1050,8 @@ mod tests {
                 }),
             ],
         );
-        assert!(data.metadata.has_updates());
-        assert_eq!(data.metadata.content_size, Some(4100));
-        cache.complete_flush(data);
+        assert_eq!(flushable.metadata.as_ref().expect("no metadata").content_size, Some(4100));
+        cache.complete_flush(flushable);
         cache.cleanup(&reserver);
     }
 
@@ -1179,15 +1070,14 @@ mod tests {
             .expect("write failed");
         let reservation = reserver.wrap_reservation(0);
         {
-            let data = cache.take_flushable_data(
+            let flushable = cache.take_flushable(
                 512,
                 0,
                 |size| allocator.allocate_buffer(size),
                 &reserver,
                 &reservation,
-                0,
-                512,
             );
+            let data = flushable.data.as_ref().expect("no data");
             assert_eq!(data.dirty_bytes(), 512);
             assert_eq!(reservation.amount(), 1024);
 
@@ -1207,15 +1097,14 @@ mod tests {
         reserver.reserve(1).expect_err("Reservation should be full");
 
         let reservation2 = reserver.wrap_reservation(0);
-        let data = cache.take_flushable_data(
+        let flushable = cache.take_flushable(
             512,
             0,
             |size| allocator.allocate_buffer(size),
             &reserver,
             &reservation2,
-            0,
-            1024,
         );
+        let data = flushable.data.as_ref().expect("no data");
         assert_eq!(data.dirty_bytes(), 1024);
         assert_eq!(reservation2.amount(), 1536);
 
@@ -1244,18 +1133,18 @@ mod tests {
             .await
             .expect("write failed");
         let reservation = reserver.wrap_reservation(0);
-        let data = cache.take_flushable_data(
+        let flushable = cache.take_flushable(
             512,
             0,
             |size| allocator.allocate_buffer(size),
             &reserver,
             &reservation,
-            0,
-            FLUSH_BATCH_SIZE,
         );
-        assert!(data.metadata.has_updates());
-        assert_eq!(data.metadata.modification_time, Some(Duration::new(2, 0)));
-        cache.complete_flush(data);
+        assert_eq!(
+            flushable.metadata.as_ref().expect("no metadata").modification_time,
+            Some(Duration::new(2, 0))
+        );
+        cache.complete_flush(flushable);
         cache.cleanup(&reserver);
     }
 
@@ -1274,19 +1163,17 @@ mod tests {
         cache.update_timestamps(Some(Duration::new(1, 0)), Some(Duration::new(2, 0)));
 
         let reservation = reserver.wrap_reservation(0);
-        let data = cache.take_flushable_data(
+        let flushable = cache.take_flushable(
             512,
             0,
             |size| allocator.allocate_buffer(size),
             &reserver,
             &reservation,
-            0,
-            FLUSH_BATCH_SIZE,
         );
-        assert!(data.metadata.has_updates());
-        assert_eq!(data.metadata.creation_time, Some(Duration::new(1, 0)));
-        assert_eq!(data.metadata.modification_time, Some(Duration::new(2, 0)));
-        cache.complete_flush(data);
+        let metadata = flushable.metadata.as_ref().expect("no metadata");
+        assert_eq!(metadata.creation_time, Some(Duration::new(1, 0)));
+        assert_eq!(metadata.modification_time, Some(Duration::new(2, 0)));
+        cache.complete_flush(flushable);
         cache.cleanup(&reserver);
     }
 
@@ -1309,18 +1196,21 @@ mod tests {
         join!(
             async {
                 let reservation = reserver.wrap_reservation(0);
-                let data = cache.take_flushable_data(
+                let flushable = cache.take_flushable(
                     512,
                     0,
                     |size| allocator.allocate_buffer(size),
                     &reserver,
                     &reservation,
-                    0,
-                    FLUSH_BATCH_SIZE,
                 );
-                assert!(data.metadata.has_updates());
-                assert_eq!(data.metadata.content_size, Some(512));
-                check_data_matches(&data, &[ExpectedRange(0, vec![123u8; 512])]);
+                assert_eq!(
+                    flushable.metadata.as_ref().expect("no metadata").content_size,
+                    Some(512)
+                );
+                check_data_matches(
+                    flushable.data.as_ref().expect("no data"),
+                    &[ExpectedRange(0, vec![123u8; 512])],
+                );
                 send1.send(()).unwrap();
                 recv2.await.unwrap();
             },
@@ -1331,117 +1221,19 @@ mod tests {
             },
         );
         let reservation = reserver.wrap_reservation(0);
-        let data = cache.take_flushable_data(
+        let flushable = cache.take_flushable(
             512,
             0,
             |size| allocator.allocate_buffer(size),
             &reserver,
             &reservation,
-            0,
-            FLUSH_BATCH_SIZE,
         );
-        assert!(data.metadata.has_updates());
-        assert_eq!(data.metadata.content_size, Some(511));
+        assert_eq!(flushable.metadata.as_ref().expect("no metadata").content_size, Some(511));
         let mut expected = vec![123u8; 511];
         expected.append(&mut vec![0]);
+        let data = flushable.data.as_ref().expect("no data");
         check_data_matches(&data, &[ExpectedRange(0, expected)]);
-        cache.complete_flush(data);
-        cache.cleanup(&reserver);
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_partial_flushes() {
-        const FLUSH_LIMIT: u64 = 65_536;
-        const SYNC_OVERHEAD: u64 = 32_768;
-        let allocator =
-            BufferAllocator::new(512, Box::new(MemBufferSource::new(FLUSH_LIMIT as usize)));
-        // The values here are carefully selected so that we will have just enough room in the
-        // reservation pool to flush FLUSH_BATCH_SIZE + SYNC_OVERHEAD bytes of data (with room for two syncs).
-        let reserver = FakeReserver::new_with_sync_overhead(
-            FLUSH_LIMIT + 3 * SYNC_OVERHEAD,
-            512,
-            SYNC_OVERHEAD,
-            FLUSH_LIMIT,
-        );
-        let cache = WritebackCache::new(MemDataBuffer::new(0));
-        let source = FakeObjectHandle::new(Arc::new(FakeObject::new()));
-
-        let buffer = vec![123u8; SYNC_OVERHEAD as usize];
-        let mut dirty = 0;
-        while dirty < FLUSH_LIMIT + SYNC_OVERHEAD {
-            cache
-                .write_or_append(
-                    None,
-                    &buffer[..],
-                    512,
-                    &reserver,
-                    Some(Duration::new(1, 0)),
-                    &source,
-                )
-                .await
-                .expect("Write failed");
-            dirty += buffer.len() as u64;
-        }
-
-        let reservation = reserver.wrap_reservation(0);
-        {
-            // If the partially flushed data is <= last_known_size, no new size should be flushed.
-            let data = cache.take_flushable_data(
-                512,
-                FLUSH_LIMIT,
-                |size| allocator.allocate_buffer(size),
-                &reserver,
-                &reservation,
-                0,
-                FLUSH_LIMIT,
-            );
-            assert_eq!(reservation.amount(), FLUSH_LIMIT + SYNC_OVERHEAD);
-            assert_eq!(data.metadata.content_size, None);
-            assert!(data.metadata.modification_time.is_some());
-        }
-        std::mem::drop(reservation);
-
-        let reservation = reserver.wrap_reservation(0);
-        let data = cache.take_flushable_data(
-            512,
-            0,
-            |size| allocator.allocate_buffer(size),
-            &reserver,
-            &reservation,
-            0,
-            FLUSH_LIMIT,
-        );
-        check_data_matches(&data, &[ExpectedRange(0, vec![123u8; FLUSH_LIMIT as usize])]);
-        assert_eq!(data.metadata.content_size, Some(FLUSH_LIMIT));
-        assert!(data.metadata.modification_time.is_some());
-        assert_eq!(data.reservation.amount(), FLUSH_LIMIT + SYNC_OVERHEAD);
-        cache.complete_flush(data);
-        std::mem::drop(reservation);
-
-        // Even if last_known_size is arbitrarily high, we should always flush the content size for
-        // the last bit of data.
-        let reservation = reserver.wrap_reservation(0);
-        let data = cache.take_flushable_data(
-            512,
-            u64::MAX,
-            |size| allocator.allocate_buffer(size),
-            &reserver,
-            &reservation,
-            FLUSH_LIMIT,
-            FLUSH_LIMIT,
-        );
-        check_data_matches(
-            &data,
-            &[ExpectedRange(FLUSH_LIMIT, vec![123u8; SYNC_OVERHEAD as usize])],
-        );
-        assert_eq!(data.metadata.content_size, Some(FLUSH_LIMIT + SYNC_OVERHEAD));
-        assert_eq!(data.reservation.amount(), SYNC_OVERHEAD * 2);
-        cache.complete_flush(data);
-
-        // Now that the flushes are complete, we should be able to reserve the whole pool.
-        std::mem::drop(reservation);
-        reserver.reserve(FLUSH_LIMIT + 3 * SYNC_OVERHEAD).expect("Can't reserve the pool");
-
+        cache.complete_flush(flushable);
         cache.cleanup(&reserver);
     }
 }
