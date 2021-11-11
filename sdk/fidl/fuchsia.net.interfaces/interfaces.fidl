@@ -15,6 +15,7 @@ const INTERFACE_NAME_LENGTH uint8 = 15;
 /// An interface name as a sequence of bytes.
 alias name = string:INTERFACE_NAME_LENGTH;
 
+// TODO(https://fxbug.dev/7913): Use built-in empty struct when available.
 type Empty = struct {};
 
 /// Properties of a network interface.

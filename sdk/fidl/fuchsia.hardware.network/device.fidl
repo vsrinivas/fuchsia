@@ -164,6 +164,7 @@ protocol PortWatcher {
     });
 };
 
+// TODO(https://fxbug.dev/7913): Use built-in empty struct when available.
 type Empty = struct {};
 
 /// Port creation and destruction events.

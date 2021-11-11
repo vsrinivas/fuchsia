@@ -29,7 +29,7 @@ type PreferredLifetimeInfo = strict union {
     /// non-deprecated addresses are assigned (as described in
     /// [RFC 4862, section 1](https://tools.ietf.org/html/rfc4862#section-1)).
     ///
-    /// Once deprecated, an address can became undeprecated if its preferred
+    /// Once deprecated, an address can become undeprecated if its preferred
     /// lifetime is extended.
     ///
     /// This field is used to signal that the address should be deprecated.

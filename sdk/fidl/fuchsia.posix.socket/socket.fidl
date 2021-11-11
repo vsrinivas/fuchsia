@@ -567,6 +567,7 @@ type OptionalUint32 = strict union {
     2: unset Empty;
 };
 
+// TODO(https://fxbug.dev/7913): Use built-in empty struct when available.
 type Empty = struct {};
 
 /// Socket level ancillary data that can be received.
