@@ -873,12 +873,7 @@ mod tests {
         };
         assert_eq!(expected, test_filter_expr!("tags HAS ANY [\"foo\", \"bar\"]").unwrap());
 
-        let expected = FilterExpression {
-            identifier: Identifier::Tags,
-            operator: Operator::Inclusion(InclusionOperator::HasAny),
-            value: OneOrMany::One(Value::StringLiteral("foo")),
-        };
-        assert_eq!(expected, test_filter_expr!("tags has any \"foo\"").unwrap());
+        assert!(test_filter_expr!("tags has any \"foo\"").is_err());
 
         // The inclusion operator IN can only be used with lists.
         let expected = FilterExpression {

@@ -190,10 +190,8 @@ impl FilterExpression<'_> {
         // Validate the operation can be used with the type of value.
         match (&self.operator, &self.value) {
             (Operator::Inclusion(_), OneOrMany::Many(_)) => Ok(()),
-            (Operator::Inclusion(InclusionOperator::HasAny), OneOrMany::One(_)) => Ok(()),
-            (Operator::Inclusion(InclusionOperator::HasAll), OneOrMany::One(_)) => Ok(()),
             (Operator::Comparison(_), OneOrMany::One(_)) => Ok(()),
-            (Operator::Inclusion(InclusionOperator::In), OneOrMany::One(_))
+            (Operator::Inclusion(_), OneOrMany::One(_))
             | (Operator::Comparison(_), OneOrMany::Many(_)) => {
                 Err(ValidationError::InvalidOperatorRhs(self.operator.clone(), self.value.ty()))
             }
