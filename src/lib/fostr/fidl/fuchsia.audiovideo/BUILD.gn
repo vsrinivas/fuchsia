@@ -10,6 +10,5 @@ fostr_fidl("fuchsia.audiovideo") {
   deps = [
     "//src/lib/fostr/fidl/fuchsia.media2",
     "//src/lib/fostr/fidl/fuchsia.mediastreams",
-    "//src/lib/fostr/fidl/zx",
   ]
 }

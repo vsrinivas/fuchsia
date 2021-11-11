@@ -11,6 +11,5 @@ fostr_fidl("fuchsia.audio") {
     "//src/lib/fostr/fidl/fuchsia.media2",
     "//src/lib/fostr/fidl/fuchsia.mediastreams",
     "//src/lib/fostr/fidl/fuchsia.ui.views",
-    "//src/lib/fostr/fidl/zx",
   ]
 }

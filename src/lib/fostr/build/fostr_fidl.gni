@@ -56,9 +56,6 @@ template("fostr_fidl") {
     if (!defined(deps)) {
       deps = []
     }
-    if (target_name != "zx") {
-      deps += [ "//src/lib/fostr/fidl/zx" ]
-    }
 
     fidl_target = "$fidl_target"
 

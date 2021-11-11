@@ -9,6 +9,5 @@ fostr_fidl("fuchsia.ui.pointerinjector") {
   deps = [
     "//src/lib/fostr/fidl/fuchsia.input.report",
     "//src/lib/fostr/fidl/fuchsia.ui.views",
-    "//src/lib/fostr/fidl/zx",
   ]
 }

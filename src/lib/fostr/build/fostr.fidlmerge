@@ -125,7 +125,7 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value);
 #include "src/lib/fostr/fidl_types.h"
 {{- $this_name := .Name }}
 {{- range .Libraries }}
-    {{- if ne .Name $this_name }}
+    {{- if (and (ne .Name $this_name) (ne .Name "zx" )) }}
 #include "src/lib/fostr/fidl/{{  template "LibrarySlashes" . }}formatting.h"
     {{- end }}
 {{- end }}

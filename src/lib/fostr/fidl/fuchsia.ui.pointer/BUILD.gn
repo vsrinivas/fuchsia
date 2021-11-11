@@ -6,8 +6,5 @@ import("//src/lib/fostr/build/fostr_fidl.gni")
 
 fostr_fidl("fuchsia.ui.pointer") {
   fidl_target = "//sdk/fidl/fuchsia.ui.pointer"
-  deps = [
-    "//src/lib/fostr/fidl/fuchsia.input.report",
-    "//src/lib/fostr/fidl/zx",
-  ]
+  deps = [ "//src/lib/fostr/fidl/fuchsia.input.report" ]
 }
