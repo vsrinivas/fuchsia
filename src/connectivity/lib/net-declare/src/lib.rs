@@ -31,6 +31,10 @@ pub use net_declare_macros::std_socket_addr_v4;
 /// [Rust issue 1992]: https://github.com/rust-lang/rfcs/issues/1992
 pub use net_declare_macros::std_socket_addr_v6;
 
+/// Declares a [`fidl_fuchsia_net::InterfaceAddress`] from a parsable IPv4
+/// address + prefix or an IPv6 address without prefix, e.g. `192.168.0.1/24`
+/// or `ff08::1`.
+pub use net_declare_macros::fidl_if_addr;
 /// Declares a [`fidl_fuchsia_net::IpAddress`] from a parsable IP address
 /// (either V4 or V6) string.
 pub use net_declare_macros::fidl_ip;
@@ -308,6 +312,23 @@ mod tests {
                 prefix_len: 64
             },
             fidl_subnet!("ff01::0102/64")
+        );
+    }
+
+    #[test]
+    fn test_fidl_if_addr() {
+        assert_eq!(
+            fidl::InterfaceAddress::Ipv4(fidl::Ipv4AddressWithPrefix {
+                addr: fidl::Ipv4Address { addr: [192, 168, 0, 1] },
+                prefix_len: 24,
+            }),
+            fidl_if_addr!("192.168.0.1/24")
+        );
+        assert_eq!(
+            fidl::InterfaceAddress::Ipv6(fidl::Ipv6Address {
+                addr: [0xFF, 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01, 0x02]
+            }),
+            fidl_if_addr!("ff01::0102")
         );
     }
 

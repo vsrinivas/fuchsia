@@ -8,7 +8,9 @@ use fidl_fuchsia_net_stack_ext::FidlReturn as _;
 use fuchsia_async::TimeoutExt as _;
 use fuchsia_zircon as zx;
 use futures::{FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _};
-use net_declare::{fidl_ip_v4, fidl_ip_v4_with_prefix, fidl_ip_v6, fidl_subnet, std_socket_addr};
+use net_declare::{
+    fidl_if_addr, fidl_ip_v4, fidl_ip_v4_with_prefix, fidl_ip_v6, fidl_subnet, std_socket_addr,
+};
 use net_types::ip::IpAddress as _;
 use netemul::RealmUdpSocket as _;
 use netstack_testing_common::realms::{Netstack2, TestSandboxExt as _};
@@ -148,8 +150,7 @@ async fn add_address_errors() {
 
     // Removing non-existent address.
     {
-        let mut address =
-            fidl_fuchsia_net::InterfaceAddress::Ipv4(fidl_ip_v4_with_prefix!("1.1.1.1/32"));
+        let mut address = fidl_if_addr!("1.1.1.1/32");
         let did_remove = control
             .remove_address(&mut address)
             .await
@@ -194,7 +195,7 @@ async fn add_address_errors() {
 
     // Adding an invalid address returns error.
     {
-        // NB: fidl_subnet! doesn't allow invalid prefix lengths.
+        // NB: fidl_if_addr! doesn't allow invalid prefix lengths.
         let invalid_address =
             fidl_fuchsia_net::InterfaceAddress::Ipv4(fidl_fuchsia_net::Ipv4AddressWithPrefix {
                 addr: fidl_ip_v4!("1.1.1.1"),
@@ -227,12 +228,7 @@ async fn add_address_errors() {
             ..fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY
         };
         matches::assert_matches!(
-            add_address(
-                &control,
-                fidl_fuchsia_net::InterfaceAddress::Ipv6(fidl_ip_v6!("fe80::1")),
-                parameters,
-            )
-            .await,
+            add_address(&control, fidl_if_addr!("fe80::1"), parameters,).await,
             Err(fidl_fuchsia_net_interfaces_ext::admin::AddressStateProviderError::AddressRemoved(
                 fidl_fuchsia_net_interfaces_admin::AddressRemovalReason::Invalid
             ))
@@ -244,13 +240,10 @@ async fn add_address_errors() {
     // tests that actually test the effects of updating an address' properties
     // once properly supported.
     {
-        let address_state_provider = add_address(
-            &control,
-            fidl_fuchsia_net::InterfaceAddress::Ipv6(fidl_ip_v6!("fe80::1")),
-            VALID_ADDRESS_PARAMETERS,
-        )
-        .await
-        .expect("add address");
+        let address_state_provider =
+            add_address(&control, fidl_if_addr!("fe80::1"), VALID_ADDRESS_PARAMETERS)
+                .await
+                .expect("add address");
         matches::assert_matches!(
             address_state_provider
                 .update_address_properties(fidl_fuchsia_net_interfaces_admin::AddressProperties::EMPTY)
@@ -295,8 +288,7 @@ async fn add_address_removal<E: netemul::Endpoint>(name: &str) {
 
     // Adding a valid address and observing the address removal.
     {
-        let mut address =
-            fidl_fuchsia_net::InterfaceAddress::Ipv4(fidl_ip_v4_with_prefix!("3.3.3.3/32"));
+        let mut address = fidl_if_addr!("3.3.3.3/32");
 
         let address_state_provider = add_address(&control, address, VALID_ADDRESS_PARAMETERS)
             .await
@@ -322,8 +314,7 @@ async fn add_address_removal<E: netemul::Endpoint>(name: &str) {
 
     // Adding a valid address and removing the interface.
     {
-        let address =
-            fidl_fuchsia_net::InterfaceAddress::Ipv4(fidl_ip_v4_with_prefix!("4.4.4.4/32"));
+        let address = fidl_if_addr!("4.4.4.4/32");
 
         let address_state_provider = add_address(&control, address, VALID_ADDRESS_PARAMETERS)
             .await
@@ -380,8 +371,7 @@ async fn add_address_offline<E: netemul::Endpoint>(name: &str) {
         fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY;
 
     // Adding a valid address and observing the address removal.
-    let mut address =
-        fidl_fuchsia_net::InterfaceAddress::Ipv4(fidl_ip_v4_with_prefix!("5.5.5.5/32"));
+    let mut address = fidl_if_addr!("5.5.5.5/32");
 
     let (address_state_provider, server) = fidl::endpoints::create_proxy::<
         fidl_fuchsia_net_interfaces_admin::AddressStateProviderMarker,

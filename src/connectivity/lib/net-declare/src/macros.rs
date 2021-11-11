@@ -450,6 +450,29 @@ declare_macro!(fidl_socket_addr_v6, FidlGen, SocketAddrV6);
 declare_macro!(fidl_mac, FidlGen, MacAddress);
 declare_macro!(fidl_subnet, FidlGen, CidrAddress);
 
+/// Generator for `fuchsia.net.InterfaceAddress`
+enum FidlInterfaceAddressGen {}
+
+impl Generator<Ipv4AddrWithPrefix> for FidlInterfaceAddressGen {
+    fn generate(input: Ipv4AddrWithPrefix) -> TokenStream {
+        let v4_addr_with_prefix = FidlGen::generate(input);
+        quote! {
+            fidl_fuchsia_net::InterfaceAddress::Ipv4(#v4_addr_with_prefix)
+        }
+    }
+}
+
+impl Generator<Ipv6Addr> for FidlInterfaceAddressGen {
+    fn generate(input: Ipv6Addr) -> TokenStream {
+        let v6_addr = FidlGen::generate(input);
+        quote! {
+            fidl_fuchsia_net::InterfaceAddress::Ipv6(#v6_addr)
+        }
+    }
+}
+
+declare_macro!(fidl_if_addr, FidlInterfaceAddressGen, Ipv4AddrWithPrefix, Ipv6Addr);
+
 /// Generator for net-types types.
 enum NetGen {}
 
