@@ -1781,8 +1781,8 @@ mod tests {
             ]
         );
         assert_matches!(
-            client.state,
-            Some(ClientState::InformationReceived(InformationReceived { dns_servers : ref d})) if *d == Vec::<Ipv6Addr>::new()
+            &client.state,
+            Some(ClientState::InformationReceived(InformationReceived { dns_servers})) if dns_servers.is_empty()
         );
 
         let mut buf = vec![0; builder.bytes_len()];
@@ -1792,15 +1792,15 @@ mod tests {
         // Extra replies received in information received state are ignored.
         assert_eq!(client.handle_message_receive(msg)[..], []);
         assert_matches!(
-            client.state,
-            Some(ClientState::InformationReceived(InformationReceived { dns_servers : ref d})) if *d == Vec::<Ipv6Addr>::new()
+            &client.state,
+            Some(ClientState::InformationReceived(InformationReceived { dns_servers})) if dns_servers.is_empty()
         );
 
         // Information received state should only respond to `Refresh` timer.
         assert_eq!(client.handle_timeout(ClientTimerType::Retransmission)[..], []);
         assert_matches!(
-            client.state,
-            Some(ClientState::InformationReceived(InformationReceived { dns_servers : ref d})) if *d == Vec::<Ipv6Addr>::new()
+            &client.state,
+            Some(ClientState::InformationReceived(InformationReceived { dns_servers})) if dns_servers.is_empty()
         );
     }
 
