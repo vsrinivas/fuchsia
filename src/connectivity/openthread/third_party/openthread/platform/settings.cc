@@ -41,11 +41,16 @@
 
 static otError platformSettingsDelete(otInstance *instance, uint16_t key, int index);
 
-void otPlatSettingsInit(otInstance *instance) {}
+ThreadConfigManager* config_manager = nullptr;
 
-void otPlatSettingsDeinit(otInstance *instance) {}
+void otPlatSettingsInit(otInstance *instance) {
+  config_manager = new ThreadConfigManager(kThreadSettingsPath);
+}
 
-static ThreadConfigManager config_manager(kThreadSettingsPath);
+void otPlatSettingsDeinit(otInstance *instance) {
+  delete config_manager;
+  config_manager = nullptr;
+}
 
 static otError get_ot_error(ThreadConfigMgrError error) {
   switch (error) {
@@ -76,7 +81,7 @@ otError otPlatSettingsGet(otInstance *instance, uint16_t key, int index, uint8_t
   size_t buffer_length = (value_length == NULL ? 0 : *value_length);
   size_t actual_value_length;
   ThreadConfigMgrError error;
-  error = config_manager.ReadConfigValueFromBinArray(key_str.c_str(), index, value, buffer_length,
+  error = config_manager->ReadConfigValueFromBinArray(key_str.c_str(), index, value, buffer_length,
                                                      &actual_value_length);
   if (value_length != NULL) {
     *value_length = actual_value_length;
@@ -107,7 +112,7 @@ otError otPlatSettingsAdd(otInstance *instance, uint16_t key, const uint8_t *val
   OT_UNUSED_VARIABLE(instance);
   std::string key_str(std::to_string(key));
   ThreadConfigMgrError err;
-  err = config_manager.AppendConfigValueBinArray(key_str.c_str(), value, value_length);
+  err = config_manager->AppendConfigValueBinArray(key_str.c_str(), value, value_length);
   return get_ot_error(err);
 }
 
@@ -125,14 +130,14 @@ static otError platformSettingsDelete(otInstance *instance, uint16_t key, int in
   if (index == -1) {
     // Special case: index == -1 means delete all values
     // corresponding to a key
-    err = config_manager.ClearConfigValue(key_str.c_str());
+    err = config_manager->ClearConfigValue(key_str.c_str());
   } else {
-    err = config_manager.ClearConfigValueFromArray(key_str.c_str(), index);
+    err = config_manager->ClearConfigValueFromArray(key_str.c_str(), index);
   }
   return get_ot_error(err);
 }
 
 void otPlatSettingsWipe(otInstance *instance) {
   OT_UNUSED_VARIABLE(instance);
-  config_manager.FactoryResetConfig();
+  config_manager->FactoryResetConfig();
 }

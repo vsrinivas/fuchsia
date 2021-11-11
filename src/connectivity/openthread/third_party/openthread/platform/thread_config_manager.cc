@@ -16,8 +16,27 @@
 ThreadConfigManager::ThreadConfigManager(const std::string& path) : config_store_path_(path) {
   json::JSONParser json_parser_;
   if (files::IsFile(config_store_path_)) {
+
+    std::vector<uint8_t> file_contents;
+    if(files::ReadFileToVector(config_store_path_, &file_contents)) {
+      FX_LOGS(DEBUG) << "Read the file: " << config_store_path_
+                     << " with contents: ";
+      {
+        std::stringstream file_contents_combined;
+        std::copy(file_contents.begin(),
+                  file_contents.end(),
+                  std::ostream_iterator<int>(file_contents_combined, " "));
+        FX_LOGS(DEBUG) << file_contents_combined.str();
+      }
+    } else {
+      FX_LOGS(ERROR) << "Failed to read file: " << config_store_path_
+                     << " to vector.";
+    }
+
     config_ = json_parser_.ParseFromFile(config_store_path_);
   } else {
+    FX_LOGS(INFO) << "File: " << config_store_path_
+                  << " not present, will create new.";
     config_.SetObject();
   }
 

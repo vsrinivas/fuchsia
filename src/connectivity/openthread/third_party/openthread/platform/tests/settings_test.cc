@@ -21,6 +21,7 @@ class SettingsTest : public ::gtest::TestLoopFixture {
  public:
   void SetUp() override {
     TestLoopFixture::SetUp();
+    otPlatSettingsInit(instance);
     otPlatSettingsWipe(instance);
 
     // Initialize data with some non-zero value
@@ -31,6 +32,7 @@ class SettingsTest : public ::gtest::TestLoopFixture {
 
   void TearDown() override {
     otPlatSettingsWipe(instance);
+    otPlatSettingsDeinit(instance);
     TestLoopFixture::TearDown();
   }
 
@@ -38,15 +40,6 @@ class SettingsTest : public ::gtest::TestLoopFixture {
   uint8_t data[kTestDataSize];
   otInstance *instance = NULL;
 };
-
-// Note - this test doesn't use TestLoopFixture
-TEST(Settings, InitDeinit) {
-  // Just to check that these (currently) no-op functions don't
-  // crash for some reason in the future
-  otInstance *instance = NULL;
-  otPlatSettingsInit(instance);
-  otPlatSettingsDeinit(instance);
-}
 
 TEST_F(SettingsTest, EmptyConfig) {
   // verify empty situation
