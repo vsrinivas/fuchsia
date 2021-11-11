@@ -265,7 +265,7 @@ mod tests {
 
     #[test]
     #[should_panic(expected = "Mock node(s) were leaked: MockNode")]
-    // TODO(fxbug.dev/86807): delete the below
+    // TODO(fxbug.dev/88496): delete the below
     #[cfg_attr(feature = "variant_asan", ignore)]
     fn test_leaked_node_panic() {
         let _node = {
