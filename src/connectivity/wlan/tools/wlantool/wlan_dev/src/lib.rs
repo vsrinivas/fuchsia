@@ -2,82 +2,66 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{format_err, Context as _, Error};
-use fidl::endpoints;
-use fidl_fuchsia_wlan_common::PowerSaveType;
-use fidl_fuchsia_wlan_device::MacRole;
-use fidl_fuchsia_wlan_device_service::{
-    self as wlan_service, DeviceMonitorMarker, DeviceMonitorProxy, DeviceServiceMarker,
-    DeviceServiceProxy, QueryIfaceResponse,
+use {
+    anyhow::{format_err, Context as _, Error},
+    fidl::endpoints,
+    fidl_fuchsia_wlan_common::PowerSaveType,
+    fidl_fuchsia_wlan_device::MacRole,
+    fidl_fuchsia_wlan_device_service::{
+        self as wlan_service, DeviceMonitorProxy, DeviceServiceProxy, QueryIfaceResponse,
+    },
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
+    fidl_fuchsia_wlan_minstrel::Peer,
+    fidl_fuchsia_wlan_sme::{
+        self as fidl_sme, ConnectTransactionEvent, ScanTransactionEvent, ScanTransactionEventStream,
+    },
+    fuchsia_zircon as zx,
+    futures::prelude::*,
+    hex::{FromHex, ToHex},
+    ieee80211::{Ssid, NULL_MAC_ADDR},
+    itertools::Itertools,
+    std::convert::TryFrom,
+    std::fmt,
+    std::str::FromStr,
+    wlan_common::{
+        channel::{Cbw, Channel, Phy},
+        scan::ScanResult,
+        RadioConfig, StationMode,
+    },
+    wlan_rsn::psk,
 };
-use fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211;
-use fidl_fuchsia_wlan_internal as fidl_internal;
-use fidl_fuchsia_wlan_minstrel::Peer;
-use fidl_fuchsia_wlan_sme::{
-    self as fidl_sme, ConnectTransactionEvent, ScanTransactionEvent, ScanTransactionEventStream,
-};
-use fuchsia_async as fasync;
-use fuchsia_component::client::connect_to_protocol;
-use fuchsia_zircon as zx;
-use futures::prelude::*;
-use hex::{FromHex, ToHex};
-use ieee80211::{Ssid, NULL_MAC_ADDR};
-use itertools::Itertools;
-use std::convert::TryFrom;
-use std::fmt;
-use std::str::FromStr;
-use structopt::StructOpt;
-use wlan_common::{
-    channel::{Cbw, Channel, Phy},
-    scan::ScanResult,
-    RadioConfig, StationMode,
-};
-use wlan_rsn::psk;
 
-mod opts;
+pub mod opts;
 use crate::opts::*;
 
 type DeviceMonitor = DeviceMonitorProxy;
 type DeviceService = DeviceServiceProxy;
 
-fn main() -> Result<(), Error> {
-    println!(
-        "Warning: this tool may cause state mismatches between layers of the WLAN \n\
-        subsystem. It is intended for use by WLAN developers only. Please reach out \n\
-        to the WLAN team if your use case relies on it."
-    );
-    let opt = Opt::from_args();
-    println!("{:?}", opt);
-
-    let mut exec = fasync::LocalExecutor::new().context("error creating event loop")?;
-    let dev_svc_proxy = connect_to_protocol::<DeviceServiceMarker>()
-        .context("failed to `connect` to device service")?;
-    let monitor_proxy = connect_to_protocol::<DeviceMonitorMarker>()
-        .context("failed to `connect` to device monitor")?;
-
-    let fut = async {
-        match opt {
-            Opt::Phy(cmd) => do_phy(cmd, monitor_proxy).await,
-            Opt::Iface(cmd) => do_iface(cmd, dev_svc_proxy, monitor_proxy).await,
-            Opt::Client(opts::ClientCmd::Connect(cmd)) | Opt::Connect(cmd) => {
-                do_client_connect(cmd, dev_svc_proxy).await
-            }
-            Opt::Client(opts::ClientCmd::Disconnect(cmd)) | Opt::Disconnect(cmd) => {
-                do_client_disconnect(cmd, dev_svc_proxy).await
-            }
-            Opt::Client(opts::ClientCmd::Scan(cmd)) | Opt::Scan(cmd) => {
-                do_client_scan(cmd, dev_svc_proxy).await
-            }
-            Opt::Client(opts::ClientCmd::WmmStatus(cmd)) | Opt::WmmStatus(cmd) => {
-                do_client_wmm_status(cmd, dev_svc_proxy, &mut std::io::stdout()).await
-            }
-            Opt::Ap(cmd) => do_ap(cmd, dev_svc_proxy).await,
-            Opt::Mesh(cmd) => do_mesh(cmd, dev_svc_proxy).await,
-            Opt::Rsn(cmd) => do_rsn(cmd).await,
-            Opt::Status(cmd) => do_status(cmd, dev_svc_proxy).await,
+pub async fn handle_wlantool_command(
+    dev_svc_proxy: DeviceService,
+    monitor_proxy: DeviceMonitor,
+    opt: Opt,
+) -> Result<(), Error> {
+    match opt {
+        Opt::Phy(cmd) => do_phy(cmd, monitor_proxy).await,
+        Opt::Iface(cmd) => do_iface(cmd, dev_svc_proxy, monitor_proxy).await,
+        Opt::Client(opts::ClientCmd::Connect(cmd)) | Opt::Connect(cmd) => {
+            do_client_connect(cmd, dev_svc_proxy).await
         }
-    };
-    exec.run_singlethreaded(fut)
+        Opt::Client(opts::ClientCmd::Disconnect(cmd)) | Opt::Disconnect(cmd) => {
+            do_client_disconnect(cmd, dev_svc_proxy).await
+        }
+        Opt::Client(opts::ClientCmd::Scan(cmd)) | Opt::Scan(cmd) => {
+            do_client_scan(cmd, dev_svc_proxy).await
+        }
+        Opt::Client(opts::ClientCmd::WmmStatus(cmd)) | Opt::WmmStatus(cmd) => {
+            do_client_wmm_status(cmd, dev_svc_proxy, &mut std::io::stdout()).await
+        }
+        Opt::Ap(cmd) => do_ap(cmd, dev_svc_proxy).await,
+        Opt::Mesh(cmd) => do_mesh(cmd, dev_svc_proxy).await,
+        Opt::Rsn(cmd) => do_rsn(cmd).await,
+        Opt::Status(cmd) => do_status(cmd, dev_svc_proxy).await,
+    }
 }
 
 async fn do_phy(cmd: opts::PhyCmd, monitor_proxy: DeviceMonitor) -> Result<(), Error> {
@@ -924,8 +908,15 @@ fn print_minstrel_stats(mut peer: Box<Peer>) {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, fidl::endpoints::create_proxy, futures::task::Poll, ieee80211::SsidError,
-        matches::assert_matches, pin_utils::pin_mut, wlan_common::assert_variant,
+        super::*,
+        fidl::endpoints::create_proxy,
+        fidl_fuchsia_wlan_device_service::{DeviceMonitorMarker, DeviceServiceMarker},
+        fuchsia_async as fasync,
+        futures::task::Poll,
+        ieee80211::SsidError,
+        matches::assert_matches,
+        pin_utils::pin_mut,
+        wlan_common::assert_variant,
     };
 
     #[test]
