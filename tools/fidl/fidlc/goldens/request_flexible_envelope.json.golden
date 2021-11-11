@@ -805,7 +805,11 @@
   "type_alias_declarations": [],
   "declaration_order": [
     "fidl.test.requestflexibleenvelope/StrictFoo",
+    "fidl.test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleRequest",
+    "fidl.test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictTopResponse",
     "fidl.test.requestflexibleenvelope/FlexibleFoo",
+    "fidl.test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleTopResponse",
+    "fidl.test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictRequest",
     "fidl.test.requestflexibleenvelope/Protocol"
   ],
   "declarations": {

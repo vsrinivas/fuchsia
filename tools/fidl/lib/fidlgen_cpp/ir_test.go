@@ -75,7 +75,11 @@ func TestAnonymousLayoutAliases(t *testing.T) {
 		};
 		`,
 			expected: map[namingContextKey][]ScopedLayout{
-				"MyMethodRequest": {{
+				"MyMethodRequest (with header)": {{
+					scopedName:    stringNamePart("ReqData"),
+					flattenedName: makeTestName("ReqData"),
+				}},
+				"MyProtocolMyMethodRequest": {{
 					scopedName:    stringNamePart("ReqData"),
 					flattenedName: makeTestName("ReqData"),
 				}},
@@ -89,7 +93,11 @@ func TestAnonymousLayoutAliases(t *testing.T) {
 		};
 		`,
 			expected: map[namingContextKey][]ScopedLayout{
-				"MyMethodResponse": {{
+				"MyMethodResponse (with header)": {{
+					scopedName:    stringNamePart("Result"),
+					flattenedName: makeTestName("MyProtocolMyMethodResult"),
+				}},
+				"MyProtocolMyMethodTopResponse": {{
 					scopedName:    stringNamePart("Result"),
 					flattenedName: makeTestName("MyProtocolMyMethodResult"),
 				}},
@@ -163,19 +171,20 @@ func TestAnonymousLayoutAliases(t *testing.T) {
 				case *Protocol:
 					for _, m := range d.Methods {
 						if len(m.RequestAnonymousChildren) > 0 {
-							layoutToChildren[m.Name()+"Request"] = m.RequestAnonymousChildren
+							layoutToChildren[m.Name()+"Request (with header)"] = m.RequestAnonymousChildren
 						}
 						if len(m.ResponseAnonymousChildren) > 0 {
-							layoutToChildren[m.Name()+"Response"] = m.ResponseAnonymousChildren
+							layoutToChildren[m.Name()+"Response (with header)"] = m.ResponseAnonymousChildren
 						}
 					}
 				}
 			}
 
-			if !cmp.Equal(layoutToChildren, ex.expected, cmp.Comparer(func(x, y ScopedLayout) bool {
+			comparer := cmp.Comparer(func(x, y ScopedLayout) bool {
 				return x.ScopedName() == y.ScopedName() && x.FlattenedName() == y.FlattenedName()
-			})) {
-				t.Error(cmp.Diff(layoutToChildren, ex.expected))
+			})
+			if !cmp.Equal(layoutToChildren, ex.expected, comparer) {
+				t.Error(cmp.Diff(layoutToChildren, ex.expected, comparer))
 			}
 		})
 	}

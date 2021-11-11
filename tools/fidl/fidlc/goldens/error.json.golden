@@ -571,6 +571,8 @@
   "declaration_order": [
     "fidl.test.error/Example_foo_Response",
     "fidl.test.error/Example_foo_Result",
+    "fidl.test.error/ExampleFooTopResponse",
+    "fidl.test.error/ExampleFooRequest",
     "fidl.test.error/Example"
   ],
   "declarations": {

@@ -137,6 +137,19 @@ var commonTemplateFuncs = template.FuncMap{
 		currentVariant = wireVariant
 		return ""
 	},
+
+	"SkipRequestResponseDecls": func(decls []Kinded) []Kinded {
+		var filtered []Kinded
+		for _, decl := range decls {
+			if s, ok := decl.(*Struct); ok {
+				if s.IsRequestOrResponse() {
+					continue
+				}
+			}
+			filtered = append(filtered, decl)
+		}
+		return filtered
+	},
 }
 
 func mergeFuncMaps(all ...template.FuncMap) template.FuncMap {

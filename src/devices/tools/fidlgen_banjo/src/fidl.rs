@@ -500,6 +500,7 @@ pub struct Struct {
     pub members: Vec<StructMember>,
     pub resource: bool,
     pub type_shape_v1: TypeShape,
+    pub is_request_or_response: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]

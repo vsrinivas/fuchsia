@@ -1014,11 +1014,6 @@ std::ostringstream JSONGenerator::Produce() {
     // for this specific library.
     std::vector<std::string> declaration_order;
     for (const flat::Decl* decl : library_->declaration_order_) {
-      if (decl->kind == flat::Decl::Kind::kStruct) {
-        auto struct_decl = static_cast<const flat::Struct*>(decl);
-        if (struct_decl->is_request_or_response)
-          continue;
-      }
       if (decl->name.library() == library_)
         declaration_order.push_back(NameFlatName(decl->name));
     }

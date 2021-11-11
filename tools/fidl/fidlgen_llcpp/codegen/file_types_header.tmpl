@@ -40,29 +40,29 @@ fidl/{{ .LibraryDots }}/cpp/wire_types.h
 
   {{ range .Bits }}{{ template "Bits:ForwardDeclaration:TypesHeader" . }}{{ end }}
   {{ range .Enums }}{{ template "Enum:ForwardDeclaration:TypesHeader" . }}{{ end }}
-  {{ range .Structs }}{{ template "Struct:ForwardDeclaration:TypesHeader" . }}{{ end }}
-  {{ range .Tables }}{{ template "Table:ForwardDeclaration:TypesHeader" . }}{{ end }}
-  {{ range .Unions }}{{ template "Union:ForwardDeclaration:TypesHeader" . }}{{ end }}
+  {{ range .Structs | SkipRequestResponseDecls }}{{ template "Struct:ForwardDeclaration:TypesHeader" . }}{{ end }}
+  {{ range .Tables | SkipRequestResponseDecls }}{{ template "Table:ForwardDeclaration:TypesHeader" . }}{{ end }}
+  {{ range .Unions | SkipRequestResponseDecls }}{{ template "Union:ForwardDeclaration:TypesHeader" . }}{{ end }}
 
   {{- /* Resolve inline object declaration order by defining small inline structs first
     (size <= 4 so can't contain a table or a union), then tables and unions, then
     the remaining types. */}}
-  {{- range .Structs }}
+  {{- range .Structs | SkipRequestResponseDecls }}
     {{ if le .TypeShapeV2.InlineSize 4 }}{{ template "Struct:TypesHeader" . }}{{ end }}
   {{- end }}
-  {{ range .Tables }}{{ template "Table:TypesHeader" . }}{{ end }}
-  {{ range .Unions }}{{ template "Union:TypesHeader" . }}{{ end }}
+  {{ range .Tables | SkipRequestResponseDecls }}{{ template "Table:TypesHeader" . }}{{ end }}
+  {{ range .Unions | SkipRequestResponseDecls }}{{ template "Union:TypesHeader" . }}{{ end }}
   {{ range .Consts }}{{ template "Const:TypesHeader" . }}{{ end }}
-  {{ range .Structs }}
+  {{ range .Structs | SkipRequestResponseDecls }}
     {{ if gt .TypeShapeV2.InlineSize 4 }}{{ template "Struct:TypesHeader" . }}{{ end }}
   {{- end }}
 
   {{ EnsureNamespace "fidl" }}
 
   {{ range .Bits }}{{ template "Bits:Traits:TypesHeader" . }}{{ end }}
-  {{ range .Structs }}{{ template "Struct:Traits:TypesHeader" . }}{{ end }}
-  {{ range .Tables }}{{ template "Table:Traits:TypesHeader" . }}{{ end }}
-  {{ range .Unions }}{{ template "Union:Traits:TypesHeader" . }}{{ end }}
+  {{ range .Structs | SkipRequestResponseDecls }}{{ template "Struct:Traits:TypesHeader" . }}{{ end }}
+  {{ range .Tables | SkipRequestResponseDecls }}{{ template "Table:Traits:TypesHeader" . }}{{ end }}
+  {{ range .Unions | SkipRequestResponseDecls }}{{ template "Union:Traits:TypesHeader" . }}{{ end }}
   {{ range .Enums }}{{ template "Enum:Traits:TypesHeader" . }}{{ end }}
 
   {{ EndOfFile }}

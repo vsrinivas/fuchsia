@@ -38,7 +38,11 @@ pub fn get_declarations<'b>(ir: &'b FidlIr) -> Result<Vec<Decl<'b>>, Error> {
                 data: ir.interface_declarations.iter().filter(|e| e.name == *ident).next()?,
             }),
             Declaration::Struct => Some(Decl::Struct {
-                data: ir.struct_declarations.iter().filter(|e| e.name == *ident).next()?,
+                data: ir
+                    .struct_declarations
+                    .iter()
+                    .filter(|e| e.name == *ident && !e.is_request_or_response)
+                    .next()?,
             }),
             Declaration::TypeAlias => Some(Decl::TypeAlias {
                 data: ir.type_alias_declarations.iter().filter(|e| e.name == *ident).next()?,

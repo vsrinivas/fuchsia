@@ -638,9 +638,8 @@ func compile(r fidlgen.Root) *Root {
 	for _, v := range r.Structs {
 		if v.IsRequestOrResponse {
 			c.requestResponsePayload[v.Name] = v
-		} else {
-			decls[v.Name] = c.compileStruct(v)
 		}
+		decls[v.Name] = c.compileStruct(v)
 	}
 
 	for _, v := range r.Protocols {

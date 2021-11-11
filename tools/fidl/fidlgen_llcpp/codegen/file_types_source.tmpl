@@ -19,15 +19,15 @@ fidl/{{ .LibraryDots }}/cpp/wire_types.cc
     {{ template "Const:TypesSource" . }}
   {{- end }}
 
-  {{- range .Structs }}
+  {{- range .Structs | SkipRequestResponseDecls }}
     {{ template "Struct:TypesSource" . }}
   {{- end }}
 
-  {{- range .Unions }}
+  {{- range .Unions | SkipRequestResponseDecls }}
     {{ template "Union:TypesSource" . }}
   {{- end }}
 
-  {{- range .Tables }}
+  {{- range .Tables | SkipRequestResponseDecls }}
     {{ template "Table:TypesSource" . }}
   {{- end }}
 

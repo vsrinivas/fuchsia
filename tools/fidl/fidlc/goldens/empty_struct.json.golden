@@ -651,6 +651,10 @@
   "type_alias_declarations": [],
   "declaration_order": [
     "fidl.test.emptystruct/Empty",
+    "fidl.test.emptystruct/EmptyProtocolSendRequest",
+    "fidl.test.emptystruct/EmptyProtocolSendAndReceiveTopResponse",
+    "fidl.test.emptystruct/EmptyProtocolSendAndReceiveRequest",
+    "fidl.test.emptystruct/EmptyProtocolReceiveRequest",
     "fidl.test.emptystruct/EmptyProtocol"
   ],
   "declarations": {

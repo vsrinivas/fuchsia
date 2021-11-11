@@ -20,7 +20,7 @@
 {{- /* When the library name only has one component, the natural types are trivially
        available in our namespace. */}}
 {{- if not .SingleComponentLibraryName }}
-{{- range .Decls }}
+{{- range .Decls | SkipRequestResponseDecls }}
 {{- if Eq .Kind Kinds.Const }}{{ template "ConstDefinition" . }}{{- end }}
 {{- end }}
 {{- end }}

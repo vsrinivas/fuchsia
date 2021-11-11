@@ -1037,6 +1037,8 @@
   "declaration_order": [
     "fidl.test.errorsyntax/ExampleUseOfErrorSyntax_CallWhichMayFail_Response",
     "fidl.test.errorsyntax/ExampleUseOfErrorSyntax_CallWhichMayFail_Result",
+    "fidl.test.errorsyntax/ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse",
+    "fidl.test.errorsyntax/ExampleUseOfErrorSyntaxCallWhichMayFailRequest",
     "fidl.test.errorsyntax/ExampleUseOfErrorSyntax"
   ],
   "declarations": {

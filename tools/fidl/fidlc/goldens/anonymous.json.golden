@@ -1725,6 +1725,7 @@
     "fidl.test.anonymous/UnionMember",
     "fidl.test.anonymous/TableData",
     "fidl.test.anonymous/TableMember",
+    "fidl.test.anonymous/SomeProtocolSomeMethodRequest",
     "fidl.test.anonymous/SomeProtocol_SomeMethod_Error",
     "fidl.test.anonymous/Op",
     "fidl.test.anonymous/OverrideTest",
@@ -1734,6 +1735,7 @@
     "fidl.test.anonymous/BitsMember",
     "fidl.test.anonymous/SomeProtocol_SomeMethod_Response",
     "fidl.test.anonymous/SomeProtocol_SomeMethod_Result",
+    "fidl.test.anonymous/SomeProtocolSomeMethodTopResponse",
     "fidl.test.anonymous/SomeProtocol"
   ],
   "declarations": {

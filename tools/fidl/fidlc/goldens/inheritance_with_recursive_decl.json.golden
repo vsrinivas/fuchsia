@@ -502,7 +502,9 @@
   "union_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
+    "fidl.test.inheritancewithrecursivedecl/ParentFirstRequest",
     "fidl.test.inheritancewithrecursivedecl/Parent",
+    "fidl.test.inheritancewithrecursivedecl/ChildSecondRequest",
     "fidl.test.inheritancewithrecursivedecl/Child"
   ],
   "declarations": {

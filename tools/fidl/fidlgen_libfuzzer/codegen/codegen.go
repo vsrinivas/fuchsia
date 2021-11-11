@@ -54,8 +54,10 @@ func countDecoderEncoders(decls []cpp.Kinded) int {
 					count++
 				}
 			}
-		} else if _, ok := decl.(*cpp.Struct); ok {
-			count++
+		} else if s, ok := decl.(*cpp.Struct); ok {
+			if !s.IsRequestOrResponse() {
+				count++
+			}
 		} else if _, ok := decl.(*cpp.Table); ok {
 			count++
 		}

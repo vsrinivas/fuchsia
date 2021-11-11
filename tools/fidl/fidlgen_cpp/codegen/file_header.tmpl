@@ -34,7 +34,7 @@
 {{- if not .SingleComponentLibraryName }}
 
 {{- /* Bring the natural domain object types into our namespace. */}}
-{{- range .Decls }}
+{{- range .Decls | SkipRequestResponseDecls }}
 {{- if Eq .Kind Kinds.Bits }}{{ template "NaturalTypeAlias" . }}{{- end }}
 {{- if Eq .Kind Kinds.Enum }}{{ template "NaturalTypeAlias" . }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "NaturalTypeAlias" . }}{{- end }}
@@ -43,7 +43,7 @@
 {{- end }}
 
 {{- /* Constants are global variables; declare them instead. */}}
-{{- range .Decls }}
+{{- range .Decls | SkipRequestResponseDecls }}
 {{- if Eq .Kind Kinds.Const }}{{ template "ConstDeclaration" . }}{{- end }}
 {{- end }}
 

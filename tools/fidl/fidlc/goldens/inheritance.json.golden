@@ -650,6 +650,8 @@
   "union_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
+    "fidl.test.inheritance/SuperFooTopResponse",
+    "fidl.test.inheritance/SuperFooRequest",
     "fidl.test.inheritance/super",
     "fidl.test.inheritance/sub"
   ],

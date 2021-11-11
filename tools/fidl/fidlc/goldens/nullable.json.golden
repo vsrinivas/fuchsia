@@ -1192,6 +1192,8 @@
     "fidl.test.nullable/StructWithNullableProtocol",
     "fidl.test.nullable/StructWithNullableHandle",
     "fidl.test.nullable/SimpleUnion",
+    "fidl.test.nullable/SimpleProtocolAddTopResponse",
+    "fidl.test.nullable/SimpleProtocolAddRequest",
     "fidl.test.nullable/SimpleProtocol",
     "fidl.test.nullable/Int32Wrapper"
   ],

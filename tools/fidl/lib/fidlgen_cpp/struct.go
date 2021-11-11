@@ -30,11 +30,18 @@ type Struct struct {
 	TypeShapeV1 TypeShape
 	TypeShapeV2 TypeShape
 
-	isEmptyStruct bool
+	isEmptyStruct       bool
+	isRequestOrResponse bool
 }
 
 func (*Struct) Kind() declKind {
 	return Kinds.Struct
+}
+
+// IsRequestOrResponse indicates whether this struct is used as a method
+// request/response.
+func (s *Struct) IsRequestOrResponse() bool {
+	return s.isRequestOrResponse
 }
 
 var _ Kinded = (*Struct)(nil)
@@ -101,6 +108,7 @@ func (c *compiler) compileStruct(val fidlgen.Struct) *Struct {
 		BackingBufferTypeV2: computeAllocation(
 			TypeShape{val.TypeShapeV2}.MaxTotalSize(), boundednessBounded).
 			BackingBufferType(),
+		isRequestOrResponse: val.IsRequestOrResponse,
 	}
 
 	for _, v := range val.Members {

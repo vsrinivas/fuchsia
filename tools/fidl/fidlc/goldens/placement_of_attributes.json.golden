@@ -815,6 +815,7 @@
     "fidl.test.placementofattributes/ExampleEnum",
     "fidl.test.placementofattributes/ExampleBits",
     "fidl.test.placementofattributes/EXAMPLE_CONST",
+    "fidl.test.placementofattributes/ExampleProtocolMethodRequest",
     "fidl.test.placementofattributes/ExampleProtocol"
   ],
   "declarations": {

@@ -40,7 +40,7 @@
 // Domain objects definitions (i.e. "natural types" in unified bindings)
 //
 
-{{- range .Decls }}
+{{- range .Decls | SkipRequestResponseDecls }}
 {{- if Eq .Kind Kinds.Bits }}{{ template "BitsDefinition" . }}{{- end }}
 {{- if Eq .Kind Kinds.Const }}{{ template "ConstDefinition" . }}{{- end }}
 {{- if Eq .Kind Kinds.Enum }}{{ template "EnumDefinition" . }}{{- end }}
