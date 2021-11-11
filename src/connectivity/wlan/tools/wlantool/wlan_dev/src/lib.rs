@@ -10,24 +10,27 @@ use {
     fidl_fuchsia_wlan_device_service::{
         self as wlan_service, DeviceMonitorProxy, DeviceServiceProxy, QueryIfaceResponse,
     },
-    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
+    fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_minstrel::Peer,
-    fidl_fuchsia_wlan_sme::{
-        self as fidl_sme, ConnectTransactionEvent, ScanTransactionEvent, ScanTransactionEventStream,
-    },
-    fuchsia_zircon as zx,
-    futures::prelude::*,
-    hex::{FromHex, ToHex},
-    ieee80211::{Ssid, NULL_MAC_ADDR},
-    itertools::Itertools,
-    std::convert::TryFrom,
+    fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_zircon_status as zx_status,
+    fuchsia_zircon_sys as zx_sys,
+    ieee80211::NULL_MAC_ADDR,
     std::fmt,
     std::str::FromStr,
-    wlan_common::{
-        channel::{Cbw, Channel, Phy},
-        scan::ScanResult,
-        RadioConfig, StationMode,
+};
+
+#[cfg(target_os = "fuchsia")]
+use {
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
+    fidl_fuchsia_wlan_sme::{
+        ConnectTransactionEvent, ScanTransactionEvent, ScanTransactionEventStream,
     },
+    futures::prelude::*,
+    hex::{FromHex, ToHex},
+    ieee80211::Ssid,
+    itertools::Itertools,
+    std::convert::TryFrom,
+    wlan_common::scan::ScanResult,
     wlan_rsn::psk,
 };
 
@@ -45,20 +48,23 @@ pub async fn handle_wlantool_command(
     match opt {
         Opt::Phy(cmd) => do_phy(cmd, monitor_proxy).await,
         Opt::Iface(cmd) => do_iface(cmd, dev_svc_proxy, monitor_proxy).await,
-        Opt::Client(opts::ClientCmd::Connect(cmd)) | Opt::Connect(cmd) => {
-            do_client_connect(cmd, dev_svc_proxy).await
-        }
+        #[cfg(target_os = "fuchsia")]
+        Opt::Client(opts::ClientCmd::Connect(cmd)) => do_client_connect(cmd, dev_svc_proxy).await,
+        #[cfg(target_os = "fuchsia")]
+        Opt::Connect(cmd) => do_client_connect(cmd, dev_svc_proxy).await,
         Opt::Client(opts::ClientCmd::Disconnect(cmd)) | Opt::Disconnect(cmd) => {
             do_client_disconnect(cmd, dev_svc_proxy).await
         }
-        Opt::Client(opts::ClientCmd::Scan(cmd)) | Opt::Scan(cmd) => {
-            do_client_scan(cmd, dev_svc_proxy).await
-        }
+        #[cfg(target_os = "fuchsia")]
+        Opt::Client(opts::ClientCmd::Scan(cmd)) => do_client_scan(cmd, dev_svc_proxy).await,
+        #[cfg(target_os = "fuchsia")]
+        Opt::Scan(cmd) => do_client_scan(cmd, dev_svc_proxy).await,
         Opt::Client(opts::ClientCmd::WmmStatus(cmd)) | Opt::WmmStatus(cmd) => {
             do_client_wmm_status(cmd, dev_svc_proxy, &mut std::io::stdout()).await
         }
         Opt::Ap(cmd) => do_ap(cmd, dev_svc_proxy).await,
         Opt::Mesh(cmd) => do_mesh(cmd, dev_svc_proxy).await,
+        #[cfg(target_os = "fuchsia")]
         Opt::Rsn(cmd) => do_rsn(cmd).await,
         Opt::Status(cmd) => do_status(cmd, dev_svc_proxy).await,
     }
@@ -90,7 +96,10 @@ async fn do_phy(cmd: opts::PhyCmd, monitor_proxy: DeviceMonitor) -> Result<(), E
                     println!("response: \"{}\"", std::str::from_utf8(&country.alpha2[..])?);
                 }
                 Err(status) => {
-                    println!("response: Failed with status {:?}", zx::Status::from_raw(status));
+                    println!(
+                        "response: Failed with status {:?}",
+                        zx_status::Status::from_raw(status)
+                    );
                 }
             }
         }
@@ -107,20 +116,20 @@ async fn do_phy(cmd: opts::PhyCmd, monitor_proxy: DeviceMonitor) -> Result<(), E
             let mut req = wlan_service::SetCountryRequest { phy_id, alpha2 };
             let response =
                 monitor_proxy.set_country(&mut req).await.context("error setting country")?;
-            println!("response: {:?}", zx::Status::from_raw(response));
+            println!("response: {:?}", zx_status::Status::from_raw(response));
         }
         opts::PhyCmd::ClearCountry { phy_id } => {
             let mut req = wlan_service::ClearCountryRequest { phy_id };
             let response =
                 monitor_proxy.clear_country(&mut req).await.context("error clearing country")?;
-            println!("response: {:?}", zx::Status::from_raw(response));
+            println!("response: {:?}", zx_status::Status::from_raw(response));
         }
         opts::PhyCmd::SetPsMode { phy_id, mode } => {
             println!("SetPSMode: phy_id {:?} ps_mode {:?}", phy_id, mode);
             let mut req = wlan_service::SetPsModeRequest { phy_id, ps_mode: mode.into() };
             let response =
                 monitor_proxy.set_ps_mode(&mut req).await.context("error setting ps mode")?;
-            println!("response: {:?}", zx::Status::from_raw(response));
+            println!("response: {:?}", zx_status::Status::from_raw(response));
         }
         opts::PhyCmd::GetPsMode { phy_id } => {
             let result =
@@ -138,7 +147,10 @@ async fn do_phy(cmd: opts::PhyCmd, monitor_proxy: DeviceMonitor) -> Result<(), E
                     }
                 },
                 Err(status) => {
-                    println!("response: Failed with status {:?}", zx::Status::from_raw(status));
+                    println!(
+                        "response: Failed with status {:?}",
+                        zx_status::Status::from_raw(status)
+                    );
                 }
             }
         }
@@ -173,7 +185,7 @@ async fn do_iface(
 
             let response =
                 monitor_proxy.destroy_iface(&mut req).await.context("error destroying iface")?;
-            match zx::Status::ok(response) {
+            match zx_status::Status::ok(response) {
                 Ok(()) => println!("destroyed iface {:?}", iface_id),
                 Err(s) => println!("error destroying iface: {:?}", s),
             }
@@ -186,7 +198,7 @@ async fn do_iface(
             let (status, response) =
                 dev_svc_proxy.query_iface(iface_id).await.context("error querying iface")?;
             match status {
-                zx::sys::ZX_OK => {
+                zx_sys::ZX_OK => {
                     let response_str = match response {
                         Some(response) => format_iface_query_response(*response),
                         None => format!("Iface {} returns empty query response", iface_id),
@@ -205,7 +217,7 @@ async fn do_iface(
                     .await
                     .context("error getting stats for iface")?;
                 match status {
-                    zx::sys::ZX_OK => {
+                    zx_sys::ZX_OK => {
                         match resp {
                             // TODO(eyw): Implement fmt::Display
                             Some(r) => println!("Iface {}: {:#?}", iface_id, r),
@@ -256,6 +268,7 @@ async fn do_iface(
     Ok(())
 }
 
+#[cfg(target_os = "fuchsia")]
 async fn do_client_connect(
     cmd: opts::ClientConnectCmd,
     dev_svc_proxy: DeviceServiceProxy,
@@ -358,6 +371,7 @@ async fn do_client_disconnect(
         .map_err(|e| format_err!("error sending disconnect request: {}", e))
 }
 
+#[cfg(target_os = "fuchsia")]
 async fn do_client_scan(
     cmd: opts::ClientScanCmd,
     dev_svc_proxy: DeviceService,
@@ -380,7 +394,7 @@ async fn print_iface_status(iface_id: u16, dev_svc_proxy: DeviceService) -> Resu
     let (status, resp) =
         dev_svc_proxy.query_iface(iface_id).await.context("querying iface info")?;
 
-    zx::Status::ok(status)?;
+    zx_status::Status::ok(status)?;
     if resp.is_none() {
         return Err(format_err!("No response"));
     }
@@ -391,11 +405,11 @@ async fn print_iface_status(iface_id: u16, dev_svc_proxy: DeviceService) -> Resu
             match client_status_response {
                 fidl_sme::ClientStatusResponse::Connected(serving_ap_info) => {
                     println!(
-                        "Iface {}: Connected to '{}' (bssid {}) channel: {} rssi: {}dBm snr: {}dB",
+                        "Iface {}: Connected to '{}' (bssid {}) channel: {:?} rssi: {}dBm snr: {}dB",
                         iface_id,
                         String::from_utf8_lossy(&serving_ap_info.ssid),
                         MacAddr(serving_ap_info.bssid),
-                        Channel::from(serving_ap_info.channel),
+                        serving_ap_info.channel,
                         serving_ap_info.rssi_dbm,
                         serving_ap_info.snr_db,
                     );
@@ -496,7 +510,14 @@ async fn do_ap(cmd: opts::ApCmd, dev_svc_proxy: DeviceService) -> Result<(), Err
             let mut config = fidl_sme::ApConfig {
                 ssid: ssid.as_bytes().to_vec(),
                 password: password.map_or(vec![], |p| p.as_bytes().to_vec()),
-                radio_cfg: RadioConfig::new(Phy::Ht, Cbw::Cbw20, channel).to_fidl(),
+                radio_cfg: fidl_sme::RadioConfig {
+                    override_phy: true,
+                    phy: PhyArg::Ht.into(),
+                    override_channel_bandwidth: true,
+                    channel_bandwidth: CbwArg::Cbw20.into(),
+                    override_primary_channel: true,
+                    primary_channel: channel,
+                },
             };
             let r = sme.start(&mut config).await?;
             match r {
@@ -559,6 +580,7 @@ async fn do_mesh(cmd: opts::MeshCmd, dev_svc_proxy: DeviceService) -> Result<(),
     Ok(())
 }
 
+#[cfg(target_os = "fuchsia")]
 async fn do_rsn(cmd: opts::RsnCmd) -> Result<(), Error> {
     match cmd {
         opts::RsnCmd::GeneratePsk { passphrase, ssid } => {
@@ -568,6 +590,7 @@ async fn do_rsn(cmd: opts::RsnCmd) -> Result<(), Error> {
     Ok(())
 }
 
+#[cfg(target_os = "fuchsia")]
 fn generate_psk(passphrase: &str, ssid: &str) -> Result<String, Error> {
     let psk = psk::compute(passphrase.as_bytes(), &Ssid::try_from(ssid)?)?;
     let mut psk_hex = String::new();
@@ -575,6 +598,7 @@ fn generate_psk(passphrase: &str, ssid: &str) -> Result<String, Error> {
     return Ok(psk_hex);
 }
 
+#[cfg(target_os = "fuchsia")]
 fn make_credential(
     password: Option<String>,
     psk: Option<String>,
@@ -625,6 +649,7 @@ impl FromStr for MacAddr {
     }
 }
 
+#[cfg(target_os = "fuchsia")]
 async fn handle_scan_transaction(scan_txn: fidl_sme::ScanTransactionProxy) -> Result<(), Error> {
     let mut printed_header = false;
     let mut events = scan_txn.take_event_stream();
@@ -669,6 +694,7 @@ async fn handle_scan_transaction(scan_txn: fidl_sme::ScanTransactionProxy) -> Re
     Ok(())
 }
 
+#[cfg(target_os = "fuchsia")]
 fn print_scan_line(
     bssid: impl fmt::Display,
     dbm: impl fmt::Display,
@@ -680,10 +706,12 @@ fn print_scan_line(
     println!("{:17} {:>4} {:>6} {:12} {:10} {}", bssid, dbm, channel, protection, compat, ssid)
 }
 
+#[cfg(target_os = "fuchsia")]
 fn print_scan_header() {
     print_scan_line("BSSID", "dBm", "Chan", "Protection", "Compatible", "SSID");
 }
 
+#[cfg(target_os = "fuchsia")]
 fn print_scan_result(scan_result: &wlan_common::scan::ScanResult) {
     print_scan_line(
         MacAddr(scan_result.bss_description.bssid.0),
@@ -695,6 +723,7 @@ fn print_scan_result(scan_result: &wlan_common::scan::ScanResult) {
     );
 }
 
+#[cfg(target_os = "fuchsia")]
 async fn handle_connect_transaction(
     connect_txn: fidl_sme::ConnectTransactionProxy,
 ) -> Result<(), Error> {
@@ -726,32 +755,34 @@ async fn handle_connect_transaction(
 
 /// Constructs a `Result<(), Error>` from a `zx::zx_status_t` returned
 /// from one of the `get_client_sme`, `get_ap_sme`, or `get_mesh_sme`
-/// functions. In particular, when `zx::Status::from_raw(raw_status)` does
-/// not match `zx::Status::OK`, this function will attach the appropriate
-/// error message to the returned `Result`. When `zx::Status::from_raw(raw_status)`
-/// does match `zx::Status::OK`, this function returns `Ok()`.
+/// functions. In particular, when `zx_status::Status::from_raw(raw_status)` does
+/// not match `zx_status::Status::OK`, this function will attach the appropriate
+/// error message to the returned `Result`. When `zx_status::Status::from_raw(raw_status)`
+/// does match `zx_status::Status::OK`, this function returns `Ok()`.
 ///
 /// If this function returns an `Err`, it includes both a cause and a context.
 /// The cause is a readable conversion of `raw_status` based on `station_mode`
 /// and `iface_id`. The context notes the failed operation and suggests the
 /// interface be checked for support of the given `station_mode`.
 fn result_from_sme_raw_status(
-    raw_status: zx::zx_status_t,
-    station_mode: StationMode,
+    raw_status: zx_sys::zx_status_t,
+    station_mode: MacRole,
     iface_id: u16,
 ) -> Result<(), Error> {
-    match zx::Status::from_raw(raw_status) {
-        zx::Status::OK => Ok(()),
-        zx::Status::NOT_FOUND => Err(Error::msg("invalid interface id")),
-        zx::Status::NOT_SUPPORTED => Err(Error::msg("operation not supported on SME interface")),
-        zx::Status::INTERNAL => {
+    match zx_status::Status::from_raw(raw_status) {
+        zx_status::Status::OK => Ok(()),
+        zx_status::Status::NOT_FOUND => Err(Error::msg("invalid interface id")),
+        zx_status::Status::NOT_SUPPORTED => {
+            Err(Error::msg("operation not supported on SME interface"))
+        }
+        zx_status::Status::INTERNAL => {
             Err(Error::msg("internal server error sending endpoint to the SME server future"))
         }
         _ => Err(Error::msg("unrecognized error associated with SME interface")),
     }
     .context(format!(
-        "Failed to access {} for interface id {}. \
-                      Please ensure the selected iface supports {} mode.",
+        "Failed to access {:?} for interface id {}. \
+                      Please ensure the selected iface supports {:?} mode.",
         station_mode, iface_id, station_mode,
     ))
 }
@@ -765,7 +796,7 @@ async fn get_client_sme(
         .get_client_sme(iface_id, remote)
         .await
         .context("error sending GetClientSme request")?;
-    result_from_sme_raw_status(raw_status, StationMode::Client, iface_id).map(|_| proxy)
+    result_from_sme_raw_status(raw_status, MacRole::Client, iface_id).map(|_| proxy)
 }
 
 async fn get_ap_sme(
@@ -777,7 +808,7 @@ async fn get_ap_sme(
         .get_ap_sme(iface_id, remote)
         .await
         .context("error sending GetApSme request")?;
-    result_from_sme_raw_status(raw_status, StationMode::Ap, iface_id).map(|_| proxy)
+    result_from_sme_raw_status(raw_status, MacRole::Ap, iface_id).map(|_| proxy)
 }
 
 async fn get_mesh_sme(
@@ -789,7 +820,7 @@ async fn get_mesh_sme(
         .get_mesh_sme(iface_id, remote)
         .await
         .context("error sending GetMeshSme request")?;
-    result_from_sme_raw_status(raw_status, StationMode::Mesh, iface_id).map(|_| proxy)
+    result_from_sme_raw_status(raw_status, MacRole::Mesh, iface_id).map(|_| proxy)
 }
 
 async fn get_iface_ids(
@@ -813,7 +844,7 @@ async fn list_minstrel_peers(
         .get_minstrel_list(iface_id)
         .await
         .context(format!("Error getting minstrel peer list iface {}", iface_id))?;
-    if status == zx::sys::ZX_OK {
+    if status == zx_sys::ZX_OK {
         Ok(peers.addrs.into_iter().map(|v| MacAddr(v)).collect())
     } else {
         println!("Error getting minstrel peer list from iface {}: {}", iface_id, status);
@@ -833,7 +864,7 @@ async fn show_minstrel_peer_for_iface(
             .get_minstrel_stats(id, &mut peer_addr.0)
             .await
             .context(format!("Error getting minstrel stats from peer {}", peer_addr))?;
-        if status != zx::sys::ZX_OK {
+        if status != zx_sys::ZX_OK {
             println!(
                 "error getting minstrel stats for {} from iface {}: {}",
                 peer_addr, id, status
@@ -985,7 +1016,7 @@ mod tests {
                 req, responder
             }))) => {
                 assert_eq!(req.iface_id, 5);
-                responder.send(zx::Status::OK.into_raw()).expect("failed to send response");
+                responder.send(zx_status::Status::OK.into_raw()).expect("failed to send response");
             }
         );
     }
@@ -1048,7 +1079,7 @@ mod tests {
             }))) => {
                 assert_eq!(req.phy_id, 45);
                 assert_eq!(req.alpha2, "RS".as_bytes());
-                responder.send(zx::Status::OK.into_raw()).expect("failed to send response");
+                responder.send(zx_status::Status::OK.into_raw()).expect("failed to send response");
             }
         );
     }
@@ -1070,7 +1101,7 @@ mod tests {
                 req, responder,
             }))) => {
                 assert_eq!(req.phy_id, 45);
-                responder.send(zx::Status::OK.into_raw()).expect("failed to send response");
+                responder.send(zx_status::Status::OK.into_raw()).expect("failed to send response");
             }
         );
     }
@@ -1123,7 +1154,7 @@ mod tests {
             }))) => {
                 assert_eq!(req.phy_id, 45);
                 assert_eq!(req.ps_mode, PowerSaveType::FastPsMode);
-                responder.send(zx::Status::OK.into_raw()).expect("failed to send response");
+                responder.send(zx_status::Status::OK.into_raw()).expect("failed to send response");
             }
         );
     }
@@ -1145,16 +1176,16 @@ mod tests {
 
     #[test]
     fn test_result_from_sme_raw_status() {
-        let ok = result_from_sme_raw_status(zx::Status::OK.into_raw(), StationMode::Client, 0);
+        let ok = result_from_sme_raw_status(zx_status::Status::OK.into_raw(), MacRole::Client, 0);
         let not_found =
-            result_from_sme_raw_status(zx::Status::NOT_FOUND.into_raw(), StationMode::Mesh, 1);
+            result_from_sme_raw_status(zx_status::Status::NOT_FOUND.into_raw(), MacRole::Mesh, 1);
         let not_supported =
-            result_from_sme_raw_status(zx::Status::NOT_SUPPORTED.into_raw(), StationMode::Ap, 2);
+            result_from_sme_raw_status(zx_status::Status::NOT_SUPPORTED.into_raw(), MacRole::Ap, 2);
         let internal_error =
-            result_from_sme_raw_status(zx::Status::INTERNAL.into_raw(), StationMode::Client, 3);
+            result_from_sme_raw_status(zx_status::Status::INTERNAL.into_raw(), MacRole::Client, 3);
         let unrecognized_error = result_from_sme_raw_status(
-            zx::Status::INTERRUPTED_RETRY.into_raw(),
-            StationMode::Mesh,
+            zx_status::Status::INTERRUPTED_RETRY.into_raw(),
+            MacRole::Mesh,
             4,
         );
 
@@ -1220,7 +1251,7 @@ mod tests {
                     iface_id, sme, responder,
                 }))) => {
                     assert_eq!(iface_id, 11);
-                    responder.send(zx::Status::OK.into_raw()).expect("failed to send GetClientSme response");
+                    responder.send(zx_status::Status::OK.into_raw()).expect("failed to send GetClientSme response");
                     sme.into_stream().expect("sme server stream failed")
                 }
             );

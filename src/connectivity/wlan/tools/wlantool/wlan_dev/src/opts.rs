@@ -115,10 +115,12 @@ pub enum Opt {
     #[structopt(name = "client")]
     Client(ClientCmd),
     #[structopt(name = "connect")]
+    #[cfg(target_os = "fuchsia")]
     Connect(ClientConnectCmd),
     #[structopt(name = "disconnect")]
     Disconnect(ClientDisconnectCmd),
     #[structopt(name = "scan")]
+    #[cfg(target_os = "fuchsia")]
     Scan(ClientScanCmd),
     #[structopt(name = "status")]
     Status(IfaceStatusCmd),
@@ -134,6 +136,7 @@ pub enum Opt {
     Mesh(MeshCmd),
 
     #[structopt(name = "rsn")]
+    #[cfg(target_os = "fuchsia")]
     /// commands for verifying RSN behavior
     Rsn(RsnCmd),
 }
@@ -334,8 +337,10 @@ pub struct IfaceStatusCmd {
 #[derive(StructOpt, Clone, Debug)]
 pub enum ClientCmd {
     #[structopt(name = "scan")]
+    #[cfg(target_os = "fuchsia")]
     Scan(ClientScanCmd),
     #[structopt(name = "connect")]
+    #[cfg(target_os = "fuchsia")]
     Connect(ClientConnectCmd),
     #[structopt(name = "disconnect")]
     Disconnect(ClientDisconnectCmd),
