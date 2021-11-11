@@ -26,10 +26,6 @@ group("tests") {
   public_deps = [ "tests" ]
 }
 
-group("config") {
-  public_deps = [ "config:sysmgr" ]
-}
-
 source_set("lib") {
   sources = [
     "run.cc",

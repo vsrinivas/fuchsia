@@ -25,10 +25,6 @@ group("tests") {
   ]
 }
 
-group("config") {
-  public_deps = [ "intl_services:config" ]
-}
-
 resource("icudtl") {
   sources = [ "//third_party/icu/common/icudtl.dat" ]
   outputs = [ "data/icudtl.dat" ]
