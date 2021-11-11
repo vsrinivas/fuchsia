@@ -14,7 +14,7 @@ use {
     log::{error, warn},
     moniker::{
         AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase, ExtendedMoniker,
-        PartialAbsoluteMoniker, RelativeMoniker, RelativeMonikerBase,
+        PartialAbsoluteMoniker, PartialRelativeMoniker, RelativeMonikerBase,
     },
     std::sync::{Arc, Weak},
     thiserror::Error,
@@ -229,7 +229,10 @@ impl GlobalPolicyChecker {
                 }
 
                 // Otherwise linear search for any non-exact matches.
-                if entries.iter().any(|entry| allowlist_entry_matches(entry, &target_moniker)) {
+                if entries
+                    .iter()
+                    .any(|entry| allowlist_entry_matches(entry, &target_moniker.to_partial()))
+                {
                     Ok(())
                 } else {
                     warn!(
@@ -300,7 +303,7 @@ impl GlobalPolicyChecker {
             .child_policy
             .reboot_on_terminate
             .iter()
-            .any(|entry| allowlist_entry_matches(entry, &target_moniker))
+            .any(|entry| allowlist_entry_matches(entry, &target_moniker.to_partial()))
         {
             Ok(())
         } else {
@@ -314,25 +317,28 @@ impl GlobalPolicyChecker {
 
 fn allowlist_entry_matches(
     allowlist_entry: &AllowlistEntry,
-    target_moniker: &AbsoluteMoniker,
+    target_moniker: &PartialAbsoluteMoniker,
 ) -> bool {
     match allowlist_entry {
         AllowlistEntry::Exact(moniker) => {
-            // An exact absolute moniker must match exactly.
-            moniker == target_moniker
+            // An exact absolute moniker must match everything but the instance ID,
+            // which won't be deterministic in a dynamic collection of components.
+            &moniker.to_partial() == target_moniker
         }
         AllowlistEntry::Realm(realm) => {
             // For a Realm entry we are looking for the target_moniker to be
             // contained in the realm (i.e. empty up path) and the down_path to be
             // non-empty (i.e. children are allowed but not the realm itself).
-            let relative = RelativeMoniker::from_absolute(realm, &target_moniker);
+            let relative =
+                PartialRelativeMoniker::from_absolute(&realm.to_partial(), target_moniker);
             relative.up_path().is_empty() && !relative.down_path().is_empty()
         }
         AllowlistEntry::Collection(realm, collection) => {
             // For a Collection entry we are looking for the target_moniker to be
             // contained in the realm (i.e. empty up path) and that the first element of
             // the down path is in a collection with a matching name.
-            let relative = RelativeMoniker::from_absolute(realm, &target_moniker);
+            let relative =
+                PartialRelativeMoniker::from_absolute(&realm.to_partial(), target_moniker);
             relative.up_path().is_empty()
                 && relative
                     .down_path()
@@ -371,7 +377,7 @@ impl ScopedPolicyChecker {
             .job_policy
             .ambient_mark_vmo_exec
             .iter()
-            .any(|entry| allowlist_entry_matches(entry, &self.moniker))
+            .any(|entry| allowlist_entry_matches(entry, &self.moniker.to_partial()))
         {
             Ok(())
         } else {
@@ -389,7 +395,7 @@ impl ScopedPolicyChecker {
             .job_policy
             .main_process_critical
             .iter()
-            .any(|entry| allowlist_entry_matches(entry, &self.moniker))
+            .any(|entry| allowlist_entry_matches(entry, &self.moniker.to_partial()))
         {
             Ok(())
         } else {
@@ -407,7 +413,7 @@ impl ScopedPolicyChecker {
             .job_policy
             .create_raw_processes
             .iter()
-            .any(|entry| allowlist_entry_matches(entry, &self.moniker))
+            .any(|entry| allowlist_entry_matches(entry, &self.moniker.to_partial()))
         {
             Ok(())
         } else {
@@ -438,20 +444,26 @@ mod tests {
         let disallowed_child_of_allowed = AbsoluteMoniker::from(vec!["foo:0", "bar:0", "baz:0"]);
         let disallowed = AbsoluteMoniker::from(vec!["baz:0", "fiz:0"]);
         let allowlist_exact = AllowlistEntry::Exact(allowed.clone());
-        assert!(allowlist_entry_matches(&allowlist_exact, &allowed));
-        assert!(!allowlist_entry_matches(&allowlist_exact, &root));
-        assert!(!allowlist_entry_matches(&allowlist_exact, &disallowed));
-        assert!(!allowlist_entry_matches(&allowlist_exact, &disallowed_child_of_allowed));
+        assert!(allowlist_entry_matches(&allowlist_exact, &allowed.to_partial()));
+        assert!(!allowlist_entry_matches(&allowlist_exact, &root.to_partial()));
+        assert!(!allowlist_entry_matches(&allowlist_exact, &disallowed.to_partial()));
+        assert!(!allowlist_entry_matches(
+            &allowlist_exact,
+            &disallowed_child_of_allowed.to_partial()
+        ));
 
         let allowed_realm_root = AbsoluteMoniker::from(vec!["qux:0"]);
         let allowed_child_of_realm = AbsoluteMoniker::from(vec!["qux:0", "quux:0"]);
         let allowed_nested_child_of_realm = AbsoluteMoniker::from(vec!["qux:0", "quux:0", "foo:0"]);
         let allowlist_realm = AllowlistEntry::Realm(allowed_realm_root.clone());
-        assert!(!allowlist_entry_matches(&allowlist_realm, &allowed_realm_root));
-        assert!(allowlist_entry_matches(&allowlist_realm, &allowed_child_of_realm));
-        assert!(allowlist_entry_matches(&allowlist_realm, &allowed_nested_child_of_realm));
-        assert!(!allowlist_entry_matches(&allowlist_realm, &disallowed));
-        assert!(!allowlist_entry_matches(&allowlist_realm, &root));
+        assert!(!allowlist_entry_matches(&allowlist_realm, &allowed_realm_root.to_partial()));
+        assert!(allowlist_entry_matches(&allowlist_realm, &allowed_child_of_realm.to_partial()));
+        assert!(allowlist_entry_matches(
+            &allowlist_realm,
+            &allowed_nested_child_of_realm.to_partial()
+        ));
+        assert!(!allowlist_entry_matches(&allowlist_realm, &disallowed.to_partial()));
+        assert!(!allowlist_entry_matches(&allowlist_realm, &root.to_partial()));
 
         let collection_holder = AbsoluteMoniker::from(vec!["corge:0"]);
         let collection_child = AbsoluteMoniker::from(vec!["corge:0", "collection:child:0"]);
@@ -460,12 +472,18 @@ mod tests {
         let non_collection_child = AbsoluteMoniker::from(vec!["corge:0", "grault:0"]);
         let allowlist_collection =
             AllowlistEntry::Collection(collection_holder.clone(), "collection".into());
-        assert!(!allowlist_entry_matches(&allowlist_collection, &collection_holder));
-        assert!(allowlist_entry_matches(&allowlist_collection, &collection_child));
-        assert!(allowlist_entry_matches(&allowlist_collection, &collection_nested_child));
-        assert!(!allowlist_entry_matches(&allowlist_collection, &non_collection_child));
-        assert!(!allowlist_entry_matches(&allowlist_collection, &disallowed));
-        assert!(!allowlist_entry_matches(&allowlist_collection, &root));
+        assert!(!allowlist_entry_matches(&allowlist_collection, &collection_holder.to_partial()));
+        assert!(allowlist_entry_matches(&allowlist_collection, &collection_child.to_partial()));
+        assert!(allowlist_entry_matches(
+            &allowlist_collection,
+            &collection_nested_child.to_partial()
+        ));
+        assert!(!allowlist_entry_matches(
+            &allowlist_collection,
+            &non_collection_child.to_partial()
+        ));
+        assert!(!allowlist_entry_matches(&allowlist_collection, &disallowed.to_partial()));
+        assert!(!allowlist_entry_matches(&allowlist_collection, &root.to_partial()));
     }
 
     #[test]
