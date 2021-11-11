@@ -1,0 +1,26 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_test.gni")
+
+rustc_test("bin") {
+  name = "rust_sample_realm"
+
+  deps = [
+    # [START realm_builder_dep_rust]
+    "//src/lib/fuchsia-component-test",
+
+    # [END realm_builder_dep_rust]
+
+    "//examples/components/routing/fidl:echo-rustc",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+
+  sources = [ "src/lib.rs" ]
+}

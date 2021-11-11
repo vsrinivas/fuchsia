@@ -1,0 +1,50 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":package" ]
+}
+
+fuchsia_component("cpp-component") {
+  testonly = true
+  manifest = "cpp/meta/sample_realm.cml"
+  component_name = "cpp"
+  deps = [ "cpp:bin" ]
+}
+
+fuchsia_component("rust-component") {
+  testonly = true
+  manifest = "rust/meta/sample_realm.cml"
+  component_name = "rust"
+  deps = [ "rust:bin" ]
+}
+
+fuchsia_component("echo_client_component") {
+  component_name = "echo_client"
+  manifest = "meta/echo_client.cml"
+  deps = [ "//examples/components/routing/echo_client" ]
+}
+
+fuchsia_component("echo_client_legacy_component") {
+  component_name = "echo_client"
+  manifest = "meta/echo_client.cmx"
+  deps = [ "//examples/components/routing/echo_client" ]
+}
+
+# Run with `fx test realm-builder-examples`.
+fuchsia_test_package("package") {
+  package_name = "realm-builder-examples"
+  test_components = [
+    ":rust-component",
+    ":cpp-component",
+  ]
+
+  deps = [
+    ":echo_client_component",
+    ":echo_client_legacy_component",
+  ]
+}

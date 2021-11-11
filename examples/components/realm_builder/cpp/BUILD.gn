@@ -1,0 +1,25 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+
+test("bin") {
+  output_name = "cpp_sample_realm"
+
+  deps = [
+    # [START realm_builder_dep_cpp]
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+
+    # [END realm_builder_dep_cpp]
+    "//examples/components/routing/fidl:echo",
+    "//garnet/public/lib/gtest",
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+
+  sources = [ "sample.cc" ]
+}

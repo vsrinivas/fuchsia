@@ -40,6 +40,7 @@ group("cmx_allowlist") {
   visibility = [
     "//build/components/tests/*",
     "//build/dart/tests/*",
+    "//examples/components/realm_builder/*",
     "//examples/dart/*",
     "//examples/diagnostics/inspect/codelab/dart/*",
     "//examples/drivers/dotmatrix_display/*",

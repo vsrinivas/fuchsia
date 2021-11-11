@@ -1,0 +1,16 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/echo_client",
+        "args": [
+            "Hello Fuchsia!"
+        ]
+    },
+    "sandbox": {
+        "services": [
+            "fidl.examples.routing.echo.Echo"
+        ]
+    }
+}

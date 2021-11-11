@@ -1,0 +1,20 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    // [START include_shard_cpp]
+    include: [
+        "//src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
+
+        // [START_EXCLUDE]
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "syslog/client.shard.cml",
+
+        // [END_EXCLUDE]
+    ],
+
+    // [END include_shard_cpp]
+    program: {
+        binary: "test/cpp_sample_realm",
+    },
+}
