@@ -200,68 +200,6 @@ reserved!(
     ]
 );
 
-// This macro is purely a utility fo validating that all the values in the given `$one_or_many` are
-// of a given type.
-macro_rules! match_one_or_many_value {
-    ($one_or_many:ident, $variant:pat) => {
-        match $one_or_many {
-            OneOrMany::One($variant) => true,
-            OneOrMany::Many(values) => values.iter().all(|value| matches!(value, $variant)),
-            _ => false,
-        }
-    };
-}
-
-impl Identifier {
-    /// Validates that all the values are of a type that can be used in an operation with this
-    /// identifier.
-    fn can_be_used_with_value_type(&self, value: &OneOrMany<Value<'_>>) -> bool {
-        match (self, value) {
-            (Identifier::Filename | Identifier::LifecycleEventType | Identifier::Tags, value) => {
-                match_one_or_many_value!(value, Value::StringLiteral(_))
-            }
-            // TODO(fxbug.dev/86960): similar to severities, we can probably have reserved values
-            // for lifecycle event types.
-            // TODO(fxbug.dev/86961): support time diferences (1h30m, 30s, etc) instead of only
-            // timestamp comparison.
-            (
-                Identifier::Pid | Identifier::Tid | Identifier::LineNumber | Identifier::Timestamp,
-                value,
-            ) => {
-                match_one_or_many_value!(value, Value::Number(_))
-            }
-            // TODO(fxbug.dev/86962): it should also be possible to compare severities with a fixed
-            // set of numbers.
-            (Identifier::Severity, value) => {
-                match_one_or_many_value!(value, Value::Severity(_))
-            }
-        }
-    }
-
-    /// Validates that this identifier can be used in an operation defined by the given `operator`.
-    fn can_be_used_with_operator(&self, operator: &Operator) -> bool {
-        match (self, &operator) {
-            (
-                Identifier::Filename
-                | Identifier::LifecycleEventType
-                | Identifier::Pid
-                | Identifier::Tid
-                | Identifier::LineNumber
-                | Identifier::Severity,
-                Operator::Comparison(ComparisonOperator::Equal)
-                | Operator::Comparison(ComparisonOperator::NotEq)
-                | Operator::Inclusion(InclusionOperator::In),
-            ) => true,
-            (Identifier::Severity | Identifier::Timestamp, Operator::Comparison(_)) => true,
-            (
-                Identifier::Tags,
-                Operator::Inclusion(InclusionOperator::HasAny | InclusionOperator::HasAll),
-            ) => true,
-            _ => false,
-        }
-    }
-}
-
 /// Parses an input containing any number and type of whitespace at the front.
 fn spaced<'a, E, F, O>(parser: F) -> impl Fn(&'a str) -> IResult<&'a str, O, E>
 where
@@ -326,18 +264,14 @@ fn list_of_values(input: &str) -> IResult<&str, Vec<Value<'_>>> {
 /// Parses a single filter expression in a metadata selector.
 fn filter_expression(input: &str) -> IResult<&str, FilterExpression<'_>> {
     let (rest, identifier) = spaced(identifier)(input)?;
-    let (rest, op) =
-        verify(spaced(operator), |op| identifier.can_be_used_with_operator(&op))(rest)?;
+    let (rest, op) = spaced(operator)(rest)?;
     let (rest, op) = map_opt(
-        verify(
-            spaced(alt((
-                map(number, move |n| OneOrMany::One(Value::Number(n))),
-                map(severity_sym, move |s| OneOrMany::One(Value::Severity(s))),
-                map(string_literal, move |s| OneOrMany::One(Value::StringLiteral(s))),
-                map(list_of_values, OneOrMany::Many),
-            ))),
-            |value| identifier.can_be_used_with_value_type(value),
-        ),
+        spaced(alt((
+            map(number, move |n| OneOrMany::One(Value::Number(n))),
+            map(severity_sym, move |s| OneOrMany::One(Value::Severity(s))),
+            map(string_literal, move |s| OneOrMany::One(Value::StringLiteral(s))),
+            map(list_of_values, OneOrMany::Many),
+        ))),
         move |one_or_many| Operation::maybe_new(op, one_or_many),
     )(rest)?;
     Ok((rest, FilterExpression { identifier, op }))
@@ -904,13 +838,20 @@ mod tests {
         assert!(list_of_values("[]").is_err());
     }
 
+    macro_rules! test_filter_expr {
+        ($filter:expr) => {
+            selector(&format!("foo:bar where {}", $filter))
+                .map(|result| result.metadata.unwrap().0.into_iter().next().unwrap())
+        };
+    }
+
     #[fuchsia::test]
     fn parse_filter_expression() {
         let expected = FilterExpression {
             identifier: Identifier::Pid,
             op: Operation::Comparison(ComparisonOperator::Equal, Value::Number(123)),
         };
-        assert_eq!(Ok(("", expected)), filter_expression("pid = 123"));
+        assert_eq!(expected, test_filter_expr!("pid = 123").unwrap());
 
         let expected = FilterExpression {
             identifier: Identifier::Severity,
@@ -919,11 +860,11 @@ mod tests {
                 Value::Severity(Severity::Info),
             ),
         };
-        assert_eq!(Ok(("", expected)), filter_expression("severity>=info"));
+        assert_eq!(expected, test_filter_expr!("severity>=info").unwrap());
 
         // All three operands are required
-        assert!(filter_expression("tid >").is_err());
-        assert!(filter_expression("!= 3").is_err());
+        assert!(test_filter_expr!("tid >").is_err());
+        assert!(test_filter_expr!("!= 3").is_err());
 
         // The inclusion operator HAS can be used with lists and single values.
         let expected = FilterExpression {
@@ -933,13 +874,13 @@ mod tests {
                 vec![Value::StringLiteral("foo"), Value::StringLiteral("bar")],
             ),
         };
-        assert_eq!(Ok(("", expected)), filter_expression("tags HAS ANY [\"foo\", \"bar\"]"));
+        assert_eq!(expected, test_filter_expr!("tags HAS ANY [\"foo\", \"bar\"]").unwrap());
 
         let expected = FilterExpression {
             identifier: Identifier::Tags,
             op: Operation::Inclusion(InclusionOperator::HasAny, vec![Value::StringLiteral("foo")]),
         };
-        assert_eq!(Ok(("", expected)), filter_expression("tags has any \"foo\""));
+        assert_eq!(expected, test_filter_expr!("tags has any \"foo\"").unwrap());
 
         // The inclusion operator IN can only be used with lists.
         let expected = FilterExpression {
@@ -950,10 +891,10 @@ mod tests {
             ),
         };
         assert_eq!(
-            Ok(("", expected)),
-            filter_expression("lifecycle_event_type in [\"started\", \"stopped\"]")
+            expected,
+            test_filter_expr!("lifecycle_event_type in [\"started\", \"stopped\"]").unwrap()
         );
-        assert!(filter_expression("pid in 123").is_err());
+        assert!(test_filter_expr!("pid in 123").is_err());
     }
 
     #[fuchsia::test]
@@ -962,26 +903,26 @@ mod tests {
             identifier: Identifier::Filename,
             op: Operation::Inclusion(InclusionOperator::In, vec![Value::StringLiteral("foo.rs")]),
         };
-        assert_eq!(Ok(("", expected)), filter_expression("filename in [\"foo.rs\"]"));
+        assert_eq!(expected, test_filter_expr!("filename in [\"foo.rs\"]").unwrap());
 
         let expected = FilterExpression {
             identifier: Identifier::Filename,
             op: Operation::Comparison(ComparisonOperator::Equal, Value::StringLiteral("foo.rs")),
         };
-        assert_eq!(Ok(("", expected)), filter_expression("filename = \"foo.rs\""));
+        assert_eq!(expected, test_filter_expr!("filename = \"foo.rs\"").unwrap());
 
         let expected = FilterExpression {
             identifier: Identifier::Filename,
             op: Operation::Comparison(ComparisonOperator::NotEq, Value::StringLiteral("foo.rs")),
         };
-        assert_eq!(Ok(("", expected)), filter_expression("filename != \"foo.rs\""));
+        assert_eq!(expected, test_filter_expr!("filename != \"foo.rs\"").unwrap());
 
-        assert!(filter_expression("filename > \"foo.rs\"").is_err());
-        assert!(filter_expression("filename < \"foo.rs\"").is_err());
-        assert!(filter_expression("filename >= \"foo.rs\"").is_err());
-        assert!(filter_expression("filename <= \"foo.rs\"").is_err());
-        assert!(filter_expression("filename has any [\"foo.rs\"]").is_err());
-        assert!(filter_expression("filename has all [\"foo.rs\"]").is_err());
+        assert!(test_filter_expr!("filename > \"foo.rs\"").is_err());
+        assert!(test_filter_expr!("filename < \"foo.rs\"").is_err());
+        assert!(test_filter_expr!("filename >= \"foo.rs\"").is_err());
+        assert!(test_filter_expr!("filename <= \"foo.rs\"").is_err());
+        assert!(test_filter_expr!("filename has any [\"foo.rs\"]").is_err());
+        assert!(test_filter_expr!("filename has all [\"foo.rs\"]").is_err());
     }
 
     #[fuchsia::test]
@@ -990,29 +931,29 @@ mod tests {
             identifier: Identifier::LifecycleEventType,
             op: Operation::Inclusion(InclusionOperator::In, vec![Value::StringLiteral("stopped")]),
         };
-        assert_eq!(Ok(("", expected)), filter_expression("lifecycle_event_type in [\"stopped\"]"));
+        assert_eq!(expected, test_filter_expr!("lifecycle_event_type in [\"stopped\"]").unwrap());
 
         let expected = FilterExpression {
             identifier: Identifier::LifecycleEventType,
             op: Operation::Comparison(ComparisonOperator::Equal, Value::StringLiteral("stopped")),
         };
-        assert_eq!(Ok(("", expected)), filter_expression("lifecycle_event_type = \"stopped\""));
+        assert_eq!(expected, test_filter_expr!("lifecycle_event_type = \"stopped\"").unwrap());
 
         let expected = FilterExpression {
             identifier: Identifier::LifecycleEventType,
             op: Operation::Comparison(ComparisonOperator::NotEq, Value::StringLiteral("stopped")),
         };
-        assert_eq!(Ok(("", expected)), filter_expression("lifecycle_event_type != \"stopped\""));
+        assert_eq!(expected, test_filter_expr!("lifecycle_event_type != \"stopped\"").unwrap());
 
-        assert!(filter_expression("lifecycle_event_type > \"stopped\"").is_err());
-        assert!(filter_expression("lifecycle_event_type < \"started\"").is_err());
-        assert!(filter_expression("lifecycle_event_type >= \"diagnostics_ready\"").is_err());
-        assert!(filter_expression("lifecycle_event_type <= \"log_sink_connected\"").is_err());
+        assert!(test_filter_expr!("lifecycle_event_type > \"stopped\"").is_err());
+        assert!(test_filter_expr!("lifecycle_event_type < \"started\"").is_err());
+        assert!(test_filter_expr!("lifecycle_event_type >= \"diagnostics_ready\"").is_err());
+        assert!(test_filter_expr!("lifecycle_event_type <= \"log_sink_connected\"").is_err());
         assert!(
-            filter_expression("lifecycle_event_type has all [\"started\", \"stopped\"]").is_err()
+            test_filter_expr!("lifecycle_event_type has all [\"started\", \"stopped\"]").is_err()
         );
         assert!(
-            filter_expression("lifecycle_event_type has any [\"started\", \"stopped\"]").is_err()
+            test_filter_expr!("lifecycle_event_type has any [\"started\", \"stopped\"]").is_err()
         );
     }
 
@@ -1031,31 +972,28 @@ mod tests {
                 ),
             };
             assert_eq!(
-                Ok(("", expected)),
-                filter_expression(&format!("{} in [100, 200]", identifier_str))
+                expected,
+                test_filter_expr!(&format!("{} in [100, 200]", identifier_str)).unwrap()
             );
 
             let expected = FilterExpression {
                 identifier: identifier.clone(),
                 op: Operation::Comparison(ComparisonOperator::Equal, Value::Number(123)),
             };
-            assert_eq!(Ok(("", expected)), filter_expression(&format!("{} = 123", identifier_str)));
+            assert_eq!(expected, test_filter_expr!(&format!("{} = 123", identifier_str)).unwrap());
 
             let expected = FilterExpression {
                 identifier: identifier.clone(),
                 op: Operation::Comparison(ComparisonOperator::NotEq, Value::Number(123)),
             };
-            assert_eq!(
-                Ok(("", expected)),
-                filter_expression(&format!("{} != 123", identifier_str))
-            );
+            assert_eq!(expected, test_filter_expr!(&format!("{} != 123", identifier_str)).unwrap());
 
-            assert!(filter_expression(&format!("{} > 1", identifier_str)).is_err());
-            assert!(filter_expression(&format!("{} < 2", identifier_str)).is_err());
-            assert!(filter_expression(&format!("{} >= 3", identifier_str)).is_err());
-            assert!(filter_expression(&format!("{} <= 4", identifier_str)).is_err());
-            assert!(filter_expression(&format!("{} has any [5, 6]", identifier_str)).is_err());
-            assert!(filter_expression(&format!("{} has all [5, 6]", identifier_str)).is_err());
+            assert!(test_filter_expr!(&format!("{} > 1", identifier_str)).is_err());
+            assert!(test_filter_expr!(&format!("{} < 2", identifier_str)).is_err());
+            assert!(test_filter_expr!(&format!("{} >= 3", identifier_str)).is_err());
+            assert!(test_filter_expr!(&format!("{} <= 4", identifier_str)).is_err());
+            assert!(test_filter_expr!(&format!("{} has any [5, 6]", identifier_str)).is_err());
+            assert!(test_filter_expr!(&format!("{} has all [5, 6]", identifier_str)).is_err());
         }
     }
 
@@ -1072,18 +1010,18 @@ mod tests {
                 ),
             };
             assert_eq!(
-                Ok(("", expected)),
-                filter_expression(&format!("tags {} [\"a\", \"b\"]", operator_str))
+                expected,
+                test_filter_expr!(&format!("tags {} [\"a\", \"b\"]", operator_str)).unwrap()
             );
         }
 
-        assert!(filter_expression("tags > \"a\"").is_err());
-        assert!(filter_expression("tags < \"b\"").is_err());
-        assert!(filter_expression("tags >= \"c\"").is_err());
-        assert!(filter_expression("tags <= \"d\"").is_err());
-        assert!(filter_expression("tags = \"e\"").is_err());
-        assert!(filter_expression("tags != \"f\"").is_err());
-        assert!(filter_expression("tags in [\"g\", \"h\"]").is_err());
+        assert!(test_filter_expr!("tags > \"a\"").is_err());
+        assert!(test_filter_expr!("tags < \"b\"").is_err());
+        assert!(test_filter_expr!("tags >= \"c\"").is_err());
+        assert!(test_filter_expr!("tags <= \"d\"").is_err());
+        assert!(test_filter_expr!("tags = \"e\"").is_err());
+        assert!(test_filter_expr!("tags != \"f\"").is_err());
+        assert!(test_filter_expr!("tags in [\"g\", \"h\"]").is_err());
     }
 
     #[fuchsia::test]
@@ -1101,13 +1039,13 @@ mod tests {
                 op: Operation::Comparison(operator, Value::Number(123)),
             };
             assert_eq!(
-                Ok(("", expected)),
-                filter_expression(&format!("timestamp {} 123", operator_str))
+                expected,
+                test_filter_expr!(&format!("timestamp {} 123", operator_str)).unwrap()
             );
         }
-        assert!(filter_expression("timestamp in [1, 2]").is_err());
-        assert!(filter_expression("timestamp has any [3, 4]").is_err());
-        assert!(filter_expression("timestamp has all [5, 6]").is_err());
+        assert!(test_filter_expr!("timestamp in [1, 2]").is_err());
+        assert!(test_filter_expr!("timestamp has any [3, 4]").is_err());
+        assert!(test_filter_expr!("timestamp has all [5, 6]").is_err());
     }
 
     #[fuchsia::test]
@@ -1125,8 +1063,8 @@ mod tests {
                 op: Operation::Comparison(operator, Value::Severity(Severity::Info)),
             };
             assert_eq!(
-                Ok(("", expected)),
-                filter_expression(&format!("severity {} info", operator_str))
+                expected,
+                test_filter_expr!(&format!("severity {} info", operator_str)).unwrap()
             );
         }
 
@@ -1137,10 +1075,10 @@ mod tests {
                 vec![Value::Severity(Severity::Info), Value::Severity(Severity::Error)],
             ),
         };
-        assert_eq!(Ok(("", expected)), filter_expression("severity in [info, error]"));
+        assert_eq!(expected, test_filter_expr!("severity in [info, error]").unwrap());
 
-        assert!(filter_expression("severity has any [info, error]").is_err());
-        assert!(filter_expression("severity has all [warn]").is_err());
+        assert!(test_filter_expr!("severity has any [info, error]").is_err());
+        assert!(test_filter_expr!("severity has all [warn]").is_err());
     }
 
     #[fuchsia::test]
@@ -1149,9 +1087,9 @@ mod tests {
             identifier: Identifier::Severity,
             op: Operation::Comparison(ComparisonOperator::Equal, Value::Severity(Severity::Info)),
         };
-        assert_eq!(Ok(("", expected)), filter_expression("severity = info"));
-        assert!(filter_expression("severity = 2").is_err());
-        assert!(filter_expression("severity = \"info\"").is_err());
+        assert_eq!(expected, test_filter_expr!("severity = info").unwrap());
+        assert!(test_filter_expr!("severity = 2").is_err());
+        assert!(test_filter_expr!("severity = \"info\"").is_err());
     }
 
     #[fuchsia::test]
@@ -1166,9 +1104,9 @@ mod tests {
                 identifier,
                 op: Operation::Comparison(ComparisonOperator::Equal, Value::Number(42)),
             };
-            assert_eq!(Ok(("", expected)), filter_expression(&format!("{} = 42", name)));
-            assert!(filter_expression(&format!("{} = info", name)).is_err());
-            assert!(filter_expression(&format!("{} = \"42\"", name)).is_err());
+            assert_eq!(expected, test_filter_expr!(&format!("{} = 42", name)).unwrap());
+            assert!(test_filter_expr!(&format!("{} = info", name)).is_err());
+            assert!(test_filter_expr!(&format!("{} = \"42\"", name)).is_err());
         }
     }
 
@@ -1182,9 +1120,9 @@ mod tests {
                 identifier,
                 op: Operation::Comparison(ComparisonOperator::Equal, Value::StringLiteral("foo")),
             };
-            assert_eq!(Ok(("", expected)), filter_expression(&format!("{} = \"foo\"", name)));
-            assert!(filter_expression(&format!("{} = info", name)).is_err());
-            assert!(filter_expression(&format!("{} = 42", name)).is_err());
+            assert_eq!(expected, test_filter_expr!(&format!("{} = \"foo\"", name)).unwrap());
+            assert!(test_filter_expr!(&format!("{} = info", name)).is_err());
+            assert!(test_filter_expr!(&format!("{} = 42", name)).is_err());
         }
 
         let expected = FilterExpression {
@@ -1194,9 +1132,9 @@ mod tests {
                 vec![Value::StringLiteral("a"), Value::StringLiteral("b")],
             ),
         };
-        assert_eq!(Ok(("", expected)), filter_expression("tags has any [\"a\", \"b\"]"));
-        assert!(filter_expression("tags has any [info, error]").is_err());
-        assert!(filter_expression("tags has any [2, 3]").is_err());
+        assert_eq!(expected, test_filter_expr!("tags has any [\"a\", \"b\"]").unwrap());
+        assert!(test_filter_expr!("tags has any [info, error]").is_err());
+        assert!(test_filter_expr!("tags has any [2, 3]").is_err());
     }
 
     #[fuchsia::test]

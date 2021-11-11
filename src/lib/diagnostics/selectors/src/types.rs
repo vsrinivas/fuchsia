@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use fidl_fuchsia_diagnostics as fdiagnostics;
-use std::borrow::Cow;
+use std::{borrow::Cow, fmt::Debug};
 
 /// Severity
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -27,6 +27,68 @@ pub enum Identifier {
     Tags,
     Tid,
     Timestamp,
+}
+
+// This macro is purely a utility fo validating that all the values in the given `$one_or_many` are
+// of a given type.
+macro_rules! match_one_or_many_value {
+    ($one_or_many:ident, $variant:pat) => {
+        match $one_or_many {
+            OneOrMany::One($variant) => true,
+            OneOrMany::Many(values) => values.iter().all(|value| matches!(value, $variant)),
+            _ => false,
+        }
+    };
+}
+
+impl Identifier {
+    /// Validates that all the values are of a type that can be used in an operation with this
+    /// identifier.
+    pub(crate) fn can_be_used_with_value_type(&self, value: &OneOrMany<Value<'_>>) -> bool {
+        match (self, value) {
+            (Identifier::Filename | Identifier::LifecycleEventType | Identifier::Tags, value) => {
+                match_one_or_many_value!(value, Value::StringLiteral(_))
+            }
+            // TODO(fxbug.dev/86960): similar to severities, we can probably have reserved values
+            // for lifecycle event types.
+            // TODO(fxbug.dev/86961): support time diferences (1h30m, 30s, etc) instead of only
+            // timestamp comparison.
+            (
+                Identifier::Pid | Identifier::Tid | Identifier::LineNumber | Identifier::Timestamp,
+                value,
+            ) => {
+                match_one_or_many_value!(value, Value::Number(_))
+            }
+            // TODO(fxbug.dev/86962): it should also be possible to compare severities with a fixed
+            // set of numbers.
+            (Identifier::Severity, value) => {
+                match_one_or_many_value!(value, Value::Severity(_))
+            }
+        }
+    }
+
+    /// Validates that this identifier can be used in an operation defined by the given `operator`.
+    pub(crate) fn can_be_used_with_operator(&self, operator: &Operator) -> bool {
+        match (self, &operator) {
+            (
+                Identifier::Filename
+                | Identifier::LifecycleEventType
+                | Identifier::Pid
+                | Identifier::Tid
+                | Identifier::LineNumber
+                | Identifier::Severity,
+                Operator::Comparison(ComparisonOperator::Equal)
+                | Operator::Comparison(ComparisonOperator::NotEq)
+                | Operator::Inclusion(InclusionOperator::In),
+            ) => true,
+            (Identifier::Severity | Identifier::Timestamp, Operator::Comparison(_)) => true,
+            (
+                Identifier::Tags,
+                Operator::Inclusion(InclusionOperator::HasAny | InclusionOperator::HasAll),
+            ) => true,
+            _ => false,
+        }
+    }
 }
 
 /// Supported comparison operators.
@@ -56,11 +118,28 @@ pub enum Operator {
 }
 
 /// Accepted right-hand-side values that can be used in an operation.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Value<'a> {
     Severity(Severity),
     StringLiteral(&'a str),
     Number(u64),
+}
+
+impl Value<'_> {
+    fn ty(&self) -> ValueType {
+        match self {
+            Value::Severity(_) => ValueType::Severity,
+            Value::StringLiteral(_) => ValueType::StringLiteral,
+            Value::Number(_) => ValueType::Number,
+        }
+    }
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum ValueType {
+    Severity,
+    StringLiteral,
+    Number,
 }
 
 /// A valid operation and the right hand side of it.
@@ -71,9 +150,19 @@ pub enum Operation<'a> {
 }
 
 /// Holds a single value or a vector of values of type `T`.
-pub(crate) enum OneOrMany<T> {
+#[derive(Debug)]
+pub enum OneOrMany<T: Debug> {
     One(T),
     Many(Vec<T>),
+}
+
+impl OneOrMany<Value<'_>> {
+    pub(crate) fn ty(&self) -> OneOrMany<ValueType> {
+        match self {
+            Self::One(value) => OneOrMany::One(value.ty()),
+            Self::Many(values) => OneOrMany::Many(values.into_iter().map(|v| v.ty()).collect()),
+        }
+    }
 }
 
 impl<'a> Operation<'a> {
@@ -105,13 +194,33 @@ pub struct FilterExpression<'a> {
     pub op: Operation<'a>,
 }
 
+impl FilterExpression<'_> {
+    pub(crate) fn operator(&self) -> Operator {
+        match self.op {
+            Operation::Comparison(operator, _) => Operator::Comparison(operator.clone()),
+            Operation::Inclusion(operator, _) => Operator::Inclusion(operator.clone()),
+        }
+    }
+
+    pub(crate) fn value(&self) -> OneOrMany<Value<'_>> {
+        match &self.op {
+            Operation::Comparison(_, value) => OneOrMany::One(value.clone()),
+            Operation::Inclusion(_, values) => OneOrMany::Many(values.clone()),
+        }
+    }
+}
+
 /// Represents a  metadata selector, which consists of a list of filters.
 #[derive(Debug, Eq, PartialEq)]
-pub struct MetadataSelector<'a>(Vec<FilterExpression<'a>>);
+pub struct MetadataSelector<'a>(pub(crate) Vec<FilterExpression<'a>>);
 
 impl<'a> MetadataSelector<'a> {
     pub fn new(filters: Vec<FilterExpression<'a>>) -> Self {
         Self(filters)
+    }
+
+    pub fn filters(&self) -> &[FilterExpression<'a>] {
+        self.0.as_slice()
     }
 }
 

@@ -24,12 +24,18 @@ pub trait ValidateTreeSelectorExt {
     fn validate(&self) -> Result<(), ValidationError>;
 }
 
+pub trait ValidateMetadataSelectorExt {
+    fn validate(&self) -> Result<(), ValidationError>;
+}
+
 pub trait Selector {
     type Component: ComponentSelector;
     type Tree: TreeSelector;
+    type Metadata: MetadataSelector;
 
     fn component(&self) -> Option<&Self::Component>;
     fn tree(&self) -> Option<&Self::Tree>;
+    fn metadata(&self) -> Option<&Self::Metadata>;
 }
 
 pub trait ComponentSelector {
@@ -42,6 +48,10 @@ pub trait TreeSelector {
 
     fn node_path(&self) -> Option<&[Self::Segment]>;
     fn property(&self) -> Option<&Self::Segment>;
+}
+
+pub trait MetadataSelector {
+    fn filters(&self) -> &[types::FilterExpression<'_>];
 }
 
 pub trait StringSelector {
@@ -59,7 +69,9 @@ impl<T: Selector> ValidateExt for T {
             (None, _) => return Err(ValidationError::MissingComponentSelector),
             (_, None) => return Err(ValidationError::MissingTreeSelector),
         }
-        // TODO(fxbug.dev/55118): validate metadata
+        if let Some(metadata) = self.metadata() {
+            metadata.validate()?;
+        }
         Ok(())
     }
 }
@@ -90,6 +102,25 @@ impl<T: TreeSelector> ValidateTreeSelectorExt for T {
         }
         if let Some(segment) = self.property() {
             segment.validate(StringSelectorValidationOpts::default())?;
+        }
+        Ok(())
+    }
+}
+
+impl<T: MetadataSelector> ValidateMetadataSelectorExt for T {
+    fn validate(&self) -> Result<(), ValidationError> {
+        for filter in self.filters() {
+            let operator = filter.operator();
+            let value = filter.value();
+            if !filter.identifier.can_be_used_with_operator(&operator) {
+                return Err(ValidationError::InvalidOperator(filter.identifier.clone(), operator));
+            }
+            if !filter.identifier.can_be_used_with_value_type(&value) {
+                return Err(ValidationError::InvalidValueType(
+                    filter.identifier.clone(),
+                    value.ty(),
+                ));
+            }
         }
         Ok(())
     }
@@ -163,6 +194,8 @@ fn validate_pattern(pattern: &str) -> Result<(), ValidationError> {
 impl Selector for fdiagnostics::Selector {
     type Component = fdiagnostics::ComponentSelector;
     type Tree = fdiagnostics::TreeSelector;
+    // TODO(fxbug.dev/55118): placeholder implementation until we have metadata in the FIDL API.
+    type Metadata = ();
 
     fn component(&self) -> Option<&Self::Component> {
         self.component_selector.as_ref()
@@ -170,6 +203,17 @@ impl Selector for fdiagnostics::Selector {
 
     fn tree(&self) -> Option<&Self::Tree> {
         self.tree_selector.as_ref()
+    }
+
+    fn metadata(&self) -> Option<&Self::Metadata> {
+        // TODO(fxbug.dev/55118): placeholder implementation until we have metadata in the FIDL API.
+        None
+    }
+}
+
+impl MetadataSelector for () {
+    fn filters(&self) -> &[types::FilterExpression<'_>] {
+        unreachable!("placholder impl. Metadata FIDL not implemented yet")
     }
 }
 
@@ -220,6 +264,7 @@ impl StringSelector for fdiagnostics::StringSelector {
 impl<'a> Selector for types::Selector<'a> {
     type Component = types::ComponentSelector<'a>;
     type Tree = types::TreeSelector<'a>;
+    type Metadata = types::MetadataSelector<'a>;
 
     fn component(&self) -> Option<&Self::Component> {
         Some(&self.component)
@@ -227,6 +272,10 @@ impl<'a> Selector for types::Selector<'a> {
 
     fn tree(&self) -> Option<&Self::Tree> {
         Some(&self.tree)
+    }
+
+    fn metadata(&self) -> Option<&Self::Metadata> {
+        self.metadata.as_ref()
     }
 }
 
@@ -247,6 +296,12 @@ impl<'a> TreeSelector for types::TreeSelector<'a> {
 
     fn property(&self) -> Option<&Self::Segment> {
         self.property.as_ref()
+    }
+}
+
+impl<'a> MetadataSelector for types::MetadataSelector<'a> {
+    fn filters(&self) -> &[types::FilterExpression<'a>] {
+        self.filters()
     }
 }
 
