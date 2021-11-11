@@ -80,6 +80,7 @@ constexpr aml_sdmmc_config_t sd_emmc_config = {
     .max_freq = 208'000'000,  // 208MHz
     .version_3 = true,
     .prefs = 0,
+    .use_new_tuning = true,
 };
 
 constexpr wifi_config_t wifi_config = {
