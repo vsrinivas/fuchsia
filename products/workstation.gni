@@ -21,7 +21,7 @@ base_package_labels += [
   "//src/fonts:open-fonts-collection",
   "//src/graphics/bin/vulkan_loader",
   "//src/identity/bin:password_authenticator_only",
-  "//src/intl/intl_services:config",
+  "//src/intl/intl_services/config:sysmgr",
   "//src/intl/intl_services:pkg",
   "//src/media/audio/bundles:services",
   "//src/media/audio/drivers/configurator",

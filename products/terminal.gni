@@ -14,7 +14,7 @@ base_package_labels += [
   "//src/ui/scenic:configs",
   "//src/fonts",
   "//src/graphics/bin/vulkan_loader",
-  "//src/intl/intl_services:config",
+  "//src/intl/intl_services/config:sysmgr",
   "//src/intl/intl_services:pkg",
   "//src/ui/a11y",
 
