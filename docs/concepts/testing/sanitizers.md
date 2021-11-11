@@ -138,7 +138,7 @@ their [heap allocations][rust-heap]. To LeakSanitizer this is indistinguishable
 from a real memory leak.
 
 If this issue affects your test then you can disable it in sanitizer builds by
-following [this example][fxr-597361-mock-node].
+following [this example][fxr605381].
 
 See: [Issue 88496: Rust tests that should_panic trigger leaksanitizer][fxb88496]
 
@@ -266,7 +266,7 @@ See also: [sanitizers in the 2021 roadmap][sanitizers-2021-roadmap].
 [fxb]: https://bugs.fuchsia.dev/p/fuchsia/issues/list
 [fxb73214]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=73214
 [fxb88496]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=88496
-[fxr-597361-mock-node]: https://fuchsia-review.googlesource.com/c/fuchsia/+/597361/7/src/power/power-manager/src/test/mock_node.rs
+[fxr605381]: https://fuchsia-review.googlesource.com/c/fuchsia/+/605381/
 [kasan]: /zircon/kernel/lib/instrumentation/asan/README.md
 [lockdep]: /docs/concepts/kernel/lockdep.md
 [llvm-asan]: https://clang.llvm.org/docs/AddressSanitizer.html
