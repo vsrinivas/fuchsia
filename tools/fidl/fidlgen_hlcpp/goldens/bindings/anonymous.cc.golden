@@ -1656,10 +1656,10 @@ void SomeProtocol_SomeMethod_Result::EnsureStorageInitialized(
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_anonymous_SomeProtocolSomeMethodRequestTable;
+    fidl_test_anonymous_SomeProtocolSomeMethodRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_anonymous_SomeProtocolSomeMethodResponseTable;
+    fidl_test_anonymous_SomeProtocolSomeMethodResponseMessageTable;
 
 }  // namespace _internal
 SomeProtocol::~SomeProtocol() = default;
@@ -1670,7 +1670,7 @@ const fidl_type_t* ::fidl::test::anonymous::SomeProtocol_RequestDecoder::
     case ::fidl::test::anonymous::internal::kSomeProtocol_SomeMethod_Ordinal:
       *out_needs_response = true;
       return &::fidl::test::anonymous::_internal::
-          fidl_test_anonymous_SomeProtocolSomeMethodRequestTable;
+          fidl_test_anonymous_SomeProtocolSomeMethodRequestMessageTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -1681,7 +1681,7 @@ const fidl_type_t* SomeProtocol_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case ::fidl::test::anonymous::internal::kSomeProtocol_SomeMethod_Ordinal:
       return &::fidl::test::anonymous::_internal::
-          fidl_test_anonymous_SomeProtocolSomeMethodResponseTable;
+          fidl_test_anonymous_SomeProtocolSomeMethodResponseMessageTable;
     default:
       return nullptr;
   }
@@ -1728,7 +1728,7 @@ SomeProtocol_SomeMethod_ResponseHandler(
         return ZX_OK;
       },
       &::fidl::test::anonymous::_internal::
-          fidl_test_anonymous_SomeProtocolSomeMethodResponseTable);
+          fidl_test_anonymous_SomeProtocolSomeMethodResponseMessageTable);
 }
 
 }  // namespace
@@ -1740,7 +1740,7 @@ void SomeProtocol_Proxy::SomeMethod(
       ::fidl::test::anonymous::internal::kSomeProtocol_SomeMethod_Ordinal);
   controller_->Send(
       &::fidl::test::anonymous::_internal::
-          fidl_test_anonymous_SomeProtocolSomeMethodRequestTable,
+          fidl_test_anonymous_SomeProtocolSomeMethodRequestMessageTable,
       ::fidl::test::anonymous::SomeProtocol_RequestEncoder::SomeMethod(
           &_encoder, &union_member, &table_member),
       SomeProtocol_SomeMethod_ResponseHandler(std::move(callback)));
@@ -1767,7 +1767,7 @@ class SomeProtocol_SomeMethod_Responder final {
         ::fidl::test::anonymous::internal::kSomeProtocol_SomeMethod_Ordinal);
     response_.Send(
         &::fidl::test::anonymous::_internal::
-            fidl_test_anonymous_SomeProtocolSomeMethodResponseTable,
+            fidl_test_anonymous_SomeProtocolSomeMethodResponseMessageTable,
         ::fidl::test::anonymous::SomeProtocol_ResponseEncoder::SomeMethod(
             &_encoder, &result));
   }
@@ -1837,9 +1837,9 @@ zx_status_t SomeProtocol_SyncProxy::SomeMethod(
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
       &::fidl::test::anonymous::_internal::
-          fidl_test_anonymous_SomeProtocolSomeMethodRequestTable,
+          fidl_test_anonymous_SomeProtocolSomeMethodRequestMessageTable,
       &::fidl::test::anonymous::_internal::
-          fidl_test_anonymous_SomeProtocolSomeMethodResponseTable,
+          fidl_test_anonymous_SomeProtocolSomeMethodResponseMessageTable,
       ::fidl::test::anonymous::SomeProtocol_RequestEncoder::SomeMethod(
           &_encoder, &union_member, &table_member),
       &response_);

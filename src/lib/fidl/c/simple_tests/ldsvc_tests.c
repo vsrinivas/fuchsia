@@ -237,8 +237,8 @@ TEST(LdsvcTests, ldmsg_functions_are_consistent) {
     done_req.header.ordinal = fuchsia_ldsvc_LoaderDoneOrdinal;
     ldmsg_req_encode(&done_req, &req_len_out, NULL, 0);
     const char* err_msg = NULL;
-    zx_status_t res = fidl_decode_etc(&fuchsia_ldsvc_LoaderDoneRequestTable, (void*)&done_req,
-                                      (uint32_t)req_len_out, NULL, 0, &err_msg);
+    zx_status_t res = fidl_decode_etc(&fuchsia_ldsvc_LoaderDoneRequestMessageTable,
+                                      (void*)&done_req, (uint32_t)req_len_out, NULL, 0, &err_msg);
     EXPECT_EQ(ZX_OK, res, "fidl_decode_etc return value not ZX_OK");
     EXPECT_EQ(err_msg, NULL, "%s", err_msg);
     // Don't bother with the round-trip here because there is no data to
@@ -246,9 +246,9 @@ TEST(LdsvcTests, ldmsg_functions_are_consistent) {
   }
 
   check_string_round_trip(fuchsia_ldsvc_LoaderLoadObjectOrdinal,
-                          &fuchsia_ldsvc_LoaderLoadObjectRequestTable);
+                          &fuchsia_ldsvc_LoaderLoadObjectRequestMessageTable);
   check_string_round_trip(fuchsia_ldsvc_LoaderConfigOrdinal,
-                          &fuchsia_ldsvc_LoaderConfigRequestTable);
+                          &fuchsia_ldsvc_LoaderConfigRequestMessageTable);
 }
 
 static zx_status_t validate_reply(fidl_txn_t* txn, const fidl_outgoing_msg_t* msg) {

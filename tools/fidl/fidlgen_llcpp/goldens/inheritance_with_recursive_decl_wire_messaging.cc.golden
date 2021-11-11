@@ -9,10 +9,10 @@ namespace fidl_test_inheritancewithrecursivedecl {
     3051519745671742363lu;
 
 extern "C" const fidl_type_t
-    fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable;
+    fidl_test_inheritancewithrecursivedecl_ParentFirstRequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_inheritancewithrecursivedecl_ParentFirstResponseTable;
+    fidl_test_inheritancewithrecursivedecl_ParentFirstResponseMessageTable;
 #ifdef __Fuchsia__
 }  // namespace fidl_test_inheritancewithrecursivedecl
 ::fidl::WireResult<::fidl_test_inheritancewithrecursivedecl::Parent::First>::
@@ -185,19 +185,19 @@ namespace fidl_test_inheritancewithrecursivedecl {
     3051519745671742363lu;
 
 extern "C" const fidl_type_t
-    fidl_test_inheritancewithrecursivedecl_ChildFirstRequestTable;
+    fidl_test_inheritancewithrecursivedecl_ChildFirstRequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_inheritancewithrecursivedecl_ChildFirstResponseTable;
+    fidl_test_inheritancewithrecursivedecl_ChildFirstResponseMessageTable;
 
 [[maybe_unused]] constexpr uint64_t kChild_Second_Ordinal =
     489667253787160198lu;
 
 extern "C" const fidl_type_t
-    fidl_test_inheritancewithrecursivedecl_ChildSecondRequestTable;
+    fidl_test_inheritancewithrecursivedecl_ChildSecondRequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_inheritancewithrecursivedecl_ChildSecondResponseTable;
+    fidl_test_inheritancewithrecursivedecl_ChildSecondResponseMessageTable;
 #ifdef __Fuchsia__
 }  // namespace fidl_test_inheritancewithrecursivedecl
 ::fidl::WireResult<::fidl_test_inheritancewithrecursivedecl::Child::First>::

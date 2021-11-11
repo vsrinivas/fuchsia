@@ -30,10 +30,10 @@ class MultiHeterogeneousMemberService;
 class EmptyService;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_service_SecondProtocolMethodOnSecondRequestTable;
+    fidl_test_service_SecondProtocolMethodOnSecondRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_service_SecondProtocolMethodOnSecondResponseTable;
+    fidl_test_service_SecondProtocolMethodOnSecondResponseMessageTable;
 
 }  // namespace fidl_test_service
 #ifdef __Fuchsia__
@@ -369,10 +369,10 @@ class ::fidl::WireServer<::fidl_test_service::SecondProtocol>
 
 namespace fidl_test_service {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_service_FirstProtocolMethodOnFirstRequestTable;
+    fidl_test_service_FirstProtocolMethodOnFirstRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_service_FirstProtocolMethodOnFirstResponseTable;
+    fidl_test_service_FirstProtocolMethodOnFirstResponseMessageTable;
 
 }  // namespace fidl_test_service
 #ifdef __Fuchsia__

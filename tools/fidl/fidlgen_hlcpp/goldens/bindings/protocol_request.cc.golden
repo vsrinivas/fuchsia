@@ -18,22 +18,22 @@ namespace test {
 namespace protocolrequest {
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocolrequest_ParentGetChildRequestTable;
+    fidl_test_protocolrequest_ParentGetChildRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocolrequest_ParentGetChildResponseTable;
+    fidl_test_protocolrequest_ParentGetChildResponseMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocolrequest_ParentGetChildRequestRequestTable;
+    fidl_test_protocolrequest_ParentGetChildRequestRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocolrequest_ParentGetChildRequestResponseTable;
+    fidl_test_protocolrequest_ParentGetChildRequestResponseMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocolrequest_ParentTakeChildRequestTable;
+    fidl_test_protocolrequest_ParentTakeChildRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocolrequest_ParentTakeChildRequestRequestTable;
+    fidl_test_protocolrequest_ParentTakeChildRequestRequestMessageTable;
 
 }  // namespace _internal
 Parent::~Parent() = default;
@@ -44,21 +44,21 @@ const fidl_type_t* ::fidl::test::protocolrequest::Parent_RequestDecoder::
     case ::fidl::test::protocolrequest::internal::kParent_GetChild_Ordinal:
       *out_needs_response = true;
       return &::fidl::test::protocolrequest::_internal::
-          fidl_test_protocolrequest_ParentGetChildRequestTable;
+          fidl_test_protocolrequest_ParentGetChildRequestMessageTable;
     case ::fidl::test::protocolrequest::internal::
         kParent_GetChildRequest_Ordinal:
       *out_needs_response = true;
       return &::fidl::test::protocolrequest::_internal::
-          fidl_test_protocolrequest_ParentGetChildRequestRequestTable;
+          fidl_test_protocolrequest_ParentGetChildRequestRequestMessageTable;
     case ::fidl::test::protocolrequest::internal::kParent_TakeChild_Ordinal:
       *out_needs_response = false;
       return &::fidl::test::protocolrequest::_internal::
-          fidl_test_protocolrequest_ParentTakeChildRequestTable;
+          fidl_test_protocolrequest_ParentTakeChildRequestMessageTable;
     case ::fidl::test::protocolrequest::internal::
         kParent_TakeChildRequest_Ordinal:
       *out_needs_response = false;
       return &::fidl::test::protocolrequest::_internal::
-          fidl_test_protocolrequest_ParentTakeChildRequestRequestTable;
+          fidl_test_protocolrequest_ParentTakeChildRequestRequestMessageTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -69,11 +69,11 @@ const fidl_type_t* Parent_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case ::fidl::test::protocolrequest::internal::kParent_GetChild_Ordinal:
       return &::fidl::test::protocolrequest::_internal::
-          fidl_test_protocolrequest_ParentGetChildResponseTable;
+          fidl_test_protocolrequest_ParentGetChildResponseMessageTable;
     case ::fidl::test::protocolrequest::internal::
         kParent_GetChildRequest_Ordinal:
       return &::fidl::test::protocolrequest::_internal::
-          fidl_test_protocolrequest_ParentGetChildRequestResponseTable;
+          fidl_test_protocolrequest_ParentGetChildRequestResponseMessageTable;
     default:
       return nullptr;
   }
@@ -118,7 +118,7 @@ Parent_GetChild_ResponseHandler(Parent::GetChildCallback&& callback) {
         return ZX_OK;
       },
       &::fidl::test::protocolrequest::_internal::
-          fidl_test_protocolrequest_ParentGetChildResponseTable);
+          fidl_test_protocolrequest_ParentGetChildResponseMessageTable);
 }
 
 }  // namespace
@@ -127,7 +127,7 @@ void Parent_Proxy::GetChild(GetChildCallback callback) {
       ::fidl::test::protocolrequest::internal::kParent_GetChild_Ordinal);
   controller_->Send(
       &::fidl::test::protocolrequest::_internal::
-          fidl_test_protocolrequest_ParentGetChildRequestTable,
+          fidl_test_protocolrequest_ParentGetChildRequestMessageTable,
       ::fidl::test::protocolrequest::Parent_RequestEncoder::GetChild(&_encoder),
       Parent_GetChild_ResponseHandler(std::move(callback)));
 }
@@ -149,7 +149,7 @@ Parent_GetChildRequest_ResponseHandler(
         return ZX_OK;
       },
       &::fidl::test::protocolrequest::_internal::
-          fidl_test_protocolrequest_ParentGetChildRequestResponseTable);
+          fidl_test_protocolrequest_ParentGetChildRequestResponseMessageTable);
 }
 
 }  // namespace
@@ -158,7 +158,7 @@ void Parent_Proxy::GetChildRequest(GetChildRequestCallback callback) {
       ::fidl::test::protocolrequest::internal::kParent_GetChildRequest_Ordinal);
   controller_->Send(
       &::fidl::test::protocolrequest::_internal::
-          fidl_test_protocolrequest_ParentGetChildRequestRequestTable,
+          fidl_test_protocolrequest_ParentGetChildRequestRequestMessageTable,
       ::fidl::test::protocolrequest::Parent_RequestEncoder::GetChildRequest(
           &_encoder),
       Parent_GetChildRequest_ResponseHandler(std::move(callback)));
@@ -169,7 +169,7 @@ void Parent_Proxy::TakeChild(
       ::fidl::test::protocolrequest::internal::kParent_TakeChild_Ordinal);
   controller_->Send(
       &::fidl::test::protocolrequest::_internal::
-          fidl_test_protocolrequest_ParentTakeChildRequestTable,
+          fidl_test_protocolrequest_ParentTakeChildRequestMessageTable,
       ::fidl::test::protocolrequest::Parent_RequestEncoder::TakeChild(&_encoder,
                                                                       &c),
       nullptr);
@@ -180,7 +180,7 @@ void Parent_Proxy::TakeChildRequest(
                                kParent_TakeChildRequest_Ordinal);
   controller_->Send(
       &::fidl::test::protocolrequest::_internal::
-          fidl_test_protocolrequest_ParentTakeChildRequestRequestTable,
+          fidl_test_protocolrequest_ParentTakeChildRequestRequestMessageTable,
       ::fidl::test::protocolrequest::Parent_RequestEncoder::TakeChildRequest(
           &_encoder, &r),
       nullptr);
@@ -207,7 +207,7 @@ class Parent_GetChild_Responder final {
         ::fidl::test::protocolrequest::internal::kParent_GetChild_Ordinal);
     response_.Send(
         &::fidl::test::protocolrequest::_internal::
-            fidl_test_protocolrequest_ParentGetChildResponseTable,
+            fidl_test_protocolrequest_ParentGetChildResponseMessageTable,
         ::fidl::test::protocolrequest::Parent_ResponseEncoder::GetChild(
             &_encoder, &c));
   }
@@ -227,7 +227,7 @@ class Parent_GetChildRequest_Responder final {
                                  kParent_GetChildRequest_Ordinal);
     response_.Send(
         &::fidl::test::protocolrequest::_internal::
-            fidl_test_protocolrequest_ParentGetChildRequestResponseTable,
+            fidl_test_protocolrequest_ParentGetChildRequestResponseMessageTable,
         ::fidl::test::protocolrequest::Parent_ResponseEncoder::GetChildRequest(
             &_encoder, &r));
   }
@@ -313,9 +313,9 @@ zx_status_t Parent_SyncProxy::GetChild(
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
       &::fidl::test::protocolrequest::_internal::
-          fidl_test_protocolrequest_ParentGetChildRequestTable,
+          fidl_test_protocolrequest_ParentGetChildRequestMessageTable,
       &::fidl::test::protocolrequest::_internal::
-          fidl_test_protocolrequest_ParentGetChildResponseTable,
+          fidl_test_protocolrequest_ParentGetChildResponseMessageTable,
       ::fidl::test::protocolrequest::Parent_RequestEncoder::GetChild(&_encoder),
       &response_);
   if (status_ != ZX_OK) return status_;
@@ -334,9 +334,9 @@ zx_status_t Parent_SyncProxy::GetChildRequest(
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
       &::fidl::test::protocolrequest::_internal::
-          fidl_test_protocolrequest_ParentGetChildRequestRequestTable,
+          fidl_test_protocolrequest_ParentGetChildRequestRequestMessageTable,
       &::fidl::test::protocolrequest::_internal::
-          fidl_test_protocolrequest_ParentGetChildRequestResponseTable,
+          fidl_test_protocolrequest_ParentGetChildRequestResponseMessageTable,
       ::fidl::test::protocolrequest::Parent_RequestEncoder::GetChildRequest(
           &_encoder),
       &response_);
@@ -354,7 +354,7 @@ zx_status_t Parent_SyncProxy::TakeChild(
       ::fidl::test::protocolrequest::internal::kParent_TakeChild_Ordinal);
   return proxy_.Send(
       &::fidl::test::protocolrequest::_internal::
-          fidl_test_protocolrequest_ParentTakeChildRequestTable,
+          fidl_test_protocolrequest_ParentTakeChildRequestMessageTable,
       ::fidl::test::protocolrequest::Parent_RequestEncoder::TakeChild(&_encoder,
                                                                       &c));
 }
@@ -365,7 +365,7 @@ zx_status_t Parent_SyncProxy::TakeChildRequest(
                                kParent_TakeChildRequest_Ordinal);
   return proxy_.Send(
       &::fidl::test::protocolrequest::_internal::
-          fidl_test_protocolrequest_ParentTakeChildRequestRequestTable,
+          fidl_test_protocolrequest_ParentTakeChildRequestRequestMessageTable,
       ::fidl::test::protocolrequest::Parent_RequestEncoder::TakeChildRequest(
           &_encoder, &r));
 }

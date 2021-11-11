@@ -18,10 +18,10 @@ namespace test {
 namespace foreigntypeinresponseusedthroughcompose {
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestTable;
+    fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseTable;
+    fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseMessageTable;
 
 }  // namespace _internal
 Top::~Top() = default;
@@ -33,7 +33,7 @@ const fidl_type_t* ::fidl::test::foreigntypeinresponseusedthroughcompose::
         kTop_GetFoo_Ordinal:
       *out_needs_response = true;
       return &::fidl::test::foreigntypeinresponseusedthroughcompose::_internal::
-          fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestTable;
+          fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestMessageTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -45,7 +45,7 @@ const fidl_type_t* Top_ResponseDecoder::GetType(uint64_t ordinal) {
     case ::fidl::test::foreigntypeinresponseusedthroughcompose::internal::
         kTop_GetFoo_Ordinal:
       return &::fidl::test::foreigntypeinresponseusedthroughcompose::_internal::
-          fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseTable;
+          fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseMessageTable;
     default:
       return nullptr;
   }
@@ -86,7 +86,7 @@ Top_GetFoo_ResponseHandler(Top::GetFooCallback&& callback) {
         return ZX_OK;
       },
       &::fidl::test::foreigntypeinresponseusedthroughcompose::_internal::
-          fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseTable);
+          fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseMessageTable);
 }
 
 }  // namespace
@@ -96,7 +96,7 @@ void Top_Proxy::GetFoo(GetFooCallback callback) {
           kTop_GetFoo_Ordinal);
   controller_->Send(
       &::fidl::test::foreigntypeinresponseusedthroughcompose::_internal::
-          fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestTable,
+          fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestMessageTable,
       ::fidl::test::foreigntypeinresponseusedthroughcompose::
           Top_RequestEncoder::GetFoo(&_encoder),
       Top_GetFoo_ResponseHandler(std::move(callback)));
@@ -124,7 +124,7 @@ class Top_GetFoo_Responder final {
             kTop_GetFoo_Ordinal);
     response_.Send(
         &::fidl::test::foreigntypeinresponseusedthroughcompose::_internal::
-            fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseTable,
+            fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseMessageTable,
         ::fidl::test::foreigntypeinresponseusedthroughcompose::
             Top_ResponseEncoder::GetFoo(&_encoder, &foo));
   }
@@ -188,9 +188,9 @@ zx_status_t Top_SyncProxy::GetFoo(::bottom::Foo* out_foo) {
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
       &::fidl::test::foreigntypeinresponseusedthroughcompose::_internal::
-          fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestTable,
+          fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestMessageTable,
       &::fidl::test::foreigntypeinresponseusedthroughcompose::_internal::
-          fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseTable,
+          fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseMessageTable,
       ::fidl::test::foreigntypeinresponseusedthroughcompose::
           Top_RequestEncoder::GetFoo(&_encoder),
       &response_);

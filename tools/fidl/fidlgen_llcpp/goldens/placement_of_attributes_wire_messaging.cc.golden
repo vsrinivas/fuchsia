@@ -9,10 +9,10 @@ namespace fidl_test_placementofattributes {
     2341079615635566980lu;
 
 extern "C" const fidl_type_t
-    fidl_test_placementofattributes_ExampleProtocolMethodRequestTable;
+    fidl_test_placementofattributes_ExampleProtocolMethodRequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_placementofattributes_ExampleProtocolMethodResponseTable;
+    fidl_test_placementofattributes_ExampleProtocolMethodResponseMessageTable;
 #ifdef __Fuchsia__
 }  // namespace fidl_test_placementofattributes
 ::fidl::WireResult<::fidl_test_placementofattributes::ExampleProtocol::Method>::

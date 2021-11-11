@@ -320,9 +320,11 @@ void Example_foo_Result::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 #ifdef __Fuchsia__
 
 namespace _internal {
-__LOCAL extern "C" const fidl_type_t fidl_test_error_ExamplefooRequestTable;
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_error_ExamplefooRequestMessageTable;
 
-__LOCAL extern "C" const fidl_type_t fidl_test_error_ExamplefooResponseTable;
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_error_ExamplefooResponseMessageTable;
 
 }  // namespace _internal
 Example::~Example() = default;
@@ -333,7 +335,7 @@ const fidl_type_t* ::fidl::test::error::Example_RequestDecoder::GetType(
     case ::fidl::test::error::internal::kExample_foo_Ordinal:
       *out_needs_response = true;
       return &::fidl::test::error::_internal::
-          fidl_test_error_ExamplefooRequestTable;
+          fidl_test_error_ExamplefooRequestMessageTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -344,7 +346,7 @@ const fidl_type_t* Example_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case ::fidl::test::error::internal::kExample_foo_Ordinal:
       return &::fidl::test::error::_internal::
-          fidl_test_error_ExamplefooResponseTable;
+          fidl_test_error_ExamplefooResponseMessageTable;
     default:
       return nullptr;
   }
@@ -386,14 +388,16 @@ Example_foo_ResponseHandler(Example::fooCallback&& callback) {
             &decoder, 16));
         return ZX_OK;
       },
-      &::fidl::test::error::_internal::fidl_test_error_ExamplefooResponseTable);
+      &::fidl::test::error::_internal::
+          fidl_test_error_ExamplefooResponseMessageTable);
 }
 
 }  // namespace
 void Example_Proxy::foo(::std::string s, fooCallback callback) {
   ::fidl::Encoder _encoder(::fidl::test::error::internal::kExample_foo_Ordinal);
   controller_->Send(
-      &::fidl::test::error::_internal::fidl_test_error_ExamplefooRequestTable,
+      &::fidl::test::error::_internal::
+          fidl_test_error_ExamplefooRequestMessageTable,
       ::fidl::test::error::Example_RequestEncoder::foo(&_encoder, &s),
       Example_foo_ResponseHandler(std::move(callback)));
 }
@@ -418,7 +422,7 @@ class Example_foo_Responder final {
         ::fidl::test::error::internal::kExample_foo_Ordinal);
     response_.Send(
         &::fidl::test::error::_internal::
-            fidl_test_error_ExamplefooResponseTable,
+            fidl_test_error_ExamplefooResponseMessageTable,
         ::fidl::test::error::Example_ResponseEncoder::foo(&_encoder, &result));
   }
 
@@ -481,8 +485,10 @@ zx_status_t Example_SyncProxy::foo(
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
-      &::fidl::test::error::_internal::fidl_test_error_ExamplefooRequestTable,
-      &::fidl::test::error::_internal::fidl_test_error_ExamplefooResponseTable,
+      &::fidl::test::error::_internal::
+          fidl_test_error_ExamplefooRequestMessageTable,
+      &::fidl::test::error::_internal::
+          fidl_test_error_ExamplefooResponseMessageTable,
       ::fidl::test::error::Example_RequestEncoder::foo(&_encoder, &s),
       &response_);
   if (status_ != ZX_OK) return status_;

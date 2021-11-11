@@ -89,14 +89,15 @@ TEST_F(LoggerTest, LogMessage) {
 
   std::unique_ptr<uint8_t[]> data_buf;
   uint32_t data_size;
-  ASSERT_NO_FATAL_FAILURES(DecodeMessage(local_, fuchsia_driver_test_logger_LoggerLogMessageOrdinal,
-                                         &fuchsia_driver_test_logger_LoggerLogMessageRequestTable,
-                                         &data_buf, &data_size),
-                           "could not decode message");
-  ASSERT_GE(data_size, sizeof(fuchsia_driver_test_logger_LoggerLogMessageRequest));
+  ASSERT_NO_FATAL_FAILURES(
+      DecodeMessage(local_, fuchsia_driver_test_logger_LoggerLogMessageOrdinal,
+                    &fuchsia_driver_test_logger_LoggerLogMessageRequestMessageTable, &data_buf,
+                    &data_size),
+      "could not decode message");
+  ASSERT_GE(data_size, sizeof(fuchsia_driver_test_logger_LoggerLogMessageRequestMessage));
 
   auto request =
-      reinterpret_cast<fuchsia_driver_test_logger_LoggerLogMessageRequest*>(data_buf.get());
+      reinterpret_cast<fuchsia_driver_test_logger_LoggerLogMessageRequestMessage*>(data_buf.get());
   ASSERT_EQ(strlen(kLogMessage), request->msg.size);
   ASSERT_EQ(0, strncmp(kLogMessage, request->msg.data, request->msg.size));
 }
@@ -108,13 +109,13 @@ void ValidateReceivedTestCase(const zx::channel& log_ch,
   uint32_t data_size;
   ASSERT_NO_FATAL_FAILURES(
       DecodeMessage(log_ch, fuchsia_driver_test_logger_LoggerLogTestCaseOrdinal,
-                    &fuchsia_driver_test_logger_LoggerLogTestCaseRequestTable, &data_buf,
+                    &fuchsia_driver_test_logger_LoggerLogTestCaseRequestMessageTable, &data_buf,
                     &data_size),
       "could not decode message");
-  ASSERT_GE(data_size, sizeof(fuchsia_driver_test_logger_LoggerLogTestCaseRequest));
+  ASSERT_GE(data_size, sizeof(fuchsia_driver_test_logger_LoggerLogTestCaseRequestMessage));
 
   auto request =
-      reinterpret_cast<fuchsia_driver_test_logger_LoggerLogTestCaseRequest*>(data_buf.get());
+      reinterpret_cast<fuchsia_driver_test_logger_LoggerLogTestCaseRequestMessage*>(data_buf.get());
   ASSERT_EQ(strlen(kFakeTestCaseName), request->name.size);
   ASSERT_EQ(0, strncmp(kFakeTestCaseName, request->name.data, request->name.size));
 

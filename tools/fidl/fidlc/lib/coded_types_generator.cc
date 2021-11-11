@@ -385,8 +385,6 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
     }
     case flat::Decl::Kind::kStruct: {
       auto struct_decl = static_cast<const flat::Struct*>(decl);
-      if (struct_decl->is_request_or_response)
-        break;
       coded::StructType* coded_struct =
           static_cast<coded::StructType*>(named_coded_types_[decl->name].get());
       std::vector<coded::StructElement>& struct_elements = coded_struct->elements;
@@ -565,8 +563,6 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
     }
     case flat::Decl::Kind::kStruct: {
       auto struct_decl = static_cast<const flat::Struct*>(decl);
-      if (struct_decl->is_request_or_response)
-        break;
       std::string struct_name = NameCodedName(struct_decl->name);
       auto typeshape_v1 = struct_decl->typeshape(WireFormat::kV1NoEe);
       auto typeshape_v2 = struct_decl->typeshape(WireFormat::kV2);

@@ -22,16 +22,16 @@ class Interface;
 class Service;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_doccomments_InterfaceMethodRequestTable;
+    fidl_test_doccomments_InterfaceMethodRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_doccomments_InterfaceMethodResponseTable;
+    fidl_test_doccomments_InterfaceMethodResponseMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_doccomments_InterfaceOnEventRequestTable;
+    fidl_test_doccomments_InterfaceOnEventRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_doccomments_InterfaceOnEventEventTable;
+    fidl_test_doccomments_InterfaceOnEventEventMessageTable;
 
 }  // namespace fidl_test_doccomments
 #ifdef __Fuchsia__

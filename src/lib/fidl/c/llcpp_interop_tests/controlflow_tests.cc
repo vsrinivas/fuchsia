@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/test/llcpp/controlflow/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
@@ -23,7 +24,6 @@
 #include <utility>
 
 #include <fbl/vector.h>
-#include <fidl/test/llcpp/controlflow/c/fidl.h>
 #include <zxtest/zxtest.h>
 
 // Interface under test
@@ -178,7 +178,7 @@ TEST(ControlFlowTest, MustSendEpitaph) {
 
     // Manually write the epitaph request message, since the epitaph will cause the C bindings
     // to fail.
-    fidl_test_llcpp_controlflow_ControlFlowMustSendAccessDeniedEpitaphRequest request = {};
+    fidl_test_llcpp_controlflow_ControlFlowMustSendAccessDeniedEpitaphRequestMessage request = {};
     fidl_init_txn_header(&request.hdr, 0,
                          fidl_test_llcpp_controlflow_ControlFlowMustSendAccessDeniedEpitaphOrdinal);
     ASSERT_OK(client_chan.write(0, &request, sizeof(request), nullptr, 0));

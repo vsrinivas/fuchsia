@@ -230,14 +230,14 @@ protocol UseOfProtocol {
   ASSERT_EQ(fidl::types::Nullability::kNonnullable, type0_ihandle->nullability);
 
   auto type1 = gen.coded_types().at(1).get();
-  EXPECT_STR_EQ("example_UseOfProtocolCallRequest", type1->coded_name.c_str());
+  EXPECT_STR_EQ("example_UseOfProtocolCallRequestMessage", type1->coded_name.c_str());
   EXPECT_TRUE(type1->is_coding_needed);
   EXPECT_EQ(24, type1->size_v1);
   EXPECT_EQ(24, type1->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kMessage, type1->kind);
   auto type1_message = static_cast<const fidl::coded::MessageType*>(type1);
   EXPECT_FALSE(type1_message->contains_envelope);
-  EXPECT_STR_EQ("example/UseOfProtocolCallRequest", type1_message->qname.c_str());
+  EXPECT_STR_EQ("example/UseOfProtocolCallRequestMessage", type1_message->qname.c_str());
   EXPECT_EQ(2, type1_message->elements.size());
 
   EXPECT_EQ(16, field(type1_message->elements.at(0)).offset_v1);
@@ -270,12 +270,14 @@ protocol ErrorSyntaxProtocol {
   EXPECT_STR_EQ("uint32", type1->coded_name.c_str());
 
   auto type2 = gen.coded_types().at(2).get();
-  EXPECT_STR_EQ("example_ErrorSyntaxProtocolErrorSyntaxMethodRequest", type2->coded_name.c_str());
+  EXPECT_STR_EQ("example_ErrorSyntaxProtocolErrorSyntaxMethodRequestMessage",
+                type2->coded_name.c_str());
   auto type2_message = static_cast<const fidl::coded::MessageType*>(type2);
   EXPECT_FALSE(type2_message->contains_envelope);
 
   auto type3 = gen.coded_types().at(3).get();
-  EXPECT_STR_EQ("example_ErrorSyntaxProtocolErrorSyntaxMethodResponse", type3->coded_name.c_str());
+  EXPECT_STR_EQ("example_ErrorSyntaxProtocolErrorSyntaxMethodResponseMessage",
+                type3->coded_name.c_str());
   auto type3_message = static_cast<const fidl::coded::MessageType*>(type3);
   EXPECT_TRUE(type3_message->contains_envelope);
 }
@@ -305,7 +307,7 @@ protocol UseOfProtocolEnds {
   ASSERT_EQ(8, gen.coded_types().size());
 
   // ClientEnd request payload
-  auto type0 = gen.coded_types().at(0).get();
+  auto type0 = gen.coded_types().at(3).get();
   EXPECT_STR_EQ("Protocol20example_SomeProtocolnonnullable", type0->coded_name.c_str());
   EXPECT_TRUE(type0->is_coding_needed);
   EXPECT_EQ(4, type0->size_v1);
@@ -315,15 +317,15 @@ protocol UseOfProtocolEnds {
   EXPECT_EQ(fidl::types::Nullability::kNonnullable, type0_ihandle->nullability);
 
   // ClientEnd request message
-  auto type1 = gen.coded_types().at(1).get();
-  EXPECT_STR_EQ("example_UseOfProtocolEndsClientEndsRequest", type1->coded_name.c_str());
+  auto type1 = gen.coded_types().at(4).get();
+  EXPECT_STR_EQ("example_UseOfProtocolEndsClientEndsRequestMessage", type1->coded_name.c_str());
   EXPECT_TRUE(type1->is_coding_needed);
   EXPECT_EQ(24, type1->size_v1);
   EXPECT_EQ(24, type1->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kMessage, type1->kind);
   auto type1_message = static_cast<const fidl::coded::MessageType*>(type1);
   EXPECT_FALSE(type1_message->contains_envelope);
-  EXPECT_STR_EQ("example/UseOfProtocolEndsClientEndsRequest", type1_message->qname.c_str());
+  EXPECT_STR_EQ("example/UseOfProtocolEndsClientEndsRequestMessage", type1_message->qname.c_str());
   EXPECT_EQ(2, type1_message->elements.size());
   EXPECT_EQ(16, field(type1_message->elements.at(0)).offset_v1);
   EXPECT_EQ(16, field(type1_message->elements.at(0)).offset_v2);
@@ -343,15 +345,15 @@ protocol UseOfProtocolEnds {
   EXPECT_EQ(fidl::types::Nullability::kNullable, type2_ihandle->nullability);
 
   // ClientEnd response message
-  auto type3 = gen.coded_types().at(3).get();
-  EXPECT_STR_EQ("example_UseOfProtocolEndsClientEndsResponse", type3->coded_name.c_str());
+  auto type3 = gen.coded_types().at(5).get();
+  EXPECT_STR_EQ("example_UseOfProtocolEndsClientEndsResponseMessage", type3->coded_name.c_str());
   EXPECT_TRUE(type3->is_coding_needed);
   EXPECT_EQ(24, type3->size_v1);
   EXPECT_EQ(24, type3->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kMessage, type3->kind);
   auto type3_message = static_cast<const fidl::coded::MessageType*>(type3);
   EXPECT_FALSE(type3_message->contains_envelope);
-  EXPECT_STR_EQ("example/UseOfProtocolEndsClientEndsResponse", type3_message->qname.c_str());
+  EXPECT_STR_EQ("example/UseOfProtocolEndsClientEndsResponseMessage", type3_message->qname.c_str());
   EXPECT_EQ(2, type3_message->elements.size());
   EXPECT_EQ(16, field(type3_message->elements.at(0)).offset_v1);
   EXPECT_EQ(16, field(type3_message->elements.at(0)).offset_v2);
@@ -361,7 +363,7 @@ protocol UseOfProtocolEnds {
   EXPECT_EQ(0xffffffff, std::get<uint32_t>(padding(type3_message->elements.at(1)).mask));
 
   // ServerEnd request payload
-  auto type4 = gen.coded_types().at(4).get();
+  auto type4 = gen.coded_types().at(1).get();
   EXPECT_STR_EQ("Request20example_SomeProtocolnullable", type4->coded_name.c_str());
   EXPECT_TRUE(type4->is_coding_needed);
   EXPECT_EQ(4, type4->size_v1);
@@ -371,15 +373,15 @@ protocol UseOfProtocolEnds {
   EXPECT_EQ(fidl::types::Nullability::kNullable, type4_ihandle->nullability);
 
   // ServerEnd request message
-  auto type5 = gen.coded_types().at(5).get();
-  EXPECT_STR_EQ("example_UseOfProtocolEndsServerEndsRequest", type5->coded_name.c_str());
+  auto type5 = gen.coded_types().at(6).get();
+  EXPECT_STR_EQ("example_UseOfProtocolEndsServerEndsRequestMessage", type5->coded_name.c_str());
   EXPECT_TRUE(type5->is_coding_needed);
   EXPECT_EQ(24, type5->size_v1);
   EXPECT_EQ(24, type5->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kMessage, type5->kind);
   auto type5_message = static_cast<const fidl::coded::MessageType*>(type5);
   EXPECT_FALSE(type5_message->contains_envelope);
-  EXPECT_STR_EQ("example/UseOfProtocolEndsServerEndsRequest", type5_message->qname.c_str());
+  EXPECT_STR_EQ("example/UseOfProtocolEndsServerEndsRequestMessage", type5_message->qname.c_str());
   EXPECT_EQ(2, type5_message->elements.size());
   EXPECT_EQ(16, field(type5_message->elements.at(0)).offset_v1);
   EXPECT_EQ(16, field(type5_message->elements.at(0)).offset_v2);
@@ -389,7 +391,7 @@ protocol UseOfProtocolEnds {
   EXPECT_EQ(0xffffffff, std::get<uint32_t>(padding(type5_message->elements.at(1)).mask));
 
   // ServerEnd response payload
-  auto type6 = gen.coded_types().at(6).get();
+  auto type6 = gen.coded_types().at(0).get();
   EXPECT_STR_EQ("Request20example_SomeProtocolnonnullable", type6->coded_name.c_str());
   EXPECT_TRUE(type6->is_coding_needed);
   EXPECT_EQ(4, type6->size_v1);
@@ -400,14 +402,14 @@ protocol UseOfProtocolEnds {
 
   // ServerEnd response message
   auto type7 = gen.coded_types().at(7).get();
-  EXPECT_STR_EQ("example_UseOfProtocolEndsServerEndsResponse", type7->coded_name.c_str());
+  EXPECT_STR_EQ("example_UseOfProtocolEndsServerEndsResponseMessage", type7->coded_name.c_str());
   EXPECT_TRUE(type7->is_coding_needed);
   EXPECT_EQ(24, type7->size_v1);
   EXPECT_EQ(24, type7->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kMessage, type7->kind);
   auto type7_message = static_cast<const fidl::coded::MessageType*>(type7);
   EXPECT_FALSE(type7_message->contains_envelope);
-  EXPECT_STR_EQ("example/UseOfProtocolEndsServerEndsResponse", type7_message->qname.c_str());
+  EXPECT_STR_EQ("example/UseOfProtocolEndsServerEndsResponseMessage", type7_message->qname.c_str());
   EXPECT_EQ(2, type7_message->elements.size());
   EXPECT_EQ(16, field(type7_message->elements.at(0)).offset_v1);
   EXPECT_EQ(16, field(type7_message->elements.at(0)).offset_v2);

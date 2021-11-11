@@ -173,10 +173,10 @@ class EthertapClient {
   }
 
   void ExpectDataRead(const void* data, size_t len, const char* msg) {
-    ASSERT_NO_FATAL_FAILURES(ExpectEvent<fuchsia_hardware_ethertap_TapDeviceOnFrameEvent>(
+    ASSERT_NO_FATAL_FAILURES(ExpectEvent<fuchsia_hardware_ethertap_TapDeviceOnFrameEventMessage>(
         fuchsia_hardware_ethertap_TapDeviceOnFrameOrdinal,
-        &fuchsia_hardware_ethertap_TapDeviceOnFrameEventTable,
-        [data, len, msg](fuchsia_hardware_ethertap_TapDeviceOnFrameEvent* frame) {
+        &fuchsia_hardware_ethertap_TapDeviceOnFrameEventMessageTable,
+        [data, len, msg](fuchsia_hardware_ethertap_TapDeviceOnFrameEventMessage* frame) {
           ASSERT_EQ(frame->data.count, len, "%s", msg);
           if (len > 0) {
             ASSERT_BYTES_EQ(static_cast<const uint8_t*>(frame->data.data),
@@ -187,20 +187,21 @@ class EthertapClient {
   }
 
   void ExpectSetParam(uint32_t param, int32_t value, size_t len, uint8_t* data, const char* msg) {
-    ASSERT_NO_FATAL_FAILURES(ExpectEvent<fuchsia_hardware_ethertap_TapDeviceOnReportParamsEvent>(
-        fuchsia_hardware_ethertap_TapDeviceOnReportParamsOrdinal,
-        &fuchsia_hardware_ethertap_TapDeviceOnReportParamsEventTable,
-        [param, value, data, len,
-         msg](fuchsia_hardware_ethertap_TapDeviceOnReportParamsEvent* report) {
-          ASSERT_EQ(report->param, param, "%s", msg);
-          ASSERT_EQ(report->value, value, "%s", msg);
-          ASSERT_EQ(report->data.count, len, "%s", msg);
-          if (len > 0) {
-            ASSERT_BYTES_EQ(static_cast<const uint8_t*>(report->data.data),
-                            static_cast<const uint8_t*>(data), len, "%s", msg);
-          }
-        },
-        msg));
+    ASSERT_NO_FATAL_FAILURES(
+        ExpectEvent<fuchsia_hardware_ethertap_TapDeviceOnReportParamsEventMessage>(
+            fuchsia_hardware_ethertap_TapDeviceOnReportParamsOrdinal,
+            &fuchsia_hardware_ethertap_TapDeviceOnReportParamsEventMessageTable,
+            [param, value, data, len,
+             msg](fuchsia_hardware_ethertap_TapDeviceOnReportParamsEventMessage* report) {
+              ASSERT_EQ(report->param, param, "%s", msg);
+              ASSERT_EQ(report->value, value, "%s", msg);
+              ASSERT_EQ(report->data.count, len, "%s", msg);
+              if (len > 0) {
+                ASSERT_BYTES_EQ(static_cast<const uint8_t*>(report->data.data),
+                                static_cast<const uint8_t*>(data), len, "%s", msg);
+              }
+            },
+            msg));
   }
 
   bool valid() const { return channel_.is_valid(); }

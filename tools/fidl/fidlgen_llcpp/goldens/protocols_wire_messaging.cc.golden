@@ -9,28 +9,28 @@ namespace fidl_test_protocols {
     kHandleRightsProtocol_NoResponseMethod_Ordinal = 5073990954122988412lu;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
+    fidl_test_protocols_HandleRightsProtocolNoResponseMethodRequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_HandleRightsProtocolNoResponseMethodResponseTable;
+    fidl_test_protocols_HandleRightsProtocolNoResponseMethodResponseMessageTable;
 
 [[maybe_unused]] constexpr uint64_t
     kHandleRightsProtocol_ResponseMethod_Ordinal = 6841738779450413052lu;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_HandleRightsProtocolResponseMethodRequestTable;
+    fidl_test_protocols_HandleRightsProtocolResponseMethodRequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_HandleRightsProtocolResponseMethodResponseTable;
+    fidl_test_protocols_HandleRightsProtocolResponseMethodResponseMessageTable;
 
 [[maybe_unused]] constexpr uint64_t kHandleRightsProtocol_AnEvent_Ordinal =
     929632006073412977lu;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_HandleRightsProtocolAnEventRequestTable;
+    fidl_test_protocols_HandleRightsProtocolAnEventRequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_HandleRightsProtocolAnEventEventTable;
+    fidl_test_protocols_HandleRightsProtocolAnEventEventMessageTable;
 #ifdef __Fuchsia__
 }  // namespace fidl_test_protocols
 ::fidl::WireResult<
@@ -677,80 +677,80 @@ namespace fidl_test_protocols {
         7699066378708085668lu;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseRequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseResponseTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseResponseMessageTable;
 
 [[maybe_unused]] constexpr uint64_t
     kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal =
         4641225961522096302lu;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseMessageTable;
 
 [[maybe_unused]] constexpr uint64_t
     kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal =
         4935493674668456948lu;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseRequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseMessageTable;
 
 [[maybe_unused]] constexpr uint64_t
     kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal =
         8985942600963248509lu;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseResponseTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseResponseMessageTable;
 
 [[maybe_unused]] constexpr uint64_t
     kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal =
         7344052883704365182lu;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseMessageTable;
 
 [[maybe_unused]] constexpr uint64_t
     kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal =
         2103802322332450033lu;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseMessageTable;
 
 [[maybe_unused]] constexpr uint64_t
     kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal =
         1323081535741489193lu;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseOnEmptyResponseRequestTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseOnEmptyResponseRequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseOnEmptyResponseEventTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseOnEmptyResponseEventMessageTable;
 
 [[maybe_unused]] constexpr uint64_t
     kWithAndWithoutRequestResponse_OnWithResponse_Ordinal =
         1691906546593908418lu;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseRequestTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseRequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseEventTable;
+    fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseEventMessageTable;
 #ifdef __Fuchsia__
 }  // namespace fidl_test_protocols
 ::fidl::WireResult<
@@ -2463,25 +2463,28 @@ namespace fidl_test_protocols {
     7121112290509197032lu;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_TransitionalRequestRequestTable;
+    fidl_test_protocols_TransitionalRequestRequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_TransitionalRequestResponseTable;
+    fidl_test_protocols_TransitionalRequestResponseMessageTable;
 
 [[maybe_unused]] constexpr uint64_t kTransitional_OneWay_Ordinal =
     1124136612964114085lu;
 
-extern "C" const fidl_type_t fidl_test_protocols_TransitionalOneWayRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_TransitionalOneWayRequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_TransitionalOneWayResponseTable;
+    fidl_test_protocols_TransitionalOneWayResponseMessageTable;
 
 [[maybe_unused]] constexpr uint64_t kTransitional_Event_Ordinal =
     6033576734966581606lu;
 
-extern "C" const fidl_type_t fidl_test_protocols_TransitionalEventRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_TransitionalEventRequestMessageTable;
 
-extern "C" const fidl_type_t fidl_test_protocols_TransitionalEventEventTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_TransitionalEventEventMessageTable;
 #ifdef __Fuchsia__
 }  // namespace fidl_test_protocols
 ::fidl::WireResult<::fidl_test_protocols::Transitional::Request>::WireResult(
@@ -3032,10 +3035,10 @@ namespace fidl_test_protocols {
     6602599911470270762lu;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_MethodWithUnionUnionMethodRequestTable;
+    fidl_test_protocols_MethodWithUnionUnionMethodRequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_MethodWithUnionUnionMethodResponseTable;
+    fidl_test_protocols_MethodWithUnionUnionMethodResponseMessageTable;
 #ifdef __Fuchsia__
 }  // namespace fidl_test_protocols
 ::fidl::WireResult<::fidl_test_protocols::MethodWithUnion::UnionMethod>::
@@ -3189,28 +3192,28 @@ namespace fidl_test_protocols {
     6967495859718087341lu;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_WithProtocolEndsClientEndsRequestTable;
+    fidl_test_protocols_WithProtocolEndsClientEndsRequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_WithProtocolEndsClientEndsResponseTable;
+    fidl_test_protocols_WithProtocolEndsClientEndsResponseMessageTable;
 
 [[maybe_unused]] constexpr uint64_t kWithProtocolEnds_ServerEnds_Ordinal =
     4493250268989071740lu;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_WithProtocolEndsServerEndsRequestTable;
+    fidl_test_protocols_WithProtocolEndsServerEndsRequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_WithProtocolEndsServerEndsResponseTable;
+    fidl_test_protocols_WithProtocolEndsServerEndsResponseMessageTable;
 
 [[maybe_unused]] constexpr uint64_t
     kWithProtocolEnds_StructContainingEnds_Ordinal = 175407360796475740lu;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_WithProtocolEndsStructContainingEndsRequestTable;
+    fidl_test_protocols_WithProtocolEndsStructContainingEndsRequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_WithProtocolEndsStructContainingEndsResponseTable;
+    fidl_test_protocols_WithProtocolEndsStructContainingEndsResponseMessageTable;
 #ifdef __Fuchsia__
 }  // namespace fidl_test_protocols
 ::fidl::WireResult<::fidl_test_protocols::WithProtocolEnds::ClientEnds>::
@@ -4218,10 +4221,10 @@ namespace fidl_test_protocols {
     2979943048488637411lu;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_ManyParametersFifteenRequestTable;
+    fidl_test_protocols_ManyParametersFifteenRequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_ManyParametersFifteenResponseTable;
+    fidl_test_protocols_ManyParametersFifteenResponseMessageTable;
 #ifdef __Fuchsia__
 }  // namespace fidl_test_protocols
 ::fidl::WireResult<::fidl_test_protocols::ManyParameters::Fifteen>::WireResult(
@@ -4378,37 +4381,37 @@ namespace fidl_test_protocols {
     4000554951765344912lu;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_WithErrorSyntaxResponseAsStructRequestTable;
+    fidl_test_protocols_WithErrorSyntaxResponseAsStructRequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_WithErrorSyntaxResponseAsStructResponseTable;
+    fidl_test_protocols_WithErrorSyntaxResponseAsStructResponseMessageTable;
 
 [[maybe_unused]] constexpr uint64_t kWithErrorSyntax_ErrorAsPrimitive_Ordinal =
     3421672554503271630lu;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveRequestTable;
+    fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveRequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseTable;
+    fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseMessageTable;
 
 [[maybe_unused]] constexpr uint64_t kWithErrorSyntax_ErrorAsEnum_Ordinal =
     627496610701472780lu;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_WithErrorSyntaxErrorAsEnumRequestTable;
+    fidl_test_protocols_WithErrorSyntaxErrorAsEnumRequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_WithErrorSyntaxErrorAsEnumResponseTable;
+    fidl_test_protocols_WithErrorSyntaxErrorAsEnumResponseMessageTable;
 
 [[maybe_unused]] constexpr uint64_t kWithErrorSyntax_HandleInResult_Ordinal =
     2147949819621101463lu;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_WithErrorSyntaxHandleInResultRequestTable;
+    fidl_test_protocols_WithErrorSyntaxHandleInResultRequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_WithErrorSyntaxHandleInResultResponseTable;
+    fidl_test_protocols_WithErrorSyntaxHandleInResultResponseMessageTable;
 #ifdef __Fuchsia__
 }  // namespace fidl_test_protocols
 ::fidl::WireResult<::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>::
@@ -5742,10 +5745,10 @@ namespace fidl_test_protocols {
     16177161678225767lu;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_DiscoverableProtocolMethodRequestTable;
+    fidl_test_protocols_DiscoverableProtocolMethodRequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_DiscoverableProtocolMethodResponseTable;
+    fidl_test_protocols_DiscoverableProtocolMethodResponseMessageTable;
 #ifdef __Fuchsia__
 }  // namespace fidl_test_protocols
 ::fidl::WireResult<::fidl_test_protocols::DiscoverableProtocol::Method>::
@@ -5853,46 +5856,46 @@ namespace fidl_test_protocols {
     565531679656837166lu;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolMethodARequestTable;
+    fidl_test_protocols_ChannelProtocolMethodARequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolMethodAResponseTable;
+    fidl_test_protocols_ChannelProtocolMethodAResponseMessageTable;
 
 [[maybe_unused]] constexpr uint64_t kChannelProtocol_EventA_Ordinal =
     5963604044179602938lu;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolEventARequestTable;
+    fidl_test_protocols_ChannelProtocolEventARequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolEventAEventTable;
+    fidl_test_protocols_ChannelProtocolEventAEventMessageTable;
 
 [[maybe_unused]] constexpr uint64_t kChannelProtocol_MethodB_Ordinal =
     6746905632127147242lu;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolMethodBRequestTable;
+    fidl_test_protocols_ChannelProtocolMethodBRequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolMethodBResponseTable;
+    fidl_test_protocols_ChannelProtocolMethodBResponseMessageTable;
 
 [[maybe_unused]] constexpr uint64_t kChannelProtocol_TakeHandle_Ordinal =
     875219241480379432lu;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolTakeHandleRequestTable;
+    fidl_test_protocols_ChannelProtocolTakeHandleRequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolTakeHandleResponseTable;
+    fidl_test_protocols_ChannelProtocolTakeHandleResponseMessageTable;
 
 [[maybe_unused]] constexpr uint64_t kChannelProtocol_MutateSocket_Ordinal =
     9065806117349865322lu;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolMutateSocketRequestTable;
+    fidl_test_protocols_ChannelProtocolMutateSocketRequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolMutateSocketResponseTable;
+    fidl_test_protocols_ChannelProtocolMutateSocketResponseMessageTable;
 #ifdef __Fuchsia__
 }  // namespace fidl_test_protocols
 ::fidl::WireResult<::fidl_test_protocols::ChannelProtocol::MethodA>::WireResult(

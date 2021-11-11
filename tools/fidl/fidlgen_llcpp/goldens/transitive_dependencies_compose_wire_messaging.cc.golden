@@ -8,10 +8,10 @@ namespace fidl_test_transitivedependenciescompose {
 [[maybe_unused]] constexpr uint64_t kTop_GetFoo_Ordinal = 3210163844600846111lu;
 
 extern "C" const fidl_type_t
-    fidl_test_transitivedependenciescompose_TopGetFooRequestTable;
+    fidl_test_transitivedependenciescompose_TopGetFooRequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_transitivedependenciescompose_TopGetFooResponseTable;
+    fidl_test_transitivedependenciescompose_TopGetFooResponseMessageTable;
 #ifdef __Fuchsia__
 }  // namespace fidl_test_transitivedependenciescompose
 ::fidl::WireResult<::fidl_test_transitivedependenciescompose::Top::GetFoo>::

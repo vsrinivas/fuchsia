@@ -1102,7 +1102,7 @@ using SomeProtocol_SomeMethod_ResultPtr =
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_anonymous_SomeProtocolSomeMethodRequestTable;
+    fidl_test_anonymous_SomeProtocolSomeMethodRequestMessageTable;
 
 }  // namespace _internal
 class SomeProtocol_RequestEncoder {
@@ -1132,18 +1132,19 @@ class SomeProtocol_RequestEncoder {
       ::fidl::Encode(_encoder, table_member, 32);
     }
 
-    fidl_trace(DidHLCPPEncode,
-               &::fidl::test::anonymous::_internal::
-                   fidl_test_anonymous_SomeProtocolSomeMethodRequestTable,
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
+    fidl_trace(
+        DidHLCPPEncode,
+        &::fidl::test::anonymous::_internal::
+            fidl_test_anonymous_SomeProtocolSomeMethodRequestMessageTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
 };
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_anonymous_SomeProtocolSomeMethodResponseTable;
+    fidl_test_anonymous_SomeProtocolSomeMethodResponseMessageTable;
 
 }  // namespace _internal
 class SomeProtocol_ResponseEncoder {
@@ -1168,11 +1169,12 @@ class SomeProtocol_ResponseEncoder {
       ::fidl::Encode(_encoder, result, 16);
     }
 
-    fidl_trace(DidHLCPPEncode,
-               &::fidl::test::anonymous::_internal::
-                   fidl_test_anonymous_SomeProtocolSomeMethodResponseTable,
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
+    fidl_trace(
+        DidHLCPPEncode,
+        &::fidl::test::anonymous::_internal::
+            fidl_test_anonymous_SomeProtocolSomeMethodResponseMessageTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
 };

@@ -530,7 +530,7 @@ using StrictUnionPtr = ::std::unique_ptr<StrictUnion>;
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_doccomments_InterfaceMethodRequestTable;
+    fidl_test_doccomments_InterfaceMethodRequestMessageTable;
 
 }  // namespace _internal
 class Interface_RequestEncoder {
@@ -552,7 +552,7 @@ class Interface_RequestEncoder {
 
     fidl_trace(DidHLCPPEncode,
                &::fidl::test::doccomments::_internal::
-                   fidl_test_doccomments_InterfaceMethodRequestTable,
+                   fidl_test_doccomments_InterfaceMethodRequestMessageTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -561,7 +561,7 @@ class Interface_RequestEncoder {
 };
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_doccomments_InterfaceOnEventEventTable;
+    fidl_test_doccomments_InterfaceOnEventEventMessageTable;
 
 }  // namespace _internal
 class Interface_ResponseEncoder {
@@ -583,7 +583,7 @@ class Interface_ResponseEncoder {
 
     fidl_trace(DidHLCPPEncode,
                &::fidl::test::doccomments::_internal::
-                   fidl_test_doccomments_InterfaceOnEventEventTable,
+                   fidl_test_doccomments_InterfaceOnEventEventMessageTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
     return _encoder->GetMessage();

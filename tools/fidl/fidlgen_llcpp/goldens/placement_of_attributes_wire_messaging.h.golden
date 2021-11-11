@@ -22,10 +22,10 @@ namespace fidl_test_placementofattributes {
 class ExampleProtocol;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_placementofattributes_ExampleProtocolMethodRequestTable;
+    fidl_test_placementofattributes_ExampleProtocolMethodRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_placementofattributes_ExampleProtocolMethodResponseTable;
+    fidl_test_placementofattributes_ExampleProtocolMethodResponseMessageTable;
 
 }  // namespace fidl_test_placementofattributes
 #ifdef __Fuchsia__
@@ -72,7 +72,7 @@ struct ::fidl::WireRequest<
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_placementofattributes::
-          fidl_test_placementofattributes_ExampleProtocolMethodRequestTable;
+          fidl_test_placementofattributes_ExampleProtocolMethodRequestMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;

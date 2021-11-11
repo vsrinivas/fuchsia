@@ -31,7 +31,7 @@ using OnlyCppAndDepsHandle = ::fidl::InterfaceHandle<OnlyCppAndDeps>;
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestTable;
+    fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestMessageTable;
 
 }  // namespace _internal
 class OnlyLibfuzzerAndDeps_RequestEncoder {
@@ -55,7 +55,7 @@ class OnlyLibfuzzerAndDeps_RequestEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::fidl::test::bindingsdenylist::_internal::
-            fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestTable,
+            fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -64,7 +64,7 @@ class OnlyLibfuzzerAndDeps_RequestEncoder {
 };
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseTable;
+    fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseMessageTable;
 
 }  // namespace _internal
 class OnlyLibfuzzerAndDeps_ResponseEncoder {
@@ -88,7 +88,7 @@ class OnlyLibfuzzerAndDeps_ResponseEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::fidl::test::bindingsdenylist::_internal::
-            fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseTable,
+            fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();

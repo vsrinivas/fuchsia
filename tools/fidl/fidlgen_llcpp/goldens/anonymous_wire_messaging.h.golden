@@ -20,10 +20,10 @@ namespace fidl_test_anonymous {
 class SomeProtocol;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_anonymous_SomeProtocolSomeMethodRequestTable;
+    fidl_test_anonymous_SomeProtocolSomeMethodRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_anonymous_SomeProtocolSomeMethodResponseTable;
+    fidl_test_anonymous_SomeProtocolSomeMethodResponseMessageTable;
 
 }  // namespace fidl_test_anonymous
 #ifdef __Fuchsia__
@@ -73,7 +73,7 @@ struct ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_anonymous::
-          fidl_test_anonymous_SomeProtocolSomeMethodRequestTable;
+          fidl_test_anonymous_SomeProtocolSomeMethodRequestMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 48;
   static constexpr uint32_t PrimarySizeV1 = 56;
@@ -228,7 +228,7 @@ struct ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_anonymous::
-          fidl_test_anonymous_SomeProtocolSomeMethodResponseTable;
+          fidl_test_anonymous_SomeProtocolSomeMethodResponseMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   static constexpr uint32_t PrimarySizeV1 = 40;
