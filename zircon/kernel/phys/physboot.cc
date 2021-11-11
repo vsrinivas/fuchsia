@@ -22,6 +22,8 @@
 #include <phys/main.h>
 #include <phys/symbolize.h>
 
+#include "zbi-handoff.h"
+
 #ifdef __x86_64__
 #include "trampoline-boot.h"
 
@@ -152,7 +154,7 @@ ChainBoot LoadZirconZbi(KernelStorage::Bootfs kernelfs) {
   // more work for the kernel.
   handoff->times = gBootTimes;
 
-  handoff->zbi = reinterpret_cast<uintptr_t>(boot.DataZbi().storage().data());
+  SummarizeMiscZbiItems(*handoff, boot.DataZbi().storage());
 
   // Even though the kernel is still a ZBI and mostly using the ZBI protocol
   // for booting, the PhysHandoff pointer (physical address) is now the

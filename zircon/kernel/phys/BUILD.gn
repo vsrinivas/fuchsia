@@ -390,5 +390,14 @@ zbi_executable("physboot") {
 
 source_set("handoff") {
   public = [ "include/phys/handoff.h" ]
+  public_deps = [
+    # handoff.h has #include <lib/arch/ticks.h>.
+    "//zircon/kernel/lib/arch",
+  ]
   public_configs = [ ":includes" ]
+
+  if (toolchain_environment == "kernel.phys") {
+    sources = [ "zbi-handoff.cc" ]
+    deps = [ "//zircon/kernel/lib/ktl" ]
+  }
 }
