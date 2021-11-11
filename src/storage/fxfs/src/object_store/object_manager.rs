@@ -192,7 +192,6 @@ impl ObjectManager {
             .clone()
     }
 
-    /// This is *not* thread-safe.
     pub async fn open_store(&self, store_object_id: u64) -> Result<Arc<ObjectStore>, Error> {
         let store = self.lazy_open_store(store_object_id);
         store.open().await?;

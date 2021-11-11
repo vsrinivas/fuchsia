@@ -51,8 +51,8 @@ use {
             object_record::{EncryptionKeys, ObjectKey, ObjectKind, ObjectValue},
             store_object_handle::DirectWriter,
             transaction::{
-                AssocObj, AssociatedObject, ExtentMutation, Mutation, NoOrd, ObjectStoreMutation,
-                Operation, Options, StoreInfoMutation, Transaction,
+                AssocObj, AssociatedObject, ExtentMutation, LockKey, Mutation, NoOrd,
+                ObjectStoreMutation, Operation, Options, StoreInfoMutation, Transaction,
             },
         },
         trace_duration,
@@ -625,11 +625,23 @@ impl ObjectStore {
         self.store_info.lock().unwrap().info().unwrap().clone()
     }
 
-    /// Opens a store. This is *not* thread-safe.
+    /// Opens a store.
     pub async fn open(&self) -> Result<(), Error> {
         if self.parent_store.is_none() || self.store_info_handle.get().is_some() {
             return Ok(());
         }
+        let fs = self.filesystem();
+        let _guard = fs
+            .write_lock(&[LockKey::object(
+                self.parent_store.as_ref().unwrap().store_object_id(),
+                self.store_object_id,
+            )])
+            .await;
+        if self.store_info_handle.get().is_some() {
+            // We lost the race.
+            return Ok(());
+        }
+
         let parent_store = self.parent_store.as_ref().unwrap();
         let handle =
             ObjectStore::open_object(&parent_store, self.store_object_id, HandleOptions::default())
