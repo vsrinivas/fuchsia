@@ -277,6 +277,7 @@ pub struct BoardConfig {
     pub bootloaders: Vec<BootloaderEntry>,
 
     /// The information required to construct and flash the ZBI.
+    #[serde(default)]
     pub zbi: ZbiConfig,
 
     /// The information required to construct the BlobFS.
@@ -314,9 +315,6 @@ pub struct FileEntry {
 #[derive(Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct VBMetaConfig {
-    /// The partition name to flash the VBMeta.
-    pub partition: String,
-
     /// The partition name of the kernel included as a VBMeta descriptor.
     pub kernel_partition: String,
 
@@ -353,9 +351,6 @@ pub struct BootloaderEntry {
 #[derive(Default, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct ZbiConfig {
-    /// The partition name to flash the ZBI.
-    pub partition: String,
-
     /// The name to give the output ZBI file.
     /// (e.g. "fuchsia" results in "fuchsia.zbi")
     #[serde(default = "default_zbi_name")]
@@ -434,9 +429,6 @@ fn default_true() -> bool {
 #[derive(Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct FvmConfig {
-    /// The partition name to flash the FVM.
-    pub partition: String,
-
     /// The size in bytes of each slice.
     #[serde(default = "default_fvm_slice_size")]
     pub slice_size: u64,
@@ -699,7 +691,6 @@ mod tests {
               "base_package_name": "system_image",
               "board_name": "my-board",
               "vbmeta": {
-                "partition": "name",
                 "kernel_partition": "zircon",
                 "key": "path/to/key",
                 "key_metadata": "path/to/metadata"
@@ -713,14 +704,12 @@ mod tests {
                 }
               ],
               "zbi": {
-                "partition": "name",
                 "name": "fuchsia",
                 "max_size": 100,
                 "embed_fvm_in_zbi": false,
                 "compression": "zstd.max",
               },
               "fvm": {
-                "partition": "name",
                 "slice_size": 100,
                 "reserved_slices": 100,
                 "filesystems": [
@@ -765,13 +754,9 @@ mod tests {
             {
               "board_name": "my-board",
               "vbmeta": {
-                "partition": "name",
                 "kernel_partition": "zircon",
                 "key": "path/to/key",
                 "key_metadata": "path/to/metadata"
-              },
-              "zbi": {
-                "partition": "name",
               },
               "recovery": {
                 "zbi": "path/to/recovery.zbi",

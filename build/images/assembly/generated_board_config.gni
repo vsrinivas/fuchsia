@@ -212,7 +212,6 @@ template("generated_board_config") {
       board_name = invoker.board_name
       zbi = {
         name = invoker.zbi_name
-        partition = zircon_a_partition
         max_size = 0
         if (defined(invoker.embed_fvm_in_zbi)) {
           embed_fvm_in_zbi = invoker.embed_fvm_in_zbi
@@ -232,7 +231,6 @@ template("generated_board_config") {
       }
       if (use_vbmeta) {
         vbmeta = {
-          partition = vbmeta_a_partition
           kernel_partition = "zircon"
           key = rebase_path(avb_key, root_build_dir)
           key_metadata = rebase_path(avb_atx_metadata, root_build_dir)
@@ -250,7 +248,6 @@ template("generated_board_config") {
 
       if (generate_fvm) {
         fvm = {
-          partition = fvm_partition
           slice_size = invoker.fvm_slice_size
           reserved_slices = fvm_reserved_slices
 

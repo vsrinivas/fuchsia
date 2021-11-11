@@ -91,7 +91,6 @@ mod tests {
         std::fs::write(&metadata_path, test_keys::TEST_RSA_4096_PEM).unwrap();
 
         let vbmeta_config = VBMetaConfig {
-            partition: "vbmeta".to_string(),
             kernel_partition: "zircon".to_string(),
             key: key_path,
             key_metadata: metadata_path,

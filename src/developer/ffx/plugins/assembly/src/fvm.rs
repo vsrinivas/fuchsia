@@ -188,7 +188,6 @@ mod tests {
     fn construct() {
         let dir = tempdir().unwrap();
         let fvm_config = FvmConfig {
-            partition: "fvm".to_string(),
             slice_size: 8388608,
             reserved_slices: 1,
             max_disk_size: None,
@@ -219,7 +218,6 @@ mod tests {
     fn construct_with_emmc() {
         let dir = tempdir().unwrap();
         let fvm_config = FvmConfig {
-            partition: "fvm".to_string(),
             slice_size: 8388608,
             reserved_slices: 1,
             max_disk_size: None,
@@ -255,7 +253,6 @@ mod tests {
     fn construct_with_nand() {
         let dir = tempdir().unwrap();
         let fvm_config = FvmConfig {
-            partition: "fvm".to_string(),
             slice_size: 8388608,
             reserved_slices: 1,
             max_disk_size: None,
