@@ -20,6 +20,7 @@ import("//build/security/verifier/verify_route_sources.gni")
 import("//build/security/verifier/verify_static_pkgs.gni")
 import("//build/zircon/tools.gni")
 import("//src/developer/ffx/build/ffx_action.gni")
+import("//src/storage/fshost/generated_fshost_config.gni")
 
 # Assembles a Fuchsia system.
 #
@@ -96,6 +97,11 @@ import("//src/developer/ffx/build/ffx_action.gni")
 #     [list of strings] List of arguments to add to /boot/config/devmgr.
 #     These arguments come after synthesized arguments to configure blobfs and
 #     pkgfs.
+#
+#   fshost_config (default: [])
+#     [list of strings] List of arguments to add to /boot/config/fshost. These
+#     arguments come before other arguments set by build args. If left unset,
+#     assemble_system will not generate an fshost config itself.
 #
 #   cmdline (optional)
 #     [list of strings] Kernel command line text.
@@ -208,6 +214,7 @@ template("assemble_system") {
     config_data = "${image_name}_config-data"
     shell_commands = "${image_name}_shell_commands"
     assembly_inputs = "${image_name}_assembly_inputs"
+    fshost_config = "${image_name}_fshost_config"
   }
 
   # Intermediate files produced for Image Assembly.
@@ -287,6 +294,11 @@ template("assemble_system") {
   devmgr_config = []
   if (defined(invoker.devmgr_config)) {
     devmgr_config = invoker.devmgr_config
+  }
+
+  fshost_config = []
+  if (defined(invoker.fshost_config)) {
+    fshost_config = invoker.fshost_config
   }
 
   include_shell_commands = true
@@ -369,6 +381,15 @@ template("assemble_system") {
     }
   }
 
+  if (fshost_config != []) {
+    generated_fshost_config(labels.fshost_config) {
+      options = fshost_config
+      if (embed_fvm_in_zbi) {
+        fvm_ramdisk = true
+      }
+    }
+  }
+
   #######
   # Build the images using the Image Assembler.
   #
@@ -410,9 +431,14 @@ template("assemble_system") {
       bootfs_labels += [ "//src/sys/base-resolver:bootfs" ]
     }
 
-    if (embed_fvm_in_zbi) {
+    if (fshost_config != []) {
+      bootfs_labels += [ ":${labels.fshost_config}" ]
+    } else if (embed_fvm_in_zbi) {
+      # TODO(fxbug.dev/81880): once the fshost config is always generated, this
+      # should be removed.
       bootfs_labels += [ "//src/storage/fshost:fvm_ramdisk" ]
     }
+
     extra_base_deps = system_image_deps
 
     # Search for the Kernel cmdline in the BootFS dependencies.

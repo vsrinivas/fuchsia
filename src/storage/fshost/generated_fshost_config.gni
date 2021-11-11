@@ -53,6 +53,12 @@ declare_args() {
 #
 # Parameters:
 #
+#   options (optional)
+#     [list of strings] A list of fshost configuration options to include in the config file.
+#     Unrecognized options are ignored. Later options override earlier options. Options with a
+#     minus in front remove the option if previously set. The options are put in after the template
+#     argument options but before the build arg options.
+#
 #   no_minfs_zxcrypt (optional; default: false)
 #     [boolean] If set, fshost will look for a data partition that doesn't have zxcrypt set up, and
 #     instead has minfs directly on the device. This option will cause production builds to fail.
@@ -121,6 +127,11 @@ template("generated_fshost_config") {
     }
     if (defined(invoker.check_filesystems) && invoker.check_filesystems) {
       contents += [ "check-filesystems" ]
+    }
+
+    # Custom options
+    if (defined(invoker.options)) {
+      contents += invoker.options
     }
 
     # Build args

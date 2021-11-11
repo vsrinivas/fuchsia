@@ -22,6 +22,7 @@ fuchsia_base = {
   board_name = board_name
   output_dir = root_build_dir
   use_esp = target_cpu != "arm64" && !use_vboot
+  fshost_config = board_fshost_config
 
   check_production_tag = check_production_eligibility
 
