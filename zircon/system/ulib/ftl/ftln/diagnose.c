@@ -22,7 +22,8 @@ bool PartialPageWrites(FTLN ftl) { return ftl->high_bc >= 0xff000000; }
 
 // Check if a partial page write occurred despite having the fix present. This is possible and may
 // be ok if the partial page write happened before the fix was picked up, and was on non-critical
-// data.
+// data. If that does happen the volume is likely to corrupt soon after by maxing out the wear value
+// of a volume block, which will cause it to be interpreted as free.
 bool PartialPageWritesWithFix(FTLN ftl) {
   if (!PartialPageWrites(ftl)) {
     return false;
@@ -76,9 +77,27 @@ bool PrematureBlockRecycle(FTLN ftl) {
   return overlap;
 }
 
+// Step through the current map pages and spot a gap in mappings. This isn't necessarily a bad
+// thing, but it means that there are large gaps in the middle of volume, which are unlikely to be
+// normal occurrences in our use case. This should only happen naturally if a region has *never*
+// been written to. Trimming it all will create an empty map page, not unmap the map page.
+bool LostMapBlock(FTLN ftl) {
+  bool found_empty = false;
+  // The map page number is the meta-page marker, we don't care about those.
+  for (uint32_t mpn = 0; mpn < ftl->num_map_pgs - 1; ++mpn) {
+    // Unmapped map pages are marked with all 0xFF.
+    if (ftl->mpns[mpn] == UINT32_MAX) {
+      found_empty = true;
+    } else if (found_empty) {
+      return true;
+    }
+  }
+  return false;
+}
+
 //  FtlnDiagnoseIssues: Search for known bad symptoms in an FTL.
 //
-//       Input: ftl = pointer to FTL control block
+//       Input: ftl = pointer to fully mounted FTL control block.
 //
 //     Returns: NULL when no symptoms found, or a char* to a human readable
 //              message. Caller is responsible for freeing.
@@ -98,6 +117,11 @@ char* FtlnDiagnoseIssues(FTLN ftl) {
       {
           &PrematureBlockRecycle,
           "Two vpages share a physical page. Premature Block Recycles occured. fxbug.dev/87653\n",
+          false,
+      },
+      {
+          &LostMapBlock,
+          "Unmapped map pages. An in-use map block may have been deleted. fxbug.dev/88465\n",
           false,
       },
   };
