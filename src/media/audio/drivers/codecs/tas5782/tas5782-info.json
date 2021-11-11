@@ -1,0 +1,12 @@
+{
+    "short_description": "Texas Instruments 5782 audio hardware codec driver",
+    "manufacturer": "Texas Instruments",
+    "families": [],
+    "models": [
+        "Tas5782"
+    ],
+    "areas": [
+        "Media",
+        "Audio"
+    ]
+}

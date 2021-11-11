@@ -41,7 +41,7 @@ fuchsia_driver("tas5782-driver") {
 fuchsia_driver_component("tas5782") {
   component_name = "tas5782"
   deps = [ ":tas5782-driver" ]
-  documentation = "tas5782-driver-info.json"
+  info = "tas5782-info.json"
 }
 
 test("tas5782-test") {

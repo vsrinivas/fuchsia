@@ -1,0 +1,15 @@
+{
+    "short_description": "USB audio driver",
+    "manufacturer": "",
+    "families": [
+        "generic"
+    ],
+    "models": [
+        "generic"
+    ],
+    "areas": [
+        "Media",
+        "Audio",
+        "Usb"
+    ]
+}

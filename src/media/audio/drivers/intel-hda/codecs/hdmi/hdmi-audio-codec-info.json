@@ -1,0 +1,14 @@
+{
+    "short_description": "Intel HDMI HDA codec driver",
+    "manufacturer": "Intel",
+    "families": [
+        "HDA"
+    ],
+    "models": [
+        "generic"
+    ],
+    "areas": [
+        "Media",
+        "Audio"
+    ]
+}

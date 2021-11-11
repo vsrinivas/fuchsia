@@ -43,7 +43,7 @@ fuchsia_driver("tas5720-driver") {
 fuchsia_driver_component("tas5720") {
   component_name = "tas5720"
   deps = [ ":tas5720-driver" ]
-  documentation = "tas5720-driver-info.json"
+  info = "tas5720-info.json"
 }
 
 test("tas5720-test-bin") {

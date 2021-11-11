@@ -1,0 +1,12 @@
+{
+    "short_description": "Maxim 98373 audio hardware codec driver",
+    "manufacturer": "Maxim",
+    "families": [],
+    "models": [
+        "Max98373"
+    ],
+    "areas": [
+        "Media",
+        "Audio"
+    ]
+}

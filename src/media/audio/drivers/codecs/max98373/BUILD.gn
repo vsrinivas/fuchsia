@@ -43,7 +43,7 @@ fuchsia_driver("max98373-driver") {
 fuchsia_driver_component("max98373") {
   component_name = "max98373"
   deps = [ ":max98373-driver" ]
-  documentation = "max98373-driver-info.json"
+  info = "max98373-info.json"
 }
 
 test("max98373-test") {

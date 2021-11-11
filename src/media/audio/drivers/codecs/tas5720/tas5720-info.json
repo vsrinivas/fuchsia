@@ -1,0 +1,12 @@
+{
+    "short_description": "Texas Instruments 5720 audio hardware codec driver",
+    "manufacturer": "Texas Instruments",
+    "families": [],
+    "models": [
+        "Tas5720"
+    ],
+    "areas": [
+        "Media",
+        "Audio"
+    ]
+}

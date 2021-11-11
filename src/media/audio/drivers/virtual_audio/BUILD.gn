@@ -57,7 +57,7 @@ fuchsia_driver("virtual_audio_driver-driver") {
 fuchsia_driver_component("virtual_audio_driver") {
   component_name = "virtual_audio_driver"
   deps = [ ":virtual_audio_driver-driver" ]
-  documentation = "virtual_audio-driver-info.json"
+  info = "virtual_audio-info.json"
 }
 
 kernel_cmdline("kernel-logging") {

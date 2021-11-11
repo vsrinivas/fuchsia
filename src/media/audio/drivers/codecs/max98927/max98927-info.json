@@ -1,0 +1,12 @@
+{
+    "short_description": "Maxim 98927 audio hardware codec driver",
+    "manufacturer": "Maxim",
+    "families": [],
+    "models": [
+        "Max98927"
+    ],
+    "areas": [
+        "Media",
+        "Audio"
+    ]
+}

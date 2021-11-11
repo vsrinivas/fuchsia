@@ -36,5 +36,5 @@ fuchsia_driver("codec-test-driver") {
 fuchsia_driver_component("test-codec") {
   component_name = "test-codec"
   deps = [ ":codec-test-driver" ]
-  documentation = "test-codec-driver-info.json"
+  info = "test-codec-info.json"
 }

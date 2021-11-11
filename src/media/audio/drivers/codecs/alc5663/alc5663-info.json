@@ -1,0 +1,12 @@
+{
+    "short_description": "Realtek Alc5663 audio hardware codec driver",
+    "manufacturer": "Realtek",
+    "families": [],
+    "models": [
+        "Alc5663"
+    ],
+    "areas": [
+        "Media",
+        "Audio"
+    ]
+}

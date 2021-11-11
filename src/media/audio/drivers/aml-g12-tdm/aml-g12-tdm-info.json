@@ -1,0 +1,16 @@
+{
+    "short_description": "AMLogic g12 audio subsystem TDM driver",
+    "manufacturer": "AMLogic",
+    "families": [
+        "g12"
+    ],
+    "models": [
+        "S905D2",
+        "T931",
+        "S905D3"
+    ],
+    "areas": [
+        "Media",
+        "Audio"
+    ]
+}

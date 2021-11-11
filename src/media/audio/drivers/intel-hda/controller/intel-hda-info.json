@@ -1,0 +1,14 @@
+{
+    "short_description": "Intel HDA controller driver",
+    "manufacturer": "Intel",
+    "families": [
+        "HDA"
+    ],
+    "models": [
+        "generic"
+    ],
+    "areas": [
+        "Media",
+        "Audio"
+    ]
+}

@@ -1,0 +1,12 @@
+{
+    "short_description": "Realtek HDA codec driver",
+    "manufacturer": "Realtek",
+    "families": [
+        "HDA"
+    ],
+    "models": [],
+    "areas": [
+        "Media",
+        "Audio"
+    ]
+}

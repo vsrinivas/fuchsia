@@ -1,0 +1,14 @@
+{
+    "short_description": "Texas Instruments 27xx audio hardware codec driver",
+    "manufacturer": "Texas Instruments",
+    "families": [
+        "Tas27xx"
+    ],
+    "models": [
+        "Tas2770"
+    ],
+    "areas": [
+        "Media",
+        "Audio"
+    ]
+}

@@ -1,0 +1,12 @@
+{
+    "short_description": "Realtek Alc5514 audio hardware codec driver",
+    "manufacturer": "Realtek",
+    "families": [],
+    "models": [
+        "Alc5514"
+    ],
+    "areas": [
+        "Media",
+        "Audio"
+    ]
+}

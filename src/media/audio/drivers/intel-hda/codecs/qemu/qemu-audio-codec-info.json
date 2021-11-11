@@ -1,0 +1,12 @@
+{
+    "short_description": "QEMU HDA codec driver",
+    "manufacturer": "",
+    "families": [
+        "HDA"
+    ],
+    "models": [],
+    "areas": [
+        "Media",
+        "Audio"
+    ]
+}

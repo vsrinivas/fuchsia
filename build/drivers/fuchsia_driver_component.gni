@@ -47,7 +47,7 @@ template("fuchsia_driver_component") {
       generate_manifest = false
     }
     generate_doc = true
-    if (defined(invoker.documentation)) {
+    if (defined(invoker.info)) {
       generate_doc = false
     }
     is_v1_driver = true
@@ -124,7 +124,7 @@ template("fuchsia_driver_component") {
         ]
       }
     } else {
-      doc_input = invoker.documentation
+      doc_input = invoker.info
       action(doc_target) {
         visibility = [ ":*" ]
         forward_variables_from(invoker, [ "testonly" ])

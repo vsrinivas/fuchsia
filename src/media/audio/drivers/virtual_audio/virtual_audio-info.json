@@ -1,0 +1,11 @@
+{
+    "short_description": "Virtual audio driver used for integration testing",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Media",
+        "Audio",
+        "Test"
+    ]
+}

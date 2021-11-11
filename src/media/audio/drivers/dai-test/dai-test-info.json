@@ -1,0 +1,11 @@
+{
+    "short_description": "Example driver connects to a DAI driver and provides StreamConfig",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Media",
+        "Audio",
+        "Test"
+    ]
+}
