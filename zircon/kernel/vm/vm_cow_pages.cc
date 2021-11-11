@@ -3331,6 +3331,10 @@ void VmCowPages::RangeChangeUpdateListLocked(RangeChangeList* list, RangeChangeO
 void VmCowPages::RangeChangeUpdateLocked(uint64_t offset, uint64_t len, RangeChangeOp op) {
   canary_.Assert();
 
+  if (len == 0) {
+    return;
+  }
+
   RangeChangeList list;
   this->range_change_offset_ = offset;
   this->range_change_len_ = len;
