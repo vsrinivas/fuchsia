@@ -4,7 +4,6 @@
         "requirements": {
             "properties": {
                 "hardware": {
-                    "additionalProperties": false,
                     "properties": {
                         "cpu": {
                             "additionalProperties": false,

@@ -13,6 +13,7 @@ if (is_host) {
     sources = [ "src/args.rs" ]
     source_root = "src/args.rs"
     deps = [
+      "//build/sdk/meta:rust",
       "//src/developer/ffx/config:lib",
       "//src/developer/ffx/core:lib",
       "//third_party/rust_crates:argh",
@@ -39,6 +40,7 @@ if (is_host) {
       "src/vdl_proto_parser.rs",
     ]
     deps = [
+      ":ffx_emulator_engines_vdl_args",
       "//build/sdk/meta:rust",
       "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
       "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
@@ -50,6 +52,7 @@ if (is_host) {
       "//src/developer/ffx/lib/fms",
       "//src/developer/ffx/lib/port_picker",
       "//src/developer/ffx/plugins/emulator/common:lib",
+      "//src/developer/ffx/plugins/emulator/config_types:ffx_emulator_config",
       "//src/developer/ffx/plugins/emulator/shutdown:ffx_emulator_shutdown_args",
       "//src/developer/ffx/plugins/emulator/start:ffx_emulator_start_args",
       "//src/lib/diagnostics/selectors",

@@ -33,8 +33,14 @@ pub const SSH_PRIVATE_KEY: &'static str = "ssh.priv";
 /// The file containing the authorized keys for SSH access.
 pub const SSH_PUBLIC_KEY: &'static str = "ssh.pub";
 
+/// The directory which contains the product bundle manifest files.
+pub const FMS_DATA_DIR: &'static str = "sdk.fms.data.dir";
+
+/// The directory which contains the product bundle manifest files.
+pub const SDK_ROOT: &'static str = "sdk.dir";
+
 const ALL_KEYS: &'static [&'static str] =
-    &[EMU_UPSCRIPT_FILE, EMU_INSTANCE_ROOT_DIR, SSH_PRIVATE_KEY, SSH_PUBLIC_KEY];
+    &[EMU_UPSCRIPT_FILE, EMU_INSTANCE_ROOT_DIR, FMS_DATA_DIR, SSH_PRIVATE_KEY, SSH_PUBLIC_KEY];
 
 macro_rules! missing_key_message {
     ($key_name:expr) => {

@@ -38,6 +38,7 @@ template("virtual_device_specification") {
     sources = [
       # Included schemata.
       "//build/sdk/meta/common.json",
+      "//build/sdk/meta/hardware-f6f47515.json",
       "//build/sdk/meta/virtual_device-93A41932.json",
     ]
     allow_comments = true

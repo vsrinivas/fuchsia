@@ -215,16 +215,29 @@ mod tests {
             "data": {
                 "name": "generic-x64",
                 "type": "virtual_device",
-                "wip": {
-                   "cpu": {
-                       "arch": "x64"
-                   },
-                   "audio": true,
-                   "pointing_device": "touch",
-                   "window_width": 1280,
-                   "window_height": 800,
-                   "ram_mb": 8192,
-                   "image_size": "2G"
+                "hardware": {
+                    "audio": {
+                        "model": "hda"
+                    },
+                    "cpu": {
+                        "arch": "x64"
+                    },
+                    "inputs": {
+                        "pointing_device": "touch"
+                    },
+                    "window_size": {
+                        "width": 640,
+                        "height": 480,
+                        "units": "pixels"
+                    },
+                    "memory": {
+                        "quantity": 1,
+                        "units": "gigabytes"
+                    },
+                    "storage": {
+                        "quantity": 1,
+                        "units": "gigabytes"
+                    }
                 }
             }
         }

@@ -14,13 +14,17 @@ use ffx_emulator_common::config::FfxConfigWrapper;
 use ansi_term::Colour::*;
 use anyhow::Result;
 use errors::ffx_bail;
+use ffx_emulator_config::EmulatorEngine;
+use ffx_emulator_engines_vdl_args::VdlConfig;
 use ffx_emulator_shutdown_args::ShutdownCommand;
 use ffx_emulator_start_args::StartCommand;
 use fidl_fuchsia_developer_bridge as bridge;
 use fms;
+use futures::executor::block_on;
 use port_picker::{is_free_tcp_port, pick_unused_port, Port};
 use regex::Regex;
 use sdk_metadata;
+use sdk_metadata::{DataUnits, ProductBundleV1, VirtualDeviceV1};
 use shared_child::SharedChild;
 use signal_hook;
 use std::env;
@@ -43,6 +47,73 @@ mod target;
 mod tools;
 mod types;
 mod vdl_proto_parser;
+
+pub struct VdlEngine {
+    cmd: Option<StartCommand>,
+    config: VdlConfig,
+    daemon_proxy: Option<bridge::DaemonProxy>,
+    vdl_files: Option<VDLFiles>,
+}
+impl EmulatorEngine for VdlEngine {
+    fn new() -> Self {
+        Self { cmd: None, config: VdlConfig::new(), daemon_proxy: None, vdl_files: None }
+    }
+    fn initialize(&mut self, _product: &ProductBundleV1, device: &VirtualDeviceV1) -> Result<()> {
+        // TODO(): Make sure we validate the manifest data as it goes into the VdlConfig.
+        self.config.audio = device.hardware.audio.model.clone();
+        self.config.pointing_device = device.hardware.inputs.pointing_device.clone();
+        self.config.image_size = format!(
+            "{}{}",
+            device.hardware.storage.quantity,
+            match device.hardware.storage.units {
+                DataUnits::Bytes => "",
+                DataUnits::Kilobytes => "K",
+                DataUnits::Megabytes => "M",
+                DataUnits::Gigabytes => "G",
+                DataUnits::Terabytes => "T",
+            }
+        );
+        self.config.ram_mb = device.hardware.memory.quantity
+            * match device.hardware.memory.units {
+                DataUnits::Bytes => 1 / (1024 * 1024),
+                DataUnits::Kilobytes => 1 / 1024,
+                DataUnits::Megabytes => 1,
+                DataUnits::Gigabytes => 1024,
+                DataUnits::Terabytes => 1024 * 1024,
+            };
+        self.config.window_height = device.hardware.window_size.height;
+        self.config.window_width = device.hardware.window_size.width;
+        Ok(())
+    }
+    fn start(&mut self) -> Result<i32> {
+        let cmd: &StartCommand = self.cmd.as_ref().unwrap();
+        let proxy: Option<&bridge::DaemonProxy> = self.daemon_proxy.as_ref();
+        let vdl: &mut VDLFiles = self.vdl_files.as_mut().unwrap();
+        block_on(vdl.start_emulator(cmd, proxy))
+    }
+    fn shutdown(&mut self) -> Result<()> {
+        ffx_bail!("The `shutdown` command is not yet implemented in the VDL engine.")
+    }
+    fn show(&mut self) -> Result<()> {
+        ffx_bail!("The `show` command is not yet implemented in the VDL engine.")
+    }
+}
+impl VdlEngine {
+    // This function is a workaround until the interface is settled. We don't want the engines to
+    // depend on the StartCommand data type, all of the parameters should come through the manifest,
+    // but until that's realized, we need to pull that data somehow.
+    pub async fn setup_vdl_files(
+        &mut self,
+        cmd: StartCommand,
+        proxy: bridge::DaemonProxy,
+    ) -> Result<()> {
+        let config = FfxConfigWrapper::new();
+        self.vdl_files = Some(VDLFiles::new(cmd.sdk, cmd.verbose, &config).await?);
+        self.cmd = Some(cmd.clone());
+        self.daemon_proxy = Some(proxy.clone());
+        Ok(())
+    }
+}
 
 static ANALYTICS_ENV_VAR: &str = "FVDL_INVOKER";
 static DEFAULT_SSH_PORT: u16 = 8022;
@@ -353,6 +424,12 @@ impl VDLFiles {
     }
 
     pub fn check_start_command(&self, command: &StartCommand) -> Result<()> {
+        // TODO(fxbug.dev/88327): Re-enable SLIRP support when the manifest is settled.
+        if !command.tuntap {
+            ffx_bail!(
+                "Running without tun/tap is currently disabled. Please include the -N flag to use FEMU"
+            )
+        }
         if command.nointeractive && command.vdl_output.is_none() {
             ffx_bail!(
                 "--vdl-output must be specified for --nointeractive mode.\n\
@@ -403,7 +480,7 @@ impl VDLFiles {
         println!("Read PBM {:?}", product_bundle);
 
         self.check_start_command(&start_command)?;
-        let vdl_args: VDLArgs = start_command.clone().into();
+        let vdl_args: VDLArgs = (&start_command.clone()).into();
 
         let mut gcs_image = vdl_args.gcs_image_archive;
         let mut gcs_bucket = vdl_args.gcs_bucket;
@@ -507,6 +584,7 @@ impl VDLFiles {
             .arg(&emu_log)
             .arg("--proto_file_path")
             .arg(&fvd)
+            .arg("--start_package_server=false")
             .arg(format!("--audio={}", &device_spec.audio))
             .arg(format!("--event_action={}", &invoker))
             .arg(format!("--debugger={}", &start_command.debugger))

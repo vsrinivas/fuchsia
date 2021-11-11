@@ -59,7 +59,7 @@ impl FromArgValue for GpuType {
 }
 
 #[ffx_command()]
-#[derive(FromArgs, Default, Debug, PartialEq)]
+#[derive(Clone, FromArgs, Default, Debug, PartialEq)]
 #[argh(subcommand, name = "start")]
 /// Starting Fuchsia Emulator
 pub struct StartCommand {

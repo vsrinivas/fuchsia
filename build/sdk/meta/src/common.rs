@@ -19,6 +19,44 @@ pub enum TargetArchitecture {
     X64,
 }
 
+#[derive(Serialize, Deserialize, Debug, Hash, Clone, PartialOrd, Ord, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum PointingDevice {
+    Mouse,
+    None,
+    Touch,
+}
+
+#[derive(Serialize, Deserialize, Debug, Hash, Clone, PartialOrd, Ord, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum ScreenUnits {
+    Pixels,
+}
+
+#[derive(Serialize, Deserialize, Debug, Hash, Clone, PartialOrd, Ord, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum DataUnits {
+    Bytes,
+    Kilobytes,
+    Megabytes,
+    Gigabytes,
+    Terabytes,
+}
+
+#[derive(Serialize, Deserialize, Debug, Hash, Clone, PartialOrd, Ord, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum AudioModel {
+    AC97,
+    AdLib,
+    Cs4231A,
+    ES1370,
+    Gus,
+    Hda,
+    None,
+    PcSpk,
+    SB16,
+}
+
 #[derive(Serialize, Deserialize, Debug, Hash, PartialEq, Eq, Clone, PartialOrd, Ord)]
 #[serde(rename_all = "snake_case")]
 pub enum ElementType {

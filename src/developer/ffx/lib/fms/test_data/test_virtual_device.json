@@ -1,16 +1,29 @@
 {
     "data": {
         "description": "A virtual arm64 device",
-        "wip": {
+        "hardware": {
             "cpu": {
                 "arch": "arm64"
             },
-            "audio": true,
-            "pointing_device": "touch",
-            "window_width": 1280,
-            "window_height": 800,
-            "ram_mb": 8192,
-            "image_size": "2G"
+            "audio": {
+                "model": "hda"
+            },
+            "inputs": {
+                "pointing_device": "touch"
+            },
+            "window_size": {
+                "height": 800,
+                "width": 1280,
+                "units": "pixels"
+            },
+            "memory": {
+                "quantity": 8192,
+                "units": "megabytes"
+            },
+            "storage": {
+                "quantity": 2,
+                "units": "gigabytes"
+            }
         },
         "name": "virtual-arm64",
         "type": "virtual_device"

@@ -4,7 +4,9 @@
 
 //! Representation of the virtual_device metadata.
 
-use crate::common::{ElementType, Envelope, TargetArchitecture};
+use crate::common::{
+    AudioModel, DataUnits, ElementType, Envelope, PointingDevice, ScreenUnits, TargetArchitecture,
+};
 use crate::json::JsonObject;
 use serde::{Deserialize, Serialize};
 
@@ -13,20 +15,63 @@ use serde::{Deserialize, Serialize};
 #[serde(deny_unknown_fields)]
 pub struct Cpu {
     /// Target CPU architecture.
-    arch: TargetArchitecture,
+    pub arch: TargetArchitecture,
+}
+
+/// Details of virtual input devices, such as mice.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct InputDevice {
+    /// Pointing device for interacting with the target.
+    pub pointing_device: PointingDevice,
+}
+
+/// Details of the virtual device's audio interface, if any.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct AudioDevice {
+    /// The model of the emulated audio device, or None.
+    pub model: AudioModel,
+}
+
+/// Screen dimensions for the virtual device, if any.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct Screen {
+    pub height: usize,
+    pub width: usize,
+    pub units: ScreenUnits,
+}
+
+/// A generic data structure for indicating quantities of data.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct DataAmount {
+    pub quantity: usize,
+    pub units: DataUnits,
 }
 
 /// Specifics for a given platform.
-/// Work in progress properties, unchecked by json-schema.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-pub struct Wip {
-    cpu: Cpu,
-    audio: bool,
-    pointing_device: String,
-    window_width: u32,
-    window_height: u32,
-    ram_mb: u64,
-    image_size: String,
+#[serde(deny_unknown_fields)]
+pub struct Hardware {
+    /// Details of the Central Processing Unit (CPU).
+    pub cpu: Cpu,
+
+    /// Details about any audio devices included in the virtual device.
+    pub audio: AudioDevice,
+
+    /// The size of the disk image for the virtual device, equivalent to virtual storage capacity.
+    pub storage: DataAmount,
+
+    /// Details about any input devices, such as a mouse or touchscreen.
+    pub inputs: InputDevice,
+
+    /// Amount of memory in the virtual device.
+    pub memory: DataAmount,
+
+    /// The size of the virtual device's screen, measured in pixels.
+    pub window_size: Screen,
 }
 
 /// Description of a virtual (rather than physical) hardware device.
@@ -49,9 +94,7 @@ pub struct VirtualDeviceV1 {
     pub kind: ElementType,
 
     /// Details about the properties of the device.
-    /// Work in progress properties, unchecked by json-schema. May be renamed
-    /// to virtual_hardware or similar in the future.
-    pub wip: Wip,
+    pub hardware: Hardware,
 }
 
 impl JsonObject for Envelope<VirtualDeviceV1> {
@@ -72,17 +115,30 @@ mod tests {
             "schema_id": "http://fuchsia.com/schemas/sdk/virtual_device-93A41932.json",
             "data": {
                 "name": "generic-x64",
-                "type": "virtual_device" ,
-                "wip": {
+                "type": "virtual_device",
+                "hardware": {
+                    "audio": {
+                        "model": "hda"
+                    },
                     "cpu": {
                         "arch": "x64"
                     },
-                    "audio": true,
-                    "pointing_device": "touch",
-                    "window_width": 1280,
-                    "window_height": 800,
-                    "ram_mb": 8192,
-                    "image_size": "2G"
+                    "inputs": {
+                        "pointing_device": "touch"
+                    },
+                    "window_size": {
+                        "width": 640,
+                        "height": 480,
+                        "units": "pixels"
+                    },
+                    "memory": {
+                        "quantity": 1,
+                        "units": "gigabytes"
+                    },
+                    "storage": {
+                        "quantity": 1,
+                        "units": "gigabytes"
+                    }
                 }
             }
         }
@@ -99,16 +155,29 @@ mod tests {
             "data": {
                 "name": "generic-x64",
                 "type": "cc_prebuilt_library",
-                "wip": {
+                "hardware": {
+                    "audio": {
+                        "model": "hda"
+                    },
                     "cpu": {
                         "arch": "x64"
                     },
-                    "audio": true,
-                    "pointing_device": "touch",
-                    "window_width": 1280,
-                    "window_height": 800,
-                    "ram_mb": 8192,
-                    "image_size": "2G"
+                    "inputs": {
+                        "pointing_device": "touch"
+                    },
+                    "window_size": {
+                        "width": 640,
+                        "height": 480,
+                        "units": "pixels"
+                    },
+                    "memory": {
+                        "quantity": 1,
+                        "units": "gigabytes"
+                    },
+                    "storage": {
+                        "quantity": 1,
+                        "units": "gigabytes"
+                    }
                 }
             }
         }
