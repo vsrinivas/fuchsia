@@ -101,7 +101,7 @@ impl ::std::convert::From<PsModeArg> for PowerSaveType {
     }
 }
 
-#[derive(StructOpt, Debug)]
+#[derive(StructOpt, Debug, PartialEq)]
 pub enum Opt {
     #[structopt(name = "phy")]
     /// commands for wlan phy devices
@@ -141,7 +141,7 @@ pub enum Opt {
     Rsn(RsnCmd),
 }
 
-#[derive(StructOpt, Clone, Debug)]
+#[derive(StructOpt, Clone, Debug, PartialEq)]
 pub enum PhyCmd {
     #[structopt(name = "list")]
     /// lists phy devices
@@ -200,7 +200,7 @@ pub enum PhyCmd {
     },
 }
 
-#[derive(StructOpt, Clone, Debug)]
+#[derive(StructOpt, Clone, Debug, PartialEq)]
 pub enum IfaceCmd {
     #[structopt(name = "new")]
     /// creates a new iface device
@@ -251,7 +251,7 @@ pub enum IfaceCmd {
     Status(IfaceStatusCmd),
 }
 
-#[derive(StructOpt, Clone, Debug)]
+#[derive(StructOpt, Clone, Debug, PartialEq)]
 pub enum MinstrelCmd {
     #[structopt(name = "list")]
     List { iface_id: Option<u16> },
@@ -259,7 +259,7 @@ pub enum MinstrelCmd {
     Show { iface_id: Option<u16>, peer_addr: Option<String> },
 }
 
-#[derive(StructOpt, Clone, Debug)]
+#[derive(StructOpt, Clone, Debug, PartialEq)]
 pub struct ClientConnectCmd {
     #[structopt(short = "i", long = "iface", default_value = "0")]
     pub iface_id: u16,
@@ -300,13 +300,13 @@ pub struct ClientConnectCmd {
     pub ssid: String,
 }
 
-#[derive(StructOpt, Clone, Debug)]
+#[derive(StructOpt, Clone, Debug, PartialEq)]
 pub struct ClientDisconnectCmd {
     #[structopt(short = "i", long = "iface", default_value = "0")]
     pub iface_id: u16,
 }
 
-#[derive(StructOpt, Clone, Debug)]
+#[derive(StructOpt, Clone, Debug, PartialEq)]
 pub struct ClientScanCmd {
     #[structopt(short = "i", long = "iface", default_value = "0")]
     pub iface_id: u16,
@@ -322,19 +322,19 @@ pub struct ClientScanCmd {
     pub scan_type: ScanTypeArg,
 }
 
-#[derive(StructOpt, Clone, Debug)]
+#[derive(StructOpt, Clone, Debug, PartialEq)]
 pub struct ClientWmmStatusCmd {
     #[structopt(short = "i", long = "iface", default_value = "0")]
     pub iface_id: u16,
 }
 
-#[derive(StructOpt, Clone, Debug)]
+#[derive(StructOpt, Clone, Debug, PartialEq)]
 pub struct IfaceStatusCmd {
     #[structopt(short = "i", long = "iface")]
     pub iface_id: Option<u16>,
 }
 
-#[derive(StructOpt, Clone, Debug)]
+#[derive(StructOpt, Clone, Debug, PartialEq)]
 pub enum ClientCmd {
     #[structopt(name = "scan")]
     #[cfg(target_os = "fuchsia")]
@@ -348,7 +348,7 @@ pub enum ClientCmd {
     WmmStatus(ClientWmmStatusCmd),
 }
 
-#[derive(StructOpt, Clone, Debug)]
+#[derive(StructOpt, Clone, Debug, PartialEq)]
 pub enum ApCmd {
     #[structopt(name = "start")]
     Start {
@@ -369,7 +369,7 @@ pub enum ApCmd {
     },
 }
 
-#[derive(StructOpt, Clone, Debug)]
+#[derive(StructOpt, Clone, Debug, PartialEq)]
 pub enum MeshCmd {
     #[structopt(name = "join")]
     Join {
@@ -393,7 +393,7 @@ pub enum MeshCmd {
     },
 }
 
-#[derive(StructOpt, Clone, Debug)]
+#[derive(StructOpt, Clone, Debug, PartialEq)]
 pub enum RsnCmd {
     #[structopt(name = "generate-psk")]
     GeneratePsk {

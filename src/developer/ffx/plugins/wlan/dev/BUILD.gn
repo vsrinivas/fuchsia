@@ -1,0 +1,22 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/developer/ffx/build/ffx_plugin.gni")
+
+ffx_plugin("ffx_wlan_dev") {
+  version = "0.1.0"
+  edition = "2018"
+  args_sources = [ "src/args.rs" ]
+  sources = [ "src/lib.rs" ]
+  deps = [
+    "//sdk/fidl/fuchsia.wlan.device.service:fuchsia.wlan.device.service-rustc",
+    "//src/connectivity/wlan/tools/wlantool/wlan_dev:wlan-dev",
+  ]
+  args_deps = [
+    "//sdk/fidl/fuchsia.wlan.device.service:fuchsia.wlan.device.service-rustc",
+    "//src/connectivity/wlan/tools/wlantool/wlan_dev:wlan-dev",
+  ]
+  with_unit_tests = true
+  args_with_unit_tests = true
+}
