@@ -17,7 +17,6 @@ use {
             error::ModelError,
             exposed_dir::ExposedDir,
             hooks::{Event, EventPayload, Hooks},
-            logging::LOGGER as MODEL_LOGGER,
             namespace::IncomingNamespace,
             policy::GlobalPolicyChecker,
             resolver::ResolvedComponent,
@@ -29,6 +28,7 @@ use {
         },
         task_scope::TaskScope,
     },
+    ::logger::fmt::LOGGER as MODEL_LOGGER,
     ::routing::{
         capability_source::BuiltinCapabilities,
         component_id_index::{ComponentIdIndex, ComponentInstanceId},
@@ -1033,7 +1033,7 @@ impl ComponentInstance {
         let execution = self.lock_execution().await;
         let logger = match &execution.runtime {
             Some(Runtime { namespace: Some(ns), .. }) => ns.get_logger(),
-            _ => &MODEL_LOGGER,
+            _ => &*MODEL_LOGGER,
         };
         logger.log(level, format_args!("{}", &message))
     }

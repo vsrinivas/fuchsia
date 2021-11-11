@@ -4,10 +4,6 @@
 
 use {
     super::config::StreamSink,
-    crate::model::{
-        logging::FmtArgsLogger,
-        namespace::{get_logger_from_proxy, NamespaceLogger},
-    },
     anyhow::{anyhow, Error},
     async_trait::async_trait,
     fidl::endpoints::ProtocolMarker,
@@ -17,6 +13,7 @@ use {
     fuchsia_zircon as zx,
     futures::AsyncReadExt,
     log::Level,
+    logger::{fmt::FmtArgsLogger, scoped::ScopedLogger},
     runner::component::ComponentNamespace,
     std::{boxed::Box, num::NonZeroUsize, sync::Arc},
     zx::HandleBased,
@@ -49,7 +46,7 @@ pub async fn bind_streams_to_syslog(
 ) -> Result<(Vec<fasync::Task<()>>, Vec<fproc::HandleInfo>), Error> {
     let mut tasks: Vec<fasync::Task<()>> = Vec::new();
     let mut handles: Vec<fproc::HandleInfo> = Vec::new();
-    let mut logger: Option<Arc<NamespaceLogger>> = None;
+    let mut logger: Option<Arc<ScopedLogger>> = None;
 
     for (fd, level, sink) in
         [(STDOUT_FD, Level::Info, stdout_sink), (STDERR_FD, Level::Warn, stderr_sink)].iter()
@@ -59,7 +56,7 @@ pub async fn bind_streams_to_syslog(
                 let logger_clone = match logger.as_ref() {
                     Some(logger) => logger.clone(),
                     None => {
-                        let new_logger: Arc<NamespaceLogger> =
+                        let new_logger: Arc<ScopedLogger> =
                             Arc::new(create_namespace_logger(ns).await?);
                         logger = Some(new_logger.clone());
                         new_logger
@@ -78,18 +75,18 @@ pub async fn bind_streams_to_syslog(
     Ok((tasks, handles))
 }
 
-async fn create_namespace_logger(ns: &ComponentNamespace) -> Result<NamespaceLogger, Error> {
+async fn create_namespace_logger(ns: &ComponentNamespace) -> Result<ScopedLogger, Error> {
     let (_, dir) = ns
         .items()
         .iter()
         .find(|(path, _)| path == SVC_DIRECTORY_NAME)
         .ok_or(anyhow!("Didn't find {} directory in component's namespace!", SVC_DIRECTORY_NAME))?;
 
-    get_logger_from_proxy(&dir, SYSLOG_PROTOCOL_NAME.to_owned()).await
+    ScopedLogger::from_directory(&dir, SYSLOG_PROTOCOL_NAME.to_owned()).await
 }
 
 fn forward_fd_to_syslog(
-    logger: Arc<NamespaceLogger>,
+    logger: Arc<ScopedLogger>,
     fd: i32,
     level: Level,
 ) -> Result<(fasync::Task<()>, fproc::HandleInfo), Error> {
@@ -173,12 +170,12 @@ trait LogWriter: Send {
 }
 
 struct SyslogWriter {
-    logger: Arc<NamespaceLogger>,
+    logger: Arc<ScopedLogger>,
     level: Level,
 }
 
 impl SyslogWriter {
-    pub fn new(logger: Arc<NamespaceLogger>, level: Level) -> Self {
+    pub fn new(logger: Arc<ScopedLogger>, level: Level) -> Self {
         Self { logger, level }
     }
 }
@@ -365,8 +362,7 @@ mod tests {
     ) -> Result<(), Error> {
         let ns = ComponentNamespace::try_from(ns_entries)
             .context("Failed to create ComponentNamespace")?;
-        let logger =
-            create_namespace_logger(&ns).await.context("Failed to create NamespaceLogger")?;
+        let logger = create_namespace_logger(&ns).await.context("Failed to create ScopedLogger")?;
         let mut writer = SyslogWriter::new(Arc::new(logger), Level::Info);
         let _ = writer.write(message).await.context("Failed to write message")?;
 

@@ -6,11 +6,12 @@
 #![allow(elided_lifetimes_in_paths)]
 
 use {
+    ::logger::klog,
     anyhow::Error,
     component_manager_lib::{
         builtin_environment::{BuiltinEnvironment, BuiltinEnvironmentBuilder},
         config::RuntimeConfig,
-        klog, startup,
+        startup,
     },
     fidl_fuchsia_component_internal as finternal, fuchsia_async as fasync,
     fuchsia_runtime::{job_default, process_self},

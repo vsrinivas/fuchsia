@@ -15,7 +15,6 @@ pub(crate) mod context;
 pub(crate) mod environment;
 pub(crate) mod events;
 pub(crate) mod lifecycle_controller_factory;
-pub(crate) mod logging;
 pub(crate) mod namespace;
 pub(crate) mod policy;
 pub(crate) mod resolver;

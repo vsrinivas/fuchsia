@@ -9,7 +9,6 @@ use {
         model::{
             component::{BindReason, ComponentInstance, Package, Runtime, WeakComponentInstance},
             error::ModelError,
-            logging::{FmtArgsLogger, LOGGER as MODEL_LOGGER},
             rights::Rights,
             routing::{
                 self, route_and_open_capability, OpenDirectoryOptions, OpenOptions,
@@ -21,20 +20,20 @@ use {
         component_instance::ComponentInstanceInterface, route_to_storage_decl,
         verify_instance_in_component_id_index, RouteRequest,
     },
-    anyhow::{Context, Error},
     cm_rust::{self, CapabilityPath, ComponentDecl, UseDecl, UseProtocolDecl},
     fidl::endpoints::{create_endpoints, ClientEnd, ProtocolMarker, Proxy, ServerEnd},
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{self as fio, DirectoryMarker, DirectoryProxy, NodeMarker},
-    fidl_fuchsia_logger::{LogSinkMarker, LogSinkProxy},
-    fuchsia_async as fasync,
-    fuchsia_syslog::{get_fx_logger_level as fx_log_level, Logger},
-    fuchsia_zircon as zx,
+    fidl_fuchsia_logger::LogSinkMarker,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::future::{AbortHandle, Abortable, BoxFuture},
     log::*,
+    logger::{
+        fmt::{FmtArgsLogger, LOGGER as MODEL_LOGGER},
+        scoped::ScopedLogger,
+    },
     moniker::AbsoluteMonikerBase,
-    std::fmt::Arguments,
-    std::{collections::HashMap, path::PathBuf, sync::Arc},
+    std::{collections::HashMap, sync::Arc},
     vfs::{
         directory::entry::DirectoryEntry, directory::helper::DirectlyMutable,
         directory::immutable::simple as pfs, execution_scope::ExecutionScope, path::Path,
@@ -47,33 +46,7 @@ type Directory = Arc<pfs::Simple>;
 pub struct IncomingNamespace {
     pub package_dir: Option<Arc<DirectoryProxy>>,
     dir_abort_handles: Vec<AbortHandle>,
-    logger: Option<NamespaceLogger>,
-}
-
-/// Writes to a LogSink socket obtained from the LogSinkProtocol. The
-/// implementation falls back to using a default logger if the LogSink is
-/// unavailable.
-pub struct NamespaceLogger {
-    // We keep the handle to the service around with the idea we might make use
-    // of the service itself in the future.
-    _log_sink_protocol: LogSinkProxy,
-    logger: Logger,
-}
-
-impl NamespaceLogger {
-    pub fn get_logger(&self) -> &Logger {
-        &self.logger
-    }
-}
-
-impl FmtArgsLogger for NamespaceLogger {
-    fn log(&self, level: Level, args: Arguments) {
-        if self.logger.is_connected() {
-            self.logger.log_f(fx_log_level(level), args, None);
-        } else {
-            MODEL_LOGGER.log(level, args);
-        }
-    }
+    logger: Option<ScopedLogger>,
 }
 
 impl Drop for IncomingNamespace {
@@ -92,7 +65,7 @@ impl IncomingNamespace {
 
     /// Returns a Logger whose output is attributed to this component's
     /// namespace.
-    pub fn get_attributed_logger(&self) -> Option<&NamespaceLogger> {
+    pub fn get_attributed_logger(&self) -> Option<&ScopedLogger> {
         self.logger.as_ref()
     }
 
@@ -105,7 +78,7 @@ impl IncomingNamespace {
             // MODEL_LOGGER is a lazy_static, which obscures the type, Deref to
             // see through to the type, a reference to which implements
             // FmtArgsLogger
-            &MODEL_LOGGER
+            &*MODEL_LOGGER
         }
     }
 
@@ -195,7 +168,7 @@ impl IncomingNamespace {
         &self,
         ns: Vec<fcrunner::ComponentNamespaceEntry>,
         log_sink_decl: &UseProtocolDecl,
-    ) -> (Vec<fcrunner::ComponentNamespaceEntry>, Option<NamespaceLogger>) {
+    ) -> (Vec<fcrunner::ComponentNamespaceEntry>, Option<ScopedLogger>) {
         // A new set of namespace entries is returned because when the entry
         // used to connect to LogSink is found, that entry is consumed. A
         // matching entry is created and placed in the set of entries returned
@@ -203,7 +176,7 @@ impl IncomingNamespace {
         // logger connection can be stored when found.
         let mut new_ns = vec![];
         let mut log_ns_dir: Option<(fcrunner::ComponentNamespaceEntry, String)> = None;
-        let mut logger = Option::<NamespaceLogger>::None;
+        let mut logger = Option::<ScopedLogger>::None;
         // Find namespace directory specified in the log_sink_decl
         for ns_dir in ns {
             if let Some(path) = &ns_dir.path.clone() {
@@ -224,54 +197,13 @@ impl IncomingNamespace {
         if let Some((mut entry, remaining_path)) = log_ns_dir {
             if let Some(dir) = entry.directory {
                 let _str = log_sink_decl.target_path.to_string();
-                let (restored_dir, logger_) = self.get_logger_from_dir(dir, remaining_path).await;
+                let (restored_dir, logger_) = get_logger_from_dir(dir, remaining_path).await;
                 entry.directory = restored_dir;
                 logger = logger_;
             }
             new_ns.push(entry);
         }
         (new_ns, logger)
-    }
-
-    /// Given a Directory, connect to the LogSink protocol at the default
-    /// location. o
-    async fn get_logger_from_dir(
-        &self,
-        dir: ClientEnd<DirectoryMarker>,
-        at_path: String,
-    ) -> (Option<ClientEnd<DirectoryMarker>>, Option<NamespaceLogger>) {
-        let mut logger = Option::<NamespaceLogger>::None;
-        match dir.into_proxy() {
-            Ok(dir_proxy) => {
-                match get_logger_from_proxy(&dir_proxy, at_path).await {
-                    Ok(ns_logger) => {
-                        logger = Some(ns_logger);
-                    }
-                    Err(err) => {
-                        info!("LogSink.Connect() failed, logs will be attributed to component manager: {}", err);
-                    }
-                }
-
-                // Now that we have the LogSink and socket, put the LogSink
-                // protocol directory back where we found it.
-                (
-                    dir_proxy.into_channel().map_or_else(
-                        |e| {
-                            error!("LogSink proxy could not be converted back to channel: {:?}", e);
-                            None
-                        },
-                        |chan| {
-                            Some(ClientEnd::<fidl_fuchsia_io::DirectoryMarker>::new(chan.into()))
-                        },
-                    ),
-                    logger,
-                )
-            }
-            Err(e) => {
-                info!("Directory client channel could not be turned into proxy: {}", e);
-                (None, logger)
-            }
-        }
     }
 
     /// add_pkg_directory will add a handle to the component's package under /pkg in the namespace.
@@ -576,6 +508,47 @@ impl IncomingNamespace {
     }
 }
 
+/// Given a Directory, connect to the LogSink protocol at the default
+/// location.
+pub async fn get_logger_from_dir(
+    dir: ClientEnd<DirectoryMarker>,
+    at_path: String,
+) -> (Option<ClientEnd<DirectoryMarker>>, Option<ScopedLogger>) {
+    let mut logger = Option::<ScopedLogger>::None;
+    match dir.into_proxy() {
+        Ok(dir_proxy) => {
+            match ScopedLogger::from_directory(&dir_proxy, at_path).await {
+                Ok(ns_logger) => {
+                    logger = Some(ns_logger);
+                }
+                Err(err) => {
+                    log::info!("LogSink.Connect() failed, logs will be attributed to component manager: {}", err);
+                }
+            }
+
+            // Now that we have the LogSink and socket, put the LogSink
+            // protocol directory back where we found it.
+            (
+                dir_proxy.into_channel().map_or_else(
+                    |e| {
+                        log::error!(
+                            "LogSink proxy could not be converted back to channel: {:?}",
+                            e
+                        );
+                        None
+                    },
+                    |chan| Some(ClientEnd::<fidl_fuchsia_io::DirectoryMarker>::new(chan.into())),
+                ),
+                logger,
+            )
+        }
+        Err(e) => {
+            log::info!("Directory client channel could not be turned into proxy: {}", e);
+            (None, logger)
+        }
+    }
+}
+
 fn make_dir_with_not_found_logging(
     root_path: String,
     component_for_logger: WeakComponentInstance,
@@ -597,7 +570,7 @@ fn make_dir_with_not_found_logging(
                     let execution = target.lock_execution().await;
                     let logger = match &execution.runtime {
                         Some(Runtime { namespace: Some(ns), .. }) => ns.get_logger(),
-                        _ => &MODEL_LOGGER,
+                        _ => &*MODEL_LOGGER,
                     };
                     logger.log(
                         Level::Warn,
@@ -615,41 +588,6 @@ fn make_dir_with_not_found_logging(
         .detach();
     }));
     new_dir
-}
-
-/// Instantiate a NamespaceLogger by connecting to the provided path within
-/// the directory.
-pub async fn get_logger_from_proxy(
-    dir: &DirectoryProxy,
-    path: String,
-) -> Result<NamespaceLogger, Error> {
-    match io_util::open_node(
-        &dir,
-        &PathBuf::from(path.trim_start_matches("/")),
-        fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
-        fidl_fuchsia_io::MODE_TYPE_SERVICE,
-    ) {
-        Ok(log_sink_node) => {
-            let mut sink = LogSinkProxy::from_channel(log_sink_node.into_channel().unwrap());
-            let log_socket = connect_to_logger(&mut sink).await?;
-            Ok(NamespaceLogger { _log_sink_protocol: sink, logger: log_socket })
-        }
-        Err(e) => Err(e),
-    }
-}
-
-async fn connect_to_logger(sink: &fidl_fuchsia_logger::LogSinkProxy) -> Result<Logger, Error> {
-    let (tx, rx) = zx::Socket::create(zx::SocketOpts::DATAGRAM)
-        .context("socket creation for logger connection failed")?;
-    sink.connect(rx).context("protocool error connecting to logger socket")?;
-    // TODO fxbug.dev/62644
-    // IMPORTANT: Set tags to empty so attributed tags will be generated by the
-    // logger. The logger should see this capability request as coming from the
-    // component and use its default tags for messages coming via this socket.
-    let tags = vec![];
-    let logger = fuchsia_syslog::build_with_tags_and_socket(tx, &tags)
-        .context("logger could not be built")?;
-    Ok(logger)
 }
 
 #[cfg(test)]

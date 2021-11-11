@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -12,14 +12,14 @@ use {
 
 const MAX_LOG_LEVEL: log::Level = log::Level::Info;
 
+lazy_static! {
+    pub static ref LOGGER: KernelLogger = KernelLogger::new();
+}
+
 /// KernelLogger is a logger implementation for the log crate. It attempts to use the kernel
 /// debuglog facility and automatically falls back to stderr if that fails.
 pub struct KernelLogger {
     debuglog: zx::DebugLog,
-}
-
-lazy_static! {
-    static ref LOGGER: KernelLogger = KernelLogger::new();
 }
 
 impl KernelLogger {
@@ -66,7 +66,7 @@ impl KernelLogger {
         }));
     }
 
-    fn log_helper(&self, level: &str, args: &fmt::Arguments) {
+    fn log_helper(&self, level: &str, args: &fmt::Arguments<'_>) {
         let mut msg = format!("[component_manager] {}: {}", level, args);
 
         while msg.len() > 0 {
@@ -83,11 +83,11 @@ impl KernelLogger {
 }
 
 impl log::Log for KernelLogger {
-    fn enabled(&self, metadata: &log::Metadata) -> bool {
+    fn enabled(&self, metadata: &log::Metadata<'_>) -> bool {
         metadata.level() <= MAX_LOG_LEVEL
     }
 
-    fn log(&self, record: &log::Record) {
+    fn log(&self, record: &log::Record<'_>) {
         if self.enabled(record.metadata()) {
             self.log_helper(&record.level().to_string(), record.args());
         }
@@ -164,7 +164,6 @@ mod tests {
 
     #[test]
     #[should_panic(expected = "panic_test")]
-    #[ignore] // TODO(fxbug.dev/40189)
     fn log_panic_test() {
         let mut rng = rand::thread_rng();
         let logged_value: u64 = rng.gen();
@@ -173,8 +172,6 @@ mod tests {
         panic::set_hook(Box::new(move |info| {
             // This will panic again if the message is not found,
             // and the message will not include "panic_test".
-            // TODO(tmandry): The order of these must be reversed when
-            // panic=abort is enabled. Ideally it wouldn't matter.
             old_hook(info);
             expect_message_in_debuglog(format!(
                 "[component_manager] PANIC: panic_test {}",
