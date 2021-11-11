@@ -1,0 +1,2 @@
+per-file network.h = file: /src/connectivity/network/OWNERS
+per-file ethernet.h = file: /src/connectivity/network/OWNERS
