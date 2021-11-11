@@ -10,153 +10,153 @@
     //             errors: [ ...as other lists below... ]
     //         }
     //     },
-  {
-    "capability_type": "directory",
-    "results": {
-      "errors": [
-        {
-          "using_node": "/bootstrap",
-          "capability": "build-info",
-          "error": {
-            "error": {
-              "analyzer_model_error": {
-                "routing_error": {
-                  "policy_error": {
-                    "capability_use_disallowed": {
-                      "cap": "build-info",
-                      "source_moniker": {
-                        "component_instance": {
-                          "path": [
-                            {
-                              "name": "bootstrap",
-                              "collection": null,
-                              "instance": 0,
-                              "rep": "bootstrap:0"
+    {
+        capability_type: "directory",
+        results: {
+            errors: [
+                {
+                    using_node: "/bootstrap",
+                    capability: "build-info",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    policy_error: {
+                                        capability_use_disallowed: {
+                                            cap: "build-info",
+                                            source_moniker: {
+                                                component_instance: {
+                                                    path: [
+                                                        {
+                                                            name: "bootstrap",
+                                                            collection: null,
+                                                            instance: 0,
+                                                            rep: "bootstrap:0",
+                                                        },
+                                                        {
+                                                            name: "fshost",
+                                                            collection: null,
+                                                            instance: 0,
+                                                            rep: "fshost:0",
+                                                        },
+                                                    ],
+                                                },
+                                            },
+                                            target_moniker: {
+                                                path: [
+                                                    {
+                                                        name: "bootstrap",
+                                                        collection: null,
+                                                        rep: "bootstrap",
+                                                    },
+                                                ],
+                                            },
+                                        },
+                                    },
+                                },
                             },
-                            {
-                              "name": "fshost",
-                              "collection": null,
-                              "instance": 0,
-                              "rep": "fshost:0"
-                            }
-                          ]
-                        }
-                      },
-                      "target_moniker": {
-                        "path": [
-                          {
-                            "name": "bootstrap",
-                            "collection": null,
-                            "rep": "bootstrap"
-                          }
-                        ]
-                      }
-                    }
-                  }
-                }
-              }
-            },
-            "message": "security policy disallows \"build-info\" from \"/bootstrap:0/fshost:0\" being used at \"/bootstrap\""
-          }
+                        },
+                        message: "security policy disallows \"build-info\" from \"/bootstrap:0/fshost:0\" being used at \"/bootstrap\"",
+                    },
+                },
+                {
+                    using_node: "/bootstrap",
+                    capability: "deprecated-misc-storage",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    policy_error: {
+                                        capability_use_disallowed: {
+                                            cap: "deprecated-misc-storage",
+                                            source_moniker: {
+                                                component_instance: {
+                                                    path: [
+                                                        {
+                                                            name: "bootstrap",
+                                                            collection: null,
+                                                            instance: 0,
+                                                            rep: "bootstrap:0",
+                                                        },
+                                                        {
+                                                            name: "fshost",
+                                                            collection: null,
+                                                            instance: 0,
+                                                            rep: "fshost:0",
+                                                        },
+                                                    ],
+                                                },
+                                            },
+                                            target_moniker: {
+                                                path: [
+                                                    {
+                                                        name: "bootstrap",
+                                                        collection: null,
+                                                        rep: "bootstrap",
+                                                    },
+                                                ],
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        message: "security policy disallows \"deprecated-misc-storage\" from \"/bootstrap:0/fshost:0\" being used at \"/bootstrap\"",
+                    },
+                },
+                {
+                    using_node: "/bootstrap/fshost",
+                    capability: "build-info",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    policy_error: {
+                                        capability_use_disallowed: {
+                                            cap: "build-info",
+                                            source_moniker: {
+                                                component_instance: {
+                                                    path: [
+                                                        {
+                                                            name: "bootstrap",
+                                                            collection: null,
+                                                            instance: 0,
+                                                            rep: "bootstrap:0",
+                                                        },
+                                                        {
+                                                            name: "fshost",
+                                                            collection: null,
+                                                            instance: 0,
+                                                            rep: "fshost:0",
+                                                        },
+                                                    ],
+                                                },
+                                            },
+                                            target_moniker: {
+                                                path: [
+                                                    {
+                                                        name: "bootstrap",
+                                                        collection: null,
+                                                        rep: "bootstrap",
+                                                    },
+                                                    {
+                                                        name: "fshost",
+                                                        collection: null,
+                                                        rep: "fshost",
+                                                    },
+                                                ],
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        message: "security policy disallows \"build-info\" from \"/bootstrap:0/fshost:0\" being used at \"/bootstrap/fshost\"",
+                    },
+                },
+            ],
         },
-        {
-          "using_node": "/bootstrap",
-          "capability": "deprecated-misc-storage",
-          "error": {
-            "error": {
-              "analyzer_model_error": {
-                "routing_error": {
-                  "policy_error": {
-                    "capability_use_disallowed": {
-                      "cap": "deprecated-misc-storage",
-                      "source_moniker": {
-                        "component_instance": {
-                          "path": [
-                            {
-                              "name": "bootstrap",
-                              "collection": null,
-                              "instance": 0,
-                              "rep": "bootstrap:0"
-                            },
-                            {
-                              "name": "fshost",
-                              "collection": null,
-                              "instance": 0,
-                              "rep": "fshost:0"
-                            }
-                          ]
-                        }
-                      },
-                      "target_moniker": {
-                        "path": [
-                          {
-                            "name": "bootstrap",
-                            "collection": null,
-                            "rep": "bootstrap"
-                          }
-                        ]
-                      }
-                    }
-                  }
-                }
-              }
-            },
-            "message": "security policy disallows \"deprecated-misc-storage\" from \"/bootstrap:0/fshost:0\" being used at \"/bootstrap\""
-          }  
-        },
-        {
-          "using_node": "/bootstrap/fshost",
-          "capability": "build-info",
-          "error": {
-            "error": {
-              "analyzer_model_error": {
-                "routing_error": {
-                  "policy_error": {
-                    "capability_use_disallowed": {
-                      "cap": "build-info",
-                      "source_moniker": {
-                        "component_instance": {
-                          "path": [
-                            {
-                              "name": "bootstrap",
-                              "collection": null,
-                              "instance": 0,
-                              "rep": "bootstrap:0"
-                            },
-                            {
-                              "name": "fshost",
-                              "collection": null,
-                              "instance": 0,
-                              "rep": "fshost:0"
-                            }
-                          ]
-                        }
-                      },
-                      "target_moniker": {
-                        "path": [
-                          {
-                            "name": "bootstrap",
-                            "collection": null,
-                            "rep": "bootstrap"
-                          },
-                          {
-                            "name": "fshost",
-                            "collection": null,
-                            "rep": "fshost"
-                          }
-                        ]
-                      }
-                    }
-                  }
-                }
-              }
-            },
-            "message": "security policy disallows \"build-info\" from \"/bootstrap:0/fshost:0\" being used at \"/bootstrap/fshost\""
-          }
-        }
-      ]
-    }
-  },
+    },
 
     // List of all event capabilities that are exempt from the verify
     // routes checker. Only add to this list if you cannot remove the
@@ -167,675 +167,768 @@
     // List of all protocol capabilities that are exempt from the verify
     // routes checker. Only add to this list if you cannot remove the
     // unused route.
-  {
-    "capability_type": "protocol",
-    "results": {
-      "errors": [
-        {
-          "using_node": "/bootstrap/driver_manager",
-          "capability": "fuchsia.pkg.PackageResolver",
-          "error": {
-            "error": {
-              "analyzer_model_error": {
-                "routing_error": {
-                  "policy_error": {
-                    "capability_use_disallowed": {
-                      "cap": "fuchsia.pkg.PackageResolver",
-                      "source_moniker": {
-                        "component_instance": {
-                          "path": [
-                            {
-                              "name": "core",
-                              "collection": null,
-                              "instance": 0,
-                              "rep": "core:0"
+    {
+        capability_type: "protocol",
+        results: {
+            errors: [
+                {
+                    // TODO(fxbug.dev/86464): remove.
+                    using_node: "/core/full-resolver",
+                    capability: "fuchsia.pkg.PackageResolver",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    use_from_parent_not_found: {
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "core",
+                                                    collection: null,
+                                                    rep: "core",
+                                                },
+                                                {
+                                                    name: "full-resolver",
+                                                    collection: null,
+                                                    rep: "full-resolver",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "fuchsia.pkg.PackageResolver",
+                                    },
+                                },
                             },
-                            {
-                              "name": "pkg-resolver",
-                              "collection": null,
-                              "instance": 0,
-                              "rep": "pkg-resolver:0"
-                            }
-                          ]
-                        }
-                      },
-                      "target_moniker": {
-                        "path": [
-                          {
-                            "name": "bootstrap",
-                            "collection": null,
-                            "rep": "bootstrap"
-                          },
-                          {
-                            "name": "driver_manager",
-                            "collection": null,
-                            "rep": "driver_manager"
-                          }
-                        ]
-                      }
-                    }
-                  }
-                }
-              }
-            },
-            "message": "security policy disallows \"fuchsia.pkg.PackageResolver\" from \"/core:0/pkg-resolver:0\" being used at \"/bootstrap/driver_manager\""
-          }
-        },
-        {
-          "capability": "fuchsia.pkg.PackageResolver",
-          "error": {
-            "error": {
-              "analyzer_model_error": {
-                "routing_error": {
-                  "policy_error": {
-                    "capability_use_disallowed": {
-                      "cap": "fuchsia.pkg.PackageResolver",
-                      "source_moniker": {
-                        "component_instance": {
-                          "path": [
-                            {
-                              "collection": null,
-                              "instance": 0,
-                              "name": "core",
-                              "rep": "core:0"
+                        },
+                        message: "A `use from parent` declaration was found at `/core/full-resolver` for `fuchsia.pkg.PackageResolver`, but no matching `offer` declaration was found in the parent",
+                    },
+                },
+                {
+                    // TODO(fxbug.dev/86464): remove.
+                    using_node: "/core/full-resolver",
+                    capability: "fuchsia.sys2.ComponentResolver",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    use_from_parent_not_found: {
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "core",
+                                                    collection: null,
+                                                    rep: "core",
+                                                },
+                                                {
+                                                    name: "full-resolver",
+                                                    collection: null,
+                                                    rep: "full-resolver",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "fuchsia.sys2.ComponentResolver",
+                                    },
+                                },
                             },
-                            {
-                              "collection": null,
-                              "instance": 0,
-                              "name": "pkg-resolver",
-                              "rep": "pkg-resolver:0"
-                            }
-                          ]
-                        }
-                      },
-                      "target_moniker": {
-                        "path": [
-                          {
-                            "collection": null,
-                            "name": "core",
-                            "rep": "core"
-                          }
-                        ]
-                      }
-                    }
-                  }
-                }
-              }
-            },
-            "message": "security policy disallows \"fuchsia.pkg.PackageResolver\" from \"/core:0/pkg-resolver:0\" being used at \"/core\""
-          },
-          "using_node": "/core"
-        },
-        {
-          "capability": "fuchsia.amber.Control",
-          "error": {
-            "error": {
-              "analyzer_model_error": {
-                "routing_error": {
-                  "expose_from_child_expose_not_found": {
-                    "capability_id": "fuchsia.amber.Control",
-                    "child_moniker": {
-                      "collection": null,
-                      "name": "appmgr",
-                      "rep": "appmgr"
-                    },
-                    "moniker": {
-                      "path": [
-                        {
-                          "collection": null,
-                          "name": "core",
-                          "rep": "core"
-                        }
-                      ]
-                    }
-                  }
-                }
-              }
-            },
-            "message": "An `expose from #appmgr` declaration was found at `/core` for `fuchsia.amber.Control`, but no matching `expose` declaration was found in the child"
-          },
-          "using_node": "/core"
-        },
-        {
-          "using_node": "/core/battery_manager",
-          "capability": "fuchsia.hardware.power.Source",
-          "error": {
-            "error": {
-              "analyzer_model_error": {
-                "routing_error": {
-                  "use_from_parent_not_found": {
-                    "moniker": {
-                      "path": [
-                        {
-                          "name": "core",
-                          "collection": null,
-                          "rep": "core"
                         },
-                        {
-                          "name": "battery_manager",
-                          "collection": null,
-                          "rep": "battery_manager"
-                        }
-                      ]
+                        message: "A `use from parent` declaration was found at `/core/full-resolver` for `fuchsia.sys2.ComponentResolver`, but no matching `offer` declaration was found in the parent",
                     },
-                    "capability_id": "fuchsia.hardware.power.Source"
-                  }
-                }
-              }
-            },
-            "message": "A `use from parent` declaration was found at `/core/battery_manager` for `fuchsia.hardware.power.Source`, but no matching `offer` declaration was found in the parent"
-          }
-        },
-        {
-          "capability": "fuchsia.kernel.RootJobForInspect",
-          "error": {
-            "error": {
-              "analyzer_model_error": {
-                "routing_error": {
-                  "policy_error": {
-                    "capability_use_disallowed": {
-                      "cap": "fuchsia.kernel.RootJobForInspect",
-                      "source_moniker": "component_manager",
-                      "target_moniker": {
-                        "path": [
-                          {
-                            "collection": null,
-                            "name": "core",
-                            "rep": "core"
-                          },
-                          {
-                            "collection": null,
-                            "name": "mem",
-                            "rep": "mem"
-                          }
-                        ]
-                      }
-                    }
-                  }
-                }
-              }
-            },
-            "message": "security policy disallows \"fuchsia.kernel.RootJobForInspect\" from \"<component_manager>\" being used at \"/core/mem\""
-          },
-          "using_node": "/core/mem"
-        },
-        {
-          "using_node": "/core/system-metrics-logger",
-          "capability": "fuchsia.device.Controller",
-          "error": {
-            "error": {
-              "analyzer_model_error": {
-                "routing_error": {
-                  "use_from_parent_not_found": {
-                    "moniker": {
-                      "path": [
-                        {
-                          "name": "core",
-                          "collection": null,
-                          "rep": "core"
-                        },
-                        {
-                          "name": "system-metrics-logger",
-                          "collection": null,
-                          "rep": "system-metrics-logger"
-                        }
-                      ]
-                    },
-                    "capability_id": "fuchsia.device.Controller"
-                  }
-                }
-              }
-            },
-            "message": "A `use from parent` declaration was found at `/core/system-metrics-logger` for `fuchsia.device.Controller`, but no matching `offer` declaration was found in the parent"
-          }
-        },
-        {
-          "capability": "fuchsia.pkg.LocalMirror",
-          "error": {
-            "error": {
-              "analyzer_model_error": {
-                "routing_error": {
-                  "use_from_parent_not_found": {
-                    "capability_id": "fuchsia.pkg.LocalMirror",
-                    "moniker": {
-                      "path": [
-                        {
-                          "collection": null,
-                          "name": "core",
-                          "rep": "core"
-                        },
-                        {
-                          "collection": null,
-                          "name": "pkg-resolver",
-                          "rep": "pkg-resolver"
-                        }
-                      ]
-                    }
-                  }
-                }
-              }
-            },
-            "message": "A `use from parent` declaration was found at `/core/pkg-resolver` for `fuchsia.pkg.LocalMirror`, but no matching `offer` declaration was found in the parent"
-          },
-          "using_node": "/core/pkg-resolver"
-        },
-        {
-          "capability": "fuchsia.pkg.PackageCache",
-          "error": {
-            "error": {
-              "analyzer_model_error": {
-                "routing_error": {
-                  "policy_error": {
-                    "capability_use_disallowed": {
-                      "cap": "fuchsia.pkg.PackageCache",
-                      "source_moniker": {
-                        "component_instance": {
-                          "path": [
-                            {
-                              "collection": null,
-                              "instance": 0,
-                              "name": "core",
-                              "rep": "core:0"
+                },
+                {
+                    // TODO(fxbug.dev/86464): remove.
+                    using_node: "/core/full-resolver",
+                    capability: "fuchsia.logger.LogSink",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    use_from_parent_not_found: {
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "core",
+                                                    collection: null,
+                                                    rep: "core",
+                                                },
+                                                {
+                                                    name: "full-resolver",
+                                                    collection: null,
+                                                    rep: "full-resolver",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "fuchsia.logger.LogSink",
+                                    },
+                                },
                             },
-                            {
-                              "collection": null,
-                              "instance": 0,
-                              "name": "pkg-cache",
-                              "rep": "pkg-cache:0"
-                            }
-                          ]
-                        }
-                      },
-                      "target_moniker": {
-                        "path": [
-                          {
-                            "collection": null,
-                            "name": "core",
-                            "rep": "core"
-                          },
-                          {
-                            "collection": null,
-                            "name": "pkg-cache",
-                            "rep": "pkg-cache"
-                          }
-                        ]
-                      }
-                    }
-                  }
-                }
-              }
-            },
-            "message": "security policy disallows \"fuchsia.pkg.PackageCache\" from \"/core:0/pkg-cache:0\" being used at \"/core/pkg-cache\""
-          },
-          "using_node": "/core/pkg-cache"
-        },
-        {
-          "capability": "fuchsia.pkg.PackageResolver",
-          "error": {
-            "error": {
-              "analyzer_model_error": {
-                "routing_error": {
-                  "policy_error": {
-                    "capability_use_disallowed": {
-                      "cap": "fuchsia.pkg.PackageResolver",
-                      "source_moniker": {
-                        "component_instance": {
-                          "path": [
-                            {
-                              "collection": null,
-                              "instance": 0,
-                              "name": "core",
-                              "rep": "core:0"
+                        },
+                        message: "A `use from parent` declaration was found at `/core/full-resolver` for `fuchsia.logger.LogSink`, but no matching `offer` declaration was found in the parent",
+                    },
+                },
+                {
+                    using_node: "/bootstrap/driver_manager",
+                    capability: "fuchsia.pkg.PackageResolver",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    policy_error: {
+                                        capability_use_disallowed: {
+                                            cap: "fuchsia.pkg.PackageResolver",
+                                            source_moniker: {
+                                                component_instance: {
+                                                    path: [
+                                                        {
+                                                            name: "core",
+                                                            collection: null,
+                                                            instance: 0,
+                                                            rep: "core:0",
+                                                        },
+                                                        {
+                                                            name: "pkg-resolver",
+                                                            collection: null,
+                                                            instance: 0,
+                                                            rep: "pkg-resolver:0",
+                                                        },
+                                                    ],
+                                                },
+                                            },
+                                            target_moniker: {
+                                                path: [
+                                                    {
+                                                        name: "bootstrap",
+                                                        collection: null,
+                                                        rep: "bootstrap",
+                                                    },
+                                                    {
+                                                        name: "driver_manager",
+                                                        collection: null,
+                                                        rep: "driver_manager",
+                                                    },
+                                                ],
+                                            },
+                                        },
+                                    },
+                                },
                             },
-                            {
-                              "collection": null,
-                              "instance": 0,
-                              "name": "pkg-resolver",
-                              "rep": "pkg-resolver:0"
-                            }
-                          ]
-                        }
-                      },
-                      "target_moniker": {
-                        "path": [
-                          {
-                            "collection": null,
-                            "name": "core",
-                            "rep": "core"
-                          },
-                          {
-                            "collection": null,
-                            "name": "pkg-resolver",
-                            "rep": "pkg-resolver"
-                          }
-                        ]
-                      }
-                    }
-                  }
-                }
-              }
-            },
-            "message": "security policy disallows \"fuchsia.pkg.PackageResolver\" from \"/core:0/pkg-resolver:0\" being used at \"/core/pkg-resolver\""
-          },
-          "using_node": "/core/pkg-resolver"
-        },
-        {
-          "capability": "fuchsia.pkg.RetainedPackages",
-          "error": {
-            "error": {
-              "analyzer_model_error": {
-                "routing_error": {
-                  "policy_error": {
-                    "capability_use_disallowed": {
-                      "cap": "fuchsia.pkg.RetainedPackages",
-                      "source_moniker": {
-                        "component_instance": {
-                          "path": [
-                            {
-                              "collection": null,
-                              "instance": 0,
-                              "name": "core",
-                              "rep": "core:0"
+                        },
+                        message: "security policy disallows \"fuchsia.pkg.PackageResolver\" from \"/core:0/pkg-resolver:0\" being used at \"/bootstrap/driver_manager\"",
+                    },
+                },
+                {
+                    capability: "fuchsia.pkg.PackageResolver",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    policy_error: {
+                                        capability_use_disallowed: {
+                                            cap: "fuchsia.pkg.PackageResolver",
+                                            source_moniker: {
+                                                component_instance: {
+                                                    path: [
+                                                        {
+                                                            collection: null,
+                                                            instance: 0,
+                                                            name: "core",
+                                                            rep: "core:0",
+                                                        },
+                                                        {
+                                                            collection: null,
+                                                            instance: 0,
+                                                            name: "pkg-resolver",
+                                                            rep: "pkg-resolver:0",
+                                                        },
+                                                    ],
+                                                },
+                                            },
+                                            target_moniker: {
+                                                path: [
+                                                    {
+                                                        collection: null,
+                                                        name: "core",
+                                                        rep: "core",
+                                                    },
+                                                ],
+                                            },
+                                        },
+                                    },
+                                },
                             },
-                            {
-                              "collection": null,
-                              "instance": 0,
-                              "name": "pkg-cache",
-                              "rep": "pkg-cache:0"
-                            }
-                          ]
-                        }
-                      },
-                      "target_moniker": {
-                        "path": [
-                          {
-                            "collection": null,
-                            "name": "core",
-                            "rep": "core"
-                          },
-                          {
-                            "collection": null,
-                            "name": "pkg-cache",
-                            "rep": "pkg-cache"
-                          }
-                        ]
-                      }
-                    }
-                  }
-                }
-              }
-            },
-            "message": "security policy disallows \"fuchsia.pkg.RetainedPackages\" from \"/core:0/pkg-cache:0\" being used at \"/core/pkg-cache\""
-          },
-          "using_node": "/core/pkg-cache"
-        },
-        {
-          "using_node": "/core/temperature-logger",
-          "capability": "fuchsia.device.Controller",
-          "error": {
-            "error": {
-              "analyzer_model_error": {
-                "routing_error": {
-                  "offer_from_parent_not_found": {
-                    "moniker": {
-                      "path": [
-                        {
-                          "name": "core",
-                          "collection": null,
-                          "rep": "core"
-                        }
-                      ]
+                        },
+                        message: "security policy disallows \"fuchsia.pkg.PackageResolver\" from \"/core:0/pkg-resolver:0\" being used at \"/core\"",
                     },
-                    "capability_id": "fuchsia.device.Controller"
-                  }
-                }
-              }
-            },
-            "message": "An `offer from parent` declaration was found at `/core` for `fuchsia.device.Controller`, but no matching `offer` declaration was found in the parent"
-          }
-        },
-        {
-          "using_node": "/core/starnix_manager/starnix_runner",
-          "capability": "fuchsia.component.runner.ComponentRunner",
-          "error": {
-            "error": {
-              "analyzer_model_error": {
-                "routing_error": {
-                  "use_from_parent_not_found": {
-                    "moniker": {
-                      "path": [
-                        {
-                          "name": "core",
-                          "collection": null,
-                          "rep": "core"
+                    using_node: "/core",
+                },
+                {
+                    capability: "fuchsia.amber.Control",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    expose_from_child_expose_not_found: {
+                                        capability_id: "fuchsia.amber.Control",
+                                        child_moniker: {
+                                            collection: null,
+                                            name: "appmgr",
+                                            rep: "appmgr",
+                                        },
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    collection: null,
+                                                    name: "core",
+                                                    rep: "core",
+                                                },
+                                            ],
+                                        },
+                                    },
+                                },
+                            },
                         },
-                        {
-                          "name": "starnix_manager",
-                          "collection": null,
-                          "rep": "starnix_manager"
-                        },
-                        {
-                          "name": "starnix_runner",
-                          "collection": null,
-                          "rep": "starnix_runner"
-                        }
-                      ]
+                        message: "An `expose from #appmgr` declaration was found at `/core` for `fuchsia.amber.Control`, but no matching `expose` declaration was found in the child",
                     },
-                    "capability_id": "fuchsia.component.runner.ComponentRunner"
-                  }
-                }
-              }
-            },
-            "message": "A `use from parent` declaration was found at `/core/starnix_manager/starnix_runner` for `fuchsia.component.runner.ComponentRunner`, but no matching `offer` declaration was found in the parent"
-          }
-        },
-        {
-          "using_node": "/core/temperature-logger",
-          "capability": "fuchsia.hardware.temperature.Device",
-          "error": {
-            "error": {
-              "analyzer_model_error": {
-                "routing_error": {
-                  "offer_from_parent_not_found": {
-                    "moniker": {
-                      "path": [
-                        {
-                          "name": "core",
-                          "collection": null,
-                          "rep": "core"
-                        }
-                      ]
+                    using_node: "/core",
+                },
+                {
+                    using_node: "/core/battery_manager",
+                    capability: "fuchsia.hardware.power.Source",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    use_from_parent_not_found: {
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "core",
+                                                    collection: null,
+                                                    rep: "core",
+                                                },
+                                                {
+                                                    name: "battery_manager",
+                                                    collection: null,
+                                                    rep: "battery_manager",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "fuchsia.hardware.power.Source",
+                                    },
+                                },
+                            },
+                        },
+                        message: "A `use from parent` declaration was found at `/core/battery_manager` for `fuchsia.hardware.power.Source`, but no matching `offer` declaration was found in the parent",
                     },
-                    "capability_id": "fuchsia.hardware.temperature.Device"
-                  }
-                }
-              }
-            },
-            "message": "An `offer from parent` declaration was found at `/core` for `fuchsia.hardware.temperature.Device`, but no matching `offer` declaration was found in the parent"
-          }
-        },
-        {
-          "using_node": "/core/test_manager/starnix_test_runner/starnix_runner",
-          "capability": "fuchsia.component.runner.ComponentRunner",
-          "error": {
-            "error": {
-              "analyzer_model_error": {
-                "routing_error": {
-                  "use_from_parent_not_found": {
-                    "moniker": {
-                      "path": [
-                        {
-                          "name": "core",
-                          "collection": null,
-                          "rep": "core"
+                },
+                {
+                    capability: "fuchsia.kernel.RootJobForInspect",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    policy_error: {
+                                        capability_use_disallowed: {
+                                            cap: "fuchsia.kernel.RootJobForInspect",
+                                            source_moniker: "component_manager",
+                                            target_moniker: {
+                                                path: [
+                                                    {
+                                                        collection: null,
+                                                        name: "core",
+                                                        rep: "core",
+                                                    },
+                                                    {
+                                                        collection: null,
+                                                        name: "mem",
+                                                        rep: "mem",
+                                                    },
+                                                ],
+                                            },
+                                        },
+                                    },
+                                },
+                            },
                         },
-                        {
-                          "name": "test_manager",
-                          "collection": null,
-                          "rep": "test_manager"
-                        },
-                        {
-                          "name": "starnix_test_runner",
-                          "collection": null,
-                          "rep": "starnix_test_runner"
-                        },
-                        {
-                          "name": "starnix_runner",
-                          "collection": null,
-                          "rep": "starnix_runner"
-                        }
-                      ]
+                        message: "security policy disallows \"fuchsia.kernel.RootJobForInspect\" from \"<component_manager>\" being used at \"/core/mem\"",
                     },
-                    "capability_id": "fuchsia.component.runner.ComponentRunner"
-                  }
-                }
-              }
-            },
-            "message": "A `use from parent` declaration was found at `/core/test_manager/starnix_test_runner/starnix_runner` for `fuchsia.component.runner.ComponentRunner`, but no matching `offer` declaration was found in the parent"
-          }
-        },
-        {
-          "using_node": "/core/test_manager/starnix_test_runner/starnix_runner",
-          "capability": "fuchsia.component.Realm",
-          "error": {
-            "error": {
-              "analyzer_model_error": {
-                "routing_error": {
-                  "use_from_parent_not_found": {
-                    "moniker": {
-                      "path": [
-                        {
-                          "name": "core",
-                          "collection": null,
-                          "rep": "core"
+                    using_node: "/core/mem",
+                },
+                {
+                    using_node: "/core/system-metrics-logger",
+                    capability: "fuchsia.device.Controller",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    use_from_parent_not_found: {
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "core",
+                                                    collection: null,
+                                                    rep: "core",
+                                                },
+                                                {
+                                                    name: "system-metrics-logger",
+                                                    collection: null,
+                                                    rep: "system-metrics-logger",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "fuchsia.device.Controller",
+                                    },
+                                },
+                            },
                         },
-                        {
-                          "name": "test_manager",
-                          "collection": null,
-                          "rep": "test_manager"
-                        },
-                        {
-                          "name": "starnix_test_runner",
-                          "collection": null,
-                          "rep": "starnix_test_runner"
-                        },
-                        {
-                          "name": "starnix_runner",
-                          "collection": null,
-                          "rep": "starnix_runner"
-                        }
-                      ]
+                        message: "A `use from parent` declaration was found at `/core/system-metrics-logger` for `fuchsia.device.Controller`, but no matching `offer` declaration was found in the parent",
                     },
-                    "capability_id": "fuchsia.component.Realm"
-                  }
-                }
-              }
-            },
-            "message": "A `use from parent` declaration was found at `/core/test_manager/starnix_test_runner/starnix_runner` for `fuchsia.component.Realm`, but no matching `offer` declaration was found in the parent"
-          }
-        },
-        {
-          "capability": "fuchsia.kernel.VmexResource",
-          "error": {
-            "error": {
-              "analyzer_model_error": {
-                "routing_error": {
-                  "policy_error": {
-                    "capability_use_disallowed": {
-                      "cap": "fuchsia.kernel.VmexResource",
-                      "source_moniker": "component_manager",
-                      "target_moniker": {
-                        "path": [
-                          {
-                            "collection": null,
-                            "name": "core",
-                            "rep": "core"
-                          },
-                          {
-                            "collection": null,
-                            "name": "test_manager",
-                            "rep": "test_manager"
-                          },
-                          {
-                            "collection": null,
-                            "name": "starnix_unit_test_runner",
-                            "rep": "starnix_unit_test_runner"
-                          }
-                        ]
-                      }
-                    }
-                  }
-                }
-              }
-            },
-            "message": "security policy disallows \"fuchsia.kernel.VmexResource\" from \"<component_manager>\" being used at \"/core/test_manager/starnix_unit_test_runner\""
-          },
-          "using_node": "/core/test_manager/starnix_unit_test_runner"
-        },
-        {
-          "using_node": "/core/vulkan_loader",
-          "capability": "fuchsia.memorypressure.Provider",
-          "error": {
-            "error": {
-              "analyzer_model_error": {
-                "routing_error": {
-                  "use_from_parent_not_found": {
-                    "moniker": {
-                      "path": [
-                        {
-                          "name": "core",
-                          "collection": null,
-                          "rep": "core"
+                },
+                {
+                    capability: "fuchsia.pkg.LocalMirror",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    use_from_parent_not_found: {
+                                        capability_id: "fuchsia.pkg.LocalMirror",
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    collection: null,
+                                                    name: "core",
+                                                    rep: "core",
+                                                },
+                                                {
+                                                    collection: null,
+                                                    name: "pkg-resolver",
+                                                    rep: "pkg-resolver",
+                                                },
+                                            ],
+                                        },
+                                    },
+                                },
+                            },
                         },
-                        {
-                          "name": "vulkan_loader",
-                          "collection": null,
-                          "rep": "vulkan_loader"
-                        }
-                      ]
+                        message: "A `use from parent` declaration was found at `/core/pkg-resolver` for `fuchsia.pkg.LocalMirror`, but no matching `offer` declaration was found in the parent",
                     },
-                    "capability_id": "fuchsia.memorypressure.Provider"
-                  }
-                }
-              }
-            },
-            "message": "A `use from parent` declaration was found at `/core/vulkan_loader` for `fuchsia.memorypressure.Provider`, but no matching `offer` declaration was found in the parent"
-          }
-        },
-        {
-          // Emergency location is not present in all products.
-          "using_node": "/core/wlancfg",
-          "capability": "fuchsia.location.sensor.WlanBaseStationWatcher",
-          "error": {
-            "error": {
-              "analyzer_model_error": {
-                "routing_error": {
-                  "use_from_parent_not_found": {
-                    "moniker": {
-                      "path": [
-                        {
-                          "name": "core",
-                          "collection": null,
-                          "rep": "core"
+                    using_node: "/core/pkg-resolver",
+                },
+                {
+                    capability: "fuchsia.pkg.PackageCache",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    policy_error: {
+                                        capability_use_disallowed: {
+                                            cap: "fuchsia.pkg.PackageCache",
+                                            source_moniker: {
+                                                component_instance: {
+                                                    path: [
+                                                        {
+                                                            collection: null,
+                                                            instance: 0,
+                                                            name: "core",
+                                                            rep: "core:0",
+                                                        },
+                                                        {
+                                                            collection: null,
+                                                            instance: 0,
+                                                            name: "pkg-cache",
+                                                            rep: "pkg-cache:0",
+                                                        },
+                                                    ],
+                                                },
+                                            },
+                                            target_moniker: {
+                                                path: [
+                                                    {
+                                                        collection: null,
+                                                        name: "core",
+                                                        rep: "core",
+                                                    },
+                                                    {
+                                                        collection: null,
+                                                        name: "pkg-cache",
+                                                        rep: "pkg-cache",
+                                                    },
+                                                ],
+                                            },
+                                        },
+                                    },
+                                },
+                            },
                         },
-                        {
-                          "name": "wlancfg",
-                          "collection": null,
-                          "rep": "wlancfg"
-                        }
-                      ]
+                        message: "security policy disallows \"fuchsia.pkg.PackageCache\" from \"/core:0/pkg-cache:0\" being used at \"/core/pkg-cache\"",
                     },
-                    "capability_id": "fuchsia.location.sensor.WlanBaseStationWatcher"
-                  }
-                }
-              }
-            },
-            "message": "A `use from parent` declaration was found at `/core/wlancfg` for `fuchsia.location.sensor.WlanBaseStationWatcher`, but no matching `offer` declaration was found in the parent"
-          }
+                    using_node: "/core/pkg-cache",
+                },
+                {
+                    capability: "fuchsia.pkg.PackageResolver",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    policy_error: {
+                                        capability_use_disallowed: {
+                                            cap: "fuchsia.pkg.PackageResolver",
+                                            source_moniker: {
+                                                component_instance: {
+                                                    path: [
+                                                        {
+                                                            collection: null,
+                                                            instance: 0,
+                                                            name: "core",
+                                                            rep: "core:0",
+                                                        },
+                                                        {
+                                                            collection: null,
+                                                            instance: 0,
+                                                            name: "pkg-resolver",
+                                                            rep: "pkg-resolver:0",
+                                                        },
+                                                    ],
+                                                },
+                                            },
+                                            target_moniker: {
+                                                path: [
+                                                    {
+                                                        collection: null,
+                                                        name: "core",
+                                                        rep: "core",
+                                                    },
+                                                    {
+                                                        collection: null,
+                                                        name: "pkg-resolver",
+                                                        rep: "pkg-resolver",
+                                                    },
+                                                ],
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        message: "security policy disallows \"fuchsia.pkg.PackageResolver\" from \"/core:0/pkg-resolver:0\" being used at \"/core/pkg-resolver\"",
+                    },
+                    using_node: "/core/pkg-resolver",
+                },
+                {
+                    capability: "fuchsia.pkg.RetainedPackages",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    policy_error: {
+                                        capability_use_disallowed: {
+                                            cap: "fuchsia.pkg.RetainedPackages",
+                                            source_moniker: {
+                                                component_instance: {
+                                                    path: [
+                                                        {
+                                                            collection: null,
+                                                            instance: 0,
+                                                            name: "core",
+                                                            rep: "core:0",
+                                                        },
+                                                        {
+                                                            collection: null,
+                                                            instance: 0,
+                                                            name: "pkg-cache",
+                                                            rep: "pkg-cache:0",
+                                                        },
+                                                    ],
+                                                },
+                                            },
+                                            target_moniker: {
+                                                path: [
+                                                    {
+                                                        collection: null,
+                                                        name: "core",
+                                                        rep: "core",
+                                                    },
+                                                    {
+                                                        collection: null,
+                                                        name: "pkg-cache",
+                                                        rep: "pkg-cache",
+                                                    },
+                                                ],
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        message: "security policy disallows \"fuchsia.pkg.RetainedPackages\" from \"/core:0/pkg-cache:0\" being used at \"/core/pkg-cache\"",
+                    },
+                    using_node: "/core/pkg-cache",
+                },
+                {
+                    using_node: "/core/temperature-logger",
+                    capability: "fuchsia.device.Controller",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    offer_from_parent_not_found: {
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "core",
+                                                    collection: null,
+                                                    rep: "core",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "fuchsia.device.Controller",
+                                    },
+                                },
+                            },
+                        },
+                        message: "An `offer from parent` declaration was found at `/core` for `fuchsia.device.Controller`, but no matching `offer` declaration was found in the parent",
+                    },
+                },
+                {
+                    using_node: "/core/starnix_manager/starnix_runner",
+                    capability: "fuchsia.component.runner.ComponentRunner",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    use_from_parent_not_found: {
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "core",
+                                                    collection: null,
+                                                    rep: "core",
+                                                },
+                                                {
+                                                    name: "starnix_manager",
+                                                    collection: null,
+                                                    rep: "starnix_manager",
+                                                },
+                                                {
+                                                    name: "starnix_runner",
+                                                    collection: null,
+                                                    rep: "starnix_runner",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "fuchsia.component.runner.ComponentRunner",
+                                    },
+                                },
+                            },
+                        },
+                        message: "A `use from parent` declaration was found at `/core/starnix_manager/starnix_runner` for `fuchsia.component.runner.ComponentRunner`, but no matching `offer` declaration was found in the parent",
+                    },
+                },
+                {
+                    using_node: "/core/temperature-logger",
+                    capability: "fuchsia.hardware.temperature.Device",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    offer_from_parent_not_found: {
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "core",
+                                                    collection: null,
+                                                    rep: "core",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "fuchsia.hardware.temperature.Device",
+                                    },
+                                },
+                            },
+                        },
+                        message: "An `offer from parent` declaration was found at `/core` for `fuchsia.hardware.temperature.Device`, but no matching `offer` declaration was found in the parent",
+                    },
+                },
+                {
+                    using_node: "/core/test_manager/starnix_test_runner/starnix_runner",
+                    capability: "fuchsia.component.runner.ComponentRunner",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    use_from_parent_not_found: {
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "core",
+                                                    collection: null,
+                                                    rep: "core",
+                                                },
+                                                {
+                                                    name: "test_manager",
+                                                    collection: null,
+                                                    rep: "test_manager",
+                                                },
+                                                {
+                                                    name: "starnix_test_runner",
+                                                    collection: null,
+                                                    rep: "starnix_test_runner",
+                                                },
+                                                {
+                                                    name: "starnix_runner",
+                                                    collection: null,
+                                                    rep: "starnix_runner",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "fuchsia.component.runner.ComponentRunner",
+                                    },
+                                },
+                            },
+                        },
+                        message: "A `use from parent` declaration was found at `/core/test_manager/starnix_test_runner/starnix_runner` for `fuchsia.component.runner.ComponentRunner`, but no matching `offer` declaration was found in the parent",
+                    },
+                },
+                {
+                    using_node: "/core/test_manager/starnix_test_runner/starnix_runner",
+                    capability: "fuchsia.component.Realm",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    use_from_parent_not_found: {
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "core",
+                                                    collection: null,
+                                                    rep: "core",
+                                                },
+                                                {
+                                                    name: "test_manager",
+                                                    collection: null,
+                                                    rep: "test_manager",
+                                                },
+                                                {
+                                                    name: "starnix_test_runner",
+                                                    collection: null,
+                                                    rep: "starnix_test_runner",
+                                                },
+                                                {
+                                                    name: "starnix_runner",
+                                                    collection: null,
+                                                    rep: "starnix_runner",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "fuchsia.component.Realm",
+                                    },
+                                },
+                            },
+                        },
+                        message: "A `use from parent` declaration was found at `/core/test_manager/starnix_test_runner/starnix_runner` for `fuchsia.component.Realm`, but no matching `offer` declaration was found in the parent",
+                    },
+                },
+                {
+                    capability: "fuchsia.kernel.VmexResource",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    policy_error: {
+                                        capability_use_disallowed: {
+                                            cap: "fuchsia.kernel.VmexResource",
+                                            source_moniker: "component_manager",
+                                            target_moniker: {
+                                                path: [
+                                                    {
+                                                        collection: null,
+                                                        name: "core",
+                                                        rep: "core",
+                                                    },
+                                                    {
+                                                        collection: null,
+                                                        name: "test_manager",
+                                                        rep: "test_manager",
+                                                    },
+                                                    {
+                                                        collection: null,
+                                                        name: "starnix_unit_test_runner",
+                                                        rep: "starnix_unit_test_runner",
+                                                    },
+                                                ],
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        message: "security policy disallows \"fuchsia.kernel.VmexResource\" from \"<component_manager>\" being used at \"/core/test_manager/starnix_unit_test_runner\"",
+                    },
+                    using_node: "/core/test_manager/starnix_unit_test_runner",
+                },
+                {
+                    using_node: "/core/vulkan_loader",
+                    capability: "fuchsia.memorypressure.Provider",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    use_from_parent_not_found: {
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "core",
+                                                    collection: null,
+                                                    rep: "core",
+                                                },
+                                                {
+                                                    name: "vulkan_loader",
+                                                    collection: null,
+                                                    rep: "vulkan_loader",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "fuchsia.memorypressure.Provider",
+                                    },
+                                },
+                            },
+                        },
+                        message: "A `use from parent` declaration was found at `/core/vulkan_loader` for `fuchsia.memorypressure.Provider`, but no matching `offer` declaration was found in the parent",
+                    },
+                },
+                {
+                    // Emergency location is not present in all products.
+                    using_node: "/core/wlancfg",
+                    capability: "fuchsia.location.sensor.WlanBaseStationWatcher",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    use_from_parent_not_found: {
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "core",
+                                                    collection: null,
+                                                    rep: "core",
+                                                },
+                                                {
+                                                    name: "wlancfg",
+                                                    collection: null,
+                                                    rep: "wlancfg",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "fuchsia.location.sensor.WlanBaseStationWatcher",
+                                    },
+                                },
+                            },
+                        },
+                        message: "A `use from parent` declaration was found at `/core/wlancfg` for `fuchsia.location.sensor.WlanBaseStationWatcher`, but no matching `offer` declaration was found in the parent",
+                    },
+                },
+            ],
         },
-      ]
-    }
-  },
+    },
 
     // List of all resolver capabilities that are exempt from the verify
     // routes checker. Only add to this list if you cannot remove the
@@ -858,126 +951,126 @@
     // List of all storage capabilities that are exempt from the verify
     // routes checker. Only add to this list if you cannot remove the
     // unused route.
-  {
-    "capability_type": "storage",
-    "results": {
-      "errors": [
-        {
-          "capability": "data",
-          "error": {
-            "error": {
-              "analyzer_model_error": {
-                "routing_error": {
-                  "use_from_parent_not_found": {
-                    "capability_id": "data",
-                    "moniker": {
-                      "path": [
-                        {
-                          "collection": null,
-                          "name": "core",
-                          "rep": "core"
+    {
+        capability_type: "storage",
+        results: {
+            errors: [
+                {
+                    capability: "data",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    use_from_parent_not_found: {
+                                        capability_id: "data",
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    collection: null,
+                                                    name: "core",
+                                                    rep: "core",
+                                                },
+                                                {
+                                                    collection: null,
+                                                    name: "test_manager",
+                                                    rep: "test_manager",
+                                                },
+                                                {
+                                                    collection: null,
+                                                    name: "go_test_runner",
+                                                    rep: "go_test_runner",
+                                                },
+                                            ],
+                                        },
+                                    },
+                                },
+                            },
                         },
-                        {
-                          "collection": null,
-                          "name": "test_manager",
-                          "rep": "test_manager"
+                        message: "A `use from parent` declaration was found at `/core/test_manager/go_test_runner` for `data`, but no matching `offer` declaration was found in the parent",
+                    },
+                    using_node: "/core/test_manager/go_test_runner",
+                },
+                {
+                    capability: "data",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    use_from_parent_not_found: {
+                                        capability_id: "data",
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    collection: null,
+                                                    name: "core",
+                                                    rep: "core",
+                                                },
+                                                {
+                                                    collection: null,
+                                                    name: "test_manager",
+                                                    rep: "test_manager",
+                                                },
+                                                {
+                                                    collection: null,
+                                                    name: "starnix_test_runner",
+                                                    rep: "starnix_test_runner",
+                                                },
+                                                {
+                                                    collection: null,
+                                                    name: "starnix_test_runner",
+                                                    rep: "starnix_test_runner",
+                                                },
+                                            ],
+                                        },
+                                    },
+                                },
+                            },
                         },
-                        {
-                          "collection": null,
-                          "name": "go_test_runner",
-                          "rep": "go_test_runner"
-                        }
-                      ]
-                    }
-                  }
-                }
-              }
-            },
-            "message": "A `use from parent` declaration was found at `/core/test_manager/go_test_runner` for `data`, but no matching `offer` declaration was found in the parent"
-          },
-          "using_node": "/core/test_manager/go_test_runner"
+                        message: "A `use from parent` declaration was found at `/core/test_manager/starnix_test_runner/starnix_test_runner` for `data`, but no matching `offer` declaration was found in the parent",
+                    },
+                    using_node: "/core/test_manager/starnix_test_runner/starnix_test_runner",
+                },
+                {
+                    capability: "tmp",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    use_from_parent_not_found: {
+                                        capability_id: "tmp",
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    collection: null,
+                                                    name: "core",
+                                                    rep: "core",
+                                                },
+                                                {
+                                                    collection: null,
+                                                    name: "test_manager",
+                                                    rep: "test_manager",
+                                                },
+                                                {
+                                                    collection: null,
+                                                    name: "starnix_test_runner",
+                                                    rep: "starnix_test_runner",
+                                                },
+                                                {
+                                                    collection: null,
+                                                    name: "starnix_test_runner",
+                                                    rep: "starnix_test_runner",
+                                                },
+                                            ],
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        message: "A `use from parent` declaration was found at `/core/test_manager/starnix_test_runner/starnix_test_runner` for `tmp`, but no matching `offer` declaration was found in the parent",
+                    },
+                    using_node: "/core/test_manager/starnix_test_runner/starnix_test_runner",
+                },
+            ],
         },
-        {
-          "capability": "data",
-          "error": {
-            "error": {
-              "analyzer_model_error": {
-                "routing_error": {
-                  "use_from_parent_not_found": {
-                    "capability_id": "data",
-                    "moniker": {
-                      "path": [
-                        {
-                          "collection": null,
-                          "name": "core",
-                          "rep": "core"
-                        },
-                        {
-                          "collection": null,
-                          "name": "test_manager",
-                          "rep": "test_manager"
-                        },
-                        {
-                          "collection": null,
-                          "name": "starnix_test_runner",
-                          "rep": "starnix_test_runner"
-                        },
-                        {
-                          "collection": null,
-                          "name": "starnix_test_runner",
-                          "rep": "starnix_test_runner"
-                        }
-                      ]
-                    }
-                  }
-                }
-              }
-            },
-            "message": "A `use from parent` declaration was found at `/core/test_manager/starnix_test_runner/starnix_test_runner` for `data`, but no matching `offer` declaration was found in the parent"
-          },
-          "using_node": "/core/test_manager/starnix_test_runner/starnix_test_runner"
-        },
-        {
-          "capability": "tmp",
-          "error": {
-            "error": {
-              "analyzer_model_error": {
-                "routing_error": {
-                  "use_from_parent_not_found": {
-                    "capability_id": "tmp",
-                    "moniker": {
-                      "path": [
-                        {
-                          "collection": null,
-                          "name": "core",
-                          "rep": "core"
-                        },
-                        {
-                          "collection": null,
-                          "name": "test_manager",
-                          "rep": "test_manager"
-                        },
-                        {
-                          "collection": null,
-                          "name": "starnix_test_runner",
-                          "rep": "starnix_test_runner"
-                        },
-                        {
-                          "collection": null,
-                          "name": "starnix_test_runner",
-                          "rep": "starnix_test_runner"
-                        }
-                      ]
-                    }
-                  }
-                }
-              }
-            },
-            "message": "A `use from parent` declaration was found at `/core/test_manager/starnix_test_runner/starnix_test_runner` for `tmp`, but no matching `offer` declaration was found in the parent"
-          },
-          "using_node": "/core/test_manager/starnix_test_runner/starnix_test_runner"
-        },
-      ]
-    }
-  }
+    },
 ]

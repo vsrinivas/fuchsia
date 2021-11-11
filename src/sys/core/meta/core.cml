@@ -16,7 +16,7 @@
         {
             name: "session-manager",
             url: "fuchsia-pkg://fuchsia.com/session_manager#meta/session_manager.cm",
-            environment: "#session-env",
+            environment: "#full-resolver-env",
         },
         {
             name: "system-update-committer",
@@ -123,10 +123,6 @@
             name: "temperature-logger",
             url: "fuchsia-pkg://fuchsia.com/temperature-logger#meta/temperature-logger.cm",
             environment: "#full-resolver-env",
-        },
-        {
-            name: "full-resolver",
-            url: "fuchsia-pkg://fuchsia.com/universe-resolver#meta/full-resolver.cm",
         },
         {
             name: "pkg-cache",
@@ -332,11 +328,6 @@
             to: [ "#network" ],
         },
         {
-            protocol: "fuchsia.pkg.PackageResolver",
-            from: "#pkg-resolver",
-            to: "#full-resolver",
-        },
-        {
             directory: [
                 "blob",
                 "pkgfs",
@@ -453,7 +444,6 @@
                 "#diagnostics-persistence",
                 "#exceptions",
                 "#font_provider",
-                "#full-resolver",
                 "#hwinfo",
                 "#last_reboot",
                 "#log-stats",
@@ -966,37 +956,6 @@
         {
             protocol: [ "fuchsia.exception.Handler" ],
             from: "#exceptions",
-        },
-    ],
-    environments: [
-        // Components that simply need access to full-resolver can use this environment.
-        {
-            name: "full-resolver-env",
-            extends: "realm",
-            resolvers: [
-                {
-                    resolver: "full-resolver",
-                    from: "#full-resolver",
-                    scheme: "fuchsia-pkg",
-                },
-            ],
-        },
-        {
-            name: "session-env",
-            extends: "realm",
-            runners: [
-                {
-                    runner: "starnix",
-                    from: "#starnix_manager",
-                },
-            ],
-            resolvers: [
-                {
-                    resolver: "full-resolver",
-                    from: "#full-resolver",
-                    scheme: "fuchsia-pkg",
-                },
-            ],
         },
     ],
 }

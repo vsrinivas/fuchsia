@@ -1,0 +1,28 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "full-resolver",
+            url: "fuchsia-pkg://fuchsia.com/universe-resolver#meta/full-resolver.cm",
+        },
+    ],
+    environments: [
+        // Components that simply need access to full-resolver can use this environment.
+        {
+            name: "full-resolver-env",
+            extends: "realm",
+        },
+        {
+            name: "session-env",
+            extends: "realm",
+            runners: [
+                {
+                    runner: "starnix",
+                    from: "#starnix_manager",
+                },
+            ],
+        },
+    ],
+}

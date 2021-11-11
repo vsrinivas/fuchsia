@@ -28,6 +28,11 @@ import("//tools/cmc/build/cmc.gni")
 #     persistent `data` storage capability. If false, any component which is
 #     offered the `data` storage capability may use it. Default is true.
 #
+#   restrict_full_resolver_to_base (optional)
+#     If true, must use the base resolver to resolve packages. If false, the
+#     component has access to the package resolver and can auto-update.
+#     Default is true.
+#
 #   deps
 #   testonly
 #   visibility
@@ -50,6 +55,17 @@ template("core_realm") {
     shard_deps += [ "//src/sys/core:core-storage-restricted" ]
   } else {
     shard_deps += [ "//src/sys/core:core-storage-unrestricted" ]
+  }
+
+  restrict_full_resolver_to_base = true
+  if (defined(invoker.restrict_full_resolver_to_base)) {
+    restrict_full_resolver_to_base = invoker.restrict_full_resolver_to_base
+  }
+
+  if (restrict_full_resolver_to_base) {
+    shard_deps += [ "//src/sys/core:full-resolver-base-only" ]
+  } else {
+    shard_deps += [ "//src/sys/core:full-resolver" ]
   }
 
   generated_file_target = "${target_name}_shard_list"
