@@ -22,7 +22,7 @@ where
     W: AsyncWrite + std::marker::Unpin,
 {
     let mut buf_from = BufReader::with_capacity(buffer_size, &mut from);
-    futures::io::copy(&mut buf_from, &mut to).await
+    futures::io::copy_buf(&mut buf_from, &mut to).await
 }
 
 fn zx_socket_from_fd(fd: i32) -> Result<fidl::AsyncSocket> {
