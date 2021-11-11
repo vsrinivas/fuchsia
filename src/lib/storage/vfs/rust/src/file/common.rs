@@ -6,12 +6,11 @@
 
 use {
     fidl_fuchsia_io::{
-        OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE,
+        VmoFlags, OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE,
         OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
         OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX,
         OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_FLAG_TRUNCATE,
-        OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE, VMO_FLAG_EXACT,
-        VMO_FLAG_EXEC, VMO_FLAG_PRIVATE, VMO_FLAG_READ, VMO_FLAG_WRITE,
+        OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon as zx,
 };
@@ -106,16 +105,16 @@ pub fn new_connection_validate_flags(
 }
 
 /// Converts the set of validated VMO flags to their respective zx::Rights.
-pub fn vmo_flags_to_rights(vmo_flags: u32) -> zx::Rights {
+pub fn vmo_flags_to_rights(vmo_flags: VmoFlags) -> zx::Rights {
     // Map VMO flags to their respective rights.
     let mut rights = zx::Rights::NONE;
-    if vmo_flags & VMO_FLAG_READ != 0 {
+    if vmo_flags.contains(VmoFlags::Read) {
         rights |= zx::Rights::READ;
     }
-    if vmo_flags & VMO_FLAG_WRITE != 0 {
+    if vmo_flags.contains(VmoFlags::Write) {
         rights |= zx::Rights::WRITE;
     }
-    if vmo_flags & VMO_FLAG_EXEC != 0 {
+    if vmo_flags.contains(VmoFlags::Execute) {
         rights |= zx::Rights::EXECUTE;
     }
 
@@ -126,26 +125,29 @@ pub fn vmo_flags_to_rights(vmo_flags: u32) -> zx::Rights {
 /// Returns Ok() if the flags were validated, and an Error(zx::Status) otherwise.
 ///
 /// Changing this function can be dangerous!  Flags operations may have security implications.
-pub fn get_buffer_validate_flags(vmo_flags: u32, connection_flags: u32) -> Result<(), zx::Status> {
+pub fn get_buffer_validate_flags(
+    vmo_flags: VmoFlags,
+    connection_flags: u32,
+) -> Result<(), zx::Status> {
     // Disallow inconsistent flag combination.
-    if vmo_flags & VMO_FLAG_PRIVATE != 0 && vmo_flags & VMO_FLAG_EXACT != 0 {
+    if vmo_flags.contains(VmoFlags::PrivateClone) && vmo_flags.contains(VmoFlags::SharedBuffer) {
         return Err(zx::Status::INVALID_ARGS);
     }
 
     // Ensure the requested rights in vmo_flags do not exceed those of the underlying connection.
-    if vmo_flags & VMO_FLAG_READ != 0 && connection_flags & OPEN_RIGHT_READABLE == 0 {
+    if vmo_flags.contains(VmoFlags::Read) && connection_flags & OPEN_RIGHT_READABLE == 0 {
         return Err(zx::Status::ACCESS_DENIED);
     }
-    if vmo_flags & VMO_FLAG_WRITE != 0 && connection_flags & OPEN_RIGHT_WRITABLE == 0 {
+    if vmo_flags.contains(VmoFlags::Write) && connection_flags & OPEN_RIGHT_WRITABLE == 0 {
         return Err(zx::Status::ACCESS_DENIED);
     }
-    if vmo_flags & VMO_FLAG_EXEC != 0 && connection_flags & OPEN_RIGHT_EXECUTABLE == 0 {
+    if vmo_flags.contains(VmoFlags::Execute) && connection_flags & OPEN_RIGHT_EXECUTABLE == 0 {
         return Err(zx::Status::ACCESS_DENIED);
     }
 
     // As documented in the io.fidl protocol, if VMO_FLAG_EXEC is requested, ensure that the
     // connection also has OPEN_RIGHT_READABLE.
-    if vmo_flags & VMO_FLAG_EXEC != 0 && connection_flags & OPEN_RIGHT_READABLE == 0 {
+    if vmo_flags.contains(VmoFlags::Execute) && connection_flags & OPEN_RIGHT_READABLE == 0 {
         return Err(zx::Status::ACCESS_DENIED);
     }
 
@@ -154,7 +156,9 @@ pub fn get_buffer_validate_flags(vmo_flags: u32, connection_flags: u32) -> Resul
 
 #[cfg(test)]
 mod tests {
-    use super::{get_buffer_validate_flags, new_connection_validate_flags, vmo_flags_to_rights};
+    use super::{
+        get_buffer_validate_flags, new_connection_validate_flags, vmo_flags_to_rights, VmoFlags,
+    };
     use crate::test_utils::build_flag_combinations;
 
     use {
@@ -162,8 +166,7 @@ mod tests {
             OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE,
             OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY,
             OPEN_FLAG_POSIX, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE,
-            OPEN_RIGHT_WRITABLE, VMO_FLAG_EXACT, VMO_FLAG_EXEC, VMO_FLAG_PRIVATE, VMO_FLAG_READ,
-            VMO_FLAG_WRITE,
+            OPEN_RIGHT_WRITABLE, VMO_FLAG_EXEC, VMO_FLAG_READ, VMO_FLAG_WRITE,
         },
         fuchsia_zircon as zx,
     };
@@ -176,10 +179,10 @@ mod tests {
         );
     }
 
-    fn rights_to_vmo_flags(readable: bool, writable: bool, executable: bool) -> u32 {
-        return if readable { VMO_FLAG_READ } else { 0 }
-            | if writable { VMO_FLAG_WRITE } else { 0 }
-            | if executable { VMO_FLAG_EXEC } else { 0 };
+    fn rights_to_vmo_flags(readable: bool, writable: bool, executable: bool) -> VmoFlags {
+        return if readable { VmoFlags::Read } else { VmoFlags::empty() }
+            | if writable { VmoFlags::Write } else { VmoFlags::empty() }
+            | if executable { VmoFlags::Execute } else { VmoFlags::empty() };
     }
 
     #[track_caller]
@@ -357,7 +360,8 @@ mod tests {
     fn test_vmo_flags_to_rights() {
         for vmo_flags in build_flag_combinations(0, VMO_FLAG_READ | VMO_FLAG_WRITE | VMO_FLAG_EXEC)
         {
-            let rights: zx::Rights = vmo_flags_to_rights(vmo_flags);
+            let rights: zx::Rights =
+                vmo_flags_to_rights(VmoFlags::from_bits_truncate(vmo_flags.into()));
             assert_eq!(vmo_flags & VMO_FLAG_READ != 0, rights.contains(zx::Rights::READ));
             assert_eq!(vmo_flags & VMO_FLAG_WRITE != 0, rights.contains(zx::Rights::WRITE));
             assert_eq!(vmo_flags & VMO_FLAG_EXEC != 0, rights.contains(zx::Rights::EXECUTE));
@@ -368,7 +372,7 @@ mod tests {
     fn get_buffer_validate_flags_invalid() {
         // Cannot specify both PRIVATE and EXACT at the same time, since they conflict.
         assert_eq!(
-            get_buffer_validate_flags(VMO_FLAG_PRIVATE | VMO_FLAG_EXACT, 0),
+            get_buffer_validate_flags(VmoFlags::PrivateClone | VmoFlags::SharedBuffer, 0),
             Err(zx::Status::INVALID_ARGS)
         );
     }

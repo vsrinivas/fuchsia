@@ -23,9 +23,9 @@ use {
     fidl::prelude::*,
     fidl_fuchsia_io::{
         FileObject, FileRequest, FileRequestStream, NodeAttributes, NodeInfo, NodeMarker,
-        SeekOrigin, Vmofile, INO_UNKNOWN, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE,
+        SeekOrigin, VmoFlags, Vmofile, INO_UNKNOWN, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE,
         OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE,
-        OPEN_RIGHT_WRITABLE, VMO_FLAG_EXEC, VMO_FLAG_PRIVATE, VMO_FLAG_WRITE,
+        OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_mem::Buffer,
     fuchsia_zircon::{
@@ -405,6 +405,10 @@ impl VmoFileConnection {
                 // VMOs are always in sync.
                 responder.send(ZX_OK)?;
             }
+            FileRequest::Sync2 { responder } => {
+                // VMOs are always in sync.
+                responder.send(&mut Ok(()))?;
+            }
             FileRequest::GetAttr { responder } => {
                 self.handle_get_attr(|status, mut attrs| {
                     responder.send(status.into_raw(), &mut attrs)
@@ -423,15 +427,45 @@ impl VmoFileConnection {
                 })
                 .await?;
             }
-            FileRequest::ReadAt { offset, count, responder } => {
+            FileRequest::Read2 { count, responder } => {
+                self.handle_read(count, |status, content| {
+                    if status == zx::Status::OK {
+                        responder.send(&mut Ok(content.to_vec()))
+                    } else {
+                        responder.send(&mut Err(status.into_raw()))
+                    }
+                })
+                .await?;
+            }
+            FileRequest::ReadAt { count, offset, responder } => {
                 self.handle_read_at(offset, count, |status, content| {
                     responder.send(status.into_raw(), content)
+                })
+                .await?;
+            }
+            FileRequest::ReadAt2 { count, offset, responder } => {
+                self.handle_read_at(offset, count, |status, content| {
+                    if status == zx::Status::OK {
+                        responder.send(&mut Ok(content.to_vec()))
+                    } else {
+                        responder.send(&mut Err(status.into_raw()))
+                    }
                 })
                 .await?;
             }
             FileRequest::Write { data, responder } => {
                 self.handle_write(&data, |status, actual| {
                     responder.send(status.into_raw(), actual)
+                })
+                .await?;
+            }
+            FileRequest::Write2 { data, responder } => {
+                self.handle_write(&data, |status, actual| {
+                    if status == zx::Status::OK {
+                        responder.send(&mut Ok(actual))
+                    } else {
+                        responder.send(&mut Err(status.into_raw()))
+                    }
                 })
                 .await?;
             }
@@ -443,14 +477,46 @@ impl VmoFileConnection {
                 })
                 .await?;
             }
+            FileRequest::WriteAt2 { offset, data, responder } => {
+                self.handle_write_at(offset, &data, |status, actual| {
+                    // Seems like our API is not really designed for 128 bit machines. If data
+                    // contains more than 16EB, we may not be returning the correct number here.
+                    if status == zx::Status::OK {
+                        responder.send(&mut Ok(actual as u64))
+                    } else {
+                        responder.send(&mut Err(status.into_raw()))
+                    }
+                })
+                .await?;
+            }
             FileRequest::Seek { offset, start, responder } => {
                 self.handle_seek(offset, start, |status, offset| {
                     responder.send(status.into_raw(), offset)
                 })
                 .await?;
             }
+            FileRequest::Seek2 { origin, offset, responder } => {
+                self.handle_seek(offset, origin, |status, offset| {
+                    if status == zx::Status::OK {
+                        responder.send(&mut Ok(offset))
+                    } else {
+                        responder.send(&mut Err(status.into_raw()))
+                    }
+                })
+                .await?;
+            }
             FileRequest::Truncate { length, responder } => {
                 self.handle_truncate(length, |status| responder.send(status.into_raw())).await?;
+            }
+            FileRequest::Resize { length, responder } => {
+                self.handle_truncate(length, |status| {
+                    if status == zx::Status::OK {
+                        responder.send(&mut Ok(()))
+                    } else {
+                        responder.send(&mut Err(status.into_raw()))
+                    }
+                })
+                .await?;
             }
             FileRequest::GetFlags { responder } => {
                 responder.send(ZX_OK, self.flags & GET_FLAGS_VISIBLE)?;
@@ -462,9 +528,19 @@ impl VmoFileConnection {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
             FileRequest::GetBuffer { flags, responder } => {
+                self.handle_get_buffer(
+                    VmoFlags::from_bits_truncate(flags as u64),
+                    |status, buffer| match buffer {
+                        None => responder.send(status.into_raw(), None),
+                        Some(mut buffer) => responder.send(status.into_raw(), Some(&mut buffer)),
+                    },
+                )
+                .await?;
+            }
+            FileRequest::GetBackingMemory { flags, responder } => {
                 self.handle_get_buffer(flags, |status, buffer| match buffer {
-                    None => responder.send(status.into_raw(), None),
-                    Some(mut buffer) => responder.send(status.into_raw(), Some(&mut buffer)),
+                    None => responder.send(&mut Err(status.into_raw())),
+                    Some(buffer) => responder.send(&mut Ok(buffer.vmo)),
                 })
                 .await?;
             }
@@ -802,7 +878,11 @@ impl VmoFileConnection {
         }
     }
 
-    async fn handle_get_buffer<R>(&mut self, flags: u32, responder: R) -> Result<(), fidl::Error>
+    async fn handle_get_buffer<R>(
+        &mut self,
+        flags: VmoFlags,
+        responder: R,
+    ) -> Result<(), fidl::Error>
     where
         R: FnOnce(zx::Status, Option<Buffer>) -> Result<(), fidl::Error>,
     {
@@ -812,14 +892,14 @@ impl VmoFileConnection {
 
         // The only sharing mode we support that disallows the VMO size to change currently
         // is VMO_FLAG_PRIVATE (`get_as_private`), so we require that to be set explicitly.
-        if flags & VMO_FLAG_WRITE != 0 && flags & VMO_FLAG_PRIVATE == 0 {
+        if flags.contains(VmoFlags::Write) && !flags.contains(VmoFlags::PrivateClone) {
             return responder(zx::Status::NOT_SUPPORTED, None);
         }
 
         // Disallow opening as both writable and executable. In addition to improving W^X
         // enforcement, this also eliminates any inconstiencies related to clones that use
         // SNAPSHOT_AT_LEAST_ON_WRITE since in that case, we cannot satisfy both requirements.
-        if flags & VMO_FLAG_EXEC != 0 && flags & VMO_FLAG_WRITE != 0 {
+        if flags.contains(VmoFlags::Execute) && flags.contains(VmoFlags::Write) {
             return responder(zx::Status::NOT_SUPPORTED, None);
         }
 
@@ -838,7 +918,7 @@ impl VmoFileConnection {
                 // callback here will make the implementation of those files systems easier.
                 let vmo_rights = vmo_flags_to_rights(flags);
                 // Unless private sharing mode is specified, we always default to shared.
-                let result = if flags & VMO_FLAG_PRIVATE != 0 {
+                let result = if flags.contains(VmoFlags::PrivateClone) {
                     Self::get_as_private(&vmo, vmo_rights, *size)
                 }
                 else {

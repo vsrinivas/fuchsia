@@ -195,6 +195,9 @@ impl MutableConnection {
                     self.base.directory.sync().await.err().unwrap_or(Status::OK).into_raw(),
                 )?;
             }
+            DirectoryAdminRequest::Sync2 { responder } => {
+                responder.send(&mut self.base.directory.sync().await.map_err(Status::into_raw))?;
+            }
             _ => {
                 // Since we haven't handled the request, we return the original request so that
                 // it can be consumed by the base handler instead.

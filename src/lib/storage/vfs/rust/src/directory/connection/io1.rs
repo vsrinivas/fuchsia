@@ -288,6 +288,9 @@ where
             DirectoryAdminRequest::Sync { responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
+            DirectoryAdminRequest::Sync2 { responder } => {
+                responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
+            }
             // TODO(https://fxbug.dev/77623): Remove when the io1 -> io2 transition is complete.
             _ => panic!("Unhandled request!"),
         }

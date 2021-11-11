@@ -18,7 +18,7 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
         FileMarker, FileObject, FileRequest, FileRequestStream, NodeAttributes, NodeInfo,
-        NodeMarker, SeekOrigin, INO_UNKNOWN, OPEN_FLAG_APPEND, OPEN_FLAG_DESCRIBE,
+        NodeMarker, SeekOrigin, VmoFlags, INO_UNKNOWN, OPEN_FLAG_APPEND, OPEN_FLAG_DESCRIBE,
         OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon::{
@@ -223,6 +223,10 @@ impl<T: 'static + File> FileConnection<T> {
                 let status = self.file.sync().await.err().unwrap_or(zx::Status::OK);
                 responder.send(status.into_raw())?;
             }
+            FileRequest::Sync2 { responder } => {
+                fuchsia_trace::duration!("storage", "File::Sync2");
+                responder.send(&mut self.file.sync().await.map_err(|status| status.into_raw()))?;
+            }
             FileRequest::GetAttr { responder } => {
                 fuchsia_trace::duration!("storage", "File::GetAttr");
                 let (status, mut attrs) = self.handle_get_attr().await;
@@ -248,6 +252,20 @@ impl<T: 'static + File> FileConnection<T> {
                 };
                 self.seek += advance;
             }
+            FileRequest::Read2 { count, responder } => {
+                fuchsia_trace::duration!("storage", "File::Read2", "bytes" => count);
+                let advance = match self.handle_read_at(self.seek, count).await {
+                    Ok((buffer, bytes_read)) => {
+                        responder.send(&mut Ok(buffer[..bytes_read as usize].to_vec()))?;
+                        bytes_read
+                    }
+                    Err(status) => {
+                        responder.send(&mut Err(status.into_raw()))?;
+                        0u64
+                    }
+                };
+                self.seek += advance;
+            }
             FileRequest::ReadAt { offset, count, responder } => {
                 fuchsia_trace::duration!(
                     "storage",
@@ -262,10 +280,33 @@ impl<T: 'static + File> FileConnection<T> {
                     Err(status) => responder.send(status.into_raw(), &[0u8; 0])?,
                 }
             }
+            FileRequest::ReadAt2 { offset, count, responder } => {
+                fuchsia_trace::duration!(
+                    "storage",
+                    "File::ReadAt2",
+                    "offset" => offset,
+                    "bytes" => count
+                );
+                match self.handle_read_at(offset, count).await {
+                    Ok((buffer, bytes_read)) => {
+                        responder.send(&mut Ok(buffer[..bytes_read as usize].to_vec()))?
+                    }
+                    Err(status) => responder.send(&mut Err(status.into_raw()))?,
+                }
+            }
             FileRequest::Write { data, responder } => {
                 fuchsia_trace::duration!("storage", "File::Write", "bytes" => data.len() as u64);
                 let (status, actual) = self.handle_write(&data).await;
                 responder.send(status.into_raw(), actual)?;
+            }
+            FileRequest::Write2 { data, responder } => {
+                fuchsia_trace::duration!("storage", "File::Write2", "bytes" => data.len() as u64);
+                let (status, actual) = self.handle_write(&data).await;
+                if status == zx::Status::OK {
+                    responder.send(&mut Ok(actual))?;
+                } else {
+                    responder.send(&mut Err(status.into_raw()))?;
+                }
             }
             FileRequest::WriteAt { offset, data, responder } => {
                 fuchsia_trace::duration!(
@@ -277,15 +318,47 @@ impl<T: 'static + File> FileConnection<T> {
                 let (status, actual) = self.handle_write_at(offset, &data).await;
                 responder.send(status.into_raw(), actual)?;
             }
+            FileRequest::WriteAt2 { offset, data, responder } => {
+                fuchsia_trace::duration!(
+                    "storage",
+                    "File::WriteAt2",
+                    "offset" => offset,
+                    "bytes" => data.len() as u64
+                );
+                let (status, actual) = self.handle_write_at(offset, &data).await;
+                if status == zx::Status::OK {
+                    responder.send(&mut Ok(actual))?;
+                } else {
+                    responder.send(&mut Err(status.into_raw()))?;
+                }
+            }
             FileRequest::Seek { offset, start, responder } => {
                 fuchsia_trace::duration!("storage", "File::Seek");
                 let (status, seek) = self.handle_seek(offset, start).await;
                 responder.send(status.into_raw(), seek)?;
             }
+            FileRequest::Seek2 { origin, offset, responder } => {
+                fuchsia_trace::duration!("storage", "File::Seek2");
+                let (status, seek) = self.handle_seek(offset, origin).await;
+                if status == zx::Status::OK {
+                    responder.send(&mut Ok(seek))?;
+                } else {
+                    responder.send(&mut Err(status.into_raw()))?;
+                }
+            }
             FileRequest::Truncate { length, responder } => {
                 fuchsia_trace::duration!("storage", "File::Truncate", "length" => length);
                 let status = self.handle_truncate(length).await;
                 responder.send(status.into_raw())?;
+            }
+            FileRequest::Resize { length, responder } => {
+                fuchsia_trace::duration!("storage", "File::Resize", "length" => length);
+                let status = self.handle_truncate(length).await;
+                if status == zx::Status::OK {
+                    responder.send(&mut Ok(()))?;
+                } else {
+                    responder.send(&mut Err(status.into_raw()))?;
+                }
             }
             FileRequest::GetFlags { responder } => {
                 fuchsia_trace::duration!("storage", "File::GetFlags");
@@ -307,11 +380,25 @@ impl<T: 'static + File> FileConnection<T> {
             }
             FileRequest::GetBuffer { flags, responder } => {
                 fuchsia_trace::duration!("storage", "File::GetBuffer");
-                let (status, mut buffer) = match self.handle_get_buffer(flags).await {
+                let (status, mut buffer) = match self
+                    .handle_get_buffer(VmoFlags::from_bits_truncate(flags as u64))
+                    .await
+                {
                     Ok(buffer) => (zx::Status::OK, Some(buffer)),
                     Err(status) => (status, None),
                 };
                 responder.send(status.into_raw(), buffer.as_mut())?;
+            }
+            FileRequest::GetBackingMemory { flags, responder } => {
+                fuchsia_trace::duration!("storage", "File::GetBackingMemory");
+                match self.handle_get_buffer(flags).await {
+                    Ok(buffer) => {
+                        responder.send(&mut Ok(buffer.vmo))?;
+                    }
+                    Err(status) => {
+                        responder.send(&mut Err(status.into_raw()))?;
+                    }
+                }
             }
             FileRequest::AdvisoryLock { request: _, responder } => {
                 fuchsia_trace::duration!("storage", "File::AdvisoryLock");
@@ -463,10 +550,11 @@ impl<T: 'static + File> FileConnection<T> {
 
     async fn handle_get_buffer(
         &mut self,
-        flags: u32,
+        flags: VmoFlags,
     ) -> Result<fidl_fuchsia_mem::Buffer, zx::Status> {
         get_buffer_validate_flags(flags, self.flags)?;
-        self.file.get_buffer(flags).await
+        // TODO(fxbug.dev/88358): Pass the VmoFlags type to get_buffer rather than the raw bits.
+        self.file.get_buffer(flags.bits() as u32).await
     }
 }
 

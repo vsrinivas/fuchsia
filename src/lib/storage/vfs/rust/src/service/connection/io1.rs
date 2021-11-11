@@ -14,8 +14,9 @@ use {
     anyhow::Error,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
-        FileMarker, FileRequest, FileRequestStream, NodeAttributes, NodeInfo, NodeMarker, Service,
-        INO_UNKNOWN, MODE_TYPE_SERVICE, OPEN_FLAG_DESCRIBE, OPEN_FLAG_NODE_REFERENCE,
+        self as fio, FileMarker, FileRequest, FileRequestStream, NodeAttributes, NodeInfo,
+        NodeMarker, Service, INO_UNKNOWN, MODE_TYPE_SERVICE, OPEN_FLAG_DESCRIBE,
+        OPEN_FLAG_NODE_REFERENCE,
     },
     fuchsia_zircon::{
         sys::{ZX_ERR_ACCESS_DENIED, ZX_ERR_NOT_SUPPORTED, ZX_OK},
@@ -148,8 +149,18 @@ impl Connection {
                 let mut info = NodeInfo::Service(Service {});
                 responder.send(&mut info)?;
             }
+            FileRequest::Describe2 { query: _, responder } => {
+                let info = fio::ConnectionInfo {
+                    representation: Some(fio::Representation::Connector(fio::ConnectorInfo::EMPTY)),
+                    ..fio::ConnectionInfo::EMPTY
+                };
+                responder.send(info)?;
+            }
             FileRequest::Sync { responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
+            }
+            FileRequest::Sync2 { responder } => {
+                responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }
             FileRequest::GetAttr { responder } => {
                 let mut attrs = NodeAttributes {
@@ -181,20 +192,38 @@ impl Connection {
             FileRequest::Read { count: _, responder } => {
                 responder.send(ZX_ERR_ACCESS_DENIED, &[])?;
             }
+            FileRequest::Read2 { count: _, responder } => {
+                responder.send(&mut Err(ZX_ERR_ACCESS_DENIED))?;
+            }
             FileRequest::ReadAt { offset: _, count: _, responder } => {
                 responder.send(ZX_ERR_ACCESS_DENIED, &[])?;
+            }
+            FileRequest::ReadAt2 { offset: _, count: _, responder } => {
+                responder.send(&mut Err(ZX_ERR_ACCESS_DENIED))?;
             }
             FileRequest::Write { data: _, responder } => {
                 responder.send(ZX_ERR_ACCESS_DENIED, 0)?;
             }
+            FileRequest::Write2 { data: _, responder } => {
+                responder.send(&mut Err(ZX_ERR_ACCESS_DENIED))?;
+            }
             FileRequest::WriteAt { offset: _, data: _, responder } => {
                 responder.send(ZX_ERR_ACCESS_DENIED, 0)?;
+            }
+            FileRequest::WriteAt2 { offset: _, data: _, responder } => {
+                responder.send(&mut Err(ZX_ERR_ACCESS_DENIED))?;
             }
             FileRequest::Seek { offset: _, start: _, responder } => {
                 responder.send(ZX_ERR_ACCESS_DENIED, 0)?;
             }
+            FileRequest::Seek2 { origin: _, offset: _, responder } => {
+                responder.send(&mut Err(ZX_ERR_ACCESS_DENIED))?;
+            }
             FileRequest::Truncate { length: _, responder } => {
                 responder.send(ZX_ERR_ACCESS_DENIED)?;
+            }
+            FileRequest::Resize { length: _, responder } => {
+                responder.send(&mut Err(ZX_ERR_ACCESS_DENIED))?;
             }
             FileRequest::GetFlags { responder } => {
                 responder.send(ZX_OK, OPEN_FLAG_NODE_REFERENCE)?;
@@ -205,6 +234,10 @@ impl Connection {
             FileRequest::GetBuffer { flags: _, responder } => {
                 // There is no backing VMO.
                 responder.send(ZX_ERR_NOT_SUPPORTED, None)?;
+            }
+            FileRequest::GetBackingMemory { flags: _, responder } => {
+                // There is no backing VMO.
+                responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }
             // TODO(https://fxbug.dev/77623): Remove when the io1 -> io2 transition is complete.
             _ => panic!("Unhandled request!"),
