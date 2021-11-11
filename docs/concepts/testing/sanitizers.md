@@ -126,6 +126,22 @@ bug with some of the same keywords that you're seeing in the sanitizer output.
 
 See also: [UBSan issues on Open Projects][ubsan-open-project].
 
+## Known issues
+
+### `#[should_panic]`
+
+Fuchsia's Rust builds [abort on `panic!`][rust-panic-abort]. This significantly
+reduces binary size. An unfortunate side effect is that tests that use the
+`#[should_panic]` attribute may falsely detect memory leaks. These tests emit an
+expected panic and then exit without unwinding, which means they don't free
+their [heap allocations][rust-heap]. To LeakSanitizer this is indistinguishable
+from a real memory leak.
+
+If this issue affects your test then you can disable it in sanitizer builds by
+following [this example][fxr-597361-mock-node].
+
+See: [Issue 88496: Rust tests that should_panic trigger leaksanitizer][fxb88496]
+
 ## Best practices
 
 ### Ensure that your code is exercised by tests
@@ -249,6 +265,8 @@ See also: [sanitizers in the 2021 roadmap][sanitizers-2021-roadmap].
 [fuzz-testing]: /docs/concepts/testing/fuzz_testing.md
 [fxb]: https://bugs.fuchsia.dev/p/fuchsia/issues/list
 [fxb73214]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=73214
+[fxb88496]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=88496
+[fxr-597361-mock-node]: https://fuchsia-review.googlesource.com/c/fuchsia/+/597361/7/src/power/power-manager/src/test/mock_node.rs
 [kasan]: /zircon/kernel/lib/instrumentation/asan/README.md
 [lockdep]: /docs/concepts/kernel/lockdep.md
 [llvm-asan]: https://clang.llvm.org/docs/AddressSanitizer.html
@@ -262,7 +280,9 @@ See also: [sanitizers in the 2021 roadmap][sanitizers-2021-roadmap].
 [nuc]: /docs/development/hardware/intel_nuc.md
 [qemu]: https://www.qemu.org
 [rfc-0078]: /docs/contribute/governance/rfcs/0078_kernel_coverage_for_fuchsia_fuzzing.md
+[rust-heap]: https://doc.rust-lang.org/1.22.0/book/first-edition/the-stack-and-the-heap.html#the-heap
 [rust-leaks]: https://doc.rust-lang.org/nomicon/leaking.html
+[rust-panic-abort]: https://doc.rust-lang.org/book/ch09-01-unrecoverable-errors-with-panic.html#unwinding-the-stack-or-aborting-in-response-to-a-panic
 [safestack]: /docs/concepts/kernel/safestack.md
 [sanitizers-2021-roadmap]: /docs/contribute/roadmap/2021/invest_in_sanitizers.md
 [shadowcallstack]: /docs/concepts/kernel/shadow_call_stack.md
