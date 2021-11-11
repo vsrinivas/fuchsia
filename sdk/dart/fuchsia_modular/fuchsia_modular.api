@@ -1,0 +1,524 @@
+{
+  "files": {
+    "agent.dart": {
+      "ClassDeclarationImpl": {
+        "Agent": {
+          "ConstructorDeclarationImpl": {
+            "Agent": {
+              "name": "Agent",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "exposeService": {
+              "SimpleFormalParameterImpl": {
+                "serviceImpl": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "serviceImpl",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "FutureOr<T>"
+                }
+              },
+              "TypeParameterListImpl": {
+                "<T extends Service>": {
+                  "TypeParameterImpl": {
+                    "T extends Service": {
+                      "name": "T extends Service",
+                      "type": "TypeParameterImpl"
+                    }
+                  },
+                  "name": "<T extends Service>",
+                  "type": "TypeParameterListImpl"
+                }
+              },
+              "isAbstract": true,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "exposeService",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "exposeServiceProvider": {
+              "SimpleFormalParameterImpl": {
+                "serviceData": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "serviceData",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "ServiceData<T>"
+                },
+                "serviceProvider": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "serviceProvider",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "ServiceProvider<T>"
+                }
+              },
+              "TypeParameterListImpl": {
+                "<T extends Service>": {
+                  "TypeParameterImpl": {
+                    "T extends Service": {
+                      "name": "T extends Service",
+                      "type": "TypeParameterImpl"
+                    }
+                  },
+                  "name": "<T extends Service>",
+                  "type": "TypeParameterListImpl"
+                }
+              },
+              "isAbstract": true,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "exposeServiceProvider",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "serve": {
+              "SimpleFormalParameterImpl": {
+                "outgoing": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "outgoing",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Outgoing"
+                }
+              },
+              "isAbstract": true,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "serve",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "Agent",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "TypeParameterListImpl": {
+        "<T extends Service>": {
+          "TypeParameterImpl": {
+            "T extends Service": {
+              "name": "T extends Service",
+              "type": "TypeParameterImpl"
+            }
+          },
+          "name": "<T extends Service>",
+          "type": "TypeParameterListImpl"
+        }
+      },
+      "name": "agent.dart",
+      "type": "file"
+    },
+    "agent_service_connection.dart": {
+      "FunctionDeclarationImpl": {
+        "connectToAgentService": {
+          "SimpleFormalParameterImpl": {
+            "agentUrl": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "agentUrl",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "String"
+            },
+            "componentContextProxy": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": true,
+              "isOptionalNamed": true,
+              "isOptionalPositional": false,
+              "isPositional": false,
+              "isRequired": false,
+              "isRequiredNamed": false,
+              "isRequiredPositional": false,
+              "name": "componentContextProxy",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "fidl_modular.ComponentContextProxy?"
+            },
+            "serviceProxy": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "serviceProxy",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "AsyncProxy<T>"
+            }
+          },
+          "TypeParameterListImpl": {
+            "<T>": {
+              "TypeParameterImpl": {
+                "T": {
+                  "name": "T",
+                  "type": "TypeParameterImpl"
+                }
+              },
+              "name": "<T>",
+              "type": "TypeParameterListImpl"
+            }
+          },
+          "isGetter": false,
+          "isSetter": false,
+          "name": "connectToAgentService",
+          "returnType": "void",
+          "type": "FunctionDeclarationImpl"
+        },
+        "deprecatedConnectToAgentService": {
+          "SimpleFormalParameterImpl": {
+            "agentUrl": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "agentUrl",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "String?"
+            },
+            "componentContextProxy": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": true,
+              "isOptionalNamed": true,
+              "isOptionalPositional": false,
+              "isPositional": false,
+              "isRequired": false,
+              "isRequiredNamed": false,
+              "isRequiredPositional": false,
+              "name": "componentContextProxy",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "fidl_modular.ComponentContextProxy?"
+            },
+            "e": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "e",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "null"
+            },
+            "serviceProxy": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "serviceProxy",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "AsyncProxy<T>?"
+            }
+          },
+          "TypeParameterListImpl": {
+            "<T>": {
+              "TypeParameterImpl": {
+                "T": {
+                  "name": "T",
+                  "type": "TypeParameterImpl"
+                }
+              },
+              "name": "<T>",
+              "type": "TypeParameterListImpl"
+            }
+          },
+          "isGetter": false,
+          "isSetter": false,
+          "name": "deprecatedConnectToAgentService",
+          "returnType": "void",
+          "type": "FunctionDeclarationImpl"
+        }
+      },
+      "name": "agent_service_connection.dart",
+      "type": "file"
+    },
+    "codecs.dart": {
+      "name": "codecs.dart",
+      "type": "file"
+    },
+    "intent.dart": {
+      "ClassDeclarationImpl": {
+        "Intent": {
+          "ConstructorDeclarationImpl": {
+            "Intent": {
+              "SimpleFormalParameterImpl": {
+                "action": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": true,
+                  "isRequiredNamed": true,
+                  "isRequiredPositional": false,
+                  "name": "action",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String?"
+                },
+                "handler": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "handler",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String?"
+                }
+              },
+              "name": "Intent",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "ExtendsClause": {
+            "name": "fidl.Intent",
+            "type": "extends"
+          },
+          "name": "Intent",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "intent.dart",
+      "type": "file"
+    },
+    "lifecycle.dart": {
+      "ClassDeclarationImpl": {
+        "Lifecycle": {
+          "ConstructorDeclarationImpl": {
+            "Lifecycle": {
+              "name": "Lifecycle",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "addTerminateListener": {
+              "SimpleFormalParameterImpl": {
+                "listener": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "listener",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Future<void> Function()"
+                }
+              },
+              "isAbstract": true,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "addTerminateListener",
+              "returnType": "bool",
+              "type": "MethodDeclarationImpl"
+            },
+            "enableLifecycleEvents": {
+              "SimpleFormalParameterImpl": {
+                "outgoing": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "outgoing",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Outgoing"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": true,
+              "name": "enableLifecycleEvents",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "Lifecycle",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "lifecycle.dart",
+      "type": "file"
+    },
+    "logger.dart": {
+      "ExportDirectiveImpl": {
+        "package:fuchsia_logger/logger.dart": {
+          "name": "package:fuchsia_logger/logger.dart",
+          "type": "ExportDirectiveImpl"
+        }
+      },
+      "name": "logger.dart",
+      "type": "file"
+    },
+    "module.dart": {
+      "ClassDeclarationImpl": {
+        "Module": {
+          "ConstructorDeclarationImpl": {
+            "Module": {
+              "name": "Module",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "removeSelfFromStory": {
+              "isAbstract": true,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "removeSelfFromStory",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "Module",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "module.dart",
+      "type": "file"
+    },
+    "module_state_exception.dart": {
+      "ClassDeclarationImpl": {
+        "ModuleStateException": {
+          "ConstructorDeclarationImpl": {
+            "ModuleStateException": {
+              "FieldFormalParameterImpl": {
+                "this.message": {
+                  "name": "this.message",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "ModuleStateException",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "ImplementsClause": {
+            "Exception": {
+              "name": "Exception",
+              "type": "interface"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "toString": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "toString",
+              "returnType": "String",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "message": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "message",
+              "type": "VariableDeclarationImpl",
+              "varType": "String"
+            }
+          },
+          "name": "ModuleStateException",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "module_state_exception.dart",
+      "type": "file"
+    },
+    "service_connection.dart": {
+      "ExportDirectiveImpl": {
+        "package:fuchsia_services/services.dart": {
+          "name": "package:fuchsia_services/services.dart",
+          "type": "ExportDirectiveImpl"
+        },
+        "src/service_connection/agent_service_connection.dart": {
+          "name": "src/service_connection/agent_service_connection.dart",
+          "type": "ExportDirectiveImpl"
+        }
+      },
+      "name": "service_connection.dart",
+      "type": "file"
+    }
+  },
+  "name": "//sdk/dart/fuchsia_modular:fuchsia_modular_detect_action",
+  "type": "package"
+}

@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(https://fxbug.dev/84961): Fix null safeety and remove this language version.
+// @dart=2.9
+
 import 'dart:io';
 
 // Diff two API files. Return the results to the calling method.
@@ -9,7 +12,7 @@ String diffTwoFiles(String leftPath, String rightPath) {
   var leftAPIString = readFile(leftPath);
   var rightAPIString = readFile(rightPath);
   if (leftAPIString == rightAPIString) {
-    return null;
+    return '';
   }
 
   // TODO(fxbug.dev/6541): Describe the differences.

@@ -1,0 +1,354 @@
+{
+  "files": {
+    "agent_interceptor.dart": {
+      "ClassDeclarationImpl": {
+        "AgentInterceptor": {
+          "ConstructorDeclarationImpl": {
+            "AgentInterceptor": {
+              "SimpleFormalParameterImpl": {
+                "onNewComponentStream": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "onNewComponentStream",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Stream<TestHarness$OnNewComponent$Response>"
+                }
+              },
+              "name": "AgentInterceptor",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "dispose": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "dispose",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "mockAgent": {
+              "SimpleFormalParameterImpl": {
+                "agentUrl": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "agentUrl",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String?"
+                },
+                "onNewAgent": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "onNewAgent",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "OnNewAgent?"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "mockAgent",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "AgentInterceptor",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "agent_interceptor.dart",
+      "type": "file"
+    },
+    "test.dart": {
+      "ExportDirectiveImpl": {
+        "src/agent_interceptor.dart": {
+          "name": "src/agent_interceptor.dart",
+          "type": "ExportDirectiveImpl"
+        },
+        "src/test_harness_fixtures.dart": {
+          "name": "src/test_harness_fixtures.dart",
+          "type": "ExportDirectiveImpl"
+        },
+        "src/test_harness_spec_builder.dart": {
+          "name": "src/test_harness_spec_builder.dart",
+          "type": "ExportDirectiveImpl"
+        }
+      },
+      "name": "test.dart",
+      "type": "file"
+    },
+    "test_harness_fixtures.dart": {
+      "FunctionDeclarationImpl": {
+        "createComponentContext": {
+          "SimpleFormalParameterImpl": {
+            "startupInfo": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "startupInfo",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "fidl_sys.StartupInfo"
+            }
+          },
+          "isGetter": false,
+          "isSetter": false,
+          "name": "createComponentContext",
+          "returnType": "ComponentContext",
+          "type": "FunctionDeclarationImpl"
+        },
+        "generateComponentUrl": {
+          "isGetter": false,
+          "isSetter": false,
+          "name": "generateComponentUrl",
+          "returnType": "String",
+          "type": "FunctionDeclarationImpl"
+        },
+        "getComponentContext": {
+          "SimpleFormalParameterImpl": {
+            "harness": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "harness",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "fidl_testing.TestHarnessProxy"
+            }
+          },
+          "isGetter": false,
+          "isSetter": false,
+          "name": "getComponentContext",
+          "returnType": "Future<fidl_modular.ComponentContextProxy>",
+          "type": "FunctionDeclarationImpl"
+        },
+        "launchTestHarness": {
+          "isGetter": false,
+          "isSetter": false,
+          "name": "launchTestHarness",
+          "returnType": "Future<fidl_testing.TestHarnessProxy>",
+          "type": "FunctionDeclarationImpl"
+        }
+      },
+      "name": "test_harness_fixtures.dart",
+      "type": "file"
+    },
+    "test_harness_spec_builder.dart": {
+      "ClassDeclarationImpl": {
+        "TestHarnessSpecBuilder": {
+          "MethodDeclarationImpl": {
+            "addComponentToIntercept": {
+              "SimpleFormalParameterImpl": {
+                "componentUrl": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "componentUrl",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String?"
+                },
+                "services": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "services",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "List<String>?"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "addComponentToIntercept",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "addEnvironmentServiceToInherit": {
+              "SimpleFormalParameterImpl": {
+                "service": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "service",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String?"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "addEnvironmentServiceToInherit",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "addServiceFromComponent": {
+              "SimpleFormalParameterImpl": {
+                "componentUrl": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "componentUrl",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String?"
+                },
+                "name": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "name",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String?"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "addServiceFromComponent",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "build": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "build",
+              "returnType": "TestHarnessSpec",
+              "type": "MethodDeclarationImpl"
+            },
+            "setBasemgrConfig": {
+              "SimpleFormalParameterImpl": {
+                "basemgrConfig": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "basemgrConfig",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "BasemgrConfig?"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "setBasemgrConfig",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "setSessionmgrConfig": {
+              "SimpleFormalParameterImpl": {
+                "sessionmgrConfig": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "sessionmgrConfig",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "SessionmgrConfig?"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "setSessionmgrConfig",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "TestHarnessSpecBuilder",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "test_harness_spec_builder.dart",
+      "type": "file"
+    }
+  },
+  "name": "//sdk/dart/fuchsia_modular_testing:fuchsia_modular_testing_detect_action",
+  "type": "package"
+}

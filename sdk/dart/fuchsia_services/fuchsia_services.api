@@ -1,0 +1,630 @@
+{
+  "files": {
+    "component_context.dart": {
+      "ClassDeclarationImpl": {
+        "ComponentContext": {
+          "ConstructorDeclarationImpl": {
+            "ComponentContext": {
+              "FieldFormalParameterImpl": {
+                "required this.outgoing": {
+                  "name": "required this.outgoing",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "required this.svc": {
+                  "name": "required this.svc",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "ComponentContext",
+              "type": "ConstructorDeclarationImpl"
+            },
+            "ComponentContext.create": {
+              "name": "ComponentContext.create",
+              "type": "ConstructorDeclarationImpl"
+            },
+            "ComponentContext.createAndServe": {
+              "name": "ComponentContext.createAndServe",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "outgoing": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "outgoing",
+              "type": "VariableDeclarationImpl",
+              "varType": "Outgoing"
+            },
+            "svc": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "svc",
+              "type": "VariableDeclarationImpl",
+              "varType": "Incoming"
+            }
+          },
+          "name": "ComponentContext",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "component_context.dart",
+      "type": "file"
+    },
+    "incoming.dart": {
+      "ClassDeclarationImpl": {
+        "Incoming": {
+          "ConstructorDeclarationImpl": {
+            "Incoming": {
+              "name": "Incoming",
+              "type": "ConstructorDeclarationImpl"
+            },
+            "Incoming.fromSvcPath": {
+              "name": "Incoming.fromSvcPath",
+              "type": "ConstructorDeclarationImpl"
+            },
+            "Incoming.withDirectory": {
+              "FieldFormalParameterImpl": {
+                "this._dirProxy": {
+                  "name": "this._dirProxy",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "Incoming.withDirectory",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "close": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "close",
+              "returnType": "Future<int>",
+              "type": "MethodDeclarationImpl"
+            },
+            "connectToService": {
+              "SimpleFormalParameterImpl": {
+                "serviceProxy": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "serviceProxy",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "AsyncProxy<T>?"
+                }
+              },
+              "TypeParameterListImpl": {
+                "<T>": {
+                  "TypeParameterImpl": {
+                    "T": {
+                      "name": "T",
+                      "type": "TypeParameterImpl"
+                    }
+                  },
+                  "name": "<T>",
+                  "type": "TypeParameterListImpl"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "connectToService",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "connectToServiceByNameWithChannel": {
+              "SimpleFormalParameterImpl": {
+                "channel": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "channel",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Channel?"
+                },
+                "serviceName": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "serviceName",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String?"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "connectToServiceByNameWithChannel",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "connectToServiceWithChannel": {
+              "SimpleFormalParameterImpl": {
+                "channel": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "channel",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Channel?"
+                },
+                "serviceProxy": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "serviceProxy",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "AsyncProxy<T>?"
+                }
+              },
+              "TypeParameterListImpl": {
+                "<T>": {
+                  "TypeParameterImpl": {
+                    "T": {
+                      "name": "T",
+                      "type": "TypeParameterImpl"
+                    }
+                  },
+                  "name": "<T>",
+                  "type": "TypeParameterListImpl"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "connectToServiceWithChannel",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "request": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "request",
+              "returnType": "InterfaceRequest<Node>",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "Incoming",
+          "type": "ClassDeclarationImpl"
+        },
+        "IncomingStateException": {
+          "ConstructorDeclarationImpl": {
+            "IncomingStateException": {
+              "FieldFormalParameterImpl": {
+                "this.message": {
+                  "name": "this.message",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "IncomingStateException",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "ImplementsClause": {
+            "Exception": {
+              "name": "Exception",
+              "type": "interface"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "toString": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "toString",
+              "returnType": "String",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "message": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "message",
+              "type": "VariableDeclarationImpl",
+              "varType": "String"
+            }
+          },
+          "name": "IncomingStateException",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "incoming.dart",
+      "type": "file"
+    },
+    "outgoing.dart": {
+      "ClassDeclarationImpl": {
+        "Outgoing": {
+          "ConstructorDeclarationImpl": {
+            "Outgoing": {
+              "name": "Outgoing",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "addPublicService": {
+              "SimpleFormalParameterImpl": {
+                "connector": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "connector",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "vfs.Connector<T>"
+                },
+                "serviceName": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "serviceName",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "TypeParameterListImpl": {
+                "<T>": {
+                  "TypeParameterImpl": {
+                    "T": {
+                      "name": "T",
+                      "type": "TypeParameterImpl"
+                    }
+                  },
+                  "name": "<T>",
+                  "type": "TypeParameterListImpl"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "addPublicService",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            },
+            "close": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "close",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "ctrlDir": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "ctrlDir",
+              "returnType": "vfs.PseudoDir",
+              "type": "MethodDeclarationImpl"
+            },
+            "debugDir": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "debugDir",
+              "returnType": "vfs.PseudoDir",
+              "type": "MethodDeclarationImpl"
+            },
+            "diagnosticsDir": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "diagnosticsDir",
+              "returnType": "vfs.PseudoDir",
+              "type": "MethodDeclarationImpl"
+            },
+            "publicDir": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "publicDir",
+              "returnType": "vfs.PseudoDir",
+              "type": "MethodDeclarationImpl"
+            },
+            "rootDir": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "rootDir",
+              "returnType": "vfs.PseudoDir",
+              "type": "MethodDeclarationImpl"
+            },
+            "serve": {
+              "SimpleFormalParameterImpl": {
+                "request": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "request",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "InterfaceRequest<Node>"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "serve",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "serveFromStartupInfo": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "serveFromStartupInfo",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "Outgoing",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "outgoing.dart",
+      "type": "file"
+    },
+    "service_provider_impl.dart": {
+      "ClassDeclarationImpl": {
+        "ServiceProviderImpl": {
+          "ExtendsClause": {
+            "name": "fuchsia_sys.ServiceProvider",
+            "type": "extends"
+          },
+          "MethodDeclarationImpl": {
+            "addServiceForName": {
+              "SimpleFormalParameterImpl": {
+                "channel": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "channel",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Channel?"
+                },
+                "connector": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "connector",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "void Function(InterfaceRequest<T>)"
+                },
+                "serviceName": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "serviceName",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "TypeParameterListImpl": {
+                "<T>": {
+                  "TypeParameterImpl": {
+                    "T": {
+                      "name": "T",
+                      "type": "TypeParameterImpl"
+                    }
+                  },
+                  "name": "<T>",
+                  "type": "TypeParameterListImpl"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "addServiceForName",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "bind": {
+              "SimpleFormalParameterImpl": {
+                "interfaceRequest": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "interfaceRequest",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "InterfaceRequest<fuchsia_sys.ServiceProvider>"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "bind",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "close": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "close",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "connectToService": {
+              "SimpleFormalParameterImpl": {
+                "channel": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "channel",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Channel?"
+                },
+                "serviceName": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "serviceName",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "connectToService",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "ServiceProviderImpl",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "service_provider_impl.dart",
+      "type": "file"
+    },
+    "services.dart": {
+      "ExportDirectiveImpl": {
+        "src/component_context.dart": {
+          "name": "src/component_context.dart",
+          "type": "ExportDirectiveImpl"
+        },
+        "src/incoming.dart": {
+          "name": "src/incoming.dart",
+          "type": "ExportDirectiveImpl"
+        },
+        "src/outgoing.dart": {
+          "name": "src/outgoing.dart",
+          "type": "ExportDirectiveImpl"
+        },
+        "src/service_provider_impl.dart": {
+          "name": "src/service_provider_impl.dart",
+          "type": "ExportDirectiveImpl"
+        }
+      },
+      "name": "services.dart",
+      "type": "file"
+    }
+  },
+  "name": "//sdk/dart/fuchsia_services:fuchsia_services_detect_action",
+  "type": "package"
+}

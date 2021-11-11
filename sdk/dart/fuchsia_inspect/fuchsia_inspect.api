@@ -1,0 +1,4809 @@
+{
+  "files": {
+    "bitfield64.dart": {
+      "ClassDeclarationImpl": {
+        "BitRange": {
+          "ConstructorDeclarationImpl": {
+            "BitRange": {
+              "FieldFormalParameterImpl": {
+                "this.end": {
+                  "name": "this.end",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "this.start": {
+                  "name": "this.start",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "BitRange",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "end": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "end",
+              "type": "VariableDeclarationImpl",
+              "varType": "int"
+            },
+            "maskAt0": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "maskAt0",
+              "type": "VariableDeclarationImpl",
+              "varType": "int"
+            },
+            "start": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "start",
+              "type": "VariableDeclarationImpl",
+              "varType": "int"
+            }
+          },
+          "name": "BitRange",
+          "type": "ClassDeclarationImpl"
+        },
+        "Bitfield64": {
+          "ConstructorDeclarationImpl": {
+            "Bitfield64": {
+              "FieldFormalParameterImpl": {
+                "this.value": {
+                  "name": "this.value",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "Bitfield64",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "read": {
+              "SimpleFormalParameterImpl": {
+                "range": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "range",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "BitRange"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "read",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            },
+            "write": {
+              "SimpleFormalParameterImpl": {
+                "range": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "range",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "BitRange"
+                },
+                "value": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "value",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "write",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "value": {
+              "isConst": false,
+              "isFinal": false,
+              "isLate": false,
+              "name": "value",
+              "type": "VariableDeclarationImpl",
+              "varType": "int"
+            }
+          },
+          "name": "Bitfield64",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "bitfield64.dart",
+      "type": "file"
+    },
+    "block.dart": {
+      "ClassDeclarationImpl": {
+        "Block": {
+          "ConstructorDeclarationImpl": {
+            "Block.create": {
+              "FieldFormalParameterImpl": {
+                "this._vmo": {
+                  "name": "this._vmo",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "this.index": {
+                  "name": "this.index",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "SimpleFormalParameterImpl": {
+                "order": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "order",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "name": "Block.create",
+              "type": "ConstructorDeclarationImpl"
+            },
+            "Block.createWithType": {
+              "FieldFormalParameterImpl": {
+                "this._vmo": {
+                  "name": "this._vmo",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "this.index": {
+                  "name": "this.index",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "SimpleFormalParameterImpl": {
+                "type": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "type",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "BlockType"
+                }
+              },
+              "name": "Block.createWithType",
+              "type": "ConstructorDeclarationImpl"
+            },
+            "Block.read": {
+              "FieldFormalParameterImpl": {
+                "this._vmo": {
+                  "name": "this._vmo",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "this.index": {
+                  "name": "this.index",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "Block.read",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "becomeBoolMetric": {
+              "SimpleFormalParameterImpl": {
+                "value": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "value",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "bool"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "becomeBoolMetric",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "becomeBuffer": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "becomeBuffer",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "becomeDoubleMetric": {
+              "SimpleFormalParameterImpl": {
+                "value": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "value",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "double"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "becomeDoubleMetric",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "becomeExtent": {
+              "SimpleFormalParameterImpl": {
+                "nextExtent": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "nextExtent",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "becomeExtent",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "becomeFree": {
+              "SimpleFormalParameterImpl": {
+                "next": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "next",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "becomeFree",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "becomeHeader": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "becomeHeader",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "becomeIntMetric": {
+              "SimpleFormalParameterImpl": {
+                "value": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "value",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "becomeIntMetric",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "becomeName": {
+              "SimpleFormalParameterImpl": {
+                "name": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "name",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "becomeName",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "becomeNode": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "becomeNode",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "becomeReserved": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "becomeReserved",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "becomeTombstone": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "becomeTombstone",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "becomeValue": {
+              "SimpleFormalParameterImpl": {
+                "nameIndex": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": true,
+                  "isRequiredNamed": true,
+                  "isRequiredPositional": false,
+                  "name": "nameIndex",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "parentIndex": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": true,
+                  "isRequiredNamed": true,
+                  "isRequiredPositional": false,
+                  "name": "parentIndex",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "becomeValue",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "boolValue": {
+              "SimpleFormalParameterImpl": {
+                "value": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "value",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "bool"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": true,
+              "isStatic": false,
+              "name": "boolValue",
+              "returnType": "null",
+              "type": "MethodDeclarationImpl"
+            },
+            "bufferExtentIndex": {
+              "SimpleFormalParameterImpl": {
+                "index": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "index",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": true,
+              "isStatic": false,
+              "name": "bufferExtentIndex",
+              "returnType": "null",
+              "type": "MethodDeclarationImpl"
+            },
+            "bufferFlags": {
+              "SimpleFormalParameterImpl": {
+                "flags": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "flags",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": true,
+              "isStatic": false,
+              "name": "bufferFlags",
+              "returnType": "null",
+              "type": "MethodDeclarationImpl"
+            },
+            "bufferTotalLength": {
+              "SimpleFormalParameterImpl": {
+                "length": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "length",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": true,
+              "isStatic": false,
+              "name": "bufferTotalLength",
+              "returnType": "null",
+              "type": "MethodDeclarationImpl"
+            },
+            "childCount": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "childCount",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            },
+            "doubleValue": {
+              "SimpleFormalParameterImpl": {
+                "value": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "value",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "double"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": true,
+              "isStatic": false,
+              "name": "doubleValue",
+              "returnType": "null",
+              "type": "MethodDeclarationImpl"
+            },
+            "intValue": {
+              "SimpleFormalParameterImpl": {
+                "value": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "value",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": true,
+              "isStatic": false,
+              "name": "intValue",
+              "returnType": "null",
+              "type": "MethodDeclarationImpl"
+            },
+            "lock": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "lock",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "nameIndex": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "nameIndex",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            },
+            "nameUtf8": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "nameUtf8",
+              "returnType": "ByteData",
+              "type": "MethodDeclarationImpl"
+            },
+            "nextExtent": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "nextExtent",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            },
+            "nextFree": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "nextFree",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            },
+            "parentIndex": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "parentIndex",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            },
+            "payloadBytes": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "payloadBytes",
+              "returnType": "ByteData",
+              "type": "MethodDeclarationImpl"
+            },
+            "payloadSpaceBytes": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "payloadSpaceBytes",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            },
+            "setExtentPayload": {
+              "SimpleFormalParameterImpl": {
+                "data": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "data",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "ByteData"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "setExtentPayload",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "size": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "size",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            },
+            "type": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "type",
+              "returnType": "BlockType",
+              "type": "MethodDeclarationImpl"
+            },
+            "unlock": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "unlock",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "vmo": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "vmo",
+              "returnType": "VmoHolder",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "index": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "index",
+              "type": "VariableDeclarationImpl",
+              "varType": "int"
+            }
+          },
+          "name": "Block",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "block.dart",
+      "type": "file"
+    },
+    "diagnostic_config.dart": {
+      "ClassDeclarationImpl": {
+        "DiagnosticsConfiguration": {
+          "MethodDeclarationImpl": {
+            "buildMetadata": {
+              "SimpleFormalParameterImpl": {
+                "metadataSource": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "metadataSource",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Map<String, dynamic>?"
+                }
+              },
+              "isAbstract": true,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "buildMetadata",
+              "returnType": "METADATA",
+              "type": "MethodDeclarationImpl"
+            },
+            "dataType": {
+              "isAbstract": true,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "dataType",
+              "returnType": "DataType",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "TypeParameterListImpl": {
+            "<METADATA>": {
+              "TypeParameterImpl": {
+                "METADATA": {
+                  "name": "METADATA",
+                  "type": "TypeParameterImpl"
+                }
+              },
+              "name": "<METADATA>",
+              "type": "TypeParameterListImpl"
+            }
+          },
+          "name": "DiagnosticsConfiguration",
+          "type": "ClassDeclarationImpl"
+        },
+        "InspectConfiguration": {
+          "ImplementsClause": {
+            "DiagnosticsConfiguration": {
+              "name": "DiagnosticsConfiguration",
+              "type": "interface"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "buildMetadata": {
+              "SimpleFormalParameterImpl": {
+                "metadataSource": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "metadataSource",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Map<String, dynamic>?"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "buildMetadata",
+              "returnType": "InspectMetadata",
+              "type": "MethodDeclarationImpl"
+            },
+            "dataType": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "dataType",
+              "returnType": "DataType",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "InspectConfiguration",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "diagnostic_config.dart",
+      "type": "file"
+    },
+    "diagnostic_data.dart": {
+      "ClassDeclarationImpl": {
+        "DiagnosticsData": {
+          "ConstructorDeclarationImpl": {
+            "DiagnosticsData": {
+              "FieldFormalParameterImpl": {
+                "required this.dataType": {
+                  "name": "required this.dataType",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "required this.metadata": {
+                  "name": "required this.metadata",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "required this.moniker": {
+                  "name": "required this.moniker",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "required this.payload": {
+                  "name": "required this.payload",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "required this.version": {
+                  "name": "required this.version",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "DiagnosticsData",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "toString": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "toString",
+              "returnType": "String",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "TypeParameterListImpl": {
+            "<METADATA>": {
+              "TypeParameterImpl": {
+                "METADATA": {
+                  "name": "METADATA",
+                  "type": "TypeParameterImpl"
+                }
+              },
+              "name": "<METADATA>",
+              "type": "TypeParameterListImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "dataType": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "dataType",
+              "type": "VariableDeclarationImpl",
+              "varType": "DataType"
+            },
+            "metadata": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "metadata",
+              "type": "VariableDeclarationImpl",
+              "varType": "METADATA"
+            },
+            "moniker": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "moniker",
+              "type": "VariableDeclarationImpl",
+              "varType": "String"
+            },
+            "payload": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "payload",
+              "type": "VariableDeclarationImpl",
+              "varType": "Map<String, dynamic>"
+            },
+            "version": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "version",
+              "type": "VariableDeclarationImpl",
+              "varType": "int"
+            }
+          },
+          "name": "DiagnosticsData",
+          "type": "ClassDeclarationImpl"
+        },
+        "InspectMetadata": {
+          "ConstructorDeclarationImpl": {
+            "InspectMetadata": {
+              "FieldFormalParameterImpl": {
+                "required this.componentUrl": {
+                  "name": "required this.componentUrl",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "required this.errors": {
+                  "name": "required this.errors",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "required this.filename": {
+                  "name": "required this.filename",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "required this.timeStamp": {
+                  "name": "required this.timeStamp",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "InspectMetadata",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "toString": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "toString",
+              "returnType": "String",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "componentUrl": {
+              "isConst": false,
+              "isFinal": false,
+              "isLate": false,
+              "name": "componentUrl",
+              "type": "VariableDeclarationImpl",
+              "varType": "String"
+            },
+            "errors": {
+              "isConst": false,
+              "isFinal": false,
+              "isLate": false,
+              "name": "errors",
+              "type": "VariableDeclarationImpl",
+              "varType": "List<String>"
+            },
+            "filename": {
+              "isConst": false,
+              "isFinal": false,
+              "isLate": false,
+              "name": "filename",
+              "type": "VariableDeclarationImpl",
+              "varType": "String"
+            },
+            "timeStamp": {
+              "isConst": false,
+              "isFinal": false,
+              "isLate": false,
+              "name": "timeStamp",
+              "type": "VariableDeclarationImpl",
+              "varType": "int"
+            }
+          },
+          "name": "InspectMetadata",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "diagnostic_data.dart",
+      "type": "file"
+    },
+    "heap.dart": {
+      "ClassDeclarationImpl": {
+        "Heap": {
+          "MethodDeclarationImpl": {
+            "allocateBlock": {
+              "SimpleFormalParameterImpl": {
+                "bytesHint": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "bytesHint",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "required": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "required",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "bool"
+                }
+              },
+              "isAbstract": true,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "allocateBlock",
+              "returnType": "Block?",
+              "type": "MethodDeclarationImpl"
+            },
+            "freeBlock": {
+              "SimpleFormalParameterImpl": {
+                "block": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "block",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Block"
+                }
+              },
+              "isAbstract": true,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "freeBlock",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "Heap",
+          "type": "ClassDeclarationImpl"
+        },
+        "Slab32": {
+          "ConstructorDeclarationImpl": {
+            "Slab32": {
+              "FieldFormalParameterImpl": {
+                "this._vmo": {
+                  "name": "this._vmo",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "Slab32",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "ImplementsClause": {
+            "Heap": {
+              "name": "Heap",
+              "type": "interface"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "allocateBlock": {
+              "SimpleFormalParameterImpl": {
+                "required": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "required",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "bool"
+                },
+                "unused": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "unused",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "allocateBlock",
+              "returnType": "Block?",
+              "type": "MethodDeclarationImpl"
+            },
+            "create": {
+              "SimpleFormalParameterImpl": {
+                "vmo": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "vmo",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "VmoHolder"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": true,
+              "name": "create",
+              "returnType": "Heap",
+              "type": "MethodDeclarationImpl"
+            },
+            "freeBlock": {
+              "SimpleFormalParameterImpl": {
+                "block": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "block",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Block"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "freeBlock",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "Slab32",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "VariableDeclarationImpl": {
+        "defaultBlockOrder": {
+          "isConst": true,
+          "isFinal": false,
+          "isLate": false,
+          "name": "defaultBlockOrder",
+          "type": "VariableDeclarationImpl",
+          "varType": "int"
+        }
+      },
+      "name": "heap.dart",
+      "type": "file"
+    },
+    "inspect.dart": {
+      "ClassDeclarationImpl": {
+        "Inspect": {
+          "ConstructorDeclarationImpl": {
+            "Inspect": {
+              "name": "Inspect",
+              "type": "ConstructorDeclarationImpl"
+            },
+            "Inspect.forTesting": {
+              "SimpleFormalParameterImpl": {
+                "vmo": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "vmo",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "FakeVmoHolder"
+                }
+              },
+              "name": "Inspect.forTesting",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "configure": {
+              "SimpleFormalParameterImpl": {
+                "vmoSizeBytes": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "vmoSizeBytes",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int?"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": true,
+              "name": "configure",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "health": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "health",
+              "returnType": "HealthNode",
+              "type": "MethodDeclarationImpl"
+            },
+            "nextInstanceWithName": {
+              "SimpleFormalParameterImpl": {
+                "name": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "name",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": true,
+              "name": "nextInstanceWithName",
+              "returnType": "String",
+              "type": "MethodDeclarationImpl"
+            },
+            "onDemand": {
+              "SimpleFormalParameterImpl": {
+                "name": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "name",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "rootNodeCallback": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "rootNodeCallback",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "OnDemandRootFn"
+                }
+              },
+              "isAbstract": true,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "onDemand",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "root": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "root",
+              "returnType": "Node?",
+              "type": "MethodDeclarationImpl"
+            },
+            "serve": {
+              "SimpleFormalParameterImpl": {
+                "outgoing": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "outgoing",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Outgoing"
+                }
+              },
+              "isAbstract": true,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "serve",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "vmoHandleForExportTestOnly": {
+              "isAbstract": true,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "vmoHandleForExportTestOnly",
+              "returnType": "Handle?",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "nameToInstanceCount": {
+              "isConst": false,
+              "isFinal": false,
+              "isLate": false,
+              "name": "nameToInstanceCount",
+              "type": "VariableDeclarationImpl",
+              "varType": "Map<String, int>"
+            },
+            "vmoSize": {
+              "isConst": false,
+              "isFinal": false,
+              "isLate": false,
+              "name": "vmoSize",
+              "type": "VariableDeclarationImpl",
+              "varType": "int"
+            }
+          },
+          "name": "Inspect",
+          "type": "ClassDeclarationImpl"
+        },
+        "InspectStateError": {
+          "ConstructorDeclarationImpl": {
+            "InspectStateError": {
+              "SimpleFormalParameterImpl": {
+                "message": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "message",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "name": "InspectStateError",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "ExtendsClause": {
+            "name": "StateError",
+            "type": "extends"
+          },
+          "name": "InspectStateError",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "FunctionDeclarationImpl": {
+        "uniqueName": {
+          "SimpleFormalParameterImpl": {
+            "prefix": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "prefix",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "String"
+            }
+          },
+          "isGetter": false,
+          "isSetter": false,
+          "name": "uniqueName",
+          "returnType": "String",
+          "type": "FunctionDeclarationImpl"
+        }
+      },
+      "VariableDeclarationImpl": {
+        "defaultVmoSizeBytes": {
+          "isConst": true,
+          "isFinal": false,
+          "isLate": false,
+          "name": "defaultVmoSizeBytes",
+          "type": "VariableDeclarationImpl",
+          "varType": "int"
+        }
+      },
+      "name": "inspect.dart",
+      "type": "file"
+    },
+    "little_big_slab.dart": {
+      "ClassDeclarationImpl": {
+        "LittleBigSlab": {
+          "ConstructorDeclarationImpl": {
+            "LittleBigSlab": {
+              "FieldFormalParameterImpl": {
+                "this._vmo": {
+                  "name": "this._vmo",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "SimpleFormalParameterImpl": {
+                "bigOrder": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "bigOrder",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "pageSizeBytes": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "pageSizeBytes",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "smallOrder": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "smallOrder",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "name": "LittleBigSlab",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "ImplementsClause": {
+            "Heap": {
+              "name": "Heap",
+              "type": "interface"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "allocateBlock": {
+              "SimpleFormalParameterImpl": {
+                "bytesHint": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "bytesHint",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "required": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "required",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "bool"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "allocateBlock",
+              "returnType": "Block?",
+              "type": "MethodDeclarationImpl"
+            },
+            "create": {
+              "SimpleFormalParameterImpl": {
+                "vmo": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "vmo",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "VmoHolder"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": true,
+              "name": "create",
+              "returnType": "Heap",
+              "type": "MethodDeclarationImpl"
+            },
+            "freeBlock": {
+              "SimpleFormalParameterImpl": {
+                "block": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "block",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Block"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "freeBlock",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "LittleBigSlab",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "little_big_slab.dart",
+      "type": "file"
+    },
+    "matcher.dart": {
+      "ClassDeclarationImpl": {
+        "NodeMatcher": {
+          "ConstructorDeclarationImpl": {
+            "NodeMatcher._invalid": {
+              "FieldFormalParameterImpl": {
+                "this._parent": {
+                  "name": "this._parent",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "NodeMatcher._invalid",
+              "type": "ConstructorDeclarationImpl"
+            },
+            "NodeMatcher._valid": {
+              "FieldFormalParameterImpl": {
+                "this._index": {
+                  "name": "this._index",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "this._parent": {
+                  "name": "this._parent",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "NodeMatcher._valid",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "ImplementsClause": {
+            "_HasErrors": {
+              "name": "_HasErrors",
+              "type": "interface"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "at": {
+              "SimpleFormalParameterImpl": {
+                "path": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "path",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "List<String>"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "at",
+              "returnType": "NodeMatcher",
+              "type": "MethodDeclarationImpl"
+            },
+            "errors": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "errors",
+              "returnType": "List<String>",
+              "type": "MethodDeclarationImpl"
+            },
+            "missingChild": {
+              "SimpleFormalParameterImpl": {
+                "name": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "name",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "missingChild",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "property": {
+              "SimpleFormalParameterImpl": {
+                "name": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "name",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "property",
+              "returnType": "PropertyMatcher",
+              "type": "MethodDeclarationImpl"
+            },
+            "propertyEquals": {
+              "SimpleFormalParameterImpl": {
+                "name": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "name",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "val": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "val",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "dynamic"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "propertyEquals",
+              "returnType": "PropertyMatcher",
+              "type": "MethodDeclarationImpl"
+            },
+            "propertyNotEquals": {
+              "SimpleFormalParameterImpl": {
+                "name": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "name",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "val": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "val",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "dynamic"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "propertyNotEquals",
+              "returnType": "PropertyMatcher",
+              "type": "MethodDeclarationImpl"
+            },
+            "resetErrors": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "resetErrors",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "NodeMatcher",
+          "type": "ClassDeclarationImpl"
+        },
+        "PropertyMatcher": {
+          "ConstructorDeclarationImpl": {
+            "PropertyMatcher._invalid": {
+              "FieldFormalParameterImpl": {
+                "this._parent": {
+                  "name": "this._parent",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "PropertyMatcher._invalid",
+              "type": "ConstructorDeclarationImpl"
+            },
+            "PropertyMatcher._valid": {
+              "FieldFormalParameterImpl": {
+                "this._index": {
+                  "name": "this._index",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "this._parent": {
+                  "name": "this._parent",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "PropertyMatcher._valid",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "ImplementsClause": {
+            "_HasErrors": {
+              "name": "_HasErrors",
+              "type": "interface"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "equals": {
+              "SimpleFormalParameterImpl": {
+                "val": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "val",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "dynamic"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "equals",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "errors": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "errors",
+              "returnType": "List<String>",
+              "type": "MethodDeclarationImpl"
+            },
+            "notEquals": {
+              "SimpleFormalParameterImpl": {
+                "val": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "val",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "dynamic"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "notEquals",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "resetErrors": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "resetErrors",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "PropertyMatcher",
+          "type": "ClassDeclarationImpl"
+        },
+        "VmoMatcher": {
+          "ConstructorDeclarationImpl": {
+            "VmoMatcher": {
+              "FieldFormalParameterImpl": {
+                "this._holder": {
+                  "name": "this._holder",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "VmoMatcher",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "ImplementsClause": {
+            "_HasErrors": {
+              "name": "_HasErrors",
+              "type": "interface"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "errors": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "errors",
+              "returnType": "List<String>",
+              "type": "MethodDeclarationImpl"
+            },
+            "node": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "node",
+              "returnType": "NodeMatcher",
+              "type": "MethodDeclarationImpl"
+            },
+            "resetErrors": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "resetErrors",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "VmoMatcher",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "VariableDeclarationImpl": {
+        "hasNoErrors": {
+          "isConst": true,
+          "isFinal": false,
+          "isLate": false,
+          "name": "hasNoErrors",
+          "type": "VariableDeclarationImpl",
+          "varType": "Matcher"
+        }
+      },
+      "name": "matcher.dart",
+      "type": "file"
+    },
+    "node.dart": {
+      "ClassDeclarationImpl": {
+        "HealthNode": {
+          "ConstructorDeclarationImpl": {
+            "HealthNode": {
+              "SimpleFormalParameterImpl": {
+                "node": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "node",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Node?"
+                }
+              },
+              "name": "HealthNode",
+              "type": "ConstructorDeclarationImpl"
+            },
+            "HealthNode.withTimeNanosForTest": {
+              "SimpleFormalParameterImpl": {
+                "node": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "node",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Node?"
+                },
+                "timeNanos": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "timeNanos",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Function"
+                }
+              },
+              "name": "HealthNode.withTimeNanosForTest",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "setOk": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "setOk",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "setStartingUp": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "setStartingUp",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "setUnhealthy": {
+              "SimpleFormalParameterImpl": {
+                "message": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "message",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "setUnhealthy",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "HealthNode",
+          "type": "ClassDeclarationImpl"
+        },
+        "Node": {
+          "ConstructorDeclarationImpl": {
+            "Node._": {
+              "FieldFormalParameterImpl": {
+                "VmoWriter this._writer": {
+                  "name": "VmoWriter this._writer",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "this._name": {
+                  "name": "this._name",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "this._parent": {
+                  "name": "this._parent",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "SimpleFormalParameterImpl": {
+                "parentIndex": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "parentIndex",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "name": "Node._",
+              "type": "ConstructorDeclarationImpl"
+            },
+            "Node._root": {
+              "FieldFormalParameterImpl": {
+                "VmoWriter this._writer": {
+                  "name": "VmoWriter this._writer",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "Node._root",
+              "type": "ConstructorDeclarationImpl"
+            },
+            "Node.deleted": {
+              "name": "Node.deleted",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "boolProperty": {
+              "SimpleFormalParameterImpl": {
+                "name": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "name",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "boolProperty",
+              "returnType": "BoolProperty?",
+              "type": "MethodDeclarationImpl"
+            },
+            "byteDataProperty": {
+              "SimpleFormalParameterImpl": {
+                "name": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "name",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "byteDataProperty",
+              "returnType": "ByteDataProperty?",
+              "type": "MethodDeclarationImpl"
+            },
+            "child": {
+              "SimpleFormalParameterImpl": {
+                "name": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "name",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "child",
+              "returnType": "Node?",
+              "type": "MethodDeclarationImpl"
+            },
+            "delete": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "delete",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "doubleProperty": {
+              "SimpleFormalParameterImpl": {
+                "name": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "name",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "doubleProperty",
+              "returnType": "DoubleProperty?",
+              "type": "MethodDeclarationImpl"
+            },
+            "intProperty": {
+              "SimpleFormalParameterImpl": {
+                "name": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "name",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "intProperty",
+              "returnType": "IntProperty?",
+              "type": "MethodDeclarationImpl"
+            },
+            "stringProperty": {
+              "SimpleFormalParameterImpl": {
+                "name": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "name",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "stringProperty",
+              "returnType": "StringProperty?",
+              "type": "MethodDeclarationImpl"
+            },
+            "valid": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "valid",
+              "returnType": "bool",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "index": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "index",
+              "type": "VariableDeclarationImpl",
+              "varType": "int"
+            }
+          },
+          "name": "Node",
+          "type": "ClassDeclarationImpl"
+        },
+        "RootNode": {
+          "ConstructorDeclarationImpl": {
+            "RootNode": {
+              "SimpleFormalParameterImpl": {
+                "writer": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "writer",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "VmoWriter"
+                }
+              },
+              "name": "RootNode",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "ExtendsClause": {
+            "name": "Node",
+            "type": "extends"
+          },
+          "MethodDeclarationImpl": {
+            "delete": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "delete",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "RootNode",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "VariableDeclarationImpl": {
+        "rootNodeIndex": {
+          "isConst": true,
+          "isFinal": false,
+          "isLate": false,
+          "name": "rootNodeIndex",
+          "type": "VariableDeclarationImpl",
+          "varType": "int"
+        }
+      },
+      "name": "node.dart",
+      "type": "file"
+    },
+    "property.dart": {
+      "ClassDeclarationImpl": {
+        "BoolProperty": {
+          "ConstructorDeclarationImpl": {
+            "BoolProperty._": {
+              "SimpleFormalParameterImpl": {
+                "name": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "name",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "parent": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "parent",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Node"
+                },
+                "writer": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "writer",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "VmoWriter"
+                }
+              },
+              "name": "BoolProperty._",
+              "type": "ConstructorDeclarationImpl"
+            },
+            "BoolProperty._deleted": {
+              "name": "BoolProperty._deleted",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "ExtendsClause": {
+            "name": "Property",
+            "type": "extends"
+          },
+          "MethodDeclarationImpl": {
+            "setValue": {
+              "SimpleFormalParameterImpl": {
+                "value": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "value",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "bool"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "setValue",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "BoolProperty",
+          "type": "ClassDeclarationImpl"
+        },
+        "ByteDataProperty": {
+          "ConstructorDeclarationImpl": {
+            "ByteDataProperty._": {
+              "SimpleFormalParameterImpl": {
+                "name": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "name",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "parent": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "parent",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Node"
+                },
+                "writer": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "writer",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "VmoWriter"
+                }
+              },
+              "name": "ByteDataProperty._",
+              "type": "ConstructorDeclarationImpl"
+            },
+            "ByteDataProperty.deleted": {
+              "name": "ByteDataProperty.deleted",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "ExtendsClause": {
+            "name": "Property",
+            "type": "extends"
+          },
+          "WithClause": {
+            "BytesProperty": {
+              "name": "BytesProperty",
+              "type": "mixin"
+            }
+          },
+          "name": "ByteDataProperty",
+          "type": "ClassDeclarationImpl"
+        },
+        "DoubleProperty": {
+          "ConstructorDeclarationImpl": {
+            "DoubleProperty._": {
+              "SimpleFormalParameterImpl": {
+                "name": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "name",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "parent": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "parent",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Node"
+                },
+                "writer": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "writer",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "VmoWriter"
+                }
+              },
+              "name": "DoubleProperty._",
+              "type": "ConstructorDeclarationImpl"
+            },
+            "DoubleProperty.deleted": {
+              "name": "DoubleProperty.deleted",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "ExtendsClause": {
+            "name": "Property",
+            "type": "extends"
+          },
+          "WithClause": {
+            "Arithmetic": {
+              "name": "Arithmetic",
+              "type": "mixin"
+            }
+          },
+          "name": "DoubleProperty",
+          "type": "ClassDeclarationImpl"
+        },
+        "IntProperty": {
+          "ConstructorDeclarationImpl": {
+            "IntProperty._": {
+              "SimpleFormalParameterImpl": {
+                "name": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "name",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "parent": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "parent",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Node"
+                },
+                "writer": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "writer",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "VmoWriter"
+                }
+              },
+              "name": "IntProperty._",
+              "type": "ConstructorDeclarationImpl"
+            },
+            "IntProperty.deleted": {
+              "name": "IntProperty.deleted",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "ExtendsClause": {
+            "name": "Property",
+            "type": "extends"
+          },
+          "WithClause": {
+            "Arithmetic": {
+              "name": "Arithmetic",
+              "type": "mixin"
+            }
+          },
+          "name": "IntProperty",
+          "type": "ClassDeclarationImpl"
+        },
+        "Property": {
+          "ConstructorDeclarationImpl": {
+            "Property._": {
+              "FieldFormalParameterImpl": {
+                "this._name": {
+                  "name": "this._name",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "this._parent": {
+                  "name": "this._parent",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "this._writer": {
+                  "name": "this._writer",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "this.index": {
+                  "name": "this.index",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "Property._",
+              "type": "ConstructorDeclarationImpl"
+            },
+            "Property.deleted": {
+              "name": "Property.deleted",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "delete": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "delete",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "setValue": {
+              "SimpleFormalParameterImpl": {
+                "value": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "value",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "T"
+                }
+              },
+              "isAbstract": true,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "setValue",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "valid": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "valid",
+              "returnType": "bool",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "TypeParameterListImpl": {
+            "<T>": {
+              "TypeParameterImpl": {
+                "T": {
+                  "name": "T",
+                  "type": "TypeParameterImpl"
+                }
+              },
+              "name": "<T>",
+              "type": "TypeParameterListImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "index": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "index",
+              "type": "VariableDeclarationImpl",
+              "varType": "int"
+            }
+          },
+          "name": "Property",
+          "type": "ClassDeclarationImpl"
+        },
+        "StringProperty": {
+          "ConstructorDeclarationImpl": {
+            "StringProperty._": {
+              "SimpleFormalParameterImpl": {
+                "name": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "name",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "parent": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "parent",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Node"
+                },
+                "writer": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "writer",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "VmoWriter"
+                }
+              },
+              "name": "StringProperty._",
+              "type": "ConstructorDeclarationImpl"
+            },
+            "StringProperty.deleted": {
+              "name": "StringProperty.deleted",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "ExtendsClause": {
+            "name": "Property",
+            "type": "extends"
+          },
+          "WithClause": {
+            "BytesProperty": {
+              "name": "BytesProperty",
+              "type": "mixin"
+            }
+          },
+          "name": "StringProperty",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "MethodDeclarationImpl": {
+        "add": {
+          "SimpleFormalParameterImpl": {
+            "delta": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "delta",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "T"
+            }
+          },
+          "isAbstract": false,
+          "isGetter": false,
+          "isOperator": false,
+          "isSetter": false,
+          "isStatic": false,
+          "name": "add",
+          "returnType": "void",
+          "type": "MethodDeclarationImpl"
+        },
+        "setValue": {
+          "SimpleFormalParameterImpl": {
+            "value": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "value",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "T"
+            }
+          },
+          "isAbstract": false,
+          "isGetter": false,
+          "isOperator": false,
+          "isSetter": false,
+          "isStatic": false,
+          "name": "setValue",
+          "returnType": "void",
+          "type": "MethodDeclarationImpl"
+        },
+        "subtract": {
+          "SimpleFormalParameterImpl": {
+            "delta": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "delta",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "T"
+            }
+          },
+          "isAbstract": false,
+          "isGetter": false,
+          "isOperator": false,
+          "isSetter": false,
+          "isStatic": false,
+          "name": "subtract",
+          "returnType": "void",
+          "type": "MethodDeclarationImpl"
+        }
+      },
+      "TypeParameterListImpl": {
+        "<T extends num?>": {
+          "TypeParameterImpl": {
+            "T extends num?": {
+              "name": "T extends num?",
+              "type": "TypeParameterImpl"
+            }
+          },
+          "name": "<T extends num?>",
+          "type": "TypeParameterListImpl"
+        },
+        "<T>": {
+          "TypeParameterImpl": {
+            "T": {
+              "name": "T",
+              "type": "TypeParameterImpl"
+            }
+          },
+          "name": "<T>",
+          "type": "TypeParameterListImpl"
+        }
+      },
+      "name": "property.dart",
+      "type": "file"
+    },
+    "reader.dart": {
+      "ClassDeclarationImpl": {
+        "ArchiveReader": {
+          "ConstructorDeclarationImpl": {
+            "ArchiveReader._internal": {
+              "FieldFormalParameterImpl": {
+                "required this.diagnosticsConfiguration": {
+                  "name": "required this.diagnosticsConfiguration",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "this.selectors": {
+                  "name": "this.selectors",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "ArchiveReader._internal",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "forInspect": {
+              "SimpleFormalParameterImpl": {
+                "selectors": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "selectors",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "List<Selector>?"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": true,
+              "name": "forInspect",
+              "returnType": "ArchiveReader<InspectMetadata>",
+              "type": "MethodDeclarationImpl"
+            },
+            "snapshot": {
+              "SimpleFormalParameterImpl": {
+                "attemptDelay": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "attemptDelay",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Duration"
+                },
+                "maxAttempts": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "maxAttempts",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int?"
+                },
+                "snapshot": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "snapshot",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "List<DiagnosticsData<METADATA>>"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "snapshot",
+              "returnType": "Future<List<DiagnosticsData<METADATA>>>",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "TypeParameterListImpl": {
+            "<METADATA>": {
+              "TypeParameterImpl": {
+                "METADATA": {
+                  "name": "METADATA",
+                  "type": "TypeParameterImpl"
+                }
+              },
+              "name": "<METADATA>",
+              "type": "TypeParameterListImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "diagnosticsConfiguration": {
+              "isConst": false,
+              "isFinal": false,
+              "isLate": false,
+              "name": "diagnosticsConfiguration",
+              "type": "VariableDeclarationImpl",
+              "varType": "DiagnosticsConfiguration<METADATA>"
+            },
+            "selectors": {
+              "isConst": false,
+              "isFinal": false,
+              "isLate": false,
+              "name": "selectors",
+              "type": "VariableDeclarationImpl",
+              "varType": "List<Selector>?"
+            }
+          },
+          "name": "ArchiveReader",
+          "type": "ClassDeclarationImpl"
+        },
+        "Selector": {
+          "ConstructorDeclarationImpl": {
+            "Selector._internal": {
+              "SimpleFormalParameterImpl": {
+                "rawSelector": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": true,
+                  "isRequiredNamed": true,
+                  "isRequiredPositional": false,
+                  "name": "rawSelector",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "name": "Selector._internal",
+              "type": "ConstructorDeclarationImpl"
+            },
+            "Selector.fromRawSelector": {
+              "SimpleFormalParameterImpl": {
+                "rawSelector": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "rawSelector",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "name": "Selector.fromRawSelector",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "name": "Selector",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "reader.dart",
+      "type": "file"
+    },
+    "testing.dart": {
+      "ExportDirectiveImpl": {
+        "src/testing/matcher.dart": {
+          "name": "src/testing/matcher.dart",
+          "type": "ExportDirectiveImpl"
+        },
+        "src/testing/util.dart": {
+          "name": "src/testing/util.dart",
+          "type": "ExportDirectiveImpl"
+        }
+      },
+      "name": "testing.dart",
+      "type": "file"
+    },
+    "util.dart": {
+      "ClassDeclarationImpl": {
+        "FakeVmoHolder": {
+          "ConstructorDeclarationImpl": {
+            "FakeVmoHolder": {
+              "FieldFormalParameterImpl": {
+                "this.size": {
+                  "name": "this.size",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "FakeVmoHolder",
+              "type": "ConstructorDeclarationImpl"
+            },
+            "FakeVmoHolder.fromVmo": {
+              "SimpleFormalParameterImpl": {
+                "retries": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "retries",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "vmo": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "vmo",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Vmo"
+                }
+              },
+              "name": "FakeVmoHolder.fromVmo",
+              "type": "ConstructorDeclarationImpl"
+            },
+            "FakeVmoHolder.usingData": {
+              "FieldFormalParameterImpl": {
+                "this.bytes": {
+                  "name": "this.bytes",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "FakeVmoHolder.usingData",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "ImplementsClause": {
+            "VmoHolder": {
+              "name": "VmoHolder",
+              "type": "interface"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "beginWork": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "beginWork",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "commit": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "commit",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "read": {
+              "SimpleFormalParameterImpl": {
+                "offset": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "offset",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "size": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "size",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "read",
+              "returnType": "ByteData",
+              "type": "MethodDeclarationImpl"
+            },
+            "readInt64": {
+              "SimpleFormalParameterImpl": {
+                "offset": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "offset",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "readInt64",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            },
+            "vmo": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "vmo",
+              "returnType": "Vmo",
+              "type": "MethodDeclarationImpl"
+            },
+            "write": {
+              "SimpleFormalParameterImpl": {
+                "data": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "data",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "ByteData"
+                },
+                "offset": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "offset",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "write",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "writeInt64": {
+              "SimpleFormalParameterImpl": {
+                "offset": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "offset",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "value": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "value",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "writeInt64",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "writeInt64Direct": {
+              "SimpleFormalParameterImpl": {
+                "offset": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "offset",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "value": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "value",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "writeInt64Direct",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "bytes": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "bytes",
+              "type": "VariableDeclarationImpl",
+              "varType": "ByteData"
+            },
+            "size": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "size",
+              "type": "VariableDeclarationImpl",
+              "varType": "int"
+            }
+          },
+          "name": "FakeVmoHolder",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "util.dart",
+      "type": "file"
+    },
+    "vmo_fields.dart": {
+      "ClassDeclarationImpl": {
+        "BlockType": {
+          "ConstructorDeclarationImpl": {
+            "BlockType._": {
+              "FieldFormalParameterImpl": {
+                "this.name": {
+                  "name": "this.name",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "this.value": {
+                  "name": "this.value",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "BlockType._",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "toString": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "toString",
+              "returnType": "String",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "anyValue": {
+              "isConst": true,
+              "isFinal": false,
+              "isLate": false,
+              "name": "anyValue",
+              "type": "VariableDeclarationImpl",
+              "varType": "BlockType"
+            },
+            "blockType12NotImplemented": {
+              "isConst": true,
+              "isFinal": false,
+              "isLate": false,
+              "name": "blockType12NotImplemented",
+              "type": "VariableDeclarationImpl",
+              "varType": "BlockType"
+            },
+            "boolValue": {
+              "isConst": true,
+              "isFinal": false,
+              "isLate": false,
+              "name": "boolValue",
+              "type": "VariableDeclarationImpl",
+              "varType": "BlockType"
+            },
+            "bufferValue": {
+              "isConst": true,
+              "isFinal": false,
+              "isLate": false,
+              "name": "bufferValue",
+              "type": "VariableDeclarationImpl",
+              "varType": "BlockType"
+            },
+            "doubleValue": {
+              "isConst": true,
+              "isFinal": false,
+              "isLate": false,
+              "name": "doubleValue",
+              "type": "VariableDeclarationImpl",
+              "varType": "BlockType"
+            },
+            "extent": {
+              "isConst": true,
+              "isFinal": false,
+              "isLate": false,
+              "name": "extent",
+              "type": "VariableDeclarationImpl",
+              "varType": "BlockType"
+            },
+            "free": {
+              "isConst": true,
+              "isFinal": false,
+              "isLate": false,
+              "name": "free",
+              "type": "VariableDeclarationImpl",
+              "varType": "BlockType"
+            },
+            "header": {
+              "isConst": true,
+              "isFinal": false,
+              "isLate": false,
+              "name": "header",
+              "type": "VariableDeclarationImpl",
+              "varType": "BlockType"
+            },
+            "intValue": {
+              "isConst": true,
+              "isFinal": false,
+              "isLate": false,
+              "name": "intValue",
+              "type": "VariableDeclarationImpl",
+              "varType": "BlockType"
+            },
+            "name": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "name",
+              "type": "VariableDeclarationImpl",
+              "varType": "String"
+            },
+            "nameUtf8": {
+              "isConst": true,
+              "isFinal": false,
+              "isLate": false,
+              "name": "nameUtf8",
+              "type": "VariableDeclarationImpl",
+              "varType": "BlockType"
+            },
+            "nodeValue": {
+              "isConst": true,
+              "isFinal": false,
+              "isLate": false,
+              "name": "nodeValue",
+              "type": "VariableDeclarationImpl",
+              "varType": "BlockType"
+            },
+            "reserved": {
+              "isConst": true,
+              "isFinal": false,
+              "isLate": false,
+              "name": "reserved",
+              "type": "VariableDeclarationImpl",
+              "varType": "BlockType"
+            },
+            "tombstone": {
+              "isConst": true,
+              "isFinal": false,
+              "isLate": false,
+              "name": "tombstone",
+              "type": "VariableDeclarationImpl",
+              "varType": "BlockType"
+            },
+            "uintValue": {
+              "isConst": true,
+              "isFinal": false,
+              "isLate": false,
+              "name": "uintValue",
+              "type": "VariableDeclarationImpl",
+              "varType": "BlockType"
+            },
+            "value": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "value",
+              "type": "VariableDeclarationImpl",
+              "varType": "int"
+            },
+            "values": {
+              "isConst": true,
+              "isFinal": false,
+              "isLate": false,
+              "name": "values",
+              "type": "VariableDeclarationImpl",
+              "varType": "List<BlockType>"
+            }
+          },
+          "name": "BlockType",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "VariableDeclarationImpl": {
+        "bufferExtentIndexBits": {
+          "isConst": false,
+          "isFinal": true,
+          "isLate": false,
+          "name": "bufferExtentIndexBits",
+          "type": "VariableDeclarationImpl",
+          "varType": "BitRange"
+        },
+        "bufferFlagsBits": {
+          "isConst": false,
+          "isFinal": true,
+          "isLate": false,
+          "name": "bufferFlagsBits",
+          "type": "VariableDeclarationImpl",
+          "varType": "BitRange"
+        },
+        "bufferTotalLengthBits": {
+          "isConst": false,
+          "isFinal": true,
+          "isLate": false,
+          "name": "bufferTotalLengthBits",
+          "type": "VariableDeclarationImpl",
+          "varType": "BitRange"
+        },
+        "bytesPerIndex": {
+          "isConst": true,
+          "isFinal": false,
+          "isLate": false,
+          "name": "bytesPerIndex",
+          "type": "VariableDeclarationImpl",
+          "varType": "int"
+        },
+        "headerIndex": {
+          "isConst": true,
+          "isFinal": false,
+          "isLate": false,
+          "name": "headerIndex",
+          "type": "VariableDeclarationImpl",
+          "varType": "int"
+        },
+        "headerMagicBits": {
+          "isConst": false,
+          "isFinal": true,
+          "isLate": false,
+          "name": "headerMagicBits",
+          "type": "VariableDeclarationImpl",
+          "varType": "BitRange"
+        },
+        "headerMagicNumber": {
+          "isConst": true,
+          "isFinal": false,
+          "isLate": false,
+          "name": "headerMagicNumber",
+          "type": "VariableDeclarationImpl",
+          "varType": "int"
+        },
+        "headerSizeBytes": {
+          "isConst": true,
+          "isFinal": false,
+          "isLate": false,
+          "name": "headerSizeBytes",
+          "type": "VariableDeclarationImpl",
+          "varType": "int"
+        },
+        "headerVersionBits": {
+          "isConst": false,
+          "isFinal": true,
+          "isLate": false,
+          "name": "headerVersionBits",
+          "type": "VariableDeclarationImpl",
+          "varType": "BitRange"
+        },
+        "headerVersionNumber": {
+          "isConst": true,
+          "isFinal": false,
+          "isLate": false,
+          "name": "headerVersionNumber",
+          "type": "VariableDeclarationImpl",
+          "varType": "int"
+        },
+        "heapStartIndex": {
+          "isConst": true,
+          "isFinal": false,
+          "isLate": false,
+          "name": "heapStartIndex",
+          "type": "VariableDeclarationImpl",
+          "varType": "int"
+        },
+        "nameIndexBits": {
+          "isConst": false,
+          "isFinal": true,
+          "isLate": false,
+          "name": "nameIndexBits",
+          "type": "VariableDeclarationImpl",
+          "varType": "BitRange"
+        },
+        "nameLengthBits": {
+          "isConst": false,
+          "isFinal": true,
+          "isLate": false,
+          "name": "nameLengthBits",
+          "type": "VariableDeclarationImpl",
+          "varType": "BitRange"
+        },
+        "nextExtentBits": {
+          "isConst": false,
+          "isFinal": true,
+          "isLate": false,
+          "name": "nextExtentBits",
+          "type": "VariableDeclarationImpl",
+          "varType": "BitRange"
+        },
+        "nextFreeBits": {
+          "isConst": false,
+          "isFinal": true,
+          "isLate": false,
+          "name": "nextFreeBits",
+          "type": "VariableDeclarationImpl",
+          "varType": "BitRange"
+        },
+        "orderBits": {
+          "isConst": false,
+          "isFinal": true,
+          "isLate": false,
+          "name": "orderBits",
+          "type": "VariableDeclarationImpl",
+          "varType": "BitRange"
+        },
+        "parentIndexBits": {
+          "isConst": false,
+          "isFinal": true,
+          "isLate": false,
+          "name": "parentIndexBits",
+          "type": "VariableDeclarationImpl",
+          "varType": "BitRange"
+        },
+        "propertyBinaryFlag": {
+          "isConst": true,
+          "isFinal": false,
+          "isLate": false,
+          "name": "propertyBinaryFlag",
+          "type": "VariableDeclarationImpl",
+          "varType": "int"
+        },
+        "propertyUtf8Flag": {
+          "isConst": true,
+          "isFinal": false,
+          "isLate": false,
+          "name": "propertyUtf8Flag",
+          "type": "VariableDeclarationImpl",
+          "varType": "int"
+        },
+        "typeBits": {
+          "isConst": false,
+          "isFinal": true,
+          "isLate": false,
+          "name": "typeBits",
+          "type": "VariableDeclarationImpl",
+          "varType": "BitRange"
+        }
+      },
+      "name": "vmo_fields.dart",
+      "type": "file"
+    },
+    "vmo_holder.dart": {
+      "ClassDeclarationImpl": {
+        "VmoHolder": {
+          "ConstructorDeclarationImpl": {
+            "VmoHolder": {
+              "FieldFormalParameterImpl": {
+                "this.size": {
+                  "name": "this.size",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "VmoHolder",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "beginWork": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "beginWork",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "commit": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "commit",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "read": {
+              "SimpleFormalParameterImpl": {
+                "offset": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "offset",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "size": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "size",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "read",
+              "returnType": "ByteData",
+              "type": "MethodDeclarationImpl"
+            },
+            "readInt64": {
+              "SimpleFormalParameterImpl": {
+                "offset": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "offset",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "readInt64",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            },
+            "vmo": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "vmo",
+              "returnType": "Vmo?",
+              "type": "MethodDeclarationImpl"
+            },
+            "write": {
+              "SimpleFormalParameterImpl": {
+                "data": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "data",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "ByteData"
+                },
+                "offset": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "offset",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "write",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "writeInt64": {
+              "SimpleFormalParameterImpl": {
+                "offset": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "offset",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "value": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "value",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "writeInt64",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "writeInt64Direct": {
+              "SimpleFormalParameterImpl": {
+                "offset": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "offset",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "value": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "value",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "writeInt64Direct",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "size": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "size",
+              "type": "VariableDeclarationImpl",
+              "varType": "int"
+            }
+          },
+          "name": "VmoHolder",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "vmo_holder.dart",
+      "type": "file"
+    },
+    "vmo_writer.dart": {
+      "ClassDeclarationImpl": {
+        "VmoWriter": {
+          "ConstructorDeclarationImpl": {
+            "VmoWriter": {
+              "FieldFormalParameterImpl": {
+                "this._vmo": {
+                  "name": "this._vmo",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "SimpleFormalParameterImpl": {
+                "heapFactory": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "heapFactory",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Function"
+                }
+              },
+              "name": "VmoWriter",
+              "type": "ConstructorDeclarationImpl"
+            },
+            "VmoWriter.withSize": {
+              "SimpleFormalParameterImpl": {
+                "size": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "size",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "name": "VmoWriter.withSize",
+              "type": "ConstructorDeclarationImpl"
+            },
+            "VmoWriter.withVmo": {
+              "SimpleFormalParameterImpl": {
+                "vmo": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "vmo",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "VmoHolder"
+                }
+              },
+              "name": "VmoWriter.withVmo",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "addMetric": {
+              "SimpleFormalParameterImpl": {
+                "metricIndex": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "metricIndex",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "value": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "value",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "T"
+                }
+              },
+              "TypeParameterListImpl": {
+                "<T extends num?>": {
+                  "TypeParameterImpl": {
+                    "T extends num?": {
+                      "name": "T extends num?",
+                      "type": "TypeParameterImpl"
+                    }
+                  },
+                  "name": "<T extends num?>",
+                  "type": "TypeParameterListImpl"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "addMetric",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "createBool": {
+              "SimpleFormalParameterImpl": {
+                "name": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "name",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "parent": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "parent",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "value": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "value",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "T"
+                }
+              },
+              "TypeParameterListImpl": {
+                "<T extends bool>": {
+                  "TypeParameterImpl": {
+                    "T extends bool": {
+                      "name": "T extends bool",
+                      "type": "TypeParameterImpl"
+                    }
+                  },
+                  "name": "<T extends bool>",
+                  "type": "TypeParameterListImpl"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "createBool",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            },
+            "createBufferProperty": {
+              "SimpleFormalParameterImpl": {
+                "name": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "name",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "parent": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "parent",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "createBufferProperty",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            },
+            "createMetric": {
+              "SimpleFormalParameterImpl": {
+                "name": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "name",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "parent": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "parent",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "value": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "value",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "T"
+                }
+              },
+              "TypeParameterListImpl": {
+                "<T extends num>": {
+                  "TypeParameterImpl": {
+                    "T extends num": {
+                      "name": "T extends num",
+                      "type": "TypeParameterImpl"
+                    }
+                  },
+                  "name": "<T extends num>",
+                  "type": "TypeParameterListImpl"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "createMetric",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            },
+            "createNode": {
+              "SimpleFormalParameterImpl": {
+                "name": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "name",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String?"
+                },
+                "parent": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "parent",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "createNode",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            },
+            "deleteEntity": {
+              "SimpleFormalParameterImpl": {
+                "index": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "index",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "deleteEntity",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "rootNode": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "rootNode",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            },
+            "setBool": {
+              "SimpleFormalParameterImpl": {
+                "metricIndex": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "metricIndex",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "value": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "value",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "T"
+                }
+              },
+              "TypeParameterListImpl": {
+                "<T extends bool>": {
+                  "TypeParameterImpl": {
+                    "T extends bool": {
+                      "name": "T extends bool",
+                      "type": "TypeParameterImpl"
+                    }
+                  },
+                  "name": "<T extends bool>",
+                  "type": "TypeParameterListImpl"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "setBool",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "setBufferProperty": {
+              "SimpleFormalParameterImpl": {
+                "propertyIndex": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "propertyIndex",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "value": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "value",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "dynamic"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "setBufferProperty",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "setMetric": {
+              "SimpleFormalParameterImpl": {
+                "metricIndex": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "metricIndex",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "value": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "value",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "T"
+                }
+              },
+              "TypeParameterListImpl": {
+                "<T extends num?>": {
+                  "TypeParameterImpl": {
+                    "T extends num?": {
+                      "name": "T extends num?",
+                      "type": "TypeParameterImpl"
+                    }
+                  },
+                  "name": "<T extends num?>",
+                  "type": "TypeParameterListImpl"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "setMetric",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "subMetric": {
+              "SimpleFormalParameterImpl": {
+                "metricIndex": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "metricIndex",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "value": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "value",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "T"
+                }
+              },
+              "TypeParameterListImpl": {
+                "<T extends num?>": {
+                  "TypeParameterImpl": {
+                    "T extends num?": {
+                      "name": "T extends num?",
+                      "type": "TypeParameterImpl"
+                    }
+                  },
+                  "name": "<T extends num?>",
+                  "type": "TypeParameterListImpl"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "subMetric",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "vmo": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "vmo",
+              "returnType": "Vmo?",
+              "type": "MethodDeclarationImpl"
+            },
+            "vmoNode": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "vmoNode",
+              "returnType": "VmoFile",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "VmoWriter",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "VariableDeclarationImpl": {
+        "invalidIndex": {
+          "isConst": true,
+          "isFinal": false,
+          "isLate": false,
+          "name": "invalidIndex",
+          "type": "VariableDeclarationImpl",
+          "varType": "int"
+        }
+      },
+      "name": "vmo_writer.dart",
+      "type": "file"
+    }
+  },
+  "name": "//sdk/dart/fuchsia_inspect:fuchsia_inspect_detect_action",
+  "type": "package"
+}

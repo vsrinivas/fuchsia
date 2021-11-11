@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(https://fxbug.dev/84961): Fix null safeety and remove this language version.
+// @dart=2.9
+
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
@@ -9,6 +12,7 @@ import 'dart:io';
 
 import 'package:analyzer/dart/analysis/analysis_context.dart';
 import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
+import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/analysis/session.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/file_system/physical_file_system.dart';
@@ -39,7 +43,7 @@ Future<String> analyzeAPI(String apiName, List<String> sources) async {
         DetectChangesVisitor d = DetectChangesVisitor(filename);
 
         AnalysisSession session = context.currentSession;
-        var result = await session.getResolvedUnit(path);
+        var result = await session.getResolvedUnit(path) as ResolvedUnitResult;
         result.unit.accept(d);
 
         package['files'][filename] = d.file;

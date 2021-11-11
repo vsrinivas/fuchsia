@@ -19,7 +19,6 @@ declare_args() {
   disable_dart_strict_deps = false
 
   # Detect dart API changes
-  # TODO(fxbug.dev/36723, fxbug.dev/6623) Remove this flag once issues are resolved
   enable_api_diff = false
 }
 
@@ -568,9 +567,9 @@ if (current_toolchain == dart_toolchain) {
         output_file = detect_target_file
 
         inputs = [
-                   _packages_path,
-                   source_file,
-                 ] + rebased_sources
+          _packages_path,
+          source_file,
+        ]
 
         outputs = [ output_file ]
 
@@ -590,7 +589,10 @@ if (current_toolchain == dart_toolchain) {
           #"--overwrite",
         ]
 
-        deps = dart_sdk_deps + [ runner_label ]
+        deps = dart_sdk_deps + [
+                 runner_label,
+                 ":$_dart_package_config_target_name",
+               ]
         forward_variables_from(invoker, [ "testonly" ])
       }
 

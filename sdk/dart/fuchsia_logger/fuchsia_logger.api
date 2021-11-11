@@ -1,0 +1,101 @@
+{
+  "files": {
+    "logger.dart": {
+      "FunctionDeclarationImpl": {
+        "setupLogger": {
+          "SimpleFormalParameterImpl": {
+            "forceShowCodeLocation": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": true,
+              "isOptionalNamed": true,
+              "isOptionalPositional": false,
+              "isPositional": false,
+              "isRequired": false,
+              "isRequiredNamed": false,
+              "isRequiredPositional": false,
+              "name": "forceShowCodeLocation",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "bool?"
+            },
+            "globalTags": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": true,
+              "isOptionalNamed": true,
+              "isOptionalPositional": false,
+              "isPositional": false,
+              "isRequired": false,
+              "isRequiredNamed": false,
+              "isRequiredPositional": false,
+              "name": "globalTags",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "List<String>?"
+            },
+            "level": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": true,
+              "isOptionalNamed": true,
+              "isOptionalPositional": false,
+              "isPositional": false,
+              "isRequired": false,
+              "isRequiredNamed": false,
+              "isRequiredPositional": false,
+              "name": "level",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "Level?"
+            },
+            "name": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": true,
+              "isOptionalNamed": true,
+              "isOptionalPositional": false,
+              "isPositional": false,
+              "isRequired": false,
+              "isRequiredNamed": false,
+              "isRequiredPositional": false,
+              "name": "name",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "String?"
+            },
+            "t": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "t",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "null"
+            }
+          },
+          "isGetter": false,
+          "isSetter": false,
+          "name": "setupLogger",
+          "returnType": "void",
+          "type": "FunctionDeclarationImpl"
+        }
+      },
+      "VariableDeclarationImpl": {
+        "log": {
+          "isConst": false,
+          "isFinal": false,
+          "isLate": false,
+          "name": "log",
+          "type": "VariableDeclarationImpl",
+          "varType": "Logger"
+        }
+      },
+      "name": "logger.dart",
+      "type": "file"
+    }
+  },
+  "name": "//sdk/dart/fuchsia_logger:fuchsia_logger_detect_action",
+  "type": "package"
+}

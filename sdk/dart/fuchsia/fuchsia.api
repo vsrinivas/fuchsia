@@ -1,0 +1,83 @@
+{
+  "files": {
+    "fuchsia.dart": {
+      "ExportDirectiveImpl": {
+        "src/fakes/fuchsia_fakes.dart": {
+          "name": "src/fakes/fuchsia_fakes.dart",
+          "type": "ExportDirectiveImpl"
+        }
+      },
+      "name": "fuchsia.dart",
+      "type": "file"
+    },
+    "fuchsia_fakes.dart": {
+      "ClassDeclarationImpl": {
+        "MxStartupInfo": {
+          "MethodDeclarationImpl": {
+            "takeEnvironment": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": true,
+              "name": "takeEnvironment",
+              "returnType": "Handle",
+              "type": "MethodDeclarationImpl"
+            },
+            "takeOutgoingServices": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": true,
+              "name": "takeOutgoingServices",
+              "returnType": "Handle",
+              "type": "MethodDeclarationImpl"
+            },
+            "takeViewRef": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": true,
+              "name": "takeViewRef",
+              "returnType": "Handle",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "MxStartupInfo",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "FunctionDeclarationImpl": {
+        "exit": {
+          "SimpleFormalParameterImpl": {
+            "returnCode": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "returnCode",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "int"
+            }
+          },
+          "isGetter": false,
+          "isSetter": false,
+          "name": "exit",
+          "returnType": "void",
+          "type": "FunctionDeclarationImpl"
+        }
+      },
+      "name": "fuchsia_fakes.dart",
+      "type": "file"
+    }
+  },
+  "name": "//sdk/dart/fuchsia:fuchsia_detect_action",
+  "type": "package"
+}

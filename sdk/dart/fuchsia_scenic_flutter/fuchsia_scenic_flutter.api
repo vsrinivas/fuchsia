@@ -1,0 +1,1186 @@
+{
+  "files": {
+    "focus_state.dart": {
+      "ClassDeclarationImpl": {
+        "FocusState": {
+          "ConstructorDeclarationImpl": {
+            "FocusState._": {
+              "name": "FocusState._",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "isFocused": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "isFocused",
+              "returnType": "Future<bool>",
+              "type": "MethodDeclarationImpl"
+            },
+            "requestFocus": {
+              "SimpleFormalParameterImpl": {
+                "viewRef": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "viewRef",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "requestFocus",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "stream": {
+              "SimpleFormalParameterImpl": {
+                "state": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "state",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "null"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "stream",
+              "returnType": "Stream<bool>",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "instance": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "instance",
+              "type": "VariableDeclarationImpl",
+              "varType": "FocusState"
+            }
+          },
+          "name": "FocusState",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "focus_state.dart",
+      "type": "file"
+    },
+    "fuchsia_view.dart": {
+      "ClassDeclarationImpl": {
+        "FuchsiaView": {
+          "ConstructorDeclarationImpl": {
+            "FuchsiaView": {
+              "FieldFormalParameterImpl": {
+                "required this.controller": {
+                  "name": "required this.controller",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "this.focusable": {
+                  "name": "this.focusable",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "this.hitTestable": {
+                  "name": "this.hitTestable",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "this.viewOcclusionHint": {
+                  "name": "this.viewOcclusionHint",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "FuchsiaView",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "ExtendsClause": {
+            "name": "StatefulWidget",
+            "type": "extends"
+          },
+          "MethodDeclarationImpl": {
+            "createState": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "createState",
+              "returnType": "_FuchsiaViewState",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "controller": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "controller",
+              "type": "VariableDeclarationImpl",
+              "varType": "FuchsiaViewController"
+            },
+            "focusable": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "focusable",
+              "type": "VariableDeclarationImpl",
+              "varType": "bool"
+            },
+            "hitTestable": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "hitTestable",
+              "type": "VariableDeclarationImpl",
+              "varType": "bool"
+            },
+            "viewOcclusionHint": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "viewOcclusionHint",
+              "type": "VariableDeclarationImpl",
+              "varType": "Rect"
+            }
+          },
+          "name": "FuchsiaView",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "fuchsia_view.dart",
+      "type": "file"
+    },
+    "fuchsia_view_connection.dart": {
+      "ClassDeclarationImpl": {
+        "FuchsiaViewConnection": {
+          "ConstructorDeclarationImpl": {
+            "FuchsiaViewConnection": {
+              "FieldFormalParameterImpl": {
+                "this.usePointerInjection": {
+                  "name": "this.usePointerInjection",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "this.viewHolderToken": {
+                  "name": "this.viewHolderToken",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "this.viewRef": {
+                  "name": "this.viewRef",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "SimpleFormalParameterImpl": {
+                "onViewConnected": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "onViewConnected",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "FuchsiaViewConnectionCallback?"
+                },
+                "onViewDisconnected": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "onViewDisconnected",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "FuchsiaViewConnectionCallback?"
+                },
+                "onViewStateChanged": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "onViewStateChanged",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "FuchsiaViewConnectionStateCallback?"
+                }
+              },
+              "name": "FuchsiaViewConnection",
+              "type": "ConstructorDeclarationImpl"
+            },
+            "FuchsiaViewConnection.flatland": {
+              "FieldFormalParameterImpl": {
+                "this.usePointerInjection": {
+                  "name": "this.usePointerInjection",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "this.viewRef": {
+                  "name": "this.viewRef",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "this.viewportCreationToken": {
+                  "name": "this.viewportCreationToken",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "SimpleFormalParameterImpl": {
+                "onViewConnected": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "onViewConnected",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "FuchsiaViewConnectionCallback?"
+                },
+                "onViewDisconnected": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "onViewDisconnected",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "FuchsiaViewConnectionCallback?"
+                },
+                "onViewStateChanged": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "onViewStateChanged",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "FuchsiaViewConnectionStateCallback?"
+                }
+              },
+              "name": "FuchsiaViewConnection.flatland",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "ExtendsClause": {
+            "name": "FuchsiaViewController",
+            "type": "extends"
+          },
+          "MethodDeclarationImpl": {
+            "hostViewRef": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "hostViewRef",
+              "returnType": "ViewRef",
+              "type": "MethodDeclarationImpl"
+            },
+            "onPointerInjectionError": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "onPointerInjectionError",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "pointerInjector": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "pointerInjector",
+              "returnType": "PointerInjector",
+              "type": "MethodDeclarationImpl"
+            },
+            "requestFocus": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "requestFocus",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "usePointerInjection": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "usePointerInjection",
+              "type": "VariableDeclarationImpl",
+              "varType": "bool"
+            },
+            "viewHolderToken": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "viewHolderToken",
+              "type": "VariableDeclarationImpl",
+              "varType": "ViewHolderToken?"
+            },
+            "viewRef": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "viewRef",
+              "type": "VariableDeclarationImpl",
+              "varType": "ViewRef?"
+            },
+            "viewportCreationToken": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "viewportCreationToken",
+              "type": "VariableDeclarationImpl",
+              "varType": "ViewportCreationToken?"
+            }
+          },
+          "name": "FuchsiaViewConnection",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "fuchsia_view_connection.dart",
+      "type": "file"
+    },
+    "fuchsia_view_controller.dart": {
+      "ClassDeclarationImpl": {
+        "FuchsiaViewController": {
+          "ConstructorDeclarationImpl": {
+            "FuchsiaViewController": {
+              "FieldFormalParameterImpl": {
+                "required this.viewId": {
+                  "name": "required this.viewId",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "this.onPointerEvent": {
+                  "name": "this.onPointerEvent",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "this.onViewConnected": {
+                  "name": "this.onViewConnected",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "this.onViewDisconnected": {
+                  "name": "this.onViewDisconnected",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "this.onViewStateChanged": {
+                  "name": "this.onViewStateChanged",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "FuchsiaViewController",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "ImplementsClause": {
+            "PlatformViewController": {
+              "name": "PlatformViewController",
+              "type": "interface"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "clearFocus": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "clearFocus",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "connect": {
+              "SimpleFormalParameterImpl": {
+                "call": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "call",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "null"
+                },
+                "focusable": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "focusable",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "bool"
+                },
+                "hitTestable": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "hitTestable",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "bool"
+                },
+                "viewOcclusionHint": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "viewOcclusionHint",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Rect"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "connect",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "connected": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "connected",
+              "returnType": "bool",
+              "type": "MethodDeclarationImpl"
+            },
+            "dispatchPointerEvent": {
+              "SimpleFormalParameterImpl": {
+                "event": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "event",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "PointerEvent"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "dispatchPointerEvent",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "dispose": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "dispose",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "requestFocus": {
+              "SimpleFormalParameterImpl": {
+                "viewRef": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "viewRef",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "requestFocus",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "update": {
+              "SimpleFormalParameterImpl": {
+                "focusable": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "focusable",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "bool"
+                },
+                "hitTestable": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "hitTestable",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "bool"
+                },
+                "viewOcclusionHint": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "viewOcclusionHint",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Rect"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "update",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "viewport": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "viewport",
+              "returnType": "Rect?",
+              "type": "MethodDeclarationImpl"
+            },
+            "whenConnected": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "whenConnected",
+              "returnType": "Future",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "onPointerEvent": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "onPointerEvent",
+              "type": "VariableDeclarationImpl",
+              "varType": "FuchsiaPointerEventsCallback?"
+            },
+            "onViewConnected": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "onViewConnected",
+              "type": "VariableDeclarationImpl",
+              "varType": "FuchsiaViewConnectionCallback?"
+            },
+            "onViewDisconnected": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "onViewDisconnected",
+              "type": "VariableDeclarationImpl",
+              "varType": "FuchsiaViewConnectionCallback?"
+            },
+            "onViewStateChanged": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "onViewStateChanged",
+              "type": "VariableDeclarationImpl",
+              "varType": "FuchsiaViewConnectionStateCallback?"
+            },
+            "viewId": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "viewId",
+              "type": "VariableDeclarationImpl",
+              "varType": "int"
+            }
+          },
+          "name": "FuchsiaViewController",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "fuchsia_view_controller.dart",
+      "type": "file"
+    },
+    "fuchsia_views_service.dart": {
+      "ClassDeclarationImpl": {
+        "FuchsiaViewsService": {
+          "ConstructorDeclarationImpl": {
+            "FuchsiaViewsService._": {
+              "SimpleFormalParameterImpl": {
+                "call": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "call",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "null"
+                }
+              },
+              "name": "FuchsiaViewsService._",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "createView": {
+              "SimpleFormalParameterImpl": {
+                "focusable": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "focusable",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "bool"
+                },
+                "hitTestable": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "hitTestable",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "bool"
+                },
+                "viewId": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "viewId",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "viewOcclusionHint": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "viewOcclusionHint",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Rect"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "createView",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "deregister": {
+              "SimpleFormalParameterImpl": {
+                "viewId": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "viewId",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "deregister",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "destroyView": {
+              "SimpleFormalParameterImpl": {
+                "viewId": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "viewId",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "destroyView",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "platformViewChannel": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "platformViewChannel",
+              "returnType": "MethodChannel",
+              "type": "MethodDeclarationImpl"
+            },
+            "register": {
+              "SimpleFormalParameterImpl": {
+                "handler": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "handler",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Future<dynamic> Function(MethodCall call)?"
+                },
+                "viewId": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "viewId",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "register",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "updateView": {
+              "SimpleFormalParameterImpl": {
+                "focusable": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "focusable",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "bool"
+                },
+                "hitTestable": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "hitTestable",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "bool"
+                },
+                "viewId": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "viewId",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "viewOcclusionHint": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "viewOcclusionHint",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Rect"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "updateView",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "instance": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "instance",
+              "type": "VariableDeclarationImpl",
+              "varType": "FuchsiaViewsService"
+            }
+          },
+          "name": "FuchsiaViewsService",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "fuchsia_views_service.dart",
+      "type": "file"
+    },
+    "pointer_injector.dart": {
+      "ClassDeclarationImpl": {
+        "PointerInjector": {
+          "ConstructorDeclarationImpl": {
+            "PointerInjector": {
+              "FieldFormalParameterImpl": {
+                "required this.onError": {
+                  "name": "required this.onError",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "SimpleFormalParameterImpl": {
+                "device": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "device",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "DeviceProxy"
+                },
+                "registry": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "registry",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Registry"
+                }
+              },
+              "name": "PointerInjector",
+              "type": "ConstructorDeclarationImpl"
+            },
+            "PointerInjector.fromSvcPath": {
+              "SimpleFormalParameterImpl": {
+                "onError": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": true,
+                  "isRequiredNamed": true,
+                  "isRequiredPositional": false,
+                  "name": "onError",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "ui.VoidCallback"
+                }
+              },
+              "name": "PointerInjector.fromSvcPath",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "dispatchEvent": {
+              "SimpleFormalParameterImpl": {
+                "e": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "e",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "null"
+                },
+                "pointer": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": true,
+                  "isRequiredNamed": true,
+                  "isRequiredPositional": false,
+                  "name": "pointer",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "PointerEvent"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "dispatchEvent",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "dispose": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "dispose",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "register": {
+              "SimpleFormalParameterImpl": {
+                "e": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "e",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "null"
+                },
+                "hostViewRef": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": true,
+                  "isRequiredNamed": true,
+                  "isRequiredPositional": false,
+                  "name": "hostViewRef",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "ViewRef"
+                },
+                "viewRef": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": true,
+                  "isRequiredNamed": true,
+                  "isRequiredPositional": false,
+                  "name": "viewRef",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "ViewRef"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "register",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "onError": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "onError",
+              "type": "VariableDeclarationImpl",
+              "varType": "ui.VoidCallback"
+            },
+            "registered": {
+              "isConst": false,
+              "isFinal": false,
+              "isLate": false,
+              "name": "registered",
+              "type": "VariableDeclarationImpl",
+              "varType": "bool"
+            }
+          },
+          "name": "PointerInjector",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "pointer_injector.dart",
+      "type": "file"
+    }
+  },
+  "name": "//sdk/dart/fuchsia_scenic_flutter:fuchsia_scenic_flutter_detect_action",
+  "type": "package"
+}

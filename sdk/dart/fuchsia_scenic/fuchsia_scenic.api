@@ -1,0 +1,96 @@
+{
+  "files": {
+    "scenic_context.dart": {
+      "ClassDeclarationImpl": {
+        "ScenicContext": {
+          "MethodDeclarationImpl": {
+            "hostViewRef": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": true,
+              "name": "hostViewRef",
+              "returnType": "ViewRef",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "ScenicContext",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "scenic_context.dart",
+      "type": "file"
+    },
+    "view_token_pair.dart": {
+      "ClassDeclarationImpl": {
+        "ViewTokenPair": {
+          "ConstructorDeclarationImpl": {
+            "ViewTokenPair": {
+              "name": "ViewTokenPair",
+              "type": "ConstructorDeclarationImpl"
+            },
+            "ViewTokenPair._fromTokens": {
+              "SimpleFormalParameterImpl": {
+                "tokens": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "tokens",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "EventPairPair"
+                }
+              },
+              "name": "ViewTokenPair._fromTokens",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "viewHolderToken": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "viewHolderToken",
+              "type": "VariableDeclarationImpl",
+              "varType": "ViewHolderToken"
+            },
+            "viewToken": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "viewToken",
+              "type": "VariableDeclarationImpl",
+              "varType": "ViewToken"
+            }
+          },
+          "name": "ViewTokenPair",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "view_token_pair.dart",
+      "type": "file"
+    },
+    "views.dart": {
+      "ExportDirectiveImpl": {
+        "src/scenic_context.dart": {
+          "name": "src/scenic_context.dart",
+          "type": "ExportDirectiveImpl"
+        },
+        "src/view_token_pair.dart": {
+          "name": "src/view_token_pair.dart",
+          "type": "ExportDirectiveImpl"
+        }
+      },
+      "name": "views.dart",
+      "type": "file"
+    }
+  },
+  "name": "//sdk/dart/fuchsia_scenic:fuchsia_scenic_detect_action",
+  "type": "package"
+}

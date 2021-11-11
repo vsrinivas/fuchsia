@@ -1,0 +1,878 @@
+{
+  "files": {
+    "fuchsia_web_services.dart": {
+      "ClassDeclarationImpl": {
+        "FuchsiaWebServices": {
+          "ConstructorDeclarationImpl": {
+            "FuchsiaWebServices": {
+              "SimpleFormalParameterImpl": {
+                "useSoftwareRendering": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "useSoftwareRendering",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "bool"
+                }
+              },
+              "name": "FuchsiaWebServices",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "dispose": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "dispose",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "evaluateJavascript": {
+              "SimpleFormalParameterImpl": {
+                "origins": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "origins",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "List<String>"
+                },
+                "script": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "script",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "evaluateJavascript",
+              "returnType": "Future<String>",
+              "type": "MethodDeclarationImpl"
+            },
+            "evaluateJavascriptBeforeLoad": {
+              "SimpleFormalParameterImpl": {
+                "id": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "id",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "origins": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "origins",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "List<String>"
+                },
+                "script": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "script",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "evaluateJavascriptBeforeLoad",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "frame": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "frame",
+              "returnType": "fidl_web.FrameProxy",
+              "type": "MethodDeclarationImpl"
+            },
+            "navigationController": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "navigationController",
+              "returnType": "fidl_web.NavigationControllerProxy",
+              "type": "MethodDeclarationImpl"
+            },
+            "postMessage": {
+              "SimpleFormalParameterImpl": {
+                "message": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "message",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "outgoingMessagePortRequest": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "outgoingMessagePortRequest",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "InterfaceRequest<fidl_web.MessagePort>?"
+                },
+                "targetOrigin": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "targetOrigin",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "postMessage",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "setJavaScriptLogLevel": {
+              "SimpleFormalParameterImpl": {
+                "level": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "level",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "fidl_web.ConsoleLogLevel"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "setJavaScriptLogLevel",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "setNavigationEventListener": {
+              "SimpleFormalParameterImpl": {
+                "observer": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "observer",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "fidl_web.NavigationEventListener"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "setNavigationEventListener",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "viewConnection": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "viewConnection",
+              "returnType": "FuchsiaViewConnection?",
+              "type": "MethodDeclarationImpl"
+            },
+            "webFeaturesFromSettings": {
+              "SimpleFormalParameterImpl": {
+                "useSoftwareRendering": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "useSoftwareRendering",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "bool"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": true,
+              "name": "webFeaturesFromSettings",
+              "returnType": "fidl_web.ContextFeatureFlags",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "baseWebFeatures": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "baseWebFeatures",
+              "type": "VariableDeclarationImpl",
+              "varType": "null"
+            }
+          },
+          "name": "FuchsiaWebServices",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "fuchsia_web_services.dart",
+      "type": "file"
+    },
+    "fuchsia_webview.dart": {
+      "ClassDeclarationImpl": {
+        "FuchsiaWebView": {
+          "ConstructorDeclarationImpl": {
+            "FuchsiaWebView": {
+              "FieldFormalParameterImpl": {
+                "this.fuchsiaWebServices": {
+                  "name": "this.fuchsiaWebServices",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "FuchsiaWebView",
+              "type": "ConstructorDeclarationImpl"
+            },
+            "FuchsiaWebView.create": {
+              "SimpleFormalParameterImpl": {
+                "useSoftwareRendering": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "useSoftwareRendering",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "bool"
+                }
+              },
+              "name": "FuchsiaWebView.create",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "ImplementsClause": {
+            "WebViewPlatform": {
+              "name": "WebViewPlatform",
+              "type": "interface"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "build": {
+              "SimpleFormalParameterImpl": {
+                "context": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": true,
+                  "isRequiredNamed": true,
+                  "isRequiredPositional": false,
+                  "name": "context",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "BuildContext"
+                },
+                "creationParams": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": true,
+                  "isRequiredNamed": true,
+                  "isRequiredPositional": false,
+                  "name": "creationParams",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "CreationParams"
+                },
+                "gestureRecognizers": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "gestureRecognizers",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Set<Factory<OneSequenceGestureRecognizer>>?"
+                },
+                "javascriptChannelRegistry": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": true,
+                  "isRequiredNamed": true,
+                  "isRequiredPositional": false,
+                  "name": "javascriptChannelRegistry",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "JavascriptChannelRegistry"
+                },
+                "onWebViewPlatformCreated": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "onWebViewPlatformCreated",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "WebViewPlatformCreatedCallback?"
+                },
+                "webViewPlatformCallbacksHandler": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": true,
+                  "isRequiredNamed": true,
+                  "isRequiredPositional": false,
+                  "name": "webViewPlatformCallbacksHandler",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "WebViewPlatformCallbacksHandler"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "build",
+              "returnType": "Widget",
+              "type": "MethodDeclarationImpl"
+            },
+            "clearCookies": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "clearCookies",
+              "returnType": "Future<bool>",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "fuchsiaWebServices": {
+              "isConst": false,
+              "isFinal": false,
+              "isLate": false,
+              "name": "fuchsiaWebServices",
+              "type": "VariableDeclarationImpl",
+              "varType": "FuchsiaWebServices?"
+            }
+          },
+          "name": "FuchsiaWebView",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "fuchsia_webview.dart",
+      "type": "file"
+    },
+    "fuchsia_webview_platform_controller.dart": {
+      "ClassDeclarationImpl": {
+        "FuchsiaWebViewPlatformController": {
+          "ConstructorDeclarationImpl": {
+            "FuchsiaWebViewPlatformController": {
+              "FieldFormalParameterImpl": {
+                "this._fuchsiaWebServices": {
+                  "name": "this._fuchsiaWebServices",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "this._javascriptChannelRegistry": {
+                  "name": "this._javascriptChannelRegistry",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "this._platformCallbacksHandler": {
+                  "name": "this._platformCallbacksHandler",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "SimpleFormalParameterImpl": {
+                "creationParams": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "creationParams",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "CreationParams"
+                }
+              },
+              "name": "FuchsiaWebViewPlatformController",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "ExtendsClause": {
+            "name": "WebViewPlatformController",
+            "type": "extends"
+          },
+          "MethodDeclarationImpl": {
+            "addJavascriptChannels": {
+              "SimpleFormalParameterImpl": {
+                "javascriptChannelNames": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "javascriptChannelNames",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Set<String>"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "addJavascriptChannels",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "canGoBack": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "canGoBack",
+              "returnType": "Future<bool>",
+              "type": "MethodDeclarationImpl"
+            },
+            "canGoForward": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "canGoForward",
+              "returnType": "Future<bool>",
+              "type": "MethodDeclarationImpl"
+            },
+            "clearCache": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "clearCache",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "clearCookies": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": true,
+              "name": "clearCookies",
+              "returnType": "Future<bool>",
+              "type": "MethodDeclarationImpl"
+            },
+            "currentUrl": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "currentUrl",
+              "returnType": "Future<String?>",
+              "type": "MethodDeclarationImpl"
+            },
+            "dispose": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "dispose",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "evaluateJavascript": {
+              "SimpleFormalParameterImpl": {
+                "javascriptString": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "javascriptString",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "evaluateJavascript",
+              "returnType": "Future<String>",
+              "type": "MethodDeclarationImpl"
+            },
+            "fuchsiaWebServices": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "fuchsiaWebServices",
+              "returnType": "FuchsiaWebServices",
+              "type": "MethodDeclarationImpl"
+            },
+            "getTitle": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "getTitle",
+              "returnType": "Future<String?>",
+              "type": "MethodDeclarationImpl"
+            },
+            "goBack": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "goBack",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "goForward": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "goForward",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "loadUrl": {
+              "SimpleFormalParameterImpl": {
+                "headers": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "headers",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Map<String, String>?"
+                },
+                "k": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "k",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "null"
+                },
+                "url": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "url",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "v": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "v",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "null"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "loadUrl",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "reload": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "reload",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "removeJavascriptChannels": {
+              "SimpleFormalParameterImpl": {
+                "javascriptChannelNames": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "javascriptChannelNames",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Set<String>"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "removeJavascriptChannels",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "updateSettings": {
+              "SimpleFormalParameterImpl": {
+                "settings": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "settings",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "WebSettings"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "updateSettings",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "FuchsiaWebViewPlatformController",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "fuchsia_webview_platform_controller.dart",
+      "type": "file"
+    },
+    "utils.dart": {
+      "FunctionDeclarationImpl": {
+        "bufferToString": {
+          "SimpleFormalParameterImpl": {
+            "buffer": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "buffer",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "fidl_mem.Buffer"
+            }
+          },
+          "isGetter": false,
+          "isSetter": false,
+          "name": "bufferToString",
+          "returnType": "String",
+          "type": "FunctionDeclarationImpl"
+        },
+        "stringToBuffer": {
+          "SimpleFormalParameterImpl": {
+            "string": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "string",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "String"
+            }
+          },
+          "isGetter": false,
+          "isSetter": false,
+          "name": "stringToBuffer",
+          "returnType": "fidl_mem.Buffer",
+          "type": "FunctionDeclarationImpl"
+        }
+      },
+      "name": "utils.dart",
+      "type": "file"
+    },
+    "webview.dart": {
+      "ExportDirectiveImpl": {
+        "src/fuchsia_webview.dart": {
+          "name": "src/fuchsia_webview.dart",
+          "type": "ExportDirectiveImpl"
+        }
+      },
+      "name": "webview.dart",
+      "type": "file"
+    }
+  },
+  "name": "//sdk/dart/fuchsia_webview_flutter:fuchsia_webview_flutter_detect_action",
+  "type": "package"
+}

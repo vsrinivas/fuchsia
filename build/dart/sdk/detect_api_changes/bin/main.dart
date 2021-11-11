@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(https://fxbug.dev/84961): Fix null safeety and remove this language version.
+// @dart=2.9
+
 import 'dart:io';
 
 import 'package:args/args.dart';
@@ -50,6 +53,7 @@ void main(List<String> arguments) async {
     print('Missing required flag: dot-packages');
     exit(1);
   }
+  File dotPackagesFile = File(dotPackages);
 
   String goldenAPIPath = argResults['golden-api'];
   if (goldenAPIPath == null) {
@@ -65,8 +69,8 @@ void main(List<String> arguments) async {
 
   // Analyze and save the new library.
   File newAPIFile = File(newAPIPath);
-  await newAPIFile
-      .writeAsString(await analyzeAPI(apiName, sources + [dotPackages]));
+  await newAPIFile.writeAsString(
+      await analyzeAPI(apiName, sources + [dotPackagesFile.absolute.path]));
 
   // Load the golden library if it exists, otherwise create it.
   File goldenAPIFile = File(goldenAPIPath);
@@ -77,7 +81,7 @@ void main(List<String> arguments) async {
 
   // Compare the new library with the golden library.
   String result = diffTwoFiles(newAPIFile.path, goldenAPIFile.path);
-  if (result != null) {
+  if (result != '') {
     print(result);
     exit(1);
   }

@@ -1,0 +1,1398 @@
+{
+  "files": {
+    "composed_pseudo_dir.dart": {
+      "ClassDeclarationImpl": {
+        "ComposedPseudoDir": {
+          "ConstructorDeclarationImpl": {
+            "ComposedPseudoDir": {
+              "SimpleFormalParameterImpl": {
+                "directory": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": true,
+                  "isRequiredNamed": true,
+                  "isRequiredPositional": false,
+                  "name": "directory",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "fidl_io.Directory"
+                },
+                "inheritedNodes": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "inheritedNodes",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "List<String>"
+                }
+              },
+              "name": "ComposedPseudoDir",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "ExtendsClause": {
+            "name": "PseudoDir",
+            "type": "extends"
+          },
+          "MethodDeclarationImpl": {
+            "addNode": {
+              "SimpleFormalParameterImpl": {
+                "name": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "name",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "node": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "node",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Vnode"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "addNode",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            },
+            "open": {
+              "SimpleFormalParameterImpl": {
+                "flags": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "flags",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "mode": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "mode",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "parentFlags": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": true,
+                  "isPositional": true,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "parentFlags",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "path": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "path",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "request": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "request",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "fidl.InterfaceRequest<fidl_io.Node>"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "open",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "ComposedPseudoDir",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "composed_pseudo_dir.dart",
+      "type": "file"
+    },
+    "pseudo_dir.dart": {
+      "ClassDeclarationImpl": {
+        "PseudoDir": {
+          "ExtendsClause": {
+            "name": "Vnode",
+            "type": "extends"
+          },
+          "MethodDeclarationImpl": {
+            "addNode": {
+              "SimpleFormalParameterImpl": {
+                "name": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "name",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "node": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "node",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Vnode"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "addNode",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            },
+            "close": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "close",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "connect": {
+              "SimpleFormalParameterImpl": {
+                "flags": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "flags",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "mode": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "mode",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "parentFlags": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": true,
+                  "isPositional": true,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "parentFlags",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "request": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "request",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "fidl.InterfaceRequest<Node>"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "connect",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            },
+            "inodeNumber": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "inodeNumber",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            },
+            "isEmpty": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "isEmpty",
+              "returnType": "bool",
+              "type": "MethodDeclarationImpl"
+            },
+            "listNodeNames": {
+              "SimpleFormalParameterImpl": {
+                "f": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "f",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "null"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "listNodeNames",
+              "returnType": "List<String>",
+              "type": "MethodDeclarationImpl"
+            },
+            "lookup": {
+              "SimpleFormalParameterImpl": {
+                "name": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "name",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "lookup",
+              "returnType": "Vnode?",
+              "type": "MethodDeclarationImpl"
+            },
+            "open": {
+              "SimpleFormalParameterImpl": {
+                "flags": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "flags",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "mode": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "mode",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "parentFlags": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": true,
+                  "isPositional": true,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "parentFlags",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "path": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "path",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "request": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "request",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "fidl.InterfaceRequest<Node>"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "open",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "removeAllNodes": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "removeAllNodes",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "removeNode": {
+              "SimpleFormalParameterImpl": {
+                "name": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "name",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "removeNode",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            },
+            "serve": {
+              "SimpleFormalParameterImpl": {
+                "request": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "request",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "fidl.InterfaceRequest<Node>"
+                },
+                "rights": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "rights",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "serve",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            },
+            "type": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "type",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "PseudoDir",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "pseudo_dir.dart",
+      "type": "file"
+    },
+    "pseudo_file.dart": {
+      "ClassDeclarationImpl": {
+        "PseudoFile": {
+          "ConstructorDeclarationImpl": {
+            "PseudoFile.readOnly": {
+              "FieldFormalParameterImpl": {
+                "this._readFn": {
+                  "name": "this._readFn",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "PseudoFile.readOnly",
+              "type": "ConstructorDeclarationImpl"
+            },
+            "PseudoFile.readOnlyStr": {
+              "SimpleFormalParameterImpl": {
+                "fn": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "fn",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "ReadFnStr"
+                }
+              },
+              "name": "PseudoFile.readOnlyStr",
+              "type": "ConstructorDeclarationImpl"
+            },
+            "PseudoFile.readWrite": {
+              "FieldFormalParameterImpl": {
+                "this._capacity": {
+                  "name": "this._capacity",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "this._readFn": {
+                  "name": "this._readFn",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "this._writeFn": {
+                  "name": "this._writeFn",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "PseudoFile.readWrite",
+              "type": "ConstructorDeclarationImpl"
+            },
+            "PseudoFile.readWriteStr": {
+              "FieldFormalParameterImpl": {
+                "this._capacity": {
+                  "name": "this._capacity",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "SimpleFormalParameterImpl": {
+                "rfn": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "rfn",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "ReadFnStr"
+                },
+                "wfn": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "wfn",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "WriteFnStr"
+                }
+              },
+              "name": "PseudoFile.readWriteStr",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "ExtendsClause": {
+            "name": "Vnode",
+            "type": "extends"
+          },
+          "MethodDeclarationImpl": {
+            "close": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "close",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "connect": {
+              "SimpleFormalParameterImpl": {
+                "flags": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "flags",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "mode": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "mode",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "parentFlags": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": true,
+                  "isPositional": true,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "parentFlags",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "request": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "request",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "fidl.InterfaceRequest<Node>"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "connect",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            },
+            "describe": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "describe",
+              "returnType": "NodeInfo",
+              "type": "MethodDeclarationImpl"
+            },
+            "describe2": {
+              "SimpleFormalParameterImpl": {
+                "query": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "query",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "ConnectionInfoQuery"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "describe2",
+              "returnType": "ConnectionInfo",
+              "type": "MethodDeclarationImpl"
+            },
+            "inodeNumber": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "inodeNumber",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            },
+            "type": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "type",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "PseudoFile",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "pseudo_file.dart",
+      "type": "file"
+    },
+    "pseudo_vmo_file.dart": {
+      "ClassDeclarationImpl": {
+        "PseudoVmoFile": {
+          "ConstructorDeclarationImpl": {
+            "PseudoVmoFile.readOnly": {
+              "FieldFormalParameterImpl": {
+                "this._vmoFn": {
+                  "name": "this._vmoFn",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "PseudoVmoFile.readOnly",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "ExtendsClause": {
+            "name": "PseudoFile",
+            "type": "extends"
+          },
+          "MethodDeclarationImpl": {
+            "describe": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "describe",
+              "returnType": "NodeInfo",
+              "type": "MethodDeclarationImpl"
+            },
+            "describe2": {
+              "SimpleFormalParameterImpl": {
+                "query": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "query",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "ConnectionInfoQuery"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "describe2",
+              "returnType": "ConnectionInfo",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "PseudoVmoFile",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "pseudo_vmo_file.dart",
+      "type": "file"
+    },
+    "service.dart": {
+      "ClassDeclarationImpl": {
+        "Service": {
+          "ConstructorDeclarationImpl": {
+            "Service.withConnector": {
+              "FieldFormalParameterImpl": {
+                "this._connector": {
+                  "name": "this._connector",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "Service.withConnector",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "ExtendsClause": {
+            "name": "Vnode",
+            "type": "extends"
+          },
+          "MethodDeclarationImpl": {
+            "close": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "close",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "connect": {
+              "SimpleFormalParameterImpl": {
+                "flags": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "flags",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "mode": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "mode",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "parentFlags": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": true,
+                  "isPositional": true,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "parentFlags",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "request": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "request",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "fidl.InterfaceRequest<Node>"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "connect",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            },
+            "inodeNumber": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "inodeNumber",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            },
+            "type": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "type",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "TypeParameterListImpl": {
+            "<T>": {
+              "TypeParameterImpl": {
+                "T": {
+                  "name": "T",
+                  "type": "TypeParameterImpl"
+                }
+              },
+              "name": "<T>",
+              "type": "TypeParameterListImpl"
+            }
+          },
+          "name": "Service",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "TypeParameterListImpl": {
+        "<T>": {
+          "TypeParameterImpl": {
+            "T": {
+              "name": "T",
+              "type": "TypeParameterImpl"
+            }
+          },
+          "name": "<T>",
+          "type": "TypeParameterListImpl"
+        }
+      },
+      "name": "service.dart",
+      "type": "file"
+    },
+    "vfs.dart": {
+      "ExportDirectiveImpl": {
+        "src/composed_pseudo_dir.dart": {
+          "name": "src/composed_pseudo_dir.dart",
+          "type": "ExportDirectiveImpl"
+        },
+        "src/pseudo_dir.dart": {
+          "name": "src/pseudo_dir.dart",
+          "type": "ExportDirectiveImpl"
+        },
+        "src/pseudo_file.dart": {
+          "name": "src/pseudo_file.dart",
+          "type": "ExportDirectiveImpl"
+        },
+        "src/pseudo_vmo_file.dart": {
+          "name": "src/pseudo_vmo_file.dart",
+          "type": "ExportDirectiveImpl"
+        },
+        "src/service.dart": {
+          "name": "src/service.dart",
+          "type": "ExportDirectiveImpl"
+        },
+        "src/vmo_file.dart": {
+          "name": "src/vmo_file.dart",
+          "type": "ExportDirectiveImpl"
+        },
+        "src/vnode.dart": {
+          "name": "src/vnode.dart",
+          "type": "ExportDirectiveImpl"
+        }
+      },
+      "name": "vfs.dart",
+      "type": "file"
+    },
+    "vmo_file.dart": {
+      "ClassDeclarationImpl": {
+        "VmoFile": {
+          "ConstructorDeclarationImpl": {
+            "VmoFile.readOnly": {
+              "FieldFormalParameterImpl": {
+                "this._sharingMode": {
+                  "name": "this._sharingMode",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "this._vmo": {
+                  "name": "this._vmo",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "VmoFile.readOnly",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "ExtendsClause": {
+            "name": "PseudoFile",
+            "type": "extends"
+          },
+          "MethodDeclarationImpl": {
+            "describe": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "describe",
+              "returnType": "NodeInfo",
+              "type": "MethodDeclarationImpl"
+            },
+            "describe2": {
+              "SimpleFormalParameterImpl": {
+                "query": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "query",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "ConnectionInfoQuery"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "describe2",
+              "returnType": "ConnectionInfo",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "VmoFile",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "EnumDeclarationImpl": {
+        "VmoSharingMode": {
+          "EnumConstantDeclarationImpl": {
+            "noSharing": {
+              "name": "noSharing",
+              "type": "EnumConstantDeclarationImpl"
+            },
+            "shareDuplicate": {
+              "name": "shareDuplicate",
+              "type": "EnumConstantDeclarationImpl"
+            }
+          },
+          "name": "VmoSharingMode",
+          "type": "EnumDeclarationImpl"
+        }
+      },
+      "name": "vmo_file.dart",
+      "type": "file"
+    },
+    "vnode.dart": {
+      "ClassDeclarationImpl": {
+        "Vnode": {
+          "MethodDeclarationImpl": {
+            "close": {
+              "isAbstract": true,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "close",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "connect": {
+              "SimpleFormalParameterImpl": {
+                "flags": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "flags",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "mode": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "mode",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "parentFlags": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": true,
+                  "isPositional": true,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "parentFlags",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "request": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "request",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "InterfaceRequest<Node>"
+                }
+              },
+              "isAbstract": true,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "connect",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            },
+            "filterForNodeReference": {
+              "SimpleFormalParameterImpl": {
+                "flags": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "flags",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "filterForNodeReference",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            },
+            "inodeNumber": {
+              "isAbstract": true,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "inodeNumber",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            },
+            "open": {
+              "SimpleFormalParameterImpl": {
+                "flags": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "flags",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "mode": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "mode",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "parentFlags": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": true,
+                  "isPositional": true,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "parentFlags",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "path": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "path",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "request": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "request",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "InterfaceRequest<Node>"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "open",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "sendErrorEvent": {
+              "SimpleFormalParameterImpl": {
+                "flags": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "flags",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "request": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "request",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "InterfaceRequest<Node>"
+                },
+                "status": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "status",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "sendErrorEvent",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "type": {
+              "isAbstract": true,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "type",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "Vnode",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "vnode.dart",
+      "type": "file"
+    }
+  },
+  "name": "//sdk/dart/fuchsia_vfs:fuchsia_vfs_detect_action",
+  "type": "package"
+}
