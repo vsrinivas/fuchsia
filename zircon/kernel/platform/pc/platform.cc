@@ -137,13 +137,6 @@ static void platform_save_bootloader_data(void) {
   for (auto it = view.begin(); it != view.end(); ++it) {
     auto [header, payload] = *it;
     switch (header->type) {
-      case ZBI_TYPE_PLATFORM_ID: {
-        if (payload.size() >= sizeof(zbi_platform_id_t)) {
-          memcpy(&bootloader.platform_id, payload.data(), sizeof(zbi_platform_id_t));
-          bootloader.platform_id_size = sizeof(zbi_platform_id_t);
-        }
-        break;
-      }
       case ZBI_TYPE_ACPI_RSDP: {
         if (payload.size() >= sizeof(uint64_t)) {
           bootloader.acpi_rsdp = *reinterpret_cast<uint64_t*>(payload.data());
@@ -366,16 +359,6 @@ zx_status_t platform_append_mexec_data(ktl::span<ktl::byte> data_zbi) {
     }
   }
 
-  // Append platform ID.
-  if (bootloader.platform_id_size) {
-    auto result = image.Append(zbi_header_t{.type = ZBI_TYPE_PLATFORM_ID},
-                               zbitl::AsBytes(bootloader.platform_id));
-    if (result.is_error()) {
-      printf("mexec: failed to append platform ID to data ZBI: ");
-      zbitl::PrintViewError(result.error_value());
-      return error(result.error_value());
-    }
-  }
   // Append information about the framebuffer to the data ZBI.
   if (bootloader.fb.base) {
     auto result =

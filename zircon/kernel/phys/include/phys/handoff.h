@@ -10,8 +10,10 @@
 #include <lib/arch/ticks.h>
 #include <stddef.h>
 #include <zircon/assert.h>
+#include <zircon/boot/image.h>
 
 #include <ktl/byte.h>
+#include <ktl/optional.h>
 #include <ktl/span.h>
 #include <ktl/type_traits.h>
 
@@ -62,8 +64,10 @@ struct PhysHandoff {
 
   // Physical address of the data ZBI.
   uint64_t zbi = 0;
+
+  // ZBI_TYPE_PLATFORM_ID payload.
+  ktl::optional<zbi_platform_id_t> platform_id;
 };
-static_assert(ktl::has_unique_object_representations_v<PhysHandoff>);
 
 extern PhysHandoff* gPhysHandoff;
 

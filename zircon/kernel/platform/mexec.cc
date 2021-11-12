@@ -21,6 +21,7 @@
 #include <ktl/span.h>
 #include <ktl/type_traits.h>
 #include <lk/init.h>
+#include <phys/handoff.h>
 #include <vm/vm_object.h>
 
 namespace {
@@ -45,7 +46,18 @@ void ConstructMexecDataZbi(uint level) {
     abort();
   }
 
-  // TODO(fxbug.dev/88059): Copy data over from gPhysHandoff.
+  // Forward relevant items from the physboot hand-off.
+  ZX_ASSERT(gPhysHandoff != nullptr);
+
+  if (gPhysHandoff->platform_id) {
+    auto result = gImageAtHandoff.Append(zbi_header_t{.type = ZBI_TYPE_PLATFORM_ID},
+                                         zbitl::AsBytes(gPhysHandoff->platform_id.value()));
+    if (result.is_error()) {
+      printf("ConstructMexecDataZbi: could not append platform ID: ");
+      zbitl::PrintViewError(result.error_value());
+      abort();
+    }
+  }
 }
 
 }  // namespace

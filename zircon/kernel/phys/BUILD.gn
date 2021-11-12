@@ -398,6 +398,9 @@ source_set("handoff") {
 
   if (toolchain_environment == "kernel.phys") {
     sources = [ "zbi-handoff.cc" ]
-    deps = [ "//zircon/kernel/lib/ktl" ]
+    deps = [
+      "//zircon/kernel/lib/ktl",
+      "//zircon/system/ulib/zbitl",
+    ]
   }
 }

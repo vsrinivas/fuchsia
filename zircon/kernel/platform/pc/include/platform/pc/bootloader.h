@@ -28,9 +28,6 @@ struct pc_bootloader_info_t {
   zbi_swfb_t fb;
   ktl::variant<ktl::monostate, dcfg_simple_pio_t, dcfg_simple_t> uart;
   zbi_nvram_t nvram;
-
-  uint64_t platform_id_size;
-  zbi_platform_id_t platform_id;
 };
 
 extern pc_bootloader_info_t bootloader;

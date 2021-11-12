@@ -386,7 +386,6 @@ void ProcessZbiEarly() {
     bool is_mexec_data = ZBI_TYPE_DRV_METADATA(header->type);
     switch (header->type) {
       case ZBI_TYPE_KERNEL_DRIVER:
-      case ZBI_TYPE_PLATFORM_ID:
         is_mexec_data = true;
         break;
       case ZBI_TYPE_CMDLINE: {
