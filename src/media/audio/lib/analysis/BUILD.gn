@@ -8,7 +8,9 @@ source_set("analysis") {
   sources = [
     "analysis.cc",
     "analysis.h",
+    "dropout.h",
     "generators.h",
+    "glitch.h",
   ]
 
   public_deps = [
@@ -31,7 +33,9 @@ executable("unittest-bin") {
 
   sources = [
     "analysis_unittest.cc",
+    "dropout_unittest.cc",
     "generators_unittest.cc",
+    "glitch_unittest.cc",
   ]
 
   deps = [
