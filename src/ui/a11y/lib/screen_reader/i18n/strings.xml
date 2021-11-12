@@ -220,4 +220,7 @@
     <string name="role_search_box">Search box</string>
     <!-- Spoken message that describes that the user is editing a text field. -->
     <string name="is_editing">Is editing</string>
+    <!-- Spoken message that describes a |letter| is capitalized. -->
+    <string name="capitalized_letter">
+        Capital <xliff:g id="letter" example="A">{letter}</xliff:g></string>
 </resources>
