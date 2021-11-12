@@ -79,6 +79,9 @@ zx_status_t DecodeProcessHandle(const fidl::internal::CodingConfig& encoding_con
                                 uint32_t metadata_index, const void* metadata_array,
                                 const char** error) {
   static_assert(mode == Mode::Decode, "process handles during decode");
+  if (!encoding_configuration.decode_process_handle) {
+    return ZX_OK;
+  }
   return encoding_configuration.decode_process_handle(handle, attr, metadata_index, metadata_array,
                                                       error);
 }

@@ -600,7 +600,7 @@ class DecodedMessageBase : public ::fidl::Result {
 // construction. Different from |OwnedEncodedMessage|, it takes in a caller-allocated buffer and
 // uses that as the backing storage for the message. The buffer must outlive instances of this
 // class.
-template <typename FidlType>
+template <typename FidlType, typename Transport = internal::ChannelTransport>
 class UnownedEncodedMessage final {
  public:
   UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size, FidlType* response)
@@ -609,7 +609,7 @@ class UnownedEncodedMessage final {
   UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
                         uint32_t backing_buffer_size, FidlType* response)
       : message_(::fidl::OutgoingMessage::CreateInternal(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_vtable = &fidl::internal::ChannelTransport::VTable,
+            .transport_vtable = &Transport::VTable,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .handles = handle_storage_.data(),
@@ -648,14 +648,14 @@ class UnownedEncodedMessage final {
   static constexpr uint32_t kNumHandles =
       fidl::internal::ClampedHandleCount<FidlType, fidl::MessageDirection::kSending>();
   std::array<zx_handle_t, kNumHandles> handle_storage_;
-  std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_storage_;
+  std::array<typename Transport::HandleMetadata, kNumHandles> handle_metadata_storage_;
   ::fidl::internal::IovecBuffer iovecs_;
   ::fidl::OutgoingMessage message_;
 };
 
 // This class owns a message of |FidlType| and encodes the message automatically upon construction
 // into a byte buffer.
-template <typename FidlType>
+template <typename FidlType, typename Transport = internal::ChannelTransport>
 class OwnedEncodedMessage final {
  public:
   explicit OwnedEncodedMessage(FidlType* response)
@@ -683,26 +683,27 @@ class OwnedEncodedMessage final {
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_.GetOutgoingMessage(); }
 
 #ifdef __Fuchsia__
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportObject>
+  void Write(TransportObject&& client) {
+    message_.Write(std::forward<TransportObject>(client));
   }
 #endif
 
  private:
   ::fidl::internal::OutgoingMessageBuffer<FidlType> backing_buffer_;
-  ::fidl::UnownedEncodedMessage<FidlType> message_;
+  ::fidl::UnownedEncodedMessage<FidlType, Transport> message_;
 };
 
 // This class manages the handles within |FidlType| and decodes the message automatically upon
 // construction. It always borrows external buffers for the backing storage of the message.
 // This class should mostly be used for tests.
-template <typename FidlType, typename Enable = void>
+template <typename FidlType, typename Transport = internal::ChannelTransport,
+          typename Enable = void>
 class DecodedMessage;
 
 // Specialization for transactional messages.
-template <typename FidlType>
-class DecodedMessage<FidlType, std::void_t<decltype(FidlType::MessageKind)>> final
+template <typename FidlType, typename Transport>
+class DecodedMessage<FidlType, Transport, std::void_t<decltype(FidlType::MessageKind)>> final
     : public ::fidl::internal::DecodedMessageBase<FidlType> {
   using Base = ::fidl::internal::DecodedMessageBase<FidlType>;
 
@@ -710,7 +711,7 @@ class DecodedMessage<FidlType, std::void_t<decltype(FidlType::MessageKind)>> fin
   using Base::DecodedMessageBase;
 
   DecodedMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-                 fidl_channel_handle_metadata_t* handle_metadata = nullptr,
+                 typename Transport::HandleMetadata* handle_metadata = nullptr,
                  uint32_t handle_actual = 0)
       : Base(::fidl::IncomingMessage::Create(bytes, byte_actual, handles, handle_metadata,
                                              handle_actual)) {}
@@ -735,16 +736,17 @@ class DecodedMessage<FidlType, std::void_t<decltype(FidlType::MessageKind)>> fin
 };
 
 // Specialization for non-transactional types (tables, structs, unions).
-template <typename FidlType>
-class DecodedMessage<FidlType, std::enable_if_t<::fidl::IsFidlObject<FidlType>::value, void>> final
-    : public ::fidl::internal::DecodedMessageBase<FidlType> {
+template <typename FidlType, typename Transport>
+class DecodedMessage<FidlType, Transport,
+                     std::enable_if_t<::fidl::IsFidlObject<FidlType>::value, void>>
+    final : public ::fidl::internal::DecodedMessageBase<FidlType> {
   using Base = ::fidl::internal::DecodedMessageBase<FidlType>;
 
  public:
   using Base::DecodedMessageBase;
 
   DecodedMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-                 fidl_channel_handle_metadata_t* handle_metadata = nullptr,
+                 typename Transport::HandleMetadata* handle_metadata = nullptr,
                  uint32_t handle_actual = 0)
       : Base(::fidl::internal::kLLCPPEncodedWireFormatVersion,
              ::fidl::IncomingMessage::Create(
@@ -754,7 +756,7 @@ class DecodedMessage<FidlType, std::enable_if_t<::fidl::IsFidlObject<FidlType>::
   // Internal constructor for specifying a specific wire format version.
   DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version, uint8_t* bytes,
                  uint32_t byte_actual, zx_handle_t* handles = nullptr,
-                 fidl_channel_handle_metadata_t* handle_metadata = nullptr,
+                 typename Transport::HandleMetadata* handle_metadata = nullptr,
                  uint32_t handle_actual = 0)
       : Base(wire_format_version, ::fidl::IncomingMessage::Create(
                                       bytes, byte_actual, handles, handle_metadata, handle_actual,

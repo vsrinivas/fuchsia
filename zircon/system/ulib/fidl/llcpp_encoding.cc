@@ -270,11 +270,13 @@ class FidlEncoder final : public ::fidl::Visitor<WireFormatVersion, fidl::Mutati
         .rights = handle_rights,
     };
     const char* error;
-    zx_status_t status =
-        encoding_configuration_.encode_process_handle(attr, handle_idx_, handle_metadata_, &error);
-    if (status != ZX_OK) {
-      SetError(error);
-      return Status::kConstraintViolationError;
+    if (encoding_configuration_.encode_process_handle) {
+      zx_status_t status = encoding_configuration_.encode_process_handle(attr, handle_idx_,
+                                                                         handle_metadata_, &error);
+      if (status != ZX_OK) {
+        SetError(error);
+        return Status::kConstraintViolationError;
+      }
     }
 
     handles_[handle_idx_] = *dest_handle;

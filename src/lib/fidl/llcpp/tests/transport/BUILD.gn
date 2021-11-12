@@ -15,7 +15,10 @@ group("transport") {
 
 test("fidl_llcpp_transport_tests_bin") {
   output_name = "fidl_llcpp_transport_tests"
-  sources = [ "transport_test.cc" ]
+  sources = [
+    "coding_test.cc",
+    "waiter_test.cc",
+  ]
   deps = [
     "//sdk/lib/stdcompat",
     "//zircon/system/ulib/fidl:fidl-llcpp",

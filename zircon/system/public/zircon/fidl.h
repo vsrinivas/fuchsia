@@ -461,7 +461,8 @@ typedef uint8_t fidl_transport_type;
 
 #define FIDL_TRANSPORT_TYPE_INVALID 0x00
 #define FIDL_TRANSPORT_TYPE_CHANNEL 0x01
-#define FIDL_MAX_TRANSPORT_TYPE 0x01
+// Designated transport type for use in tests.
+#define FIDL_TRANSPORT_TYPE_TEST 0xff
 
 // Transport agnostic handle representation.
 typedef uint32_t fidl_handle_t;
