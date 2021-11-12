@@ -984,7 +984,6 @@ group("default") {
     "//:create-all-drivers-doc",
     "//:drivers-check",
     "//:host",
-    "//build:tests",
     "//build/images:packages",
     "//build/input:build_only",
     "//build/unification",

@@ -81,6 +81,7 @@ group("tests") {
   testonly = true
   public_deps = [
     "fidl:tests",
+    "//build:tests",
     "//examples:tests",
     "//garnet/packages/tests:all",
     "//scripts:tests",
