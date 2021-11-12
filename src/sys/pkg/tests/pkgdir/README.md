@@ -188,3 +188,9 @@ modification_time, as packages don't contain that metadata.
 
 pkgfs also doesn't support these times, but returns a placeholder value
 (18446744011573954816) instead.
+
+### `/meta` opened as a file supports `ReadAt()`
+
+package-directory supports `ReadAt()` on meta-as-file.
+
+pkgfs only supports reading that file with `Read()`, not `ReadAt()`.
