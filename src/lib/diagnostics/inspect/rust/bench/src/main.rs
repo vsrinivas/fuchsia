@@ -8,11 +8,10 @@ use {
     fidl,
     fidl_fuchsia_inspect::{TreeMarker, TreeProxy},
     fuchsia_inspect::{
-        heap::Heap,
         reader::snapshot::{Snapshot, SnapshotTree},
         reader::ReadableTree,
-        ArithmeticArrayProperty, ArrayProperty, ExponentialHistogramParams, HistogramProperty,
-        Inspector, LinearHistogramParams, Node, NumericProperty, Property,
+        ArithmeticArrayProperty, ArrayProperty, ExponentialHistogramParams, Heap,
+        HistogramProperty, Inspector, LinearHistogramParams, Node, NumericProperty, Property,
     },
     fuchsia_trace as ftrace,
     fuchsia_trace_provider::trace_provider_create_with_fdio,

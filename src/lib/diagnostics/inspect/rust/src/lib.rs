@@ -86,12 +86,10 @@ pub use diagnostics_hierarchy::{
     DiagnosticsHierarchy, ExponentialHistogramParams, LinearHistogramParams,
 };
 
-pub use {crate::state::Stats, crate::writer::*};
-
-pub use {testing::*, writer::types::*};
-
-#[doc(hidden)]
-pub use writer::heap;
+pub use {
+    crate::{state::Stats, writer::*},
+    testing::*,
+};
 
 pub mod testing {
     pub use diagnostics_hierarchy::{

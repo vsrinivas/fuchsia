@@ -3,10 +3,14 @@
 // found in the LICENSE file.
 
 mod error;
-pub mod heap;
+pub(crate) mod heap;
 pub(crate) mod state;
 mod testing_utils;
 pub mod types;
 mod utils;
 
-pub use {error::Error, heap::Heap, state::State, types::*, utils::*};
+pub(crate) use state::State;
+pub use {error::Error, types::*, utils::*};
+
+#[doc(hidden)]
+pub use heap::Heap;
