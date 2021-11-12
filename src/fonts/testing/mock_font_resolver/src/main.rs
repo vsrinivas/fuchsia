@@ -13,11 +13,12 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{self as syslog, fx_vlog, macros::*},
     fuchsia_url::pkg_url::PkgUrl,
-    fuchsia_vfs_pseudo_fs::{
-        directory::entry::DirectoryEntry, file::simple::read_only, pseudo_directory,
-    },
     fuchsia_zircon::Status,
     futures::{StreamExt, TryStreamExt},
+    vfs::{
+        directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
+        file::vmo::asynchronous::read_only_static, pseudo_directory,
+    },
 };
 
 #[fasync::run_singlethreaded]
@@ -55,21 +56,21 @@ async fn resolve(
 
     // Serve fake directories with single font files, with the selection depending on the package
     // URL. These correspond to the fake fonts declared in ../tests/*.font_manifest.json.
-    let mut root = match package_url.as_ref() {
+    let root = match package_url.as_ref() {
         // From ephemeral.font_manifest.json
         "fuchsia-pkg://fuchsia.com/font-package-ephemeral-ttf" => pseudo_directory! {
-            "Ephemeral.ttf" => read_only(|| Ok(b"not actually a font".to_vec())),
+            "Ephemeral.ttf" => read_only_static(b"not actually a font"),
         },
 
         // From aliases.font_manifest.json
         "fuchsia-pkg://fuchsia.com/font-package-alphasans-regular-ttf" => pseudo_directory! {
-            "AlphaSans-Regular.ttf" => read_only(|| Ok(b"alpha".to_vec())),
+            "AlphaSans-Regular.ttf" => read_only_static(b"alpha"),
         },
         "fuchsia-pkg://fuchsia.com/font-package-alphasans-condensed-ttf" => pseudo_directory! {
-            "AlphaSans-Condensed.ttf" => read_only(|| Ok(b"alpha".to_vec())),
+            "AlphaSans-Condensed.ttf" => read_only_static(b"alpha"),
         },
         "fuchsia-pkg://fuchsia.com/font-package-alphasanshebrew-regular-ttf" => pseudo_directory! {
-            "AlphaSansHebrew-Regular.ttf" => read_only(|| Ok(b"alpha".to_vec())),
+            "AlphaSansHebrew-Regular.ttf" => read_only_static(b"alpha"),
         },
         _ => {
             return Err(Status::NOT_FOUND);
@@ -78,15 +79,9 @@ async fn resolve(
 
     let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DIRECTORY;
     let mode = MODE_TYPE_DIRECTORY;
-    let mut path = std::iter::empty();
     let node = ServerEnd::from(directory_request.into_channel());
 
-    root.open(flags, mode, &mut path, node);
-
-    fasync::Task::spawn(async move {
-        root.await;
-    })
-    .detach();
+    root.open(ExecutionScope::new(), flags, mode, vfs::path::Path::dot(), node);
 
     Ok(())
 }
