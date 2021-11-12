@@ -9,10 +9,10 @@ namespace fidl_test_service {
     6118813307380259369lu;
 
 extern "C" const fidl_type_t
-    fidl_test_service_SecondProtocolMethodOnSecondRequestTable;
+    fidl_test_service_SecondProtocolMethodOnSecondRequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_service_SecondProtocolMethodOnSecondResponseTable;
+    fidl_test_service_SecondProtocolMethodOnSecondResponseMessageTable;
 #ifdef __Fuchsia__
 }  // namespace fidl_test_service
 ::fidl::WireResult<::fidl_test_service::SecondProtocol::MethodOnSecond>::
@@ -117,10 +117,10 @@ namespace fidl_test_service {
     6590661047173168036lu;
 
 extern "C" const fidl_type_t
-    fidl_test_service_FirstProtocolMethodOnFirstRequestTable;
+    fidl_test_service_FirstProtocolMethodOnFirstRequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_service_FirstProtocolMethodOnFirstResponseTable;
+    fidl_test_service_FirstProtocolMethodOnFirstResponseMessageTable;
 #ifdef __Fuchsia__
 }  // namespace fidl_test_service
 ::fidl::WireResult<::fidl_test_service::FirstProtocol::MethodOnFirst>::

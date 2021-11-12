@@ -32,7 +32,7 @@ static void echo_server(zx_handle_t server) {
       ASSERT_EQ(actual_handles, 2u, "");
       zx_handle_close_many(handles, actual_handles);
       fidl_message_header_t* req = (fidl_message_header_t*)msg;
-      fidl_test_echo_EchoEchoResponse response;
+      fidl_test_echo_EchoEchoResponseMessage response;
       memset(&response, 0, sizeof(response));
       fidl_init_txn_header(&response.hdr, req->txid, req->ordinal);
       response.status = ZX_OK;

@@ -22,16 +22,16 @@ namespace fidl_test_errorsyntax {
 class ExampleUseOfErrorSyntax;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailRequestTable;
+    fidl_test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailResponseTable;
+    fidl_test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailResponseMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
+    fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailResponseTable;
+    fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailResponseMessageTable;
 
 }  // namespace fidl_test_errorsyntax
 #ifdef __Fuchsia__
@@ -76,7 +76,7 @@ struct ::fidl::WireRequest<
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_errorsyntax::
-          fidl_test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailRequestTable;
+          fidl_test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailRequestMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   static constexpr uint32_t PrimarySizeV1 = 32;
@@ -239,7 +239,7 @@ struct ::fidl::WireResponse<
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_errorsyntax::
-          fidl_test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailResponseTable;
+          fidl_test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailResponseMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   static constexpr uint32_t PrimarySizeV1 = 40;
@@ -398,7 +398,7 @@ struct ::fidl::WireRequest<
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_errorsyntax::
-          fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
+          fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   static constexpr uint32_t PrimarySizeV1 = 32;
@@ -560,7 +560,7 @@ struct ::fidl::WireResponse<
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_errorsyntax::
-          fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailResponseTable;
+          fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailResponseMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   static constexpr uint32_t PrimarySizeV1 = 40;

@@ -22,10 +22,10 @@ class OnlyLibfuzzerAndDeps;
 class OnlyCppAndDeps;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestTable;
+    fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseTable;
+    fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseMessageTable;
 
 }  // namespace fidl_test_bindingsdenylist
 #ifdef __Fuchsia__

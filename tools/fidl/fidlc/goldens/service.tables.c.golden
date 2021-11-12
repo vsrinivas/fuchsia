@@ -5,10 +5,10 @@
 
 
 
-__LOCAL extern const struct FidlCodedStruct fidl_test_service_SecondProtocolMethodOnSecondRequestTable;
-const struct FidlCodedStruct fidl_test_service_SecondProtocolMethodOnSecondRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=16u, .size_v2=16u, .name="fidl.test.service/SecondProtocolMethodOnSecondRequest"};
+__LOCAL extern const struct FidlCodedStruct fidl_test_service_SecondProtocolMethodOnSecondRequestMessageTable;
+const struct FidlCodedStruct fidl_test_service_SecondProtocolMethodOnSecondRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=16u, .size_v2=16u, .name="fidl.test.service/SecondProtocolMethodOnSecondRequestMessage"};
 
-__LOCAL extern const struct FidlCodedStruct fidl_test_service_FirstProtocolMethodOnFirstRequestTable;
-const struct FidlCodedStruct fidl_test_service_FirstProtocolMethodOnFirstRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=16u, .size_v2=16u, .name="fidl.test.service/FirstProtocolMethodOnFirstRequest"};
+__LOCAL extern const struct FidlCodedStruct fidl_test_service_FirstProtocolMethodOnFirstRequestMessageTable;
+const struct FidlCodedStruct fidl_test_service_FirstProtocolMethodOnFirstRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=16u, .size_v2=16u, .name="fidl.test.service/FirstProtocolMethodOnFirstRequestMessage"};
 
 

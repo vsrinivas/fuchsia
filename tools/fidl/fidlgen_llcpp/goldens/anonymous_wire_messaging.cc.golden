@@ -9,10 +9,10 @@ namespace fidl_test_anonymous {
     8941579241812366574lu;
 
 extern "C" const fidl_type_t
-    fidl_test_anonymous_SomeProtocolSomeMethodRequestTable;
+    fidl_test_anonymous_SomeProtocolSomeMethodRequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_anonymous_SomeProtocolSomeMethodResponseTable;
+    fidl_test_anonymous_SomeProtocolSomeMethodResponseMessageTable;
 #ifdef __Fuchsia__
 }  // namespace fidl_test_anonymous
 ::fidl::WireResult<::fidl_test_anonymous::SomeProtocol::SomeMethod>::WireResult(

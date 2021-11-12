@@ -4,15 +4,16 @@
 
 
 __LOCAL extern const struct FidlCodedStruct bottom_FooTable;
+__LOCAL extern const struct FidlCodedStruct middle_MiddleGetFooTopResponseTable;
 
 
-__LOCAL extern const struct FidlCodedStruct fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestTable;
-const struct FidlCodedStruct fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=16u, .size_v2=16u, .name="fidl.test.foreigntypeinresponseusedthroughcompose/TopGetFooRequest"};
+__LOCAL extern const struct FidlCodedStruct fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestMessageTable;
+const struct FidlCodedStruct fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=16u, .size_v2=16u, .name="fidl.test.foreigntypeinresponseusedthroughcompose/TopGetFooRequestMessage"};
 
-__LOCAL extern const struct FidlCodedStruct fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseTable;
-static const struct FidlStructElement Fields67fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponse[] = {
+__LOCAL extern const struct FidlCodedStruct fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseMessageTable;
+static const struct FidlStructElement Fields74fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseMessage[] = {
     /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=20u, .offset_v2=20u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
 };
-const struct FidlCodedStruct fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields67fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponse, .element_count=1u, .size_v1=24u, .size_v2=24u, .name="fidl.test.foreigntypeinresponseusedthroughcompose/TopGetFooResponse"};
+const struct FidlCodedStruct fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields74fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseMessage, .element_count=1u, .size_v1=24u, .size_v2=24u, .name="fidl.test.foreigntypeinresponseusedthroughcompose/TopGetFooResponseMessage"};
 
 

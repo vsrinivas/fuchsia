@@ -9,19 +9,19 @@ namespace fidl_test_requestflexibleenvelope {
     kProtocol_RequestStrictResponseFlexible_Ordinal = 4346871690266280218lu;
 
 extern "C" const fidl_type_t
-    fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
+    fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable;
+    fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseMessageTable;
 
 [[maybe_unused]] constexpr uint64_t
     kProtocol_RequestFlexibleResponseStrict_Ordinal = 4374294377437089654lu;
 
 extern "C" const fidl_type_t
-    fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
+    fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestMessageTable;
 
 extern "C" const fidl_type_t
-    fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable;
+    fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseMessageTable;
 #ifdef __Fuchsia__
 }  // namespace fidl_test_requestflexibleenvelope
 ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::

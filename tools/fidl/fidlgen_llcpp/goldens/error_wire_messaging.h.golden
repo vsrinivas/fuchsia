@@ -19,9 +19,11 @@
 namespace fidl_test_error {
 class Example;
 
-__LOCAL extern "C" const fidl_type_t fidl_test_error_ExamplefooRequestTable;
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_error_ExamplefooRequestMessageTable;
 
-__LOCAL extern "C" const fidl_type_t fidl_test_error_ExamplefooResponseTable;
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_error_ExamplefooResponseMessageTable;
 
 }  // namespace fidl_test_error
 #ifdef __Fuchsia__
@@ -58,7 +60,7 @@ struct ::fidl::WireRequest<::fidl_test_error::Example::Foo> final {
   WireRequest() { _InitHeader(); }
 
   static constexpr const fidl_type_t* Type =
-      &::fidl_test_error::fidl_test_error_ExamplefooRequestTable;
+      &::fidl_test_error::fidl_test_error_ExamplefooRequestMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   static constexpr uint32_t PrimarySizeV1 = 32;
@@ -207,7 +209,7 @@ struct ::fidl::WireResponse<::fidl_test_error::Example::Foo> final {
   WireResponse() { _InitHeader(); }
 
   static constexpr const fidl_type_t* Type =
-      &::fidl_test_error::fidl_test_error_ExamplefooResponseTable;
+      &::fidl_test_error::fidl_test_error_ExamplefooResponseMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   static constexpr uint32_t PrimarySizeV1 = 40;

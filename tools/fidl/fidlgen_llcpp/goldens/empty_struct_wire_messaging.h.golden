@@ -20,22 +20,22 @@ namespace fidl_test_emptystruct {
 class EmptyProtocol;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_emptystruct_EmptyProtocolSendRequestTable;
+    fidl_test_emptystruct_EmptyProtocolSendRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_emptystruct_EmptyProtocolSendResponseTable;
+    fidl_test_emptystruct_EmptyProtocolSendResponseMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_emptystruct_EmptyProtocolReceiveRequestTable;
+    fidl_test_emptystruct_EmptyProtocolReceiveRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_emptystruct_EmptyProtocolReceiveEventTable;
+    fidl_test_emptystruct_EmptyProtocolReceiveEventMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
+    fidl_test_emptystruct_EmptyProtocolSendAndReceiveRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_emptystruct_EmptyProtocolSendAndReceiveResponseTable;
+    fidl_test_emptystruct_EmptyProtocolSendAndReceiveResponseMessageTable;
 
 }  // namespace fidl_test_emptystruct
 #ifdef __Fuchsia__
@@ -78,7 +78,7 @@ struct ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send> final {
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_emptystruct::
-          fidl_test_emptystruct_EmptyProtocolSendRequestTable;
+          fidl_test_emptystruct_EmptyProtocolSendRequestMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -227,7 +227,7 @@ struct ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::Receive>
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_emptystruct::
-          fidl_test_emptystruct_EmptyProtocolReceiveEventTable;
+          fidl_test_emptystruct_EmptyProtocolReceiveEventMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -383,7 +383,7 @@ struct ::fidl::WireRequest<
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_emptystruct::
-          fidl_test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
+          fidl_test_emptystruct_EmptyProtocolSendAndReceiveRequestMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -536,7 +536,7 @@ struct ::fidl::WireResponse<
 
   static constexpr const fidl_type_t* Type =
       &::fidl_test_emptystruct::
-          fidl_test_emptystruct_EmptyProtocolSendAndReceiveResponseTable;
+          fidl_test_emptystruct_EmptyProtocolSendAndReceiveResponseMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;

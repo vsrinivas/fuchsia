@@ -576,16 +576,16 @@ void FlexibleFoo::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
+    fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable;
+    fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
+    fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable;
+    fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseMessageTable;
 
 }  // namespace _internal
 Protocol::~Protocol() = default;
@@ -598,12 +598,12 @@ const fidl_type_t* ::fidl::test::requestflexibleenvelope::
         kProtocol_RequestStrictResponseFlexible_Ordinal:
       *out_needs_response = true;
       return &::fidl::test::requestflexibleenvelope::_internal::
-          fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
+          fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestMessageTable;
     case ::fidl::test::requestflexibleenvelope::internal::
         kProtocol_RequestFlexibleResponseStrict_Ordinal:
       *out_needs_response = true;
       return &::fidl::test::requestflexibleenvelope::_internal::
-          fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
+          fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestMessageTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -615,11 +615,11 @@ const fidl_type_t* Protocol_ResponseDecoder::GetType(uint64_t ordinal) {
     case ::fidl::test::requestflexibleenvelope::internal::
         kProtocol_RequestStrictResponseFlexible_Ordinal:
       return &::fidl::test::requestflexibleenvelope::_internal::
-          fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable;
+          fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseMessageTable;
     case ::fidl::test::requestflexibleenvelope::internal::
         kProtocol_RequestFlexibleResponseStrict_Ordinal:
       return &::fidl::test::requestflexibleenvelope::_internal::
-          fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable;
+          fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseMessageTable;
     default:
       return nullptr;
   }
@@ -665,7 +665,7 @@ Protocol_RequestStrictResponseFlexible_ResponseHandler(
         return ZX_OK;
       },
       &::fidl::test::requestflexibleenvelope::_internal::
-          fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable);
+          fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseMessageTable);
 }
 
 }  // namespace
@@ -676,7 +676,7 @@ void Protocol_Proxy::RequestStrictResponseFlexible(
                                kProtocol_RequestStrictResponseFlexible_Ordinal);
   controller_->Send(
       &::fidl::test::requestflexibleenvelope::_internal::
-          fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable,
+          fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestMessageTable,
       ::fidl::test::requestflexibleenvelope::Protocol_RequestEncoder::
           RequestStrictResponseFlexible(&_encoder, &s),
       Protocol_RequestStrictResponseFlexible_ResponseHandler(
@@ -700,7 +700,7 @@ Protocol_RequestFlexibleResponseStrict_ResponseHandler(
         return ZX_OK;
       },
       &::fidl::test::requestflexibleenvelope::_internal::
-          fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable);
+          fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseMessageTable);
 }
 
 }  // namespace
@@ -711,7 +711,7 @@ void Protocol_Proxy::RequestFlexibleResponseStrict(
                                kProtocol_RequestFlexibleResponseStrict_Ordinal);
   controller_->Send(
       &::fidl::test::requestflexibleenvelope::_internal::
-          fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable,
+          fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestMessageTable,
       ::fidl::test::requestflexibleenvelope::Protocol_RequestEncoder::
           RequestFlexibleResponseStrict(&_encoder, &s),
       Protocol_RequestFlexibleResponseStrict_ResponseHandler(
@@ -740,7 +740,7 @@ class Protocol_RequestStrictResponseFlexible_Responder final {
             kProtocol_RequestStrictResponseFlexible_Ordinal);
     response_.Send(
         &::fidl::test::requestflexibleenvelope::_internal::
-            fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable,
+            fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseMessageTable,
         ::fidl::test::requestflexibleenvelope::Protocol_ResponseEncoder::
             RequestStrictResponseFlexible(&_encoder, &f));
   }
@@ -761,7 +761,7 @@ class Protocol_RequestFlexibleResponseStrict_Responder final {
             kProtocol_RequestFlexibleResponseStrict_Ordinal);
     response_.Send(
         &::fidl::test::requestflexibleenvelope::_internal::
-            fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable,
+            fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseMessageTable,
         ::fidl::test::requestflexibleenvelope::Protocol_ResponseEncoder::
             RequestFlexibleResponseStrict(&_encoder, &f));
   }
@@ -842,9 +842,9 @@ zx_status_t Protocol_SyncProxy::RequestStrictResponseFlexible(
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
       &::fidl::test::requestflexibleenvelope::_internal::
-          fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable,
+          fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestMessageTable,
       &::fidl::test::requestflexibleenvelope::_internal::
-          fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable,
+          fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseMessageTable,
       ::fidl::test::requestflexibleenvelope::Protocol_RequestEncoder::
           RequestStrictResponseFlexible(&_encoder, &s),
       &response_);
@@ -864,9 +864,9 @@ zx_status_t Protocol_SyncProxy::RequestFlexibleResponseStrict(
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
       &::fidl::test::requestflexibleenvelope::_internal::
-          fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable,
+          fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestMessageTable,
       &::fidl::test::requestflexibleenvelope::_internal::
-          fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable,
+          fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseMessageTable,
       ::fidl::test::requestflexibleenvelope::Protocol_RequestEncoder::
           RequestFlexibleResponseStrict(&_encoder, &s),
       &response_);

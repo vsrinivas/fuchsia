@@ -26,7 +26,7 @@ using ChildHandle = ::fidl::InterfaceHandle<Child>;
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable;
+    fidl_test_inheritancewithrecursivedecl_ParentFirstRequestMessageTable;
 
 }  // namespace _internal
 class Parent_RequestEncoder {
@@ -63,7 +63,7 @@ class Parent_RequestEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::fidl::test::inheritancewithrecursivedecl::_internal::
-            fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable,
+            fidl_test_inheritancewithrecursivedecl_ParentFirstRequestMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -80,10 +80,10 @@ class Parent_ResponseEncoder {
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_inheritancewithrecursivedecl_ChildFirstRequestTable;
+    fidl_test_inheritancewithrecursivedecl_ChildFirstRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_inheritancewithrecursivedecl_ChildSecondRequestTable;
+    fidl_test_inheritancewithrecursivedecl_ChildSecondRequestMessageTable;
 
 }  // namespace _internal
 class Child_RequestEncoder {
@@ -120,7 +120,7 @@ class Child_RequestEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::fidl::test::inheritancewithrecursivedecl::_internal::
-            fidl_test_inheritancewithrecursivedecl_ChildFirstRequestTable,
+            fidl_test_inheritancewithrecursivedecl_ChildFirstRequestMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -158,7 +158,7 @@ class Child_RequestEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::fidl::test::inheritancewithrecursivedecl::_internal::
-            fidl_test_inheritancewithrecursivedecl_ChildSecondRequestTable,
+            fidl_test_inheritancewithrecursivedecl_ChildSecondRequestMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 

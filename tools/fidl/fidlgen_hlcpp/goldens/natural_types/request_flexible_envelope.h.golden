@@ -233,10 +233,10 @@ using FlexibleFooPtr = ::std::unique_ptr<FlexibleFoo>;
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
+    fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
+    fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestMessageTable;
 
 }  // namespace _internal
 class Protocol_RequestEncoder {
@@ -264,7 +264,7 @@ class Protocol_RequestEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::fidl::test::requestflexibleenvelope::_internal::
-            fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable,
+            fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -293,7 +293,7 @@ class Protocol_RequestEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::fidl::test::requestflexibleenvelope::_internal::
-            fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable,
+            fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -302,10 +302,10 @@ class Protocol_RequestEncoder {
 };
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable;
+    fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable;
+    fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseMessageTable;
 
 }  // namespace _internal
 class Protocol_ResponseEncoder {
@@ -333,7 +333,7 @@ class Protocol_ResponseEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::fidl::test::requestflexibleenvelope::_internal::
-            fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable,
+            fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
@@ -361,7 +361,7 @@ class Protocol_ResponseEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::fidl::test::requestflexibleenvelope::_internal::
-            fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable,
+            fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
