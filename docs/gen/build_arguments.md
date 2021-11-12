@@ -68,14 +68,14 @@ TODO(fxbug.dev/67565) - remove once external sync FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/a81c4803f52fb695663857923b21572fa9baf44f/src/intel/vulkan/BUILD.gn#27)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/4edeb49f6fd91220f465c1bc33afc1ae650485d5/src/intel/vulkan/BUILD.gn#27)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/a81c4803f52fb695663857923b21572fa9baf44f/src/intel/vulkan/BUILD.gn#30)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/4edeb49f6fd91220f465c1bc33afc1ae650485d5/src/intel/vulkan/BUILD.gn#30)
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -307,7 +307,7 @@ context.
 
 **Current value (from the default):** `[]`
 
-From //build/board.gni:46
+From //build/board.gni:49
 
 ### board_description
 Human readable board description corresponding to the board name.
@@ -378,7 +378,14 @@ board's fastboot protocol.
 
 **Current value (from the default):** `[]`
 
-From //build/board.gni:50
+From //build/board.gni:53
+
+### board_fshost_config
+A list of fshost options to add to the fshost config.
+
+**Current value (from the default):** `[]`
+
+From //build/board.gni:42
 
 ### board_has_libvulkan_arm_mali
 Board files can set this to true if they have a package with a mali libvulkan VCD.
@@ -462,7 +469,7 @@ From //boards/arm64.gni:25
 
 **Overridden from the default:** `[]`
 
-From //build/board.gni:42
+From //build/board.gni:45
 
 **Current value for `target_cpu = "x64"`:** `["//garnet/packages/prod:drivers-system", "//src/devices/acpi:drivers", "//src/graphics/drivers/msd-intel-gen", "//src/media/audio/bundles:virtual_audio_driver"]`
 
@@ -470,7 +477,7 @@ From //boards/common/x64-common.gni:71
 
 **Overridden from the default:** `[]`
 
-From //build/board.gni:42
+From //build/board.gni:45
 
 ### board_tools
 List of paths to board-specific tools to include in the build output.
@@ -485,7 +492,7 @@ any kind of stable contract for users of the archive.
 
 **Current value (from the default):** `[]`
 
-From //build/board.gni:61
+From //build/board.gni:64
 
 ### board_zedboot_bootfs_labels
 A list of binary labels to include in the zedboot ZBI.
