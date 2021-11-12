@@ -1,8 +1,8 @@
 {
     select: {
         avrcp_connection_failures: [
-            "INSPECT:bt-avrcp.cmx:root/metrics:connection_errors",
             "INSPECT:core/bt-avrcp:root/metrics:connection_errors",
+            "INSPECT:bt-avrcp.cmx:root/metrics:connection_errors",
         ],
         le_connection_failures: "INSPECT:bootstrap/driver_manager:root/bt-host/adapter/low_energy_connection_manager:recent_connection_failures",
     },
