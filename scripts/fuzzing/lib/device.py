@@ -187,7 +187,13 @@ class Device(object):
             return False
         if self._urls == None or refresh:
             self._urls = []
-            out = self.ssh(['cs', 'info']).check_output()
+            cmd = [
+                self.buildenv.abspath(
+                    self.buildenv.fuchsia_dir, '.jiri_root/bin/fx'), 'ffx',
+                'component', 'show', '.'
+            ]
+            out = self.host.create_process(cmd).check_output().strip()
+
             pat = re.compile(r'^URL: (?P<url>.*)')
             for line in str(out).split('\n'):
                 match = pat.match(line)

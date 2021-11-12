@@ -64,8 +64,12 @@ class FactoryTest(TestCaseWithFactory):
         build_dir = self.buildenv.build_dir
         device_addr = '::1'
         cmd = [
-            self.buildenv.abspath('//.jiri_root/bin/fx'), 'ffx', 'target',
-            'list', '--format', 'a',
+            self.buildenv.abspath('//.jiri_root/bin/fx'),
+            'ffx',
+            'target',
+            'list',
+            '--format',
+            'a',
         ]
         self.set_outputs(cmd, [device_addr])
         self.host.touch(

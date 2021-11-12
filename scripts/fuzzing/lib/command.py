@@ -160,32 +160,6 @@ def update_corpus(args, factory):
     factory.host.echo('', build_gn + ' updated.')
 
 
-def _run_tests(pattern, factory):
-    # __file__ is scripts/fuzzing/lib/command.py
-    lib_dir = os.path.dirname(os.path.abspath(__file__))
-    # ../test
-    test_dir = os.path.join(os.path.dirname(lib_dir), 'test')
-    # scripts/fuzzing/lib/../../ => scripts/
-    top_level_dir = os.path.dirname(os.path.dirname(lib_dir))
-    tests = unittest.defaultTestLoader.discover(test_dir, pattern=pattern, top_level_dir=top_level_dir)
-    if factory.host.tracing:
-        os.environ[Host.TRACE_ENVVAR] = '1'
-        verbosity = 2
-    else:
-        verbosity = 1
-    unittest.runner.TextTestRunner(verbosity=verbosity).run(tests)
-
-
-def run_e2e_test(args, factory):
-    """Runs the end-to-end test against a (resolved) fuzzer, if specified."""
-    if args.name:
-        # Use Factory.create_fuzzer to resolve the fuzzer name, prompting the
-        # user if needed.
-        fuzzer = factory.create_fuzzer(args)
-        sys.argv[sys.argv.index(args.name)] = str(fuzzer)
-    _run_tests('test_e2e.py', factory)
-
-
 def measure_coverage(args, factory):
     """Generates a coverage report of specified fuzzers."""
     fuzzer = factory.create_fuzzer(args, include_tests=True)

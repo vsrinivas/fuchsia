@@ -18,17 +18,6 @@ from lib.factory import Factory
 from test_case import TestCaseWithIO
 
 
-# Override test loading so we can run a different set of tests depending on
-# whether a fuzzer was specified as an argument
-def load_tests(loader, standard_tests, pattern):
-    if Factory().parser.parse_args().name:
-        test_class = IntegrationTestSingle
-    else:
-        test_class = IntegrationTestFull
-
-    return unittest.TestLoader().loadTestsFromTestCase(test_class)
-
-
 class IntegrationTest(TestCaseWithIO):
 
     def assertNoErrors(self):
@@ -192,57 +181,3 @@ class IntegrationTestFull(IntegrationTest):
         self.assertOutContains(
             'INFO: libFuzzer starting', 'Test unit written to data/minimized',
             'failed to minimize beyond data/minimized (3 bytes)')
-
-
-class IntegrationTestSingle(IntegrationTest):
-    """Exercise several basic operations with the given fuzzer."""
-
-    def test_single_fuzzer(self):
-        # (Re-)parse the command line arguments, a la main.py.
-        args = self.parser.parse_args()
-
-        # Ensure exactly 1 fuzzer is selected.
-        fuzzer = self.factory.create_fuzzer(args)
-        self.assertNoErrors()
-        args.name = str(fuzzer)
-
-        list_args = self.parser.parse_args(['list', args.name])
-        list_args.command(list_args, self.factory)
-        self.assertOut(
-            ['Found 1 matching fuzzer for "{}":'.format(str(fuzzer))], n=1)
-        self.assertNoErrors()
-
-        start_args = self.parser.parse_args(
-            ['start', '-o', self.temp_dir, args.name])
-        proc = command.start_fuzzer(start_args, self.factory)
-        self.assertNoErrors()
-
-        stop_args = self.parser.parse_args(['stop', args.name])
-        command.stop_fuzzer(stop_args, self.factory)
-        self.assertNoErrors()
-        if proc:
-            proc.wait()
-
-        check_args = self.parser.parse_args(['check', args.name])
-        command.check_fuzzer(check_args, self.factory)
-        self.assertOut(['{}: STOPPED'.format(args.name)], n=1)
-        self.assertNoErrors()
-
-        unit = os.path.join(self.temp_dir, 'unit')
-        with open(unit, 'w') as opened:
-            opened.write('hello world')
-
-        repro_args = self.parser.parse_args(['repro', args.name, unit])
-        command.repro_units(repro_args, self.factory)
-        self.assertNoErrors()
-
-        analyze_args = ['analyze', '-max_total_time=10', args.name]
-        if args.local:
-            analyze_args.append('--local')
-        analyze_args = self.parser.parse_args(analyze_args)
-        command.analyze_fuzzer(analyze_args, self.factory)
-        self.assertNoErrors()
-
-
-if __name__ == '__main__':
-    unittest.main()

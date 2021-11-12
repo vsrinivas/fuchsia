@@ -159,10 +159,10 @@ class TestCaseWithFactory(TestCaseWithIO):
         If a duration is provided, the component will stop running
         after the given duration.
         """
-        cmd = ['cs info']
+        cmd = ['/fuchsia_dir/.jiri_root/bin/fx ffx component show .']
         output = 'URL: {}'.format(url)
         end = None if not duration else self.host.elapsed + duration
-        self.set_outputs(cmd, [output], end=end, reset=False, ssh=True)
+        self.set_outputs(cmd, [output], end=end, reset=False)
         if refresh:
             self.device.has_cs_info(url, refresh)
 

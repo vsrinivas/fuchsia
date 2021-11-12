@@ -17,6 +17,14 @@ tests = [
   "namespace",
 ]
 
+common_test_sources = [
+  "__init__.py",
+  "factory_fake.py",
+  "host_fake.py",
+  "process_fake.py",
+  "test_case.py",
+  "test_env.py",
+]
 foreach(test, tests) {
   _test_target = "${test}_test"
   _test_dir = "${root_out_dir}/test_data/" + get_label_info(_test_target, "dir")
@@ -32,15 +40,7 @@ foreach(test, tests) {
 
   python_host_test(_test_target) {
     main_source = "${test}_test.py"
-    sources = [
-      "__init__.py",
-      "factory_fake.py",
-      "host_fake.py",
-      "process_fake.py",
-      "test_case.py",
-      "test_e2e.py",
-      "test_env.py",
-    ]
+    sources = common_test_sources
     libraries = [ "../lib" ]
     deps = [ ":${_data_target}" ]
     test_dir = _test_dir
@@ -48,12 +48,25 @@ foreach(test, tests) {
   }
 }
 
-# TODO(https://fxbug.dev/73835): Create test targets for `fx fuzz e2etest`.
-
 group("tests") {
   testonly = true
   public_deps = []
   foreach(t, tests) {
     public_deps += [ ":${t}_test($host_toolchain)" ]
   }
+}
+
+# This E2E test is intentionally disconnected from the build graph, as it
+# requires fuzzers to have been built and deployed to a running device and thus
+# is not currently suited to running in CQ.
+python_host_test("e2e_test") {
+  main_source = "test_e2e.py"
+  sources = common_test_sources
+  libraries = [ "../lib" ]
+  extra_args = [ "-v" ]
+}
+
+group("e2e_tests") {
+  testonly = true
+  public_deps = [ ":e2e_test($host_toolchain)" ]
 }

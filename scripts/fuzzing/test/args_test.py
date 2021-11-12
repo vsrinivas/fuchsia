@@ -43,7 +43,6 @@ class ArgsTest(TestCaseWithFactory):
             '  analyze             Report coverage info for a given corpus and/or dictionary.',
             '  check               Check on the status of one or more fuzzers.',
             '  coverage            Generate a coverage report for a test.',
-            '  e2etest             Run the end-to-end test for this tool.',
             '  help                Print this message and exit.',
             '  list                List available fuzzers in the current build.',
             '  repro               Reproduce fuzzer findings by replaying test units.',
@@ -568,28 +567,6 @@ class ArgsTest(TestCaseWithFactory):
             name='name',
             libfuzzer_opts={'output': 'foo'},
             subprocess_args=['--sub', '-sub=val'])
-
-    def test_e2e_test_parser(self):
-        self.assertParseHelp(
-            ['help', 'e2etest'], [
-                '',
-                'Usage: fx fuzz e2etest [OPTIONS] [NAME]',
-                '',
-                'Run the end-to-end test for this tool. If a fuzzer is named, it',
-                'will be run. If none is specified, several example fuzzers will be',
-                'used. This requires the fuzzer(s) to have already been built and',
-                'deployed to a running device.',
-                '',
-                'Arguments:',
-                '  NAME                Fuzzer name to match.  This can be part of the package',
-                '                      and/or target name, e.g. "foo", "bar", and "foo/bar" all',
-                '                      match "foo_package/bar_target".',
-                '',
-                'Options:',
-                '  -l,--local          Exclude corpus elements from Clusterfuzz.',
-                '  -v,--verbose        Display additional output.',
-                '',
-            ])
 
     def test_coverage_parser(self):
         self.assertParseHelp(
