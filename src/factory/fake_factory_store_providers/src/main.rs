@@ -17,13 +17,14 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{self as syslog, macros::*},
-    fuchsia_vfs_pseudo_fs::{
-        directory::entry::DirectoryEntry, file::simple::read_only_str, tree_builder::TreeBuilder,
-    },
     futures::{lock::Mutex, prelude::*},
     serde_json::from_reader,
-    std::{collections::HashMap, fs::File, iter, str::FromStr, sync::Arc},
+    std::{collections::HashMap, fs::File, str::FromStr, sync::Arc},
     structopt::StructOpt,
+    vfs::{
+        directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
+        file::vmo::asynchronous::read_only_const, tree_builder::TreeBuilder,
+    },
 };
 
 type LockedDirectoryProxy = Arc<Mutex<DirectoryProxy>>;
@@ -53,25 +54,21 @@ fn start_test_dir(config_path: &str) -> Result<DirectoryProxy, Error> {
     for (name, contents) in files.into_iter() {
         tree.add_entry(
             &name.split("/").collect::<Vec<&str>>(),
-            read_only_str(move || Ok(contents.to_string())),
+            read_only_const(contents.as_bytes()),
         )
         .unwrap();
     }
 
-    let mut test_dir = tree.build();
+    let test_dir = tree.build();
 
     let (test_dir_proxy, test_dir_service) = fidl::endpoints::create_proxy::<DirectoryMarker>()?;
     test_dir.open(
+        ExecutionScope::new(),
         OPEN_RIGHT_READABLE,
         MODE_TYPE_DIRECTORY,
-        &mut iter::empty(),
+        vfs::path::Path::dot(),
         test_dir_service.into_channel().into(),
     );
-
-    fasync::Task::spawn(async move {
-        let _ = test_dir.await;
-    })
-    .detach();
 
     Ok(test_dir_proxy)
 }
