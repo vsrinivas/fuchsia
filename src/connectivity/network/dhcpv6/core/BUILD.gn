@@ -18,7 +18,10 @@ rustc_library("core") {
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:thiserror",
   ]
-  test_deps = [ "//src/connectivity/lib/net-declare" ]
+  test_deps = [
+    "//src/connectivity/lib/net-declare",
+    "//third_party/rust_crates:test-case",
+  ]
 
   sources = [
     "src/client.rs",

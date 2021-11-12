@@ -1195,7 +1195,10 @@ impl<R: Rng> ClientStateMachine<R> {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, net_declare::std_ip_v6, packet::ParsablePacket, rand::rngs::mock::StepRng};
+    use {
+        super::*, net_declare::std_ip_v6, packet::ParsablePacket, rand::rngs::mock::StepRng,
+        test_case::test_case,
+    };
 
     #[test]
     fn test_information_request_and_reply() {
@@ -1293,101 +1296,133 @@ mod tests {
         configured_addresses
     }
 
-    #[test]
-    fn test_solicit() {
-        // Try to start the client in stateful mode with different address
-        // configurations.
-        for (address_count, preferred_addresses) in vec![
-            (1, Vec::new()),
-            (2, vec![std_ip_v6!("::ffff:c00a:2ff")]),
-            (2, vec![std_ip_v6!("::ffff:c00a:2ff"), std_ip_v6!("::ffff:c00a:3ff")]),
-        ] {
-            let client_id = v6::duid_uuid();
-            let mut configured_addresses: HashMap<u32, Option<Ipv6Addr>> = HashMap::new();
-            let addresses: Vec<Option<Ipv6Addr>> =
-                preferred_addresses.iter().map(|&addr| Some(addr)).collect();
-            let addresses =
-                addresses.into_iter().chain(std::iter::repeat(None)).take(address_count);
-            for (iaid, addr) in (0..).zip(addresses) {
-                let entry = configured_addresses.insert(iaid, addr);
-                assert_matches!(entry, None);
+    /// Creates a stateful client and asserts that:
+    ///    - the client is started in ServerDiscovery state
+    ///    - the state contain the expected value
+    ///    - the actions are correct
+    ///    - the Solicit message is correct
+    ///
+    /// Returns the client in ServerDiscovery state and the actions associated
+    /// with transitioning to this state.
+    fn start_server_discovery<R: Rng>(
+        transaction_id: [u8; 3],
+        client_id: [u8; CLIENT_ID_LEN],
+        configured_addresses: HashMap<u32, Option<Ipv6Addr>>,
+        options_to_request: Vec<v6::OptionCode>,
+        rng: R,
+    ) -> (ClientStateMachine<R>, Actions) {
+        let (client, actions) = ClientStateMachine::start_stateful(
+            transaction_id,
+            client_id.clone(),
+            configured_addresses.clone(),
+            options_to_request.clone(),
+            rng,
+        );
+
+        assert_matches!(&client.state,
+            Some(ClientState::ServerDiscovery(ServerDiscovery {
+                client_id: got_client_id,
+                configured_addresses: got_configured_addresses,
+                first_solicit_time: Some(_),
+                retrans_timeout: INITIAL_SOLICIT_TIMEOUT,
+                solicit_max_rt: SOLICIT_MAX_RT,
+                collected_advertise,
+                collected_sol_max_rt,
+            })) if collected_advertise.is_empty() &&
+                   collected_sol_max_rt.is_empty() &&
+                   *got_client_id == client_id &&
+                   *got_configured_addresses == configured_addresses
+        );
+
+        // Start of server discovery should send a solicit and schedule a
+        // retransmission timer.
+        let buf = match &actions[..] {
+            [Action::SendMessage(buf), Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_SOLICIT_TIMEOUT)] => {
+                buf
             }
+            actions => panic!("unexpected actions {:?}", actions),
+        };
 
-            let (client, actions) = ClientStateMachine::start_stateful(
-                [0, 1, 2],
-                client_id.clone(),
-                configured_addresses,
-                Vec::new(),
-                StepRng::new(std::u64::MAX / 2, 0),
-            );
+        let mut buf = &buf[..];
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        assert_eq!(msg.msg_type(), v6::MessageType::Solicit);
 
-            assert_matches!(
-                client.state,
-                Some(ClientState::ServerDiscovery(ServerDiscovery {
-                    client_id: ref state_client_id,
-                    first_solicit_time: Some(_),
-                    retrans_timeout: INITIAL_SOLICIT_TIMEOUT,
-                    ..
-                })) if *state_client_id == client_id
-            );
-
-            // Start of server discovery should send a solicit and schedule a
-            // retransmission timer.
-            let buf = match &actions[..] {
-                [Action::SendMessage(buf), Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_SOLICIT_TIMEOUT)] => {
-                    buf
+        // The solicit should contain the expected options.
+        let (mut non_ia_opts, ia_opts, other) = msg.options().fold(
+            (Vec::new(), Vec::new(), Vec::new()),
+            |(mut non_ia_opts, mut ia_opts, mut other), opt| {
+                match opt {
+                    v6::ParsedDhcpOption::ClientId(_)
+                    | v6::ParsedDhcpOption::ElapsedTime(_)
+                    | v6::ParsedDhcpOption::Oro(_) => non_ia_opts.push(opt),
+                    v6::ParsedDhcpOption::Iana(iana_data) => ia_opts.push(iana_data),
+                    opt => other.push(opt),
                 }
-                actions => panic!("unexpected actions {:?}", actions),
-            };
+                (non_ia_opts, ia_opts, other)
+            },
+        );
+        let option_sorter: fn(
+            &v6::ParsedDhcpOption<'_>,
+            &v6::ParsedDhcpOption<'_>,
+        ) -> std::cmp::Ordering =
+            |opt1, opt2| (u16::from(opt1.code())).cmp(&(u16::from(opt2.code())));
 
-            let mut buf = &buf[..];
-            let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
-            assert_eq!(msg.msg_type(), v6::MessageType::Solicit);
+        non_ia_opts.sort_by(option_sorter);
+        let mut expected_oro = vec![v6::OptionCode::SolMaxRt];
+        expected_oro.extend_from_slice(&options_to_request);
+        let mut expected_non_ia_opts = vec![
+            v6::ParsedDhcpOption::ClientId(&client_id),
+            v6::ParsedDhcpOption::ElapsedTime(0),
+            v6::ParsedDhcpOption::Oro(expected_oro),
+        ];
+        expected_non_ia_opts.sort_by(option_sorter);
+        assert_eq!(non_ia_opts, expected_non_ia_opts);
 
-            // The solicit should contain the expected options.
-            let mut got_options = msg
-                .options()
-                .filter(|opt| {
-                    vec![v6::OptionCode::ClientId, v6::OptionCode::ElapsedTime, v6::OptionCode::Oro]
-                        .contains(&opt.code())
-                })
-                .collect::<Vec<_>>();
-            let option_sorter: fn(
-                &v6::ParsedDhcpOption<'_>,
-                &v6::ParsedDhcpOption<'_>,
-            ) -> std::cmp::Ordering =
-                |opt1, opt2| (u16::from(opt1.code())).cmp(&(u16::from(opt2.code())));
-
-            got_options.sort_by(option_sorter);
-            let mut expected_options = vec![
-                v6::ParsedDhcpOption::ClientId(&client_id),
-                v6::ParsedDhcpOption::ElapsedTime(0),
-                v6::ParsedDhcpOption::Oro(vec![v6::OptionCode::SolMaxRt]),
-            ];
-            expected_options.sort_by(option_sorter);
-            assert_eq!(got_options, expected_options);
-
-            let iana_options =
-                msg.options().filter(|opt| opt.code() == v6::OptionCode::Iana).collect::<Vec<_>>();
-            assert_eq!(address_count, iana_options.len());
-            let mut got_preferred_addresses = Vec::new();
-            for option in iana_options {
-                let iana_data = if let v6::ParsedDhcpOption::Iana(iana_data) = option {
-                    iana_data
-                } else {
-                    continue;
-                };
-                // Each IANA option should at most one IA Address option.
-                assert!(iana_data.iter_options().count() <= 1);
-                for iana_option in iana_data.iter_options() {
-                    if let v6::ParsedDhcpOption::IaAddr(iaaddr_data) = iana_option {
-                        got_preferred_addresses.push(iaaddr_data.addr());
+        let mut solicited_addresses = HashMap::new();
+        for iana_data in ia_opts.iter() {
+            if iana_data.iter_options().count() == 0 {
+                assert_eq!(solicited_addresses.insert(iana_data.iaid(), None), None);
+                continue;
+            }
+            for iana_option in iana_data.iter_options() {
+                match iana_option {
+                    v6::ParsedDhcpOption::IaAddr(iaaddr_data) => {
+                        assert_eq!(
+                            solicited_addresses.insert(iana_data.iaid(), Some(iaaddr_data.addr())),
+                            None
+                        );
                     }
+                    option => panic!("unexpected option {:?}", option),
                 }
             }
-            got_preferred_addresses.sort();
-            assert_eq!(got_preferred_addresses, preferred_addresses);
         }
+        assert_eq!(solicited_addresses, configured_addresses);
+        assert_eq!(&other, &[]);
+
+        (client, actions)
+    }
+
+    // Test starting the client in stateful mode with different address
+    // configurations.
+    #[test_case(1, Vec::new(), Vec::new())]
+    #[test_case(2, vec![std_ip_v6!("::ffff:c00a:1ff")], vec![v6::OptionCode::DnsServers])]
+    #[test_case(
+       2,
+       vec![std_ip_v6!("::ffff:c00a:2ff"), std_ip_v6!("::ffff:c00a:3ff")],
+       vec![v6::OptionCode::DnsServers])]
+    fn test_solicit(
+        address_count: u32,
+        preferred_addresses: Vec<Ipv6Addr>,
+        options_to_request: Vec<v6::OptionCode>,
+    ) {
+        // The client and actions are checked inside `start_server_discovery`
+        let (_client, _actions) = start_server_discovery(
+            [0, 1, 2],
+            v6::duid_uuid(),
+            to_configured_addresses(address_count, preferred_addresses),
+            options_to_request,
+            StepRng::new(std::u64::MAX / 2, 0),
+        );
     }
 
     impl IdentityAssociation {
@@ -1580,20 +1615,12 @@ mod tests {
     #[test]
     fn test_receive_complete_advertise_with_max_preference() {
         let client_id = v6::duid_uuid();
-        let (mut client, _actions) = ClientStateMachine::start_stateful(
+        let (mut client, _actions) = start_server_discovery(
             [0, 1, 2],
             client_id.clone(),
             to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
-        );
-
-        assert_matches!(
-            client.state,
-            Some(ClientState::ServerDiscovery(ServerDiscovery {
-                retrans_timeout: INITIAL_SOLICIT_TIMEOUT,
-                ..
-            }))
         );
 
         let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
@@ -1640,27 +1667,19 @@ mod tests {
         // The client should transition to Requesting when receiving a complete
         // advertise with preference 255.
         let actions = client.handle_message_receive(msg);
-        assert_matches!(client.state, Some(ClientState::Requesting(Requesting { .. })));
+        assert_matches!(client.state, Some(ClientState::Requesting(Requesting {})));
         assert_eq!(actions, [Action::CancelTimer(ClientTimerType::Retransmission)]);
     }
 
     #[test]
     fn test_select_first_server_while_retransmitting() {
         let client_id = v6::duid_uuid();
-        let (mut client, _actions) = ClientStateMachine::start_stateful(
+        let (mut client, _actions) = start_server_discovery(
             [0, 1, 2],
             client_id.clone(),
             to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
-        );
-
-        assert_matches!(
-            client.state,
-            Some(ClientState::ServerDiscovery(ServerDiscovery {
-                retrans_timeout: INITIAL_SOLICIT_TIMEOUT,
-                ..
-            }))
         );
 
         // On transmission timeout, if no advertise were received the client
@@ -1676,7 +1695,18 @@ mod tests {
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         assert_eq!(msg.msg_type(), v6::MessageType::Solicit);
         assert_eq!(*timeout, 2 * INITIAL_SOLICIT_TIMEOUT);
-        assert_matches!(client.state, Some(ClientState::ServerDiscovery(ServerDiscovery { .. })));
+        assert_matches!(
+            &client.state,
+            Some(ClientState::ServerDiscovery(ServerDiscovery {
+                client_id: _,
+                configured_addresses: _,
+                first_solicit_time: _,
+                retrans_timeout: _,
+                solicit_max_rt: _,
+                collected_advertise,
+                collected_sol_max_rt: _,
+            })) if collected_advertise.is_empty()
+        );
 
         let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
             std_ip_v6!("::ffff:c00a:5ff"),
