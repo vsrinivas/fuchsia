@@ -3291,6 +3291,139 @@ TEST_F(FlatlandTest, SetOpacityTestCases) {
   }
 }
 
+TEST_F(FlatlandTest, CreateFilledRectErrorTest) {
+  const ContentId kInvalidId = {0};
+
+  // Zero is not a valid content ID.
+  {
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
+    flatland->CreateFilledRect(kInvalidId);
+    PRESENT(flatland, false);
+  }
+
+  // Same ID can't be imported twice.
+  {
+    const ContentId kId = {1};
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
+    flatland->CreateFilledRect(kId);
+    PRESENT(flatland, true);
+
+    flatland->CreateFilledRect(kId);
+    PRESENT(flatland, false);
+  }
+
+  // Test SetSolidFill function.
+  {
+    const ContentId kId2 = {2};
+
+    // Can't call SetSolidFill on invalid ID.
+    {
+      std::shared_ptr<Flatland> flatland = CreateFlatland();
+      flatland->SetSolidFill(kInvalidId, {1, 0, 0, 1}, {20, 30});
+      PRESENT(flatland, false);
+    }
+
+    // Can't call SetSolidFill on ID that hasn't been created.
+    {
+      std::shared_ptr<Flatland> flatland = CreateFlatland();
+      flatland->SetSolidFill(kId2, {1, 0, 0, 1}, {20, 30});
+      PRESENT(flatland, false);
+    }
+
+    // Now it should work after creating the filled rect first.
+    {
+      std::shared_ptr<Flatland> flatland = CreateFlatland();
+      flatland->CreateFilledRect(kId2);
+      flatland->SetSolidFill(kId2, {1, 0, 0, 1}, {20, 30});
+      PRESENT(flatland, true);
+    }
+  }
+
+  // Test ReleaseFilledRect function
+  {
+    const ContentId kId3 = {3};
+
+    // Cannot release an invalid ID.
+    {
+      std::shared_ptr<Flatland> flatland = CreateFlatland();
+      flatland->ReleaseFilledRect(kInvalidId);
+      PRESENT(flatland, false);
+    }
+
+    // Cannot release an ID that hasn't been created.
+    {
+      std::shared_ptr<Flatland> flatland = CreateFlatland();
+      flatland->ReleaseFilledRect(kId3);
+      PRESENT(flatland, false);
+    }
+
+    // Now it should work once we create it first.
+    {
+      std::shared_ptr<Flatland> flatland = CreateFlatland();
+      flatland->CreateFilledRect(kId3);
+      flatland->ReleaseFilledRect(kId3);
+      PRESENT(flatland, true);
+
+      // And now we should be able to reuse the same id.
+      flatland->CreateFilledRect(kId3);
+      PRESENT(flatland, true);
+    }
+  }
+}
+
+// Make sure that the data for filled rects gets passed along
+// correctly to the uberstructs.
+TEST_F(FlatlandTest, FilledRectUberstructTest) {
+  const ContentId kFilledRectId = {1};
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
+
+  // Create constants.
+  const uint32_t kFilledWidth = 50;
+  const uint32_t kFilledHeight = 100;
+
+  // Create a filled rect and set its color to magenta with a size
+  // of (50, 100);
+  flatland->CreateFilledRect(kFilledRectId);
+  flatland->SetSolidFill(kFilledRectId, {1, 0, 1, 1}, {kFilledWidth, kFilledHeight});
+  PRESENT(flatland, true);
+
+  // Create a transform, make it the root transform, and attach the
+  // solid filled rect.
+  const TransformId kTransformId = {2};
+
+  flatland->CreateTransform(kTransformId);
+  flatland->SetRootTransform(kTransformId);
+  flatland->SetContent(kTransformId, kFilledRectId);
+  PRESENT(flatland, true);
+
+  // Get the filled rect content handle.
+  const auto maybe_rect_handle = flatland->GetContentHandle(kFilledRectId);
+  ASSERT_TRUE(maybe_rect_handle.has_value());
+  const auto rect_handle = maybe_rect_handle.value();
+
+  // Now find the data in the uber struct.
+  auto uber_struct = GetUberStruct(flatland.get());
+  EXPECT_EQ(uber_struct->local_topology.back().handle, rect_handle);
+
+  // Grab the metadata for the handle.
+  auto image_kv = uber_struct->images.find(rect_handle);
+  EXPECT_NE(image_kv, uber_struct->images.end());
+
+  // Make sure the color matches the above color.
+  EXPECT_EQ(image_kv->second.multiply_color[0], 1.0);
+  EXPECT_EQ(image_kv->second.multiply_color[1], 0.0);
+  EXPECT_EQ(image_kv->second.multiply_color[2], 1.0);
+  EXPECT_EQ(image_kv->second.multiply_color[3], 1.0);
+
+  // Grab the data for the matrix.
+  auto matrix_kv = uber_struct->local_matrices.find(rect_handle);
+  EXPECT_NE(matrix_kv, uber_struct->local_matrices.end());
+
+  // Make sure the values match.
+  EXPECT_EQ(static_cast<uint32_t>(matrix_kv->second[0][0]), kFilledWidth);
+  EXPECT_EQ(static_cast<uint32_t>(matrix_kv->second[1][1]), kFilledHeight);
+}
+
 TEST_F(FlatlandTest, SetImageSampleRegionTestCases) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
   const TransformId kTransformId = {1};

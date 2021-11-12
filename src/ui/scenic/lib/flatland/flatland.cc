@@ -874,6 +874,94 @@ void Flatland::SetImageDestinationSize(ContentId image_id, SizeU size) {
   matrices_[content_kv->second].SetScale(size);
 }
 
+void Flatland::CreateFilledRect(ContentId rect_id) {
+  if (rect_id.value == kInvalidId) {
+    error_reporter_->ERROR() << "CreateFilledRect called with rect_id 0";
+    ReportBadOperationError();
+    return;
+  }
+
+  if (content_handles_.count(rect_id.value)) {
+    error_reporter_->ERROR() << "CreateFilledRect called with pre-existing content id "
+                             << rect_id.value;
+    ReportBadOperationError();
+    return;
+  }
+
+  allocation::ImageMetadata metadata;
+  // allocation::kInvalidImageId is overloaded in the renderer to signal that a
+  // default 1x1 white texture should be applied to this rectangle.
+  metadata.identifier = allocation::kInvalidImageId;
+  metadata.is_opaque = false;
+
+  // Now that we've successfully been able to import the image into the importers,
+  // we can now create a handle for it in the transform graph, and add the metadata
+  // to our map.
+  auto handle = transform_graph_.CreateTransform();
+  content_handles_[rect_id.value] = handle;
+  image_metadatas_[handle] = metadata;
+}
+
+void Flatland::SetSolidFill(ContentId rect_id, fuchsia::ui::composition::ColorRgba color,
+                            fuchsia::math::SizeU size) {
+  if (rect_id.value == kInvalidId) {
+    error_reporter_->ERROR() << "SetSolidFill called with rect_id 0";
+    ReportBadOperationError();
+    return;
+  }
+
+  auto content_kv = content_handles_.find(rect_id.value);
+
+  if (content_kv == content_handles_.end()) {
+    error_reporter_->ERROR() << "SetSolidFill called with non-existent rect_id " << rect_id.value;
+    ReportBadOperationError();
+    return;
+  }
+
+  auto image_kv = image_metadatas_.find(content_kv->second);
+  if (image_kv == image_metadatas_.end()) {
+    error_reporter_->ERROR() << "Missing medatada for rect with id  " << rect_id.value;
+    ReportBadOperationError();
+    return;
+  }
+
+  image_kv->second.multiply_color = {color.red, color.green, color.blue, color.alpha};
+  matrices_[content_kv->second].SetScale(size);
+}
+
+void Flatland::ReleaseFilledRect(ContentId rect_id) {
+  if (rect_id.value == kInvalidId) {
+    error_reporter_->ERROR() << "ReleaseFilledRect called with rect_id zero";
+    ReportBadOperationError();
+    return;
+  }
+
+  auto content_kv = content_handles_.find(rect_id.value);
+
+  if (content_kv == content_handles_.end()) {
+    error_reporter_->ERROR() << "ReleaseFilledRect failed, rect_id " << rect_id.value
+                             << " not found";
+    ReportBadOperationError();
+    return;
+  }
+
+  auto image_kv = image_metadatas_.find(content_kv->second);
+
+  if (image_kv == image_metadatas_.end()) {
+    error_reporter_->ERROR() << "ReleaseFilledRect failed, content_id " << rect_id.value
+                             << " has no metadata.";
+    ReportBadOperationError();
+    return;
+  }
+
+  bool erased_from_graph = transform_graph_.ReleaseTransform(content_kv->second);
+  FX_DCHECK(erased_from_graph);
+
+  // Even though the handle is released, it may still be referenced by client Transforms. The
+  // image_metadatas_ map preserves the entry until it shows up in the dead_transforms list.
+  content_handles_.erase(rect_id.value);
+}
+
 void Flatland::SetOpacity(TransformId transform_id, float val) {
   if (transform_id.value == kInvalidId) {
     error_reporter_->ERROR() << "SetOpacity called with transform_id 0";

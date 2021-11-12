@@ -366,9 +366,47 @@ bool DisplayCompositor::SetRenderDataOnDisplay(const RenderData& data) {
                    std::vector<uint64_t>(layers.begin(), layers.begin() + num_images));
 
   for (uint32_t i = 0; i < num_images; i++) {
-    ApplyLayerImage(layers[i], data.rectangles[i], data.images[i], /*wait_id*/ 0, /*signal_id*/ 0);
+    if (data.images[i].identifier == allocation::kInvalidImageId) {
+      ApplyLayerColor(layers[i], data.rectangles[i], data.images[i]);
+    } else {
+      ApplyLayerImage(layers[i], data.rectangles[i], data.images[i], /*wait_id*/ 0,
+                      /*signal_id*/ 0);
+    }
   }
   return true;
+}
+
+void DisplayCompositor::ApplyLayerColor(uint32_t layer_id, escher::Rectangle2D rectangle,
+                                        allocation::ImageMetadata image) {
+  std::unique_lock<std::mutex> lock(lock_);
+  auto [src, dst] = DisplaySrcDstFrames::New(rectangle, image);
+
+  // TODO(fxbug.dev/77993): The display controller pathway currently does not accurately take into
+  // account rotation, even though the gpu rendering path does. While the gpu renderer can directly
+  // make use of UV rotation to represent rotations, the display controller, making only use of a
+  // source_rect (image sample region), will give false results with this current setup if a
+  // rotation has been applied to the rectangle. On top of that, the current rectangle struct gives
+  // no indication that it has been rotated, as the rotation is stored implicitly, meaning that we
+  // cannot currently exit out of this pathway early if rotation is caught, nor can we accurately
+  // choose the right transform. Therefore we will need explicit rotation data to be plumbed down to
+  // be able to choose the right enum. This will be easier to do once we settle on the proper way to
+  // handle transforms/matrices going forward.
+  auto transform = fuchsia::hardware::display::Transform::IDENTITY;
+
+  // We have to convert the image_metadata's multiply color, which is an array of normalized
+  // floating point values, to an unnormalized array of uint8_ts in the range 0-255.
+  std::vector<uint8_t> col = {static_cast<uint8_t>(255 * image.multiply_color[0]),
+                              static_cast<uint8_t>(255 * image.multiply_color[1]),
+                              static_cast<uint8_t>(255 * image.multiply_color[2]),
+                              static_cast<uint8_t>(255 * image.multiply_color[3])};
+
+  (*display_controller_.get())->SetLayerColorConfig(layer_id, ZX_PIXEL_FORMAT_ARGB_8888, col);
+  (*display_controller_.get())->SetLayerPrimaryPosition(layer_id, transform, src, dst);
+
+  auto alpha_mode = image.is_opaque ? fuchsia::hardware::display::AlphaMode::DISABLE
+                                    : fuchsia::hardware::display::AlphaMode::PREMULTIPLIED;
+
+  (*display_controller_.get())->SetLayerPrimaryAlpha(layer_id, alpha_mode, image.multiply_color[3]);
 }
 
 void DisplayCompositor::ApplyLayerImage(uint32_t layer_id, escher::Rectangle2D rectangle,

@@ -28,6 +28,13 @@ type Orientation = strict enum {
     CCW_270_DEGREES = 4;
 };
 
+type ColorRgba = struct {
+    red float32;
+    green float32;
+    blue float32;
+    alpha float32;
+};
+
 /// The return type of [`GetLayout`]. This table contains most of the information necessary
 /// for a client to decide how to layout their content in a Flatland instance. This data may be
 /// provided to the client before the command that creates the View is presented, so that the
@@ -674,6 +681,32 @@ protocol Flatland {
     SetImageDestinationSize(struct {
         image_id ContentId;
         size fuchsia.math.SizeU;
+    });
+
+
+    /// Creates a solid-color rectangle. By default a filled-rect does not have a defined
+    /// color or size. It is necessary to call |SetSolidFill| to specify a color and size
+    /// before a filled rect can be used for rendering. Not doing so will result the
+    // rectangle having a default size of (0,0) and so it will not show up when rendering.
+    CreateFilledRect(resource struct {
+        rect_id ContentId;
+    });
+
+
+    /// Defines the color and size of a filled rect. |rect_id| must refer to content that
+    /// was created via a call to CreateFilledRect. The color is not premultiplied.
+    SetSolidFill(resource struct {
+        rect_id ContentId;
+        color ColorRgba;
+        size fuchsia.math.SizeU;
+    });
+
+    /// Automatically garbage collects the rectangle when it is no longer needed for
+    /// rendering. |rect_id| must have been instantiated with a call to
+    /// |CreateFilledRect|. Once released, the ID immediately goes out of scope and is free
+    /// to be used again.
+    ReleaseFilledRect(struct {
+        rect_id ContentId;
     });
 
     // ***** Content management *****

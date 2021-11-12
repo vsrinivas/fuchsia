@@ -133,6 +133,13 @@ class Flatland : public fuchsia::ui::composition::Flatland,
   // |fuchsia::ui::composition::Flatland|
   void SetImageDestinationSize(ContentId image_id, fuchsia::math::SizeU size) override;
   // |fuchsia::ui::composition::Flatland|
+  void CreateFilledRect(ContentId rect_id) override;
+  // |fuchsia::ui::composition::Flatland|
+  void SetSolidFill(ContentId rect_id, fuchsia::ui::composition::ColorRgba color,
+                    fuchsia::math::SizeU size) override;
+  // |fuchsia::ui::composition::Flatland|
+  void ReleaseFilledRect(ContentId rect_id) override;
+  // |fuchsia::ui::composition::Flatland|
   void SetOpacity(TransformId transform_id, float val) override;
   // |fuchsia::ui::composition::Flatland|
   void SetContent(TransformId transform_id, ContentId content_id) override;
