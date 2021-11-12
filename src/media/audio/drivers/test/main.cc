@@ -84,7 +84,7 @@ void RegisterTests(bool expect_audio_core_connected) {
   }
 }
 
-};  // namespace media::audio::drivers::test
+}  // namespace media::audio::drivers::test
 
 int main(int argc, char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);

@@ -33,4 +33,4 @@ AudioDeviceEnumeratorStub::TakeChannel() {
   return std::move(channel_);
 }
 
-};  // namespace media::audio::drivers::test
+}  // namespace media::audio::drivers::test

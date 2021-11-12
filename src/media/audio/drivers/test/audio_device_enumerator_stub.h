@@ -39,6 +39,6 @@ class AudioDeviceEnumeratorStub : public fuchsia::media::AudioDeviceEnumerator {
   fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> channel_;
 };
 
-};  // namespace media::audio::drivers::test
+}  // namespace media::audio::drivers::test
 
 #endif  // SRC_MEDIA_AUDIO_DRIVERS_TEST_AUDIO_DEVICE_ENUMERATOR_STUB_H_
