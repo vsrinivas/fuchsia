@@ -9,6 +9,16 @@
                 // non-hermetic tests from this collection.
                 "/core/test_manager/tests:**",
 
+                // The v2 Flutter and Dart JIT runners (which are not used for
+                // release builds) execute VMOs in order to run Flutter and
+                // Dart components.
+                // TODO(fxb/88626): These runners are configured in
+                // experiences.git (a product) and references to them do not
+                // belong in fuchsia.git (the platform). Add support for
+                // per-product policies and remove the runners from here.
+                "/core/session-manager/session:session/dart_jit_runner",
+                "/core/session-manager/session:session/flutter_jit_runner",
+
                 // We allow tests to access ambient executability in the same
                 // way that we're permissive with use of the components v1
                 // deprecated-ambient-replace-as-executable feature and
