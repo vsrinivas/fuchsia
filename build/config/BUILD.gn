@@ -549,6 +549,7 @@ config("default_warnings") {
     "-Wconversion",
     "-Wimplicit-fallthrough",
     "-Wnewline-eof",
+    "-Wstrict-prototypes",
     "-Wwrite-strings",
     "-Wno-sign-conversion",
     "-Wno-unused-parameter",
