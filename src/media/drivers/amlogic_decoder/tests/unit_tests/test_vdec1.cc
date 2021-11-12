@@ -38,8 +38,8 @@ class FakeOwner : public DecoderCore::Owner {
   void set_device_type(DeviceType type) { device_type_ = type; }
 
   MmioRegisters* mmio() override { return mmio_; }
-  void UngateClocks() override { clocks_gated_ = false; };
-  void GateClocks() override { clocks_gated_ = true; };
+  void UngateClocks() override { clocks_gated_ = false; }
+  void GateClocks() override { clocks_gated_ = true; }
   zx::unowned_bti bti() override { return zx::unowned_bti(bti_); }
   DeviceType device_type() override { return device_type_; }
   fuchsia::sysmem::AllocatorSyncPtr& SysmemAllocatorSyncPtr() override { return allocator_; }
@@ -161,7 +161,6 @@ TEST_F(Vdec1UnitTest, PowerOnSm1) {
   EXPECT_TRUE(fake_owner.clocks_gated());
   EXPECT_EQ(0xffffffffu, AoRtiGenPwrIso0::Get().ReadFrom(fake_owner.mmio()->aobus).reg_value());
   EXPECT_EQ(0xffffffffu, AoRtiGenPwrSleep0::Get().ReadFrom(fake_owner.mmio()->aobus).reg_value());
-
 }
 
 }  // namespace test

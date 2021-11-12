@@ -60,7 +60,7 @@ class FakeOwner : public VideoDecoder::Owner {
   zx::unowned_bti bti() override { return video_->bti(); }
   DeviceType device_type() override { return device_type_; }
   FirmwareBlob* firmware_blob() override { return &blob_; }
-  bool is_tee_available() override { return false; };
+  bool is_tee_available() override { return false; }
   zx_status_t TeeSmcLoadVideoFirmware(FirmwareBlob::FirmwareType index,
                                       FirmwareBlob::FirmwareVdecLoadMode vdec) override {
     return ZX_ERR_NOT_SUPPORTED;
