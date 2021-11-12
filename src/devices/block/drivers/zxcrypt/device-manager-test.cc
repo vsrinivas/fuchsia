@@ -58,15 +58,6 @@ zx::vmo GetInspectVMOHandle(const fbl::unique_fd& devfs_root) {
   return zx::vmo(out_vmo);
 }
 
-zx_status_t WaitForDeviceRemoval(int dirfd, int event, const char* fn, void* cookie) {
-  std::condition_variable* cv = reinterpret_cast<std::condition_variable*>(cookie);
-  if (event == WATCH_EVENT_REMOVE_FILE) {
-    cv->notify_one();
-    return ZX_ERR_STOP;
-  }
-  return ZX_OK;
-}
-
 TEST(ZxcryptInspect, ExportsGuid) {
   // Zxcrypt volume manager requires this.
   driver_integration_test::IsolatedDevmgr devmgr;
@@ -113,23 +104,7 @@ TEST(ZxcryptInspect, ExportsGuid) {
   std::string guid = GetInspectInstanceGuid(GetInspectVMOHandle(devmgr.devfs_root()));
   ASSERT_FALSE(guid.empty());
 
-  // Seal and confirm that the GUID is gone. Note that because Seal() is async,
-  // we wait for the block device to disappear to avoid flakes before querying inspect.
-  std::mutex mu;
-  auto device_removed = std::condition_variable();
-  auto watcher = std::thread([devfs_root = devmgr.devfs_root().get(), &device_removed]() {
-    int fd = -1;
-    fdio_open_fd_at(devfs_root, "class/block/", O_DIRECTORY | O_RDONLY, &fd);
-    fdio_watch_directory(fd, WaitForDeviceRemoval, ZX_TIME_INFINITE, &device_removed);
-    close(fd);
-  });
   ASSERT_OK(volume_client.Seal());
-  {
-    std::unique_lock<std::mutex> lock(mu);
-    device_removed.wait(lock);
-  }
-  watcher.join();
-  ASSERT_TRUE(GetInspectInstanceGuid(GetInspectVMOHandle(devmgr.devfs_root())).empty());
 
   // Ensure we turn down the zxcrypt manager before we free up the ramdisk.
   vol_mgr.reset();
