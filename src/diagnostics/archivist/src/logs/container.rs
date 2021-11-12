@@ -16,10 +16,8 @@ use crate::{
 };
 use diagnostics_data::{BuilderArgs, LogsData, LogsDataBuilder};
 use fidl::prelude::*;
-use fidl_fuchsia_diagnostics::{Interest, StreamMode};
-use fidl_fuchsia_logger::{
-    LogInterestSelector, LogSinkControlHandle, LogSinkRequest, LogSinkRequestStream,
-};
+use fidl_fuchsia_diagnostics::{Interest, LogInterestSelector, StreamMode};
+use fidl_fuchsia_logger::{LogSinkControlHandle, LogSinkRequest, LogSinkRequestStream};
 use fuchsia_async::Task;
 use fuchsia_zircon as zx;
 use futures::{channel::mpsc, prelude::*};

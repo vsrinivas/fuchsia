@@ -26,10 +26,9 @@ use std::thread;
 use std::time;
 
 // Include the generated FIDL bindings for the `Logger` service.
-use fidl_fuchsia_diagnostics::{Interest, Severity};
+use fidl_fuchsia_diagnostics::{Interest, LogInterestSelector, Severity, MAX_LOG_SELECTORS};
 use fidl_fuchsia_logger::{
-    LogFilterOptions, LogInterestSelector, LogLevelFilter, LogMessage, MAX_LOG_SELECTORS, MAX_TAGS,
-    MAX_TAG_LEN_BYTES,
+    LogFilterOptions, LogLevelFilter, LogMessage, MAX_TAGS, MAX_TAG_LEN_BYTES,
 };
 
 const DEFAULT_FILE_CAPACITY: u64 = 64000;
@@ -1856,10 +1855,14 @@ mod tests {
         #[fuchsia::test]
         fn select_exceed_max_error() {
             let mut args = vec!["--select".to_string()];
+            // Push `MAX_LOG_SELECTORS+1` selectors.
             args.push(
-                "1.cmx#INFO,2.cmx#INFO,3.cmx#INFO,4.cmx#INFO,5.cmx#INFO,6.cmx#INFO".to_string(),
+                (0..=MAX_LOG_SELECTORS)
+                    .into_iter()
+                    .map(|i| format!("{}.cmx#INFO", i))
+                    .collect::<Vec<_>>()
+                    .join(","),
             );
-
             parse_flag_test_helper(&args, None);
         }
     }

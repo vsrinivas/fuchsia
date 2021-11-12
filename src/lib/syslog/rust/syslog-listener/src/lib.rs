@@ -7,9 +7,10 @@
 #![deny(missing_docs)]
 
 use anyhow::{Context as _, Error};
+use fidl_fuchsia_diagnostics::LogInterestSelector;
 use fidl_fuchsia_logger::{
-    LogFilterOptions, LogInterestSelector, LogListenerSafeRequest, LogListenerSafeRequestStream,
-    LogMarker, LogMessage, LogProxy,
+    LogFilterOptions, LogListenerSafeRequest, LogListenerSafeRequestStream, LogMarker, LogMessage,
+    LogProxy,
 };
 use fuchsia_component::client::connect_to_protocol;
 use futures::{channel::mpsc, TryStreamExt};

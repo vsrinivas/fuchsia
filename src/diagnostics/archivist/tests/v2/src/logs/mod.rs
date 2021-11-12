@@ -6,6 +6,7 @@ mod attribution;
 mod basic;
 mod budget;
 mod crash;
+mod interest;
 mod lifecycle;
 mod redaction;
 mod selectors;

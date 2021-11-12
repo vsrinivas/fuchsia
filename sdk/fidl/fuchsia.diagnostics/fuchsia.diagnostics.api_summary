@@ -24,9 +24,15 @@ union/member fuchsia.diagnostics/FormattedContent.text fuchsia.mem/Buffer
 resource flexible union fuchsia.diagnostics/FormattedContent
 table/member fuchsia.diagnostics/Interest.min_severity fuchsia.diagnostics/Severity
 table fuchsia.diagnostics/Interest
+struct/member fuchsia.diagnostics/LogInterestSelector.interest fuchsia.diagnostics/Interest
+struct/member fuchsia.diagnostics/LogInterestSelector.selector fuchsia.diagnostics/ComponentSelector
+struct fuchsia.diagnostics/LogInterestSelector
+protocol/member fuchsia.diagnostics/LogSettings.RegisterInterest(vector<fuchsia.diagnostics/LogInterestSelector>:64 selectors)
+protocol fuchsia.diagnostics/LogSettings
 const fuchsia.diagnostics/MAXIMUM_ENTRIES_PER_BATCH uint16 64
 const fuchsia.diagnostics/MAXIMUM_RAW_SELECTOR_LENGTH uint16 1024
 const fuchsia.diagnostics/MAX_DATA_HIERARCHY_DEPTH uint16 100
+const fuchsia.diagnostics/MAX_LOG_SELECTORS uint8 64
 const fuchsia.diagnostics/MAX_MONIKER_SEGMENTS uint16 25
 const fuchsia.diagnostics/MAX_STRING_SELECTOR_LENGTH uint16 100
 table/member fuchsia.diagnostics/PerformanceConfiguration.batch_retrieval_timeout_seconds int64

@@ -1,6 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 use {
     crate::{
         constants::{ARCHIVIST_MONIKER, ARCHIVIST_URL},
@@ -25,9 +26,12 @@ use {
         InspectHierarchyMatcher,
     },
     fidl::endpoints::ProtocolMarker,
-    fidl_fuchsia_diagnostics::{self, Selector, StreamMode},
+    fidl_fuchsia_diagnostics::{
+        self, LogInterestSelector, LogSettingsMarker, LogSettingsRequest, LogSettingsRequestStream,
+        Selector, StreamMode,
+    },
     fidl_fuchsia_io::{DirectoryProxy, CLONE_FLAG_SAME_RIGHTS},
-    fidl_fuchsia_logger::{LogInterestSelector, LogMarker, LogRequest, LogRequestStream},
+    fidl_fuchsia_logger::{LogMarker, LogRequest, LogRequestStream},
     fuchsia_async::Task,
     fuchsia_inspect as inspect, fuchsia_zircon as zx,
     futures::channel::mpsc,
@@ -146,6 +150,30 @@ impl DataRepo {
 
             sender.send(listener.spawn(logs, dump_logs)).await.ok();
         }
+        Ok(())
+    }
+
+    pub async fn handle_log_settings(
+        self,
+        mut stream: LogSettingsRequestStream,
+    ) -> Result<(), LogsError> {
+        while let Some(request) = stream.next().await {
+            let request = request.map_err(|source| LogsError::HandlingRequests {
+                protocol: LogSettingsMarker::NAME,
+                source,
+            })?;
+
+            // TODO(fxbug.dev/88205): this currently matches existing behavior. However we'd like to
+            // revert to the old interest as soon as this protocol is disconnected. To do this,
+            // we'll handle a set of interests requested per component, if the interest is not
+            // already contained in the maximum interest found in the set we'll update it.
+            match request {
+                LogSettingsRequest::RegisterInterest { selectors, .. } => {
+                    self.write().update_logs_interest(selectors);
+                }
+            }
+        }
+
         Ok(())
     }
 
