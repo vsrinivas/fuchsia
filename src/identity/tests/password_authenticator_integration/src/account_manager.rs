@@ -248,14 +248,14 @@ impl TestEnv {
     }
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn get_account_ids_no_partition() {
     let env = TestEnv::build().await;
     let account_ids = env.account_ids().await;
     assert_eq!(account_ids, vec![]);
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn get_account_ids_partition_wrong_guid() {
     let env = TestEnv::build().await;
     let unrelated_guid: Guid = Guid {
@@ -272,7 +272,7 @@ async fn get_account_ids_partition_wrong_guid() {
     assert_eq!(account_ids, vec![]);
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn get_account_ids_partition_wrong_label() {
     let env = TestEnv::build().await;
     let _ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, "wrong-label").await;
@@ -286,7 +286,7 @@ async fn get_account_ids_partition_wrong_label() {
     assert_eq!(account_ids, vec![]);
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn get_account_ids_partition_no_zxcrypt() {
     let env = TestEnv::build().await;
     let _ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
@@ -300,7 +300,7 @@ async fn get_account_ids_partition_no_zxcrypt() {
     assert_eq!(account_ids, vec![]);
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn get_account_ids_with_zxcrypt_header() {
     let env = TestEnv::build().await;
     let ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
@@ -316,7 +316,7 @@ async fn get_account_ids_with_zxcrypt_header() {
     assert_eq!(account_ids, vec![1]);
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn deprecated_provision_new_account_on_unformatted_partition() {
     let env = TestEnv::build().await;
     let _ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
@@ -345,7 +345,7 @@ async fn deprecated_provision_new_account_on_unformatted_partition() {
     assert_eq!(account_ids, vec![1]);
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn deprecated_provision_new_account_on_formatted_partition() {
     let env = TestEnv::build().await;
     let ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
