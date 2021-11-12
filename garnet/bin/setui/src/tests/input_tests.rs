@@ -113,8 +113,8 @@ fn default_mic_cam_config() -> InputConfiguration {
     }
 }
 
-// An InputConfiguration with a muted microphone and disabled camera.
-fn default_mic_cam_config_cam_disabled() -> InputConfiguration {
+// An InputConfiguration with a microphone and sw disabled camera.
+fn default_mic_cam_config_cam_sw_disabled() -> InputConfiguration {
     InputConfiguration {
         devices: vec![
             InputDeviceConfiguration {
@@ -122,7 +122,7 @@ fn default_mic_cam_config_cam_disabled() -> InputConfiguration {
                 device_type: InputDeviceType::MICROPHONE,
                 source_states: vec![
                     SourceState { source: DeviceStateSource::HARDWARE, state: AVAILABLE_BITS },
-                    SourceState { source: DeviceStateSource::SOFTWARE, state: MUTED_BITS },
+                    SourceState { source: DeviceStateSource::SOFTWARE, state: AVAILABLE_BITS },
                 ],
                 mutable_toggle_state: MUTED_DISABLED_BITS,
             },
@@ -130,8 +130,8 @@ fn default_mic_cam_config_cam_disabled() -> InputConfiguration {
                 device_name: DEFAULT_CAMERA_NAME.to_string(),
                 device_type: InputDeviceType::CAMERA,
                 source_states: vec![
-                    SourceState { source: DeviceStateSource::HARDWARE, state: MUTED_BITS },
-                    SourceState { source: DeviceStateSource::SOFTWARE, state: AVAILABLE_BITS },
+                    SourceState { source: DeviceStateSource::HARDWARE, state: AVAILABLE_BITS },
+                    SourceState { source: DeviceStateSource::SOFTWARE, state: MUTED_BITS },
                 ],
                 mutable_toggle_state: MUTED_DISABLED_BITS,
             },
@@ -710,14 +710,15 @@ fn test_camera_disable_combinations() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_restore() {
     let mut stored_info = create_default_input_info().clone();
-    stored_info.input_device_state = default_mic_cam_config_cam_disabled().into();
+    stored_info.input_device_state = default_mic_cam_config_cam_sw_disabled().into();
     let env = TestInputEnvironmentBuilder::new()
         .set_starting_input_info_sources(stored_info)
         .set_input_device_config(default_mic_config_muted())
         .build()
         .await;
 
-    get_and_check_state(&env.input_service, true, true).await;
+    get_and_check_state(&env.input_service, false, true).await;
+    assert!(env.camera3_service.lock().await.camera_sw_muted());
 }
 
 // Test to ensure mic input change events are received.
