@@ -59,7 +59,6 @@ class Mixer {
           Fixed::FromRaw(dest_frames_to_frac_source_frames.Apply(target_dest_frame));
       bookkeeping.source_pos_modulo = 0;
       source_pos_error = zx::duration(0);
-      initial_position_is_set = true;
     }
 
     // Used by custom code when debugging.
@@ -238,6 +237,11 @@ class Mixer {
     // Output values of this function are source subframes (raw_value of the Fixed type).
     TimelineFunction source_ref_clock_to_frac_source_frames;
 
+    // This field is used to ensure that when a stream timeline changes, we re-establish the offset
+    // between destination frame and source fractional frame using clock calculations. If the
+    // timeline hasn't changed, we use step_size calculations to track whether we are drifting.
+    uint32_t source_ref_clock_to_frac_source_frames_generation = kInvalidGenerationId;
+
     // This translates CLOCK_MONOTONIC time to source subframe. Output values of this function are
     // source subframes (raw_value of the Fixed type).
     // This TLF entails the source rate as well as the source reference clock.
@@ -274,13 +278,6 @@ class Mixer {
     // next_source_frame is reset to that clock-derived value, and this field is set to zero. This
     // field sets the direction and magnitude of any steps taken for clock reconciliation.
     zx::duration source_pos_error{0};
-
-    // This field is used to ensure that when a stream first starts, we establish the offset between
-    // destination frame and source fractional frame using clock calculations. We want to only do
-    // this _once_, because thereafter we use ongoing step_size to track whether we are drifting out
-    // of sync, rather than use a clock calculation each time (which would essentially "jam-sync"
-    // each mix buffer, possibly creating gaps or overlaps in the process).
-    bool initial_position_is_set = false;
   };
 
   // Bookkeeping

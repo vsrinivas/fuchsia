@@ -589,15 +589,18 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
   // UpdateSourceTrans
   //
   // Ensure the mappings from source-frame to source-ref-time and monotonic-time are up-to-date.
+  auto previous_clock_generation = info.source_ref_clock_to_frac_source_frames_generation;
   auto snapshot = stream.ref_time_to_frac_presentation_frame();
   info.source_ref_clock_to_frac_source_frames = snapshot.timeline_function;
+  info.source_ref_clock_to_frac_source_frames_generation = snapshot.generation;
 
+  // If the source timeline indicates that it is paused, then our step_size must be 0.
+  // Exit early, since we need not proceed onward to measure position error and rate-adjust clocks.
   if (info.source_ref_clock_to_frac_source_frames.subject_delta() == 0) {
     info.clock_mono_to_frac_source_frames = TimelineFunction();
     info.dest_frames_to_frac_source_frames = TimelineFunction();
     bookkeeping.step_size = Fixed(0);
     bookkeeping.SetRateModuloAndDenominator(0, 1, &info);
-    info.initial_position_is_set = false;
     return;
   }
 
@@ -616,12 +619,14 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
   // Ensure the mappings from dest-frame to monotonic-time is up-to-date.
   // We should only be here if we have a valid mix job. This means a job which supplies a valid
   // transformation from reference time to destination frames (based on dest frame rate).
+  //
+  // If the dest timeline indicates that it is paused, then our step_size must be 0.
+  // Exit early, since we need not proceed onward to measure position error and rate-adjust clocks.
   FX_DCHECK(cur_mix_job_.dest_ref_clock_to_frac_dest_frame.rate().reference_delta());
   if (cur_mix_job_.dest_ref_clock_to_frac_dest_frame.subject_delta() == 0) {
     info.dest_frames_to_frac_source_frames = TimelineFunction();
     bookkeeping.step_size = Fixed(0);
     bookkeeping.SetRateModuloAndDenominator(0, 1, &info);
-    info.initial_position_is_set = false;
     return;
   }
 
@@ -649,13 +654,16 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
   FX_LOGS(TRACE) << clock::TimelineRateToString(frac_source_frames_per_dest_frame,
                                                 "dest-to-frac-source rate (no clock effects)");
 
-  // Project dest position cur_mix_job_.dest_start_frame into monotonic time as mono_now_from_dest.
+  // Project dest pos "cur_mix_job_.dest_start_frame" into monotonic time as "mono_now_from_dest".
   auto dest_frame = cur_mix_job_.dest_start_frame;
   auto mono_now_from_dest = zx::time{dest_frames_to_clock_mono.Apply(dest_frame)};
 
-  // Set the position relationship of the source and dest clocks, if one has not yet been set.
-  if (!info.initial_position_is_set) {
-    JamSyncPositions(source_clock, dest_clock, info, bookkeeping, dest_frame, mono_now_from_dest);
+  // If source timeline has changed, redefine the source pos that corresponds to this dest pos and
+  // use a step_size that matches the new source-to-dest relationship. Exit early: we should use the
+  // new relationship for at least one mix before measuring pos error and rate-adjusting clocks.
+  if (info.source_ref_clock_to_frac_source_frames_generation != previous_clock_generation) {
+    JamSyncPositions(source_clock, dest_clock, info, bookkeeping, dest_frame, mono_now_from_dest,
+                     true);
     SetStepSize(info, bookkeeping, frac_source_frames_per_dest_frame);
     return;
   }
@@ -676,10 +684,11 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
     }
   }
 
-  // Check for dest position discontinuity. If so, reset positions and rate adjustments.
+  // Check for dest position discontinuity. If so, reset positions and rate adjustments; exit.
   if (dest_frame != info.next_dest_frame) {
     // Set new running positions, based on E2E clock (not just step_size).
-    JamSyncPositions(source_clock, dest_clock, info, bookkeeping, dest_frame, mono_now_from_dest);
+    JamSyncPositions(source_clock, dest_clock, info, bookkeeping, dest_frame, mono_now_from_dest,
+                     false);
     SetStepSize(info, bookkeeping, frac_source_frames_per_dest_frame);
     return;
   }
@@ -706,11 +715,12 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
     info.source_pos_error = zx::nsec(0);
   }
 
-  // If source error exceeds our threshold, allow a discontinuity and reset position and rates.
+  // If source error exceeds our threshold, allow a discontinuity, reset position and rates, exit.
   if (std::abs(info.source_pos_error.get()) > kMaxErrorThresholdDuration.get()) {
     Reporter::Singleton().MixerClockSkewDiscontinuity(info.source_pos_error);
 
-    JamSyncPositions(source_clock, dest_clock, info, bookkeeping, dest_frame, mono_now_from_dest);
+    JamSyncPositions(source_clock, dest_clock, info, bookkeeping, dest_frame, mono_now_from_dest,
+                     false);
     SetStepSize(info, bookkeeping, frac_source_frames_per_dest_frame);
     return;
   }
@@ -739,11 +749,11 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
 // running position jumps unexpectedly, and when the error in source position exceeds our threshold.
 void MixStage::JamSyncPositions(AudioClock& source_clock, AudioClock& dest_clock,
                                 Mixer::SourceInfo& info, Mixer::Bookkeeping& bookkeeping,
-                                int64_t dest_frame, zx::time mono_now_from_dest) {
+                                int64_t dest_frame, zx::time mono_now_from_dest,
+                                bool timeline_changed) {
   auto prev_running_dest_frame = info.next_dest_frame;
   auto prev_running_source_frame = info.next_source_frame;
   double prev_source_pos_error = static_cast<double>(info.source_pos_error.get());
-  auto initial_position_was_set = info.initial_position_is_set;
 
   info.ResetPositions(dest_frame, bookkeeping);
 
@@ -765,8 +775,8 @@ void MixStage::JamSyncPositions(AudioClock& source_clock, AudioClock& dest_clock
                   << info.next_source_frame;
 
     std::stringstream complete_log_msg;
-    if (!initial_position_was_set) {
-      complete_log_msg << "JamSync(set initial position): " << dest_stream.str()
+    if (timeline_changed) {
+      complete_log_msg << "JamSync(pos timeline changed): " << dest_stream.str()
                        << source_stream.str() << common_stream.str();
       // Log these at lowest level, but reset the count so we always log the next jam-sync
       jam_sync_count_ = -1;
