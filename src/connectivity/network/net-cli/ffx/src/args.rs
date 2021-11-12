@@ -7,8 +7,13 @@
 
 #[ffx_core::ffx_command]
 #[derive(argh::FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "net", description = "View and manage target network configuration")]
+#[argh(subcommand, name = "net")]
+/// View and manage target network configuration
 pub struct Command {
-    #[argh(subcommand, description = "network configuration command to execute on target device")]
+    #[argh(subcommand)]
     pub cmd: net_cli::CommandEnum,
+
+    /// a realm to target when sending commands. Defaults to the core network realm.
+    #[argh(option)]
+    pub realm: Option<String>,
 }

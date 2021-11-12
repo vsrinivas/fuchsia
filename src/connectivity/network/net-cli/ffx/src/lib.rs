@@ -15,108 +15,111 @@ use fidl_fuchsia_net_neighbor as fneighbor;
 use fidl_fuchsia_net_stack as fstack;
 use fidl_fuchsia_netstack as fnetstack;
 
-const DHCPD_SELECTOR: &str = "core/network/dhcpd:expose:fuchsia.net.dhcp.Server";
-const STACK_SELECTOR: &str = "core/network/netstack:expose:fuchsia.net.stack.Stack";
-const NETSTACK_SELECTOR: &str = "core/network/netstack:expose:fuchsia.netstack.Netstack";
-const FILTER_SELECTOR: &str = "core/network/netstack:expose:fuchsia.net.filter.Filter";
-const LOG_SELECTOR: &str = "core/network/netstack:expose:fuchsia.net.stack.Log";
-const NEIGHBOR_CONTROLLER_SELECTOR: &str =
-    "core/network/netstack:expose:fuchsia.net.neighbor.Controller";
-const NEIGHBOR_VIEW_SELECTOR: &str = "core/network/netstack:expose:fuchsia.net.neighbor.View";
+const DHCPD_SELECTOR_SUFFIX: &str = "/dhcpd:expose:fuchsia.net.dhcp.Server";
+const STACK_SELECTOR_SUFFIX: &str = "/netstack:expose:fuchsia.net.stack.Stack";
+const NETSTACK_SELECTOR_SUFFIX: &str = "/netstack:expose:fuchsia.netstack.Netstack";
+const FILTER_SELECTOR_SUFFIX: &str = "/netstack:expose:fuchsia.net.filter.Filter";
+const LOG_SELECTOR_SUFFIX: &str = "/netstack:expose:fuchsia.net.stack.Log";
+const NEIGHBOR_CONTROLLER_SELECTOR_SUFFIX: &str =
+    "/netstack:expose:fuchsia.net.neighbor.Controller";
+const NEIGHBOR_VIEW_SELECTOR_SUFFIX: &str = "/netstack:expose:fuchsia.net.neighbor.View";
+const NETWORK_REALM: &str = "core/network";
 
-struct FfxConnector {
+struct FfxConnector<'a> {
     remote_control: fremotecontrol::RemoteControlProxy,
+    realm: &'a str,
 }
 
-async fn remotecontrol_connect<S: ProtocolMarker>(
-    remote_control: &fremotecontrol::RemoteControlProxy,
-    selector: &str,
-) -> Result<S::Proxy, anyhow::Error> {
-    let (proxy, server_end) = fidl::endpoints::create_proxy::<S>()
-        .with_context(|| format!("failed to create proxy to {}", S::NAME))?;
-    let _: fremotecontrol::ServiceMatch = remote_control
-        .connect(selectors::parse_selector(selector)?, server_end.into_channel())
-        .await?
-        .map_err(|e| {
-            anyhow::anyhow!("failed to connect to {} as {}: {:?}", S::NAME, selector, e)
-        })?;
-    Ok(proxy)
+impl FfxConnector<'_> {
+    async fn remotecontrol_connect<S: ProtocolMarker>(
+        &self,
+        selector_suffix: &str,
+    ) -> Result<S::Proxy, anyhow::Error> {
+        let Self { remote_control, realm } = &self;
+        let unparsed_selector = format!("{}{}", realm, selector_suffix);
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<S>()
+            .with_context(|| format!("failed to create proxy to {}", S::NAME))?;
+        let selector = selectors::parse_selector(&unparsed_selector)
+            .with_context(|| format!("failed to parse selector {}", &unparsed_selector))?;
+        let _: fremotecontrol::ServiceMatch =
+            remote_control.connect(selector, server_end.into_channel()).await?.map_err(|e| {
+                anyhow::anyhow!(
+                    "failed to connect to {} as {}: {:?}",
+                    S::NAME,
+                    unparsed_selector,
+                    e
+                )
+            })?;
+        Ok(proxy)
+    }
 }
 
 #[async_trait::async_trait]
-impl net_cli::ServiceConnector<fstack::StackMarker> for FfxConnector {
+impl net_cli::ServiceConnector<fstack::StackMarker> for FfxConnector<'_> {
     async fn connect(
         &self,
     ) -> Result<<fstack::StackMarker as ProtocolMarker>::Proxy, anyhow::Error> {
-        let Self { remote_control } = &self;
-        remotecontrol_connect::<fstack::StackMarker>(remote_control, STACK_SELECTOR).await
+        self.remotecontrol_connect::<fstack::StackMarker>(STACK_SELECTOR_SUFFIX).await
     }
 }
 
 #[async_trait::async_trait]
-impl net_cli::ServiceConnector<fnetstack::NetstackMarker> for FfxConnector {
+impl net_cli::ServiceConnector<fnetstack::NetstackMarker> for FfxConnector<'_> {
     async fn connect(
         &self,
     ) -> Result<<fnetstack::NetstackMarker as ProtocolMarker>::Proxy, anyhow::Error> {
-        let Self { remote_control } = &self;
-        remotecontrol_connect::<fnetstack::NetstackMarker>(remote_control, NETSTACK_SELECTOR).await
+        self.remotecontrol_connect::<fnetstack::NetstackMarker>(NETSTACK_SELECTOR_SUFFIX).await
     }
 }
 
 #[async_trait::async_trait]
-impl net_cli::ServiceConnector<ffilter::FilterMarker> for FfxConnector {
+impl net_cli::ServiceConnector<ffilter::FilterMarker> for FfxConnector<'_> {
     async fn connect(
         &self,
     ) -> Result<<ffilter::FilterMarker as ProtocolMarker>::Proxy, anyhow::Error> {
-        let Self { remote_control } = &self;
-        remotecontrol_connect::<ffilter::FilterMarker>(remote_control, FILTER_SELECTOR).await
+        self.remotecontrol_connect::<ffilter::FilterMarker>(FILTER_SELECTOR_SUFFIX).await
     }
 }
 
 #[async_trait::async_trait]
-impl net_cli::ServiceConnector<fstack::LogMarker> for FfxConnector {
+impl net_cli::ServiceConnector<fstack::LogMarker> for FfxConnector<'_> {
     async fn connect(&self) -> Result<<fstack::LogMarker as ProtocolMarker>::Proxy, anyhow::Error> {
-        let Self { remote_control } = &self;
-        remotecontrol_connect::<fstack::LogMarker>(remote_control, LOG_SELECTOR).await
+        self.remotecontrol_connect::<fstack::LogMarker>(LOG_SELECTOR_SUFFIX).await
     }
 }
 
 #[async_trait::async_trait]
-impl net_cli::ServiceConnector<fdhcp::Server_Marker> for FfxConnector {
+impl net_cli::ServiceConnector<fdhcp::Server_Marker> for FfxConnector<'_> {
     async fn connect(
         &self,
     ) -> Result<<fdhcp::Server_Marker as ProtocolMarker>::Proxy, anyhow::Error> {
-        let Self { remote_control } = &self;
-        remotecontrol_connect::<fdhcp::Server_Marker>(remote_control, DHCPD_SELECTOR).await
+        self.remotecontrol_connect::<fdhcp::Server_Marker>(DHCPD_SELECTOR_SUFFIX).await
     }
 }
 
 #[async_trait::async_trait]
-impl net_cli::ServiceConnector<fneighbor::ControllerMarker> for FfxConnector {
+impl net_cli::ServiceConnector<fneighbor::ControllerMarker> for FfxConnector<'_> {
     async fn connect(
         &self,
     ) -> Result<<fneighbor::ControllerMarker as ProtocolMarker>::Proxy, anyhow::Error> {
-        let Self { remote_control } = &self;
-        remotecontrol_connect::<fneighbor::ControllerMarker>(
-            remote_control,
-            NEIGHBOR_CONTROLLER_SELECTOR,
+        self.remotecontrol_connect::<fneighbor::ControllerMarker>(
+            NEIGHBOR_CONTROLLER_SELECTOR_SUFFIX,
         )
         .await
     }
 }
 
 #[async_trait::async_trait]
-impl net_cli::ServiceConnector<fneighbor::ViewMarker> for FfxConnector {
+impl net_cli::ServiceConnector<fneighbor::ViewMarker> for FfxConnector<'_> {
     async fn connect(
         &self,
     ) -> Result<<fneighbor::ViewMarker as ProtocolMarker>::Proxy, anyhow::Error> {
-        let Self { remote_control } = &self;
-        remotecontrol_connect::<fneighbor::ViewMarker>(remote_control, NEIGHBOR_VIEW_SELECTOR).await
+        self.remotecontrol_connect::<fneighbor::ViewMarker>(NEIGHBOR_VIEW_SELECTOR_SUFFIX).await
     }
 }
 
 #[async_trait::async_trait]
-impl net_cli::NetCliDepsConnector for FfxConnector {
+impl net_cli::NetCliDepsConnector for FfxConnector<'_> {
     async fn connect_device(&self, _devfs_path: &str) -> Result<net_cli::Device, anyhow::Error> {
         // TODO(https://fxbug.dev/77130): Find a way to get device entries when running on the host.
         Err(anyhow::anyhow!(
@@ -130,6 +133,7 @@ pub async fn net(
     remote_control: fremotecontrol::RemoteControlProxy,
     cmd: ffx_net_args::Command,
 ) -> Result<(), anyhow::Error> {
-    let ffx_net_args::Command { cmd } = cmd;
-    net_cli::do_root(net_cli::Command { cmd }, &FfxConnector { remote_control }).await
+    let ffx_net_args::Command { cmd, realm } = cmd;
+    let realm = realm.as_deref().unwrap_or(NETWORK_REALM);
+    net_cli::do_root(net_cli::Command { cmd }, &FfxConnector { remote_control, realm }).await
 }
