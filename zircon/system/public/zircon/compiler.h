@@ -125,7 +125,7 @@
 // a pointer to that memory. Argument indexes are one-based. The compiler can use this
 // information to support compile-time __builtin_object_size checks.
 #if defined(__clang__)
-#define __ALLOC_SIZE(x, ...) __attribute__((__alloc_size__(x, ## __VA_ARGS__)))
+#define __ALLOC_SIZE(x, ...) __attribute__((__alloc_size__(x, ##__VA_ARGS__)))
 #else
 // TODO(fxrev.dev/571541): GCC warns incorrectly on constructs that could result in
 // large allocations for type reasons but cannot for other (checked) reasons. Disable
@@ -339,6 +339,10 @@
 #define __TA_ACQUIRE(...) __THREAD_ANNOTATION(__acquire_capability__(__VA_ARGS__))
 #define __TA_ACQUIRE_SHARED(...) __THREAD_ANNOTATION(__acquire_shared_capability__(__VA_ARGS__))
 #define __TA_TRY_ACQUIRE(...) __THREAD_ANNOTATION(__try_acquire_capability__(__VA_ARGS__))
+// Neither ACQUIRED_BEFORE nor ACQUIRED_AFTER are implemented in clang. Users of these macros must
+// not rely upon them to catch lock ordering bugs, and must treat them as documentation only.
+// See:
+// https://clang.llvm.org/docs/ThreadSafetyAnalysis.html#acquired-before-and-acquired-after-are-currently-unimplemented
 #define __TA_ACQUIRED_BEFORE(...) __THREAD_ANNOTATION(__acquired_before__(__VA_ARGS__))
 #define __TA_ACQUIRED_AFTER(...) __THREAD_ANNOTATION(__acquired_after__(__VA_ARGS__))
 #define __TA_RELEASE(...) __THREAD_ANNOTATION(__release_capability__(__VA_ARGS__))
@@ -363,6 +367,6 @@
 #endif
 #endif
 
-#endif // !defined(__ASSEMBLER__)
+#endif  // !defined(__ASSEMBLER__)
 
 #endif  // SYSROOT_ZIRCON_COMPILER_H_
