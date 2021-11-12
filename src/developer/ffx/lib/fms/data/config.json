@@ -1,0 +1,10 @@
+{
+    "fms": {
+        "data": {
+            "files": [
+                "{sdk.root}/gen/build/images/*_device.json",
+                "{sdk.root}/gen/build/images/product_bundle.json"
+            ]
+        }
+    }
+}

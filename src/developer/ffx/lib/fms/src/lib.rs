@@ -7,14 +7,15 @@
 //! Uses a unique identifier (FMS Name) to lookup SDK Module metadata.
 
 use {
-    anyhow::{anyhow, bail, Context, Result},
+    anyhow::{bail, Context, Result},
     glob::glob,
     sdk_metadata::{from_reader, Metadata, ProductBundleV1, VirtualDeviceV1},
     std::{
         collections::HashMap,
+        ffi::OsStr,
         fs::File,
         io::{BufReader, Read},
-        path::Path,
+        path::{Path, PathBuf},
     },
 };
 
@@ -32,22 +33,53 @@ impl Entries {
 
     /// Initialize the FMS database.
     ///
-    /// Look for appropriate .json files in `dir_path` and import metadata from
-    /// them.
-    pub fn from_dir_path(dir_path: &Path) -> Result<Self> {
+    /// Look for appropriate .json files in the "fms.data.files" config entry
+    /// and import metadata from them.
+    pub async fn from_config() -> Result<Self> {
+        let files: Vec<PathBuf> =
+            ffx_config::get("fms.data.files").await.context("ffx_config::get fms data")?;
+        const SDK_ROOT: &str = "{sdk.root}/";
+        let sdk_root: PathBuf = ffx_config::get("sdk.root").await?;
+        let files = files
+            .iter()
+            .map(|path| {
+                // If the path starts with SDK_ROOT, replace it with sdk_root.
+                match path.strip_prefix(SDK_ROOT) {
+                    Ok(s) => sdk_root.join(&s),
+                    Err(_) => path.to_path_buf(),
+                }
+            })
+            .collect::<Vec<_>>();
+        Ok(Entries::from_path_list(&files).await.context("Loading config fms.data.files")?)
+    }
+
+    /// Initialize the FMS database from a list of file paths.
+    pub async fn from_path_list(paths: &[PathBuf]) -> Result<Self> {
         let mut entries = Self::new();
-        let all_json = dir_path.join("*.json");
-        let dir_path_str = all_json.to_str().ok_or(anyhow!("Path to string failed."))?;
-        for path in glob(&dir_path_str).context("Bad glob pattern.")? {
-            let path = path?;
-            let file = File::open(&path)?;
-            let mut buf_reader = BufReader::new(file);
-            entries.add_json(&mut buf_reader)?;
+        for path in paths {
+            entries.add_from_path(&path)?;
         }
         if entries.data.is_empty() {
-            bail!("No valid FMS metadata was found in {:?}.", all_json);
+            bail!("No valid FMS metadata was found in {:?}.", paths);
         }
         Ok(entries)
+    }
+
+    /// Add metadata from each file(s) in `path`.
+    ///
+    /// `path` may be a glob pattern representing multiple files.
+    pub fn add_from_path(&mut self, path: &Path) -> Result<()> {
+        let path_str = path.to_string_lossy().to_string();
+        for path in glob(&path_str).context("Bad glob pattern.")? {
+            let path = path?;
+            if path.extension() != Some(OsStr::new("json")) {
+                bail!("Expecting only '*.json' files, got {:?}.", path);
+            }
+            let file = File::open(&path).context(format!("{:?}", path))?;
+            let mut buf_reader = BufReader::new(file);
+            self.add_json(&mut buf_reader).context(format!("{:?}", path))?;
+        }
+        Ok(())
     }
 
     /// Add metadata from json text to the store of FMS entries.
@@ -185,11 +217,11 @@ mod tests {
         assert_eq!(entries.entry("unfound"), None);
     }
 
-    #[test]
-    #[should_panic(expected = "No valid FMS metadata was found")]
-    fn test_entries_from_dir_path_no_files() {
+    #[should_panic(expected = "Expecting only '*.json' files")]
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_entries_from_path_list_no_files() {
         let temp_dir = TempDir::new().expect("temp dir");
-        Entries::from_dir_path(&temp_dir.path()).expect("load entries");
+        Entries::from_path_list(&[temp_dir.path().to_path_buf()]).await.expect("load entries");
     }
 
     #[test]

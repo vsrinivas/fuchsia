@@ -9,6 +9,7 @@ if (is_host) {
   json_merge("config.json") {
     sources = [
       rebase_path("//src/developer/ffx/daemon/data/config.json"),
+      rebase_path("//src/developer/ffx/lib/fms/data/config.json"),
       get_label_info("//src/developer/ffx:config.json", "target_out_dir") +
           "/config.json",
     ]

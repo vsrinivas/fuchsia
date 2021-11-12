@@ -1,9 +1,3 @@
 {
-    "sdk": {
-        "fms": {
-            "data": {
-                "dir": "{sdk.root}/gen/build/images"
-            }
-        }
-    }
+    "sdk": {}
 }
