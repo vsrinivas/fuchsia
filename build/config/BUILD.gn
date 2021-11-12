@@ -1009,7 +1009,7 @@ config("Wno-conversion") {
     "//zircon/kernel/kernel:*",
     "//zircon/kernel/lib/acpi_lite:*",
     "//zircon/kernel/lib/cbuf:*",
-    "//zircon/kernel/lib/crypto:*",
+    "//zircon/kernel/lib/crypto/boringssl:*",
     "//zircon/kernel/lib/jtrace:*",
     "//zircon/kernel/lib/jtrace/tests:*",
     "//zircon/kernel/lib/libc/string",

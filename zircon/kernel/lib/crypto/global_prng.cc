@@ -31,11 +31,8 @@
 #include <ktl/span.h>
 #include <ktl/string_view.h>
 #include <lk/init.h>
-#include <phys/handoff.h>
-
-// See note in //zircon/third_party/ulib/boringssl/BUILD.gn
-#define BORINGSSL_NO_CXX
 #include <openssl/sha.h>
+#include <phys/handoff.h>
 
 #define LOCAL_TRACE 0
 

@@ -12,8 +12,8 @@ source_set("crypto-entropy-src") {
   include_dirs = [ "include" ]
   public_deps = [ "//zircon/kernel/lib/ktl" ]
   deps = [
+    "boringssl",
     "//zircon/system/ulib/explicit-memory",
-    "//zircon/third_party/ulib/boringssl",
   ]
 }
 
@@ -40,6 +40,7 @@ zx_library("crypto") {
   ]
   deps = [
     ":crypto-entropy",
+    "boringssl",
     "entropy",
     "//zircon/kernel/lib/boot-options",
     "//zircon/kernel/lib/fbl",
@@ -49,19 +50,12 @@ zx_library("crypto") {
     "//zircon/kernel/phys:handoff",
     "//zircon/system/ulib/explicit-memory",
     "//zircon/system/ulib/zbitl",
-    "//zircon/third_party/ulib/boringssl",
   ]
   public_deps = [
     # <lib/crypto/prng.h> has #include <ktl/atomic.h>.
     "//zircon/kernel/lib/ktl:headers",
 
-    # lib/crypto/prng.h has #include <openssl/sha.h>.
-    "//zircon/third_party/ulib/boringssl:headers",
-
     # <lib/crypto/entropy/jitterentropy_collector.h> has #include <lib/jitterentropy/jitterentropy.h>.
     "//zircon/third_party/lib/jitterentropy:headers",
   ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }

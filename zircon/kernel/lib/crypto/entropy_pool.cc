@@ -7,9 +7,6 @@
 #include <lib/crypto/entropy_pool.h>
 
 #include <explicit-memory/bytes.h>
-
-// See note in //zircon/third_party/ulib/boringssl/BUILD.gn
-#define BORINGSSL_NO_CXX
 #include <openssl/sha.h>
 
 namespace crypto {

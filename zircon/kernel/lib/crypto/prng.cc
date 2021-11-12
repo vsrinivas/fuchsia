@@ -17,9 +17,6 @@
 #include <explicit-memory/bytes.h>
 #include <kernel/mutex.h>
 #include <ktl/atomic.h>
-
-// See note in //zircon/third_party/ulib/boringssl/BUILD.gn
-#define BORINGSSL_NO_CXX
 #include <openssl/chacha.h>
 #include <openssl/sha.h>
 
@@ -105,7 +102,7 @@ void Prng::Draw(void* out, size_t size) {
 uint64_t Prng::RandInt(uint64_t exclusive_upper_bound) {
   ASSERT(exclusive_upper_bound != 0);
 
-  const uint log2 = log2_ulong_ceil(exclusive_upper_bound);
+  const uint log2 = static_cast<uint>(log2_ceil<uint64_t>(exclusive_upper_bound));
   const size_t mask =
       (log2 != sizeof(uint64_t) * CHAR_BIT) ? (uint64_t(1) << log2) - 1 : UINT64_MAX;
   DEBUG_ASSERT(exclusive_upper_bound - 1 <= mask);

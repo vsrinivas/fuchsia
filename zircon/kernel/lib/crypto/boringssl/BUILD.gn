@@ -1,0 +1,45 @@
+# Copyright 2019 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//third_party/boringssl/zircon.gni")
+
+source_set("boringssl") {
+  visibility = [ "../*" ]
+
+  public = [
+    "//third_party/boringssl/src/include/openssl/base.h",
+    "//third_party/boringssl/src/include/openssl/chacha.h",
+    "//third_party/boringssl/src/include/openssl/sha.h",
+  ]
+  public_configs = [ ":config" ]
+  sources = [ "zircon-mem.c" ]
+  foreach(file, boringssl_zircon_kernel_sources) {
+    sources += [ "//third_party/boringssl/$file" ]
+  }
+
+  # Some boringssl code is not -Wconversion clean.
+  configs += [ "//build/config:Wno-conversion" ]
+
+  deps = [ "//zircon/kernel/lib/libc" ]
+}
+
+config("config") {
+  visibility = [ ":*" ]
+
+  defines = [
+    "BORINGSSL_NO_CXX",
+
+    # The assembly code uses vector registers, which is not allowed in
+    # kernel code.
+    "OPENSSL_NO_ASM",
+    "OPENSSL_NO_THREADS_CORRUPT_MEMORY_AND_LEAK_SECRETS_IF_THREADED",
+  ]
+
+  include_dirs = [ "." ]
+  foreach(dir, boringssl_zircon_include_dirs) {
+    include_dirs += [ "//third_party/boringssl/$dir" ]
+  }
+}
