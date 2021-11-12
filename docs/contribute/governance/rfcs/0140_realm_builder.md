@@ -1132,6 +1132,6 @@ offer/expose API, and this approach results in a slightly simpler API.
 [resolver-docs]: /docs/concepts/components/v2/capabilities/resolvers.md
 [runner-docs]: /docs/concepts/components/v2/capabilities/runners.md
 [test-manager-lib-rs]: /src/sys/test_manager/src/lib.rs
-[lifecycle-controller]: https://fuchsia.dev/reference/fidl/fuchsia.sys2?hl=en#LifecycleController
+[lifecycle-controller]: https://fuchsia.dev/reference/fidl/fuchsia.sys2#LifecycleController
 [collection]: /docs/concepts/components/v2/realms.md#collections
 [manifest-shards]: /docs/development/components/build.md#component-manifest-shards
