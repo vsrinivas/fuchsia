@@ -93,15 +93,28 @@ impl FfxConfigWrapper {
             None => Err(ConfigError::from(anyhow!("key not found {}", property_name))),
         }
     }
+
+    /// Returns the PathBuf to the executable with the same name in the SDK.
+    /// For testing purposes, add an override value of "test_tool_path.$tool_name".
+    pub async fn get_host_tool(&self, tool_name: &str) -> Result<PathBuf> {
+        if self.overrides.is_empty() {
+            let sdk = ffx_config::get_sdk().await?;
+            sdk.get_host_tool(tool_name)
+        } else {
+            let key = format!("test_tool_path.{}", tool_name);
+            match self.overrides.get(key.as_str()) {
+                Some(val) => Ok(PathBuf::from(val)),
+                None => Err(anyhow!("host tool not found {}", tool_name)),
+            }
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serial_test::serial;
 
     #[fuchsia_async::run_singlethreaded(test)]
-    #[serial]
     async fn test_keys() {
         const FAKE_PATH: &str = "/path/to/key";
         const RANDOM_PROPERTY_NAME: &str = "random-property-name";
@@ -122,5 +135,19 @@ mod tests {
             format!("{:?}", err_result.unwrap_err()),
             format!("ConfigError({})", missing_key_message!(RANDOM_PROPERTY_NAME))
         );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_sdk_tools() {
+        const FAKE_FVM_PATH: &str = "/path/to/fvm";
+        let mut config = FfxConfigWrapper::new();
+
+        let err_result = config.get_host_tool("fvm").await;
+        assert!(err_result.is_err());
+
+        config.overrides.insert("test_tool_path.fvm", FAKE_FVM_PATH);
+        let result = config.get_host_tool("fvm").await;
+        assert!(result.is_ok());
+        assert_eq!(PathBuf::from(FAKE_FVM_PATH), result.unwrap());
     }
 }
