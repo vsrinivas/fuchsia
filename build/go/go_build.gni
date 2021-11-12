@@ -32,7 +32,7 @@ declare_args() {
 #
 #   use_prebuilt_go (optional)
 #     If true, use a prebuilt go toolchain, rather than building the toolchain.
-#     If not set, defaults to false when targetting Fuchsia and true otherwise.
+#     If not set, defaults to false when targeting Fuchsia and true otherwise.
 #
 #   sdk_category (optional)
 #     Publication level of the library in SDKs.
