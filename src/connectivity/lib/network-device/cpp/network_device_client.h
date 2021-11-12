@@ -125,7 +125,7 @@ class NetworkDeviceClient : public internal::DeviceEventHandlerProxy<NetworkDevi
   using RxCallback = fit::function<void(Buffer buffer)>;
   using ErrorCallback = fit::function<void(zx_status_t)>;
   using StatusCallback = fit::function<void(netdev::wire::PortStatus)>;
-  using GetPortInfoWithMacCallback = fit::function<void(zx::status<PortInfoAndMac>)>;
+  using PortInfoWithMacCallback = fit::function<void(zx::status<PortInfoAndMac>)>;
 
   // Opens a new session with `name` and invokes `callback` when done.
   //
@@ -156,7 +156,7 @@ class NetworkDeviceClient : public internal::DeviceEventHandlerProxy<NetworkDevi
   // Gets information about the given port.
   //
   // Ports may be freely queried without being attached.
-  void GetPortInfoWithMac(uint8_t port_id, GetPortInfoWithMacCallback callback);
+  void GetPortInfoWithMac(uint8_t port_id, PortInfoWithMacCallback callback);
 
   // Kills the current session.
   //

@@ -355,7 +355,7 @@ void NetworkDeviceClient::DetachPort(uint8_t port_id, ErrorCallback callback) {
   ScheduleCallbackPromise(std::move(promise), std::move(callback));
 }
 
-void NetworkDeviceClient::GetPortInfoWithMac(uint8_t port_id, GetPortInfoWithMacCallback callback) {
+void NetworkDeviceClient::GetPortInfoWithMac(uint8_t port_id, PortInfoWithMacCallback callback) {
   struct State {
     PortInfoAndMac result;
     fidl::WireClient<netdev::Port> port_client;
