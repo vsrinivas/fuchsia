@@ -7,6 +7,7 @@
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/impl/naive_image.h"
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
+#include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/renderer/render_funcs.h"
 #include "src/ui/lib/escher/renderer/sampler_cache.h"
 #include "src/ui/lib/escher/resources/resource_recycler.h"
@@ -43,6 +44,17 @@ static vk::Format ConvertToVkFormat(zx_pixel_format_t pixel_format) {
   return vk::Format::eUndefined;
 }
 
+// Create a default 1x1 texture for solid color renderables which are not associated
+// with an image.
+static escher::TexturePtr CreateWhiteTexture(escher::Escher* escher,
+                                             escher::BatchGpuUploader* gpu_uploader) {
+  FX_DCHECK(escher);
+  uint8_t channels[4];
+  channels[0] = channels[1] = channels[2] = channels[3] = 255;
+  auto image = escher->NewRgbaImage(gpu_uploader, 1, 1, channels);
+  return escher->NewTexture(std::move(image), vk::Filter::eNearest);
+}
+
 static escher::TexturePtr CreateDepthTexture(escher::Escher* escher,
                                              const escher::ImagePtr& output_image) {
   escher::TexturePtr depth_buffer;
@@ -57,7 +69,18 @@ static escher::TexturePtr CreateDepthTexture(escher::Escher* escher,
 namespace flatland {
 
 VkRenderer::VkRenderer(escher::EscherWeakPtr escher)
-    : escher_(std::move(escher)), compositor_(escher::RectangleCompositor(escher_.get())) {}
+    : escher_(std::move(escher)), compositor_(escher::RectangleCompositor(escher_.get())) {
+  auto gpu_uploader = escher::BatchGpuUploader::New(escher_, /*frame_trace_number*/ 0);
+  FX_DCHECK(gpu_uploader);
+
+  texture_map_[allocation::kInvalidImageId] = CreateWhiteTexture(escher_.get(), gpu_uploader.get());
+  gpu_uploader->Submit();
+
+  {
+    TRACE_DURATION("gfx", "VkRenderer::Initialize");
+    WaitIdle();
+  }
+}
 
 VkRenderer::~VkRenderer() {
   auto vk_device = escher_->vk_device();

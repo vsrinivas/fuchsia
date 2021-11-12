@@ -29,6 +29,29 @@ using allocation::ImageMetadata;
 using NullRendererTest = RendererTest;
 using VulkanRendererTest = RendererTest;
 
+// We need this function for several tests because irectly reading the vmo values for sysmem-backed
+// images does not unmap the sRGB image values back into a linear space. So we have to do that
+// conversion here before we do any value comparisons. This conversion could be done automatically
+// if we were doing a Vulkan read on the vk::Image directly and not a sysmem read of the vmo,
+// but we don't have direct access to the images in the Renderer.
+static void sRGBtoLinear(const uint8_t* in_sRGB, uint8_t* out_linear, uint32_t num_bytes) {
+  for (uint32_t i = 0; i < num_bytes; i++) {
+    // Do not de-encode the alpha value.
+    if ((i + 1) % 4 == 0) {
+      out_linear[i] = in_sRGB[i];
+      continue;
+    }
+
+    // Function to convert from sRGB to linear RGB.
+    float s_val = (float(in_sRGB[i]) / float(0xFF));
+    if (0.f <= s_val && s_val <= 0.04045f) {
+      out_linear[i] = (s_val / 12.92f) * 255U;
+    } else {
+      out_linear[i] = std::powf(((s_val + 0.055f) / 1.055f), 2.4f) * 255U;
+    }
+  }
+}
+
 namespace {
 static constexpr float kDegreesToRadians = glm::pi<float>() / 180.f;
 
@@ -39,6 +62,23 @@ glm::ivec4 GetPixel(uint8_t* vmo_host, uint32_t width, uint32_t x, uint32_t y) {
   uint32_t a = vmo_host[y * width * 4 + x * 4 + 3];
   return glm::ivec4(r, g, b, a);
 }
+
+// When checking the output of a render target, we want to make sure that non only
+// are the renderables renderered correctly, but that the rest of the image is
+// black, without any errantly colored pixels.
+#define CHECK_BLACK_PIXELS(bytes, kTargetWidth, kTargetHeight, color_count) \
+  {                                                                         \
+    uint32_t black_pixels = 0;                                              \
+    for (uint32_t y = 0; y < kTargetHeight; y++) {                          \
+      for (uint32_t x = 0; x < kTargetWidth; x++) {                         \
+        auto col = GetPixel(bytes, kTargetWidth, x, y);                     \
+        if (col == glm::ivec4(0, 0, 0, 0)) {                                \
+          black_pixels++;                                                   \
+        }                                                                   \
+      }                                                                     \
+    }                                                                       \
+    EXPECT_EQ(black_pixels, kTargetWidth* kTargetHeight - color_count);     \
+  }
 
 }  // anonymous namespace
 
@@ -718,16 +758,8 @@ VK_TEST_F(VulkanRendererTest, RenderTest) {
                    EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 9, 4), glm::ivec4(0, 255, 0, 255));
 
                    // Make sure the remaining pixels are black.
-                   uint32_t black_pixels = 0;
-                   for (uint32_t y = 0; y < kTargetHeight; y++) {
-                     for (uint32_t x = 0; x < kTargetWidth; x++) {
-                       auto col = GetPixel(vmo_host, kTargetWidth, x, y);
-                       if (col == glm::ivec4(0, 0, 0, 0))
-                         black_pixels++;
-                     }
-                   }
-                   EXPECT_EQ(black_pixels,
-                             kTargetWidth * kTargetHeight - kRenderableWidth * kRenderableHeight);
+                   CHECK_BLACK_PIXELS(vmo_host, kTargetWidth, kTargetHeight,
+                                      kRenderableWidth * kRenderableHeight);
                  });
 
   // Now let's update the uvs of the renderable so only the green portion of the image maps onto
@@ -743,35 +775,24 @@ VK_TEST_F(VulkanRendererTest, RenderTest) {
   // Get a raw pointer from the client collection's vmo that represents the render target
   // and read its values. This should show that the renderable was rendered to the center
   // of the render target, with its associated texture.
-  MapHostPointer(client_target_info, render_target.vmo_index,
-                 [&](uint8_t* vmo_host, uint32_t num_bytes) mutable {
-                   // Flush the cache before reading back target image.
-                   EXPECT_EQ(ZX_OK,
-                             zx_cache_flush(vmo_host, kTargetWidth * kTargetHeight * 4,
-                                            ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
+  MapHostPointer(
+      client_target_info, render_target.vmo_index,
+      [&](uint8_t* vmo_host, uint32_t num_bytes) mutable {
+        // Flush the cache before reading back target image.
+        EXPECT_EQ(ZX_OK, zx_cache_flush(vmo_host, kTargetWidth * kTargetHeight * 4,
+                                        ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
 
-                   // All of the renderable's pixels should be green.
-                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 6, 3), glm::ivec4(0, 255, 0, 255));
-                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 7, 3), glm::ivec4(0, 255, 0, 255));
-                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 8, 3), glm::ivec4(0, 255, 0, 255));
-                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 9, 3), glm::ivec4(0, 255, 0, 255));
-                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 6, 4), glm::ivec4(0, 255, 0, 255));
-                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 7, 4), glm::ivec4(0, 255, 0, 255));
-                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 8, 4), glm::ivec4(0, 255, 0, 255));
-                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 9, 4), glm::ivec4(0, 255, 0, 255));
+        // All of the renderable's pixels should be green.
+        for (uint32_t i = 6; i < 6 + kRenderableWidth; i++) {
+          for (uint32_t j = 3; j < 3 + kRenderableHeight; j++) {
+            EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, i, j), glm::ivec4(0, 255, 0, 255));
+          }
+        }
 
-                   // Make sure the remaining pixels are black.
-                   uint32_t black_pixels = 0;
-                   for (uint32_t y = 0; y < kTargetHeight; y++) {
-                     for (uint32_t x = 0; x < kTargetWidth; x++) {
-                       auto col = GetPixel(vmo_host, kTargetWidth, x, y);
-                       if (col == glm::ivec4(0, 0, 0, 0))
-                         black_pixels++;
-                     }
-                   }
-                   EXPECT_EQ(black_pixels,
-                             kTargetWidth * kTargetHeight - kRenderableWidth * kRenderableHeight);
-                 });
+        // Make sure the remaining pixels are black.
+        CHECK_BLACK_PIXELS(vmo_host, kTargetWidth, kTargetHeight,
+                           kRenderableWidth * kRenderableHeight);
+      });
 }
 
 // This test actually renders a rectangle using the VKRenderer. We create a single rectangle,
@@ -972,16 +993,8 @@ VK_TEST_F(VulkanRendererTest, RotationRenderTest) {
                    EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 10, 4), green);
 
                    // Make sure the remaining pixels are black.
-                   uint32_t black_pixels = 0;
-                   for (uint32_t y = 0; y < kTargetHeight; y++) {
-                     for (uint32_t x = 0; x < kTargetWidth; x++) {
-                       auto col = GetPixel(vmo_host, kTargetWidth, x, y);
-                       if (col == glm::ivec4(0, 0, 0, 0))
-                         black_pixels++;
-                     }
-                   }
-                   EXPECT_EQ(black_pixels,
-                             kTargetWidth * kTargetHeight - kRenderableWidth * kRenderableHeight);
+                   CHECK_BLACK_PIXELS(vmo_host, kTargetWidth, kTargetHeight,
+                                      kRenderableWidth * kRenderableHeight);
                  });
 
   // Now let's update the renderable so it is rotated 90 deg.
@@ -1023,16 +1036,9 @@ VK_TEST_F(VulkanRendererTest, RotationRenderTest) {
         EXPECT_EQ(GetPixel(vmo_host, kTargetWidthFlipped, 12, 10), green);
 
         // Make sure the remaining pixels are black.
-        uint32_t black_pixels = 0;
-        for (uint32_t y = 0; y < kTargetHeightFlipped; y++) {
-          for (uint32_t x = 0; x < kTargetWidthFlipped; x++) {
-            auto col = GetPixel(vmo_host, kTargetWidthFlipped, x, y);
-            if (col == glm::ivec4(0, 0, 0, 0))
-              black_pixels++;
-          }
-        }
-        EXPECT_EQ(black_pixels, kTargetWidthFlipped * kTargetHeightFlipped -
-                                    kRenderableWidth * kRenderableHeight);
+
+        CHECK_BLACK_PIXELS(vmo_host, kTargetWidth, kTargetHeight,
+                           kRenderableWidth * kRenderableHeight);
       });
 
   // Now let's update the renderable so it is rotated 180 deg.
@@ -1073,16 +1079,8 @@ VK_TEST_F(VulkanRendererTest, RotationRenderTest) {
                    EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 10, 4), red);
 
                    // Make sure the remaining pixels are black.
-                   uint32_t black_pixels = 0;
-                   for (uint32_t y = 0; y < kTargetHeight; y++) {
-                     for (uint32_t x = 0; x < kTargetWidth; x++) {
-                       auto col = GetPixel(vmo_host, kTargetWidth, x, y);
-                       if (col == glm::ivec4(0, 0, 0, 0))
-                         black_pixels++;
-                     }
-                   }
-                   EXPECT_EQ(black_pixels,
-                             kTargetWidth * kTargetHeight - kRenderableWidth * kRenderableHeight);
+                   CHECK_BLACK_PIXELS(vmo_host, kTargetWidth, kTargetHeight,
+                                      kRenderableWidth * kRenderableHeight);
                  });
 
   // Now let's update the renderable so it is rotated 270 deg.
@@ -1124,16 +1122,193 @@ VK_TEST_F(VulkanRendererTest, RotationRenderTest) {
         EXPECT_EQ(GetPixel(vmo_host, kTargetWidthFlipped, 4, 26), red);
 
         // Make sure the remaining pixels are black.
-        uint32_t black_pixels = 0;
-        for (uint32_t y = 0; y < kTargetHeightFlipped; y++) {
-          for (uint32_t x = 0; x < kTargetWidthFlipped; x++) {
-            auto col = GetPixel(vmo_host, kTargetWidthFlipped, x, y);
-            if (col == glm::ivec4(0, 0, 0, 0))
-              black_pixels++;
+        CHECK_BLACK_PIXELS(vmo_host, kTargetWidth, kTargetHeight,
+                           kRenderableWidth * kRenderableHeight);
+      });
+}
+
+// Tests if the VK renderer can handle rendering an image without a provided image
+// and only a multiply color (which means that we do not allocate an image for the
+// renderable in this test, only the render target).
+VK_TEST_F(VulkanRendererTest, SolidColorTest) {
+  SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
+  auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
+  auto unique_escher = std::make_unique<escher::Escher>(
+      env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
+  VkRenderer renderer(unique_escher->GetWeakPtr());
+
+  auto target_tokens = flatland::SysmemTokens::Create(sysmem_allocator_.get());
+  auto target_id = allocation::GenerateUniqueBufferCollectionId();
+  auto result = renderer.RegisterRenderTargetCollection(target_id, sysmem_allocator_.get(),
+                                                        std::move(target_tokens.dup_token));
+  EXPECT_TRUE(result);
+
+  // Create a client-side handle to the render target and set the client constraints.
+  auto [buffer_usage, memory_constraints] = GetUsageAndMemoryConstraintsForCpuWriteOften();
+  auto client_target = CreateBufferCollectionSyncPtrAndSetConstraints(
+      sysmem_allocator_.get(), std::move(target_tokens.local_token),
+      /*image_count*/ 1,
+      /*width*/ 60,
+      /*height*/ 40, buffer_usage, fuchsia::sysmem::PixelFormatType::BGRA32,
+      std::make_optional(memory_constraints));
+
+  fuchsia::sysmem::BufferCollectionInfo_2 client_target_info = {};
+  {
+    zx_status_t allocation_status = ZX_OK;
+    auto status = client_target->WaitForBuffersAllocated(&allocation_status, &client_target_info);
+    EXPECT_EQ(status, ZX_OK);
+    EXPECT_EQ(allocation_status, ZX_OK);
+  }
+
+  // Create the render_target image metadata.
+  const uint32_t kTargetWidth = 16;
+  const uint32_t kTargetHeight = 8;
+  ImageMetadata render_target = {.collection_id = target_id,
+                                 .identifier = allocation::GenerateUniqueImageId(),
+                                 .vmo_index = 0,
+                                 .width = kTargetWidth,
+                                 .height = kTargetHeight};
+
+  // Create the image meta data for the solid color renderable.
+  ImageMetadata renderable_image_data = {.identifier = allocation::kInvalidImageId,
+                                         .multiply_color = {1, 0.4, 0, 1},
+                                         .is_opaque = false};
+
+  renderer.ImportBufferImage(render_target);
+
+  // Create the two renderables.
+  const uint32_t kRenderableWidth = 4;
+  const uint32_t kRenderableHeight = 2;
+  Rectangle2D renderable(glm::vec2(6, 3), glm::vec2(kRenderableWidth, kRenderableHeight));
+
+  // Render the renderable to the render target.
+  renderer.Render(render_target, {renderable}, {renderable_image_data});
+  renderer.WaitIdle();
+
+  // Get a raw pointer from the client collection's vmo that represents the render target
+  // and read its values. This should show that the renderable was rendered to the center
+  // of the render target, with its associated texture.
+  MapHostPointer(client_target_info, render_target.vmo_index,
+                 [&](uint8_t* vmo_host, uint32_t num_bytes) mutable {
+                   // Flush the cache before reading back target image.
+                   EXPECT_EQ(ZX_OK,
+                             zx_cache_flush(vmo_host, kTargetWidth * kTargetHeight * 4,
+                                            ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
+
+                   uint8_t linear_vals[num_bytes];
+                   sRGBtoLinear(vmo_host, linear_vals, num_bytes);
+
+                   // Make sure the pixels are in the right order give that we rotated
+                   // the rectangle. Values are BGRA.
+                   for (uint32_t i = 6; i < 6 + kRenderableWidth; i++) {
+                     for (uint32_t j = 3; j < 3 + kRenderableHeight; j++) {
+                       auto pixel = GetPixel(linear_vals, kTargetWidth, i, j);
+                       // The sRGB conversion function provides slightly different results depending
+                       // on the platform.
+                       EXPECT_TRUE(pixel == glm::ivec4(0, 101, 255, 255) ||
+                                   pixel == glm::ivec4(0, 102, 255, 255));
+                     }
+                   }
+
+                   // Make sure the remaining pixels are black.
+                   CHECK_BLACK_PIXELS(vmo_host, kTargetWidth, kTargetHeight, 8U);
+                 });
+}
+
+// Tests if the VK renderer can handle rendering 2 solid color images. Since solid
+// color images make use of a shared default 1x1 white texture within the vk renderer,
+// this tests to make sure that there aren't any problems that arise from this sharing.
+VK_TEST_F(VulkanRendererTest, MultipleSolidColorTest) {
+  SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
+  auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
+  auto unique_escher = std::make_unique<escher::Escher>(
+      env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
+  VkRenderer renderer(unique_escher->GetWeakPtr());
+
+  auto target_tokens = flatland::SysmemTokens::Create(sysmem_allocator_.get());
+  auto target_id = allocation::GenerateUniqueBufferCollectionId();
+  auto result = renderer.RegisterRenderTargetCollection(target_id, sysmem_allocator_.get(),
+                                                        std::move(target_tokens.dup_token));
+  EXPECT_TRUE(result);
+
+  // Create a client-side handle to the render target and set the client constraints.
+  auto [buffer_usage, memory_constraints] = GetUsageAndMemoryConstraintsForCpuWriteOften();
+  auto client_target = CreateBufferCollectionSyncPtrAndSetConstraints(
+      sysmem_allocator_.get(), std::move(target_tokens.local_token),
+      /*image_count*/ 1,
+      /*width*/ 60,
+      /*height*/ 40, buffer_usage, fuchsia::sysmem::PixelFormatType::BGRA32,
+      std::make_optional(memory_constraints));
+
+  fuchsia::sysmem::BufferCollectionInfo_2 client_target_info = {};
+  {
+    zx_status_t allocation_status = ZX_OK;
+    auto status = client_target->WaitForBuffersAllocated(&allocation_status, &client_target_info);
+    EXPECT_EQ(status, ZX_OK);
+    EXPECT_EQ(allocation_status, ZX_OK);
+  }
+
+  // Create the render_target image metadata.
+  const uint32_t kTargetWidth = 16;
+  const uint32_t kTargetHeight = 8;
+  ImageMetadata render_target = {.collection_id = target_id,
+                                 .identifier = allocation::GenerateUniqueImageId(),
+                                 .vmo_index = 0,
+                                 .width = kTargetWidth,
+                                 .height = kTargetHeight};
+
+  // Create the image meta data for the solid color renderable - red.
+  ImageMetadata renderable_image_data = {.identifier = allocation::kInvalidImageId,
+                                         .multiply_color = {1, 0, 0, 1},
+                                         .is_opaque = false};
+
+  // Create the image meta data for the other solid color renderable - blue.
+  ImageMetadata renderable_image_data_2 = {.identifier = allocation::kInvalidImageId,
+                                           .multiply_color = {0, 0, 1, 1},
+                                           .is_opaque = false};
+
+  renderer.ImportBufferImage(render_target);
+
+  // Create the two renderables.
+  const uint32_t kRenderableWidth = 4;
+  const uint32_t kRenderableHeight = 2;
+  Rectangle2D renderable(glm::vec2(6, 3), glm::vec2(kRenderableWidth, kRenderableHeight));
+  Rectangle2D renderable_2(glm::vec2(6, 5), glm::vec2(kRenderableWidth, kRenderableHeight));
+
+  // Render the renderable to the render target.
+  renderer.Render(render_target, {renderable, renderable_2},
+                  {renderable_image_data, renderable_image_data_2});
+  renderer.WaitIdle();
+
+  // Get a raw pointer from the client collection's vmo that represents the render target
+  // and read its values. This should show that the renderable was rendered to the center
+  // of the render target, with its associated texture.
+  MapHostPointer(
+      client_target_info, render_target.vmo_index,
+      [&](uint8_t* vmo_host, uint32_t num_bytes) mutable {
+        // Flush the cache before reading back target image.
+        EXPECT_EQ(ZX_OK, zx_cache_flush(vmo_host, kTargetWidth * kTargetHeight * 4,
+                                        ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
+
+        uint8_t linear_vals[num_bytes];
+        sRGBtoLinear(vmo_host, linear_vals, num_bytes);
+
+        // Make sure the pixels are in the right order give that we rotated
+        // the rectangle.
+        for (uint32_t i = 6; i < 6 + kRenderableWidth; i++) {
+          for (uint32_t j = 3; j < 3 + kRenderableHeight; j++) {
+            EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, i, j), glm::ivec4(0, 0, 255, 255));
           }
         }
-        EXPECT_EQ(black_pixels, kTargetWidthFlipped * kTargetHeightFlipped -
-                                    kRenderableWidth * kRenderableHeight);
+
+        for (uint32_t i = 6; i < 6 + kRenderableWidth; i++) {
+          for (uint32_t j = 5; j < 5 + kRenderableHeight; j++) {
+            EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, i, j), glm::ivec4(255, 0, 0, 255));
+          }
+        }
+
+        // Make sure the remaining pixels are black.
+        CHECK_BLACK_PIXELS(vmo_host, kTargetWidth, kTargetHeight, 16U);
       });
 }
 
@@ -1287,45 +1462,24 @@ VK_TEST_F(VulkanRendererTest, TransparencyTest) {
         EXPECT_EQ(ZX_OK, zx_cache_flush(vmo_host, kTargetWidth * kTargetHeight * 4,
                                         ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
 
-        // Directly reading the vmo values does not unmap the sRGB image values back
-        // into a linear space. So we have to do that conversion here before we do
-        // any value comparisons. This conversion could be done automatically if we were
-        // doing a Vulkan read on the vk::Image directly and not a sysmem read of the vmo,
-        // but we don't have direct access to the images in the Renderer.
         uint8_t linear_vals[num_bytes];
-        for (uint32_t i = 0; i < num_bytes; i++) {
-          // Do not de-encode the alpha value.
-          if ((i + 1) % 4 == 0) {
-            linear_vals[i] = vmo_host[i];
-            continue;
-          }
-          float lin_val = std::powf((float(vmo_host[i]) / float(0xFF)), 2.2f);
-          linear_vals[i] = lin_val * 255U;
-        }
+        sRGBtoLinear(vmo_host, linear_vals, num_bytes);
 
         // Make sure the pixels are in the right order give that we rotated
         // the rectangle.
         EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 6, 3), glm::ivec4(255, 0, 0, 255));
         EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 6, 4), glm::ivec4(255, 0, 0, 255));
-        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 7, 3), glm::ivec4(128, 255, 0, 255));
-        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 7, 4), glm::ivec4(128, 255, 0, 255));
-        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 8, 3), glm::ivec4(128, 255, 0, 255));
-        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 8, 4), glm::ivec4(128, 255, 0, 255));
-        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 9, 3), glm::ivec4(128, 255, 0, 255));
-        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 9, 4), glm::ivec4(128, 255, 0, 255));
+        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 7, 3), glm::ivec4(126, 255, 0, 255));
+        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 7, 4), glm::ivec4(126, 255, 0, 255));
+        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 8, 3), glm::ivec4(126, 255, 0, 255));
+        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 8, 4), glm::ivec4(126, 255, 0, 255));
+        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 9, 3), glm::ivec4(126, 255, 0, 255));
+        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 9, 4), glm::ivec4(126, 255, 0, 255));
         EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 10, 3), glm::ivec4(0, 255, 0, 128));
         EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 10, 4), glm::ivec4(0, 255, 0, 128));
 
         // Make sure the remaining pixels are black.
-        uint32_t black_pixels = 0;
-        for (uint32_t y = 0; y < kTargetHeight; y++) {
-          for (uint32_t x = 0; x < kTargetWidth; x++) {
-            auto col = GetPixel(vmo_host, kTargetWidth, x, y);
-            if (col == glm::ivec4(0, 0, 0, 0))
-              black_pixels++;
-          }
-        }
-        EXPECT_EQ(black_pixels, kTargetWidth * kTargetHeight - 10U);
+        CHECK_BLACK_PIXELS(vmo_host, kTargetWidth, kTargetHeight, 10U);
       });
 }
 
@@ -1472,27 +1626,8 @@ VK_TEST_F(VulkanRendererTest, MultiplyColorTest) {
         EXPECT_EQ(ZX_OK, zx_cache_flush(vmo_host, kTargetWidth * kTargetHeight * 4,
                                         ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
 
-        // Directly reading the vmo values does not unmap the sRGB image values back
-        // into a linear space. So we have to do that conversion here before we do
-        // any value comparisons. This conversion could be done automatically if we were
-        // doing a Vulkan read on the vk::Image directly and not a sysmem read of the vmo,
-        // but we don't have direct access to the images in the Renderer.
         uint8_t linear_vals[num_bytes];
-        for (uint32_t i = 0; i < num_bytes; i++) {
-          // Do not de-encode the alpha value.
-          if ((i + 1) % 4 == 0) {
-            linear_vals[i] = vmo_host[i];
-            continue;
-          }
-
-          // Function to convert from sRGB to linear RGB.
-          float s_val = (float(vmo_host[i]) / float(0xFF));
-          if (0.f <= s_val && s_val <= 0.04045f) {
-            linear_vals[i] = (s_val / 12.92f) * 255U;
-          } else {
-            linear_vals[i] = std::powf(((s_val + 0.055f) / 1.055f), 2.4f) * 255U;
-          }
-        }
+        sRGBtoLinear(vmo_host, linear_vals, num_bytes);
 
 // The sRGB values are different on different platforms and so the uncompressed values
 // will likewise be different. Specifically, it is the AMLOGIC platforms (astro, sherlock,
@@ -1524,15 +1659,7 @@ VK_TEST_F(VulkanRendererTest, MultiplyColorTest) {
         EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 10, 4), glm::ivec4(0, kCompVal, 0, 128));
 
         // Make sure the remaining pixels are black.
-        uint32_t black_pixels = 0;
-        for (uint32_t y = 0; y < kTargetHeight; y++) {
-          for (uint32_t x = 0; x < kTargetWidth; x++) {
-            auto col = GetPixel(vmo_host, kTargetWidth, x, y);
-            if (col == glm::ivec4(0, 0, 0, 0))
-              black_pixels++;
-          }
-        }
-        EXPECT_EQ(black_pixels, kTargetWidth * kTargetHeight - 10U);
+        CHECK_BLACK_PIXELS(vmo_host, kTargetWidth, kTargetHeight, 10U);
       });
 }
 
