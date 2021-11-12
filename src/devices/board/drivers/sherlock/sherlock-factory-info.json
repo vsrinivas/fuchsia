@@ -1,0 +1,9 @@
+{
+    "short_description": "Sherlock factory board driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Board"
+    ]
+}

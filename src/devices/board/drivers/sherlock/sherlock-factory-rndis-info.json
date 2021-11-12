@@ -1,0 +1,9 @@
+{
+    "short_description": "Sherlock factory RNDIS board driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Board"
+    ]
+}

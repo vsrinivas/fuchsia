@@ -653,6 +653,7 @@ template("sherlock_driver") {
 
   fuchsia_driver_component(target_name) {
     deps = [ ":${target_name}-driver" ]
+    info = "${target_name}-info.json"
   }
 }
 
