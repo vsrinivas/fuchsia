@@ -184,14 +184,13 @@ mod tests {
             client::AppBuilder,
             server::{NestedEnvironment, ServiceFs},
         },
-        fuchsia_vfs_pseudo_fs::{
-            directory::entry::DirectoryEntry,
-            file::simple::{read_only, read_only_str},
-            tree_builder::TreeBuilder,
-        },
         fuchsia_zircon as zx,
         futures::{StreamExt, TryStreamExt},
-        std::{iter, str::from_utf8},
+        std::str::from_utf8,
+        vfs::{
+            directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
+            file::vmo::asynchronous::read_only_static, tree_builder::TreeBuilder,
+        },
     };
 
     const FACTORYCTL_PKG_URL: &str =
@@ -243,30 +242,21 @@ mod tests {
         contents2: &'static [u8],
     ) -> Result<DirectoryProxy, Error> {
         let mut tree = TreeBuilder::empty_dir();
-        tree.add_entry(
-            &name.split("/").collect::<Vec<&str>>(),
-            read_only_str(move || Ok(contents.to_owned())),
-        )
-        .unwrap();
-        tree.add_entry(
-            &name2.split("/").collect::<Vec<&str>>(),
-            read_only(move || Ok(contents2.to_vec())),
-        )
-        .unwrap();
-        let mut test_dir = tree.build();
+        tree.add_entry(&name.split("/").collect::<Vec<&str>>(), read_only_static(contents))
+            .unwrap();
+        tree.add_entry(&name2.split("/").collect::<Vec<&str>>(), read_only_static(contents2))
+            .unwrap();
+        let test_dir = tree.build();
 
         let (test_dir_proxy, test_dir_service) =
             fidl::endpoints::create_proxy::<DirectoryMarker>()?;
         test_dir.open(
+            ExecutionScope::new(),
             OPEN_RIGHT_READABLE,
             MODE_TYPE_DIRECTORY,
-            &mut iter::empty(),
+            vfs::path::Path::dot(),
             test_dir_service.into_channel().into(),
         );
-        fasync::Task::spawn(async move {
-            let _ = test_dir.await;
-        })
-        .detach();
 
         Ok(test_dir_proxy)
     }
