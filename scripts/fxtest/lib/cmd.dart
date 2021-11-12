@@ -300,7 +300,8 @@ class FuchsiaTestCommand {
             exitCode: failureExitCode,
             message:
                 'Package repository is not available. Run "fx serve-updates" again or use the "--no-use-package-hash" flag.',
-            testName: testBundle.testDefinition.name));
+            testName: testBundle.testDefinition.name,
+            command: ''));
         return false;
       } else {
         String packageName = testBundle.testDefinition.packageUrl!.packageName;
@@ -310,7 +311,8 @@ class FuchsiaTestCommand {
               exitCode: failureExitCode,
               message:
                   'Package $packageName is not in the package repository, check if it was correctly built or use the "--no-use-package-hash" flag.',
-              testName: testBundle.testDefinition.name));
+              testName: testBundle.testDefinition.name,
+              command: ''));
           return false;
         }
         testBundle.testDefinition.hash = repository[packageName]!.merkle;

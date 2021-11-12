@@ -236,12 +236,7 @@ abstract class OutputFormatter {
       String tests = _testFailedEvents.length != 1 ? 'tests' : 'test';
       buffer.addLine(wrapWith('Failed $tests:', [red]));
       for (var event in _testFailedEvents) {
-        // testName is a friendly string which contains the whole invocation cmd,
-        // Extract the test name from invocation cmd, on error display whole cmd.
-        var invocationCmd = event.testName.split(' ');
-        var name = wrapWith(
-            invocationCmd.length > 7 ? invocationCmd[7] : event.testName,
-            [cyan]);
+        var name = wrapWith(event.testName, [cyan]);
         buffer.addLine('${addEmoji(Emoji.x)}  $name');
       }
     }
@@ -303,7 +298,7 @@ class StandardOutputFormatter extends OutputFormatter {
 
   @override
   void _handleTestStarted(TestStarted event) {
-    String testName = wrapWith(event.testName, [cyan])!;
+    String command = wrapWith(event.command, [cyan])!;
     // Add some padding for our first test event
     if (_testStartedEvents.length == 1) {
       buffer.addLine('');
@@ -311,7 +306,7 @@ class StandardOutputFormatter extends OutputFormatter {
     _lastTestHadOutput = false;
 
     var output =
-        '$ratioDisplay $testExecutionTime ${addEmoji(Emoji.thinking)}  $testName';
+        '$ratioDisplay $testExecutionTime ${addEmoji(Emoji.thinking)}  $command';
     if (isVerbose) {
       buffer.addLine(output);
     } else {

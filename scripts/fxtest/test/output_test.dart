@@ -52,7 +52,7 @@ void main() {
       'test': {
         'cpu': 'x64',
         'label': '//scripts/lib:lib_tests(//build/toolchain:host_x64)',
-        'name': 'lib_tests',
+        'name': 'host_x64/lib_tests',
         'os': 'linux',
         'path': 'host_x64/lib_tests',
         'runtime_deps': 'host_x64/gen/scripts/lib/lib_tests.deps.json'
@@ -101,7 +101,7 @@ void main() {
       // Output that the test passed. Note that the _test is running_ content
       // has been overwritten.
       expect(buffer.content.first, contains('✅'));
-      expect(buffer.content.first, contains('/whatever/host_x64/lib_tests'));
+      expect(buffer.content.first, contains('host_x64/lib_tests'));
       expect(commandExitCode, 0);
     });
 
@@ -139,7 +139,7 @@ void main() {
       // Output that the test failed. Note that the _test is running_ content
       // has been overwritten.
       expect(allOutput, contains('❌'));
-      expect(allOutput, contains('/whatever/host_x64/lib_tests'));
+      expect(allOutput, contains('host_x64/lib_tests'));
       expect(commandExitCode, 2);
     });
   });

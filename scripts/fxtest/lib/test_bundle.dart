@@ -241,7 +241,7 @@ class TestBundle {
 
     yield TestStarted(
       testDefinition: testDefinition,
-      testName: fullCommandDisplay,
+      command: fullCommandDisplay,
     );
 
     if (isDryRun) {
@@ -299,7 +299,8 @@ class TestBundle {
       workingDirectory: workingDirectory,
     );
     return TestResult(
-      testName: fullCommandDisplay,
+      testName: testDefinition.name,
+      command: fullCommandDisplay,
       exitCode: result.exitCode,
       runtime: DateTime.now().difference(start),
       message: result.exitCode == 0

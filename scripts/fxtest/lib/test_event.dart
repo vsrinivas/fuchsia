@@ -19,11 +19,10 @@ class TestResult extends TestEvent {
   final int exitCode;
 
   /// Friendly string to print indicating this test.
-  ///
-  /// It is valid to put the whole invocation command here, as that will allow
-  /// developers to most-easily directly target their specific test, should they
-  /// so choose.
   final String testName;
+
+  /// The full command invoked to run this test.
+  final String? command;
 
   /// Whether the test was actually executed.
   ///
@@ -40,6 +39,7 @@ class TestResult extends TestEvent {
 
   TestResult({
     required this.testName,
+    required this.command,
     required this.exitCode,
     required this.message,
     required this.runtime,
@@ -50,7 +50,8 @@ class TestResult extends TestEvent {
   })  : isDryRun = true,
         exitCode = 0,
         runtime = Duration(),
-        message = null;
+        message = null,
+        command = null;
 
   bool get isSuccess => exitCode == 0;
 
@@ -95,15 +96,17 @@ class TestOutputEvent extends TestInfo {
 
 class TestStarted extends TestEvent {
   final TestDefinition testDefinition;
-  final String testName;
+  final String command;
 
   TestStarted({
     required this.testDefinition,
-    required this.testName,
+    required this.command,
   });
 
   @override
-  String toString() => '<TestStarted $testName>';
+  String toString() => '<TestStarted ${testDefinition.name}>';
+
+  String get name => testDefinition.name;
 }
 
 /// Signifies to output formatters that we have entered this phase.
