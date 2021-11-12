@@ -59,6 +59,7 @@ dart_tool("fxtest") {
   ]
   deps = [
     "//scripts/fxutils",
+    "//sdk/dart/zircon",
     "//third_party/dart-pkg/pub/args",
     "//third_party/dart-pkg/pub/io",
     "//third_party/dart-pkg/pub/meta",

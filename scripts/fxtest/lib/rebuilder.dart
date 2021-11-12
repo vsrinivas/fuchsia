@@ -14,7 +14,8 @@ Future<Process> fxCommandRun(String fx, String cmd, [List<String>? args]) {
     final _exitCode = await process.exitCode;
     if (_exitCode != 0) {
       throw FxRunException(
-          'fx $cmd ${args == null ? '' : args.join(' ')}', _exitCode);
+          'Failed to run fx $cmd ${args == null ? '' : args.join(' ')}',
+          _exitCode);
     }
     return process;
   });

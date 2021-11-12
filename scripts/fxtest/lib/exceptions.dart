@@ -14,6 +14,12 @@ class FxRunException implements Exception {
       'Exit Code: $exitCode';
 }
 
+class TestFrameworkUnavailableError implements Exception {
+  @override
+  String toString() => 'Could not connect to Test Manager.\n'
+      'This could indicate the target device is unavilable or some bug in the test framework.';
+}
+
 class FailFastException implements Exception {
   @override
   String toString() => 'FailFastException';

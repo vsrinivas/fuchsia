@@ -8,6 +8,7 @@ import 'dart:io';
 import 'package:fxtest/fxtest.dart';
 import 'package:fxutils/fxutils.dart' as fxutils;
 import 'package:path/path.dart' as p;
+import 'package:zircon/zircon.dart';
 
 /// Container that holds enough information about a test to execute it and
 /// report back on output / events.
@@ -280,7 +281,14 @@ class TestBundle {
     if (!timingEvents.isCompleted) {
       timingEvents.complete();
     }
-    yield result;
+    // ffx returns a ZX_ERR_UNAVILABLE code if it could not connect to test
+    // manager. This indicates some issue with the setup and isn't retriable.
+    if (result.exitCode == -ZX.ERR_UNAVAILABLE) {
+      yield FatalError('Could not run ${testDefinition.name}');
+      throw TestFrameworkUnavailableError();
+    } else {
+      yield result;
+    }
     if (raiseOnFailure && result.exitCode != 0) {
       throw FailFastException();
     }

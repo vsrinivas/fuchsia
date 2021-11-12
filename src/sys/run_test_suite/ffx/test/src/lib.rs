@@ -7,7 +7,7 @@ mod suite_definition;
 
 use {
     anyhow::{anyhow, format_err, Context, Result},
-    errors::{ffx_bail, ffx_error, FfxError},
+    errors::{ffx_bail, ffx_bail_with_code, ffx_error, ffx_error_with_code, FfxError},
     ffx_core::ffx_plugin,
     ffx_test_args::{
         DeleteResultCommand, ListCommand, ResultCommand, ResultSubCommand, RunCommand,
@@ -18,6 +18,7 @@ use {
     fidl_fuchsia_developer_remotecontrol as fremotecontrol,
     fidl_fuchsia_test_manager as ftest_manager,
     ftest_manager::{RunBuilderMarker, RunBuilderProxy},
+    lazy_static::lazy_static,
     output_directory::{DirectoryError, DirectoryId, DirectoryManager},
     std::fs::File,
     std::io::{stdout, Write},
@@ -25,6 +26,13 @@ use {
 };
 
 const RUN_BUILDER_SELECTOR: &str = "core/test_manager:expose:fuchsia.test.manager.RunBuilder";
+
+lazy_static! {
+    /// Error code returned if connecting to Test Manager fails.
+    static ref SETUP_FAILED_CODE: i32 = -fidl::Status::UNAVAILABLE.into_raw();
+    /// Error code returned if tests time out.
+    static ref TIMED_OUT_CODE: i32 = -fidl::Status::TIMED_OUT.into_raw();
+}
 
 struct RunBuilderConnector {
     remote_control: fremotecontrol::RemoteControlProxy,
@@ -57,11 +65,16 @@ impl RunBuilderConnector {
 
 #[ffx_plugin(ftest_manager::QueryProxy = "core/test_manager:expose:fuchsia.test.manager.Query")]
 pub async fn test(
-    query_proxy: ftest_manager::QueryProxy,
-    remote_control: fremotecontrol::RemoteControlProxy,
+    query_proxy_result: Result<ftest_manager::QueryProxy>,
+    remote_control_result: Result<fremotecontrol::RemoteControlProxy>,
     cmd: TestCommand,
 ) -> Result<()> {
     let writer = Box::new(stdout());
+
+    let query_proxy =
+        query_proxy_result.map_err(|e| ffx_error_with_code!(*SETUP_FAILED_CODE, "{:?}", e))?;
+    let remote_control =
+        remote_control_result.map_err(|e| ffx_error_with_code!(*SETUP_FAILED_CODE, "{:?}", e))?;
 
     match cmd.subcommand {
         TestSubcommand::Run(run) => run_test(RunBuilderConnector::new(remote_control), run).await,
@@ -136,7 +149,9 @@ async fn run_test(builder_connector: Box<RunBuilderConnector>, cmd: RunCommand) 
     .await
     {
         run_test_suite_lib::Outcome::Passed => Ok(()),
-        run_test_suite_lib::Outcome::Timedout => ffx_bail!("Tests timed out."),
+        run_test_suite_lib::Outcome::Timedout => {
+            ffx_bail_with_code!(*TIMED_OUT_CODE, "Tests timed out.",)
+        }
         run_test_suite_lib::Outcome::Failed => ffx_bail!("Tests failed."),
         run_test_suite_lib::Outcome::Inconclusive => ffx_bail!("Inconclusive test result."),
         run_test_suite_lib::Outcome::Error { internal } => match internal {
