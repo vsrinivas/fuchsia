@@ -728,8 +728,20 @@ fn get_dependencies_from_environments(decl: &ComponentDecl, dependency_map: &mut
     for env in &decl.environments {
         env_source_children.insert(&env.name, vec![]);
         for runner in &env.runners {
-            if let RegistrationSource::Child(source_child) = &runner.source {
-                env_source_children.get_mut(&env.name).unwrap().push(source_child);
+            match &runner.source {
+                RegistrationSource::Child(source_child) => {
+                    env_source_children.get_mut(&env.name).unwrap().push(source_child);
+                }
+                RegistrationSource::Parent | RegistrationSource::Self_ => {}
+            }
+        }
+
+        for resolver in &env.resolvers {
+            match &resolver.source {
+                RegistrationSource::Child(source_child) => {
+                    env_source_children.get_mut(&env.name).unwrap().push(source_child)
+                }
+                RegistrationSource::Parent | RegistrationSource::Self_ => {}
             }
         }
     }
@@ -1143,6 +1155,198 @@ mod tests {
             vec![DependencyNode::Child("childC".to_string())],
         ));
         expected.push((DependencyNode::Child("childC".to_string()), vec![]));
+        validate_results(expected, process_component_dependencies(&decl));
+    }
+
+    #[test]
+    fn test_environment_with_resolver_from_parent() {
+        let decl = ComponentDecl {
+            environments: vec![EnvironmentDeclBuilder::new()
+                .name("resolver_env")
+                .add_resolver(cm_rust::ResolverRegistration {
+                    source: RegistrationSource::Parent,
+                    resolver: "foo".into(),
+                    scheme: "httweeeeees".into(),
+                })
+                .build()],
+            children: vec![
+                ChildDeclBuilder::new_lazy_child("childA").build(),
+                ChildDeclBuilder::new_lazy_child("childB").environment("resolver_env").build(),
+            ],
+            ..default_component_decl()
+        };
+        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
+        expected.push((
+            DependencyNode::Parent,
+            vec![
+                DependencyNode::Child("childA".to_string()),
+                DependencyNode::Child("childB".to_string()),
+            ],
+        ));
+        expected.push((DependencyNode::Child("childA".to_string()), vec![]));
+        expected.push((DependencyNode::Child("childB".to_string()), vec![]));
+        validate_results(expected, process_component_dependencies(&decl));
+    }
+
+    #[test]
+    fn test_environment_with_resolver_from_child() {
+        let decl = ComponentDecl {
+            environments: vec![EnvironmentDeclBuilder::new()
+                .name("resolver_env")
+                .add_resolver(cm_rust::ResolverRegistration {
+                    source: RegistrationSource::Child("childA".to_string()),
+                    resolver: "foo".into(),
+                    scheme: "httweeeeees".into(),
+                })
+                .build()],
+            children: vec![
+                ChildDeclBuilder::new_lazy_child("childA").build(),
+                ChildDeclBuilder::new_lazy_child("childB").environment("resolver_env").build(),
+            ],
+            ..default_component_decl()
+        };
+        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
+        expected.push((
+            DependencyNode::Parent,
+            vec![
+                DependencyNode::Child("childA".to_string()),
+                DependencyNode::Child("childB".to_string()),
+            ],
+        ));
+        expected.push((
+            DependencyNode::Child("childA".to_string()),
+            vec![DependencyNode::Child("childB".to_string())],
+        ));
+        expected.push((DependencyNode::Child("childB".to_string()), vec![]));
+        validate_results(expected, process_component_dependencies(&decl));
+    }
+
+    // add test where B depends on A via environment and C depends on B via environment
+
+    #[test]
+    fn test_environment_with_chain_of_resolvers() {
+        let decl = ComponentDecl {
+            environments: vec![
+                EnvironmentDeclBuilder::new()
+                    .name("env1")
+                    .add_resolver(cm_rust::ResolverRegistration {
+                        source: RegistrationSource::Child("childA".to_string()),
+                        resolver: "foo".into(),
+                        scheme: "httweeeeees".into(),
+                    })
+                    .build(),
+                EnvironmentDeclBuilder::new()
+                    .name("env2")
+                    .add_resolver(cm_rust::ResolverRegistration {
+                        source: RegistrationSource::Child("childB".to_string()),
+                        resolver: "bar".into(),
+                        scheme: "httweeeeee".into(),
+                    })
+                    .build(),
+            ],
+            children: vec![
+                ChildDeclBuilder::new_lazy_child("childA").build(),
+                ChildDeclBuilder::new_lazy_child("childB").environment("env1").build(),
+                ChildDeclBuilder::new_lazy_child("childC").environment("env2").build(),
+            ],
+            ..default_component_decl()
+        };
+        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
+        expected.push((
+            DependencyNode::Parent,
+            vec![
+                DependencyNode::Child("childA".to_string()),
+                DependencyNode::Child("childB".to_string()),
+                DependencyNode::Child("childC".to_string()),
+            ],
+        ));
+        expected.push((
+            DependencyNode::Child("childA".to_string()),
+            vec![DependencyNode::Child("childB".to_string())],
+        ));
+        expected.push((
+            DependencyNode::Child("childB".to_string()),
+            vec![DependencyNode::Child("childC".to_string())],
+        ));
+        expected.push((DependencyNode::Child("childC".to_string()), vec![]));
+        validate_results(expected, process_component_dependencies(&decl));
+    }
+
+    #[test]
+    fn test_environment_with_resolver_and_runner_from_child() {
+        let decl = ComponentDecl {
+            environments: vec![EnvironmentDeclBuilder::new()
+                .name("multi_env")
+                .add_resolver(cm_rust::ResolverRegistration {
+                    source: RegistrationSource::Child("childA".to_string()),
+                    resolver: "foo".into(),
+                    scheme: "httweeeeees".into(),
+                })
+                .add_runner(cm_rust::RunnerRegistration {
+                    source: RegistrationSource::Child("childB".to_string()),
+                    source_name: "bar".into(),
+                    target_name: "bar".into(),
+                })
+                .build()],
+            children: vec![
+                ChildDeclBuilder::new_lazy_child("childA").build(),
+                ChildDeclBuilder::new_lazy_child("childB").build(),
+                ChildDeclBuilder::new_lazy_child("childC").environment("multi_env").build(),
+            ],
+            ..default_component_decl()
+        };
+        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
+        expected.push((
+            DependencyNode::Parent,
+            vec![
+                DependencyNode::Child("childA".to_string()),
+                DependencyNode::Child("childB".to_string()),
+                DependencyNode::Child("childC".to_string()),
+            ],
+        ));
+        expected.push((
+            DependencyNode::Child("childA".to_string()),
+            vec![DependencyNode::Child("childC".to_string())],
+        ));
+        expected.push((
+            DependencyNode::Child("childB".to_string()),
+            vec![DependencyNode::Child("childC".to_string())],
+        ));
+        expected.push((DependencyNode::Child("childC".to_string()), vec![]));
+        validate_results(expected, process_component_dependencies(&decl));
+    }
+
+    #[test]
+    fn test_environment_with_collection_resolver_from_child() {
+        let decl = ComponentDecl {
+            environments: vec![EnvironmentDeclBuilder::new()
+                .name("resolver_env")
+                .add_resolver(cm_rust::ResolverRegistration {
+                    source: RegistrationSource::Child("childA".to_string()),
+                    resolver: "foo".into(),
+                    scheme: "httweeeeees".into(),
+                })
+                .build()],
+            children: vec![ChildDeclBuilder::new_lazy_child("childA").build()],
+            collections: vec![CollectionDeclBuilder::new()
+                .name("coll")
+                .environment("resolver_env")
+                .build()],
+            ..default_component_decl()
+        };
+        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
+        expected.push((
+            DependencyNode::Parent,
+            vec![
+                DependencyNode::Child("childA".to_string()),
+                DependencyNode::Collection("coll".to_string()),
+            ],
+        ));
+        expected.push((
+            DependencyNode::Child("childA".to_string()),
+            vec![DependencyNode::Collection("coll".to_string())],
+        ));
+        expected.push((DependencyNode::Collection("coll".to_string()), vec![]));
         validate_results(expected, process_component_dependencies(&decl));
     }
 
