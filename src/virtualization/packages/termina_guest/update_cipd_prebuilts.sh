@@ -72,14 +72,25 @@ create_cros_tree() {
   (cd src/overlays; git checkout cros/test-magma)
   (cd src/third_party/chromiumos-overlay; git checkout cros/test-magma)
   (cd src/platform2; git checkout cros/test-magma)
+  (cd src/platform/minigbm; git checkout cros/test-magma)
 
-  # Switch to Fuchsia's mesa branch and build the "libmagma SDK":
+  # Apply patches to minigbm temporarily
+  (cd src/platform/minigbm; git fetch https://chromium.googlesource.com/chromiumos/platform/minigbm refs/changes/72/3276672/13 && git cherry-pick FETCH_HEAD)
+  (cd src/platform/minigbm; git fetch https://chromium.googlesource.com/chromiumos/platform/minigbm refs/changes/36/3276636/4 && git cherry-pick FETCH_HEAD)
+  (cd src/platform/minigbm; git fetch https://chromium.googlesource.com/chromiumos/platform/minigbm refs/changes/88/3276688/1 && git cherry-pick FETCH_HEAD)
+
+  # Switch to Fuchsia's mesa branch
   (cd src/third_party/mesa && \
     git config remote.fuchsia.url >&- || \
     git remote add fuchsia https://fuchsia.googlesource.com/third_party/mesa && \
     git remote update fuchsia && \
-    git checkout fuchsia/main && \
-    cd fuchsia && ./install-magma-linux.sh)
+    git checkout fuchsia/main)
+
+  if [ ! -d src/third_party/magma ]; then
+    # Create magma area and build it from fuchsia
+    mkdir -p src/third_party/magma
+    (cd src/third_party/magma && "${FUCHSIA_DIR}/src/graphics/lib/magma/scripts/install-magma-linux.sh")
+  fi
 
   popd
 }
@@ -111,7 +122,10 @@ build_angle() {
     angle_enable_essl=false \
     angle_enable_glsl=false \
     angle_build_all=true \
-    angle_enable_swiftshader=false"
+    angle_enable_swiftshader=false \
+    angle_use_custom_libvulkan=false \
+    angle_egl_extension=\"so.1\" \
+    angle_glesv2_extension=\"so.2\""
 
   ninja -C out angle gles2_torus_lighting
 
@@ -144,6 +158,12 @@ build_termina_image() {
 
   # Switch to source build of sommelier
   cros_sdk bash -c "cros_workon --board=${board} start sommelier"
+
+  # Switch to source build of magma
+  cros_sdk bash -c "cros_workon --board=${board} start magma"
+
+  # Switch to source build of minigbm
+  cros_sdk bash -c "cros_workon --board=${board} start minigbm"
 
   # Build chromeos image
   cros_sdk bash -c "./build_packages --board=${board} --nowithautotest && \
@@ -216,11 +236,8 @@ main() {
   # Tael board is 32bit userspace so we can't link in our 64bit libraries
   if [ "${arch}" == "x64" ]; then
     echo "*** Copy ANGLE outputs to chromeos tree"
-    cp -f "${work_dir}/angle/out/libEGL.so" "${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files"
-    cp -f "${work_dir}/angle/out/libGLESv2.so" "${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files"
-
-    echo "*** Copy GBM to chromeos tree"
-    cp -f "${FUCHSIA_DIR}/prebuilt/third_party/minigbm/linux-${arch}/libgbm.so" "${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files"
+    cp -f "${work_dir}/angle/out/libEGL.so.1" "${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files"
+    cp -f "${work_dir}/angle/out/libGLESv2.so.2" "${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files"
   fi
 
   echo "*** Build Termina image"
