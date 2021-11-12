@@ -59,6 +59,8 @@ struct BufferSpan {
 };
 
 namespace internal {
+// The largest message to store on the stack.
+static constexpr size_t kMaxMessageSizeOnStack = 512;
 
 // A stack allocated uninitialized array of |kSize| bytes, guaranteed to follow
 // FIDL alignment.
@@ -111,6 +113,16 @@ struct BoxedMessageBuffer {
  private:
   uint8_t* bytes_ = new uint8_t[kSize];
 };
+
+// Pick the appropriate message buffer implementation based on size requirements.
+template <size_t kSize>
+using MessageBuffer = std::conditional_t<kSize <= kMaxMessageSizeOnStack,
+                                         InlineMessageBuffer<kSize>, BoxedMessageBuffer<kSize>>;
+
+// Outgoing messages only have to be as big enough to hold known fields.
+template <typename FidlType>
+using OutgoingMessageBuffer =
+    MessageBuffer<internal::ClampedMessageSize<FidlType, MessageDirection::kSending>()>;
 
 // |AnyBufferAllocator| is a type-erasing buffer allocator. Its main purpose is
 // to extend the caller-allocating call/reply flavors to work with a flexible

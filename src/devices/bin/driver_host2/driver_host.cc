@@ -174,7 +174,7 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
   }
   // We encode start_args outside of callback in order to access stack-allocated
   // data before it is destroyed.
-  fdf::wire::DriverStartArgs::OwnedEncodedMessage message(&request->start_args);
+  fidl::OwnedEncodedMessage<fdf::wire::DriverStartArgs> message(&request->start_args);
   if (!message.ok()) {
     LOGF(ERROR, "Failed to start driver '%s', could not encode start args: %s", url.data(),
          message.FormatDescription().data());

@@ -140,7 +140,7 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_h
 
   // By specifying |AllowUnownedInputRef|, we fuzz the code paths used in production message
   // passing, which uses multiple iovecs referencing input objects instead of copying.
-  typename T::OwnedEncodedMessage encoded(::fidl::internal::AllowUnownedInputRef{}, value);
+  fidl::OwnedEncodedMessage<T> encoded(::fidl::internal::AllowUnownedInputRef{}, value);
 
   if (encoded.status() != ZX_OK) {
     status.status = encoded.status();
@@ -181,7 +181,7 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_h
   // encoded by users and fully owns the content of the encoded message. One example of this is
   // in-process messaging.
   T* value2 = decoded2.PrimaryObject();
-  typename T::OwnedEncodedMessage encoded2(value2);
+  fidl::OwnedEncodedMessage<T> encoded2(value2);
 
   if (encoded2.status() != ZX_OK) {
     status.status = encoded2.status();

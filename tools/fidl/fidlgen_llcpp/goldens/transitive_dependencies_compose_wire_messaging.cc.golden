@@ -156,9 +156,9 @@ void fidl::internal::
   ::fidl::WireRequest<::fidl_test_transitivedependenciescompose::Top::GetFoo>
       _request{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::WireRequest<::fidl_test_transitivedependenciescompose::Top::GetFoo>::
-      OwnedEncodedMessage _request_message(
-          ::fidl::internal::AllowUnownedInputRef{}, &_request);
+  ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
+      ::fidl_test_transitivedependenciescompose::Top::GetFoo>>
+      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
@@ -196,9 +196,9 @@ void fidl::internal::
   ::fidl::WireRequest<::fidl_test_transitivedependenciescompose::Top::GetFoo>
       _request{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::WireRequest<::fidl_test_transitivedependenciescompose::Top::GetFoo>::
-      OwnedEncodedMessage _request_message(
-          ::fidl::internal::AllowUnownedInputRef{}, &_request);
+  ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
+      ::fidl_test_transitivedependenciescompose::Top::GetFoo>>
+      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
@@ -210,9 +210,9 @@ void fidl::internal::
       _request{};
 
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::WireRequest<::fidl_test_transitivedependenciescompose::Top::GetFoo>::
-      OwnedEncodedMessage _request_message(
-          ::fidl::internal::AllowUnownedInputRef{}, &_request);
+  ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
+      ::fidl_test_transitivedependenciescompose::Top::GetFoo>>
+      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
@@ -332,9 +332,9 @@ void fidl::WireServer<::fidl_test_transitivedependenciescompose::Top>::
     Reply(::fidl::BufferSpan _buffer, const ::bottom::wire::Foo& foo) {
   ::fidl::WireResponse<::fidl_test_transitivedependenciescompose::Top::GetFoo>
       _response{foo};
-  ::fidl::WireResponse<::fidl_test_transitivedependenciescompose::Top::GetFoo>::
-      UnownedEncodedMessage _response_message(_buffer.data, _buffer.capacity,
-                                              &_response);
+  ::fidl::UnownedEncodedMessage<::fidl::WireResponse<
+      ::fidl_test_transitivedependenciescompose::Top::GetFoo>>
+      _response_message(_buffer.data, _buffer.capacity, &_response);
   return CompleterBase::SendReply(&_response_message.GetOutgoingMessage());
 }
 #endif  // __Fuchsia__

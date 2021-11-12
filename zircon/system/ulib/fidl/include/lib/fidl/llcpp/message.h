@@ -16,6 +16,7 @@
 #include <zircon/fidl.h>
 
 #include <memory>
+#include <string>
 #include <type_traits>
 #include <vector>
 
@@ -595,23 +596,201 @@ class DecodedMessageBase : public ::fidl::Result {
 
 }  // namespace internal
 
-// This class owns a message of |FidlType| and encodes the message automatically upon construction
-// into a byte buffer.
-template <typename FidlType>
-using OwnedEncodedMessage = typename FidlType::OwnedEncodedMessage;
-
 // This class manages the handles within |FidlType| and encodes the message automatically upon
 // construction. Different from |OwnedEncodedMessage|, it takes in a caller-allocated buffer and
 // uses that as the backing storage for the message. The buffer must outlive instances of this
 // class.
 template <typename FidlType>
-using UnownedEncodedMessage = typename FidlType::UnownedEncodedMessage;
+class UnownedEncodedMessage final {
+ public:
+  UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size, FidlType* response)
+      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize, backing_buffer,
+                              backing_buffer_size, response) {}
+  UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
+                        uint32_t backing_buffer_size, FidlType* response)
+      : message_(::fidl::OutgoingMessage::CreateInternal(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_vtable = &fidl::internal::ChannelTransport::VTable,
+            .iovecs = iovecs_,
+            .iovec_capacity = iovec_capacity,
+            .handles = handle_storage_.data(),
+            .handle_metadata = handle_metadata_storage_.data(),
+            .handle_capacity = kNumHandles,
+            .backing_buffer = backing_buffer,
+            .backing_buffer_capacity = backing_buffer_size,
+        })) {
+    ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
+    message_.Encode<FidlType>(response);
+  }
+  UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+  UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+  const char* status_string() const { return message_.status_string(); }
+#endif
+  bool ok() const { return message_.status() == ZX_OK; }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
+
+  ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+#ifdef __Fuchsia__
+  template <typename ChannelLike>
+  void Write(ChannelLike&& client) {
+    message_.Write(std::forward<ChannelLike>(client));
+  }
+#endif
+
+ private:
+  static constexpr uint32_t kNumHandles =
+      fidl::internal::ClampedHandleCount<FidlType, fidl::MessageDirection::kSending>();
+  std::array<zx_handle_t, kNumHandles> handle_storage_;
+  std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_storage_;
+  ::fidl::internal::IovecBuffer iovecs_;
+  ::fidl::OutgoingMessage message_;
+};
+
+// This class owns a message of |FidlType| and encodes the message automatically upon construction
+// into a byte buffer.
+template <typename FidlType>
+class OwnedEncodedMessage final {
+ public:
+  explicit OwnedEncodedMessage(FidlType* response)
+      : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()),
+                 response) {}
+  // Internal constructor.
+  explicit OwnedEncodedMessage(::fidl::internal::AllowUnownedInputRef allow_unowned,
+                               FidlType* response)
+      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), response) {}
+  OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+  OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+  const char* status_string() const { return message_.status_string(); }
+#endif
+  bool ok() const { return message_.ok(); }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
+
+  ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_.GetOutgoingMessage(); }
+
+#ifdef __Fuchsia__
+  template <typename ChannelLike>
+  void Write(ChannelLike&& client) {
+    message_.Write(std::forward<ChannelLike>(client));
+  }
+#endif
+
+ private:
+  ::fidl::internal::OutgoingMessageBuffer<FidlType> backing_buffer_;
+  ::fidl::UnownedEncodedMessage<FidlType> message_;
+};
 
 // This class manages the handles within |FidlType| and decodes the message automatically upon
 // construction. It always borrows external buffers for the backing storage of the message.
 // This class should mostly be used for tests.
+template <typename FidlType, typename Enable = void>
+class DecodedMessage;
+
+// Specialization for transactional messages.
 template <typename FidlType>
-using DecodedMessage = typename FidlType::DecodedMessage;
+class DecodedMessage<FidlType, std::void_t<decltype(FidlType::MessageKind)>> final
+    : public ::fidl::internal::DecodedMessageBase<FidlType> {
+  using Base = ::fidl::internal::DecodedMessageBase<FidlType>;
+
+ public:
+  using Base::DecodedMessageBase;
+
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
+                 fidl_channel_handle_metadata_t* handle_metadata = nullptr,
+                 uint32_t handle_actual = 0)
+      : Base(::fidl::IncomingMessage::Create(bytes, byte_actual, handles, handle_metadata,
+                                             handle_actual)) {}
+
+  ~DecodedMessage() {
+    if constexpr (::fidl::IsResource<FidlType>::value) {
+      if (Base::ok() && (PrimaryObject() != nullptr)) {
+        PrimaryObject()->_CloseHandles();
+      }
+    }
+  }
+
+  FidlType* PrimaryObject() {
+    ZX_DEBUG_ASSERT(Base::ok());
+    return reinterpret_cast<FidlType*>(Base::bytes());
+  }
+
+  // Release the ownership of the decoded message. That means that the handles won't be closed
+  // When the object is destroyed.
+  // After calling this method, the |DecodedMessage| object should not be used anymore.
+  void ReleasePrimaryObject() { ::fidl::internal::DecodedMessageBase<FidlType>::ResetBytes(); }
+};
+
+// Specialization for non-transactional types (tables, structs, unions).
+template <typename FidlType>
+class DecodedMessage<FidlType, std::enable_if_t<::fidl::IsFidlObject<FidlType>::value, void>> final
+    : public ::fidl::internal::DecodedMessageBase<FidlType> {
+  using Base = ::fidl::internal::DecodedMessageBase<FidlType>;
+
+ public:
+  using Base::DecodedMessageBase;
+
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
+                 fidl_channel_handle_metadata_t* handle_metadata = nullptr,
+                 uint32_t handle_actual = 0)
+      : Base(::fidl::internal::kLLCPPEncodedWireFormatVersion,
+             ::fidl::IncomingMessage::Create(
+                 bytes, byte_actual, handles, handle_metadata, handle_actual,
+                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version, uint8_t* bytes,
+                 uint32_t byte_actual, zx_handle_t* handles = nullptr,
+                 fidl_channel_handle_metadata_t* handle_metadata = nullptr,
+                 uint32_t handle_actual = 0)
+      : Base(wire_format_version, ::fidl::IncomingMessage::Create(
+                                      bytes, byte_actual, handles, handle_metadata, handle_actual,
+                                      ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+
+  DecodedMessage(const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(static_cast<uint8_t*>(c_msg->bytes), c_msg->num_bytes, c_msg->handles,
+                       static_cast<fidl_channel_handle_metadata_t*>(c_msg->handle_metadata),
+                       c_msg->num_handles) {}
+
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(wire_format_version, static_cast<uint8_t*>(c_msg->bytes), c_msg->num_bytes,
+                       c_msg->handles,
+                       static_cast<fidl_channel_handle_metadata_t*>(c_msg->handle_metadata),
+                       c_msg->num_handles) {}
+
+  ~DecodedMessage() {
+    if constexpr (::fidl::IsResource<FidlType>::value) {
+      if (Base::ok() && (PrimaryObject() != nullptr)) {
+        PrimaryObject()->_CloseHandles();
+      }
+    }
+  }
+
+  FidlType* PrimaryObject() {
+    ZX_DEBUG_ASSERT(Base::ok());
+    return reinterpret_cast<FidlType*>(Base::bytes());
+  }
+
+  // Release the ownership of the decoded message. That means that the handles won't be closed
+  // When the object is destroyed.
+  // After calling this method, the |DecodedMessage| object should not be used anymore.
+  void ReleasePrimaryObject() { Base::ResetBytes(); }
+};
 
 // Holds the result of converting an outgoing message to an incoming message.
 //

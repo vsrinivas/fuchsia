@@ -135,7 +135,8 @@ void fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo(
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo> _request{s};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>::OwnedEncodedMessage
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
@@ -170,7 +171,8 @@ void fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo(
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo> _request{s};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>::OwnedEncodedMessage
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
@@ -181,9 +183,10 @@ void fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo(
         _context) {
   ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo> _request{s};
 
-  ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>::
-      UnownedEncodedMessage _request_message(
-          _request_buffer.data, _request_buffer.capacity, &_request);
+  ::fidl::UnownedEncodedMessage<
+      ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>>
+      _request_message(_request_buffer.data, _request_buffer.capacity,
+                       &_request);
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
@@ -287,9 +290,9 @@ void fidl::WireServer<::fidl_test_inheritance::Super>::dispatch_message(
 fidl::internal::WireCompleterBase<::fidl_test_inheritance::Super::Foo>::Reply(
     ::fidl::BufferSpan _buffer, int64_t y) {
   ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo> _response{y};
-  ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>::
-      UnownedEncodedMessage _response_message(_buffer.data, _buffer.capacity,
-                                              &_response);
+  ::fidl::UnownedEncodedMessage<
+      ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>>
+      _response_message(_buffer.data, _buffer.capacity, &_response);
   return CompleterBase::SendReply(&_response_message.GetOutgoingMessage());
 }
 #endif  // __Fuchsia__
@@ -435,7 +438,8 @@ void fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo(
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo> _request{s};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>::OwnedEncodedMessage
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
@@ -469,7 +473,8 @@ void fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo(
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo> _request{s};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>::OwnedEncodedMessage
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
@@ -479,7 +484,8 @@ void fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo(
     ::fidl::WireResponseContext<::fidl_test_inheritance::Sub::Foo>* _context) {
   ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo> _request{s};
 
-  ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>::UnownedEncodedMessage
+  ::fidl::UnownedEncodedMessage<
+      ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>>
       _request_message(_request_buffer.data, _request_buffer.capacity,
                        &_request);
   ::fidl::internal::ClientBase::SendTwoWay(
@@ -585,7 +591,8 @@ void fidl::WireServer<::fidl_test_inheritance::Sub>::dispatch_message(
 fidl::internal::WireCompleterBase<::fidl_test_inheritance::Sub::Foo>::Reply(
     ::fidl::BufferSpan _buffer, int64_t y) {
   ::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo> _response{y};
-  ::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>::UnownedEncodedMessage
+  ::fidl::UnownedEncodedMessage<
+      ::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>>
       _response_message(_buffer.data, _buffer.capacity, &_response);
   return CompleterBase::SendReply(&_response_message.GetOutgoingMessage());
 }

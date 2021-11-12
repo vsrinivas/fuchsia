@@ -133,7 +133,8 @@ void fidl::internal::WireClientImpl<::fidl_test_error::Example>::Foo(
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::WireRequest<::fidl_test_error::Example::Foo> _request{s};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::WireRequest<::fidl_test_error::Example::Foo>::OwnedEncodedMessage
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireRequest<::fidl_test_error::Example::Foo>>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
@@ -167,7 +168,8 @@ void fidl::internal::WireClientImpl<::fidl_test_error::Example>::Foo(
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::WireRequest<::fidl_test_error::Example::Foo> _request{s};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::WireRequest<::fidl_test_error::Example::Foo>::OwnedEncodedMessage
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireRequest<::fidl_test_error::Example::Foo>>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
@@ -177,7 +179,8 @@ void fidl::internal::WireClientImpl<::fidl_test_error::Example>::Foo(
     ::fidl::WireResponseContext<::fidl_test_error::Example::Foo>* _context) {
   ::fidl::WireRequest<::fidl_test_error::Example::Foo> _request{s};
 
-  ::fidl::WireRequest<::fidl_test_error::Example::Foo>::UnownedEncodedMessage
+  ::fidl::UnownedEncodedMessage<
+      ::fidl::WireRequest<::fidl_test_error::Example::Foo>>
       _request_message(_request_buffer.data, _request_buffer.capacity,
                        &_request);
   ::fidl::internal::ClientBase::SendTwoWay(
@@ -298,7 +301,8 @@ fidl::internal::WireCompleterBase<::fidl_test_error::Example::Foo>::Reply(
     ::fidl::BufferSpan _buffer,
     ::fidl_test_error::wire::ExampleFooResult result) {
   ::fidl::WireResponse<::fidl_test_error::Example::Foo> _response{result};
-  ::fidl::WireResponse<::fidl_test_error::Example::Foo>::UnownedEncodedMessage
+  ::fidl::UnownedEncodedMessage<
+      ::fidl::WireResponse<::fidl_test_error::Example::Foo>>
       _response_message(_buffer.data, _buffer.capacity, &_response);
   return CompleterBase::SendReply(&_response_message.GetOutgoingMessage());
 }

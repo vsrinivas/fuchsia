@@ -312,7 +312,7 @@ void Driver::Log(FuchsiaLogSeverity severity, const char* tag, const char* file,
 namespace {
 
 zx_status_t DriverStart(fidl_incoming_msg_t* msg, async_dispatcher_t* dispatcher, void** driver) {
-  fdf::wire::DriverStartArgs::DecodedMessage decoded(msg);
+  fidl::DecodedMessage<fdf::wire::DriverStartArgs> decoded(msg);
   if (!decoded.ok()) {
     return decoded.status();
   }

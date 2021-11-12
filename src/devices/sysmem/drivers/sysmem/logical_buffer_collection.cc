@@ -1141,7 +1141,7 @@ void LogicalBufferCollection::TryLateLogicalAllocation(std::vector<NodePropertie
   auto tmp_unpopulated_buffer_collection_info = clone_result.take_value();
   // This could be big so use heap.
   auto linearized_late_logical_allocation_buffer_collection_info =
-      std::make_unique<fuchsia_sysmem2::wire::BufferCollectionInfo::OwnedEncodedMessage>(
+      std::make_unique<fidl::OwnedEncodedMessage<fuchsia_sysmem2::wire::BufferCollectionInfo>>(
           &tmp_unpopulated_buffer_collection_info);
 
   fidl::OutgoingMessage& original_linear_buffer_collection_info =

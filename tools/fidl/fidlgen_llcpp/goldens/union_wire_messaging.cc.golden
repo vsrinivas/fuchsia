@@ -312,10 +312,10 @@ void fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>::
                           StrictXUnionHenceResponseMayBeStackAllocated>
       _request{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::WireRequest<::fidl_test_union::TestProtocol::
-                          StrictXUnionHenceResponseMayBeStackAllocated>::
-      OwnedEncodedMessage _request_message(
-          ::fidl::internal::AllowUnownedInputRef{}, &_request);
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireRequest<::fidl_test_union::TestProtocol::
+                              StrictXUnionHenceResponseMayBeStackAllocated>>
+      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
@@ -357,10 +357,10 @@ void fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>::
                           StrictXUnionHenceResponseMayBeStackAllocated>
       _request{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::WireRequest<::fidl_test_union::TestProtocol::
-                          StrictXUnionHenceResponseMayBeStackAllocated>::
-      OwnedEncodedMessage _request_message(
-          ::fidl::internal::AllowUnownedInputRef{}, &_request);
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireRequest<::fidl_test_union::TestProtocol::
+                              StrictXUnionHenceResponseMayBeStackAllocated>>
+      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
@@ -374,10 +374,10 @@ void fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>::
       _request{};
 
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::WireRequest<::fidl_test_union::TestProtocol::
-                          StrictXUnionHenceResponseMayBeStackAllocated>::
-      OwnedEncodedMessage _request_message(
-          ::fidl::internal::AllowUnownedInputRef{}, &_request);
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireRequest<::fidl_test_union::TestProtocol::
+                              StrictXUnionHenceResponseMayBeStackAllocated>>
+      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
@@ -448,10 +448,10 @@ void fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>::
                           FlexibleXUnionHenceResponseMustBeHeapAllocated>
       _request{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::WireRequest<::fidl_test_union::TestProtocol::
-                          FlexibleXUnionHenceResponseMustBeHeapAllocated>::
-      OwnedEncodedMessage _request_message(
-          ::fidl::internal::AllowUnownedInputRef{}, &_request);
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireRequest<::fidl_test_union::TestProtocol::
+                              FlexibleXUnionHenceResponseMustBeHeapAllocated>>
+      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
@@ -494,10 +494,10 @@ void fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>::
                           FlexibleXUnionHenceResponseMustBeHeapAllocated>
       _request{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::WireRequest<::fidl_test_union::TestProtocol::
-                          FlexibleXUnionHenceResponseMustBeHeapAllocated>::
-      OwnedEncodedMessage _request_message(
-          ::fidl::internal::AllowUnownedInputRef{}, &_request);
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireRequest<::fidl_test_union::TestProtocol::
+                              FlexibleXUnionHenceResponseMustBeHeapAllocated>>
+      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
@@ -511,10 +511,10 @@ void fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>::
       _request{};
 
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::WireRequest<::fidl_test_union::TestProtocol::
-                          FlexibleXUnionHenceResponseMustBeHeapAllocated>::
-      OwnedEncodedMessage _request_message(
-          ::fidl::internal::AllowUnownedInputRef{}, &_request);
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireRequest<::fidl_test_union::TestProtocol::
+                              FlexibleXUnionHenceResponseMustBeHeapAllocated>>
+      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
@@ -659,10 +659,10 @@ void fidl::WireServer<::fidl_test_union::TestProtocol>::dispatch_message(
   ::fidl::WireResponse<::fidl_test_union::TestProtocol::
                            StrictXUnionHenceResponseMayBeStackAllocated>
       _response{xu};
-  ::fidl::WireResponse<::fidl_test_union::TestProtocol::
-                           StrictXUnionHenceResponseMayBeStackAllocated>::
-      UnownedEncodedMessage _response_message(_buffer.data, _buffer.capacity,
-                                              &_response);
+  ::fidl::UnownedEncodedMessage<
+      ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                               StrictXUnionHenceResponseMayBeStackAllocated>>
+      _response_message(_buffer.data, _buffer.capacity, &_response);
   return CompleterBase::SendReply(&_response_message.GetOutgoingMessage());
 }
 #endif  // __Fuchsia__
@@ -694,10 +694,10 @@ void fidl::WireServer<::fidl_test_union::TestProtocol>::dispatch_message(
   ::fidl::WireResponse<::fidl_test_union::TestProtocol::
                            FlexibleXUnionHenceResponseMustBeHeapAllocated>
       _response{xu};
-  ::fidl::WireResponse<::fidl_test_union::TestProtocol::
-                           FlexibleXUnionHenceResponseMustBeHeapAllocated>::
-      UnownedEncodedMessage _response_message(_buffer.data, _buffer.capacity,
-                                              &_response);
+  ::fidl::UnownedEncodedMessage<
+      ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                               FlexibleXUnionHenceResponseMustBeHeapAllocated>>
+      _response_message(_buffer.data, _buffer.capacity, &_response);
   return CompleterBase::SendReply(&_response_message.GetOutgoingMessage());
 }
 #endif  // __Fuchsia__

@@ -88,7 +88,7 @@
   ::fidl::Result {{ .WireCompleterBase.NoLeading }}::Reply(
         {{- RenderParams "::fidl::BufferSpan _buffer" .ResponseArgs }}) {
     {{ .WireResponse }} _response{ {{ RenderForwardParams .ResponseArgs }} };
-    {{ .WireResponse }}::UnownedEncodedMessage _response_message(
+    ::fidl::UnownedEncodedMessage<{{ .WireResponse }}> _response_message(
           _buffer.data, _buffer.capacity, &_response);
     return CompleterBase::SendReply(&_response_message.GetOutgoingMessage());
   }
