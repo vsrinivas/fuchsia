@@ -15,12 +15,14 @@
 
 #ifndef __ASSEMBLER__
 
+#include <lib/zx/status.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
 #include <fbl/ref_ptr.h>
+#include <ktl/byte.h>
 #include <ktl/span.h>
 #include <vm/vm_object.h>
 
@@ -45,7 +47,15 @@ typedef void (*mexec_asm_func)(uint64_t arg0, uint64_t arg1, uint64_t arg2, uint
 
 // Extend the provided data ZBI with the platform-specific items that might
 // be necessary for the kernel that mexec is chain-loading.
-zx_status_t platform_append_mexec_data(ktl::span<std::byte> data_zbi);
+//
+// TODO(fxbug.dev/88059): The items appended here will eventually be accounted
+// for in early boot as a function of the physboot hand-off. At that point,
+// this function will be deleted.
+zx_status_t platform_append_mexec_data(ktl::span<ktl::byte> data_zbi);
+
+// Writes an mexec data ZBI into the provided buffer and returns the size of
+// that ZBI if successful.
+zx::status<size_t> WriteMexecData(ktl::span<ktl::byte> buffer);
 
 /* This function is called at the beginning of mexec.  Interrupts are not yet
  * disabled, but only one CPU is running.

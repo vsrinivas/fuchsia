@@ -7,7 +7,6 @@
 #include <align.h>
 #include <debug.h>
 #include <lib/boot-options/boot-options.h>
-#include <lib/crashlog.h>
 #include <lib/debuglog.h>
 #include <lib/fit/defer.h>
 #include <lib/instrumentation/asan.h>
@@ -287,45 +286,13 @@ zx_status_t sys_system_mexec_payload_get(zx_handle_t resource, user_out_ptr<void
     return ZX_ERR_NO_MEMORY;
   }
 
-  // Create a zero length ZBI in the buffer.
-  zbitl::Image image(ktl::span<ktl::byte>{buffer, buffer_size});
-  if (auto result = image.clear(); result.is_error()) {
-    zbitl::PrintViewError(result.error_value());
-    return ZX_ERR_INTERNAL;
+  if (auto result = WriteMexecData({buffer, buffer_size}); result.is_error()) {
+    return result.error_value();
+  } else {
+    size_t zbi_size = ktl::move(result).value();
+    ZX_DEBUG_ASSERT(zbi_size <= buffer_size);
+    return user_buffer.reinterpret<ktl::byte>().copy_array_to_user(buffer, zbi_size);
   }
-
-  if (zx_status_t result = platform_append_mexec_data(image.storage()); result != ZX_OK) {
-    return result;
-  }
-
-  // Propagate any stashed crashlog to the next kernel.
-  const fbl::RefPtr<VmObject> stashed_crashlog = crashlog_get_stashed();
-  if (stashed_crashlog && stashed_crashlog->size() <= UINT32_MAX) {
-    auto append_result = image.Append(zbi_header_t{
-        .type = ZBI_TYPE_CRASHLOG, .length = static_cast<uint32_t>(stashed_crashlog->size())});
-    if (append_result.is_error()) {
-      // The only possible storage error that can result from a span-backed
-      // Image would be a failure to increase the capacity. In this case, the
-      // expectation is that ZX_ERR_BUFFER_TOO_SMALL is returned and the caller
-      // will react by making the syscall again with a larger buffer.
-      if (append_result.error_value().storage_error) {
-        return ZX_ERR_BUFFER_TOO_SMALL;
-      }
-
-      printf("mexec: could not append crashlog: ");
-      zbitl::PrintViewError(append_result.error_value());
-      return ZX_ERR_INTERNAL;
-    }
-    auto it = ktl::move(append_result).value();
-    ktl::span<ktl::byte> payload = (*it).payload;
-    if (zx_status_t result = stashed_crashlog->Read(payload.data(), 0, payload.size());
-        result != ZX_OK) {
-      return result;
-    }
-  }
-
-  return user_buffer.reinterpret<ktl::byte>().copy_array_to_user(image.storage().data(),
-                                                                 image.size_bytes());
 }
 
 // zx_status_t zx_system_mexec

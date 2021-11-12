@@ -11,6 +11,7 @@ source_set("platform") {
     "boot-options.cc",
     "halt_helper.cc",
     "hw_reboot_reason.cc",
+    "mexec.cc",
     "power.cc",
     "ram_mappable_crashlog.cc",
   ]
@@ -25,8 +26,12 @@ source_set("platform") {
     "//zircon/kernel/lib/debuglog",
     "//zircon/kernel/lib/init",
     "//zircon/kernel/lib/jtrace:headers",
+    "//zircon/kernel/lib/ktl",
     "//zircon/kernel/lib/persistent-debuglog",
     "//zircon/kernel/lib/root_resource_filter",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/ram-crashlog",
+    "//zircon/system/ulib/zbitl",
+    "//zircon/system/ulib/zxc",
   ]
 }
