@@ -333,7 +333,7 @@ class PayloadManager {
   fbl::RefPtr<PayloadBuffer> AllocateUsingAllocateCallback(uint64_t size) const
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
-  FIT_DECLARE_THREAD_CHECKER(thread_checker_);
+  FIT_DECLARE_THREAD_CHECKER(thread_checker_)
   mutable std::mutex mutex_;
 
   Connector output_ FXL_GUARDED_BY(mutex_);

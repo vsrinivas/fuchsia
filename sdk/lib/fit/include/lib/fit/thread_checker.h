@@ -62,13 +62,10 @@ class FIT_CAPABILITY("mutex") thread_checker final {
 };
 
 #ifndef NDEBUG
-#define FIT_DECLARE_THREAD_CHECKER(c) fit::thread_checker c
+#define FIT_DECLARE_THREAD_CHECKER(c) fit::thread_checker c;
 #define FIT_DCHECK_IS_THREAD_VALID(c) assert((c).is_thread_valid())
 #else
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wextra-semi"
 #define FIT_DECLARE_THREAD_CHECKER(c)
-#pragma GCC diagnostic pop
 #define FIT_DCHECK_IS_THREAD_VALID(c) ((void)0)
 #endif
 

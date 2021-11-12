@@ -59,7 +59,7 @@ class FidlAudioRenderer : public AudioRenderer {
   void OnTimelineTransition() override;
 
  private:
-  FIT_DECLARE_THREAD_CHECKER(thread_checker_);
+  FIT_DECLARE_THREAD_CHECKER(thread_checker_)
 
   // Determines if more packets are needed.
   bool NeedMorePackets();

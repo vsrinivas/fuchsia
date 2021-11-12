@@ -29,7 +29,7 @@ class MagmaDevice : public GpuDevice {
 
   bool Initialize(int dir_fd, std::string name, inspect::Node* parent);
 
-  FIT_DECLARE_THREAD_CHECKER(main_thread_);
+  FIT_DECLARE_THREAD_CHECKER(main_thread_)
   IcdList icd_list_;
 
   fuchsia::gpu::magma::DevicePtr device_;

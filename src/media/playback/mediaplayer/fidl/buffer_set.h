@@ -161,7 +161,7 @@ class BufferSetManager {
   void ReleaseBufferForProcessor(uint64_t lifetime_ordinal, uint32_t buffer_index);
 
  private:
-  FIT_DECLARE_THREAD_CHECKER(thread_checker_);
+  FIT_DECLARE_THREAD_CHECKER(thread_checker_)
 
   // The current |BufferSet| this is only null when |ApplyConstraints| has
   // never been called. It's important not to clear this arbitrarily, because

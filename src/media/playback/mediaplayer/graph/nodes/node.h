@@ -502,8 +502,7 @@ class Node : public std::enable_shared_from_this<Node> {
   // This method must be called on the main graph thread.
   void ConfigureOutputToUseSysmemVmos(
       ServiceProvider* service_provider, uint64_t max_aggregate_payload_size,
-      VmoAllocation vmo_allocation,
-      zx_vm_option_t map_flags = ZX_VM_PERM_WRITE,
+      VmoAllocation vmo_allocation, zx_vm_option_t map_flags = ZX_VM_PERM_WRITE,
       std::shared_ptr<fuchsia::sysmem::ImageFormatConstraints> video_constraints = nullptr,
       size_t output_index = 0);
 
@@ -589,7 +588,7 @@ class Node : public std::enable_shared_from_this<Node> {
   void ApplyOutputConfiguration(Output* output, ServiceProvider* service_provider = nullptr);
 
   // The stage's thread is always the main graph thread.
-  FIT_DECLARE_THREAD_CHECKER(thread_checker_);
+  FIT_DECLARE_THREAD_CHECKER(thread_checker_)
 
   async_dispatcher_t* dispatcher_;
 

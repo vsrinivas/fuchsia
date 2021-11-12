@@ -102,7 +102,7 @@ class FidlProcessor : public Processor {
   // has.
   void HandlePossibleOutputStreamTypeChange(const StreamType& old_type, const StreamType& new_type);
 
-  FIT_DECLARE_THREAD_CHECKER(thread_checker_);
+  FIT_DECLARE_THREAD_CHECKER(thread_checker_)
 
   ServiceProvider* service_provider_;
   StreamType::Medium medium_;

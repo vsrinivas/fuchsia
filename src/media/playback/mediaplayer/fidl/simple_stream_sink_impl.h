@@ -88,7 +88,7 @@ class SimpleStreamSinkImpl : public Node, public fuchsia::media::SimpleStreamSin
     uint32_t packet_count_{};
   };
 
-  FIT_DECLARE_THREAD_CHECKER(thread_checker_);
+  FIT_DECLARE_THREAD_CHECKER(thread_checker_)
 
   std::unique_ptr<StreamType> output_stream_type_;
   media::TimelineRate pts_rate_;

@@ -98,7 +98,7 @@ class LoaderApp {
   void NotifyIcdsChangedOnMainThread();
   void NotifyIcdsChangedLocked() FXL_REQUIRE(pending_action_mutex_);
 
-  FIT_DECLARE_THREAD_CHECKER(main_thread_);
+  FIT_DECLARE_THREAD_CHECKER(main_thread_)
 
   sys::ComponentContext* context_;
   async_dispatcher_t* dispatcher_;
