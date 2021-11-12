@@ -678,10 +678,15 @@ impl ServerDiscovery {
                     //    If a client receives an IA_NA with T1 greater than T2
                     //    and both T1 and T2 are greater than 0, the client
                     //    discards the IA_NA option and processes the remainder
-                    //    the message as though the server had not included the
-                    //    of invalid IA_NA option.
-                    if iana_data.t1() > iana_data.t2() {
-                        continue;
+                    //    of the message as though the server had not included
+                    //    the invalid IA_NA option.
+                    match (iana_data.t1(), iana_data.t2()) {
+                        (v6::TimeValue::Zero, _) | (_, v6::TimeValue::Zero) => {}
+                        (t1, t2) => {
+                            if t1 > t2 {
+                                continue;
+                            }
+                        }
                     }
 
                     // Per RFC 8415, section 21.4, IAIDs are expected to be
@@ -1731,6 +1736,90 @@ mod tests {
         let actions = client.handle_message_receive(msg);
         assert_matches!(actions[..], [Action::CancelTimer(ClientTimerType::Retransmission)]);
         assert_matches!(client.state, Some(ClientState::Requesting(Requesting {})));
+    }
+
+    const INFINITY: u32 = u32::MAX;
+    // T1 and T2 are non-zero and T1 > T2, the client should ignore this IA_NA option.
+    #[test_case(60, 30, true)]
+    #[test_case(INFINITY, 30, true)]
+    // T1 > T2, but T2 is zero, the client should process this IA_NA option.
+    #[test_case(60, 0, false)]
+    // T1 is zero, the client should process this IA_NA option.
+    #[test_case(0, 30, false)]
+    // T1 <= T2, the client should process this IA_NA option.
+    #[test_case(60, 90, false)]
+    #[test_case(60, INFINITY, false)]
+    #[test_case(INFINITY, INFINITY, false)]
+    fn test_receive_advertise_with_invalid_iana(t1: u32, t2: u32, ignore_iana: bool) {
+        let client_id = v6::duid_uuid();
+        let (client, _actions) = start_server_discovery(
+            [0, 1, 2],
+            client_id.clone(),
+            to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
+            Vec::new(),
+            StepRng::new(std::u64::MAX / 2, 0),
+        );
+
+        let ia = IdentityAssociation {
+            address: std_ip_v6!("::ffff:c00a:1ff"),
+            preferred_lifetime: Duration::from_secs(10),
+            valid_lifetime: Duration::from_secs(20),
+        };
+        let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+            ia.address,
+            u32::try_from(ia.preferred_lifetime.as_secs()).expect("value should fit in u32"),
+            u32::try_from(ia.valid_lifetime.as_secs()).expect("value should fit in u32"),
+            &[],
+        ))];
+        let options = [
+            v6::DhcpOption::ClientId(&client_id),
+            v6::DhcpOption::ServerId(&[1, 2, 3]),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(0, t1, t2, &iana_options)),
+        ];
+        let ClientStateMachine { transaction_id, options_to_request, state, rng } = client;
+        let builder =
+            v6::MessageBuilder::new(v6::MessageType::Advertise, transaction_id.clone(), &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        let () = builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+
+        let mut client = ClientStateMachine { transaction_id, options_to_request, state, rng };
+        assert_matches!(client.handle_message_receive(msg)[..], []);
+        let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } = client;
+        let collected_advertise = match state {
+            Some(ClientState::ServerDiscovery(ServerDiscovery {
+                client_id: _,
+                configured_addresses: _,
+                first_solicit_time: _,
+                retrans_timeout: _,
+                solicit_max_rt: _,
+                collected_advertise,
+                collected_sol_max_rt: _,
+            })) => collected_advertise,
+            state => panic!("unexpected state {:?}", state),
+        };
+        match ignore_iana {
+            true => assert!(
+                collected_advertise.is_empty(),
+                "collected_advertise = {:?}",
+                collected_advertise
+            ),
+            false => {
+                let addresses = match collected_advertise.peek() {
+                    Some(AdvertiseMessage {
+                        server_id: _,
+                        addresses,
+                        dns_servers: _,
+                        preference: _,
+                        receive_time: _,
+                        preferred_addresses_count: _,
+                    }) => addresses,
+                    advertise => panic!("unexpected advertise {:?}", advertise),
+                };
+                assert_eq!(*addresses, HashMap::from([(0, ia)]));
+            }
+        }
     }
 
     #[test]

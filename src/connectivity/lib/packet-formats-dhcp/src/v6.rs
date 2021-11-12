@@ -204,6 +204,55 @@ pub struct IanaData<B: ByteSlice> {
     options: Records<B, ParsedDhcpOptionImpl>,
 }
 
+/// A `u32` value that is guaranteed to be greater than 0 and less than `u32::MAX`.
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct NonZeroOrMaxU32(u32);
+
+impl NonZeroOrMaxU32 {
+    /// Constructs a `NonZeroOrMaxU32`.
+    ///
+    /// # Panics
+    ///
+    /// `new` panics if `t` is not greater than 0 and less than `u32::MAX`.
+    fn new(v: u32) -> NonZeroOrMaxU32 {
+        assert!(v > 0 && v < u32::MAX);
+        NonZeroOrMaxU32(v)
+    }
+}
+
+/// A representation of T1/T2 times to relay the fact that certain values have
+/// special significance as described in RFC 8415, [section 14.2] and
+/// [section 7.7].
+///
+/// [section 14.2]: https://datatracker.ietf.org/doc/html/rfc8415#section-14.2
+/// [section 7.7]: https://datatracker.ietf.org/doc/html/rfc8415#section-7.7
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum TimeValue {
+    /// The value is left to the discretion of the client per [RFC 8415,
+    /// section 14.2].
+    ///
+    /// [RFC 8415, section 14.2]: https://datatracker.ietf.org/doc/html/rfc8415#section-14.2
+    Zero,
+    /// The value is set to a value greater than 0 and less than `Infinity`.
+    Finite(NonZeroOrMaxU32),
+    /// `u32::MAX` representing "infinity", the client will never attempt to
+    /// extend the lifetime, as described in per [RFC 8415, section 7.7].
+    ///
+    /// [RFC 8415, section 7.7]: https://datatracker.ietf.org/doc/html/rfc8415#section-7.7
+    Infinity,
+}
+
+impl TimeValue {
+    /// Constructs a new `TimeValue`.
+    fn new(t: u32) -> TimeValue {
+        match t {
+            0 => TimeValue::Zero,
+            u32::MAX => TimeValue::Infinity,
+            t => TimeValue::Finite(NonZeroOrMaxU32::new(t)),
+        }
+    }
+}
+
 impl<'a, B: ByteSlice> IanaData<B> {
     /// Constructs a new `IanaData` from a `ByteSlice`.
     pub fn new(buf: B) -> Result<Self, ParseError> {
@@ -219,14 +268,24 @@ impl<'a, B: ByteSlice> IanaData<B> {
         self.header.iaid.get()
     }
 
-    /// Returns the T1.
-    pub fn t1(&self) -> u32 {
-        self.header.t1.get()
+    /// Returns the T1 as `TimeValue` to relay the fact that certain values have
+    /// special significance as described in RFC 8415, [section 14.2] and
+    /// [section 7.7].
+    ///
+    /// [section 14.2]: https://datatracker.ietf.org/doc/html/rfc8415#section-14.2
+    /// [section 7.7]: https://datatracker.ietf.org/doc/html/rfc8415#section-7.7
+    pub fn t1(&self) -> TimeValue {
+        TimeValue::new(self.header.t1.get())
     }
 
-    /// Returns the T2.
-    pub fn t2(&self) -> u32 {
-        self.header.t2.get()
+    /// Returns the T2 as `TimeValue` to relay the fact that certain values have
+    /// special significance as described in RFC 8415, [section 14.2] and
+    /// [section 7.7].
+    ///
+    /// [section 14.2]: https://datatracker.ietf.org/doc/html/rfc8415#section-14.2
+    /// [section 7.7]: https://datatracker.ietf.org/doc/html/rfc8415#section-7.7
+    pub fn t2(&self) -> TimeValue {
+        TimeValue::new(self.header.t2.get())
     }
 
     /// Returns an iterator over the options.
@@ -1402,5 +1461,37 @@ mod tests {
             Message::parse(&mut &buf[..], ()),
             Err(ParseError::InvalidOpLen(OptionCode::DnsServers, 17))
         );
+    }
+
+    #[test]
+    fn test_time_value() {
+        assert_eq!(TimeValue::new(0), TimeValue::Zero);
+        assert_eq!(TimeValue::new(5), TimeValue::Finite(NonZeroOrMaxU32::new(5)));
+        assert_eq!(TimeValue::new(u32::MAX), TimeValue::Infinity);
+    }
+
+    #[test]
+    fn test_time_value_ord() {
+        assert!(TimeValue::Zero < TimeValue::Finite(NonZeroOrMaxU32(1)));
+        assert!(TimeValue::Finite(NonZeroOrMaxU32(u32::MAX - 1)) < TimeValue::Infinity);
+    }
+
+    #[test]
+    fn test_non_zero_or_max_u32_new() {
+        // `new` should not panic for argument between (0, u32::MAX).
+        let _t = NonZeroOrMaxU32::new(1);
+        let _t = NonZeroOrMaxU32::new(u32::MAX - 1);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_non_zero_or_max_u32_new_panics_on_zero() {
+        let _ = NonZeroOrMaxU32::new(0);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_non_zero_or_max_u32_new_panics_on_max_u32() {
+        let _ = NonZeroOrMaxU32::new(u32::MAX);
     }
 }
