@@ -177,10 +177,16 @@ impl InputControllerInner {
     }
 
     /// Restores the input state.
-    // TODO(fxbug.dev/57917): After config is implemented, this should return a ControllerStateResult.
-    async fn restore(&mut self) {
+    async fn restore(&mut self) -> ControllerStateResult {
         let input_info = self.get_stored_info().await;
         self.input_device_state = input_info.input_device_state;
+
+        let cam_state = self.get_cam_sw_state().ok();
+        if let Some(state) = cam_state {
+            self.push_cam_sw_state(state).await
+        } else {
+            Ok(())
+        }
     }
 
     /// Sets the software mic state to `muted`.
@@ -410,12 +416,7 @@ impl data_controller::Create for InputController {
 impl controller::Handle for InputController {
     async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
         match request {
-            Request::Restore => {
-                // Get hardware state.
-                // TODO(fxbug.dev/57917): After config is implemented, handle the error here.
-                self.inner.lock().await.restore().await;
-                Some(Ok(None))
-            }
+            Request::Restore => Some(self.inner.lock().await.restore().await.map(|_| None)),
             // TODO(fxb/65686): remove when FIDL is changed.
             Request::SetMicMute(muted) => {
                 Some(self.inner.lock().await.set_sw_mic_mute(muted).await)
@@ -483,11 +484,7 @@ impl controller::Handle for InputController {
 
     async fn change_state(&mut self, state: State) -> Option<ControllerStateResult> {
         match state {
-            State::Startup => {
-                // TODO(fxbug.dev/57917): After config is implemented, handle the error here.
-                self.inner.lock().await.restore().await;
-                Some(Ok(()))
-            }
+            State::Startup => Some(self.inner.lock().await.restore().await),
             _ => None,
         }
     }
