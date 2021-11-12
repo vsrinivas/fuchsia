@@ -102,6 +102,7 @@ impl MarkdownTemplate<'_> {
             ("lower_snake_case", crate::templates::lower_snake_case),
             ("pulldown", crate::templates::pulldown),
             ("methodId", crate::templates::method_id),
+            ("processVersions", crate::templates::process_versions),
         ];
         for &(name, helper) in helpers {
             handlebars.register_helper(name, Box::new(helper));

@@ -332,6 +332,61 @@ fn mi(method: &str, protocol: &str) -> String {
     format!("{protocol}.{method}", protocol = protocol, method = method)
 }
 
+pub fn process_versions(
+    h: &Helper<'_, '_>,
+    _: &Handlebars<'_>,
+    _: &Context,
+    _: &mut RenderContext<'_, '_>,
+    out: &mut dyn Output,
+) -> Result<(), RenderError> {
+    let version_list: Value = serde_json::from_str(
+        &h.param(0)
+            .ok_or_else(|| RenderError::new("Param 0 is required for process_version helper"))?
+            .value()
+            .to_string(),
+    )?;
+
+    let output = pv(&version_list);
+    out.write(&output)?;
+    Ok(())
+}
+
+fn pv(version_list: &Value) -> String {
+    let mut added = "".to_string();
+    let mut deprecated = "".to_string();
+    let mut removed = "".to_string();
+    let mut version_val;
+
+    // Each iteration picks up an 'added', 'removed' or 'deprecated'
+    // version which can be unordered.
+    // Loop over all entries to pick up all the information.
+    // If any value is 2^64-1, render it as HEAD
+    // TODO(theosiu) Update to have links for release notes
+    for version in version_list.as_array().expect("get array of versions") {
+        version_val = if version["value"]["value"] == u64::MAX.to_string() {
+            "HEAD".to_string()
+        } else {
+            version["value"]["value"].to_string().trim_matches('"').to_string()
+        };
+
+        if version["name"] == "added" {
+            added = format!("Added:{version_val}", version_val = version_val);
+        } else if version["name"] == "removed" {
+            removed = format!("Removed:{version_val}", version_val = version_val);
+        } else if version["name"] == "deprecated" {
+            deprecated = format!("Deprecated:{version_val}", version_val = version_val);
+        }
+    }
+    return format!(
+        "{added} {deprecated} {removed}",
+        added = added,
+        removed = removed,
+        deprecated = deprecated
+    )
+    .trim()
+    .to_string();
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -478,6 +533,31 @@ file, the error is <code>ZX_ERR_NOT_FILE</code>.</li>
 </ul>
 "#;
         assert_eq!(pd(description), expected);
+    }
+
+    #[test]
+    fn pv_test() {
+        let fidl_json1 = json!([
+            json!({"value": json!({"value": "1"}),
+            "name": "added",}),
+            json!({"value": json!({"value": "3"}),
+            "name": "removed",}),
+            json!({"value": json!({"value": "2"}),
+            "name": "deprecated",}),
+        ]);
+        assert_eq!(pv(&fidl_json1), "Added:1 Deprecated:2 Removed:3");
+
+        let fidl_json2 = json!([
+            json!({"value": json!({"value": "1"}),
+            "name": "added",}),
+            json!({"value": json!({"value": "2"}),
+            "name": "deprecated",}),
+        ]);
+        assert_eq!(pv(&fidl_json2), "Added:1 Deprecated:2");
+
+        let fidl_json3 = json!([json!({"value": json!({"value": "1"}),
+            "name": "added",})]);
+        assert_eq!(pv(&fidl_json3), "Added:1");
     }
 
     #[test]
