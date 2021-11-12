@@ -35,6 +35,10 @@ import("fuchsia_unittest_component.gni")
 #     Type: string
 #     Default: target_name
 #
+#   package_deps (optional)
+#     Additional package targets this test package relies on.
+#     Type: list(labels)
+#
 #   component_name (optional)
 #     The name of the component.
 #     Type: string
@@ -110,6 +114,7 @@ template("fuchsia_unittest_package") {
     fuchsia_test_package(target_name) {
       forward_variables_from(invoker,
                              [
+                               "package_deps",
                                "package_name",
                                "test_specs",
                                "visibility",

@@ -37,9 +37,9 @@ _max_severity_allowed_val = [
 #     [string] In the case of a fuchsia test, this describes the GN label
 #     (with toolchain) of the fuchsia package.
 #
-#   package_manifest (optional)
-#     [string] In the case of a fuchsia test, this describes the path to the
-#     package manifest that describes the contents of the package.
+#   package_manifests (optional)
+#     [list of strings] In the case of a fuchsia test, this contains a set of
+#     paths to package manifests that describe the blobs needed by this test.
 #
 #   deps (optional)
 #     [list of labels]: List of labels that the test depends on.
@@ -321,7 +321,7 @@ template("test_spec") {
                                "path",
                                "package_url",
                                "package_label",
-                               "package_manifest",
+                               "package_manifests",
                              ])
       if (defined(_parallel)) {
         parallel = _parallel

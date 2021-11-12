@@ -49,8 +49,8 @@ func (s *Shard) CreatePackageRepo() error {
 	// as we can early exit for shards with no such manifests.
 	var pkgManifests []string
 	for _, t := range s.Tests {
-		if t.PackageManifest != "" {
-			pkgManifests = append(pkgManifests, t.PackageManifest)
+		if len(t.PackageManifests) != 0 {
+			pkgManifests = append(pkgManifests, t.PackageManifests...)
 		}
 	}
 	if len(pkgManifests) == 0 {

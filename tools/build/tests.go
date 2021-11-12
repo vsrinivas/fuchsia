@@ -28,9 +28,10 @@ type Test struct {
 	// for this test.
 	PackageLabel string `json:"package_label,omitempty"`
 
-	// PackageManifest is the path to the manifest for this fuchsia package
-	// relative to the build directory.
-	PackageManifest string `json:"package_manifest,omitempty"`
+	// PackageManifests is a list of paths to manifests describing the
+	// packages needed by the test. They are all relative to the build
+	// directory.
+	PackageManifests []string `json:"package_manifests,omitempty"`
 
 	// Path is the path to the test on the target OS.
 	Path string `json:"path"`

@@ -59,6 +59,10 @@ import("fuchsia_test_component_manifest.gni")
 #     Type: string
 #     Default: target_name
 #
+#   package_deps (optional)
+#     Additional package targets this test package relies on.
+#     Type: list(labels)
+#
 #   wrap_cmx_test_with_cml_test (optional)
 #     If enabled, test_components that are legacy (v1) tests with cmx manifests
 #     will be wrapped with a modern (v2) test with a cml manifest. The launch
@@ -150,7 +154,19 @@ template("fuchsia_test_package") {
         forward_variables_from(test_specs, "*")
         target = get_label_info(":$target_name", "label_with_toolchain")
         package_label = package_label
-        package_manifest = package_manifest
+        package_manifests = [ package_manifest ]
+
+        # Add the package manifest of any package that this test depends on to
+        # run.
+        if (defined(invoker.package_deps)) {
+          foreach(dep, invoker.package_deps) {
+            dep_out_dir = get_label_info(dep, "target_out_dir")
+            dep_name = get_label_info(dep, "name")
+            package_manifests += [ rebase_path(
+                    "${dep_out_dir}/${dep_name}/package_manifest.json",
+                    root_build_dir) ]
+          }
+        }
         package_url =
             "fuchsia-pkg://fuchsia.com/$package_name#meta/$manifest_name"
       }
@@ -170,6 +186,10 @@ template("fuchsia_test_package") {
       }
       deps += invoker.test_components
       deps += test_deps
+      if (defined(invoker.package_deps)) {
+        deps -= invoker.package_deps
+        deps += invoker.package_deps
+      }
       testonly = true
     }
   } else {
