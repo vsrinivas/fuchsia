@@ -356,10 +356,7 @@
         {
             directory: "dev-input-report",
             from: "parent",
-            to: [
-                "#system-tests",
-                "#tests",
-            ],
+            to: [ "#system-tests" ],
             rights: [ "r*" ],
         },
 
@@ -367,10 +364,7 @@
         {
             directory: "dev-display-controller",
             from: "parent",
-            to: [
-                "#system-tests",
-                "#tests",
-            ],
+            to: [ "#system-tests" ],
             rights: [ "rw*" ],
         },
 
@@ -378,37 +372,25 @@
         {
             directory: "dev-goldfish-address-space",
             from: "parent",
-            to: [
-                "#system-tests",
-                "#tests",
-            ],
+            to: [ "#system-tests" ],
             rights: [ "rw*" ],
         },
         {
             directory: "dev-goldfish-control",
             from: "parent",
-            to: [
-                "#system-tests",
-                "#tests",
-            ],
+            to: [ "#system-tests" ],
             rights: [ "rw*" ],
         },
         {
             directory: "dev-goldfish-pipe",
             from: "parent",
-            to: [
-                "#system-tests",
-                "#tests",
-            ],
+            to: [ "#system-tests" ],
             rights: [ "rw*" ],
         },
         {
             directory: "dev-goldfish-sync",
             from: "parent",
-            to: [
-                "#system-tests",
-                "#tests",
-            ],
+            to: [ "#system-tests" ],
             rights: [ "rw*" ],
         },
         {
@@ -417,7 +399,6 @@
             to: [
                 "#starnix_test_runner",
                 "#system-tests",
-                "#tests",
             ],
             rights: [ "rw*" ],
         },
@@ -427,10 +408,7 @@
         {
             directory: "dev-mediacodec",
             from: "parent",
-            to: [
-                "#system-tests",
-                "#tests",
-            ],
+            to: [ "#system-tests" ],
             rights: [ "rw*" ],
         },
 
