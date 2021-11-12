@@ -18,7 +18,8 @@ class {{ .WireClientImpl }} final : public ::fidl::internal::ClientBase {
  private:
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
-      ::fidl::internal::AsyncEventHandler* maybe_event_handler) override;
+      ::fidl::internal::AsyncEventHandler* maybe_event_handler,
+      const internal::IncomingTransportContext* transport_context) override;
 };
 {{- EndifFuchsia -}}
 {{- end }}
@@ -36,7 +37,8 @@ class {{ .WireClientImpl }} final : public ::fidl::internal::ClientBase {
   std::optional<::fidl::UnbindInfo>
   {{ .WireClientImpl.NoLeading }}::DispatchEvent(
       fidl::IncomingMessage& msg,
-      ::fidl::internal::AsyncEventHandler* maybe_event_handler) {
+      ::fidl::internal::AsyncEventHandler* maybe_event_handler,
+      const internal::IncomingTransportContext* transport_context) {
     {{- if .Events }}
     auto* event_handler = static_cast<{{ .WireAsyncEventHandler }}*>(maybe_event_handler);
     fidl_message_header_t* hdr = msg.header();

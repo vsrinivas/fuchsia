@@ -15,7 +15,9 @@ class {{ .WireResponseContext }} : public ::fidl::internal::ResponseContext {
   virtual void OnResult({{ .WireUnownedResult }}& result) = 0;
 
  private:
-  ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(::fidl::IncomingMessage&& msg) override;
+  ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
+    ::fidl::IncomingMessage&& msg,
+    const internal::IncomingTransportContext* transport_context) override;
 };
 {{- EndifFuchsia }}
 {{- end }}
@@ -29,7 +31,9 @@ class {{ .WireResponseContext }} : public ::fidl::internal::ResponseContext {
     : ::fidl::internal::ResponseContext({{ .OrdinalName }}) {}
 
 ::cpp17::optional<::fidl::UnbindInfo>
-{{ .WireResponseContext.NoLeading }}::OnRawResult(::fidl::IncomingMessage&& msg) {
+{{ .WireResponseContext.NoLeading }}::OnRawResult(
+    ::fidl::IncomingMessage&& msg,
+    const internal::IncomingTransportContext* transport_context) {
   if (unlikely(!msg.ok())) {
     {{ .WireUnownedResult }} result{msg.error()};
     OnResult(result);

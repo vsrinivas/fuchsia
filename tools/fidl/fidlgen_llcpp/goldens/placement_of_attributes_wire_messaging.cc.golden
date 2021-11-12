@@ -102,7 +102,8 @@ namespace fidl_test_placementofattributes {
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
     ::fidl_test_placementofattributes::ExampleProtocol>::
     DispatchEvent(fidl::IncomingMessage& msg,
-                  ::fidl::internal::AsyncEventHandler* maybe_event_handler) {
+                  ::fidl::internal::AsyncEventHandler* maybe_event_handler,
+                  const internal::IncomingTransportContext* transport_context) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
@@ -153,7 +154,9 @@ void fidl::internal::WireServerDispatcher<
   ::fidl::internal::Dispatch(impl, msg, txn, entries_, entries_end_);
 }
 void fidl::WireServer<::fidl_test_placementofattributes::ExampleProtocol>::
-    dispatch_message(fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
+    dispatch_message(
+        ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+        const ::fidl::internal::IncomingTransportContext* transport_context) {
   ::fidl::internal::WireServerDispatcher<
       ::fidl_test_placementofattributes::ExampleProtocol>::Dispatch(this,
                                                                     std::move(

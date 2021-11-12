@@ -136,10 +136,14 @@ class ResponseContext : public fidl::internal_wavl::WAVLTreeContainable<Response
   // |OnRawResult| is always invoked asynchronously whether in case of success
   // or error, unless the dispatcher is shut down, in which case it will be
   // called synchronously.
-  virtual cpp17::optional<fidl::UnbindInfo> OnRawResult(::fidl::IncomingMessage&& result) = 0;
+  virtual cpp17::optional<fidl::UnbindInfo> OnRawResult(
+      ::fidl::IncomingMessage&& result,
+      const internal::IncomingTransportContext* transport_context) = 0;
 
   // A helper around |OnRawResult| to directly notify an error to the context.
-  void OnError(::fidl::Result error) { OnRawResult(::fidl::IncomingMessage::Create(error)); }
+  void OnError(::fidl::Result error) {
+    OnRawResult(::fidl::IncomingMessage::Create(error), nullptr);
+  }
 
  private:
   friend class ResponseContextAsyncErrorTask<ResponseContext>;
@@ -228,14 +232,16 @@ class ClientBase {
   // a new transaction ID. |message| will be updated with that transaction ID.
   //
   // Errors are notified via |context|.
-  void SendTwoWay(::fidl::OutgoingMessage& message, ResponseContext* context);
+  void SendTwoWay(fidl::OutgoingMessage& message, ResponseContext* context,
+                  const fidl::WriteOptions& write_options = {});
 
   // Sends a one way message.
   //
   // |message| will have its transaction ID set to zero.
   //
   // Errors are returned to the caller.
-  fidl::Result SendOneWay(::fidl::OutgoingMessage& message);
+  fidl::Result SendOneWay(::fidl::OutgoingMessage& message,
+                          const fidl::WriteOptions& write_options = {});
 
   // For debugging.
   size_t GetTransactionCount() {
@@ -269,7 +275,8 @@ class ClientBase {
   // |UnbindInfo| describing the error. Otherwise, it will return
   // |std::nullopt|.
   std::optional<UnbindInfo> Dispatch(fidl::IncomingMessage& msg,
-                                     AsyncEventHandler* maybe_event_handler);
+                                     AsyncEventHandler* maybe_event_handler,
+                                     const internal::IncomingTransportContext* transport_context);
 
   // Dispatches an incoming event.
   //
@@ -295,8 +302,9 @@ class ClientBase {
   // If errors occur during dispatching, the function will return an
   // |UnbindInfo| describing the error. Otherwise, it will return
   // |std::nullopt|.
-  virtual std::optional<UnbindInfo> DispatchEvent(fidl::IncomingMessage& msg,
-                                                  AsyncEventHandler* maybe_event_handler) = 0;
+  virtual std::optional<UnbindInfo> DispatchEvent(
+      fidl::IncomingMessage& msg, AsyncEventHandler* maybe_event_handler,
+      const internal::IncomingTransportContext* transport_context) = 0;
 
  private:
   // Handles errors in sending one-way or two-way FIDL requests. This may lead

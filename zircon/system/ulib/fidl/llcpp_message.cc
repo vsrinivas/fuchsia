@@ -178,7 +178,7 @@ void OutgoingMessage::EncodeImpl(const fidl_type_t* message_type, void* data) {
   message_.iovec.num_iovecs = 1;
 }
 
-void OutgoingMessage::Write(internal::AnyUnownedTransport transport, WriteOptions options) {
+void OutgoingMessage::Write(internal::AnyUnownedTransport transport, const WriteOptions& options) {
   if (!ok()) {
     return;
   }
@@ -195,7 +195,7 @@ void OutgoingMessage::CallImpl(internal::AnyUnownedTransport transport,
                                const fidl_type_t* response_type, uint8_t* result_bytes,
                                uint32_t result_byte_capacity, fidl_handle_t* result_handles,
                                void* result_handle_metadata, uint32_t result_handle_capacity,
-                               CallOptions options) {
+                               const CallOptions& options) {
   if (status() != ZX_OK) {
     return;
   }

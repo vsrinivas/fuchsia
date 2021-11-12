@@ -88,7 +88,8 @@ namespace fidl_test_inheritance {
 
 ::cpp17::optional<::fidl::UnbindInfo>
 fidl::WireResponseContext<::fidl_test_inheritance::Super::Foo>::OnRawResult(
-    ::fidl::IncomingMessage&& msg) {
+    ::fidl::IncomingMessage&& msg,
+    const internal::IncomingTransportContext* transport_context) {
   if (unlikely(!msg.ok())) {
     ::fidl::WireUnownedResult<::fidl_test_inheritance::Super::Foo> result{
         msg.error()};
@@ -215,7 +216,8 @@ fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo_Sync(
 std::optional<::fidl::UnbindInfo>
 fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::DispatchEvent(
     fidl::IncomingMessage& msg,
-    ::fidl::internal::AsyncEventHandler* maybe_event_handler) {
+    ::fidl::internal::AsyncEventHandler* maybe_event_handler,
+    const internal::IncomingTransportContext* transport_context) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
@@ -261,7 +263,8 @@ void fidl::internal::WireServerDispatcher<::fidl_test_inheritance::Super>::
   ::fidl::internal::Dispatch(impl, msg, txn, entries_, entries_end_);
 }
 void fidl::WireServer<::fidl_test_inheritance::Super>::dispatch_message(
-    fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
+    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    const ::fidl::internal::IncomingTransportContext* transport_context) {
   ::fidl::internal::WireServerDispatcher<
       ::fidl_test_inheritance::Super>::Dispatch(this, std::move(msg), txn);
 }
@@ -386,7 +389,8 @@ namespace fidl_test_inheritance {
 
 ::cpp17::optional<::fidl::UnbindInfo>
 fidl::WireResponseContext<::fidl_test_inheritance::Sub::Foo>::OnRawResult(
-    ::fidl::IncomingMessage&& msg) {
+    ::fidl::IncomingMessage&& msg,
+    const internal::IncomingTransportContext* transport_context) {
   if (unlikely(!msg.ok())) {
     ::fidl::WireUnownedResult<::fidl_test_inheritance::Sub::Foo> result{
         msg.error()};
@@ -510,7 +514,8 @@ fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo_Sync(
 std::optional<::fidl::UnbindInfo>
 fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::DispatchEvent(
     fidl::IncomingMessage& msg,
-    ::fidl::internal::AsyncEventHandler* maybe_event_handler) {
+    ::fidl::internal::AsyncEventHandler* maybe_event_handler,
+    const internal::IncomingTransportContext* transport_context) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
@@ -556,7 +561,8 @@ void fidl::internal::WireServerDispatcher<::fidl_test_inheritance::Sub>::
   ::fidl::internal::Dispatch(impl, msg, txn, entries_, entries_end_);
 }
 void fidl::WireServer<::fidl_test_inheritance::Sub>::dispatch_message(
-    fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
+    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    const ::fidl::internal::IncomingTransportContext* transport_context) {
   ::fidl::internal::WireServerDispatcher<
       ::fidl_test_inheritance::Sub>::Dispatch(this, std::move(msg), txn);
 }

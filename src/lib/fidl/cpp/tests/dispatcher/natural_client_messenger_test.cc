@@ -35,7 +35,8 @@ class FakeClientImpl : public fidl::internal::ClientBase {
   fidl::Endpoints<TestProtocol>& endpoints() { return endpoints_; }
 
   std::optional<fidl::UnbindInfo> DispatchEvent(
-      fidl::IncomingMessage& msg, fidl::internal::AsyncEventHandler* maybe_event_handler) override {
+      fidl::IncomingMessage& msg, fidl::internal::AsyncEventHandler* maybe_event_handler,
+      const fidl::internal::IncomingTransportContext* transport_context) override {
     ZX_PANIC("Never used in this test");
   }
 
@@ -57,7 +58,9 @@ class MockResponseContext : public fidl::internal::ResponseContext {
  public:
   MockResponseContext() : fidl::internal::ResponseContext(kTestOrdinal) {}
 
-  cpp17::optional<fidl::UnbindInfo> OnRawResult(::fidl::IncomingMessage&& msg) override {
+  cpp17::optional<fidl::UnbindInfo> OnRawResult(
+      ::fidl::IncomingMessage&& msg,
+      const fidl::internal::IncomingTransportContext* transport_context) override {
     if (msg.ok()) {
       // We never get a response from the server in this test.
       ZX_PANIC("Never used in this test");

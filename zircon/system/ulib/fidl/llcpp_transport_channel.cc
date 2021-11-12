@@ -17,7 +17,7 @@ namespace internal {
 
 namespace {
 
-zx_status_t channel_write(fidl_handle_t handle, WriteOptions write_options, const void* data,
+zx_status_t channel_write(fidl_handle_t handle, const WriteOptions& write_options, const void* data,
                           uint32_t data_count, const fidl_handle_t* handles,
                           const void* handle_metadata, uint32_t handles_count) {
 #ifndef __Fuchsia__
@@ -40,7 +40,7 @@ zx_status_t channel_write(fidl_handle_t handle, WriteOptions write_options, cons
 #endif
 }
 
-zx_status_t channel_read(fidl_handle_t handle, ReadOptions read_options, void* data,
+zx_status_t channel_read(fidl_handle_t handle, const ReadOptions& read_options, void* data,
                          uint32_t data_capacity, fidl_handle_t* handles, void* handle_metadata,
                          uint32_t handles_capacity, uint32_t* out_data_actual_count,
                          uint32_t* out_handles_actual_count) {
@@ -71,7 +71,7 @@ zx_status_t channel_read(fidl_handle_t handle, ReadOptions read_options, void* d
 #endif
 }
 
-zx_status_t channel_call(fidl_handle_t handle, CallOptions call_options,
+zx_status_t channel_call(fidl_handle_t handle, const CallOptions& call_options,
                          const CallMethodArgs& cargs, uint32_t* out_data_actual_count,
                          uint32_t* out_handles_actual_count) {
 #ifndef __Fuchsia__
@@ -172,7 +172,7 @@ void ChannelWaiter::HandleWaitFinished(async_dispatcher_t* dispatcher, zx_status
   }
   fidl_trace(DidLLCPPAsyncChannelRead, nullptr /* type */, bytes.data(), msg.byte_actual(),
              msg.handle_actual());
-  return success_handler_(msg);
+  return success_handler_(msg, nullptr);
 }
 #endif
 

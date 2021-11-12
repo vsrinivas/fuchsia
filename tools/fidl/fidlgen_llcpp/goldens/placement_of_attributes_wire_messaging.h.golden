@@ -378,8 +378,9 @@ class ::fidl::WireServer<::fidl_test_placementofattributes::ExampleProtocol>
                       MethodCompleter::Sync& _completer) = 0;
 
  private:
-  void dispatch_message(::fidl::IncomingMessage&& msg,
-                        ::fidl::Transaction* txn) final;
+  void dispatch_message(
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      const internal::IncomingTransportContext* transport_context) final;
 };
 #endif  // __Fuchsia__
 
@@ -422,7 +423,8 @@ class ::fidl::internal::WireClientImpl<
  private:
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
-      ::fidl::internal::AsyncEventHandler* maybe_event_handler) override;
+      ::fidl::internal::AsyncEventHandler* maybe_event_handler,
+      const internal::IncomingTransportContext* transport_context) override;
 };
 namespace fidl {
 #endif  // __Fuchsia__

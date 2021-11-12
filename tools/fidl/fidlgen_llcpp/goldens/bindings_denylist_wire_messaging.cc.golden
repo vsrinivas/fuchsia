@@ -72,10 +72,11 @@ namespace fidl_test_bindingsdenylist {
           ::fidl_test_bindingsdenylist::
               kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal) {}
 
-::cpp17::optional<::fidl::UnbindInfo> fidl::WireResponseContext<
-    ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-        LibfuzzerNeedsNonemptyProtocol>::OnRawResult(::fidl::IncomingMessage&&
-                                                         msg) {
+::cpp17::optional<::fidl::UnbindInfo>
+fidl::WireResponseContext<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                              LibfuzzerNeedsNonemptyProtocol>::
+    OnRawResult(::fidl::IncomingMessage&& msg,
+                const internal::IncomingTransportContext* transport_context) {
   if (unlikely(!msg.ok())) {
     ::fidl::WireUnownedResult<
         ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
@@ -223,7 +224,8 @@ fidl::internal::WireClientImpl<
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
     ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
     DispatchEvent(fidl::IncomingMessage& msg,
-                  ::fidl::internal::AsyncEventHandler* maybe_event_handler) {
+                  ::fidl::internal::AsyncEventHandler* maybe_event_handler,
+                  const internal::IncomingTransportContext* transport_context) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
@@ -271,7 +273,9 @@ void fidl::internal::WireServerDispatcher<
   ::fidl::internal::Dispatch(impl, msg, txn, entries_, entries_end_);
 }
 void fidl::WireServer<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
-    dispatch_message(fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
+    dispatch_message(
+        ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+        const ::fidl::internal::IncomingTransportContext* transport_context) {
   ::fidl::internal::WireServerDispatcher<
       ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::Dispatch(this,
                                                                     std::move(
@@ -324,7 +328,8 @@ void ::fidl::WireResponse<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
 std::optional<::fidl::UnbindInfo> fidl::internal::
     WireClientImpl<::fidl_test_bindingsdenylist::OnlyCppAndDeps>::DispatchEvent(
         fidl::IncomingMessage& msg,
-        ::fidl::internal::AsyncEventHandler* maybe_event_handler) {
+        ::fidl::internal::AsyncEventHandler* maybe_event_handler,
+        const internal::IncomingTransportContext* transport_context) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
@@ -353,7 +358,9 @@ void fidl::internal::WireServerDispatcher<
   ::fidl::internal::Dispatch(impl, msg, txn, entries_, entries_end_);
 }
 void fidl::WireServer<::fidl_test_bindingsdenylist::OnlyCppAndDeps>::
-    dispatch_message(fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
+    dispatch_message(
+        ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+        const ::fidl::internal::IncomingTransportContext* transport_context) {
   ::fidl::internal::WireServerDispatcher<
       ::fidl_test_bindingsdenylist::OnlyCppAndDeps>::Dispatch(this,
                                                               std::move(msg),

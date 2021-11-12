@@ -300,7 +300,8 @@ namespace fidl_test_protocolrequest {
 
 ::cpp17::optional<::fidl::UnbindInfo>
 fidl::WireResponseContext<::fidl_test_protocolrequest::Parent::GetChild>::
-    OnRawResult(::fidl::IncomingMessage&& msg) {
+    OnRawResult(::fidl::IncomingMessage&& msg,
+                const internal::IncomingTransportContext* transport_context) {
   if (unlikely(!msg.ok())) {
     ::fidl::WireUnownedResult<::fidl_test_protocolrequest::Parent::GetChild>
         result{msg.error()};
@@ -330,7 +331,8 @@ fidl::WireResponseContext<::fidl_test_protocolrequest::Parent::GetChild>::
 
 ::cpp17::optional<::fidl::UnbindInfo> fidl::WireResponseContext<
     ::fidl_test_protocolrequest::Parent::GetChildRequest>::
-    OnRawResult(::fidl::IncomingMessage&& msg) {
+    OnRawResult(::fidl::IncomingMessage&& msg,
+                const internal::IncomingTransportContext* transport_context) {
   if (unlikely(!msg.ok())) {
     ::fidl::WireUnownedResult<
         ::fidl_test_protocolrequest::Parent::GetChildRequest>
@@ -637,7 +639,8 @@ fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::TakeChild(
 std::optional<::fidl::UnbindInfo> fidl::internal::
     WireClientImpl<::fidl_test_protocolrequest::Parent>::DispatchEvent(
         fidl::IncomingMessage& msg,
-        ::fidl::internal::AsyncEventHandler* maybe_event_handler) {
+        ::fidl::internal::AsyncEventHandler* maybe_event_handler,
+        const internal::IncomingTransportContext* transport_context) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
@@ -739,7 +742,8 @@ void fidl::internal::WireServerDispatcher<::fidl_test_protocolrequest::Parent>::
   ::fidl::internal::Dispatch(impl, msg, txn, entries_, entries_end_);
 }
 void fidl::WireServer<::fidl_test_protocolrequest::Parent>::dispatch_message(
-    fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
+    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    const ::fidl::internal::IncomingTransportContext* transport_context) {
   ::fidl::internal::WireServerDispatcher<
       ::fidl_test_protocolrequest::Parent>::Dispatch(this, std::move(msg), txn);
 }
@@ -878,7 +882,8 @@ void ::fidl::WireRequest<
 std::optional<::fidl::UnbindInfo> fidl::internal::
     WireClientImpl<::fidl_test_protocolrequest::Child>::DispatchEvent(
         fidl::IncomingMessage& msg,
-        ::fidl::internal::AsyncEventHandler* maybe_event_handler) {
+        ::fidl::internal::AsyncEventHandler* maybe_event_handler,
+        const internal::IncomingTransportContext* transport_context) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
@@ -904,7 +909,8 @@ void fidl::internal::WireServerDispatcher<::fidl_test_protocolrequest::Child>::
   ::fidl::internal::Dispatch(impl, msg, txn, entries_, entries_end_);
 }
 void fidl::WireServer<::fidl_test_protocolrequest::Child>::dispatch_message(
-    fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
+    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    const ::fidl::internal::IncomingTransportContext* transport_context) {
   ::fidl::internal::WireServerDispatcher<
       ::fidl_test_protocolrequest::Child>::Dispatch(this, std::move(msg), txn);
 }

@@ -168,7 +168,8 @@ namespace fidl_test_emptystruct {
 
 ::cpp17::optional<::fidl::UnbindInfo> fidl::WireResponseContext<
     ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>::
-    OnRawResult(::fidl::IncomingMessage&& msg) {
+    OnRawResult(::fidl::IncomingMessage&& msg,
+                const internal::IncomingTransportContext* transport_context) {
   if (unlikely(!msg.ok())) {
     ::fidl::WireUnownedResult<
         ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
@@ -345,7 +346,8 @@ fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::
 std::optional<::fidl::UnbindInfo> fidl::internal::
     WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::DispatchEvent(
         fidl::IncomingMessage& msg,
-        ::fidl::internal::AsyncEventHandler* maybe_event_handler) {
+        ::fidl::internal::AsyncEventHandler* maybe_event_handler,
+        const internal::IncomingTransportContext* transport_context) {
   auto* event_handler = static_cast<
       ::fidl::WireAsyncEventHandler<::fidl_test_emptystruct::EmptyProtocol>*>(
       maybe_event_handler);
@@ -498,7 +500,8 @@ void fidl::internal::
   ::fidl::internal::Dispatch(impl, msg, txn, entries_, entries_end_);
 }
 void fidl::WireServer<::fidl_test_emptystruct::EmptyProtocol>::dispatch_message(
-    fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
+    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    const ::fidl::internal::IncomingTransportContext* transport_context) {
   ::fidl::internal::WireServerDispatcher<
       ::fidl_test_emptystruct::EmptyProtocol>::Dispatch(this, std::move(msg),
                                                         txn);

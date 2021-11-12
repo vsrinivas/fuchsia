@@ -103,7 +103,8 @@ namespace fidl_test_transitivedependenciescompose {
 
 ::cpp17::optional<::fidl::UnbindInfo> fidl::WireResponseContext<
     ::fidl_test_transitivedependenciescompose::Top::GetFoo>::
-    OnRawResult(::fidl::IncomingMessage&& msg) {
+    OnRawResult(::fidl::IncomingMessage&& msg,
+                const internal::IncomingTransportContext* transport_context) {
   if (unlikely(!msg.ok())) {
     ::fidl::WireUnownedResult<
         ::fidl_test_transitivedependenciescompose::Top::GetFoo>
@@ -253,7 +254,8 @@ fidl::internal::WireClientImpl<::fidl_test_transitivedependenciescompose::Top>::
 std::optional<::fidl::UnbindInfo>
 fidl::internal::WireClientImpl<::fidl_test_transitivedependenciescompose::Top>::
     DispatchEvent(fidl::IncomingMessage& msg,
-                  ::fidl::internal::AsyncEventHandler* maybe_event_handler) {
+                  ::fidl::internal::AsyncEventHandler* maybe_event_handler,
+                  const internal::IncomingTransportContext* transport_context) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
@@ -300,7 +302,9 @@ void fidl::internal::WireServerDispatcher<
   ::fidl::internal::Dispatch(impl, msg, txn, entries_, entries_end_);
 }
 void fidl::WireServer<::fidl_test_transitivedependenciescompose::Top>::
-    dispatch_message(fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
+    dispatch_message(
+        ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+        const ::fidl::internal::IncomingTransportContext* transport_context) {
   ::fidl::internal::WireServerDispatcher<
       ::fidl_test_transitivedependenciescompose::Top>::Dispatch(this,
                                                                 std::move(msg),

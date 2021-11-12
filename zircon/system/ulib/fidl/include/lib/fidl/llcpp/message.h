@@ -170,10 +170,10 @@ class OutgoingMessage : public ::fidl::Result {
 
   // Various helper functions for writing to other channel-like types.
 
-  void Write(internal::AnyUnownedTransport transport, WriteOptions options = {});
+  void Write(internal::AnyUnownedTransport transport, const WriteOptions& options = {});
 
   template <typename TransportObject>
-  void Write(TransportObject&& transport, WriteOptions options = {}) {
+  void Write(TransportObject&& transport, const WriteOptions& options = {}) {
     Write(internal::MakeAnyUnownedTransport(std::forward<TransportObject>(transport)), options);
   }
 
@@ -184,14 +184,14 @@ class OutgoingMessage : public ::fidl::Result {
   void Call(internal::AnyUnownedTransport transport, uint8_t* result_bytes,
             uint32_t result_byte_capacity, fidl_handle_t* result_handles,
             void* result_handle_metadata, uint32_t result_handle_capacity,
-            CallOptions options = {}) {
+            const CallOptions& options = {}) {
     CallImpl(transport, FidlType::Type, result_bytes, result_byte_capacity, result_handles,
              result_handle_metadata, result_handle_capacity, options);
   }
 
   template <typename FidlType, typename TransportObject>
   void Call(TransportObject&& transport, uint8_t* result_bytes, uint32_t result_byte_capacity,
-            CallOptions options = {}) {
+            const CallOptions& options = {}) {
     fidl_handle_t result_handles[ZX_CHANNEL_MAX_MSG_HANDLES];
     typename internal::AssociatedTransport<TransportObject>::HandleMetadata
         result_handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
@@ -210,7 +210,8 @@ class OutgoingMessage : public ::fidl::Result {
 
   void CallImpl(internal::AnyUnownedTransport transport, const fidl_type_t* response_type,
                 uint8_t* result_bytes, uint32_t result_byte_capacity, fidl_handle_t* result_handles,
-                void* result_handle_metadata, uint32_t result_handle_capacity, CallOptions options);
+                void* result_handle_metadata, uint32_t result_handle_capacity,
+                const CallOptions& options);
 
   uint32_t iovec_capacity() const { return iovec_capacity_; }
   uint32_t handle_capacity() const { return handle_capacity_; }
@@ -516,7 +517,7 @@ IncomingMessage MessageRead(TransportObject&& transport, ::fidl::BufferSpan byte
                             fidl_handle_t* handle_storage,
                             typename internal::AssociatedTransport<TransportObject>::HandleMetadata*
                                 handle_metadata_storage,
-                            uint32_t handle_capacity, ReadOptions options = {}) {
+                            uint32_t handle_capacity, const ReadOptions& options = {}) {
   auto type_erased_transport =
       internal::MakeAnyUnownedTransport(std::forward<TransportObject>(transport));
   uint32_t num_bytes, num_handles;
@@ -526,8 +527,8 @@ IncomingMessage MessageRead(TransportObject&& transport, ::fidl::BufferSpan byte
   if (status != ZX_OK) {
     return IncomingMessage::Create(fidl::Result::TransportError(status));
   }
-  return IncomingMessage::Create(bytes_storage.data, num_bytes,
-                                 handle_storage, handle_metadata_storage, num_handles);
+  return IncomingMessage::Create(bytes_storage.data, num_bytes, handle_storage,
+                                 handle_metadata_storage, num_handles);
 }
 
 namespace internal {

@@ -47,7 +47,8 @@ class IncomingMessageDispatcher {
   // names which would appear on the subclasses.
   //
   // Always consumes the handles in |msg|.
-  virtual void dispatch_message(::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) = 0;
+  virtual void dispatch_message(::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+                                const internal::IncomingTransportContext* transport_context) = 0;
 };
 
 // Defines an incoming method entry. Used by a server to dispatch an incoming message.

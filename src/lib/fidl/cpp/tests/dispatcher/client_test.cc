@@ -46,8 +46,9 @@ class WireClientImpl<TestProtocol> : public ClientBase {
   }
 
  private:
-  std::optional<UnbindInfo> DispatchEvent(fidl::IncomingMessage& msg,
-                                          AsyncEventHandler* maybe_event_handler) override {
+  std::optional<UnbindInfo> DispatchEvent(
+      fidl::IncomingMessage& msg, AsyncEventHandler* maybe_event_handler,
+      const internal::IncomingTransportContext* transport_context) override {
     ZX_PANIC("Not used in this test");
   }
 };

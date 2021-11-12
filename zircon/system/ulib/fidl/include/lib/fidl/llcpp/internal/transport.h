@@ -19,18 +19,36 @@
 #endif
 
 namespace fidl {
+namespace internal {
+// Placeholder type for transport specific context type in the outgoing direction.
+// reinterpret_cast into the appropriate type for the transport.
+struct OutgoingTransportContext;
+// Placeholder type for transport specific context type in the incoming direction.
+// reinterpret_cast into the appropriate type for the transport.
+struct IncomingTransportContext;
+}  // namespace internal
 
 // Options passed from the user-facing write API to transport write().
-struct WriteOptions {};
+struct WriteOptions {
+  // Transport specific context.
+  const internal::OutgoingTransportContext* outgoing_transport_context;
+};
 
 // Options passed from the user-facing read API to transport read().
 struct ReadOptions {
   bool discardable = false;
+  // Transport specific context populated by read.
+  internal::IncomingTransportContext* out_incoming_transport_context;
 };
 
 // Options passed from the user-facing call API to transport call().
 struct CallOptions {
   zx_time_t deadline = ZX_TIME_INFINITE;
+
+  // Transport specific context.
+  const internal::OutgoingTransportContext* outgoing_transport_context;
+  // Transport specific context populated by call.
+  internal::IncomingTransportContext* out_incoming_transport_context;
 };
 
 class IncomingMessage;
@@ -132,7 +150,8 @@ class AnyTransportWaiter {
 };
 
 // Function receiving notification of successful waits on a TransportWaiter.
-using TransportWaitSuccessHandler = fit::inline_function<void(fidl::IncomingMessage&)>;
+using TransportWaitSuccessHandler = fit::inline_function<void(
+    fidl::IncomingMessage&, const IncomingTransportContext* transport_context)>;
 
 // Function receiving notification of failing waits on a TransportWaiter.
 using TransportWaitFailureHandler = fit::inline_function<void(UnbindInfo)>;
@@ -146,21 +165,22 @@ struct TransportVTable {
   // Write to the transport.
   // |handle_metadata| contains transport-specific metadata produced by
   // EncodingConfiguration::decode_process_handle.
-  zx_status_t (*write)(fidl_handle_t handle, WriteOptions options, const void* data,
+  zx_status_t (*write)(fidl_handle_t handle, const WriteOptions& options, const void* data,
                        uint32_t data_count, const fidl_handle_t* handles,
                        const void* handle_metadata, uint32_t handles_count);
 
   // Read from the transport.
   // This populates |handle_metadata|, which contains transport-specific metadata and will be
   // passed to EncodingConfiguration::decode_process_handle.
-  zx_status_t (*read)(fidl_handle_t handle, ReadOptions options, void* data, uint32_t data_capacity,
-                      fidl_handle_t* handles, void* handle_metadata, uint32_t handles_capacity,
-                      uint32_t* out_data_actual_count, uint32_t* out_handles_actual_count);
+  zx_status_t (*read)(fidl_handle_t handle, const ReadOptions& options, void* data,
+                      uint32_t data_capacity, fidl_handle_t* handles, void* handle_metadata,
+                      uint32_t handles_capacity, uint32_t* out_data_actual_count,
+                      uint32_t* out_handles_actual_count);
 
   // Perform a call on the transport.
   // The arguments are formatted in |cargs|, with the write direction args corresponding to
   // those in |write| and the read direction args corresponding to those in |read|.
-  zx_status_t (*call)(fidl_handle_t handle, CallOptions options, const CallMethodArgs& cargs,
+  zx_status_t (*call)(fidl_handle_t handle, const CallOptions& options, const CallMethodArgs& cargs,
                       uint32_t* out_data_actual_count, uint32_t* out_handles_actual_count);
 
 #ifdef __Fuchsia__
@@ -206,21 +226,21 @@ class AnyUnownedTransport {
 
   fidl_transport_type type() const { return vtable_->type; }
 
-  zx_status_t write(WriteOptions options, const void* data, uint32_t data_count,
+  zx_status_t write(const WriteOptions& options, const void* data, uint32_t data_count,
                     const fidl_handle_t* handles, const void* handle_metadata,
                     uint32_t handles_count) const {
     return vtable_->write(handle_, options, data, data_count, handles, handle_metadata,
                           handles_count);
   }
 
-  zx_status_t read(ReadOptions options, void* data, uint32_t data_capacity, fidl_handle_t* handles,
-                   void* handle_metadata, uint32_t handles_capacity,
+  zx_status_t read(const ReadOptions& options, void* data, uint32_t data_capacity,
+                   fidl_handle_t* handles, void* handle_metadata, uint32_t handles_capacity,
                    uint32_t* out_data_actual_count, uint32_t* out_handles_actual_count) const {
     return vtable_->read(handle_, options, data, data_capacity, handles, handle_metadata,
                          handles_capacity, out_data_actual_count, out_handles_actual_count);
   }
 
-  zx_status_t call(CallOptions options, const CallMethodArgs& cargs,
+  zx_status_t call(const CallOptions& options, const CallMethodArgs& cargs,
                    uint32_t* out_data_actual_count, uint32_t* out_handles_actual_count) const {
     return vtable_->call(handle_, options, cargs, out_data_actual_count, out_handles_actual_count);
   }
@@ -296,21 +316,21 @@ class AnyTransport {
 
   fidl_transport_type type() const { return vtable_->type; }
 
-  zx_status_t write(WriteOptions options, const void* data, uint32_t data_count,
+  zx_status_t write(const WriteOptions& options, const void* data, uint32_t data_count,
                     const fidl_handle_t* handles, const void* handle_metadata,
                     uint32_t handles_count) const {
     return vtable_->write(handle_, options, data, data_count, handles, handle_metadata,
                           handles_count);
   }
 
-  zx_status_t read(ReadOptions options, void* data, uint32_t data_capacity, fidl_handle_t* handles,
-                   void* handle_metadata, uint32_t handles_capacity,
+  zx_status_t read(const ReadOptions& options, void* data, uint32_t data_capacity,
+                   fidl_handle_t* handles, void* handle_metadata, uint32_t handles_capacity,
                    uint32_t* out_data_actual_count, uint32_t* out_handles_actual_count) const {
     return vtable_->read(handle_, options, data, data_capacity, handles, handle_metadata,
                          handles_capacity, out_data_actual_count, out_handles_actual_count);
   }
 
-  zx_status_t call(CallOptions options, const CallMethodArgs& cargs,
+  zx_status_t call(const CallOptions& options, const CallMethodArgs& cargs,
                    uint32_t* out_data_actual_count, uint32_t* out_handles_actual_count) const {
     return vtable_->call(handle_, options, cargs, out_data_actual_count, out_handles_actual_count);
   }

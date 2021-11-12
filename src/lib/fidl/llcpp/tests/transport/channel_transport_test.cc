@@ -23,7 +23,12 @@ TEST(ChannelTransport, Success) {
 
   bool success = false;
   fidl::internal::ChannelWaiter waiter(
-      ch1.get(), dispatcher, [&success](fidl::IncomingMessage&) { success = true; },
+      ch1.get(), dispatcher,
+      [&success](fidl::IncomingMessage&,
+                 const fidl::internal::IncomingTransportContext* transport_context) {
+        ASSERT_NULL(transport_context);
+        success = true;
+      },
       [](fidl::UnbindInfo) { ZX_PANIC("shouldn't get here"); });
   ASSERT_OK(waiter.Begin());
 
@@ -41,7 +46,10 @@ TEST(ChannelTransport, Failure) {
 
   std::optional<fidl::UnbindInfo> failure;
   fidl::internal::ChannelWaiter waiter(
-      ch1.get(), dispatcher, [](fidl::IncomingMessage&) { ZX_PANIC("shouldn't get here"); },
+      ch1.get(), dispatcher,
+      [](fidl::IncomingMessage&, const fidl::internal::IncomingTransportContext*) {
+        ZX_PANIC("shouldn't get here");
+      },
       [&failure](fidl::UnbindInfo info) { failure = info; });
   ASSERT_OK(waiter.Begin());
 

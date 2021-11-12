@@ -93,11 +93,12 @@ void ClientBase::ReleaseResponseContexts(fidl::UnbindInfo info) {
   }
 }
 
-void ClientBase::SendTwoWay(::fidl::OutgoingMessage& message, ResponseContext* context) {
+void ClientBase::SendTwoWay(fidl::OutgoingMessage& message, ResponseContext* context,
+                            const fidl::WriteOptions& write_options) {
   if (auto transport = GetTransport()) {
     PrepareAsyncTxn(context);
     message.set_txid(context->Txid());
-    message.Write(*transport);
+    message.Write(*transport, write_options);
     if (!message.ok()) {
       ForgetAsyncTxn(context);
       TryAsyncDeliverError(message.error(), context);
@@ -108,10 +109,11 @@ void ClientBase::SendTwoWay(::fidl::OutgoingMessage& message, ResponseContext* c
   TryAsyncDeliverError(fidl::Result::Unbound(), context);
 }
 
-fidl::Result ClientBase::SendOneWay(::fidl::OutgoingMessage& message) {
+fidl::Result ClientBase::SendOneWay(::fidl::OutgoingMessage& message,
+                                    const fidl::WriteOptions& write_options) {
   if (auto transport = GetTransport()) {
     message.set_txid(0);
-    message.Write(*transport);
+    message.Write(*transport, write_options);
     if (!message.ok()) {
       HandleSendError(message.error());
       return message.error();
@@ -134,8 +136,9 @@ void ClientBase::TryAsyncDeliverError(::fidl::Result error, ResponseContext* con
   }
 }
 
-std::optional<UnbindInfo> ClientBase::Dispatch(fidl::IncomingMessage& msg,
-                                               AsyncEventHandler* maybe_event_handler) {
+std::optional<UnbindInfo> ClientBase::Dispatch(
+    fidl::IncomingMessage& msg, AsyncEventHandler* maybe_event_handler,
+    const internal::IncomingTransportContext* transport_context) {
   if (fit::nullable epitaph = msg.maybe_epitaph(); unlikely(epitaph)) {
     return UnbindInfo::PeerClosed((*epitaph)->error);
   }
@@ -143,7 +146,7 @@ std::optional<UnbindInfo> ClientBase::Dispatch(fidl::IncomingMessage& msg,
   auto* hdr = msg.header();
   if (hdr->txid == 0) {
     // Dispatch events (received messages with no txid).
-    return DispatchEvent(msg, maybe_event_handler);
+    return DispatchEvent(msg, maybe_event_handler, transport_context);
   }
 
   // If this is a response, look up the corresponding ResponseContext based on the txid.
@@ -159,7 +162,7 @@ std::optional<UnbindInfo> ClientBase::Dispatch(fidl::IncomingMessage& msg,
           Result::UnexpectedMessage(ZX_ERR_NOT_FOUND, fidl::internal::kErrorUnknownTxId)};
     }
   }
-  return context->OnRawResult(std::move(msg));
+  return context->OnRawResult(std::move(msg), transport_context);
 }
 
 void ClientController::Bind(std::shared_ptr<ClientBase>&& client_impl,
