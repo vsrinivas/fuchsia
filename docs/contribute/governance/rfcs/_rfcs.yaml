@@ -1798,3 +1798,16 @@
   reviewers: ['abarth@google.com', 'ianloic@google.com', 'yifeit@google.com']
   submitted: '2021-05-25'
   reviewed: '2021-10-27'
+
+- name: 'RFC-0140'
+  title: 'Realm Builder'
+  short_description: 'The design an feature set of Realm Builder is outlined and described'
+  authors: ['dgonyeo@google.com']
+  file: '0140_realm_builder.md'
+  area: ['Component Framework']
+  issue: ['']
+  gerrit_change_id: ['576844']
+  status: 'Accepted'
+  reviewers: ['geb@google.com', 'yaneury@google.com', 'peterjohnston@google.com', 'jaeheon@google.com']
+  submitted: '2021-09-06'
+  reviewed: '2021-11-10'
