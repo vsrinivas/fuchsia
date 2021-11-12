@@ -419,7 +419,6 @@
             from: "parent",
             to: [
                 "#system-tests",
-                "#tests",
             ],
         },
     ],
