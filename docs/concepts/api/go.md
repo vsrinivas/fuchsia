@@ -166,6 +166,18 @@ Go] recommends). In Fuchsia, we have chosen to always use an empty struct due to
 the small performance improvement (which comes at the cost of small added
 syntax).
 
+### Instantiating slices
+
+If you're going to define the slice using a literal, then `[]T{ ... }` is the
+way to go.
+
+Otherwise use `var slice []T` to create an empty slice, i.e. do not use
+`slice:= []T{}`.
+
+Note that pre-allocating slices can bring meaningful performance improvements,
+and may be preferred over a simpler syntax. See for instance [slices usage and
+internals](https://go.dev/blog/slices-intro).
+
 ### Instantiating maps
 
 If you're going to define the map using a literal, then `map[K]T{ ... }` is the
