@@ -8,11 +8,14 @@ use {fidl_fuchsia_identity_account as faccount, thiserror::Error};
 #[error("failed to derive key from password")]
 pub struct KeyError;
 
+/// A 256-bit key.
+pub type Key = [u8; 32];
+
 /// The `KeyDerivation` trait provides a mechanism for deriving a key from a password.
 /// The returned key is suitable for use with a zxcrypt volume.
 pub trait KeyDerivation {
     /// Derive a key from the given password. The returned key will be 256 bits long.
-    fn derive_key(&self, password: &str) -> Result<Vec<u8>, KeyError>;
+    fn derive_key(&self, password: &str) -> Result<Key, KeyError>;
 }
 
 impl From<KeyError> for faccount::Error {

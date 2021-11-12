@@ -6,7 +6,7 @@
 //! this program. These are placed together in a single module to make it easy to remember
 //! which implementations need to be re-written with production versions.
 
-use crate::keys::{KeyDerivation, KeyError};
+use crate::keys::{Key, KeyDerivation, KeyError};
 
 /// The singleton account ID on the device.
 /// For now, we only support a single account (as in the fuchsia.identity protocol).  The local
@@ -25,12 +25,12 @@ pub const GLOBAL_ZXCRYPT_KEY: [u8; 32] = [0; 32];
 pub struct NullKeyDerivation;
 
 impl KeyDerivation for NullKeyDerivation {
-    fn derive_key(&self, password: &str) -> Result<Vec<u8>, KeyError> {
+    fn derive_key(&self, password: &str) -> Result<Key, KeyError> {
         // Panic if the password is anything but the empty string.
         assert_eq!(
             password, GLOBAL_ACCOUNT_PASSWORD,
             "NullKeyDerivation must not be used on real passwords"
         );
-        Ok(GLOBAL_ZXCRYPT_KEY.to_vec())
+        Ok(GLOBAL_ZXCRYPT_KEY.clone())
     }
 }

@@ -356,7 +356,7 @@ impl Account {
 mod test {
     use {
         super::*,
-        crate::{disk_management::DiskError, prototype::NullKeyDerivation},
+        crate::{disk_management::DiskError, keys::Key, prototype::NullKeyDerivation},
         async_trait::async_trait,
         fidl_fuchsia_io::DirectoryMarker,
         fuchsia_zircon::Status,
@@ -481,11 +481,11 @@ mod test {
     impl EncryptedBlockDevice for MockEncryptedBlockDevice {
         type BlockDevice = MockBlockDevice;
 
-        async fn format(&self, _key: &[u8]) -> Result<(), DiskError> {
+        async fn format(&self, _key: &Key) -> Result<(), DiskError> {
             self.format.clone().map_err(|err_factory| err_factory())
         }
 
-        async fn unseal(&self, _key: &[u8]) -> Result<MockBlockDevice, DiskError> {
+        async fn unseal(&self, _key: &Key) -> Result<MockBlockDevice, DiskError> {
             self.unseal.clone().map(|b| *b).map_err(|err_factory| err_factory())
         }
     }

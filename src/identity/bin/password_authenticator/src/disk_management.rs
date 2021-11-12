@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::keys::Key,
     async_trait::async_trait,
     fidl::endpoints::{ProtocolMarker, ServerEnd},
     fidl_fuchsia_device::ControllerMarker,
@@ -48,8 +49,6 @@ pub enum DiskError {
     FailedToFormatZxcrypt(#[source] zx::Status),
     #[error("Failed to unseal zxcrypt block device: {0}")]
     FailedToUnsealZxcrypt(#[source] zx::Status),
-    #[error("Key size must be 256 bits")]
-    KeySizeError,
 }
 
 impl From<DiskError> for faccount::Error {
@@ -207,11 +206,11 @@ pub trait EncryptedBlockDevice {
 
     /// Unseals the block device using the given key. The key must be 256 bits long.
     /// Returns a decrypted block device on success.
-    async fn unseal(&self, key: &[u8]) -> Result<Self::BlockDevice, DiskError>;
+    async fn unseal(&self, key: &Key) -> Result<Self::BlockDevice, DiskError>;
 
     /// Re-encrypts the block device using the given key, wiping out any previous zxcrypt volumes.
     /// The key must be 256 bits long.
-    async fn format(&self, key: &[u8]) -> Result<(), DiskError>;
+    async fn format(&self, key: &Key) -> Result<(), DiskError>;
 }
 
 /// The production implementation of [`DiskManager`].
@@ -355,8 +354,7 @@ pub struct EncryptedDevBlockDevice(DirectoryProxy);
 impl EncryptedBlockDevice for EncryptedDevBlockDevice {
     type BlockDevice = DevBlockDevice;
 
-    async fn unseal(&self, key: &[u8]) -> Result<Self::BlockDevice, DiskError> {
-        check_key_size(key)?;
+    async fn unseal(&self, key: &Key) -> Result<Self::BlockDevice, DiskError> {
         let (device_manager_proxy, server_end) =
             fidl::endpoints::create_proxy::<DeviceManagerMarker>()?;
         self.0.open(
@@ -384,8 +382,7 @@ impl EncryptedBlockDevice for EncryptedDevBlockDevice {
         Ok(DevBlockDevice(Node(unsealed_block_node)))
     }
 
-    async fn format(&self, key: &[u8]) -> Result<(), DiskError> {
-        check_key_size(key)?;
+    async fn format(&self, key: &Key) -> Result<(), DiskError> {
         let (device_manager_proxy, server_end) =
             fidl::endpoints::create_proxy::<DeviceManagerMarker>()?;
         self.0.open(
@@ -396,14 +393,6 @@ impl EncryptedBlockDevice for EncryptedDevBlockDevice {
         )?;
         zx::Status::ok(device_manager_proxy.format(key, 0).await?)
             .map_err(DiskError::FailedToFormatZxcrypt)?;
-        Ok(())
-    }
-}
-
-fn check_key_size(key: &[u8]) -> Result<(), DiskError> {
-    if key.len() != 32 {
-        Err(DiskError::KeySizeError)
-    } else {
         Ok(())
     }
 }
@@ -890,10 +879,11 @@ pub mod test {
 
         // Build a zxcrypt block device that points to our mock zxcrypt driver node, emulating
         // bind_to_encrypted_block.
+        let key = Box::new(GLOBAL_ZXCRYPT_KEY.clone());
         let encrypted_block_device =
             EncryptedDevBlockDevice(serve_mock_devfs(&scope, mock_encrypted_block_dir));
-        encrypted_block_device.format(&GLOBAL_ZXCRYPT_KEY).await.expect("format");
-        let _ = encrypted_block_device.unseal(&GLOBAL_ZXCRYPT_KEY).await.expect("unseal");
+        encrypted_block_device.format(&key).await.expect("format");
+        let _ = encrypted_block_device.unseal(&key).await.expect("unseal");
 
         scope.shutdown();
         scope.wait().await;
