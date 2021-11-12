@@ -78,7 +78,7 @@ The structure of the update package, `fuchsia-pkg://fuchsia.com/update`, contain
 *   `/zbi[.signed]`
     Kernel image. Must not be present if the `update-mode` is `force-recovery`. `zbi` or `zbi.signed`
     is required to be present if the `update-mode` is `normal`.
-*   `/zedboot[.signed]`
+*   `/recovery`
     Recovery image
 *   `/meta/contents` and `/meta/package`
     Metadata files present in all packages.

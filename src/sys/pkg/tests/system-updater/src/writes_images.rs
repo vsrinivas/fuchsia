@@ -102,7 +102,7 @@ async fn skip_recovery_does_not_write_recovery_or_vbmeta() {
         .add_file("packages.json", make_packages_json([]))
         .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
         .add_file("zbi", "fake zbi")
-        .add_file("zedboot", "new recovery")
+        .add_file("recovery", "new recovery")
         .add_file("recovery.vbmeta", "new recovery vbmeta");
 
     env.run_update_with_options(
@@ -323,60 +323,6 @@ async fn writes_to_a_if_abr_supported_and_current_config_r() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn writes_recovery_called_legacy_zedboot() {
-    let env = TestEnv::builder().build().await;
-
-    env.resolver
-        .register_package("update", "upd4t3")
-        .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
-        .add_file("zbi", "fake zbi")
-        .add_file("zedboot", "new recovery");
-
-    env.run_update().await.expect("success");
-
-    assert_eq!(
-        env.take_interactions(),
-        vec![
-            Paver(PaverEvent::QueryCurrentConfiguration),
-            Paver(PaverEvent::ReadAsset {
-                configuration: paver::Configuration::A,
-                asset: paver::Asset::VerifiedBootMetadata
-            }),
-            Paver(PaverEvent::ReadAsset {
-                configuration: paver::Configuration::A,
-                asset: paver::Asset::Kernel
-            }),
-            Paver(PaverEvent::QueryCurrentConfiguration),
-            Paver(PaverEvent::QueryConfigurationStatus { configuration: paver::Configuration::A }),
-            Paver(PaverEvent::SetConfigurationUnbootable {
-                configuration: paver::Configuration::B
-            }),
-            Paver(PaverEvent::BootManagerFlush),
-            PackageResolve(UPDATE_PKG_URL.to_string()),
-            ReplaceRetainedPackages(vec![]),
-            Gc,
-            BlobfsSync,
-            Paver(PaverEvent::WriteAsset {
-                configuration: paver::Configuration::B,
-                asset: paver::Asset::Kernel,
-                payload: b"fake zbi".to_vec(),
-            }),
-            Paver(PaverEvent::WriteAsset {
-                configuration: paver::Configuration::Recovery,
-                asset: paver::Asset::Kernel,
-                payload: b"new recovery".to_vec(),
-            }),
-            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
-            Paver(PaverEvent::DataSinkFlush),
-            Paver(PaverEvent::BootManagerFlush),
-            Reboot,
-        ]
-    );
-}
-
-// TODO(fxbug.dev/52356): drop this duplicate test when "zedboot" is no longer allowed/used.
-#[fasync::run_singlethreaded(test)]
 async fn writes_recovery() {
     let env = TestEnv::builder().build().await;
 
@@ -438,7 +384,7 @@ async fn writes_recovery_vbmeta() {
         .add_file("packages.json", make_packages_json([]))
         .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
         .add_file("zbi", "fake zbi")
-        .add_file("zedboot", "new recovery")
+        .add_file("recovery", "new recovery")
         .add_file("recovery.vbmeta", "new recovery vbmeta");
 
     env.run_update().await.expect("success");

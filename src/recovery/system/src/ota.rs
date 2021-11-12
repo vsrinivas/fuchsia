@@ -279,7 +279,9 @@ mod tests {
         blobfs_ramdisk::BlobfsRamdisk,
         fidl_fuchsia_pkg_ext::RepositoryKey,
         fuchsia_async as fasync,
-        fuchsia_pkg_testing::{serve::HttpResponder, Package, PackageBuilder, RepositoryBuilder},
+        fuchsia_pkg_testing::{
+            make_epoch_json, serve::HttpResponder, Package, PackageBuilder, RepositoryBuilder,
+        },
         futures::future::{ready, BoxFuture},
         hyper::{header, Body, Request, Response, StatusCode},
         mock_paver::MockPaverServiceBuilder,
@@ -569,6 +571,7 @@ mod tests {
             .add_package(package)
             .add_image("zbi.signed", "zbi image")
             .add_image("fuchsia.vbmeta", "fuchsia vbmeta")
+            .add_image("epoch.json", &make_epoch_json(1))
             .authorized_keys("test authorized keys file!");
 
         env.run_ota().await?;

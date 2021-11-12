@@ -1,1 +1,2 @@
 0=Initial epoch (fxbug.dev/72370)
+1=Remove zedboot from UpdatePackage (fxbug.dev/52356)

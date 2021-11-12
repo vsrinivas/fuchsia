@@ -760,7 +760,7 @@ const UPDATE_PKG_URL_PINNED: &str = "fuchsia-pkg://fuchsia.com/update?hash=00112
 // constant to match the SOURCE epoch. This will encourage developers to think critically about
 // bumping the epoch and follow the policy documented on fuchsia.dev.
 // See //src/sys/pkg/bin/system-updater/epoch/playbook.md for information on bumping the epoch.
-const SOURCE_EPOCH: u64 = 0;
+const SOURCE_EPOCH: u64 = 1;
 
 fn resolved_urls(interactions: SystemUpdaterInteractions) -> Vec<String> {
     (*interactions.lock())

@@ -19,7 +19,7 @@ async fn rejects_invalid_package_name() {
         .register_custom_package("not_update", "not_update", "upd4t3", "fuchsia.com")
         .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
         .add_file("zbi", "fake zbi")
-        .add_file("zedboot", "new recovery")
+        .add_file("recovery", "new recovery")
         .add_file("version", "build version");
 
     let not_update_package_url = "fuchsia-pkg://fuchsia.com/not_update";

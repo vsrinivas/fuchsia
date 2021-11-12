@@ -41,7 +41,7 @@ impl Default for Version {
             vbmeta_hash: Default::default(),
             zbi_hash: Default::default(),
             build_version: SystemVersion::Opaque("".to_string()),
-            epoch: "0".to_string(),
+            epoch: "1".to_string(),
         }
     }
 }
@@ -282,7 +282,10 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn version_for_invalid_update_package() {
         let update_pkg = TestUpdatePackage::new();
-        assert_eq!(Version::for_update_package(&update_pkg).await, Version::default());
+        assert_eq!(
+            Version::for_update_package(&update_pkg).await,
+            Version { epoch: "0".to_string(), ..Version::default() }
+        );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -348,7 +351,7 @@ mod tests {
             // See comment in sha256_hash_removed_trailing_zeros test.
             zbi_hash: "a7124150e065aa234710ab387523f17deb36a9249938e11f2f3656954412ab8".to_string(),
             build_version: SystemVersion::Opaque("".to_string()),
-            epoch: "0".to_string(),
+            epoch: "1".to_string(),
         };
         assert_eq!(
             Version::current(
@@ -357,7 +360,7 @@ mod tests {
                 &boot_manager,
                 &NamespaceBuildInfo,
                 &Some(pkgfs_system),
-                &make_epoch_json(0)
+                &make_epoch_json(1)
             )
             .await,
             last_target_version

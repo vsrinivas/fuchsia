@@ -29,7 +29,7 @@ use {
         testing::{AnyProperty, TreeAssertion},
         tree_assertion,
     },
-    fuchsia_pkg_testing::make_packages_json,
+    fuchsia_pkg_testing::{make_epoch_json, make_packages_json},
     fuchsia_zircon as zx,
     futures::{
         channel::{mpsc, oneshot},
@@ -692,7 +692,8 @@ async fn omaha_client_update(mut env: TestEnv, platform_metrics: TreeAssertion) 
                 "packages.json",
                 make_packages_json(["fuchsia-pkg://fuchsia.com/system_image/0?hash=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead"]),
             )
-            .add_file("zbi", "fake zbi"),
+            .add_file("zbi", "fake zbi")
+            .add_file("epoch.json", make_epoch_json(1))
     );
     env.proxies
         .resolver.url("fuchsia-pkg://fuchsia.com/system_image/0?hash=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead")
@@ -1228,7 +1229,8 @@ async fn test_omaha_client_perform_pending_reboot_after_out_of_space() {
                 "packages.json",
                 make_packages_json(["fuchsia-pkg://fuchsia.com/system_image/0?hash=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead"]),
             )
-            .add_file("zbi", "fake zbi"),
+            .add_file("zbi", "fake zbi")
+            .add_file("epoch.json", make_epoch_json(1)),
     );
 
     // ...but the system image package should fail with NO_SPACE

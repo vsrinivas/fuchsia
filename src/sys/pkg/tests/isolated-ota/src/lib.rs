@@ -14,7 +14,9 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_merkle::Hash,
-    fuchsia_pkg_testing::{serve::ServedRepository, Package, PackageBuilder, RepositoryBuilder},
+    fuchsia_pkg_testing::{
+        make_epoch_json, serve::ServedRepository, Package, PackageBuilder, RepositoryBuilder,
+    },
     fuchsia_url::pkg_url::RepoUrl,
     fuchsia_zircon as zx,
     futures::prelude::*,
@@ -379,6 +381,7 @@ pub async fn test_pave_fails() -> Result<(), Error> {
         .paver(|p| p.insert_hook(mphooks::return_error(paver_hook)))
         .add_package(test_package)
         .add_image("zbi.signed", "FAIL".as_bytes())
+        .add_image("epoch.json", make_epoch_json(1).as_bytes())
         .add_image("fuchsia.vbmeta", "FAIL".as_bytes())
         .build()
         .await
@@ -416,9 +419,10 @@ pub async fn test_updater_succeeds() -> Result<(), Error> {
     let mut builder = TestEnvBuilder::new()
         .add_image("zbi.signed", "This is a zbi".as_bytes())
         .add_image("fuchsia.vbmeta", "This is a vbmeta".as_bytes())
-        .add_image("zedboot.signed", "This is zedboot".as_bytes())
+        .add_image("recovery", "This is recovery".as_bytes())
         .add_image("recovery.vbmeta", "This is another vbmeta".as_bytes())
         .add_image("bootloader", "This is a bootloader upgrade".as_bytes())
+        .add_image("epoch.json", make_epoch_json(1).as_bytes())
         .add_image("firmware_test", "This is the test firmware".as_bytes());
     for i in 0i64..3 {
         let name = format!("test-package{}", i);
@@ -472,7 +476,7 @@ pub async fn test_updater_succeeds() -> Result<(), Error> {
                 asset: Asset::VerifiedBootMetadata,
                 payload: "This is a vbmeta".as_bytes().to_vec(),
             },
-            // Note that zedboot/recovery isn't written, as isolated-ota skips them.
+            // Note that recovery isn't written, as isolated-ota skips them.
             PaverEvent::SetConfigurationActive { configuration: Configuration::B },
             PaverEvent::DataSinkFlush,
             PaverEvent::BootManagerFlush,
@@ -669,9 +673,10 @@ pub async fn test_omaha_works() -> Result<(), Error> {
     let mut builder = TestEnvBuilder::new()
         .add_image("zbi.signed", "This is a zbi".as_bytes())
         .add_image("fuchsia.vbmeta", "This is a vbmeta".as_bytes())
-        .add_image("zedboot.signed", "This is zedboot".as_bytes())
+        .add_image("recovery", "This is recovery".as_bytes())
         .add_image("recovery.vbmeta", "This is another vbmeta".as_bytes())
         .add_image("bootloader", "This is a bootloader upgrade".as_bytes())
+        .add_image("epoch.json", make_epoch_json(1).as_bytes())
         .add_image("firmware_test", "This is the test firmware".as_bytes());
     for i in 0i64..3 {
         let name = format!("test-package{}", i);
@@ -729,7 +734,7 @@ pub async fn test_omaha_works() -> Result<(), Error> {
                 asset: Asset::VerifiedBootMetadata,
                 payload: "This is a vbmeta".as_bytes().to_vec(),
             },
-            // Note that zedboot/recovery isn't written, as isolated-ota skips them.
+            // Note that recovery isn't written, as isolated-ota skips them.
             PaverEvent::SetConfigurationActive { configuration: Configuration::B },
             PaverEvent::DataSinkFlush,
             PaverEvent::BootManagerFlush,

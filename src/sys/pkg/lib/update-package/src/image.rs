@@ -44,12 +44,6 @@ pub enum ImageType {
     FuchsiaVbmeta,
 
     /// Recovery image.
-    Zedboot,
-
-    /// Recovery image.
-    ZedbootSigned,
-
-    /// Recovery image.
     Recovery,
 
     /// Metadata for recovery image.
@@ -69,8 +63,6 @@ impl ImageType {
             Self::Zbi => "zbi",
             Self::ZbiSigned => "zbi.signed",
             Self::FuchsiaVbmeta => "fuchsia.vbmeta",
-            Self::Zedboot => "zedboot",
-            Self::ZedbootSigned => "zedboot.signed",
             Self::Recovery => "recovery",
             Self::RecoveryVbmeta => "recovery.vbmeta",
             Self::Bootloader => "bootloader",
@@ -106,9 +98,7 @@ impl Image {
         match self.imagetype() {
             ImageType::Zbi | ImageType::ZbiSigned => ImageClass::Zbi,
             ImageType::FuchsiaVbmeta => ImageClass::ZbiVbmeta,
-            ImageType::Zedboot | ImageType::ZedbootSigned | ImageType::Recovery => {
-                ImageClass::Recovery
-            }
+            ImageType::Recovery => ImageClass::Recovery,
             ImageType::RecoveryVbmeta => ImageClass::RecoveryVbmeta,
             ImageType::Bootloader | ImageType::Firmware => ImageClass::Firmware,
         }
@@ -230,14 +220,6 @@ mod tests {
 
     #[test]
     fn recovery_images_target_recovery() {
-        assert!(
-            Image::new(ImageType::Zedboot, None).classify().targets_recovery(),
-            "image zedboot should target recovery",
-        );
-        assert!(
-            Image::new(ImageType::ZedbootSigned, None).classify().targets_recovery(),
-            "image zedboot.signed should target recovery",
-        );
         assert!(
             Image::new(ImageType::Recovery, None).classify().targets_recovery(),
             "image recovery should target recovery",

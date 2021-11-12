@@ -435,7 +435,7 @@ update_package("update") {
   system_r = files.recovery_images
   board_name = board_name
   version_file = build_info_files.version
-  epoch = "0"
+  epoch = "1"
 }
 
 verify_files_match("update_matches") {
@@ -515,7 +515,7 @@ update_package("update_prime") {
   system_r = files.recovery_images
   board_name = board_name
   version_file = build_info_files.version
-  epoch = "0"
+  epoch = "1"
 }
 
 verify_files_match("update_prime_matches") {

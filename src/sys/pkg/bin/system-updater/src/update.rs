@@ -514,8 +514,6 @@ impl<'a> Attempt<'a> {
             ImageType::Zbi,
             ImageType::ZbiSigned,
             ImageType::FuchsiaVbmeta,
-            ImageType::Zedboot,
-            ImageType::ZedbootSigned,
             ImageType::Recovery,
             ImageType::RecoveryVbmeta,
         ];
