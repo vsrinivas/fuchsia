@@ -5,7 +5,7 @@
 use argh::{FromArgValue, FromArgs};
 use ffx_core::ffx_command;
 use serde::{Deserialize, Serialize};
-use std::fmt;
+use std::{fmt, path::PathBuf};
 
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
 pub enum GpuType {
@@ -63,199 +63,62 @@ impl FromArgValue for GpuType {
 #[argh(subcommand, name = "start")]
 /// Starting Fuchsia Emulator
 pub struct StartCommand {
-    /// bool, run emulator in headless mode where there is no GUI.
-    /// Note that ssh console in terminal will still be started.
-    /// In order to run the emulator completely in the background
-    /// use this flag along with --nointeractive and --vdl-output
+    /// name of emulator instance. This is used to identify the instance.
+    /// Default is 'fuchsia-emulator'.
+    #[argh(option, default = "\"fuchsia-emulator\".to_string()")]
+    pub name: String,
+
+    /// run emulator in headless mode where there is no GUI.
     #[argh(switch, short = 'H')]
     pub headless: bool,
 
-    /// bool, run emulator with emulated nic via tun/tap.
+    /// run emulator with network in bridge mode via tun/tap.
+    /// This option is not supported on MacOS.
+    /// TODO(fxbug.dev/88327): Support SLIRP and No network.
     #[argh(switch, short = 'N')]
     pub tuntap: bool,
 
-    /// GPU acceleration to run the emulator. Allowed values are "host", "guest",
-    /// "swiftshader_indirect", or "auto". Default is "auto".
+    /// configure GPU acceleration to run the emulator. Allowed values are "host", "guest",
+    /// "swiftshader_indirect", or "auto". Default is "auto". Note: This only affects
+    /// FEMU emulator.
     #[argh(option)]
     pub gpu: Option<GpuType>,
 
-    /// bool, enable pixel scaling on HiDPI devices.
+    /// enable pixel scaling on HiDPI devices (MacOS).
     #[argh(switch)]
     pub hidpi_scaling: bool,
 
-    /// path to tun/tap upscript, this script will be executed before booting up FEMU.
-    #[argh(option, short = 'u')]
-    pub upscript: Option<String>,
-
-    /// set pointing device used on emulator: mouse or touch screen. Allowed values are "touch", "mouse". Default is "touch".
-    #[argh(option, short = 'p')]
-    pub pointing_device: Option<String>,
-
-    /// emulator window width. Default to 1280.
-    #[argh(option, short = 'w')]
-    pub window_width: Option<usize>,
-
-    /// emulator window height. Default to 800.
-    #[argh(option, short = 'h')]
-    pub window_height: Option<usize>,
-
-    /// emulator ram in megabytes. Default is 8192.
-    #[argh(option)]
-    pub ram_mb: Option<usize>,
-
-    /// emulator audio interface enabled. Default is true.
-    #[argh(option)]
-    pub audio: Option<bool>,
-
-    /// extends storage size to <size> bytes. Default is "2G".
-    #[argh(option, short = 's')]
-    pub image_size: Option<String>,
-
-    /// path to fuchsia virtual device configuration as a protobuf, if not specified a generic one will be generated.
-    #[argh(option, short = 'F')]
-    pub device_proto: Option<String>,
-
-    /// path to fuchsia virtual device configuration as a JSON manifest
-    #[argh(option)]
-    pub device_spec: Option<String>,
-
-    /// path to aemu location.
-    /// When running in fuchsia repo, defaults to looking in prebuilt/third_party/aemu/PLATFORM.
-    /// When running in fuchsia sdk, defaults to looking in $HOME/.fuchsia/femu.
-    #[argh(option, short = 'e')]
-    pub aemu_path: Option<String>,
-
-    /// label used to download AEMU from CIPD. Default is "integration".
-    /// Download only happens if aemu binary cannot be found from known paths.
-    #[argh(option)]
-    pub aemu_version: Option<String>,
-
-    /// device_launcher binary location.
-    /// When running in fuchsia repo, defaults to looking in prebuilt/vdl/device_launcher.
-    /// When running in fuchsia sdk, defaults to looking in directory containing `fvdl`.
-    #[argh(option, short = 'd')]
-    pub vdl_path: Option<String>,
-
-    /// label used to download vdl from CIPD. Default is "latest".
-    /// Download only happens if vdl (device_launcher) binary cannot be found from known paths.
-    #[argh(option)]
-    pub vdl_version: Option<String>,
-
-    /// enable WebRTC HTTP service on port, if set to 0 a random port will be picked
-    #[argh(option, short = 'x')]
-    pub grpcwebproxy: Option<usize>,
-
-    /// location of grpcwebproxy,
-    /// When running in fuchsia repo, defaults to looking in prebuilt/third_party/grpcwebproxy
-    /// When running in fuchsia sdk, defaults to looking in $HOME/.fuchsia/femu.
-    #[argh(option, short = 'X')]
-    pub grpcwebproxy_path: Option<String>,
-
-    /// label used to download grpcwebproxy from CIPD. Default is "latest".
-    /// Download only happens if --grpcwebproxy is set and grpcwebproxy binary cannot be found from known paths or path specified by --grpcwebproxy_path.
-    #[argh(option)]
-    pub grpcwebproxy_version: Option<String>,
-
-    /// fuchsia sdk ID used to fetch from gcs, if specified, the emulator will launch with fuchsia sdk files fetched from gcs.
-    /// To find the latest version run `gsutil cat gs://fuchsia/development/LATEST_LINUX`.
-    #[argh(option, short = 'v')]
-    pub sdk_version: Option<String>,
-
-    /// gcs bucket name. Default is "fuchsia".
-    #[argh(option)]
-    pub gcs_bucket: Option<String>,
-
-    /// image file name used to fetch from gcs. Default is "qemu-x64".
-    /// To view available image names run `gsutil ls -l gs://fuchsia/development/$(gsutil cat gs://fuchsia/development/LATEST_LINUX)/images`.
-    #[argh(option)]
-    pub image_name: Option<String>,
-
-    /// file path to store emulator log. Default is a temp file that is deleted after `fvdl` exits.
+    /// file path to store emulator log.
     #[argh(option, short = 'l')]
-    pub emulator_log: Option<String>,
+    pub log: Option<PathBuf>,
 
-    /// host port mapping for user-networking mode. This flag will be ignored if --tuntap is used.
-    /// If not specified, an ssh port on host will be randomly picked and forwarded.
-    /// ex: hostfwd=tcp::<host_port>-:<guest_port>,hostfwd=tcp::<host_port>-:<guest_port>
+    /// host port mapping for user-networking mode.
+    /// TODO(fxbug.dev/88327): enable SLIRP.
     #[argh(option)]
     pub port_map: Option<String>,
 
-    /// file destination to write `device_launcher` output.
-    /// Required for --nointeractive mode. Default is a temp file that is deleted after `fvdl` exits.
-    /// Specify this flag if you plan to use the `shutdown` subcommand.
-    #[argh(option)]
-    pub vdl_output: Option<String>,
-
-    /// extra kernel flags to pass into aemu.
-    #[argh(option, short = 'c')]
-    pub kernel_args: Option<String>,
-
-    /// bool, turn off interactive mode.
-    /// if turned off, fvdl will not land user in the ssh console but GUI will still be launched.
-    /// A ssh port will still be forwarded.
-    /// User needs to specify --vdl-output flag with this mode, and manually call
-    /// the `shutdown` subcommand to perform clean shutdown.
-    /// In order to run the emulator completely in the background
-    /// use this flag along with --headless.
-    #[argh(switch)]
-    pub nointeractive: bool,
-
-    /// bool, download and re-use image files in the cached location ~/.fuchsia/<image_name>/<sdk_version>/.
-    /// If not set (default), image files will be stored in a temp location and removed with `shutdown` subcommand.
-    /// If image location is specified with --kernel-image, --zbi-image, --fvm-image etc., the cached image will
-    /// be overwritten for the specified image file.
-    #[argh(switch, short = 'i')]
-    pub cache_image: bool,
-
-    /// bool, pause on launch and wait for a debugger process to attach before resuming
+    /// pause on launch and wait for a debugger process to attach before resuming.
     #[argh(switch)]
     pub debugger: bool,
 
-    /// bool, launches emulator in qemu console
-    /// No local services such as package_server will be running in this mode.
+    /// launches emulator in qemu console.
     #[argh(switch, short = 'm')]
     pub monitor: bool,
 
-    /// bool, launches user in femu serial console, this flag is required for bringup image.
-    /// No local services such as package_server will be running in this mode.
+    /// launches user in femu serial console.
     #[argh(switch)]
-    pub emu_only: bool,
+    pub console: bool,
 
     /// environment variables for emulator. The argument can be repeated for multiple times
-    /// to add multiple arguments. If not specified, only the default environment variables
+    /// to add multiple arguments. If not specified, only the environment variable
     /// (DISPLAY) will be set to run the emulator.
     #[argh(option)]
     pub envs: Vec<String>,
 
-    /// bool, disable acceleration using KVM on Linux and HVF on macOS.
+    /// disable acceleration using KVM on Linux and HVF on macOS.
+    /// TODO(fxbug.dev/88633): change to support --accel [none|hyper|auto]
     #[argh(switch)]
     pub noacceleration: bool,
-
-    /// string, absolute path to amber-files location, path name must end with 'amber-files'.
-    #[argh(option, short = 'a')]
-    pub amber_files: Option<String>,
-
-    /// string, absolute path to fvm image file location.
-    #[argh(option, short = 'f')]
-    pub fvm_image: Option<String>,
-
-    /// string, absolute path to kernel image file location.
-    /// If specified --zbi-image and --image-architecture must also be specified.
-    /// When running with --sdk option, this will skip downloading fuchsia image prebuilts from GCS.
-    #[argh(option, short = 'k')]
-    pub kernel_image: Option<String>,
-
-    /// string, absolute path to zircon image file location.
-    /// If specified --kernel-image and --image-architecture must also be specified.
-    /// When running with --sdk option, this will skip downloading fuchsia image prebuilts from GCS.
-    #[argh(option, short = 'z')]
-    pub zbi_image: Option<String>,
-
-    /// string, specifies image architecture, accepted values are 'arm64' or 'x64'.
-    /// Required if image override flags (i.e --fvm-image, --kernel-image, --zbi-image, or --amber-files)
-    /// are specified.
-    #[argh(option, short = 'A')]
-    pub image_architecture: Option<String>,
 
     /// use named product information from Product Bundle Metadata (PBM). If no
     /// product bundle is specified and there is an obvious choice, that will be
@@ -263,21 +126,11 @@ pub struct StartCommand {
     #[argh(positional)]
     pub product_bundle: Option<String>,
 
-    /// bool, enables extra logging for debugging
+    /// enables extra logging for debugging
     #[argh(switch, short = 'V')]
     pub verbose: bool,
 
-    /// bool, terminates the plugin before it calls out to the next layer, and prints the command
-    /// to the screen for debugging. The temporary staging directory is also retained.
+    /// terminates the plugin before executing the emulator command.
     #[argh(switch)]
     pub dry_run: bool,
-
-    /// usize, specifies the count of cpu cores used by the emulator. If unspecified, the emulator
-    /// will pick up a value best for the host environment.
-    #[argh(option)]
-    pub cpu_count: Option<usize>,
-
-    /// running in fuchsia sdk (not inside the fuchsia code repository)
-    #[argh(switch)]
-    pub sdk: bool,
 }
