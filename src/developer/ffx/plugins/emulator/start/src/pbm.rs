@@ -4,8 +4,6 @@
 
 //! Utilities for Product Bundle Metadata (PBM).
 
-use ffx_emulator_common::config::FfxConfigWrapper;
-use ffx_emulator_config::EmulatorEngine;
 use ffx_emulator_start_args::StartCommand;
 use fms;
 
@@ -13,11 +11,7 @@ use fms;
 ///
 /// The PBM links to information about the virtual device specification which
 /// will inform the emulator on what device to emulate.
-pub async fn update_engine_with_pbm(
-    start_command: &StartCommand,
-    engine: &mut dyn EmulatorEngine,
-    _config: &FfxConfigWrapper,
-) -> Result<(), anyhow::Error> {
+pub async fn update_engine_with_pbm(start_command: &StartCommand) -> Result<(), anyhow::Error> {
     let fms_entries = fms::Entries::from_config().await?;
     let product_bundle = fms::find_product_bundle(&fms_entries, &start_command.product_bundle)?;
     let virtual_device = fms::find_virtual_device(&fms_entries, &product_bundle.device_refs)?;
@@ -26,5 +20,6 @@ pub async fn update_engine_with_pbm(
         product_bundle.name, product_bundle.device_refs, virtual_device,
     );
 
-    engine.initialize(product_bundle, virtual_device)
+    // TODO: Get the values into the engine
+    Ok(())
 }

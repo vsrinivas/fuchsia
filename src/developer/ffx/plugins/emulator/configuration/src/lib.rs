@@ -7,8 +7,6 @@
 //! types will be directly deserializable from the PBM, and converted into engine-specific types at
 //! runtime.
 
-use ffx_emulator_engines_vdl_args::VdlConfig;
-use sdk_metadata::{ProductBundleV1, VirtualDeviceV1};
 use serde::Deserialize;
 
 pub trait EmulatorEngine {
@@ -25,8 +23,10 @@ pub trait EmulatorEngine {
     /// isn't valid other setup runs into problems.
     fn initialize(
         &mut self,
-        product: &ProductBundleV1,
-        device: &VirtualDeviceV1,
+        device_config: DeviceConfig,
+        guest_config: GuestConfig,
+        host_config: HostConfig,
+        runtime_config: RuntimeConfig,
     ) -> Result<(), anyhow::Error>;
 
     /// Start the emulator running. This function shouldn't require any additional configuration as
@@ -56,10 +56,16 @@ pub trait EmulatorEngine {
 
 /// This holds the image files and other information specific to the guest OS.
 #[derive(Debug, Deserialize)]
+pub struct DeviceConfig {}
+
+/// This holds the image files and other information specific to the guest OS.
+#[derive(Debug, Deserialize)]
 pub struct GuestConfig {}
 
 /// This holds the engine-specific configuration data.
 #[derive(Debug, Deserialize)]
-pub enum HostConfig {
-    Vdl(VdlConfig),
-}
+pub struct HostConfig {}
+
+/// This holds the image files and other information specific to the guest OS.
+#[derive(Debug, Deserialize)]
+pub struct RuntimeConfig {}

@@ -12,7 +12,6 @@ if (is_host) {
     sources = [ "src/lib.rs" ]
     deps = [
       "//build/sdk/meta:rust",
-      "//src/developer/ffx/plugins/emulator/engines:ffx_emulator_engines_args",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:serde",
     ]

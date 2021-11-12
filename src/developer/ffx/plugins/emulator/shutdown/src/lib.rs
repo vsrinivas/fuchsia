@@ -4,15 +4,10 @@
 
 use ffx_core::ffx_plugin;
 use ffx_emulator_common::config::FfxConfigWrapper;
-use ffx_emulator_engines_vdl::VDLFiles;
 use ffx_emulator_shutdown_args::ShutdownCommand;
-use fidl_fuchsia_developer_bridge as bridge;
 
 #[ffx_plugin("emu.experimental")]
-pub async fn shutdown(
-    cmd: ShutdownCommand,
-    daemon_proxy: bridge::DaemonProxy,
-) -> Result<(), anyhow::Error> {
-    let config = FfxConfigWrapper::new();
-    VDLFiles::new(cmd.sdk, false, &config).await?.stop_vdl(&cmd, Some(&daemon_proxy)).await
+pub async fn shutdown(_cmd: ShutdownCommand) -> Result<(), anyhow::Error> {
+    let _config = FfxConfigWrapper::new();
+    todo!()
 }

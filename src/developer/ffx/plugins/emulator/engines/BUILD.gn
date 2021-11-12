@@ -3,16 +3,12 @@
 # found in the LICENSE file.
 
 if (is_host) {
-  group("ffx_emulator_engines_args") {
-    deps = [ "vdl:ffx_emulator_engines_vdl_args" ]
-  }
-
   group("ffx_emulator_engines") {
-    deps = [ "vdl:ffx_emulator_engines_vdl" ]
+    deps = []
   }
 
   group("tests") {
     testonly = true
-    deps = [ "vdl:tests($host_toolchain)" ]
+    deps = []
   }
 }
