@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{dirs_to_test, just_pkgfs_for_now, Mode, PackageSource},
+    crate::{dirs_to_test, Mode, PackageSource},
     anyhow::{anyhow, Context as _, Error},
     fidl::AsHandleRef,
     fidl_fuchsia_io::{
@@ -491,7 +491,7 @@ impl NodeSetFlagsOutcome<'_> {
 
 #[fuchsia::test]
 async fn set_attr() {
-    for source in just_pkgfs_for_now().await {
+    for source in dirs_to_test().await {
         set_attr_per_package_source(source).await
     }
 }
@@ -526,7 +526,10 @@ async fn verify_set_attr(node: NodeProxy) -> Result<(), Error> {
     };
     match node.set_attr(0, &mut node_attr).await {
         Ok(status) => {
-            if zx::Status::from_raw(status) == zx::Status::NOT_SUPPORTED {
+            if matches!(
+                zx::Status::from_raw(status),
+                zx::Status::NOT_SUPPORTED | zx::Status::BAD_HANDLE
+            ) {
                 return Ok(());
             }
             return Err(anyhow!("wrong status returned: {:?}", zx::Status::from_raw(status)));
