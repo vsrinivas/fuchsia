@@ -12,12 +12,38 @@
 #include <algorithm>
 #include <iomanip>
 
+#include "lib/syslog/cpp/macros.h"
 #include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/reporter.h"
 
 constexpr bool VERBOSE_TIMING_DEBUG = false;
 
 namespace media::audio {
+
+namespace {
+
+// For debugging purposes, dropout checks can be enabled on an OutputProducer. The RMS signal
+// strength is checked over a specified window, and if it fails below the specified value, an error
+// message is emitted in the system log.
+//
+// Because these types of checks are intended only for specific content and conditions, they are
+// only enabled for renderers that match the specific format, frame rate and channelization.
+//
+// The parameters for these dropout checkers should be tuned for the test content being used. The
+// current values were useful while working with half-amplitude white-noise at unity gain/volume.
+//
+// By default these checks should be disabled.
+static constexpr bool kEnableDropoutChecks = false;
+// Only enable the dropout checks if the ring buffer format fits these dimensions.
+static constexpr fuchsia::media::AudioSampleFormat kPowerCheckerSampleFormat =
+    fuchsia::media::AudioSampleFormat::SIGNED_16;
+static constexpr uint32_t kPowerCheckerChannelCount = 4;
+static constexpr uint32_t kPowerCheckerFrameRate = 96000;
+static constexpr size_t kRmsWindowFrames = 512;
+static constexpr double kRmsLevelMin = 0.085;
+static constexpr int64_t kMaxPermittedSilentFrames = 2;
+
+}  // namespace
 
 static constexpr fuchsia::media::AudioSampleFormat kDefaultAudioFmt =
     fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32;
@@ -268,6 +294,15 @@ void DriverOutput::WriteToRing(const AudioOutput::FrameSpan& span, const float* 
       FX_DCHECK(buffer != nullptr);
       auto job_buf_offset = offset * output_producer_->channels();
       output_producer_->ProduceOutput(buffer + job_buf_offset, dest_buf, to_send);
+
+      if constexpr (kEnableDropoutChecks) {
+        if (power_checker_) {
+          power_checker_->Check(buffer + job_buf_offset, frames_sent_ + offset, to_send, true);
+        }
+        if (silence_checker_) {
+          silence_checker_->Check(buffer + job_buf_offset, frames_sent_ + offset, to_send, true);
+        }
+      }
     }
     size_t dest_buf_len = to_send * output_producer_->bytes_per_frame();
     wav_writer_.Write(dest_buf, dest_buf_len);
@@ -454,6 +489,18 @@ void DriverOutput::OnDriverInfoFetched() {
     file_name_ += (std::to_string(instance_count) + kWavFileExtension);
     wav_writer_.Initialize(file_name_.c_str(), pref_fmt, num_chans, frame_rate,
                            format.bytes_per_frame() * 8 / num_chans);
+  }
+
+  if constexpr (kEnableDropoutChecks) {
+    if (pref_fmt == kPowerCheckerSampleFormat && frame_rate == kPowerCheckerFrameRate &&
+        num_chans == kPowerCheckerChannelCount) {
+      std::ostringstream dropout_log_tag;
+      dropout_log_tag << "DriverOutput(" << this << ")";
+      power_checker_ = std::make_unique<PowerChecker>(kRmsWindowFrames, num_chans, kRmsLevelMin,
+                                                      dropout_log_tag.str());
+      silence_checker_ = std::make_unique<SilenceChecker>(kMaxPermittedSilentFrames, num_chans,
+                                                          dropout_log_tag.str());
+    }
   }
 
   // Success; now wait until configuration completes.

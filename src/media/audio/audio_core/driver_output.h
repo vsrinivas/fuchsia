@@ -13,6 +13,7 @@
 #include "src/media/audio/audio_core/channel_attributes.h"
 #include "src/media/audio/audio_core/mixer/output_producer.h"
 #include "src/media/audio/audio_core/threading_model.h"
+#include "src/media/audio/lib/analysis/dropout.h"
 #include "src/media/audio/lib/wav/wav_writer.h"
 
 namespace media::audio {
@@ -143,6 +144,9 @@ class DriverOutput : public AudioOutput {
 
   std::vector<ChannelAttributes> channel_config_;
   uint64_t current_active_channel_mask_;
+
+  std::unique_ptr<PowerChecker> power_checker_;
+  std::unique_ptr<SilenceChecker> silence_checker_;
 };
 
 }  // namespace media::audio

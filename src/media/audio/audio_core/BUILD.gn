@@ -201,6 +201,7 @@ source_set("audio_core_lib") {
     "//src/lib/fsl",
     "//src/media/audio/audio_core/mixer",
     "//src/media/audio/drivers/lib/audio-proto-utils",
+    "//src/media/audio/lib/analysis",
     "//src/media/audio/lib/effects_loader",
     "//src/media/audio/lib/format",
     "//src/media/audio/lib/timeline",
