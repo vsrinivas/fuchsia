@@ -10,6 +10,7 @@
 
 #include <string>
 
+#include "fuchsia/media/cpp/fidl.h"
 #include "src/media/audio/audio_core/audio_admin.h"
 #include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/audio_core/stream_usage.h"
@@ -17,6 +18,37 @@
 #include "src/media/audio/lib/clock/utils.h"
 
 namespace media::audio {
+
+namespace {
+
+// For debugging purposes, log all incoming calls to Play(including timestamps) and Pause().
+static constexpr bool kLogPlayCalls = false;
+static constexpr bool kLogPauseCalls = false;
+static constexpr bool kLogDtorCalls = false;
+
+// Constants used when using dropout checks
+static constexpr bool kEnableDropoutChecks = false;
+static constexpr bool kDisplayPacketOnDropout = false;
+
+// Dropout checkers are currently limited to float32 data only.
+static constexpr fuchsia::media::AudioSampleFormat kDropoutChecksFormat =
+    fuchsia::media::AudioSampleFormat::FLOAT;
+// Only enable the dropout checks if the renderer also fits these other dimensions.
+static constexpr int32_t kDropoutChecksChannelCount = 2;
+static constexpr int32_t kDropoutChecksFrameRate = 44100;
+
+// Const values used by PowerChecker to analyze the RMS power of incoming packets.
+// Adjust the window size and min RMS level as needed, for the test content being used.
+// Set channel count, frame rate and sample_format so that only the client of interest is analyzed.
+// Current values were used for a stereo float 44.1k source stream containing ampl-0.5 white noise.
+static constexpr int64_t kRmsWindowInFrames = 512;
+static constexpr double kRmsLevelMin = 0.065;  // 0.16;
+
+// With the controlled content (sine|const|ramp|noise at full-scale amplitude) that is
+// commonly used with this dropout checker, consecutive silent frames should not occur.
+static constexpr int64_t kConsecutiveSilenceFramesAllowed = 1;
+
+}  // namespace
 
 AudioRenderer::AudioRenderer(
     fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request, Context* context)
@@ -26,6 +58,10 @@ AudioRenderer::AudioRenderer(
 }
 
 AudioRenderer::~AudioRenderer() {
+  if constexpr (kLogDtorCalls) {
+    FX_LOGS(WARNING) << "************ Renderer(" << this << ") destructor ************";
+  }
+
   // We (not ~BaseRenderer) must call this, because our ReportStop is gone when parent dtor runs
   ReportStopIfStarted();
 
@@ -111,6 +147,20 @@ void AudioRenderer::SetPcmStreamType(fuchsia::media::AudioStreamType stream_type
   }
   format_ = {format_result.take_value()};
 
+  // Only create a PowerChecker if enabled, and if the renderer fits our specifications
+  if constexpr (kEnableDropoutChecks) {
+    if (format_->sample_format() == kDropoutChecksFormat &&
+        format_->frames_per_second() == kDropoutChecksFrameRate &&
+        format_->channels() == kDropoutChecksChannelCount) {
+      std::ostringstream out;
+      out << "AudioRenderer(" << this << ")";
+      power_checker_ = std::make_unique<PowerChecker>(kRmsWindowInFrames, format_->channels(),
+                                                      kRmsLevelMin, out.str());
+      silence_checker_ = std::make_unique<SilenceChecker>(kConsecutiveSilenceFramesAllowed,
+                                                          format_->channels(), out.str());
+    }
+  }
+
   reporter().SetFormat(*format_);
 
   context().route_graph().SetRendererRoutingProfile(
@@ -143,10 +193,64 @@ void AudioRenderer::RemovePayloadBufferInternal(uint32_t id) {
   SerializeWithPause([this, id]() mutable { BaseRenderer::RemovePayloadBufferInternal(id); });
 }
 
+// Analyze a packet for dropouts; return true if no dropouts. Because it is called only when
+// debugging specific conditions/content, this function assumes that the packet format is FLOAT.
+bool AudioRenderer::AnalyzePacket(fuchsia::media::StreamPacket packet) {
+  auto payload_buffer = payload_buffers().find(packet.payload_buffer_id)->second;
+  auto packet_data = reinterpret_cast<const float*>(
+      reinterpret_cast<uint8_t*>(payload_buffer->start()) + packet.payload_offset);
+  int64_t frame_count = packet.payload_size / format()->bytes_per_frame();
+  auto frame_start = frames_received();
+  auto rms_check =
+      power_checker_ ? power_checker_->Check(packet_data, frame_start, frame_count, true) : true;
+  auto silence_check = silence_checker_
+                           ? silence_checker_->Check(packet_data, frame_start, frame_count, true)
+                           : true;
+  // If packet fails either check, display its metadata. Limit logging to avoid log storms.
+  if (!rms_check || !silence_check) {
+    FX_LOGS_FIRST_N(INFO, 200) << "********** Dropout detected (rms_check "
+                               << (rms_check ? "pass" : "FAIL") << ", consec_silence_check "
+                               << (silence_check ? "pass" : "FAIL")
+                               << ") in packet payload_buffer_id " << packet.payload_buffer_id
+                               << ", offset " << packet.payload_offset << " (bytes), size "
+                               << packet.payload_size << " (bytes), frames 0 to " << frame_count - 1
+                               << ",  pts "
+                               << (packet.pts == fuchsia::media::NO_TIMESTAMP
+                                       ? "NO_TIMESTAMP"
+                                       : std::to_string(packet.pts).c_str())
+                               << " **********";
+    // If the debug flag is enabled, also display the packet's entire set of data values.
+    if constexpr (kDisplayPacketOnDropout) {
+      std::ostringstream out;
+      for (auto i = 0; i < frame_count; ++i) {
+        out << "  [" << std::setw(3) << i << "]";
+        auto sample_index = i * format()->channels();
+        for (auto chan = 0; chan < format()->channels(); ++chan) {
+          out << std::setprecision(6) << std::fixed << std::setw(10)
+              << packet_data[sample_index + chan];
+        }
+        if ((i + 1) % (8 / format()->channels()) == 0 || (i + 1) == frame_count) {
+          // To limit this to approx. the same interval as the logging above, we assume 10-msec
+          // packets at the specified stereo-44.1k format.
+          FX_LOGS_FIRST_N(INFO, 22050) << out.str();
+          out.str(std::string());  // clear the stream's contents to prep for for the next line
+        }
+      }
+    }
+  }
+  return rms_check && silence_check;
+}
+
 void AudioRenderer::SendPacketInternal(fuchsia::media::StreamPacket packet,
                                        SendPacketCallback callback) {
   SerializeWithPause([this, packet, callback = std::move(callback)]() mutable {
     BaseRenderer::SendPacketInternal(packet, std::move(callback));
+
+    if constexpr (kEnableDropoutChecks) {
+      if (power_checker_ || silence_checker_) {
+        AnalyzePacket(packet);
+      }
+    }
   });
 }
 
@@ -179,6 +283,18 @@ constexpr zx::duration kRampDownOnPauseDuration = zx::msec(5);
 
 void AudioRenderer::PlayInternal(zx::time reference_time, zx::time media_time,
                                  PlayCallback callback) {
+  if constexpr (kLogPlayCalls) {
+    FX_LOGS(INFO) << "************ Renderer(" << this << ") Play(ref time "
+                  << (reference_time.get() == fuchsia::media::NO_TIMESTAMP
+                          ? "NO_TIMESTAMP"
+                          : std::to_string(reference_time.get()))
+                  << ", media time  "
+                  << (media_time.get() == fuchsia::media::NO_TIMESTAMP
+                          ? "NO_TIMESTAMP"
+                          : std::to_string(media_time.get()))
+                  << ") ************";
+  }
+
   if constexpr (kEnableRampDownOnPause) {
     // Allow Play() to interrupt a pending Pause(). This reduces the chance of underflow when
     // the client calls Play() with a reference_time very close to now -- if we instead wait
@@ -202,6 +318,10 @@ void AudioRenderer::PlayInternal(zx::time reference_time, zx::time media_time,
 }
 
 void AudioRenderer::PauseInternal(PauseCallback callback) {
+  if constexpr (kLogPauseCalls) {
+    FX_LOGS(WARNING) << "************ Renderer(" << this << ") Pause ************";
+  }
+
   if constexpr (!kEnableRampDownOnPause) {
     BaseRenderer::PauseInternal(std::move(callback));
     return;

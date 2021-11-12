@@ -42,7 +42,7 @@ class BaseRenderer : public AudioObject,
  public:
   ~BaseRenderer() override;
 
-  void OnRenderRange(int64_t presentation_time, uint32_t duration){}
+  void OnRenderRange(int64_t presentation_time, uint32_t duration) {}
 
   // |fuchsia::media::AudioRenderer|
   void AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) final;
@@ -109,6 +109,12 @@ class BaseRenderer : public AudioObject,
   zx_status_t SetCustomReferenceClock(zx::clock ref_clock);
   Reporter::Renderer& reporter() { return *reporter_; }
 
+  // Only needed by AudioRenderer if glitch-/dropout-detection is enabled.
+  std::unordered_map<uint32_t, fbl::RefPtr<RefCountedVmoMapper>> payload_buffers() {
+    return payload_buffers_;
+  }
+  int64_t frames_received() const { return frames_received_; }
+
  private:
   // Recompute the minimum clock lead time based on the current set of outputs
   // we are linked to.  If this requirement is different from the previous
@@ -133,6 +139,7 @@ class BaseRenderer : public AudioObject,
   float pts_continuity_threshold_ = 0.0f;
   bool pts_continuity_threshold_set_ = false;
   Fixed pts_continuity_threshold_frac_frame_{0};
+  int64_t frames_received_ = 0;
 
   // Play/Pause state
   Fixed pause_time_frac_frames_;

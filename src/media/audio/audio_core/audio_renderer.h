@@ -14,6 +14,7 @@
 #include "src/media/audio/audio_core/base_renderer.h"
 #include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
+#include "src/media/audio/lib/analysis/dropout.h"
 
 namespace media::audio {
 
@@ -117,6 +118,11 @@ class AudioRenderer : public BaseRenderer,
   bool reference_clock_is_set_ FXL_GUARDED_BY(mutex_) = false;
   std::optional<float> notified_gain_db_ FXL_GUARDED_BY(mutex_);
   std::optional<bool> notified_mute_ FXL_GUARDED_BY(mutex_);
+
+  // Only used if kEnableDropoutChecks is set
+  bool AnalyzePacket(fuchsia::media::StreamPacket packet);
+  std::unique_ptr<PowerChecker> power_checker_;
+  std::unique_ptr<SilenceChecker> silence_checker_;
 
   class GainControlBinding : public fuchsia::media::audio::GainControl {
    public:

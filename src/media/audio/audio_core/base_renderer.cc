@@ -440,6 +440,7 @@ void BaseRenderer::SendPacketInternal(fuchsia::media::StreamPacket packet,
         start_pts =
             Fixed::FromRaw(reference_clock_to_fractional_frames_->Apply(start_ref_time.get()));
       }
+      frames_received_ = 0;
     }
   } else {
     // Looks like we have an explicit PTS on this packet. Boost it into the fractional input frame
@@ -450,6 +451,7 @@ void BaseRenderer::SendPacketInternal(fuchsia::media::StreamPacket packet,
     start_pts =
         (delta < pts_continuity_threshold_frac_frame_) ? next_frac_frame_pts_ : packet_ffpts;
   }
+  frames_received_ += frame_count;
 
   uint32_t frame_offset = packet.payload_offset / frame_size;
   FX_LOGS(TRACE) << " [pkt " << ffl::String::DecRational << packet_ffpts << ", now "
@@ -527,6 +529,7 @@ void BaseRenderer::DiscardAllPacketsInternal(DiscardAllPacketsCallback callback)
   for (auto& [_, packet_queue] : packet_queues_) {
     packet_queue->Flush(flush_token);
   }
+  frames_received_ = 0;
 }
 
 void BaseRenderer::DiscardAllPacketsNoReply() {
