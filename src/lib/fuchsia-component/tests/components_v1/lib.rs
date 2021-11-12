@@ -19,13 +19,14 @@ use {
     files_async::readdir,
     fuchsia_async::{self as fasync, run_until_stalled},
     fuchsia_component::server::{ServiceFs, ServiceFsDir, ServiceObj},
-    fuchsia_vfs_pseudo_fs::{
-        directory::entry::DirectoryEntry, file::simple::read_only_static, pseudo_directory,
-    },
     fuchsia_zircon::{self as zx, HandleBased as _},
     futures::{future::try_join, stream::TryStreamExt, FutureExt, StreamExt},
     matches::assert_matches,
     std::{future::Future, path::Path, sync::atomic},
+    vfs::{
+        directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
+        file::vmo::asynchronous::read_only_static, pseudo_directory,
+    },
 };
 
 #[run_until_stalled(test)]
@@ -569,16 +570,18 @@ async fn open_remote_directory_files() -> Result<(), Error> {
 #[run_until_stalled(test)]
 async fn open_remote_pseudo_directory_files() -> Result<(), Error> {
     let data = "test";
-    let mut root = pseudo_directory! {
+    let root = pseudo_directory! {
         "test.txt" => read_only_static(data)
     };
     let mut fs = ServiceFs::new();
     let (remote_proxy, remote_server_end) = create_proxy::<DirectoryMarker>()?;
 
+    let scope = ExecutionScope::new();
     root.open(
+        scope.clone(),
         fidl_fuchsia_io::OPEN_RIGHT_READABLE,
         0,
-        &mut vec![].into_iter(),
+        vfs::path::Path::dot(),
         fidl::endpoints::ServerEnd::<NodeMarker>::from(remote_server_end.into_channel()),
     );
 
@@ -587,10 +590,6 @@ async fn open_remote_pseudo_directory_files() -> Result<(), Error> {
     let (dir_proxy, dir_server_end) = create_proxy::<DirectoryMarker>()?;
     fs.serve_connection(dir_server_end.into_channel())?;
 
-    fuchsia_async::Task::spawn(async move {
-        root.await;
-    })
-    .detach();
     fuchsia_async::Task::spawn(fs.collect::<()>()).detach();
 
     // Open the test file
@@ -604,6 +603,8 @@ async fn open_remote_pseudo_directory_files() -> Result<(), Error> {
         .await
         .expect("could not read expected data");
 
+    scope.shutdown();
+    scope.wait().await;
     Ok(())
 }
 
