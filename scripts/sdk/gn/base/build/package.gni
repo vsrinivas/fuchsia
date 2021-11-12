@@ -181,7 +181,12 @@ template("fuchsia_package") {
       ids_txt_paths = [ _build_ids_file ]
     }
 
-    # TODO(fxb/88338): Append the target API level if specified.
+    if (fuchsia_target_api_level != -1) {
+      args += [
+        "--api-level",
+        "${fuchsia_target_api_level}",
+      ]
+    }
   }
 
   # Creates a Fuchsia metadata package.
