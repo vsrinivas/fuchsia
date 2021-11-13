@@ -1,7 +1,9 @@
 {
-    "short_description": "",
+    "short_description": "<Please add a description of this driver here>",
     "manufacturer": "",
     "families": [],
     "models": [],
-    "areas": []
+    "areas": [
+        "Test"
+    ]
 }

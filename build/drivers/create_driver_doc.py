@@ -14,9 +14,7 @@ def main():
     parser.add_argument(
         '--driver_path', required=True, help='The path to the driver.')
     parser.add_argument(
-        '--doc_input',
-        type=argparse.FileType('r'),
-        help='The input JSON documentation file.')
+        '--doc_input', help='The input JSON documentation file.')
     parser.add_argument(
         '--doc_output',
         required=True,
@@ -34,12 +32,22 @@ def main():
         'path': args.driver_path
     }
     if (args.doc_input):
-        doc_contents = json.load(args.doc_input)
-        documentation['short_description'] = doc_contents['short_description']
-        documentation['manufacturer'] = doc_contents['manufacturer']
-        documentation['families'] = doc_contents['families']
-        documentation['models'] = doc_contents['models']
-        documentation['areas'] = doc_contents['areas']
+        with open(args.doc_input) as doc_input_file:
+            doc_contents = json.load(doc_input_file)
+            if len(doc_contents['short_description']) < 1:
+                raise Exception(
+                    "Driver info file: {}, must include a \"short_description\""
+                    .format(args.doc_input))
+            documentation['short_description'] = doc_contents[
+                'short_description']
+            documentation['manufacturer'] = doc_contents['manufacturer']
+            documentation['families'] = doc_contents['families']
+            documentation['models'] = doc_contents['models']
+            if len(doc_contents['areas']) < 1:
+                raise Exception(
+                    "Driver info file: {}, must include at least one item in \"areas\""
+                    .format(args.doc_input))
+            documentation['areas'] = doc_contents['areas']
 
     json.dump(documentation, args.doc_output)
 

@@ -52,7 +52,8 @@ relevant board file in `//boards` or `//vendor/<foo>/boards` to the
 1. Include the `tests` build target in the
 `<PATH>:tests` build target to get your tests included in CQ.
 1. Add proper bind rules in `<NAME>.bind`.
-1. Add driver information in `<NAME>-info.json`.
+1. Add driver information in `<NAME>-info.json`. The file must include a `short_description` and
+`areas` matching at least one of the areas listed at `//build/drivers/areas.txt`.
 1. Write the functionality for the driver.
 
 ## Declaring a driver

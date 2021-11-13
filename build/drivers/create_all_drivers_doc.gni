@@ -40,7 +40,11 @@ template("create_all_drivers_doc") {
     forward_variables_from(invoker, [ "testonly" ])
     deps = [ ":${all_doc_target}" ]
     script = "//build/drivers/create_all_drivers_doc.py"
-    inputs = [ all_doc_output ]
+    areas_file = "//build/drivers/areas.txt"
+    inputs = [
+      all_doc_output,
+      areas_file,
+    ]
     metadata = {
       # Record metadata for the //tools/docsgen build API.
       generated_docset = [
@@ -55,6 +59,8 @@ template("create_all_drivers_doc") {
     outputs = [ "${target_gen_dir}/all_drivers_doc.json" ]
     depfile = "${target_gen_dir}/${target_name}.d"
     args = [
+      "--areas_list",
+      rebase_path(areas_file, root_build_dir),
       "--doc_list",
       rebase_path(all_doc_output, root_build_dir),
       "--output",
