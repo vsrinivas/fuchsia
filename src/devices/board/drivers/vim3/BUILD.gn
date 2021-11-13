@@ -165,6 +165,7 @@ fuchsia_driver("vim3-driver") {
 fuchsia_driver_component("vim3") {
   component_name = "vim3"
   deps = [ ":vim3-driver" ]
+  info = "vim3-info.json"
 }
 
 group("tests") {

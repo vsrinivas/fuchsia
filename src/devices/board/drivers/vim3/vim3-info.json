@@ -1,0 +1,9 @@
+{
+    "short_description": "VIM3 board driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Board"
+    ]
+}
