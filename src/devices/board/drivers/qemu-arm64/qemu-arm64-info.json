@@ -1,0 +1,10 @@
+{
+    "short_description": "QEMU ARM64 board driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Board",
+        "Test"
+    ]
+}

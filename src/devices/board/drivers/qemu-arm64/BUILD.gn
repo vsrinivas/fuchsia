@@ -64,4 +64,5 @@ fuchsia_driver("qemu-arm64-driver") {
 fuchsia_driver_component("qemu-arm64") {
   component_name = "qemu-arm64"
   deps = [ ":qemu-arm64-driver" ]
+  info = "qemu-arm64-info.json"
 }
