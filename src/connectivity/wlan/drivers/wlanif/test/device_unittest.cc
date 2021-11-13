@@ -193,8 +193,6 @@ TEST(SmeChannel, Bound) {
   auto mlme_proxy = wlan_mlme::MLME_SyncProxy(std::move(ctx.mlme));
   wlan_mlme::ScanRequest mlme_scan_request = {
       .txn_id = 754,
-      .bss_type_selector = wlan_internal::BSS_TYPE_SELECTOR_INFRASTRUCTURE,
-      .bssid = {6,6,6,6,6,6},
       .scan_type = wlan_mlme::ScanTypes::PASSIVE,
       .channel_list = {5},
       .ssid_list = {{1, 2, 3}, {4, 5, 6, 7}},
@@ -211,9 +209,6 @@ TEST(SmeChannel, Bound) {
   // Verify scan request.
   ASSERT_TRUE(ctx.scan_req.has_value());
   ASSERT_EQ(ctx.scan_req->txn_id, 754u);
-  ASSERT_EQ(ctx.scan_req->bss_type_selector,
-            fuchsia_wlan_internal_BSS_TYPE_SELECTOR_INFRASTRUCTURE);
-  ASSERT_THAT(ctx.scan_req->bssid, ElementsAre(6,6,6,6,6,6));
   ASSERT_EQ(ctx.scan_req->scan_type, WLAN_SCAN_TYPE_PASSIVE);
 
   ASSERT_EQ(ctx.scan_req->channels_count, 1u);

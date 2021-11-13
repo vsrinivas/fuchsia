@@ -26,9 +26,6 @@ const MAX_SSIDS_PER_SCAN_REQUEST uint32 = 32;
 
 type ScanRequest = struct {
     txn_id uint64;
-    bss_type_selector internal.BssTypeSelector;
-    // TODO(fxbug.dev/81918): Rename these to bssid_selector and ssid_selector.
-    bssid ieee80211.MacAddr;
     scan_type ScanTypes;
     channel_list vector<uint8>:MAX;
     ssid_list vector<ieee80211.Ssid>:MAX;

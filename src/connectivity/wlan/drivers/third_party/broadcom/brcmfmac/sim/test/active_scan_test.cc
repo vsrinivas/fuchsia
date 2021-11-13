@@ -342,7 +342,6 @@ TEST_F(ActiveScanTest, OverSizeSsid) {
   const cssid_t ssids_list[] = {valid_scan_ssid, invalid_scan_ssid};
   wlanif_scan_req_t req_break_ssid_list = {
       .txn_id = ++client_ifc_.scan_txn_id_,
-      .bss_type_selector = fuchsia_wlan_internal_BSS_TYPE_SELECTOR_ANY,
       .scan_type = WLAN_SCAN_TYPE_ACTIVE,
       .channels_list = channels_list,
       .channels_count = 5,
