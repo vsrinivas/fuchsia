@@ -194,6 +194,7 @@ TEST(SmeChannel, Bound) {
   wlan_mlme::ScanRequest mlme_scan_request = {
       .txn_id = 754,
       .bss_type_selector = wlan_internal::BSS_TYPE_SELECTOR_INFRASTRUCTURE,
+      .bssid = {6,6,6,6,6,6},
       .scan_type = wlan_mlme::ScanTypes::PASSIVE,
       .channel_list = {5},
       .ssid_list = {{1, 2, 3}, {4, 5, 6, 7}},
@@ -212,6 +213,7 @@ TEST(SmeChannel, Bound) {
   ASSERT_EQ(ctx.scan_req->txn_id, 754u);
   ASSERT_EQ(ctx.scan_req->bss_type_selector,
             fuchsia_wlan_internal_BSS_TYPE_SELECTOR_INFRASTRUCTURE);
+  ASSERT_THAT(ctx.scan_req->bssid, ElementsAre(6,6,6,6,6,6));
   ASSERT_EQ(ctx.scan_req->scan_type, WLAN_SCAN_TYPE_PASSIVE);
 
   ASSERT_EQ(ctx.scan_req->channels_count, 1u);
@@ -225,6 +227,7 @@ TEST(SmeChannel, Bound) {
   ASSERT_THAT(ctx.scan_req->ssids_list[1].data,
               ElementsAre(4, 5, 6, 7, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
                           _, _, _, _, _, _, _));
+  ASSERT_EQ(ctx.scan_req->probe_delay, 0u);
   ASSERT_EQ(ctx.scan_req->min_channel_time, 0u);
   ASSERT_EQ(ctx.scan_req->max_channel_time, 100u);
 

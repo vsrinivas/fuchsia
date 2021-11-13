@@ -14,7 +14,6 @@
 
 #include <gtest/gtest.h>
 
-#include "lib/fidl/cpp/vector.h"
 #include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/buffer_writer.h"
 #include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/channel.h"
 #include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/write_element.h"

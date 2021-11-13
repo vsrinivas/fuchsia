@@ -56,7 +56,7 @@ impl From<ScanError> for zx::Status {
             ScanError::Busy => zx::Status::UNAVAILABLE,
             ScanError::EmptyChannelList
             | ScanError::MaxChannelTimeLtMin
-            | ScanError::SsidTooLong => zx::Status::INVALID_ARGS,
+            | ScanError::SsidTooLong
             | ScanError::UnsupportedBssTypeSelector => zx::Status::INVALID_ARGS,
             ScanError::StartHwScanFails(status) => status,
             ScanError::HwScanAborted => zx::Status::INTERNAL,
@@ -70,7 +70,7 @@ impl From<ScanError> for fidl_mlme::ScanResultCode {
             ScanError::Busy => fidl_mlme::ScanResultCode::NotSupported,
             ScanError::EmptyChannelList
             | ScanError::MaxChannelTimeLtMin
-            | ScanError::SsidTooLong => fidl_mlme::ScanResultCode::InvalidArgs,
+            | ScanError::SsidTooLong
             | ScanError::UnsupportedBssTypeSelector => fidl_mlme::ScanResultCode::InvalidArgs,
             ScanError::StartHwScanFails(..) | ScanError::HwScanAborted => {
                 fidl_mlme::ScanResultCode::InternalError

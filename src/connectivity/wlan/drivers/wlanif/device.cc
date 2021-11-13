@@ -263,12 +263,15 @@ zx_status_t Device::Connect(zx::channel request) {
 void Device::StartScan(wlan_mlme::ScanRequest req) {
   wlanif_scan_req_t impl_req = {
       .txn_id = req.txn_id,
+      .bss_type_selector = req.bss_type_selector,
       .scan_type = ConvertScanType(req.scan_type),
       .channels_count = req.channel_list.size(),
       .ssids_count = req.ssid_list.size(),
+      .probe_delay = req.probe_delay,
       .min_channel_time = req.min_channel_time,
       .max_channel_time = req.max_channel_time,
   };
+  std::memcpy(impl_req.bssid, req.bssid.data(), ETH_ALEN);
 
   if (impl_req.ssids_count == 0) {
     wlanif_impl_start_scan(&wlanif_impl_, &impl_req);
@@ -284,12 +287,8 @@ void Device::StartScan(wlan_mlme::ScanRequest req) {
     };
     OnScanEnd(&end);
     return;
-  // bss_type
-  impl_req.bss_type_selector = req.bss_type_selector;
-
-  // bssid
-  std::memcpy(impl_req.bssid, req.bssid.data(), ETH_ALEN);
   }
+
   memcpy(channels_list_begin.get(), req.channel_list.data(), impl_req.channels_count);
   impl_req.channels_list = channels_list_begin.get();
 
