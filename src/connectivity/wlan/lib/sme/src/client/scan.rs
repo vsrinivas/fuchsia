@@ -228,6 +228,7 @@ fn new_scan_request(
         bssid: WILDCARD_BSSID.0,
         scan_type: fidl_mlme::ScanTypes::Passive,
         probe_delay: 0,
+        // TODO(fxbug.dev/88658): SME silently ignores unsupported channels
         channel_list: get_channels_to_scan(&device_info, &scan_request),
         ssid_list: ssid_list.into_iter().map(Ssid::into).collect(),
         min_channel_time: PASSIVE_SCAN_CHANNEL_MS,
@@ -254,6 +255,7 @@ fn new_discovery_scan_request<T>(
     new_scan_request(mlme_txn_id, discovery_scan.scan_request.clone(), vec![], device_info)
 }
 
+// TODO(fxbug.dev/88658): SME silently ignores unsupported channels
 /// Get channels to scan depending on device's capability and scan type. If scan type is passive,
 /// or if scan type is active but the device handles DFS channels, then the channels returned by
 /// this function are the intersection of device's supported channels and Fuchsia supported
@@ -574,7 +576,7 @@ mod tests {
         assert_eq!(req.scan_type, fidl_mlme::ScanTypes::Active);
         assert_eq!(req.channel_list, vec![36, 165, 1]);
         assert_eq!(req.ssid_list, Vec::<Vec<u8>>::new());
-        assert_eq!(req.probe_delay, 0);
+        assert_eq!(req.probe_delay, 5);
         assert_eq!(req.min_channel_time, 200);
         assert_eq!(req.max_channel_time, 200);
     }
@@ -589,7 +591,7 @@ mod tests {
             10,
             fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
                 ssids: vec![ssid1.clone(), ssid2.clone()],
-                // TODO(fxbug.dev/...): SME silently ignores invalid channels
+                // TODO(fxbug.dev/88658): SME silently ignores unsupported channels
                 channels: vec![1, 20, 100],
             }),
         );
@@ -601,7 +603,7 @@ mod tests {
         assert_eq!(req.scan_type, fidl_mlme::ScanTypes::Active);
         assert_eq!(req.channel_list, vec![1]);
         assert_eq!(req.ssid_list, vec![ssid1, ssid2]);
-        assert_eq!(req.probe_delay, 0);
+        assert_eq!(req.probe_delay, 5);
         assert_eq!(req.min_channel_time, 200);
         assert_eq!(req.max_channel_time, 200);
     }
