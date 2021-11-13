@@ -53,6 +53,7 @@ void SpinelFramer::ClearStats(void) {
   tx_frame_byte_count_ = 0;
   rx_frame_count_ = 0;
   tx_frame_count_ = 0;
+  inspector_.UpdateIdx();
 }
 
 void SpinelFramer::LogDebugBuffer(const char *desc, const uint8_t *buffer_ptr,
@@ -259,6 +260,7 @@ zx_status_t SpinelFramer::PushPullSpi(void) {
 
   if ((slave_header & kHeaderResetFlag) == kHeaderResetFlag) {
     slave_reset_count_++;
+    inspector_.UpdateIdx();
     zxlogf(INFO, "Slave did reset (%llu resets so far)", (unsigned long long)slave_reset_count_);
     slave_did_reset_ = true;
     dump_stats_ = true;
@@ -485,7 +487,13 @@ void SpinelFramer::TrySpiTransaction() {
     zxlogf(DEBUG, "STATS: tx_frame_byte_count_=%llu", (unsigned long long)tx_frame_byte_count_);
     zxlogf(DEBUG, "STATS: rx_frame_count_=%llu", (unsigned long long)rx_frame_count_);
     zxlogf(DEBUG, "STATS: rx_frame_byte_count_=%llu", (unsigned long long)rx_frame_byte_count_);
+    inspector_.SetInspectData(slave_reset_count_, spi_frame_count_, spi_valid_frame_count_,
+                              spi_garbage_frame_count_, spi_duplex_frame_count_,
+                              spi_unresponsive_frame_count_, rx_frame_byte_count_,
+                              tx_frame_byte_count_, rx_frame_count_, tx_frame_count_);
   }
 }
+
+::zx::vmo SpinelFramer::InspectorDuplicateVmo() const { return inspector_.DuplicateVmo(); }
 
 }  // namespace ot

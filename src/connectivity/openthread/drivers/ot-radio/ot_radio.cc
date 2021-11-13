@@ -481,13 +481,16 @@ zx_status_t OtRadioDevice::Create(void* ctx, zx_device_t* parent,
 }
 
 zx_status_t OtRadioDevice::Bind() {
-  zx_status_t status = DdkAdd(ddk::DeviceAddArgs("ot-radio").set_proto_id(ZX_PROTOCOL_OT_RADIO));
+  zx_status_t status = DdkAdd(ddk::DeviceAddArgs("ot-radio")
+                                  .set_proto_id(ZX_PROTOCOL_OT_RADIO)
+                                  .set_inspect_vmo(spinel_framer_->InspectorDuplicateVmo()));
   if (status != ZX_OK) {
     zxlogf(ERROR, "ot-radio: Could not create device: %d", status);
     return status;
   } else {
     zxlogf(DEBUG, "ot-radio: Added device");
   }
+
   return status;
 }
 

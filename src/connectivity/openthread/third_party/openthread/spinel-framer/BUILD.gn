@@ -3,6 +3,12 @@
 # found in the LICENSE file.
 
 source_set("spinel-framer") {
-  sources = [ "spinel_framer.cc" ]
-  deps = [ "//sdk/banjo/fuchsia.hardware.spi:fuchsia.hardware.spi_banjo_cpp" ]
+  sources = [
+    "spinel_framer.cc",
+    "spinel_inspector.cc",
+  ]
+  deps = [
+    "//sdk/banjo/fuchsia.hardware.spi:fuchsia.hardware.spi_banjo_cpp",
+    "//zircon/system/ulib/inspect",
+  ]
 }

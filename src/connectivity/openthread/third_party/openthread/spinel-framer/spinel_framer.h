@@ -8,6 +8,8 @@
 #include <fuchsia/hardware/spi/cpp/banjo.h>
 #include <zircon/types.h>
 
+#include "spinel_inspector.h"
+
 namespace ot {
 
 class SpinelFramer {
@@ -21,6 +23,7 @@ class SpinelFramer {
   bool IsPacketPresent(void);
   void TrySpiTransaction(void);
   void SetInboundAllowanceStatus(bool status);
+  ::zx::vmo InspectorDuplicateVmo() const;
 
  private:
   static constexpr uint16_t kMaxFrameSize = 2048;
@@ -65,6 +68,7 @@ class SpinelFramer {
   void DebugSpiHeader(const char* hint);
   bool has_inbound_allowance_ = false;
   bool did_print_rate_limit_log_ = false;
+  SpinelFramerInspector inspector_;
 };
 
 }  // namespace ot
