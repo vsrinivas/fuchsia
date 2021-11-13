@@ -1,0 +1,10 @@
+{
+    "short_description": "Integration test board driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Board",
+        "Test"
+    ]
+}
