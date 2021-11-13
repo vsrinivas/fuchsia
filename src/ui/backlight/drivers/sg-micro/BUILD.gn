@@ -44,6 +44,7 @@ fuchsia_driver("sg-micro-driver") {
 fuchsia_driver_component("sg-micro") {
   component_name = "sg-micro"
   deps = [ ":sg-micro-driver" ]
+  info = "sg-micro-info.json"
 }
 
 test("sgm37603a-test-bin") {

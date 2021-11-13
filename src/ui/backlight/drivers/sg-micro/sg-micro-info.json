@@ -1,0 +1,11 @@
+{
+    "short_description": "SG Micro backlight driver",
+    "manufacturer": "SG Micro",
+    "families": [],
+    "models": [
+        "Sgm37603a"
+    ],
+    "areas": [
+        "Display"
+    ]
+}
