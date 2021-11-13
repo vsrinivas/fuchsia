@@ -1,0 +1,10 @@
+{
+    "short_description": "Fake OpenThread radio",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Openthread",
+        "Test"
+    ]
+}

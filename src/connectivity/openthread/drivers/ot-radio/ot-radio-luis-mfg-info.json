@@ -1,0 +1,11 @@
+{
+    "short_description": "Luis factory OpenThread radio driver",
+    "manufacturer": "Nordic Semiconductor",
+    "families": [],
+    "models": [
+        "nRF52840"
+    ],
+    "areas": [
+        "Openthread"
+    ]
+}
