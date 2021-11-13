@@ -186,7 +186,6 @@ sysroot_uninstrumented_libc_entries = [
         "bits/setjmp.h",
         "bits/shm.h",
         "bits/signal.h",
-        "bits/socket.h",
         "bits/stat.h",
         "bits/statfs.h",
         "bits/termios.h",

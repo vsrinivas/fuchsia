@@ -17,7 +17,40 @@ extern "C" {
 #define __NEED_struct_iovec
 
 #include <bits/alltypes.h>
-#include <bits/socket.h>
+
+struct msghdr {
+  void* msg_name;
+  socklen_t msg_namelen;
+  struct iovec* msg_iov;
+#if __LONG_MAX > 0x7fffffff && __BYTE_ORDER == __BIG_ENDIAN
+  int __pad1;
+#endif
+  int msg_iovlen;
+#if __LONG_MAX > 0x7fffffff && __BYTE_ORDER == __LITTLE_ENDIAN
+  int __pad1;
+#endif
+  void* msg_control;
+#if __LONG_MAX > 0x7fffffff && __BYTE_ORDER == __BIG_ENDIAN
+  int __pad2;
+#endif
+  socklen_t msg_controllen;
+#if __LONG_MAX > 0x7fffffff && __BYTE_ORDER == __LITTLE_ENDIAN
+  int __pad2;
+#endif
+  int msg_flags;
+};
+
+struct cmsghdr {
+#if __LONG_MAX > 0x7fffffff && __BYTE_ORDER == __BIG_ENDIAN
+  int __pad1;
+#endif
+  socklen_t cmsg_len;
+#if __LONG_MAX > 0x7fffffff && __BYTE_ORDER == __LITTLE_ENDIAN
+  int __pad1;
+#endif
+  int cmsg_level;
+  int cmsg_type;
+};
 
 #ifdef _GNU_SOURCE
 struct ucred {
@@ -94,6 +127,7 @@ struct linger {
 #define PF_LLC 26
 #define PF_IB 27
 #define PF_MPLS 28
+#define PF_CAN 29
 #define PF_TIPC 30
 #define PF_BLUETOOTH 31
 #define PF_IUCV 32
@@ -105,7 +139,11 @@ struct linger {
 #define PF_ALG 38
 #define PF_NFC 39
 #define PF_VSOCK 40
-#define PF_MAX 41
+#define PF_KCM 41
+#define PF_QIPCRTR 42
+#define PF_SMC 43
+#define PF_XDP 44
+#define PF_MAX 45
 
 #define AF_UNSPEC PF_UNSPEC
 #define AF_LOCAL PF_LOCAL
@@ -139,6 +177,7 @@ struct linger {
 #define AF_LLC PF_LLC
 #define AF_IB PF_IB
 #define AF_MPLS PF_MPLS
+#define AF_CAN PF_CAN
 #define AF_TIPC PF_TIPC
 #define AF_BLUETOOTH PF_BLUETOOTH
 #define AF_IUCV PF_IUCV
@@ -150,6 +189,10 @@ struct linger {
 #define AF_ALG PF_ALG
 #define AF_NFC PF_NFC
 #define AF_VSOCK PF_VSOCK
+#define AF_KCM PF_KCM
+#define AF_QIPCRTR PF_QIPCRTR
+#define AF_SMC PF_SMC
+#define AF_XDP PF_XDP
 #define AF_MAX PF_MAX
 
 #ifndef SO_DEBUG
@@ -172,13 +215,34 @@ struct linger {
 #define SO_PEERCRED 17
 #define SO_RCVLOWAT 18
 #define SO_SNDLOWAT 19
-#define SO_RCVTIMEO 20
-#define SO_SNDTIMEO 21
 #define SO_ACCEPTCONN 30
+#define SO_PEERSEC 31
 #define SO_SNDBUFFORCE 32
 #define SO_RCVBUFFORCE 33
 #define SO_PROTOCOL 38
 #define SO_DOMAIN 39
+#endif
+
+#ifndef SO_RCVTIMEO
+#if __LONG_MAX == 0x7fffffff
+#define SO_RCVTIMEO 66
+#define SO_SNDTIMEO 67
+#else
+#define SO_RCVTIMEO 20
+#define SO_SNDTIMEO 21
+#endif
+#endif
+
+#ifndef SO_TIMESTAMP
+#if __LONG_MAX == 0x7fffffff
+#define SO_TIMESTAMP 63
+#define SO_TIMESTAMPNS 64
+#define SO_TIMESTAMPING 65
+#else
+#define SO_TIMESTAMP 29
+#define SO_TIMESTAMPNS 35
+#define SO_TIMESTAMPING 37
+#endif
 #endif
 
 #define SO_SECURITY_AUTHENTICATION 22
@@ -192,15 +256,10 @@ struct linger {
 #define SO_GET_FILTER SO_ATTACH_FILTER
 
 #define SO_PEERNAME 28
-#define SO_TIMESTAMP 29
 #define SCM_TIMESTAMP SO_TIMESTAMP
-
-#define SO_PEERSEC 31
 #define SO_PASSSEC 34
-#define SO_TIMESTAMPNS 35
 #define SCM_TIMESTAMPNS SO_TIMESTAMPNS
 #define SO_MARK 36
-#define SO_TIMESTAMPING 37
 #define SCM_TIMESTAMPING SO_TIMESTAMPING
 #define SO_RXQ_OVFL 40
 #define SO_WIFI_STATUS 41
@@ -217,6 +276,18 @@ struct linger {
 #define SO_DETACH_BPF SO_DETACH_FILTER
 #define SO_ATTACH_REUSEPORT_CBPF 51
 #define SO_ATTACH_REUSEPORT_EBPF 52
+#define SO_CNX_ADVICE 53
+#define SCM_TIMESTAMPING_OPT_STATS 54
+#define SO_MEMINFO 55
+#define SO_INCOMING_NAPI_ID 56
+#define SO_COOKIE 57
+#define SCM_TIMESTAMPING_PKTINFO 58
+#define SO_PEERGROUPS 59
+#define SO_ZEROCOPY 60
+#define SO_TXTIME 61
+#define SCM_TXTIME SO_TXTIME
+#define SO_BINDTOIFINDEX 62
+#define SO_DETACH_REUSEPORT_BPF 68
 
 #ifndef SOL_SOCKET
 #define SOL_SOCKET 1
@@ -233,6 +304,23 @@ struct linger {
 #define SOL_ATM 264
 #define SOL_AAL 265
 #define SOL_IRDA 266
+#define SOL_NETBEUI 267
+#define SOL_LLC 268
+#define SOL_DCCP 269
+#define SOL_NETLINK 270
+#define SOL_TIPC 271
+#define SOL_RXRPC 272
+#define SOL_PPPOL2TP 273
+#define SOL_BLUETOOTH 274
+#define SOL_PNPIPE 275
+#define SOL_RDS 276
+#define SOL_IUCV 277
+#define SOL_CAIF 278
+#define SOL_ALG 279
+#define SOL_NFC 280
+#define SOL_KCM 281
+#define SOL_TLS 282
+#define SOL_XDP 283
 
 #define SOMAXCONN 128
 
@@ -250,8 +338,11 @@ struct linger {
 #define MSG_CONFIRM 0x0800
 #define MSG_RST 0x1000
 #define MSG_ERRQUEUE 0x2000
+#define MSG_NOSIGNAL 0x4000
 #define MSG_MORE 0x8000
 #define MSG_WAITFORONE 0x10000
+#define MSG_BATCH 0x40000
+#define MSG_ZEROCOPY 0x4000000
 #define MSG_FASTOPEN 0x20000000
 #define MSG_CMSG_CLOEXEC 0x40000000
 
@@ -260,12 +351,12 @@ struct linger {
 #define __MHDR_END(mhdr) ((unsigned char*)(mhdr)->msg_control + (mhdr)->msg_controllen)
 
 #define CMSG_DATA(cmsg) ((unsigned char*)(((struct cmsghdr*)(cmsg)) + 1))
-#define CMSG_NXTHDR(mhdr, cmsg)                                          \
-  ((cmsg)->cmsg_len < sizeof(struct cmsghdr)                             \
-       ? (struct cmsghdr*)0                                              \
-       : (__CMSG_NEXT(cmsg) + sizeof(struct cmsghdr) >= __MHDR_END(mhdr) \
-              ? (struct cmsghdr*)0                                       \
-              : ((struct cmsghdr*)__CMSG_NEXT(cmsg))))
+#define CMSG_NXTHDR(mhdr, cmsg)                                    \
+  ((cmsg)->cmsg_len < sizeof(struct cmsghdr) ||                    \
+           (ssize_t)(__CMSG_LEN(cmsg) + sizeof(struct cmsghdr)) >= \
+               __MHDR_END(mhdr) - (unsigned char*)(cmsg)           \
+       ? 0                                                         \
+       : (struct cmsghdr*)__CMSG_NEXT(cmsg))
 #define CMSG_FIRSTHDR(mhdr)                                                                        \
   ((size_t)(mhdr)->msg_controllen >= sizeof(struct cmsghdr) ? (struct cmsghdr*)(mhdr)->msg_control \
                                                             : (struct cmsghdr*)0)
@@ -284,8 +375,8 @@ struct sockaddr {
 
 struct sockaddr_storage {
   sa_family_t ss_family;
+  char __ss_padding[128 - sizeof(long) - sizeof(sa_family_t)];
   unsigned long __ss_align;
-  char __ss_padding[128 - 2 * sizeof(unsigned long)];
 };
 
 int socket(int, int, int);
@@ -314,6 +405,12 @@ int getsockopt(int, int, int, void* __restrict, socklen_t* __restrict);
 int setsockopt(int, int, int, const void*, socklen_t);
 
 int sockatmark(int);
+
+#if _REDIR_TIME64
+#ifdef _GNU_SOURCE
+__REDIR(recvmmsg, __recvmmsg_time64);
+#endif
+#endif
 
 #ifdef __cplusplus
 }
