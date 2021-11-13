@@ -108,6 +108,9 @@ async fn resolve_package(
     if root_url.host() != "fuchsia.com" {
         return Err(ResolverError::UnsupportedRepo);
     }
+    if root_url.package_hash().is_some() {
+        return Err(ResolverError::PackageHashNotSupported);
+    }
     let package_name = io_util::canonicalize_path(root_url.path());
     // Package contents are available at `packages/$PACKAGE_NAME/0`.
     let dir = io_util::directory::open_directory(
@@ -124,6 +127,8 @@ async fn resolve_package(
 enum ResolverError {
     #[error("invalid component URL: {}", .0)]
     InvalidUrl(#[from] PkgUrlParseError),
+    #[error("component URL with package hash not supported")]
+    PackageHashNotSupported,
     #[error("the hostname refers to an unsupported repo")]
     UnsupportedRepo,
     #[error("component not found: {}", .0)]
@@ -141,7 +146,9 @@ enum ResolverError {
 impl From<ResolverError> for fsys::ResolverError {
     fn from(err: ResolverError) -> fsys::ResolverError {
         match err {
-            ResolverError::InvalidUrl(_) => fsys::ResolverError::InvalidArgs,
+            ResolverError::InvalidUrl(_) | ResolverError::PackageHashNotSupported => {
+                fsys::ResolverError::InvalidArgs
+            }
             ResolverError::UnsupportedRepo => fsys::ResolverError::NotSupported,
             ResolverError::ComponentNotFound(_) => fsys::ResolverError::ManifestNotFound,
             ResolverError::PackageNotFound(_) => fsys::ResolverError::PackageNotFound,
@@ -252,6 +259,16 @@ mod tests {
         assert_matches!(
             resolve_component("fuchsia-pkg://fuchsia.ca/foo#meta/bar.cm", &pkgfs_dir).await,
             Err(ResolverError::UnsupportedRepo)
+        );
+
+        let url_with_hash = concat!(
+            "fuchsia-pkg://fuchsia.com/test-package",
+            "?hash=f241b31d5913b66c90a44d44537d6bec62672e1f05dbc4c4f22b863b01c68749",
+            "#meta/test.cm"
+        );
+        assert_matches!(
+            resolve_component(url_with_hash, &pkgfs_dir).await,
+            Err(ResolverError::PackageHashNotSupported)
         );
     }
 
