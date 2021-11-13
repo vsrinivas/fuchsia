@@ -27,9 +27,12 @@ const WLAN_WMM_PARAM_LEN uint32 = 18;
 
 type WlanifScanReq = struct {
     txn_id uint64;
+    bss_type_selector fuchsia.wlan.internal.BssTypeSelector;
+    bssid ieee80211.MacAddr;
     scan_type WlanScanType;
     channels vector<uint8>:MAX;
     ssids vector<ieee80211.CSsid>:MAX;
+    probe_delay uint32;
     min_channel_time uint32;
     max_channel_time uint32;
 };

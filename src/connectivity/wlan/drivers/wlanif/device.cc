@@ -284,6 +284,11 @@ void Device::StartScan(wlan_mlme::ScanRequest req) {
     };
     OnScanEnd(&end);
     return;
+  // bss_type
+  impl_req.bss_type_selector = req.bss_type_selector;
+
+  // bssid
+  std::memcpy(impl_req.bssid, req.bssid.data(), ETH_ALEN);
   }
   memcpy(channels_list_begin.get(), req.channel_list.data(), impl_req.channels_count);
   impl_req.channels_list = channels_list_begin.get();

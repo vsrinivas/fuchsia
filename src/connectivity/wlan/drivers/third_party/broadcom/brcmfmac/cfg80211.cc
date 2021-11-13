@@ -906,8 +906,18 @@ static zx_status_t brcmf_escan_prep(struct brcmf_cfg80211_info* cfg,
      this field is ignored. */
   fill_with_wildcard_ssid(&params_le->ssid_le);
 
-  // Do not filter scan results based on BSS type.
-  params_le->bss_type = DOT11_BSSTYPE_ANY;
+  switch (request->bss_type_selector) {
+    case fuchsia_wlan_internal_BSS_TYPE_SELECTOR_ANY:
+      params_le->bss_type = DOT11_BSSTYPE_ANY;
+      break;
+    case fuchsia_wlan_internal_BSS_TYPE_SELECTOR_INFRASTRUCTURE:
+    case fuchsia_wlan_internal_BSS_TYPE_SELECTOR_PERSONAL:
+    case fuchsia_wlan_internal_BSS_TYPE_SELECTOR_INDEPENDENT:
+    case fuchsia_wlan_internal_BSS_TYPE_SELECTOR_MESH:
+    default:
+      BRCMF_ERR("scanning only supports bss_type_selector ANY");
+      return ZX_ERR_INVALID_ARGS;
+  }
 
   if (request->scan_type == WLAN_SCAN_TYPE_ACTIVE) {
     params_le->scan_type = BRCMF_SCANTYPE_ACTIVE;

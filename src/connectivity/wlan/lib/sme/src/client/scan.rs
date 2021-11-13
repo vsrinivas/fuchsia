@@ -223,6 +223,9 @@ fn new_scan_request(
 ) -> fidl_mlme::ScanRequest {
     let scan_req = fidl_mlme::ScanRequest {
         txn_id: mlme_txn_id,
+        // All supported MLME drivers only support BSS_TYPE_SELECTOR_ANY
+        bss_type_selector: fidl_internal::BSS_TYPE_SELECTOR_ANY,
+        bssid: WILDCARD_BSSID.0,
         scan_type: fidl_mlme::ScanTypes::Passive,
         probe_delay: 0,
         channel_list: get_channels_to_scan(&device_info, &scan_request),

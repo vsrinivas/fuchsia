@@ -1211,6 +1211,8 @@ mod tests {
     fn scan_req() -> fidl_mlme::ScanRequest {
         fidl_mlme::ScanRequest {
             txn_id: 1337,
+            bss_type_selector: fidl_internal::BSS_TYPE_SELECTOR_ANY,
+            bssid: BSSID.0,
             scan_type: fidl_mlme::ScanTypes::Passive,
             channel_list: vec![SCAN_CHANNEL_PRIMARY],
             ssid_list: vec![Ssid::try_from("ssid").unwrap().into()],
