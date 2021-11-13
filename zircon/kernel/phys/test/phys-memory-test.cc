@@ -15,6 +15,7 @@
 #include <ktl/byte.h>
 #include <ktl/span.h>
 #include <phys/allocation.h>
+#include <phys/new.h>
 
 #include "test-main.h"
 
@@ -63,6 +64,13 @@ int TestMain(void* zbi_ptr, arch::EarlyTicks ticks) {
   InitMemory(zbi_ptr);
 
   printf("Testing memory allocation...\n");
+
+  fbl::AllocChecker ac;
+  int* x = new (gPhysNew<memalloc::Type::kZbiTestPayload>, ac) int{17};
+  ZX_ASSERT(ac.check());
+  ZX_ASSERT(x != nullptr);
+  ZX_ASSERT(*x == 17);
+
   size_t bytes_allocated = AllocateAndOverwriteFreeMemory();
   if (bytes_allocated == 0) {
     printf("FAIL: Could not allocate any memory.\n");

@@ -269,6 +269,17 @@ if (toolchain_environment == "kernel.phys" ||
     public_configs = [ ":includes" ]
   }
 
+  source_set("new") {
+    public = [ "include/phys/new.h" ]
+    public_deps = [
+      # <phys/new.h> has #include <phys/allocation.h>.
+      ":allocation",
+
+      # <phys/new.h> has #include <lib/trivial-allocator/new.h>
+      "//src/lib/trivial-allocator",
+    ]
+  }
+
   source_set("zbitl-allocation") {
     public = [ "include/phys/zbitl-allocation.h" ]
     sources = [ "zbitl-allocation.cc" ]

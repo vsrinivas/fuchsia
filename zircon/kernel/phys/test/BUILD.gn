@@ -166,6 +166,7 @@ if (current_toolchain != default_toolchain) {
     deps = [
       ":test-main",
       "..:allocation",
+      "..:new",
       "//zircon/kernel/lib/ktl",
       "//zircon/kernel/lib/libc",
     ]
