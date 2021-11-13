@@ -8,21 +8,10 @@ import("//build/host.gni")
 import("//tools/fidl/lib/fidlgentest/fidlgentest_go_test.gni")
 
 if (is_host) {
-  go_library("summarize_test_lib") {
-    testonly = true
-    sources = [
-      "elementslice_test.go",
-      "summary_test.go",
-      "symboltable_test.go",
-      "wraparoundtype_test.go",
-    ]
-    deps = [ ":gopkg" ]
-  }
-
   fidlgentest_go_test("summarize_test") {
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/lib/summarize" ]
     deps = [
-      ":summarize_test_lib",
+      ":gopkg",
       "//third_party/golibs:github.com/google/go-cmp",
     ]
   }
@@ -34,14 +23,18 @@ if (is_host) {
       "bits.go",
       "consts.go",
       "elementslice.go",
+      "elementslice_test.go",
       "elementstr.go",
       "enums.go",
       "library.go",
       "properties.go",
       "protocol.go",
       "summary.go",
+      "summary_test.go",
       "symboltable.go",
+      "symboltable_test.go",
       "wraparoundtype.go",
+      "wraparoundtype_test.go",
     ]
     deps = [ "//tools/fidl/lib/fidlgen" ]
 

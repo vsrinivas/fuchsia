@@ -16,29 +16,22 @@ go_library("fidlgen_cpp") {
     "generator.go",
     "handles.go",
     "ir.go",
+    "ir_test.go",
     "name_transforms.go",
+    "name_transforms_test.go",
     "names.go",
+    "names_test.go",
     "namespace.go",
     "namespaced_enum.go",
+    "namespaced_enum_test.go",
     "protocol.go",
+    "protocol_test.go",
     "service.go",
     "struct.go",
     "table.go",
     "template_funcs.go",
-    "union.go",
-  ]
-}
-
-go_library("cpp_test") {
-  testonly = true
-  deps = [ ":fidlgen_cpp" ]
-  sources = [
-    "ir_test.go",
-    "name_transforms_test.go",
-    "names_test.go",
-    "namespaced_enum_test.go",
-    "protocol_test.go",
     "testutils_test.go",
+    "union.go",
   ]
 }
 
@@ -46,7 +39,7 @@ if (is_host) {
   fidlgentest_go_test("fidlgen_cpp_ir_test") {
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen_cpp" ]
     deps = [
-      ":cpp_test",
+      ":fidlgen_cpp",
       "//third_party/golibs:github.com/google/go-cmp",
     ]
   }

@@ -11,23 +11,17 @@ go_library("fidlgen") {
     "formatter.go",
     "generator.go",
     "identifiers.go",
+    "identifiers_test.go",
     "names.go",
+    "names.go",
+    "names_test.go",
     "reserved_names.go",
     "strings.go",
+    "strings_test.go",
     "templates.go",
     "types.go",
-    "write_file_if_changed.go",
-  ]
-}
-
-go_library("fidlgen_test_lib") {
-  testonly = true
-  deps = [ ":fidlgen" ]
-  sources = [
-    "identifiers_test.go",
-    "names_test.go",
-    "strings_test.go",
     "types_test.go",
+    "write_file_if_changed.go",
   ]
 }
 
@@ -35,7 +29,7 @@ if (is_host) {
   fidlgentest_go_test("fidlgen_lib_test") {
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen" ]
     deps = [
-      ":fidlgen_test_lib",
+      ":fidlgen",
       "//third_party/golibs:github.com/google/go-cmp",
     ]
   }

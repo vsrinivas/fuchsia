@@ -8,37 +8,24 @@ import("//build/host.gni")
 import("//tools/fidl/lib/fidlgentest/fidlgentest_go_test.gni")
 
 if (is_host) {
-  go_library("apidiff_test_lib") {
-    testonly = true
-    sources = [
-      "apidiff_test.go",
-      "diff_test.go",
-      "report_test.go",
-    ]
-    deps = [
-      ":gopkg",
-      "//tools/fidl/lib/fidlgen",
-      "//tools/fidl/lib/summarize:gopkg",
-    ]
-  }
-
   fidlgentest_go_test("apidiff_test") {
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/lib/apidiff" ]
-    deps = [
-      ":apidiff_test_lib",
-      "//third_party/golibs:github.com/google/go-cmp",
-    ]
+    deps = [ ":gopkg" ]
   }
 
   go_library("gopkg") {
     name = "go.fuchsia.dev/fuchsia/tools/fidl/lib/apidiff"
     sources = [
       "apidiff.go",
+      "apidiff_test.go",
       "classification.go",
       "diff.go",
+      "diff_test.go",
       "report.go",
+      "report_test.go",
     ]
     deps = [
+      "//third_party/golibs:github.com/google/go-cmp",
       "//third_party/golibs:gopkg.in/yaml.v2",
       "//tools/fidl/lib/fidlgen",
       "//tools/fidl/lib/summarize:gopkg",
