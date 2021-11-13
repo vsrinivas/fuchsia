@@ -231,15 +231,10 @@ enum/member fuchsia.settings/SettingsEpitaph.PERSISTENT_STORAGE_ERROR 3
 enum/member fuchsia.settings/SettingsEpitaph.REQUEST_NOT_SUPPORTED 1
 strict enum fuchsia.settings/SettingsEpitaph uint32
 protocol/member fuchsia.settings/Setup.Set(fuchsia.settings/SetupSettings settings,bool reboot_device) -> (fuchsia.settings/Setup_Set_Result result)
-protocol/member fuchsia.settings/Setup.Set2(fuchsia.settings/SetupSettings settings,bool reboot_device) -> (fuchsia.settings/Setup_Set2_Result result)
 protocol/member fuchsia.settings/Setup.Watch() -> (fuchsia.settings/SetupSettings settings)
 protocol fuchsia.settings/Setup
 table/member fuchsia.settings/SetupSettings.enabled_configuration_interfaces fuchsia.settings/ConfigurationInterfaces
 table fuchsia.settings/SetupSettings
-struct fuchsia.settings/Setup_Set2_Response
-union/member fuchsia.settings/Setup_Set2_Result.err fuchsia.settings/Error
-union/member fuchsia.settings/Setup_Set2_Result.response fuchsia.settings/Setup_Set2_Response
-strict union fuchsia.settings/Setup_Set2_Result
 struct fuchsia.settings/Setup_Set_Response
 union/member fuchsia.settings/Setup_Set_Result.err fuchsia.settings/Error
 union/member fuchsia.settings/Setup_Set_Result.response fuchsia.settings/Setup_Set_Response

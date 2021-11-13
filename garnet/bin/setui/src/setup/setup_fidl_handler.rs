@@ -13,8 +13,8 @@ use crate::setup::types::{
 };
 use fidl::prelude::*;
 use fidl_fuchsia_settings::{
-    SetupMarker, SetupRequest, SetupSet2Responder, SetupSet2Result, SetupSetResponder,
-    SetupSetResult, SetupSettings, SetupWatchResponder,
+    SetupMarker, SetupRequest, SetupSetResponder, SetupSetResult, SetupSettings,
+    SetupWatchResponder,
 };
 use fuchsia_syslog::fx_log_warn;
 use std::convert::TryFrom;
@@ -24,16 +24,6 @@ fidl_hanging_get_responder!(SetupMarker, SetupSettings, SetupWatchResponder);
 impl ErrorResponder for SetupSetResponder {
     fn id(&self) -> &'static str {
         "Setup_Set"
-    }
-
-    fn respond(self: Box<Self>, error: fidl_fuchsia_settings::Error) -> Result<(), fidl::Error> {
-        self.send(&mut Err(error))
-    }
-}
-
-impl ErrorResponder for SetupSet2Responder {
-    fn id(&self) -> &'static str {
-        "Setup_Set2"
     }
 
     fn respond(self: Box<Self>, error: fidl_fuchsia_settings::Error) -> Result<(), fidl::Error> {
@@ -102,12 +92,6 @@ impl request::Responder<Scoped<SetupSetResult>> for SetupSetResponder {
     }
 }
 
-impl request::Responder<Scoped<SetupSet2Result>> for SetupSet2Responder {
-    fn respond(self, Scoped(mut response): Scoped<SetupSet2Result>) {
-        let _ = self.send(&mut response).ok();
-    }
-}
-
 impl watch::Responder<SetupSettings, fuchsia_zircon::Status> for SetupWatchResponder {
     fn respond(self, response: Result<SetupSettings, fuchsia_zircon::Status>) {
         match response {
@@ -127,14 +111,6 @@ impl TryFrom<SetupRequest> for Job {
         #[allow(unreachable_patterns)]
         match item {
             SetupRequest::Set { settings, reboot_device, responder } => {
-                match to_request(settings, reboot_device) {
-                    Some(request) => {
-                        Ok(request::Work::new(SettingType::Setup, request, responder).into())
-                    }
-                    None => Err(JobError::InvalidInput(Box::new(responder))),
-                }
-            }
-            SetupRequest::Set2 { settings, reboot_device, responder } => {
                 match to_request(settings, reboot_device) {
                     Some(request) => {
                         Ok(request::Work::new(SettingType::Setup, request, responder).into())
@@ -203,34 +179,6 @@ mod tests {
         let (proxy, server) =
             fidl::endpoints::create_proxy::<SetupMarker>().expect("should be able to create proxy");
         let _fut = proxy.set(
-            SetupSettings {
-                enabled_configuration_interfaces: CONFIGURATION_INTERFACES,
-                ..SetupSettings::EMPTY
-            },
-            SHOULD_REBOOT,
-        );
-        let mut request_stream: SetupRequestStream =
-            server.into_stream().expect("should be able to convert to stream");
-        let request = request_stream
-            .next()
-            .await
-            .expect("should have on request before stream is closed")
-            .expect("should have gotten a request");
-        let job = Job::try_from(request);
-        let job = job.as_ref();
-        assert_matches!(job.map(|j| j.workload()), Ok(work::Load::Independent(_)));
-        assert_matches!(job.map(|j| j.execution_type()), Ok(execution::Type::Independent));
-    }
-
-    #[fuchsia_async::run_until_stalled(test)]
-    async fn try_from_set2_converts_supplied_params() {
-        const CONFIGURATION_INTERFACES: Option<fidl_fuchsia_settings::ConfigurationInterfaces> =
-            Some(fidl_fuchsia_settings::ConfigurationInterfaces::Ethernet);
-        const SHOULD_REBOOT: bool = true;
-
-        let (proxy, server) =
-            fidl::endpoints::create_proxy::<SetupMarker>().expect("should be able to create proxy");
-        let _fut = proxy.set2(
             SetupSettings {
                 enabled_configuration_interfaces: CONFIGURATION_INTERFACES,
                 ..SetupSettings::EMPTY
