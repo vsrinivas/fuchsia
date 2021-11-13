@@ -1,0 +1,16 @@
+{
+    "short_description": "Texas Instruments Lp LED driver",
+    "manufacturer": "Texas Instruments",
+    "families": [
+        "Lp"
+    ],
+    "models": [
+        "Lp5018",
+        "Lp5024",
+        "Lp5030",
+        "Lp5036"
+    ],
+    "areas": [
+        "Light"
+    ]
+}

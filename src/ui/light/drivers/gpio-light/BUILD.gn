@@ -39,6 +39,7 @@ fuchsia_driver("gpio-light-driver") {
 fuchsia_driver_component("gpio-light") {
   component_name = "gpio-light"
   deps = [ ":gpio-light-driver" ]
+  info = "gpio-light-info.json"
 }
 
 group("tests") {
