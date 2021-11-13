@@ -11,7 +11,8 @@
 
 namespace ot {
 constexpr size_t kHistorySize = 6;
-
+constexpr int64_t kNanoSecondsPerMilliSeconds = 1000000LL;
+constexpr int64_t kInspectIntervalMilliSeconds = 60000LL;
 class SpinelFramerInspector {
  public:
   SpinelFramerInspector();
@@ -21,12 +22,15 @@ class SpinelFramerInspector {
                       uint64_t rx_frame_byte_count, uint64_t tx_frame_byte_count,
                       uint64_t rx_frame_count, uint64_t tx_frame_count);
   void UpdateIdx();
+  bool ShouldSetInspectData();
+  int GetInspectRemainingTimeMilliSeconds();
   ::zx::vmo DuplicateVmo() const;
 
  private:
+  int64_t GetTimeMs();
   inspect::Inspector inspect_;
   inspect::Node history_[kHistorySize];
-  inspect::UintProperty timestamp_[kHistorySize];
+  inspect::UintProperty timestamp_ms_[kHistorySize];
   inspect::UintProperty rcp_reset_count_[kHistorySize];
   inspect::UintProperty spi_frame_count_[kHistorySize];
   inspect::UintProperty spi_valid_frame_count_[kHistorySize];
@@ -37,6 +41,7 @@ class SpinelFramerInspector {
   inspect::UintProperty tx_frame_byte_count_[kHistorySize];
   inspect::UintProperty rx_frame_count_[kHistorySize];
   inspect::UintProperty tx_frame_count_[kHistorySize];
+  int64_t data_set_timestamp_ms_;
   size_t idx_;
 };
 

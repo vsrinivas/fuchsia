@@ -335,7 +335,11 @@ void SpinelFramer::Init(ddk::SpiProtocolClient spi, uint16_t spi_rx_align_allowa
 void SpinelFramer::SetInboundAllowanceStatus(bool status) { has_inbound_allowance_ = status; }
 
 uint32_t SpinelFramer::GetTimeoutMs(void) {
-  int timeout_ms = 1000 * 60 * 60 * 24;  // 24 hours
+  int timeout_ms = inspector_.GetInspectRemainingTimeMilliSeconds();
+
+  if (timeout_ms == 0) {
+    dump_stats_ = true;
+  }
 
   if (spi_tx_is_ready_ || dump_stats_) {
     // We have data to send to the radio.
