@@ -16,6 +16,7 @@ pub struct DevCommand {
 #[argh(subcommand)]
 pub enum DevSubcommand {
     Phy(PhyCommand),
+    Iface(IfaceCommand),
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
@@ -35,6 +36,29 @@ pub enum PhySubcommand {
     ClearCountry(ClearCountry),
     SetPsMode(SetPsMode),
     GetPsMode(GetPsMode),
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(
+    subcommand,
+    name = "iface",
+    description = "Create, destroy, and query the states of WLAN interfaces."
+)]
+pub struct IfaceCommand {
+    #[argh(subcommand)]
+    pub subcommand: IfaceSubcommand,
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand)]
+pub enum IfaceSubcommand {
+    New(NewIface),
+    Delete(Delete),
+    List(IfaceList),
+    Query(IfaceQuery),
+    Stats(Stats),
+    Minstrel(Minstrel),
+    Status(Status),
 }
 
 impl From<PhySubcommand> for wlan_dev::opts::Opt {
@@ -184,7 +208,207 @@ impl From<DevSubcommand> for wlan_dev::opts::Opt {
     fn from(cmd: DevSubcommand) -> Self {
         match cmd {
             DevSubcommand::Phy(phy_cmd) => wlan_dev::opts::Opt::from(phy_cmd.subcommand),
+            DevSubcommand::Iface(iface_cmd) => wlan_dev::opts::Opt::from(iface_cmd.subcommand),
         }
+    }
+}
+
+impl From<IfaceSubcommand> for wlan_dev::opts::Opt {
+    fn from(cmd: IfaceSubcommand) -> Self {
+        wlan_dev::opts::Opt::Iface(match cmd {
+            IfaceSubcommand::New(arg) => wlan_dev::opts::IfaceCmd::from(arg),
+            IfaceSubcommand::Delete(arg) => wlan_dev::opts::IfaceCmd::from(arg),
+            IfaceSubcommand::List(arg) => wlan_dev::opts::IfaceCmd::from(arg),
+            IfaceSubcommand::Query(arg) => wlan_dev::opts::IfaceCmd::from(arg),
+            IfaceSubcommand::Stats(arg) => wlan_dev::opts::IfaceCmd::from(arg),
+            IfaceSubcommand::Minstrel(arg) => wlan_dev::opts::IfaceCmd::from(arg),
+            IfaceSubcommand::Status(arg) => wlan_dev::opts::IfaceCmd::from(arg),
+        })
+    }
+}
+
+#[derive(PartialEq, Debug)]
+pub enum RoleArg {
+    Client,
+    Ap,
+}
+
+impl std::str::FromStr for RoleArg {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "client" => Ok(RoleArg::Client),
+            "ap" => Ok(RoleArg::Ap),
+            other => Err(anyhow::format_err!("could not parse PsModeArg: {}", other)),
+        }
+    }
+}
+
+impl From<RoleArg> for wlan_dev::opts::RoleArg {
+    fn from(arg: RoleArg) -> Self {
+        match arg {
+            RoleArg::Client => wlan_dev::opts::RoleArg::Client,
+            RoleArg::Ap => wlan_dev::opts::RoleArg::Ap,
+        }
+    }
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "new", description = "Create a new WLAN interface.")]
+pub struct NewIface {
+    #[argh(
+        option,
+        short = 'p',
+        long = "phy",
+        description = "PHY ID on which to create the interface."
+    )]
+    phy_id: u16,
+    #[argh(option, short = 'r', long = "role", description = "MAC role for the new interface.")]
+    role: RoleArg,
+    #[argh(option, short = 'm', description = "MAC address for the new interface.")]
+    sta_addr: Option<String>,
+}
+
+impl From<NewIface> for wlan_dev::opts::IfaceCmd {
+    fn from(new: NewIface) -> Self {
+        wlan_dev::opts::IfaceCmd::New {
+            phy_id: new.phy_id,
+            role: wlan_dev::opts::RoleArg::from(new.role),
+            sta_addr: new.sta_addr,
+        }
+    }
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "del", description = "Destroy a WLAN interface.")]
+pub struct Delete {
+    #[argh(positional, description = "interface ID to destroy.")]
+    iface_id: u16,
+}
+
+impl From<Delete> for wlan_dev::opts::IfaceCmd {
+    fn from(del: Delete) -> Self {
+        wlan_dev::opts::IfaceCmd::Delete { iface_id: del.iface_id }
+    }
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "list", description = "Lists all interface IDs.")]
+pub struct IfaceList {}
+
+impl From<IfaceList> for wlan_dev::opts::IfaceCmd {
+    fn from(_: IfaceList) -> Self {
+        wlan_dev::opts::IfaceCmd::List
+    }
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "query", description = "Query the properties of a WLAN interface.")]
+pub struct IfaceQuery {
+    #[argh(positional, description = "interface ID to query.")]
+    iface_id: u16,
+}
+
+impl From<IfaceQuery> for wlan_dev::opts::IfaceCmd {
+    fn from(query: IfaceQuery) -> Self {
+        wlan_dev::opts::IfaceCmd::Query { iface_id: query.iface_id }
+    }
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "stats", description = "Query WLAN interface stats.")]
+pub struct Stats {
+    #[argh(
+        positional,
+        description = "interface ID to display stats from, if no ID is provided, all interfaces are queried."
+    )]
+    iface_id: Option<u16>,
+}
+
+impl From<Stats> for wlan_dev::opts::IfaceCmd {
+    fn from(stats: Stats) -> Self {
+        wlan_dev::opts::IfaceCmd::Stats { iface_id: stats.iface_id }
+    }
+}
+
+// The ffx minstrel command differs from the original definition provided by wlan-dev.  While
+// structopt allows for multiple optional positional arguments, argh does not.  To provide a
+// similar experience, the `show` arguments have been converted into options instead of
+// positionals.
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand)]
+pub enum MinstrelSubcommand {
+    List(MinstrelList),
+    Show(Show),
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "list", description = "List minstrel peers.")]
+pub struct MinstrelList {
+    #[argh(
+        positional,
+        description = "interface ID to query, if no ID is provided, all interfaces are queried."
+    )]
+    iface_id: Option<u16>,
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "show", description = "Show stats for minstrel peers.")]
+pub struct Show {
+    #[argh(
+        option,
+        short = 'i',
+        long = "iface",
+        description = "interface ID to query, if no ID is provided, all interfaces are queried."
+    )]
+    iface_id: Option<u16>,
+    #[argh(
+        option,
+        short = 'p',
+        long = "peer",
+        description = "target peer address, if none is provided, all will be shown."
+    )]
+    peer_addr: Option<String>,
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "minstrel", description = "Query interface minstrel stats.")]
+pub struct Minstrel {
+    #[argh(subcommand)]
+    pub subcommand: MinstrelSubcommand,
+}
+
+impl From<Minstrel> for wlan_dev::opts::IfaceCmd {
+    fn from(minstrel: Minstrel) -> Self {
+        match minstrel.subcommand {
+            MinstrelSubcommand::List(list) => {
+                wlan_dev::opts::IfaceCmd::Minstrel(wlan_dev::opts::MinstrelCmd::List {
+                    iface_id: list.iface_id,
+                })
+            }
+            MinstrelSubcommand::Show(show) => {
+                wlan_dev::opts::IfaceCmd::Minstrel(wlan_dev::opts::MinstrelCmd::Show {
+                    iface_id: show.iface_id,
+                    peer_addr: show.peer_addr,
+                })
+            }
+        }
+    }
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "status", description = "Query status of the target interface.")]
+pub struct Status {
+    #[argh(option, short = 'i', long = "iface", description = "iface ID to query status on.")]
+    iface_id: Option<u16>,
+}
+
+impl From<Status> for wlan_dev::opts::IfaceCmd {
+    fn from(status: Status) -> Self {
+        wlan_dev::opts::IfaceCmd::Status(wlan_dev::opts::IfaceStatusCmd {
+            iface_id: status.iface_id,
+        })
     }
 }
 
@@ -245,6 +469,91 @@ mod tests {
         assert_eq!(
             wlan_dev::opts::PhyCmd::from(GetPsMode { phy_id: 123 }),
             wlan_dev::opts::PhyCmd::GetPsMode { phy_id: 123 }
+        );
+    }
+
+    #[test]
+    fn test_iface_list_conversion() {
+        assert_eq!(wlan_dev::opts::IfaceCmd::from(IfaceList {}), wlan_dev::opts::IfaceCmd::List);
+    }
+
+    #[test]
+    fn test_iface_new_conversion() {
+        assert_eq!(
+            wlan_dev::opts::IfaceCmd::from(NewIface {
+                phy_id: 123,
+                role: RoleArg::Client,
+                sta_addr: Some(String::from("test"))
+            }),
+            wlan_dev::opts::IfaceCmd::New {
+                phy_id: 123,
+                role: wlan_dev::opts::RoleArg::Client,
+                sta_addr: Some(String::from("test"))
+            }
+        );
+    }
+
+    #[test]
+    fn test_iface_delete_conversion() {
+        assert_eq!(
+            wlan_dev::opts::IfaceCmd::from(Delete { iface_id: 123 }),
+            wlan_dev::opts::IfaceCmd::Delete { iface_id: 123 }
+        );
+    }
+
+    #[test]
+    fn test_iface_query_conversion() {
+        assert_eq!(
+            wlan_dev::opts::IfaceCmd::from(IfaceQuery { iface_id: 123 }),
+            wlan_dev::opts::IfaceCmd::Query { iface_id: 123 }
+        );
+    }
+
+    #[test]
+    fn test_iface_stats_conversion() {
+        assert_eq!(
+            wlan_dev::opts::IfaceCmd::from(Stats { iface_id: Some(123) }),
+            wlan_dev::opts::IfaceCmd::Stats { iface_id: Some(123) }
+        );
+    }
+
+    #[test]
+    fn test_iface_minstrel_list_conversion() {
+        assert_eq!(
+            wlan_dev::opts::IfaceCmd::from(Minstrel {
+                subcommand: MinstrelSubcommand::List(MinstrelList { iface_id: Some(123) })
+            }),
+            wlan_dev::opts::IfaceCmd::Minstrel({
+                wlan_dev::opts::MinstrelCmd::List { iface_id: Some(123) }
+            })
+        );
+    }
+
+    #[test]
+    fn test_iface_minstrel_show_conversion() {
+        assert_eq!(
+            wlan_dev::opts::IfaceCmd::from(Minstrel {
+                subcommand: MinstrelSubcommand::Show(Show {
+                    iface_id: Some(123),
+                    peer_addr: Some(String::from("peer addr")),
+                })
+            }),
+            wlan_dev::opts::IfaceCmd::Minstrel({
+                wlan_dev::opts::MinstrelCmd::Show {
+                    iface_id: Some(123),
+                    peer_addr: Some(String::from("peer addr")),
+                }
+            })
+        );
+    }
+
+    #[test]
+    fn test_iface_status_conversion() {
+        assert_eq!(
+            wlan_dev::opts::IfaceCmd::from(Status { iface_id: Some(123) }),
+            wlan_dev::opts::IfaceCmd::Status(wlan_dev::opts::IfaceStatusCmd {
+                iface_id: Some(123)
+            })
         );
     }
 }
