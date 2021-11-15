@@ -61,6 +61,10 @@ template("product_metadata") {
           build_info_product,
         ],
         [
+          "build_info_version",
+          build_info_version,
+        ],
+        [
           "is_debug",
           is_debug,
         ],
