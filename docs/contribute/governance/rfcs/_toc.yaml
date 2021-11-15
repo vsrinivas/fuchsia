@@ -291,3 +291,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0138_handling_unknown_interactions.md
 - title: "RFC-0140: Discard unknown data in FIDL"
   path: /docs/contribute/governance/rfcs/0140_realm_builder.md
+- title: "RFC-0141: CTS Process"
+  path: /docs/contribute/governance/rfcs/0141_cts_process.md
