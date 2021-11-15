@@ -272,8 +272,10 @@ driver_bind_rules("gt6853_touch_bind") {
   bind_output = "gt6853_touch_bind.bc"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform.s905d3",
+    "//src/devices/bind/fuchsia.goodix.platform",
     "//src/devices/bind/fuchsia.gpio",
     "//src/devices/bind/fuchsia.i2c",
+    "//src/devices/bind/fuchsia.platform",
   ]
 }
 

@@ -32,6 +32,13 @@ static const device_metadata_t ft3x27_touch_metadata[] = {
     {.type = DEVICE_METADATA_PRIVATE, .data = &device_info, .length = sizeof(device_info)},
 };
 
+static const pbus_boot_metadata_t touch_boot_metadata[] = {
+    {
+        .zbi_type = DEVICE_METADATA_BOARD_PRIVATE,
+        .zbi_extra = 0,
+    },
+};
+
 // Composite binding rules for focaltech touch driver.
 
 zx_status_t Nelson::TouchInit() {
@@ -43,31 +50,28 @@ zx_status_t Nelson::TouchInit() {
     return TouchInitP1();
   }
 
-  const zx_device_prop_t props[] = {
-      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GOODIX},
-      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_GOODIX_GT6853},
-  };
-
+  // TODO(fxbug.dev/87836): Remove this once the bootloader has been updated.
   const bool use_9365_config = Is9365Ddic();
-  const device_metadata_t touch_metadata[] = {
+  const pbus_metadata_t touch_metadata[] = {
       {
           .type = DEVICE_METADATA_PRIVATE,
-          .data = &use_9365_config,
-          .length = sizeof(use_9365_config),
+          .data_buffer = reinterpret_cast<const uint8_t*>(&use_9365_config),
+          .data_size = sizeof(use_9365_config),
       },
   };
 
-  const composite_device_desc_t comp_desc = {
-      .props = props,
-      .props_count = countof(props),
-      .fragments = gt6853_touch_fragments,
-      .fragments_count = countof(gt6853_touch_fragments),
-      .primary_fragment = "i2c",
-      .spawn_colocated = false,
+  const pbus_dev_t touch_dev = {
+      .name = "gt6853-touch",
+      .vid = PDEV_VID_GOODIX,
+      .did = PDEV_DID_GOODIX_GT6853,
       .metadata_list = touch_metadata,
       .metadata_count = countof(touch_metadata),
+      .boot_metadata_list = touch_boot_metadata,
+      .boot_metadata_count = countof(touch_boot_metadata),
   };
-  zx_status_t status = DdkAddComposite("gt6853-touch", &comp_desc);
+  zx_status_t status =
+      pbus_.AddComposite(&touch_dev, reinterpret_cast<uint64_t>(gt6853_touch_fragments),
+                         countof(gt6853_touch_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "nelson_touch_init(gt6853): composite_device_add failed: %d", status);
     return status;
