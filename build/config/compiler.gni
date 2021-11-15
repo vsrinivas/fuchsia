@@ -44,7 +44,6 @@ if (use_oz) {
   assert(optimize == "size", "clang_use_oz requires `optimize = \"size\"`")
 }
 
-# NOTE: Keep in sync with //build/config/zircon/levels.gni
 declare_args() {
   # * `none` means no debugging information
   # * `backtrace` means sufficient debugging information to symbolize backtraces
