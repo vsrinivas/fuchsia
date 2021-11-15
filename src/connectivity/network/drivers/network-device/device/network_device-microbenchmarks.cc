@@ -10,7 +10,7 @@
 #include "src/lib/fxl/strings/string_printf.h"
 #include "test_session.h"
 
-#define ASSERT_OK(status, msg) \
+#define ZX_ASSERT_OK(status, msg) \
   ZX_ASSERT_MSG((status) == ZX_OK, msg " %s", zx_status_get_string(status))
 
 namespace network {
@@ -188,26 +188,27 @@ bool LatencyTest(perftest::RepeatState* state, const uint16_t buffer_count) {
                 network::FakeDeviceImpl::kDepth);
   async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
   zx_status_t status = loop.StartThread("netdevice-dispatcher");
-  ASSERT_OK(status, "failed to start thread");
+  ZX_ASSERT_OK(status, "failed to start thread");
 
   network::FakeDeviceImpl impl(state);
 
   zx::status device_status =
       network::internal::DeviceInterface::Create(loop.dispatcher(), impl.client());
-  ASSERT_OK(device_status.status_value(), "failed to create device");
+  ZX_ASSERT_OK(device_status.status_value(), "failed to create device");
   std::unique_ptr device = std::move(device_status.value());
 
   zx::status device_endpoints = fidl::CreateEndpoints<network::netdev::Device>();
-  ASSERT_OK(device_endpoints.status_value(), "failed to create device endpoints");
-  ASSERT_OK(device->Bind(std::move(device_endpoints->server)), "failed to bind to device");
+  ZX_ASSERT_OK(device_endpoints.status_value(), "failed to create device endpoints");
+  ZX_ASSERT_OK(device->Bind(std::move(device_endpoints->server)), "failed to bind to device");
 
   zx::status port_endpoints = fidl::CreateEndpoints<network::netdev::Port>();
-  ASSERT_OK(port_endpoints.status_value(), "failed to create port endpoints");
-  ASSERT_OK(device->BindPort(network::FakeDeviceImpl::kPortId, std::move(port_endpoints->server)),
-            "failed to bind port");
+  ZX_ASSERT_OK(port_endpoints.status_value(), "failed to create port endpoints");
+  ZX_ASSERT_OK(
+      device->BindPort(network::FakeDeviceImpl::kPortId, std::move(port_endpoints->server)),
+      "failed to bind port");
   fidl::WireSyncClient port = fidl::BindSyncClient((std::move(port_endpoints->client)));
   fidl::WireResult port_info_result = port->GetInfo();
-  ASSERT_OK(port_info_result.status(), "failed to get port info");
+  ZX_ASSERT_OK(port_info_result.status(), "failed to get port info");
   const network::netdev::wire::PortInfo& port_info = port_info_result->info;
   ZX_ASSERT_MSG(port_info.has_id(), "port id missing");
   const network::netdev::wire::PortId& port_id = port_info.id();
@@ -216,9 +217,9 @@ bool LatencyTest(perftest::RepeatState* state, const uint16_t buffer_count) {
   fidl::WireSyncClient client = fidl::BindSyncClient(std::move(device_endpoints->client));
   status =
       session.Open(client, "session", network::netdev::wire::SessionFlags::kPrimary, buffer_count);
-  ASSERT_OK(status, "failed to open session");
+  ZX_ASSERT_OK(status, "failed to open session");
   status = session.AttachPort(port_id, {network::netdev::wire::FrameType::kEthernet});
-  ASSERT_OK(status, "failed to attach port");
+  ZX_ASSERT_OK(status, "failed to attach port");
 
   std::array<uint16_t, network::FakeDeviceImpl::kDepth> write_descriptors, returned_descriptors;
   for (uint16_t i = 0; i < buffer_count; i++) {
@@ -236,13 +237,13 @@ bool LatencyTest(perftest::RepeatState* state, const uint16_t buffer_count) {
   while (state->KeepRunning()) {
     size_t actual;
     status = session.SendDescriptors(write_descriptors.begin(), buffer_count, &actual);
-    ASSERT_OK(status, "failed to send descriptors");
+    ZX_ASSERT_OK(status, "failed to send descriptors");
     ZX_ASSERT_MSG(actual == buffer_count, "partial FIFO write %ld/%d", actual, buffer_count);
 
     status = session.test_fifo().wait_one(ZX_FIFO_READABLE, zx::time::infinite(), nullptr);
-    ASSERT_OK(status, "wait FIFO readable");
+    ZX_ASSERT_OK(status, "wait FIFO readable");
     status = session.FetchDescriptors(returned_descriptors.begin(), buffer_count, &actual);
-    ASSERT_OK(status, "failed to fetch descriptors");
+    ZX_ASSERT_OK(status, "failed to fetch descriptors");
     // Guarantee that all descriptors we sent come back to us, so the device can't be making any
     // work in its background threads.
     ZX_ASSERT_MSG(actual == buffer_count, "unexpected partial FIFO batch read %ld/%d", actual,
@@ -252,7 +253,7 @@ bool LatencyTest(perftest::RepeatState* state, const uint16_t buffer_count) {
   sync_completion_t completion;
   device->Teardown([&completion]() { sync_completion_signal(&completion); });
   status = sync_completion_wait(&completion, zx::duration::infinite().get());
-  ASSERT_OK(status, "sync_completion_wait(_, _) failed ");
+  ZX_ASSERT_OK(status, "sync_completion_wait(_, _) failed ");
   return true;
 }
 
