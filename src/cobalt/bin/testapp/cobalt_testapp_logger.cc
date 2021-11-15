@@ -4,15 +4,18 @@
 
 #include "src/cobalt/bin/testapp/cobalt_testapp_logger.h"
 
+#include <fuchsia/diagnostics/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <map>
 #include <string>
 
+#include <rapidjson/document.h>
+#include <src/lib/fsl/vmo/strings.h>
+
 #include "src/cobalt/bin/utils/status_utils.h"
 
-namespace cobalt {
-namespace testapp {
+namespace cobalt::testapp {
 
 using ::cobalt::StatusToString;
 using fuchsia::cobalt::Status;
@@ -221,5 +224,47 @@ bool CobaltTestAppLogger::CheckForSuccessfulSend() {
   return send_success;
 }
 
-}  // namespace testapp
-}  // namespace cobalt
+std::string CobaltTestAppLogger::GetInspectJson() const {
+  fuchsia::diagnostics::BatchIteratorSyncPtr iterator;
+  fuchsia::diagnostics::StreamParameters stream_parameters;
+  stream_parameters.set_data_type(fuchsia::diagnostics::DataType::INSPECT);
+  stream_parameters.set_stream_mode(fuchsia::diagnostics::StreamMode::SNAPSHOT);
+  stream_parameters.set_format(fuchsia::diagnostics::Format::JSON);
+
+  {
+    std::vector<fuchsia::diagnostics::SelectorArgument> args;
+    args.emplace_back();
+    args[0].set_raw_selector(cobalt_under_test_moniker_ + ":root");
+
+    fuchsia::diagnostics::ClientSelectorConfiguration client_selector_config;
+    client_selector_config.set_selectors(std::move(args));
+    stream_parameters.set_client_selector_configuration(std::move(client_selector_config));
+  }
+  (*inspect_archive_)->StreamDiagnostics(std::move(stream_parameters), iterator.NewRequest());
+
+  fuchsia::diagnostics::BatchIterator_GetNext_Result out_result;
+  zx_status_t status = iterator->GetNext(&out_result);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to get the Inspect diagnostics data: " << status;
+    return "";
+  }
+  if (out_result.is_err()) {
+    FX_LOGS(ERROR) << "Inspect diagnostics Reader Error returned: "
+                   << (out_result.err() == fuchsia::diagnostics::ReaderError::IO);
+    return "";
+  }
+  if (out_result.response().batch.empty()) {
+    FX_LOGS(ERROR) << "Inspect diagnostics returned empty response.";
+    return "";
+  }
+  // Should be at most one component.
+  ZX_ASSERT(out_result.response().batch.size() <= 1);
+  if (!out_result.response().batch.empty()) {
+    std::string json;
+    fsl::StringFromVmo(out_result.response().batch[0].json(), &json);
+    return json;
+  }
+  return "";
+}
+
+}  // namespace cobalt::testapp

@@ -37,7 +37,7 @@ class CobaltTestApp {
  public:
   CobaltTestApp(bool use_network, bool test_for_prober)
       : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
-        logger_(use_network, &cobalt_controller_),
+        logger_(use_network, &cobalt_controller_, &inspect_archive_),
         use_network_(use_network),
         test_for_prober_(test_for_prober) {
     loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -45,6 +45,7 @@ class CobaltTestApp {
     if (test_for_prober) {
       FX_LOGS(INFO) << "Running the Cobalt test app in prober mode";
     }
+    context_->svc()->Connect(inspect_archive_.NewRequest());
   }
 
   // Runs all of the tests. Returns true if they all pass.
@@ -63,6 +64,7 @@ class CobaltTestApp {
   fuchsia::sys::ComponentControllerPtr controller_;
   fuchsia::cobalt::ControllerSyncPtr cobalt_controller_;
   fuchsia::cobalt::SystemDataUpdaterSyncPtr system_data_updater_;
+  fuchsia::diagnostics::ArchiveAccessorSyncPtr inspect_archive_;
   CobaltTestAppLogger logger_;
   bool use_network_;
   bool test_for_prober_;

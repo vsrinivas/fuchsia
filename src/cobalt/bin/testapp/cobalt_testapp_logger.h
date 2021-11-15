@@ -6,6 +6,7 @@
 #define SRC_COBALT_BIN_TESTAPP_COBALT_TESTAPP_LOGGER_H_
 
 #include <fuchsia/cobalt/cpp/fidl.h>
+#include <fuchsia/diagnostics/cpp/fidl.h>
 #include <fuchsia/metrics/cpp/fidl.h>
 
 #include <map>
@@ -32,8 +33,11 @@ inline std::string StatusToString(fuchsia::metrics::Status status) {
 
 class CobaltTestAppLogger {
  public:
-  CobaltTestAppLogger(bool use_network, fuchsia::cobalt::ControllerSyncPtr* cobalt_controller)
-      : use_network_(use_network), cobalt_controller_(cobalt_controller) {}
+  CobaltTestAppLogger(bool use_network, fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
+                      fuchsia::diagnostics::ArchiveAccessorSyncPtr* inspect_archive)
+      : use_network_(use_network),
+        cobalt_controller_(cobalt_controller),
+        inspect_archive_(inspect_archive) {}
 
   // Synchronously invokes LogEvent() using the given parameters.
   bool LogEvent(uint32_t metric_id, uint32_t index);
@@ -76,7 +80,8 @@ class CobaltTestAppLogger {
                            const std::map<uint32_t, uint64_t>& histogram_map);
 
   // Synchronously invokes LogString() using the given parameters.
-  bool LogString(uint32_t metric_id, std::vector<uint32_t> indices, const std::string& string_value);
+  bool LogString(uint32_t metric_id, std::vector<uint32_t> indices,
+                 const std::string& string_value);
 
   // Synchronously invokes LogCustomEvent() for an event of type
   // cobalt.CobaltMetricsTestProto, using the given parameter values.
@@ -93,6 +98,14 @@ class CobaltTestAppLogger {
   // the Observations soon and return the status.
   bool CheckForSuccessfulSend();
 
+  // Set the component moniker used by the current Cobalt instance that is being tested.
+  void SetCobaltUnderTestMoniker(const std::string& cobalt_under_test_moniker) {
+    cobalt_under_test_moniker_ = cobalt_under_test_moniker;
+  }
+
+  // Get the inspect JSON for the current Cobalt instance that is being tested.
+  std::string GetInspectJson() const;
+
   bool use_network_;
 
   fuchsia::cobalt::ControllerSyncPtr* cobalt_controller_;
@@ -100,6 +113,10 @@ class CobaltTestAppLogger {
   fuchsia::cobalt::LoggerSyncPtr logger_;
   fuchsia::cobalt::LoggerSimpleSyncPtr logger_simple_;
   fuchsia::metrics::MetricEventLoggerSyncPtr metric_event_logger_;
+
+ private:
+  fuchsia::diagnostics::ArchiveAccessorSyncPtr* inspect_archive_;
+  std::string cobalt_under_test_moniker_;
 };
 
 }  // namespace cobalt::testapp

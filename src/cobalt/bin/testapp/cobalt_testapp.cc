@@ -125,6 +125,7 @@ sys::testing::ScopedChild CobaltTestApp::Connect(const std::string &variant) {
   auto child = sys::testing::ScopedChild::New(
       std::move(realm_proxy), "fuchsia_component_test_collection",
       "cobalt_under_test_" + std::to_string(scoped_child_destructors_.size()), variant);
+  logger_.SetCobaltUnderTestMoniker("fuchsia_component_test_collection\\:" + child.GetChildName());
 
   fuchsia::cobalt::LoggerFactorySyncPtr logger_factory =
       child.ConnectSync<fuchsia::cobalt::LoggerFactory>();

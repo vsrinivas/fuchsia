@@ -17,6 +17,9 @@
             url: "fuchsia-boot:///#meta/sysinfo.cm",
         },
     ],
+    use: [
+        { protocol: "fuchsia.diagnostics.ArchiveAccessor" },
+    ],
     offer: [
         {
             directory: "config-data",

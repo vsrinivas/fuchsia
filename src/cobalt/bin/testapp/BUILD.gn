@@ -26,6 +26,15 @@ metrics_registry("prober_metrics_registry") {
   generate_cc = true
 }
 
+metrics_registry("internal_metrics_registry") {
+  # This must match the IDs of our Cobalt project as specified in:
+  # third_party/cobalt_config/projects.yaml
+  customer_id = 2147483647
+  project_id = 205836624
+  namespace = "cobalt_internal_registry"
+  generate_cc = true
+}
+
 executable("cobalt_testapp") {
   testonly = true
   output_name = "cobalt_testapp"
@@ -40,10 +49,12 @@ executable("cobalt_testapp") {
   ]
 
   deps = [
+    ":internal_metrics_registry_cc",
     ":prober_metrics_registry_cc",
     ":testapp_metrics_registry_cc",
     "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.cobalt",
+    "//sdk/fidl/fuchsia.diagnostics",
     "//sdk/fidl/fuchsia.metrics",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp",
@@ -56,6 +67,7 @@ executable("cobalt_testapp") {
     "//third_party/cobalt/src/lib/util:datetime_util",
     "//third_party/cobalt/src/public/lib:clock_interfaces",
     "//third_party/cobalt/src/registry:cobalt_registry_proto",
+    "//third_party/rapidjson",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

@@ -4,8 +4,15 @@
 
 #include "src/cobalt/bin/testapp/tests.h"
 
+#include <fuchsia/diagnostics/cpp/fidl.h>
+#include <lib/sys/cpp/service_directory.h>
+
 #include <ctime>
 
+#include <rapidjson/document.h>
+#include <rapidjson/pointer.h>
+
+#include "src/cobalt/bin/testapp/internal_metrics_registry.cb.h"
 #include "src/cobalt/bin/testapp/prober_metrics_registry.cb.h"
 #include "src/cobalt/bin/testapp/test_constants.h"
 #include "src/cobalt/bin/testapp/testapp_metrics_registry.cb.h"
@@ -13,15 +20,13 @@
 #include "src/lib/cobalt/cpp/cobalt_event_builder.h"
 #include "third_party/cobalt/src/lib/util/datetime_util.h"
 
-namespace cobalt {
-
-using util::SystemClockInterface;
-using util::TimeToDayIndex;
-
-namespace testapp {
+namespace cobalt::testapp {
 
 using fidl::VectorPtr;
 using fuchsia::cobalt::Status;
+using util::SystemClockInterface;
+using util::TimeToDayIndex;
+using LoggerMethod = cobalt_internal_registry::PerProjectLoggerCallsMadeMetricDimensionLoggerMethod;
 
 namespace {
 uint32_t CurrentDayIndex(SystemClockInterface* clock) {
@@ -193,10 +198,8 @@ bool TestLogIntHistogram(CobaltTestAppLogger* logger) {
 bool TestLogCustomEvent(CobaltTestAppLogger* logger) {
   FX_LOGS(INFO) << "========================";
   FX_LOGS(INFO) << "TestLogCustomEvent";
-  bool success =
-      logger->LogCustomMetricsTestProto(cobalt_registry::kQueryResponseMetricId,
-                                        "test " + std::to_string(std::time(0)),
-                                        100, 1);
+  bool success = logger->LogCustomMetricsTestProto(cobalt_registry::kQueryResponseMetricId,
+                                                   "test " + std::to_string(std::time(0)), 100, 1);
 
   FX_LOGS(INFO) << "TestLogCustomEvent : " << (success ? "PASS" : "FAIL");
 
@@ -311,6 +314,59 @@ bool GenerateObsAndCheckCount(uint32_t day_index,
   return true;
 }
 
+bool CheckInspectData(CobaltTestAppLogger* logger, uint32_t project_id, LoggerMethod method,
+                      int64_t expected_logger_calls,
+                      const std::map<std::pair<uint32_t, uint32_t>, uint64_t>& expected_num_obs) {
+  std::string inspect_json = logger->GetInspectJson();
+  rapidjson::Document inspect;
+  inspect.Parse(inspect_json);
+
+  rapidjson::Pointer pointer(
+      "/payload/root/cobalt_app/core/internal_metrics/logger_calls/per_method/method_" +
+      std::to_string(method) + "/num_calls");
+  rapidjson::Value& value = rapidjson::GetValueByPointerWithDefault(inspect, pointer, -1);
+  if (value.GetInt64() != expected_logger_calls) {
+    FX_LOGS(ERROR) << "Expected " << expected_logger_calls << " logger calls to method " << method
+                   << ", found "
+                   << (value.GetInt64() == -1 ? "none" : std::to_string(value.GetInt64()))
+                   << "\nFull inspect data: " << inspect_json;
+    return false;
+  }
+
+  pointer = rapidjson::Pointer(
+      std::string(
+          "/payload/root/cobalt_app/core/internal_metrics/logger_calls/per_project/fuchsia~1") +
+      (project_id == cobalt_registry::kProjectId ? cobalt_registry::kProjectName
+                                                 : cobalt_prober_registry::kProjectName) +
+      "/num_calls");
+  value = rapidjson::GetValueByPointerWithDefault(inspect, pointer, -1);
+  if (value.GetInt64() != expected_logger_calls) {
+    FX_LOGS(ERROR) << "Expected " << expected_logger_calls << " logger calls for project "
+                   << project_id << ", found "
+                   << (value.GetInt64() == -1 ? "none" : std::to_string(value.GetInt64()))
+                   << "\nFull inspect data: " << inspect_json;
+    return false;
+  }
+
+  for (const auto& [ids, expected] : expected_num_obs) {
+    const auto& [metric_id, report_id] = ids;
+    pointer = rapidjson::Pointer("/payload/root/cobalt_app/core/observations_stored/report_1-" +
+                                 std::to_string(project_id) + "-" + std::to_string(metric_id) +
+                                 "-" + std::to_string(report_id));
+    value = rapidjson::GetValueByPointerWithDefault(inspect, pointer, -1);
+    if (value.GetInt64() != static_cast<int64_t>(expected)) {
+      FX_LOGS(ERROR) << "Expected " << expected
+                     << " observations counted in Inspect for report MetricID " << metric_id
+                     << " ReportId " << report_id << ", found "
+                     << (value.GetInt64() == -1 ? "none" : std::to_string(value.GetInt64()))
+                     << "\nFull inspect data: " << inspect_json;
+      return false;
+    }
+  }
+
+  return true;
+}
+
 bool TestLogEventWithAggregation(CobaltTestAppLogger* logger, SystemClockInterface* clock,
                                  fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
                                  const size_t backfill_days, uint32_t project_id) {
@@ -352,6 +408,11 @@ bool TestLogEventWithAggregation(CobaltTestAppLogger* logger, SystemClockInterfa
     return false;
   }
   if (!GenerateObsAndCheckCount(day_index, cobalt_controller, project_id, expect_no_obs)) {
+    FX_LOGS(INFO) << "TestLogEventWithAggregation : FAIL";
+    return false;
+  }
+  if (!CheckInspectData(logger, project_id, LoggerMethod::LogEvent,
+                        std::size(kFeaturesActiveIndices), expected_num_obs)) {
     FX_LOGS(INFO) << "TestLogEventWithAggregation : FAIL";
     return false;
   }
@@ -569,6 +630,20 @@ bool TestLogInteger(CobaltTestAppLogger* logger, SystemClockInterface* clock,
     FX_LOGS(INFO) << "TestLogInteger : FAIL";
     return false;
   }
+  if (!CheckInspectData(logger, project_id, LoggerMethod::LogInteger,
+                        std::size(kUpdateDurationNewErrorNameIndices) *
+                                std::size(kUpdateDurationNewStageIndices) *
+                                std::size(kUpdateDurationNewValues) +
+                            std::size(kStreamingTimeNewTypeIndices) *
+                                std::size(kStreamingTimeNewModuleNameIndices) *
+                                std::size(kStreamingTimeNewValues) +
+                            std::size(kApplicationMemoryNewMemoryTypeIndices) *
+                                std::size(kApplicationMemoryNewApplicationNameIndices) *
+                                std::size(kApplicationMemoryNewValues),
+                        expected_num_obs)) {
+    FX_LOGS(INFO) << "TestLogInteger : FAIL";
+    return false;
+  }
   return SendAndCheckSuccess("TestLogInteger", logger);
 }
 
@@ -675,6 +750,19 @@ bool TestLogOccurrence(CobaltTestAppLogger* logger, SystemClockInterface* clock,
     FX_LOGS(INFO) << "TestLogOccurrence : FAIL";
     return false;
   }
+  if (!CheckInspectData(
+          logger, project_id, LoggerMethod::LogOccurrence,
+          std::size(kFeaturesActiveNewSkillIndices) * std::size(kFeaturesActiveNewCounts) +
+              std::size(kFileSystemCacheMissesNewEncryptionStateIndices) *
+                  std::size(kFileSystemCacheMissesNewFileSystemTypeIndices) *
+                  std::size(kFileSystemCacheMissesNewCounts) +
+              std::size(kConnectionAttemptsNewStatusIndices) *
+                  std::size(kConnectionAttemptsNewHostNameIndices) *
+                  std::size(kConnectionAttemptsNewCounts),
+          expected_num_obs)) {
+    FX_LOGS(INFO) << "TestLogOccurrence : FAIL";
+    return false;
+  }
   return SendAndCheckSuccess("TestLogOccurrence", logger);
 }
 
@@ -762,9 +850,19 @@ bool TestLogIntegerHistogram(CobaltTestAppLogger* logger, SystemClockInterface* 
     FX_LOGS(INFO) << "TestLogIntegerHistogram : FAIL";
     return false;
   }
+  if (!CheckInspectData(logger, project_id, LoggerMethod::LogIntegerHistogram,
+                        std::size(kPowerUsageNewApplicationStateIndices) *
+                                std::size(kPowerUsageNewApplicationNameIndices) +
+                            std::size(kBandwidthUsageNewApplicationStateIndices) *
+                                std::size(kBandwidthUsageNewApplicationNameIndices),
+                        expected_num_obs)) {
+    FX_LOGS(INFO) << "TestLogIntegerHistogram : FAIL";
+    return false;
+  }
   return SendAndCheckSuccess("TestLogIntegerHistogram", logger);
 }
 
+bool CheckInspectData(uint32_t id, std::map<uint32_t, uint32_t> map, int i, size_t i_1);
 // error_occurred_components using STRING metric.
 //
 // For each of the three event_codes, log each of the five application components.
@@ -810,8 +908,14 @@ bool TestLogString(CobaltTestAppLogger* logger, SystemClockInterface* clock,
     FX_LOGS(INFO) << "TestLogString : FAIL";
     return false;
   }
+  if (!CheckInspectData(
+          logger, project_id, LoggerMethod::LogString,
+          std::size(kErrorOccurredComponentsStatusIndices) * std::size(kApplicationComponentNames),
+          expected_num_obs)) {
+    FX_LOGS(INFO) << "TestLogString : FAIL";
+    return false;
+  }
   return SendAndCheckSuccess("TestLogString", logger);
 }
 
-}  // namespace testapp
-}  // namespace cobalt
+}  // namespace cobalt::testapp

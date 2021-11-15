@@ -108,4 +108,177 @@ TEST_F(DiagnosticsTest, ObservationStoreUpdatedMultipleTimes) {
                                       IntIs("report_1-2-3-4", 12), IntIs("total", 12)))))))))))));
 }
 
+TEST_F(DiagnosticsTest, LoggerCalled) {
+  listener_->LoggerCalled(1, "fuchsia/cobalt");
+  EXPECT_THAT(
+      InspectHierarchy(),
+      AllOf(NodeMatches(NameMatches("root")),
+            ChildrenMatch(UnorderedElementsAre(AllOf(
+                NodeMatches(NameMatches("core")),
+                ChildrenMatch(Contains(AllOf(
+                    NodeMatches(NameMatches("internal_metrics")),
+                    ChildrenMatch(Contains(AllOf(
+                        NodeMatches(AllOf(NameMatches("logger_calls"),
+                                          PropertyList(UnorderedElementsAre(
+                                              IntIs("total", 1),
+                                              IntIs("last_successful_time", testing::Gt(0)))))),
+                        ChildrenMatch(UnorderedElementsAre(
+                            AllOf(NodeMatches(NameMatches("per_project")),
+                                  ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
+                                      NameMatches("fuchsia/cobalt"),
+                                      PropertyList(UnorderedElementsAre(
+                                          IntIs("num_calls", 1),
+                                          IntIs("last_successful_time", testing::Gt(0))))))))),
+                            AllOf(NodeMatches(NameMatches("per_method")),
+                                  ChildrenMatch(UnorderedElementsAre(NodeMatches(
+                                      AllOf(NameMatches("method_1"),
+                                            PropertyList(UnorderedElementsAre(
+                                                IntIs("num_calls", 1),
+                                                IntIs("last_successful_time",
+                                                      testing::Gt(0))))))))))))))))))))));
+  listener_->LoggerCalled(2, "fuchsia/memory");
+  EXPECT_THAT(
+      InspectHierarchy(),
+      AllOf(
+          NodeMatches(NameMatches("root")),
+          ChildrenMatch(UnorderedElementsAre(AllOf(
+              NodeMatches(NameMatches("core")),
+              ChildrenMatch(Contains(AllOf(
+                  NodeMatches(NameMatches("internal_metrics")),
+                  ChildrenMatch(Contains(AllOf(
+                      NodeMatches(AllOf(
+                          NameMatches("logger_calls"),
+                          PropertyList(UnorderedElementsAre(
+                              IntIs("total", 2), IntIs("last_successful_time", testing::Gt(0)))))),
+                      ChildrenMatch(UnorderedElementsAre(
+                          AllOf(NodeMatches(NameMatches("per_project")),
+                                ChildrenMatch(UnorderedElementsAre(
+                                    NodeMatches(
+                                        AllOf(NameMatches("fuchsia/cobalt"),
+                                              PropertyList(UnorderedElementsAre(
+                                                  IntIs("num_calls", 1),
+                                                  IntIs("last_successful_time", testing::Gt(0)))))),
+                                    NodeMatches(AllOf(
+                                        NameMatches("fuchsia/memory"),
+                                        PropertyList(UnorderedElementsAre(
+                                            IntIs("num_calls", 1),
+                                            IntIs("last_successful_time", testing::Gt(0))))))))),
+                          AllOf(NodeMatches(NameMatches("per_method")),
+                                ChildrenMatch(UnorderedElementsAre(
+                                    NodeMatches(
+                                        AllOf(NameMatches("method_1"),
+                                              PropertyList(UnorderedElementsAre(
+                                                  IntIs("num_calls", 1),
+                                                  IntIs("last_successful_time", testing::Gt(0)))))),
+                                    NodeMatches(AllOf(NameMatches("method_2"),
+                                                      PropertyList(UnorderedElementsAre(
+                                                          IntIs("num_calls", 1),
+                                                          IntIs("last_successful_time",
+                                                                testing::Gt(0))))))))))))))))))))));
+  listener_->LoggerCalled(2, "fuchsia/cobalt");
+  EXPECT_THAT(
+      InspectHierarchy(),
+      AllOf(
+          NodeMatches(NameMatches("root")),
+          ChildrenMatch(UnorderedElementsAre(AllOf(
+              NodeMatches(NameMatches("core")),
+              ChildrenMatch(Contains(AllOf(
+                  NodeMatches(NameMatches("internal_metrics")),
+                  ChildrenMatch(Contains(AllOf(
+                      NodeMatches(AllOf(
+                          NameMatches("logger_calls"),
+                          PropertyList(UnorderedElementsAre(
+                              IntIs("total", 3), IntIs("last_successful_time", testing::Gt(0)))))),
+                      ChildrenMatch(UnorderedElementsAre(
+                          AllOf(NodeMatches(NameMatches("per_project")),
+                                ChildrenMatch(UnorderedElementsAre(
+                                    NodeMatches(
+                                        AllOf(NameMatches("fuchsia/cobalt"),
+                                              PropertyList(UnorderedElementsAre(
+                                                  IntIs("num_calls", 2),
+                                                  IntIs("last_successful_time", testing::Gt(0)))))),
+                                    NodeMatches(AllOf(
+                                        NameMatches("fuchsia/memory"),
+                                        PropertyList(UnorderedElementsAre(
+                                            IntIs("num_calls", 1),
+                                            IntIs("last_successful_time", testing::Gt(0))))))))),
+                          AllOf(NodeMatches(NameMatches("per_method")),
+                                ChildrenMatch(UnorderedElementsAre(
+                                    NodeMatches(
+                                        AllOf(NameMatches("method_1"),
+                                              PropertyList(UnorderedElementsAre(
+                                                  IntIs("num_calls", 1),
+                                                  IntIs("last_successful_time", testing::Gt(0)))))),
+                                    NodeMatches(AllOf(NameMatches("method_2"),
+                                                      PropertyList(UnorderedElementsAre(
+                                                          IntIs("num_calls", 2),
+                                                          IntIs("last_successful_time",
+                                                                testing::Gt(0))))))))))))))))))))));
+}
+
+TEST_F(DiagnosticsTest, TrackDiskUsage) {
+  listener_->TrackDiskUsage(1, 256, 1024);
+  EXPECT_THAT(InspectHierarchy(),
+              AllOf(NodeMatches(NameMatches("root")),
+                    ChildrenMatch(UnorderedElementsAre(AllOf(
+                        NodeMatches(NameMatches("core")),
+                        ChildrenMatch(Contains(AllOf(
+                            NodeMatches(NameMatches("internal_metrics")),
+                            ChildrenMatch(Contains(AllOf(
+                                NodeMatches(NameMatches("disk_usage")),
+                                ChildrenMatch(UnorderedElementsAre(AllOf(
+                                    NodeMatches(NameMatches("per_storage_class")),
+                                    ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
+                                        NameMatches("storage_class_1"),
+                                        PropertyList(UnorderedElementsAre(
+                                            IntIs("current_bytes", 256), IntIs("max_bytes", 256),
+                                            IntIs("byte_limit", 1024)))))))))))))))))))));
+  listener_->TrackDiskUsage(2, 124, -1);
+  EXPECT_THAT(
+      InspectHierarchy(),
+      AllOf(NodeMatches(NameMatches("root")),
+            ChildrenMatch(UnorderedElementsAre(AllOf(
+                NodeMatches(NameMatches("core")),
+                ChildrenMatch(Contains(AllOf(
+                    NodeMatches(NameMatches("internal_metrics")),
+                    ChildrenMatch(Contains(AllOf(
+                        NodeMatches(NameMatches("disk_usage")),
+                        ChildrenMatch(UnorderedElementsAre(AllOf(
+                            NodeMatches(NameMatches("per_storage_class")),
+                            ChildrenMatch(UnorderedElementsAre(
+                                NodeMatches(AllOf(
+                                    NameMatches("storage_class_1"),
+                                    PropertyList(UnorderedElementsAre(IntIs("current_bytes", 256),
+                                                                      IntIs("max_bytes", 256),
+                                                                      IntIs("byte_limit", 1024))))),
+                                NodeMatches(
+                                    AllOf(NameMatches("storage_class_2"),
+                                          PropertyList(UnorderedElementsAre(
+                                              IntIs("current_bytes", 124), IntIs("max_bytes", 124),
+                                              IntIs("byte_limit", 0)))))))))))))))))))));
+  listener_->TrackDiskUsage(1, 100, 1024);
+  EXPECT_THAT(
+      InspectHierarchy(),
+      AllOf(NodeMatches(NameMatches("root")),
+            ChildrenMatch(UnorderedElementsAre(AllOf(
+                NodeMatches(NameMatches("core")),
+                ChildrenMatch(Contains(AllOf(
+                    NodeMatches(NameMatches("internal_metrics")),
+                    ChildrenMatch(Contains(AllOf(
+                        NodeMatches(NameMatches("disk_usage")),
+                        ChildrenMatch(UnorderedElementsAre(AllOf(
+                            NodeMatches(NameMatches("per_storage_class")),
+                            ChildrenMatch(UnorderedElementsAre(
+                                NodeMatches(AllOf(
+                                    NameMatches("storage_class_1"),
+                                    PropertyList(UnorderedElementsAre(IntIs("current_bytes", 100),
+                                                                      IntIs("max_bytes", 256),
+                                                                      IntIs("byte_limit", 1024))))),
+                                NodeMatches(
+                                    AllOf(NameMatches("storage_class_2"),
+                                          PropertyList(UnorderedElementsAre(
+                                              IntIs("current_bytes", 124), IntIs("max_bytes", 124),
+                                              IntIs("byte_limit", 0)))))))))))))))))))));
+}
+
 }  // namespace cobalt
