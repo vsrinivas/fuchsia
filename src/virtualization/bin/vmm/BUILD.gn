@@ -190,6 +190,7 @@ executable("vmm_unittests") {
     sources += [
       "arch/x64/decode_unittest.cc",
       "arch/x64/io_apic_unittest.cc",
+      "arch/x64/io_port_unittest.cc",
       "arch/x64/page_table_unittest.cc",
       "arch/x64/rtc_mc146818_unittest.cc",
     ]

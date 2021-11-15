@@ -13,13 +13,21 @@
 #include "src/virtualization/bin/vmm/arch/x64/rtc_mc146818.h"
 #include "src/virtualization/bin/vmm/io.h"
 
-// clang-format off
-
 // PM1 ports. Exposed here for ACPI.
-static constexpr uint64_t kPm1EventPort   = 0x1000;
+static constexpr uint64_t kPm1EventPort = 0x1000;
 static constexpr uint64_t kPm1ControlPort = 0x2000;
 
-// clang-format on
+// CMOS relative port mappings.
+constexpr uint16_t kCmosIndexPort = 0;
+constexpr uint16_t kCmosDataPort = 1;
+
+// CMOS reboot reason byte address.
+//
+// Zircon uses this CMOS register to indicate the reason for its last reboot
+// (e.g., a graceful reboot, panic, OTA, etc). We don't attempt to persist
+// this register across VM runs, but do emulate basic reads/writes to it to
+// avoid Zircon crashing during system shutdown.
+constexpr uint8_t kCmosRebootReason = 0x30;
 
 class Guest;
 
@@ -67,6 +75,7 @@ class CmosHandler : public IoHandler {
   zx_status_t WriteCmosRegister(uint8_t cmos_index, uint8_t value);
   mutable std::mutex mutex_;
   uint8_t index_ __TA_GUARDED(mutex_) = 0;
+  uint8_t reboot_reason_byte_ __TA_GUARDED(mutex_) = 0;
 
   RtcMc146818 rtc_;
 };

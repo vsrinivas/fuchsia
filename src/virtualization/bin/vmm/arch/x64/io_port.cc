@@ -22,10 +22,6 @@ constexpr uint16_t kPm1EnablePortOffset         = 2;
 constexpr uint16_t kPm1ControlPortOffset        = kPm1ControlPort - kPm1EventPort;
 constexpr uint16_t kPm1Size                     = kPm1EnablePortOffset + 1;
 
-// CMOS relative port mappings.
-constexpr uint16_t kCmosIndexPort               = 0;
-constexpr uint16_t kCmosDataPort                = 1;
-
 // CMOS register addresses.
 constexpr uint8_t kCmosRegisterShutdownStatus   = 15;
 
@@ -211,8 +207,15 @@ zx_status_t CmosHandler::Write(uint64_t addr, const IoValue& value) {
 
 zx_status_t CmosHandler::ReadCmosRegister(uint8_t cmos_index, uint8_t* value) {
   // Currently the RTC is the only implemented CMOS registers
-  if (RtcMc146818::IsValidRegister(cmos_index))
+  if (RtcMc146818::IsValidRegister(cmos_index)) {
     return rtc_.ReadRegister(static_cast<RtcMc146818::Register>(cmos_index), value);
+  }
+  if (cmos_index == kCmosRebootReason) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    *value = reboot_reason_byte_;
+    return ZX_OK;
+  }
+
   FX_LOGS(ERROR) << "Unsupported CMOS register read 0x" << std::hex
                  << static_cast<uint32_t>(cmos_index);
   return ZX_ERR_NOT_SUPPORTED;
@@ -225,6 +228,12 @@ zx_status_t CmosHandler::WriteCmosRegister(uint8_t cmos_index, uint8_t value) {
     // Ignore attempts to write to shutdown status register.
     return ZX_OK;
   }
+  if (cmos_index == kCmosRebootReason) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    reboot_reason_byte_ = value;
+    return ZX_OK;
+  }
+
   FX_LOGS(ERROR) << "Unsupported CMOS register write 0x" << std::hex
                  << static_cast<uint32_t>(cmos_index);
   return ZX_ERR_NOT_SUPPORTED;
