@@ -4,7 +4,7 @@
 
 #![allow(dead_code)]
 
-use crate::task::Waiter;
+use crate::task::{WaitQueue, Waiter};
 use crate::types::*;
 use parking_lot::RwLock;
 use std::collections::VecDeque;
@@ -50,7 +50,10 @@ pub struct SignalState {
     ///
     /// There may be more than one instance of a real-time signal in the queue, but for standard
     /// signals there is only ever one instance of any given signal.
-    pub queue: VecDeque<SignalInfo>,
+    queue: VecDeque<SignalInfo>,
+
+    /// Wait queue for signalfd. Signaled whenever a signal is added to the queue.
+    pub signalfd_wait: WaitQueue,
 
     // See https://man7.org/linux/man-pages/man2/sigaltstack.2.html
     pub alt_stack: Option<sigaltstack_t>,
@@ -71,28 +74,29 @@ impl SignalState {
         old_mask
     }
 
-    /// Checks whether the given signal is blocked.
-    pub fn is_blocked(&self, signal: Signal) -> bool {
-        self.mask & signal.mask() != 0
-    }
-
     pub fn enqueue(&mut self, siginfo: SignalInfo) {
         if siginfo.signal.is_real_time() || !self.has_queued(siginfo.signal) {
             self.queue.push_back(siginfo.clone());
+            self.signalfd_wait.notify_all();
         }
     }
 
-    /// Finds the next pending (queued and not blocked) signal, removes it from the queue, and
-    /// returns it.
-    pub fn take_next_pending(&mut self) -> Option<SignalInfo> {
+    /// Finds the next queued signal that is not blocked by the given mask, removes it from the
+    /// queue, and returns it.
+    pub fn take_next_allowed_by_mask(&mut self, mask: sigset_t) -> Option<SignalInfo> {
         // Find the first non-blocked signal
-        let index = self.queue.iter().position(|sig| !self.is_blocked(sig.signal))?;
+        let index = self.queue.iter().position(|sig| !sig.signal.is_in_set(mask))?;
         self.queue.remove(index)
     }
 
     /// Returns whether any signals are pending (queued and not blocked).
     pub fn is_any_pending(&self) -> bool {
-        self.queue.iter().any(|sig| !self.is_blocked(sig.signal))
+        self.is_any_allowed_by_mask(self.mask)
+    }
+
+    /// Returns whether any signals are queued and not blocked by the given mask.
+    pub fn is_any_allowed_by_mask(&self, mask: sigset_t) -> bool {
+        self.queue.iter().any(|sig| !sig.signal.is_in_set(mask))
     }
 
     /// Iterates over queued signals with the given number.
@@ -111,21 +115,21 @@ impl SignalState {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SignalInfo {
     pub signal: Signal,
-    pub errno: u32,
-    pub code: u32,
+    pub errno: i32,
+    pub code: i32,
     pub detail: SignalDetail,
 }
 
 impl SignalInfo {
     pub fn default(signal: Signal) -> Self {
-        Self { signal, errno: 0, code: SI_KERNEL, detail: SignalDetail::default() }
+        Self { signal, errno: 0, code: SI_KERNEL as i32, detail: SignalDetail::default() }
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum SignalDetail {
     None,
 }

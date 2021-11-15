@@ -147,6 +147,7 @@ if (target_cpu == "x64") {
       "selinux.rs",
       "signals/mod.rs",
       "signals/signal_handling.rs",
+      "signals/signalfd.rs",
       "signals/syscalls.rs",
       "signals/types.rs",
       "signals/waiting.rs",

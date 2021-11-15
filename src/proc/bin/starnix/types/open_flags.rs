@@ -6,11 +6,9 @@ use bitflags::bitflags;
 
 use crate::types::uapi;
 
-const O_ACCESS_MASK: u32 = 0x3;
-
 bitflags! {
     pub struct OpenFlags: u32 {
-      const ACCESS_MASK = O_ACCESS_MASK;
+      const ACCESS_MASK = 0x3;
 
       // The access modes are not really bits. Instead, they're an enum
       // embedded in the bitfield. Use ACCESS_MASK to extract the enum
@@ -41,12 +39,12 @@ bitflags! {
 
 impl OpenFlags {
     pub fn can_read(&self) -> bool {
-        let access_mode = self.bits() & O_ACCESS_MASK;
+        let access_mode = self.bits() & Self::ACCESS_MASK.bits();
         return access_mode == uapi::O_RDONLY || access_mode == uapi::O_RDWR;
     }
 
     pub fn can_write(&self) -> bool {
-        let access_mode = self.bits() & O_ACCESS_MASK;
+        let access_mode = self.bits() & Self::ACCESS_MASK.bits();
         return access_mode == uapi::O_WRONLY || access_mode == uapi::O_RDWR;
     }
 }

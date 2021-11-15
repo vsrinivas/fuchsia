@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 pub mod signal_handling;
+pub mod signalfd;
 pub mod syscalls;
 pub mod types;
 pub mod waiting;

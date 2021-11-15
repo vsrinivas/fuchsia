@@ -111,12 +111,13 @@ pub trait FileOps: Send + Sync + AsAny {
     fn wait_async(
         &self,
         _file: &FileObject,
+        _current_task: &CurrentTask,
         _waiter: &Arc<Waiter>,
         _events: FdEvents,
         _handler: EventHandler,
     );
 
-    fn query_events(&self) -> FdEvents;
+    fn query_events(&self, current_task: &CurrentTask) -> FdEvents;
 
     fn ioctl(
         &self,
@@ -152,7 +153,7 @@ macro_rules! fd_impl_nonseekable {
             _offset: usize,
             _data: &[UserBuffer],
         ) -> Result<usize, Errno> {
-            Err(errno!(ESPIPE))
+            error!(ESPIPE)
         }
         fn write_at(
             &self,
@@ -161,7 +162,7 @@ macro_rules! fd_impl_nonseekable {
             _offset: usize,
             _data: &[UserBuffer],
         ) -> Result<usize, Errno> {
-            Err(errno!(ESPIPE))
+            error!(ESPIPE)
         }
         fn seek(
             &self,
@@ -170,7 +171,7 @@ macro_rules! fd_impl_nonseekable {
             _offset: off_t,
             _whence: SeekOrigin,
         ) -> Result<off_t, Errno> {
-            Err(errno!(ESPIPE))
+            error!(ESPIPE)
         }
     };
 }
@@ -282,13 +283,14 @@ macro_rules! fd_impl_nonblocking {
         fn wait_async(
             &self,
             _file: &FileObject,
+            _current_task: &CurrentTask,
             _waiter: &Arc<Waiter>,
             _events: FdEvents,
             _handler: EventHandler,
         ) {
         }
 
-        fn query_events(&self) -> FdEvents {
+        fn query_events(&self, _current_task: &CurrentTask) -> FdEvents {
             FdEvents::POLLIN | FdEvents::POLLOUT
         }
     };
@@ -494,7 +496,7 @@ impl FileObject {
 
         let waiter = Waiter::new();
         loop {
-            self.ops().wait_async(self, &waiter, events, WaitCallback::none());
+            self.ops().wait_async(self, current_task, &waiter, events, WaitCallback::none());
             match op() {
                 Err(errno) if errno == EAGAIN => waiter
                     .wait_until(current_task, deadline.unwrap_or(zx::Time::INFINITE))
@@ -662,14 +664,19 @@ impl FileObject {
     }
 
     /// Wait on the specified events and call the EventHandler when ready
-    pub fn wait_async(&self, waiter: &Arc<Waiter>, events: FdEvents, handler: EventHandler) {
-        self.ops().wait_async(self, waiter, events, handler)
+    pub fn wait_async(
+        &self,
+        current_task: &CurrentTask,
+        waiter: &Arc<Waiter>,
+        events: FdEvents,
+        handler: EventHandler,
+    ) {
+        self.ops().wait_async(self, current_task, waiter, events, handler)
     }
 
     // Return the events currently active
-    #[allow(dead_code)]
-    pub fn query_events(&self) -> FdEvents {
-        self.ops().query_events()
+    pub fn query_events(&self, current_task: &CurrentTask) -> FdEvents {
+        self.ops().query_events(current_task)
     }
 
     //

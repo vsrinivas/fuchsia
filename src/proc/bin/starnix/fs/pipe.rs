@@ -333,6 +333,7 @@ impl FileOps for PipeFileObject {
     fn wait_async(
         &self,
         _file: &FileObject,
+        _current_task: &CurrentTask,
         waiter: &Arc<Waiter>,
         events: FdEvents,
         handler: EventHandler,
@@ -346,9 +347,8 @@ impl FileOps for PipeFileObject {
         }
     }
 
-    fn query_events(&self) -> FdEvents {
-        let pipe = self.pipe.lock();
-        pipe.query_events()
+    fn query_events(&self, _current_task: &CurrentTask) -> FdEvents {
+        self.pipe.lock().query_events()
     }
 
     fn fcntl(

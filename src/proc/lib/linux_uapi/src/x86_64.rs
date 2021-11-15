@@ -1378,6 +1378,8 @@ pub const SS_ONSTACK: u32 = 1;
 pub const SS_DISABLE: u32 = 2;
 pub const SS_AUTODISARM: u32 = 2147483648;
 pub const SS_FLAG_BITS: u32 = 2147483648;
+pub const SFD_CLOEXEC: u32 = 524288;
+pub const SFD_NONBLOCK: u32 = 2048;
 pub const _K_SS_MAXSIZE: u32 = 128;
 pub const S_IFMT: u32 = 61440;
 pub const S_IFSOCK: u32 = 49152;
@@ -2968,6 +2970,32 @@ impl Default for sigevent {
     }
 }
 pub type sigevent_t = sigevent;
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct signalfd_siginfo {
+    pub ssi_signo: __u32,
+    pub ssi_errno: __s32,
+    pub ssi_code: __s32,
+    pub ssi_pid: __u32,
+    pub ssi_uid: __u32,
+    pub ssi_fd: __s32,
+    pub ssi_tid: __u32,
+    pub ssi_band: __u32,
+    pub ssi_overrun: __u32,
+    pub ssi_trapno: __u32,
+    pub ssi_status: __s32,
+    pub ssi_int: __s32,
+    pub ssi_ptr: __u64,
+    pub ssi_utime: __u64,
+    pub ssi_stime: __u64,
+    pub ssi_addr: __u64,
+    pub ssi_addr_lsb: __u16,
+    pub __pad2: __u16,
+    pub ssi_syscall: __s32,
+    pub ssi_call_addr: __u64,
+    pub ssi_arch: __u32,
+    pub __pad: [__u8; 28usize],
+}
 pub type __kernel_sa_family_t = crate::x86_64_types::c_ushort;
 #[repr(C)]
 #[derive(Copy, Clone)]

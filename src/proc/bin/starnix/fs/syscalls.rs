@@ -967,7 +967,7 @@ pub fn sys_epoll_ctl(
     match op {
         EPOLL_CTL_ADD => {
             current_task.mm.read_object(event, &mut epoll_event)?;
-            epoll_file.add(&ctl_file, epoll_event)?;
+            epoll_file.add(&current_task, &ctl_file, epoll_event)?;
         }
         EPOLL_CTL_MOD => {
             current_task.mm.read_object(event, &mut epoll_event)?;
@@ -1046,7 +1046,7 @@ fn poll(
         }
         let file = current_task.files.get(FdNumber::from_raw(poll_descriptor.fd as i32))?;
         let event = EpollEvent { events: poll_descriptor.events as u32, data: index as u64 };
-        epoll_file.add(&file, event)?;
+        epoll_file.add(&current_task, &file, event)?;
     }
 
     let mask = mask.unwrap_or_else(|| current_task.signals.read().mask);

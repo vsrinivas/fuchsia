@@ -5,9 +5,11 @@
 use std::convert::TryFrom;
 use std::sync::Arc;
 
+use super::signalfd::*;
 use super::waiting::*;
 use crate::errno;
 use crate::error;
+use crate::fs::*;
 use crate::not_implemented;
 use crate::signals::*;
 use crate::syscalls::*;
@@ -173,7 +175,10 @@ fn send_unchecked_signal(task: &Task, unchecked_signal: &UncheckedSignal) -> Res
 
     send_signal(
         task,
-        SignalInfo { code: SI_USER, ..SignalInfo::default(Signal::try_from(unchecked_signal)?) },
+        SignalInfo {
+            code: SI_USER as i32,
+            ..SignalInfo::default(Signal::try_from(unchecked_signal)?)
+        },
     );
     Ok(())
 }
@@ -393,6 +398,32 @@ pub fn sys_wait4(
     } else {
         Ok(SUCCESS)
     }
+}
+
+pub fn sys_signalfd4(
+    current_task: &CurrentTask,
+    fd: FdNumber,
+    mask_addr: UserRef<sigset_t>,
+    mask_size: usize,
+    flags: u32,
+) -> Result<SyscallResult, Errno> {
+    if fd.raw() != -1 {
+        not_implemented!("changing mask of a signalfd");
+        return error!(EINVAL);
+    }
+    if flags & !SFD_CLOEXEC != 0 {
+        return error!(EINVAL);
+    }
+    if mask_size != std::mem::size_of::<sigset_t>() {
+        return error!(EINVAL);
+    }
+
+    let mut mask: sigset_t = 0;
+    current_task.mm.read_object(mask_addr, &mut mask)?;
+    let signalfd = SignalFd::new(current_task.kernel(), mask);
+    let flags = if flags & SFD_CLOEXEC != 0 { FdFlags::CLOEXEC } else { FdFlags::empty() };
+    let fd = current_task.files.add_with_flags(signalfd, flags)?;
+    Ok(fd.into())
 }
 
 #[cfg(test)]

@@ -83,17 +83,32 @@ impl EpollFileObject {
         )
     }
 
-    fn wait_on_file(&self, key: EpollKey, wait_object: &WaitObject) -> Result<(), Errno> {
+    fn wait_on_file(
+        &self,
+        current_task: &CurrentTask,
+        key: EpollKey,
+        wait_object: &WaitObject,
+    ) -> Result<(), Errno> {
         let trigger_list = self.trigger_list.clone();
         let handler =
             move |observed: FdEvents| trigger_list.lock().push_back(ReadyObject { key, observed });
 
-        wait_object.target.wait_async(&self.waiter, wait_object.events, Box::new(handler));
+        wait_object.target.wait_async(
+            current_task,
+            &self.waiter,
+            wait_object.events,
+            Box::new(handler),
+        );
         Ok(())
     }
 
     /// Asynchronously wait on certain events happening on a FileHandle.
-    pub fn add(&self, file: &FileHandle, mut epoll_event: EpollEvent) -> Result<(), Errno> {
+    pub fn add(
+        &self,
+        current_task: &CurrentTask,
+        file: &FileHandle,
+        mut epoll_event: EpollEvent,
+    ) -> Result<(), Errno> {
         epoll_event.events |= FdEvents::POLLHUP.mask();
         epoll_event.events |= FdEvents::POLLERR.mask();
 
@@ -107,7 +122,7 @@ impl EpollFileObject {
                     events: FdEvents::from(epoll_event.events),
                     data: epoll_event.data,
                 });
-                self.wait_on_file(key, wait_object)
+                self.wait_on_file(current_task, key, wait_object)
             }
         }
     }
@@ -140,7 +155,7 @@ impl EpollFileObject {
             for to_wait in rearm_list.iter() {
                 // TODO handle interrupts here
                 let w = waits.get(&to_wait.key).ok_or(errno!(EFAULT))?;
-                self.wait_on_file(to_wait.key, w)?;
+                self.wait_on_file(current_task, to_wait.key, w)?;
             }
             rearm_list.clear();
         }
@@ -159,7 +174,7 @@ impl EpollFileObject {
         // how this happens.
         let mut pending_list: Vec<ReadyObject> = vec![];
         loop {
-            match self.waiter.wait_until(current_task, wait_deadline) {
+            match self.waiter.wait_until(&current_task, wait_deadline) {
                 Ok(_) => {}
                 Err(err) => {
                     if err == ETIMEDOUT {
@@ -179,7 +194,7 @@ impl EpollFileObject {
             if let Some(pending) = trigger_list.pop_front() {
                 let wait_objects = self.wait_objects.read();
                 if let Some(wait) = wait_objects.get(&pending.key) {
-                    let observed = wait.target.query_events();
+                    let observed = wait.target.query_events(current_task);
                     if observed & wait.events {
                         let ready = ReadyObject { key: pending.key, observed };
                         pending_list.push(ready);
@@ -188,7 +203,7 @@ impl EpollFileObject {
                         }
                         wait_deadline = zx::Time::ZERO;
                     } else {
-                        self.wait_on_file(pending.key, wait)?;
+                        self.wait_on_file(current_task, pending.key, wait)?;
                     }
                 }
             }
@@ -240,6 +255,7 @@ impl FileOps for EpollFileObject {
     fn wait_async(
         &self,
         _file: &FileObject,
+        _current_task: &CurrentTask,
         _waiter: &Arc<Waiter>,
         _events: FdEvents,
         _handler: EventHandler,
@@ -247,7 +263,7 @@ impl FileOps for EpollFileObject {
         panic!("waiting on epoll unimplemnted")
     }
 
-    fn query_events(&self) -> FdEvents {
+    fn query_events(&self, _current_task: &CurrentTask) -> FdEvents {
         panic!("querying epoll unimplemnted")
     }
 }
@@ -286,7 +302,11 @@ mod tests {
         let epoll_file = EpollFileObject::new(&kernel);
         let epoll_file = epoll_file.downcast_file::<EpollFileObject>().unwrap();
         epoll_file
-            .add(&pipe_out, EpollEvent { events: FdEvents::POLLIN.mask(), data: EVENT_DATA })
+            .add(
+                &current_task,
+                &pipe_out,
+                EpollEvent { events: FdEvents::POLLIN.mask(), data: EVENT_DATA },
+            )
             .unwrap();
 
         let thread = std::thread::spawn(move || {
@@ -333,7 +353,11 @@ mod tests {
         let epoll_file = EpollFileObject::new(&kernel);
         let epoll_file = epoll_file.downcast_file::<EpollFileObject>().unwrap();
         epoll_file
-            .add(&pipe_out, EpollEvent { events: FdEvents::POLLIN.mask(), data: EVENT_DATA })
+            .add(
+                &current_task,
+                &pipe_out,
+                EpollEvent { events: FdEvents::POLLIN.mask(), data: EVENT_DATA },
+            )
             .unwrap();
 
         let events = epoll_file.wait(&current_task, 10, -1).unwrap();

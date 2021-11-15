@@ -53,6 +53,11 @@ impl Signal {
         1 << (self.number - 1)
     }
 
+    /// Returns whether the signal is in the specified signal set.
+    pub fn is_in_set(&self, set: sigset_t) -> bool {
+        set & self.mask() != 0
+    }
+
     /// Returns true if the signal is a real-time signal.
     pub fn is_real_time(&self) -> bool {
         self.number >= uapi::SIGRTMIN

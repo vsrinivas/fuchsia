@@ -332,7 +332,7 @@ mod tests {
             COUNTER.store(FINAL_VAL, Ordering::Relaxed);
         });
         let waiter = Waiter::new();
-        pipe.wait_async(&waiter, FdEvents::POLLIN, report_packet);
+        pipe.wait_async(&current_task, &waiter, FdEvents::POLLIN, report_packet);
         let test_string_clone = test_string.clone();
 
         let thread = std::thread::spawn(move || {
@@ -384,7 +384,7 @@ mod tests {
             assert!(observed & watched_events);
             COUNTER.store(FINAL_VAL, Ordering::Relaxed);
         };
-        pipe_out.wait_async(&waiter, watched_events, Box::new(report_packet));
+        pipe_out.wait_async(&current_task, &waiter, watched_events, Box::new(report_packet));
 
         let thread = std::thread::spawn(move || {
             let no_written = pipe_in.write(&writer_task, &write_buf).unwrap();

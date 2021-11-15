@@ -192,6 +192,7 @@ impl FileOps for TimerFile {
     fn wait_async(
         &self,
         _file: &FileObject,
+        _current_task: &CurrentTask,
         waiter: &Arc<Waiter>,
         events: FdEvents,
         handler: EventHandler,
@@ -209,7 +210,7 @@ impl FileOps for TimerFile {
             .unwrap(); // TODO return error
     }
 
-    fn query_events(&self) -> FdEvents {
+    fn query_events(&self, _current_task: &CurrentTask) -> FdEvents {
         let observed =
             self.timer.wait_handle(zx::Signals::TIMER_SIGNALED, zx::Time::INFINITE_PAST).unwrap();
         TimerFile::get_events_from_signals(observed)

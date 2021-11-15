@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::errno;
 use crate::error;
 use crate::fd_impl_nonseekable;
 use crate::fs::*;
@@ -132,6 +131,7 @@ impl FileOps for EventFdFileObject {
     fn wait_async(
         &self,
         _file: &FileObject,
+        _current_task: &CurrentTask,
         waiter: &Arc<Waiter>,
         events: FdEvents,
         handler: EventHandler,
@@ -145,7 +145,7 @@ impl FileOps for EventFdFileObject {
         }
     }
 
-    fn query_events(&self) -> FdEvents {
+    fn query_events(&self, _current_task: &CurrentTask) -> FdEvents {
         let inner = self.inner.lock();
         query_events_internal(&inner)
     }

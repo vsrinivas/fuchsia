@@ -187,7 +187,7 @@ pub fn send_signal(task: &Task, siginfo: SignalInfo) {
     let mut signal_state = task.signals.write();
     signal_state.enqueue(siginfo.clone());
 
-    if !signal_state.is_blocked(siginfo.signal)
+    if !siginfo.signal.is_in_set(signal_state.mask)
         && action_for_signal(&siginfo, task.signal_actions.get(siginfo.signal))
             != DeliveryAction::Ignore
     {
@@ -235,7 +235,8 @@ pub fn dequeue_signal(current_task: &mut CurrentTask) {
     let task = current_task.task_arc_clone();
     let mut signal_state = task.signals.write();
 
-    if let Some(siginfo) = signal_state.take_next_pending() {
+    let mask = signal_state.mask;
+    if let Some(siginfo) = signal_state.take_next_allowed_by_mask(mask) {
         let sigaction = task.signal_actions.get(siginfo.signal);
         match action_for_signal(&siginfo, sigaction) {
             DeliveryAction::CallHandler => {

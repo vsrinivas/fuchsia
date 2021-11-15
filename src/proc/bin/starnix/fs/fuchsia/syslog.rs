@@ -5,7 +5,6 @@
 use log::info;
 use std::sync::Arc;
 
-use crate::errno;
 use crate::error;
 use crate::fd_impl_nonblocking;
 use crate::fd_impl_nonseekable;
