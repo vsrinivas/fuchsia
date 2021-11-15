@@ -22,7 +22,7 @@ const DRM_FORMAT_ABGR8888: u32 = 0x34324241;
 const DRM_FORMAT_XRGB8888: u32 = 0x34325258;
 const DRM_FORMAT_XBGR8888: u32 = 0x34324258;
 
-const DRM_FORMAT_MOD_NONE: u64 = 0;
+const DRM_FORMAT_MOD_LINEAR: u64 = 0;
 
 /// The set of pixel formats that will be announced to clients.
 const SUPPORTED_PIXEL_FORMATS: &[(u32, bool)] = &[
@@ -31,6 +31,16 @@ const SUPPORTED_PIXEL_FORMATS: &[(u32, bool)] = &[
     (DRM_FORMAT_XRGB8888, false),
     (DRM_FORMAT_XBGR8888, false),
 ];
+
+/// The set of modifiers that will be announced to clients.
+#[cfg(feature = "i915")]
+const SUPPORTED_MODIFIERS: &[u64] = &[
+    DRM_FORMAT_MOD_LINEAR,
+    1 << 56 | 1, // I915_FORMAT_MOD_X_TILED
+    1 << 56 | 2, // I915_FORMAT_MOD_Y_TILED
+];
+#[cfg(not(feature = "i915"))]
+const SUPPORTED_MODIFIERS: &[u64] = &[DRM_FORMAT_MOD_LINEAR];
 
 /// The zwp_linux_dmabuf_v1 global.
 pub struct LinuxDmabuf {
@@ -48,16 +58,16 @@ impl LinuxDmabuf {
         for (format, _) in SUPPORTED_PIXEL_FORMATS.iter() {
             client.event_queue().post(this, ZwpLinuxDmabufV1Event::Format { format: *format })?;
             if self.client_version >= 3 {
-                // Linear layout.
-                let modifier = DRM_FORMAT_MOD_NONE;
-                client.event_queue().post(
-                    this,
-                    ZwpLinuxDmabufV1Event::Modifier {
-                        format: *format,
-                        modifier_hi: (modifier >> 32) as u32,
-                        modifier_lo: (modifier & 0xffffffff) as u32,
-                    },
-                )?;
+                for modifier in SUPPORTED_MODIFIERS.iter() {
+                    client.event_queue().post(
+                        this,
+                        ZwpLinuxDmabufV1Event::Modifier {
+                            format: *format,
+                            modifier_hi: (modifier >> 32) as u32,
+                            modifier_lo: (modifier & 0xffffffff) as u32,
+                        },
+                    )?;
+                }
             }
         }
         Ok(())
