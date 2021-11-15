@@ -15,11 +15,11 @@ use {
         model::{
             policy::ScopedPolicyChecker,
             resolver::{self, ResolvedComponent, Resolver, ResolverError},
-            runner::Runner,
         },
     },
     anyhow::Error,
     async_trait::async_trait,
+    cm_runner::Runner,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_sys2 as fsys,
     fuchsia_component::client as fclient,

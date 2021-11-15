@@ -21,11 +21,9 @@ pub(crate) mod resolver;
 pub(crate) mod rights;
 pub(crate) mod routing;
 pub(crate) mod routing_fns;
-pub(crate) mod runner;
 pub(crate) mod storage;
 
 mod addable_directory;
-mod component_controller;
 mod dir_tree;
 mod exposed_dir;
 mod lifecycle_controller;

@@ -12,14 +12,12 @@ pub use open::*;
 use {
     crate::{
         capability::{CapabilityProvider, CapabilitySource, ComponentCapability},
-        channel,
         model::{
             component::{BindReason, ComponentInstance, ExtendedInstance, WeakComponentInstance},
             error::ModelError,
             hooks::{Event, EventPayload},
             storage,
         },
-        task_scope::TaskScope,
     },
     ::routing::{
         component_instance::ComponentInstanceInterface, path::PathBufExt, route_capability,
@@ -27,6 +25,8 @@ use {
     },
     async_trait::async_trait,
     cm_rust::{self, CapabilityName, CapabilityPath, ExposeDecl, UseDecl, UseStorageDecl},
+    cm_task_scope::TaskScope,
+    cm_util::channel,
     fidl::{endpoints::ServerEnd, epitaph::ChannelEpitaphExt},
     fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     futures::lock::Mutex,

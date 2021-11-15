@@ -20,6 +20,10 @@ use {
         component_instance::ComponentInstanceInterface, route_to_storage_decl,
         verify_instance_in_component_id_index, RouteRequest,
     },
+    cm_logger::{
+        fmt::{FmtArgsLogger, LOGGER as MODEL_LOGGER},
+        scoped::ScopedLogger,
+    },
     cm_rust::{self, CapabilityPath, ComponentDecl, UseDecl, UseProtocolDecl},
     fidl::endpoints::{create_endpoints, ClientEnd, ProtocolMarker, Proxy, ServerEnd},
     fidl_fuchsia_component_runner as fcrunner,
@@ -28,10 +32,6 @@ use {
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::future::{AbortHandle, Abortable, BoxFuture},
     log::*,
-    logger::{
-        fmt::{FmtArgsLogger, LOGGER as MODEL_LOGGER},
-        scoped::ScopedLogger,
-    },
     moniker::AbsoluteMonikerBase,
     std::{collections::HashMap, sync::Arc},
     vfs::{

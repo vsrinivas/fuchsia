@@ -4,18 +4,18 @@
 use {
     crate::{
         capability::{CapabilityProvider, CapabilitySource, InternalCapability},
-        channel,
         config::RuntimeConfig,
         model::{
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             policy::ScopedPolicyChecker,
-            runner::Runner,
         },
-        task_scope::TaskScope,
     },
     async_trait::async_trait,
+    cm_runner::Runner,
     cm_rust::CapabilityName,
+    cm_task_scope::TaskScope,
+    cm_util::channel,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_component_runner as fcrunner, fuchsia_zircon as zx,
     futures::stream::TryStreamExt,

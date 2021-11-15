@@ -15,14 +15,11 @@ pub mod model;
 pub mod startup;
 
 pub(crate) mod binder;
-pub(crate) mod channel;
 pub(crate) mod collection;
-pub(crate) mod convert;
 pub(crate) mod directory_ready_notifier;
 pub(crate) mod framework;
 pub(crate) mod fuchsia_pkg_resolver;
 pub(crate) mod root_stop_notifier;
-pub(crate) mod task_scope;
 
 mod builtin;
 mod constants;

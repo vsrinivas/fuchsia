@@ -5,13 +5,11 @@
 use {
     crate::{
         capability::NamespaceCapabilities,
-        channel,
         model::{
             actions::{
                 start, ActionSet, DestroyChildAction, DiscoverAction, PurgeChildAction,
                 ResolveAction, StartAction, StopAction,
             },
-            component_controller::ComponentController,
             context::{ModelContext, WeakModelContext},
             environment::Environment,
             error::ModelError,
@@ -24,11 +22,9 @@ use {
                 self, route_and_open_capability, OpenOptions, OpenResourceError, OpenRunnerOptions,
                 RouteRequest, RoutingError,
             },
-            runner::{NullRunner, RemoteRunner, Runner},
         },
-        task_scope::TaskScope,
     },
-    ::logger::fmt::LOGGER as MODEL_LOGGER,
+    ::cm_logger::fmt::LOGGER as MODEL_LOGGER,
     ::routing::{
         capability_source::BuiltinCapabilities,
         component_id_index::{ComponentIdIndex, ComponentInstanceId},
@@ -43,7 +39,11 @@ use {
     anyhow::format_err,
     async_trait::async_trait,
     clonable_error::ClonableError,
+    cm_runner::component_controller::ComponentController,
+    cm_runner::{NullRunner, RemoteRunner, Runner},
     cm_rust::{self, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, UseDecl},
+    cm_task_scope::TaskScope,
+    cm_util::channel,
     fidl::endpoints::{self, Proxy, ServerEnd},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_component_runner as fcrunner,

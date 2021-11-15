@@ -3,12 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::{policy::PolicyError, runner::RunnerError},
-    anyhow::Error,
-    clonable_error::ClonableError,
-    fuchsia_zircon as zx,
-    log::error,
-    thiserror::Error,
+    crate::model::policy::PolicyError, anyhow::Error, clonable_error::ClonableError,
+    cm_runner::RunnerError, fuchsia_zircon as zx, log::error, thiserror::Error,
 };
 
 /// Errors produced by `ElfRunner`.

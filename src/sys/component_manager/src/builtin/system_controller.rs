@@ -5,18 +5,18 @@
 use {
     crate::{
         capability::{CapabilityProvider, CapabilitySource, InternalCapability},
-        channel,
         model::{
             actions::{ActionSet, ShutdownAction},
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             model::Model,
         },
-        task_scope::TaskScope,
     },
     anyhow::{format_err, Context as _, Error},
     async_trait::async_trait,
     cm_rust::CapabilityName,
+    cm_task_scope::TaskScope,
+    cm_util::channel,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_sys2::*,
     fuchsia_async::{self as fasync},

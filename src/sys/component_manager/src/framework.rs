@@ -5,9 +5,7 @@
 use {
     crate::{
         capability::{CapabilityProvider, CapabilitySource, InternalCapability},
-        channel,
         config::RuntimeConfig,
-        convert::{child_decl_to_fsys, child_ref_to_fsys, collection_ref_to_fsys},
         model::{
             component::{BindReason, ComponentInstance, WeakComponentInstance},
             error::ModelError,
@@ -15,13 +13,17 @@ use {
             model::Model,
             routing::error::RoutingError,
         },
-        task_scope::TaskScope,
     },
     ::routing::error::ComponentInstanceError,
     anyhow::Error,
     async_trait::async_trait,
     cm_fidl_validator,
     cm_rust::{CapabilityName, FidlIntoNative},
+    cm_task_scope::TaskScope,
+    cm_util::{
+        channel,
+        convert::{child_decl_to_fsys, child_ref_to_fsys, collection_ref_to_fsys},
+    },
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_io::DirectoryMarker,
@@ -455,7 +457,6 @@ mod tests {
         super::*,
         crate::{
             builtin_environment::BuiltinEnvironment,
-            convert::decl as fdecl,
             model::{
                 binding::Binder,
                 component::{BindReason, ComponentInstance},
@@ -464,8 +465,8 @@ mod tests {
             },
         },
         cm_rust::{
-            self, CapabilityName, CapabilityPath, ComponentDecl, EventMode, ExposeDecl,
-            ExposeProtocolDecl, ExposeSource, ExposeTarget,
+            self, convert as fdecl, CapabilityName, CapabilityPath, ComponentDecl, EventMode,
+            ExposeDecl, ExposeProtocolDecl, ExposeSource, ExposeTarget,
         },
         cm_rust_testing::*,
         fidl::endpoints::{self, Proxy},

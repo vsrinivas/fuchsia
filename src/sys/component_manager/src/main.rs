@@ -6,7 +6,7 @@
 #![allow(elided_lifetimes_in_paths)]
 
 use {
-    ::logger::klog,
+    ::cm_logger::klog,
     anyhow::Error,
     component_manager_lib::{
         builtin_environment::{BuiltinEnvironment, BuiltinEnvironmentBuilder},

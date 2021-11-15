@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        capability::*, channel, model::error::ModelError, model::hooks::*, task_scope::TaskScope,
-    },
+    crate::{capability::*, model::error::ModelError, model::hooks::*},
     async_trait::async_trait,
     cm_rust::*,
+    cm_task_scope::TaskScope,
+    cm_util::channel,
     fidl::endpoints::ServerEnd,
     fidl_fidl_examples_routing_echo::{EchoMarker, EchoRequest, EchoRequestStream},
     fuchsia_zircon::{self as zx},

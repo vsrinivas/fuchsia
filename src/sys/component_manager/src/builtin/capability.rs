@@ -5,15 +5,15 @@
 use {
     crate::{
         capability::*,
-        channel,
         model::{
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
         },
-        task_scope::TaskScope,
     },
     anyhow::{format_err, Error},
     async_trait::async_trait,
+    cm_task_scope::TaskScope,
+    cm_util::channel,
     fidl::endpoints::{ProtocolMarker, ServerEnd},
     fuchsia_zircon::{self as zx, ResourceInfo},
     log::warn,

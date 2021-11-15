@@ -5,7 +5,6 @@
 use {
     crate::{
         capability::CapabilityProvider,
-        channel,
         model::{
             error::ModelError,
             events::{
@@ -20,10 +19,11 @@ use {
             },
             model::Model,
         },
-        task_scope::TaskScope,
     },
     async_trait::async_trait,
     cm_rust::EventMode,
+    cm_task_scope::TaskScope,
+    cm_util::channel,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::lock::Mutex,

@@ -5,7 +5,6 @@
 use {
     crate::{
         capability::{CapabilityProvider, CapabilitySource, InternalCapability},
-        channel,
         model::{
             addable_directory::AddableDirectoryWithResult,
             component::WeakComponentInstance,
@@ -16,10 +15,11 @@ use {
             lifecycle_controller_factory::LifecycleControllerFactory,
             routing_fns::{route_expose_fn, route_use_fn},
         },
-        task_scope::TaskScope,
     },
     async_trait::async_trait,
     cm_rust::{CapabilityPath, ComponentDecl},
+    cm_task_scope::TaskScope,
+    cm_util::channel,
     fidl::endpoints::{ProtocolMarker, ServerEnd},
     fidl_fuchsia_io::{DirectoryProxy, NodeMarker, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY},
     fidl_fuchsia_sys2::LifecycleControllerMarker,

@@ -4,11 +4,9 @@
 
 use {
     fuchsia_async::Task,
-    futures::lock::Mutex,
-    futures::{Future, FutureExt},
+    futures::{lock::Mutex, Future, FutureExt},
     rand::{thread_rng, Rng},
-    std::collections::HashMap,
-    std::sync::Arc,
+    std::{collections::HashMap, sync::Arc},
 };
 
 /// Hosts tasks for a single component instance. If the scope is dropped, all tasks
@@ -44,7 +42,6 @@ impl TaskScope {
 
     // Shuts down this task scope, preventing more tasks from being added.
     // Blocks until all tasks are complete.
-    #[cfg(test)]
     pub async fn shutdown(self) {
         let tasks: Vec<(u128, Task<()>)> = self.tasks.lock().await.drain().collect();
         drop(self.tasks);

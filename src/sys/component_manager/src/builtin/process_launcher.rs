@@ -5,16 +5,16 @@
 use {
     crate::{
         capability::{CapabilityProvider, CapabilitySource, InternalCapability},
-        channel,
         model::{
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
         },
-        task_scope::TaskScope,
     },
     anyhow::Error,
     async_trait::async_trait,
     cm_rust::CapabilityName,
+    cm_task_scope::TaskScope,
+    cm_util::channel,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_process as fproc,
     fuchsia_runtime::{HandleInfo, HandleInfoError},

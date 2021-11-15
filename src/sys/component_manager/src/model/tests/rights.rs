@@ -5,19 +5,19 @@
 use {
     crate::{
         capability::{CapabilityProvider, CapabilitySource, InternalCapability},
-        channel,
         model::{
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             rights,
             testing::routing_test_helpers::*,
         },
-        task_scope::TaskScope,
     },
     ::routing_test_helpers::{rights::CommonRightsTest, RoutingTestModel},
     async_trait::async_trait,
     cm_rust::*,
     cm_rust_testing::*,
+    cm_task_scope::TaskScope,
+    cm_util::channel,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{self as fio, DirectoryProxy},
     fuchsia_zircon as zx,

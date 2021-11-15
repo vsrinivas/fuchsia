@@ -1,0 +1,47 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_library.gni")
+
+group("tests") {
+  testonly = true
+
+  deps = [ ":component_manager_runner_test" ]
+}
+
+rustc_library("runner") {
+  name = "cm_runner"
+  with_unit_tests = true
+
+  deps = [
+    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
+    "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner-rustc",
+    "//sdk/fidl/fuchsia.diagnostics.types:fuchsia.diagnostics.types-rustc",
+    "//src/lib/error/clonable_error",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/lib/runner",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:thiserror",
+  ]
+
+  test_deps = [
+    "//src/lib/fuchsia",
+    "//third_party/rust_crates:matches",
+  ]
+
+  sources = [
+    "src/component_controller.rs",
+    "src/lib.rs",
+  ]
+}
+
+fuchsia_unittest_package("component_manager_runner_test") {
+  deps = [ ":runner_test" ]
+}

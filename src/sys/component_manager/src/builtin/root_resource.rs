@@ -54,7 +54,7 @@ mod tests {
     use {
         super::*,
         crate::model::hooks::{Event, EventPayload, Hooks},
-        crate::task_scope::TaskScope,
+        cm_task_scope::TaskScope,
         fidl::endpoints::ClientEnd,
         fidl_fuchsia_kernel as fkernel,
         futures::lock::Mutex,

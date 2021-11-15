@@ -17,6 +17,7 @@ rustc_library("clonable_error") {
     "//src/fonts:*",
     "//src/fonts/manifest:*",
     "//src/sys/component_manager:*",
+    "//src/sys/component_manager/lib/*",
     "//src/sys/lib/routing:*",
   ]
 

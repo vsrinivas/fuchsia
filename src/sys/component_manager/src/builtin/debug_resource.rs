@@ -66,8 +66,8 @@ mod tests {
         crate::{
             builtin::capability::BuiltinCapability,
             model::hooks::{Event, EventPayload, Hooks},
-            task_scope::TaskScope,
         },
+        cm_task_scope::TaskScope,
         fidl::endpoints::ClientEnd,
         fidl_fuchsia_kernel as fkernel, fuchsia_async as fasync,
         fuchsia_component::client::connect_to_protocol,

@@ -1,6 +1,8 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+pub mod component_controller;
 
 use {
     anyhow::Error, async_trait::async_trait, clonable_error::ClonableError,
@@ -111,7 +113,7 @@ impl RunnerError {
 /// Such environments, even though they don't execute any code, can still be
 /// used by other components to bind to, which in turn may trigger further
 /// bindings to its children.
-pub(super) struct NullRunner {}
+pub struct NullRunner {}
 
 #[async_trait]
 impl Runner for NullRunner {

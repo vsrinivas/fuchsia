@@ -12,6 +12,7 @@ group("tests") {
 }
 
 rustc_library("logger") {
+  name = "cm_logger"
   with_unit_tests = true
 
   deps = [

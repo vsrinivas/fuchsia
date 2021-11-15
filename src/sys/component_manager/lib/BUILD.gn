@@ -4,5 +4,10 @@
 
 group("tests") {
   testonly = true
-  deps = [ "logger:tests" ]
+  deps = [
+    "logger:tests",
+    "runner:tests",
+    "task_scope:tests",
+    "util:tests",
+  ]
 }

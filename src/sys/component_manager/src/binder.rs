@@ -7,7 +7,6 @@ use {
         capability::{
             CapabilityProvider, CapabilitySource, ComponentCapability, InternalCapability,
         },
-        channel,
         model::{
             component::{BindReason, WeakComponentInstance},
             error::ModelError,
@@ -15,10 +14,11 @@ use {
             model::Model,
             routing::report_routing_failure,
         },
-        task_scope::TaskScope,
     },
     async_trait::async_trait,
     cm_rust::{CapabilityName, CapabilityPath, ProtocolDecl},
+    cm_task_scope::TaskScope,
+    cm_util::channel,
     fuchsia_zircon as zx,
     lazy_static::lazy_static,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker},
@@ -183,6 +183,7 @@ mod tests {
         },
         cm_rust::{self, CapabilityName, ComponentDecl, EventMode},
         cm_rust_testing::*,
+        cm_task_scope::TaskScope,
         fidl::{client::Client, handle::AsyncChannel},
         fuchsia_zircon as zx,
         futures::{lock::Mutex, StreamExt},

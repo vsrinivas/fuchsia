@@ -5,15 +5,15 @@
 use {
     crate::{
         capability::*,
-        channel,
-        model::addable_directory::AddableDirectoryWithResult,
         model::{
+            addable_directory::AddableDirectoryWithResult,
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
         },
-        task_scope::TaskScope,
     },
     async_trait::async_trait,
+    cm_task_scope::TaskScope,
+    cm_util::channel,
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fuchsia_io::DirectoryMarker,
     fuchsia_zircon as zx,

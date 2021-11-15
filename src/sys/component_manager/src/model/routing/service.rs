@@ -5,16 +5,16 @@
 use {
     crate::{
         capability::CapabilityProvider,
-        channel,
         model::{
             component::{ComponentInstance, WeakComponentInstance},
             error::ModelError,
             routing::{open_capability_at_source, OpenRequest},
         },
-        task_scope::TaskScope,
     },
     ::routing::capability_source::AggregateCapabilityProvider,
     async_trait::async_trait,
+    cm_task_scope::TaskScope,
+    cm_util::channel,
     fidl::{endpoints::ServerEnd, epitaph::ChannelEpitaphExt},
     fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     log::*,

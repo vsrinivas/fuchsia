@@ -18,7 +18,6 @@ use {
             AggregateCapability, CapabilityProvider, CapabilitySource, ComponentCapability,
             InternalCapability,
         },
-        channel,
         framework::SDK_REALM_SERVICE,
         model::{
             actions::{
@@ -31,12 +30,13 @@ use {
             routing::{RouteRequest, RouteSource, RoutingError},
             testing::{routing_test_helpers::*, test_helpers::*},
         },
-        task_scope::TaskScope,
     },
     anyhow::Error,
     async_trait::async_trait,
     cm_rust::*,
     cm_rust_testing::*,
+    cm_task_scope::TaskScope,
+    cm_util::channel,
     fidl::endpoints::ServerEnd,
     fidl_fidl_examples_routing_echo::{self as echo},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,

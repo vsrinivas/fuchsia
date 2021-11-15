@@ -59,7 +59,7 @@ mod tests {
     use {
         super::*,
         crate::model::hooks::{Event, EventPayload, Hooks},
-        crate::task_scope::TaskScope,
+        cm_task_scope::TaskScope,
         fidl::endpoints::ClientEnd,
         fuchsia_async as fasync,
         fuchsia_zircon::AsHandleRef,

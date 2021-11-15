@@ -19,14 +19,12 @@ use {
     crate::{
         builtin::{crash_introspect::CrashRecords, runner::BuiltinRunnerFactory},
         config::RuntimeConfig,
-        model::{
-            policy::ScopedPolicyChecker,
-            runner::{Runner, RunnerError},
-        },
+        model::policy::ScopedPolicyChecker,
     },
     anyhow::{format_err, Context as _},
     async_trait::async_trait,
     chrono::{DateTime, NaiveDateTime, Utc},
+    cm_runner::{Runner, RunnerError},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_component as fcomp, fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_diagnostics_types::{

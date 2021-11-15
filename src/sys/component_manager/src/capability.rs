@@ -4,9 +4,9 @@
 
 use {
     crate::model::{component::ComponentInstance, error::ModelError},
-    crate::task_scope::TaskScope,
     ::routing::capability_source::CapabilitySourceInterface,
     async_trait::async_trait,
+    cm_task_scope::TaskScope,
     fuchsia_zircon as zx,
     std::path::PathBuf,
 };

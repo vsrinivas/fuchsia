@@ -13,7 +13,6 @@
 use {
     crate::{
         capability::{CapabilityProvider, CapabilitySource, ComponentCapability},
-        channel,
         model::{
             component::{BindReason, ComponentInstance, WeakComponentInstance},
             error::ModelError,
@@ -22,12 +21,13 @@ use {
             routing::{RouteRequest, RouteSource},
             storage,
         },
-        task_scope::TaskScope,
     },
     ::routing::{capability_source::StorageCapabilitySource, route_capability},
     anyhow::{format_err, Error},
     async_trait::async_trait,
     cm_rust::{CapabilityName, ExposeDecl, OfferDecl, StorageDecl, UseDecl},
+    cm_task_scope::TaskScope,
+    cm_util::channel,
     fidl::endpoints::{ProtocolMarker, ServerEnd},
     fidl_fuchsia_component as fcomponent,
     fidl_fuchsia_io::{CLONE_FLAG_SAME_RIGHTS, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
