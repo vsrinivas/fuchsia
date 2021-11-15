@@ -96,6 +96,7 @@ executable("gdc_task_unittest_bin") {
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/mock-mmio-reg",
     "//src/devices/testing/no_ddk",
+    "//src/lib/fsl",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

@@ -6,8 +6,8 @@
 
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
-#include <lib/ddk/trace/event.h>
 #include <lib/ddk/hw/reg.h>
+#include <lib/ddk/trace/event.h>
 #include <lib/image-format/image_format.h>
 #include <lib/syslog/cpp/macros.h>
 #include <stdint.h>
@@ -33,6 +33,12 @@ constexpr uint32_t kHiu = 0;
 constexpr uint32_t kGdc = 1;
 constexpr uint32_t kAxiAlignment = 16;
 constexpr uint32_t kWordSize = 4;
+
+// Expected maximum size (in bytes) GDC configuration.
+constexpr uint32_t kGdcConfigurationSize = 16384;
+
+// Expected maximum number of GDC configurations.
+constexpr uint32_t kGdcConfigurationBufferCount = 4;
 
 }  // namespace
 
@@ -80,10 +86,11 @@ zx_status_t GdcDevice::GdcInitTask(const buffer_collection_info_2_t* input_buffe
   }
 
   auto task = std::make_unique<GdcTask>();
-  zx_status_t status = task->Init(
-      input_buffer_collection, output_buffer_collection, input_image_format,
-      output_image_format_table_list, output_image_format_table_count, output_image_format_index,
-      config_vmo_list, config_vmos_count, frame_callback, res_callback, remove_task_callback, bti_);
+  zx_status_t status =
+      task->Init(input_buffer_collection, output_buffer_collection, input_image_format,
+                 output_image_format_table_list, output_image_format_table_count,
+                 output_image_format_index, config_vmo_list, config_vmos_count,
+                 gdc_config_contig_vmos_, frame_callback, res_callback, remove_task_callback, bti_);
   if (status != ZX_OK) {
     FX_PLOGST(ERROR, kTag, status) << "Task Creation Failed";
     return status;
@@ -309,6 +316,10 @@ void GdcDevice::RemoveTask(TaskInfo& info) {
     return;
   }
 
+  // Return the GDC VMOs from the task back to GcdDevice so that they can be reused by the
+  // next task to be created.
+  task->OnRemoveTask(gdc_config_contig_vmos_);
+
   task->RemoveTaskCallback(TASK_REMOVE_STATUS_OK);
 
   // Remove map entry.
@@ -522,9 +533,20 @@ zx_status_t GdcDevice::Setup(void* /*ctx*/, zx_device_t* parent, std::unique_ptr
     return status;
   }
 
-  auto gdc_device =
-      std::make_unique<GdcDevice>(parent, std::move(*clk_mmio), std::move(*gdc_mmio),
-                                  std::move(gdc_irq), std::move(bti), std::move(port));
+  std::stack<zx::vmo> gdc_config_contig_vmos;
+  for (uint32_t i = 0; i < kGdcConfigurationBufferCount; i++) {
+    zx::vmo vmo;
+    status = zx::vmo::create_contiguous(bti, kGdcConfigurationSize, 0, &vmo);
+    if (status != ZX_OK) {
+      FX_LOGST(ERROR, kTag) << "Unable to create contiguous memory for GDC configuration VMO";
+      return ZX_ERR_NO_MEMORY;
+    }
+    gdc_config_contig_vmos.push(std::move(vmo));
+  }
+
+  auto gdc_device = std::make_unique<GdcDevice>(
+      parent, std::move(*clk_mmio), std::move(*gdc_mmio), std::move(gdc_config_contig_vmos),
+      std::move(gdc_irq), std::move(bti), std::move(port));
   gdc_device->InitClocks();
 
   status = gdc_device->StartThread();

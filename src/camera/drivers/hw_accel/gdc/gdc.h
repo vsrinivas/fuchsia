@@ -20,6 +20,7 @@
 #include <zircon/fidl.h>
 
 #include <deque>
+#include <stack>
 #include <unordered_map>
 
 #include <ddktl/device.h>
@@ -45,13 +46,15 @@ class GdcDevice : public GdcDeviceType, public ddk::GdcProtocol<GdcDevice, ddk::
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(GdcDevice);
   explicit GdcDevice(zx_device_t* parent, ddk::MmioBuffer clk_mmio, ddk::MmioBuffer gdc_mmio,
-                     zx::interrupt gdc_irq, zx::bti bti, zx::port port)
+                     std::stack<zx::vmo> gdc_config_contig_vmos, zx::interrupt gdc_irq, zx::bti bti,
+                     zx::port port)
       : GdcDeviceType(parent),
         port_(std::move(port)),
         clock_mmio_(std::move(clk_mmio)),
         gdc_mmio_(std::move(gdc_mmio)),
         gdc_irq_(std::move(gdc_irq)),
-        bti_(std::move(bti)) {}
+        bti_(std::move(bti)),
+        gdc_config_contig_vmos_(std::move(gdc_config_contig_vmos)) {}
 
   ~GdcDevice() { StopThread(); }
 
@@ -134,6 +137,12 @@ class GdcDevice : public GdcDeviceType, public ddk::GdcProtocol<GdcDevice, ddk::
   ddk::MmioBuffer gdc_mmio_;
   zx::interrupt gdc_irq_;
   zx::bti bti_;
+
+  // Stack of pre-allocated contiguous VMOs to hold GDC configurations. Each GdcTask pops VMOs from
+  // this stack during task initialization, for use in GdcTask operations. When a GdcTask is
+  // removed, its config VMOs are returned to this stack for reuse in new tasks.
+  std::stack<zx::vmo> gdc_config_contig_vmos_ __TA_GUARDED(interface_lock_);
+
   uint32_t next_task_index_ __TA_GUARDED(interface_lock_) = 0;
   std::unordered_map<uint32_t, std::unique_ptr<GdcTask>> task_map_ __TA_GUARDED(interface_lock_);
   std::deque<TaskInfo> processing_queue_ __TA_GUARDED(processing_queue_lock_);

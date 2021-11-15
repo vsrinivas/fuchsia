@@ -22,6 +22,7 @@
 #include "src/camera/drivers/hw_accel/gdc/gdc_regs.h"
 #include "src/camera/drivers/hw_accel/task/task.h"
 #include "src/camera/drivers/test_utils/fake_buffer_collection.h"
+#include "src/lib/fsl/handles/object_info.h"
 
 namespace gdc {
 namespace {
@@ -30,13 +31,22 @@ constexpr uint32_t kWidth = 1080;
 constexpr uint32_t kHeight = 764;
 constexpr uint32_t kNumberOfBuffers = 5;
 constexpr uint32_t kNumberOfMmios = 50;
-constexpr uint32_t kConfigSize = 1000;
+constexpr uint32_t kConfigSize = 10000;
 constexpr uint32_t kMaxTasks = 10;
 constexpr uint32_t kImageFormatTableSize = 8;
 
 template <typename T>
 ddk_mock::MockMmioReg& GetMockReg(ddk_mock::MockMmioRegRegion& registers) {
   return registers[T::Get().addr()];
+}
+
+void CreateContiguousConfigVmos(const zx::bti& bti_handle, uint32_t vmo_size, uint32_t vmo_count,
+                                std::stack<zx::vmo>& config_contig_vmos) {
+  for (uint32_t i = 0; i < vmo_count; i++) {
+    zx::vmo vmo;
+    EXPECT_OK(zx::vmo::create_contiguous(bti_handle, vmo_size, 0, &vmo));
+    config_contig_vmos.push(std::move(vmo));
+  }
 }
 
 // Integration test for the driver defined in //src/camera/drivers/hw_accel/gdc
@@ -130,6 +140,9 @@ class TaskTest : public zxtest::Test {
     config_info_.config_vmo = config_vmo.release();
     config_info_.size = kConfigSize;
     ASSERT_OK(status);
+
+    CreateContiguousConfigVmos(bti_handle_, kConfigSize, kImageFormatTableSize + kMaxTasks,
+                               config_contig_vmos_);
   }
 
   // Sets up GdcDevice, initialize a task.
@@ -167,10 +180,10 @@ class TaskTest : public zxtest::Test {
     zx::interrupt irq;
     EXPECT_OK(irq_.duplicate(ZX_RIGHT_SAME_RIGHTS, &irq));
 
-    gdc_device_ =
-        std::make_unique<GdcDevice>(nullptr, ddk::MmioBuffer(fake_regs.GetMmioBuffer()),
-                                    ddk::MmioBuffer(fake_regs.GetMmioBuffer()), std::move(irq),
-                                    std::move(bti_handle_), std::move(port));
+    gdc_device_ = std::make_unique<GdcDevice>(nullptr, ddk::MmioBuffer(fake_regs.GetMmioBuffer()),
+                                              ddk::MmioBuffer(fake_regs.GetMmioBuffer()),
+                                              std::move(config_contig_vmos_), std::move(irq),
+                                              std::move(bti_handle_), std::move(port));
 
     gdc_config_info config_vmo_info_array[kImageFormatTableSize];
     uint32_t task_id;
@@ -239,6 +252,7 @@ class TaskTest : public zxtest::Test {
   std::unique_ptr<GdcDevice> gdc_device_;
   uint32_t output_image_format_index_;
   gdc_config_info config_info_;
+  std::stack<zx::vmo> config_contig_vmos_;
   bool frame_status_error_ = false;
 
  private:
@@ -255,8 +269,8 @@ TEST_F(TaskTest, BasicCreationTest) {
   auto task = std::make_unique<GdcTask>();
   zx_status_t status =
       task->Init(&input_buffer_collection_, &output_buffer_collection_, &input_image_format_,
-                 output_image_format_table_, 1, 0, &config_info_, 1, &frame_callback_,
-                 &res_callback_, &remove_task_callback_, bti_handle_);
+                 output_image_format_table_, 1, 0, &config_info_, 1, config_contig_vmos_,
+                 &frame_callback_, &res_callback_, &remove_task_callback_, bti_handle_);
   EXPECT_OK(status);
 }
 
@@ -268,16 +282,17 @@ TEST_F(TaskTest, InvalidFormatTest) {
   auto task = std::make_unique<GdcTask>();
   EXPECT_EQ(ZX_ERR_INVALID_ARGS,
             task->Init(&input_buffer_collection_, &output_buffer_collection_, &format,
-                       output_image_format_table_, 1, 0, &config_info_, 1, &frame_callback_,
-                       &res_callback_, &remove_task_callback_, bti_handle_));
+                       output_image_format_table_, 1, 0, &config_info_, 1, config_contig_vmos_,
+                       &frame_callback_, &res_callback_, &remove_task_callback_, bti_handle_));
 }
 
 TEST_F(TaskTest, InputBufferTest) {
   SetUpBufferCollections(kNumberOfBuffers);
   auto task = std::make_unique<GdcTask>();
-  auto status = task->Init(&input_buffer_collection_, &output_buffer_collection_,
-                           &input_image_format_, output_image_format_table_, 1, 0, &config_info_, 1,
-                           &frame_callback_, &res_callback_, &remove_task_callback_, bti_handle_);
+  auto status =
+      task->Init(&input_buffer_collection_, &output_buffer_collection_, &input_image_format_,
+                 output_image_format_table_, 1, 0, &config_info_, 1, config_contig_vmos_,
+                 &frame_callback_, &res_callback_, &remove_task_callback_, bti_handle_);
   EXPECT_OK(status);
 
   // Get the input buffers physical addresses
@@ -294,19 +309,20 @@ TEST_F(TaskTest, InputBufferTest) {
 TEST_F(TaskTest, InvalidVmoAndOutputFormatCountTest) {
   SetUpBufferCollections(kNumberOfBuffers);
   auto task = std::make_unique<GdcTask>();
-  auto status =
-      task->Init(&input_buffer_collection_, &output_buffer_collection_, &input_image_format_,
-                 output_image_format_table_, kImageFormatTableSize, 0, &config_info_, 1,
-                 &frame_callback_, &res_callback_, &remove_task_callback_, bti_handle_);
+  auto status = task->Init(&input_buffer_collection_, &output_buffer_collection_,
+                           &input_image_format_, output_image_format_table_, kImageFormatTableSize,
+                           0, &config_info_, 1, config_contig_vmos_, &frame_callback_,
+                           &res_callback_, &remove_task_callback_, bti_handle_);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
 }
 
 TEST_F(TaskTest, InvalidVmoTest) {
   SetUpBufferCollections(0);
   auto task = std::make_unique<GdcTask>();
-  auto status = task->Init(&input_buffer_collection_, &output_buffer_collection_,
-                           &input_image_format_, output_image_format_table_, 1, 0, &config_info_, 1,
-                           &frame_callback_, &res_callback_, &remove_task_callback_, bti_handle_);
+  auto status =
+      task->Init(&input_buffer_collection_, &output_buffer_collection_, &input_image_format_,
+                 output_image_format_table_, 1, 0, &config_info_, 1, config_contig_vmos_,
+                 &frame_callback_, &res_callback_, &remove_task_callback_, bti_handle_);
   // Expecting Task setup to be returning an error when there are
   // no VMOs in the buffer collection. At the moment VmoPool library
   // doesn't return an error.
@@ -616,13 +632,16 @@ TEST(TaskTest, NonContigVmoTest) {
   info.config_vmo = config_vmo.release();
   info.size = kConfigSize;
 
+  std::stack<zx::vmo> config_contig_vmos;
+  CreateContiguousConfigVmos(bti_handle, kConfigSize, 1, config_contig_vmos);
+
   auto task = std::make_unique<GdcTask>();
   image_format_2_t image_format_table[kImageFormatTableSize];
   EXPECT_OK(camera::GetImageFormat(image_format_table[0], fuchsia_sysmem_PixelFormatType_NV12,
                                    kWidth, kHeight));
-  status =
-      task->Init(&input_buffer_collection, &output_buffer_collection, &format, image_format_table,
-                 1, 0, &info, 1, &frame_callback, &res_callback, &remove_task_callback, bti_handle);
+  status = task->Init(&input_buffer_collection, &output_buffer_collection, &format,
+                      image_format_table, 1, 0, &info, 1, config_contig_vmos, &frame_callback,
+                      &res_callback, &remove_task_callback, bti_handle);
   // Expecting Task setup to convert the non-contig vmo to contig
   EXPECT_EQ(ZX_OK, status);
 
@@ -656,13 +675,16 @@ TEST(TaskTest, InvalidConfigVmoTest) {
   info.config_vmo = ZX_HANDLE_INVALID;
   info.size = kConfigSize;
 
+  std::stack<zx::vmo> config_contig_vmos;
+  CreateContiguousConfigVmos(bti_handle, kConfigSize, 1, config_contig_vmos);
+
   auto task = std::make_unique<GdcTask>();
   image_format_2_t image_format_table[kImageFormatTableSize];
   EXPECT_OK(camera::GetImageFormat(image_format_table[0], fuchsia_sysmem_PixelFormatType_NV12,
                                    kWidth, kHeight));
-  status =
-      task->Init(&input_buffer_collection, &output_buffer_collection, &format, image_format_table,
-                 1, 0, &info, 1, &frame_callback, &res_callback, &remove_task_callback, bti_handle);
+  status = task->Init(&input_buffer_collection, &output_buffer_collection, &format,
+                      image_format_table, 1, 0, &info, 1, config_contig_vmos, &frame_callback,
+                      &res_callback, &remove_task_callback, bti_handle);
   // Expecting Task setup to convert the non-contig vmo to contig
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
 
@@ -692,10 +714,57 @@ TEST(TaskTest, InvalidBufferCollectionTest) {
   info.config_vmo = config_vmo.release();
   info.size = kConfigSize;
 
+  std::stack<zx::vmo> config_contig_vmos;
+  CreateContiguousConfigVmos(bti_handle, kConfigSize, 1, config_contig_vmos);
+
   zx_status_t status =
-      task->Init(nullptr, nullptr, nullptr, image_format_table, 1, 0, &info, 1, &frame_callback,
-                 &res_callback, &remove_task_callback, bti_handle);
+      task->Init(nullptr, nullptr, nullptr, image_format_table, 1, 0, &info, 1, config_contig_vmos,
+                 &frame_callback, &res_callback, &remove_task_callback, bti_handle);
   EXPECT_NE(ZX_OK, status);
+}
+
+TEST_F(TaskTest, ReuseConfigContiguousVmoTest) {
+  SetUpBufferCollections(kNumberOfBuffers);
+
+  std::stack<zx::vmo> config_contig_vmos;
+  CreateContiguousConfigVmos(bti_handle_, config_info_.size, 1, config_contig_vmos);
+  auto original_vmo_koid = fsl::GetKoid(config_contig_vmos.top().get());
+
+  auto task = std::make_unique<GdcTask>();
+  zx_status_t status =
+      task->Init(&input_buffer_collection_, &output_buffer_collection_, &input_image_format_,
+                 output_image_format_table_, 1, 0, &config_info_, 1, config_contig_vmos,
+                 &frame_callback_, &res_callback_, &remove_task_callback_, bti_handle_);
+  EXPECT_OK(status);
+
+  EXPECT_TRUE(config_contig_vmos.empty());
+  task->OnRemoveTask(config_contig_vmos);
+  ASSERT_FALSE(config_contig_vmos.empty());
+
+  EXPECT_EQ(original_vmo_koid, fsl::GetKoid(config_contig_vmos.top().get()));
+}
+
+TEST_F(TaskTest, CreateConfigContiguousVmoTest) {
+  SetUpBufferCollections(kNumberOfBuffers);
+
+  // Use an invalid size (1 byte) for the config VMO. The task will need to create its own
+  // contiguous VMO to use instead.
+  std::stack<zx::vmo> config_contig_vmos;
+  CreateContiguousConfigVmos(bti_handle_, 1, 1, config_contig_vmos);
+  auto original_vmo_koid = fsl::GetKoid(config_contig_vmos.top().get());
+
+  auto task = std::make_unique<GdcTask>();
+  zx_status_t status =
+      task->Init(&input_buffer_collection_, &output_buffer_collection_, &input_image_format_,
+                 output_image_format_table_, 1, 0, &config_info_, 1, config_contig_vmos,
+                 &frame_callback_, &res_callback_, &remove_task_callback_, bti_handle_);
+  EXPECT_OK(status);
+
+  EXPECT_TRUE(config_contig_vmos.empty());
+  task->OnRemoveTask(config_contig_vmos);
+  ASSERT_FALSE(config_contig_vmos.empty());
+
+  EXPECT_NE(original_vmo_koid, fsl::GetKoid(config_contig_vmos.top().get()));
 }
 
 }  // namespace
