@@ -102,7 +102,10 @@ config("compiler") {
   ]
 
   if (!is_gcc) {
-    configs += [ ":clang_defaults" ]
+    configs += [
+      ":clang_defaults",
+      ":ffp_contract",
+    ]
   }
 
   if (current_os == "fuchsia") {
@@ -133,6 +136,14 @@ config("clang_defaults") {
   if (current_cpu == "x64") {
     asmflags += [ "-Wa,--mrelax-relocations=yes" ]
   }
+}
+
+config("ffp_contract") {
+  # TODO(fxbug.dev/88681): This was the default for -ffp-model=precise until
+  # LLVM revision f04e387055e495e3e14570087d68e93593cf2918 when Clang switched
+  # to -ffp-contract=on.
+  cflags = [ "-ffp-contract=off" ]
+  asmflags = cflags
 }
 
 # We want to force a recompile and relink of the world whenever our toolchain
