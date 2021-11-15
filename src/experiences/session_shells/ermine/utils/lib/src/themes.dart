@@ -178,3 +178,55 @@ class AppTheme {
         ),
       );
 }
+
+class ErmineButtonStyle {
+  const ErmineButtonStyle._();
+
+  static ButtonStyle elevatedButton(ThemeData theme) => ButtonStyle(
+        overlayColor: MaterialStateProperty.resolveWith<Color?>(
+            (Set<MaterialState> states) {
+          if (states.contains(MaterialState.hovered)) {
+            return theme.bottomAppBarColor.withOpacity(0.24);
+          }
+          if (states.contains(MaterialState.focused)) {
+            return theme.bottomAppBarColor.withOpacity(0.38);
+          }
+          if (states.contains(MaterialState.pressed)) {
+            return theme.colorScheme.primary.withOpacity(0.58);
+          }
+          return null;
+        }),
+      );
+
+  static ButtonStyle outlinedButton(ThemeData theme) => ButtonStyle(
+        overlayColor: MaterialStateProperty.resolveWith<Color?>(
+            (Set<MaterialState> states) {
+          if (states.contains(MaterialState.hovered)) {
+            return theme.dividerColor.withOpacity(0.12);
+          }
+          if (states.contains(MaterialState.focused)) {
+            return theme.dividerColor.withOpacity(0.24);
+          }
+          if (states.contains(MaterialState.pressed)) {
+            return theme.colorScheme.primary.withOpacity(0.58);
+          }
+          return null;
+        }),
+      );
+
+  static ButtonStyle textButton(ThemeData theme) => ButtonStyle(
+        overlayColor: MaterialStateProperty.resolveWith<Color?>(
+            (Set<MaterialState> states) {
+          if (states.contains(MaterialState.hovered)) {
+            return theme.dividerColor.withOpacity(0.12);
+          }
+          if (states.contains(MaterialState.focused)) {
+            return theme.dividerColor.withOpacity(0.24);
+          }
+          if (states.contains(MaterialState.pressed)) {
+            return theme.colorScheme.primary.withOpacity(0.58);
+          }
+          return null;
+        }),
+      );
+}

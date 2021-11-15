@@ -8,6 +8,7 @@ import 'package:ermine/src/widgets/settings/channel_settings.dart';
 import 'package:ermine/src/widgets/settings/shortcut_settings.dart';
 import 'package:ermine/src/widgets/settings/timezone_settings.dart';
 import 'package:ermine/src/widgets/settings/wifi_settings.dart';
+import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:internationalization/strings.dart';
@@ -80,6 +81,7 @@ class _ListSettings extends StatelessWidget {
               children: [
                 // Restart button.
                 OutlinedButton.icon(
+                  style: ErmineButtonStyle.outlinedButton(Theme.of(context)),
                   onPressed: appState.restart,
                   icon: Icon(Icons.restart_alt),
                   label: Text(Strings.restart.toUpperCase()),
@@ -88,6 +90,7 @@ class _ListSettings extends StatelessWidget {
 
                 // Power off button.
                 OutlinedButton.icon(
+                  style: ErmineButtonStyle.outlinedButton(Theme.of(context)),
                   onPressed: appState.shutdown,
                   icon: Icon(Icons.power_settings_new_rounded),
                   label: Text(Strings.shutdown.toUpperCase()),
@@ -172,6 +175,8 @@ class _ListSettings extends StatelessWidget {
                     trailing: appState.settingsState.brightnessAuto == true
                         ? Text(Strings.auto.toUpperCase())
                         : OutlinedButton(
+                            style: ErmineButtonStyle.outlinedButton(
+                                Theme.of(context)),
                             onPressed: appState.settingsState.setBrightnessAuto,
                             child: Text(Strings.auto.toUpperCase()),
                           ),
@@ -197,11 +202,15 @@ class _ListSettings extends StatelessWidget {
                     ),
                     trailing: appState.settingsState.volumeMuted == true
                         ? OutlinedButton(
+                            style: ErmineButtonStyle.outlinedButton(
+                                Theme.of(context)),
                             onPressed: () => appState.settingsState
                                 .setVolumeMute(muted: false),
                             child: Text(Strings.unmute.toUpperCase()),
                           )
                         : OutlinedButton(
+                            style: ErmineButtonStyle.outlinedButton(
+                                Theme.of(context)),
                             onPressed: () => appState.settingsState
                                 .setVolumeMute(muted: true),
                             child: Text(Strings.mute.toUpperCase()),
@@ -253,6 +262,7 @@ class _ListSettings extends StatelessWidget {
                   leading: Icon(Icons.feedback_outlined),
                   title: Text(Strings.feedback),
                   trailing: OutlinedButton(
+                    style: ErmineButtonStyle.outlinedButton(Theme.of(context)),
                     onPressed: appState.launchFeedback,
                     child: Text(Strings.open.toUpperCase()),
                   ),
@@ -264,6 +274,7 @@ class _ListSettings extends StatelessWidget {
                   leading: Icon(Icons.info_outline),
                   title: Text(Strings.openSource),
                   trailing: OutlinedButton(
+                    style: ErmineButtonStyle.outlinedButton(Theme.of(context)),
                     onPressed: appState.launchLicense,
                     child: Text(Strings.open.toUpperCase()),
                   ),

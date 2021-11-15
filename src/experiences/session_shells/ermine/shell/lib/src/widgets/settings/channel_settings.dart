@@ -4,6 +4,7 @@
 
 import 'package:ermine/src/states/settings_state.dart';
 import 'package:ermine/src/widgets/settings/setting_details.dart';
+import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:internationalization/strings.dart';
@@ -110,6 +111,7 @@ class ChannelSettings extends StatelessWidget {
         Padding(
           padding: EdgeInsets.fromLTRB(8, 12, 24, 12),
           child: ElevatedButton(
+            style: ErmineButtonStyle.elevatedButton(Theme.of(context)),
             onPressed: state.targetChannel == '' ? null : updateAlert,
             child: Text(Strings.update.toUpperCase()),
           ),
