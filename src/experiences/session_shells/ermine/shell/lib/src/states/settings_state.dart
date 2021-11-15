@@ -80,7 +80,7 @@ abstract class SettingsState implements TaskService {
   double? get volumeLevel;
   bool? get volumeMuted;
   List<NetworkInformation> get availableNetworks;
-  String get targetNetwork;
+  NetworkInformation get targetNetwork;
   List<NetworkInformation> get savedNetworks;
   TextEditingController get networkPasswordTextController;
 
@@ -114,7 +114,7 @@ abstract class SettingsState implements TaskService {
   void setVolumeLevel(double value);
   void setVolumeMute({bool muted});
   void showWiFiSettings();
-  void connectToWPA2Network(String password);
-  void setTargetNetwork(String network);
+  void connectToNetwork([String password]);
+  void setTargetNetwork(NetworkInformation network);
   void removeNetwork(String network);
 }

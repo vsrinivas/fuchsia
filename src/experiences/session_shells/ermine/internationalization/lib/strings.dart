@@ -1093,6 +1093,12 @@ class Strings {
         name: 'forget',
         desc: 'The label for "Forget" text field.',
       );
+  static String connectToNetwork(String network) => Intl.message(
+        'Connect to $network',
+        name: 'Connect to network',
+        desc: 'The prompt text to connected to selected network.',
+        args: [network],
+      );
 
   /// Lookup message given it's name.
   static String? lookup(String name) {

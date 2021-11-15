@@ -11,9 +11,8 @@ import 'package:internationalization/strings.dart';
 /// Defines a widget to control WiFi in [SettingDetails] widget.
 class WiFiSettings extends StatelessWidget {
   final SettingsState state;
-  final ValueChanged<String> onChange;
 
-  const WiFiSettings({required this.state, required this.onChange});
+  const WiFiSettings({required this.state});
 
   @override
   Widget build(BuildContext context) {
@@ -61,7 +60,8 @@ class WiFiSettings extends StatelessWidget {
                                 color: networkCompatible
                                     ? null
                                     : Theme.of(context).disabledColor),
-                            onTap: () => onChange(savedNetworks[index].name),
+                            onTap: () =>
+                                state.setTargetNetwork(savedNetworks[index]),
                             trailing: PopupMenuButton(
                               itemBuilder: (context) {
                                 return [
@@ -107,10 +107,10 @@ class WiFiSettings extends StatelessWidget {
                                 color: networkCompatible
                                     ? null
                                     : Theme.of(context).disabledColor),
-                            onTap: () =>
-                                onChange(availableNetworks[index].name),
-                            trailing: ((state.targetNetwork != '') &&
-                                    (state.targetNetwork == networkName))
+                            onTap: () => state
+                                .setTargetNetwork(availableNetworks[index]),
+                            trailing: ((state.targetNetwork.name != '') &&
+                                    (state.targetNetwork.name == networkName))
                                 ? Icon(Icons.check_outlined)
                                 : null,
                           );
@@ -120,46 +120,82 @@ class WiFiSettings extends StatelessWidget {
               ),
             ),
           ),
-          _buildPasswordPrompt(context),
+          _buildNetworkSelection(context),
         ],
       );
     });
   }
 
-  Widget _buildPasswordPrompt(BuildContext context) {
-    bool networkSelected = state.targetNetwork != '';
+  Widget _buildNetworkSelection(BuildContext context) {
+    if (state.targetNetwork.name == '') {
+      return _buildSelectNetworkPrompt(context);
+    } else {
+      if (state.targetNetwork.isOpen) {
+        return _buildOpenNetworkPrompt(context);
+      } else {
+        return _buildPasswordEntryPrompt(context);
+      }
+    }
+  }
+
+  Widget _buildSelectNetworkPrompt(BuildContext context) {
     return AppBar(
       elevation: 0,
-      title: networkSelected
-          ? TextField(
-              controller: state.networkPasswordTextController,
-              maxLines: 1,
-              decoration: InputDecoration(
-                border: InputBorder.none,
-                hintText: Strings.enterPasswordForNetwork(state.targetNetwork),
-              ),
-            )
-          : Text(
-              Strings.selectNetwork,
-              style: Theme.of(context).textTheme.bodyText2,
-            ),
+      title: Text(
+        Strings.selectNetwork,
+        style: Theme.of(context).textTheme.bodyText2,
+      ),
+      shape: Border(top: BorderSide(color: Theme.of(context).indicatorColor)),
+    );
+  }
+
+  Widget _buildOpenNetworkPrompt(BuildContext context) {
+    return AppBar(
+      elevation: 0,
+      title: Text(
+        Strings.connectToNetwork(state.targetNetwork.name),
+        style: Theme.of(context).textTheme.bodyText2,
+      ),
       shape: Border(top: BorderSide(color: Theme.of(context).indicatorColor)),
       actions: [
-        if (networkSelected)
-          Padding(
-            padding: EdgeInsets.fromLTRB(8, 12, 24, 12),
-            child: ElevatedButton(
-              onPressed: () =>
-                  _enterPassword(state.networkPasswordTextController),
-              child: Text(Strings.connect),
-            ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(8, 12, 24, 12),
+          child: ElevatedButton(
+            onPressed: state.connectToNetwork,
+            child: Text(Strings.connect),
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPasswordEntryPrompt(BuildContext context) {
+    return AppBar(
+      elevation: 0,
+      title: TextField(
+        controller: state.networkPasswordTextController,
+        maxLines: 1,
+        decoration: InputDecoration(
+          border: InputBorder.none,
+          hintText: Strings.enterPasswordForNetwork(state.targetNetwork.name),
+        ),
+      ),
+      shape: Border(top: BorderSide(color: Theme.of(context).indicatorColor)),
+      actions: [
+        Padding(
+          padding: EdgeInsets.fromLTRB(8, 12, 24, 12),
+          child: ElevatedButton(
+            onPressed: () =>
+                _enterPassword(state.networkPasswordTextController),
+            child: Text(Strings.connect),
+          ),
+        ),
       ],
     );
   }
 
   void _enterPassword(TextEditingController textController) {
-    state.connectToWPA2Network(textController.text);
+    state.connectToNetwork(textController.text);
     textController.clear();
   }
 }

@@ -161,9 +161,10 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   final Observable<bool?> _volumeMuted = Observable<bool?>(null);
 
   @override
-  String get targetNetwork => _targetNetwork.value;
-  set targetNetwork(String value) => _targetNetwork.value = value;
-  final Observable<String> _targetNetwork = Observable<String>('');
+  NetworkInformation get targetNetwork => _targetNetwork.value;
+  set targetNetwork(NetworkInformation value) => _targetNetwork.value = value;
+  final Observable<NetworkInformation> _targetNetwork =
+      Observable<NetworkInformation>(NetworkInformation());
 
   @override
   TextEditingController get networkPasswordTextController =>
@@ -436,11 +437,11 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
       runInAction(() => settingsPage.value = SettingsPage.wifi);
 
   @override
-  void connectToWPA2Network(String password) =>
-      runInAction(() => wifiService.connectToWPA2Network(password));
+  void connectToNetwork([String password = '']) =>
+      runInAction(() => wifiService.connectToNetwork(password));
 
   @override
-  void setTargetNetwork(String network) =>
+  void setTargetNetwork(NetworkInformation network) =>
       runInAction(() => wifiService.targetNetwork = network);
 
   @override

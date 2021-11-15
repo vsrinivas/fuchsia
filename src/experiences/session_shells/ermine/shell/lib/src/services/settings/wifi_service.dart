@@ -32,7 +32,7 @@ class WiFiService implements TaskService {
   Timer? _timer;
   int scanIntervalInSeconds = 20;
   final _scannedNetworks = <policy.ScanResult>{};
-  String _targetNetwork = '';
+  NetworkInformation _targetNetwork = NetworkInformation();
   final _savedNetworks = <policy.NetworkConfig>{};
 
   WiFiService();
@@ -81,8 +81,8 @@ class WiFiService implements TaskService {
     _scanResultIteratorProvider = policy.ScanResultIteratorProxy();
   }
 
-  String get targetNetwork => _targetNetwork;
-  set targetNetwork(String network) {
+  NetworkInformation get targetNetwork => _targetNetwork;
+  set targetNetwork(NetworkInformation network) {
     _targetNetwork = network;
     onChanged();
   }
@@ -129,13 +129,17 @@ class WiFiService implements TaskService {
     return utf8.decode(network.id!.ssid.toList());
   }
 
-  Future<void> connectToWPA2Network(String password) async {
+  Future<void> connectToNetwork(String password) async {
     try {
       _connectToWPA2NetworkSubscription = () async {
-        final utf8password = Uint8List.fromList(password.codeUnits);
-        final credential = policy.Credential.withPassword(utf8password);
+        final credential = _targetNetwork.isOpen
+            ? policy.Credential.withNone(policy.Empty())
+            : policy.Credential.withPassword(
+                Uint8List.fromList(password.codeUnits));
+
         policy.ScanResult? network = _scannedNetworks.firstWhereOrNull(
-            (network) => nameFromScannedNetwork(network) == _targetNetwork);
+            (network) =>
+                nameFromScannedNetwork(network) == _targetNetwork.name);
 
         if (network == null) {
           throw Exception(
@@ -145,7 +149,6 @@ class WiFiService implements TaskService {
         final networkConfig =
             policy.NetworkConfig(id: network.id, credential: credential);
 
-        // TODO(fxb/79885): Separate save and connect functionality.
         await _clientController?.saveNetwork(networkConfig);
 
         final requestStatus = await _clientController?.connect(network.id!);
@@ -279,6 +282,8 @@ class NetworkInformation {
   bool _compatible = false;
   // Security type of network
   policy.SecurityType? _securityType;
+
+  NetworkInformation();
 
   // Constructor for network config
   NetworkInformation.fromNetworkConfig(policy.NetworkConfig networkConfig) {
