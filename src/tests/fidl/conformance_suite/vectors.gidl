@@ -4,8 +4,8 @@
 
 // Test vector with a 2^64-1 count, exceeding the 32-bit limit from RFC-0059.
 decode_failure("VectorCountExceedsLimitByALot") {
-    // TODO(fxbug.dev/82167): Go and Dart all panic and don't return proper errors.
-    bindings_denylist = [go, dart],
+    // TODO(fxbug.dev/82167): Go panics and doesn't return proper errors.
+    bindings_denylist = [go],
     type = VectorWrapper,
     bytes = {
         v1, v2 = [
@@ -18,8 +18,8 @@ decode_failure("VectorCountExceedsLimitByALot") {
 
 // Test vector with a 2^32 count, exceeding the 32-bit limit from RFC-0059.
 decode_failure("VectorCountExceedsLimitByOne") {
-    // TODO(fxbug.dev/82167): Go and Dart all panic and don't return proper errors.
-    bindings_denylist = [go, dart],
+    // TODO(fxbug.dev/82167): Go panics and doesn't return proper errors.
+    bindings_denylist = [go],
     type = VectorWrapper,
     bytes = {
         v1, v2 = [

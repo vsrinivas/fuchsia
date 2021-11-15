@@ -178,6 +178,7 @@ const int kAllocAbsent = 0;
 const int kAllocPresent = 0xFFFFFFFFFFFFFFFF;
 const int kHandleAbsent = 0;
 const int kHandlePresent = 0xFFFFFFFF;
+const int kMaxCount = 0xFFFFFFFF; // 2^32-1
 
 abstract class FidlType<T, I extends Iterable<T>> {
   const FidlType({required this.inlineSizeV1, required this.inlineSizeV2});
@@ -789,14 +790,20 @@ void _encodeString(Encoder encoder, String value, int offset, int depth,
 }
 
 String? _decodeString(Decoder decoder, int offset, int depth) {
+  // When doing size comparisions, note that Dart represents numbers as
+  // signed integers such that large uint64 values are negative.
   final int size = decoder.decodeUint64(offset);
   final int data = decoder.decodeUint64(offset + 8);
   if (data == kAllocAbsent) {
-    if (size > 0) {
+    if (size != 0) {
       throw FidlError('Expected string, received null',
           FidlErrorCode.fidlNonEmptyStringWithNullBody);
     }
     return null;
+  }
+  if (size < 0 || size > kMaxCount) {
+    throw FidlError('Size of string exceeds limit: $size',
+        FidlErrorCode.fidlCountExceedsLimit);
   }
   final Uint8List bytes =
       decoder.data.buffer.asUint8List(decoder.claimMemory(size, depth), size);
@@ -1298,6 +1305,12 @@ class TableType<T extends Table> extends SimpleFidlType<T> {
       return ctor({});
     }
 
+    // Size limit.
+    if (maxOrdinal < 0 || maxOrdinal > kMaxCount) {
+      throw FidlError('Size of table exceeds limit: $maxOrdinal',
+          FidlErrorCode.fidlCountExceedsLimit);
+    }
+
     // Offsets.
     int envelopeOffset = decoder.claimMemory(
         maxOrdinal * envelopeSize(decoder.wireFormat), depth);
@@ -1584,6 +1597,10 @@ I? _decodeVector<T, I extends Iterable<T>>(Decoder decoder,
   _throwIfExceedsLimit(count, maybeElementCount);
   if (data == kAllocAbsent) {
     return null;
+  }
+  if (count < 0 || count > kMaxCount) {
+    throw FidlError('Size of vector exceeds limit: $count',
+        FidlErrorCode.fidlCountExceedsLimit);
   }
   final int base = decoder.claimMemory(
       count * element.inlineSize(decoder.wireFormat), depth);

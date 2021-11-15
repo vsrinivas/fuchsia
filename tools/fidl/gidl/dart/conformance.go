@@ -360,7 +360,7 @@ func toDartIntList(handles []gidlir.Handle) string {
 
 // Dart error codes are defined in sdk/dart/fidl/lib/src/error.dart.
 var dartErrorCodeNames = map[gidlir.ErrorCode]string{
-	gidlir.CountExceedsLimit:            "unknown",
+	gidlir.CountExceedsLimit:            "fidlCountExceedsLimit",
 	gidlir.ExceededMaxOutOfLineDepth:    "fidlExceededMaxOutOfLineDepth",
 	gidlir.ExtraHandles:                 "fidlTooManyHandles",
 	gidlir.IncorrectHandleType:          "fidlIncorrectHandleType",

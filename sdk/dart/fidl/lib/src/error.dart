@@ -26,6 +26,7 @@ enum FidlErrorCode {
   fidlMissingRequiredHandleRights,
   fidlIncorrectHandleType,
   fidlInvalidInlineBitInEnvelope,
+  fidlCountExceedsLimit,
 }
 
 class FidlError implements Exception {
