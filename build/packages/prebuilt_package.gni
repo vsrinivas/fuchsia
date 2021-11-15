@@ -28,10 +28,10 @@ template("prebuilt_package") {
   pkg_version = 0
   manifest_target_name = target_name + ".manifest"
 
-  meta_dir = target_out_dir + "/" + pkg_name + ".meta"
-  blobs_json = "$meta_dir/blobs.json"
-  package_manifest_json = "$meta_dir/package_manifest.json"
-  blobs_manifest = "$meta_dir/blobs.manifest"
+  pkg_out_dir = target_out_dir + "/" + pkg_name
+  blobs_json = "$pkg_out_dir/blobs.json"
+  package_manifest_json = "$pkg_out_dir/package_manifest.json"
+  blobs_manifest = "$pkg_out_dir/blobs.manifest"
   blobs_json_path = rebase_path(blobs_json, root_build_dir)
 
   unpack_action_name = target_name + ".debug-archive"
@@ -56,7 +56,7 @@ template("prebuilt_package") {
     blob_manifest = blobs_manifest
     meta_far_merkle_index_entry =
         "$pkg_name/$pkg_version=" +
-        rebase_path("$meta_dir/meta.far.merkle", root_build_dir)
+        rebase_path("$pkg_out_dir/meta.far.merkle", root_build_dir)
     package_output_manifest = package_manifest_json
   }
 
@@ -76,7 +76,7 @@ template("prebuilt_package") {
 
     script = "//build/packages/prebuilt_package.py"
 
-    meta_merkle = "$meta_dir/meta.far.merkle"
+    meta_merkle = "$pkg_out_dir/meta.far.merkle"
     pm = "$host_out_dir/pm"
 
     args = [
@@ -87,7 +87,7 @@ template("prebuilt_package") {
       "--archive",
       rebase_path(archive, root_build_dir),
       "--workdir",
-      rebase_path(meta_dir, root_build_dir),
+      rebase_path(pkg_out_dir, root_build_dir),
     ]
 
     inputs = [
