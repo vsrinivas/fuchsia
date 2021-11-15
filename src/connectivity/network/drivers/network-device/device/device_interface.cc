@@ -529,8 +529,8 @@ void DeviceInterface::SessionStarted(Session& session) {
     StartDevice();
   }
 
-  if (evt_session_started) {
-    evt_session_started(session.name());
+  if (evt_session_started_) {
+    evt_session_started_(session.name());
   }
 }
 

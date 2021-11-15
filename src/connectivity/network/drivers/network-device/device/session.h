@@ -59,9 +59,6 @@ class AttachedPort {
     return WithPort([salt](DevicePort& port) { return port.id().salt == salt; });
   }
 
- protected:
-  friend DeviceInterface;
-
   AttachedPort(DeviceInterface* parent, DevicePort* port,
                cpp20::span<const netdev::wire::FrameType> frame_types)
       : parent_(parent),
@@ -198,8 +195,6 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
 
   bool IsDying() const __TA_REQUIRES_SHARED(parent_->control_lock()) { return dying_; }
 
- protected:
-  friend DeviceInterface;
   // Notifies session of port destruction.
   //
   // Returns true iff the session should be stopped after detaching from the port.

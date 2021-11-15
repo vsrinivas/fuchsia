@@ -320,7 +320,7 @@ zx::status<std::unique_ptr<NetworkDeviceInterface>> FakeNetworkDeviceImpl::Creat
   }
 
   auto& value = device.value();
-  value->evt_session_started = [this](const char* session) {
+  value->evt_session_started_ = [this](const char* session) {
     event_.signal(0, kEventSessionStarted);
   };
   return zx::ok(std::move(value));

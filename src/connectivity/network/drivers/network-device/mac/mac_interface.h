@@ -50,7 +50,7 @@ class MacInterface : public ::network::MacAddrDeviceInterface {
   // device implementation, taking into consideration the device's available operating modes.
   mode_t ConvertMode(const netdev::wire::MacFilterMode& mode) const;
 
- protected:
+ private:
   friend MacClientInstance;
   // Consolidates all the requested operating modes and multicast filtering from all the attached
   // clients into a final operating mode and sets it on the parent device implementation.
@@ -60,7 +60,6 @@ class MacInterface : public ::network::MacAddrDeviceInterface {
   // there are no more open client instances.
   void CloseClient(MacClientInstance* client) __TA_EXCLUDES(lock_);
 
- private:
   explicit MacInterface(ddk::MacAddrProtocolClient parent);
 
   const ddk::MacAddrProtocolClient impl_;

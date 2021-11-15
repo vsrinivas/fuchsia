@@ -250,6 +250,14 @@ class NetworkDeviceTest : public ::testing::Test {
     return session.DetachPort(GetSaltedPortId(impl.id()));
   }
 
+  const internal::SessionList& GetDeviceSessionsUnsafe(internal::DeviceInterface& device) const {
+    return device.sessions_;
+  }
+
+  void SetEvtRxQueuePacketHandler(fit::function<void(uint64_t)> h) {
+    static_cast<internal::DeviceInterface*>(device_.get())->evt_rx_queue_packet_ = std::move(h);
+  }
+
  protected:
   FakeNetworkDeviceImpl impl_;
   FakeNetworkPortImpl port13_;
@@ -1262,7 +1270,7 @@ TEST_F(NetworkDeviceTest, SessionNameRespectsStringView) {
   zx::status response = dev->OpenSession(std::move(name), std::move(info));
   ASSERT_OK(response.status_value());
 
-  const auto& session = dev->sessions_unsafe().front();
+  const auto& session = GetDeviceSessionsUnsafe(*dev).front();
 
   ASSERT_STREQ("hello", session.name());
 }
@@ -1395,17 +1403,16 @@ TEST_F(NetworkDeviceTest, RxQueueIdlesOnPausedSession) {
     return zx::ok(key);
   };
 
-  auto* dev_iface = static_cast<internal::DeviceInterface*>(device_.get());
-  dev_iface->evt_rx_queue_packet = [&observed_key, &completion](uint64_t key) {
+  SetEvtRxQueuePacketHandler([&observed_key, &completion](uint64_t key) {
     fbl::AutoLock l(&observed_key.lock);
     std::optional k = observed_key.key;
     EXPECT_EQ(k, std::nullopt);
     observed_key.key = key;
     sync_completion_signal(&completion);
-  };
-  auto undo = fit::defer([dev_iface]() {
+  });
+  auto undo = fit::defer([this]() {
     // Clear event handler so we don't see any of the teardown.
-    dev_iface->evt_rx_queue_packet = nullptr;
+    SetEvtRxQueuePacketHandler(nullptr);
   });
 
   TestSession session;
@@ -2676,7 +2683,7 @@ TEST_F(NetworkDeviceTest, SessionsClosedOnStartFailure) {
 
   auto* device = static_cast<internal::DeviceInterface*>(device_.get());
   fbl::AutoLock lock(&device->control_lock());
-  ASSERT_TRUE(device->sessions_unsafe().is_empty());
+  ASSERT_TRUE(GetDeviceSessionsUnsafe(*device).is_empty());
   ASSERT_FALSE(device->IsDataPlaneOpen());
 }
 

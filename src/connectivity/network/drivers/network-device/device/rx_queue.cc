@@ -291,9 +291,7 @@ int RxQueue::WatchThread(std::unique_ptr<rx_space_buffer_t[]> space_buffers) {
         LOGF_ERROR("RxQueue::WatchThread port wait failed %s", zx_status_get_string(status));
         return status;
       }
-      if (parent_->evt_rx_queue_packet) {
-        parent_->evt_rx_queue_packet(packet.key);
-      }
+      parent_->NotifyRxQueuePacket(packet.key);
       switch (packet.key) {
         case kQuitWatchKey:
           LOG_TRACE("RxQueue::WatchThread got quit key");

@@ -111,7 +111,7 @@ class RxQueue {
 // Newtype for the internal SessionTransaction class to allow other header files to forward declare
 // it.
 class RxSessionTransaction : public RxQueue::SessionTransaction {
- protected:
+ private:
   friend RxQueue;
   explicit RxSessionTransaction(RxQueue* parent) : RxQueue::SessionTransaction(parent) {}
 };

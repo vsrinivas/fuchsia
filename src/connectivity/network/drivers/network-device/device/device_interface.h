@@ -16,6 +16,11 @@
 #include "public/locks.h"
 #include "public/network_device.h"
 
+namespace network::testing {
+class NetworkDeviceTest;
+class FakeNetworkDeviceImpl;
+}  // namespace network::testing
+
 namespace network::internal {
 class RxQueue;
 class RxSessionTransaction;
@@ -166,8 +171,6 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
     return ports_[base_id].salt;
   }
 
- protected:
-  friend Session;
   // Acquires a port for use in a Session.
   //
   // Sessions are notified of ports that are no longer safe to use by the DeviceInterface through
@@ -179,7 +182,17 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
                                        cpp20::span<const netdev::wire::FrameType> rx_frame_types)
       __TA_REQUIRES(control_lock_);
 
+  // Event observer hook for Rx queue packets.
+  void NotifyRxQueuePacket(uint64_t key) {
+    if (evt_rx_queue_packet_) {
+      evt_rx_queue_packet_(key);
+    }
+  }
+
  private:
+  friend testing::NetworkDeviceTest;
+  friend testing::FakeNetworkDeviceImpl;
+
   // Helper class to keep track of clients bound to DeviceInterface.
   class Binding : public fbl::DoublyLinkedListable<std::unique_ptr<Binding>> {
    public:
@@ -307,13 +320,9 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
   fbl::Mutex tx_buffers_lock_ __TA_ACQUIRED_AFTER(tx_lock_);
   SharedLock control_lock_ __TA_ACQUIRED_AFTER(tx_lock_, tx_buffers_lock_, rx_lock_);
 
- public:
   // Event hooks used in tests:
-  fit::function<void(const char*)> evt_session_started;
-  fit::function<void(uint64_t)> evt_rx_queue_packet;
-
-  // Unsafe accessors used in tests:
-  const SessionList& sessions_unsafe() const { return sessions_; }
+  fit::function<void(const char*)> evt_session_started_;
+  fit::function<void(uint64_t)> evt_rx_queue_packet_;
 };
 
 }  // namespace network::internal
