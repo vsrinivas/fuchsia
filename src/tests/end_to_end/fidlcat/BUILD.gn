@@ -64,25 +64,35 @@ template("generate_symbols") {
   }
 }
 
-generate_symbols("echo_client_cpp_sym") {
+generate_symbols("echo_client_sym") {
   library_label =
-      "//examples/fidl/legacy/echo_client_cpp:bin($target_toolchain)"
-  library_path = "$_shared_out_dir/echo_client_cpp"
-  output = "${target_gen_dir}/echo_client_cpp.debug"
+      "//src/testing/fidl/echo_client_placeholder:bin($target_toolchain)"
+  library_path = "$_shared_out_dir/echo_client_placeholder"
+  output = "${target_gen_dir}/echo_client_placeholder.debug"
+}
+
+# Examples FIDL library required by save/replay .proto tests recorded against
+# legacy FIDL examples
+fidl("echo") {
+  testonly = true
+  name = "fidl.examples.echo"
+  visibility = [ ":*" ]
+  sources = [ "echo.test.fidl" ]
 }
 
 if (is_host) {
   host_test_data("runtime_deps") {
     sources = [
-      # We have to list all of the FIDL IR we need here explicitly here because it will not
-      # otherwise be present when we execute the test. This must be kept in sync with the
-      # list of FIDL IR in the test itself.
-      "$_shared_out_dir/fidling/gen/examples/fidl/legacy/services/echo.fidl.json",
+      # We have to list all required FIDL IR explicitly here or they will not be
+      # present when we execute the test.
+      # This must be kept in sync with the list of FIDL IR in the test itself.
       "$_shared_out_dir/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io.fidl.json",
       "$_shared_out_dir/fidling/gen/sdk/fidl/fuchsia.mem/fuchsia.mem.fidl.json",
       "$_shared_out_dir/fidling/gen/sdk/fidl/fuchsia.sys/fuchsia.sys.fidl.json",
+      "$_shared_out_dir/fidling/gen/src/testing/fidl/placeholders.fidl.json",
+      "$_shared_out_dir/fidling/gen/src/tests/end_to_end/fidlcat/echo.fidl.json",
       "$host_tools_dir/fidlcat",
-      "${target_gen_dir}/echo_client_cpp.debug",
+      "${target_gen_dir}/echo_client_placeholder.debug",
       "//src/tests/end_to_end/fidlcat/echo.proto",
       "//src/tests/end_to_end/fidlcat/echo_client.proto",
       "//src/tests/end_to_end/fidlcat/echo_client_sync.proto",
@@ -95,16 +105,15 @@ if (is_host) {
     outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]
 
     deps = [
-      ":echo_client_cpp_sym",
-      "//examples/fidl/legacy/echo_client_cpp",
-      "//examples/fidl/legacy/echo_server_cpp",
-      "//examples/fidl/legacy/services:echo",
+      ":echo",
+      ":echo_client_sym",
       "//garnet/packages/prod:run",
       "//garnet/packages/tools:sl4f",
       "//sdk/fidl/fuchsia.io($fidl_toolchain)",
       "//sdk/fidl/fuchsia.mem($fidl_toolchain)",
       "//sdk/fidl/fuchsia.sys($fidl_toolchain)",
       "//src/developer/debug/debug_agent",
+      "//src/testing/fidl:placeholders",
       "//tools/fidlcat:fidlcat_host($host_toolchain)",
     ]
   }
@@ -113,5 +122,9 @@ if (is_host) {
 group("tests") {
   testonly = true
 
-  deps = [ ":fidlcat_test($host_toolchain)" ]
+  deps = [
+    ":fidlcat_test($host_toolchain)",
+    "//src/testing/fidl/echo_client_placeholder",
+    "//src/testing/fidl/echo_server_placeholder",
+  ]
 }

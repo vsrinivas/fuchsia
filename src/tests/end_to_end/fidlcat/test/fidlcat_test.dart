@@ -71,13 +71,16 @@ class RunFidlcat {
 
     List<String> arguments;
     final String symbolPath = Platform.script
-        .resolve('runtime_deps/echo_client_cpp.debug')
+        .resolve('runtime_deps/echo_client_placeholder.debug')
         .toFilePath();
     // We have to list all of the IR we need explicitly, here and in the BUILD.gn file. The
     // two lists must be kept in sync: if you add an IR here, you must also add it to the
     // BUILD.gn file.
     final String echoIr =
         Platform.script.resolve('runtime_deps/echo.fidl.json').toFilePath();
+    final String testIr = Platform.script
+        .resolve('runtime_deps/placeholders.fidl.json')
+        .toFilePath();
     final String ioIr = Platform.script
         .resolve('runtime_deps/fuchsia.io.fidl.json')
         .toFilePath();
@@ -86,6 +89,7 @@ class RunFidlcat {
         .toFilePath();
     arguments = [
       '--fidl-ir-path=$echoIr',
+      '--fidl-ir-path=$testIr',
       '--fidl-ir-path=$ioIr',
       '--fidl-ir-path=$sysIr',
       '-s',
@@ -152,12 +156,12 @@ void main(List<String> arguments) {
       var instance = RunFidlcat();
       await instance.run(log, sl4fDriver, fidlcatPath, RunMode.withAgent, [
         'run',
-        'fuchsia-pkg://fuchsia.com/echo_client_cpp#meta/echo_client_cpp.cmx'
+        'fuchsia-pkg://fuchsia.com/echo_client_placeholder#meta/echo_client.cmx'
       ]);
 
       expect(
           instance.stdoutString,
-          contains('sent request fidl.examples.echo/Echo.EchoString = {\n'
+          contains('sent request test.placeholders/Echo.EchoString = {\n'
               '    value: string = "hello world"\n'
               '  }'),
           reason: instance.additionalResult);
@@ -172,7 +176,7 @@ void main(List<String> arguments) {
 
       /// fuchsia-pkg URL for the echo client.
       const String echoClientUrl =
-          'fuchsia-pkg://fuchsia.com/echo_client_cpp#meta/echo_client_cpp.cmx';
+          'fuchsia-pkg://fuchsia.com/echo_client_placeholder#meta/echo_client.cmx';
 
       /// Launch three instances of echo client one after the other.
       await sl4fDriver.ssh.run('run $echoClientUrl');
@@ -194,7 +198,7 @@ void main(List<String> arguments) {
           reason: instance.additionalResult);
 
       await instance.agentResult;
-    }, skip: 'It\'s too flaky in the CI');  // TODO(fxb/86627): Enable me.
+    }, skip: 'It\'s too flaky in the CI'); // TODO(fxb/86627): Enable me.
 
     test('Test --extra-name', () async {
       var instance = RunFidlcat();
@@ -202,7 +206,7 @@ void main(List<String> arguments) {
         '--remote-name=echo_server',
         '--extra-name=echo_client',
         'run',
-        'fuchsia-pkg://fuchsia.com/echo_client_cpp#meta/echo_client_cpp.cmx'
+        'fuchsia-pkg://fuchsia.com/echo_client_placeholder#meta/echo_client.cmx'
       ]);
 
       final lines = instance.stdoutString.split('\n\n');
@@ -213,10 +217,10 @@ void main(List<String> arguments) {
       /// "Monitoring echo_client" and "Monitoring echo_server".
       /// With --extra-name for echo_client, we wait for echo_server before monitoring echo_client.
       /// Therefore, both line are one after the other.
-      expect(lines[1], contains('Monitoring echo_client_cpp.cmx koid='),
+      expect(lines[1], contains('Monitoring echo_client.cmx koid='),
           reason: instance.additionalResult);
 
-      expect(lines[2], contains('Monitoring echo_server_cpp.cmx koid='),
+      expect(lines[2], contains('Monitoring echo_server.cmx koid='),
           reason: instance.additionalResult);
 
       await instance.agentResult;
@@ -227,14 +231,14 @@ void main(List<String> arguments) {
       await instance.run(log, sl4fDriver, fidlcatPath, RunMode.withAgent, [
         '--trigger=.*EchoString',
         'run',
-        'fuchsia-pkg://fuchsia.com/echo_client_cpp#meta/echo_client_cpp.cmx'
+        'fuchsia-pkg://fuchsia.com/echo_client_placeholder#meta/echo_client.cmx'
       ]);
 
       final lines = instance.stdoutString.split('\n\n');
 
       /// The first displayed message must be EchoString.
       expect(lines[2],
-          contains('sent request fidl.examples.echo/Echo.EchoString = {\n'),
+          contains('sent request test.placeholders/Echo.EchoString = {\n'),
           reason: instance.additionalResult);
 
       await instance.agentResult;
@@ -246,7 +250,7 @@ void main(List<String> arguments) {
         '--messages=.*EchoString',
         '--exclude-syscalls=zx_channel_create',
         'run',
-        'fuchsia-pkg://fuchsia.com/echo_client_cpp#meta/echo_client_cpp.cmx'
+        'fuchsia-pkg://fuchsia.com/echo_client_placeholder#meta/echo_client.cmx'
       ]);
 
       final lines = instance.stdoutString.split('\n\n');
@@ -255,13 +259,13 @@ void main(List<String> arguments) {
       /// filtered out).
       expect(
           lines[4],
-          contains('sent request fidl.examples.echo/Echo.EchoString = {\n'
+          contains('sent request test.placeholders/Echo.EchoString = {\n'
               '    value: string = "hello world"\n'
               '  }'),
           reason: instance.additionalResult);
       expect(
           lines[5],
-          contains('received response fidl.examples.echo/Echo.EchoString = {\n'
+          contains('received response test.placeholders/Echo.EchoString = {\n'
               '      response: string = "hello world"\n'
               '    }'),
           reason: instance.additionalResult);
@@ -279,12 +283,12 @@ void main(List<String> arguments) {
         '--to',
         savePath,
         'run',
-        'fuchsia-pkg://fuchsia.com/echo_client_cpp#meta/echo_client_cpp.cmx'
+        'fuchsia-pkg://fuchsia.com/echo_client_placeholder#meta/echo_client.cmx'
       ]);
 
       expect(
           instanceSave.stdoutString,
-          contains('sent request fidl.examples.echo/Echo.EchoString = {\n'
+          contains('sent request test.placeholders/Echo.EchoString = {\n'
               '    value: string = "hello world"\n'
               '  }'),
           reason: instanceSave.additionalResult);
@@ -297,7 +301,7 @@ void main(List<String> arguments) {
 
       expect(
           instanceReplay.stdoutString,
-          contains('sent request fidl.examples.echo/Echo.EchoString = {\n'
+          contains('sent request test.placeholders/Echo.EchoString = {\n'
               '    value: string = "hello world"\n'
               '  }'),
           reason: instanceReplay.additionalResult);
