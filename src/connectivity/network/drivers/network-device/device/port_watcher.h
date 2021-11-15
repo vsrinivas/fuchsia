@@ -28,15 +28,16 @@ class PortWatcher : public fbl::DoublyLinkedListable<std::unique_ptr<PortWatcher
   // |existing_ports| contains the port identifiers to be included in the watcher's existing ports
   // list.
   // |closed_callback| is called when the watcher is closed by the peer or by a call to |Unbind|.
-  zx_status_t Bind(async_dispatcher_t* dispatcher, cpp20::span<const uint8_t> existing_ports,
+  zx_status_t Bind(async_dispatcher_t* dispatcher,
+                   cpp20::span<const netdev::wire::PortId> existing_ports,
                    fidl::ServerEnd<netdev::PortWatcher> channel, ClosedCallback closed_callback);
   // Unbinds the port watcher if currently bound.
   void Unbind();
 
   // Notifies peer of port addition.
-  void PortAdded(uint8_t port_id);
+  void PortAdded(netdev::wire::PortId port_id);
   // Notifies peer of port removal.
-  void PortRemoved(uint8_t port_id);
+  void PortRemoved(netdev::wire::PortId port_id);
 
   // FIDL protocol implementation.
   void Watch(WatchRequestView request, WatchCompleter::Sync& completer) override;
@@ -49,9 +50,9 @@ class PortWatcher : public fbl::DoublyLinkedListable<std::unique_ptr<PortWatcher
     Event(Event&& other) = delete;
     Event(const Event& other);
 
-    void SetExisting(uint8_t port_id);
-    void SetAdded(uint8_t port_id);
-    void SetRemoved(uint8_t port_id);
+    void SetExisting(netdev::wire::PortId port_id);
+    void SetAdded(netdev::wire::PortId port_id);
+    void SetRemoved(netdev::wire::PortId port_id);
     void SetIdle();
 
     netdev::wire::DevicePortEvent event() const { return event_; }
@@ -59,7 +60,7 @@ class PortWatcher : public fbl::DoublyLinkedListable<std::unique_ptr<PortWatcher
    private:
     netdev::wire::DevicePortEvent event_;
     netdev::wire::Empty empty_;
-    uint8_t port_id_;
+    netdev::wire::PortId port_id_;
   };
 
   // Queues an event in the internal queue.

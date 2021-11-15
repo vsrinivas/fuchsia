@@ -326,18 +326,5 @@ zx::status<std::unique_ptr<NetworkDeviceInterface>> FakeNetworkDeviceImpl::Creat
   return zx::ok(std::move(value));
 }
 
-zx_status_t AttachSessionPort(TestSession& session, FakeNetworkPortImpl& impl) {
-  std::vector<netdev::wire::FrameType> rx_types;
-  for (uint8_t frame_type :
-       cpp20::span(impl.port_info().rx_types_list, impl.port_info().rx_types_count)) {
-    rx_types.push_back(static_cast<netdev::wire::FrameType>(frame_type));
-  }
-  return session.AttachPort(impl.id(), std::move(rx_types));
-}
-
-zx_status_t DetachSessionPort(TestSession& session, FakeNetworkPortImpl& impl) {
-  return session.DetachPort(impl.id());
-}
-
 }  // namespace testing
 }  // namespace network

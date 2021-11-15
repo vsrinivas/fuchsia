@@ -154,6 +154,42 @@ func (ns *Netstack) addInterface(config stack.InterfaceConfig, device stack.Devi
 		return stack.StackAddInterfaceResultWithErr(stack.ErrorInvalidArgs)
 	}
 
+	// This API is only compatible with devices with a single port, ensure that's
+	// the case and use the discovered port id.
+	portId, err := func() (network.PortId, error) {
+		watcherReq, watcher, err := network.NewPortWatcherWithCtxInterfaceRequest()
+		if err != nil {
+			return network.PortId{}, err
+		}
+		defer func() {
+			_ = watcher.Close()
+		}()
+		if err := dev.GetPortWatcher(context.Background(), watcherReq); err != nil {
+			return network.PortId{}, err
+		}
+		event, err := watcher.Watch(context.Background())
+		if err != nil {
+			return network.PortId{}, err
+		}
+		if got, want := event.Which(), network.I_devicePortEventTag(network.DevicePortEventExisting); got != want {
+			return network.PortId{}, fmt.Errorf("unexpected device event %d, want= %d", got, want)
+		}
+		portId := event.Existing
+		event, err = watcher.Watch(context.Background())
+		if err != nil {
+			return network.PortId{}, err
+		}
+		if got, want := event.Which(), network.I_devicePortEventTag(network.DevicePortEventIdle); got != want {
+			return network.PortId{}, fmt.Errorf("unexpected device event %d, want= %d", got, want)
+		}
+		return portId, nil
+	}()
+	if err != nil {
+		_ = dev.Close()
+		_ = syslog.Warnf("failed to discover device port for network device: %s", err)
+		return stack.StackAddInterfaceResultWithErr(stack.ErrorInternal)
+	}
+
 	client, err := netdevice.NewClient(context.Background(), dev, &netdevice.SimpleSessionConfigFactory{})
 	if err != nil {
 		_ = syslog.Warnf("failed to create network device client: %s", err)
@@ -166,8 +202,10 @@ func (ns *Netstack) addInterface(config stack.InterfaceConfig, device stack.Devi
 		}
 	}()
 
-	// Always connect to port zero here to fulfill the deprecated API.
-	port, err := client.NewPort(context.Background(), netdevice.PortId(0))
+	if err != nil {
+		_ = syslog.Errorf("failed to create watcher endpoints")
+	}
+	port, err := client.NewPort(context.Background(), portId)
 	if err != nil {
 		_ = syslog.Warnf("failed to create network device port: %s", err)
 		return stack.StackAddInterfaceResultWithErr(stack.ErrorInternal)

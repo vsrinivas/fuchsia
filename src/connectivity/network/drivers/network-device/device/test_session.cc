@@ -86,7 +86,7 @@ void TestSession::Setup(fidl::ClientEnd<netdev::Session> session, netdev::wire::
   fifos_ = std::move(fifos);
 }
 
-zx_status_t TestSession::AttachPort(uint8_t port_id,
+zx_status_t TestSession::AttachPort(netdev::wire::PortId port_id,
                                     std::vector<netdev::wire::FrameType> frame_types) {
   fidl::WireResult wire_result = session_->Attach(
       port_id, fidl::VectorView<netdev::wire::FrameType>::FromExternal(frame_types));
@@ -102,7 +102,7 @@ zx_status_t TestSession::AttachPort(uint8_t port_id,
   }
 }
 
-zx_status_t TestSession::DetachPort(uint8_t port_id) {
+zx_status_t TestSession::DetachPort(netdev::wire::PortId port_id) {
   fidl::WireResult wire_result = session_->Detach(port_id);
   if (!wire_result.ok()) {
     return wire_result.status();
@@ -161,14 +161,17 @@ zx_status_t TestSession::SendTx(const uint16_t* descriptor, size_t count, size_t
   return fifos_.tx.write(sizeof(uint16_t), descriptor, count, actual);
 }
 
-zx_status_t TestSession::SendTxData(uint8_t port_id, uint16_t descriptor_index,
+zx_status_t TestSession::SendTxData(const netdev::wire::PortId& port_id, uint16_t descriptor_index,
                                     const std::vector<uint8_t>& data) {
   buffer_descriptor_t& desc = ResetDescriptor(descriptor_index);
   zx_status_t status;
   if ((status = data_vmo_.write(&data.at(0), desc.offset, data.size())) != ZX_OK) {
     return status;
   }
-  desc.port_id = port_id;
+  desc.port_id = {
+      .base = port_id.base,
+      .salt = port_id.salt,
+  };
   desc.data_length = static_cast<uint32_t>(data.size());
   return SendTx(descriptor_index);
 }

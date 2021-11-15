@@ -44,10 +44,10 @@ pub enum Error {
     DeviceInfo(#[from] crate::session::DeviceInfoValidationError),
     #[error("failed to validate netdev::PortStatus")]
     PortStatus(#[from] crate::client::PortStatusValidationError),
-    #[error("failed to attach port {0}: {1}")]
-    Attach(u8, zx::Status),
-    #[error("failed to detach port {0}: {1}")]
-    Detach(u8, zx::Status),
+    #[error("failed to attach port {0:?}: {1}")]
+    Attach(crate::Port, zx::Status),
+    #[error("failed to detach port {0:?}: {1}")]
+    Detach(crate::Port, zx::Status),
 }
 
 /// Common result type for methods in this crate.

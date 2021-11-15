@@ -44,6 +44,9 @@ class TunPair : public fbl::DoublyLinkedListable<std::unique_ptr<TunPair>>,
   void RemovePort(RemovePortRequestView request, RemovePortCompleter::Sync& completer) override;
   void GetLeft(GetLeftRequestView request, GetLeftCompleter::Sync& _completer) override;
   void GetRight(GetRightRequestView request, GetRightCompleter::Sync& _completer) override;
+  void GetLeftPort(GetLeftPortRequestView request, GetLeftPortCompleter::Sync& _completer) override;
+  void GetRightPort(GetRightPortRequestView request,
+                    GetRightPortCompleter::Sync& _completer) override;
 
  private:
   class Port : public PortAdapterParent {

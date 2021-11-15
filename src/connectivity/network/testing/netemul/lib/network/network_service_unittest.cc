@@ -197,6 +197,28 @@ class NetworkServiceTest : public TestWithEnvironmentFixture {
         [&eth1, &eth2]() { return (*eth1)->online() && (*eth2)->online(); }, kTestTimeout));
   }
 
+  zx::status<fuchsia_hardware_network::wire::PortId> GetSinglePortId(
+      network::client::NetworkDeviceClient& cli) {
+    std::optional<zx::status<fuchsia_hardware_network::wire::PortId>> id;
+    cli.GetPorts([&id](zx::status<std::vector<fuchsia_hardware_network::wire::PortId>> result) {
+      if (result.is_error()) {
+        id = result.take_error();
+        return;
+      }
+      const std::vector<fuchsia_hardware_network::wire::PortId>& port_ids = result.value();
+      if (port_ids.size() != 1) {
+        ADD_FAILURE() << "observed " << port_ids.size() << "ports, expected a single port";
+        id = zx::error(ZX_ERR_INTERNAL);
+        return;
+      }
+      const fuchsia_hardware_network::wire::PortId& port_id = port_ids[0];
+      EXPECT_EQ(port_id.base, Endpoint::kPortId);
+      id = zx::ok(port_id);
+    });
+    RunLoopUntil([&id]() { return id.has_value(); });
+    return id.value();
+  }
+
   void TearDown() override {
     async::PostTask(svc_loop_->dispatcher(), [this]() {
       svc_.reset();
@@ -1101,7 +1123,12 @@ TEST_F(NetworkServiceTest, HybridNetworkDevice) {
     ok = true;
   });
   WAIT_FOR_OK_AND_RESET(ok);
-  netdev_cli.AttachPort(Endpoint::kPortId, {kEndpointFrameType}, [&ok](zx_status_t status) {
+
+  zx::status maybe_port_id = GetSinglePortId(netdev_cli);
+  ASSERT_OK(maybe_port_id.status_value());
+  const fuchsia_hardware_network::wire::PortId port_id = maybe_port_id.value();
+
+  netdev_cli.AttachPort(port_id, {kEndpointFrameType}, [&ok](zx_status_t status) {
     ASSERT_OK(status);
     ok = true;
   });
@@ -1111,7 +1138,7 @@ TEST_F(NetworkServiceTest, HybridNetworkDevice) {
   {
     bool netdev_online = false;
     auto watcher = netdev_cli.WatchStatus(
-        Endpoint::kPortId, [&netdev_online](fuchsia_hardware_network::wire::PortStatus status) {
+        port_id, [&netdev_online](fuchsia_hardware_network::wire::PortStatus status) {
           if (status.flags() & fuchsia_hardware_network::wire::StatusFlags::kOnline) {
             netdev_online = true;
           }
@@ -1151,6 +1178,7 @@ TEST_F(NetworkServiceTest, HybridNetworkDevice) {
   auto tx = netdev_cli.AllocTx();
   ASSERT_TRUE(tx.is_valid());
   tx.data().SetFrameType(fuchsia_hardware_network::wire::FrameType::kEthernet);
+  tx.data().SetPortId(port_id);
   ASSERT_EQ(tx.data().Write(test_buff1, TEST_BUF_SIZE), TEST_BUF_SIZE);
   ASSERT_OK(tx.Send());
   WAIT_FOR_OK_AND_RESET(rx_eth);
@@ -1226,12 +1254,20 @@ TEST_F(NetworkServiceTest, DualNetworkDevice) {
     ok = true;
   });
   WAIT_FOR_OK_AND_RESET(ok);
-  cli1.AttachPort(Endpoint::kPortId, {kEndpointFrameType}, [&ok](zx_status_t status) {
+
+  zx::status maybe_port_id = GetSinglePortId(cli1);
+  ASSERT_OK(maybe_port_id.status_value());
+  const fuchsia_hardware_network::wire::PortId port_id1 = maybe_port_id.value();
+  cli1.AttachPort(port_id1, {kEndpointFrameType}, [&ok](zx_status_t status) {
     ASSERT_OK(status);
     ok = true;
   });
   WAIT_FOR_OK_AND_RESET(ok);
-  cli2.AttachPort(Endpoint::kPortId, {kEndpointFrameType}, [&ok](zx_status_t status) {
+
+  maybe_port_id = GetSinglePortId(cli2);
+  ASSERT_OK(maybe_port_id.status_value());
+  const fuchsia_hardware_network::wire::PortId port_id2 = maybe_port_id.value();
+  cli2.AttachPort(port_id2, {kEndpointFrameType}, [&ok](zx_status_t status) {
     ASSERT_OK(status);
     ok = true;
   });
@@ -1241,14 +1277,14 @@ TEST_F(NetworkServiceTest, DualNetworkDevice) {
   {
     bool online1 = false;
     bool online2 = false;
-    auto watcher1 = cli1.WatchStatus(
-        Endpoint::kPortId, [&online1](fuchsia_hardware_network::wire::PortStatus status) {
+    auto watcher1 =
+        cli1.WatchStatus(port_id1, [&online1](fuchsia_hardware_network::wire::PortStatus status) {
           if (status.flags() & fuchsia_hardware_network::wire::StatusFlags::kOnline) {
             online1 = true;
           }
         });
-    auto watcher2 = cli2.WatchStatus(
-        Endpoint::kPortId, [&online2](fuchsia_hardware_network::wire::PortStatus status) {
+    auto watcher2 =
+        cli2.WatchStatus(port_id2, [&online2](fuchsia_hardware_network::wire::PortStatus status) {
           if (status.flags() & fuchsia_hardware_network::wire::StatusFlags::kOnline) {
             online2 = true;
           }
@@ -1287,6 +1323,7 @@ TEST_F(NetworkServiceTest, DualNetworkDevice) {
     auto tx = cli2.AllocTx();
     ASSERT_TRUE(tx.is_valid());
     tx.data().SetFrameType(fuchsia_hardware_network::wire::FrameType::kEthernet);
+    tx.data().SetPortId(port_id2);
     ASSERT_EQ(tx.data().Write(test_buff1, TEST_BUF_SIZE), TEST_BUF_SIZE);
     ASSERT_OK(tx.Send());
     WAIT_FOR_OK_AND_RESET(rx1);
@@ -1297,6 +1334,7 @@ TEST_F(NetworkServiceTest, DualNetworkDevice) {
     auto tx = cli1.AllocTx();
     ASSERT_TRUE(tx.is_valid());
     tx.data().SetFrameType(fuchsia_hardware_network::wire::FrameType::kEthernet);
+    tx.data().SetPortId(port_id1);
     ASSERT_EQ(tx.data().Write(test_buff2, TEST_BUF_SIZE), TEST_BUF_SIZE);
     ASSERT_OK(tx.Send());
     WAIT_FOR_OK_AND_RESET(rx2);
@@ -1310,6 +1348,7 @@ TEST_F(NetworkServiceTest, DualNetworkDevice) {
     auto tx = cli1.AllocTx();
     ASSERT_TRUE(tx.is_valid());
     tx.data().SetFrameType(fuchsia_hardware_network::wire::FrameType::kEthernet);
+    tx.data().SetPortId(port_id1);
     ASSERT_EQ(tx.data().Write(test_buff2, TEST_BUF_SIZE), TEST_BUF_SIZE);
     ASSERT_OK(tx.Send());
   }
@@ -1371,10 +1410,8 @@ TEST_F(NetworkServiceTest, VirtualizationTeardown) {
       tun_port.NewRequest()));
 
   {
-    fidl::SynchronousInterfacePtr<fuchsia::hardware::network::Device> network_device;
-    ASSERT_OK(tun_device->GetDevice(network_device.NewRequest()));
     fidl::InterfaceHandle<fuchsia::hardware::network::Port> port;
-    ASSERT_OK(network_device->GetPort(kPortID, port.NewRequest()));
+    ASSERT_OK(tun_port->GetPort(port.NewRequest()));
     ASSERT_OK(net->AddPort(std::move(port), virtualization_interface.NewRequest()));
   }
 
@@ -1406,10 +1443,8 @@ TEST_F(NetworkServiceTest, VirtualizationTeardown) {
   CreateNetwork(netname, &net);
 
   {
-    fidl::SynchronousInterfacePtr<fuchsia::hardware::network::Device> network_device;
-    ASSERT_OK(tun_device->GetDevice(network_device.NewRequest()));
     fidl::InterfaceHandle<fuchsia::hardware::network::Port> port;
-    ASSERT_OK(network_device->GetPort(kPortID, port.NewRequest()));
+    ASSERT_OK(tun_port->GetPort(port.NewRequest()));
     ASSERT_OK(net->AddPort(std::move(port), virtualization_interface.NewRequest()));
   }
 
@@ -1466,7 +1501,12 @@ TEST_F(NetworkServiceTest, NetworkDeviceAndVirtualization) {
     ASSERT_OK(status);
   });
   WAIT_FOR_OK_AND_RESET(ok);
-  cli.AttachPort(Endpoint::kPortId, {kEndpointFrameType}, [&ok](zx_status_t status) {
+
+  zx::status maybe_port_id = GetSinglePortId(cli);
+  ASSERT_OK(maybe_port_id.status_value());
+  const fuchsia_hardware_network::wire::PortId port_id = maybe_port_id.value();
+
+  cli.AttachPort(port_id, {kEndpointFrameType}, [&ok](zx_status_t status) {
     ok = true;
     ASSERT_OK(status);
   });
@@ -1509,10 +1549,8 @@ TEST_F(NetworkServiceTest, NetworkDeviceAndVirtualization) {
 
   fidl::InterfaceHandle<fuchsia::net::virtualization::Interface> virtualization_interface;
   {
-    fidl::SynchronousInterfacePtr<fuchsia::hardware::network::Device> network_device;
-    tun_device->GetDevice(network_device.NewRequest());
     fidl::InterfaceHandle<fuchsia::hardware::network::Port> port;
-    ASSERT_OK(network_device->GetPort(kPortID, port.NewRequest()));
+    tun_port->GetPort(port.NewRequest());
     ASSERT_OK(net->AddPort(std::move(port), virtualization_interface.NewRequest()));
   }
 
@@ -1520,8 +1558,8 @@ TEST_F(NetworkServiceTest, NetworkDeviceAndVirtualization) {
   {
     bool online = false;
     bool attached = false;
-    auto watcher = cli.WatchStatus(
-        Endpoint::kPortId, [&online](fuchsia_hardware_network::wire::PortStatus status) {
+    auto watcher =
+        cli.WatchStatus(port_id, [&online](fuchsia_hardware_network::wire::PortStatus status) {
           if (status.flags() & fuchsia_hardware_network::wire::StatusFlags::kOnline) {
             online = true;
           }
@@ -1557,14 +1595,16 @@ TEST_F(NetworkServiceTest, NetworkDeviceAndVirtualization) {
   // Send data from virtualized guest to network device.
   {
     bool rx = false;
-    cli.SetRxCallback([&rx, &test_buff1](network::client::NetworkDeviceClient::Buffer buff) {
-      rx = true;
-      ASSERT_EQ(buff.data().port_id(), Endpoint::kPortId);
-      ASSERT_EQ(buff.data().frame_type(), kEndpointFrameType);
-      ASSERT_EQ(TEST_BUF_SIZE, buff.data().len());
-      ASSERT_EQ(buff.data().parts(), 1u);
-      ASSERT_EQ(0, memcmp(buff.data().part(0).data().data(), test_buff1, TEST_BUF_SIZE));
-    });
+    cli.SetRxCallback(
+        [&rx, &test_buff1, &port_id](network::client::NetworkDeviceClient::Buffer buff) {
+          rx = true;
+          ASSERT_EQ(buff.data().port_id().base, port_id.base);
+          ASSERT_EQ(buff.data().port_id().salt, port_id.salt);
+          ASSERT_EQ(buff.data().frame_type(), kEndpointFrameType);
+          ASSERT_EQ(TEST_BUF_SIZE, buff.data().len());
+          ASSERT_EQ(buff.data().parts(), 1u);
+          ASSERT_EQ(0, memcmp(buff.data().part(0).data().data(), test_buff1, TEST_BUF_SIZE));
+        });
 
     bool tx = false;
     tun_device->WriteFrame(
@@ -1600,7 +1640,7 @@ TEST_F(NetworkServiceTest, NetworkDeviceAndVirtualization) {
   {
     auto tx = cli.AllocTx();
     ASSERT_TRUE(tx.is_valid());
-    tx.data().SetPortId(Endpoint::kPortId);
+    tx.data().SetPortId(port_id);
     tx.data().SetFrameType(kEndpointFrameType);
     ASSERT_EQ(tx.data().Write(test_buff2, TEST_BUF_SIZE), TEST_BUF_SIZE);
     ASSERT_OK(tx.Send());

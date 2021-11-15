@@ -663,7 +663,7 @@ type interfacesAdminDeviceControlImpl struct {
 	detached     bool
 }
 
-func (d *interfacesAdminDeviceControlImpl) CreateInterface(_ fidl.Context, portId uint8, control admin.ControlWithCtxInterfaceRequest, options admin.Options) error {
+func (d *interfacesAdminDeviceControlImpl) CreateInterface(_ fidl.Context, portId network.PortId, control admin.ControlWithCtxInterfaceRequest, options admin.Options) error {
 
 	ifs, closeReason := func() (*ifState, admin.InterfaceRemovedReason) {
 		port, err := d.deviceClient.NewPort(context.Background(), portId)

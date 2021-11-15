@@ -11,4 +11,4 @@ pub mod session;
 
 pub use client::{Client, DevicePortEvent, PortStatus};
 pub use error::Error;
-pub use session::{Buffer, Config, DeviceInfo, Session};
+pub use session::{Buffer, Config, DeviceInfo, Port, Session};

@@ -85,6 +85,62 @@ class NetDeviceDriverTest : public ::testing::Test {
   const FakeNetworkDeviceImpl& device_impl() const { return device_impl_; }
   FakeNetworkPortImpl& port_impl() { return port_impl_; }
 
+  zx::status<netdev::wire::PortId> GetSaltedPortId(uint8_t base_id) {
+    // List all existing ports from the device until we find the right port id.
+    zx::status connect_result = ConnectNetDevice();
+    if (connect_result.is_error()) {
+      return connect_result.take_error();
+    }
+    fidl::WireSyncClient<netdev::Device>& netdevice = connect_result.value();
+    zx::status endpoints = fidl::CreateEndpoints<netdev::PortWatcher>();
+    if (endpoints.is_error()) {
+      return endpoints.take_error();
+    }
+    auto [client_end, server_end] = std::move(endpoints.value());
+    if (zx_status_t status = netdevice->GetPortWatcher(std::move(server_end)).status();
+        status != ZX_OK) {
+      return zx::error(status);
+    }
+    fidl::WireSyncClient watcher = fidl::BindSyncClient(std::move(client_end));
+    for (;;) {
+      fidl::WireResult result = watcher->Watch();
+      if (!result.ok()) {
+        return zx::error(result.status());
+      }
+      const netdev::wire::DevicePortEvent& event = result.value().event;
+
+      netdev::wire::PortId id;
+      switch (event.which()) {
+        case netdev::wire::DevicePortEvent::Tag::kAdded:
+          id = event.added();
+          break;
+        case netdev::wire::DevicePortEvent::Tag::kExisting:
+          id = event.existing();
+          break;
+        case netdev::wire::DevicePortEvent::Tag::kIdle:
+        case netdev::wire::DevicePortEvent::Tag::kRemoved:
+          ADD_FAILURE() << "Unexpected port watcher event " << static_cast<uint32_t>(event.which());
+          return zx::error(ZX_ERR_INTERNAL);
+      }
+      if (id.base == base_id) {
+        return zx::ok(id);
+      }
+    }
+  }
+
+  zx_status_t AttachSessionPort(TestSession& session, FakeNetworkPortImpl& impl) {
+    std::vector<netdev::wire::FrameType> rx_types;
+    for (uint8_t frame_type :
+         cpp20::span(impl.port_info().rx_types_list, impl.port_info().rx_types_count)) {
+      rx_types.push_back(static_cast<netdev::wire::FrameType>(frame_type));
+    }
+    zx::status port_id = GetSaltedPortId(impl.id());
+    if (port_id.is_error()) {
+      return port_id.status_value();
+    }
+    return session.AttachPort(port_id.value(), std::move(rx_types));
+  }
+
  private:
   const std::shared_ptr<MockDevice> parent_ = MockDevice::FakeRootParent();
   async::Loop loop_;
@@ -121,10 +177,14 @@ TEST_F(NetDeviceDriverTest, TestWatcherDestruction) {
   ASSERT_OK(connect_result.status_value());
   fidl::WireSyncClient<netdev::Device>& netdevice = connect_result.value();
 
+  zx::status maybe_port_id = GetSaltedPortId(kPortId);
+  ASSERT_OK(maybe_port_id.status_value());
+  const netdev::wire::PortId& port_id = maybe_port_id.value();
+
   zx::status port_endpoints = fidl::CreateEndpoints<netdev::Port>();
   ASSERT_OK(port_endpoints.status_value());
   auto [port_client_end, port_server_end] = std::move(*port_endpoints);
-  ASSERT_OK(netdevice->GetPort(kPortId, std::move(port_server_end)).status());
+  ASSERT_OK(netdevice->GetPort(port_id, std::move(port_server_end)).status());
   auto port = fidl::BindSyncClient(std::move(port_client_end));
 
   zx::status endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();

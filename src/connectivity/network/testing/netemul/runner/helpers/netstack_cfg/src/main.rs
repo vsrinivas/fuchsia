@@ -95,7 +95,7 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
             };
 
             // Get a port from the device.
-            let port_id = loop {
+            let mut port_id = loop {
                 let port_event = port_watcher.watch().await.context("watch")?;
                 match port_event {
                     fidl_fuchsia_hardware_network::DevicePortEvent::Existing(port_id)
@@ -135,7 +135,7 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
                     .context("failed to create control endpoints")?;
             let () = device_control
                 .create_interface(
-                    port_id,
+                    &mut port_id,
                     control_server_end,
                     fidl_fuchsia_net_interfaces_admin::Options {
                         name: Some(opt.endpoint.clone()),

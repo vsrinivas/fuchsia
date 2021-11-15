@@ -186,7 +186,6 @@ class EthertapImpl : public EndpointImpl {
 class NetworkDeviceImpl : public EndpointImpl,
                           public fuchsia::netemul::internal::NetworkDeviceInstance {
  public:
-  static constexpr uint8_t kTunPortId = 0;
   explicit NetworkDeviceImpl(Endpoint::Config config) : EndpointImpl(std::move(config)) {}
 
   zx_status_t Setup(const std::string& name, bool start_online,
@@ -207,7 +206,7 @@ class NetworkDeviceImpl : public EndpointImpl,
     tun_device_.set_error_handler([this](zx_status_t err) { Closed(); });
 
     fuchsia::net::tun::DevicePortConfig port_config;
-    port_config.mutable_base()->set_id(kTunPortId);
+    port_config.mutable_base()->set_id(Endpoint::kPortId);
     port_config.mutable_base()->set_mtu(config().mtu);
     port_config.mutable_base()->set_rx_types({Endpoint::kFrameType});
     port_config.mutable_base()->set_tx_types({fuchsia::hardware::network::FrameTypeSupport{
@@ -251,7 +250,7 @@ class NetworkDeviceImpl : public EndpointImpl,
     }
     auto* p = static_cast<const uint8_t*>(data);
     fuchsia::net::tun::Frame frame;
-    frame.set_port(kTunPortId);
+    frame.set_port(Endpoint::kPortId);
     frame.set_frame_type(fuchsia::hardware::network::FrameType::ETHERNET);
     frame.set_data(std::vector<uint8_t>(p, p + len));
     tun_device_->WriteFrame(std::move(frame), [](fpromise::result<void, zx_status_t> status) {

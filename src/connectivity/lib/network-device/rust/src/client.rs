@@ -49,7 +49,7 @@ impl Client {
         buffer: u32,
     ) -> Result<impl Stream<Item = Result<PortStatus>> + Unpin> {
         let (port_proxy, port_server) = fidl::endpoints::create_proxy::<netdev::PortMarker>()?;
-        let () = self.device.get_port(port.into(), port_server)?;
+        let () = self.device.get_port(&mut port.into(), port_server)?;
         let (watcher_proxy, watcher_server) =
             fidl::endpoints::create_proxy::<netdev::StatusWatcherMarker>()?;
         let () = port_proxy.get_status_watcher(watcher_server, buffer)?;

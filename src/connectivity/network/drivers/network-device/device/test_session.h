@@ -28,9 +28,9 @@ class TestSession {
   zx_status_t Init(uint16_t descriptor_count, uint64_t buffer_size);
   zx::status<netdev::wire::SessionInfo> GetInfo();
   void Setup(fidl::ClientEnd<netdev::Session> session, netdev::wire::Fifos fifos);
-  [[nodiscard]] zx_status_t AttachPort(uint8_t port_id,
+  [[nodiscard]] zx_status_t AttachPort(netdev::wire::PortId port_id,
                                        std::vector<netdev::wire::FrameType> frame_types);
-  [[nodiscard]] zx_status_t DetachPort(uint8_t port_id);
+  [[nodiscard]] zx_status_t DetachPort(netdev::wire::PortId port_id);
 
   zx_status_t Close();
   zx_status_t WaitClosed(zx::time deadline);
@@ -43,7 +43,7 @@ class TestSession {
   zx_status_t FetchTx(uint16_t* descriptors, size_t count, size_t* actual) const;
   zx_status_t SendRx(const uint16_t* descriptor, size_t count, size_t* actual) const;
   zx_status_t SendTx(const uint16_t* descriptor, size_t count, size_t* actual) const;
-  zx_status_t SendTxData(uint8_t port_id, uint16_t descriptor_index,
+  zx_status_t SendTxData(const netdev::wire::PortId& port_id, uint16_t descriptor_index,
                          const std::vector<uint8_t>& data);
 
   zx_status_t FetchRx(uint16_t* descriptor) const {

@@ -76,7 +76,7 @@ impl Session {
     }
 
     /// Attaches [`Session`] to a port.
-    pub async fn attach<IntoIter, Iter>(&self, Port(port): Port, rx_frames: IntoIter) -> Result<()>
+    pub async fn attach<IntoIter, Iter>(&self, port: Port, rx_frames: IntoIter) -> Result<()>
     where
         IntoIter: IntoIterator<IntoIter = Iter>,
         Iter: Iterator<Item = netdev::FrameType> + ExactSizeIterator,
@@ -85,18 +85,18 @@ impl Session {
         let () = self
             .inner()?
             .proxy
-            .attach(port, &mut iter)
+            .attach(&mut port.into(), &mut iter)
             .await?
             .map_err(|raw| Error::Attach(port, zx::Status::from_raw(raw)))?;
         Ok(())
     }
 
     /// Detaches a port from the [`Session`].
-    pub async fn detach(&self, Port(port): Port) -> Result<()> {
+    pub async fn detach(&self, port: Port) -> Result<()> {
         let () = self
             .inner()?
             .proxy
-            .detach(port)
+            .detach(&mut port.into())
             .await?
             .map_err(|raw| Error::Detach(port, zx::Status::from_raw(raw)))?;
         Ok(())
@@ -479,18 +479,20 @@ impl DeviceInfo {
 
 /// A port of the device.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Port(u8);
+pub struct Port {
+    base: u8,
+    salt: u8,
+}
 
-impl From<u8> for Port {
-    fn from(p: u8) -> Self {
-        Port(p)
+impl From<netdev::PortId> for Port {
+    fn from(netdev::PortId { base, salt }: netdev::PortId) -> Self {
+        Self { base, salt }
     }
 }
 
-impl Into<u8> for Port {
-    fn into(self) -> u8 {
-        let Self(p) = self;
-        p
+impl From<Port> for netdev::PortId {
+    fn from(Port { base, salt }: Port) -> Self {
+        Self { base, salt }
     }
 }
 

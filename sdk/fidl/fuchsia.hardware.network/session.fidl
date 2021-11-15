@@ -44,7 +44,7 @@ protocol Session {
     /// port's supported frames.
     /// * error `ZX_ERR_ALREADY_BOUND` if `port` is already attached.
     Attach(struct {
-        port port_id;
+        port PortId;
         rx_frames vector<FrameType>:MAX_FRAME_TYPES;
     }) -> (struct {}) error zx.status;
     /// Detaches the session from `port`.
@@ -58,7 +58,7 @@ protocol Session {
     /// * error `ZX_ERR_NOT_FOUND` if the session is not currently attached to
     /// the port.
     Detach(struct {
-        port port_id;
+        port PortId;
     }) -> (struct {}) error zx.status;
     /// Cleanly closes a session.
     ///

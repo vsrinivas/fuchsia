@@ -10,8 +10,20 @@ const MAX_STATUS_BUFFER uint32 = 50;
 /// The maximum number of ports attached to a device at a given time.
 const MAX_PORTS uint8 = 32;
 
-/// The identifier of a port within a device. Always less than [`MAX_PORTS`].
-alias port_id = uint8;
+/// The base identifier of a port within a device. Always less than
+/// [`MAX_PORTS`].
+alias base_port_id = uint8;
+
+/// A device port identifier.
+type PortId = struct {
+    /// The base identifier for the port.
+    ///
+    /// Generally identifies a port instance in hardware.
+    base base_port_id;
+    /// An implementation-defined identifier that is guaranteed to change on
+    /// every instantiation of the identified port.
+    salt uint8;
+};
 
 /// Network device class.
 ///
@@ -77,7 +89,7 @@ protocol StatusWatcher {
 /// Logical port information.
 type PortInfo = table {
     /// Port's identifier. Required.
-    1: id port_id;
+    1: id PortId;
     /// Port's class. Required.
     2: class PortClass;
     /// Supported rx frame types on this port. Required.

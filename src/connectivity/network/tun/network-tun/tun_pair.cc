@@ -146,11 +146,33 @@ void TunPair::RemovePort(RemovePortRequestView request, RemovePortCompleter::Syn
 }
 
 void TunPair::GetLeft(GetLeftRequestView request, GetLeftCompleter::Sync& _completer) {
-  left_->Bind(std::move(request->device));
+  zx_status_t status = left_->Bind(std::move(request->device));
+  if (status != ZX_OK) {
+    FX_LOGF(ERROR, "tun", "bind to left device failed: %s", zx_status_get_string(status));
+  }
 }
 
 void TunPair::GetRight(GetRightRequestView request, GetRightCompleter::Sync& _completer) {
-  right_->Bind(std::move(request->device));
+  zx_status_t status = right_->Bind(std::move(request->device));
+  if (status != ZX_OK) {
+    FX_LOGF(ERROR, "tun", "bind to right device failed: %s", zx_status_get_string(status));
+  }
+}
+
+void TunPair::GetLeftPort(GetLeftPortRequestView request, GetLeftPortCompleter::Sync& _completer) {
+  zx_status_t status = left_->BindPort(request->id, std::move(request->port));
+  if (status != ZX_OK) {
+    FX_LOGF(ERROR, "tun", "bind to left port %d failed: %s", request->id,
+            zx_status_get_string(status));
+  }
+}
+void TunPair::GetRightPort(GetRightPortRequestView request,
+                           GetRightPortCompleter::Sync& _completer) {
+  zx_status_t status = right_->BindPort(request->id, std::move(request->port));
+  if (status != ZX_OK) {
+    FX_LOGF(ERROR, "tun", "bind to right port %d failed: %s", request->id,
+            zx_status_get_string(status));
+  }
 }
 
 void TunPair::OnTxAvail(DeviceAdapter* device) {

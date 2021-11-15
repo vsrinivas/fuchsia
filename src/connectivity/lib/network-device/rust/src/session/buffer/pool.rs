@@ -24,7 +24,7 @@ use futures::channel::oneshot::{channel, Receiver, Sender};
 
 use super::{ChainLength, DescId, DescRef, DescRefMut, Descriptors};
 use crate::error::{Error, Result};
-use crate::session::{BufferLayout, Config, Pending};
+use crate::session::{BufferLayout, Config, Pending, Port};
 
 /// Responsible for managing [`Buffer`]s for a [`Session`](crate::session::Session).
 pub(in crate::session) struct Pool {
@@ -449,6 +449,11 @@ impl<K: AllocKind> Buffer<K> {
     pub fn frame_type(&self) -> Result<netdev::FrameType> {
         self.alloc.descriptor().frame_type()
     }
+
+    /// Retrieves the buffer's source port.
+    pub fn port(&self) -> Port {
+        self.alloc.descriptor().port()
+    }
 }
 
 impl Buffer<Tx> {
@@ -459,6 +464,11 @@ impl Buffer<Tx> {
             // buffer_length, which is a u32.
             descriptor.commit(u32::try_from(part.len).unwrap())
         }
+    }
+
+    /// Sets the buffer's destination port.
+    pub fn set_port(&mut self, port: Port) {
+        self.alloc.descriptor_mut().set_port(port)
     }
 
     /// Sets the frame type of the buffer.

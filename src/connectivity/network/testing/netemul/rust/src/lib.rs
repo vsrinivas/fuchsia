@@ -34,9 +34,6 @@ type Result<T = ()> = std::result::Result<T, anyhow::Error>;
 /// The default MTU used in in netemul endpoint configurations.
 pub const DEFAULT_MTU: u16 = 1500;
 
-/// The port identifier used by netemul for [`NetworkDevice`] endpoints.
-pub const PORT_ID: u8 = fnetemul_network::PORT_ID;
-
 /// Abstraction for different endpoint backing types.
 pub trait Endpoint: Copy + Clone {
     /// The backing [`EndpointBacking`] for this `Endpoint`.
@@ -639,6 +636,38 @@ impl<'a> TestFakeEndpoint<'a> {
     }
 }
 
+/// Returns the [`fnetwork::PortId`] for a device that is expected to have a
+/// single port.
+///
+/// Returns an error if the device has more or less than a single port.
+pub async fn get_single_device_port_id(device: &fnetwork::DeviceProxy) -> Result<fnetwork::PortId> {
+    let (watcher, server) = fidl::endpoints::create_proxy::<fnetwork::PortWatcherMarker>()
+        .context("create endpoints")?;
+    let () = device.get_port_watcher(server).context("get port watcher")?;
+    let stream = futures::stream::try_unfold(watcher, |watcher| async move {
+        let event = watcher.watch().await.context("watch failed")?;
+        match event {
+            fnetwork::DevicePortEvent::Existing(port_id) => Ok(Some((port_id, watcher))),
+            fnetwork::DevicePortEvent::Idle(fnetwork::Empty {}) => Ok(None),
+            e @ fnetwork::DevicePortEvent::Added(_) | e @ fnetwork::DevicePortEvent::Removed(_) => {
+                Err(anyhow::anyhow!("unexpected device port event {:?}", e))
+            }
+        }
+    });
+    futures::pin_mut!(stream);
+    let port_id = stream
+        .try_next()
+        .await
+        .context("fetching first port")?
+        .ok_or_else(|| anyhow::anyhow!("no ports found on device"))?;
+    let rest = stream.try_collect::<Vec<_>>().await.context("observing idle")?;
+    if rest.is_empty() {
+        Ok(port_id)
+    } else {
+        Err(anyhow::anyhow!("found more than one device port: {:?}, {:?}", port_id, rest))
+    }
+}
+
 impl<'a> TestEndpoint<'a> {
     /// Gets access to this device's virtual Ethernet device.
     ///
@@ -668,6 +697,7 @@ impl<'a> TestEndpoint<'a> {
     ) -> Result<(
         fidl::endpoints::ClientEnd<fnetwork::DeviceMarker>,
         fidl::endpoints::ClientEnd<fnetwork::MacAddressingMarker>,
+        fnetwork::PortId,
     )> {
         match self
             .get_device()
@@ -675,7 +705,7 @@ impl<'a> TestEndpoint<'a> {
             .with_context(|| format!("failed to get device connection for {}", self.name))?
         {
             fnetemul_network::DeviceConnection::NetworkDevice(n) => {
-                Self::connect_netdevice_protocols(n)
+                Self::connect_netdevice_protocols(n).await
             }
             fnetemul_network::DeviceConnection::Ethernet(_) => {
                 Err(anyhow::anyhow!("Endpoint {} is not a Network Device", self.name))
@@ -684,11 +714,12 @@ impl<'a> TestEndpoint<'a> {
     }
 
     /// Helper function to retrieve the protocols from a netdevice client end.
-    fn connect_netdevice_protocols(
+    async fn connect_netdevice_protocols(
         netdevice: fidl::endpoints::ClientEnd<fnetwork::DeviceInstanceMarker>,
     ) -> Result<(
         fidl::endpoints::ClientEnd<fnetwork::DeviceMarker>,
         fidl::endpoints::ClientEnd<fnetwork::MacAddressingMarker>,
+        fnetwork::PortId,
     )> {
         // TODO(http://fxbug.dev/85061): Do not automatically connect to port
         // once Netstack exposes FIDL that is port-aware and we've migrated to
@@ -696,16 +727,17 @@ impl<'a> TestEndpoint<'a> {
         let netdevice: fnetwork::DeviceInstanceProxy = netdevice.into_proxy()?;
         let (device, device_server_end) =
             fidl::endpoints::create_proxy::<fnetwork::DeviceMarker>()?;
+        let () = netdevice.get_device(device_server_end)?;
+        let mut port_id = get_single_device_port_id(&device).await?;
         let (port, port_server_end) = fidl::endpoints::create_proxy::<fnetwork::PortMarker>()?;
-        let () = device.get_port(PORT_ID, port_server_end)?;
+        let () = device.get_port(&mut port_id, port_server_end)?;
         let (mac, mac_server_end) =
             fidl::endpoints::create_endpoints::<fnetwork::MacAddressingMarker>()?;
-        let () = netdevice.get_device(device_server_end)?;
         let () = port.get_mac(mac_server_end)?;
         // No other references exist, we just created this proxy, unwrap is safe.
         let device =
             fidl::endpoints::ClientEnd::new(device.into_channel().unwrap().into_zx_channel());
-        Ok((device, mac))
+        Ok((device, mac, port_id))
     }
 
     /// Adds this endpoint to `stack`, returning the interface identifier.
@@ -718,7 +750,7 @@ impl<'a> TestEndpoint<'a> {
                 stack.add_ethernet_interface(&self.name, eth).await.squash_result()?
             }
             fnetemul_network::DeviceConnection::NetworkDevice(netdevice) => {
-                let (device, mac) = Self::connect_netdevice_protocols(netdevice)?;
+                let (device, mac, _port_id) = Self::connect_netdevice_protocols(netdevice).await?;
                 stack
                     .add_interface(
                         fnet_stack::InterfaceConfig::EMPTY,
@@ -755,7 +787,7 @@ impl<'a> TestEndpoint<'a> {
                 .map(u64::from)
                 .context("add_ethernet_device failed"),
             fnetemul_network::DeviceConnection::NetworkDevice(netdevice) => {
-                let (device, mac) = Self::connect_netdevice_protocols(netdevice)?;
+                let (device, mac, _port_id) = Self::connect_netdevice_protocols(netdevice).await?;
                 stack
                     .add_interface(
                         fnet_stack::InterfaceConfig {

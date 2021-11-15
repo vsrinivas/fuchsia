@@ -14,13 +14,13 @@ use futures::{
     stream::TryStreamExt as _,
 };
 use matches::assert_matches;
-use netdevice_client::{Client, Error, Session};
+use netdevice_client::{Client, Error, Port, Session};
 use std::{
     convert::TryInto as _,
     io::{Read as _, Write as _},
 };
 
-const DEFAULT_PORT_ID: u8 = 0;
+const DEFAULT_PORT_ID: u8 = 2;
 const DEFAULT_MTU: u32 = 1500;
 const DATA_BYTE: u8 = 42;
 const DATA_LEN: usize = 4;
@@ -28,9 +28,9 @@ const SESSION_BUFFER_LEN: usize = 2048;
 
 #[fasync::run_singlethreaded(test)]
 async fn test_rx() {
-    let (tun, _port) = create_tun_device_and_port();
+    let (tun, _tun_port, port) = create_tun_device_and_port().await;
     let client = create_netdev_client(&tun);
-    let () = with_netdev_session(client, "test_rx", |session, _client| async move {
+    let () = with_netdev_session(client, port, "test_rx", |session, _client| async move {
         let frame = tun::Frame {
             frame_type: Some(netdev::FrameType::Ethernet),
             data: Some(vec![DATA_BYTE; DATA_LEN]),
@@ -53,15 +53,16 @@ async fn test_rx() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_tx() {
-    let (tun, _port) = create_tun_device_and_port();
+    let (tun, _tun_port, port) = create_tun_device_and_port().await;
     let client = create_netdev_client(&tun);
-    let () = with_netdev_session(client, "test_tx", |session, _client| async move {
+    let () = with_netdev_session(client, port, "test_tx", |session, _client| async move {
         let mut buffer =
             session.alloc_tx_buffer(DATA_LEN).await.expect("failed to alloc tx buffer");
         assert_eq!(
             buffer.write(&[DATA_BYTE; DATA_LEN][..]).expect("failed to write into the buffer"),
             DATA_LEN
         );
+        buffer.set_port(port);
         buffer.set_frame_type(netdev::FrameType::Ethernet);
         session.send(buffer).await.expect("failed to send the buffer");
         let frame = tun
@@ -71,13 +72,15 @@ async fn test_tx() {
             .map_err(zx::Status::from_raw)
             .expect("failed to read frame from the tun device");
         assert_eq!(frame.data, Some(vec![DATA_BYTE; DATA_LEN]));
+        assert_eq!(frame.frame_type, Some(netdev::FrameType::Ethernet));
+        assert_eq!(frame.port, Some(DEFAULT_PORT_ID));
     })
     .await;
 }
 
 // Receives buffer from session and echoes back. It copies the content from
 // half of the buffers, round robin on index.
-async fn echo(session: Session, frame_count: u32) {
+async fn echo(session: Session, port: Port, frame_count: u32) {
     for i in 0..frame_count {
         let mut buffer = session.recv().await.expect("failed to recv from session");
         assert_eq!(buffer.cap(), DATA_LEN);
@@ -94,6 +97,7 @@ async fn echo(session: Session, frame_count: u32) {
             let mut buffer =
                 session.alloc_tx_buffer(DATA_LEN).await.expect("no tx buffer available");
             buffer.set_frame_type(netdev::FrameType::Ethernet);
+            buffer.set_port(port);
             assert_eq!(buffer.write(&bytes).unwrap(), DATA_LEN);
             session.send(buffer).await.expect("failed to send the buffer back on the copying path");
         }
@@ -103,10 +107,10 @@ async fn echo(session: Session, frame_count: u32) {
 #[fasync::run_singlethreaded(test)]
 async fn test_echo_tun() {
     const FRAME_TOTAL_COUNT: u32 = 512;
-    let (tun, _port) = create_tun_device_and_port();
+    let (tun, _tun_port, port) = create_tun_device_and_port().await;
     let client = create_netdev_client(&tun);
-    with_netdev_session(client, "test_echo_tun", |session, _client| async {
-        let echo_fut = echo(session, FRAME_TOTAL_COUNT);
+    with_netdev_session(client, port, "test_echo_tun", |session, _client| async {
+        let echo_fut = echo(session, port, FRAME_TOTAL_COUNT);
         let main_fut = async move {
             for i in 0..FRAME_TOTAL_COUNT {
                 let frame = tun::Frame {
@@ -142,67 +146,76 @@ async fn test_echo_tun() {
 async fn test_echo_pair() {
     const FRAME_TOTAL_COUNT: u32 = 512;
     let pair = create_tun_device_pair();
-    let (client1, client2) = create_netdev_client_pair(&pair).await;
-    let () = with_netdev_session(client1, "test_echo_pair_1", |session1, client1| async move {
-        let () = with_netdev_session(client2, "test_echo_pair_2", |session2, client2| async move {
-            // Wait for the ports to be online before we send anything.
-            assert_matches!(
-                client1.wait_online(DEFAULT_PORT_ID.into()).await,
-                Ok(netdevice_client::PortStatus {
-                    flags: netdev::StatusFlags::Online,
-                    mtu: DEFAULT_MTU
-                })
-            );
-            assert_matches!(
-                client2.wait_online(DEFAULT_PORT_ID.into()).await,
-                Ok(netdevice_client::PortStatus {
-                    flags: netdev::StatusFlags::Online,
-                    mtu: DEFAULT_MTU
-                })
-            );
-            let echo_fut = echo(session1, FRAME_TOTAL_COUNT);
-            let main_fut = async {
-                for i in 0..FRAME_TOTAL_COUNT {
-                    let mut buffer = session2
-                        .alloc_tx_buffer(DATA_LEN)
-                        .await
-                        .expect("failed to alloc tx buffer");
-                    buffer.set_frame_type(netdev::FrameType::Ethernet);
-                    let mut bytes = i.to_le_bytes();
-                    assert_eq!(
-                        buffer.write(&bytes[..]).expect("failed to write into the buffer"),
-                        DATA_LEN
+    let (client1, port1, client2, port2) = create_netdev_client_pair(&pair).await;
+    let () =
+        with_netdev_session(client1, port1, "test_echo_pair_1", |session1, client1| async move {
+            let () = with_netdev_session(
+                client2,
+                port2,
+                "test_echo_pair_2",
+                |session2, client2| async move {
+                    // Wait for the ports to be online before we send anything.
+                    assert_matches!(
+                        client1.wait_online(port1).await,
+                        Ok(netdevice_client::PortStatus {
+                            flags: netdev::StatusFlags::Online,
+                            mtu: DEFAULT_MTU
+                        })
                     );
-                    session2.send(buffer).await.expect("failed to send the buffer");
+                    assert_matches!(
+                        client2.wait_online(port2).await,
+                        Ok(netdevice_client::PortStatus {
+                            flags: netdev::StatusFlags::Online,
+                            mtu: DEFAULT_MTU
+                        })
+                    );
+                    let echo_fut = echo(session1, port1, FRAME_TOTAL_COUNT);
+                    let main_fut = async {
+                        for i in 0..FRAME_TOTAL_COUNT {
+                            let mut buffer = session2
+                                .alloc_tx_buffer(DATA_LEN)
+                                .await
+                                .expect("failed to alloc tx buffer");
+                            buffer.set_frame_type(netdev::FrameType::Ethernet);
+                            buffer.set_port(port2);
+                            let mut bytes = i.to_le_bytes();
+                            assert_eq!(
+                                buffer.write(&bytes[..]).expect("failed to write into the buffer"),
+                                DATA_LEN
+                            );
+                            session2.send(buffer).await.expect("failed to send the buffer");
 
-                    let mut buffer =
-                        session2.recv().await.expect("failed to recv from the session");
-                    assert_eq!(
-                        buffer.read(&mut bytes[..]).expect("failed to read from the buffer"),
-                        DATA_LEN
-                    );
-                    assert_eq!(u32::from_le_bytes(bytes), i);
-                }
-            };
-            futures::join!(echo_fut, main_fut);
+                            let mut buffer =
+                                session2.recv().await.expect("failed to recv from the session");
+                            assert_eq!(
+                                buffer
+                                    .read(&mut bytes[..])
+                                    .expect("failed to read from the buffer"),
+                                DATA_LEN
+                            );
+                            assert_eq!(u32::from_le_bytes(bytes), i);
+                        }
+                    };
+                    futures::join!(echo_fut, main_fut);
+                },
+            )
+            .await;
         })
         .await;
-    })
-    .await;
 }
 
 #[test]
 fn test_session_task_dropped() {
     let mut executor = fasync::TestExecutor::new().expect("failed to create executor");
     let session = executor.run_singlethreaded(async {
-        let (tun, _port) = create_tun_device_and_port();
+        let (tun, _tun_port, port) = create_tun_device_and_port().await;
         let client = create_netdev_client(&tun);
         let (session, _task) = client
             .primary_session("test_session_task_dropped", SESSION_BUFFER_LEN)
             .await
             .expect("failed to create session");
         let () = session
-            .attach(DEFAULT_PORT_ID.into(), vec![netdev::FrameType::Ethernet])
+            .attach(port, vec![netdev::FrameType::Ethernet])
             .await
             .expect("failed to attach session");
         session
@@ -225,11 +238,9 @@ fn test_session_task_dropped() {
 #[fasync::run_singlethreaded(test)]
 async fn test_status_stream() {
     const TOGGLE_COUNT: usize = 3;
-    let (tun, port) = create_tun_device_and_port();
+    let (tun, tun_port, port) = create_tun_device_and_port().await;
     let client = create_netdev_client(&tun);
-    let mut watcher = client
-        .port_status_stream(DEFAULT_PORT_ID.into())
-        .expect("failed to create a status watcher");
+    let mut watcher = client.port_status_stream(port).expect("failed to create a status watcher");
 
     for _ in 0..TOGGLE_COUNT {
         assert_matches!(
@@ -239,7 +250,7 @@ async fn test_status_stream() {
                 mtu: DEFAULT_MTU
             }))
         );
-        port.set_online(false).await.expect("failed to flip online flag");
+        tun_port.set_online(false).await.expect("failed to flip online flag");
         assert_eq!(
             watcher.try_next().await.expect("failed to get next status update"),
             Some(netdevice_client::PortStatus {
@@ -247,29 +258,29 @@ async fn test_status_stream() {
                 mtu: DEFAULT_MTU
             })
         );
-        port.set_online(true).await.expect("failed to flip online flag");
+        tun_port.set_online(true).await.expect("failed to flip online flag");
     }
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn test_port_stream() {
-    let (_tun, mut stream) = {
-        let (tun, _port) = create_tun_device_and_port();
+    let (_tun, mut stream, port) = {
+        let (tun, _tun_port, port) = create_tun_device_and_port().await;
         let client = create_netdev_client(&tun);
         let mut stream = client.device_port_event_stream().expect("failed to create port stream");
         assert_matches!(
             stream.try_next().await.expect("failed to get next event"),
-            Some(netdev::DevicePortEvent::Existing(DEFAULT_PORT_ID))
+            Some(netdev::DevicePortEvent::Existing(p)) if p == port.into()
         );
         assert_matches!(
             stream.try_next().await.expect("failed to get next event"),
             Some(netdev::DevicePortEvent::Idle(netdev::Empty { .. }))
         );
-        (tun, stream)
+        (tun, stream, port)
     };
     assert_matches!(
         stream.try_next().await.expect("failed to get next event"),
-        Some(netdev::DevicePortEvent::Removed(DEFAULT_PORT_ID))
+        Some(netdev::DevicePortEvent::Removed(p)) if p == port.into()
     );
 }
 
@@ -287,7 +298,7 @@ fn default_base_port_config() -> tun::BasePortConfig {
     }
 }
 
-fn create_tun_device_and_port() -> (tun::DeviceProxy, tun::PortProxy) {
+async fn create_tun_device_and_port() -> (tun::DeviceProxy, tun::PortProxy, Port) {
     let ctrl =
         connect_to_protocol::<tun::ControlMarker>().expect("failed to connect to tun.Control");
     let (device, server) = endpoints::create_proxy::<tun::DeviceMarker>()
@@ -309,7 +320,14 @@ fn create_tun_device_and_port() -> (tun::DeviceProxy, tun::PortProxy) {
             server,
         )
         .expect("failed to add port to device");
-    (device, port)
+
+    let (device_port, server) =
+        endpoints::create_proxy::<netdev::PortMarker>().expect("failed to create endpoints");
+    port.get_port(server).expect("get device port");
+
+    let id = device_port.get_info().await.expect("getting port info").id.expect("missing port id");
+
+    (device, port, id.into())
 }
 
 fn create_tun_device_pair() -> tun::DevicePairProxy {
@@ -333,10 +351,10 @@ fn create_netdev_client(tun: &tun::DeviceProxy) -> Client {
     client
 }
 
-async fn create_netdev_client_pair(pair: &tun::DevicePairProxy) -> (Client, Client) {
-    let (device1, left) = endpoints::create_proxy::<netdev::DeviceMarker>()
+async fn create_netdev_client_pair(pair: &tun::DevicePairProxy) -> (Client, Port, Client, Port) {
+    let (device_left, left) = endpoints::create_proxy::<netdev::DeviceMarker>()
         .expect("failed to create left device proxy");
-    let (device2, right) = endpoints::create_proxy::<netdev::DeviceMarker>()
+    let (device_right, right) = endpoints::create_proxy::<netdev::DeviceMarker>()
         .expect("failed to create right device proxy");
     pair.get_left(left).expect("failed to connect left");
     pair.get_right(right).expect("failed to connect right");
@@ -347,10 +365,25 @@ async fn create_netdev_client_pair(pair: &tun::DevicePairProxy) -> (Client, Clie
     .await
     .unwrap()
     .expect("failed to create the default logical port");
-    (Client::new(device1), Client::new(device2))
+
+    async fn get_port_id<F: FnOnce(fidl::endpoints::ServerEnd<netdev::PortMarker>)>(f: F) -> Port {
+        let (port, server) =
+            fidl::endpoints::create_proxy::<netdev::PortMarker>().expect("create endpoints");
+        f(server);
+        port.get_info().await.expect("getting info").id.expect("missing id").into()
+    }
+
+    let port_left =
+        get_port_id(|server| pair.get_left_port(DEFAULT_PORT_ID, server).expect("get left port"))
+            .await;
+    let port_right =
+        get_port_id(|server| pair.get_right_port(DEFAULT_PORT_ID, server).expect("get right port"))
+            .await;
+
+    (Client::new(device_left), port_left, Client::new(device_right), port_right)
 }
 
-async fn with_netdev_session<F, Fut>(client: Client, name: &str, f: F)
+async fn with_netdev_session<F, Fut>(client: Client, port: Port, name: &str, f: F)
 where
     F: FnOnce(Session, Client) -> Fut,
     Fut: Future<Output = ()>,
@@ -358,7 +391,7 @@ where
     let (session, task) =
         client.primary_session(name, SESSION_BUFFER_LEN).await.expect("failed to create session");
     let () = session
-        .attach(DEFAULT_PORT_ID.into(), vec![netdev::FrameType::Ethernet])
+        .attach(port, vec![netdev::FrameType::Ethernet])
         .await
         .expect("failed to attach session");
     futures::select! {

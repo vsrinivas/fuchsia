@@ -82,6 +82,7 @@ class TunDevice : public fbl::DoublyLinkedListable<std::unique_ptr<TunDevice>>,
     void GetState(GetStateRequestView request, GetStateCompleter::Sync& completer) override;
     void WatchState(WatchStateRequestView request, WatchStateCompleter::Sync& completer) override;
     void SetOnline(SetOnlineRequestView request, SetOnlineCompleter::Sync& completer) override;
+    void GetPort(GetPortRequestView request, GetPortCompleter::Sync& _completer) override;
 
     void SetOnline(bool online);
     PortAdapter& adapter() { return *adapter_; }

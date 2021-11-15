@@ -197,25 +197,37 @@ bool LatencyTest(perftest::RepeatState* state, const uint16_t buffer_count) {
   ASSERT_OK(device_status.status_value(), "failed to create device");
   std::unique_ptr device = std::move(device_status.value());
 
-  zx::status endpoints = fidl::CreateEndpoints<network::netdev::Device>();
-  ASSERT_OK(endpoints.status_value(), "failed to create endpoints");
-  status = device->Bind(std::move(endpoints->server));
-  ASSERT_OK(status, "failed to bind to device");
+  zx::status device_endpoints = fidl::CreateEndpoints<network::netdev::Device>();
+  ASSERT_OK(device_endpoints.status_value(), "failed to create device endpoints");
+  ASSERT_OK(device->Bind(std::move(device_endpoints->server)), "failed to bind to device");
+
+  zx::status port_endpoints = fidl::CreateEndpoints<network::netdev::Port>();
+  ASSERT_OK(port_endpoints.status_value(), "failed to create port endpoints");
+  ASSERT_OK(device->BindPort(network::FakeDeviceImpl::kPortId, std::move(port_endpoints->server)),
+            "failed to bind port");
+  fidl::WireSyncClient port = fidl::BindSyncClient((std::move(port_endpoints->client)));
+  fidl::WireResult port_info_result = port->GetInfo();
+  ASSERT_OK(port_info_result.status(), "failed to get port info");
+  const network::netdev::wire::PortInfo& port_info = port_info_result->info;
+  ZX_ASSERT_MSG(port_info.has_id(), "port id missing");
+  const network::netdev::wire::PortId& port_id = port_info.id();
 
   Session session;
-  fidl::WireSyncClient client = fidl::BindSyncClient(std::move(endpoints->client));
+  fidl::WireSyncClient client = fidl::BindSyncClient(std::move(device_endpoints->client));
   status =
       session.Open(client, "session", network::netdev::wire::SessionFlags::kPrimary, buffer_count);
   ASSERT_OK(status, "failed to open session");
-  status = session.AttachPort(network::FakeDeviceImpl::kPortId,
-                              {network::netdev::wire::FrameType::kEthernet});
+  status = session.AttachPort(port_id, {network::netdev::wire::FrameType::kEthernet});
   ASSERT_OK(status, "failed to attach port");
 
   std::array<uint16_t, network::FakeDeviceImpl::kDepth> write_descriptors, returned_descriptors;
   for (uint16_t i = 0; i < buffer_count; i++) {
     buffer_descriptor_t& descriptor = session.ResetDescriptor(i);
     // Tx tests need to set the port id here.
-    descriptor.port_id = network::FakeDeviceImpl::kPortId;
+    descriptor.port_id = {
+        .base = port_id.base,
+        .salt = port_id.salt,
+    };
     write_descriptors[i] = i;
   }
 

@@ -23,12 +23,12 @@ class DeviceInterface;
 class DevicePort : public fidl::WireServer<netdev::Port> {
  public:
   using TeardownCallback = fit::callback<void(DevicePort&)>;
-  DevicePort(DeviceInterface* parent, async_dispatcher_t* dispatcher, uint8_t id,
+  DevicePort(DeviceInterface* parent, async_dispatcher_t* dispatcher, netdev::wire::PortId id,
              ddk::NetworkPortProtocolClient port, std::unique_ptr<MacAddrDeviceInterface> mac,
              TeardownCallback on_teardown);
   ~DevicePort() { port_.Removed(); }
 
-  uint8_t id() const { return port_id_; }
+  netdev::wire::PortId id() const { return id_; }
   ddk::NetworkPortProtocolClient& impl() { return port_; }
 
   // Notifies port of status changes notifications from the network device implementation.
@@ -99,7 +99,7 @@ class DevicePort : public fidl::WireServer<netdev::Port> {
 
   DeviceInterface* const parent_;  // Pointer to parent device. Not owned.
   async_dispatcher_t* const dispatcher_;
-  const uint8_t port_id_;
+  const netdev::wire::PortId id_;
   ddk::NetworkPortProtocolClient port_;
   std::unique_ptr<MacAddrDeviceInterface> mac_ __TA_GUARDED(lock_);
   BindingList bindings_ __TA_GUARDED(lock_);

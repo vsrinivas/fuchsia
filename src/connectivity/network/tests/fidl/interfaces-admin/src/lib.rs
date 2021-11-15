@@ -629,9 +629,10 @@ async fn device_control_create_interface() {
         .connect_to_protocol::<fidl_fuchsia_net_interfaces_admin::InstallerMarker>()
         .expect("connect to protocol");
 
-    let (device, _mac): (
+    let (device, _mac, mut port_id): (
         _,
         fidl::endpoints::ClientEnd<fidl_fuchsia_hardware_network::MacAddressingMarker>,
+        _,
     ) = endpoint.get_netdevice().await.expect("get netdevice");
     let (device_control, device_control_server_end) =
         fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces_admin::DeviceControlMarker>()
@@ -642,7 +643,7 @@ async fn device_control_create_interface() {
         fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints().expect("create proxy");
     let () = device_control
         .create_interface(
-            netemul::PORT_ID,
+            &mut port_id,
             control_server_end,
             fidl_fuchsia_net_interfaces_admin::Options {
                 name: Some(IF_NAME.to_string()),
@@ -773,6 +774,13 @@ async fn device_control_owns_interfaces_lifetimes(detach: bool) {
                     port_server_end,
                 )
                 .expect("add port");
+            let mut port_id = {
+                let (device_port, server) =
+                    fidl::endpoints::create_proxy::<fidl_fuchsia_hardware_network::PortMarker>()
+                        .expect("create endpoints");
+                let () = port.get_port(server).expect("get port");
+                device_port.get_info().await.expect("get info").id.expect("missing port id")
+            };
 
             let (control, control_server_end) =
                 fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
@@ -780,7 +788,7 @@ async fn device_control_owns_interfaces_lifetimes(detach: bool) {
 
             let () = device_control
                 .create_interface(
-                    index,
+                    &mut port_id,
                     control_server_end,
                     fidl_fuchsia_net_interfaces_admin::Options::EMPTY,
                 )
@@ -953,7 +961,14 @@ async fn control_terminal_events(
         async move {
             // Interact with port to make sure it's installed.
             let () = port.set_online(false).await.expect("calling set_online");
-            port
+
+            let (device_port, server) =
+                fidl::endpoints::create_proxy::<fidl_fuchsia_hardware_network::PortMarker>()
+                    .expect("create endpoints");
+            let () = port.get_port(server).expect("get port");
+            let id = device_port.get_info().await.expect("get info").id.expect("missing port id");
+
+            (port, id)
         }
     };
 
@@ -962,12 +977,12 @@ async fn control_terminal_events(
             .expect("create proxy");
     let () = installer.install_device(device, device_control_server_end).expect("install device");
 
-    let create_interface = |port_id, options| {
+    let create_interface = |mut port_id, options| {
         let (control, control_server_end) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces_admin::ControlMarker>()
                 .expect("create proxy");
         let () = device_control
-            .create_interface(port_id, control_server_end, options)
+            .create_interface(&mut port_id, control_server_end, options)
             .expect("create interface");
         control
     };
@@ -979,11 +994,11 @@ async fn control_terminal_events(
 
     let (control, _keep_alive): (_, Vec<KeepResource>) = match reason {
         fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::PortAlreadyBound => {
-            let port = create_port(base_port_config).await;
+            let (port, port_id) = create_port(base_port_config).await;
             let control1 = {
                 let control =
                     fidl_fuchsia_net_interfaces_ext::admin::Control::new(create_interface(
-                        BASE_PORT_ID,
+                        port_id.clone(),
                         fidl_fuchsia_net_interfaces_admin::Options::EMPTY,
                     ));
                 // Verify that interface was created.
@@ -993,16 +1008,16 @@ async fn control_terminal_events(
 
             // Create a new interface with the same port identifier.
             let control2 =
-                create_interface(BASE_PORT_ID, fidl_fuchsia_net_interfaces_admin::Options::EMPTY);
+                create_interface(port_id, fidl_fuchsia_net_interfaces_admin::Options::EMPTY);
             (control2, vec![KeepResource::Control(control1), KeepResource::Port(port)])
         }
         fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::DuplicateName => {
-            let port1 = create_port(base_port_config.clone()).await;
+            let (port1, port1_id) = create_port(base_port_config.clone()).await;
             let if_name = "test_same_name";
             let control1 = {
                 let control =
                     fidl_fuchsia_net_interfaces_ext::admin::Control::new(create_interface(
-                        BASE_PORT_ID,
+                        port1_id,
                         fidl_fuchsia_net_interfaces_admin::Options {
                             name: Some(if_name.to_string()),
                             ..fidl_fuchsia_net_interfaces_admin::Options::EMPTY
@@ -1014,15 +1029,14 @@ async fn control_terminal_events(
             };
 
             // Create a new interface with the same name.
-            const OTHER_PORT_ID: u8 = BASE_PORT_ID + 1;
-            let port2 = create_port(fidl_fuchsia_net_tun::BasePortConfig {
-                id: Some(OTHER_PORT_ID),
+            let (port2, port2_id) = create_port(fidl_fuchsia_net_tun::BasePortConfig {
+                id: Some(BASE_PORT_ID + 1),
                 ..base_port_config
             })
             .await;
 
             let control2 = create_interface(
-                OTHER_PORT_ID,
+                port2_id,
                 fidl_fuchsia_net_interfaces_admin::Options {
                     name: Some(if_name.to_string()),
                     ..fidl_fuchsia_net_interfaces_admin::Options::EMPTY
@@ -1038,7 +1052,7 @@ async fn control_terminal_events(
             )
         }
         fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::BadPort => {
-            let port = create_port(fidl_fuchsia_net_tun::BasePortConfig {
+            let (port, port_id) = create_port(fidl_fuchsia_net_tun::BasePortConfig {
                 // netdevice/client.go only accepts IP devices that support both
                 // IPv4 and IPv6.
                 rx_types: Some(vec![fidl_fuchsia_hardware_network::FrameType::Ipv4]),
@@ -1046,19 +1060,21 @@ async fn control_terminal_events(
             })
             .await;
             let control =
-                create_interface(BASE_PORT_ID, fidl_fuchsia_net_interfaces_admin::Options::EMPTY);
+                create_interface(port_id, fidl_fuchsia_net_interfaces_admin::Options::EMPTY);
             (control, vec![KeepResource::Port(port)])
         }
         fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::PortClosed => {
             // Port closed is equivalent to port doesn't exist.
-            let control =
-                create_interface(BASE_PORT_ID, fidl_fuchsia_net_interfaces_admin::Options::EMPTY);
+            let control = create_interface(
+                fidl_fuchsia_hardware_network::PortId { base: BASE_PORT_ID, salt: 0 },
+                fidl_fuchsia_net_interfaces_admin::Options::EMPTY,
+            );
             (control, vec![])
         }
         fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::User => {
-            let port = create_port(base_port_config).await;
+            let (port, port_id) = create_port(base_port_config).await;
             let control =
-                create_interface(BASE_PORT_ID, fidl_fuchsia_net_interfaces_admin::Options::EMPTY);
+                create_interface(port_id, fidl_fuchsia_net_interfaces_admin::Options::EMPTY);
             let interface_id = control.get_id().await.expect("get id");
 
             // Remove the interface using legacy API.
@@ -1110,7 +1126,7 @@ async fn device_control_closes_on_device_close() {
         .connect_to_protocol::<fidl_fuchsia_net_interfaces_admin::InstallerMarker>()
         .expect("connect to protocol");
 
-    let (device, _mac) = endpoint.get_netdevice().await.expect("get netdevice");
+    let (device, _mac, mut port_id) = endpoint.get_netdevice().await.expect("get netdevice");
     let (device_control, device_control_server_end) =
         fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces_admin::DeviceControlMarker>()
             .expect("create proxy");
@@ -1122,7 +1138,7 @@ async fn device_control_closes_on_device_close() {
         fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints().expect("create proxy");
     let () = device_control
         .create_interface(
-            netemul::PORT_ID,
+            &mut port_id,
             control_server_end,
             fidl_fuchsia_net_interfaces_admin::Options::EMPTY,
         )
@@ -1178,9 +1194,10 @@ async fn installer_creates_datapath() {
                     .connect_to_protocol::<fidl_fuchsia_net_interfaces_admin::InstallerMarker>()
                     .expect("connect to protocol");
 
-                let (device, _mac): (
+                let (device, _mac, mut port_id): (
                     _,
                     fidl::endpoints::ClientEnd<fidl_fuchsia_hardware_network::MacAddressingMarker>,
+                    _,
                 ) = endpoint.get_netdevice().await.expect("get netdevice");
                 let (device_control, device_control_server_end) = fidl::endpoints::create_proxy::<
                     fidl_fuchsia_net_interfaces_admin::DeviceControlMarker,
@@ -1195,7 +1212,7 @@ async fn installer_creates_datapath() {
                         .expect("create proxy");
                 let () = device_control
                     .create_interface(
-                        netemul::PORT_ID,
+                        &mut port_id,
                         control_server_end,
                         fidl_fuchsia_net_interfaces_admin::Options {
                             name: Some(name.to_string()),
@@ -1292,7 +1309,7 @@ async fn control_enable_disable() {
         .connect_to_protocol::<fidl_fuchsia_net_interfaces_admin::InstallerMarker>()
         .expect("connect to protocol");
 
-    let (device, _mac) = endpoint.get_netdevice().await.expect("get netdevice");
+    let (device, _mac, mut port_id) = endpoint.get_netdevice().await.expect("get netdevice");
     let (device_control, device_control_server_end) =
         fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces_admin::DeviceControlMarker>()
             .expect("create proxy");
@@ -1322,7 +1339,7 @@ async fn control_enable_disable() {
 
     let () = device_control
         .create_interface(
-            netemul::PORT_ID,
+            &mut port_id,
             control_server_end,
             fidl_fuchsia_net_interfaces_admin::Options::EMPTY,
         )
@@ -1394,7 +1411,7 @@ async fn control_owns_interface_lifetime(detach: bool) {
         .connect_to_protocol::<fidl_fuchsia_net_interfaces_admin::InstallerMarker>()
         .expect("connect to protocol");
 
-    let (device, _mac) = endpoint.get_netdevice().await.expect("get netdevice");
+    let (device, _mac, mut port_id) = endpoint.get_netdevice().await.expect("get netdevice");
     let (device_control, device_control_server_end) =
         fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces_admin::DeviceControlMarker>()
             .expect("create proxy");
@@ -1424,7 +1441,7 @@ async fn control_owns_interface_lifetime(detach: bool) {
 
     let () = device_control
         .create_interface(
-            netemul::PORT_ID,
+            &mut port_id,
             control_server_end,
             fidl_fuchsia_net_interfaces_admin::Options::EMPTY,
         )

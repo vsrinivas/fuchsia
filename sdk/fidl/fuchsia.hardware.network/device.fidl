@@ -126,7 +126,7 @@ protocol Device {
     /// `port` is closed with a `ZX_ERR_NOT_FOUND` epitaph if no port with `id`
     /// exists.
     GetPort(resource struct {
-        id port_id;
+        id PortId;
         port server_end:Port;
     });
     /// Connects a [`PortWatcher`] to this device.
@@ -172,11 +172,11 @@ type Empty = struct {};
 // but it causes rust binding errors.
 type DevicePortEvent = strict union {
     /// Port existed when watcher was created.
-    1: existing port_id;
+    1: existing PortId;
     /// New port was added to device.
-    2: added port_id;
+    2: added PortId;
     /// Port was removed from the device.
-    3: removed port_id;
+    3: removed PortId;
     /// Exhausted list of existing ports.
     4: idle Empty;
 };

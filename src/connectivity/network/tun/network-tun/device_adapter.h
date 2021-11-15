@@ -57,6 +57,8 @@ class DeviceAdapter : public ddk::NetworkDeviceImplProtocol<DeviceAdapter> {
 
   // Binds `req` to this adapter's `NetworkDeviceInterface`.
   zx_status_t Bind(fidl::ServerEnd<netdev::Device> req);
+  // Binds `req` to the port with `port_id` in this adapter's `NetworkDeviceInterface`.
+  zx_status_t BindPort(uint8_t port_id, fidl::ServerEnd<netdev::Port> req);
 
   // Tears down this adapter and calls `callback` when teardown is finished.
   // Tearing down causes all client channels to be closed.

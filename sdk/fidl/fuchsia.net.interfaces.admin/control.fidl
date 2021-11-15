@@ -140,7 +140,7 @@ protocol DeviceControl {
     /// + request `port` the device's port to instantiate as an interface.
     /// + request `control` grants access to the created interface.
     CreateInterface(resource struct {
-        port fuchsia.hardware.network.port_id;
+        port fuchsia.hardware.network.PortId;
         control server_end:Control;
         options table {
             /// New interface name.

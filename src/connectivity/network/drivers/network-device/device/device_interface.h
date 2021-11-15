@@ -44,6 +44,7 @@ struct SessionRxBuffer {
 // Used to cache common calculation and reduce number of arguments in functions.
 struct RxFrameInfo {
   const buffer_metadata_t& meta;
+  uint8_t port_id_salt;
   cpp20::span<const SessionRxBuffer> buffers;
   uint32_t total_length;
 };
@@ -65,6 +66,7 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
   // Public NetworkDevice API.
   void Teardown(fit::callback<void()> callback) override;
   zx_status_t Bind(fidl::ServerEnd<netdev::Device> req) override;
+  zx_status_t BindPort(uint8_t port_id, fidl::ServerEnd<netdev::Port> req) override;
 
   // NetworkDevice interface implementation.
   void NetworkDeviceIfcPortStatusChanged(uint8_t port_id, const port_status_t* new_status);
@@ -155,6 +157,15 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
   zx::status<netdev::wire::DeviceOpenSessionResponse> OpenSession(
       fidl::StringView name, netdev::wire::SessionInfo session_info);
 
+  // Returns the current port salt for the provided base port ID.
+  //
+  // If the port with |base_id| does not currently exist, returns the value of
+  // the previously existing port with the same |base_id| or the initial salt
+  // value.
+  uint8_t GetPortSalt(uint8_t base_id) __TA_REQUIRES_SHARED(control_lock_) {
+    return ports_[base_id].salt;
+  }
+
  protected:
   friend Session;
   // Acquires a port for use in a Session.
@@ -164,7 +175,7 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
   //
   // NB: The validity of the returned AttachedPort is not really guaranteed by the type system, but
   // by the fact that DeviceInterface will detach all ports from sessions before continuing.
-  zx::status<AttachedPort> AcquirePort(uint8_t port_id,
+  zx::status<AttachedPort> AcquirePort(netdev::wire::PortId port_id,
                                        cpp20::span<const netdev::wire::FrameType> rx_frame_types)
       __TA_REQUIRES(control_lock_);
 
@@ -245,7 +256,7 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
       const std::unique_ptr<DevicePort> null_port;
       return f(null_port);
     }
-    return f(ports_[port_id]);
+    return f(ports_[port_id].port);
   }
   void OnPortTeardownComplete(DevicePort& port);
 
@@ -266,7 +277,11 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
   SessionList sessions_ __TA_GUARDED(control_lock_);
   uint32_t active_primary_sessions_ __TA_GUARDED(control_lock_) = 0;
 
-  std::array<std::unique_ptr<DevicePort>, MAX_PORTS> ports_ __TA_GUARDED(control_lock_);
+  struct PortSlot {
+    std::unique_ptr<DevicePort> port;
+    uint8_t salt;
+  };
+  std::array<PortSlot, MAX_PORTS> ports_ __TA_GUARDED(control_lock_);
 
   SessionList dead_sessions_ __TA_GUARDED(control_lock_);
 

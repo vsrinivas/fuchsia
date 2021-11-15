@@ -261,7 +261,7 @@ pub(super) enum NetworkDevice {}
 /// An instance of a network device.
 pub(super) struct NetworkDeviceInstance {
     port: fhwnet::PortProxy,
-    port_id: u8,
+    port_id: fhwnet::PortId,
     device_control: fidl_fuchsia_net_interfaces_admin::DeviceControlProxy,
     topological_path: String,
 }
@@ -271,7 +271,7 @@ impl std::fmt::Debug for NetworkDeviceInstance {
         let NetworkDeviceInstance { port: _, port_id, device_control: _, topological_path } = self;
         write!(
             f,
-            "NetworkDeviceInstance{{topological_path={}, port={}}}",
+            "NetworkDeviceInstance{{topological_path={}, port={:?}}}",
             topological_path, port_id
         )
     }
@@ -352,16 +352,16 @@ impl Device for NetworkDevice {
                     match port_event {
                         fhwnet::DevicePortEvent::Idle(fhwnet::Empty {}) => {}
                         fhwnet::DevicePortEvent::Removed(port_id) => {
-                            let _: u8 = port_id;
+                            let _: fhwnet::PortId = port_id;
                         }
-                        fhwnet::DevicePortEvent::Added(port_id)
-                        | fhwnet::DevicePortEvent::Existing(port_id) => {
+                        fhwnet::DevicePortEvent::Added(mut port_id)
+                        | fhwnet::DevicePortEvent::Existing(mut port_id) => {
                             let (port, port_server_end) =
                                 fidl::endpoints::create_proxy::<fhwnet::PortMarker>()
                                     .context("create port endpoints")
                                     .map_err(errors::Error::NonFatal)?;
                             let () = device
-                                .get_port(port_id, port_server_end)
+                                .get_port(&mut port_id, port_server_end)
                                 .context("calling Device get_port")
                                 .map_err(errors::Error::NonFatal)?;
                             break Ok(Some((
@@ -440,7 +440,7 @@ impl Device for NetworkDevice {
 
         let () = device_control
             .create_interface(
-                *port_id,
+                &mut port_id.clone(),
                 control_server_end,
                 fidl_fuchsia_net_interfaces_admin::Options {
                     name: Some(name),

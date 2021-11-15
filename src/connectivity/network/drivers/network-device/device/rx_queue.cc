@@ -255,12 +255,13 @@ void RxQueue::CompleteRxList(const rx_buffer_t* rx_buffer_list, size_t count) {
       continue;
     }
 
+    primary_session->AssertParentControlLockShared(*parent_);
     const RxFrameInfo frame_info = {
         .meta = rx_buffer.meta,
+        .port_id_salt = parent_->GetPortSalt(rx_buffer.meta.port),
         .buffers = cpp20::span(session_parts.begin(), session_parts_iter),
         .total_length = total_length,
     };
-    primary_session->AssertParentControlLockShared(*parent_);
     primary_session->AssertParentRxLock(*parent_);
     if (primary_session->CompleteRx(frame_info)) {
       std::for_each(rx_parts.begin(), rx_parts.end(),

@@ -54,14 +54,16 @@ class Guest : public fuchsia::net::virtualization::Interface, public data::Consu
   fidl::Binding<fuchsia::net::virtualization::Interface>& binding() { return binding_; }
   network::client::NetworkDeviceClient& client() { return client_; }
   fuchsia::hardware::network::PortPtr& port() { return port_; }
-  void SetAttachedPort(uint8_t port_id) { attached_port_id_ = port_id; }
+  void SetAttachedPort(fuchsia_hardware_network::wire::PortId port_id) {
+    attached_port_id_ = port_id;
+  }
 
   void Consume(const void* data, size_t len) override {
     if (!attached_port_id_.has_value()) {
       // Not yet attached to any ports.
       return;
     }
-    uint8_t port_id = attached_port_id_.value();
+    const fuchsia_hardware_network::wire::PortId& port_id = attached_port_id_.value();
     network::client::NetworkDeviceClient::Buffer buffer = client_.AllocTx();
     if (!buffer.is_valid()) {
       FX_LOGS(ERROR) << "network device client TX buffers depleted, dropping " << len << " bytes";
@@ -85,7 +87,9 @@ class Guest : public fuchsia::net::virtualization::Interface, public data::Consu
   fxl::WeakPtr<data::Consumer> GetPointer() { return weak_ptr_factory_.GetWeakPtr(); }
 
  private:
-  std::optional<uint8_t> attached_port_id_;
+  // NB: Netdevice client uses LLCPP types so we store the port ID in the
+  // compatible type.
+  std::optional<fuchsia_hardware_network::wire::PortId> attached_port_id_;
   fuchsia::hardware::network::PortPtr port_;
   fidl::Binding<fuchsia::net::virtualization::Interface> binding_;
   network::client::NetworkDeviceClient client_;
@@ -254,7 +258,11 @@ void Network::AddPort(fidl::InterfaceHandle<fuchsia::hardware::network::Port> po
   guest.port().set_error_handler(cleanup);
   guest.port()->GetInfo([this, device = std::move(device_server_end), &guest,
                          cleanup](fuchsia::hardware::network::PortInfo info) mutable {
-    uint8_t port_id = info.id();
+    fuchsia::hardware::network::PortId hlcpp_port_id = info.id();
+    fuchsia_hardware_network::wire::PortId port_id = {
+        .base = hlcpp_port_id.base,
+        .salt = hlcpp_port_id.salt,
+    };
     guest.port()->GetDevice(
         fidl::InterfaceRequest<fuchsia::hardware::network::Device>(device.TakeChannel()));
     guest.client().OpenSession(name_, [port_id, &guest, cleanup](zx_status_t status) {

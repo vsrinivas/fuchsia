@@ -39,6 +39,10 @@ zx_status_t DeviceAdapter::Bind(fidl::ServerEnd<netdev::Device> req) {
   return device_->Bind(std::move(req));
 }
 
+zx_status_t DeviceAdapter::BindPort(uint8_t port_id, fidl::ServerEnd<netdev::Port> req) {
+  return device_->BindPort(port_id, std::move(req));
+}
+
 zx_status_t DeviceAdapter::NetworkDeviceImplInit(const network_device_ifc_protocol_t* iface) {
   device_iface_ = ddk::NetworkDeviceIfcProtocolClient(iface);
   return ZX_OK;

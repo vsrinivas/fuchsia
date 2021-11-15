@@ -73,7 +73,7 @@ struct PortInfoAndMac {
       const netdev::wire::PortInfo& fidl,
       const std::optional<fuchsia_net::wire::MacAddress>& unicast_address);
 
-  uint8_t id;
+  netdev::wire::PortId id;
   fuchsia_hardware_network::wire::DeviceClass port_class;
   std::vector<fuchsia_hardware_network::wire::FrameType> rx_types;
   std::vector<fuchsia_hardware_network::wire::FrameTypeSupport> tx_types;
@@ -126,6 +126,7 @@ class NetworkDeviceClient : public internal::DeviceEventHandlerProxy<NetworkDevi
   using ErrorCallback = fit::function<void(zx_status_t)>;
   using StatusCallback = fit::function<void(netdev::wire::PortStatus)>;
   using PortInfoWithMacCallback = fit::function<void(zx::status<PortInfoAndMac>)>;
+  using PortsCallback = fit::function<void(zx::status<std::vector<netdev::wire::PortId>>)>;
 
   // Opens a new session with `name` and invokes `callback` when done.
   //
@@ -145,18 +146,21 @@ class NetworkDeviceClient : public internal::DeviceEventHandlerProxy<NetworkDevi
   // Attaches a port to the current session.
   //
   // Calls callback with the operation's result.
-  void AttachPort(uint8_t port_id, std::vector<netdev::wire::FrameType> rx_frame_types,
+  void AttachPort(netdev::wire::PortId port_id, std::vector<netdev::wire::FrameType> rx_frame_types,
                   ErrorCallback callback);
 
   // Detaches a port from the current session.
   //
   // Calls callback with the operation's result.
-  void DetachPort(uint8_t port_id, ErrorCallback callback);
+  void DetachPort(netdev::wire::PortId port_id, ErrorCallback callback);
 
   // Gets information about the given port.
   //
   // Ports may be freely queried without being attached.
-  void GetPortInfoWithMac(uint8_t port_id, PortInfoWithMacCallback callback);
+  void GetPortInfoWithMac(netdev::wire::PortId port_id, PortInfoWithMacCallback callback);
+
+  // Gets all ports currently attached to the device.
+  void GetPorts(PortsCallback callback);
 
   // Kills the current session.
   //
@@ -180,7 +184,7 @@ class NetworkDeviceClient : public internal::DeviceEventHandlerProxy<NetworkDevi
   // `buffer` is the number of changes buffered by the network device, according to the
   // `fuchsia.hardware.network.Device` protocol.
   zx::status<std::unique_ptr<NetworkDeviceClient::StatusWatchHandle>> WatchStatus(
-      uint8_t port_id, StatusCallback callback, uint32_t buffer = 1);
+      netdev::wire::PortId port_id, StatusCallback callback, uint32_t buffer = 1);
 
   const DeviceInfo& device_info() const { return device_info_; }
 
@@ -252,13 +256,13 @@ class NetworkDeviceClient : public internal::DeviceEventHandlerProxy<NetworkDevi
     // The total length, in bytes, of the buffer.
     uint32_t len() const;
 
-    uint8_t port_id() const;
+    netdev::wire::PortId port_id() const;
     netdev::wire::FrameType frame_type() const;
     netdev::wire::InfoType info_type() const;
     uint32_t inbound_flags() const;
     uint32_t return_flags() const;
 
-    void SetPortId(uint8_t port_id);
+    void SetPortId(netdev::wire::PortId port_id);
     void SetFrameType(netdev::wire::FrameType type);
     void SetTxRequest(netdev::wire::TxFlags tx_flags);
 

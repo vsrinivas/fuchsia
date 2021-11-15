@@ -346,9 +346,6 @@ class TxReturnTransaction {
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(TxReturnTransaction);
 };
 
-[[nodiscard]] zx_status_t AttachSessionPort(TestSession& session, FakeNetworkPortImpl& impl);
-[[nodiscard]] zx_status_t DetachSessionPort(TestSession& session, FakeNetworkPortImpl& impl);
-
 }  // namespace testing
 }  // namespace network
 

@@ -1,6 +1,6 @@
 protocol/member fuchsia.hardware.network/Device.Clone(server_end:fuchsia.hardware.network/Device device)
 protocol/member fuchsia.hardware.network/Device.GetInfo() -> (fuchsia.hardware.network/DeviceInfo info)
-protocol/member fuchsia.hardware.network/Device.GetPort(uint8 id,server_end:fuchsia.hardware.network/Port port)
+protocol/member fuchsia.hardware.network/Device.GetPort(fuchsia.hardware.network/PortId id,server_end:fuchsia.hardware.network/Port port)
 protocol/member fuchsia.hardware.network/Device.GetPortWatcher(server_end:fuchsia.hardware.network/PortWatcher watcher)
 protocol/member fuchsia.hardware.network/Device.OpenSession(string:64 session_name,fuchsia.hardware.network/SessionInfo session_info) -> (fuchsia.hardware.network/Device_OpenSession_Result result)
 protocol fuchsia.hardware.network/Device
@@ -27,10 +27,10 @@ table/member fuchsia.hardware.network/DeviceInfo.tx_depth uint16
 table fuchsia.hardware.network/DeviceInfo
 protocol/member fuchsia.hardware.network/DeviceInstance.GetDevice(server_end:fuchsia.hardware.network/Device device)
 protocol fuchsia.hardware.network/DeviceInstance
-union/member fuchsia.hardware.network/DevicePortEvent.added uint8
-union/member fuchsia.hardware.network/DevicePortEvent.existing uint8
+union/member fuchsia.hardware.network/DevicePortEvent.added fuchsia.hardware.network/PortId
+union/member fuchsia.hardware.network/DevicePortEvent.existing fuchsia.hardware.network/PortId
 union/member fuchsia.hardware.network/DevicePortEvent.idle fuchsia.hardware.network/Empty
-union/member fuchsia.hardware.network/DevicePortEvent.removed uint8
+union/member fuchsia.hardware.network/DevicePortEvent.removed fuchsia.hardware.network/PortId
 strict union fuchsia.hardware.network/DevicePortEvent
 struct/member fuchsia.hardware.network/Device_OpenSession_Response.fifos fuchsia.hardware.network/Fifos
 struct/member fuchsia.hardware.network/Device_OpenSession_Response.session client_end:fuchsia.hardware.network/Session
@@ -81,8 +81,11 @@ protocol/member fuchsia.hardware.network/Port.GetMac(server_end:fuchsia.hardware
 protocol/member fuchsia.hardware.network/Port.GetStatus() -> (fuchsia.hardware.network/PortStatus status)
 protocol/member fuchsia.hardware.network/Port.GetStatusWatcher(server_end:fuchsia.hardware.network/StatusWatcher watcher,uint32 buffer)
 protocol fuchsia.hardware.network/Port
+struct/member fuchsia.hardware.network/PortId.base uint8
+struct/member fuchsia.hardware.network/PortId.salt uint8
+struct fuchsia.hardware.network/PortId
 table/member fuchsia.hardware.network/PortInfo.class fuchsia.hardware.network/DeviceClass
-table/member fuchsia.hardware.network/PortInfo.id uint8
+table/member fuchsia.hardware.network/PortInfo.id fuchsia.hardware.network/PortId
 table/member fuchsia.hardware.network/PortInfo.rx_types vector<fuchsia.hardware.network/FrameType>:4
 table/member fuchsia.hardware.network/PortInfo.tx_types vector<fuchsia.hardware.network/FrameTypeSupport>:4
 table fuchsia.hardware.network/PortInfo
@@ -116,9 +119,9 @@ bits/member fuchsia.hardware.network/RxFlags.RX_ECHOED_TX 2147483648
 bits/member fuchsia.hardware.network/RxFlags.RX_OVERRUN 536870912
 bits/member fuchsia.hardware.network/RxFlags.RX_VALIDATION_ERROR 1073741824
 strict bits fuchsia.hardware.network/RxFlags uint32
-protocol/member fuchsia.hardware.network/Session.Attach(uint8 port,vector<fuchsia.hardware.network/FrameType>:4 rx_frames) -> (fuchsia.hardware.network/Session_Attach_Result result)
+protocol/member fuchsia.hardware.network/Session.Attach(fuchsia.hardware.network/PortId port,vector<fuchsia.hardware.network/FrameType>:4 rx_frames) -> (fuchsia.hardware.network/Session_Attach_Result result)
 protocol/member fuchsia.hardware.network/Session.Close()
-protocol/member fuchsia.hardware.network/Session.Detach(uint8 port) -> (fuchsia.hardware.network/Session_Detach_Result result)
+protocol/member fuchsia.hardware.network/Session.Detach(fuchsia.hardware.network/PortId port) -> (fuchsia.hardware.network/Session_Detach_Result result)
 protocol fuchsia.hardware.network/Session
 bits/member fuchsia.hardware.network/SessionFlags.LISTEN_TX 2
 bits/member fuchsia.hardware.network/SessionFlags.PRIMARY 1

@@ -12,6 +12,7 @@
 #include <zircon/status.h>
 
 #include <memory>
+#include <unordered_set>
 
 #include <fbl/unique_fd.h>
 
@@ -128,7 +129,8 @@ class NetDeviceTest : public gtest::RealLoopFixture {
     return zx::ok(std::move(port_endpoints->client));
   }
 
-  zx::status<std::pair<fidl::WireSharedClient<tun::Device>, fidl::WireSharedClient<tun::Port>>>
+  zx::status<std::tuple<fidl::WireSharedClient<tun::Device>, fidl::WireSharedClient<tun::Port>,
+                        netdev::wire::PortId>>
   OpenTunDeviceAndPort(tun::wire::DeviceConfig device_config,
                        tun::wire::DevicePortConfig port_config) {
     zx::status device = OpenTunDevice(std::move(device_config));
@@ -139,16 +141,48 @@ class NetDeviceTest : public gtest::RealLoopFixture {
     if (port.is_error()) {
       return port.take_error();
     }
-    return zx::ok(std::make_pair(
+    fidl::ClientEnd port_client = std::move(port.value());
+    zx::status port_id = GetPortId([&port_client](fidl::ServerEnd<netdev::Port> server) {
+      return fidl::WireCall(port_client)->GetPort(std::move(server)).status();
+    });
+    if (port_id.is_error()) {
+      return port_id.take_error();
+    }
+
+    return zx::ok(std::make_tuple(
         fidl::WireSharedClient(std::move(*device), dispatcher(),
                                std::make_unique<TestEventHandler<tun::Device>>("tun device")),
-        fidl::WireSharedClient(std::move(*port), dispatcher(),
-                               std::make_unique<TestEventHandler<tun::Port>>("tun port"))));
+        fidl::WireSharedClient(std::move(port_client), dispatcher(),
+                               std::make_unique<TestEventHandler<tun::Port>>("tun port")),
+        port_id.value()));
   }
 
-  zx::status<std::pair<fidl::WireSharedClient<tun::Device>, fidl::WireSharedClient<tun::Port>>>
+  zx::status<std::tuple<fidl::WireSharedClient<tun::Device>, fidl::WireSharedClient<tun::Port>,
+                        netdev::wire::PortId>>
   OpenTunDeviceAndPort() {
     return OpenTunDeviceAndPort(DefaultDeviceConfig(), DefaultDevicePortConfig());
+  }
+
+  static zx::status<fuchsia_hardware_network::wire::PortId> GetPortId(
+      fit::function<zx_status_t(fidl::ServerEnd<fuchsia_hardware_network::Port>)> get_port) {
+    zx::status endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::Port>();
+    if (endpoints.is_error()) {
+      return endpoints.take_error();
+    }
+    auto [client, server] = std::move(endpoints.value());
+    if (zx_status_t status = get_port(std::move(server)); status != ZX_OK) {
+      return zx::error(status);
+    }
+
+    fidl::WireResult result = fidl::WireCall(client)->GetInfo();
+    if (!result.ok()) {
+      return zx::error(result.status());
+    }
+    fuchsia_hardware_network::wire::PortInfo& port_info = result.value().info;
+    if (!port_info.has_id()) {
+      return zx::error(ZX_ERR_INTERNAL);
+    }
+    return zx::ok(port_info.id());
   }
 
   zx::status<fidl::WireSharedClient<tun::DevicePair>> OpenTunPair(
@@ -216,7 +250,7 @@ class NetDeviceTest : public gtest::RealLoopFixture {
     return opt.value();
   }
 
-  zx_status_t AttachPort(NetworkDeviceClient& client, uint8_t port = kPortId,
+  zx_status_t AttachPort(NetworkDeviceClient& client, fuchsia_hardware_network::wire::PortId port,
                          std::vector<netdev::wire::FrameType> frame_types = {
                              netdev::wire::FrameType::kEthernet}) {
     std::optional<zx_status_t> opt;
@@ -234,12 +268,12 @@ class NetDeviceTest : public gtest::RealLoopFixture {
 TEST_F(NetDeviceTest, TestRxTx) {
   auto tun_device_result = OpenTunDeviceAndPort();
   ASSERT_OK(tun_device_result.status_value());
-  auto& [tun_device, tun_port] = tun_device_result.value();
+  auto& [tun_device, tun_port, port_id] = tun_device_result.value();
   std::unique_ptr<NetworkDeviceClient> client;
   ASSERT_OK(tun_device->GetDevice(CreateClientRequest(&client)).status());
 
   ASSERT_OK(StartSession(*client));
-  ASSERT_OK(AttachPort(*client));
+  ASSERT_OK(AttachPort(*client, port_id));
   ASSERT_TRUE(WaitTapOnline(tun_port));
   ASSERT_TRUE(client->HasSession());
 
@@ -294,7 +328,7 @@ TEST_F(NetDeviceTest, TestRxTx) {
   auto tx = client->AllocTx();
   ASSERT_TRUE(tx.is_valid());
   tx.data().SetFrameType(fuchsia_hardware_network::wire::FrameType::kEthernet);
-  tx.data().SetPortId(kPortId);
+  tx.data().SetPortId(port_id);
   ASSERT_EQ(tx.data().Write(send_data.data(), send_data.size()), send_data.size());
   ASSERT_OK(tx.Send());
 
@@ -304,14 +338,15 @@ TEST_F(NetDeviceTest, TestRxTx) {
 TEST_F(NetDeviceTest, TestEcho) {
   auto tun_device_result = OpenTunDeviceAndPort();
   ASSERT_OK(tun_device_result.status_value());
-  auto& [tun_device_bind, tun_port] = tun_device_result.value();
+  auto& [tun_device_bind, tun_port, port_id_bind] = tun_device_result.value();
   // Move into variable so we can capture in lambdas.
-  auto tun_device = std::move(tun_device_bind);
+  fidl::WireSharedClient tun_device = std::move(tun_device_bind);
+  const netdev::wire::PortId port_id = port_id_bind;
   std::unique_ptr<NetworkDeviceClient> client;
   ASSERT_OK(tun_device->GetDevice(CreateClientRequest(&client)).status());
 
   ASSERT_OK(StartSession(*client));
-  ASSERT_OK(AttachPort(*client));
+  ASSERT_OK(AttachPort(*client, port_id));
   ASSERT_TRUE(WaitTapOnline(tun_port));
   ASSERT_TRUE(client->HasSession());
 
@@ -347,7 +382,7 @@ TEST_F(NetDeviceTest, TestEcho) {
   };
 
   uint32_t echoed = 0;
-  client->SetRxCallback([&client, &echoed](NetworkDeviceClient::Buffer buffer) {
+  client->SetRxCallback([&client, &echoed, &port_id](NetworkDeviceClient::Buffer buffer) {
     echoed++;
     // Alternate between echoing with a copy and just descriptor swap.
     if (echoed % 2 == 0) {
@@ -355,7 +390,7 @@ TEST_F(NetDeviceTest, TestEcho) {
       ASSERT_TRUE(tx.is_valid()) << "Tx alloc failed at echo " << echoed;
       tx.data().SetFrameType(buffer.data().frame_type());
       tx.data().SetTxRequest(fuchsia_hardware_network::wire::TxFlags());
-      tx.data().SetPortId(kPortId);
+      tx.data().SetPortId(port_id);
       auto wr = tx.data().Write(buffer.data());
       EXPECT_EQ(wr, buffer.data().len());
       EXPECT_EQ(tx.Send(), ZX_OK);
@@ -420,18 +455,28 @@ TEST_F(NetDeviceTest, TestEchoPair) {
     ASSERT_EQ(result.value().result.which(), tun::wire::DevicePairAddPortResult::Tag::kResponse)
         << zx_status_get_string(result.value().result.err());
   }
+  zx::status port_id = GetPortId([&tun_pair](fidl::ServerEnd<netdev::Port> port) {
+    return tun_pair->GetLeftPort(kPortId, std::move(port)).status();
+  });
+  ASSERT_OK(port_id.status_value());
+  const netdev::wire::PortId left_port_id = port_id.value();
+  port_id = GetPortId([&tun_pair](fidl::ServerEnd<netdev::Port> port) {
+    return tun_pair->GetRightPort(kPortId, std::move(port)).status();
+  });
+  ASSERT_OK(port_id.status_value());
+  const netdev::wire::PortId right_port_id = port_id.value();
 
   ASSERT_OK(StartSession(*left));
   ASSERT_OK(StartSession(*right));
-  ASSERT_OK(AttachPort(*left));
-  ASSERT_OK(AttachPort(*right));
+  ASSERT_OK(AttachPort(*left, left_port_id));
+  ASSERT_OK(AttachPort(*right, right_port_id));
 
-  left->SetRxCallback([&left](NetworkDeviceClient::Buffer buffer) {
+  left->SetRxCallback([&left, &left_port_id](NetworkDeviceClient::Buffer buffer) {
     auto tx = left->AllocTx();
     ASSERT_TRUE(tx.is_valid()) << "Tx alloc failed at echo";
     tx.data().SetFrameType(buffer.data().frame_type());
     tx.data().SetTxRequest(fuchsia_hardware_network::wire::TxFlags());
-    tx.data().SetPortId(kPortId);
+    tx.data().SetPortId(left_port_id);
     uint32_t pload;
     EXPECT_EQ(buffer.data().Read(&pload, sizeof(pload)), sizeof(pload));
     pload = ~pload;
@@ -457,9 +502,9 @@ TEST_F(NetDeviceTest, TestEchoPair) {
 
   {
     fpromise::bridge online_bridge;
-    auto status_handle =
-        right->WatchStatus(kPortId, [completer = std::move(online_bridge.completer)](
-                                        fuchsia_hardware_network::wire::PortStatus status) mutable {
+    auto status_handle = right->WatchStatus(
+        right_port_id, [completer = std::move(online_bridge.completer)](
+                           fuchsia_hardware_network::wire::PortStatus status) mutable {
           if (status.flags() & fuchsia_hardware_network::wire::StatusFlags::kOnline) {
             completer.complete_ok();
           }
@@ -471,7 +516,7 @@ TEST_F(NetDeviceTest, TestEchoPair) {
     auto tx = right->AllocTx();
     ASSERT_TRUE(tx.is_valid());
     tx.data().SetFrameType(fuchsia_hardware_network::wire::FrameType::kEthernet);
-    tx.data().SetPortId(kPortId);
+    tx.data().SetPortId(right_port_id);
     ASSERT_EQ(tx.data().Write(&i, sizeof(i)), sizeof(i));
     ASSERT_OK(tx.Send());
   }
@@ -482,7 +527,7 @@ TEST_F(NetDeviceTest, TestEchoPair) {
 TEST_F(NetDeviceTest, StatusWatcher) {
   auto tun_device_result = OpenTunDeviceAndPort();
   ASSERT_OK(tun_device_result.status_value());
-  auto& [tun_device, tun_port] = tun_device_result.value();
+  auto& [tun_device, tun_port, port_id] = tun_device_result.value();
   std::unique_ptr<NetworkDeviceClient> client;
   ASSERT_OK(tun_device->GetDevice(CreateClientRequest(&client)).status());
   uint32_t call_count1 = 0;
@@ -490,7 +535,7 @@ TEST_F(NetDeviceTest, StatusWatcher) {
   bool expect_online = true;
 
   auto watcher1 = client->WatchStatus(
-      kPortId, [&call_count1, &expect_online](fuchsia_hardware_network::wire::PortStatus status) {
+      port_id, [&call_count1, &expect_online](fuchsia_hardware_network::wire::PortStatus status) {
         call_count1++;
         ASSERT_EQ(static_cast<bool>(status.flags() &
                                     fuchsia_hardware_network::wire::StatusFlags::kOnline),
@@ -501,7 +546,7 @@ TEST_F(NetDeviceTest, StatusWatcher) {
 
   {
     auto watcher2 = client->WatchStatus(
-        kPortId,
+        port_id,
         [&call_count2](fuchsia_hardware_network::wire::PortStatus status) { call_count2++; });
 
     // Run loop with both watchers attached.
@@ -533,12 +578,12 @@ TEST_F(NetDeviceTest, StatusWatcher) {
 TEST_F(NetDeviceTest, ErrorCallback) {
   auto tun_device_result = OpenTunDeviceAndPort();
   ASSERT_OK(tun_device_result.status_value());
-  auto& [tun_device, tun_port] = tun_device_result.value();
+  auto& [tun_device, tun_port, port_id] = tun_device_result.value();
   std::unique_ptr<NetworkDeviceClient> client;
   ASSERT_OK(tun_device->GetDevice(CreateClientRequest(&client)).status());
 
   ASSERT_OK(StartSession(*client));
-  ASSERT_OK(AttachPort(*client));
+  ASSERT_OK(AttachPort(*client, port_id));
   ASSERT_TRUE(WaitTapOnline(tun_port));
   ASSERT_TRUE(client->HasSession());
 
@@ -574,13 +619,13 @@ TEST_F(NetDeviceTest, PadTxFrames) {
   auto tun_device_result =
       OpenTunDeviceAndPort(std::move(device_config), DefaultDevicePortConfig());
   ASSERT_OK(tun_device_result.status_value());
-  auto& [tun_device, tun_port] = tun_device_result.value();
+  auto& [tun_device, tun_port, port_id] = tun_device_result.value();
 
   std::unique_ptr<NetworkDeviceClient> client;
   ASSERT_OK(tun_device->GetDevice(CreateClientRequest(&client)).status());
 
   ASSERT_OK(StartSession(*client));
-  ASSERT_OK(AttachPort(*client));
+  ASSERT_OK(AttachPort(*client, port_id));
   ASSERT_TRUE(WaitTapOnline(tun_port));
   ASSERT_TRUE(client->HasSession());
 
@@ -598,7 +643,7 @@ TEST_F(NetDeviceTest, PadTxFrames) {
     }
     ASSERT_TRUE(tx.is_valid());
     tx.data().SetFrameType(fuchsia_hardware_network::wire::FrameType::kEthernet);
-    tx.data().SetPortId(kPortId);
+    tx.data().SetPortId(port_id);
     EXPECT_EQ(tx.data().Write(frame.data(), frame.size()), frame.size());
     EXPECT_EQ(tx.Send(), ZX_OK);
 
@@ -632,13 +677,13 @@ TEST_F(NetDeviceTest, TestPortInfoNoMac) {
   // Create the tun device and client.
   auto tun_device_result = OpenTunDeviceAndPort();
   ASSERT_OK(tun_device_result.status_value());
-  auto& [tun_device, tun_port] = tun_device_result.value();
+  auto& [tun_device, tun_port, port_id] = tun_device_result.value();
   std::unique_ptr<NetworkDeviceClient> client;
   ASSERT_OK(tun_device->GetDevice(CreateClientRequest(&client)).status());
 
   // Fetch the port's details.
   std::optional<zx::status<network::client::PortInfoAndMac>> response;
-  client->GetPortInfoWithMac(kPortId,
+  client->GetPortInfoWithMac(port_id,
                              [&response](zx::status<network::client::PortInfoAndMac> result) {
                                response = std::move(result);
                              });
@@ -647,7 +692,8 @@ TEST_F(NetDeviceTest, TestPortInfoNoMac) {
   // Ensure the values are correct.
   ASSERT_OK(response->status_value());
   const network::client::PortInfoAndMac& port_details = response->value();
-  EXPECT_EQ(port_details.id, kPortId);
+  EXPECT_EQ(port_details.id.base, port_id.base);
+  EXPECT_EQ(port_details.id.salt, port_id.salt);
   ASSERT_EQ(port_details.rx_types.size(), 1u);
   EXPECT_EQ(port_details.rx_types.at(0), netdev::wire::FrameType::kEthernet);
   ASSERT_EQ(port_details.tx_types.size(), 1u);
@@ -667,13 +713,13 @@ TEST_F(NetDeviceTest, TestPortInfoWithMac) {
   // Create the tun device and client.
   auto tun_device_result = OpenTunDeviceAndPort(DefaultDeviceConfig(), config);
   ASSERT_OK(tun_device_result.status_value());
-  auto& [tun_device, tun_port] = tun_device_result.value();
+  auto& [tun_device, tun_port, port_id] = tun_device_result.value();
   std::unique_ptr<NetworkDeviceClient> client;
   ASSERT_OK(tun_device->GetDevice(CreateClientRequest(&client)).status());
 
   // Fetch the port's details.
   std::optional<zx::status<network::client::PortInfoAndMac>> response;
-  client->GetPortInfoWithMac(kPortId,
+  client->GetPortInfoWithMac(port_id,
                              [&response](zx::status<network::client::PortInfoAndMac> result) {
                                response = std::move(result);
                              });
@@ -693,13 +739,13 @@ TEST_F(NetDeviceTest, TestPortInfoInvalidPort) {
   // Create the tun device and client.
   auto tun_device_result = OpenTunDeviceAndPort();
   ASSERT_OK(tun_device_result.status_value());
-  auto& [tun_device, tun_port] = tun_device_result.value();
+  auto& [tun_device, tun_port, port_id] = tun_device_result.value();
   std::unique_ptr<NetworkDeviceClient> client;
   ASSERT_OK(tun_device->GetDevice(CreateClientRequest(&client)).status());
 
   // Query an invalid port.
   std::optional<zx::status<network::client::PortInfoAndMac>> response;
-  client->GetPortInfoWithMac(/*port_id=*/17,
+  client->GetPortInfoWithMac(netdev::wire::PortId{.base = 17},
                              [&response](zx::status<network::client::PortInfoAndMac> result) {
                                response = std::move(result);
                              });
@@ -714,12 +760,12 @@ TEST_F(NetDeviceTest, TestPortInfoInvalidPort) {
 TEST_F(NetDeviceTest, CancelsWaitOnTeardown) {
   auto tun_device_result = OpenTunDeviceAndPort();
   ASSERT_OK(tun_device_result.status_value());
-  auto& [tun_device, tun_port] = tun_device_result.value();
+  auto& [tun_device, tun_port, port_id] = tun_device_result.value();
   std::unique_ptr<NetworkDeviceClient> client;
   ASSERT_OK(tun_device->GetDevice(CreateClientRequest(&client)).status());
 
   ASSERT_OK(StartSession(*client));
-  ASSERT_OK(AttachPort(*client));
+  ASSERT_OK(AttachPort(*client, port_id));
 
   // Generate some rx and tx traffic.
   for (size_t i = 0; i < 10; i++) {
@@ -745,7 +791,7 @@ TEST_F(NetDeviceTest, CancelsWaitOnTeardown) {
     auto tx = client->AllocTx();
     ASSERT_TRUE(tx.is_valid());
     tx.data().SetFrameType(fuchsia_hardware_network::wire::FrameType::kEthernet);
-    tx.data().SetPortId(kPortId);
+    tx.data().SetPortId(port_id);
     ASSERT_EQ(tx.data().Write(kSendData, countof(kSendData)), countof(kSendData));
     ASSERT_OK(tx.Send());
   }
@@ -759,5 +805,65 @@ TEST_F(NetDeviceTest, CancelsWaitOnTeardown) {
   ASSERT_STATUS(err.value(), ZX_ERR_PEER_CLOSED);
   RunLoopUntilIdle();
 }
+
+class GetPortsTest : public NetDeviceTest, public testing::WithParamInterface<size_t> {};
+
+TEST_P(GetPortsTest, GetPortsWithPortCount) {
+  const size_t port_count = GetParam();
+  auto tun_device_result = OpenTunDevice(DefaultDeviceConfig());
+  ASSERT_OK(tun_device_result.status_value());
+  fidl::ClientEnd tun_device = std::move(tun_device_result.value());
+  std::unique_ptr<NetworkDeviceClient> client;
+  ASSERT_OK(fidl::WireCall(tun_device)->GetDevice(CreateClientRequest(&client)).status());
+
+  // Sidestep having to write a custom hasher to put things in a set.
+  union PortId {
+    netdev::wire::PortId id;
+    uint16_t v;
+  };
+  static_assert(sizeof(netdev::wire::PortId) == sizeof(uint16_t));
+
+  std::vector<fidl::ClientEnd<tun::Port>> ports;
+  std::unordered_set<uint16_t> expect_ids;
+  for (size_t i = 0; i < port_count; i++) {
+    SCOPED_TRACE(i);
+    tun::wire::DevicePortConfig config = DefaultDevicePortConfig();
+    config.base().set_id(static_cast<uint8_t>(i + 1));
+    zx::status status = AddTunPort(tun_device, std::move(config));
+    ASSERT_OK(status.status_value());
+    fidl::ClientEnd port = std::move(status.value());
+    zx::status endpoints = fidl::CreateEndpoints<netdev::Port>();
+    ASSERT_OK(endpoints.status_value());
+    auto [client, server] = std::move(endpoints.value());
+    ASSERT_OK(fidl::WireCall(port)->GetPort(std::move(server)).status());
+    ports.push_back(std::move(port));
+
+    fidl::WireResult result = fidl::WireCall(client)->GetInfo();
+    ASSERT_OK(result.status());
+    const netdev::wire::PortInfo& info = result->info;
+    ASSERT_TRUE(info.has_id());
+    expect_ids.insert(PortId{.id = info.id()}.v);
+  }
+
+  std::optional<zx::status<std::vector<netdev::wire::PortId>>> response;
+  client->GetPorts(
+      [&response](zx::status<std::vector<netdev::wire::PortId>> result) { response = result; });
+  ASSERT_TRUE(RunLoopUntilOrFailure([&response]() { return response.has_value(); }));
+  zx::status status = std::move(response.value());
+  ASSERT_OK(status.status_value());
+  std::vector<netdev::wire::PortId> got_ids = std::move(status.value());
+  EXPECT_EQ(got_ids.size(), expect_ids.size());
+  for (netdev::wire::PortId id : got_ids) {
+    auto it = expect_ids.find(PortId{.id = id}.v);
+    EXPECT_NE(it, expect_ids.end())
+        << " couldn't find ID " << id.base << ", " << id.salt << " in set ";
+    expect_ids.erase(it);
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(NetDeviceTest, GetPortsTest, testing::Values(0, 1, 3),
+                         [](const testing::TestParamInfo<size_t>& info) {
+                           return std::to_string(info.param);
+                         });
 
 }  // namespace

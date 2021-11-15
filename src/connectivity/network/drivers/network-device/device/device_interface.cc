@@ -89,9 +89,8 @@ DeviceInterface::~DeviceInterface() {
                 dead_sessions_.size());
   ZX_ASSERT_MSG(bindings_.is_empty(), "Can't destroy device interface with %ld attached bindings.",
                 bindings_.size());
-  size_t active_ports = std::count_if(
-      ports_.begin(), ports_.end(),
-      [](const std::unique_ptr<DevicePort>& port) { return static_cast<bool>(port); });
+  size_t active_ports = std::count_if(ports_.begin(), ports_.end(),
+                                      [](const PortSlot& port) { return port.port != nullptr; });
   ZX_ASSERT_MSG(!active_ports, "Can't destroy device interface with %ld ports", active_ports);
 }
 
@@ -211,6 +210,22 @@ zx_status_t DeviceInterface::Bind(fidl::ServerEnd<netdev::Device> req) {
   return Binding::Bind(this, std::move(req));
 }
 
+zx_status_t DeviceInterface::BindPort(uint8_t port_id, fidl::ServerEnd<netdev::Port> req) {
+  fbl::AutoLock lock(&control_lock_);
+  if (teardown_state_ != TeardownState::RUNNING) {
+    return ZX_ERR_BAD_STATE;
+  }
+  if (port_id >= MAX_PORTS) {
+    return ZX_ERR_NOT_FOUND;
+  }
+  PortSlot& slot = ports_[port_id];
+  if (slot.port == nullptr) {
+    return ZX_ERR_NOT_FOUND;
+  }
+  slot.port->Bind(std::move(req));
+  return ZX_OK;
+}
+
 void DeviceInterface::NetworkDeviceIfcPortStatusChanged(uint8_t port_id,
                                                         const port_status_t* new_status) {
   SharedAutoLock lock(&control_lock_);
@@ -251,8 +266,8 @@ void DeviceInterface::NetworkDeviceIfcAddPort(uint8_t port_id,
     LOGF_ERROR("network-device: port id %d out of allowed range: [0, %ld)", port_id, ports_.size());
     return;
   }
-  std::unique_ptr<DevicePort>& port_slot = ports_[port_id];
-  if (port_slot) {
+  PortSlot& port_slot = ports_[port_id];
+  if (port_slot.port != nullptr) {
     LOGF_ERROR("network-device: port %d already exists", port_id);
     return;
   }
@@ -272,8 +287,13 @@ void DeviceInterface::NetworkDeviceIfcAddPort(uint8_t port_id,
   }
 
   fbl::AllocChecker checker;
+  const netdev::wire::PortId salted_id = {
+      .base = port_id,
+      // NB: This relies on wrapping overflow.
+      .salt = static_cast<uint8_t>(port_slot.salt + 1),
+  };
   std::unique_ptr<DevicePort> port(
-      new (&checker) DevicePort(this, dispatcher_, port_id, port_client, std::move(mac),
+      new (&checker) DevicePort(this, dispatcher_, salted_id, port_client, std::move(mac),
                                 fit::bind_member(this, &DeviceInterface::OnPortTeardownComplete)));
   if (!checker.check()) {
     LOGF_ERROR("network-device: failed to allocate port memory");
@@ -282,10 +302,12 @@ void DeviceInterface::NetworkDeviceIfcAddPort(uint8_t port_id,
 
   // Clear port_client to prevent deferred call from notifying removal.
   port_client.clear();
-  port_slot = std::move(port);
+  // Update slot with newly created port and its salt.
+  port_slot.salt = salted_id.salt;
+  port_slot.port = std::move(port);
 
   for (auto& watcher : port_watchers_) {
-    watcher.PortAdded(port_id);
+    watcher.PortAdded(salted_id);
   }
 }
 
@@ -418,14 +440,14 @@ zx::status<netdev::wire::DeviceOpenSessionResponse> DeviceInterface::OpenSession
 
 void DeviceInterface::GetPort(GetPortRequestView request, GetPortCompleter::Sync& _completer) {
   SharedAutoLock lock(&control_lock_);
-  WithPort(request->id,
-           [req = std::move(request->port)](const std::unique_ptr<DevicePort>& port) mutable {
-             if (port) {
-               port->Bind(std::move(req));
-             } else {
-               req.Close(ZX_ERR_NOT_FOUND);
-             }
-           });
+  WithPort(request->id.base, [req = std::move(request->port), salt = request->id.salt](
+                                 const std::unique_ptr<DevicePort>& port) mutable {
+    if (port && port->id().salt == salt) {
+      port->Bind(std::move(req));
+    } else {
+      req.Close(ZX_ERR_NOT_FOUND);
+    }
+  });
 }
 
 void DeviceInterface::GetPortWatcher(GetPortWatcherRequestView request,
@@ -443,12 +465,12 @@ void DeviceInterface::GetPortWatcher(GetPortWatcherRequestView request,
     return;
   }
 
-  std::array<uint8_t, MAX_PORTS> port_ids;
+  std::array<netdev::wire::PortId, MAX_PORTS> port_ids;
   size_t port_id_count = 0;
 
-  for (const std::unique_ptr<DevicePort>& port : ports_) {
-    if (port) {
-      port_ids[port_id_count++] = port->id();
+  for (const PortSlot& port : ports_) {
+    if (port.port) {
+      port_ids[port_id_count++] = port.port->id();
     }
   }
 
@@ -762,8 +784,8 @@ bool DeviceInterface::ContinueTeardown(network::internal::DeviceInterface::Teard
         teardown_state_ = TeardownState::PORTS;
         size_t port_count = 0;
         for (auto& p : ports_) {
-          if (p) {
-            p->Teardown();
+          if (p.port) {
+            p.port->Teardown();
             port_count++;
           }
         }
@@ -772,9 +794,8 @@ bool DeviceInterface::ContinueTeardown(network::internal::DeviceInterface::Teard
       }
       case TeardownState::PORTS: {
         // Pre-condition to enter sessions state: ports must all be destroyed.
-        if (std::any_of(ports_.begin(), ports_.end(), [](const std::unique_ptr<DevicePort>& port) {
-              return static_cast<bool>(port);
-            })) {
+        if (std::any_of(ports_.begin(), ports_.end(),
+                        [](const PortSlot& port) { return static_cast<bool>(port.port); })) {
           return nullptr;
         }
         teardown_state_ = TeardownState::SESSIONS;
@@ -832,42 +853,42 @@ bool DeviceInterface::ContinueTeardown(network::internal::DeviceInterface::Teard
 }
 
 zx::status<AttachedPort> DeviceInterface::AcquirePort(
-    uint8_t port_id, cpp20::span<const netdev::wire::FrameType> rx_frame_types) {
-  return WithPort(
-      port_id,
-      [this, &rx_frame_types](const std::unique_ptr<DevicePort>& port) -> zx::status<AttachedPort> {
-        if (!port) {
-          return zx::error(ZX_ERR_NOT_FOUND);
-        }
-        if (std::any_of(rx_frame_types.begin(), rx_frame_types.end(),
-                        [&port](netdev::wire::FrameType frame_type) {
-                          return !port->IsValidRxFrameType(frame_type);
-                        })) {
-          return zx::error(ZX_ERR_INVALID_ARGS);
-        }
-        return zx::ok(AttachedPort(this, port.get(), rx_frame_types));
-      });
+    netdev::wire::PortId port_id, cpp20::span<const netdev::wire::FrameType> rx_frame_types) {
+  return WithPort(port_id.base,
+                  [this, &rx_frame_types, salt = port_id.salt](
+                      const std::unique_ptr<DevicePort>& port) -> zx::status<AttachedPort> {
+                    if (port == nullptr || port->id().salt != salt) {
+                      return zx::error(ZX_ERR_NOT_FOUND);
+                    }
+                    if (std::any_of(rx_frame_types.begin(), rx_frame_types.end(),
+                                    [&port](netdev::wire::FrameType frame_type) {
+                                      return !port->IsValidRxFrameType(frame_type);
+                                    })) {
+                      return zx::error(ZX_ERR_INVALID_ARGS);
+                    }
+                    return zx::ok(AttachedPort(this, port.get(), rx_frame_types));
+                  });
 }
 
 void DeviceInterface::OnPortTeardownComplete(DevicePort& port) {
-  LOGF_TRACE("network-device: %s(%d)", __FUNCTION__, port.id());
+  LOGF_TRACE("network-device: %s(%d)", __FUNCTION__, port.id().base);
 
   control_lock_.Acquire();
   bool stop_device = false;
   // Go over the non-primary sessions first, so we don't mess with the primary session.
   for (auto& session : sessions_) {
     session.AssertParentControlLock(*this);
-    if (session.OnPortDestroyed(port.id())) {
+    if (session.OnPortDestroyed(port.id().base)) {
       stop_device |= SessionStoppedInner(session);
     }
   }
   if (primary_session_) {
     primary_session_->AssertParentControlLock(*this);
-    if (primary_session_->OnPortDestroyed(port.id())) {
+    if (primary_session_->OnPortDestroyed(port.id().base)) {
       stop_device |= SessionStoppedInner(*primary_session_);
     }
   }
-  ports_[port.id()] = nullptr;
+  ports_[port.id().base].port = nullptr;
   if (stop_device) {
     StopDevice(TeardownState::PORTS);
   } else {
@@ -1100,7 +1121,17 @@ DeviceInterface::DeviceInterface(async_dispatcher_t* dispatcher,
       vmo_store_(vmo_store::Options{
           vmo_store::MapOptions{ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE,
                                 nullptr},
-          std::nullopt}) {}
+          std::nullopt,
+      }) {
+  // Seed the port salts to some non-random but unpredictable value.
+  union {
+    uint8_t b[sizeof(uintptr_t)];
+    uintptr_t ptr;
+  } seed = {.ptr = reinterpret_cast<uintptr_t>(this)};
+  for (size_t i = 0; i < ports_.size(); i++) {
+    ports_[i].salt = static_cast<uint8_t>(i) ^ seed.b[i % sizeof(seed.b)];
+  }
+}  // namespace internal
 
 zx_status_t DeviceInterface::Binding::Bind(DeviceInterface* interface,
                                            fidl::ServerEnd<netdev::Device> channel) {

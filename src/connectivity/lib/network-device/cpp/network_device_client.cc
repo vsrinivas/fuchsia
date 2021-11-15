@@ -298,7 +298,7 @@ zx_status_t NetworkDeviceClient::PrepareSession() {
   return ZX_OK;
 }
 
-void NetworkDeviceClient::AttachPort(uint8_t port_id,
+void NetworkDeviceClient::AttachPort(netdev::wire::PortId port_id,
                                      std::vector<netdev::wire::FrameType> rx_frame_types,
                                      ErrorCallback callback) {
   auto promise = [this, port_id, &rx_frame_types]() -> fpromise::promise<void, zx_status_t> {
@@ -328,7 +328,7 @@ void NetworkDeviceClient::AttachPort(uint8_t port_id,
   ScheduleCallbackPromise(std::move(promise), std::move(callback));
 }
 
-void NetworkDeviceClient::DetachPort(uint8_t port_id, ErrorCallback callback) {
+void NetworkDeviceClient::DetachPort(netdev::wire::PortId port_id, ErrorCallback callback) {
   auto promise = [this, &port_id]() -> fpromise::promise<void, zx_status_t> {
     if (!session_.is_valid()) {
       return fpromise::make_error_promise(ZX_ERR_BAD_STATE);
@@ -355,7 +355,8 @@ void NetworkDeviceClient::DetachPort(uint8_t port_id, ErrorCallback callback) {
   ScheduleCallbackPromise(std::move(promise), std::move(callback));
 }
 
-void NetworkDeviceClient::GetPortInfoWithMac(uint8_t port_id, PortInfoWithMacCallback callback) {
+void NetworkDeviceClient::GetPortInfoWithMac(netdev::wire::PortId port_id,
+                                             PortInfoWithMacCallback callback) {
   struct State {
     PortInfoAndMac result;
     fidl::WireClient<netdev::Port> port_client;
@@ -448,6 +449,74 @@ void NetworkDeviceClient::GetPortInfoWithMac(uint8_t port_id, PortInfoWithMacCal
   fpromise::schedule_for_consumer(executor_.get(), std::move(fetch_details));
 }
 
+void NetworkDeviceClient::GetPorts(PortsCallback callback) {
+  struct PortWatcherHelper {
+    using PortsAndCompleted = std::pair<std::vector<netdev::wire::PortId>, bool>;
+    using Promise = fpromise::promise<PortsAndCompleted, zx_status_t>;
+    static Promise Watch(fidl::WireClient<netdev::PortWatcher> watcher,
+                         std::vector<netdev::wire::PortId> found_ports) {
+      fpromise::bridge<PortsAndCompleted, zx_status_t> bridge;
+      watcher->Watch([completer = std::move(bridge.completer), ports = std::move(found_ports)](
+                         fidl::WireUnownedResult<netdev::PortWatcher::Watch>& result) mutable {
+        if (!result.ok()) {
+          completer.complete_error(result.status());
+          return;
+        }
+        const netdev::wire::DevicePortEvent& event = result->event;
+        switch (event.which()) {
+          case netdev::wire::DevicePortEvent::Tag::kIdle:
+            completer.complete_ok(std::make_pair(std::move(ports), true));
+            break;
+          case netdev::wire::DevicePortEvent::Tag::kExisting:
+            ports.push_back(event.existing());
+            completer.complete_ok(std::make_pair(std::move(ports), false));
+            break;
+          case netdev::wire::DevicePortEvent::Tag::kRemoved:
+          case netdev::wire::DevicePortEvent::Tag::kAdded:
+            completer.complete_error(ZX_ERR_INTERNAL);
+            break;
+        }
+      });
+
+      return bridge.consumer.promise().and_then(
+          [watcher = std::move(watcher)](PortsAndCompleted& next) mutable -> Promise {
+            auto& [ports, complete] = next;
+            if (complete) {
+              // All done.
+              return fpromise::make_result_promise<PortsAndCompleted, zx_status_t>(
+                  fpromise::ok(std::move(next)));
+            }
+            return Watch(std::move(watcher), std::move(ports));
+          });
+    }
+  };
+  zx::status watcher_endpoints = fidl::CreateEndpoints<netdev::PortWatcher>();
+  if (watcher_endpoints.is_error()) {
+    callback(zx::error(watcher_endpoints.error_value()));
+    return;
+  }
+  device_->GetPortWatcher(std::move(watcher_endpoints->server));
+  fidl::WireClient<netdev::PortWatcher> watcher;
+  watcher.Bind(std::move(watcher_endpoints->client), dispatcher_);
+
+  fpromise::bridge<std::vector<netdev::wire::PortId>, zx_status_t> bridge;
+  auto promise = PortWatcherHelper::Watch(std::move(watcher), {});
+
+  auto list_ports = promise.then(
+      [callback = std::move(callback)](
+          fpromise::result<PortWatcherHelper::PortsAndCompleted, zx_status_t>& result) {
+        if (!result.is_ok()) {
+          callback(zx::error(result.error()));
+          return;
+        }
+        auto& [ports, complete] = result.value();
+        FX_CHECK(complete);
+        callback(zx::success(std::move(ports)));
+      });
+
+  fpromise::schedule_for_consumer(executor_.get(), std::move(list_ports));
+}
+
 void NetworkDeviceClient::ScheduleCallbackPromise(fpromise::promise<void, zx_status_t> promise,
                                                   ErrorCallback callback) {
   fpromise::schedule_for_consumer(
@@ -475,7 +544,8 @@ zx_status_t NetworkDeviceClient::KillSession() {
 }
 
 zx::status<std::unique_ptr<NetworkDeviceClient::StatusWatchHandle>>
-NetworkDeviceClient::WatchStatus(uint8_t port_id, StatusCallback callback, uint32_t buffer) {
+NetworkDeviceClient::WatchStatus(netdev::wire::PortId port_id, StatusCallback callback,
+                                 uint32_t buffer) {
   zx::status port_endpoints = fidl::CreateEndpoints<netdev::Port>();
   if (port_endpoints.is_error()) {
     return port_endpoints.take_error();
@@ -903,10 +973,20 @@ void NetworkDeviceClient::BufferData::SetFrameType(netdev::wire::FrameType type)
   part(0).desc_->frame_type = static_cast<uint8_t>(type);
 }
 
-uint8_t NetworkDeviceClient::BufferData::port_id() const { return part(0).desc_->port_id; }
+netdev::wire::PortId NetworkDeviceClient::BufferData::port_id() const {
+  const buffer_descriptor_t& desc = *part(0).desc_;
+  return {
+      .base = desc.port_id.base,
+      .salt = desc.port_id.salt,
+  };
+}
 
-void NetworkDeviceClient::BufferData::SetPortId(uint8_t port_id) {
-  part(0).desc_->port_id = port_id;
+void NetworkDeviceClient::BufferData::SetPortId(netdev::wire::PortId port_id) {
+  buffer_descriptor_t& desc = *part(0).desc_;
+  desc.port_id = {
+      .base = port_id.base,
+      .salt = port_id.salt,
+  };
 }
 
 netdev::wire::InfoType NetworkDeviceClient::BufferData::info_type() const {

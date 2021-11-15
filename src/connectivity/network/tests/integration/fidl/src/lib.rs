@@ -195,7 +195,7 @@ async fn test_no_duplicate_interface_names() {
     assert_eq!(result, Err(fuchsia_zircon::Status::ALREADY_EXISTS));
 
     // Same for netdevice.
-    let (network_device, mac) =
+    let (network_device, mac, _port_id) =
         netdev_ep.get_netdevice().await.expect("connect to netdevice protocols");
     let result = stack
         .add_interface(

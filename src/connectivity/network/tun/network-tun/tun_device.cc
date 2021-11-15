@@ -424,6 +424,13 @@ void TunDevice::Port::SetOnline(bool online) {
   });
 }
 
+void TunDevice::Port::GetPort(GetPortRequestView request, GetPortCompleter::Sync& _completer) {
+  zx_status_t status = parent_->device_->BindPort(adapter_->id(), std::move(request->port));
+  if (status != ZX_OK) {
+    FX_LOGF(ERROR, "tun", "BindPort %d failed: %s", adapter_->id(), zx_status_get_string(status));
+  }
+}
+
 void TunDevice::Port::Bind(fidl::ServerEnd<fuchsia_net_tun::Port> req) {
   binding_ = fidl::BindServer(parent_->loop_.dispatcher(), std::move(req), this,
                               [parent = parent_, id = adapter().id()](

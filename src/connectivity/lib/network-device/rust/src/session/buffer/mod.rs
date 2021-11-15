@@ -5,7 +5,7 @@
 //! Fuchsia netdevice buffer management.
 
 pub(super) mod pool;
-mod sys;
+pub mod sys;
 
 use std::convert::TryFrom;
 use std::iter;
@@ -19,7 +19,10 @@ use fuchsia_runtime::vmar_root_self;
 use fuchsia_zircon::{self as zx, sys::ZX_PAGE_SIZE};
 use static_assertions::const_assert_eq;
 
-use crate::error::{Error, Result};
+use crate::{
+    error::{Error, Result},
+    session::Port,
+};
 use types::{ChainLength, DESCID_NO_NEXT};
 
 pub use pool::{AllocKind, Buffer, Rx, Tx};
@@ -91,6 +94,21 @@ impl<K: AllocKind> Descriptor<K> {
         this.tail_length
     }
 
+    fn port(&self) -> Port {
+        let Self(
+            sys::buffer_descriptor {
+                port_id: sys::buffer_descriptor_port_id { base, salt }, ..
+            },
+            _marker,
+        ) = self;
+        Port { base: *base, salt: *salt }
+    }
+
+    fn set_port(&mut self, Port { base, salt }: Port) {
+        let Self(sys::buffer_descriptor { port_id, .. }, _marker) = self;
+        *port_id = sys::buffer_descriptor_port_id { base, salt };
+    }
+
     /// Initializes a descriptor with the given layout.
     fn initialize(&mut self, chain_len: ChainLength, head_len: u16, data_len: u32, tail_len: u16) {
         let Self(
@@ -101,7 +119,7 @@ impl<K: AllocKind> Descriptor<K> {
                 // allocation routines.
                 nxt: _,
                 info_type,
-                port_id,
+                port_id: sys::buffer_descriptor_port_id { base, salt },
                 // We shouldn't touch this field as it is reserved.
                 _reserved: _,
                 // We shouldn't touch this field as it is managed by DescRef{Mut}.
@@ -120,7 +138,8 @@ impl<K: AllocKind> Descriptor<K> {
         *frame_type = 0;
         *chain_length = chain_len.get();
         *info_type = 0;
-        *port_id = 0;
+        *base = 0;
+        *salt = 0;
         *head_length = head_len;
         *tail_length = tail_len;
         *data_length = data_len;

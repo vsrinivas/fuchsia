@@ -11,12 +11,12 @@
 
 namespace network::internal {
 
-DevicePort::DevicePort(DeviceInterface* parent, async_dispatcher_t* dispatcher, uint8_t id,
-                       ddk::NetworkPortProtocolClient port,
+DevicePort::DevicePort(DeviceInterface* parent, async_dispatcher_t* dispatcher,
+                       netdev::wire::PortId id, ddk::NetworkPortProtocolClient port,
                        std::unique_ptr<MacAddrDeviceInterface> mac, TeardownCallback on_teardown)
     : parent_(parent),
       dispatcher_(dispatcher),
-      port_id_(id),
+      id_(id),
       port_(port),
       mac_(std::move(mac)),
       on_teardown_(std::move(on_teardown)) {
@@ -136,7 +136,7 @@ void DevicePort::GetMac(GetMacRequestView request, GetMacCompleter::Sync& _compl
   }
   zx_status_t status = mac_->Bind(dispatcher_, std::move(req));
   if (status != ZX_OK) {
-    LOGF_ERROR("network-device: failed to bind to MacAddr on port %d: %s", port_id_,
+    LOGF_ERROR("network-device: failed to bind to MacAddr on port %d: %s", id_.base,
                zx_status_get_string(status));
   }
 }
@@ -214,13 +214,11 @@ void DevicePort::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& com
   fidl::WireTableFrame<netdev::wire::PortInfo> frame;
   netdev::wire::PortInfo port_info(
       fidl::ObjectView<fidl::WireTableFrame<netdev::wire::PortInfo>>::FromExternal(&frame));
-  // NB: Need to copy port identifier out because ObjectView wants a non const pointer.
-  uint8_t port_id = port_id_;
   auto tx_support = fidl::VectorView<netdev::wire::FrameTypeSupport>::FromExternal(
       supported_tx_.data(), supported_tx_count_);
   auto rx_support = fidl::VectorView<netdev::wire::FrameType>::FromExternal(supported_rx_.data(),
                                                                             supported_rx_count_);
-  port_info.set_id(port_id)
+  port_info.set_id(id_)
       .set_class_(port_class_)
       .set_tx_types(fidl::ObjectView<decltype(tx_support)>::FromExternal(&tx_support))
       .set_rx_types(fidl::ObjectView<decltype(rx_support)>::FromExternal(&rx_support));

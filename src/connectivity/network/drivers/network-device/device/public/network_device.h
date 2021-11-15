@@ -38,6 +38,10 @@ class NetworkDeviceInterface {
   // dispatcher given to the device on creation.
   virtual zx_status_t Bind(fidl::ServerEnd<netdev::Device> req) = 0;
 
+  // Binds the request channel req to a port belonging to this NetworkDeviceInterface. Requests will
+  // be handled on the dispatcher given to the device on creation.
+  virtual zx_status_t BindPort(uint8_t port_id, fidl::ServerEnd<netdev::Port> req) = 0;
+
  protected:
   NetworkDeviceInterface() = default;
 };

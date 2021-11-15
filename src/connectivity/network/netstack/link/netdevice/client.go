@@ -39,7 +39,7 @@ const tag = "netdevice"
 const emptyLinkAddress tcpip.LinkAddress = ""
 
 type bufferDescriptor = C.buffer_descriptor_t
-type PortId = uint8
+type basePortId = uint8
 
 type PortMode int
 
@@ -66,7 +66,7 @@ type Client struct {
 		sync.RWMutex
 		closed      bool
 		runningChan chan struct{}
-		ports       map[PortId]*Port
+		ports       map[basePortId]*Port
 	}
 }
 
@@ -129,7 +129,7 @@ func (p *Port) LinkAddress() tcpip.LinkAddress {
 }
 
 // write writes a list of packets to the device.
-func (c *Client) write(port PortId, pkts stack.PacketBufferList, protocol tcpip.NetworkProtocolNumber) (int, tcpip.Error) {
+func (c *Client) write(port network.PortId, pkts stack.PacketBufferList, protocol tcpip.NetworkProtocolNumber) (int, tcpip.Error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	if c.mu.closed {
@@ -167,7 +167,8 @@ func (c *Client) write(port PortId, pkts stack.PacketBufferList, protocol tcpip.
 		for ; n < int(c.deviceInfo.MinTxBufferLength); n++ {
 			data[n] = 0
 		}
-		descriptor.port_id = C.uchar(port)
+		descriptor.port_id.base = C.uchar(port.Base)
+		descriptor.port_id.salt = C.uchar(port.Salt)
 		descriptor.info_type = C.uint(network.InfoTypeNoInfo)
 		descriptor.frame_type = C.uchar(frameType)
 		descriptor.data_length = C.uint(n)
@@ -254,7 +255,7 @@ func (p *Port) Attach(dispatcher stack.NetworkDispatcher) {
 func (p *Port) Close() error {
 	p.client.mu.Lock()
 	// Remove from parent.
-	delete(p.client.mu.ports, p.portInfo.GetId())
+	delete(p.client.mu.ports, p.portInfo.GetId().Base)
 	p.client.mu.Unlock()
 
 	p.state.mu.Lock()
@@ -346,19 +347,25 @@ func (c *Client) Run(ctx context.Context) {
 			case network.FrameTypeIpv6:
 				protocolNumber = header.IPv6ProtocolNumber
 			}
-			portId := PortId(descriptor.port_id)
+			portId := basePortId(descriptor.port_id.base)
 
 			c.mu.RLock()
 			port, ok := c.mu.ports[portId]
 			c.mu.RUnlock()
 			if ok {
-				port.state.mu.Lock()
-				dispatcher := port.state.mu.dispatcher
-				port.state.mu.Unlock()
-				if dispatcher != nil {
-					dispatcher.DeliverNetworkPacket(emptyLinkAddress, emptyLinkAddress, protocolNumber, stack.NewPacketBuffer(stack.PacketBufferOptions{
-						Data: view.ToVectorisedView(),
-					}))
+				if want, got := port.portInfo.GetId().Salt, uint8(descriptor.port_id.salt); want == got {
+					port.state.mu.Lock()
+					dispatcher := port.state.mu.dispatcher
+					port.state.mu.Unlock()
+					if dispatcher != nil {
+						dispatcher.DeliverNetworkPacket(emptyLinkAddress, emptyLinkAddress, protocolNumber, stack.NewPacketBuffer(stack.PacketBufferOptions{
+							Data: view.ToVectorisedView(),
+						}))
+					}
+				} else {
+					// This can happen if the port flaps on the device while frames
+					// are propagating in the FIFO.
+					_ = syslog.WarnTf(tag, "received frame on port %d with bad salt %d, want %d", portId, got, want)
 				}
 			} else {
 				// This can happen if the port is detached from the client while frames
@@ -496,7 +503,7 @@ func (c *Client) Close() error {
 }
 
 func (c *Client) closeInner() (chan struct{}, error) {
-	runningChan, ports, err := func() (chan struct{}, map[PortId]*Port, error) {
+	runningChan, ports, err := func() (chan struct{}, map[basePortId]*Port, error) {
 		c.mu.Lock()
 		defer c.mu.Unlock()
 		if c.mu.closed {
@@ -567,7 +574,7 @@ func (c *Client) resetRxDescriptor(descriptor *bufferDescriptor) {
 }
 
 // NewPort creates a new port client for this device.
-func (c *Client) NewPort(ctx context.Context, portId PortId) (*Port, error) {
+func (c *Client) NewPort(ctx context.Context, portId network.PortId) (*Port, error) {
 	portRequest, port, err := network.NewPortWithCtxInterfaceRequest()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create port request: %w", err)
@@ -670,10 +677,11 @@ func (c *Client) NewPort(ctx context.Context, portId PortId) (*Port, error) {
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if _, ok := c.mu.ports[portId]; ok {
+	baseId := basePortId(portId.Base)
+	if _, ok := c.mu.ports[baseId]; ok {
 		return nil, &PortAlreadyBoundError{id: portId}
 	}
-	c.mu.ports[portId] = portEndpoint
+	c.mu.ports[baseId] = portEndpoint
 
 	// Prevent deferred functions from cleaning up.
 	mac = nil
@@ -786,7 +794,7 @@ func NewClient(ctx context.Context, dev *network.DeviceWithCtxInterface, session
 			TxFifo:  sessionResult.Response.Fifos.Tx,
 		},
 	}
-	c.mu.ports = make(map[PortId]*Port)
+	c.mu.ports = make(map[basePortId]*Port)
 
 	if entries := c.handler.InitRx(c.config.RxDescriptorCount); entries != c.config.RxDescriptorCount {
 		panic(fmt.Sprintf("bad handler rx queue size: %d, expected %d", entries, c.config.RxDescriptorCount))
@@ -848,11 +856,11 @@ func (e *InvalidPortOperatingModeError) Error() string {
 }
 
 type PortAlreadyBoundError struct {
-	id PortId
+	id network.PortId
 }
 
 func (e *PortAlreadyBoundError) Error() string {
-	return fmt.Sprintf("port %d is already bound", e.id)
+	return fmt.Sprintf("port %d(salt=%d) is already bound", e.id.Base, e.id.Salt)
 }
 
 func selectPortOperatingMode(rxTypes []network.FrameType) (PortMode, error) {

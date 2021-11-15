@@ -166,7 +166,26 @@ class NetworkDeviceTest : public ::testing::Test {
     return fidl::BindSyncClient(std::move(client_end));
   }
 
-  zx::status<fidl::WireSyncClient<netdev::Port>> OpenPort(uint8_t port_id) {
+  netdev::wire::PortId GetSaltedPortId(uint8_t base_port_id) {
+    auto* dev_iface = static_cast<internal::DeviceInterface*>(device_.get());
+    // Sidestep thread safety to poke into device internals.
+    //
+    // Generally safe for test usage here as long as ports are always added to
+    // the device on the main thread.
+    uint8_t salt = [&dev_iface, &base_port_id]() __TA_NO_THREAD_SAFETY_ANALYSIS {
+      return dev_iface->GetPortSalt(base_port_id);
+    }();
+    return {
+        .base = base_port_id,
+        .salt = salt,
+    };
+  }
+
+  zx::status<fidl::WireSyncClient<netdev::Port>> OpenPort(uint8_t base_port_id) {
+    return OpenPort(GetSaltedPortId(base_port_id));
+  }
+
+  zx::status<fidl::WireSyncClient<netdev::Port>> OpenPort(netdev::wire::PortId port_id) {
     zx::status endpoints = fidl::CreateEndpoints<netdev::Port>();
     if (endpoints.is_error()) {
       return endpoints.take_error();
@@ -216,6 +235,19 @@ class NetworkDeviceTest : public ::testing::Test {
 
     fidl::WireSyncClient connection = OpenConnection();
     return session->Open(connection, session_name, flags, num_descriptors, buffer_size);
+  }
+
+  zx_status_t AttachSessionPort(TestSession& session, FakeNetworkPortImpl& impl) {
+    std::vector<netdev::wire::FrameType> rx_types;
+    for (uint8_t frame_type :
+         cpp20::span(impl.port_info().rx_types_list, impl.port_info().rx_types_count)) {
+      rx_types.push_back(static_cast<netdev::wire::FrameType>(frame_type));
+    }
+    return session.AttachPort(GetSaltedPortId(impl.id()), std::move(rx_types));
+  }
+
+  zx_status_t DetachSessionPort(TestSession& session, FakeNetworkPortImpl& impl) {
+    return session.DetachPort(GetSaltedPortId(impl.id()));
   }
 
  protected:
@@ -459,9 +491,11 @@ TEST_F(NetworkDeviceTest, RxBufferBuild) {
     }
     if (setup.descriptor == kDescriptor2) {
       // The chained descriptor's port metadata is not set.
-      EXPECT_EQ(desc.port_id, 0);
+      EXPECT_EQ(desc.port_id.base, 0);
+      EXPECT_EQ(desc.port_id.salt, 0);
     } else {
-      EXPECT_EQ(desc.port_id, kPort13);
+      EXPECT_EQ(desc.port_id.base, kPort13);
+      EXPECT_EQ(desc.port_id.salt, GetSaltedPortId(kPort13).salt);
     }
     if (setup.flags.has_value()) {
       EXPECT_EQ(desc.inbound_flags, static_cast<uint32_t>(*setup.flags));
@@ -480,6 +514,7 @@ TEST_F(NetworkDeviceTest, TxBufferBuild) {
   ASSERT_OK(AttachSessionPort(session, port13_));
   ASSERT_OK(WaitStart());
   constexpr size_t kDescTests = 3;
+  const netdev::wire::PortId port13_id = GetSaltedPortId(kPort13);
   // send three Rx descriptors:
   // - A simple descriptor with just data length
   // - A descriptor with head and tail removed
@@ -487,18 +522,27 @@ TEST_F(NetworkDeviceTest, TxBufferBuild) {
   uint16_t all_descs[kDescTests + 1] = {0, 1, 2};
   {
     buffer_descriptor_t& desc = session.ResetDescriptor(kDescriptorIndex0);
-    desc.port_id = kPort13;
+    desc.port_id = {
+        .base = port13_id.base,
+        .salt = port13_id.salt,
+    };
   }
   {
     buffer_descriptor_t& desc = session.ResetDescriptor(kDescriptorIndex1);
-    desc.port_id = kPort13;
+    desc.port_id = {
+        .base = port13_id.base,
+        .salt = port13_id.salt,
+    };
     desc.head_length = 16;
     desc.tail_length = 32;
     desc.data_length -= desc.head_length + desc.tail_length;
   }
   {
     buffer_descriptor_t& desc = session.ResetDescriptor(kDescriptorIndex2);
-    desc.port_id = kPort13;
+    desc.port_id = {
+        .base = port13_id.base,
+        .salt = port13_id.salt,
+    };
     desc.data_length = 10;
     desc.chain_length = 2;
     desc.nxt = 3;
@@ -620,6 +664,7 @@ TEST_F(NetworkDeviceTest, SessionPauseUnpause) {
 
 TEST_F(NetworkDeviceTest, TwoSessionsTx) {
   ASSERT_OK(CreateDeviceWithPort13());
+  const netdev::wire::PortId port13_id = GetSaltedPortId(kPort13);
   fidl::WireSyncClient connection = OpenConnection();
   TestSession session_a;
   ASSERT_OK(OpenSession(&session_a));
@@ -633,9 +678,9 @@ TEST_F(NetworkDeviceTest, TwoSessionsTx) {
   // Send something from each session, both should succeed.
   std::vector<uint8_t> sent_buff_a({1, 2, 3, 4});
   std::vector<uint8_t> sent_buff_b({5, 6});
-  session_a.SendTxData(kPort13, 0, sent_buff_a);
+  session_a.SendTxData(port13_id, 0, sent_buff_a);
   ASSERT_OK(WaitTx());
-  session_b.SendTxData(kPort13, 1, sent_buff_b);
+  session_b.SendTxData(port13_id, 1, sent_buff_b);
   ASSERT_OK(WaitTx());
   // Wait until we have two frames waiting.
   std::unique_ptr buff_a = impl_.PopTxBuffer();
@@ -754,7 +799,7 @@ TEST_F(NetworkDeviceTest, ListenSession) {
 
   // send data from session a:
   std::vector<uint8_t> send_buff({1, 2, 3, 4});
-  session_a.SendTxData(kPort13, 0, send_buff);
+  session_a.SendTxData(GetSaltedPortId(kPort13), 0, send_buff);
   ASSERT_OK(WaitTx());
 
   uint16_t desc_idx;
@@ -832,7 +877,10 @@ TEST_F(NetworkDeviceTest, DelayedStart) {
   // We should be able to pause and unpause session_a while we're still holding the device.
   // we can send Tx data and it won't reach the device until TriggerStart is called.
   buffer_descriptor_t& desc = session_a.ResetDescriptor(kDescriptorIndex0);
-  desc.port_id = kPort13;
+  desc.port_id = {
+      .base = kPort13,
+      .salt = GetSaltedPortId(kPort13).salt,
+  };
   ASSERT_OK(session_a.SendTx(kDescriptorIndex0));
   ASSERT_OK(DetachSessionPort(session_a, port13_));
   ASSERT_OK(AttachSessionPort(session_a, port13_));
@@ -885,7 +933,10 @@ TEST_F(NetworkDeviceTest, DelayedStop) {
   // With the session running, send down a tx frame and then close the session. The session should
   // NOT be closed until we actually both call TriggerStop and return the outstanding buffer.
   buffer_descriptor_t& desc = session_a.ResetDescriptor(kDescriptorIndex0);
-  desc.port_id = kPort13;
+  desc.port_id = {
+      .base = kPort13,
+      .salt = GetSaltedPortId(kPort13).salt,
+  };
   ASSERT_OK(session_a.SendTx(kDescriptorIndex0));
   ASSERT_OK(WaitTx());
   ASSERT_OK(session_a.Close());
@@ -920,7 +971,10 @@ TEST_P(RxTxParamTest, WaitsForAllBuffersReturned) {
   session.ResetDescriptor(kDescriptorIndex0);
   ASSERT_OK(session.SendRx(kDescriptorIndex0));
   buffer_descriptor_t& desc = session.ResetDescriptor(kDescriptorIndex1);
-  desc.port_id = kPort13;
+  desc.port_id = {
+      .base = kPort13,
+      .salt = GetSaltedPortId(kPort13).salt,
+  };
   ASSERT_OK(session.SendTx(kDescriptorIndex1));
   ASSERT_OK(WaitTx());
   ASSERT_OK(WaitRxAvailable());
@@ -992,7 +1046,10 @@ TEST_F(NetworkDeviceTest, TeardownWithReclaim) {
   session_a.ResetDescriptor(kDescriptorIndex0);
   ASSERT_OK(session_a.SendRx(kDescriptorIndex0));
   buffer_descriptor_t& desc = session_a.ResetDescriptor(kDescriptorIndex1);
-  desc.port_id = kPort13;
+  desc.port_id = {
+      .base = kPort13,
+      .salt = GetSaltedPortId(kPort13).salt,
+  };
   ASSERT_OK(session_a.SendTx(kDescriptorIndex1));
   ASSERT_OK(WaitTx());
   ASSERT_OK(WaitRxAvailable());
@@ -1012,16 +1069,23 @@ TEST_F(NetworkDeviceTest, TxHeadLength) {
   ASSERT_OK(OpenSession(&session));
   ASSERT_OK(AttachSessionPort(session, port13_));
   session.ZeroVmo();
+  const netdev::wire::PortId port13_id = GetSaltedPortId(kPort13);
   {
     buffer_descriptor_t& desc = session.ResetDescriptor(kDescriptorIndex0);
-    desc.port_id = kPort13;
+    desc.port_id = {
+        .base = port13_id.base,
+        .salt = port13_id.salt,
+    };
     desc.head_length = kHeadLength;
     desc.data_length = 1;
     *session.buffer(desc.offset + desc.head_length) = 0xAA;
   }
   {
     buffer_descriptor_t& desc = session.ResetDescriptor(kDescriptorIndex1);
-    desc.port_id = kPort13;
+    desc.port_id = {
+        .base = port13_id.base,
+        .salt = port13_id.salt,
+    };
     desc.head_length = kHeadLength * 2;
     desc.data_length = 1;
     *session.buffer(desc.offset + desc.head_length) = 0xBB;
@@ -1070,7 +1134,10 @@ TEST_F(NetworkDeviceTest, InvalidTxFrameType) {
   ASSERT_OK(AttachSessionPort(session, port13_));
   ASSERT_OK(WaitStart());
   buffer_descriptor_t& desc = session.ResetDescriptor(kDescriptorIndex0);
-  desc.port_id = kPort13;
+  desc.port_id = {
+      .base = kPort13,
+      .salt = GetSaltedPortId(kPort13).salt,
+  };
   desc.frame_type = static_cast<uint8_t>(netdev::wire::FrameType::kIpv4);
   ASSERT_OK(session.SendTx(kDescriptorIndex0));
   // Session should be killed because of contract breach:
@@ -1152,7 +1219,10 @@ TEST_F(NetworkDeviceTest, ReturnTxInline) {
   ASSERT_OK(WaitStart());
   {
     buffer_descriptor_t& desc = session.ResetDescriptor(0x02);
-    desc.port_id = kPort13;
+    desc.port_id = {
+        .base = kPort13,
+        .salt = GetSaltedPortId(kPort13).salt,
+    };
   }
   ASSERT_OK(session.SendTx(0x02));
   ASSERT_OK(session.tx_fifo().wait_one(ZX_FIFO_READABLE, TEST_DEADLINE, nullptr));
@@ -1168,7 +1238,8 @@ TEST_F(NetworkDeviceTest, RejectsInvalidRxTypes) {
   TestSession session;
   ASSERT_OK(OpenSession(&session, netdev::wire::SessionFlags::kPrimary, kDefaultDescriptorCount,
                         kDefaultBufferLength));
-  ASSERT_STATUS(session.AttachPort(kPort13, {netdev::wire::FrameType::kIpv4}), ZX_ERR_INVALID_ARGS);
+  ASSERT_STATUS(session.AttachPort(GetSaltedPortId(kPort13), {netdev::wire::FrameType::kIpv4}),
+                ZX_ERR_INVALID_ARGS);
 }
 
 // Regression test for session name not respecting fidl::StringView lack of null termination
@@ -1224,7 +1295,10 @@ TEST_F(NetworkDeviceTest, RejectsSmallTxBuffers) {
   ASSERT_OK(AttachSessionPort(session, port13_));
   ASSERT_OK(WaitStart());
   buffer_descriptor_t& desc = session.ResetDescriptor(kDescriptorIndex0);
-  desc.port_id = kPort13;
+  desc.port_id = {
+      .base = kPort13,
+      .salt = GetSaltedPortId(kPort13).salt,
+  };
   desc.data_length = kMinTxLength - 1;
   ASSERT_OK(session.SendTx(kDescriptorIndex0));
   // Session should be killed because of contract breach:
@@ -1384,8 +1458,11 @@ TEST_F(NetworkDeviceTest, OnlyReceiveOnSubscribedPorts) {
 
   for (uint16_t desc : descriptors) {
     buffer_descriptor_t& descriptor = session.ResetDescriptor(desc);
-    // Garble descriptor port.
-    descriptor.port_id = MAX_PORTS - 1;
+    // Garble descriptor port and salt.
+    descriptor.port_id = {
+        .base = MAX_PORTS - 1,
+        .salt = static_cast<uint8_t>(~(MAX_PORTS - 1)),
+    };
   }
   size_t actual;
   ASSERT_OK(session.SendRx(descriptors.data(), descriptors.size(), &actual));
@@ -1407,9 +1484,12 @@ TEST_F(NetworkDeviceTest, OnlyReceiveOnSubscribedPorts) {
   ASSERT_OK(session.FetchRx(descriptors.data(), descriptors.size(), &actual));
   // Only one of the descriptors makes it back into the session.
   ASSERT_EQ(actual, 1u);
-  uint16_t returned = descriptors[0];
-  ASSERT_EQ(session.descriptor(returned).port_id, kPort13);
-
+  {
+    uint16_t returned = descriptors[0];
+    const buffer_descriptor_t& desc = session.descriptor(returned);
+    ASSERT_EQ(desc.port_id.base, kPort13);
+    ASSERT_EQ(desc.port_id.salt, GetSaltedPortId(kPort13).salt);
+  }
   // The unused descriptor comes right back to us.
   ASSERT_OK(WaitRxAvailable());
   ASSERT_EQ(impl_.rx_buffer_count(), 1u);
@@ -1460,29 +1540,65 @@ TEST_F(NetworkDeviceTest, RejectsInvalidPortIds) {
   }
 }
 
-TEST_F(NetworkDeviceTest, TxOnUnattachedPort) {
-  // Test that transmitting a frame to a port we're not attached to returns the buffer with an
-  // error.
+TEST_F(NetworkDeviceTest, TxBadPorts) {
+  // Test that attempting tx with bad port values causes the buffer to be
+  // returned with an error.
   ASSERT_OK(CreateDeviceWithPort13());
+  FakeNetworkPortImpl port5;
+  port5.AddPort(5, impl_.client());
+  auto cleanup = fit::defer([&port5]() { port5.RemoveSync(); });
+
   TestSession session;
   ASSERT_OK(OpenSession(&session));
   ASSERT_OK(AttachSessionPort(session, port13_));
   ASSERT_OK(WaitStart());
-  constexpr uint16_t kDesc = 0;
-  buffer_descriptor_t& desc = session.ResetDescriptor(kDesc);
-  desc.port_id = MAX_PORTS - 1;
-  ASSERT_OK(session.SendTx(kDesc));
-  // Should be returned with an error.
-  zx_signals_t observed;
-  ASSERT_OK(session.tx_fifo().wait_one(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED, zx::time::infinite(),
-                                       &observed));
-  ASSERT_EQ(observed & (ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED), ZX_FIFO_READABLE);
-  uint16_t read_desc = 0xFFFF;
-  ASSERT_OK(session.FetchTx(&read_desc));
-  ASSERT_EQ(read_desc, kDesc);
-  ASSERT_EQ(desc.return_flags,
-            static_cast<uint32_t>(netdev::wire::TxReturnFlags::kTxRetError |
-                                  netdev::wire::TxReturnFlags::kTxRetNotAvailable));
+
+  const struct {
+    const char* name;
+    netdev::wire::PortId port_id;
+  } test_cases[] = {
+      {
+          .name = "port doesn't exist",
+          .port_id =
+              {
+                  .base = MAX_PORTS - 1,
+              },
+      },
+      {
+          .name = "port not attached",
+          .port_id = GetSaltedPortId(port5.id()),
+      },
+      {
+          .name = "bad salt",
+          .port_id =
+              {
+                  .base = kPort13,
+                  .salt = static_cast<uint8_t>(GetSaltedPortId(kPort13).salt + 1),
+              },
+      },
+  };
+
+  for (const auto& t : test_cases) {
+    SCOPED_TRACE(t.name);
+    constexpr uint16_t kDesc = 0;
+    buffer_descriptor_t& desc = session.ResetDescriptor(kDesc);
+    desc.port_id = {
+        .base = t.port_id.base,
+        .salt = t.port_id.salt,
+    };
+    ASSERT_OK(session.SendTx(kDesc));
+    // Should be returned with an error.
+    zx_signals_t observed;
+    ASSERT_OK(session.tx_fifo().wait_one(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED,
+                                         zx::time::infinite(), &observed));
+    ASSERT_EQ(observed & (ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED), ZX_FIFO_READABLE);
+    uint16_t read_desc = 0xFFFF;
+    ASSERT_OK(session.FetchTx(&read_desc));
+    ASSERT_EQ(read_desc, kDesc);
+    ASSERT_EQ(desc.return_flags,
+              static_cast<uint32_t>(netdev::wire::TxReturnFlags::kTxRetError |
+                                    netdev::wire::TxReturnFlags::kTxRetNotAvailable));
+  }
 }
 
 TEST_F(NetworkDeviceTest, RxCrossSessionChaining) {
@@ -1623,6 +1739,7 @@ TEST_P(RxTxBufferReturnTest, TestRaceFramesWithDeviceStop) {
   // - NetworkDeviceImplStart and NetworkDeviceImplStop can't be called when device is already in
   // that state.
   ASSERT_OK(CreateDeviceWithPort13());
+  const netdev::wire::PortId port13_id = GetSaltedPortId(kPort13);
 
   auto [rxtx, return_method, auto_stop] = GetParam();
   impl_.set_auto_stop(auto_stop);
@@ -1635,7 +1752,11 @@ TEST_P(RxTxBufferReturnTest, TestRaceFramesWithDeviceStop) {
     ASSERT_OK(AttachSessionPort(session, port13_));
     ASSERT_OK(WaitStart());
     buffer_descriptor_t& desc = session.ResetDescriptor(i);
-    desc.port_id = kPort13;
+    desc.port_id = {
+        .base = port13_id.base,
+        .salt = port13_id.salt,
+    };
+
     fit::function<void()> manual_return;
     switch (rxtx) {
       case RxTxSwitch::Rx:
@@ -1756,7 +1877,9 @@ TEST_F(NetworkDeviceTest, PortGetInfo) {
   const netdev::wire::PortInfo& port_info = result.value().info;
   const port_info_t& impl_info = port13_.port_info();
   ASSERT_TRUE(port_info.has_id());
-  EXPECT_EQ(port_info.id(), kPort13);
+  const netdev::wire::PortId& port_id = port_info.id();
+  EXPECT_EQ(port_id.base, kPort13);
+  EXPECT_EQ(port_id.salt, GetSaltedPortId(kPort13).salt);
   ASSERT_TRUE(port_info.has_class());
   EXPECT_EQ(port_info.class_(),
             static_cast<netdev::wire::DeviceClass>(port13_.port_info().port_class));
@@ -1853,23 +1976,38 @@ TEST_F(NetworkDeviceTest, PortGetMacFails) {
 
 TEST_F(NetworkDeviceTest, NonExistentPort) {
   // Test network device and session operation on non existent ports.
-  ASSERT_OK(CreateDevice());
+  ASSERT_OK(CreateDeviceWithPort13());
   TestSession session;
   ASSERT_OK(OpenSession(&session));
-  constexpr struct {
-    uint8_t port_id;
+  const struct {
+    netdev::wire::PortId port_id;
     const char* name;
     zx_status_t session_error;
   } kTests[] = {
       {
-          .port_id = kPort13 + 1,
+          .port_id =
+              {
+                  .base = kPort13 + 1,
+              },
           .name = "port doesn't exist",
           .session_error = ZX_ERR_NOT_FOUND,
       },
       {
-          .port_id = MAX_PORTS + 20,
+          .port_id =
+              {
+                  .base = MAX_PORTS + 20,
+              },
           .name = "out of range port ID",
           .session_error = ZX_ERR_INVALID_ARGS,
+      },
+      {
+          .port_id =
+              {
+                  .base = kPort13,
+                  .salt = static_cast<uint8_t>(GetSaltedPortId(kPort13).salt + 1),
+              },
+          .name = "bad salt",
+          .session_error = ZX_ERR_NOT_FOUND,
       },
   };
   for (const auto& t : kTests) {
@@ -1935,8 +2073,11 @@ TEST_F(NetworkDeviceTest, MultiplePortsAndSessions) {
     }
     for (uint16_t desc : descriptors) {
       buffer_descriptor_t& descriptor = s.session.ResetDescriptor(desc);
-      // Garble descriptor port.
-      descriptor.port_id = MAX_PORTS - 1;
+      // Garble descriptor port and salt.
+      descriptor.port_id = {
+          .base = MAX_PORTS - 1,
+          .salt = static_cast<uint8_t>(~(MAX_PORTS - 1)),
+      };
     }
     size_t actual;
     ASSERT_OK(s.session.SendRx(descriptors.data(), descriptors.size(), &actual));
@@ -1949,6 +2090,7 @@ TEST_F(NetworkDeviceTest, MultiplePortsAndSessions) {
   // Receive one buffer on each of the ports we created.
   RxReturnTransaction return_session(&impl_);
   for (auto& port : ports) {
+    SCOPED_TRACE(static_cast<int>(port.id()));
     std::unique_ptr rx_space = impl_.PopRxBuffer();
     uint8_t port_id = port.id();
     // Write some data so the buffer makes it into the session.
@@ -1968,7 +2110,10 @@ TEST_F(NetworkDeviceTest, MultiplePortsAndSessions) {
 
     auto desc_iter = returned_descriptors.begin();
     for (auto& port : s.attach_ports) {
-      ASSERT_EQ(s.session.descriptor(*desc_iter++).port_id, port.id());
+      SCOPED_TRACE(static_cast<int>(port.id()));
+      const buffer_descriptor_t& desc = s.session.descriptor(*desc_iter++);
+      ASSERT_EQ(desc.port_id.base, port.id());
+      ASSERT_EQ(desc.port_id.salt, GetSaltedPortId(port.id()).salt);
     }
   }
 }
@@ -1978,7 +2123,7 @@ TEST_F(NetworkDeviceTest, ListenSessionPortFiltering) {
   ASSERT_OK(CreateDevice());
   constexpr uint8_t kPortCount = 2;
   std::array<FakeNetworkPortImpl, kPortCount> ports;
-  for (uint8_t i = 0; i < ports.size(); i++) {
+  for (uint8_t i = 0; i < static_cast<uint8_t>(ports.size()); i++) {
     ports[i].AddPort(i + 1, impl_.client());
   }
   auto remove_ports = fit::defer([&ports]() {
@@ -1998,7 +2143,7 @@ TEST_F(NetworkDeviceTest, ListenSessionPortFiltering) {
   ASSERT_OK(AttachSessionPort(listen_session, ports[0]));
 
   // Prepare descriptors on the listening session.
-  for (uint16_t i = 0; i < ports.size(); i++) {
+  for (uint16_t i = 0; i < static_cast<uint16_t>(ports.size()); i++) {
     listen_session.ResetDescriptor(i);
     ASSERT_OK(listen_session.SendRx(i));
   }
@@ -2007,7 +2152,11 @@ TEST_F(NetworkDeviceTest, ListenSessionPortFiltering) {
     std::array<uint16_t, kPortCount> descriptors = {0, 1};
     for (uint8_t i = 0; i < kPortCount; i++) {
       buffer_descriptor_t& desc = primary_session.ResetDescriptor(descriptors[i]);
-      desc.port_id = ports[i].id();
+      netdev::wire::PortId id = GetSaltedPortId(ports[i].id());
+      desc.port_id = {
+          .base = id.base,
+          .salt = id.salt,
+      };
     }
     size_t actual;
     ASSERT_OK(primary_session.SendTx(descriptors.data(), descriptors.size(), &actual));
@@ -2018,7 +2167,11 @@ TEST_F(NetworkDeviceTest, ListenSessionPortFiltering) {
   // Observe the listening session only receive for the port it attached to.
   uint16_t desc;
   ASSERT_OK(listen_session.FetchRx(&desc));
-  ASSERT_EQ(listen_session.descriptor(desc).port_id, ports[0].id());
+
+  const buffer_descriptor_t& buffer_desc = listen_session.descriptor(desc);
+  const netdev::wire::PortId id = GetSaltedPortId(ports[0].id());
+  ASSERT_EQ(buffer_desc.port_id.base, id.base);
+  ASSERT_EQ(buffer_desc.port_id.salt, id.salt);
   ASSERT_STATUS(listen_session.FetchRx(&desc), ZX_ERR_SHOULD_WAIT);
 }
 
@@ -2029,7 +2182,7 @@ TEST_F(NetworkDeviceTest, PortWatcher) {
 
   struct PortEvent {
     netdev::wire::DevicePortEvent::Tag which;
-    std::optional<uint8_t> port_id;
+    std::optional<netdev::wire::PortId> port_id;
   };
 
   auto watch_next = [watcher = fidl::BindSyncClient(std::move(endpoints->client))]() mutable {
@@ -2060,10 +2213,17 @@ TEST_F(NetworkDeviceTest, PortWatcher) {
   auto expect_event = [](std::future<zx::status<PortEvent>> fut, PortEvent expect) {
     ASSERT_TRUE(fut.valid());
     fut.wait();
-    const zx::status<PortEvent>& e = fut.get();
-    ASSERT_OK(e.status_value());
-    ASSERT_EQ(e.value().which, expect.which);
-    ASSERT_EQ(e.value().port_id, expect.port_id);
+    const zx::status<PortEvent>& maybe_event = fut.get();
+    ASSERT_OK(maybe_event.status_value());
+    const PortEvent& e = maybe_event.value();
+    ASSERT_EQ(e.which, expect.which);
+    if (expect.port_id.has_value()) {
+      ASSERT_TRUE(e.port_id.has_value());
+      ASSERT_EQ(e.port_id.value().base, expect.port_id.value().base);
+      ASSERT_EQ(e.port_id.value().salt, expect.port_id.value().salt);
+    } else {
+      ASSERT_FALSE(e.port_id.has_value());
+    }
   };
   auto expect_blocked = [](std::future<zx::status<PortEvent>>& fut) {
     ASSERT_TRUE(fut.valid());
@@ -2071,6 +2231,7 @@ TEST_F(NetworkDeviceTest, PortWatcher) {
   };
 
   ASSERT_OK(CreateDeviceWithPort13());
+  netdev::wire::PortId salted_id = GetSaltedPortId(kPort13);
   fidl::WireSyncClient device = OpenConnection();
   ASSERT_OK(device->GetPortWatcher(std::move(endpoints->server)).status());
 
@@ -2078,7 +2239,7 @@ TEST_F(NetworkDeviceTest, PortWatcher) {
   ASSERT_NO_FATAL_FAILURE(
       expect_event(watch_next(), {
                                      .which = netdev::wire::DevicePortEvent::Tag::kExisting,
-                                     .port_id = kPort13,
+                                     .port_id = salted_id,
                                  }));
   ASSERT_NO_FATAL_FAILURE(
       expect_event(watch_next(), {
@@ -2093,11 +2254,12 @@ TEST_F(NetworkDeviceTest, PortWatcher) {
   {
     FakeNetworkPortImpl port;
     port.AddPort(kOtherPortId, impl_.client());
+    netdev::wire::PortId other_salted_id = GetSaltedPortId(kOtherPortId);
     auto remove_port = fit::defer([&port]() { port.RemoveSync(); });
     ASSERT_NO_FATAL_FAILURE(
         expect_event(std::move(fut), {
                                          .which = netdev::wire::DevicePortEvent::Tag::kAdded,
-                                         .port_id = kOtherPortId,
+                                         .port_id = other_salted_id,
                                      }));
 
     fut = watch_next();
@@ -2106,32 +2268,33 @@ TEST_F(NetworkDeviceTest, PortWatcher) {
     ASSERT_NO_FATAL_FAILURE(
         expect_event(std::move(fut), {
                                          .which = netdev::wire::DevicePortEvent::Tag::kRemoved,
-                                         .port_id = kOtherPortId,
+                                         .port_id = other_salted_id,
                                      }));
     fut = watch_next();
     ASSERT_NO_FATAL_FAILURE(expect_blocked(fut));
   }
 
   // Add and remove ports with the same ID without calling watch to prove events are being enqueued.
-  constexpr size_t kAddRemoveRounds = 3;
-  {
-    for (size_t i = 0; i < kAddRemoveRounds; i++) {
-      FakeNetworkPortImpl port;
-      port.AddPort(kOtherPortId, impl_.client());
-      port.RemoveSync();
-    }
+  std::array<netdev::wire::PortId, 3> install_rounds;
+
+  for (auto& port_id : install_rounds) {
+    FakeNetworkPortImpl port;
+    port.AddPort(kOtherPortId, impl_.client());
+    port_id = GetSaltedPortId(kOtherPortId);
+    port.RemoveSync();
   }
-  for (size_t i = 0; i < kAddRemoveRounds; i++) {
-    SCOPED_TRACE(i);
+
+  for (auto& port_id : install_rounds) {
+    SCOPED_TRACE(static_cast<uint32_t>(port_id.base));
     ASSERT_NO_FATAL_FAILURE(
         expect_event(std::move(fut), {
                                          .which = netdev::wire::DevicePortEvent::Tag::kAdded,
-                                         .port_id = kOtherPortId,
+                                         .port_id = port_id,
                                      }));
     ASSERT_NO_FATAL_FAILURE(
         expect_event(watch_next(), {
                                        .which = netdev::wire::DevicePortEvent::Tag::kRemoved,
-                                       .port_id = kOtherPortId,
+                                       .port_id = port_id,
                                    }));
     fut = watch_next();
   }
@@ -2215,6 +2378,7 @@ const std::string badDescriptorTestToString(
 TEST_P(BadDescriptorTest, SessionIsKilledOnBadDescriptor) {
   impl_.set_immediate_return_tx(true);
   ASSERT_OK(CreateDeviceWithPort13());
+  const netdev::wire::PortId port13_id = GetSaltedPortId(kPort13);
   TestSession primary;
   TestSession secondary;
   TestSession listen;
@@ -2274,7 +2438,10 @@ TEST_P(BadDescriptorTest, SessionIsKilledOnBadDescriptor) {
     } break;
     case DescriptorSource::ListenSessionRx: {
       buffer_descriptor_t& desc = primary.ResetDescriptor(kGoodTxDescriptor);
-      desc.port_id = kPort13;
+      desc.port_id = {
+          .base = port13_id.base,
+          .salt = port13_id.salt,
+      };
       ASSERT_OK(primary.SendTx(kGoodTxDescriptor));
     } break;
     case DescriptorSource::Tx:
@@ -2282,7 +2449,10 @@ TEST_P(BadDescriptorTest, SessionIsKilledOnBadDescriptor) {
       break;
     case DescriptorSource::TxChain: {
       buffer_descriptor_t& desc = primary.ResetDescriptor(kGoodTxDescriptor);
-      desc.port_id = kPort13;
+      desc.port_id = {
+          .base = port13_id.base,
+          .salt = port13_id.salt,
+      };
       desc.chain_length = 1;
       desc.nxt = kDescriptorCount;
       ASSERT_OK(primary.SendTx(kGoodTxDescriptor));
@@ -2455,7 +2625,10 @@ TEST_F(NetworkDeviceTest, BufferChainingOnListenTx) {
   }
 
   buffer_descriptor_t& tx_desc = primary.ResetDescriptor(kTxDescriptor);
-  tx_desc.port_id = kPort13;
+  tx_desc.port_id = {
+      .base = kPort13,
+      .salt = GetSaltedPortId(kPort13).salt,
+  };
   tx_desc.data_length = kTxLen;
   tx_desc.head_length = kTxHeadLen;
   uint8_t b = 0;
@@ -2551,7 +2724,7 @@ TEST_F(NetworkDeviceTest, CanUpdatePortStatusWithinSetActive) {
 
   // Port goes offline on SetActive callback when session detaches.
   {
-    ASSERT_OK(session.DetachPort(port13_.id()));
+    ASSERT_OK(session.DetachPort(GetSaltedPortId(kPort13)));
     fidl::WireResult result = watcher->WatchStatus();
     ASSERT_OK(result.status());
     ASSERT_EQ(result.value().port_status.flags(), netdev::wire::StatusFlags());
@@ -2624,9 +2797,20 @@ TEST_F(NetworkDeviceTest, ClonePort) {
   auto [client_end, server_end] = std::move(endpoints.value());
   ASSERT_OK(connection1->Clone(std::move(server_end)).status());
   fidl::WireSyncClient connection2 = fidl::BindSyncClient(std::move(client_end));
-  fidl::WireResult result = connection2->GetInfo();
-  ASSERT_OK(result.status());
-  ASSERT_EQ(result.value().info.id(), kPort13);
+
+  netdev::wire::PortId salted_id1, salted_id2;
+  {
+    fidl::WireResult result = connection1->GetInfo();
+    ASSERT_OK(result.status());
+    salted_id1 = result.value().info.id();
+  }
+  {
+    fidl::WireResult result = connection2->GetInfo();
+    ASSERT_OK(result.status());
+    salted_id2 = result.value().info.id();
+  }
+  EXPECT_EQ(salted_id1.base, salted_id2.base);
+  EXPECT_EQ(salted_id1.salt, salted_id2.salt);
 }
 
 TEST_F(NetworkDeviceTest, PortGetDevice) {
@@ -2643,6 +2827,39 @@ TEST_F(NetworkDeviceTest, PortGetDevice) {
   fidl::WireResult result = device_connection->GetInfo();
   ASSERT_OK(result.status());
   ASSERT_EQ(result.value().info.min_rx_buffer_length(), impl_.info().min_rx_buffer_length);
+}
+
+TEST_F(NetworkDeviceTest, PortIdSaltChangesOnFlap) {
+  ASSERT_OK(CreateDevice());
+  const uint8_t base_salt = GetSaltedPortId(kPort13).salt + 1;
+  for (uint8_t i = 0; i < 5; i++) {
+    SCOPED_TRACE(static_cast<uint32_t>(i));
+    // Salt will increase monotonically with each round of port addition,
+    // removal.
+    const uint8_t expect_salt = base_salt + i;
+    FakeNetworkPortImpl port;
+    port.AddPort(kPort13, impl_.client());
+    // Check internal ID and salt.
+    {
+      netdev::wire::PortId id = GetSaltedPortId(kPort13);
+      EXPECT_EQ(id.base, kPort13);
+      EXPECT_EQ(id.salt, expect_salt);
+    }
+    // Check public API ID and salt.
+    {
+      zx::status status = OpenPort(kPort13);
+      ASSERT_OK(status.status_value());
+      fidl::WireSyncClient port = std::move(status.value());
+      fidl::WireResult result = port->GetInfo();
+      ASSERT_OK(result.status());
+      const netdev::wire::PortInfo& info = result.value().info;
+      ASSERT_TRUE(info.has_id());
+      const netdev::wire::PortId id = info.id();
+      EXPECT_EQ(id.base, kPort13);
+      EXPECT_EQ(id.salt, expect_salt);
+    }
+    port.RemoveSync();
+  }
 }
 
 }  // namespace testing

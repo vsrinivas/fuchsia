@@ -54,6 +54,11 @@ class AttachedPort {
     return cpp20::span(frame_types_.begin(), frame_type_count_);
   }
 
+  /// Returns true if the attached port's salt matches the provided |salt|.
+  bool SaltMatches(uint8_t salt) __TA_REQUIRES_SHARED(parent_->control_lock()) {
+    return WithPort([salt](DevicePort& port) { return port.id().salt == salt; });
+  }
+
  protected:
   friend DeviceInterface;
 
@@ -130,8 +135,9 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   void Detach(DetachRequestView request, DetachCompleter::Sync& _completer) override;
   void Close(CloseRequestView request, CloseCompleter::Sync& _completer) override;
 
-  zx_status_t AttachPort(uint8_t port_id, cpp20::span<const netdev::wire::FrameType> frame_types);
-  zx_status_t DetachPort(uint8_t port_id);
+  zx_status_t AttachPort(netdev::wire::PortId port_id,
+                         cpp20::span<const netdev::wire::FrameType> frame_types);
+  zx_status_t DetachPort(netdev::wire::PortId port_id);
 
   // Sets the return code for a tx descriptor.
   void MarkTxReturnResult(uint16_t descriptor, zx_status_t status);
@@ -220,12 +226,17 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
 
   // Detaches a port from the session.
   //
+  // If |salt| is provided, only succeeds if |salt| matches currently attached port's value.
+  //
   // Returns zx::ok(true) if the session was attached to the port and the session transitioned to
   // paused.
+  //
   // Returns zx::ok(false) if the session was attached to the port but it remains running attached
   // to other ports.
+  //
   // Returns zx::error otherwise.
-  zx::status<bool> DetachPortLocked(uint8_t port_id) __TA_REQUIRES(parent_->control_lock());
+  zx::status<bool> DetachPortLocked(uint8_t port_id, std::optional<uint8_t> salt)
+      __TA_REQUIRES(parent_->control_lock());
 
   // Fetch tx descriptors from the FIFO and queue them in the parent `DeviceInterface`'s TxQueue.
   zx_status_t FetchTx()

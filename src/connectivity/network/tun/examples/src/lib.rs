@@ -116,7 +116,7 @@ async fn tap_like_over_network_tun() -> Result<(), Error> {
             .context("failed to create device endpoints")?;
     let () = tun.create_device(device_config, server_end).context("failed to create device")?;
     // Add a port.
-    let (_tun_port, server_end) =
+    let (tun_port, server_end) =
         fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::PortMarker>()
             .context("failed to create port endpoints")?;
     let () = tun_device.add_port(port_config, server_end).context("failed to add port")?;
@@ -136,7 +136,7 @@ async fn tap_like_over_network_tun() -> Result<(), Error> {
 
         let () =
             tun_device.get_device(netdevice_server_end).context("failed to connect protocols")?;
-        let () = network_device.get_port(PORT_ID, port_server_end).context("get_port failed")?;
+        let () = tun_port.get_port(port_server_end).context("get_port failed")?;
         let () = port.get_mac(mac_server_end).context("get_mac failed")?;
         let network_device: fidl::endpoints::ClientEnd<_> = network_device
             .into_channel()

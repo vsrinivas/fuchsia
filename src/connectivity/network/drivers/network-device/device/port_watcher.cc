@@ -11,14 +11,14 @@
 namespace network::internal {
 
 zx_status_t PortWatcher::Bind(async_dispatcher_t* dispatcher,
-                              cpp20::span<const uint8_t> existing_ports,
+                              cpp20::span<const netdev::wire::PortId> existing_ports,
                               fidl::ServerEnd<netdev::PortWatcher> channel,
                               ClosedCallback closed_callback) {
   fbl::AutoLock lock(&lock_);
   ZX_DEBUG_ASSERT(!binding_.has_value());
 
   // Gather all existing ports.
-  for (const uint8_t& port_id : existing_ports) {
+  for (const netdev::wire::PortId& port_id : existing_ports) {
     Event event;
     event.SetExisting(port_id);
     if (zx_status_t status = QueueEvent(event); status != ZX_OK) {
@@ -94,14 +94,14 @@ zx_status_t PortWatcher::QueueEvent(const PortWatcher::Event& event) {
   return ZX_OK;
 }
 
-void PortWatcher::PortAdded(uint8_t port_id) {
+void PortWatcher::PortAdded(netdev::wire::PortId port_id) {
   fbl::AutoLock lock(&lock_);
   Event event;
   event.SetAdded(port_id);
   ProcessEvent(event);
 }
 
-void PortWatcher::PortRemoved(uint8_t port_id) {
+void PortWatcher::PortRemoved(netdev::wire::PortId port_id) {
   fbl::AutoLock lock(&lock_);
   Event event;
   event.SetRemoved(port_id);
@@ -137,17 +137,17 @@ PortWatcher::Event::Event(const PortWatcher::Event& other) {
   }
 }
 
-void PortWatcher::Event::SetExisting(uint8_t port_id) {
+void PortWatcher::Event::SetExisting(netdev::wire::PortId port_id) {
   port_id_ = port_id;
   event_ = netdev::wire::DevicePortEvent::WithExisting(port_id_);
 }
 
-void PortWatcher::Event::SetAdded(uint8_t port_id) {
+void PortWatcher::Event::SetAdded(netdev::wire::PortId port_id) {
   port_id_ = port_id;
   event_ = netdev::wire::DevicePortEvent::WithAdded(port_id_);
 }
 
-void PortWatcher::Event::SetRemoved(uint8_t port_id) {
+void PortWatcher::Event::SetRemoved(netdev::wire::PortId port_id) {
   port_id_ = port_id;
   event_ = netdev::wire::DevicePortEvent::WithRemoved(port_id_);
 }

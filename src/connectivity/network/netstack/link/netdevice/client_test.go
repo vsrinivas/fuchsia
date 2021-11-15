@@ -233,13 +233,38 @@ func createTunDeviceOnly(t *testing.T, ctx context.Context) *tun.DeviceWithCtxIn
 	return createTunWithConfig(t, ctx, deviceConfig)
 }
 
-func createTunWithOnline(t *testing.T, ctx context.Context, online bool) (*tun.DeviceWithCtxInterface, *tun.PortWithCtxInterface) {
+func getPortId(t *testing.T, ctx context.Context, getPort func(request network.PortWithCtxInterfaceRequest) error) network.PortId {
+	t.Helper()
+	portReq, port := newNetworkPortRequest(t)
+	if err := getPort(portReq); err != nil {
+		t.Fatalf("failed to send port request: %s", err)
+	}
+	info, err := port.GetInfo(ctx)
+	if err != nil {
+		t.Fatalf("port.GetInfo(_) = %s", err)
+	}
+	if !info.HasId() {
+		t.Fatalf("missing id in port info: %+v", info)
+	}
+	return info.GetId()
+}
+
+func getTunPortId(t *testing.T, ctx context.Context, tunPort *tun.PortWithCtxInterface) network.PortId {
+	t.Helper()
+	return getPortId(t, ctx, func(req network.PortWithCtxInterfaceRequest) error {
+		return tunPort.GetPort(ctx, req)
+	})
+}
+
+func createTunWithOnline(t *testing.T, ctx context.Context, online bool) (*tun.DeviceWithCtxInterface, *tun.PortWithCtxInterface, network.PortId) {
+	t.Helper()
 	portConfig := defaultPortConfig()
 	portConfig.SetOnline(online)
 
 	tunDevice := createTunDeviceOnly(t, ctx)
 	tunPort := addPortWithConfig(t, ctx, tunDevice, portConfig)
-	return tunDevice, tunPort
+	portId := getTunPortId(t, ctx, tunPort)
+	return tunDevice, tunPort, portId
 }
 
 func createTunPair(t *testing.T, ctx context.Context, frameTypes []network.FrameType) *tun.DevicePairWithCtxInterface {
@@ -286,7 +311,7 @@ func createTunClientPair(t *testing.T, ctx context.Context) (*tun.DeviceWithCtxI
 	return createTunClientPairWithOnline(t, ctx, true)
 }
 
-func newClientAndPort(t *testing.T, ctx context.Context, netdev *network.DeviceWithCtxInterface) (*Client, *Port) {
+func newClientAndPort(t *testing.T, ctx context.Context, netdev *network.DeviceWithCtxInterface, portId network.PortId) (*Client, *Port) {
 	t.Helper()
 
 	client, err := NewClient(ctx, netdev, &SimpleSessionConfigFactory{})
@@ -299,7 +324,7 @@ func newClientAndPort(t *testing.T, ctx context.Context, netdev *network.DeviceW
 		}
 	})
 
-	port, err := client.NewPort(ctx, TunPortId)
+	port, err := client.NewPort(ctx, portId)
 	if err != nil {
 		t.Fatalf("client.NewPort(_, %d) failed: %s", TunPortId, err)
 	}
@@ -314,9 +339,9 @@ func newClientAndPort(t *testing.T, ctx context.Context, netdev *network.DeviceW
 
 func createTunClientPairWithOnline(t *testing.T, ctx context.Context, online bool) (*tun.DeviceWithCtxInterface, *tun.PortWithCtxInterface, *Client, *Port) {
 	t.Helper()
-	tundev, tunport := createTunWithOnline(t, ctx, online)
+	tundev, tunport, portId := createTunWithOnline(t, ctx, online)
 	netdev := connectDevice(t, ctx, tundev)
-	client, port := newClientAndPort(t, ctx, netdev)
+	client, port := newClientAndPort(t, ctx, netdev, portId)
 	return tundev, tunport, client, port
 }
 
@@ -413,7 +438,7 @@ func TestWritePacket(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			tunDev, _ := createTunWithOnline(t, ctx, true)
+			tunDev, _, portId := createTunWithOnline(t, ctx, true)
 			netdev := connectDevice(t, ctx, tunDev)
 			client, err := NewClient(
 				ctx,
@@ -434,7 +459,7 @@ func TestWritePacket(t *testing.T) {
 			})
 			runClient(t, client)
 
-			port, err := client.NewPort(ctx, TunPortId)
+			port, err := client.NewPort(ctx, portId)
 			if err != nil {
 				t.Fatalf("client.NewPort(_, %d) failed: %s", TunPortId, err)
 			}
@@ -893,12 +918,13 @@ func TestPortModeDetection(t *testing.T) {
 
 	for index, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			portId := PortId(index)
+			baseId := basePortId(index)
 			portConfig := defaultPortConfig()
 			portConfig.Base.SetRxTypes(testCase.frameTypes)
-			portConfig.Base.SetId(portId)
+			portConfig.Base.SetId(baseId)
 
-			_ = addPortWithConfig(t, ctx, tunDev, portConfig)
+			tunPort := addPortWithConfig(t, ctx, tunDev, portConfig)
+			portId := getTunPortId(t, ctx, tunPort)
 
 			port, err := client.NewPort(ctx, portId)
 			if err == nil {
@@ -950,8 +976,15 @@ func TestPairExchangePackets(t *testing.T) {
 		t.Fatalf("pair.GetRight(_, _): %s", err)
 	}
 
-	lClient, lPort := newClientAndPort(t, ctx, left)
-	rClient, rPort := newClientAndPort(t, ctx, right)
+	lPortId := getPortId(t, ctx, func(req network.PortWithCtxInterfaceRequest) error {
+		return pair.GetLeftPort(ctx, TunPortId, req)
+	})
+	rPortId := getPortId(t, ctx, func(req network.PortWithCtxInterfaceRequest) error {
+		return pair.GetRightPort(ctx, TunPortId, req)
+	})
+
+	lClient, lPort := newClientAndPort(t, ctx, left, lPortId)
+	rClient, rPort := newClientAndPort(t, ctx, right, rPortId)
 	runClient(t, lClient)
 	runClient(t, rClient)
 

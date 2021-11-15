@@ -10,12 +10,6 @@ using fuchsia.net.virtualization;
 using fuchsia.net;
 using zx;
 
-/// The port identifier used when creating [`EndpointBacking.NETWORK_DEVICE`]
-/// endpoints.
-// TODO(https://fxbug.dev/85061): Change this to an arbitrary non-zero value
-// once fuchsia.net.stack/Stack.AddInterface doesn't assume a port zero exists.
-const PORT_ID uint8 = 0;
-
 /// Provides emulated latency configuration.
 type LatencyConfig = struct {
     /// Average latency, in ms.

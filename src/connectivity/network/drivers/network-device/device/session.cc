@@ -243,7 +243,7 @@ void Session::OnUnbind(fidl::UnbindInfo info, fidl::ServerEnd<netdev::Session> c
     fbl::AutoLock lock(&parent_->control_lock());
     for (uint8_t i = 0; i < MAX_PORTS; i++) {
       // We can ignore the return from detaching, this port is about to get destroyed.
-      zx::status<bool> __UNUSED result = DetachPortLocked(i);
+      zx::status<bool> __UNUSED result = DetachPortLocked(i, std::nullopt);
     }
     dying_ = true;
   }
@@ -377,13 +377,12 @@ zx_status_t Session::FetchTx() {
     }
     buffer_descriptor_t& desc = *desc_ptr;
 
-    if (desc.port_id >= attached_ports_.size()) {
-      LOGF_ERROR("network-device(%s): received invalid tx port id: %d", name(), desc.port_id);
+    if (desc.port_id.base >= attached_ports_.size()) {
+      LOGF_ERROR("network-device(%s): received invalid tx port id: %d", name(), desc.port_id.base);
       return ZX_ERR_IO_INVALID;
     }
-    std::optional<AttachedPort>& slot = attached_ports_[desc.port_id];
-    if (!slot.has_value()) {
-      // Port is not attached, immediately return the buffer with an error.
+    std::optional<AttachedPort>& slot = attached_ports_[desc.port_id.base];
+    auto return_descriptor = [this, &desc, &desc_idx]() {
       // Tx on unattached port is a recoverable error; we must handle it gracefully because
       // detaching a port can race with regular tx.
       // This is not expected to be part of fast path operation, so it should be
@@ -393,20 +392,34 @@ zx_status_t Session::FetchTx() {
       zx_status_t status = fifo_tx_.write(sizeof(desc_idx), &desc_idx, 1, nullptr);
       switch (status) {
         case ZX_OK:
-          break;
+          return ZX_OK;
         case ZX_ERR_PEER_CLOSED:
           // Tx FIFO closing is an expected error.
           return ZX_ERR_PEER_CLOSED;
         default:
           LOGF_ERROR("network-device(%s): failed to return buffer with bad port number %d: %s",
-                     name(), desc.port_id, zx_status_get_string(status));
+                     name(), desc.port_id.base, zx_status_get_string(status));
           return ZX_ERR_IO_INVALID;
+      }
+    };
+    if (!slot.has_value()) {
+      // Port is not attached, immediately return the descriptor with an error.
+      if (zx_status_t status = return_descriptor(); status != ZX_OK) {
+        return status;
       }
       continue;
     }
     AttachedPort& port = slot.value();
     // Reject invalid tx types.
     port.AssertParentControlLockShared(*parent_);
+    if (!port.SaltMatches(desc.port_id.salt)) {
+      // Bad port salt, immediately return the descriptor with an error.
+      if (zx_status_t status = return_descriptor(); status != ZX_OK) {
+        return status;
+      }
+      continue;
+    }
+
     if (!port.WithPort([frame_type = desc.frame_type](DevicePort& p) {
           return p.IsValidRxFrameType(static_cast<netdev::wire::FrameType>(frame_type));
         })) {
@@ -446,7 +459,7 @@ zx_status_t Session::FetchTx() {
         .data_count = 0,
         .meta =
             {
-                .port = desc.port_id,
+                .port = desc.port_id.base,
                 .info_type = static_cast<uint32_t>(info_type),
                 .flags = desc.inbound_flags,
                 .frame_type = desc.frame_type,
@@ -565,16 +578,16 @@ void Session::ResumeTx() {
   }
 }
 
-zx_status_t Session::AttachPort(uint8_t port_id,
+zx_status_t Session::AttachPort(netdev::wire::PortId port_id,
                                 cpp20::span<const netdev::wire::FrameType> frame_types) {
   size_t attached_count;
   {
     fbl::AutoLock lock(&parent_->control_lock());
 
-    if (port_id >= attached_ports_.size()) {
+    if (port_id.base >= attached_ports_.size()) {
       return ZX_ERR_INVALID_ARGS;
     }
-    std::optional<AttachedPort>& slot = attached_ports_[port_id];
+    std::optional<AttachedPort>& slot = attached_ports_[port_id.base];
     if (slot.has_value()) {
       return ZX_ERR_ALREADY_EXISTS;
     }
@@ -605,11 +618,11 @@ zx_status_t Session::AttachPort(uint8_t port_id,
   return ZX_OK;
 }
 
-zx_status_t Session::DetachPort(uint8_t port_id) {
+zx_status_t Session::DetachPort(netdev::wire::PortId port_id) {
   bool stop_session;
   {
     fbl::AutoLock lock(&parent_->control_lock());
-    auto result = DetachPortLocked(port_id);
+    auto result = DetachPortLocked(port_id.base, port_id.salt);
     if (result.is_error()) {
       return result.error_value();
     }
@@ -623,7 +636,7 @@ zx_status_t Session::DetachPort(uint8_t port_id) {
   return ZX_OK;
 }
 
-zx::status<bool> Session::DetachPortLocked(uint8_t port_id) {
+zx::status<bool> Session::DetachPortLocked(uint8_t port_id, std::optional<uint8_t> salt) {
   if (port_id >= attached_ports_.size()) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
@@ -633,6 +646,11 @@ zx::status<bool> Session::DetachPortLocked(uint8_t port_id) {
   }
   AttachedPort& attached_port = slot.value();
   attached_port.AssertParentControlLockShared(*parent_);
+  if (salt.has_value()) {
+    if (!attached_port.SaltMatches(salt.value())) {
+      return zx::error(ZX_ERR_NOT_FOUND);
+    }
+  }
   attached_port.WithPort([](DevicePort& p) { p.SessionDetached(); });
   slot = std::nullopt;
   return zx::ok(
@@ -641,7 +659,7 @@ zx::status<bool> Session::DetachPortLocked(uint8_t port_id) {
 }
 
 bool Session::OnPortDestroyed(uint8_t port_id) {
-  zx::status status = DetachPortLocked(port_id);
+  zx::status status = DetachPortLocked(port_id, std::nullopt);
   // Tolerate errors on port destruction, just means we weren't attached to this port.
   if (status.is_error()) {
     return false;
@@ -900,6 +918,7 @@ bool Session::CompleteRxWith(const Session& owner, const RxFrameInfo& frame_info
   cpp20::span<const SessionRxBuffer> parts(parts_storage.begin(), parts_iter);
   zx_status_t status = LoadRxInfo(RxFrameInfo{
       .meta = frame_info.meta,
+      .port_id_salt = frame_info.port_id_salt,
       .buffers = parts,
       .total_length = frame_info.total_length,
   });
@@ -985,7 +1004,7 @@ bool Session::ListenFromTx(const Session& owner, uint16_t owner_index) {
   }
   const buffer_descriptor_t& owner_desc = *owner_desc_iter;
   // Bail early if not interested in frame type.
-  if (!IsSubscribedToFrameType(owner_desc.port_id,
+  if (!IsSubscribedToFrameType(owner_desc.port_id.base,
                                static_cast<netdev::wire::FrameType>(owner_desc.frame_type))) {
     return false;
   }
@@ -1023,7 +1042,7 @@ bool Session::ListenFromTx(const Session& owner, uint16_t owner_index) {
   // Build frame information as if this had been received from any other session and call into
   // common routine to commit the descriptor.
   const buffer_metadata_t frame_meta = {
-      .port = owner_desc.port_id,
+      .port = owner_desc.port_id.base,
       .info_type = static_cast<uint32_t>(info_type),
       .flags = static_cast<uint32_t>(netdev::wire::RxFlags::kRxEchoedTx),
       .frame_type = owner_desc.frame_type,
@@ -1031,6 +1050,7 @@ bool Session::ListenFromTx(const Session& owner, uint16_t owner_index) {
 
   return CompleteRxWith(owner, RxFrameInfo{
                                    .meta = frame_meta,
+                                   .port_id_salt = parent_->GetPortSalt(frame_meta.port),
                                    .buffers = cpp20::span(parts.begin(), parts_iter),
                                    .total_length = total_length,
                                });
@@ -1086,7 +1106,10 @@ zx_status_t Session::LoadRxInfo(const RxFrameInfo& info) {
       desc.info_type = static_cast<uint32_t>(info_type);
       desc.frame_type = info.meta.frame_type;
       desc.inbound_flags = info.meta.flags;
-      desc.port_id = info.meta.port;
+      desc.port_id = {
+          .base = info.meta.port,
+          .salt = info.port_id_salt,
+      };
 
       rx_return_queue_[rx_return_queue_count_++] = buffers_iterator->descriptor;
       return ZX_OK;
