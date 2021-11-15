@@ -33,7 +33,7 @@ ways to circumvent the interface.
 <span class="compare-worse">Not recommended</span>: Avoid exposing your clients
 to your implementation details that are not contractual. Common mistakes include
 exposing broadly-scoped capabilities or namespaces, and leaking implementation
-details via [component monikers][monikers] and
+details via [URLs][url], [component monikers][monikers], and
 [diagnostics selectors][selectors].
 
 [fidl]: /docs/concepts/fidl/overview.md
@@ -45,3 +45,4 @@ details via [component monikers][monikers] and
 [rfc-0061]: /docs/contribute/governance/rfcs/0061_extensible_unions.md
 [rfc-0083]: /docs/contribute/governance/rfcs/0083_fidl_versioning.md
 [selectors]: /docs/reference/diagnostics/selectors.md
+[url]: /docs/concepts/components/component_urls.md
