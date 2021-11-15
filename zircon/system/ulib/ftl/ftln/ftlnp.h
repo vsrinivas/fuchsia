@@ -236,7 +236,7 @@ extern FTLN Ftln;
 //
 // Function Prototypes.
 //
-int FtlnDelVol(FTLN ftl);
+void FtlnDelVol(FTLN ftl);
 int FtlnWrPages(const void* buf, ui32 first, int count, void* vol);
 int FtlnRdPages(void* buf, ui32 first, int count, void* vol);
 int FtlnReport(void* vol, ui32 msg, ...);

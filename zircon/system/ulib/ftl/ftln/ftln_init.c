@@ -1595,21 +1595,18 @@ FtlnAddV_err:
   return NULL;
 }
 
-//  FtlnDelVol: Delete an existing FTL NDM volume (both FTL and FS)
+//  FtlnDelVol: Delete an existing FTL NDM volume
 //
 //       Input: ftl = pointer to FTL control block
 //
 //        Note: Called with exclusive file system access held
 //
-//     Returns: 0 if success, -1 if error
-//
-int FtlnDelVol(FTLN ftl) {
+void FtlnDelVol(FTLN ftl) {
   ftl->logger.debug(__FILE__, __LINE__, "Deleting FTL volume.");
   // Remove volume from list of volumes.
   CIRC_NODE_REMOVE(&ftl->link);
   // Delete FTL and return success.
   free_ftl(ftl);
-  return 0;
 }
 
 // FtlNdmDelVol: Delete an existing FTL NDM volume
@@ -1642,14 +1639,12 @@ int FtlNdmDelVol(const char* name) {
     // If volume found, delete it and return success.
     ftln = (FTLN)circ;
     if (strcmp(ftln->vol_name, name) == 0) {
-      int rc;
-
       // Delete this TargetFTL-NDM volume.
-      rc = FtlnDelVol(ftln);
+      FtlnDelVol(ftln);
 
-      // Release file system exclusive access and return status.
+      // Release file system exclusive access and return success.
       semPostBin(FileSysSem);
-      return rc;
+      return 0;
     }
   }
 }
