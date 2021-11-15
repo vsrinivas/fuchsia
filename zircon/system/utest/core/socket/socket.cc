@@ -393,115 +393,6 @@ TEST(SocketTest, PeerClosedSetProperty) {
   ASSERT_STATUS(local.set_property(ZX_PROP_SOCKET_TX_THRESHOLD, &t, sizeof(t)), ZX_ERR_PEER_CLOSED);
 }
 
-TEST(SocketTest, ShutdownWrite) {
-  zx::socket local, remote;
-  ASSERT_OK(zx::socket::create(0, &local, &remote));
-
-  EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE);
-  EXPECT_EQ(GetSignals(remote), ZX_SOCKET_WRITABLE);
-
-  {
-    size_t count;
-    ASSERT_OK(remote.write(0u, kMsg1.data(), kMsg1.size(), &count));
-    ASSERT_EQ(count, kMsg1.size());
-  }
-
-  ASSERT_OK(remote.shutdown(ZX_SOCKET_SHUTDOWN_WRITE));
-
-  EXPECT_EQ(GetSignals(local),
-            ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED);
-  EXPECT_EQ(GetSignals(remote), ZX_SOCKET_WRITE_DISABLED);
-
-  {
-    size_t count;
-    ASSERT_OK(local.write(0u, kMsg2.data(), kMsg2.size(), &count));
-    ASSERT_EQ(count, kMsg2.size());
-  }
-
-  EXPECT_EQ(GetSignals(remote), ZX_SOCKET_READABLE | ZX_SOCKET_WRITE_DISABLED);
-
-  ASSERT_STATUS(remote.write(0u, kMsg3.data(), kMsg3.size(), nullptr), ZX_ERR_BAD_STATE);
-
-  char rbuf[kReadBufSize];
-
-  {
-    size_t count;
-    ASSERT_OK(local.read(0u, rbuf, sizeof(rbuf), &count));
-    ASSERT_EQ(count, kMsg1.size());
-    EXPECT_BYTES_EQ(rbuf, kMsg1.data(), kMsg1.size());
-  }
-
-  ASSERT_STATUS(local.read(0u, rbuf, 1u, nullptr), ZX_ERR_BAD_STATE);
-
-  EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_WRITE_DISABLED);
-
-  {
-    size_t count;
-    ASSERT_OK(remote.read(0u, rbuf, sizeof(rbuf), &count));
-    ASSERT_EQ(count, kMsg2.size());
-    EXPECT_BYTES_EQ(rbuf, kMsg2.data(), kMsg2.size());
-  }
-
-  local.reset();
-
-  // Calling shutdown after the peer is closed is completely valid.
-  ASSERT_OK(remote.shutdown(ZX_SOCKET_SHUTDOWN_READ));
-
-  EXPECT_EQ(GetSignals(remote),
-            ZX_SOCKET_PEER_WRITE_DISABLED | ZX_SOCKET_WRITE_DISABLED | ZX_SOCKET_PEER_CLOSED);
-
-  remote.reset();
-}
-
-TEST(SocketTest, ShutdownRead) {
-  zx::socket local, remote;
-  ASSERT_OK(zx::socket::create(0, &local, &remote));
-
-  EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE);
-  EXPECT_EQ(GetSignals(remote), ZX_SOCKET_WRITABLE);
-
-  {
-    size_t count;
-    ASSERT_OK(remote.write(0u, kMsg1.data(), kMsg1.size(), &count));
-    ASSERT_EQ(count, kMsg1.size());
-  }
-
-  ASSERT_OK(local.shutdown(ZX_SOCKET_SHUTDOWN_READ));
-
-  EXPECT_EQ(GetSignals(local),
-            ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED);
-  EXPECT_EQ(GetSignals(remote), ZX_SOCKET_WRITE_DISABLED);
-
-  {
-    size_t count;
-    ASSERT_OK(local.write(0u, kMsg2.data(), kMsg2.size(), &count));
-    ASSERT_EQ(count, kMsg2.size());
-  }
-
-  EXPECT_EQ(GetSignals(remote), ZX_SOCKET_READABLE | ZX_SOCKET_WRITE_DISABLED);
-
-  ASSERT_STATUS(remote.write(0u, kMsg3.data(), kMsg3.size(), nullptr), ZX_ERR_BAD_STATE);
-
-  char rbuf[kReadBufSize];
-
-  {
-    size_t count;
-    ASSERT_OK(local.read(0u, rbuf, sizeof(rbuf), &count));
-    ASSERT_EQ(count, kMsg1.size());
-    EXPECT_BYTES_EQ(rbuf, kMsg1.data(), kMsg1.size());
-  }
-
-  ASSERT_STATUS(local.read(0u, rbuf, 1u, nullptr), ZX_ERR_BAD_STATE);
-  EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_WRITE_DISABLED);
-
-  {
-    size_t count;
-    ASSERT_OK(remote.read(0u, rbuf, sizeof(rbuf), &count));
-    ASSERT_EQ(count, kMsg2.size());
-    EXPECT_BYTES_EQ(rbuf, kMsg2.data(), kMsg2.size());
-  }
-}
-
 TEST(SocketTest, BytesOutstanding) {
   zx::socket local;
   constexpr uint32_t write_data[] = {0xdeadbeef, 0xc0ffee};
@@ -547,112 +438,6 @@ TEST(SocketTest, BytesOutstanding) {
                 ZX_ERR_PEER_CLOSED);
 }
 
-TEST(SocketTest, ShutdownWriteBytesOutstanding) {
-  zx::socket local, remote;
-  ASSERT_OK(zx::socket::create(0, &local, &remote));
-
-  EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE);
-  {
-    size_t count;
-    ASSERT_OK(remote.write(0u, kMsg1.data(), kMsg1.size(), &count));
-    ASSERT_EQ(count, kMsg1.size());
-  }
-
-  ASSERT_OK(remote.shutdown(ZX_SOCKET_SHUTDOWN_WRITE));
-
-  EXPECT_EQ(GetSignals(local),
-            ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED);
-  EXPECT_EQ(GetSignals(remote), ZX_SOCKET_WRITE_DISABLED);
-
-  {
-    size_t count;
-    ASSERT_OK(local.write(0u, kMsg2.data(), kMsg2.size(), &count));
-    ASSERT_EQ(count, kMsg2.size());
-  }
-
-  EXPECT_EQ(GetSignals(remote), ZX_SOCKET_READABLE | ZX_SOCKET_WRITE_DISABLED);
-
-  ASSERT_STATUS(remote.write(0u, kMsg3.data(), kMsg3.size(), nullptr), ZX_ERR_BAD_STATE);
-
-  char rbuf[kReadBufSize];
-
-  zx_info_socket_t info{};
-  ASSERT_OK(local.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr));
-  EXPECT_EQ(info.rx_buf_available, kMsg1.size());
-
-  {
-    size_t count;
-    ASSERT_OK(local.read(0u, rbuf, sizeof(rbuf), &count));
-    ASSERT_EQ(count, kMsg1.size());
-    EXPECT_BYTES_EQ(rbuf, kMsg1.data(), kMsg1.size());
-  }
-
-  ASSERT_STATUS(local.read(0u, rbuf, sizeof(rbuf), nullptr), ZX_ERR_BAD_STATE);
-
-  EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_WRITE_DISABLED);
-
-  {
-    size_t count;
-    ASSERT_OK(remote.read(0u, rbuf, sizeof(rbuf), &count));
-    ASSERT_EQ(count, kMsg2.size());
-    EXPECT_BYTES_EQ(rbuf, kMsg2.data(), kMsg2.size());
-  }
-}
-
-TEST(SocketTest, ShutdownReadBytesOutstanding) {
-  zx::socket local, remote;
-  ASSERT_OK(zx::socket::create(0, &local, &remote));
-
-  EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE);
-  EXPECT_EQ(GetSignals(remote), ZX_SOCKET_WRITABLE);
-
-  {
-    size_t count;
-    ASSERT_OK(remote.write(0u, kMsg1.data(), kMsg1.size(), &count));
-    ASSERT_EQ(count, kMsg1.size());
-  }
-
-  ASSERT_OK(local.shutdown(ZX_SOCKET_SHUTDOWN_READ));
-
-  EXPECT_EQ(GetSignals(local),
-            ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED);
-  EXPECT_EQ(GetSignals(remote), ZX_SOCKET_WRITE_DISABLED);
-
-  {
-    size_t count;
-    ASSERT_OK(local.write(0u, kMsg2.data(), kMsg2.size(), &count));
-    ASSERT_EQ(count, kMsg2.size());
-  }
-
-  EXPECT_EQ(GetSignals(remote), ZX_SOCKET_READABLE | ZX_SOCKET_WRITE_DISABLED);
-
-  ASSERT_STATUS(remote.write(0u, kMsg3.data(), kMsg3.size(), nullptr), ZX_ERR_BAD_STATE);
-
-  char rbuf[kReadBufSize];
-
-  zx_info_socket_t info{};
-  ASSERT_OK(local.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr));
-  EXPECT_EQ(info.rx_buf_available, kMsg1.size());
-
-  {
-    size_t count;
-    ASSERT_OK(local.read(0u, rbuf, sizeof(rbuf), &count));
-    ASSERT_EQ(count, kMsg1.size());
-    EXPECT_BYTES_EQ(rbuf, kMsg1.data(), kMsg1.size());
-  }
-
-  ASSERT_STATUS(local.read(0u, rbuf, sizeof(rbuf), nullptr), ZX_ERR_BAD_STATE);
-
-  EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_WRITE_DISABLED);
-
-  {
-    size_t count;
-    ASSERT_OK(remote.read(0u, rbuf, sizeof(rbuf), &count));
-    ASSERT_EQ(count, kMsg2.size());
-    EXPECT_BYTES_EQ(rbuf, kMsg2.data(), kMsg2.size());
-  }
-}
-
 TEST(SocketTest, SetDispositionHandleWithoutRight) {
   zx::socket local, remote;
   ASSERT_OK(zx::socket::create(0, &local, &remote));
@@ -689,7 +474,7 @@ TEST(SocketTest, SetDispositionInvalidArgs) {
   EXPECT_STATUS(local.set_disposition(0, invalid_disposition), ZX_ERR_INVALID_ARGS);
 }
 
-void disable_write_helper(bool disable_local_write, bool disable_remote_write, bool use_shutdown) {
+void disable_write_helper(bool disable_local_write, bool disable_remote_write) {
   zx::socket local, remote;
   ASSERT_OK(zx::socket::create(0, &local, &remote));
 
@@ -720,28 +505,22 @@ void disable_write_helper(bool disable_local_write, bool disable_remote_write, b
 
   // Set the dispositions.
   {
-    uint32_t shutdown_mode = 0;
     uint32_t local_disposition = 0;
     uint32_t remote_disposition = 0;
     if (disable_local_write) {
-      shutdown_mode |= ZX_SOCKET_SHUTDOWN_WRITE;
       local_disposition = ZX_SOCKET_DISPOSITION_WRITE_DISABLED;
       local_state |= ZX_SOCKET_WRITE_DISABLED;
       local_state ^= ZX_SOCKET_WRITABLE;
       remote_state |= ZX_SOCKET_PEER_WRITE_DISABLED;
     }
     if (disable_remote_write) {
-      shutdown_mode |= ZX_SOCKET_SHUTDOWN_READ;
       remote_disposition = ZX_SOCKET_DISPOSITION_WRITE_DISABLED;
       remote_state ^= ZX_SOCKET_WRITABLE;
       remote_state |= ZX_SOCKET_WRITE_DISABLED;
       local_state |= ZX_SOCKET_PEER_WRITE_DISABLED;
     }
-    if (use_shutdown) {
-      ASSERT_OK(local.shutdown(shutdown_mode));
-    } else {
-      ASSERT_OK(local.set_disposition(local_disposition, remote_disposition));
-    }
+
+    ASSERT_OK(local.set_disposition(local_disposition, remote_disposition));
     EXPECT_EQ(GetSignals(local), local_state);
     EXPECT_EQ(GetSignals(remote), remote_state);
   }
@@ -791,40 +570,28 @@ void disable_write_helper(bool disable_local_write, bool disable_remote_write, b
     EXPECT_EQ(GetSignals(remote), remote_state);
   }
 
-  // Enable writes on both endpoints, and confirm that reading/writing works from both ends.
-  // Only do this when using set_disposition. Shutdown are non-revertible so this wouldn't
-  // work.
-  if (!use_shutdown) {
-    EXPECT_OK(local.set_disposition(ZX_SOCKET_DISPOSITION_WRITE_ENABLED,
-                                    ZX_SOCKET_DISPOSITION_WRITE_ENABLED));
-    EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE);
-    EXPECT_EQ(GetSignals(remote), ZX_SOCKET_WRITABLE);
+  // Re-enable writes on both endpoints, and confirm that reading/writing works from both ends.
+  EXPECT_OK(local.set_disposition(ZX_SOCKET_DISPOSITION_WRITE_ENABLED,
+                                  ZX_SOCKET_DISPOSITION_WRITE_ENABLED));
+  EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE);
+  EXPECT_EQ(GetSignals(remote), ZX_SOCKET_WRITABLE);
 
-    ASSERT_NO_FAILURES(write_data(local, kMsg2));
-    ASSERT_NO_FAILURES(write_data(remote, kMsg3));
-    EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE);
-    EXPECT_EQ(GetSignals(remote), ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE);
+  ASSERT_NO_FAILURES(write_data(local, kMsg2));
+  ASSERT_NO_FAILURES(write_data(remote, kMsg3));
+  EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE);
+  EXPECT_EQ(GetSignals(remote), ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE);
 
-    ASSERT_NO_FAILURES(read_and_verify_data(local, kMsg3));
-    ASSERT_NO_FAILURES(read_and_verify_data(remote, kMsg2));
-    EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE);
-    EXPECT_EQ(GetSignals(remote), ZX_SOCKET_WRITABLE);
-  }
+  ASSERT_NO_FAILURES(read_and_verify_data(local, kMsg3));
+  ASSERT_NO_FAILURES(read_and_verify_data(remote, kMsg2));
+  EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE);
+  EXPECT_EQ(GetSignals(remote), ZX_SOCKET_WRITABLE);
 }
 
-TEST(SocketTest, DisableWriteLocalWithShutdown) { disable_write_helper(true, false, true); }
+TEST(SocketTest, DisableWriteLocalWithSetDisposition) { disable_write_helper(true, false); }
 
-TEST(SocketTest, DisableWritePeerWithShutdown) { disable_write_helper(false, true, true); }
+TEST(SocketTest, DisableWritePeerWithSetDisposition) { disable_write_helper(false, true); }
 
-TEST(SocketTest, DisableWriteBothEndpointWithShutdown) { disable_write_helper(true, true, true); }
-
-TEST(SocketTest, DisableWriteLocalWithSetDisposition) { disable_write_helper(true, false, false); }
-
-TEST(SocketTest, DisableWritePeerWithSetDisposition) { disable_write_helper(false, true, false); }
-
-TEST(SocketTest, DisableWriteBothEndpointsWithSetDisposition) {
-  disable_write_helper(true, true, false);
-}
+TEST(SocketTest, DisableWriteBothEndpointsWithSetDisposition) { disable_write_helper(true, true); }
 
 TEST(SocketTest, SetDispositionOfClosedPeerWithBufferedData) {
   zx::socket local;
