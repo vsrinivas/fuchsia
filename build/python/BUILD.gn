@@ -22,6 +22,7 @@ host_test_data("pip") {
 group("tests") {
   testonly = true
   deps = [
+    "tests/action:tests",
     "tests/bin",
     "tests/host_test:py_host_test_with_lib($host_toolchain)",
     "tests/lib",

@@ -1,0 +1,63 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Declares an action() that uses python for the script
+#
+# This sets up the python module search path using the GN paths specified, and
+# otherwise is the same as an action(), forwarding all invoker vars to the
+# action()
+#
+# Parameters:
+#
+#   modules (optional)
+#     [list of GN paths] The GN paths to python module source files that the
+#       script needs to use.
+#
+#   all others are passed to action() as expected,
+#
+template("python_action") {
+  if (defined(invoker.modules)) {
+    # Rebase the paths to get filesystem paths
+    module_path_list = rebase_path(invoker.modules, root_build_dir)
+
+    # Strip the filenames
+    module_dir_list = get_path_info(module_path_list, "dir")
+
+    # Concatenate the directories into a search path
+    module_search_path = string_join(":", module_dir_list)
+
+    module_args = [
+      "--module_path",
+      module_search_path,
+    ]
+  }
+
+  action(target_name) {
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "modules",
+                             "script",
+                             "args",
+                             "inputs",
+                           ])
+
+    script = "//build/python/python_action_runner.py"
+    args = module_args + [
+             "--script",
+             rebase_path(invoker.script, root_build_dir),
+             "--",
+           ] + invoker.args
+
+    # set all the modules as inputs so Ninja, and the action tracer, are
+    # aware of them.
+    inputs = [ invoker.script ]
+    if (defined(invoker.modules)) {
+      inputs += invoker.modules
+    }
+    if (defined(invoker.inputs)) {
+      inputs += invoker.inputs
+    }
+  }
+}
