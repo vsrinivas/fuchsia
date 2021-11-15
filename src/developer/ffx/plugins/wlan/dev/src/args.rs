@@ -17,6 +17,9 @@ pub struct DevCommand {
 pub enum DevSubcommand {
     Phy(PhyCommand),
     Iface(IfaceCommand),
+    Client(ClientCommand),
+    Ap(ApCommand),
+    Mesh(MeshCommand),
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
@@ -59,6 +62,49 @@ pub enum IfaceSubcommand {
     Stats(Stats),
     Minstrel(Minstrel),
     Status(Status),
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "client", description = "Controls a WLAN client interface.")]
+pub struct ClientCommand {
+    #[argh(subcommand)]
+    pub subcommand: ClientSubcommand,
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand)]
+pub enum ClientSubcommand {
+    Disconnect(Disconnect),
+    WmmStatus(WmmStatus),
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "ap", description = "Controls a WLAN AP interface.")]
+pub struct ApCommand {
+    #[argh(subcommand)]
+    pub subcommand: ApSubcommand,
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand)]
+pub enum ApSubcommand {
+    Start(Start),
+    Stop(Stop),
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "mesh", description = "Controls a WLAN mesh interface.")]
+pub struct MeshCommand {
+    #[argh(subcommand)]
+    pub subcommand: MeshSubcommand,
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand)]
+pub enum MeshSubcommand {
+    Join(Join),
+    Leave(Leave),
+    Paths(Paths),
 }
 
 impl From<PhySubcommand> for wlan_dev::opts::Opt {
@@ -209,6 +255,9 @@ impl From<DevSubcommand> for wlan_dev::opts::Opt {
         match cmd {
             DevSubcommand::Phy(phy_cmd) => wlan_dev::opts::Opt::from(phy_cmd.subcommand),
             DevSubcommand::Iface(iface_cmd) => wlan_dev::opts::Opt::from(iface_cmd.subcommand),
+            DevSubcommand::Client(client_cmd) => wlan_dev::opts::Opt::from(client_cmd.subcommand),
+            DevSubcommand::Ap(ap_cmd) => wlan_dev::opts::Opt::from(ap_cmd.subcommand),
+            DevSubcommand::Mesh(mesh_cmd) => wlan_dev::opts::Opt::from(mesh_cmd.subcommand),
         }
     }
 }
@@ -412,6 +461,190 @@ impl From<Status> for wlan_dev::opts::IfaceCmd {
     }
 }
 
+impl From<ClientSubcommand> for wlan_dev::opts::Opt {
+    fn from(cmd: ClientSubcommand) -> Self {
+        wlan_dev::opts::Opt::Client(match cmd {
+            ClientSubcommand::Disconnect(arg) => wlan_dev::opts::ClientCmd::from(arg),
+            ClientSubcommand::WmmStatus(arg) => wlan_dev::opts::ClientCmd::from(arg),
+        })
+    }
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "disconnect", description = "Causes client to disconnect.")]
+pub struct Disconnect {
+    #[argh(
+        option,
+        short = 'i',
+        long = "iface",
+        default = "0",
+        description = "iface ID to disconnect."
+    )]
+    iface_id: u16,
+}
+
+impl From<Disconnect> for wlan_dev::opts::ClientCmd {
+    fn from(arg: Disconnect) -> Self {
+        wlan_dev::opts::ClientCmd::Disconnect(wlan_dev::opts::ClientDisconnectCmd {
+            iface_id: arg.iface_id,
+        })
+    }
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "wmm_status", description = "Queries client WMM status.")]
+pub struct WmmStatus {
+    #[argh(
+        option,
+        short = 'i',
+        long = "iface",
+        default = "0",
+        description = "iface ID to disconnect."
+    )]
+    iface_id: u16,
+}
+
+impl From<WmmStatus> for wlan_dev::opts::ClientCmd {
+    fn from(arg: WmmStatus) -> Self {
+        wlan_dev::opts::ClientCmd::WmmStatus(wlan_dev::opts::ClientWmmStatusCmd {
+            iface_id: arg.iface_id,
+        })
+    }
+}
+
+impl From<ApSubcommand> for wlan_dev::opts::Opt {
+    fn from(cmd: ApSubcommand) -> Self {
+        wlan_dev::opts::Opt::Ap(match cmd {
+            ApSubcommand::Start(arg) => wlan_dev::opts::ApCmd::from(arg),
+            ApSubcommand::Stop(arg) => wlan_dev::opts::ApCmd::from(arg),
+        })
+    }
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "start", description = "Starts an AP interface.")]
+pub struct Start {
+    #[argh(
+        option,
+        short = 'i',
+        long = "iface",
+        default = "0",
+        description = "interface ID to start AP on"
+    )]
+    iface_id: u16,
+    #[argh(option, short = 's', description = "AP SSID")]
+    ssid: String,
+    #[argh(option, short = 'p', description = "AP password")]
+    password: Option<String>,
+    #[argh(option, short = 'c', description = "channel to start AP on")]
+    channel: u8,
+}
+
+impl From<Start> for wlan_dev::opts::ApCmd {
+    fn from(cmd: Start) -> Self {
+        wlan_dev::opts::ApCmd::Start {
+            iface_id: cmd.iface_id,
+            ssid: cmd.ssid,
+            password: cmd.password,
+            channel: cmd.channel,
+        }
+    }
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "stop", description = "Stops an AP interface.")]
+pub struct Stop {
+    #[argh(
+        option,
+        short = 'i',
+        long = "iface",
+        default = "0",
+        description = "interface ID to stop AP on"
+    )]
+    iface_id: u16,
+}
+
+impl From<Stop> for wlan_dev::opts::ApCmd {
+    fn from(cmd: Stop) -> Self {
+        wlan_dev::opts::ApCmd::Stop { iface_id: cmd.iface_id }
+    }
+}
+
+impl From<MeshSubcommand> for wlan_dev::opts::Opt {
+    fn from(cmd: MeshSubcommand) -> Self {
+        wlan_dev::opts::Opt::Mesh(match cmd {
+            MeshSubcommand::Join(arg) => wlan_dev::opts::MeshCmd::from(arg),
+            MeshSubcommand::Leave(arg) => wlan_dev::opts::MeshCmd::from(arg),
+            MeshSubcommand::Paths(arg) => wlan_dev::opts::MeshCmd::from(arg),
+        })
+    }
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "join", description = "Joins a mesh")]
+pub struct Join {
+    #[argh(
+        option,
+        short = 'i',
+        long = "iface",
+        default = "0",
+        description = "interface ID to join mesh on"
+    )]
+    iface_id: u16,
+    #[argh(option, short = 'm', description = "WLAN mesh ID to join")]
+    mesh_id: String,
+    #[argh(option, short = 'c', description = "channel to start AP on")]
+    channel: u8,
+}
+
+impl From<Join> for wlan_dev::opts::MeshCmd {
+    fn from(cmd: Join) -> Self {
+        wlan_dev::opts::MeshCmd::Join {
+            iface_id: cmd.iface_id,
+            mesh_id: cmd.mesh_id,
+            channel: cmd.channel,
+        }
+    }
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "leave", description = "Leaves a mesh")]
+pub struct Leave {
+    #[argh(
+        option,
+        short = 'i',
+        long = "iface",
+        default = "0",
+        description = "interface ID that should leave a mesh"
+    )]
+    iface_id: u16,
+}
+
+impl From<Leave> for wlan_dev::opts::MeshCmd {
+    fn from(cmd: Leave) -> Self {
+        wlan_dev::opts::MeshCmd::Leave { iface_id: cmd.iface_id }
+    }
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "paths", description = "Retrieves mesh paths")]
+pub struct Paths {
+    #[argh(
+        option,
+        short = 'i',
+        long = "iface",
+        default = "0",
+        description = "interface ID for which mesh paths will be queried"
+    )]
+    iface_id: u16,
+}
+
+impl From<Paths> for wlan_dev::opts::MeshCmd {
+    fn from(cmd: Paths) -> Self {
+        wlan_dev::opts::MeshCmd::Paths { iface_id: cmd.iface_id }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -555,5 +788,83 @@ mod tests {
                 iface_id: Some(123)
             })
         );
+    }
+
+    #[test]
+    fn test_client_disconnect_conversion() {
+        assert_eq!(
+            wlan_dev::opts::ClientCmd::from(Disconnect { iface_id: 123 }),
+            wlan_dev::opts::ClientCmd::Disconnect(wlan_dev::opts::ClientDisconnectCmd {
+                iface_id: 123
+            })
+        )
+    }
+
+    #[test]
+    fn test_client_wmm_status_conversion() {
+        assert_eq!(
+            wlan_dev::opts::ClientCmd::from(WmmStatus { iface_id: 123 }),
+            wlan_dev::opts::ClientCmd::WmmStatus(wlan_dev::opts::ClientWmmStatusCmd {
+                iface_id: 123
+            })
+        )
+    }
+
+    #[test]
+    fn test_ap_start_conversion() {
+        assert_eq!(
+            wlan_dev::opts::ApCmd::from(Start {
+                iface_id: 456,
+                ssid: String::from("asdf"),
+                password: Some(String::from("qwer")),
+                channel: 123
+            }),
+            wlan_dev::opts::ApCmd::Start {
+                iface_id: 456,
+                ssid: String::from("asdf"),
+                password: Some(String::from("qwer")),
+                channel: 123
+            }
+        )
+    }
+
+    #[test]
+    fn test_ap_stop_conversion() {
+        assert_eq!(
+            wlan_dev::opts::ApCmd::from(Stop { iface_id: 123 }),
+            wlan_dev::opts::ApCmd::Stop { iface_id: 123 }
+        )
+    }
+
+    #[test]
+    fn test_mesh_join_conversion() {
+        assert_eq!(
+            wlan_dev::opts::MeshCmd::from(Join {
+                iface_id: 456,
+                mesh_id: String::from("zxcv"),
+                channel: 123,
+            }),
+            wlan_dev::opts::MeshCmd::Join {
+                iface_id: 456,
+                mesh_id: String::from("zxcv"),
+                channel: 123,
+            }
+        )
+    }
+
+    #[test]
+    fn test_mesh_leave_conversion() {
+        assert_eq!(
+            wlan_dev::opts::MeshCmd::from(Leave { iface_id: 123 }),
+            wlan_dev::opts::MeshCmd::Leave { iface_id: 123 }
+        )
+    }
+
+    #[test]
+    fn test_mesh_paths_conversion() {
+        assert_eq!(
+            wlan_dev::opts::MeshCmd::from(Paths { iface_id: 123 }),
+            wlan_dev::opts::MeshCmd::Paths { iface_id: 123 }
+        )
     }
 }
