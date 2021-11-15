@@ -986,6 +986,63 @@ TEST_F(AmlSdmmcTest, NewDelayLineTuningOddDivider) {
   EXPECT_EQ(distance->value(), 63);
 }
 
+TEST_F(AmlSdmmcTest, NewDelayLineTuningCorrectFailingWindowIfLastOne) {
+  dut_->SetRequestResults(
+      "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||----"
+      "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+      "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+      "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+      "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||");
+
+  dut_->set_board_config({
+      .supports_dma = true,
+      .min_freq = 400000,
+      .max_freq = 120000000,
+      .version_3 = true,
+      .prefs = 0,
+      .use_new_tuning = true,
+  });
+  ASSERT_OK(dut_->Init({}));
+
+  AmlSdmmcClock::Get().FromValue(0).set_cfg_div(5).WriteTo(&mmio_);
+  AmlSdmmcCfg::Get().ReadFrom(&mmio_).set_bus_width(AmlSdmmcCfg::kBusWidth4Bit).WriteTo(&mmio_);
+
+  auto adjust = AmlSdmmcAdjust::Get().FromValue(0).set_adj_delay(0x3f).WriteTo(&mmio_);
+  auto delay1 = AmlSdmmcDelay1::Get().FromValue(0).WriteTo(&mmio_);
+  auto delay2 = AmlSdmmcDelay2::Get().FromValue(0).WriteTo(&mmio_);
+
+  // The old tuning method should be checked because the chosen adj_delay had some delay line
+  // failures, but the new method should be used because it is further from a failing point.
+  EXPECT_OK(dut_->SdmmcPerformTuning(SD_SEND_TUNING_BLOCK));
+
+  adjust.ReadFrom(&mmio_);
+  delay1.ReadFrom(&mmio_);
+  delay2.ReadFrom(&mmio_);
+
+  EXPECT_EQ(adjust.adj_delay(), 2);
+  EXPECT_EQ(delay1.dly_0(), 60);
+  EXPECT_EQ(delay1.dly_1(), 60);
+  EXPECT_EQ(delay1.dly_2(), 60);
+  EXPECT_EQ(delay1.dly_3(), 60);
+  EXPECT_EQ(delay1.dly_4(), 60);
+  EXPECT_EQ(delay2.dly_5(), 60);
+  EXPECT_EQ(delay2.dly_6(), 60);
+  EXPECT_EQ(delay2.dly_7(), 60);
+  EXPECT_EQ(delay2.dly_8(), 60);
+  EXPECT_EQ(delay2.dly_9(), 60);
+
+  const auto* root = dut_->GetInspectRoot("-unknown");
+  ASSERT_NOT_NULL(root);
+
+  const auto* adj_delay = root->node().get_property<inspect::UintPropertyValue>("adj_delay");
+  ASSERT_NOT_NULL(adj_delay);
+  EXPECT_EQ(adj_delay->value(), 2);
+
+  const auto* delay_lines = root->node().get_property<inspect::UintPropertyValue>("delay_lines");
+  ASSERT_NOT_NULL(delay_lines);
+  EXPECT_EQ(delay_lines->value(), 60);
+}
+
 TEST_F(AmlSdmmcTest, SetBusFreq) {
   ASSERT_OK(dut_->Init({}));
   {

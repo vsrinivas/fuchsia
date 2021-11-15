@@ -1094,11 +1094,17 @@ AmlSdmmc::TuneWindow AmlSdmmc::ProcessTuningResultsInternal(
     }
   }
 
+  // If wrapping is enabled then the first and last windows are combined.
+  const uint32_t last_window_size = current_window.size + (wrap ? first_size : 0);
+
   if (current_window.start == 0) {
+    // The best window will not have been set if no values failed. If that happens the current
+    // window start will still be set to zero -- check for that case and update the best window.
     best_window = {.start = 0, .size = param_max + 1};
-  } else if (wrap && current_window.size + first_size > best_window.size) {
-    // Combine the last window with the first window.
-    best_window = {.start = current_window.start, .size = current_window.size + first_size};
+  } else if (last_window_size > best_window.size) {
+    // If the final value passed then the last (and current) window was never checked against the
+    // best window. Make the last window the best window if it is larger than the previous best.
+    best_window = {.start = current_window.start, .size = last_window_size};
   }
 
   best_window.results.results = tuning_results;
