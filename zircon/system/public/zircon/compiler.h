@@ -339,6 +339,8 @@
 #define __TA_ACQUIRE(...) __THREAD_ANNOTATION(__acquire_capability__(__VA_ARGS__))
 #define __TA_ACQUIRE_SHARED(...) __THREAD_ANNOTATION(__acquire_shared_capability__(__VA_ARGS__))
 #define __TA_TRY_ACQUIRE(...) __THREAD_ANNOTATION(__try_acquire_capability__(__VA_ARGS__))
+#define __TA_TRY_ACQUIRE_SHARED(...) \
+  __THREAD_ANNOTATION(__try_acquire_shared_capability__(__VA_ARGS__))
 // Neither ACQUIRED_BEFORE nor ACQUIRED_AFTER are implemented in clang. Users of these macros must
 // not rely upon them to catch lock ordering bugs, and must treat them as documentation only.
 // See:

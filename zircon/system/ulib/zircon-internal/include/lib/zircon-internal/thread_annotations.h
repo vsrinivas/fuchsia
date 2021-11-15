@@ -21,6 +21,8 @@
 // TA_ACQ_AFTER(x)              Indicates that if both this mutex and muxex |x| are to be acquired,
 //                              that this mutex must be acquired after mutex |x|.
 // TA_TRY_ACQ(bool, x)          function acquires the mutex |x| if the function returns |bool|
+// TA_TRY_ACQ_SHARED(bool, x)   function acquires the mutex |x| for shared reading if the function
+//                              returns |bool|
 // TA_REL(x)                    function releases the mutex |x|
 // TA_REL_SHARED(x)             function releases the shared for reading mutex |x|
 // TA_ASSERT(x)                 function asserts that |x| is held
@@ -45,6 +47,7 @@
 #define TA_ACQ_BEFORE(...) THREAD_ANNOTATION(acquired_before(__VA_ARGS__))
 #define TA_ACQ_AFTER(...) THREAD_ANNOTATION(acquired_after(__VA_ARGS__))
 #define TA_TRY_ACQ(...) THREAD_ANNOTATION(try_acquire_capability(__VA_ARGS__))
+#define TA_TRY_ACQ_SHARED(...) THREAD_ANNOTATION(try_acquire_shared_capability(__VA_ARGS__))
 #define TA_REL(...) THREAD_ANNOTATION(release_capability(__VA_ARGS__))
 #define TA_REL_SHARED(...) THREAD_ANNOTATION(release_shared_capability(__VA_ARGS__))
 #define TA_ASSERT(...) THREAD_ANNOTATION(assert_capability(__VA_ARGS__))
