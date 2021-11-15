@@ -4,6 +4,10 @@
 
 library conformance;
 
+type VectorWithLimit = struct {
+    v vector<uint8>:2;
+};
+
 type VectorWrapper = struct {
     v vector<uint8>;
 };

@@ -2,6 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+encode_failure("VectorExceedsLimit") {
+    // TODO(fxbug.dev/37304) Enforce size bounds in rust
+    // TODO(fxbug.dev/88730) Enforce size bounds in dart
+    bindings_denylist = [rust, dart],
+    value = VectorWithLimit {
+        v: [1, 2, 3], // exceeds the string length
+    },
+    err = COUNT_EXCEEDS_LIMIT,
+}
+
 // Test vector with a 2^64-1 count, exceeding the 32-bit limit from RFC-0059.
 decode_failure("VectorCountExceedsLimitByALot") {
     // TODO(fxbug.dev/82167): Go panics and doesn't return proper errors.
