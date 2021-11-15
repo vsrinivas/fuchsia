@@ -234,6 +234,11 @@ fn find_serial_numbers() -> Vec<String> {
 
 pub async fn find_devices() -> Vec<FastbootDevice> {
     let mut products = Vec::new();
+    let is_disabled: bool = get("fastboot.usb.disabled").await.unwrap_or(false);
+    if is_disabled {
+        return products;
+    }
+
     let serials = find_serial_numbers();
     let in_use = SERIALS_IN_USE.lock().await;
     // Don't probe in-use clients
