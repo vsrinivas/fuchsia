@@ -9,7 +9,6 @@ if (is_debug) {
 }
 
 # NOTE: Keep in sync with //build/config/zircon/levels.gni
-# TODO: Unify the default value between the two files.
 declare_args() {
   # * `none`: really unoptimized, usually only build-tested and not run
   # * `debug`: "optimized for debugging", light enough to avoid confusion
