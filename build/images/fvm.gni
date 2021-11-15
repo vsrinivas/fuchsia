@@ -76,8 +76,8 @@ declare_args() {
   minfs_board_maximum_bytes = false
   minfs_product_maximum_bytes = false
 
-  # TODO(fxbug.dev/83978): Remove this arg which is used as part of a temporary
-  # workaround.
+  # TODO(fxbug.dev/85718): Remove this arg. It is not currently used but is set
+  # in some out-of-tree configuration files.
   minfs_board_maximum_data_bytes = false
 
   # End of variables for blobfs/minfs dimensions

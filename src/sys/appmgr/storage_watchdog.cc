@@ -118,14 +118,11 @@ StorageWatchdog::StorageUsage StorageWatchdog::GetStorageUsage() {
   }
   info.name[fuchsia_io_admin::wire::kMaxFsNameBuffer - 1] = '\0';
 
-#ifdef DATA_PARTITION_SIZE_BYTES
-  // TODO(fxbug.dev/83978): Remove this temporary fix.
-  size_t total = DATA_PARTITION_SIZE_BYTES;
-#else
-  // The number of bytes which may be allocated plus the number of bytes which
-  // have been allocated
+  // The number of bytes which may be allocated plus the number of bytes which have been allocated.
+  // |total_bytes| is the amount of data (not counting metadata like inode storage) that minfs has
+  // currently allocated from the volume manager, while used_bytes is the amount of those actually
+  // used for current storage.
   size_t total = info.free_shared_pool_bytes + info.total_bytes;
-#endif
 
   if (total == 0) {
     FX_LOGS(WARNING) << "storage_watchdog: unable to determine storage "

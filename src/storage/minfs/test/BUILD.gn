@@ -188,9 +188,11 @@ test("minfs_micro_benchmark") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
+# To run this use the component name below: "minfs-integration-fs-tests"
 test("fs_tests") {
   sources = [ "integration/fs_tests.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
     "//sdk/lib/fdio",

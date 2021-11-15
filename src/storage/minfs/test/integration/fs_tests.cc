@@ -5,6 +5,7 @@
 // Tests for MinFS-specific behavior.
 
 #include <fcntl.h>
+#include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <fidl/fuchsia.io.admin/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fuchsia/minfs/c/fidl.h>
@@ -65,6 +66,7 @@ void QueryInfo(const TestFilesystem& fs, fuchsia_io_admin::wire::FilesystemInfo*
   ASSERT_NE(info->fs_id, 0ul);
   ASSERT_EQ(info->used_bytes % info->block_size, 0ul);
   ASSERT_EQ(info->total_bytes % info->block_size, 0ul);
+  ASSERT_EQ(info->free_shared_pool_bytes % info->block_size, 0ul);
 }
 
 void GetFreeBlocks(const TestFilesystem& fs, uint32_t* out_free_blocks) {
@@ -113,23 +115,85 @@ class MinfsFvmTest : public BaseFilesystemTest {
       : BaseFilesystemTest(options) {}
 
  protected:
-  // A simple structure used to validate the results of QueryInfo.
-  struct ExpectedQueryInfo {
-    size_t total_bytes;
-    size_t used_bytes;
-    size_t total_nodes;
-    size_t used_nodes;
-    size_t free_shared_pool_bytes;
-  };
+  // Get the FVM path from the RamDisk. fs().GetDevicePath() returns the partition path like
+  // "/dev/class/block/001" which isn't what we want.
+  fbl::unique_fd GetFvmFd() {
+    // This expects to be set up with a RamDisk. The filesystem has some variants and this could be
+    // on a RamNand, but then this code would need updating.
+    storage::RamDisk* ram_disk = fs().GetRamDisk();
+    EXPECT_TRUE(ram_disk);
 
-  void VerifyQueryInfo(const ExpectedQueryInfo& expected) const {
-    fuchsia_io_admin::wire::FilesystemInfo info;
-    ASSERT_NO_FATAL_FAILURE(QueryInfo(fs(), &info));
-    ASSERT_EQ(info.total_bytes, expected.total_bytes);
-    ASSERT_EQ(info.used_bytes, expected.used_bytes);
-    ASSERT_EQ(info.total_nodes, expected.total_nodes);
-    ASSERT_EQ(info.used_nodes, expected.used_nodes);
-    ASSERT_EQ(info.free_shared_pool_bytes, expected.free_shared_pool_bytes);
+    // Want something like "/dev/sys/platform/00:00:2d/ramctl/ramdisk-0/block/fvm"
+    std::string fvm_path = ram_disk->path() + "/fvm";
+    fbl::unique_fd fd(open(fvm_path.c_str(), O_RDWR));
+    EXPECT_TRUE(fd);
+    return fd;
+  }
+
+  // Returns the GUID associated with the minfs partition inside FVM.
+  zx::status<fuchsia_hardware_block_partition::wire::Guid> GetMinfsPartitionGuid() {
+    zx::status<std::string> device_path_or = fs().DevicePath();
+    EXPECT_TRUE(device_path_or.is_ok());
+    fbl::unique_fd fd(open(device_path_or->c_str(), O_RDWR));
+    EXPECT_TRUE(fd);
+
+    fdio_cpp::UnownedFdioCaller caller(fd);
+    auto response =
+        fidl::WireCall(
+            fidl::UnownedClientEnd<fuchsia_hardware_block_partition::Partition>(caller.channel()))
+            ->GetInstanceGuid();
+    if (response.status() != ZX_OK)
+      return zx::error(response.status());
+    if (response->status != ZX_OK)
+      return zx::error(response->status);
+    return zx::ok(*response->guid);
+  }
+
+  zx::status<fuchsia_hardware_block_volume::wire::VolumeManagerInfo> GetVolumeManagerInfo() {
+    fbl::unique_fd fvm_fd = GetFvmFd();
+    EXPECT_TRUE(fvm_fd);
+
+    fdio_cpp::UnownedFdioCaller caller(fvm_fd.get());
+    auto response =
+        fidl::WireCall(fidl::UnownedClientEnd<fuchsia_hardware_block_volume::VolumeManager>(
+                           caller.borrow_channel()))
+            ->GetInfo();
+    if (response.status() != ZX_OK)
+      return zx::error(response.status());
+    if (response->status != ZX_OK)
+      return zx::error(response->status);
+    return zx::ok(*response->info);
+  }
+
+  zx_status_t SetPartitionLimit(uint64_t byte_limit) {
+    fbl::unique_fd fvm_fd = GetFvmFd();
+    EXPECT_TRUE(fvm_fd);
+
+    auto guid_or = GetMinfsPartitionGuid();
+    EXPECT_TRUE(guid_or.is_ok());
+
+    fdio_cpp::UnownedFdioCaller caller(fvm_fd.get());
+    auto set_response =
+        fidl::WireCall(fidl::UnownedClientEnd<fuchsia_hardware_block_volume::VolumeManager>(
+                           caller.borrow_channel()))
+            ->SetPartitionLimit(*guid_or, byte_limit);
+    if (set_response.status() != ZX_OK)
+      return set_response.status();
+    if (set_response->status != ZX_OK)
+      return set_response->status;
+
+    // Query the partition limit to make sure it worked.
+    auto get_response =
+        fidl::WireCall(fidl::UnownedClientEnd<fuchsia_hardware_block_volume::VolumeManager>(
+                           caller.borrow_channel()))
+            ->GetPartitionLimit(*guid_or);
+    if (get_response.status() != ZX_OK)
+      return get_response.status();
+    if (get_response->status != ZX_OK)
+      return get_response->status;
+
+    EXPECT_EQ(byte_limit, get_response->byte_count);
+    return ZX_OK;
   }
 
   void ToggleMetrics(bool enabled) const {
@@ -160,9 +224,11 @@ class MinfsFvmTest : public BaseFilesystemTest {
 
 class MinfsFvmTestWith8MiBSliceSize : public MinfsFvmTest {
  public:
+  static constexpr uint64_t kSliceSize = 1024 * 1024 * 8;
+
   static TestFilesystemOptions GetOptions() {
     auto options = OptionsWithDescription("MinfsWithFvm");
-    options.fvm_slice_size = 8'388'608;
+    options.fvm_slice_size = kSliceSize;
     return options;
   }
 
@@ -323,6 +389,45 @@ void FillDirectory(const TestFilesystem& fs, int dir_fd, uint32_t max_blocks) {
       entries_per_iteration = 1;
     }
   }
+}
+
+TEST_F(MinfsFvmTestWith8MiBSliceSize, FreeSharedPoolBytes) {
+  // Get the volume initial conditions for computing what minfs should be returning. There should be
+  // at least two free slices for us to test the partition limit.
+  zx::status<fuchsia_hardware_block_volume::wire::VolumeManagerInfo> manager_info =
+      GetVolumeManagerInfo();
+  ASSERT_TRUE(manager_info.is_ok());
+  ASSERT_LT(manager_info->assigned_slice_count, manager_info->slice_count);
+  uint64_t free_slices = manager_info->slice_count - manager_info->assigned_slice_count;
+
+  // Normal free space size should just report the volume manager's free space.
+  fuchsia_io_admin::wire::FilesystemInfo info;
+  ASSERT_NO_FATAL_FAILURE(QueryInfo(fs(), &info));
+  ASSERT_EQ(kSliceSize * free_slices, info.free_shared_pool_bytes);
+
+  // Lower the partition limit to one more slice than the filesystem currently is using (since
+  // there's only our partition in FVM, we know all used slices belong to minfs).
+  uint64_t new_limit = (manager_info->assigned_slice_count + 1) * kSliceSize;
+  ASSERT_EQ(ZX_OK, SetPartitionLimit(new_limit));
+  ASSERT_NO_FATAL_FAILURE(QueryInfo(fs(), &info));
+  EXPECT_EQ(kSliceSize, info.free_shared_pool_bytes);  // Set exactly one slice free.
+
+  // Match the limit to the current partition size.
+  new_limit = manager_info->assigned_slice_count * kSliceSize;
+  ASSERT_EQ(ZX_OK, SetPartitionLimit(new_limit));
+  ASSERT_NO_FATAL_FAILURE(QueryInfo(fs(), &info));
+  EXPECT_EQ(0u, info.free_shared_pool_bytes);  // No slices free.
+
+  // Lower the limit to to below the partition size.
+  new_limit = (manager_info->assigned_slice_count - 1) * kSliceSize;
+  ASSERT_EQ(ZX_OK, SetPartitionLimit(new_limit));
+  ASSERT_NO_FATAL_FAILURE(QueryInfo(fs(), &info));
+  EXPECT_EQ(0u, info.free_shared_pool_bytes);  // No slices free.
+
+  // Remove the limit, it should go back to the full free bytes.
+  ASSERT_EQ(ZX_OK, SetPartitionLimit(0u));
+  ASSERT_NO_FATAL_FAILURE(QueryInfo(fs(), &info));
+  ASSERT_EQ(kSliceSize * free_slices, info.free_shared_pool_bytes);
 }
 
 // Test various operations when the Minfs partition is near capacity.  This test is sensitive to the
