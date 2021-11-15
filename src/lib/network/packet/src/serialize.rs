@@ -2103,10 +2103,6 @@ mod tests {
             min_body_len: usize,
         ) {
             let old_body = buffer.to_flattened_vec();
-            println!(
-                "buffer: {:?}, prefix_len: {}, footer_len: {}, min_body_len: {}",
-                buffer, header_len, footer_len, min_body_len,
-            );
 
             let buffer = buffer
                 .serialize_vec(DummyPacketBuilder::new(
@@ -2152,15 +2148,35 @@ mod tests {
                 &flat[header_len + body.len()..header_len + body.len() + padding_len];
             let total_body_len = body.len() + padding_len;
             let footer_bytes = &flat[header_len + total_body_len..];
-            assert_eq!(buffer.len() - total_body_len, header_len + footer_len);
+            assert_eq!(
+                buffer.len() - total_body_len,
+                header_len + footer_len,
+                "buffer.len()({}) - total_body_len({}) != header_len({}) + footer_len({})",
+                buffer.len(),
+                header_len,
+                footer_len,
+                min_body_len,
+            );
 
             // DummyPacketBuilder fills its header with 0xFF
-            assert!(header_bytes.iter().all(|b| *b == 0xFF));
+            assert!(
+                header_bytes.iter().all(|b| *b == 0xFF),
+                "header_bytes {:?} are not filled with 0xFF's",
+                header_bytes,
+            );
             assert_eq!(body_bytes, body);
             // Padding bytes must be initialized to zero
-            assert!(padding_bytes.iter().all(|b| *b == 0));
-            // DummyPacketBuilder fills its header with 0xFE
-            assert!(footer_bytes.iter().all(|b| *b == 0xFE));
+            assert!(
+                padding_bytes.iter().all(|b| *b == 0),
+                "padding_bytes {:?} are not filled with 0s",
+                padding_bytes,
+            );
+            // DummyPacketBuilder fills its footer with 0xFE
+            assert!(
+                footer_bytes.iter().all(|b| *b == 0xFE),
+                "footer_bytes {:?} are not filled with 0xFE's",
+                footer_bytes,
+            );
         }
 
         // Test for every valid combination of buf_len, range_start, range_end,
