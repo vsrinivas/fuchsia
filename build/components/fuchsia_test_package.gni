@@ -61,6 +61,8 @@ import("fuchsia_test_component_manifest.gni")
 #
 #   package_deps (optional)
 #     Additional package targets this test package relies on.
+#     Test packages that depend on the contents of other packages are not
+#     hermetic, so populating this parameter is discouraged.
 #     Type: list(labels)
 #
 #   wrap_cmx_test_with_cml_test (optional)
