@@ -997,7 +997,7 @@ From //src/virtualization/packages/debian_guest/BUILD.gn:9
 
 **Current value (from the default):** `"debug"`
 
-From //build/config/compiler.gni:53
+From //build/config/compiler.gni:51
 
 ### dev_bootfs_labels
 List of labels for objects to include in the ZBI.
@@ -1084,7 +1084,7 @@ Explicitly specify DWARF version used.
 
 **Current value (from the default):** `5`
 
-From //build/config/compiler.gni:67
+From //build/config/compiler.gni:65
 
 ### enable_api_diff
 Detect dart API changes
@@ -3036,7 +3036,7 @@ From [//third_party/openthread/etc/gn/openthread.gni:196](https://fuchsia.google
 
 **Current value (from the default):** `"size"`
 
-From //build/config/compiler.gni:22
+From //build/config/compiler.gni:21
 
 ### output_breakpad_syms
 Sets if we should output breakpad symbols for Fuchsia binaries.
@@ -4010,7 +4010,7 @@ Controls whether to use -Oz when `optimize` is set to `"size"`.
 
 **Current value (from the default):** `false`
 
-From //build/config/compiler.gni:41
+From //build/config/compiler.gni:40
 
 ### use_prebuilt_ffmpeg
 Use a prebuilt ffmpeg binary rather than building it locally.  See
