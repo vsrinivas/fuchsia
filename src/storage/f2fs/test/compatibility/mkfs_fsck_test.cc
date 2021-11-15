@@ -2,10 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <filesystem>
-
-#include <gtest/gtest.h>
-
 #include "src/storage/f2fs/test/compatibility/compatibility.h"
 
 namespace f2fs {
@@ -23,12 +19,13 @@ TEST(CompatibilityTest, SimpleMkfsFsckTest) {
   ftruncate(fd.get(), disk_size);
 
   // mkfs on host
-  std::unique_ptr<CompatibilityTestOperator> host_operator(new HostOperator(test_path, ""));
+  std::unique_ptr<CompatibilityTestOperator> host_operator =
+      std::make_unique<HostOperator>(test_path, "");
   host_operator->Mkfs();
 
   // fsck on Fuchsia
-  std::unique_ptr<CompatibilityTestOperator> target_operator(
-      new TargetOperator(test_path, std::move(fd), block_count));
+  std::unique_ptr<CompatibilityTestOperator> target_operator =
+      std::make_unique<TargetOperator>(test_path, std::move(fd), block_count);
   target_operator->Fsck();
 
   // Get test file
@@ -37,11 +34,11 @@ TEST(CompatibilityTest, SimpleMkfsFsckTest) {
   ftruncate(fd2.get(), disk_size);
 
   // mkfs on Fuchsia
-  target_operator.reset(new TargetOperator(test_path2, std::move(fd2), block_count));
+  target_operator = std::make_unique<TargetOperator>(test_path2, std::move(fd2), block_count);
   target_operator->Mkfs();
 
   // fsck on host
-  host_operator.reset(new HostOperator(test_path2, ""));
+  host_operator = std::make_unique<HostOperator>(test_path2, "");
   host_operator->Fsck();
 
   // Remove test files
@@ -64,12 +61,13 @@ TEST(CompatibilityTest, LargeDeviceMkfsFsckTest) {
   ftruncate(fd.get(), disk_size);
 
   // mkfs on host
-  std::unique_ptr<CompatibilityTestOperator> host_operator(new HostOperator(test_path, ""));
+  std::unique_ptr<CompatibilityTestOperator> host_operator =
+      std::make_unique<HostOperator>(test_path, "");
   host_operator->Mkfs();
 
   // fsck on Fuchsia
-  std::unique_ptr<CompatibilityTestOperator> target_operator(
-      new TargetOperator(test_path, std::move(fd), block_count));
+  std::unique_ptr<CompatibilityTestOperator> target_operator =
+      std::make_unique<TargetOperator>(test_path, std::move(fd), block_count);
   target_operator->Fsck();
 
   // Get test file
@@ -78,11 +76,11 @@ TEST(CompatibilityTest, LargeDeviceMkfsFsckTest) {
   ftruncate(fd2.get(), disk_size);
 
   // mkfs on Fuchsia
-  target_operator.reset(new TargetOperator(test_path2, std::move(fd2), block_count));
+  target_operator = std::make_unique<TargetOperator>(test_path2, std::move(fd2), block_count);
   target_operator->Mkfs();
 
   // fsck on host
-  host_operator.reset(new HostOperator(test_path2, ""));
+  host_operator = std::make_unique<HostOperator>(test_path2, "");
   host_operator->Fsck();
 
   // Remove test files

@@ -9,6 +9,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <filesystem>
+
+#include <gtest/gtest.h>
+
 #include "src/storage/f2fs/f2fs.h"
 
 namespace f2fs {
@@ -19,7 +23,7 @@ class TestFile {
  public:
   virtual ~TestFile() = default;
 
-  virtual bool is_valid() = 0;
+  virtual bool is_valid() const = 0;
 
   virtual ssize_t Read(void *buf, size_t count) = 0;
   virtual ssize_t Write(const void *buf, size_t count) = 0;
@@ -32,7 +36,7 @@ class HostTestFile : public TestFile {
  public:
   explicit HostTestFile(int fd) : fd_(fd) {}
 
-  bool is_valid() final;
+  bool is_valid() const final;
 
   ssize_t Read(void *buf, size_t count) final;
   ssize_t Write(const void *buf, size_t count) final;
@@ -53,7 +57,7 @@ class TargetTestFile : public TestFile {
     }
   }
 
-  bool is_valid() final;
+  bool is_valid() const final;
 
   ssize_t Read(void *buf, size_t count) final;
   ssize_t Write(const void *buf, size_t count) final;

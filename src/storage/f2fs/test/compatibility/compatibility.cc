@@ -4,10 +4,6 @@
 
 #include "src/storage/f2fs/test/compatibility/compatibility.h"
 
-#include <filesystem>
-
-#include <gtest/gtest.h>
-
 namespace f2fs {
 
 std::string GenerateTestPath(std::string_view format) {
@@ -15,7 +11,7 @@ std::string GenerateTestPath(std::string_view format) {
   return test_path;
 }
 
-bool HostTestFile::is_valid() { return fd_.is_valid(); }
+bool HostTestFile::is_valid() const { return fd_.is_valid(); }
 
 ssize_t HostTestFile::Read(void *buf, size_t count) { return read(fd_.get(), buf, count); }
 
@@ -60,7 +56,7 @@ std::unique_ptr<TestFile> HostOperator::Open(std::string_view path, int flags, m
   return ret;
 }
 
-bool TargetTestFile::is_valid() { return (vnode_ != nullptr); }
+bool TargetTestFile::is_valid() const { return (vnode_ != nullptr); }
 
 ssize_t TargetTestFile::Read(void *buf, size_t count) {
   if (!vnode_->IsReg()) {
@@ -141,7 +137,7 @@ void TargetOperator::Mkfs() {
   auto ret = mkfs.DoMkfs();
   ASSERT_EQ(ret.is_error(), false);
 
-  bcache_ = mkfs.Destroy();
+  bcache_ = std::move(*ret);
 }
 
 void TargetOperator::Mount() {
