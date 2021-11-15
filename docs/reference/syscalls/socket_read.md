@@ -56,7 +56,8 @@ field of the resulting `zx_info_socket_t`, which you can obtain using the
 
 **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
 
-**ZX_ERR_BAD_STATE**  reading has been disabled for this socket endpoint via [`zx_socket_shutdown()`].
+**ZX_ERR_BAD_STATE**  writing to *handle*'s peer has been disabled via
+[`zx_socket_set_disposition()`] and no pending data remains on *handle*.
 
 **ZX_ERR_WRONG_TYPE**  *handle* is not a socket handle.
 
@@ -73,12 +74,12 @@ readable.
 ## SEE ALSO
 
  - [`zx_socket_create()`]
- - [`zx_socket_shutdown()`]
+ - [`zx_socket_set_disposition()`]
  - [`zx_socket_write()`]
 
 <!-- References updated by update-docs-from-fidl, do not edit. -->
 
 [`zx_object_get_info()`]: object_get_info.md
 [`zx_socket_create()`]: socket_create.md
-[`zx_socket_shutdown()`]: socket_shutdown.md
+[`zx_socket_set_disposition()`]: socket_set_disposition.md
 [`zx_socket_write()`]: socket_write.md

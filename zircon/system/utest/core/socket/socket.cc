@@ -587,11 +587,11 @@ void disable_write_helper(bool disable_local_write, bool disable_remote_write) {
   EXPECT_EQ(GetSignals(remote), ZX_SOCKET_WRITABLE);
 }
 
-TEST(SocketTest, DisableWriteLocalWithSetDisposition) { disable_write_helper(true, false); }
+TEST(SocketTest, DisableWriteLocal) { disable_write_helper(true, false); }
 
-TEST(SocketTest, DisableWritePeerWithSetDisposition) { disable_write_helper(false, true); }
+TEST(SocketTest, DisableWritePeer) { disable_write_helper(false, true); }
 
-TEST(SocketTest, DisableWriteBothEndpointsWithSetDisposition) { disable_write_helper(true, true); }
+TEST(SocketTest, DisableWriteBoth) { disable_write_helper(true, true); }
 
 TEST(SocketTest, SetDispositionOfClosedPeerWithBufferedData) {
   zx::socket local;

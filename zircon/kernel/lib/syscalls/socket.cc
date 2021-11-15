@@ -103,23 +103,6 @@ zx_status_t sys_socket_read(zx_handle_t handle, uint32_t options, user_out_ptr<v
   return status;
 }
 
-// zx_status_t zx_socket_shutdown
-//
-// TODO(https://fxbug.dev/78128): Remove after ABI transition.
-zx_status_t sys_socket_shutdown(zx_handle_t handle, uint32_t options) {
-  if (options & ~ZX_SOCKET_SHUTDOWN_MASK)
-    return ZX_ERR_INVALID_ARGS;
-
-  auto up = ProcessDispatcher::GetCurrent();
-
-  fbl::RefPtr<SocketDispatcher> socket;
-  zx_status_t status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &socket);
-  if (status != ZX_OK)
-    return status;
-
-  return socket->Shutdown(options);
-}
-
 // zx_status_t zx_socket_set_disposition
 zx_status_t sys_socket_set_disposition(zx_handle_t handle, uint32_t disposition,
                                        uint32_t disposition_peer) {

@@ -63,7 +63,7 @@
 ## Sockets
 + [socket_create](socket_create.md) - create a new socket
 + [socket_read](socket_read.md) - read data from a socket
-+ [socket_shutdown](socket_shutdown.md) - prevent reading or writing
++ [socket_set_disposition](socket_set_disposition.md) - set write disposition of a socket
 + [socket_write](socket_write.md) - write data to a socket
 
 ## Stream

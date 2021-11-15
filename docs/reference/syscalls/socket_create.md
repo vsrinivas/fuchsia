@@ -56,11 +56,11 @@ The maximum capacity is not currently set-able.
 ## SEE ALSO
 
  - [`zx_socket_read()`]
- - [`zx_socket_shutdown()`]
+ - [`zx_socket_set_disposition()`]
  - [`zx_socket_write()`]
 
 <!-- References updated by update-docs-from-fidl, do not edit. -->
 
 [`zx_socket_read()`]: socket_read.md
-[`zx_socket_shutdown()`]: socket_shutdown.md
+[`zx_socket_set_disposition()`]: socket_set_disposition.md
 [`zx_socket_write()`]: socket_write.md

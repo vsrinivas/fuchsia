@@ -117,69 +117,6 @@ zx_status_t SocketDispatcher::UserSignalSelfLocked(uint32_t clear_mask, uint32_t
   return ZX_OK;
 }
 
-// TODO(https://fxbug.dev/78128): Delete Shutdown after ABI transition.
-zx_status_t SocketDispatcher::Shutdown(uint32_t how) {
-  canary_.Assert();
-
-  LTRACE_ENTRY;
-
-  const bool shutdown_read = how & ZX_SOCKET_SHUTDOWN_READ;
-  const bool shutdown_write = how & ZX_SOCKET_SHUTDOWN_WRITE;
-
-  Guard<Mutex> guard{get_lock()};
-
-  zx_signals_t signals = GetSignalsStateLocked();
-  // If we're already shut down in the requested way, return immediately.
-  const uint32_t want_signals = (shutdown_read ? ZX_SOCKET_PEER_WRITE_DISABLED : 0) |
-                                (shutdown_write ? ZX_SOCKET_WRITE_DISABLED : 0);
-  const uint32_t have_signals =
-      signals & (ZX_SOCKET_PEER_WRITE_DISABLED | ZX_SOCKET_WRITE_DISABLED);
-  if (want_signals == have_signals) {
-    return ZX_OK;
-  }
-  zx_signals_t clear_mask = 0u;
-  zx_signals_t set_mask = 0u;
-  if (shutdown_read) {
-    read_disabled_ = true;
-    set_mask |= ZX_SOCKET_PEER_WRITE_DISABLED;
-  }
-  if (shutdown_write) {
-    clear_mask |= ZX_SOCKET_WRITABLE;
-    set_mask |= ZX_SOCKET_WRITE_DISABLED;
-  }
-  UpdateStateLocked(clear_mask, set_mask);
-
-  // Our peer may already be closed - if so, we've already updated our own bits so we are done. If
-  // the peer is done, we need to notify them of the state change.
-  if (peer_ != nullptr) {
-    AssertHeld(*peer_->get_lock());
-    return peer_->ShutdownOtherLocked(how);
-  }
-
-  return ZX_OK;
-}
-
-zx_status_t SocketDispatcher::ShutdownOtherLocked(uint32_t how) {
-  canary_.Assert();
-
-  const bool shutdown_read = how & ZX_SOCKET_SHUTDOWN_READ;
-  const bool shutdown_write = how & ZX_SOCKET_SHUTDOWN_WRITE;
-
-  zx_signals_t clear_mask = 0u;
-  zx_signals_t set_mask = 0u;
-  if (shutdown_read) {
-    clear_mask |= ZX_SOCKET_WRITABLE;
-    set_mask |= ZX_SOCKET_WRITE_DISABLED;
-  }
-  if (shutdown_write) {
-    read_disabled_ = true;
-    set_mask |= ZX_SOCKET_PEER_WRITE_DISABLED;
-  }
-
-  UpdateStateLocked(clear_mask, set_mask);
-  return ZX_OK;
-}
-
 namespace {
 void ExtendMasksFromDisposition(SocketDispatcher::Disposition disposition, zx_signals_t& clear_mask,
                                 zx_signals_t& set_mask, zx_signals_t& clear_mask_peer,

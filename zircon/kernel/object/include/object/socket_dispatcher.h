@@ -46,9 +46,6 @@ class SocketDispatcher final : public PeeredDispatcher<SocketDispatcher, ZX_DEFA
   // Socket methods.
   zx_status_t Write(user_in_ptr<const char> src, size_t len, size_t* written);
 
-  // Shut this endpoint of the socket down for reading, writing, or both.
-  zx_status_t Shutdown(uint32_t how);
-
   // Set the socket endpoints' dispositions.
   zx_status_t SetDisposition(Disposition disposition, Disposition disposition_peer);
 
@@ -73,7 +70,6 @@ class SocketDispatcher final : public PeeredDispatcher<SocketDispatcher, ZX_DEFA
   zx_status_t WriteSelfLocked(user_in_ptr<const char> src, size_t len, size_t* nwritten)
       TA_REQ(get_lock());
   zx_status_t UserSignalSelfLocked(uint32_t clear_mask, uint32_t set_mask) TA_REQ(get_lock());
-  zx_status_t ShutdownOtherLocked(uint32_t how) TA_REQ(get_lock());
   void UpdateReadStatus(Disposition disposition_peer) TA_REQ(get_lock());
   [[nodiscard]] bool IsDispositionStateValid(Disposition disposition_peer) const TA_REQ(get_lock());
 

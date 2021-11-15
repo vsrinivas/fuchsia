@@ -114,7 +114,6 @@ Symbols:
   - { Name: _zx_socket_create, Type: Func }
   - { Name: _zx_socket_read, Type: Func }
   - { Name: _zx_socket_set_disposition, Type: Func }
-  - { Name: _zx_socket_shutdown, Type: Func }
   - { Name: _zx_socket_write, Type: Func }
   - { Name: _zx_status_get_string, Type: Func }
   - { Name: _zx_stream_create, Type: Func }
@@ -302,7 +301,6 @@ Symbols:
   - { Name: zx_socket_create, Type: Func, Weak: true }
   - { Name: zx_socket_read, Type: Func, Weak: true }
   - { Name: zx_socket_set_disposition, Type: Func, Weak: true }
-  - { Name: zx_socket_shutdown, Type: Func, Weak: true }
   - { Name: zx_socket_write, Type: Func, Weak: true }
   - { Name: zx_status_get_string, Type: Func, Weak: true }
   - { Name: zx_stream_create, Type: Func, Weak: true }

@@ -354,12 +354,6 @@ typedef struct zx_iovec {
 
 // Socket options and limits.
 
-// These options can be passed to zx_socket_shutdown().
-// TODO(https://fxbug.dev/78128): Remove after ABI transition.
-#define ZX_SOCKET_SHUTDOWN_WRITE            ((uint32_t)1u << 0)
-#define ZX_SOCKET_SHUTDOWN_READ             ((uint32_t)1u << 1)
-#define ZX_SOCKET_SHUTDOWN_MASK             (ZX_SOCKET_SHUTDOWN_WRITE | ZX_SOCKET_SHUTDOWN_READ)
-
 // These options can be passed to zx_socket_set_disposition().
 #define ZX_SOCKET_DISPOSITION_WRITE_DISABLED ((uint32_t)1u << 0)
 #define ZX_SOCKET_DISPOSITION_WRITE_ENABLED  ((uint32_t)1u << 1)

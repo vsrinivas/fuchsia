@@ -84,7 +84,10 @@ bool TestCreateWriteReadClose() {
   // Test that shutting down a socket for writes still allows reads from the paired dispatcher
   EXPECT_EQ(dispatcher0.dispatcher()->Write(write->user_in<char>(), 1, &written), ZX_OK);
   EXPECT_EQ(written, 1u);
-  EXPECT_EQ(dispatcher0.dispatcher()->Shutdown(ZX_SOCKET_SHUTDOWN_WRITE), ZX_OK);
+  EXPECT_EQ(dispatcher0.dispatcher()->SetDisposition(
+                SocketDispatcher::Disposition(SocketDispatcher::Disposition::kWriteDisabled),
+                SocketDispatcher::Disposition(SocketDispatcher::Disposition::kNone)),
+            ZX_OK);
   EXPECT_EQ(dispatcher0.dispatcher()->Write(write->user_in<char>(), 1, &written),
             ZX_ERR_BAD_STATE);  // |written| is not updated if Write() fails.
   dispatcher1.dispatcher()->GetInfo(&info);
