@@ -11,6 +11,10 @@
         runner: "elf",
         binary: "bin/driver_manager",
         args: [ "--use-driver-index" ],
-        lifecycle: { stop_event: "notify" },
+
+        // TODO(fxbug.dev/88341): We cannot use CF lifecycle events here to suspend drivers
+        // until DriverFramework fixes the errors that happen when a new driver is being
+        // bound in the middle of shutdown.
+        // lifecycle: { stop_event: "notify" },
     },
 }

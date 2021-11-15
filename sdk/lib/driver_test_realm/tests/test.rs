@@ -33,6 +33,20 @@ async fn get_driver_info(
     Ok(info_result)
 }
 
+#[fasync::run_singlethreaded(test)]
+async fn test_smoke_test() -> Result<()> {
+    let realm = RealmBuilder::new().await?;
+    realm.driver_test_realm_setup().await?;
+
+    let instance = realm.build().await?;
+
+    instance.driver_test_realm_start(fdt::RealmArgs::EMPTY).await?;
+
+    // Connect to a protocol to ensure that it starts, then immediately exit.
+    let _ = instance.root.connect_to_protocol_at_exposed_dir::<fdd::DriverDevelopmentMarker>()?;
+    Ok(())
+}
+
 // Run DriverTestRealm with no arguments and see that the drivers in our package
 // are loaded.
 #[fasync::run_singlethreaded(test)]
@@ -53,11 +67,6 @@ async fn test_empty_args() -> Result<()> {
         .any(|d| d.url == Some("fuchsia-boot:///#driver/test-parent-sys.so".to_string())));
     assert!(info.iter().any(|d| d.url == Some("fuchsia-boot:///#driver/test.so".to_string())));
 
-    // Connect to /dev and make sure our drivers come up.
-    // TODO: If this isn't done, the test will flake with an error because DriverManager
-    // will shut down while the drivers are still trying to bind.
-    let dev = instance.driver_test_realm_connect_to_dev()?;
-    device_watcher::recursive_wait_and_open_node(&dev, "sys/test/test").await?;
     Ok(())
 }
 
