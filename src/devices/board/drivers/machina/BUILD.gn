@@ -47,4 +47,5 @@ fuchsia_driver("machina-driver") {
 fuchsia_driver_component("machina") {
   component_name = "machina"
   deps = [ ":machina-driver" ]
+  info = "machina-info.json"
 }
