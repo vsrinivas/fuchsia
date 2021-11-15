@@ -50,7 +50,7 @@ foreach(target_name, test_list) {
     non_dart_deps = [ ":runtime_deps($host_toolchain)" ]
 
     environments = [
-      # Runs on "main" builders (try and ci) in NUC environments.
+      atlas_env,
       nuc_env,
       vim3_env,
     ]
@@ -106,7 +106,10 @@ foreach(target_name, flutter_test_list) {
 
     non_dart_deps = [ ":runtime_deps($host_toolchain)" ]
 
-    environments = [ nuc_env ]
+    environments = [
+      atlas_env,
+      nuc_env,
+    ]
   }
 }
 
@@ -154,6 +157,8 @@ foreach(test, shard_test_list) {
       non_dart_deps = [ ":runtime_deps($host_toolchain)" ]
 
       environments = [
+        # TODO(fxb/88635): netstack_iperf fails on altas_env
+        # atlas_env,
         nuc_env,
         vim3_env,
       ]
@@ -264,7 +269,7 @@ dart_test("touch_input_latency_benchmarks_test") {
   non_dart_deps = [ ":runtime_deps($host_toolchain)" ]
 
   environments = [
-    # Runs on "main" builders (try and ci) in NUC environments.
+    atlas_env,
     nuc_env,
   ]
 }
