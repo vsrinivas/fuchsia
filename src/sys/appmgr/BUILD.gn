@@ -111,11 +111,6 @@ source_set("lib") {
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
-
-  # TODO(fxbug.dev/83978): Remove this temporary fix.
-  if (minfs_board_maximum_data_bytes != false) {
-    defines = [ "DATA_PARTITION_SIZE_BYTES=$minfs_board_maximum_data_bytes" ]
-  }
 }
 
 source_set("appmgr_for_test") {

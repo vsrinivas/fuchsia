@@ -711,12 +711,31 @@ Minfs::~Minfs() {
 }
 
 #ifdef __Fuchsia__
-zx_status_t Minfs::FVMQuery(fuchsia_hardware_block_volume_VolumeManagerInfo* info) const {
-  if (!(Info().flags & kMinfsFlagFVM)) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
+uint64_t Minfs::GetFreeFvmBytes() const {
+  if (!(Info().flags & kMinfsFlagFVM))
+    return 0;  // No FVM means no additional bytes can be allocated from it.
+
+  // This information is for the entire FVM volume. So the "slices allocated" counts across all
+  // partitions inside of FVM.
+  fuchsia_hardware_block_volume_VolumeManagerInfo manager;
   fuchsia_hardware_block_volume_VolumeInfo volume;
-  return bc_->device()->VolumeGetInfo(info, &volume);
+  if (zx_status_t status = bc_->device()->VolumeGetInfo(&manager, &volume); status != ZX_OK) {
+    FX_LOGS(WARNING) << "FVM can't report partition limit.";
+    return 0;  // Assume no free space if FVM can't respond.
+  }
+  uint64_t free_fvm_bytes =
+      (manager.slice_count - manager.assigned_slice_count) * manager.slice_size;
+
+  if (!volume.byte_limit)
+    return free_fvm_bytes;  // No partition limit.
+
+  uint64_t partition_allocated_bytes = volume.partition_slice_count * manager.slice_size;
+  if (partition_allocated_bytes > volume.byte_limit) {
+    // Already beyond max size (the limit could have been set after our last resize).
+    return 0;
+  }
+
+  return std::min(free_fvm_bytes, volume.byte_limit - partition_allocated_bytes);
 }
 #endif
 
@@ -1448,20 +1467,18 @@ zx_status_t Minfs::GetFilesystemInfo(fidl::AnyArena& allocator,
   out.set_block_size(BlockSize());
   out.set_max_node_name_size(kMinfsMaxNameSize);
   out.set_fs_type(fuchsia_fs::wire::FsType::kMinfs);
+
+  // For minfs, the total_bytes/used_bytes refers only to data blocks, not metadata blocks.
   out.set_total_bytes(allocator, Info().block_count * Info().block_size);
   out.set_used_bytes(allocator, (Info().alloc_block_count + reserved_blocks) * Info().block_size);
+
   out.set_total_nodes(allocator, Info().inode_count);
   out.set_used_nodes(allocator, Info().alloc_inode_count);
+  out.set_free_shared_pool_bytes(allocator, GetFreeFvmBytes());
 
   zx::event fs_id_copy;
   if (fs_id_.duplicate(ZX_RIGHTS_BASIC, &fs_id_copy) == ZX_OK)
     out.set_fs_id(std::move(fs_id_copy));
-
-  fuchsia_hardware_block_volume_VolumeManagerInfo fvm_info;
-  if (FVMQuery(&fvm_info) == ZX_OK) {
-    uint64_t free_slices = fvm_info.slice_count - fvm_info.assigned_slice_count;
-    out.set_free_shared_pool_bytes(allocator, fvm_info.slice_size * free_slices);
-  }
 
   if (auto device_path_or = bc_->device()->GetDevicePath(); device_path_or.is_ok())
     out.set_device_path(allocator, fidl::StringView(allocator, device_path_or.value()));

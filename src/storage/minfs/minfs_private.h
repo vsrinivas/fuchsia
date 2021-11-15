@@ -216,8 +216,10 @@ class Minfs :
   // unlinked nodes and existing journal entries). Does not enable the journal.
   [[nodiscard]] zx_status_t InitializeUnjournalledWriteback();
 
-  // Queries the superblock flags for FVM as well as underlying FVM, if it exists.
-  [[nodiscard]] zx_status_t FVMQuery(fuchsia_hardware_block_volume_VolumeManagerInfo* info) const;
+  // Queries FVM for how many free bytes are available to this partition. This counts both the
+  // partition limit and the total free bytes available in FVM. If FVM is disabled or there is
+  // a failure querying, assumes there are no free bytes.
+  [[nodiscard]] uint64_t GetFreeFvmBytes() const;
 #endif
 
   // instantiate a vnode from an inode

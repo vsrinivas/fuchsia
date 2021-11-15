@@ -85,15 +85,8 @@ zx::status<> Minfs::AddDirtyBytes(uint64_t dirty_bytes, bool allocated) {
     uint32_t local_blocks_available = Info().block_count - Info().alloc_block_count;
     if (blocks_needed > local_blocks_available) {
       // Check if fvm has free slices.
-      fuchsia_hardware_block_volume_VolumeManagerInfo fvm_info;
-      if (FVMQuery(&fvm_info) != ZX_OK) {
-        FX_LOGS_FIRST_N(WARNING, 10)
-            << "Minfs::AddDirtyBytes can't call FvmQuery, assuming no space.";
-        return zx::error(ZX_ERR_NO_SPACE);
-      }
-      uint64_t free_slices = fvm_info.slice_count - fvm_info.assigned_slice_count;
-      uint64_t blocks_available =
-          local_blocks_available + (fvm_info.slice_size * free_slices / Info().BlockSize());
+      uint64_t free_fvm_bytes = GetFreeFvmBytes();
+      uint64_t blocks_available = local_blocks_available + (free_fvm_bytes / Info().BlockSize());
       if (blocks_needed > blocks_available) {
         FX_LOGS_FIRST_N(WARNING, 10) << "Minfs::AddDirtyBytes can't find any free blocks.";
         return zx::error(ZX_ERR_NO_SPACE);
