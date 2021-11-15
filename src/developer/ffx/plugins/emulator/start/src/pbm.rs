@@ -4,22 +4,26 @@
 
 //! Utilities for Product Bundle Metadata (PBM).
 
+use anyhow::Result;
+use ffx_emulator_config::EmulatorConfiguration;
 use ffx_emulator_start_args::StartCommand;
 use fms;
 
-/// Apply values from the Product Bundle Metadata (PBM) to the StartCommand.
-///
-/// The PBM links to information about the virtual device specification which
-/// will inform the emulator on what device to emulate.
-pub async fn update_engine_with_pbm(start_command: &StartCommand) -> Result<(), anyhow::Error> {
+/// Create a RuntimeConfiguration based on the command line args.
+pub(crate) async fn make_configs(cmd: &StartCommand) -> Result<EmulatorConfiguration> {
+    let emulator_configuration: EmulatorConfiguration = EmulatorConfiguration::default();
+
     let fms_entries = fms::Entries::from_config().await?;
-    let product_bundle = fms::find_product_bundle(&fms_entries, &start_command.product_bundle)?;
+    let product_bundle = fms::find_product_bundle(&fms_entries, &cmd.product_bundle)?;
     let virtual_device = fms::find_virtual_device(&fms_entries, &product_bundle.device_refs)?;
     println!(
         "Found PBM {:?}, device_refs {:?}, virtual_device {:?}.",
         product_bundle.name, product_bundle.device_refs, virtual_device,
     );
 
-    // TODO: Get the values into the engine
-    Ok(())
+    // Map the product and device specifications to the Host,Device, and Guest configs
+
+    // Apply command line options.
+
+    Ok(emulator_configuration)
 }

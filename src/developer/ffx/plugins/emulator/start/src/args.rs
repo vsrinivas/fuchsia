@@ -8,6 +8,32 @@ use serde::{Deserialize, Serialize};
 use std::{fmt, path::PathBuf};
 
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum EngineType {
+    /// Fuchsia Emulator based on AEMU. Supports graphics.
+    Femu,
+
+    /// Qemu emulator. Version 5.
+    Qemu,
+}
+
+impl FromArgValue for EngineType {
+    fn from_arg_value(text: &str) -> Result<Self, std::string::String> {
+        let value = serde_json::from_str(&format!("\"{}\"", text)).expect(&format!(
+            "could not parse '{}' as a valid EngineType. \
+            Please check the help text for allowed values and try again",
+            text
+        ));
+        Ok(value)
+    }
+}
+impl Default for EngineType {
+    fn default() -> Self {
+        EngineType::Femu
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
 pub enum GpuType {
     /// Let the emulator choose between hardware or software graphics
     /// acceleration based on your computer setup.
@@ -59,7 +85,7 @@ impl FromArgValue for GpuType {
 }
 
 #[ffx_command()]
-#[derive(Clone, FromArgs, Default, Debug, PartialEq)]
+#[derive(Clone, FromArgs, Debug, Default, PartialEq)]
 #[argh(subcommand, name = "start")]
 /// Starting Fuchsia Emulator
 pub struct StartCommand {
@@ -67,6 +93,11 @@ pub struct StartCommand {
     /// Default is 'fuchsia-emulator'.
     #[argh(option, default = "\"fuchsia-emulator\".to_string()")]
     pub name: String,
+
+    /// emulator engine to use for this instance.  Allowed values are
+    ///  "femu", "qemu". Default is "femu".
+    #[argh(option, default = "EngineType::Femu")]
+    pub engine: EngineType,
 
     /// run emulator in headless mode where there is no GUI.
     #[argh(switch, short = 'H')]
