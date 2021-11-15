@@ -5,6 +5,7 @@
 group("drivers") {
   deps = [
     "drivers/acpi-battery",
+    "drivers/acpi-pwrsrc",
     "drivers/intel-thermal",
   ]
 }
@@ -13,6 +14,7 @@ group("tests") {
   testonly = true
   deps = [
     "drivers/acpi-battery:tests",
+    "drivers/acpi-pwrsrc:tests",
     "drivers/intel-thermal:tests",
   ]
 }

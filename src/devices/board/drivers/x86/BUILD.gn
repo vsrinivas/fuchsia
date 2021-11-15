@@ -97,7 +97,6 @@ fuchsia_driver("platform-bus-x86-driver") {
     "acpi-dev/dev-lid.cc",
     "acpi-dev/dev-lid.h",
     "acpi-dev/dev-pwrbtn.cc",
-    "acpi-dev/dev-pwrsrc.cc",
     "acpi-dev/dev-tbmc.cc",
     "acpi-nswalk.cc",
     "debug.cc",
@@ -202,33 +201,6 @@ test("x86-lid-test") {
 bootfs_test("x86-lid-bootfs-test") {
   name = "x86-lid-test"
   deps = [ ":x86-lid-test" ]
-}
-
-test("x86-pwrsrc-test") {
-  sources = [
-    "acpi-dev/dev-pwrsrc-test.cc",
-    "acpi-dev/dev-pwrsrc.cc",
-  ]
-  configs += [ ":config" ]
-  deps = [
-    "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.hidbus:fuchsia.hardware.hidbus_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_c",
-    "//sdk/lib/fdio",
-    "//src/lib/ddk",
-    "//src/lib/ddktl",
-    "//third_party/acpica",
-    "//zircon/system/ulib/hid",
-    "//zircon/system/ulib/zxtest",
-  ]
-}
-
-bootfs_test("x86-pwrsrc-bootfs-test") {
-  name = "x86-pwrsrc-test"
-  deps = [ ":x86-pwrsrc-test" ]
 }
 
 test("x86-board-test") {

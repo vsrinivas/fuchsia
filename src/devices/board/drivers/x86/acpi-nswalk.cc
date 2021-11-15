@@ -242,8 +242,6 @@ zx_status_t publish_acpi_devices(acpi::Manager* manager, zx_device_t* platform_b
         // device.
         if (hid == LID_HID_STRING) {
           lid_init(acpi_root, object);
-        } else if (hid == PWRSRC_HID_STRING) {
-          pwrsrc_init(acpi_root, object);
         } else if (hid == EC_HID_STRING) {
           ec_init(acpi_root, object);
         } else if (hid == GOOGLE_TBMC_HID_STRING) {
