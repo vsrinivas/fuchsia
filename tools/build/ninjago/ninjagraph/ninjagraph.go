@@ -393,8 +393,8 @@ func (g *Graph) PopulateEdges(steps []ninjalog.Step) error {
 		// the output node is not included in the build graph), it can still be
 		// associated with the step since it can match on both other outputs.
 		for _, out := range append(step.Outs, step.Out) {
-			if _, ok := stepByOut[out]; ok {
-				return fmt.Errorf("multiple steps claim to produce the same output %s", out)
+			if conflict, ok := stepByOut[out]; ok {
+				return fmt.Errorf("multiple steps claim to produce the same output %s\nverbose debugging info:\n:step 1: %#v\ncommand 1: %#v\nstep 2: %#v\ncommand 2: %#v\n", out, conflict, conflict.Command, step, step.Command)
 			}
 			stepByOut[out] = step
 		}
