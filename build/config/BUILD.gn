@@ -558,6 +558,7 @@ config("default_warnings") {
     "-Wall",
     "-Wextra",
     "-Wconversion",
+    "-Wextra-semi",
     "-Wimplicit-fallthrough",
     "-Wnewline-eof",
     "-Wstrict-prototypes",

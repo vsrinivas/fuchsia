@@ -7,5 +7,4 @@
 # It should not be used on any target native to the GN build.
 
 config("zircon-migrated") {
-  cflags_cc = [ "-Wextra-semi" ]
 }
