@@ -347,6 +347,22 @@ if (toolchain_environment == "kernel.phys" ||
     # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
     configs += [ "//build/config:Wno-conversion" ]
   }
+
+  source_set("handoff-prep") {
+    public = [ "handoff-prep.h" ]
+    sources = [
+      "handoff-prep-zbi.cc",
+      "handoff-prep.cc",
+    ]
+    public_deps = [
+      "//src/lib/trivial-allocator",
+      "//zircon/kernel/lib/ktl",
+    ]
+    deps = [
+      ":handoff",
+      "//zircon/system/ulib/zbitl",
+    ]
+  }
 }
 
 config("includes") {
@@ -369,6 +385,7 @@ zbi_executable("physboot") {
     ":allocation",
     ":boot-zbi",
     ":handoff",
+    ":handoff-prep",
     ":kernel-package",
     ":main",
     ":stdio",
@@ -406,12 +423,4 @@ source_set("handoff") {
     "//zircon/kernel/lib/arch",
   ]
   public_configs = [ ":includes" ]
-
-  if (toolchain_environment == "kernel.phys") {
-    sources = [ "zbi-handoff.cc" ]
-    deps = [
-      "//zircon/kernel/lib/ktl",
-      "//zircon/system/ulib/zbitl",
-    ]
-  }
 }

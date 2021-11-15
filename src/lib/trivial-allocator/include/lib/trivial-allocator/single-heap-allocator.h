@@ -37,7 +37,9 @@ class SingleHeapAllocator {
     constexpr Allocation(Allocation&& other) noexcept : ptr_(other.release()) {}
 
     constexpr Allocation& operator=(Allocation&& other) noexcept {
-      std::swap(ptr_, other.ptr_);
+      void* other_ptr = other.ptr_;
+      other.ptr_ = ptr_;
+      ptr_ = other_ptr;
       return *this;
     }
 
@@ -45,7 +47,11 @@ class SingleHeapAllocator {
 
     constexpr void* get() { return ptr_; }
 
-    [[nodiscard]] constexpr void* release() { return std::exchange(ptr_, nullptr); }
+    [[nodiscard]] constexpr void* release() {
+      void* ptr = ptr_;
+      ptr_ = nullptr;
+      return ptr;
+    }
 
    private:
     friend SingleHeapAllocator;
@@ -57,10 +63,18 @@ class SingleHeapAllocator {
 
   constexpr SingleHeapAllocator(const SingleHeapAllocator&) = delete;
 
-  constexpr SingleHeapAllocator(SingleHeapAllocator&& other) noexcept
-      : heap_(std::exchange(other.heap_, {})) {}
+  constexpr SingleHeapAllocator(SingleHeapAllocator&& other) noexcept : heap_(other.heap_) {
+    other.heap_ = {};
+  }
 
   explicit constexpr SingleHeapAllocator(cpp20::span<std::byte> heap) : heap_(heap) {}
+
+  constexpr SingleHeapAllocator& operator=(SingleHeapAllocator&& other) noexcept {
+    auto other_heap = other.heap_;
+    other.heap_ = heap_;
+    heap_ = other_heap;
+    return *this;
+  }
 
   Allocation operator()(size_t& size, size_t alignment) {
     Allocation result;

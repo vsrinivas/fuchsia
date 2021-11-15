@@ -22,7 +22,7 @@
 #include <phys/main.h>
 #include <phys/symbolize.h>
 
-#include "zbi-handoff.h"
+#include "handoff-prep.h"
 
 #ifdef __x86_64__
 #include "trampoline-boot.h"
@@ -139,27 +139,20 @@ ChainBoot LoadZirconZbi(KernelStorage::Bootfs kernelfs) {
     handoff_item = it;
   }
 
-  // Initialize the handoff payload.
-  auto handoff_payload = handoff_item->payload;
-  ZX_ASSERT(handoff_payload.size() >= sizeof(PhysHandoff));
-  static_assert(alignof(PhysHandoff) <= ZBI_ALIGNMENT);
+  // Prepare the handoff data structures.
+  HandoffPrep prep;
+  prep.Init(handoff_item->payload);
 
-  auto handoff = new (handoff_payload.data()) PhysHandoff;
+  prep.SummarizeMiscZbiItems(boot.DataZbi().storage());
 
-  // TODO(fxbug.dev/32414): There are no time samples taken in physboot after
-  // the decompression is done, since it's not doing much else yet.  The first
-  // sample taken by the kernel proper measures the interval containing all of
-  // physboot's "handoff" work.  Additional time samples for more substantial
-  // stages of pre-handoff setup work will be added as physboot starts doing
-  // more work for the kernel.
-  handoff->times = gBootTimes;
-
-  SummarizeMiscZbiItems(*handoff, boot.DataZbi().storage());
+  // This is the last thing copied into the PhysHandoff object, so that it
+  // includes all the time samples collected along the way.
+  prep.handoff()->times = gBootTimes;
 
   // Even though the kernel is still a ZBI and mostly using the ZBI protocol
   // for booting, the PhysHandoff pointer (physical address) is now the
   // argument to the kernel, not the data ZBI address.
-  boot.Boot(handoff);
+  boot.Boot(prep.handoff());
 }
 
 }  // namespace
