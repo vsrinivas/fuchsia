@@ -152,6 +152,7 @@ fuchsia_test_component("touch-input-test-ip-component") {
 }
 
 fuchsia_test_package("touch-input-test-ip") {
+  package_deps = [ "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider" ]
   test_components = [ ":touch-input-test-ip-component" ]
   deps = [
     ":touch-input-test-display_rotation-ip",

@@ -84,6 +84,7 @@ fuchsia_component("factory-reset-handler-test-component") {
 }
 
 fuchsia_test_package("factory-reset-handler-test") {
+  package_deps = [ "//garnet/bin/trace_manager:trace_manager" ]
   test_components = [ ":factory-reset-handler-test-component" ]
   deps = [
     ":factory-reset-handler-test-config",

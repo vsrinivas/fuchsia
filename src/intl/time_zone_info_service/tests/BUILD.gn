@@ -28,6 +28,7 @@ rustc_test("time-zone-info-service-test") {
 }
 
 fuchsia_unittest_package("time-zone-info-service-test-pkg") {
+  package_deps = [ "//src/sys/test_runners/starnix:starnix-test-runner" ]
   package_name = "time-zone-info-service-test"
   component_name = "time-zone-info-service-test"
   manifest = "meta/time-zone-info-service-test.cml"

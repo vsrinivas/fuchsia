@@ -33,6 +33,13 @@ rustc_test("test_manager_test_bin") {
 }
 
 fuchsia_unittest_package("test_manager_test") {
+  package_deps = [
+    "//examples/tests:example-tests",
+    "//src/sys/test_manager/cmx_runner/tests:cmx_runner_tests",
+    "//src/sys/test_manager/tests/diagnostics_tests:test-manager-diagnostics-tests",
+    "//src/sys/test_runners/gtest/test_data:gtest-runner-example-tests",
+    "//src/sys/test_runners/starnix:starnix-test-runner",
+  ]
   manifest = "meta/test_manager_test.cml"
   deps = [
     ":test_manager_test_bin",

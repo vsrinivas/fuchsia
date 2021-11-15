@@ -201,6 +201,10 @@ fuchsia_component("crashing_component") {
 }
 
 fuchsia_test_package("appmgr_integration_tests") {
+  package_deps = [
+    "//src/sys/appmgr/integration_tests/util:persistent_storage_test_util",
+    "//src/testing/sl4f:sl4f",
+  ]
   test_components = [
     ":appmgr_full_integration_tests",
     ":appmgr_hub_integration_tests",

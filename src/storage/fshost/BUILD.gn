@@ -456,6 +456,7 @@ fuchsia_component("fshost-integration-test") {
 }
 
 fuchsia_test_package("fshost-tests") {
+  package_deps = [ "//src/testing/sl4f:sl4f" ]
   test_specs = {
     log_settings = {
       max_severity = "ERROR"

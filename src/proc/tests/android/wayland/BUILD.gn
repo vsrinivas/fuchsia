@@ -69,6 +69,7 @@ foreach(test_name, wayland_tests) {
 }
 
 fuchsia_test_package("starnix_wayland_tests") {
+  package_deps = [ "//src/sys/test_runners/starnix:starnix-test-runner" ]
   deps = [
     "//src/proc/tests/android:android_system_image",
     "//src/proc/tests/android:starnix_data_tmp_placeholder",

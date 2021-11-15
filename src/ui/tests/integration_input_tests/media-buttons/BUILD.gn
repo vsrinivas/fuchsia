@@ -45,6 +45,10 @@ fuchsia_unittest_component("mediabuttons-listener-test") {
 }
 
 fuchsia_test_package("mediabuttons-integration-tests") {
+  package_deps = [
+    "//garnet/bin/trace_manager:trace_manager",
+    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider",
+  ]
   test_components = [ ":mediabuttons-listener-test" ]
 
   deps = [

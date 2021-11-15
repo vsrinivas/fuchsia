@@ -134,6 +134,8 @@ fidl("fuchsia.zircon.benchmarks") {
 #     QEMU, but running Fuchsia on QEMU on that builder does not work
 #     (perhaps because of missing dependencies).
 fuchsia_unittest_package("fuchsia_microbenchmarks_unittestmode") {
+  package_deps =
+      [ "//src/tests/microbenchmarks:fuchsia_microbenchmarks_perftestmode" ]
   package_name = "fuchsia_microbenchmarks"
 
   manifest = "meta/fuchsia_microbenchmarks.cmx"

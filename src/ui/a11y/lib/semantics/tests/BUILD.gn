@@ -150,6 +150,7 @@ resource("static") {
 }
 
 fuchsia_test_package("semantics-integration-tests") {
+  package_deps = [ "//src/ui/scenic:scenic_pkg" ]
   test_components = [
     ":flutter_semantics_tests",
     ":web_semantics_tests",

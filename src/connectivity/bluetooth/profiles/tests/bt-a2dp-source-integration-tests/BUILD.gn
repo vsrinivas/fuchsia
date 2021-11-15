@@ -42,6 +42,10 @@ fuchsia_test_component("bt-a2dp-source-integration-test-component") {
 }
 
 fuchsia_test_package("bt-a2dp-source-integration-tests") {
+  package_deps = [
+    "//src/connectivity/bluetooth/profiles/bt-avrcp-target:bt-avrcp-target",
+    "//src/connectivity/bluetooth/testing/mock-piconet-server:mock-piconet-server",
+  ]
   test_components = [ ":bt-a2dp-source-integration-test-component" ]
 
   # The max severity is set to ERROR due to the Cobalt connector ERROR message if the `Logger`

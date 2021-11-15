@@ -189,7 +189,6 @@ template("fuchsia_test_package") {
       deps += invoker.test_components
       deps += test_deps
       if (defined(invoker.package_deps)) {
-        deps -= invoker.package_deps
         deps += invoker.package_deps
       }
       testonly = true

@@ -57,6 +57,7 @@ fuchsia_component("telephony-tests") {
 }
 
 fuchsia_test_package("telephony-tests-package") {
+  package_deps = [ "//src/connectivity/telephony/ril-qmi:ril-qmi" ]
   test_components = [ ":telephony-tests" ]
   test_specs = {
     log_settings = {

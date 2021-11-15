@@ -64,6 +64,10 @@ fuchsia_component("gtest_runner_stress_test") {
 }
 
 fuchsia_test_package("gtest-runner-integration-test") {
+  package_deps = [
+    "//src/sys/test_runners/gtest/test_data:gtest-runner-example-tests",
+    "//src/sys/test_runners/starnix:starnix-test-runner",
+  ]
   test_components = [
     ":gtest_runner_integration_test",
     ":gtest_runner_stress_test",

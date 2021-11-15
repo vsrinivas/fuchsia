@@ -45,6 +45,10 @@ fuchsia_component("isolated-ota-integration-test") {
 }
 
 fuchsia_test_package("isolated-ota-integration-tests") {
+  package_deps = [
+    "//src/lib/storage/ramdevice_client/rust:ramdisk-isolated-devmgr",
+    "//src/sys/pkg/lib/isolated-swd:isolated-swd-components",
+  ]
   test_components = [ ":isolated-ota-integration-test" ]
   deps = [
     "//src/connectivity/network/dns:component-legacy",

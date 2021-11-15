@@ -162,6 +162,7 @@ fuchsia_test_package("audio_decoder_test_v2") {
     ":sbc_file",
     "//src/media/codec:codec_factory",
   ]
+  package_deps = [ "//src/media/codec:codec_factory" ]
 }
 
 fuchsia_unittest_package("audio_decoder_test") {
@@ -216,6 +217,7 @@ fuchsia_test_component("audio_encoder_test_v2_comp") {
 fuchsia_test_package("audio_encoder_test_v2") {
   test_components = [ ":audio_encoder_test_v2_comp" ]
   deps = [ "//src/media/codec:codec_factory" ]
+  package_deps = [ "//src/media/codec:codec_factory" ]
 }
 
 fuchsia_unittest_package("audio_encoder_test") {
@@ -344,6 +346,7 @@ fuchsia_test_package("h264_decoder_test_v2") {
     ":bear_video",
     "//src/media/codec:codec_factory",
   ]
+  package_deps = [ "//src/media/codec:codec_factory" ]
   test_specs = {
     environments = basic_envs + [
                      astro_env,

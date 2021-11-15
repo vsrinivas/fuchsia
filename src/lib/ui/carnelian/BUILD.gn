@@ -397,6 +397,7 @@ fuchsia_unittest_package("carnelian-render-tests") {
 }
 
 fuchsia_unittest_package("carnelian-tests") {
+  package_deps = [ "//garnet/bin/trace_manager:trace_manager" ]
   manifest = "meta/carnelian_lib_test.cmx"
   deps = [ ":carnelian_test" ]
 }

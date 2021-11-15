@@ -134,6 +134,7 @@ fuchsia_test_package("use_h264_decoder_frame_num_gaps_tests") {
       vim3_env,
     ]
   }
+  package_deps = [ "//src/media/codec:codec_factory" ]
 }
 
 # Force SW decode.  Only run in environments where we include a SW h264 decoder.
@@ -163,6 +164,10 @@ fuchsia_test_package("use_h264_sw_decoder_tests") {
   test_specs = {
     environments = [ emu_env ]
   }
+  package_deps = [
+    "//src/media/codec:codec_factory",
+    "//src/media/codec:codec_runner_sw_ffmpeg",
+  ]
 }
 
 fuchsia_unittest_component("use_h264_multi_decoder_test") {

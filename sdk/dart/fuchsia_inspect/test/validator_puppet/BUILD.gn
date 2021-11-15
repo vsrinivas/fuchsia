@@ -40,6 +40,7 @@ fuchsia_test_component("validator-component") {
 }
 
 fuchsia_test_package("inspect-validator-test-dart") {
+  package_deps = [ "//sdk/dart/fuchsia_inspect/test/validator_puppet:dart-inspect-validator-puppet" ]
   test_components = [ ":validator-component" ]
   deps = [ ":dart-inspect-validator-puppet" ]
 }

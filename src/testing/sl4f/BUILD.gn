@@ -431,6 +431,10 @@ resource("sl4f-server-tests-files") {
 }
 
 fuchsia_unittest_package("sl4f-service-tests") {
+  package_deps = [
+    "//src/factory/fake_factory_store_providers:fake_factory_store_providers",
+    "//src/power/battery-manager:battery-manager",
+  ]
   manifest = "meta/sl4f_lib_lib_test.cmx"
   deps = [
     ":lib_test",

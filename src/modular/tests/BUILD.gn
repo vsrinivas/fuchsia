@@ -438,6 +438,8 @@ fuchsia_package_with_single_component("module_with_fake_runner") {
 }
 
 fuchsia_test_package("modular_integration_tests") {
+  package_deps =
+      [ "//src/modular/bin/modular_test_harness:modular_test_harness" ]
   test_components = [
     ":agent-restart-test",
     ":agent-services-test",

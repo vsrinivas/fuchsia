@@ -236,6 +236,7 @@ fuchsia_component("limbo_client_unittest") {
 # PACKAGES
 ###############################################################################
 fuchsia_test_package("exception-broker-tests") {
+  package_deps = [ "//src/developer/forensics:copy-pkg" ]
   test_components = [
     ":exception_broker_config_test",
     ":exception_broker_integration_test",

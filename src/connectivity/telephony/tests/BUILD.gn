@@ -65,6 +65,7 @@ fuchsia_component("tel-driver-unit-test") {
 }
 
 fuchsia_test_package("telephony-tests") {
+  package_deps = [ "//src/connectivity/telephony/ril-qmi:ril-qmi" ]
   test_components = [
     ":fake-at-driver-test",
     ":fake-qmi-query",

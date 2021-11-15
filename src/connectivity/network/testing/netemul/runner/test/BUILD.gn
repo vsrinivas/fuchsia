@@ -124,6 +124,9 @@ fuchsia_test_component("model-unittest") {
 }
 
 fuchsia_test_package("netemul-sandbox-test") {
+  package_deps = [
+    "//src/connectivity/network/testing/netemul/runner/runner:netemul-runner",
+  ]
   test_components = [
     ":dynamic-devices-test",
     ":easy-netstack-cfg-netdevice-test",

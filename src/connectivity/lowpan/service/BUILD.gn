@@ -54,6 +54,10 @@ group("service") {
 }
 
 fuchsia_unittest_package("lowpanservice-test") {
+  package_deps = [
+    "//src/connectivity/lowpan/drivers/lowpan-dummy-driver:lowpan-dummy-driver",
+    "//src/connectivity/lowpan/service:lowpanservice",
+  ]
   manifest = "meta/lowpanservice-test.cmx"
   deps = [
     ":bin_test",

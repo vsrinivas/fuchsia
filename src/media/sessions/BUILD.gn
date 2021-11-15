@@ -78,6 +78,10 @@ rustc_binary("bin") {
 }
 
 fuchsia_unittest_package("mediasession_tests") {
+  package_deps = [
+    "//src/diagnostics/archivist:archivist-for-embedding",
+    "//src/media/sessions:mediasession",
+  ]
   manifest = "meta/mediasession_bin_test.cmx"
   deps = [ ":bin_test" ]
 }

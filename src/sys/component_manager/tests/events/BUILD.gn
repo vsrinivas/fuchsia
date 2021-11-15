@@ -139,6 +139,7 @@ fuchsia_component("realm_offered_root") {
 }
 
 fuchsia_unittest_package("events_integration_test") {
+  package_deps = [ "//src/sys/component_manager:component-manager" ]
   manifest = "meta/events_integration_test.cmx"
   deps = [
     ":async_reporter",

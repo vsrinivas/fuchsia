@@ -116,6 +116,7 @@ dart_test_component("unittests_component") {
 }
 
 fuchsia_test_package("zircon_unittests") {
+  package_deps = [ dart_default_build_cfg.runner_dep ]
   test_components = [ ":unittests_component" ]
 }
 
