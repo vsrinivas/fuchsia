@@ -7,6 +7,7 @@
 
 #include <lib/fidl/coding.h>
 #include <lib/fidl/internal.h>
+#include <lib/fidl/llcpp/message.h>
 #include <zircon/fidl.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -14,6 +15,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
+#include <memory>
 #include <vector>
 
 #ifndef __Fuchsia__
@@ -24,15 +26,35 @@
 
 namespace c_conformance_utils {
 
+inline bool operator==(zx_handle_disposition_t a, zx_handle_disposition_t b) {
+  return a.operation == b.operation && a.handle == b.handle && a.type == b.type &&
+         a.rights == b.rights && a.result == b.result;
+}
+inline bool operator!=(zx_handle_disposition_t a, zx_handle_disposition_t b) { return !(a == b); }
+inline std::ostream& operator<<(std::ostream& os, const zx_handle_disposition_t& hd) {
+  return os << "zx_handle_disposition_t{\n"
+            << "  .operation = " << hd.operation << "\n"
+            << "  .handle = " << hd.handle << "\n"
+            << "  .type = " << hd.type << "\n"
+            << "  .rights = " << hd.rights << "\n"
+            << "  .result = " << hd.result << "\n"
+            << "}\n";
+}
+
 template <typename T>
 bool ComparePayload(const T* actual, size_t actual_size, const T* expected, size_t expected_size) {
   bool pass = true;
   for (size_t i = 0; i < actual_size && i < expected_size; i++) {
     if (actual[i] != expected[i]) {
       pass = false;
-      std::cout << std::dec << "element[" << i << "]: " << std::hex << "actual=0x" << +actual[i]
-                << " "
-                << "expected=0x" << +expected[i] << "\n";
+      if constexpr (std::is_same_v<T, zx_handle_disposition_t>) {
+        std::cout << std::dec << "element[" << i << "]: actual=" << actual[i]
+                  << " expected=" << expected[i];
+      } else {
+        std::cout << std::dec << "element[" << i << "]: " << std::hex << "actual=0x" << +actual[i]
+                  << " "
+                  << "expected=0x" << +expected[i] << "\n";
+      }
     }
   }
   if (actual_size != expected_size) {
@@ -42,6 +64,59 @@ bool ComparePayload(const T* actual, size_t actual_size, const T* expected, size
               << "expected.size=" << +expected_size << "\n";
   }
   return pass;
+}
+
+template <typename FidlType>
+bool EncodeSuccess(FidlWireFormatVersion wire_format_version, FidlType* value,
+                   const std::vector<uint8_t>& expected_bytes,
+                   const std::vector<zx_handle_disposition_t>& expected_handle_dispositions,
+                   bool check_handle_rights) {
+  // Linearize the built objects using LLCPP encode -> decode.
+  fidl::OwnedEncodedMessage<FidlType> llcpp_encoded(value);
+  auto& outgoing_msg = llcpp_encoded.GetOutgoingMessage();
+  auto copied_bytes = outgoing_msg.CopyBytes();
+  fidl::DecodedMessage<FidlType> llcpp_decoded(
+      copied_bytes.data(), static_cast<uint32_t>(copied_bytes.size()), outgoing_msg.handles(),
+      static_cast<fidl_channel_handle_metadata_t*>(outgoing_msg.handle_metadata()),
+      outgoing_msg.handle_actual());
+
+  zx_handle_disposition_t handle_dispositions[ZX_CHANNEL_MAX_MSG_HANDLES];
+  uint32_t actual_handles;
+  const char* error_msg = nullptr;
+  zx_status_t status = fidl_encode_etc(
+      FidlType::Type, llcpp_decoded.PrimaryObject(), static_cast<uint32_t>(copied_bytes.size()),
+      handle_dispositions, std::size(handle_dispositions), &actual_handles, &error_msg);
+  if (status != ZX_OK) {
+    std::cout << "Encoding failed (" << zx_status_get_string(status) << "): " << error_msg
+              << std::endl;
+    return false;
+  }
+  if (error_msg != nullptr) {
+    std::cout << "error message unexpectedly non-null when status is ZX_OK: " << error_msg
+              << std::endl;
+    return false;
+  }
+
+  bool bytes_match = ComparePayload(copied_bytes.data(), copied_bytes.size(), expected_bytes.data(),
+                                    expected_bytes.size());
+  bool handles_match = false;
+  if (check_handle_rights) {
+    handles_match =
+        ComparePayload(handle_dispositions, actual_handles, expected_handle_dispositions.data(),
+                       expected_handle_dispositions.size());
+  } else {
+    std::vector<zx_handle_t> handles;
+    std::vector<zx_handle_t> expected_handles;
+    for (size_t i = 0; i < actual_handles; i++) {
+      handles.push_back(handle_dispositions[i].handle);
+    }
+    for (const auto& handle_disposition : expected_handle_dispositions) {
+      expected_handles.push_back(handle_disposition.handle);
+    }
+    handles_match = ComparePayload(handles.data(), handles.size(), expected_handles.data(),
+                                   expected_handles.size());
+  }
+  return bytes_match && handles_match;
 }
 
 // Verifies that |bytes| and |handles| successfully decodes.

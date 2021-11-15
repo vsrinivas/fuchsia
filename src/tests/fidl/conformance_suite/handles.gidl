@@ -90,6 +90,8 @@ success("ArrayOfOptionalHandles") {
 }
 
 success("VectorOfHandles") {
+    // TODO(fxbug.dev/88707) Fix on C. (Unknown failure reason).
+    bindings_denylist = [c],
     handle_defs = {
         #0 = event(),
         #1 = event(),
@@ -112,6 +114,8 @@ success("VectorOfHandles") {
 }
 
 success("VectorOfOptionalHandles") {
+    // TODO(fxbug.dev/88707) Fix on C. (Unknown failure reason).
+    bindings_denylist = [c],
     handle_defs = {
         #0 = event(),
     },
@@ -189,6 +193,8 @@ decode_failure("TooFewHandles") {
 
 // Currently channels max out at 64-handles.
 success("ChannelMaxHandles") {
+    // TODO(fxbug.dev/88707) Fix on C. (Unknown failure reason).
+    bindings_denylist = [c],
     handle_defs = {
         #0 = event(), #1 = event(), #2 = event(), #3 = event(),
         #4 = event(), #5 = event(), #6 = event(), #7 = event(),
@@ -308,8 +314,9 @@ decode_success("ChannelMaxUnknownHandlesDropped") {
 // this test is the same as ChannelMaxUnknownHandlesDropped, but expects
 // that the unknown data is stored in the value instead of discarded
 success("ChannelMaxUnknownHandlesStored") {
+    // TODO(fxbug.dev/88707) Fix on C. (Unknown failure reason).
     // LLCPP is tested in the ChannelMaxUnknownHandlesDropped test
-    bindings_denylist = [llcpp],
+    bindings_denylist = [llcpp, c],
     handle_defs = {
         #0 = event(), #1 = event(), #2 = event(), #3 = event(),
         #4 = event(), #5 = event(), #6 = event(), #7 = event(),

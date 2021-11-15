@@ -33,6 +33,27 @@ var conformanceTmpl = template.Must(template.New("tmpl").Parse(`
 #include "sdk/cts/tests/pkg/fidl/cpp/test/handle_util.h"
 #endif
 
+{{ range .EncodeSuccessCases }}
+{{- if .FuchsiaOnly }}
+#ifdef __Fuchsia__
+{{- end }}
+TEST(C_Conformance, {{ .Name }}_Encode) {
+	{{- if .HandleDefs }}
+	const std::vector<zx_handle_t> handle_defs = {{ .HandleDefs }};
+	{{- end }}
+	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	{{ .ValueBuild }}
+	const auto expected_bytes = {{ .Bytes }};
+	const auto expected_handles = {{ .Handles }};
+	alignas(FIDL_ALIGNMENT) auto obj = {{ .ValueVar }};
+	EXPECT_TRUE(c_conformance_utils::EncodeSuccess(
+		{{ .WireFormatVersion }}, &obj, expected_bytes, expected_handles, {{ .CheckHandleRights }}));
+}
+{{- if .FuchsiaOnly }}
+#endif  // __Fuchsia__
+{{- end }}
+{{ end }}
+
 {{ range .DecodeSuccessCases }}
 {{- if .FuchsiaOnly }}
 #ifdef __Fuchsia__
@@ -77,8 +98,14 @@ TEST(C_Conformance, {{ .Name }}_Decode_Failure) {
 `))
 
 type conformanceTmplInput struct {
+	EncodeSuccessCases []encodeSuccessCase
 	DecodeSuccessCases []decodeSuccessCase
 	DecodeFailureCases []decodeFailureCase
+}
+
+type encodeSuccessCase struct {
+	Name, WireFormatVersion, HandleDefs, ValueBuild, ValueVar, Bytes, Handles string
+	FuchsiaOnly, CheckHandleRights                                            bool
 }
 
 type decodeSuccessCase struct {
@@ -94,6 +121,10 @@ type decodeFailureCase struct {
 // Generate generates C tests.
 func GenerateConformanceTests(gidl gidlir.All, fidl fidlgen.Root, config gidlconfig.GeneratorConfig) ([]byte, error) {
 	schema := gidlmixer.BuildSchema(fidl)
+	encodeSuccessCases, err := encodeSuccessCases(gidl.EncodeSuccess, schema)
+	if err != nil {
+		return nil, err
+	}
 	decodeSuccessCases, err := decodeSuccessCases(gidl.DecodeSuccess, schema)
 	if err != nil {
 		return nil, err
@@ -104,10 +135,47 @@ func GenerateConformanceTests(gidl gidlir.All, fidl fidlgen.Root, config gidlcon
 	}
 	var buf bytes.Buffer
 	err = conformanceTmpl.Execute(&buf, conformanceTmplInput{
+		EncodeSuccessCases: encodeSuccessCases,
 		DecodeSuccessCases: decodeSuccessCases,
 		DecodeFailureCases: decodeFailureCases,
 	})
 	return buf.Bytes(), err
+}
+
+func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlmixer.Schema) ([]encodeSuccessCase, error) {
+	var encodeSuccessCases []encodeSuccessCase
+	for _, encodeSuccess := range gidlEncodeSuccesses {
+		decl, err := schema.ExtractDeclarationEncodeSuccess(encodeSuccess.Value, encodeSuccess.HandleDefs)
+		if err != nil {
+			return nil, fmt.Errorf("encode success %s: %s", encodeSuccess.Name, err)
+		}
+		if containsUnionOrTable(decl) {
+			continue
+		}
+		if gidlir.ContainsUnknownField(encodeSuccess.Value) {
+			continue
+		}
+		handleDefs := libhlcpp.BuildHandleDefs(encodeSuccess.HandleDefs)
+		valueBuild, valueVar := libllcpp.BuildValueAllocator("allocator", encodeSuccess.Value, decl, libllcpp.HandleReprRaw)
+		fuchsiaOnly := decl.IsResourceType() || len(encodeSuccess.HandleDefs) > 0
+		for _, encoding := range encodeSuccess.Encodings {
+			if !wireFormatSupported(encoding.WireFormat) {
+				continue
+			}
+			encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
+				Name:              testCaseName(encodeSuccess.Name, encoding.WireFormat),
+				WireFormatVersion: wireFormatName(encoding.WireFormat),
+				HandleDefs:        handleDefs,
+				ValueBuild:        valueBuild,
+				ValueVar:          valueVar,
+				Bytes:             libhlcpp.BuildBytes(encoding.Bytes),
+				Handles:           libhlcpp.BuildRawHandleDispositions(encoding.HandleDispositions),
+				FuchsiaOnly:       fuchsiaOnly,
+				CheckHandleRights: encodeSuccess.CheckHandleRights,
+			})
+		}
+	}
+	return encodeSuccessCases, nil
 }
 
 func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlmixer.Schema) ([]decodeSuccessCase, error) {
@@ -116,6 +184,9 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 		decl, err := schema.ExtractDeclaration(decodeSuccess.Value, decodeSuccess.HandleDefs)
 		if err != nil {
 			return nil, fmt.Errorf("decode success %s: %s", decodeSuccess.Name, err)
+		}
+		if containsUnionOrTable(decl) {
+			continue
 		}
 		if gidlir.ContainsUnknownField(decodeSuccess.Value) {
 			continue
@@ -148,6 +219,9 @@ func decodeFailureCases(gidlDecodeFailurees []gidlir.DecodeFailure, schema gidlm
 		decl, err := schema.ExtractDeclarationByName(decodeFailure.Type)
 		if err != nil {
 			return nil, fmt.Errorf("decode failure %s: %s", decodeFailure.Name, err)
+		}
+		if containsUnionOrTable(decl) {
+			continue
 		}
 		handleDefs := libhlcpp.BuildHandleInfoDefs(decodeFailure.HandleDefs)
 		valueType := libllcpp.ConformanceType(decodeFailure.Type)
@@ -182,4 +256,33 @@ func testCaseName(baseName string, wireFormat gidlir.WireFormat) string {
 
 func wireFormatName(wireFormat gidlir.WireFormat) string {
 	return fmt.Sprintf("FIDL_WIRE_FORMAT_VERSION_%s", fidlgen.ToUpperCamelCase(wireFormat.String()))
+}
+
+func containsUnionOrTable(decl gidlmixer.Declaration) bool {
+	return containsUnionOrTableInternal(decl, 0)
+}
+
+func containsUnionOrTableInternal(decl gidlmixer.Declaration, depth int) bool {
+	if depth > 32 {
+		return false
+	}
+	switch decl := decl.(type) {
+	case *gidlmixer.TableDecl, *gidlmixer.UnionDecl:
+		return true
+	case *gidlmixer.StructDecl:
+		for _, fieldName := range decl.FieldNames() {
+			fieldDecl, ok := decl.Field(fieldName)
+			if !ok {
+				panic(fmt.Sprintf("field %s not found", fieldName))
+			}
+			if containsUnionOrTableInternal(fieldDecl, depth+1) {
+				return true
+			}
+		}
+		return false
+	case gidlmixer.ListDeclaration:
+		return containsUnionOrTableInternal(decl.Elem(), depth+1)
+	default:
+		return false
+	}
 }
