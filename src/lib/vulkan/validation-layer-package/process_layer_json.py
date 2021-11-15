@@ -6,6 +6,8 @@ import argparse
 import json
 import os
 
+# This script modifies library_path in the VkLayer_khronos_validation.json file
+# to the correct path in the validation-layer-package package.
 parser = argparse.ArgumentParser()
 parser.add_argument("output_file")
 parser.add_argument("input_file")

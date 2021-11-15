@@ -14,7 +14,6 @@ executable("layer-server-bin") {
   sources = [ "main.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.io",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
@@ -22,6 +21,7 @@ executable("layer-server-bin") {
     "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/svc",
   ]
 }
 
@@ -33,9 +33,9 @@ group("vulkan_validation_layers") {
 }
 
 # Modify the validation layer json to reference the correct library path.
-action("processjson") {
+action("process_layer_json") {
   deps = [ "//third_party/Vulkan-ValidationLayers:vulkan_gen_json_files" ]
-  script = "processjson.py"
+  script = "process_layer_json.py"
   sources = [ "${vulkan_data_dir}/VkLayer_khronos_validation.json" ]
   outputs = [ "$target_gen_dir/VkLayer_khronos_validation.json" ]
   args = [
@@ -45,10 +45,10 @@ action("processjson") {
 }
 
 resource("vklayer_khronos_validation_json") {
-  target_outputs = get_target_outputs(":processjson")
+  target_outputs = get_target_outputs(":process_layer_json")
   sources = [ target_outputs[0] ]
   outputs = [ "data/vulkan/explicit_layer.d/VkLayer_khronos_validation.json" ]
-  deps = [ ":processjson" ]
+  deps = [ ":process_layer_json" ]
 }
 
 fuchsia_component("layer-server-component") {
@@ -66,7 +66,7 @@ fuchsia_package("validation-layer-package") {
 }
 
 if (current_toolchain == target_toolchain) {
-  # Generate a cml that includes a specific version of the package.
+  # Generate a cml that includes a specific version of validation-layer-package.
   action("cml") {
     # This boils down to a _pm target.
     target_outputs = get_target_outputs(":validation-layer-package")
@@ -74,13 +74,13 @@ if (current_toolchain == target_toolchain) {
     # The meta.far.merkle file contains the current package hash.
     merkle_file = target_outputs[2]
     deps = [ ":validation-layer-package" ]
-    script = "makecml.py"
+    script = "make_validation_client_cml.py"
     sources = [
       merkle_file,
       script,
     ]
 
-    outputs = [ "$target_gen_dir/vulkan-client.cml" ]
+    outputs = [ "$target_gen_dir/validation-client.cml" ]
     args = [
       rebase_path(outputs[0]),
       rebase_path(merkle_file, root_build_dir),
@@ -97,5 +97,6 @@ fuchsia_component("validation-client") {
 
   deps = [ cml_target ]
 
-  manifest = get_label_info(deps[0], "target_gen_dir") + "/vulkan-client.cml"
+  manifest =
+      get_label_info(deps[0], "target_gen_dir") + "/validation-client.cml"
 }

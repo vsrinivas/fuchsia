@@ -10,7 +10,7 @@ This prototype requires that the client uses CFv2.
 
 1. Depend on the `//src/lib/vulkan/validation-layer-package:validation-client`
   target in your component.
-2. Include the `vulkan/client.shard.cml` CML shard.
+2. Include the `//src/lib/vulkan/validation-layer-package/client.shard.cml` CML shard.
 3. Add `/vulkan_validation_pkg/data/vulkan/explicit_layer.d` to the layer path, in one of several ways:
 
     * Set the `VK_LAYER_PATH=/vulkan_validation_pkg/data/vulkan/explicit_layer.d` [environment variable][environ].
@@ -53,7 +53,7 @@ the validation layers:
 }
 ```
 
-This can be placed in any of these directories:
+This can be placed at any of these paths:
 
 * `/pkg/data/vulkan/implicit_layer.d/VkLayer_override.json`
 * `/config/vulkan/implicit_layer.d/VkLayer_override.json`
