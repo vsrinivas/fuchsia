@@ -1,0 +1,27 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.device.runtime.test;
+
+using zx;
+
+const MAX_TRANSFER_SIZE uint32 = 4096;
+
+type RuntimeRequest = strict enum {
+    GET_DATA = 1;
+};
+
+protocol TestDevice {
+    /// Sets the test data that can be retrieved from this device using a runtime channel.
+    SetTestData(struct {
+        in vector<uint8>:MAX_TRANSFER_SIZE;
+    }) -> (struct {}) error zx.status;
+};
+
+protocol TestDeviceChild {
+    /// Returns the test data stored in the parent device using the runtime channel.
+    GetParentDataOverRuntimeChannel() -> (struct {
+        out vector<uint8>:MAX_TRANSFER_SIZE;
+    }) error zx.status;
+};

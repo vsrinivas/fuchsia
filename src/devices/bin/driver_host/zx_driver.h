@@ -6,6 +6,7 @@
 #define SRC_DEVICES_BIN_DRIVER_HOST_ZX_DRIVER_H_
 
 #include <fidl/fuchsia.device.manager/cpp/wire.h>
+#include <lib/fdf/internal.h>
 #include <lib/fidl/llcpp/client.h>
 #include <lib/syslog/logger.h>
 #include <zircon/types.h>
@@ -14,6 +15,8 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
+
+#include "driver_stack_manager.h"
 
 class DriverInspect;
 
@@ -89,10 +92,16 @@ struct zx_driver : fbl::DoublyLinkedListable<fbl::RefPtr<zx_driver>>, fbl::RefCo
 
   bool has_run_unit_tests_op() const { return ops_->run_unit_tests != nullptr; }
 
-  zx_status_t InitOp() { return ops_->init(&ctx_); }
+  zx_status_t InitOp() {
+    DriverStackManager dsm(this);
+
+    return ops_->init(&ctx_);
+  }
 
   zx_status_t BindOp(internal::BindContext* bind_context,
                      const fbl::RefPtr<zx_device_t>& device) const {
+    DriverStackManager dsm(this);
+
     fbl::StringBuffer<32> trace_label;
     trace_label.AppendPrintf("%s:bind", name_);
     TRACE_DURATION("driver_host:driver-hooks", trace_label.data());
@@ -106,6 +115,8 @@ struct zx_driver : fbl::DoublyLinkedListable<fbl::RefPtr<zx_driver>>, fbl::RefCo
   zx_status_t CreateOp(internal::CreationContext* creation_context,
                        const fbl::RefPtr<zx_device_t>& parent, const char* name, const char* args,
                        zx_handle_t rpc_channel) const {
+    DriverStackManager dsm(this);
+
     internal::set_creation_context(creation_context);
     auto status = ops_->create(ctx_, parent.get(), name, args, rpc_channel);
     internal::set_creation_context(nullptr);
@@ -113,11 +124,15 @@ struct zx_driver : fbl::DoublyLinkedListable<fbl::RefPtr<zx_driver>>, fbl::RefCo
   }
 
   void ReleaseOp() const {
+    DriverStackManager dsm(this);
+
     // TODO(kulakowski/teisenbe) Consider poisoning the ops_ table on release.
     ops_->release(ctx_);
   }
 
   bool RunUnitTestsOp(const fbl::RefPtr<zx_device_t>& parent, zx::channel test_output) const {
+    DriverStackManager dsm(this);
+
     return ops_->run_unit_tests(ctx_, parent.get(), test_output.release());
   }
 

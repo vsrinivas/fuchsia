@@ -18,6 +18,8 @@ sdk://pkg/ddk
 sdk://pkg/ddk-platform-defs
 sdk://pkg/ddktl-experimental-driver-only
 sdk://pkg/dev-operation-experimental-driver-only
+sdk://pkg/driver_runtime
+sdk://pkg/driver_runtime_ddktl_cpp
 sdk://pkg/fidl
 sdk://pkg/fidl-llcpp-experimental-driver-only
 sdk://pkg/fidl_base

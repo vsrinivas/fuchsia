@@ -83,7 +83,7 @@ class Channel {
   //
   // This operation is thread-safe.
   zx::status<> Write(uint32_t options, Arena& arena, void* data, uint32_t num_bytes,
-                     cpp20::span<zx_handle_t> handles) {
+                     cpp20::span<zx_handle_t> handles) const {
     uint32_t handles_size = static_cast<uint32_t>(handles.size());
     return zx::make_status(fdf_channel_write(channel_, options, arena.get(), data, num_bytes,
                                              handles.data(), handles_size));
@@ -109,7 +109,7 @@ class Channel {
   // side of the channel is closed.
   //
   // This operation is thread-safe.
-  zx::status<ReadReturn> Read(uint32_t options) {
+  zx::status<ReadReturn> Read(uint32_t options) const {
     fdf_arena_t* arena;
     void* data;
     uint32_t num_bytes;

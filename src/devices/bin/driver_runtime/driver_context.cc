@@ -8,6 +8,8 @@
 
 #include <vector>
 
+#include "src/devices/lib/log/log.h"
+
 namespace {
 
 static thread_local std::vector<const void*> g_driver_call_stack;
@@ -17,7 +19,11 @@ static thread_local std::vector<const void*> g_driver_call_stack;
 namespace driver_context {
 
 void PushDriver(const void* driver) {
-  ZX_DEBUG_ASSERT(IsDriverInCallStack(driver) == false);
+  // TODO(fxbug.dev/88520): re-enable this once driver host v1 is deprecated.
+  // ZX_DEBUG_ASSERT(IsDriverInCallStack(driver) == false);
+  if (IsDriverInCallStack(driver)) {
+    LOGF(TRACE, "DriverContext: tried to push driver %p that was already in stack\n", driver);
+  }
   g_driver_call_stack.push_back(driver);
 }
 

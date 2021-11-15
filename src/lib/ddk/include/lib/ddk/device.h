@@ -5,6 +5,7 @@
 #ifndef SRC_LIB_DDK_INCLUDE_LIB_DDK_DEVICE_H_
 #define SRC_LIB_DDK_INCLUDE_LIB_DDK_DEVICE_H_
 
+#include <lib/fdf/types.h>
 #include <zircon/compiler.h>
 #include <zircon/fidl.h>
 #include <zircon/syscalls.h>
@@ -401,6 +402,16 @@ typedef struct zx_protocol_device {
   // This hook will only be executed on the devhost's main thread.
   zx_status_t (*message)(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
+  //@ ## service_connect
+  // Connect a runtime client to this device.
+  //
+  // Provides ownership of *channel*, which is a fdf runtime channel.
+  //
+  // This hook is never called by the devhost runtime other than when
+  // **device_service_connect()** is invoked by some driver. It is executed
+  // synchronously in the same thread as the caller.
+  zx_status_t (*service_connect)(void* ctx, const char* service_name, fdf_handle_t channel);
+
   //@ ## child_pre_release
   // The child_pre_release hook is used to signal that a child device
   // will soon be released. This is after the child and all its descendents
@@ -426,6 +437,9 @@ zx_status_t device_get_protocol(const zx_device_t* dev, uint32_t proto_id, void*
 // Direct Device Ops Functions
 
 zx_off_t device_get_size(zx_device_t* dev);
+
+zx_status_t device_service_connect(zx_device_t* device, const char* service_name,
+                                   fdf_handle_t channel);
 
 // Device Metadata Support
 

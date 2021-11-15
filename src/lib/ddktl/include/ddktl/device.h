@@ -7,6 +7,7 @@
 
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/fdf/cpp/channel.h>
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/wire_messaging.h>
@@ -264,6 +265,20 @@ class GetSizable : public base_mixin {
 
  private:
   static zx_off_t GetSize(void* ctx) { return static_cast<D*>(ctx)->DdkGetSize(); }
+};
+
+template <typename D>
+class ServiceConnectable : public base_mixin {
+ protected:
+  static constexpr void InitOp(zx_protocol_device_t* proto) {
+    internal::CheckServiceConnectable<D>();
+    proto->service_connect = ServiceConnect;
+  }
+
+ private:
+  static zx_status_t ServiceConnect(void* ctx, const char* service_name, fdf_handle_t channel) {
+    return static_cast<D*>(ctx)->DdkServiceConnect(service_name, fdf::Channel(channel));
+  }
 };
 
 template <typename D, typename Protocol>
@@ -572,6 +587,10 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
       const char* path = fidl::DiscoverableProtocolName<Protocol>) const {
     return device_connect_fragment_fidl_protocol(parent(), fragment_name, path,
                                                  request.TakeChannel().release());
+  }
+
+  zx_status_t DdkServiceConnect(const char* service_name, fdf::Channel channel) {
+    return device_service_connect(parent(), service_name, channel.release());
   }
 
   const char* name() const { return this->name_.c_str(); }

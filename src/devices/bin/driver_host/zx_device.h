@@ -34,6 +34,7 @@
 #include <fbl/vector.h>
 
 #include "devfs_vnode.h"
+#include "driver_stack_manager.h"
 #include "inspect.h"
 
 class CompositeDevice;
@@ -126,42 +127,62 @@ struct zx_device
   void CloseAllConnections();
 
   void InitOp() {
+    DriverStackManager dsm(driver);
+
     TraceLabelBuffer trace_label;
     TRACE_DURATION("driver_host:driver-hooks", get_trace_label("init", &trace_label));
     Dispatch(ops_->init);
   }
 
   zx_status_t OpenOp(zx_device_t** dev_out, uint32_t flags) {
+    DriverStackManager dsm(driver);
+
     TraceLabelBuffer trace_label;
     TRACE_DURATION("driver_host:driver-hooks", get_trace_label("open", &trace_label));
     return Dispatch(ops_->open, ZX_OK, dev_out, flags);
   }
 
   zx_status_t CloseOp(uint32_t flags) {
+    DriverStackManager dsm(driver);
+
     TraceLabelBuffer trace_label;
     TRACE_DURATION("driver_host:driver-hooks", get_trace_label("close", &trace_label));
     return Dispatch(ops_->close, ZX_OK, flags);
   }
 
   void UnbindOp() {
+    DriverStackManager dsm(driver);
+
     TraceLabelBuffer trace_label;
     TRACE_DURATION("driver_host:driver-hooks", get_trace_label("unbind", &trace_label));
     Dispatch(ops_->unbind);
   }
 
+  zx_status_t ServiceConnectOp(const char* service_name, fdf_handle_t channel) {
+    DriverStackManager dsm(driver);
+
+    return Dispatch(ops_->service_connect, ZX_OK, service_name, channel);
+  }
+
   void ReleaseOp() {
+    DriverStackManager dsm(driver);
+
     TraceLabelBuffer trace_label;
     TRACE_DURATION("driver_host:driver-hooks", get_trace_label("release", &trace_label));
     Dispatch(ops_->release);
   }
 
   void SuspendNewOp(uint8_t requested_state, bool enable_wake, uint8_t suspend_reason) {
+    DriverStackManager dsm(driver);
+
     TraceLabelBuffer trace_label;
     TRACE_DURATION("driver_host:driver-hooks", get_trace_label("suspend", &trace_label));
     Dispatch(ops_->suspend, requested_state, enable_wake, suspend_reason);
   }
 
   zx_status_t SetPerformanceStateOp(uint32_t requested_state, uint32_t* out_state) {
+    DriverStackManager dsm(driver);
+
     TraceLabelBuffer trace_label;
     TRACE_DURATION("driver_host:driver-hooks",
                    get_trace_label("set_performance_state", &trace_label));
@@ -169,18 +190,24 @@ struct zx_device
   }
 
   zx_status_t ConfigureAutoSuspendOp(bool enable, uint8_t requested_state) {
+    DriverStackManager dsm(driver);
+
     TraceLabelBuffer trace_label;
     TRACE_DURATION("driver_host:driver-hooks", get_trace_label("conf_auto_suspend", &trace_label));
     return Dispatch(ops_->configure_auto_suspend, ZX_ERR_NOT_SUPPORTED, enable, requested_state);
   }
 
   void ResumeNewOp(uint32_t requested_state) {
+    DriverStackManager dsm(driver);
+
     TraceLabelBuffer trace_label;
     TRACE_DURATION("driver_host:driver-hooks", get_trace_label("resume", &trace_label));
     Dispatch(ops_->resume, requested_state);
   }
 
   zx_status_t ReadOp(void* buf, size_t count, zx_off_t off, size_t* actual) {
+    DriverStackManager dsm(driver);
+
     TraceLabelBuffer trace_label;
     TRACE_DURATION("driver_host:driver-hooks", get_trace_label("read", &trace_label));
     inspect_->ReadOpStats().Update();
@@ -188,6 +215,8 @@ struct zx_device
   }
 
   zx_status_t WriteOp(const void* buf, size_t count, zx_off_t off, size_t* actual) {
+    DriverStackManager dsm(driver);
+
     TraceLabelBuffer trace_label;
     TRACE_DURATION("driver_host:driver-hooks", get_trace_label("write", &trace_label));
     inspect_->WriteOpStats().Update();
@@ -195,12 +224,16 @@ struct zx_device
   }
 
   zx_off_t GetSizeOp() {
+    DriverStackManager dsm(driver);
+
     TraceLabelBuffer trace_label;
     TRACE_DURATION("driver_host:driver-hooks", get_trace_label("get_size", &trace_label));
     return Dispatch(ops_->get_size, 0lu);
   }
 
   zx_status_t MessageOp(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
+    DriverStackManager dsm(driver);
+
     TraceLabelBuffer trace_label;
     TRACE_DURATION("driver_host:driver-hooks", get_trace_label("message", &trace_label));
     inspect_->MessageOpStats().Update();
@@ -208,6 +241,8 @@ struct zx_device
   }
 
   void ChildPreReleaseOp(void* child_ctx) {
+    DriverStackManager dsm(driver);
+
     TraceLabelBuffer trace_label;
     TRACE_DURATION("driver_host:driver-hooks", get_trace_label("child_pre_release", &trace_label));
     Dispatch(ops_->child_pre_release, child_ctx);

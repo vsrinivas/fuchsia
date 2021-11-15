@@ -1,0 +1,97 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/components.gni")
+import("//build/drivers.gni")
+import("//build/fidl/fidl.gni")
+import("//build/test.gni")
+
+fidl("fuchsia.device.runtime.test") {
+  sources = [ "test.fidl" ]
+  visibility = [ ":*" ]
+  public_deps = [ "//zircon/vdso/zx" ]
+}
+
+test("test") {
+  output_name = "driver-runtime-test"
+
+  sources = [ "test.cc" ]
+  deps = [
+    ":fuchsia.device.runtime.test_llcpp",
+    "//sdk/fidl/fuchsia.driver.test",
+    "//sdk/fidl/fuchsia.io",
+    "//sdk/lib/driver_test_realm/realm_builder/cpp",
+    "//src/devices/lib/device-watcher/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//zircon/system/ulib/service:service-llcpp",
+  ]
+}
+
+fuchsia_unittest_package("driver-runtime-test") {
+  deps = [
+    ":child",
+    ":parent",
+    ":test",
+    "//src/devices/misc/drivers/test-parent",
+  ]
+}
+
+driver_bind_rules("parent-driver-bind") {
+  rules = "parent-driver.bind"
+  header_output = "parent-driver-bind.h"
+  deps = [ "//src/devices/bind/fuchsia.test" ]
+}
+
+fuchsia_driver("parent-driver") {
+  sources = [ "parent-driver.cc" ]
+  deps = [
+    ":fuchsia.device.runtime.test_llcpp",
+    ":parent-driver-bind",
+    "//sdk/lib/driver_runtime:driver_runtime_cpp",
+    "//sdk/lib/fdio",
+    "//src/devices/lib/driver",
+    "//src/devices/lib/driver:driver_runtime",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/system/ulib/fbl",
+  ]
+}
+
+fuchsia_driver_component("parent") {
+  component_name = "parent"
+  deps = [ ":parent-driver" ]
+}
+
+driver_bind_rules("child-driver-bind") {
+  rules = "child-driver.bind"
+  header_output = "child-driver-bind.h"
+  deps = [ "//src/devices/bind/fuchsia.test" ]
+}
+
+fuchsia_driver("child-driver") {
+  sources = [ "child-driver.cc" ]
+  deps = [
+    ":child-driver-bind",
+    ":fuchsia.device.runtime.test_llcpp",
+    "//sdk/lib/driver_runtime:driver_runtime_cpp",
+    "//src/devices/lib/driver",
+    "//src/devices/lib/driver:driver_runtime",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fidl:fidl-llcpp",
+  ]
+}
+
+fuchsia_driver_component("child") {
+  component_name = "child"
+  deps = [ ":child-driver" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":driver-runtime-test" ]
+}

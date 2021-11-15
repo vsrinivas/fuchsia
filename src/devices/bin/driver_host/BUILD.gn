@@ -42,7 +42,10 @@ source_set("common") {
     "zx_device.cc",
   ]
 
-  deps = [ "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp" ]
+  deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//src/devices/lib/driver:driver_runtime",
+  ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",

@@ -57,6 +57,7 @@ sdk_static_library("ddk") {
   public_deps = [
     # <ddk/io-buffer.h> has #include <zircon/syscalls.h>.
 
+    "//sdk/lib/driver_runtime",
     "//zircon/system/ulib/async:async",
     "//zircon/system/ulib/ddk-platform-defs",
     "//zircon/system/ulib/mmio-ptr",
@@ -131,4 +132,5 @@ library_headers("ddk-deprecated-binding-headers") {
 
 library_headers("ddk-device-headers") {
   headers = [ "lib/ddk/device.h" ]
+  public_deps = [ "//sdk/lib/driver_runtime" ]
 }

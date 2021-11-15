@@ -302,6 +302,14 @@ __EXPORT zx_status_t device_close_protocol_session_multibindable(const zx_device
 
 __EXPORT zx_off_t device_get_size(zx_device_t* dev) { return dev->GetSizeOp(); }
 
+__EXPORT zx_status_t device_service_connect(zx_device_t* dev, const char* service_name,
+                                            fdf_handle_t channel) {
+  if (dev->ops()->service_connect) {
+    return dev->ServiceConnectOp(service_name, channel);
+  }
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 // LibDriver Misc Interfaces
 
 // Please do not use get_root_resource() in new code. See fxbug.dev/31358.

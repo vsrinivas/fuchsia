@@ -42,7 +42,7 @@ class Dispatcher {
   // zircon threads with the dispatcher.
   //
   // This must be called from a thread managed by the driver runtime.
-  static zx::status<Dispatcher> Create(uint32_t options, cpp17::string_view scheduler_role) {
+  static zx::status<Dispatcher> Create(uint32_t options, cpp17::string_view scheduler_role = {}) {
     fdf_dispatcher_t* dispatcher;
     zx_status_t status =
         fdf_dispatcher_create(options, scheduler_role.data(), scheduler_role.size(), &dispatcher);

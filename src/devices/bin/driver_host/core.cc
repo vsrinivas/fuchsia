@@ -90,6 +90,11 @@ static zx_status_t default_message(void* ctx, fidl_incoming_msg_t* msg, fidl_txn
 
 static void default_child_pre_release(void* ctx, void* child_ctx) {}
 
+static zx_status_t default_service_connect(void* ctx, const char* service_name,
+                                           fdf_handle_t channel) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 const zx_protocol_device_t internal::kDeviceDefaultOps = []() {
   zx_protocol_device_t ops = {};
   ops.open = default_open;
@@ -105,6 +110,7 @@ const zx_protocol_device_t internal::kDeviceDefaultOps = []() {
   ops.message = default_message;
   ops.set_performance_state = default_set_performance_state;
   ops.child_pre_release = default_child_pre_release;
+  ops.service_connect = default_service_connect;
   return ops;
 }();
 
@@ -137,6 +143,8 @@ static zx_protocol_device_t device_invalid_ops = []() {
       +[](void* ctx, uint32_t requested_state, uint32_t* out_state) -> zx_status_t {
     device_invalid_fatal(ctx);
   };
+  ops.service_connect =
+      +[](void* ctx, const char*, fdf_handle_t) -> zx_status_t { device_invalid_fatal(ctx); };
   return ops;
 }();
 

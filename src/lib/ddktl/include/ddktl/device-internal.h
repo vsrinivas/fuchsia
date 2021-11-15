@@ -6,6 +6,7 @@
 #define SRC_LIB_DDKTL_INCLUDE_DDKTL_DEVICE_INTERNAL_H_
 
 #include <lib/ddk/device.h>
+#include <lib/fdf/cpp/channel.h>
 
 #include <string>
 #include <type_traits>
@@ -294,6 +295,18 @@ constexpr void CheckGetSizable() {
                     std::is_same<decltype(&D::DdkGetSize), zx_off_t (D::*)(void) const>::value,
                 "DdkGetSize must be a public non-static member function with signature "
                 "'zx_off_t DdkGetSize()'.");
+}
+
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN(has_ddk_service_connect, DdkServiceConnect);
+
+template <typename D>
+constexpr void CheckServiceConnectable() {
+  static_assert(has_ddk_service_connect<D>::value,
+                "ServiceConnectable classes must implement DdkServiceConnect");
+  static_assert(std::is_same<decltype(&D::DdkServiceConnect),
+                             zx_status_t (D::*)(const char*, fdf::Channel)>::value,
+                "DdkServiceConnect must be a public non-static member function with signature "
+                "'zx_status_t DdkServiceConnect(const char*, fdf::Channel)'.");
 }
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN(has_ddk_message_manual, DdkMessage);
