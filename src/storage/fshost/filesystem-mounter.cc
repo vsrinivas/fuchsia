@@ -6,6 +6,7 @@
 
 #include <dirent.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire_types.h>
 #include <fidl/fuchsia.update.verify/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/inspect/service/cpp/service.h>
@@ -90,9 +91,12 @@ zx::status<zx::channel> FilesystemMounter::MountFilesystem(
     return zx::error(status);
   }
 
+  uint32_t open_rights = fio::wire::kOpenRightReadable | fio::wire::kOpenFlagPosix;
+  if (options.admin) {
+    open_rights |= fio::wire::kOpenRightAdmin;
+  }
   if (auto resp = fidl::WireCall<fio::Directory>(zx::unowned_channel(export_root.channel()))
-                      ->Open(fio::wire::kOpenRightReadable | fio::wire::kOpenFlagPosix, 0,
-                             fidl::StringView("root"), std::move(root_server));
+                      ->Open(open_rights, 0, fidl::StringView("root"), std::move(root_server));
       !resp.ok()) {
     return zx::error(resp.status());
   }
@@ -109,6 +113,11 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device, const MountOp
     return ZX_ERR_ALREADY_BOUND;
   }
 
+  MountOptions data_options = options;
+  if (config_.is_set(Config::kDataFilesystemNoDirectoryAdmin)) {
+    data_options.admin = false;
+  }
+
   std::string binary_path = config_.ReadStringOptionValue(Config::kDataFilesystemBinaryPath);
   if (binary_path.empty())
     binary_path = "/pkg/bin/minfs";
@@ -118,7 +127,7 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device, const MountOp
     return crypt_client_or.error_value();
 
   if (zx::status ret =
-          MountFilesystem(FsManager::MountPoint::kData, binary_path.c_str(), options,
+          MountFilesystem(FsManager::MountPoint::kData, binary_path.c_str(), data_options,
                           std::move(block_device), FS_SVC, std::move(crypt_client_or).value());
       ret.is_error()) {
     return ret.error_value();
