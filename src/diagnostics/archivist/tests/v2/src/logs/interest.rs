@@ -17,7 +17,7 @@ async fn register_interest() {
     let builder = test_topology::create(test_topology::Options::default())
         .await
         .expect("create test topology");
-    test_topology::add_eager_component(&builder, "child", LOGGER_COMPONENT_FOR_INTEREST_URL)
+    test_topology::add_eager_child(&builder, "child", LOGGER_COMPONENT_FOR_INTEREST_URL)
         .await
         .expect("add child");
     let instance = builder.build().await.expect("create instance");

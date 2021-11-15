@@ -93,7 +93,7 @@ async fn listen_for_syslog_routed_stdio() {
     let builder = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
-    test_topology::add_eager_component(&builder, "stdio-puppet", constants::STDIO_PUPPET_URL)
+    test_topology::add_eager_child(&builder, "stdio-puppet", constants::STDIO_PUPPET_URL)
         .await
         .expect("add child");
     builder

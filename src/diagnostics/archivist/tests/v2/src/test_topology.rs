@@ -130,11 +130,7 @@ pub async fn create(opts: Options) -> Result<RealmBuilder, Error> {
     Ok(builder)
 }
 
-pub async fn add_eager_component(
-    builder: &RealmBuilder,
-    name: &str,
-    url: &str,
-) -> Result<(), Error> {
+pub async fn add_eager_child(builder: &RealmBuilder, name: &str, url: &str) -> Result<(), Error> {
     let path = format!("test/{}", name);
     builder
         .add_child(path.as_ref(), url, ChildProperties::new().eager())

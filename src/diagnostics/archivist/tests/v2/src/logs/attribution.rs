@@ -24,7 +24,7 @@ async fn log_attribution() {
     let builder = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
-    test_topology::add_eager_component(&builder, "child", STUB_INSPECT_COMPONENT_URL)
+    test_topology::add_eager_child(&builder, "child", STUB_INSPECT_COMPONENT_URL)
         .await
         .expect("add child");
 

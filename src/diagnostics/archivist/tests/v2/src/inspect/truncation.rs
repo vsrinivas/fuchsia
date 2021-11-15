@@ -11,10 +11,10 @@ async fn accessor_truncation_test() {
     let builder = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
-    test_topology::add_eager_component(&builder, "child_a", IQUERY_TEST_COMPONENT_URL)
+    test_topology::add_eager_child(&builder, "child_a", IQUERY_TEST_COMPONENT_URL)
         .await
         .expect("add child a");
-    test_topology::add_eager_component(&builder, "child_b", IQUERY_TEST_COMPONENT_URL)
+    test_topology::add_eager_child(&builder, "child_b", IQUERY_TEST_COMPONENT_URL)
         .await
         .expect("add child b");
 
