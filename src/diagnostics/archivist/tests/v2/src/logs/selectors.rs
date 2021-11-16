@@ -21,10 +21,10 @@ async fn component_selectors_filter_logs() {
     let builder = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
-    test_topology::add_child(&builder, "a", constants::LOG_AND_EXIT_COMPONENT_URL)
+    test_topology::add_lazy_child(&builder, "a", constants::LOG_AND_EXIT_COMPONENT_URL)
         .await
         .expect("add log_and_exit a");
-    test_topology::add_child(&builder, "b", constants::LOG_AND_EXIT_COMPONENT_URL)
+    test_topology::add_lazy_child(&builder, "b", constants::LOG_AND_EXIT_COMPONENT_URL)
         .await
         .expect("add log_and_exit b");
 

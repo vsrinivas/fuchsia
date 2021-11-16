@@ -144,7 +144,7 @@ pub async fn add_eager_child(builder: &RealmBuilder, name: &str, url: &str) -> R
     Ok(())
 }
 
-pub async fn add_child(builder: &RealmBuilder, name: &str, url: &str) -> Result<(), Error> {
+pub async fn add_lazy_child(builder: &RealmBuilder, name: &str, url: &str) -> Result<(), Error> {
     let path = format!("test/{}", name);
     builder
         .add_child(path.as_ref(), url, ChildProperties::new())

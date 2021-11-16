@@ -83,7 +83,7 @@ async fn test_logs_with_hanging_log_connector() {
         )
         .await
         .unwrap();
-    test_topology::add_child(&builder, LOG_AND_EXIT_COMPONENT, LOG_AND_EXIT_COMPONENT_URL)
+    test_topology::add_lazy_child(&builder, LOG_AND_EXIT_COMPONENT, LOG_AND_EXIT_COMPONENT_URL)
         .await
         .expect("add log_and_exit");
     expose_test_realm_protocol(&builder).await;
@@ -150,7 +150,7 @@ async fn log_sink_connected_event_test() {
     let builder = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
-    test_topology::add_child(&builder, LOG_AND_EXIT_COMPONENT, LOG_AND_EXIT_COMPONENT_URL)
+    test_topology::add_lazy_child(&builder, LOG_AND_EXIT_COMPONENT, LOG_AND_EXIT_COMPONENT_URL)
         .await
         .expect("add log_and_exit");
 
@@ -183,7 +183,7 @@ async fn test_logs_lifecycle() {
     let builder = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
-    test_topology::add_child(&builder, LOG_AND_EXIT_COMPONENT, LOG_AND_EXIT_COMPONENT_URL)
+    test_topology::add_lazy_child(&builder, LOG_AND_EXIT_COMPONENT, LOG_AND_EXIT_COMPONENT_URL)
         .await
         .expect("add log_and_exit");
 
