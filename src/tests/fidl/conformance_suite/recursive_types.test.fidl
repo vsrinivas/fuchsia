@@ -1,0 +1,36 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library conformance;
+
+type RecursiveOptionalBasicStruct = struct {
+    inner box<RecursiveOptionalBasicStruct>;
+};
+
+type RecursiveVectorStruct = struct {
+    vec vector<RecursiveVectorStruct>:optional;
+};
+
+type RecursiveUnionStruct = struct {
+    u RecursiveUnion:optional;
+};
+
+type RecursiveUnion = union {
+    // The union type can't be directly depended on because it causes an include cycle.
+    1: s RecursiveUnionStruct;
+};
+
+type RecursiveTableHolder = struct {
+    // A table can't be optional so it needs to be wrapped in an optional struct.
+    t RecursiveTable;
+};
+
+type RecursiveTableOptionalHolder = struct {
+    o box<RecursiveTableHolder>;
+};
+
+type RecursiveTable = table {
+    // A table field can't be optional. Including the table in a non-optional way causes an include cycle.
+    1: s RecursiveTableOptionalHolder;
+};

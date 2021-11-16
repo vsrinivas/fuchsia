@@ -15,6 +15,7 @@ conformance_suite_gidl_files = [
   "//src/tests/fidl/conformance_suite/integer.gidl",
   "//src/tests/fidl/conformance_suite/padding.gidl",
   "//src/tests/fidl/conformance_suite/recursive_depth.gidl",
+  "//src/tests/fidl/conformance_suite/recursive_types.gidl",
   "//src/tests/fidl/conformance_suite/strings.gidl",
   "//src/tests/fidl/conformance_suite/strings_utf8.gen.gidl",
   "//src/tests/fidl/conformance_suite/tables.gidl",

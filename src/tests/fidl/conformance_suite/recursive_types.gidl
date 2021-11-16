@@ -1,0 +1,114 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+success("RecursiveOptionalStruct") {
+    value = RecursiveOptionalBasicStruct {
+        inner: RecursiveOptionalBasicStruct {
+            inner: RecursiveOptionalBasicStruct {
+                inner: null,
+            },
+        },
+    },
+    bytes = {
+        v1, v2 = [
+            repeat(0xff):8,
+            repeat(0xff):8,
+            repeat(0x00):8,
+        ]
+    }
+}
+
+success("RecursiveVectorStruct") {
+    // TODO(fxbug.dev/88725) Enable this test for HLCPP and Rust.
+    bindings_denylist = [hlcpp, rust],
+    value = RecursiveVectorStruct { 
+        vec: [
+            RecursiveVectorStruct {
+                vec: [
+                    RecursiveVectorStruct {
+                        vec: [],
+                    },
+                ],
+            },
+        ]
+    },
+    bytes = {
+        v1, v2 = [
+            num(1):8,
+            repeat(0xff):8,
+
+            num(1):8,
+            repeat(0xff):8,
+
+            num(0):8,
+            repeat(0xff):8,
+        ]
+    }
+}
+
+success("RecursiveUnionStruct") {
+    value = RecursiveUnionStruct {
+        u: RecursiveUnion {
+            s: RecursiveUnionStruct {
+                u: RecursiveUnion {
+                    s: RecursiveUnionStruct {
+                        u: null,
+                    },
+                },
+            },
+        },
+    },
+    bytes = {
+        v2 = [
+            num(1):8,
+            num(32):4, num(0):2, num(0):2,
+
+            num(1):8,
+            num(16):4, num(0):2, num(0):2,
+
+            num(0):8,
+            num(0):4, num(0):2, num(0):2,
+        ]
+    }
+}
+
+success("RecursiveTableStruct") {
+    value = RecursiveTableHolder {
+        t: RecursiveTable {
+            s: RecursiveTableOptionalHolder {
+                o: RecursiveTableHolder {
+                    t: RecursiveTable {
+                        s: RecursiveTableOptionalHolder {
+                            o: RecursiveTableHolder {
+                                t: RecursiveTable {
+                                    s: RecursiveTableOptionalHolder {
+                                        o: null,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    },
+    bytes = {
+        v2 = [
+            num(1):8,
+            repeat(0xff):8,
+            num(72):4, num(0):2, num(0):2,
+            repeat(0xff):8,
+
+            num(1):8,
+            repeat(0xff):8,
+            num(40):4, num(0):2, num(0):2,
+            repeat(0xff):8,
+
+            num(1):8,
+            repeat(0xff):8,
+            num(8):4, num(0):2, num(0):2,
+            repeat(0x00):8,
+        ]
+    }
+}
