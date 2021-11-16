@@ -64,6 +64,8 @@ rustc_library("lib") {
     "//third_party/rust_crates:thiserror",
   ]
 
+  test_deps = [ "//src/lib/testing/fixture" ]
+
   sources = [
     "src/devices.rs",
     "src/dhcpv4.rs",
@@ -72,6 +74,7 @@ rustc_library("lib") {
     "src/errors.rs",
     "src/interface.rs",
     "src/lib.rs",
+    "src/virtualization.rs",
   ]
 
   configs -= [ "//build/config/rust:allow_unused_results" ]

@@ -4,6 +4,7 @@
 
 use std::fmt::Display;
 
+#[derive(Debug)]
 pub(super) enum Error {
     NonFatal(anyhow::Error),
     Fatal(anyhow::Error),

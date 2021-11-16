@@ -15,6 +15,7 @@ mod dhcpv6;
 mod dns;
 mod errors;
 mod interface;
+mod virtualization;
 
 use dhcp::protocol::FromFidlExt as _;
 use std::collections::{hash_map::Entry, HashMap, HashSet};
@@ -29,15 +30,16 @@ use std::str::FromStr;
 use fidl::endpoints::RequestStream as _;
 use fidl_fuchsia_io as fio;
 use fidl_fuchsia_net as fnet;
+use fidl_fuchsia_net_debug as fnet_debug;
 use fidl_fuchsia_net_dhcp as fnet_dhcp;
 use fidl_fuchsia_net_dhcpv6 as fnet_dhcpv6;
 use fidl_fuchsia_net_ext::{self as fnet_ext, DisplayExt as _, IntoExt as _, IpExt as _};
 use fidl_fuchsia_net_filter as fnet_filter;
 use fidl_fuchsia_net_interfaces as fnet_interfaces;
+use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
 use fidl_fuchsia_net_interfaces_ext::{self as fnet_interfaces_ext, Update as _};
 use fidl_fuchsia_net_name as fnet_name;
 use fidl_fuchsia_net_stack as fnet_stack;
-use fidl_fuchsia_net_virtualization as fnet_virtualization;
 use fidl_fuchsia_netstack as fnetstack;
 use fuchsia_async::DurationExt as _;
 use fuchsia_component::client::{clone_namespace_svc, new_protocol_connector_in_dir};
@@ -50,7 +52,7 @@ use anyhow::{anyhow, Context as _};
 use async_trait::async_trait;
 use async_utils::stream::TryFlattenUnorderedExt as _;
 use dns_server_watcher::{DnsServers, DnsServersUpdateSource, DEFAULT_DNS_PORT};
-use futures::{FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _};
+use futures::{StreamExt as _, TryFutureExt as _, TryStreamExt as _};
 use io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE};
 use log::{debug, error, info, trace, warn};
 use net_declare::fidl_ip_v4;
@@ -227,6 +229,57 @@ pub struct InterfaceMetrics {
     pub eth_metric: Metric,
 }
 
+#[derive(Debug, PartialEq, Eq, Hash, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum DeviceClass {
+    Virtual,
+    Ethernet,
+    Wlan,
+    Ppp,
+    Bridge,
+    WlanAp,
+}
+
+impl From<fidl_fuchsia_hardware_network::DeviceClass> for DeviceClass {
+    fn from(device_class: fidl_fuchsia_hardware_network::DeviceClass) -> Self {
+        match device_class {
+            fidl_fuchsia_hardware_network::DeviceClass::Virtual => DeviceClass::Virtual,
+            fidl_fuchsia_hardware_network::DeviceClass::Ethernet => DeviceClass::Ethernet,
+            fidl_fuchsia_hardware_network::DeviceClass::Wlan => DeviceClass::Wlan,
+            fidl_fuchsia_hardware_network::DeviceClass::Ppp => DeviceClass::Ppp,
+            fidl_fuchsia_hardware_network::DeviceClass::Bridge => DeviceClass::Bridge,
+            fidl_fuchsia_hardware_network::DeviceClass::WlanAp => DeviceClass::WlanAp,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Deserialize)]
+#[serde(transparent)]
+struct AllowedDeviceClasses(HashSet<DeviceClass>);
+
+impl Default for AllowedDeviceClasses {
+    fn default() -> Self {
+        // When new variants are added, this exhaustive match will cause a compilation failure as a
+        // reminder to add the new variant to the default array.
+        match DeviceClass::Virtual {
+            DeviceClass::Virtual
+            | DeviceClass::Ethernet
+            | DeviceClass::Wlan
+            | DeviceClass::Ppp
+            | DeviceClass::Bridge
+            | DeviceClass::WlanAp => {}
+        }
+        Self(HashSet::from([
+            DeviceClass::Virtual,
+            DeviceClass::Ethernet,
+            DeviceClass::Wlan,
+            DeviceClass::Ppp,
+            DeviceClass::Bridge,
+            DeviceClass::WlanAp,
+        ]))
+    }
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Config {
@@ -235,6 +288,8 @@ struct Config {
     pub filter_enabled_interface_types: HashSet<InterfaceType>,
     #[serde(default)]
     pub interface_metrics: InterfaceMetrics,
+    #[serde(default)]
+    pub allowed_upstream_device_classes: AllowedDeviceClasses,
 }
 
 impl Config {
@@ -540,10 +595,10 @@ impl<'a> NetCfg<'a> {
             optional_svc_connect::<fnet_dhcpv6::ClientProviderMarker>(&svc_dir)
                 .await
                 .context("could not connect to DHCPv6 client provider")?;
-        let installer = svc_connect::<fidl_fuchsia_net_interfaces_admin::InstallerMarker>(&svc_dir)
+        let installer = svc_connect::<fnet_interfaces_admin::InstallerMarker>(&svc_dir)
             .await
             .context("could not connect to installer")?;
-        let debug = svc_connect::<fidl_fuchsia_net_debug::InterfacesMarker>(&svc_dir)
+        let debug = svc_connect::<fnet_debug::InterfacesMarker>(&svc_dir)
             .await
             .context("could not connect to debug")?;
         let persisted_interface_config =
@@ -563,8 +618,8 @@ impl<'a> NetCfg<'a> {
             allow_virtual_devices,
             persisted_interface_config,
             filter_enabled_interface_types,
-            interface_properties: HashMap::new(),
-            interface_states: HashMap::new(),
+            interface_properties: Default::default(),
+            interface_states: Default::default(),
             interface_metrics,
             dns_servers: Default::default(),
         })
@@ -683,7 +738,10 @@ impl<'a> NetCfg<'a> {
     ///
     /// The device directory will be monitored for device events and the netstack will be
     /// configured with a new interface on new device discovery.
-    async fn run(&mut self) -> Result<(), anyhow::Error> {
+    async fn run(
+        &mut self,
+        mut virtualization_handler: impl virtualization::Handler,
+    ) -> Result<(), anyhow::Error> {
         let ethdev_stream = self
             .create_device_stream::<devices::EthernetDevice>()
             .await
@@ -734,6 +792,17 @@ impl<'a> NetCfg<'a> {
             "dns watchers should be empty"
         );
 
+        // Serve fuchsia.net.virtualization/Control.
+        let mut fs = ServiceFs::new_local();
+        let _: &mut ServiceFsDir<'_, _> =
+            fs.dir("svc").add_fidl_service(virtualization::Event::ControlRequestStream);
+        let _: &mut ServiceFs<_> =
+            fs.take_and_serve_directory_handle().context("take and serve directory handle")?;
+
+        // Maintain a queue of virtualization events to be dispatched to the virtualization handler.
+        let mut virtualization_events = futures::stream::SelectAll::new();
+        virtualization_events.push(fs.boxed_local());
+
         // Lifecycle handle takes no args, must be set to zero.
         // See zircon/processargs.h.
         const LIFECYCLE_HANDLE_ARG: u16 = 0;
@@ -780,7 +849,7 @@ impl<'a> NetCfg<'a> {
 
                     self
                         .handle_interface_watcher_event(
-                            event, dns_watchers.get_mut()
+                            event, dns_watchers.get_mut(), &mut virtualization_handler,
                         )
                         .await
                         .context("handle interface watcher event")
@@ -821,6 +890,19 @@ impl<'a> NetCfg<'a> {
                         }
                         errors::Error::Fatal(e) => Err(e),
                     })?
+                }
+                event = virtualization_events.select_next_some() => {
+                    virtualization_handler
+                        .handle_event(event, &mut virtualization_events)
+                        .await
+                        .context("handle virtualization event")
+                        .or_else(|e| match e {
+                            errors::Error::NonFatal(e) => {
+                                error!("non-fatal error handling virtualization: {:?}", e);
+                                Ok(())
+                            }
+                            errors::Error::Fatal(e) => Err(e),
+                        })?
                 }
                 req = lifecycle.try_next() => {
                     let req = req
@@ -866,15 +948,42 @@ impl<'a> NetCfg<'a> {
         &mut self,
         event: fnet_interfaces::Event,
         watchers: &mut DnsServerWatchers<'_>,
+        virtualization_handler: &mut impl virtualization::Handler,
     ) -> Result<(), errors::Error> {
-        match self
+        let update_result = self
             .interface_properties
             .update(event)
             .context("failed to update interface properties with watcher event")
             .map_err(errors::Error::Fatal)?
-        {
-            fnet_interfaces_ext::UpdateResult::Added(properties) => {
-                match self.interface_states.get_mut(&properties.id) {
+            // Modify the result so that it refers to interfaces by ID rather than by holding a
+            // reference into the interface state.
+            //
+            // This forces the caller to lookup the interface properties, but allows us to share the
+            // result with methods that require a &mut self.
+            //
+            // TODO(https://fxbug.dev/88615): consider avoiding `UpdateResult::map` by refactoring
+            // `NetCfg::handle_interface_update_result` not to need a `&mut self`.
+            .map(|properties| properties.id);
+        self.handle_interface_update_result(&update_result, watchers)
+            .await
+            .context("handle interface update")?;
+        virtualization_handler
+            .handle_interface_update_result(&self.interface_properties, &update_result)
+            .await
+            .context("handle interface update for virtualization")?;
+        Ok(())
+    }
+
+    async fn handle_interface_update_result(
+        &mut self,
+        update_result: &fnet_interfaces_ext::UpdateResult<u64>,
+        watchers: &mut DnsServerWatchers<'_>,
+    ) -> Result<(), errors::Error> {
+        match update_result {
+            fnet_interfaces_ext::UpdateResult::Added(id) => {
+                let properties =
+                    self.interface_properties.get(&id).expect("lookup interface by ID");
+                match self.interface_states.get_mut(&id) {
                     Some(state) => state
                         .on_discovery(properties, self.dhcpv6_client_provider.as_ref(), watchers)
                         .await
@@ -883,8 +992,10 @@ impl<'a> NetCfg<'a> {
                     None => Ok(()),
                 }
             }
-            fnet_interfaces_ext::UpdateResult::Existing(properties) => {
-                match self.interface_states.get_mut(&properties.id) {
+            fnet_interfaces_ext::UpdateResult::Existing(id) => {
+                let properties =
+                    self.interface_properties.get(&id).expect("lookup interface by ID");
+                match self.interface_states.get_mut(&id) {
                     Some(state) => state
                         .on_discovery(properties, self.dhcpv6_client_provider.as_ref(), watchers)
                         .await
@@ -895,8 +1006,10 @@ impl<'a> NetCfg<'a> {
             }
             fnet_interfaces_ext::UpdateResult::Changed {
                 previous: fnet_interfaces::Properties { online: previous_online, .. },
-                current: current_properties,
+                current: id,
             } => {
+                let current_properties =
+                    self.interface_properties.get(&id).expect("lookup interface by ID");
                 let &fnet_interfaces_ext::Properties {
                     id, ref name, online, ref addresses, ..
                 } = current_properties;
@@ -1064,7 +1177,7 @@ impl<'a> NetCfg<'a> {
                                 dhcpv6::stop_client(
                                     &self.lookup_admin,
                                     &mut self.dns_servers,
-                                    id,
+                                    *id,
                                     watchers,
                                 )
                                 .await
@@ -1553,23 +1666,6 @@ impl<'a> NetCfg<'a> {
     }
 }
 
-pub async fn handle_virtualization_control(
-    mut stream: fnet_virtualization::ControlRequestStream,
-) -> Result<(), anyhow::Error> {
-    while let Some(request) = stream.try_next().await? {
-        match request {
-            fnet_virtualization::ControlRequest::CreateNetwork {
-                config: _,
-                network: _,
-                control_handle: _,
-            } => {
-                todo!("https://fxbug.dev/85078: implement fuchsia.net.virtualization/Control")
-            }
-        }
-    }
-    Ok(())
-}
-
 pub async fn run<M: Mode>() -> Result<(), anyhow::Error> {
     let opt: Opt = argh::from_env();
     let Opt { allow_virtual_devices, min_severity, config_data } = &opt;
@@ -1584,6 +1680,7 @@ pub async fn run<M: Mode>() -> Result<(), anyhow::Error> {
         filter_config,
         filter_enabled_interface_types,
         interface_metrics,
+        allowed_upstream_device_classes: AllowedDeviceClasses(allowed_upstream_device_classes),
     } = Config::load(config_data)?;
 
     let mut netcfg =
@@ -1608,7 +1705,7 @@ pub async fn run<M: Mode>() -> Result<(), anyhow::Error> {
             errors::Error::Fatal(e) => Err(e),
         })?;
 
-    M::run(netcfg)
+    M::run(netcfg, allowed_upstream_device_classes)
         .map_err(|e| {
             let err_str = format!("fatal error running main: {:?}", e);
             error!("{}", err_str);
@@ -1624,7 +1721,10 @@ pub async fn run<M: Mode>() -> Result<(), anyhow::Error> {
 /// assembled together for specific netcfg builds.
 #[async_trait(?Send)]
 pub trait Mode {
-    async fn run(netcfg: NetCfg<'_>) -> Result<(), anyhow::Error>;
+    async fn run(
+        netcfg: NetCfg<'_>,
+        allowed_upstream_device_classes: HashSet<DeviceClass>,
+    ) -> Result<(), anyhow::Error>;
 }
 
 /// In this configuration, netcfg acts as the policy manager for netstack,
@@ -1634,8 +1734,11 @@ pub enum BasicMode {}
 
 #[async_trait(?Send)]
 impl Mode for BasicMode {
-    async fn run(mut netcfg: NetCfg<'_>) -> Result<(), anyhow::Error> {
-        netcfg.run().await.context("event loop")
+    async fn run(
+        mut netcfg: NetCfg<'_>,
+        _allowed_upstream_device_classes: HashSet<DeviceClass>,
+    ) -> Result<(), anyhow::Error> {
+        netcfg.run(virtualization::Stub).await.context("event loop")
     }
 }
 
@@ -1646,26 +1749,20 @@ pub enum VirtualizationEnabled {}
 
 #[async_trait(?Send)]
 impl Mode for VirtualizationEnabled {
-    async fn run(mut netcfg: NetCfg<'_>) -> Result<(), anyhow::Error> {
-        let mut fs = ServiceFs::new_local();
-        let _: &mut ServiceFsDir<'_, _> =
-            fs.dir("svc").add_fidl_service(|s: fnet_virtualization::ControlRequestStream| s);
-        let _: &mut ServiceFs<_> =
-            fs.take_and_serve_directory_handle().context("take and serve directory handle")?;
-        let mut virtualization_fut = fs
-            .for_each_concurrent(None, |stream| async {
-                handle_virtualization_control(stream)
-                    .await
-                    .unwrap_or_else(|e| error!("error handling request stream: {:?}", e))
-            })
-            .fuse();
-
-        let event_loop = netcfg.run().map(|r| r.context("event loop")).fuse();
-        futures::pin_mut!(event_loop);
-        futures::select! {
-            result = event_loop => result,
-            () = virtualization_fut => Err(anyhow!("virtualization protocol handle closed")),
-        }
+    async fn run(
+        mut netcfg: NetCfg<'_>,
+        allowed_upstream_device_classes: HashSet<DeviceClass>,
+    ) -> Result<(), anyhow::Error> {
+        let handler = virtualization::Virtualization::new(
+            allowed_upstream_device_classes,
+            virtualization::BridgeHandlerImpl::new(
+                netcfg.stack.clone(),
+                netcfg.netstack.clone(),
+                netcfg.debug.clone(),
+            ),
+            netcfg.installer.clone(),
+        );
+        netcfg.run(handler).await.context("event loop")
     }
 }
 
@@ -1820,7 +1917,7 @@ mod tests {
             has_default_ipv6_route: None,
             ..fnet_interfaces::Properties::EMPTY
         });
-        netcfg.handle_interface_watcher_event(event, dns_watchers).await
+        netcfg.handle_interface_watcher_event(event, dns_watchers, &mut virtualization::Stub).await
     }
 
     /// Make sure that a new DHCPv6 client was requested, and verify its parameters.
@@ -1894,6 +1991,7 @@ mod tests {
                     ..fnet_interfaces::Properties::EMPTY
                 }),
                 &mut dns_watchers,
+                &mut virtualization::Stub,
             )
             .await
             .context("error handling interface added event with interface up and sockaddr1")
@@ -2060,6 +2158,7 @@ mod tests {
                     ..fnet_interfaces::Properties::EMPTY
                 }),
                 &mut dns_watchers,
+                &mut virtualization::Stub,
             )
             .await
             .context("error handling interface added event with interface up and sockaddr1")
@@ -2232,6 +2331,7 @@ mod tests {
                 .handle_interface_watcher_event(
                     fnet_interfaces::Event::Removed(INTERFACE_ID),
                     &mut dns_watchers,
+                    &mut virtualization::Stub,
                 )
                 .map(|r| r.context("error handling interface removed event"))
                 .map_err(Into::into),
@@ -2263,7 +2363,8 @@ mod tests {
   "interface_metrics": {
     "wlan_metric": 100,
     "eth_metric": 10
-  }
+  },
+  "allowed_upstream_device_classes": ["ethernet", "wlan"]
 }
 "#;
 
@@ -2272,6 +2373,7 @@ mod tests {
             filter_config,
             filter_enabled_interface_types,
             interface_metrics,
+            allowed_upstream_device_classes,
         } = Config::load_str(config_str).unwrap();
 
         assert_eq!(vec!["8.8.8.8".parse::<std::net::IpAddr>().unwrap()], servers);
@@ -2280,18 +2382,20 @@ mod tests {
         assert_eq!(Vec::<String>::new(), nat_rules);
         assert_eq!(Vec::<String>::new(), rdr_rules);
 
-        assert_eq!(
-            IntoIterator::into_iter([InterfaceType::Wlan]).collect::<HashSet<_>>(),
-            filter_enabled_interface_types
-        );
+        assert_eq!(HashSet::from([InterfaceType::Wlan]), filter_enabled_interface_types);
 
         let expected_metrics =
             InterfaceMetrics { wlan_metric: Metric(100), eth_metric: Metric(10) };
         assert_eq!(interface_metrics, expected_metrics);
+
+        assert_eq!(
+            AllowedDeviceClasses(HashSet::from([DeviceClass::Ethernet, DeviceClass::Wlan])),
+            allowed_upstream_device_classes
+        );
     }
 
     #[test]
-    fn test_config_metric_defaults() {
+    fn test_config_defaults() {
         let config_str = r#"
 {
   "dns_config": { "servers": [] },
@@ -2308,9 +2412,11 @@ mod tests {
             dns_config: _,
             filter_config: _,
             filter_enabled_interface_types: _,
+            allowed_upstream_device_classes,
             interface_metrics,
         } = Config::load_str(config_str).unwrap();
 
+        assert_eq!(allowed_upstream_device_classes, Default::default());
         assert_eq!(interface_metrics, Default::default());
     }
 
@@ -2345,6 +2451,7 @@ mod tests {
             dns_config: _,
             filter_config: _,
             filter_enabled_interface_types: _,
+            allowed_upstream_device_classes: _,
             interface_metrics,
         } = Config::load_str(&config_str).unwrap();
 

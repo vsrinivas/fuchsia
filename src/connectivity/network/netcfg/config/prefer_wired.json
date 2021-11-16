@@ -23,5 +23,9 @@
     "interface_metrics": {
         "wlan_metric": 100,
         "eth_metric": 90
-    }
+    },
+    "allowed_upstream_device_classes": [
+        "ethernet",
+        "wlan"
+    ]
 }
