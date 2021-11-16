@@ -6003,6 +6003,9 @@ rust_library("num-bigint-v0_4_3") {
     "--cfg=u64_digit",
     "--cfg=has_try_from",
   ]
+  if (current_cpu == "x64") {
+    rustflags += [ "--cfg=use_addcarry" ]
+  }
 }
 
 rust_library("num-complex-v0_4_0") {

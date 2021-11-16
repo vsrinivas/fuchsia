@@ -417,9 +417,11 @@ env_vars = ["OUT_DIR=../../../compat/mime_guess"]
 rustflags = [
   "--cfg=u64_digit",
   "--cfg=has_try_from",
-  "--cfg=use_addcarry",
 ]
 env_vars = ["OUT_DIR=../../../../compat/num-bigint"]
+
+[gn.package.num-bigint."0.4.3".platform."cfg(target_arch = \"x86_64\")"]
+rustflags = ["--cfg=use_addcarry"]
 
 [gn.package.num-complex."0.4.0"]
 rustflags = ["--cfg=has_i128", "--cfg=has_const_fn"]
