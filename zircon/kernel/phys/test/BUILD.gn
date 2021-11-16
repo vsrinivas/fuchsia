@@ -155,6 +155,7 @@ if (current_toolchain != default_toolchain) {
     deps = [
       ":test-main",
       "//zircon/kernel/lib/arch/test:kernel-tests",
+      "//zircon/kernel/lib/crypto:crypto-entropy-test",
       "//zircon/kernel/lib/libc",
       "//zircon/kernel/lib/unittest",
       "//zircon/kernel/tests",

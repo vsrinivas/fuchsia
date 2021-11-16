@@ -21,4 +21,7 @@ bool zbitl_tests();
 // These are in kernel/lib/arch/test.
 bool ArchRandomTests();
 
+// These are in kernel/lib/crypto.
+bool crypto_entropy_pool_tests();
+
 #endif  // ZIRCON_KERNEL_PHYS_TEST_PHYS_UNITTESTS_H_

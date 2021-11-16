@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/crypto/entropy_pool.h>
+#include <zircon/assert.h>
 
 #include <explicit-memory/bytes.h>
 #include <openssl/sha.h>
@@ -26,7 +27,7 @@ EntropyPool::~EntropyPool() {
 }
 
 void EntropyPool::Add(ktl::span<const uint8_t> entropy) {
-  ASSERT(entropy.size() <= kMaxEntropySize);
+  ZX_ASSERT(entropy.size() <= kMaxEntropySize);
 
   SHA256_CTX ctx;
   SHA256_Init(&ctx);

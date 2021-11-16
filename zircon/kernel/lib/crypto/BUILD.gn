@@ -13,6 +13,7 @@ source_set("crypto-entropy-src") {
   public_deps = [ "//zircon/kernel/lib/ktl" ]
   deps = [
     "boringssl",
+    "//zircon/kernel/lib/libc",
     "//zircon/system/ulib/explicit-memory",
   ]
 }
@@ -22,13 +23,9 @@ source_set("crypto-entropy-test") {
   include_dirs = [ "include" ]
   deps = [
     ":crypto-entropy-src",
+    "//zircon/kernel/lib/libc",
     "//zircon/kernel/lib/unittest",
   ]
-}
-
-zx_library("crypto-entropy") {
-  public_deps = [ ":crypto-entropy-src" ]
-  deps = [ ":crypto-entropy-test" ]
 }
 
 zx_library("crypto") {
@@ -39,7 +36,8 @@ zx_library("crypto") {
     "prng_unittest.cc",
   ]
   deps = [
-    ":crypto-entropy",
+    ":crypto-entropy-src",
+    ":crypto-entropy-test",
     "boringssl",
     "entropy",
     "//zircon/kernel/lib/boot-options",

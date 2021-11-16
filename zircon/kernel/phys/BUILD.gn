@@ -145,6 +145,7 @@ if (toolchain_environment == "kernel.phys" ||
       ":zbi-memory",
       "//zircon/kernel/lib/arch",
       "//zircon/kernel/lib/boot-options",
+      "//zircon/kernel/lib/crypto:crypto-entropy-src",
       "//zircon/system/ulib/uart",
       "//zircon/system/ulib/zbitl",
     ]

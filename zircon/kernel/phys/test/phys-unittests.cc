@@ -25,7 +25,8 @@ const char Symbolize::kProgramName_[] = "phys-unittests";
   SUITE(string_view_tests) \
   SUITE(unittest_tests)    \
   SUITE(zbitl_tests)       \
-  SUITE(ArchRandomTests)
+  SUITE(ArchRandomTests)   \
+  SUITE(crypto_entropy_pool_tests)
 
 #define COUNT(suite) +1
 constexpr int kNumSuites = TEST_SUITES(COUNT);
