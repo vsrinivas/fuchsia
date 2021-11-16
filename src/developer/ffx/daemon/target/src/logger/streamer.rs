@@ -984,7 +984,6 @@ mod test {
             component_url: Some(String::default()),
             moniker: String::default(),
             severity: diagnostics_data::Severity::Info,
-            size_bytes: 1,
         })
         .set_message(&msg)
         .build()

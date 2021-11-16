@@ -11,7 +11,6 @@ use crate::{
 };
 use async_trait::async_trait;
 use diagnostics_data::{BuilderArgs, LogsData, LogsDataBuilder, Severity};
-use diagnostics_message::METADATA_SIZE;
 use fidl::endpoints::ProtocolMarker;
 use fidl_fuchsia_boot::ReadOnlyLogMarker;
 use fuchsia_async as fasync;
@@ -159,14 +158,12 @@ pub fn convert_debuglog_to_log_message(record: &zx::sys::zx_log_record_t) -> Opt
         Severity::Info
     };
 
-    let size = METADATA_SIZE + 5 /*'klog' tag*/ + contents.len() + 1;
     Some(
         LogsDataBuilder::new(BuilderArgs {
             timestamp_nanos: record.timestamp.into(),
             component_url: Some(KERNEL_IDENTITY.url.to_string()),
             moniker: KERNEL_IDENTITY.to_string(),
             severity,
-            size_bytes: size,
         })
         .set_pid(record.pid)
         .set_tid(record.tid)
@@ -196,7 +193,6 @@ mod tests {
                 component_url: Some(KERNEL_IDENTITY.url.clone()),
                 moniker: KERNEL_IDENTITY.to_string(),
                 severity: Severity::Info,
-                size_bytes: METADATA_SIZE + 6 + "test log".len(),
             })
             .set_pid(klog.record.pid)
             .set_tid(klog.record.tid)
@@ -229,7 +225,6 @@ mod tests {
                 component_url: Some(KERNEL_IDENTITY.url.clone()),
                 moniker: KERNEL_IDENTITY.to_string(),
                 severity: Severity::Info,
-                size_bytes: METADATA_SIZE + 6 + zx::sys::ZX_LOG_RECORD_DATA_MAX,
             })
             .set_pid(klog.record.pid)
             .set_tid(klog.record.tid)
@@ -250,7 +245,6 @@ mod tests {
                 component_url: Some(KERNEL_IDENTITY.url.clone()),
                 moniker: KERNEL_IDENTITY.to_string(),
                 severity: Severity::Info,
-                size_bytes: METADATA_SIZE + 6,
             })
             .set_pid(klog.record.pid)
             .set_tid(klog.record.tid)
@@ -289,7 +283,6 @@ mod tests {
                 component_url: Some(KERNEL_IDENTITY.url.clone()),
                 moniker: KERNEL_IDENTITY.to_string(),
                 severity: Severity::Info,
-                size_bytes: METADATA_SIZE + 6 + "test log".len(),
             })
             .set_pid(klog.record.pid)
             .set_tid(klog.record.tid)

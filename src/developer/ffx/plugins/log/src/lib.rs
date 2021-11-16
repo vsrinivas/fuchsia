@@ -610,7 +610,6 @@ mod test {
             component_url: Some("component_url".to_string()),
             moniker: "some/moniker".to_string(),
             severity: diagnostics_data::Severity::Warn,
-            size_bytes: 1,
         })
         .set_pid(1)
         .set_tid(2)
@@ -756,7 +755,6 @@ mod test {
                 component_url: Some(String::default()),
                 moniker: String::default(),
                 severity: diagnostics_data::Severity::Info,
-                size_bytes: 1,
             })
             .set_message("log1")
             .build()
@@ -768,7 +766,6 @@ mod test {
                 component_url: Some(String::default()),
                 moniker: String::default(),
                 severity: diagnostics_data::Severity::Info,
-                size_bytes: 1,
             })
             .set_message("log2")
             .build()
@@ -782,7 +779,6 @@ mod test {
                 component_url: Some(String::default()),
                 moniker: String::default(),
                 severity: diagnostics_data::Severity::Info,
-                size_bytes: 1,
             })
             .set_message("log3")
             .build()
@@ -829,7 +825,6 @@ mod test {
                 component_url: Some(String::default()),
                 moniker: "included/moniker".to_string(),
                 severity: diagnostics_data::Severity::Error,
-                size_bytes: 1,
             })
             .set_message("included message")
             .build()
@@ -841,7 +836,6 @@ mod test {
                 component_url: Some(String::default()),
                 moniker: "included/moniker".to_string(),
                 severity: diagnostics_data::Severity::Fatal,
-                size_bytes: 1,
             })
             .set_message("included message")
             .build()
@@ -853,7 +847,6 @@ mod test {
                 component_url: Some(String::default()),
                 moniker: "not/this/moniker".to_string(),
                 severity: diagnostics_data::Severity::Error,
-                size_bytes: 1,
             })
             .set_message("different message")
             .build()
@@ -865,7 +858,6 @@ mod test {
                 component_url: Some(String::default()),
                 moniker: "included/moniker".to_string(),
                 severity: diagnostics_data::Severity::Warn,
-                size_bytes: 1,
             })
             .set_message("included message")
             .build()
@@ -877,7 +869,6 @@ mod test {
                 component_url: Some(String::default()),
                 moniker: "other/moniker".to_string(),
                 severity: diagnostics_data::Severity::Error,
-                size_bytes: 1,
             })
             .set_message("not this message")
             .build()
@@ -901,7 +892,6 @@ mod test {
                 component_url: Some(String::default()),
                 moniker: "included/moniker".to_string(),
                 severity: diagnostics_data::Severity::Error,
-                size_bytes: 1,
             })
             .set_message("not this")
             .build(),
@@ -914,7 +904,6 @@ mod test {
                 component_url: Some(String::default()),
                 moniker: "included/moniker".to_string(),
                 severity: diagnostics_data::Severity::Error,
-                size_bytes: 1,
             })
             .set_message("some message")
             .build(),
@@ -927,7 +916,6 @@ mod test {
                 component_url: Some(String::default()),
                 moniker: "included/moniker".to_string(),
                 severity: diagnostics_data::Severity::Warn,
-                size_bytes: 1,
             })
             .set_message("not this")
             .build(),
@@ -939,7 +927,6 @@ mod test {
                 component_url: Some(String::default()),
                 moniker: "included/moniker".to_string(),
                 severity: diagnostics_data::Severity::Error,
-                size_bytes: 1,
             })
             .set_message("included")
             .build(),
@@ -958,7 +945,6 @@ mod test {
                 component_url: Some(String::default()),
                 moniker: "included/moniker".to_string(),
                 severity: diagnostics_data::Severity::Error,
-                size_bytes: 1,
             })
             .set_message("included message")
             .build()
@@ -970,7 +956,6 @@ mod test {
                 component_url: Some(String::default()),
                 moniker: "included/moniker".to_string(),
                 severity: diagnostics_data::Severity::Info,
-                size_bytes: 1,
             })
             .set_message("different message")
             .build()
@@ -982,7 +967,6 @@ mod test {
                 component_url: Some(String::default()),
                 moniker: "other/moniker".to_string(),
                 severity: diagnostics_data::Severity::Debug,
-                size_bytes: 1,
             })
             .set_message("included message")
             .build()
@@ -1001,7 +985,6 @@ mod test {
                 component_url: Some(String::default()),
                 moniker: "klog".to_string(),
                 severity: diagnostics_data::Severity::Error,
-                size_bytes: 1,
             })
             .set_message("included message")
             .build()
@@ -1013,7 +996,6 @@ mod test {
                 component_url: Some(String::default()),
                 moniker: "other/moniker".to_string(),
                 severity: diagnostics_data::Severity::Error,
-                size_bytes: 1,
             })
             .set_message("included message")
             .build()
@@ -1035,7 +1017,6 @@ mod test {
                 component_url: Some(String::default()),
                 moniker: "moniker".to_string(),
                 severity: diagnostics_data::Severity::Error,
-                size_bytes: 1,
             })
             .set_message("included message")
             .build()
@@ -1047,7 +1028,6 @@ mod test {
                 component_url: Some(String::default()),
                 moniker: "moniker".to_string(),
                 severity: diagnostics_data::Severity::Info,
-                size_bytes: 1,
             })
             .set_message("also message")
             .build()
@@ -1059,7 +1039,6 @@ mod test {
                 component_url: Some(String::default()),
                 moniker: "included/moniker".to_string(),
                 severity: diagnostics_data::Severity::Info,
-                size_bytes: 1,
             })
             .set_message("not in there message")
             .build()
@@ -1071,7 +1050,6 @@ mod test {
                 component_url: Some(String::default()),
                 moniker: "moniker".to_string(),
                 severity: diagnostics_data::Severity::Error,
-                size_bytes: 1,
             })
             .set_message("different message")
             .build()
@@ -1093,7 +1071,6 @@ mod test {
                 component_url: Some(String::default()),
                 moniker: "included/moniker.cmx:12345".to_string(),
                 severity: diagnostics_data::Severity::Error,
-                size_bytes: 1,
             })
             .set_message("included message")
             .build()
@@ -1105,7 +1082,6 @@ mod test {
                 component_url: Some(String::default()),
                 moniker: "also/moniker".to_string(),
                 severity: diagnostics_data::Severity::Error,
-                size_bytes: 1,
             })
             .set_message("different message")
             .build()
@@ -1117,7 +1093,6 @@ mod test {
                 component_url: Some(String::default()),
                 moniker: "other/moniker".to_string(),
                 severity: diagnostics_data::Severity::Error,
-                size_bytes: 1,
             })
             .set_message("included message")
             .build()
@@ -1140,7 +1115,6 @@ mod test {
                 component_url: Some(String::default()),
                 moniker: String::default(),
                 severity: diagnostics_data::Severity::Error,
-                size_bytes: 1,
             })
             .set_message("included")
             .add_tag("tag1")
@@ -1155,7 +1129,6 @@ mod test {
                 component_url: Some(String::default()),
                 moniker: String::default(),
                 severity: diagnostics_data::Severity::Error,
-                size_bytes: 1,
             })
             .set_message("included")
             .add_tag("tag2")
@@ -1168,7 +1141,6 @@ mod test {
                 component_url: Some(String::default()),
                 moniker: String::default(),
                 severity: diagnostics_data::Severity::Error,
-                size_bytes: 1,
             })
             .set_message("included")
             .add_tag("tag1")
@@ -1193,7 +1165,6 @@ mod test {
                 component_url: Some("fuchsia.com/this-component.cmx".to_string()),
                 moniker: "any/moniker".to_string(),
                 severity: diagnostics_data::Severity::Error,
-                size_bytes: 1,
             })
             .set_message("message")
             .build()
@@ -1205,7 +1176,6 @@ mod test {
                 component_url: Some("fuchsia.com/not-this-component.cmx".to_string()),
                 moniker: "any/moniker".to_string(),
                 severity: diagnostics_data::Severity::Error,
-                size_bytes: 1,
             })
             .set_message("message")
             .build()
@@ -1217,7 +1187,6 @@ mod test {
                 component_url: Some("some-other.com/component.cmx".to_string()),
                 moniker: "any/moniker".to_string(),
                 severity: diagnostics_data::Severity::Error,
-                size_bytes: 1,
             })
             .set_message("message")
             .build()

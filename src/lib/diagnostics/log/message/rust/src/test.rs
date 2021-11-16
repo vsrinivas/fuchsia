@@ -137,7 +137,6 @@ fn tags_with_message() {
         component_url: Some(TEST_IDENTITY.url.clone()),
         moniker: TEST_IDENTITY.moniker.clone(),
         severity: Severity::Debug,
-        size_bytes: METADATA_SIZE + b_end,
     })
     .set_dropped(packet.metadata.dropped_logs.into())
     .set_pid(packet.metadata.pid)
@@ -180,7 +179,6 @@ fn placeholder_tag_replaced_with_attributed_name() {
         component_url: Some(TEST_IDENTITY.url.clone()),
         moniker: TEST_IDENTITY.moniker.clone(),
         severity: Severity::Debug,
-        size_bytes: METADATA_SIZE + b_end,
     })
     .set_pid(packet.metadata.pid)
     .set_dropped(packet.metadata.dropped_logs.into())
@@ -248,7 +246,6 @@ fn two_tags_with_message() {
         component_url: Some(TEST_IDENTITY.url.clone()),
         moniker: TEST_IDENTITY.moniker.clone(),
         severity: Severity::Debug,
-        size_bytes: METADATA_SIZE + data_size,
     })
     .set_dropped(packet.metadata.dropped_logs.into())
     .set_pid(packet.metadata.pid)
@@ -303,7 +300,6 @@ fn max_tags_with_message() {
         component_url: Some(TEST_IDENTITY.url.clone()),
         moniker: TEST_IDENTITY.moniker.clone(),
         severity: Severity::Debug,
-        size_bytes: METADATA_SIZE + msg_end,
     })
     .set_dropped(packet.metadata.dropped_logs.into())
     .set_pid(packet.metadata.pid)
@@ -351,7 +347,6 @@ fn max_tags() {
         component_url: Some(TEST_IDENTITY.url.clone()),
         moniker: TEST_IDENTITY.moniker.clone(),
         severity: Severity::Debug,
-        size_bytes: 48,
     })
     .set_dropped(packet.metadata.dropped_logs as u64)
     .set_pid(packet.metadata.pid)
@@ -384,7 +379,6 @@ fn no_tags_with_message() {
             component_url: Some(TEST_IDENTITY.url.clone()),
             moniker: TEST_IDENTITY.moniker.clone(),
             severity: Severity::Debug,
-            size_bytes: METADATA_SIZE + 3,
         })
         .set_dropped(packet.metadata.dropped_logs as u64)
         .set_pid(packet.metadata.pid)
@@ -411,7 +405,6 @@ fn message_severity() {
         component_url: Some(TEST_IDENTITY.url.clone()),
         moniker: TEST_IDENTITY.moniker.clone(),
         severity: Severity::Info,
-        size_bytes: METADATA_SIZE + 1,
     })
     .set_pid(packet.metadata.pid)
     .set_message("".to_string())
@@ -467,7 +460,6 @@ fn legacy_message_severity() {
         component_url: Some(TEST_IDENTITY.url.clone()),
         moniker: TEST_IDENTITY.moniker.clone(),
         severity: Severity::Debug,
-        size_bytes: METADATA_SIZE + 1,
     })
     .set_dropped(packet.metadata.dropped_logs as u64)
     .set_pid(1)
@@ -559,7 +551,6 @@ fn test_from_structured() {
             component_url: Some(TEST_IDENTITY.url.clone()),
             moniker: TEST_IDENTITY.moniker.clone(),
             severity: Severity::Error,
-            size_bytes: 224,
         })
         .set_dropped(2)
         .set_file("some_file.cc".to_string())
@@ -608,7 +599,6 @@ fn test_from_structured() {
             component_url: Some(TEST_IDENTITY.url.clone()),
             moniker: TEST_IDENTITY.moniker.clone(),
             severity: Severity::Error,
-            size_bytes: encoded.len(),
         })
         .add_tag("tag1")
         .add_tag("tag2")
@@ -630,7 +620,6 @@ fn test_from_structured() {
             component_url: Some(TEST_IDENTITY.url.clone()),
             moniker: TEST_IDENTITY.moniker.clone(),
             severity: Severity::Error,
-            size_bytes: encoded.len(),
         })
         .build()
     );

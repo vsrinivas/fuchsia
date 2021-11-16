@@ -114,7 +114,6 @@ impl LogsArtifactsContainer {
                                 timestamp_nanos: (*last_timestamp).into(),
                                 component_url: Some(identity.url.clone()),
                                 severity: diagnostics_data::Severity::Warn,
-                                size_bytes: 0,
                             })
                             .add_error(diagnostics_data::LogError::FailedToParseRecord(format!(
                                 "{:?}",
@@ -132,7 +131,6 @@ impl LogsArtifactsContainer {
                         timestamp_nanos: (*last_timestamp).into(),
                         component_url: Some(identity.url.clone()),
                         severity: diagnostics_data::Severity::Warn,
-                        size_bytes: 0,
                     })
                     .add_error(diagnostics_data::LogError::DroppedLogs { count: n })
                     .set_message(message)

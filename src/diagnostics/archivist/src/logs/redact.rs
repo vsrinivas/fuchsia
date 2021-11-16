@@ -347,7 +347,6 @@ mod test {
             component_url: Some(TEST_IDENTITY.url.clone()),
             moniker: TEST_IDENTITY.to_string(),
             severity: Severity::Info,
-            size_bytes: 0,
         })
         .set_message(contents.to_string())
         .build()

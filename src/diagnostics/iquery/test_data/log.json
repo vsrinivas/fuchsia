@@ -7,7 +7,6 @@
             "line": 0,
             "pid": "PID",
             "severity": "INFO",
-            "size_bytes": 192,
             "tags": [
                 "realm_builder_server",
                 "realm_builder_server"
@@ -32,7 +31,6 @@
             "dropped": 0,
             "pid": "PID",
             "severity": "INFO",
-            "size_bytes": 144,
             "tags": [
                 "iquery_basic_component"
             ],

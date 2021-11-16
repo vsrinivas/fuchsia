@@ -65,7 +65,6 @@ fn v1_to_v2(data: LogsDataV1) -> LogsData {
         timestamp_nanos: data.metadata.timestamp.clone(),
         component_url: data.metadata.component_url.clone(),
         severity: data.metadata.severity.clone(),
-        size_bytes: data.metadata.size_bytes.clone(),
     })
     .set_message(data.msg().unwrap_or("").to_string())
     .set_tid(data.tid().unwrap_or(0))
@@ -224,7 +223,6 @@ mod test {
               "component_url": "fuchsia-pkg://fuchsia.com/network#meta/netstack.cm",
               "timestamp": 263002243373398,
               "severity": "WARN",
-              "size_bytes": 137,
               "tags": [
                 "netstack",
                 "DHCP"
@@ -260,7 +258,6 @@ mod test {
               "component_url": "fuchsia-pkg://fuchsia.com/network#meta/netstack.cm",
               "timestamp": 263002243373398,
               "severity": "WARN",
-              "size_bytes": 137,
               "tags": [
                 "netstack",
                 "DHCP"
@@ -307,7 +304,6 @@ mod test {
             timestamp_nanos: Timestamp::from(403649538626725i64),
             component_url: Some(String::from("fuchsia-pkg://fuchsia.com/network#meta/netstack.cm")),
             severity: Severity::Info,
-            size_bytes: 158,
         })
         .set_message(String::from("netstack message"))
         .set_tid(0)
@@ -329,7 +325,6 @@ mod test {
             timestamp_nanos: Timestamp::from(263002243373398i64),
             component_url: Some(String::from("fuchsia-pkg://fuchsia.com/network#meta/netstack.cm")),
             severity: Severity::Warn,
-            size_bytes: 137,
         })
         .set_message(String::from("netstack message"))
         .set_tid(0)

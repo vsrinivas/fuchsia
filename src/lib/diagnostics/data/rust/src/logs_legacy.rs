@@ -219,7 +219,6 @@ mod test {
                 timestamp_nanos: 0i64.into(),
                 component_url: Some(TEST_URL.to_string()),
                 moniker: TEST_MONIKER.to_string(),
-                size_bytes: 1,
                 severity,
             })
             .build();

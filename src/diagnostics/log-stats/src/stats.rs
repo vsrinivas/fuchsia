@@ -315,7 +315,6 @@ pub enum LogSource {
 #[cfg(test)]
 mod tests {
     use diagnostics_data::{BuilderArgs, LogsDataBuilder};
-    use diagnostics_message::METADATA_SIZE;
 
     const TEST_URL: &'static str = "fuchsia-pkg://test";
     const TEST_MONIKER: &'static str = "fake-test/moniker";
@@ -760,7 +759,6 @@ mod tests {
             component_url: Some(TEST_URL.to_string()),
             moniker: TEST_MONIKER.to_string(),
             severity: Severity::Error,
-            size_bytes: 0,
         })
         .set_message("[irrelevant_tag(32)] Hello".to_string())
         .set_line(123u64)
@@ -789,7 +787,6 @@ mod tests {
             component_url: Some(TEST_URL.to_string()),
             moniker: TEST_MONIKER.to_string(),
             severity: Severity::Error,
-            size_bytes: 0,
         })
         .set_message("[irrelevant_tag(32)] Hello".to_string())
         .set_file("path/to/file.cc".to_string())
@@ -821,7 +818,6 @@ mod tests {
             component_url: Some(TEST_URL.to_string()),
             moniker: TEST_MONIKER.to_string(),
             severity: Severity::Error,
-            size_bytes: 0,
         })
         .set_message("[irrelevant_tag(32)] Hello".to_string())
         .build();
@@ -1062,7 +1058,6 @@ mod tests {
             component_url: Some(TEST_URL.to_string()),
             moniker: TEST_MONIKER.to_string(),
             severity: severity,
-            size_bytes: METADATA_SIZE + 1 + msg.len(),
         })
         .set_message(msg.to_string())
         .build()

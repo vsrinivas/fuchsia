@@ -215,7 +215,6 @@ mod tests {
             component_url: Some(TEST_IDENTITY.url.clone()),
             moniker: TEST_IDENTITY.to_string(),
             severity: Severity::Debug,
-            size_bytes: 64,
         })
         .set_pid(123)
         .set_tid(456)

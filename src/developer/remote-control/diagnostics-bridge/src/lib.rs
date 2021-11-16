@@ -493,7 +493,6 @@ mod test {
             component_url: Some(String::from("fake-url")),
             moniker: String::from("test/moniker"),
             severity: Severity::Error,
-            size_bytes: 1,
         })
         .set_message(msg)
         .build()

@@ -198,7 +198,6 @@ impl DiagnosticsData for Logs {
     fn override_error(metadata: Self::Metadata, error: String) -> Self::Metadata {
         LogsMetadata {
             severity: metadata.severity,
-            size_bytes: metadata.size_bytes,
             component_url: metadata.component_url,
             timestamp: metadata.timestamp,
             errors: Some(vec![LogError::Other(Error { message: error })]),
@@ -208,6 +207,7 @@ impl DiagnosticsData for Logs {
             pid: metadata.pid,
             tags: metadata.tags,
             tid: metadata.tid,
+            size_bytes: None,
         }
     }
 }
@@ -358,10 +358,10 @@ pub struct LogsMetadata {
     pub dropped: Option<u64>,
 
     /// Size of the original message on the wire, in bytes.
-    // TODO(fxbug.dev/85755): once ffx has rolled for 6 weeks (after Oct 5th, 2021) and most users
-    // of ffx are using a version that includes this changes, make this `skip`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub size_bytes: Option<usize>,
+    /// DEPRECATED: do not set. Left for backwards compatibility with older serialized metadatas
+    /// that contain this field.
+    #[serde(skip)]
+    size_bytes: Option<usize>,
 }
 
 /// Severities a log message can have, often called the log's "level".
@@ -588,11 +588,6 @@ pub struct BuilderArgs {
     pub component_url: Option<String>,
     /// The message severity
     pub severity: Severity,
-    /// Size of the message encoded in wire format in bytes.
-    /// This value does not actually correspond to memory usage
-    /// in anything other than wire format and should not be used
-    /// for memory accounting purposes.
-    pub size_bytes: usize,
 }
 
 impl LogsDataBuilder {
@@ -692,7 +687,6 @@ impl LogsDataBuilder {
             self.args.timestamp_nanos,
             self.args.component_url,
             self.args.severity,
-            self.args.size_bytes,
             self.errors,
         );
         ret.metadata.dropped = self.dropped;
@@ -763,7 +757,6 @@ impl Data<Logs> {
         timestamp_nanos: impl Into<Timestamp>,
         component_url: Option<String>,
         severity: impl Into<Severity>,
-        size_bytes: usize,
         errors: Vec<LogError>,
     ) -> Self {
         let errors = if errors.is_empty() { None } else { Some(errors) };
@@ -777,7 +770,6 @@ impl Data<Logs> {
                 timestamp: timestamp_nanos.into(),
                 component_url: component_url,
                 severity: severity.into(),
-                size_bytes: Some(size_bytes),
                 errors,
                 dropped: None,
                 file: None,
@@ -785,6 +777,7 @@ impl Data<Logs> {
                 pid: None,
                 tags: None,
                 tid: None,
+                size_bytes: None,
             },
         }
     }
@@ -1287,7 +1280,6 @@ mod tests {
             component_url: Some("url".to_string()),
             moniker: String::from("moniker"),
             severity: Severity::Info,
-            size_bytes: 0,
             timestamp_nanos: 0.into(),
         });
         //let tree = builder.build();
@@ -1305,7 +1297,6 @@ mod tests {
             "component_url": "url",
               "dropped": 0,
               "severity": "INFO",
-              "size_bytes": 0,
               "tags": [],
 
             "timestamp": 0,
@@ -1322,7 +1313,6 @@ mod tests {
             component_url: Some("url".to_string()),
             moniker: String::from("moniker"),
             severity: Severity::Info,
-            size_bytes: 0,
             timestamp_nanos: 0.into(),
         })
         .set_message("app")
@@ -1359,7 +1349,6 @@ mod tests {
               "line": 420,
               "pid": 1001,
               "severity": "INFO",
-              "size_bytes": 0,
               "tags": ["You're", "IT!"],
               "tid": 200,
 
@@ -1377,7 +1366,6 @@ mod tests {
             component_url: Some("url".to_string()),
             moniker: String::from("moniker"),
             severity: Severity::Info,
-            size_bytes: 0,
             timestamp_nanos: 0.into(),
         })
         .set_format_printf("app", vec!["some".to_string(), "arg".to_string()])
@@ -1416,7 +1404,6 @@ mod tests {
               "line": 420,
               "pid": 1001,
               "severity": "INFO",
-              "size_bytes": 0,
               "tags": ["You're", "IT!"],
               "tid": 200,
 
@@ -1494,7 +1481,6 @@ mod tests {
             component_url: Some(String::from("fake-url")),
             moniker: String::from("moniker"),
             severity: Severity::Info,
-            size_bytes: 1,
         })
         .set_pid(123)
         .set_tid(456)
@@ -1519,7 +1505,6 @@ mod tests {
             component_url: Some(String::from("fake-url")),
             moniker: String::from("moniker"),
             severity: Severity::Info,
-            size_bytes: 1,
         })
         .set_pid(123)
         .set_tid(456)
@@ -1529,12 +1514,8 @@ mod tests {
         assert_eq!("[00012.345678][123][456][moniker] INFO: some message", format!("{}", data))
     }
 
-    // TODO(fxbug.dev/85755): once ffx has rolled for 6 weeks (after Oct 5th, 2021) and most users
-    // of ffx are using a version that includes this changes. We'll make size_bytes=None the
-    // default. At that point, we can refactor this test to instead test backwards compatibility --
-    // deserializing a json value with size_bytes.
     #[fuchsia::test]
-    fn deserialize_no_size_bytes() {
+    fn size_bytes_deserialize_backwards_compatibility() {
         let original_json = json!({
           "moniker": "a/b",
           "version": 1,
@@ -1553,18 +1534,16 @@ mod tests {
             "timestamp": 123,
           }
         });
-        let mut expected_data = LogsDataBuilder::new(BuilderArgs {
+        let expected_data = LogsDataBuilder::new(BuilderArgs {
             component_url: Some("url".to_string()),
             moniker: String::from("a/b"),
             severity: Severity::Info,
             timestamp_nanos: 123.into(),
-            size_bytes: 3,
         })
         .build();
-        // Remove the size_bytes from expected_data. Currently all the code is expected to set the
-        // value, therefore we still require it in BuilderArgs.
-        expected_data.metadata.size_bytes = None;
         let original_data: LogsData = serde_json::from_value(original_json).unwrap();
         assert_eq!(original_data, expected_data);
+        // We skip deserializing the size_bytes
+        assert_eq!(original_data.metadata.size_bytes, None);
     }
 }

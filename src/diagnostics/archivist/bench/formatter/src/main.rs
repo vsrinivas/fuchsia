@@ -51,7 +51,6 @@ fn bench_json_packet_serializer(b: &mut criterion::Bencher, total_logs: u64) {
                 )),
                 moniker: format!("moniker-{}", i),
                 severity: Severity::Info,
-                size_bytes: 0,
                 timestamp_nanos: (i as i64).into(),
             })
             .set_message(format!("Benching #{}", i))

@@ -120,7 +120,6 @@ mod tests {
             component_url: Some(identity.url.clone()),
             moniker: identity.to_string(),
             severity: Severity::Info,
-            size_bytes: 1,
         })
         .build()
     }

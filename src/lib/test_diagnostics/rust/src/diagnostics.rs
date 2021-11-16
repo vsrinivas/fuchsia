@@ -435,7 +435,6 @@ mod tests {
             component_url: Some(String::from("fake-url")),
             moniker: String::from("test/moniker"),
             severity: Severity::Info,
-            size_bytes: 1,
         })
         .set_message(value.to_string())
         .build();

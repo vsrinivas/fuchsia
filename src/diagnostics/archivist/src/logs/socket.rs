@@ -120,7 +120,6 @@ mod tests {
             component_url: Some(TEST_IDENTITY.url.clone()),
             moniker: TEST_IDENTITY.to_string(),
             severity: Severity::Info,
-            size_bytes: METADATA_SIZE + 6 /* tag */+ 6, /* msg */
         })
         .set_pid(packet.metadata.pid)
         .set_tid(packet.metadata.tid)
@@ -129,7 +128,9 @@ mod tests {
         .build()
         .into();
 
-        let result_message = ls.next().await.unwrap().parse(&TEST_IDENTITY).unwrap();
+        let bytes = ls.next().await.unwrap();
+        assert_eq!(bytes.size(), METADATA_SIZE + 6 /* tag */+ 6 /* msg */,);
+        let result_message = bytes.parse(&TEST_IDENTITY).unwrap();
         assert_eq!(result_message, expected_p);
 
         // write one more time
@@ -161,7 +162,6 @@ mod tests {
             component_url: Some(TEST_IDENTITY.url.clone()),
             moniker: TEST_IDENTITY.to_string(),
             severity: Severity::Fatal,
-            size_bytes: encoded.len(),
         })
         .add_tag("tag-a")
         .add_key(diagnostics_data::LogsProperty::String(
@@ -174,7 +174,9 @@ mod tests {
         let mut stream = LogMessageSocket::new_structured(sout, Default::default()).unwrap();
 
         sin.write(encoded).unwrap();
-        let result_message = stream.next().await.unwrap().parse(&TEST_IDENTITY).unwrap();
+        let bytes = stream.next().await.unwrap();
+        let result_message = bytes.parse(&TEST_IDENTITY).unwrap();
+        assert_eq!(bytes.size(), encoded.len());
         assert_eq!(result_message, expected_p);
 
         // write again

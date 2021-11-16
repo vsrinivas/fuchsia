@@ -49,7 +49,6 @@ pub fn from_logger(source: MonikerWithUrl, msg: LoggerMessage) -> LogsData {
         component_url: Some(source.url),
         moniker: source.moniker.clone(),
         severity: msg.severity,
-        size_bytes: msg.size_bytes,
     })
     .set_pid(msg.pid)
     .set_tid(msg.tid)
@@ -76,7 +75,6 @@ pub fn for_dropped(count: u64, source: MonikerWithUrl, timestamp: i64) -> LogsDa
         component_url: Some(source.url.clone()),
         moniker: source.moniker,
         severity: Severity::Warn,
-        size_bytes: 0,
     })
     .add_error(LogError::DroppedLogs { count })
     .set_message(message)
@@ -97,7 +95,6 @@ pub fn from_structured(source: MonikerWithUrl, bytes: &[u8]) -> Result<LogsData,
         // NOTE: this severity is not final. Severity will be set after parsing the
         // record.arguments
         severity: Severity::Info,
-        size_bytes: bytes.len(),
     });
 
     // Raw value from the client that we don't trust (not yet sanitized)
