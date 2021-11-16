@@ -79,47 +79,20 @@ zx_status_t Sysdev::Create(void* ctx, zx_device_t* parent, const char* name, con
   zx::channel items_svc(items_svc_handle);
   auto sysdev = std::make_unique<Sysdev>(parent);
 
-  // Check if we were sent configuration data
-  zx::vmo payload;
-  uint32_t payload_len = 0;
-  if (items_svc.is_valid()) {
-    zx_status_t status = fuchsia_boot_ItemsGet(items_svc.get(), ZBI_TYPE_DRV_BOARD_PRIVATE, 0,
-                                               payload.reset_and_get_address(), &payload_len);
-    if (status != ZX_OK) {
-      return status;
-    }
-  }
-
-  uintptr_t payload_addr = 0;
-  if (payload_len > 0) {
-    zx_status_t status =
-        zx::vmar::root_self()->map(ZX_VM_PERM_READ, 0, payload, 0, payload_len, &payload_addr);
-    if (status != ZX_OK) {
-      return status;
-    }
-  }
-  payload.reset();
-
   zx_status_t status = sysdev->DdkAdd(ddk::DeviceAddArgs("sys").set_flags(DEVICE_ADD_NON_BINDABLE));
   if (status != ZX_OK) {
     return status;
   }
 
-  // If we were sent configuration data, check to see if we were told to
-  // create a composite.  If so, we will create a composite out of
-  // "well-known" devices that the test may create.  These are children with
+  // Create a composite out of "well-known" devices that the libdriver-integration-test may create.
+  // These are children with
   // the PLATFORM_DEV properties
   // (PDEV_VID_TEST, PDEV_PID_LIBDRIVER_TEST, PDEV_DID_TEST_CHILD_1) and
   // (PDEV_VID_TEST, PDEV_PID_LIBDRIVER_TEST, PDEV_DID_TEST_CHILD_2).
   // The resulting composite will have PLATFORM_DEV properties
   // (PDEV_VID_TEST, PDEV_PID_LIBDRIVER_TEST, PDEV_DID_TEST_COMPOSITE).
-  if (payload_len >= sizeof(bool)) {
-    auto should_create_composite = reinterpret_cast<const bool*>(payload_addr);
-    if (*should_create_composite) {
-      status = sysdev->MakeComposite();
-      ZX_ASSERT(status == ZX_OK);
-    }
-  }
+  status = sysdev->MakeComposite();
+  ZX_ASSERT(status == ZX_OK);
 
   status = TestParent::Create(sysdev->zxdev());
 

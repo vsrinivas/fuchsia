@@ -19,7 +19,7 @@ namespace libdriver_integration_test {
 
 class CompositeDeviceTest : public IntegrationTest {
  public:
-  static void SetUpTestCase() { DoSetup(true /* should_create_composite */); }
+  static void SetUpTestCase() { DoSetup(); }
 
  protected:
   // Create the fragments for the well-known composite that the mock sysdev creates.

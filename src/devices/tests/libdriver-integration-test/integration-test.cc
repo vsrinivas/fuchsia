@@ -20,9 +20,9 @@ namespace libdriver_integration_test {
 async::Loop IntegrationTest::loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
 IntegrationTest::IsolatedDevmgr IntegrationTest::devmgr_;
 
-void IntegrationTest::SetUpTestCase() { DoSetup(false /* should_create_composite */); }
+void IntegrationTest::SetUpTestCase() { DoSetup(); }
 
-void IntegrationTest::DoSetup(bool should_create_composite) {
+void IntegrationTest::DoSetup() {
   // Set up the isolated devmgr instance for this test suite.  Note that we
   // only do this once for the whole suite, because it is currently an
   // expensive process.  Ideally we'd do this between every test.
@@ -30,30 +30,6 @@ void IntegrationTest::DoSetup(bool should_create_composite) {
   args.stdio = fbl::unique_fd(open("/dev/null", O_RDWR));
   args.load_drivers.push_back("/boot/driver/fragment.so");
   args.load_drivers.push_back("/boot/driver/fragment.proxy.so");
-
-  // Rig up a get_boot_item that will send configuration information over to
-  // the sysdev driver.
-  args.get_boot_item = [should_create_composite](uint32_t type, uint32_t extra, zx::vmo* vmo,
-                                                 uint32_t* length) {
-    vmo->reset();
-    *length = 0;
-    if (type != ZBI_TYPE_DRV_BOARD_PRIVATE || extra != 0) {
-      return ZX_OK;
-    }
-    zx::vmo data;
-    zx_status_t status = zx::vmo::create(1, 0, &data);
-    if (status != ZX_OK) {
-      return status;
-    }
-    status = data.write(reinterpret_cast<const void*>(&should_create_composite), 0,
-                        sizeof(should_create_composite));
-    if (status != ZX_OK) {
-      return status;
-    }
-    *length = sizeof(should_create_composite);
-    *vmo = std::move(data);
-    return ZX_OK;
-  };
 
   zx_status_t status =
       IsolatedDevmgr::Create(std::move(args), loop_.dispatcher(), &IntegrationTest::devmgr_);

@@ -132,7 +132,7 @@ class IntegrationTest : public testing::Test {
   void RunPromise(Promise<void> promise);
 
  protected:
-  static void DoSetup(bool should_create_composite);
+  static void DoSetup();
 
   using IsolatedDevmgr = devmgr_integration_test::IsolatedDevmgr;
   static IsolatedDevmgr devmgr_;
