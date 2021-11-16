@@ -253,7 +253,7 @@ Arrays are denoted:
 *   `array<T, N>`: where **T** can be any FIDL type
     (including an array) and **N** is the number of elements in the array.
     Note: An array's size MUST be no more than 2<sup>32</sup>-1.
-    For additional details, see [FTP-059].
+    For additional details, see [RFC-0059].
 
 ![drawing](images/arrays.png)
 
@@ -266,7 +266,7 @@ Arrays are denoted:
 *   Stored as a 16 byte record consisting of:
     *   `size`: 64-bit unsigned number of elements
     Note: A vector's size MUST be no more than 2<sup>32</sup>-1.
-    For additional details, see [FTP-059].
+    For additional details, see [RFC-0059].
     *   `data`: 64-bit presence indication or pointer to out-of-line element data
 *   When encoded for transfer, `data` indicates
     presence of content:
@@ -810,7 +810,7 @@ Conformant FIDL bindings must check all of the following integrity constraints:
 | 4       | Unused                                                       |             |
 | 3       | Unused                                                       |             |
 | 2       | Unused                                                       |             |
-| 1       | Unused                                                       |             |
+| 1       | Indicates whether the v2 wire format is used ([RFC-0114])    |             |
 | 0       | Unused | Indicates whether static unions should be encoded as xunions ([RFC-0061]) |
 
 *Flags[1]*
@@ -852,9 +852,10 @@ treatise on the subject.
 
 [channel call]: /docs/reference/syscalls/channel_call.md
 [channel write]: /docs/reference/syscalls/channel_write.md
-[FTP-0061]: /docs/contribute/governance/rfcs/0061_extensible_unions.md
 [RFC-0030]: /docs/contribute/governance/rfcs/0030_fidl_is_little_endian.md
 [RFC-0059]: /docs/contribute/governance/rfcs/0059_reserved_bits_count_fields.md
+[RFC-0061]: /docs/contribute/governance/rfcs/0061_extensible_unions.md
+[RFC-0114]: /docs/contribute/governance/rfcs/0114_fidl_envelope_inlining.md
 [abi-api-compat]: /docs/development/languages/fidl/guides/compatibility/README.md
 [lostart]: http://www.catb.org/esr/structure-packing/
 [concepts]: /docs/concepts/fidl/overview.md
