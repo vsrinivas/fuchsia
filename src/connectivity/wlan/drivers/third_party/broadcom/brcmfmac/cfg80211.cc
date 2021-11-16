@@ -791,13 +791,12 @@ static void brcmf_notify_escan_complete(struct brcmf_cfg80211_info* cfg, struct 
   cfg->escan_timer->Stop();
   brcmf_scan_config_mpc(ifp, 1);
 
-  if (cfg->scan_request) {
+  if (cfg->scan_in_progress) {
     BRCMF_IFDBG(WLANIF, ndev, "ESCAN Completed scan: %s",
                 status == BRCMF_E_STATUS_SUCCESS ? "Done"
                 : status == BRCMF_E_STATUS_ABORT ? "Aborted"
                                                  : "Errored");
-    // Now that we're done with this scan_request we can remove it
-    cfg->scan_request = nullptr;
+    cfg->scan_in_progress = false;
 
     switch (status) {
       case BRCMF_E_STATUS_SUCCESS:
@@ -1152,7 +1151,7 @@ zx_status_t brcmf_cfg80211_scan(struct net_device* ndev, const wlanif_scan_req_t
 
   BRCMF_DBG(SCAN, "START ESCAN\n");
 
-  cfg->scan_request = req;
+  cfg->scan_in_progress = true;
   brcmf_set_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status);
 
   cfg->escan_info.run = brcmf_run_escan;
@@ -1171,7 +1170,7 @@ scan_out:
     BRCMF_ERR("scan error (%d)", err);
   }
   brcmf_clear_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status);
-  cfg->scan_request = nullptr;
+  cfg->scan_in_progress = false;
   return err;
 }
 
@@ -2605,7 +2604,7 @@ static zx_status_t brcmf_abort_scanning(struct brcmf_cfg80211_info* cfg) {
     return ZX_OK;
   }
 
-  if (cfg->scan_request) {
+  if (cfg->scan_in_progress) {
     escan->escan_state = WL_ESCAN_STATE_IDLE;
     if ((err = brcmf_abort_escan(escan->ifp)) != ZX_OK) {
       BRCMF_ERR("Abort scan failed -- error: %s", zx_status_get_string(err));
@@ -2618,7 +2617,7 @@ static zx_status_t brcmf_abort_scanning(struct brcmf_cfg80211_info* cfg) {
 // Abort scanning immediately and inform SME right away
 static void brcmf_abort_scanning_immediately(struct brcmf_cfg80211_info* cfg) {
   brcmf_abort_scanning(cfg);
-  if (cfg->scan_request) {
+  if (cfg->scan_in_progress) {
     brcmf_notify_escan_complete(cfg, cfg->escan_info.ifp, BRCMF_E_STATUS_ABORT);
   }
 }
@@ -2634,7 +2633,7 @@ static void brcmf_cfg80211_escan_timeout_worker(WorkItem* work) {
 static void brcmf_escan_timeout(struct brcmf_cfg80211_info* cfg) {
   cfg->pub->irq_callback_lock.lock();
 
-  if (cfg->scan_request) {
+  if (cfg->scan_in_progress) {
     BRCMF_ERR("scan timer expired");
     // If it's for SIM tests, won't enqueue.
     EXEC_TIMEOUT_WORKER(escan_timeout_work);
@@ -2712,7 +2711,7 @@ static zx_status_t brcmf_cfg80211_escan_handler(struct brcmf_if* ifp,
     goto chk_scan_end;
   }
 
-  if (!cfg->scan_request) {
+  if (!cfg->scan_in_progress) {
     BRCMF_DBG(SCAN, "result without cfg80211 request");
     goto chk_scan_end;
   }
@@ -2733,7 +2732,7 @@ chk_scan_end:
   // If this is not a partial notification, indicate scan complete to wlanstack
   if (status != BRCMF_E_STATUS_PARTIAL) {
     cfg->escan_info.escan_state = WL_ESCAN_STATE_IDLE;
-    if (cfg->scan_request) {
+    if (cfg->scan_in_progress) {
       brcmf_notify_escan_complete(cfg, ifp, status);
     } else {
       BRCMF_DBG(SCAN, "Ignored scan complete result 0x%x", status);
@@ -5663,7 +5662,7 @@ static zx_status_t brcmf_init_cfg(struct brcmf_cfg80211_info* cfg) {
   zx_status_t err = ZX_OK;
   async_dispatcher_t* dispatcher = cfg->pub->device->GetDispatcher();
 
-  cfg->scan_request = nullptr;
+  cfg->scan_in_progress = false;
   cfg->dongle_up = false; /* dongle is not up yet */
   err = brcmf_init_cfg_mem(cfg);
   if (err != ZX_OK) {

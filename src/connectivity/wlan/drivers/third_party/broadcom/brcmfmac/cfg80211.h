@@ -351,7 +351,6 @@ enum brcmf_disconnect_mode {
  *
  * @conf: dongle configuration.
  * @btcoex: Bluetooth coexistence information.
- * @scan_request: cfg80211 scan request object.
  * @usr_sync: mainly for dongle up/down synchronization.
  * @bss_list: bss_list holding scanned ap information.
  * @bss_info: bss information for cfg80211 layer.
@@ -364,6 +363,7 @@ enum brcmf_disconnect_mode {
  * @dongle_up: indicate whether dongle up or not.
  * @roam_on: on/off switch for dongle self-roaming.
  * @scan_tried: indicates if first scan attempted.
+ * @scan_in_progress: indicates if a scan is in progress
  * @dcmd_buf: dcmd buffer.
  * @extra_buf: mainly to grab assoc information.
  * @debugfsdir: debugfs folder for this device.
@@ -391,7 +391,6 @@ enum brcmf_disconnect_mode {
 struct brcmf_cfg80211_info {
   struct brcmf_cfg80211_conf* conf;
   struct brcmf_btcoex_info* btcoex;
-  const wlanif_scan_req_t* scan_request;
   mtx_t usr_sync;
   struct wl_cfg80211_bss_info* bss_info;
   struct brcmf_cfg80211_connect_info conn_info;
@@ -402,6 +401,7 @@ struct brcmf_cfg80211_info {
   bool ibss_starter;
   bool dongle_up;
   bool scan_tried;
+  bool scan_in_progress;
   uint8_t* dcmd_buf;
   uint8_t* extra_buf;
   zx_handle_t debugfsdir;
