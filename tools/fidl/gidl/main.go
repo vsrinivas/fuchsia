@@ -225,7 +225,7 @@ func main() {
 	if *flags.Out == "" {
 		log.Fatalf("no -out path specified for main file")
 	}
-	if err := ioutil.WriteFile(*flags.Out, mainFile, 0666); err != nil {
+	if err := fidlgen.WriteFileIfChanged(*flags.Out, mainFile); err != nil {
 		log.Fatal(err)
 	}
 }
