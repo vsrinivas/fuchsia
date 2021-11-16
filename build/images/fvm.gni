@@ -76,10 +76,6 @@ declare_args() {
   minfs_board_maximum_bytes = false
   minfs_product_maximum_bytes = false
 
-  # TODO(fxbug.dev/85718): Remove this arg. It is not currently used but is set
-  # in some out-of-tree configuration files.
-  minfs_board_maximum_data_bytes = false
-
   # End of variables for blobfs/minfs dimensions
 
   # Specifying these variables will generate a NAND FVM image suitable for
