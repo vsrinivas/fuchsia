@@ -60,9 +60,9 @@ TEST_F(VnodeTest, Time) {
 
   timespec cur_time;
   clock_gettime(CLOCK_REALTIME, &cur_time);
-  ASSERT_LE(test_vnode->GetATime().tv_nsec, cur_time.tv_nsec);
-  ASSERT_LE(test_vnode->GetMTime().tv_nsec, cur_time.tv_nsec);
-  ASSERT_LE(test_vnode->GetCTime().tv_nsec, cur_time.tv_nsec);
+  ASSERT_LE(zx::duration(test_vnode->GetATime()), zx::duration(cur_time));
+  ASSERT_LE(zx::duration(test_vnode->GetMTime()), zx::duration(cur_time));
+  ASSERT_LE(zx::duration(test_vnode->GetCTime()), zx::duration(cur_time));
 
   ASSERT_EQ(test_vnode->Close(), ZX_OK);
   test_vnode = nullptr;
