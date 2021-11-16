@@ -7,7 +7,6 @@
 
 #include <zircon/types.h>
 
-#include <regex>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
