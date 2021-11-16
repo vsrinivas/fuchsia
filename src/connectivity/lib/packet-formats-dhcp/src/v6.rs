@@ -204,21 +204,31 @@ pub struct IanaData<B: ByteSlice> {
     options: Records<B, ParsedDhcpOptionImpl>,
 }
 
-/// A `u32` value that is guaranteed to be greater than 0 and less than `u32::MAX`.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct NonZeroOrMaxU32(u32);
+mod private {
+    /// A `u32` value that is guaranteed to be greater than 0 and less than `u32::MAX`.
+    #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+    pub struct NonZeroOrMaxU32(u32);
 
-impl NonZeroOrMaxU32 {
-    /// Constructs a `NonZeroOrMaxU32`.
-    ///
-    /// # Panics
-    ///
-    /// `new` panics if `t` is not greater than 0 and less than `u32::MAX`.
-    fn new(v: u32) -> NonZeroOrMaxU32 {
-        assert!(v > 0 && v < u32::MAX);
-        NonZeroOrMaxU32(v)
+    impl NonZeroOrMaxU32 {
+        /// Constructs a `NonZeroOrMaxU32`.
+        ///
+        /// # Panics
+        ///
+        /// `new` panics if `t` is not greater than 0 and less than `u32::MAX`.
+        pub(super) fn new(v: u32) -> NonZeroOrMaxU32 {
+            assert!(v > 0 && v < u32::MAX);
+            NonZeroOrMaxU32(v)
+        }
+
+        /// Returns the value.
+        pub fn get(self) -> u32 {
+            let NonZeroOrMaxU32(t) = self;
+            t
+        }
     }
 }
+
+pub use private::*;
 
 /// A representation of T1/T2 times to relay the fact that certain values have
 /// special significance as described in RFC 8415, [section 14.2] and
@@ -999,7 +1009,7 @@ impl InnerPacketBuilder for MessageBuilder<'_> {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, matches::assert_matches, std::str::FromStr};
+    use {super::*, matches::assert_matches, std::str::FromStr, test_case::test_case};
 
     fn test_buf_with_no_options() -> Vec<u8> {
         let builder = MessageBuilder::new(MessageType::Solicit, [1, 2, 3], &[]);
@@ -1463,24 +1473,17 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_time_value() {
-        assert_eq!(TimeValue::new(0), TimeValue::Zero);
-        assert_eq!(TimeValue::new(5), TimeValue::Finite(NonZeroOrMaxU32::new(5)));
-        assert_eq!(TimeValue::new(u32::MAX), TimeValue::Infinity);
+    #[test_case(TimeValue::new(0), TimeValue::Zero)]
+    #[test_case(TimeValue::new(5), TimeValue::Finite(NonZeroOrMaxU32::new(5)))]
+    #[test_case(TimeValue::new(u32::MAX), TimeValue::Infinity)]
+    fn test_time_value_new(time_value: TimeValue, expected_variant: TimeValue) {
+        assert_eq!(time_value, expected_variant);
     }
 
     #[test]
     fn test_time_value_ord() {
-        assert!(TimeValue::Zero < TimeValue::Finite(NonZeroOrMaxU32(1)));
-        assert!(TimeValue::Finite(NonZeroOrMaxU32(u32::MAX - 1)) < TimeValue::Infinity);
-    }
-
-    #[test]
-    fn test_non_zero_or_max_u32_new() {
-        // `new` should not panic for argument between (0, u32::MAX).
-        let _t = NonZeroOrMaxU32::new(1);
-        let _t = NonZeroOrMaxU32::new(u32::MAX - 1);
+        assert!(TimeValue::Zero < TimeValue::Finite(NonZeroOrMaxU32::new(1)));
+        assert!(TimeValue::Finite(NonZeroOrMaxU32::new(u32::MAX - 1)) < TimeValue::Infinity);
     }
 
     #[test]
@@ -1493,5 +1496,12 @@ mod tests {
     #[should_panic]
     fn test_non_zero_or_max_u32_new_panics_on_max_u32() {
         let _ = NonZeroOrMaxU32::new(u32::MAX);
+    }
+
+    #[test_case(1)]
+    #[test_case(4321)]
+    #[test_case(u32::MAX - 1)]
+    fn test_non_zero_or_max_u32_get(t: u32) {
+        assert_eq!(NonZeroOrMaxU32::new(t).get(), t);
     }
 }

@@ -21,7 +21,10 @@ rustc_library("packet-formats-dhcp") {
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:uuid",
   ]
-  test_deps = [ "//third_party/rust_crates:matches" ]
+  test_deps = [
+    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:test-case",
+  ]
 
   sources = [
     "src/lib.rs",
