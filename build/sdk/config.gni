@@ -9,4 +9,8 @@ declare_args() {
   # Whether to only warn when an SDK has been modified.
   # If false, any unacknowledged SDK change will cause a build failure.
   warn_on_sdk_changes = false
+
+  # Adds the suffix to the end of the product bundle name in order to make it unique.
+  # Used to distinguish between similar builds with different packages.
+  product_name_suffix = ""
 }
