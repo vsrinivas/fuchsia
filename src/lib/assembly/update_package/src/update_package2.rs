@@ -15,10 +15,6 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 
 /// A builder that constructs update packages.
-///
-/// This builder is replacing UpdatePackageBuilder. The main difference between the two builders is
-/// that the new builder's interface matches exactly the `ffx create-update` CLI interface, which
-/// is documented in //src/developer/ffx/plugins/assembly/README.md
 pub struct UpdatePackageBuilder2 {
     /// Name of the UpdatePackage.
     /// This is typically only modified for OTA tests so that multiple UpdatePackages can be

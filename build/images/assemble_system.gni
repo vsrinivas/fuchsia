@@ -118,20 +118,12 @@ import("//src/storage/fshost/generated_fshost_config.gni")
 #     [bool] Whether to include shell commands. Should be set to false for
 #     build without shell access.
 #
-#   update_package_name (optional; default: "update")
-#     [string] The name to give the update package. For prime builds this
-#     should be "update_prime", so that the package does not override the
-#     non-prime package during publishing.
-#
 #   base_package_name (optional; default: "system_image")
 #     [string] The name to give the base package. For prime builds this
 #     should be "system_image_prime", so that the package does not override the
 #     non-prime package during publishing.
 #
 # Board parameters:
-#
-#   board_name (required)
-#     [string] The name of the board to place in the images.
 #
 #   assembly_compress_blobs (default: true)
 #     [boolean] Whether the blobs added to the blobfs image should be compressed.
@@ -143,16 +135,6 @@ import("//src/storage/fshost/generated_fshost_config.gni")
 #
 #   check_production_tag (default: false)
 #      [bool] Whether to check there is no non_production_tag dependencies.
-#
-#   include_version_and_epoch (default: false)
-#      [bool] Whether to include the version and epoch files into the Update
-#      Package.
-#
-#   recovery (optional)
-#     [label] Recovery label to include in the update package.
-#
-#   use_esp (optional)
-#     [bool] Whether to include ESP bootloaders in the update package.
 #
 # Board: MinFS parameters:
 #
@@ -193,7 +175,9 @@ import("//src/storage/fshost/generated_fshost_config.gni")
 template("assemble_system") {
   assert(defined(invoker.base_packages), "Need to define base_packages")
   assert(defined(invoker.bootfs_labels), "Need to define bootfs_labels")
-  assert(defined(invoker.board_name), "Need to define board_name")
+
+  # This should be removed once all clients are no longer supplying board_name.
+  not_needed(invoker, [ "board_name" ])
 
   image_name = target_name
   if (defined(invoker.image_name)) {
@@ -230,14 +214,12 @@ template("assemble_system") {
     zbi_signed = "${zbi}.signed"
     vbmeta = "${outdir}/${image_name}.vbmeta"
     base_package = "${outdir}/base.far"
-    update_package = "${outdir}/update.far"
     minfs = "${outdir}/data.blk"
     blobfs = "${outdir}/blob.blk"
     fvm = "${outdir}/fvm.blk"
     fvm_sparse = "${outdir}/fvm.sparse.blk"
     fvm_blob_sparse = "${outdir}/fvm.blob.sparse.blk"
     fvm_fastboot = "${outdir}/fvm.fastboot.blk"
-    update_package_manifest = "${outdir}/update_package_manifest.json"
     base_package_manifest = "${outdir}/base_package_manifest.json"
     packages = "${outdir}/packages.json"
 
@@ -247,8 +229,6 @@ template("assemble_system") {
     static_packages = "${gendir}/data/static_packages"
     cache_packages = "${gendir}/data/cache_packages"
     base_meta_package = "${gendir}/system_image/meta/package"
-    update_meta_package = "${gendir}/update/meta/package"
-    old_packages = "${gendir}/packages.json"
     images_manifest = "${outdir}/images.json"
     assembly_inputs = "${outdir}/assembly_inputs.json"
 
@@ -457,8 +437,6 @@ template("assemble_system") {
                            [
                              "testonly",
                              "visibility",
-                             "recovery",
-                             "use_esp",
                              "blobfs_minimum_inodes",
                              "blobfs_minimum_data_bytes",
                              "blobfs_maximum_bytes",
@@ -468,11 +446,8 @@ template("assemble_system") {
                              "zbi_name",
                              "zbi_signing_script",
                              "zbi_signing_args",
-                             "include_version_and_epoch",
                              "base_package_name",
-                             "update_package_name",
                            ])
-    board_name = invoker.board_name
     generate_fvm = generate_fvm
     output_path = files.board_config
 
@@ -556,6 +531,10 @@ template("assemble_system") {
       if (defined(invoker.metadata)) {
         forward_variables_from(invoker.metadata, "*")
       }
+
+      if (generate_fvm) {
+        package_output_manifests = [ files.base_package_manifest ]
+      }
     }
 
     # TODO(fxbug.dev/77290) - Add depfile support and then remove the following
@@ -594,9 +573,7 @@ template("assemble_system") {
     outputs = [
       files.zbi,
       files.zbi_manifest,
-      files.update_package,
       files.packages,
-      files.old_packages,
       files.images_manifest,
     ]
 
@@ -639,8 +616,6 @@ template("assemble_system") {
         files.static_packages,
         files.cache_packages,
         files.base_meta_package,
-        files.update_meta_package,
-        files.update_package_manifest,
         files.base_package_manifest,
       ]
 
@@ -830,6 +805,13 @@ template("assemble_system") {
     }
     if (defined(invoker.static_pkgs_goldens)) {
       deps += [ ":${image_name}_static_pkgs_verify_files" ]
+    }
+
+    metadata = {
+      # Assemblies have some defined packages, such as the base package.
+      # This barrier prevents a Assembly#1 from including a depending Assembly#2
+      # packages in the package sets (base, cache, system) for Assembly#1.
+      assembly_package_barrier = []
     }
 
     # Note: "${image_name}_route_sources_verify_files" dependency on pm-publish

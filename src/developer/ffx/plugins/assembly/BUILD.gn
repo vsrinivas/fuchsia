@@ -22,7 +22,6 @@ ffx_plugin("ffx_assembly") {
     "src/operations/config_data.rs",
     "src/operations/create_update.rs",
     "src/operations/image.rs",
-    "src/update_package.rs",
     "src/util.rs",
     "src/vbmeta.rs",
     "src/vfs.rs",

@@ -16,7 +16,6 @@ if (is_host) {
       "//src/lib/assembly/update_packages_manifest",
       "//src/lib/assembly/util",
       "//src/sys/pkg/lib/epoch",
-      "//src/sys/pkg/lib/fuchsia-hash",
       "//src/sys/pkg/lib/fuchsia-pkg",
       "//src/sys/pkg/lib/version",
       "//third_party/rust_crates:anyhow",
@@ -27,12 +26,12 @@ if (is_host) {
     ]
     sources = [
       "src/lib.rs",
-      "src/update_package.rs",
       "src/update_package2.rs",
     ]
     test_deps = [
       "//src/lib/fuchsia-url",
       "//src/sys/pkg/lib/far/rust:fuchsia-archive",
+      "//src/sys/pkg/lib/fuchsia-hash",
     ]
   }
 }

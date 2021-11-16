@@ -135,7 +135,7 @@ mod tests {
     use super::{construct_zbi, vendor_sign_zbi};
 
     use crate::base_package::BasePackage;
-    use crate::config::{BoardConfig, ProductConfig, ZbiSigningScript};
+    use crate::config::{BoardConfig, ProductConfig, ZbiConfig, ZbiSigningScript};
     use assembly_test_util::{generate_fake_tool, generate_fake_tool_nop};
     use assembly_util::PathToStringExt;
     use fuchsia_hash::Hash;
@@ -160,7 +160,7 @@ mod tests {
         // Create fake product/board definitions.
         let kernel_path = dir.path().join("kernel");
         let mut product_config = ProductConfig::new(&kernel_path, 0);
-        let board_config = BoardConfig::new("board");
+        let board_config = BoardConfig::default();
 
         // Create a kernel which is equivalent to: zbi --ouput <zbi-name>
         let kernel_bytes = vec![
@@ -213,8 +213,10 @@ mod tests {
         std::fs::write(&zbi_path, "fake zbi").unwrap();
 
         // Create fake board definitions.
-        let mut board_config = BoardConfig::new("board");
-        board_config.zbi.name = "fuchsia".into();
+        let board_config = BoardConfig {
+            zbi: ZbiConfig { name: "fuchsia".into(), ..ZbiConfig::default() },
+            ..BoardConfig::default()
+        };
 
         // Create the signing tool that ensures that we pass the correct arguments.
         let tool_path = dir.path().join("tool.sh");

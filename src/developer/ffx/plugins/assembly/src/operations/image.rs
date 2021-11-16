@@ -6,7 +6,6 @@ use crate::base_package::{construct_base_package, BasePackage};
 use crate::blobfs::construct_blobfs;
 use crate::config::{BoardConfig, PartialProductConfig, ProductConfig};
 use crate::fvm::{construct_fvm, Fvms};
-use crate::update_package::{construct_update, UpdatePackage};
 use crate::util::{from_reader, pkg_manifest_from_path};
 use crate::vbmeta::construct_vbmeta;
 use crate::zbi::{construct_zbi, vendor_sign_zbi};
@@ -144,17 +143,6 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
 
     info!("Creating the packages manifest");
     create_package_manifest(&outdir, &board, &product, base_package.as_ref())?;
-
-    info!("Creating the update package");
-    let _update_package: UpdatePackage = construct_update(
-        &outdir,
-        &gendir,
-        &product,
-        &board,
-        &zbi_for_update_path,
-        vbmeta_path,
-        base_package.as_ref(),
-    )?;
 
     Ok(())
 }

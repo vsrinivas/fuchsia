@@ -104,7 +104,10 @@ template("generated_product_config") {
   template("list_package_manifests") {
     generated_file(target_name) {
       data_keys = [ "package_output_manifests" ]
-      walk_keys = [ "package_barrier" ]
+      walk_keys = [
+        "package_barrier",
+        "assembly_package_barrier",
+      ]
       outputs = [ invoker.filename ]
       output_conversion = "json"
       rebase = root_build_dir

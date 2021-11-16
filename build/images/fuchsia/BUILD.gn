@@ -18,14 +18,11 @@ supports_fastboot_fvm = fvm_partition != "" && !bootfs_only
 fuchsia_base = {
   testonly = fuchsia_zbi_testonly
   generate_fvm = !bootfs_only
-  board_name = board_name
   output_dir = root_build_dir
-  use_esp = target_cpu != "arm64" && !use_vboot
   fshost_config = board_fshost_config
 
   check_production_tag = check_production_eligibility
 
-  include_version_and_epoch = true
   include_component_id_index = true
 
   # The shell commands may be included by the meta_package_labels.
@@ -34,7 +31,6 @@ fuchsia_base = {
   include_shell_commands = false
 
   cmdline_deps = [ "//build/input:bootfs" ]
-  recovery = recovery_label
 
   base_packages = [
     "//:additional_base_driver_packages",
@@ -170,9 +166,6 @@ group("fuchsia") {
   public_deps = [
     ":fuchsia_assembly",
     ":update",
-    ":update_matches",
-    ":update_prime",
-    ":update_prime_matches",
   ]
   if (!bootfs_only) {
     public_deps += [ ":copy_blobfs" ]
@@ -204,9 +197,6 @@ assemble_system("fuchsia_assembly") {
   files = {
     outdir = target_out_dir + "/" + image_name
 
-    base_package_manifest = "${outdir}/base_package_manifest.json"
-    update_package_manifest = "${outdir}/update_package_manifest.json"
-
     zbi = "${outdir}/fuchsia.zbi"
     zbi_signed = "${outdir}/fuchsia.zbi.signed"
     vbmeta = "${outdir}/fuchsia.vbmeta"
@@ -230,13 +220,6 @@ assemble_system("fuchsia_assembly") {
   }
 
   metadata = {
-    # We generated a couple of PackageManifests. We need to declare them, so
-    # that these packages are published into amber.
-    package_output_manifests = [ files.update_package_manifest ]
-    if (!bootfs_only) {
-      package_output_manifests += [ files.base_package_manifest ]
-    }
-
     # Declare all the generated images.
     images = [
       # MinFS
@@ -437,17 +420,6 @@ update_package("update") {
   epoch = "1"
 }
 
-verify_files_match("update_matches") {
-  testonly = fuchsia_zbi_testonly
-  first = "$root_out_dir/obj/build/images/fuchsia/fuchsia/update.far"
-  second = "$root_out_dir/obj/build/images/fuchsia/update/update.far"
-
-  deps = [
-    ":fuchsia_assembly",
-    ":update",
-  ]
-}
-
 host_test_data("fuchsia_zbi_for_host_tests") {
   sources = [ "$root_build_dir/fuchsia.zbi" ]
 }
@@ -469,34 +441,17 @@ fuchsia_package("dummy") {
   visibility = [ ":*" ]
 }
 
-assemble_system("fuchsia_prime") {
+assemble_system("fuchsia_prime_assembly") {
   forward_variables_from(fuchsia_base, "*")
   bootfs_labels = [ "//build/input:bootfs" ]
   system_image_deps += [ ":dummy" ]
-  update_package_name = "update_prime"
   base_package_name = "system_image_prime"
-
-  # Calculate the paths of the generated images.
-  files = {
-    outdir = get_label_info(":$target_name", "target_out_dir") + "/$target_name"
-    base_package_manifest = "${outdir}/base_package_manifest.json"
-    update_package_manifest = "${outdir}/update_package_manifest.json"
-  }
-
-  # We generated a couple of PackageManifests. We need to declare them, so
-  # that these packages are published into the package repository.
-  metadata = {
-    package_output_manifests = [ files.update_package_manifest ]
-    if (!bootfs_only) {
-      package_output_manifests += [ files.base_package_manifest ]
-    }
-  }
 }
 
-update_package("update_prime") {
+update_package("fuchsia_prime") {
   files = {
-    _fuchsia_out =
-        get_label_info(":fuchsia_prime", "target_out_dir") + "/fuchsia_prime"
+    _fuchsia_out = get_label_info(":fuchsia_prime", "target_out_dir") +
+                   "/fuchsia_prime_assembly"
     _recovery_out = get_label_info(recovery_label, "target_out_dir") + "/" +
                     get_label_info(recovery_label, "name")
     fuchsia_partitions = "${_fuchsia_out}_partitions.json"
@@ -507,7 +462,7 @@ update_package("update_prime") {
 
   testonly = fuchsia_zbi_testonly
   deps = [
-    ":fuchsia_prime",
+    ":fuchsia_prime_assembly",
     "//build/info:latest-commit-date",
     recovery_label,
   ]
@@ -519,17 +474,6 @@ update_package("update_prime") {
   board_name = board_name
   version_file = build_info_files.version
   epoch = "1"
-}
-
-verify_files_match("update_prime_matches") {
-  testonly = fuchsia_zbi_testonly
-  first = "$root_out_dir/obj/build/images/fuchsia/fuchsia_prime/update.far"
-  second = "$root_out_dir/obj/build/images/fuchsia/update_prime/update.far"
-
-  deps = [
-    ":fuchsia_prime",
-    ":update_prime",
-  ]
 }
 
 ##################################################

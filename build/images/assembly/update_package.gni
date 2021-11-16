@@ -116,5 +116,11 @@ template("update_package") {
         invoker.name,
       ]
     }
+
+    metadata = {
+      # We generated a PackageManifest. We need to declare it, so that these
+      # packages are published into amber.
+      package_output_manifests = [ files.update_package_manifest ]
+    }
   }
 }

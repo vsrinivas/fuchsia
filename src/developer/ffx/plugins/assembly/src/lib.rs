@@ -10,7 +10,6 @@ mod config;
 mod extra_hash_descriptor;
 mod fvm;
 mod operations;
-mod update_package;
 mod util;
 mod zbi;
 

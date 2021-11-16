@@ -251,30 +251,13 @@ pub struct KernelConfig {
 #[derive(Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct BoardConfig {
-    /// The path to a file indicating the version of the product.
-    pub version_file: Option<PathBuf>,
-
-    /// The path to a file on the host indicating the OTA backstop.
-    pub epoch_file: Option<PathBuf>,
-
-    /// The name of the update package.
-    #[serde(default = "default_update_package_name")]
-    pub update_package_name: String,
-
     /// The name of the base package.
     #[serde(default = "default_base_package_name")]
     pub base_package_name: String,
 
-    /// The name of the board.
-    pub board_name: String,
-
     /// The information required to construct and flash the verified boot
     /// metadata (VBMeta).
     pub vbmeta: Option<VBMetaConfig>,
-
-    /// The list of information for each bootloader.
-    #[serde(default)]
-    pub bootloaders: Vec<BootloaderEntry>,
 
     /// The information required to construct and flash the ZBI.
     #[serde(default)]
@@ -286,14 +269,6 @@ pub struct BoardConfig {
 
     /// The information required to construct and flash the FVM.
     pub fvm: Option<FvmConfig>,
-
-    /// The information required to update and flash recovery.
-    /// TODO(fxbug.dev/76371): Re-design so that recovery is a separate product.
-    pub recovery: Option<RecoveryConfig>,
-}
-
-fn default_update_package_name() -> String {
-    "update".to_string()
 }
 
 fn default_base_package_name() -> String {
@@ -545,22 +520,14 @@ mod tests {
         }
     }
 
-    impl BoardConfig {
-        /// Helper function for constructing a BoardConfig for tests in this
-        /// and other modules within the crate.
-        pub fn new(name: impl AsRef<str>) -> Self {
+    impl Default for BoardConfig {
+        fn default() -> Self {
             Self {
-                version_file: None,
-                epoch_file: None,
-                update_package_name: default_update_package_name(),
                 base_package_name: default_base_package_name(),
-                board_name: name.as_ref().into(),
                 vbmeta: None,
-                bootloaders: Vec::default(),
                 zbi: ZbiConfig::default(),
                 blobfs: BlobFSConfig::default(),
                 fvm: None,
-                recovery: None,
             }
         }
     }
@@ -685,24 +652,12 @@ mod tests {
     fn board_from_json_file() {
         let json = r#"
             {
-              "version_file": "path/to/version",
-              "epoch_file": "path/to/epoch",
-              "update_package_name": "update",
               "base_package_name": "system_image",
-              "board_name": "my-board",
               "vbmeta": {
                 "kernel_partition": "zircon",
                 "key": "path/to/key",
                 "key_metadata": "path/to/metadata"
               },
-              "bootloaders": [
-                {
-                  "partition": "name",
-                  "name": "name",
-                  "type": "bl2",
-                  "source": "path/to/file/on/host"
-                }
-              ],
               "zbi": {
                 "name": "fuchsia",
                 "max_size": 100,
@@ -736,38 +691,24 @@ mod tests {
                 "layout": "padded",
                 "compress": true
               },
-              "recovery": {
-                "zbi": "path/to/recovery.zbi",
-                "vbmeta": "path/to/recovery.vbmeta"
-              }
             }
          "#;
 
         let mut cursor = std::io::Cursor::new(json);
         let config: BoardConfig = from_reader(&mut cursor).expect("parse config");
-        assert_eq!(config.board_name, "my-board");
+        assert_eq!(config.base_package_name, "system_image");
     }
 
     #[test]
     fn board_from_minimal_json_file() {
         let json = r#"
             {
-              "board_name": "my-board",
-              "vbmeta": {
-                "kernel_partition": "zircon",
-                "key": "path/to/key",
-                "key_metadata": "path/to/metadata"
-              },
-              "recovery": {
-                "zbi": "path/to/recovery.zbi",
-                "vbmeta": "path/to/recovery.vbmeta"
-              }
             }
          "#;
 
         let mut cursor = std::io::Cursor::new(json);
         let config: BoardConfig = from_reader(&mut cursor).expect("parse config");
-        assert_eq!(config.board_name, "my-board");
+        assert_eq!(config.base_package_name, "system_image");
     }
 
     #[test]
@@ -787,6 +728,7 @@ mod tests {
     fn board_from_invalid_json_file() {
         let json = r#"
             {
+                "invalid": "data"
             }
         "#;
 
