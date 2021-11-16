@@ -1,0 +1,31 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/host.gni")
+import("//build/test.gni")
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":concurrent-test($host_toolchain)",
+    ":concurrent-test-pkg",
+  ]
+}
+
+test("concurrent-test") {
+  output_name = "libconcurrent-test"
+  include_dirs = [ "include" ]
+  sources = [ "copy.cc" ]
+
+  deps = [
+    "//zircon/system/ulib/concurrent",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("concurrent-test-pkg") {
+  package_name = "concurrent-test"
+  deps = [ ":concurrent-test" ]
+}
