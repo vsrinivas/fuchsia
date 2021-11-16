@@ -12,6 +12,7 @@ config("re2_skipped_warnings") {
   visibility = [ ":*" ]
   cflags = [
     "-Wno-conversion",
+    "-Wno-extra-semi",
     "-Wno-missing-field-initializers",
     "-Wno-tautological-unsigned-enum-zero-compare",
     "-Wno-tautological-unsigned-zero-compare",
