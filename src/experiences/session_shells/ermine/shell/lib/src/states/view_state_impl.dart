@@ -139,7 +139,7 @@ class ViewStateImpl with Disposable implements ViewState {
         return;
       }
       _requestFocusPending = true;
-      FocusState.instance.requestFocus(view.handle).then((_) {
+      viewConnection.requestFocus().then((_) {
         _requestFocusPending = false;
       }).catchError((e) {
         if (retry > 0) {
