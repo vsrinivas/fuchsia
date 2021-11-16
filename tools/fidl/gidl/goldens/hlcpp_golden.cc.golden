@@ -617,6 +617,76 @@ v1.v = std::vector<uint8_t>{1ull, 2ull, 3ull, 4ull, 1ull, 2ull, 3ull, 4ull, 1ull
 	EXPECT_TRUE(result);
 }
 
+TEST(Conformance, GoldenByteNullableVectorStructNonNull_V1_Encode) {
+	conformance::GoldenNullableByteVectorStruct v1;
+
+v1.v = ::fidl::VectorPtr<uint8_t>{{1ull, 2ull, 3ull, 4ull}};
+
+	const auto expected_bytes = std::vector<uint8_t>{
+0x04,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x02,0x03,0x04,0x00,0x00,0x00,0x00,
+};
+	const auto expected_handles = std::vector<zx_handle_disposition_t>{};
+	
+	const auto result =
+		fidl::test::util::ValueToBytes<conformance::GoldenNullableByteVectorStruct>(
+			fidl::internal::WireFormatVersion::kV1, std::move(v1), expected_bytes, expected_handles, false);
+	EXPECT_TRUE(result);
+}
+
+TEST(Conformance, GoldenByteNullableVectorStructNonNull_V2_Encode) {
+	conformance::GoldenNullableByteVectorStruct v1;
+
+v1.v = ::fidl::VectorPtr<uint8_t>{{1ull, 2ull, 3ull, 4ull}};
+
+	const auto expected_bytes = std::vector<uint8_t>{
+0x04,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x02,0x03,0x04,0x00,0x00,0x00,0x00,
+};
+	const auto expected_handles = std::vector<zx_handle_disposition_t>{};
+	
+	const auto result =
+		fidl::test::util::ValueToBytes<conformance::GoldenNullableByteVectorStruct>(
+			fidl::internal::WireFormatVersion::kV2, std::move(v1), expected_bytes, expected_handles, false);
+	EXPECT_TRUE(result);
+}
+
+TEST(Conformance, GoldenNullableByteVectorStructNull_V1_Encode) {
+	conformance::GoldenNullableByteVectorStruct v1;
+
+v1.v = ::fidl::VectorPtr<uint8_t>();
+
+	const auto expected_bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	const auto expected_handles = std::vector<zx_handle_disposition_t>{};
+	
+	const auto result =
+		fidl::test::util::ValueToBytes<conformance::GoldenNullableByteVectorStruct>(
+			fidl::internal::WireFormatVersion::kV1, std::move(v1), expected_bytes, expected_handles, false);
+	EXPECT_TRUE(result);
+}
+
+TEST(Conformance, GoldenNullableByteVectorStructNull_V2_Encode) {
+	conformance::GoldenNullableByteVectorStruct v1;
+
+v1.v = ::fidl::VectorPtr<uint8_t>();
+
+	const auto expected_bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	const auto expected_handles = std::vector<zx_handle_disposition_t>{};
+	
+	const auto result =
+		fidl::test::util::ValueToBytes<conformance::GoldenNullableByteVectorStruct>(
+			fidl::internal::WireFormatVersion::kV2, std::move(v1), expected_bytes, expected_handles, false);
+	EXPECT_TRUE(result);
+}
+
 TEST(Conformance, GoldenStructVectorStruct_V1_Encode) {
 	conformance::GoldenStructVectorStruct v1;
 
@@ -1486,6 +1556,82 @@ ASSERT_EQ(f2[8], uint8_t(1ull));
 ASSERT_EQ(f2[9], uint8_t(2ull));
 ASSERT_EQ(f2[10], uint8_t(3ull));
 ASSERT_EQ(f2[11], uint8_t(4ull));
+
+	fidl::test::util::ForgetHandles(fidl::internal::WireFormatVersion::kV2, std::move(value));
+}
+
+TEST(Conformance, GoldenByteNullableVectorStructNonNull_V1_Decode) {
+	auto bytes = std::vector<uint8_t>{
+0x04,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x02,0x03,0x04,0x00,0x00,0x00,0x00,
+};
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value =
+	    fidl::test::util::DecodedBytes<conformance::GoldenNullableByteVectorStruct>(fidl::test::util::kV1Header, std::move(bytes), std::move(handles));
+	[[maybe_unused]] auto& f1 = value;
+[[maybe_unused]] auto& f2 = f1.v.value();
+ASSERT_EQ(f2.size(), 4);
+ASSERT_EQ(f2[0], uint8_t(1ull));
+ASSERT_EQ(f2[1], uint8_t(2ull));
+ASSERT_EQ(f2[2], uint8_t(3ull));
+ASSERT_EQ(f2[3], uint8_t(4ull));
+
+	fidl::test::util::ForgetHandles(fidl::internal::WireFormatVersion::kV1, std::move(value));
+}
+
+TEST(Conformance, GoldenByteNullableVectorStructNonNull_V2_Decode) {
+	auto bytes = std::vector<uint8_t>{
+0x04,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x02,0x03,0x04,0x00,0x00,0x00,0x00,
+};
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value =
+	    fidl::test::util::DecodedBytes<conformance::GoldenNullableByteVectorStruct>(fidl::test::util::kV2Header, std::move(bytes), std::move(handles));
+	[[maybe_unused]] auto& f1 = value;
+[[maybe_unused]] auto& f2 = f1.v.value();
+ASSERT_EQ(f2.size(), 4);
+ASSERT_EQ(f2[0], uint8_t(1ull));
+ASSERT_EQ(f2[1], uint8_t(2ull));
+ASSERT_EQ(f2[2], uint8_t(3ull));
+ASSERT_EQ(f2[3], uint8_t(4ull));
+
+	fidl::test::util::ForgetHandles(fidl::internal::WireFormatVersion::kV2, std::move(value));
+}
+
+TEST(Conformance, GoldenNullableByteVectorStructNull_V1_Decode) {
+	auto bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value =
+	    fidl::test::util::DecodedBytes<conformance::GoldenNullableByteVectorStruct>(fidl::test::util::kV1Header, std::move(bytes), std::move(handles));
+	[[maybe_unused]] auto& f1 = value;
+ASSERT_FALSE(f1.v.has_value());
+
+	fidl::test::util::ForgetHandles(fidl::internal::WireFormatVersion::kV1, std::move(value));
+}
+
+TEST(Conformance, GoldenNullableByteVectorStructNull_V2_Decode) {
+	auto bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value =
+	    fidl::test::util::DecodedBytes<conformance::GoldenNullableByteVectorStruct>(fidl::test::util::kV2Header, std::move(bytes), std::move(handles));
+	[[maybe_unused]] auto& f1 = value;
+ASSERT_FALSE(f1.v.has_value());
 
 	fidl::test::util::ForgetHandles(fidl::internal::WireFormatVersion::kV2, std::move(value));
 }

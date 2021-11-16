@@ -245,7 +245,12 @@ func (b *equalityCheckBuilder) visitUnion(actualExpr string, expectedValue gidli
 }
 
 func (b *equalityCheckBuilder) visitList(actualExpr string, expectedValue []gidlir.Value, decl gidlmixer.ListDeclaration) {
-	actualVar := b.createAndAssignVar(actualExpr)
+	var actualVar string
+	if decl.IsNullable() {
+		actualVar = b.createAndAssignVar(actualExpr + ".value()")
+	} else {
+		actualVar = b.createAndAssignVar(actualExpr)
+	}
 	if _, ok := decl.(*gidlmixer.VectorDecl); ok {
 		b.assertEquals(fmt.Sprintf("%s.size()", actualVar), fmt.Sprintf("%d", len(expectedValue)))
 	}

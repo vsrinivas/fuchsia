@@ -338,13 +338,16 @@ func onList(value []gidlir.Value, decl gidlmixer.ListDeclaration) string {
 		elements = append(elements, visit(item, elemDecl))
 	}
 	elementsStr := strings.Join(elements, ", ")
+	var valueStr string
 	switch decl.(type) {
 	case *gidlmixer.ArrayDecl:
-		return fmt.Sprintf("[%s]", elementsStr)
+		valueStr = fmt.Sprintf("[%s]", elementsStr)
 	case *gidlmixer.VectorDecl:
-		return fmt.Sprintf("vec![%s]", elementsStr)
+		valueStr = fmt.Sprintf("vec![%s]", elementsStr)
+	default:
+		panic(fmt.Sprintf("unexpected decl %v", decl))
 	}
-	panic(fmt.Sprintf("unexpected decl %v", decl))
+	return wrapNullable(decl, valueStr)
 }
 
 func buildHandleValue(handle gidlir.Handle) string {

@@ -264,15 +264,21 @@ func (b *cppValueBuilder) visitVector(value []gidlir.Value, decl *gidlmixer.Vect
 	}
 	if _, ok := elemDecl.(gidlmixer.PrimitiveDeclaration); ok {
 		// Populate the vector using aggregate initialization.
-		return fmt.Sprintf("%s{%s}",
-			typeName(decl), strings.Join(elements, ", "))
+		if decl.IsNullable() {
+			return fmt.Sprintf("%s{{%s}}", typeName(decl), strings.Join(elements, ", "))
+		}
+		return fmt.Sprintf("%s{%s}", typeName(decl), strings.Join(elements, ", "))
 	}
 	vectorVar := b.newVar()
 	// Populate the vector using push_back. We can't use an initializer list
 	// because they always copy, which breaks if the element is a unique_ptr.
 	b.Builder.WriteString(fmt.Sprintf("%s %s;\n", typeName(decl), vectorVar))
+	accessor := "."
+	if decl.IsNullable() {
+		accessor = "->"
+	}
 	for _, element := range elements {
-		b.Builder.WriteString(fmt.Sprintf("%s.push_back(%s);\n", vectorVar, element))
+		b.Builder.WriteString(fmt.Sprintf("%s%spush_back(%s);\n", vectorVar, accessor, element))
 	}
 	return fmt.Sprintf("std::move(%s)", vectorVar)
 }
