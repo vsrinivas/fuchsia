@@ -57,17 +57,40 @@
 namespace {
 
 namespace fio = fuchsia_io;
+namespace fdm = fuchsia_device_manager;
 
 bool property_value_type_valid(uint32_t value_type) {
   return value_type > ZX_DEVICE_PROPERTY_VALUE_UNDEFINED &&
          value_type <= ZX_DEVICE_PROPERTY_VALUE_BOOL;
 }
 
-fuchsia_device_manager::wire::DeviceProperty convert_device_prop(const zx_device_prop_t& prop) {
-  return fuchsia_device_manager::wire::DeviceProperty{
+fdm::wire::DeviceProperty convert_device_prop(const zx_device_prop_t& prop) {
+  return fdm::wire::DeviceProperty{
       .id = prop.id,
       .reserved = prop.reserved,
       .value = prop.value,
+  };
+}
+
+std::optional<fdm::wire::DeviceProperty> fidl_offer_to_device_prop(const char* fidl_offer) {
+  static const std::unordered_map<std::string_view, uint32_t> kPropMap = {
+#define DDK_FIDL_PROTOCOL_DEF(tag, val, name) \
+  {                                           \
+      #name,                                  \
+      val,                                    \
+  },
+#include <lib/ddk/fidl-protodefs.h>
+  };
+
+  auto prop = kPropMap.find(fidl_offer);
+  if (prop == kPropMap.end()) {
+    return std::nullopt;
+  }
+  auto& [key, value] = *prop;
+  return fdm::wire::DeviceProperty{
+      .id = BIND_FIDL_PROTOCOL,
+      .reserved = 0,
+      .value = value,
   };
 }
 
@@ -280,6 +303,11 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
         .value = fuchsia_device_manager::wire::PropertyValue::WithBoolValue(true),
     };
     str_props_list.push_back(str_property);
+
+    auto prop = fidl_offer_to_device_prop(offer);
+    if (prop) {
+      props_list.push_back(*prop);
+    }
   }
 
   const auto& coordinator_client = parent->coordinator_client;
