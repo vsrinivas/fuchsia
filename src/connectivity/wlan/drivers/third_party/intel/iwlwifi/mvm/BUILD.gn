@@ -39,7 +39,6 @@ source_set("mvm") {
     "time-event.h",
     "tof.h",
   ]
-  deps = [ "//zircon/system/ulib/zircon-internal" ]
   public_deps = [
     "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_c",
     "//sdk/banjo/fuchsia.hardware.wlan.info:fuchsia.hardware.wlan.info_banjo_c",

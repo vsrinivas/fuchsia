@@ -51,7 +51,6 @@ source_set("core") {
     "//src/lib/ddk",
     "//zircon/system/public",
     "//zircon/system/ulib/sync",
-    "//zircon/system/ulib/zircon-internal",
   ]
   public_deps = [
     "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_c",

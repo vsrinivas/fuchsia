@@ -34,9 +34,9 @@
  *
  *****************************************************************************/
 
-#include <lib/zircon-internal/thread_annotations.h>
 #include <stdbool.h>
 #include <threads.h>
+#include <zircon/compiler.h>
 #include <zircon/syscalls.h>
 
 #include <ddk/hw/wlan/ieee80211/c/banjo.h>
@@ -610,7 +610,7 @@ static void iwl_mvm_init_modparams(struct iwl_mvm* mvm) {
 }
 #endif
 
-static int iwl_mvm_fwrt_dump_start(void* ctx) TA_NO_THREAD_SAFETY_ANALYSIS {
+static int iwl_mvm_fwrt_dump_start(void* ctx) __TA_NO_THREAD_SAFETY_ANALYSIS {
   struct iwl_mvm* mvm = ctx;
   int ret;
 
@@ -624,7 +624,7 @@ static int iwl_mvm_fwrt_dump_start(void* ctx) TA_NO_THREAD_SAFETY_ANALYSIS {
   return 0;
 }
 
-static void iwl_mvm_fwrt_dump_end(void* ctx) TA_NO_THREAD_SAFETY_ANALYSIS {
+static void iwl_mvm_fwrt_dump_end(void* ctx) __TA_NO_THREAD_SAFETY_ANALYSIS {
   struct iwl_mvm* mvm = ctx;
 
   mtx_unlock(&mvm->mutex);

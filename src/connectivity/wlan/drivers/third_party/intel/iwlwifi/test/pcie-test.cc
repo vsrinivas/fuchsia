@@ -19,7 +19,6 @@
 #include <lib/fake-bti/bti.h>
 #include <lib/mock-function/mock-function.h>
 #include <lib/sync/completion.h>
-#include <lib/zircon-internal/align.h>
 #include <lib/zx/bti.h>
 #include <zircon/listnode.h>
 
@@ -37,6 +36,7 @@ extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/internal.h"
 }
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/align.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/irq.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
@@ -333,7 +333,7 @@ class PcieTest : public zxtest::Test {
     for (uint32_t i = from; i <= to; ++i) {
       struct iwl_rx_mem_buffer* rxb = rxq->queue[i];
       for (size_t offset = 0; offset < iwl_iobuf_size(rxb->io_buf);
-           offset += ZX_ALIGN(1, FH_RSCSR_FRAME_ALIGN)) {  // move to next packet
+           offset += IWL_ALIGN(1, FH_RSCSR_FRAME_ALIGN)) {  // move to next packet
         struct iwl_rx_cmd_buffer rxcb = {
             ._iobuf = rxb->io_buf,
             ._offset = static_cast<int>(offset),

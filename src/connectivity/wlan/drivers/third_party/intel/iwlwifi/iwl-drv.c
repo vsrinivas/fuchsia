@@ -38,7 +38,6 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
 #include <lib/sync/completion.h>
-#include <lib/zircon-internal/align.h>
 #include <stdio.h>
 #include <threads.h>
 #include <zircon/listnode.h>
@@ -53,6 +52,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-modparams.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-op-mode.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/align.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/device.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/module.h"
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
@@ -846,8 +846,8 @@ fw_dbg_conf:
       IWL_ERR(drv, "invalid TLV len: %zd/%u\n", len, tlv_len);
       return ZX_ERR_INVALID_ARGS;
     }
-    len -= ZX_ALIGN(tlv_len, 4);
-    data += sizeof(*tlv) + ZX_ALIGN(tlv_len, 4);
+    len -= IWL_ALIGN(tlv_len, 4);
+    data += sizeof(*tlv) + IWL_ALIGN(tlv_len, 4);
 
     switch (tlv_type) {
       case IWL_UCODE_TLV_INST:
