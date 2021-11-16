@@ -74,9 +74,9 @@ TEST(Conformance, {{ .Name }}_Decode) {
 	auto bytes = {{ .Bytes }};
 	auto handles = {{ .Handles }};
 	auto obj = {{ .ValueVar }};
-	auto equality_check = [&]({{ .ValueType }}& {{ .EqualityInputVar }}) -> bool {
-		{{ .EqualityBuild }}
-		return {{ .EqualityValue }};
+	auto equality_check = [&]({{ .ValueType }}& {{ .Equality.InputVar }}) -> bool {
+		{{ .Equality.HelperStatements }}
+		return {{ .Equality.Expr }};
 	};
 	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
 		{{ .WireFormatVersion }}, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
@@ -146,12 +146,12 @@ type encodeSuccessCase struct {
 }
 
 type decodeSuccessCase struct {
-	Name, HandleDefs, HandleKoidVectorName         string
-	WireFormatVersion                              string
-	ValueBuild, ValueVar, ValueType                string
-	EqualityInputVar, EqualityBuild, EqualityValue string
-	Bytes, Handles                                 string
-	FuchsiaOnly                                    bool
+	Name, HandleDefs, HandleKoidVectorName string
+	WireFormatVersion                      string
+	ValueBuild, ValueVar, ValueType        string
+	Equality                               libllcpp.EqualityCheck
+	Bytes, Handles                         string
+	FuchsiaOnly                            bool
 }
 
 type encodeFailureCase struct {
@@ -240,7 +240,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 		valueBuild, valueVar := libllcpp.BuildValueAllocator("allocator", decodeSuccess.Value, decl, libllcpp.HandleReprInfo)
 		equalityInputVar := "actual"
 		handleKoidVectorName := "handle_koids"
-		equalityBuild, EqualityValue := libllcpp.BuildEqualityCheck(equalityInputVar, decodeSuccess.Value, decl, "handle_koids")
+		equality := libllcpp.BuildEqualityCheck(equalityInputVar, decodeSuccess.Value, decl, handleKoidVectorName)
 		fuchsiaOnly := decl.IsResourceType() || len(decodeSuccess.HandleDefs) > 0
 		for _, encoding := range decodeSuccess.Encodings {
 			if !wireFormatSupported(encoding.WireFormat) {
@@ -253,9 +253,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 				ValueBuild:           valueBuild,
 				ValueVar:             valueVar,
 				ValueType:            libllcpp.ConformanceType(gidlir.TypeFromValue(decodeSuccess.Value)),
-				EqualityInputVar:     equalityInputVar,
-				EqualityBuild:        equalityBuild,
-				EqualityValue:        EqualityValue,
+				Equality:             equality,
 				Bytes:                libhlcpp.BuildBytes(encoding.Bytes),
 				Handles:              libhlcpp.BuildRawHandleInfos(encoding.Handles),
 				FuchsiaOnly:          fuchsiaOnly,

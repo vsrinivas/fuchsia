@@ -8,6 +8,7 @@
 #include <lib/fidl/coding.h>
 #include <lib/fidl/internal.h>
 #include <lib/fidl/llcpp/message.h>
+#include <lib/fit/function.h>
 #include <zircon/fidl.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -120,9 +121,11 @@ bool EncodeSuccess(FidlWireFormatVersion wire_format_version, FidlType* value,
 }
 
 // Verifies that |bytes| and |handles| successfully decodes.
-// TODO(fxbug.dev/67276) Check deep equality of decoded value.
+// EqualityCheck takes a raw pointer to the input in its FIDL decoded form,
+// and checks deep equality and compares handles based on koid, type and rights.
 inline bool DecodeSuccess(FidlWireFormatVersion wire_format_version, const fidl_type* type,
-                          std::vector<uint8_t> bytes, std::vector<zx_handle_info_t> handles) {
+                          std::vector<uint8_t> bytes, std::vector<zx_handle_info_t> handles,
+                          fit::callback<bool(void* actual)> equality_check) {
   const char* error_msg = nullptr;
   zx_status_t status;
   switch (wire_format_version) {
@@ -150,6 +153,12 @@ inline bool DecodeSuccess(FidlWireFormatVersion wire_format_version, const fidl_
               << std::endl;
     return false;
   }
+
+  if (!equality_check(static_cast<void*>(bytes.data()))) {
+    std::cout << "decode results does not equal to expected" << std::endl;
+    return false;
+  }
+
   return true;
 }
 

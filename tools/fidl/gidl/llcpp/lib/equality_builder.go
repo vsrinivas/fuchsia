@@ -13,13 +13,39 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-func BuildEqualityCheck(actualExpr string, expectedValue gidlir.Value, decl gidlmixer.Declaration, handleKoidVectorName string) (string, string) {
+// EqualityCheck contains the necessary information to render an equality check.
+// See BuildEqualityCheck.
+type EqualityCheck = struct {
+	// InputVar is the name of the wire domain object to be checked.
+	InputVar string
+
+	// HelperStatements is a series of statements binding particular fields
+	// in a wire domain object to named references. It should precede the
+	// EqualityExpr when rendered.
+	HelperStatements string
+
+	// Expr is an expression checking the named references from
+	// HelperStatements against their expected value.
+	Expr string
+}
+
+// BuildEqualityCheck builds an ad-hoc equality test verifying that a wire domain object
+// matches the expected value.
+//
+// In particular, an actual handle having the same KOID, type, and rights as the expected
+// handle is considered equal to the expected, despite possibly having different handle
+// numbers, to accommodate handle replacement.
+func BuildEqualityCheck(actualVar string, expectedValue gidlir.Value, decl gidlmixer.Declaration, handleKoidVectorName string) EqualityCheck {
 	builder := equalityCheckBuilder{
 		handleKoidVectorName: handleKoidVectorName,
 	}
-	resultValue := builder.visit(fidlExpr(actualExpr), expectedValue, decl)
+	resultValue := builder.visit(fidlExpr(actualVar), expectedValue, decl)
 	resultBuild := builder.String()
-	return resultBuild, string(resultValue)
+	return EqualityCheck{
+		InputVar:         actualVar,
+		HelperStatements: resultBuild,
+		Expr:             string(resultValue),
+	}
 }
 
 // A boolean expression in C++ (i.e. the output of the check).
