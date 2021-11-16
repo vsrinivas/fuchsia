@@ -130,6 +130,12 @@ romfs_image("extras") {
       "${linux_exe_path}/bench-vk",
     ]
 
+    if (current_cpu == "x64") {
+      deps += [ "//src/graphics/tests/vkgbm(${linux_exe_toolchain})" ]
+
+      inputs += [ "${linux_exe_path}/vkgbm" ]
+    }
+
     inputs += linux_runner_user_extras
   }
 
