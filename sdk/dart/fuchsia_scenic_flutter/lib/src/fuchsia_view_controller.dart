@@ -127,10 +127,17 @@ class FuchsiaViewController implements PlatformViewController {
     );
   }
 
-  /// Requests that focus be transferred to the remote Scene represented by
-  /// this connection.
+  /// Requests that focus be transferred to the child view referred to by
+  /// viewRef. Note that this method should only be used with Scenics legacy
+  /// GFX API
   Future<void> requestFocus(int viewRef) async {
     return FocusState.instance.requestFocus(viewRef);
+  }
+
+  /// Requests that focus be transferred to the child view referred to by
+  /// viewId. Note that this method should only be used with the Flatland API
+  Future<void> requestFocusById(int viewId) async {
+    return FocusState.instance.requestFocusById(viewId);
   }
 
   /// Dispose relevant resources when the view is take [OffStage] by Flutter.

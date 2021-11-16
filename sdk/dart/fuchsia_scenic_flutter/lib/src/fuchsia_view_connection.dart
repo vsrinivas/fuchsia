@@ -48,6 +48,8 @@ class FuchsiaViewConnection extends FuchsiaViewController {
   /// This requires the view's [ViewRef] to be set during construction.
   final bool usePointerInjection;
 
+  final bool useFlatland;
+
   /// Constructor.
   FuchsiaViewConnection(
     this.viewHolderToken, {
@@ -56,6 +58,7 @@ class FuchsiaViewConnection extends FuchsiaViewController {
     FuchsiaViewConnectionCallback? onViewDisconnected,
     FuchsiaViewConnectionStateCallback? onViewStateChanged,
     this.usePointerInjection = false,
+    this.useFlatland = false,
   })  : assert(viewHolderToken!.value != null && viewHolderToken.value.isValid),
         assert(
             viewRef?.reference == null || viewRef!.reference.handle!.isValid),
@@ -79,6 +82,7 @@ class FuchsiaViewConnection extends FuchsiaViewController {
     FuchsiaViewConnectionCallback? onViewDisconnected,
     FuchsiaViewConnectionStateCallback? onViewStateChanged,
     this.usePointerInjection = false,
+    this.useFlatland = true,
   })  : assert(viewportCreationToken!.value != null &&
             viewportCreationToken.value.isValid),
         assert(
@@ -97,11 +101,18 @@ class FuchsiaViewConnection extends FuchsiaViewController {
         );
 
   /// Requests that focus be transferred to the remote Scene represented by
-  /// this connection.
+  /// this connection. This method is the point at which focus handling for
+  /// flatland diverges. In Flatland, the Flutter engine holds the ViewRef
+  /// and does not provide it to dart code, so we must refer to the child
+  /// view by viewId instead
   @override
   Future<void> requestFocus([int _ = 0]) async {
     assert(viewRef?.reference != null && _ == 0);
-    return super.requestFocus(viewRef!.reference.handle!.handle);
+    if (useFlatland) {
+      return super.requestFocusById(viewId);
+    } else {
+      return super.requestFocus(viewRef!.reference.handle!.handle);
+    }
   }
 
   static void _handleViewStateChanged(

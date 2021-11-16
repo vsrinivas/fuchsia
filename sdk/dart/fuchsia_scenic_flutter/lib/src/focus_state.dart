@@ -58,13 +58,34 @@ class FocusState {
     final args = <String, dynamic>{
       'viewRef': viewRef,
     };
-
     final result = await FuchsiaViewsService.instance.platformViewChannel
         .invokeMethod('View.focus.request', args);
     // Throw OSError if result is non-zero.
     if (result != 0) {
       throw OSError(
         'Failed to request focus for view: $viewRef with $result',
+        result,
+      );
+    }
+  }
+
+  /// Requests that focus be transferred to the remote Scene by ViewId
+  /// This method is indended for use by FuchsiaViewConnection only.
+  Future<void> requestFocusById(int viewId) async {
+    final args = <String, dynamic>{
+      'viewId': viewId,
+    };
+
+    final result = await FuchsiaViewsService.instance.platformViewChannel
+        .invokeMethod('View.focus.requestById', args);
+    // Throw OSError if result is non-zero. This may be because the ViewId is
+    // invalid (i.e. the view has not been created or destroyed yet). If you are
+    // trying to set focus on a FuchsiaViewConnection immediately after creating
+    // it and it is failing you may be racing against scenic providing a view ref
+    // back to the flutter engine, and it may be effective to wait a moment and retry.
+    if (result != 0) {
+      throw OSError(
+        'Failed to request focus for view: $viewId with $result',
         result,
       );
     }
