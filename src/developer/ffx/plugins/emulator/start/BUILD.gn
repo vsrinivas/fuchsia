@@ -9,6 +9,7 @@ if (is_host) {
     version = "0.1.0"
     edition = "2018"
     args_deps = [
+      "//src/developer/ffx/plugins/emulator/configuration:ffx_emulator_config",
       "//third_party/rust_crates:serde",
       "//third_party/rust_crates:serde_json",
     ]

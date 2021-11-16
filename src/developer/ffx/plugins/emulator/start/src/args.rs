@@ -4,9 +4,9 @@
 
 use argh::{FromArgValue, FromArgs};
 use ffx_core::ffx_command;
+use ffx_emulator_config::AccelerationMode;
 use serde::{Deserialize, Serialize};
 use std::{fmt, path::PathBuf};
-
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum EngineType {
@@ -115,6 +115,12 @@ pub struct StartCommand {
     #[argh(option)]
     pub gpu: Option<GpuType>,
 
+    /// virtualization acceleration. Valid choices are "none" to disable acceleration, "hyper" to use the
+    /// host's hypervisor interface, KVM on Linux and HVF on macOS, "auto" to use the hypervisor if detected.
+    /// The default value is "auto".
+    #[argh(option, default = "AccelerationMode::Auto")]
+    pub accel: AccelerationMode,
+
     /// enable pixel scaling on HiDPI devices (MacOS).
     #[argh(switch)]
     pub hidpi_scaling: bool,
@@ -145,11 +151,6 @@ pub struct StartCommand {
     /// (DISPLAY) will be set to run the emulator.
     #[argh(option)]
     pub envs: Vec<String>,
-
-    /// disable acceleration using KVM on Linux and HVF on macOS.
-    /// TODO(fxbug.dev/88633): change to support --accel [none|hyper|auto]
-    #[argh(switch)]
-    pub noacceleration: bool,
 
     /// use named product information from Product Bundle Metadata (PBM). If no
     /// product bundle is specified and there is an obvious choice, that will be

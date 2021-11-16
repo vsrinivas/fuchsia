@@ -10,8 +10,8 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use ffx_emulator_common::config::FfxConfigWrapper;
-use serde::Deserialize;
-
+use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 #[async_trait]
 pub trait EmulatorEngine {
     /// Instantiate an empty instance of this engine type. Meaningful defaults can be applied here,
@@ -84,3 +84,33 @@ pub struct HostConfig {}
 /// and behavior of Fuchsia running within the emulator instance.
 #[derive(Debug, Default, Deserialize)]
 pub struct RuntimeConfig {}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum AccelerationMode {
+    /// The emulator will set the acceleration mode according to the host system's capabilities.
+    Auto,
+
+    /// KVM or similar acceleration will be enabled.
+    Hyper,
+
+    /// Hardware acceleration is disabled.
+    None,
+}
+impl Default for AccelerationMode {
+    fn default() -> Self {
+        AccelerationMode::None
+    }
+}
+
+impl FromStr for AccelerationMode {
+    type Err = std::string::String;
+    fn from_str(text: &str) -> Result<Self, std::string::String> {
+        let value = serde_json::from_str(&format!("\"{}\"", text)).expect(&format!(
+            "could not parse '{}' as a valid AccelerationMode. \
+            Please check the help text for allowed values and try again",
+            text
+        ));
+        Ok(value)
+    }
+}
