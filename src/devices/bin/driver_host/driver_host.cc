@@ -848,56 +848,50 @@ zx_status_t DriverHostContext::ScheduleUnbindChildren(const fbl::RefPtr<zx_devic
   return resp.status();
 }
 
-zx_status_t DriverHostContext::GetTopoPath(const fbl::RefPtr<zx_device_t>& dev, char* path,
-                                           size_t max, size_t* actual) {
+void DriverHostContext::GetTopoPath(const fbl::RefPtr<zx_device_t>& dev,
+                                    fit::callback<void(zx::status<std::string_view>)> cb) {
+  auto buf = std::make_unique<fbl::StringBuffer<fuchsia_device::wire::kMaxDevicePathLen + 1>>();
   fbl::RefPtr<zx_device_t> remote_dev = dev;
   if (dev->flags() & DEV_FLAG_INSTANCE) {
     // Instances cannot be opened a second time. If dev represents an instance, return the path
     // to its parent, prefixed with an '@'.
-    if (max < 1) {
-      return ZX_ERR_BUFFER_TOO_SMALL;
-    }
-    path[0] = '@';
-    path++;
-    max--;
+    buf->Append('@');
     remote_dev = dev->parent();
   }
 
   const auto& client = remote_dev->coordinator_client;
   if (!client) {
-    return ZX_ERR_IO_REFUSED;
+    cb(zx::error(ZX_ERR_IO_REFUSED));
+    return;
   }
 
   VLOGD(1, *remote_dev, "get-topo-path");
-  auto response = client->GetTopologicalPath_Sync();
-  zx_status_t status = response.status();
-  zx_status_t call_status = ZX_OK;
-  if (status == ZX_OK) {
-    if (response.Unwrap()->result.is_err()) {
-      call_status = response.Unwrap()->result.err();
-    } else {
-      auto& r = response.Unwrap()->result.response();
-      memcpy(path, r.path.data(), r.path.size());
-      *actual = r.path.size();
-    }
-  }
+  client->GetTopologicalPath(
+      [dev = std::move(dev), buf = std::move(buf), cb = std::move(cb)](
+          fidl::WireUnownedResult<fdm::Coordinator::GetTopologicalPath>& result) mutable {
+        zx_status_t status = result.status();
+        zx_status_t call_status = ZX_OK;
+        if (status == ZX_OK) {
+          if (result->result.is_err()) {
+            call_status = result->result.err();
+          } else {
+            auto& r = result->result.response();
+            buf->Append(r.path.get());
+          }
+        }
 
-  log_rpc_result(dev, "get-topo-path", status, call_status);
-  if (status != ZX_OK) {
-    return status;
-  }
-  if (call_status != ZX_OK) {
-    return status;
-  }
+        log_rpc_result(dev, "get-topo-path", status, call_status);
+        if (status != ZX_OK) {
+          cb(zx::error(status));
+          return;
+        }
+        if (call_status != ZX_OK) {
+          cb(zx::error(status));
+          return;
+        }
 
-  path[*actual] = 0;
-  *actual += 1;
-
-  // Account for the prefixed '@' we may have added above.
-  if (dev->flags() & DEV_FLAG_INSTANCE) {
-    *actual += 1;
-  }
-  return ZX_OK;
+        cb(zx::ok(std::string_view(*buf)));
+      });
 }
 
 zx_status_t DriverHostContext::DeviceBind(const fbl::RefPtr<zx_device_t>& dev,

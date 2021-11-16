@@ -101,8 +101,8 @@ class DriverHostContext {
                            const char* path, zx_handle_t* vmo_handle, size_t* size);
   void LoadFirmwareAsync(const zx_driver_t* drv, const fbl::RefPtr<zx_device_t>& dev,
                          const char* path, load_firmware_callback_t callback, void* context);
-  zx_status_t GetTopoPath(const fbl::RefPtr<zx_device_t>& dev, char* path, size_t max,
-                          size_t* actual);
+  void GetTopoPath(const fbl::RefPtr<zx_device_t>& dev,
+                   fit::callback<void(zx::status<std::string_view>)> cb);
   zx_status_t GetMetadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t type, void* buf,
                           size_t buflen, size_t* actual) TA_REQ(api_lock_);
 

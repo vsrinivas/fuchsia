@@ -11,6 +11,7 @@
 #include <fbl/string_buffer.h>
 
 #include "driver_host.h"
+#include "lib/fidl/llcpp/string_view.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 
 namespace {
@@ -206,19 +207,14 @@ void DevfsVnode::GetDeviceName(GetDeviceNameRequestView request,
 
 void DevfsVnode::GetTopologicalPath(GetTopologicalPathRequestView request,
                                     GetTopologicalPathCompleter::Sync& completer) {
-  char buf[fuchsia_device::wire::kMaxDevicePathLen + 1];
-  size_t actual;
-  zx_status_t status = dev_->driver_host_context()->GetTopoPath(dev_, buf, sizeof(buf), &actual);
-  if (status != ZX_OK) {
-    completer.ReplyError(status);
-    return;
-  }
-  if (actual > 0) {
-    // Remove the accounting for the null byte
-    actual--;
-  }
-  auto path = ::fidl::StringView(buf, actual);
-  completer.ReplySuccess(std::move(path));
+  dev_->driver_host_context()->GetTopoPath(
+      dev_, [completer = completer.ToAsync()](zx::status<std::string_view> path) mutable {
+        if (path.is_error()) {
+          completer.ReplyError(path.status_value());
+          return;
+        }
+        completer.ReplySuccess(fidl::StringView::FromExternal(*path));
+      });
 }
 
 void DevfsVnode::GetMinDriverLogSeverity(GetMinDriverLogSeverityRequestView request,
