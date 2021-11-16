@@ -6,6 +6,7 @@ import("//build/images/assemble_system.gni")
 import("//build/images/assembly/update_package.gni")
 import("//build/images/vboot/vboot.gni")
 import("//build/security.gni")
+import("//build/testing/host_test_data.gni")
 import("//build/testing/verify_files_match.gni")
 
 ##################################################
@@ -445,6 +446,10 @@ verify_files_match("update_matches") {
     ":fuchsia_assembly",
     ":update",
   ]
+}
+
+host_test_data("fuchsia_zbi_for_host_tests") {
+  sources = [ "$root_build_dir/fuchsia.zbi" ]
 }
 
 ##################################################

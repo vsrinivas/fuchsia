@@ -4,7 +4,6 @@
 
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
-import("//build/testing/host_test_data.gni")
 
 group("tests") {
   testonly = true
@@ -27,13 +26,9 @@ if (is_linux) {
     sources = [ "kernel_panic_test.go" ]
   }
 
-  host_test_data("main_zbi") {
-    sources = [ "$root_build_dir/fuchsia.zbi" ]
-  }
-
   go_test("kernel_panic_tests") {
     gopackages = [ "go.fuchsia.dev/fuchsia/src/tests/kernel_panic" ]
     deps = [ ":lib" ]
-    non_go_deps = [ ":main_zbi" ]
+    non_go_deps = [ "//build/images/fuchsia:fuchsia_zbi_for_host_tests" ]
   }
 }

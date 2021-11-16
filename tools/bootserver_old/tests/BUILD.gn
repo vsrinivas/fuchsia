@@ -49,7 +49,7 @@ if (is_linux) {
     ]
     non_go_deps = [
       ":bootserver_user_tools",
-      ":main_zbi",
+      "//build/images/fuchsia:fuchsia_zbi_for_host_tests",
     ]
     sources = [
       "common.go",
@@ -60,10 +60,6 @@ if (is_linux) {
       "test_write_firmware_no_type/test_write_firmware_no_type_test.go",
       "test_write_firmware_with_type/test_write_firmware_with_type_test.go",
     ]
-  }
-
-  host_test_data("main_zbi") {
-    sources = [ "$root_build_dir/fuchsia.zbi" ]
   }
 
   host_out_dir = get_label_info("//bogus($host_toolchain)", "root_out_dir")

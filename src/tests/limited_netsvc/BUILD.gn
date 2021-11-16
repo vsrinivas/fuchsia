@@ -25,10 +25,6 @@ if (is_linux) {
     sources = [ "limited_netsvc_test.go" ]
   }
 
-  host_test_data("main_zbi") {
-    sources = [ "$root_build_dir/fuchsia.zbi" ]
-  }
-
   net_tools = [
     "netaddr",
     "netcp",
@@ -76,8 +72,8 @@ if (is_linux) {
       "//tools/virtual_device:proto",
     ]
     non_go_deps = [
-      ":main_zbi",
       ":netsvc_user_tools",
+      "//build/images/fuchsia:fuchsia_zbi_for_host_tests",
     ]
   }
 }

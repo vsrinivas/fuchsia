@@ -4,7 +4,6 @@
 
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
-import("//build/testing/host_test_data.gni")
 
 group("tests") {
   testonly = true
@@ -27,10 +26,6 @@ if (is_linux) {
     sources = [ "kernel_crashlog_test.go" ]
   }
 
-  host_test_data("main_zbi") {
-    sources = [ "$root_build_dir/fuchsia.zbi" ]
-  }
-
   go_test("kernel_crashlog_tests") {
     gopackages = [ "fuchsia.googlesource.com/tests/kernel_crashlog" ]
     deps = [
@@ -38,6 +33,6 @@ if (is_linux) {
       "//tools/virtual_device",
       "//tools/virtual_device:proto",
     ]
-    non_go_deps = [ ":main_zbi" ]
+    non_go_deps = [ "//build/images/fuchsia:fuchsia_zbi_for_host_tests" ]
   }
 }

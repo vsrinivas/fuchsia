@@ -4,7 +4,6 @@
 
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
-import("//build/testing/host_test_data.gni")
 
 group("tests") {
   testonly = true
@@ -32,10 +31,6 @@ if (is_linux) {
     sources = [ "reboottest.go" ]
   }
 
-  host_test_data("main_zbi") {
-    sources = [ "$root_build_dir/fuchsia.zbi" ]
-  }
-
   # The CQ/CI test infrastructure has a per-binary timeout. When the target
   # (Fuchsia) is built with asan and ubsan instrumentation, it can take a long
   # time to boot (60s or more). To avoid exceeding the timeout, each test case
@@ -52,7 +47,7 @@ if (is_linux) {
     go_test("${split_name}_test") {
       gopackages = [ "go.fuchsia.dev/fuchsia/src/tests/reboot/$split_name" ]
       deps = [ ":$split_name" ]
-      non_go_deps = [ ":main_zbi" ]
+      non_go_deps = [ "//build/images/fuchsia:fuchsia_zbi_for_host_tests" ]
     }
   }
 
