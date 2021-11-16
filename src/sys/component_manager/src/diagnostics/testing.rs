@@ -5,25 +5,47 @@
 #![cfg(test)]
 
 use {
-    crate::diagnostics::runtime_stats_source::*,
+    crate::diagnostics::{
+        runtime_stats_source::*,
+        task_info::{TaskInfo, TaskState},
+    },
     async_trait::async_trait,
-    fuchsia_zircon as zx, fuchsia_zircon_sys as zx_sys,
+    fuchsia_async::{self as fasync, DurationExt},
+    fuchsia_zircon::{self as zx, AsHandleRef},
+    fuchsia_zircon_sys as zx_sys,
     futures::{channel::oneshot, lock::Mutex},
+    injectable_time::TimeSource,
     std::{collections::VecDeque, sync::Arc},
 };
 
 /// Mock for a Task. Holds a queue of runtime infos (measurements) that will be fetched for test
 /// purposes.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct FakeTask {
     values: Arc<Mutex<VecDeque<zx::TaskRuntimeInfo>>>,
     koid: zx_sys::zx_koid_t,
-    pub invalid_handle: bool,
+    event: Arc<zx::Event>,
+}
+
+impl Default for FakeTask {
+    fn default() -> Self {
+        Self::new(0, vec![])
+    }
 }
 
 impl FakeTask {
     pub fn new(koid: zx_sys::zx_koid_t, values: Vec<zx::TaskRuntimeInfo>) -> Self {
-        Self { koid, invalid_handle: false, values: Arc::new(Mutex::new(values.into())) }
+        Self {
+            koid,
+            values: Arc::new(Mutex::new(values.into())),
+            event: Arc::new(zx::Event::create().unwrap()),
+        }
+    }
+
+    pub async fn terminate(&self) {
+        self.event
+            .signal_handle(zx::Signals::NONE, zx::Signals::TASK_TERMINATED)
+            .expect("signal task terminated");
     }
 }
 
@@ -32,11 +54,34 @@ impl RuntimeStatsSource for FakeTask {
     fn koid(&self) -> Result<zx_sys::zx_koid_t, zx::Status> {
         Ok(self.koid.clone())
     }
-    fn handle_is_invalid(&self) -> bool {
-        self.invalid_handle
+
+    fn handle_ref(&self) -> zx::HandleRef<'_> {
+        self.event.as_handle_ref()
     }
+
     async fn get_runtime_info(&self) -> Result<zx::TaskRuntimeInfo, zx::Status> {
         Ok(self.values.lock().await.pop_front().unwrap_or(zx::TaskRuntimeInfo::default()))
+    }
+}
+
+impl<U: TimeSource + Send> TaskInfo<FakeTask, U> {
+    pub async fn force_terminate(&mut self) {
+        match &*self.task.lock().await {
+            TaskState::Alive(t) | TaskState::Terminated(t) => t.terminate().await,
+            TaskState::TerminatedAndMeasured => {}
+        }
+
+        // Since the terminate is done asynchronously, ensure we actually have marked this task as
+        // terminated to avoid flaking.
+        loop {
+            if matches!(
+                *self.task.lock().await,
+                TaskState::Terminated(_) | TaskState::TerminatedAndMeasured
+            ) {
+                return;
+            }
+            fasync::Timer::new(zx::Duration::from_millis(100).after_now()).await;
+        }
     }
 }
 

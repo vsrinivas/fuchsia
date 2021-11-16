@@ -17,8 +17,8 @@ use {
 pub trait RuntimeStatsSource {
     /// The koid of the Cpu stats source.
     fn koid(&self) -> Result<zx_sys::zx_koid_t, zx::Status>;
-    /// Whether the handle backing up this source is invalid.
-    fn handle_is_invalid(&self) -> bool;
+    /// The returned future will resolve when the task is terminated.
+    fn handle_ref(&self) -> zx::HandleRef<'_>;
     /// Provides the runtime info containing the stats.
     async fn get_runtime_info(&self) -> Result<zx::TaskRuntimeInfo, zx::Status>;
 }
@@ -60,11 +60,11 @@ impl RuntimeStatsSource for DiagnosticsTask {
         Ok(info.koid.raw_koid())
     }
 
-    fn handle_is_invalid(&self) -> bool {
+    fn handle_ref(&self) -> zx::HandleRef<'_> {
         match &self {
-            DiagnosticsTask::Job(job) => job.as_handle_ref().is_invalid(),
-            DiagnosticsTask::Process(process) => process.as_handle_ref().is_invalid(),
-            DiagnosticsTask::Thread(thread) => thread.as_handle_ref().is_invalid(),
+            DiagnosticsTask::Job(job) => job.as_handle_ref(),
+            DiagnosticsTask::Process(process) => process.as_handle_ref(),
+            DiagnosticsTask::Thread(thread) => thread.as_handle_ref(),
             TaskUnknown!() => {
                 unreachable!("only jobs, threads and processes are tasks");
             }

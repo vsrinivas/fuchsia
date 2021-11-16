@@ -29,6 +29,7 @@ use {
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker},
     std::{
         collections::BTreeMap,
+        fmt::Debug,
         sync::{Arc, Weak},
     },
 };
@@ -45,7 +46,7 @@ macro_rules! maybe_return {
 const MAX_INSPECT_SIZE : usize = 2 * 1024 * 1024 /* 2MB */;
 
 /// Provides stats for all components running in the system.
-pub struct ComponentTreeStats<T: RuntimeStatsSource> {
+pub struct ComponentTreeStats<T: RuntimeStatsSource + Debug> {
     /// Map from a moniker of a component running in the system to its stats.
     tree: Mutex<BTreeMap<ExtendedMoniker, Arc<Mutex<ComponentStats<T>>>>>,
 
@@ -69,7 +70,7 @@ pub struct ComponentTreeStats<T: RuntimeStatsSource> {
     totals: Mutex<AggregatedStats>,
 }
 
-impl<T: 'static + RuntimeStatsSource + Send + Sync> ComponentTreeStats<T> {
+impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T> {
     pub async fn new(node: inspect::Node) -> Arc<Self> {
         let processing_times = node.create_int_exponential_histogram(
             "processing_times_ns",
@@ -427,8 +428,12 @@ mod tests {
         for task in
             stats.tree.lock().await.get(&moniker).unwrap().lock().await.tasks_mut().iter_mut()
         {
-            task.lock().await.task_mut().invalid_handle = true;
+            task.lock().await.force_terminate().await;
         }
+
+        // This will perform a measurement that is done after a task has finished for the sake of
+        // having one post-termination measurement.
+        stats.measure().await;
 
         for i in 0..COMPONENT_CPU_MAX_SAMPLES {
             stats.measure().await;
@@ -843,12 +848,12 @@ mod tests {
                 ..zx::TaskRuntimeInfo::default()
             }],
         );
-        let fake_runtime =
+        let fake_parent_runtime =
             FakeRuntime::new(FakeDiagnosticsContainer::new(parent_task.clone(), None));
         stats
             .on_component_started(
                 ExtendedMoniker::ComponentInstance(vec!["parent:0"].into()),
-                &fake_runtime,
+                &fake_parent_runtime,
             )
             .await;
 
@@ -875,15 +880,20 @@ mod tests {
         assert_eq!(stats.tree.lock().await.len(), 2);
         assert_eq!(stats.tasks.lock().await.len(), 2);
 
-        // Invalidate the handle, to simulate that the component stopped.
+        // Mark as terminated, to simulate that the component completely stopped.
         for task in stats.tree.lock().await.get(&child_moniker).unwrap().lock().await.tasks_mut() {
-            task.lock().await.task_mut().invalid_handle = true;
+            task.lock().await.force_terminate().await;
         }
 
+        // This will perform the (last) post-termination sample.
+        stats.measure().await;
+
+        // These will start incrementing the counter of post-termination samples, but won't sample.
         for _ in 0..COMPONENT_CPU_MAX_SAMPLES {
             stats.measure().await;
         }
 
+        // Causes the task to be gone since it has been terminated for long enough.
         stats.measure().await;
 
         // Child is gone and only the parent exists now.

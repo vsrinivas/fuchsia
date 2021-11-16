@@ -8,6 +8,7 @@ use {
         measurement::{Measurement, MeasurementsQueue},
         runtime_stats_source::RuntimeStatsSource,
     },
+    fuchsia_async as fasync,
     fuchsia_inspect::{self as inspect, HistogramProperty, UintLinearHistogramProperty},
     fuchsia_zircon as zx,
     fuchsia_zircon_sys::{self as zx_sys, zx_system_get_num_cpus},
@@ -15,7 +16,10 @@ use {
     injectable_time::{MonotonicTime, TimeSource},
     lazy_static::lazy_static,
     moniker::ExtendedMoniker,
-    std::sync::Weak,
+    std::{
+        fmt::Debug,
+        sync::{Arc, Weak},
+    },
 };
 
 lazy_static! {
@@ -41,11 +45,27 @@ fn num_cpus() -> i64 {
 }
 
 #[derive(Debug)]
-pub struct TaskInfo<T: RuntimeStatsSource, U: TimeSource> {
+pub(crate) enum TaskState<T: RuntimeStatsSource + Debug> {
+    TerminatedAndMeasured,
+    Terminated(T),
+    Alive(T),
+}
+
+impl<T> From<T> for TaskState<T>
+where
+    T: RuntimeStatsSource + Debug,
+{
+    fn from(task: T) -> TaskState<T> {
+        TaskState::Alive(task)
+    }
+}
+
+#[derive(Debug)]
+pub struct TaskInfo<T: RuntimeStatsSource + Debug, U: TimeSource> {
     koid: zx_sys::zx_koid_t,
-    task: T,
+    pub(crate) task: Arc<Mutex<TaskState<T>>>,
     time_source: U,
-    pub has_parent_task: bool,
+    pub(crate) has_parent_task: bool,
     measurements: MeasurementsQueue,
     histogram: Option<UintLinearHistogramProperty>,
     previous_cpu: zx::Duration,
@@ -55,9 +75,10 @@ pub struct TaskInfo<T: RuntimeStatsSource, U: TimeSource> {
     children: Vec<Weak<Mutex<TaskInfo<T, MonotonicTime>>>>,
     should_drop_old_measurements: bool,
     post_invalidation_measurements: usize,
+    _terminated_signal_task: fasync::Task<()>,
 }
 
-impl<T: RuntimeStatsSource + Send + Sync> TaskInfo<T, MonotonicTime> {
+impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> TaskInfo<T, MonotonicTime> {
     /// Creates a new `TaskInfo` from the given cpu stats provider.
     // Due to https://github.com/rust-lang/rust/issues/50133 we cannot just derive TryFrom on a
     // generic type given a collision with the blanket implementation.
@@ -75,7 +96,9 @@ impl<T: RuntimeStatsSource + Send + Sync> TaskInfo<T, MonotonicTime> {
     }
 }
 
-impl<T: RuntimeStatsSource + Send + Sync, U: TimeSource + std::marker::Send> TaskInfo<T, U> {
+impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync, U: TimeSource + std::marker::Send>
+    TaskInfo<T, U>
+{
     // Injects a couple of test dependencies
     fn try_from_internal(
         task: T,
@@ -84,9 +107,24 @@ impl<T: RuntimeStatsSource + Send + Sync, U: TimeSource + std::marker::Send> Tas
         sample_period: std::time::Duration,
         cpu_cores: i64,
     ) -> Result<Self, zx::Status> {
+        let koid = task.koid()?;
+        let maybe_handle = task.handle_ref().duplicate(zx::Rights::SAME_RIGHTS).ok();
+        let arc_task = Arc::new(Mutex::new(TaskState::from(task)));
+        let state = arc_task.clone();
+        let _terminated_signal_task = fasync::Task::spawn(async move {
+            if let Some(handle) = maybe_handle {
+                let _ = fasync::OnSignals::new(&handle, zx::Signals::TASK_TERMINATED).await;
+            }
+            let mut state = state.lock().await;
+            *state = match std::mem::replace(&mut *state, TaskState::TerminatedAndMeasured) {
+                s @ TaskState::TerminatedAndMeasured => s,
+                TaskState::Alive(t) => TaskState::Terminated(t),
+                s @ TaskState::Terminated(_) => s,
+            };
+        });
         Ok(Self {
-            koid: task.koid()?,
-            task,
+            koid,
+            task: arc_task,
             has_parent_task: false,
             measurements: MeasurementsQueue::new(),
             children: vec![],
@@ -98,6 +136,7 @@ impl<T: RuntimeStatsSource + Send + Sync, U: TimeSource + std::marker::Send> Tas
             previous_cpu: zx::Duration::from_nanos(0),
             previous_histogram_timestamp: time_source.now(),
             time_source,
+            _terminated_signal_task,
         })
     }
 
@@ -120,18 +159,29 @@ impl<T: RuntimeStatsSource + Send + Sync, U: TimeSource + std::marker::Send> Tas
 
     fn measure_subtree<'a>(&'a mut self) -> BoxFuture<'a, Option<&'a Measurement>> {
         async move {
-            if self.task.handle_is_invalid() {
-                if self.should_drop_old_measurements {
-                    self.measurements.pop_front();
-                } else {
-                    self.post_invalidation_measurements += 1;
-                    self.should_drop_old_measurements = self.post_invalidation_measurements
-                        + self.measurements.len()
-                        >= COMPONENT_CPU_MAX_SAMPLES;
+            let runtime_info_res = {
+                let mut guard = self.task.lock().await;
+                match &*guard {
+                    TaskState::TerminatedAndMeasured => {
+                        if self.should_drop_old_measurements {
+                            self.measurements.pop_front();
+                        } else {
+                            self.post_invalidation_measurements += 1;
+                            self.should_drop_old_measurements = self.post_invalidation_measurements
+                                + self.measurements.len()
+                                >= COMPONENT_CPU_MAX_SAMPLES;
+                        }
+                        return None;
+                    }
+                    TaskState::Terminated(task) => {
+                        let result = task.get_runtime_info().await;
+                        *guard = TaskState::TerminatedAndMeasured;
+                        result
+                    }
+                    TaskState::Alive(task) => task.get_runtime_info().await,
                 }
-                return None;
-            }
-            if let Ok(runtime_info) = self.task.get_runtime_info().await {
+            };
+            if let Ok(runtime_info) = runtime_info_res {
                 let mut measurement = Measurement::from_runtime_info(
                     runtime_info,
                     zx::Time::from_nanos(self.time_source.now()),
@@ -144,7 +194,7 @@ impl<T: RuntimeStatsSource + Send + Sync, U: TimeSource + std::marker::Send> Tas
                         if let Some(child_measurement) = child_guard.measure_subtree().await {
                             measurement -= child_measurement;
                         }
-                        if child_guard.is_alive() {
+                        if child_guard.is_alive().await {
                             alive_children.push(weak_child);
                         }
                     }
@@ -184,8 +234,9 @@ impl<T: RuntimeStatsSource + Send + Sync, U: TimeSource + std::marker::Send> Tas
     /// A task is alive when:
     /// - Its handle is valid, or
     /// - There's at least one measurement saved.
-    pub fn is_alive(&self) -> bool {
-        return !self.task.handle_is_invalid() || !self.measurements.is_empty();
+    pub async fn is_alive(&self) -> bool {
+        return !matches!(*self.task.lock().await, TaskState::TerminatedAndMeasured)
+            || !self.measurements.is_empty();
     }
 
     /// Writes the task measurements under the given inspect node `parent`.
@@ -209,11 +260,6 @@ impl<T: RuntimeStatsSource + Send + Sync, U: TimeSource + std::marker::Send> Tas
     pub fn total_measurements(&self) -> usize {
         self.measurements.len()
     }
-
-    #[cfg(test)]
-    pub fn task_mut(&mut self) -> &mut T {
-        &mut self.task
-    }
 }
 
 #[cfg(test)]
@@ -226,6 +272,7 @@ mod tests {
         diagnostics_hierarchy::ArrayContent,
         fuchsia_inspect::testing::{assert_data_tree, AnyProperty},
         injectable_time::FakeTime,
+        matches::assert_matches,
         std::sync::Arc,
     };
 
@@ -234,7 +281,7 @@ mod tests {
         // Set up test
         let mut task: TaskInfo<FakeTask, _> =
             TaskInfo::try_from(FakeTask::default(), None /* histogram */).unwrap();
-        assert!(task.is_alive());
+        assert!(task.is_alive().await);
 
         // Take three measurements.
         task.measure_if_no_parent().await;
@@ -242,29 +289,37 @@ mod tests {
         task.measure_if_no_parent().await;
         assert_eq!(task.measurements.len(), 2);
         task.measure_if_no_parent().await;
-        assert!(task.is_alive());
+        assert!(task.is_alive().await);
         assert_eq!(task.measurements.len(), 3);
 
-        // Invalidate the handle
-        task.task.invalid_handle = true;
+        // Terminate the task
+        task.force_terminate().await;
 
-        // Allow MAX-N (N=3 here) measurements to be taken until we start dropping.
-        for i in 3..COMPONENT_CPU_MAX_SAMPLES {
+        // This will perform the post-termination measurement and bring the state to terminated and
+        // measured.
+        task.measure_if_no_parent().await;
+        assert_eq!(task.measurements.len(), 4);
+        assert_matches!(*task.task.lock().await, TaskState::TerminatedAndMeasured);
+
+        for i in 4..COMPONENT_CPU_MAX_SAMPLES {
             task.measure_if_no_parent().await;
-            assert_eq!(task.measurements.len(), 3);
-            assert_eq!(task.post_invalidation_measurements, i - 2);
+            assert_eq!(task.measurements.len(), 4);
+            assert_eq!(task.post_invalidation_measurements, i - 3);
         }
 
-        task.measure_if_no_parent().await; // 1 dropped, 2 left
-        assert!(task.is_alive());
+        task.measure_if_no_parent().await; // 1 dropped, 3 left
+        assert!(task.is_alive().await);
+        assert_eq!(task.measurements.len(), 3);
+        task.measure_if_no_parent().await; // 2 dropped, 2 left
+        assert!(task.is_alive().await);
         assert_eq!(task.measurements.len(), 2);
-        task.measure_if_no_parent().await; // 2 dropped, 1 left
-        assert!(task.is_alive());
+        task.measure_if_no_parent().await; // 3 dropped, 1 left
+        assert!(task.is_alive().await);
         assert_eq!(task.measurements.len(), 1);
 
         // Take one last measure.
-        task.measure_if_no_parent().await; // 3 dropped, 0 left
-        assert!(!task.is_alive());
+        task.measure_if_no_parent().await; // 4 dropped, 0 left
+        assert!(!task.is_alive().await);
         assert_eq!(task.measurements.len(), 0);
     }
 
@@ -434,7 +489,7 @@ mod tests {
         // Fake child 2 not being alive anymore. It should be removed.
         {
             let mut child_2_guard = child_2.lock().await;
-            child_2_guard.task.invalid_handle = true;
+            child_2_guard.task = Arc::new(Mutex::new(TaskState::TerminatedAndMeasured));
             child_2_guard.measurements = MeasurementsQueue::new();
         }
 

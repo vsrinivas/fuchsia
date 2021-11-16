@@ -9,17 +9,17 @@ use {
     fuchsia_async as fasync, fuchsia_inspect as inspect, fuchsia_zircon_sys as zx_sys,
     futures::lock::Mutex,
     injectable_time::MonotonicTime,
-    std::sync::Arc,
+    std::{fmt::Debug, sync::Arc},
 };
 
 /// Tracks the tasks associated to some component and provides utilities for measuring them.
-pub struct ComponentStats<T: RuntimeStatsSource> {
+pub struct ComponentStats<T: RuntimeStatsSource + Debug> {
     tasks: Vec<Arc<Mutex<TaskInfo<T, MonotonicTime>>>>,
     _task: Option<fasync::Task<()>>,
     is_measuring: bool,
 }
 
-impl<T: RuntimeStatsSource + Send + Sync> ComponentStats<T> {
+impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentStats<T> {
     /// Creates a new `ComponentStats` awaiting the component tasks not ready to take measurements
     /// yet.
     pub fn pending(task: fasync::Task<()>) -> Self {
@@ -45,7 +45,7 @@ impl<T: RuntimeStatsSource + Send + Sync> ComponentStats<T> {
     pub async fn is_alive(&self) -> bool {
         let mut any_task_alive = false;
         for task in &self.tasks {
-            if task.lock().await.is_alive() {
+            if task.lock().await.is_alive().await {
                 any_task_alive = true;
             }
         }
@@ -71,7 +71,7 @@ impl<T: RuntimeStatsSource + Send + Sync> ComponentStats<T> {
         while let Some(task) = self.tasks.pop() {
             let (is_alive, koid) = {
                 let task_guard = task.lock().await;
-                (task_guard.is_alive(), task_guard.koid())
+                (task_guard.is_alive().await, task_guard.koid())
             };
             if is_alive {
                 final_tasks.push(task);
