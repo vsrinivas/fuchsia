@@ -83,10 +83,9 @@ async fn test_logs_with_hanging_log_connector() {
         )
         .await
         .unwrap();
-    test_topology::add_lazy_child(&builder, LOG_AND_EXIT_COMPONENT, LOG_AND_EXIT_COMPONENT_URL)
+    test_topology::add_eager_child(&builder, LOG_AND_EXIT_COMPONENT, LOG_AND_EXIT_COMPONENT_URL)
         .await
         .expect("add log_and_exit");
-    expose_test_realm_protocol(&builder).await;
 
     let instance = builder.build().await.expect("create instance");
     let accessor =
@@ -111,14 +110,7 @@ async fn test_logs_with_hanging_log_connector() {
         instance.root.child_name()
     );
 
-    let mut child_ref = ChildRef { name: LOG_AND_EXIT_COMPONENT.to_string(), collection: None };
     reader.retry_if_empty(true);
-    let (exposed_dir, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
-    let realm = instance.root.connect_to_protocol_at_exposed_dir::<RealmMarker>().unwrap();
-    realm.open_exposed_dir(&mut child_ref, server_end).await.unwrap().unwrap();
-
-    let _ =
-        client::connect_to_protocol_at_dir_root::<fcomponent::BinderMarker>(&exposed_dir).unwrap();
 
     check_message(&moniker, subscription.next().await.unwrap());
     // Trigger a response to the TakeLogConnectionListener request that is hanging for
@@ -150,25 +142,14 @@ async fn log_sink_connected_event_test() {
     let builder = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
-    test_topology::add_lazy_child(&builder, LOG_AND_EXIT_COMPONENT, LOG_AND_EXIT_COMPONENT_URL)
+    test_topology::add_eager_child(&builder, LOG_AND_EXIT_COMPONENT, LOG_AND_EXIT_COMPONENT_URL)
         .await
         .expect("add log_and_exit");
-
-    // Currently RealmBuilder doesn't support to expose a capability from framework, therefore we
-    // manually update the decl that the builder creates.
-    test_topology::expose_test_realm_protocol(&builder).await;
 
     let instance = builder.build().await.expect("create instance");
     let accessor =
         instance.root.connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>().unwrap();
-    let mut child_ref = ChildRef { name: LOG_AND_EXIT_COMPONENT.to_string(), collection: None };
-    // launch our child and wait for it to exit before asserting on its logs
-    let (exposed_dir, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
-    let realm = instance.root.connect_to_protocol_at_exposed_dir::<RealmMarker>().unwrap();
-    realm.open_exposed_dir(&mut child_ref, server_end).await.unwrap().unwrap();
 
-    let _ =
-        client::connect_to_protocol_at_dir_root::<fcomponent::BinderMarker>(&exposed_dir).unwrap();
     let mut reader = ArchiveReader::new();
     reader
         .with_archive(accessor)
@@ -189,7 +170,7 @@ async fn test_logs_lifecycle() {
 
     // Currently RealmBuilder doesn't support to expose a capability from framework, therefore we
     // manually update the decl that the builder creates.
-    test_topology::expose_test_realm_protocol(&builder).await;
+    expose_test_realm_protocol(&builder).await;
 
     let instance = builder.build().await.expect("create instance");
     let accessor =
