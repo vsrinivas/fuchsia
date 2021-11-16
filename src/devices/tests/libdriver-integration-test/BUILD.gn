@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
-import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 test("tests") {
   testonly = true
@@ -30,13 +30,13 @@ test("tests") {
     "//sdk/fidl/fuchsia.io:fuchsia.io",
     "//sdk/lib/fdio",
     "//sdk/lib/fit-promise",
+    "//src/devices/testing/devmgr-integration-test-shim",
     "//src/lib/ddk",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/inspector",
 

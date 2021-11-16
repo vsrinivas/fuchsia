@@ -84,7 +84,6 @@ zx_library("devmgr-integration-test") {
 
   # STOP: Do not add any new entries to this allow list. Use //sdk/lib/driver_test_realm instead.
   visibility = [
-    "//src/devices/tests/libdriver-integration-test/*",
     "//src/lib/isolated_devmgr/*",
     "//vendor/*",
     "//zircon/system/ulib/devmgr-integration-test/test/*",

@@ -139,10 +139,6 @@ class IntegrationTest : public testing::Test {
 
   static async::Loop loop_;
   fidl::InterfacePtr<fuchsia::io::Directory> devfs_;
-
- private:
-  // Function that will be called whenever we see an exception from devmgr
-  static void DevmgrException(zx_exception_info_t);
 };
 
 }  // namespace libdriver_integration_test

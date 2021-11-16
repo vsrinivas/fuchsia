@@ -34,8 +34,6 @@ void IntegrationTest::DoSetup() {
   zx_status_t status =
       IsolatedDevmgr::Create(std::move(args), loop_.dispatcher(), &IntegrationTest::devmgr_);
   ASSERT_EQ(status, ZX_OK) << "failed to create IsolatedDevmgr";
-
-  IntegrationTest::devmgr_.SetExceptionCallback(DevmgrException);
 }
 
 void IntegrationTest::TearDownTestCase() { IntegrationTest::devmgr_.reset(); }
@@ -56,12 +54,6 @@ void IntegrationTest::SetUp() {
 IntegrationTest::~IntegrationTest() {
   IntegrationTest::loop_.Quit();
   IntegrationTest::loop_.ResetQuit();
-}
-
-void IntegrationTest::DevmgrException(zx_exception_info_t) {
-  // Log an error in the currently running test
-  ADD_FAILURE() << "Crash inside devmgr job";
-  IntegrationTest::loop_.Quit();
 }
 
 void IntegrationTest::RunPromise(Promise<void> promise) {

@@ -28,6 +28,8 @@ class IsolatedDevmgr {
   IsolatedDevmgr(IsolatedDevmgr&& other);
   IsolatedDevmgr& operator=(IsolatedDevmgr&& other);
 
+  void reset() { *this = IsolatedDevmgr(); }
+
   // Get an args structure pre-populated with the test sysdev driver, the
   // test control driver, and the test driver directory.
   static devmgr_launcher::Args DefaultArgs();
