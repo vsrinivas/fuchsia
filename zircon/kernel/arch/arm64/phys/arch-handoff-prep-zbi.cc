@@ -1,0 +1,40 @@
+// Copyright 2021 The Fuchsia Authors
+//
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/MIT
+
+#include <zircon/assert.h>
+#include <zircon/boot/driver-config.h>
+#include <zircon/boot/image.h>
+
+#include <ktl/byte.h>
+#include <ktl/span.h>
+#include <phys/arch/arch-handoff.h>
+#include <phys/handoff.h>
+
+#include "handoff-prep.h"
+
+void HandoffPrep::ArchSummarizeMiscZbiItem(const zbi_header_t& header,
+                                           ktl::span<const ktl::byte> payload) {
+  ZX_DEBUG_ASSERT(handoff_);
+  ArchPhysHandoff& arch_handoff = handoff_->arch_handoff;
+
+  // TODO(fxbug.dev/88059): Handle all cases below.
+  static_cast<void>(arch_handoff);
+  switch (header.type) {
+    case ZBI_TYPE_KERNEL_DRIVER: {
+      switch (header.extra) {
+        case KDRV_ARM_PSCI:
+        case KDRV_ARM_GIC_V2:
+        case KDRV_ARM_GIC_V3:
+        case KDRV_ARM_GENERIC_TIMER:
+        case KDRV_AMLOGIC_HDCP:
+        case KDRV_AMLOGIC_RNG:
+        case KDRV_GENERIC_32BIT_WATCHDOG:
+          break;
+      }
+      break;
+    }
+  }
+}

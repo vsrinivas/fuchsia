@@ -66,6 +66,16 @@ if (toolchain_environment == "kernel.phys") {
     deps = [ "//zircon/kernel/lib/arch" ]
     libs = [ "./linuxboot.ld" ]
   }
+
+  source_set("arch-handoff-prep") {
+    sources = [ "arch-handoff-prep-zbi.cc" ]
+    deps = [
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/phys:handoff",
+      "//zircon/kernel/phys:handoff-prep.h",
+    ]
+    include_dirs = [ "//zircon/kernel/phys" ]
+  }
 }
 
 group("tests") {

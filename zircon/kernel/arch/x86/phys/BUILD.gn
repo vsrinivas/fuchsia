@@ -300,6 +300,16 @@ if (current_toolchain == default_toolchain) {
     include_dirs = [ "//." ]
   }
 
+  source_set("arch-handoff-prep") {
+    sources = [ "arch-handoff-prep-zbi.cc" ]
+    deps = [
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/phys:handoff",
+      "//zircon/kernel/phys:handoff-prep.h",
+    ]
+    include_dirs = [ "//zircon/kernel/phys" ]
+  }
+
   # This is where code is actually loaded both for the Multiboot spec and for
   # the original/legacy x86 ZBI booting spec.
   config("load-1mb") {

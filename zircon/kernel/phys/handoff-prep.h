@@ -9,6 +9,7 @@
 
 #include <lib/trivial-allocator/basic-leaky-allocator.h>
 #include <lib/trivial-allocator/single-heap-allocator.h>
+#include <zircon/boot/image.h>
 
 #include <ktl/byte.h>
 #include <ktl/span.h>
@@ -31,7 +32,7 @@ class HandoffPrep {
 
   // Summarizes the provided data ZBI's miscellaneous simple items for the
   // kernel, filling in corresponding handoff()->item fields.
-  void SummarizeMiscZbiItems(ktl::span<ktl::byte> zbi);
+  void SummarizeMiscZbiItems(ktl::span<const ktl::byte> zbi);
 
  private:
   using AllocateFunction = trivial_allocator::SingleHeapAllocator;
@@ -40,6 +41,10 @@ class HandoffPrep {
   // TODO(fxbug.dev/84107): Later this will just return
   // gPhysNew<memalloc::Type::kPhysHandoff>.
   Allocator& allocator() { return allocator_; }
+
+  // The arch-specific protocol for a given item.
+  // Defined in //zircon/kernel/arch/$cpu/phys/arch-handoff-prep-zbi.cc.
+  void ArchSummarizeMiscZbiItem(const zbi_header_t& header, ktl::span<const ktl::byte> payload);
 
   Allocator allocator_;
   PhysHandoff* handoff_ = nullptr;

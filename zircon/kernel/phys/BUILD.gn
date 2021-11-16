@@ -348,25 +348,37 @@ if (toolchain_environment == "kernel.phys" ||
     configs += [ "//build/config:Wno-conversion" ]
   }
 
-  source_set("handoff-prep") {
+  # Split out so that the definition of arch-specific methods can include
+  # handoff-prep.h without introducing a dependency cycle.
+  source_set("handoff-prep.h") {
     public = [ "handoff-prep.h" ]
+
+    public_deps = [
+      "//src/lib/trivial-allocator",
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
+    ]
+  }
+
+  source_set("handoff-prep") {
     sources = [
       "handoff-prep-zbi.cc",
       "handoff-prep.cc",
     ]
-    public_deps = [
-      "//src/lib/trivial-allocator",
-      "//zircon/kernel/lib/ktl",
-    ]
+    public_deps = [ ":handoff-prep.h" ]
     deps = [
       ":handoff",
+      "//zircon/kernel/arch/$zircon_cpu/phys:arch-handoff-prep",
       "//zircon/system/ulib/zbitl",
     ]
   }
 }
 
 config("includes") {
-  include_dirs = [ "include" ]
+  include_dirs = [
+    "include",
+    "//zircon/kernel/arch/${zircon_cpu}/phys/include",
+  ]
 }
 
 group("tests") {
@@ -417,7 +429,10 @@ zbi_executable("physboot") {
 }
 
 source_set("handoff") {
-  public = [ "include/phys/handoff.h" ]
+  public = [
+    "//zircon/kernel/arch/${zircon_cpu}/phys/include/phys/arch/arch-handoff.h",
+    "include/phys/handoff.h",
+  ]
   public_deps = [
     # handoff.h has #include <lib/arch/ticks.h>.
     "//zircon/kernel/lib/arch",

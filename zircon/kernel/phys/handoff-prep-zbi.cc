@@ -14,7 +14,7 @@
 
 #include "handoff-prep.h"
 
-void HandoffPrep::SummarizeMiscZbiItems(ktl::span<ktl::byte> zbi) {
+void HandoffPrep::SummarizeMiscZbiItems(ktl::span<const ktl::byte> zbi) {
   // TODO(fxbug.dev/84107): The data ZBI is still inspected by the kernel
   // proper until migrations are complete, so this communicates the physical
   // address during handoff.  This member should be removed as soon as the
@@ -27,7 +27,12 @@ void HandoffPrep::SummarizeMiscZbiItems(ktl::span<ktl::byte> zbi) {
     switch (header->type) {
       case ZBI_TYPE_PLATFORM_ID:
         ZX_ASSERT(payload.size() >= sizeof(zbi_platform_id_t));
-        handoff_->platform_id = *reinterpret_cast<zbi_platform_id_t*>(payload.data());
+        handoff_->platform_id = *reinterpret_cast<const zbi_platform_id_t*>(payload.data());
+        break;
+
+      // Default assumption is that the type is architecture-specific.
+      default:
+        ArchSummarizeMiscZbiItem(*header, payload);
         break;
     }
   }

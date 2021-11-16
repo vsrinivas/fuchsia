@@ -16,6 +16,7 @@
 #include <ktl/optional.h>
 #include <ktl/span.h>
 #include <ktl/type_traits.h>
+#include <phys/arch/arch-handoff.h>
 
 // This holds arch::EarlyTicks timestamps collected by physboot before the
 // kernel proper is cognizant.  Once the platform timer hardware is set up for
@@ -61,7 +62,12 @@ struct PhysHandoff {
 
   const uint64_t magic = kMagic;
 
+  // Architecture-specific content.
+  ArchPhysHandoff arch_handoff;
+  static_assert(ktl::is_default_constructible_v<ArchPhysHandoff>);
+
   PhysBootTimes times;
+  static_assert(ktl::is_default_constructible_v<PhysBootTimes>);
 
   // Physical address of the data ZBI.
   uint64_t zbi = 0;
@@ -69,6 +75,8 @@ struct PhysHandoff {
   // ZBI_TYPE_PLATFORM_ID payload.
   ktl::optional<zbi_platform_id_t> platform_id;
 };
+
+static_assert(ktl::is_default_constructible_v<PhysHandoff>);
 
 extern PhysHandoff* gPhysHandoff;
 
