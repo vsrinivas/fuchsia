@@ -19,6 +19,12 @@ pub enum TargetArchitecture {
     X64,
 }
 
+impl Default for TargetArchitecture {
+    fn default() -> Self {
+        TargetArchitecture::X64
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Hash, Clone, PartialOrd, Ord, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum PointingDevice {
@@ -27,10 +33,22 @@ pub enum PointingDevice {
     Touch,
 }
 
+impl Default for PointingDevice {
+    fn default() -> Self {
+        PointingDevice::None
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Hash, Clone, PartialOrd, Ord, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum ScreenUnits {
     Pixels,
+}
+
+impl Default for ScreenUnits {
+    fn default() -> Self {
+        ScreenUnits::Pixels
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Hash, Clone, PartialOrd, Ord, PartialEq, Eq)]
@@ -41,6 +59,12 @@ pub enum DataUnits {
     Megabytes,
     Gigabytes,
     Terabytes,
+}
+
+impl Default for DataUnits {
+    fn default() -> Self {
+        DataUnits::Bytes
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Hash, Clone, PartialOrd, Ord, PartialEq, Eq)]
@@ -55,6 +79,12 @@ pub enum AudioModel {
     None,
     PcSpk,
     SB16,
+}
+
+impl Default for AudioModel {
+    fn default() -> Self {
+        AudioModel::None
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Hash, PartialEq, Eq, Clone, PartialOrd, Ord)]

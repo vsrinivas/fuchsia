@@ -19,7 +19,7 @@ pub struct Cpu {
 }
 
 /// Details of virtual input devices, such as mice.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct InputDevice {
     /// Pointing device for interacting with the target.
@@ -27,7 +27,7 @@ pub struct InputDevice {
 }
 
 /// Details of the virtual device's audio interface, if any.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct AudioDevice {
     /// The model of the emulated audio device, or None.
@@ -35,7 +35,7 @@ pub struct AudioDevice {
 }
 
 /// Screen dimensions for the virtual device, if any.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Screen {
     pub height: usize,
@@ -44,7 +44,7 @@ pub struct Screen {
 }
 
 /// A generic data structure for indicating quantities of data.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct DataAmount {
     pub quantity: usize,

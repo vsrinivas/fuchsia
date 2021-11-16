@@ -4,9 +4,10 @@
 
 use argh::{FromArgValue, FromArgs};
 use ffx_core::ffx_command;
-use ffx_emulator_config::AccelerationMode;
+use ffx_emulator_config::{AccelerationMode, GpuType};
 use serde::{Deserialize, Serialize};
-use std::{fmt, path::PathBuf};
+use std::path::PathBuf;
+
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum EngineType {
@@ -27,60 +28,10 @@ impl FromArgValue for EngineType {
         Ok(value)
     }
 }
+
 impl Default for EngineType {
     fn default() -> Self {
         EngineType::Femu
-    }
-}
-
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
-pub enum GpuType {
-    /// Let the emulator choose between hardware or software graphics
-    /// acceleration based on your computer setup.
-    #[serde(rename = "auto")]
-    Auto,
-
-    /// Use the GPU on your computer for hardware acceleration. This option
-    /// typically provides the highest graphics quality and performance for the
-    /// emulator. However, if your graphics drivers have issues rendering
-    /// OpenGL, you might need to use the swiftshader_indirect or
-    /// angle_indirect options.
-    #[serde(rename = "host")]
-    Host,
-
-    /// Use a Quick Boot-compatible variant of SwiftShader to render graphics
-    /// using software acceleration. This option is a good alternative to host
-    /// mode if your computer can't use hardware acceleration.
-    #[serde(rename = "swiftshader_indirect")]
-    SwiftshaderIndirect,
-
-    /// Use guest-side software rendering. This option provides the lowest
-    /// graphics quality and performance for the emulator.
-    #[serde(rename = "guest")]
-    Guest,
-}
-
-impl Default for GpuType {
-    fn default() -> Self {
-        GpuType::Auto
-    }
-}
-
-impl fmt::Display for GpuType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let trim: &[char] = &['"'];
-        write!(f, "{}", serde_json::to_value(self).unwrap().to_string().trim_matches(trim))
-    }
-}
-
-impl FromArgValue for GpuType {
-    fn from_arg_value(text: &str) -> Result<Self, std::string::String> {
-        let value = serde_json::from_str(&format!("\"{}\"", text)).expect(&format!(
-            "could not parse '{}' as a valid GpuType. \
-            Please check the help text for allowed values and try again",
-            text
-        ));
-        Ok(value)
     }
 }
 
