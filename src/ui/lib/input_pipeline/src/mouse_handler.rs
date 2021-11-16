@@ -112,14 +112,16 @@ impl MouseHandler {
             }
             _ => return,
         };
-        // TODO: this variable triggered the `must_not_suspend` lint and may be held across an await
-        // If this is the case, it is an error. See fxbug.dev/87757 for more details
-        let mut current_position = self.current_position.borrow_mut();
-        *current_position = new_position;
 
-        Position::clamp(&mut *current_position, Position::zero(), self.max_position);
+        let pos = {
+            let mut current_position = self.current_position.borrow_mut();
+            *current_position = new_position;
 
-        match self.position_sender.borrow_mut().send(*current_position).await {
+            Position::clamp(&mut *current_position, Position::zero(), self.max_position);
+
+            *current_position
+        };
+        match self.position_sender.borrow_mut().send(pos).await {
             Err(e) => {
                 fx_log_err!("Failed to send current mouse position with error {:?}", e);
             }
