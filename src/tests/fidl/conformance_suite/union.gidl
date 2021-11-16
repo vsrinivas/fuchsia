@@ -979,3 +979,31 @@ encode_failure("OptionalFlexibleResourceUnionDefaultInitialized") {
     },
     err = UNION_FIELD_NOT_SET,
 }
+
+decode_failure("EnvelopeByteCountExceedsMessageByteCount") {
+    // TODO(fxbug.dev/88704) Fix in Rust.
+    // TODO(fxbug.dev/88705) Fix in Dart.
+    bindings_denylist = [rust, dart],
+    type = EnvelopeInliningTestUnionStruct,
+    bytes = {
+        v2 = [
+            num(100):8, // unknown
+            num(8):4, num(0):2, repeat(0):2,
+        ],
+    },
+    err = ENVELOPE_BYTES_EXCEED_MESSAGE_LENGTH,
+}
+
+decode_failure("EnvelopeHandleCountExceedsMessageHandleCount") {
+    // TODO(fxbug.dev/88704) Fix in Rust.
+    // TODO(fxbug.dev/88705) Fix in Dart.
+    bindings_denylist = [rust, dart],
+    type = EnvelopeInliningTestUnionStruct,
+    bytes = {
+        v2 = [
+            num(100):8, // unknown
+            num(0):4, num(1):2, repeat(0):2,
+        ],
+    },
+    err = ENVELOPE_HANDLES_EXCEED_MESSAGE_LENGTH,
+}
