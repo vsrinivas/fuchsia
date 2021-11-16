@@ -72,6 +72,9 @@ template("gidl") {
     outputs = [ invoker.output ]
     deps = [ fidl_target ]
     forward_variables_from(invoker, [ "visibility" ])
+
+    # GIDL will not update outputs if they're unchanged.
+    all_outputs_fresh = false
   }
 }
 
