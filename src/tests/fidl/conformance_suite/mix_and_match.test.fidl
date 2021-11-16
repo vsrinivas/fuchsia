@@ -32,6 +32,19 @@ type TestAddEthernetDeviceRequest = struct {
     this_should_be_a_handle uint32;
 };
 
+type TestPackageResolverResolveRequest = resource struct {
+    package_url string;
+    selectors vector<string>;
+    update_policy UpdatePolicy;
+    // TODO(fxbug.dev/7947): Use 'EthernetDevice device;' instead.
+    this_should_be_a_handle uint32;
+};
+
+type UpdatePolicy = struct {
+    fetch_if_absent bool;
+    allow_old_versions bool;
+};
+
 type NodeAttributes = struct {
     mode uint32;
     id uint64;
