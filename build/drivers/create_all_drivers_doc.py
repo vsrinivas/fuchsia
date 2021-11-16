@@ -7,6 +7,7 @@
 import argparse
 import os
 import json
+import yaml
 
 
 def main():
@@ -25,7 +26,7 @@ def main():
         '--output',
         type=argparse.FileType('w'),
         required=True,
-        help='The path for the output global documentation file.')
+        help='The path for the output YAML global documentation file.')
     parser.add_argument(
         '--dep_file', type=argparse.FileType('w'), required=True)
 
@@ -55,7 +56,7 @@ def main():
                             doc_path, area,
                             all_drivers_doc_dict['drivers_areas']))
 
-    json.dump(all_drivers_doc_dict, args.output)
+    yaml.dump(all_drivers_doc_dict, args.output)
     args.dep_file.write('{}: {}\n'.format(args.output.name, ' '.join(doc_list)))
 
 

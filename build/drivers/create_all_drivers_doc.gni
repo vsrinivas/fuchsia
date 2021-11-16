@@ -38,8 +38,13 @@ template("create_all_drivers_doc") {
 
   action(target_name) {
     forward_variables_from(invoker, [ "testonly" ])
-    deps = [ ":${all_doc_target}" ]
-    script = "//build/drivers/create_all_drivers_doc.py"
+    deps = [
+      ":${all_doc_target}",
+      "//build/drivers:gen_create_all_drivers_doc",
+    ]
+    script =
+        get_label_info("//build/drivers:gen_create_all_drivers_doc",
+                       "target_out_dir") + "/gen_create_all_drivers_doc.pyz"
     areas_file = "//build/drivers/areas.txt"
     inputs = [
       all_doc_output,
@@ -50,13 +55,13 @@ template("create_all_drivers_doc") {
       generated_docset = [
         {
           name = "driversdoc"
-          origin_files = [ rebase_path("$root_gen_dir/all_drivers_doc.json",
+          origin_files = [ rebase_path("$root_gen_dir/all_drivers_doc.yaml",
                                        root_build_dir) ]
           dest_folder = "sdk/drivers"
         },
       ]
     }
-    outputs = [ "${target_gen_dir}/all_drivers_doc.json" ]
+    outputs = [ "${target_gen_dir}/all_drivers_doc.yaml" ]
     depfile = "${target_gen_dir}/${target_name}.d"
     args = [
       "--areas_list",

@@ -1,0 +1,10 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/python/python_binary.gni")
+
+python_binary("gen_create_all_drivers_doc") {
+  main_source = "//build/drivers/create_all_drivers_doc.py"
+  deps = [ "//third_party/pyyaml:yaml" ]
+}
