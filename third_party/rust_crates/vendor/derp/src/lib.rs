@@ -51,7 +51,6 @@
 //!     assert_eq!(buf.as_slice(), MY_DATA);
 //! }
 //! ```
-extern crate untrusted;
 
 use std::fmt::{self, Display};
 

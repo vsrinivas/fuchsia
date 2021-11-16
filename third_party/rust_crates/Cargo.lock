@@ -984,9 +984,9 @@ dependencies = [
 
 [[package]]
 name = "derp"
-version = "0.0.13"
+version = "0.0.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "94f0ee448f0157160400788497517aecd9897c24bef2a910620f73cfe06211af"
+checksum = "c9b84cfd9b6fa437e498215e5625e9e3ae3bf9bb54d623028a181c40820db169"
 dependencies = [
  "untrusted",
 ]
@@ -4143,9 +4143,9 @@ checksum = "bbf752f9ee0c3d93a52ae37a2af72e98bb9230b4164737623b0bfc1d84db1eda"
 
 [[package]]
 name = "tuf"
-version = "0.3.0-beta1"
+version = "0.3.0-beta2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "181bb9e3e403505cc998adaedd572e4e89fc9ff7a19fb2120bdec383a16a46d0"
+checksum = "ca2b40a29ca1132f9ffe5bb281ee678c93b075c2f96a88a0743d9def1fe68d99"
 dependencies = [
  "chrono",
  "data-encoding",
@@ -4156,7 +4156,7 @@ dependencies = [
  "hyper",
  "itoa",
  "log 0.4.11",
- "parking_lot 0.9.0",
+ "parking_lot 0.11.1",
  "percent-encoding 2.1.0",
  "ring",
  "serde",

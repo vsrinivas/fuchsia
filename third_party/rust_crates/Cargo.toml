@@ -56,7 +56,7 @@ dashmap = "4.0.2"
 data-encoding = "2.1.2"
 deepsize = { version = "0.2.0", features = ["chrono", "slab", "smallvec"] }
 derivative = "2.1.1"
-derp = "0.0.13"
+derp = "0.0.14"
 difference = "2.0.0"
 eui48 = { version = "0.4.6", features = ["serde", "disp_hexstring"] }
 event-listener = "2.5.1"
@@ -146,7 +146,7 @@ streaming-stats = "0.2.3"
 strsim = "0.10.0"
 structopt = "0.2.14"
 tempfile = "3.2"
-tuf = { version = "0.3.0-beta1", default-features = false }
+tuf = { version = "0.3.0-beta2", default-features = false }
 tui = "0.16.0"
 termion = "1.5.3"
 test-case = "1.1.0"

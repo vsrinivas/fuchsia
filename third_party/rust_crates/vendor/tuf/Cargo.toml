@@ -12,7 +12,7 @@
 [package]
 edition = "2018"
 name = "tuf"
-version = "0.3.0-beta1"
+version = "0.3.0-beta2"
 authors = ["heartsucker <heartsucker@autistici.org>", "Erick Tryzelaar <etryzelaar@google.com>"]
 description = "Library for The Update Framework (TUF)"
 homepage = "https://github.com/heartsucker/rust-tuf"
@@ -34,7 +34,7 @@ features = ["serde"]
 version = "2.0.0-rc.2"
 
 [dependencies.derp]
-version = "0.0.13"
+version = "0.0.14"
 
 [dependencies.futures-io]
 version = "0.3.1"
@@ -58,7 +58,7 @@ version = "0.4"
 version = "0.4"
 
 [dependencies.parking_lot]
-version = "0.9"
+version = "0.11"
 
 [dependencies.percent-encoding]
 version = "2.1"
@@ -99,7 +99,7 @@ version = "1"
 version = "0.1.8"
 
 [dev-dependencies.pretty_assertions]
-version = "0.6"
+version = "1"
 
 [features]
 default = ["hyper/default"]

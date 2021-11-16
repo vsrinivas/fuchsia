@@ -20,7 +20,7 @@
 use std::fmt::{self, Display, Formatter};
 use untrusted::{Input, Reader};
 
-use {Error, Result};
+use crate::{Error, Result};
 
 const CONSTRUCTED: u8 = 1 << 5;
 const CONTEXT_SPECIFIC: u8 = 2 << 6;

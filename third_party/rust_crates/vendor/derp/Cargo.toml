@@ -11,8 +11,9 @@
 # will likely look very different (and much more reasonable)
 
 [package]
+edition = "2018"
 name = "derp"
-version = "0.0.13"
+version = "0.0.14"
 authors = ["heartsucker <heartsucker@autistici.org>"]
 description = "DER Parser (and Writer)"
 homepage = "https://github.com/heartsucker/derp"
@@ -21,26 +22,5 @@ readme = "README.md"
 keywords = ["der", "parser"]
 license = "ISC"
 repository = "https://github.com/heartsucker/derp"
-
-[[bin]]
-name = "derp"
-path = "./src/bin/derp.rs"
-doc = false
-required-features = ["cli"]
-[dependencies.clap]
-version = "2.23"
-optional = true
-
-[dependencies.data-encoding]
-version = "2.0.0-rc.1"
-optional = true
-
-[dependencies.pem]
-version = "0.6"
-optional = true
-
 [dependencies.untrusted]
 version = "0.7"
-
-[features]
-cli = ["clap", "data-encoding", "pem"]
