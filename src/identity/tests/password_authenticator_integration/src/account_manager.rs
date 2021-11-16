@@ -12,7 +12,7 @@ use {
     fidl_fuchsia_hardware_block_partition::Guid,
     fidl_fuchsia_hardware_block_volume::VolumeManagerMarker,
     fidl_fuchsia_identity_account::{AccountManagerMarker, AccountManagerProxy, AccountMetadata},
-    fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_component_test::{
         ChildProperties, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
     },
@@ -34,10 +34,14 @@ const ACCOUNT_LABEL: &str = "account";
 const RAMCTL_PATH: &'static str = "sys/platform/00:00:2d/ramctl";
 const BLOCK_SIZE: u64 = 4096;
 const BLOCK_COUNT: u64 = 1024; // 4MB RAM ought to be good enough
-const FVM_SLICE_SIZE: usize = 8192;
+
+// 1 block for zxcrypt, and minfs needs at least 3 blocks.
+const FVM_SLICE_SIZE: usize = BLOCK_SIZE as usize * 4;
+
 // For whatever reason, using `Duration::MAX` seems to trigger immediate ZX_ERR_TIMED_OUT in the
 // wait_for_device_at calls, so we just set a quite large timeout here.
 const DEVICE_WAIT_TIMEOUT: Duration = Duration::from_secs(20);
+const GLOBAL_ACCOUNT_ID: u64 = 1;
 const EMPTY_PASSWORD: &'static str = "";
 
 #[link(name = "fs-management")]
@@ -56,6 +60,13 @@ impl TestEnv {
         builder
             .add_child("password_authenticator", "fuchsia-pkg://fuchsia.com/password-authenticator-integration-tests#meta/password-authenticator.cm", ChildProperties::new()).await.unwrap()
             .add_route(RouteBuilder::protocol("fuchsia.logger.LogSink")
+                .source(RouteEndpoint::AboveRoot)
+                .targets(vec![
+                    RouteEndpoint::component("password_authenticator"),
+                ])
+            ).await.unwrap()
+
+            .add_route(RouteBuilder::protocol("fuchsia.process.Launcher")
                 .source(RouteEndpoint::AboveRoot)
                 .targets(vec![
                     RouteEndpoint::component("password_authenticator"),
@@ -129,8 +140,8 @@ impl TestEnv {
                 .expect("Could not create volume manager channel pair");
         self.dev_root()
             .open(
-                fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
-                fidl_fuchsia_io::MODE_TYPE_SERVICE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                fio::MODE_TYPE_SERVICE,
                 &fvm_path,
                 ServerEnd::new(volume_manager_server.into_channel()),
             )
@@ -164,8 +175,8 @@ impl TestEnv {
         let mgr_path = ramdisk.get_path().to_string() + "/fvm/" + name + "-p-1/block/zxcrypt";
         self.dev_root()
             .open(
-                fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
-                fidl_fuchsia_io::MODE_TYPE_SERVICE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                fio::MODE_TYPE_SERVICE,
                 &mgr_path,
                 ServerEnd::new(manager_server.into_channel()),
             )
@@ -180,8 +191,8 @@ impl TestEnv {
         let block_path = ramdisk.get_path().to_string() + "/fvm/" + name + "-p-1/block";
         self.dev_root()
             .open(
-                fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
-                fidl_fuchsia_io::MODE_TYPE_SERVICE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                fio::MODE_TYPE_SERVICE,
                 &block_path,
                 ServerEnd::new(controller_server.into_channel()),
             )
@@ -206,17 +217,16 @@ impl TestEnv {
         manager.format(&key, 0).await.expect("Could not format zxcrypt");
     }
 
-    pub fn dev_root(&self) -> fidl_fuchsia_io::DirectoryProxy {
+    pub fn dev_root(&self) -> fio::DirectoryProxy {
         let (dev_dir_client, dev_dir_server) =
-            fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>()
-                .expect("create channel pair");
+            fidl::endpoints::create_proxy::<fio::DirectoryMarker>().expect("create channel pair");
 
         self.realm_instance
             .root
             .get_exposed_dir()
             .open(
-                fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
-                fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                fio::MODE_TYPE_DIRECTORY,
                 "dev",
                 ServerEnd::new(dev_dir_server.into_channel()),
             )
@@ -242,16 +252,12 @@ impl TestEnv {
             .connect_to_protocol_at_exposed_dir::<AccountManagerMarker>()
             .expect("connect to account manager")
     }
-
-    pub async fn account_ids(&self) -> Vec<u64> {
-        self.account_manager().get_account_ids().await.expect("get account ids")
-    }
 }
 
 #[fuchsia::test]
 async fn get_account_ids_no_partition() {
     let env = TestEnv::build().await;
-    let account_ids = env.account_ids().await;
+    let account_ids = env.account_manager().get_account_ids().await.expect("get account ids");
     assert_eq!(account_ids, vec![]);
 }
 
@@ -262,11 +268,7 @@ async fn get_account_ids_partition_wrong_guid() {
         value: [0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf],
     };
     let _ramdisk = env.setup_ramdisk(unrelated_guid, ACCOUNT_LABEL).await;
-    let account_manager = env
-        .realm_instance
-        .root
-        .connect_to_protocol_at_exposed_dir::<AccountManagerMarker>()
-        .expect("connect to account manager");
+    let account_manager = env.account_manager();
 
     let account_ids = account_manager.get_account_ids().await.expect("get account ids");
     assert_eq!(account_ids, vec![]);
@@ -276,11 +278,7 @@ async fn get_account_ids_partition_wrong_guid() {
 async fn get_account_ids_partition_wrong_label() {
     let env = TestEnv::build().await;
     let _ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, "wrong-label").await;
-    let account_manager = env
-        .realm_instance
-        .root
-        .connect_to_protocol_at_exposed_dir::<AccountManagerMarker>()
-        .expect("connect to account manager");
+    let account_manager = env.account_manager();
 
     let account_ids = account_manager.get_account_ids().await.expect("get account ids");
     assert_eq!(account_ids, vec![]);
@@ -290,11 +288,7 @@ async fn get_account_ids_partition_wrong_label() {
 async fn get_account_ids_partition_no_zxcrypt() {
     let env = TestEnv::build().await;
     let _ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
-    let account_manager = env
-        .realm_instance
-        .root
-        .connect_to_protocol_at_exposed_dir::<AccountManagerMarker>()
-        .expect("connect to account manager");
+    let account_manager = env.account_manager();
 
     let account_ids = account_manager.get_account_ids().await.expect("get account ids");
     assert_eq!(account_ids, vec![]);
@@ -305,12 +299,7 @@ async fn get_account_ids_with_zxcrypt_header() {
     let env = TestEnv::build().await;
     let ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
     env.format_zxcrypt(&ramdisk, ACCOUNT_LABEL).await;
-
-    let account_manager = env
-        .realm_instance
-        .root
-        .connect_to_protocol_at_exposed_dir::<AccountManagerMarker>()
-        .expect("connect to account manager");
+    let account_manager = env.account_manager();
 
     let account_ids = account_manager.get_account_ids().await.expect("get account ids");
     assert_eq!(account_ids, vec![1]);
@@ -320,12 +309,7 @@ async fn get_account_ids_with_zxcrypt_header() {
 async fn deprecated_provision_new_account_on_unformatted_partition() {
     let env = TestEnv::build().await;
     let _ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
-
-    let account_manager = env
-        .realm_instance
-        .root
-        .connect_to_protocol_at_exposed_dir::<AccountManagerMarker>()
-        .expect("connect to account manager");
+    let account_manager = env.account_manager();
 
     let account_ids = account_manager.get_account_ids().await.expect("get account ids");
     assert_eq!(account_ids, vec![]);
@@ -350,12 +334,7 @@ async fn deprecated_provision_new_account_on_formatted_partition() {
     let env = TestEnv::build().await;
     let ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
     env.format_zxcrypt(&ramdisk, ACCOUNT_LABEL).await;
-
-    let account_manager = env
-        .realm_instance
-        .root
-        .connect_to_protocol_at_exposed_dir::<AccountManagerMarker>()
-        .expect("connect to account manager");
+    let account_manager = env.account_manager();
 
     let account_ids = account_manager.get_account_ids().await.expect("get account ids");
     assert_eq!(account_ids, vec![1]);
@@ -370,4 +349,66 @@ async fn deprecated_provision_new_account_on_formatted_partition() {
         .await
         .expect("deprecated_new_provision FIDL")
         .expect_err("deprecated provision new account should fail");
+}
+
+#[fuchsia::test]
+async fn deprecated_provision_new_account_formats_directory() {
+    let env = TestEnv::build().await;
+    let _ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
+    let account_manager = env.account_manager();
+
+    let account_ids = account_manager.get_account_ids().await.expect("get account ids");
+    assert_eq!(account_ids, vec![]);
+
+    let expected_content = b"some data";
+    {
+        let (account_proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
+        account_manager
+            .deprecated_provision_new_account(
+                EMPTY_PASSWORD,
+                AccountMetadata { name: Some("test".to_string()), ..AccountMetadata::EMPTY },
+                server_end,
+            )
+            .await
+            .expect("deprecated_new_provision FIDL")
+            .expect("deprecated provision new account");
+
+        let (root, server_end) = fidl::endpoints::create_proxy().unwrap();
+        account_proxy
+            .get_data_directory(server_end)
+            .await
+            .expect("get_data_directory FIDL")
+            .expect("get_data_directory");
+        let file = io_util::directory::open_file(
+            &root,
+            "test",
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        )
+        .await
+        .expect("create file");
+
+        let (status, bytes_written) = file.write(expected_content).await.expect("file write");
+        Status::ok(status).expect("failed to write content");
+        assert_eq!(bytes_written, expected_content.len() as u64);
+    }
+
+    let (account_proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
+    account_manager
+        .deprecated_get_account(GLOBAL_ACCOUNT_ID, EMPTY_PASSWORD, server_end)
+        .await
+        .expect("deprecated_get_account FIDL")
+        .expect("deprecated_get_account");
+
+    let (root, server_end) = fidl::endpoints::create_proxy().unwrap();
+    account_proxy
+        .get_data_directory(server_end)
+        .await
+        .expect("get_data_directory FIDL")
+        .expect("get_data_directory");
+    let file = io_util::directory::open_file(&root, "test", fio::OPEN_RIGHT_READABLE)
+        .await
+        .expect("create file");
+
+    let actual_contents = io_util::file::read(&file).await.expect("read file");
+    assert_eq!(&actual_contents, expected_content);
 }

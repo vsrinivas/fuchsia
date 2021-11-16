@@ -10,6 +10,7 @@ rustc_test("driver") {
   edition = "2018"
 
   deps = [
+    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test-rustc",
     "//sdk/fidl/fuchsia.hardware.block.encrypted:fuchsia.hardware.block.encrypted-rustc",
@@ -65,6 +66,7 @@ fuchsia_test_package("password-authenticator-integration-tests") {
   deps = [
     ":password-authenticator-integration-test",
     "//src/identity/bin/password_authenticator:component",
+    "//src/storage/bin/minfs",
   ]
 }
 

@@ -12,8 +12,12 @@ use {
     fidl_fuchsia_hardware_block_partition::{PartitionMarker, PartitionProxyInterface},
     fidl_fuchsia_identity_account as faccount,
     fidl_fuchsia_io::{
-        DirectoryProxy, FileMarker, NodeProxy, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE,
+        DirectoryProxy, FileMarker, NodeMarker, NodeProxy, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE,
         OPEN_RIGHT_WRITABLE,
+    },
+    fs_management::{
+        self as fs,
+        asynchronous::{Filesystem, ServingFilesystem},
     },
     fuchsia_vfs_watcher::{WatchEvent, WatchMessage, Watcher},
     fuchsia_zircon as zx,
@@ -49,6 +53,14 @@ pub enum DiskError {
     FailedToFormatZxcrypt(#[source] zx::Status),
     #[error("Failed to unseal zxcrypt block device: {0}")]
     FailedToUnsealZxcrypt(#[source] zx::Status),
+    #[error("Failed to format minfs: {0}")]
+    MinfsFormatError(#[from] fs::CommandError),
+    #[error("Failed to serve minfs: {0}")]
+    MinfsServeError(#[from] fs::ServeError),
+    #[error("Failed to shutdown minfs: {0}")]
+    MinfsShutdownError(#[from] fs::ShutdownError),
+    #[error("Failed to kill the minfs process: {0}")]
+    MinfsKillError(#[from] fs::KillError),
 }
 
 impl From<DiskError> for faccount::Error {
@@ -164,6 +176,7 @@ pub trait DiskManager {
     type BlockDevice;
     type Partition: Partition<BlockDevice = Self::BlockDevice>;
     type EncryptedBlockDevice: EncryptedBlockDevice<BlockDevice = Self::BlockDevice>;
+    type Minfs: Minfs;
 
     /// Returns a list of all block devices that are valid partitions.
     async fn partitions(&self) -> Result<Vec<Self::Partition>, DiskError>;
@@ -180,6 +193,9 @@ pub trait DiskManager {
 
     /// Format the minfs filesystem onto a block device.
     async fn format_minfs(&self, block_dev: &Self::BlockDevice) -> Result<(), DiskError>;
+
+    /// Serves the minfs filesystem on the given block device.
+    async fn serve_minfs(&self, block_dev: Self::BlockDevice) -> Result<Self::Minfs, DiskError>;
 }
 
 /// The `Partition` trait provides a narrow interface for
@@ -213,6 +229,15 @@ pub trait EncryptedBlockDevice {
     async fn format(&self, key: &Key) -> Result<(), DiskError>;
 }
 
+#[async_trait]
+pub trait Minfs: Send + 'static {
+    /// Returns the root directory of the minfs instance.
+    fn root_dir(&self) -> &DirectoryProxy;
+
+    /// Shutdown the serving minfs instance.
+    async fn shutdown(self) -> Result<(), DiskError>;
+}
+
 /// The production implementation of [`DiskManager`].
 pub struct DevDiskManager {
     /// The /dev directory to use as the root for all device paths.
@@ -232,6 +257,7 @@ impl DiskManager for DevDiskManager {
     type BlockDevice = DevBlockDevice;
     type Partition = DevBlockPartition;
     type EncryptedBlockDevice = EncryptedDevBlockDevice;
+    type Minfs = DevMinfs;
 
     async fn partitions(&self) -> Result<Vec<Self::Partition>, DiskError> {
         all_partitions(&self.dev_root).await
@@ -282,9 +308,17 @@ impl DiskManager for DevDiskManager {
         Ok(EncryptedDevBlockDevice(block_dir))
     }
 
-    async fn format_minfs(&self, _block_dev: &Self::BlockDevice) -> Result<(), DiskError> {
-        // TODO(fxbug.dev/86859): Implement minfs formatting.
+    async fn format_minfs(&self, block_dev: &Self::BlockDevice) -> Result<(), DiskError> {
+        let node = block_dev.0.clone_as::<NodeMarker>()?;
+        let minfs = Filesystem::from_node(node, fs::Minfs::default());
+        minfs.format().await?;
         Ok(())
+    }
+
+    async fn serve_minfs(&self, block_dev: Self::BlockDevice) -> Result<Self::Minfs, DiskError> {
+        let minfs = Filesystem::from_node(block_dev.0 .0, fs::Minfs::default());
+        let serving_fs = minfs.serve().await.map_err(|err| err.serve_error().clone())?;
+        Ok(DevMinfs { serving_fs })
     }
 }
 
@@ -394,6 +428,32 @@ impl EncryptedBlockDevice for EncryptedDevBlockDevice {
         zx::Status::ok(device_manager_proxy.format(key, 0).await?)
             .map_err(DiskError::FailedToFormatZxcrypt)?;
         Ok(())
+    }
+}
+
+/// Production implementation of Minfs.
+pub struct DevMinfs {
+    serving_fs: ServingFilesystem<fs::Minfs>,
+}
+
+#[async_trait]
+impl Minfs for DevMinfs {
+    fn root_dir(&self) -> &DirectoryProxy {
+        self.serving_fs.root()
+    }
+
+    async fn shutdown(self) -> Result<(), DiskError> {
+        match self.serving_fs.shutdown().await {
+            Ok(_) => Ok(()),
+            Err(err) => {
+                error!(
+                    "failed to shutdown minfs: {}; trying to terminate minfs process...",
+                    err.shutdown_error()
+                );
+                err.kill_filesystem().await?;
+                Ok(())
+            }
+        }
     }
 }
 

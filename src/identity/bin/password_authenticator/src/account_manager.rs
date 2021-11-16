@@ -3,31 +3,38 @@
 // found in the LICENSE file.
 
 use crate::{
+    account::{Account, CheckNewClientResult},
     constants::{ACCOUNT_LABEL, FUCHSIA_DATA_GUID},
     disk_management::{DiskError, DiskManager, EncryptedBlockDevice, Partition},
-    keys::KeyDerivation,
+    keys::{Key, KeyDerivation},
     prototype::{GLOBAL_ACCOUNT_ID, GLOBAL_ACCOUNT_PASSWORD},
 };
 use anyhow::{anyhow, Context, Error};
 use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_identity_account::{
     self as faccount, AccountManagerRequest, AccountManagerRequestStream, AccountMarker,
-    AccountRequest, AccountRequestStream, Lifetime,
 };
-use futures::{lock::Mutex, prelude::*, select};
-use identity_common::{TaskGroup, TaskGroupCancel};
+use futures::{lock::Mutex, prelude::*};
 use log::{error, warn};
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 pub type AccountId = u64;
 
-pub struct AccountManager<DM, KD> {
+pub struct AccountManager<DM, KD>
+where
+    DM: DiskManager,
+    KD: KeyDerivation,
+{
     disk_manager: DM,
     key_derivation: KD,
 
-    // Maps a TaskGroup to each account, allowing for the cancelation of all tasks running for a
-    // particular account.
-    account_tasks: Mutex<HashMap<AccountId, TaskGroup>>,
+    accounts: Mutex<HashMap<AccountId, AccountState<DM::Minfs>>>,
+}
+
+/// The external state of the account.
+enum AccountState<M> {
+    Provisioning(Arc<Mutex<()>>),
+    Provisioned(Arc<Account<M>>),
 }
 
 impl<DM, KD> AccountManager<DM, KD>
@@ -36,7 +43,7 @@ where
     KD: KeyDerivation,
 {
     pub fn new(disk_manager: DM, key_derivation: KD) -> Self {
-        Self { disk_manager, key_derivation, account_tasks: Mutex::new(HashMap::new()) }
+        Self { disk_manager, key_derivation, accounts: Mutex::new(HashMap::new()) }
     }
 
     /// Serially process a stream of incoming AccountManager FIDL requests.
@@ -183,26 +190,84 @@ where
         &self,
         id: AccountId,
         password: String,
-        account: ServerEnd<AccountMarker>,
+        server_end: ServerEnd<AccountMarker>,
     ) -> Result<(), faccount::Error> {
-        // Get the list of account IDs on the device. `id` must be one of those.
-        let account_ids = self.get_account_ids().await.map_err(|_| faccount::Error::NotFound)?;
-        if account_ids.into_iter().find(|i| *i == id).is_none() {
-            return Err(faccount::Error::NotFound);
-        }
-
         if password != GLOBAL_ACCOUNT_PASSWORD {
             return Err(faccount::Error::FailedAuthentication);
         }
 
-        let account_stream = account.into_stream().map_err(|_| faccount::Error::Resource)?;
-        let mut account_tasks = self.account_tasks.lock().await;
-        let task_group = account_tasks.entry(id).or_insert_with(TaskGroup::new);
-        task_group
-            .spawn(move |cancel| Account.handle_requests_for_stream(account_stream, cancel))
+        let key = self.key_derivation.derive_key(&password)?;
+
+        // Acquire the lock for all accounts.
+        let mut accounts_locked = self.accounts.lock().await;
+        let account = match accounts_locked.get(&id) {
+            Some(AccountState::Provisioned(account)) => {
+                // Attempt to authenticate with the account using the derived key.
+                match account.check_new_client(&key).await {
+                    CheckNewClientResult::Sealed => {
+                        // The account has been sealed. We'll need to unseal the account from disk.
+                        let account = self.unseal_account(id, &key).await?;
+                        accounts_locked.insert(id, AccountState::Provisioned(account.clone()));
+                        account
+                    }
+                    CheckNewClientResult::UnsealedSameKey => {
+                        // The account is unsealed and the keys match. We can reuse this `Account`
+                        // instance.
+                        // It is possible for this Account to be sealed by the time the new client
+                        // channel is served below. The result will be that the new channel is
+                        // dropped as soon as it is scheduled to be served.
+                        account.clone()
+                    }
+                    CheckNewClientResult::UnsealedDifferentKey => {
+                        // The account is unsealed but the keys don't match.
+                        return Err(faccount::Error::FailedAuthentication);
+                    }
+                }
+            }
+            Some(AccountState::Provisioning(_)) => {
+                // This account is in the process of being provisioned, treat it like it doesn't
+                // exist.
+                return Err(faccount::Error::NotFound);
+            }
+            None => {
+                // There is no account associated with the ID in memory. Check if the account can
+                // be unsealed from disk.
+                let account = self.unseal_account(id, &key).await?;
+                accounts_locked.insert(id, AccountState::Provisioned(account.clone()));
+                account
+            }
+        };
+
+        account
+            .clone()
+            .handle_requests_for_stream(
+                server_end.into_stream().map_err(|_| faccount::Error::Resource)?,
+            )
             .await
             .map_err(|_| faccount::Error::Resource)?;
         Ok(())
+    }
+
+    async fn unseal_account(
+        &self,
+        id: AccountId,
+        key: &Key,
+    ) -> Result<Arc<Account<DM::Minfs>>, faccount::Error> {
+        let account_ids = self.get_account_ids().await.map_err(|_| faccount::Error::NotFound)?;
+        if account_ids.into_iter().find(|i| *i == id).is_none() {
+            return Err(faccount::Error::NotFound);
+        }
+        let block_device = self.find_account_partition().await.ok_or(faccount::Error::NotFound)?;
+        let encrypted_block = self.disk_manager.bind_to_encrypted_block(block_device).await?;
+        let block_device = match encrypted_block.unseal(&key).await {
+            Ok(block_device) => block_device,
+            Err(DiskError::FailedToUnsealZxcrypt(_)) => {
+                return Err(faccount::Error::FailedAuthentication)
+            }
+            Err(err) => return Err(err.into()),
+        };
+        let minfs = self.disk_manager.serve_minfs(block_device).await?;
+        Ok(Arc::new(Account::new(key.clone(), minfs)))
     }
 
     async fn provision_new_account(&self, password: String) -> Result<AccountId, faccount::Error> {
@@ -210,9 +275,27 @@ where
             return Err(faccount::Error::InvalidRequest);
         }
 
+        // Acquire the lock for all accounts.
+        let mut accounts_locked = self.accounts.lock().await;
+
+        // Check if the global account is already provisioned or being provisioned.
+        if let Some(state) = accounts_locked.get(&GLOBAL_ACCOUNT_ID) {
+            match state {
+                AccountState::Provisioned(_) => return Err(faccount::Error::FailedPrecondition),
+                AccountState::Provisioning(lock) => {
+                    // The account was being provisioned at some point. Try to acquire the lock.
+                    if lock.try_lock().is_none() {
+                        // The lock is locked, someone else is provisioning the account.
+                        return Err(faccount::Error::FailedPrecondition);
+                    }
+                    // The lock was unlocked, meaning the original provisioner failed.
+                }
+            }
+        }
+
         let block = self.find_account_partition().await.ok_or(faccount::Error::NotFound)?;
 
-        // Check that an account has not already been provisioned.
+        // Check that an account has not already been provisioned on disk.
         if self
             .disk_manager
             .has_zxcrypt_header(&block)
@@ -222,12 +305,35 @@ where
             return Err(faccount::Error::FailedPrecondition);
         }
 
+        // Reserve the new account ID and mark it as being provisioned so other tasks don't try to
+        // provision the same account or unseal it.
+        let provisioning_lock = Arc::new(Mutex::new(()));
+        accounts_locked
+            .insert(GLOBAL_ACCOUNT_ID, AccountState::Provisioning(provisioning_lock.clone()));
+
+        // Acquire the provisioning lock. That way if we fail to provision, this lock will be
+        // automatically released and another task can try to provision again.
+        let _ = provisioning_lock.lock().await;
+
+        // Release the lock for all accounts, allowing other tasks to access unrelated accounts.
+        drop(accounts_locked);
+
+        // Provision the new account.
         let key = self.key_derivation.derive_key(&password)?;
         let res: Result<AccountId, DiskError> = async {
             let encrypted_block = self.disk_manager.bind_to_encrypted_block(block).await?;
             encrypted_block.format(&key).await?;
             let unsealed_block = encrypted_block.unseal(&key).await?;
             self.disk_manager.format_minfs(&unsealed_block).await?;
+            let minfs = self.disk_manager.serve_minfs(unsealed_block).await?;
+
+            // Register the newly provisioned and unsealed account.
+            let mut accounts_locked = self.accounts.lock().await;
+            accounts_locked.insert(
+                GLOBAL_ACCOUNT_ID,
+                AccountState::Provisioned(Arc::new(Account::new(key, minfs))),
+            );
+
             Ok(GLOBAL_ACCOUNT_ID)
         }
         .await;
@@ -241,114 +347,11 @@ where
     }
 
     #[cfg(test)]
-    async fn cancel_account_channels(&self, id: AccountId) {
-        let mut account_tasks = self.account_tasks.lock().await;
-        if let Some(task_group) = account_tasks.remove(&id) {
-            task_group.cancel().await.expect("TaskGroup cancel");
+    async fn seal_account(&self, id: AccountId) {
+        let mut accounts_locked = self.accounts.lock().await;
+        if let Some(AccountState::Provisioned(account)) = accounts_locked.remove(&id) {
+            account.seal().await.expect("seal");
         }
-    }
-}
-
-/// Serves the `fuchsia.identity.account.Account` FIDL protocol.
-struct Account;
-
-impl Account {
-    /// Serially process a stream of incoming Account FIDL requests, shutting down the channel when
-    /// `cancel` is signaled.
-    pub async fn handle_requests_for_stream(
-        &self,
-        account_stream: AccountRequestStream,
-        mut cancel: TaskGroupCancel,
-    ) {
-        let mut account_stream = account_stream.fuse();
-        loop {
-            select! {
-                res = account_stream.try_next() => match res {
-                    Ok(Some(request)) => {
-                        self.handle_request(request)
-                            .unwrap_or_else(|err| {
-                                error!("error handling FIDL request: {:#}", err)
-                            })
-                            .await;
-                    }
-                    Ok(None) => {
-                        break;
-                    }
-                    Err(err) => {
-                        error!("error reading FIDL request from stream: {:#}", err);
-                        break;
-                    }
-                },
-                _ = &mut cancel => {
-                    warn!("Account FIDL server canceled");
-                    break;
-                }
-            }
-        }
-    }
-
-    /// Handles a single Account FIDL request.
-    async fn handle_request(&self, request: AccountRequest) -> Result<(), Error> {
-        match request {
-            AccountRequest::Lock { responder } => {
-                responder
-                    .send(&mut Err(faccount::Error::UnsupportedOperation))
-                    .context("sending Lock response")?;
-            }
-            AccountRequest::GetDataDirectory { data_directory: _, responder } => {
-                responder
-                    .send(&mut Err(faccount::Error::UnsupportedOperation))
-                    .context("sending GetDataDirectory response")?;
-            }
-            AccountRequest::GetAuthState { scenario: _, responder } => {
-                responder
-                    .send(&mut Err(faccount::Error::UnsupportedOperation))
-                    .context("sending GetAuthState response")?;
-            }
-            AccountRequest::GetLifetime { responder } => {
-                responder.send(Lifetime::Persistent).context("sending GetLifetime response")?;
-            }
-            AccountRequest::GetDefaultPersona { persona: _, responder } => {
-                responder
-                    .send(&mut Err(faccount::Error::UnsupportedOperation))
-                    .context("sending GetDefaultPersona response")?;
-            }
-            AccountRequest::GetPersona { id: _, persona: _, responder } => {
-                responder
-                    .send(&mut Err(faccount::Error::UnsupportedOperation))
-                    .context("sending GetPersona response")?;
-            }
-            AccountRequest::GetPersonaIds { responder } => {
-                responder.send(&[]).context("sending GetPersonaIds response")?;
-            }
-            AccountRequest::RegisterAuthListener {
-                scenario: _,
-                listener: _,
-                initial_state: _,
-                granularity: _,
-                responder,
-            } => {
-                responder
-                    .send(&mut Err(faccount::Error::UnsupportedOperation))
-                    .context("sending RegisterAuthListener response")?;
-            }
-            AccountRequest::GetAuthMechanismEnrollments { responder } => {
-                responder
-                    .send(&mut Err(faccount::Error::UnsupportedOperation))
-                    .context("sending GetAuthMechanismEnrollments response")?;
-            }
-            AccountRequest::CreateAuthMechanismEnrollment { auth_mechanism_id: _, responder } => {
-                responder
-                    .send(&mut Err(faccount::Error::UnsupportedOperation))
-                    .context("sending CreateAuthMechanismEnrollment response")?;
-            }
-            AccountRequest::RemoveAuthMechanismEnrollment { enrollment_id: _, responder } => {
-                responder
-                    .send(&mut Err(faccount::Error::UnsupportedOperation))
-                    .context("sending RemoveAuthMechanismEnrollment response")?;
-            }
-        }
-        Ok(())
     }
 }
 
@@ -356,17 +359,56 @@ impl Account {
 mod test {
     use {
         super::*,
-        crate::{disk_management::DiskError, keys::Key, prototype::NullKeyDerivation},
+        crate::{
+            disk_management::{DiskError, Minfs},
+            keys::Key,
+            prototype::NullKeyDerivation,
+        },
         async_trait::async_trait,
-        fidl_fuchsia_io::DirectoryMarker,
+        fidl_fuchsia_io::{
+            DirectoryMarker, DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_FLAG_CREATE,
+            OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        },
+        fs_management::ServeError,
         fuchsia_zircon::Status,
+        vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope},
     };
 
     /// Mock implementation of [`DiskManager`].
     struct MockDiskManager {
+        scope: ExecutionScope,
         // If no partition list is given, partitions() (from the DiskManager trait) will return
         // an error.
         maybe_partitions: Option<Vec<MockPartition>>,
+        format_minfs: Result<(), fn() -> DiskError>,
+        serve_minfs_fn: Arc<Mutex<dyn FnMut() -> Result<MockMinfs, DiskError> + Send>>,
+    }
+
+    impl Default for MockDiskManager {
+        fn default() -> Self {
+            let scope = ExecutionScope::build()
+                .entry_constructor(vfs::directory::mutable::simple::tree_constructor(
+                    |_parent, _name| {
+                        Ok(vfs::file::vmo::read_write(
+                            vfs::file::vmo::simple_init_vmo_resizable_with_capacity(&[], 100),
+                            |_| async {},
+                        ))
+                    },
+                ))
+                .new();
+            Self {
+                scope: scope.clone(),
+                maybe_partitions: None,
+                format_minfs: Ok(()),
+                serve_minfs_fn: Arc::new(Mutex::new(move || Ok(MockMinfs::simple(scope.clone())))),
+            }
+        }
+    }
+
+    impl Drop for MockDiskManager {
+        fn drop(&mut self) {
+            self.scope.shutdown();
+        }
     }
 
     #[async_trait]
@@ -374,6 +416,7 @@ mod test {
         type BlockDevice = MockBlockDevice;
         type Partition = MockPartition;
         type EncryptedBlockDevice = MockEncryptedBlockDevice;
+        type Minfs = MockMinfs;
 
         async fn partitions(&self) -> Result<Vec<MockPartition>, DiskError> {
             self.maybe_partitions
@@ -397,19 +440,31 @@ mod test {
         }
 
         async fn format_minfs(&self, _block_dev: &MockBlockDevice) -> Result<(), DiskError> {
-            Ok(())
+            self.format_minfs.clone().map_err(|err_factory| err_factory())
+        }
+
+        async fn serve_minfs(&self, _block_dev: MockBlockDevice) -> Result<MockMinfs, DiskError> {
+            let mut locked_fn = self.serve_minfs_fn.lock().await;
+            (*locked_fn)()
         }
     }
 
     impl MockDiskManager {
         fn new() -> Self {
-            Self { maybe_partitions: None }
+            Self::default()
         }
 
-        fn with_partition(self, partition: MockPartition) -> Self {
-            let mut partitions = self.maybe_partitions.unwrap_or_else(Vec::new);
-            partitions.push(partition);
-            MockDiskManager { maybe_partitions: Some(partitions) }
+        fn with_partition(mut self, partition: MockPartition) -> Self {
+            self.maybe_partitions.get_or_insert_with(Vec::new).push(partition);
+            self
+        }
+
+        fn with_serve_minfs<F>(mut self, serve_minfs: F) -> Self
+        where
+            F: FnMut() -> Result<MockMinfs, DiskError> + Send + 'static,
+        {
+            self.serve_minfs_fn = Arc::new(Mutex::new(serve_minfs));
+            self
         }
     }
 
@@ -487,6 +542,34 @@ mod test {
 
         async fn unseal(&self, _key: &Key) -> Result<MockBlockDevice, DiskError> {
             self.unseal.clone().map(|b| *b).map_err(|err_factory| err_factory())
+        }
+    }
+
+    #[derive(Debug, Clone)]
+    struct MockMinfs(DirectoryProxy);
+
+    impl MockMinfs {
+        fn simple(scope: ExecutionScope) -> Self {
+            let (proxy, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+            vfs::directory::mutable::simple().open(
+                scope,
+                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                MODE_TYPE_DIRECTORY,
+                vfs::path::Path::dot(),
+                ServerEnd::new(server_end.into_channel()),
+            );
+            MockMinfs(proxy)
+        }
+    }
+
+    #[async_trait]
+    impl Minfs for MockMinfs {
+        fn root_dir(&self) -> &DirectoryProxy {
+            &self.0
+        }
+
+        async fn shutdown(self) -> Result<(), DiskError> {
+            Ok(())
         }
     }
 
@@ -664,7 +747,7 @@ mod test {
         let (_, server) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
         assert_eq!(
             client.get_data_directory(server).await.expect("get_data_directory FIDL"),
-            Err(faccount::Error::UnsupportedOperation)
+            Ok(())
         );
     }
 
@@ -686,12 +769,12 @@ mod test {
         let (_, server) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
         assert_eq!(
             client1.get_data_directory(server).await.expect("get_data_directory 1 FIDL"),
-            Err(faccount::Error::UnsupportedOperation)
+            Ok(())
         );
         let (_, server) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
         assert_eq!(
             client2.get_data_directory(server).await.expect("get_data_directory 2 FIDL"),
-            Err(faccount::Error::UnsupportedOperation)
+            Ok(())
         );
     }
 
@@ -709,7 +792,7 @@ mod test {
         let (_, server) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
         assert_eq!(
             client.get_data_directory(server).await.expect("get_data_directory 1 FIDL"),
-            Err(faccount::Error::UnsupportedOperation)
+            Ok(())
         );
         drop(client);
         let (client, server) = fidl::endpoints::create_proxy::<AccountMarker>().unwrap();
@@ -720,7 +803,7 @@ mod test {
         let (_, server) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
         assert_eq!(
             client.get_data_directory(server).await.expect("get_data_directory 2 FIDL"),
-            Err(faccount::Error::UnsupportedOperation)
+            Ok(())
         );
     }
 
@@ -737,9 +820,9 @@ mod test {
         let (_, server) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
         assert_eq!(
             client.get_data_directory(server).await.expect("get_data_directory FIDL"),
-            Err(faccount::Error::UnsupportedOperation)
+            Ok(())
         );
-        account_manager.cancel_account_channels(GLOBAL_ACCOUNT_ID).await;
+        account_manager.seal_account(GLOBAL_ACCOUNT_ID).await;
         let (_, server) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
         let err =
             client.get_data_directory(server).await.expect_err("get_data_directory should fail");
@@ -837,5 +920,146 @@ mod test {
             account_manager.provision_new_account(GLOBAL_ACCOUNT_PASSWORD.to_string()).await,
             Err(faccount::Error::Resource)
         );
+    }
+
+    #[fuchsia::test]
+    async fn test_deprecated_provision_new_account_get_data_directory() {
+        let disk_manager =
+            MockDiskManager::new().with_partition(make_unformatted_account_partition());
+        let account_manager = AccountManager::new(disk_manager, NullKeyDerivation);
+        assert_eq!(
+            account_manager
+                .provision_new_account(GLOBAL_ACCOUNT_PASSWORD.to_string())
+                .await
+                .expect("provision account"),
+            GLOBAL_ACCOUNT_ID
+        );
+
+        let (account, server_end) = fidl::endpoints::create_proxy().unwrap();
+        account_manager
+            .get_account(GLOBAL_ACCOUNT_ID, GLOBAL_ACCOUNT_PASSWORD.to_string(), server_end)
+            .await
+            .expect("get_account");
+
+        let (root_dir, server_end) = fidl::endpoints::create_proxy().unwrap();
+        account
+            .get_data_directory(server_end)
+            .await
+            .expect("get_data_directory FIDL")
+            .expect("get_data_directory");
+
+        let expected_content = b"some data";
+        let file = io_util::directory::open_file(
+            &root_dir,
+            "test",
+            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+        )
+        .await
+        .expect("create file");
+        let (status, bytes_written) = file.write_at(expected_content, 0).await.expect("file write");
+        Status::ok(status).expect("file write failed");
+        assert_eq!(bytes_written, expected_content.len() as u64);
+
+        let actual_content = io_util::file::read(&file).await.expect("read file");
+        assert_eq!(&actual_content, expected_content);
+    }
+
+    #[fuchsia::test]
+    async fn test_already_provisioned_get_data_directory() {
+        let disk_manager =
+            MockDiskManager::new().with_partition(make_formatted_account_partition());
+        let account_manager = AccountManager::new(disk_manager, NullKeyDerivation);
+
+        let (account, server_end) = fidl::endpoints::create_proxy().unwrap();
+        account_manager
+            .get_account(GLOBAL_ACCOUNT_ID, GLOBAL_ACCOUNT_PASSWORD.to_string(), server_end)
+            .await
+            .expect("get_account");
+
+        let (root_dir, server_end) = fidl::endpoints::create_proxy().unwrap();
+        account
+            .get_data_directory(server_end)
+            .await
+            .expect("get_data_directory FIDL")
+            .expect("get_data_directory");
+
+        let expected_content = b"some data";
+        let file = io_util::directory::open_file(
+            &root_dir,
+            "test",
+            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+        )
+        .await
+        .expect("create file");
+        let (status, bytes_written) = file.write_at(expected_content, 0).await.expect("file write");
+        Status::ok(status).expect("file write failed");
+        assert_eq!(bytes_written, expected_content.len() as u64);
+
+        let actual_content = io_util::file::read(&file).await.expect("read file");
+        assert_eq!(&actual_content, expected_content);
+    }
+
+    #[fuchsia::test]
+    async fn test_recover_from_failed_provisioning() {
+        let scope = ExecutionScope::new();
+        let mut one_time_failure =
+            Some(DiskError::MinfsServeError(ServeError::Fidl(fidl::Error::Invalid)));
+        let disk_manager = MockDiskManager::new()
+            .with_partition(make_unformatted_account_partition())
+            .with_serve_minfs(move || {
+                if let Some(err) = one_time_failure.take() {
+                    Err(err)
+                } else {
+                    Ok(MockMinfs::simple(scope.clone()))
+                }
+            });
+        let account_manager = AccountManager::new(disk_manager, NullKeyDerivation);
+
+        // Expect a Resource failure.
+        assert_eq!(
+            account_manager.provision_new_account(GLOBAL_ACCOUNT_PASSWORD.to_string()).await,
+            Err(faccount::Error::Resource)
+        );
+
+        // Provisioning again should succeed.
+        assert_eq!(
+            account_manager.provision_new_account(GLOBAL_ACCOUNT_PASSWORD.to_string()).await,
+            Ok(GLOBAL_ACCOUNT_ID)
+        );
+    }
+
+    #[fuchsia::test]
+    async fn test_get_unseal_after_account_sealed() {
+        let disk_manager =
+            MockDiskManager::new().with_partition(make_formatted_account_partition());
+        let account_manager = AccountManager::new(disk_manager, NullKeyDerivation);
+
+        let (account, server_end) = fidl::endpoints::create_proxy().unwrap();
+        account_manager
+            .get_account(GLOBAL_ACCOUNT_ID, GLOBAL_ACCOUNT_PASSWORD.to_string(), server_end)
+            .await
+            .expect("get_account");
+
+        let (_, server_end) = fidl::endpoints::create_proxy().unwrap();
+        account
+            .get_data_directory(server_end)
+            .await
+            .expect("get_data_directory FIDL")
+            .expect("get_data_directory");
+
+        account_manager.seal_account(GLOBAL_ACCOUNT_ID).await;
+
+        let (account, server_end) = fidl::endpoints::create_proxy().unwrap();
+        account_manager
+            .get_account(GLOBAL_ACCOUNT_ID, GLOBAL_ACCOUNT_PASSWORD.to_string(), server_end)
+            .await
+            .expect("get_account");
+
+        let (_, server_end) = fidl::endpoints::create_proxy().unwrap();
+        account
+            .get_data_directory(server_end)
+            .await
+            .expect("get_data_directory FIDL")
+            .expect("get_data_directory");
     }
 }

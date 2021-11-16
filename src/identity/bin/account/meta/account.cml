@@ -12,7 +12,10 @@
             to: "#password_authenticator",
         },
         {
-            protocol: [ "fuchsia.logger.LogSink" ],
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+            ],
             from: "parent",
             to: "#password_authenticator",
         },
