@@ -55,7 +55,7 @@ class SystemInstanceTest : public zxtest::Test {
   SystemInstanceTest()
       : inspect_manager_(loop_.dispatcher()),
         coordinator_(DefaultConfig(nullptr, nullptr, nullptr), &inspect_manager_,
-                     loop_.dispatcher()) {}
+                     loop_.dispatcher(), loop_.dispatcher()) {}
 
   SystemInstance under_test_;
   LoaderServiceConnector service_connector_;

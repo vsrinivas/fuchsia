@@ -37,6 +37,7 @@
 #include <fbl/string.h>
 #include <fbl/vector.h>
 
+#include "lib/async/dispatcher.h"
 #include "src/devices/bin/driver_manager/composite_device.h"
 #include "src/devices/bin/driver_manager/devfs.h"
 #include "src/devices/bin/driver_manager/device.h"
@@ -177,7 +178,7 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   Coordinator& operator=(Coordinator&&) = delete;
 
   Coordinator(CoordinatorConfig config, InspectManager* inspect_manager,
-              async_dispatcher_t* dispatcher);
+              async_dispatcher_t* dispatcher, async_dispatcher_t* firmware_dispatcher);
   ~Coordinator();
 
   zx_status_t InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& svc_dir);
@@ -248,8 +249,15 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   zx_status_t BindDevice(const fbl::RefPtr<Device>& dev, std::string_view drvlibname,
                          bool new_device);
   zx_status_t GetTopologicalPath(const fbl::RefPtr<const Device>& dev, char* out, size_t max) const;
-  zx_status_t LoadFirmware(const fbl::RefPtr<Device>& dev, const char* driver_libname,
-                           const char* path, zx::vmo* vmo, size_t* size);
+
+  struct LoadFirmwareResult {
+    zx::vmo vmo;
+    size_t size;
+  };
+  // |cb| may be called in the caller's callstack, or from another thread, and therefore must be
+  // able to deal with both re-entrancy as well as thread-safe.
+  void LoadFirmware(const fbl::RefPtr<Device>& dev, const char* driver_libname, const char* path,
+                    fit::callback<void(zx::status<LoadFirmwareResult>)> cb);
 
   zx_status_t GetMetadata(const fbl::RefPtr<Device>& dev, uint32_t type, void* buffer,
                           size_t buflen, size_t* size);
@@ -271,6 +279,7 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   void DumpState(VmoWriter* vmo) const;
 
   async_dispatcher_t* dispatcher() const { return dispatcher_; }
+  async_dispatcher_t* firmware_dispatcher() const { return firmware_dispatcher_; }
   const zx::resource& root_resource() const { return config_.root_resource; }
   fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args() const { return config_.boot_args; }
   bool require_system() const { return config_.require_system; }
@@ -357,6 +366,7 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
  private:
   CoordinatorConfig config_;
   async_dispatcher_t* const dispatcher_;
+  async_dispatcher_t* const firmware_dispatcher_;
   bool running_ = false;
   bool launched_first_driver_host_ = false;
   bool power_manager_registered_ = false;

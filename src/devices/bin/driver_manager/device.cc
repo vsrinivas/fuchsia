@@ -881,15 +881,15 @@ void Device::LoadFirmware(LoadFirmwareRequestView request, LoadFirmwareCompleter
   memcpy(fw_path, request->fw_path.data(), request->fw_path.size());
   fw_path[request->fw_path.size()] = 0;
 
-  zx::vmo vmo;
-  uint64_t size = 0;
-  zx_status_t status;
-  if ((status = dev->coordinator->LoadFirmware(dev, driver_path, fw_path, &vmo, &size)) != ZX_OK) {
-    completer.ReplyError(status);
-    return;
-  }
-
-  completer.ReplySuccess(std::move(vmo), size);
+  dev->coordinator->LoadFirmware(dev, driver_path, fw_path,
+                                 [completer = completer.ToAsync()](
+                                     zx::status<Coordinator::LoadFirmwareResult> result) mutable {
+                                   if (result.is_error()) {
+                                     completer.ReplyError(result.status_value());
+                                     return;
+                                   }
+                                   completer.ReplySuccess(std::move(result->vmo), result->size);
+                                 });
 }
 
 void Device::GetMetadata(GetMetadataRequestView request, GetMetadataCompleter::Sync& completer) {

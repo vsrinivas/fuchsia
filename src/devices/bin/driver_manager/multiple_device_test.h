@@ -51,7 +51,7 @@ class CoordinatorForTest {
  public:
   CoordinatorForTest(CoordinatorConfig config, async_dispatcher_t* dispatcher)
       : inspect_manager_(dispatcher),
-        coordinator_(std::move(config), &inspect_manager_, dispatcher) {}
+        coordinator_(std::move(config), &inspect_manager_, dispatcher, dispatcher) {}
 
   Coordinator& coordinator() { return coordinator_; }
 
