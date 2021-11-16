@@ -54,7 +54,7 @@ class PagerProxy : public PageProvider,
   void SwapAsyncRequest(page_request_t* old, page_request_t* new_req) final;
   void OnClose() final;
   void OnDetach() final;
-  zx_status_t WaitForRequest(const page_request_t* request, Event* event) final;
+  zx_status_t WaitOnEvent(Event* event) final;
   void Dump() final;
   bool SupportsPageRequestType(page_request_type type) const final {
     if (type == page_request_type::READ) {

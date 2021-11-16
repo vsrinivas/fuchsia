@@ -355,15 +355,6 @@ void PageSource::CompleteRequestLocked(PageRequest* request, zx_status_t status)
   request->event_.Signal(status);
 }
 
-void PageSource::CompleteRequest(PageRequest* request, zx_status_t status) {
-  canary_.Assert();
-  Guard<Mutex> guard{&page_source_mtx_};
-  // With the lock held check if the request has already been completed or not.
-  if (request->offset_ != UINT64_MAX) {
-    CompleteRequestLocked(request, status);
-  }
-}
-
 void PageSource::CancelRequest(PageRequest* request) {
   canary_.Assert();
   Guard<Mutex> guard{&page_source_mtx_};
@@ -481,14 +472,10 @@ void PageRequest::Init(fbl::RefPtr<PageSource> src, uint64_t offset, page_reques
 
 zx_status_t PageRequest::Wait() {
   VM_KTRACE_DURATION(1, "page_request_wait", offset_, len_);
-  zx_status_t status = src_->page_provider_->WaitForRequest(&provider_request_, &event_);
+  zx_status_t status = src_->page_provider_->WaitOnEvent(&event_);
   VM_KTRACE_FLOW_END(1, "page_request_signal", reinterpret_cast<uintptr_t>(this));
   if (status != ZX_OK && !PageSource::IsValidFailureCode(status)) {
     src_->CancelRequest(this);
-  } else if (offset_ != UINT64_MAX) {
-    // WaitForRequest returned without the request having been completed. Assume WaitForRequest is
-    // correct and complete the request.
-    src_->CompleteRequest(this, status);
   }
   return status;
 }
