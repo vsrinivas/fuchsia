@@ -120,7 +120,7 @@ void ZbiMain(void* zbi, arch::EarlyTicks boot_ticks) {
 
   BootZbi boot;
   if (shim.Check("Not a bootable ZBI", boot.Init(input_zbi)) &&
-      shim.Check("Failed to load ZBI", boot.Load(shim.size_bytes())) &&
+      shim.Check("Failed to load ZBI", boot.Load(static_cast<uint32_t>(shim.size_bytes()))) &&
       shim.Check("Failed to append boot loader items to data ZBI",
                  shim.AppendItems(boot.DataZbi()))) {
     boot.Boot();

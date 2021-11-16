@@ -28,6 +28,7 @@
 #include <arch/arm64/hypervisor/el2_state.h>
 #include <arch/aspace.h>
 #include <fbl/auto_lock.h>
+#include <fbl/bits.h>
 #include <kernel/mutex.h>
 #include <ktl/algorithm.h>
 #include <vm/arch_vm_aspace.h>
@@ -393,10 +394,13 @@ class ArmArchVmAspace::ConsistencyManager {
 
   // Pending TLBs to flush are stored as 63 bits, with the bottom bit stolen to store the terminal
   // flag. 63 bits is more than enough as these entries are page aligned at the minimum.
-  struct {
-    bool terminal : 1;
-    uint64_t va_shifted : 63;
-  } pending_tlbs_[kMaxPendingTlbs];
+  FBL_BITFIELD_DEF_START(PendingTlbs, uint64_t)
+  FBL_BITFIELD_MEMBER(terminal, 0, 1);
+  FBL_BITFIELD_MEMBER(va_shifted, 1, 63);
+  FBL_BITFIELD_DEF_END();
+
+  PendingTlbs pending_tlbs_[kMaxPendingTlbs];
+
   size_t num_pending_tlbs_ = 0;
 
   // vm_page_t's to release to the PMM after the TLB invalidation occurs.

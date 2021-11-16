@@ -644,7 +644,7 @@ int cmd_dap(int argc, const cmd_args *argv, uint32_t flags) {
     if (argc < 3) {
       goto notenoughargs;
     }
-    cpu_debug_command(argv[2].u);
+    cpu_debug_command(static_cast<cpu_num_t>(argv[2].u));
   } else {
     printf("unknown command\n");
     goto usage;

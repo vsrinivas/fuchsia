@@ -104,7 +104,7 @@ bool asid_allocator_test_inner(enum arm64_asid_width asid_width) {
 
     // free them all
     for (uint32_t i = MMU_ARM64_FIRST_USER_ASID; i <= max_asid; i++) {
-      auto status = aa->Free(i);
+      auto status = aa->Free(static_cast<uint16_t>(i));
       ASSERT_TRUE(status.is_ok());
     }
   }

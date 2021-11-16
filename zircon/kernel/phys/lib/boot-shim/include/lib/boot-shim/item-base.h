@@ -31,7 +31,7 @@ class ItemBase {
 
   // Convenience used in size_bytes() implementations.
   static constexpr size_t ItemSize(size_t payload) {
-    return payload == 0 ? 0 : sizeof(zbi_header_t) + ZBI_ALIGN(payload);
+    return payload == 0 ? 0 : sizeof(zbi_header_t) + ZBI_ALIGN(static_cast<uint32_t>(payload));
   }
 
   // These methods are not actually defined in the base class.

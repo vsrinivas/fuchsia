@@ -26,7 +26,7 @@ void InitAcpi(LegacyBootShim& shim) {
   uint64_t rsdp = gLegacyBoot.acpi_rsdp;
 
   PhysPhysMemReader mem_reader;
-  auto acpi_parser = acpi_lite::AcpiParser::Init(mem_reader, rsdp);
+  auto acpi_parser = acpi_lite::AcpiParser::Init(mem_reader, static_cast<zx_paddr_t>(rsdp));
   if (acpi_parser.is_ok()) {
     shim.InitAcpi(acpi_parser.value());
   } else {

@@ -62,9 +62,6 @@ zbi_executable("x86-legacy-zbi-boot-shim") {
 
   configs -= [ "//zircon/kernel/phys:load-pic" ]
   configs += [ "//zircon/kernel/arch/x86/phys:load-1mb" ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # This is the inverse shim: between a modern ZBI boot loader that
@@ -110,9 +107,6 @@ if (toolchain_environment == "kernel.phys" ||
       "//zircon/kernel/phys:symbolize",
       "//zircon/kernel/phys/lib/memalloc",
     ]
-
-    # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-    configs += [ "//build/config:Wno-conversion" ]
   }
 }
 
@@ -174,9 +168,6 @@ if (toolchain_environment == "kernel.phys32") {
       "//zircon/system/ulib/hwreg",
     ]
     friend = [ ":legacy-boot-shim-tests" ]
-
-    # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-    configs += [ "//build/config:Wno-conversion" ]
   }
 
   source_set("stdout") {
@@ -242,9 +233,6 @@ test("legacy-boot-shim-tests") {
     "//zircon/kernel/phys/lib/boot-shim:boot-shim-test",
     "//zircon/system/ulib/zxtest",
   ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 qemu_shim_tests = [
