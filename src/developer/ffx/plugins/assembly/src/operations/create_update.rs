@@ -6,7 +6,7 @@ use crate::util::from_reader;
 use anyhow::{Context, Result};
 use assembly_images_manifest::ImagesManifest;
 use assembly_partitions_config::PartitionsConfig;
-use assembly_update_package::{Slot, UpdatePackageBuilder2};
+use assembly_update_package::{Slot, UpdatePackageBuilder};
 use assembly_update_packages_manifest::UpdatePackagesManifest;
 use epoch::EpochFile;
 use ffx_assembly_args::CreateUpdateArgs;
@@ -19,7 +19,7 @@ pub fn create_update(args: CreateUpdateArgs) -> Result<()> {
     let partitions = PartitionsConfig::from_reader(&mut file)
         .context("Failed to parse the partitions config")?;
     let epoch: EpochFile = EpochFile::Version1 { epoch: args.epoch };
-    let mut builder = UpdatePackageBuilder2::new(
+    let mut builder = UpdatePackageBuilder::new(
         partitions,
         args.board_name,
         args.version_file,

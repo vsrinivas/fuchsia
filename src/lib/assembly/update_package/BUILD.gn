@@ -26,7 +26,7 @@ if (is_host) {
     ]
     sources = [
       "src/lib.rs",
-      "src/update_package2.rs",
+      "src/update_package.rs",
     ]
     test_deps = [
       "//src/lib/fuchsia-url",

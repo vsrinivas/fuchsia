@@ -15,7 +15,7 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 
 /// A builder that constructs update packages.
-pub struct UpdatePackageBuilder2 {
+pub struct UpdatePackageBuilder {
     /// Name of the UpdatePackage.
     /// This is typically only modified for OTA tests so that multiple UpdatePackages can be
     /// published to the same repository.
@@ -108,7 +108,7 @@ impl ImageMapping {
     }
 }
 
-impl UpdatePackageBuilder2 {
+impl UpdatePackageBuilder {
     /// Construct a new UpdatePackageBuilder with the minimal requirements for an UpdatePackage.
     pub fn new(
         partitions: PartitionsConfig,
@@ -283,7 +283,7 @@ mod tests {
         let epoch = EpochFile::Version1 { epoch: 0 };
         let mut fake_version = NamedTempFile::new().unwrap();
         writeln!(fake_version, "1.2.3.4").unwrap();
-        let mut builder = UpdatePackageBuilder2::new(
+        let mut builder = UpdatePackageBuilder::new(
             partitions_config,
             "board",
             fake_version.path().to_path_buf(),
@@ -336,7 +336,7 @@ mod tests {
 
         let mut fake_version = NamedTempFile::new().unwrap();
         writeln!(fake_version, "1.2.3.4").unwrap();
-        let mut builder = UpdatePackageBuilder2::new(
+        let mut builder = UpdatePackageBuilder::new(
             PartitionsConfig::default(),
             "board",
             fake_version.path().to_path_buf(),
@@ -359,7 +359,7 @@ mod tests {
 
         let mut fake_version = NamedTempFile::new().unwrap();
         writeln!(fake_version, "1.2.3.4").unwrap();
-        let mut builder = UpdatePackageBuilder2::new(
+        let mut builder = UpdatePackageBuilder::new(
             PartitionsConfig::default(),
             "board",
             fake_version.path().to_path_buf(),
