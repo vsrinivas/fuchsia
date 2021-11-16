@@ -292,7 +292,7 @@ Areas for future work:
 [core_bundle]: https://cs.opensource.google/fuchsia/fuchsia/+/main:bundles/buildbot/BUILD.gn;l=58;drc=9e1506dfbe789637c709fcc4ad43896f5044f947
 [core_no_e2e_bundle]: https://cs.opensource.google/fuchsia/fuchsia/+/main:bundles/buildbot/BUILD.gn;l=53;drc=9e1506dfbe789637c709fcc4ad43896f5044f947
 [covargs]: /tools/debug/covargs/
-[coverage-dashboard]: https://analysis.chromium.org/p/fuchsia/coverage
+[coverage-dashboard]: https://analysis.chromium.org/coverage/p/fuchsia
 [debugdata]: https://fuchsia.dev/reference/fidl/fuchsia.debugdata
 [flaky-policy]: /docs/concepts/testing/test_flake_policy.md
 [fuchsia-coverage-ci]: https://ci.chromium.org/p/fuchsia/builders/ci/fuchsia-coverage
