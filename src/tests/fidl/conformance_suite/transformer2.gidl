@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 success("Table_NoFields") {
-    // TODO(fxbug.dev/40782): Fix encoding bug in LLCPP.
-    bindings_denylist = [llcpp],
     value = Struct_Table_NoFields {
         t: Table_NoFields {},
     },
@@ -19,8 +17,6 @@ success("Table_NoFields") {
 }
 
 success("Table_TwoReservedFields") {
-    // TODO(fxbug.dev/40782): Fix encoding bug in LLCPP.
-    bindings_denylist = [llcpp],
     value = Struct_Table_TwoReservedFields {
         t: Table_TwoReservedFields {},
     },
