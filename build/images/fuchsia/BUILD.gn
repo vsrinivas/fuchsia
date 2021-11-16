@@ -8,8 +8,6 @@ import("//build/images/vboot/vboot.gni")
 import("//build/security.gni")
 import("//build/testing/verify_files_match.gni")
 
-assert(current_toolchain == target_toolchain)
-
 ##################################################
 # Shared parameters across assemblies in this file
 ##################################################
