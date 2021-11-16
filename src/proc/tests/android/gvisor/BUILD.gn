@@ -125,7 +125,7 @@ foreach(test_name, gvisor_tests) {
 }
 
 fuchsia_test_package("starnix_gvisor_tests") {
-  package_deps = [ "//src/sys/test_runners/starnix:starnix-test-runner" ]
+  package_deps = [ "//src/proc/bin/starnix:pkg" ]
   deps = [
     "//src/proc/tests/android:android_system_image",
     "//src/proc/tests/android:starnix_data_tmp_placeholder",
