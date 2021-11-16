@@ -13,6 +13,7 @@ use super::{
 use crate::appendable::{Appendable, BufferTooSmall};
 use crate::organization::Oui;
 use bytes::Bytes;
+use fidl_fuchsia_wlan_common::DriverFeature;
 use nom::combinator::{map, map_res};
 use nom::number::streaming::{le_u16, le_u8};
 use nom::{call, cond, count, do_parse, eof, named, named_attr, take, try_parse, IResult};
@@ -116,6 +117,10 @@ impl RsnCapabilities {
             && !self.contains_unsupported_capability()
     }
 
+    pub fn is_compatible_with_features(&self, driver_features: &Vec<DriverFeature>) -> bool {
+        !self.mgmt_frame_protection_req() || driver_features.contains(&DriverFeature::Mfp)
+    }
+
     /// Returns true if RsnCapabilities contains a capability
     /// which wlanstack cannot currently agree to handle.
     fn contains_unsupported_capability(&self) -> bool {
@@ -207,15 +212,16 @@ impl Rsne {
     /// Group Data Cipher: same as A-RSNE (CCMP-128 or TKIP)
     /// Pairwise Cipher: best from A-RSNE (prefer CCMP-128 over TKIP)
     /// AKM: PSK
-    pub fn derive_wpa2_s_rsne(&self) -> Result<Self, Error> {
-        if !self.is_wpa2_rsn_compatible() {
+    pub fn derive_wpa2_s_rsne(&self, driver_features: &Vec<DriverFeature>) -> Result<Self, Error> {
+        if !self.is_wpa2_rsn_compatible(driver_features) {
             return Err(Error::CannotDeriveWpa2Rsne);
         }
 
         // Enable management frame protection if supported.
         let rsn_capabilities = match self.rsn_capabilities.clone() {
             Some(cap) => {
-                if cap.mgmt_frame_protection_cap() {
+                if cap.mgmt_frame_protection_cap() && driver_features.contains(&DriverFeature::Mfp)
+                {
                     Some(cap.with_mgmt_frame_protection_req(true))
                 } else {
                     Some(cap)
@@ -249,8 +255,8 @@ impl Rsne {
     /// Group Data Cipher: CCMP-128
     /// Pairwise Cipher: CCMP-128
     /// AKM: SAE
-    pub fn derive_wpa3_s_rsne(&self) -> Result<Rsne, Error> {
-        if !self.is_wpa3_rsn_compatible() {
+    pub fn derive_wpa3_s_rsne(&self, driver_features: &Vec<DriverFeature>) -> Result<Rsne, Error> {
+        if !self.is_wpa3_rsn_compatible(driver_features) {
             return Err(Error::CannotDeriveWpa3Rsne);
         }
 
@@ -464,7 +470,7 @@ impl Rsne {
     /// Group Data Ciphers: CCMP-128, TKIP
     /// Pairwise Cipher: CCMP-128, TKIP
     /// AKM: PSK, SAE
-    pub fn is_wpa2_rsn_compatible(&self) -> bool {
+    pub fn is_wpa2_rsn_compatible(&self, driver_features: &Vec<DriverFeature>) -> bool {
         let group_data_supported = self.group_data_cipher_suite.as_ref().map_or(false, |c| {
             // IEEE allows TKIP usage only for compatibility reasons.
             c.has_known_usage()
@@ -479,8 +485,16 @@ impl Rsne {
             self.akm_suites.iter().any(|a| a.has_known_algorithm() && a.suite_type == akm::PSK);
         let caps_supported =
             self.rsn_capabilities.as_ref().map_or(true, RsnCapabilities::is_wpa2_compatible);
+        let features_supported = self
+            .rsn_capabilities
+            .as_ref()
+            .map_or(true, |caps| caps.is_compatible_with_features(driver_features));
 
-        group_data_supported && pairwise_supported && akm_supported && caps_supported
+        group_data_supported
+            && pairwise_supported
+            && akm_supported
+            && caps_supported
+            && features_supported
     }
 
     /// Supported Ciphers and AKMs:
@@ -488,7 +502,7 @@ impl Rsne {
     /// Pairwise Cipher: CCMP-128
     /// AKM: SAE
     /// The MFPR bit is required, except for Wpa2/Wpa3 compatibility mode.
-    pub fn is_wpa3_rsn_compatible(&self) -> bool {
+    pub fn is_wpa3_rsn_compatible(&self, driver_features: &Vec<DriverFeature>) -> bool {
         let group_data_supported = self.group_data_cipher_suite.as_ref().map_or(false, |c| {
             c.has_known_usage()
                 && (c.suite_type == cipher::CCMP_128 || c.suite_type == cipher::TKIP)
@@ -505,8 +519,15 @@ impl Rsne {
             .rsn_capabilities
             .as_ref()
             .map_or(false, |caps| caps.is_wpa3_compatible(wpa2_compatibility_mode));
-
-        group_data_supported && pairwise_supported && sae_supported && caps_supported
+        let features_supported = self
+            .rsn_capabilities
+            .as_ref()
+            .map_or(true, |caps| caps.is_compatible_with_features(driver_features));
+        group_data_supported
+            && pairwise_supported
+            && sae_supported
+            && caps_supported
+            && features_supported
     }
 
     fn with_caps(mut self, rsn_capabilities: RsnCapabilities) -> Self {
@@ -576,6 +597,7 @@ mod tests {
         *,
     };
     use crate::test_utils::FixedSizedTestBuffer;
+    use test_case::test_case;
 
     #[cfg(feature = "benchmark")]
     mod bench {
@@ -718,18 +740,25 @@ mod tests {
         assert!(!caps.is_wpa2_compatible());
     }
 
-    #[test]
-    fn test_wpa2_enables_pmf() {
+    #[test_case(vec![DriverFeature::Mfp], true)]
+    #[test_case(vec![], false)]
+    #[fuchsia::test]
+    fn test_wpa2_enables_pmf_if_supported(driver_features: Vec<DriverFeature>, expect_mfp: bool) {
         let a_rsne =
             Rsne::wpa2_rsne_with_caps(RsnCapabilities(0).with_mgmt_frame_protection_cap(true));
-        assert!(a_rsne.is_wpa2_rsn_compatible());
+        assert!(a_rsne.is_wpa2_rsn_compatible(&driver_features));
 
-        let s_rsne = a_rsne.derive_wpa2_s_rsne().expect("Should be able to derive s_rsne with PMF");
-        assert!(s_rsne.is_wpa2_rsn_compatible());
-        assert!(s_rsne
-            .rsn_capabilities
-            .expect("PMF RSNE should have RSN capabilities")
-            .mgmt_frame_protection_req());
+        let s_rsne = a_rsne
+            .derive_wpa2_s_rsne(&driver_features)
+            .expect("Should be able to derive s_rsne with PMF");
+        assert!(s_rsne.is_wpa2_rsn_compatible(&driver_features));
+        assert_eq!(
+            expect_mfp,
+            s_rsne
+                .rsn_capabilities
+                .expect("PMF RSNE should have RSN capabilities")
+                .mgmt_frame_protection_req()
+        );
     }
 
     #[test]
@@ -794,7 +823,7 @@ mod tests {
             akm_suites: vec![AKM_PSK],
             ..Default::default()
         };
-        assert_eq!(rsne.is_wpa2_rsn_compatible(), false);
+        assert_eq!(rsne.is_wpa2_rsn_compatible(&vec![]), false);
     }
 
     #[test]
@@ -804,14 +833,14 @@ mod tests {
             akm_suites: vec![AKM_PSK],
             ..Default::default()
         };
-        assert_eq!(rsne.is_wpa2_rsn_compatible(), false);
+        assert_eq!(rsne.is_wpa2_rsn_compatible(&vec![]), false);
 
         let rsne = Rsne {
             pairwise_cipher_suites: vec![CIPHER_CCMP_128],
             akm_suites: vec![AKM_SAE],
             ..Default::default()
         };
-        assert_eq!(rsne.is_wpa3_rsn_compatible(), false);
+        assert_eq!(rsne.is_wpa3_rsn_compatible(&vec![DriverFeature::Mfp]), false);
     }
 
     #[test]
@@ -830,9 +859,10 @@ mod tests {
             akm_suites: vec![AKM_PSK],
             ..Default::default()
         };
-        assert_eq!(a_rsne.is_wpa2_rsn_compatible(), true);
+        assert_eq!(a_rsne.is_wpa2_rsn_compatible(&vec![]), true);
 
-        let s_rsne = a_rsne.derive_wpa2_s_rsne().expect("could not derive WPA2 Supplicant RSNE");
+        let s_rsne =
+            a_rsne.derive_wpa2_s_rsne(&vec![]).expect("could not derive WPA2 Supplicant RSNE");
         let expected_rsne_bytes = vec![
             0x30, // element id, 48 expressed as hexadecimal value
             0x12, // length in octets, 18 expressed as hexadecimal value
@@ -854,9 +884,10 @@ mod tests {
             akm_suites: vec![AKM_PSK],
             ..Default::default()
         };
-        assert_eq!(a_rsne.is_wpa2_rsn_compatible(), true);
+        assert_eq!(a_rsne.is_wpa2_rsn_compatible(&vec![]), true);
 
-        let s_rsne = a_rsne.derive_wpa2_s_rsne().expect("could not derive WPA2 Supplicant RSNE");
+        let s_rsne =
+            a_rsne.derive_wpa2_s_rsne(&vec![]).expect("could not derive WPA2 Supplicant RSNE");
         let expected_rsne_bytes = vec![
             0x30, // element id, 48 expressed as hexadecimal value
             0x12, // length in octets, 18 expressed as hexadecimal value
@@ -878,9 +909,10 @@ mod tests {
             akm_suites: vec![AKM_PSK],
             ..Default::default()
         };
-        assert_eq!(a_rsne.is_wpa2_rsn_compatible(), true);
+        assert_eq!(a_rsne.is_wpa2_rsn_compatible(&vec![]), true);
 
-        let s_rsne = a_rsne.derive_wpa2_s_rsne().expect("could not derive WPA2 Supplicant RSNE");
+        let s_rsne =
+            a_rsne.derive_wpa2_s_rsne(&vec![]).expect("could not derive WPA2 Supplicant RSNE");
         let expected_rsne_bytes = vec![
             0x30, // element id, 48 expressed as hexadecimal value
             0x12, // length in octets, 18 expressed as hexadecimal value
@@ -902,9 +934,10 @@ mod tests {
             akm_suites: vec![AKM_PSK],
             ..Default::default()
         };
-        assert_eq!(a_rsne.is_wpa2_rsn_compatible(), true);
+        assert_eq!(a_rsne.is_wpa2_rsn_compatible(&vec![]), true);
 
-        let s_rsne = a_rsne.derive_wpa2_s_rsne().expect("could not derive WPA2 Supplicant RSNE");
+        let s_rsne =
+            a_rsne.derive_wpa2_s_rsne(&vec![]).expect("could not derive WPA2 Supplicant RSNE");
         let expected_rsne_bytes = vec![
             0x30, // element id, 48 expressed as hexadecimal value
             0x12, // length in octets, 18 expressed as hexadecimal value
@@ -926,9 +959,10 @@ mod tests {
             akm_suites: vec![AKM_PSK],
             ..Default::default()
         };
-        assert_eq!(a_rsne.is_wpa2_rsn_compatible(), true);
+        assert_eq!(a_rsne.is_wpa2_rsn_compatible(&vec![]), true);
 
-        let s_rsne = a_rsne.derive_wpa2_s_rsne().expect("could not derive WPA2 Supplicant RSNE");
+        let s_rsne =
+            a_rsne.derive_wpa2_s_rsne(&vec![]).expect("could not derive WPA2 Supplicant RSNE");
         let expected_rsne_bytes = vec![
             0x30, // element id, 48 expressed as hexadecimal value
             0x12, // length in octets, 18 expressed as hexadecimal value
@@ -950,7 +984,7 @@ mod tests {
             akm_suites: vec![AKM_PSK],
             ..Default::default()
         };
-        assert!(rsne.is_wpa2_rsn_compatible());
+        assert!(rsne.is_wpa2_rsn_compatible(&vec![]));
 
         let rsne = Rsne {
             group_data_cipher_suite: Some(CIPHER_CCMP_128),
@@ -958,7 +992,7 @@ mod tests {
             akm_suites: vec![AKM_PSK],
             ..Default::default()
         };
-        assert!(rsne.is_wpa2_rsn_compatible());
+        assert!(rsne.is_wpa2_rsn_compatible(&vec![]));
     }
 
     #[test]
@@ -969,7 +1003,7 @@ mod tests {
             akm_suites: vec![AKM_PSK],
             ..Default::default()
         };
-        assert_eq!(rsne.is_wpa2_rsn_compatible(), false);
+        assert_eq!(rsne.is_wpa2_rsn_compatible(&vec![]), false);
     }
 
     #[test]
@@ -979,14 +1013,14 @@ mod tests {
             akm_suites: vec![AKM_PSK],
             ..Default::default()
         };
-        assert_eq!(rsne.is_wpa2_rsn_compatible(), false);
+        assert_eq!(rsne.is_wpa2_rsn_compatible(&vec![]), false);
 
         let rsne = Rsne {
             group_data_cipher_suite: Some(CIPHER_CCMP_128),
             akm_suites: vec![AKM_SAE],
             ..Default::default()
         };
-        assert_eq!(rsne.is_wpa3_rsn_compatible(), false);
+        assert_eq!(rsne.is_wpa3_rsn_compatible(&vec![DriverFeature::Mfp]), false);
     }
 
     #[test]
@@ -1005,8 +1039,8 @@ mod tests {
             akm_suites: vec![AKM_EAP],
             ..Default::default()
         };
-        assert_eq!(rsne.is_wpa2_rsn_compatible(), false);
-        assert_eq!(rsne.is_wpa3_rsn_compatible(), false);
+        assert_eq!(rsne.is_wpa2_rsn_compatible(&vec![]), false);
+        assert_eq!(rsne.is_wpa3_rsn_compatible(&vec![DriverFeature::Mfp]), false);
 
         let rsne = Rsne {
             group_data_cipher_suite: Some(CIPHER_CCMP_128),
@@ -1014,7 +1048,7 @@ mod tests {
             akm_suites: vec![AKM_PSK],
             ..Default::default()
         };
-        assert_eq!(rsne.is_wpa3_rsn_compatible(), false);
+        assert_eq!(rsne.is_wpa3_rsn_compatible(&vec![DriverFeature::Mfp]), false);
 
         let rsne = Rsne {
             group_data_cipher_suite: Some(CIPHER_CCMP_128),
@@ -1022,7 +1056,7 @@ mod tests {
             akm_suites: vec![AKM_SAE],
             ..Default::default()
         };
-        assert_eq!(rsne.is_wpa2_rsn_compatible(), false);
+        assert_eq!(rsne.is_wpa2_rsn_compatible(&vec![]), false);
     }
 
     #[test]
@@ -1032,8 +1066,8 @@ mod tests {
             pairwise_cipher_suites: vec![CIPHER_CCMP_128],
             ..Default::default()
         };
-        assert_eq!(rsne.is_wpa2_rsn_compatible(), false);
-        assert_eq!(rsne.is_wpa3_rsn_compatible(), false);
+        assert_eq!(rsne.is_wpa2_rsn_compatible(&vec![]), false);
+        assert_eq!(rsne.is_wpa3_rsn_compatible(&vec![DriverFeature::Mfp]), false);
     }
 
     #[test]
@@ -1090,20 +1124,26 @@ mod tests {
     #[test]
     fn test_compatible_wpa2_rsne() {
         let rsne = Rsne::wpa2_rsne();
-        assert!(rsne.is_wpa2_rsn_compatible());
+        assert!(rsne.is_wpa2_rsn_compatible(&vec![]));
     }
 
     #[test]
     fn test_compatible_wpa2_wpa3_rsne() {
         let rsne = Rsne::wpa2_wpa3_rsne();
-        assert!(rsne.is_wpa2_rsn_compatible());
-        assert!(rsne.is_wpa3_rsn_compatible());
+        assert!(rsne.is_wpa2_rsn_compatible(&vec![]));
+        assert!(rsne.is_wpa3_rsn_compatible(&vec![DriverFeature::Mfp]));
     }
 
     #[test]
     fn test_compatible_wpa3_rsne() {
         let rsne = Rsne::wpa3_rsne();
-        assert!(rsne.is_wpa3_rsn_compatible());
+        assert!(rsne.is_wpa3_rsn_compatible(&vec![DriverFeature::Mfp]));
+    }
+
+    #[test]
+    fn test_incompatible_wpa3_rsne_no_mfp() {
+        let rsne = Rsne::wpa3_rsne();
+        assert!(!rsne.is_wpa3_rsn_compatible(&vec![]));
     }
 
     #[test]
@@ -1114,9 +1154,10 @@ mod tests {
             akm_suites: vec![AKM_PSK],
             ..Default::default()
         };
-        assert_eq!(a_rsne.is_wpa2_rsn_compatible(), true);
+        assert_eq!(a_rsne.is_wpa2_rsn_compatible(&vec![]), true);
 
-        let s_rsne = a_rsne.derive_wpa2_s_rsne().expect("could not derive WPA2 Supplicant RSNE");
+        let s_rsne =
+            a_rsne.derive_wpa2_s_rsne(&vec![]).expect("could not derive WPA2 Supplicant RSNE");
         let expected_rsne_bytes =
             vec![48, 18, 1, 0, 0, 15, 172, 4, 1, 0, 0, 15, 172, 4, 1, 0, 0, 15, 172, 2];
         assert_eq!(s_rsne.into_bytes(), expected_rsne_bytes);
@@ -1137,9 +1178,10 @@ mod tests {
             akm_suites: vec![AKM_PSK, AKM_FT_PSK],
             ..Default::default()
         };
-        assert_eq!(a_rsne.is_wpa2_rsn_compatible(), true);
+        assert_eq!(a_rsne.is_wpa2_rsn_compatible(&vec![]), true);
 
-        let s_rsne = a_rsne.derive_wpa2_s_rsne().expect("could not derive WPA2 Supplicant RSNE");
+        let s_rsne =
+            a_rsne.derive_wpa2_s_rsne(&vec![]).expect("could not derive WPA2 Supplicant RSNE");
         let expected_rsne_bytes =
             vec![48, 18, 1, 0, 0, 15, 172, 4, 1, 0, 0, 15, 172, 4, 1, 0, 0, 15, 172, 2];
         assert_eq!(s_rsne.into_bytes(), expected_rsne_bytes);
@@ -1148,9 +1190,11 @@ mod tests {
     #[test]
     fn test_ccmp128_group_data_pairwise_cipher_sae() {
         let a_rsne = Rsne::wpa3_rsne();
-        assert_eq!(a_rsne.is_wpa3_rsn_compatible(), true);
+        assert_eq!(a_rsne.is_wpa3_rsn_compatible(&vec![DriverFeature::Mfp]), true);
 
-        let s_rsne = a_rsne.derive_wpa3_s_rsne().expect("could not derive WPA2 Supplicant RSNE");
+        let s_rsne = a_rsne
+            .derive_wpa3_s_rsne(&vec![DriverFeature::Mfp])
+            .expect("could not derive WPA2 Supplicant RSNE");
         let expected_rsne_bytes =
             vec![48, 20, 1, 0, 0, 15, 172, 4, 1, 0, 0, 15, 172, 4, 1, 0, 0, 15, 172, 8, 192, 0];
         assert_eq!(s_rsne.into_bytes(), expected_rsne_bytes);
@@ -1159,15 +1203,19 @@ mod tests {
     #[test]
     fn test_wpa3_transition_mode() {
         let a_rsne = Rsne::wpa2_wpa3_rsne();
-        assert_eq!(a_rsne.is_wpa2_rsn_compatible(), true);
-        assert_eq!(a_rsne.is_wpa3_rsn_compatible(), true);
+        assert_eq!(a_rsne.is_wpa2_rsn_compatible(&vec![]), true);
+        assert_eq!(a_rsne.is_wpa3_rsn_compatible(&vec![DriverFeature::Mfp]), true);
 
-        let s_rsne = a_rsne.derive_wpa2_s_rsne().expect("could not derive WPA2 Supplicant RSNE");
+        let s_rsne = a_rsne
+            .derive_wpa2_s_rsne(&vec![DriverFeature::Mfp])
+            .expect("could not derive WPA2 Supplicant RSNE");
         let expected_rsne_bytes =
             vec![48, 20, 1, 0, 0, 15, 172, 4, 1, 0, 0, 15, 172, 4, 1, 0, 0, 15, 172, 2, 192, 0];
         assert_eq!(s_rsne.into_bytes(), expected_rsne_bytes);
 
-        let s_rsne = a_rsne.derive_wpa3_s_rsne().expect("could not derive WPA3 Supplicant RSNE");
+        let s_rsne = a_rsne
+            .derive_wpa3_s_rsne(&vec![DriverFeature::Mfp])
+            .expect("could not derive WPA3 Supplicant RSNE");
         let expected_rsne_bytes =
             vec![48, 20, 1, 0, 0, 15, 172, 4, 1, 0, 0, 15, 172, 4, 1, 0, 0, 15, 172, 8, 192, 0];
         assert_eq!(s_rsne.into_bytes(), expected_rsne_bytes);

@@ -137,7 +137,7 @@ pub fn get_wpa2_rsna(
     // Credentials supplied and BSS is protected.
     let (_, a_rsne) = rsne::from_bytes(a_rsne_bytes)
         .map_err(|e| format_err!("invalid RSNE {:02x?}: {:?}", a_rsne_bytes, e))?;
-    let s_rsne = a_rsne.derive_wpa2_s_rsne()?;
+    let s_rsne = a_rsne.derive_wpa2_s_rsne(&device_info.driver_features)?;
     let negotiated_protection = NegotiatedProtection::from_rsne(&s_rsne)?;
 
     let psk = compute_psk(credential, &bss.ssid)?;
@@ -218,7 +218,7 @@ pub fn get_wpa3_rsna(
 
     let (_, a_rsne) = rsne::from_bytes(a_rsne_bytes)
         .map_err(|e| format_err!("invalid RSNE {:02x?}: {:?}", a_rsne_bytes, e))?;
-    let s_rsne = a_rsne.derive_wpa3_s_rsne()?;
+    let s_rsne = a_rsne.derive_wpa3_s_rsne(&device_info.driver_features)?;
     let negotiated_protection = NegotiatedProtection::from_rsne(&s_rsne)?;
     let supplicant = wlan_rsn::Supplicant::new_wpa_personal(
         NonceReader::new(&device_info.sta_addr[..])?,

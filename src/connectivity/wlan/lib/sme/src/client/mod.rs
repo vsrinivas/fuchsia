@@ -123,11 +123,15 @@ impl ClientConfig {
         bss: &BssDescription,
         device_info: &fidl_mlme::DeviceInfo,
     ) -> bool {
-        self.is_bss_protection_compatible(bss)
+        self.is_bss_protection_compatible(bss, &device_info.driver_features)
             && self.are_bss_channel_and_data_rates_compatible(bss, device_info)
     }
 
-    fn is_bss_protection_compatible(&self, bss: &BssDescription) -> bool {
+    fn is_bss_protection_compatible(
+        &self,
+        bss: &BssDescription,
+        driver_features: &Vec<fidl_fuchsia_wlan_common::DriverFeature>,
+    ) -> bool {
         let privacy = wlan_common::mac::CapabilityInfo(bss.capability_info).privacy();
         let protection = bss.protection();
         match &protection {
@@ -139,7 +143,7 @@ impl ClientConfig {
             {
                 match bss.rsne() {
                     Some(rsne) if privacy => match rsne::from_bytes(rsne) {
-                        Ok((_, a_rsne)) => a_rsne.is_wpa3_rsn_compatible(),
+                        Ok((_, a_rsne)) => a_rsne.is_wpa3_rsn_compatible(driver_features),
                         _ => false,
                     },
                     _ => false,
@@ -151,7 +155,7 @@ impl ClientConfig {
             | BssProtection::Wpa2Personal
             | BssProtection::Wpa2Wpa3Personal => match bss.rsne() {
                 Some(rsne) if privacy => match rsne::from_bytes(rsne) {
-                    Ok((_, a_rsne)) => a_rsne.is_wpa2_rsn_compatible(),
+                    Ok((_, a_rsne)) => a_rsne.is_wpa2_rsn_compatible(&driver_features),
                     _ => false,
                 },
                 _ => false,
@@ -836,30 +840,36 @@ mod tests {
     fn verify_protection_compatibility() {
         // Compatible:
         let cfg = ClientConfig::default();
-        assert!(cfg.is_bss_protection_compatible(&fake_bss_description!(Open)));
-        assert!(cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa1Wpa2TkipOnly)));
-        assert!(cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa2TkipOnly)));
-        assert!(cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa2)));
-        assert!(cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa2Wpa3)));
+        assert!(cfg.is_bss_protection_compatible(&fake_bss_description!(Open), &vec![]));
+        assert!(cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa1Wpa2TkipOnly), &vec![]));
+        assert!(cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa2TkipOnly), &vec![]));
+        assert!(cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa2), &vec![]));
+        assert!(cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa2Wpa3), &vec![]));
 
         // Not compatible:
-        assert!(!cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa1)));
-        assert!(!cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa3)));
-        assert!(!cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa3Transition)));
-        assert!(!cfg.is_bss_protection_compatible(&fake_bss_description!(Eap)));
+        assert!(!cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa1), &vec![]));
+        assert!(!cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa3), &vec![]));
+        assert!(!cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa3Transition), &vec![]));
+        assert!(!cfg.is_bss_protection_compatible(&fake_bss_description!(Eap), &vec![]));
 
         // WEP support is configurable to be on or off:
         let cfg = ClientConfig::from_config(Config::default().with_wep(), false);
-        assert!(cfg.is_bss_protection_compatible(&fake_bss_description!(Wep)));
+        assert!(cfg.is_bss_protection_compatible(&fake_bss_description!(Wep), &vec![]));
 
         // WPA1 support is configurable to be on or off:
         let cfg = ClientConfig::from_config(Config::default().with_wpa1(), false);
-        assert!(cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa1)));
+        assert!(cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa1), &vec![]));
 
         // WPA3 support is configurable to be on or off:
         let cfg = ClientConfig::from_config(Config::default(), true);
-        assert!(cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa3)));
-        assert!(cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa3Transition)));
+        assert!(cfg.is_bss_protection_compatible(
+            &fake_bss_description!(Wpa3),
+            &vec![fidl_fuchsia_wlan_common::DriverFeature::Mfp],
+        ));
+        assert!(cfg.is_bss_protection_compatible(
+            &fake_bss_description!(Wpa3Transition),
+            &vec![fidl_fuchsia_wlan_common::DriverFeature::Mfp],
+        ));
     }
 
     #[test]

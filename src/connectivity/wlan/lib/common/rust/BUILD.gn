@@ -25,6 +25,7 @@ rustc_library("wlan-common") {
     "//sdk/fidl/fuchsia.wlan.sme:fuchsia.wlan.sme-rustc",
     "//src/connectivity/wlan/lib/bitfield:wlan-bitfield",
     "//src/connectivity/wlan/lib/ieee80211",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/mundane",
     "//src/lib/zerocopy",
@@ -43,6 +44,7 @@ rustc_library("wlan-common") {
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:static_assertions",
+    "//third_party/rust_crates:test-case",
     "//third_party/rust_crates:thiserror",
   ]
 

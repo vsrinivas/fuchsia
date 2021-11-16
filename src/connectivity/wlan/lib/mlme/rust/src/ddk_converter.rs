@@ -209,6 +209,9 @@ fn convert_driver_features(
     if (*features & banjo_ddk_wlaninfo::WlanInfoDriverFeature::PROBE_RESP_OFFLOAD).0 != 0 {
         out.push(fidl_common::DriverFeature::ProbeRespOffload);
     }
+    if (*features & banjo_ddk_wlaninfo::WlanInfoDriverFeature::MFP).0 != 0 {
+        out.push(fidl_common::DriverFeature::Mfp);
+    }
     out
 }
 
