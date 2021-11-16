@@ -12,7 +12,6 @@ group("test") {
 
 test("storage-metrics") {
   output_dir = "$root_out_dir/zircon-migrated"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "storage-metrics-test.cc" ]
   deps = [
     "//sdk/banjo/fuchsia.hardware.block:fuchsia.hardware.block_banjo_cpp",

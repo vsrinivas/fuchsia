@@ -24,7 +24,6 @@ fuchsia_driver("usb-cdc-acm-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "usb-cdc-acm.cc" ]
   deps = [
     ":cdc_acm_bind",
@@ -64,7 +63,6 @@ fuchsia_driver("fake-usb-cdc-acm-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "usb-cdc-acm-function.cc" ]
   deps = [
     ":usb_cdc_acm_function_bind",

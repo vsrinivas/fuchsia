@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 executable("ping") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ping.cc" ]
   deps = [
     "//sdk/lib/fdio",

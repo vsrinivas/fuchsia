@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 executable("dd") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "main.c" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.skipblock:fuchsia.hardware.skipblock_c",

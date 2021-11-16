@@ -21,7 +21,6 @@ fuchsia_driver("tas58xx-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "tas58xx.cc" ]
   deps = [
     ":ti_tas58xx-bind",
@@ -47,7 +46,6 @@ fuchsia_driver_component("tas58xx") {
 }
 
 test("tas58xx-test") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "tas58xx-test"
   configs += [ "//build/config:all_source" ]
   sources = [

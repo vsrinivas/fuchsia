@@ -54,7 +54,6 @@ source_set("common") {
 }
 
 test("skip-block-test-bin") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "skip-block-test"
   sources = [
     "test/logical-to-physical-map-test.cc",

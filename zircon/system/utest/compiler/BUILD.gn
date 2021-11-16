@@ -15,7 +15,6 @@ config("integer-paranoia") {
 
 test("compiler") {
   output_name = "compiler-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "integer.cc",
     "no-unique-address.cc",

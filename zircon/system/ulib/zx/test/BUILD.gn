@@ -13,9 +13,6 @@ group("test") {
 
 test("zx") {
   output_name = "zx-test"
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   sources = [
     "object-test.cc",
     "traits.cc",

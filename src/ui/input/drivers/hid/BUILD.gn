@@ -21,7 +21,6 @@ fuchsia_driver("hid-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "device-report-reader.cc",
     "hid-fifo.c",
@@ -57,7 +56,6 @@ fuchsia_driver_component("hid") {
 }
 
 test("hid-test") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "device-report-reader.cc",
     "hid-fifo.c",

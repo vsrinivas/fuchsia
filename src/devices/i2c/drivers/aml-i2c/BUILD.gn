@@ -26,7 +26,6 @@ fuchsia_driver("aml-i2c-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "aml-i2c.c" ]
   deps = [
     ":aml_i2c_bind",

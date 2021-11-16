@@ -19,7 +19,6 @@ fuchsia_driver("ftdi-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "ftdi-i2c.cc",
     "ftdi-mpsse.cc",
@@ -69,7 +68,6 @@ fuchsia_driver("ftdi-fake-usb-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ftdi-function.cc" ]
   deps = [
     ":ftdi_function_bind",

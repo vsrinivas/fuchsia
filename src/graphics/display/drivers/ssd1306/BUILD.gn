@@ -20,7 +20,6 @@ fuchsia_driver("ssd1306_driver-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ssd1306.cc" ]
   deps = [
     ":ssd1306-bind",

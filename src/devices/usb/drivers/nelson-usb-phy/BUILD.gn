@@ -26,7 +26,6 @@ fuchsia_driver("nelson-usb-phy-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "nelson-usb-phy.cc" ]
   deps = [
     ":nelson_usb_phy_bind",

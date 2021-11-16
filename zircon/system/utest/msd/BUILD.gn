@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 executable("msd") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "msd-test"
   testonly = false
   sources = [ "msd.c" ]

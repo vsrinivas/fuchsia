@@ -3,8 +3,6 @@
 # found in the LICENSE file.
 
 source_set("event-pair") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
-
   testonly = true
   sources = [ "event-pair.cc" ]
   deps = [

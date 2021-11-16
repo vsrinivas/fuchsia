@@ -26,9 +26,6 @@ fuchsia_driver("machina-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   sources = [
     "machina-sysmem.c",
     "machina.c",

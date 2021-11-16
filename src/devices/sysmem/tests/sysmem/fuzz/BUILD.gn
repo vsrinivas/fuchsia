@@ -27,7 +27,6 @@ fuzzers_package("sysmem-fuzz") {
 fuzzer("sysmem_fuzzer") {
   testonly = true
   output_name = "sysmem_fuzzer"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "sysmem_fuzz.cc",
     "sysmem_fuzz_common.cc",
@@ -72,7 +71,6 @@ fuzzer("sysmem_fuzzer") {
 fuzzer("sysmem_fuzzer_multi") {
   testonly = true
   output_name = "sysmem_fuzzer_multi"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "sysmem_fuzz_common.cc",
     "sysmem_fuzz_multi.cc",

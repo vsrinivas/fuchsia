@@ -24,7 +24,6 @@ fuchsia_driver("fallback-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "rtc-impl.cc" ]
   deps = [
     ":fallback_rtc_bind",

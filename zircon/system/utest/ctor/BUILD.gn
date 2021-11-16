@@ -7,7 +7,6 @@ import("//build/test.gni")
 
 test("ctor") {
   output_name = "ctor-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ctor.cc" ]
   deps = [
     ":dso-ctor",
@@ -18,7 +17,6 @@ test("ctor") {
 
 shared_library("dso-ctor") {
   testonly = true
-  configs += [ "//build/unification/config:zircon-migrated" ]
   visibility = [ ":*" ]
   sources = [ "dso-ctor/dso-ctor.cc" ]
 }

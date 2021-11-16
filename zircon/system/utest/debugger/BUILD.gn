@@ -9,10 +9,7 @@ import("//build/testing/bootfs_test.gni")
 # to the base packages in your build. The binary ends up in /boot/test/sys/debugger-test
 test("debugger") {
   output_name = "debugger-test"
-  configs += [
-    "//build/unification/config:zircon-migrated",
-    "//build/config:all_source",
-  ]
+  configs += [ "//build/config:all_source" ]
   sources = [
     "crash-and-recover.cc",
     "crash-and-recover.h",

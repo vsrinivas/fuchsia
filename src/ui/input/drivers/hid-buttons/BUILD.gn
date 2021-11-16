@@ -21,7 +21,6 @@ fuchsia_driver("hid-buttons-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = []
   deps = [
     ":common",
@@ -68,10 +67,7 @@ source_set("common") {
 }
 
 test("hid-buttons-test") {
-  configs += [
-    "//build/config:all_source",
-    "//build/unification/config:zircon-migrated",
-  ]
+  configs += [ "//build/config:all_source" ]
   output_name = "hid-buttons-test"
   sources = [ "hid-buttons-test.cc" ]
   deps = [

@@ -6,7 +6,6 @@ import("//build/components.gni")
 import("//build/test.gni")
 
 test("stdio-test") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "stdio.c",
     "util.c",
@@ -21,7 +20,6 @@ test("stdio-test") {
 }
 
 executable("stdio-test-util") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "test-util.cc" ]
   deps = [ "//sdk/lib/fdio" ]
 }

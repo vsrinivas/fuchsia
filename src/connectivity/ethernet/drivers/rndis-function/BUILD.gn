@@ -51,7 +51,6 @@ fuchsia_driver("rndis-function-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   deps = [
     ":rndis-function-lib",
     "//src/devices/lib/driver",
@@ -64,9 +63,6 @@ fuchsia_driver_component("rndis-function") {
 }
 
 test("rndis-function-test") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   if (is_fuchsia) {
     testonly = true
   }

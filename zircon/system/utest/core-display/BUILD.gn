@@ -7,7 +7,6 @@ import("//build/testing/bootfs_test.gni")
 
 test("core-display") {
   output_name = "core-display-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "core-display-test.cc" ]
   deps = [
     "//sdk/banjo/fuchsia.hardware.display.controller:fuchsia.hardware.display.controller_banjo_cpp",

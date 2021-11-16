@@ -6,7 +6,6 @@ import("//build/components.gni")
 import("//build/test.gni")
 
 executable("thermal-cli") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "main.cc" ]
   deps = [
     ":common",
@@ -31,7 +30,6 @@ source_set("common") {
 }
 
 test("thermal-cli-test-bin") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "thermal-cli-test"
   sources = [ "test/thermal-cli-test.cc" ]
   include_dirs = [ "." ]

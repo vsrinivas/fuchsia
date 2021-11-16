@@ -18,7 +18,6 @@ fuchsia_driver("aml-g12-tdm-driver") {
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
-    "//build/unification/config:zircon-migrated",
   ]
   sources = [
     "aml-tdm-config-device.cc",
@@ -71,7 +70,6 @@ fuchsia_driver("aml-g12-tdm-dai-driver") {
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
-    "//build/unification/config:zircon-migrated",
   ]
   sources = [
     "aml-tdm-config-device.cc",

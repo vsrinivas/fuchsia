@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 executable("dlog") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "dlog.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",

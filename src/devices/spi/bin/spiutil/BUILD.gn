@@ -3,9 +3,6 @@
 # found in the LICENSE file.
 
 executable("spiutil") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   sources = [ "spiutil.cc" ]
   deps = [
     "//sdk/lib/fdio",

@@ -6,10 +6,7 @@ import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
 
 test("futex-ownership") {
-  configs += [
-    "//build/unification/config:zircon-migrated",
-    "//build/config:all_source",
-  ]
+  configs += [ "//build/config:all_source" ]
   sources = [
     "bad-handle.cc",
     "ownership.cc",

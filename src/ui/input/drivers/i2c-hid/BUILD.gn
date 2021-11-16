@@ -23,7 +23,6 @@ fuchsia_driver("i2c-hid-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "i2c-hid.cc" ]
   deps = [
     ":i2c_hid_bind",
@@ -49,10 +48,7 @@ fuchsia_driver_component("i2c-hid") {
 }
 
 test("i2c-hid-test") {
-  configs += [
-    "//build/unification/config:zircon-migrated",
-    "//build/config:all_source",
-  ]
+  configs += [ "//build/config:all_source" ]
   sources = [
     "i2c-hid-test.cc",
     "i2c-hid.cc",

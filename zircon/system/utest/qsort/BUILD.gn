@@ -7,7 +7,6 @@ import("//build/test.gni")
 
 test("qsort") {
   output_name = "qsort-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "qsort.c" ]
   deps = [
     "//sdk/lib/fdio",

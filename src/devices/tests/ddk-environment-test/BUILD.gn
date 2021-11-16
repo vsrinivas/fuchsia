@@ -24,7 +24,6 @@ fuchsia_driver("ddk-environment-test-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "test-driver.cc" ]
   deps = [
     ":fuchsia.device.environment.test_llcpp",
@@ -45,7 +44,6 @@ fuchsia_driver_component("ddk-environment-test") {
 }
 
 test("ddk-environment") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "test.cc" ]
   deps = [
     ":fuchsia.device.environment.test_llcpp",

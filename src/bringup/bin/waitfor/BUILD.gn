@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 executable("waitfor") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "waitfor.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",

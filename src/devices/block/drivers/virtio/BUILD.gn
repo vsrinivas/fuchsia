@@ -20,9 +20,6 @@ fuchsia_driver("virtio_block-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   sources = [ "block_driver.cc" ]
   deps = [
     ":block_lib",
@@ -74,9 +71,6 @@ fuchsia_driver("virtio_scsi-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   sources = [ "scsi_driver.cc" ]
   deps = [
     ":scsi_lib",
@@ -93,9 +87,6 @@ fuchsia_driver_component("virtio_scsi") {
 }
 
 test("virtio-block-test-bin") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   if (is_fuchsia) {
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]
     if (configs + fdio_config - fdio_config != configs) {
@@ -117,9 +108,6 @@ test("virtio-block-test-bin") {
 }
 
 test("virtio-scsi-test-bin") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   if (is_fuchsia) {
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]
     if (configs + fdio_config - fdio_config != configs) {

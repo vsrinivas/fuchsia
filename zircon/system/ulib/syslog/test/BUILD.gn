@@ -17,7 +17,6 @@ group("test") {
 
 test("syslog") {
   output_name = "syslog-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "syslog_socket_tests.cc",
     "syslog_tests.cc",
@@ -35,7 +34,6 @@ test("syslog") {
 
 test("syslog-static") {
   output_name = "syslog-static-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "syslog_socket_tests.cc",
     "syslog_tests.cc",

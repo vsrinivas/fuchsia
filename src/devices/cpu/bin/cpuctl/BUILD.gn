@@ -6,7 +6,6 @@ import("//build/components.gni")
 import("//build/test.gni")
 
 executable("cpuctl") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "cpuctl.cc",
     "performance-domain.cc",
@@ -29,7 +28,6 @@ executable("cpuctl") {
 }
 
 test("cpuctl-test-bin") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "cpuctl-test"
   sources = [
     "cpuctl-test.cc",

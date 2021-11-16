@@ -21,7 +21,6 @@ fuchsia_driver("i2c-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "i2c-bus.cc",
     "i2c-child.cc",
@@ -51,7 +50,6 @@ fuchsia_driver_component("i2c") {
 }
 
 test("i2c-test-bin") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "i2c-test"
   configs += [ "//build/config:all_source" ]
   sources = [

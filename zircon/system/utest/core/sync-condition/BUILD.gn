@@ -3,8 +3,6 @@
 # found in the LICENSE file.
 
 source_set("sync-condition") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
-
   testonly = true
   sources = [ "condition.cc" ]
   deps = [

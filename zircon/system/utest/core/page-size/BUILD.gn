@@ -13,8 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 source_set("page-size") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
-
   testonly = true
   sources = [ "page_size.cc" ]
   deps = [

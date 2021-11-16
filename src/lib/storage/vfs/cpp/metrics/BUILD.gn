@@ -77,9 +77,6 @@ group("metrics") {
 # Separated into own target, so it is easier to cleanup later.
 test("metrics-composite-latency-event-test") {
   if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]
     if (configs + fdio_config - fdio_config != configs) {
       configs -= fdio_config
@@ -98,9 +95,6 @@ test("metrics-composite-latency-event-test") {
 }
 
 test("metrics-inspect-test") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   if (is_fuchsia) {
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]
     if (configs + fdio_config - fdio_config != configs) {

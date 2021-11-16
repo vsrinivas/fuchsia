@@ -16,9 +16,6 @@ group("tests") {
 
 test("fbl") {
   output_name = "fbl-test"
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   include_dirs = [ "include" ]
   sources = [
     "algorithm_tests.cc",

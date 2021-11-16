@@ -11,7 +11,6 @@ group("test") {
 }
 
 test("id_allocator-test") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "id_allocator.cc" ]
   deps = [
     "//sdk/lib/fdio",

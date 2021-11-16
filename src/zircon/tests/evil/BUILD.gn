@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 executable("evil") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "evil-tests"
   sources = [ "evil.c" ]
   deps = [

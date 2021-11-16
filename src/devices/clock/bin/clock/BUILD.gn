@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 executable("clock") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "clock.c" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_c",
@@ -12,7 +11,6 @@ executable("clock") {
 }
 
 executable("clkctl") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "clkctl.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.clock:fuchsia.hardware.clock_llcpp",

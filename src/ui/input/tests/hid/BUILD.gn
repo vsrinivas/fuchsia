@@ -6,7 +6,6 @@ import("//build/components.gni")
 import("//build/test.gni")
 
 test("hid-driver-test") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "hid-driver.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.hidctl:fuchsia.hardware.hidctl_c",

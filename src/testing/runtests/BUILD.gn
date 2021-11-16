@@ -3,8 +3,6 @@
 # found in the LICENSE file.
 
 executable("runtests") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
-
   testonly = true
   sources = [ "runtests.cc" ]
   deps = [

@@ -7,7 +7,6 @@ import("//build/testing/bootfs_test.gni")
 
 test("task-utils") {
   output_name = "task-utils-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "walker.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_c",

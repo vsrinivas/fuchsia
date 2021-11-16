@@ -7,7 +7,6 @@ import("//build/test.gni")
 
 test("profile") {
   output_name = "profile-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "profile.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_c",

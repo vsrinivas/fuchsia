@@ -7,7 +7,6 @@ import("//build/test.gni")
 
 test("cprng") {
   output_name = "cprng-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "cprng.c" ]
   deps = [
     "//sdk/lib/fdio",

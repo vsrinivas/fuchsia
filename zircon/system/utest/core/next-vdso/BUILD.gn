@@ -3,8 +3,6 @@
 # found in the LICENSE file.
 
 source_set("next-vdso") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
-
   testonly = true
   sources = [ "next-vdso.cc" ]
   public_deps = [

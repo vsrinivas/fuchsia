@@ -23,7 +23,6 @@ source_set("common_srcs") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "aml-canvas.cc" ]
   public_deps = [
     ":aml_canvas_bind",
@@ -53,7 +52,6 @@ fuchsia_driver_component("aml-canvas") {
 }
 
 test("aml-canvas-test") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "aml-canvas-test"
   sources = [ "aml-canvas-test.cc" ]
   deps = [

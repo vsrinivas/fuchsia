@@ -20,9 +20,6 @@ fuchsia_driver("virtio_input-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   sources = [
     "input.cc",
     "input_driver.cc",
@@ -46,9 +43,6 @@ fuchsia_driver_component("virtio_input") {
 }
 
 test("virtio-input-test") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   if (is_fuchsia) {
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]
     if (configs + fdio_config - fdio_config != configs) {

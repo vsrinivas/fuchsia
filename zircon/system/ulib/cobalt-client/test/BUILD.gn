@@ -67,9 +67,6 @@ source_set("in-memory-logger-test") {
 test("cobalt-client-unit") {
   output_name = "cobalt-client-unit-test"
   if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]
     if (configs + fdio_config - fdio_config != configs) {
       configs -= fdio_config

@@ -16,7 +16,6 @@ group("psutils") {
 
 test("ps") {
   output_name = "ps-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ps_test.c" ]
   deps = [
     "//sdk/lib/fdio",
@@ -29,7 +28,6 @@ test("ps") {
 
 test("handles") {
   output_name = "handles-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "handles_test.cc" ]
   deps = [
     "//sdk/lib/fdio",

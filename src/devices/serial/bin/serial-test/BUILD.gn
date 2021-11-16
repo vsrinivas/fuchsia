@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 executable("serial-test") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "serial-test.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_llcpp",

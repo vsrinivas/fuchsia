@@ -6,9 +6,6 @@ import("//build/components.gni")
 import("//build/test.gni")
 
 executable("gpioutil") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   sources = [
     "gpioutil.cc",
     "main.cc",
@@ -28,7 +25,6 @@ executable("gpioutil") {
 }
 
 test("gpioutil-test-bin") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "gpioutil-test"
   sources = [
     "gpioutil.cc",

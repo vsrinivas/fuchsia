@@ -7,7 +7,6 @@ import("//build/test.gni")
 
 test("cleanup") {
   output_name = "cleanup-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "cleanup.cc" ]
   deps = [
     "//sdk/lib/fdio",

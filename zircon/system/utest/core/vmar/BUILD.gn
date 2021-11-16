@@ -3,8 +3,6 @@
 # found in the LICENSE file.
 
 source_set("vmar") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
-
   testonly = true
   sources = [ "vmar.cc" ]
   deps = [

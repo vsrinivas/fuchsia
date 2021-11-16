@@ -27,7 +27,6 @@ source_set("src") {
 }
 
 executable("acpidump") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "acpidump"
   output_dir = "$root_out_dir/zircon-migrated"
   sources = [ "main.cc" ]
@@ -35,7 +34,6 @@ executable("acpidump") {
 }
 
 test("test") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "acpidump-test"
   sources = [ "acpidump_test.cc" ]
   include_dirs = [ "." ]

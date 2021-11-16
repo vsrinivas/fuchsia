@@ -21,9 +21,6 @@ fuchsia_driver("ams-light-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   sources = [ "tcs3400.cc" ]
   deps = [
     ":tcs3400_light_bind",

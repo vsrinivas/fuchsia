@@ -19,7 +19,6 @@ if (current_cpu == "x64") {
       "//build/config:all_source",
       "//build/config/fuchsia:enable_zircon_asserts",
     ]
-    configs += [ "//build/unification/config:zircon-migrated" ]
     sources = [ "rtl8111.c" ]
     deps = [
       ":realtek_rtl8111_bind",

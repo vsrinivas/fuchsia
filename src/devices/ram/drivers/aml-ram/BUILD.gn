@@ -24,9 +24,6 @@ fuchsia_driver("aml-ram-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   sources = [ "aml-ram.cc" ]
   deps = [
     ":aml_ram_bind",
@@ -42,7 +39,6 @@ fuchsia_driver_component("aml-ram") {
 }
 
 test("aml-ram-test-bin") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "aml-ram-test"
   sources = [
     "aml-ram-test.cc",

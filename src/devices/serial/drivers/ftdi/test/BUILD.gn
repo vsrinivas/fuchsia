@@ -7,7 +7,6 @@ import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 test("ftdi-i2c-test") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ftdi-i2c-test.cc" ]
   include_dirs = [ ".." ]
   deps = [
@@ -61,7 +60,6 @@ fuchsia_unittest_package("ftdi-i2c-test-package") {
 
 test("ftdi-integration") {
   output_name = "ftdi-integration-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ftdi-test.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_llcpp",

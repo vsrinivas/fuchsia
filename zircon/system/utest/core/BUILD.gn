@@ -81,9 +81,6 @@ foreach(test_name, core_tests) {
     output_name = "core-$test_name"
 
     if (is_fuchsia) {
-      configs += [ "//build/unification/config:zircon-migrated" ]
-    }
-    if (is_fuchsia) {
       fdio_config = [ "//build/config/fuchsia:fdio_config" ]
       if (configs + fdio_config - fdio_config != configs) {
         configs -= fdio_config
@@ -106,10 +103,7 @@ test("standalone") {
   output_name = "core-standalone-test"
 
   if (is_fuchsia) {
-    configs += [
-      "//build/unification/config:zircon-migrated",
-      "//build/config:all_source",
-    ]
+    configs += [ "//build/config:all_source" ]
   }
   if (is_fuchsia) {
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]

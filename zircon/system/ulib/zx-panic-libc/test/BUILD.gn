@@ -12,7 +12,6 @@ group("test") {
 
 test("zx-panic-libc-test") {
   output_name = "zx-panic-libc-test-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "zx-panic-libc-test.cc" ]
   deps = [
     "//sdk/lib/fdio",

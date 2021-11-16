@@ -6,7 +6,6 @@ import("//build/components.gni")
 import("//build/test.gni")
 
 executable("ram-info") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "main.cc",
     "ram-info.cc",
@@ -29,7 +28,6 @@ executable("ram-info") {
 }
 
 test("ram-info-test-bin") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "ram-info-test"
   sources = [
     "ram-info-test.cc",

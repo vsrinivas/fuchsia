@@ -7,7 +7,6 @@ import("//build/test.gni")
 
 test("serial-unittest-bin") {
   output_name = "serial-unittest"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "serial-test.cc" ]
   include_dirs = [ ".." ]
   deps = [

@@ -7,10 +7,7 @@ import("//build/test.gni")
 
 test("events") {
   output_name = "events-test"
-  configs += [
-    "//build/config:all_source",
-    "//build/unification/config:zircon-migrated",
-  ]
+  configs += [ "//build/config:all_source" ]
   sources = [ "events.c" ]
   deps = [
     "//sdk/lib/fdio",

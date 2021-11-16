@@ -5,9 +5,6 @@
 # Prints out the status of syscalls used to confirm them being disabled.
 executable("syscall-check") {
   if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]
     if (configs + fdio_config - fdio_config != configs) {
       configs -= fdio_config

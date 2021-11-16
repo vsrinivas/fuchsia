@@ -11,7 +11,6 @@ group("tests") {
 }
 
 test("backlight-test") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "backlight-test"
   sources = [ "backlight-test.cc" ]
   deps = [

@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 executable("usbctl") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "usbctl.cc" ]
   deps = [
     "//sdk/banjo/fuchsia.hardware.usb.modeswitch:fuchsia.hardware.usb.modeswitch_banjo_cpp",

@@ -30,7 +30,6 @@ fuchsia_driver("amlogic-clk-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "aml-clk.cc",
     "aml-fclk-rates.cc",
@@ -65,7 +64,6 @@ fuchsia_driver_component("amlogic-clk") {
 
 test("amlogic-clk-test-bin") {
   output_name = "amlogic-clk-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "aml-clk-test.cc",
     "aml-clk.cc",

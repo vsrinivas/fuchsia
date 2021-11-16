@@ -15,7 +15,6 @@ group("tests") {
 
 test("rtc-lib-test-bin") {
   output_name = "rtc-lib-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "rtc.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_c",
@@ -33,7 +32,6 @@ fuchsia_unittest_package("rtc-lib-test") {
 
 test("rtc-lib-llcpp-test-bin") {
   output_name = "rtc-lib-llcpp-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "rtc_llcpp_unittest.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_llcpp",

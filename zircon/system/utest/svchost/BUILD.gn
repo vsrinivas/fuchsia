@@ -7,7 +7,6 @@ import("//build/testing/bootfs_test.gni")
 
 test("svchost") {
   output_name = "svchost-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "main.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",

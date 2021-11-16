@@ -25,7 +25,6 @@ fuchsia_driver("e1000-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "e1000_80003es2lan.c",
     "e1000_82540.c",

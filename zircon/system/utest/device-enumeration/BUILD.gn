@@ -7,7 +7,6 @@ import("//build/testing/bootfs_test.gni")
 
 test("device-enumeration") {
   output_name = "device-enumeration-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "aemu.cc",
     "aemu.h",

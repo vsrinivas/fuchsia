@@ -7,7 +7,6 @@ import("//build/testing/bootfs_test.gni")
 
 test("race-tests") {
   output_name = "race-tests-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "race-tests.cc" ]
   deps = [
     "//sdk/lib/fdio",

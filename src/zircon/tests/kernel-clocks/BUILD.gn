@@ -12,7 +12,6 @@ group("tests") {
 
 test("kernel-clocks") {
   output_name = "kernel-clocks-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "kernel-clocks.cc" ]
   deps = [
     "//sdk/lib/fdio",

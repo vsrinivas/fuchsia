@@ -46,9 +46,6 @@ fuchsia_driver("virtio_gpu-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   sources = [ "gpu_driver.cc" ]
   deps = [
     ":gpu_lib",
@@ -66,9 +63,6 @@ fuchsia_driver_component("virtio_gpu") {
 
 test("virtio-gpu-test") {
   output_name = "virtio-gpu-test-test"
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   if (is_fuchsia) {
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]
     if (configs + fdio_config - fdio_config != configs) {

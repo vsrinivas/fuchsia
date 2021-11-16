@@ -7,7 +7,6 @@ import("//build/test.gni")
 
 test("handle-alias") {
   output_name = "handle-alias-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "handle-alias.c" ]
   deps = [
     "//sdk/lib/fdio",

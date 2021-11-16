@@ -6,10 +6,7 @@ import("//build/components.gni")
 import("//build/test.gni")
 
 test("display-core-unittests") {
-  configs += [
-    "//build/unification/config:zircon-migrated",
-    "//build/config:all_source",
-  ]
+  configs += [ "//build/config:all_source" ]
   sources = [
     "display-test.cc",
     "eld-test.cc",

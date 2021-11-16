@@ -21,7 +21,6 @@ fuchsia_driver("gpio-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "gpio.cc" ]
   deps = [
     ":gpio_bind",
@@ -44,7 +43,6 @@ fuchsia_driver_component("gpio") {
 }
 
 test("gpio-test-bin") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "gpio-test"
   sources = [
     "gpio-test.cc",

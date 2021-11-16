@@ -27,9 +27,6 @@ source_set("sources") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   sources = [ "aml-gpu.cc" ]
   public_deps = [
     ":aml_gpu_bind",

@@ -21,7 +21,6 @@ fuchsia_driver("nandpart-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "aml-bad-block.cc",
     "bad-block.cc",
@@ -53,7 +52,6 @@ fuchsia_driver_component("nandpart") {
 }
 
 test("nandpart-test-bin") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "nandpart-test"
   sources = [
     "aml-bad-block.cc",

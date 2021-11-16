@@ -21,7 +21,6 @@ fuchsia_driver("ethernet-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ethernet.cc" ]
   deps = [
     ":ethernet_bind",
@@ -63,7 +62,6 @@ source_set("test_util") {
 }
 
 test("ethernet-unittest") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "ethernet-unittest"
   configs += [ "//build/config:all_source" ]
   sources = [

@@ -6,7 +6,6 @@ import("//build/components.gni")
 import("//build/test.gni")
 
 executable("sdio") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "main.cc",
     "sdio.cc",
@@ -25,7 +24,6 @@ executable("sdio") {
 }
 
 test("sdio-test-bin") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "sdio-test"
   sources = [
     "sdio-test.cc",

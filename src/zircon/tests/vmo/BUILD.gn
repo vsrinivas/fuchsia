@@ -7,7 +7,6 @@ import("//build/test.gni")
 
 test("vmo") {
   output_name = "vmo-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "bench.cc",
     "vmo.cc",

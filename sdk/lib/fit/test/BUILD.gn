@@ -18,9 +18,6 @@ group("tests") {
 test("fit-unittest") {
   output_name = "fit-unittest-test"
   if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]
     if (configs + fdio_config - fdio_config != configs) {
       configs -= fdio_config
@@ -39,9 +36,6 @@ test("fit-unittest") {
 
 # TODO: Convert these to zxtest and move them into the test above.
 test("fit") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   if (is_fuchsia) {
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]
     if (configs + fdio_config - fdio_config != configs) {

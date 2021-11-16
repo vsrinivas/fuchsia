@@ -21,7 +21,6 @@ fuchsia_driver("usb-peripheral-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "usb-function.cc",
     "usb-peripheral.cc",
@@ -65,7 +64,6 @@ fuchsia_driver_component("usb-peripheral") {
 }
 
 test("usb-peripheral-unittest-bin") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "usb-function.cc",
     "usb-peripheral-test.cc",

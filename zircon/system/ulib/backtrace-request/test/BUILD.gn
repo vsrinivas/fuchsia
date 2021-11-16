@@ -14,7 +14,6 @@ group("tests") {
 }
 
 test("backtrace-request-test") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "backtrace-request-test.cc" ]
   deps = [
     "//sdk/lib/fdio",
@@ -34,7 +33,6 @@ fuchsia_unittest_package("backtrace-request-test-pkg") {
 # Related unittests exist alongside the backtrace and crashsvc code, but
 # this verifies that the pieces are working together correctly.
 test("backtrace-request-integration-test") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "backtrace-request-integration-test.cc" ]
   deps = [
     "//sdk/lib/fdio",

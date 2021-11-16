@@ -7,7 +7,6 @@ import("//build/test.gni")
 
 test("property") {
   output_name = "property-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "property.cc" ]
   deps = [
     "//sdk/lib/fdio",

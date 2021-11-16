@@ -3,8 +3,6 @@
 # found in the LICENSE file.
 
 source_set("memory-mapping") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
-
   testonly = true
   sources = [ "memory-mapping.cc" ]
   deps = [

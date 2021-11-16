@@ -22,10 +22,7 @@ fuchsia_component("crasher_v2") {
 
 executable("crasher_exe") {
   output_name = "crasher"
-  configs += [
-    "//build/config:all_source",
-    "//build/unification/config:zircon-migrated",
-  ]
+  configs += [ "//build/config:all_source" ]
   sources = [
     "cpp_specific.cc",
     "crasher.c",

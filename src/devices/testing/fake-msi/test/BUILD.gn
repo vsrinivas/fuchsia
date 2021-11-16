@@ -7,7 +7,6 @@ import("//build/test.gni")
 
 test("fake-msi-test-bin") {
   if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]
     if (configs + fdio_config - fdio_config != configs) {
       configs -= fdio_config

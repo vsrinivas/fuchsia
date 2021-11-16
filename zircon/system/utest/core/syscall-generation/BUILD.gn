@@ -4,9 +4,6 @@
 
 source_set("syscall-generation") {
   testonly = true
-
-  configs += [ "//build/unification/config:zircon-migrated" ]
-
   sources = [ "syscall-generation.cc" ]
   deps = [
     "//sdk/lib/fdio",

@@ -8,9 +8,6 @@ import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 
 executable("display_detect") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   sources = [ "display-detect.cc" ]
   deps = [
     "//sdk/banjo/fuchsia.hardware.display.controller:fuchsia.hardware.display.controller_banjo_cpp",

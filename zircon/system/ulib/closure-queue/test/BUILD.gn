@@ -7,7 +7,6 @@ import("//build/test.gni")
 
 test("closure-queue") {
   output_name = "closure-queue-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "closure-queue-test.cc" ]
   deps = [
     "//sdk/lib/fdio",

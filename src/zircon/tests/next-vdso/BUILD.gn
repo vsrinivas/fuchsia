@@ -7,7 +7,6 @@ import("//build/test.gni")
 
 test("next-vdso") {
   output_name = "next-vdso-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "next-vdso.cc" ]
   deps = [
     "//sdk/lib/fdio",

@@ -3,8 +3,6 @@
 # found in the LICENSE file.
 
 source_set("profile") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
-
   testonly = true
   sources = [ "profile.cc" ]
   deps = [

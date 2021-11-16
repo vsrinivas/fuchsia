@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 executable("disk-inspect") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "main.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_llcpp",

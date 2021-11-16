@@ -20,7 +20,6 @@ fuchsia_driver("ram-nand-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "bind.cc",
     "ram-nand-ctl.cc",
@@ -70,7 +69,6 @@ source_set("common") {
 }
 
 test("ram-nand-test") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "ram-nand-test"
   sources = [
     "test/ram-nand-ctl.cc",

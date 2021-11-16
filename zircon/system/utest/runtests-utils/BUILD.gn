@@ -8,9 +8,6 @@ import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
 
 test("runtests-utils") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   sources = [
     "fuchsia-run-test.cc",
     "log-exporter-test.cc",
@@ -36,10 +33,6 @@ test("runtests-utils") {
 }
 
 executable("publish-data-helper") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-
   testonly = true
   visibility = [ ":*" ]
   sources = [ "helper/publish-data-helper.cc" ]
@@ -55,10 +48,6 @@ executable("publish-data-helper") {
 }
 
 executable("profile-helper") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-
   testonly = true
   visibility = [ ":*" ]
   sources = [ "helper/profile-helper.cc" ]

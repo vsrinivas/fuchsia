@@ -3,10 +3,6 @@
 # found in the LICENSE file.
 
 executable("blktest") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-
   testonly = true
   sources = [
     "blktest.cc",

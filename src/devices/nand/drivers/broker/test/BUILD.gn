@@ -38,9 +38,6 @@ source_set("common") {
 test("nand-broker") {
   output_name = "nand-broker-test"
   if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]
     if (configs + fdio_config - fdio_config != configs) {
       configs -= fdio_config
@@ -52,9 +49,6 @@ test("nand-broker") {
 
 test("nandpart-broker") {
   output_name = "nandpart-broker-test"
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   if (is_fuchsia) {
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]
     if (configs + fdio_config - fdio_config != configs) {

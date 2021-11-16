@@ -7,10 +7,7 @@ import("//build/test.gni")
 
 test("fpu") {
   output_name = "fpu-test"
-  configs += [
-    "//build/unification/config:zircon-migrated",
-    "//build/config:all_source",
-  ]
+  configs += [ "//build/config:all_source" ]
   sources = [ "fputest.c" ]
   deps = [
     "//sdk/lib/fdio",

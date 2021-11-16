@@ -7,7 +7,6 @@ import("//build/test.gni")
 
 test("getentropy") {
   output_name = "getentropy-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "getentropy.cc" ]
   deps = [
     "//sdk/lib/fdio",

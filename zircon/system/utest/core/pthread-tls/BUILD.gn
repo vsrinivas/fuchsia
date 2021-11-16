@@ -3,8 +3,6 @@
 # found in the LICENSE file.
 
 source_set("pthread-tls") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
-
   testonly = true
   sources = [ "tls-test.c" ]
   deps = [

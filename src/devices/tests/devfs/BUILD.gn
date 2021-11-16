@@ -6,7 +6,6 @@ import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
 
 test("devfs") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "fdio-tests.cc",
     "fidl-tests.cc",

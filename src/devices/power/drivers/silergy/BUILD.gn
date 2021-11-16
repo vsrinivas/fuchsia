@@ -20,9 +20,6 @@ fuchsia_driver("sy-buck-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   sources = [ "sy-buck.cc" ]
   deps = [
     ":sy-buck-bind",
@@ -52,7 +49,6 @@ fuchsia_driver_component("sy-buck") {
 }
 
 test("sy-buck-test-bin") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "sy-buck-test"
   sources = [
     "sy-buck-test.cc",

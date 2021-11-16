@@ -12,9 +12,6 @@ group("test") {
 
 test("logger-unit") {
   output_name = "logger-unit-test"
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   sources = [ "logger-test.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_c",

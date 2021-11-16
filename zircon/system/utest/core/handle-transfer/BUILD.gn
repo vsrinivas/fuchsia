@@ -3,8 +3,6 @@
 # found in the LICENSE file.
 
 source_set("handle-transfer") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
-
   testonly = true
   sources = [ "handle-transfer.cc" ]
   deps = [

@@ -4,8 +4,6 @@
 
 # These tests only run in the unified core-test.
 source_set("unified-only") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
-
   testonly = true
   sources = [ "debuglog.cc" ]
   deps = [

@@ -12,7 +12,6 @@ group("test") {
 
 test("image-format-test") {
   output_name = "image-format-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "image-format-test.cc" ]
   deps = [
     "//sdk/lib/fdio",

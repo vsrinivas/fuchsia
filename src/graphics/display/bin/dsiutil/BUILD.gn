@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 executable("dsiutil") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "main.cc" ]
   deps = [
     "//sdk/banjo/fuchsia.hardware.dsiimpl:fuchsia.hardware.dsiimpl_banjo_cpp",

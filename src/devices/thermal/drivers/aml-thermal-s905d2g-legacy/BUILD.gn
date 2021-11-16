@@ -20,7 +20,6 @@ fuchsia_driver("aml-thermal-s905d2g-legacy-driver") {
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
-    "//build/unification/config:zircon-migrated",
   ]
   sources = [
     "aml-cpufreq.cc",
@@ -61,10 +60,7 @@ fuchsia_driver_component("aml-thermal-s905d2g-legacy") {
 }
 
 test("aml-thermal-s905d2g-legacy-test-bin") {
-  configs += [
-    "//build/config:all_source",
-    "//build/unification/config:zircon-migrated",
-  ]
+  configs += [ "//build/config:all_source" ]
   output_name = "aml-thermal-s905d2g-legacy-test"
   sources = [
     "aml-cpufreq.cc",

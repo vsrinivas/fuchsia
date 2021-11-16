@@ -3,8 +3,6 @@
 # found in the LICENSE file.
 
 source_set("pthread-barrier") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
-
   testonly = true
   sources = [ "barrier.cc" ]
   deps = [

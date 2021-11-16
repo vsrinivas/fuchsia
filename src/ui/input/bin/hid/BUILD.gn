@@ -4,10 +4,7 @@
 
 executable("hid") {
   if (is_fuchsia) {
-    configs += [
-      "//build/unification/config:zircon-migrated",
-      "//build/config:all_source",
-    ]
+    configs += [ "//build/config:all_source" ]
   }
   output_dir = "$root_out_dir/zircon-migrated"
 

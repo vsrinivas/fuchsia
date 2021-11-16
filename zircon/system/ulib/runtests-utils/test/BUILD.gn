@@ -13,8 +13,6 @@ group("test") {
 test("service-proxy-dir") {
   output_name = "service-proxy-dir-test"
 
-  configs += [ "//build/unification/config:zircon-migrated" ]
-
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.

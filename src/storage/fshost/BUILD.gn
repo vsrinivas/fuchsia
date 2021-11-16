@@ -32,7 +32,6 @@ source_set("launcher") {
 }
 
 source_set("fshost-registry") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "admin-server.cc",
     "deprecated-loader-service.cc",
@@ -80,7 +79,6 @@ source_set("fshost-registry") {
 }
 
 source_set("inspect") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "inspect-manager.cc",
     "inspect-manager.h",
@@ -218,10 +216,7 @@ source_set("block-watcher") {
 
 executable("fshost") {
   if (is_fuchsia) {
-    configs += [
-      "//build/unification/config:zircon-migrated",
-      "//build/config:all_source",
-    ]
+    configs += [ "//build/config:all_source" ]
   }
   if (is_fuchsia) {
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]

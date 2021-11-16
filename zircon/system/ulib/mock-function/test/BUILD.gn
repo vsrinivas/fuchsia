@@ -6,7 +6,6 @@ import("//build/components.gni")
 import("//build/test.gni")
 
 test("mock-function-test") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "mock-function-test"
   sources = [ "mock-function-test.cc" ]
   deps = [

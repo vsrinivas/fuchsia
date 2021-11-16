@@ -7,7 +7,6 @@ group("fs-mkfs") {
 }
 
 executable("mkfs") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "main.cc" ]
   deps = [
     "//sdk/lib/fdio",

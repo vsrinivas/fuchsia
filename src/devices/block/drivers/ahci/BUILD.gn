@@ -22,7 +22,6 @@ fuchsia_driver("ahci-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   deps = [
     ":shared",
     "//src/devices/lib/driver",
@@ -43,7 +42,6 @@ group("tests") {
 }
 
 test("ahci-unittest-bin") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "ahci-unittest"
   configs += [ "//build/config:all_source" ]
   sources = [

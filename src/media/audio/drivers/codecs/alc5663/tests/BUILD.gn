@@ -6,7 +6,6 @@ import("//build/components.gni")
 import("//build/test.gni")
 
 test("alc5663-test") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "alc5663-test"
 
   sources = [

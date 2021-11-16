@@ -3,8 +3,6 @@
 # found in the LICENSE file.
 
 executable("usb-fwloader") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
-
   testonly = true
   sources = [ "usb-fwloader.cc" ]
   deps = [

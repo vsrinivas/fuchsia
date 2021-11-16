@@ -34,9 +34,6 @@ group("tests") {
 test("ftl-test-bin") {
   output_name = "ftl-test"
   if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]
     if (configs + fdio_config - fdio_config != configs) {
       configs -= fdio_config
@@ -64,9 +61,6 @@ fuchsia_unittest_package("ftl-test") {
 
 test("ftl-integration") {
   output_name = "ftl-integration-test"
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   if (is_fuchsia) {
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]
     if (configs + fdio_config - fdio_config != configs) {

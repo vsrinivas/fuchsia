@@ -48,7 +48,6 @@ fuchsia_driver("cpu-trace-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "cpu-trace.cc" ]
 
   if (current_cpu == "x64") {
@@ -85,7 +84,6 @@ group("tests") {
 
 test("perf-mon-tests-bin") {
   output_name = "perf-mon-tests"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "tests/perf-mon-tests.cc" ]
   deps = [
     ":perf-mon",

@@ -7,7 +7,6 @@ import("//build/testing/bootfs_test.gni")
 
 test("miscsvc") {
   output_name = "miscsvc-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "main.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.paver:fuchsia.paver_llcpp",

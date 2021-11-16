@@ -3,8 +3,6 @@
 # found in the LICENSE file.
 
 source_set("interrupt") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
-
   testonly = true
   sources = [
     "interrupt-test.cc",

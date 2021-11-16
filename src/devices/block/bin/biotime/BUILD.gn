@@ -6,8 +6,6 @@ import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
 
 executable("biotime") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
-
   testonly = true
   sources = [ "biotime.cc" ]
   deps = [
@@ -24,7 +22,6 @@ executable("biotime") {
 }
 
 test("biotime-test") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "biotime-test.cc" ]
   output_name = "biotime-test"
   deps = [

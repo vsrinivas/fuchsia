@@ -3,8 +3,6 @@
 # found in the LICENSE file.
 
 source_set("threads") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
-
   testonly = true
   sources = [
     "register-set.cc",
@@ -22,8 +20,6 @@ source_set("threads") {
 }
 
 source_set("thread-functions") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
-
   testonly = true
   visibility = [ ":*" ]
   sources = [ "thread-functions/thread-functions.cc" ]

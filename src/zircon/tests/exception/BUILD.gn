@@ -7,10 +7,7 @@ import("//build/testing/bootfs_test.gni")
 
 test("exception") {
   output_name = "exception-test"
-  configs += [
-    "//build/unification/config:zircon-migrated",
-    "//build/config:all_source",
-  ]
+  configs += [ "//build/config:all_source" ]
   sources = [
     "exception.cc",
     "exception_to_string.cc",

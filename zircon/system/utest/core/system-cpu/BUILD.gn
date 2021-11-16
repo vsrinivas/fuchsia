@@ -3,8 +3,6 @@
 # found in the LICENSE file.
 
 source_set("system-cpu") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
-
   testonly = true
   sources = [ "performance_info.cc" ]
   deps = [

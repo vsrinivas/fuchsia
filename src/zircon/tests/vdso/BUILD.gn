@@ -7,7 +7,6 @@ import("//build/testing/bootfs_test.gni")
 
 test("vdso") {
   output_name = "vdso-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "vdso.cc" ]
   deps = [
     "//sdk/lib/fdio",
@@ -20,7 +19,6 @@ test("vdso") {
 
 test("vdso-base") {
   output_name = "vdso-base-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "vdso-base.c" ]
   deps = [
     "//sdk/lib/fdio",
@@ -30,7 +28,6 @@ test("vdso-base") {
 }
 
 test("vdso-variant") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "vdso-variant.c" ]
   deps = [
     "//sdk/lib/fdio",
@@ -40,8 +37,6 @@ test("vdso-variant") {
 }
 
 executable("vdso-variant-helper") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
-
   testonly = true
   visibility = [ ":*" ]
   sources = [ "helper/vdso-variant-helper.c" ]

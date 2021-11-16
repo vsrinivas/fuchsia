@@ -29,9 +29,6 @@ default_stack_size_cases = [
 foreach(case, default_stack_size_cases) {
   test("default-stack-size-${case.name}") {
     if (is_fuchsia) {
-      configs += [ "//build/unification/config:zircon-migrated" ]
-    }
-    if (is_fuchsia) {
       fdio_config = [ "//build/config/fuchsia:fdio_config" ]
       if (configs + fdio_config - fdio_config != configs) {
         configs -= fdio_config
@@ -56,9 +53,6 @@ foreach(case, default_stack_size_cases) {
 
 executable("debugdata-test-helper") {
   if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]
     if (configs + fdio_config - fdio_config != configs) {
       configs -= fdio_config
@@ -71,9 +65,6 @@ executable("debugdata-test-helper") {
 }
 
 test("cdebugdata-test") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   if (is_fuchsia) {
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]
     if (configs + fdio_config - fdio_config != configs) {
@@ -109,9 +100,6 @@ test("cdebugdata-test") {
 
 test("posix-clocks-test") {
   if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]
     if (configs + fdio_config - fdio_config != configs) {
       configs -= fdio_config
@@ -127,9 +115,6 @@ test("posix-clocks-test") {
 }
 
 test("pthread-detach-idempotent-test") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   if (is_fuchsia) {
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]
     if (configs + fdio_config - fdio_config != configs) {
@@ -147,10 +132,7 @@ test("pthread-detach-idempotent-test") {
 
 test("atexit-test") {
   if (is_fuchsia) {
-    configs += [
-      "//build/unification/config:zircon-migrated",
-      "//build/config:all_source",
-    ]
+    configs += [ "//build/config:all_source" ]
   }
   if (is_fuchsia) {
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]

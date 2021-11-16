@@ -18,9 +18,6 @@ fuchsia_driver("alc5514-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   sources = [ "alc5514.cc" ]
   deps = [
     ":alc5514_bind",

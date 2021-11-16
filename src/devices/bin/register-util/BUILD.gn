@@ -43,7 +43,6 @@ fuchsia_unittest_package("register-util-test-package") {
 }
 
 executable("register-util") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "main.cc",
     "register-util.cc",

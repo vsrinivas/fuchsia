@@ -7,7 +7,6 @@ import("//build/test.gni")
 
 test("dlopen-indirect-deps") {
   output_name = "dlopen-indirect-deps-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "dlopen-indirect-deps.c" ]
   deps = [
     "//sdk/lib/fdio",
@@ -18,7 +17,6 @@ test("dlopen-indirect-deps") {
 
 shared_library("dlopen-indirect-deps-test-module") {
   testonly = true
-  configs += [ "//build/unification/config:zircon-migrated" ]
   visibility = [
     ":*",
     "//zircon/system/utest/debugger:*",
@@ -29,7 +27,6 @@ shared_library("dlopen-indirect-deps-test-module") {
 
 shared_library("dlopen-indirect-deps-test-liba") {
   testonly = true
-  configs += [ "//build/unification/config:zircon-migrated" ]
   visibility = [
     ":*",
     "//zircon/system/utest/debugger:*",
@@ -42,7 +39,6 @@ shared_library("dlopen-indirect-deps-test-liba") {
 
 shared_library("dlopen-indirect-deps-test-libb") {
   testonly = true
-  configs += [ "//build/unification/config:zircon-migrated" ]
   visibility = [
     ":*",
     "//zircon/system/utest/debugger:*",

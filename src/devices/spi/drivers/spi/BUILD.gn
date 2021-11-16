@@ -29,7 +29,6 @@ fuchsia_driver("spi-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "spi-child.cc",
     "spi.cc",
@@ -67,7 +66,6 @@ fuchsia_driver_component("spi") {
 }
 
 test("spi-test-bin") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "spi-test"
   sources = [
     "spi-child.cc",

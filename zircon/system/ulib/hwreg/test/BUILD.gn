@@ -6,7 +6,6 @@ import("//build/components.gni")
 import("//build/test.gni")
 
 test("libhwreg-test") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "asm-test.cc",
     "bitfields-test.cc",
@@ -21,7 +20,6 @@ test("libhwreg-test") {
 }
 
 test("libhwreg-i2c-test") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "i2c-hwreg-test.cc" ]
   deps = [
     "//sdk/banjo/fuchsia.hardware.i2c:fuchsia.hardware.i2c_banjo_cpp",

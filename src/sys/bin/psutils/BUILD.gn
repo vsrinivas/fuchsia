@@ -19,7 +19,6 @@ group("psutils") {
 }
 
 source_set("ps_internal") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ps_internal.c" ]
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
@@ -33,7 +32,6 @@ source_set("ps_internal") {
 }
 
 source_set("handles_internal") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "handles-internal.cc",
     "object-utils.cc",
@@ -48,7 +46,6 @@ source_set("handles_internal") {
 
 executable("ps") {
   output_dir = "$root_out_dir/zircon-migrated"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ps.c" ]
   deps = [
     ":ps_internal",
@@ -63,7 +60,6 @@ executable("ps") {
 }
 
 executable("top") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "top.c" ]
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
@@ -78,7 +74,6 @@ executable("top") {
 }
 
 executable("kill") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "kill.c" ]
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
@@ -91,7 +86,6 @@ executable("kill") {
 }
 
 executable("killall") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "killall.c" ]
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
@@ -101,7 +95,6 @@ executable("killall") {
 }
 
 executable("vmaps") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "vmaps.c" ]
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
@@ -112,7 +105,6 @@ executable("vmaps") {
 }
 
 executable("vmos") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "vmo-utils.c",
     "vmos.cc",
@@ -126,7 +118,6 @@ executable("vmos") {
 }
 
 executable("memgraph") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "memgraph.cc",
     "object-utils.cc",
@@ -152,7 +143,6 @@ action("gen-memgraph-schema") {
 }
 
 executable("kstats") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "kstats.c",
     "resources.c",
@@ -168,7 +158,6 @@ executable("kstats") {
 }
 
 executable("threads") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "threads.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
@@ -185,7 +174,6 @@ executable("threads") {
 }
 
 executable("signal") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "signal.c" ]
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
@@ -199,7 +187,6 @@ executable("signal") {
 
 executable("handles") {
   output_dir = "$root_out_dir/zircon-migrated"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "handles.cc" ]
   deps = [
     ":handles_internal",

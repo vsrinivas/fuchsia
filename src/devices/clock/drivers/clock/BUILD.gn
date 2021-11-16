@@ -19,7 +19,6 @@ fuchsia_driver("clock-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "clock.cc" ]
   deps = [
     ":clock-bind",

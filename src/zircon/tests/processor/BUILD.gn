@@ -7,7 +7,6 @@ import("//build/test.gni")
 
 test("processor") {
   output_name = "processor-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "processor.c" ]
   deps = [
     "//sdk/lib/fdio",

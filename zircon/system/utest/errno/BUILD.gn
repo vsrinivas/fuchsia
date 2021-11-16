@@ -7,7 +7,6 @@ import("//build/test.gni")
 
 test("errno") {
   output_name = "errno-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "errno.c" ]
   deps = [
     "//sdk/lib/fdio",

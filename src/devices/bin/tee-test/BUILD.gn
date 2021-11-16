@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 executable("tee-test") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "tee-test.c" ]
   deps = [
     "//sdk/lib/fdio",

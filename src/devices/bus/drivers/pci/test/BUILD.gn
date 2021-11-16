@@ -67,9 +67,6 @@ fuchsia_driver("pci_fake-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   testonly = true
   sources = [ "driver/fake_bus_driver.cc" ]
   public_deps = [
@@ -98,9 +95,6 @@ fuchsia_driver("pci_protocol_test_driver-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
 
   if (userspace_pci_enable_msi_x) {
     defines = [ "ENABLE_MSIX" ]

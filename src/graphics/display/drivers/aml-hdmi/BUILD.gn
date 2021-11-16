@@ -23,7 +23,6 @@ source_set("common_srcs") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   public_deps = [
     ":aml_hdmi_bind",
     "//sdk/banjo/fuchsia.hardware.display.controller:fuchsia.hardware.display.controller_banjo_cpp",
@@ -61,7 +60,6 @@ fuchsia_driver_component("aml-hdmi") {
 }
 
 test("aml-hdmi-test-bin") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "aml-hdmi-test"
   sources = [
     "aml-hdmi-test.cc",

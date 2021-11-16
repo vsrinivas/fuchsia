@@ -3,8 +3,6 @@
 # found in the LICENSE file.
 
 source_set("elf-tls") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
-
   testonly = true
   configs += [ "//build/config:all_source" ]
   sources = [ "tls.cc" ]

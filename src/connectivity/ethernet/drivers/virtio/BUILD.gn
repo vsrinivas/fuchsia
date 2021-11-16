@@ -35,9 +35,6 @@ fuchsia_driver("virtio_ethernet-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   deps = [
     ":virtio_ethernet_lib",
     "//src/devices/lib/driver",
@@ -50,9 +47,6 @@ fuchsia_driver_component("virtio_ethernet") {
 }
 
 test("virtio-ethernet-test") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   if (is_fuchsia) {
     testonly = true
   }

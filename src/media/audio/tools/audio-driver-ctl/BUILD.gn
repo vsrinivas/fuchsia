@@ -42,7 +42,6 @@ source_set("src") {
 }
 
 executable("bin") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "audio-driver-ctl"
   output_dir = "$root_out_dir/zircon-migrated"
   sources = [ "audio.cc" ]
@@ -55,7 +54,6 @@ executable("bin") {
 }
 
 test("audio-driver-ctl-test") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "audio-driver-ctl-test"
   sources = [
     "noise-source-test.cc",

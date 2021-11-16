@@ -111,7 +111,6 @@ test("zbitl-unittests") {
 
   if (is_fuchsia) {
     sources += [ "vmo-tests.cc" ]
-    configs += [ "//build/unification/config:zircon-migrated" ]
   } else if (is_host) {
     deps += [ ":host-test-data" ]
   }

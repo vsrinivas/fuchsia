@@ -3,8 +3,6 @@
 # found in the LICENSE file.
 
 source_set("default-exception-handler") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
-
   testonly = true
   sources = [ "default-exception-handler.cc" ]
   deps = [

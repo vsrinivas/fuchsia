@@ -55,7 +55,6 @@ foreach(driver, simple_drivers) {
       "//build/config:all_source",
       "//build/config/fuchsia:enable_zircon_asserts",
     ]
-    configs += [ "//build/unification/config:zircon-migrated" ]
     sources = [ "simple-$driver.cc" ]
     deps = [
       ":shared",

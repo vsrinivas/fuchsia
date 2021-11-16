@@ -59,7 +59,6 @@ fuchsia_driver("focaltech-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "ft_device.cc",
     "ft_firmware.cc",
@@ -79,7 +78,6 @@ fuchsia_driver("focaltech-sherlock-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "ft_device.cc",
     "ft_firmware.cc",

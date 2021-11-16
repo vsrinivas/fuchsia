@@ -12,7 +12,6 @@ group("test") {
 
 test("serial-async-unittest-bin") {
   output_name = "serial-async-unittest"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "serial-async-test.cc" ]
   include_dirs = [ ".." ]
   deps = [

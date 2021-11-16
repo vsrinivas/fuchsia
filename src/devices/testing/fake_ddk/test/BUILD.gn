@@ -6,9 +6,6 @@ import("//build/components.gni")
 import("//build/test.gni")
 
 test("fake-ddk-test-bin") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   output_name = "fake-ddk-test"
   sources = [ "fake-ddk-test.cc" ]
   deps = [

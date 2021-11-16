@@ -23,7 +23,6 @@ fuchsia_driver("gpio-test-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
 
   # TODO: testonly = true
   sources = [ "gpio-test.cc" ]

@@ -63,9 +63,6 @@ fuchsia_driver("optee-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   deps = [ ":optee_lib" ]
 }
 
@@ -83,9 +80,6 @@ group("tests") {
 }
 
 test("optee-message-test-bin") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   output_name = "optee-message-test"
   include_dirs = [ "." ]
   sources = [ "test/optee-message-test.cc" ]

@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 executable("lsblk") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "main.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",

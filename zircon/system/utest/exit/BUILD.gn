@@ -7,10 +7,7 @@ import("//build/test.gni")
 
 test("exit") {
   output_name = "exit-test"
-  configs += [
-    "//build/config:all_source",
-    "//build/unification/config:zircon-migrated",
-  ]
+  configs += [ "//build/config:all_source" ]
   sources = [ "exit.c" ]
   deps = [
     "//sdk/lib/fdio",

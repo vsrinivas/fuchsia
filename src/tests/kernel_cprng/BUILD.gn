@@ -21,9 +21,6 @@ group("tests") {
 
 executable("cprng-draw") {
   testonly = true
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   sources = [ "cprng-draw.cc" ]
   deps = [ "//src/zircon/lib/zircon" ]
 }

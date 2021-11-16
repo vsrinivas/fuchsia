@@ -24,9 +24,6 @@ fuchsia_driver("aml-cpu-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   sources = [ "aml-cpu.cc" ]
   deps = [
     ":aml-cpu-bind",
@@ -57,7 +54,6 @@ fuchsia_driver_component("aml-cpu") {
 }
 
 test("aml-cpu-test-bin") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "aml-cpu-test.cc",
     "aml-cpu.cc",

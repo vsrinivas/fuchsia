@@ -72,7 +72,6 @@ fuchsia_driver("virtual-bus-tester-driver") {
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
-    "//build/unification/config:zircon-migrated",
   ]
   sources = [ "host.cc" ]
   deps = [
@@ -110,7 +109,6 @@ fuchsia_driver("virtual-bus-tester-function-driver") {
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
-    "//build/unification/config:zircon-migrated",
   ]
   sources = [ "peripheral.cc" ]
   deps = [

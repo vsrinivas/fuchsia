@@ -22,7 +22,6 @@ fuchsia_driver("usb-cdc-function-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "cdc-eth-function.cc" ]
   deps = [
     ":usb_cdc_bind",

@@ -20,7 +20,6 @@ fuchsia_driver("aml-thermistor-driver") {
   output_name = "astro-thermistor"
   defines = [ "_ALL_SOURCE" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "thermistor-channel.cc",
     "thermistor.cc",

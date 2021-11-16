@@ -11,9 +11,6 @@ group("tests") {
 }
 
 test("usb-request-test-bin") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   output_name = "usb-request-test"
   sources = [
     "request-c-test.cc",
@@ -36,9 +33,6 @@ test("usb-request-test-bin") {
 }
 
 test("usb-wrapper-test-bin") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   output_name = "usb-wrapper-test"
   sources = [ "usb-wrapper-test.cc" ]
   deps = [
@@ -57,9 +51,6 @@ test("usb-wrapper-test-bin") {
 }
 
 test("usb-desc-lib-test-bin") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   output_name = "usb-desc-lib-test"
   sources = [ "usb-desc-lib-test.cc" ]
   deps = [

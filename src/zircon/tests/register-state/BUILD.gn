@@ -7,7 +7,6 @@ import("//build/test.gni")
 
 test("register-state") {
   output_name = "register-state-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "register-state-test.cc" ]
   deps = [
     "//sdk/lib/fdio",

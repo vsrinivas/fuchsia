@@ -7,7 +7,6 @@ import("//build/test.gni")
 
 test("status") {
   output_name = "status-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "status.cc" ]
   deps = [
     "//sdk/lib/fdio",

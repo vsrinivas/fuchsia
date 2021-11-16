@@ -3,8 +3,6 @@
 # found in the LICENSE file.
 
 source_set("c11-condvar") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
-
   testonly = true
   configs += [ "//build/config:all_source" ]
   sources = [ "condvar.cc" ]

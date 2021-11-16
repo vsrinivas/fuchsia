@@ -13,7 +13,6 @@ fuchsia_driver("core-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   deps = [
     ":shared",
     "//sdk/lib/syslog/cpp:backend_legacy",
@@ -35,7 +34,6 @@ group("tests") {
 }
 
 test("core-unittest-bin") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "blockcore"
   include_dirs = [ "." ]
   sources = [

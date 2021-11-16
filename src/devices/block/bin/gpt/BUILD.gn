@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 executable("gpt") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "gpt.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",

@@ -7,7 +7,6 @@ import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
 
 test("sysmem") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "sysmem_tests.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",

@@ -29,9 +29,6 @@ fuchsia_driver("aml-securemem-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   sources = [
     "device.cc",
     "device.h",
@@ -74,9 +71,6 @@ fuchsia_driver_component("aml-securemem") {
 }
 
 test("aml-securemem-test-bin") {
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   output_name = "aml-securemem-test"
   sources = [
     "device.cc",

@@ -7,7 +7,6 @@ import("//build/testing/bootfs_test.gni")
 
 test("usb") {
   output_name = "usb-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "usb-test.c" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.usb.tester:fuchsia.hardware.usb.tester_c",

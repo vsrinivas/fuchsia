@@ -12,9 +12,6 @@ group("test") {
 
 test("async") {
   output_name = "async-test"
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   sources = [
     "default_tests.cc",
     "dispatcher_tests.cc",

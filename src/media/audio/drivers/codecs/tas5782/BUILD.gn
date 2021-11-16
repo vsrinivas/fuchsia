@@ -20,7 +20,6 @@ fuchsia_driver("tas5782-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "tas5782.cc" ]
   deps = [
     ":ti_tas5782-bind",
@@ -45,7 +44,6 @@ fuchsia_driver_component("tas5782") {
 }
 
 test("tas5782-test") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "tas5782-test"
   configs += [ "//build/config:all_source" ]
   sources = [

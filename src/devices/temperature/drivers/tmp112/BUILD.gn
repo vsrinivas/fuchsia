@@ -23,7 +23,6 @@ fuchsia_driver("tmp112-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "tmp112.cc" ]
   deps = [
     ":tmp112-bind",
@@ -42,7 +41,6 @@ fuchsia_driver_component("tmp112") {
 }
 
 test("tmp112-test-bin") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "tmp112-test"
   sources = [
     "tmp112-test.cc",

@@ -20,7 +20,6 @@ fuchsia_driver("sdhci-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "sdhci.cc" ]
   deps = [
     ":sdhci-bind",
@@ -45,7 +44,6 @@ fuchsia_driver_component("sdhci") {
 }
 
 test("sdhci-test-bin") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "sdhci-test"
   configs += [ "//build/config:all_source" ]
   sources = [

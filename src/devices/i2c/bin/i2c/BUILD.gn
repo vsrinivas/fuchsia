@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 executable("i2c") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "i2c.c" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_c",

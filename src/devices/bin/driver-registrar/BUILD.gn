@@ -4,7 +4,6 @@
 
 executable("driver-registrar") {
   sources = [ "driver-registrar.cc" ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   deps = [
     "//sdk/fidl/fuchsia.driver.registrar:fuchsia.driver.registrar_llcpp",
     "//sdk/fidl/fuchsia.pkg",

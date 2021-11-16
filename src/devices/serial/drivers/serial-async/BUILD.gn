@@ -19,7 +19,6 @@ fuchsia_driver("serial-async-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   deps = [
     ":common",
     "//src/devices/lib/driver",

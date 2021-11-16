@@ -22,7 +22,6 @@ fuchsia_driver("fuchsia_driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   deps = [
     ":fvm_bind",
     ":shared",
@@ -94,7 +93,6 @@ group("tests") {
 
 test("fvm-driver-unittests") {
   output_name = "fvm-driver-unittests-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "slice_extent_test.cc",
     "vpartition_manager_test.cc",

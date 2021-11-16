@@ -7,9 +7,6 @@ import("//build/test.gni")
 
 test("async-loop") {
   output_name = "async-loop-test"
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   sources = [ "loop_tests.cc" ]
   deps = [
     "//sdk/lib/fdio",

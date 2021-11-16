@@ -6,8 +6,6 @@ import("//build/zircon/zircon_cpu.gni")
 import("//src/devices/bus/drivers/pci/pci.gni")
 
 source_set("bad-syscall") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
-
   testonly = true
   sources = [
     "bad-syscall.cc",

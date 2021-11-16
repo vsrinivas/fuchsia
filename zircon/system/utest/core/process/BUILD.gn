@@ -3,8 +3,6 @@
 # found in the LICENSE file.
 
 source_set("process") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
-
   testonly = true
   sources = [
     "process.cc",

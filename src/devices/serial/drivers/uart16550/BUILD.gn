@@ -33,7 +33,6 @@ template("define_common_lib") {
     visibility = [ ":*" ]
     configs += [
       "//build/config:all_source",
-      "//build/unification/config:zircon-migrated",
       "//build/config/fuchsia:enable_zircon_asserts",
     ]
     sources = [ "uart16550.cc" ]
@@ -81,7 +80,6 @@ driver_bind_rules("uart16550_bind") {
 
 fuchsia_driver("uart16550-driver") {
   output_name = "uart16550"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   deps = [
     ":uart16550_bind",
     ":uart16550_lib",
@@ -95,7 +93,6 @@ fuchsia_driver_component("uart16550") {
 }
 
 test("uart16550-test-bin") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "uart16550-test"
   sources = [ "uart16550-test.cc" ]
   deps = [

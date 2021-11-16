@@ -24,7 +24,6 @@ fuchsia_driver("aml-thermal-s905d2g-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "aml-thermal.cc",
     "aml-tsensor.cc",
@@ -61,7 +60,6 @@ fuchsia_driver_component("aml-thermal-s905d2g") {
 }
 
 test("aml-thermal-s905d2g-test-bin") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "aml-thermal-s905d2g-test"
   configs += [ "//build/config:all_source" ]
   sources = [

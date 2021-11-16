@@ -7,7 +7,6 @@ import("//build/test.gni")
 
 test("thread-initial-state") {
   output_name = "thread-initial-state-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "${current_cpu}.S",
     "init-state.c",

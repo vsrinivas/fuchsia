@@ -8,7 +8,6 @@ import("//src/storage/testing/driver_test_realm.gni")
 
 test("ramdisk") {
   output_name = "ramdisk-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ramdisk.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
