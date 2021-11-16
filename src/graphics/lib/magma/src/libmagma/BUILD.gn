@@ -11,6 +11,9 @@ group("libmagma") {
 static_library("libmagma_static") {
   public_deps = [ "$magma_build_root/include:magma" ]
 
+  # This allows the library to be used as a dependency by rust build rules.
+  public_configs = [ "//build/config/fuchsia:static_cpp_standard_library" ]
+
   sources = [ "magma.cc" ]
 
   deps = [
