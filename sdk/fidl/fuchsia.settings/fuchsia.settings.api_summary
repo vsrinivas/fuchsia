@@ -32,6 +32,9 @@ struct fuchsia.settings/Audio_Set_Response
 union/member fuchsia.settings/Audio_Set_Result.err fuchsia.settings/Error
 union/member fuchsia.settings/Audio_Set_Result.response fuchsia.settings/Audio_Set_Response
 strict union fuchsia.settings/Audio_Set_Result
+struct/member fuchsia.settings/Autorepeat.delay int64
+struct/member fuchsia.settings/Autorepeat.period int64
+struct fuchsia.settings/Autorepeat
 enum/member fuchsia.settings/CaptionFontFamily.CASUAL 5
 enum/member fuchsia.settings/CaptionFontFamily.CURSIVE 6
 enum/member fuchsia.settings/CaptionFontFamily.MONOSPACED_SANS_SERIF 3
@@ -165,6 +168,7 @@ struct fuchsia.settings/KeyboardSet_Set_Response
 union/member fuchsia.settings/KeyboardSet_Set_Result.err fuchsia.settings/Error
 union/member fuchsia.settings/KeyboardSet_Set_Result.response fuchsia.settings/KeyboardSet_Set_Response
 strict union fuchsia.settings/KeyboardSet_Set_Result
+table/member fuchsia.settings/KeyboardSettings.autorepeat fuchsia.settings/Autorepeat
 table/member fuchsia.settings/KeyboardSettings.keymap fuchsia.input/KeymapId
 table fuchsia.settings/KeyboardSettings
 protocol/member fuchsia.settings/KeyboardWatch.Watch() -> (fuchsia.settings/KeyboardSettings settings)

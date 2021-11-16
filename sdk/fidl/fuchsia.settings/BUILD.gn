@@ -28,5 +28,6 @@ fidl("fuchsia.settings") {
     "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.ui.types",
+    "//zircon/vdso/zx",
   ]
 }
