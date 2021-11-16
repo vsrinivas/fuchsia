@@ -19,12 +19,14 @@
 #include <queue>
 #include <vector>
 
+#include "fake_netstack_internal.h"
+
 // TODO(fxbug.dev/87034): Remove this implementation once all devices
 // have migrated to the new fuchsia.net.stack FIDL protocol.
 
 namespace fake_netstack::v1 {
 
-class Device {
+class Device : public fake_netstack::internal::DeviceInterface {
  public:
   static zx_status_t Create(async_dispatcher_t* dispatcher,
                             fuchsia::hardware::ethernet::DeviceSyncPtr eth_device,
@@ -32,8 +34,8 @@ class Device {
 
   zx_status_t Start();
 
-  fpromise::promise<std::vector<uint8_t>, zx_status_t> ReadPacket();
-  fpromise::promise<void, zx_status_t> WritePacket(std::vector<uint8_t> packet);
+  fpromise::promise<std::vector<uint8_t>, zx_status_t> ReadPacket() override;
+  fpromise::promise<void, zx_status_t> WritePacket(std::vector<uint8_t> packet) override;
 
  private:
   Device(async_dispatcher_t* dispatcher, fuchsia::hardware::ethernet::DeviceSyncPtr eth_device,

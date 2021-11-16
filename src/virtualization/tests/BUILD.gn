@@ -112,8 +112,11 @@ source_set("fake_netstack") {
     "fake_netstack_v1.h",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.network",
     "//sdk/fidl/fuchsia.net.interfaces",
+    "//sdk/fidl/fuchsia.net.virtualization",
     "//sdk/fidl/fuchsia.netstack",
+    "//src/connectivity/lib/network-device/cpp",
     "//src/lib/inet",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
