@@ -640,6 +640,12 @@ foreach(cred_path, board_fastboot_unlock_credentials) {
   archive_fastboot_credentials += [ "$basename.script" ]
 }
 
+fuchsia_bootloader_partitions = bootloader_parts
+fuchsia_requires_unlock = false
+if (bootstrap_parts != []) {
+  fuchsia_bootloader_partitions += bootstrap_parts
+  fuchsia_requires_unlock = true
+}
 flash_manifest_products = [
   {
     name = "recovery"
@@ -648,8 +654,15 @@ flash_manifest_products = [
     oem_files = []
   },
   {
-    name = "fuchsia"
+    name = "fuchsia_only"
     bootloader_partitions = bootloader_parts
+    partitions = parts
+    oem_files = []
+  },
+  {
+    name = "fuchsia"
+    requires_unlock = fuchsia_requires_unlock
+    bootloader_partitions = fuchsia_bootloader_partitions
     partitions = parts
     oem_files = []
   },
@@ -779,6 +792,12 @@ action("flash_script_archive") {
 }
 
 fastboot_manifest_archive_file = "$root_build_dir/flash_archive.json"
+archive_fuchsia_bootloader_partitions = archive_bootloader_parts
+archive_fuchsia_requires_unlock = false
+if (archive_bootstrap_parts != []) {
+  archive_fuchsia_bootloader_partitions += archive_bootstrap_parts
+  archive_fuchsia_requires_unlock = true
+}
 archive_flash_manifest_products = [
   {
     name = "recovery"
@@ -787,8 +806,15 @@ archive_flash_manifest_products = [
     oem_files = []
   },
   {
-    name = "fuchsia"
+    name = "fuchsia_only"
     bootloader_partitions = archive_bootloader_parts
+    partitions = archive_parts
+    oem_files = []
+  },
+  {
+    name = "fuchsia"
+    requires_unlock = archive_fuchsia_requires_unlock
+    bootloader_partitions = archive_fuchsia_bootloader_partitions
     partitions = archive_parts
     oem_files = []
   },
