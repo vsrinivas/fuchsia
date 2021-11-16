@@ -19,6 +19,8 @@ rustc_library("mdns") {
     "//third_party/rust_crates:byteorder",
   ]
 
+  test_deps = [ "//third_party/rust_crates:matches" ]
+
   sources = [
     "src/lib.rs",
     "src/protocol.rs",

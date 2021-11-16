@@ -179,10 +179,13 @@ impl FidlService for Mdns {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ::mdns::protocol::{Class, DomainBuilder, MessageBuilder, RecordBuilder, Type};
+    use ::mdns::protocol::{
+        Class, DomainBuilder, EmbeddedPacketBuilder, MessageBuilder, RecordBuilder, Type,
+    };
     use lazy_static::lazy_static;
     use packet::{InnerPacketBuilder, Serializer};
     use services::testing::FakeDaemonBuilder;
+    use std::net::IpAddr;
     use std::net::SocketAddr;
 
     lazy_static! {
@@ -269,8 +272,38 @@ mod tests {
         .unwrap();
         socket.set_ttl(1).unwrap();
         socket.set_multicast_ttl_v4(1).unwrap();
-        let addr: SocketAddr = (std::net::Ipv4Addr::UNSPECIFIED, bound_port).into();
-        socket.send_to(&MDNS_PACKET, &addr.into()).unwrap();
+        let addr: SocketAddr = (std::net::Ipv4Addr::LOCALHOST, bound_port).into();
+
+        let my_ip = match addr.ip() {
+            IpAddr::V4(addr) => addr.octets(),
+            _ => panic!("expected ipv4 addr"),
+        };
+
+        let mut message = MessageBuilder::new(0, true);
+        let domain =
+            DomainBuilder::from_str("thumb-set-human-shred._fuchsia._udp.local").unwrap().bytes();
+
+        let ptr = RecordBuilder::new(
+            DomainBuilder::from_str("_fuchsia._udp.local").unwrap(),
+            Type::Ptr,
+            Class::In,
+            true,
+            1,
+            &domain,
+        );
+        message.add_answer(ptr);
+
+        let nodename = DomainBuilder::from_str("thumb-set-human-shred.local").unwrap();
+        let rec = RecordBuilder::new(nodename, Type::A, Class::In, true, 4500, &my_ip);
+        message.add_additional(rec);
+
+        let msg_bytes = message
+            .into_serializer()
+            .serialize_vec_outer()
+            .unwrap_or_else(|_| panic!("failed to serialize"))
+            .unwrap_b();
+        socket.send_to(msg_bytes.as_ref(), &addr.into()).unwrap();
+
         while let Some(e) = proxy.get_next_event().await.unwrap() {
             if matches!(*e, bridge::MdnsEventType::TargetFound(_),) {
                 break;
@@ -280,7 +313,7 @@ mod tests {
             proxy.get_targets().await.unwrap().into_iter().next().unwrap().nodename.unwrap(),
             "thumb-set-human-shred",
         );
-        socket.send_to(&MDNS_PACKET, &addr.into()).unwrap();
+        socket.send_to(msg_bytes.as_ref(), &addr.into()).unwrap();
         while let Some(e) = proxy.get_next_event().await.unwrap() {
             if matches!(*e, bridge::MdnsEventType::TargetRediscovered(_)) {
                 break;
