@@ -31,6 +31,9 @@ per-file             sync-to = olivernewman@google.com
 per-file             set = olivernewman@google.com
 # per-file-COMPONENT set = Tools>Fx
 
+per-file             test = crjohns@google.com,satsukiu@google.com,anmittal@google.com
+# per-file-COMPONENT test = Tools>Fx
+
 per-file fdt,tests/subcommands/fx_fdt_test = shrike@google.com,abbogart@google.com,dragonbear@google.com
 # per-file-COMPONENT fdt,tests/subcommands/fx_fdt_test = DeveloperExperience>FuchsiaDevTools
 
