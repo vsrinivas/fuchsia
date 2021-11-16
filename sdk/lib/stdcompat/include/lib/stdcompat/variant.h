@@ -421,7 +421,9 @@ class variant
 
   // Swap.
 
-  void swap(variant& other) { cpp20::swap(storage_, other.storage_); }
+  void swap(variant& other) {
+    other.storage_ = cpp20::exchange(storage_, std::move(other.storage_));
+  }
 
   // Comparison.
 

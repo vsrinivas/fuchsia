@@ -35,35 +35,47 @@ TEST(InplaceTagTest, InplaceTagsSwitchToStdProvidedOnStd17) {
 #endif
 }
 
-constexpr bool SwapCheck() {
+constexpr bool ExchangeCheck() {
   int a = 1;
   int b = 2;
 
-  cpp20::swap(a, b);
+  b = cpp20::exchange(a, std::move(b));
 
   return a == 2 && b == 1;
 }
 
-constexpr bool SwapCheck2() {
+constexpr bool ExchangeCheck2() {
   cpp17::string_view a = "1";
   cpp17::string_view b = "2";
 
-  cpp20::swap(a, b);
+  b = cpp20::exchange(a, std::move(b));
 
   return a == "2" && b == "1";
 }
 
-TEST(SwapTest, IsConstexpr) {
-  static_assert(SwapCheck(), "swap evaluates incorrectly in constexpr context.");
-  static_assert(SwapCheck2(), "swap evaluates incorrectly in constexpr context.");
+bool ExchangeCheck3() {
+  cpp17::string_view a = "1";
+  cpp17::string_view b = "2";
+
+  b = cpp20::exchange(a, std::move(b));
+
+  return a == "2" && b == "1";
 }
+
+TEST(ExchangeTest, IsConstexpr) {
+  static_assert(ExchangeCheck(), "exchange evaluates incorrectly in constexpr context.");
+  static_assert(ExchangeCheck2(), "exchange evaluates incorrectly in constexpr context.");
+}
+
+TEST(ExchangeTest, Runtime) { ASSERT_TRUE(ExchangeCheck3()); }
 
 #if __cpp_lib_constexpr_algorithms >= 201806L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
-TEST(SwapTest, IsAliasWhenAvailable) {
-  constexpr void (*cpp20_swap)(int&, int&) = &cpp20::swap<int>;
-  constexpr void (*std_swap)(int&, int&) = &std::swap<int>;
-  static_assert(cpp20_swap == std_swap, "cpp20::swap must be an alias for std::swap in c++20.");
+TEST(ExchangeTest, IsAliasWhenAvailable) {
+  constexpr void (*cpp20_exchange)(int&, int&&) = &cpp20::exchange<int>;
+  constexpr void (*std_exchange)(int&, int&&) = &std::exchange<int>;
+  static_assert(cpp20_exchange == std_exchange,
+                "cpp20::exchange must be an alias for std::exchange in c++20.");
 }
 
 #endif

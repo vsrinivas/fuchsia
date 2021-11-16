@@ -115,8 +115,8 @@ class basic_string_view {
   }
 
   constexpr void swap(basic_string_view& other) noexcept {
-    cpp20::swap(data_, other.data_);
-    cpp20::swap(length_, other.length_);
+    other.data_ = cpp20::exchange(data_, std::move(other.data_));
+    other.length_ = cpp20::exchange(length_, std::move(other.length_));
   }
 
   size_type copy(CharT* dest, size_type count, size_type pos = 0) const {

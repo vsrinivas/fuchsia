@@ -5,6 +5,7 @@
 #ifndef LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_UTILITY_H_
 #define LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_UTILITY_H_
 
+#include <type_traits>
 #include <utility>
 
 #include "internal/utility.h"
@@ -92,17 +93,18 @@ namespace cpp20 {
 
 #if __cpp_lib_constexpr_algorithms >= 201806L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
-using std::swap;
+using std::exchange;
 
 #else  // Add swap constexpr polyfill.
 
-template <typename T, typename std::enable_if<std::is_move_constructible<T>::value &&
-                                                  std::is_move_assignable<T>::value,
-                                              bool>::type = true>
-constexpr void swap(T& a, T& b) noexcept {
-  T tmp = std::move(b);
-  b = std::move(a);
-  a = std::move(tmp);
+template <
+    typename T, typename U = T,
+    typename std::enable_if<std::is_move_assignable<T>::value && cpp17::is_assignable_v<T&, U>,
+                            bool>::type = true>
+constexpr T exchange(T& obj, U&& new_value) {
+  T old = std::move(obj);
+  obj = std::forward<U>(new_value);
+  return old;
 }
 
 #endif  // __cpp_lib_constexpr_algorithms >= 201806L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)

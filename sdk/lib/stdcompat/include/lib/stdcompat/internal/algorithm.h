@@ -27,7 +27,7 @@ constexpr void make_heap(RandomIterator first, RandomIterator end, Comparator co
       if (comparison(parent, element)) {
         break;
       }
-      cpp20::swap(parent, element);
+      element = cpp20::exchange(parent, std::move(element));
       element_index = parent_index;
     }
   };
@@ -44,7 +44,8 @@ template <typename RandomIterator, typename Comparator>
 constexpr void sort_heap(RandomIterator first, RandomIterator end, Comparator comparison) {
   // Length is always positive.
   constexpr auto extract_element = [](RandomIterator root, size_t length, Comparator& comparison) {
-    cpp20::swap(*root, *(root + length - 1));
+    auto& element = *(root + length - 1);
+    element = cpp20::exchange(*root, std::move(element));
     // The last item has been extracted from the heap, so length is reduced.
     size_t element_index = 0;
     length--;
@@ -63,7 +64,9 @@ constexpr void sort_heap(RandomIterator first, RandomIterator end, Comparator co
       if (element_index == parent_candidate) {
         break;
       }
-      cpp20::swap(*(root + element_index), *(root + parent_candidate));
+      auto& parent_cand_element = *(root + parent_candidate);
+      parent_cand_element =
+          cpp20::exchange(*(root + element_index), std::move(parent_cand_element));
       element_index = parent_candidate;
     }
   };
