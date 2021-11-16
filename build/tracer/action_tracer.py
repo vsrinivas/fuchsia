@@ -55,7 +55,7 @@ class MatchConditions(object):
         """Returns true if path matches any of the conditions."""
         if any(path.startswith(prefix) for prefix in self.prefixes):
             return True
-        if any(path.endswith(prefix) for prefix in self.suffixes):
+        if any(path.endswith(suffix) for suffix in self.suffixes):
             return True
         if set(path.split(os.path.sep)).intersection(self.components):
             return True
@@ -835,37 +835,37 @@ def main():
     ignored_prefixes = {
         # Allow actions to access prebuilts that are not declared as inputs
         # (until we fix all instances of this)
-        os.path.join(src_root, "prebuilt"),
+        os.path.join(src_root, "prebuilt/"),
         # Allow actions to run `git` commands.
         # Actions can set certain refs under .git as inputs to trigger on
         # relevant changes to git. However fully predicting what files will be
         # accessed by certain git commands used in the build is not viable, it's
         # not necessarily stable and doesn't make a good contract.
-        os.path.join(src_root, ".git"),
-        os.path.join(src_root, "integration", ".git"),
-        os.path.join(src_root, "third_party", "mesa", ".git"),
-        os.path.join(src_root, "third_party", "glslang", ".git"),
-        os.path.join(src_root, "third_party", "spirv-tools", ".git"),
+        os.path.join(src_root, ".git/"),
+        os.path.join(src_root, "integration", ".git/"),
+        os.path.join(src_root, "third_party", "mesa", ".git/"),
+        os.path.join(src_root, "third_party", "glslang", ".git/"),
+        os.path.join(src_root, "third_party", "spirv-tools", ".git/"),
         # Allow actions to read .fx-build-dir to figure out the current build
         # directory.
-        os.path.join(src_root, ".fx-build-dir"),
+        os.path.join(src_root, ".fx-build-dir/"),
         # TODO(jayzhuang): flutter's dart_libraries currently don't have sources
         # listed, fix that and remove this exception.
-        os.path.join(src_root, "third_party", "dart-pkg", "git", "flutter"),
+        os.path.join(src_root, "third_party", "dart-pkg", "git", "flutter/"),
         # The Dart format and analyzer want to write to $HOME/.dart/...
         # but there is no HOME defined when running `fx build`, so they end
         # up writing to the output directory instead. Ignore these since this
         # is harmless. This is favored to setting a fake HOME value in
         # the `hermetic-env` script (used by `fx build`), because it allows
         # catching other tools trying to write to $HOME in the future.
-        os.path.join(os.getcwd(), ".dart"),
+        os.path.join(os.getcwd(), ".dart/"),
     }
     ignored_suffixes = {
         # TODO(jayzhuang): Figure out whether `.dart_tool/package_config.json`
         # should be included in inputs.
-        ".dart_tool/package_config.json",
+        "/.dart_tool/package_config.json",
         # Allow Flutter to read and write tool states.
-        ".config/flutter/tool_state",
+        "/.config/flutter/tool_state",
     }
     ignored_path_parts = {
         # Python creates these directories with bytecode caches
