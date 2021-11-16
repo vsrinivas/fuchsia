@@ -126,9 +126,6 @@ type TestOptionalFlexibleResourceXUnionInStruct = resource struct {
     xu SampleResourceXUnion:optional;
 };
 
-// TODO(fxbug.dev/36441): Allow bindings to compile on host with handles.
-// TODO(fxbug.dev/72247): Encode libfuzzer dependency on HLCPP and LLCPP.
-@bindings_denylist("llcpp, libfuzzer")
 type FidlvizDemo = resource struct {
     f1 uint8;
     f2 int8;

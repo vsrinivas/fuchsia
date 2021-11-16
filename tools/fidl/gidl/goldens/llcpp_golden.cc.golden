@@ -576,6 +576,78 @@ var1.v = std::move(var2);
 		::fidl::internal::WireFormatVersion::kV2, &obj, expected_bytes, expected_handles, false));
 }
 
+TEST(Conformance, GoldenByteNullableVectorStructNonNull_V1_Encode) {
+	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	auto var1 = conformance::wire::GoldenNullableByteVectorStruct{};
+auto var2 = fidl::VectorView<uint8_t>(allocator, 4);
+var2[0] = uint8_t(1ull);
+var2[1] = uint8_t(2ull);
+var2[2] = uint8_t(3ull);
+var2[3] = uint8_t(4ull);
+var1.v = std::move(var2);
+
+	const auto expected_bytes = std::vector<uint8_t>{
+0x04,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x02,0x03,0x04,0x00,0x00,0x00,0x00,
+};
+	const auto expected_handles = std::vector<zx_handle_disposition_t>{};
+	alignas(FIDL_ALIGNMENT) auto obj = std::move(var1);
+	EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(
+		::fidl::internal::WireFormatVersion::kV1, &obj, expected_bytes, expected_handles, false));
+}
+
+TEST(Conformance, GoldenByteNullableVectorStructNonNull_V2_Encode) {
+	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	auto var1 = conformance::wire::GoldenNullableByteVectorStruct{};
+auto var2 = fidl::VectorView<uint8_t>(allocator, 4);
+var2[0] = uint8_t(1ull);
+var2[1] = uint8_t(2ull);
+var2[2] = uint8_t(3ull);
+var2[3] = uint8_t(4ull);
+var1.v = std::move(var2);
+
+	const auto expected_bytes = std::vector<uint8_t>{
+0x04,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x02,0x03,0x04,0x00,0x00,0x00,0x00,
+};
+	const auto expected_handles = std::vector<zx_handle_disposition_t>{};
+	alignas(FIDL_ALIGNMENT) auto obj = std::move(var1);
+	EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, &obj, expected_bytes, expected_handles, false));
+}
+
+TEST(Conformance, GoldenNullableByteVectorStructNull_V1_Encode) {
+	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	auto var1 = conformance::wire::GoldenNullableByteVectorStruct{};
+var1.v = fidl::VectorView<uint8_t>();
+
+	const auto expected_bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	const auto expected_handles = std::vector<zx_handle_disposition_t>{};
+	alignas(FIDL_ALIGNMENT) auto obj = std::move(var1);
+	EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(
+		::fidl::internal::WireFormatVersion::kV1, &obj, expected_bytes, expected_handles, false));
+}
+
+TEST(Conformance, GoldenNullableByteVectorStructNull_V2_Encode) {
+	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	auto var1 = conformance::wire::GoldenNullableByteVectorStruct{};
+var1.v = fidl::VectorView<uint8_t>();
+
+	const auto expected_bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	const auto expected_handles = std::vector<zx_handle_disposition_t>{};
+	alignas(FIDL_ALIGNMENT) auto obj = std::move(var1);
+	EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, &obj, expected_bytes, expected_handles, false));
+}
+
 TEST(Conformance, GoldenStructVectorStruct_V1_Encode) {
 	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
 	auto var1 = conformance::wire::GoldenStructVectorStruct{};
@@ -1598,6 +1670,104 @@ var1.v = std::move(var2);
 [[maybe_unused]] auto& f2 = f1.v;
 
 		return ((f2.count() == 12 && (f2[0] == uint8_t(1ull)) && (f2[1] == uint8_t(2ull)) && (f2[2] == uint8_t(3ull)) && (f2[3] == uint8_t(4ull)) && (f2[4] == uint8_t(1ull)) && (f2[5] == uint8_t(2ull)) && (f2[6] == uint8_t(3ull)) && (f2[7] == uint8_t(4ull)) && (f2[8] == uint8_t(1ull)) && (f2[9] == uint8_t(2ull)) && (f2[10] == uint8_t(3ull)) && (f2[11] == uint8_t(4ull))));
+	};
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+}
+
+
+TEST(Conformance, GoldenByteNullableVectorStructNonNull_V1_Decode) {
+	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	auto var1 = conformance::wire::GoldenNullableByteVectorStruct{};
+auto var2 = fidl::VectorView<uint8_t>(allocator, 4);
+var2[0] = uint8_t(1ull);
+var2[1] = uint8_t(2ull);
+var2[2] = uint8_t(3ull);
+var2[3] = uint8_t(4ull);
+var1.v = std::move(var2);
+
+	auto bytes = std::vector<uint8_t>{
+0x04,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x02,0x03,0x04,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto obj = std::move(var1);
+	auto equality_check = [&](conformance::wire::GoldenNullableByteVectorStruct& actual) -> bool {
+		[[maybe_unused]] auto& f1 = actual;
+[[maybe_unused]] auto& f2 = f1.v;
+
+		return ((f2.count() == 4 && (f2[0] == uint8_t(1ull)) && (f2[1] == uint8_t(2ull)) && (f2[2] == uint8_t(3ull)) && (f2[3] == uint8_t(4ull))));
+	};
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV1, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+}
+
+
+TEST(Conformance, GoldenByteNullableVectorStructNonNull_V2_Decode) {
+	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	auto var1 = conformance::wire::GoldenNullableByteVectorStruct{};
+auto var2 = fidl::VectorView<uint8_t>(allocator, 4);
+var2[0] = uint8_t(1ull);
+var2[1] = uint8_t(2ull);
+var2[2] = uint8_t(3ull);
+var2[3] = uint8_t(4ull);
+var1.v = std::move(var2);
+
+	auto bytes = std::vector<uint8_t>{
+0x04,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x02,0x03,0x04,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto obj = std::move(var1);
+	auto equality_check = [&](conformance::wire::GoldenNullableByteVectorStruct& actual) -> bool {
+		[[maybe_unused]] auto& f1 = actual;
+[[maybe_unused]] auto& f2 = f1.v;
+
+		return ((f2.count() == 4 && (f2[0] == uint8_t(1ull)) && (f2[1] == uint8_t(2ull)) && (f2[2] == uint8_t(3ull)) && (f2[3] == uint8_t(4ull))));
+	};
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+}
+
+
+TEST(Conformance, GoldenNullableByteVectorStructNull_V1_Decode) {
+	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	auto var1 = conformance::wire::GoldenNullableByteVectorStruct{};
+var1.v = fidl::VectorView<uint8_t>();
+
+	auto bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto obj = std::move(var1);
+	auto equality_check = [&](conformance::wire::GoldenNullableByteVectorStruct& actual) -> bool {
+		[[maybe_unused]] auto& f1 = actual;
+
+		return ((f1.v.data() == nullptr));
+	};
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV1, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+}
+
+
+TEST(Conformance, GoldenNullableByteVectorStructNull_V2_Decode) {
+	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	auto var1 = conformance::wire::GoldenNullableByteVectorStruct{};
+var1.v = fidl::VectorView<uint8_t>();
+
+	auto bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto obj = std::move(var1);
+	auto equality_check = [&](conformance::wire::GoldenNullableByteVectorStruct& actual) -> bool {
+		[[maybe_unused]] auto& f1 = actual;
+
+		return ((f1.v.data() == nullptr));
 	};
 	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
 		::fidl::internal::WireFormatVersion::kV2, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));

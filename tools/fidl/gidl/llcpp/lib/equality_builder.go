@@ -128,6 +128,8 @@ func (b *equalityCheckBuilder) visit(actualExpr fidlExpr, expectedValue gidlir.V
 		return b.visitList(actualExpr, expectedValue, decl.(gidlmixer.ListDeclaration))
 	case nil:
 		switch decl.(type) {
+		case *gidlmixer.VectorDecl:
+			return boolSprintf("(%s.data() == nullptr)", actualExpr)
 		case *gidlmixer.StringDecl:
 			return boolSprintf("%s.is_null()", actualExpr)
 		case *gidlmixer.HandleDecl:

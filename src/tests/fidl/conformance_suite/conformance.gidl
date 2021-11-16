@@ -1227,8 +1227,6 @@ success("LargeArrays") {
 // This tests the default input used in fidlviz:
 // https://fuchsia.googlesource.com/fidl-misc/+/HEAD/fidlviz/
 success("FidlvizDemo") {
-    // TODO(fxbug.dev/36441): Implement handles in all backends.
-    bindings_denylist = [c, llcpp, transformer],
     handle_defs = {
         #0 = event(),
     },
