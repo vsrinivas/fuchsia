@@ -5,7 +5,6 @@
 #include <fbl/algorithm.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
-#include <wlan/protocol/mac.h>
 
 namespace wlan {
 

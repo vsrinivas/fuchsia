@@ -17,7 +17,7 @@
 
 #include <assert.h>
 
-#include <wlan/protocol/ieee80211.h>
+#include <wlan/common/ieee80211.h>
 
 #include "debug.h"
 #include "hif.h"

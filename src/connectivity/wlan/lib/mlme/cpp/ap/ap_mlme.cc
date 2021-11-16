@@ -13,7 +13,6 @@
 #include <wlan/mlme/ap/ap_mlme.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/rust_utils.h>
-#include <wlan/protocol/mac.h>
 
 namespace wlan {
 

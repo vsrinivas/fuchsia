@@ -7,7 +7,6 @@
 #include <fuchsia/hardware/wlan/info/c/banjo.h>
 
 #include <wlan/common/channel.h>
-#include <wlan/protocol/mac.h>
 
 namespace wlan {
 namespace test_utils {

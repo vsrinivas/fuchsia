@@ -69,7 +69,7 @@ test("impl_unittest") {
   sources = [ "impl_unittest.cc" ]
 
   deps = [
-    "//garnet/lib/wlan/protocol",
+    "//sdk/banjo/fuchsia.hardware.wlanif:fuchsia.hardware.wlanif_banjo_cpp",
     "//src/lib/fxl/test:gtest_main",
   ]
 }

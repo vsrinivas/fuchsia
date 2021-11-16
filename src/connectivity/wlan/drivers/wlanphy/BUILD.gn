@@ -16,7 +16,6 @@ wlanphy_sources = [
 
 wlanphy_deps = [
   ":wlanphy_bind",
-  "//garnet/lib/wlan/protocol",
   "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_cpp",
   "//sdk/banjo/fuchsia.hardware.wlanphyimpl:fuchsia.hardware.wlanphyimpl_banjo_cpp",
   "//sdk/fidl/fuchsia.wlan.device",

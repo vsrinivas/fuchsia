@@ -41,14 +41,13 @@ source_set("platform") {
     ":driver_inspector",
     ":rcu_manager",
     "//sdk/lib/stdcompat",
-    "//src/connectivity/wlan/lib/common/cpp:common",
     "//zircon/system/ulib/async:async-cpp",
   ]
   public_deps = [
-    "//garnet/lib/wlan/protocol:protocol",
     "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_c",
     "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_c",
     "//sdk/banjo/fuchsia.hardware.wlan.mac:fuchsia.hardware.wlan.mac_banjo_c",
+    "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/lib/ddk",
     "//zircon/system/public",
     "//zircon/system/ulib/async",
@@ -115,6 +114,7 @@ source_set("fuchsia_device") {
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/cfg",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie",
+    "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",

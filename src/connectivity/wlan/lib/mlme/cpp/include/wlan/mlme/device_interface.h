@@ -18,7 +18,6 @@
 #include <fbl/ref_ptr.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/mlme/mac_frame.h>
-#include <wlan/protocol/mac.h>
 
 #include "src/connectivity/wlan/lib/mlme/rust/c-binding/bindings.h"
 

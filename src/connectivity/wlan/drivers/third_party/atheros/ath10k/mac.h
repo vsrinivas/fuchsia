@@ -18,11 +18,12 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_MAC_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_MAC_H_
 
+#include <fuchsia/hardware/wlan/info/c/banjo.h>
+#include <fuchsia/hardware/wlan/mac/c/banjo.h>
 #include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 
 #include <ddk/hw/wlan/ieee80211/c/banjo.h>
-#include <wlan/protocol/mac.h>
 
 #include "core.h"
 

@@ -5,7 +5,6 @@
 #include <fbl/algorithm.h>
 #include <wlan/common/element_splitter.h>
 #include <wlan/common/mac_frame.h>
-#include <wlan/protocol/mac.h>
 
 namespace wlan {
 

@@ -190,8 +190,8 @@ source_set("core") {
   public_deps = [
     ":debug",
     ":linuxisms",
-    "//garnet/lib/wlan/protocol",
     "//sdk/banjo/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.wlanif:fuchsia.hardware.wlanif_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanphyimpl:fuchsia.hardware.wlanphyimpl_banjo_cpp",
     "//sdk/fidl/fuchsia.factory.wlan:fuchsia.factory.wlan_llcpp",
     "//sdk/fidl/fuchsia.wlan.common",

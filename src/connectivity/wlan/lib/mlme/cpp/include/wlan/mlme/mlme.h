@@ -13,7 +13,6 @@
 
 #include <wlan/common/bitfield.h>
 #include <wlan/mlme/mac_frame.h>
-#include <wlan/protocol/mac.h>
 
 namespace wlan {
 

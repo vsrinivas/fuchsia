@@ -94,7 +94,7 @@ impl Phy {
 
 /// A Channel defines the frequency spectrum to be used for radio synchronization.
 /// See for sister definitions in FIDL and C/C++
-///  - //garnet/lib/wlan/protocol/wlan/protocol/info.h |struct wlan_channel_t|
+///  - //sdk/fidl/fuchsia.wlan.common/wlan_common.fidl |struct wlan_channel_t|
 ///  - //sdk/fidl/fuchsia.wlan.mlme/wlan_mlme.fidl |struct WlanChan|
 #[derive(Clone, Copy, Debug, Ord, PartialOrd, Eq, PartialEq)]
 pub struct Channel {

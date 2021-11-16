@@ -107,10 +107,10 @@ type SetCountryArgs = struct {
 /// Allow the test program to observe and control the behavior of the wlantap-phy device.
 /// A wlantap-phy device is a special vendor device and its driver (Fuchsia being the vendor)
 /// used for testing purpose.
-/// Implements a subset of `wlanmac_ifc_t` and `wlanmac_protocol_ops_t` in
-/// //garnet/lib/wlan/protocol/include/wlan/protocol/mac.h
-/// Implements a subset of `WlanphyImpl` protocol in
-/// //zircon/system/banjo/fuchsia.hardware.wlanphyimpl/wlanphy-impl.banjo
+/// Implements a subset of `wlanmac_ifc_t` and `wlanmac_protocol_ops_t` defined in
+/// fuchsia.hardware.wlan.mac/mac.fidl
+/// Implements a subset of `WlanphyImpl` protocol defined in
+/// fuchsia.hardware.wlanphyimpl/wlanphy-impl.fidl
 protocol WlantapPhy {
     /// Shutdown the phy device so that it does not respond to any further calls.
     /// Once shutdown, there is no way to restart the device.

@@ -5,11 +5,11 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_FRAME_VALIDATION_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_FRAME_VALIDATION_H_
 
+#include <zircon/types.h>
+
 #include <wlan/common/action_frame.h>
 #include <wlan/common/mac_frame.h>
 #include <wlan/mlme/packet.h>
-#include <wlan/protocol/mac.h>
-#include <zircon/types.h>
 
 namespace wlan {
 

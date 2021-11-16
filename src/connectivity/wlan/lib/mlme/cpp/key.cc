@@ -7,7 +7,6 @@
 #include <optional>
 
 #include <wlan/mlme/key.h>
-#include <wlan/protocol/mac.h>
 
 namespace wlan {
 

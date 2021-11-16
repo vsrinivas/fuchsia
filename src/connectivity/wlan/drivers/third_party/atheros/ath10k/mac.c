@@ -17,13 +17,14 @@
 
 #include "mac.h"
 
+#include <fuchsia/hardware/wlan/info/c/banjo.h>
 #include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <stdlib.h>
 #include <zircon/status.h>
 
 #include <ddk/hw/wlan/wlaninfo/c/banjo.h>
-#include <wlan/protocol/ieee80211.h>
+#include <wlan/common/ieee80211.h>
 
 #include "core.h"
 #include "debug.h"

@@ -50,7 +50,6 @@ executable("beacon_unittests") {
   sources = [ "beacon_unittests.cc" ]
 
   deps = [
-    "//garnet/lib/wlan/protocol",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
     "//sdk/fidl/fuchsia.wlan.ieee80211",
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",

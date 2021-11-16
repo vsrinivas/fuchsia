@@ -7,7 +7,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
 
 #include <wlan/common/channel.h>
-#include <wlan/protocol/ieee80211.h>
+#include <wlan/common/ieee80211.h>
 
 size_t ieee80211_get_header_len(const struct ieee80211_frame_header* fw) {
   return ieee80211_hdrlen(fw);

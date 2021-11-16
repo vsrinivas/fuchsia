@@ -27,6 +27,7 @@ source_set("common") {
     "include/wlan/common/element.h",
     "include/wlan/common/element_id.h",
     "include/wlan/common/energy.h",
+    "include/wlan/common/ieee80211.h",
     "include/wlan/common/ieee80211_codes.h",
     "include/wlan/common/logging.h",
     "include/wlan/common/mac_frame.h",
@@ -55,6 +56,7 @@ source_set("common") {
     "//sdk/banjo/ddk.hw.wlan.ieee80211:ddk.hw.wlan.ieee80211_banjo_cpp",
     "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlan.info:fuchsia.hardware.wlan.info_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.wlan.mac:fuchsia.hardware.wlan.mac_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanphyimpl:fuchsia.hardware.wlanphyimpl_banjo_cpp",
     "//sdk/fidl/fuchsia.wlan.common",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
@@ -70,8 +72,6 @@ source_set("common") {
 
   public_configs = [ ":wlan_common_config" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
-
-  deps = [ "//garnet/lib/wlan/protocol" ]
 
   # TODO(fxbug.dev/46688): This library contains public interfaces that spread
   # undefined behavior to its callers. At the time of writing, all are caused

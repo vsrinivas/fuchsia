@@ -23,7 +23,7 @@
 #include <lib/ddk/driver.h>
 #include <lib/zircon-internal/align.h>
 
-#include <wlan/protocol/ieee80211.h>
+#include <wlan/common/ieee80211.h>
 
 #include "core.h"
 #include "debug.h"

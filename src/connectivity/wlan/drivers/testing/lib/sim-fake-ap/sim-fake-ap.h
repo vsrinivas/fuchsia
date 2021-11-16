@@ -16,7 +16,7 @@
 #include <functional>
 #include <list>
 
-#include <wlan/protocol/ieee80211.h>
+#include <wlan/common/ieee80211.h>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-frame.h"

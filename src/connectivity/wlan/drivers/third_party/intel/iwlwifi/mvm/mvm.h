@@ -42,7 +42,6 @@
 #include <zircon/time.h>
 
 #include <ddk/hw/wlan/wlaninfo/c/banjo.h>
-#include <wlan/protocol/mac.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/acpi.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/dbg.h"

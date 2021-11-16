@@ -38,7 +38,6 @@ fuchsia_driver("wlanphy-testdev-driver") {
 
   deps = [
     ":wlanphy_test_bind",
-    "//garnet/lib/wlan/protocol",
     "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.sdio:fuchsia.hardware.sdio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.test:fuchsia.hardware.test_banjo_cpp",

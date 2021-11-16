@@ -11,7 +11,6 @@ static_library("sim-fake-ap") {
   deps = [ "//src/lib/ddk" ]
 
   public_deps = [
-    "//garnet/lib/wlan/protocol:protocol",
     "//sdk/banjo/ddk.hw.wlan.ieee80211:ddk.hw.wlan.ieee80211_banjo_cpp",
     "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_cpp",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",

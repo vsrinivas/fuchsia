@@ -15,7 +15,6 @@
 
 #include <wlan/common/dispatcher.h>
 #include <wlan/common/phy.h>
-#include <wlan/protocol/mac.h>
 
 #include "utils.h"
 #include "wlantap-mac.h"

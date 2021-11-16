@@ -33,7 +33,6 @@
 #include <zircon/types.h>
 
 #include <ddk/hw/wlan/ieee80211/c/banjo.h>
-#include <wlan/protocol/mac.h>
 
 #include "src/connectivity/wlan/drivers/third_party/atheros/ath10k/ath10k_pci-bind.h"
 #include "src/connectivity/wlan/drivers/third_party/atheros/ath10k/bmi.h"

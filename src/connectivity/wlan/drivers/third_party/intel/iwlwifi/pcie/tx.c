@@ -40,7 +40,7 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
-#include <wlan/protocol/ieee80211.h>
+#include <wlan/common/ieee80211.h>
 
 #if 0  // NEEDS_PORTING
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-op-mode.h"

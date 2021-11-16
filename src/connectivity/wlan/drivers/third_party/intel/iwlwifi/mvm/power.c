@@ -53,7 +53,7 @@
 
 #include <zircon/status.h>
 
-#include <wlan/protocol/ieee80211.h>
+#include <wlan/common/ieee80211.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-modparams.h"

@@ -5,6 +5,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_TX_VECTOR_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_TX_VECTOR_H_
 
+#include <fuchsia/hardware/wlan/mac/c/banjo.h>
 #include <fuchsia/wlan/common/c/banjo.h>
 #include <lib/zx/time.h>
 #include <zircon/assert.h>
@@ -16,9 +17,10 @@
 #include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <wlan/common/element.h>
 #include <wlan/common/logging.h>
-#include <wlan/protocol/mac.h>
 
 namespace wlan {
+
+using tx_vec_idx_t = uint16_t;
 
 static constexpr uint8_t kHtNumMcs = 32;  // Only support MCS 0-31
 static constexpr uint8_t kHtNumUniqueMcs = 8;

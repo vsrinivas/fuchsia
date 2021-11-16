@@ -25,7 +25,7 @@
 #include <stdint.h>
 
 #include <ddk/hw/wlan/wlaninfo/c/banjo.h>
-#include <wlan/protocol/ieee80211.h>
+#include <wlan/common/ieee80211.h>
 
 #if defined(__cplusplus)
 extern "C" {

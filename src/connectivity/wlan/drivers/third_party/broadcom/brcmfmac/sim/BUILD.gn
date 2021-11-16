@@ -47,6 +47,7 @@ source_set("sim_common") {
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
     "//sdk/fidl/fuchsia.wlan.ieee80211",
     "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal_banjo_c",
+    "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal_banjo_c",
     "//src/devices/lib/broadcom",
     "//src/lib/ddk",
     "//src/lib/ddktl",

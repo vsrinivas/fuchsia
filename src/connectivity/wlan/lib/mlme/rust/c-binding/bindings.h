@@ -17,8 +17,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include <garnet/lib/wlan/protocol/include/wlan/protocol/mac.h>
-
 typedef struct wlan_ap_sta_t wlan_ap_sta_t;
 
 /**

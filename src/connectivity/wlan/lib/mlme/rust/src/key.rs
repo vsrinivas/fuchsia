@@ -17,7 +17,6 @@ impl KeyType {
 }
 // LINT.ThenChange(//zircon/system/banjo/fuchsia.hardware.wlan.info/info.banjo)
 
-// LINT.IfChange
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Protection(u8);
@@ -29,9 +28,6 @@ impl Protection {
     pub const RX_TX: Self = Self(3);
 }
 
-/// This is wlan_key_config_t.
-///
-/// It should match the same ABI as garnet/lib/wlan/protocol/include/wlan/protocol/mac.h.
 #[repr(C)]
 #[derive(Clone, Debug, PartialEq)]
 pub struct KeyConfig {
@@ -46,7 +42,6 @@ pub struct KeyConfig {
     pub key: [u8; 32],
     pub rsc: u64,
 }
-// LINT.ThenChange(//garnet/lib/wlan/protocol/include/wlan/protocol/mac.h)
 
 impl From<&fidl_mlme::SetKeyDescriptor> for KeyConfig {
     fn from(key_desc: &fidl_mlme::SetKeyDescriptor) -> Self {

@@ -26,7 +26,6 @@
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/mlme.h>
 #include <wlan/mlme/packet.h>
-#include <wlan/protocol/mac.h>
 
 namespace wlan {
 

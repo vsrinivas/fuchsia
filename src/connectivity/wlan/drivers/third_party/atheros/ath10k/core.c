@@ -27,8 +27,6 @@
 #include <zircon/process.h>
 #include <zircon/status.h>
 
-#include <wlan/protocol/mac.h>
-
 #include "bmi.h"
 #include "debug.h"
 #include "hif.h"

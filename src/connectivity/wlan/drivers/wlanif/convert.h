@@ -12,8 +12,6 @@
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <net/ethernet.h>
 
-#include <wlan/protocol/mac.h>
-
 namespace wlanif {
 
 uint8_t ConvertScanType(::fuchsia::wlan::mlme::ScanTypes scan_type);

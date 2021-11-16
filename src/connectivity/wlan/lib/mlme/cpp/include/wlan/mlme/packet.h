@@ -5,6 +5,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_PACKET_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_PACKET_H_
 
+#include <fuchsia/hardware/ethernet/c/banjo.h>
 #include <lib/operation/ethernet.h>
 #include <lib/stdcompat/span.h>
 #include <zircon/types.h>
@@ -21,7 +22,6 @@
 #include <src/connectivity/wlan/lib/mlme/rust/c-binding/bindings.h>
 #include <wlan/common/logging.h>
 #include <wlan/mlme/wlan.h>
-#include <wlan/protocol/mac.h>
 
 typedef struct ethernet_netbuf ethernet_netbuf_t;
 

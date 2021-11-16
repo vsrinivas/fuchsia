@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_WLAN_PROTOCOL_INCLUDE_WLAN_PROTOCOL_IEEE80211_H_
-#define GARNET_LIB_WLAN_PROTOCOL_INCLUDE_WLAN_PROTOCOL_IEEE80211_H_
+#ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_IEEE80211_H_
+#define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_IEEE80211_H_
 
 #include <net/ethernet.h>
 #include <stdbool.h>
@@ -340,4 +340,4 @@ static inline const char* ieee80211_cipher_str(const uint8_t* oui, uint8_t ciphe
 //
 static inline int ieee80211_tu_to_usec(int tu) { return tu * 1024; }
 
-#endif  // GARNET_LIB_WLAN_PROTOCOL_INCLUDE_WLAN_PROTOCOL_IEEE80211_H_
+#endif  // SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_IEEE80211_H_

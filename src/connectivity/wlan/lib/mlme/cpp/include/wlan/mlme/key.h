@@ -5,10 +5,11 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_KEY_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_KEY_H_
 
-#include <optional>
-
+#include <fuchsia/hardware/wlan/info/c/banjo.h>
+#include <fuchsia/hardware/wlan/mac/c/banjo.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
-#include <wlan/protocol/mac.h>
+
+#include <optional>
 
 namespace wlan {
 

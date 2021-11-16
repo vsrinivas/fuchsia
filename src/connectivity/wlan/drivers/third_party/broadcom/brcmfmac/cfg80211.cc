@@ -38,10 +38,9 @@
 #include <ddk/hw/wlan/ieee80211/c/banjo.h>
 #include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <wifi/wifi-config.h>
+#include <wlan/common/ieee80211.h>
 #include <wlan/common/ieee80211_codes.h>
 #include <wlan/common/macaddr.h>
-#include <wlan/protocol/ieee80211.h>
-#include <wlan/protocol/mac.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bits.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_d11.h"

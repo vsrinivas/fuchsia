@@ -96,7 +96,6 @@ constexpr FemtoWatt& operator-=(FemtoWatt& lhs, FemtoWatt rhs) {
   return lhs;
 }
 
-// LINT.IfChange
 // IEEE Std 802.11-2016, Table 9-60, 9-71
 // For the use for SNR or relative comparison.
 // For precision of 1 dB step, See IEEE 802.11-2016, Table 6-7, 9-18, etc.
@@ -130,7 +129,6 @@ struct dBm : EnergyType<int8_t, dBm> {
 struct dBmh : EnergyType<int16_t, dBmh> {
   explicit dBmh(int16_t v = 0);
 };
-// LINT.ThenChange(//garnet/lib/wlan/protocol/include/wlan/protocol/mac.h)
 
 dB to_dB(dBh u);
 dBh to_dBh(dB u);
