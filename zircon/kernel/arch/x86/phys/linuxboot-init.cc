@@ -76,7 +76,8 @@ ktl::string_view GetBootloaderName(const linuxboot::boot_params& bp) {
     loader = bp.hdr.ext_loader_type + 0x10u;
   }
 
-  uint8_t version = (bp.hdr.type_of_loader & 0x0fu) + (bp.hdr.ext_loader_ver << 4);
+  uint8_t version =
+      (bp.hdr.type_of_loader & 0x0fu) + static_cast<uint8_t>(bp.hdr.ext_loader_ver << 4);
 
   snprintf(&bootloader_name[sizeof(bootloader_name) - 5], 5, "%02hhx%02hhx", loader, version);
 

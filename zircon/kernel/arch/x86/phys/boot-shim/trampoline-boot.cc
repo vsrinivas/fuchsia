@@ -162,7 +162,7 @@ fitx::result<BootZbi::Error> TrampolineBoot::Load(uint32_t extra_data_capacity) 
   // space is safely allocated in our present reckoning so it's disjoint from
   // the data and kernel image memory and from this shim's own image, but as
   // soon as we boot into the new kernel it will be reclaimable memory.
-  if (auto result = BootZbi::Load(static_cast<uint32_t>(extra_data_capacity + Trampoline::size()),
+  if (auto result = BootZbi::Load(extra_data_capacity + static_cast<uint32_t>(Trampoline::size()),
                                   kFixedLoadAddress);
       result.is_error()) {
     return result.take_error();

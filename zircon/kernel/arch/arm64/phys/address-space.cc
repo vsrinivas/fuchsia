@@ -98,7 +98,7 @@ void EnablePagingForEl(Paddr ttbr0_root) {
 // of the processor.
 void EnablePaging(Paddr root) {
   // Set up page table for EL1 or EL2, depending on which mode we are running in.
-  const uint8_t current_el = arch::ArmCurrentEl::Read().el();
+  const auto current_el = arch::ArmCurrentEl::Read().el();
   switch (current_el) {
     case 1:
       return EnablePagingForEl<arch::ArmTcrEl1, arch::ArmSctlrEl1, arch::ArmTtbr0El1,
@@ -107,7 +107,7 @@ void EnablePaging(Paddr root) {
       return EnablePagingForEl<arch::ArmTcrEl2, arch::ArmSctlrEl2, arch::ArmTtbr0El2,
                                arch::ArmMairEl2>(root);
     default:
-      ZX_PANIC("Unsupported ARM64 exception level: %d\n", current_el);
+      ZX_PANIC("Unsupported ARM64 exception level: %u\n", static_cast<uint8_t>(current_el));
   }
 }
 

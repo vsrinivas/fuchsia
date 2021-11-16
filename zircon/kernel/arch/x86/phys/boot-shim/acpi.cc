@@ -25,6 +25,12 @@ void InitAcpi(LegacyBootShim& shim) {
   // If the RSDP address is 0, AcpiParser::Init will try to find it by magic.
   uint64_t rsdp = gLegacyBoot.acpi_rsdp;
 
+  if (static_cast<uintptr_t>(rsdp) != rsdp) {
+    printf("%s: ACPI tables (%#" PRIx64 ") were reportedly not found within the lower 4GiB\n",
+           Symbolize::kProgramName_, rsdp);
+    return;
+  }
+
   PhysPhysMemReader mem_reader;
   auto acpi_parser = acpi_lite::AcpiParser::Init(mem_reader, static_cast<zx_paddr_t>(rsdp));
   if (acpi_parser.is_ok()) {

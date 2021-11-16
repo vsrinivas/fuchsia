@@ -61,7 +61,7 @@ cpp20::span<zbi_mem_range_t> Write(const zbi_mem_range_t& entry,
   return payload.subspan(1);
 }
 
-size_t PayloadSize(const memalloc::Pool& pool) { return Accumulate(pool, Count, 0); }
+size_t PayloadSize(const memalloc::Pool& pool) { return Accumulate(pool, Count, size_t{0}); }
 
 void WritePayload(const memalloc::Pool& pool, cpp20::span<std::byte> buffer) {
   cpp20::span<zbi_mem_range_t> payload{

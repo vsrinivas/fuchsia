@@ -153,8 +153,9 @@ bool BootZbi::KernelCanLoadInPlace() const {
   }
 
   // The incoming ZBI must supply enough reusable headroom for the kernel.
-  uint32_t in_place_start = kernel_item_.item_offset() - sizeof(zbi_header_t);
-  size_t in_place_space = zbi_.storage().size() - in_place_start;
+  uint32_t in_place_start =
+      kernel_item_.item_offset() - static_cast<uint32_t>(sizeof(zbi_header_t));
+  uint32_t in_place_space = static_cast<uint32_t>(zbi_.storage().size()) - in_place_start;
   return in_place_space >= KernelMemorySize();
 }
 
@@ -284,7 +285,8 @@ fitx::result<BootZbi::Error> BootZbi::Load(uint32_t extra_data_capacity,
   if (it != zbi_.end()) {
     data_address = input_address + it.item_offset() - sizeof(zbi_header_t);
     aligned_data_address = data_address & -arch::kZbiBootDataAlignment;
-    data_load_size = zbi_.size_bytes() - it.item_offset() + sizeof(zbi_header_t);
+    data_load_size =
+        static_cast<uint32_t>(zbi_.size_bytes() - it.item_offset()) + sizeof(zbi_header_t);
   }
 
   // There must be a container header for the data ZBI even if it's empty.
@@ -329,8 +331,9 @@ fitx::result<BootZbi::Error> BootZbi::Load(uint32_t extra_data_capacity,
   if (!KernelCanLoadInPlace() || !data_.storage().empty()) {
     // Allocate space for the kernel image and copy it in.
     fbl::AllocChecker ac;
-    kernel_buffer_ = Allocation::New(ac, memalloc::Type::kKernel, KernelMemorySize(),
-                                     arch::kZbiBootKernelAlignment);
+    kernel_buffer_ =
+        Allocation::New(ac, memalloc::Type::kKernel, static_cast<size_t>(KernelMemorySize()),
+                        arch::kZbiBootKernelAlignment);
     if (!ac.check()) {
       return fitx::error{Error{
           .zbi_error = "cannot allocate memory for kernel image",
@@ -404,9 +407,10 @@ void BootZbi::LogAddresses() {
          KernelLoadAddress() + KernelLoadSize(), pretty::FormattedBytes(KernelLoadSize()).c_str());
   debugf("%s:       BSS @ [" ADDR ", " ADDR ")  %s\n", name, KernelLoadAddress() + KernelLoadSize(),
          KernelLoadAddress() + KernelMemorySize(),
-         pretty::FormattedBytes(KernelHeader()->reserve_memory_size).c_str());
+         pretty::FormattedBytes(static_cast<size_t>(KernelHeader()->reserve_memory_size)).c_str());
   debugf("%s:       ZBI @ [" ADDR ", " ADDR ")  %s\n", name, DataLoadAddress(),
-         DataLoadAddress() + DataLoadSize(), pretty::FormattedBytes(DataLoadSize()).c_str());
+         DataLoadAddress() + DataLoadSize(),
+         pretty::FormattedBytes(static_cast<size_t>(DataLoadSize())).c_str());
 }
 
 void BootZbi::LogBoot(uint64_t entry) const {
