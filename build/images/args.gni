@@ -143,6 +143,12 @@ declare_args() {
   # build output and therefore should never be 'true' in checked-in configs, and
   # is meant solely for developer debugging.
   verbose_image_assembly = false
+
+  # Include the shell commands package.  Used as a parameter to
+  # assemble_system().  See documentation there.
+  #
+  # This is a placeholder non-value for a soft transition
+  include_shell_commands_package = ""
 }
 
 assert(custom_signing_script == "" || !use_vboot,
