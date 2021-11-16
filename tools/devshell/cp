@@ -6,10 +6,11 @@
 #### CATEGORY=Device management
 ### copy a file to/from a target device
 
-## usage: fx cp [--to-target|--to-host] SRC... DST
+## usage: fx cp [-r] [--to-target|--to-host] SRC... DST
 ##
 ## Copies a file from the host to the target device, or vice versa.
 ##
+## -r: recursively copy directories
 ## --to-target: copy file SRC from host to DST on the target
 ## --to-host: copy file SRC from target to DST on the host
 ##
@@ -20,9 +21,15 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.
 
 set -e
 
+recurse=false
 to_target=true
-if [[ $# -gt 2 ]]; then
+# Process all the args except the last two.
+while (( "$#" > 2 )); do
   case "$1" in
+  -r)
+    recurse=true
+    shift
+    ;;
   --to-target)
     to_target=true
     shift
@@ -35,7 +42,7 @@ if [[ $# -gt 2 ]]; then
     fx-command-help
     exit 1
   esac
-fi
+done
 
 if [[ $# -lt 2 ]]; then
   fx-command-help
@@ -49,6 +56,11 @@ srcs=( "${args[@]:0:$nargs-1}" )
 host="$(get-fuchsia-device-addr)"
 
 sftp_args=()
+sftp_command_args=()
+
+if [[ "${recurse}" = "true" ]]; then
+  sftp_command_args+=( "-r" )
+fi
 
 port="$(get-device-ssh-port)"
 if [[ -n "${port}" ]]; then
@@ -64,13 +76,13 @@ sftp_args+=(
 if [[ "${to_target}" = "true" ]]; then
   (
   for src in "${srcs[@]}"; do
-    echo "put \"${src}\" \"${dst}\""
+    echo "put ${sftp_command_args} \"${src}\" \"${dst}\""
   done
   ) | fx-command-run sftp "${sftp_args[@]}" > /dev/null
 else
   (
   for src in "${srcs[@]}"; do
-    echo "get \"${src}\" \"${dst}\""
+    echo "get ${sftp_command_args} \"${src}\" \"${dst}\""
   done
   ) | fx-command-run sftp "${sftp_args[@]}" > /dev/null
 fi
