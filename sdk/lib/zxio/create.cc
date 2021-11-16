@@ -126,7 +126,7 @@ zx_status_t zxio_create_with_info(zx_handle_t raw_handle, const zx_info_handle_b
       // the seek value we had previously.
       zx_status_t status = zx::stream::create(options, vmo, 0u, &stream);
       if (status != ZX_OK) {
-        zxio_null_init(&storage->io);
+        zxio_default_init(&storage->io);
         return status;
       }
       return zxio_vmo_init(storage, std::move(vmo), std::move(stream));
@@ -146,7 +146,7 @@ zx_status_t zxio_create(zx_handle_t raw_handle, zxio_storage_t* storage) {
   zx_info_handle_basic_t info = {};
   zx_status_t status = handle.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
   if (status != ZX_OK) {
-    zxio_null_init(&storage->io);
+    zxio_default_init(&storage->io);
     return status;
   }
   return zxio_create_with_info(handle.release(), &info, storage);

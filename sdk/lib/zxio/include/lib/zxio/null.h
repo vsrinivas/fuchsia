@@ -113,6 +113,9 @@ static __CONSTEXPR const zxio_ops_t zxio_default_ops = {
     .advisory_lock = zxio_default_advisory_lock,
 };
 
+// Default implementations of the ZXIO operations.
+zx_status_t zxio_default_init(zxio_t* io);
+
 // Null ------------------------------------------------------------------------
 
 // Null implementations of the ZXIO operations.

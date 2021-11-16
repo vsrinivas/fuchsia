@@ -31,6 +31,14 @@ TEST(FDIOTest, CreateNullFD) {
   EXPECT_EQ(3, write(fd.get(), "abc", 3));
 }
 
+TEST(FDIOTest, DupNullFD) {
+  fbl::unique_fd fd(fdio_fd_create_null());
+  EXPECT_LE(0, fd.get());
+  fbl::unique_fd dup_fd(dup(fd.get()));
+  EXPECT_LE(0, dup_fd.get());
+  EXPECT_NE(fd.get(), dup_fd.get());
+}
+
 TEST(FDIOTest, CreateSocket) {
   zx::socket s1, s2;
   ASSERT_OK(zx::socket::create(0, &s1, &s2));
@@ -132,7 +140,7 @@ TEST(FDIOTest, GetServiceHandle) {
   EXPECT_EQ(ZX_ERR_NOT_FOUND, fdio_get_service_handle(unused_fd, h1.reset_and_get_address()));
   EXPECT_EQ(ZX_ERR_NOT_FOUND, fdio_get_service_handle(-1, h1.reset_and_get_address()));
 
-  fdio_t* io = fdio_null_create();
+  fdio_t* io = fdio_default_create();
   fbl::unique_fd fd(fdio_bind_to_fd(io, -1, 0));
   EXPECT_LE(0, fd.get());
   EXPECT_EQ(0, fcntl(fd.get(), F_GETFD));

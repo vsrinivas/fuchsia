@@ -525,24 +525,26 @@ extern "C" __EXPORT void __libc_extensions_init(uint32_t handle_count, zx_handle
     fdio_internal::update_cwd_path(cwd ? cwd : "/");
   }
 
-  fdio_ptr null_io = nullptr;
-  auto get_null = [&null_io]() {
-    if (null_io == nullptr) {
-      zx::status null = fdio_internal::zxio::create();
-      ZX_ASSERT_MSG(null.is_ok(), "%s", null.status_string());
-      null_io = std::move(null.value());
-    }
-    return null_io;
-  };
-
   if (use_for_stdio == nullptr) {
-    use_for_stdio = get_null();
+    zx::status null = fdio_internal::zxio::create_null();
+    ZX_ASSERT_MSG(null.is_ok(), "%s", null.status_string());
+    use_for_stdio = std::move(null.value());
   }
 
   // configure stdin/out/err if not init'd
   for (uint32_t n = 0; n < 3; n++) {
     fdio_fdtab[n].try_set(use_for_stdio);
   }
+
+  fdio_ptr default_io = nullptr;
+  auto get_default = [&default_io]() {
+    if (default_io == nullptr) {
+      zx::status default_result = fdio_internal::zxio::create();
+      ZX_ASSERT_MSG(default_result.is_ok(), "%s", default_result.status_string());
+      default_io = std::move(default_result.value());
+    }
+    return default_io;
+  };
 
   zx::status root = fdio_ns_open_root(fdio_root_ns);
   if (root.is_ok()) {
@@ -551,11 +553,11 @@ extern "C" __EXPORT void __libc_extensions_init(uint32_t handle_count, zx_handle
     if (cwd.is_ok()) {
       ZX_ASSERT(fdio_cwd_handle.try_set(cwd.value()));
     } else {
-      ZX_ASSERT(fdio_cwd_handle.try_set(get_null()));
+      ZX_ASSERT(fdio_cwd_handle.try_set(get_default()));
     }
   } else {
-    ZX_ASSERT(fdio_root_handle.try_set(get_null()));
-    ZX_ASSERT(fdio_cwd_handle.try_set(get_null()));
+    ZX_ASSERT(fdio_root_handle.try_set(get_default()));
+    ZX_ASSERT(fdio_cwd_handle.try_set(get_default()));
   }
 }
 

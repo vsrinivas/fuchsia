@@ -14,8 +14,18 @@
 #include "zxio.h"
 
 __EXPORT
-fdio_t* fdio_null_create(void) {
+fdio_t* fdio_default_create(void) {
   zx::status io = fdio_internal::zxio::create();
+  if (io.is_error()) {
+    return nullptr;
+  }
+  std::variant reference = GetLastReference(std::move(io.value()));
+  return std::get<fdio::last_reference>(reference).ExportToRawPtr();
+}
+
+__EXPORT
+fdio_t* fdio_null_create(void) {
+  zx::status io = fdio_internal::zxio::create_null();
   if (io.is_error()) {
     return nullptr;
   }
@@ -35,7 +45,7 @@ zx_status_t fdio_create(zx_handle_t h, fdio_t** out_io) {
 
 __EXPORT
 int fdio_fd_create_null(void) {
-  zx::status io = fdio_internal::zxio::create();
+  zx::status io = fdio_internal::zxio::create_null();
   if (io.is_error()) {
     return ERROR(io.status_value());
   }

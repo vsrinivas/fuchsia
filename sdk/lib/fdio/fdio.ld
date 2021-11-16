@@ -33,6 +33,7 @@
 		fdio_bind_to_fd;
 		fdio_create;
 		fdio_cwd_clone;
+		fdio_default_create;
 		fdio_fd_clone;
 		fdio_fd_create;
 		fdio_fd_create_null;

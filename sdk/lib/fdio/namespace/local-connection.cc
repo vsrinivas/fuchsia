@@ -159,7 +159,7 @@ zx::status<fdio_ptr> CreateLocalConnection(fbl::RefPtr<const fdio_namespace> fs,
                 "LocalConnection must have trivial destructor");
   zxio_storage_t& storage = io->zxio_storage();
   auto* dir = new (&storage) LocalConnection();
-  zxio_null_init(&storage.io);
+  zxio_default_init(&storage.io);
 
   // Leak a strong reference to |this| which will be reclaimed
   // in |zxio_dir_close()|.

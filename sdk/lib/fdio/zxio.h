@@ -13,6 +13,7 @@ namespace fdio_internal {
 
 struct zxio : public base {
   static zx::status<fdio_ptr> create();
+  static zx::status<fdio_ptr> create_null();
   static zx::status<fdio_ptr> create_pipe(zx::socket socket);
   static zx::status<std::pair<fdio_ptr, fdio_ptr>> create_pipe_pair(uint32_t options);
 

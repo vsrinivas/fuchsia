@@ -31,6 +31,15 @@ zx::status<fdio_ptr> zxio::create() {
   if (io == nullptr) {
     return zx::error(ZX_ERR_NO_MEMORY);
   }
+  zxio_default_init(&io->zxio_storage().io);
+  return zx::ok(io);
+}
+
+zx::status<fdio_ptr> zxio::create_null() {
+  fdio_ptr io = fbl::MakeRefCounted<zxio>();
+  if (io == nullptr) {
+    return zx::error(ZX_ERR_NO_MEMORY);
+  }
   zxio_null_init(&io->zxio_storage().io);
   return zx::ok(io);
 }

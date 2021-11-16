@@ -32,6 +32,9 @@ typedef struct fdio fdio_t;
 zx_status_t fdio_create(zx_handle_t handle, fdio_t** out_io) ZX_AVAILABLE_SINCE(1);
 
 // Creates an |fdio_t| that does nothing.
+fdio_t* fdio_default_create(void) ZX_AVAILABLE_SINCE(7);
+
+// Creates an |fdio_t| that acts as |/dev/null|.
 fdio_t* fdio_null_create(void) ZX_AVAILABLE_SINCE(1);
 
 // Access the |zxio_t| field within an |fdio_t|.

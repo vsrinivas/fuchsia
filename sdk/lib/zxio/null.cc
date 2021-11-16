@@ -151,6 +151,11 @@ zx_status_t zxio_default_set_window_size(zxio_t* io, uint32_t width, uint32_t he
   return ZX_ERR_NOT_SUPPORTED;
 }
 
+zx_status_t zxio_default_init(zxio_t* io) {
+  zxio_init(io, &zxio_default_ops);
+  return ZX_OK;
+}
+
 static constexpr zxio_ops_t zxio_null_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
   ops.readv = [](zxio_t* io, const zx_iovec_t* vector, size_t vector_count, zxio_flags_t flags,
