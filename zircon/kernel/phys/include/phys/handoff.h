@@ -38,6 +38,7 @@ class PhysBootTimes {
     kPhysSetup,        // Earliest/arch-specific phys setup (e.g. paging).
     kDecompressStart,  // Begin decompression.
     kDecompressEnd,    // STORAGE_KERNEL decompressed.
+    kZbiDone,          // ZBI items have been ingested.
     kCount
   };
 

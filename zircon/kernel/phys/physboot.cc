@@ -144,6 +144,7 @@ ChainBoot LoadZirconZbi(KernelStorage::Bootfs kernelfs) {
   prep.Init(handoff_item->payload);
 
   prep.SummarizeMiscZbiItems(boot.DataZbi().storage());
+  gBootTimes.SampleNow(PhysBootTimes::kZbiDone);
 
   // This is the last thing copied into the PhysHandoff object, so that it
   // includes all the time samples collected along the way.

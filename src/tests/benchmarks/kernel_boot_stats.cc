@@ -38,6 +38,7 @@ constexpr std::pair<const char*, const char*> kTimelineSteps[] = {
     {"boot.timeline.physboot-setup", "KernelBootPhysSetup"},
     {"boot.timeline.decompress-start", "KernelBootPhysZbiScan"},
     {"boot.timeline.decompress-end", "KernelBootDecompression"},
+    {"boot.timeline.zbi-done", "KernelBootPhysZbiIngestion"},
     {"boot.timeline.physboot-handoff", "KernelBootPhysHandoff"},
     {"boot.timeline.virtual", "KernelBootPhysical"},
     {"boot.timeline.threading", "KernelBootThreads"},

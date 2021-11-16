@@ -53,6 +53,7 @@ KCOUNTER(timeline_zbi_entry, "boot.timeline.zbi")
 KCOUNTER(timeline_physboot_setup, "boot.timeline.physboot-setup")
 KCOUNTER(timeline_decompress_start, "boot.timeline.decompress-start")
 KCOUNTER(timeline_decompress_end, "boot.timeline.decompress-end")
+KCOUNTER(timeline_zbi_done, "boot.timeline.zbi-done")
 KCOUNTER(timeline_physboot_handoff, "boot.timeline.physboot-handoff")
 KCOUNTER(timeline_virtual_entry, "boot.timeline.virtual")
 
@@ -83,6 +84,9 @@ void TimelineCounters(unsigned int level) {
           break;
         case PhysBootTimes::kDecompressEnd:
           Set(timeline_decompress_end, when);
+          break;
+        case PhysBootTimes::kZbiDone:
+          Set(timeline_zbi_done, when);
           break;
         case PhysBootTimes::kCount:
           // There is no PhysBootTimes entry corresponding to kCount.
