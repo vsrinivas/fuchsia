@@ -9,8 +9,8 @@ using fuchsia.ui.pointer;
 using fuchsia.ui.views;
 using zx;
 
-/// The set of error codes returned in [`OnNextFrameBegin`]. Everything except NO_ERROR, causes
-/// Flatland channel to be closed.
+/// The set of error codes returned in [`OnError`]. Everything except NO_ERROR, causes Flatland
+/// channel to be closed.
 type FlatlandError = strict enum {
     /// Indicates that the parameters used the function calls are invalid.
     BAD_OPERATION = 1;
