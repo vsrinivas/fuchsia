@@ -189,7 +189,7 @@ class TestDriverTestReporter : public DriverTestReporter {
 TEST(MiscTestCase, InitCoreDevices) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   InspectManager inspect_manager(loop.dispatcher());
-  Coordinator coordinator(NullConfig(), &inspect_manager, loop.dispatcher());
+  Coordinator coordinator(NullConfig(), &inspect_manager, loop.dispatcher(), loop.dispatcher());
 
   zx_status_t status = coordinator.InitCoreDevices(kSystemDriverPath);
   ASSERT_OK(status);
@@ -198,7 +198,7 @@ TEST(MiscTestCase, InitCoreDevices) {
 TEST(MiscTestCase, DumpState) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   InspectManager inspect_manager(loop.dispatcher());
-  Coordinator coordinator(NullConfig(), &inspect_manager, loop.dispatcher());
+  Coordinator coordinator(NullConfig(), &inspect_manager, loop.dispatcher(), loop.dispatcher());
 
   zx_status_t status = coordinator.InitCoreDevices(kSystemDriverPath);
   ASSERT_OK(status);
@@ -249,7 +249,7 @@ TEST(MiscTestCase, LoadDisabledDriver) {
 TEST(MiscTestCase, BindDrivers) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   InspectManager inspect_manager(loop.dispatcher());
-  Coordinator coordinator(NullConfig(), &inspect_manager, loop.dispatcher());
+  Coordinator coordinator(NullConfig(), &inspect_manager, loop.dispatcher(), loop.dispatcher());
 
   zx_status_t status = coordinator.InitCoreDevices(kSystemDriverPath);
   ASSERT_OK(status);
@@ -270,7 +270,7 @@ TEST(MiscTestCase, BindDrivers) {
 TEST(MiscTestCase, BindDriversForBuiltins) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   InspectManager inspect_manager(loop.dispatcher());
-  Coordinator coordinator(NullConfig(), &inspect_manager, loop.dispatcher());
+  Coordinator coordinator(NullConfig(), &inspect_manager, loop.dispatcher(), loop.dispatcher());
 
   zx_status_t status = coordinator.InitCoreDevices(kSystemDriverPath);
   ASSERT_OK(status);
@@ -336,7 +336,7 @@ TEST(MiscTestCase, BindDriversForBuiltins) {
 TEST(MiscTestCase, BindDevices) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   InspectManager inspect_manager(loop.dispatcher());
-  Coordinator coordinator(NullConfig(), &inspect_manager, loop.dispatcher());
+  Coordinator coordinator(NullConfig(), &inspect_manager, loop.dispatcher(), loop.dispatcher());
 
   ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator));
 
@@ -391,7 +391,7 @@ TEST(MiscTestCase, BindDevices) {
 TEST(MiscTestCase, TestOutput) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   InspectManager inspect_manager(loop.dispatcher());
-  Coordinator coordinator(NullConfig(), &inspect_manager, loop.dispatcher());
+  Coordinator coordinator(NullConfig(), &inspect_manager, loop.dispatcher(), loop.dispatcher());
 
   ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator));
 
@@ -497,7 +497,7 @@ void AddDeviceWithProperties(const fuchsia_device_manager::wire::DeviceProperty*
                              size_t str_props_count) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   InspectManager inspect_manager(loop.dispatcher());
-  Coordinator coordinator(NullConfig(), &inspect_manager, loop.dispatcher());
+  Coordinator coordinator(NullConfig(), &inspect_manager, loop.dispatcher(), loop.dispatcher());
 
   ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator));
 
@@ -568,7 +568,7 @@ TEST(MiscTestCase, DeviceProperties) {
 TEST(MiscTestCase, InvalidStringProperties) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   InspectManager inspect_manager(loop.dispatcher());
-  Coordinator coordinator(NullConfig(), &inspect_manager, loop.dispatcher());
+  Coordinator coordinator(NullConfig(), &inspect_manager, loop.dispatcher(), loop.dispatcher());
 
   ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator));
 
@@ -614,7 +614,8 @@ TEST(MiscTestCase, DeviceAlreadyBoundFromDriverIndex) {
   auto config = NullConfig();
   config.driver_index = fidl::WireSharedClient<fdf::DriverIndex>(std::move(fake.Connect().value()),
                                                                  loop.dispatcher());
-  Coordinator coordinator(std::move(config), &inspect_manager, loop.dispatcher());
+  Coordinator coordinator(std::move(config), &inspect_manager, loop.dispatcher(),
+                          loop.dispatcher());
 
   ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator));
 

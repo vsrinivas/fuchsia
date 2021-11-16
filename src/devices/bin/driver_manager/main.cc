@@ -337,7 +337,11 @@ int main(int argc, char** argv) {
     config.oom_event = zx::event(oom_event);
   }
 
-  Coordinator coordinator(std::move(config), &inspect_manager, loop.dispatcher());
+  async::Loop firmware_loop(&kAsyncLoopConfigNeverAttachToThread);
+  firmware_loop.StartThread("firmware-loop");
+
+  Coordinator coordinator(std::move(config), &inspect_manager, loop.dispatcher(),
+                          firmware_loop.dispatcher());
 
   // Services offered to the rest of the system.
   status = coordinator.InitOutgoingServices(outgoing.svc_dir());
