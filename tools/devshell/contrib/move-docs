@@ -1,0 +1,207 @@
+#!/usr/bin/env fuchsia-vendored-python
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Documentation
+### Helper tool to batch move docs from one location to another
+
+## Usage: fx move-docs [--dry-run] INPUT_FILE
+##        cat INPUT_FILE | fx move-docs [--dry-run]
+##        echo "docs/orig/file.md doc/new_location/_toc.yaml" | fx move-docs [--dry-run]
+##
+## INPUT_FILE is a file with two columns, where the first column
+## is the original location of the doc to be moved, and the second
+## line is the destination _toc.yaml file.
+##
+## This tool will locate the original and destination _toc.yaml files,
+## update them and update any reference to the original file.
+##
+## It will also create a proper entry in the _redirects.yaml file.
+##
+import argparse
+import os
+import sys
+import shutil
+import re
+import fnmatch
+import pathlib
+
+TOC_H="""# Copyright 2021 The Fuchsia Authors. All rights reserved.
+         # Use of this source code is governed by a BSD-style license that can be
+         # found in the LICENSE file.
+
+         # Please, read https://fuchsia.dev/fuchsia-src/contribute/docs/documentation-navigation-toc
+         # before making changes to this file, and add a member of the fuchsia.dev
+         # team as reviewer.
+         toc: """
+
+def process_file(orig, dest_yaml):
+    print("***** Processing %s:" % orig)
+
+    orig_yaml=os.path.join(os.path.dirname(orig), "_toc.yaml")
+    dest=os.path.join(os.path.dirname(dest_yaml), os.path.basename(orig))
+
+    if not os.path.basename(dest_yaml) == '_toc.yaml':
+        print("Destination TOC has to be named _toc.yaml: %s" % dest_yaml)
+        return False
+    if not os.path.exists(orig):
+        print("Original file does not exist: %s" % orig)
+        return False
+    if not os.path.exists(orig_yaml):
+        print("_toc.yaml for the original file does not exist: %s" % orig_yaml)
+        return False
+    if os.path.exists(dest):
+        print("Destination file exists: %s" % dest)
+        return False
+    if not os.path.exists(dest_yaml):
+        if dry_run:
+            print("...dryrun...   Creating destination _toc.yaml: %s" % dest_yaml)
+        else:
+            pathlib.Path(os.path.dirname(dest_yaml)).mkdir(parents=True, exist_ok=True)
+            with open(dest_yaml, "w") as f:
+                f.write(TOC_H)
+
+    # We can't use yaml library because it throws away comments and styles. Since
+    # we just want to do basic manipulation on relatively well-behaved yaml
+    # files, we will hack it.
+    with open(orig_yaml) as f:
+        orig_lines = f.readlines()
+
+    new_lines = []
+    entry=[]
+    target_entry=None
+    started_toc=False
+    is_target=False
+    for line in orig_lines:
+        if not started_toc:
+            new_lines.append(line)
+            if re.search(r'^\s*toc:\s*$', line):
+                started_toc=True
+            continue
+        if re.search(r'^\s*- ', line):
+            if len(entry):
+                if is_target:
+                    target_entry = entry
+                else:
+                    new_lines.extend(entry)
+            entry = []
+            is_target = False
+        elif re.search(r'\s*[\s-]\s*path:\s*"?' + re.escape("/" + orig), line):
+            is_target = True
+        entry.append(line)
+
+    if len(entry):
+        if is_target:
+            target_entry = entry
+        else:
+            new_lines.extend(entry)
+
+    if not target_entry:
+        print("ERROR: could not find the original TOC entry in %s" % orig_yaml)
+        return False
+
+    if dry_run:
+        print("...dryrun...   Removing entry from %s:" % orig_yaml)
+        print(''.join(target_entry))
+    else:
+      with open(orig_yaml, 'w') as f:
+        print(''.join(new_lines), file=f)
+
+    # Add the entry to the destination _toc.yaml file
+    new_target_entry = [re.sub(re.escape(orig), dest, line) for line in target_entry]
+    if dry_run:
+        print("...dryrun...   Adding entry to the end of %s:" % dest_yaml)
+        print(''.join(new_target_entry))
+    else:
+      with open(dest_yaml, 'a') as f:
+        print('\n', file=f)
+        print(''.join(new_target_entry), file=f)
+
+    # Move the original file to the destination
+    if dry_run:
+        print("...dryrun...   Moving file %s to %s" % (orig, dest))
+    else:
+        shutil.move(orig, dest)
+
+    # Replace usage of the original file in all *.md docs
+    docs_dir=os.path.join(os.environ['FUCHSIA_DIR'], 'docs')
+    find_replace(docs_dir, orig, dest, '*.md')
+
+    # Add an entry to _redirects.yaml
+    redirect=['- from: /%s' % orig, '  to: /%s' % dest]
+    redirect_file=os.path.join(docs_dir, '_redirects.yaml')
+    if dry_run:
+        print('...dryrun...   Adding entry to docs/_redirects.yaml:')
+        print('\n'.join(redirect))
+        print('\n')
+    else:
+        with open(redirect_file, 'a' if os.path.exists(redirect_file) else 'w') as f:
+          print('\n', file=f)
+          print('\n'.join(redirect), file=f)
+
+    return True
+
+def find_replace(directory, find, replace, filePattern):
+    for path, dirs, files in os.walk(os.path.abspath(directory)):
+        for filename in fnmatch.filter(files, filePattern):
+            filepath = os.path.join(path, filename)
+            with open(filepath) as f:
+                s = f.read()
+            new_s = s.replace(find, replace)
+            if s != new_s:
+                if dry_run:
+                    print("###   Changing references in %s" %
+                            os.path.relpath(filepath, directory))
+                else:
+                    with open(filepath, "w") as f:
+                        f.write(new_s)
+
+def is_file_toc(filename, toc):
+    if filename[0] != '/':
+        filename='/' + filename
+    return toc['path'] == filename
+
+def main():
+    parser = argparse.ArgumentParser(
+        description=u"Move docs in batch")
+
+    parser.add_argument(
+        "input_file",
+        nargs=u"?",
+        default=u"",
+        help="Filename with one entry per line, each entry being space-separated strings for the original file and the destination _toc.yaml")
+
+    parser.add_argument(
+        "--dry-run",
+        action="store_const",
+        default=False,
+        const=True,
+        help="Does not modify any file",
+    )
+
+    args = parser.parse_args()
+
+    global dry_run
+    dry_run = args.dry_run
+
+    if args.input_file:
+      input_file = open(args.input_file)
+    else:
+      input_file = sys.stdin
+
+
+    for line in input_file.readlines():
+        orig, dest_yaml = line.split()
+        orig = orig[1:] if orig.startswith('/docs') else orig
+        dest_yaml = dest_yaml[1:] if dest_yaml.startswith('/docs') else dest_yaml
+        process_file(orig, dest_yaml)
+
+    if input_file is not sys.stdin:
+        input_file.close()
+
+    sys.exit(0)
+
+
+if __name__ == u"__main__":
+    sys.exit(main())

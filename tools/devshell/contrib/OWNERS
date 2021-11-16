@@ -35,6 +35,7 @@ per-file make-fuchsia-vol=raggi@google.com
 per-file make-integration-patch=thatguy@google.com
 per-file merge-package-config=chaselatta@google.com
 per-file mkinstaller=simonshields@google.com
+per-file move-docs=mangini@google.com
 per-file onet=raggi@google.com
 per-file regen-goldens=mkember@google.com
 per-file             remove-update-source = file: /src/sys/pkg/OWNERS
