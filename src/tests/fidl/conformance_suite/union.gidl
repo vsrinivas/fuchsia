@@ -523,7 +523,7 @@ success("UnionEnvelopeInlining_UnknownHandleValue_Inlined") {
 // Tests decode of a value in a union that can be represented inline in the
 // envelope but is incorrectly using the out of line representation.
 decode_failure("UnionOutOfLineEnvelopeWhenInlineRequired") {
-    bindings_allowlist = [go,dart,rust],
+    bindings_allowlist = [go,dart,rust,llcpp],
     type = EnvelopeInliningTestUnionStruct,
     bytes = {
         v2 = [
