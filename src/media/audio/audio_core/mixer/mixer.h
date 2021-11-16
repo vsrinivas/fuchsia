@@ -296,10 +296,31 @@ class Mixer {
   struct Bookkeeping {
     explicit Bookkeeping(Gain::Limits gain_limits = Gain::Limits{}) : gain(gain_limits) {}
 
-    // How many steps are needed to meet/exceed the specified delta, using the specified step_size,
-    // rate_modulo, denominator and initial position modulo.
-    static int64_t StepsNeededForDelta(Fixed delta, Fixed step_size, uint64_t rate_modulo,
-                                       uint64_t denominator, uint64_t initial_pos_modulo) {
+    static Fixed DestLenToSourceLen(int64_t dest_frames, Fixed step_size, uint64_t rate_modulo,
+                                    uint64_t denominator, uint64_t initial_source_pos_modulo) {
+      // rate_modulo and denominator are arbitrarily large int64, so we must up-cast to 128-bit.
+      __int128_t running_modulo =
+          static_cast<__int128_t>(rate_modulo) * static_cast<__int128_t>(dest_frames) +
+          static_cast<__int128_t>(initial_source_pos_modulo);
+      // But rate_modulo and source_pos_modulo < denominator, so mod_contribution <= dest_frames
+      __int128_t mod_contribution = running_modulo / static_cast<__int128_t>(denominator);
+      FX_DCHECK(mod_contribution <= std::numeric_limits<int64_t>::max());
+
+      // Max step_size is 192, which is 21 bits in Fixed (8.13). Also, mod_contribution cannot
+      // exceed dest_frames, which means
+      //     source_length_raw <= (step_size.raw_value() + 1) * dest_frames
+      // Thus source_length_raw will overflow an int64 only if dest_frames >= 2^63/(192*2^13+1),
+      // which is dest_frames > 5.86e12, which is dest_frames > 353 days @ 192khz.
+      int64_t source_length_raw =
+          step_size.raw_value() * dest_frames + static_cast<int64_t>(mod_contribution);
+
+      return Fixed::FromRaw(source_length_raw);
+    }
+
+    // How many steps are needed to meet OR EXCEED the specified delta, using the specified
+    // step_size, rate_modulo, denominator and initial position modulo.
+    static int64_t SourceLenToDestLen(Fixed delta, Fixed step_size, uint64_t rate_modulo,
+                                      uint64_t denominator, uint64_t initial_pos_modulo) {
       FX_DCHECK(delta >= Fixed(0));
       FX_DCHECK(step_size >= Fixed::FromRaw(1));
       FX_DCHECK(denominator > 0);

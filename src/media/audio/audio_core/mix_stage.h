@@ -75,9 +75,10 @@ class MixStage : public ReadableStream {
   void ForEachSource(TaskType task_type, Fixed dest_frame);
   void ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info, Mixer::Bookkeeping& bookkeeping,
                                      ReadableStream& stream);
-  void JamSyncPositions(AudioClock& source_clock, AudioClock& dest_clock, Mixer::SourceInfo& info,
-                        Mixer::Bookkeeping& bookkeeping, int64_t dest_frame,
-                        zx::time mono_now_from_dest, bool timeline_changed);
+  void SyncSourcePositionFromClocks(AudioClock& source_clock, AudioClock& dest_clock,
+                                    Mixer::SourceInfo& info, Mixer::Bookkeeping& bookkeeping,
+                                    int64_t dest_frame, zx::time mono_now_from_dest,
+                                    bool timeline_changed);
   void SetStepSize(Mixer::SourceInfo& info, Mixer::Bookkeeping& bookkeeping,
                    TimelineRate& frac_source_frames_per_dest_frame);
 

@@ -19,12 +19,11 @@
 
 namespace media::audio {
 
-// Log clock synchronization adjustments. As currently configured, when enabled we log clock
-// tuning once every 100 times, OR if source position error is 500ns or greater.
+// Enable logging of sync-related clock adjustments. Log every time source position error >= 500ns,
+// otherwise every ~100th time (which in practice is approx once per second).
 constexpr bool kLogClockTuning = true;
-// Make these zx::durations, if/when operator-() is added to zx::duration.
-constexpr int64_t kPositionErrorLoggingThresholdNs = 500;
-constexpr int64_t kClockTuneLoggingStride = 100;
+constexpr zx::duration kLogClockTuningPositionErrorThreshold = zx::nsec(500);
+constexpr int64_t kClockTuneLoggingStride = 97;  // make strides prime, to avoid periodicity
 
 //
 // static methods
@@ -356,14 +355,14 @@ int32_t AudioClock::TuneForError(zx::time monotonic_time, zx::duration source_po
 }
 
 // If kLogClockTuning is enabled, then log if:
-//    source position error is kPositionErrorLoggingThresholdNs or more, or
+//    source position error is kLogClockTuningPositionErrorThreshold or more, or
 //    it's been kClockTuneLoggingStride times since we last logged.
 void AudioClock::LogClockAdjustments(zx::duration source_pos_error, int32_t rate_adjust_ppm) {
   if constexpr (kLogClockTuning) {
     static int64_t log_count = 0;
 
     // If absolute error is large enough, then log now but reset our stride.
-    if (std::abs(source_pos_error.to_nsecs()) >= kPositionErrorLoggingThresholdNs) {
+    if (std::abs(source_pos_error.to_nsecs()) >= kLogClockTuningPositionErrorThreshold.to_nsecs()) {
       log_count = 0;
     }
     if (log_count == 0) {
