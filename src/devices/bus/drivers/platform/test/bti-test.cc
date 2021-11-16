@@ -5,88 +5,63 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <fidl/fuchsia.hardware.btitest/cpp/wire.h>
+#include <fuchsia/driver/test/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/ddk/platform-defs.h>
-#include <lib/devmgr-integration-test/fixture.h>
-#include <lib/devmgr-launcher/launch.h>
+#include <lib/driver_test_realm/realm_builder/cpp/lib.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/watcher.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
+#include <lib/sys/component/cpp/testing/realm_builder_types.h>
 #include <lib/zx/time.h>
 #include <zircon/boot/image.h>
 #include <zircon/status.h>
 
 #include <zxtest/zxtest.h>
 
+#include "src/devices/lib/device-watcher/cpp/device-watcher.h"
+
 namespace {
 
-using devmgr_integration_test::IsolatedDevmgr;
-using devmgr_integration_test::RecursiveWaitForFile;
+using device_watcher::RecursiveWaitForFile;
 
-zbi_platform_id_t kPlatformId = []() {
-  zbi_platform_id_t plat_id = {};
-  plat_id.vid = PDEV_VID_TEST;
-  plat_id.pid = PDEV_PID_PBUS_TEST;
-  strcpy(plat_id.board_name, "pbus-test");
-  return plat_id;
-}();
-
-#define BOARD_REVISION_TEST 42
-
-const zbi_board_info_t kBoardInfo = []() {
-  zbi_board_info_t board_info = {};
-  board_info.revision = BOARD_REVISION_TEST;
-  return board_info;
-}();
-
-zx_status_t GetBootItem(uint32_t type, uint32_t extra, zx::vmo* out, uint32_t* length) {
-  zx::vmo vmo;
-  switch (type) {
-    case ZBI_TYPE_PLATFORM_ID: {
-      zx_status_t status = zx::vmo::create(sizeof(kPlatformId), 0, &vmo);
-      if (status != ZX_OK) {
-        return status;
-      }
-      status = vmo.write(&kPlatformId, 0, sizeof(kPlatformId));
-      if (status != ZX_OK) {
-        return status;
-      }
-      *length = sizeof(kPlatformId);
-      break;
-    }
-    case ZBI_TYPE_DRV_BOARD_INFO: {
-      zbi_board_info_t board_info = kBoardInfo;
-      zx_status_t status = zx::vmo::create(sizeof(kBoardInfo), 0, &vmo);
-      if (status != ZX_OK) {
-        return status;
-      }
-      status = vmo.write(&board_info, 0, sizeof(board_info));
-      if (status != ZX_OK) {
-        return status;
-      }
-      *length = sizeof(board_info);
-      break;
-    }
-    default:
-      break;
-  }
-
-  *out = std::move(vmo);
-  return ZX_OK;
-}
+using namespace sys::testing;
 
 constexpr char kParentPath[] = "sys/platform/11:01:1a";
 constexpr char kDevicePath[] = "sys/platform/11:01:1a/test-bti";
 
 TEST(PbusBtiTest, BtiIsSameAfterCrash) {
-  devmgr_launcher::Args args;
-  args.sys_device_driver = "fuchsia-boot:///#driver/platform-bus.so",
-  args.get_boot_item = GetBootItem;
+  auto realm_builder = sys::testing::Realm::Builder::Create();
+  driver_test_realm::Setup(realm_builder);
+  realm_builder.AddRoute(CapabilityRoute{.capability = Protocol{"fuchsia.boot.RootResource"},
+                                         .source = {AboveRoot()},
+                                         .targets = {Moniker{"driver_test_realm"}}});
 
-  IsolatedDevmgr devmgr;
-  ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  auto realm = realm_builder.Build(loop.dispatcher());
+
+  // Start DriverTestRealm.
+  fidl::SynchronousInterfacePtr<fuchsia::driver::test::Realm> driver_test_realm;
+  ASSERT_EQ(ZX_OK, realm.Connect(driver_test_realm.NewRequest()));
+  fuchsia::driver::test::Realm_Start_Result realm_result;
+  auto args = fuchsia::driver::test::RealmArgs();
+  args.set_root_driver("fuchsia-boot:///#driver/platform-bus.so");
+  ASSERT_EQ(ZX_OK, driver_test_realm->Start(std::move(args), &realm_result));
+  ASSERT_FALSE(realm_result.is_err());
+
+  // Connect to dev.
+  fidl::InterfaceHandle<fuchsia::io::Directory> dev;
+  zx_status_t status = realm.Connect("dev", dev.NewRequest().TakeChannel());
+  ASSERT_EQ(status, ZX_OK);
+
+  fbl::unique_fd dev_fd;
+  status = fdio_fd_create(dev.TakeChannel().release(), dev_fd.reset_and_get_address());
+  ASSERT_EQ(status, ZX_OK);
 
   fbl::unique_fd fd;
-  EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), kDevicePath, &fd));
+  EXPECT_OK(RecursiveWaitForFile(dev_fd, kDevicePath, &fd));
   zx::status bti_client_end =
       fdio_cpp::FdioCaller(std::move(fd)).take_as<fuchsia_hardware_btitest::BtiDevice>();
   ASSERT_OK(bti_client_end.status_value());
@@ -99,9 +74,9 @@ TEST(PbusBtiTest, BtiIsSameAfterCrash) {
     koid1 = result->koid;
   }
 
-  fd.reset(openat(devmgr.devfs_root().get(), kParentPath, O_DIRECTORY | O_RDONLY));
-  std::unique_ptr<devmgr_integration_test::DirWatcher> watcher;
-  ASSERT_OK(devmgr_integration_test::DirWatcher::Create(std::move(fd), &watcher));
+  fd.reset(openat(dev_fd.get(), kParentPath, O_DIRECTORY | O_RDONLY));
+  std::unique_ptr<device_watcher::DirWatcher> watcher;
+  ASSERT_OK(device_watcher::DirWatcher::Create(std::move(fd), &watcher));
 
   {
     auto result = client->Crash();
@@ -110,7 +85,7 @@ TEST(PbusBtiTest, BtiIsSameAfterCrash) {
 
   // We implicitly rely on driver host being rebound in the event of a crash.
   ASSERT_OK(watcher->WaitForRemoval("test-bti", zx::duration::infinite()));
-  EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), kDevicePath, &fd));
+  EXPECT_OK(RecursiveWaitForFile(dev_fd, kDevicePath, &fd));
   bti_client_end =
       fdio_cpp::FdioCaller(std::move(fd)).take_as<fuchsia_hardware_btitest::BtiDevice>();
   ASSERT_OK(bti_client_end.status_value());

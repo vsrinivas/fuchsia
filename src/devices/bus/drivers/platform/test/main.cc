@@ -28,68 +28,11 @@ namespace {
 using devmgr_integration_test::IsolatedDevmgr;
 using devmgr_integration_test::RecursiveWaitForFile;
 
-#define BOARD_REVISION_TEST 42
-
-const zbi_board_info_t kBoardInfo = []() {
-  zbi_board_info_t board_info = {};
-  board_info.revision = BOARD_REVISION_TEST;
-  return board_info;
-}();
-
-zx_status_t GetBootItem(const zbi_platform_id_t* platform_id, uint32_t type, uint32_t extra,
-                        zx::vmo* out, uint32_t* length) {
-  zx::vmo vmo;
-  switch (type) {
-    case ZBI_TYPE_PLATFORM_ID: {
-      zx_status_t status = zx::vmo::create(sizeof(*platform_id), 0, &vmo);
-      if (status != ZX_OK) {
-        return status;
-      }
-      status = vmo.write(platform_id, 0, sizeof(*platform_id));
-      if (status != ZX_OK) {
-        return status;
-      }
-      *length = sizeof(*platform_id);
-      break;
-    }
-    case ZBI_TYPE_DRV_BOARD_INFO: {
-      zbi_board_info_t board_info = kBoardInfo;
-      zx_status_t status = zx::vmo::create(sizeof(kBoardInfo), 0, &vmo);
-      if (status != ZX_OK) {
-        return status;
-      }
-      status = vmo.write(&board_info, 0, sizeof(board_info));
-      if (status != ZX_OK) {
-        return status;
-      }
-      *length = sizeof(board_info);
-      break;
-    }
-    default:
-      break;
-  }
-
-  *out = std::move(vmo);
-  return ZX_OK;
-}
-
 TEST(PbusTest, Enumeration) {
   devmgr_launcher::Args args;
   args.sys_device_driver = "fuchsia-boot:///#driver/platform-bus.so",
   args.load_drivers.push_back("/boot/driver/fragment.so");
   args.load_drivers.push_back("/boot/driver/fragment.proxy.so");
-
-  args.get_boot_item = [](uint32_t type, uint32_t extra, zx::vmo* out, uint32_t* length) {
-    zbi_platform_id_t kPlatformId = []() {
-      zbi_platform_id_t plat_id = {};
-      plat_id.vid = PDEV_VID_TEST;
-      plat_id.pid = PDEV_PID_PBUS_TEST;
-      strcpy(plat_id.board_name, "pbus-test");
-      return plat_id;
-    }();
-
-    return GetBootItem(&kPlatformId, type, extra, out, length);
-  };
 
   IsolatedDevmgr devmgr;
   ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));
@@ -173,24 +116,6 @@ TEST(PbusTest, Enumeration) {
           ZX_TIME_INFINITE, &devices_seen),
       ZX_ERR_STOP);
   ASSERT_EQ(devices_seen, 2);
-}
-
-TEST(PbusTest, BoardInfo) {
-  devmgr_launcher::Args args;
-  args.sys_device_driver = "fuchsia-boot:///#driver/platform-bus.so",
-  args.get_boot_item = [](uint32_t type, uint32_t extra, zx::vmo* out, uint32_t* length) {
-    zbi_platform_id_t kPlatformId = []() {
-      zbi_platform_id_t plat_id = {};
-      strcpy(plat_id.board_name, "pbus-test");
-      // Avoid specifying a VID/DID to ensure board driver doesn't bind.
-      return plat_id;
-    }();
-
-    return GetBootItem(&kPlatformId, type, extra, out, length);
-  };
-
-  IsolatedDevmgr devmgr;
-  ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));
 
   fbl::unique_fd platform_bus;
   ASSERT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform", &platform_bus));
@@ -203,8 +128,8 @@ TEST(PbusTest, BoardInfo) {
   auto board_info = client->GetBoardName();
   EXPECT_OK(board_info.status());
   EXPECT_TRUE(board_info.ok());
-  EXPECT_BYTES_EQ(board_info->name.cbegin(), "pbus-test", board_info->name.size());
-  EXPECT_EQ(board_info->name.size(), strlen("pbus-test"));
+  EXPECT_BYTES_EQ(board_info->name.cbegin(), "driver-integration-test", board_info->name.size());
+  EXPECT_EQ(board_info->name.size(), strlen("driver-integration-test"));
 
   // Get interrupt controller information.
   auto irq_ctrl_info = client->GetInterruptControllerInfo();

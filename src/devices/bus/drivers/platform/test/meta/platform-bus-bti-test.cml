@@ -1,20 +1,20 @@
 {
     include: [
+        "//sdk/lib/driver_test_realm/meta/realm_builder.shard.cml",
         "//sdk/lib/inspect/client.shard.cml",
         "//sdk/lib/syslog/client.shard.cml",
+        "//src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
         "//src/sys/test_manager/system-test.shard.cml",
         "//src/sys/test_runners/elf/default.shard.cml",
-        "//zircon/system/ulib/devmgr-integration-test/meta/client.shard.cml",
     ],
     program: {
         binary: "test/platform-bus-bti-test",
     },
-    use: [
+    offer: [
         {
-            protocol: [
-                "fuchsia.boot.RootResource",
-                "fuchsia.exception.Handler",
-            ],
+            protocol: [ "fuchsia.boot.RootResource" ],
+            from: "parent",
+            to: "#fuchsia_component_test_collection",
         },
     ],
 }

@@ -57,6 +57,11 @@
             ],
         },
         {
+            protocol: [ "fuchsia.boot.RootResource" ],
+            from: "parent",
+            to: [ "#driver_manager" ],
+        },
+        {
             protocol: [
                 "fuchsia.process.Launcher",
                 "fuchsia.sys.Launcher",

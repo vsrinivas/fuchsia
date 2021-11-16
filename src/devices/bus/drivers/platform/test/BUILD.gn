@@ -14,11 +14,11 @@ test("platform-bus") {
   deps = [
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
     "//sdk/lib/fdio",
+    "//src/devices/testing/devmgr-integration-test-shim",
     "//src/lib/ddk",
 
     # TODO(fxb/38132): Migrate to the new bind rules and delete the below
     "//src/lib/ddk:ddk-deprecated-binding-headers",
-    "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
@@ -661,12 +661,16 @@ test("platform-bus-bti") {
   sources = [ "bti-test.cc" ]
   deps = [
     ":fuchsia.hardware.btitest_llcpp",
+    "//sdk/fidl/fuchsia.driver.test",
+    "//sdk/lib/driver_test_realm/realm_builder/cpp",
     "//sdk/lib/fdio",
+    "//src/devices/lib/device-watcher/cpp",
     "//src/lib/ddk",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
 
     # TODO(fxb/38132): Migrate to the new bind rules and delete the below
     "//src/lib/ddk:ddk-deprecated-binding-headers",
-    "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/zx",
