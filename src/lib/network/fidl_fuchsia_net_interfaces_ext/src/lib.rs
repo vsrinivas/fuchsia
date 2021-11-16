@@ -105,14 +105,17 @@ pub enum UpdateError {
 }
 
 /// The result of updating network interface state with an event.
+///
+/// This type is generic to allow for it to either own or borrow interface properties depending on
+/// its use case.
 #[derive(Debug, PartialEq)]
-pub enum UpdateResult<'a> {
+pub enum UpdateResult<T> {
     /// The update did not change the local state.
     NoChange,
     /// The update inserted an existing interface into the local state.
-    Existing(&'a Properties),
+    Existing(T),
     /// The update inserted an added interface into the local state.
-    Added(&'a Properties),
+    Added(T),
     /// The update changed an existing interface in the local state.
     Changed {
         /// The previous values of any properties which changed.
@@ -122,10 +125,29 @@ pub enum UpdateResult<'a> {
         /// iff it has changed as a result of the update.
         previous: fnet_interfaces::Properties,
         /// The properties of the interface post-update.
-        current: &'a Properties,
+        current: T,
     },
-    /// The update removed a removed interface from the local state.
+    /// The update removed an interface from the local state.
     Removed(Properties),
+}
+
+impl<T> UpdateResult<T> {
+    /// Map an `UpdateResult<T>` to an `UpdateResult<U>` by applying a function to the contained
+    /// interface properties type.
+    pub fn map<F, U>(self, f: F) -> UpdateResult<U>
+    where
+        F: Fn(T) -> U,
+    {
+        match self {
+            UpdateResult::NoChange => UpdateResult::NoChange,
+            UpdateResult::Existing(properties) => UpdateResult::Existing(f(properties)),
+            UpdateResult::Added(properties) => UpdateResult::Added(f(properties)),
+            UpdateResult::Changed { previous, current } => {
+                UpdateResult::Changed { previous, current: f(current) }
+            }
+            UpdateResult::Removed(properties) => UpdateResult::Removed(properties),
+        }
+    }
 }
 
 /// A trait for types holding interface state that can be updated by change events.
@@ -133,11 +155,17 @@ pub trait Update {
     /// Update state with the interface change event.
     ///
     /// Returns a bool indicating whether the update caused any changes.
-    fn update(&mut self, event: fnet_interfaces::Event) -> Result<UpdateResult<'_>, UpdateError>;
+    fn update(
+        &mut self,
+        event: fnet_interfaces::Event,
+    ) -> Result<UpdateResult<&Properties>, UpdateError>;
 }
 
 impl Update for Properties {
-    fn update(&mut self, event: fnet_interfaces::Event) -> Result<UpdateResult<'_>, UpdateError> {
+    fn update(
+        &mut self,
+        event: fnet_interfaces::Event,
+    ) -> Result<UpdateResult<&Properties>, UpdateError> {
         match event {
             fnet_interfaces::Event::Existing(existing) => {
                 let existing = Properties::try_from(existing)?;
@@ -232,7 +260,10 @@ impl Update for Properties {
 }
 
 impl Update for InterfaceState {
-    fn update(&mut self, event: fnet_interfaces::Event) -> Result<UpdateResult<'_>, UpdateError> {
+    fn update(
+        &mut self,
+        event: fnet_interfaces::Event,
+    ) -> Result<UpdateResult<&Properties>, UpdateError> {
         fn get_properties(state: &InterfaceState) -> &Properties {
             match state {
                 InterfaceState::Known(properties) => properties,
@@ -281,7 +312,10 @@ impl Update for InterfaceState {
 }
 
 impl Update for HashMap<u64, Properties> {
-    fn update(&mut self, event: fnet_interfaces::Event) -> Result<UpdateResult<'_>, UpdateError> {
+    fn update(
+        &mut self,
+        event: fnet_interfaces::Event,
+    ) -> Result<UpdateResult<&Properties>, UpdateError> {
         match event {
             fnet_interfaces::Event::Existing(existing) => {
                 let existing = Properties::try_from(existing)?;
@@ -453,7 +487,7 @@ where
         |mut acc, event| {
             futures::future::ready(match event {
                 fnet_interfaces::Event::Existing(_) => match acc.update(event) {
-                    Ok::<UpdateResult<'_>, _>(_) => Ok(async_utils::fold::FoldWhile::Continue(acc)),
+                    Ok::<UpdateResult<_>, _>(_) => Ok(async_utils::fold::FoldWhile::Continue(acc)),
                     Err(e) => Err(WatcherOperationError::Update(e)),
                 },
                 fnet_interfaces::Event::Idle(fnet_interfaces::Empty {}) => {
@@ -824,5 +858,42 @@ mod tests {
             Err(AddressValidationError::Logical(e @ String { .. }))
                 if e == "non-positive value for valid_until=0"
         );
+    }
+
+    #[test_case(
+        HashMap::new(),
+        fnet_interfaces::Event::Existing(fidl_properties(ID)),
+        validated_properties(ID);
+        "existing"
+    )]
+    #[test_case(
+        HashMap::new(),
+        fnet_interfaces::Event::Added(fidl_properties(ID)),
+        validated_properties(ID);
+        "added"
+    )]
+    #[test_case(
+        std::iter::once((ID, validated_properties(ID))).collect::<HashMap<_, _>>(),
+        fnet_interfaces::Event::Changed(properties_delta(ID)),
+        validated_properties_after_change(ID);
+        "changed"
+    )]
+    fn test_update_result_map(
+        mut state: HashMap<u64, Properties>,
+        event: fnet_interfaces::Event,
+        expected_properties: Properties,
+    ) {
+        let result =
+            state.update(event).expect("update interface state").map(|properties| properties.id);
+
+        match result {
+            UpdateResult::Existing(id)
+            | UpdateResult::Added(id)
+            | UpdateResult::Changed { previous: _, current: id } => {
+                let properties = state.get(&id).expect("look up interface properties by id");
+                assert_eq!(*properties, expected_properties);
+            }
+            result => panic!("got unexpected update result {:#?}", result),
+        }
     }
 }
