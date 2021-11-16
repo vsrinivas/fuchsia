@@ -12,6 +12,18 @@ success("EmptyStruct") {
     },
 }
 
+decode_failure("NonZeroEmptyStructBytes") {
+    // TODO(fxbug.dev/88799) Add validation in dart, c, llcpp, hlcpp.
+    bindings_denylist = [dart, c, llcpp, hlcpp],
+    type = EmptyStruct,
+    bytes = {
+        v1, v2 = [
+            0x01, padding:7,
+        ],
+    },
+    err = INVALID_EMPTY_STRUCT,
+}
+
 success("EmptyStructSandwich") {
     value = EmptyStructSandwich {
         before: "before",

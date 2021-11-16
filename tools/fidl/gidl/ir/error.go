@@ -11,6 +11,7 @@ const (
 	ExceededMaxOutOfLineDepth          ErrorCode = "EXCEEDED_MAX_OUT_OF_LINE_DEPTH"
 	ExtraHandles                       ErrorCode = "EXTRA_HANDLES"
 	IncorrectHandleType                ErrorCode = "INCORRECT_HANDLE_TYPE"
+	InvalidEmptyStruct                 ErrorCode = "INVALID_EMPTY_STRUCT"
 	InvalidInlineBitInEnvelope         ErrorCode = "INVALID_INLINE_BIT_IN_ENVELOPE"
 	InvalidNumBytesInEnvelope          ErrorCode = "INVALID_NUM_BYTES_IN_ENVELOPE"
 	InvalidNumHandlesInEnvelope        ErrorCode = "INVALID_NUM_HANDLES_IN_ENVELOPE"
@@ -37,6 +38,7 @@ var AllErrorCodes = map[ErrorCode]struct{}{
 	ExceededMaxOutOfLineDepth:          {},
 	ExtraHandles:                       {},
 	IncorrectHandleType:                {},
+	InvalidEmptyStruct:                 {},
 	InvalidInlineBitInEnvelope:         {},
 	InvalidNumBytesInEnvelope:          {},
 	InvalidNumHandlesInEnvelope:        {},

@@ -327,6 +327,7 @@ var goErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.ExceededMaxOutOfLineDepth:          "ErrExceededMaxOutOfLineDepth",
 	gidlir.ExtraHandles:                       "ErrTooManyHandles",
 	gidlir.IncorrectHandleType:                "ErrIncorrectHandleType",
+	gidlir.InvalidEmptyStruct:                 "ErrInvalidEmptyStruct",
 	gidlir.InvalidInlineBitInEnvelope:         "ErrInvalidInlineBitValueInEnvelope",
 	gidlir.InvalidNumBytesInEnvelope:          "ErrInvalidNumBytesInEnvelope",
 	gidlir.InvalidNumHandlesInEnvelope:        "ErrInvalidNumHandlesInEnvelope",

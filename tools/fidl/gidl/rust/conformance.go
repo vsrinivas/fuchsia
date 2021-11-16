@@ -368,6 +368,7 @@ var rustErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.ExceededMaxOutOfLineDepth:          "MaxRecursionDepth",
 	gidlir.ExtraHandles:                       "ExtraHandles",
 	gidlir.IncorrectHandleType:                "IncorrectHandleSubtype",
+	gidlir.InvalidEmptyStruct:                 "Invalid",
 	gidlir.InvalidInlineBitInEnvelope:         "InvalidInlineBitInEnvelope",
 	gidlir.InvalidNumBytesInEnvelope:          "InvalidNumBytesInEnvelope",
 	gidlir.InvalidNumHandlesInEnvelope:        "InvalidNumHandlesInEnvelope",
