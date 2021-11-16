@@ -5,7 +5,6 @@
 use {
     crate::{
         builtin_environment::BuiltinEnvironment,
-        config::AllowlistEntry,
         model::{
             actions::{ActionKey, ActionSet, ShutdownAction, StartAction, StopAction},
             binding::Binder,
@@ -14,13 +13,13 @@ use {
             events::registry::EventSubscription,
             hooks::{EventPayload, EventType, HooksRegistration},
             model::Model,
-            policy::PolicyError,
             testing::{
                 mocks::*, out_dir::OutDir, routing_test_helpers::RoutingTestBuilder,
                 test_helpers::*, test_hook::TestHook,
             },
         },
     },
+    ::routing::{config::AllowlistEntry, policy::PolicyError},
     cm_rust::{
         CapabilityPath, ComponentDecl, EventMode, RegistrationSource, RunnerDecl,
         RunnerRegistration,

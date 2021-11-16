@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource, InternalCapability},
+        capability::{CapabilityProvider, CapabilitySource},
         model::{
             addable_directory::AddableDirectoryWithResult,
             component::WeakComponentInstance,
@@ -16,6 +16,7 @@ use {
             routing_fns::{route_expose_fn, route_use_fn},
         },
     },
+    ::routing::capability_source::InternalCapability,
     async_trait::async_trait,
     cm_rust::{CapabilityPath, ComponentDecl},
     cm_task_scope::TaskScope,
@@ -687,7 +688,6 @@ mod tests {
                 binding::Binder,
                 component::BindReason,
                 model::Model,
-                rights,
                 testing::{
                     test_helpers::{
                         component_decl_with_test_runner, dir_contains, list_directory,
@@ -906,7 +906,7 @@ mod tests {
                         source: UseSource::Framework,
                         source_name: "hub".into(),
                         target_path: CapabilityPath::try_from("/hub").unwrap(),
-                        rights: *rights::READ_RIGHTS,
+                        rights: *routing::rights::READ_RIGHTS,
                         subdir: None,
                     }))
                     .build(),
@@ -961,7 +961,7 @@ mod tests {
                         source: UseSource::Framework,
                         source_name: "hub".into(),
                         target_path: CapabilityPath::try_from("/hub").unwrap(),
-                        rights: *rights::READ_RIGHTS,
+                        rights: *routing::rights::READ_RIGHTS,
                         subdir: Some("resolved".into()),
                     }))
                     .build(),
@@ -998,7 +998,7 @@ mod tests {
                         source: UseSource::Framework,
                         source_name: "hub".into(),
                         target_path: CapabilityPath::try_from("/hub").unwrap(),
-                        rights: *rights::READ_RIGHTS,
+                        rights: *routing::rights::READ_RIGHTS,
                         subdir: None,
                     }))
                     .build(),
@@ -1068,7 +1068,7 @@ mod tests {
                             source: UseSource::Framework,
                             source_name: "hub".into(),
                             target_path: CapabilityPath::try_from("/hub").unwrap(),
-                            rights: *rights::READ_RIGHTS,
+                            rights: *routing::rights::READ_RIGHTS,
                             subdir: Some("resolved".into()),
                         }))
                         .build(),
@@ -1124,7 +1124,7 @@ mod tests {
                     .directory(DirectoryDecl {
                         name: "baz".into(),
                         source_path: Some("/data".parse().unwrap()),
-                        rights: *rights::READ_RIGHTS,
+                        rights: *routing::rights::READ_RIGHTS,
                     })
                     .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: ExposeSource::Self_,
@@ -1169,7 +1169,7 @@ mod tests {
                         source: UseSource::Framework,
                         source_name: "hub".into(),
                         target_path: CapabilityPath::try_from("/hub").unwrap(),
-                        rights: *rights::READ_RIGHTS,
+                        rights: *routing::rights::READ_RIGHTS,
                         subdir: Some("exec".into()),
                         dependency_type: DependencyType::Strong,
                     }))
@@ -1183,7 +1183,7 @@ mod tests {
                         source: UseSource::Parent,
                         source_name: "foo-dir".into(),
                         target_path: CapabilityPath::try_from("/data/bar").unwrap(),
-                        rights: *rights::READ_RIGHTS | *rights::WRITE_RIGHTS,
+                        rights: *routing::rights::READ_RIGHTS | *routing::rights::WRITE_RIGHTS,
                         subdir: None,
                         dependency_type: DependencyType::Strong,
                     }))
@@ -1270,7 +1270,7 @@ mod tests {
                     .directory(DirectoryDecl {
                         name: "baz".into(),
                         source_path: Some("/data".parse().unwrap()),
-                        rights: *rights::READ_RIGHTS,
+                        rights: *routing::rights::READ_RIGHTS,
                     })
                     .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: ExposeSource::Self_,

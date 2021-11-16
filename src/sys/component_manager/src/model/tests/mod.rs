@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 mod lifecycle;
+mod policy;
 mod rights;
 mod routing;
 mod storage;

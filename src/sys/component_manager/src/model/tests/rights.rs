@@ -4,14 +4,14 @@
 
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource, InternalCapability},
+        capability::{CapabilityProvider, CapabilitySource},
         model::{
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
-            rights,
             testing::routing_test_helpers::*,
         },
     },
+    ::routing::capability_source::InternalCapability,
     ::routing_test_helpers::{rights::CommonRightsTest, RoutingTestModel},
     async_trait::async_trait,
     cm_rust::*,
@@ -143,7 +143,7 @@ async fn framework_directory_rights() {
                     source: UseSource::Parent,
                     source_name: "foo_data".into(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                    rights: *rights::READ_RIGHTS,
+                    rights: *routing::rights::READ_RIGHTS,
                     subdir: None,
                 }))
                 .build(),
@@ -192,7 +192,7 @@ async fn framework_directory_incompatible_rights() {
                     source: UseSource::Parent,
                     source_name: "foo_data".into(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                    rights: *rights::READ_RIGHTS | *rights::WRITE_RIGHTS,
+                    rights: *routing::rights::READ_RIGHTS | *routing::rights::WRITE_RIGHTS,
                     subdir: None,
                 }))
                 .build(),

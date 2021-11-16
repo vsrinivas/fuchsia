@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource, InternalCapability},
+        capability::{CapabilityProvider, CapabilitySource},
         model::{
             error::ModelError,
             events::{
@@ -16,6 +16,7 @@ use {
             model::Model,
         },
     },
+    ::routing::capability_source::InternalCapability,
     async_trait::async_trait,
     cm_rust::CapabilityName,
     lazy_static::lazy_static,

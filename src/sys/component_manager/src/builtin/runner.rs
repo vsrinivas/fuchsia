@@ -3,13 +3,14 @@
 // found in the LICENSE file.
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource, InternalCapability},
-        config::RuntimeConfig,
+        capability::{CapabilityProvider, CapabilitySource},
         model::{
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
-            policy::ScopedPolicyChecker,
         },
+    },
+    ::routing::{
+        capability_source::InternalCapability, config::RuntimeConfig, policy::ScopedPolicyChecker,
     },
     async_trait::async_trait,
     cm_runner::Runner,
@@ -131,13 +132,11 @@ impl CapabilityProvider for RunnerCapabilityProvider {
 mod tests {
     use {
         super::*,
-        crate::{
-            config::{AllowlistEntry, JobPolicyAllowlists, SecurityPolicy},
-            model::{
-                hooks::Hooks,
-                testing::{mocks::MockRunner, routing_test_helpers::*},
-            },
+        crate::model::{
+            hooks::Hooks,
+            testing::{mocks::MockRunner, routing_test_helpers::*},
         },
+        ::routing::config::{AllowlistEntry, JobPolicyAllowlists, SecurityPolicy},
         anyhow::Error,
         cm_rust::{CapabilityDecl, RunnerDecl},
         cm_rust_testing::*,

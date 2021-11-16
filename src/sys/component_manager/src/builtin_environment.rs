@@ -34,7 +34,6 @@ use {
             vmex_resource::VmexResource,
         },
         collection::CollectionCapabilityHost,
-        config::RuntimeConfig,
         diagnostics::ComponentTreeStats,
         directory_ready_notifier::DirectoryReadyNotifier,
         elf_runner::ElfRunner,
@@ -42,7 +41,7 @@ use {
         fuchsia_pkg_resolver,
         model::{
             component::ComponentManagerInstance,
-            environment::{DebugRegistry, Environment, RunnerRegistry},
+            environment::Environment,
             error::ModelError,
             event_logger::EventLogger,
             events::{
@@ -59,6 +58,10 @@ use {
             storage::admin_protocol::StorageAdmin,
         },
         root_stop_notifier::RootStopNotifier,
+    },
+    ::routing::{
+        config::RuntimeConfig,
+        environment::{DebugRegistry, RunnerRegistry},
     },
     anyhow::{bail, format_err, Context as _, Error},
     cm_rust::{CapabilityName, RunnerRegistration},

@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::{builtin::capability::BuiltinCapability, capability::*},
+    crate::builtin::capability::BuiltinCapability,
+    ::routing::capability_source::InternalCapability,
     anyhow::Error,
     async_trait::async_trait,
     cm_rust::CapabilityName,
@@ -96,7 +97,11 @@ impl BuiltinCapability for WriteOnlyLog {
 mod tests {
     use {
         super::*,
-        crate::model::hooks::{Event, EventPayload, Hooks},
+        crate::{
+            capability::CapabilitySource,
+            model::hooks::{Event, EventPayload, Hooks},
+        },
+        ::routing::capability_source::InternalCapability,
         cm_task_scope::TaskScope,
         fidl::endpoints::ClientEnd,
         fuchsia_async as fasync,

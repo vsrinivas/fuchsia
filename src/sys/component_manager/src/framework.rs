@@ -4,17 +4,19 @@
 
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource, InternalCapability},
-        config::RuntimeConfig,
+        capability::{CapabilityProvider, CapabilitySource},
         model::{
             component::{BindReason, ComponentInstance, WeakComponentInstance},
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             model::Model,
-            routing::error::RoutingError,
         },
     },
-    ::routing::error::ComponentInstanceError,
+    ::routing::{
+        capability_source::InternalCapability,
+        config::RuntimeConfig,
+        error::{ComponentInstanceError, RoutingError},
+    },
     anyhow::Error,
     async_trait::async_trait,
     cm_fidl_validator,

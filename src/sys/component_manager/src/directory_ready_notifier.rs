@@ -6,16 +6,13 @@ use {
     crate::model::{
         component::{ComponentInstance, InstanceState},
         error::ModelError,
-        events::{
-            filter::EventFilter,
-            synthesizer::{EventSynthesisProvider, ExtendedComponent},
-        },
+        events::synthesizer::{EventSynthesisProvider, ExtendedComponent},
         hooks::{
             Event, EventError, EventErrorPayload, EventPayload, EventType, Hook, HooksRegistration,
         },
         model::Model,
-        rights::Rights,
     },
+    ::routing::{event::EventFilter, rights::Rights},
     async_trait::async_trait,
     cm_rust::{
         CapabilityName, CapabilityPath, ComponentDecl, ExposeDecl, ExposeDirectoryDecl,

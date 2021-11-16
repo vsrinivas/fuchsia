@@ -4,14 +4,14 @@
 
 use {
     crate::model::{
-        events::error::EventsError,
-        policy::PolicyError,
-        resolver::ResolverError,
-        routing::{OpenResourceError, RoutingError},
+        events::error::EventsError, resolver::ResolverError, routing::OpenResourceError,
         storage::StorageError,
     },
-    ::routing::component_id_index::ComponentIdIndexError,
-    ::routing::error::ComponentInstanceError,
+    ::routing::{
+        component_id_index::ComponentIdIndexError,
+        error::{ComponentInstanceError, RoutingError},
+        policy::PolicyError,
+    },
     anyhow::Error,
     clonable_error::ClonableError,
     cm_runner::RunnerError,

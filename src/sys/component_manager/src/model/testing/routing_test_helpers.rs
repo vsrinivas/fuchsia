@@ -6,10 +6,6 @@ use {
     crate::{
         builtin::runner::BuiltinRunnerFactory,
         builtin_environment::{BuiltinEnvironment, BuiltinEnvironmentBuilder},
-        config::{
-            AllowlistEntry, CapabilityAllowlistKey, ChildPolicyAllowlists, RuntimeConfig,
-            SecurityPolicy,
-        },
         model::{
             binding::Binder,
             component::{BindReason, ComponentInstance, InstanceState},
@@ -17,6 +13,14 @@ use {
             hooks::HooksRegistration,
             model::Model,
             testing::{echo_service::*, mocks::*, out_dir::OutDir, test_helpers::*},
+        },
+    },
+    ::routing::{
+        component_id_index::ComponentInstanceId,
+        component_instance::ComponentInstanceInterface,
+        config::{
+            AllowlistEntry, CapabilityAllowlistKey, ChildPolicyAllowlists, RuntimeConfig,
+            SecurityPolicy,
         },
     },
     ::routing_test_helpers::{generate_storage_path, RoutingTestModel, RoutingTestModelBuilder},
@@ -43,9 +47,6 @@ use {
     moniker::{
         AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, PartialAbsoluteMoniker,
         PartialChildMoniker, RelativeMoniker, RelativeMonikerBase,
-    },
-    routing::{
-        component_id_index::ComponentInstanceId, component_instance::ComponentInstanceInterface,
     },
     std::{
         collections::{HashMap, HashSet},

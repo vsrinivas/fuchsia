@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        capability::*,
+        capability::{CapabilityProvider, CapabilitySource},
         model::{
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
@@ -17,6 +17,7 @@ use {
     fidl::endpoints::{ProtocolMarker, ServerEnd},
     fuchsia_zircon::{self as zx, ResourceInfo},
     log::warn,
+    routing::capability_source::InternalCapability,
     std::{
         path::PathBuf,
         sync::{Arc, Weak},

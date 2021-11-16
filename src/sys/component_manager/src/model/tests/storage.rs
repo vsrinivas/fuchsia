@@ -6,7 +6,6 @@ use {
     crate::model::{
         component::BindReason,
         error::ModelError,
-        rights,
         routing::{route_and_open_capability, OpenOptions, OpenStorageOptions},
         testing::routing_test_helpers::*,
     },
@@ -104,7 +103,7 @@ async fn use_in_collection_from_parent() {
                 .directory(
                     DirectoryDeclBuilder::new("data")
                         .path("/data")
-                        .rights(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS)
+                        .rights(*routing::rights::READ_RIGHTS | *routing::rights::WRITE_RIGHTS)
                         .build(),
                 )
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
@@ -112,7 +111,7 @@ async fn use_in_collection_from_parent() {
                     source_name: "data".try_into().unwrap(),
                     target_name: "minfs".try_into().unwrap(),
                     target: OfferTarget::static_child("b".to_string()),
-                    rights: Some(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS),
+                    rights: Some(*routing::rights::READ_RIGHTS | *routing::rights::WRITE_RIGHTS),
                     subdir: None,
                     dependency_type: DependencyType::Strong,
                 }))
@@ -274,7 +273,7 @@ async fn use_in_collection_from_grandparent() {
                 .directory(
                     DirectoryDeclBuilder::new("minfs")
                         .path("/data")
-                        .rights(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS)
+                        .rights(*routing::rights::READ_RIGHTS | *routing::rights::WRITE_RIGHTS)
                         .build(),
                 )
                 .offer(OfferDecl::Storage(OfferStorageDecl {
@@ -500,7 +499,7 @@ async fn use_restricted_storage_start_failure() {
                 .directory(
                     DirectoryDeclBuilder::new("data")
                         .path("/data")
-                        .rights(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS)
+                        .rights(*routing::rights::READ_RIGHTS | *routing::rights::WRITE_RIGHTS)
                         .build(),
                 )
                 .storage(StorageDecl {
@@ -604,7 +603,7 @@ async fn use_restricted_storage_open_failure() {
                 .directory(
                     DirectoryDeclBuilder::new("data")
                         .path("/data")
-                        .rights(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS)
+                        .rights(*routing::rights::READ_RIGHTS | *routing::rights::WRITE_RIGHTS)
                         .build(),
                 )
                 .storage(StorageDecl {

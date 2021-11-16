@@ -3,7 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::{capability::*, model::error::ModelError, model::hooks::*},
+    crate::{
+        capability::{CapabilityProvider, CapabilitySource},
+        model::error::ModelError,
+        model::hooks::*,
+    },
     async_trait::async_trait,
     cm_rust::*,
     cm_task_scope::TaskScope,
@@ -13,6 +17,7 @@ use {
     fuchsia_zircon::{self as zx},
     futures::TryStreamExt,
     lazy_static::lazy_static,
+    routing::capability_source::InternalCapability,
     std::{
         convert::TryInto,
         path::PathBuf,

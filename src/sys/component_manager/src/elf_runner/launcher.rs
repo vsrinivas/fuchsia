@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::{builtin::process_launcher::ProcessLauncher, config::RuntimeConfig},
+    crate::builtin::process_launcher::ProcessLauncher,
+    ::routing::config::RuntimeConfig,
     anyhow::{Context as _, Error},
     fidl_fuchsia_process as fproc, fuchsia_async as fasync,
     fuchsia_component::client,

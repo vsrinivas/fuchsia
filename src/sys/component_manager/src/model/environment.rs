@@ -9,7 +9,9 @@ use {
         },
         resolver::{ResolvedComponent, Resolver, ResolverError, ResolverRegistry},
     },
-    ::routing::environment::EnvironmentInterface,
+    ::routing::environment::{
+        DebugRegistry, EnvironmentExtends, EnvironmentInterface, RunnerRegistry,
+    },
     async_trait::async_trait,
     cm_rust::EnvironmentDecl,
     fidl_fuchsia_sys2 as fsys,
@@ -18,11 +20,6 @@ use {
         time::Duration,
     },
 };
-
-// TODO(https://fxbug.dev/71901): remove aliases once the routing lib has a stable API.
-pub type EnvironmentExtends = ::routing::environment::EnvironmentExtends;
-pub type RunnerRegistry = ::routing::environment::RunnerRegistry;
-pub type DebugRegistry = ::routing::environment::DebugRegistry;
 
 /// A realm's environment, populated from a component's [`EnvironmentDecl`].
 /// An environment defines intrinsic behaviors of a component's realm. Components
@@ -171,7 +168,6 @@ impl Resolver for Environment {
 mod tests {
     use {
         super::*,
-        crate::config::RuntimeConfig,
         crate::model::{
             binding::Binder,
             component::BindReason,
@@ -179,7 +175,9 @@ mod tests {
             model::{Model, ModelParams},
             testing::mocks::MockResolver,
         },
-        ::routing::{environment::DebugRegistration, error::ComponentInstanceError},
+        ::routing::{
+            config::RuntimeConfig, environment::DebugRegistration, error::ComponentInstanceError,
+        },
         cm_rust::{CapabilityName, RegistrationSource, RunnerRegistration},
         cm_rust_testing::{
             ChildDeclBuilder, CollectionDeclBuilder, ComponentDeclBuilder, EnvironmentDeclBuilder,

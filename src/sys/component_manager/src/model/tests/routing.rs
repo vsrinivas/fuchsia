@@ -14,10 +14,7 @@
 /// dynamic component instances) should be defined here.
 use {
     crate::{
-        capability::{
-            AggregateCapability, CapabilityProvider, CapabilitySource, ComponentCapability,
-            InternalCapability,
-        },
+        capability::{CapabilityProvider, CapabilitySource},
         framework::SDK_REALM_SERVICE,
         model::{
             actions::{
@@ -26,10 +23,15 @@ use {
             error::ModelError,
             events::registry::EventSubscription,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
-            rights,
             routing::{RouteRequest, RouteSource, RoutingError},
             testing::{routing_test_helpers::*, test_helpers::*},
         },
+    },
+    ::routing::{
+        capability_source::{AggregateCapability, ComponentCapability, InternalCapability},
+        error::ComponentInstanceError,
+        rights::READ_RIGHTS,
+        route_capability,
     },
     anyhow::Error,
     async_trait::async_trait,
@@ -47,7 +49,6 @@ use {
     maplit::hashmap,
     matches::assert_matches,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, PartialAbsoluteMoniker},
-    routing::{error::ComponentInstanceError, rights::READ_RIGHTS, route_capability},
     routing_test_helpers::{
         default_service_capability, instantiate_common_routing_tests, RoutingTestModel,
     },
@@ -360,7 +361,7 @@ async fn use_in_collection() {
                     source: OfferSource::Self_,
                     target_name: "hippo_data".into(),
                     target: OfferTarget::static_child("b".to_string()),
-                    rights: Some(*rights::READ_RIGHTS),
+                    rights: Some(*routing::rights::READ_RIGHTS),
                     subdir: None,
                     dependency_type: DependencyType::Strong,
                 }))
@@ -388,7 +389,7 @@ async fn use_in_collection() {
                     source: OfferSource::Parent,
                     target_name: "hippo_data".into(),
                     target: OfferTarget::Collection("coll".to_string()),
-                    rights: Some(*rights::READ_RIGHTS),
+                    rights: Some(*routing::rights::READ_RIGHTS),
                     subdir: None,
                     dependency_type: DependencyType::Strong,
                 }))
@@ -410,7 +411,7 @@ async fn use_in_collection() {
                     source: UseSource::Parent,
                     source_name: "hippo_data".into(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                    rights: *rights::READ_RIGHTS,
+                    rights: *routing::rights::READ_RIGHTS,
                     subdir: None,
                 }))
                 .build(),
@@ -482,7 +483,7 @@ async fn use_in_collection_not_offered() {
                     source: OfferSource::Self_,
                     target_name: "hippo_data".into(),
                     target: OfferTarget::static_child("b".to_string()),
-                    rights: Some(*rights::READ_RIGHTS),
+                    rights: Some(*routing::rights::READ_RIGHTS),
                     subdir: None,
                     dependency_type: DependencyType::Strong,
                 }))
@@ -515,7 +516,7 @@ async fn use_in_collection_not_offered() {
                     source: UseSource::Parent,
                     source_name: "hippo_data".into(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                    rights: *rights::READ_RIGHTS,
+                    rights: *routing::rights::READ_RIGHTS,
                     subdir: None,
                     dependency_type: DependencyType::Strong,
                 }))

@@ -11,13 +11,7 @@ use {
     std::path::PathBuf,
 };
 
-// TODO(https://fxbug.dev/71901): remove aliases once the routing lib has a stable API.
 pub type CapabilitySource = CapabilitySourceInterface<ComponentInstance>;
-pub type InternalCapability = ::routing::capability_source::InternalCapability;
-pub type ComponentCapability = ::routing::capability_source::ComponentCapability;
-pub type AggregateCapability = ::routing::capability_source::AggregateCapability;
-pub type NamespaceCapabilities = ::routing::capability_source::NamespaceCapabilities;
-
 /// The server-side of a capability implements this trait.
 /// Multiple `CapabilityProvider` objects can compose with one another for a single
 /// capability request. For example, a `CapabitilityProvider` can be interposed

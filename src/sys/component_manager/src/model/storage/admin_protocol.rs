@@ -12,7 +12,7 @@
 
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource, ComponentCapability},
+        capability::{CapabilityProvider, CapabilitySource},
         model::{
             component::{BindReason, ComponentInstance, WeakComponentInstance},
             error::ModelError,
@@ -22,7 +22,10 @@ use {
             storage,
         },
     },
-    ::routing::{capability_source::StorageCapabilitySource, route_capability},
+    ::routing::{
+        capability_source::{ComponentCapability, StorageCapabilitySource},
+        route_capability,
+    },
     anyhow::{format_err, Error},
     async_trait::async_trait,
     cm_rust::{CapabilityName, ExposeDecl, OfferDecl, StorageDecl, UseDecl},

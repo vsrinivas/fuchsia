@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    super::error::ElfRunnerError, crate::model::policy::ScopedPolicyChecker,
+    super::error::ElfRunnerError, ::routing::policy::ScopedPolicyChecker,
     fidl_fuchsia_data as fdata,
 };
 
@@ -156,12 +156,12 @@ fn get_stream_sink(
 mod tests {
     use {
         super::*,
-        crate::{
+        ::routing::{
             config::{
                 AllowlistEntry, ChildPolicyAllowlists, JobPolicyAllowlists, RuntimeConfig,
                 SecurityPolicy,
             },
-            model::policy::{PolicyError, ScopedPolicyChecker},
+            policy::{PolicyError, ScopedPolicyChecker},
         },
         fidl_fuchsia_data as fdata,
         lazy_static::lazy_static,

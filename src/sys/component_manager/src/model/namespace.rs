@@ -4,12 +4,10 @@
 
 use {
     crate::{
-        capability::ComponentCapability,
         constants::PKG_PATH,
         model::{
             component::{BindReason, ComponentInstance, Package, Runtime, WeakComponentInstance},
             error::ModelError,
-            rights::Rights,
             routing::{
                 self, route_and_open_capability, OpenDirectoryOptions, OpenOptions,
                 OpenProtocolOptions, OpenServiceOptions, OpenStorageOptions,
@@ -17,8 +15,8 @@ use {
         },
     },
     ::routing::{
-        component_instance::ComponentInstanceInterface, route_to_storage_decl,
-        verify_instance_in_component_id_index, RouteRequest,
+        capability_source::ComponentCapability, component_instance::ComponentInstanceInterface,
+        rights::Rights, route_to_storage_decl, verify_instance_in_component_id_index, RouteRequest,
     },
     cm_logger::{
         fmt::{FmtArgsLogger, LOGGER as MODEL_LOGGER},

@@ -5,13 +5,13 @@
 pub mod error;
 pub mod open;
 pub mod service;
+pub use ::routing::error::RoutingError;
 pub use error::OpenResourceError;
-pub use error::RoutingError;
 pub use open::*;
 
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource, ComponentCapability},
+        capability::{CapabilityProvider, CapabilitySource},
         model::{
             component::{BindReason, ComponentInstance, ExtendedInstance, WeakComponentInstance},
             error::ModelError,
@@ -20,8 +20,8 @@ use {
         },
     },
     ::routing::{
-        component_instance::ComponentInstanceInterface, path::PathBufExt, route_capability,
-        route_storage_and_backing_directory,
+        capability_source::ComponentCapability, component_instance::ComponentInstanceInterface,
+        path::PathBufExt, route_capability, route_storage_and_backing_directory,
     },
     async_trait::async_trait,
     cm_rust::{self, CapabilityName, CapabilityPath, ExposeDecl, UseDecl, UseStorageDecl},

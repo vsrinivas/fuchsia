@@ -6,10 +6,11 @@ use {
     crate::model::{
         component::{ComponentInstance, InstanceState},
         error::ModelError,
-        events::{dispatcher::EventDispatcherScope, event::Event, filter::EventFilter},
+        events::{dispatcher::EventDispatcherScope, event::Event},
         hooks::{Event as HookEvent, EventType},
         model::Model,
     },
+    ::routing::event::EventFilter,
     async_trait::async_trait,
     cm_rust::CapabilityName,
     fuchsia_async as fasync,
@@ -255,13 +256,13 @@ mod tests {
         super::*,
         crate::model::{
             events::{
-                mode_set::EventModeSet,
                 registry::{EventRegistry, RoutedEvent, SubscriptionOptions},
                 stream::EventStream,
             },
             hooks::{EventError, EventErrorPayload, EventPayload},
             testing::routing_test_helpers::*,
         },
+        ::routing::event::EventModeSet,
         cm_rust::{
             DirectoryDecl, EventMode, ExposeDecl, ExposeDirectoryDecl, ExposeSource, ExposeTarget,
         },

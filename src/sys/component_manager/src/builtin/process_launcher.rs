@@ -4,12 +4,13 @@
 
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource, InternalCapability},
+        capability::{CapabilityProvider, CapabilitySource},
         model::{
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
         },
     },
+    ::routing::capability_source::InternalCapability,
     anyhow::Error,
     async_trait::async_trait,
     cm_rust::CapabilityName,

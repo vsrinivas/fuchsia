@@ -4,9 +4,7 @@
 
 use {
     crate::{
-        capability::{
-            CapabilityProvider, CapabilitySource, ComponentCapability, InternalCapability,
-        },
+        capability::{CapabilityProvider, CapabilitySource},
         model::{
             component::{BindReason, WeakComponentInstance},
             error::ModelError,
@@ -22,6 +20,7 @@ use {
     fuchsia_zircon as zx,
     lazy_static::lazy_static,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker},
+    routing::capability_source::{ComponentCapability, InternalCapability},
     std::{
         path::PathBuf,
         sync::{Arc, Weak},

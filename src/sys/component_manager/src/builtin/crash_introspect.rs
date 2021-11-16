@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::{builtin::capability::BuiltinCapability, capability::InternalCapability},
+    crate::builtin::capability::BuiltinCapability,
+    ::routing::capability_source::InternalCapability,
     anyhow::Error,
     async_trait::async_trait,
     cm_rust::CapabilityName,

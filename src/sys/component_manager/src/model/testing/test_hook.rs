@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        capability::*,
+        capability::{CapabilityProvider, CapabilitySource},
         model::{
             addable_directory::AddableDirectoryWithResult,
             error::ModelError,
@@ -19,6 +19,7 @@ use {
     fuchsia_zircon as zx,
     futures::{executor::block_on, lock::Mutex, prelude::*},
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase},
+    routing::capability_source::InternalCapability,
     std::{
         cmp::Eq,
         collections::HashMap,

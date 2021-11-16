@@ -10,11 +10,14 @@ use {
             component::{
                 BindReason, ComponentInstance, ComponentManagerInstance, WeakComponentInstance,
             },
-            environment::{DebugRegistry, Environment, RunnerRegistry},
+            environment::Environment,
             error::ModelError,
-            policy::ScopedPolicyChecker,
             resolver::{ResolvedComponent, Resolver, ResolverError, ResolverRegistry},
         },
+    },
+    ::routing::{
+        environment::{DebugRegistry, RunnerRegistry},
+        policy::ScopedPolicyChecker,
     },
     anyhow::format_err,
     async_trait::async_trait,

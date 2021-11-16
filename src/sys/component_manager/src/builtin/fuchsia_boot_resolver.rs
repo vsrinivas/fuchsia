@@ -3,10 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::component::ComponentInstance,
     crate::{
         builtin::capability::BuiltinCapability,
-        capability::InternalCapability,
+        model::component::ComponentInstance,
         model::resolver::{self, ResolvedComponent, Resolver, ResolverError},
     },
     anyhow::Error,
@@ -17,6 +16,7 @@ use {
     fuchsia_url::boot_url::BootUrl,
     fuchsia_zircon::Status,
     futures::TryStreamExt,
+    routing::capability_source::InternalCapability,
     std::path::Path,
     std::sync::Arc,
 };

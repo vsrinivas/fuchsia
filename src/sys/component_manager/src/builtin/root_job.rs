@@ -3,16 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::{builtin::capability::BuiltinCapability, capability::*},
-    anyhow::Error,
-    async_trait::async_trait,
-    cm_rust::CapabilityName,
-    fidl_fuchsia_kernel as fkernel,
-    fuchsia_runtime::job_default,
-    fuchsia_zircon as zx,
-    futures::prelude::*,
-    lazy_static::lazy_static,
-    std::sync::Arc,
+    crate::builtin::capability::BuiltinCapability,
+    ::routing::capability_source::InternalCapability, anyhow::Error, async_trait::async_trait,
+    cm_rust::CapabilityName, fidl_fuchsia_kernel as fkernel, fuchsia_runtime::job_default,
+    fuchsia_zircon as zx, futures::prelude::*, lazy_static::lazy_static, std::sync::Arc,
 };
 
 lazy_static! {
@@ -58,7 +52,10 @@ impl BuiltinCapability for RootJob {
 mod tests {
     use {
         super::*,
-        crate::model::hooks::{Event, EventPayload, Hooks},
+        crate::{
+            capability::CapabilitySource,
+            model::hooks::{Event, EventPayload, Hooks},
+        },
         cm_task_scope::TaskScope,
         fidl::endpoints::ClientEnd,
         fuchsia_async as fasync,

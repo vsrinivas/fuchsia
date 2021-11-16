@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{builtin::capability::BuiltinCapability, capability::*},
+    crate::builtin::capability::BuiltinCapability,
     anyhow::{format_err, Error},
     async_trait::async_trait,
     cm_rust::CapabilityName,
@@ -11,6 +11,7 @@ use {
     fuchsia_zircon::{self as zx, HandleBased, Resource},
     futures::prelude::*,
     lazy_static::lazy_static,
+    routing::capability_source::InternalCapability,
     std::sync::Arc,
 };
 
@@ -63,6 +64,7 @@ mod tests {
         super::*,
         crate::{
             builtin::capability::BuiltinCapability,
+            capability::CapabilitySource,
             model::hooks::{Event, EventPayload, Hooks},
         },
         cm_task_scope::TaskScope,

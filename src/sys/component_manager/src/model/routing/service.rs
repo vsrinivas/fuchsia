@@ -314,10 +314,12 @@ mod tests {
     use {
         super::*,
         crate::{
-            capability::{CapabilitySource, ComponentCapability},
-            model::{routing::RoutingError, testing::routing_test_helpers::RoutingTestBuilder},
+            capability::CapabilitySource, model::testing::routing_test_helpers::RoutingTestBuilder,
         },
-        ::routing::component_instance::ComponentInstanceInterface,
+        ::routing::{
+            capability_source::ComponentCapability, component_instance::ComponentInstanceInterface,
+            error::RoutingError,
+        },
         cm_rust::*,
         cm_rust_testing::{ChildDeclBuilder, CollectionDeclBuilder, ComponentDeclBuilder},
         moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker, PartialChildMoniker},

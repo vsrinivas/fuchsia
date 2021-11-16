@@ -3,30 +3,26 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        capability::NamespaceCapabilities,
-        model::{
-            actions::{
-                start, ActionSet, DestroyChildAction, DiscoverAction, PurgeChildAction,
-                ResolveAction, StartAction, StopAction,
-            },
-            context::{ModelContext, WeakModelContext},
-            environment::Environment,
-            error::ModelError,
-            exposed_dir::ExposedDir,
-            hooks::{Event, EventPayload, Hooks},
-            namespace::IncomingNamespace,
-            policy::GlobalPolicyChecker,
-            resolver::ResolvedComponent,
-            routing::{
-                self, route_and_open_capability, OpenOptions, OpenResourceError, OpenRunnerOptions,
-                RouteRequest, RoutingError,
-            },
+    crate::model::{
+        actions::{
+            start, ActionSet, DestroyChildAction, DiscoverAction, PurgeChildAction, ResolveAction,
+            StartAction, StopAction,
+        },
+        context::{ModelContext, WeakModelContext},
+        environment::Environment,
+        error::ModelError,
+        exposed_dir::ExposedDir,
+        hooks::{Event, EventPayload, Hooks},
+        namespace::IncomingNamespace,
+        resolver::ResolvedComponent,
+        routing::{
+            self, route_and_open_capability, OpenOptions, OpenResourceError, OpenRunnerOptions,
+            RouteRequest, RoutingError,
         },
     },
     ::cm_logger::fmt::LOGGER as MODEL_LOGGER,
     ::routing::{
-        capability_source::BuiltinCapabilities,
+        capability_source::{BuiltinCapabilities, NamespaceCapabilities},
         component_id_index::{ComponentIdIndex, ComponentInstanceId},
         component_instance::{
             ComponentInstanceInterface, ExtendedInstanceInterface, ResolvedInstanceInterface,
@@ -34,13 +30,13 @@ use {
         },
         environment::EnvironmentInterface,
         error::ComponentInstanceError,
+        policy::GlobalPolicyChecker,
         DebugRouteMapper,
     },
     anyhow::format_err,
     async_trait::async_trait,
     clonable_error::ClonableError,
-    cm_runner::component_controller::ComponentController,
-    cm_runner::{NullRunner, RemoteRunner, Runner},
+    cm_runner::{component_controller::ComponentController, NullRunner, RemoteRunner, Runner},
     cm_rust::{self, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, UseDecl},
     cm_task_scope::TaskScope,
     cm_util::channel,
@@ -1826,7 +1822,6 @@ pub mod tests {
             binding::Binder,
             events::{registry::EventSubscription, stream::EventStream},
             hooks::{EventError, EventErrorPayload, EventType},
-            rights,
             testing::{
                 mocks::{ControlMessage, ControllerActionResponse, MockController},
                 routing_test_helpers::{RoutingTest, RoutingTestBuilder},
@@ -2302,7 +2297,7 @@ pub mod tests {
                     .directory(cm_rust::DirectoryDecl {
                         name: "diagnostics".into(),
                         source_path: Some("/diagnostics".try_into().unwrap()),
-                        rights: *rights::READ_RIGHTS,
+                        rights: *::routing::rights::READ_RIGHTS,
                     })
                     .expose(cm_rust::ExposeDecl::Directory(cm_rust::ExposeDirectoryDecl {
                         source: cm_rust::ExposeSource::Self_,

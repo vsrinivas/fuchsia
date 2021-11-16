@@ -6,8 +6,6 @@ use {
     crate::model::{
         events::{
             event::Event,
-            filter::EventFilter,
-            mode_set::EventModeSet,
             registry::{ExecutionMode, SubscriptionOptions, SubscriptionType},
         },
         hooks::{
@@ -15,6 +13,7 @@ use {
             TransferEvent,
         },
     },
+    ::routing::event::{EventFilter, EventModeSet},
     anyhow::Error,
     cm_rust::{DictionaryValue, EventMode},
     fuchsia_trace as trace,
@@ -231,10 +230,8 @@ impl EventDispatcherScope {
 mod tests {
     use {
         super::*,
-        crate::{
-            capability::{CapabilitySource, InternalCapability},
-            model::events::registry::ExecutionMode,
-        },
+        crate::{capability::CapabilitySource, model::events::registry::ExecutionMode},
+        ::routing::capability_source::InternalCapability,
         fuchsia_zircon as zx,
         futures::StreamExt,
         matches::assert_matches,

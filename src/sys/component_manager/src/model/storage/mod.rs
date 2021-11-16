@@ -405,7 +405,6 @@ mod tests {
     use {
         crate::model::{
             component::BindReason,
-            rights,
             routing::error::OpenResourceError,
             testing::{
                 routing_test_helpers::{RoutingTest, RoutingTestBuilder},
@@ -434,7 +433,7 @@ mod tests {
                     .directory(DirectoryDecl {
                         name: "data".into(),
                         source_path: Some("/data".try_into().unwrap()),
-                        rights: *rights::READ_RIGHTS | *rights::WRITE_RIGHTS,
+                        rights: *routing::rights::READ_RIGHTS | *routing::rights::WRITE_RIGHTS,
                     })
                     .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
                         source_name: "data".try_into().unwrap(),
@@ -521,7 +520,7 @@ mod tests {
                     .directory(DirectoryDecl {
                         name: "data".into(),
                         source_path: Some("/data".try_into().unwrap()),
-                        rights: *rights::READ_RIGHTS | *rights::WRITE_RIGHTS,
+                        rights: *routing::rights::READ_RIGHTS | *routing::rights::WRITE_RIGHTS,
                     })
                     .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
                         source_name: "data".try_into().unwrap(),
@@ -643,7 +642,7 @@ mod tests {
                     .directory(DirectoryDecl {
                         name: "data".into(),
                         source_path: Some("/data".try_into().unwrap()),
-                        rights: *rights::READ_RIGHTS | *rights::WRITE_RIGHTS,
+                        rights: *routing::rights::READ_RIGHTS | *routing::rights::WRITE_RIGHTS,
                     })
                     .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
                         source_name: "data".try_into().unwrap(),
@@ -769,7 +768,7 @@ mod tests {
                     .directory(DirectoryDecl {
                         name: "data".into(),
                         source_path: Some("/data".try_into().unwrap()),
-                        rights: *rights::READ_RIGHTS | *rights::WRITE_RIGHTS,
+                        rights: *routing::rights::READ_RIGHTS | *routing::rights::WRITE_RIGHTS,
                     })
                     .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
                         source_name: "data".try_into().unwrap(),

@@ -3,11 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        config::RuntimeConfig,
-        model::{error::ModelError, policy::GlobalPolicyChecker},
+    crate::model::error::ModelError,
+    ::routing::{
+        component_id_index::ComponentIdIndex, config::RuntimeConfig, policy::GlobalPolicyChecker,
     },
-    routing::component_id_index::ComponentIdIndex,
     std::sync::{Arc, Weak},
 };
 

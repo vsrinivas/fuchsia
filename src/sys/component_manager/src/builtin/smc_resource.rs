@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::{builtin::capability::ResourceCapability, capability::*},
+    crate::builtin::capability::ResourceCapability,
+    ::routing::capability_source::InternalCapability,
     anyhow::Error,
     async_trait::async_trait,
     cm_rust::CapabilityName,
@@ -63,6 +64,7 @@ mod tests {
         super::*,
         crate::{
             builtin::capability::BuiltinCapability,
+            capability::CapabilitySource,
             model::hooks::{Event, EventPayload, Hooks},
         },
         cm_task_scope::TaskScope,

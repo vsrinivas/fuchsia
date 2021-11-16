@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::component::ComponentInstance,
-    crate::model::resolver::{ResolvedComponent, Resolver, ResolverError},
+    crate::model::{
+        component::ComponentInstance,
+        resolver::{ResolvedComponent, Resolver, ResolverError},
+    },
     ::routing::{environment::find_first_absolute_ancestor_url, error::ComponentInstanceError},
     anyhow::anyhow,
     async_trait::async_trait,
@@ -103,10 +105,11 @@ mod tests {
                 WeakExtendedInstance,
             },
             context::WeakModelContext,
-            environment::{DebugRegistry, Environment, RunnerRegistry},
+            environment::Environment,
             hooks::Hooks,
             resolver::{Resolver, ResolverRegistry},
         },
+        ::routing::environment::{DebugRegistry, RunnerRegistry},
         anyhow::Error,
         async_trait::async_trait,
         fidl_fuchsia_sys2 as fsys,

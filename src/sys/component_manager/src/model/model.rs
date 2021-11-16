@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    crate::config::RuntimeConfig,
     crate::model::{
         actions::{ActionKey, DiscoverAction},
         binding::Binder,
@@ -12,6 +11,7 @@ use {
         environment::Environment,
         error::ModelError,
     },
+    ::routing::config::RuntimeConfig,
     moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker},
     std::sync::Arc,
 };

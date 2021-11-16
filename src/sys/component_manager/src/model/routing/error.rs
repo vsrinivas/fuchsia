@@ -10,9 +10,6 @@ use {
     thiserror::Error,
 };
 
-// TODO(https://fxbug.dev/71901): remove RoutingError alias once the routing lib has a stable API.
-pub type RoutingError = ::routing::error::RoutingError;
-
 #[derive(Debug, Error, Clone)]
 pub enum OpenResourceError {
     #[error("Failed to open path `{}` in outgoing directory of `{}`: {}", path, moniker, err)]

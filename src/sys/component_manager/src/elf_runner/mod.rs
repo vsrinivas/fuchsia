@@ -16,11 +16,8 @@ use {
         launcher::ProcessLauncherConnector, runtime_dir::RuntimeDirBuilder,
         stdout::bind_streams_to_syslog,
     },
-    crate::{
-        builtin::{crash_introspect::CrashRecords, runner::BuiltinRunnerFactory},
-        config::RuntimeConfig,
-        model::policy::ScopedPolicyChecker,
-    },
+    crate::builtin::{crash_introspect::CrashRecords, runner::BuiltinRunnerFactory},
+    ::routing::{config::RuntimeConfig, policy::ScopedPolicyChecker},
     anyhow::{format_err, Context as _},
     async_trait::async_trait,
     chrono::{DateTime, NaiveDateTime, Utc},
@@ -650,11 +647,13 @@ impl Runner for ScopedElfRunner {
 mod tests {
     use {
         super::*,
-        crate::model::policy::ScopedPolicyChecker,
         crate::{
             builtin::runner::BuiltinRunnerFactory,
-            config::{AllowlistEntry, JobPolicyAllowlists, RuntimeConfig, SecurityPolicy},
             model::testing::test_helpers::{create_fs_with_mock_logsink, MockServiceRequest},
+        },
+        ::routing::{
+            config::{AllowlistEntry, JobPolicyAllowlists, RuntimeConfig, SecurityPolicy},
+            policy::ScopedPolicyChecker,
         },
         anyhow::Error,
         fdio,

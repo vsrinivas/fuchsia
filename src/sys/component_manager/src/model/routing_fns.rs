@@ -3,16 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        capability::ComponentCapability,
-        model::{
-            component::WeakComponentInstance,
-            routing::{
-                self, route_and_open_namespace_capability,
-                route_and_open_namespace_capability_from_expose,
-            },
+    crate::model::{
+        component::WeakComponentInstance,
+        routing::{
+            self, route_and_open_namespace_capability,
+            route_and_open_namespace_capability_from_expose,
         },
     },
+    ::routing::capability_source::ComponentCapability,
     cm_rust::{ExposeDecl, UseDecl},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::NodeMarker,

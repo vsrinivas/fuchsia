@@ -3,13 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    crate::{builtin::capability::BuiltinCapability, capability::*},
+    crate::builtin::capability::BuiltinCapability,
     anyhow::Error,
     async_trait::async_trait,
     cm_rust::CapabilityName,
     fidl_fuchsia_boot as fboot,
     futures::prelude::*,
     lazy_static::lazy_static,
+    routing::capability_source::InternalCapability,
     std::{
         collections::{hash_map::Iter, HashMap},
         env,

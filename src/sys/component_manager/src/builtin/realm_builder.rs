@@ -8,15 +8,14 @@
 //! component manager behavior.
 
 use {
-    crate::model::component::ComponentInstance,
     crate::{
         builtin::{capability::BuiltinCapability, runner::BuiltinRunnerFactory},
-        capability::InternalCapability,
         model::{
-            policy::ScopedPolicyChecker,
+            component::ComponentInstance,
             resolver::{self, ResolvedComponent, Resolver, ResolverError},
         },
     },
+    ::routing::{capability_source::InternalCapability, policy::ScopedPolicyChecker},
     anyhow::Error,
     async_trait::async_trait,
     cm_runner::Runner,

@@ -7,10 +7,10 @@
 
 use {
     ::cm_logger::klog,
+    ::routing::config::RuntimeConfig,
     anyhow::Error,
     component_manager_lib::{
         builtin_environment::{BuiltinEnvironment, BuiltinEnvironmentBuilder},
-        config::RuntimeConfig,
         startup,
     },
     fidl_fuchsia_component_internal as finternal, fuchsia_async as fasync,

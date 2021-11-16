@@ -5,7 +5,6 @@
 use {
     crate::{
         builtin_environment::{BuiltinEnvironment, BuiltinEnvironmentBuilder},
-        config::RuntimeConfig,
         model::{
             binding::Binder,
             component::{BindReason, ComponentInstance, InstanceState, WeakComponentInstance},
@@ -18,6 +17,7 @@ use {
             },
         },
     },
+    ::routing::config::RuntimeConfig,
     anyhow::{Context, Error},
     cm_rust::{
         CapabilityDecl, CapabilityName, ChildDecl, ComponentDecl, EventMode, NativeIntoFidl,

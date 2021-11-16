@@ -4,12 +4,10 @@
 
 use {
     crate::model::{
-        events::{
-            filter::EventFilter,
-            synthesizer::{EventSynthesisProvider, ExtendedComponent},
-        },
+        events::synthesizer::{EventSynthesisProvider, ExtendedComponent},
         hooks::{Event, EventPayload},
     },
+    ::routing::event::EventFilter,
     async_trait::async_trait,
 };
 

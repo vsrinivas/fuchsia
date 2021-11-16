@@ -4,15 +4,13 @@
 
 use {
     crate::{
-        capability::{CapabilitySource, InternalCapability},
+        capability::CapabilitySource,
         model::{
             component::{ComponentInstance, InstanceState},
             error::ModelError,
             events::{
                 dispatcher::{EventDispatcher, EventDispatcherScope},
                 error::EventsError,
-                filter::EventFilter,
-                mode_set::EventModeSet,
                 stream::EventStream,
                 synthesizer::{EventSynthesisProvider, EventSynthesizer},
             },
@@ -24,7 +22,11 @@ use {
             routing::{RouteRequest, RouteSource},
         },
     },
-    ::routing::route_capability,
+    ::routing::{
+        capability_source::InternalCapability,
+        event::{EventFilter, EventModeSet},
+        route_capability,
+    },
     async_trait::async_trait,
     cm_rust::{CapabilityName, EventMode, UseDecl, UseEventDecl},
     fuchsia_trace as trace,
@@ -430,18 +432,16 @@ impl Hook for EventRegistry {
 mod tests {
     use {
         super::*,
-        crate::{
-            capability::ComponentCapability,
-            model::{
-                component::ComponentInstance,
-                environment::Environment,
-                events::event::Event,
-                hooks::{Event as ComponentEvent, EventError, EventErrorPayload, EventPayload},
-                testing::test_helpers::{TestModelResult, *},
-            },
+        crate::model::{
+            component::ComponentInstance,
+            environment::Environment,
+            events::event::Event,
+            hooks::{Event as ComponentEvent, EventError, EventErrorPayload, EventPayload},
+            testing::test_helpers::{TestModelResult, *},
         },
         ::routing::{
-            component_instance::ComponentInstanceInterface, error::ComponentInstanceError,
+            capability_source::ComponentCapability, component_instance::ComponentInstanceInterface,
+            error::ComponentInstanceError,
         },
         cm_rust::ProtocolDecl,
         fuchsia_async as fasync, fuchsia_zircon as zx,
