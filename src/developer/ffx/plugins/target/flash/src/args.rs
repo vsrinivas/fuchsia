@@ -6,6 +6,7 @@ use {
     anyhow::{bail, Error, Result},
     argh::FromArgs,
     ffx_core::ffx_command,
+    ffx_flash_sub_command::Subcommand,
     serde::{Deserialize, Serialize},
     std::path::{Path, PathBuf},
 };
@@ -14,7 +15,7 @@ pub(crate) const OEM_FILE_ERROR_MSG: &str =
     "Unrecognized OEM staged file. Expected comma-separated pair: \"<OEM_COMMAND>,<PATH_TO_FILE>\"";
 
 #[ffx_command()]
-#[derive(FromArgs, Default, Debug, PartialEq, Clone)]
+#[derive(FromArgs, Default, Debug, PartialEq)]
 #[argh(
     subcommand,
     name = "flash",
@@ -82,6 +83,9 @@ pub struct FlashCommand {
         description = "skip hardware verification.  This is dangerous, please be sure the images you are flashing match the device"
     )]
     pub skip_verify: bool,
+
+    #[argh(subcommand)]
+    pub subcommand: Option<Subcommand>,
 }
 
 #[derive(Default, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]

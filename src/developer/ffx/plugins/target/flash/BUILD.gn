@@ -37,6 +37,8 @@ ffx_plugin("ffx_flash") {
     "src/manifest/v2.rs",
     "src/manifest/v3.rs",
   ]
+
+  plugin_deps = [ "lock:ffx_flash_lock" ]
 }
 
 # Add a group for the common tests
