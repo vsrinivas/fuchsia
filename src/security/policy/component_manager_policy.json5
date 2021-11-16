@@ -5,10 +5,6 @@
                 "/core/appmgr",
                 "/core/test_manager/elf_test_ambient_exec_runner",
 
-                // TODO(https://fxbug.dev/76568): Remove this from the list once we remove all
-                // non-hermetic tests from this collection.
-                "/core/test_manager/tests:**",
-
                 // The v2 Flutter and Dart JIT runners (which are not used for
                 // release builds) execute VMOs in order to run Flutter and
                 // Dart components.
@@ -184,11 +180,6 @@
                     "/core/debug_serial",
                     "/core/starnix_manager/starnix_runner",
                     "/core/test_manager/starnix_test_runner/starnix_runner",
-
-                    // TODO(https://fxbug.dev/76568): Remove this from the list
-                    // once we remove non-hermetic tests using VmexResource from this
-                    // collection.
-                    "/core/test_manager/tests:**",
                     "/core/test_manager/system-tests:**",
                 ],
             },

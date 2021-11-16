@@ -11,22 +11,28 @@ import("//build/test.gni")
 # Parameters
 #   forwarded_protocols: A list of protocols to offer to the test from the parent.
 #   test_url:            The component url for the test that is being wrapped.
+#   shard_includes:      Shards to include with generated manifest file.
 template("wrap_with_decompressor") {
   generated_target = "${target_name}_generated_wrapper_manifest"
   forward_variables_from(invoker,
                          [
                            "forwarded_protocols",
                            "test_url",
+                           "shard_includes",
                          ])
   assert(defined(test_url))
   if (!defined(forwarded_protocols)) {
     forwarded_protocols = [ "fuchsia.logger.LogSink" ]
+  }
+  if (!defined(shard_includes)) {
+    shard_includes = []
   }
   fuchsia_test_component_manifest(generated_target) {
     visibility = [ ":*" ]
     metadata = {
       test_component_manifest_cml = [
         {
+          include = shard_includes
           children = [
             {
               name = "decompressor"
