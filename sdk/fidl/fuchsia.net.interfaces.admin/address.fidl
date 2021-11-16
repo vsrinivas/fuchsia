@@ -172,7 +172,7 @@ protocol AddressStateProvider {
 };
 
 /// Address assignment parameters.
-type AddressParameters = resource table {
+type AddressParameters = table {
     /// The initial properties of the address.
     ///
     /// If not set, interpreted as an empty `AddressProperties`.
