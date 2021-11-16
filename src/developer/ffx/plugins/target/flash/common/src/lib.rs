@@ -229,7 +229,7 @@ pub async fn verify_hardware(revision: &String, fastboot_proxy: &FastbootProxy) 
         .map_err(map_fidl_error)?
         .map_err(|e| anyhow!("Communication error with the device: {:?}", e))?;
     if let Some(r) = rev.split("-").next() {
-        if r != *revision {
+        if r != *revision && rev != *revision {
             ffx_bail!(
                 "Hardware mismatch! Trying to flash images built for {} but have {}",
                 revision,
