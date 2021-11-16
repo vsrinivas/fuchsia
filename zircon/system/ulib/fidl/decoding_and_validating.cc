@@ -130,13 +130,15 @@ void ConvertEnvelopeToDecodedRepresentation(const void* bytes_base_ptr,
   ZX_ASSERT(offset <= std::numeric_limits<uint16_t>::max());
   ZX_ASSERT(envelope_copy.num_bytes <= std::numeric_limits<uint16_t>::max());
   fidl_envelope_v2_unknown_data_t unknown_data_envelope = {
-      .out_of_line =
-          {
-              .num_bytes = static_cast<uint16_t>(envelope_copy.num_bytes),
-              .offset = static_cast<uint16_t>(offset),
-          },
       .num_handles = envelope_copy.num_handles,
       .flags = envelope_copy.flags,
+  };
+  // TODO(fxbug.dev/88835): GCC 11 gets confused by this case with a
+  // `.out_of_line = ...` designated initializer above.  This code produces
+  // the same result with both compilers, but avoids this GCC bug.
+  unknown_data_envelope.out_of_line = {
+      .num_bytes = static_cast<uint16_t>(envelope_copy.num_bytes),
+      .offset = static_cast<uint16_t>(offset),
   };
   memcpy(envelope_ptr, &unknown_data_envelope, sizeof(unknown_data_envelope));
 }
