@@ -15,7 +15,7 @@ go_library("netdevice") {
     "//sdk/fidl/fuchsia.hardware.ethernet($go_toolchain)",
     "//sdk/fidl/fuchsia.net($go_toolchain)",
     "//sdk/fidl/fuchsia.net.tun($go_toolchain)",
-    "//src/connectivity/network/netstack:gen/netstack",
+    "//src/connectivity/network/netstack:gen/netstack/link/netdevice",
     "//src/connectivity/network/netstack/link",
     "//src/connectivity/network/netstack/link/fifo",
     "//src/connectivity/network/netstack/testutil",

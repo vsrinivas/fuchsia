@@ -82,12 +82,19 @@ def main():
 
     current_sources = []
     if args.sources:
-        # TODO(fxbug.dev/3037): verify that the sources are in a single folder.
         for source in args.sources:
             current_sources.append(
                 Source(
                     os.path.join(name, source),
                     os.path.join(args.source_dir, source), args.output))
+        if not name.endswith('/...'):
+            # Validate that `sources` are all in the same directory.
+            dirnames = {os.path.dirname(s) for s in args.sources}
+            if len(dirnames) > 1:
+                dirnames_joined = ', '.join(sorted(dirnames))
+                raise ValueError(
+                    f'Sources for "{name}" come from multiple directories:'
+                    f' {dirnames_joined}')
     elif args.allow_globbing:
         current_sources.append(Source(name, args.source_dir, args.output))
     result = get_sources(args.deps, extra_sources=current_sources)

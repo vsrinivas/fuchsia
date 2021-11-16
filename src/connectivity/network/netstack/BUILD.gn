@@ -44,29 +44,41 @@ fuchsia_package("netstack") {
   deps = [ ":component-legacy" ]
 }
 
-generated_go("gen/netstack") {
+generated_go("gen/netstack/link/eth") {
   definitions = [
     {
       src = "link/eth/handler.json"
-      package = "link/eth"
       template = "link/fifo/gen/handler.tmpl"
       copy = [ "link/fifo/gen/fifo_entry.go" ]
     },
     {
       src = "link/eth/entries.json"
-      package = "link/eth"
       template = "link/fifo/gen/entries.tmpl"
     },
+  ]
+}
+
+generated_go("gen/netstack/link/netdevice") {
+  definitions = [
     {
       src = "link/netdevice/handler.json"
-      package = "link/netdevice"
       template = "link/fifo/gen/handler.tmpl"
     },
     {
       src = "link/netdevice/entries.json"
-      package = "link/netdevice"
       template = "link/fifo/gen/entries.tmpl"
     },
+  ]
+}
+
+go_library("pprof") {
+  name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/pprof"
+  source_dir = "pprof"
+  sources = [ "export.go" ]
+  deps = [
+    "inspect",
+    "//src/lib/component",
+    "//src/lib/syslog/go",
   ]
 }
 
@@ -74,6 +86,7 @@ go_library("lib") {
   name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack"
 
   deps = [
+    ":pprof",
     "dhcp",
     "dns",
     "fidlconv",
@@ -140,7 +153,6 @@ go_library("lib") {
     "netstack_service_impl_test.go",
     "netstack_test.go",
     "noop_endpoint_test.go",
-    "pprof/export.go",
     "socket_conv.go",
   ]
 }

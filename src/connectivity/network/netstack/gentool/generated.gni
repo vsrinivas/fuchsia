@@ -12,11 +12,9 @@ import("//build/go/go_library.gni")
 #    {
 #      # JSON file applied to the template.
 #      src = "my_definition.json"
-#      # Destination package in the generated library.
-#      package = "eth"
 #      # Path to template definition.
 #      template = "my_template.tmpl"
-#      # copy support files to destination package.
+#      # copy support files to destination.
 #      copy = [ "my_support_file.go" ]
 #    },
 #
@@ -29,17 +27,14 @@ template("generated_go") {
 
   foreach(f, invoker.definitions) {
     assert(defined(f.template), "missing template path for generation")
-    assert(defined(f.package), "missing destination package for generation")
     assert(defined(f.src), "missing source JSON path for generation")
-
-    pkg_label = string_replace(f.package, "/", "_")
 
     # Name of the source JSON file will be the name of the generated go file.
     dst_name = get_path_info(f.src, "name")
 
     # Define a target name for each definition, the generated library will
     # depend on all the actions we declare.
-    name = "_${target_name}_${pkg_label}_${dst_name}"
+    name = string_replace("_${target_name}_$dst_name", "/", "_")
 
     copy_deps = []
     if (defined(f.copy)) {
@@ -57,20 +52,19 @@ template("generated_go") {
 
         # The copied file is part of the library, add it to the list of
         # generated files.
-        gen_files += [ "${f.package}/$file" ]
+        gen_files += [ file ]
         copy(copy_name) {
           sources = [ c ]
-          outputs = [ "$target_gen_dir/${f.package}/$file" ]
+          outputs = [ "$target_gen_dir/$target_name/$file" ]
         }
       }
     }
 
-    # The generated file is in the specified package and uses the source JSON
-    # name.
-    gen_file = "${f.package}/${dst_name}.go"
+    # The generated file uses the source JSON name.
+    gen_file = "$dst_name.go"
 
     # The file will be generated in target_gen_dir.
-    gen_dst = "$target_gen_dir/$gen_file"
+    gen_dst = "$target_gen_dir/$target_name/$gen_file"
 
     # Keep all the generated files and their target labels, the generated
     # library will depend on them.
@@ -83,10 +77,7 @@ template("generated_go") {
         f.template,
         f.src,
       ]
-      inputs = [
-        f.template,
-        f.src,
-      ]
+      inputs = sources
       outputs = [ gen_dst ]
 
       args = [
@@ -108,7 +99,7 @@ template("generated_go") {
 
     # Depend on all the compiled_actions above.
     non_go_deps = gen_names
-    source_dir = target_gen_dir
+    source_dir = "$target_gen_dir/$target_name"
 
     # Specify each of the files composing the library.
     sources = gen_files
