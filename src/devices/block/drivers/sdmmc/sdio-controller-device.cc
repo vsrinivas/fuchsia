@@ -120,6 +120,8 @@ zx_status_t SdioControllerDevice::ProbeSdio() {
     return st;
   }
 
+  sdmmc_.SetRequestRetries(10);
+
   if ((st = ProcessCccr()) != ZX_OK) {
     zxlogf(ERROR, "Read CCCR failed, retcode = %d", st);
     return st;
@@ -156,6 +158,8 @@ zx_status_t SdioControllerDevice::ProbeSdio() {
       return st;
     }
   }
+
+  sdmmc_.SetRequestRetries(0);
 
   zxlogf(INFO, "sdio device initialized successfully");
   zxlogf(INFO, "          Manufacturer: 0x%x", funcs_[0].hw_info.manufacturer_id);

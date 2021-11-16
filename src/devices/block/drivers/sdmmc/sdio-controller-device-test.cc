@@ -784,6 +784,27 @@ TEST_F(SdioControllerDeviceTest, ProbeSetVoltage) {
   EXPECT_EQ(sdmmc_.signal_voltage(), SDMMC_VOLTAGE_V180);
 }
 
+TEST_F(SdioControllerDeviceTest, ProbeRetriesRequests) {
+  sdmmc_.set_command_callback(SDIO_SEND_OP_COND, [](sdmmc_req_t* req) -> void {
+    req->response[0] = OpCondFunctions(5) | SDIO_SEND_OP_COND_RESP_S18A;
+  });
+  uint32_t tries = 0;
+  sdmmc_.set_command_callback(SDIO_IO_RW_DIRECT, [&](sdmmc_req_t* req) -> void {
+    const bool write = req->arg & SDIO_IO_RW_DIRECT_RW_FLAG;
+    const uint32_t fn_idx =
+        (req->arg & SDIO_IO_RW_DIRECT_FN_IDX_MASK) >> SDIO_IO_RW_DIRECT_FN_IDX_LOC;
+    const uint32_t addr =
+        (req->arg & SDIO_IO_RW_DIRECT_REG_ADDR_MASK) >> SDIO_IO_RW_DIRECT_REG_ADDR_LOC;
+
+    const bool read_fn0_fbr = !write && (fn_idx == 0) && (addr == SDIO_CIA_FBR_CIS_ADDR);
+    req->status = (read_fn0_fbr && tries++ < 7) ? ZX_ERR_IO : ZX_OK;
+  });
+
+  EXPECT_OK(dut_->Init());
+
+  EXPECT_OK(dut_->ProbeSdio());
+}
+
 TEST_F(SdioControllerDeviceTest, IoAbortSetsAbortFlag) {
   sdmmc_.set_command_callback(
       SDIO_SEND_OP_COND, [](sdmmc_req_t* req) -> void { req->response[0] = OpCondFunctions(5); });

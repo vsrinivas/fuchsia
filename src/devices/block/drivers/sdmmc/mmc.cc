@@ -269,6 +269,8 @@ bool SdmmcBlockDevice::MmcSupportsHs400() {
 }
 
 zx_status_t SdmmcBlockDevice::ProbeMmc() {
+  sdmmc_.SetRequestRetries(0);
+
   size_t actual = 0;
   emmc_config_t config = {};
   zx_status_t st =

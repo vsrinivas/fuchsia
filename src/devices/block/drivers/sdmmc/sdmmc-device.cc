@@ -37,12 +37,17 @@ namespace sdmmc {
 
 zx_status_t SdmmcDevice::Init() { return host_.HostInfo(&host_info_); }
 
-zx_status_t SdmmcDevice::SdmmcRequestHelper(sdmmc_req_t* req, uint8_t retries,
-                                            uint32_t wait_time) const {
+zx_status_t SdmmcDevice::Request(sdmmc_req_t* req, uint32_t retries, zx::duration wait_time) const {
+  if (retries == 0) {
+    retries = retries_;
+  }
+
   zx_status_t st;
   while (((st = host_.Request(req)) != ZX_OK) && retries > 0) {
     retries--;
-    zx::nanosleep(zx::deadline_after(zx::msec(wait_time)));
+    if (wait_time.get() > 0) {
+      zx::nanosleep(zx::deadline_after(wait_time));
+    }
   }
   return st;
 }
@@ -55,7 +60,7 @@ zx_status_t SdmmcDevice::SdmmcGoIdle() {
   req.arg = 0;
   req.cmd_flags = SDMMC_GO_IDLE_STATE_FLAGS;
   req.use_dma = UseDma();
-  return host_.Request(&req);
+  return Request(&req);
 }
 
 zx_status_t SdmmcDevice::SdmmcSendStatus(uint32_t* response) {
@@ -64,7 +69,7 @@ zx_status_t SdmmcDevice::SdmmcSendStatus(uint32_t* response) {
   req.arg = RcaArg();
   req.cmd_flags = SDMMC_SEND_STATUS_FLAGS;
   req.use_dma = UseDma();
-  zx_status_t st = host_.Request(&req);
+  zx_status_t st = Request(&req);
   if (st == ZX_OK) {
     *response = req.response[0];
   }
@@ -80,7 +85,7 @@ zx_status_t SdmmcDevice::SdmmcStopTransmission(uint32_t* status) {
     req.cmd_flags = SDMMC_STOP_TRANSMISSION_FLAGS;
     req.use_dma = UseDma();
     req.suppress_error_messages = i < (kRetryAttempts - 1);
-    if ((st = host_.Request(&req)) == ZX_OK) {
+    if ((st = Request(&req)) == ZX_OK) {
       if (status) {
         *status = req.response[0];
       }
@@ -98,7 +103,7 @@ zx_status_t SdmmcDevice::SdmmcWaitForState(uint32_t state) {
     req.cmd_flags = SDMMC_SEND_STATUS_FLAGS;
     req.use_dma = UseDma();
     req.suppress_error_messages = i < (kRetryAttempts - 1);
-    zx_status_t st = host_.Request(&req);
+    zx_status_t st = Request(&req);
     if (st == ZX_OK && MMC_STATUS_CURRENT_STATE(req.response[0]) == state) {
       return ZX_OK;
     }
@@ -112,7 +117,7 @@ zx_status_t SdmmcDevice::SdmmcIoRequestWithRetries(sdmmc_req_t* request, uint32_
     sdmmc_req_t req = *request;
     req.suppress_error_messages = i < (kRetryAttempts - 1);
 
-    if ((st = host_.Request(&req)) == ZX_OK) {
+    if ((st = Request(&req)) == ZX_OK) {
       memcpy(request->response, req.response, sizeof(req.response));
       break;
     }
@@ -143,7 +148,7 @@ zx_status_t SdmmcDevice::SdSendAppCmd() {
   req.arg = RcaArg();
   req.cmd_flags = SDMMC_APP_CMD_FLAGS;
   req.use_dma = UseDma();
-  return host_.Request(&req);
+  return Request(&req);
 }
 
 zx_status_t SdmmcDevice::SdSendOpCond(uint32_t flags, uint32_t* ocr) {
@@ -157,7 +162,7 @@ zx_status_t SdmmcDevice::SdSendOpCond(uint32_t flags, uint32_t* ocr) {
   req.arg = flags;
   req.cmd_flags = SD_APP_SEND_OP_COND_FLAGS;
   req.use_dma = UseDma();
-  if ((st = host_.Request(&req)) != ZX_OK) {
+  if ((st = Request(&req)) != ZX_OK) {
     return st;
   }
 
@@ -173,7 +178,7 @@ zx_status_t SdmmcDevice::SdSendIfCond() {
   req.arg = arg;
   req.cmd_flags = SD_SEND_IF_COND_FLAGS;
   req.use_dma = UseDma();
-  zx_status_t st = host_.Request(&req);
+  zx_status_t st = Request(&req);
   if (st != ZX_OK) {
     zxlogf(DEBUG, "SD_SEND_IF_COND failed, retcode = %d", st);
     return st;
@@ -194,7 +199,7 @@ zx_status_t SdmmcDevice::SdSendRelativeAddr(uint16_t* card_status) {
   req.cmd_flags = SD_SEND_RELATIVE_ADDR_FLAGS;
   req.use_dma = UseDma();
 
-  zx_status_t st = host_.Request(&req);
+  zx_status_t st = Request(&req);
   if (st != ZX_OK) {
     zxlogf(DEBUG, "SD_SEND_RELATIVE_ADDR failed, retcode = %d", st);
     return st;
@@ -215,7 +220,7 @@ zx_status_t SdmmcDevice::SdSelectCard() {
   req.arg = RcaArg();
   req.cmd_flags = SD_SELECT_CARD_FLAGS;
   req.use_dma = UseDma();
-  return host_.Request(&req);
+  return Request(&req);
 }
 
 zx_status_t SdmmcDevice::SdSendScr(std::array<uint8_t, 8>& scr) {
@@ -234,7 +239,7 @@ zx_status_t SdmmcDevice::SdSendScr(std::array<uint8_t, 8>& scr) {
   req.virt_buffer = scr.data();
   req.virt_size = 8;
   req.buf_offset = 0;
-  return host_.Request(&req);
+  return Request(&req);
 }
 
 zx_status_t SdmmcDevice::SdSetBusWidth(sdmmc_bus_width_t width) {
@@ -252,7 +257,7 @@ zx_status_t SdmmcDevice::SdSetBusWidth(sdmmc_bus_width_t width) {
   req.arg = (width == SDMMC_BUS_WIDTH_FOUR ? 2 : 0);
   req.cmd_flags = SD_APP_SET_BUS_WIDTH_FLAGS;
   req.use_dma = UseDma();
-  return host_.Request(&req);
+  return Request(&req);
 }
 
 zx_status_t SdmmcDevice::SdSwitchUhsVoltage(uint32_t ocr) {
@@ -267,7 +272,7 @@ zx_status_t SdmmcDevice::SdSwitchUhsVoltage(uint32_t ocr) {
     return ZX_OK;
   }
 
-  if ((st = host_.Request(&req)) != ZX_OK) {
+  if ((st = Request(&req)) != ZX_OK) {
     zxlogf(DEBUG, "SD_VOLTAGE_SWITCH failed, retcode = %d", st);
     return st;
   }
@@ -308,7 +313,7 @@ zx_status_t SdmmcDevice::SdioSendOpCond(uint32_t ocr, uint32_t* rocr) {
   req.use_dma = UseDma();
   req.suppress_error_messages = true;
   for (size_t i = 0; i < 100; i++) {
-    if ((st = SdmmcRequestHelper(&req, 3, 10)) != ZX_OK) {
+    if ((st = Request(&req, 3, zx::msec(10))) != ZX_OK) {
       // fail on request error
       break;
     }
@@ -345,7 +350,7 @@ zx_status_t SdmmcDevice::SdioIoRwDirect(bool write, uint32_t fn_idx, uint32_t re
     req.cmd_flags = SDIO_IO_RW_DIRECT_FLAGS;
   }
   req.use_dma = UseDma();
-  zx_status_t st = host_.Request(&req);
+  zx_status_t st = Request(&req);
   if (st != ZX_OK) {
     // Let the platform driver handle logging of this error.
     zxlogf(DEBUG, "SDIO_IO_RW_DIRECT failed, retcode = %d", st);
@@ -406,7 +411,7 @@ zx_status_t SdmmcDevice::SdioIoRwExtended(uint32_t caps, bool write, uint32_t fn
   }
   req.use_dma = use_dma;
 
-  zx_status_t st = host_.Request(&req);
+  zx_status_t st = Request(&req);
   if (st != ZX_OK) {
     zxlogf(DEBUG, "SDIO_IO_RW_DIRECT_EXTENDED failed, retcode = %d", st);
     return st;
@@ -474,7 +479,7 @@ zx_status_t SdmmcDevice::MmcSendOpCond(uint32_t ocr, uint32_t* rocr) {
   req.use_dma = UseDma();
   zx_status_t st;
   for (int i = 100; i; i--) {
-    if ((st = host_.Request(&req)) != ZX_OK) {
+    if ((st = Request(&req)) != ZX_OK) {
       // fail on request error
       break;
     }
@@ -494,7 +499,7 @@ zx_status_t SdmmcDevice::MmcAllSendCid(std::array<uint8_t, SDMMC_CID_SIZE>& cid)
   req.arg = 0;
   req.cmd_flags = SDMMC_ALL_SEND_CID_FLAGS;
   req.use_dma = UseDma();
-  zx_status_t st = host_.Request(&req);
+  zx_status_t st = Request(&req);
   auto* const cid_u32 = reinterpret_cast<uint32_t*>(cid.data());
   if (st == ZX_OK) {
     cid_u32[0] = req.response[0];
@@ -512,7 +517,7 @@ zx_status_t SdmmcDevice::MmcSetRelativeAddr(uint16_t rca) {
   req.arg = RcaArg();
   req.cmd_flags = MMC_SET_RELATIVE_ADDR_FLAGS;
   req.use_dma = UseDma();
-  return host_.Request(&req);
+  return Request(&req);
 }
 
 zx_status_t SdmmcDevice::MmcSendCsd(std::array<uint8_t, SDMMC_CSD_SIZE>& csd) {
@@ -521,7 +526,7 @@ zx_status_t SdmmcDevice::MmcSendCsd(std::array<uint8_t, SDMMC_CSD_SIZE>& csd) {
   req.arg = RcaArg();
   req.cmd_flags = SDMMC_SEND_CSD_FLAGS;
   req.use_dma = UseDma();
-  zx_status_t st = host_.Request(&req);
+  zx_status_t st = Request(&req);
   auto* const csd_u32 = reinterpret_cast<uint32_t*>(csd.data());
   if (st == ZX_OK) {
     csd_u32[0] = req.response[0];
@@ -543,7 +548,7 @@ zx_status_t SdmmcDevice::MmcSendExtCsd(std::array<uint8_t, MMC_EXT_CSD_SIZE>& ex
   req.virt_buffer = ext_csd.data();
   req.virt_size = 512;
   req.cmd_flags = MMC_SEND_EXT_CSD_FLAGS;
-  zx_status_t st = host_.Request(&req);
+  zx_status_t st = Request(&req);
   if (st == ZX_OK && zxlog_level_enabled(TRACE)) {
     zxlogf(TRACE, "EXT_CSD:");
     hexdump8_ex(ext_csd.data(), ext_csd.size(), 0);
@@ -557,7 +562,7 @@ zx_status_t SdmmcDevice::MmcSelectCard() {
   req.arg = RcaArg();
   req.cmd_flags = MMC_SELECT_CARD_FLAGS;
   req.use_dma = UseDma();
-  return host_.Request(&req);
+  return Request(&req);
 }
 
 zx_status_t SdmmcDevice::MmcSwitch(uint8_t index, uint8_t value) {
@@ -569,7 +574,7 @@ zx_status_t SdmmcDevice::MmcSwitch(uint8_t index, uint8_t value) {
   req.arg = arg;
   req.cmd_flags = MMC_SWITCH_FLAGS;
   req.use_dma = UseDma();
-  return host_.Request(&req);
+  return Request(&req);
 }
 
 }  // namespace sdmmc

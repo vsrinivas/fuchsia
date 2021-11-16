@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/sdmmc/cpp/banjo.h>
 #include <lib/sdmmc/hw.h>
 #include <lib/stdcompat/span.h>
+#include <lib/zx/time.h>
 
 #include <array>
 
@@ -21,7 +22,7 @@ namespace sdmmc {
 // required.
 class SdmmcDevice {
  public:
-  SdmmcDevice(const ddk::SdmmcProtocolClient& host) : host_(host), host_info_({}) {}
+  explicit SdmmcDevice(const ddk::SdmmcProtocolClient& host) : host_(host), host_info_({}) {}
 
   zx_status_t Init();
 
@@ -32,6 +33,8 @@ class SdmmcDevice {
 
   // Update the current voltage field, e.g. after reading the card status registers.
   void SetCurrentVoltage(sdmmc_voltage_t new_voltage) { signal_voltage_ = new_voltage; }
+
+  void SetRequestRetries(uint32_t retries) { retries_ = retries; }
 
   // SD/MMC shared ops
   zx_status_t SdmmcGoIdle();
@@ -76,7 +79,9 @@ class SdmmcDevice {
  private:
   static constexpr uint32_t kRetryAttempts = 10;
 
-  zx_status_t SdmmcRequestHelper(sdmmc_req_t* req, uint8_t retries, uint32_t wait_time) const;
+  // Retry each request retries_ times (with wait_time delay in between) by default. Requests are
+  // always tried at least once.
+  zx_status_t Request(sdmmc_req_t* req, uint32_t retries = 0, zx::duration wait_time = {}) const;
   zx_status_t SdSendAppCmd();
 
   inline uint32_t RcaArg() const { return rca_ << 16; }
@@ -85,6 +90,7 @@ class SdmmcDevice {
   sdmmc_host_info_t host_info_;
   sdmmc_voltage_t signal_voltage_ = SDMMC_VOLTAGE_V330;
   uint16_t rca_ = 0;  // APP_CMD requires the initial RCA to be zero.
+  uint32_t retries_ = 0;
 };
 
 }  // namespace sdmmc

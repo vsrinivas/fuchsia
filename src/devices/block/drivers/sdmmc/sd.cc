@@ -31,6 +31,8 @@ constexpr uint8_t kCsdStructV2 = 0x1;
 namespace sdmmc {
 
 zx_status_t SdmmcBlockDevice::ProbeSd() {
+  sdmmc_.SetRequestRetries(0);
+
   // Issue the SEND_IF_COND command, this will tell us that we can talk to
   // the card correctly and it will also tell us if the voltage range that we
   // have supplied has been accepted.
