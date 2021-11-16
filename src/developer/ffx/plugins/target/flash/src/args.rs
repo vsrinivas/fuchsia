@@ -6,7 +6,6 @@ use {
     anyhow::{bail, Error, Result},
     argh::FromArgs,
     ffx_core::ffx_command,
-    ffx_flash_sub_command::Subcommand,
     serde::{Deserialize, Serialize},
     std::path::{Path, PathBuf},
 };
@@ -87,6 +86,19 @@ pub struct FlashCommand {
     #[argh(subcommand)]
     pub subcommand: Option<Subcommand>,
 }
+
+#[derive(FromArgs, Clone, PartialEq, Debug)]
+#[argh(subcommand)]
+pub enum Subcommand {
+    Lock(LockCommand),
+    //TODO Unlock,
+    //TODO Boot,
+}
+
+#[derive(FromArgs, Clone, PartialEq, Debug)]
+/// Locks a fastboot target.
+#[argh(subcommand, name = "lock")]
+pub struct LockCommand {}
 
 #[derive(Default, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct OemFile(String, String);

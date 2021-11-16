@@ -3,17 +3,22 @@
 // found in the LICENSE file.
 
 use {
-    crate::manifest::{flash_from_path, flash_from_sdk},
+    crate::{
+        lock::flash_lock,
+        manifest::{from_path, from_sdk},
+    },
     anyhow::Result,
     errors::ffx_bail,
     ffx_config::{file, sdk::SdkVersion},
     ffx_core::ffx_plugin,
-    ffx_flash_args::{FlashCommand, OemFile},
+    ffx_flash_args::{FlashCommand, OemFile, Subcommand::Lock},
     fidl_fuchsia_developer_bridge::FastbootProxy,
     std::io::{stdout, Write},
     std::path::Path,
 };
 
+mod common;
+mod lock;
 mod manifest;
 
 const SSH_OEM_COMMAND: &str = "add-staged-bootloader-file ssh.authorized_keys";
@@ -28,6 +33,11 @@ pub async fn flash_plugin_impl<W: Write>(
     mut cmd: FlashCommand,
     writer: &mut W,
 ) -> Result<()> {
+    // Since locking doesn't need anything from the manifest, just return early.
+    if let Some(Lock(_)) = cmd.subcommand {
+        return flash_lock(writer, &fastboot_proxy).await;
+    }
+
     match cmd.ssh_key.as_ref() {
         Some(ssh) => {
             let ssh_file = Path::new(ssh);
@@ -61,7 +71,7 @@ pub async fn flash_plugin_impl<W: Write>(
             if !manifest.is_file() {
                 ffx_bail!("Manifest \"{}\" is not a file.", manifest.display());
             }
-            flash_from_path(writer, manifest.to_path_buf(), fastboot_proxy, cmd).await
+            from_path(writer, manifest.to_path_buf(), fastboot_proxy, cmd).await
         }
         None => {
             let sdk = ffx_config::get_sdk().await?;
@@ -78,7 +88,7 @@ pub async fn flash_plugin_impl<W: Write>(
                 "No manifest path was given, using SDK from {}.",
                 sdk.get_path_prefix().display()
             )?;
-            flash_from_sdk(writer, path, fastboot_proxy, cmd).await
+            from_sdk(writer, path, fastboot_proxy, cmd).await
         }
     }
 }
@@ -89,7 +99,7 @@ pub async fn flash_plugin_impl<W: Write>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use ffx_fastboot_common::file::FileResolver;
+    use crate::common::file::FileResolver;
     use fidl_fuchsia_developer_bridge::FastbootRequest;
     use std::default::Default;
     use std::path::PathBuf;

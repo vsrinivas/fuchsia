@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
+    crate::common::{
         done_time, file::FileResolver, handle_upload_progress_for_staging, is_locked,
         map_fidl_error, UNLOCK_ERR,
     },
@@ -162,7 +162,7 @@ impl UnlockCredentials {
     }
 }
 
-pub async fn unlock_device<W: Write, F: FileResolver + Sync>(
+pub(crate) async fn unlock_device<W: Write, F: FileResolver + Sync>(
     writer: &mut W,
     file_resolver: &mut F,
     creds: &Vec<String>,

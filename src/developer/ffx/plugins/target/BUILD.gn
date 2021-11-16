@@ -26,11 +26,3 @@ ffx_plugin("ffx_target") {
 
   args_sources = [ "src/args.rs" ]
 }
-
-# Non-plugin tests group.
-# Needed for rustc_library targets (non-plugin targets - such as common libraries)
-group("tests") {
-  testonly = true
-
-  deps = [ "flash:tests" ]
-}

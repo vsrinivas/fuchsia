@@ -3,18 +3,20 @@
 // found in the LICENSE file.
 
 use {
-    crate::manifest::{
-        sdk::SdkEntries, v1::FlashManifest as FlashManifestV1,
-        v2::FlashManifest as FlashManifestV2, v3::FlashManifest as FlashManifestV3,
+    crate::{
+        common::{
+            file::{ArchiveResolver, FileResolver, Resolver, TarResolver},
+            prepare, Flash,
+        },
+        manifest::{
+            sdk::SdkEntries, v1::FlashManifest as FlashManifestV1,
+            v2::FlashManifest as FlashManifestV2, v3::FlashManifest as FlashManifestV3,
+        },
     },
     anyhow::{anyhow, Context, Result},
     async_trait::async_trait,
     chrono::Utc,
     errors::{ffx_bail, ffx_error},
-    ffx_fastboot_common::{
-        file::{ArchiveResolver, FileResolver, Resolver, TarResolver},
-        prepare, Flash,
-    },
     ffx_flash_args::FlashCommand,
     fidl_fuchsia_developer_bridge::FastbootProxy,
     fms::Entries,
@@ -134,7 +136,7 @@ impl Flash for FlashManifestVersion {
     }
 }
 
-pub(crate) async fn flash_from_sdk<W: Write>(
+pub(crate) async fn from_sdk<W: Write>(
     writer: &mut W,
     path: PathBuf,
     fastboot_proxy: FastbootProxy,
@@ -148,7 +150,7 @@ pub(crate) async fn flash_from_sdk<W: Write>(
     .await
 }
 
-pub(crate) async fn flash_from_path<W: Write>(
+pub(crate) async fn from_path<W: Write>(
     writer: &mut W,
     path: PathBuf,
     fastboot_proxy: FastbootProxy,

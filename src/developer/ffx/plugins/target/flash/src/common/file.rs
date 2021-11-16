@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::done_time,
+    crate::common::done_time,
     anyhow::{anyhow, bail, Context, Result},
     chrono::Utc,
     errors::{ffx_bail, ffx_error},
@@ -17,17 +17,17 @@ use {
     zip::read::ZipArchive,
 };
 
-pub trait FileResolver {
+pub(crate) trait FileResolver {
     fn manifest(&self) -> &Path;
     fn get_file<W: Write>(&mut self, writer: &mut W, file: &str) -> Result<String>;
 }
 
-pub struct Resolver {
+pub(crate) struct Resolver {
     manifest_path: PathBuf,
 }
 
 impl Resolver {
-    pub fn new(path: PathBuf) -> Result<Self> {
+    pub(crate) fn new(path: PathBuf) -> Result<Self> {
         Ok(Self {
             manifest_path: path
                 .canonicalize()
@@ -58,7 +58,7 @@ impl FileResolver for Resolver {
     }
 }
 
-pub struct ArchiveResolver {
+pub(crate) struct ArchiveResolver {
     temp_dir: TempDir,
     manifest_path: PathBuf,
     internal_manifest_path: PathBuf,
@@ -66,7 +66,7 @@ pub struct ArchiveResolver {
 }
 
 impl ArchiveResolver {
-    pub fn new<W: Write>(writer: &mut W, path: PathBuf) -> Result<Self> {
+    pub(crate) fn new<W: Write>(writer: &mut W, path: PathBuf) -> Result<Self> {
         let temp_dir = tempdir()?;
         let file = File::open(path.clone())
             .map_err(|e| ffx_error!("Could not open archive file: {}", e))?;
@@ -165,13 +165,13 @@ impl FileResolver for ArchiveResolver {
     }
 }
 
-pub struct TarResolver {
+pub(crate) struct TarResolver {
     _temp_dir: TempDir,
     manifest_path: PathBuf,
 }
 
 impl TarResolver {
-    pub fn new<W: Write>(writer: &mut W, path: PathBuf) -> Result<Self> {
+    pub(crate) fn new<W: Write>(writer: &mut W, path: PathBuf) -> Result<Self> {
         let temp_dir = tempdir()?;
         let file = File::open(path.clone())
             .map_err(|e| ffx_error!("Could not open archive file: {}", e))?;
