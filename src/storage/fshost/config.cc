@@ -87,6 +87,9 @@ const char Config::kWaitForData[] = "wait-for-data";
 // Use the given binary as the filesystem for the data partition.
 const char Config::kDataFilesystemBinaryPath[] = "data-filesystem-binary-path";
 
+// Does not request DirectoryAdmin for data root handle.
+const char Config::kDataFilesystemNoDirectoryAdmin[] = "data-filesystem-no-directory-admin";
+
 // If set, the data filesystem needs crypt support.
 const char Config::kDataFilesystemUsesCrypt[] = "data-filesystem-uses-crypt";
 

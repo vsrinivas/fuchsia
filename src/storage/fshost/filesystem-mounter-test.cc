@@ -5,10 +5,15 @@
 #include "filesystem-mounter.h"
 
 #include <fidl/fuchsia.io/cpp/wire_test_base.h>
+#include <fidl/fuchsia.io/cpp/wire_types.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/llcpp/server.h>
+#include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
+#include <zircon/time.h>
+
+#include <mutex>
 
 #include <cobalt-client/cpp/in_memory_logger.h>
 #include <gtest/gtest.h>
@@ -73,7 +78,11 @@ enum class FilesystemType {
 
 class TestMounter : public FilesystemMounter {
  public:
-  class FakeNodeImpl : public fuchsia_io::testing::Node_TestBase {
+  class FakeDirectoryImpl : public fuchsia_io::testing::Directory_TestBase {
+   public:
+    explicit FakeDirectoryImpl(std::function<void(uint32_t)> flags_callback)
+        : flags_callback_(std::move(flags_callback)) {}
+
     void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
       ADD_FAILURE() << "Unexpected call to " << name;
       completer.Close(ZX_ERR_NOT_SUPPORTED);
@@ -83,13 +92,39 @@ class TestMounter : public FilesystemMounter {
       completer.Reply(
           fuchsia_io::wire::NodeInfo::WithDirectory(fuchsia_io::wire::DirectoryObject()));
     }
+
+    void Open(OpenRequestView request, OpenCompleter::Sync& _completer) override {
+      flags_callback_(request->flags);
+    }
+
+   private:
+    std::function<void(uint32_t)> flags_callback_;
   };
 
   template <typename... Args>
-  explicit TestMounter(async_dispatcher_t* dispatcher, Args&&... args)
-      : FilesystemMounter(std::forward<Args>(args)...), dispatcher_(dispatcher) {}
+  explicit TestMounter(Args&&... args)
+      : FilesystemMounter(std::forward<Args>(args)...),
+        loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
+    loop_.StartThread("filesystem-mounter-test");
+  }
 
   void ExpectFilesystem(FilesystemType fs) { expected_filesystem_ = fs; }
+
+  void ResetSeenAdminFlag() {
+    std::lock_guard l(flags_lock_);
+    seen_admin_flag_ = false;
+    sync_completion_reset(&flags_completion_);
+  }
+
+  bool SeenAdminFlag() {
+    sync_completion_wait(&flags_completion_, ZX_TIME_INFINITE);
+    bool copy_of_result;
+    {
+      std::lock_guard l(flags_lock_);
+      copy_of_result = seen_admin_flag_;
+    }
+    return copy_of_result;
+  }
 
   zx_status_t LaunchFs(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids, size_t len,
                        uint32_t fs_flags) final {
@@ -121,8 +156,14 @@ class TestMounter : public FilesystemMounter {
     EXPECT_EQ(ids[0], PA_DIRECTORY_REQUEST);
     EXPECT_EQ(ids[1], FS_HANDLE_BLOCK_DEVICE_ID);
 
-    fidl::BindServer(dispatcher_, fidl::ServerEnd<fuchsia_io::Node>(zx::channel(hnd[0])),
-                     std::make_unique<FakeNodeImpl>());
+    fidl::BindServer(loop_.dispatcher(),
+                     fidl::ServerEnd<fuchsia_io::Directory>(zx::channel(hnd[0])),
+                     std::make_unique<FakeDirectoryImpl>([this](uint32_t flags) {
+                       std::lock_guard l(this->flags_lock_);
+                       if ((flags & fuchsia_io::wire::kOpenRightAdmin) > 0)
+                         this->seen_admin_flag_ = true;
+                       sync_completion_signal(&flags_completion_);
+                     }));
 
     // Close all other handles.
     for (size_t i = 1; i < len; i++) {
@@ -134,32 +175,22 @@ class TestMounter : public FilesystemMounter {
 
  private:
   FilesystemType expected_filesystem_ = FilesystemType::kBlobfs;
-  async_dispatcher_t* const dispatcher_;
-};
-
-class MounterTestWithDispatcher : public MounterTest {
- public:
-  MounterTestWithDispatcher() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
-
- protected:
-  void SetUp() override { ASSERT_OK(loop_.StartThread("filesystem-mounter-test")); }
-
-  async_dispatcher_t* dispatcher() { return loop_.dispatcher(); }
-
- private:
+  std::mutex flags_lock_;
+  sync_completion_t flags_completion_;
+  bool seen_admin_flag_ TA_GUARDED(flags_lock_) = false;
   async::Loop loop_;
 };
 
-TEST_F(MounterTestWithDispatcher, DurableMount) {
-  TestMounter mounter(dispatcher(), manager(), &config_);
+TEST_F(MounterTest, DurableMount) {
+  TestMounter mounter(manager(), &config_);
 
   mounter.ExpectFilesystem(FilesystemType::kMinfs);
   ASSERT_OK(mounter.MountDurable(zx::channel(), MountOptions()));
   ASSERT_TRUE(mounter.DurableMounted());
 }
 
-TEST_F(MounterTestWithDispatcher, FactoryMount) {
-  TestMounter mounter(dispatcher(), manager(), &config_);
+TEST_F(MounterTest, FactoryMount) {
+  TestMounter mounter(manager(), &config_);
 
   mounter.ExpectFilesystem(FilesystemType::kFactoryfs);
   ASSERT_OK(mounter.MountFactoryFs(zx::channel(), MountOptions()));
@@ -167,9 +198,9 @@ TEST_F(MounterTestWithDispatcher, FactoryMount) {
   ASSERT_TRUE(mounter.FactoryMounted());
 }
 
-TEST_F(MounterTestWithDispatcher, PkgfsWillNotMountBeforeData) {
+TEST_F(MounterTest, PkgfsWillNotMountBeforeData) {
   config_ = Config(Config::Options{{Config::kWaitForData, {}}});
-  TestMounter mounter(dispatcher(), manager(), &config_);
+  TestMounter mounter(manager(), &config_);
 
   mounter.ExpectFilesystem(FilesystemType::kBlobfs);
   ASSERT_OK(mounter.MountBlob(zx::channel(), MountOptions()));
@@ -180,8 +211,8 @@ TEST_F(MounterTestWithDispatcher, PkgfsWillNotMountBeforeData) {
   EXPECT_FALSE(mounter.PkgfsMounted());
 }
 
-TEST_F(MounterTestWithDispatcher, PkgfsWillNotMountBeforeDataUnlessExplicitlyRequested) {
-  TestMounter mounter(dispatcher(), manager(), &config_);
+TEST_F(MounterTest, PkgfsWillNotMountBeforeDataUnlessExplicitlyRequested) {
+  TestMounter mounter(manager(), &config_);
 
   mounter.ExpectFilesystem(FilesystemType::kBlobfs);
   ASSERT_OK(mounter.MountBlob(zx::channel(), MountOptions()));
@@ -192,9 +223,9 @@ TEST_F(MounterTestWithDispatcher, PkgfsWillNotMountBeforeDataUnlessExplicitlyReq
   EXPECT_TRUE(mounter.PkgfsMounted());
 }
 
-TEST_F(MounterTestWithDispatcher, PkgfsWillNotMountBeforeBlob) {
+TEST_F(MounterTest, PkgfsWillNotMountBeforeBlob) {
   config_ = Config(Config::Options{{Config::kWaitForData, {}}});
-  TestMounter mounter(dispatcher(), manager(), &config_);
+  TestMounter mounter(manager(), &config_);
 
   mounter.ExpectFilesystem(FilesystemType::kMinfs);
   ASSERT_OK(mounter.MountData(zx::channel(), MountOptions()));
@@ -205,9 +236,9 @@ TEST_F(MounterTestWithDispatcher, PkgfsWillNotMountBeforeBlob) {
   EXPECT_FALSE(mounter.PkgfsMounted());
 }
 
-TEST_F(MounterTestWithDispatcher, PkgfsMountsWithBlobAndData) {
+TEST_F(MounterTest, PkgfsMountsWithBlobAndData) {
   config_ = Config(Config::Options{{Config::kWaitForData, {}}});
-  TestMounter mounter(dispatcher(), manager(), &config_);
+  TestMounter mounter(manager(), &config_);
 
   mounter.ExpectFilesystem(FilesystemType::kBlobfs);
   ASSERT_OK(mounter.MountBlob(zx::channel(), MountOptions()));
@@ -218,6 +249,43 @@ TEST_F(MounterTestWithDispatcher, PkgfsMountsWithBlobAndData) {
   ASSERT_TRUE(mounter.DataMounted());
   mounter.TryMountPkgfs();
   EXPECT_TRUE(mounter.PkgfsMounted());
+}
+
+TEST_F(MounterTest, OpenAllWithDirectoryAdmin) {
+  config_ = Config(Config::Options{{Config::kWaitForData, {}}});
+  TestMounter mounter(manager(), &config_);
+
+  mounter.ResetSeenAdminFlag();
+  mounter.ExpectFilesystem(FilesystemType::kMinfs);
+  ASSERT_OK(mounter.MountData(zx::channel(), MountOptions()));
+  ASSERT_TRUE(mounter.SeenAdminFlag());
+
+  mounter.ResetSeenAdminFlag();
+  mounter.ExpectFilesystem(FilesystemType::kBlobfs);
+  ASSERT_OK(mounter.MountBlob(zx::channel(), MountOptions()));
+  ASSERT_TRUE(mounter.SeenAdminFlag());
+
+  ASSERT_TRUE(mounter.BlobMounted());
+  ASSERT_TRUE(mounter.DataMounted());
+}
+
+TEST_F(MounterTest, OpenDataRootWithoutDirectoryAdmin) {
+  config_ = Config(
+      Config::Options{{Config::kWaitForData, {}}, {Config::kDataFilesystemNoDirectoryAdmin, {}}});
+  TestMounter mounter(manager(), &config_);
+
+  mounter.ResetSeenAdminFlag();
+  mounter.ExpectFilesystem(FilesystemType::kMinfs);
+  ASSERT_OK(mounter.MountData(zx::channel(), MountOptions()));
+  ASSERT_FALSE(mounter.SeenAdminFlag());
+
+  mounter.ResetSeenAdminFlag();
+  mounter.ExpectFilesystem(FilesystemType::kBlobfs);
+  ASSERT_OK(mounter.MountBlob(zx::channel(), MountOptions()));
+  ASSERT_TRUE(mounter.SeenAdminFlag());
+
+  ASSERT_TRUE(mounter.BlobMounted());
+  ASSERT_TRUE(mounter.DataMounted());
 }
 
 }  // namespace

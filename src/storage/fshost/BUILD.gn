@@ -598,10 +598,14 @@ template("fshost_config") {
     if (invoker.unstable_feature_use_fxfs) {
       contents += [
         "data-filesystem-binary-path=/pkg/bin/fxfs",
+        "data-filesystem-no-directory-admin",
         "data-filesystem-uses-crypt",
       ]
     } else if (invoker.unstable_feature_use_f2fs) {
-      contents += [ "data-filesystem-binary-path=/pkg/bin/f2fs" ]
+      contents += [
+        "data-filesystem-binary-path=/pkg/bin/f2fs",
+        "data-filesystem-no-directory-admin",
+      ]
     }
 
     if (defined(invoker.check_filesystems) && invoker.check_filesystems) {
