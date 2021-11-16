@@ -1554,19 +1554,19 @@ Possible values:
 
 **Current value (from the default):** `"default"`
 
-From //build/images/fvm.gni:100
+From //build/images/fvm.gni:96
 
 ### fvm_ftl_nand_block_count
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:93
+From //build/images/fvm.gni:89
 
 ### fvm_ftl_nand_oob_size
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:91
+From //build/images/fvm.gni:87
 
 ### fvm_ftl_nand_page_size
 Specifying these variables will generate a NAND FVM image suitable for
@@ -1577,13 +1577,13 @@ room to initialize on boot.
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:90
+From //build/images/fvm.gni:86
 
 ### fvm_ftl_nand_pages_per_block
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:92
+From //build/images/fvm.gni:88
 
 ### fvm_max_disk_size
 The max size of the disk where the FVM is written. This is used for
@@ -2442,14 +2442,6 @@ From //zircon/kernel/lib/crashlog/params.gni:14
 
 From //build/images/fvm.gni:76
 
-### minfs_board_maximum_data_bytes
-TODO(fxbug.dev/83978): Remove this arg which is used as part of a temporary
-workaround.
-
-**Current value (from the default):** `false`
-
-From //build/images/fvm.gni:81
-
 ### minfs_board_minimum_data_bytes
 
 **Current value (from the default):** `false`
@@ -3185,6 +3177,14 @@ A human readable product description.
 **Current value (from the default):** `""`
 
 From //build/product.gni:13
+
+### product_name_suffix
+Adds the suffix to the end of the product bundle name in order to make it unique.
+Used to distinguish between similar builds with different packages.
+
+**Current value (from the default):** `""`
+
+From //build/sdk/config.gni:15
 
 ### product_system_image_deps
 A list of binary labels to include in the system_image package.
@@ -4441,4 +4441,10 @@ be removed after everyone has had a chance to get hold of their machines.
 **Current value (from the default):** `false`
 
 From //zircon/kernel/BUILD.gn:29
+
+### use_custom_gbm
+
+**Current value (from the default):** `false`
+
+From //src/graphics/lib/gbm/gbm.gni:6
 
