@@ -170,12 +170,23 @@ static inline bool is_within(uintptr_t x, uintptr_t addr, uintptr_t size) {
 
 static zx_status_t read_fd(const int fd, const PhysMem& phys_mem, const uintptr_t off,
                            size_t* file_size) {
+  // Get the image file size.
   struct stat stat;
   ssize_t ret = fstat(fd, &stat);
   if (ret < 0) {
     FX_LOGS(ERROR) << "Failed to stat file:" << strerror(errno);
     return ZX_ERR_IO;
   }
+
+  // Ensure it will fit in guest memory.
+  if (static_cast<size_t>(stat.st_size) > phys_mem.size() - off) {
+    FX_LOGS(ERROR) << "File too large for guest memory. File size: " << stat.st_size
+                   << " byte(s), guest physical memory size: " << phys_mem.size()
+                   << " byte(s), load offset: " << off;
+    return ZX_ERR_NO_RESOURCES;
+  }
+
+  // Read into guest memory.
   ret = read(fd, phys_mem.ptr(off, stat.st_size), stat.st_size);
   if (ret != stat.st_size) {
     FX_LOGS(ERROR) << "Failed to read file:" << strerror(errno);
