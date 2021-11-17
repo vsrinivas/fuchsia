@@ -303,6 +303,14 @@ struct net_device {
     // rssi histogram, index = -(rssi), For ex, -128 => 128....-1 => 1
     std::array<uint64_t, RSSI_HISTOGRAM_LEN> rssi_buckets;
     wlanif_mlme_stats_t mlme_stats;
+    std::vector<wlanif_noise_floor_histogram_t> noise_floor_histograms;
+    std::vector<wlanif_hist_bucket_t> noise_floor_samples;
+    std::vector<wlanif_rssi_histogram_t> rssi_histograms;
+    std::vector<wlanif_hist_bucket_t> rssi_samples;
+    std::vector<wlanif_rx_rate_index_histogram_t> rx_rate_index_histograms;
+    std::vector<wlanif_hist_bucket_t> rx_rate_index_samples;
+    std::vector<wlanif_snr_histogram_t> snr_histograms;
+    std::vector<wlanif_hist_bucket_t> snr_samples;
     brcmf_pktcnt_le fw_pktcnt;
   } stats;
   zx::channel mlme_channel;

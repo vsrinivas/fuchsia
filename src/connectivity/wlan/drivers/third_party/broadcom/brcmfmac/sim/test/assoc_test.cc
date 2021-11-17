@@ -126,6 +126,8 @@ class AssocTest : public SimTest {
   void AssocErrorEventInject(brcmf_fweh_event_status_t ret_status, status_code_t ret_reason);
 
   void SendStatsQuery();
+  void GetIfaceCounterStats(wlanif_iface_counter_stats_t* out_stats);
+  void GetIfaceHistogramStats(wlanif_iface_histogram_stats_t* out_stats);
   void DetailedHistogramErrorInject();
 
  protected:
@@ -463,6 +465,14 @@ void AssocTest::SendStatsQuery() {
   client_ifc_.if_impl_ops_->stats_query_req(client_ifc_.if_impl_ctx_);
 }
 
+void AssocTest::GetIfaceCounterStats(wlanif_iface_counter_stats_t* out_stats) {
+  client_ifc_.if_impl_ops_->get_iface_counter_stats(client_ifc_.if_impl_ctx_, out_stats);
+}
+
+void AssocTest::GetIfaceHistogramStats(wlanif_iface_histogram_stats_t* out_stats) {
+  client_ifc_.if_impl_ops_->get_iface_histogram_stats(client_ifc_.if_impl_ctx_, out_stats);
+}
+
 // Verify that StatsQueryReq works when associated.
 TEST_F(AssocTest, StatsQueryReqTest) {
   // Create our device instance
@@ -572,6 +582,122 @@ TEST_F(AssocTest, StatsQueryReqWithoutDetailedHistogramFeatureTest) {
   ASSERT_THAT(client_mlme_stats.rssi_histograms, IsEmpty());
   ASSERT_THAT(client_mlme_stats.rx_rate_index_histograms, IsEmpty());
   ASSERT_THAT(client_mlme_stats.snr_histograms, IsEmpty());
+}
+
+TEST_F(AssocTest, GetIfaceCounterStatsTest) {
+  // Create our device instance
+  Init();
+
+  // Start up our fake AP
+  simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
+  ap.EnableBeacon(zx::msec(100));
+
+  context_.expected_results.push_front(STATUS_CODE_SUCCESS);
+  wlanif_iface_counter_stats_t stats = {};
+
+  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&AssocTest::GetIfaceCounterStats, this, &stats),
+                             zx::msec(30));
+
+  env_->Run(kTestDuration);
+
+  // Sim firmware returns these fake values for packet counters.
+  const uint64_t fw_rx_good = 5;
+  const uint64_t fw_rx_bad = 4;
+  const uint64_t fw_rx_multicast = 1;
+  const uint64_t fw_tx_good = 3;
+  const uint64_t fw_tx_bad = 2;
+  EXPECT_EQ(stats.rx_unicast_total, fw_rx_good + fw_rx_bad);
+  EXPECT_EQ(stats.rx_unicast_drop, fw_rx_bad);
+  EXPECT_EQ(stats.rx_multicast, fw_rx_multicast);
+  EXPECT_EQ(stats.tx_total, fw_tx_good + fw_tx_bad);
+  EXPECT_EQ(stats.tx_drop, fw_tx_bad);
+}
+
+TEST_F(AssocTest, GetIfaceHistogramStatsTest) {
+  // Create our device instance
+  Init();
+
+  // Start up our fake AP
+  simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
+  ap.EnableBeacon(zx::msec(100));
+
+  context_.expected_results.push_front(STATUS_CODE_SUCCESS);
+  wlanif_iface_histogram_stats_t banjo_stats = {};
+
+  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&AssocTest::GetIfaceHistogramStats, this, &banjo_stats),
+                             zx::msec(30));
+
+  env_->Run(kTestDuration);
+
+  fuchsia::wlan::stats::IfaceHistogramStats stats;
+  wlanif::ConvertIfaceHistogramStats(&stats, banjo_stats);
+
+  // Sim firmware returns these fake values for per-antenna histograms.
+  const auto& expected_hist_scope = fuchsia::wlan::stats::HistScope::PER_ANTENNA;
+  const auto& expected_antenna_freq = fuchsia::wlan::stats::AntennaFreq::ANTENNA_2_G;
+  const uint8_t expected_antenna_index = 0;
+  const uint8_t expected_snr_index = 60;
+  const uint8_t expected_snr_num_frames = 50;
+  // TODO(fxbug.dev/29698): Test all bucket values when sim firmware fully supports wstats_counters.
+  // Sim firmware populates only SNR buckets, probably due to the discrepancies between the iovar
+  // get handling between real and sim firmware (e.g. fxr/404141). When wstats_counters is fully
+  // supported in sim firmware we can test for the expected noise floor, RSSI, and rate buckets.
+
+  ASSERT_THAT(stats.noise_floor_histograms, SizeIs(1));
+  EXPECT_EQ(stats.noise_floor_histograms[0].hist_scope, expected_hist_scope);
+  ASSERT_THAT(stats.noise_floor_histograms[0].antenna_id, NotNull());
+  EXPECT_EQ(stats.noise_floor_histograms[0].antenna_id->freq, expected_antenna_freq);
+  EXPECT_EQ(stats.noise_floor_histograms[0].antenna_id->index, expected_antenna_index);
+
+  ASSERT_THAT(stats.rssi_histograms, SizeIs(1));
+  EXPECT_EQ(stats.rssi_histograms[0].hist_scope, expected_hist_scope);
+  ASSERT_THAT(stats.rssi_histograms[0].antenna_id, NotNull());
+  EXPECT_EQ(stats.rssi_histograms[0].antenna_id->freq, expected_antenna_freq);
+  EXPECT_EQ(stats.rssi_histograms[0].antenna_id->index, expected_antenna_index);
+
+  ASSERT_THAT(stats.rx_rate_index_histograms, SizeIs(1));
+  EXPECT_EQ(stats.rx_rate_index_histograms[0].hist_scope, expected_hist_scope);
+  ASSERT_THAT(stats.rx_rate_index_histograms[0].antenna_id, NotNull());
+  EXPECT_EQ(stats.rx_rate_index_histograms[0].antenna_id->freq, expected_antenna_freq);
+  EXPECT_EQ(stats.rx_rate_index_histograms[0].antenna_id->index, expected_antenna_index);
+
+  ASSERT_THAT(stats.snr_histograms, SizeIs(1));
+  EXPECT_EQ(stats.snr_histograms[0].hist_scope, expected_hist_scope);
+  ASSERT_THAT(stats.snr_histograms[0].antenna_id, NotNull());
+  EXPECT_EQ(stats.snr_histograms[0].antenna_id->freq, expected_antenna_freq);
+  EXPECT_EQ(stats.snr_histograms[0].antenna_id->index, expected_antenna_index);
+  ASSERT_THAT(stats.snr_histograms[0].snr_samples, SizeIs(1));
+  EXPECT_EQ(stats.snr_histograms[0].snr_samples[0].bucket_index, expected_snr_index);
+  EXPECT_EQ(stats.snr_histograms[0].snr_samples[0].num_samples, expected_snr_num_frames);
+}
+
+TEST_F(AssocTest, GetIfaceHistogramStatsNotSupportedTest) {
+  // Create our device instance
+  Init();
+
+  // Start up our fake AP
+  simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
+  ap.EnableBeacon(zx::msec(100));
+
+  context_.expected_results.push_front(STATUS_CODE_SUCCESS);
+  wlanif_iface_histogram_stats_t banjo_stats = {};
+
+  DetailedHistogramErrorInject();
+  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&AssocTest::GetIfaceHistogramStats, this, &banjo_stats),
+                             zx::msec(30));
+
+  env_->Run(kTestDuration);
+
+  fuchsia::wlan::stats::IfaceHistogramStats stats;
+  wlanif::ConvertIfaceHistogramStats(&stats, banjo_stats);
+
+  ASSERT_THAT(stats.noise_floor_histograms, IsEmpty());
+  ASSERT_THAT(stats.rssi_histograms, IsEmpty());
+  ASSERT_THAT(stats.rx_rate_index_histograms, IsEmpty());
+  ASSERT_THAT(stats.snr_histograms, IsEmpty());
 }
 
 void AssocTest::AssocErrorInject() {

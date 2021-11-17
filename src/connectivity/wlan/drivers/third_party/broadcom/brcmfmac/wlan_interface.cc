@@ -21,6 +21,7 @@
 
 #include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 
+#include "fuchsia/hardware/wlanif/c/banjo.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
@@ -105,6 +106,14 @@ wlanif_impl_protocol_ops_t wlan_interface_proto_ops = {
           return static_cast<WlanInterface*>(ctx)->EapolReq(req);
         },
     .stats_query_req = [](void* ctx) { return static_cast<WlanInterface*>(ctx)->StatsQueryReq(); },
+    .get_iface_counter_stats =
+        [](void* ctx, wlanif_iface_counter_stats_t* out_stats) {
+          return static_cast<WlanInterface*>(ctx)->GetIfaceCounterStats(out_stats);
+        },
+    .get_iface_histogram_stats =
+        [](void* ctx, wlanif_iface_histogram_stats_t* out_stats) {
+          return static_cast<WlanInterface*>(ctx)->GetIfaceHistogramStats(out_stats);
+        },
     .start_capture_frames =
         [](void* ctx, const wlanif_start_capture_frames_req_t* req,
            wlanif_start_capture_frames_resp_t* resp) {
@@ -361,6 +370,22 @@ void WlanInterface::StatsQueryReq() {
   if (wdev_ != nullptr) {
     brcmf_if_stats_query_req(wdev_->netdev);
   }
+}
+
+zx_status_t WlanInterface::GetIfaceCounterStats(wlanif_iface_counter_stats_t* out_stats) {
+  std::shared_lock<std::shared_mutex> guard(lock_);
+  if (wdev_ == nullptr) {
+    return ZX_ERR_BAD_STATE;
+  }
+  return brcmf_if_get_iface_counter_stats(wdev_->netdev, out_stats);
+}
+
+zx_status_t WlanInterface::GetIfaceHistogramStats(wlanif_iface_histogram_stats_t* out_stats) {
+  std::shared_lock<std::shared_mutex> guard(lock_);
+  if (wdev_ == nullptr) {
+    return ZX_ERR_BAD_STATE;
+  }
+  return brcmf_if_get_iface_histogram_stats(wdev_->netdev, out_stats);
 }
 
 void WlanInterface::StartCaptureFrames(const wlanif_start_capture_frames_req_t* req,
