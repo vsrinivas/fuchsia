@@ -42,4 +42,10 @@ config("config") {
   foreach(dir, boringssl_zircon_include_dirs) {
     include_dirs += [ "//third_party/boringssl/$dir" ]
   }
+
+  if (is_gcc) {
+    # Some of the boringssl code plays fast and loose with array sizes in the
+    # type system, but is actually safe at runtime.
+    cflags = [ "-Wno-stringop-overflow" ]
+  }
 }
