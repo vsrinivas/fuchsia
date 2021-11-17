@@ -64,7 +64,7 @@ fn hsv_to_rgba(h: f32, s: f32, v: f32) -> [u8; 4] {
 }
 
 enum MessageInternal {
-    CreateView(fviews::ViewCreationToken, fviews::ViewRefControl, fviews::ViewRef),
+    CreateView(fviews::ViewCreationToken, fviews::ViewIdentityOnCreation),
     OnPresentError {
         error: fland::FlatlandError,
     },
@@ -80,6 +80,9 @@ enum MessageInternal {
         width: u32,
         height: u32,
     },
+    FocusChanged {
+        is_focused: bool,
+    },
 }
 
 struct AppModel<'a> {
@@ -91,6 +94,7 @@ struct AppModel<'a> {
     hue: f32,
     page_size: usize,
     last_expected_presentation_time: zx::Time,
+    is_focused: bool,
 }
 
 impl<'a> AppModel<'a> {
@@ -108,7 +112,10 @@ impl<'a> AppModel<'a> {
             allocation: None,
             hue: 0.0,
             page_size: zx::system_get_page_size().try_into().unwrap(),
-            last_expected_presentation_time: zx::Time::from_nanos(0),
+            // If there are multiple instances of this example on-screen, it looks prettier if they
+            // don't all have exactly the same color, which would happen if we zeroed this value.
+            last_expected_presentation_time: zx::Time::get_monotonic(),
+            is_focused: false,
         }
     }
 
@@ -184,22 +191,43 @@ impl<'a> AppModel<'a> {
     fn create_parent_viewport_watcher(
         &mut self,
         mut view_creation_token: fviews::ViewCreationToken,
+        mut view_identity: fviews::ViewIdentityOnCreation,
     ) {
-        let (parent_viewport_watcher, server_end) =
+        let (parent_viewport_watcher, parent_viewport_watcher_request) =
             create_proxy::<fland::ParentViewportWatcherMarker>()
                 .expect("failed to create ParentViewportWatcherProxy");
+        let (focused, focused_request) = create_proxy::<fviews::ViewRefFocusedMarker>()
+            .expect("failed to create ViewRefFocusedProxy");
+        let view_bound_protocols = fland::ViewBoundProtocols {
+            view_ref_focused: Some(focused_request),
+            ..fland::ViewBoundProtocols::EMPTY
+        };
 
         // NOTE: it isn't necessary to call maybe_present() for this to take effect, because we will
         // relayout when receive the initial layout info.  See CreateView() FIDL docs.
-        self.flatland.create_view(&mut view_creation_token, server_end).expect("fidl error");
+        self.flatland
+            .create_view2(
+                &mut view_creation_token,
+                &mut view_identity,
+                view_bound_protocols,
+                parent_viewport_watcher_request,
+            )
+            .expect("fidl error");
 
+        Self::spawn_layout_info_watcher(parent_viewport_watcher, self.internal_sender.clone());
+        Self::spawn_view_ref_focused_watcher(focused, self.internal_sender.clone());
+    }
+
+    fn spawn_layout_info_watcher(
+        parent_viewport_watcher: fland::ParentViewportWatcherProxy,
+        sender: UnboundedSender<MessageInternal>,
+    ) {
         // NOTE: there may be a race condition if TemporaryFlatlandViewProvider.CreateView() is
         // invoked a second time, causing us to create another graph link.  Because Zircon doesn't
         // guarantee ordering on responses of different channels, we might receive data from the old
         // link after data from the new link, just before the old link is closed.  Non-example code
         // should be more careful (this assumes that the client expects CreateView() to be called
         // multiple times, which clients commonly don't).
-        let sender = self.internal_sender.clone();
         fasync::Task::spawn(async move {
             let mut layout_info_stream = HangingGetStream::new(
                 parent_viewport_watcher,
@@ -220,11 +248,42 @@ impl<'a> AppModel<'a> {
                             .expect("failed to send MessageInternal.");
                     }
                     Err(fidl::Error::ClientChannelClosed { .. }) => {
-                        info!("graph link connection closed.");
+                        info!("ParentViewportWatcher connection closed.");
                         return; // from spawned task closure
                     }
                     Err(fidl_error) => {
-                        warn!("graph link GetLayout() error: {:?}", fidl_error);
+                        warn!("ParentViewportWatcher GetLayout() error: {:?}", fidl_error);
+                        return; // from spawned task closure
+                    }
+                }
+            }
+        })
+        .detach();
+    }
+
+    fn spawn_view_ref_focused_watcher(
+        focused: fviews::ViewRefFocusedProxy,
+        sender: UnboundedSender<MessageInternal>,
+    ) {
+        fasync::Task::spawn(async move {
+            let mut focused_stream =
+                HangingGetStream::new(focused, fviews::ViewRefFocusedProxy::watch);
+            while let Some(result) = focused_stream.next().await {
+                match result {
+                    Ok(fviews::FocusState { focused: Some(focused), .. }) => {
+                        sender
+                            .unbounded_send(MessageInternal::FocusChanged { is_focused: focused })
+                            .expect("failed to send MessageInternal.");
+                    }
+                    Ok(_) => {
+                        error!("Missing required field FocusState.focused");
+                    }
+                    Err(fidl::Error::ClientChannelClosed { .. }) => {
+                        info!("ViewRefFocused connection closed.");
+                        return; // from spawned task closure
+                    }
+                    Err(fidl_error) => {
+                        warn!("ViewRefFocused GetLayout() error: {:?}", fidl_error);
                         return; // from spawned task closure
                     }
                 }
@@ -274,10 +333,11 @@ impl<'a> AppModel<'a> {
 
                 // TODO(fxbug.dev/76640): should look at pixel-format, instead of assuming 32-bit
                 // BGRA pixels.  For now, format is hard-coded anyway.
-                let p00: [u8; 4] = hsv_to_rgba(self.hue, 30.0, 75.0);
-                let p10: [u8; 4] = hsv_to_rgba(self.hue + 20.0, 30.0, 75.0);
-                let p11: [u8; 4] = hsv_to_rgba(self.hue + 60.0, 30.0, 75.0);
-                let p01: [u8; 4] = hsv_to_rgba(self.hue + 40.0, 30.0, 75.0);
+                let saturation = if self.is_focused { 75.0 } else { 30.0 };
+                let p00: [u8; 4] = hsv_to_rgba(self.hue, saturation, 75.0);
+                let p10: [u8; 4] = hsv_to_rgba(self.hue + 20.0, saturation, 75.0);
+                let p11: [u8; 4] = hsv_to_rgba(self.hue + 60.0, saturation, 75.0);
+                let p01: [u8; 4] = hsv_to_rgba(self.hue + 40.0, saturation, 75.0);
 
                 // The size used to map a VMO must be a multiple of the page size.  Ensure that the
                 // VMO is at least one page in size, and that the size returned by sysmem is no
@@ -323,14 +383,13 @@ fn setup_fidl_services(sender: UnboundedSender<MessageInternal>) {
                         fapp::ViewProviderRequest::CreateView2 { args, .. } => {
                             let view_creation_token = args.view_creation_token.unwrap();
                             // We do not get passed a view ref so create our own.
-                            let ViewRefPair { control_ref, view_ref } =
-                                ViewRefPair::new().expect("unable to create view ref pair");
-
+                            let view_identity = fviews::ViewIdentityOnCreation::from(
+                                ViewRefPair::new().expect("failed to create ViewRefPair"),
+                            );
                             sender
                                 .unbounded_send(MessageInternal::CreateView(
                                     view_creation_token,
-                                    control_ref,
-                                    view_ref,
+                                    view_identity,
                                 ))
                                 .expect("failed to send MessageInternal.");
                         }
@@ -426,10 +485,8 @@ async fn main() {
           message = internal_receiver.next().fuse() => {
             if let Some(message) = message {
               match message {
-                MessageInternal::CreateView(view_creation_token, _view_ref_control, _view_ref) => {
-                      // TODO(fxbug.dev/78866): handling ViewRefs is necessary for focus management.
-                        // For now, input is unsupported, and so we drop the ViewRef and ViewRefControl.
-                      app.create_parent_viewport_watcher(view_creation_token);
+                MessageInternal::CreateView(view_creation_token, view_identity) => {
+                      app.create_parent_viewport_watcher(view_creation_token, view_identity);
                   }
                   MessageInternal::Relayout { width, height } => {
                       app.on_relayout(width, height);
@@ -469,6 +526,9 @@ async fn main() {
                       zx::Time::from_nanos(frame_presented_info.actual_presentation_time),
                       presented_infos);
                   }
+                  MessageInternal::FocusChanged{ is_focused } => {
+                    app.is_focused = is_focused;
+                 }
                 }
             }
           }

@@ -2,29 +2,31 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{Context as _, Error};
-use async_utils::hanging_get::client::HangingGetStream;
-use fidl::endpoints::{create_proxy, ClientEnd};
-use fidl_fuchsia_developer_tiles::{
-    ControllerAddTileFromUrlResponder, ControllerAddTileFromViewProviderResponder,
-    ControllerControlHandle, ControllerListTilesResponder, ControllerRequest,
-    ControllerRequestStream,
+use {
+    anyhow::{Context as _, Error},
+    async_utils::hanging_get::client::HangingGetStream,
+    fidl::endpoints::{create_proxy, ClientEnd},
+    fidl_fuchsia_developer_tiles::{
+        ControllerAddTileFromUrlResponder, ControllerAddTileFromViewProviderResponder,
+        ControllerControlHandle, ControllerListTilesResponder, ControllerRequest,
+        ControllerRequestStream,
+    },
+    fidl_fuchsia_math as fmath,
+    fidl_fuchsia_sys::{LauncherMarker, LauncherProxy},
+    fidl_fuchsia_ui_app as ui_app, fidl_fuchsia_ui_composition as ui_comp,
+    fidl_fuchsia_ui_gfx::Vec3,
+    fidl_fuchsia_ui_views::{self as ui_views, ViewRef},
+    fuchsia_async as fasync, fuchsia_component as component,
+    fuchsia_component::client::{connect_to_protocol, launch, App},
+    fuchsia_scenic::{self as scenic, flatland},
+    fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
+    futures::{
+        channel::mpsc::{unbounded, UnboundedSender},
+        future,
+        prelude::*,
+    },
+    std::{collections::BTreeMap, convert::TryInto},
 };
-use fidl_fuchsia_math as fmath;
-use fidl_fuchsia_sys::{LauncherMarker, LauncherProxy};
-use fidl_fuchsia_ui_app as ui_app;
-use fidl_fuchsia_ui_gfx::Vec3;
-use fuchsia_async as fasync;
-use fuchsia_component as component;
-use fuchsia_component::client::{connect_to_protocol, launch, App};
-use fuchsia_scenic::flatland;
-use futures::{
-    channel::mpsc::{unbounded, UnboundedSender},
-    future,
-    prelude::*,
-};
-use log::*;
-use std::{collections::BTreeMap, convert::TryInto};
 
 const ROOT_TRANSFORM_ID: flatland::TransformId = flatland::TransformId { value: u64::MAX };
 
@@ -40,6 +42,7 @@ struct Service {
     tiles: BTreeMap<u32, Tile>,
     session: flatland::FlatlandProxy,
     launcher: LauncherProxy,
+    focuser: ui_views::FocuserProxy,
     num_presents_allowed: u32,
     pending_present: bool,
     logical_width: u32,
@@ -50,6 +53,7 @@ enum MessageInternal {
     ControllerRequest(ControllerRequest),
     FlatlandEvent(flatland::FlatlandEvent),
     ParentViewportWatcherGetLayout(flatland::LayoutInfo),
+    ReceivedChildViewRef(ViewRef),
 }
 
 // Represents a grid of uniformly-sized rectangular cells.
@@ -115,8 +119,22 @@ impl Service {
         let (parent_viewport_watcher_proxy, parent_viewport_watcher_request) =
             create_proxy::<flatland::ParentViewportWatcherMarker>()
                 .expect("failed to create ParentViewportWatcher endpoints");
+        let mut view_identity = ui_views::ViewIdentityOnCreation::from(
+            scenic::ViewRefPair::new().expect("failed to create ViewRefPair"),
+        );
+        let (focuser, focuser_request) =
+            create_proxy::<ui_views::FocuserMarker>().expect("failed to create Focuser endpoints");
+        let view_bound_protocols = ui_comp::ViewBoundProtocols {
+            view_focuser: Some(focuser_request),
+            ..ui_comp::ViewBoundProtocols::EMPTY
+        };
         session
-            .create_view(&mut link_tokens.view_creation_token, parent_viewport_watcher_request)
+            .create_view2(
+                &mut link_tokens.view_creation_token,
+                &mut view_identity,
+                view_bound_protocols,
+                parent_viewport_watcher_request,
+            )
             .expect("fidl error");
 
         fasync::Task::spawn(async move {
@@ -135,7 +153,7 @@ impl Service {
                             .expect("failed to send MessageInternal.");
                     }
                     Err(fidl_error) => {
-                        warn!("graph link GetLayout() error: {:?}", fidl_error);
+                        fx_log_warn!("graph link GetLayout() error: {:?}", fidl_error);
                         return; // from spawned task closure
                     }
                 }
@@ -151,6 +169,7 @@ impl Service {
             tiles: BTreeMap::new(),
             session,
             launcher,
+            focuser,
             num_presents_allowed: 1,
             pending_present: false,
             logical_width: 1280,
@@ -163,6 +182,7 @@ impl Service {
         url: String,
         allow_focus: bool,
         args: Option<Vec<String>>,
+        sender: UnboundedSender<MessageInternal>,
         responder: ControllerAddTileFromUrlResponder,
     ) -> Result<(), Error> {
         let id = self.next_id;
@@ -189,8 +209,9 @@ impl Service {
             ..flatland::ViewportProperties::EMPTY
         };
 
-        let (_, child_view_watcher_request) = create_proxy::<flatland::ChildViewWatcherMarker>()
-            .expect("failed to create ChildViewWatcher endpoints");
+        let (child_view_watcher, child_view_watcher_request) =
+            create_proxy::<flatland::ChildViewWatcherMarker>()
+                .expect("failed to create ChildViewWatcher endpoints");
 
         self.session.create_transform(&mut transform_id).expect("fidl error");
         self.session
@@ -213,6 +234,21 @@ impl Service {
 
         self.relayout();
 
+        let view_ref = child_view_watcher.get_view_ref();
+        fasync::Task::local(async move {
+            match view_ref.await {
+                Ok(view_ref) => {
+                    sender
+                        .unbounded_send(MessageInternal::ReceivedChildViewRef(view_ref))
+                        .expect("failed to send MessageInternal");
+                }
+                Err(e) => {
+                    fx_log_err!("error when requesting ViewRef from ChildViewWatcher: {}", e);
+                }
+            }
+        })
+        .detach();
+
         Ok(())
     }
 
@@ -222,7 +258,7 @@ impl Service {
         _provider: ClientEnd<ui_app::ViewProviderMarker>,
         _responder: ControllerAddTileFromViewProviderResponder,
     ) {
-        error!("AddTileFromViewProvider is not implemented (and probably will not be).");
+        fx_log_err!("AddTileFromViewProvider is not implemented (and probably will not be).");
     }
 
     fn remove_tile(&mut self, key: u32, _control_handle: ControllerControlHandle) {
@@ -240,7 +276,7 @@ impl Service {
 
             self.relayout();
         } else {
-            warn!("RemoveTile: Tried to remove non-existent tile with key {:?}", key)
+            fx_log_warn!("RemoveTile: Tried to remove non-existent tile with key {:?}", key)
         }
     }
 
@@ -262,12 +298,12 @@ impl Service {
             &mut sizes.iter_mut(),
             &mut focusabilities,
         ) {
-            warn!("ListTiles: fidl response error: {:?}", e);
+            fx_log_warn!("ListTiles: fidl response error: {:?}", e);
         }
     }
 
     fn quit(&mut self, _control_handle: ControllerControlHandle) {
-        info!("recieved Quit message");
+        fx_log_info!("recieved Quit message");
         std::process::exit(0);
     }
 
@@ -368,7 +404,7 @@ async fn main() -> Result<(), Error> {
         .expect("error connecting to Flatland display");
     let flatland_session = connect_to_protocol::<flatland::FlatlandMarker>()
         .expect("error connecting to Flatland session");
-    info!("Established connections to Flatland display and session");
+    fx_log_info!("Established connections to Flatland display and session");
 
     setup_fidl_services(internal_sender.clone());
     setup_handle_flatland_events(flatland_session.take_event_stream(), internal_sender.clone());
@@ -383,8 +419,14 @@ async fn main() -> Result<(), Error> {
         match message {
             MessageInternal::ControllerRequest(request) => match request {
                 ControllerRequest::AddTileFromUrl { url, allow_focus, args, responder } => {
-                    if let Err(e) = service.add_tile_from_url(url, allow_focus, args, responder) {
-                        info!("error in add_tile_from_url(): {:?}", e);
+                    if let Err(e) = service.add_tile_from_url(
+                        url,
+                        allow_focus,
+                        args,
+                        internal_sender.clone(),
+                        responder,
+                    ) {
+                        fx_log_info!("error in add_tile_from_url(): {:?}", e);
                     }
                 }
                 ControllerRequest::AddTileFromViewProvider { url, provider, responder } => {
@@ -412,7 +454,7 @@ async fn main() -> Result<(), Error> {
                 }
                 flatland::FlatlandEvent::OnFramePresented { .. } => {}
                 flatland::FlatlandEvent::OnError { error } => {
-                    error!("OnPresentProcessed({:?})", error);
+                    fx_log_err!("OnPresentProcessed({:?})", error);
                 }
             },
             MessageInternal::ParentViewportWatcherGetLayout(layout_info) => {
@@ -422,10 +464,21 @@ async fn main() -> Result<(), Error> {
                     service.relayout();
                 }
             }
+            MessageInternal::ReceivedChildViewRef(mut view_ref) => {
+                let result = service.focuser.request_focus(&mut view_ref);
+                fasync::Task::local(async move {
+                    match result.await {
+                        Ok(Ok(())) => {}
+                        Ok(Err(e)) => fx_log_err!("Error while requesting focus on child {:?}", e),
+                        Err(e) => fx_log_err!("FIDL error while requesting focus on child {:?}", e),
+                    }
+                })
+                .detach();
+            }
         }
     }
 
-    info!("Exiting tiles-flatland, goodbye.");
+    fx_log_info!("Exiting tiles-flatland, goodbye.");
 
     Ok(())
 }
