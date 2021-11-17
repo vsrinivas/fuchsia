@@ -66,11 +66,12 @@ static constexpr zx::duration kMaxErrorThresholdDuration = zx::msec(2);
 // By default NDEBUG builds are WARNING, and DEBUG builds INFO. To disable jam-sync logging for a
 // certain level, set the interval to 0. To disable all jam-sync logging, set kLogJamSyncs to false.
 static constexpr bool kLogJamSyncs = true;
-static constexpr uint16_t kJamSyncWarningInterval = 20;  // Log 1 of every 200 jam-syncs at WARNING
-static constexpr uint16_t kJamSyncInfoInterval = 5;      // Log 1 of every 20 jam-syncs at INFO
-static constexpr uint16_t kJamSyncTraceInterval = 1;     // Log all remaining jam-syncs at TRACE
+static constexpr uint16_t kJamSyncWarningInterval = 200;  // Log 1 of every 200 jam-syncs at WARNING
+static constexpr uint16_t kJamSyncInfoInterval = 20;      // Log 1 of every 20 jam-syncs at INFO
+static constexpr uint16_t kJamSyncTraceInterval = 1;      // Log all remaining jam-syncs at TRACE
 
-static constexpr bool kLogPositionInfo = true;
+static constexpr bool kLogInitialPositionSync = false;
+static constexpr bool kLogDestDiscontinuities = true;
 static constexpr bool kLogRollbacks = false;
 // Use logging strides that are prime, to avoid seeing only certain message cadences.
 static constexpr int kPositionLogStride = 997;
@@ -663,7 +664,7 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
   // use a step_size that matches the new source-to-dest relationship. Exit early: we should use the
   // new relationship for at least one mix before measuring pos error and rate-adjusting clocks.
   if (info.source_ref_clock_to_frac_source_frames_generation != clock_generation_for_previous_mix) {
-    if constexpr (kLogPositionInfo) {
+    if constexpr (kLogInitialPositionSync) {
       FX_LOGS(INFO) << "MixStage(" << this << "), stream(" << &stream
                     << "): " << (source_clock.is_device_clock() ? "Device" : "Client")
                     << (source_clock.is_adjustable() ? "Adjustable" : "Fixed") << "("
@@ -709,7 +710,7 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
   if (dest_frame != info.next_dest_frame) {
     auto dest_gap_duration = zx::nsec(dest_frames_to_clock_mono.rate().Scale(
         std::abs(dest_frame - info.next_dest_frame), TimelineRate::RoundingMode::Ceiling));
-    if constexpr (kLogPositionInfo) {
+    if constexpr (kLogDestDiscontinuities) {
       static int dest_discontinuity_count = 0;
       if (dest_discontinuity_count % kPositionLogStride == 0) {
         FX_LOGS(WARNING) << "MixStage(" << this << "), stream(" << &stream
@@ -722,7 +723,7 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
         FX_LOGS(WARNING) << "Dest discontinuity: " << info.next_dest_frame - dest_frame
                          << " frames (" << dest_gap_duration.to_nsecs() << " nsec), will "
                          << (dest_gap_duration < kMaxErrorThresholdDuration ? "NOT" : "")
-                         << " JamSync **********";
+                         << " SyncSourcePositionFromClocks **********";
       }
       dest_discontinuity_count = (dest_discontinuity_count + 1) % kPositionLogStride;
     }
@@ -820,6 +821,10 @@ void MixStage::SyncSourcePositionFromClocks(AudioClock& source_clock, AudioClock
   AudioClock::ResetRateAdjustments(source_clock, dest_clock, mono_now_from_dest);
 
   if constexpr (kLogJamSyncs) {
+    if (timeline_changed && !kLogInitialPositionSync) {
+      return;
+    }
+
     std::stringstream common_stream, dest_stream, source_stream;
     common_stream << "; MixStage " << static_cast<void*>(this) << ", SourceInfo "
                   << static_cast<void*>(&info) << "; "
