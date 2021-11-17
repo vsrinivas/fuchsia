@@ -232,6 +232,7 @@
                 "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.input3.Keyboard",
                 "fuchsia.ui.scenic.Scenic",
+                "fuchsia.vulkan.loader.Loader",
             ],
             from: "parent",
             to: [

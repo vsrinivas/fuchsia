@@ -804,7 +804,10 @@
         {
             protocol: [ "fuchsia.vulkan.loader.Loader" ],
             from: "#vulkan_loader",
-            to: [ "#session-manager" ],
+            to: [
+                "#session-manager",
+                "#starnix_manager",
+            ],
         },
         {
             directory: "dev",
