@@ -200,15 +200,15 @@ TEST_F(InspectDevfsTestCase, DevfsEntries) {
 TEST_F(InspectDevfsTestCase, NoPubProtocolVisibleInClassDirectory) {
   size_t test_index;
   zx::vmo inspect_vmo, inspect_vmo_duplicate;
-  uint32_t test_device_protocol = ZX_PROTOCOL_BUTTONS;  // This has PF_NOPUB set
+  uint32_t test_device_protocol = ZX_PROTOCOL_GPIO;  // This has PF_NOPUB set
   ASSERT_OK(zx::vmo::create(8 * 1024, 0, &inspect_vmo));
   ASSERT_OK(inspect_vmo.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP,
                                   &inspect_vmo_duplicate));
 
-  ASSERT_NO_FATAL_FAILURES(AddDevice(
-      platform_bus()->device, "test-device", test_device_protocol /* protocol id */, "",
-      false /* has_init */, false /* reply_to_init */,
-      false /* always_init */, std::move(inspect_vmo_duplicate) /* inspect */, &test_index));
+  ASSERT_NO_FATAL_FAILURES(
+      AddDevice(platform_bus()->device, "test-device", test_device_protocol /* protocol id */, "",
+                false /* has_init */, false /* reply_to_init */, false /* always_init */,
+                std::move(inspect_vmo_duplicate) /* inspect */, &test_index));
 
   // Check that device vmo is listed in devfs
   uint8_t buffer[4096];

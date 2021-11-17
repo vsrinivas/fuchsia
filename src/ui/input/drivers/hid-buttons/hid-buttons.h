@@ -6,8 +6,6 @@
 #define SRC_UI_INPUT_DRIVERS_HID_BUTTONS_HID_BUTTONS_H_
 
 #include <fidl/fuchsia.buttons/cpp/wire.h>
-#include <fuchsia/hardware/buttons/c/banjo.h>
-#include <fuchsia/hardware/buttons/cpp/banjo.h>
 #include <fuchsia/hardware/gpio/c/banjo.h>
 #include <fuchsia/hardware/hidbus/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -54,8 +52,6 @@ class HidButtonsDevice;
 using DeviceType = ddk::Device<HidButtonsDevice, ddk::Unbindable>;
 class HidButtonsHidBusFunction;
 using HidBusFunctionType = ddk::Device<HidButtonsHidBusFunction>;
-class HidButtonsButtonsFunction;
-using ButtonsFunctionType = ddk::Device<HidButtonsButtonsFunction, ddk::Unbindable>;
 class ButtonsNotifyInterface;
 
 using Buttons = fuchsia_buttons::Buttons;
@@ -103,7 +99,6 @@ class HidButtonsDevice : public DeviceType {
  protected:
   // Protected for unit testing.
   void ShutDown() TA_EXCL(client_lock_);
-  HidButtonsButtonsFunction* GetButtonsFunction() { return buttons_function_; }
 
   zx::port port_;
 
@@ -117,7 +112,6 @@ class HidButtonsDevice : public DeviceType {
   std::list<ButtonsNotifyInterface> interfaces_ TA_GUARDED(channels_lock_);  // owns the channels
 
   HidButtonsHidBusFunction* hidbus_function_;
-  HidButtonsButtonsFunction* buttons_function_;
 
  private:
   friend class HidButtonsDeviceTest;
@@ -185,37 +179,6 @@ class HidButtonsHidBusFunction
 
  private:
   HidButtonsDevice* device_;
-};
-
-class HidButtonsButtonsFunction
-    : public ButtonsFunctionType,
-      public ddk::ButtonsProtocol<HidButtonsButtonsFunction, ddk::base_protocol>,
-      public fbl::RefCounted<HidButtonsButtonsFunction> {
- public:
-  HidButtonsButtonsFunction(zx_device_t* device, HidButtonsDevice* peripheral)
-      : ButtonsFunctionType(device),
-        device_(peripheral),
-        loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
-    loop_.StartThread("hid-buttons-notify-loop", &loop_thread_);
-  }
-  virtual ~HidButtonsButtonsFunction() = default;
-
-  void DdkUnbind(ddk::UnbindTxn txn) {
-    loop_.Shutdown();
-    txn.Reply();
-  }
-  void DdkRelease() { delete this; }
-
-  // Methods required by the ddk mixins.
-  zx_status_t ButtonsGetChannel(zx::channel chan) {
-    return device_->ButtonsGetChannel(std::move(chan), loop_.dispatcher());
-  }
-
- private:
-  HidButtonsDevice* device_;
-
-  async::Loop loop_;
-  thrd_t loop_thread_;
 };
 
 class ButtonsNotifyInterface : public fidl::WireServer<Buttons> {

@@ -8,7 +8,6 @@
 #include <fuchsia/hardware/acpi/cpp/banjo.h>
 #include <fuchsia/hardware/amlogiccanvas/cpp/banjo.h>
 #include <fuchsia/hardware/audio/cpp/banjo.h>
-#include <fuchsia/hardware/buttons/cpp/banjo.h>
 #include <fuchsia/hardware/camera/sensor/cpp/banjo.h>
 #include <fuchsia/hardware/clock/cpp/banjo.h>
 #include <fuchsia/hardware/dsi/cpp/banjo.h>
@@ -80,7 +79,6 @@ class Fragment : public FragmentBase {
       : FragmentBase(parent),
         acpi_client_(parent, ZX_PROTOCOL_ACPI),
         canvas_client_(parent, ZX_PROTOCOL_AMLOGIC_CANVAS),
-        buttons_client_(parent, ZX_PROTOCOL_BUTTONS),
         clock_client_(parent, ZX_PROTOCOL_CLOCK),
         eth_board_client_(parent, ZX_PROTOCOL_ETH_BOARD),
         goldfish_address_space_client_(parent, ZX_PROTOCOL_GOLDFISH_ADDRESS_SPACE),
@@ -142,10 +140,6 @@ class Fragment : public FragmentBase {
   zx_status_t RpcCanvas(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                         uint32_t* out_resp_size, zx::handle* req_handles, uint32_t req_handle_count,
                         zx::handle* resp_handles, uint32_t* resp_handle_count);
-  zx_status_t RpcButtons(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                         uint32_t* out_resp_size, zx::handle* req_handles,
-                         uint32_t req_handle_count, zx::handle* resp_handles,
-                         uint32_t* resp_handle_count);
   zx_status_t RpcClock(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                        uint32_t* out_resp_size, zx::handle* req_handles, uint32_t req_handle_count,
                        zx::handle* resp_handles, uint32_t* resp_handle_count);
@@ -227,7 +221,6 @@ class Fragment : public FragmentBase {
 
   ProtocolClient<ddk::AcpiProtocolClient, acpi_protocol_t> acpi_client_;
   ProtocolClient<ddk::AmlogicCanvasProtocolClient, amlogic_canvas_protocol_t> canvas_client_;
-  ProtocolClient<ddk::ButtonsProtocolClient, buttons_protocol_t> buttons_client_;
   ProtocolClient<ddk::ClockProtocolClient, clock_protocol_t> clock_client_;
   ProtocolClient<ddk::EthBoardProtocolClient, eth_board_protocol_t> eth_board_client_;
   ProtocolClient<ddk::GoldfishAddressSpaceProtocolClient, goldfish_address_space_protocol_t>

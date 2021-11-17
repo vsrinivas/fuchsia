@@ -37,9 +37,6 @@ zx_status_t FragmentProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
     case ZX_PROTOCOL_AMLOGIC_CANVAS:
       proto->ops = &amlogic_canvas_protocol_ops_;
       return ZX_OK;
-    case ZX_PROTOCOL_BUTTONS:
-      proto->ops = &buttons_protocol_ops_;
-      return ZX_OK;
     case ZX_PROTOCOL_CODEC:
       proto->ops = &codec_protocol_ops_;
       return ZX_OK;
@@ -191,21 +188,6 @@ zx_status_t FragmentProxy::AmlogicCanvasFree(uint8_t canvas_idx) {
   req.canvas_idx = canvas_idx;
 
   return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
-}
-
-zx_status_t FragmentProxy::ButtonsGetChannel(zx::channel chan) {
-  ButtonsProxyRequest req = {};
-  ButtonsProxyResponse resp = {};
-  req.header.proto_id = ZX_PROTOCOL_BUTTONS;
-  req.op = ButtonsOp::GET_NOTIFY_CHANNEL;
-  zx_handle_t handle = chan.release();
-
-  auto status =
-      Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp), &handle, 1, nullptr, 0, nullptr);
-  if (status != ZX_OK) {
-    return status;
-  }
-  return ZX_OK;
 }
 
 zx_status_t FragmentProxy::CodecConnect(zx::channel chan) {

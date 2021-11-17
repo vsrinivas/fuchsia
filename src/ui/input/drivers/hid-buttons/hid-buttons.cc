@@ -4,7 +4,6 @@
 
 #include "hid-buttons.h"
 
-#include <fuchsia/hardware/buttons/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/metadata.h>
@@ -473,19 +472,6 @@ zx_status_t HidButtonsDevice::Bind(fbl::Array<Gpio> gpios,
   }
   hidbus_function_ = hidbus_function.release();
 
-  std::unique_ptr<HidButtonsButtonsFunction> buttons_function(
-      new (&ac) HidButtonsButtonsFunction(zxdev(), this));
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  status = buttons_function->DdkAdd("buttons_function");
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "DdkAdd for Buttons Function failed %d", status);
-    DdkAsyncRemove();
-    return status;
-  }
-  buttons_function_ = buttons_function.release();
-
   return ZX_OK;
 }
 
@@ -501,7 +487,6 @@ void HidButtonsDevice::ShutDown() {
   client_.clear();
 
   hidbus_function_ = nullptr;
-  buttons_function_ = nullptr;
 }
 
 void HidButtonsDevice::DdkUnbind(ddk::UnbindTxn txn) {

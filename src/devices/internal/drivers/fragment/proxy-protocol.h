@@ -125,20 +125,6 @@ struct AcpiProxyResponse {
   ProxyResponse header;
 };
 
-// ZX_PROTOCOL_BUTTONS proxy support.
-enum class ButtonsOp {
-  GET_NOTIFY_CHANNEL,
-};
-
-struct ButtonsProxyRequest {
-  ProxyRequest header;
-  ButtonsOp op;
-};
-
-struct ButtonsProxyResponse {
-  ProxyResponse header;
-};
-
 // ZX_PROTOCOL_CODEC proxy support.
 enum class CodecOp {
   GET_CHANNEL,
