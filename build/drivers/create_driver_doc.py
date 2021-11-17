@@ -11,6 +11,7 @@ import os
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--name', required=True, help='A name for the driver.')
     parser.add_argument(
         '--driver_path', required=True, help='The path to the driver.')
     parser.add_argument(
@@ -24,6 +25,7 @@ def main():
     args = parser.parse_args()
 
     documentation = {
+        'name': args.name,
         'short_description': '',
         'manufacturer': '',
         'families': [],

@@ -109,6 +109,11 @@ template("fuchsia_driver_component") {
         get_path_info(get_path_info(invoker.target_name, "abspath"), "dir")
     doc_output = "${target_gen_dir}/${target_name}-doc.json"
     doc_target = "${target_name}-driver-info"
+
+    name = invoker.target_name
+    if (defined(invoker.component_name)) {
+      name = invoker.component_name
+    }
     if (generate_doc) {
       action(doc_target) {
         visibility = [ ":*" ]
@@ -117,6 +122,8 @@ template("fuchsia_driver_component") {
         inputs = [ driver_path ]
         outputs = [ doc_output ]
         args = [
+          "--name",
+          name,
           "--driver_path",
           driver_path,
           "--doc_output",
@@ -135,6 +142,8 @@ template("fuchsia_driver_component") {
         ]
         outputs = [ "${doc_output}" ]
         args = [
+          "--name",
+          name,
           "--driver_path",
           driver_path,
           "--doc_input",
