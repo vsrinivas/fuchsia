@@ -10,6 +10,7 @@
 #include <ffl/string.h>
 #include <gmock/gmock.h>
 
+#include "src/media/audio/audio_core/mixer/constants.h"
 #include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/audio_core/packet_queue.h"
 #include "src/media/audio/audio_core/ring_buffer.h"
@@ -927,26 +928,26 @@ TEST_F(MixStageTest, PositionSkip) {
   }
 }
 
-// SourceInfo.initial_position_is_set represents whether a position relationship between source and
-// dest streams has been established. When the stream first starts, JamSyncPositions is called and
-// sets the flag. It is cleared on Pause (surfaced to MixStage via a source's ref-clock-to-frac-
-// frames timeline), so that when Playback resumes the new position relationship is reestablished.
+// SourceInfo.source_ref_clock_to_frac_source_frames_generation tracks changes in the position
+// relationship between source and its reference clock. When the stream first starts, the
+// TimelineFunction is set and the generation is updated. It is updated on both Pause and Play, so
+// that when Playback resumes the new position relationship is reestablished.
 //
-// Verify that SourceInfo.initial_position_is_set is initialized to false, is set to true upon first
-// mix, and is set to false upon Pause.
+// Verify that SourceInfo.source_ref_clock_to_frac_source_frames_generation updates appropriately on
+// first mix, Pause and Play.
 TEST_F(MixStageTest, SourceDestPositionRelationship) {
   // Before the first mix: position relationship should not be set
   auto packet_queue = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function_,
                                                     std::move(clone_of_device_clock_));
   auto& info =
       mix_stage_->AddInput(packet_queue, 0.0f, Mixer::Resampler::WindowedSinc)->source_info();
-  EXPECT_FALSE(info.initial_position_is_set);
+  EXPECT_EQ(info.source_ref_clock_to_frac_source_frames_generation, kInvalidGenerationId);
 
   // Request the initial mix: position relationship should be set
   auto source_pos_for_read_lock = Fixed(0);
   constexpr int32_t dest_frames_per_mix = 96;
   mix_stage_->ReadLock(rlctx, source_pos_for_read_lock, dest_frames_per_mix);
-  EXPECT_TRUE(info.initial_position_is_set);
+  EXPECT_EQ(info.source_ref_clock_to_frac_source_frames_generation, 1u);
 
   source_pos_for_read_lock += Fixed(dest_frames_per_mix);
   auto long_running_source_pos = info.next_source_frame;
@@ -954,7 +955,7 @@ TEST_F(MixStageTest, SourceDestPositionRelationship) {
   timeline_function_->Update(TimelineFunction(source_pos_for_read_lock.raw_value(),
                                               zx::clock::get_monotonic().get(), {0, 1}));
   mix_stage_->ReadLock(rlctx, source_pos_for_read_lock, dest_frames_per_mix);
-  EXPECT_FALSE(info.initial_position_is_set);
+  EXPECT_EQ(info.source_ref_clock_to_frac_source_frames_generation, 2u);
 
   // Restart the timeline and request another mix: position relationship should be set
   source_pos_for_read_lock += Fixed(dest_frames_per_mix);
@@ -962,7 +963,7 @@ TEST_F(MixStageTest, SourceDestPositionRelationship) {
       source_pos_for_read_lock.raw_value(), zx::clock::get_monotonic().get(),
       TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
   mix_stage_->ReadLock(rlctx, source_pos_for_read_lock, dest_frames_per_mix);
-  EXPECT_TRUE(info.initial_position_is_set);
+  EXPECT_EQ(info.source_ref_clock_to_frac_source_frames_generation, 3u);
   EXPECT_EQ(info.next_source_frame, long_running_source_pos + Fixed(dest_frames_per_mix * 2))
       << ffl::String::DecRational << info.next_source_frame;
 
@@ -991,7 +992,7 @@ zx::duration MixStageTest::GetDurationErrorForFracFrameError(Fixed frac_source_e
   RunLoopUntilIdle();
   expected_running_dest_frames += dest_frames_per_mix;
 
-  EXPECT_TRUE(info.initial_position_is_set);
+  EXPECT_NE(info.source_ref_clock_to_frac_source_frames_generation, kInvalidGenerationId);
   EXPECT_EQ(info.next_dest_frame, expected_running_dest_frames);
   EXPECT_EQ(info.source_pos_error, zx::duration(0));
 
