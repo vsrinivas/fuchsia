@@ -298,10 +298,7 @@
         {
             directory: "root-ssl-certificates",
             from: "parent",
-            to: [
-                "#system-tests",
-                "#tests",
-            ],
+            to: [ "#system-tests" ],
             rights: [ "r*" ],
         },
 
@@ -414,9 +411,7 @@
         {
             protocol: "fuchsia.sysinfo.SysInfo",
             from: "parent",
-            to: [
-                "#system-tests",
-            ],
+            to: [ "#system-tests" ],
         },
     ],
     expose: [
