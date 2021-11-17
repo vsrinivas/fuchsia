@@ -18,6 +18,7 @@ MediaPlayerTestUtilParams::MediaPlayerTestUtilParams(const fxl::CommandLine& com
   loop_ = command_line.HasOption("loop");
   test_seek_ = command_line.HasOption("test-seek");
   experiment_ = command_line.HasOption("experiment");
+  silent_ = command_line.HasOption("silent");
 
   std::string rate_as_string;
   if (command_line.GetOptionValue("rate", &rate_as_string)) {
@@ -73,6 +74,7 @@ void MediaPlayerTestUtilParams::Usage() {
   std::cerr << "    --loop        play the files in a loop on startup\n";
   std::cerr << "    --test-seek   play random segments of one file on startup\n";
   std::cerr << "    --rate=<rate> sets the playback rate (default is 1.0)\n";
+  std::cerr << "    --silent      do not render audio\n";
   // --experiment is deliberately omitted here. See the .h file.
 }
 

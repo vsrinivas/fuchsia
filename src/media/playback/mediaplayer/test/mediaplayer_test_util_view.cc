@@ -114,7 +114,7 @@ MediaPlayerTestUtilView::MediaPlayerTestUtilView(scenic::ViewContext view_contex
     TestSeek();
   } else {
     // Get the player primed now.
-    commands_.SetFile(params_.paths().front());
+    commands_.SetFile(params_.paths().front(), params_.silent());
     commands_.Pause();
     commands_.WaitForViewReady();
 
@@ -134,7 +134,7 @@ void MediaPlayerTestUtilView::RunExperiment() {
 }
 
 void MediaPlayerTestUtilView::TestSeek() {
-  commands_.SetFile(params_.paths().front());
+  commands_.SetFile(params_.paths().front(), params_.silent());
   commands_.WaitForViewReady();
 
   // Need to load content before deciding where to seek.
@@ -196,7 +196,7 @@ void MediaPlayerTestUtilView::ScheduleNextFile() {
   commands_.WaitForEndOfStream();
 
   if (params_.paths().size() > 1) {
-    commands_.SetFile(params_.paths()[next_path_index_]);
+    commands_.SetFile(params_.paths()[next_path_index_], params_.silent());
   } else {
     // Just one file...seek to the beginning.
     commands_.Seek(0);

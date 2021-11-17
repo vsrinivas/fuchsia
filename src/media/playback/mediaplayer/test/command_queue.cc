@@ -120,7 +120,10 @@ void CommandQueue::SetFileCommand::Execute(CommandQueue* command_queue) {
 
   auto fd = fbl::unique_fd(open(path_.c_str(), O_RDONLY));
   FX_CHECK(fd.is_valid());
-  command_queue->player_->SetFileSource(fsl::CloneChannelFromFileDescriptor(fd.get()));
+  fuchsia::media::playback::PlayerOptions options;
+  options.set_silent(silent_);
+  command_queue->player_->SetFileSourceWithOptions(fsl::CloneChannelFromFileDescriptor(fd.get()),
+                                                   std::move(options));
   command_queue->prev_seek_position_ = 0;
   command_queue->status_ = nullptr;
   command_queue->ExecuteNextCommand();

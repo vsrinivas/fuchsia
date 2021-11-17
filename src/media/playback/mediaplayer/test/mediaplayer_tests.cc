@@ -741,9 +741,6 @@ TEST_F(MediaPlayerTests, ElementarySourceWithBogus) {
 
 // Play a real A/V file from beginning to end.
 TEST_F(MediaPlayerTests, PlayBear) {
-  // It would be great to verify the audio packets here, but test bots are slow enough that
-  // audio packets sometimes get dropped due to lack of VMO space for the audio renderer.
-
   fake_sysmem_.SetExpectations(BearSysmemExpectations());
 
   fake_audio_.renderer().ExpectPackets(
@@ -939,7 +936,89 @@ TEST_F(MediaPlayerTests, PlayBear) {
   QuitOnEndOfStream();
 
   Execute();
+  EXPECT_TRUE(fake_audio_.create_audio_renderer_called());
   EXPECT_TRUE(fake_audio_.renderer().expected());
+  EXPECT_TRUE(fake_scenic_.session().expected());
+  EXPECT_TRUE(fake_sysmem_.expected());
+}  // namespace test
+
+// Play a real A/V file from beginning to end with no audio.
+TEST_F(MediaPlayerTests, PlayBearSilent) {
+  fake_sysmem_.SetExpectations(BearSysmemExpectations());
+
+  fake_scenic_.session().SetExpectations(
+      1,
+      {
+          .pixel_format = {.type = fuchsia::sysmem::PixelFormatType::R8G8B8A8},
+          .coded_width = 2,
+          .coded_height = 2,
+          .bytes_per_row = 8,
+          .display_width = 2,
+          .display_height = 2,
+          .color_space = {.type = fuchsia::sysmem::ColorSpaceType::SRGB},
+          .has_pixel_aspect_ratio = true,
+      },
+      {
+          .pixel_format = {.type = fuchsia::sysmem::PixelFormatType::I420},
+          .coded_width = 1280,
+          .coded_height = 738,
+          .bytes_per_row = 1280,
+          .display_width = 1280,
+          .display_height = 720,
+          .color_space = {.type = fuchsia::sysmem::ColorSpaceType::REC709},
+          .has_pixel_aspect_ratio = true,
+      },
+      {
+          {0, 944640, 0xe22305b43e20ba47},          {146479375, 944640, 0x66ae7cd1ab593c8e},
+          {179846042, 944640, 0x8893faaea28f39bc},  {213212708, 944640, 0x88508b0a34efffad},
+          {246579375, 944640, 0x3a63c81772b70383},  {279946042, 944640, 0x3780c4550621ebe0},
+          {313312708, 944640, 0x4f921c4320a6417f},  {346679375, 944640, 0x4e9a21647e4929be},
+          {380046042, 944640, 0xe7e665c795955c15},  {413412708, 944640, 0x3c3aedc1d6683aa4},
+          {446779375, 944640, 0xfe9e286a635fb73d},  {480146042, 944640, 0x47e6f4f1abff1b7e},
+          {513512708, 944640, 0x84f562dcd46197a5},  {546879375, 944640, 0xf38b34e69d27cbc9},
+          {580246042, 944640, 0xee2998da3599b399},  {613612708, 944640, 0x524da51958ef48d3},
+          {646979375, 944640, 0x062586602fe0a479},  {680346042, 944640, 0xc32d430e92ae479c},
+          {713712708, 944640, 0x3dff5398e416dc2b},  {747079375, 944640, 0xd3c76266c63bd4c3},
+          {780446042, 944640, 0xc3241587b5491999},  {813812708, 944640, 0xfd3abe1fbe877da2},
+          {847179375, 944640, 0x1a3bd139a0f8460b},  {880546042, 944640, 0x11f585d7e68bda67},
+          {913912708, 944640, 0xecd344c5043e29ae},  {947279375, 944640, 0x7ae6b259c3b7f093},
+          {980646042, 944640, 0x5d49bfa6c196c9d1},  {1014012708, 944640, 0xe83a44b02cac86f6},
+          {1047379375, 944640, 0xffad44c6d3f60005}, {1080746042, 944640, 0x85d1372b40b214c4},
+          {1114112708, 944640, 0x9b6f88950ead9041}, {1147479375, 944640, 0x1396882cb6f522a1},
+          {1180846042, 944640, 0x07815d4ef90b1507}, {1214212708, 944640, 0x424879e928edc717},
+          {1247579375, 944640, 0xd623f27e3773245f}, {1280946042, 944640, 0x47581df2a2e350ff},
+          {1314312708, 944640, 0xb836a1cbbae59a31}, {1347679375, 944640, 0xe6d7ce3f416411ea},
+          {1381046042, 944640, 0x1c5dba765b2b85f3}, {1414412708, 944640, 0x85987a43defb3ead},
+          {1447779375, 944640, 0xe66b3d70ca2358db}, {1481146042, 944640, 0x2b7e765a1f2245de},
+          {1514512708, 944640, 0x9e79fedce712de01}, {1547879375, 944640, 0x7ad7078f8731e4f0},
+          {1581246042, 944640, 0x91ac3c20c4d4e497}, {1614612708, 944640, 0xdb7c8209e5b3a2f4},
+          {1647979375, 944640, 0xd47a9314da3ddec9}, {1681346042, 944640, 0x00c1c1f8e8570386},
+          {1714712708, 944640, 0x1b603a5644b00e7f}, {1748079375, 944640, 0x15c18419b83f5a54},
+          {1781446042, 944640, 0x0038ff1808d201c7}, {1814812708, 944640, 0xe7b2592675d2002a},
+          {1848179375, 944640, 0x55ef9a4ba7570494}, {1881546042, 944640, 0x14b6c92ae0fde6a9},
+          {1914912708, 944640, 0x3f05f2378c5d06c2}, {1948279375, 944640, 0x04f246ec6c3f0ab9},
+          {1981646042, 944640, 0x829529ce2d0a95cd}, {2015012708, 944640, 0xc0eee6a564624169},
+          {2048379375, 944640, 0xdd31903bdc9c909f}, {2081746042, 944640, 0x989727e8fcd13cca},
+          {2115112708, 944640, 0x9e6b6fe9d1b02649}, {2148479375, 944640, 0x01cfc5a96079d823},
+          {2181846042, 944640, 0x90ee949821bfed16}, {2215212708, 944640, 0xf6e66a48b2c977cc},
+          {2248579375, 944640, 0xb5a1d79f1401e1a6}, {2281946042, 944640, 0x89e8ca8aa0b24bef},
+          {2315312708, 944640, 0xd7e384493250e13b}, {2348679375, 944640, 0x7c042bbc365297eb},
+          {2382046042, 944640, 0xfaf92184251ecbf4}, {2415412708, 944640, 0x0edcf5f479f9ec39},
+          {2448779375, 944640, 0x59c165487d90fbb3}, {2482146042, 944640, 0xd4fbf15095e6b728},
+          {2515512708, 944640, 0x6a05e676671df8e1}, {2548879375, 944640, 0x44d653ed72393e1c},
+          {2582246042, 944640, 0x912f720f4c904527}, {2615612708, 944640, 0xe4ca7bc6919d1e70},
+          {2648979375, 944640, 0x6cde61420e173a62}, {2682346042, 944640, 0xfe0d7d86d0b57044},
+          {2715712708, 944640, 0x2d96bc09b6303a4b}, {2749079375, 944640, 0x2cdaab788c93a466},
+          {2782446042, 944640, 0x979b90a096e76dbb}, {2815812708, 944640, 0x851ccb01ea035f4e},
+      });
+
+  CreateView();
+  commands_.SetFile(kBearFilePath, true);  // true -> silent
+  commands_.Play();
+  QuitOnEndOfStream();
+
+  Execute();
+  EXPECT_FALSE(fake_audio_.create_audio_renderer_called());
   EXPECT_TRUE(fake_scenic_.session().expected());
   EXPECT_TRUE(fake_sysmem_.expected());
 }  // namespace test

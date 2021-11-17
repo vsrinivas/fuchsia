@@ -20,10 +20,13 @@ protocol/member fuchsia.media.playback/Player.Pause()
 protocol/member fuchsia.media.playback/Player.Play()
 protocol/member fuchsia.media.playback/Player.Seek(int64 position)
 protocol/member fuchsia.media.playback/Player.SetFileSource(zx/handle:CHANNEL file_channel)
+protocol/member fuchsia.media.playback/Player.SetFileSourceWithOptions(zx/handle:CHANNEL file_channel,fuchsia.media.playback/PlayerOptions options)
 protocol/member fuchsia.media.playback/Player.SetPlaybackRate(float32 playback_rate)
 protocol/member fuchsia.media.playback/Player.SetSource(client_end:<fuchsia.media.playback/Source,optional> source)
 protocol/member fuchsia.media.playback/Player.TransitionToSource(client_end:fuchsia.media.playback/Source source,int64 transition_pts,int64 start_pts)
 protocol fuchsia.media.playback/Player
+table/member fuchsia.media.playback/PlayerOptions.silent bool
+table fuchsia.media.playback/PlayerOptions
 struct/member fuchsia.media.playback/PlayerStatus.audio_connected bool
 struct/member fuchsia.media.playback/PlayerStatus.can_pause bool
 struct/member fuchsia.media.playback/PlayerStatus.can_seek bool

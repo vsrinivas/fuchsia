@@ -52,7 +52,9 @@ class CommandQueue {
   void NotifyViewReady();
 
   // Queues a |SetFileSource| command.
-  void SetFile(const std::string& path) { AddCommand(new SetFileCommand(path)); }
+  void SetFile(const std::string& path, bool silent = false) {
+    AddCommand(new SetFileCommand(path, silent));
+  }
 
   // Queues a |SetPlaybackRate| command.
   void SetPlaybackRate(float rate) { AddCommand(new SetPlaybackRateCommand(rate)); }
@@ -131,9 +133,10 @@ class CommandQueue {
   };
 
   struct SetFileCommand : public Command {
-    SetFileCommand(const std::string& path) : path_(path) {}
+    SetFileCommand(const std::string& path, bool silent) : path_(path), silent_(silent) {}
     void Execute(CommandQueue* command_queue) override;
     std::string path_;
+    bool silent_;
   };
 
   struct SetPlaybackRateCommand : public Command {
