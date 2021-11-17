@@ -777,7 +777,10 @@ impl Contents {
                 },
             });
             for (i, layer) in layers.enumerate() {
-                self.composition.insert(u16::try_from(damage.start + i).unwrap(), layer);
+                self.composition.insert(
+                    Order::try_from(damage.start + i).unwrap_or_else(|e| panic!("{}", e)),
+                    layer,
+                );
             }
             // Add more stroke layers if needed.
             if self.stroke_count < scene.strokes.len() {
@@ -788,7 +791,8 @@ impl Contents {
         // Remove strokes that are no longer part of the scene.
         while self.stroke_count > scene.strokes.len() {
             self.stroke_count -= 1;
-            self.composition.remove(u16::try_from(self.stroke_count).unwrap());
+            self.composition
+                .remove(Order::try_from(self.stroke_count).unwrap_or_else(|e| panic!("{}", e)));
         }
 
         // Update damaged tool layers.
@@ -830,8 +834,11 @@ impl Contents {
                 });
 
             for (i, layer) in layers.enumerate() {
-                self.composition
-                    .insert(u16::try_from(MAX_STROKES + damage.start + i).unwrap(), layer);
+                self.composition.insert(
+                    Order::try_from(MAX_STROKES + damage.start + i)
+                        .unwrap_or_else(|e| panic!("{}", e)),
+                    layer,
+                );
             }
         }
 

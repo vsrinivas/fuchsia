@@ -4,12 +4,43 @@
 
 use std::{cmp::Ordering, convert::TryFrom, mem};
 
-use crate::TILE_SHIFT;
+use crate::{MAX_HEIGHT_SHIFT, MAX_WIDTH_SHIFT, TILE_SHIFT, TILE_SIZE};
 
 const NONE: u64 = 1 << 63;
 
-pub const BIT_FIELD_LENS: [usize; 8] =
-    [1, 15 - TILE_SHIFT, 16 - TILE_SHIFT, 20, TILE_SHIFT, TILE_SHIFT, 6, 6];
+pub const BIT_FIELD_LENS: [usize; 8] = {
+    const fn log2_round_up(n: usize) -> usize {
+        if n.count_ones() == 1 {
+            n.trailing_zeros() as usize
+        } else {
+            mem::size_of::<usize>() * 8 - n.leading_zeros() as usize
+        }
+    }
+
+    let mut bit_field_lens = [
+        1,
+        MAX_HEIGHT_SHIFT - TILE_SHIFT,
+        MAX_WIDTH_SHIFT - TILE_SHIFT,
+        0,
+        TILE_SHIFT,
+        TILE_SHIFT,
+        log2_round_up((TILE_SIZE + 1) * 2),
+        log2_round_up((TILE_SIZE + 1) * 2),
+    ];
+
+    let layer_id_len = mem::size_of::<PixelSegment>() * 8
+        - bit_field_lens[0]
+        - bit_field_lens[1]
+        - bit_field_lens[2]
+        - bit_field_lens[4]
+        - bit_field_lens[5]
+        - bit_field_lens[6]
+        - bit_field_lens[7];
+
+    bit_field_lens[3] = layer_id_len;
+
+    bit_field_lens
+};
 
 const fn mask_for(bit_field_index: usize) -> u64 {
     ((1 << BIT_FIELD_LENS[bit_field_index]) - 1) as u64
@@ -192,14 +223,14 @@ impl TryFrom<PixelSegment> for PixelSegmentUnpacked {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{PIXEL_DOUBLE_WIDTH, PIXEL_WIDTH};
+    use crate::{LAYER_LIMIT, PIXEL_DOUBLE_WIDTH, PIXEL_WIDTH};
 
     #[test]
     fn pixel_segment_max() {
         let is_none = true;
         let tile_y = (1 << (BIT_FIELD_LENS[1] - 1)) - 1;
         let tile_x = (1 << (BIT_FIELD_LENS[2] - 1)) - 1;
-        let layer_id = (1 << 20) - 1;
+        let layer_id = LAYER_LIMIT as u32;
         let local_y = (1 << BIT_FIELD_LENS[4]) - 1;
         let local_x = (1 << BIT_FIELD_LENS[5]) - 1;
         let double_area_multiplier = PIXEL_DOUBLE_WIDTH as u8;

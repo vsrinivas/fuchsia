@@ -9,7 +9,7 @@ use carnelian::{
     drawing::{path_for_rectangle, path_for_rounded_rectangle},
     input::{self},
     make_app_assistant,
-    render::{BlendMode, Context as RenderContext, Fill, FillRule, Layer, Path, Style},
+    render::{BlendMode, Context as RenderContext, Fill, FillRule, Layer, Order, Path, Style},
     scene::{
         facets::{Facet, FacetId},
         scene::{Scene, SceneBuilder},
@@ -154,7 +154,7 @@ impl Facet for SpinningSquareFacet {
         let square_raster = raster_builder.build();
 
         layer_group.insert(
-            0,
+            Order::default(),
             Layer {
                 raster: square_raster,
                 clip: None,

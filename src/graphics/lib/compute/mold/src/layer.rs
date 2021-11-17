@@ -2,17 +2,125 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{cmp::Ordering, iter::FromIterator, mem};
+use std::{cmp::Ordering, convert::TryFrom, error::Error, fmt, iter::FromIterator, mem};
 
 use rustc_hash::FxHashMap;
-use surpass::{self, painter::Props};
+use surpass::{self, painter::Props, LAYER_LIMIT, MAX_HEIGHT, MAX_WIDTH};
 
-const IDENTITY: &[f32; 6] = &[1.0, 0.0, 0.0, 1.0, 0.0, 0.0];
+use crate::PIXEL_ACCURACY;
+
+const IDENTITY: AffineTransform = AffineTransform([1.0, 0.0, 0.0, 1.0, 0.0, 0.0]);
+const MAX_SCALING_FACTOR_X: f32 = 1.0 + PIXEL_ACCURACY as f32 / MAX_WIDTH as f32;
+const MAX_SCALING_FACTOR_Y: f32 = 1.0 + PIXEL_ACCURACY as f32 / MAX_HEIGHT as f32;
+
+#[derive(Debug, PartialEq)]
+pub enum AffineTransformError {
+    ExceededScalingFactor { x: bool, y: bool },
+}
+
+impl fmt::Display for AffineTransformError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            AffineTransformError::ExceededScalingFactor { x: true, y: false } => {
+                write!(f, "exceeded scaling factor on the X axis (-1.0 to 1.0)")
+            }
+            AffineTransformError::ExceededScalingFactor { x: false, y: true } => {
+                write!(f, "exceeded scaling factor on the Y axis (-1.0 to 1.0)")
+            }
+            AffineTransformError::ExceededScalingFactor { x: true, y: true } => {
+                write!(f, "exceeded scaling factor on both axis (-1.0 to 1.0)")
+            }
+            _ => panic!("cannot display invalid AffineTransformError"),
+        }
+    }
+}
+
+impl Error for AffineTransformError {}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct AffineTransform([f32; 6]);
+
+impl AffineTransform {
+    pub fn as_slice(&self) -> [f32; 6] {
+        self.0
+    }
+}
+
+impl Default for AffineTransform {
+    fn default() -> Self {
+        IDENTITY
+    }
+}
+
+impl TryFrom<[f32; 6]> for AffineTransform {
+    type Error = AffineTransformError;
+
+    fn try_from(transform: [f32; 6]) -> Result<Self, Self::Error> {
+        let scales_up_x =
+            transform[0] * transform[0] + transform[2] * transform[2] > MAX_SCALING_FACTOR_X;
+        let scales_up_y =
+            transform[1] * transform[1] + transform[3] * transform[3] > MAX_SCALING_FACTOR_Y;
+        let scales_up = scales_up_x || scales_up_y;
+        (!scales_up)
+            .then(|| AffineTransform(transform))
+            .ok_or(AffineTransformError::ExceededScalingFactor { x: scales_up_x, y: scales_up_y })
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum OrderError {
+    ExceededLayerLimit,
+}
+
+impl fmt::Display for OrderError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "exceeded layer limit ({})", LAYER_LIMIT)
+    }
+}
+
+impl Error for OrderError {}
+
+#[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct Order(u32);
+
+impl Order {
+    pub const MAX: Self = Self(LAYER_LIMIT as u32);
+
+    pub const fn as_u32(&self) -> u32 {
+        self.0
+    }
+
+    pub const fn new(order: u32) -> Result<Self, OrderError> {
+        if order > Self::MAX.as_u32() {
+            Err(OrderError::ExceededLayerLimit)
+        } else {
+            Ok(Self(order))
+        }
+    }
+}
+
+impl TryFrom<u32> for Order {
+    type Error = OrderError;
+
+    fn try_from(order: u32) -> Result<Self, OrderError> {
+        Self::new(order)
+    }
+}
+
+impl TryFrom<usize> for Order {
+    type Error = OrderError;
+
+    fn try_from(order: usize) -> Result<Self, OrderError> {
+        u32::try_from(order)
+            .map_err(|_| OrderError::ExceededLayerLimit)
+            .and_then(|x| Self::try_from(x))
+    }
+}
 
 #[derive(Clone, Copy, Debug)]
 struct End {
-    index: u16,
-    other: u16,
+    index: u32,
+    other: u32,
 }
 
 impl End {
@@ -31,19 +139,21 @@ impl End {
 
 #[derive(Debug)]
 pub struct IdSet {
-    free_ranges: FxHashMap<u16, u16>,
+    free_ranges: FxHashMap<u32, u32>,
 }
 
 impl IdSet {
     pub fn new() -> Self {
-        Self { free_ranges: FxHashMap::from_iter([(0, u16::MAX), (u16::MAX, 0)]) }
+        Self {
+            free_ranges: FxHashMap::from_iter([(0, Order::MAX.as_u32()), (Order::MAX.as_u32(), 0)]),
+        }
     }
 
     fn first(&self) -> Option<End> {
         self.free_ranges.iter().next().map(|(&index, &other)| End { index, other })
     }
 
-    fn get(&self, index: u16) -> Option<End> {
+    fn get(&self, index: u32) -> Option<End> {
         self.free_ranges.get(&index).map(|&other| End { index, other })
     }
 
@@ -55,7 +165,7 @@ impl IdSet {
         self.free_ranges.remove(&end.index);
     }
 
-    pub fn acquire(&mut self) -> Option<u16> {
+    pub fn acquire(&mut self) -> Option<u32> {
         self.first().map(|end| {
             self.remove(end);
 
@@ -68,7 +178,7 @@ impl IdSet {
         })
     }
 
-    pub fn release(&mut self, index: u16) {
+    pub fn release(&mut self, index: u32) {
         let left = index.checked_sub(1).and_then(|index| self.get(index));
         let right = index.checked_add(1).and_then(|index| self.get(index));
 
@@ -171,23 +281,14 @@ impl Layer {
     }
 
     #[inline]
-    pub fn transform(&self) -> &[f32; 6] {
-        self.inner.affine_transform.as_ref().unwrap_or(IDENTITY)
+    pub fn transform(&self) -> AffineTransform {
+        self.inner.affine_transform.map(AffineTransform).unwrap_or_default()
     }
 
     #[inline]
-    pub fn set_transform(&mut self, transform: &[f32; 6]) -> &mut Self {
-        let affine_transform = if transform == IDENTITY {
-            None
-        } else {
-            if transform[0] * transform[0] + transform[2] * transform[2] > 1.001
-                || transform[1] * transform[1] + transform[3] * transform[3] > 1.001
-            {
-                panic!("Layer's scaling on each axis must be between -1.0 and 1.0");
-            }
-
-            Some(*transform)
-        };
+    pub fn set_transform(&mut self, transform: AffineTransform) -> &mut Self {
+        let affine_transform =
+            if transform == IDENTITY { None } else { Some(transform.as_slice()) };
 
         if self.inner.affine_transform != affine_transform {
             self.is_unchanged.clear();
@@ -198,15 +299,15 @@ impl Layer {
     }
 
     #[inline]
-    pub fn order(&self) -> u16 {
-        self.inner.order.expect("Layers should always have orders") as u16
+    pub fn order(&self) -> u32 {
+        self.inner.order.expect("Layers should always have orders")
     }
 
     #[inline]
-    pub fn set_order(&mut self, order: u16) -> &mut Self {
-        if self.inner.order != Some(order as u32) {
+    pub fn set_order(&mut self, order: Order) -> &mut Self {
+        if self.inner.order != Some(order.as_u32()) {
             self.is_unchanged.clear();
-            self.inner.order = Some(order as u32);
+            self.inner.order = Some(order.as_u32());
         }
 
         self
@@ -242,11 +343,11 @@ impl Layer {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
-
     use super::*;
 
-    const ID_SET_SIZE: u16 = 8;
+    use std::collections::HashSet;
+
+    const ID_SET_SIZE: u32 = 8;
 
     fn set() -> IdSet {
         IdSet { free_ranges: FxHashMap::from_iter([(0, ID_SET_SIZE - 1), (ID_SET_SIZE - 1, 0)]) }
@@ -284,5 +385,70 @@ mod tests {
 
         assert!(set.acquire().is_some());
         assert!(set.acquire().is_none());
+    }
+
+    #[test]
+    fn wrong_scaling_factor() {
+        let transform =
+            [0.1, MAX_SCALING_FACTOR_Y.sqrt(), MAX_SCALING_FACTOR_X.sqrt(), 0.1, 0.5, 0.0];
+
+        assert_eq!(
+            AffineTransform::try_from(transform),
+            Err(AffineTransformError::ExceededScalingFactor { x: true, y: true })
+        );
+    }
+
+    #[test]
+    fn wrong_scaling_factor_x() {
+        let transform = [0.1, 0.0, MAX_SCALING_FACTOR_X.sqrt(), 0.0, 0.5, 0.0];
+
+        assert_eq!(
+            AffineTransform::try_from(transform),
+            Err(AffineTransformError::ExceededScalingFactor { x: true, y: false })
+        );
+    }
+
+    #[test]
+    fn wrong_scaling_factor_y() {
+        let transform = [0.0, MAX_SCALING_FACTOR_Y.sqrt(), 0.0, 0.1, 0.5, 0.0];
+
+        assert_eq!(
+            AffineTransform::try_from(transform),
+            Err(AffineTransformError::ExceededScalingFactor { x: false, y: true })
+        );
+    }
+
+    #[test]
+    fn correct_scaling_factor() {
+        let transform = [1.0, MAX_SCALING_FACTOR_Y.sqrt(), 0.0, 0.0, 0.5, 0.0];
+        let affine_transform = AffineTransform::try_from(transform);
+
+        assert_eq!(affine_transform, Ok(AffineTransform(transform)));
+    }
+
+    #[test]
+    fn wrong_u32_order_value() {
+        let order = Order::MAX.as_u32() + 1;
+
+        assert_eq!(Order::try_from(order), Err(OrderError::ExceededLayerLimit));
+    }
+
+    #[test]
+    fn wrong_usize_order_values() {
+        let order = (Order::MAX.as_u32() + 1) as usize;
+
+        assert_eq!(Order::try_from(order), Err(OrderError::ExceededLayerLimit));
+
+        let order = u64::MAX as usize;
+
+        assert_eq!(Order::try_from(order), Err(OrderError::ExceededLayerLimit));
+    }
+
+    #[test]
+    fn correct_order_value() {
+        let order_value = Order::MAX.as_u32();
+        let order = Order::try_from(order_value);
+
+        assert_eq!(order, Ok(Order(order_value as u32)));
     }
 }

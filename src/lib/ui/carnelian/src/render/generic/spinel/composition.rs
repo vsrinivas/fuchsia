@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{collections::BTreeMap, ptr, slice};
+use std::{collections::BTreeMap, convert::TryFrom, ptr, slice};
 
 use euclid::default::{Rect, Size2D};
 use spinel_rs_sys::*;
@@ -12,15 +12,15 @@ use crate::{
     drawing::DisplayRotation,
     render::generic::{
         spinel::{init, InnerContext, Spinel},
-        BlendMode, Composition, Fill, FillRule, Layer, Style,
+        BlendMode, Composition, Fill, FillRule, Layer, Order, Style,
     },
 };
 
 fn group_layers(
     spn_styling: SpnStyling,
     top_group: SpnGroupId,
-    layers: &BTreeMap<u16, Layer<Spinel>>,
-    last_layer: u32,
+    layers: &BTreeMap<Order, Layer<Spinel>>,
+    last_layer: Order,
 ) {
     fn cmds_len(style: &Style) -> usize {
         let fill_rule_len = match style.fill_rule {
@@ -42,14 +42,14 @@ fn group_layers(
     }
 
     for (order, Layer { style, .. }) in layers.iter() {
-        let i = *order as u32;
+        let i = *order;
         let cmds = unsafe {
             let len = cmds_len(style);
             let data = init(|ptr| {
                 spn!(spn_styling_group_layer(
                     spn_styling,
                     top_group,
-                    last_layer - i,
+                    last_layer.as_u32() - i.as_u32(),
                     len as u32,
                     ptr
                 ))
@@ -110,7 +110,7 @@ fn group_layers(
 
 #[derive(Clone, Debug)]
 pub struct SpinelComposition {
-    pub(crate) layers: BTreeMap<u16, Layer<Spinel>>,
+    pub(crate) layers: BTreeMap<Order, Layer<Spinel>>,
     pub(crate) background_color: [f32; 4],
 }
 
@@ -131,13 +131,20 @@ impl SpinelComposition {
             spn!(spn_composition_set_clip(composition, clip.as_ptr(),));
         }
 
-        let last_layer = *self.layers.keys().next_back().unwrap_or(&0) as u32;
-        let clear_layer = last_layer + 1;
+        let last_layer = *self.layers.keys().next_back().unwrap_or(&Order::default());
+        let clear_layer =
+            Order::try_from(last_layer.as_u32() + 1).unwrap_or_else(|e| panic!("{}", e));
 
         // Release existing rasters after placing them in clear layer.
         for raster in previous_rasters.drain(..) {
             unsafe {
-                spn!(spn_composition_place(composition, &raster, &(clear_layer), ptr::null(), 1));
+                spn!(spn_composition_place(
+                    composition,
+                    &raster,
+                    &(clear_layer.as_u32()),
+                    ptr::null(),
+                    1
+                ));
             }
             context.get_checked().map(|context| unsafe {
                 spn!(spn_raster_release(context, &raster as *const _, 1))
@@ -189,9 +196,16 @@ impl SpinelComposition {
                 let raster =
                     unsafe { init(|ptr| spn!(spn_raster_builder_end(raster_builder, ptr))) };
 
-                let i = last_layer - *order as u32;
+                let i = Order::try_from(last_layer.as_u32() - order.as_u32())
+                    .unwrap_or_else(|e| panic!("{}", e));
                 unsafe {
-                    spn!(spn_composition_place(composition, &raster, &(i), ptr::null(), 1));
+                    spn!(spn_composition_place(
+                        composition,
+                        &raster,
+                        &(i.as_u32()),
+                        ptr::null(),
+                        1
+                    ));
                 }
 
                 // Save raster for clearing.
@@ -211,22 +225,27 @@ impl SpinelComposition {
         const MAX_LAYER_CMDS: u32 = 6; // spn_styling_group_layer
         let leave_cmds: u32 = if needs_linear_to_srgb_opcode { 5 } else { 4 }; // spn_styling_group_leave
 
-        let last_layer = *self.layers.keys().next_back().unwrap_or(&0) as u32;
+        let last_layer = *self.layers.keys().next_back().unwrap_or(&Order::default());
         let num_clear_layers = 1;
-        let num_layers = last_layer + 1;
-        let len = num_layers + num_clear_layers;
-        let styling_len = len * MAX_LAYER_CMDS + PARENTS + ENTER_CMDS + leave_cmds + GROUP_SIZE;
+        let num_layers =
+            Order::try_from(last_layer.as_u32() + 1 as u32).unwrap_or_else(|e| panic!("{}", e));
+        let len = Order::try_from(num_layers.as_u32() + num_clear_layers as u32)
+            .unwrap_or_else(|e| panic!("{}", e));
+        let styling_len = Order::try_from(
+            len.as_u32() * MAX_LAYER_CMDS + PARENTS + ENTER_CMDS + leave_cmds + GROUP_SIZE,
+        )
+        .unwrap_or_else(|e| panic!("{}", e));
         let spn_styling = context.get_checked().map(|context| unsafe {
-            init(|ptr| spn!(spn_styling_create(context, ptr, len, styling_len)))
+            init(|ptr| spn!(spn_styling_create(context, ptr, len.as_u32(), styling_len.as_u32())))
         })?;
 
         let top_group = unsafe { init(|ptr| spn!(spn_styling_group_alloc(spn_styling, ptr))) };
 
         unsafe {
             spn!(spn_styling_group_parents(spn_styling, top_group, PARENTS, ptr::null_mut()));
-            if len != 0 {
+            if len.as_u32() != 0 {
                 spn!(spn_styling_group_range_lo(spn_styling, top_group, 0));
-                spn!(spn_styling_group_range_hi(spn_styling, top_group, len - 1));
+                spn!(spn_styling_group_range_hi(spn_styling, top_group, len.as_u32() - 1));
             }
         }
 
@@ -258,9 +277,9 @@ impl SpinelComposition {
         let clear_cmds = unsafe {
             let data = init(|ptr| {
                 let len = 5;
-                spn!(spn_styling_group_layer(spn_styling, top_group, num_layers, len, ptr))
+                spn!(spn_styling_group_layer(spn_styling, top_group, num_layers.as_u32(), len, ptr))
             });
-            slice::from_raw_parts_mut(data, len as usize)
+            slice::from_raw_parts_mut(data, len.as_u32() as usize)
         };
         clear_cmds[0] = SpnCommand::SpnStylingOpcodeCoverWipZero;
         unsafe {
@@ -288,11 +307,11 @@ impl Composition<Spinel> for SpinelComposition {
         self.layers.clear();
     }
 
-    fn insert(&mut self, order: u16, layer: Layer<Spinel>) {
+    fn insert(&mut self, order: Order, layer: Layer<Spinel>) {
         self.layers.insert(order, layer);
     }
 
-    fn remove(&mut self, order: u16) {
+    fn remove(&mut self, order: Order) {
         self.layers.remove(&order);
     }
 }

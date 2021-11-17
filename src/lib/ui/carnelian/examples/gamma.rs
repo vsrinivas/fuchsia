@@ -8,7 +8,7 @@ use {
         color::Color,
         drawing::path_for_rectangle,
         make_app_assistant,
-        render::{BlendMode, Context as RenderContext, Fill, FillRule, Layer, Path, Style},
+        render::{BlendMode, Context as RenderContext, Fill, FillRule, Layer, Order, Path, Style},
         scene::{
             facets::Facet,
             scene::{Scene, SceneBuilder},
@@ -20,6 +20,7 @@ use {
     euclid::{size2, vec2, Transform2D},
     fuchsia_trace_provider,
     fuchsia_zircon::Event,
+    std::convert::TryFrom,
 };
 
 const BLACK_COLOR: Color = Color { r: 0, g: 0, b: 0, a: 255 };
@@ -100,7 +101,7 @@ impl Facet for GammaFacet {
         }));
         layer_group.clear();
         for (i, layer) in layers.enumerate() {
-            layer_group.insert(i as u16, layer);
+            layer_group.insert(Order::try_from(i).unwrap_or_else(|e| panic!("{}", e)), layer);
         }
         Ok(())
     }

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{fmt::Debug, hash::Hash, io::Read, ops::Add, u32};
+use std::{convert::TryFrom, error, fmt, fmt::Debug, hash::Hash, io::Read, ops::Add, u32};
 
 use anyhow::Error;
 use euclid::{
@@ -261,6 +261,56 @@ pub struct Style {
     pub blend_mode: BlendMode,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum OrderError {
+    ExceededLayerLimit,
+}
+
+impl fmt::Display for OrderError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "exceeded layer limit ({})", Order::MAX.as_u32())
+    }
+}
+
+impl error::Error for OrderError {}
+
+#[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct Order(u32);
+
+impl Order {
+    pub const MAX: Self = Self((1 << 18) - 1);
+
+    pub const fn as_u32(&self) -> u32 {
+        self.0
+    }
+
+    pub const fn new(order: u32) -> Result<Self, OrderError> {
+        if order > Self::MAX.as_u32() {
+            Err(OrderError::ExceededLayerLimit)
+        } else {
+            Ok(Self(order))
+        }
+    }
+}
+
+impl TryFrom<u32> for Order {
+    type Error = OrderError;
+
+    fn try_from(order: u32) -> Result<Self, OrderError> {
+        Self::new(order)
+    }
+}
+
+impl TryFrom<usize> for Order {
+    type Error = OrderError;
+
+    fn try_from(order: usize) -> Result<Self, OrderError> {
+        u32::try_from(order)
+            .map_err(|_| OrderError::ExceededLayerLimit)
+            .and_then(|x| Self::try_from(x))
+    }
+}
+
 /// 2D layer containing a raster with a style.
 #[derive(Clone, Debug)]
 pub struct Layer<B: Backend> {
@@ -279,9 +329,9 @@ pub trait Composition<B: Backend> {
     /// Resets composition by removing all layers.
     fn clear(&mut self);
     /// Inserts layer into the composition.
-    fn insert(&mut self, order: u16, layer: Layer<B>);
+    fn insert(&mut self, order: Order, layer: Layer<B>);
     /// Removes layer from the composition.
-    fn remove(&mut self, order: u16);
+    fn remove(&mut self, order: Order);
 }
 
 #[cfg(test)]
@@ -318,7 +368,7 @@ pub(crate) mod tests {
 
             let mut composition: B::Composition = Composition::new(Color::new());
             composition.insert(
-                0,
+                Order::default(),
                 Layer {
                     raster: raster.clone() + raster,
                     clip: None,

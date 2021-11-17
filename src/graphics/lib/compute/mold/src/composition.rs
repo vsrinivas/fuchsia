@@ -34,11 +34,11 @@ macro_rules! take_builder {
 pub struct Composition {
     builder: Option<LinesBuilder>,
     rasterizer: Rasterizer,
-    layers: FxHashMap<u16, Layer>,
+    layers: FxHashMap<u32, Layer>,
     layer_ids: IdSet,
     external_count: usize,
-    external_to_internal: FxHashMap<LayerId, u16>,
-    orders_to_layers: FxHashMap<u16, u16>,
+    external_to_internal: FxHashMap<LayerId, u32>,
+    orders_to_layers: FxHashMap<u32, u32>,
     layouts: FxHashMap<(*mut [u8; 4], usize), BufferLayout>,
     buffers_with_caches: Rc<RefCell<SmallBitSet>>,
 }
@@ -93,7 +93,7 @@ impl Composition {
         let mut len = 0;
         for segment in segments {
             self.builder().push(
-                id as u32,
+                id,
                 &surpass::Segment::new(
                     surpass::Point::new(segment.p0.x, segment.p0.y),
                     surpass::Point::new(segment.p1.x, segment.p1.y),
@@ -105,7 +105,7 @@ impl Composition {
 
         let layer = self.layers.entry(id).or_default();
 
-        layer.inner.order = Some(id as u32);
+        layer.inner.order = Some(id);
         layer.inner.is_enabled = true;
         layer.len += len;
 
@@ -161,10 +161,7 @@ impl Composition {
         if self.builder().len() >= self.actual_len() * LINES_GARBAGE_THRESHOLD {
             take_builder!(self, |mut builder: LinesBuilder| {
                 builder.retain(|layer| {
-                    self.layers
-                        .get(&(layer as u16))
-                        .map(|layer| layer.inner.is_enabled)
-                        .unwrap_or_default()
+                    self.layers.get(&layer).map(|layer| layer.inner.is_enabled).unwrap_or_default()
                 });
                 builder
             });
@@ -212,7 +209,7 @@ impl Composition {
         for (layer_id, layer) in &self.layers {
             if layer.inner.is_enabled {
                 self.orders_to_layers.insert(
-                    layer.inner.order.expect("Layers should always have orders") as u16,
+                    layer.inner.order.expect("Layers should always have orders"),
                     *layer_id,
                 );
             }
@@ -228,8 +225,8 @@ impl Composition {
         let rasterizer = &mut self.rasterizer;
 
         struct CompositionContext<'l> {
-            layers: &'l FxHashMap<u16, Layer>,
-            orders_to_layers: &'l FxHashMap<u16, u16>,
+            layers: &'l FxHashMap<u32, Layer>,
+            orders_to_layers: &'l FxHashMap<u32, u32>,
             cache_id: Option<u8>,
         }
 
@@ -238,7 +235,7 @@ impl Composition {
             fn get(&self, layer_id: u32) -> Cow<'_, Props> {
                 let layer_id = self
                     .orders_to_layers
-                    .get(&(layer_id as u16))
+                    .get(&layer_id)
                     .expect("orders_to_layers was not populated in Composition::render");
                 Cow::Borrowed(
                     self.layers
@@ -255,7 +252,7 @@ impl Composition {
                     Some(cache_id) => {
                         let layer_id = self
                             .orders_to_layers
-                            .get(&(layer_id as u16))
+                            .get(&layer_id)
                             .expect("orders_to_layers was not populated in Composition::render");
                         self.layers
                             .get(layer_id)
@@ -273,8 +270,8 @@ impl Composition {
         };
 
         take_builder!(self, |builder: LinesBuilder| {
-            let lines = builder
-                .build(|layer_id| layers.get(&(layer_id as u16)).map(|layer| layer.inner.clone()));
+            let lines =
+                builder.build(|layer_id| layers.get(&layer_id).map(|layer| layer.inner.clone()));
 
             rasterizer.rasterize(&lines);
             rasterizer.sort();
@@ -315,9 +312,11 @@ impl Composition {
 mod tests {
     use super::*;
 
+    use std::convert::TryFrom;
+
     use surpass::TILE_SIZE;
 
-    use crate::{Fill, FillRule, Func, Point, Style};
+    use crate::{layer::AffineTransform, Fill, FillRule, Func, Point, Style};
 
     const BLACK: [u8; 4] = [0x00, 0x0, 0x00, 0xFF];
     const BLACKF: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
@@ -404,7 +403,7 @@ mod tests {
             .insert_in_layer(layer_id, &pixel_path(1, 0))
             .unwrap()
             .set_props(solid(REDF))
-            .set_transform(&[1.0, 0.0, 0.0, 1.0, 0.5, 0.0]);
+            .set_transform(AffineTransform::try_from([1.0, 0.0, 0.0, 1.0, 0.5, 0.0]).unwrap());
 
         composition.render(
             Buffer { buffer: &mut buffer, width: 3, ..Default::default() },
@@ -426,7 +425,17 @@ mod tests {
             .insert_in_layer(layer_id, &pixel_path(-1, 1))
             .unwrap()
             .set_props(solid(REDF))
-            .set_transform(&[angle.cos(), -angle.sin(), angle.sin(), angle.cos(), 0.0, 0.0]);
+            .set_transform(
+                AffineTransform::try_from([
+                    angle.cos(),
+                    -angle.sin(),
+                    angle.sin(),
+                    angle.cos(),
+                    0.0,
+                    0.0,
+                ])
+                .unwrap(),
+            );
 
         composition.render(
             Buffer { buffer: &mut buffer, width: 3, ..Default::default() },
@@ -584,14 +593,9 @@ mod tests {
 
         assert_eq!(buffer[0], RED);
 
-        composition.get_mut(layer_id).unwrap().set_transform(&[
-            1.0,
-            0.0,
-            0.0,
-            1.0,
-            TILE_SIZE as f32,
-            0.0,
-        ]);
+        composition.get_mut(layer_id).unwrap().set_transform(
+            AffineTransform::try_from([1.0, 0.0, 0.0, 1.0, TILE_SIZE as f32, 0.0]).unwrap(),
+        );
 
         composition.render(
             Buffer {
@@ -606,14 +610,9 @@ mod tests {
 
         assert_eq!(buffer[0], BLACK);
 
-        composition.get_mut(layer_id).unwrap().set_transform(&[
-            1.0,
-            0.0,
-            0.0,
-            1.0,
-            -(TILE_SIZE as f32),
-            0.0,
-        ]);
+        composition.get_mut(layer_id).unwrap().set_transform(
+            AffineTransform::try_from([1.0, 0.0, 0.0, 1.0, -(TILE_SIZE as f32), 0.0]).unwrap(),
+        );
 
         composition.render(
             Buffer {
@@ -628,14 +627,9 @@ mod tests {
 
         assert_eq!(buffer[0], RED);
 
-        composition.get_mut(layer_id).unwrap().set_transform(&[
-            1.0,
-            0.0,
-            0.0,
-            1.0,
-            0.0,
-            TILE_SIZE as f32,
-        ]);
+        composition.get_mut(layer_id).unwrap().set_transform(
+            AffineTransform::try_from([1.0, 0.0, 0.0, 1.0, 0.0, TILE_SIZE as f32]).unwrap(),
+        );
 
         composition.render(
             Buffer {
@@ -702,7 +696,10 @@ mod tests {
 
         assert_eq!(buffer[0], RED);
 
-        composition.get_mut(layer_id).unwrap().set_transform(&[1.0, 0.0, 0.0, 1.0, 1.0, 0.0]);
+        composition
+            .get_mut(layer_id)
+            .unwrap()
+            .set_transform(AffineTransform::try_from([1.0, 0.0, 0.0, 1.0, 1.0, 0.0]).unwrap());
 
         composition.render(
             Buffer {

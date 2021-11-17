@@ -9,7 +9,8 @@ use {
         input::{self},
         make_app_assistant,
         render::{
-            BlendMode, Context as RenderContext, Fill, FillRule, Layer, Path, PathBuilder, Style,
+            BlendMode, Context as RenderContext, Fill, FillRule, Layer, Order, Path, PathBuilder,
+            Style,
         },
         scene::{
             facets::Facet,
@@ -25,6 +26,7 @@ use {
     fuchsia_zircon::Event,
     std::collections::HashSet,
     std::collections::VecDeque,
+    std::convert::TryFrom,
     std::f32,
     std::rc::Rc,
 };
@@ -403,7 +405,7 @@ struct DesignerState {
     pub drawing_mode: DrawingMode,
     pub last_points: PairQueue<Point>,
     pub last_anchor: Option<Point>,
-    pub layer_order: u16,
+    pub layer_order: Order,
 }
 
 impl DesignerState {
@@ -416,17 +418,22 @@ impl DesignerState {
     }
 
     fn handle_mouse_release(&mut self) {
-        self.layer_order += 1;
+        self.layer_order =
+            Order::try_from(self.layer_order.as_u32() + 1).unwrap_or_else(|e| panic!("{}", e));
         self.last_anchor = match self.handle_mouse_up_anchor_event() {
             MouseUpAnchorEvent::SetLastAnchor(position) => Some(position),
             MouseUpAnchorEvent::ResetLastAnchor => None,
         };
 
-        self.layer_order += match self.drawing_mode {
-            DrawingMode::Curve(_) => 3,
-            DrawingMode::Line | DrawingMode::PreCurve => 2,
-            DrawingMode::Point => 1,
-        };
+        self.layer_order = Order::try_from(
+            self.layer_order.as_u32()
+                + match self.drawing_mode {
+                    DrawingMode::Curve(_) => 3,
+                    DrawingMode::Line | DrawingMode::PreCurve => 2,
+                    DrawingMode::Point => 1,
+                },
+        )
+        .unwrap_or_else(|e| panic!("{}", e));
 
         if matches!(self.drawing_mode, DrawingMode::Curve(_) | DrawingMode::PreCurve) {
             self.drawing_mode = DrawingMode::Line;
@@ -472,7 +479,7 @@ impl DesignerState {
         path: Path,
         context: &mut RenderContext,
         layer_group: &mut dyn LayerGroup,
-        layer_order: u16,
+        layer_order: Order,
     ) {
         let mut raster_builder = context.raster_builder().expect("raster_builder");
         raster_builder.add(&path, None);
@@ -522,7 +529,13 @@ impl DesignerState {
                         _ => (),
                     }
                     let path = path_builder.build();
-                    self.insert_layer_in_group(path, context, layer_group, self.layer_order + i);
+                    self.insert_layer_in_group(
+                        path,
+                        context,
+                        layer_group,
+                        Order::try_from(self.layer_order.as_u32() + i as u32)
+                            .unwrap_or_else(|e| panic!("{}", e)),
+                    );
                 }
 
                 self.drawing_mode = DrawingMode::PreCurve;
@@ -549,7 +562,13 @@ impl DesignerState {
                         _ => (),
                     }
                     let path = path_builder.build();
-                    self.insert_layer_in_group(path, context, layer_group, self.layer_order + i);
+                    self.insert_layer_in_group(
+                        path,
+                        context,
+                        layer_group,
+                        Order::try_from(self.layer_order.as_u32() + i as u32)
+                            .unwrap_or_else(|e| panic!("{}", e)),
+                    );
                 }
             }
             DrawingMode::Curve(Bezier::Cubic) if self.cursor.is_dragged => {
@@ -568,7 +587,13 @@ impl DesignerState {
                         _ => (),
                     }
                     let path = path_builder.build();
-                    self.insert_layer_in_group(path, context, layer_group, self.layer_order + i);
+                    self.insert_layer_in_group(
+                        path,
+                        context,
+                        layer_group,
+                        Order::try_from(self.layer_order.as_u32() + i as u32)
+                            .unwrap_or_else(|e| panic!("{}", e)),
+                    );
                 }
             }
             _ => (),
@@ -583,7 +608,7 @@ impl Default for DesignerState {
             drawing_mode: DrawingMode::Point,
             last_points: PairQueue::new(),
             last_anchor: None,
-            layer_order: 0,
+            layer_order: Order::default(),
         }
     }
 }

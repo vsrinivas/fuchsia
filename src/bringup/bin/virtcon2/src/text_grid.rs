@@ -7,7 +7,9 @@ use {
     carnelian::{
         color::Color,
         drawing::{FontFace, GlyphMap, TextGrid, TextGridCell},
-        render::{BlendMode, Context as RenderContext, Fill, FillRule, Layer, Path, Raster, Style},
+        render::{
+            BlendMode, Context as RenderContext, Fill, FillRule, Layer, Order, Path, Raster, Style,
+        },
         scene::{facets::Facet, LayerGroup},
         Size, ViewAssistantContext,
     },
@@ -221,9 +223,9 @@ pub struct TextGridFacet<T> {
     term: Option<Rc<RefCell<Term<T>>>>,
     status: Vec<(String, Rgb)>,
     status_tab_width: usize,
-    cells: FxHashMap<u16, CellId>,
-    old_cells: FxHashSet<u16>,
-    new_cells: FxHashSet<u16>,
+    cells: FxHashMap<Order, CellId>,
+    old_cells: FxHashSet<Order>,
+    new_cells: FxHashSet<Order>,
 }
 
 pub enum TextGridMessages<T> {
@@ -349,7 +351,7 @@ impl<T: 'static> Facet for TextGridFacet<T> {
         // Process all cells and update the layer group as needed.
         for (order, column, row, content, rgb) in cells.into_iter() {
             let id = CellId { content, rgb };
-            let order = u16::try_from(order).expect("too many layers");
+            let order = Order::try_from(order).unwrap_or_else(|e| panic!("{}", e));
 
             // Remove from old cells.
             self.old_cells.remove(&order);

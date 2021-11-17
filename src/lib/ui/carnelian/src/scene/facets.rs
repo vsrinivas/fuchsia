@@ -8,7 +8,7 @@ use crate::{
     drawing::{linebreak_text, measure_text_width, path_for_rectangle, FontFace, GlyphMap, Text},
     render::{
         rive::{load_rive, RenderCache as RiveRenderCache},
-        BlendMode, Context as RenderContext, Fill, FillRule, Layer, Raster, Shed, Style,
+        BlendMode, Context as RenderContext, Fill, FillRule, Layer, Order, Raster, Shed, Style,
     },
     Coord, Point, Rect, Size, ViewAssistantContext,
 };
@@ -124,7 +124,7 @@ impl Facet for RectangleFacet {
         let raster = line_raster.clone();
         self.raster = Some(line_raster);
         layer_group.insert(
-            0,
+            Order::default(),
             Layer {
                 raster,
                 clip: None,
@@ -291,7 +291,7 @@ impl Facet for TextFacet {
         self.rendered_text = Some(rendered_text);
 
         layer_group.insert(
-            0,
+            Order::default(),
             Layer {
                 raster,
                 clip: None,
@@ -347,7 +347,7 @@ impl Facet for RasterFacet {
         _view_context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         layer_group.insert(
-            0,
+            Order::default(),
             Layer { raster: self.raster.clone(), clip: None, style: self.style.clone() },
         );
         Ok(())
@@ -409,7 +409,7 @@ impl Facet for ShedFacet {
         });
         for (i, (raster, style)) in rasters.iter().rev().enumerate() {
             layer_group.insert(
-                u16::try_from(i).expect("too many layers"),
+                Order::try_from(i).unwrap_or_else(|e| panic!("{}", e)),
                 Layer { raster: raster.clone(), clip: None, style: style.clone() },
             );
         }
@@ -530,7 +530,7 @@ impl Facet for RiveFacet {
 
         layer_group.clear();
         for (i, layer) in layers.enumerate() {
-            layer_group.insert(u16::try_from(i).expect("too many layers"), layer);
+            layer_group.insert(Order::try_from(i).unwrap_or_else(|e| panic!("{}", e)), layer);
         }
 
         Ok(())

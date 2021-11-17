@@ -11,8 +11,8 @@ use {
         input::{self},
         make_app_assistant,
         render::{
-            BlendMode, Composition, Context, CopyRegion, Fill, FillRule, Image, Layer, PostCopy,
-            PreClear, Raster, RenderExt, Style,
+            BlendMode, Composition, Context, CopyRegion, Fill, FillRule, Image, Layer, Order,
+            PostCopy, PreClear, Raster, RenderExt, Style,
         },
         App, AppAssistant, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
     },
@@ -181,7 +181,7 @@ impl ViewAssistant for PngViewAssistant {
         // Clear area where image was previously located.
         if let Some(clear_raster) = &rendering.clear_raster {
             rendering.composition.insert(
-                0,
+                Order::default(),
                 Layer {
                     raster: clear_raster.clone(),
                     clip: None,

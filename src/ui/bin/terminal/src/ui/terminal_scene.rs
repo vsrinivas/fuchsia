@@ -8,7 +8,7 @@ use {
     carnelian::{
         color::Color,
         input::{self},
-        render::{Composition, Context as RenderContext, PreClear, RenderExt},
+        render::{Composition, Context as RenderContext, Order, PreClear, RenderExt},
         Coord, Rect, Size, ViewAssistantContext,
     },
     fuchsia_trace as ftrace,
@@ -68,7 +68,7 @@ impl TerminalScene {
 
         self.composition.clear();
         for (i, layer) in grid_layers.into_iter().chain(scroll_bar_layers).enumerate() {
-            self.composition.insert(u16::try_from(i).expect("too many layers"), layer);
+            self.composition.insert(Order::try_from(i).unwrap_or_else(|e| panic!("{}", e)), layer);
         }
 
         render_context.render(&mut self.composition, None, image, &ext);

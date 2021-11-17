@@ -8,8 +8,8 @@ use {
         color::Color,
         make_app_assistant,
         render::{
-            BlendMode, Context as RenderContext, Fill, FillRule, Layer, Path, PathBuilder, Raster,
-            Style,
+            BlendMode, Context as RenderContext, Fill, FillRule, Layer, Order, Path, PathBuilder,
+            Raster, Style,
         },
         scene::{
             facets::Facet,
@@ -23,7 +23,7 @@ use {
     euclid::{point2, size2, vec2, Angle, Transform2D},
     fuchsia_trace_provider,
     fuchsia_zircon::Event,
-    std::f32,
+    std::{convert::TryFrom, f32},
 };
 
 const BACKGROUND_COLOR: Color = Color { r: 235, g: 213, b: 179, a: 255 };
@@ -270,7 +270,7 @@ impl Facet for ClockFaceFacet {
         }));
         layer_group.clear();
         for (i, layer) in layers.enumerate() {
-            layer_group.insert(i as u16, layer);
+            layer_group.insert(Order::try_from(i).unwrap_or_else(|e| panic!("{}", e)), layer);
         }
         Ok(())
     }

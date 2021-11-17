@@ -15,7 +15,8 @@ use crate::{
     color::Color,
     drawing::{path_for_cursor, FontFace},
     render::{
-        Composition, Context as RenderContext, Fill, Layer, PreClear, Raster, RenderExt, Style,
+        Composition, Context as RenderContext, Fill, Layer, Order, PreClear, Raster, RenderExt,
+        Style,
     },
     Coord, IntPoint, Point, Rect, Size, ViewAssistantContext,
 };
@@ -36,24 +37,24 @@ impl LayerGroup for DirectLayerGroup<'_> {
     fn clear(&mut self) {
         self.0.clear();
     }
-    fn insert(&mut self, order: u16, layer: Layer) {
-        self.0.insert(order, layer);
+    fn insert(&mut self, order: Order, layer: Layer) {
+        self.0.insert(Order::try_from(order).unwrap_or_else(|e| panic!("{}", e)), layer);
     }
-    fn remove(&mut self, order: u16) {
-        self.0.remove(order);
+    fn remove(&mut self, order: Order) {
+        self.0.remove(Order::try_from(order).unwrap_or_else(|e| panic!("{}", e)));
     }
 }
 
-struct SimpleLayerGroup<'a>(&'a mut BTreeMap<u16, Layer>);
+struct SimpleLayerGroup<'a>(&'a mut BTreeMap<Order, Layer>);
 
 impl LayerGroup for SimpleLayerGroup<'_> {
     fn clear(&mut self) {
         self.0.clear();
     }
-    fn insert(&mut self, order: u16, layer: Layer) {
+    fn insert(&mut self, order: Order, layer: Layer) {
         self.0.insert(order, layer);
     }
-    fn remove(&mut self, order: u16) {
+    fn remove(&mut self, order: Order) {
         self.0.remove(&order);
     }
 }
@@ -85,7 +86,7 @@ fn cursor_layer_pair(cursor_raster: &Raster, position: IntPoint) -> (Layer, Laye
     )
 }
 
-type LayerMap = BTreeMap<FacetId, BTreeMap<u16, Layer>>;
+type LayerMap = BTreeMap<FacetId, BTreeMap<Order, Layer>>;
 
 /// Options for creating a scene.
 pub struct SceneOptions {
@@ -277,7 +278,7 @@ impl Scene {
     }
 
     fn update_composition(
-        layers: impl IntoIterator<Item = (u16, Layer)>,
+        layers: impl IntoIterator<Item = (Order, Layer)>,
         mouse_position: &Option<IntPoint>,
         mouse_cursor_raster: &Option<Raster>,
         corner_knockouts: &Option<Raster>,
@@ -286,27 +287,33 @@ impl Scene {
         duration!("gfx", "Scene::update_composition");
 
         for (order, layer) in layers.into_iter() {
-            composition.insert(order, layer);
+            composition.insert(Order::try_from(order).unwrap_or_else(|e| panic!("{}", e)), layer);
         }
 
-        // Mold backend currently supports up to u16::MAX / 2 orders.
-        const MAX_ORDER: u16 = u16::MAX / 2;
+        // Mold backend currently supports up to Order::MAX / 2 orders.
+        const MAX_ORDER: u32 = Order::MAX.as_u32() / 2;
 
-        const CORNER_KOCKOUTS_ORDER: u16 = MAX_ORDER;
-        const MOUSE_CURSOR_LAYER_0_ORDER: u16 = MAX_ORDER - 1;
-        const MOUSE_CURSOR_LAYER_1_ORDER: u16 = MAX_ORDER - 2;
+        const CORNER_KOCKOUTS_ORDER: u32 = MAX_ORDER;
+        const MOUSE_CURSOR_LAYER_0_ORDER: u32 = MAX_ORDER - 1;
+        const MOUSE_CURSOR_LAYER_1_ORDER: u32 = MAX_ORDER - 2;
 
         if let Some(position) = mouse_position {
             if let Some(raster) = mouse_cursor_raster {
                 let (layer0, layer1) = cursor_layer_pair(raster, *position);
-                composition.insert(MOUSE_CURSOR_LAYER_0_ORDER, layer0);
-                composition.insert(MOUSE_CURSOR_LAYER_1_ORDER, layer1);
+                composition.insert(
+                    Order::try_from(MOUSE_CURSOR_LAYER_0_ORDER).unwrap_or_else(|e| panic!("{}", e)),
+                    layer0,
+                );
+                composition.insert(
+                    Order::try_from(MOUSE_CURSOR_LAYER_1_ORDER).unwrap_or_else(|e| panic!("{}", e)),
+                    layer1,
+                );
             }
         }
 
         if let Some(raster) = corner_knockouts {
             composition.insert(
-                CORNER_KOCKOUTS_ORDER,
+                Order::try_from(CORNER_KOCKOUTS_ORDER).unwrap_or_else(|e| panic!("{}", e)),
                 Layer {
                     raster: raster.clone(),
                     clip: None,
@@ -397,11 +404,12 @@ impl Scene {
                 let facet_origin = next_origin;
 
                 // Advance origin for next facet.
-                next_origin += facet_layers.keys().next_back().map(|o| *o as u32 + 1).unwrap_or(0);
+                next_origin += facet_layers.keys().next_back().map(|o| o.as_u32() + 1).unwrap_or(0);
 
                 facet_layers.iter().map(move |(order, layer)| {
                     (
-                        u16::try_from(facet_origin + *order as u32).expect("too many layers"),
+                        Order::try_from(facet_origin + order.as_u32())
+                            .unwrap_or_else(|e| panic!("{}", e)),
                         Layer {
                             raster: layer.raster.clone().translate(facet_translation),
                             clip: layer.clip.clone().map(|c| c.translate(facet_translation)),

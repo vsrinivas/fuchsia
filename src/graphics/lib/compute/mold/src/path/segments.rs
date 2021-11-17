@@ -6,11 +6,8 @@ use crate::{
     path::{transform::Transform, PathCommand},
     point::Point,
     segment::Segment,
-    PIXEL_WIDTH,
+    PIXEL_ACCURACY,
 };
-
-// Pixel accuracy should be within 0.5 of a sub-pixel.
-const PIXEL_ACCURACY: f32 = 0.5 / PIXEL_WIDTH as f32;
 
 fn lerp(t: f32, a: f32, b: f32) -> f32 {
     a * (1.0 - t) + b * t

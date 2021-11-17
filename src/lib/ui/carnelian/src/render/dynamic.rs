@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub use crate::render::generic::{BlendMode, Fill, FillRule, Gradient, GradientType, Style};
+pub use crate::render::generic::{BlendMode, Fill, FillRule, Gradient, GradientType, Order, Style};
 use crate::{
     color::Color,
     render::generic::{
@@ -487,6 +487,7 @@ impl RasterBuilder {
         }
     }
 }
+
 #[derive(Clone, Debug)]
 pub struct Layer {
     /// Layer raster.
@@ -526,7 +527,7 @@ impl Composition {
         }
     }
     /// Insert layer into composition.
-    pub fn insert(&mut self, order: u16, layer: Layer) {
+    pub fn insert(&mut self, order: Order, layer: Layer) {
         if let CompositionInner::Empty = self.inner {
             match layer {
                 Layer { raster: Raster { inner: RasterInner::Mold(_) }, .. } => {
@@ -580,7 +581,7 @@ impl Composition {
         }
     }
     /// Remove layer from composition.
-    pub fn remove(&mut self, order: u16) {
+    pub fn remove(&mut self, order: Order) {
         match &mut self.inner {
             CompositionInner::Mold(composition) => composition.remove(order),
             CompositionInner::Spinel(composition) => composition.remove(order),

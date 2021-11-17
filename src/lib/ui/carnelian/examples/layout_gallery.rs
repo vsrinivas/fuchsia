@@ -8,7 +8,7 @@ use carnelian::{
     drawing::{load_font, path_for_rectangle, FontFace},
     input::{self},
     make_app_assistant,
-    render::{BlendMode, Context as RenderContext, Fill, FillRule, Layer, Raster, Style},
+    render::{BlendMode, Context as RenderContext, Fill, FillRule, Layer, Order, Raster, Style},
     scene::{
         facets::{
             Facet, FacetId, TextFacetOptions, TextHorizontalAlignment, TextVerticalAlignment,
@@ -347,7 +347,7 @@ impl Facet for TestFacet {
         let raster = line_raster.clone();
         self.raster = Some(line_raster);
         layer_group.insert(
-            0,
+            Order::default(),
             Layer {
                 raster: raster,
                 clip: None,
