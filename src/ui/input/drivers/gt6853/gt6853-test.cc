@@ -27,11 +27,15 @@ size_t config_size = 0;
 zx::vmo* firmware_vmo = nullptr;
 size_t firmware_size = 0;
 
+const char* config_path = nullptr;
+
 }  // namespace
 
 zx_status_t load_firmware_from_driver(zx_driver_t* drv, zx_device_t* device, const char* path,
                                       zx_handle_t* fw, size_t* size) {
-  if (strcmp(path, GT6853_CONFIG_9364_PATH) == 0 && config_vmo && config_vmo->is_valid()) {
+  if ((strcmp(path, GT6853_CONFIG_9364_PATH) == 0 || strcmp(path, GT6853_CONFIG_9365_PATH) == 0) &&
+      config_vmo && config_vmo->is_valid()) {
+    config_path = path;
     *fw = config_vmo->get();
     *size = config_size;
     return ZX_OK;
@@ -287,19 +291,21 @@ class Gt6853Test : public zxtest::Test {
   }
 
   zx_status_t Init() {
-    fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[3], 3);
-    fragments[0].name = "i2c";
-    fragments[0].protocols.emplace_back(fake_ddk::ProtocolEntry{
+    fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[4], 4);
+    fragments[0].name = "pdev";
+    fragments[0].protocols.emplace_back(fake_ddk::ProtocolEntry{});
+    fragments[1].name = "i2c";
+    fragments[1].protocols.emplace_back(fake_ddk::ProtocolEntry{
         .id = ZX_PROTOCOL_I2C,
         .proto = {.ops = fake_i2c_.GetProto()->ops, .ctx = fake_i2c_.GetProto()->ctx},
     });
-    fragments[1].name = "gpio-int";
-    fragments[1].protocols.emplace_back(fake_ddk::ProtocolEntry{
+    fragments[2].name = "gpio-int";
+    fragments[2].protocols.emplace_back(fake_ddk::ProtocolEntry{
         .id = ZX_PROTOCOL_GPIO,
         .proto = {.ops = mock_gpio_.GetProto()->ops, .ctx = mock_gpio_.GetProto()->ctx},
     });
-    fragments[2].name = "gpio-reset";
-    fragments[2].protocols.emplace_back(fake_ddk::ProtocolEntry{
+    fragments[3].name = "gpio-reset";
+    fragments[3].protocols.emplace_back(fake_ddk::ProtocolEntry{
         .id = ZX_PROTOCOL_GPIO,
         .proto = {.ops = mock_gpio_.GetProto()->ops, .ctx = mock_gpio_.GetProto()->ctx},
     });
@@ -469,6 +475,39 @@ TEST_F(Gt6853Test, ConfigDownload) {
 
   EXPECT_STR_EQ(reinterpret_cast<const char*>(fake_i2c_.get_config_data().data()),
                 "Config number one");
+  EXPECT_STR_EQ(config_path, GT6853_CONFIG_9364_PATH);
+  EXPECT_EQ(fake_i2c_.get_config_data().size(), 0x0304 - 121);
+}
+
+TEST_F(Gt6853Test, ConfigDownloadBootloaderPanelType) {
+  constexpr uint32_t kPanelType = 4;  // kPanelTypeKdFiti9365
+
+  config_size = 2338;
+  ASSERT_OK(zx::vmo::create(fbl::round_up(config_size, ZX_PAGE_SIZE), 0, &config_vmo_));
+
+  const uint32_t config_size_le = htole32(config_size);
+  ASSERT_OK(config_vmo_.write(&config_size_le, 0, sizeof(config_size_le)));
+  ASSERT_OK(WriteConfigData({0x2b}, 4));
+  ASSERT_OK(WriteConfigData({0x03}, 9));
+  ASSERT_OK(WriteConfigData({0x16, 0x00, 0x1a, 0x03, 0x1e, 0x06}, 16));
+  ASSERT_OK(WriteConfigData({0x04, 0x03, 0x00, 0x00}, 0x0016));
+  ASSERT_OK(WriteConfigData({0x02}, 0x0016 + 20));
+  ASSERT_OK(WriteConfigString("Config number two", 0x0016 + 121));
+  ASSERT_OK(WriteConfigData({0x04, 0x03, 0x00, 0x00}, 0x031a));
+  ASSERT_OK(WriteConfigData({0x00}, 0x031a + 20));
+  ASSERT_OK(WriteConfigString("Config number zero", 0x031a + 121));
+  ASSERT_OK(WriteConfigData({0x04, 0x03, 0x00, 0x00}, 0x061e));
+  ASSERT_OK(WriteConfigData({0x01}, 0x061e + 20));
+  ASSERT_OK(WriteConfigString("Config number one", 0x061e + 121));
+
+  fake_i2c_.set_sensor_id(0);
+
+  ddk_.SetMetadata(DEVICE_METADATA_BOARD_PRIVATE, &kPanelType, sizeof(kPanelType));
+  ASSERT_OK(Init());
+
+  EXPECT_STR_EQ(reinterpret_cast<const char*>(fake_i2c_.get_config_data().data()),
+                "Config number zero");
+  EXPECT_STR_EQ(config_path, GT6853_CONFIG_9365_PATH);
   EXPECT_EQ(fake_i2c_.get_config_data().size(), 0x0304 - 121);
 }
 

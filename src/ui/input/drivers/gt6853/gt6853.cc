@@ -38,6 +38,17 @@ constexpr size_t kI2cMaxTransferSize = 256;
 constexpr uint8_t kCpuRunFromFlash[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 constexpr uint8_t kCpuRunFromRam[8] = {0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55};
 
+// TODO(fxbug.dev/87836): Pull these out into a Nelson-specific file.
+enum {
+  // These values are shared with the bootloader, and must be kept in sync.
+  kPanelTypeKdFiti9364 = 1,
+  kPanelTypeBoeFiti9364 = 2,
+  kPanelTypeInxFiti9364 = 3,
+  kPanelTypeKdFiti9365 = 4,
+  kPanelTypeBoeFiti9365 = 5,
+  kPanelTypeBoeSit7703 = 6,
+};
+
 }  // namespace
 
 namespace touch {
@@ -268,16 +279,30 @@ zx_status_t Gt6853Device::DownloadConfigIfNeeded() {
   zx::vmo config_vmo;
 
   bool use_9365_config = false;
+
   size_t actual = 0;
-  zx_status_t status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &use_9365_config,
-                                           sizeof(use_9365_config), &actual);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to get device metadata: %d", status);
-    return status;
+  uint32_t panel_type_id = 0;
+  zx_status_t status = DdkGetFragmentMetadata("pdev", DEVICE_METADATA_BOARD_PRIVATE, &panel_type_id,
+                                              sizeof(panel_type_id), &actual);
+  if (status == ZX_OK && actual == sizeof(panel_type_id)) {
+    zxlogf(INFO, "Panel type: %d", panel_type_id);
+
+    // TODO(fxbug.dev/87836): Add support for the new DDIC.
+    use_9365_config =
+        panel_type_id == kPanelTypeKdFiti9365 || panel_type_id == kPanelTypeBoeFiti9365;
+  } else {
+    // TODO(fxbug.dev/87836): Remove this fallback once the bootloader has been updated.
+    status = DdkGetFragmentMetadata("pdev", DEVICE_METADATA_PRIVATE, &use_9365_config,
+                                    sizeof(use_9365_config), &actual);
+    if (status == ZX_OK && actual != sizeof(use_9365_config)) {
+      zxlogf(ERROR, "Expected metadata size %zu, got %zu", sizeof(use_9365_config), actual);
+      return ZX_ERR_BAD_STATE;
+    }
   }
-  if (actual != sizeof(use_9365_config)) {
-    zxlogf(ERROR, "Expected metadata size %zu, got %zu", sizeof(use_9365_config), actual);
-    return ZX_ERR_BAD_STATE;
+
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to get panel type: %d", status);
+    return status;
   }
 
   size_t config_vmo_size = 0;
