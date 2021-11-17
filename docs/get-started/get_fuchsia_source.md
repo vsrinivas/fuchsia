@@ -10,6 +10,7 @@ The steps are:
 2. [Install prerequisite packages](#install-prerequisite-packages).
 3. [Download the Fuchsia source code](#download-the-fuchsia-source-code).
 4. [Set up environment variables](#set-up-environment-variables).
+5. [Configure firewall rules (Optional)](#configure-firewall-rules).
 
 ## 1. Perform a preflight check {#perform-a-preflight-check}
 
@@ -165,6 +166,23 @@ do the following:
     ```posix-terminal
     fx help
     ```
+
+## 5. Configure firewall rules (Optional) {#configure-firewall-rules}
+
+Note: This step is not required to build or run Fuchsia, but it's recommended
+to ensure that emulators run smoothly on Linux.
+
+If you're planning on running Fuchsia on Linux, it is advised to run the
+following command to ensure that Fuchsia device and emulator traffic is allowed:
+
+    ```posix-terminal
+    fx setup-ufw
+    ```
+
+This script requires `sudo` to run successfully, and will ask for your password
+in order to set the appropriate firewall rules to permit Fuchsia-specific traffic.
+
+For more information on `fx setup-ufw`, see [`setup-ufw`](https://fuchsia.dev/reference/tools/fx/cmd/setup-ufw).
 
 ## Next steps
 
