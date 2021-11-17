@@ -7,7 +7,18 @@ import("//src/graphics/lib/magma/gnbuild/magma.gni")
 group("integration") {
   testonly = true
 
-  public_deps = [ ":magma_conformance_tests" ]
+  public_deps = [
+    ":linux_x64",
+    ":magma_conformance_tests",
+  ]
+}
+
+group("linux_x64") {
+  testonly = true
+  public_deps = [
+    ":virtmagma_conformance_tests(//build/toolchain:linux_x64)",
+    ":virtmagma_no_cpp_test(//build/toolchain:linux_x64)",
+  ]
 }
 
 executable("magma_conformance_tests") {
@@ -75,4 +86,25 @@ executable("virtmagma_conformance_tests") {
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+}
+
+executable("virtmagma_no_cpp_test") {
+  testonly = true
+
+  ldflags = [ "-nostdlib++" ]
+
+  sources = [
+    "main.c",
+    "test_magma_c.c",
+  ]
+
+  deps = [
+    "$magma_build_root/include:magma",
+    "$magma_build_root/src/libmagma_linux",
+  ]
+
+  disable_syslog_backend = true
+
+  # Builds fail
+  exclude_toolchain_tags = [ "asan" ]
 }

@@ -78,6 +78,9 @@ class OwnedFd {
 template <class T, class U, int magic>
 class VirtmagmaObject {
  public:
+  void* operator new(size_t size) { return malloc(size); }
+  void operator delete(void* ptr) { free(ptr); }
+
   static VirtmagmaObject* Create(T object, U parent) {
     return new VirtmagmaObject(object, std::move(parent));
   }
