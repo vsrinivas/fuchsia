@@ -134,8 +134,14 @@ void NetdeviceMigration::EthernetIfcRecv(const uint8_t* data_buffer, size_t data
     return;
   }
   {
-    fbl::AutoLock vmo_lock(&vmo_lock_);
+    network::SharedAutoLock vmo_lock(&vmo_lock_);
     auto* vmo = vmo_store_.GetVmo(space.region.vmo);
+    if (vmo == nullptr) {
+      zxlogf(ERROR, "netdevice-migration: rx buffer space %du queued with unknown vmo id %du",
+             space.id, space.region.vmo);
+      DdkAsyncRemove();
+      return;
+    }
     cpp20::span<uint8_t> vmo_view = vmo->data();
     std::copy_n(data_buffer, data_size, vmo_view.begin() + space.region.offset);
   }
@@ -161,10 +167,10 @@ zx_status_t NetdeviceMigration::NetworkDeviceImplInit(const network_device_ifc_p
 }
 
 void NetdeviceMigration::NetworkDeviceImplStart(network_device_impl_start_callback callback,
-                                                void* cookie) __TA_EXCLUDES(tx_lock_, rx_lock_) {
+                                                void* cookie) __TA_EXCLUDES(rx_lock_, tx_lock_) {
   {
-    std::lock_guard tx_lock(tx_lock_);
     std::lock_guard rx_lock(rx_lock_);
+    std::lock_guard tx_lock(tx_lock_);
     if (tx_started_ || rx_started_) {
       zxlogf(WARNING, "netdevice-migration: device already started\n");
       callback(cookie, ZX_ERR_ALREADY_BOUND);
@@ -181,23 +187,22 @@ void NetdeviceMigration::NetworkDeviceImplStart(network_device_impl_start_callba
     return;
   }
   {
-    std::lock_guard tx_lock(tx_lock_);
     std::lock_guard rx_lock(rx_lock_);
-    tx_started_ = true;
+    std::lock_guard tx_lock(tx_lock_);
     rx_started_ = true;
+    tx_started_ = true;
   }
   callback(cookie, ZX_OK);
 }
 
 void NetdeviceMigration::NetworkDeviceImplStop(network_device_impl_stop_callback callback,
-                                               void* cookie) __TA_EXCLUDES(tx_lock_)
-    __TA_EXCLUDES(rx_lock_) {
+                                               void* cookie) __TA_EXCLUDES(rx_lock_, tx_lock_) {
   ethernet_.Stop();
   {
-    std::lock_guard tx_lock(tx_lock_);
     std::lock_guard rx_lock(rx_lock_);
-    tx_started_ = false;
+    std::lock_guard tx_lock(tx_lock_);
     rx_started_ = false;
+    tx_started_ = false;
   }
   callback(cookie);
 }
@@ -205,7 +210,127 @@ void NetdeviceMigration::NetworkDeviceImplStop(network_device_impl_stop_callback
 void NetdeviceMigration::NetworkDeviceImplGetInfo(device_info_t* out_info) { *out_info = info_; }
 
 void NetdeviceMigration::NetworkDeviceImplQueueTx(const tx_buffer_t* buffers_list,
-                                                  size_t buffers_count) {}
+                                                  size_t buffers_count)
+    __TA_EXCLUDES(tx_lock_, vmo_lock_) {
+  constexpr uint32_t kQueueOpts = 0;
+  struct CompleteArgs {
+    ethernet_netbuf_t netbuf;
+    FrameCookie* cookie;
+  };
+  CompleteArgs args[kFifoDepth];
+  auto args_iter = std::begin(args);
+  {
+    network::SharedAutoLock vmo_lock(&vmo_lock_);
+    std::lock_guard tx_lock(tx_lock_);
+    cpp20::span buffers(buffers_list, buffers_count);
+    if (buffers.size() > tx_frame_cookies_.size()) {
+      zxlogf(ERROR, "netdevice-migration: received tx buffers %ld > available tx frame cookies %lu",
+             buffers.size(), tx_frame_cookies_.size());
+      DdkAsyncRemove();
+      return;
+    }
+    if (!tx_started_) {
+      zxlogf(ERROR, "netdevice-migration: tx buffers queued before start call");
+      tx_result_t results[buffers.size()];
+      for (size_t i = 0; i < buffers.size(); ++i) {
+        results[i] = {
+            .id = buffers[i].id,
+            .status = ZX_ERR_UNAVAILABLE,
+        };
+      }
+      netdevice_.CompleteTx(results, countof(results));
+      return;
+    }
+    for (const tx_buffer_t& buffer : buffers) {
+      if (buffer.data_count > info_.max_buffer_parts) {
+        zxlogf(ERROR,
+               "netdevice-migration: tx buffer queued with parts count %ld > max buffer parts %du",
+               buffer.data_count, info_.max_buffer_parts);
+        DdkAsyncRemove();
+        return;
+      }
+      if (buffer.data_list->length > info_.max_buffer_length) {
+        zxlogf(ERROR,
+               "netdevice-migration: tx buffer queued with length %ld > max buffer length %du",
+               buffer.data_list->length, info_.max_buffer_length);
+        DdkAsyncRemove();
+        return;
+      }
+      auto* vmo = vmo_store_.GetVmo(buffer.data_list->vmo);
+      if (vmo == nullptr) {
+        zxlogf(ERROR, "netdevice-migration: tx buffer %du queued with unknown vmo id %du",
+               buffer.id, buffer.data_list->vmo);
+        DdkAsyncRemove();
+        return;
+      }
+      zx_paddr_t phys_addr = 0;
+      if (eth_bti_.is_valid()) {
+        fzl::PinnedVmo::Region region;
+        size_t regions_needed = 0;
+        if (zx_status_t status = vmo->GetPinnedRegions(
+                buffer.data_list->offset, buffer.data_list->length, &region, 1, &regions_needed);
+            status != ZX_OK) {
+          zxlogf(ERROR, "netdevice-migration: failed to get pinned regions of vmo: %s",
+                 zx_status_get_string(status));
+          tx_result_t result = {
+              .id = buffer.id,
+              .status = ZX_ERR_INTERNAL,
+          };
+          netdevice_.CompleteTx(&result, 1);
+          continue;
+        }
+        phys_addr = region.phys_addr;
+      }
+      cpp20::span vmo_view(vmo->data());
+      vmo_view = vmo_view.subspan(buffer.data_list->offset, buffer.data_list->length);
+      FrameCookie* cookie = tx_frame_cookies_.back();
+      tx_frame_cookies_.pop_back();
+      *cookie = {
+          .id = buffer.id,
+          .netdev = this,
+      };
+      *args_iter++ = {
+          .netbuf =
+              {
+                  .data_buffer = vmo_view.data(),
+                  .data_size = vmo_view.size(),
+                  .phys = phys_addr,
+              },
+          .cookie = cookie,
+      };
+    }
+  }
+  for (auto arg = std::begin(args); arg != args_iter; ++arg) {
+    ethernet_.QueueTx(
+        kQueueOpts, &arg->netbuf,
+        [](void* ctx, zx_status_t status, ethernet_netbuf_t* netbuf) {
+          // The error semantics of fuchsia.hardware.ethernet/EthernetImpl.QueueTx are unspecified
+          // other than `ZX_OK` indicating success. However, ethernet driver usages of
+          // `ZX_ERR_NO_RESOURCES` and `ZX_ERR_UNAVAILABLE` map to the meanings specified by
+          // fuchsia.hardware.network.device/TxResult. Accordingly, use `ZX_ERR_INTERNAL` for any
+          // other Ethernet error.
+          switch (status) {
+            case ZX_OK:
+            case ZX_ERR_NO_RESOURCES:
+            case ZX_ERR_UNAVAILABLE:
+              break;
+            default:
+              status = ZX_ERR_INTERNAL;
+          }
+          tx_result_t result = {
+              .status = status,
+          };
+          auto* cookie = static_cast<FrameCookie*>(ctx);
+          result.id = cookie->id;
+          cookie->netdev->netdevice_.CompleteTx(&result, 1);
+          {
+            std::lock_guard tx_lock(cookie->netdev->tx_lock_);
+            cookie->netdev->tx_frame_cookies_.push_back(cookie);
+          }
+        },
+        arg->cookie);
+  }
+}
 
 void NetdeviceMigration::NetworkDeviceImplQueueRxSpace(const rx_space_buffer_t* buffers_list,
                                                        size_t buffers_count)

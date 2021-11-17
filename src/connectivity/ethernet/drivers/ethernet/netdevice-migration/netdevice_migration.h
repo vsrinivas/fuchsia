@@ -31,8 +31,15 @@ class NetdeviceMigration : public DeviceType,
                            public ddk::NetworkPortProtocol<NetdeviceMigration> {
  public:
   static constexpr uint8_t kPortId = 13;
+  // Equivalent to generic ethernet driver FIFO depth; see
+  // eth::EthDev::kFifoDepth in //src/connectivity/ethernet/drivers/ethernet/ethernet.h.
+  static constexpr uint32_t kFifoDepth = 256;
   static zx::status<std::unique_ptr<NetdeviceMigration>> Create(zx_device_t* dev);
-  virtual ~NetdeviceMigration() = default;
+  virtual ~NetdeviceMigration() {
+    size_t diff = cookie_storage_.size() - tx_frame_cookies_.size();
+    ZX_ASSERT_MSG(diff == 0, "ethernet driver has not returned %lu of %lu tx frame cookies", diff,
+                  tx_frame_cookies_.size());
+  }
 
   // Initializes the driver and binds it to the parent device `dev`. The DDK calls Bind through
   // the zx_driver_ops_t published for this driver; consequently, a client of this driver will not
@@ -71,10 +78,6 @@ class NetdeviceMigration : public DeviceType,
   void NetworkPortRemoved();
 
  private:
-  // Equivalent to generic ethernet driver FIFO depth; see
-  // eth::EthDev::kFifoDepth in //src/connectivity/ethernet/drivers/ethernet/ethernet.h.
-  static constexpr uint32_t kFifoDepth = 256;
-
   NetdeviceMigration(zx_device_t* parent, ddk::EthernetImplProtocolClient ethernet, uint32_t mtu,
                      zx::bti eth_bti, vmo_store::Options opts)
       : DeviceType(parent),
@@ -95,7 +98,11 @@ class NetdeviceMigration : public DeviceType,
             // Ensures that an rx buffer will always be large enough to the ethernet MTU.
             .min_rx_buffer_length = mtu,
         }),
-        vmo_store_(opts) {}
+        vmo_store_(opts) {
+    for (FrameCookie& cookie : cookie_storage_) {
+      tx_frame_cookies_.push_back(&cookie);
+    }
+  }
 
   ddk::NetworkDeviceIfcProtocolClient netdevice_;
 
@@ -107,16 +114,22 @@ class NetdeviceMigration : public DeviceType,
   std::mutex status_lock_;
   fuchsia_hardware_network::wire::StatusFlags port_status_flags_ __TA_GUARDED(status_lock_);
 
-  std::mutex tx_lock_ __TA_ACQUIRED_BEFORE(rx_lock_, vmo_lock_);
+  std::mutex tx_lock_ __TA_ACQUIRED_AFTER(rx_lock_, vmo_lock_);
   bool tx_started_ __TA_GUARDED(tx_lock_) = false;
+  struct FrameCookie {
+    uint32_t id;
+    NetdeviceMigration* netdev;
+  };
+  std::array<FrameCookie, kFifoDepth> cookie_storage_ __TA_GUARDED(tx_lock_);
+  std::vector<FrameCookie*> tx_frame_cookies_ __TA_GUARDED(tx_lock_);
 
-  std::mutex rx_lock_ __TA_ACQUIRED_AFTER(tx_lock_) __TA_ACQUIRED_BEFORE(vmo_lock_);
+  std::mutex rx_lock_ __TA_ACQUIRED_BEFORE(tx_lock_, vmo_lock_);
   bool rx_started_ __TA_GUARDED(rx_lock_) = false;
   // Use a queue to enforce FIFO ordering. With LIFO ordering, some buffers will sit unused unless
   // the driver hits buffer starvation, which could obscure bugs related to malformed buffers.
   std::queue<rx_space_buffer_t> rx_spaces_ __TA_GUARDED(rx_lock_);
 
-  network::SharedLock vmo_lock_ __TA_ACQUIRED_AFTER(rx_lock_, tx_lock_);
+  network::SharedLock vmo_lock_ __TA_ACQUIRED_BEFORE(tx_lock_) __TA_ACQUIRED_AFTER(rx_lock_);
   NetdeviceMigrationVmoStore vmo_store_ __TA_GUARDED(vmo_lock_);
 
   friend class NetdeviceMigrationTestHelper;
