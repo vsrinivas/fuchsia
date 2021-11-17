@@ -44,7 +44,8 @@ use {
 
 mod service;
 pub use service::{
-    FidlService, FidlServiceMember, Service, ServiceObj, ServiceObjLocal, ServiceObjTrait,
+    FidlService, FidlServiceMember, FidlServiceServerConnector, Service, ServiceObj,
+    ServiceObjLocal, ServiceObjTrait,
 };
 
 mod stream_helpers;
@@ -326,6 +327,35 @@ impl<P: DiscoverableProtocolMarker, O> Service for ComponentProxy<P, O> {
 // in order to call these functions.
 macro_rules! add_functions {
     () => {
+        /// Adds a service connector to the directory.
+        ///
+        /// ```rust
+        /// let mut fs = ServiceFs::new_local();
+        /// fs
+        ///     .add_service_connector(|server_end: ServerEnd<EchoMarker>| {
+        ///         connect_channel_to_protocol::<EchoMarker>(
+        ///             server_end.into_channel(),
+        ///         )
+        ///     })
+        ///     .add_service_connector(|server_end: ServerEnd<CustomMarker>| {
+        ///         connect_channel_to_protocol::<CustomMarker>(
+        ///             server_end.into_channel(),
+        ///         )
+        ///     })
+        ///     .take_and_serve_directory_handle()?;
+        /// ```
+        ///
+        /// The FIDL service will be hosted at the name provided by the
+        /// `[Discoverable]` annotation in the FIDL source.
+        pub fn add_service_connector<F, P>(&mut self, service: F) -> &mut Self
+        where
+            F: FnMut(ServerEnd<P>) -> ServiceObjTy::Output,
+            P: DiscoverableProtocolMarker,
+            FidlServiceServerConnector<F, P, ServiceObjTy::Output>: Into<ServiceObjTy>,
+        {
+            self.add_service_at(P::PROTOCOL_NAME, FidlServiceServerConnector::from(service))
+        }
+
         /// Adds a service to the directory at the given path.
         ///
         /// The path must be a single component containing no `/` characters.

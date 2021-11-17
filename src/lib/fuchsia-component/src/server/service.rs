@@ -5,7 +5,7 @@
 //! The `Service` trait and its trait-object wrappers.
 
 use {
-    fidl::endpoints::{RequestStream, ServiceRequest},
+    fidl::endpoints::{DiscoverableProtocolMarker, RequestStream, ServerEnd, ServiceRequest},
     fuchsia_async as fasync, fuchsia_zircon as zx,
     std::marker::PhantomData,
 };
@@ -54,7 +54,7 @@ where
     RS: RequestStream,
 {
     f: F,
-    marker: PhantomData<fn(RS) -> Output>,
+    marker: PhantomData<(RS, Output)>,
 }
 
 impl<F, RS, Output> From<F> for FidlService<F, RS, Output>
@@ -84,6 +84,39 @@ where
     }
 }
 
+/// A wrapper for functions from `ServerEnd` to `Output` which implements
+/// `Service`.
+pub struct FidlServiceServerConnector<F, P, Output>
+where
+    F: FnMut(ServerEnd<P>) -> Output,
+    P: DiscoverableProtocolMarker,
+{
+    f: F,
+    marker: PhantomData<(P, Output)>,
+}
+
+impl<F, P, Output> From<F> for FidlServiceServerConnector<F, P, Output>
+where
+    F: FnMut(ServerEnd<P>) -> Output,
+    P: DiscoverableProtocolMarker,
+{
+    fn from(f: F) -> Self {
+        Self { f, marker: PhantomData }
+    }
+}
+
+impl<F, P, Output> Service for FidlServiceServerConnector<F, P, Output>
+where
+    F: FnMut(ServerEnd<P>) -> Output,
+    P: DiscoverableProtocolMarker,
+{
+    type Output = Output;
+    fn connect(&mut self, channel: zx::Channel) -> Option<Self::Output> {
+        let FidlServiceServerConnector { f, marker: _ } = self;
+        Some(f(ServerEnd::new(channel)))
+    }
+}
+
 /// A wrapper for functions from `ServiceRequest` to `Output` which implements
 /// `Service`.
 ///
@@ -95,7 +128,7 @@ where
     SR: ServiceRequest,
 {
     f: F,
-    marker: PhantomData<fn(SR) -> Output>,
+    marker: PhantomData<(SR, Output)>,
 }
 
 impl<F, SR, Output> From<F> for FidlServiceMember<F, SR, Output>
