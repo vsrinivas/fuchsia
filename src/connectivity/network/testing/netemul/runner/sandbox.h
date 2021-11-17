@@ -15,6 +15,7 @@
 #include <unordered_set>
 
 #include <src/connectivity/network/testing/netemul/lib/network/netdump.h>
+#include <src/virtualization/tests/socket_logger.h>
 
 #include "managed_environment.h"
 #include "model/config.h"
@@ -154,6 +155,7 @@ class Sandbox {
   fuchsia::sys::EnvironmentPtr parent_env_;
   fuchsia::sys::LoaderPtr loader_;
   ManagedEnvironment::Ptr root_;
+  std::optional<SocketLogger> guest_uart_;
   std::shared_ptr<ManagedEnvironment> guest_;
   // keep network handles to keep objects alive
   std::vector<zx::channel> network_handles_;

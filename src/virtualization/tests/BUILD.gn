@@ -64,7 +64,10 @@ source_set("periodic_logger") {
 }
 
 source_set("socket_logger") {
-  visibility = [ ":*" ]
+  visibility = [
+    "//src/connectivity/network/testing/netemul/*",
+    "//src/virtualization/*",
+  ]
   sources = [
     "socket_logger.cc",
     "socket_logger.h",

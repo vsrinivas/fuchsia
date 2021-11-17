@@ -14,6 +14,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/vfs.h>
 #include <lib/fpromise/promise.h>
+#include <lib/fpromise/result.h>
 #include <lib/fpromise/sequencer.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/termination_reason.h>
@@ -551,31 +552,66 @@ Sandbox::Promise Sandbox::LaunchGuestEnvironment(const ConfiguringEnvironmentPtr
                          [completer](uint32_t cid) mutable { completer->complete_ok(); });
 
   return bridge.consumer.promise()
-      .and_then([guest_controller = std::move(guest_controller)]() mutable {
-        fpromise::bridge<zx::socket, SandboxResult> bridge;
-        std::shared_ptr completer =
-            std::make_shared<decltype(bridge.completer)>(std::move(bridge.completer));
-        guest_controller.set_error_handler([completer](zx_status_t status) {
+      .and_then([guest_controller = std::move(guest_controller),
+                 this]() mutable -> fpromise::promise<zx::socket, SandboxResult> {
+        fpromise::bridge<void, SandboxResult> uart_bridge;
+        std::shared_ptr uart_completer =
+            std::make_shared<decltype(uart_bridge.completer)>(std::move(uart_bridge.completer));
+
+        fpromise::bridge<zx::socket, SandboxResult> console_bridge;
+        std::shared_ptr console_completer = std::make_shared<decltype(console_bridge.completer)>(
+            std::move(console_bridge.completer));
+
+        guest_controller.set_error_handler([uart_completer, console_completer](zx_status_t status) {
           std::stringstream ss;
-          ss << "Could not create guest console: " << zx_status_get_string(status);
-          completer->complete_error(SandboxResult(SandboxResult::Status::SETUP_FAILED, ss.str()));
+          ss << "Failed while fetching guest console and UART: " << zx_status_get_string(status);
+          if (uart_completer) {
+            uart_completer->complete_error(
+                SandboxResult(SandboxResult::Status::SETUP_FAILED, ss.str()));
+          }
+          if (console_completer) {
+            console_completer->complete_error(
+                SandboxResult(SandboxResult::Status::SETUP_FAILED, ss.str()));
+          }
         });
+
+        // Fetch the guest's console.
         guest_controller->GetConsole(
-            [completer](fuchsia::virtualization::Guest_GetConsole_Result result) mutable {
+            [console_completer](fuchsia::virtualization::Guest_GetConsole_Result result) mutable {
               if (result.is_err()) {
                 std::stringstream ss;
-                ss << "Could not create guest socket connection: "
-                   << zx_status_get_string(result.err());
-                completer->complete_error(
+                ss << "Could not get guest console socket: " << zx_status_get_string(result.err());
+                console_completer->complete_error(
                     SandboxResult(SandboxResult::Status::SETUP_FAILED, ss.str()));
               } else {
-                completer->complete_ok(std::move(result.response().socket));
+                console_completer->complete_ok(std::move(result.response().socket));
               }
             });
-        // Keep |guest_controller| alive; otherwise the callback won't fire.
-        return bridge.consumer.promise().inspect(
-            [guest_controller = std::move(guest_controller)](
-                const fpromise::result<zx::socket, SandboxResult>&) {});
+
+        // Fetch the guest's UART, and start logging it.
+        guest_controller->GetSerial([uart_completer, this](zx::socket socket) mutable {
+          // Start logging guest serial immediately, even if still waiting for
+          // the GetConsole call to finish.
+          guest_uart_.emplace(&Logger::Get(), std::move(socket));
+          uart_completer->complete_ok();
+        });
+
+        // Wait for both the console and serial to be fetched.
+        return fpromise::join_promises(console_bridge.consumer.promise(),
+                                       uart_bridge.consumer.promise())
+            .then(
+                [](fpromise::result<std::tuple<fpromise::result<zx::socket, netemul::SandboxResult>,
+                                               fpromise::result<void, netemul::SandboxResult>>>&
+                       result) -> fpromise::result<zx::socket, netemul::SandboxResult> {
+                  auto& [console_result, uart_result] = result.value();
+                  if (uart_result.is_error()) {
+                    return fpromise::error(uart_result.error());
+                  }
+                  return std::move(console_result);
+                })
+            // Keep |guest_controller| alive; otherwise the callback won't fire.
+            .inspect([guest_controller = std::move(guest_controller)](
+                         const fpromise::result<zx::socket, SandboxResult>&) {});
       })
       .and_then([this, &guest](zx::socket& socket) -> PromiseResult {
         // Wait until the guest's serial console becomes usable to ensure that the guest has
