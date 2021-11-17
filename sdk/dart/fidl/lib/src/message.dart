@@ -160,11 +160,9 @@ void _validateDecoding(Decoder decoder) {
 
 /// Decodes a FIDL message that contains a single parameter.
 T decodeMessage<T>(IncomingMessage message, int inlineSize, MemberType typ) {
-  final Decoder decoder = Decoder(message)
-    ..claimMemory(kMessageHeaderSize + inlineSize, 0);
-  T decoded = typ.decode(decoder, kMessageHeaderSize, 1);
-  _validateDecoding(decoder);
-  return decoded;
+  return decodeMessageWithCallback(message, inlineSize, (Decoder decoder) {
+    return typ.decode(decoder, kMessageHeaderSize, 1);
+  });
 }
 
 /// Decodes a FIDL message with multiple parameters.  The callback parameter
