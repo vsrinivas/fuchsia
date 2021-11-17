@@ -188,7 +188,11 @@ static zx_status_t read_fd(const int fd, const PhysMem& phys_mem, const uintptr_
 zx_status_t load_kernel(fbl::unique_fd kernel_fd, const PhysMem& phys_mem,
                         const uintptr_t kernel_off) {
   size_t kernel_size;
-  read_fd(kernel_fd.get(), phys_mem, kernel_off, &kernel_size);
+  zx_status_t status = read_fd(kernel_fd.get(), phys_mem, kernel_off, &kernel_size);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to read kernel image";
+    return status;
+  }
   if (is_within(kDtbOffset, kernel_off, kernel_size)) {
     FX_LOGS(ERROR) << "Kernel location overlaps DTB location";
     return ZX_ERR_OUT_OF_RANGE;
