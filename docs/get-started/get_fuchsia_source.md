@@ -175,9 +175,9 @@ to ensure that emulators run smoothly on Linux.
 If you're planning on running Fuchsia on Linux, it is advised to run the
 following command to ensure that Fuchsia device and emulator traffic is allowed:
 
-    ```posix-terminal
-    fx setup-ufw
-    ```
+```posix-terminal
+fx setup-ufw
+```
 
 This script requires `sudo` to run successfully, and will ask for your password
 in order to set the appropriate firewall rules to permit Fuchsia-specific traffic.
