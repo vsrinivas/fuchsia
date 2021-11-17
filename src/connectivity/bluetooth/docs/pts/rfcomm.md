@@ -15,7 +15,7 @@ Notes:
 * Run `fx log --only test-rfcomm-client` to enable logging in a separate terminal. Relevant RFCOMM
   values will be printed in this log.
 * Ensure the HFP component is not running. If `ps | grep hfp` returns a process, terminate it by
-  running `killall bt-hfp-audio-gateway.cmx`.
+  running `killall bt-hfp-audio-gateway.cm`.
 
 ## IXIT Values
 TSPX_bd_addr_iut = The address of your device

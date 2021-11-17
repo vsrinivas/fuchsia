@@ -131,19 +131,12 @@ resource("test_config") {
 fuchsia_component("component") {
   component_name = "bt-hfp-audio-gateway"
   deps = [ ":bin" ]
-  manifest = "meta/bt-hfp-audio-gateway.cmx"
-}
-
-fuchsia_component("component-v2") {
-  component_name = "bt-hfp-audio-gateway"
-  deps = [ ":bin" ]
   manifest = "meta/bt-hfp-audio-gateway.cml"
 }
 
 fuchsia_package("bt-hfp-audio-gateway-default") {
   deps = [
     ":component",
-    ":component-v2",
     ":default_config",
   ]
 }
@@ -160,18 +153,6 @@ core_shard("bt-hfp-audio-gateway-core-shard") {
 # support.
 core_shard("bt-headset-core-shard") {
   shard_file = "meta/bt-headset.core_shard.cml"
-}
-
-config_data("service_config") {
-  for_pkg = "sysmgr"
-  outputs = [ "bt-hfp-audio-gateway-service.config" ]
-  sources = [ "service.config" ]
-}
-
-config_data("startup_config") {
-  for_pkg = "sysmgr"
-  outputs = [ "bt-hfp-audio-gateway-startup.config" ]
-  sources = [ "startup.config" ]
 }
 
 group("bt-hfp-audio-gateway") {
