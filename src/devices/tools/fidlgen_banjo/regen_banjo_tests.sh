@@ -17,8 +17,8 @@ C_FILES="$BANJO_DIR/tests/c"
 CPP_FILES="$BANJO_DIR/tests/cpp"
 RUST_FILES="$BANJO_DIR/tests/rust"
 AST_FILES="$BANJO_DIR/tests/ast"
-FIDLGEN_BANJO="$FUCHSIA_BUILD_DIR/host_x64-novariant/exe.unstripped/fidlgen_banjo"
-FIDLC="$FUCHSIA_BUILD_DIR/host_x64-novariant/exe.unstripped/fidlc"
+FIDLGEN_BANJO="$FUCHSIA_BUILD_DIR/host_x64/exe.unstripped/fidlgen_banjo"
+FIDLC="$FUCHSIA_BUILD_DIR/host_x64/exe.unstripped/fidlc"
 
 FILE="$1"
 

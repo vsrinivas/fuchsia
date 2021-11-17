@@ -7,7 +7,6 @@
 
 #![allow(unused_imports, non_camel_case_types)]
 
-use fuchsia_zircon as zircon;
 
 use banjo_banjo_examples_point as banjo_examples_point;
 use banjo_examples_point::*;

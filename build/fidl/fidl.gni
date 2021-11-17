@@ -172,6 +172,11 @@ template("fidl") {
                              ])
     }
 
+    import("//build/banjo/fidl_banjo.gni")
+    fidl_banjo(target_name) {
+      forward_variables_from(invoker, "*")
+    }
+
     # TODO(cramertj): remove pending fxbug.dev/26853.
     import("//build/rust/fidl_rust_library.gni")
     fidl_rust_library(target_name) {
@@ -199,11 +204,6 @@ template("fidl") {
           ":${target_name}_client",
           ":${target_name}_server",
         ]
-      }
-
-      import("//build/banjo/fidl_banjo.gni")
-      fidl_banjo(target_name) {
-        forward_variables_from(invoker, "*")
       }
     }
   }

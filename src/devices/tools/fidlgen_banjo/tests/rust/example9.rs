@@ -7,8 +7,7 @@
 
 #![allow(unused_imports, non_camel_case_types)]
 
-use fuchsia_zircon as zircon;
-
+use fuchsia_zircon_status as zircon;
 
 pub const FAVORITE_ECHO: EchoMe = EchoMe.zero;
 #[repr(C)]

@@ -9,7 +9,6 @@
 
 use fuchsia_zircon as zircon;
 
-
 pub const VECTORS_SIZE: u32 = 32;
 pub const STRINGS_SIZE: u32 = 32;
 pub const ARRAYS_SIZE: u32 = 32;

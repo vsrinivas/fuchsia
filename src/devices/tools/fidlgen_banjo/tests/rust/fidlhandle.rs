@@ -10,7 +10,6 @@
 use fuchsia_zircon as zircon;
 
 
-
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct SomeStruct {

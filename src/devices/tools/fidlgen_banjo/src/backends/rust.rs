@@ -398,12 +398,33 @@ impl<'a, W: io::Write> RustBackend<'a, W> {
     }
 }
 
+fn has_zircon_dep(ir: &FidlIr) -> bool {
+    ir.library_dependencies.iter().find(|library| library.name.0.as_str() == "zx").is_some()
+}
+
+fn uses_zircon_handles(ir: &FidlIr) -> bool {
+    // Ignore tables because we don't generate those.
+    ir.struct_declarations
+        .iter()
+        .filter(|decl| decl.resource && !decl.is_request_or_response)
+        .count()
+        + ir.union_declarations.iter().filter(|decl| decl.resource).count()
+        > 0
+}
+
 impl<'a, W: io::Write> Backend<'a, W> for RustBackend<'a, W> {
     fn codegen(&mut self, ir: FidlIr) -> Result<(), Error> {
         let decl_order = get_declarations(&ir)?;
 
+        let zircon_include = match (has_zircon_dep(&ir), uses_zircon_handles(&ir)) {
+            (false, _) => "",
+            (true, true) => "use fuchsia_zircon as zircon;",
+            (true, false) => "use fuchsia_zircon_status as zircon;",
+        };
+
         self.w.write_fmt(format_args!(
             include_str!("templates/rust/header.rs"),
+            zircon_include = zircon_include,
             includes = self.codegen_includes(&ir)?,
             primary_namespace = ir.name.0,
         ))?;

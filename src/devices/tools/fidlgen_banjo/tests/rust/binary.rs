@@ -7,7 +7,6 @@
 
 #![allow(unused_imports, non_camel_case_types)]
 
-use fuchsia_zircon as zircon;
 
 
 pub const BINARY_NUMBER: u32 = 0b100100100;

@@ -7,7 +7,6 @@
 
 #![allow(unused_imports, non_camel_case_types)]
 
-use fuchsia_zircon as zircon;
 
 
 pub const STRINGS_SIZE: u32 = 32;
