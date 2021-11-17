@@ -56,7 +56,7 @@
 
 #define DCMD_RESP_TIMEOUT_MSEC (2500)
 
-#if !defined(NDEBUG)
+#ifdef BRCMF_CONSOLE_LOG
 
 #define BRCMF_TRAP_INFO_SIZE 80
 
@@ -96,7 +96,7 @@ struct rte_console {
   char cbuf[CBUF_LEN];
 };
 
-#endif /* !defined(NDEBUG) */
+#endif // BRCMF_CONSOLE_LOG
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bus.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipcommon.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
@@ -359,9 +359,9 @@ struct sdpcm_shared {
   uint32_t assert_exp_addr;
   uint32_t assert_file_addr;
   uint32_t assert_line;
-#if !defined(NDEBUG)
+#ifdef BRCMF_CONSOLE_LOG
   uint32_t console_addr; /* Address of struct rte_console */
-#endif                   // !defined(NDEBUG)
+#endif // BRCMF_CONSOLE_LOG
   uint32_t msgtrace_addr;
   uint8_t tag[32];
   uint32_t brpt_addr;
@@ -373,9 +373,9 @@ struct sdpcm_shared_le {
   uint32_t assert_exp_addr;
   uint32_t assert_file_addr;
   uint32_t assert_line;
-#if !defined(NDEBUG)
+#ifdef BRCMF_CONSOLE_LOG
   uint32_t console_addr; /* Address of struct rte_console */
-#endif                   // !defined(NDEBUG)
+#endif // BRCMF_CONSOLE_LOG
   uint32_t msgtrace_addr;
   uint8_t tag[32];
   uint32_t brpt_addr;
@@ -836,7 +836,7 @@ static zx_status_t brcmf_sdio_shared_write(struct brcmf_sdio* bus, struct sdpcm_
   return __brcmf_sdio_sharedrw(bus, sh, true);
 }
 
-#if !defined(NDEBUG)
+#ifdef BRCMF_CONSOLE_LOG
 static void brcmf_sdio_get_console_addr(struct brcmf_sdio* bus) {
   struct sdpcm_shared sh;
 
@@ -844,9 +844,9 @@ static void brcmf_sdio_get_console_addr(struct brcmf_sdio* bus) {
     bus->console_addr = sh.console_addr;
   }
 }
-#else  /* !defined(NDEBUG) */
+#else // BRCMF_CONSOLE_LOG
 static void brcmf_sdio_get_console_addr(struct brcmf_sdio* bus) {}
-#endif /* !defined(NDEBUG) */
+#endif // BRCMF_CONSOLE_LOG
 
 static uint32_t brcmf_sdio_hostmail(struct brcmf_sdio* bus) {
   struct brcmf_sdio_dev* sdiod = bus->sdiodev;
@@ -2486,7 +2486,7 @@ static zx_status_t brcmf_sdio_bus_txdata(brcmf_bus* bus_if, brcmf_netbuf* pkt) {
   return ret;
 }
 
-#if !defined(NDEBUG)
+#ifdef BRCMF_CONSOLE_LOG
 #define CONSOLE_LINE_MAX 192
 
 static zx_status_t brcmf_sdio_readconsole(struct brcmf_sdio* bus) {
@@ -2572,7 +2572,7 @@ break2:
 
   return ZX_OK;
 }
-#endif /* !defined(NDEBUG) */
+#endif // BRCMF_CONSOLE_LOG
 
 zx_status_t brcmf_sdio_bus_txctl(brcmf_bus* bus_if, unsigned char* msg, uint msglen) {
   struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
@@ -3041,7 +3041,7 @@ static void brcmf_sdio_bus_watchdog(struct brcmf_sdio* bus) {
     /* Update interrupt tracking */
     bus->sdcnt.lastintrs = bus->sdcnt.intrcount;
   }
-#if !defined(NDEBUG)
+#ifdef BRCMF_CONSOLE_LOG
   /* Poll for console output periodically */
   // This was the original check. But for some reason sdiodev->state never gets set to
   // BRCMF_SDIOD_DATA. Need to investiage TODO(fxbug.dev/36618)
@@ -3059,7 +3059,7 @@ static void brcmf_sdio_bus_watchdog(struct brcmf_sdio* bus) {
       sdio_release_host(bus->sdiodev->func1);
     }
   }
-#endif /* !defined(NDEBUG) */
+#endif // BRCMF_CONSOLE_LOG
 
 // TODO(cphoenix): Turn "idle" back on once things are working, and see if anything breaks.
 #ifdef TEMP_DISABLE_DO_IDLE
@@ -3613,11 +3613,11 @@ static zx_status_t brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
 
   BRCMF_DBG(TEMP, "Exit");
   ZX_DEBUG_ASSERT(err == ZX_OK);
-#if !defined(NDEBUG)
+#ifdef BRCMF_CONSOLE_LOG
   if (BRCMF_IS_ON(FWCON)) {
     bus->console_interval = BRCMF_CONSOLE_INTERVAL;
   }
-#endif
+#endif // BRCMF_CONSOLE_LOG
   return err;
 
 fail:
@@ -3795,12 +3795,12 @@ zx_status_t brcmf_sdio_firmware_callback(brcmf_pub* drvr, const void* firmware,
   err = brcmf_sdio_shared_read(bus, &sh);
   BRCMF_DBG(TEMP, "Read shared returned %d", err);
 
-#if !defined(NDEBUG)
+#ifdef BRCMF_CONSOLE_LOG
   bus->console_addr = sh.console_addr;
   BRCMF_DBG(TEMP, "console_addr 0x%x", bus->console_addr);
   brcmf_sdio_readconsole(bus);
   BRCMF_DBG(TEMP, "Should have seen readconsole output");
-#endif  // !defined(NDEBUG)
+#endif // BRCMF_CONSOLE_LOG
 
   if (err == ZX_OK) {
     /* Allow full data communication using DPC from now on. */
