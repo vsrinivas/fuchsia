@@ -552,8 +552,22 @@ fn generate_proxy_from_selector(
         async {
             // This needs to be a block in order for this `use` to avoid conflicting with a plugins own `use` for this trait.
             use futures::TryFutureExt;
-            injector.remote_factory().await?
-            .connect(#selector, #server_end.into_channel())
+
+            let retry_count = 1;
+            let mut tries = 0;
+            // We try `retry_count` + 1 times to get a non-error result from calling
+            // injectory.remote_factory(). The __remote_factory variable will be a Result<P> which
+            // is why we use the ? operator at the end of the loop to early return an error from
+            // this block if we didn't manage to get a handle to the remote control proxy.
+            let __remote_factory = loop {
+                tries += 1;
+                let remote_factory = injector.remote_factory().await;
+                if remote_factory.is_ok() || tries > retry_count {
+                    break remote_factory;
+                }
+            }?;
+
+            __remote_factory.connect(#selector, #server_end.into_channel())
             .map_ok_or_else(|e| Result::<(), anyhow::Error>::Err(anyhow::anyhow!(e)), |fidl_result| {
                 fidl_result
                 .map(|_| ())
