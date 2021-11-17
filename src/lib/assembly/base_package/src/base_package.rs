@@ -127,7 +127,13 @@ pub struct BasePackageBuildResults {
 // Pulls out the path and merkle from `package` and adds it to `packages` with a path to
 // merkle mapping.
 fn add_package_to(list: &mut PackageList, package: PackageManifest) -> Result<()> {
-    let path = package.package_path().to_string();
+    let package_path = package.package_path();
+    let package_name = package_path.name().as_ref();
+    if package_name == "system_image" || package_name == "update" {
+        return Err(anyhow!("system_image and update packages are not allowed"));
+    }
+
+    let path = package_path.to_string();
     let meta_blob = package.into_blobs().into_iter().find(|blob| blob.path == "meta/");
     match meta_blob {
         Some(meta_blob) => Ok(list.insert(path, meta_blob.merkle)),
@@ -241,6 +247,26 @@ mod tests {
             b"package0=0000000000000000000000000000000000000000000000000000000000000000\n\
                     package1=1111111111111111111111111111111111111111111111111111111111111111\n"
         );
+    }
+
+    #[test]
+    fn test_add_package_to() {
+        let system_image = generate_test_manifest("system_image", "0", None);
+        let update = generate_test_manifest("update", "0", None);
+        let valid = generate_test_manifest("valid", "0", None);
+        let mut packages = PackageList::default();
+        assert!(add_package_to(&mut packages, system_image).is_err());
+        assert!(add_package_to(&mut packages, update).is_err());
+        assert!(add_package_to(&mut packages, valid).is_ok());
+    }
+
+    #[test]
+    fn build_with_unsupported_packages() {
+        let mut builder = BasePackageBuilder::default();
+        assert!(builder
+            .add_base_package(generate_test_manifest("system_image", "0", None))
+            .is_err());
+        assert!(builder.add_base_package(generate_test_manifest("update", "0", None)).is_err());
     }
 
     #[test]
