@@ -12,9 +12,9 @@ use {
     cm_rust::{
         CapabilityDecl, CapabilityName, ChildRef, ComponentDecl, DependencyType, OfferDecl,
         OfferDeclCommon, OfferDirectoryDecl, OfferProtocolDecl, OfferResolverDecl, OfferRunnerDecl,
-        OfferServiceDecl, OfferSource, OfferStorageDecl, OfferTarget, RegistrationSource,
-        SourceName, StorageDirectorySource, UseDecl, UseDirectoryDecl, UseEventDecl,
-        UseProtocolDecl, UseServiceDecl, UseSource,
+        OfferServiceDecl, OfferSource, OfferStorageDecl, OfferTarget, RegistrationDeclCommon,
+        RegistrationSource, SourceName, StorageDirectorySource, UseDecl, UseDirectoryDecl,
+        UseEventDecl, UseProtocolDecl, UseServiceDecl, UseSource,
     },
     futures::future::select_all,
     maplit::hashset,
@@ -721,27 +721,49 @@ fn get_dependency_from_offer(
     }
 }
 
+/// Add the provider of an environmment registration to the map of environments
+/// to components that provide something to the environment.
+fn add_env_provider<T>(
+    decls: &Vec<T>,
+    env_name: String,
+    tracking_map: &mut HashMap<&String, Vec<String>>,
+) where
+    T: RegistrationDeclCommon,
+{
+    for decl in decls {
+        match decl.source() {
+            RegistrationSource::Child(source_child) => {
+                tracking_map.get_mut(&env_name).unwrap().push(source_child.to_string());
+            }
+            RegistrationSource::Parent | RegistrationSource::Self_ => {}
+        }
+    }
+}
+
 /// Loops through all the child and collection declarations to determine what siblings provide
 /// capabilities to other siblings through an environment.
 fn get_dependencies_from_environments(decl: &ComponentDecl, dependency_map: &mut DependencyMap) {
     let mut env_source_children = HashMap::new();
+
     for env in &decl.environments {
         env_source_children.insert(&env.name, vec![]);
-        for runner in &env.runners {
-            match &runner.source {
-                RegistrationSource::Child(source_child) => {
-                    env_source_children.get_mut(&env.name).unwrap().push(source_child);
+        for source in env.get_dependency_sources() {
+            match source {
+                cm_rust::DependencySource::Runner { registry: runners } => {
+                    add_env_provider(runners, env.name.clone(), &mut env_source_children);
                 }
-                RegistrationSource::Parent | RegistrationSource::Self_ => {}
-            }
-        }
 
-        for resolver in &env.resolvers {
-            match &resolver.source {
-                RegistrationSource::Child(source_child) => {
-                    env_source_children.get_mut(&env.name).unwrap().push(source_child)
+                cm_rust::DependencySource::Resolver { registry: resolvers } => {
+                    add_env_provider(resolvers, env.name.clone(), &mut env_source_children);
                 }
-                RegistrationSource::Parent | RegistrationSource::Self_ => {}
+
+                cm_rust::DependencySource::Debug { registry: debug_capabilities } => {
+                    add_env_provider(
+                        debug_capabilities,
+                        env.name.clone(),
+                        &mut env_source_children,
+                    );
+                }
             }
         }
     }
