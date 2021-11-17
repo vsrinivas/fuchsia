@@ -20,7 +20,7 @@ async fn handle_cmd(cmd: args::Command) -> Result<(), Error> {
             crate::check::handle_check_now_cmd(check_now).await?;
         }
         args::Command::ForceInstall(args) => {
-            crate::install::hande_force_install(
+            crate::install::handle_force_install(
                 args.update_pkg_url,
                 args.reboot,
                 args.service_initiated,

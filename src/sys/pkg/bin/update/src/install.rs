@@ -11,7 +11,7 @@ use {
     futures::prelude::*,
 };
 
-pub async fn hande_force_install(
+pub async fn handle_force_install(
     update_pkg_url: String,
     reboot: bool,
     service_initiated: bool,
@@ -27,7 +27,7 @@ async fn handle_force_install_impl(
     service_initiated: bool,
     installer: &InstallerProxy,
 ) -> Result<(), Error> {
-    let pkgurl = PkgUrl::parse(&update_pkg_url).context("parsing update package url")?;
+    let pkg_url = PkgUrl::parse(&update_pkg_url).context("parsing update package url")?;
 
     let options = Options {
         initiator: if service_initiated {
@@ -44,7 +44,7 @@ async fn handle_force_install_impl(
             .context("creating reboot controller")?;
 
     let mut update_attempt =
-        start_update(&pkgurl, options, &installer, Some(reboot_controller_server_end))
+        start_update(&pkg_url, options, &installer, Some(reboot_controller_server_end))
             .await
             .context("starting update")?;
 

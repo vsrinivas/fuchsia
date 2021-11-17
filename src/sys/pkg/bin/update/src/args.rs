@@ -120,12 +120,12 @@ mod tests {
 
     #[test]
     fn test_unknown_option() {
-        assert_matches!(Update::from_args(&["update"], &["--unkown"]), Err(_));
+        assert_matches!(Update::from_args(&["update"], &["--unknown"]), Err(_));
     }
 
     #[test]
     fn test_unknown_subcommand() {
-        assert_matches!(Update::from_args(&["update"], &["unkown"]), Err(_));
+        assert_matches!(Update::from_args(&["update"], &["unknown"]), Err(_));
     }
 
     #[test]
