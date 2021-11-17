@@ -18,3 +18,6 @@ pub mod device_storage;
 /// This mod implements a factory that can be populated to provide handlers on
 /// demand.
 pub mod setting_handler_factory_impl;
+
+/// This mod implements recording stash write failures to inspect.
+mod stash_inspect_logger;

@@ -151,6 +151,7 @@ rustc_library("lib") {
     "src/handler/setting_handler.rs",
     "src/handler/setting_handler_factory_impl.rs",
     "src/handler/setting_proxy.rs",
+    "src/handler/stash_inspect_logger.rs",
     "src/hanging_get_handler.rs",
     "src/ingress.rs",
     "src/ingress/fidl.rs",

@@ -2,7 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::handler::setting_handler::persist::UpdateState;
+use std::any::Any;
+use std::borrow::Cow;
+use std::collections::{HashMap, HashSet};
+use std::ops::{Add, Sub};
+use std::sync::Arc;
+use std::time::{Duration, Instant};
+
 use anyhow::{format_err, Context, Error};
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_stash::{StoreAccessorProxy, StoreProxy, Value};
@@ -14,12 +20,9 @@ use futures::lock::Mutex;
 use futures::{FutureExt, StreamExt};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
-use std::any::Any;
-use std::borrow::Cow;
-use std::collections::{HashMap, HashSet};
-use std::ops::{Add, Sub};
-use std::sync::Arc;
-use std::time::{Duration, Instant};
+
+use crate::handler::setting_handler::persist::UpdateState;
+use crate::handler::stash_inspect_logger::StashInspectLoggerHandle;
 
 const SETTINGS_PREFIX: &str = "settings";
 
@@ -58,7 +61,7 @@ struct TypedStorage {
     commit_sender: UnboundedSender<CommitParams>,
 
     /// Cached storage managed through interior mutability.
-    cached_storage: Mutex<CachedStorage>,
+    cached_storage: Arc<Mutex<CachedStorage>>,
 }
 
 /// `CachedStorage` abstracts over a cached value that's read from and written
@@ -69,6 +72,26 @@ struct CachedStorage {
 
     /// Stash connection for this particular type's stash storage.
     stash_proxy: StoreAccessorProxy,
+
+    /// Handle to logger that records stash write failures.
+    inspect_handle: StashInspectLoggerHandle,
+}
+
+impl CachedStorage {
+    /// Triggers a flush on the given stash proxy.
+    async fn stash_commit(&mut self, _flush: bool, setting_key: String) {
+        if self
+            .stash_proxy
+            .flush()
+            .await
+            .map_err(|e| format_err!("fidl call to flush on stash failed: {:?}", e))
+            .and_then(|r| r.map_err(|e| format_err!("flush call on stash failed: {:?}", e)))
+            .is_err()
+        {
+            // Record the write failure to inspect.
+            self.inspect_handle.logger.lock().await.record_flush_failure(setting_key);
+        }
+    }
 }
 
 /// Structs that can be stored in device storage should derive the Serialize, Deserialize, and
@@ -223,12 +246,14 @@ impl DeviceStorage {
             let (commit_sender, commit_receiver) = futures::channel::mpsc::unbounded::<CommitParams>();
             let stash_proxy = stash_generator();
 
+            let cached_storage = Arc::new(Mutex::new(CachedStorage {
+                current_data: None,
+                stash_proxy: stash_proxy.clone(),
+                inspect_handle: StashInspectLoggerHandle::new(),
+            }));
             let storage = TypedStorage {
                 commit_sender,
-                cached_storage: Mutex::new(CachedStorage {
-                    current_data: None,
-                    stash_proxy: stash_proxy.clone(),
-                }),
+                cached_storage: cached_storage.clone(),
             };
 
             // Each key has an independent commit queue.
@@ -271,7 +296,7 @@ impl DeviceStorage {
                         _ = next_commit_timer_fuse => {
                             // Timer triggered, check for pending commits.
                             if let Some(params) = pending_commit {
-                                DeviceStorage::stash_commit(&stash_proxy, params.flush).await;
+                                cached_storage.lock().await.stash_commit(params.flush, key.into()).await;
                                 last_commit = Instant::now();
                                 pending_commit = None;
                             }
@@ -281,7 +306,7 @@ impl DeviceStorage {
                     }
                 }
             })
-            .detach();
+                .detach();
             (key, storage)
         }).collect();
         DeviceStorage { caching_enabled: true, debounce_writes: true, typed_storage_map }
@@ -295,18 +320,6 @@ impl DeviceStorage {
     #[cfg(test)]
     fn set_debounce_writes(&mut self, debounce: bool) {
         self.debounce_writes = debounce;
-    }
-
-    /// Triggers a flush on the given stash proxy.
-    async fn stash_commit(stash_proxy: &StoreAccessorProxy, _flush: bool) {
-        if let Err(flush_err) = stash_proxy
-            .flush()
-            .await
-            .map_err(|e| format_err!("fidl call to flush on stash failed: {:?}", e))
-            .and_then(|r| r.map_err(|e| format_err!("flush call on stash failed: {:?}", e)))
-        {
-            fx_log_err!("{:?}", flush_err);
-        }
     }
 
     /// Write `new_value` to storage. If `flush` is true then then changes will immediately be
@@ -355,10 +368,11 @@ impl DeviceStorage {
 
         Ok(if cached_value != Some(new_value) {
             let mut serialized = Value::Stringval(new_value.serialize_to());
-            cached_storage.stash_proxy.set_value(&prefixed(T::KEY), &mut serialized)?;
+            let key = prefixed(T::KEY);
+            cached_storage.stash_proxy.set_value(&key, &mut serialized)?;
             if !self.debounce_writes {
                 // Not debouncing writes for testing, just commit immediately.
-                DeviceStorage::stash_commit(&cached_storage.stash_proxy, flush).await;
+                cached_storage.stash_commit(flush, key).await;
             } else {
                 typed_storage.commit_sender.unbounded_send(CommitParams { flush }).with_context(
                     || {
@@ -539,12 +553,14 @@ fn prefixed(input_string: &str) -> String {
 
 #[cfg(test)]
 pub mod testing {
-    use super::*;
+    use std::sync::Arc;
+
     use fidl_fuchsia_stash::{StoreAccessorMarker, StoreAccessorRequest};
     use fuchsia_async as fasync;
     use futures::lock::Mutex;
     use futures::prelude::*;
-    use std::sync::Arc;
+
+    use super::*;
 
     #[derive(PartialEq)]
     pub enum StashAction {
@@ -735,20 +751,25 @@ pub mod testing {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use fidl_fuchsia_stash::{
-        StoreAccessorMarker, StoreAccessorRequest, StoreAccessorRequestStream,
-    };
-    use fuchsia_async as fasync;
-    use fuchsia_async::{TestExecutor, Time};
-    use futures::prelude::*;
-    use matches::assert_matches;
-    use serde::{Deserialize, Serialize};
     use std::convert::TryInto;
     use std::marker::Unpin;
     use std::sync::Arc;
     use std::task::Poll;
+
+    use fidl_fuchsia_stash::{
+        FlushError, StoreAccessorMarker, StoreAccessorRequest, StoreAccessorRequestStream,
+    };
+    use fuchsia_async as fasync;
+    use fuchsia_async::{TestExecutor, Time};
+    use fuchsia_inspect::assert_data_tree;
+    use futures::pin_mut;
+    use futures::prelude::*;
+    use matches::assert_matches;
+    use serde::{Deserialize, Serialize};
+
     use testing::*;
+
+    use super::*;
 
     const VALUE0: i32 = 3;
     const VALUE1: i32 = 33;
@@ -821,6 +842,16 @@ mod tests {
         match stash_stream.next().await.unwrap() {
             Ok(StoreAccessorRequest::Flush { responder }) => {
                 responder.send(&mut Ok(())).ok();
+            } // expected
+            request => panic!("Unexpected request: {:?}", request),
+        }
+    }
+
+    /// Verifies that a Flush call was sent to stash, and send back a failure.
+    async fn fail_stash_flush(stash_stream: &mut StoreAccessorRequestStream) {
+        match stash_stream.next().await.unwrap() {
+            Ok(StoreAccessorRequest::Flush { responder }) => {
+                let _ = responder.send(&mut Err(FlushError::CommitFailed));
             } // expected
             request => panic!("Unexpected request: {:?}", request),
         }
@@ -910,6 +941,82 @@ mod tests {
         let result = storage.get::<TestStruct>().await;
 
         assert_eq!(result.value, VALUE0);
+    }
+
+    // Verifies that stash flush failures are written to inspect.
+    #[test]
+    fn test_flush_fail_writes_to_inspect() {
+        let written_value = VALUE2;
+        let mut executor = TestExecutor::new_with_fake_time().expect("Failed to create executor");
+
+        let (stash_proxy, mut stash_stream) =
+            fidl::endpoints::create_proxy_and_stream::<StoreAccessorMarker>().unwrap();
+
+        let storage =
+            DeviceStorage::with_stash_proxy(vec![TestStruct::KEY], move || stash_proxy.clone());
+
+        // Write to device storage.
+        let value_to_write = TestStruct { value: written_value };
+        let write_future = storage.write(&value_to_write, false);
+        futures::pin_mut!(write_future);
+
+        // Initial cache check is done if no read was ever performed.
+        assert_matches!(executor.run_until_stalled(&mut write_future), Poll::Pending);
+
+        {
+            let respond_future = validate_stash_get_and_respond(
+                &mut stash_stream,
+                serde_json::to_string(&TestStruct::default_value()).unwrap(),
+            );
+            futures::pin_mut!(respond_future);
+            advance_executor(&mut executor, &mut respond_future);
+        }
+
+        // Write request finishes immediately.
+        assert_matches!(executor.run_until_stalled(&mut write_future), Poll::Ready(Ok(_)));
+
+        // Set request is received immediately on write.
+        {
+            let set_value_future = verify_stash_set(&mut stash_stream, written_value);
+            futures::pin_mut!(set_value_future);
+            advance_executor(&mut executor, &mut set_value_future);
+        }
+
+        // Start listening for the flush request.
+        let flush_future = fail_stash_flush(&mut stash_stream);
+        futures::pin_mut!(flush_future);
+
+        // Flush is received without a wait. Due to the way time works with executors, if there was
+        // a delay, the test would stall since time never advances.
+        advance_executor(&mut executor, &mut flush_future);
+
+        // Queue up a second write to guarantee that CachedStorage has written the failure to
+        // inspect.
+        {
+            let value_to_write = TestStruct { value: VALUE1 };
+            let write_future = storage.write(&value_to_write, false);
+            futures::pin_mut!(write_future);
+            assert_matches!(
+                executor.run_until_stalled(&mut write_future),
+                Poll::Ready(Result::Ok(_))
+            );
+        }
+
+        let logger_handle = StashInspectLoggerHandle::new();
+        let lock_future = logger_handle.logger.lock();
+        pin_mut!(lock_future);
+        let inspector = match executor.run_until_stalled(&mut lock_future) {
+            Poll::Ready(res) => res,
+            _ => panic!("Couldn't get inspect logger lock"),
+        }
+        .inspector;
+        assert_data_tree!(inspector, root: {
+            stash_failures: {
+                testkey: {
+                    count: 1u64,
+                }
+            }
+        });
     }
 
     // Test that an initial write to DeviceStorage causes a SetValue and Flush to Stash
@@ -1149,8 +1256,9 @@ mod tests {
     // This mod includes structs to only be used by
     // test_device_compatible_migration tests.
     mod test_device_compatible_migration {
-        use crate::handler::device_storage::DeviceStorageCompatible;
         use serde::{Deserialize, Serialize};
+
+        use crate::handler::device_storage::DeviceStorageCompatible;
 
         pub const DEFAULT_V1_VALUE: i32 = 1;
         pub const DEFAULT_CURRENT_VALUE: i32 = 2;
