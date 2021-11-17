@@ -44,6 +44,7 @@ const PARSE_RETRY_DELAY: Duration = Duration::from_micros(100);
 type SseResponseCreatorMap = RwLock<HashMap<RepositoryId, Arc<SseResponseCreator>>>;
 
 /// RepositoryManager represents the web server that serves [Repositories](Repository) to a target.
+#[derive(Debug)]
 pub struct RepositoryServer {
     local_addr: SocketAddr,
     stop: futures::channel::oneshot::Sender<()>,
@@ -386,6 +387,7 @@ fn status_response(status_code: StatusCode) -> Response<Body> {
 }
 
 /// Adapt [async-net::TcpStream] to work with hyper.
+#[derive(Debug)]
 pub enum ConnectionStream {
     Tcp(TcpStream),
     Socket(fasync::Socket),

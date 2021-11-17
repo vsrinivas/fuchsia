@@ -1,7 +1,9 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 use {
+    crate::tunnel::TunnelManager,
     anyhow::{Context as _, Result},
     async_lock::RwLock,
     async_trait::async_trait,
@@ -11,26 +13,20 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_developer_bridge as bridge,
     fidl_fuchsia_developer_bridge_ext::{RepositorySpec, RepositoryTarget},
-    fidl_fuchsia_developer_remotecontrol as rcs,
-    fidl_fuchsia_net_ext::SocketAddress as SocketAddressExt,
     fidl_fuchsia_pkg::RepositoryManagerMarker,
     fidl_fuchsia_pkg_rewrite::EngineMarker,
     fidl_fuchsia_pkg_rewrite_ext::{do_transaction, Rule},
     fuchsia_async as fasync,
     fuchsia_zircon_status::Status,
-    futures::{
-        channel::oneshot::Sender as OneshotSender,
-        future::{select, Either},
-        FutureExt as _, StreamExt as _,
-    },
+    futures::{FutureExt as _, StreamExt as _},
     itertools::Itertools as _,
     pkg::{
         config as pkg_config,
-        repository::{self, ConnectionStream, Repository, RepositoryManager, RepositoryServer},
+        repository::{self, Repository, RepositoryManager, RepositoryServer},
     },
     services::prelude::*,
     std::{
-        collections::{HashMap, HashSet},
+        collections::HashSet,
         convert::{TryFrom, TryInto},
         net,
         rc::Rc,
@@ -38,6 +34,8 @@ use {
         time::Duration,
     },
 };
+
+mod tunnel;
 
 const REPOSITORY_MANAGER_SELECTOR: &str = "core/appmgr:out:fuchsia.pkg.RepositoryManager";
 const REWRITE_SERVICE_SELECTOR: &str = "core/appmgr:out:fuchsia.pkg.rewrite.Engine";
@@ -48,13 +46,14 @@ const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(5);
 const MAX_PACKAGES: i64 = 512;
 const MAX_REGISTERED_TARGETS: i64 = 512;
 
+#[derive(Debug)]
 struct ServerInfo {
     server: RepositoryServer,
-    addr: net::SocketAddr,
     task: fasync::Task<()>,
-    sink: futures::channel::mpsc::UnboundedSender<Result<ConnectionStream>>,
+    tunnel_manager: TunnelManager,
 }
 
+#[derive(Debug)]
 enum ServerState {
     Running(ServerInfo),
     Stopped(net::SocketAddr),
@@ -62,25 +61,62 @@ enum ServerState {
 }
 
 impl ServerState {
-    fn take_running(&mut self) -> Option<ServerInfo> {
-        match std::mem::replace(self, ServerState::Unconfigured) {
-            ServerState::Running(x) => {
-                *self = ServerState::Stopped(x.addr.clone());
-                Some(x)
+    async fn new_running(addr: net::SocketAddr, manager: Arc<RepositoryManager>) -> Result<Self> {
+        log::info!("Starting repository server on {}", addr);
+
+        let (server_fut, sink, server) = RepositoryServer::builder(addr, Arc::clone(&manager))
+            .start()
+            .await
+            .context("starting repository server")?;
+
+        log::info!("Started repository server on {}", server.local_addr());
+
+        // Spawn the server future in the background to process requests from clients.
+        let task = fasync::Task::local(server_fut);
+
+        let tunnel_manager = TunnelManager::new(server.local_addr(), sink);
+
+        Ok(ServerState::Running(ServerInfo { server, task, tunnel_manager }))
+    }
+
+    async fn start_tunnel(&self, cx: &Context, target_nodename: &str) -> Result<()> {
+        match self {
+            ServerState::Running(ref server_info) => {
+                server_info.tunnel_manager.start_tunnel(cx, target_nodename.to_string()).await
             }
-            ServerState::Stopped(x) => {
-                *self = ServerState::Stopped(x);
-                None
-            }
-            ServerState::Unconfigured => None,
+            _ => Ok(()),
         }
     }
 
-    fn connection_sink(
-        &self,
-    ) -> Option<futures::channel::mpsc::UnboundedSender<Result<ConnectionStream>>> {
+    async fn stop(&mut self) {
+        match std::mem::replace(self, ServerState::Unconfigured) {
+            ServerState::Running(server_info) => {
+                *self = ServerState::Stopped(server_info.server.local_addr());
+
+                log::info!("Stopping the repository server");
+
+                server_info.server.stop();
+
+                futures::select! {
+                    () = server_info.task.fuse() => {
+                        log::info!("Stopped the repository server");
+                    },
+                    () = fasync::Timer::new(SHUTDOWN_TIMEOUT).fuse() => {
+                        log::error!("Timed out waiting for the repository server to shut down");
+                    },
+                }
+            }
+            state => {
+                *self = state;
+            }
+        }
+    }
+
+    /// Returns the address is running on. Returns None if the server is not
+    /// running, or is unconfigured.
+    fn listen_addr(&self) -> Option<net::SocketAddr> {
         match self {
-            ServerState::Running(x) => Some(x.sink.clone()),
+            ServerState::Running(x) => Some(x.server.local_addr()),
             _ => None,
         }
     }
@@ -90,7 +126,6 @@ impl ServerState {
 pub struct RepoInner {
     manager: Arc<RepositoryManager>,
     server: ServerState,
-    tunnels: HashMap<String, OneshotSender<()>>,
 }
 
 #[ffx_service]
@@ -107,7 +142,7 @@ enum SaveConfig {
 
 #[async_trait::async_trait(?Send)]
 pub trait EventHandlerProvider {
-    async fn setup_event_handlers(&self, cx: Context, inner: Arc<RwLock<RepoInner>>);
+    async fn setup_event_handlers(&mut self, cx: Context, inner: Arc<RwLock<RepoInner>>);
 }
 
 #[derive(Default)]
@@ -115,10 +150,18 @@ pub struct RealEventHandlerProvider;
 
 #[async_trait::async_trait(?Send)]
 impl EventHandlerProvider for RealEventHandlerProvider {
-    async fn setup_event_handlers(&self, cx: Context, inner: Arc<RwLock<RepoInner>>) {
+    async fn setup_event_handlers(&mut self, cx: Context, inner: Arc<RwLock<RepoInner>>) {
         let q = cx.daemon_event_queue().await;
         q.add_handler(DaemonEventHandler { cx, inner }).await;
     }
+}
+
+async fn start_tunnel(
+    cx: &Context,
+    inner: &Arc<RwLock<RepoInner>>,
+    target_nodename: &str,
+) -> Result<()> {
+    inner.read().await.server.start_tunnel(&cx, &target_nodename).await
 }
 
 async fn add_repository(
@@ -153,6 +196,9 @@ async fn add_repository(
     // Finally add the repository.
     let mut inner = inner.write().await;
     inner.manager.add(Arc::new(repo));
+
+    // The repository server is only started when repositories are added to the
+    // daemon. Now that we added one, make sure the server has started.
     inner.start_server_warn().await;
 
     Ok(())
@@ -160,7 +206,7 @@ async fn add_repository(
 
 async fn register_target(
     cx: &Context,
-    target_info: RepositoryTarget,
+    mut target_info: RepositoryTarget,
     save_config: SaveConfig,
     inner: Arc<RwLock<RepoInner>>,
 ) -> Result<(), bridge::RepositoryError> {
@@ -184,8 +230,8 @@ async fn register_target(
         )
         .await
         .map_err(|err| {
-            log::warn!(
-                "Failed to open target proxy with target name {:?}: {:#?}",
+            log::error!(
+                "failed to open target proxy with target name {:?}: {:#?}",
                 target_info.target_identifier,
                 err
             );
@@ -193,18 +239,14 @@ async fn register_target(
         })?;
 
     let target_nodename = target.nodename.ok_or_else(|| {
-        log::warn!("target {:?} does not have a nodename", target_info.target_identifier);
+        log::error!("target {:?} does not have a nodename", target_info.target_identifier);
         bridge::RepositoryError::InternalError
     })?;
 
-    let listen_addr = match pkg_config::repository_listen_addr().await {
-        Ok(Some(listen_addr)) => listen_addr,
-        Ok(None) => {
+    let listen_addr = match inner.read().await.server.listen_addr() {
+        Some(listen_addr) => listen_addr,
+        None => {
             log::error!("repository server is not running");
-            return Err(bridge::RepositoryError::InternalError);
-        }
-        Err(err) => {
-            log::error!("failed to get listen addr from config: {:?}", err);
             return Err(bridge::RepositoryError::InternalError);
         }
     };
@@ -216,18 +258,18 @@ async fn register_target(
         )
         .await
         .map_err(|e| {
-            log::warn!("failed to get config: {}", e);
+            log::error!("failed to get config: {}", e);
             return bridge::RepositoryError::RepositoryManagerError;
         })?;
 
     match proxy.add(config.into()).await {
         Ok(Ok(())) => {}
         Ok(Err(err)) => {
-            log::warn!("Failed to add config: {:#?}", Status::from_raw(err));
+            log::error!("failed to add config: {:#?}", Status::from_raw(err));
             return Err(bridge::RepositoryError::RepositoryManagerError);
         }
         Err(err) => {
-            log::warn!("Failed to add config: {:#?}", err);
+            log::error!("failed to add config: {:#?}", err);
             return Err(bridge::RepositoryError::TargetCommunicationFailure);
         }
     }
@@ -236,9 +278,18 @@ async fn register_target(
         let () = create_aliases(cx, repo.name(), &target_nodename, &target_info.aliases).await?;
     }
 
+    // Start the tunnel to the device if one isn't running already.
+    start_tunnel(&cx, &inner, &target_nodename).await.map_err(|err| {
+        log::error!("Failed to start tunnel to target {:?}: {:#}", target_nodename, err);
+        bridge::RepositoryError::TargetCommunicationFailure
+    })?;
+
     if save_config == SaveConfig::Save {
+        // Make sure we update the target info with the real nodename.
+        target_info.target_identifier = Some(target_nodename.clone());
+
         pkg::config::set_registration(&target_nodename, &target_info).await.map_err(|err| {
-            log::warn!("Failed to save registration to config: {:#?}", err);
+            log::error!("Failed to save registration to config: {:#?}", err);
             bridge::RepositoryError::InternalError
         })?;
     }
@@ -382,19 +433,7 @@ impl RepoInner {
             ServerState::Stopped(addr) => addr.clone(),
         };
 
-        log::info!("Starting repository server on {}", addr);
-
-        let (server_fut, sink, server) = RepositoryServer::builder(addr, Arc::clone(&self.manager))
-            .start()
-            .await
-            .context("starting repository server")?;
-
-        log::info!("Started repository server on {}", server.local_addr());
-
-        // Spawn the server future in the background to process requests from clients.
-        let task = fasync::Task::local(server_fut);
-
-        self.server = ServerState::Running(ServerInfo { server, addr, task, sink });
+        self.server = ServerState::new_running(addr, Arc::clone(&self.manager)).await?;
 
         Ok(())
     }
@@ -408,17 +447,7 @@ impl RepoInner {
     async fn stop_server(&mut self) {
         log::info!("Stopping repository service");
 
-        let server_info = self.server.take_running();
-        if let Some(server_info) = server_info {
-            server_info.server.stop();
-
-            futures::select! {
-                () = server_info.task.fuse() => {},
-                () = fasync::Timer::new(SHUTDOWN_TIMEOUT).fuse() => {
-                    log::error!("Timed out waiting for the repository server to shut down");
-                },
-            }
-        }
+        self.server.stop().await;
 
         // Drop all repositories.
         self.manager.clear();
@@ -702,7 +731,6 @@ impl<T: EventHandlerProvider + Default> Default for Repo<T> {
             inner: Arc::new(RwLock::new(RepoInner {
                 manager: RepositoryManager::new(),
                 server: ServerState::Unconfigured,
-                tunnels: HashMap::new(),
             })),
             event_handler_provider: T::default(),
         }
@@ -964,74 +992,6 @@ impl TargetEventHandler {
     fn new(cx: Context, inner: Arc<RwLock<RepoInner>>, target: Rc<Target>) -> Self {
         Self { cx, inner, target }
     }
-
-    async fn spawn_tunnel(&self, source_nodename: &str) {
-        let listen_addr = match pkg_config::repository_listen_addr().await {
-            Ok(Some(listen_addr)) => listen_addr,
-            Ok(None) => {
-                // Don't try to create a tunnel if the repository is not configured to run.
-                return;
-            }
-            Err(err) => {
-                log::error!("unable to look up repositry.server.listen from config: {:#}", err);
-                return;
-            }
-        };
-
-        let cx = self.cx.clone();
-        let inner = Arc::clone(&self.inner);
-        let source_nodename = source_nodename.to_owned();
-
-        fasync::Task::local(async move {
-            let source_nodename_rcs = source_nodename.clone();
-            let result = async move {
-                let rc = cx.open_remote_control(Some(source_nodename_rcs)).await?;
-                let (client, server) = fidl::endpoints::create_endpoints()?;
-                rc.reverse_tcp(&mut SocketAddressExt(listen_addr).into(), client)
-                    .await?
-                    .map_err(|x| anyhow::anyhow!("{:?}", x))?;
-                Ok::<_, anyhow::Error>(server.into_stream()?)
-            }
-            .await;
-
-            let server = match result {
-                Ok(s) => s,
-                Err(e) => {
-                    log::warn!("Could not open tunnel for target {:?}: {:?}", source_nodename, e);
-                    return;
-                }
-            };
-
-            let (sender, receiver) = futures::channel::oneshot::channel();
-
-            inner.write().await.tunnels.insert(source_nodename.clone(), sender);
-            let sink = if let Some(sink) = inner.read().await.server.connection_sink() {
-                sink
-            } else {
-                // Server isn't running. Nowhere to send data.
-                return;
-            };
-
-            if let Either::Left((Err(e), _)) = select(
-                server
-                    .map(|x| match x {
-                        Ok(rcs::ForwardCallbackRequest::Forward { socket, .. }) => {
-                            Ok(fasync::Socket::from_socket(socket)
-                                .map(ConnectionStream::Socket)
-                                .map_err(Into::into))
-                        }
-                        Err(e) => Ok(Err(anyhow::Error::from(e))),
-                    })
-                    .forward(sink),
-                receiver,
-            )
-            .await
-            {
-                log::warn!("Error forwarding tunnel from target {:?}: {:?}", source_nodename, e);
-            }
-        })
-        .detach();
-    }
 }
 
 #[async_trait(?Send)]
@@ -1051,14 +1011,16 @@ impl EventHandler<TargetEvent> for TargetEventHandler {
             return Ok(EventStatus::Waiting);
         };
 
-        self.spawn_tunnel(&source_nodename).await;
-
         // Find any saved registrations for this target and register them on the device.
+        let mut found = false;
         for (repo_name, targets) in pkg::config::get_registrations().await {
+            log::info!("registrations {:?} {:?}", repo_name, targets);
             for (target_nodename, target_info) in targets {
                 if target_nodename != source_nodename {
                     continue;
                 }
+
+                found = true;
 
                 if let Err(err) = register_target(
                     &self.cx,
@@ -1085,6 +1047,17 @@ impl EventHandler<TargetEvent> for TargetEventHandler {
             }
         }
 
+        // Start a repository tunnel if we had any registrations for this device.
+        if found {
+            if let Err(err) = start_tunnel(&self.cx, &self.inner, &source_nodename).await {
+                log::error!(
+                    "failed to start repository tunnel for {:?}: {:#}",
+                    source_nodename,
+                    err
+                );
+            }
+        }
+
         Ok(EventStatus::Waiting)
     }
 }
@@ -1097,6 +1070,7 @@ mod tests {
         ffx_config::ConfigLevel,
         fidl::{self, endpoints::Request},
         fidl_fuchsia_developer_bridge_ext::RepositoryStorageType,
+        fidl_fuchsia_developer_remotecontrol as rcs,
         fidl_fuchsia_pkg::{
             MirrorConfig, RepositoryConfig, RepositoryKeyConfig, RepositoryManagerRequest,
         },
@@ -1107,8 +1081,11 @@ mod tests {
         matches::assert_matches,
         services::testing::FakeDaemonBuilder,
         std::{
+            cell::RefCell,
             fs,
             future::Future,
+            net::{Ipv4Addr, SocketAddr},
+            rc::Rc,
             sync::{Arc, Mutex},
         },
     };
@@ -1125,10 +1102,20 @@ mod tests {
         };
     }
 
-    fn test_repo_config() -> RepositoryConfig {
+    async fn test_repo_config(
+        repo: &Rc<RefCell<Repo<TestEventHandlerProvider>>>,
+    ) -> RepositoryConfig {
+        // The repository server started on a random address, so look it up.
+        let inner = Arc::clone(&repo.borrow().inner);
+        let addr = if let Some(addr) = inner.read().await.server.listen_addr() {
+            addr
+        } else {
+            panic!("server is not running");
+        };
+
         RepositoryConfig {
             mirrors: Some(vec![MirrorConfig {
-                mirror_url: Some(format!("http://[::1]:8085/{}", REPO_NAME)),
+                mirror_url: Some(format!("http://{}/{}", addr, REPO_NAME)),
                 subscribe: Some(true),
                 ..MirrorConfig::EMPTY
             }]),
@@ -1186,33 +1173,38 @@ mod tests {
         Remove { repo_url: String },
     }
 
-    #[derive(Default)]
-    struct ErroringRepositoryManager {}
+    struct ErroringRepositoryManager {
+        events: Arc<Mutex<Vec<RepositoryManagerEvent>>>,
+    }
 
-    #[async_trait(?Send)]
-    impl FidlService for ErroringRepositoryManager {
-        type Service = RepositoryManagerMarker;
-        type StreamHandler = FidlStreamHandler<Self>;
+    impl ErroringRepositoryManager {
+        fn new() -> (
+            Self,
+            impl Fn(&Context, Request<RepositoryManagerMarker>) -> Result<(), anyhow::Error> + 'static,
+        ) {
+            let events = Arc::new(Mutex::new(Vec::new()));
+            let events_closure = Arc::clone(&events);
 
-        async fn handle(
-            &self,
-            _cx: &Context,
-            req: RepositoryManagerRequest,
-        ) -> Result<(), anyhow::Error> {
-            match req {
+            let closure = move |_cx: &Context, req| match req {
                 RepositoryManagerRequest::Add { repo, responder } => {
-                    assert_eq!(repo, test_repo_config());
-
-                    responder.send(&mut Err(1)).unwrap()
+                    events_closure.lock().unwrap().push(RepositoryManagerEvent::Add { repo });
+                    responder.send(&mut Err(1)).unwrap();
+                    Ok(())
                 }
                 RepositoryManagerRequest::Remove { repo_url: _, responder } => {
-                    responder.send(&mut Ok(())).unwrap()
+                    responder.send(&mut Ok(())).unwrap();
+                    Ok(())
                 }
                 _ => {
                     panic!("unexpected RepositoryManager request {:?}", req);
                 }
-            }
-            Ok(())
+            };
+
+            (Self { events }, closure)
+        }
+
+        fn take_events(&self) -> Vec<RepositoryManagerEvent> {
+            self.events.lock().unwrap().drain(..).collect::<Vec<_>>()
         }
     }
 
@@ -1318,12 +1310,51 @@ mod tests {
         EditTransactionCommit,
     }
 
+    struct FakeRcs {
+        events: Arc<Mutex<Vec<RcsEvent>>>,
+    }
+
+    impl FakeRcs {
+        fn new() -> (Self, impl Fn(rcs::RemoteControlRequest, Option<String>) -> ()) {
+            let events = Arc::new(Mutex::new(Vec::new()));
+            let events_closure = Arc::clone(&events);
+
+            let closure = move |req: rcs::RemoteControlRequest, target: Option<String>| {
+                log::info!("got a rcs request: {:?} {:?}", req, target);
+
+                match (req, target.as_deref()) {
+                    (
+                        rcs::RemoteControlRequest::ReverseTcp { responder, .. },
+                        Some(TARGET_NODENAME),
+                    ) => {
+                        events_closure.lock().unwrap().push(RcsEvent::ReverseTcp);
+                        responder.send(&mut Ok(())).unwrap()
+                    }
+                    (req, target) => {
+                        panic!("Unexpected request {:?}: {:?}", target, req)
+                    }
+                }
+            };
+
+            (Self { events }, closure)
+        }
+
+        fn take_events(&self) -> Vec<RcsEvent> {
+            self.events.lock().unwrap().drain(..).collect()
+        }
+    }
+
+    #[derive(Debug, PartialEq)]
+    enum RcsEvent {
+        ReverseTcp,
+    }
+
     #[derive(Default)]
     struct TestEventHandlerProvider;
 
     #[async_trait::async_trait(?Send)]
     impl EventHandlerProvider for TestEventHandlerProvider {
-        async fn setup_event_handlers(&self, cx: Context, inner: Arc<RwLock<RepoInner>>) {
+        async fn setup_event_handlers(&mut self, cx: Context, inner: Arc<RwLock<RepoInner>>) {
             let handler =
                 TargetEventHandler::new(cx, inner, Target::new_named(TARGET_NODENAME.to_string()));
             handler.on_event(TargetEvent::RcsActivated).await.unwrap();
@@ -1391,8 +1422,18 @@ mod tests {
 
             // Since ffx_config is global, it's possible to leave behind entries
             // across tests. Lets clean them up.
+            let _ = ffx_config::remove("repository.server.listen").await;
             let _ = pkg::config::remove_repository(REPO_NAME).await;
             let _ = pkg::config::remove_registration(REPO_NAME, TARGET_NODENAME).await;
+
+            // Repo will automatically start a server, so make sure it picks a random local port.
+            let addr: SocketAddr = (Ipv4Addr::LOCALHOST, 0).into();
+            ffx_config::set(
+                ("repository.server.listen", ConfigLevel::User),
+                addr.to_string().into(),
+            )
+            .await
+            .unwrap();
 
             fut.await
         })
@@ -1443,21 +1484,27 @@ mod tests {
                                 "storage_type": "ephemeral",
                             },
                         }
-                    }
+                    },
+                    "server": {
+                        "listen": SocketAddr::from((Ipv4Addr::LOCALHOST, 0)).to_string(),
+                    },
                 }),
             )
             .await
             .unwrap();
 
+            let repo = Rc::new(RefCell::new(Repo::<TestEventHandlerProvider>::default()));
+            let (_fake_rcs, fake_rcs_closure) = FakeRcs::new();
             let (fake_repo_manager, fake_repo_manager_closure) = FakeRepositoryManager::new();
             let (fake_engine, fake_engine_closure) = FakeEngine::new();
 
             let daemon = FakeDaemonBuilder::new()
+                .rcs_handler(fake_rcs_closure)
                 .register_instanced_service_closure::<RepositoryManagerMarker, _>(
                     fake_repo_manager_closure,
                 )
                 .register_instanced_service_closure::<EngineMarker, _>(fake_engine_closure)
-                .register_fidl_service::<Repo<TestEventHandlerProvider>>()
+                .inject_fidl_service(Rc::clone(&repo))
                 .nodename(TARGET_NODENAME.to_string())
                 .build();
 
@@ -1466,7 +1513,7 @@ mod tests {
             // Make sure we set up the repository and rewrite rules on the device.
             assert_eq!(
                 fake_repo_manager.take_events(),
-                vec![RepositoryManagerEvent::Add { repo: test_repo_config() }],
+                vec![RepositoryManagerEvent::Add { repo: test_repo_config(&repo).await }],
             );
 
             assert_eq!(
@@ -1515,22 +1562,12 @@ mod tests {
     #[test]
     fn test_add_remove() {
         run_test(async {
-            let got_tunnel_req = Arc::new(std::sync::Mutex::new(false));
-            let got_tunnel_req_inner = Arc::clone(&got_tunnel_req);
+            let repo = Rc::new(RefCell::new(Repo::<TestEventHandlerProvider>::default()));
+            let (fake_rcs, fake_rcs_closure) = FakeRcs::new();
+
             let daemon = FakeDaemonBuilder::new()
-                .rcs_handler(move |request, target| match (request, target.as_deref()) {
-                    (
-                        rcs::RemoteControlRequest::ReverseTcp { responder, .. },
-                        Some("some-target"),
-                    ) => {
-                        *got_tunnel_req_inner.lock().unwrap() = true;
-                        responder.send(&mut Ok(())).unwrap()
-                    }
-                    (request, target) => {
-                        panic!("Unexpected request to RCS {:?}: {:?}", target, request)
-                    }
-                })
-                .register_fidl_service::<Repo<TestEventHandlerProvider>>()
+                .rcs_handler(fake_rcs_closure)
+                .inject_fidl_service(Rc::clone(&repo))
                 .build();
 
             let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
@@ -1538,19 +1575,34 @@ mod tests {
                 path: Some(EMPTY_REPO_PATH.to_owned()),
                 ..bridge::FileSystemRepositorySpec::EMPTY
             });
+
+            // Initially no server should be running.
+            {
+                let inner = Arc::clone(&repo.borrow().inner);
+                assert_matches!(inner.read().await.server, ServerState::Stopped(_));
+            }
+
             proxy
                 .add_repository(REPO_NAME, &mut spec.clone())
                 .await
                 .expect("communicated with proxy")
                 .expect("adding repository to succeed");
 
-            assert!(*got_tunnel_req.lock().unwrap());
-
             // Make sure the repository was added.
             assert_eq!(
                 get_repositories(&proxy).await,
                 vec![bridge::RepositoryConfig { name: REPO_NAME.to_string(), spec }]
             );
+
+            // Adding a repository should start the server.
+            {
+                let inner = Arc::clone(&repo.borrow().inner);
+                assert_matches!(inner.read().await.server, ServerState::Running(_));
+            }
+
+            // Adding a repository should not create a tunnel, since we haven't registered the
+            // repository on a device.
+            assert_eq!(fake_rcs.take_events(), vec![]);
 
             assert!(proxy.remove_repository(REPO_NAME).await.unwrap());
 
@@ -1563,15 +1615,18 @@ mod tests {
     #[test]
     fn test_removing_repo_also_deregisters_from_target() {
         run_test(async {
+            let repo = Rc::new(RefCell::new(Repo::<TestEventHandlerProvider>::default()));
             let (fake_repo_manager, fake_repo_manager_closure) = FakeRepositoryManager::new();
             let (fake_engine, fake_engine_closure) = FakeEngine::new();
+            let (_fake_rcs, fake_rcs_closure) = FakeRcs::new();
 
             let daemon = FakeDaemonBuilder::new()
+                .rcs_handler(fake_rcs_closure)
                 .register_instanced_service_closure::<RepositoryManagerMarker, _>(
                     fake_repo_manager_closure,
                 )
                 .register_instanced_service_closure::<EngineMarker, _>(fake_engine_closure)
-                .register_fidl_service::<Repo<TestEventHandlerProvider>>()
+                .inject_fidl_service(Rc::clone(&repo))
                 .nodename(TARGET_NODENAME.to_string())
                 .build();
 
@@ -1604,7 +1659,7 @@ mod tests {
             // Registering the target should have set up a repository.
             assert_eq!(
                 fake_repo_manager.take_events(),
-                vec![RepositoryManagerEvent::Add { repo: test_repo_config() }]
+                vec![RepositoryManagerEvent::Add { repo: test_repo_config(&repo).await }]
             );
 
             // Adding the registration should have set up rewrite rules.
@@ -1674,15 +1729,18 @@ mod tests {
     #[test]
     fn test_add_register_deregister() {
         run_test(async {
+            let repo = Rc::new(RefCell::new(Repo::<TestEventHandlerProvider>::default()));
             let (fake_repo_manager, fake_repo_manager_closure) = FakeRepositoryManager::new();
             let (fake_engine, fake_engine_closure) = FakeEngine::new();
+            let (fake_rcs, fake_rcs_closure) = FakeRcs::new();
 
             let daemon = FakeDaemonBuilder::new()
+                .rcs_handler(fake_rcs_closure)
                 .register_instanced_service_closure::<RepositoryManagerMarker, _>(
                     fake_repo_manager_closure,
                 )
                 .register_instanced_service_closure::<EngineMarker, _>(fake_engine_closure)
-                .register_fidl_service::<Repo<TestEventHandlerProvider>>()
+                .inject_fidl_service(Rc::clone(&repo))
                 .nodename(TARGET_NODENAME.to_string())
                 .build();
 
@@ -1696,7 +1754,6 @@ mod tests {
             add_repo(&proxy, REPO_NAME).await;
 
             // We shouldn't have added repositories or rewrite rules to the fuchsia device yet.
-
             assert_eq!(fake_repo_manager.take_events(), vec![]);
             assert_eq!(fake_engine.take_events(), vec![]);
 
@@ -1715,7 +1772,7 @@ mod tests {
             // Registering the target should have set up a repository.
             assert_eq!(
                 fake_repo_manager.take_events(),
-                vec![RepositoryManagerEvent::Add { repo: test_repo_config() }]
+                vec![RepositoryManagerEvent::Add { repo: test_repo_config(&repo).await }]
             );
 
             // Adding the registration should have set up rewrite rules.
@@ -1734,6 +1791,9 @@ mod tests {
                     EngineEvent::EditTransactionCommit,
                 ],
             );
+
+            // Registering a repository should create a tunnel.
+            assert_eq!(fake_rcs.take_events(), vec![RcsEvent::ReverseTcp]);
 
             // The RepositoryRegistry should remember we set up the registrations.
             assert_eq!(
@@ -1795,6 +1855,7 @@ mod tests {
     #[test]
     fn test_register_deduplicates_rules() {
         run_test(async {
+            let (_fake_rcs, fake_rcs_closure) = FakeRcs::new();
             let (_fake_repo_manager, fake_repo_manager_closure) = FakeRepositoryManager::new();
             let (fake_engine, fake_engine_closure) = FakeEngine::with_rules(vec![
                 rule!("fuchsia.com" => REPO_NAME, "/" => "/"),
@@ -1804,6 +1865,7 @@ mod tests {
             ]);
 
             let daemon = FakeDaemonBuilder::new()
+                .rcs_handler(fake_rcs_closure)
                 .register_instanced_service_closure::<RepositoryManagerMarker, _>(
                     fake_repo_manager_closure,
                 )
@@ -1895,15 +1957,18 @@ mod tests {
     #[test]
     fn test_add_register_default_target() {
         run_test(async {
+            let repo = Rc::new(RefCell::new(Repo::<TestEventHandlerProvider>::default()));
+            let (_fake_rcs, fake_rcs_closure) = FakeRcs::new();
             let (fake_repo_manager, fake_repo_manager_closure) = FakeRepositoryManager::new();
             let (fake_engine, fake_engine_closure) = FakeEngine::new();
 
             let daemon = FakeDaemonBuilder::new()
+                .rcs_handler(fake_rcs_closure)
                 .register_instanced_service_closure::<RepositoryManagerMarker, _>(
                     fake_repo_manager_closure,
                 )
                 .register_instanced_service_closure::<EngineMarker, _>(fake_engine_closure)
-                .register_fidl_service::<Repo<TestEventHandlerProvider>>()
+                .inject_fidl_service(Rc::clone(&repo))
                 .nodename(TARGET_NODENAME.to_string())
                 .build();
 
@@ -1923,7 +1988,7 @@ mod tests {
 
             assert_eq!(
                 fake_repo_manager.take_events(),
-                vec![RepositoryManagerEvent::Add { repo: test_repo_config() }]
+                vec![RepositoryManagerEvent::Add { repo: test_repo_config(&repo).await }]
             );
 
             // We didn't set up any aliases.
@@ -1935,15 +2000,18 @@ mod tests {
     #[test]
     fn test_add_register_empty_aliases() {
         run_test(async {
+            let repo = Rc::new(RefCell::new(Repo::<TestEventHandlerProvider>::default()));
+            let (_fake_rcs, fake_rcs_closure) = FakeRcs::new();
             let (fake_repo_manager, fake_repo_manager_closure) = FakeRepositoryManager::new();
             let (fake_engine, fake_engine_closure) = FakeEngine::new();
 
             let daemon = FakeDaemonBuilder::new()
+                .rcs_handler(fake_rcs_closure)
                 .register_instanced_service_closure::<RepositoryManagerMarker, _>(
                     fake_repo_manager_closure,
                 )
                 .register_instanced_service_closure::<EngineMarker, _>(fake_engine_closure)
-                .register_fidl_service::<Repo<TestEventHandlerProvider>>()
+                .inject_fidl_service(Rc::clone(&repo))
                 .nodename(TARGET_NODENAME.to_string())
                 .build();
 
@@ -1972,7 +2040,7 @@ mod tests {
             // We should have added a repository to the device, but no rewrite rules.
             assert_eq!(
                 fake_repo_manager.take_events(),
-                vec![RepositoryManagerEvent::Add { repo: test_repo_config() }]
+                vec![RepositoryManagerEvent::Add { repo: test_repo_config(&repo).await }]
             );
             assert_eq!(fake_engine.take_events(), vec![]);
 
@@ -1994,15 +2062,18 @@ mod tests {
     #[test]
     fn test_add_register_none_aliases() {
         run_test(async {
+            let repo = Rc::new(RefCell::new(Repo::<TestEventHandlerProvider>::default()));
             let (fake_repo_manager, fake_repo_manager_closure) = FakeRepositoryManager::new();
             let (fake_engine, fake_engine_closure) = FakeEngine::new();
+            let (_fake_rcs, fake_rcs_closure) = FakeRcs::new();
 
             let daemon = FakeDaemonBuilder::new()
+                .rcs_handler(fake_rcs_closure)
                 .register_instanced_service_closure::<RepositoryManagerMarker, _>(
                     fake_repo_manager_closure,
                 )
                 .register_instanced_service_closure::<EngineMarker, _>(fake_engine_closure)
-                .register_fidl_service::<Repo<TestEventHandlerProvider>>()
+                .inject_fidl_service(Rc::clone(&repo))
                 .nodename(TARGET_NODENAME.to_string())
                 .build();
 
@@ -2024,7 +2095,7 @@ mod tests {
             // Make sure we set up the repository on the device.
             assert_eq!(
                 fake_repo_manager.take_events(),
-                vec![RepositoryManagerEvent::Add { repo: test_repo_config() }],
+                vec![RepositoryManagerEvent::Add { repo: test_repo_config(&repo).await }],
             );
 
             // We shouldn't have made any rewrite rules.
@@ -2047,12 +2118,17 @@ mod tests {
     #[test]
     fn test_add_register_repo_manager_error() {
         run_test(async {
+            let repo = Rc::new(RefCell::new(Repo::<TestEventHandlerProvider>::default()));
+            let (erroring_repo_manager, erroring_repo_manager_closure) =
+                ErroringRepositoryManager::new();
             let (fake_engine, fake_engine_closure) = FakeEngine::new();
 
             let daemon = FakeDaemonBuilder::new()
-                .register_fidl_service::<ErroringRepositoryManager>()
+                .register_instanced_service_closure::<RepositoryManagerMarker, _>(
+                    erroring_repo_manager_closure,
+                )
                 .register_instanced_service_closure::<EngineMarker, _>(fake_engine_closure)
-                .register_fidl_service::<Repo<TestEventHandlerProvider>>()
+                .inject_fidl_service(Rc::clone(&repo))
                 .nodename(TARGET_NODENAME.to_string())
                 .build();
 
@@ -2074,6 +2150,12 @@ mod tests {
                 bridge::RepositoryError::RepositoryManagerError
             );
 
+            // Make sure we tried to add the repository.
+            assert_eq!(
+                erroring_repo_manager.take_events(),
+                vec![RepositoryManagerEvent::Add { repo: test_repo_config(&repo).await }],
+            );
+
             // Make sure we didn't communicate with the device.
             assert_eq!(fake_engine.take_events(), vec![]);
 
@@ -2092,12 +2174,17 @@ mod tests {
     #[test]
     fn test_register_non_existent_repo() {
         run_test(async {
+            let repo = Rc::new(RefCell::new(Repo::<TestEventHandlerProvider>::default()));
+            let (erroring_repo_manager, erroring_repo_manager_closure) =
+                ErroringRepositoryManager::new();
             let (fake_engine, fake_engine_closure) = FakeEngine::new();
 
             let daemon = FakeDaemonBuilder::new()
-                .register_fidl_service::<ErroringRepositoryManager>()
+                .register_instanced_service_closure::<RepositoryManagerMarker, _>(
+                    erroring_repo_manager_closure,
+                )
                 .register_instanced_service_closure::<EngineMarker, _>(fake_engine_closure)
-                .register_fidl_service::<Repo<TestEventHandlerProvider>>()
+                .inject_fidl_service(Rc::clone(&repo))
                 .nodename(TARGET_NODENAME.to_string())
                 .build();
 
@@ -2118,6 +2205,7 @@ mod tests {
             );
 
             // Make sure we didn't communicate with the device.
+            assert_eq!(erroring_repo_manager.take_events(), vec![]);
             assert_eq!(fake_engine.take_events(), vec![]);
         })
     }
@@ -2126,12 +2214,17 @@ mod tests {
     #[test]
     fn test_deregister_non_existent_repo() {
         run_test(async {
+            let repo = Rc::new(RefCell::new(Repo::<TestEventHandlerProvider>::default()));
+            let (erroring_repo_manager, erroring_repo_manager_closure) =
+                ErroringRepositoryManager::new();
             let (fake_engine, fake_engine_closure) = FakeEngine::new();
 
             let daemon = FakeDaemonBuilder::new()
-                .register_fidl_service::<ErroringRepositoryManager>()
+                .register_instanced_service_closure::<RepositoryManagerMarker, _>(
+                    erroring_repo_manager_closure,
+                )
                 .register_instanced_service_closure::<EngineMarker, _>(fake_engine_closure)
-                .register_fidl_service::<Repo<TestEventHandlerProvider>>()
+                .inject_fidl_service(Rc::clone(&repo))
                 .nodename(TARGET_NODENAME.to_string())
                 .build();
 
@@ -2146,6 +2239,7 @@ mod tests {
             );
 
             // Make sure we didn't communicate with the device.
+            assert_eq!(erroring_repo_manager.take_events(), vec![]);
             assert_eq!(fake_engine.take_events(), vec![]);
         });
     }

@@ -57,7 +57,10 @@ if (is_host) {
       "//third_party/rust_crates:serial_test",
     ]
 
-    sources = [ "src/lib.rs" ]
+    sources = [
+      "src/lib.rs",
+      "src/tunnel.rs",
+    ]
   }
 }
 
