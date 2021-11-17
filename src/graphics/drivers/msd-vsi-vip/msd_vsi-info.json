@@ -1,0 +1,9 @@
+{
+    "short_description": "Magma Service Driver for Verisilicon",
+    "manufacturer": "Verisilicon",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Graphics"
+    ]
+}

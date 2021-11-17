@@ -1,0 +1,9 @@
+{
+    "short_description": "Goldfish emulator control driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Graphics"
+    ]
+}

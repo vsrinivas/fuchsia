@@ -20,6 +20,7 @@ fuchsia_driver("msd_intel-driver") {
 fuchsia_driver_component("msd_intel") {
   component_name = "libmsd_intel"
   deps = [ ":msd_intel-driver" ]
+  info = "msd_intel-info.json"
 }
 
 # The gpu device; runs gtests at startup
@@ -39,6 +40,7 @@ fuchsia_driver_component("msd_intel_test") {
   testonly = true
   component_name = "libmsd_intel_test"
   deps = [ ":msd_intel_test-driver" ]
+  info = "msd_intel_test-info.json"
 }
 
 driver_bind_rules("msd_intel_bind") {

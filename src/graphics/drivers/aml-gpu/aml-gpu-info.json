@@ -1,0 +1,15 @@
+{
+    "short_description": "AMLogic Mali driver",
+    "manufacturer": "AMLogic",
+    "families": [],
+    "models": [
+        "S912",
+        "S905d2",
+        "S905d3",
+        "T931",
+        "A311d"
+    ],
+    "areas": [
+        "Graphics"
+    ]
+}

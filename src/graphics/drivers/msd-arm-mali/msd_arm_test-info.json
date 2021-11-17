@@ -1,0 +1,12 @@
+{
+    "short_description": "Test Magma Service Driver for ARM Mali",
+    "manufacturer": "ARM",
+    "families": [],
+    "models": [
+        "generic"
+    ],
+    "areas": [
+        "Graphics",
+        "Test"
+    ]
+}

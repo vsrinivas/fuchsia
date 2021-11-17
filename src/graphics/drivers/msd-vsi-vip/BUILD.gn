@@ -26,6 +26,7 @@ fuchsia_driver("msd_vsi-driver") {
 }
 
 fuchsia_driver_component("msd_vsi") {
+  info = "msd_vsi-info.json"
   component_name = "libmsd_vsi"
   deps = [ ":msd_vsi-driver" ]
 }
@@ -41,6 +42,7 @@ fuchsia_driver("msd_vsi_test-driver") {
 }
 
 fuchsia_driver_component("msd_vsi_test") {
+  info = "msd_vsi_test-info.json"
   testonly = true
   component_name = "libmsd_vsi_test"
   deps = [ ":msd_vsi_test-driver" ]

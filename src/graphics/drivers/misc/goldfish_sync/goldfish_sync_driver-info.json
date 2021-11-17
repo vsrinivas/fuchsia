@@ -1,0 +1,9 @@
+{
+    "short_description": "ACPI Goldfish emulator control driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Graphics"
+    ]
+}

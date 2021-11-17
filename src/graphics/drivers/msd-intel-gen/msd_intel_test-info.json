@@ -1,0 +1,15 @@
+{
+    "short_description": "Test Magma Service Driver for the Intel Gen series GPUs",
+    "manufacturer": "Intel",
+    "families": [
+        "HD/Iris Graphics 5xx",
+        "HD/Iris Graphics 6xx"
+    ],
+    "models": [
+        "generic"
+    ],
+    "areas": [
+        "Graphics",
+        "Test"
+    ]
+}

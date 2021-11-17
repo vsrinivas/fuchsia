@@ -19,6 +19,7 @@ fuchsia_driver("msd_arm-driver") {
 fuchsia_driver_component("msd_arm") {
   component_name = "libmsd_arm"
   deps = [ ":msd_arm-driver" ]
+  info = "msd_arm-info.json"
 }
 
 fuchsia_driver("msd_arm_test-driver") {
@@ -39,6 +40,7 @@ fuchsia_driver_component("msd_arm_test") {
   testonly = true
   component_name = "libmsd_arm_test"
   deps = [ ":msd_arm_test-driver" ]
+  info = "msd_arm_test-info.json"
 }
 
 driver_bind_rules("msd_arm_bind") {
