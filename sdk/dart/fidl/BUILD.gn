@@ -27,9 +27,9 @@ dart_library("fidl") {
     "src/struct.dart",
     "src/table.dart",
     "src/types.dart",
+    "src/union.dart",
     "src/unknown_data.dart",
     "src/wire_format.dart",
-    "src/xunion.dart",
   ]
 
   deps = [

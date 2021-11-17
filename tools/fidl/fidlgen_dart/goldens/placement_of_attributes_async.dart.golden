@@ -158,7 +158,7 @@ const Map<int, ExampleUnionTag> _ExampleUnionTag_map = {
   1: ExampleUnionTag.variant,
 };
 
-class ExampleUnion extends $fidl.XUnion {
+class ExampleUnion extends $fidl.Union {
   const ExampleUnion.withVariant(int value)
       : _ordinal = 1,
         _data = value;
@@ -241,7 +241,7 @@ const Map<int, ExampleXUnionTag> _ExampleXUnionTag_map = {
   1: ExampleXUnionTag.variant,
 };
 
-class ExampleXUnion extends $fidl.XUnion {
+class ExampleXUnion extends $fidl.Union {
   const ExampleXUnion.withVariant(int value)
       : _ordinal = 1,
         _data = value;

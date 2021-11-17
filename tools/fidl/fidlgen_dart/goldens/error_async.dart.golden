@@ -49,7 +49,7 @@ const Map<int, ExampleFooResultTag> _ExampleFooResultTag_map = {
   2: ExampleFooResultTag.err,
 };
 
-class ExampleFooResult extends $fidl.XUnion {
+class ExampleFooResult extends $fidl.Union {
   const ExampleFooResult.withResponse(ExampleFooResponse value)
       : _ordinal = 1,
         _data = value;

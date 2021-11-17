@@ -47,7 +47,7 @@ const Map<int, UnionSmallArrayTag> _UnionSmallArrayTag_map = {
   1: UnionSmallArrayTag.a,
 };
 
-class UnionSmallArray extends $fidl.XUnion {
+class UnionSmallArray extends $fidl.Union {
   const UnionSmallArray.withA(Uint32List value)
       : _ordinal = 1,
         _data = value;
@@ -131,7 +131,7 @@ const Map<int, UnionLargeArrayTag> _UnionLargeArrayTag_map = {
   1: UnionLargeArrayTag.a,
 };
 
-class UnionLargeArray extends $fidl.XUnion {
+class UnionLargeArray extends $fidl.Union {
   const UnionLargeArray.withA(Uint32List value)
       : _ordinal = 1,
         _data = value;

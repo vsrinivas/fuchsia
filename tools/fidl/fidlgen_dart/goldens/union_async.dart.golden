@@ -49,7 +49,7 @@ const Map<int, PizzaOrPastaTag> _PizzaOrPastaTag_map = {
   2: PizzaOrPastaTag.pasta,
 };
 
-class PizzaOrPasta extends $fidl.XUnion {
+class PizzaOrPasta extends $fidl.Union {
   const PizzaOrPasta.withPizza(Pizza value)
       : _ordinal = 1,
         _data = value;
@@ -149,7 +149,7 @@ const Map<int, ExplicitPizzaOrPastaTag> _ExplicitPizzaOrPastaTag_map = {
   4: ExplicitPizzaOrPastaTag.pasta,
 };
 
-class ExplicitPizzaOrPasta extends $fidl.XUnion {
+class ExplicitPizzaOrPasta extends $fidl.Union {
   const ExplicitPizzaOrPasta.withPizza(Pizza value)
       : _ordinal = 1,
         _data = value;
@@ -251,7 +251,7 @@ const Map<int, FlexiblePizzaOrPastaTag> _FlexiblePizzaOrPastaTag_map = {
   2: FlexiblePizzaOrPastaTag.pasta,
 };
 
-class FlexiblePizzaOrPasta extends $fidl.XUnion {
+class FlexiblePizzaOrPasta extends $fidl.Union {
   const FlexiblePizzaOrPasta.withPizza(Pizza value)
       : _ordinal = 1,
         _data = value;
@@ -357,7 +357,7 @@ const Map<int, StrictPizzaOrPastaTag> _StrictPizzaOrPastaTag_map = {
   2: StrictPizzaOrPastaTag.pasta,
 };
 
-class StrictPizzaOrPasta extends $fidl.XUnion {
+class StrictPizzaOrPasta extends $fidl.Union {
   const StrictPizzaOrPasta.withPizza(Pizza value)
       : _ordinal = 1,
         _data = value;
@@ -459,7 +459,7 @@ const Map<int, UnionTag> _UnionTag_map = {
   3: UnionTag.vectorStringAlsoNeedsConstructor,
 };
 
-class Union extends $fidl.XUnion {
+class Union extends $fidl.Union {
   const Union.withPrimitive(int value)
       : _ordinal = 1,
         _data = value;
@@ -585,7 +585,7 @@ const Map<int, FlexibleUnionTag> _FlexibleUnionTag_map = {
   3: FlexibleUnionTag.vectorStringAlsoNeedsConstructor,
 };
 
-class FlexibleUnion extends $fidl.XUnion {
+class FlexibleUnion extends $fidl.Union {
   const FlexibleUnion.withPrimitive(int value)
       : _ordinal = 1,
         _data = value;
@@ -714,7 +714,7 @@ const Map<int, StrictUnionTag> _StrictUnionTag_map = {
   3: StrictUnionTag.vectorStringAlsoNeedsConstructor,
 };
 
-class StrictUnion extends $fidl.XUnion {
+class StrictUnion extends $fidl.Union {
   const StrictUnion.withPrimitive(int value)
       : _ordinal = 1,
         _data = value;
@@ -836,7 +836,7 @@ const Map<int, FieldCollisionTag> _FieldCollisionTag_map = {
   1: FieldCollisionTag.fieldCollisionTag,
 };
 
-class FieldCollision extends $fidl.XUnion {
+class FieldCollision extends $fidl.Union {
   const FieldCollision.withFieldCollisionTag(int value)
       : _ordinal = 1,
         _data = value;
@@ -922,7 +922,7 @@ const Map<int, ExplicitUnionTag> _ExplicitUnionTag_map = {
   3: ExplicitUnionTag.stringNeedsConstructor,
 };
 
-class ExplicitUnion extends $fidl.XUnion {
+class ExplicitUnion extends $fidl.Union {
   const ExplicitUnion.withPrimitive(int value)
       : _ordinal = 1,
         _data = value;
@@ -1024,7 +1024,7 @@ const Map<int, ReverseOrdinalUnionTag> _ReverseOrdinalUnionTag_map = {
   1: ReverseOrdinalUnionTag.first,
 };
 
-class ReverseOrdinalUnion extends $fidl.XUnion {
+class ReverseOrdinalUnion extends $fidl.Union {
   const ReverseOrdinalUnion.withSecond(int value)
       : _ordinal = 2,
         _data = value;
@@ -1125,7 +1125,7 @@ const Map<int, FlexibleFooTag> _FlexibleFooTag_map = {
   2: FlexibleFooTag.i,
 };
 
-class FlexibleFoo extends $fidl.XUnion {
+class FlexibleFoo extends $fidl.Union {
   const FlexibleFoo.withS(String value)
       : _ordinal = 1,
         _data = value;
@@ -1228,7 +1228,7 @@ const Map<int, StrictFooTag> _StrictFooTag_map = {
   2: StrictFooTag.i,
 };
 
-class StrictFoo extends $fidl.XUnion {
+class StrictFoo extends $fidl.Union {
   const StrictFoo.withS(String value)
       : _ordinal = 1,
         _data = value;
@@ -1328,7 +1328,7 @@ const Map<int, ExplicitFooTag> _ExplicitFooTag_map = {
   1: ExplicitFooTag.i,
 };
 
-class ExplicitFoo extends $fidl.XUnion {
+class ExplicitFoo extends $fidl.Union {
   const ExplicitFoo.withS(String value)
       : _ordinal = 2,
         _data = value;
@@ -1431,7 +1431,7 @@ const Map<int, ExplicitStrictFooTag> _ExplicitStrictFooTag_map = {
   2: ExplicitStrictFooTag.i,
 };
 
-class ExplicitStrictFoo extends $fidl.XUnion {
+class ExplicitStrictFoo extends $fidl.Union {
   const ExplicitStrictFoo.withS(String value)
       : _ordinal = 3,
         _data = value;
@@ -1532,7 +1532,7 @@ const Map<int, OlderSimpleUnionTag> _OlderSimpleUnionTag_map = {
   2: OlderSimpleUnionTag.f,
 };
 
-class OlderSimpleUnion extends $fidl.XUnion {
+class OlderSimpleUnion extends $fidl.Union {
   const OlderSimpleUnion.withI(int value)
       : _ordinal = 1,
         _data = value;
@@ -1639,7 +1639,7 @@ const Map<int, NewerSimpleUnionTag> _NewerSimpleUnionTag_map = {
   3: NewerSimpleUnionTag.v,
 };
 
-class NewerSimpleUnion extends $fidl.XUnion {
+class NewerSimpleUnion extends $fidl.Union {
   const NewerSimpleUnion.withI(int value)
       : _ordinal = 1,
         _data = value;
@@ -1765,7 +1765,7 @@ const Map<int, StrictSimpleXUnionTag> _StrictSimpleXUnionTag_map = {
   3: StrictSimpleXUnionTag.s,
 };
 
-class StrictSimpleXUnion extends $fidl.XUnion {
+class StrictSimpleXUnion extends $fidl.Union {
   const StrictSimpleXUnion.withI(int value)
       : _ordinal = 1,
         _data = value;
@@ -1881,7 +1881,7 @@ const Map<int, XUnionContainingEmptyStructTag>
   1: XUnionContainingEmptyStructTag.empty,
 };
 
-class XUnionContainingEmptyStruct extends $fidl.XUnion {
+class XUnionContainingEmptyStruct extends $fidl.Union {
   const XUnionContainingEmptyStruct.withEmpty(Empty value)
       : _ordinal = 1,
         _data = value;
@@ -1970,7 +1970,7 @@ const Map<int, StrictBoundedXUnionTag> _StrictBoundedXUnionTag_map = {
   1: StrictBoundedXUnionTag.v,
 };
 
-class StrictBoundedXUnion extends $fidl.XUnion {
+class StrictBoundedXUnion extends $fidl.Union {
   const StrictBoundedXUnion.withV(Uint8List value)
       : _ordinal = 1,
         _data = value;
@@ -2057,7 +2057,7 @@ const Map<int, ExplicitXUnionTag> _ExplicitXUnionTag_map = {
   4: ExplicitXUnionTag.f,
 };
 
-class ExplicitXUnion extends $fidl.XUnion {
+class ExplicitXUnion extends $fidl.Union {
   const ExplicitXUnion.withI(int value)
       : _ordinal = 1,
         _data = value;
@@ -2160,7 +2160,7 @@ const Map<int, UnionWithAttributesTag> _UnionWithAttributesTag_map = {
   1: UnionWithAttributesTag.x,
 };
 
-class UnionWithAttributes extends $fidl.XUnion {
+class UnionWithAttributes extends $fidl.Union {
   const UnionWithAttributes.withX(int value)
       : _ordinal = 1,
         _data = value;

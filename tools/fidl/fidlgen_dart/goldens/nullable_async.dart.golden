@@ -50,7 +50,7 @@ const Map<int, SimpleUnionTag> _SimpleUnionTag_map = {
   2: SimpleUnionTag.b,
 };
 
-class SimpleUnion extends $fidl.XUnion {
+class SimpleUnion extends $fidl.Union {
   const SimpleUnion.withA(int value)
       : _ordinal = 1,
         _data = value;

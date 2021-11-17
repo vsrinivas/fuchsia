@@ -226,7 +226,7 @@ const Map<int, WithErrorSyntaxResponseAsStructResultTag>
   2: WithErrorSyntaxResponseAsStructResultTag.err,
 };
 
-class WithErrorSyntaxResponseAsStructResult extends $fidl.XUnion {
+class WithErrorSyntaxResponseAsStructResult extends $fidl.Union {
   const WithErrorSyntaxResponseAsStructResult.withResponse(
       WithErrorSyntaxResponseAsStructResponse value)
       : _ordinal = 1,
@@ -335,7 +335,7 @@ const Map<int, WithErrorSyntaxErrorAsPrimitiveResultTag>
   2: WithErrorSyntaxErrorAsPrimitiveResultTag.err,
 };
 
-class WithErrorSyntaxErrorAsPrimitiveResult extends $fidl.XUnion {
+class WithErrorSyntaxErrorAsPrimitiveResult extends $fidl.Union {
   const WithErrorSyntaxErrorAsPrimitiveResult.withResponse(
       WithErrorSyntaxErrorAsPrimitiveResponse value)
       : _ordinal = 1,
@@ -444,7 +444,7 @@ const Map<int, WithErrorSyntaxErrorAsEnumResultTag>
   2: WithErrorSyntaxErrorAsEnumResultTag.err,
 };
 
-class WithErrorSyntaxErrorAsEnumResult extends $fidl.XUnion {
+class WithErrorSyntaxErrorAsEnumResult extends $fidl.Union {
   const WithErrorSyntaxErrorAsEnumResult.withResponse(
       WithErrorSyntaxErrorAsEnumResponse value)
       : _ordinal = 1,
@@ -551,7 +551,7 @@ const Map<int, WithErrorSyntaxHandleInResultResultTag>
   2: WithErrorSyntaxHandleInResultResultTag.err,
 };
 
-class WithErrorSyntaxHandleInResultResult extends $fidl.XUnion {
+class WithErrorSyntaxHandleInResultResult extends $fidl.Union {
   const WithErrorSyntaxHandleInResultResult.withResponse(
       WithErrorSyntaxHandleInResultResponse value)
       : _ordinal = 1,
@@ -658,7 +658,7 @@ const Map<int, TheUnionTag> _TheUnionTag_map = {
   1: TheUnionTag.v,
 };
 
-class TheUnion extends $fidl.XUnion {
+class TheUnion extends $fidl.Union {
   const TheUnion.withV(int value)
       : _ordinal = 1,
         _data = value;

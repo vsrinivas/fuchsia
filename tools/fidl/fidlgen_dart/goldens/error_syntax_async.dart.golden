@@ -52,7 +52,7 @@ const Map<int, ExampleUseOfErrorSyntaxCallWhichMayFailResultTag>
   2: ExampleUseOfErrorSyntaxCallWhichMayFailResultTag.err,
 };
 
-class ExampleUseOfErrorSyntaxCallWhichMayFailResult extends $fidl.XUnion {
+class ExampleUseOfErrorSyntaxCallWhichMayFailResult extends $fidl.Union {
   const ExampleUseOfErrorSyntaxCallWhichMayFailResult.withResponse(
       ExampleUseOfErrorSyntaxCallWhichMayFailResponse value)
       : _ordinal = 1,

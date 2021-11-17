@@ -378,7 +378,7 @@ var dartErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.NonResourceUnknownHandles:          "fidlNonResourceHandle",
 	gidlir.StrictBitsUnknownBit:               "fidlInvalidBit",
 	gidlir.StrictEnumUnknownValue:             "fidlInvalidEnumValue",
-	gidlir.StrictUnionUnknownField:            "fidlStrictXUnionUnknownField",
+	gidlir.StrictUnionUnknownField:            "fidlStrictUnionUnknownField",
 	gidlir.StringNotUtf8:                      "unknown",
 	gidlir.StringTooLong:                      "fidlStringTooLong",
 	gidlir.TooFewBytes:                        "unknown",

@@ -300,7 +300,7 @@ const Map<int, UnionMemberTag> _UnionMemberTag_map = {
   2: UnionMemberTag.unionData,
 };
 
-class UnionMember extends $fidl.XUnion {
+class UnionMember extends $fidl.Union {
   const UnionMember.withUnionData(int value)
       : _ordinal = 2,
         _data = value;
@@ -388,7 +388,7 @@ const Map<int, SomeProtocolSomeMethodResultTag>
   2: SomeProtocolSomeMethodResultTag.err,
 };
 
-class SomeProtocolSomeMethodResult extends $fidl.XUnion {
+class SomeProtocolSomeMethodResult extends $fidl.Union {
   const SomeProtocolSomeMethodResult.withResponse(
       SomeProtocolSomeMethodResponse value)
       : _ordinal = 1,
@@ -497,7 +497,7 @@ const Map<int, ExpressionTag> _ExpressionTag_map = {
   3: ExpressionTag.functionApplication,
 };
 
-class Expression extends $fidl.XUnion {
+class Expression extends $fidl.Union {
   const Expression.withValue(int value)
       : _ordinal = 1,
         _data = value;

@@ -105,7 +105,7 @@ const Map<int, UnionWithHandleTag> _UnionWithHandleTag_map = {
   1: UnionWithHandleTag.h,
 };
 
-class UnionWithHandle extends $fidl.XUnion {
+class UnionWithHandle extends $fidl.Union {
   const UnionWithHandle.withH($zircon.Vmo value)
       : _ordinal = 1,
         _data = value;

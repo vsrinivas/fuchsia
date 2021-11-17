@@ -19,5 +19,5 @@ export 'src/struct.dart';
 export 'src/table.dart';
 export 'src/types.dart';
 export 'src/unknown_data.dart';
+export 'src/union.dart';
 export 'src/wire_format.dart';
-export 'src/xunion.dart';

@@ -50,7 +50,7 @@ const Map<int, FlexibleFooTag> _FlexibleFooTag_map = {
   2: FlexibleFooTag.i,
 };
 
-class FlexibleFoo extends $fidl.XUnion {
+class FlexibleFoo extends $fidl.Union {
   const FlexibleFoo.withS(String value)
       : _ordinal = 1,
         _data = value;
@@ -153,7 +153,7 @@ const Map<int, StrictFooTag> _StrictFooTag_map = {
   2: StrictFooTag.i,
 };
 
-class StrictFoo extends $fidl.XUnion {
+class StrictFoo extends $fidl.Union {
   const StrictFoo.withS(String value)
       : _ordinal = 1,
         _data = value;

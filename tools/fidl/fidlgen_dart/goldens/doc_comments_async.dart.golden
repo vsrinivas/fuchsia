@@ -344,7 +344,7 @@ const Map<int, StrictUnionTag> _StrictUnionTag_map = {
 /// strict union comment #1
 ///
 /// strict union comment #3
-class StrictUnion extends $fidl.XUnion {
+class StrictUnion extends $fidl.Union {
   const StrictUnion.withField(int value)
       : _ordinal = 1,
         _data = value;
@@ -430,7 +430,7 @@ const Map<int, FlexibleUnionTag> _FlexibleUnionTag_map = {
 /// flexible union comment #1
 ///
 /// flexible union comment #3
-class FlexibleUnion extends $fidl.XUnion {
+class FlexibleUnion extends $fidl.Union {
   const FlexibleUnion.withField(int value)
       : _ordinal = 1,
         _data = value;

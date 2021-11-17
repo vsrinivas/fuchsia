@@ -6,8 +6,8 @@
 
 import 'hash_codes.dart';
 
-abstract class XUnion {
-  const XUnion();
+abstract class Union {
+  const Union();
 
   int get $ordinal;
   Object get $data;
@@ -23,7 +23,7 @@ abstract class XUnion {
     if (runtimeType != other.runtimeType) {
       return false;
     }
-    final XUnion otherUnion = other;
+    final Union otherUnion = other;
     if ($ordinal != otherUnion.$ordinal) {
       return false;
     }
@@ -31,4 +31,4 @@ abstract class XUnion {
   }
 }
 
-typedef XUnionFactory<T> = T Function(int index, Object data);
+typedef UnionFactory<T> = T Function(int index, Object data);

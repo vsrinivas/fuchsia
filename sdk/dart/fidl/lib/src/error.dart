@@ -16,7 +16,7 @@ enum FidlErrorCode {
   fidlTooFewHandles,
   fidlStringTooLong,
   fidlNonNullableTypeWithNullValue,
-  fidlStrictXUnionUnknownField,
+  fidlStrictUnionUnknownField,
   fidlUnknownMagic,
   fidlInvalidBit,
   fidlInvalidEnumValue,

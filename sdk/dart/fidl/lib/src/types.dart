@@ -17,7 +17,7 @@ import 'struct.dart';
 import 'table.dart';
 import 'unknown_data.dart';
 import 'wire_format.dart';
-import 'xunion.dart';
+import 'union.dart';
 
 // ignore_for_file: public_member_api_docs
 // ignore_for_file: always_specify_types
@@ -1351,7 +1351,7 @@ class TableType<T extends Table> extends SimpleFidlType<T> {
   }
 }
 
-void _encodeUnion<T extends XUnion>(Encoder encoder, T value, int offset,
+void _encodeUnion<T extends Union>(Encoder encoder, T value, int offset,
     int depth, Map<int, FidlType> members, bool flexible, bool resource) {
   final int envelopeOffset = offset + 8;
   final int ordinal = value.$ordinal;
@@ -1364,18 +1364,18 @@ void _encodeUnion<T extends XUnion>(Encoder encoder, T value, int offset,
   }
   if (fieldType == null)
     throw FidlError('Bad xunion ordinal: $ordinal',
-        FidlErrorCode.fidlStrictXUnionUnknownField);
+        FidlErrorCode.fidlStrictUnionUnknownField);
 
   encoder.encodeUint64(ordinal, offset);
   _encodeEnvelopePresent(encoder, envelopeOffset, depth, data, fieldType);
 }
 
-T? _decodeUnion<T extends XUnion>(
+T? _decodeUnion<T extends Union>(
     Decoder decoder,
     int offset,
     int depth,
     Map<int, FidlType> members,
-    XUnionFactory<T> ctor,
+    UnionFactory<T> ctor,
     bool flexible,
     bool resource) {
   final int envelopeOffset = offset + 8;
@@ -1400,7 +1400,7 @@ T? _decodeUnion<T extends XUnion>(
       if (!flexible) {
         unknownData.closeHandles();
         throw FidlError('Bad xunion ordinal: $ordinal',
-            FidlErrorCode.fidlStrictXUnionUnknownField);
+            FidlErrorCode.fidlStrictUnionUnknownField);
       }
 
       _maybeThrowOnUnknownHandles(resource, unknownData);
@@ -1413,7 +1413,7 @@ T? _decodeUnion<T extends XUnion>(
   }
 }
 
-class UnionType<T extends XUnion> extends SimpleFidlType<T> {
+class UnionType<T extends Union> extends SimpleFidlType<T> {
   const UnionType(
       {required this.members,
       required this.ctor,
@@ -1422,7 +1422,7 @@ class UnionType<T extends XUnion> extends SimpleFidlType<T> {
       : super(inlineSizeV1: 24, inlineSizeV2: 16);
 
   final Map<int, FidlType> members;
-  final XUnionFactory<T> ctor;
+  final UnionFactory<T> ctor;
   final bool flexible;
   final bool resource;
 
@@ -1441,7 +1441,7 @@ class UnionType<T extends XUnion> extends SimpleFidlType<T> {
   }
 }
 
-class NullableUnionType<T extends XUnion> extends SimpleFidlType<T?> {
+class NullableUnionType<T extends Union> extends SimpleFidlType<T?> {
   const NullableUnionType(
       {required this.members,
       required this.ctor,
@@ -1450,7 +1450,7 @@ class NullableUnionType<T extends XUnion> extends SimpleFidlType<T?> {
       : super(inlineSizeV1: 24, inlineSizeV2: 16);
 
   final Map<int, FidlType> members;
-  final XUnionFactory<T> ctor;
+  final UnionFactory<T> ctor;
   final bool flexible;
   final bool resource;
 

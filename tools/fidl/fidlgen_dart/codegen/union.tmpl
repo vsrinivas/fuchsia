@@ -23,7 +23,7 @@ const Map<int, {{ .TagName }}> _{{ .TagName }}_map = {
 {{range .Doc }}
 ///{{ . -}}
 {{- end }}
-class {{ .Name }} extends $fidl.XUnion {
+class {{ .Name }} extends $fidl.Union {
 {{- range .Members }}
 
   const {{ $.Name }}.with{{ .CtorName }}({{ .Type.Decl }} value)

@@ -47,7 +47,7 @@ const Map<int, UnionSize8Alignment4Tag> _UnionSize8Alignment4Tag_map = {
   1: UnionSize8Alignment4Tag.variant,
 };
 
-class UnionSize8Alignment4 extends $fidl.XUnion {
+class UnionSize8Alignment4 extends $fidl.Union {
   const UnionSize8Alignment4.withVariant(int value)
       : _ordinal = 1,
         _data = value;
@@ -130,7 +130,7 @@ const Map<int, UnionSize12Alignment4Tag> _UnionSize12Alignment4Tag_map = {
   1: UnionSize12Alignment4Tag.variant,
 };
 
-class UnionSize12Alignment4 extends $fidl.XUnion {
+class UnionSize12Alignment4 extends $fidl.Union {
   const UnionSize12Alignment4.withVariant(Uint8List value)
       : _ordinal = 1,
         _data = value;
@@ -215,7 +215,7 @@ const Map<int, UnionSize24Alignment8Tag> _UnionSize24Alignment8Tag_map = {
   1: UnionSize24Alignment8Tag.variant,
 };
 
-class UnionSize24Alignment8 extends $fidl.XUnion {
+class UnionSize24Alignment8 extends $fidl.Union {
   const UnionSize24Alignment8.withVariant(StructSize16Alignment8 value)
       : _ordinal = 1,
         _data = value;
@@ -298,7 +298,7 @@ const Map<int, UnionSize36Alignment4Tag> _UnionSize36Alignment4Tag_map = {
   1: UnionSize36Alignment4Tag.variant,
 };
 
-class UnionSize36Alignment4 extends $fidl.XUnion {
+class UnionSize36Alignment4 extends $fidl.Union {
   const UnionSize36Alignment4.withVariant(Uint8List value)
       : _ordinal = 1,
         _data = value;
