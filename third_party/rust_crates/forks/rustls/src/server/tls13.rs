@@ -41,7 +41,7 @@ use crate::suites;
 #[cfg(feature = "logging")]
 use crate::log::{warn, trace, debug};
 use crate::error::TLSError;
-use crate::handshake::{check_handshake_message, check_message};
+use crate::check::check_message;
 #[cfg(feature = "quic")]
 use crate::{
     quic,
@@ -211,9 +211,7 @@ impl CompleteClientHelloHandling {
 
     fn emit_fake_ccs(&mut self,
                      sess: &mut ServerSessionImpl) {
-        #[cfg(feature = "quic")] {
-            if let Protocol::Quic = sess.common.protocol { return; }
-        }
+        if sess.common.is_quic() { return; }
         let m = Message {
             typ: ContentType::ChangeCipherSpec,
             version: ProtocolVersion::TLSv1_2,
@@ -287,7 +285,8 @@ impl CompleteClientHelloHandling {
             extensions: Vec::new(),
         };
 
-        let schemes = verify::supported_verify_schemes();
+        let schemes = sess.config.get_verifier()
+            .supported_verify_schemes();
         cr.extensions.push(CertReqExtension::SignatureAlgorithms(schemes.to_vec()));
 
         let names = sess.config.verifier.client_auth_root_subjects(sess.get_sni())
@@ -367,10 +366,9 @@ impl CompleteClientHelloHandling {
                                      server_key: &mut sign::CertifiedKey,
                                      schemes: &[SignatureScheme])
                                      -> Result<(), TLSError> {
-        let mut message = Vec::new();
-        message.resize(64, 0x20u8);
-        message.extend_from_slice(b"TLS 1.3, server CertificateVerify\x00");
-        message.extend_from_slice(&self.handshake.transcript.get_current_hash());
+        let message = verify::construct_tls13_server_verify_message(
+            &self.handshake.transcript.get_current_hash()
+        );
 
         let signing_key = &server_key.key;
         let signer = signing_key.choose_scheme(schemes)
@@ -466,10 +464,9 @@ impl CompleteClientHelloHandling {
 
     pub fn handle_client_hello(mut self,
                                sess: &mut ServerSessionImpl,
-                               sni: Option<webpki::DNSName>,
                                mut server_key: sign::CertifiedKey,
                                chm: &Message) -> hs::NextStateOrError {
-        let client_hello = extract_handshake!(chm, HandshakePayload::ClientHello).unwrap();
+        let client_hello = require_handshake_msg!(chm, HandshakeType::ClientHello, HandshakePayload::ClientHello)?;
 
         if client_hello.compression_methods.len() != 1 {
             return Err(hs::illegal_param(sess, "client offered wrong compressions"));
@@ -525,8 +522,6 @@ impl CompleteClientHelloHandling {
 
             return Err(hs::incompatible(sess, "no kx group overlap with client"));
         }
-
-        hs::save_sni(sess, sni);
 
         let chosen_group = chosen_group.unwrap();
         let chosen_share = shares_ext.iter()
@@ -638,12 +633,8 @@ impl ExpectCertificate {
 }
 
 impl hs::State for ExpectCertificate {
-    fn check_message(&self, m: &Message) -> hs::CheckResult {
-        check_handshake_message(m, &[HandshakeType::Certificate])
-    }
-
     fn handle(mut self: Box<Self>, sess: &mut ServerSessionImpl, m: Message) -> hs::NextStateOrError {
-        let certp = extract_handshake!(m, HandshakePayload::CertificateTLS13).unwrap();
+        let certp = require_handshake_msg!(m, HandshakeType::Certificate, HandshakePayload::CertificateTLS13)?;
         self.handshake.transcript.add_message(&m);
 
         // We don't send any CertificateRequest extensions, so any extensions
@@ -702,21 +693,19 @@ impl ExpectCertificateVerify {
 }
 
 impl hs::State for ExpectCertificateVerify {
-    fn check_message(&self, m: &Message) -> hs::CheckResult {
-        check_handshake_message(m, &[HandshakeType::CertificateVerify])
-    }
-
     fn handle(mut self: Box<Self>, sess: &mut ServerSessionImpl, m: Message) -> hs::NextStateOrError {
         let rc = {
-            let sig = extract_handshake!(m, HandshakePayload::CertificateVerify).unwrap();
+            let sig = require_handshake_msg!(m, HandshakeType::CertificateVerify, HandshakePayload::CertificateVerify)?;
             let handshake_hash = self.handshake.transcript.get_current_hash();
             self.handshake.transcript.abandon_client_auth();
             let certs = &self.client_cert.cert_chain;
+            let msg = verify::construct_tls13_client_verify_message(&handshake_hash);
 
-            verify::verify_tls13(&certs[0],
-                                 sig,
-                                 &handshake_hash,
-                                 b"TLS 1.3, client CertificateVerify\x00")
+            sess.config
+                .get_verifier()
+                .verify_tls13_signature(&msg,
+                                        &certs[0],
+                                        sig)
         };
 
         if let Err(e) = rc {
@@ -849,12 +838,8 @@ impl ExpectFinished {
 }
 
 impl hs::State for ExpectFinished {
-    fn check_message(&self, m: &Message) -> hs::CheckResult {
-        check_handshake_message(m, &[HandshakeType::Finished])
-    }
-
     fn handle(mut self: Box<Self>, sess: &mut ServerSessionImpl, m: Message) -> hs::NextStateOrError {
-        let finished = extract_handshake!(m, HandshakePayload::Finished).unwrap();
+        let finished = require_handshake_msg!(m, HandshakeType::Finished, HandshakePayload::Finished)?;
 
         let handshake_hash = self.handshake.transcript.get_current_hash();
         let expect_verify_data = self.key_schedule.sign_client_finish(&handshake_hash);
@@ -919,9 +904,7 @@ impl ExpectTraffic {
         Ok(())
     }
 
-    fn handle_key_update(&mut self, sess: &mut ServerSessionImpl, m: Message) -> Result<(), TLSError> {
-        let kur = extract_handshake!(m, HandshakePayload::KeyUpdate).unwrap();
-
+    fn handle_key_update(&mut self, sess: &mut ServerSessionImpl, kur: &KeyUpdateRequest) -> Result<(), TLSError> {
         #[cfg(feature = "quic")]
         {
             if let Protocol::Quic = sess.common.protocol {
@@ -955,17 +938,15 @@ impl ExpectTraffic {
 }
 
 impl hs::State for ExpectTraffic {
-    fn check_message(&self, m: &Message) -> hs::CheckResult {
-        check_message(m,
-                      &[ContentType::ApplicationData, ContentType::Handshake],
-                      &[HandshakeType::KeyUpdate])
-    }
-
     fn handle(mut self: Box<Self>, sess: &mut ServerSessionImpl, m: Message) -> hs::NextStateOrError {
         if m.is_content_type(ContentType::ApplicationData) {
             self.handle_traffic(sess, m)?;
-        } else if m.is_handshake_type(HandshakeType::KeyUpdate) {
-            self.handle_key_update(sess, m)?;
+        } else if let Ok(key_update) = require_handshake_msg!(m, HandshakeType::KeyUpdate, HandshakePayload::KeyUpdate) {
+            self.handle_key_update(sess, key_update)?;
+        } else {
+            check_message(&m,
+                          &[ContentType::ApplicationData, ContentType::Handshake],
+                          &[HandshakeType::KeyUpdate])?;
         }
 
         Ok(self)
@@ -997,14 +978,9 @@ pub struct ExpectQUICTraffic {
 
 #[cfg(feature = "quic")]
 impl hs::State for ExpectQUICTraffic {
-    fn check_message(&self, m: &Message) -> hs::CheckResult {
-        Err(TLSError::InappropriateMessage {
-            expect_types: Vec::new(),
-            got_type: m.typ,
-        })
-    }
-
-    fn handle(self: Box<Self>, _: &mut ServerSessionImpl, _: Message) -> hs::NextStateOrError {
-        unreachable!("check_message always fails");
+    fn handle(self: Box<Self>, _: &mut ServerSessionImpl, m: Message) -> hs::NextStateOrError {
+        // reject all messages
+        check_message(&m, &[], &[])?;
+        unreachable!();
     }
 }

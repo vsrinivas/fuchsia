@@ -259,6 +259,9 @@ fn lookup_scheme(scheme: u16) -> rustls::SignatureScheme {
         0x0804 => rustls::SignatureScheme::RSA_PSS_SHA256,
         0x0805 => rustls::SignatureScheme::RSA_PSS_SHA384,
         0x0806 => rustls::SignatureScheme::RSA_PSS_SHA512,
+        0x0807 => rustls::SignatureScheme::ED25519,
+        // TODO: add support for Ed448
+        // 0x0808 => rustls::SignatureScheme::ED448,
         _ => {
             println_err!("Unsupported signature scheme {:04x}", scheme);
             process::exit(BOGO_NACK);
@@ -716,6 +719,9 @@ fn main() {
             "-expect-signed-cert-timestamps" |
             "-expect-certificate-types" |
             "-expect-client-ca-list" |
+            "-on-retry-expect-early-data-reason" |
+            "-on-resume-expect-early-data-reason" |
+            "-on-initial-expect-early-data-reason" |
             "-handshaker-path" |
             "-expect-msg-callback" => {
                 println!("not checking {} {}; NYI", arg, args.remove(0));
@@ -724,6 +730,11 @@ fn main() {
             "-expect-secure-renegotiation" |
             "-expect-no-session-id" |
             "-enable-ed25519" |
+            "-expect-hrr" |
+            "-expect-no-hrr" |
+            "-on-resume-expect-no-offer-early-data" |
+            "-key-update" | //< we could implement an API for this
+            "-expect-tls13-downgrade" |
             "-expect-session-id" => {
                 println!("not checking {}; NYI", arg);
             }
@@ -744,7 +755,7 @@ fn main() {
                 opts.quic_transport_params = base64::decode(args.remove(0).as_bytes())
                     .expect("invalid base64");
             }
-            "-expected-quic-transport-params" => {
+            "-expect-quic-transport-params" => {
                 opts.expect_quic_transport_params = base64::decode(args.remove(0).as_bytes())
                     .expect("invalid base64");
             }
@@ -804,10 +815,25 @@ fn main() {
             "-expect-ticket-supports-early-data" => {
                 opts.expect_ticket_supports_early_data = true;
             }
-            "-expect-accept-early-data" => {
+            "-expect-accept-early-data" |
+            "-on-resume-expect-accept-early-data" => {
                 opts.expect_accept_early_data = true;
             }
-            "-expect-reject-early-data" => {
+            "-expect-early-data-reason" |
+            "-on-resume-expect-reject-early-data-reason" => {
+                let reason = args.remove(0);
+                match reason.as_str() {
+                    "disabled" | "protocol_version" => {
+                        opts.expect_reject_early_data = true;
+                    }
+                    _ => {
+                        println!("NYI early data reason: {}", reason);
+                        process::exit(1);
+                    }
+                }
+            }
+            "-expect-reject-early-data" |
+            "-on-resume-expect-reject-early-data" => {
                 opts.expect_reject_early_data = true;
             }
             "-expect-version" => {
@@ -855,6 +881,7 @@ fn main() {
             "-use-exporter-between-reads" |
             "-ticket-key" |
             "-tls-unique" |
+            "-curves" |
             "-enable-server-custom-extension" |
             "-enable-client-custom-extension" |
             "-expect-dhe-group-size" |
@@ -881,6 +908,7 @@ fn main() {
             "-on-resume-read-with-unfinished-write" |
             "-expect-peer-cert-file" |
             "-no-rsa-pss-rsae-certs" |
+            "-ignore-tls13-downgrade" |
             "-on-initial-expect-peer-cert-file" => {
                 println!("NYI option {:?}", arg);
                 process::exit(BOGO_NACK);

@@ -6,11 +6,11 @@
 //! ## Current features
 //!
 //! * TLS1.2 and TLS1.3.
-//! * ECDSA or RSA server authentication by clients.
-//! * ECDSA or RSA server authentication by servers.
+//! * ECDSA, Ed25519 or RSA server authentication by clients.
+//! * ECDSA, Ed25519 or RSA server authentication by servers.
 //! * Forward secrecy using ECDHE; with curve25519, nistp256 or nistp384 curves.
 //! * AES128-GCM and AES256-GCM bulk encryption, with safe nonces.
-//! * Chacha20Poly1305 bulk encryption.
+//! * ChaCha20-Poly1305 bulk encryption ([RFC7905](https://tools.ietf.org/html/rfc7905)).
 //! * ALPN support.
 //! * SNI support.
 //! * Tunable MTU to make TLS messages match size of underlying transport.
@@ -53,6 +53,13 @@
 //!
 //! There are plenty of other libraries that provide these features should you
 //! need them.
+//!
+//! ### Platform support
+//!
+//! Rustls uses [`ring`](https://crates.io/crates/ring) for implementing the
+//! cryptography in TLS. As a result, rustls only runs on platforms
+//! [supported by `ring`](https://github.com/briansmith/ring#online-automated-testing).
+//! At the time of writing this means x86, x86-64, armv7, and aarch64.
 //!
 //! ## Design Overview
 //! ### Rustls does not take care of network IO
@@ -234,7 +241,8 @@ mod anchors;
 mod verify;
 #[cfg(test)]
 mod verifybench;
-mod handshake;
+#[macro_use]
+mod check;
 mod suites;
 mod ticketer;
 mod server;
@@ -280,7 +288,21 @@ pub use crate::verify::{NoClientAuth, AllowAnyAuthenticatedClient,
 pub use crate::suites::{ALL_CIPHERSUITES, BulkAlgorithm, SupportedCipherSuite};
 pub use crate::key::{Certificate, PrivateKey};
 pub use crate::keylog::{KeyLog, NoKeyLog, KeyLogFile};
-pub use crate::vecbuf::{WriteV, WriteVAdapter};
+
+/// All defined ciphersuites appear in this module.
+///
+/// ALL_CIPHERSUITES is provided an array of all of these values.
+pub mod ciphersuite {
+    pub use crate::suites::TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256;
+    pub use crate::suites::TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256;
+    pub use crate::suites::TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256;
+    pub use crate::suites::TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384;
+    pub use crate::suites::TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256;
+    pub use crate::suites::TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384;
+    pub use crate::suites::TLS13_CHACHA20_POLY1305_SHA256;
+    pub use crate::suites::TLS13_AES_256_GCM_SHA384;
+    pub use crate::suites::TLS13_AES_128_GCM_SHA256;
+}
 
 /// Message signing interfaces and implementations.
 pub mod sign;
@@ -302,7 +324,8 @@ mod quic {
 #[cfg(feature = "dangerous_configuration")]
 #[cfg_attr(docsrs, doc(cfg(feature = "dangerous_configuration")))]
 pub use crate::verify::{ServerCertVerifier, ServerCertVerified,
-    ClientCertVerifier, ClientCertVerified, WebPKIVerifier};
+    ClientCertVerifier, ClientCertVerified, HandshakeSignatureValid,
+    WebPKIVerifier};
 #[cfg(feature = "dangerous_configuration")]
 #[cfg_attr(docsrs, doc(cfg(feature = "dangerous_configuration")))]
 pub use crate::client::danger::DangerousClientConfig;

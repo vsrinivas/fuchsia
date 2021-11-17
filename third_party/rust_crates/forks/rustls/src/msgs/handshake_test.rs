@@ -1,7 +1,7 @@
 use super::handshake::*;
 use super::enums::*;
 use super::base::{Payload, PayloadU8, PayloadU16, PayloadU24};
-use super::codec::{Reader, Codec};
+use super::codec::{Reader, Codec, put_u16};
 use webpki::DNSNameRef;
 use crate::key::Certificate;
 
@@ -370,10 +370,16 @@ fn get_sample_clienthellopayload() -> ClientHelloPayload {
             ClientExtension::SupportedVersions(vec![ ProtocolVersion::TLSv1_3 ]),
             ClientExtension::KeyShare(vec![ KeyShareEntry::new(NamedGroup::X25519, &[1, 2, 3]) ]),
             ClientExtension::PresharedKeyModes(vec![ PSKKeyExchangeMode::PSK_DHE_KE ]),
-            ClientExtension::PresharedKey(
-                PresharedKeyOffer::new(PresharedKeyIdentity::new(vec![3, 4, 5], 123456),
-                                       vec![1, 2, 3])
-                ),
+            ClientExtension::PresharedKey(PresharedKeyOffer {
+                identities: vec![
+                    PresharedKeyIdentity::new(vec![3, 4, 5], 123456),
+                    PresharedKeyIdentity::new(vec![6, 7, 8], 7891011),
+                ],
+                binders: vec![
+                    PresharedKeyBinder::new(vec![1, 2, 3]),
+                    PresharedKeyBinder::new(vec![3, 4, 5]),
+                ]
+            }),
             ClientExtension::Cookie(PayloadU16(vec![1, 2, 3])),
             ClientExtension::ExtendedMasterSecretRequest,
             ClientExtension::CertificateStatusRequest(CertificateStatusRequest::build_ocsp()),
@@ -407,6 +413,76 @@ fn client_has_duplicate_extensions_works() {
 
     chp.extensions = vec![];
     assert!(!chp.has_duplicate_extension());
+}
+
+#[test]
+fn test_truncated_psk_offer() {
+    let ext = ClientExtension::PresharedKey(PresharedKeyOffer {
+        identities: vec![
+            PresharedKeyIdentity::new(vec![3, 4, 5], 123456),
+        ],
+        binders: vec![
+            PresharedKeyBinder::new(vec![1, 2, 3]),
+        ]
+    });
+
+    let mut enc = ext.get_encoding();
+    println!("testing {:?} enc {:?}", ext, enc);
+    for l in 0..enc.len() {
+        if l == 9 {
+            continue;
+        }
+        put_u16(l as u16, &mut enc[4..]);
+        let rc = ClientExtension::read_bytes(&enc);
+        assert!(rc.is_none());
+    }
+}
+
+#[test]
+fn test_truncated_client_hello_is_detected() {
+    let ch = get_sample_clienthellopayload();
+    let enc = ch.get_encoding();
+    println!("testing {:?} enc {:?}", ch, enc);
+
+    for l in 0..enc.len() {
+        println!("len {:?} enc {:?}", l, &enc[..l]);
+        if l == 41 {
+            continue; // where extensions are empty
+        }
+        assert!(ClientHelloPayload::read_bytes(&enc[..l]).is_none());
+    }
+}
+
+#[test]
+fn test_truncated_client_extension_is_detected() {
+    let chp = get_sample_clienthellopayload();
+
+    for ext in &chp.extensions {
+        let mut enc = ext.get_encoding();
+        println!("testing {:?} enc {:?}", ext, enc);
+
+        // "outer" truncation, ie, where the extension-level length is longer than
+        // the input
+        for l in 0..enc.len() {
+            assert!(ClientExtension::read_bytes(&enc[..l]).is_none());
+        }
+
+        // these extension types don't have any internal encoding that rustls validates:
+        match ext.get_type() {
+            ExtensionType::TransportParameters | ExtensionType::Unknown(_) => {
+                continue;
+            }
+            _ => {}
+        };
+
+        // "inner" truncation, where the extension-level length agrees with the input
+        // length, but isn't long enough for the type of extension
+        for l in 0..(enc.len()-4) {
+            put_u16(l as u16, &mut enc[2..]);
+            println!("  encoding {:?} len {:?}", enc, l);
+            assert!(ClientExtension::read_bytes(&enc).is_none());
+        }
+    }
 }
 
 fn test_client_extension_getter(typ: ExtensionType, getter: fn(&ClientHelloPayload) -> bool) {
@@ -488,6 +564,38 @@ fn client_get_psk_modes() {
                                  |chp| chp.get_psk_modes().is_some());
 }
 
+#[test]
+fn test_truncated_helloretry_extension_is_detected() {
+    let hrr = get_sample_helloretryrequest();
+
+    for ext in &hrr.extensions {
+        let mut enc = ext.get_encoding();
+        println!("testing {:?} enc {:?}", ext, enc);
+
+        // "outer" truncation, ie, where the extension-level length is longer than
+        // the input
+        for l in 0..enc.len() {
+            assert!(HelloRetryExtension::read_bytes(&enc[..l]).is_none());
+        }
+
+        // these extension types don't have any internal encoding that rustls validates:
+        match ext.get_type() {
+            ExtensionType::Unknown(_) => {
+                continue;
+            }
+            _ => {}
+        };
+
+        // "inner" truncation, where the extension-level length agrees with the input
+        // length, but isn't long enough for the type of extension
+        for l in 0..(enc.len()-4) {
+            put_u16(l as u16, &mut enc[2..]);
+            println!("  encoding {:?} len {:?}", enc, l);
+            assert!(HelloRetryExtension::read_bytes(&enc).is_none());
+        }
+    }
+}
+
 fn test_helloretry_extension_getter(typ: ExtensionType, getter: fn(&HelloRetryRequest) -> bool) {
     let mut hrr = get_sample_helloretryrequest();
     let mut exts = mem::replace(&mut hrr.extensions, vec![]);
@@ -523,6 +631,38 @@ fn helloretry_get_cookie() {
 fn helloretry_get_supported_versions() {
     test_helloretry_extension_getter(ExtensionType::SupportedVersions,
                                      |hrr| hrr.get_supported_versions().is_some());
+}
+
+#[test]
+fn test_truncated_server_extension_is_detected() {
+    let shp = get_sample_serverhellopayload();
+
+    for ext in &shp.extensions {
+        let mut enc = ext.get_encoding();
+        println!("testing {:?} enc {:?}", ext, enc);
+
+        // "outer" truncation, ie, where the extension-level length is longer than
+        // the input
+        for l in 0..enc.len() {
+            assert!(ServerExtension::read_bytes(&enc[..l]).is_none());
+        }
+
+        // these extension types don't have any internal encoding that rustls validates:
+        match ext.get_type() {
+            ExtensionType::TransportParameters | ExtensionType::Unknown(_) => {
+                continue;
+            }
+            _ => {}
+        };
+
+        // "inner" truncation, where the extension-level length agrees with the input
+        // length, but isn't long enough for the type of extension
+        for l in 0..(enc.len()-4) {
+            put_u16(l as u16, &mut enc[2..]);
+            println!("  encoding {:?} len {:?}", enc, l);
+            assert!(ServerExtension::read_bytes(&enc).is_none());
+        }
+    }
 }
 
 fn test_server_extension_getter(typ: ExtensionType, getter: fn(&ServerHelloPayload) -> bool) {
@@ -755,9 +895,8 @@ fn get_sample_certificatestatus() -> CertificateStatus {
     }
 }
 
-#[test]
-fn can_roundtrip_all_tls12_handshake_payloads() {
-    let hms = [
+fn get_all_tls12_handshake_payloads() -> Vec<HandshakeMessagePayload> {
+    vec![
         HandshakeMessagePayload {
             typ: HandshakeType::HelloRequest,
             payload: HandshakePayload::HelloRequest,
@@ -826,13 +965,16 @@ fn can_roundtrip_all_tls12_handshake_payloads() {
             typ: HandshakeType::Unknown(99),
             payload: HandshakePayload::Unknown(Payload(vec![ 1, 2, 3 ])),
         },
-    ];
+    ]
+}
 
-    for ref hm in hms.iter() {
+#[test]
+fn can_roundtrip_all_tls12_handshake_payloads() {
+    for ref hm in get_all_tls12_handshake_payloads().iter() {
         println!("{:?}", hm.typ);
         let bytes = hm.get_encoding();
         let mut rd = Reader::init(&bytes);
-        let other = HandshakeMessagePayload::read_version(&mut rd, ProtocolVersion::TLSv1_2)
+        let other = HandshakeMessagePayload::read(&mut rd)
             .unwrap();
         assert_eq!(rd.any_left(), false);
         assert_eq!(hm.get_encoding(), other.get_encoding());
@@ -843,8 +985,39 @@ fn can_roundtrip_all_tls12_handshake_payloads() {
 }
 
 #[test]
-fn can_roundtrip_all_tls13_handshake_payloads() {
-    let hms = [
+fn can_detect_truncation_of_all_tls12_handshake_payloads() {
+    for hm in get_all_tls12_handshake_payloads().iter() {
+        let mut enc = hm.get_encoding();
+        println!("test {:?} enc {:?}", hm, enc);
+
+        // outer truncation
+        for l in 0..enc.len() {
+            assert!(HandshakeMessagePayload::read_bytes(&enc[..l]).is_none())
+        }
+
+        // inner truncation
+        for l in 0..enc.len()-4 {
+            put_u24(l as u32, &mut enc[1..]);
+            println!("  check len {:?} enc {:?}", l, enc);
+
+            match (hm.typ, l) {
+                (HandshakeType::ClientHello, 41) |
+                    (HandshakeType::ServerHello, 38) |
+                    (HandshakeType::ServerKeyExchange, _) |
+                    (HandshakeType::ClientKeyExchange, _) |
+                    (HandshakeType::Finished, _) |
+                    (HandshakeType::Unknown(_), _) => continue,
+                _ => {}
+            };
+
+            assert!(HandshakeMessagePayload::read_version(&mut Reader::init(&enc), ProtocolVersion::TLSv1_2).is_none());
+            assert!(HandshakeMessagePayload::read_bytes(&enc).is_none());
+        }
+    }
+}
+
+fn get_all_tls13_handshake_payloads() -> Vec<HandshakeMessagePayload> {
+    vec![
         HandshakeMessagePayload {
             typ: HandshakeType::HelloRequest,
             payload: HandshakePayload::HelloRequest,
@@ -876,6 +1049,11 @@ fn can_roundtrip_all_tls13_handshake_payloads() {
         HandshakeMessagePayload {
             typ: HandshakeType::CertificateRequest,
             payload: HandshakePayload::CertificateRequestTLS13(get_sample_certificaterequestpayloadtls13()),
+        },
+        HandshakeMessagePayload {
+            typ: HandshakeType::CertificateVerify,
+            payload: HandshakePayload::CertificateVerify(DigitallySignedStruct::new(SignatureScheme::ECDSA_NISTP256_SHA256,
+                                                                                    vec![ 1, 2, 3 ]))
         },
         HandshakeMessagePayload {
             typ: HandshakeType::ServerHelloDone,
@@ -913,9 +1091,12 @@ fn can_roundtrip_all_tls13_handshake_payloads() {
             typ: HandshakeType::Unknown(99),
             payload: HandshakePayload::Unknown(Payload(vec![ 1, 2, 3 ])),
         },
-    ];
+    ]
+}
 
-    for ref hm in hms.iter() {
+#[test]
+fn can_roundtrip_all_tls13_handshake_payloads() {
+    for ref hm in get_all_tls13_handshake_payloads().iter() {
         println!("{:?}", hm.typ);
         let bytes = hm.get_encoding();
         let mut rd = Reader::init(&bytes);
@@ -928,4 +1109,79 @@ fn can_roundtrip_all_tls13_handshake_payloads() {
         println!("{:?}", hm);
         println!("{:?}", other);
     }
+}
+
+fn put_u24(u: u32, b: &mut [u8]) {
+    b[0] = (u >> 16) as u8;
+    b[1] = (u >> 8) as u8;
+    b[2] = u as u8;
+}
+
+#[test]
+fn can_detect_truncation_of_all_tls13_handshake_payloads() {
+    for hm in get_all_tls13_handshake_payloads().iter() {
+        let mut enc = hm.get_encoding();
+        println!("test {:?} enc {:?}", hm, enc);
+
+        // outer truncation
+        for l in 0..enc.len() {
+            assert!(HandshakeMessagePayload::read_bytes(&enc[..l]).is_none())
+        }
+
+        // inner truncation
+        for l in 0..enc.len()-4 {
+            put_u24(l as u32, &mut enc[1..]);
+            println!("  check len {:?} enc {:?}", l, enc);
+
+            match (hm.typ, l) {
+                (HandshakeType::ClientHello, 41) |
+                    (HandshakeType::ServerHello, 38) |
+                    (HandshakeType::ServerKeyExchange, _) |
+                    (HandshakeType::ClientKeyExchange, _) |
+                    (HandshakeType::Finished, _) |
+                    (HandshakeType::Unknown(_), _) => continue,
+                _ => {}
+            };
+
+            assert!(HandshakeMessagePayload::read_version(&mut Reader::init(&enc), ProtocolVersion::TLSv1_3).is_none());
+        }
+    }
+}
+
+#[test]
+fn cannot_read_messagehash_from_network() {
+    let mh = HandshakeMessagePayload {
+        typ: HandshakeType::MessageHash,
+        payload: HandshakePayload::MessageHash(Payload::new(vec![ 1, 2, 3 ])),
+    };
+    println!("mh {:?}", mh);
+    let enc = mh.get_encoding();
+    assert!(HandshakeMessagePayload::read_bytes(&enc).is_none());
+}
+
+#[test]
+fn cannot_decode_huge_certificate() {
+    let mut buf = [ 0u8; 65 * 1024 ];
+    // exactly 64KB decodes fine
+    buf[0] = 0x0b;
+    buf[1] = 0x01;
+    buf[2] = 0x00;
+    buf[3] = 0x03;
+    buf[4] = 0x01;
+    buf[5] = 0x00;
+    buf[6] = 0x00;
+    buf[7] = 0x00;
+    buf[8] = 0xff;
+    buf[9] = 0xfd;
+    HandshakeMessagePayload::read_bytes(&buf)
+        .unwrap();
+
+    // however 64KB + 1 byte does not
+    buf[1] = 0x01;
+    buf[2] = 0x00;
+    buf[3] = 0x04;
+    buf[4] = 0x01;
+    buf[5] = 0x00;
+    buf[6] = 0x01;
+    assert!(HandshakeMessagePayload::read_bytes(&buf).is_none());
 }

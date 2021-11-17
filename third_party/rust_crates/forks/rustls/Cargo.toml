@@ -44,7 +44,7 @@ name = "benchmarks"
 path = "tests/benchmarks.rs"
 harness = false
 [dependencies.base64]
-version = "0.11"
+version = "0.12.3"
 
 [dependencies.log]
 version = "0.4.4"
@@ -67,11 +67,8 @@ version = "0.7.1"
 [dev-dependencies.log]
 version = "0.4.4"
 
-[dev-dependencies.tempfile]
-version = "3.0"
-
 [dev-dependencies.webpki-roots]
-version = "0.19.0"
+version = "0.20"
 
 [features]
 dangerous_configuration = []

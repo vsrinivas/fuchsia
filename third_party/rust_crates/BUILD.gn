@@ -1607,10 +1607,10 @@ rust_library("backtrace-sys-v0_1_37") {
   ]
 }
 
-rust_library("base64-v0_11_0") {
+rust_library("base64-v0_12_3") {
   crate_name = "base64"
-  crate_root = "//third_party/rust_crates/vendor/base64-0.11.0/src/lib.rs"
-  output_name = "base64-ba233daa82312979"
+  crate_root = "//third_party/rust_crates/vendor/base64-0.12.3/src/lib.rs"
+  output_name = "base64-65089d30c59c7393"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -1623,8 +1623,8 @@ rust_library("base64-v0_11_0") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=ba233daa82312979",
-    "-Cextra-filename=-ba233daa82312979",
+    "-Cmetadata=65089d30c59c7393",
+    "-Cextra-filename=-65089d30c59c7393",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
@@ -8721,7 +8721,7 @@ rust_library("rustls-v0_17_0") {
   ]
 
   deps = []
-  deps += [ ":base64-v0_11_0" ]
+  deps += [ ":base64-v0_12_3" ]
   deps += [ ":log-v0_4_11" ]
   deps += [ ":ring-v0_16_12" ]
   deps += [ ":sct-v0_6_0" ]

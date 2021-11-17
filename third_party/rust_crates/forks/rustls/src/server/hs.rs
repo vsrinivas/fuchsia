@@ -18,13 +18,11 @@ use crate::msgs::persist;
 use crate::session::SessionSecrets;
 use crate::server::{ServerSessionImpl, ServerConfig, ClientHello};
 use crate::suites;
-use crate::verify;
 use crate::rand;
 use crate::sign;
 #[cfg(feature = "logging")]
 use crate::log::{trace, debug};
 use crate::error::TLSError;
-use crate::handshake::check_handshake_message;
 use webpki;
 #[cfg(feature = "quic")]
 use crate::session::Protocol;
@@ -32,24 +30,10 @@ use crate::session::Protocol;
 use crate::server::common::{HandshakeDetails, ServerKXDetails};
 use crate::server::{tls12, tls13};
 
-macro_rules! extract_handshake(
-  ( $m:expr, $t:path ) => (
-    match $m.payload {
-      MessagePayload::Handshake(ref hsp) => match hsp.payload {
-        $t(ref hm) => Some(hm),
-        _ => None
-      },
-      _ => None
-    }
-  )
-);
-
-pub type CheckResult = Result<(), TLSError>;
 pub type NextState = Box<dyn State + Send + Sync>;
 pub type NextStateOrError = Result<NextState, TLSError>;
 
 pub trait State {
-    fn check_message(&self, m: &Message) -> CheckResult;
     fn handle(self: Box<Self>, sess: &mut ServerSessionImpl, m: Message) -> NextStateOrError;
 
     fn export_keying_material(&self,
@@ -125,7 +109,8 @@ fn same_dns_name_or_both_none(a: Option<&webpki::DNSName>,
 // which is illegal.  Not mentioned in RFC.
 pub fn check_aligned_handshake(sess: &mut ServerSessionImpl) -> Result<(), TLSError> {
     if !sess.common.handshake_joiner.is_empty() {
-        Err(illegal_param(sess, "keys changed with pending hs fragment"))
+        sess.common.send_fatal_alert(AlertDescription::UnexpectedMessage);
+        Err(TLSError::PeerMisbehavedError("key epoch or handshake flight with pending fragment".to_string()))
     } else {
         Ok(())
     }
@@ -464,11 +449,13 @@ impl ExpectClientHello {
     }
 
     fn emit_certificate_req(&mut self, sess: &mut ServerSessionImpl) -> Result<bool, TLSError> {
-        let client_auth = &sess.config.verifier;
+        let client_auth = sess.config.get_verifier();
 
         if !client_auth.offer_client_auth() {
             return Ok(false);
         }
+
+        let verify_schemes = client_auth.supported_verify_schemes();
 
         let names = client_auth.client_auth_root_subjects(sess.get_sni())
             .ok_or_else(|| {
@@ -480,7 +467,7 @@ impl ExpectClientHello {
         let cr = CertificateRequestPayload {
             certtypes: vec![ ClientCertificateType::RSASign,
                          ClientCertificateType::ECDSASign ],
-            sigschemes: verify::supported_verify_schemes().to_vec(),
+            sigschemes: verify_schemes,
             canames: names,
         };
 
@@ -556,12 +543,8 @@ impl ExpectClientHello {
 }
 
 impl State for ExpectClientHello {
-    fn check_message(&self, m: &Message) -> CheckResult {
-        check_handshake_message(m, &[HandshakeType::ClientHello])
-    }
-
     fn handle(mut self: Box<Self>, sess: &mut ServerSessionImpl, m: Message) -> NextStateOrError {
-        let client_hello = extract_handshake!(m, HandshakePayload::ClientHello).unwrap();
+        let client_hello = require_handshake_msg!(m, HandshakeType::ClientHello, HandshakePayload::ClientHello)?;
         let tls13_enabled = sess.config.supports_version(ProtocolVersion::TLSv1_3);
         let tls12_enabled = sess.config.supports_version(ProtocolVersion::TLSv1_2);
         trace!("we got a clienthello {:?}", client_hello);
@@ -575,6 +558,9 @@ impl State for ExpectClientHello {
         if client_hello.has_duplicate_extension() {
             return Err(decode_error(sess, "client sent duplicate extensions"));
         }
+
+        // No handshake messages should follow this one in this flight.
+        check_aligned_handshake(sess)?;
 
         // Are we doing TLS1.3?
         let maybe_versions_ext = client_hello.get_versions_extension();
@@ -615,6 +601,11 @@ impl State for ExpectClientHello {
             },
             None => None,
         };
+
+        if !self.done_retry {
+            // save only the first SNI
+            save_sni(sess, sni.clone());
+        }
 
         // We communicate to the upper layer what kind of key they should choose
         // via the sigschemes value.  Clients tend to treat this extension
@@ -688,11 +679,10 @@ impl State for ExpectClientHello {
 
         if sess.common.is_tls13() {
             return self.into_complete_tls13_client_hello_handling()
-                .handle_client_hello(sess, sni, certkey, &m);
+                .handle_client_hello(sess, certkey, &m);
         }
 
         // -- TLS1.2 only from hereon in --
-        save_sni(sess, sni.clone());
         self.handshake.transcript.add_message(&m);
 
         if client_hello.ems_support_offered() {

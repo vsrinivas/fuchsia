@@ -6,7 +6,6 @@ use crate::msgs::handshake::{HandshakePayload, HandshakeMessagePayload};
 use crate::msgs::handshake::DecomposedSignatureScheme;
 use crate::msgs::handshake::ServerKeyExchangePayload;
 use crate::msgs::handshake::DigitallySignedStruct;
-use crate::msgs::enums::ClientCertificateType;
 use crate::msgs::codec::Codec;
 use crate::msgs::persist;
 use crate::msgs::ccs::ChangeCipherSpecPayload;
@@ -16,9 +15,9 @@ use crate::suites;
 use crate::verify;
 use crate::ticketer;
 #[cfg(feature = "logging")]
-use crate::log::{debug, trace, warn};
+use crate::log::{debug, trace};
 use crate::error::TLSError;
-use crate::handshake::{check_message, check_handshake_message};
+use crate::check::check_message;
 
 use crate::client::common::{ServerCertDetails, ServerKXDetails, HandshakeDetails};
 use crate::client::common::{ReceivedTicketDetails, ClientAuthDetails};
@@ -53,12 +52,8 @@ impl ExpectCertificate {
 }
 
 impl hs::State for ExpectCertificate {
-    fn check_message(&self, m: &Message) -> Result<(), TLSError> {
-        check_handshake_message(m, &[HandshakeType::Certificate])
-    }
-
     fn handle(mut self: Box<Self>, _sess: &mut ClientSessionImpl, m: Message) -> hs::NextStateOrError {
-        let cert_chain = extract_handshake!(m, HandshakePayload::Certificate).unwrap();
+        let cert_chain = require_handshake_msg!(m, HandshakeType::Certificate, HandshakePayload::Certificate)?;
         self.handshake.transcript.add_message(&m);
 
         self.server_cert.cert_chain = cert_chain.clone();
@@ -88,16 +83,12 @@ impl ExpectCertificateStatus {
 }
 
 impl hs::State for ExpectCertificateStatus {
-    fn check_message(&self, m: &Message) -> Result<(), TLSError> {
-        check_handshake_message(m, &[HandshakeType::CertificateStatus])
-    }
-
     fn handle(mut self: Box<Self>, _sess: &mut ClientSessionImpl, m: Message) -> hs::NextStateOrError {
         self.handshake.transcript.add_message(&m);
-        let mut status = extract_handshake_mut!(m, HandshakePayload::CertificateStatus).unwrap();
+        let mut status = require_handshake_msg_mut!(m, HandshakeType::CertificateStatus, HandshakePayload::CertificateStatus)?;
 
         self.server_cert.ocsp_response = status.take_ocsp_response();
-        debug!("Server stapled OCSP response is {:?}", self.server_cert.ocsp_response);
+        trace!("Server stapled OCSP response is {:?}", self.server_cert.ocsp_response);
         Ok(self.into_expect_server_kx())
     }
 }
@@ -127,13 +118,10 @@ impl ExpectCertificateStatusOrServerKX {
 }
 
 impl hs::State for ExpectCertificateStatusOrServerKX {
-    fn check_message(&self, m: &Message) -> Result<(), TLSError> {
-        check_handshake_message(m,
-                                &[HandshakeType::ServerKeyExchange,
-                                  HandshakeType::CertificateStatus])
-    }
-
     fn handle(self: Box<Self>, sess: &mut ClientSessionImpl, m: Message) -> hs::NextStateOrError {
+        check_message(&m,
+                      &[ContentType::Handshake],
+                      &[HandshakeType::ServerKeyExchange, HandshakeType::CertificateStatus])?;
         if m.is_handshake_type(HandshakeType::ServerKeyExchange) {
             self.into_expect_server_kx().handle(sess, m)
         } else {
@@ -160,12 +148,8 @@ impl ExpectServerKX {
 }
 
 impl hs::State for ExpectServerKX {
-    fn check_message(&self, m: &Message) -> Result<(), TLSError> {
-        check_handshake_message(m, &[HandshakeType::ServerKeyExchange])
-    }
-
     fn handle(mut self: Box<Self>, sess: &mut ClientSessionImpl, m: Message) -> hs::NextStateOrError {
-        let opaque_kx = extract_handshake!(m, HandshakePayload::ServerKeyExchange).unwrap();
+        let opaque_kx = require_handshake_msg!(m, HandshakeType::ServerKeyExchange, HandshakePayload::ServerKeyExchange)?;
         let maybe_decoded_kx = opaque_kx.unwrap_given_kxa(&sess.common.get_suite_assert().kx);
         self.handshake.transcript.add_message(&m);
 
@@ -313,12 +297,8 @@ impl ExpectCertificateRequest {
 }
 
 impl hs::State for ExpectCertificateRequest {
-    fn check_message(&self, m: &Message) -> Result<(), TLSError> {
-        check_handshake_message(m, &[HandshakeType::CertificateRequest])
-    }
-
     fn handle(mut self: Box<Self>, sess: &mut ClientSessionImpl, m: Message) -> hs::NextStateOrError {
-        let certreq = extract_handshake!(m, HandshakePayload::CertificateRequest).unwrap();
+        let certreq = require_handshake_msg!(m, HandshakeType::CertificateRequest, HandshakePayload::CertificateRequest)?;
         self.handshake.transcript.add_message(&m);
         debug!("Got CertificateRequest {:?}", certreq);
 
@@ -326,13 +306,9 @@ impl hs::State for ExpectCertificateRequest {
 
         // The RFC jovially describes the design here as 'somewhat complicated'
         // and 'somewhat underspecified'.  So thanks for that.
-
-        // We only support RSA signing at the moment.  If you don't support that,
-        // we're not doing client auth.
-        if !certreq.certtypes.contains(&ClientCertificateType::RSASign) {
-            warn!("Server asked for client auth but without RSASign");
-            return Ok(self.into_expect_server_done(client_auth));
-        }
+        //
+        // We ignore certreq.certtypes as a result, since the information it contains
+        // is entirely duplicated in certreq.sigschemes.
 
         let canames = certreq.canames
             .iter()
@@ -342,9 +318,12 @@ impl hs::State for ExpectCertificateRequest {
             sess.config.client_auth_cert_resolver.resolve(&canames, &certreq.sigschemes);
 
         if let Some(mut certkey) = maybe_certkey {
-            debug!("Attempting client auth");
             let maybe_signer = certkey.key.choose_scheme(&certreq.sigschemes);
-            client_auth.cert = Some(certkey.take_cert());
+
+            if let Some(_) = &maybe_signer {
+                debug!("Attempting client auth");
+                client_auth.cert = Some(certkey.take_cert());
+            }
             client_auth.signer = maybe_signer;
         } else {
             debug!("Client auth requested but no cert/sigscheme available");
@@ -383,14 +362,8 @@ impl ExpectServerDoneOrCertReq {
 }
 
 impl hs::State for ExpectServerDoneOrCertReq {
-    fn check_message(&self, m: &Message) -> Result<(), TLSError> {
-        check_handshake_message(m,
-                                &[HandshakeType::CertificateRequest,
-                                  HandshakeType::ServerHelloDone])
-    }
-
     fn handle(mut self: Box<Self>, sess: &mut ClientSessionImpl, m: Message) -> hs::NextStateOrError {
-        if extract_handshake!(m, HandshakePayload::CertificateRequest).is_some() {
+        if require_handshake_msg!(m, HandshakeType::CertificateRequest, HandshakePayload::CertificateRequest).is_ok() {
             self.into_expect_certificate_req().handle(sess, m)
         } else {
             self.handshake.transcript.abandon_client_auth();
@@ -438,15 +411,14 @@ impl ExpectServerDone {
 }
 
 impl hs::State for ExpectServerDone {
-    fn check_message(&self, m: &Message) -> Result<(), TLSError> {
-        check_handshake_message(m, &[HandshakeType::ServerHelloDone])
-    }
-
     fn handle(self: Box<Self>, sess: &mut ClientSessionImpl, m: Message) -> hs::NextStateOrError {
         let mut st = *self;
+        check_message(&m, &[ContentType::Handshake], &[HandshakeType::ServerHelloDone])?;
         st.handshake.transcript.add_message(&m);
 
-        debug!("Server cert is {:?}", st.server_cert.cert_chain);
+        hs::check_aligned_handshake(sess)?;
+
+        trace!("Server cert is {:?}", st.server_cert.cert_chain);
         debug!("Server DNS name is {:?}", st.handshake.dns_name);
 
         // 1. Verify the cert chain.
@@ -496,16 +468,18 @@ impl hs::State for ExpectServerDone {
             // Check the signature is compatible with the ciphersuite.
             let sig = &st.server_kx.kx_sig;
             let scs = sess.common.get_suite_assert();
-            if scs.sign != sig.scheme.sign() {
+            if !scs.usable_for_sigalg(sig.scheme.sign()) {
                 let error_message =
                     format!("peer signed kx with wrong algorithm (got {:?} expect {:?})",
                                       sig.scheme.sign(), scs.sign);
                 return Err(TLSError::PeerMisbehavedError(error_message));
             }
 
-            verify::verify_signed_struct(&message,
-                                         &st.server_cert.cert_chain[0],
-                                         sig)
+            sess.config
+                .get_verifier()
+                .verify_tls12_signature(&message,
+                                        &st.server_cert.cert_chain[0],
+                                        sig)
                 .map_err(|err| hs::send_cert_error_alert(sess, err))?
         };
         sess.server_cert_chain = st.server_cert.take_chain();
@@ -592,20 +566,11 @@ impl ExpectCCS {
 }
 
 impl hs::State for ExpectCCS {
-    fn check_message(&self, m: &Message) -> Result<(), TLSError> {
-        check_message(m, &[ContentType::ChangeCipherSpec], &[])
-    }
-
-    fn handle(self: Box<Self>, sess: &mut ClientSessionImpl, _m: Message) -> hs::NextStateOrError {
+    fn handle(self: Box<Self>, sess: &mut ClientSessionImpl, m: Message) -> hs::NextStateOrError {
+        check_message(&m, &[ContentType::ChangeCipherSpec], &[])?;
         // CCS should not be received interleaved with fragmented handshake-level
         // message.
-        if !sess.common.handshake_joiner.is_empty() {
-            warn!("CCS received interleaved with fragmented handshake");
-            return Err(TLSError::InappropriateMessage {
-                expect_types: vec![ ContentType::Handshake ],
-                got_type: ContentType::ChangeCipherSpec,
-            });
-        }
+        hs::check_aligned_handshake(sess)?;
 
         // nb. msgs layer validates trivial contents of CCS
         sess.common
@@ -638,14 +603,10 @@ impl ExpectNewTicket {
 }
 
 impl hs::State for ExpectNewTicket {
-    fn check_message(&self, m: &Message) -> Result<(), TLSError> {
-        check_handshake_message(m, &[HandshakeType::NewSessionTicket])
-    }
-
     fn handle(mut self: Box<Self>, _sess: &mut ClientSessionImpl, m: Message) -> hs::NextStateOrError {
         self.handshake.transcript.add_message(&m);
 
-        let nst = extract_handshake_mut!(m, HandshakePayload::NewSessionTicket).unwrap();
+        let nst = require_handshake_msg_mut!(m, HandshakeType::NewSessionTicket, HandshakePayload::NewSessionTicket)?;
         let recvd = ReceivedTicketDetails::from(nst.ticket.0, nst.lifetime_hint);
         Ok(self.into_expect_ccs(recvd))
     }
@@ -716,13 +677,11 @@ impl ExpectFinished {
 }
 
 impl hs::State for ExpectFinished {
-    fn check_message(&self, m: &Message) -> Result<(), TLSError> {
-        check_handshake_message(m, &[HandshakeType::Finished])
-    }
-
     fn handle(self: Box<Self>, sess: &mut ClientSessionImpl, m: Message) -> hs::NextStateOrError {
         let mut st = *self;
-        let finished = extract_handshake!(m, HandshakePayload::Finished).unwrap();
+        let finished = require_handshake_msg!(m, HandshakeType::Finished, HandshakePayload::Finished)?;
+
+        hs::check_aligned_handshake(sess)?;
 
         // Work out what verify_data we expect.
         let vh = st.handshake.transcript.get_current_hash();
@@ -768,11 +727,8 @@ struct ExpectTraffic {
 }
 
 impl hs::State for ExpectTraffic {
-    fn check_message(&self, m: &Message) -> Result<(), TLSError> {
-        check_message(m, &[ContentType::ApplicationData], &[])
-    }
-
     fn handle(self: Box<Self>, sess: &mut ClientSessionImpl, mut m: Message) -> hs::NextStateOrError {
+        check_message(&m, &[ContentType::ApplicationData], &[])?;
         sess.common.take_received_plaintext(m.take_opaque_payload().unwrap());
         Ok(self)
     }

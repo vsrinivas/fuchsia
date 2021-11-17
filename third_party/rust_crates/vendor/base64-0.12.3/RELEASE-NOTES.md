@@ -1,6 +1,19 @@
-# Next
+# 0.12.2
 
-- 0.11.0
+Add `BinHex` alphabet
+
+# 0.12.1
+
+- Add `Bcrypt` alphabet
+
+# 0.12.0
+
+- A `Read` implementation (`DecoderReader`) to let users transparently decoded data from a b64 input source
+- IMAP's modified b64 alphabet
+- Relaxed type restrictions to just `AsRef<[ut8]>` for main `encode*`/`decode*` functions
+- A minor performance improvement in encoding
+
+# 0.11.0
 - Minimum rust version 1.34.0
 - `no_std` is now supported via the two new features `alloc` and `std`.
 

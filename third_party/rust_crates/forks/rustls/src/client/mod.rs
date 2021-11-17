@@ -1,6 +1,6 @@
 use crate::msgs::enums::CipherSuite;
 use crate::msgs::enums::{AlertDescription, HandshakeType};
-use crate::session::{Session, SessionCommon};
+use crate::session::{Session, SessionCommon, MiddleboxCCS};
 use crate::keylog::{KeyLog, NoKeyLog};
 use crate::suites::{SupportedCipherSuite, ALL_CIPHERSUITES};
 use crate::msgs::handshake::CertificatePayload;
@@ -13,12 +13,11 @@ use crate::anchors;
 use crate::sign;
 use crate::error::TLSError;
 use crate::key;
-use crate::vecbuf::WriteV;
 #[cfg(feature = "logging")]
 use crate::log::trace;
 
 use std::sync::Arc;
-use std::io;
+use std::io::{self, IoSlice};
 use std::fmt;
 use std::mem;
 
@@ -149,8 +148,17 @@ impl ClientConfig {
     /// The default session persistence provider stores up to 32
     /// items in memory.
     pub fn new() -> ClientConfig {
+        ClientConfig::with_ciphersuites(&ALL_CIPHERSUITES)
+    }
+
+    /// Make a `ClientConfig` with a custom set of ciphersuites,
+    /// no root certificates, no ALPN protocols, and no client auth.
+    ///
+    /// The default session persistence provider stores up to 32
+    /// items in memory.
+    pub fn with_ciphersuites(ciphersuites: &[&'static SupportedCipherSuite]) -> ClientConfig {
         ClientConfig {
-            ciphersuites: ALL_CIPHERSUITES.to_vec(),
+            ciphersuites: ciphersuites.to_vec(),
             root_store: anchors::RootCertStore::empty(),
             alpn_protocols: Vec::new(),
             session_persistence: handy::ClientSessionMemoryCache::new(32),
@@ -372,7 +380,7 @@ pub struct ClientSessionImpl {
     pub alpn_protocol: Option<Vec<u8>>,
     pub common: SessionCommon,
     pub error: Option<TLSError>,
-    pub state: Option<Box<dyn hs::State + Send + Sync>>,
+    pub state: Option<hs::NextState>,
     pub server_cert_chain: CertificatePayload,
     pub early_data: EarlyData,
     pub resumption_ciphersuite: Option<&'static SupportedCipherSuite>,
@@ -449,9 +457,7 @@ impl ClientSessionImpl {
 
     pub fn process_msg(&mut self, mut msg: Message) -> Result<(), TLSError> {
         // TLS1.3: drop CCS at any time during handshaking
-        if self.common.is_tls13()
-            && msg.is_content_type(ContentType::ChangeCipherSpec)
-            && self.is_handshaking() {
+        if let MiddleboxCCS::Drop = self.common.filter_tls13_ccs(&msg)? {
             trace!("Dropping CCS");
             return Ok(());
         }
@@ -496,13 +502,24 @@ impl ClientSessionImpl {
         Ok(())
     }
 
+    fn reject_renegotiation_attempt(&mut self) -> Result<(), TLSError> {
+        self.common.send_warning_alert(AlertDescription::NoRenegotiation);
+        Ok(())
+    }
+
     fn queue_unexpected_alert(&mut self) {
         self.common.send_fatal_alert(AlertDescription::UnexpectedMessage);
     }
 
-    fn reject_renegotiation_attempt(&mut self) -> Result<(), TLSError> {
-        self.common.send_warning_alert(AlertDescription::NoRenegotiation);
-        Ok(())
+    fn maybe_send_unexpected_alert(&mut self, rc: hs::NextStateOrError) -> hs::NextStateOrError {
+        match rc {
+            Err(TLSError::InappropriateMessage { .. }) |
+            Err(TLSError::InappropriateHandshakeMessage { .. }) => {
+                self.queue_unexpected_alert();
+            }
+            _ => {}
+        };
+        rc
     }
 
     /// Process `msg`.  First, we get the current state.  Then we ask what messages
@@ -518,13 +535,9 @@ impl ClientSessionImpl {
         }
 
         let state = self.state.take().unwrap();
-        state
-            .check_message(&msg)
-            .map_err(|err| {
-                self.queue_unexpected_alert();
-                err
-            })?;
-        self.state = Some(state.handle(self, msg)?);
+        let maybe_next_state = state.handle(self, msg);
+        let next_state = self.maybe_send_unexpected_alert(maybe_next_state)?;
+        self.state = Some(next_state);
 
         Ok(())
     }
@@ -666,10 +679,6 @@ impl Session for ClientSession {
         self.imp.common.write_tls(wr)
     }
 
-    fn writev_tls(&mut self, wr: &mut dyn WriteV) -> io::Result<usize> {
-        self.imp.common.writev_tls(wr)
-    }
-
     fn process_new_packets(&mut self) -> Result<(), TLSError> {
         self.imp.process_new_packets()
     }
@@ -720,8 +729,18 @@ impl Session for ClientSession {
 }
 
 impl io::Read for ClientSession {
-    /// Obtain plaintext data received from the peer over
-    /// this TLS connection.
+    /// Obtain plaintext data received from the peer over this TLS connection.
+    ///
+    /// If the peer closes the TLS session cleanly, this fails with an error of
+    /// kind ErrorKind::ConnectionAborted once all the pending data has been read.
+    /// No further data can be received on that connection, so the underlying TCP
+    /// connection should closed too.
+    ///
+    /// Note that support close notify varies in peer TLS libraries: many do not
+    /// support it and uncleanly close the TCP connection (this might be
+    /// vulnerable to truncation attacks depending on the application protocol).
+    /// This means applications using rustls must both handle ErrorKind::ConnectionAborted
+    /// from this function, *and* unexpected closure of the underlying TCP connection.
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         self.imp.common.read(buf)
     }
@@ -740,6 +759,14 @@ impl io::Write for ClientSession {
     /// cause excess memory usage.
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.imp.send_some_plaintext(buf)
+    }
+
+    fn write_vectored(&mut self, bufs: &[IoSlice<'_>]) -> io::Result<usize> {
+        let mut sz = 0;
+        for buf in bufs {
+            sz += self.imp.send_some_plaintext(buf)?;
+        }
+        Ok(sz)
     }
 
     fn flush(&mut self) -> io::Result<()> {

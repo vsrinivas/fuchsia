@@ -1,4 +1,4 @@
-use std::io::{Read, Write, Result};
+use std::io::{IoSlice, Read, Write, Result};
 use crate::session::Session;
 
 /// This type implements `io::Read` and `io::Write`, encapsulating
@@ -59,6 +59,19 @@ impl<'a, S, T> Write for Stream<'a, S, T> where S: 'a + Session, T: 'a + Read + 
         self.complete_prior_io()?;
 
         let len = self.sess.write(buf)?;
+
+        // Try to write the underlying transport here, but don't let
+        // any errors mask the fact we've consumed `len` bytes.
+        // Callers will learn of permanent errors on the next call.
+        let _ = self.sess.complete_io(self.sock);
+
+        Ok(len)
+    }
+
+    fn write_vectored(&mut self, bufs: &[IoSlice<'_>]) -> Result<usize> {
+        self.complete_prior_io()?;
+
+        let len = self.sess.write_vectored(bufs)?;
 
         // Try to write the underlying transport here, but don't let
         // any errors mask the fact we've consumed `len` bytes.
@@ -145,31 +158,16 @@ mod tests {
 
     #[test]
     fn stream_can_be_created_for_session_and_tcpstream() {
-        fn _foo<'a>(sess: &'a mut dyn Session, sock: &'a mut TcpStream) -> Stream<'a, dyn Session, TcpStream> {
-            Stream {
-                sess,
-                sock,
-            }
-        }
+        type _Test<'a> = Stream<'a, dyn Session, TcpStream>;
     }
 
     #[test]
     fn streamowned_can_be_created_for_client_and_tcpstream() {
-        fn _foo(sess: ClientSession, sock: TcpStream) -> StreamOwned<ClientSession, TcpStream> {
-            StreamOwned {
-                sess,
-                sock,
-            }
-        }
+        type _Test = StreamOwned<ClientSession, TcpStream>;
     }
 
     #[test]
     fn streamowned_can_be_created_for_server_and_tcpstream() {
-        fn _foo(sess: ServerSession, sock: TcpStream) -> StreamOwned<ServerSession, TcpStream> {
-            StreamOwned {
-                sess,
-                sock,
-            }
-        }
+        type _Test = StreamOwned<ServerSession, TcpStream>;
     }
 }

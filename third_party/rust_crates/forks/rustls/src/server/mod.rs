@@ -1,4 +1,4 @@
-use crate::session::{Session, SessionCommon};
+use crate::session::{Session, SessionCommon, MiddleboxCCS};
 use crate::keylog::{KeyLog, NoKeyLog};
 use crate::suites::{SupportedCipherSuite, ALL_CIPHERSUITES};
 use crate::msgs::enums::ContentType;
@@ -10,14 +10,13 @@ use crate::error::TLSError;
 use crate::sign;
 use crate::verify;
 use crate::key;
-use crate::vecbuf::WriteV;
 #[cfg(feature = "logging")]
 use crate::log::trace;
 
 use webpki;
 
 use std::sync::Arc;
-use std::io;
+use std::io::{self, IoSlice};
 use std::fmt;
 
 #[macro_use]
@@ -112,8 +111,9 @@ pub struct ClientHello<'a> {
 
 impl<'a> ClientHello<'a> {
     /// Creates a new ClientHello
-    fn new(server_name: Option<webpki::DNSNameRef<'a>>, sigschemes:  &'a [SignatureScheme],
-    alpn: Option<&'a[&'a[u8]]>)->Self {
+    fn new(server_name: Option<webpki::DNSNameRef<'a>>,
+           sigschemes:  &'a [SignatureScheme],
+           alpn: Option<&'a[&'a[u8]]>) -> Self {
         ClientHello {server_name, sigschemes, alpn}
     }
 
@@ -201,8 +201,26 @@ impl ServerConfig {
     /// default, requiring client authentication, requires additional
     /// configuration that we cannot provide reasonable defaults for.
     pub fn new(client_cert_verifier: Arc<dyn verify::ClientCertVerifier>) -> ServerConfig {
+        ServerConfig::with_ciphersuites(client_cert_verifier, &ALL_CIPHERSUITES)
+    }
+
+    /// Make a `ServerConfig` with a custom set of ciphersuites,
+    /// no keys/certificates, and no ALPN protocols.  Session resumption
+    /// is enabled by storing up to 256 recent sessions in memory. Tickets are
+    /// disabled.
+    ///
+    /// Publicly-available web servers on the internet generally don't do client
+    /// authentication; for this use case, `client_cert_verifier` should be a
+    /// `NoClientAuth`. Otherwise, use `AllowAnyAuthenticatedClient` or another
+    /// implementation to enforce client authentication.
+    ///
+    /// We don't provide a default for `client_cert_verifier` because the safest
+    /// default, requiring client authentication, requires additional
+    /// configuration that we cannot provide reasonable defaults for.
+    pub fn with_ciphersuites(client_cert_verifier: Arc<dyn verify::ClientCertVerifier>,
+                             ciphersuites: &[&'static SupportedCipherSuite]) -> ServerConfig {
         ServerConfig {
-            ciphersuites: ALL_CIPHERSUITES.to_vec(),
+            ciphersuites: ciphersuites.to_vec(),
             ignore_client_order: false,
             mtu: None,
             session_storage: handy::ServerSessionMemoryCache::new(256),
@@ -245,7 +263,7 @@ impl ServerConfig {
     /// disregarded.
     ///
     /// `cert_chain` is a vector of DER-encoded certificates.
-    /// `key_der` is a DER-encoded RSA or ECDSA private key.
+    /// `key_der` is a DER-encoded RSA, ECDSA, or Ed25519 private key.
     ///
     /// This function fails if `key_der` is invalid.
     pub fn set_single_cert(&mut self,
@@ -261,7 +279,7 @@ impl ServerConfig {
     /// connections, irrespective of things like SNI hostname.
     ///
     /// `cert_chain` is a vector of DER-encoded certificates.
-    /// `key_der` is a DER-encoded RSA or ECDSA private key.
+    /// `key_der` is a DER-encoded RSA, ECDSA, or Ed25519 private key.
     /// `ocsp` is a DER-encoded OCSP response.  Ignored if zero length.
     /// `scts` is an `SignedCertificateTimestampList` encoding (see RFC6962)
     /// and is ignored if empty.
@@ -359,9 +377,7 @@ impl ServerSessionImpl {
 
     pub fn process_msg(&mut self, mut msg: Message) -> Result<(), TLSError> {
         // TLS1.3: drop CCS at any time during handshaking
-        if self.common.is_tls13()
-            && msg.is_content_type(ContentType::ChangeCipherSpec)
-            && self.is_handshaking() {
+        if let MiddleboxCCS::Drop = self.common.filter_tls13_ccs(&msg)? {
             trace!("Dropping CCS");
             return Ok(());
         }
@@ -405,6 +421,17 @@ impl ServerSessionImpl {
         self.common.send_fatal_alert(AlertDescription::UnexpectedMessage);
     }
 
+    fn maybe_send_unexpected_alert(&mut self, rc: hs::NextStateOrError) -> hs::NextStateOrError {
+        match rc {
+            Err(TLSError::InappropriateMessage { .. }) |
+            Err(TLSError::InappropriateHandshakeMessage { .. }) => {
+                self.queue_unexpected_alert();
+            }
+            _ => {}
+        };
+        rc
+    }
+
     pub fn process_main_protocol(&mut self, msg: Message) -> Result<(), TLSError> {
         if self.common.traffic && !self.common.is_tls13() &&
            msg.is_handshake_type(HandshakeType::ClientHello) {
@@ -412,11 +439,10 @@ impl ServerSessionImpl {
             return Ok(());
         }
 
-        let st = self.state.take().unwrap();
-        st.check_message(&msg)
-            .map_err(|err| { self.queue_unexpected_alert(); err })?;
-
-        self.state = Some(st.handle(self, msg)?);
+        let state = self.state.take().unwrap();
+        let maybe_next_state = state.handle(self, msg);
+        let next_state = self.maybe_send_unexpected_alert(maybe_next_state)?;
+        self.state = Some(next_state);
 
         Ok(())
     }
@@ -576,10 +602,6 @@ impl Session for ServerSession {
         self.imp.common.write_tls(wr)
     }
 
-    fn writev_tls(&mut self, wr: &mut dyn WriteV) -> io::Result<usize> {
-        self.imp.common.writev_tls(wr)
-    }
-
     fn process_new_packets(&mut self) -> Result<(), TLSError> {
         self.imp.process_new_packets()
     }
@@ -629,8 +651,18 @@ impl Session for ServerSession {
 }
 
 impl io::Read for ServerSession {
-    /// Obtain plaintext data received from the peer over
-    /// this TLS connection.
+    /// Obtain plaintext data received from the peer over this TLS connection.
+    ///
+    /// If the peer closes the TLS session cleanly, this fails with an error of
+    /// kind ErrorKind::ConnectionAborted once all the pending data has been read.
+    /// No further data can be received on that connection, so the underlying TCP
+    /// connection should closed too.
+    ///
+    /// Note that support close notify varies in peer TLS libraries: many do not
+    /// support it and uncleanly close the TCP connection (this might be
+    /// vulnerable to truncation attacks depending on the application protocol).
+    /// This means applications using rustls must both handle ErrorKind::ConnectionAborted
+    /// from this function, *and* unexpected closure of the underlying TCP connection.
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         self.imp.common.read(buf)
     }
@@ -649,6 +681,14 @@ impl io::Write for ServerSession {
     /// cause excess memory usage.
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.imp.send_some_plaintext(buf)
+    }
+
+    fn write_vectored(&mut self, bufs: &[IoSlice<'_>]) -> io::Result<usize> {
+        let mut sz = 0;
+        for buf in bufs {
+            sz += self.imp.send_some_plaintext(buf)?;
+        }
+        Ok(sz)
     }
 
     fn flush(&mut self) -> io::Result<()> {

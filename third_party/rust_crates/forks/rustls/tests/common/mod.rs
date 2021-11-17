@@ -1,9 +1,5 @@
-use std::fs::{self, File};
-use std::str;
-use tempfile;
-
 use std::sync::Arc;
-use std::io::{self, Write};
+use std::io;
 
 use rustls;
 
@@ -18,7 +14,13 @@ use rustls::{RootCertStore, NoClientAuth, AllowAnyAuthenticatedClient};
 use rustls::internal::msgs::{codec::Codec, codec::Reader, message::Message};
 
 #[cfg(feature = "dangerous_configuration")]
-use rustls::{ClientCertVerified, ClientCertVerifier, DistinguishedNames};
+use rustls::{
+    ClientCertVerified,
+    ClientCertVerifier,
+    DistinguishedNames,
+    SignatureScheme,
+    WebPKIVerifier
+};
 
 use webpki;
 
@@ -40,20 +42,6 @@ macro_rules! embed_files {
                 )+
                 _ => panic!("unknown keytype {} with path {}", keytype, path),
             }
-        }
-
-        pub fn new_test_ca() -> tempfile::TempDir {
-            let dir = tempfile::TempDir::new().unwrap();
-
-            fs::create_dir(dir.path().join("ecdsa")).unwrap();
-            fs::create_dir(dir.path().join("rsa")).unwrap();
-
-            $(
-                let mut f = File::create(dir.path().join($keytype).join($path)).unwrap();
-                f.write($name).unwrap();
-            )+
-
-            dir
         }
     }
 }
@@ -77,6 +65,23 @@ embed_files! {
     (ECDSA_INTER_REQ, "ecdsa", "inter.req");
     (ECDSA_NISTP256_PEM, "ecdsa", "nistp256.pem");
     (ECDSA_NISTP384_PEM, "ecdsa", "nistp384.pem");
+
+    (EDDSA_CA_CERT, "eddsa", "ca.cert");
+    (EDDSA_CA_DER, "eddsa", "ca.der");
+    (EDDSA_CA_KEY, "eddsa", "ca.key");
+    (EDDSA_CLIENT_CERT, "eddsa", "client.cert");
+    (EDDSA_CLIENT_CHAIN, "eddsa", "client.chain");
+    (EDDSA_CLIENT_FULLCHAIN, "eddsa", "client.fullchain");
+    (EDDSA_CLIENT_KEY, "eddsa", "client.key");
+    (EDDSA_CLIENT_REQ, "eddsa", "client.req");
+    (EDDSA_END_CERT, "eddsa", "end.cert");
+    (EDDSA_END_CHAIN, "eddsa", "end.chain");
+    (EDDSA_END_FULLCHAIN, "eddsa", "end.fullchain");
+    (EDDSA_END_KEY, "eddsa", "end.key");
+    (EDDSA_END_REQ, "eddsa", "end.req");
+    (EDDSA_INTER_CERT, "eddsa", "inter.cert");
+    (EDDSA_INTER_KEY, "eddsa", "inter.key");
+    (EDDSA_INTER_REQ, "eddsa", "inter.req");
 
     (RSA_CA_CERT, "rsa", "ca.cert");
     (RSA_CA_DER, "rsa", "ca.der");
@@ -156,19 +161,25 @@ pub fn transfer_altered<F>(left: &mut dyn Session, filter: F, right: &mut dyn Se
     total
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum KeyType {
     RSA,
-    ECDSA
+    ECDSA,
+    ED25519,
 }
 
-pub static ALL_KEY_TYPES: [KeyType; 2] = [ KeyType::RSA, KeyType::ECDSA ];
+pub static ALL_KEY_TYPES: [KeyType; 3] = [
+    KeyType::RSA,
+    KeyType::ECDSA,
+    KeyType::ED25519,
+];
 
 impl KeyType {
     fn bytes_for(&self, part: &str) -> &'static [u8] {
         match self {
             KeyType::RSA => bytes_for("rsa", part),
             KeyType::ECDSA => bytes_for("ecdsa", part),
+            KeyType::ED25519 => bytes_for("eddsa", part),
         }
     }
 
@@ -304,6 +315,7 @@ pub struct MockClientVerifier {
     pub verified: fn() -> Result<ClientCertVerified, TLSError>,
     pub subjects: Option<DistinguishedNames>,
     pub mandatory: Option<bool>,
+    pub offered_schemes: Option<Vec<SignatureScheme>>,
 }
 
 #[cfg(feature = "dangerous_configuration")]
@@ -323,6 +335,14 @@ impl ClientCertVerifier for MockClientVerifier {
     fn verify_client_cert(&self, _presented_certs: &[Certificate], sni: Option<&webpki::DNSName>) -> Result<ClientCertVerified, TLSError> {
         assert!(sni.is_some());
         (self.verified)()
+    }
+
+    fn supported_verify_schemes(&self) -> Vec<SignatureScheme> {
+        if let Some(schemes) = &self.offered_schemes {
+            schemes.clone()
+        } else {
+            WebPKIVerifier::verification_schemes()
+        }
     }
 }
 
