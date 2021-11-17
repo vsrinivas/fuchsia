@@ -1538,3 +1538,59 @@ decode_failure("UnionInlinePadding_ThreePaddingByte_UpperByte_InvalidPadding") {
     },
     err = INVALID_PADDING_BYTE,
 }
+
+decode_failure("BadPaddedString_LowerByte") {
+    bindings_denylist = [dart, go],
+    type = StringWrapper,
+    bytes = {
+        v1, v2 = [
+            num(6):8,
+            repeat(0xff):8,
+            0x41, 0x42, 0x43, 0x44, 0x45, 0x46,
+            0xee, padding:1, // should be padding:2
+        ],
+    },
+    err = INVALID_PADDING_BYTE,
+}
+
+decode_failure("BadPaddedString_UpperByte") {
+    bindings_denylist = [dart, go],
+    type = StringWrapper,
+    bytes = {
+        v1, v2 = [
+            num(6):8,
+            repeat(0xff):8,
+            0x41, 0x42, 0x43, 0x44, 0x45, 0x46,
+            padding:1, 0xee, // should be padding:2
+        ],
+    },
+    err = INVALID_PADDING_BYTE,
+}
+
+decode_failure("BadPaddedVector_LowerByte") {
+    bindings_denylist = [dart, go],
+    type = VectorWrapper,
+    bytes = {
+        v1, v2 = [
+            num(6):8,
+            repeat(0xff):8,
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+            0xee, padding:1, // should be padding:2
+        ],
+    },
+    err = INVALID_PADDING_BYTE,
+}
+
+decode_failure("BadPaddedVector_UpperByte") {
+    bindings_denylist = [dart, go],
+    type = VectorWrapper,
+    bytes = {
+        v1, v2 = [
+            num(6):8,
+            repeat(0xff):8,
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+            padding:1, 0xee, // should be padding:2
+        ],
+    },
+    err = INVALID_PADDING_BYTE,
+}
