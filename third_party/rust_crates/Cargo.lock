@@ -221,12 +221,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "atom"
-version = "0.3.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c86699c3f02778ec07158376991c8f783dd1f2f95c579ffaf0738dc984b2fe2"
-
-[[package]]
 name = "atomic-waker"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1355,7 +1349,6 @@ dependencies = [
  "textwrap",
  "thiserror",
  "time",
- "timebomb",
  "tokio",
  "tokio-rustls",
  "toml",
@@ -2788,16 +2781,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pulse"
-version = "0.5.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "655612b6c8d96a8a02f331fe296cb4f925b68e87c1d195544675abca2d9b9af0"
-dependencies = [
- "atom",
- "time",
-]
-
-[[package]]
 name = "quick-error"
 version = "1.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3913,16 +3896,6 @@ dependencies = [
  "libc",
  "redox_syscall 0.1.51",
  "winapi",
-]
-
-[[package]]
-name = "timebomb"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f0886f4b637067027d8c9a038a9249d95648689d1a91009d9abb895625f883a"
-dependencies = [
- "pulse",
- "time",
 ]
 
 [[package]]

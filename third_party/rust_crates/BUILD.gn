@@ -814,10 +814,6 @@ if (current_os == "fuchsia") {
   }
 }
 
-group("timebomb") {
-  deps = [ ":timebomb-v0_1_2" ]
-}
-
 group("tokio") {
   deps = [ ":tokio-v0_2_21" ]
 }
@@ -1500,27 +1496,6 @@ rust_proc_macro("async-trait-v0_1_51") {
     "--edition=2018",
     "-Cmetadata=d25462a1cec8322c",
     "-Cextra-filename=-d25462a1cec8322c",
-  ]
-}
-
-rust_library("atom-v0_3_5") {
-  crate_name = "atom"
-  crate_root = "//third_party/rust_crates/vendor/atom/src/lib.rs"
-  output_name = "atom-e5d6d7aa13ea54d2"
-  configs -= [
-    "//build/config/rust:edition_2018",
-    "//build/config/rust:2018_idioms",
-  ]
-
-  deps = []
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=e5d6d7aa13ea54d2",
-    "-Cextra-filename=-e5d6d7aa13ea54d2",
   ]
 }
 
@@ -7459,30 +7434,6 @@ rust_library("pulldown-cmark-v0_6_0") {
   ]
 }
 
-rust_library("pulse-v0_5_3") {
-  crate_name = "pulse"
-  crate_root = "//third_party/rust_crates/vendor/pulse/src/lib.rs"
-  output_name = "pulse-c8d41d8ba488b402"
-  configs -= [
-    "//build/config/rust:edition_2018",
-    "//build/config/rust:2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":atom-v0_3_5" ]
-  deps += [ ":time-v0_1_42" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=c8d41d8ba488b402",
-    "-Cextra-filename=-c8d41d8ba488b402",
-    "--cfg=feature=\"default\"",
-  ]
-}
-
 rust_library("quick-error-v1_2_2") {
   crate_name = "quick_error"
   crate_root = "//third_party/rust_crates/vendor/quick-error-1.2.2/src/lib.rs"
@@ -10397,29 +10348,6 @@ rust_library("time-v0_1_42") {
   aliased_deps = {
     syscall = ":redox_syscall-v0_1_51"
   }
-}
-
-rust_library("timebomb-v0_1_2") {
-  crate_name = "timebomb"
-  crate_root = "//third_party/rust_crates/vendor/timebomb/src/lib.rs"
-  output_name = "timebomb-29a9884c96189d4e"
-  configs -= [
-    "//build/config/rust:edition_2018",
-    "//build/config/rust:2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":pulse-v0_5_3" ]
-  deps += [ ":time-v0_1_42" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=29a9884c96189d4e",
-    "-Cextra-filename=-29a9884c96189d4e",
-  ]
 }
 
 rust_library("tiny_http-v0_6_2") {
