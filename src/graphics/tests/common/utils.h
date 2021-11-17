@@ -41,6 +41,14 @@
     return err;                                                                                    \
   }
 
+enum class VulkanExtensionSupportState {
+  kNotSupported,
+  kSupportedInCore,
+  kSupportedAsExtensionOnly,
+};
+
+VulkanExtensionSupportState CheckVulkanTimelineSemaphoreSupport(uint32_t instance_api_version);
+
 //
 // DebugUtilsTestCallback will fail an EXPECT_TRUE() test if validation errors should
 // not be ignored and the message severity is of type ::eError.  It directs errors to stderr

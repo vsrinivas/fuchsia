@@ -153,13 +153,21 @@ bool VkReadbackTest::InitVulkan(uint32_t vk_api_version) {
   // set_device_info() during unique context construction.
   VulkanContext::Builder builder;
   vk::DeviceCreateInfo device_info = builder.DeviceInfo();
-  device_info.enabledExtensionCount = static_cast<uint32_t>(enabled_extension_names.size());
-  device_info.ppEnabledExtensionNames = enabled_extension_names.data();
 
   auto features = vk::PhysicalDeviceVulkan12Features().setTimelineSemaphore(true);
-  if (vk_api_version == VK_API_VERSION_1_2) {
-    device_info.setPNext(&features);
+  switch (CheckVulkanTimelineSemaphoreSupport(vk_api_version)) {
+    case VulkanExtensionSupportState::kSupportedInCore:
+      device_info.setPNext(&features);
+      break;
+    case VulkanExtensionSupportState::kSupportedAsExtensionOnly:
+      enabled_extension_names.push_back(VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME);
+      break;
+    case VulkanExtensionSupportState::kNotSupported:
+      break;
   }
+
+  device_info.enabledExtensionCount = static_cast<uint32_t>(enabled_extension_names.size());
+  device_info.ppEnabledExtensionNames = enabled_extension_names.data();
 
   builder.set_instance_info(instance_info).set_device_info(device_info);
 #ifdef __linux__

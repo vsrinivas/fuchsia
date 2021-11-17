@@ -11,6 +11,7 @@
 #include <gtest/gtest.h>
 #include <vulkan/vulkan.h>
 
+#include "src/graphics/tests/common/utils.h"
 #include "src/lib/fxl/test/test_settings.h"
 #include "vkreadback.h"
 
@@ -131,28 +132,14 @@ TEST(Vulkan, ReadbackLoopWithFenceWait) {
 
 TEST(Vulkan, ReadbackLoopWithTimelineWait) {
   VkReadbackTest test;
-  ASSERT_TRUE(test.Initialize(VK_API_VERSION_1_2));
 
-  {
-    auto properties = test.physical_device().getProperties();
-    // If device API version < 1.2, we should make sure that the device supports
-    // VK_KHR_timeline_semaphore extension.
-    if (properties.apiVersion < VK_API_VERSION_1_2) {
-      auto extension_rv = test.physical_device().enumerateDeviceExtensionProperties();
-      ASSERT_EQ(extension_rv.result, vk::Result::eSuccess);
-      auto extensions = extension_rv.value;
-      auto found_ext =
-          std::find_if(extensions.begin(), extensions.end(), [](const auto& extension) {
-            return strcmp(extension.extensionName.data(),
-                          VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME) == 0;
-          }) != extensions.end();
-
-      if (!found_ext) {
-        fprintf(stderr, "VK_KHR_timeline_semaphore extension not found. Test skipped.\n");
-        GTEST_SKIP();
-      }
-    }
+  if (CheckVulkanTimelineSemaphoreSupport(VK_API_VERSION_1_2) ==
+      VulkanExtensionSupportState::kNotSupported) {
+    fprintf(stderr, "Timeline semaphore feature not supported. Test skipped.\n");
+    GTEST_SKIP();
   }
+
+  ASSERT_TRUE(test.Initialize(VK_API_VERSION_1_2));
 
   {
     vk::PhysicalDeviceTimelineSemaphoreProperties timeline_properties{};
