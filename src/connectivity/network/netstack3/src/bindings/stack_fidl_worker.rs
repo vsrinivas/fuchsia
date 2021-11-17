@@ -9,7 +9,8 @@ use super::{
         IntoFidl, TryFromFidlWithContext as _, TryIntoCore as _, TryIntoFidl as _,
         TryIntoFidlWithContext as _,
     },
-    ContextExt as _, LockedStackContext, StackContext, StackDispatcher as _,
+    DeviceStatusNotifier, InterfaceControl as _, Lockable, LockableContext,
+    MutableDeviceState as _,
 };
 
 use fidl::prelude::*;
@@ -23,24 +24,30 @@ use log::{debug, error};
 use net_types::{ethernet::Mac, SpecifiedAddr};
 use netstack3_core::{
     add_ip_addr_subnet, add_route, del_device_route, del_ip_addr, get_all_ip_addr_subnets,
-    get_all_routes, initialize_device, EntryEither,
+    get_all_routes, initialize_device, Ctx, EntryEither,
 };
 
-pub(crate) struct StackFidlWorker<C: StackContext> {
+pub(crate) struct StackFidlWorker<C> {
     ctx: C,
 }
 
-struct LockedFidlWorker<'a, C: StackContext> {
-    ctx: LockedStackContext<'a, C>,
+struct LockedFidlWorker<'a, C: LockableContext> {
+    ctx: <C as Lockable<'a, Ctx<C::Dispatcher>>>::Guard,
     worker: &'a StackFidlWorker<C>,
 }
 
-impl<C: StackContext> StackFidlWorker<C> {
+impl<C: LockableContext> StackFidlWorker<C> {
     async fn lock_worker(&self) -> LockedFidlWorker<'_, C> {
         let ctx = self.ctx.lock().await;
         LockedFidlWorker { ctx, worker: self }
     }
+}
 
+impl<C> StackFidlWorker<C>
+where
+    C: ethernet_worker::EthernetWorkerContext,
+    C: Clone,
+{
     pub(crate) async fn serve(ctx: C, stream: StackRequestStream) -> Result<(), fidl::Error> {
         stream
             .try_fold(Self { ctx }, |worker, req| async {
@@ -158,7 +165,11 @@ impl<C: StackContext> StackFidlWorker<C> {
     }
 }
 
-impl<'a, C: StackContext> LockedFidlWorker<'a, C> {
+impl<'a, C> LockedFidlWorker<'a, C>
+where
+    C: ethernet_worker::EthernetWorkerContext,
+    C: Clone,
+{
     async fn fidl_add_ethernet_interface(
         mut self,
         topological_path: String,
@@ -217,9 +228,15 @@ impl<'a, C: StackContext> LockedFidlWorker<'a, C> {
             }
         }
     }
+}
 
+impl<'a, C> LockedFidlWorker<'a, C>
+where
+    C: LockableContext,
+    C::Dispatcher: AsMut<Devices>,
+{
     fn fidl_del_ethernet_interface(mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
-        match AsMut::<Devices>::as_mut(self.ctx.dispatcher_mut()).remove_device(id) {
+        match self.ctx.dispatcher_mut().as_mut().remove_device(id) {
             Some(_info) => {
                 // TODO(rheacock): ensure that the core client deletes all data
                 Ok(())
@@ -230,10 +247,16 @@ impl<'a, C: StackContext> LockedFidlWorker<'a, C> {
             }
         }
     }
+}
 
+impl<'a, C> LockedFidlWorker<'a, C>
+where
+    C: LockableContext,
+    C::Dispatcher: AsRef<Devices>,
+{
     fn fidl_list_interfaces(self) -> Vec<fidl_net_stack::InterfaceInfo> {
         let mut devices = Vec::new();
-        for device in AsRef::<Devices>::as_ref(self.ctx.dispatcher()).iter_devices() {
+        for device in self.ctx.dispatcher().as_ref().iter_devices() {
             let mut addresses = Vec::new();
             if let Some(core_id) = device.core_id() {
                 for addr in get_all_ip_addr_subnets(&self.ctx, core_id) {
@@ -276,7 +299,7 @@ impl<'a, C: StackContext> LockedFidlWorker<'a, C> {
         id: u64,
     ) -> Result<fidl_net_stack::InterfaceInfo, fidl_net_stack::Error> {
         let device =
-            self.ctx.dispatcher().get_device_info(id).ok_or(fidl_net_stack::Error::NotFound)?;
+            self.ctx.dispatcher().as_ref().get_device(id).ok_or(fidl_net_stack::Error::NotFound)?;
         let mut addresses = Vec::new();
         if let Some(core_id) = device.core_id() {
             for addr in get_all_ip_addr_subnets(&self.ctx, core_id) {
@@ -316,7 +339,7 @@ impl<'a, C: StackContext> LockedFidlWorker<'a, C> {
         addr: fidl_net::Subnet,
     ) -> Result<(), fidl_net_stack::Error> {
         let device_info =
-            self.ctx.dispatcher().get_device_info(id).ok_or(fidl_net_stack::Error::NotFound)?;
+            self.ctx.dispatcher().as_ref().get_device(id).ok_or(fidl_net_stack::Error::NotFound)?;
         // TODO(brunodalbo): We should probably allow adding static addresses
         // to interfaces that are not installed, return BadState for now
         let device_id = device_info.core_id().ok_or(fidl_net_stack::Error::BadState)?;
@@ -335,7 +358,7 @@ impl<'a, C: StackContext> LockedFidlWorker<'a, C> {
         addr: fidl_net::Subnet,
     ) -> Result<(), fidl_net_stack::Error> {
         let device_info =
-            self.ctx.dispatcher().get_device_info(id).ok_or(fidl_net_stack::Error::NotFound)?;
+            self.ctx.dispatcher().as_ref().get_device(id).ok_or(fidl_net_stack::Error::NotFound)?;
         // TODO(gongt): Since addresses can't be added to inactive interfaces
         // they can't be deleted either; return BadState for now.
         let device_id = device_info.core_id().ok_or(fidl_net_stack::Error::BadState)?;
@@ -366,7 +389,12 @@ impl<'a, C: StackContext> LockedFidlWorker<'a, C> {
         };
         add_route(&mut self.ctx, entry).map_err(IntoFidl::into_fidl)
     }
+}
 
+impl<'a, C> LockedFidlWorker<'a, C>
+where
+    C: LockableContext,
+{
     fn fidl_del_forwarding_entry(
         mut self,
         subnet: fidl_net::Subnet,
@@ -377,7 +405,14 @@ impl<'a, C: StackContext> LockedFidlWorker<'a, C> {
             Err(fidl_net_stack::Error::InvalidArgs)
         }
     }
+}
 
+impl<'a, C> LockedFidlWorker<'a, C>
+where
+    C: LockableContext,
+    C::Dispatcher: DeviceStatusNotifier,
+    C::Dispatcher: AsRef<Devices> + AsMut<Devices>,
+{
     fn fidl_enable_interface(mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
         self.ctx.update_device_state(id, |dev_info| dev_info.set_admin_enabled(true));
         self.ctx.enable_interface(id)

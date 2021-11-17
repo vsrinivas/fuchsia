@@ -19,9 +19,10 @@ use netstack3_core::{
     LocalAddressError, NetstackError, RemoteAddressError, SocketError, UdpSendError,
 };
 
-use crate::bindings::socket::udp::BindingsUdpContext;
-use crate::bindings::util::{IntoCore, IntoFidl};
-use crate::bindings::StackContext;
+use crate::bindings::{
+    util::{IntoCore as _, IntoFidl as _},
+    LockableContext,
+};
 
 // Socket constants defined in FDIO in
 // `//sdk/lib/fdio/private-socket.h`
@@ -34,42 +35,14 @@ const ZXSIO_SIGNAL_OUTGOING: zx::Signals = zx::Signals::USER_1;
 #[derive(Debug)]
 struct SocketWorkerProperties {}
 
-pub(crate) trait SocketStackDispatcher:
-    AsRef<udp::UdpSocketCollection>
-    + AsMut<udp::UdpSocketCollection>
-    + BindingsUdpContext<Ipv4>
-    + BindingsUdpContext<Ipv6>
-{
-}
-
-impl<T> SocketStackDispatcher for T where
-    T: AsRef<udp::UdpSocketCollection>
-        + AsMut<udp::UdpSocketCollection>
-        + BindingsUdpContext<Ipv4>
-        + BindingsUdpContext<Ipv6>
-{
-}
-
-pub(crate) trait SocketStackContext:
-    StackContext + udp::UdpStackContext<Ipv4> + udp::UdpStackContext<Ipv6>
-where
-    <Self as StackContext>::Dispatcher: SocketStackDispatcher,
-{
-}
-impl<T> SocketStackContext for T
-where
-    T: StackContext + udp::UdpStackContext<Ipv4> + udp::UdpStackContext<Ipv6>,
-    T::Dispatcher: SocketStackDispatcher,
-{
-}
-
 pub(crate) async fn serve<C>(
     ctx: C,
     stream: psocket::ProviderRequestStream,
 ) -> Result<(), fidl::Error>
 where
-    C: SocketStackContext,
-    C::Dispatcher: SocketStackDispatcher,
+    C: LockableContext,
+    C::Dispatcher: udp::UdpWorkerDispatcher,
+    C: Clone + Send + Sync + 'static,
 {
     stream
         .try_fold(ctx, |ctx, req| async {

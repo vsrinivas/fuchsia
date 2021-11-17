@@ -25,17 +25,18 @@ use log::{error, trace};
 use net_types::ip::{Ip, Ipv4, Ipv6};
 use netstack3_core::{
     connect_udp, get_udp_conn_info, get_udp_listener_info, listen_udp, remove_udp_conn,
-    remove_udp_listener, send_udp, send_udp_conn, send_udp_listener, BufferUdpContext, IdMap,
-    IdMapCollection, IpExt, UdpConnId, UdpConnInfo, UdpContext, UdpListenerId, UdpListenerInfo,
+    remove_udp_listener, send_udp, send_udp_conn, send_udp_listener, BufferUdpContext, Ctx,
+    EventDispatcher, IdMap, IdMapCollection, IpExt, UdpConnId, UdpConnInfo, UdpContext,
+    UdpListenerId, UdpListenerInfo,
 };
 use packet::{Buf, BufferMut};
 use std::collections::VecDeque;
 
-use crate::bindings::{BindingsDispatcher, LockedStackContext};
+use crate::bindings::{BindingsDispatcher, Lockable, LockableContext};
 
 use super::{
-    IntoErrno, IpSockAddrExt, SockAddr, SocketWorkerProperties, StackContext,
-    ZXSIO_SIGNAL_INCOMING, ZXSIO_SIGNAL_OUTGOING,
+    IntoErrno, IpSockAddrExt, SockAddr, SocketWorkerProperties, ZXSIO_SIGNAL_INCOMING,
+    ZXSIO_SIGNAL_OUTGOING,
 };
 
 /// Limits the number of messages that can be queued for an application to be
@@ -105,20 +106,6 @@ impl UdpSocketIpExt for Ipv6 {
     }
 }
 
-pub(crate) trait BindingsUdpContext<I: UdpSocketIpExt>:
-    UdpContext<I> + BufferUdpContext<I, Buf<Vec<u8>>> + for<'a> BufferUdpContext<I, Buf<&'a mut [u8]>>
-{
-}
-
-impl<
-        I: UdpSocketIpExt,
-        C: UdpContext<I>
-            + BufferUdpContext<I, Buf<Vec<u8>>>
-            + for<'a> BufferUdpContext<I, Buf<&'a mut [u8]>>,
-    > BindingsUdpContext<I> for C
-{
-}
-
 impl<I: UdpSocketIpExt> UdpContext<I> for BindingsDispatcher {}
 
 // NOTE(brunodalbo) we implement BufferUdpContext for EventLoopInner in this
@@ -157,7 +144,7 @@ impl<I: UdpSocketIpExt, B: BufferMut> BufferUdpContext<I, B> for BindingsDispatc
 }
 
 /// Worker that serves the fuchsia.posix.socket.Control FIDL.
-struct UdpSocketWorker<I: UdpSocketIpExt, C: StackContext> {
+struct UdpSocketWorker<I, C> {
     ctx: C,
     id: usize,
     rights: u32,
@@ -223,17 +210,15 @@ impl<I: Ip> SocketState<I> {
     }
 }
 
-pub(crate) trait UdpStackContext<I: UdpSocketIpExt>: StackContext
-where
-    <Self as StackContext>::Dispatcher: BindingsUdpContext<I>,
+pub(crate) trait UdpWorkerDispatcher:
+    RequestHandlerDispatcher<Ipv4> + RequestHandlerDispatcher<Ipv6>
 {
 }
 
-impl<T, I> UdpStackContext<I> for T
+impl<T> UdpWorkerDispatcher for T
 where
-    I: UdpSocketIpExt,
-    T: StackContext,
-    T::Dispatcher: BindingsUdpContext<I>,
+    T: RequestHandlerDispatcher<Ipv4>,
+    T: RequestHandlerDispatcher<Ipv6>,
 {
 }
 
@@ -245,11 +230,9 @@ pub(super) fn spawn_worker<C>(
     properties: SocketWorkerProperties,
 ) -> Result<(), Errno>
 where
-    C: UdpStackContext<Ipv4> + UdpStackContext<Ipv6>,
-    C::Dispatcher: AsRef<UdpSocketCollection>
-        + AsMut<UdpSocketCollection>
-        + BindingsUdpContext<Ipv4>
-        + BindingsUdpContext<Ipv6>,
+    C: LockableContext,
+    C::Dispatcher: UdpWorkerDispatcher,
+    C: Clone + Send + Sync + 'static,
 {
     match (domain, proto) {
         (psocket::Domain::Ipv4, psocket::DatagramSocketProtocol::Udp) => {
@@ -265,10 +248,11 @@ where
     }
 }
 
-impl<I: UdpSocketIpExt, C: UdpStackContext<I>> UdpSocketWorker<I, C>
+impl<I, C> UdpSocketWorker<I, C>
 where
-    <C as StackContext>::Dispatcher:
-        AsRef<UdpSocketCollection> + AsMut<UdpSocketCollection> + BindingsUdpContext<I>,
+    I: UdpSocketIpExt,
+    C: RequestHandlerContext<I>,
+    C: Clone + Send + Sync + 'static,
 {
     /// Starts servicing events from the provided event stream.
     fn spawn(
@@ -903,18 +887,61 @@ impl<I: UdpSocketIpExt> BindingData<I> {
     }
 }
 
-struct RequestHandler<'a, I: UdpSocketIpExt, C: StackContext> {
-    ctx: LockedStackContext<'a, C>,
+pub(crate) trait RequestHandlerDispatcher<I>:
+    EventDispatcher
+    + AsRef<UdpSocketCollection>
+    + AsMut<UdpSocketCollection>
+    + UdpContext<I>
+    + BufferUdpContext<I, Buf<Vec<u8>>>
+where
+    I: IpExt,
+{
+}
+
+impl<I, T> RequestHandlerDispatcher<I> for T
+where
+    I: IpExt,
+    T: EventDispatcher,
+    T: AsRef<UdpSocketCollection> + AsMut<UdpSocketCollection>,
+    T: UdpContext<I> + BufferUdpContext<I, Buf<Vec<u8>>>,
+{
+}
+
+struct RequestHandler<'a, I, C: LockableContext> {
+    ctx: <C as Lockable<'a, Ctx<C::Dispatcher>>>::Guard,
     binding_id: usize,
     rights: u32,
     _marker: PhantomData<I>,
 }
 
+// TODO(https://github.com/rust-lang/rust/issues/20671): Replace the duplicate associated type with
+// a where clause bounding the parent trait's associated type.
+//
+// OR
+//
+// TODO(https://github.com/rust-lang/rust/issues/52662): Replace the duplicate associated type with
+// a bound on the parent trait's associated type.
+trait RequestHandlerContext<I>:
+    LockableContext<Dispatcher = <Self as RequestHandlerContext<I>>::Dispatcher>
+where
+    I: IpExt,
+{
+    type Dispatcher: RequestHandlerDispatcher<I>;
+}
+
+impl<I, T> RequestHandlerContext<I> for T
+where
+    I: IpExt,
+    T: LockableContext,
+    T::Dispatcher: RequestHandlerDispatcher<I>,
+{
+    type Dispatcher = T::Dispatcher;
+}
+
 impl<'a, I, C> RequestHandler<'a, I, C>
 where
     I: UdpSocketIpExt,
-    C: UdpStackContext<I>,
-    C::Dispatcher: AsRef<UdpSocketCollection> + AsMut<UdpSocketCollection> + BindingsUdpContext<I>,
+    C: RequestHandlerContext<I>,
 {
     fn describe(&self) -> Option<fidl_fuchsia_io::NodeInfo> {
         self.get_state()

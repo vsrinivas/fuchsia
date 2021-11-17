@@ -35,7 +35,6 @@ use futures::channel::mpsc;
 use futures::{lock::Mutex, sink::SinkExt as _, FutureExt as _, StreamExt as _, TryStreamExt as _};
 use log::{debug, error, trace, warn};
 use net_types::ethernet::Mac;
-use net_types::ip::{Ipv4, Ipv6};
 use packet::{BufferMut, Serializer};
 use rand::rngs::OsRng;
 use util::ConversionContext;
@@ -53,54 +52,11 @@ use netstack3_core::{
     IpSockCreationError, StackStateBuilder, TimerId,
 };
 
-use crate::bindings::socket::udp::BindingsUdpContext;
-
-/// A shorthand definition for the rather gnarly type signature of the lock
-/// obtained by the [`Lockable`] trait bound on [`StackContext`] that provides a
-/// [`Ctx`].
-type LockedStackContext<'a, C> = <C as Lockable<'a, Ctx<<C as StackContext>::Dispatcher>>>::Guard;
-
-/// A StackContext that provides an asynchronous lock to a specified `Ctx` to be
-/// used in calls into core.
-// NOTE(brunodalbo): Currently StackContext only provides a cannonball lock on
-// the entire context that is provided to core. The pattern here is expected to
-// expand (possibly by submodules such as posix sockets). The vision is
-// that we reduce the time that the core context needs to be locked to a
-// minimum, until it eventually becomes slow path only.
-pub(crate) trait StackContext:
-    Send + Sync + 'static + Clone + for<'a> Lockable<'a, Ctx<<Self as StackContext>::Dispatcher>>
-{
-    /// The [`EventDispatcher`] used by this `StackContext`.
-    type Dispatcher: StackDispatcher;
+pub(crate) trait LockableContext: for<'a> Lockable<'a, Ctx<Self::Dispatcher>> {
+    type Dispatcher: EventDispatcher;
 }
 
-/// The dispatcher used by a [`StackContext`].
-///
-/// `StackDispatcher` has numerous trait bounds that allow a type implementing
-/// it to be `EventDispatcher` for core, as well as providing bindings-specific
-/// information for all submodules in this crate.
-pub(crate) trait StackDispatcher:
-    EventDispatcher
-    + for<'a> BufferIcmpContext<Ipv4, packet::Buf<&'a mut [u8]>>
-    + for<'a> BufferIcmpContext<Ipv6, packet::Buf<&'a mut [u8]>>
-    + for<'a> DeviceLayerEventDispatcher<packet::Buf<&'a mut [u8]>>
-    + BindingsUdpContext<Ipv4>
-    + BindingsUdpContext<Ipv6>
-    + ConversionContext
-    + Sync
-    + Send
-    + AsRef<Devices>
-    + AsMut<Devices>
-    + AsRef<timers::TimerDispatcher<TimerId>>
-    + AsMut<timers::TimerDispatcher<TimerId>>
-    + 'static
-{
-    /// Shorthand method to get a [`DeviceInfo`] from the device's bindings
-    /// identifier.
-    fn get_device_info(&self, id: u64) -> Option<&DeviceInfo> {
-        AsRef::<Devices>::as_ref(self).get_device(id)
-    }
-
+pub(crate) trait DeviceStatusNotifier {
     /// A notification that the state of the device with binding Id `id`
     /// changed.
     ///
@@ -112,8 +68,6 @@ pub(crate) trait StackDispatcher:
     fn device_status_changed(&mut self, id: u64);
 }
 
-/// The "real" implementation of [`StackDispatcher`].
-///
 /// `BindingsDispatcher` is the dispatcher used by [`Netstack`] and it
 /// implements the regular network stack operation, sending outgoing frames to
 /// the appropriate devices, and proxying calls to their appropriate submodules.
@@ -166,7 +120,7 @@ impl AsMut<timers::TimerDispatcher<TimerId>> for BindingsDispatcher {
     }
 }
 
-impl StackDispatcher for BindingsDispatcher {
+impl DeviceStatusNotifier for BindingsDispatcher {
     fn device_status_changed(&mut self, _id: u64) {
         // NOTE(brunodalbo) we may want to do more things here in the future,
         // for now this is only intercepted for testing
@@ -195,7 +149,9 @@ impl AsMut<UdpSocketCollection> for BindingsDispatcher {
 
 impl<D> timers::TimerHandler<TimerId> for Ctx<D>
 where
-    D: StackDispatcher,
+    D: EventDispatcher,
+    D: AsMut<timers::TimerDispatcher<TimerId>>,
+    D: Send + Sync + 'static,
 {
     fn handle_expired_timer(&mut self, timer: TimerId) {
         handle_timer(self, timer)
@@ -208,21 +164,24 @@ where
 
 impl<C> timers::TimerContext<TimerId> for C
 where
-    C: StackContext,
+    C: LockableContext,
+    C: Clone + Send + Sync + 'static,
+    C::Dispatcher: AsMut<timers::TimerDispatcher<TimerId>>,
+    C::Dispatcher: Send + Sync + 'static,
 {
     type Handler = Ctx<C::Dispatcher>;
 }
 
 impl<D> ConversionContext for D
 where
-    D: StackDispatcher,
+    D: AsRef<Devices>,
 {
     fn get_core_id(&self, binding_id: u64) -> Option<DeviceId> {
-        AsRef::<Devices>::as_ref(self).get_core_id(binding_id)
+        self.as_ref().get_core_id(binding_id)
     }
 
     fn get_binding_id(&self, core_id: DeviceId) -> Option<u64> {
-        AsRef::<Devices>::as_ref(self).get_binding_id(core_id)
+        self.as_ref().get_binding_id(core_id)
     }
 }
 
@@ -330,11 +289,26 @@ impl<I: IcmpIpExt, B: BufferMut> BufferIcmpContext<I, B> for BindingsDispatcher 
     }
 }
 
-/// Utility operations that can be performed on a locked `Ctx<D>`.
-trait ContextExt {
+trait MutableDeviceState {
     /// Invoke a function on the state associated with the device `id`.
     fn update_device_state<F: FnOnce(&mut DeviceInfo)>(&mut self, id: u64, f: F);
+}
 
+impl<D> MutableDeviceState for Ctx<D>
+where
+    D: EventDispatcher,
+    D: AsMut<Devices>,
+    D: DeviceStatusNotifier,
+{
+    fn update_device_state<F: FnOnce(&mut DeviceInfo)>(&mut self, id: u64, f: F) {
+        if let Some(device_info) = self.dispatcher_mut().as_mut().get_device_mut(id) {
+            f(device_info);
+            self.dispatcher_mut().device_status_changed(id)
+        }
+    }
+}
+
+trait InterfaceControl {
     /// Enables an interface, adding it to the core if it is not currently
     /// enabled.
     ///
@@ -349,19 +323,14 @@ trait ContextExt {
     fn disable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error>;
 }
 
-impl<D: StackDispatcher> ContextExt for Ctx<D> {
-    fn update_device_state<F: FnOnce(&mut DeviceInfo)>(&mut self, id: u64, f: F) {
-        if let Some(device_info) =
-            AsMut::<Devices>::as_mut(self.dispatcher_mut()).get_device_mut(id)
-        {
-            f(device_info);
-            self.dispatcher_mut().device_status_changed(id)
-        }
-    }
-
+impl<D> InterfaceControl for Ctx<D>
+where
+    D: EventDispatcher,
+    D: AsRef<Devices> + AsMut<Devices>,
+{
     fn enable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
         let (state, disp) = self.state_and_dispatcher();
-        let device = disp.get_device_info(id).ok_or(fidl_net_stack::Error::NotFound)?;
+        let device = disp.as_ref().get_device(id).ok_or(fidl_net_stack::Error::NotFound)?;
 
         if device.admin_enabled() && device.phy_up() {
             // TODO(rheacock, fxbug.dev/21135): Handle core and driver state in
@@ -371,7 +340,7 @@ impl<D: StackDispatcher> ContextExt for Ctx<D> {
             let generate_core_id = |info: &DeviceInfo| {
                 state.add_ethernet_device(Mac::new(info.mac().octets), info.mtu())
             };
-            match AsMut::<Devices>::as_mut(disp).activate_device(id, generate_core_id) {
+            match disp.as_mut().activate_device(id, generate_core_id) {
                 Ok(device_info) => {
                     // we can unwrap core_id here because activate_device just
                     // succeeded.
@@ -394,7 +363,7 @@ impl<D: StackDispatcher> ContextExt for Ctx<D> {
     }
 
     fn disable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
-        match AsMut::<Devices>::as_mut(self.dispatcher_mut()).deactivate_device(id) {
+        match self.dispatcher_mut().as_mut().deactivate_device(id) {
             Ok((core_id, device_info)) => {
                 // Sanity check that there is a reason that the device is
                 // disabled.
@@ -432,7 +401,7 @@ impl Clone for Netstack {
     }
 }
 
-impl StackContext for Netstack {
+impl LockableContext for Netstack {
     type Dispatcher = BindingsDispatcher;
 }
 

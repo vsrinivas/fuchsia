@@ -17,7 +17,7 @@ use fidl_fuchsia_netemul_network as net;
 use fidl_fuchsia_netemul_sandbox as sandbox;
 use fuchsia_async as fasync;
 use fuchsia_component::client;
-use futures::{lock::Mutex, Future};
+use futures::lock::Mutex;
 use matches::assert_matches;
 use net_types::{
     ethernet::Mac,
@@ -34,10 +34,10 @@ use packet::{Buf, BufferMut, Serializer};
 
 use crate::bindings::{
     context::Lockable,
-    devices::DeviceInfo,
+    devices::{DeviceInfo, Devices},
     socket::udp::UdpSocketIpExt,
     util::{ConversionContext as _, IntoFidl as _, TryFromFidlWithContext as _, TryIntoFidl as _},
-    BindingsDispatcher, LockedStackContext, RequestStreamExt as _, StackContext, StackDispatcher,
+    BindingsDispatcher, DeviceStatusNotifier, LockableContext, RequestStreamExt as _,
 };
 
 /// log::Log implementation that uses stdout.
@@ -90,9 +90,15 @@ impl TestDispatcher {
     fn new() -> Self {
         Self { disp: BindingsDispatcher::new(), status_changed_signal: None }
     }
+
+    /// Shorthand method to get a [`DeviceInfo`] from the device's bindings
+    /// identifier.
+    fn get_device_info(&self, id: u64) -> Option<&DeviceInfo> {
+        AsRef::<Devices>::as_ref(self).get_device(id)
+    }
 }
 
-impl StackDispatcher for TestDispatcher {
+impl DeviceStatusNotifier for TestDispatcher {
     fn device_status_changed(&mut self, id: u64) {
         if let Some(s) = self.status_changed_signal.take() {
             s.send(()).unwrap();
@@ -219,9 +225,6 @@ where
 }
 
 /// A netstack context for testing.
-/// `TestContext` replaces [`crate::bindings::Netstack`] for testing. It
-/// implements [`StackContext`] appropriately, using [`TestDispatcher`] as its
-/// Event Dispatcher to allow for special inspection for certain tests.
 pub(crate) struct TestContext {
     ctx: Arc<Mutex<Ctx<TestDispatcher>>>,
 }
@@ -246,7 +249,7 @@ impl<'a> Lockable<'a, Ctx<TestDispatcher>> for TestContext {
     }
 }
 
-impl StackContext for TestContext {
+impl LockableContext for TestContext {
     type Dispatcher = TestDispatcher;
 }
 
@@ -362,8 +365,8 @@ impl TestStack {
     }
 
     /// Acquire a lock on this `TestStack`'s context.
-    pub(crate) fn ctx(&self) -> impl Future<Output = LockedStackContext<'_, TestContext>> {
-        self.ctx.lock()
+    pub(crate) async fn ctx(&self) -> <TestContext as Lockable<'_, Ctx<TestDispatcher>>>::Guard {
+        self.ctx.lock().await
     }
 }
 
@@ -385,7 +388,10 @@ impl TestSetup {
     }
 
     /// Acquires a lock on the [`TestContext`] at index `i`.
-    pub(crate) async fn ctx(&mut self, i: usize) -> LockedStackContext<'_, TestContext> {
+    pub(crate) async fn ctx(
+        &mut self,
+        i: usize,
+    ) -> <TestContext as Lockable<'_, Ctx<TestDispatcher>>>::Guard {
         self.get(i).ctx.lock().await
     }
 

@@ -20,7 +20,7 @@ use futures::{
 use net_types::ip::{Ip as _, Ipv4, Ipv6, Subnet, SubnetEither};
 use netstack3_core::{get_all_ip_addr_subnets, get_all_routes, EntryDest};
 
-use super::{util::IntoFidl as _, Devices, StackContext};
+use super::{util::IntoFidl as _, Devices, LockableContext};
 
 /// Possible errors when serving `fuchsia.net.interfaces/State`.
 #[derive(thiserror::Error, Debug)]
@@ -34,7 +34,8 @@ pub(crate) enum Error {
 /// Serves the `fuchsia.net.interfaces/State` protocol.
 pub(crate) async fn serve<C, S>(ctx: C, stream: StateRequestStream, sink: S) -> Result<(), Error>
 where
-    C: StackContext,
+    C: LockableContext,
+    C::Dispatcher: AsRef<Devices>,
     S: Sink<Watcher> + std::marker::Unpin,
     Error: From<S::Error>,
 {
@@ -57,9 +58,13 @@ where
         .await
 }
 
-async fn existing_properties(ctx: &impl StackContext) -> Result<EventQueue, zx::Status> {
+async fn existing_properties<C>(ctx: &C) -> Result<EventQueue, zx::Status>
+where
+    C: LockableContext,
+    C::Dispatcher: AsRef<Devices>,
+{
     let ctx = ctx.lock().await;
-    let existing = AsRef::<Devices>::as_ref(ctx.dispatcher()).iter_devices().map(|info| {
+    let existing = ctx.dispatcher().as_ref().iter_devices().map(|info| {
         let features = info.features();
         // TODO(https://fxbug.dev/84863): rewrite features in terms of fuchsia.hardware.network.
         let device_class = if features.contains(fidl_ethernet::Features::Loopback) {
