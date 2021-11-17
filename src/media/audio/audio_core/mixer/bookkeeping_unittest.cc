@@ -35,84 +35,79 @@ TEST(BookkeepingTest, Defaults) {
 }
 
 // Validate the calculations that do not use rate_modulo etc.
-TEST(BookkeepingTest, StepsNeededForDelta_NoModulo) {
-  Mixer::Bookkeeping bookkeeping;
-
+TEST(BookkeepingTest, SourceLenToDestLen_NoModulo) {
   // integral delta and step, no remainder
-  EXPECT_EQ(Mixer::Bookkeeping::StepsNeededForDelta(Fixed(0), Fixed(1), 0, 1, 0), 0);
-  EXPECT_EQ(Mixer::Bookkeeping::StepsNeededForDelta(Fixed(1), Fixed(1), 0, 1, 0), 1);
-  EXPECT_EQ(Mixer::Bookkeeping::StepsNeededForDelta(Fixed(2), Fixed(1), 0, 1, 0), 2);
-  EXPECT_EQ(Mixer::Bookkeeping::StepsNeededForDelta(Fixed(3), Fixed(3), 0, 1, 0), 1);
-  EXPECT_EQ(Mixer::Bookkeeping::StepsNeededForDelta(Fixed(4), Fixed(2), 0, 1, 0), 2);
+  EXPECT_EQ(Mixer::Bookkeeping::SourceLenToDestLen(Fixed(0), Fixed(1), 0, 1, 0), 0);
+  EXPECT_EQ(Mixer::Bookkeeping::SourceLenToDestLen(Fixed(1), Fixed(1), 0, 1, 0), 1);
+  EXPECT_EQ(Mixer::Bookkeeping::SourceLenToDestLen(Fixed(2), Fixed(1), 0, 1, 0), 2);
+  EXPECT_EQ(Mixer::Bookkeeping::SourceLenToDestLen(Fixed(3), Fixed(3), 0, 1, 0), 1);
+  EXPECT_EQ(Mixer::Bookkeeping::SourceLenToDestLen(Fixed(4), Fixed(2), 0, 1, 0), 2);
 
   // integral delta and step, w/remainder
-  EXPECT_EQ(Mixer::Bookkeeping::StepsNeededForDelta(Fixed(3), Fixed(2), 0, 1, 0), 2);
-  EXPECT_EQ(Mixer::Bookkeeping::StepsNeededForDelta(Fixed(9), Fixed(4), 0, 1, 0), 3);
+  EXPECT_EQ(Mixer::Bookkeeping::SourceLenToDestLen(Fixed(3), Fixed(2), 0, 1, 0), 2);
+  EXPECT_EQ(Mixer::Bookkeeping::SourceLenToDestLen(Fixed(9), Fixed(4), 0, 1, 0), 3);
 
   // fractional delta and step, w/remainder
-  EXPECT_EQ(Mixer::Bookkeeping::StepsNeededForDelta(Fixed::FromRaw(1), Fixed(1), 0, 1, 0), 1);
-  EXPECT_EQ(
-      Mixer::Bookkeeping::StepsNeededForDelta(Fixed(1) + Fixed::FromRaw(1), Fixed(1), 0, 1, 0), 2);
+  EXPECT_EQ(Mixer::Bookkeeping::SourceLenToDestLen(Fixed::FromRaw(1), Fixed(1), 0, 1, 0), 1);
+  EXPECT_EQ(Mixer::Bookkeeping::SourceLenToDestLen(Fixed(1) + Fixed::FromRaw(1), Fixed(1), 0, 1, 0),
+            2);
 
-  EXPECT_EQ(Mixer::Bookkeeping::StepsNeededForDelta(Fixed(3) - Fixed::FromRaw(1),
-                                                    ffl::FromRatio(3, 4), 0, 1, 0),
+  EXPECT_EQ(Mixer::Bookkeeping::SourceLenToDestLen(Fixed(3) - Fixed::FromRaw(1),
+                                                   ffl::FromRatio(3, 4), 0, 1, 0),
             4);
-  EXPECT_EQ(Mixer::Bookkeeping::StepsNeededForDelta(Fixed(3), ffl::FromRatio(3, 4), 0, 1, 0), 4);
-  EXPECT_EQ(Mixer::Bookkeeping::StepsNeededForDelta(Fixed(3) + Fixed::FromRaw(1),
-                                                    ffl::FromRatio(3, 4), 0, 1, 0),
+  EXPECT_EQ(Mixer::Bookkeeping::SourceLenToDestLen(Fixed(3), ffl::FromRatio(3, 4), 0, 1, 0), 4);
+  EXPECT_EQ(Mixer::Bookkeeping::SourceLenToDestLen(Fixed(3) + Fixed::FromRaw(1),
+                                                   ffl::FromRatio(3, 4), 0, 1, 0),
             5);
 
-  EXPECT_EQ(Mixer::Bookkeeping::StepsNeededForDelta(Fixed(18) - Fixed::FromRaw(1),
-                                                    ffl::FromRatio(9, 8), 0, 1, 0),
+  EXPECT_EQ(Mixer::Bookkeeping::SourceLenToDestLen(Fixed(18) - Fixed::FromRaw(1),
+                                                   ffl::FromRatio(9, 8), 0, 1, 0),
             16);
-  EXPECT_EQ(Mixer::Bookkeeping::StepsNeededForDelta(Fixed(18), ffl::FromRatio(9, 8), 0, 1, 0), 16);
-  EXPECT_EQ(Mixer::Bookkeeping::StepsNeededForDelta(Fixed(Fixed(18) + Fixed::FromRaw(1)),
-                                                    ffl::FromRatio(9, 8), 0, 1, 0),
+  EXPECT_EQ(Mixer::Bookkeeping::SourceLenToDestLen(Fixed(18), ffl::FromRatio(9, 8), 0, 1, 0), 16);
+  EXPECT_EQ(Mixer::Bookkeeping::SourceLenToDestLen(Fixed(Fixed(18) + Fixed::FromRaw(1)),
+                                                   ffl::FromRatio(9, 8), 0, 1, 0),
             17);
 
   // Ideally, this would result in 3 steps needed, but step_size was reduced to Fixed::FromRaw(1)
   // precision and thus is slightly less than a perfect 2/3, so 3 steps is _just_ short.
-  EXPECT_EQ(Mixer::Bookkeeping::StepsNeededForDelta(Fixed(2), ffl::FromRatio(2, 3), 0, 1, 0), 4);
+  EXPECT_EQ(Mixer::Bookkeeping::SourceLenToDestLen(Fixed(2), ffl::FromRatio(2, 3), 0, 1, 0), 4);
   // _Just_ short by exactly one fractional frame, in fact.
-  EXPECT_EQ(Mixer::Bookkeeping::StepsNeededForDelta(Fixed(2) - Fixed::FromRaw(1),
-                                                    ffl::FromRatio(2, 3), 0, 1, 0),
+  EXPECT_EQ(Mixer::Bookkeeping::SourceLenToDestLen(Fixed(2) - Fixed::FromRaw(1),
+                                                   ffl::FromRatio(2, 3), 0, 1, 0),
             3);
 }
 
 // Validate the calculations that use rate_modulo and denominator
 // These are needed for example to perfectly capture a 2/3 step_size.
-TEST(BookkeepingTest, StepsNeededForDelta_WithModulo) {
-  Mixer::Bookkeeping bookkeeping;
+TEST(BookkeepingTest, SourceLenToDestLen_WithModulo) {
   // pos_modulo but no rate_modulo. initial_source_pos_modulo should be entirely ignored, so
   // these should reduce to  3 / (3/4)  and  18 / (9/8)  -- or exactly 4 and 16.
-  EXPECT_EQ(Mixer::Bookkeeping::StepsNeededForDelta(Fixed(3), ffl::FromRatio(3, 4), 0, 21, 20), 4);
-  EXPECT_EQ(Mixer::Bookkeeping::StepsNeededForDelta(Fixed(18), ffl::FromRatio(9, 8), 0, 999, 998),
+  EXPECT_EQ(Mixer::Bookkeeping::SourceLenToDestLen(Fixed(3), ffl::FromRatio(3, 4), 0, 21, 20), 4);
+  EXPECT_EQ(Mixer::Bookkeeping::SourceLenToDestLen(Fixed(18), ffl::FromRatio(9, 8), 0, 999, 998),
             16);
 
   // rate_modulo adds up to just one unit shy of rolling over (initial mod is 0 or unspecified)
-  EXPECT_EQ(Mixer::Bookkeeping::StepsNeededForDelta(Fixed(2), ffl::FromRatio(2, 3), 33, 100, 0), 4);
+  EXPECT_EQ(Mixer::Bookkeeping::SourceLenToDestLen(Fixed(2), ffl::FromRatio(2, 3), 33, 100, 0), 4);
 
   // rate_modulo adds up to just one unit shy of rolling over (non-zero initial mod is specified)
-  EXPECT_EQ(Mixer::Bookkeeping::StepsNeededForDelta(Fixed(2), ffl::FromRatio(2, 3), 31, 100, 6), 4);
+  EXPECT_EQ(Mixer::Bookkeeping::SourceLenToDestLen(Fixed(2), ffl::FromRatio(2, 3), 31, 100, 6), 4);
 
   // rate_modulo exactly rolls over (no or 0 initial_mod)
-  EXPECT_EQ(Mixer::Bookkeeping::StepsNeededForDelta(Fixed(2), ffl::FromRatio(2, 3), 1, 3, 0), 3);
-  EXPECT_EQ(Mixer::Bookkeeping::StepsNeededForDelta(Fixed(Fixed(18) + Fixed::FromRaw(1)),
-                                                    ffl::FromRatio(9, 8), 1, 16, 0),
+  EXPECT_EQ(Mixer::Bookkeeping::SourceLenToDestLen(Fixed(2), ffl::FromRatio(2, 3), 1, 3, 0), 3);
+  EXPECT_EQ(Mixer::Bookkeeping::SourceLenToDestLen(Fixed(Fixed(18) + Fixed::FromRaw(1)),
+                                                   ffl::FromRatio(9, 8), 1, 16, 0),
             16);
 
   // rate_modulo exactly rolls over (non-zero initial mod)
-  EXPECT_EQ(Mixer::Bookkeeping::StepsNeededForDelta(Fixed(2), ffl::FromRatio(2, 3), 33, 100, 1), 3);
-  EXPECT_EQ(Mixer::Bookkeeping::StepsNeededForDelta(Fixed(2), ffl::FromRatio(2, 3), 31, 100, 7), 3);
-  EXPECT_EQ(Mixer::Bookkeeping::StepsNeededForDelta(Fixed(Fixed(18) + Fixed::FromRaw(1)),
-                                                    ffl::FromRatio(9, 8), 1, 32, 16),
+  EXPECT_EQ(Mixer::Bookkeeping::SourceLenToDestLen(Fixed(2), ffl::FromRatio(2, 3), 33, 100, 1), 3);
+  EXPECT_EQ(Mixer::Bookkeeping::SourceLenToDestLen(Fixed(2), ffl::FromRatio(2, 3), 31, 100, 7), 3);
+  EXPECT_EQ(Mixer::Bookkeeping::SourceLenToDestLen(Fixed(Fixed(18) + Fixed::FromRaw(1)),
+                                                   ffl::FromRatio(9, 8), 1, 32, 16),
             16);
 }
 
 // Validate the limiting parameters of this calculation -- combinations of the max and min inputs.
-TEST(BookkeepingTest, StepsNeededForDelta_Limits) {
-  Mixer::Bookkeeping bookkeeping;
-
+TEST(BookkeepingTest, SourceLenToDestLen_Limits) {
   auto max_delta = Fixed::Max();
   auto max_step_size = Fixed::Max();
   auto max_denom = std::numeric_limits<uint64_t>::max();
@@ -123,30 +118,28 @@ TEST(BookkeepingTest, StepsNeededForDelta_Limits) {
   auto max_initial_pos_mod = max_denom - 1u;
 
   // Largest return value without modulo factors
-  EXPECT_EQ(Mixer::Bookkeeping::StepsNeededForDelta(max_delta, min_step_size, 0, 1, 0),
+  EXPECT_EQ(Mixer::Bookkeeping::SourceLenToDestLen(max_delta, min_step_size, 0, 1, 0),
             std::numeric_limits<int64_t>::max());
 
   // Largest return value with modulo factors
-  EXPECT_EQ(Mixer::Bookkeeping::StepsNeededForDelta(max_delta, min_step_size, min_nonzero_rate_mod,
-                                                    max_denom, 0),
+  EXPECT_EQ(Mixer::Bookkeeping::SourceLenToDestLen(max_delta, min_step_size, min_nonzero_rate_mod,
+                                                   max_denom, 0),
             std::numeric_limits<int64_t>::max());
 
   // The largest possible step_size is equal to the largest possible delta
-  EXPECT_EQ(Mixer::Bookkeeping::StepsNeededForDelta(max_delta, max_step_size, 0, 1, 0), 1);
-  EXPECT_EQ(Mixer::Bookkeeping::StepsNeededForDelta(max_delta, max_step_size, max_rate_mod,
-                                                    max_denom, max_initial_pos_mod),
+  EXPECT_EQ(Mixer::Bookkeeping::SourceLenToDestLen(max_delta, max_step_size, 0, 1, 0), 1);
+  EXPECT_EQ(Mixer::Bookkeeping::SourceLenToDestLen(max_delta, max_step_size, max_rate_mod,
+                                                   max_denom, max_initial_pos_mod),
             1);
 
   // This is the largest possible rate_mod/initial_pos_mod contribution, relative to step_size
   EXPECT_EQ(
-      Mixer::Bookkeeping::StepsNeededForDelta(max_delta, min_step_size, max_rate_mod, max_denom, 0),
+      Mixer::Bookkeeping::SourceLenToDestLen(max_delta, min_step_size, max_rate_mod, max_denom, 0),
       std::numeric_limits<int64_t>::max() / 2 + 1);
 }
 
 // Validate initial_pos_modulo's precise contribution: exactly what is needed, versus one less
-TEST(BookkeepingTest, StepsNeededForDelta_PosModuloContribution) {
-  Mixer::Bookkeeping bookkeeping;
-
+TEST(BookkeepingTest, SourceLenToDestLen_PosModuloContribution) {
   auto max_delta = Fixed::Max();
   auto min_step_size = Fixed::FromRaw(1);
 
@@ -159,21 +152,21 @@ TEST(BookkeepingTest, StepsNeededForDelta_PosModuloContribution) {
   auto large_initial_pos_mod = large_denom + 2u;
 
   // With smaller denominator, rate_mod contributes 1 frac frame which reduces steps by 1.
-  EXPECT_EQ(Mixer::Bookkeeping::StepsNeededForDelta(max_delta, min_step_size, min_nonzero_rate_mod,
-                                                    large_denom, 1),
+  EXPECT_EQ(Mixer::Bookkeeping::SourceLenToDestLen(max_delta, min_step_size, min_nonzero_rate_mod,
+                                                   large_denom, 1),
             std::numeric_limits<int64_t>::max() - 1);
   // ...at just 1 initial position modulo less, we require an additional step to cover the delta.
-  EXPECT_EQ(Mixer::Bookkeeping::StepsNeededForDelta(max_delta, min_step_size, min_nonzero_rate_mod,
-                                                    large_denom, 0),
+  EXPECT_EQ(Mixer::Bookkeeping::SourceLenToDestLen(max_delta, min_step_size, min_nonzero_rate_mod,
+                                                   large_denom, 0),
             std::numeric_limits<int64_t>::max());
 
   // This exact large initial position modulo ultimately reduces steps by 1.
-  EXPECT_EQ(Mixer::Bookkeeping::StepsNeededForDelta(max_delta, min_step_size, min_nonzero_rate_mod,
-                                                    max_denom, large_initial_pos_mod),
+  EXPECT_EQ(Mixer::Bookkeeping::SourceLenToDestLen(max_delta, min_step_size, min_nonzero_rate_mod,
+                                                   max_denom, large_initial_pos_mod),
             std::numeric_limits<int64_t>::max() - 1);
   // ...at just 1 initial position modulo less, we require an additional step to cover the delta.
-  EXPECT_EQ(Mixer::Bookkeeping::StepsNeededForDelta(max_delta, min_step_size, min_nonzero_rate_mod,
-                                                    max_denom, large_initial_pos_mod - 1),
+  EXPECT_EQ(Mixer::Bookkeeping::SourceLenToDestLen(max_delta, min_step_size, min_nonzero_rate_mod,
+                                                   max_denom, large_initial_pos_mod - 1),
             std::numeric_limits<int64_t>::max());
 
   // Very small step_size and large rate_mod where initial_pos_mod exactly makes the difference:
@@ -190,13 +183,32 @@ TEST(BookkeepingTest, StepsNeededForDelta_PosModuloContribution) {
   // +   pos_modulo contributes 1.
   //
   // 40..00 + 3F..FE + 1 == 7F..FF, exactly the delta we needed to cover.
-  EXPECT_EQ(Mixer::Bookkeeping::StepsNeededForDelta(max_delta, min_step_size, max_rate_mod - 3,
-                                                    max_denom, 1),
+  EXPECT_EQ(Mixer::Bookkeeping::SourceLenToDestLen(max_delta, min_step_size, max_rate_mod - 3,
+                                                   max_denom, 1),
             std::numeric_limits<int64_t>::max() / 2 + 1);
   // ...at just 1 initial position modulo less, we require an additional step to cover the delta.
-  EXPECT_EQ(Mixer::Bookkeeping::StepsNeededForDelta(max_delta, min_step_size, max_rate_mod - 3,
-                                                    max_denom, 0),
+  EXPECT_EQ(Mixer::Bookkeeping::SourceLenToDestLen(max_delta, min_step_size, max_rate_mod - 3,
+                                                   max_denom, 0),
             std::numeric_limits<int64_t>::max() / 2 + 2);
+}
+
+// Verify that we correctly calculate the equivalent source length for a given dest frame length,
+// using step_size and (rate_modulo, denominator, initial_source_pos_modulo).
+TEST(BookkeepingTest, DestLenToSourceLen) {
+  // Test the no-rate-modulo case
+  // 3 * (2+11/8192 + (0/7)/8192) + (6/7)/8192 == 6+33/8192 + (6/7)/8192 == 6+33/8192.
+  EXPECT_EQ(Mixer::Bookkeeping::DestLenToSourceLen(3, Fixed(2) + Fixed::FromRaw(11), 0, 7, 6),
+            Fixed(Fixed(6) + Fixed::FromRaw(33)));
+
+  // Test the source_pos_modulo-almost-rolls-over case.
+  // 3 * (2+11/8192 + (5/7)/8192) + (5/7)/8192 == 6+33/8192 + (20/7)/8192 == 6+35/8192.
+  EXPECT_EQ(Mixer::Bookkeeping::DestLenToSourceLen(3, Fixed(2) + Fixed::FromRaw(11), 5, 7, 5),
+            Fixed(Fixed(6) + Fixed::FromRaw(35)));
+
+  // Test the source_pos_modulo-exactly-rolls-over case.
+  // 3 * (2+11/8192 + (5/7)/8192) + (6/7)/8192 == 6+33/8192 + (21/7)/8192 == 6+36/8192.
+  EXPECT_EQ(Mixer::Bookkeeping::DestLenToSourceLen(3, Fixed(2) + Fixed::FromRaw(11), 5, 7, 6),
+            Fixed(Fixed(6) + Fixed::FromRaw(36)));
 }
 
 }  // namespace
