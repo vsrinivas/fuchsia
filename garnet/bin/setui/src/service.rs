@@ -73,7 +73,7 @@ pub enum Address {
     Storage,
 }
 
-/// The types of data that can be sent through the service [`MessageHub`]. This
+/// The types of data that can be sent through the service `MessageHub`. This
 /// enumeration is meant to provide a top level definition. Further definitions
 /// for particular domains should be located in the appropriate mod.
 #[derive(Clone, PartialEq, Debug)]

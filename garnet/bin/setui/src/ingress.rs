@@ -4,7 +4,7 @@
 
 //! This mod defines the building blocks for receiving inbound communication from external
 //! interfaces, such as FIDL. It also includes common implementations for working with
-//! [Jobs](crate::job::Job) for incoming requests.
+//! `Jobs` for incoming requests.
 
 /// The [fidl] mod enables defining components that provide inbound communication over FIDL.
 pub mod fidl;

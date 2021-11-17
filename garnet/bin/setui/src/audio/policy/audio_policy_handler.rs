@@ -58,8 +58,8 @@
 //! state.
 //!
 //! [Requests]: crate::handler::base::Payload::Request
-//! [Set]: crate::handler:;base::Payload::Request::SetVolume
-//! [Get]: crate::handler:;base::Payload::Request::Get
+//! [Set]: crate::handler::base::Request::SetVolume
+//! [Get]: crate::handler::base::Request::Get
 //! [Response]: crate::handler::base::Payload::Response
 //! [Rebroadcast]: crate::handler::base::Request::Rebroadcast
 
