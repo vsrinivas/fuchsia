@@ -103,6 +103,12 @@ SECTIONS {
   .dynsym : { *(.dynsym) }
   .dynstr : { *(.dynstr) }
 
+  /*
+   * Instrumentation data.  Orphans placement can put this in weird places,
+   * so place it explicitly.  This is a read-only section.
+   */
+  __llvm_prf_names : { *(__llvm_prf_names) }
+
   .preinit_array : {
     KEEP(*(.preinit_array))
   }
@@ -128,6 +134,12 @@ SECTIONS {
   .got : { *(.got.plt) *(.got) }
   ASSERT(SIZEOF(.got) <= 4 * 8, ".got should contain only ABI-required entries.")
 
+  /*
+   * Instrumentation data.  Orphans placement can put this in weird places,
+   * so place it explicitly.  This is a RELRO section.
+   */
+  __llvm_prf_data : { *(__llvm_prf_data) }
+
   .data : {
     *(.data*)
   }
@@ -139,6 +151,14 @@ SECTIONS {
   }
   ASSERT(SIZEOF(BootCpuidData) ==  2 * SIZEOF(BootCpuidLeaf),
          "The BootCpuidLeaf and BootCpuidData sizes should precisely correlate: one holds CPUID leaf information and the other the associated values")
+
+  /*
+   * Instrumentation data.  Orphans placement can put this in weird places,
+   * so place it explicitly.  This is a writable section.
+   * TODO(mcgrathr): This is not a bss (NOBITS) section though it probably
+   * ought to be.  Move this down into the bss segment if that changes.
+   */
+  __llvm_prf_cnts : { *(__llvm_prf_cnts) }
 
   /*
    * Any writable orphan sections will be placed here.  The separate clause
