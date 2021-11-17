@@ -173,12 +173,12 @@ static zx_status_t read_fd(const int fd, const PhysMem& phys_mem, const uintptr_
   struct stat stat;
   ssize_t ret = fstat(fd, &stat);
   if (ret < 0) {
-    FX_LOGS(ERROR) << "Failed to stat file";
+    FX_LOGS(ERROR) << "Failed to stat file:" << strerror(errno);
     return ZX_ERR_IO;
   }
   ret = read(fd, phys_mem.ptr(off, stat.st_size), stat.st_size);
   if (ret != stat.st_size) {
-    FX_LOGS(ERROR) << "Failed to read file";
+    FX_LOGS(ERROR) << "Failed to read file:" << strerror(errno);
     return ZX_ERR_IO;
   }
   *file_size = stat.st_size;
