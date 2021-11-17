@@ -629,7 +629,11 @@ async fn device_control_create_interface() {
         .connect_to_protocol::<fidl_fuchsia_net_interfaces_admin::InstallerMarker>()
         .expect("connect to protocol");
 
-    let (device, mut port_id) = endpoint.get_netdevice().await.expect("get netdevice");
+    let (device, _mac, mut port_id): (
+        _,
+        fidl::endpoints::ClientEnd<fidl_fuchsia_hardware_network::MacAddressingMarker>,
+        _,
+    ) = endpoint.get_netdevice().await.expect("get netdevice");
     let (device_control, device_control_server_end) =
         fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces_admin::DeviceControlMarker>()
             .expect("create proxy");
@@ -1122,7 +1126,7 @@ async fn device_control_closes_on_device_close() {
         .connect_to_protocol::<fidl_fuchsia_net_interfaces_admin::InstallerMarker>()
         .expect("connect to protocol");
 
-    let (device, mut port_id) = endpoint.get_netdevice().await.expect("get netdevice");
+    let (device, _mac, mut port_id) = endpoint.get_netdevice().await.expect("get netdevice");
     let (device_control, device_control_server_end) =
         fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces_admin::DeviceControlMarker>()
             .expect("create proxy");
@@ -1190,7 +1194,11 @@ async fn installer_creates_datapath() {
                     .connect_to_protocol::<fidl_fuchsia_net_interfaces_admin::InstallerMarker>()
                     .expect("connect to protocol");
 
-                let (device, mut port_id) = endpoint.get_netdevice().await.expect("get netdevice");
+                let (device, _mac, mut port_id): (
+                    _,
+                    fidl::endpoints::ClientEnd<fidl_fuchsia_hardware_network::MacAddressingMarker>,
+                    _,
+                ) = endpoint.get_netdevice().await.expect("get netdevice");
                 let (device_control, device_control_server_end) = fidl::endpoints::create_proxy::<
                     fidl_fuchsia_net_interfaces_admin::DeviceControlMarker,
                 >()
@@ -1301,7 +1309,7 @@ async fn control_enable_disable() {
         .connect_to_protocol::<fidl_fuchsia_net_interfaces_admin::InstallerMarker>()
         .expect("connect to protocol");
 
-    let (device, mut port_id) = endpoint.get_netdevice().await.expect("get netdevice");
+    let (device, _mac, mut port_id) = endpoint.get_netdevice().await.expect("get netdevice");
     let (device_control, device_control_server_end) =
         fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces_admin::DeviceControlMarker>()
             .expect("create proxy");
@@ -1403,7 +1411,7 @@ async fn control_owns_interface_lifetime(detach: bool) {
         .connect_to_protocol::<fidl_fuchsia_net_interfaces_admin::InstallerMarker>()
         .expect("connect to protocol");
 
-    let (device, mut port_id) = endpoint.get_netdevice().await.expect("get netdevice");
+    let (device, _mac, mut port_id) = endpoint.get_netdevice().await.expect("get netdevice");
     let (device_control, device_control_server_end) =
         fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces_admin::DeviceControlMarker>()
             .expect("create proxy");

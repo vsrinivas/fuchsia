@@ -668,20 +668,6 @@ pub async fn get_single_device_port_id(device: &fnetwork::DeviceProxy) -> Result
     }
 }
 
-/// Helper function to retrieve device and port information from a netemul
-/// netdevice instance.
-async fn to_netdevice_inner(
-    netdevice: fidl::endpoints::ClientEnd<fnetwork::DeviceInstanceMarker>,
-) -> Result<(fidl::endpoints::ClientEnd<fnetwork::DeviceMarker>, fnetwork::PortId)> {
-    let netdevice: fnetwork::DeviceInstanceProxy = netdevice.into_proxy()?;
-    let (device, device_server_end) = fidl::endpoints::create_proxy::<fnetwork::DeviceMarker>()?;
-    let () = netdevice.get_device(device_server_end)?;
-    let port_id = get_single_device_port_id(&device).await?;
-    // No other references exist, we just created this proxy, unwrap is safe.
-    let device = fidl::endpoints::ClientEnd::new(device.into_channel().unwrap().into_zx_channel());
-    Ok((device, port_id))
-}
-
 impl<'a> TestEndpoint<'a> {
     /// Gets access to this device's virtual Ethernet device.
     ///
@@ -708,103 +694,117 @@ impl<'a> TestEndpoint<'a> {
     /// [`fnetemul_network::DeviceConnection::NetworkDevice`].
     pub async fn get_netdevice(
         &self,
-    ) -> Result<(fidl::endpoints::ClientEnd<fnetwork::DeviceMarker>, fnetwork::PortId)> {
+    ) -> Result<(
+        fidl::endpoints::ClientEnd<fnetwork::DeviceMarker>,
+        fidl::endpoints::ClientEnd<fnetwork::MacAddressingMarker>,
+        fnetwork::PortId,
+    )> {
         match self
             .get_device()
             .await
             .with_context(|| format!("failed to get device connection for {}", self.name))?
         {
-            fnetemul_network::DeviceConnection::NetworkDevice(n) => to_netdevice_inner(n).await,
+            fnetemul_network::DeviceConnection::NetworkDevice(n) => {
+                Self::connect_netdevice_protocols(n).await
+            }
             fnetemul_network::DeviceConnection::Ethernet(_) => {
                 Err(anyhow::anyhow!("Endpoint {} is not a Network Device", self.name))
             }
         }
     }
 
-    async fn add_to_stack(
-        &self,
-        realm: &TestRealm<'a>,
-        name: Option<String>,
+    /// Helper function to retrieve the protocols from a netdevice client end.
+    async fn connect_netdevice_protocols(
+        netdevice: fidl::endpoints::ClientEnd<fnetwork::DeviceInstanceMarker>,
     ) -> Result<(
-        u64,
-        fidl_fuchsia_net_interfaces_ext::admin::Control,
-        Option<fidl_fuchsia_net_interfaces_admin::DeviceControlProxy>,
+        fidl::endpoints::ClientEnd<fnetwork::DeviceMarker>,
+        fidl::endpoints::ClientEnd<fnetwork::MacAddressingMarker>,
+        fnetwork::PortId,
     )> {
-        match self.get_device().await.context("get_device failed")? {
+        // TODO(http://fxbug.dev/85061): Do not automatically connect to port
+        // once Netstack exposes FIDL that is port-aware and we've migrated to
+        // fuchsia.net.interfaces.admin to add devices to the stack.
+        let netdevice: fnetwork::DeviceInstanceProxy = netdevice.into_proxy()?;
+        let (device, device_server_end) =
+            fidl::endpoints::create_proxy::<fnetwork::DeviceMarker>()?;
+        let () = netdevice.get_device(device_server_end)?;
+        let mut port_id = get_single_device_port_id(&device).await?;
+        let (port, port_server_end) = fidl::endpoints::create_proxy::<fnetwork::PortMarker>()?;
+        let () = device.get_port(&mut port_id, port_server_end)?;
+        let (mac, mac_server_end) =
+            fidl::endpoints::create_endpoints::<fnetwork::MacAddressingMarker>()?;
+        let () = port.get_mac(mac_server_end)?;
+        // No other references exist, we just created this proxy, unwrap is safe.
+        let device =
+            fidl::endpoints::ClientEnd::new(device.into_channel().unwrap().into_zx_channel());
+        Ok((device, mac, port_id))
+    }
+
+    /// Adds this endpoint to `stack`, returning the interface identifier.
+    pub async fn add_to_stack(&self, realm: &TestRealm<'a>) -> Result<u64> {
+        let stack = realm
+            .connect_to_protocol::<fnet_stack::StackMarker>()
+            .context("failed to connect to stack")?;
+        Ok(match self.get_device().await.context("get_device failed")? {
             fnetemul_network::DeviceConnection::Ethernet(eth) => {
-                let id = {
-                    // NB: Use different stack APIs based on name because
-                    // fuchsia.net.stack doesn't allow the name to be set, and
-                    // netstack3 doesn't support fuchsia.netstack.
-                    //
-                    // Migration to netdevice (https://fxbug.dev/34719) and new
-                    // APIs on NS3 (https://fxbug.dev/88796) should eventually
-                    // allow us to get rid of this.
-                    if let Some(name) = name {
-                        let netstack = realm
-                            .connect_to_protocol::<fnetstack::NetstackMarker>()
-                            .context("failed to connect to netstack")?;
-                        netstack
-                            .add_ethernet_device(
-                                &self.name,
-                                &mut fnetstack::InterfaceConfig {
-                                    name,
-                                    filepath: String::new(),
-                                    metric: 0,
-                                },
-                                eth,
-                            )
-                            .await
-                            .context("add_ethernet_device FIDL error")?
-                            .map_err(fuchsia_zircon::Status::from_raw)
-                            .map(u64::from)
-                            .context("add_ethernet_device failed")?
-                    } else {
-                        let stack = realm
-                            .connect_to_protocol::<fnet_stack::StackMarker>()
-                            .context("failed to connect to stack")?;
-                        stack.add_ethernet_interface(&self.name, eth).await.squash_result()?
-                    }
-                };
-                let debug = realm
-                    .connect_to_protocol::<fidl_fuchsia_net_debug::InterfacesMarker>()
-                    .context("connect to protocol")?;
-                let (control, server_end) =
-                    fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
-                        .context("create endpoints")?;
-                let () = debug.get_admin(id, server_end).context("get admin")?;
-                Ok((id, control, None))
+                stack.add_ethernet_interface(&self.name, eth).await.squash_result()?
             }
             fnetemul_network::DeviceConnection::NetworkDevice(netdevice) => {
-                let (device, mut port_id) = to_netdevice_inner(netdevice).await?;
-                let installer = realm
-                    .connect_to_protocol::<fidl_fuchsia_net_interfaces_admin::InstallerMarker>()
-                    .context("connect to protocol")?;
-                let device_control = {
-                    let (control, server_end) = fidl::endpoints::create_proxy::<
-                        fidl_fuchsia_net_interfaces_admin::DeviceControlMarker,
-                    >()
-                    .context("create proxy")?;
-                    let () =
-                        installer.install_device(device, server_end).context("install device")?;
-                    control
-                };
-                let (control, server_end) =
-                    fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
-                        .context("create endpoints")?;
-                let () = device_control
-                    .create_interface(
-                        &mut port_id,
-                        server_end,
-                        fidl_fuchsia_net_interfaces_admin::Options {
-                            name,
-                            metric: None,
-                            ..fidl_fuchsia_net_interfaces_admin::Options::EMPTY
-                        },
+                let (device, mac, _port_id) = Self::connect_netdevice_protocols(netdevice).await?;
+                stack
+                    .add_interface(
+                        fnet_stack::InterfaceConfig::EMPTY,
+                        &mut fnet_stack::DeviceDefinition::Ethernet(
+                            fnet_stack::EthernetDeviceDefinition {
+                                network_device: device,
+                                mac: mac,
+                            },
+                        ),
                     )
-                    .context("create interface")?;
-                let id = control.get_id().await.context("get id")?;
-                Ok((id, control, Some(device_control)))
+                    .await
+                    .squash_result()?
+            }
+        })
+    }
+
+    async fn add_to_stack_with_name(&self, realm: &TestRealm<'a>, name: String) -> Result<u64> {
+        let stack = realm
+            .connect_to_protocol::<fnet_stack::StackMarker>()
+            .context("failed to connect to stack")?;
+        let netstack = realm
+            .connect_to_protocol::<fnetstack::NetstackMarker>()
+            .context("failed to connect to netstack")?;
+        match self.get_device().await.context("get_device failed")? {
+            fnetemul_network::DeviceConnection::Ethernet(eth) => netstack
+                .add_ethernet_device(
+                    &self.name,
+                    &mut fnetstack::InterfaceConfig { name, filepath: String::new(), metric: 0 },
+                    eth,
+                )
+                .await
+                .context("add_ethernet_device FIDL error")?
+                .map_err(fuchsia_zircon::Status::from_raw)
+                .map(u64::from)
+                .context("add_ethernet_device failed"),
+            fnetemul_network::DeviceConnection::NetworkDevice(netdevice) => {
+                let (device, mac, _port_id) = Self::connect_netdevice_protocols(netdevice).await?;
+                stack
+                    .add_interface(
+                        fnet_stack::InterfaceConfig {
+                            name: Some(name),
+                            topopath: None,
+                            metric: None,
+                            ..fnet_stack::InterfaceConfig::EMPTY
+                        },
+                        &mut fnet_stack::DeviceDefinition::Ethernet(
+                            fnet_stack::EthernetDeviceDefinition {
+                                network_device: device,
+                                mac: mac,
+                            },
+                        ),
+                    )
+                    .await
+                    .squash_result()
             }
         }
     }
@@ -820,10 +820,11 @@ impl<'a> TestEndpoint<'a> {
         realm: &TestRealm<'a>,
         name: Option<String>,
     ) -> Result<TestInterface<'a>> {
-        let (id, control, device_control) = self
-            .add_to_stack(realm, name)
-            .await
-            .with_context(|| format!("failed to add {} to realm {}", self.name, realm.name))?;
+        let id = match name {
+            Some(name) => self.add_to_stack_with_name(realm, name).await,
+            None => self.add_to_stack(realm).await,
+        }
+        .with_context(|| format!("failed to add {} to realm {}", self.name, realm.name))?;
         let stack = realm
             .connect_to_protocol::<fnet_stack::StackMarker>()
             .context("failed to connect to stack")?;
@@ -833,15 +834,7 @@ impl<'a> TestEndpoint<'a> {
         let interface_state = realm
             .connect_to_protocol::<fnet_interfaces::StateMarker>()
             .context("failed to connect to interfaces state")?;
-        Ok(TestInterface {
-            endpoint: self,
-            id,
-            stack,
-            netstack,
-            interface_state,
-            control,
-            device_control,
-        })
+        Ok(TestInterface { endpoint: self, id, stack, netstack, interface_state })
     }
 }
 
@@ -853,8 +846,6 @@ pub struct TestInterface<'a> {
     stack: fnet_stack::StackProxy,
     netstack: fnetstack::NetstackProxy,
     interface_state: fnet_interfaces::StateProxy,
-    control: fidl_fuchsia_net_interfaces_ext::admin::Control,
-    device_control: Option<fidl_fuchsia_net_interfaces_admin::DeviceControlProxy>,
 }
 
 impl<'a> std::ops::Deref for TestInterface<'a> {
@@ -990,27 +981,6 @@ impl<'a> TestInterface<'a> {
             .context("failed to stop dhcp client")?;
 
         Ok(())
-    }
-
-    /// Consumes this [`TestInterface`] and returns all the lifetime-carrying
-    /// internal channels within it.
-    pub fn into_inner(
-        self,
-    ) -> (
-        fnetemul_network::EndpointProxy,
-        fidl_fuchsia_net_interfaces_ext::admin::Control,
-        Option<fidl_fuchsia_net_interfaces_admin::DeviceControlProxy>,
-    ) {
-        let Self {
-            endpoint: TestEndpoint { endpoint, name: _, _sandbox: _ },
-            id: _,
-            stack: _,
-            netstack: _,
-            interface_state: _,
-            control,
-            device_control,
-        } = self;
-        (endpoint, control, device_control)
     }
 }
 

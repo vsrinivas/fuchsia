@@ -118,12 +118,11 @@ async fn watcher_existing<N: Netstack>(name: &str) {
             .await
             .expect("create endpoint");
 
-        let iface = ep.into_interface_in_realm(&realm).await.expect("add device to stack");
-        let id = iface.id();
+        let id = ep.add_to_stack(&realm).await.expect("add device to stack");
 
         // Netstack3 doesn't allow addresses to be added while link is down.
         let () = stack.enable_interface(id).await.squash_result().expect("enable interface");
-        let () = iface.set_link_up(true).await.expect("bring device up");
+        let () = ep.set_link_up(true).await.expect("bring device up");
         loop {
             // TODO(https://fxbug.dev/75553): Remove usage of get_interface_info.
             let info = stack.get_interface_info(id).await.squash_result().expect("get interface");
@@ -131,7 +130,7 @@ async fn watcher_existing<N: Netstack>(name: &str) {
                 break;
             }
         }
-        eps.push(iface);
+        eps.push(ep);
 
         let mut addr = fidl_fuchsia_net::Subnet {
             addr: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
@@ -262,8 +261,7 @@ async fn test_add_remove_interface<E: netemul::Endpoint>(name: &str) {
         .expect("connect to protocol");
     let device = sandbox.create_endpoint::<E, _>(name).await.expect("create endpoint");
 
-    let iface = device.into_interface_in_realm(&realm).await.expect("add device");
-    let id = iface.id();
+    let id = device.add_to_stack(&realm).await.expect("add device");
 
     let interface_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
@@ -308,8 +306,7 @@ async fn test_close_interface<E: netemul::Endpoint>(enabled: bool, name: &str) {
         .expect("connect to protocol");
     let device = sandbox.create_endpoint::<E, _>(name).await.expect("create endpoint");
 
-    let iface = device.into_interface_in_realm(&realm).await.expect("add device");
-    let id = iface.id();
+    let id = device.add_to_stack(&realm).await.expect("add device");
 
     if enabled {
         let () = stack.enable_interface(id).await.squash_result().expect("enable interface");
@@ -335,8 +332,7 @@ async fn test_close_interface<E: netemul::Endpoint>(enabled: bool, name: &str) {
     .expect("observe interface addition");
 
     // Drop the device, that should cause the interface to be deleted.
-    let (ep, _control, _device_control) = iface.into_inner();
-    std::mem::drop(ep);
+    std::mem::drop(device);
 
     // Wait until we observe the removed interface is missing.
     let () = fidl_fuchsia_net_interfaces_ext::wait_interface(
