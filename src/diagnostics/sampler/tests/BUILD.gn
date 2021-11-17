@@ -97,10 +97,6 @@ resource("validation-resources") {
 }
 
 fuchsia_test_package("sampler-integration-tests") {
-  package_deps = [
-    "//src/cobalt/bin/testing/mock_cobalt:mock_cobalt",
-    "//src/diagnostics/archivist:archivist-for-embedding",
-  ]
   test_components = [
     ":config-validation-test",
     ":sampler-integration-test",
@@ -110,6 +106,8 @@ fuchsia_test_package("sampler-integration-tests") {
     ":sampler-for-test",
     ":test-config",
     ":validation-resources",
+    "//src/cobalt/bin/testing/mock_cobalt:component_v2",
+    "//src/diagnostics/archivist:archivist-for-embedding-v2",
     "//src/diagnostics/sampler/tests/test_component:single_counter_test_component",
   ]
 }
