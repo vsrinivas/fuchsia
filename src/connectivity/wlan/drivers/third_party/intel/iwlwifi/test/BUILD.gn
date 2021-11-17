@@ -52,11 +52,9 @@ source_set("sim_library") {
     "//zircon/system/ulib/fbl",
   ]
   public_deps = [
-    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
-    "//src/connectivity/wlan/drivers/testing/lib/sim-env",
-    "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform",
+    "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/pci/testing:pci-protocol-fake",
     "//src/devices/testing/mock-ddk",
     "//zircon/system/public",

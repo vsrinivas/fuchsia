@@ -9,7 +9,6 @@
 
 #include <zxtest/zxtest.h>
 
-#include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/sim-trans.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
 
@@ -35,7 +34,6 @@ class FakeUcodeCapaTest : public ::zxtest::Test {
   ~FakeUcodeCapaTest() = default;
 
  protected:
-  ::wlan::simulation::Environment dummy_env_;
   std::shared_ptr<MockDevice> fake_parent_;
   SimTransport sim_trans_;
 };

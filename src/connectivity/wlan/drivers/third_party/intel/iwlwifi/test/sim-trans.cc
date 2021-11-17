@@ -311,8 +311,7 @@ remove_dev:
 
 namespace wlan::testing {
 
-SimTransport::SimTransport(::wlan::simulation::Environment* env, zx_device_t* parent)
-    : SimMvm(env), device_{}, iwl_trans_(nullptr) {
+SimTransport::SimTransport(zx_device_t* parent) : device_{}, iwl_trans_(nullptr) {
   task_loop_ = std::make_unique<::async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
   task_loop_->StartThread("iwlwifi-test-task-worker", nullptr);
   irq_loop_ = std::make_unique<::async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);

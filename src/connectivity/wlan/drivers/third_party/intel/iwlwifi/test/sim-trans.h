@@ -15,7 +15,6 @@
 
 #include <memory>
 
-#include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/sim-mvm.h"
 
@@ -50,7 +49,7 @@ static inline struct sim_trans_priv* IWL_TRANS_GET_SIM_TRANS(struct iwl_trans* t
 
 class SimTransport : public SimMvm {
  public:
-  explicit SimTransport(::wlan::simulation::Environment* env, zx_device_t* parent);
+  explicit SimTransport(zx_device_t* parent);
   ~SimTransport();
 
   // This function must be called before starting using other functions.

@@ -8,9 +8,6 @@
 #include <memory>
 #include <vector>
 
-#include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
-#include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-sta-ifc.h"
-
 extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 }  // extern "C"
@@ -20,16 +17,9 @@ extern "C" {
 
 namespace wlan::testing {
 
-class SimMvm : public ::wlan::simulation::StationIfc {
+class SimMvm {
  public:
-  explicit SimMvm(::wlan::simulation::Environment* env) : env_(env), resp_buf_(kNvmAccessCmdSize) {
-    env->AddStation(this);
-  }
-  ~SimMvm() {
-    if (env_ != nullptr) {
-      env_->RemoveStation(this);
-    }
-  }
+  explicit SimMvm() : resp_buf_(kNvmAccessCmdSize) {}
 
   // Execute the command.
   //
@@ -39,16 +29,11 @@ class SimMvm : public ::wlan::simulation::StationIfc {
   //
   zx_status_t SendCmd(struct iwl_host_cmd* cmd, bool* notify_wait);
 
-  // StationIfc operations
-  void Rx(std::shared_ptr<const simulation::SimFrame> frame,
-          std::shared_ptr<const simulation::WlanRxInfo> info) override {}
-
  private:
   // The buffer size should be determined by the max response size.
   // This number is for the response of NVM_ACCESS_CMD read command.
   static constexpr size_t kNvmAccessCmdSize = 16 + 2048;
 
-  ::wlan::simulation::Environment* env_;
   SimNvm nvm_;
 
   // Used by SendCmd() to store the response from the simulated firmware functions.

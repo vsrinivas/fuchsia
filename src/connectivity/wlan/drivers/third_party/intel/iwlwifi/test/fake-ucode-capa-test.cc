@@ -16,7 +16,7 @@ extern "C" {
 namespace wlan::testing {
 
 FakeUcodeCapaTest::FakeUcodeCapaTest(uint32_t api_index, uint32_t api_capa)
-    : fake_parent_(MockDevice::FakeRootParent()), sim_trans_(&dummy_env_, fake_parent_.get()) {
+    : fake_parent_(MockDevice::FakeRootParent()), sim_trans_(fake_parent_.get()) {
   // Add a default MVM firmware to the fake DDK.
   TlvFwBuilder fw_builder;
 
