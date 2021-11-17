@@ -1,6 +1,6 @@
 {
   "pkg/ddktl-experimental-driver-only/include/ddktl/device-internal.h": "ba5123ae2f01d0798ca9a78dff0ef881",
-  "pkg/ddktl-experimental-driver-only/include/ddktl/device.h": "2046c1f5e596ad5bb11bc7d1b3986531",
+  "pkg/ddktl-experimental-driver-only/include/ddktl/device.h": "2499e463b1933f2e360a676fa0690b16",
   "pkg/ddktl-experimental-driver-only/include/ddktl/fidl.h": "d60c3d9165aa799d681834c19893b1ec",
   "pkg/ddktl-experimental-driver-only/include/ddktl/init-txn.h": "235cec9d0106288ac2b15e09c93af2bd",
   "pkg/ddktl-experimental-driver-only/include/ddktl/resume-txn.h": "5740648294b4d982e58324b455161de8",
