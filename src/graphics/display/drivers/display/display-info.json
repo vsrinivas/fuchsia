@@ -1,0 +1,13 @@
+{
+    "short_description": "Core display controller interface driver",
+    "manufacturer": "",
+    "families": [
+        "generic"
+    ],
+    "models": [
+        "generic"
+    ],
+    "areas": [
+        "Display"
+    ]
+}

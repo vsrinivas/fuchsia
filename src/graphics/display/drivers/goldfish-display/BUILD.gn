@@ -34,6 +34,7 @@ fuchsia_driver("goldfish-display-driver") {
 fuchsia_driver_component("goldfish-display") {
   component_name = "goldfish-display"
   deps = [ ":goldfish-display-driver" ]
+  info = "goldfish-display-info.json"
 }
 
 source_set("common") {

@@ -57,6 +57,7 @@ fuchsia_driver("aml-hdmi-driver") {
 fuchsia_driver_component("aml-hdmi") {
   component_name = "aml-hdmi"
   deps = [ ":aml-hdmi-driver" ]
+  info = "aml-hdmi-info.json"
 }
 
 test("aml-hdmi-test-bin") {

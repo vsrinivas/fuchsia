@@ -29,6 +29,7 @@ fuchsia_driver("display-driver") {
 fuchsia_driver_component("display") {
   component_name = "display"
   deps = [ ":display-driver" ]
+  info = "display-info.json"
 }
 
 # Also used by test/.

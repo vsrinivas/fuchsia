@@ -1,0 +1,11 @@
+{
+    "short_description": "Simple PCI AMD display driver",
+    "manufacturer": "AMD",
+    "families": [],
+    "models": [
+        "Kaveri R7"
+    ],
+    "areas": [
+        "Display"
+    ]
+}

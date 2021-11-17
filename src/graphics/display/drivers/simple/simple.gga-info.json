@@ -1,0 +1,9 @@
+{
+    "short_description": "Simple PCI Google Graphics adapter display driver",
+    "manufacturer": "Google",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Display"
+    ]
+}

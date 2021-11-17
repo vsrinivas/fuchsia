@@ -1,0 +1,12 @@
+{
+    "short_description": "PCI Intel display and GPU core driver",
+    "manufacturer": "Intel",
+    "families": [
+        "Kaby Lake",
+        "Sky Lake"
+    ],
+    "models": [],
+    "areas": [
+        "Display"
+    ]
+}

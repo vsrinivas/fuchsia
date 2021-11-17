@@ -1,0 +1,12 @@
+{
+    "short_description": "AMLogic display driver",
+    "manufacturer": "AMLogic",
+    "families": [],
+    "models": [
+        "S905d2",
+        "A311d"
+    ],
+    "areas": [
+        "Display"
+    ]
+}

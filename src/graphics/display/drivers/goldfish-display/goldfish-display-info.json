@@ -1,0 +1,9 @@
+{
+    "short_description": "Goldfish emulation display driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Display"
+    ]
+}

@@ -1,0 +1,11 @@
+{
+    "short_description": "AMLogic HDMI display driver",
+    "manufacturer": "AMLogic",
+    "families": [],
+    "models": [
+        "A311d"
+    ],
+    "areas": [
+        "Display"
+    ]
+}

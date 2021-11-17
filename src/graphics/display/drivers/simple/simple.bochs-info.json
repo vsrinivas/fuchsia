@@ -1,0 +1,9 @@
+{
+    "short_description": "Simple PCI Bochs display driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Display"
+    ]
+}

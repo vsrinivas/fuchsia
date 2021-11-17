@@ -1,0 +1,11 @@
+{
+    "short_description": "Solomon Systech Semiconductor dotmatrix display driver",
+    "manufacturer": "Solomon Systech Semiconductor",
+    "families": [],
+    "models": [
+        "Ssd1306"
+    ],
+    "areas": [
+        "Display"
+    ]
+}

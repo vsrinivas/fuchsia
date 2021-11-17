@@ -1,0 +1,9 @@
+{
+    "short_description": "Simple PCI Nvidia display driver",
+    "manufacturer": "Nvidia",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Display"
+    ]
+}

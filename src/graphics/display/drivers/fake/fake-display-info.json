@@ -1,0 +1,10 @@
+{
+    "short_description": "Fake display driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Display",
+        "Test"
+    ]
+}

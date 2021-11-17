@@ -1,0 +1,9 @@
+{
+    "short_description": "Simple PCI Intel display driver",
+    "manufacturer": "Intel",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Display"
+    ]
+}

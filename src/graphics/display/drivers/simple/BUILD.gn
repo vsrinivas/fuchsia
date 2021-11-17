@@ -73,6 +73,7 @@ foreach(driver, simple_drivers) {
   fuchsia_driver_component("simple.$driver") {
     component_name = "simple.$driver"
     deps = [ ":simple.$driver-driver" ]
+    info = "simple.$driver-info.json"
   }
 }
 group("tests") {
