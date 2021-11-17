@@ -1295,10 +1295,10 @@ TEST(BindServerTestCase, ReplyNotRequiredAfterUnbound) {
       fidl::BindServer(loop.dispatcher(), std::move(remote), server.get(), std::move(on_unbound));
 
   // Start another thread to make the outgoing call.
-  std::thread([local = std::move(local)]() mutable {
+  auto other_call_thread = std::thread([local = std::move(local)]() mutable {
     auto result = fidl::WireCall(local)->Echo(kExpectedReply);
     EXPECT_EQ(ZX_ERR_PEER_CLOSED, result.status());
-  }).detach();
+  });
 
   // Wait for the server to enter Echo().
   ASSERT_OK(sync_completion_wait(&ready, ZX_TIME_INFINITE));
@@ -1311,6 +1311,7 @@ TEST(BindServerTestCase, ReplyNotRequiredAfterUnbound) {
 
   // The AsyncCompleter will be destroyed without having Reply()d or Close()d
   // but should not crash.
+  other_call_thread.join();
 }
 
 // These classes are used to create a server implementation with multiple
