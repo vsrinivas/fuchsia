@@ -12,8 +12,6 @@
 
 #include <memory>
 
-#include <fbl/alloc_checker.h>
-
 extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"
@@ -37,13 +35,7 @@ PcieDevice::~PcieDevice() { ZX_DEBUG_ASSERT(pci_dev_.drvdata == nullptr); }
 zx_status_t PcieDevice::Create(zx_device_t* parent_device) {
   zx_status_t status = ZX_OK;
 
-  fbl::AllocChecker ac;
-  auto device = std::unique_ptr<PcieDevice>(new (&ac) PcieDevice(parent_device));
-  if (!ac.check()) {
-    IWL_ERR(nullptr, "failed to allocate pcie_device (%zu bytes)", sizeof(PcieDevice));
-    return ZX_ERR_NO_MEMORY;
-  }
-
+  std::unique_ptr<PcieDevice> device(new PcieDevice(parent_device));
   device->driver_inspector_ =
       std::make_unique<DriverInspector>(DriverInspectorOptions{.root_name = "iwlwifi"});
   if ((status = device->DdkAdd(::ddk::DeviceAddArgs("iwlwifi-wlanphyimpl")

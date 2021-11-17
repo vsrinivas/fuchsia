@@ -49,7 +49,6 @@ source_set("sim_library") {
     "//src/devices/testing/fake-bti",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fbl",
   ]
   public_deps = [
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
@@ -152,7 +151,6 @@ executable("mac80211_test") {
   deps = [
     ":sim_library",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
-    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/mock-function",
     "//zircon/system/ulib/zxtest",
   ]

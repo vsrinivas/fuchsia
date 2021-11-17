@@ -121,7 +121,6 @@ source_set("fuchsia_device") {
     "//zircon/system/public",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fbl",
   ]
   friend =
       [ "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test:*" ]

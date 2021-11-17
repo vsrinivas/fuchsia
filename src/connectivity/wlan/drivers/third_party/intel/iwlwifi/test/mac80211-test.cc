@@ -5,6 +5,7 @@
 // Used to test mvm/mac80211.c
 
 #include <lib/mock-function/mock-function.h>
+#include <zircon/compiler.h>
 
 #include <zxtest/zxtest.h>
 
@@ -14,7 +15,6 @@ extern "C" {
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/mock-trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/single-ap-test.h"
-#include "zircon/system/ulib/fbl/include/fbl/auto_lock.h"
 
 namespace wlan::testing {
 namespace {
@@ -178,13 +178,13 @@ TEST_F(Mac80211Test, ChanCtxMultiple) {
 
 // Test the normal usage.
 //
-TEST_F(Mac80211Test, MvmSlotNormalCase) {
-  fbl::AutoLock auto_lock(&mvm_->mutex);
+TEST_F(Mac80211Test, MvmSlotNormalCase) __TA_NO_THREAD_SAFETY_ANALYSIS {
   int index;
   struct iwl_mvm_vif mvmvif = {};  // an instance to bind
   zx_status_t ret;
 
   // Fill up all mvmvif slots and expect okay
+  mtx_lock(&mvm_->mutex);
   for (size_t i = 0; i < MAX_NUM_MVMVIF; i++) {
     ret = iwl_mvm_find_free_mvmvif_slot(mvm_, &index);
     ASSERT_EQ(ret, ZX_OK);
@@ -202,12 +202,12 @@ TEST_F(Mac80211Test, MvmSlotNormalCase) {
   // One more is not accepted.
   ret = iwl_mvm_find_free_mvmvif_slot(mvm_, &index);
   ASSERT_EQ(ret, ZX_ERR_NO_RESOURCES);
+  mtx_unlock(&mvm_->mutex);
 }
 
 // Bind / unbind test.
 //
-TEST_F(Mac80211Test, MvmSlotBindUnbind) {
-  fbl::AutoLock auto_lock(&mvm_->mutex);
+TEST_F(Mac80211Test, MvmSlotBindUnbind) __TA_NO_THREAD_SAFETY_ANALYSIS {
   int index;
   struct iwl_mvm_vif mvmvif = {};  // an instance to bind
   zx_status_t ret;
@@ -216,6 +216,7 @@ TEST_F(Mac80211Test, MvmSlotBindUnbind) {
   ASSERT_EQ(MAX_NUM_MVMVIF, 4);
 
   // First occupy the index 0, 1, 3.
+  mtx_lock(&mvm_->mutex);
   ret = iwl_mvm_bind_mvmvif(mvm_, 0, &mvmvif);
   ASSERT_EQ(ret, ZX_OK);
   ret = iwl_mvm_bind_mvmvif(mvm_, 1, &mvmvif);
@@ -241,6 +242,7 @@ TEST_F(Mac80211Test, MvmSlotBindUnbind) {
   ret = iwl_mvm_find_free_mvmvif_slot(mvm_, &index);
   ASSERT_EQ(ret, ZX_OK);
   ASSERT_EQ(index, 1);
+  mtx_unlock(&mvm_->mutex);
 }
 
 class McastFilterTest : public Mac80211Test, public MockTrans {

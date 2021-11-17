@@ -8,8 +8,6 @@
 
 #include <memory>
 
-#include <fbl/alloc_checker.h>
-
 extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 }  // extern "C"
@@ -47,14 +45,7 @@ zx_status_t WlanphyImplDevice::WlanphyImplCreateIface(const wlanphy_impl_create_
   struct iwl_mvm* mvm = iwl_trans_get_mvm(drvdata());
   struct iwl_mvm_vif* mvmvif = mvm->mvmvif[*out_iface_id];
 
-  fbl::AllocChecker ac;
-  auto wlanmac_device =
-      fbl::make_unique_checked<WlanmacDevice>(&ac, parent(), drvdata(), *out_iface_id, mvmvif);
-  if (!ac.check()) {
-    IWL_ERR(this, "%s() failed to allocate wlanmac_device (%zu bytes)", __func__,
-            sizeof(*wlanmac_device));
-    return ZX_ERR_NO_MEMORY;
-  }
+  auto wlanmac_device = std::make_unique<WlanmacDevice>(parent(), drvdata(), *out_iface_id, mvmvif);
 
   if ((status = wlanmac_device->DdkAdd("iwlwifi-wlanmac")) != ZX_OK) {
     IWL_ERR(this, "%s() failed mac device add: %s\n", __func__, zx_status_get_string(status));

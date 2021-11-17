@@ -10,10 +10,9 @@
 #include <stdio.h>
 #include <zircon/syscalls.h>
 
+#include <cstdio>
 #include <sstream>
 #include <string>
-
-#include <fbl/string_printf.h>
 
 #define INSPECT_BUFSIZ 512
 
@@ -50,19 +49,18 @@ static std::string inspect_host_cmd_str(struct iwl_host_cmd* cmd) {
       "dup",
   };
 
-  std::string out(
-      fbl::StringPrintf("host_cmd id[0x%02x] flags[0x%x:%s]\n", cmd->id, cmd->flags,
-                        join_bitmap_string(flags_defs, ARRAY_SIZE(flags_defs), cmd->flags).c_str())
-          .c_str());
+  constexpr size_t kMaxStrBufSize = 1024;
+  char strbuf[kMaxStrBufSize];
+  std::snprintf(strbuf, kMaxStrBufSize, "host_cmd id[0x%02x] flags[0x%x:%s]\n", cmd->id, cmd->flags,
+                join_bitmap_string(flags_defs, ARRAY_SIZE(flags_defs), cmd->flags).c_str());
+  std::string out(strbuf);
 
   for (size_t i = 0; i < ARRAY_SIZE(cmd->len); i++) {
-    out +=
-        std::string(fbl::StringPrintf("  [%zu] dataflags[0x%x:%s] len[%d]\n", i, cmd->dataflags[i],
-                                      join_bitmap_string(dataflags_defs, ARRAY_SIZE(dataflags_defs),
-                                                         cmd->dataflags[i])
-                                          .c_str(),
-                                      cmd->len[i])
-                        .c_str());
+    std::snprintf(
+        strbuf, kMaxStrBufSize, "  [%zu] dataflags[0x%x:%s] len[%d]\n", i, cmd->dataflags[i],
+        join_bitmap_string(dataflags_defs, ARRAY_SIZE(dataflags_defs), cmd->dataflags[i]).c_str(),
+        cmd->len[i]);
+    out += std::string(strbuf);
   }
 
   return out;
