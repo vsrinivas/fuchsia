@@ -13,10 +13,6 @@
       "type": "host_tool"
     },
     {
-      "meta": "bin/fcp-meta.json",
-      "type": "host_tool"
-    },
-    {
       "meta": "bin/fdevtools-meta.json",
       "type": "host_tool"
     },

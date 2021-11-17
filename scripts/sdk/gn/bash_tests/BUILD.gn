@@ -16,7 +16,6 @@ group("tests") {
 # test the bash f* scripts.
 test_scripts = [
   "fconfig-test.sh",
-  "fcp-test.sh",
   "fdevtools-test.sh",
   "femu-exec-wrapper-test.sh",
   "femu-test.sh",
@@ -52,7 +51,6 @@ host_script_test_data("gn_sdk_bash_tests") {
       target_base_dir = "scripts/sdk/gn/base/bin"
       files = [
         "//scripts/sdk/gn/base/bin/fconfig.sh",
-        "//scripts/sdk/gn/base/bin/fcp.sh",
         "//scripts/sdk/gn/base/bin/fdevtools.sh",
         "//scripts/sdk/gn/base/bin/femu-exec-wrapper.sh",
         "//scripts/sdk/gn/base/bin/femu.sh",
