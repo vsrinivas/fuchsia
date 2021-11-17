@@ -89,19 +89,18 @@ class TableWithAttributes final {
     frame_ptr_->x_.set_data(nullptr);
     return *this;
   }
-
-  TableWithAttributes& clear_x() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->x_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   TableWithAttributes& set_x(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->x_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+    return *this;
+  }
+
+  TableWithAttributes& clear_x() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->x_.clear_data();
     return *this;
   }
 
@@ -212,19 +211,18 @@ class SimpleTable final {
     frame_ptr_->x_.set_data(nullptr);
     return *this;
   }
-
-  SimpleTable& clear_x() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->x_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SimpleTable& set_x(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->x_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+    return *this;
+  }
+
+  SimpleTable& clear_x() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->x_.clear_data();
     return *this;
   }
 
@@ -248,19 +246,18 @@ class SimpleTable final {
     frame_ptr_->y_.set_data(nullptr);
     return *this;
   }
-
-  SimpleTable& clear_y() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->y_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SimpleTable& set_y(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->y_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(5));
+    return *this;
+  }
+
+  SimpleTable& clear_y() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->y_.clear_data();
     return *this;
   }
 
@@ -368,19 +365,18 @@ class ReverseOrdinalTable final {
     frame_ptr_->z_.set_data(nullptr);
     return *this;
   }
-
-  ReverseOrdinalTable& clear_z() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->z_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   ReverseOrdinalTable& set_z(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->z_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+    return *this;
+  }
+
+  ReverseOrdinalTable& clear_z() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->z_.clear_data();
     return *this;
   }
 
@@ -404,19 +400,18 @@ class ReverseOrdinalTable final {
     frame_ptr_->y_.set_data(nullptr);
     return *this;
   }
-
-  ReverseOrdinalTable& clear_y() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->y_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   ReverseOrdinalTable& set_y(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->y_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(2));
+    return *this;
+  }
+
+  ReverseOrdinalTable& clear_y() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->y_.clear_data();
     return *this;
   }
 
@@ -440,19 +435,18 @@ class ReverseOrdinalTable final {
     frame_ptr_->x_.set_data(nullptr);
     return *this;
   }
-
-  ReverseOrdinalTable& clear_x() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->x_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   ReverseOrdinalTable& set_x(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->x_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(3));
+    return *this;
+  }
+
+  ReverseOrdinalTable& clear_x() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->x_.clear_data();
     return *this;
   }
 
@@ -559,19 +553,18 @@ class OlderSimpleTable final {
     frame_ptr_->x_.set_data(nullptr);
     return *this;
   }
-
-  OlderSimpleTable& clear_x() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->x_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   OlderSimpleTable& set_x(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->x_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+    return *this;
+  }
+
+  OlderSimpleTable& clear_x() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->x_.clear_data();
     return *this;
   }
 
@@ -682,19 +675,18 @@ class NewerSimpleTable final {
     frame_ptr_->x_.set_data(nullptr);
     return *this;
   }
-
-  NewerSimpleTable& clear_x() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->x_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   NewerSimpleTable& set_x(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->x_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+    return *this;
+  }
+
+  NewerSimpleTable& clear_x() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->x_.clear_data();
     return *this;
   }
 
@@ -718,19 +710,18 @@ class NewerSimpleTable final {
     frame_ptr_->y_.set_data(nullptr);
     return *this;
   }
-
-  NewerSimpleTable& clear_y() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->y_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   NewerSimpleTable& set_y(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->y_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(5));
+    return *this;
+  }
+
+  NewerSimpleTable& clear_y() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->y_.clear_data();
     return *this;
   }
 
@@ -754,19 +745,18 @@ class NewerSimpleTable final {
     frame_ptr_->z_.set_data(nullptr);
     return *this;
   }
-
-  NewerSimpleTable& clear_z() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->z_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   NewerSimpleTable& set_z(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->z_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(6));
+    return *this;
+  }
+
+  NewerSimpleTable& clear_z() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->z_.clear_data();
     return *this;
   }
 
@@ -1016,19 +1006,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v1_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v1() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v1_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v1(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v1_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v1() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v1_.clear_data();
     return *this;
   }
 
@@ -1054,19 +1043,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v2_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v2() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v2_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v2(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v2_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(2));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v2() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v2_.clear_data();
     return *this;
   }
 
@@ -1092,19 +1080,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v3_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v3() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v3_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v3(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v3_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(3));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v3() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v3_.clear_data();
     return *this;
   }
 
@@ -1130,19 +1117,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v4_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v4() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v4_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v4(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v4_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(4));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v4() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v4_.clear_data();
     return *this;
   }
 
@@ -1168,19 +1154,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v5_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v5() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v5_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v5(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v5_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(5));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v5() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v5_.clear_data();
     return *this;
   }
 
@@ -1206,19 +1191,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v6_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v6() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v6_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v6(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v6_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(6));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v6() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v6_.clear_data();
     return *this;
   }
 
@@ -1244,19 +1228,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v7_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v7() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v7_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v7(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v7_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(7));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v7() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v7_.clear_data();
     return *this;
   }
 
@@ -1282,19 +1265,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v8_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v8() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v8_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v8(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v8_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(8));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v8() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v8_.clear_data();
     return *this;
   }
 
@@ -1320,19 +1302,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v9_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v9() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v9_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v9(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v9_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(9));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v9() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v9_.clear_data();
     return *this;
   }
 
@@ -1358,19 +1339,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v10_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v10() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v10_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v10(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v10_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(10));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v10() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v10_.clear_data();
     return *this;
   }
 
@@ -1396,19 +1376,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v11_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v11() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v11_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v11(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v11_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(11));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v11() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v11_.clear_data();
     return *this;
   }
 
@@ -1434,19 +1413,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v12_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v12() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v12_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v12(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v12_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(12));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v12() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v12_.clear_data();
     return *this;
   }
 
@@ -1472,19 +1450,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v13_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v13() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v13_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v13(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v13_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(13));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v13() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v13_.clear_data();
     return *this;
   }
 
@@ -1510,19 +1487,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v14_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v14() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v14_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v14(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v14_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(14));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v14() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v14_.clear_data();
     return *this;
   }
 
@@ -1548,19 +1524,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v15_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v15() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v15_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v15(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v15_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(15));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v15() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v15_.clear_data();
     return *this;
   }
 
@@ -1586,19 +1561,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v16_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v16() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v16_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v16(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v16_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(16));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v16() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v16_.clear_data();
     return *this;
   }
 
@@ -1624,19 +1598,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v17_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v17() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v17_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v17(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v17_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(17));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v17() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v17_.clear_data();
     return *this;
   }
 
@@ -1662,19 +1635,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v18_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v18() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v18_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v18(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v18_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(18));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v18() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v18_.clear_data();
     return *this;
   }
 
@@ -1700,19 +1672,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v19_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v19() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v19_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v19(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v19_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(19));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v19() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v19_.clear_data();
     return *this;
   }
 
@@ -1738,19 +1709,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v20_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v20() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v20_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v20(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v20_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(20));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v20() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v20_.clear_data();
     return *this;
   }
 
@@ -1776,19 +1746,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v21_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v21() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v21_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v21(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v21_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(21));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v21() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v21_.clear_data();
     return *this;
   }
 
@@ -1814,19 +1783,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v22_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v22() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v22_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v22(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v22_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(22));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v22() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v22_.clear_data();
     return *this;
   }
 
@@ -1852,19 +1820,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v23_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v23() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v23_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v23(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v23_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(23));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v23() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v23_.clear_data();
     return *this;
   }
 
@@ -1890,19 +1857,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v24_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v24() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v24_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v24(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v24_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(24));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v24() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v24_.clear_data();
     return *this;
   }
 
@@ -1928,19 +1894,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v25_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v25() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v25_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v25(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v25_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(25));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v25() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v25_.clear_data();
     return *this;
   }
 
@@ -1966,19 +1931,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v26_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v26() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v26_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v26(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v26_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(26));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v26() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v26_.clear_data();
     return *this;
   }
 
@@ -2004,19 +1968,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v27_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v27() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v27_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v27(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v27_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(27));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v27() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v27_.clear_data();
     return *this;
   }
 
@@ -2042,19 +2005,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v28_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v28() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v28_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v28(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v28_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(28));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v28() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v28_.clear_data();
     return *this;
   }
 
@@ -2080,19 +2042,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v29_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v29() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v29_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v29(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v29_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(29));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v29() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v29_.clear_data();
     return *this;
   }
 
@@ -2118,19 +2079,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v30_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v30() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v30_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v30(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v30_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(30));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v30() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v30_.clear_data();
     return *this;
   }
 
@@ -2156,19 +2116,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v31_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v31() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v31_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v31(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v31_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(31));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v31() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v31_.clear_data();
     return *this;
   }
 
@@ -2194,19 +2153,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v32_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v32() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v32_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v32(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v32_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(32));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v32() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v32_.clear_data();
     return *this;
   }
 
@@ -2232,19 +2190,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v33_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v33() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v33_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v33(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v33_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(33));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v33() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v33_.clear_data();
     return *this;
   }
 
@@ -2270,19 +2227,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v34_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v34() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v34_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v34(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v34_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(34));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v34() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v34_.clear_data();
     return *this;
   }
 
@@ -2308,19 +2264,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v35_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v35() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v35_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v35(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v35_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(35));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v35() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v35_.clear_data();
     return *this;
   }
 
@@ -2346,19 +2301,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v36_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v36() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v36_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v36(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v36_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(36));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v36() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v36_.clear_data();
     return *this;
   }
 
@@ -2384,19 +2338,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v37_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v37() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v37_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v37(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v37_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(37));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v37() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v37_.clear_data();
     return *this;
   }
 
@@ -2422,19 +2375,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v38_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v38() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v38_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v38(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v38_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(38));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v38() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v38_.clear_data();
     return *this;
   }
 
@@ -2460,19 +2412,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v39_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v39() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v39_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v39(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v39_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(39));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v39() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v39_.clear_data();
     return *this;
   }
 
@@ -2498,19 +2449,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v40_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v40() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v40_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v40(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v40_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(40));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v40() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v40_.clear_data();
     return *this;
   }
 
@@ -2536,19 +2486,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v41_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v41() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v41_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v41(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v41_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(41));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v41() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v41_.clear_data();
     return *this;
   }
 
@@ -2574,19 +2523,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v42_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v42() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v42_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v42(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v42_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(42));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v42() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v42_.clear_data();
     return *this;
   }
 
@@ -2612,19 +2560,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v43_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v43() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v43_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v43(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v43_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(43));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v43() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v43_.clear_data();
     return *this;
   }
 
@@ -2650,19 +2597,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v44_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v44() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v44_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v44(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v44_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(44));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v44() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v44_.clear_data();
     return *this;
   }
 
@@ -2688,19 +2634,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v45_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v45() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v45_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v45(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v45_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(45));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v45() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v45_.clear_data();
     return *this;
   }
 
@@ -2726,19 +2671,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v46_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v46() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v46_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v46(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v46_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(46));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v46() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v46_.clear_data();
     return *this;
   }
 
@@ -2764,19 +2708,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v47_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v47() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v47_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v47(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v47_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(47));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v47() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v47_.clear_data();
     return *this;
   }
 
@@ -2802,19 +2745,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v48_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v48() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v48_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v48(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v48_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(48));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v48() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v48_.clear_data();
     return *this;
   }
 
@@ -2840,19 +2782,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v49_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v49() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v49_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v49(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v49_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(49));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v49() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v49_.clear_data();
     return *this;
   }
 
@@ -2878,19 +2819,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v50_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v50() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v50_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v50(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v50_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(50));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v50() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v50_.clear_data();
     return *this;
   }
 
@@ -2916,19 +2856,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v51_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v51() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v51_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v51(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v51_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(51));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v51() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v51_.clear_data();
     return *this;
   }
 
@@ -2954,19 +2893,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v52_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v52() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v52_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v52(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v52_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(52));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v52() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v52_.clear_data();
     return *this;
   }
 
@@ -2992,19 +2930,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v53_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v53() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v53_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v53(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v53_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(53));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v53() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v53_.clear_data();
     return *this;
   }
 
@@ -3030,19 +2967,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v54_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v54() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v54_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v54(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v54_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(54));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v54() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v54_.clear_data();
     return *this;
   }
 
@@ -3068,19 +3004,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v55_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v55() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v55_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v55(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v55_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(55));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v55() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v55_.clear_data();
     return *this;
   }
 
@@ -3106,19 +3041,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v56_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v56() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v56_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v56(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v56_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(56));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v56() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v56_.clear_data();
     return *this;
   }
 
@@ -3144,19 +3078,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v57_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v57() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v57_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v57(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v57_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(57));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v57() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v57_.clear_data();
     return *this;
   }
 
@@ -3182,19 +3115,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v58_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v58() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v58_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v58(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v58_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(58));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v58() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v58_.clear_data();
     return *this;
   }
 
@@ -3220,19 +3152,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v59_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v59() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v59_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v59(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v59_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(59));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v59() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v59_.clear_data();
     return *this;
   }
 
@@ -3258,19 +3189,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v60_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v60() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v60_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v60(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v60_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(60));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v60() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v60_.clear_data();
     return *this;
   }
 
@@ -3296,19 +3226,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v61_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v61() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v61_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v61(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v61_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(61));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v61() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v61_.clear_data();
     return *this;
   }
 
@@ -3334,19 +3263,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v62_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v62() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v62_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v62(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v62_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(62));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v62() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v62_.clear_data();
     return *this;
   }
 
@@ -3372,19 +3300,18 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v63_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v63() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v63_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v63(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v63_.set_data(
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(63));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v63() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v63_.clear_data();
     return *this;
   }
 
@@ -3411,13 +3338,6 @@ class SixtyFourOrdinalTable final {
     frame_ptr_->v64_.set_data(nullptr);
     return *this;
   }
-
-  SixtyFourOrdinalTable& clear_v64() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v64_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   SixtyFourOrdinalTable& set_v64(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -3425,6 +3345,12 @@ class SixtyFourOrdinalTable final {
         ::fidl::ObjectView<::fidl_test_table::wire::ExtensionTable>(
             allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(64));
+    return *this;
+  }
+
+  SixtyFourOrdinalTable& clear_v64() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v64_.clear_data();
     return *this;
   }
 

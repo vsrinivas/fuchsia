@@ -55,7 +55,7 @@ TEST(DispatcherHandleOwnership, ServerReceiveOneWay) {
   auto [observer, send] = CreateEventPair();
   fidl::Arena allocator;
   test::wire::Resource r(allocator);
-  r.set_handle(allocator, std::move(send));
+  r.set_handle(std::move(send));
   auto result = client->SendResource(r);
   ASSERT_TRUE(result.ok());
 
@@ -82,7 +82,7 @@ TEST(DispatcherHandleOwnership, ClientReceiveTwoWay) {
       auto [observer, send] = CreateEventPair();
       fidl::Arena allocator;
       test::wire::Resource r(allocator);
-      r.set_handle(allocator, std::move(send));
+      r.set_handle(std::move(send));
       observer_ = std::move(observer);
       completer.Reply(r);
     }
@@ -148,7 +148,7 @@ TEST(DispatcherHandleOwnership, ClientReceiveEvent) {
   auto [observer, send] = CreateEventPair();
   fidl::Arena allocator;
   test::wire::Resource r(allocator);
-  r.set_handle(allocator, std::move(send));
+  r.set_handle(std::move(send));
   ASSERT_OK(server_binding->ResourceEvent(r));
 
   class EventHandler final : public fidl::WireAsyncEventHandler<test::Protocol> {

@@ -52,7 +52,7 @@ TEST(FidlExamples, Unions) {
 TEST(FidlExamples, Tables) {
   fidl::Arena allocator;
   fuchsia_examples::wire::User user(allocator);
-  user.set_age(allocator, 30);
+  user.set_age(30);
   user.set_name(allocator, allocator, "jdoe");
   ASSERT_FALSE(user.IsEmpty());
   ASSERT_EQ(user.age(), 30);

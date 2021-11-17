@@ -114,10 +114,10 @@ class HandleCloseProviderServer : public fidl::WireServer<test::HandleProvider> 
     if ((request->fields & 1) != 0) {
       zx::event event;
       zx::event::create(0, &event);
-      t.set_h1(allocator, std::move(event));
+      t.set_h1(std::move(event));
     }
     if ((request->fields & 2) != 0) {
-      t.set_h2(allocator);
+      t.set_h2({});
       zx::event::create(0, &t.h2().h);
     }
     completer.Reply(std::move(t));
@@ -130,10 +130,10 @@ class HandleCloseProviderServer : public fidl::WireServer<test::HandleProvider> 
     if ((request->fields & 1) != 0) {
       zx::event event;
       zx::event::create(0, &event);
-      reply.t.set_h1(allocator, std::move(event));
+      reply.t.set_h1(std::move(event));
     }
     if ((request->fields & 2) != 0) {
-      reply.t.set_h2(allocator);
+      reply.t.set_h2({});
       zx::event::create(0, &reply.t.h2().h);
     }
     completer.Reply(std::move(reply));

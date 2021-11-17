@@ -84,19 +84,18 @@ class TableSmallArray final {
     frame_ptr_->a_.set_data(nullptr);
     return *this;
   }
-
-  TableSmallArray& clear_a() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->a_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   TableSmallArray& set_a(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->a_.set_data(::fidl::ObjectView<::fidl::Array<uint32_t, 2>>(
         allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+    return *this;
+  }
+
+  TableSmallArray& clear_a() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->a_.clear_data();
     return *this;
   }
 
@@ -203,19 +202,18 @@ class TableLargeArray final {
     frame_ptr_->a_.set_data(nullptr);
     return *this;
   }
-
-  TableLargeArray& clear_a() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->a_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   TableLargeArray& set_a(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->a_.set_data(::fidl::ObjectView<::fidl::Array<uint32_t, 100>>(
         allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+    return *this;
+  }
+
+  TableLargeArray& clear_a() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->a_.clear_data();
     return *this;
   }
 

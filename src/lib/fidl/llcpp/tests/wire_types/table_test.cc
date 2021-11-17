@@ -11,7 +11,7 @@ TEST(Table, TablePrimitive) {
   namespace test = fidl_llcpp_types_test;
   fidl::Arena allocator;
   test::wire::SampleTable table(allocator);
-  table.set_x(allocator, 3).set_y(allocator, 100);
+  table.set_x(3).set_y(100);
 
   ASSERT_TRUE(table.has_x());
   ASSERT_TRUE(table.has_y());
@@ -76,7 +76,7 @@ TEST(Table, NotEmptyTable) {
   fidl::Arena allocator;
   test::wire::SampleTable table(allocator);
   ASSERT_TRUE(table.IsEmpty());
-  table.set_x(allocator, 3).set_y(allocator, 100);
+  table.set_x(3).set_y(100);
   ASSERT_FALSE(table.IsEmpty());
 }
 
@@ -96,11 +96,11 @@ TEST(Table, Getters) {
   fidl::Arena allocator;
   test::wire::SampleTable table(allocator);
   EXPECT_FALSE(table.has_x());
-  table.set_x(allocator, 3);
+  table.set_x(3);
   static_assert(std::is_same<uint8_t&, decltype(table.x())>::value);
   EXPECT_TRUE(table.has_x());
   EXPECT_EQ(3, table.x());
-  table.set_x(allocator, 4);
+  table.set_x(4);
   EXPECT_TRUE(table.has_x());
   EXPECT_EQ(4, table.x());
 }
@@ -116,7 +116,7 @@ TEST(Table, SubTables) {
   EXPECT_TRUE(table.has_t());
 
   EXPECT_FALSE(table.t().has_x());
-  table.t().set_x(allocator, 12);
+  table.t().set_x(12);
   EXPECT_TRUE(table.t().has_x());
   EXPECT_EQ(12, table.t().x());
 
@@ -128,7 +128,7 @@ TEST(Table, SubTables) {
   table.vt()[0].Allocate(allocator);
 
   EXPECT_FALSE(table.vt()[0].has_x());
-  table.vt()[0].set_x(allocator, 13);
+  table.vt()[0].set_x(13);
   EXPECT_TRUE(table.vt()[0].has_x());
   EXPECT_EQ(13, table.vt()[0].x());
   table.vt()[0].clear_x();
@@ -142,7 +142,7 @@ TEST(Table, SubTables) {
   // |Allocate| must be called on a default-constructed table before using it.
   table.at()[0].Allocate(allocator);
   EXPECT_FALSE(table.at()[0].has_x());
-  table.at()[0].set_x(allocator, 15);
+  table.at()[0].set_x(15);
   EXPECT_TRUE(table.at()[0].has_x());
   EXPECT_EQ(15, table.at()[0].x());
   table.at()[0].clear_x();
@@ -165,18 +165,18 @@ TEST(Table, SettingUnsettingHandles) {
   ASSERT_EQ(ZX_OK, zx::event::create(0, &event1));
   zx::event event1_dup;
   event1.duplicate(ZX_RIGHT_SAME_RIGHTS, &event1_dup);
-  table.set_hs(allocator, test::wire::HandleStruct{
-                              .h = std::move(event1),
-                          });
+  table.set_hs(test::wire::HandleStruct{
+      .h = std::move(event1),
+  });
   ASSERT_EQ(2u, event_ref_count(event1_dup));
 
   zx::event event2;
   ASSERT_EQ(ZX_OK, zx::event::create(0, &event2));
   zx::event event2_dup;
   event2.duplicate(ZX_RIGHT_SAME_RIGHTS, &event2_dup);
-  table.set_hs(allocator, test::wire::HandleStruct{
-                              .h = std::move(event2),
-                          });
+  table.set_hs(test::wire::HandleStruct{
+      .h = std::move(event2),
+  });
   ASSERT_EQ(1u, event_ref_count(event1_dup));
   ASSERT_EQ(2u, event_ref_count(event2_dup));
 

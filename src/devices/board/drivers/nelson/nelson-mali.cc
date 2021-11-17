@@ -78,7 +78,7 @@ zx_status_t Nelson::MaliInit() {
   using fuchsia_hardware_gpu_amlogic::wire::Metadata;
   fidl::Arena allocator;
   Metadata metadata(allocator);
-  metadata.set_supports_protected_mode(allocator, true);
+  metadata.set_supports_protected_mode(true);
   fidl::OwnedEncodedMessage<Metadata> encoded_metadata(&metadata);
   if (!encoded_metadata.ok()) {
     zxlogf(ERROR, "%s: Could not build metadata %s\n", __func__,

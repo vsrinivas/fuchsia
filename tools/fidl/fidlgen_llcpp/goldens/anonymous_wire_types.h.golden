@@ -412,13 +412,6 @@ class TableMember final {
     frame_ptr_->table_data_.set_data(nullptr);
     return *this;
   }
-
-  TableMember& clear_table_data() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->table_data_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   TableMember& set_table_data(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -427,6 +420,12 @@ class TableMember final {
             ::fidl::VectorView<::fidl_test_anonymous::wire::TableData>>(
             allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(2));
+    return *this;
+  }
+
+  TableMember& clear_table_data() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->table_data_.clear_data();
     return *this;
   }
 
@@ -538,19 +537,18 @@ class FunctionApplication final {
     frame_ptr_->func_.set_data(nullptr);
     return *this;
   }
-
-  FunctionApplication& clear_func() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->func_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   FunctionApplication& set_func(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->func_.set_data(::fidl::ObjectView<::fidl::StringView>(
         allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+    return *this;
+  }
+
+  FunctionApplication& clear_func() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->func_.clear_data();
     return *this;
   }
 
@@ -580,13 +578,6 @@ class FunctionApplication final {
     frame_ptr_->args_.set_data(nullptr);
     return *this;
   }
-
-  FunctionApplication& clear_args() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->args_.clear_data();
-    return *this;
-  }
-
   template <typename... Args>
   FunctionApplication& set_args(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -595,6 +586,12 @@ class FunctionApplication final {
             ::fidl::VectorView<::fidl_test_anonymous::wire::Expression>>(
             allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(3));
+    return *this;
+  }
+
+  FunctionApplication& clear_args() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->args_.clear_data();
     return *this;
   }
 
@@ -619,16 +616,6 @@ class FunctionApplication final {
   FunctionApplication& clear_flags() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->flags_.clear_data();
-    return *this;
-  }
-
-  template <typename... Args>
-  FunctionApplication& set_flags(::fidl::AnyArena& allocator, Args&&... args) {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->flags_.set_data(
-        ::fidl::ObjectView<::fidl_test_anonymous::wire::Flags>(
-            allocator, std::forward<Args>(args)...));
-    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(4));
     return *this;
   }
 
