@@ -111,10 +111,7 @@ class Simple extends $fidl.Struct {
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<Simple> kSimple_Type = $fidl.StructType<Simple>(
-  inlineSizeV1: 2,
-  inlineSizeV2: 2,
-  structDecode: Simple._structDecode,
-);
+    inlineSizeV1: 2, inlineSizeV2: 2, structDecode: Simple._structDecode);
 
 class BasicStruct extends $fidl.Struct {
   const BasicStruct({
@@ -173,10 +170,12 @@ class BasicStruct extends $fidl.Struct {
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 4, 4);
         return BasicStruct(
             x: $fieldType0.decode($decoder, $offset + 0, $depth),
             y: $fieldType1.decode($decoder, $offset + 8, $depth));
       case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 4, 4);
         return BasicStruct(
             x: $fieldType0.decode($decoder, $offset + 0, $depth),
             y: $fieldType1.decode($decoder, $offset + 8, $depth));
@@ -190,7 +189,6 @@ class BasicStruct extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<BasicStruct> kBasicStruct_Type =
     $fidl.StructType<BasicStruct>(
-  inlineSizeV1: 24,
-  inlineSizeV2: 24,
-  structDecode: BasicStruct._structDecode,
-);
+        inlineSizeV1: 24,
+        inlineSizeV2: 24,
+        structDecode: BasicStruct._structDecode);

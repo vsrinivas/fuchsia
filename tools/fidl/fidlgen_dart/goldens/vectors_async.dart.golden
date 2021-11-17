@@ -122,7 +122,6 @@ class ExampleUseOfVectors extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<ExampleUseOfVectors> kExampleUseOfVectors_Type =
     $fidl.StructType<ExampleUseOfVectors>(
-  inlineSizeV1: 32,
-  inlineSizeV2: 32,
-  structDecode: ExampleUseOfVectors._structDecode,
-);
+        inlineSizeV1: 32,
+        inlineSizeV2: 32,
+        structDecode: ExampleUseOfVectors._structDecode);

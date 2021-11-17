@@ -208,6 +208,13 @@ abstract class FidlType<T, I extends Iterable<T>> {
     }
   }
 
+  T decodeObject(Decoder decoder, int offset, int inlineSize, int depth) {
+    T decoded = decode(decoder, offset, depth);
+    final int padding = align(inlineSize) - inlineSize;
+    decoder.checkPadding(offset + inlineSize, padding);
+    return decoded;
+  }
+
   T decode(Decoder decoder, int offset, int depth);
 
   I decodeArray(Decoder decoder, int count, int offset, int depth);
@@ -851,6 +858,7 @@ class NullableStringType extends SimpleFidlType<String?> {
   }) : super(inlineSizeV1: 16, inlineSizeV2: 16);
 
   final int? maybeElementCount;
+
   @override
   void encode(Encoder encoder, String? value, int offset, int depth) {
     if (value == null) {
@@ -895,10 +903,10 @@ class PointerType<T> extends SimpleFidlType<T?> {
     if (data == kAllocAbsent) {
       return null;
     }
-    T? decoded = element.decode(
-        decoder,
-        decoder.claimMemory(element.inlineSize(decoder.wireFormat), depth),
-        depth + 1);
+    final int boxInlineSize = element.inlineSize(decoder.wireFormat);
+    final int boxOffset = decoder.claimMemory(boxInlineSize, depth);
+    T? decoded = element.decodeObject(
+        decoder, boxOffset, boxInlineSize, depth + 1);
     return decoded;
   }
 
@@ -1030,6 +1038,8 @@ enum EnvelopePresence {
   absent,
 }
 
+const kInlineEnvelopeContentSize = 4;
+
 class EnvelopeHeader {
   int numBytes;
   int numHandles;
@@ -1100,7 +1110,7 @@ EnvelopeHeader _decodeV2EnvelopeHeader(Decoder decoder, int offset) {
       );
     case 1: // inlined content
       return EnvelopeHeader(
-        0,
+        kInlineEnvelopeContentSize,
         numHandles,
         EnvelopePresence.present,
         EnvelopeContentLocation.inline,
@@ -1136,7 +1146,10 @@ T? _decodeEnvelopeContent<T, I extends Iterable<T>>(
       if (header.contentLocation == EnvelopeContentLocation.inline) {
         if (fieldType != null) {
           final claimedHandles = decoder.countClaimedHandles();
+          final fieldInlineSize = fieldType.inlineSize(decoder.wireFormat);
           final field = fieldType.decode(decoder, headerOffset, depth + 1);
+          decoder.checkPadding(headerOffset + fieldInlineSize,
+              kInlineEnvelopeContentSize - fieldInlineSize);
           final numHandlesConsumed =
               decoder.countClaimedHandles() - claimedHandles;
           if (header.numHandles != numHandlesConsumed) {
@@ -1165,10 +1178,11 @@ T? _decodeEnvelopeContent<T, I extends Iterable<T>>(
               FidlErrorCode.fidlInvalidInlineBitInEnvelope);
         }
 
-        final fieldOffset = decoder.claimMemory(
-            fieldType.inlineSize(decoder.wireFormat), depth);
+        final fieldInlineSize = fieldType.inlineSize(decoder.wireFormat);
+        final fieldOffset = decoder.claimMemory(fieldInlineSize, depth);
         final claimedHandles = decoder.countClaimedHandles();
-        final field = fieldType.decode(decoder, fieldOffset, depth + 1);
+        final field = fieldType.decodeObject(
+            decoder, fieldOffset, fieldInlineSize, depth + 1);
         final numBytesConsumed = decoder.nextOffset() - fieldOffset;
         final numHandlesConsumed =
             decoder.countClaimedHandles() - claimedHandles;
@@ -1355,6 +1369,9 @@ void _encodeUnion<T extends Union>(Encoder encoder, T value, int offset,
     int depth, Map<int, FidlType> members, bool flexible, bool resource) {
   final int envelopeOffset = offset + 8;
   final int ordinal = value.$ordinal;
+  if (ordinal == 0) {
+    throw FidlError('Invalid ordinal: $ordinal', FidlErrorCode.unknown);
+  }
   var fieldType = members[ordinal];
   final data = value.$data;
   if (fieldType == null && flexible && data is UnknownRawData) {

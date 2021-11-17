@@ -106,6 +106,7 @@ type Struct struct {
 	Identifier       fidlgen.EncodedCompoundIdentifier
 	Name             string
 	Members          []StructMember
+	Paddings         []StructPadding
 	TypeSymbol       string
 	TypeExpr         string
 	HasNullableField bool
@@ -123,6 +124,11 @@ type StructMember struct {
 	OffsetV2     int
 	typeExpr     string
 	Documented
+}
+
+type StructPadding struct {
+	OffsetV1, OffsetV2   int
+	PaddingV1, PaddingV2 int
 }
 
 // Table represents a table declaration.
@@ -989,7 +995,7 @@ func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 func (c *compiler) compileStructMember(val fidlgen.StructMember) StructMember {
 	t := c.compileType(val.Type)
 
-	defaultValue := ""
+	var defaultValue string
 	if val.MaybeDefaultValue != nil {
 		defaultValue = c.compileConstant(*val.MaybeDefaultValue, &t)
 	}
@@ -1009,40 +1015,55 @@ func (c *compiler) compileStructMember(val fidlgen.StructMember) StructMember {
 
 func (c *compiler) compileStruct(val fidlgen.Struct) Struct {
 	ci := fidlgen.ParseCompoundIdentifier(val.Name)
+	name := c.compileUpperCamelCompoundIdentifier(ci, "", declarationContext)
 	r := Struct{
-		Identifier:       val.Name,
-		Name:             c.compileUpperCamelCompoundIdentifier(ci, "", declarationContext),
-		Members:          []StructMember{},
-		TypeSymbol:       c.typeSymbolForCompoundIdentifier(ci),
-		TypeExpr:         "",
-		HasNullableField: false,
-		Documented:       docString(val),
+		Identifier: val.Name,
+		Name:       name,
+		TypeSymbol: c.typeSymbolForCompoundIdentifier(ci),
+		TypeExpr: fmt.Sprintf(
+			`$fidl.StructType<%s>(inlineSizeV1: %v, inlineSizeV2: %v, structDecode: %s._structDecode)`,
+			name, val.TypeShapeV1.InlineSize, val.TypeShapeV2.InlineSize, name),
+		Documented: docString(val),
 	}
 
-	var hasNullableField = false
-
-	for _, v := range val.Members {
-		var member = c.compileStructMember(v)
-		if member.Type.Nullable {
-			hasNullableField = true
-		}
-		r.Members = append(r.Members, member)
-	}
-
-	if len(r.Members) == 0 {
+	// Early exit for empty struct case.
+	if len(val.Members) == 0 {
 		r.isEmptyStruct = true
 		r.Members = []StructMember{
 			c.compileStructMember(fidlgen.EmptyStructMember("reserved")),
 		}
+		return r
 	}
 
-	r.HasNullableField = hasNullableField
-
-	r.TypeExpr = fmt.Sprintf(`$fidl.StructType<%s>(
-  inlineSizeV1: %v,
-  inlineSizeV2: %v,
-  structDecode: %s._structDecode,
-)`, r.Name, val.TypeShapeV1.InlineSize, val.TypeShapeV2.InlineSize, r.Name)
+	var (
+		isFirst                              = true
+		previousPaddingV1, previousPaddingV2 int
+	)
+	for _, v := range val.Members {
+		member := c.compileStructMember(v)
+		if member.Type.Nullable {
+			r.HasNullableField = true
+		}
+		r.Members = append(r.Members, member)
+		if isFirst {
+			isFirst = false
+		} else {
+			r.Paddings = append(r.Paddings, StructPadding{
+				OffsetV1:  v.FieldShapeV1.Offset - previousPaddingV1,
+				OffsetV2:  v.FieldShapeV2.Offset - previousPaddingV2,
+				PaddingV1: previousPaddingV1,
+				PaddingV2: previousPaddingV2,
+			})
+		}
+		previousPaddingV1 = v.FieldShapeV1.Padding
+		previousPaddingV2 = v.FieldShapeV2.Padding
+	}
+	r.Paddings = append(r.Paddings, StructPadding{
+		OffsetV1:  val.TypeShapeV1.InlineSize - previousPaddingV1,
+		OffsetV2:  val.TypeShapeV2.InlineSize - previousPaddingV2,
+		PaddingV1: previousPaddingV1,
+		PaddingV2: previousPaddingV2,
+	})
 	return r
 }
 

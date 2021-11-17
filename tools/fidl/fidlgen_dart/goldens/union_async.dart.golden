@@ -2298,10 +2298,7 @@ class Pizza extends $fidl.Struct {
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<Pizza> kPizza_Type = $fidl.StructType<Pizza>(
-  inlineSizeV1: 16,
-  inlineSizeV2: 16,
-  structDecode: Pizza._structDecode,
-);
+    inlineSizeV1: 16, inlineSizeV2: 16, structDecode: Pizza._structDecode);
 
 class Pasta extends $fidl.Struct {
   const Pasta({
@@ -2359,10 +2356,7 @@ class Pasta extends $fidl.Struct {
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<Pasta> kPasta_Type = $fidl.StructType<Pasta>(
-  inlineSizeV1: 16,
-  inlineSizeV2: 16,
-  structDecode: Pasta._structDecode,
-);
+    inlineSizeV1: 16, inlineSizeV2: 16, structDecode: Pasta._structDecode);
 
 class NullableUnionStruct extends $fidl.Struct {
   const NullableUnionStruct({
@@ -2431,10 +2425,9 @@ class NullableUnionStruct extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<NullableUnionStruct> kNullableUnionStruct_Type =
     $fidl.StructType<NullableUnionStruct>(
-  inlineSizeV1: 24,
-  inlineSizeV2: 16,
-  structDecode: NullableUnionStruct._structDecode,
-);
+        inlineSizeV1: 24,
+        inlineSizeV2: 16,
+        structDecode: NullableUnionStruct._structDecode);
 
 class Empty extends $fidl.Struct {
   const Empty({
@@ -2494,10 +2487,7 @@ class Empty extends $fidl.Struct {
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<Empty> kEmpty_Type = $fidl.StructType<Empty>(
-  inlineSizeV1: 1,
-  inlineSizeV2: 1,
-  structDecode: Empty._structDecode,
-);
+    inlineSizeV1: 1, inlineSizeV2: 1, structDecode: Empty._structDecode);
 
 class StructWithNullableXUnion extends $fidl.Struct {
   const StructWithNullableXUnion({
@@ -2566,10 +2556,9 @@ class StructWithNullableXUnion extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<StructWithNullableXUnion>
     kStructWithNullableXUnion_Type = $fidl.StructType<StructWithNullableXUnion>(
-  inlineSizeV1: 24,
-  inlineSizeV2: 16,
-  structDecode: StructWithNullableXUnion._structDecode,
-);
+        inlineSizeV1: 24,
+        inlineSizeV2: 16,
+        structDecode: StructWithNullableXUnion._structDecode);
 
 class UnionSandwich extends $fidl.Struct {
   const UnionSandwich({
@@ -2638,11 +2627,16 @@ class UnionSandwich extends $fidl.Struct {
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 4, 4);
+        $decoder.checkPadding($offset + 36, 4);
         return UnionSandwich(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             u: $fieldType1.decode($decoder, $offset + 8, $depth),
             b: $fieldType2.decode($decoder, $offset + 32, $depth));
       case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 4, 4);
+
+        $decoder.checkPadding($offset + 28, 4);
         return UnionSandwich(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             u: $fieldType1.decode($decoder, $offset + 8, $depth),
@@ -2657,10 +2651,9 @@ class UnionSandwich extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<UnionSandwich> kUnionSandwich_Type =
     $fidl.StructType<UnionSandwich>(
-  inlineSizeV1: 40,
-  inlineSizeV2: 32,
-  structDecode: UnionSandwich._structDecode,
-);
+        inlineSizeV1: 40,
+        inlineSizeV2: 32,
+        structDecode: UnionSandwich._structDecode);
 
 // strictXUnionHenceResponseMayBeStackAllocated: () -> (StrictBoundedXUnion xu)
 const int _kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal =

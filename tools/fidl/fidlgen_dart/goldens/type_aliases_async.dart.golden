@@ -250,6 +250,8 @@ class ExampleOfUseOfAliases extends $fidl.Struct {
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 4, 4);
+        $decoder.checkPadding($offset + 84, 4);
         return ExampleOfUseOfAliases(
             fieldOfU32: $fieldType0.decode($decoder, $offset + 0, $depth),
             fieldOfVecOfStrings:
@@ -266,6 +268,9 @@ class ExampleOfUseOfAliases extends $fidl.Struct {
             fieldOfNullableClientEnd:
                 $fieldType7.decode($decoder, $offset + 80, $depth));
       case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 4, 4);
+
+        $decoder.checkPadding($offset + 84, 4);
         return ExampleOfUseOfAliases(
             fieldOfU32: $fieldType0.decode($decoder, $offset + 0, $depth),
             fieldOfVecOfStrings:
@@ -291,7 +296,6 @@ class ExampleOfUseOfAliases extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<ExampleOfUseOfAliases> kExampleOfUseOfAliases_Type =
     $fidl.StructType<ExampleOfUseOfAliases>(
-  inlineSizeV1: 88,
-  inlineSizeV2: 88,
-  structDecode: ExampleOfUseOfAliases._structDecode,
-);
+        inlineSizeV1: 88,
+        inlineSizeV2: 88,
+        structDecode: ExampleOfUseOfAliases._structDecode);

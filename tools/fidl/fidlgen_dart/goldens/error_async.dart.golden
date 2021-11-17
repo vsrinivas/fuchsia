@@ -199,10 +199,9 @@ class ExampleFooResponse extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<ExampleFooResponse> kExample_foo_Response_Type =
     $fidl.StructType<ExampleFooResponse>(
-  inlineSizeV1: 8,
-  inlineSizeV2: 8,
-  structDecode: ExampleFooResponse._structDecode,
-);
+        inlineSizeV1: 8,
+        inlineSizeV2: 8,
+        structDecode: ExampleFooResponse._structDecode);
 
 // foo: (String s) -> (int y)
 const int _kExample_foo_Ordinal = 0x57e41804562237ae;

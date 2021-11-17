@@ -821,10 +821,7 @@ class Handles extends $fidl.Struct {
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<Handles> kHandles_Type = $fidl.StructType<Handles>(
-  inlineSizeV1: 132,
-  inlineSizeV2: 132,
-  structDecode: Handles._structDecode,
-);
+    inlineSizeV1: 132, inlineSizeV2: 132, structDecode: Handles._structDecode);
 
 abstract class SomeProtocol {
   $fidl.ServiceData? get $serviceData => SomeProtocolData();

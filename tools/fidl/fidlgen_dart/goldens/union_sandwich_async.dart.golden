@@ -442,11 +442,16 @@ class SandwichUnionSize8Alignment4 extends $fidl.Struct {
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 4, 4);
+        $decoder.checkPadding($offset + 36, 4);
         return SandwichUnionSize8Alignment4(
             before: $fieldType0.decode($decoder, $offset + 0, $depth),
             union: $fieldType1.decode($decoder, $offset + 8, $depth),
             after: $fieldType2.decode($decoder, $offset + 32, $depth));
       case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 4, 4);
+
+        $decoder.checkPadding($offset + 28, 4);
         return SandwichUnionSize8Alignment4(
             before: $fieldType0.decode($decoder, $offset + 0, $depth),
             union: $fieldType1.decode($decoder, $offset + 8, $depth),
@@ -462,10 +467,9 @@ class SandwichUnionSize8Alignment4 extends $fidl.Struct {
 const $fidl.StructType<SandwichUnionSize8Alignment4>
     kSandwichUnionSize8Alignment4_Type =
     $fidl.StructType<SandwichUnionSize8Alignment4>(
-  inlineSizeV1: 40,
-  inlineSizeV2: 32,
-  structDecode: SandwichUnionSize8Alignment4._structDecode,
-);
+        inlineSizeV1: 40,
+        inlineSizeV2: 32,
+        structDecode: SandwichUnionSize8Alignment4._structDecode);
 
 class SandwichUnionSize12Alignment4 extends $fidl.Struct {
   const SandwichUnionSize12Alignment4({
@@ -534,11 +538,16 @@ class SandwichUnionSize12Alignment4 extends $fidl.Struct {
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 4, 4);
+        $decoder.checkPadding($offset + 36, 4);
         return SandwichUnionSize12Alignment4(
             before: $fieldType0.decode($decoder, $offset + 0, $depth),
             union: $fieldType1.decode($decoder, $offset + 8, $depth),
             after: $fieldType2.decode($decoder, $offset + 32, $depth));
       case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 4, 4);
+
+        $decoder.checkPadding($offset + 28, 4);
         return SandwichUnionSize12Alignment4(
             before: $fieldType0.decode($decoder, $offset + 0, $depth),
             union: $fieldType1.decode($decoder, $offset + 8, $depth),
@@ -554,10 +563,9 @@ class SandwichUnionSize12Alignment4 extends $fidl.Struct {
 const $fidl.StructType<SandwichUnionSize12Alignment4>
     kSandwichUnionSize12Alignment4_Type =
     $fidl.StructType<SandwichUnionSize12Alignment4>(
-  inlineSizeV1: 40,
-  inlineSizeV2: 32,
-  structDecode: SandwichUnionSize12Alignment4._structDecode,
-);
+        inlineSizeV1: 40,
+        inlineSizeV2: 32,
+        structDecode: SandwichUnionSize12Alignment4._structDecode);
 
 class StructSize16Alignment8 extends $fidl.Struct {
   const StructSize16Alignment8({
@@ -633,10 +641,9 @@ class StructSize16Alignment8 extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<StructSize16Alignment8> kStructSize16Alignment8_Type =
     $fidl.StructType<StructSize16Alignment8>(
-  inlineSizeV1: 16,
-  inlineSizeV2: 16,
-  structDecode: StructSize16Alignment8._structDecode,
-);
+        inlineSizeV1: 16,
+        inlineSizeV2: 16,
+        structDecode: StructSize16Alignment8._structDecode);
 
 class SandwichUnionSize24Alignment8 extends $fidl.Struct {
   const SandwichUnionSize24Alignment8({
@@ -705,11 +712,16 @@ class SandwichUnionSize24Alignment8 extends $fidl.Struct {
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 4, 4);
+        $decoder.checkPadding($offset + 36, 4);
         return SandwichUnionSize24Alignment8(
             before: $fieldType0.decode($decoder, $offset + 0, $depth),
             union: $fieldType1.decode($decoder, $offset + 8, $depth),
             after: $fieldType2.decode($decoder, $offset + 32, $depth));
       case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 4, 4);
+
+        $decoder.checkPadding($offset + 28, 4);
         return SandwichUnionSize24Alignment8(
             before: $fieldType0.decode($decoder, $offset + 0, $depth),
             union: $fieldType1.decode($decoder, $offset + 8, $depth),
@@ -725,10 +737,9 @@ class SandwichUnionSize24Alignment8 extends $fidl.Struct {
 const $fidl.StructType<SandwichUnionSize24Alignment8>
     kSandwichUnionSize24Alignment8_Type =
     $fidl.StructType<SandwichUnionSize24Alignment8>(
-  inlineSizeV1: 40,
-  inlineSizeV2: 32,
-  structDecode: SandwichUnionSize24Alignment8._structDecode,
-);
+        inlineSizeV1: 40,
+        inlineSizeV2: 32,
+        structDecode: SandwichUnionSize24Alignment8._structDecode);
 
 class SandwichUnionSize36Alignment4 extends $fidl.Struct {
   const SandwichUnionSize36Alignment4({
@@ -797,11 +808,16 @@ class SandwichUnionSize36Alignment4 extends $fidl.Struct {
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 4, 4);
+        $decoder.checkPadding($offset + 36, 4);
         return SandwichUnionSize36Alignment4(
             before: $fieldType0.decode($decoder, $offset + 0, $depth),
             union: $fieldType1.decode($decoder, $offset + 8, $depth),
             after: $fieldType2.decode($decoder, $offset + 32, $depth));
       case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 4, 4);
+
+        $decoder.checkPadding($offset + 28, 4);
         return SandwichUnionSize36Alignment4(
             before: $fieldType0.decode($decoder, $offset + 0, $depth),
             union: $fieldType1.decode($decoder, $offset + 8, $depth),
@@ -817,7 +833,6 @@ class SandwichUnionSize36Alignment4 extends $fidl.Struct {
 const $fidl.StructType<SandwichUnionSize36Alignment4>
     kSandwichUnionSize36Alignment4_Type =
     $fidl.StructType<SandwichUnionSize36Alignment4>(
-  inlineSizeV1: 40,
-  inlineSizeV2: 32,
-  structDecode: SandwichUnionSize36Alignment4._structDecode,
-);
+        inlineSizeV1: 40,
+        inlineSizeV2: 32,
+        structDecode: SandwichUnionSize36Alignment4._structDecode);

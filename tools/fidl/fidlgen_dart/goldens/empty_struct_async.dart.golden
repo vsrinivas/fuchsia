@@ -97,10 +97,7 @@ class Empty extends $fidl.Struct {
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<Empty> kEmpty_Type = $fidl.StructType<Empty>(
-  inlineSizeV1: 1,
-  inlineSizeV2: 1,
-  structDecode: Empty._structDecode,
-);
+    inlineSizeV1: 1, inlineSizeV2: 1, structDecode: Empty._structDecode);
 
 // send: (Empty e)
 const int _kEmptyProtocol_Send_Ordinal = 0x1e4e78d0556b6f28;

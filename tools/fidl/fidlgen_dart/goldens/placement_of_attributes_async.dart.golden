@@ -378,10 +378,9 @@ class ExampleStruct extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<ExampleStruct> kExampleStruct_Type =
     $fidl.StructType<ExampleStruct>(
-  inlineSizeV1: 4,
-  inlineSizeV2: 4,
-  structDecode: ExampleStruct._structDecode,
-);
+        inlineSizeV1: 4,
+        inlineSizeV2: 4,
+        structDecode: ExampleStruct._structDecode);
 
 class ExampleTable extends $fidl.Table {
   const ExampleTable({

@@ -93,10 +93,12 @@ class Int8Int32 extends $fidl.Struct {
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 1, 3);
         return Int8Int32(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 4, $depth));
       case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 1, 3);
         return Int8Int32(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 4, $depth));
@@ -109,10 +111,7 @@ class Int8Int32 extends $fidl.Struct {
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<Int8Int32> kInt8Int32_Type = $fidl.StructType<Int8Int32>(
-  inlineSizeV1: 8,
-  inlineSizeV2: 8,
-  structDecode: Int8Int32._structDecode,
-);
+    inlineSizeV1: 8, inlineSizeV2: 8, structDecode: Int8Int32._structDecode);
 
 class Int16Int8 extends $fidl.Struct {
   const Int16Int8({
@@ -167,10 +166,12 @@ class Int16Int8 extends $fidl.Struct {
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 3, 1);
         return Int16Int8(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 2, $depth));
       case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 3, 1);
         return Int16Int8(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 2, $depth));
@@ -183,10 +184,7 @@ class Int16Int8 extends $fidl.Struct {
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<Int16Int8> kInt16Int8_Type = $fidl.StructType<Int16Int8>(
-  inlineSizeV1: 4,
-  inlineSizeV2: 4,
-  structDecode: Int16Int8._structDecode,
-);
+    inlineSizeV1: 4, inlineSizeV2: 4, structDecode: Int16Int8._structDecode);
 
 class ArrayInt16Int8 extends $fidl.Struct {
   const ArrayInt16Int8({
@@ -249,10 +247,9 @@ class ArrayInt16Int8 extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<ArrayInt16Int8> kArrayInt16Int8_Type =
     $fidl.StructType<ArrayInt16Int8>(
-  inlineSizeV1: 12,
-  inlineSizeV2: 12,
-  structDecode: ArrayInt16Int8._structDecode,
-);
+        inlineSizeV1: 12,
+        inlineSizeV2: 12,
+        structDecode: ArrayInt16Int8._structDecode);
 
 class StructPaddingTestStruct extends $fidl.Struct {
   const StructPaddingTestStruct({
@@ -340,10 +337,9 @@ class StructPaddingTestStruct extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<StructPaddingTestStruct> kStructPaddingTestStruct_Type =
     $fidl.StructType<StructPaddingTestStruct>(
-  inlineSizeV1: 24,
-  inlineSizeV2: 24,
-  structDecode: StructPaddingTestStruct._structDecode,
-);
+        inlineSizeV1: 24,
+        inlineSizeV2: 24,
+        structDecode: StructPaddingTestStruct._structDecode);
 
 class NonInlineStructTestStruct extends $fidl.Struct {
   const NonInlineStructTestStruct({
@@ -412,10 +408,12 @@ class NonInlineStructTestStruct extends $fidl.Struct {
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 12, 4);
         return NonInlineStructTestStruct(
             element: $fieldType0.decode($decoder, $offset + 0, $depth),
             h: $fieldType1.decode($decoder, $offset + 8, $depth));
       case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 12, 4);
         return NonInlineStructTestStruct(
             element: $fieldType0.decode($decoder, $offset + 0, $depth),
             h: $fieldType1.decode($decoder, $offset + 8, $depth));
@@ -430,10 +428,9 @@ class NonInlineStructTestStruct extends $fidl.Struct {
 const $fidl.StructType<NonInlineStructTestStruct>
     kNonInlineStructTestStruct_Type =
     $fidl.StructType<NonInlineStructTestStruct>(
-  inlineSizeV1: 16,
-  inlineSizeV2: 16,
-  structDecode: NonInlineStructTestStruct._structDecode,
-);
+        inlineSizeV1: 16,
+        inlineSizeV2: 16,
+        structDecode: NonInlineStructTestStruct._structDecode);
 
 class TopLevelStruct extends $fidl.Struct {
   const TopLevelStruct({
@@ -509,7 +506,6 @@ class TopLevelStruct extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<TopLevelStruct> kTopLevelStruct_Type =
     $fidl.StructType<TopLevelStruct>(
-  inlineSizeV1: 40,
-  inlineSizeV2: 40,
-  structDecode: TopLevelStruct._structDecode,
-);
+        inlineSizeV1: 40,
+        inlineSizeV2: 40,
+        structDecode: TopLevelStruct._structDecode);

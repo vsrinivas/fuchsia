@@ -94,6 +94,11 @@ class {{ .Name }} extends $fidl.Struct {
   static {{ .Name }} _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
+        {{- range $padding := .Paddings }}
+        {{- if ne $padding.PaddingV1 0 }}
+        $decoder.checkPadding($offset + {{ $padding.OffsetV1 }}, {{ $padding.PaddingV1 }});
+        {{- end }}
+        {{- end }}
         return {{ .Name }}(
         {{ range $index, $member := .Members }}
         {{- if ne $index 0 }},{{ end }}
@@ -102,6 +107,11 @@ class {{ .Name }} extends $fidl.Struct {
         {{- end -}}
         );
       case $fidl.WireFormat.v2:
+        {{- range $padding := .Paddings }}
+        {{- if ne $padding.PaddingV2 0 }}
+        $decoder.checkPadding($offset + {{ $padding.OffsetV2 }}, {{ $padding.PaddingV2 }});
+        {{ end -}}
+        {{ end -}}
         return {{ .Name }}(
         {{ range $index, $member := .Members }}
         {{- if ne $index 0 }},{{ end }}

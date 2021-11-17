@@ -96,7 +96,4 @@ class Baz extends $fidl.Struct {
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<Baz> kBaz_Type = $fidl.StructType<Baz>(
-  inlineSizeV1: 4,
-  inlineSizeV2: 4,
-  structDecode: Baz._structDecode,
-);
+    inlineSizeV1: 4, inlineSizeV2: 4, structDecode: Baz._structDecode);

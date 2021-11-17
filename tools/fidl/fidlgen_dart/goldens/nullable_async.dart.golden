@@ -207,10 +207,9 @@ class StructWithNullableString extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<StructWithNullableString>
     kStructWithNullableString_Type = $fidl.StructType<StructWithNullableString>(
-  inlineSizeV1: 16,
-  inlineSizeV2: 16,
-  structDecode: StructWithNullableString._structDecode,
-);
+        inlineSizeV1: 16,
+        inlineSizeV2: 16,
+        structDecode: StructWithNullableString._structDecode);
 
 class StructWithNullableVector extends $fidl.Struct {
   const StructWithNullableVector({
@@ -280,10 +279,9 @@ class StructWithNullableVector extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<StructWithNullableVector>
     kStructWithNullableVector_Type = $fidl.StructType<StructWithNullableVector>(
-  inlineSizeV1: 16,
-  inlineSizeV2: 16,
-  structDecode: StructWithNullableVector._structDecode,
-);
+        inlineSizeV1: 16,
+        inlineSizeV2: 16,
+        structDecode: StructWithNullableVector._structDecode);
 
 class StructWithNullableHandle extends $fidl.Struct {
   const StructWithNullableHandle({
@@ -353,10 +351,9 @@ class StructWithNullableHandle extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<StructWithNullableHandle>
     kStructWithNullableHandle_Type = $fidl.StructType<StructWithNullableHandle>(
-  inlineSizeV1: 4,
-  inlineSizeV2: 4,
-  structDecode: StructWithNullableHandle._structDecode,
-);
+        inlineSizeV1: 4,
+        inlineSizeV2: 4,
+        structDecode: StructWithNullableHandle._structDecode);
 
 class StructWithNullableProtocol extends $fidl.Struct {
   const StructWithNullableProtocol({
@@ -427,10 +424,9 @@ class StructWithNullableProtocol extends $fidl.Struct {
 const $fidl.StructType<StructWithNullableProtocol>
     kStructWithNullableProtocol_Type =
     $fidl.StructType<StructWithNullableProtocol>(
-  inlineSizeV1: 4,
-  inlineSizeV2: 4,
-  structDecode: StructWithNullableProtocol._structDecode,
-);
+        inlineSizeV1: 4,
+        inlineSizeV2: 4,
+        structDecode: StructWithNullableProtocol._structDecode);
 
 class StructWithNullableRequest extends $fidl.Struct {
   const StructWithNullableRequest({
@@ -501,10 +497,9 @@ class StructWithNullableRequest extends $fidl.Struct {
 const $fidl.StructType<StructWithNullableRequest>
     kStructWithNullableRequest_Type =
     $fidl.StructType<StructWithNullableRequest>(
-  inlineSizeV1: 4,
-  inlineSizeV2: 4,
-  structDecode: StructWithNullableRequest._structDecode,
-);
+        inlineSizeV1: 4,
+        inlineSizeV2: 4,
+        structDecode: StructWithNullableRequest._structDecode);
 
 class Int32Wrapper extends $fidl.Struct {
   const Int32Wrapper({
@@ -566,10 +561,9 @@ class Int32Wrapper extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<Int32Wrapper> kInt32Wrapper_Type =
     $fidl.StructType<Int32Wrapper>(
-  inlineSizeV1: 4,
-  inlineSizeV2: 4,
-  structDecode: Int32Wrapper._structDecode,
-);
+        inlineSizeV1: 4,
+        inlineSizeV2: 4,
+        structDecode: Int32Wrapper._structDecode);
 
 class StructWithNullableStruct extends $fidl.Struct {
   const StructWithNullableStruct({
@@ -639,10 +633,9 @@ class StructWithNullableStruct extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<StructWithNullableStruct>
     kStructWithNullableStruct_Type = $fidl.StructType<StructWithNullableStruct>(
-  inlineSizeV1: 8,
-  inlineSizeV2: 8,
-  structDecode: StructWithNullableStruct._structDecode,
-);
+        inlineSizeV1: 8,
+        inlineSizeV2: 8,
+        structDecode: StructWithNullableStruct._structDecode);
 
 class StructWithNullableUnion extends $fidl.Struct {
   const StructWithNullableUnion({
@@ -711,10 +704,9 @@ class StructWithNullableUnion extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<StructWithNullableUnion> kStructWithNullableUnion_Type =
     $fidl.StructType<StructWithNullableUnion>(
-  inlineSizeV1: 24,
-  inlineSizeV2: 16,
-  structDecode: StructWithNullableUnion._structDecode,
-);
+        inlineSizeV1: 24,
+        inlineSizeV2: 16,
+        structDecode: StructWithNullableUnion._structDecode);
 
 // add: (int a, int b) -> (int sum)
 const int _kSimpleProtocol_Add_Ordinal = 0x113010d7832f175d;

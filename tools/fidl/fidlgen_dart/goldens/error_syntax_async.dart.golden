@@ -214,10 +214,10 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailResponse extends $fidl.Struct {
 const $fidl.StructType<ExampleUseOfErrorSyntaxCallWhichMayFailResponse>
     kExampleUseOfErrorSyntax_CallWhichMayFail_Response_Type =
     $fidl.StructType<ExampleUseOfErrorSyntaxCallWhichMayFailResponse>(
-  inlineSizeV1: 8,
-  inlineSizeV2: 8,
-  structDecode: ExampleUseOfErrorSyntaxCallWhichMayFailResponse._structDecode,
-);
+        inlineSizeV1: 8,
+        inlineSizeV2: 8,
+        structDecode:
+            ExampleUseOfErrorSyntaxCallWhichMayFailResponse._structDecode);
 
 // composedCallWhichMayFail: (String s) -> (int value)
 const int _kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal =

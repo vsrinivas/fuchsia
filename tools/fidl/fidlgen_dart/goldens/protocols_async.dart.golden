@@ -820,10 +820,9 @@ class WithErrorSyntaxResponseAsStructResponse extends $fidl.Struct {
 const $fidl.StructType<WithErrorSyntaxResponseAsStructResponse>
     kWithErrorSyntax_ResponseAsStruct_Response_Type =
     $fidl.StructType<WithErrorSyntaxResponseAsStructResponse>(
-  inlineSizeV1: 24,
-  inlineSizeV2: 24,
-  structDecode: WithErrorSyntaxResponseAsStructResponse._structDecode,
-);
+        inlineSizeV1: 24,
+        inlineSizeV2: 24,
+        structDecode: WithErrorSyntaxResponseAsStructResponse._structDecode);
 
 class WithErrorSyntaxErrorAsPrimitiveResponse extends $fidl.Struct {
   const WithErrorSyntaxErrorAsPrimitiveResponse({
@@ -888,10 +887,9 @@ class WithErrorSyntaxErrorAsPrimitiveResponse extends $fidl.Struct {
 const $fidl.StructType<WithErrorSyntaxErrorAsPrimitiveResponse>
     kWithErrorSyntax_ErrorAsPrimitive_Response_Type =
     $fidl.StructType<WithErrorSyntaxErrorAsPrimitiveResponse>(
-  inlineSizeV1: 1,
-  inlineSizeV2: 1,
-  structDecode: WithErrorSyntaxErrorAsPrimitiveResponse._structDecode,
-);
+        inlineSizeV1: 1,
+        inlineSizeV2: 1,
+        structDecode: WithErrorSyntaxErrorAsPrimitiveResponse._structDecode);
 
 class WithErrorSyntaxErrorAsEnumResponse extends $fidl.Struct {
   const WithErrorSyntaxErrorAsEnumResponse({
@@ -956,10 +954,9 @@ class WithErrorSyntaxErrorAsEnumResponse extends $fidl.Struct {
 const $fidl.StructType<WithErrorSyntaxErrorAsEnumResponse>
     kWithErrorSyntax_ErrorAsEnum_Response_Type =
     $fidl.StructType<WithErrorSyntaxErrorAsEnumResponse>(
-  inlineSizeV1: 1,
-  inlineSizeV2: 1,
-  structDecode: WithErrorSyntaxErrorAsEnumResponse._structDecode,
-);
+        inlineSizeV1: 1,
+        inlineSizeV2: 1,
+        structDecode: WithErrorSyntaxErrorAsEnumResponse._structDecode);
 
 class WithErrorSyntaxHandleInResultResponse extends $fidl.Struct {
   const WithErrorSyntaxHandleInResultResponse({
@@ -1025,10 +1022,9 @@ class WithErrorSyntaxHandleInResultResponse extends $fidl.Struct {
 const $fidl.StructType<WithErrorSyntaxHandleInResultResponse>
     kWithErrorSyntax_HandleInResult_Response_Type =
     $fidl.StructType<WithErrorSyntaxHandleInResultResponse>(
-  inlineSizeV1: 4,
-  inlineSizeV2: 4,
-  structDecode: WithErrorSyntaxHandleInResultResponse._structDecode,
-);
+        inlineSizeV1: 4,
+        inlineSizeV2: 4,
+        structDecode: WithErrorSyntaxHandleInResultResponse._structDecode);
 
 class ProtocolEnds extends $fidl.Struct {
   const ProtocolEnds({
@@ -1141,10 +1137,9 @@ class ProtocolEnds extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<ProtocolEnds> kProtocolEnds_Type =
     $fidl.StructType<ProtocolEnds>(
-  inlineSizeV1: 16,
-  inlineSizeV2: 16,
-  structDecode: ProtocolEnds._structDecode,
-);
+        inlineSizeV1: 16,
+        inlineSizeV2: 16,
+        structDecode: ProtocolEnds._structDecode);
 
 // noRequestNoResponse: ()
 const int _kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal =

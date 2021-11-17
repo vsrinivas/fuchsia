@@ -451,6 +451,7 @@ class Testing extends $fidl.Struct {
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 316, 4);
         return Testing(
             u1: $fieldType0.decode($decoder, $offset + 0, $depth),
             u2: $fieldType1.decode($decoder, $offset + 8, $depth),
@@ -481,6 +482,7 @@ class Testing extends $fidl.Struct {
             aa2: $fieldType26.decode($decoder, $offset + 640, $depth),
             aa3: $fieldType27.decode($decoder, $offset + 656, $depth));
       case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 316, 4);
         return Testing(
             u1: $fieldType0.decode($decoder, $offset + 0, $depth),
             u2: $fieldType1.decode($decoder, $offset + 8, $depth),
@@ -519,10 +521,7 @@ class Testing extends $fidl.Struct {
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<Testing> kTesting_Type = $fidl.StructType<Testing>(
-  inlineSizeV1: 704,
-  inlineSizeV2: 704,
-  structDecode: Testing._structDecode,
-);
+    inlineSizeV1: 704, inlineSizeV2: 704, structDecode: Testing._structDecode);
 
 abstract class MyProtocol {
   $fidl.ServiceData? get $serviceData => MyProtocolData();

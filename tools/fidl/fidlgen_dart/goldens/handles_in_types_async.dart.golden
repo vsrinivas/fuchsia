@@ -292,6 +292,8 @@ class HandlesInTypes extends $fidl.Struct {
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 4, 4);
+        $decoder.checkPadding($offset + 44, 4);
         return HandlesInTypes(
             normalHandle: $fieldType0.decode($decoder, $offset + 0, $depth),
             handleInVec: $fieldType1.decode($decoder, $offset + 8, $depth),
@@ -302,6 +304,9 @@ class HandlesInTypes extends $fidl.Struct {
             unionWithHandle:
                 $fieldType5.decode($decoder, $offset + 80, $depth));
       case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 4, 4);
+
+        $decoder.checkPadding($offset + 44, 4);
         return HandlesInTypes(
             normalHandle: $fieldType0.decode($decoder, $offset + 0, $depth),
             handleInVec: $fieldType1.decode($decoder, $offset + 8, $depth),
@@ -321,10 +326,9 @@ class HandlesInTypes extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<HandlesInTypes> kHandlesInTypes_Type =
     $fidl.StructType<HandlesInTypes>(
-  inlineSizeV1: 104,
-  inlineSizeV2: 96,
-  structDecode: HandlesInTypes._structDecode,
-);
+        inlineSizeV1: 104,
+        inlineSizeV2: 96,
+        structDecode: HandlesInTypes._structDecode);
 
 class TableWithHandle extends $fidl.Table {
   const TableWithHandle({

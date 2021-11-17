@@ -569,10 +569,7 @@ class Struct extends $fidl.Struct {
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<Struct> kStruct_Type = $fidl.StructType<Struct>(
-  inlineSizeV1: 4,
-  inlineSizeV2: 4,
-  structDecode: Struct._structDecode,
-);
+    inlineSizeV1: 4, inlineSizeV2: 4, structDecode: Struct._structDecode);
 
 /// table comment #1
 ///

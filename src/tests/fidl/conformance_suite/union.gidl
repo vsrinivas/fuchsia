@@ -36,7 +36,7 @@ success("UnionWithBoundString") {
 
 encode_failure("UnionWithBoundString_ExceedsBounds") {
     // TODO(fxbug.dev/37304) Enforce size bounds in rust
-    bindings_denylist = [rust, dart],
+    bindings_denylist = [rust],
     value = UnionWithBoundStringStruct {
         v: UnionWithBoundString {
             boundFiveStr: "abcdef",
@@ -539,9 +539,9 @@ decode_failure("UnionOutOfLineEnvelopeWhenInlineRequired") {
 }
 
 encode_failure("RequiredFlexibleValueUnionZeroOrdinalNoPayload") {
-    // TODO(fxbug.dev/7805): Fix in Go and Dart.
+    // TODO(fxbug.dev/7805): Fix in Go.
     // C and LLCPP cannot construct unknown variants.
-    bindings_denylist = [go, dart, c, llcpp],
+    bindings_denylist = [go, c, llcpp],
     value = TestFlexibleXUnionInStruct {
         xu: SampleXUnion {
             0: {
@@ -555,7 +555,7 @@ encode_failure("RequiredFlexibleValueUnionZeroOrdinalNoPayload") {
 encode_failure("RequiredFlexibleValueUnionZeroOrdinalWithPayload") {
     // TODO(fxbug.dev/7805): Fix in Go and Dart.
     // C and LLCPP cannot construct unknown variants.
-    bindings_denylist = [go, dart, c, llcpp],
+    bindings_denylist = [go, c, llcpp],
     value = TestFlexibleXUnionInStruct {
         xu: SampleXUnion {
             0: {
@@ -569,7 +569,7 @@ encode_failure("RequiredFlexibleValueUnionZeroOrdinalWithPayload") {
 encode_failure("RequiredFlexibleResourceUnionZeroOrdinalNoPayload") {
     // TODO(fxbug.dev/7805): Fix in Go and Dart.
     // C and LLCPP cannot construct unknown variants.
-    bindings_denylist = [go, dart, c, llcpp],
+    bindings_denylist = [go, c, llcpp],
     value = TestFlexibleResourceXUnionInStruct {
         xu: SampleResourceXUnion {
             0: {
@@ -583,7 +583,7 @@ encode_failure("RequiredFlexibleResourceUnionZeroOrdinalNoPayload") {
 encode_failure("RequiredFlexibleResourceUnionZeroOrdinalWithPayload") {
     // TODO(fxbug.dev/7805): Fix in Go and Dart.
     // C and LLCPP cannot construct unknown variants.
-    bindings_denylist = [go, dart, c, llcpp],
+    bindings_denylist = [go, c, llcpp],
     value = TestFlexibleResourceXUnionInStruct {
         xu: SampleResourceXUnion {
             0: {
@@ -597,7 +597,7 @@ encode_failure("RequiredFlexibleResourceUnionZeroOrdinalWithPayload") {
 encode_failure("OptionalFlexibleValueUnionZeroOrdinalWithPayload") {
     // TODO(fxbug.dev/7805): Fix in Go and Dart.
     // C and LLCPP cannot construct unknown variants.
-    bindings_denylist = [go, dart, c, llcpp],
+    bindings_denylist = [go, c, llcpp],
     value = TestOptionalFlexibleXUnionInStruct {
         xu: SampleXUnion {
             0: {
@@ -611,7 +611,7 @@ encode_failure("OptionalFlexibleValueUnionZeroOrdinalWithPayload") {
 encode_failure("OptionalFlexibleResourceUnionZeroOrdinalWithPayload") {
     // TODO(fxbug.dev/7805): Fix in Go and Dart.
     // C and LLCPP cannot construct unknown variants.
-    bindings_denylist = [go, dart, c, llcpp],
+    bindings_denylist = [go, c, llcpp],
     value = TestOptionalFlexibleResourceXUnionInStruct {
         xu: SampleResourceXUnion {
             0: {

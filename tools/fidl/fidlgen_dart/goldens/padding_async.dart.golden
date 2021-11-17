@@ -96,10 +96,12 @@ class Padding1ByteEnd extends $fidl.Struct {
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 3, 1);
         return Padding1ByteEnd(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 2, $depth));
       case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 3, 1);
         return Padding1ByteEnd(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 2, $depth));
@@ -113,10 +115,9 @@ class Padding1ByteEnd extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<Padding1ByteEnd> kPadding1ByteEnd_Type =
     $fidl.StructType<Padding1ByteEnd>(
-  inlineSizeV1: 4,
-  inlineSizeV2: 4,
-  structDecode: Padding1ByteEnd._structDecode,
-);
+        inlineSizeV1: 4,
+        inlineSizeV2: 4,
+        structDecode: Padding1ByteEnd._structDecode);
 
 class Padding2ByteEnd extends $fidl.Struct {
   const Padding2ByteEnd({
@@ -175,10 +176,12 @@ class Padding2ByteEnd extends $fidl.Struct {
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 6, 2);
         return Padding2ByteEnd(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 4, $depth));
       case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 6, 2);
         return Padding2ByteEnd(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 4, $depth));
@@ -192,10 +195,9 @@ class Padding2ByteEnd extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<Padding2ByteEnd> kPadding2ByteEnd_Type =
     $fidl.StructType<Padding2ByteEnd>(
-  inlineSizeV1: 8,
-  inlineSizeV2: 8,
-  structDecode: Padding2ByteEnd._structDecode,
-);
+        inlineSizeV1: 8,
+        inlineSizeV2: 8,
+        structDecode: Padding2ByteEnd._structDecode);
 
 class Padding3ByteEnd extends $fidl.Struct {
   const Padding3ByteEnd({
@@ -254,10 +256,12 @@ class Padding3ByteEnd extends $fidl.Struct {
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 5, 3);
         return Padding3ByteEnd(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 4, $depth));
       case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 5, 3);
         return Padding3ByteEnd(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 4, $depth));
@@ -271,10 +275,9 @@ class Padding3ByteEnd extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<Padding3ByteEnd> kPadding3ByteEnd_Type =
     $fidl.StructType<Padding3ByteEnd>(
-  inlineSizeV1: 8,
-  inlineSizeV2: 8,
-  structDecode: Padding3ByteEnd._structDecode,
-);
+        inlineSizeV1: 8,
+        inlineSizeV2: 8,
+        structDecode: Padding3ByteEnd._structDecode);
 
 class Padding4ByteEnd extends $fidl.Struct {
   const Padding4ByteEnd({
@@ -333,10 +336,12 @@ class Padding4ByteEnd extends $fidl.Struct {
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 12, 4);
         return Padding4ByteEnd(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 8, $depth));
       case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 12, 4);
         return Padding4ByteEnd(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 8, $depth));
@@ -350,10 +355,9 @@ class Padding4ByteEnd extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<Padding4ByteEnd> kPadding4ByteEnd_Type =
     $fidl.StructType<Padding4ByteEnd>(
-  inlineSizeV1: 16,
-  inlineSizeV2: 16,
-  structDecode: Padding4ByteEnd._structDecode,
-);
+        inlineSizeV1: 16,
+        inlineSizeV2: 16,
+        structDecode: Padding4ByteEnd._structDecode);
 
 class Padding5ByteEnd extends $fidl.Struct {
   const Padding5ByteEnd({
@@ -422,11 +426,13 @@ class Padding5ByteEnd extends $fidl.Struct {
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 11, 5);
         return Padding5ByteEnd(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 8, $depth),
             c: $fieldType2.decode($decoder, $offset + 10, $depth));
       case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 11, 5);
         return Padding5ByteEnd(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 8, $depth),
@@ -441,10 +447,9 @@ class Padding5ByteEnd extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<Padding5ByteEnd> kPadding5ByteEnd_Type =
     $fidl.StructType<Padding5ByteEnd>(
-  inlineSizeV1: 16,
-  inlineSizeV2: 16,
-  structDecode: Padding5ByteEnd._structDecode,
-);
+        inlineSizeV1: 16,
+        inlineSizeV2: 16,
+        structDecode: Padding5ByteEnd._structDecode);
 
 class Padding6ByteEnd extends $fidl.Struct {
   const Padding6ByteEnd({
@@ -503,10 +508,12 @@ class Padding6ByteEnd extends $fidl.Struct {
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 10, 6);
         return Padding6ByteEnd(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 8, $depth));
       case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 10, 6);
         return Padding6ByteEnd(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 8, $depth));
@@ -520,10 +527,9 @@ class Padding6ByteEnd extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<Padding6ByteEnd> kPadding6ByteEnd_Type =
     $fidl.StructType<Padding6ByteEnd>(
-  inlineSizeV1: 16,
-  inlineSizeV2: 16,
-  structDecode: Padding6ByteEnd._structDecode,
-);
+        inlineSizeV1: 16,
+        inlineSizeV2: 16,
+        structDecode: Padding6ByteEnd._structDecode);
 
 class Padding7ByteEnd extends $fidl.Struct {
   const Padding7ByteEnd({
@@ -582,10 +588,12 @@ class Padding7ByteEnd extends $fidl.Struct {
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 9, 7);
         return Padding7ByteEnd(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 8, $depth));
       case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 9, 7);
         return Padding7ByteEnd(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 8, $depth));
@@ -599,10 +607,9 @@ class Padding7ByteEnd extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<Padding7ByteEnd> kPadding7ByteEnd_Type =
     $fidl.StructType<Padding7ByteEnd>(
-  inlineSizeV1: 16,
-  inlineSizeV2: 16,
-  structDecode: Padding7ByteEnd._structDecode,
-);
+        inlineSizeV1: 16,
+        inlineSizeV2: 16,
+        structDecode: Padding7ByteEnd._structDecode);
 
 class Padding1ByteMiddle extends $fidl.Struct {
   const Padding1ByteMiddle({
@@ -661,10 +668,12 @@ class Padding1ByteMiddle extends $fidl.Struct {
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 1, 1);
         return Padding1ByteMiddle(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 2, $depth));
       case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 1, 1);
         return Padding1ByteMiddle(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 2, $depth));
@@ -678,10 +687,9 @@ class Padding1ByteMiddle extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<Padding1ByteMiddle> kPadding1ByteMiddle_Type =
     $fidl.StructType<Padding1ByteMiddle>(
-  inlineSizeV1: 4,
-  inlineSizeV2: 4,
-  structDecode: Padding1ByteMiddle._structDecode,
-);
+        inlineSizeV1: 4,
+        inlineSizeV2: 4,
+        structDecode: Padding1ByteMiddle._structDecode);
 
 class Padding2ByteMiddle extends $fidl.Struct {
   const Padding2ByteMiddle({
@@ -740,10 +748,12 @@ class Padding2ByteMiddle extends $fidl.Struct {
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 2, 2);
         return Padding2ByteMiddle(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 4, $depth));
       case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 2, 2);
         return Padding2ByteMiddle(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 4, $depth));
@@ -757,10 +767,9 @@ class Padding2ByteMiddle extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<Padding2ByteMiddle> kPadding2ByteMiddle_Type =
     $fidl.StructType<Padding2ByteMiddle>(
-  inlineSizeV1: 8,
-  inlineSizeV2: 8,
-  structDecode: Padding2ByteMiddle._structDecode,
-);
+        inlineSizeV1: 8,
+        inlineSizeV2: 8,
+        structDecode: Padding2ByteMiddle._structDecode);
 
 class Padding3ByteMiddle extends $fidl.Struct {
   const Padding3ByteMiddle({
@@ -819,10 +828,12 @@ class Padding3ByteMiddle extends $fidl.Struct {
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 1, 3);
         return Padding3ByteMiddle(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 4, $depth));
       case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 1, 3);
         return Padding3ByteMiddle(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 4, $depth));
@@ -836,10 +847,9 @@ class Padding3ByteMiddle extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<Padding3ByteMiddle> kPadding3ByteMiddle_Type =
     $fidl.StructType<Padding3ByteMiddle>(
-  inlineSizeV1: 8,
-  inlineSizeV2: 8,
-  structDecode: Padding3ByteMiddle._structDecode,
-);
+        inlineSizeV1: 8,
+        inlineSizeV2: 8,
+        structDecode: Padding3ByteMiddle._structDecode);
 
 class Padding4ByteMiddle extends $fidl.Struct {
   const Padding4ByteMiddle({
@@ -898,10 +908,12 @@ class Padding4ByteMiddle extends $fidl.Struct {
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 4, 4);
         return Padding4ByteMiddle(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 8, $depth));
       case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 4, 4);
         return Padding4ByteMiddle(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 8, $depth));
@@ -915,10 +927,9 @@ class Padding4ByteMiddle extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<Padding4ByteMiddle> kPadding4ByteMiddle_Type =
     $fidl.StructType<Padding4ByteMiddle>(
-  inlineSizeV1: 16,
-  inlineSizeV2: 16,
-  structDecode: Padding4ByteMiddle._structDecode,
-);
+        inlineSizeV1: 16,
+        inlineSizeV2: 16,
+        structDecode: Padding4ByteMiddle._structDecode);
 
 class Padding5ByteMiddle extends $fidl.Struct {
   const Padding5ByteMiddle({
@@ -987,11 +998,13 @@ class Padding5ByteMiddle extends $fidl.Struct {
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 3, 5);
         return Padding5ByteMiddle(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 2, $depth),
             c: $fieldType2.decode($decoder, $offset + 8, $depth));
       case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 3, 5);
         return Padding5ByteMiddle(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 2, $depth),
@@ -1006,10 +1019,9 @@ class Padding5ByteMiddle extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<Padding5ByteMiddle> kPadding5ByteMiddle_Type =
     $fidl.StructType<Padding5ByteMiddle>(
-  inlineSizeV1: 16,
-  inlineSizeV2: 16,
-  structDecode: Padding5ByteMiddle._structDecode,
-);
+        inlineSizeV1: 16,
+        inlineSizeV2: 16,
+        structDecode: Padding5ByteMiddle._structDecode);
 
 class Padding6ByteMiddle extends $fidl.Struct {
   const Padding6ByteMiddle({
@@ -1068,10 +1080,12 @@ class Padding6ByteMiddle extends $fidl.Struct {
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 2, 6);
         return Padding6ByteMiddle(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 8, $depth));
       case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 2, 6);
         return Padding6ByteMiddle(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 8, $depth));
@@ -1085,10 +1099,9 @@ class Padding6ByteMiddle extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<Padding6ByteMiddle> kPadding6ByteMiddle_Type =
     $fidl.StructType<Padding6ByteMiddle>(
-  inlineSizeV1: 16,
-  inlineSizeV2: 16,
-  structDecode: Padding6ByteMiddle._structDecode,
-);
+        inlineSizeV1: 16,
+        inlineSizeV2: 16,
+        structDecode: Padding6ByteMiddle._structDecode);
 
 class Padding7ByteMiddle extends $fidl.Struct {
   const Padding7ByteMiddle({
@@ -1147,10 +1160,12 @@ class Padding7ByteMiddle extends $fidl.Struct {
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 1, 7);
         return Padding7ByteMiddle(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 8, $depth));
       case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 1, 7);
         return Padding7ByteMiddle(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 8, $depth));
@@ -1164,10 +1179,9 @@ class Padding7ByteMiddle extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<Padding7ByteMiddle> kPadding7ByteMiddle_Type =
     $fidl.StructType<Padding7ByteMiddle>(
-  inlineSizeV1: 16,
-  inlineSizeV2: 16,
-  structDecode: Padding7ByteMiddle._structDecode,
-);
+        inlineSizeV1: 16,
+        inlineSizeV2: 16,
+        structDecode: Padding7ByteMiddle._structDecode);
 
 class Padding4ByteAlignmentLength12 extends $fidl.Struct {
   const Padding4ByteAlignmentLength12({
@@ -1246,12 +1260,17 @@ class Padding4ByteAlignmentLength12 extends $fidl.Struct {
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 5, 1);
+        $decoder.checkPadding($offset + 10, 2);
         return Padding4ByteAlignmentLength12(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 4, $depth),
             c: $fieldType2.decode($decoder, $offset + 6, $depth),
             d: $fieldType3.decode($decoder, $offset + 8, $depth));
       case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 5, 1);
+
+        $decoder.checkPadding($offset + 10, 2);
         return Padding4ByteAlignmentLength12(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 4, $depth),
@@ -1268,10 +1287,9 @@ class Padding4ByteAlignmentLength12 extends $fidl.Struct {
 const $fidl.StructType<Padding4ByteAlignmentLength12>
     kPadding4ByteAlignmentLength12_Type =
     $fidl.StructType<Padding4ByteAlignmentLength12>(
-  inlineSizeV1: 12,
-  inlineSizeV2: 12,
-  structDecode: Padding4ByteAlignmentLength12._structDecode,
-);
+        inlineSizeV1: 12,
+        inlineSizeV2: 12,
+        structDecode: Padding4ByteAlignmentLength12._structDecode);
 
 class Padding2ByteAlignmentLength6 extends $fidl.Struct {
   const Padding2ByteAlignmentLength6({
@@ -1340,11 +1358,16 @@ class Padding2ByteAlignmentLength6 extends $fidl.Struct {
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 1, 1);
+        $decoder.checkPadding($offset + 5, 1);
         return Padding2ByteAlignmentLength6(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 2, $depth),
             c: $fieldType2.decode($decoder, $offset + 4, $depth));
       case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 1, 1);
+
+        $decoder.checkPadding($offset + 5, 1);
         return Padding2ByteAlignmentLength6(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
             b: $fieldType1.decode($decoder, $offset + 2, $depth),
@@ -1360,7 +1383,6 @@ class Padding2ByteAlignmentLength6 extends $fidl.Struct {
 const $fidl.StructType<Padding2ByteAlignmentLength6>
     kPadding2ByteAlignmentLength6_Type =
     $fidl.StructType<Padding2ByteAlignmentLength6>(
-  inlineSizeV1: 6,
-  inlineSizeV2: 6,
-  structDecode: Padding2ByteAlignmentLength6._structDecode,
-);
+        inlineSizeV1: 6,
+        inlineSizeV2: 6,
+        structDecode: Padding2ByteAlignmentLength6._structDecode);

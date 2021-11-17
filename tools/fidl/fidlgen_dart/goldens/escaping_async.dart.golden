@@ -100,7 +100,6 @@ class DocCommentWithQuotes extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<DocCommentWithQuotes> kDocCommentWithQuotes_Type =
     $fidl.StructType<DocCommentWithQuotes>(
-  inlineSizeV1: 1,
-  inlineSizeV2: 1,
-  structDecode: DocCommentWithQuotes._structDecode,
-);
+        inlineSizeV1: 1,
+        inlineSizeV2: 1,
+        structDecode: DocCommentWithQuotes._structDecode);

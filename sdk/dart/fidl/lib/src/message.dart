@@ -177,9 +177,11 @@ T decodeMessage<T>(IncomingMessage message, int inlineSize, MemberType typ) {
 /// these multiple values into a bespoke, properly typed class.
 A decodeMessageWithCallback<A>(
     IncomingMessage message, int inlineSize, A Function(Decoder decoder) f) {
-  final Decoder decoder = Decoder(message)
-    ..claimMemory(kMessageHeaderSize + inlineSize, 0);
+  final int size = kMessageHeaderSize + inlineSize;
+  final Decoder decoder = Decoder(message)..claimMemory(size, 0);
   A out = f(decoder);
+  final int padding = align(size) - size;
+  decoder.checkPadding(size, padding);
   _validateDecoding(decoder);
   return out;
 }

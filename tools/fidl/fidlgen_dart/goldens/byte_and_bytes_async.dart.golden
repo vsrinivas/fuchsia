@@ -129,6 +129,7 @@ class ByteAndBytes extends $fidl.Struct {
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 1, 7);
         return ByteAndBytes(
             singleByte: $fieldType0.decode($decoder, $offset + 0, $depth),
             manyBytes: $fieldType1.decode($decoder, $offset + 8, $depth),
@@ -136,6 +137,7 @@ class ByteAndBytes extends $fidl.Struct {
             optOnlyOneKBytes:
                 $fieldType3.decode($decoder, $offset + 40, $depth));
       case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 1, 7);
         return ByteAndBytes(
             singleByte: $fieldType0.decode($decoder, $offset + 0, $depth),
             manyBytes: $fieldType1.decode($decoder, $offset + 8, $depth),
@@ -152,7 +154,6 @@ class ByteAndBytes extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<ByteAndBytes> kByteAndBytes_Type =
     $fidl.StructType<ByteAndBytes>(
-  inlineSizeV1: 56,
-  inlineSizeV2: 56,
-  structDecode: ByteAndBytes._structDecode,
-);
+        inlineSizeV1: 56,
+        inlineSizeV2: 56,
+        structDecode: ByteAndBytes._structDecode);

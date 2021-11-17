@@ -667,10 +667,7 @@ class TableData extends $fidl.Struct {
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<TableData> kTableData_Type = $fidl.StructType<TableData>(
-  inlineSizeV1: 1,
-  inlineSizeV2: 1,
-  structDecode: TableData._structDecode,
-);
+    inlineSizeV1: 1, inlineSizeV2: 1, structDecode: TableData._structDecode);
 
 class SomeProtocolSomeMethodResponse extends $fidl.Struct {
   const SomeProtocolSomeMethodResponse({
@@ -735,10 +732,9 @@ class SomeProtocolSomeMethodResponse extends $fidl.Struct {
 const $fidl.StructType<SomeProtocolSomeMethodResponse>
     kSomeProtocol_SomeMethod_Response_Type =
     $fidl.StructType<SomeProtocolSomeMethodResponse>(
-  inlineSizeV1: 4,
-  inlineSizeV2: 4,
-  structDecode: SomeProtocolSomeMethodResponse._structDecode,
-);
+        inlineSizeV1: 4,
+        inlineSizeV2: 4,
+        structDecode: SomeProtocolSomeMethodResponse._structDecode);
 
 class OverrideTest extends $fidl.Struct {
   const OverrideTest({
@@ -817,11 +813,13 @@ class OverrideTest extends $fidl.Struct {
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 4, 4);
         return OverrideTest(
             op: $fieldType0.decode($decoder, $offset + 0, $depth),
             left: $fieldType1.decode($decoder, $offset + 8, $depth),
             right: $fieldType2.decode($decoder, $offset + 32, $depth));
       case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 4, 4);
         return OverrideTest(
             op: $fieldType0.decode($decoder, $offset + 0, $depth),
             left: $fieldType1.decode($decoder, $offset + 8, $depth),
@@ -836,10 +834,9 @@ class OverrideTest extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<OverrideTest> kOverrideTest_Type =
     $fidl.StructType<OverrideTest>(
-  inlineSizeV1: 56,
-  inlineSizeV2: 40,
-  structDecode: OverrideTest._structDecode,
-);
+        inlineSizeV1: 56,
+        inlineSizeV2: 40,
+        structDecode: OverrideTest._structDecode);
 
 class TableMember extends $fidl.Table {
   const TableMember({

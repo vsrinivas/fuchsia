@@ -20,7 +20,7 @@ const int _kAlignmentMask = _kAlignment - 1;
 
 const int _maxOutOfLineDepth = 32;
 
-int _align(int size) => (size + _kAlignmentMask) & ~_kAlignmentMask;
+int align(int size) => (size + _kAlignmentMask) & ~_kAlignmentMask;
 
 void _checkRange(int value, int min, int max) {
   if (value < min || value > max) {
@@ -65,7 +65,7 @@ class Encoder {
           FidlErrorCode.fidlExceededMaxOutOfLineDepth);
     }
     int offset = _extent;
-    _claimMemory(_align(size));
+    _claimMemory(align(size));
     return offset;
   }
 
@@ -168,7 +168,7 @@ class Decoder {
           FidlErrorCode.fidlExceededMaxOutOfLineDepth);
     }
     final int result = _nextOffset;
-    _nextOffset += _align(size);
+    _nextOffset += align(size);
     if (_nextOffset > data.lengthInBytes) {
       throw FidlError('Cannot access out of range memory');
     }
@@ -217,4 +217,13 @@ class Decoder {
   double decodeFloat32(int offset) => data.getFloat32(offset, Endian.little);
 
   double decodeFloat64(int offset) => data.getFloat64(offset, Endian.little);
+
+  void checkPadding(int offset, int padding) {
+    for (int readAt = offset; readAt < offset + padding; readAt++) {
+      if (data.getUint8(readAt) != 0) {
+        throw FidlError('Non-zero padding at: $readAt',
+            FidlErrorCode.fidlInvalidPaddingByte);
+      }
+    }
+  }
 }

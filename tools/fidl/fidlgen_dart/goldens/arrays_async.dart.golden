@@ -268,10 +268,9 @@ class StructSmallArray extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<StructSmallArray> kStructSmallArray_Type =
     $fidl.StructType<StructSmallArray>(
-  inlineSizeV1: 8,
-  inlineSizeV2: 8,
-  structDecode: StructSmallArray._structDecode,
-);
+        inlineSizeV1: 8,
+        inlineSizeV2: 8,
+        structDecode: StructSmallArray._structDecode);
 
 class StructLargeArray extends $fidl.Struct {
   const StructLargeArray({
@@ -334,10 +333,9 @@ class StructLargeArray extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<StructLargeArray> kStructLargeArray_Type =
     $fidl.StructType<StructLargeArray>(
-  inlineSizeV1: 400,
-  inlineSizeV2: 400,
-  structDecode: StructLargeArray._structDecode,
-);
+        inlineSizeV1: 400,
+        inlineSizeV2: 400,
+        structDecode: StructLargeArray._structDecode);
 
 class TableSmallArray extends $fidl.Table {
   const TableSmallArray({
