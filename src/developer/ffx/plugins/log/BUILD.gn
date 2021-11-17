@@ -23,6 +23,7 @@ ffx_plugin("ffx_log") {
   deps = [
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//src/developer/ffx:ffx_lib_args",
+    "//src/developer/ffx/lib/writer:lib",
     "//src/developer/ffx/logger/data:lib",
     "//src/developer/ffx/logger/frontend:lib",
     "//src/developer/ffx/logger/test_utils:lib",
@@ -31,6 +32,7 @@ ffx_plugin("ffx_log") {
     "//src/lib/diagnostics/hierarchy/rust",
     "//src/lib/diagnostics/selectors",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:blocking",

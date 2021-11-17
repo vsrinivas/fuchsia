@@ -14,6 +14,7 @@ use {
     ffx_log_args::{DumpCommand, LogCommand, LogSubCommand, TimeFormat, WatchCommand},
     ffx_log_data::{EventType, LogData, LogEntry},
     ffx_log_frontend::{exec_log_cmd, LogCommandParameters, LogFormatter},
+    ffx_writer::Writer,
     fidl_fuchsia_developer_bridge::{DaemonProxy, StreamMode, TimeBound},
     fidl_fuchsia_developer_remotecontrol::{ArchiveIteratorError, RemoteControlProxy},
     fuchsia_async::futures::{AsyncWrite, AsyncWriteExt},
@@ -167,12 +168,33 @@ impl From<&LogCommand> for LogFilterCriteria {
     }
 }
 
-pub struct LogFormatterOptions {
+/// text display options
+#[derive(Clone)]
+pub struct TextDisplayOptions {
     color: bool,
     time_format: TimeFormat,
     show_metadata: bool,
-    no_symbols: bool,
     show_tags: bool,
+}
+
+/// display options
+#[derive(Clone)]
+pub enum DisplayOption {
+    Text(TextDisplayOptions),
+    Json,
+}
+
+/// additional log options
+#[derive(Default)]
+pub struct LogOpts {
+    /// true if machine output (JSON) is enabled
+    is_machine: bool,
+}
+
+#[derive(Clone)]
+pub struct LogFormatterOptions {
+    display: DisplayOption,
+    no_symbols: bool,
 }
 
 pub struct DefaultLogFormatter<'a> {
@@ -194,34 +216,27 @@ impl<'a> LogFormatter for DefaultLogFormatter<'_> {
                 if !self.filters.matches(&log_entry) {
                     return Ok(());
                 }
-
-                match log_entry {
-                    LogEntry { data: LogData::TargetLog(data), .. } => {
-                        self.format_target_log_data(data, None)
-                    }
-                    LogEntry { data: LogData::SymbolizedTargetLog(data, symbolized), .. } => {
-                        if !self.options.no_symbols && symbolized.is_empty() {
-                            return Ok(());
+                match &self.options.display {
+                    DisplayOption::Text(options) => {
+                        match self.format_text_log(&options, log_entry)? {
+                            Some(s) => s,
+                            None => return Ok(()),
                         }
-
-                        self.format_target_log_data(data, Some(symbolized))
                     }
-                    LogEntry { data: LogData::MalformedTargetLog(raw), .. } => {
-                        format!("malformed target log: {}", raw)
-                    }
-                    LogEntry { data: LogData::FfxEvent(etype), timestamp, .. } => match etype {
-                        EventType::LoggingStarted => {
-                            let mut s = String::from("logger started.");
-                            if self.has_previous_log {
-                                s.push_str(" Logs before this may have been dropped if they were not cached on the target. There may be a brief delay while we catch up...");
+                    DisplayOption::Json => {
+                        match log_entry {
+                            LogEntry {
+                                data: LogData::SymbolizedTargetLog(_, ref symbolized),
+                                ..
+                            } => {
+                                if !self.options.no_symbols && symbolized.is_empty() {
+                                    return Ok(());
+                                }
                             }
-                            format_ffx_event(&s, Some(timestamp))
+                            _ => {}
                         }
-                        EventType::TargetDisconnected => format_ffx_event(
-                            "Logger lost connection to target. Retrying...",
-                            Some(timestamp),
-                        ),
-                    },
+                        serde_json::to_string(&log_entry)?
+                    }
                 }
             }
             Err(e) => format!("got an error fetching next log: {:?}", e),
@@ -250,14 +265,49 @@ impl<'a> DefaultLogFormatter<'a> {
         }
     }
 
-    fn format_target_timestamp(&self, ts: Timestamp) -> String {
+    fn format_text_log(
+        &self,
+        options: &TextDisplayOptions,
+        log_entry: LogEntry,
+    ) -> Result<Option<String>, Error> {
+        Ok(match log_entry {
+            LogEntry { data: LogData::TargetLog(data), .. } => {
+                Some(self.format_target_log_data(options, data, None))
+            }
+            LogEntry { data: LogData::SymbolizedTargetLog(data, symbolized), .. } => {
+                if !self.options.no_symbols && symbolized.is_empty() {
+                    return Ok(None);
+                }
+
+                Some(self.format_target_log_data(options, data, Some(symbolized)))
+            }
+            LogEntry { data: LogData::MalformedTargetLog(raw), .. } => {
+                Some(format!("malformed target log: {}", raw))
+            }
+            LogEntry { data: LogData::FfxEvent(etype), timestamp, .. } => match etype {
+                EventType::LoggingStarted => {
+                    let mut s = String::from("logger started.");
+                    if self.has_previous_log {
+                        s.push_str(" Logs before this may have been dropped if they were not cached on the target. There may be a brief delay while we catch up...");
+                    }
+                    Some(format_ffx_event(&s, Some(timestamp)))
+                }
+                EventType::TargetDisconnected => Some(format_ffx_event(
+                    "Logger lost connection to target. Retrying...",
+                    Some(timestamp),
+                )),
+            },
+        })
+    }
+
+    fn format_target_timestamp(&self, options: &TextDisplayOptions, ts: Timestamp) -> String {
         let mut abs_ts = 0;
         let time_format = match self.boot_ts_nanos {
             Some(boot_ts) => {
                 abs_ts = boot_ts + *ts;
-                self.options.time_format.clone()
+                &options.time_format
             }
-            None => TimeFormat::Monotonic,
+            None => &TimeFormat::Monotonic,
         };
 
         match time_format {
@@ -273,11 +323,16 @@ impl<'a> DefaultLogFormatter<'a> {
         }
     }
 
-    pub fn format_target_log_data(&self, data: LogsData, symbolized_msg: Option<String>) -> String {
+    pub fn format_target_log_data(
+        &self,
+        options: &TextDisplayOptions,
+        data: LogsData,
+        symbolized_msg: Option<String>,
+    ) -> String {
         let symbolized_msg = if self.options.no_symbols { None } else { symbolized_msg };
 
-        let ts = self.format_target_timestamp(data.metadata.timestamp);
-        let color_str = if self.options.color {
+        let ts = self.format_target_timestamp(&options, data.metadata.timestamp);
+        let color_str = if options.color {
             severity_to_color_str(data.metadata.severity)
         } else {
             String::default()
@@ -285,13 +340,13 @@ impl<'a> DefaultLogFormatter<'a> {
 
         let msg = symbolized_msg.unwrap_or(data.msg().unwrap_or("<missing message>").to_string());
 
-        let process_info_str = if self.options.show_metadata {
+        let process_info_str = if options.show_metadata {
             format!("[{}][{}]", data.pid().unwrap_or(0), data.tid().unwrap_or(0))
         } else {
             String::default()
         };
 
-        let tags_str = if self.options.show_tags {
+        let tags_str = if options.show_tags {
             format!("[{}]", data.tags().map(|t| t.join(",")).unwrap_or(String::default()))
         } else {
             String::default()
@@ -339,10 +394,18 @@ This likely means that your logs will not be symbolized."
 #[ffx_plugin("proactive_log.enabled")]
 pub async fn log(
     daemon_proxy: DaemonProxy,
+    #[ffx(machine = Vec<JsonTargets>)] writer: Writer,
     rcs_proxy: Option<RemoteControlProxy>,
     cmd: LogCommand,
 ) -> Result<()> {
-    log_impl(daemon_proxy, rcs_proxy, cmd, &mut std::io::stdout()).await
+    log_impl(
+        daemon_proxy,
+        rcs_proxy,
+        cmd,
+        &mut std::io::stdout(),
+        LogOpts { is_machine: writer.is_machine() },
+    )
+    .await
 }
 
 pub async fn log_impl<W: std::io::Write>(
@@ -350,6 +413,7 @@ pub async fn log_impl<W: std::io::Write>(
     rcs_proxy: Option<RemoteControlProxy>,
     cmd: LogCommand,
     writer: &mut W,
+    opts: LogOpts,
 ) -> Result<()> {
     let config_color: bool = get(COLOR_CONFIG_NAME).await?;
 
@@ -358,11 +422,17 @@ pub async fn log_impl<W: std::io::Write>(
         LogFilterCriteria::from(&cmd),
         &mut stdout,
         LogFormatterOptions {
-            color: should_color(config_color, cmd.no_color),
-            time_format: cmd.clock.clone(),
-            show_metadata: cmd.show_metadata,
             no_symbols: cmd.no_symbols,
-            show_tags: !cmd.hide_tags,
+            display: if opts.is_machine {
+                DisplayOption::Json
+            } else {
+                DisplayOption::Text(TextDisplayOptions {
+                    show_tags: !cmd.hide_tags,
+                    color: should_color(config_color, cmd.no_color),
+                    time_format: cmd.clock.clone(),
+                    show_metadata: cmd.show_metadata,
+                })
+            },
         },
     );
 
@@ -619,17 +689,27 @@ mod test {
         logs_data_builder().add_tag("tag1").add_tag("tag2").set_message("message").build()
     }
 
-    fn default_log_formatter_options() -> LogFormatterOptions {
-        LogFormatterOptions {
-            color: false,
-            time_format: TimeFormat::Monotonic,
-            show_metadata: false,
-            no_symbols: false,
-            show_tags: false,
+    impl Default for LogFormatterOptions {
+        fn default() -> Self {
+            LogFormatterOptions {
+                no_symbols: false,
+                display: DisplayOption::Text(TextDisplayOptions::default()),
+            }
         }
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    impl Default for TextDisplayOptions {
+        fn default() -> Self {
+            Self {
+                color: Default::default(),
+                time_format: TimeFormat::Monotonic,
+                show_metadata: Default::default(),
+                show_tags: Default::default(),
+            }
+        }
+    }
+
+    #[fuchsia::test]
     async fn test_dump_empty() {
         let mut formatter = FakeLogFormatter::new();
         let cmd = empty_dump_command();
@@ -656,7 +736,7 @@ mod test {
         formatter.assert_same_logs(vec![])
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_watch() {
         let mut formatter = FakeLogFormatter::new();
         let cmd = empty_log_command();
@@ -694,7 +774,7 @@ mod test {
         formatter.assert_same_logs(vec![Ok(log1), Ok(log2), Ok(log3)])
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_watch_with_error() {
         let mut formatter = FakeLogFormatter::new();
         let cmd = empty_log_command();
@@ -738,7 +818,7 @@ mod test {
         ])
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_dump_with_to_timestamp() {
         let mut formatter = FakeLogFormatter::new();
         let cmd = LogCommand { until_monotonic: Some(default_ts()), ..empty_dump_command() };
@@ -809,7 +889,7 @@ mod test {
         formatter.assert_same_logs(vec![Ok(log1), Ok(log2)])
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_criteria_moniker_message_and_severity_matches() {
         let cmd = LogCommand {
             filter: vec!["included".to_string()],
@@ -876,7 +956,7 @@ mod test {
         )));
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_criteria_message_severity_symbolized_log() {
         let cmd = LogCommand {
             filter: vec!["included".to_string()],
@@ -934,7 +1014,7 @@ mod test {
         ))));
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_empty_criteria() {
         let cmd = empty_dump_command();
         let criteria = LogFilterCriteria::from(&cmd);
@@ -974,7 +1054,7 @@ mod test {
         )));
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_criteria_klog_only() {
         let cmd = LogCommand { kernel: true, ..empty_dump_command() };
         let criteria = LogFilterCriteria::from(&cmd);
@@ -1003,7 +1083,7 @@ mod test {
         )));
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_criteria_multiple_matches() {
         let cmd = LogCommand {
             filter: vec!["included".to_string(), "also".to_string()],
@@ -1057,7 +1137,7 @@ mod test {
         )));
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_criteria_multiple_excludes() {
         let cmd = LogCommand {
             exclude: vec![".cmx".to_string(), "also".to_string()],
@@ -1100,7 +1180,7 @@ mod test {
         )));
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_criteria_tag_filter() {
         let cmd = LogCommand {
             tags: vec!["tag1".to_string()],
@@ -1150,7 +1230,7 @@ mod test {
         )));
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_criteria_matches_component_url() {
         let cmd = LogCommand {
             filter: vec!["fuchsia.com".to_string()],
@@ -1194,7 +1274,7 @@ mod test {
         )));
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_from_time_passed_to_daemon() {
         let mut formatter = FakeLogFormatter::new();
         let cmd = LogCommand {
@@ -1226,7 +1306,7 @@ mod test {
         assert!(output.is_empty());
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_since_monotonic_passed_to_daemon() {
         let mut formatter = FakeLogFormatter::new();
         let cmd = LogCommand {
@@ -1258,7 +1338,7 @@ mod test {
         assert!(output.is_empty());
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_multiple_from_time_args_fails() {
         let mut formatter = FakeLogFormatter::new();
         let cmd = LogCommand {
@@ -1286,7 +1366,7 @@ mod test {
         assert!(output.is_empty());
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_multiple_to_time_args_fails() {
         let mut formatter = FakeLogFormatter::new();
         let cmd = LogCommand {
@@ -1314,176 +1394,269 @@ mod test {
         assert!(output.is_empty());
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_default_formatter() {
         let mut stdout = Unblock::new(std::io::stdout());
-        let formatter = DefaultLogFormatter::new(
-            LogFilterCriteria::default(),
-            &mut stdout,
-            default_log_formatter_options(),
-        );
+        let options = LogFormatterOptions::default();
+        let formatter =
+            DefaultLogFormatter::new(LogFilterCriteria::default(), &mut stdout, options.clone());
+        match &options.display {
+            DisplayOption::Text(options) => {
+                assert_eq!(
+                    formatter.format_target_log_data(&options, logs_data(), None),
+                    "[1615535969.000][some/moniker][W\u{1b}[m] message\u{1b}[m"
+                );
+            }
+            DisplayOption::Json => unreachable!("The default display option must be Text"),
+        }
+    }
 
+    #[fuchsia::test]
+    async fn test_default_formatter_with_json() {
+        let mut output = vec![];
+        let options = LogFormatterOptions { display: DisplayOption::Json, no_symbols: false };
+        {
+            let mut formatter = DefaultLogFormatter::new(
+                LogFilterCriteria::default(),
+                &mut output,
+                options.clone(),
+            );
+            let mut entry = LogEntry::new(LogData::TargetLog(logs_data())).unwrap();
+            entry.timestamp = Timestamp::from(0);
+            formatter.push_log(ArchiveIteratorResult::Ok(entry)).await.unwrap();
+        }
         assert_eq!(
-            formatter.format_target_log_data(logs_data(), None),
-            "[1615535969.000][some/moniker][W\u{1b}[m] message\u{1b}[m"
+            String::from_utf8(output).unwrap(),
+            r#"{"data":{"TargetLog":{"data_source":"Logs","metadata":{"component_url":"component_url","timestamp":1615535969000000000,"severity":"WARN","tags":["tag1","tag2"],"pid":1,"tid":2,"dropped":0},"moniker":"some/moniker","payload":{"root":{"message":{"value":"message"}}},"version":1}},"timestamp":0,"version":1}
+"#
         );
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_default_formatter_local_time() {
         let mut stdout = Unblock::new(std::io::stdout());
-        let mut formatter = DefaultLogFormatter::new(
-            LogFilterCriteria::default(),
-            &mut stdout,
-            LogFormatterOptions {
-                time_format: TimeFormat::Local,
-                ..default_log_formatter_options()
-            },
-        );
+        let options = LogFormatterOptions {
+            display: DisplayOption::Text(TextDisplayOptions {
+                time_format: TimeFormat::Utc,
+                ..TextDisplayOptions::default()
+            }),
+            no_symbols: false,
+        };
+        let mut formatter =
+            DefaultLogFormatter::new(LogFilterCriteria::default(), &mut stdout, options.clone());
 
-        // Before setting the boot timestamp, it should use monotonic time.
-        assert_eq!(
-            formatter.format_target_log_data(logs_data(), None),
-            "[1615535969.000][some/moniker][W\u{1b}[m] message\u{1b}[m"
-        );
+        match &options.display {
+            DisplayOption::Text(options) => {
+                // Before setting the boot timestamp, it should use monotonic time.
+                assert_eq!(
+                    formatter.format_target_log_data(&options, logs_data(), None),
+                    "[1615535969.000][some/moniker][W\u{1b}[m] message\u{1b}[m"
+                );
 
-        formatter.set_boot_timestamp(1);
+                formatter.set_boot_timestamp(1);
 
-        // In order to avoid flakey tests due to timezone differences, we just verify that
-        // the output *did* change.
-        assert_ne!(
-            formatter.format_target_log_data(logs_data(), None),
-            "[1615535969.000][some/moniker][W\u{1b}[m] message\u{1b}[m"
-        );
+                // In order to avoid flakey tests due to timezone differences, we just verify that
+                // the output *did* change.
+                assert_ne!(
+                    formatter.format_target_log_data(&options, logs_data(), None),
+                    "[1615535969.000][some/moniker][W\u{1b}[m] message\u{1b}[m"
+                );
+            }
+            DisplayOption::Json => unreachable!("The default display option must be Text"),
+        }
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_default_formatter_utc_time() {
         let mut stdout = Unblock::new(std::io::stdout());
-        let mut formatter = DefaultLogFormatter::new(
-            LogFilterCriteria::default(),
-            &mut stdout,
-            LogFormatterOptions { time_format: TimeFormat::Utc, ..default_log_formatter_options() },
-        );
+        let options = LogFormatterOptions {
+            display: DisplayOption::Text(TextDisplayOptions {
+                time_format: TimeFormat::Utc,
+                ..TextDisplayOptions::default()
+            }),
+            no_symbols: false,
+        };
+        let mut formatter =
+            DefaultLogFormatter::new(LogFilterCriteria::default(), &mut stdout, options.clone());
 
-        // Before setting the boot timestamp, it should use monotonic time.
-        assert_eq!(
-            formatter.format_target_log_data(logs_data(), None),
-            "[1615535969.000][some/moniker][W\u{1b}[m] message\u{1b}[m"
-        );
+        match &options.display {
+            DisplayOption::Text(options) => {
+                // Before setting the boot timestamp, it should use monotonic time.
+                assert_eq!(
+                    formatter.format_target_log_data(&options, logs_data(), None),
+                    "[1615535969.000][some/moniker][W\u{1b}[m] message\u{1b}[m"
+                );
 
-        formatter.set_boot_timestamp(1);
-        assert_eq!(
-            formatter.format_target_log_data(logs_data(), None),
-            "[2021-03-12 07:59:29.000][some/moniker][W\u{1b}[m] message\u{1b}[m"
-        );
+                formatter.set_boot_timestamp(1);
+                assert_eq!(
+                    formatter.format_target_log_data(&options, logs_data(), None),
+                    "[2021-03-12 07:59:29.000][some/moniker][W\u{1b}[m] message\u{1b}[m"
+                );
+            }
+            DisplayOption::Json => unreachable!("The default display option must be Text"),
+        }
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_default_formatter_colored_output() {
         let mut stdout = Unblock::new(std::io::stdout());
-        let formatter = DefaultLogFormatter::new(
-            LogFilterCriteria::default(),
-            &mut stdout,
-            LogFormatterOptions { color: true, ..default_log_formatter_options() },
-        );
-
-        assert_eq!(
-            formatter.format_target_log_data(logs_data(), None),
-            "[1615535969.000][some/moniker][\u{1b}[38;5;3mW\u{1b}[m] \u{1b}[38;5;3mmessage\u{1b}[m"
-        );
+        let options = LogFormatterOptions {
+            display: DisplayOption::Text(TextDisplayOptions {
+                color: true,
+                ..TextDisplayOptions::default()
+            }),
+            no_symbols: false,
+        };
+        let formatter =
+            DefaultLogFormatter::new(LogFilterCriteria::default(), &mut stdout, options.clone());
+        match &options.display {
+            DisplayOption::Text(options) => {
+                assert_eq!(
+                    formatter.format_target_log_data(&options, logs_data(), None),
+                    "[1615535969.000][some/moniker][\u{1b}[38;5;3mW\u{1b}[m] \u{1b}[38;5;3mmessage\u{1b}[m"
+                );
+            }
+            DisplayOption::Json => unreachable!("The default display option must be Text"),
+        }
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_default_formatter_show_metadata() {
         let mut stdout = Unblock::new(std::io::stdout());
-        let formatter = DefaultLogFormatter::new(
-            LogFilterCriteria::default(),
-            &mut stdout,
-            LogFormatterOptions { show_metadata: true, ..default_log_formatter_options() },
-        );
+        let options = LogFormatterOptions {
+            display: DisplayOption::Text(TextDisplayOptions {
+                show_metadata: true,
+                ..TextDisplayOptions::default()
+            }),
+            no_symbols: false,
+        };
 
-        assert_eq!(
-            formatter.format_target_log_data(logs_data(), None),
-            "[1615535969.000][1][2][some/moniker][W\u{1b}[m] message\u{1b}[m"
-        );
+        let formatter =
+            DefaultLogFormatter::new(LogFilterCriteria::default(), &mut stdout, options.clone());
+        match &options.display {
+            DisplayOption::Text(options) => {
+                assert_eq!(
+                    formatter.format_target_log_data(&options, logs_data(), None),
+                    "[1615535969.000][1][2][some/moniker][W\u{1b}[m] message\u{1b}[m"
+                );
+            }
+            DisplayOption::Json => unreachable!("The default display option must be Text"),
+        }
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_default_formatter_symbolized_log_message() {
         let mut stdout = Unblock::new(std::io::stdout());
-        let formatter = DefaultLogFormatter::new(
-            LogFilterCriteria::default(),
-            &mut stdout,
-            default_log_formatter_options(),
-        );
-
-        assert_eq!(
-            formatter.format_target_log_data(logs_data(), Some("symbolized".to_string())),
-            "[1615535969.000][some/moniker][W\u{1b}[m] symbolized\u{1b}[m"
-        );
+        let options = LogFormatterOptions::default();
+        let formatter =
+            DefaultLogFormatter::new(LogFilterCriteria::default(), &mut stdout, options.clone());
+        match &options.display {
+            DisplayOption::Text(options) => {
+                assert_eq!(
+                    formatter.format_target_log_data(
+                        &options,
+                        logs_data(),
+                        Some("symbolized".to_string())
+                    ),
+                    "[1615535969.000][some/moniker][W\u{1b}[m] symbolized\u{1b}[m"
+                );
+            }
+            DisplayOption::Json => unreachable!("The default display option must be Text"),
+        }
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_default_formatter_no_symbols() {
         let mut stdout = Unblock::new(std::io::stdout());
-        let formatter = DefaultLogFormatter::new(
-            LogFilterCriteria::default(),
-            &mut stdout,
-            LogFormatterOptions { no_symbols: true, ..default_log_formatter_options() },
-        );
-
-        assert_eq!(
-            formatter.format_target_log_data(logs_data(), Some("symbolized".to_string())),
-            "[1615535969.000][some/moniker][W\u{1b}[m] message\u{1b}[m"
-        );
+        let options = LogFormatterOptions { no_symbols: true, ..LogFormatterOptions::default() };
+        let formatter =
+            DefaultLogFormatter::new(LogFilterCriteria::default(), &mut stdout, options.clone());
+        match &options.display {
+            DisplayOption::Text(options) => {
+                assert_eq!(
+                    formatter.format_target_log_data(
+                        &options,
+                        logs_data(),
+                        Some("symbolized".to_string())
+                    ),
+                    "[1615535969.000][some/moniker][W\u{1b}[m] message\u{1b}[m"
+                );
+            }
+            DisplayOption::Json => unreachable!("The default display option must be Text"),
+        }
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_default_formatter_show_tags() {
         let mut stdout = Unblock::new(std::io::stdout());
-        let formatter = DefaultLogFormatter::new(
-            LogFilterCriteria::default(),
-            &mut stdout,
-            LogFormatterOptions { show_tags: true, ..default_log_formatter_options() },
-        );
-
-        assert_eq!(
-            formatter.format_target_log_data(logs_data(), None),
-            "[1615535969.000][some/moniker][tag1,tag2][W\u{1b}[m] message\u{1b}[m"
-        );
+        let options = LogFormatterOptions {
+            display: DisplayOption::Text(TextDisplayOptions {
+                show_tags: true,
+                ..TextDisplayOptions::default()
+            }),
+            no_symbols: false,
+        };
+        let formatter =
+            DefaultLogFormatter::new(LogFilterCriteria::default(), &mut stdout, options.clone());
+        match &options.display {
+            DisplayOption::Text(options) => {
+                assert_eq!(
+                    formatter.format_target_log_data(options, logs_data(), None),
+                    "[1615535969.000][some/moniker][tag1,tag2][W\u{1b}[m] message\u{1b}[m"
+                );
+            }
+            DisplayOption::Json => unreachable!("The default display option must be Text"),
+        }
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_default_formatter_hides_tags_if_empty() {
         let mut stdout = Unblock::new(std::io::stdout());
-        let formatter = DefaultLogFormatter::new(
-            LogFilterCriteria::default(),
-            &mut stdout,
-            LogFormatterOptions { show_tags: true, ..default_log_formatter_options() },
-        );
+        let options = LogFormatterOptions {
+            display: DisplayOption::Text(TextDisplayOptions {
+                show_tags: true,
+                ..TextDisplayOptions::default()
+            }),
+            no_symbols: false,
+        };
 
-        assert_eq!(
-            formatter.format_target_log_data(logs_data_builder().build(), None),
-            "[1615535969.000][some/moniker][][W\u{1b}[m] <missing message>\u{1b}[m"
-        );
+        let formatter =
+            DefaultLogFormatter::new(LogFilterCriteria::default(), &mut stdout, options.clone());
+        match &options.display {
+            DisplayOption::Text(options) => {
+                assert_eq!(
+                    formatter.format_target_log_data(&options, logs_data_builder().build(), None),
+                    "[1615535969.000][some/moniker][][W\u{1b}[m] <missing message>\u{1b}[m"
+                );
+            }
+            DisplayOption::Json => unreachable!("The default display option must be Text"),
+        }
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_default_formatter_multiline_message() {
         let mut stdout = Unblock::new(std::io::stdout());
-        let formatter = DefaultLogFormatter::new(
-            LogFilterCriteria::default(),
-            &mut stdout,
-            LogFormatterOptions { show_tags: true, ..default_log_formatter_options() },
-        );
-
-        assert_eq!(
-            formatter.format_target_log_data(
-                logs_data_builder().set_message("multi\nline\nmessage").build(),
-                None
-            ),
-            "[1615535969.000][some/moniker][][W\u{1b}[m] multi\nline\nmessage\u{1b}[m"
-        );
+        let options = LogFormatterOptions {
+            display: DisplayOption::Text(TextDisplayOptions {
+                show_tags: true,
+                ..TextDisplayOptions::default()
+            }),
+            no_symbols: false,
+        };
+        let formatter =
+            DefaultLogFormatter::new(LogFilterCriteria::default(), &mut stdout, options.clone());
+        match &options.display {
+            DisplayOption::Text(options) => {
+                assert_eq!(
+                    formatter.format_target_log_data(
+                        &options,
+                        logs_data_builder().set_message("multi\nline\nmessage").build(),
+                        None
+                    ),
+                    "[1615535969.000][some/moniker][][W\u{1b}[m] multi\nline\nmessage\u{1b}[m"
+                );
+            }
+            DisplayOption::Json => unreachable!("The default display option must be Text"),
+        }
     }
 }
