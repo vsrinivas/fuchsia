@@ -22,6 +22,7 @@ const (
 	InvalidPresenceIndicator           ErrorCode = "INVALID_PRESENCE_INDICATOR"
 	MissingRequiredHandleRights        ErrorCode = "MISSING_REQUIRED_HANDLE_RIGHTS"
 	NonEmptyStringWithNullBody         ErrorCode = "NON_EMPTY_STRING_WITH_NULL_BODY"
+	NonEmptyVectorWithNullBody         ErrorCode = "NON_EMPTY_VECTOR_WITH_NULL_BODY"
 	NonNullableTypeWithNullValue       ErrorCode = "NON_NULLABLE_TYPE_WITH_NULL_VALUE"
 	NonResourceUnknownHandles          ErrorCode = "NON_RESOURCE_UNKNOWN_HANDLES"
 	StrictBitsUnknownBit               ErrorCode = "STRICT_BITS_UNKNOWN_BIT"
@@ -50,6 +51,7 @@ var AllErrorCodes = map[ErrorCode]struct{}{
 	InvalidPresenceIndicator:           {},
 	MissingRequiredHandleRights:        {},
 	NonEmptyStringWithNullBody:         {},
+	NonEmptyVectorWithNullBody:         {},
 	NonNullableTypeWithNullValue:       {},
 	NonResourceUnknownHandles:          {},
 	StrictBitsUnknownBit:               {},

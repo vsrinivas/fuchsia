@@ -12,6 +12,83 @@ encode_failure("VectorExceedsLimit") {
     err = COUNT_EXCEEDS_LIMIT,
 }
 
+decode_failure("EmptyVectorWithNullPtrBody") {
+    // TODO(fxbug.dev/88792) Rust does not produce the correct error.
+    bindings_denylist = [rust],
+    type = VectorWrapper,
+    bytes = {
+        v1, v2 = [
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // length of vector data
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // invalid null pointer to content
+        ],
+    },
+    err = NON_NULLABLE_TYPE_WITH_NULL_VALUE,
+}
+
+success("EmptyOptionalVectorWithNullPtrBody") {
+    value = OptionalVectorWrapper{
+        v: null,
+    },
+    bytes = {
+        v1, v2 = [
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // length of vector data
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // invalid null pointer to content
+        ],
+    },
+}
+
+decode_failure("NonEmptyVectorWithNullPtrBody") {
+    // TODO(fxbug.dev/88793) Fix this on dart.
+    bindings_denylist = [dart],
+    type = VectorWrapper,
+    bytes = {
+        v1, v2 = [
+            0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // length of vector data
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // invalid null pointer to content
+        ],
+    },
+    err = NON_EMPTY_VECTOR_WITH_NULL_BODY,
+}
+
+decode_failure("NonEmptyOptionalVectorWithNullPtrBody") {
+    // TODO(fxbug.dev/88793) Fix this on dart.
+    bindings_denylist = [dart],
+    type = OptionalVectorWrapper,
+    bytes = {
+        v1, v2 = [
+            0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // length of vector data
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // invalid null pointer to content
+        ],
+    },
+    err = NON_EMPTY_VECTOR_WITH_NULL_BODY,
+}
+
+decode_failure("VectorWrongPointerValue") {
+    // TODO(fxbug.dev/88793) Fix this on dart.
+    bindings_denylist = [dart],
+    type = VectorWrapper,
+    bytes = {
+        v1, v2 = [
+            0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // length of vector data
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, // invalid pointer to content
+        ],
+    },
+    err = INVALID_PRESENCE_INDICATOR,
+}
+
+decode_failure("OptionalVectorWrongPointerValue") {
+    // TODO(fxbug.dev/88793) Fix this on dart.
+    bindings_denylist = [dart],
+    type = OptionalVectorWrapper,
+    bytes = {
+        v1, v2 = [
+            0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // length of vector data
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, // invalid pointer to content
+        ],
+    },
+    err = INVALID_PRESENCE_INDICATOR,
+}
+
 // Test vector with a 2^64-1 count, exceeding the 32-bit limit from RFC-0059.
 decode_failure("VectorCountExceedsLimitByALot") {
     // TODO(fxbug.dev/82167): Go panics and doesn't return proper errors.

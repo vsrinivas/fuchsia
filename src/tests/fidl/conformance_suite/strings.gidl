@@ -11,6 +11,31 @@ encode_failure("StringExceedsLimit") {
     err = STRING_TOO_LONG,
 }
 
+decode_failure("EmptyStringWithNullPtrBody") {
+    // TODO(fxbug.dev/88792) Rust does not produce the correct error.
+    bindings_denylist = [rust],
+    type = StringWrapper,
+    bytes = {
+        v1, v2 = [
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // length of string data
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // invalid null pointer to content
+        ],
+    },
+    err = NON_NULLABLE_TYPE_WITH_NULL_VALUE,
+}
+
+success("EmptyOptionalStringWithNullPtrBody") {
+    value = OptionalStringWrapper{
+        str: null,
+    },
+    bytes = {
+        v1, v2 = [
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // length of string data
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // invalid null pointer to content
+        ],
+    },
+}
+
 decode_failure("NonEmptyStringWithNullPtrBody") {
     type = StringWrapper,
     bytes = {
@@ -20,6 +45,43 @@ decode_failure("NonEmptyStringWithNullPtrBody") {
         ],
     },
     err = NON_EMPTY_STRING_WITH_NULL_BODY,
+}
+
+decode_failure("NonEmptyOptionalStringWithNullPtrBody") {
+    type = OptionalStringWrapper,
+    bytes = {
+        v1, v2 = [
+            0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // length of string data
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // invalid null pointer to content
+        ],
+    },
+    err = NON_EMPTY_STRING_WITH_NULL_BODY,
+}
+
+decode_failure("StringWrongPointerValue") {
+    // TODO(fxbug.dev/88793) Fix this on dart.
+    bindings_denylist = [dart],
+    type = StringWrapper,
+    bytes = {
+        v1, v2 = [
+            0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // length of string data
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, // invalid pointer to content
+        ],
+    },
+    err = INVALID_PRESENCE_INDICATOR,
+}
+
+decode_failure("OptionalStringWrongPointerValue") {
+    // TODO(fxbug.dev/88793) Fix this on dart.
+    bindings_denylist = [dart],
+    type = OptionalStringWrapper,
+    bytes = {
+        v1, v2 = [
+            0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // length of string data
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, // invalid pointer to content
+        ],
+    },
+    err = INVALID_PRESENCE_INDICATOR,
 }
 
 // Test string with a 2^64-1 count, exceeding the 32-bit limit from RFC-0059.

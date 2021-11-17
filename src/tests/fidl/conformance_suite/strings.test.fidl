@@ -10,3 +10,7 @@ type Length2StringWrapper = struct {
 type StringWrapper = struct {
     str string;
 };
+
+type OptionalStringWrapper = struct {
+    str string:optional;
+};

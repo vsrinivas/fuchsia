@@ -377,6 +377,7 @@ var rustErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.InvalidPresenceIndicator:           "InvalidPresenceIndicator",
 	gidlir.MissingRequiredHandleRights:        "MissingExpectedHandleRights",
 	gidlir.NonEmptyStringWithNullBody:         "UnexpectedNullRef",
+	gidlir.NonEmptyVectorWithNullBody:         "UnexpectedNullRef",
 	gidlir.NonNullableTypeWithNullValue:       "UnexpectedNullRef",
 	gidlir.NonResourceUnknownHandles:          "CannotStoreUnknownHandles",
 	gidlir.StrictBitsUnknownBit:               "InvalidBitsValue",
