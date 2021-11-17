@@ -1,0 +1,9 @@
+{
+    "short_description": "Virtio emulation SCSI block driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Block"
+    ]
+}

@@ -23,6 +23,7 @@ fuchsia_driver("core-driver") {
 fuchsia_driver_component("core") {
   component_name = "block.core"
   deps = [ ":core-driver" ]
+  info = "core-info.json"
 }
 
 group("tests") {

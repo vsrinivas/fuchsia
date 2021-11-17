@@ -48,6 +48,7 @@ fuchsia_driver("gpt-driver") {
 fuchsia_driver_component("gpt") {
   component_name = "gpt"
   deps = [ ":gpt-driver" ]
+  info = "gpt-info.json"
 }
 
 test("gpt-device-test-bin") {

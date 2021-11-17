@@ -44,6 +44,7 @@ fuchsia_driver("ramdisk-driver") {
 fuchsia_driver_component("ramdisk") {
   component_name = "ramdisk"
   deps = [ ":ramdisk-driver" ]
+  info = "ramdisk-info.json"
 }
 
 group("tests") {

@@ -1,0 +1,13 @@
+{
+    "short_description": "Master Boot Record partitions manager driver",
+    "manufacturer": "",
+    "families": [
+        "generic"
+    ],
+    "models": [
+        "generic"
+    ],
+    "areas": [
+        "Block"
+    ]
+}

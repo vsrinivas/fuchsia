@@ -1,0 +1,13 @@
+{
+    "short_description": "Flash Translation Layer for NAND devices driver",
+    "manufacturer": "",
+    "families": [
+        "generic"
+    ],
+    "models": [
+        "generic"
+    ],
+    "areas": [
+        "Block"
+    ]
+}

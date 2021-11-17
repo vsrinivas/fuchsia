@@ -50,6 +50,7 @@ fuchsia_driver("aml-sdmmc-driver") {
 fuchsia_driver_component("aml-sdmmc") {
   component_name = "aml-sdmmc"
   deps = [ ":aml-sdmmc-driver" ]
+  info = "aml-sdmmc-info.json"
 }
 
 test("aml-sdmmc-test-bin") {

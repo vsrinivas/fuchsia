@@ -41,6 +41,7 @@ fuchsia_driver("sdhci-driver") {
 fuchsia_driver_component("sdhci") {
   component_name = "sdhci"
   deps = [ ":sdhci-driver" ]
+  info = "sdhci-info.json"
 }
 
 test("sdhci-test-bin") {

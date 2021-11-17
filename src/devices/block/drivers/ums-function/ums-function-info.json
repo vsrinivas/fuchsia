@@ -1,0 +1,14 @@
+{
+    "short_description": "USB Mass Storage function driver",
+    "manufacturer": "",
+    "families": [
+        "generic"
+    ],
+    "models": [
+        "generic"
+    ],
+    "areas": [
+        "Block",
+        "Usb"
+    ]
+}

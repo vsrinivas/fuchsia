@@ -1,0 +1,13 @@
+{
+    "short_description": "PCI SDHCI driver",
+    "manufacturer": "",
+    "families": [
+        "generic"
+    ],
+    "models": [
+        "generic"
+    ],
+    "areas": [
+        "Block"
+    ]
+}

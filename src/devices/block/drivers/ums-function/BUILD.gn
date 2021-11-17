@@ -45,4 +45,5 @@ fuchsia_driver("ums-function-driver") {
 fuchsia_driver_component("ums-function") {
   component_name = "ums-function"
   deps = [ ":ums-function-driver" ]
+  info = "ums-function-info.json"
 }

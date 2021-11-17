@@ -70,6 +70,7 @@ fuchsia_driver("sdmmc-driver") {
 fuchsia_driver_component("sdmmc") {
   component_name = "sdmmc"
   deps = [ ":sdmmc-driver" ]
+  info = "sdmmc-info.json"
 }
 
 test("sdmmc-test-bin") {

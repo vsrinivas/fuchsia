@@ -54,6 +54,7 @@ fuchsia_driver("mbr-driver") {
 fuchsia_driver_component("mbr") {
   component_name = "mbr"
   deps = [ ":mbr-driver" ]
+  info = "mbr-info.json"
 }
 
 test("mbr-test-bin") {

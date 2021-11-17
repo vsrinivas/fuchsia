@@ -71,6 +71,7 @@ fuchsia_driver("zxcrypt-driver") {
 fuchsia_driver_component("zxcrypt") {
   component_name = "zxcrypt"
   deps = [ ":zxcrypt-driver" ]
+  info = "zxcrypt-info.json"
 }
 
 driver_bind_rules("bind") {

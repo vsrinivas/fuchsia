@@ -1,0 +1,9 @@
+{
+    "short_description": "AMLogic SDMMC block driver",
+    "manufacturer": "AMLogic",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Block"
+    ]
+}
