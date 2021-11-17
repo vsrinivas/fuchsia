@@ -3722,6 +3722,7 @@ void brcmf_if_set_keys_req(net_device* ndev, const wlanif_set_keys_req_t* req) {
     if (result != ZX_OK) {
       BRCMF_WARN("Error setting key %zu: %s.", i, zx_status_get_string(result));
     }
+    // TODO(fxbug.dev/87211): Return a SetKeysConfirm to SME.
   }
 }
 

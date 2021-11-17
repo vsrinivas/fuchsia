@@ -486,6 +486,7 @@ mod test_utils {
         pub link_status: LinkStatus,
         pub assocs: std::collections::HashMap<MacAddr, WlanAssocCtx>,
         pub buffer_provider: BufferProvider,
+        pub set_key_results: Vec<zx::Status>,
     }
 
     impl FakeDevice {
@@ -508,6 +509,7 @@ mod test_utils {
                 link_status: LinkStatus::DOWN,
                 assocs: std::collections::HashMap::new(),
                 buffer_provider: FakeBufferProvider::new(),
+                set_key_results: vec![],
             }
         }
 
@@ -587,10 +589,13 @@ mod test_utils {
         }
 
         pub extern "C" fn set_key(device: *mut c_void, key: *mut key::KeyConfig) -> i32 {
-            unsafe {
-                (*(device as *mut Self)).keys.push((*key).clone());
+            let device = unsafe { &mut *(device as *mut Self) };
+            device.keys.push(unsafe { (*key).clone() });
+            if device.set_key_results.is_empty() {
+                zx::sys::ZX_OK
+            } else {
+                device.set_key_results.remove(0).into_raw()
             }
-            zx::sys::ZX_OK
         }
 
         pub extern "C" fn start_hw_scan(

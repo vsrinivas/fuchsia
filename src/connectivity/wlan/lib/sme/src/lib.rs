@@ -103,6 +103,7 @@ fn mlme_event_name(event: &MlmeEvent) -> &str {
         MlmeEvent::AssociateInd { .. } => "AssociateInd",
         MlmeEvent::DisassociateConf { .. } => "DisassociateConf",
         MlmeEvent::DisassociateInd { .. } => "DisassociateInd",
+        MlmeEvent::SetKeysConf { .. } => "SetKeysConf",
         MlmeEvent::StartConf { .. } => "StartConf",
         MlmeEvent::StopConf { .. } => "StopConf",
         MlmeEvent::EapolConf { .. } => "EapolConf",

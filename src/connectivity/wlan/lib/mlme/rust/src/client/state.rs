@@ -695,11 +695,25 @@ impl Associated {
             error!("Unexpected MLME-SetKeys.request message: BSS not protected");
             return;
         }
-        for key_desc in req.keylist {
-            if let Err(e) = sta.ctx.device.set_key(KeyConfig::from(&key_desc)) {
-                error!("failed to set keys in driver: {}", e);
-            }
-        }
+        let results = req
+            .keylist
+            .iter()
+            .map(|key_desc| match sta.ctx.device.set_key(KeyConfig::from(key_desc)) {
+                Ok(()) => fidl_mlme::SetKeyResult {
+                    key_id: key_desc.key_id,
+                    status: zx::Status::OK.into_raw(),
+                },
+                Err(e) => {
+                    error!("failed to set key: {}", e);
+                    fidl_mlme::SetKeyResult { key_id: key_desc.key_id, status: e.into_raw() }
+                }
+            })
+            .collect();
+        let _ = sta
+            .ctx
+            .device
+            .mlme_control_handle()
+            .send_set_keys_conf(&mut fidl_mlme::SetKeysConfirm { results });
     }
 
     fn on_sme_set_controlled_port(
@@ -3109,6 +3123,12 @@ mod tests {
             States::from(statemachine::testing::new_state(Associated(empty_association(&mut sta))));
         let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_keys_req(&exec));
         assert_eq!(m.fake_device.keys.len(), 1);
+        let conf = assert_variant!(m.fake_device.next_mlme_msg::<fidl_mlme::SetKeysConfirm>(), Ok(conf) => conf);
+        assert_eq!(conf.results.len(), 1);
+        assert_eq!(
+            conf.results[0],
+            fidl_mlme::SetKeyResult { key_id: 6, status: zx::Status::OK.into_raw() }
+        );
 
         assert_eq!(
             m.fake_device.keys[0],
@@ -3127,6 +3147,41 @@ mod tests {
                 ],
                 rsc: 8,
             }
+        );
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn mlme_set_keys_failure() {
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
+        let mut ctx = m.make_ctx();
+        let mut sta = make_protected_client_station();
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+
+        let state =
+            States::from(statemachine::testing::new_state(Associated(empty_association(&mut sta))));
+        m.fake_device.set_key_results.push(zx::Status::BAD_STATE);
+        m.fake_device.set_key_results.push(zx::Status::OK);
+        // Create a SetKeysReq with one success and one failure.
+        let mut set_keys_req = fake_mlme_set_keys_req(&exec);
+        match &mut set_keys_req {
+            fidl_mlme::MlmeRequest::SetKeysReq { req, .. } => {
+                req.keylist
+                    .push(fidl_mlme::SetKeyDescriptor { key_id: 4, ..req.keylist[0].clone() });
+            }
+            _ => panic!(),
+        }
+        let _state = state.handle_mlme_msg(&mut sta, set_keys_req);
+        let conf = assert_variant!(m.fake_device.next_mlme_msg::<fidl_mlme::SetKeysConfirm>(), Ok(conf) => conf);
+        assert_eq!(conf.results.len(), 2);
+        assert_eq!(
+            conf.results[0],
+            fidl_mlme::SetKeyResult { key_id: 6, status: zx::Status::BAD_STATE.into_raw() }
+        );
+        assert_eq!(
+            conf.results[1],
+            fidl_mlme::SetKeyResult { key_id: 4, status: zx::Status::OK.into_raw() }
         );
     }
 

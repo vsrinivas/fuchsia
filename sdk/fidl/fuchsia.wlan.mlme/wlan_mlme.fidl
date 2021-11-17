@@ -627,6 +627,9 @@ protocol MLME {
     SetKeysReq(struct {
         req SetKeysRequest;
     });
+    -> SetKeysConf(struct {
+        conf SetKeysConfirm;
+    });
 
     DeleteKeysReq(struct {
         req DeleteKeysRequest;
