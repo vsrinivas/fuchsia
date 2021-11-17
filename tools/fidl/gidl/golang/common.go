@@ -325,7 +325,6 @@ var goErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.EnvelopeBytesExceedMessageLength:   "ErrPayloadTooSmall",
 	gidlir.EnvelopeHandlesExceedMessageLength: "ErrTooManyHandles",
 	gidlir.ExceededMaxOutOfLineDepth:          "ErrExceededMaxOutOfLineDepth",
-	gidlir.ExtraHandles:                       "ErrTooManyHandles",
 	gidlir.IncorrectHandleType:                "ErrIncorrectHandleType",
 	gidlir.InvalidBoolean:                     "ErrInvalidBoolValue",
 	gidlir.InvalidEmptyStruct:                 "ErrInvalidEmptyStruct",
@@ -346,6 +345,8 @@ var goErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.StringTooLong:                      "ErrStringTooLong",
 	gidlir.TooFewBytes:                        "ErrPayloadTooSmall",
 	gidlir.TooFewHandles:                      "ErrNotEnoughHandles",
+	gidlir.TooManyBytesInMessage:              "ErrTooManyBytesInMessage",
+	gidlir.TooManyHandlesInMessage:            "ErrTooManyHandles",
 	gidlir.UnionFieldNotSet:                   "ErrInvalidXUnionTag",
 	gidlir.CountExceedsLimit:                  "ErrVectorTooLong",
 }

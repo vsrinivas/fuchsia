@@ -24,6 +24,19 @@ decode_failure("NonZeroEmptyStructBytes") {
     err = INVALID_EMPTY_STRUCT,
 }
 
+decode_failure("TooManyBytes") {
+    // TODO(fxbug.dev/88808) Add validation in Dart and go.
+    bindings_denylist = [dart, go],
+    type = EmptyStruct,
+    bytes = {
+        v1, v2 = [
+            0x00, padding:7,
+            repeat(0x00):8, // extra bytes
+        ],
+    },
+    err = TOO_MANY_BYTES_IN_MESSAGE,
+}
+
 success("EmptyStructSandwich") {
     value = EmptyStructSandwich {
         before: "before",

@@ -364,7 +364,6 @@ var dartErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.EnvelopeBytesExceedMessageLength:   "unknown",
 	gidlir.EnvelopeHandlesExceedMessageLength: "unknown",
 	gidlir.ExceededMaxOutOfLineDepth:          "fidlExceededMaxOutOfLineDepth",
-	gidlir.ExtraHandles:                       "fidlTooManyHandles",
 	gidlir.IncorrectHandleType:                "fidlIncorrectHandleType",
 	gidlir.InvalidBoolean:                     "fidlInvalidBoolean",
 	gidlir.InvalidEmptyStruct:                 "unknown",
@@ -385,6 +384,8 @@ var dartErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.StringTooLong:                      "fidlStringTooLong",
 	gidlir.TooFewBytes:                        "unknown",
 	gidlir.TooFewHandles:                      "fidlTooFewHandles",
+	gidlir.TooManyBytesInMessage:              "unknown",
+	gidlir.TooManyHandlesInMessage:            "fidlTooManyHandles",
 	gidlir.UnionFieldNotSet:                   "unknown",
 }
 

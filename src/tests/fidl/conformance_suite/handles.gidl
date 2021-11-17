@@ -176,7 +176,7 @@ decode_failure("TooManyHandles") {
             #0, #1,
         ],
     },
-    err = EXTRA_HANDLES,
+    err = TOO_MANY_HANDLES_IN_MESSAGE,
 }
 
 decode_failure("TooFewHandles") {

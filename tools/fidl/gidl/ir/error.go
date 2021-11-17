@@ -11,7 +11,6 @@ const (
 	EnvelopeBytesExceedMessageLength   ErrorCode = "ENVELOPE_BYTES_EXCEED_MESSAGE_LENGTH"
 	EnvelopeHandlesExceedMessageLength ErrorCode = "ENVELOPE_HANDLES_EXCEED_MESSAGE_LENGTH"
 	ExceededMaxOutOfLineDepth          ErrorCode = "EXCEEDED_MAX_OUT_OF_LINE_DEPTH"
-	ExtraHandles                       ErrorCode = "EXTRA_HANDLES"
 	IncorrectHandleType                ErrorCode = "INCORRECT_HANDLE_TYPE"
 	InvalidBoolean                     ErrorCode = "INVALID_BOOLEAN"
 	InvalidEmptyStruct                 ErrorCode = "INVALID_EMPTY_STRUCT"
@@ -32,6 +31,8 @@ const (
 	StringTooLong                      ErrorCode = "STRING_TOO_LONG"
 	TooFewBytes                        ErrorCode = "TOO_FEW_BYTES"
 	TooFewHandles                      ErrorCode = "TOO_FEW_HANDLES"
+	TooManyBytesInMessage              ErrorCode = "TOO_MANY_BYTES_IN_MESSAGE"
+	TooManyHandlesInMessage            ErrorCode = "TOO_MANY_HANDLES_IN_MESSAGE"
 	UnionFieldNotSet                   ErrorCode = "UNION_FIELD_NOT_SET"
 )
 
@@ -40,7 +41,6 @@ var AllErrorCodes = map[ErrorCode]struct{}{
 	EnvelopeBytesExceedMessageLength:   {},
 	EnvelopeHandlesExceedMessageLength: {},
 	ExceededMaxOutOfLineDepth:          {},
-	ExtraHandles:                       {},
 	IncorrectHandleType:                {},
 	InvalidBoolean:                     {},
 	InvalidEmptyStruct:                 {},
@@ -61,5 +61,7 @@ var AllErrorCodes = map[ErrorCode]struct{}{
 	StringTooLong:                      {},
 	TooFewBytes:                        {},
 	TooFewHandles:                      {},
+	TooManyBytesInMessage:              {},
+	TooManyHandlesInMessage:            {},
 	UnionFieldNotSet:                   {},
 }

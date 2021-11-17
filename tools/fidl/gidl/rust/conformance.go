@@ -366,7 +366,6 @@ var rustErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.EnvelopeBytesExceedMessageLength:   "InvalidNumBytesInEnvelope",
 	gidlir.EnvelopeHandlesExceedMessageLength: "InvalidNumHandlesInEnvelope",
 	gidlir.ExceededMaxOutOfLineDepth:          "MaxRecursionDepth",
-	gidlir.ExtraHandles:                       "ExtraHandles",
 	gidlir.IncorrectHandleType:                "IncorrectHandleSubtype",
 	gidlir.InvalidBoolean:                     "InvalidBoolean",
 	gidlir.InvalidEmptyStruct:                 "Invalid",
@@ -386,6 +385,8 @@ var rustErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.StringNotUtf8:                      "Utf8Error",
 	gidlir.StringTooLong:                      "OutOfRange",
 	gidlir.TooFewBytes:                        "OutOfRange",
+	gidlir.TooManyBytesInMessage:              "ExtraBytes",
+	gidlir.TooManyHandlesInMessage:            "ExtraHandles",
 	gidlir.UnionFieldNotSet:                   "UnknownUnionTag",
 }
 
