@@ -1859,6 +1859,16 @@ Set to true to include internal fonts in the build.
 
 From //src/fonts/build/font_args.gni:7
 
+### include_shell_commands_package
+Include the shell commands package.  Used as a parameter to
+assemble_system().  See documentation there.
+
+This is a placeholder non-value for a soft transition
+
+**Current value (from the default):** `""`
+
+From //build/images/args.gni:151
+
 ### include_zxdb_large_tests
 Normally these tests are not built and run because they require large amounts of optional data
 be downloaded. Set this to true to enable the build for the zxdb_large_tests.
