@@ -176,7 +176,7 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
   fpromise::promise<inspect::Inspector> Inspect() const;
   size_t NumOrphanedNodes() const;
   zx::status<> PublishComponentRunner(const fbl::RefPtr<fs::PseudoDir>& svc_dir);
-  zx::status<> StartRootDriver(std::string_view name);
+  zx::status<> StartRootDriver(std::string_view url);
 
  private:
   using CompositeArgs = std::vector<std::weak_ptr<Node>>;
