@@ -108,7 +108,7 @@ class FuchsiaHTTPClientTest : public ::gtest::TestLoopFixture {
       RunLoopUntilIdle();
 
       if (std::chrono::steady_clock::now() - start_time > std::chrono::seconds(5)) {
-        return util::Status(util::StatusCode::DEADLINE_EXCEEDED, "Timed out while waiting!");
+        return Status(StatusCode::DEADLINE_EXCEEDED, "Timed out while waiting!");
       }
     }
     // Note that here we are violating our own mandate to not wait on the
@@ -183,7 +183,7 @@ TEST_F(FuchsiaHTTPClientTest, NetworkError) {
   SetNetworkErrorResponse(fuchsia::net::http::Error::INTERNAL);
   auto response_or = PostStringAndWait("Request");
   ASSERT_FALSE(response_or.ok());
-  EXPECT_EQ(response_or.status().error_code(), util::StatusCode::INTERNAL);
+  EXPECT_EQ(response_or.status().error_code(), StatusCode::INTERNAL);
   EXPECT_THAT(response_or.status().error_message(), HasSubstr("Internal Error"));
 }
 
@@ -203,7 +203,7 @@ TEST_F(FuchsiaHTTPClientTest, TimeoutWithNoResponse) {
   ASSERT_EQ(std::future_status::ready, response_future.wait_for(std::chrono::microseconds(1)));
   auto response_or = response_future.get();
   ASSERT_FALSE(response_or.ok());
-  EXPECT_EQ(response_or.status().error_code(), util::StatusCode::DEADLINE_EXCEEDED);
+  EXPECT_EQ(response_or.status().error_code(), StatusCode::DEADLINE_EXCEEDED);
 }
 
 TEST_F(FuchsiaHTTPClientTest, MultipleSlowResponses) {
@@ -214,27 +214,27 @@ TEST_F(FuchsiaHTTPClientTest, MultipleSlowResponses) {
   SetHttpResponse("Body1", 200);
   auto response_or = PostStringAndWait("Request");
   ASSERT_FALSE(response_or.ok());
-  EXPECT_EQ(response_or.status().error_code(), util::StatusCode::DEADLINE_EXCEEDED);
+  EXPECT_EQ(response_or.status().error_code(), StatusCode::DEADLINE_EXCEEDED);
 
   SetHttpResponse("Body2", 200);
   response_or = PostStringAndWait("Request");
   ASSERT_FALSE(response_or.ok());
-  EXPECT_EQ(response_or.status().error_code(), util::StatusCode::DEADLINE_EXCEEDED);
+  EXPECT_EQ(response_or.status().error_code(), StatusCode::DEADLINE_EXCEEDED);
 
   SetHttpResponse("Body3", 200);
   response_or = PostStringAndWait("Request");
   ASSERT_FALSE(response_or.ok());
-  EXPECT_EQ(response_or.status().error_code(), util::StatusCode::DEADLINE_EXCEEDED);
+  EXPECT_EQ(response_or.status().error_code(), StatusCode::DEADLINE_EXCEEDED);
 
   SetHttpResponse("Body4", 200);
   response_or = PostStringAndWait("Request");
   ASSERT_FALSE(response_or.ok());
-  EXPECT_EQ(response_or.status().error_code(), util::StatusCode::DEADLINE_EXCEEDED);
+  EXPECT_EQ(response_or.status().error_code(), StatusCode::DEADLINE_EXCEEDED);
 
   SetHttpResponse("Body5", 200);
   response_or = PostStringAndWait("Request");
   ASSERT_FALSE(response_or.ok());
-  EXPECT_EQ(response_or.status().error_code(), util::StatusCode::DEADLINE_EXCEEDED);
+  EXPECT_EQ(response_or.status().error_code(), StatusCode::DEADLINE_EXCEEDED);
 
   // With no delay, all should be fine
   SetResponseDelay(zx::sec(0));
@@ -248,7 +248,7 @@ TEST_F(FuchsiaHTTPClientTest, HandlesServiceCrash) {
 
   auto response_or = PostStringAndWait("Request");
   ASSERT_FALSE(response_or.ok());
-  EXPECT_EQ(response_or.status().error_code(), util::StatusCode::UNAVAILABLE);
+  EXPECT_EQ(response_or.status().error_code(), StatusCode::UNAVAILABLE);
   EXPECT_THAT(response_or.status().error_message(), HasSubstr("ZX_ERR_PEER_CLOSED"));
 }
 
@@ -281,7 +281,7 @@ TEST_F(FuchsiaHTTPClientTest, HungSocket) {
   auto response_or = PostStringAndWait("Test123", std::chrono::milliseconds(10));
 
   ASSERT_FALSE(response_or.ok());
-  EXPECT_EQ(response_or.status().error_code(), util::StatusCode::DEADLINE_EXCEEDED);
+  EXPECT_EQ(response_or.status().error_code(), StatusCode::DEADLINE_EXCEEDED);
 }
 
 }  // namespace utils

@@ -27,7 +27,7 @@ class JSONHelper {
   lib::statusor::StatusOr<bool> GetBool(const std::string& key) const;
 
  private:
-  util::Status EnsureKey(const std::string& key) const;
+  Status EnsureKey(const std::string& key) const;
 
   json::JSONParser json_parser_;
   rapidjson::Document config_file_contents_;

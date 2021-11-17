@@ -17,11 +17,11 @@ namespace cobalt {
 
 fuchsia::cobalt::Status ToCobaltStatus(logger::Status s);
 
-fuchsia::cobalt::Status ToCobaltStatus(util::Status s);
+fuchsia::cobalt::Status ToCobaltStatus(Status s);
 
 fuchsia::metrics::Status ToMetricsStatus(logger::Status s);
 
-fuchsia::metrics::Status ToMetricsStatus(util::Status s);
+fuchsia::metrics::Status ToMetricsStatus(Status s);
 
 // Reads the PEM file at the specified path and returns the contents as
 // a string. CHECK fails if the file cannot be read.

@@ -8,6 +8,7 @@
 
 #include "third_party/cobalt/src/lib/util/file_util.h"
 #include "third_party/cobalt/src/lib/util/pem_util.h"
+#include "third_party/cobalt/src/public/lib/status.h"
 
 namespace cobalt {
 
@@ -35,28 +36,28 @@ fuchsia::cobalt::Status ToCobaltStatus(logger::Status s) {
   }
 }
 
-fuchsia::cobalt::Status ToCobaltStatus(util::Status s) {
+fuchsia::cobalt::Status ToCobaltStatus(Status s) {
   switch (s.error_code()) {
-    case util::StatusCode::OK:
+    case StatusCode::OK:
       return fuchsia::cobalt::Status::OK;
-    case util::StatusCode::INVALID_ARGUMENT:
+    case StatusCode::INVALID_ARGUMENT:
       return fuchsia::cobalt::Status::INVALID_ARGUMENTS;
-    case util::StatusCode::RESOURCE_EXHAUSTED:
+    case StatusCode::RESOURCE_EXHAUSTED:
       return fuchsia::cobalt::Status::BUFFER_FULL;
-    case util::StatusCode::CANCELLED:
-    case util::StatusCode::UNKNOWN:
-    case util::StatusCode::DEADLINE_EXCEEDED:
-    case util::StatusCode::NOT_FOUND:
-    case util::StatusCode::ALREADY_EXISTS:
-    case util::StatusCode::PERMISSION_DENIED:
-    case util::StatusCode::FAILED_PRECONDITION:
-    case util::StatusCode::ABORTED:
-    case util::StatusCode::OUT_OF_RANGE:
-    case util::StatusCode::UNIMPLEMENTED:
-    case util::StatusCode::INTERNAL:
-    case util::StatusCode::UNAVAILABLE:
-    case util::StatusCode::DATA_LOSS:
-    case util::StatusCode::UNAUTHENTICATED:
+    case StatusCode::CANCELLED:
+    case StatusCode::UNKNOWN:
+    case StatusCode::DEADLINE_EXCEEDED:
+    case StatusCode::NOT_FOUND:
+    case StatusCode::ALREADY_EXISTS:
+    case StatusCode::PERMISSION_DENIED:
+    case StatusCode::FAILED_PRECONDITION:
+    case StatusCode::ABORTED:
+    case StatusCode::OUT_OF_RANGE:
+    case StatusCode::UNIMPLEMENTED:
+    case StatusCode::INTERNAL:
+    case StatusCode::UNAVAILABLE:
+    case StatusCode::DATA_LOSS:
+    case StatusCode::UNAUTHENTICATED:
     default:
       return fuchsia::cobalt::Status::INTERNAL_ERROR;
   }
@@ -86,28 +87,28 @@ fuchsia::metrics::Status ToMetricsStatus(logger::Status s) {
   }
 }
 
-fuchsia::metrics::Status ToMetricsStatus(util::Status s) {
+fuchsia::metrics::Status ToMetricsStatus(Status s) {
   switch (s.error_code()) {
-    case util::StatusCode::OK:
+    case StatusCode::OK:
       return fuchsia::metrics::Status::OK;
-    case util::StatusCode::INVALID_ARGUMENT:
+    case StatusCode::INVALID_ARGUMENT:
       return fuchsia::metrics::Status::INVALID_ARGUMENTS;
-    case util::StatusCode::RESOURCE_EXHAUSTED:
+    case StatusCode::RESOURCE_EXHAUSTED:
       return fuchsia::metrics::Status::BUFFER_FULL;
-    case util::StatusCode::CANCELLED:
-    case util::StatusCode::UNKNOWN:
-    case util::StatusCode::DEADLINE_EXCEEDED:
-    case util::StatusCode::NOT_FOUND:
-    case util::StatusCode::ALREADY_EXISTS:
-    case util::StatusCode::PERMISSION_DENIED:
-    case util::StatusCode::FAILED_PRECONDITION:
-    case util::StatusCode::ABORTED:
-    case util::StatusCode::OUT_OF_RANGE:
-    case util::StatusCode::UNIMPLEMENTED:
-    case util::StatusCode::INTERNAL:
-    case util::StatusCode::UNAVAILABLE:
-    case util::StatusCode::DATA_LOSS:
-    case util::StatusCode::UNAUTHENTICATED:
+    case StatusCode::CANCELLED:
+    case StatusCode::UNKNOWN:
+    case StatusCode::DEADLINE_EXCEEDED:
+    case StatusCode::NOT_FOUND:
+    case StatusCode::ALREADY_EXISTS:
+    case StatusCode::PERMISSION_DENIED:
+    case StatusCode::FAILED_PRECONDITION:
+    case StatusCode::ABORTED:
+    case StatusCode::OUT_OF_RANGE:
+    case StatusCode::UNIMPLEMENTED:
+    case StatusCode::INTERNAL:
+    case StatusCode::UNAVAILABLE:
+    case StatusCode::DATA_LOSS:
+    case StatusCode::UNAUTHENTICATED:
     default:
       return fuchsia::metrics::Status::INTERNAL_ERROR;
   }

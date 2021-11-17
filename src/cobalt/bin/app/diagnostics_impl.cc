@@ -38,7 +38,7 @@ DiagnosticsImpl::DiagnosticsImpl(inspect::Node node) : node_(std::move(node)) {
   disk_usage_per_storage_class_node_ = disk_usage_.CreateChild("per_storage_class");
 }
 
-void DiagnosticsImpl::SentObservationResult(const cobalt::util::Status& status) {
+void DiagnosticsImpl::SentObservationResult(const Status& status) {
   time_t current_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
   if (status.ok()) {
     send_observations_successes_.Add(1);

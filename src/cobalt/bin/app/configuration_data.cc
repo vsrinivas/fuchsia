@@ -19,7 +19,6 @@
 namespace cobalt {
 
 using cobalt::lib::statusor::StatusOr;
-using cobalt::util::Status;
 
 const char FuchsiaConfigurationData::kDefaultEnvironmentDir[] = "/pkg/data";
 const char FuchsiaConfigurationData::kDefaultConfigDir[] = "/config/data";
@@ -74,7 +73,7 @@ StatusOr<T> MakeBadTypeError(const std::string& key, const std::string& expected
   static const char* kTypeNames[] = {"Null",  "False",  "True",  "Object",
                                      "Array", "String", "Number"};
 
-  return Status(util::StatusCode::INVALID_ARGUMENT,
+  return Status(StatusCode::INVALID_ARGUMENT,
                 fxl::Concatenate({"Key ", key, " is not of type ", expected, "."}),
                 fxl::Concatenate({"Key ", key, " is expected to be a ", expected,
                                   ", but was instead a ", std::string(kTypeNames[actual])}));
@@ -102,12 +101,11 @@ StatusOr<bool> JSONHelper::GetBool(const std::string& key) const {
 
 Status JSONHelper::EnsureKey(const std::string& key) const {
   if (json_parser_.HasError()) {
-    return Status(util::StatusCode::INTERNAL, "Failed to parse json file.",
-                  json_parser_.error_str());
+    return Status(StatusCode::INTERNAL, "Failed to parse json file.", json_parser_.error_str());
   }
 
   if (!config_file_contents_.HasMember(key)) {
-    return Status(util::StatusCode::NOT_FOUND,
+    return Status(StatusCode::NOT_FOUND,
                   fxl::Concatenate({"Key ", key, " not present in the config."}));
   }
 

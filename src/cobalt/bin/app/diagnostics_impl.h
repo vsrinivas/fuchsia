@@ -22,7 +22,7 @@ class DiagnosticsImpl : public DiagnosticsInterface {
   explicit DiagnosticsImpl(inspect::Node node);
   ~DiagnosticsImpl() override = default;
 
-  void SentObservationResult(const cobalt::util::Status& status) override;
+  void SentObservationResult(const Status& status) override;
 
   void ObservationStoreUpdated(const std::map<lib::ReportSpec, uint64_t>& num_obs_per_report,
                                int64_t store_byte_count, int64_t max_store_bytes) override;

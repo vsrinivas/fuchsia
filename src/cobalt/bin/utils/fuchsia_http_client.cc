@@ -54,30 +54,30 @@ StatusOr<HTTPResponse> ReadResponse(fuchsia::net::http::Response fx_response, zx
   if (fx_response.has_error()) {
     std::ostringstream ss;
     ss << "Got error while making HTTP request: ";
-    auto status_code = util::StatusCode::INTERNAL;
+    auto status_code = StatusCode::INTERNAL;
     switch (fx_response.error()) {
       case fuchsia::net::http::Error::INTERNAL:
         ss << "Internal Error";
-        status_code = util::StatusCode::INTERNAL;
+        status_code = StatusCode::INTERNAL;
         break;
       case fuchsia::net::http::Error::UNABLE_TO_PARSE:
         ss << "Unable to parse HTTP data";
-        status_code = util::StatusCode::INVALID_ARGUMENT;
+        status_code = StatusCode::INVALID_ARGUMENT;
         break;
       case fuchsia::net::http::Error::CHANNEL_CLOSED:
         ss << "Channel closed";
-        status_code = util::StatusCode::ABORTED;
+        status_code = StatusCode::ABORTED;
         break;
       case fuchsia::net::http::Error::CONNECT:
         ss << "Error occurred while connecting";
-        status_code = util::StatusCode::UNAVAILABLE;
+        status_code = StatusCode::UNAVAILABLE;
         break;
       case fuchsia::net::http::Error::DEADLINE_EXCEEDED:
         ss << "Deadline exceeded while waiting for response";
-        status_code = util::StatusCode::DEADLINE_EXCEEDED;
+        status_code = StatusCode::DEADLINE_EXCEEDED;
         break;
     }
-    return util::Status(status_code, ss.str());
+    return Status(status_code, ss.str());
   }
 
   response.http_code = fx_response.status_code();
@@ -109,11 +109,11 @@ StatusOr<HTTPResponse> ReadResponse(fuchsia::net::http::Response fx_response, zx
             switch (status) {
               case ZX_ERR_TIMED_OUT:
                 FX_LOGS(ERROR) << "Exceeded deadline while waiting on the socket";
-                return util::Status(util::StatusCode::DEADLINE_EXCEEDED,
-                                    "Deadline exceeded while waiting on socket");
+                return Status(StatusCode::DEADLINE_EXCEEDED,
+                              "Deadline exceeded while waiting on socket");
               default:
                 FX_LOGS(ERROR) << "Unhandled zx_status_t: " << status;
-                return util::Status(util::StatusCode::UNAVAILABLE, "Unhandled zx error");
+                return Status(StatusCode::UNAVAILABLE, "Unhandled zx error");
             }
           }
           continue;
@@ -123,7 +123,7 @@ StatusOr<HTTPResponse> ReadResponse(fuchsia::net::http::Response fx_response, zx
           break;
         default:
           FX_LOGS(ERROR) << "Unhandled zx_status_t: " << status;
-          return util::Status(util::StatusCode::UNAVAILABLE, "Unhandled zx error");
+          return Status(StatusCode::UNAVAILABLE, "Unhandled zx error");
       }
     }
   }
@@ -160,7 +160,7 @@ StatusOr<HTTPResponse> FuchsiaHTTPClient::PostSync(HTTPRequest request,
     FX_LOGS(WARNING) << s;
 
     loader_.Unbind();
-    return util::Status(util::StatusCode::UNAVAILABLE, s);
+    return Status(StatusCode::UNAVAILABLE, s);
   }
 
   return ReadResponse(std::move(fx_response), zx_deadline);

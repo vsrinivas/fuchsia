@@ -43,7 +43,7 @@ class DiagnosticsTest : public gtest::TestLoopFixture {
 };
 
 TEST_F(DiagnosticsTest, SentObservationResultSuccess) {
-  listener_->SentObservationResult(util::Status::OK);
+  listener_->SentObservationResult(Status::OK);
   EXPECT_THAT(InspectHierarchy(),
               AllOf(NodeMatches(NameMatches("root")),
                     ChildrenMatch(UnorderedElementsAre(AllOf(
@@ -57,21 +57,21 @@ TEST_F(DiagnosticsTest, SentObservationResultSuccess) {
 
 TEST_F(DiagnosticsTest, SentObservationResultError) {
   listener_->SentObservationResult(
-      util::Status(util::StatusCode::DEADLINE_EXCEEDED, "error_message", "error_details"));
+      Status(StatusCode::DEADLINE_EXCEEDED, "error_message", "error_details"));
   EXPECT_THAT(
       InspectHierarchy(),
-      AllOf(NodeMatches(NameMatches("root")),
-            ChildrenMatch(UnorderedElementsAre(AllOf(
-                NodeMatches(NameMatches("core")),
-                ChildrenMatch(Contains(AllOf(NodeMatches(AllOf(
-                    NameMatches("sending_observations"),
-                    PropertyList(UnorderedElementsAre(
-                        IntIs("successes", 0), IntIs("errors", 1), IntIs("last_success_time", 0),
-                        IntIs("last_error_time", testing::Gt(0)),
-                        IntIs("last_error_code",
-                              static_cast<int64_t>(util::StatusCode::DEADLINE_EXCEEDED)),
-                        StringIs("last_error_message", "error_message"),
-                        StringIs("last_error_details", "error_details")))))))))))));
+      AllOf(
+          NodeMatches(NameMatches("root")),
+          ChildrenMatch(UnorderedElementsAre(AllOf(
+              NodeMatches(NameMatches("core")),
+              ChildrenMatch(Contains(AllOf(NodeMatches(AllOf(
+                  NameMatches("sending_observations"),
+                  PropertyList(UnorderedElementsAre(
+                      IntIs("successes", 0), IntIs("errors", 1), IntIs("last_success_time", 0),
+                      IntIs("last_error_time", testing::Gt(0)),
+                      IntIs("last_error_code", static_cast<int64_t>(StatusCode::DEADLINE_EXCEEDED)),
+                      StringIs("last_error_message", "error_message"),
+                      StringIs("last_error_details", "error_details")))))))))))));
 }
 
 TEST_F(DiagnosticsTest, ObservationStoreUpdatedOnce) {
