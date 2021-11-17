@@ -10,6 +10,7 @@ rustc_test("socket") {
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network-rustc",
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces-rustc",
+    "//sdk/fidl/fuchsia.net.interfaces.admin:fuchsia.net.interfaces.admin-rustc",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.net.tun:fuchsia.net.tun-rustc",
     "//src/connectivity/lib/fidl_fuchsia_net_stack_ext",

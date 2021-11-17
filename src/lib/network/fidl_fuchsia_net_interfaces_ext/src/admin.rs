@@ -87,7 +87,7 @@ pub fn assignment_state_stream(
 /// `AddressStateProvider` may be used as usual. If an error is returned, a
 /// terminal error has occurred on the underlying channel.
 pub async fn wait_assignment_state<S>(
-    stream: &mut S,
+    stream: S,
     want: fidl_fuchsia_net_interfaces_admin::AddressAssignmentState,
 ) -> Result<(), AddressStateProviderError>
 where

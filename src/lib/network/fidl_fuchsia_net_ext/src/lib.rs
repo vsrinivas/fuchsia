@@ -221,6 +221,24 @@ impl Into<fidl::Subnet> for Subnet {
     }
 }
 
+/// Returns a subnet which guarantees the masked bits on its IP address are
+/// zero.
+pub fn apply_subnet_mask(subnet: fidl::Subnet) -> fidl::Subnet {
+    let fidl::Subnet { addr, prefix_len } = subnet;
+    use net_types::ip::IpAddress as _;
+    let addr = match addr {
+        fidl::IpAddress::Ipv4(fidl::Ipv4Address { addr }) => {
+            let addr = net_types::ip::Ipv4Addr::from(addr).mask(prefix_len).ipv4_bytes();
+            fidl::IpAddress::Ipv4(fidl::Ipv4Address { addr })
+        }
+        fidl::IpAddress::Ipv6(fidl::Ipv6Address { addr }) => {
+            let addr = net_types::ip::Ipv6Addr::from(addr).mask(prefix_len).ipv6_bytes();
+            fidl::IpAddress::Ipv6(fidl::Ipv6Address { addr })
+        }
+    };
+    fidl::Subnet { addr, prefix_len }
+}
+
 #[derive(PartialEq, Eq, Debug, Clone, Copy, Hash)]
 pub struct MacAddress {
     pub octets: [u8; 6],

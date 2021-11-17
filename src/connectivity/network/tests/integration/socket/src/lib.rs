@@ -9,7 +9,8 @@ use fuchsia_async::TimeoutExt as _;
 
 use anyhow::Context as _;
 use futures::{
-    io::AsyncReadExt as _, io::AsyncWriteExt as _, TryFutureExt as _, TryStreamExt as _,
+    io::AsyncReadExt as _, io::AsyncWriteExt as _, FutureExt as _, StreamExt as _,
+    TryFutureExt as _, TryStreamExt as _,
 };
 use net_declare::{fidl_ip_v4, fidl_ip_v6, fidl_subnet};
 use netemul::{RealmTcpListener as _, RealmTcpStream as _, RealmUdpSocket as _};
@@ -171,56 +172,105 @@ async fn test_tcp_socket<E: netemul::Endpoint>(name: &str) {
 // Helper function to add ip device to stack.
 async fn install_ip_device(
     realm: &netemul::TestRealm<'_>,
-    device: fidl::endpoints::ClientEnd<fidl_fuchsia_hardware_network::DeviceMarker>,
-    addrs: &mut [fidl_fuchsia_net::Subnet],
-) -> u64 {
+    port: fidl_fuchsia_hardware_network::PortProxy,
+    addrs: impl IntoIterator<Item = fidl_fuchsia_net::Subnet>,
+) -> (
+    u64,
+    fidl_fuchsia_net_interfaces_ext::admin::Control,
+    fidl_fuchsia_net_interfaces_admin::DeviceControlProxy,
+) {
+    let installer =
+        realm.connect_to_protocol::<fidl_fuchsia_net_interfaces_admin::InstallerMarker>().unwrap();
     let stack = realm.connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>().unwrap();
-    let interface_state =
-        realm.connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>().unwrap();
-    let id = stack
-        .add_interface(
-            fidl_fuchsia_net_stack::InterfaceConfig {
-                name: None,
-                topopath: None,
-                metric: None,
-                ..fidl_fuchsia_net_stack::InterfaceConfig::EMPTY
-            },
-            &mut fidl_fuchsia_net_stack::DeviceDefinition::Ip(device),
-        )
-        .await
-        .squash_result()
-        .expect("failed to add to stack");
-    let () = stack.enable_interface(id).await.squash_result().expect("failed to enable interface");
-    for addr in addrs.iter_mut() {
-        let () = stack
-            .add_interface_address(id, addr)
-            .await
-            .squash_result()
-            .unwrap_or_else(|e| panic!("failed to add interface address {:?}: {:?}", addr, e));
-    }
-    // Wait for addresses to be assigned. Necessary for IPv6 addresses
-    // since DAD must be performed.
-    let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
-        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
-            .expect("failed to create event stream"),
-        &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(id),
-        |fidl_fuchsia_net_interfaces_ext::Properties { addresses, .. }| {
-            // TODO(https://github.com/rust-lang/rust/issues/80967): use bool::then_some.
-            addrs
-                .iter()
-                .all(|want| {
-                    addresses.iter().any(
-                        |&fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until: _ }| {
-                            addr == *want
-                        },
-                    )
+
+    let mut port_id = port.get_info().await.expect("get port info").id.expect("missing port id");
+    let device = {
+        let (device, server_end) =
+            fidl::endpoints::create_endpoints::<fidl_fuchsia_hardware_network::DeviceMarker>()
+                .expect("create endpoints");
+        let () = port.get_device(server_end).expect("get device");
+        device
+    };
+    let device_control = {
+        let (control, server_end) = fidl::endpoints::create_proxy::<
+            fidl_fuchsia_net_interfaces_admin::DeviceControlMarker,
+        >()
+        .expect("create proxy");
+        let () = installer.install_device(device, server_end).expect("install device");
+        control
+    };
+    let control = {
+        let (control, server_end) =
+            fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
+                .expect("create endpoints");
+        let () = device_control
+            .create_interface(
+                &mut port_id,
+                server_end,
+                fidl_fuchsia_net_interfaces_admin::Options::EMPTY,
+            )
+            .expect("create interface");
+        control
+    };
+    assert!(control.enable().await.expect("enable interface").expect("failed to enable interface"));
+
+    let id = control.get_id().await.expect("get id");
+
+    let () = futures::stream::iter(addrs.into_iter())
+        .for_each_concurrent(None, |subnet| {
+            let (address_state_provider, server_end) = fidl::endpoints::create_proxy::<
+                fidl_fuchsia_net_interfaces_admin::AddressStateProviderMarker,
+            >()
+            .expect("create proxy");
+            let fidl_fuchsia_net::Subnet { addr, prefix_len } = &subnet;
+            let mut interface_address = match addr {
+                fidl_fuchsia_net::IpAddress::Ipv4(a) => fidl_fuchsia_net::InterfaceAddress::Ipv4(
+                    fidl_fuchsia_net::Ipv4AddressWithPrefix {
+                        addr: a.clone(),
+                        prefix_len: *prefix_len,
+                    },
+                ),
+                fidl_fuchsia_net::IpAddress::Ipv6(a) => {
+                    fidl_fuchsia_net::InterfaceAddress::Ipv6(a.clone())
+                }
+            };
+
+            // We're not interested in maintaining the address' lifecycle through
+            // the proxy.
+            let () = address_state_provider.detach().expect("detach");
+            let () = control
+                .add_address(
+                    &mut interface_address,
+                    fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
+                    server_end,
+                )
+                .expect("add address");
+
+            // Wait for the address to be assigned.
+            let wait_assignment_fut =
+                fidl_fuchsia_net_interfaces_ext::admin::wait_assignment_state(
+                    fidl_fuchsia_net_interfaces_ext::admin::assignment_state_stream(
+                        address_state_provider,
+                    ),
+                    fidl_fuchsia_net_interfaces_admin::AddressAssignmentState::Assigned,
+                )
+                .map(|r| r.expect("wait assignment state"));
+
+            // NB: add_address above does NOT create a subnet route.
+            let add_forwarding_entry_fut = stack
+                .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
+                    subnet: fidl_fuchsia_net_ext::apply_subnet_mask(subnet.clone()),
+                    destination: fidl_fuchsia_net_stack::ForwardingDestination::DeviceId(id),
                 })
-                .then(|| ())
-        },
-    )
-    .await
-    .expect("failed to observe addresses");
-    id
+                .map(move |r| {
+                    r.squash_result().unwrap_or_else(|e| {
+                        panic!("failed to add interface address {:?}: {:?}", subnet, e)
+                    })
+                });
+            futures::future::join(wait_assignment_fut, add_forwarding_entry_fut).map(|((), ())| ())
+        })
+        .await;
+    (id, control, device_control)
 }
 
 const TUN_DEFAULT_PORT_ID: u8 = 0;
@@ -283,14 +333,14 @@ async fn test_ip_endpoints_socket() {
         .map_err(fuchsia_zircon::Status::from_raw)
         .expect("add_port returned error");
 
-    let (client_device, client_req) =
-        fidl::endpoints::create_endpoints::<fidl_fuchsia_hardware_network::DeviceMarker>()
-            .expect("failed to create endpoints");
-    let (server_device, server_req) =
-        fidl::endpoints::create_endpoints::<fidl_fuchsia_hardware_network::DeviceMarker>()
-            .expect("failed to create endpoints");
-    let () = tun_pair.get_left(client_req).expect("get_left failed");
-    let () = tun_pair.get_right(server_req).expect("get_right failed");
+    let (client_port, client_req) =
+        fidl::endpoints::create_proxy::<fidl_fuchsia_hardware_network::PortMarker>()
+            .expect("failed to create proxy");
+    let (server_port, server_req) =
+        fidl::endpoints::create_proxy::<fidl_fuchsia_hardware_network::PortMarker>()
+            .expect("failed to create proxy");
+    let () = tun_pair.get_left_port(TUN_DEFAULT_PORT_ID, client_req).expect("get_left failed");
+    let () = tun_pair.get_right_port(TUN_DEFAULT_PORT_ID, server_req).expect("get_right failed");
 
     // Addresses must be in the same subnet.
     const SERVER_ADDR_V4: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.1/24");
@@ -302,9 +352,12 @@ async fn test_ip_endpoints_socket() {
     // its link signal set to up once both sides have sessions attached. This
     // way both devices will be configured "at the same time" and DAD will be
     // able to complete for IPv6 addresses.
-    let (_client_id, _server_id) = futures::future::join(
-        install_ip_device(&client, client_device, &mut [CLIENT_ADDR_V4, CLIENT_ADDR_V6]),
-        install_ip_device(&server, server_device, &mut [SERVER_ADDR_V4, SERVER_ADDR_V6]),
+    let (
+        (_client_id, _client_control, _client_device_control),
+        (_server_id, _server_control, _server_device_control),
+    ) = futures::future::join(
+        install_ip_device(&client, client_port, [CLIENT_ADDR_V4, CLIENT_ADDR_V6]),
+        install_ip_device(&server, server_port, [SERVER_ADDR_V4, SERVER_ADDR_V6]),
     )
     .await;
 
@@ -337,26 +390,29 @@ async fn test_ip_endpoint_packets() {
         )
         .expect("failed to create tun pair");
 
-    let (_tun_port, port_req) =
-        fidl::endpoints::create_endpoints::<fidl_fuchsia_net_tun::PortMarker>()
-            .expect("failed to create endpoints");
-    let () = tun_dev
-        .add_port(
-            fidl_fuchsia_net_tun::DevicePortConfig {
-                base: Some(base_ip_device_port_config()),
-                online: Some(true),
-                // No MAC, this is a pure IP device.
-                mac: None,
-                ..fidl_fuchsia_net_tun::DevicePortConfig::EMPTY
-            },
-            port_req,
-        )
-        .expect("add_port failed");
+    let (_tun_port, port) = {
+        let (tun_port, server_end) =
+            fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::PortMarker>()
+                .expect("failed to create endpoints");
+        let () = tun_dev
+            .add_port(
+                fidl_fuchsia_net_tun::DevicePortConfig {
+                    base: Some(base_ip_device_port_config()),
+                    online: Some(true),
+                    // No MAC, this is a pure IP device.
+                    mac: None,
+                    ..fidl_fuchsia_net_tun::DevicePortConfig::EMPTY
+                },
+                server_end,
+            )
+            .expect("add_port failed");
 
-    let (device, device_req) =
-        fidl::endpoints::create_endpoints::<fidl_fuchsia_hardware_network::DeviceMarker>()
-            .expect("failed to create endpoints");
-    let () = tun_dev.get_device(device_req).expect("get_device failed");
+        let (port, server_end) =
+            fidl::endpoints::create_proxy::<fidl_fuchsia_hardware_network::PortMarker>()
+                .expect("failed to create endpoints");
+        let () = tun_port.get_port(server_end).expect("get_port failed");
+        (tun_port, port)
+    };
 
     // Declare addresses in the same subnet. Alice is Netstack, and Bob is our
     // end of the tun device that we'll use to inject frames.
@@ -367,10 +423,10 @@ async fn test_ip_endpoint_packets() {
     const BOB_ADDR_V4: fidl_fuchsia_net::Ipv4Address = fidl_ip_v4!("192.168.0.2");
     const BOB_ADDR_V6: fidl_fuchsia_net::Ipv6Address = fidl_ip_v6!("2001::2");
 
-    let _device_id = install_ip_device(
+    let (_id, _control, _device_control) = install_ip_device(
         &realm,
-        device,
-        &mut [
+        port,
+        [
             fidl_fuchsia_net::Subnet {
                 addr: fidl_fuchsia_net::IpAddress::Ipv4(ALICE_ADDR_V4),
                 prefix_len: PREFIX_V4,
