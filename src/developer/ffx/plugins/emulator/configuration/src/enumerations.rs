@@ -48,7 +48,7 @@ impl FromStr for AccelerationMode {
 /// Selector for the launcher's output once the system is running.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum Console {
+pub enum ConsoleType {
     /// The launcher will finish by opening the Fuchsia serial console.
     Console,
 
@@ -59,9 +59,9 @@ pub enum Console {
     None,
 }
 
-impl Default for Console {
+impl Default for ConsoleType {
     fn default() -> Self {
-        Console::None
+        ConsoleType::None
     }
 }
 

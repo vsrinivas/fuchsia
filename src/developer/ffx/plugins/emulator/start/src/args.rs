@@ -12,37 +12,44 @@ use std::path::PathBuf;
 #[argh(subcommand, name = "start")]
 /// Starting Fuchsia Emulator
 pub struct StartCommand {
-    /// name of emulator instance. This is used to identify the instance.
-    /// Default is 'fuchsia-emulator'.
-    #[argh(option, default = "\"fuchsia-emulator\".to_string()")]
-    pub name: String,
+    /// virtualization acceleration. Valid choices are "none" to disable acceleration, "hyper" to
+    /// use the host's hypervisor interface, KVM on Linux and HVF on macOS, "auto" to use the
+    /// hypervisor if detected. The default value is "auto".
+    #[argh(option, default = "AccelerationMode::Auto")]
+    pub accel: AccelerationMode,
+
+    /// launches user in femu serial console.
+    #[argh(switch)]
+    pub console: bool,
+
+    /// pause on launch and wait for a debugger process to attach before resuming.
+    #[argh(switch)]
+    pub debugger: bool,
+
+    /// terminates the plugin before executing the emulator command.
+    #[argh(switch)]
+    pub dry_run: bool,
 
     /// emulator engine to use for this instance.  Allowed values are
     ///  "femu", "qemu". Default is "femu".
     #[argh(option, default = "EngineType::Femu")]
     pub engine: EngineType,
 
-    /// run emulator in headless mode where there is no GUI.
-    #[argh(switch, short = 'H')]
-    pub headless: bool,
-
-    /// run emulator with network in bridge mode via tun/tap.
-    /// This option is not supported on MacOS.
-    /// TODO(fxbug.dev/88327): Support SLIRP and No network.
-    #[argh(switch, short = 'N')]
-    pub tuntap: bool,
+    /// environment variables for emulator. The argument can be repeated for multiple times
+    /// to add multiple arguments. If not specified, only the environment variable
+    /// (DISPLAY) will be set to run the emulator.
+    #[argh(option)]
+    pub envs: Vec<String>,
 
     /// configure GPU acceleration to run the emulator. Allowed values are "host", "guest",
     /// "swiftshader_indirect", or "auto". Default is "auto". Note: This only affects
     /// FEMU emulator.
     #[argh(option)]
-    pub gpu: Option<GpuType>,
+    pub gpu: GpuType,
 
-    /// virtualization acceleration. Valid choices are "none" to disable acceleration, "hyper" to use the
-    /// host's hypervisor interface, KVM on Linux and HVF on macOS, "auto" to use the hypervisor if detected.
-    /// The default value is "auto".
-    #[argh(option, default = "AccelerationMode::Auto")]
-    pub accel: AccelerationMode,
+    /// run emulator in headless mode where there is no GUI.
+    #[argh(switch, short = 'H')]
+    pub headless: bool,
 
     /// enable pixel scaling on HiDPI devices (MacOS).
     #[argh(switch)]
@@ -52,28 +59,19 @@ pub struct StartCommand {
     #[argh(option, short = 'l')]
     pub log: Option<PathBuf>,
 
-    /// host port mapping for user-networking mode.
-    /// TODO(fxbug.dev/88327): enable SLIRP.
-    #[argh(option)]
-    pub port_map: Option<String>,
-
-    /// pause on launch and wait for a debugger process to attach before resuming.
-    #[argh(switch)]
-    pub debugger: bool,
-
     /// launches emulator in qemu console.
     #[argh(switch, short = 'm')]
     pub monitor: bool,
 
-    /// launches user in femu serial console.
-    #[argh(switch)]
-    pub console: bool,
+    /// name of emulator instance. This is used to identify the instance.
+    /// Default is 'fuchsia-emulator'.
+    #[argh(option, default = "\"fuchsia-emulator\".to_string()")]
+    pub name: String,
 
-    /// environment variables for emulator. The argument can be repeated for multiple times
-    /// to add multiple arguments. If not specified, only the environment variable
-    /// (DISPLAY) will be set to run the emulator.
+    /// host port mapping for user-networking mode.
+    /// TODO(fxbug.dev/88327): enable SLIRP.
     #[argh(option)]
-    pub envs: Vec<String>,
+    pub port_map: Option<String>,
 
     /// use named product information from Product Bundle Metadata (PBM). If no
     /// product bundle is specified and there is an obvious choice, that will be
@@ -81,11 +79,13 @@ pub struct StartCommand {
     #[argh(positional)]
     pub product_bundle: Option<String>,
 
+    /// run emulator with network in bridge mode via tun/tap.
+    /// This option is not supported on MacOS.
+    /// TODO(fxbug.dev/88327): Support SLIRP and No network.
+    #[argh(switch, short = 'N')]
+    pub tuntap: bool,
+
     /// enables extra logging for debugging
     #[argh(switch, short = 'V')]
     pub verbose: bool,
-
-    /// terminates the plugin before executing the emulator command.
-    #[argh(switch)]
-    pub dry_run: bool,
 }

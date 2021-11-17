@@ -7,7 +7,9 @@
 //! types will be directly deserializable from the PBM, and converted into engine-specific types at
 //! runtime.
 
-use crate::enumerations::*;
+use crate::enumerations::{
+    AccelerationMode, ConsoleType, GpuType, LogLevel, NetworkingMode, VirtualCpu,
+};
 use anyhow::Result;
 use async_trait::async_trait;
 use sdk_metadata::{AudioDevice, DataAmount, PointingDevice, Screen};
@@ -122,7 +124,7 @@ pub struct HostConfig {
 #[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct RuntimeConfig {
     /// The emulator's output, which might come from the serial console, the guest, or nothing.
-    pub console: Console,
+    pub console: ConsoleType,
 
     /// Pause the emulator and wait for the user to attach a debugger to the process.
     pub debugger: bool,

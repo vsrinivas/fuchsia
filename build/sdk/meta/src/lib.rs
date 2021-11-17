@@ -20,10 +20,15 @@ mod json;
 mod loadable_module;
 mod manifest;
 mod metadata;
-mod physical_device;
 mod product_bundle;
 mod sysroot;
-mod virtual_device;
+
+// These need to be addressable from external code, because they have conflicting types
+// named "Hardware" and "Cpu". In order to use one of these types in external code, it
+// needs to specify which version of the type to use, e.g. virtual_device::Hardware, or
+// the import will fail to locate the type.
+pub mod physical_device;
+pub mod virtual_device;
 
 pub use crate::banjo_library::*;
 pub use crate::cc_prebuilt_library::*;

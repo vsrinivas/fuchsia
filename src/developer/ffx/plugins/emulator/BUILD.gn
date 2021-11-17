@@ -19,6 +19,7 @@ if (is_host) {
       "common:tests",
       "configuration:tests",
       "engines:tests",
+      "start:tests",
     ]
   }
 }
