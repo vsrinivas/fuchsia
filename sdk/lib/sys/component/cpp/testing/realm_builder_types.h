@@ -91,9 +91,11 @@ struct LegacyComponentUrl final {
   std::string_view url;
 };
 
+// [START mock_handles_cpp]
 // Handles provided to mock component.
 class MockHandles final {
  public:
+  // [START_EXCLUDE]
   MockHandles(fdio_ns_t* ns, OutgoingDirectory outgoing_dir);
   ~MockHandles();
 
@@ -102,6 +104,7 @@ class MockHandles final {
 
   MockHandles(MockHandles&) = delete;
   MockHandles& operator=(MockHandles&) = delete;
+  // [END_EXLCUDE]
 
   // Returns the namespace provided to the mock component. The returned pointer
   // will be invalid once *this is destroyed.
@@ -116,11 +119,15 @@ class MockHandles final {
   // "/svc" in the namespace object returned by `ns()`.
   ServiceDirectory svc();
 
+  // [START_EXCLUDE]
  private:
   fdio_ns_t* namespace_;
   OutgoingDirectory outgoing_dir_;
+  // [END_EXCLUDE]
 };
+// [END mock_handles_cpp]
 
+// [START mock_interface_cpp]
 // The interface for backing implementations of components with a Source of Mock.
 class MockComponent {
  public:
@@ -131,6 +138,7 @@ class MockComponent {
   // the component.
   virtual void Start(std::unique_ptr<MockHandles> mock_handles);
 };
+// [END mock_interface_cpp]
 
 // A reference to a mock component.
 struct Mock final {

@@ -16,6 +16,7 @@ use {
 pub const MOCK_ID_KEY: &'static str = "mock_id";
 pub const RUNNER_NAME: &'static str = "realm_builder";
 
+// [START mock_interface_rust]
 /// The implementation for a mock component. The contained function is called when the framework
 /// asks the mock to run, and the function is given the component's handles for its namespace and
 /// outgoing directory. The mock component may then use this handles to run a ServiceFs, access
@@ -24,6 +25,7 @@ pub const RUNNER_NAME: &'static str = "realm_builder";
 pub struct Mock(
     Arc<dyn Fn(MockHandles) -> BoxFuture<'static, Result<(), Error>> + Sync + Send + 'static>,
 );
+// [END mock_interface_rust]
 
 impl Mock {
     /// Creates a new `Mock`. The `mock_fn` must be a function which takes a `MockHandles` struct
@@ -49,6 +51,7 @@ impl Mock {
     }
 }
 
+// [START mock_handles_rust]
 /// The handles from the framework over which the mock should interact with other components.
 pub struct MockHandles {
     namespace: HashMap<String, fio::DirectoryProxy>,
@@ -57,6 +60,7 @@ pub struct MockHandles {
     /// the mock.
     pub outgoing_dir: ServerEnd<fio::DirectoryMarker>,
 }
+// [END mock_handles_rust]
 
 impl MockHandles {
     /// Connects to a FIDL protocol and returns a proxy to that protocol.

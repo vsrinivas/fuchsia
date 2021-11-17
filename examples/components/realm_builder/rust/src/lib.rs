@@ -48,7 +48,7 @@ async fn make_echo_call() -> Result<(), Error> {
         .await?;
     // [END add_legacy_component_rust]
 
-    // [START add_mock_component_test]
+    // [START add_mock_component_rust]
     builder
         .add_mock_child(
             "d",
@@ -56,7 +56,7 @@ async fn make_echo_call() -> Result<(), Error> {
             ChildProperties::new(),
         )
         .await?;
-    // [END add_mock_component_test]
+    // [END add_mock_component_rust]
 
     // [START route_between_children_rust]
     builder
