@@ -42,7 +42,8 @@
 #define VIRTIO_ID_GPU 16          /* virtio GPU */
 #define VIRTIO_ID_INPUT 18        /* virtio input */
 #define VIRTIO_ID_VSOCK 19        /* virtio vsock transport */
-#define VIRTIO_ID_WL 63           /* virtio wayland */
+#define VIRTIO_ID_SOUND 25        /* virtio sound */
 #define VIRTIO_ID_MAGMA 50        /* virtio magma */
+#define VIRTIO_ID_WL 63           /* virtio wayland */
 
 #endif /* _LINUX_VIRTIO_IDS_H */
