@@ -221,6 +221,12 @@ impl ClientMlme {
             MlmeMsg::StartScan { req, .. } => Ok(self.on_sme_scan(req)),
             MlmeMsg::JoinReq { req, .. } => self.on_sme_join(req),
             MlmeMsg::StatsQueryReq { .. } => self.on_sme_stats_query(),
+            MlmeMsg::GetIfaceCounterStats { responder } => {
+                self.on_sme_get_iface_counter_stats(responder)
+            }
+            MlmeMsg::GetIfaceHistogramStats { responder } => {
+                self.on_sme_get_iface_histogram_stats(responder)
+            }
             MlmeMsg::QueryDeviceInfo { responder } => self.on_sme_query_device_info(responder),
             MlmeMsg::ListMinstrelPeers { responder } => self.on_sme_list_minstrel_peers(responder),
             MlmeMsg::GetMinstrelStats { responder, req } => {
@@ -317,6 +323,24 @@ impl ClientMlme {
         // TODO(fxbug.dev/43456): Implement stats
         let mut resp = stats::empty_stats_query_response();
         self.ctx.device.mlme_control_handle().send_stats_query_resp(&mut resp).map_err(|e| e.into())
+    }
+
+    fn on_sme_get_iface_counter_stats(
+        &self,
+        responder: fidl_mlme::MlmeGetIfaceCounterStatsResponder,
+    ) -> Result<(), Error> {
+        let mut resp =
+            fidl_mlme::GetIfaceCounterStatsResponse::ErrorStatus(zx::sys::ZX_ERR_NOT_SUPPORTED);
+        responder.send(&mut resp).map_err(|e| e.into())
+    }
+
+    fn on_sme_get_iface_histogram_stats(
+        &self,
+        responder: fidl_mlme::MlmeGetIfaceHistogramStatsResponder,
+    ) -> Result<(), Error> {
+        let mut resp =
+            fidl_mlme::GetIfaceHistogramStatsResponse::ErrorStatus(zx::sys::ZX_ERR_NOT_SUPPORTED);
+        responder.send(&mut resp).map_err(|e| e.into())
     }
 
     fn on_sme_query_device_info(
@@ -1128,7 +1152,9 @@ mod tests {
             device::FakeDevice,
             test_utils::{fake_control_handle, MockWlanRxInfo},
         },
+        fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_wlan_common as fidl_common, fuchsia_async as fasync,
+        futures::{task::Poll, StreamExt},
         std::convert::TryFrom,
         wlan_common::{
             assert_variant, fake_fidl_bss_description, ie,
@@ -2403,6 +2429,52 @@ mod tests {
             .next_mlme_msg::<fidl_mlme::StatsQueryResponse>()
             .expect("Should receive a stats query response");
         assert_eq!(stats_query_resp, stats::empty_stats_query_response());
+    }
+
+    #[test]
+    fn mlme_respond_to_get_iface_counter_stats_with_error_status() {
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
+        let mut me = m.make_mlme();
+
+        let (mlme_proxy, mut mlme_req_stream) = create_proxy_and_stream::<fidl_mlme::MlmeMarker>()
+            .expect("failed to create Mlme proxy");
+        let mut stats_fut = mlme_proxy.get_iface_counter_stats();
+        assert_variant!(exec.run_until_stalled(&mut stats_fut), Poll::Pending);
+        let mlme_req = assert_variant!(exec.run_until_stalled(&mut mlme_req_stream.next()), Poll::Ready(Some(Ok(req))) => match req {
+            fidl_mlme::MlmeRequest::GetIfaceCounterStats { .. } => req,
+            other => panic!("unexpected MlmeRequest: {:?}", other),
+        });
+
+        assert_variant!(me.handle_mlme_msg(mlme_req), Ok(()));
+        let resp = assert_variant!(exec.run_until_stalled(&mut stats_fut), Poll::Ready(Ok(r)) => r);
+        assert_eq!(
+            resp,
+            fidl_mlme::GetIfaceCounterStatsResponse::ErrorStatus(zx::sys::ZX_ERR_NOT_SUPPORTED)
+        );
+    }
+
+    #[test]
+    fn mlme_respond_to_get_iface_histogram_stats_with_error_status() {
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
+        let mut me = m.make_mlme();
+
+        let (mlme_proxy, mut mlme_req_stream) = create_proxy_and_stream::<fidl_mlme::MlmeMarker>()
+            .expect("failed to create Mlme proxy");
+        let mut stats_fut = mlme_proxy.get_iface_histogram_stats();
+        assert_variant!(exec.run_until_stalled(&mut stats_fut), Poll::Pending);
+        let mlme_req = assert_variant!(exec.run_until_stalled(&mut mlme_req_stream.next()), Poll::Ready(Some(Ok(req))) => match req {
+            fidl_mlme::MlmeRequest::GetIfaceHistogramStats { .. } => req,
+            other => panic!("unexpected MlmeRequest: {:?}", other),
+        });
+
+        assert_variant!(me.handle_mlme_msg(mlme_req), Ok(()));
+        let resp = assert_variant!(exec.run_until_stalled(&mut stats_fut), Poll::Ready(Ok(r)) => r);
+        assert_eq!(
+            resp,
+            fidl_mlme::GetIfaceHistogramStatsResponse::ErrorStatus(zx::sys::ZX_ERR_NOT_SUPPORTED)
+        );
     }
 
     #[test]
