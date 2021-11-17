@@ -43,16 +43,13 @@ template("go_test") {
     _output_name = invoker.output_name
   }
 
-  _is_host = is_linux || is_mac
-
-  assert(
-      _is_host || (!defined(invoker.args) && !defined(invoker.environments) &&
-                       !defined(invoker.timeout)),
-      "args, environments, and timeout are only supported for host tests")
+  assert(is_host || (!defined(invoker.args) && !defined(invoker.environments) &&
+                         !defined(invoker.timeout)),
+         "args, environments, and timeout are only supported for host tests")
 
   _go_build_target_name = target_name
 
-  if (_is_host) {
+  if (is_host) {
     _go_build_target_name = "${target_name}_go_build"
     host_test(target_name) {
       binary_path = "$root_out_dir/$_output_name"
