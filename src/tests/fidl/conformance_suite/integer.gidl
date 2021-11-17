@@ -24,6 +24,16 @@ success("BoolFalse") {
     },
 }
 
+decode_failure("BadInvalidBoolean") {
+    type = MyBool,
+    bytes = {
+        v1, v2 = [
+            0x10,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+        ],
+    },
+    err = INVALID_BOOLEAN,
+}
+
 success("ByteZero") {
     value = MyByte {
         value: 0,

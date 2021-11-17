@@ -1175,7 +1175,7 @@ impl Decodable for bool {
         *self = match unsafe { *decoder.buf.get_unchecked(offset) } {
             0 => false,
             1 => true,
-            _ => return Err(Error::Invalid),
+            _ => return Err(Error::InvalidBoolean),
         };
         Ok(())
     }

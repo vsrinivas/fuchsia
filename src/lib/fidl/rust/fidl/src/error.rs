@@ -25,6 +25,10 @@ pub enum Error {
     #[error("Unexpected response to synchronous FIDL query.")]
     UnexpectedSyncResponse,
 
+    /// Invalid boolean
+    #[error("Invalid FIDL boolean.")]
+    InvalidBoolean,
+
     /// Invalid header for a FIDL buffer.
     #[error("Invalid header for a FIDL buffer.")]
     InvalidHeader,

@@ -8,9 +8,12 @@ type ErrorCode string
 
 const (
 	CountExceedsLimit                  ErrorCode = "COUNT_EXCEEDS_LIMIT"
+	EnvelopeBytesExceedMessageLength   ErrorCode = "ENVELOPE_BYTES_EXCEED_MESSAGE_LENGTH"
+	EnvelopeHandlesExceedMessageLength ErrorCode = "ENVELOPE_HANDLES_EXCEED_MESSAGE_LENGTH"
 	ExceededMaxOutOfLineDepth          ErrorCode = "EXCEEDED_MAX_OUT_OF_LINE_DEPTH"
 	ExtraHandles                       ErrorCode = "EXTRA_HANDLES"
 	IncorrectHandleType                ErrorCode = "INCORRECT_HANDLE_TYPE"
+	InvalidBoolean                     ErrorCode = "INVALID_BOOLEAN"
 	InvalidEmptyStruct                 ErrorCode = "INVALID_EMPTY_STRUCT"
 	InvalidInlineBitInEnvelope         ErrorCode = "INVALID_INLINE_BIT_IN_ENVELOPE"
 	InvalidNumBytesInEnvelope          ErrorCode = "INVALID_NUM_BYTES_IN_ENVELOPE"
@@ -29,15 +32,16 @@ const (
 	TooFewBytes                        ErrorCode = "TOO_FEW_BYTES"
 	TooFewHandles                      ErrorCode = "TOO_FEW_HANDLES"
 	UnionFieldNotSet                   ErrorCode = "UNION_FIELD_NOT_SET"
-	EnvelopeBytesExceedMessageLength   ErrorCode = "ENVELOPE_BYTES_EXCEED_MESSAGE_LENGTH"
-	EnvelopeHandlesExceedMessageLength ErrorCode = "ENVELOPE_HANDLES_EXCEED_MESSAGE_LENGTH"
 )
 
 var AllErrorCodes = map[ErrorCode]struct{}{
 	CountExceedsLimit:                  {},
+	EnvelopeBytesExceedMessageLength:   {},
+	EnvelopeHandlesExceedMessageLength: {},
 	ExceededMaxOutOfLineDepth:          {},
 	ExtraHandles:                       {},
 	IncorrectHandleType:                {},
+	InvalidBoolean:                     {},
 	InvalidEmptyStruct:                 {},
 	InvalidInlineBitInEnvelope:         {},
 	InvalidNumBytesInEnvelope:          {},
@@ -56,6 +60,4 @@ var AllErrorCodes = map[ErrorCode]struct{}{
 	TooFewBytes:                        {},
 	TooFewHandles:                      {},
 	UnionFieldNotSet:                   {},
-	EnvelopeBytesExceedMessageLength:   {},
-	EnvelopeHandlesExceedMessageLength: {},
 }

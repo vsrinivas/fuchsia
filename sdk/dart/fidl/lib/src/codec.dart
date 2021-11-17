@@ -191,7 +191,12 @@ class Decoder {
     return handleInfos[_nextHandle++];
   }
 
-  bool decodeBool(int offset) => data.getInt8(offset) != 0;
+  bool decodeBool(int offset) {
+    if (data.getUint8(offset) > 1) {
+      throw FidlError('Invalid boolean', FidlErrorCode.fidlInvalidBoolean);
+    }
+    return data.getUint8(offset) == 1;
+  }
 
   int decodeInt8(int offset) => data.getInt8(offset);
 
