@@ -4,16 +4,23 @@
 library fuchsia.lightsensor;
 
 /// The color intensities that can be returned from a light sensor.
-type Rgbc = table {
+type Rgbc = struct {
     /// Intensity of red light measured by the light sensor.
-    1: red_intensity float32;
+    red_intensity float32;
 
     /// Intensity of green light measured by the light sensor.
-    2: green_intensity float32;
+    green_intensity float32;
 
     /// Intensity of blue light measured by the light sensor.
-    3: blue_intensity float32;
+    blue_intensity float32;
 
     /// Intensity of clear light measured by the light sensor.
-    4: clear_intensity float32;
+    clear_intensity float32;
+};
+
+/// Possible error results from API calls.
+type Error = strict enum {
+    /// The input provided to the API was outside of the valid range of input, or required
+    /// parameters were missing from a table.
+    INVALID_INPUT = 1;
 };

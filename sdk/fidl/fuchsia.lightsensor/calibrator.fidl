@@ -12,5 +12,5 @@ protocol Calibrator {
         data Rgbc;
     }) -> (struct {
         data Rgbc;
-    });
+    }) error Error;
 };
