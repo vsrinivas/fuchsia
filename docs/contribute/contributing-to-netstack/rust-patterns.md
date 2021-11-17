@@ -214,6 +214,67 @@ fn do_stuff() {
 }
 ```
 
+## Prefer exhaustive matches
+
+Match exhaustively whenever possible, avoiding [catch-all patterns]. Matching
+exhaustively provides more local context during reviews, acts as a prompt to
+revisit when the enumeration is updated, and requires more explicit forms to
+drop information.
+
+Some patterns implicitly defeat exhaustive matches. We should use them with
+care:
+
+- Avoid `if let` patterns, since that's effectively a non-exhaustive match. We
+  carve out the exception to allow binding to the `Some` value of an
+  `Option<T>`, since it's a well known type and the `None` variant doesn't carry
+  any information. Note that if `T` is an enum, `if let Some(Foo::Variant)` is
+  not a valid use of the exception, since it sidesteps an exhaustive match on
+  `T`.
+- Avoid methods on enum receivers that indicate variants without matching, e.g.:
+  - `is_foo(&self) -> bool` enum methods like [`Result::is_ok`] or
+  [`Option::is_none`].
+  - `foo(self) -> Option<T>` enum methods like [`Result::ok`], which serve as
+  single-variant extraction helpers that are easy to miss in review.
+
+Rust provides the [`non_exhaustive`] attribute which defeats the intent of
+matching exhaustively, and `flexible` FIDL types are annotated with that
+attribute. When dealing with such types, attempting to match exhaustively is
+prone to becoming stale - the type can evolve without breaking the code - and
+should, thus, be avoided.
+
+```rust
+// Don't attempt to match exhaustively, exhaustive enumeration is prone to
+// becoming stale and mislead future readers if `Foo` takes more variants.
+fn bad_flexible_match(foo: fidl_foo::FlexibleFoo) {
+    match foo {
+        fidl_foo::FlexibleFoo::Bar => { /* ... */ },
+        foo @ fidl_foo::FlexibleFoo::Baz |
+        foo => panic!("unexpected foo {:?}", foo)
+    }
+}
+
+// Use the catch-all pattern instead when the type is non_exhaustive.
+fn good_flexible_match(foo: fidl_foo::FlexibleFoo) {
+    match foo {
+        fidl_foo::FlexibleFoo::Bar => { /* ... */ },
+        foo => panic!("unexpected foo {:?}", foo)
+    }
+}
+
+// Note that if the type was not marked non_exhaustive we'd prefer to match
+// exhaustively.
+fn strict_match(foo: fidl_foo::StrictFoo) {
+    match foo {
+        fidl_foo::StrictFoo::Bar => { /* ... */ },
+        foo @ fidl_foo::StrictFoo::Baz |
+        foo @ fidl_foo::StrictFoo::Boo => panic!("unexpected foo {:?}", foo)
+    }
+}
+```
+
+> TODO(https://github.com/rust-lang/rust/issues/89554): Revisit `non_exhaustive`
+guidance once `non_exhaustive_omitted_patterns` lint is stabilized.
+
 ## Process for changes to this page
 
 All are invited and welcome to propose changes to the patterns adopted by the
@@ -265,3 +326,8 @@ Things to keep in mind:
 [std_addr_tests]: https://github.com/rust-lang/rust/blob/1.49.0/library/std/src/net/addr/tests.rs
 [network/tests/integration]: /src/connectivity/network/tests/integration
 [network/tests/fidl]: /src/connectivity/network/tests/fidl
+[`Result::is_ok`]: https://doc.rust-lang.org/std/result/enum.Result.html#method.is_ok
+[`Result::ok`]: https://doc.rust-lang.org/std/result/enum.Result.html#method.ok
+[`Option::is_none`]: https://doc.rust-lang.org/std/option/enum.Option.html#method.is_none
+[`non_exhaustive`]: https://doc.rust-lang.org/reference/attributes/type_system.html#the-non_exhaustive-attribute
+[catch-all patterns]: https://doc.rust-lang.org/book/ch06-02-match.html#catch-all-patterns-and-the-_-placeholder
