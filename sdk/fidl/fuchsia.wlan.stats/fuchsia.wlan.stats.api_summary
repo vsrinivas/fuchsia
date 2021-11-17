@@ -32,6 +32,17 @@ struct fuchsia.wlan.stats/HistBucket
 enum/member fuchsia.wlan.stats/HistScope.PER_ANTENNA 2
 enum/member fuchsia.wlan.stats/HistScope.STATION 1
 strict enum fuchsia.wlan.stats/HistScope uint8
+struct/member fuchsia.wlan.stats/IfaceCounterStats.rx_multicast uint64
+struct/member fuchsia.wlan.stats/IfaceCounterStats.rx_unicast_drop uint64
+struct/member fuchsia.wlan.stats/IfaceCounterStats.rx_unicast_total uint64
+struct/member fuchsia.wlan.stats/IfaceCounterStats.tx_drop uint64
+struct/member fuchsia.wlan.stats/IfaceCounterStats.tx_total uint64
+struct fuchsia.wlan.stats/IfaceCounterStats
+struct/member fuchsia.wlan.stats/IfaceHistogramStats.noise_floor_histograms vector<fuchsia.wlan.stats/NoiseFloorHistogram>:8
+struct/member fuchsia.wlan.stats/IfaceHistogramStats.rssi_histograms vector<fuchsia.wlan.stats/RssiHistogram>:8
+struct/member fuchsia.wlan.stats/IfaceHistogramStats.rx_rate_index_histograms vector<fuchsia.wlan.stats/RxRateIndexHistogram>:8
+struct/member fuchsia.wlan.stats/IfaceHistogramStats.snr_histograms vector<fuchsia.wlan.stats/SnrHistogram>:8
+struct fuchsia.wlan.stats/IfaceHistogramStats
 struct/member fuchsia.wlan.stats/IfaceStats.dispatcher_stats fuchsia.wlan.stats/DispatcherStats
 struct/member fuchsia.wlan.stats/IfaceStats.mlme_stats fuchsia.wlan.stats/MlmeStats:optional
 struct fuchsia.wlan.stats/IfaceStats

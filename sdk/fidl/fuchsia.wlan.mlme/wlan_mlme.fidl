@@ -683,9 +683,17 @@ protocol MLME {
         info DeviceInfo;
     });
 
+    @deprecated("Use GetIfaceCounterStats or GetIfaceHistogramStats instead")
     StatsQueryReq();
+    @deprecated("Use GetIfaceCounterStats or GetIfaceHistogramStats instead")
     -> StatsQueryResp(struct {
         resp StatsQueryResponse;
+    });
+    GetIfaceCounterStats() -> (struct {
+        resp GetIfaceCounterStatsResponse;
+    });
+    GetIfaceHistogramStats() -> (struct {
+        resp GetIfaceHistogramStatsResponse;
     });
 
     ListMinstrelPeers() -> (struct {

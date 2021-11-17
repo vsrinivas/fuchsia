@@ -184,13 +184,33 @@ type ApMlmeStats = struct {
 };
 
 // LINT.ThenChange(//src/connectivity/wlan/lib/common/cpp/include/wlan/common/stats.h)
-
+@deprecated("Use IfaceCounterStats or IfaceHistogramStats instead")
 type MlmeStats = strict union {
     1: client_mlme_stats ClientMlmeStats;
     2: ap_mlme_stats ApMlmeStats;
 };
 
+@deprecated("Use IfaceCounterStats or IfaceHistogramStats instead")
 type IfaceStats = struct {
     dispatcher_stats DispatcherStats;
     mlme_stats MlmeStats:optional;
+};
+
+type IfaceCounterStats = struct {
+    rx_unicast_total uint64;
+    rx_unicast_drop uint64;
+    rx_multicast uint64;
+    tx_total uint64;
+    tx_drop uint64;
+};
+
+type IfaceHistogramStats = struct {
+    /// Noise floor histogram(s).
+    noise_floor_histograms vector<NoiseFloorHistogram>:MAX_HISTOGRAMS_PER_TYPE;
+    /// Received signal strength indicator (RSSI) histogram(s).
+    rssi_histograms vector<RssiHistogram>:MAX_HISTOGRAMS_PER_TYPE;
+    /// Received rate index histogram(s).
+    rx_rate_index_histograms vector<RxRateIndexHistogram>:MAX_HISTOGRAMS_PER_TYPE;
+    /// Signal to noise ratio (SNR) histogram(s).
+    snr_histograms vector<SnrHistogram>:MAX_HISTOGRAMS_PER_TYPE;
 };

@@ -10,6 +10,7 @@ using fuchsia.wlan.minstrel;
 using fuchsia.wlan.mlme;
 using fuchsia.wlan.sme;
 using fuchsia.wlan.stats;
+using zx;
 
 type PhyListItem = struct {
     phy_id uint16;
@@ -100,6 +101,18 @@ type AddIfaceResponse = struct {
     iface_id uint16;
 };
 
+// TODO(fxbug.dev/83621): Move this to wlan_internal.fidl after fxbug.dev/85462 is fixed
+type GetIfaceCounterStatsResponse = strict union {
+    1: stats fuchsia.wlan.stats.IfaceCounterStats;
+    2: error_status zx.status;
+};
+
+// TODO(fxbug.dev/83621): Move this to wlan_internal.fidl after fxbug.dev/85462 is fixed
+type GetIfaceHistogramStatsResponse = strict union {
+    1: stats fuchsia.wlan.stats.IfaceHistogramStats;
+    2: error_status zx.status;
+};
+
 protocol DeviceWatcher {
     -> OnPhyAdded(struct {
         phy_id uint16;
@@ -156,6 +169,16 @@ protocol DeviceService {
     }) -> (struct {
         status int32;
         stats box<fuchsia.wlan.stats.IfaceStats>;
+    });
+    GetIfaceCounterStats(struct {
+        iface_id uint16;
+    }) -> (struct {
+        resp GetIfaceCounterStatsResponse;
+    });
+    GetIfaceHistogramStats(struct {
+        iface_id uint16;
+    }) -> (struct {
+        resp GetIfaceHistogramStatsResponse;
     });
     GetMinstrelList(struct {
         iface_id uint16;

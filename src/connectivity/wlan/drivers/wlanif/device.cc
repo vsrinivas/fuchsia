@@ -611,6 +611,14 @@ void Device::StatsQueryReq() {
   }
 }
 
+void Device::GetIfaceCounterStats(GetIfaceCounterStatsCallback cb) {
+  lerror("GetIfaceCounterStats is not implemented\n");
+}
+
+void Device::GetIfaceHistogramStats(GetIfaceHistogramStatsCallback cb) {
+  lerror("GetIfaceHistogramStats is not implemented\n");
+}
+
 void Device::ListMinstrelPeers(ListMinstrelPeersCallback cb) {
   lerror("Minstrel peer list not available: FullMAC driver not supported.\n");
   ZX_DEBUG_ASSERT(false);

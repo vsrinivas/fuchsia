@@ -97,6 +97,14 @@ pub async fn serve_device_requests(
                     Err(status) => responder.send(status.into_raw(), None),
                 }
             }
+            DeviceServiceRequest::GetIfaceCounterStats { .. } => {
+                error!("DeviceServiceRequest::GetIfaceCounterStats is unimplemented");
+                Ok(())
+            }
+            DeviceServiceRequest::GetIfaceHistogramStats { .. } => {
+                error!("DeviceServiceRequest::GetIfaceHistogramStats is unimplemented");
+                Ok(())
+            }
             DeviceServiceRequest::GetMinstrelList { iface_id, responder } => {
                 let (status, mut peers) = list_minstrel_peers(&ifaces, iface_id).await;
                 responder.send(status.into_raw(), &mut peers)

@@ -591,13 +591,36 @@ type WlanifMlmeStats = struct {
     stats StatsUnion;
 };
 
+@deprecated("Use WlanifIfaceCounterStats or WlanifIfaceHistogramStats instead")
 type WlanifStats = struct {
     dispatcher_stats WlanifDispatcherStats;
     mlme_stats vector<WlanifMlmeStats>:MAX;
 };
 
+@deprecated("Use WlanifIfaceCounterStats or WlanifIfaceHistogramStats instead")
 type WlanifStatsQueryResponse = struct {
     stats WlanifStats;
+};
+
+// TODO(fxbug.dev/83621): Use wlan_stats.fidl structure after fxbug.dev/85462 is fixed
+type WlanifIfaceCounterStats = struct {
+    rx_unicast_total uint64;
+    rx_unicast_drop uint64;
+    rx_multicast uint64;
+    tx_total uint64;
+    tx_drop uint64;
+};
+
+// TODO(fxbug.dev/83621): Use wlan_stats.fidl structure after fxbug.dev/85462 is fixed
+type WlanifIfaceHistogramStats = struct {
+    /// Noise floor histogram(s).
+    noise_floor_histograms vector<WlanifNoiseFloorHistogram>:WLANIF_MAX_HISTOGRAMS_PER_TYPE;
+    /// Received signal strength indicator (RSSI) histogram(s).
+    rssi_histograms vector<WlanifRssiHistogram>:WLANIF_MAX_HISTOGRAMS_PER_TYPE;
+    /// Received rate index histogram(s).
+    rx_rate_index_histograms vector<WlanifRxRateIndexHistogram>:WLANIF_MAX_HISTOGRAMS_PER_TYPE;
+    /// Signal to noise ratio (SNR) histogram(s).
+    snr_histograms vector<WlanifSnrHistogram>:WLANIF_MAX_HISTOGRAMS_PER_TYPE;
 };
 
 type WlanifCapturedFrameResult = struct {
@@ -670,6 +693,7 @@ protocol WlanifImplIfc {
     EapolInd(struct {
         ind WlanifEapolIndication;
     }) -> ();
+    @deprecated("Use GetIfaceCounterStats or GetIfaceHistogramStats instead")
     StatsQueryResp(struct {
         resp WlanifStatsQueryResponse;
     }) -> ();
@@ -760,7 +784,16 @@ protocol WlanifImpl {
     }) -> ();
 
     // MLME extensions
+    @deprecated("Use GetIfaceCounterStats or GetIfaceHistogramStats instead")
     StatsQueryReq() -> ();
+    GetIfaceCounterStats() -> (struct {
+        status int32;
+        stats WlanifIfaceCounterStats;
+    });
+    GetIfaceHistogramStats() -> (struct {
+        status int32;
+        stats WlanifIfaceHistogramStats;
+    });
     StartCaptureFrames(struct {
         req WlanifStartCaptureFramesReq;
     }) -> (struct {

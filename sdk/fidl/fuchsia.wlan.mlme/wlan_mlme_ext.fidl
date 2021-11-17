@@ -69,6 +69,18 @@ type StatsQueryResponse = struct {
     stats fuchsia.wlan.stats.IfaceStats;
 };
 
+// TODO(fxbug.dev/83621): Move this to wlan_internal.fidl after fxbug.dev/85462 is fixed
+type GetIfaceCounterStatsResponse = strict union {
+    1: stats fuchsia.wlan.stats.IfaceCounterStats;
+    2: error_status int32;
+};
+
+// TODO(fxbug.dev/83621): Move this to wlan_internal.fidl after fxbug.dev/85462 is fixed
+type GetIfaceHistogramStatsResponse = strict union {
+    1: stats fuchsia.wlan.stats.IfaceHistogramStats;
+    2: error_status int32;
+};
+
 type MinstrelListResponse = struct {
     peers fuchsia.wlan.minstrel.Peers;
 };
