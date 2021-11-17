@@ -12,10 +12,9 @@ use {
         server::volume::FxVolumeAndRoot,
     },
     anyhow::{Context, Error},
-    fidl_fuchsia_fs::{
-        AdminRequest, AdminRequestStream, FilesystemInfo, FsType, QueryRequest, QueryRequestStream,
-    },
-    fidl_fuchsia_io::{self as fio, DirectoryMarker},
+    fidl_fuchsia_fs::{AdminRequest, AdminRequestStream, QueryRequest, QueryRequestStream},
+    fidl_fuchsia_io::{self as fio, DirectoryMarker, MAX_FILENAME},
+    fidl_fuchsia_io_admin::FilesystemInfo,
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon::{self as zx},
     futures::stream::{StreamExt, TryStreamExt},
@@ -40,6 +39,15 @@ mod testing;
 // where inspect test cases fail if we try and use that, possibly because of a signed/unsigned bug.
 // See fxbug.dev/87152.  Until that's fixed, we'll have to use i64::MAX.
 pub const TOTAL_NODES: u64 = i64::MAX as u64;
+
+pub const VFS_TYPE_FXFS: u32 = 0x73667866;
+
+// An array used to initialize the FilesystemInfo |name| field. This just spells "fxfs" 0-padded to
+// 32 bytes.
+pub const FXFS_INFO_NAME: [i8; 32] = [
+    0x66, 0x78, 0x66, 0x73, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0,
+];
 
 enum Services {
     Admin(AdminRequestStream),
@@ -140,14 +148,17 @@ impl FxfsServer {
                 // TODO(csuter): Support all the fields.
                 let info = self.fs.get_info();
                 responder.send(&mut Ok(FilesystemInfo {
-                    total_bytes: Some(info.total_bytes),
-                    used_bytes: Some(info.used_bytes),
-                    block_size: Some(info.block_size),
-                    max_node_name_size: Some(255), // This is limited by Fuchsia.io
-                    fs_type: Some(FsType::Fxfs),
-                    total_nodes: Some(TOTAL_NODES),
-                    used_nodes: Some(self.volume.volume().store().object_count()),
-                    ..FilesystemInfo::EMPTY
+                    total_bytes: info.total_bytes,
+                    used_bytes: info.used_bytes,
+                    total_nodes: TOTAL_NODES,
+                    used_nodes: self.volume.volume().store().object_count(),
+                    free_shared_pool_bytes: 0,
+                    block_size: info.block_size,
+                    fs_id: 0,                               // TODO(csuter)
+                    max_filename_size: MAX_FILENAME as u32, // This is limited by Fuchsia.io
+                    fs_type: VFS_TYPE_FXFS,
+                    padding: 0,
+                    name: FXFS_INFO_NAME,
                 }))?;
             }
             _ => panic!("Unimplemented"),

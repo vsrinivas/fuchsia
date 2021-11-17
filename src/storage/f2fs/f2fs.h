@@ -133,8 +133,7 @@ class F2fs : public fs::Vfs {
   void SetQueryService(fbl::RefPtr<fs::QueryService> svc) { query_svc_ = std::move(svc); }
   void SetAdminService(fbl::RefPtr<AdminService> svc) { admin_svc_ = std::move(svc); }
 
-  zx_status_t GetFilesystemInfo(fidl::AnyArena &allocator,
-                                fuchsia_fs::wire::FilesystemInfo &out) final;
+  zx::status<fs::FilesystemInfo> GetFilesystemInfo() final;
 #else   // __Fuchsia__
   [[nodiscard]] static zx_status_t Create(std::unique_ptr<f2fs::Bcache> bc,
                                           const MountOptions &options, std::unique_ptr<F2fs> *out);

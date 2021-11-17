@@ -39,8 +39,7 @@ class Runner : public fs::ManagedVfs {
 
   // fs::ManagedVfs interface.
   void Shutdown(fs::FuchsiaVfs::ShutdownCallback closure) final;
-  zx_status_t GetFilesystemInfo(fidl::AnyArena& allocator,
-                                fuchsia_fs::wire::FilesystemInfo& out) final;
+  zx::status<fs::FilesystemInfo> GetFilesystemInfo() final;
 
   // Other methods.
 

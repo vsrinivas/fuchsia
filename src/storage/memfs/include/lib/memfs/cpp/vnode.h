@@ -203,8 +203,7 @@ class Vfs : public fs::ManagedVfs {
   zx_status_t GrowVMO(zx::vmo& vmo, size_t current_size, size_t request_size, size_t* actual_size);
 
   // fs::FuchsiaVfs override:
-  zx_status_t GetFilesystemInfo(fidl::AnyArena& allocator,
-                                fuchsia_fs::wire::FilesystemInfo& out) override;
+  zx::status<fs::FilesystemInfo> GetFilesystemInfo() override;
 
  private:
   explicit Vfs(async_dispatcher_t* dispatcher);

@@ -62,10 +62,7 @@ void Runner::Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) {
   });
 }
 
-zx_status_t Runner::GetFilesystemInfo(fidl::AnyArena& allocator,
-                                      fuchsia_fs::wire::FilesystemInfo& out) {
-  return blobfs_->GetFilesystemInfo(allocator, out);
-}
+zx::status<fs::FilesystemInfo> Runner::GetFilesystemInfo() { return blobfs_->GetFilesystemInfo(); }
 
 zx_status_t Runner::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root, ServeLayout layout) {
   fbl::RefPtr<fs::Vnode> vn;

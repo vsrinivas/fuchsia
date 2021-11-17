@@ -307,8 +307,7 @@ class Minfs :
 
   // FuchsiaVfs overrides.
   void Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) final;
-  zx_status_t GetFilesystemInfo(fidl::AnyArena& allocator,
-                                fuchsia_fs::wire::FilesystemInfo& out) final;
+  zx::status<fs::FilesystemInfo> GetFilesystemInfo() final;
 
   // Signals the completion object as soon as the journal has finished synchronizing.
   void Sync(SyncCallback closure = {});

@@ -5,10 +5,11 @@ use {
     crate::{directory::FatDirectory, filesystem::FatFilesystem, node::Node},
     anyhow::Error,
     fatfs::FsOptions,
-    fidl_fuchsia_fs::{AdminRequest, FilesystemInfo, FsType, QueryRequest},
+    fidl_fuchsia_fs::{AdminRequest, QueryRequest},
     fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
+    fidl_fuchsia_io_admin::FilesystemInfo,
     fuchsia_syslog::{fx_log_err, fx_log_warn},
-    fuchsia_zircon::{HandleBased, Rights, Status},
+    fuchsia_zircon::{AsHandleRef, Status},
     std::pin::Pin,
     std::sync::Arc,
     vfs::{
@@ -44,6 +45,15 @@ pub use types::Disk;
 /// This is the minimum possible value. For instance, a 300 byte UTF-8 string could fit inside 255
 /// UCS-2 codepoints (if it had some 16 bit characters), but a 300 byte ASCII string would not fit.
 pub const MAX_FILENAME_LEN: u32 = 255;
+
+pub const VFS_TYPE_FATFS: u32 = 0xce694d21;
+
+// An array used to initialize the FilesystemInfo |name| field. This just spells "fatfs" 0-padded to
+// 32 bytes.
+pub const FATFS_INFO_NAME: [i8; 32] = [
+    0x66, 0x61, 0x74, 0x66, 0x73, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0,
+];
 
 pub trait RootDirectory: DirectoryEntry + Directory {}
 impl<T: DirectoryEntry + Directory> RootDirectory for T {}
@@ -87,23 +97,27 @@ impl FatFs {
     }
 
     fn get_info(&self) -> Result<FilesystemInfo, Status> {
-        let mut result = FilesystemInfo::EMPTY;
         let fs_lock = self.inner.lock().unwrap();
 
         let cluster_size = fs_lock.cluster_size() as u64;
         let total_clusters = fs_lock.total_clusters()? as u64;
-        result.total_bytes = Some(cluster_size * total_clusters);
-
         let free_clusters = fs_lock.free_clusters()? as u64;
-        result.used_bytes = Some(cluster_size * (total_clusters - free_clusters));
+        let block_size = fs_lock.sector_size()? as u32;
 
-        result.fs_id = Some(self.inner.fs_id().duplicate_handle(Rights::BASIC)?);
-        result.block_size = Some(fs_lock.sector_size()? as u32);
-        result.max_node_name_size = Some(MAX_FILENAME_LEN);
-        result.fs_type = Some(FsType::Fatfs);
-        result.name = Some("fatfs".to_owned());
-
-        Ok(result)
+        Ok(FilesystemInfo {
+            total_bytes: cluster_size * total_clusters,
+            used_bytes: cluster_size * (total_clusters - free_clusters),
+            // TODO(fxbug.dev/86984) Define a value for "unknown" or "undefined".
+            total_nodes: 0,
+            used_nodes: 0,
+            free_shared_pool_bytes: 0, // Volume manager is not supported.
+            fs_id: self.inner.fs_id().get_koid()?.raw_koid(),
+            block_size,
+            max_filename_size: MAX_FILENAME_LEN,
+            fs_type: VFS_TYPE_FATFS,
+            padding: 0,
+            name: FATFS_INFO_NAME,
+        })
     }
 
     pub fn handle_query(&self, scope: &ExecutionScope, req: QueryRequest) -> Result<(), Error> {
@@ -175,7 +189,7 @@ mod tests {
         fidl::endpoints::Proxy,
         fidl_fuchsia_io::{DirectoryProxy, FileProxy, NodeMarker, NodeProxy},
         fuchsia_async as fasync,
-        fuchsia_zircon::{AsHandleRef, Status},
+        fuchsia_zircon::Status,
         futures::{future::BoxFuture, prelude::*},
         std::{collections::HashMap, io::Write, ops::Deref},
         vfs::{execution_scope::ExecutionScope, path::Path},
@@ -365,7 +379,7 @@ mod tests {
         let fatfs = disk.into_fatfs();
 
         let mut result = fatfs.get_info().expect("get_info succeeds");
-        result.fs_id = None; // Skip comparing this ID since it's not predictable.
+        result.fs_id = 0; // Skip comparing this ID since it's not predictable.
 
         assert_eq!(
             result,
@@ -373,18 +387,17 @@ mod tests {
                 // An empty FAT disk formatted by fatfs uses 46 sectors for filesystem data:
                 // * 32 reserved sectors (for the BPB, etc.)
                 // * 7 sectors for each of the two FATs.
-                total_bytes: Some(TEST_DISK_SIZE - (46 * 512)),
-                used_bytes: Some(0),
-                total_nodes: None,
-                used_nodes: None,
-                free_shared_pool_bytes: None,
-                fs_id: None,
-                block_size: Some(512),
-                max_node_name_size: Some(MAX_FILENAME_LEN),
-                fs_type: Some(FsType::Fatfs),
-                name: Some("fatfs".to_string()),
-                device_path: None,
-                ..FilesystemInfo::EMPTY
+                total_bytes: TEST_DISK_SIZE - (46 * 512),
+                used_bytes: 0,
+                total_nodes: 0,
+                used_nodes: 0,
+                free_shared_pool_bytes: 0,
+                fs_id: 0,
+                block_size: 512,
+                max_filename_size: MAX_FILENAME_LEN,
+                fs_type: VFS_TYPE_FATFS,
+                padding: 0,
+                name: FATFS_INFO_NAME,
             }
         );
     }
@@ -398,7 +411,7 @@ mod tests {
         let fatfs = disk.into_fatfs();
 
         let result = fatfs.get_info().expect("get_info succeeds");
-        assert_eq!(result.used_bytes, Some(cluster_size as u64));
+        assert_eq!(result.used_bytes, cluster_size as u64);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -406,8 +419,6 @@ mod tests {
         let fatfs = TestFatDisk::empty_disk(TEST_DISK_SIZE).into_fatfs();
         let result = fatfs.get_info().expect("get_info succeeds");
         let result2 = fatfs.get_info().expect("get_info succeeds");
-        let koid = result.fs_id.unwrap().get_koid().expect("get_koid succeeds");
-        let koid2 = result2.fs_id.unwrap().get_koid().expect("get_koid succeeds");
-        assert_eq!(koid, koid2);
+        assert_eq!(result.fs_id, result2.fs_id);
     }
 }

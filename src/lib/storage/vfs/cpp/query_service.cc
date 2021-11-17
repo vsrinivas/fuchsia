@@ -19,12 +19,11 @@ QueryService::QueryService(FuchsiaVfs* vfs)
       vfs_(vfs) {}
 
 void QueryService::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
-  fidl::Arena allocator;
-  fuchsia_fs::wire::FilesystemInfo out(allocator);
-  if (zx_status_t status = vfs_->GetFilesystemInfo(allocator, out); status != ZX_OK) {
-    completer.ReplyError(status);
+  zx::status<FilesystemInfo> info_or = vfs_->GetFilesystemInfo();
+  if (info_or.is_ok()) {
+    completer.ReplySuccess(info_or->ToFidl());
   } else {
-    completer.ReplySuccess(std::move(out));
+    completer.ReplyError(info_or.error_value());
   }
 }
 

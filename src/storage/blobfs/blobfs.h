@@ -107,7 +107,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   zx_status_t AddBlocks(size_t nblocks, RawBitmap* block_map) final;
 
   // Returns filesystem specific information.
-  zx_status_t GetFilesystemInfo(fidl::AnyArena& allocator, fuchsia_fs::wire::FilesystemInfo& out);
+  zx::status<fs::FilesystemInfo> GetFilesystemInfo();
 
   // TransactionManager interface.
   //

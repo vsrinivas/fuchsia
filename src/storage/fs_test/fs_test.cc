@@ -671,7 +671,7 @@ zx::status<uint64_t> TestFilesystem::GetFsInfoTotalBytes() const {
     return zx::error(result.status());  // Transport error.
   if (result->result.is_err())
     return zx::error(result->result.err());  // Domain specific error.
-  return zx::ok(result->result.response().info.total_bytes());
+  return zx::ok(result->result.response().info.total_bytes);
 }
 
 zx::status<uint64_t> TestFilesystem::GetFsInfoUsedBytes() const {
@@ -684,7 +684,7 @@ zx::status<uint64_t> TestFilesystem::GetFsInfoUsedBytes() const {
     return zx::error(result.status());  // Transport error.
   if (result->result.is_err())
     return zx::error(result->result.err());  // Domain specific error.
-  return zx::ok(result->result.response().info.used_bytes());
+  return zx::ok(result->result.response().info.used_bytes);
 }
 
 }  // namespace fs_test

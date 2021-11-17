@@ -44,7 +44,7 @@ class Factoryfs {
   virtual ~Factoryfs();
   zx_status_t OpenRootNode(fbl::RefPtr<fs::Vnode>* out);
 
-  zx_status_t GetFilesystemInfo(fidl::AnyArena& allocator, fuchsia_fs::wire::FilesystemInfo& out);
+  zx::status<fs::FilesystemInfo> GetFilesystemInfo();
 
   fs::FuchsiaVfs* vfs() const { return vfs_; }
   const Superblock& Info() const { return superblock_; }

@@ -11,30 +11,44 @@ const MOUNT_CREATE_FLAG_REPLACE uint32 = 0x00000001;
 const MAX_FS_NAME_BUFFER uint64 = 32;
 
 type FilesystemInfo = struct {
-    /// The number of data bytes which may be stored in a filesystem.
+    /// The number of data bytes which may be stored in a filesystem. This does not count
+    /// metadata or other filesystem overhead like block rounding.
     total_bytes uint64;
-    /// The number of data bytes which are in use by the filesystem.
+
+    /// The number of data bytes which are in use by the filesystem. This does not count
+    /// metadata or other filesystem overhead like block rounding.
     used_bytes uint64;
+
     /// The number of nodes which may be stored in the filesystem.
     total_nodes uint64;
+
     /// The number of nodes used by the filesystem.
     used_nodes uint64;
-    /// The amount of space which may be allocated from the underlying
-    /// volume manager. If unsupported, this will be zero.
+
+    /// The amount of additional space which may be allocated from the underlying volume manager.
+    /// If unsupported or there is no space for the filesystem to grow, this will be zero.
     free_shared_pool_bytes uint64;
-    /// A unique identifier for this filesystem instance. Will not be preserved
-    /// across reboots.
+
+    /// A unique identifier for this filesystem instance. Will not be preserved across reboots.
+    ///
+    /// Implementors should create a kernel object (normally an event) and use its koid for the
+    /// filesystem ID. This koid guarantees uniqueness in the system.
     fs_id uint64;
-    /// The size of a single filesystem block.
+
+    /// The size in bytes of a single filesystem block.
     block_size uint32;
+
     /// The maximum length of a filesystem name.
     max_filename_size uint32;
-    /// A unique identifier for the type of the underlying filesystem.
+
+    /// A unique identifier for the type of the underlying filesystem. These constants are the
+    /// VFS_TYPE_* constants defined in zircon/device/vfs.h.
     fs_type uint32;
+
     padding uint32;
-    // TODO(smklein): Replace this field with a string when supported
-    // by the "Simple" interface. At the moment, name is a fixed-size,
-    // null-terminated buffer.
+
+    // TODO(smklein): Replace this field with a string when supported by the "Simple" interface. At
+    // the moment, name is a fixed-size, null-terminated buffer.
     name array<int8, MAX_FS_NAME_BUFFER>;
 };
 

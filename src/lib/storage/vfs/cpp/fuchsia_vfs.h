@@ -30,6 +30,29 @@ namespace internal {
 class Connection;
 }  // namespace internal
 
+// An internal version of fuchsia_io_admin::wire::FilesystemInfo with a simpler API and default
+// initializers. See that FIDL struct for documentation.
+struct FilesystemInfo {
+  uint64_t total_bytes = 0;
+  uint64_t used_bytes = 0;
+  uint64_t total_nodes = 0;
+  uint64_t used_nodes = 0;
+  uint64_t free_shared_pool_bytes = 0;
+  uint64_t fs_id = 0;  // One of VFS_TYPE_*
+  uint32_t block_size = 0;
+  uint32_t max_filename_size = 0;
+  uint32_t fs_type = 0;
+  std::string name;  // Length must be less than MAX_FS_NAME_BUFFER.
+
+  // To ensure global uniqueness, filesystems should create and maintain an event object. The koid
+  // of this object is guaranteed unique in the system and is used for the filesystem ID. This
+  // function extracts the koid of the given event object and sets it as the filesystem ID.
+  void SetFsId(const zx::event& event);
+
+  // Writes this object's values to the given FIDL object.
+  fuchsia_io_admin::wire::FilesystemInfo ToFidl() const;
+};
+
 // Vfs specialization that adds Fuchsia-specific
 class FuchsiaVfs : public Vfs {
  public:
@@ -61,12 +84,10 @@ class FuchsiaVfs : public Vfs {
   zx_status_t Rename(zx::event token, fbl::RefPtr<Vnode> oldparent, std::string_view oldStr,
                      std::string_view newStr) __TA_EXCLUDES(vfs_lock_);
 
-  // Provides the implementation for fuchsia.fs.Query. This default implementation returns
-  // ZX_ERR_NOT_SUPPORTED. The implementation should use the given allocator when setting the
-  // values in the |out| struct.
-  virtual zx_status_t GetFilesystemInfo(fidl::AnyArena& allocator,
-                                        fuchsia_fs::wire::FilesystemInfo& out)
-      __TA_EXCLUDES(vfs_lock_);
+  // Provides the implementation for fuchsia.fs.Query.GetInfo() and
+  // fuchsia.io.admin.DirectoryAdmin.QueryFilesystem(). This default implementation returns
+  // ZX_ERR_NOT_SUPPORTED.
+  virtual zx::status<FilesystemInfo> GetFilesystemInfo() __TA_EXCLUDES(vfs_lock_);
 
   async_dispatcher_t* dispatcher() const { return dispatcher_; }
   void SetDispatcher(async_dispatcher_t* dispatcher);

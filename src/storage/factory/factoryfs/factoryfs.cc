@@ -65,22 +65,20 @@ zx_status_t Factoryfs::OpenRootNode(fbl::RefPtr<fs::Vnode>* out) {
   return ZX_OK;
 }
 
-zx_status_t Factoryfs::GetFilesystemInfo(fidl::AnyArena& allocator,
-                                         fuchsia_fs::wire::FilesystemInfo& out) {
-  out.set_block_size(kFactoryfsBlockSize);
-  out.set_max_node_name_size(kFactoryfsMaxNameSize);
-  out.set_fs_type(fuchsia_fs::wire::FsType::kFactoryfs);
-  out.set_total_bytes(allocator, superblock_.data_blocks * kFactoryfsBlockSize);
-  out.set_used_bytes(allocator, superblock_.data_blocks * kFactoryfsBlockSize);
-  out.set_total_nodes(allocator, superblock_.directory_entries);
-  out.set_used_nodes(allocator, superblock_.directory_entries);
-  out.set_name(allocator, fidl::StringView(allocator, "factoryfs"));
+zx::status<fs::FilesystemInfo> Factoryfs::GetFilesystemInfo() {
+  fs::FilesystemInfo info;
 
-  zx::event fs_id_copy;
-  if (fs_id_.duplicate(ZX_RIGHTS_BASIC, &fs_id_copy) == ZX_OK)
-    out.set_fs_id(std::move(fs_id_copy));
+  info.block_size = kFactoryfsBlockSize;
+  info.max_filename_size = kFactoryfsMaxNameSize;
+  info.fs_type = VFS_TYPE_FACTORYFS;
+  info.total_bytes = superblock_.data_blocks * kFactoryfsBlockSize;
+  info.used_bytes = superblock_.data_blocks * kFactoryfsBlockSize;
+  info.total_nodes = superblock_.directory_entries;
+  info.used_nodes = superblock_.directory_entries;
+  info.SetFsId(fs_id_);
+  info.name = "factoryfs";
 
-  return ZX_OK;
+  return zx::ok(info);
 }
 
 Factoryfs::Factoryfs(std::unique_ptr<BlockDevice> device, const Superblock* superblock,

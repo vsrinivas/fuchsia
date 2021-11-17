@@ -17,7 +17,7 @@ use {
             file::FxFile,
             node::{FxNode, GetResult, OpenedNode},
             volume::FxVolume,
-            TOTAL_NODES,
+            FXFS_INFO_NAME, TOTAL_NODES, VFS_TYPE_FXFS,
         },
     },
     anyhow::{bail, Error},
@@ -25,7 +25,6 @@ use {
     either::{Left, Right},
     fdio::fdio_sys::{V_IRGRP, V_IROTH, V_IRWXU, V_IXGRP, V_IXOTH, V_TYPE_DIR},
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_fs::FsType,
     fidl_fuchsia_io::{
         self as fio, NodeAttributes, NodeMarker, MAX_FILENAME, MODE_TYPE_BLOCK_DEVICE,
         MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_MASK, MODE_TYPE_SERVICE, MODE_TYPE_SOCKET,
@@ -639,9 +638,9 @@ impl Directory for FxDirectory {
             fs_id: 0, // TODO(csuter)
             block_size: info.block_size.try_into().unwrap(),
             max_filename_size: MAX_FILENAME as u32,
-            fs_type: FsType::Fxfs.into_primitive(),
+            fs_type: VFS_TYPE_FXFS,
             padding: 0,
-            name: Default::default(),
+            name: FXFS_INFO_NAME,
         })
     }
 }

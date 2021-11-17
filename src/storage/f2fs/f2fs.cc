@@ -270,27 +270,22 @@ zx_status_t FlushDirtyNodePage(F2fs* fs, Page& page) {
 
 #ifdef __Fuchsia__
 
-zx_status_t F2fs::GetFilesystemInfo(fidl::AnyArena& allocator,
-                                    fuchsia_fs::wire::FilesystemInfo& out) {
-  out.set_block_size(kBlockSize);
-  out.set_max_node_name_size(kMaxNameLen);
-  out.set_fs_type(fuchsia_fs::wire::FsType::kF2Fs);
-  out.set_total_bytes(allocator, superblock_info_->GetUserBlockCount() * kBlockSize);
-  out.set_used_bytes(allocator, ValidUserBlocks() * kBlockSize);
-  out.set_total_nodes(allocator, superblock_info_->GetTotalNodeCount());
-  out.set_used_nodes(allocator, superblock_info_->GetTotalValidInodeCount());
-  out.set_name(allocator, fidl::StringView(allocator, "f2fs"));
+zx::status<fs::FilesystemInfo> F2fs::GetFilesystemInfo() {
+  fs::FilesystemInfo info;
 
-  zx::event fs_id_copy;
-  if (fs_id_.duplicate(ZX_RIGHTS_BASIC, &fs_id_copy) == ZX_OK)
-    out.set_fs_id(std::move(fs_id_copy));
-
-  if (auto device_path_or = bc_->device()->GetDevicePath(); device_path_or.is_ok())
-    out.set_device_path(allocator, fidl::StringView(allocator, device_path_or.value()));
+  info.block_size = kBlockSize;
+  info.max_filename_size = kMaxNameLen;
+  info.fs_type = VFS_TYPE_F2FS;
+  info.total_bytes = superblock_info_->GetUserBlockCount() * kBlockSize;
+  info.used_bytes = ValidUserBlocks() * kBlockSize;
+  info.total_nodes = superblock_info_->GetTotalNodeCount();
+  info.used_nodes = superblock_info_->GetTotalValidInodeCount();
+  info.SetFsId(fs_id_);
+  info.name = "f2fs";
 
   // TODO(unknown): Fill free_shared_pool_bytes using fvm info
 
-  return ZX_OK;
+  return zx::ok(info);
 }
 
 #endif  // __Fuchsia__

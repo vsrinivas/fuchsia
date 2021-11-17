@@ -9,12 +9,11 @@ use {
         refs::{FatfsDirRef, FatfsFileRef},
         types::{Dir, DirEntry},
         util::{dos_to_unix_time, fatfs_error_to_status, unix_to_dos_time},
-        MAX_FILENAME_LEN,
+        FATFS_INFO_NAME, MAX_FILENAME_LEN, VFS_TYPE_FATFS,
     },
     async_trait::async_trait,
     fatfs::validate_filename,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_fs::FsType,
     fidl_fuchsia_io::{
         self as fio, NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE,
         INO_UNKNOWN, MODE_TYPE_DIRECTORY, MODE_TYPE_MASK, OPEN_FLAG_CREATE,
@@ -736,12 +735,6 @@ impl Directory for FatDirectory {
         let total_bytes = cluster_size * total_clusters;
         let used_bytes = cluster_size * (total_clusters - free_clusters);
 
-        // "fatfs"
-        let name = [
-            0x66, 0x61, 0x74, 0x66, 0x73, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-        ];
-
         Ok(FilesystemInfo {
             total_bytes,
             used_bytes,
@@ -751,9 +744,9 @@ impl Directory for FatDirectory {
             fs_id: self.filesystem.fs_id().get_koid()?.raw_koid(),
             block_size: cluster_size as u32,
             max_filename_size: MAX_FILENAME_LEN,
-            fs_type: FsType::Fatfs.into_primitive(),
+            fs_type: VFS_TYPE_FATFS,
             padding: 0,
-            name,
+            name: FATFS_INFO_NAME,
         })
     }
 }

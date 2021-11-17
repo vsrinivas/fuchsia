@@ -43,9 +43,8 @@ void Runner::Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) {
   });
 }
 
-zx_status_t Runner::GetFilesystemInfo(fidl::AnyArena& allocator,
-                                      fuchsia_fs::wire::FilesystemInfo& out) {
-  return factoryfs_->GetFilesystemInfo(allocator, out);
+zx::status<fs::FilesystemInfo> Runner::GetFilesystemInfo() {
+  return factoryfs_->GetFilesystemInfo();
 }
 
 zx_status_t Runner::ServeRoot(zx::channel root, ServeLayout layout) {

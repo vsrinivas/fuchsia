@@ -50,11 +50,11 @@ TEST_P(QueryFilesystemTest, QueryTest) {
     ASSERT_TRUE(result.ok() && result->result.is_response());
     const auto& info2 = result->result.response().info;
 
-    EXPECT_EQ(info2.total_bytes(), info.total_bytes);
-    EXPECT_EQ(info2.used_bytes(), info.used_bytes);
-    EXPECT_EQ(info2.block_size(), info.block_size);
-    EXPECT_EQ(info2.max_node_name_size(), info.max_filename_size);
-    EXPECT_EQ(static_cast<uint32_t>(info2.fs_type()), info.fs_type);
+    EXPECT_EQ(info2.total_bytes, info.total_bytes);
+    EXPECT_EQ(info2.used_bytes, info.used_bytes);
+    EXPECT_EQ(info2.block_size, info.block_size);
+    EXPECT_EQ(info2.max_filename_size, info.max_filename_size);
+    EXPECT_EQ(info2.fs_type, info.fs_type);
     // TODO(csuter): Add support for other members
   }
 
@@ -92,11 +92,11 @@ TEST_P(QueryFilesystemTest, QueryTest) {
     ASSERT_TRUE(result2.ok() && result2->result.is_response());
     const auto& info3 = result2->result.response().info;
 
-    EXPECT_EQ(info3.total_bytes(), info2.total_bytes);
-    EXPECT_EQ(info3.used_bytes(), info2.used_bytes);
-    EXPECT_EQ(info3.block_size(), info2.block_size);
-    EXPECT_EQ(info3.max_node_name_size(), info2.max_filename_size);
-    EXPECT_EQ(static_cast<uint32_t>(info3.fs_type()), info2.fs_type);
+    EXPECT_EQ(info3.total_bytes, info2.total_bytes);
+    EXPECT_EQ(info3.used_bytes, info2.used_bytes);
+    EXPECT_EQ(info3.block_size, info2.block_size);
+    EXPECT_EQ(info3.max_filename_size, info2.max_filename_size);
+    EXPECT_EQ(info3.fs_type, info2.fs_type);
   }
 }
 

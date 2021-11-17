@@ -729,25 +729,22 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks, RawBitmap* block_map) {
   return ZX_OK;
 }
 
-zx_status_t Blobfs::GetFilesystemInfo(fidl::AnyArena& allocator,
-                                      fuchsia_fs::wire::FilesystemInfo& out) {
-  out.set_block_size(kBlobfsBlockSize);
-  out.set_max_node_name_size(digest::kSha256HexLength);
-  out.set_fs_type(fuchsia_fs::wire::FsType::kBlobfs);
-  out.set_total_bytes(allocator, Info().data_block_count * Info().block_size);
-  out.set_used_bytes(allocator, Info().alloc_block_count * Info().block_size);
-  out.set_total_nodes(allocator, Info().inode_count);
-  out.set_used_nodes(allocator, Info().alloc_inode_count);
-  out.set_name(allocator, fidl::StringView(allocator, "blobfs"));
+zx::status<fs::FilesystemInfo> Blobfs::GetFilesystemInfo() {
+  fs::FilesystemInfo info;
 
-  zx::event fs_id_copy;
-  if (fs_id_.duplicate(ZX_RIGHTS_BASIC, &fs_id_copy) == ZX_OK)
-    out.set_fs_id(std::move(fs_id_copy));
+  info.block_size = kBlobfsBlockSize;
+  info.max_filename_size = digest::kSha256HexLength;
+  info.fs_type = VFS_TYPE_BLOBFS;
+  // data_block_count and alloc_block_count are 64-bits so this shouldn't overflow unless the
+  // header is corrupt.
+  info.total_bytes = Info().data_block_count * Info().block_size;
+  info.used_bytes = Info().alloc_block_count * Info().block_size;
+  info.total_nodes = Info().inode_count;
+  info.used_nodes = Info().alloc_inode_count;
+  info.SetFsId(fs_id_);
+  info.name = "blobfs";
 
-  if (auto device_path_or = Device()->GetDevicePath(); device_path_or.is_ok())
-    out.set_device_path(allocator, fidl::StringView(allocator, device_path_or.value()));
-
-  return ZX_OK;
+  return zx::ok(info);
 }
 
 zx::status<BlockIterator> Blobfs::BlockIteratorByNodeIndex(uint32_t node_index) {

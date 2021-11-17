@@ -61,33 +61,27 @@ zx_status_t Vfs::GrowVMO(zx::vmo& vmo, size_t current_size, size_t request_size,
   return ZX_OK;
 }
 
-zx_status_t Vfs::GetFilesystemInfo(fidl::AnyArena& allocator,
-                                   fuchsia_fs::wire::FilesystemInfo& out) {
-  out.set_block_size(GetPageSize());
-  out.set_max_node_name_size(kDnodeNameMax);
-  out.set_fs_type(fuchsia_fs::wire::FsType::kMemfs);
+zx::status<fs::FilesystemInfo> Vfs::GetFilesystemInfo() {
+  fs::FilesystemInfo info;
 
-  zx::event fs_id_copy;
-  if (fs_id_.duplicate(ZX_RIGHTS_BASIC, &fs_id_copy) == ZX_OK)
-    out.set_fs_id(std::move(fs_id_copy));
+  info.block_size = GetPageSize();
+  info.max_filename_size = kDnodeNameMax;
+  info.fs_type = VFS_TYPE_MEMFS;
+  info.SetFsId(fs_id_);
 
-  // There's no sensible value to use for the total_bytes for memfs. Fuchsia overcommits memory,
-  // which means you can have a memfs that stores more total bytes than the device has physical
-  // memory. You can actually commit more total_bytes than the device has physical memory because
-  // of zero-page deduplication.
-  out.set_total_bytes(allocator, UINT64_MAX);
-  // It's also very difficult to come up with a sensible value for used_bytes because memfs vends
-  // writable duplicates of its underlying VMOs to its client. The client can manipulate the VMOs
-  // in arbitrarily difficult ways to account for their memory usage.
-  out.set_used_bytes(allocator, 0);
-  out.set_total_nodes(allocator, UINT64_MAX);
+  // TODO(fxbug.dev/86984) Define a better value for "unknown" or "undefined" for the total_bytes
+  // and used_bytes (memfs vends writable duplicates of its underlying VMOs to its clients which
+  // makes accounting difficult).
+  info.total_bytes = UINT64_MAX;
+  info.used_bytes = 0;
+  info.total_nodes = UINT64_MAX;
   uint64_t deleted_ino_count = VnodeMemfs::GetDeletedInoCounter();
   uint64_t ino_count = VnodeMemfs::GetInoCounter();
   ZX_DEBUG_ASSERT(ino_count >= deleted_ino_count);
-  out.set_used_nodes(allocator, ino_count - deleted_ino_count);
-  out.set_name(allocator, fidl::StringView(allocator, "memfs"));
+  info.used_nodes = ino_count - deleted_ino_count;
+  info.name = "memfs";
 
-  return ZX_OK;
+  return zx::ok(info);
 }
 
 zx_status_t Vfs::Create(async_dispatcher_t* dispatcher, std::string_view fs_name,

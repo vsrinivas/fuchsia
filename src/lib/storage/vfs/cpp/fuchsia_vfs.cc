@@ -58,6 +58,37 @@ uint32_t ToStreamOptions(const VnodeConnectionOptions& options) {
 
 }  // namespace
 
+void FilesystemInfo::SetFsId(const zx::event& event) {
+  zx_info_handle_basic_t handle_info;
+  if (zx_status_t status =
+          event.get_info(ZX_INFO_HANDLE_BASIC, &handle_info, sizeof(handle_info), nullptr, nullptr);
+      status == ZX_OK) {
+    fs_id = handle_info.koid;
+  } else {
+    fs_id = ZX_KOID_INVALID;
+  }
+}
+
+fuchsia_io_admin::wire::FilesystemInfo FilesystemInfo::ToFidl() const {
+  fuchsia_io_admin::wire::FilesystemInfo out = {};
+
+  out.total_bytes = total_bytes;
+  out.used_bytes = used_bytes;
+  out.total_nodes = total_nodes;
+  out.used_nodes = used_nodes;
+  out.free_shared_pool_bytes = free_shared_pool_bytes;
+  out.fs_id = fs_id;
+  out.block_size = block_size;
+  out.max_filename_size = max_filename_size;
+  out.fs_type = fs_type;
+
+  ZX_DEBUG_ASSERT(name.size() < fuchsia_io_admin::wire::kMaxFsNameBuffer);
+  out.name[name.copy(reinterpret_cast<char*>(out.name.data()),
+                     fuchsia_io_admin::wire::kMaxFsNameBuffer - 1)] = '\0';
+
+  return out;
+}
+
 constexpr FuchsiaVfs::MountNode::MountNode() = default;
 FuchsiaVfs::MountNode::~MountNode() { ZX_DEBUG_ASSERT(vn_ == nullptr); }
 
@@ -208,9 +239,8 @@ zx_status_t FuchsiaVfs::Rename(zx::event token, fbl::RefPtr<Vnode> oldparent,
   return ZX_OK;
 }
 
-zx_status_t FuchsiaVfs::GetFilesystemInfo(fidl::AnyArena& allocator,
-                                          fuchsia_fs::wire::FilesystemInfo& out) {
-  return ZX_ERR_NOT_SUPPORTED;
+zx::status<FilesystemInfo> FuchsiaVfs::GetFilesystemInfo() {
+  return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
 zx_status_t FuchsiaVfs::Link(zx::event token, fbl::RefPtr<Vnode> oldparent, std::string_view oldStr,

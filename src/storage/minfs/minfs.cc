@@ -1460,32 +1460,22 @@ void Minfs::Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) {
   });
 }
 
-zx_status_t Minfs::GetFilesystemInfo(fidl::AnyArena& allocator,
-                                     fuchsia_fs::wire::FilesystemInfo& out) {
+zx::status<fs::FilesystemInfo> Minfs::GetFilesystemInfo() {
+  fs::FilesystemInfo info;
   uint32_t reserved_blocks = BlocksReserved();
 
-  out.set_block_size(BlockSize());
-  out.set_max_node_name_size(kMinfsMaxNameSize);
-  out.set_fs_type(fuchsia_fs::wire::FsType::kMinfs);
+  info.block_size = BlockSize();
+  info.max_filename_size = kMinfsMaxNameSize;
+  info.fs_type = VFS_TYPE_MINFS;
+  info.total_bytes = Info().block_count * Info().block_size;
+  info.used_bytes = (Info().alloc_block_count + reserved_blocks) * Info().block_size;
+  info.total_nodes = Info().inode_count;
+  info.used_nodes = Info().alloc_inode_count;
+  info.free_shared_pool_bytes = GetFreeFvmBytes();
+  info.SetFsId(fs_id_);
+  info.name = "minfs";
 
-  // For minfs, the total_bytes/used_bytes refers only to data blocks, not metadata blocks.
-  out.set_total_bytes(allocator, Info().block_count * Info().block_size);
-  out.set_used_bytes(allocator, (Info().alloc_block_count + reserved_blocks) * Info().block_size);
-
-  out.set_total_nodes(allocator, Info().inode_count);
-  out.set_used_nodes(allocator, Info().alloc_inode_count);
-  out.set_free_shared_pool_bytes(allocator, GetFreeFvmBytes());
-
-  zx::event fs_id_copy;
-  if (fs_id_.duplicate(ZX_RIGHTS_BASIC, &fs_id_copy) == ZX_OK)
-    out.set_fs_id(std::move(fs_id_copy));
-
-  if (auto device_path_or = bc_->device()->GetDevicePath(); device_path_or.is_ok())
-    out.set_device_path(allocator, fidl::StringView(allocator, device_path_or.value()));
-
-  out.set_name(allocator, fidl::StringView(allocator, "minfs"));
-
-  return ZX_OK;
+  return zx::ok(info);
 }
 
 #endif

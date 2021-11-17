@@ -8,6 +8,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/zx/vmo.h>
+#include <zircon/device/vfs.h>
 
 #include <array>
 #include <atomic>
@@ -50,44 +51,26 @@ class QueryServiceTest : public BlobfsWithFvmTest {
     const auto& query_result = call_result.value().result;
     ASSERT_TRUE(query_result.is_response());
 
-    const fuchsia_fs::wire::FilesystemInfo& info = query_result.response().info;
+    const fuchsia_io_admin::wire::FilesystemInfo& info = query_result.response().info;
 
     // Check that total_bytes are a multiple of slice size.
     const uint64_t slice_size = fs().options().fvm_slice_size;
-    EXPECT_GE(info.total_bytes(), slice_size);
-    EXPECT_EQ(info.total_bytes() % slice_size, 0ul);
+    EXPECT_GE(info.total_bytes, slice_size);
+    EXPECT_EQ(info.total_bytes % slice_size, 0ul);
 
     // Check that used_bytes are within a reasonable range.
-    EXPECT_GE(info.used_bytes(), expected_bytes);
-    EXPECT_LE(info.used_bytes(), info.total_bytes());
+    EXPECT_GE(info.used_bytes, expected_bytes);
+    EXPECT_LE(info.used_bytes, info.total_bytes);
 
-    EXPECT_GE(info.total_nodes(), expected_nodes);
-    EXPECT_EQ((info.total_nodes() * sizeof(Inode)) % slice_size, 0ul);
-    EXPECT_EQ(info.used_nodes(), expected_nodes);
+    EXPECT_GE(info.total_nodes, expected_nodes);
+    EXPECT_EQ((info.total_nodes * sizeof(Inode)) % slice_size, 0ul);
+    EXPECT_EQ(info.used_nodes, expected_nodes);
+    EXPECT_NE(info.fs_id, 0u);  // Just validate a nonzero ID value.
+    EXPECT_EQ(info.block_size, kBlobfsBlockSize);
+    EXPECT_EQ(info.max_filename_size, digest::kSha256HexLength);
+    EXPECT_EQ(info.fs_type, VFS_TYPE_BLOBFS);
 
-    // Should be able to query for the koid of the |fs_id| event.
-    EXPECT_TRUE(info.fs_id().is_valid());
-    zx_info_handle_basic_t event_info;
-    EXPECT_EQ(info.fs_id().get_info(ZX_INFO_HANDLE_BASIC, &event_info, sizeof(event_info), nullptr,
-                                    nullptr),
-              ZX_OK);
-    EXPECT_GE(event_info.koid, 0ul);
-
-    EXPECT_EQ(info.block_size(), kBlobfsBlockSize);
-    EXPECT_EQ(info.max_node_name_size(), digest::kSha256HexLength);
-    EXPECT_EQ(info.fs_type(), fuchsia_fs::wire::FsType::kBlobfs);
-
-    const std::string expected_fs_name = "blobfs";
-    ASSERT_EQ(expected_fs_name.size(), info.name().size());
-    ASSERT_EQ(std::string(info.name().data(), info.name().size()), expected_fs_name)
-        << "Unexpected filesystem mounted";
-
-    const std::string expected_device_path =
-        storage::GetTopologicalPath(fs().DevicePath().value()).value();
-    ASSERT_EQ(expected_device_path.size(), info.device_path().size());
-    ASSERT_EQ(std::string(info.device_path().data(), info.device_path().size()),
-              expected_device_path)
-        << "Incorrect device path";
+    ASSERT_EQ(reinterpret_cast<const char*>(info.name.data()), std::string("blobfs"));
   }
 };
 

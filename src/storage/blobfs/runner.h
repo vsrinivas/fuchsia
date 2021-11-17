@@ -37,8 +37,7 @@ class Runner : public fs::PagedVfs {
 
   // fs::PagedVfs implementation.
   void Shutdown(fs::FuchsiaVfs::ShutdownCallback closure) final;
-  zx_status_t GetFilesystemInfo(fidl::AnyArena& allocator,
-                                fuchsia_fs::wire::FilesystemInfo& out) override;
+  zx::status<fs::FilesystemInfo> GetFilesystemInfo() final;
 
   // Serves the root directory of the filesystem using |root| as the server-end of an IPC
   // connection.

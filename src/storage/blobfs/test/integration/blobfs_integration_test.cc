@@ -467,28 +467,27 @@ void QueryInfo(fs_test::TestFilesystem& fs, size_t expected_nodes, size_t expect
   const auto& query_result = fidl::WireCall(client_end->borrow())->GetInfo();
   ASSERT_TRUE(query_result.ok());
 
-  const fuchsia_fs::wire::FilesystemInfo& info = query_result.value().result.response().info;
+  const fuchsia_io_admin::wire::FilesystemInfo& info = query_result.value().result.response().info;
 
   constexpr std::string_view kFsName = "blobfs";
-  const char* name = reinterpret_cast<const char*>(info.name().data());
+  const char* name = reinterpret_cast<const char*>(info.name.data());
   ASSERT_EQ(name, kFsName) << "Unexpected filesystem mounted";
-  EXPECT_EQ(info.block_size(), kBlobfsBlockSize);
-  EXPECT_EQ(info.max_node_name_size(), 64U);
-  static_assert(VFS_TYPE_BLOBFS == (unsigned long)fuchsia_fs::wire::FsType::kBlobfs);
-  EXPECT_EQ(info.fs_type(), fuchsia_fs::wire::FsType::kBlobfs);
-  EXPECT_NE(info.fs_id(), 0ul);
+  EXPECT_EQ(info.block_size, kBlobfsBlockSize);
+  EXPECT_EQ(info.max_filename_size, 64U);
+  EXPECT_EQ(info.fs_type, VFS_TYPE_BLOBFS);
+  EXPECT_NE(info.fs_id, 0ul);
 
   // Check that used_bytes are within a reasonable range
-  EXPECT_GE(info.used_bytes(), expected_bytes);
-  EXPECT_LE(info.used_bytes(), info.total_bytes());
+  EXPECT_GE(info.used_bytes, expected_bytes);
+  EXPECT_LE(info.used_bytes, info.total_bytes);
 
   // Check that total_bytes are a multiple of slice_size
   const uint64_t slice_size = fs.options().fvm_slice_size;
-  EXPECT_GE(info.total_bytes(), slice_size);
-  EXPECT_EQ(info.total_bytes() % slice_size, 0ul);
-  EXPECT_GE(info.total_nodes(), fs.options().num_inodes);
-  EXPECT_EQ((info.total_nodes() * sizeof(Inode)) % slice_size, 0ul);
-  EXPECT_EQ(info.used_nodes(), expected_nodes);
+  EXPECT_GE(info.total_bytes, slice_size);
+  EXPECT_EQ(info.total_bytes % slice_size, 0ul);
+  EXPECT_GE(info.total_nodes, fs.options().num_inodes);
+  EXPECT_EQ((info.total_nodes * sizeof(Inode)) % slice_size, 0ul);
+  EXPECT_EQ(info.used_nodes, expected_nodes);
 }
 
 TEST_F(BlobfsWithFvmTest, QueryInfo) {

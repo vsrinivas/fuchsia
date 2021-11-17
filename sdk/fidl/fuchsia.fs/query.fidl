@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 library fuchsia.fs;
 
-using fuchsia.io2;
+using fuchsia.io.admin;
 using zx;
 
 /// `Query` exposes objective filesystem information independent of specific
@@ -12,10 +12,10 @@ using zx;
 protocol Query {
     /// Queries the filesystem.
     ///
-    /// - `info` see [`fuchsia.fs/FilesystemInfo`] for details on the fields.
+    /// - `info` see [`fuchsia.io.admin/FilesystemInfo`] for details on the fields.
     ///
     GetInfo() -> (resource struct {
-        info FilesystemInfo;
+        info fuchsia.io.admin.FilesystemInfo;
     }) error zx.status;
 
     /// Checks if a node is associated with this filesystem, given some token
@@ -25,62 +25,4 @@ protocol Query {
     }) -> (struct {
         is_in_filesystem bool;
     });
-};
-
-/// Information about a filesystem.
-///
-/// If a particular field is not applicable or not supported, implementations
-/// should leave it absent.
-type FilesystemInfo = resource table {
-    /// The number of data bytes which may be stored in the filesystem.
-    1: total_bytes uint64;
-
-    /// The number of data bytes which are in use by the filesystem.
-    /// Note that this value may change in the mean time.
-    2: used_bytes uint64;
-
-    /// The number of nodes which may be stored in the filesystem.
-    3: total_nodes uint64;
-
-    /// The number of nodes used by the filesystem.
-    /// Note that this value may change in the mean time.
-    4: used_nodes uint64;
-
-    /// The amount of space which may be allocated from the underlying
-    /// volume manager. Note that this value may change in the mean time.
-    5: free_shared_pool_bytes uint64;
-
-    /// A globally unique identifier for this filesystem instance.
-    6: fs_id zx.handle:EVENT;
-
-    /// The size of a single filesystem block.
-    7: block_size uint32;
-
-    /// The maximum length of a filesystem name.
-    8: max_node_name_size uint32;
-
-    /// A unique identifier for the type of the underlying filesystem.
-    9: fs_type FsType;
-
-    /// The name of the filesystem.
-   10: name string:MAX_FS_NAME_LENGTH;
-
-    /// Path to the device backing this filesystem.
-   11: device_path fuchsia.io2.Path;
-};
-
-/// The maximum length of the name of a filesystem.
-const MAX_FS_NAME_LENGTH uint64 = 32;
-
-/// The type of the filesystem.
-///
-/// This enum should be flexible, to accommodate future additions.
-type FsType = strict enum : uint32 {
-    BLOBFS = 0x9e694d21;
-    FACTORYFS = 0x1e694d21;
-    FATFS = 0xce694d21;
-    MINFS = 0x6e694d21;
-    MEMFS = 0x3e694d21;
-    FXFS = 0x73667866;
-    F2FS = 0xfe694d21;
 };

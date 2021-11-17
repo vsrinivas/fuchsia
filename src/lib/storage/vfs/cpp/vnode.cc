@@ -305,45 +305,11 @@ zx_status_t Vnode::QueryFilesystem(fuchsia_io_admin::wire::FilesystemInfo* out) 
   if (!vfs_)
     return ZX_ERR_NOT_SUPPORTED;
 
-  // TODO(fxbug.dev/84558) This should be unified with the fs.Query.FilesystemInfo to avoid
-  // this transformation. For now, allow implementation via the fs.Query version and convert to
-  // io.admin.
-  fidl::Arena allocator;
-  fuchsia_fs::wire::FilesystemInfo input(allocator);
-  if (zx_status_t status = vfs_->GetFilesystemInfo(allocator, input); status != ZX_OK)
-    return status;
+  zx::status<FilesystemInfo> info_or = vfs_->GetFilesystemInfo();
+  if (info_or.is_error())
+    return info_or.error_value();
 
-  if (input.has_block_size())
-    out->block_size = input.block_size();
-  if (input.has_max_node_name_size())
-    out->max_filename_size = input.max_node_name_size();
-  if (input.has_fs_type())
-    out->fs_type = static_cast<uint32_t>(input.fs_type());
-  if (input.has_total_bytes())
-    out->total_bytes = input.total_bytes();
-  if (input.has_used_bytes())
-    out->used_bytes = input.used_bytes();
-  if (input.has_total_nodes())
-    out->total_nodes = input.total_nodes();
-  if (input.has_used_nodes())
-    out->used_nodes = input.used_nodes();
-  if (input.has_free_shared_pool_bytes())
-    out->free_shared_pool_bytes = input.free_shared_pool_bytes();
-
-  if (input.has_fs_id()) {
-    zx_info_handle_basic_t handle_info;
-    if (zx_status_t status = input.fs_id().get_info(ZX_INFO_HANDLE_BASIC, &handle_info,
-                                                    sizeof(handle_info), nullptr, nullptr);
-        status == ZX_OK) {
-      out->fs_id = handle_info.koid;
-    }
-  }
-
-  if (input.has_name()) {
-    out->name[input.name().get().copy(reinterpret_cast<char*>(out->name.data()),
-                                      fuchsia_io_admin::wire::kMaxFsNameBuffer - 1)] = '\0';
-  }
-
+  *out = info_or->ToFidl();
   return ZX_OK;
 }
 
