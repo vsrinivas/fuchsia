@@ -43,6 +43,7 @@ sdk_source_set("driver_runtime_cpp") {
   public_configs = [ ":include" ]
   public_deps = [
     ":driver_runtime",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
   ]
   sources = [ "channel_read.cc" ]

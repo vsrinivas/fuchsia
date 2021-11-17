@@ -18,6 +18,24 @@ typedef zx_handle_t fdf_handle_t;
 // TODO(fxbug.dev/85595): use our own error types
 typedef zx_status_t fdf_status_t;
 
+typedef zx_txid_t fdf_txid_t;
+
+// Defined in <lib/fdf/arena.h>
+struct fdf_arena;
+
+typedef struct fdf_channel_call_args {
+  struct fdf_arena* wr_arena;
+  void* wr_data;
+  uint32_t wr_num_bytes;
+  zx_handle_t* wr_handles;
+  uint32_t wr_num_handles;
+  struct fdf_arena** rd_arena;
+  void** rd_data;
+  uint32_t* rd_num_bytes;
+  zx_handle_t** rd_handles;
+  uint32_t* rd_num_handles;
+} fdf_channel_call_args_t;
+
 __END_CDECLS
 
 #endif  // LIB_DRIVER_RUNTIME_INCLUDE_LIB_FDF_TYPES_H_

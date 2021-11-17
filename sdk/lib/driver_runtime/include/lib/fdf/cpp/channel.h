@@ -9,6 +9,7 @@
 #include <lib/fdf/cpp/arena.h>
 #include <lib/stdcompat/span.h>
 #include <lib/zx/status.h>
+#include <lib/zx/time.h>
 
 namespace fdf {
 
@@ -122,6 +123,68 @@ class Channel {
     }
     cpp20::span<zx_handle_t> out_handles{handles, num_handles};
     return zx::ok(ReadReturn{Arena(arena), data, num_bytes, out_handles});
+  }
+
+  // Channel::Call() is like a combined Channel::Write(), ChannelRead::Begin(),
+  // and Channel::Call(), with the addition of a feature where a transaction id at
+  // the front of the message payload bytes is used to match reply messages with send messages,
+  // enabling multiple calling threads to share a channel without any additional client-side
+  // bookkeeping.
+  //
+  // The first four bytes of the written and read back messages are treated as a
+  // transaction ID of type fdf_txid_t. The runtime generates a txid for the
+  // written message, replacing that part of the message as read from the user.
+  // The runtime generated txid will be between 0x80000000 and 0xFFFFFFFF,
+  // and will not collide with any txid from any other Channel::Call()
+  // in progress against this channel endpoint. If the written message has a
+  // length of fewer than four bytes, an error is reported.
+  //
+  // While |deadline| has not passed, if an inbound message arrives with a matching txid,
+  // instead of being added to the tail of the general inbound message queue,
+  // it is delivered directly to the thread waiting in Channel::Call().
+  //
+  // If such a reply arrives after |deadline| has passed, it will arrive in the
+  // general inbound message queue.
+  //
+  // All written handles are consumed and are no longer available to the caller,
+  // on success or failure.
+  //
+  // Returns |ZX_OK| if the call completed successfully.
+  // Returns |ZX_ERR_BAD_HANDLE| if the channel is not a valid handle.
+  // Returns |ZX_ERR_INVALID_ARGS| if |data| or the handles contained in |handles|
+  // are not managed by |arena|, or |num_bytes| is less than four,
+  // or at least one of |handles| has a pending callback registered via a ChannelRead.
+  // Returns |ZX_ERR_PEER_CLOSED| if the other side of the channel is closed.
+  // Returns |ZX_ERR_TIMED_OUT| if |deadline| passed before a reply matching
+  // the correct txid was received.
+  //
+  // This operation is thread-safe.
+  zx::status<ReadReturn> Call(uint32_t options, zx::time deadline, Arena& arena, void* data,
+                              uint32_t num_bytes, cpp20::span<zx_handle_t> handles) const {
+    fdf_arena_t* rd_arena;
+    void* rd_data;
+    uint32_t rd_num_bytes;
+    zx_handle_t* rd_handles;
+    uint32_t rd_num_handles;
+
+    fdf_channel_call_args_t args = {
+        .wr_arena = arena.get(),
+        .wr_data = data,
+        .wr_num_bytes = num_bytes,
+        .wr_handles = handles.data(),
+        .wr_num_handles = static_cast<uint32_t>(handles.size()),
+        .rd_arena = &rd_arena,
+        .rd_data = &rd_data,
+        .rd_num_bytes = &rd_num_bytes,
+        .rd_handles = &rd_handles,
+        .rd_num_handles = &rd_num_handles,
+    };
+    fdf_status_t status = fdf_channel_call(channel_, options, deadline.get(), &args);
+    if (status != ZX_OK) {
+      return zx::error(status);
+    }
+    cpp20::span<zx_handle_t> out_handles{rd_handles, rd_num_handles};
+    return zx::ok(ReadReturn{Arena(rd_arena), rd_data, rd_num_bytes, out_handles});
   }
 
   fdf_handle_t get() { return channel_; }

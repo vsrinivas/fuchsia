@@ -133,6 +133,45 @@ fdf_status_t fdf_channel_read(fdf_handle_t channel, uint32_t options, fdf_arena_
 fdf_status_t fdf_channel_wait_async(struct fdf_dispatcher* dispatcher,
                                     struct fdf_channel_read* channel_read, uint32_t options);
 
+// fdf_channel_call() is like a combined fdf_channel_write(), fdf_channel_wait_async(),
+// and fdf_channel_read(), with the addition of a feature where a transaction id at
+// the front of the message payload bytes is used to match reply messages with send messages,
+// enabling multiple calling threads to share a channel without any additional client-side
+// bookkeeping.
+//
+// The first four bytes of the written and read back messages are treated as a
+// transaction ID of type fdf_txid_t. The runtime generates a txid for the
+// written message, replacing that part of the message as read from the user.
+// The runtime generated txid will be between 0x80000000 and 0xFFFFFFFF,
+// and will not collide with any txid from any other fdf_channel_call()
+// in progress against this channel endpoint. If the written message has a
+// length of fewer than four bytes, an error is reported.
+//
+// While |deadline| has not passed, if an inbound message arrives with a matching txid,
+// instead of being added to the tail of the general inbound message queue,
+// it is delivered directly to the thread waiting in fdf_channel_call().
+//
+// If such a reply arrives after |deadline| has passed, it will arrive in the
+// general inbound message queue.
+//
+// All written handles are consumed and are no longer available to the caller,
+// on success or failure.
+//
+// Returns |ZX_OK| if the call completed successfully.
+// Returns |ZX_ERR_BAD_HANDLE| if |channel| is not a valid handle.
+// Returns |ZX_ERR_INVALID_ARGS| if |args| is NULL,
+// or |wr_data| or |wr_handles| are non-NULL and not pointers managed by |wr_arena|,
+// or |wr_num_bytes| is less than four,
+// or at least one of |wr_handles| has a pending callback registered via |fdf_channel_wait_async|,
+// or |rd_arena| is NULL when |rd_data| or |rd_handles| are non-NULL.
+// Returns |ZX_ERR_PEER_CLOSED| if the other side of the channel is closed.
+// Returns |ZX_ERR_TIMED_OUT| if |deadline| passed before a reply matching
+// the correct txid was received.
+//
+// This operation is thread-safe.
+fdf_status_t fdf_channel_call(fdf_handle_t handle, uint32_t options, zx_time_t deadline,
+                              const fdf_channel_call_args_t* args);
+
 // If there is a pending callback registered via |fdf_channel_wait_async|,
 // how it is handled depends on whether the dispatcher it was registered with is
 // synchronized.
