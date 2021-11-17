@@ -225,7 +225,16 @@ func main() {
 	if *flags.Out == "" {
 		log.Fatalf("no -out path specified for main file")
 	}
-	if err := ioutil.WriteFile(*flags.Out, mainFile, 0666); err != nil {
+
+	if *flags.Language == "fuzzer_corpus" {
+		// The fuzzer corpus manifest must always be written so that the build
+		// system tries to rebuild the package. The individual files within the
+		// corpus aren't tracked by the build system.
+		err = ioutil.WriteFile(*flags.Out, mainFile, 0666)
+	} else {
+		err = fidlgen.WriteFileIfChanged(*flags.Out, mainFile)
+	}
+	if err != nil {
 		log.Fatal(err)
 	}
 }

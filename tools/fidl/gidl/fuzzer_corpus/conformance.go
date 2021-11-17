@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"path"
 
 	gidlconfig "go.fuchsia.dev/fuchsia/tools/fidl/gidl/config"
@@ -130,13 +129,8 @@ func writeTestCase(hostDir string, packageDataDir string, tc testCase) (distribu
 	data := getData(tc)
 
 	filePath := path.Join(hostDir, tc.name)
-	file, err := os.Create(filePath)
+	err := fidlgen.WriteFileIfChanged(filePath, data)
 	if err != nil {
-		return distributionEntry{}, err
-	}
-	defer file.Close()
-
-	if _, err = file.Write(data); err != nil {
 		return distributionEntry{}, err
 	}
 
@@ -152,12 +146,6 @@ func GenerateConformanceTests(gidl gidlir.All, _ fidlgen.Root, config gidlconfig
 	}
 	if config.FuzzerCorpusPackageDataDir == "" {
 		return nil, errors.New("Must specify --fuzzer-corpus-package-data-dir when generating fuzzer_corpus")
-	}
-
-	os.RemoveAll(config.FuzzerCorpusHostDir)
-	err := os.MkdirAll(config.FuzzerCorpusHostDir, os.ModePerm)
-	if err != nil {
-		return nil, err
 	}
 
 	var manifest []distributionEntry
