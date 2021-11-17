@@ -102,6 +102,14 @@ source_set("guest_console") {
   ]
 }
 
+source_set("guest_constants") {
+  visibility = [
+    "//src/connectivity/network/testing/netemul/*",
+    "//src/virtualization/*",
+  ]
+  public = [ "guest_constants.h" ]
+}
+
 source_set("fake_netstack") {
   testonly = true
   visibility = [
@@ -185,6 +193,7 @@ source_set("lib") {
 
   deps = [
     ":guest_console",
+    ":guest_constants",
     ":periodic_logger",
     ":socket_logger",
     "//sdk/fidl/fuchsia.kernel",

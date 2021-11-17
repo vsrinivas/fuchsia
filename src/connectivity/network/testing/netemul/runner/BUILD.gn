@@ -72,6 +72,7 @@ source_set("src") {
     "//src/virtualization/lib/guest_config",
     "//src/virtualization/lib/guest_interaction:fuchsia.netemul.guest",
     "//src/virtualization/tests:guest_console",
+    "//src/virtualization/tests:guest_constants",
     "//src/virtualization/tests:socket_logger",
     "//third_party/rapidjson",
     "//zircon/system/ulib/async:async-cpp",

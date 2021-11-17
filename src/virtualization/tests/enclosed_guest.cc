@@ -24,6 +24,7 @@
 
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/virtualization/lib/grpc/grpc_vsock_stub.h"
+#include "src/virtualization/tests/guest_constants.h"
 #include "src/virtualization/tests/logger.h"
 #include "src/virtualization/tests/periodic_logger.h"
 
@@ -43,33 +44,6 @@ constexpr zx::duration kLoopConditionStep = zx::msec(10);
 constexpr zx::duration kRetryStep = zx::msec(200);
 constexpr uint32_t kTerminaStartupListenerPort = 7777;
 constexpr uint32_t kTerminaMaitredPort = 8888;
-
-// Linux kernel command line params for additional serial debug logs during boot.
-constexpr std::string_view kLinuxKernelSerialDebugCmdline[] = {
-// Add early UART output from kernel.
-#if __aarch64__
-    "earlycon=pl011,0x808300000",
-#elif __x86_64__
-    "earlycon=uart,io,0x3f8",
-#else
-#error Unknown architecture.
-#endif
-
-    // Tell Linux to keep the console in polling mode instead of trying to switch
-    // to a real UART driver. The latter assumes a working transmit interrupt,
-    // but we don't implement one yet.
-    //
-    // TODO(fxbug.dev/48616): Ideally, Machina's UART would support IRQs allowing
-    // us to just use the full UART driver.
-    "keep_bootcon",
-
-    // Tell Linux to not try and use the UART as a console, but use the virtual
-    // console tty0 instead.
-    //
-    // TODO(fxbug.dev/48616): If Machina's UART had full IRQ support, using
-    // ttyS0 as a console would be fine.
-    "console=tty0",
-};
 
 bool RunLoopUntil(async::Loop* loop, fit::function<bool()> condition, zx::time deadline) {
   while (zx::clock::get_monotonic() < deadline) {

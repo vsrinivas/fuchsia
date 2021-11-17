@@ -24,6 +24,7 @@
 
 #include <src/lib/pkg_url/fuchsia_pkg_url.h>
 #include <src/virtualization/tests/guest_console.h>
+#include <src/virtualization/tests/guest_constants.h>
 
 #include "src/lib/cmx/cmx.h"
 #include "src/lib/fxl/strings/concatenate.h"
@@ -58,6 +59,47 @@ STATIC_MSG_STRUCT(kMsgTest, "test")
 #define ASSERT_DISPATCHER(disp) ZX_ASSERT((disp) == async_get_default_dispatcher())
 #define ASSERT_MAIN_DISPATCHER ASSERT_DISPATCHER(main_dispatcher_)
 #define ASSERT_HELPER_DISPATCHER ASSERT_DISPATCHER(helper_loop_->dispatcher())
+
+namespace {
+
+// Return true if the given configuration is a Linux guest.
+bool IsLinuxGuest(const config::Guest& guest) { return guest.guest_image_url() == kDebianGuestUrl; }
+
+// Generate a virtualization GuestConfig (used to launch VMSs) from our Sandbox guest config.
+fuchsia::virtualization::GuestConfig CreateGuestCfg(const config::Guest& guest) {
+  fuchsia::virtualization::GuestConfig cfg;
+  cfg.set_virtio_gpu(false);
+
+  // For Linux guests, configure kernel debug serial.
+  if (IsLinuxGuest(guest)) {
+    for (std::string_view arg : kLinuxKernelSerialDebugCmdline) {
+      cfg.mutable_cmdline_add()->emplace_back(arg);
+    }
+  }
+
+  if (!guest.macs().empty()) {
+    for (const auto& [mac, network] : guest.macs()) {
+      fuchsia::virtualization::NetSpec out{};
+      uint32_t bytes[6];
+      int matched = std::sscanf(mac.c_str(), "%02x:%02x:%02x:%02x:%02x:%02x", &bytes[0], &bytes[1],
+                                &bytes[2], &bytes[3], &bytes[4], &bytes[5]);
+      FX_CHECK(matched == 6) << "Could not parse MAC address in guest config: " << mac;
+      for (size_t i = 0; i != 6; ++i) {
+        out.mac_address.octets[i] = static_cast<uint8_t>(bytes[i]);
+      }
+      out.enable_bridge = false;
+      cfg.mutable_net_devices()->push_back(out);
+    }
+
+    // Prevent the guest from receiving a default MAC address from the VirtioNet
+    // internals.
+    cfg.set_default_net(false);
+  }
+
+  return cfg;
+}
+
+}  // namespace
 
 Sandbox::Sandbox(SandboxArgs args) : env_config_(std::move(args.config)) {
   auto services = sys::ServiceDirectory::CreateFromNamespace();
@@ -513,29 +555,6 @@ Sandbox::Promise Sandbox::LaunchGuestEnvironment(const ConfiguringEnvironmentPtr
   ASSERT_HELPER_DISPATCHER;
 
   // Launch the guest.
-  fuchsia::virtualization::GuestConfig cfg;
-  cfg.set_virtio_gpu(false);
-
-  if (!guest.macs().empty()) {
-    // Prevent the guest from receiving a default MAC address from the VirtioNet
-    // internals.
-    cfg.set_default_net(false);
-
-    for (const auto& [mac, network] : guest.macs()) {
-      fuchsia::virtualization::NetSpec out = {
-          .enable_bridge = false,
-      };
-
-      uint32_t bytes[6];
-      std::sscanf(mac.c_str(), "%02x:%02x:%02x:%02x:%02x:%02x", &bytes[0], &bytes[1], &bytes[2],
-                  &bytes[3], &bytes[4], &bytes[5]);
-      for (size_t i = 0; i != 6; ++i) {
-        out.mac_address.octets[i] = static_cast<uint8_t>(bytes[i]);
-      }
-      cfg.mutable_net_devices()->push_back(out);
-    }
-  }
-
   fpromise::bridge<void, SandboxResult> bridge;
   std::shared_ptr completer =
       std::make_shared<decltype(bridge.completer)>(std::move(bridge.completer));
@@ -547,7 +566,7 @@ Sandbox::Promise Sandbox::LaunchGuestEnvironment(const ConfiguringEnvironmentPtr
     completer->complete_error(SandboxResult(SandboxResult::Status::SETUP_FAILED, ss.str()));
   });
 
-  realm_->LaunchInstance(guest.guest_image_url(), guest.guest_label(), std::move(cfg),
+  realm_->LaunchInstance(guest.guest_image_url(), guest.guest_label(), CreateGuestCfg(guest),
                          guest_controller.NewRequest(),
                          [completer](uint32_t cid) mutable { completer->complete_ok(); });
 
@@ -625,7 +644,7 @@ Sandbox::Promise Sandbox::LaunchGuestEnvironment(const ConfiguringEnvironmentPtr
           }
         }
 
-        if (guest.guest_image_url() == kDebianGuestUrl) {
+        if (IsLinuxGuest(guest)) {
           // Wait until guest_interaction_daemon is running.
           zx_status_t status = serial.ExecuteBlocking(
               "journalctl -f --no-tail -u guest_interaction_daemon | grep -m1 Listening", "$",
