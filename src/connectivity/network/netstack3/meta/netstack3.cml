@@ -10,6 +10,7 @@
     capabilities: [
         {
             protocol: [
+                "fuchsia.net.debug.Interfaces",
                 "fuchsia.net.interfaces.State",
                 "fuchsia.net.stack.Stack",
                 "fuchsia.posix.socket.Provider",
@@ -19,6 +20,7 @@
     expose: [
         {
             protocol: [
+                "fuchsia.net.debug.Interfaces",
                 "fuchsia.net.interfaces.State",
                 "fuchsia.net.stack.Stack",
                 "fuchsia.posix.socket.Provider",

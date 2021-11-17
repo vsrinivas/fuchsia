@@ -31,7 +31,7 @@ use fidl_fuchsia_net_stack as fidl_net_stack;
 use fuchsia_async as fasync;
 use fuchsia_component::server::{ServiceFs, ServiceFsDir};
 use futures::channel::mpsc;
-use futures::{lock::Mutex, sink::SinkExt as _, FutureExt as _, StreamExt as _};
+use futures::{lock::Mutex, sink::SinkExt as _, FutureExt as _, StreamExt as _, TryStreamExt as _};
 use log::{debug, error, trace, warn};
 use net_types::ethernet::Mac;
 use net_types::ip::{Ipv4, Ipv6};
@@ -439,6 +439,7 @@ enum Service {
     Stack(fidl_fuchsia_net_stack::StackRequestStream),
     Socket(fidl_fuchsia_posix_socket::ProviderRequestStream),
     Interfaces(fidl_fuchsia_net_interfaces::StateRequestStream),
+    Debug(fidl_fuchsia_net_debug::InterfacesRequestStream),
 }
 
 enum Task {
@@ -496,6 +497,7 @@ impl Netstack {
         let mut fs = ServiceFs::new_local();
         let _: &mut ServiceFsDir<'_, _> = fs
             .dir("svc")
+            .add_fidl_service(Service::Debug)
             .add_fidl_service(Service::Stack)
             .add_fidl_service(Service::Socket)
             .add_fidl_service(Service::Interfaces);
@@ -537,6 +539,30 @@ impl Netstack {
                                     }),
                                 )
                             })
+                            .await
+                    }
+                    WorkItem::Incoming(Service::Debug(debug)) => {
+                        // TODO(https://fxbug.dev/88797): Implement this
+                        // properly. This protocol is stubbed out to allow
+                        // shared integration test code with Netstack2.
+                        debug
+                            .serve_with(|rs| rs.try_for_each(|req| async move {
+                                match req {
+                                    fidl_fuchsia_net_debug::InterfacesRequest::GetAdmin {
+                                        id: _,
+                                        control,
+                                        control_handle: _,
+                                    } => {
+                                        let () = control
+                                            .close_with_epitaph(fuchsia_zircon::Status::NOT_SUPPORTED)
+                                            .unwrap_or_else(|e| log::error!("failed to send epitaph: {:?}", e));
+                                        log::warn!(
+                                            "TODO(https://fxbug.dev/88797): fuchsia.net.debug/Interfaces not implemented"
+                                        );
+                                    }
+                                }
+                                Result::<(), fidl::Error>::Ok(())
+                            }))
                             .await
                     }
                     WorkItem::Spawned(Task::Watcher(watcher)) => {

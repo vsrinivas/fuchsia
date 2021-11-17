@@ -61,6 +61,7 @@ impl NetstackVersion {
                 fnet_interfaces::StateMarker::PROTOCOL_NAME,
                 fnet_stack::StackMarker::PROTOCOL_NAME,
                 fposix_socket::ProviderMarker::PROTOCOL_NAME,
+                fnet_debug::InterfacesMarker::PROTOCOL_NAME,
             ],
         }
     }
