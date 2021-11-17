@@ -1,6 +1,9 @@
 {
     include: [
         "//src/connectivity/network/tun/network-tun/meta/network-tun-test.shard.cml",
+
+        // Depends on config_data which is a system capability.
+        "//src/sys/test_manager/system-test.shard.cml",
         "//src/sys/test_runners/gtest/default.shard.cml",
         "inspect/client.shard.cml",
         "syslog/client.shard.cml",

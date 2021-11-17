@@ -2,7 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "//sdk/lib/syslog/client.shard.cml" ],
+    include: [
+        "//sdk/lib/syslog/client.shard.cml",
+
+        // Depends on config_data which is a system capability.
+        "//src/sys/test_manager/system-test.shard.cml",
+    ],
     children: [
         {
             name: "hwinfo_retail_tests_test_driver",

@@ -1,5 +1,10 @@
 {
-    include: [ "//src/lib/fuchsia-hyper/hyper_testing.shard.cml" ],
+    include: [
+        "//src/lib/fuchsia-hyper/hyper_testing.shard.cml",
+
+        // Depends on config_data which is a system capability.
+        "//src/sys/test_manager/system-test.shard.cml",
+    ],
     children: [
         {
             name: "test_driver",

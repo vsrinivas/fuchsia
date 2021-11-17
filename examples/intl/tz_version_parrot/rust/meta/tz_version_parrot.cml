@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 {
     include: [
+        // Depends on config_data which is a system capability.
+        "//src/sys/test_manager/system-test.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
         "syslog/client.shard.cml",
     ],

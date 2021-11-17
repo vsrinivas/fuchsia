@@ -310,10 +310,7 @@
         {
             directory: "config-data",
             from: "parent",
-            to: [
-                "#system-tests",
-                "#tests",
-            ],
+            to: [ "#system-tests" ],
         },
         {
             storage: "tmp",

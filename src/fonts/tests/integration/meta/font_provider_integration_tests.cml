@@ -1,4 +1,8 @@
 {
+    include: [
+        // Depends on config_data which is a system capability.
+        "//src/sys/test_manager/system-test.shard.cml",
+    ],
     children: [
         {
             name: "font_resolver",
