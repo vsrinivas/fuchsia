@@ -8,6 +8,7 @@ group("tests") {
     "bt-a2dp-loopback",
     "bt-a2dp-source-integration-tests:tests",
     "bt-avrcp-integration-tests:tests",
+    "bt-device-id-integration-tests:tests",
     "bt-hfp-audio-gateway-integration-tests:tests",
     "bt-rfcomm-integration-tests:tests",
 
