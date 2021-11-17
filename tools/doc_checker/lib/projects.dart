@@ -24,5 +24,6 @@ const List<String> validProjects = <String>[
   'third_party', // This is a family of projects.
   'topaz',
   'vscode-language-fidl',
+  'workstation',
   'samples',
 ];

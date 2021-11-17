@@ -1824,3 +1824,16 @@
   reviewers: [ 'ananthak@google.com', 'dworsham@google.com', 'jcecil@google.com', 'pascallouis@google.com', 'shayba@google.com']
   submitted: '2021-09-20'
   reviewed: '2021-11-15'
+
+- name: 'RFC-0142'
+  title: 'Bazel SDK'
+  short_description: 'Plan and requirements to design and distribute an official Bazel SDK.'
+  authors: ['chriscraws@google.com']
+  file: '0142_bazel_sdk.md'
+  area: ['General']
+  issue: ['']
+  gerrit_change_id: ['560368']
+  status: 'Accepted'
+  reviewers: [ 'amathes@google.com', 'chandarren@google.com', 'chaselatta@google.com', 'lijiaming@google.com', 'shayba@google.com', 'dworsham@google.com', 'sethladd@google.com', 'ejia@google.com', 'maruel@google.com', 'hjfreyer@google.com', 'crjohns@google.com', 'mangini@google.com']
+  submitted: '2021-11-16'
+  reviewed: '2021-11-10'
