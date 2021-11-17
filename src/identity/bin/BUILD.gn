@@ -11,6 +11,7 @@ group("bin") {
     "account",
     "account_handler",
     "account_manager",
+    "credential_manager",
     "dev_auth_provider",
     "dev_authenticator",
     "google_auth_provider",
@@ -23,6 +24,7 @@ group("tests") {
   testonly = true
   deps = [
     ":identity_bin_unittests",
+    "credential_manager:tests",
     "password_authenticator:tests",
   ]
 }
