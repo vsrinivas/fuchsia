@@ -56,8 +56,7 @@ struct TestEnv {
 impl TestEnv {
     async fn build() -> TestEnv {
         let builder = RealmBuilder::new().await.unwrap();
-        builder.driver_test_realm_setup().await.unwrap();
-        builder
+        builder.driver_test_realm_setup().await.unwrap()
             .add_child("password_authenticator", "fuchsia-pkg://fuchsia.com/password-authenticator-integration-tests#meta/password-authenticator.cm", ChildProperties::new()).await.unwrap()
             .add_route(RouteBuilder::protocol("fuchsia.logger.LogSink")
                 .source(RouteEndpoint::AboveRoot)

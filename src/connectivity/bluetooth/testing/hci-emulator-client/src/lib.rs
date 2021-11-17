@@ -349,7 +349,7 @@ mod tests {
     #[fuchsia::test]
     async fn publish_lifecycle_with_realm() {
         let realm = RealmBuilder::new().await.unwrap();
-        realm.driver_test_realm_setup().await.unwrap();
+        let _ = realm.driver_test_realm_setup().await.unwrap();
         let realm = realm.build().await.expect("failed to build realm");
         let args = fdt::RealmArgs {
             root_driver: Some("fuchsia-boot:///#driver/platform-bus.so".to_string()),

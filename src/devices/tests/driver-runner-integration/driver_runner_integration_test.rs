@@ -44,7 +44,7 @@ async fn driver_runner_test() -> Result<(), anyhow::Error> {
 
     let builder = RealmBuilder::new().await?;
     // TODO(fxbug.dev/85884): This should be a relative URL but then driver_host2.cm doesn't resolve correctly.
-    builder.driver_test_realm_setup().await?;
+    let _ = builder.driver_test_realm_setup().await?;
 
     let instance = builder.build().await?;
 

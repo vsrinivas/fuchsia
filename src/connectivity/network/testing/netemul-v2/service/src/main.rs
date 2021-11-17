@@ -819,8 +819,10 @@ async fn setup_network_realm(
     let network_context_package_url = relative_url(NETWORK_CONTEXT_COMPONENT_NAME);
 
     let mut builder = RealmBuilder::new().await.context("error creating new realm builder")?;
-    let () = builder.driver_test_realm_setup().await?;
     let _: &RealmBuilder = builder
+        .driver_test_realm_setup()
+        .await
+        .context("error setting up the driver test realm")?
         .add_child(
             NETWORK_CONTEXT_COMPONENT_NAME,
             network_context_package_url,
