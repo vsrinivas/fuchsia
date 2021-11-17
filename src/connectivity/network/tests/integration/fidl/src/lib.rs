@@ -5,6 +5,7 @@
 #![cfg(test)]
 
 use anyhow::Context as _;
+use fidl::endpoints::Proxy as _;
 use fidl_fuchsia_net_ext::{IntoExt as _, NetTypesIpAddressExt};
 use fidl_fuchsia_net_stack as net_stack;
 use fidl_fuchsia_net_stack_ext::{exec_fidl, FidlReturn as _};
@@ -195,8 +196,24 @@ async fn test_no_duplicate_interface_names() {
     assert_eq!(result, Err(fuchsia_zircon::Status::ALREADY_EXISTS));
 
     // Same for netdevice.
-    let (network_device, mac, _port_id) =
+    let (network_device, mut port_id) =
         netdev_ep.get_netdevice().await.expect("connect to netdevice protocols");
+    let (network_device, mac) = {
+        let (port, server_end) =
+            fidl::endpoints::create_proxy::<fidl_fuchsia_hardware_network::PortMarker>()
+                .expect("create proxy");
+        let device = network_device.into_proxy().expect("get device proxy");
+        let () = device.get_port(&mut port_id, server_end).expect("get port");
+        let (mac, server_end) = fidl::endpoints::create_endpoints::<
+            fidl_fuchsia_hardware_network::MacAddressingMarker,
+        >()
+        .expect("create endpoints");
+        let () = port.get_mac(server_end).expect("get mac");
+        let device = fidl::endpoints::ClientEnd::new(
+            device.into_channel().expect("into_channel").into_zx_channel(),
+        );
+        (device, mac)
+    };
     let result = stack
         .add_interface(
             fidl_fuchsia_net_stack::InterfaceConfig {
@@ -226,14 +243,14 @@ async fn add_ethernet_interface<N: Netstack>(name: &str) {
     let device =
         sandbox.create_endpoint::<netemul::Ethernet, _>(name).await.expect("create endpoint");
 
-    let id = device.add_to_stack(&realm).await.expect("add device");
+    let iface = device.into_interface_in_realm(&realm).await.expect("add device");
 
     let interface = stack
         .list_interfaces()
         .await
         .expect("list interfaces")
         .into_iter()
-        .find(|interface| interface.id == id)
+        .find(|interface| interface.id == iface.id())
         .expect("find added ethernet interface");
     assert!(
         !interface.properties.features.contains(fidl_fuchsia_hardware_ethernet::Features::Loopback),
@@ -254,11 +271,12 @@ async fn add_del_interface_address<N: Netstack>(name: &str) {
     let device =
         sandbox.create_endpoint::<netemul::Ethernet, _>(name).await.expect("create endpoint");
 
-    let id = device.add_to_stack(&realm).await.expect("add device");
+    let iface = device.into_interface_in_realm(&realm).await.expect("add device");
+    let id = iface.id();
 
     // Netstack3 doesn't allow addresses to be added while link is down.
     let () = stack.enable_interface(id).await.squash_result().expect("enable interface");
-    let () = device.set_link_up(true).await.expect("bring device up");
+    let () = iface.set_link_up(true).await.expect("bring device up");
     loop {
         // TODO(https://fxbug.dev/75553): Remove usage of get_interface_info.
         let info = exec_fidl!(stack.get_interface_info(id), "get interface").unwrap();
