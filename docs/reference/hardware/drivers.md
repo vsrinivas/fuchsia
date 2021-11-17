@@ -5,7 +5,7 @@
 {% comment %}
 The list of Fuchsia drivers is generated from the information in the following
 files:
-https://fuchsia.dev/reference/drivers/all_drivers_doc.json
+https://fuchsia.dev/reference/drivers/all_drivers_doc.yaml
 
 Since this page is generated from on a template, the full page is best viewed at
 http://www.fuchsia.dev/fuchsia-src/reference/hardware/drivers
@@ -15,7 +15,7 @@ http://www.fuchsia.dev/fuchsia-src/reference/hardware/drivers
 <div class="form-checkbox">
   <h4 class="showalways">Driver area</h4>
 <form id="filter-checkboxes-reset">
-  {%- for area in areas %}
+  {%- for area in drivers.drivers_areas %}
     {%- set found=false %}
     {%- for driver in drivers.drivers_documentation %}
         {%- for drivera in driver.areas %}

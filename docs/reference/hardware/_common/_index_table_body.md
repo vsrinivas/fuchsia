@@ -1,19 +1,6 @@
   <tr class = "driver">
-    {%- if driver.short_description != '' %}
-    <td><p>{{ driver.short_description }}<a name="{{ driver.short_description|replace(" ", "-")|replace("(", "")|replace(")", "")|lower() }}"></a></p><h3 class="add-link" style="display:none">{{ driver.short_description }}</h3></td>
-    {%- elif driver.path != '' %}
-      {%- for index in range(driver.path|length - 1) -%}
-        {% if driver.path[index] == '/' %}
-          {% set pathmark = index %}
-        {% endif %}
-      {%- endfor -%}
-      {% set drivername = [] %}
-      {%- for index in range(pathmark + 1, driver.path|length) -%}
-      {% do drivername.append(driver.path[index]) %}
-      {%- endfor -%}
-      <td><p>{{drivername|join|capitalize}}<a name="{{ drivername|join|replace(" ", "-")|replace("(", "")|replace(")", "")|lower() }}"></a></p><h3 class="add-link" style="display:none">{{ drivername|join|capitalize }}</h3></td>
-    {% else %}
-    <td><p>No short description</p></td>
+    {%- if driver.name %}
+    <td><p>{{ driver.name }}<a name="{{ driver.name|replace(" ", "-")|replace("(", "")|replace(")", "")|lower() }}"></a></p><h3 class="add-link" style="display:none">{{ driver.name }}</h3></td>
     {% endif %}
     <td>
       <table class = "nested responsive">
@@ -21,6 +8,12 @@
         <col width="10%">
       </colgroup>
         <tbody class="list">
+          {%- if driver.short_description %}
+          <tr>
+            <td>Description</td>
+            <td>{{ driver.short_description }}</td>
+          </tr>
+          {%- endif %}
           {%- if driver.manufacturer %}
           <tr>
             <td>Manufacturer</td>

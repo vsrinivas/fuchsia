@@ -6,12 +6,12 @@
 {%- set issue_url = "https://fxbug.dev/" %}
 {%- set cs_url = "https://cs.opensource.google/fuchsia/fuchsia/+/main:" %}
 {%- set fuchsia_source_tree_change = "https://fuchsia.googlesource.com/fuchsia/+/" %}
-{%- set drivers_dir = "docs/reference/hardware/" %}
-{%- set drivers_metadata_file = "_drivers.yaml" %}
+{%- set drivers_dir = "reference/drivers/" %}
+{%- set drivers_metadata_file = "all_drivers_doc.yaml" %}
 {%- set areas_yaml_file = "_drivers_areas.yaml" %}
 
-{%- set drivers | jsonloads %}
-{% include "reference/drivers/all_drivers_doc.json" %}
+{%- set drivers | yamlloads %}
+{% include "reference/drivers/all_drivers_doc.yaml" %}
 {%- endset %}
 
 {%- set areas | yamlloads %}
