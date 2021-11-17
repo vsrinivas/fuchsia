@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include "trampoline-boot.h"
+#include "phys/trampoline-boot.h"
 
 #include <lib/arch/x86/standard-segments.h>
 #include <lib/arch/zbi-boot.h>

@@ -85,6 +85,28 @@ if (toolchain_environment == "kernel.phys" ||
     toolchain_environment == "kernel.phys32") {
   # All the code gets built here in the phys environment.
 
+  source_set("trampoline-boot") {
+    visibility = [
+      ":*",
+
+      # Required for legacy-boot-shim
+      "//zircon/kernel/arch/x86/*",
+    ]
+    sources = [ "trampoline-boot.cc" ]
+    public = [ "include/phys/trampoline-boot.h" ]
+
+    public_deps = [ ":boot-zbi" ]
+
+    deps = [
+      ":page-table",
+      ":symbolize",
+      "//zircon/kernel/lib/arch",
+      "//zircon/kernel/phys/lib/memalloc",
+    ]
+
+    public_configs = [ ":includes" ]
+  }
+
   config("defines") {
     # Always enable tests and asserts in phys code.
     defines = [ "LK_DEBUGLEVEL=2" ]
@@ -403,8 +425,7 @@ zbi_executable("physboot") {
     "//zircon/system/ulib/zbitl",
   ]
   if (current_cpu == "x64") {
-    deps += [ "//zircon/kernel/arch/x86/phys/boot-shim:trampoline-boot" ]
-    include_dirs = [ "//zircon/kernel/arch/x86/phys/boot-shim" ]
+    deps += [ ":trampoline-boot" ]
   }
 
   # TODO(fxbug.dev/79992): Work around LTO compilation bugs.

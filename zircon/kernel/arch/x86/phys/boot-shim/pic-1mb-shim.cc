@@ -12,8 +12,7 @@
 #include <phys/allocation.h>
 #include <phys/main.h>
 #include <phys/symbolize.h>
-
-#include "trampoline-boot.h"
+#include <phys/trampoline-boot.h>
 
 const char Symbolize::kProgramName_[] = "pic-1mb-boot-shim";
 

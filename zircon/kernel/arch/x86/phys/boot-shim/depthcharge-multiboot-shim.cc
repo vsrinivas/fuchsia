@@ -16,11 +16,11 @@
 #include <phys/main.h>
 #include <phys/page-table.h>
 #include <phys/symbolize.h>
+#include <phys/trampoline-boot.h>
 
 #include "acpi.h"
 #include "legacy-boot-shim.h"
 #include "stdout.h"
-#include "trampoline-boot.h"
 
 const char Symbolize::kProgramName_[] = "depthcharge-multiboot-shim";
 

@@ -16,10 +16,10 @@
 #include <phys/page-table.h>
 #include <phys/stdio.h>
 #include <phys/symbolize.h>
+#include <phys/trampoline-boot.h>
 
 #include "acpi.h"
 #include "stdout.h"
-#include "trampoline-boot.h"
 
 void PhysMain(void* ptr, arch::EarlyTicks boot_ticks) {
   ConfigureStdout();

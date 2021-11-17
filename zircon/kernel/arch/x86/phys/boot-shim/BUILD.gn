@@ -82,32 +82,13 @@ zbi_executable("pic-1mb-boot-shim") {
 
   sources = [ "pic-1mb-shim.cc" ]
   deps = [
-    ":trampoline-boot",
     "//zircon/kernel/phys:main",
     "//zircon/kernel/phys:symbolize",
+    "//zircon/kernel/phys:trampoline-boot",
     "//zircon/kernel/phys:zbi-memory",
     "//zircon/kernel/phys/lib/memalloc",
     "//zircon/system/ulib/zbitl",
   ]
-}
-
-if (toolchain_environment == "kernel.phys" ||
-    toolchain_environment == "kernel.phys32") {
-  source_set("trampoline-boot") {
-    visibility = [
-      ":*",
-      "//zircon/kernel/phys/*",
-    ]
-    sources = [ "trampoline-boot.cc" ]
-    public = [ "trampoline-boot.h" ]
-    public_deps = [ "//zircon/kernel/phys:boot-zbi" ]
-    deps = [
-      "//zircon/kernel/lib/arch",
-      "//zircon/kernel/phys:page-table",
-      "//zircon/kernel/phys:symbolize",
-      "//zircon/kernel/phys/lib/memalloc",
-    ]
-  }
 }
 
 zbi_executable("phys-1mb-hello-world") {
@@ -155,7 +136,6 @@ if (toolchain_environment == "kernel.phys32") {
     ]
     public_deps = [
       ":stdout",
-      ":trampoline-boot",
       "..:address-space",
       "..:legacy-boot",
       "//zircon/kernel/lib/acpi_lite",
@@ -164,6 +144,7 @@ if (toolchain_environment == "kernel.phys32") {
       "//zircon/kernel/phys:main",
       "//zircon/kernel/phys:page-table",
       "//zircon/kernel/phys:symbolize",
+      "//zircon/kernel/phys:trampoline-boot",
       "//zircon/kernel/phys/lib/boot-shim",
       "//zircon/system/ulib/hwreg",
     ]

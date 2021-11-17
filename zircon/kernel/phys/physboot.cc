@@ -25,7 +25,7 @@
 #include "handoff-prep.h"
 
 #ifdef __x86_64__
-#include "trampoline-boot.h"
+#include <phys/trampoline-boot.h>
 
 using ChainBoot = TrampolineBoot;
 

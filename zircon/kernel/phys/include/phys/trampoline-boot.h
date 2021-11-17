@@ -4,8 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef ZIRCON_KERNEL_ARCH_X86_PHYS_BOOT_SHIM_TRAMPOLINE_BOOT_H_
-#define ZIRCON_KERNEL_ARCH_X86_PHYS_BOOT_SHIM_TRAMPOLINE_BOOT_H_
+#ifndef ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_TRAMPOLINE_BOOT_H_
+#define ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_TRAMPOLINE_BOOT_H_
 
 #include <ktl/optional.h>
 #include <phys/boot-zbi.h>
@@ -42,4 +42,4 @@ class TrampolineBoot : public BootZbi {
   Trampoline* trampoline_ = nullptr;
 };
 
-#endif  // ZIRCON_KERNEL_ARCH_X86_PHYS_BOOT_SHIM_TRAMPOLINE_BOOT_H_
+#endif  // ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_TRAMPOLINE_BOOT_H_
