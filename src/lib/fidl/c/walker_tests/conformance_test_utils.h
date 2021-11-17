@@ -162,6 +162,41 @@ inline bool DecodeSuccess(FidlWireFormatVersion wire_format_version, const fidl_
   return true;
 }
 
+// Verifies that |bytes| and |handles| successfully validates.
+inline bool ValidateSuccess(FidlWireFormatVersion wire_format_version, const fidl_type* type,
+                            std::vector<uint8_t> bytes,
+                            const std::vector<zx_handle_info_t>& handles) {
+  const char* error_msg = nullptr;
+  zx_status_t status;
+  switch (wire_format_version) {
+    case FIDL_WIRE_FORMAT_VERSION_V1: {
+      status = internal__fidl_validate__v1__may_break(
+          type, bytes.data(), static_cast<uint32_t>(bytes.size()),
+          static_cast<uint32_t>(handles.size()), &error_msg);
+      break;
+    }
+    case FIDL_WIRE_FORMAT_VERSION_V2: {
+      status = internal__fidl_validate__v2__may_break(
+          type, bytes.data(), static_cast<uint32_t>(bytes.size()),
+          static_cast<uint32_t>(handles.size()), &error_msg);
+      break;
+    }
+    default:
+      ZX_PANIC("unknown wire format");
+  }
+  if (status != ZX_OK) {
+    std::cout << "Validating failed (" << zx_status_get_string(status) << "): " << error_msg
+              << std::endl;
+    return false;
+  }
+  if (error_msg != nullptr) {
+    std::cout << "error message unexpectedly non-null when status is ZX_OK: " << error_msg
+              << std::endl;
+    return false;
+  }
+  return true;
+}
+
 // Verifies that |bytes| and |handles| fails to decode.
 inline bool DecodeFailure(FidlWireFormatVersion wire_format_version, const fidl_type* type,
                           std::vector<uint8_t> bytes, std::vector<zx_handle_info_t> handles,
@@ -189,6 +224,42 @@ inline bool DecodeFailure(FidlWireFormatVersion wire_format_version, const fidl_
   }
   if (status != expected_error_code) {
     std::cout << "Decoding failed with error code " << zx_status_get_string(status) << " ("
+              << error_msg << "), but expected error code "
+              << zx_status_get_string(expected_error_code) << std::endl;
+    return false;
+  }
+  return true;
+}
+
+// Verifies that |bytes| and |handles| fails to validate.
+inline bool ValidateFailure(FidlWireFormatVersion wire_format_version, const fidl_type* type,
+                            std::vector<uint8_t> bytes,
+                            const std::vector<zx_handle_info_t>& handles,
+                            zx_status_t expected_error_code) {
+  const char* error_msg = nullptr;
+  zx_status_t status;
+  switch (wire_format_version) {
+    case FIDL_WIRE_FORMAT_VERSION_V1: {
+      status = internal__fidl_validate__v1__may_break(
+          type, bytes.data(), static_cast<uint32_t>(bytes.size()),
+          static_cast<uint32_t>(handles.size()), &error_msg);
+      break;
+    }
+    case FIDL_WIRE_FORMAT_VERSION_V2: {
+      status = internal__fidl_validate__v2__may_break(
+          type, bytes.data(), static_cast<uint32_t>(bytes.size()),
+          static_cast<uint32_t>(handles.size()), &error_msg);
+      break;
+    }
+    default:
+      ZX_PANIC("unknown wire format");
+  }
+  if (status == ZX_OK) {
+    std::cout << "Validating unexpectedly succeeded" << std::endl;
+    return false;
+  }
+  if (status != expected_error_code) {
+    std::cout << "Validating failed with error code " << zx_status_get_string(status) << " ("
               << error_msg << "), but expected error code "
               << zx_status_get_string(expected_error_code) << std::endl;
     return false;

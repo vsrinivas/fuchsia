@@ -81,6 +81,19 @@ TEST(C_Conformance, {{ .Name }}_Decode) {
 	EXPECT_TRUE(c_conformance_utils::DecodeSuccess(
 		{{ .WireFormatVersion }}, decltype(obj)::Type, std::move(bytes), std::move(handles), equality_check));
 }
+
+TEST(C_Conformance, {{ .Name }}_Validate) {
+	{{- if .HandleDefs }}
+	const std::vector<zx_handle_info_t> handle_defs = {{ .HandleDefs }};
+	{{- end }}
+	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	{{ .ValueBuild }}
+	std::vector<uint8_t> bytes = {{ .Bytes }};
+	std::vector<zx_handle_info_t> handles = {{ .Handles }};
+	auto obj = {{ .ValueVar }};
+	EXPECT_TRUE(c_conformance_utils::ValidateSuccess(
+		{{ .WireFormatVersion }}, decltype(obj)::Type, std::move(bytes), handles));
+}
 {{- if .FuchsiaOnly }}
 #endif  // __Fuchsia__
 {{- end }}
@@ -100,6 +113,20 @@ TEST(C_Conformance, {{ .Name }}_Decode_Failure) {
 	{{- if .HandleDefs }}
 	for (const zx_handle_info_t handle_info : handle_defs) {
 		EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_object_get_info(handle_info.handle, ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
+	}
+	{{- end }}
+}
+
+TEST(C_Conformance, {{ .Name }}_Validate_Failure) {
+	{{- if .HandleDefs }}
+	const std::vector<zx_handle_info_t> handle_defs = {{ .HandleDefs }};
+	{{- end }}
+	std::vector<uint8_t> bytes = {{ .Bytes }};
+	std::vector<zx_handle_info_t> handles = {{ .Handles }};
+	EXPECT_TRUE(c_conformance_utils::ValidateFailure({{ .WireFormatVersion }}, {{ .ValueType }}::Type, std::move(bytes), handles, {{ .ErrorCode }}));
+	{{- if .HandleDefs }}
+	for (const zx_handle_info_t handle_info : handle_defs) {
+		EXPECT_EQ(ZX_OK, zx_object_get_info(handle_info.handle, ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
 	}
 	{{- end }}
 }
