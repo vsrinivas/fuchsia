@@ -99,8 +99,6 @@ class MixStageTest : public testing::ThreadingModelFixture {
         << "Mixer pos_filter_width " << should_be_sinc->pos_filter_width().raw_value()
         << " too small, should be greater than " << Fixed(1).raw_value();
   }
-  zx::duration GetDurationErrorForFracFrameError(Fixed error, uint64_t source_pos_modulo = 0,
-                                                 uint64_t denominator = 1);
 
   std::shared_ptr<MixStage> mix_stage_;
 
@@ -928,95 +926,81 @@ TEST_F(MixStageTest, PositionSkip) {
   }
 }
 
-// SourceInfo.source_ref_clock_to_frac_source_frames_generation tracks changes in the position
-// relationship between source and its reference clock. When the stream first starts, the
-// TimelineFunction is set and the generation is updated. It is updated on both Pause and Play, so
-// that when Playback resumes the new position relationship is reestablished.
-//
-// Verify that SourceInfo.source_ref_clock_to_frac_source_frames_generation updates appropriately on
-// first mix, Pause and Play.
-TEST_F(MixStageTest, SourceDestPositionRelationship) {
-  // Before the first mix: position relationship should not be set
-  auto packet_queue = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function_,
-                                                    std::move(clone_of_device_clock_));
-  auto& info =
-      mix_stage_->AddInput(packet_queue, 0.0f, Mixer::Resampler::WindowedSinc)->source_info();
-  EXPECT_EQ(info.source_ref_clock_to_frac_source_frames_generation, kInvalidGenerationId);
+class MixStagePositionTest : public MixStageTest {
+ protected:
+  static constexpr int32_t kDestFramesPerMix = 96;
 
-  // Request the initial mix: position relationship should be set
-  auto source_pos_for_read_lock = Fixed(0);
-  constexpr int32_t dest_frames_per_mix = 96;
-  mix_stage_->ReadLock(rlctx, source_pos_for_read_lock, dest_frames_per_mix);
-  EXPECT_EQ(info.source_ref_clock_to_frac_source_frames_generation, 1u);
+  void SetUpWithClock(std::unique_ptr<AudioClock> clock) {
+    packet_queue_ =
+        std::make_shared<PacketQueue>(kDefaultFormat, timeline_function_, std::move(clock));
+    info_ =
+        &(mix_stage_->AddInput(packet_queue_, 0.0f, Mixer::Resampler::WindowedSinc)->source_info());
 
-  source_pos_for_read_lock += Fixed(dest_frames_per_mix);
-  auto long_running_source_pos = info.next_source_frame;
-  // Pause the timeline and request another mix: position relationship should be cleared
-  timeline_function_->Update(TimelineFunction(source_pos_for_read_lock.raw_value(),
-                                              zx::clock::get_monotonic().get(), {0, 1}));
-  mix_stage_->ReadLock(rlctx, source_pos_for_read_lock, dest_frames_per_mix);
-  EXPECT_EQ(info.source_ref_clock_to_frac_source_frames_generation, 2u);
-
-  // Restart the timeline and request another mix: position relationship should be set
-  source_pos_for_read_lock += Fixed(dest_frames_per_mix);
-  timeline_function_->Update(TimelineFunction(
-      source_pos_for_read_lock.raw_value(), zx::clock::get_monotonic().get(),
-      TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
-  mix_stage_->ReadLock(rlctx, source_pos_for_read_lock, dest_frames_per_mix);
-  EXPECT_EQ(info.source_ref_clock_to_frac_source_frames_generation, 3u);
-  EXPECT_EQ(info.next_source_frame, long_running_source_pos + Fixed(dest_frames_per_mix * 2))
-      << ffl::String::DecRational << info.next_source_frame;
-
-  source_pos_for_read_lock += Fixed(dest_frames_per_mix);
-  EXPECT_EQ(info.next_dest_frame, source_pos_for_read_lock.Floor());
-}
-
-zx::duration MixStageTest::GetDurationErrorForFracFrameError(Fixed frac_source_error,
-                                                             uint64_t source_pos_modulo,
-                                                             uint64_t denominator) {
-  auto clock = clock::testing::CreateCustomClock({.synthetic_offset_from_mono = zx::duration(0)})
-                   .take_value();
-  auto packet_queue =
-      std::make_shared<PacketQueue>(kDefaultFormat, timeline_function_,
-                                    context().clock_factory()->CreateClientFixed(std::move(clock)));
-  auto mixer = mix_stage_->AddInput(packet_queue, 0.0f, Mixer::Resampler::WindowedSinc);
-
-  auto& info = mixer->source_info();
-  constexpr int32_t dest_frames_per_mix = 96;
-  auto source_pos_for_read_lock = Fixed(0);
-  auto expected_running_dest_frames = 0;
-
-  // Initial mix
-  //
-  mix_stage_->ReadLock(rlctx, source_pos_for_read_lock, dest_frames_per_mix);
-  RunLoopUntilIdle();
-  expected_running_dest_frames += dest_frames_per_mix;
-
-  EXPECT_NE(info.source_ref_clock_to_frac_source_frames_generation, kInvalidGenerationId);
-  EXPECT_EQ(info.next_dest_frame, expected_running_dest_frames);
-  EXPECT_EQ(info.source_pos_error, zx::duration(0));
-
-  // Inject error, mix
-  //
-  source_pos_for_read_lock += Fixed(dest_frames_per_mix);
-  info.next_source_frame += frac_source_error;
-
-  auto& bookkeeping = mixer->bookkeeping();
-  FX_CHECK(source_pos_modulo < denominator);
-  if (denominator > 1) {
-    bookkeeping.SetRateModuloAndDenominator(1, denominator);
-    bookkeeping.source_pos_modulo = source_pos_modulo;
+    // Before the first mix: position relationship should not be set
+    EXPECT_EQ(info()->source_ref_clock_to_frac_source_frames_generation, kInvalidGenerationId);
+    // Request the initial mix: position relationship should be set
+    mix_stage_->ReadLock(rlctx, Fixed(0), kDestFramesPerMix);
   }
-  mix_stage_->ReadLock(rlctx, source_pos_for_read_lock, dest_frames_per_mix);
-  RunLoopUntilIdle();
-  expected_running_dest_frames += dest_frames_per_mix;
 
-  EXPECT_EQ(info.next_dest_frame, expected_running_dest_frames);
-  return info.source_pos_error;
-}
+  zx::duration GetDurationErrorForFracFrameError(Fixed frac_source_error,
+                                                 uint64_t source_pos_modulo = 0,
+                                                 uint64_t denominator = 1) {
+    auto clock = clock::testing::CreateCustomClock({.synthetic_offset_from_mono = zx::duration(0)})
+                     .take_value();
+    auto packet_queue = std::make_shared<PacketQueue>(
+        kDefaultFormat, timeline_function_,
+        context().clock_factory()->CreateClientFixed(std::move(clock)));
+    auto mixer = mix_stage_->AddInput(packet_queue, 0.0f, Mixer::Resampler::WindowedSinc);
+    auto& info = mixer->source_info();
+
+    // Initial mix
+    mix_stage_->ReadLock(rlctx, Fixed(0), kDestFramesPerMix);
+    RunLoopUntilIdle();
+
+    EXPECT_NE(info.source_ref_clock_to_frac_source_frames_generation, kInvalidGenerationId);
+    EXPECT_EQ(info.next_dest_frame, kDestFramesPerMix);
+    EXPECT_EQ(info.source_pos_error, zx::duration(0));
+
+    // Inject error, mix
+    info.next_source_frame += frac_source_error;
+
+    auto& bookkeeping = mixer->bookkeeping();
+    FX_CHECK(source_pos_modulo < denominator);
+    if (denominator > 1) {
+      bookkeeping.SetRateModuloAndDenominator(1, denominator);
+      bookkeeping.source_pos_modulo = source_pos_modulo;
+    }
+    mix_stage_->ReadLock(rlctx, Fixed(kDestFramesPerMix), kDestFramesPerMix);
+    RunLoopUntilIdle();
+
+    EXPECT_EQ(info.next_dest_frame, 2 * kDestFramesPerMix);
+    return info.source_pos_error;
+  }
+
+  void ExpectPositionOffsetsAfterMix(int64_t pre_mix_dest_offset, Fixed pre_mix_source_offset,
+                                     int64_t post_mix_dest_offset, Fixed post_mix_source_offset) {
+    Fixed expect_long_running_source_pos =
+        info()->next_source_frame + Fixed(kDestFramesPerMix) + post_mix_source_offset;
+    info()->next_source_frame = info()->next_source_frame + pre_mix_source_offset;
+
+    auto expect_long_running_dest_pos =
+        info()->next_dest_frame + kDestFramesPerMix + post_mix_dest_offset;
+    info()->next_dest_frame = info()->next_dest_frame + pre_mix_dest_offset;
+
+    mix_stage_->ReadLock(rlctx, Fixed(kDestFramesPerMix), kDestFramesPerMix);
+    EXPECT_EQ(info()->next_source_frame, expect_long_running_source_pos);
+    EXPECT_EQ(info()->next_dest_frame, expect_long_running_dest_pos);
+  }
+
+  media::audio::Mixer::SourceInfo* info() { return info_; }
+
+ private:
+  media::audio::Mixer::SourceInfo* info_;
+  std::shared_ptr<PacketQueue> packet_queue_;
+};
 
 // Verify that SourceInfo.source_pos_error is set to zero if less than one fractional frame.
-TEST_F(MixStageTest, PosError_IgnoreOneFracFrame) {
+TEST_F(MixStagePositionTest, PosError_IgnoreOneFracFrame) {
   {
     SCOPED_TRACE("position_error 0 frac frames");
     EXPECT_EQ(GetDurationErrorForFracFrameError(Fixed(0)).to_nsecs(), 0);
@@ -1044,7 +1028,7 @@ TEST_F(MixStageTest, PosError_IgnoreOneFracFrame) {
 }
 
 // Verify that SourceInfo.source_pos_error correctly rounds to a ns-based equivalent.
-TEST_F(MixStageTest, PosError_RoundToNs) {
+TEST_F(MixStagePositionTest, PosError_RoundToNs) {
   // Validate floor behavior without pos_modulo/denominator present
   {
     // Source position error 3 frac frames is 7.6 ns, rounds out to 8ns.
@@ -1069,7 +1053,7 @@ TEST_F(MixStageTest, PosError_RoundToNs) {
 }
 
 // Verify that SourceInfo.source_pos_error correctly incorporates source_pos_modulo.
-TEST_F(MixStageTest, PosError_IncludePosModulo) {
+TEST_F(MixStagePositionTest, PosError_IncludePosModulo) {
   // Validate floor behavior plus pos_modulo/denominator contribution
   {
     // Source position error 2 +56/100 frac frames is 6.51ns, rounds out to 7ns.
@@ -1091,6 +1075,117 @@ TEST_F(MixStageTest, PosError_IncludePosModulo) {
     SCOPED_TRACE("position_error -2 frac frames plus 24/100");
     EXPECT_EQ(GetDurationErrorForFracFrameError(Fixed::FromRaw(-2), 24, 100).to_nsecs(), -4);
   }
+}
+
+// SourceInfo.source_ref_clock_to_frac_source_frames_generation tracks changes in the position
+// relationship between source and its reference clock. When the stream first starts, the
+// TimelineFunction is set and the generation is updated. It is updated on both Pause and Play, so
+// that when Playback resumes the new position relationship is reestablished.
+//
+// Verify that SourceInfo.source_ref_clock_to_frac_source_frames_generation updates appropriately on
+// first mix, Pause and Play.
+TEST_F(MixStagePositionTest, SourceDestPositionRelationship) {
+  SetUpWithClock(std::move(clone_of_device_clock_));
+  EXPECT_EQ(info()->source_ref_clock_to_frac_source_frames_generation, 1u);
+
+  auto long_running_source_pos = info()->next_source_frame;
+  // Pause the timeline and request another mix: position relationship should be cleared
+  timeline_function_->Update(TimelineFunction(Fixed(kDestFramesPerMix).raw_value(),
+                                              zx::clock::get_monotonic().get(), {0, 1}));
+  mix_stage_->ReadLock(rlctx, Fixed(kDestFramesPerMix), kDestFramesPerMix);
+  EXPECT_EQ(info()->source_ref_clock_to_frac_source_frames_generation, 2u);
+
+  // Restart the timeline and request another mix: position relationship should be set
+  timeline_function_->Update(TimelineFunction(
+      Fixed(2 * kDestFramesPerMix).raw_value(), zx::clock::get_monotonic().get(),
+      TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
+  mix_stage_->ReadLock(rlctx, Fixed(2 * kDestFramesPerMix), kDestFramesPerMix);
+  EXPECT_EQ(info()->source_ref_clock_to_frac_source_frames_generation, 3u);
+  EXPECT_EQ(info()->next_source_frame, long_running_source_pos + Fixed(2 * kDestFramesPerMix))
+      << ffl::String::DecRational << info()->next_source_frame;
+
+  EXPECT_EQ(info()->next_dest_frame, Fixed(3 * kDestFramesPerMix).Floor());
+}
+
+// On backward dest discontinuity beyond the acceptable 960-frame threshold, long-running pos for
+// both dest and source are reset.
+// We will remove this case once we no longer have backwards-position movement.
+TEST_F(MixStagePositionTest, DestDiscontinuityRollbackBeyondThreshold) {
+  SetUpWithClock(std::move(clone_of_device_clock_));
+  // MixStage should reset both dest and source, then advance normally
+  ExpectPositionOffsetsAfterMix(1000, Fixed(0), 0, Fixed(0));
+}
+
+// On backward dest discontinuity within the acceptable 960-frame threshold, long-running pos for
+// both dest and source are correctly rolled-back.
+// We will remove this case once we no longer have backwards-position movement.
+TEST_F(MixStagePositionTest, DestDiscontinuityRollbackWithinThreshold) {
+  SetUpWithClock(std::move(clone_of_device_clock_));
+  // MixStage should rollback both dest and source by that same 300, then advance normally
+  ExpectPositionOffsetsAfterMix(300, Fixed(0), 0, Fixed(-300));
+}
+
+// On forward dest discontinuity beyond the acceptable 2ms threshold, long-running pos for both dest
+// and source are reset.
+TEST_F(MixStagePositionTest, DestDiscontinuityBeyondThreshold) {
+  SetUpWithClock(std::move(clone_of_device_clock_));
+  // MixStage should reset both dest and source, then advance normally
+  ExpectPositionOffsetsAfterMix(-100, Fixed(0), 0, Fixed(0));
+}
+
+// On forward dest discontinuity within the acceptable 2ms threshold, long-running pos for both dest
+// and source are correctly advanced.
+TEST_F(MixStagePositionTest, DestDiscontinuityWithinThreshold) {
+  SetUpWithClock(std::move(clone_of_device_clock_));
+  // MixStage should advance both dest and source by that same 96, then advance normally
+  ExpectPositionOffsetsAfterMix(-96, Fixed(0), 0, Fixed(96));
+}
+
+// On source discontinuity with clocks that indicate "no-sync needed", long-running pos for both
+// dest and source are not adjusted.
+TEST_F(MixStagePositionTest, SourceDiscontinuityNoSync) {
+  SetUpWithClock(std::move(clone_of_device_clock_));
+  // MixStage should not adjust these but merely advance normally
+  ExpectPositionOffsetsAfterMix(0, Fixed(-300), 0, Fixed(-300));
+}
+
+// On source discontinuity beyond the recoverability threshold, long-running source pos is reset.
+TEST_F(MixStagePositionTest, SourceDiscontinuityBeyondThreshold) {
+  auto non_clone = context().clock_factory()->CreateClientFixed(
+      clock::testing::CreateCustomClock({.synthetic_offset_from_mono = zx::duration(0)})
+          .take_value());
+  SetUpWithClock(std::move(non_clone));
+  // MixStage should reset source, then advance normally
+  ExpectPositionOffsetsAfterMix(0, Fixed(-300), 0, Fixed(0));
+}
+
+// On a one-subframe source discontinuity, long-running source pos is untouched, no rate-adjustment
+TEST_F(MixStagePositionTest, SourceDiscontinuitySingleSubframe) {
+  auto non_clone = context().clock_factory()->CreateClientFixed(
+      clock::testing::CreateCustomClock({.synthetic_offset_from_mono = zx::duration(0)})
+          .take_value());
+  SetUpWithClock(std::move(non_clone));
+  // MixStage should ignore the error and advance normally
+  ExpectPositionOffsetsAfterMix(0, Fixed::FromRaw(-1), 0, Fixed::FromRaw(-1));
+}
+
+// On source discontinuity within the recoverability threshold, the discontinuity should not be
+// erased but rate-adjustment should occur.
+TEST_F(MixStagePositionTest, SourceDiscontinuityWithinThreshold) {
+  auto non_clone = context().clock_factory()->CreateClientFixed(
+      clock::testing::CreateCustomClock({.synthetic_offset_from_mono = zx::duration(0)})
+          .take_value());
+  SetUpWithClock(std::move(non_clone));
+
+  // Artificially decrement long-running source position by less than 2ms but more than 1 subframe
+  // MixStage should accept the source error, rate-adjust, then advance
+  auto expect_long_running_dest_pos = info()->next_dest_frame + kDestFramesPerMix;
+  Fixed expect_long_running_source_pos = info()->next_source_frame + Fixed(kDestFramesPerMix);
+  info()->next_source_frame = info()->next_source_frame - Fixed::FromRaw(512);
+
+  mix_stage_->ReadLock(rlctx, Fixed(kDestFramesPerMix), kDestFramesPerMix);
+  EXPECT_LT(info()->next_source_frame, expect_long_running_source_pos);
+  EXPECT_EQ(info()->next_dest_frame, expect_long_running_dest_pos);
 }
 
 }  // namespace media::audio
