@@ -169,6 +169,22 @@ struct BindingData<I: Ip> {
 }
 
 impl<I: Ip> BindingData<I> {
+    /// Creates a new `BindingData` with the provided event pair and
+    /// `properties`.
+    fn new(
+        local_event: zx::EventPair,
+        peer_event: zx::EventPair,
+        properties: SocketWorkerProperties,
+    ) -> Self {
+        Self {
+            local_event,
+            peer_event,
+            info: SocketControlInfo { _properties: properties, state: SocketState::Unbound },
+            available_data: VecDeque::new(),
+            ref_count: 1,
+        }
+    }
+
     fn receive_datagram(&mut self, addr: I::Addr, port: u16, body: &[u8]) -> Result<(), Error> {
         if self.available_data.len() >= MAX_OUTSTANDING_APPLICATION_MESSAGES {
             return Err(format_err!("UDP application buffers are full"));
@@ -866,24 +882,6 @@ where
         // need to treat that as an implicit close request as well.
         let () = self.make_handler().await.close();
         Ok(())
-    }
-}
-
-impl<I: UdpSocketIpExt> BindingData<I> {
-    /// Creates a new `BindingData` with the provided event pair and
-    /// `properties`.
-    fn new(
-        local_event: zx::EventPair,
-        peer_event: zx::EventPair,
-        properties: SocketWorkerProperties,
-    ) -> Self {
-        Self {
-            local_event,
-            peer_event,
-            info: SocketControlInfo { _properties: properties, state: SocketState::Unbound },
-            available_data: VecDeque::new(),
-            ref_count: 1,
-        }
     }
 }
 
