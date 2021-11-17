@@ -1,0 +1,11 @@
+{
+    "short_description": "USB HID fake driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Input",
+        "Test",
+        "Usb"
+    ]
+}

@@ -1,0 +1,10 @@
+{
+    "short_description": "Virtio input driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Input",
+        "Test"
+    ]
+}

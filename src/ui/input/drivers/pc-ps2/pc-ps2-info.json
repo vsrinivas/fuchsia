@@ -1,0 +1,11 @@
+{
+    "short_description": "ACPI i8042 keyboard controller",
+    "manufacturer": "",
+    "families": [],
+    "models": [
+        "i8042"
+    ],
+    "areas": [
+        "Input"
+    ]
+}

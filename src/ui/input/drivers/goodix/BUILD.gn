@@ -60,6 +60,7 @@ fuchsia_driver("goodix-module-driver") {
 fuchsia_driver_component("goodix-module") {
   component_name = "goodix"
   deps = [ ":goodix-module-driver" ]
+  info = "goodix-module-info.json"
 }
 
 if (internal_access) {

@@ -1,0 +1,11 @@
+{
+    "short_description": "Bosch Bma253 accelerometer driver",
+    "manufacturer": "Bosch",
+    "families": [],
+    "models": [
+        "Bma253"
+    ],
+    "areas": [
+        "Input"
+    ]
+}

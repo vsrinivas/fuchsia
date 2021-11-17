@@ -1,0 +1,11 @@
+{
+    "short_description": "Goodix Gt92xx touch controller driver",
+    "manufacturer": "Goodix",
+    "families": [
+        "Gt92xx"
+    ],
+    "models": [],
+    "areas": [
+        "Input"
+    ]
+}

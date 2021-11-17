@@ -40,4 +40,5 @@ fuchsia_driver("pc-ps2-driver") {
 fuchsia_driver_component("pc-ps2") {
   component_name = "pc-ps2"
   deps = [ ":pc-ps2-driver" ]
+  info = "pc-ps2-info.json"
 }

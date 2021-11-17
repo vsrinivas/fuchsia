@@ -1,0 +1,11 @@
+{
+    "short_description": "Cypress Semiconductor Cy8cmbr3108 touch controller driver",
+    "manufacturer": "Cypress Semiconductor",
+    "families": [],
+    "models": [
+        "Cy8cmbr3108"
+    ],
+    "areas": [
+        "Input"
+    ]
+}

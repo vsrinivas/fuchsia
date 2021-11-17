@@ -53,6 +53,7 @@ fuchsia_driver("hid-driver") {
 fuchsia_driver_component("hid") {
   component_name = "hid"
   deps = [ ":hid-driver" ]
+  info = "hid-info.json"
 }
 
 test("hid-test") {

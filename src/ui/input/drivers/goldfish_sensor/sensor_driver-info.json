@@ -1,0 +1,9 @@
+{
+    "short_description": "Goldfish emulator pipe sensor driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Input"
+    ]
+}

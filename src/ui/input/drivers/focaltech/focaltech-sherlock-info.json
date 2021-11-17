@@ -1,0 +1,13 @@
+{
+    "short_description": "Focaltech Ft touch controller driver for Sherlock",
+    "manufacturer": "Focaltech",
+    "families": [
+        "Ft"
+    ],
+    "models": [
+        "Ft5726"
+    ],
+    "areas": [
+        "Input"
+    ]
+}

@@ -1,0 +1,11 @@
+{
+    "short_description": "Goodix Gt6853 touch controller driver",
+    "manufacturer": "Goodix",
+    "families": [],
+    "models": [
+        "Gt6853"
+    ],
+    "areas": [
+        "Input"
+    ]
+}

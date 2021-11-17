@@ -49,6 +49,7 @@ fuchsia_driver("bma253-driver") {
 fuchsia_driver_component("bma253") {
   component_name = "bma253"
   deps = [ ":bma253-driver" ]
+  info = "bma253-info.json"
 }
 
 test("bma253-test") {
