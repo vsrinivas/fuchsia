@@ -17,6 +17,7 @@ if (is_host) {
       "//src/developer/ffx/plugins/emulator/configuration:ffx_emulator_config",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:async-trait",
+      "//third_party/rust_crates:serde",
     ]
   }
 

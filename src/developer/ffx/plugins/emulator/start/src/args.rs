@@ -2,38 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use argh::{FromArgValue, FromArgs};
+use argh::FromArgs;
 use ffx_core::ffx_command;
-use ffx_emulator_config::{AccelerationMode, GpuType};
-use serde::{Deserialize, Serialize};
+use ffx_emulator_config::{AccelerationMode, EngineType, GpuType};
 use std::path::PathBuf;
-
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
-#[serde(rename_all = "lowercase")]
-pub enum EngineType {
-    /// Fuchsia Emulator based on AEMU. Supports graphics.
-    Femu,
-
-    /// Qemu emulator. Version 5.
-    Qemu,
-}
-
-impl FromArgValue for EngineType {
-    fn from_arg_value(text: &str) -> Result<Self, std::string::String> {
-        let value = serde_json::from_str(&format!("\"{}\"", text)).expect(&format!(
-            "could not parse '{}' as a valid EngineType. \
-            Please check the help text for allowed values and try again",
-            text
-        ));
-        Ok(value)
-    }
-}
-
-impl Default for EngineType {
-    fn default() -> Self {
-        EngineType::Femu
-    }
-}
 
 #[ffx_command()]
 #[derive(Clone, FromArgs, Debug, Default, PartialEq)]

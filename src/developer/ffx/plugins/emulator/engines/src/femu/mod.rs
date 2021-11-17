@@ -9,21 +9,19 @@ use anyhow::Result;
 use async_trait::async_trait;
 use ffx_emulator_common::config::FfxConfigWrapper;
 use ffx_emulator_config::{EmulatorConfiguration, EmulatorEngine};
+use serde::{Deserialize, Serialize};
 
-pub struct FemuEngine {}
+#[derive(Default, Deserialize, Serialize)]
+pub struct FemuEngine {
+    #[serde(skip)]
+    pub(crate) _ffx_config: FfxConfigWrapper,
+
+    pub(crate) _emulator_configuration: EmulatorConfiguration,
+    pub(crate) _pid: i32,
+}
 
 #[async_trait]
 impl EmulatorEngine for FemuEngine {
-    fn new() -> Self {
-        FemuEngine {}
-    }
-    async fn initialize(
-        &mut self,
-        _config: &FfxConfigWrapper,
-        _emulator_configuration: EmulatorConfiguration,
-    ) -> Result<()> {
-        todo!()
-    }
     async fn start(&mut self) -> Result<i32> {
         todo!()
     }
@@ -31,6 +29,9 @@ impl EmulatorEngine for FemuEngine {
         todo!()
     }
     fn shutdown(&mut self) -> Result<()> {
+        todo!()
+    }
+    fn validate(&self) -> Result<()> {
         todo!()
     }
 }

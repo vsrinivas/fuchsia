@@ -10,7 +10,6 @@
 use crate::enumerations::*;
 use anyhow::Result;
 use async_trait::async_trait;
-use ffx_emulator_common::config::FfxConfigWrapper;
 use sdk_metadata::{AudioDevice, DataAmount, PointingDevice, Screen};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -18,29 +17,12 @@ use std::path::PathBuf;
 
 #[async_trait]
 pub trait EmulatorEngine {
-    /// Instantiate an empty instance of this engine type. Meaningful defaults can be applied here,
-    /// but the majority of the configuration will occur in initialize(). Should never have a reason
-    /// to fail.
-    fn new() -> Self
-    where
-        Self: Sized;
-
-    /// Set up the internal data types from the Product Bundle Manifest structures. This function
-    /// will be responsible for validating the input data types, copying the values needed for the
-    /// engine's behavior, and performing any other setup required. Could throw an error if the data
-    /// isn't valid other setup runs into problems.
-    async fn initialize(
-        &mut self,
-        config: &FfxConfigWrapper,
-        emulator_configuration: EmulatorConfiguration,
-    ) -> Result<()>;
-
     /// Start the emulator running. This function shouldn't require any additional configuration as
-    /// input, since the object should be fully configured by initialize(). At its most basic, this
-    /// should assemble the command-line to invoke the emulator binary, then spawn the process and
-    /// exit. If support processes are required, or temporary files need to be written to disk, that
-    /// would be handled here. When the function returns, the emulator will be running independently
-    /// and the process can terminate, or an error will be sent back explaining the failure.
+    /// input, since the object should be fully configured by the EngineBuilder. At its most basic,
+    /// this should assemble the command-line to invoke the emulator binary, then spawn the process
+    /// and return. If support processes are required, or temporary files need to be written to
+    /// disk, that would be handled here. When the function returns, either the emulator will be
+    /// running independently, or an error will be sent back explaining the failure.
     async fn start(&mut self) -> Result<i32>;
 
     /// Shut down a running emulator instance. The engine should have been instantiated from a saved
@@ -58,10 +40,17 @@ pub trait EmulatorEngine {
     /// but it returns a Result to allow for things like ffx_bail if its not implemented yet. We
     /// might adjust this later if we find a use case for failing during the show command.
     fn show(&mut self) -> Result<()>;
+
+    /// Validate the configuration parameters that have been provided to this engine, according to
+    /// the requirements for this engine type. If there are fields which are required, mutually
+    /// exclusive, only work when applied in certain combinations, or don't apply to this engine
+    /// type, this function will return an error indicating which field(s) and why. It also returns
+    /// an error if the engine has already been started. Otherwise, this returns Ok(()).
+    fn validate(&self) -> Result<()>;
 }
 
 /// Collects the specific configurations into a single struct for ease of passing around.
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct EmulatorConfiguration {
     pub host: HostConfig,
     pub device: DeviceConfig,
@@ -70,7 +59,7 @@ pub struct EmulatorConfiguration {
 }
 
 /// Specifications of the virtual device to be emulated.
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct DeviceConfig {
     /// The model of audio device being emulated, if any.
     pub audio: AudioDevice,
@@ -94,7 +83,7 @@ pub struct DeviceConfig {
 }
 
 /// Image files and other information specific to the guest OS.
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct GuestConfig {
     /// Fuchsia Volume Manager image, this is the guest's virtual storage device.
     pub fvm_image: Option<PathBuf>,
@@ -111,7 +100,7 @@ pub struct GuestConfig {
 }
 
 /// Host-side configuration data, such as physical hardware and host OS details.
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct HostConfig {
     /// Determines the type of hardware acceleration to use for emulation, such as KVM.
     pub acceleration: AccelerationMode,
@@ -130,7 +119,7 @@ pub struct HostConfig {
 /// execution of an emulator instance. These are different from the
 /// DeviceConfig and GuestConfig which defines the hardware configuration
 /// and behavior of Fuchsia running within the emulator instance.
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct RuntimeConfig {
     /// The emulator's output, which might come from the serial console, the guest, or nothing.
     pub console: Console,

@@ -65,6 +65,34 @@ impl Default for Console {
     }
 }
 
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum EngineType {
+    /// Fuchsia Emulator based on AEMU. Supports graphics.
+    Femu,
+
+    /// Qemu emulator. Version 5.
+    Qemu,
+}
+
+impl FromStr for EngineType {
+    type Err = std::string::String;
+    fn from_str(text: &str) -> Result<Self, std::string::String> {
+        let value = serde_json::from_str(&format!("\"{}\"", text)).expect(&format!(
+            "could not parse '{}' as a valid EngineType. \
+            Please check the help text for allowed values and try again",
+            text
+        ));
+        Ok(value)
+    }
+}
+
+impl Default for EngineType {
+    fn default() -> Self {
+        EngineType::Femu
+    }
+}
+
 /// Selector for which type of graphics acceleration to enable for the emulator.
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
