@@ -378,7 +378,7 @@ macro_rules! add_functions {
         /// to do this is to create an `enum` with variants for each service
         /// you want to serve.
         ///
-        /// ```ignore
+        /// ```rust
         /// enum MyServices {
         ///     EchoServer(EchoRequestStream),
         ///     CustomServer(CustomRequestStream),
@@ -389,7 +389,7 @@ macro_rules! add_functions {
         /// The constructor for a variant of the `MyServices` enum can be passed
         /// as the `service` parameter.
         ///
-        /// ```ignore
+        /// ```rust
         /// let mut fs = ServiceFs::new_local();
         /// fs
         ///     .add_fidl_service(MyServices::EchoServer)
@@ -399,7 +399,7 @@ macro_rules! add_functions {
         ///
         /// `ServiceFs` can now be treated as a `Stream` of type `MyServices`.
         ///
-        /// ```ignore
+        /// ```rust
         /// const MAX_CONCURRENT: usize = 10_000;
         /// fs.for_each_concurrent(MAX_CONCURRENT, |request: MyServices| {
         ///     match request {
