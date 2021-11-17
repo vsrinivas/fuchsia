@@ -18,6 +18,7 @@ ffx_plugin("ffx_flash") {
     "//third_party/rust_crates:async-fs",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:base64",
+    "//third_party/rust_crates:blocking",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:flate2",
@@ -48,5 +49,6 @@ ffx_plugin("ffx_flash") {
     "src/manifest/v1.rs",
     "src/manifest/v2.rs",
     "src/manifest/v3.rs",
+    "src/unlock/mod.rs",
   ]
 }

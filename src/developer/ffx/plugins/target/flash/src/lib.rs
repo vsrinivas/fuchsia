@@ -4,24 +4,34 @@
 
 use {
     crate::{
+        common::{file::EmptyResolver, prepare},
         lock::flash_lock,
         manifest::{from_path, from_sdk},
+        unlock::flash_unlock,
     },
     anyhow::Result,
     errors::ffx_bail,
     ffx_config::{file, sdk::SdkVersion},
     ffx_core::ffx_plugin,
-    ffx_flash_args::{FlashCommand, OemFile, Subcommand::Lock},
+    ffx_flash_args::{
+        FlashCommand, OemFile,
+        Subcommand::{Lock, Unlock},
+        UnlockCommand,
+    },
     fidl_fuchsia_developer_bridge::FastbootProxy,
-    std::io::{stdout, Write},
+    std::io::{stdin, stdout, Write},
     std::path::Path,
 };
 
 mod common;
 mod lock;
 mod manifest;
+mod unlock;
 
 const SSH_OEM_COMMAND: &str = "add-staged-bootloader-file ssh.authorized_keys";
+
+const WARNING: &str = "WARNING: ALL SETTINGS USER CONTENT WILL BE ERASED!\n\
+                        Do you want to continue? [yN]";
 
 #[ffx_plugin()]
 pub async fn flash(fastboot_proxy: FastbootProxy, cmd: FlashCommand) -> Result<()> {
@@ -33,9 +43,40 @@ pub async fn flash_plugin_impl<W: Write>(
     mut cmd: FlashCommand,
     writer: &mut W,
 ) -> Result<()> {
-    // Since locking doesn't need anything from the manifest, just return early.
-    if let Some(Lock(_)) = cmd.subcommand {
-        return flash_lock(writer, &fastboot_proxy).await;
+    // Some operations don't need the manifest, just return early.
+    match &cmd.subcommand {
+        Some(Lock(_)) => return flash_lock(writer, &fastboot_proxy).await,
+        Some(Unlock(UnlockCommand { cred, force })) => {
+            if !force {
+                writeln!(writer, "{}", WARNING)?;
+                let answer = blocking::unblock(|| {
+                    use std::io::BufRead;
+                    let mut line = String::new();
+                    let stdin = stdin();
+                    let mut locked = stdin.lock();
+                    let _ = locked.read_line(&mut line);
+                    line
+                })
+                .await;
+                if answer.trim() != "y" {
+                    ffx_bail!("User aborted");
+                }
+            }
+            match cred {
+                Some(cred_file) => {
+                    prepare(writer, &fastboot_proxy).await?;
+                    return flash_unlock(
+                        writer,
+                        &mut EmptyResolver::new()?,
+                        &vec![cred_file.to_string()],
+                        &fastboot_proxy,
+                    )
+                    .await;
+                }
+                _ => {}
+            }
+        }
+        _ => {}
     }
 
     match cmd.ssh_key.as_ref() {
@@ -54,8 +95,11 @@ pub async fn flash_plugin_impl<W: Write>(
                 let key: Option<String> = file("ssh.pub").await?;
                 match key {
                     Some(k) => {
-                        eprintln!("No `--ssh-key` flag, using {}", k);
-                        cmd.oem_stage.push(OemFile::new(SSH_OEM_COMMAND.to_string(), k));
+                        // Only needed when flashing.
+                        if cmd.subcommand.is_none() {
+                            eprintln!("No `--ssh-key` flag, using {}", k);
+                            cmd.oem_stage.push(OemFile::new(SSH_OEM_COMMAND.to_string(), k));
+                        }
                     }
                     None => ffx_bail!(
                         "Warning: flashing without a SSH key is not advised. \n\

@@ -5,7 +5,7 @@
 use {
     crate::common::{
         file::FileResolver, flash_and_reboot, is_locked, Flash, Partition as PartitionTrait,
-        Product as ProductTrait, MISSING_PRODUCT, UNLOCK_ERR,
+        Product as ProductTrait, Unlock, MISSING_PRODUCT, UNLOCK_ERR,
     },
     anyhow::Result,
     async_trait::async_trait,
@@ -103,6 +103,9 @@ impl Flash for FlashManifest {
         flash_and_reboot(writer, file_resolver, product, &fastboot_proxy, cmd).await
     }
 }
+
+#[async_trait(?Send)]
+impl Unlock for FlashManifest {}
 
 ////////////////////////////////////////////////////////////////////////////////
 // tests

@@ -6,9 +6,11 @@ use {
     crate::{
         common::{
             crypto::unlock_device, file::FileResolver, finish, flash_bootloader, flash_product,
-            is_locked, lock_device, verify_hardware, Flash, MISSING_PRODUCT,
+            is_locked, lock_device, verify_hardware, Flash, Unlock, MISSING_CREDENTIALS,
+            MISSING_PRODUCT,
         },
         manifest::v1::FlashManifest as FlashManifestV1,
+        unlock::flash_unlock,
     },
     anyhow::Result,
     async_trait::async_trait,
@@ -18,10 +20,6 @@ use {
     serde::{Deserialize, Serialize},
     std::io::Write,
 };
-
-const MISSING_CREDENTIALS: &str =
-    "The flash manifest is missing the credential files to unlock this device.\n\
-     Please unlock the target and try again.";
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub(crate) struct FlashManifest {
@@ -65,6 +63,22 @@ impl Flash for FlashManifest {
         }
         flash_product(writer, file_resolver, product, &fastboot_proxy, &cmd).await?;
         finish(writer, &fastboot_proxy).await
+    }
+}
+
+#[async_trait(?Send)]
+impl Unlock for FlashManifest {
+    async fn unlock<W, F>(
+        &self,
+        writer: &mut W,
+        file_resolver: &mut F,
+        fastboot_proxy: FastbootProxy,
+    ) -> Result<()>
+    where
+        W: Write,
+        F: FileResolver + Sync,
+    {
+        flash_unlock(writer, file_resolver, &self.credentials, &fastboot_proxy).await
     }
 }
 

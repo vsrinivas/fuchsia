@@ -91,7 +91,7 @@ pub struct FlashCommand {
 #[argh(subcommand)]
 pub enum Subcommand {
     Lock(LockCommand),
-    //TODO Unlock,
+    Unlock(UnlockCommand),
     //TODO Boot,
 }
 
@@ -99,6 +99,21 @@ pub enum Subcommand {
 /// Locks a fastboot target.
 #[argh(subcommand, name = "lock")]
 pub struct LockCommand {}
+
+#[derive(FromArgs, Clone, PartialEq, Debug)]
+/// Locks a fastboot target.
+#[argh(subcommand, name = "unlock")]
+pub struct UnlockCommand {
+    #[argh(
+        option,
+        short = 'c',
+        description = "optional path to credential file to use to unlock the device"
+    )]
+    pub cred: Option<String>,
+
+    #[argh(switch, description = "skips the warning message that this command is dangerous")]
+    pub force: bool,
+}
 
 #[derive(Default, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct OemFile(String, String);

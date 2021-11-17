@@ -23,6 +23,10 @@ use {
     termion::{color, style},
 };
 
+pub(crate) const MISSING_CREDENTIALS: &str =
+    "The flash manifest is missing the credential files to unlock this device.\n\
+     Please unlock the target and try again.";
+
 pub(crate) mod crypto;
 pub(crate) mod file;
 
@@ -51,6 +55,25 @@ pub(crate) trait Flash {
     where
         W: Write,
         F: FileResolver + Sync;
+}
+
+#[async_trait(?Send)]
+pub(crate) trait Unlock {
+    async fn unlock<W, F>(
+        &self,
+        _writer: &mut W,
+        _file_resolver: &mut F,
+        _fastboot_proxy: FastbootProxy,
+    ) -> Result<()>
+    where
+        W: Write,
+        F: FileResolver + Sync,
+    {
+        ffx_bail!(
+            "This manifest does not support unlocking target devices. \n\
+        Please update to a newer version of manifest and try again."
+        )
+    }
 }
 
 pub(crate) const MISSING_PRODUCT: &str = "Manifest does not contain product";

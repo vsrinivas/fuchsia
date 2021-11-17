@@ -6,18 +6,18 @@ use {
     crate::{
         common::{
             file::{ArchiveResolver, FileResolver, Resolver, TarResolver},
-            prepare, Flash,
+            prepare, Flash, Unlock,
         },
         manifest::{
             sdk::SdkEntries, v1::FlashManifest as FlashManifestV1,
             v2::FlashManifest as FlashManifestV2, v3::FlashManifest as FlashManifestV3,
         },
     },
-    anyhow::{anyhow, Context, Result},
+    anyhow::{anyhow, bail, Context, Result},
     async_trait::async_trait,
     chrono::Utc,
     errors::{ffx_bail, ffx_error},
-    ffx_flash_args::FlashCommand,
+    ffx_flash_args::{FlashCommand, Subcommand::Unlock as UnlockSub},
     fidl_fuchsia_developer_bridge::FastbootProxy,
     fms::Entries,
     serde::{Deserialize, Serialize},
@@ -136,6 +136,40 @@ impl Flash for FlashManifestVersion {
     }
 }
 
+#[async_trait(?Send)]
+impl Unlock for FlashManifestVersion {
+    async fn unlock<W, F>(
+        &self,
+        writer: &mut W,
+        file_resolver: &mut F,
+        fastboot_proxy: FastbootProxy,
+    ) -> Result<()>
+    where
+        W: Write,
+        F: FileResolver + Sync,
+    {
+        let total_time = Utc::now();
+        prepare(writer, &fastboot_proxy).await?;
+        match self {
+            Self::V1(v) => v.unlock(writer, file_resolver, fastboot_proxy).await?,
+            Self::V2(v) => v.unlock(writer, file_resolver, fastboot_proxy).await?,
+            Self::V3(v) => v.unlock(writer, file_resolver, fastboot_proxy).await?,
+            Self::Sdk(v) => v.unlock(writer, file_resolver, fastboot_proxy).await?,
+        };
+        let duration = Utc::now().signed_duration_since(total_time);
+        writeln!(
+            writer,
+            "{}Total Time{} [{}{:.2}s{}]",
+            color::Fg(color::Green),
+            style::Reset,
+            color::Fg(color::Blue),
+            (duration.num_milliseconds() as f32) / (1000 as f32),
+            style::Reset
+        )?;
+        Ok(())
+    }
+}
+
 pub(crate) async fn from_sdk<W: Write>(
     writer: &mut W,
     path: PathBuf,
@@ -191,7 +225,15 @@ impl<F: FileResolver + Sync> FlashManifest<F> {
         fastboot_proxy: FastbootProxy,
         cmd: FlashCommand,
     ) -> Result<()> {
-        self.version.flash(writer, &mut self.resolver, fastboot_proxy, cmd).await
+        match &cmd.subcommand {
+            None => self.version.flash(writer, &mut self.resolver, fastboot_proxy, cmd).await,
+            Some(UnlockSub(_)) => {
+                // Using the manifest, don't need the unlock credential from the UnlockCommand
+                // here.
+                self.version.unlock(writer, &mut self.resolver, fastboot_proxy).await
+            }
+            _ => bail!("Unexpected operation"), // Should not get here as lock is handled before manifest code.
+        }
     }
 }
 

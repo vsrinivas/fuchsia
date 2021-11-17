@@ -14,7 +14,7 @@ const LOCKABLE_VAR: &str = "vx-unlockable";
 const EPHEMERAL: &str = "ephemeral";
 const EPHEMERAL_ERR: &str = "Cannot lock ephemeral devices. Reboot the device to unlock.";
 const LOCKED_ERR: &str = "Target is already locked.";
-const LOCKED: &str = "locked";
+const LOCKED: &str = "Target is now locked.";
 
 pub(crate) async fn flash_lock<W: Write>(
     writer: &mut W,

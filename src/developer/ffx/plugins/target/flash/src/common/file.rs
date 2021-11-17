@@ -22,6 +22,38 @@ pub(crate) trait FileResolver {
     fn get_file<W: Write>(&mut self, writer: &mut W, file: &str) -> Result<String>;
 }
 
+pub(crate) struct EmptyResolver {
+    fake: PathBuf,
+}
+
+impl EmptyResolver {
+    pub(crate) fn new() -> Result<Self> {
+        let mut fake = std::env::current_dir()?;
+        fake.push("fake");
+        Ok(Self { fake })
+    }
+}
+
+impl FileResolver for EmptyResolver {
+    fn manifest(&self) -> &Path {
+        self.fake.as_path() //should never get used
+    }
+
+    fn get_file<W: Write>(&mut self, _writer: &mut W, file: &str) -> Result<String> {
+        if PathBuf::from(file).is_absolute() {
+            Ok(file.to_string())
+        } else {
+            let mut parent = std::env::current_dir()?;
+            parent.push(file);
+            if let Some(f) = parent.to_str() {
+                Ok(f.to_string())
+            } else {
+                ffx_bail!("Only UTF-8 strings are currently supported in the flash manifest")
+            }
+        }
+    }
+}
+
 pub(crate) struct Resolver {
     manifest_path: PathBuf,
 }
