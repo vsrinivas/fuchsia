@@ -41,6 +41,7 @@
 #include <kernel/align.h>
 #include <kernel/cpu.h>
 #include <ktl/atomic.h>
+#include <ktl/declval.h>
 
 struct Thread;
 struct percpu;
@@ -115,7 +116,7 @@ static_assert(__offsetof(struct x86_percpu, default_tss.rsp0) == PERCPU_KERNEL_S
 static_assert(__offsetof(struct x86_percpu, interrupt_stacks.nmi) ==
               PERCPU_INTERRUPT_STACKS_NMI_OFFSET);
 
-static_assert(sizeof(((x86_percpu *)nullptr)->interrupt_stacks.nmi) == INTERRUPT_STACK_SIZE);
+static_assert(sizeof(ktl::declval<x86_percpu>().interrupt_stacks.nmi) == INTERRUPT_STACK_SIZE);
 
 extern struct x86_percpu bp_percpu;
 extern struct x86_percpu *ap_percpus;
