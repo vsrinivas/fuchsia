@@ -4579,35 +4579,3 @@ version = "1.5.0+zstd.1.4.9"
 dependencies = [
  "libc",
 ]
-
-[[patch.unused]]
-name = "cmake"
-version = "0.1.99"
-
-[[patch.unused]]
-name = "futures-timer"
-version = "3.0.2"
-
-[[patch.unused]]
-name = "js-sys"
-version = "0.3.37"
-
-[[patch.unused]]
-name = "pkg-config"
-version = "0.3.99"
-
-[[patch.unused]]
-name = "wasm-bindgen-futures"
-version = "0.4.10"
-
-[[patch.unused]]
-name = "wepoll-binding"
-version = "2.0.2"
-
-[[patch.unused]]
-name = "winapi-i686-pc-windows-gnu"
-version = "0.4.0"
-
-[[patch.unused]]
-name = "winapi-x86_64-pc-windows-gnu"
-version = "0.4.0"

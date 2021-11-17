@@ -276,19 +276,11 @@ walkdir = { path = "ask2patch/walkdir" }
 
 ### Empty Forks: empty forks kept only for satisfying cargo's resolution
 backtrace-sys = { path = "empty/backtrace-sys" }
-cmake = { path = "empty/cmake"}
 crossterm_winapi = { path = "empty/crossterm_winapi" }
-futures-timer = { path = "empty/futures-timer" }
-js-sys = { path = "empty/js-sys" }
 miow = { path = "empty/miow" }
 ntapi = { path = "empty/ntapi" }
-pkg-config = { path = "empty/pkg-config" }
-wasm-bindgen-futures = { path = "empty/wasm-bindgen-futures" }
 web-sys = { path = "empty/web-sys" }
-wepoll-binding = { path = "empty/wepoll-binding" }
 wepoll-sys = { path = "empty/wepoll-sys" }
-winapi-i686-pc-windows-gnu = { path = "empty/winapi-i686-pc-windows-gnu" }
-winapi-x86_64-pc-windows-gnu = { path = "empty/winapi-x86_64-pc-windows-gnu" }
 winapi = { path = "empty/winapi" }
 winapi-util = { path = "empty/winapi-util" }
 
