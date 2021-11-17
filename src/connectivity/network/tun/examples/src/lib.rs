@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{Context as _, Error};
 use fidl::endpoints::Proxy;
 use net_declare::{fidl_ip, fidl_mac, fidl_subnet};
 
@@ -96,11 +95,11 @@ fn new_device_and_port_config(
 /// An example of configuring and operating a TAP-like interface using
 /// fuchsia.net.tun.
 #[fuchsia_async::run_singlethreaded(test)]
-async fn tap_like_over_network_tun() -> Result<(), Error> {
+async fn tap_like_over_network_tun() {
     // Connect to the ambient fuchsia.net.tun/Control service.
     let tun =
         fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_net_tun::ControlMarker>()
-            .context("failed to connect to service")?;
+            .expect("failed to connect to service");
 
     // Define the tun device configuration we want to use.
     // For a TAP-like device, the frame type must be Ethernet, and we must
@@ -113,31 +112,30 @@ async fn tap_like_over_network_tun() -> Result<(), Error> {
     // Request device creation.
     let (tun_device, server_end) =
         fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::DeviceMarker>()
-            .context("failed to create device endpoints")?;
-    let () = tun.create_device(device_config, server_end).context("failed to create device")?;
+            .expect("failed to create device endpoints");
+    let () = tun.create_device(device_config, server_end).expect("failed to create device");
     // Add a port.
     let (tun_port, server_end) =
         fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::PortMarker>()
-            .context("failed to create port endpoints")?;
-    let () = tun_device.add_port(port_config, server_end).context("failed to add port")?;
+            .expect("failed to create port endpoints");
+    let () = tun_device.add_port(port_config, server_end).expect("failed to add port");
 
     // Get the Netstack ends of the tun Ethernet device.
     let (network_device, mac) = {
         let (network_device, netdevice_server_end) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_hardware_network::DeviceMarker>()
-                .context("failed to create netdevice proxy")?;
+                .expect("failed to create netdevice proxy");
         let (port, port_server_end) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_hardware_network::PortMarker>()
-                .context("failed to create port proxy")?;
+                .expect("failed to create port proxy");
         let (mac, mac_server_end) = fidl::endpoints::create_endpoints::<
             fidl_fuchsia_hardware_network::MacAddressingMarker,
         >()
-        .context("failed to create mac endpoints")?;
+        .expect("failed to create mac endpoints");
 
-        let () =
-            tun_device.get_device(netdevice_server_end).context("failed to connect protocols")?;
-        let () = tun_port.get_port(port_server_end).context("get_port failed")?;
-        let () = port.get_mac(mac_server_end).context("get_mac failed")?;
+        let () = tun_device.get_device(netdevice_server_end).expect("failed to connect protocols");
+        let () = tun_port.get_port(port_server_end).expect("get_port failed");
+        let () = port.get_mac(mac_server_end).expect("get_mac failed");
         let network_device: fidl::endpoints::ClientEnd<_> = network_device
             .into_channel()
             .expect("failed to get inner channel")
@@ -149,7 +147,7 @@ async fn tap_like_over_network_tun() -> Result<(), Error> {
     // Connect to Netstack and install the device.
     let stack =
         fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
-            .context("failed to connect to stack")?;
+            .expect("failed to connect to stack");
     let interface_id = stack
         .add_interface(
             // Interface configuration.
@@ -167,36 +165,28 @@ async fn tap_like_over_network_tun() -> Result<(), Error> {
             ),
         )
         .await
-        .context("add_interface FIDL error")?
-        .map_err(|e: fidl_fuchsia_net_stack::Error| {
-            anyhow::anyhow!("add_interface failed: {:?}", e)
-        })?;
+        .expect("add_interface FIDL error")
+        .expect("add_interface failed");
 
     // Enable the interface.
     let () = stack
         .enable_interface(interface_id)
         .await
-        .context("enable_interface FIDL error")?
-        .map_err(|e: fidl_fuchsia_net_stack::Error| {
-            anyhow::anyhow!("enable_interface failed: {:?}", e)
-        })?;
+        .expect("enable_interface FIDL error")
+        .expect("enable_interface failed");
 
     // Add an IPv4 address to it.
     let () = stack
         .add_interface_address(interface_id, &mut CONFIG_FOR_TAP_LIKE.ip_layer.alice_subnet.clone())
         .await
-        .context("add_interface_address FIDL error")?
-        .map_err(|e: fidl_fuchsia_net_stack::Error| {
-            anyhow::anyhow!("add_interface_address failed: {:?}", e)
-        })?;
+        .expect("add_interface_address FIDL error")
+        .expect("add_interface_address failed");
 
     // Wait for Netstack to report the interface online. Netstack may drop
     // frames if they're sent before the online signal is observed. This is
     // necessary to prevent this test from flaking since we're only going to
     // send a single echo request.
-    let () = helpers::wait_interface_online(interface_id)
-        .await
-        .context("failed to observe interface online")?;
+    let () = helpers::wait_interface_online(interface_id).await;
 
     // Now we can send frames. In this example we'll send an ICMP echo request
     // and wait for the Netstack to respond.
@@ -209,9 +199,9 @@ async fn tap_like_over_network_tun() -> Result<(), Error> {
             ..fidl_fuchsia_net_tun::Frame::EMPTY
         })
         .await
-        .context("write_frame FIDL error")?
+        .expect("write_frame FIDL error")
         .map_err(fuchsia_zircon::Status::from_raw)
-        .context("write_frame failed")?;
+        .expect("write_frame failed");
 
     // Read frames until we see the echo response.
     loop {
@@ -230,15 +220,13 @@ async fn tap_like_over_network_tun() -> Result<(), Error> {
         } = tun_device
             .read_frame()
             .await
-            .context("read_frame FIDL error")?
+            .expect("read_frame FIDL error")
             .map_err(fuchsia_zircon::Status::from_raw)
-            .context("read_frame failed")?;
-        let data = data.ok_or_else(|| anyhow::anyhow!("received Frame with missing data field"))?;
+            .expect("read_frame failed");
+        let data = data.expect("received Frame with missing data field");
         assert_eq!(port, Some(PORT_ID));
         assert_eq!(frame_type, Some(fidl_fuchsia_hardware_network::FrameType::Ethernet));
-        match helpers::get_icmp_response_for_tap_like(&data[..])
-            .context("failed to parse ICMP response")?
-        {
+        match helpers::get_icmp_response_for_tap_like(&data[..]) {
             None => (),
             Some(helpers::ParsedFrame::ArpRequest { target_ip, sender_mac, sender_ip }) => {
                 // When we get an ARP request for bob's IP, we need to send an
@@ -256,9 +244,9 @@ async fn tap_like_over_network_tun() -> Result<(), Error> {
                             ..fidl_fuchsia_net_tun::Frame::EMPTY
                         })
                         .await
-                        .context("write_frame FIDL error")?
+                        .expect("write_frame FIDL error")
                         .map_err(fuchsia_zircon::Status::from_raw)
-                        .context("write_frame failed")?;
+                        .expect("write_frame failed");
                 }
             }
             Some(helpers::ParsedFrame::IcmpEchoResponse { src_mac, dst_mac, src_ip, dst_ip }) => {
@@ -266,7 +254,7 @@ async fn tap_like_over_network_tun() -> Result<(), Error> {
                 assert_eq!(dst_mac, CONFIG_FOR_TAP_LIKE.bob_mac);
                 assert_eq!(src_ip, CONFIG_FOR_TAP_LIKE.ip_layer.alice_subnet.addr);
                 assert_eq!(dst_ip, CONFIG_FOR_TAP_LIKE.ip_layer.bob_ip);
-                break Ok(());
+                break;
             }
         }
     }
@@ -275,11 +263,11 @@ async fn tap_like_over_network_tun() -> Result<(), Error> {
 /// An example of configuring and operating a TUN-like interface using
 /// fuchsia.net.tun.
 #[fuchsia_async::run_singlethreaded(test)]
-async fn tun_like_over_network_tun() -> Result<(), Error> {
+async fn tun_like_over_network_tun() {
     // Connect to the ambient fuchsia.net.tun/Control service.
     let tun =
         fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_net_tun::ControlMarker>()
-            .context("failed to connect to service")?;
+            .expect("failed to connect to service");
 
     // Define the tun device configuration we want to use. For a TUN-like
     // device, the frame types must be IPv4 and IPv6, and we don't provide a MAC
@@ -295,24 +283,24 @@ async fn tun_like_over_network_tun() -> Result<(), Error> {
     // Request device creation.
     let (tun_device, server_end) =
         fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::DeviceMarker>()
-            .context("failed to create device endpoints")?;
-    let () = tun.create_device(device_config, server_end).context("failed to create device")?;
+            .expect("failed to create device endpoints");
+    let () = tun.create_device(device_config, server_end).expect("failed to create device");
     // Add a port.
     let (_tun_port, server_end) =
         fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::PortMarker>()
-            .context("failed to create port endpoints")?;
-    let () = tun_device.add_port(port_config, server_end).context("failed to add port")?;
+            .expect("failed to create port endpoints");
+    let () = tun_device.add_port(port_config, server_end).expect("failed to add port");
 
     // Get the Netstack end of the tun IPv4/IPv6 device.
     let (network_device, netdevice_server_end) =
         fidl::endpoints::create_endpoints::<fidl_fuchsia_hardware_network::DeviceMarker>()
-            .context("failed to create netdevice endpoints")?;
-    let () = tun_device.get_device(netdevice_server_end).context("failed to get device")?;
+            .expect("failed to create netdevice endpoints");
+    let () = tun_device.get_device(netdevice_server_end).expect("failed to get device");
 
     // Connect to Netstack and install the device.
     let stack =
         fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
-            .context("failed to connect to stack")?;
+            .expect("failed to connect to stack");
     let interface_id = stack
         .add_interface(
             // Interface configuration.
@@ -328,36 +316,28 @@ async fn tun_like_over_network_tun() -> Result<(), Error> {
             &mut fidl_fuchsia_net_stack::DeviceDefinition::Ip(network_device),
         )
         .await
-        .context("add_interface FIDL error")?
-        .map_err(|e: fidl_fuchsia_net_stack::Error| {
-            anyhow::anyhow!("add_interface failed: {:?}", e)
-        })?;
+        .expect("add_interface FIDL error")
+        .expect("add_interface failed");
 
     // Enable the interface.
     let () = stack
         .enable_interface(interface_id)
         .await
-        .context("enable_interface FIDL error")?
-        .map_err(|e: fidl_fuchsia_net_stack::Error| {
-            anyhow::anyhow!("enable_interface failed: {:?}", e)
-        })?;
+        .expect("enable_interface FIDL error")
+        .expect("enable_interface failed");
 
     // Add an IPv4 address to it.
     let () = stack
         .add_interface_address(interface_id, &mut CONFIG_FOR_TUN_LIKE.alice_subnet.clone())
         .await
-        .context("add_interface_address FIDL error")?
-        .map_err(|e: fidl_fuchsia_net_stack::Error| {
-            anyhow::anyhow!("add_interface_address failed: {:?}", e)
-        })?;
+        .expect("add_interface_address FIDL error")
+        .expect("add_interface_address failed");
 
     // Wait for Netstack to report the interface online. Netstack may drop
     // frames if they're sent before the online signal is observed. This is
     // necessary to prevent this test from flaking since we're only going to
     // send a single echo request.
-    let () = helpers::wait_interface_online(interface_id)
-        .await
-        .context("failed to observe interface online")?;
+    let () = helpers::wait_interface_online(interface_id).await;
 
     // Now we can send frames. In this example we'll send an ICMP echo request
     // and wait for the Netstack to respond.
@@ -370,9 +350,9 @@ async fn tun_like_over_network_tun() -> Result<(), Error> {
             ..fidl_fuchsia_net_tun::Frame::EMPTY
         })
         .await
-        .context("write_frame FIDL error")?
+        .expect("write_frame FIDL error")
         .map_err(fuchsia_zircon::Status::from_raw)
-        .context("write_frame failed")?;
+        .expect("write_frame failed");
 
     // Read frames until we see the echo response.
     loop {
@@ -390,25 +370,23 @@ async fn tun_like_over_network_tun() -> Result<(), Error> {
         } = tun_device
             .read_frame()
             .await
-            .context("read_frame FIDL error")?
+            .expect("read_frame FIDL error")
             .map_err(fuchsia_zircon::Status::from_raw)
-            .context("read_frame failed")?;
+            .expect("read_frame failed");
         assert_eq!(port, Some(PORT_ID));
         match frame_type {
             Some(fidl_fuchsia_hardware_network::FrameType::Ipv4) => (),
             Some(fidl_fuchsia_hardware_network::FrameType::Ipv6) => continue,
             unexpected => {
-                break Err(anyhow::anyhow!("received unexpected frame_type: {:?}", unexpected))
+                panic!("received unexpected frame_type: {:?}", unexpected);
             }
         }
-        let data = data.ok_or_else(|| anyhow::anyhow!("received Frame with missing data field"))?;
+        let data = data.expect("received Frame with missing data field");
 
-        if let Some((src_ip, dst_ip)) = helpers::get_icmp_response_for_tun_like(&data[..])
-            .context("failed to parse ICMP response")?
-        {
+        if let Some((src_ip, dst_ip)) = helpers::get_icmp_response_for_tun_like(&data[..]) {
             assert_eq!(src_ip, CONFIG_FOR_TUN_LIKE.alice_subnet.addr);
             assert_eq!(dst_ip, CONFIG_FOR_TUN_LIKE.bob_ip);
-            break Ok(());
+            break;
         }
     }
 }
@@ -416,7 +394,6 @@ async fn tun_like_over_network_tun() -> Result<(), Error> {
 /// This module contains some helpers to remove noise from the examples in this
 /// crate.
 mod helpers {
-    use anyhow::{Context as _, Error};
     use net_types::{
         ethernet::Mac,
         ip::{Ipv4, Ipv4Addr},
@@ -511,50 +488,45 @@ mod helpers {
     /// Attempts to parse an ICMP echo response in an Ethernet frame contained
     /// in `data`.
     ///
-    /// Returns `Err` if the frame can't be parsed, `Ok(None)` if the frame is
-    /// valid but it's not an ICMP response.
+    /// Returns `None` if the frame is valid but it's not an ICMP response.
     ///
     /// Otherwise, returns either a [`ParsedFrame::IcmpEchoResponse`] with the
     /// echo response or a [`ParsedFrame::ArpRequest`] indicating that an ARP
     /// response must be sent for LL resolution.
-    pub(super) fn get_icmp_response_for_tap_like(
-        data: &[u8],
-    ) -> Result<Option<ParsedFrame>, Error> {
+    ///
+    /// # Panics
+    ///
+    /// Panics if the frame can't be parsed.
+    pub(super) fn get_icmp_response_for_tap_like(data: &[u8]) -> Option<ParsedFrame> {
         let mut bv = data;
         let ethernet = EthernetFrame::parse(&mut bv, EthernetFrameLengthCheck::NoCheck)
-            .context("failed to parse Ethernet frame")?;
+            .expect("failed to parse Ethernet frame");
         let src_mac = fidl_mac(ethernet.src_mac());
         let dst_mac = fidl_mac(ethernet.dst_mac());
         match ethernet.ethertype() {
-            Some(EtherType::Ipv4) => get_icmp_response_for_tun_like(bv).map(|r| {
-                r.map(|(src_ip, dst_ip)| ParsedFrame::IcmpEchoResponse {
-                    src_mac,
-                    dst_mac,
-                    src_ip,
-                    dst_ip,
-                })
+            Some(EtherType::Ipv4) => get_icmp_response_for_tun_like(bv).map(|(src_ip, dst_ip)| {
+                ParsedFrame::IcmpEchoResponse { src_mac, dst_mac, src_ip, dst_ip }
             }),
             Some(EtherType::Arp) => {
                 let arp = ArpPacket::<_, Mac, Ipv4Addr>::parse(&mut bv, ())
-                    .context("failed to parse ARP packet")?;
+                    .expect("failed to parse ARP packet");
                 match arp.operation() {
-                    ArpOp::Request => Ok(Some(ParsedFrame::ArpRequest {
+                    ArpOp::Request => Some(ParsedFrame::ArpRequest {
                         target_ip: fidl_ip(arp.target_protocol_address()),
                         sender_mac: fidl_mac(arp.sender_hardware_address()),
                         sender_ip: fidl_ip(arp.sender_protocol_address()),
-                    })),
-                    ArpOp::Response | ArpOp::Other(_) => Ok(None),
+                    }),
+                    ArpOp::Response | ArpOp::Other(_) => None,
                 }
             }
-            _ => Ok(None),
+            _ => None,
         }
     }
 
     /// Attempts to parse an ICMP echo response in an Ethernet frame contained
     /// in `data`.
     ///
-    /// Returns `Err` if the frame can't be parsed, `Ok(None)` if the frame is
-    /// valid but it's not an ICMP response.
+    /// Returns `None` if the frame is valid but it's not an ICMP response.
     ///
     /// Otherwise, returns the `(src_ip, dst_ip)` addressing tuple.
     ///
@@ -562,22 +534,26 @@ mod helpers {
     /// crate and it makes assumptions that may not be valid in a production
     /// environment, such as assuming that no IP fragmentation happens, and the
     /// ICMP echo responses are not validated.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the frame can't be parsed.
     pub(super) fn get_icmp_response_for_tun_like(
         data: &[u8],
-    ) -> Result<Option<(fidl_fuchsia_net::IpAddress, fidl_fuchsia_net::IpAddress)>, Error> {
+    ) -> Option<(fidl_fuchsia_net::IpAddress, fidl_fuchsia_net::IpAddress)> {
         let mut bv = data;
-        let ipv4 = Ipv4Packet::parse(&mut bv, ()).context("failed to parse IPv4")?;
+        let ipv4 = Ipv4Packet::parse(&mut bv, ()).expect("failed to parse IPv4");
         if ipv4.proto() != Ipv4Proto::Icmp {
-            return Ok(None);
+            return None;
         }
         let src_ip = ipv4.src_ip();
         let dst_ip = ipv4.dst_ip();
         let icmp = Icmpv4Packet::parse(&mut bv, IcmpParseArgs::new(src_ip, dst_ip))
-            .context("failed to parse ICMP")?;
+            .expect("failed to parse ICMP");
         if let Icmpv4Packet::EchoReply(_echo) = icmp {
-            Ok(Some((fidl_ip(src_ip), fidl_ip(dst_ip))))
+            Some((fidl_ip(src_ip), fidl_ip(dst_ip)))
         } else {
-            Ok(None)
+            None
         }
     }
 
@@ -603,14 +579,14 @@ mod helpers {
     }
 
     /// Waits for interface with ID `interface_id` to come online.
-    pub(super) async fn wait_interface_online(interface_id: u64) -> Result<(), Error> {
+    pub(super) async fn wait_interface_online(interface_id: u64) {
         let interface_state = fuchsia_component::client::connect_to_protocol::<
             fidl_fuchsia_net_interfaces::StateMarker,
         >()
-        .context("failed to connect to interfaces state service")?;
+        .expect("failed to connect to interfaces state service");
         fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
             fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
-                .context("failed to create event stream")?,
+                .expect("failed to create event stream"),
             &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(interface_id),
             |&fidl_fuchsia_net_interfaces_ext::Properties {
                  id: _,
@@ -629,6 +605,6 @@ mod helpers {
             },
         )
         .await
-        .context("failed to wait for interface online")
+        .expect("failed to wait for interface online")
     }
 }
