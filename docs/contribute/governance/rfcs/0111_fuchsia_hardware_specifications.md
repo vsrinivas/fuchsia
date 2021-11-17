@@ -400,7 +400,7 @@ ARM v8.0-A (Cortex A-34) or later:
 *   AES: AESE, AESD, AESMC, AESIMC, PMULL and PMULL2
 *   SHA2: SHA256H, SHA256H2, SHA256U0, SHA256U1
 
-ARM 8.1 or later:
+ARM 8.1 or later (or ARMv8-A if supported):
 
 *   CRC32
 
