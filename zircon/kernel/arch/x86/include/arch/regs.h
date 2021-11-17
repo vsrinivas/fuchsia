@@ -31,6 +31,8 @@
 #define X86_IFRAME_OFFSET_USER_SP (20 * 8)
 #define X86_IFRAME_OFFSET_USER_SS (21 * 8)
 
+#define X86_IFRAME_SIZE (22 * 8)
+
 #ifndef __ASSEMBLER__
 
 #include <assert.h>
@@ -47,30 +49,32 @@ struct iframe_t {
   uint64_t user_sp, user_ss;                      // pushed by interrupt
 };
 
-static_assert(offsetof(iframe_t, rdi) == X86_IFRAME_OFFSET_RDI, "");
-static_assert(offsetof(iframe_t, rsi) == X86_IFRAME_OFFSET_RSI, "");
-static_assert(offsetof(iframe_t, rbp) == X86_IFRAME_OFFSET_RBP, "");
-static_assert(offsetof(iframe_t, rbx) == X86_IFRAME_OFFSET_RBX, "");
-static_assert(offsetof(iframe_t, rdx) == X86_IFRAME_OFFSET_RDX, "");
-static_assert(offsetof(iframe_t, rcx) == X86_IFRAME_OFFSET_RCX, "");
-static_assert(offsetof(iframe_t, rax) == X86_IFRAME_OFFSET_RAX, "");
-static_assert(offsetof(iframe_t, r8) == X86_IFRAME_OFFSET_R8, "");
-static_assert(offsetof(iframe_t, r9) == X86_IFRAME_OFFSET_R9, "");
-static_assert(offsetof(iframe_t, r10) == X86_IFRAME_OFFSET_R10, "");
-static_assert(offsetof(iframe_t, r11) == X86_IFRAME_OFFSET_R11, "");
-static_assert(offsetof(iframe_t, r12) == X86_IFRAME_OFFSET_R12, "");
-static_assert(offsetof(iframe_t, r13) == X86_IFRAME_OFFSET_R13, "");
-static_assert(offsetof(iframe_t, r14) == X86_IFRAME_OFFSET_R14, "");
-static_assert(offsetof(iframe_t, r15) == X86_IFRAME_OFFSET_R15, "");
+static_assert(offsetof(iframe_t, rdi) == X86_IFRAME_OFFSET_RDI);
+static_assert(offsetof(iframe_t, rsi) == X86_IFRAME_OFFSET_RSI);
+static_assert(offsetof(iframe_t, rbp) == X86_IFRAME_OFFSET_RBP);
+static_assert(offsetof(iframe_t, rbx) == X86_IFRAME_OFFSET_RBX);
+static_assert(offsetof(iframe_t, rdx) == X86_IFRAME_OFFSET_RDX);
+static_assert(offsetof(iframe_t, rcx) == X86_IFRAME_OFFSET_RCX);
+static_assert(offsetof(iframe_t, rax) == X86_IFRAME_OFFSET_RAX);
+static_assert(offsetof(iframe_t, r8) == X86_IFRAME_OFFSET_R8);
+static_assert(offsetof(iframe_t, r9) == X86_IFRAME_OFFSET_R9);
+static_assert(offsetof(iframe_t, r10) == X86_IFRAME_OFFSET_R10);
+static_assert(offsetof(iframe_t, r11) == X86_IFRAME_OFFSET_R11);
+static_assert(offsetof(iframe_t, r12) == X86_IFRAME_OFFSET_R12);
+static_assert(offsetof(iframe_t, r13) == X86_IFRAME_OFFSET_R13);
+static_assert(offsetof(iframe_t, r14) == X86_IFRAME_OFFSET_R14);
+static_assert(offsetof(iframe_t, r15) == X86_IFRAME_OFFSET_R15);
 
-static_assert(offsetof(iframe_t, vector) == X86_IFRAME_OFFSET_VECTOR, "");
-static_assert(offsetof(iframe_t, err_code) == X86_IFRAME_OFFSET_ERR_CODE, "");
+static_assert(offsetof(iframe_t, vector) == X86_IFRAME_OFFSET_VECTOR);
+static_assert(offsetof(iframe_t, err_code) == X86_IFRAME_OFFSET_ERR_CODE);
 
-static_assert(offsetof(iframe_t, ip) == X86_IFRAME_OFFSET_IP, "");
-static_assert(offsetof(iframe_t, cs) == X86_IFRAME_OFFSET_CS, "");
-static_assert(offsetof(iframe_t, flags) == X86_IFRAME_OFFSET_FLAGS, "");
-static_assert(offsetof(iframe_t, user_sp) == X86_IFRAME_OFFSET_USER_SP, "");
-static_assert(offsetof(iframe_t, user_ss) == X86_IFRAME_OFFSET_USER_SS, "");
+static_assert(offsetof(iframe_t, ip) == X86_IFRAME_OFFSET_IP);
+static_assert(offsetof(iframe_t, cs) == X86_IFRAME_OFFSET_CS);
+static_assert(offsetof(iframe_t, flags) == X86_IFRAME_OFFSET_FLAGS);
+static_assert(offsetof(iframe_t, user_sp) == X86_IFRAME_OFFSET_USER_SP);
+static_assert(offsetof(iframe_t, user_ss) == X86_IFRAME_OFFSET_USER_SS);
+
+static_assert(sizeof(iframe_t) == X86_IFRAME_SIZE);
 
 void PrintFrame(FILE* file, const iframe_t& frame);
 

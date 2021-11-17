@@ -9,8 +9,11 @@
 
 #include <arch/asm_macros.h>
 #include <arch/code-patches/case-id.h>
+#include <arch/regs.h>
 #include <arch/x86/descriptor.h>
+#include <arch/x86/mp.h>
 #include <lib/arch/asm.h>
+#include <lib/arch/x86/msr.h>
 #include <lib/code-patching/asm.h>
 
 // This is called 256 times in a row, with isr.current set to the iteration
@@ -95,18 +98,11 @@
   // assume that the direction flag is unset.
   cld
 
-  // Check to see if we came from user space by testing the CPL in the
-  // %cs selector that was saved on the stack automatically.  Check for != 0.
-  testb $3, 0x18(%rsp)
-  jz 1f
-
-  // Swap %gs.base to kernel space.
-  swapgs
-1:
-  // Mitigates the swapgs bug. See <arch/code-patches/case-id.h>.
-  .code_patching.start CASE_ID_SWAPGS_MITIGATION
-  lfence
-  .code_patching.end
+  // Later on we're going to calculate the percpu pointer using dead reckoning
+  // from %rsp so keep track of what all has been pushed onto the stack.
+  //
+  // At this point the stack contains 7 qwords.  5 or 6 pushed by the interrupt
+  // and 2 or 1 pushed by the stub.
 
   // Save general purpose registers.
   push_reg %r15
@@ -125,7 +121,32 @@
   push_reg %rsi
   push_reg %rdi
 
+  // At this point the stack contains a complete iframe_t.
+
   movq %rsp, %rdi     // Pass the iframe in %rdi.
+
+  // There are two main paths through this function.  One path is for NMIs.  The
+  // other is for all other interrupts (non_nmi).  Both share a common return
+  // path.
+  //
+  // TODO(maniscalco): Refactor this function to eliminate the compare and branch
+  // without duplicating logic that's common to the NMI and non-NMI paths.
+
+  // Was this an NMI?
+  cmpq $2, X86_IFRAME_OFFSET_VECTOR(%rsp)
+  je .Lnmi
+
+  // Check to see if we came from user space by testing the CPL in the
+  // %cs selector that was saved on the stack automatically.  Check for != 0.
+  testb $3, X86_IFRAME_OFFSET_CS(%rsp)
+  jz 1f
+  // Swap %gs.base to kernel space.
+  swapgs
+1:
+  // Mitigates the swapgs bug. See <arch/code-patches/case-id.h>.
+  .code_patching.start CASE_ID_SWAPGS_MITIGATION
+  lfence
+  .code_patching.end
 
   call x86_exception_handler
 
@@ -133,6 +154,26 @@
   // When gdb sees this as the return address it knows it can fetch
   // iframe_t from $rsp. See scripts/zircon.elf-gdb.py.
 .label interrupt_common_iframe_set_up_for_debugger
+
+  // Label exists only so a test can verify the code patching result.
+.label interrupt_non_nmi_maybe_mds_buff_overwrite, global
+  // Mitigates MDS/TAA bugs. See <arch/code-patches/case-id.h>
+  .code_patching.start CASE_ID_MDS_TAA_MITIGATION
+  call mds_buff_overwrite
+  .code_patching.end
+
+  // Check if we're returning to user space as per before.
+  testb $3, X86_IFRAME_OFFSET_CS(%rsp)
+  jz    1f
+  // Swap %gs.base back to user space.
+  swapgs
+1:
+  // Mitigates the swapgs bug. See <arch/code-patches/case-id.h>.
+  .code_patching.start CASE_ID_SWAPGS_MITIGATION
+  lfence
+  .code_patching.end
+
+.Lcommon_return:
 
   // Restore general purpose registers.
   pop_reg %rdi
@@ -151,28 +192,51 @@
   pop_reg %r14
   pop_reg %r15
 
-  /* check if we're returning to user space as per before */
-  testb $3, 0x18(%rsp)
-  jz    1f
+  // Drop vector number and error code.
+  add_to_sp 16
 
-.label interrupt_maybe_mds_buff_overwrite, global
+  iretq
+
+.Lnmi:
+  // We took an NMI.  The NMI may have interrupted another interrupt handler
+  // before that handler was able to setup the kernel's %gs.base.  We can't
+  // be sure of the state of %gs.base so we'll have to recover it.  Start by
+  // saving the current value in a callee-saved register so we can later restore
+  // it.
+
+  // Save it in %rbx.
+  //
+  // TODO(maniscalco): If/when NMIs become performance critical (e.g. used for
+  // profiling) consider using rdgsbase/wrgsbase when available instead of the
+  // MSR.
+  rdmsr64 MSR_IA32_GS_BASE
+  mov %rax, %rbx
+
+  // Compute the %rsp-relative offset of the stack base.
+  .Lstack_base_from_rsp = INTERRUPT_STACK_SIZE - X86_IFRAME_SIZE
+  // The NMI stack is embedded in the percpu struct.
+  .Lpercpu_from_rsp = .Lstack_base_from_rsp + PERCPU_INTERRUPT_STACKS_NMI_OFFSET
+  mov %rsp, %rax
+  sub $.Lpercpu_from_rsp, %rax
+
+  // Set %gs.base to point at the percpu struct.
+  wrmsr64 MSR_IA32_GS_BASE
+
+  call x86_nmi_handler
+
+  // Label exists only so a test can verify the code patching result.
+.label interrupt_nmi_maybe_mds_buff_overwrite, global
   // Mitigates MDS/TAA bugs. See <arch/code-patches/case-id.h>
   .code_patching.start CASE_ID_MDS_TAA_MITIGATION
   call mds_buff_overwrite
   .code_patching.end
 
-  /* swap gs back to user space */
-  swapgs
-1:
-  // Mitigates the swapgs bug. See <arch/code-patches/case-id.h>.
-  .code_patching.start CASE_ID_SWAPGS_MITIGATION
-  lfence
-  .code_patching.end
+  // Restore the saved %gs.base.
+  mov %rbx, %rax
+  wrmsr64 MSR_IA32_GS_BASE
 
-  // Drop vector number and error code.
-  add_to_sp 16
+  jmp .Lcommon_return
 
-  iretq
 .end_function
 
 // Call external interrupt handler manually without actually issuing interrupt.

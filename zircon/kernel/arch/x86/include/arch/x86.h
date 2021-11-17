@@ -26,8 +26,9 @@ struct syscall_regs_t;
 
 #define X86_8BYTE_MASK 0xFFFFFFFF
 
-// Implemented in assembly.
+// Called by assembly.
 extern "C" void x86_exception_handler(struct iframe_t* frame);
+extern "C" void x86_nmi_handler(struct iframe_t* frame);
 void platform_irq(struct iframe_t* frame);
 
 struct arch_exception_context {

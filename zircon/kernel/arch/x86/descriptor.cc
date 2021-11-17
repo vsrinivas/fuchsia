@@ -66,9 +66,9 @@ void x86_initialize_percpu_tss(void) {
 }
 
 static void x86_tss_assign_ists(struct x86_percpu* percpu, tss_t* tss) {
-  tss->ist1 = (uintptr_t)&percpu->interrupt_stacks[0] + PAGE_SIZE;
-  tss->ist2 = (uintptr_t)&percpu->interrupt_stacks[1] + PAGE_SIZE;
-  tss->ist3 = (uintptr_t)&percpu->interrupt_stacks[2] + PAGE_SIZE;
+  tss->ist1 = reinterpret_cast<uintptr_t>(&percpu->interrupt_stacks.nmi + 1);
+  tss->ist2 = reinterpret_cast<uintptr_t>(&percpu->interrupt_stacks.machine_check + 1);
+  tss->ist3 = reinterpret_cast<uintptr_t>(&percpu->interrupt_stacks.double_fault + 1);
 }
 
 void x86_set_tss_sp(vaddr_t sp) {

@@ -22,6 +22,16 @@
   shr $32, %rdx
   wrmsr
 .endm
+
+// Reads the given MSR, which should be the bare constant, into %rax.
+// Clobbers %rcx and %rdx.
+.macro rdmsr64 msr
+  mov $\msr, %ecx
+  rdmsr
+  shl $32, %rdx
+  or %rdx, %rax
+.endm
+
 #endif  // __x86_64__
 
 #if defined(__x86_64__) || defined(__i386__)

@@ -16,14 +16,17 @@
 #include <arch/arch_ops.h>
 #include <arch/mp.h>
 #include <arch/x86.h>
+#include <arch/x86/apic.h>
 #include <arch/x86/cpuid.h>
 #include <arch/x86/cpuid_test_data.h>
 #include <arch/x86/fake_msr_access.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/hwp.h>
+#include <arch/x86/interrupts.h>
 #include <arch/x86/platform_access.h>
 #include <hwreg/x86msr.h>
 #include <kernel/cpu.h>
+#include <kernel/deadline.h>
 #include <ktl/array.h>
 #include <ktl/unique_ptr.h>
 
@@ -31,7 +34,8 @@
 
 extern void x86_amd_set_lfence_serializing(const cpu_id::CpuId*, MsrAccess*);
 extern char __x86_indirect_thunk_r11;
-extern char interrupt_maybe_mds_buff_overwrite;
+extern char interrupt_non_nmi_maybe_mds_buff_overwrite;
+extern char interrupt_nmi_maybe_mds_buff_overwrite;
 extern char syscall_maybe_mds_buff_overwrite;
 
 namespace {
@@ -386,7 +390,8 @@ static bool test_spectre_v2_mitigations() {
 
 static bool test_mds_taa_mitigation() {
   BEGIN_TEST;
-  for (char* src : {&interrupt_maybe_mds_buff_overwrite, &syscall_maybe_mds_buff_overwrite}) {
+  for (char* src : {&interrupt_non_nmi_maybe_mds_buff_overwrite,
+                    &interrupt_nmi_maybe_mds_buff_overwrite, &syscall_maybe_mds_buff_overwrite}) {
     unsigned char check_buffer[5];
     memcpy(check_buffer, src, sizeof(check_buffer));
     if (x86_cpu_should_md_clear_on_user_return()) {
@@ -421,6 +426,27 @@ static bool test_gdt_mapping() {
   END_TEST;
 }
 
+// TODO(fxbug.dev/88368): Unconditionally re-enable this test when fxbug.dev/88368 has been
+// resolved.
+//
+// Spam all the CPUs with NMIs, see that nothing bad happens.
+bool test_nmi_spam() {
+  BEGIN_TEST;
+
+  if (x86_hypervisor == X86_HYPERVISOR_KVM) {
+    printf("skipping test, see fxbug.dev/88368\n");
+    END_TEST;
+  }
+
+  constexpr zx_duration_t kDuration = ZX_MSEC(100);
+  const Deadline deadline = Deadline::after(kDuration);
+  do {
+    apic_send_mask_ipi(X86_INT_NMI, mp_get_active_mask(), DELIVERY_MODE_NMI);
+  } while (current_time() < deadline.when());
+
+  END_TEST;
+}
+
 }  // anonymous namespace
 
 UNITTEST_START_TESTCASE(x64_platform_tests)
@@ -435,4 +461,5 @@ UNITTEST("test amd_platform_init", test_amd_platform_init)
 UNITTEST("test spectre v2 mitigation building blocks", test_spectre_v2_mitigations)
 UNITTEST("test mds mitigation building blocks", test_mds_taa_mitigation)
 UNITTEST("test gdt is mapped", test_gdt_mapping)
+UNITTEST("test nmi spam", test_nmi_spam)
 UNITTEST_END_TESTCASE(x64_platform_tests, "x64_platform_tests", "")
