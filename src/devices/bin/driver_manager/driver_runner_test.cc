@@ -688,12 +688,6 @@ TEST_F(DriverRunnerTest, StartSecondDriver_NewDriverHost) {
           ASSERT_TRUE(protocol.has_source_name());
           EXPECT_EQ("fuchsia.package.Protocol", protocol.source_name());
 
-          ASSERT_TRUE(protocol.has_target());
-          ASSERT_TRUE(protocol.target().is_child());
-          auto& target_ref = protocol.target().child();
-          EXPECT_EQ("root.second", target_ref.name);
-          EXPECT_EQ("boot-drivers", target_ref.collection.value_or("missing"));
-
           ASSERT_TRUE(protocol.has_target_name());
           EXPECT_EQ("fuchsia.package.Renamed", protocol.target_name());
         });

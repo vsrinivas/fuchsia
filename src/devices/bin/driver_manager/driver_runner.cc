@@ -344,19 +344,13 @@ fidl::VectorView<fdecl::wire::Offer> Node::CreateOffers(fidl::AnyArena& arena) c
     node_offers.reserve(node_offers.size() + parent_offers.size());
     for (auto& parent_offer : parent_offers) {
       fdecl::wire::Offer& offer = parent_offer->get();
-      VisitOffer<bool>(offer, [this, &arena, source_node](auto& decl) mutable {
+      VisitOffer<bool>(offer, [&arena, source_node](auto& decl) mutable {
         // Assign the source of the offer.
         fdecl::wire::ChildRef source_ref{
             .name = {arena, source_node->TopoName()},
             .collection = CollectionName(source_node->collection_),
         };
         decl.set_source(arena, fdecl::wire::Ref::WithChild(arena, source_ref));
-        // Assign the target of the offer.
-        fdecl::wire::ChildRef target_ref{
-            .name = {arena, TopoName()},
-            .collection = CollectionName(collection_),
-        };
-        decl.set_target(arena, fdecl::wire::Ref::WithChild(arena, target_ref));
         return true;
       });
       node_offers.push_back(offer);
