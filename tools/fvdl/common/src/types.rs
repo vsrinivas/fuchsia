@@ -382,6 +382,7 @@ pub struct VDLArgs {
     pub package_server_port: String,
     pub acceleration: bool,
     pub image_architecture: String,
+    pub isolated_ffx_config_path: String,
 }
 
 impl From<&StartCommand> for VDLArgs {
@@ -447,6 +448,11 @@ impl From<&StartCommand> for VDLArgs {
                 .as_ref()
                 .unwrap_or(&String::from(""))
                 .to_string(),
+            isolated_ffx_config_path: cmd
+                .isolated_ffx_config_path
+                .as_ref()
+                .unwrap_or(&String::from(""))
+                .to_string(),
         }
     }
 }
@@ -471,6 +477,7 @@ mod tests {
             package_server_log: Some("/a/b/c/server.log".to_string()),
             envs: Vec::new(),
             cache_image: true,
+            isolated_ffx_config_path: Some("/a/b/c/isolated_config.txt".to_string()),
             ..Default::default()
         };
         let vdl_args: VDLArgs = start_command.into();
@@ -484,6 +491,7 @@ mod tests {
         assert_eq!(vdl_args.acceleration, true);
         assert_eq!(vdl_args.package_server_port, "0");
         assert_eq!(vdl_args.amber_unpack_root, "");
+        assert_eq!(vdl_args.isolated_ffx_config_path, "/a/b/c/isolated_config.txt");
         assert!(vdl_args.cache_root.as_path().ends_with("qemu-x64/0.20201130.3.1"));
     }
 

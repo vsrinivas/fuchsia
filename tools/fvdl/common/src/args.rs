@@ -273,6 +273,11 @@ pub struct StartCommand {
     /// running in fuchsia sdk (not inside the fuchsia code repository)
     #[argh(switch)]
     pub sdk: bool,
+
+    /// string, specifies a config to an isolated ffx instance. If unspecified, will use the
+    /// default ffx instance.
+    #[argh(option)]
+    pub isolated_ffx_config_path: Option<String>,
 }
 
 #[derive(FromArgs, Default, Debug, PartialEq)]

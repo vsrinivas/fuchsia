@@ -71,8 +71,8 @@ impl Tools {
 #[derive(Clone)]
 pub struct HostTools {
     pub aemu: PathBuf,
-    pub device_finder: PathBuf,
     pub far: Option<PathBuf>,
+    pub ffx: Option<PathBuf>,
     pub fvm: Option<PathBuf>,
     pub grpcwebproxy: PathBuf,
     pub pm: Option<PathBuf>,
@@ -84,8 +84,8 @@ pub struct HostTools {
 impl fmt::Debug for HostTools {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "[fvdl] tool aemu {:?}", self.aemu)?;
-        writeln!(f, "[fvdl] tool device_finder {:?}", self.device_finder)?;
         writeln!(f, "[fvdl] tool far {:?}", self.far)?;
+        writeln!(f, "[fvdl] tool ffx {:?}", self.ffx)?;
         writeln!(f, "[fvdl] tool fvm {:?}", self.fvm)?;
         writeln!(f, "[fvdl] tool grpcwebproxy {:?}", self.grpcwebproxy)?;
         writeln!(f, "[fvdl] tool pm {:?}", self.pm)?;
@@ -138,13 +138,13 @@ impl HostTools {
                 Ok(val) => val.join("device_launcher"),
                 _ => f.find_fuchsia_root()?.join("prebuilt/vdl/device_launcher"),
             },
-            device_finder: match read_env_path("HOST_OUT_DIR") {
-                Ok(val) => val.join("device-finder"),
-                _ => f.get_tool_path("device-finder")?,
-            },
             far: match read_env_path("HOST_OUT_DIR") {
                 Ok(val) => Some(val.join("far")),
                 _ => f.get_tool_path("far").ok(),
+            },
+            ffx: match read_env_path("HOST_OUT_DIR") {
+                Ok(val) => Some(val.join("ffx")),
+                _ => f.get_tool_path("ffx").ok(),
             },
             fvm: match read_env_path("HOST_OUT_DIR") {
                 Ok(val) => Some(val.join("fvm")),
@@ -178,8 +178,8 @@ impl HostTools {
             grpcwebproxy: PathBuf::new(),
             vdl: PathBuf::new(),
             // in-tree tools that are packaged with GN SDK.
-            device_finder: sdk_tool_dir.join("device-finder"),
             far: Some(sdk_tool_dir.join("far")),
+            ffx: Some(sdk_tool_dir.join("ffx")),
             fvm: Some(sdk_tool_dir.join("fvm")),
             pm: Some(sdk_tool_dir.join("pm")),
             zbi: sdk_tool_dir.join("zbi"),
@@ -309,10 +309,10 @@ mod test {
         },
         {
           "cpu": "x64",
-          "label": "//tools/net/device-finder:device-finder(//build/toolchain:host_x64)",
-          "name": "device-finder",
+          "label": "//src/developer/ffx:ffx_bin(//build/toolchain:host_x64)",
+          "name": "ffx",
           "os": "linux",
-          "path": "host_x64/exe.unstripped/device-finder"
+          "path": "host_x64/ffx"
         },
         {
           "cpu": "x64",
@@ -354,10 +354,7 @@ mod test {
     #[test]
     fn test_tools_parse() -> Result<()> {
         let tools = Tools::from_string(TOOLS_JSON)?;
-        assert_eq!(
-            tools.find_path_with_arch("device-finder", "x64")?,
-            "host_x64/exe.unstripped/device-finder"
-        );
+        assert_eq!(tools.find_path_with_arch("ffx", "x64")?, "host_x64/ffx");
         assert_eq!(tools.find_path_with_arch("zbi", "x64")?, "host_x64/zbi");
         assert_eq!(tools.find_path_with_arch("fvm", "x64")?, "host_x64/fvm");
         Ok(())
@@ -376,9 +373,9 @@ mod test {
         assert_eq!(host_tools.aemu.to_str().unwrap(), "/host/out/aemu/emulator");
         assert_eq!(host_tools.vdl.to_str().unwrap(), "/host/out/vdl/device_launcher");
         assert_eq!(host_tools.far.as_ref().unwrap().to_str().unwrap(), "/host/out/far");
+        assert_eq!(host_tools.ffx.as_ref().unwrap().to_str().unwrap(), "/host/out/ffx");
         assert_eq!(host_tools.fvm.as_ref().unwrap().to_str().unwrap(), "/host/out/fvm");
         assert_eq!(host_tools.pm.as_ref().unwrap().to_str().unwrap(), "/host/out/pm");
-        assert_eq!(host_tools.device_finder.to_str().unwrap(), "/host/out/device-finder");
         assert_eq!(host_tools.zbi.to_str().unwrap(), "/host/out/zbi");
         Ok(())
     }
@@ -418,9 +415,9 @@ mod test {
         assert!(!host_tools.vdl.as_os_str().is_empty());
         assert!(!host_tools.grpcwebproxy.as_os_str().is_empty());
         assert_eq!(host_tools.far.as_ref().unwrap().to_str().unwrap(), "/host/out/far");
+        assert_eq!(host_tools.ffx.as_ref().unwrap().to_str().unwrap(), "/host/out/ffx");
         assert_eq!(host_tools.fvm.as_ref().unwrap().to_str().unwrap(), "/host/out/fvm");
         assert_eq!(host_tools.pm.as_ref().unwrap().to_str().unwrap(), "/host/out/pm");
-        assert_eq!(host_tools.device_finder.to_str().unwrap(), "/host/out/device-finder");
         assert_eq!(host_tools.zbi.to_str().unwrap(), "/host/out/zbi");
         Ok(())
     }

@@ -452,8 +452,8 @@ impl VDLFiles {
             .arg(&self.host_tools.far.as_ref().unwrap_or(&PathBuf::new()))
             .arg("--fvm_tool")
             .arg(&self.host_tools.fvm.as_ref().unwrap_or(&PathBuf::new()))
-            .arg("--device_finder_tool")
-            .arg(&self.host_tools.device_finder)
+            .arg("--ffx_tool")
+            .arg(&self.host_tools.ffx.as_ref().unwrap_or(&PathBuf::new()))
             .arg("--zbi_tool")
             .arg(&self.host_tools.zbi)
             .arg("--grpcwebproxy_tool")
@@ -494,7 +494,9 @@ impl VDLFiles {
             .arg(format!("--image_cache_path={}", vdl_args.cache_root.display()))
             .arg(format!("--kernel_args={}", vdl_args.extra_kerel_args))
             .arg(format!("--accel={}", vdl_args.acceleration))
-            .arg(format!("--image_architecture={}", vdl_args.image_architecture));
+            .arg(format!("--image_architecture={}", vdl_args.image_architecture))
+            .arg("--use_ffx_for_discovery") // TODO(fxbug.dev/86745): Remove once ffx is default.
+            .arg(format!("--isolated_ffx_config_path={}", vdl_args.isolated_ffx_config_path));
 
         for i in 0..start_command.envs.len() {
             cmd.arg("--env").arg(&start_command.envs[i]);
@@ -662,9 +664,10 @@ impl VDLFiles {
             "LogLevel=ERROR",
         ];
         if tuntap {
-            let device_addr = Command::new(&self.host_tools.device_finder)
-                .args(&["resolve", "-ipv4=false", "fuchsia-5254-0063-5e7a"])
-                .output()?;
+            let device_addr =
+                Command::new(&self.host_tools.ffx.as_ref().unwrap_or(&PathBuf::new()))
+                    .args(&["target", "list", "--format", "a", "fuchsia-5254-0063-5e7a"])
+                    .output()?;
             ssh_options.append(&mut vec![
                 "-i",
                 &self.ssh_files.private_key.to_str().unwrap(),

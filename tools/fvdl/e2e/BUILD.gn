@@ -11,7 +11,11 @@ go_library("intree_lib") {
     "common.go",
     "fvdl_intree_test.go",
   ]
-  deps = [ "//tools/fvdl/e2e/e2etest" ]
+  deps = [
+    "//tools/botanist:constants",
+    "//tools/fvdl/e2e/e2etest",
+    "//tools/lib/ffxutil",
+  ]
 }
 
 go_library("sdk_lib") {
@@ -21,7 +25,9 @@ go_library("sdk_lib") {
   ]
   deps = [
     "//third_party/golibs:cloud.google.com/go/storage",
+    "//tools/botanist:constants",
     "//tools/fvdl/e2e/e2etest",
+    "//tools/lib/ffxutil",
   ]
 }
 
@@ -56,19 +62,19 @@ if (is_linux) {
 
   host_test_data("copy_host_tools") {
     sources = [
-      "${host_tools_dir}/device-finder",
       "${host_tools_dir}/far",
+      "${host_tools_dir}/ffx",
       "${host_tools_dir}/fvdl",
       "${host_tools_dir}/pm",
       get_label_info("//src/storage/bin/fvm", "root_out_dir") + "/fvm",
       get_label_info("//zircon/tools/zbi", "root_out_dir") + "/zbi",
     ]
     deps = [
+      "//src/developer/ffx:host($host_toolchain)",
       "//src/storage/bin/fvm($host_toolchain)",
       "//src/sys/pkg/bin/far:host($host_toolchain)",
       "//src/sys/pkg/bin/pm:host($host_toolchain)",
       "//tools/fvdl:host($host_toolchain)",
-      "//tools/net/device-finder:host($host_toolchain)",
       "//zircon/tools/zbi($host_toolchain)",
     ]
     outputs = [ "${_tools_out}/{{source_file_part}}" ]

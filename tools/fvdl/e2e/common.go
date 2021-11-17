@@ -15,7 +15,9 @@ import (
 	"sync"
 	"testing"
 
+	"go.fuchsia.dev/fuchsia/tools/botanist/constants"
 	"go.fuchsia.dev/fuchsia/tools/fvdl/e2e/e2etest"
+	"go.fuchsia.dev/fuchsia/tools/lib/ffxutil"
 )
 
 var (
@@ -29,6 +31,8 @@ var (
 	grpcwebproxyPath  string
 	fuchsiaBuildDir   string
 	hostToolsDir      string
+	ffx               string
+	ffxInstance       *ffxutil.FFXInstance
 	fvm               string
 	zbi               string
 	kernel            string
@@ -70,6 +74,10 @@ func setUp(t *testing.T, intree bool) {
 		}
 		fvdl = filepath.Join(hostToolsDir, "fvdl")
 		if _, err := os.Stat(fvdl); os.IsNotExist(err) {
+			t.Fatal(err)
+		}
+		ffx = filepath.Join(hostToolsDir, "ffx")
+		if _, err := os.Stat(ffx); os.IsNotExist(err) {
 			t.Fatal(err)
 		}
 		fuchsiaBuildDir = filepath.Join(runtimeDir, "images")
@@ -121,12 +129,23 @@ func runVDLWithArgs(ctx context.Context, t *testing.T, args []string, intree boo
 	if err := os.MkdirAll(filepath.Join(testOut, t.Name()), 0o755); err != nil {
 		t.Fatal(err)
 	}
+	// Create a new isolated ffx instance.
+	ffxInstance, err := ffxutil.NewFFXInstance(ffx, "", os.Environ(), os.Getenv(constants.NodenameEnvKey), os.Getenv(constants.SSHKeyEnvKey), testOut)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ffxConfigPath := filepath.Join(testOut, "ffx_config.json")
 	vdlOut := filepath.Join(testOut, t.Name(), "vdl_out")
 	t.Logf("[test info] writing vdl output to %s", vdlOut)
 	td := t.TempDir()
 
 	t.Cleanup(func() {
 		killEmu(ctx, t, intree, vdlOut)
+		if ffxInstance != nil {
+			if err := ffxInstance.Stop(); err != nil {
+				t.Logf("FFX didn't stop the running daemon %s", err)
+			}
+		}
 	})
 
 	maxTries := 2
@@ -140,6 +159,7 @@ func runVDLWithArgs(ctx context.Context, t *testing.T, args []string, intree boo
 				"--vdl-output", vdlOut,
 				"--emulator-log", filepath.Join(testOut, t.Name(), "emu_log"),
 				"--amber-unpack-root", filepath.Join(td, "packages"),
+				"--isolated-ffx-config-path", ffxConfigPath,
 			)...,
 		)
 		if intree {
