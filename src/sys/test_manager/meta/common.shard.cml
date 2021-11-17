@@ -130,9 +130,14 @@
     offer: [
         {
             protocol: [
+                // Tests can write to debug logs
+                "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.logger.LogSink",
                 "fuchsia.process.Launcher",
                 "fuchsia.sys2.EventSource",
+
+                // Tests can produce trace.
+                "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",
             to: [
@@ -151,19 +156,6 @@
             to: "#debug_data",
         },
 
-        // fxbug.dev/76568: This is a hermetic realm. We are in the process of
-        // removing these legacy offers to this realm. Non-hermetic tests have
-        // been moved to "system-tests" realm.
-        {
-            protocol: [
-                "fuchsia.boot.ReadOnlyLog",
-                "fuchsia.boot.WriteOnlyLog",
-                "fuchsia.tracing.provider.Registry",
-            ],
-            from: "parent",
-            to: "#tests",
-        },
-
         // These capabilities are offered for use by certain non-hermetic tests.
         {
             // update https://fuchsia.dev/fuchsia-src/concepts/testing/v2/test_runner_framework#legacy_non-hermetic_tests
@@ -171,7 +163,6 @@
             protocol: [
                 "fuchsia.boot.ReadOnlyLog",
                 "fuchsia.boot.RootResource",
-                "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.exception.Handler",
                 "fuchsia.kernel.RootJobForInspect",
                 "fuchsia.kernel.Stats",
@@ -186,7 +177,6 @@
                 // TODO(fxbug.dev/86464): Remove this once we have facet API.
                 "fuchsia.sys2.ComponentResolver",
                 "fuchsia.sysmem.Allocator",
-                "fuchsia.tracing.provider.Registry",
                 "fuchsia.vulkan.loader.Loader",
             ],
             from: "parent",
