@@ -31,6 +31,11 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/timer.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/workqueue.h"
 
+#if !defined(NDEBUG)
+// To see console logs remember to also enable the FWCON debug message filter in debug.h.
+#define BRCMF_CONSOLE_LOG
+#endif  // !defined(NDEBUG)
+
 #define SDIOD_FBR_SIZE 0x100
 
 /* io_en */
@@ -426,7 +431,7 @@ void pkt_align(struct brcmf_netbuf* p, int len, int align);
 // only friends of this header file.
 #define CTL_DONE_TIMEOUT_MSEC (2500)
 
-#if !defined(NDEBUG)
+#ifdef BRCMF_CONSOLE_LOG
 struct rte_log_le {
   uint32_t buf; /* Can't be pointer on (64-bit) hosts */
   uint32_t buf_size;
@@ -444,7 +449,7 @@ struct brcmf_console {
   uint last;                /* Last buffer read index */
 };
 
-#endif /* !defined(NDEBUG) */
+#endif /* BRCMF_CONSOLE_LOG */
 
 /* dongle SDIO bus specific header info */
 struct brcmf_sdio_hdrinfo {
@@ -543,11 +548,11 @@ struct brcmf_sdio {
   uint pollrate;          /* Ticks between device polls */
   uint polltick;          /* Tick counter */
 
-#if !defined(NDEBUG)
+#ifdef BRCMF_CONSOLE_LOG
   uint console_interval;
   struct brcmf_console console; /* Console output polling support */
   uint console_addr;            /* Console address from shared struct */
-#endif                          /* !defined(NDEBUG) */
+#endif // BRCMF_CONSOLE_LOG
 
   uint clkstate;     /* State of sd and backplane clock(s) */
   int32_t idletime;  /* Control for activity timeout */
