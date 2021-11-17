@@ -30,6 +30,7 @@ use fidl::endpoints::{DiscoverableProtocolMarker, RequestStream};
 use fidl_fuchsia_net_stack as fidl_net_stack;
 use fuchsia_async as fasync;
 use fuchsia_component::server::{ServiceFs, ServiceFsDir};
+use fuchsia_zircon as zx;
 use futures::channel::mpsc;
 use futures::{lock::Mutex, sink::SinkExt as _, FutureExt as _, StreamExt as _, TryStreamExt as _};
 use log::{debug, error, trace, warn};
@@ -466,8 +467,7 @@ impl<D: DiscoverableProtocolMarker, S: RequestStream<Protocol = D>> RequestStrea
         F: FnOnce(Self) -> Fut,
         Fut: Future<Output = Result<(), E>>,
     {
-        f(self)
-            .map(|res| res.unwrap_or_else(|err| log::error!("{} error: {}", D::PROTOCOL_NAME, err)))
+        f(self).map(|res| res.unwrap_or_else(|err| error!("{} error: {}", D::PROTOCOL_NAME, err)))
     }
 }
 
@@ -554,9 +554,13 @@ impl Netstack {
                                         control_handle: _,
                                     } => {
                                         let () = control
-                                            .close_with_epitaph(fuchsia_zircon::Status::NOT_SUPPORTED)
-                                            .unwrap_or_else(|e| log::error!("failed to send epitaph: {:?}", e));
-                                        log::warn!(
+                                            .close_with_epitaph(zx::Status::NOT_SUPPORTED)
+                                            .unwrap_or_else(|e| if e.is_closed() {
+                                                debug!("control handle closed before sending epitaph: {:?}", e)
+                                            } else {
+                                                error!("failed to send epitaph: {:?}", e)
+                                            });
+                                        warn!(
                                             "TODO(https://fxbug.dev/88797): fuchsia.net.debug/Interfaces not implemented"
                                         );
                                     }
@@ -567,7 +571,7 @@ impl Netstack {
                     }
                     WorkItem::Spawned(Task::Watcher(watcher)) => {
                         watcher.await.unwrap_or_else(|err| {
-                            log::error!("fuchsia.net.interfaces.Watcher error: {}", err)
+                            error!("fuchsia.net.interfaces.Watcher error: {}", err)
                         })
                     }
                 }
