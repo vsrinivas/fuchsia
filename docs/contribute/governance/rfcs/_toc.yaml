@@ -289,9 +289,9 @@ toc:
   path: /docs/contribute/governance/rfcs/0137_discard_unknown_data_in_fidl.md
 - title: "RFC-0138: Handling unknown interactions"
   path: /docs/contribute/governance/rfcs/0138_handling_unknown_interactions.md
+- title: "RFC-0139: Bazel SDK"
+  path: /docs/contribute/governance/rfcs/0139_bazel_sdk.md
 - title: "RFC-0140: Discard unknown data in FIDL"
   path: /docs/contribute/governance/rfcs/0140_realm_builder.md
 - title: "RFC-0141: CTS Process"
   path: /docs/contribute/governance/rfcs/0141_cts_process.md
-- title: "RFC-0142: Bazel SDK"
-  path: /docs/contribute/governance/rfcs/0142_bazel_sdk.md
