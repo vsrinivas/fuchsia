@@ -180,13 +180,6 @@ template("fuchsia_package") {
     metadata = {
       ids_txt_paths = [ _build_ids_file ]
     }
-
-    if (fuchsia_target_api_level != -1) {
-      args += [
-        "--api-level",
-        "${fuchsia_target_api_level}",
-      ]
-    }
   }
 
   # Creates a Fuchsia metadata package.

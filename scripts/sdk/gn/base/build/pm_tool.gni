@@ -93,6 +93,12 @@ template("fuchsia_pm_tool") {
       version,
     ]
     if (command == "build") {
+      if (fuchsia_target_api_level != -1) {
+        args += [
+          "--api-level",
+          "${fuchsia_target_api_level}",
+        ]
+      }
       args += [
         command,
         "-output-package-manifest",
