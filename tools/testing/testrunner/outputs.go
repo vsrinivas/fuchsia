@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package main
+package testrunner
 
 import (
 	"bytes"
@@ -17,26 +17,25 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 	"go.fuchsia.dev/fuchsia/tools/testing/tap"
-	"go.fuchsia.dev/fuchsia/tools/testing/testrunner"
 )
 
-// testOutput manages the test runner's output drivers. Upon completion, if tar output is
+// TestOutputs manages the test runner's output drivers. Upon completion, if tar output is
 // initialized, a TAR archive containing all other outputs is produced.
-type testOutputs struct {
-	outDir  string
-	summary runtests.TestSummary
+type TestOutputs struct {
+	OutDir  string
+	Summary runtests.TestSummary
 	tap     *tap.Producer
 }
 
-func createTestOutputs(producer *tap.Producer, outDir string) *testOutputs {
-	return &testOutputs{
-		outDir: outDir,
+func CreateTestOutputs(producer *tap.Producer, outDir string) *TestOutputs {
+	return &TestOutputs{
+		OutDir: outDir,
 		tap:    producer,
 	}
 }
 
 // Record writes the test result to initialized outputs.
-func (o *testOutputs) record(result testrunner.TestResult) error {
+func (o *TestOutputs) Record(result TestResult) error {
 	// Sponge doesn't seem to like the path if we just put Name in there.
 	nameForPath := url.PathEscape(strings.ReplaceAll(result.Name, ":", ""))
 	outputRelPath := filepath.Join(nameForPath, strconv.Itoa(result.RunIndex), runtests.TestOutputFilename)
@@ -48,7 +47,7 @@ func (o *testOutputs) record(result testrunner.TestResult) error {
 		return fmt.Errorf("test %q must have positive duration: (start, end) = (%s, %s)", result.Name, result.StartTime, result.EndTime)
 	}
 
-	o.summary.Tests = append(o.summary.Tests, runtests.TestDetails{
+	o.Summary.Tests = append(o.Summary.Tests, runtests.TestDetails{
 		Name:           result.Name,
 		GNLabel:        result.GNLabel,
 		OutputFiles:    []string{outputRelPath},
@@ -62,8 +61,8 @@ func (o *testOutputs) record(result testrunner.TestResult) error {
 	desc := fmt.Sprintf("%s (%s)", result.Name, duration)
 	o.tap.Ok(result.Passed(), desc)
 
-	if o.outDir != "" {
-		outputRelPath = filepath.Join(o.outDir, outputRelPath)
+	if o.OutDir != "" {
+		outputRelPath = filepath.Join(o.OutDir, outputRelPath)
 		pathWriter, err := osmisc.CreateFile(outputRelPath)
 		if err != nil {
 			return fmt.Errorf("failed to create stdio file for test %q: %w", result.Name, err)
@@ -81,8 +80,8 @@ func (o *testOutputs) record(result testrunner.TestResult) error {
 // o.outDir, that path should be provided as the `insertPrefixPath` which will
 // get prepended to the sink file paths so that they point to the correct paths
 // relative to o.outDir.
-func (o *testOutputs) updateDataSinks(newSinks map[string]runtests.DataSinkReference, insertPrefixPath string) {
-	for i, test := range o.summary.Tests {
+func (o *TestOutputs) updateDataSinks(newSinks map[string]runtests.DataSinkReference, insertPrefixPath string) {
+	for i, test := range o.Summary.Tests {
 		if sinkRef, ok := newSinks[test.Name]; ok {
 			if test.DataSinks == nil {
 				test.DataSinks = runtests.DataSinkMap{}
@@ -93,21 +92,21 @@ func (o *testOutputs) updateDataSinks(newSinks map[string]runtests.DataSinkRefer
 					test.DataSinks[name] = append(test.DataSinks[name], sink)
 				}
 			}
-			o.summary.Tests[i] = test
+			o.Summary.Tests[i] = test
 		}
 	}
 }
 
 // Close stops the recording of test outputs; it must be called to finalize them.
-func (o *testOutputs) Close() error {
-	if o.outDir == "" {
+func (o *TestOutputs) Close() error {
+	if o.OutDir == "" {
 		return nil
 	}
-	summaryBytes, err := json.Marshal(o.summary)
+	summaryBytes, err := json.Marshal(o.Summary)
 	if err != nil {
 		return err
 	}
-	summaryPath := filepath.Join(o.outDir, runtests.TestSummaryFilename)
+	summaryPath := filepath.Join(o.OutDir, runtests.TestSummaryFilename)
 	s, err := osmisc.CreateFile(summaryPath)
 	if err != nil {
 		return fmt.Errorf("failed to create file: %w", err)

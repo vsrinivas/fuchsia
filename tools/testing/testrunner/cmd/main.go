@@ -26,7 +26,7 @@ import (
 	"syscall"
 	"time"
 
-	"go.fuchsia.dev/fuchsia/tools/botanist/constants"
+	botanistconstants "go.fuchsia.dev/fuchsia/tools/botanist/constants"
 	"go.fuchsia.dev/fuchsia/tools/botanist/target"
 	"go.fuchsia.dev/fuchsia/tools/integration/testsharder"
 	"go.fuchsia.dev/fuchsia/tools/lib/clock"
@@ -39,13 +39,11 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/testing/tap"
 	"go.fuchsia.dev/fuchsia/tools/testing/testparser"
 	"go.fuchsia.dev/fuchsia/tools/testing/testrunner"
+	"go.fuchsia.dev/fuchsia/tools/testing/testrunner/constants"
 )
 
 // Fuchsia-specific environment variables possibly exposed to the testrunner.
 const (
-	// A directory that will be automatically archived on completion of a task.
-	testOutDirEnvKey = "FUCHSIA_TEST_OUTDIR"
-
 	testTimeoutGracePeriod = 30 * time.Second
 )
 
@@ -80,7 +78,7 @@ Executes all tests found in the JSON [tests-file]
 Fuchsia tests require both the node address of the fuchsia instance and a private
 SSH key corresponding to a authorized key to be set in the environment under
 %s and %s respectively.
-`, constants.DeviceAddrEnvKey, constants.SSHKeyEnvKey)
+`, botanistconstants.DeviceAddrEnvKey, botanistconstants.SSHKeyEnvKey)
 }
 
 func main() {
@@ -129,7 +127,7 @@ func setupAndExecute(ctx context.Context, flags testrunnerFlags) error {
 
 	// Configure a test outputs object, responsible for producing TAP output,
 	// recording data sinks, and archiving other test outputs.
-	testOutDir := filepath.Join(os.Getenv(testOutDirEnvKey), flags.outDir)
+	testOutDir := filepath.Join(os.Getenv(constants.TestOutDirEnvKey), flags.outDir)
 	if testOutDir == "" {
 		var err error
 		testOutDir, err = ioutil.TempDir("", "testrunner")
@@ -140,14 +138,14 @@ func setupAndExecute(ctx context.Context, flags testrunnerFlags) error {
 	logger.Debugf(ctx, "test output directory: %s", testOutDir)
 
 	var addr net.IPAddr
-	if deviceAddr, ok := os.LookupEnv(constants.DeviceAddrEnvKey); ok {
+	if deviceAddr, ok := os.LookupEnv(botanistconstants.DeviceAddrEnvKey); ok {
 		addrPtr, err := net.ResolveIPAddr("ip", deviceAddr)
 		if err != nil {
 			return fmt.Errorf("failed to parse device address %s: %w", deviceAddr, err)
 		}
 		addr = *addrPtr
 	}
-	sshKeyFile := os.Getenv(constants.SSHKeyEnvKey)
+	sshKeyFile := os.Getenv(botanistconstants.SSHKeyEnvKey)
 
 	cleanUp, err := environment.Ensure()
 	if err != nil {
@@ -157,9 +155,9 @@ func setupAndExecute(ctx context.Context, flags testrunnerFlags) error {
 
 	tapProducer := tap.NewProducer(os.Stdout)
 	tapProducer.Plan(len(tests))
-	outputs := createTestOutputs(tapProducer, testOutDir)
+	outputs := testrunner.CreateTestOutputs(tapProducer, testOutDir)
 
-	serialSocketPath := os.Getenv(constants.SerialSocketEnvKey)
+	serialSocketPath := os.Getenv(botanistconstants.SerialSocketEnvKey)
 	execErr := execute(ctx, tests, outputs, addr, sshKeyFile, serialSocketPath, testOutDir, flags)
 	if err := outputs.Close(); err != nil {
 		if execErr == nil {
@@ -220,20 +218,13 @@ func loadTests(path string) ([]testsharder.Test, error) {
 	return tests, nil
 }
 
-type tester interface {
-	Test(context.Context, testsharder.Test, io.Writer, io.Writer, string) (runtests.DataSinkReference, error)
-	Close() error
-	EnsureSinks(context.Context, []runtests.DataSinkReference, *testOutputs) error
-	RunSnapshot(context.Context, string) error
-}
-
 // for testability
 var (
-	sshTester    = newFuchsiaSSHTester
-	serialTester = newFuchsiaSerialTester
+	sshTester    = testrunner.NewFuchsiaSSHTester
+	serialTester = testrunner.NewFuchsiaSerialTester
 )
 
-var ffxInstance = func(ffxPath string, dir string, env []string, target, sshKey string, outputDir string) (ffxTester, error) {
+var ffxInstance = func(ffxPath string, dir string, env []string, target, sshKey string, outputDir string) (testrunner.FFXTester, error) {
 	ffx, err := ffxutil.NewFFXInstance(ffxPath, dir, env, target, sshKey, outputDir)
 	if ffx == nil {
 		return nil, err
@@ -244,7 +235,7 @@ var ffxInstance = func(ffxPath string, dir string, env []string, target, sshKey 
 func execute(
 	ctx context.Context,
 	tests []testsharder.Test,
-	outputs *testOutputs,
+	outputs *testrunner.TestOutputs,
 	addr net.IPAddr,
 	sshKeyFile,
 	serialSocketPath,
@@ -252,8 +243,8 @@ func execute(
 	flags testrunnerFlags,
 ) error {
 	var fuchsiaSinks, localSinks []runtests.DataSinkReference
-	var fuchsiaTester, localTester tester
-	var ffx ffxTester
+	var fuchsiaTester, localTester testrunner.Tester
+	var ffx testrunner.FFXTester
 
 	localEnv := append(os.Environ(),
 		// Tell tests written in Rust to print stack on failures.
@@ -265,23 +256,23 @@ func execute(
 	// because it requires a lot of network requests and environment inspection,
 	// so we use dependency injection and pass it as a parameter to
 	// `runAndOutputTests` to make that function more easily testable.
-	testerForTest := func(test testsharder.Test) (tester, *[]runtests.DataSinkReference, error) {
+	testerForTest := func(test testsharder.Test) (testrunner.Tester, *[]runtests.DataSinkReference, error) {
 		switch test.OS {
 		case "fuchsia":
 			if fuchsiaTester == nil {
 				var err error
 				if sshKeyFile != "" {
 					ffx, err = ffxInstance(
-						flags.ffxPath, flags.localWD, localEnv, os.Getenv(constants.NodenameEnvKey),
-						os.Getenv(constants.SSHKeyEnvKey), outputs.outDir)
+						flags.ffxPath, flags.localWD, localEnv, os.Getenv(botanistconstants.NodenameEnvKey),
+						os.Getenv(botanistconstants.SSHKeyEnvKey), outputs.OutDir)
 					if err != nil {
 						return nil, nil, err
 					}
 					fuchsiaTester, err = sshTester(
-						ctx, addr, sshKeyFile, outputs.outDir, serialSocketPath, flags.useRuntests, ffx)
+						ctx, addr, sshKeyFile, outputs.OutDir, serialSocketPath, flags.useRuntests, ffx)
 				} else {
 					if serialSocketPath == "" {
-						return nil, nil, fmt.Errorf("%q must be set if %q is not set", constants.SerialSocketEnvKey, constants.SSHKeyEnvKey)
+						return nil, nil, fmt.Errorf("%q must be set if %q is not set", botanistconstants.SerialSocketEnvKey, botanistconstants.SSHKeyEnvKey)
 					}
 					fuchsiaTester, err = serialTester(ctx, serialSocketPath)
 				}
@@ -302,19 +293,19 @@ func execute(
 			if fuchsiaTester == nil && sshKeyFile != "" {
 				var err error
 				ffx, err = ffxInstance(
-					flags.ffxPath, flags.localWD, localEnv, os.Getenv(constants.NodenameEnvKey),
-					os.Getenv(constants.SSHKeyEnvKey), outputs.outDir)
+					flags.ffxPath, flags.localWD, localEnv, os.Getenv(botanistconstants.NodenameEnvKey),
+					os.Getenv(botanistconstants.SSHKeyEnvKey), outputs.OutDir)
 				if err != nil {
 					logger.Errorf(ctx, "failed to initialize fuchsia tester: %s", err)
 				}
 				fuchsiaTester, err = sshTester(
-					ctx, addr, sshKeyFile, outputs.outDir, serialSocketPath, flags.useRuntests, ffx)
+					ctx, addr, sshKeyFile, outputs.OutDir, serialSocketPath, flags.useRuntests, ffx)
 				if err != nil {
 					logger.Errorf(ctx, "failed to initialize fuchsia tester: %s", err)
 				}
 			}
 			if localTester == nil {
-				localTester = newSubprocessTester(flags.localWD, localEnv, outputs.outDir)
+				localTester = testrunner.NewSubprocessTester(flags.localWD, localEnv, outputs.OutDir)
 			}
 			return localTester, &localSinks, nil
 		default:
@@ -336,7 +327,7 @@ func execute(
 	if ffx != nil {
 		defer ffx.Stop()
 	}
-	finalize := func(t tester, sinks []runtests.DataSinkReference) error {
+	finalize := func(t testrunner.Tester, sinks []runtests.DataSinkReference) error {
 		if t != nil {
 			if err := t.RunSnapshot(ctx, flags.snapshotFile); err != nil {
 				// This error usually has a different root cause that gets masked when we
@@ -380,8 +371,8 @@ func (b *stdioBuffer) Write(p []byte) (n int, err error) {
 func runAndOutputTests(
 	ctx context.Context,
 	tests []testsharder.Test,
-	testerForTest func(testsharder.Test) (tester, *[]runtests.DataSinkReference, error),
-	outputs *testOutputs,
+	testerForTest func(testsharder.Test) (testrunner.Tester, *[]runtests.DataSinkReference, error),
+	outputs *testrunner.TestOutputs,
 	globalOutDir string,
 ) error {
 	// testToRun represents an entry in the queue of tests to run.
@@ -423,7 +414,7 @@ func runAndOutputTests(
 			return err
 		}
 		result.RunIndex = runIndex
-		if err := outputs.record(*result); err != nil {
+		if err := outputs.Record(*result); err != nil {
 			return err
 		}
 
@@ -460,7 +451,7 @@ func runAndOutputTests(
 func runTestOnce(
 	ctx context.Context,
 	test testsharder.Test,
-	t tester,
+	t testrunner.Tester,
 	outDir string,
 ) (*testrunner.TestResult, error) {
 	// The test case parser specifically uses stdout, so we need to have a
@@ -477,8 +468,8 @@ func runTestOnce(
 	//
 	// This is a bit of a hack, but is a lesser evil than extending the
 	// testrunner CLI just to sidecar the information of 'is QEMU'.
-	againstQEMU := os.Getenv(constants.NodenameEnvKey) == target.DefaultQEMUNodename
-	if _, ok := t.(*fuchsiaSerialTester); ok && againstQEMU {
+	againstQEMU := os.Getenv(botanistconstants.NodenameEnvKey) == target.DefaultQEMUNodename
+	if _, ok := t.(*testrunner.FuchsiaSerialTester); ok && againstQEMU {
 		multistdout = io.MultiWriter(stdio, stdout)
 	}
 
@@ -528,7 +519,7 @@ func runTestOnce(
 		dataSinks = res.dataSinks
 		err = res.err
 	case <-timeoutCh:
-		err = &timeoutError{outerTestTimeout}
+		err = &testrunner.TimeoutError{outerTestTimeout}
 		cancelTest()
 	}
 	if err != nil {
@@ -538,18 +529,18 @@ func runTestOnce(
 			// context cancelation.
 			return nil, err
 		}
-		var errFatal fatalError
+		var errFatal testrunner.FatalError
 		if errors.As(err, &errFatal) {
 			// The tester encountered a fatal condition and cannot run any more
 			// tests.
 			return nil, err
 		}
 		result = runtests.TestFailure
-		var timeoutErr *timeoutError
+		var timeoutErr *testrunner.TimeoutError
 		if errors.As(err, &timeoutErr) {
 			// TODO(fxbug.dev/49266): Emit a different "Timeout" result if the
 			// test timed out.
-			logger.Errorf(ctx, "Test %s timed out after %s", test.Name, timeoutErr.timeout)
+			logger.Errorf(ctx, "Test %s timed out after %s", test.Name, timeoutErr.Timeout)
 		} else {
 			logger.Errorf(ctx, "Error running test %s: %s", test.Name, err)
 		}

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package main
+package testrunner
 
 import (
 	"bytes"
@@ -89,7 +89,7 @@ func (r *fakeCmdRunner) Run(_ context.Context, command []string, _, _ io.Writer)
 
 func TestSubprocessTester(t *testing.T) {
 	tmpDir := t.TempDir()
-	tester := subprocessTester{
+	tester := SubprocessTester{
 		localOutputDir: tmpDir,
 		getModuleBuildIDs: func(test string) ([]string, error) {
 			name := filepath.Base(test)
@@ -217,51 +217,6 @@ func (*fakeDataSinkCopier) Close() error {
 	return nil
 }
 
-type fakeFFXTester struct {
-	cmdsCalled []string
-}
-
-func (f *fakeFFXTester) SetStdoutStderr(_, _ io.Writer) {
-}
-
-func (f *fakeFFXTester) run(cmd string) error {
-	f.cmdsCalled = append(f.cmdsCalled, cmd)
-	return nil
-}
-
-func (f *fakeFFXTester) List(_ context.Context, _ ...string) error {
-	return f.run("list")
-}
-
-func (f *fakeFFXTester) TargetWait(_ context.Context) error {
-	return f.run("target wait")
-}
-
-func (f *fakeFFXTester) GetConfig(_ context.Context) error {
-	return f.run("config")
-}
-
-func (f *fakeFFXTester) Test(_ context.Context, _ string, _ ...string) error {
-	return f.run("test")
-}
-
-func (f *fakeFFXTester) Snapshot(_ context.Context, _, _ string) error {
-	return f.run("snapshot")
-}
-
-func (f *fakeFFXTester) Stop() error {
-	return f.run("stop")
-}
-
-func containsCmd(cmds []string, cmd string) bool {
-	for _, c := range cmds {
-		if c == cmd {
-			return true
-		}
-	}
-	return false
-}
-
 func TestSSHTester(t *testing.T) {
 	cases := []struct {
 		name            string
@@ -348,14 +303,14 @@ func TestSSHTester(t *testing.T) {
 			}
 			copier := &fakeDataSinkCopier{}
 			serialSocket := &fakeSerialClient{}
-			tester := &fuchsiaSSHTester{
+			tester := &FuchsiaSSHTester{
 				client:                      client,
 				copier:                      copier,
 				connectionErrorRetryBackoff: &retry.ZeroBackoff{},
 				serialSocket:                serialSocket,
 				useRuntests:                 c.useRuntests,
 			}
-			ffx := &fakeFFXTester{}
+			ffx := &MockFFXTester{}
 			if c.useFFX {
 				tester.ffx = ffx
 			}
@@ -396,27 +351,27 @@ func TestSSHTester(t *testing.T) {
 				}
 			}
 			if c.runV2 {
-				if err = tester.EnsureSinks(context.Background(), []runtests.DataSinkReference{sinks}, &testOutputs{}); err != nil {
+				if err = tester.EnsureSinks(context.Background(), []runtests.DataSinkReference{sinks}, &TestOutputs{}); err != nil {
 					t.Errorf("failed to collect v2 sinks: %s", err)
 				}
 			}
 
 			if c.useFFX {
 				if c.runV2 && !c.useRuntests {
-					if !containsCmd(ffx.cmdsCalled, "test") {
-						t.Errorf("failed to call `ffx test`, called: %s", ffx.cmdsCalled)
+					if !ffx.ContainsCmd("test") {
+						t.Errorf("failed to call `ffx test`, called: %s", ffx.CmdsCalled)
 					}
 				} else {
-					if containsCmd(ffx.cmdsCalled, "test") {
+					if ffx.ContainsCmd("test") {
 						t.Errorf("unexpectedly called ffx test")
 					}
 				}
 				if c.runSnapshot {
-					if !containsCmd(ffx.cmdsCalled, "snapshot") {
-						t.Errorf("failed to call `ffx target snapshot`, called: %s", ffx.cmdsCalled)
+					if !ffx.ContainsCmd("snapshot") {
+						t.Errorf("failed to call `ffx target snapshot`, called: %s", ffx.CmdsCalled)
 					}
 				} else {
-					if containsCmd(ffx.cmdsCalled, "snapshot") {
+					if ffx.ContainsCmd("snapshot") {
 						t.Errorf("unexpectedly called ffx target snapshot")
 					}
 				}
@@ -570,7 +525,7 @@ func TestSerialTester(t *testing.T) {
 			defer socket.Close()
 			defer serial.Close()
 
-			tester := fuchsiaSerialTester{socket: socket}
+			tester := FuchsiaSerialTester{socket: socket}
 			test := testsharder.Test{
 				Test: build.Test{
 					Name: "myfoo",

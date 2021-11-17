@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package main
+package testrunner
 
 import (
 	"bytes"
@@ -70,28 +70,40 @@ const (
 	testStartedTimeout = 5 * time.Second
 )
 
-// fatalError is a thin wrapper around another error. If returned by a tester's
+// Tester describes the interface for all different types of testers.
+type Tester interface {
+	Test(context.Context, testsharder.Test, io.Writer, io.Writer, string) (runtests.DataSinkReference, error)
+	Close() error
+	EnsureSinks(context.Context, []runtests.DataSinkReference, *TestOutputs) error
+	RunSnapshot(context.Context, string) error
+}
+
+// FatalError is a thin wrapper around another error. If returned by a tester's
 // Test() function, it indicates that the tester encountered a fatal error
 // condition and that testrunner should exit early with a non-zero exit code
 // rather than continuing to run tests.
-type fatalError struct {
+type FatalError struct {
 	error
 }
 
-func (e fatalError) Unwrap() error {
+func NewFatalError(err error) FatalError {
+	return FatalError{err}
+}
+
+func (e FatalError) Unwrap() error {
 	return e.error
 }
 
-// timeoutError should be returned by a Test() function to indicate that the
+// TimeoutError should be returned by a Test() function to indicate that the
 // test timed out. It is up to each tester to enforce timeouts, since the
 // process for gracefully cleaning up after a timeout differs depending on how
 // the tests are run.
-type timeoutError struct {
-	timeout time.Duration
+type TimeoutError struct {
+	Timeout time.Duration
 }
 
-func (e *timeoutError) Error() string {
-	return fmt.Sprintf("test killed because timeout reached (%s)", e.timeout)
+func (e *TimeoutError) Error() string {
+	return fmt.Sprintf("test killed because timeout reached (%s)", e.Timeout)
 }
 
 // For testability
@@ -124,8 +136,8 @@ type serialClient interface {
 	runDiagnostics(ctx context.Context) error
 }
 
-// subprocessTester executes tests in local subprocesses.
-type subprocessTester struct {
+// SubprocessTester executes tests in local subprocesses.
+type SubprocessTester struct {
 	env               []string
 	dir               string
 	localOutputDir    string
@@ -150,8 +162,8 @@ func getModuleBuildIDs(test string) ([]string, error) {
 
 // NewSubprocessTester returns a SubprocessTester that can execute tests
 // locally with a given working directory and environment.
-func newSubprocessTester(dir string, env []string, localOutputDir string) tester {
-	return &subprocessTester{
+func NewSubprocessTester(dir string, env []string, localOutputDir string) Tester {
+	return &SubprocessTester{
 		dir:               dir,
 		env:               env,
 		localOutputDir:    localOutputDir,
@@ -159,12 +171,12 @@ func newSubprocessTester(dir string, env []string, localOutputDir string) tester
 	}
 }
 
-func (t *subprocessTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer, outDir string) (runtests.DataSinkReference, error) {
+func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer, outDir string) (runtests.DataSinkReference, error) {
 	sinkRef := runtests.DataSinkReference{}
 	if test.Path == "" {
 		return sinkRef, fmt.Errorf("test %q has no `path` set", test.Name)
 	}
-	// Some tests read testOutDirEnvKey so ensure they get their own output dir.
+	// Some tests read TestOutDirEnvKey so ensure they get their own output dir.
 	if err := os.MkdirAll(outDir, 0o770); err != nil {
 		return sinkRef, err
 	}
@@ -184,7 +196,7 @@ func (t *subprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 
 	r := newRunner(t.dir, append(
 		t.env,
-		fmt.Sprintf("%s=%s", testOutDirEnvKey, outDir),
+		fmt.Sprintf("%s=%s", constants.TestOutDirEnvKey, outDir),
 		// When host-side tests are instrumented for profiling, executing
 		// them will write a profile to the location under this environment variable.
 		fmt.Sprintf("%s=%s", llvmProfileEnvKey, profileAbs),
@@ -196,7 +208,7 @@ func (t *subprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 	}
 	err := r.Run(ctx, []string{test.Path}, stdout, stderr)
 	if errors.Is(err, context.DeadlineExceeded) {
-		err = &timeoutError{test.Timeout}
+		err = &TimeoutError{test.Timeout}
 	}
 
 	if exists, profileErr := osmisc.FileExists(profileAbs); profileErr != nil {
@@ -223,7 +235,7 @@ func (t *subprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 	return sinkRef, err
 }
 
-func (t *subprocessTester) EnsureSinks(ctx context.Context, sinkRefs []runtests.DataSinkReference, _ *testOutputs) error {
+func (t *SubprocessTester) EnsureSinks(ctx context.Context, sinkRefs []runtests.DataSinkReference, _ *TestOutputs) error {
 	// Nothing to actually copy; if any profiles were emitted, they would have
 	// been written directly to the output directory. We verify here that all
 	// recorded data sinks are actually present.
@@ -248,11 +260,11 @@ func (t *subprocessTester) EnsureSinks(ctx context.Context, sinkRefs []runtests.
 	return nil
 }
 
-func (t *subprocessTester) RunSnapshot(_ context.Context, _ string) error {
+func (t *SubprocessTester) RunSnapshot(_ context.Context, _ string) error {
 	return nil
 }
 
-func (t *subprocessTester) Close() error {
+func (t *SubprocessTester) Close() error {
 	return nil
 }
 
@@ -273,7 +285,7 @@ func (s *serialSocket) runDiagnostics(ctx context.Context) error {
 }
 
 // for testability
-type ffxTester interface {
+type FFXTester interface {
 	SetStdoutStderr(stdout, stderr io.Writer)
 	List(ctx context.Context, args ...string) error
 	TargetWait(ctx context.Context) error
@@ -283,21 +295,21 @@ type ffxTester interface {
 	Stop() error
 }
 
-// fuchsiaSSHTester executes fuchsia tests over an SSH connection.
-type fuchsiaSSHTester struct {
+// FuchsiaSSHTester executes fuchsia tests over an SSH connection.
+type FuchsiaSSHTester struct {
 	client                      sshClient
 	copier                      dataSinkCopier
 	useRuntests                 bool
 	localOutputDir              string
 	connectionErrorRetryBackoff retry.Backoff
 	serialSocket                serialClient
-	ffx                         ffxTester
+	ffx                         FFXTester
 }
 
-// newFuchsiaSSHTester returns a fuchsiaSSHTester associated to a fuchsia
+// NewFuchsiaSSHTester returns a FuchsiaSSHTester associated to a fuchsia
 // instance of given nodename, the private key paired with an authorized one
 // and the directive of whether `runtests` should be used to execute the test.
-func newFuchsiaSSHTester(ctx context.Context, addr net.IPAddr, sshKeyFile, localOutputDir, serialSocketPath string, useRuntests bool, ffx ffxTester) (tester, error) {
+func NewFuchsiaSSHTester(ctx context.Context, addr net.IPAddr, sshKeyFile, localOutputDir, serialSocketPath string, useRuntests bool, ffx FFXTester) (Tester, error) {
 	if ffx != nil {
 		if err := ffx.List(ctx); err != nil {
 			return nil, err
@@ -337,7 +349,7 @@ func newFuchsiaSSHTester(ctx context.Context, addr net.IPAddr, sshKeyFile, local
 	if err != nil {
 		return nil, err
 	}
-	return &fuchsiaSSHTester{
+	return &FuchsiaSSHTester{
 		client:                      client,
 		copier:                      copier,
 		useRuntests:                 useRuntests,
@@ -348,7 +360,7 @@ func newFuchsiaSSHTester(ctx context.Context, addr net.IPAddr, sshKeyFile, local
 	}, nil
 }
 
-func (t *fuchsiaSSHTester) reconnect(ctx context.Context) error {
+func (t *FuchsiaSSHTester) reconnect(ctx context.Context) error {
 	if err := t.client.Reconnect(ctx); err != nil {
 		return fmt.Errorf("failed to reestablish SSH connection: %w", err)
 	}
@@ -358,7 +370,7 @@ func (t *fuchsiaSSHTester) reconnect(ctx context.Context) error {
 	return nil
 }
 
-func (t *fuchsiaSSHTester) isTimeoutError(test testsharder.Test, err error) bool {
+func (t *FuchsiaSSHTester) isTimeoutError(test testsharder.Test, err error) bool {
 	if test.Timeout <= 0 {
 		return false
 	}
@@ -368,7 +380,7 @@ func (t *fuchsiaSSHTester) isTimeoutError(test testsharder.Test, err error) bool
 	return false
 }
 
-func (t *fuchsiaSSHTester) runSSHCommandWithRetry(ctx context.Context, command []string, stdout, stderr io.Writer) error {
+func (t *FuchsiaSSHTester) runSSHCommandWithRetry(ctx context.Context, command []string, stdout, stderr io.Writer) error {
 	const maxReconnectAttempts = 3
 	return retry.Retry(ctx, retry.WithMaxAttempts(t.connectionErrorRetryBackoff, maxReconnectAttempts), func() error {
 		if cmdErr := t.client.Run(ctx, command, stdout, stderr); cmdErr != nil {
@@ -398,7 +410,7 @@ func (t *fuchsiaSSHTester) runSSHCommandWithRetry(ctx context.Context, command [
 }
 
 // Test runs a test over SSH.
-func (t *fuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer, _ string) (runtests.DataSinkReference, error) {
+func (t *FuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer, _ string) (runtests.DataSinkReference, error) {
 	sinks := runtests.DataSinkReference{}
 	isComponentV2 := strings.HasSuffix(test.PackageURL, componentV2Suffix)
 	if isComponentV2 && t.ffx != nil {
@@ -419,11 +431,11 @@ func (t *fuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdo
 		// If we continue to experience a connection error after several retries
 		// then the device has likely become unresponsive and there's no use in
 		// continuing to try to run tests, so mark the error as fatal.
-		return sinks, fatalError{testErr}
+		return sinks, FatalError{testErr}
 	}
 
 	if t.isTimeoutError(test, testErr) {
-		testErr = &timeoutError{test.Timeout}
+		testErr = &TimeoutError{test.Timeout}
 	}
 
 	var sinkErr error
@@ -447,7 +459,7 @@ func (t *fuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdo
 	return sinks, testErr
 }
 
-func (t *fuchsiaSSHTester) EnsureSinks(ctx context.Context, sinkRefs []runtests.DataSinkReference, outputs *testOutputs) error {
+func (t *FuchsiaSSHTester) EnsureSinks(ctx context.Context, sinkRefs []runtests.DataSinkReference, outputs *TestOutputs) error {
 	// Collect v2 references.
 	v2Sinks, err := t.copier.GetReferences(dataOutputDirV2)
 	if err != nil {
@@ -467,7 +479,7 @@ func (t *fuchsiaSSHTester) EnsureSinks(ctx context.Context, sinkRefs []runtests.
 	return t.copySinks(ctx, sinkRefs, t.localOutputDir)
 }
 
-func (t *fuchsiaSSHTester) copySinks(ctx context.Context, sinkRefs []runtests.DataSinkReference, localOutputDir string) error {
+func (t *FuchsiaSSHTester) copySinks(ctx context.Context, sinkRefs []runtests.DataSinkReference, localOutputDir string) error {
 	startTime := clock.Now(ctx)
 	sinkMap, err := t.copier.Copy(sinkRefs, localOutputDir)
 	if err != nil {
@@ -483,7 +495,7 @@ func (t *fuchsiaSSHTester) copySinks(ctx context.Context, sinkRefs []runtests.Da
 }
 
 // RunSnapshot runs `snapshot` on the device.
-func (t *fuchsiaSSHTester) RunSnapshot(ctx context.Context, snapshotFile string) error {
+func (t *FuchsiaSSHTester) RunSnapshot(ctx context.Context, snapshotFile string) error {
 	if snapshotFile == "" {
 		return nil
 	}
@@ -508,7 +520,7 @@ func (t *fuchsiaSSHTester) RunSnapshot(ctx context.Context, snapshotFile string)
 
 // Close terminates the underlying SSH connection. The object is no longer
 // usable after calling this method.
-func (t *fuchsiaSSHTester) Close() error {
+func (t *FuchsiaSSHTester) Close() error {
 	defer t.client.Close()
 	return t.copier.Close()
 }
@@ -520,17 +532,18 @@ type socketConn interface {
 }
 
 // FuchsiaSerialTester executes fuchsia tests over serial.
-type fuchsiaSerialTester struct {
+type FuchsiaSerialTester struct {
 	socket         socketConn
 	localOutputDir string
 }
 
-func newFuchsiaSerialTester(ctx context.Context, serialSocketPath string) (tester, error) {
+// NewFuchsiaSerialTester creates a tester that runs tests over serial.
+func NewFuchsiaSerialTester(ctx context.Context, serialSocketPath string) (Tester, error) {
 	socket, err := serial.NewSocket(ctx, serialSocketPath)
 	if err != nil {
 		return nil, err
 	}
-	return &fuchsiaSerialTester{socket: socket}, nil
+	return &FuchsiaSerialTester{socket: socket}, nil
 }
 
 // Exposed for testability.
@@ -686,7 +699,7 @@ func (r *parseOutKernelReader) lineWithoutKernelLog(line []byte, isTruncated boo
 	return line
 }
 
-func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, stdout, _ io.Writer, _ string) (runtests.DataSinkReference, error) {
+func (t *FuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, stdout, _ io.Writer, _ string) (runtests.DataSinkReference, error) {
 	// We don't collect data sinks for serial tests. Just return an empty DataSinkReference.
 	sinks := runtests.DataSinkReference{}
 	command, err := commandForTest(&test, true, "", test.Timeout)
@@ -725,7 +738,7 @@ func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, s
 			constants.FailedToStartSerialTestMsg, startSerialCommandMaxAttempts, readErr)
 		// In practice, repeated failure to run a test means that the device has
 		// become unresponsive and we won't have any luck running later tests.
-		return sinks, fatalError{err}
+		return sinks, FatalError{err}
 	}
 
 	t.socket.SetIOTimeout(test.Timeout + 30*time.Second)
@@ -742,17 +755,17 @@ func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, s
 	return sinks, nil
 }
 
-func (t *fuchsiaSerialTester) EnsureSinks(_ context.Context, _ []runtests.DataSinkReference, _ *testOutputs) error {
+func (t *FuchsiaSerialTester) EnsureSinks(_ context.Context, _ []runtests.DataSinkReference, _ *TestOutputs) error {
 	return nil
 }
 
-func (t *fuchsiaSerialTester) RunSnapshot(_ context.Context, _ string) error {
+func (t *FuchsiaSerialTester) RunSnapshot(_ context.Context, _ string) error {
 	return nil
 }
 
 // Close terminates the underlying Serial socket connection. The object is no
 // longer usable after calling this method.
-func (t *fuchsiaSerialTester) Close() error {
+func (t *FuchsiaSerialTester) Close() error {
 	return t.socket.Close()
 }
 

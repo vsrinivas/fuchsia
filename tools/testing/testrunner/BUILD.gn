@@ -7,9 +7,32 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("lib") {
-  sources = [ "result.go" ]
+  sources = [
+    "mock.go",
+    "outputs.go",
+    "outputs_test.go",
+    "result.go",
+    "tester.go",
+    "tester_test.go",
+  ]
 
-  deps = [ "//tools/testing/runtests" ]
+  deps = [
+    ":constants",
+    "//third_party/golibs:golang.org/x/crypto",
+    "//tools/build",
+    "//tools/debug/elflib",
+    "//tools/integration/testsharder:testsharder_lib",
+    "//tools/lib/clock",
+    "//tools/lib/iomisc",
+    "//tools/lib/logger",
+    "//tools/lib/osmisc",
+    "//tools/lib/retry",
+    "//tools/lib/serial",
+    "//tools/lib/subprocess",
+    "//tools/net/sshutil",
+    "//tools/testing/runtests",
+    "//tools/testing/tap",
+  ]
 }
 
 go_library("constants") {
@@ -23,34 +46,16 @@ go_library("main") {
   sources = [
     "main.go",
     "main_test.go",
-    "outputs.go",
-    "outputs_test.go",
-    "tester.go",
-    "tester_test.go",
   ]
 
   deps = [
-    ":constants",
     ":lib",
-    "//third_party/golibs:golang.org/x/crypto",
     "//tools/botanist:constants",
     "//tools/botanist:target",
-    "//tools/build",
-    "//tools/debug/elflib",
-    "//tools/integration/testsharder:testsharder_lib",
-    "//tools/lib/clock",
     "//tools/lib/color",
     "//tools/lib/environment",
     "//tools/lib/ffxutil",
-    "//tools/lib/iomisc",
-    "//tools/lib/logger",
-    "//tools/lib/osmisc",
-    "//tools/lib/retry",
     "//tools/lib/streams",
-    "//tools/lib/subprocess",
-    "//tools/net/sshutil",
-    "//tools/testing/runtests",
-    "//tools/testing/tap",
     "//tools/testing/testparser",
   ]
 }
@@ -60,11 +65,23 @@ go_binary("testrunner") {
   deps = [ ":main" ]
 }
 
-go_test("tests") {
-  output_name = "testrunner_tests"
+go_test("testrunner_main_tests") {
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/testing/testrunner/cmd" ]
   deps = [
     ":main",
     "//third_party/golibs:github.com/google/go-cmp",
+  ]
+}
+
+go_test("testrunner_lib_tests") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/testing/testrunner" ]
+  deps = [ ":lib" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":testrunner_lib_tests",
+    ":testrunner_main_tests",
   ]
 }

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package main
+package testrunner
 
 import (
 	"bytes"
@@ -18,12 +18,11 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 	"go.fuchsia.dev/fuchsia/tools/testing/tap"
-	"go.fuchsia.dev/fuchsia/tools/testing/testrunner"
 )
 
 func TestRecordingOfOutputs(t *testing.T) {
 	start := time.Unix(0, 0)
-	results := []testrunner.TestResult{
+	results := []TestResult{
 		{
 			Name:      "fuchsia-pkg://foo#test_a",
 			GNLabel:   "//a/b/c:test_a(//toolchain)",
@@ -62,7 +61,7 @@ func TestRecordingOfOutputs(t *testing.T) {
 	var buf bytes.Buffer
 	producer := tap.NewProducer(&buf)
 	producer.Plan(len(results))
-	o := createTestOutputs(producer, outDir)
+	o := CreateTestOutputs(producer, outDir)
 	defer o.Close()
 
 	outputFileA := filepath.Join(url.PathEscape("fuchsia-pkg//foo#test_a"), "0", "stdout-and-stderr.txt")
@@ -126,7 +125,7 @@ func TestRecordingOfOutputs(t *testing.T) {
 	for name, content := range expectedSinks {
 		// Add sinks to expectedContents.
 		expectedContents[name] = content
-		path := filepath.Join(o.outDir, name)
+		path := filepath.Join(o.OutDir, name)
 		dir := filepath.Dir(path)
 		if err := os.MkdirAll(dir, 0o700); err != nil {
 			t.Fatalf("failed to make directory %q for outputs: %v", dir, err)
@@ -137,7 +136,7 @@ func TestRecordingOfOutputs(t *testing.T) {
 	}
 
 	for _, result := range results {
-		if err := o.record(result); err != nil {
+		if err := o.Record(result); err != nil {
 			t.Fatalf("failed to record result of %q: %v", result.Name, err)
 		}
 	}
@@ -156,7 +155,7 @@ func TestRecordingOfOutputs(t *testing.T) {
 	o.Close()
 
 	// Verify that the summary as expected.
-	actualSummary := o.summary
+	actualSummary := o.Summary
 	if !reflect.DeepEqual(actualSummary, expectedSummary) {
 		t.Errorf("unexpected summary:\nexpected: %v\nactual: %v\n", expectedSummary, actualSummary)
 	}

@@ -26,6 +26,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/clock"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 	"go.fuchsia.dev/fuchsia/tools/testing/tap"
+	"go.fuchsia.dev/fuchsia/tools/testing/testrunner"
 )
 
 const (
@@ -37,7 +38,7 @@ const (
 
 // When returned by Test(), errFatal should cause testrunner to stop running any
 // more tests.
-var errFatal = fatalError{errors.New("fatal error occurred")}
+var errFatal = testrunner.NewFatalError(errors.New("fatal error occurred"))
 
 type fakeTester struct {
 	testErr   error
@@ -67,7 +68,7 @@ func (t *fakeTester) Close() error {
 	return nil
 }
 
-func (t *fakeTester) EnsureSinks(_ context.Context, _ []runtests.DataSinkReference, _ *testOutputs) error {
+func (t *fakeTester) EnsureSinks(_ context.Context, _ []runtests.DataSinkReference, _ *testrunner.TestOutputs) error {
 	t.funcCalls = append(t.funcCalls, copySinksFunc)
 	return nil
 }
@@ -725,7 +726,7 @@ func TestRunAndOutputTests(t *testing.T) {
 			}
 
 			runCounts := make(map[string]int)
-			testerForTest := func(testsharder.Test) (tester, *[]runtests.DataSinkReference, error) {
+			testerForTest := func(testsharder.Test) (testrunner.Tester, *[]runtests.DataSinkReference, error) {
 				return &fakeTester{runTest: func(ctx context.Context, test testsharder.Test, stdout, stderr io.Writer) error {
 					runIndex := runCounts[test.Name]
 					runCounts[test.Name]++
@@ -767,7 +768,7 @@ func TestRunAndOutputTests(t *testing.T) {
 			}
 
 			resultsDir := mkdtemp(t, "results")
-			outputs := createTestOutputs(tap.NewProducer(io.Discard), resultsDir)
+			outputs := testrunner.CreateTestOutputs(tap.NewProducer(io.Discard), resultsDir)
 
 			err := runAndOutputTests(ctx, tc.tests, testerForTest, outputs, mkdtemp(t, "outputs"))
 			if !errors.Is(err, tc.expectedErr) {
@@ -777,7 +778,7 @@ func TestRunAndOutputTests(t *testing.T) {
 				cmpopts.EquateEmpty(),
 				cmpopts.IgnoreFields(runtests.TestDetails{}, "StartTime"),
 			}
-			if diff := cmp.Diff(tc.expectedResults, outputs.summary.Tests, opts...); diff != "" {
+			if diff := cmp.Diff(tc.expectedResults, outputs.Summary.Tests, opts...); diff != "" {
 				t.Errorf("test results diff (-want +got): %s", diff)
 			}
 			for path, want := range tc.expectedOutputs {
@@ -872,20 +873,20 @@ func TestExecute(t *testing.T) {
 				ffxInstance = oldFFXInstance
 			}()
 			fuchsiaTester := &fakeTester{}
-			sshTester = func(_ context.Context, _ net.IPAddr, _, _, _ string, _ bool, _ ffxTester) (tester, error) {
+			sshTester = func(_ context.Context, _ net.IPAddr, _, _, _ string, _ bool, _ testrunner.FFXTester) (testrunner.Tester, error) {
 				if c.wantErr {
 					return nil, fmt.Errorf("failed to get tester")
 				}
 				return fuchsiaTester, nil
 			}
-			serialTester = func(_ context.Context, _ string) (tester, error) {
+			serialTester = func(_ context.Context, _ string) (testrunner.Tester, error) {
 				if c.wantErr {
 					return nil, fmt.Errorf("failed to get tester")
 				}
 				return fuchsiaTester, nil
 			}
-			ffx := &fakeFFXTester{}
-			ffxInstance = func(_, _ string, _ []string, _, _, _ string) (ffxTester, error) {
+			ffx := &testrunner.MockFFXTester{}
+			ffxInstance = func(_, _ string, _ []string, _, _, _ string) (testrunner.FFXTester, error) {
 				if c.useFFX {
 					return ffx, nil
 				}
@@ -894,7 +895,7 @@ func TestExecute(t *testing.T) {
 
 			var buf bytes.Buffer
 			producer := tap.NewProducer(&buf)
-			o := createTestOutputs(producer, "")
+			o := testrunner.CreateTestOutputs(producer, "")
 			defer o.Close()
 			err := execute(context.Background(), tests, o, net.IPAddr{}, c.sshKeyFile, c.serialSocketPath, "out-dir", testrunnerFlags{})
 			if c.wantErr {
@@ -906,8 +907,8 @@ func TestExecute(t *testing.T) {
 			if err != nil {
 				t.Errorf("got error: %v", err)
 			}
-			if c.useFFX && !containsCmd(ffx.cmdsCalled, "stop") {
-				t.Errorf("failed to call `ffx daemon stop`, called: %s", ffx.cmdsCalled)
+			if c.useFFX && !ffx.ContainsCmd("stop") {
+				t.Errorf("failed to call `ffx daemon stop`, called: %s", ffx.CmdsCalled)
 			}
 
 			funcCalls := strings.Join(fuchsiaTester.funcCalls, ",")
