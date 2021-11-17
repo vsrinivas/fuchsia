@@ -24,6 +24,7 @@ mod artifact;
 pub mod diagnostics;
 mod error;
 pub mod output;
+mod stream_util;
 
 pub use error::{RunTestSuiteError, UnexpectedEventError};
 use {
@@ -32,6 +33,7 @@ use {
         AnsiFilterWriter, ArtifactType, CaseId, DirectoryArtifactType, RunReporter, SuiteId,
         SuiteReporter, Timestamp,
     },
+    stream_util::StreamUtil,
 };
 
 /// Duration after which to emit an excessive duration log.
@@ -699,15 +701,11 @@ impl RunningSuite {
         let unprocessed_event_stream = futures::stream::repeat_with(move || proxy.get_events())
             .buffered(Self::PIPELINED_REQUESTS);
         // Terminate the stream after we get an error or empty list of events.
-        let mut terminate_next = false;
-        let terminated_event_stream = unprocessed_event_stream.take_while(move |result| {
-            let take_result = !terminate_next;
-            terminate_next = match result {
-                Ok(Ok(events)) if !events.is_empty() => false,
-                Ok(Ok(_)) | Ok(Err(_)) | Err(_) => true,
-            };
-            futures::future::ready(take_result)
-        });
+        let terminated_event_stream =
+            unprocessed_event_stream.take_until_stop_after(|result| match &result {
+                Ok(Ok(events)) => events.is_empty(),
+                Err(_) | Ok(Err(_)) => true,
+            });
         // Flatten the stream of vecs into a stream of single events.
         let mut event_stream = terminated_event_stream
             .map(Self::convert_to_result_vec)

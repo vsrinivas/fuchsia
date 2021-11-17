@@ -34,7 +34,6 @@ use {
         future::join_all,
         lock,
         prelude::*,
-        stream::FusedStream,
         StreamExt,
     },
     io_util,
@@ -788,8 +787,11 @@ impl Suite {
         // Workaround to prevent zx_peer_closed error
         // TODO(fxbug.dev/87976) once fxbug.dev/87890 is fixed, the controller should be dropped as soon as all
         // events are drained.
-        if !controller.is_terminated() {
-            let () = controller.map(|_| ()).collect().await;
+        let (inner, _) = controller.into_inner();
+        if let Err(e) =
+            fasync::OnSignals::new(inner.channel(), zx::Signals::CHANNEL_PEER_CLOSED).await
+        {
+            warn!("Error waiting for SuiteController channel to close: {:?}", e);
         }
     }
 
