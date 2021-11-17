@@ -7,15 +7,7 @@
 
 group("all") {
   testonly = true
-  public_deps = [
-    "//garnet/packages/experimental:network_settings_server",
-    "//garnet/packages/experimental:sys",
-  ]
-}
-
-group("network_settings_server") {
-  testonly = true
-  public_deps = [ "//garnet/bin/network_settings_server" ]
+  public_deps = [ "//garnet/packages/experimental:sys" ]
 }
 
 group("sys") {

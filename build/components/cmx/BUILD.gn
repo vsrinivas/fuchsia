@@ -58,7 +58,6 @@ group("cmx_allowlist") {
     "//garnet/bin/hwstress/*",
     "//garnet/bin/insntrace/*",
     "//garnet/bin/ktrace_provider/*",
-    "//garnet/bin/network_settings_server/*",
     "//garnet/bin/run_test_component/*",
     "//garnet/bin/sched/*",
     "//garnet/bin/setui/*",
