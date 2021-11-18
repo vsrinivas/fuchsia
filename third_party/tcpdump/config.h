@@ -129,7 +129,7 @@
 #define HAVE_PCAP_IF_T 1
 
 /* Define to 1 if you have the `pcap_lib_version' function. */
-#define HAVE_PCAP_LIB_VERSION 1
+/* #undef HAVE_PCAP_LIB_VERSION */
 
 /* define if libpcap has pcap_list_datalinks() */
 #define HAVE_PCAP_LIST_DATALINKS 1
@@ -162,7 +162,7 @@
 #define HAVE_PCAP_SET_TSTAMP_TYPE 1
 
 /* define if libpcap has pcap_version */
-/* #undef HAVE_PCAP_VERSION */
+#define HAVE_PCAP_VERSION 1
 
 /* Define to 1 if you have the `pfopen' function. */
 /* #undef HAVE_PFOPEN */

@@ -205,7 +205,7 @@ executable("bin") {
 
   configs += [ ":suppress_warnings" ]
 
-  public_deps = [ "//third_party/libpcap" ]
+  deps = [ "//third_party/libpcap" ]
 }
 
 config("suppress_warnings") {

@@ -19,12 +19,16 @@ shared_library("libpcap") {
     "src/nametoaddr.c",
     "src/optimize.c",
     "src/pcap-common.c",
-    "src/pcap-null.c",
     "src/pcap.c",
     "src/savefile.c",
     "src/scanner.c",
     "src/sf-pcap.c",
     "src/sf-pcapng.c",
+
+    # To build for the null-platform, use `src/pcap-null.c` instead of
+    # `pcap-fuchsia.{c,cc}`.
+    "pcap-fuchsia.c",
+    "pcap-fuchsia.cc",
   ]
 
   defines = [
@@ -39,6 +43,8 @@ shared_library("libpcap") {
   configs += [ ":suppress_warnings" ]
 
   public_deps = [ ":headers" ]
+
+  deps = [ "//sdk/lib/fit" ]
 }
 
 library_headers("headers") {

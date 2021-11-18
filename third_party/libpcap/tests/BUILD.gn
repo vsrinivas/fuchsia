@@ -1,0 +1,37 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/test.gni")
+
+test("bin") {
+  output_name = "libpcap_test"
+  sources = [ "libpcap_test.cc" ]
+
+  deps = [
+    "//sdk/lib/fit",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/libpcap",
+    "//zircon/system/ulib/fbl",
+  ]
+}
+
+fuchsia_test_component("component") {
+  component_name = "libpcap-test"
+  manifest = "meta/libpcap-test.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_test_package("tests") {
+  package_name = "libpcap-test"
+
+  test_components = [ ":component" ]
+
+  deps = [
+    # The tests depend `fuchsia.posix.socket/Provider` and
+    # `fuchsia.posix.socket.packet/Provider` which the netstack exposes.
+    "//src/connectivity/network/netstack:component-debug",
+  ]
+}

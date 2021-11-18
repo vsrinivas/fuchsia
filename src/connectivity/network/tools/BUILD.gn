@@ -17,6 +17,7 @@ group("tests") {
   deps = [
     "network-speed-test:tests",
     "sockscripter:tests",
+    "//third_party/libpcap/tests",
     "//third_party/tcpdump/tests",
   ]
 }

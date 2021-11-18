@@ -19,6 +19,7 @@ use fidl_fuchsia_net_stack as fnet_stack;
 use fidl_fuchsia_netemul as fnetemul;
 use fidl_fuchsia_netstack as fnetstack;
 use fidl_fuchsia_posix_socket as fposix_socket;
+use fidl_fuchsia_posix_socket_packet as fposix_socket_packet;
 use fidl_fuchsia_stash as fstash;
 
 use crate::Result;
@@ -56,6 +57,7 @@ impl NetstackVersion {
                 fnet_stack::StackMarker::PROTOCOL_NAME,
                 fnetstack::NetstackMarker::PROTOCOL_NAME,
                 fposix_socket::ProviderMarker::PROTOCOL_NAME,
+                fposix_socket_packet::ProviderMarker::PROTOCOL_NAME,
             ],
             NetstackVersion::Netstack3 => &[
                 fnet_interfaces::StateMarker::PROTOCOL_NAME,

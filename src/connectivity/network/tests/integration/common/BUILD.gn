@@ -23,6 +23,7 @@ rustc_library("netstack_testing_common") {
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket-rustc",
+    "//sdk/fidl/fuchsia.posix.socket.packet:fuchsia.posix.socket.packet-rustc",
     "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/connectivity/lib/net-types",

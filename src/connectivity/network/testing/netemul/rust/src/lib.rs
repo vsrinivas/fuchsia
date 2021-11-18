@@ -251,12 +251,21 @@ impl<'a> TestRealm<'a> {
             let (proxy, server_end) =
                 fidl::endpoints::create_proxy::<S>().context("create proxy")?;
             let () = self
-                .realm
-                .connect_to_protocol(S::PROTOCOL_NAME, None, server_end.into_channel())
-                .context("connect to protocol")?;
+                .connect_to_protocol_with_server_end(server_end)
+                .context("connect to protocol name with server end")?;
             Result::Ok(proxy)
         })()
         .context(S::PROTOCOL_NAME)
+    }
+
+    /// Connects to a protocol within the realm.
+    pub fn connect_to_protocol_with_server_end<S: fidl::endpoints::DiscoverableProtocolMarker>(
+        &self,
+        server_end: fidl::endpoints::ServerEnd<S>,
+    ) -> Result {
+        self.realm
+            .connect_to_protocol(S::PROTOCOL_NAME, None, server_end.into_channel())
+            .context("connect to protocol")
     }
 
     /// Gets the relative moniker of the root of the managed realm.

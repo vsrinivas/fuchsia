@@ -11,6 +11,13 @@ fuchsia_unittest_package("tests") {
   deps = [
     ":bin",
 
+    # netemul-sandbox-v2 is used to create hermetic test realms.
+    "//src/connectivity/network/testing/netemul-v2/service:netemul-sandbox",
+
+    # The tests depend `fuchsia.posix.socket/Provider` and
+    # `fuchsia.posix.socket.packet/Provider` which the netstack exposes.
+    "//src/connectivity/network/netstack:component-debug",
+
     # TCPDump is under test.
     "//third_party/tcpdump:bin",
   ]
@@ -19,13 +26,23 @@ fuchsia_unittest_package("tests") {
 rustc_test("bin") {
   output_name = "tcpdump_integration_test"
   deps = [
+    "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket-rustc",
+    "//sdk/fidl/fuchsia.posix.socket.packet:fuchsia.posix.socket.packet-rustc",
+    "//src/connectivity/lib/net-declare",
+    "//src/connectivity/network/testing/netemul-v2/fidl:fuchsia.netemul-rustc",
+    "//src/connectivity/network/testing/netemul/rust:lib",
+    "//src/connectivity/network/tests/integration/common:netstack_testing_common",
+    "//src/lib/async-utils",
     "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-runtime",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:libc",
+    "//third_party/rust_crates:regex",
   ]
   sources = [ "src/lib.rs" ]
   configs -= [ "//build/config/rust:allow_unused_results" ]

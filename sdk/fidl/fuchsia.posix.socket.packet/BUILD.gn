@@ -10,6 +10,9 @@ fidl("fuchsia.posix.socket.packet") {
   sources = [ "socket.fidl" ]
 
   public_deps = [
+    # TODO(https://fxbug.dev/88443): Remove this dependency since this target
+    # does not directly depend on `fuchsia.io`.
+    "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.net",
     "//sdk/fidl/fuchsia.posix",
     "//sdk/fidl/fuchsia.posix.socket",
