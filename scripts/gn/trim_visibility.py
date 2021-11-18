@@ -55,12 +55,12 @@ def main():
         found_usage = False
         for root, _, files in os.walk(gn_util.target_to_dir(vis)):
             for filename in files:
-                if os.path.splitext(filename)[1] == ".gn":
+                if os.path.splitext(filename)[1] in (".gn", ".gni"):
                     # This has some false positives, but is better than parsing
                     # GN files or relying on `gn desc` for the target, each of
                     # which is a whole can of worms.
                     if args.target in open(os.path.join(root, filename)).read():
-                        used_visibility.add(vis)
+                        used_visibility.add(gn_util.canonicalize_target(vis))
                         found_usage = True
                         break
             if found_usage:

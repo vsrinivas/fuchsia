@@ -9,7 +9,9 @@ import json
 import subprocess
 import functools
 
-TARGET_DIR_PART = re.compile(r"\/\/([\w\-_]*(?:\/[\w\-_]+)*)")
+# Group 1: directory
+# Group 2 (optional): target in dir
+TARGET_EXP = re.compile(r"\/\/([\w\-_]*(?:\/[\w\-_]+)*)(?::([\w\-u]*))?")
 
 
 def gn_refs(target):
@@ -46,8 +48,19 @@ def get_out_dir():
 # TODO(shayba): consider supporting local labels (not just absolutes)
 def target_to_dir(target):
     """Returns likely directory path for a target's BUILD.gn file."""
-    m = TARGET_DIR_PART.match(target)
+    m = TARGET_EXP.match(target)
     return m.group(1)
+
+
+def canonicalize_target(target):
+    """Turns "//foo/bar:bar" into "//foo/bar"."""
+    m = TARGET_EXP.match(target)
+    directory = m.group(1)
+    inner_target = m.group(2)
+    if inner_target and inner_target == directory.rpartition("/")[2]:
+        return "//" + directory
+    else:
+        return target
 
 
 # TODO(shayba): consider supporting local labels (not just absolutes)
