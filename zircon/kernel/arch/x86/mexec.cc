@@ -47,5 +47,15 @@ fitx::result<fitx::failed> ArchAppendMexecDataFromHandoff(MexecDataImage& image,
     }
   }
 
+  if (handoff.arch_handoff.smbios) {
+    auto result = image.Append(zbi_header_t{.type = ZBI_TYPE_SMBIOS},
+                               zbitl::AsBytes(handoff.arch_handoff.smbios.value()));
+    if (result.is_error()) {
+      printf("mexec: could not append SMBIOS pointer: ");
+      zbitl::PrintViewError(result.error_value());
+      return fitx::failed();
+    }
+  }
+
   return fitx::ok();
 }

@@ -19,7 +19,6 @@ void HandoffPrep::ArchSummarizeMiscZbiItem(const zbi_header_t& header,
   ZX_DEBUG_ASSERT(handoff_);
   ArchPhysHandoff& arch_handoff = handoff_->arch_handoff;
 
-  // TODO(fxbug.dev/88059): Handle all cases below.
   switch (header.type) {
     case ZBI_TYPE_ACPI_RSDP:
       ZX_ASSERT(payload.size() >= sizeof(uint64_t));
@@ -34,6 +33,8 @@ void HandoffPrep::ArchSummarizeMiscZbiItem(const zbi_header_t& header,
       arch_handoff.framebuffer = *reinterpret_cast<const zbi_swfb_t*>(payload.data());
       break;
     case ZBI_TYPE_SMBIOS:
+      ZX_ASSERT(payload.size() >= sizeof(uint64_t));
+      arch_handoff.smbios = *reinterpret_cast<const uint64_t*>(payload.data());
       break;
   }
 }

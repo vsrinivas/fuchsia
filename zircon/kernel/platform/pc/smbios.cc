@@ -13,6 +13,7 @@
 #include <zircon/types.h>
 
 #include <ktl/move.h>
+#include <phys/handoff.h>
 #include <platform/pc/bootloader.h>
 #include <platform/pc/smbios.h>
 #include <vm/physmap.h>
@@ -31,18 +32,19 @@ union {
 uintptr_t kStructBase = 0;  // Address of first SMBIOS struct
 
 zx_status_t FindEntryPoint(const uint8_t** base, smbios::EntryPointVersion* version) {
-  // See if our bootloader told us where the table is
-  if (bootloader.smbios != 0) {
-    const uint8_t* p = reinterpret_cast<const uint8_t*>(paddr_to_physmap(bootloader.smbios));
+  // See if the ZBI told us where the table is.
+  if (gPhysHandoff->arch_handoff.smbios) {
+    uint64_t smbios = gPhysHandoff->arch_handoff.smbios.value();
+    const uint8_t* p = reinterpret_cast<const uint8_t*>(paddr_to_physmap(smbios));
     if (!memcmp(p, SMBIOS2_ANCHOR, strlen(SMBIOS2_ANCHOR))) {
       *base = p;
       *version = smbios::EntryPointVersion::V2_1;
-      kEntryPointPhys = bootloader.smbios;
+      kEntryPointPhys = smbios;
       return ZX_OK;
     } else if (!memcmp(p, SMBIOS3_ANCHOR, strlen(SMBIOS3_ANCHOR))) {
       *base = p;
       *version = smbios::EntryPointVersion::V3_0;
-      kEntryPointPhys = bootloader.smbios;
+      kEntryPointPhys = smbios;
       return ZX_OK;
     }
   }
