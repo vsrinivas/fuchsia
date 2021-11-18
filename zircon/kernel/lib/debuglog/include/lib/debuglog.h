@@ -116,6 +116,8 @@ void dlog_serial_write(ktl::string_view str);
 // backend as dlog_serial_write.
 extern FILE gDlogSerialFile;
 
+extern bool dlog_bypass_;
+
 // bluescreen_init should be called at the "start" of a fatal fault or
 // panic to ensure that the fault output (via kernel printf/dprintf)
 // is captured or displayed to the user
@@ -144,10 +146,7 @@ zx_status_t dlog_shutdown(zx_time_t deadline);
 void dlog_bypass_init();
 
 // Accessor to quickly determine if the debuglog bypass is enabled.
-static inline bool dlog_bypass() {
-  extern bool dlog_bypass_;
-  return dlog_bypass_;
-}
+static inline bool dlog_bypass() { return dlog_bypass_; }
 
 // Renders as many of the recent debug log entries as will fit into the memory
 // region specified by |target|.  Returns the number of bytes of target which

@@ -33,6 +33,8 @@ struct idt _idt __ALIGNED(PAGE_SIZE);
 // Read-only remapping of the IDT
 static struct idt* _idt_ro;
 
+extern uintptr_t const _isr_table[];
+
 static inline void idt_set_segment_sel(struct idt_entry* entry, uint16_t sel) {
   entry->w0 = (entry->w0 & 0x0000ffff) | (sel << 16);
 }
@@ -77,8 +79,6 @@ void idt_set_ist_index(struct idt* idt, uint8_t vec, uint8_t ist_idx) {
 }
 
 void idt_setup(struct idt* idt) {
-  extern uintptr_t const _isr_table[];
-
   // If SMAP is not available, we need to skip past the CLAC instruction
   // at the beginning of the ISR stubs.
   int clac_shift = 0;

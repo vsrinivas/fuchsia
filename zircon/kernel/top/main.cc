@@ -42,12 +42,12 @@ KCOUNTER(timeline_init, "boot.timeline.init")
 
 static bool lk_global_constructors_called_flag = false;
 
+extern void (*const __init_array_start[])();
+extern void (*const __init_array_end[])();
+
 bool lk_global_constructors_called() { return lk_global_constructors_called_flag; }
 
 static void call_constructors() {
-  extern void (*const __init_array_start[])();
-  extern void (*const __init_array_end[])();
-
   for (void (*const* a)() = __init_array_start; a != __init_array_end; a++) {
     (*a)();
   }

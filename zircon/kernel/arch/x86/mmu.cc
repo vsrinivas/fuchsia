@@ -95,6 +95,8 @@ uint64_t kernel_relocated_base = 0xffffffff00000000;
 static const paddr_t kernel_pt_phys =
     (vaddr_t)KERNEL_PT - (vaddr_t)__code_start + KERNEL_LOAD_OFFSET;
 
+extern bool g_has_meltdown;
+
 paddr_t x86_kernel_cr3(void) { return kernel_pt_phys; }
 
 /**
@@ -521,7 +523,6 @@ void x86_mmu_early_init() {
 }
 
 void x86_mmu_init(void) {
-  extern bool g_has_meltdown;
   g_enable_isolation =
       !gBootOptions->x86_disable_spec_mitigations &&
       (gBootOptions->x86_pti_enable == 1 || (gBootOptions->x86_pti_enable == 2 && g_has_meltdown));

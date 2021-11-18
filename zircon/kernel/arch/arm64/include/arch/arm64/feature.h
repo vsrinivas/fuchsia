@@ -66,8 +66,9 @@ enum class arm64_asid_width {
   ASID_16,
 };
 
+extern arm64_asid_width arm64_asid_width_;
+
 static inline enum arm64_asid_width arm64_asid_width() {
-  extern enum arm64_asid_width arm64_asid_width_;
   DEBUG_ASSERT(arm64_asid_width_ != arm64_asid_width::UNKNOWN);
   return arm64_asid_width_;
 }

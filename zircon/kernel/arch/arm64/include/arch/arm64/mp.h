@@ -63,12 +63,16 @@ void arch_init_cpu_map(uint cluster_count, const uint* cluster_cpus);
 void arch_register_mpid(uint cpu_id, uint64_t mpid);
 void arm64_init_percpu_early();
 
+extern uint arm_num_cpus;
+extern uint arm64_cpu_cluster_ids[SMP_MAX_CPUS];
+extern uint arm64_cpu_cpu_ids[SMP_MAX_CPUS];
+
 // Use the x20 register to always point at the local cpu structure for fast access.
 // x20 is the first available callee-saved register that clang will allow to be marked
 // as fixed (via -ffixed-x20 command line). Since it's callee saved when making firmware
 // calls to PSCI or SMCC the register will be naturally saved and restored.
 static inline void arm64_write_percpu_ptr(struct arm64_percpu* percpu) {
-  __asm__ volatile("mov x20, %0" :: "r"(percpu));
+  __asm__ volatile("mov x20, %0" ::"r"(percpu));
 }
 
 static inline struct arm64_percpu* arm64_read_percpu_ptr() {
@@ -102,21 +106,12 @@ static inline cpu_num_t arch_curr_cpu_num() {
 
 // TODO(fxbug.dev/32903) get num_cpus from topology.
 // This needs to be set very early (before arch_init).
-static inline void arch_set_num_cpus(uint cpu_count) {
-  extern uint arm_num_cpus;
-  arm_num_cpus = cpu_count;
-}
+static inline void arch_set_num_cpus(uint cpu_count) { arm_num_cpus = cpu_count; }
 
-static inline uint arch_max_num_cpus() {
-  extern uint arm_num_cpus;
-
-  return arm_num_cpus;
-}
+static inline uint arch_max_num_cpus() { return arm_num_cpus; }
 
 // translate a cpu number back to the cluster ID (AFF1)
 static inline uint arch_cpu_num_to_cluster_id(cpu_num_t cpu) {
-  extern uint arm64_cpu_cluster_ids[SMP_MAX_CPUS];
-
   DEBUG_ASSERT(cpu < SMP_MAX_CPUS);
 
   return arm64_cpu_cluster_ids[cpu];
@@ -124,8 +119,6 @@ static inline uint arch_cpu_num_to_cluster_id(cpu_num_t cpu) {
 
 // translate a cpu number back to the MP cpu number within a cluster (AFF0)
 static inline uint arch_cpu_num_to_cpu_id(cpu_num_t cpu) {
-  extern uint arm64_cpu_cpu_ids[SMP_MAX_CPUS];
-
   DEBUG_ASSERT(cpu < SMP_MAX_CPUS);
 
   return arm64_cpu_cpu_ids[cpu];

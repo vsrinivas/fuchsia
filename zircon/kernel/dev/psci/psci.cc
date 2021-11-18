@@ -15,6 +15,9 @@
 
 #define LOCAL_TRACE 0
 
+// Defined in start.S.
+extern paddr_t kernel_entry_paddr;
+
 static uint64_t shutdown_args[3] = {0, 0, 0};
 static uint64_t reboot_args[3] = {0, 0, 0};
 static uint64_t reboot_bootloader_args[3] = {0, 0, 0};
@@ -64,8 +67,8 @@ void psci_system_reset(enum reboot_flags flags) {
     args = reboot_recovery_args;
   }
 
-  dprintf(INFO, "PSCI reboot: %#" PRIx32 " %#" PRIx64 " %#" PRIx64 " %#" PRIx64 "\n",
-    reset_command, args[0], args[1], args[2]);
+  dprintf(INFO, "PSCI reboot: %#" PRIx32 " %#" PRIx64 " %#" PRIx64 " %#" PRIx64 "\n", reset_command,
+          args[0], args[1], args[2]);
   do_psci_call(reset_command, args[0], args[1], args[2]);
 }
 
@@ -122,7 +125,7 @@ LK_PDEV_INIT(arm_psci_init, KDRV_ARM_PSCI, arm_psci_init, LK_INIT_LEVEL_PLATFORM
 
 static int cmd_psci(int argc, const cmd_args* argv, uint32_t flags) {
   if (argc < 2) {
-notenoughargs:
+  notenoughargs:
     printf("not enough arguments\n");
     printf("%s system_reset\n", argv[0].str);
     printf("%s system_off\n", argv[0].str);
@@ -137,8 +140,6 @@ notenoughargs:
   } else if (!strcmp(argv[1].str, "system_off")) {
     psci_system_off();
   } else if (!strcmp(argv[1].str, "cpu_on")) {
-    // Defined in start.S.
-    extern paddr_t kernel_entry_paddr;
     if (argc < 3) {
       goto notenoughargs;
     }

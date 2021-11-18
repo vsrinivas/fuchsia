@@ -37,6 +37,10 @@ static Mutex bootstrap_lock;
 // the PMM may not have any available and we'd be unable to do so.
 static fbl::RefPtr<VmAspace> bootstrap_aspace = nullptr;
 
+// Actual GDT address.
+extern uint8_t _temp_gdt;
+extern uint8_t _temp_gdt_end;
+
 void x86_bootstrap16_init(paddr_t bootstrap_base) {
   DEBUG_ASSERT(!IS_PAGE_ALIGNED(bootstrap_phys_addr));
   DEBUG_ASSERT(IS_PAGE_ALIGNED(bootstrap_base));
@@ -71,10 +75,6 @@ zx_status_t x86_bootstrap16_acquire(uintptr_t entry64, void** bootstrap_aperture
     }
     bootstrap_lock.Release();
   });
-
-  // Actual GDT address.
-  extern uint8_t _temp_gdt;
-  extern uint8_t _temp_gdt_end;
 
   // Compute what needs to go into the mappings
   paddr_t gdt_phys_page = vaddr_to_paddr((void*)ROUNDDOWN((uintptr_t)&_temp_gdt, PAGE_SIZE));

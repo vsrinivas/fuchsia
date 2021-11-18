@@ -74,14 +74,14 @@ void x86_cpu_feature_init();
 /* Invoked on each CPU late in init sequence. */
 void x86_cpu_feature_late_init_percpu();
 
-static inline const struct cpuid_leaf* x86_get_cpuid_leaf(enum x86_cpuid_leaf_num leaf) {
-  extern struct cpuid_leaf _cpuid[MAX_SUPPORTED_CPUID + 1];
-  extern struct cpuid_leaf _cpuid_hyp[MAX_SUPPORTED_CPUID_HYP - X86_CPUID_HYP_BASE + 1];
-  extern struct cpuid_leaf _cpuid_ext[MAX_SUPPORTED_CPUID_EXT - X86_CPUID_EXT_BASE + 1];
-  extern uint32_t max_cpuid;
-  extern uint32_t max_ext_cpuid;
-  extern uint32_t max_hyp_cpuid;
+extern struct cpuid_leaf _cpuid[MAX_SUPPORTED_CPUID + 1];
+extern struct cpuid_leaf _cpuid_hyp[MAX_SUPPORTED_CPUID_HYP - X86_CPUID_HYP_BASE + 1];
+extern struct cpuid_leaf _cpuid_ext[MAX_SUPPORTED_CPUID_EXT - X86_CPUID_EXT_BASE + 1];
+extern uint32_t max_cpuid;
+extern uint32_t max_ext_cpuid;
+extern uint32_t max_hyp_cpuid;
 
+static inline const struct cpuid_leaf* x86_get_cpuid_leaf(enum x86_cpuid_leaf_num leaf) {
   if (leaf < X86_CPUID_HYP_BASE) {
     if (unlikely(leaf > max_cpuid))
       return NULL;
@@ -247,21 +247,15 @@ enum x86_hypervisor_list {
 };
 
 extern enum x86_hypervisor_list x86_hypervisor;
+extern bool g_hypervisor_has_pv_clock;
+extern bool g_hypervisor_has_pv_eoi;
+extern bool g_hypervisor_has_pv_ipi;
 
-static inline bool x86_hypervisor_has_pv_clock() {
-  extern bool g_hypervisor_has_pv_clock;
-  return g_hypervisor_has_pv_clock;
-}
+static inline bool x86_hypervisor_has_pv_clock() { return g_hypervisor_has_pv_clock; }
 
-static inline bool x86_hypervisor_has_pv_eoi() {
-  extern bool g_hypervisor_has_pv_eoi;
-  return g_hypervisor_has_pv_eoi;
-}
+static inline bool x86_hypervisor_has_pv_eoi() { return g_hypervisor_has_pv_eoi; }
 
-static inline bool x86_hypervisor_has_pv_ipi() {
-  extern bool g_hypervisor_has_pv_ipi;
-  return g_hypervisor_has_pv_ipi;
-}
+static inline bool x86_hypervisor_has_pv_ipi() { return g_hypervisor_has_pv_ipi; }
 
 /* returns 0 if unknown, otherwise value in Hz */
 typedef uint64_t (*x86_get_timer_freq_func_t)();
@@ -288,50 +282,37 @@ typedef struct {
   x86_idle_states_t idle_states;
 } x86_microarch_config_t;
 
+extern const x86_microarch_config_t* x86_microarch_config;
+extern bool g_has_ibpb;
+extern bool g_ras_fill_on_ctxt_switch;
+extern bool g_cpu_vulnerable_to_rsb_underflow;
+extern bool g_should_ibpb_on_ctxt_switch;
+extern bool g_ssb_mitigated;
+extern bool g_l1d_flush_on_vmentry;
+extern bool g_md_clear_on_user_return;
+extern bool g_has_enhanced_ibrs;
+
 static inline const x86_microarch_config_t* x86_get_microarch_config() {
-  extern const x86_microarch_config_t* x86_microarch_config;
   return x86_microarch_config;
 }
 
-static inline bool x86_cpu_has_ibpb() {
-  extern bool g_has_ibpb;
-  return g_has_ibpb;
-}
+static inline bool x86_cpu_has_ibpb() { return g_has_ibpb; }
 
-static inline bool x86_cpu_should_ras_fill_on_ctxt_switch() {
-  extern bool g_ras_fill_on_ctxt_switch;
-  return g_ras_fill_on_ctxt_switch;
-}
+static inline bool x86_cpu_should_ras_fill_on_ctxt_switch() { return g_ras_fill_on_ctxt_switch; }
 
 static inline bool x86_cpu_vulnerable_to_rsb_underflow() {
-  extern bool g_cpu_vulnerable_to_rsb_underflow;
   return g_cpu_vulnerable_to_rsb_underflow;
 }
 
-static inline bool x86_cpu_should_ibpb_on_ctxt_switch() {
-  extern bool g_should_ibpb_on_ctxt_switch;
-  return g_should_ibpb_on_ctxt_switch;
-}
+static inline bool x86_cpu_should_ibpb_on_ctxt_switch() { return g_should_ibpb_on_ctxt_switch; }
 
-static inline bool x86_cpu_should_mitigate_ssb() {
-  extern bool g_ssb_mitigated;
-  return g_ssb_mitigated;
-}
+static inline bool x86_cpu_should_mitigate_ssb() { return g_ssb_mitigated; }
 
-static inline bool x86_cpu_should_l1d_flush_on_vmentry() {
-  extern bool g_l1d_flush_on_vmentry;
-  return g_l1d_flush_on_vmentry;
-}
+static inline bool x86_cpu_should_l1d_flush_on_vmentry() { return g_l1d_flush_on_vmentry; }
 
-static inline bool x86_cpu_should_md_clear_on_user_return() {
-  extern bool g_md_clear_on_user_return;
-  return g_md_clear_on_user_return;
-}
+static inline bool x86_cpu_should_md_clear_on_user_return() { return g_md_clear_on_user_return; }
 
-static inline bool x86_cpu_has_enhanced_ibrs() {
-  extern bool g_has_enhanced_ibrs;
-  return g_has_enhanced_ibrs;
-}
+static inline bool x86_cpu_has_enhanced_ibrs() { return g_has_enhanced_ibrs; }
 
 // Vendor-specific per-cpu init functions, in amd.cpp/intel.cpp
 void x86_amd_init_percpu();

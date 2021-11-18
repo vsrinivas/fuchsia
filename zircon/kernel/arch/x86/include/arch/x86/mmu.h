@@ -67,8 +67,8 @@
 #define X86_KERNEL_PD_FLAGS (X86_MMU_PG_A | X86_MMU_PG_RW | X86_MMU_PG_P)
 
 /* default flags for 2MB/4MB/1GB page directory entries */
-#define X86_KERNEL_PD_LP_FLAGS (X86_MMU_PG_A | X86_MMU_PG_D | X86_MMU_PG_G | X86_MMU_PG_PS | \
-                                X86_MMU_PG_RW | X86_MMU_PG_P)
+#define X86_KERNEL_PD_LP_FLAGS \
+  (X86_MMU_PG_A | X86_MMU_PG_D | X86_MMU_PG_G | X86_MMU_PG_PS | X86_MMU_PG_RW | X86_MMU_PG_P)
 
 #define X86_MMU_PG_NX (1UL << 63)
 
@@ -109,10 +109,9 @@
 
 #include <arch/x86/page_tables/page_tables.h>
 
-static inline bool x86_kpti_is_enabled() {
-  extern int g_enable_isolation;
-  return g_enable_isolation == 1;
-}
+extern int g_enable_isolation;
+
+static inline bool x86_kpti_is_enabled() { return g_enable_isolation == 1; }
 
 struct map_range {
   vaddr_t start_vaddr;
