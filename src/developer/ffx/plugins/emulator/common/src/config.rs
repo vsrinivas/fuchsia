@@ -18,6 +18,12 @@ use {
 
 // These are constants for the keys accessed by ffx emulator plugin.
 
+/// The SDK tool "fvm" used to modify fvm files.
+pub const FVM_HOST_TOOL: &'static str = "fvm";
+
+/// The SDK tool "zbi" used to modify the zbi image.
+pub const ZBI_HOST_TOOL: &'static str = "zbi";
+
 /// The root directory for storing instance specific data. Instances
 /// should create a subdirectory in this directory to store data.
 pub const EMU_INSTANCE_ROOT_DIR: &'static str = "emu.instance_dir";
@@ -65,7 +71,7 @@ macro_rules! missing_key_message {
 /// TODO(fxbug.dev/86958): Support injecting configuration for tests into ffx::config.
 #[derive(Default)]
 pub struct FfxConfigWrapper {
-    pub overrides: std::collections::HashMap<&'static str, &'static str>,
+    pub overrides: std::collections::HashMap<&'static str, String>,
 }
 
 impl FfxConfigWrapper {
@@ -117,8 +123,7 @@ impl FfxConfigWrapper {
             let sdk = ffx_config::get_sdk().await?;
             sdk.get_host_tool(tool_name)
         } else {
-            let key = format!("test_tool_path.{}", tool_name);
-            match self.overrides.get(key.as_str()) {
+            match self.overrides.get(tool_name) {
                 Some(val) => Ok(PathBuf::from(val)),
                 None => Err(anyhow!("host tool not found {}", tool_name)),
             }
@@ -132,17 +137,17 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_keys() {
-        const FAKE_PATH: &str = "/path/to/key";
+        let fake_path: String = String::from("/path/to/key");
         const RANDOM_PROPERTY_NAME: &str = "random-property-name";
 
         let mut config = FfxConfigWrapper::new();
         // Add a value for ssh_public key. This causes all config queries to be resolved via
         // overrides.
-        config.overrides.insert(SSH_PRIVATE_KEY, FAKE_PATH);
+        config.overrides.insert(SSH_PRIVATE_KEY, fake_path.clone());
 
         // Get the key
         let ok_result = config.file(SSH_PRIVATE_KEY).await;
-        assert_eq!(ok_result.unwrap(), PathBuf::from(FAKE_PATH));
+        assert_eq!(ok_result.unwrap(), PathBuf::from(fake_path));
 
         // Try to get a key not defined in ALL_KEYS.
         let err_result = config.file(RANDOM_PROPERTY_NAME).await;
@@ -155,15 +160,15 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_sdk_tools() {
-        const FAKE_FVM_PATH: &str = "/path/to/fvm";
+        let fake_fvm_path: String = String::from("/path/to/fvm");
         let mut config = FfxConfigWrapper::new();
 
         let err_result = config.get_host_tool("fvm").await;
         assert!(err_result.is_err());
 
-        config.overrides.insert("test_tool_path.fvm", FAKE_FVM_PATH);
+        config.overrides.insert("fvm", fake_fvm_path.clone());
         let result = config.get_host_tool("fvm").await;
         assert!(result.is_ok());
-        assert_eq!(PathBuf::from(FAKE_FVM_PATH), result.unwrap());
+        assert_eq!(PathBuf::from(fake_fvm_path), result.unwrap());
     }
 }

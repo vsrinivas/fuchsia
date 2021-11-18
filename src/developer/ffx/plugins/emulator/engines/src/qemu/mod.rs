@@ -14,10 +14,14 @@ use ffx_emulator_common::config::FfxConfigWrapper;
 use ffx_emulator_config::{EmulatorConfiguration, EmulatorEngine};
 use serde::{Deserialize, Serialize};
 
+pub(crate) mod qemu_base;
+
+pub(crate) use qemu_base::QemuBasedEngine;
+
 #[derive(Default, Deserialize, Serialize)]
 pub struct QemuEngine {
     #[serde(skip)]
-    pub(crate) _ffx_config: FfxConfigWrapper,
+    pub(crate) ffx_config: FfxConfigWrapper,
 
     pub(crate) emulator_configuration: EmulatorConfiguration,
     pub(crate) _pid: i32,
@@ -26,6 +30,16 @@ pub struct QemuEngine {
 #[async_trait]
 impl EmulatorEngine for QemuEngine {
     async fn start(&mut self) -> Result<i32> {
+        self.emulator_configuration.guest = self
+            .stage_image_files(
+                &self.emulator_configuration.runtime.name,
+                &self.emulator_configuration.guest,
+                &self.emulator_configuration.device,
+                &self.ffx_config,
+            )
+            .await
+            .expect("could not stage image files");
+
         self.write_to_disk(
             &self.emulator_configuration.runtime.instance_directory,
             &self.emulator_configuration.runtime.log_level,
@@ -40,9 +54,11 @@ impl EmulatorEngine for QemuEngine {
         todo!()
     }
     fn validate(&self) -> Result<()> {
-        todo!()
+        self.check_required_files(&self.emulator_configuration.guest)?;
+        Ok(())
     }
 }
 
 #[async_trait]
 impl SerializingEngine for QemuEngine {}
+impl QemuBasedEngine for QemuEngine {}

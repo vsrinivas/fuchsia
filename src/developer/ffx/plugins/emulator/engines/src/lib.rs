@@ -108,12 +108,12 @@ impl EngineBuilder {
         let engine: Box<dyn EmulatorEngine> = match self.engine_type {
             EngineType::Femu => Box::new(FemuEngine {
                 emulator_configuration: self.emulator_configuration,
-                _ffx_config: self.ffx_config,
+                ffx_config: self.ffx_config,
                 ..Default::default()
             }),
             EngineType::Qemu => Box::new(QemuEngine {
                 emulator_configuration: self.emulator_configuration,
-                _ffx_config: self.ffx_config,
+                ffx_config: self.ffx_config,
                 ..Default::default()
             }),
         };

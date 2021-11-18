@@ -84,7 +84,7 @@ pub struct DeviceConfig {
 }
 
 /// Image files and other information specific to the guest OS.
-#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct GuestConfig {
     /// Fuchsia Volume Manager image, this is the guest's virtual storage device.
     pub fvm_image: Option<PathBuf>,

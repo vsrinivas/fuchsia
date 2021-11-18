@@ -14,3 +14,5 @@ mod interface_types;
 pub use conversions::*;
 pub use enumerations::*;
 pub use interface_types::*;
+
+pub use sdk_metadata::{AudioDevice, DataAmount, DataUnits};

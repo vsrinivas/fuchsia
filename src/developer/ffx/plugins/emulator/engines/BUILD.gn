@@ -11,12 +11,14 @@ if (is_host) {
       "src/femu/mod.rs",
       "src/lib.rs",
       "src/qemu/mod.rs",
+      "src/qemu/qemu_base.rs",
       "src/serialization.rs",
     ]
     deps = [
       "//src/developer/ffx/config:lib",
       "//src/developer/ffx/plugins/emulator/common:ffx_emulator_common",
       "//src/developer/ffx/plugins/emulator/configuration:ffx_emulator_config",
+      "//src/lib/fuchsia-async",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:async-trait",
       "//third_party/rust_crates:serde",
