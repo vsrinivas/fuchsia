@@ -3229,7 +3229,7 @@ pub fn decode_xunion_inline_portion(
 
     match decode_envelope_header(decoder, offset + 8)? {
         Some((inlined, num_bytes, num_handles)) => Ok((ordinal, inlined, num_bytes, num_handles)),
-        None => Err(Error::UnexpectedNullRef),
+        None => Err(Error::NotNullable),
     }
 }
 
