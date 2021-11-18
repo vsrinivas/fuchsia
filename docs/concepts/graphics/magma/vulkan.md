@@ -61,16 +61,10 @@ above shards, include the following:
 
   ```json5
   {
-    ...
-    use: [
-        {
-            protocol: [
-              "fuchsia.tracing.provider.Registry",
-              "fuchsia.sysmem.Allocator",
-              "fuchsia.vulkan.loader.Loader",
-            ],
-        },
+    include: [
+      "vulkan/client.shard.cml"
     ],
+    ...
   }
   ```
 
@@ -115,6 +109,15 @@ above shards, include the following:
       ...
   }
   ```
+
+### Required capabilities
+
+A component that uses Vulkan must have these FIDL services routed to it:
+
+* `fuchsia.sysmem.Allocator`
+* `fuchsia.vulkan.loader.Loader`
+* `fuchsia.tracing.provider.Registry`
+* `fuchsia.logger.LogSink`
 
 ## Buildtime dependencies
 
