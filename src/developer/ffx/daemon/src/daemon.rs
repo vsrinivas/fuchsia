@@ -381,7 +381,8 @@ impl Daemon {
             // TODO: this just prints serial output to stdout - ffx probably wants to take a more
             // nuanced approach here.
             blocking::Unblock::new(std::io::stdout()),
-        )?;
+        )
+        .await?;
 
         self.ascendd.replace(Some(ascendd));
 

@@ -39,8 +39,12 @@ pub struct Ascendd {
 }
 
 impl Ascendd {
-    pub fn new(opt: Opt, stdout: impl AsyncWrite + Unpin + Send + 'static) -> Result<Self, Error> {
-        Ok(Self { task: Task::spawn(run_ascendd(opt, stdout)) })
+    pub async fn new(
+        opt: Opt,
+        stdout: impl AsyncWrite + Unpin + Send + 'static,
+    ) -> Result<Self, Error> {
+        let (sockpath, serial, incoming) = bind_listener(opt).await?;
+        Ok(Self { task: Task::spawn(run_ascendd(sockpath, serial, incoming, stdout)) })
     }
 }
 
@@ -74,41 +78,52 @@ pub fn run_stream<'a>(
     run_stream_link(node, rx, tx, Default::default(), config)
 }
 
-async fn run_ascendd(opt: Opt, stdout: impl AsyncWrite + Unpin + Send) -> Result<(), Error> {
+async fn bind_listener(opt: Opt) -> Result<(String, String, UnixListener), Error> {
     let Opt { sockpath, serial } = opt;
 
-    let sockpath = &sockpath.unwrap_or(hoist::DEFAULT_ASCENDD_PATH.to_string());
+    let sockpath = sockpath.unwrap_or(hoist::DEFAULT_ASCENDD_PATH.to_string());
     let serial = serial.unwrap_or("none".to_string());
 
     log::info!("starting ascendd on {} with node id {:?}", sockpath, hoist().node().node_id());
 
     let incoming = loop {
-        match UnixListener::bind(sockpath) {
+        match UnixListener::bind(&sockpath) {
             Ok(listener) => {
                 break listener;
             }
-            Err(_) => match UnixStream::connect(sockpath)
+            Err(_) => match UnixStream::connect(&sockpath)
                 .on_timeout(Duration::from_secs(1), || {
                     Err(std::io::Error::new(TimedOut, format_err!("connecting to ascendd socket")))
                 })
                 .await
             {
                 Ok(_) => {
-                    log::error!("another ascendd is already listening at {}", sockpath);
+                    log::error!("another ascendd is already listening at {}", &sockpath);
                     bail!("another ascendd is aleady listening!");
                 }
                 Err(_) => {
-                    log::info!("cleaning up stale ascendd socket at {}", sockpath);
-                    std::fs::remove_file(sockpath)?;
+                    log::info!("cleaning up stale ascendd socket at {}", &sockpath);
+                    std::fs::remove_file(&sockpath)?;
                 }
             },
         }
     };
 
+    Ok((sockpath, serial, incoming))
+}
+
+async fn run_ascendd(
+    sockpath: String,
+    serial: String,
+    incoming: UnixListener,
+    stdout: impl AsyncWrite + Unpin + Send,
+) -> Result<(), Error> {
     let node = hoist().node();
     node.set_implementation(fidl_fuchsia_overnet_protocol::Implementation::Ascendd);
 
     log::info!("ascendd listening to socket {}", sockpath);
+
+    let sockpath = &sockpath;
 
     futures::future::try_join(
         run_serial_link_handlers(Arc::downgrade(&hoist().node()), &serial, stdout),
