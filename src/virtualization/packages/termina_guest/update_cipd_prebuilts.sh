@@ -77,7 +77,7 @@ create_cros_tree() {
   # Apply patches to minigbm temporarily
   (cd src/platform/minigbm; git fetch https://chromium.googlesource.com/chromiumos/platform/minigbm refs/changes/72/3276672/13 && git cherry-pick FETCH_HEAD)
   (cd src/platform/minigbm; git fetch https://chromium.googlesource.com/chromiumos/platform/minigbm refs/changes/36/3276636/4 && git cherry-pick FETCH_HEAD)
-  (cd src/platform/minigbm; git fetch https://chromium.googlesource.com/chromiumos/platform/minigbm refs/changes/88/3276688/1 && git cherry-pick FETCH_HEAD)
+  (cd src/platform/minigbm; git fetch https://chromium.googlesource.com/chromiumos/platform/minigbm refs/changes/88/3276688/4 && git cherry-pick FETCH_HEAD)
 
   # Switch to Fuchsia's mesa branch
   (cd src/third_party/mesa && \
