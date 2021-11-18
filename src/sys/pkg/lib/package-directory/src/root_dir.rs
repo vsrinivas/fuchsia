@@ -24,6 +24,7 @@ use {
     fuchsia_pkg::MetaContents,
     fuchsia_syslog::fx_log_err,
     fuchsia_zircon as zx,
+    io_util::file::AsyncReadAtExt as _,
     once_cell::sync::OnceCell,
     std::{collections::HashMap, sync::Arc},
     vfs::{
@@ -97,6 +98,41 @@ impl RootDir {
         Ok(RootDir { blobfs, hash, meta_far, meta_files, non_meta_files, meta_far_vmo })
     }
 
+    /// Returns the contents, if present, of the file at object relative path expression `path`.
+    /// https://fuchsia.dev/fuchsia-src/concepts/process/namespaces?hl=en#object_relative_path_expressions
+    pub async fn read_file(&self, path: &str) -> Result<Vec<u8>, ReadFileError> {
+        if let Some(hash) = self.non_meta_files.get(path) {
+            let blob = self
+                .blobfs
+                .open_blob_for_read_no_describe(hash)
+                .map_err(ReadFileError::BlobfsOpen)?;
+            return io_util::file::read(&blob).await.map_err(ReadFileError::BlobfsRead);
+        }
+
+        if let Some(location) = self.meta_files.get(path) {
+            let mut file = io_util::file::AsyncFile::from_proxy(Clone::clone(&self.meta_far));
+            let mut contents = vec![0; crate::u64_to_usize_safe(location.length)];
+            let () = file
+                .read_at_exact(location.offset, contents.as_mut_slice())
+                .await
+                .map_err(ReadFileError::PartialBlobRead)?;
+            return Ok(contents);
+        }
+
+        Err(ReadFileError::NoFileAtPath { path: path.to_string() })
+    }
+
+    /// Returns `true` iff there is a file at `path`, an object relative path expression.
+    /// https://fuchsia.dev/fuchsia-src/concepts/process/namespaces?hl=en#object_relative_path_expressions
+    pub fn has_file(&self, path: &str) -> bool {
+        self.non_meta_files.contains_key(path) || self.meta_files.contains_key(path)
+    }
+
+    /// Returns the hash of the package.
+    pub fn hash(&self) -> &fuchsia_hash::Hash {
+        &self.hash
+    }
+
     pub(crate) async fn meta_far_vmo(&self) -> Result<&zx::Vmo, anyhow::Error> {
         Ok(if let Some(vmo) = self.meta_far_vmo.get() {
             vmo
@@ -114,6 +150,21 @@ impl RootDir {
             }
         })
     }
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum ReadFileError {
+    #[error("opening blob")]
+    BlobfsOpen(#[source] io_util::node::OpenError),
+
+    #[error("reading blob")]
+    BlobfsRead(#[source] io_util::file::ReadError),
+
+    #[error("reading part of a blob")]
+    PartialBlobRead(#[source] std::io::Error),
+
+    #[error("no file exists at path: {path:?}")]
+    NoFileAtPath { path: String },
 }
 
 impl vfs::directory::entry::DirectoryEntry for RootDir {
@@ -397,6 +448,27 @@ mod tests {
             }
             Err(e) => panic!("Expected collision error, receieved {:?}", e),
         };
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn read_file() {
+        let (_env, root_dir) = TestEnv::new().await;
+
+        assert_eq!(root_dir.read_file("resource").await.unwrap().as_slice(), b"blob-contents");
+        assert_eq!(root_dir.read_file("meta/file").await.unwrap().as_slice(), b"meta-contents0");
+        assert_matches!(
+            root_dir.read_file("missing").await.unwrap_err(),
+            ReadFileError::NoFileAtPath{path} if path == "missing"
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn has_file() {
+        let (_env, root_dir) = TestEnv::new().await;
+
+        assert!(root_dir.has_file("resource"));
+        assert!(root_dir.has_file("meta/file"));
+        assert_eq!(root_dir.has_file("missing"), false);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

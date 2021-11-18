@@ -28,7 +28,7 @@ mod meta_subdir;
 mod non_meta_subdir;
 mod root_dir;
 
-pub use root_dir::RootDir;
+pub use root_dir::{ReadFileError, RootDir};
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
