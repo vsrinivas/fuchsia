@@ -1442,7 +1442,6 @@ impl ResolvedInstanceState {
     /// with the same name already existed. This function always succeeds - an
     /// error returned by the `Future` means that the `Discover` action failed,
     /// but the creation of the child still succeeded.
-    #[must_use]
     async fn add_child(
         &mut self,
         component: &Arc<ComponentInstance>,
@@ -1466,7 +1465,6 @@ impl ResolvedInstanceState {
     /// name already existed. Like `add_child`, but doesn't register a
     /// `Discover` action, and therefore doesn't return a future to wait for.
     #[cfg(test)]
-    #[must_use]
     pub async fn add_child_no_discover(
         &mut self,
         component: &Arc<ComponentInstance>,
@@ -1476,7 +1474,6 @@ impl ResolvedInstanceState {
         self.add_child_internal(component, child, collection, None, None).await.is_some()
     }
 
-    #[must_use]
     async fn add_child_internal(
         &mut self,
         component: &Arc<ComponentInstance>,

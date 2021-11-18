@@ -89,7 +89,6 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
     ///
     /// The `description` field is used to describe who is holding
     /// the lock. It is used only for debugging purposes.
-    #[must_use]
     pub(super) async fn wait_for_api_task_lock(
         &self,
         description: &'static str,

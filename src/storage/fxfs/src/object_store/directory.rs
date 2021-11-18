@@ -383,7 +383,6 @@ pub enum ReplacedChild {
 /// be deleted permanently (and must be empty).
 ///
 /// If |src| is None, this is effectively the same as unlink(dst.0/dst.1).
-#[must_use]
 pub async fn replace_child<'a, S: HandleOwner>(
     transaction: &mut Transaction<'a>,
     src: Option<(&'a Directory<S>, &str)>,

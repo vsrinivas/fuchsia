@@ -73,7 +73,6 @@ impl RequestTracker {
     /// a TID.
     ///
     /// This will block if all request slots are taken.
-    #[must_use]
     pub async fn register_handler(&self, handler: &Arc<Mutex<dyn ResponseHandler>>) -> NonZeroU8 {
         loop {
             {

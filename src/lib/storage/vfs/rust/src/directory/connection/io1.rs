@@ -113,7 +113,6 @@ where
     seek: TraversalPosition,
 }
 
-#[must_use = "handle_requests() returns an async task that needs to be run"]
 pub(in crate::directory) async fn handle_requests<Connection>(
     mut requests: DirectoryAdminRequestStream,
     mut connection: Connection,
