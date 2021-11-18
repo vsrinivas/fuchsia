@@ -7,16 +7,18 @@
 
 mod femu;
 mod qemu;
+mod serialization;
 
 use femu::FemuEngine;
 use qemu::QemuEngine;
 
 use anyhow::Result;
-use ffx_emulator_common::config::FfxConfigWrapper;
+use ffx_emulator_common::config::{FfxConfigWrapper, EMU_INSTANCE_ROOT_DIR};
 use ffx_emulator_config::{
     DeviceConfig, EmulatorConfiguration, EmulatorEngine, EngineType, GuestConfig, HostConfig,
     RuntimeConfig,
 };
+use std::{fs::create_dir_all, path::PathBuf};
 
 /// The EngineBuilder is used to create and configure an EmulatorEngine, while ensuring the
 /// configuration will result in a valid emulation instance.
@@ -96,15 +98,21 @@ impl EngineBuilder {
         self
     }
 
-    pub fn build(self) -> Result<Box<dyn EmulatorEngine>> {
+    pub async fn build(mut self) -> Result<Box<dyn EmulatorEngine>> {
+        // Set up the instance directory, now that we have enough information.
+        let mut path = PathBuf::from(self.ffx_config.get(EMU_INSTANCE_ROOT_DIR).await?);
+        path.push(&self.emulator_configuration.runtime.name);
+        create_dir_all(&path.as_path())?;
+        self.emulator_configuration.runtime.instance_directory = path;
+
         let engine: Box<dyn EmulatorEngine> = match self.engine_type {
             EngineType::Femu => Box::new(FemuEngine {
-                _emulator_configuration: self.emulator_configuration,
+                emulator_configuration: self.emulator_configuration,
                 _ffx_config: self.ffx_config,
                 ..Default::default()
             }),
             EngineType::Qemu => Box::new(QemuEngine {
-                _emulator_configuration: self.emulator_configuration,
+                emulator_configuration: self.emulator_configuration,
                 _ffx_config: self.ffx_config,
                 ..Default::default()
             }),

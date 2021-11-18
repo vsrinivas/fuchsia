@@ -18,7 +18,7 @@ pub async fn start(cmd: StartCommand, _daemon_proxy: bridge::DaemonProxy) -> Res
 
     // Initialize an engine of the requested type with the configuration defined in the manifest.
     let mut engine =
-        EngineBuilder::new().config(emulator_configuration).engine_type(cmd.engine).build()?;
+        EngineBuilder::new().config(emulator_configuration).engine_type(cmd.engine).build().await?;
 
     std::process::exit(engine.start().await?)
 }

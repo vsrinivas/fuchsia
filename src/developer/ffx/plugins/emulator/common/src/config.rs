@@ -79,9 +79,24 @@ impl FfxConfigWrapper {
     pub async fn file(&self, property_name: &str) -> Result<PathBuf, ConfigError> {
         // If the overrides map is empty, use ffx_config API directly.
         if self.overrides.is_empty() {
-            return ffx_config::file(property_name).await;
+            ffx_config::file(property_name).await
+        } else {
+            Ok(PathBuf::from(self.from_overrides(property_name)?))
         }
+    }
 
+    /// Returns the value that the property_name resolves to. Does not check files for existence.
+    pub async fn get(&self, property_name: &str) -> Result<String, ConfigError> {
+        // If the overrides map is empty, use ffx_config API directly.
+        if self.overrides.is_empty() {
+            ffx_config::get(property_name).await
+        } else {
+            self.from_overrides(property_name)
+        }
+    }
+
+    /// Checks the overrides map for the requested property, and returns it if it exists.
+    fn from_overrides(&self, property_name: &str) -> Result<String, ConfigError> {
         // If the overrides map has entries, this means the wrapper is being
         // used in a test. Take advantage of this fact, and confirm that the
         // property_name being asked for is documented in the ALL_KEYS array.
@@ -90,7 +105,7 @@ impl FfxConfigWrapper {
             return Err(ConfigError::from(anyhow!(missing_key_message!(property_name))));
         }
         match self.overrides.get(property_name) {
-            Some(val) => Ok(PathBuf::from(val)),
+            Some(val) => Ok(val.to_string()),
             None => Err(ConfigError::from(anyhow!("key not found {}", property_name))),
         }
     }

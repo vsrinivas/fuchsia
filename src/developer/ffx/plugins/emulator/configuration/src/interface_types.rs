@@ -14,8 +14,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use sdk_metadata::{AudioDevice, DataAmount, PointingDevice, Screen};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 
 #[async_trait]
 pub trait EmulatorEngine {
@@ -143,6 +142,9 @@ pub struct RuntimeConfig {
     /// On machines with high-density screens (such as MacBook Pro), window size may be
     /// scaled to match the host's resolution which results in a much smaller GUI.
     pub hidpi_scaling: bool,
+
+    /// The staging and working directory for the emulator instance.
+    pub instance_directory: PathBuf,
 
     /// The verbosity level of the logs for this instance.
     pub log_level: LogLevel,
