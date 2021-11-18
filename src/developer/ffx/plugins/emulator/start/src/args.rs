@@ -44,7 +44,7 @@ pub struct StartCommand {
     /// configure GPU acceleration to run the emulator. Allowed values are "host", "guest",
     /// "swiftshader_indirect", or "auto". Default is "auto". Note: This only affects
     /// FEMU emulator.
-    #[argh(option)]
+    #[argh(option, default = "GpuType::Auto")]
     pub gpu: GpuType,
 
     /// run emulator in headless mode where there is no GUI.
