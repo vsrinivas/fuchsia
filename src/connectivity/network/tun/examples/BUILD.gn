@@ -12,6 +12,7 @@ rustc_test("test") {
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network-rustc",
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces-rustc",
+    "//sdk/fidl/fuchsia.net.interfaces.admin:fuchsia.net.interfaces.admin-rustc",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.net.tun:fuchsia.net.tun-rustc",
     "//src/connectivity/lib/net-declare",
@@ -20,6 +21,7 @@ rustc_test("test") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/network/fidl_fuchsia_net_ext",
     "//src/lib/network/fidl_fuchsia_net_interfaces_ext",
     "//src/lib/network/packet",
     "//src/lib/zircon/rust:fuchsia-zircon",
@@ -32,7 +34,7 @@ rustc_test("test") {
 
 fuchsia_component("tun-rust-example") {
   testonly = true
-  manifest = "meta/tun-rust-example.cmx"
+  manifest = "meta/tun-rust-example.cml"
   deps = [ ":test" ]
 }
 
@@ -40,7 +42,7 @@ fuchsia_test_package("examples") {
   package_name = "network-tun-examples"
   test_components = [ ":tun-rust-example" ]
   deps = [
-    "//src/connectivity/network/netstack:component-debug-legacy",
-    "//src/connectivity/network/tun/network-tun:component",
+    "//src/connectivity/network/netstack:component-debug",
+    "//src/connectivity/network/tun/network-tun:component-v2",
   ]
 }

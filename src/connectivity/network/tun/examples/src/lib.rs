@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl::endpoints::Proxy;
 use net_declare::{fidl_ip, fidl_mac, fidl_subnet};
 
 struct IpLayerConfig {
@@ -120,67 +119,20 @@ async fn tap_like_over_network_tun() {
             .expect("failed to create port endpoints");
     let () = tun_device.add_port(port_config, server_end).expect("failed to add port");
 
-    // Get the Netstack ends of the tun Ethernet device.
-    let (network_device, mac) = {
-        let (network_device, netdevice_server_end) =
-            fidl::endpoints::create_proxy::<fidl_fuchsia_hardware_network::DeviceMarker>()
-                .expect("failed to create netdevice proxy");
-        let (port, port_server_end) =
-            fidl::endpoints::create_proxy::<fidl_fuchsia_hardware_network::PortMarker>()
-                .expect("failed to create port proxy");
-        let (mac, mac_server_end) = fidl::endpoints::create_endpoints::<
-            fidl_fuchsia_hardware_network::MacAddressingMarker,
-        >()
-        .expect("failed to create mac endpoints");
+    // Install the interface in the stack.
+    //
+    // _device_control must be kept alive because it encodes the device
+    // lifetime.
+    let (_device_control, control, interface_id) =
+        helpers::create_interface(&tun_device, &tun_port).await;
 
-        let () = tun_device.get_device(netdevice_server_end).expect("failed to connect protocols");
-        let () = tun_port.get_port(port_server_end).expect("get_port failed");
-        let () = port.get_mac(mac_server_end).expect("get_mac failed");
-        let network_device: fidl::endpoints::ClientEnd<_> = network_device
-            .into_channel()
-            .expect("failed to get inner channel")
-            .into_zx_channel()
-            .into();
-        (network_device, mac)
-    };
-
-    // Connect to Netstack and install the device.
-    let stack =
-        fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
-            .expect("failed to connect to stack");
-    let interface_id = stack
-        .add_interface(
-            // Interface configuration.
-            fidl_fuchsia_net_stack::InterfaceConfig {
-                name: Some("tap-like".to_string()),
-                topopath: Some("/fake-topopath".to_string()),
-                metric: Some(100),
-                ..fidl_fuchsia_net_stack::InterfaceConfig::EMPTY
-            },
-            // The device definition tells Netstack this is an Ethernet device
-            // and gives it handles to access the data plane and the MAC
-            // addressing control plane.
-            &mut fidl_fuchsia_net_stack::DeviceDefinition::Ethernet(
-                fidl_fuchsia_net_stack::EthernetDeviceDefinition { network_device, mac },
-            ),
-        )
-        .await
-        .expect("add_interface FIDL error")
-        .expect("add_interface failed");
-
-    // Enable the interface.
-    let () = stack
-        .enable_interface(interface_id)
-        .await
-        .expect("enable_interface FIDL error")
-        .expect("enable_interface failed");
-
-    // Add an IPv4 address to it.
-    let () = stack
-        .add_interface_address(interface_id, &mut CONFIG_FOR_TAP_LIKE.ip_layer.alice_subnet.clone())
-        .await
-        .expect("add_interface_address FIDL error")
-        .expect("add_interface_address failed");
+    // Add an IPv4 address.
+    let () = helpers::add_interface_address(
+        &control,
+        interface_id,
+        CONFIG_FOR_TAP_LIKE.ip_layer.alice_subnet.clone(),
+    )
+    .await;
 
     // Wait for Netstack to report the interface online. Netstack may drop
     // frames if they're sent before the online signal is observed. This is
@@ -286,52 +238,25 @@ async fn tun_like_over_network_tun() {
             .expect("failed to create device endpoints");
     let () = tun.create_device(device_config, server_end).expect("failed to create device");
     // Add a port.
-    let (_tun_port, server_end) =
+    let (tun_port, server_end) =
         fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::PortMarker>()
             .expect("failed to create port endpoints");
     let () = tun_device.add_port(port_config, server_end).expect("failed to add port");
 
-    // Get the Netstack end of the tun IPv4/IPv6 device.
-    let (network_device, netdevice_server_end) =
-        fidl::endpoints::create_endpoints::<fidl_fuchsia_hardware_network::DeviceMarker>()
-            .expect("failed to create netdevice endpoints");
-    let () = tun_device.get_device(netdevice_server_end).expect("failed to get device");
+    // Install the interface in the stack.
+    //
+    // _device_control must be kept alive because it encodes the device
+    // lifetime.
+    let (_device_control, control, interface_id) =
+        helpers::create_interface(&tun_device, &tun_port).await;
 
-    // Connect to Netstack and install the device.
-    let stack =
-        fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
-            .expect("failed to connect to stack");
-    let interface_id = stack
-        .add_interface(
-            // Interface configuration.
-            fidl_fuchsia_net_stack::InterfaceConfig {
-                name: Some("tun-like".to_string()),
-                topopath: Some("/fake-topopath".to_string()),
-                metric: Some(100),
-                ..fidl_fuchsia_net_stack::InterfaceConfig::EMPTY
-            },
-            // The device definition tells Netstack this is a TUN-like device
-            // operating at the IP layer and gives it handles to access the data
-            // plane.
-            &mut fidl_fuchsia_net_stack::DeviceDefinition::Ip(network_device),
-        )
-        .await
-        .expect("add_interface FIDL error")
-        .expect("add_interface failed");
-
-    // Enable the interface.
-    let () = stack
-        .enable_interface(interface_id)
-        .await
-        .expect("enable_interface FIDL error")
-        .expect("enable_interface failed");
-
-    // Add an IPv4 address to it.
-    let () = stack
-        .add_interface_address(interface_id, &mut CONFIG_FOR_TUN_LIKE.alice_subnet.clone())
-        .await
-        .expect("add_interface_address FIDL error")
-        .expect("add_interface_address failed");
+    // Add an IPv4 address.
+    let () = helpers::add_interface_address(
+        &control,
+        interface_id,
+        CONFIG_FOR_TUN_LIKE.alice_subnet.clone(),
+    )
+    .await;
 
     // Wait for Netstack to report the interface online. Netstack may drop
     // frames if they're sent before the online signal is observed. This is
@@ -394,6 +319,7 @@ async fn tun_like_over_network_tun() {
 /// This module contains some helpers to remove noise from the examples in this
 /// crate.
 mod helpers {
+    use fidl::endpoints::Proxy as _;
     use net_types::{
         ethernet::Mac,
         ip::{Ipv4, Ipv4Addr},
@@ -606,5 +532,135 @@ mod helpers {
         )
         .await
         .expect("failed to wait for interface online")
+    }
+
+    /// Installs the provided port on the stack.
+    pub(super) async fn create_interface(
+        tun_device: &fidl_fuchsia_net_tun::DeviceProxy,
+        tun_port: &fidl_fuchsia_net_tun::PortProxy,
+    ) -> (
+        fidl_fuchsia_net_interfaces_admin::DeviceControlProxy,
+        fidl_fuchsia_net_interfaces_ext::admin::Control,
+        u64,
+    ) {
+        // Get the information Installer needs to install the device.
+        let (network_device, mut port_id) = {
+            let (network_device, netdevice_server_end) =
+                fidl::endpoints::create_proxy::<fidl_fuchsia_hardware_network::DeviceMarker>()
+                    .expect("failed to create netdevice proxy");
+            let (port, port_server_end) =
+                fidl::endpoints::create_proxy::<fidl_fuchsia_hardware_network::PortMarker>()
+                    .expect("failed to create port proxy");
+
+            let () = tun_device.get_device(netdevice_server_end).expect("get_device failed");
+            let () = tun_port.get_port(port_server_end).expect("get_port failed");
+            let port_id = port.get_info().await.expect("get_info failed").id.expect("missing id");
+            let network_device: fidl::endpoints::ClientEnd<_> = network_device
+                .into_channel()
+                .expect("failed to get inner channel")
+                .into_zx_channel()
+                .into();
+            (network_device, port_id)
+        };
+
+        // Connect to Installer and install the device.
+        let installer = fuchsia_component::client::connect_to_protocol::<
+            fidl_fuchsia_net_interfaces_admin::InstallerMarker,
+        >()
+        .expect("failed to connect to installer");
+        let device_control = {
+            let (control, server_end) = fidl::endpoints::create_proxy::<
+                fidl_fuchsia_net_interfaces_admin::DeviceControlMarker,
+            >()
+            .expect("create proxy");
+            let () = installer
+                .install_device(network_device, server_end)
+                .expect("install_device failed");
+            control
+        };
+        let control = {
+            let (control, server_end) =
+                fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
+                    .expect("create endpoints");
+            let () = device_control
+                .create_interface(
+                    &mut port_id,
+                    server_end,
+                    fidl_fuchsia_net_interfaces_admin::Options::EMPTY,
+                )
+                .expect("create_interface failed");
+            control
+        };
+
+        // Enable the interface.
+        let did_enable = control.enable().await.expect("enable FIDL error").expect("enable failed");
+        assert!(did_enable);
+
+        // Retrieve the interface ID.
+        let interface_id = control.get_id().await.expect("get_id failed");
+        (device_control, control, interface_id)
+    }
+
+    /// Adds an address to an installed interface.
+    pub(super) async fn add_interface_address(
+        control: &fidl_fuchsia_net_interfaces_ext::admin::Control,
+        interface_id: u64,
+        subnet: fidl_fuchsia_net::Subnet,
+    ) {
+        let (address_state_provider, server_end) = fidl::endpoints::create_proxy::<
+            fidl_fuchsia_net_interfaces_admin::AddressStateProviderMarker,
+        >()
+        .expect("create proxy");
+        // AddressStateProvider allows us to tie the lifetime of the address to
+        // this proxy, opt out by detaching.
+        let () = address_state_provider.detach().expect("detach failed");
+
+        let mut interface_addr = {
+            let fidl_fuchsia_net::Subnet { addr, prefix_len } = &subnet;
+            match addr {
+                fidl_fuchsia_net::IpAddress::Ipv4(addr) => {
+                    fidl_fuchsia_net::InterfaceAddress::Ipv4(
+                        fidl_fuchsia_net::Ipv4AddressWithPrefix {
+                            addr: addr.clone(),
+                            prefix_len: *prefix_len,
+                        },
+                    )
+                }
+                fidl_fuchsia_net::IpAddress::Ipv6(addr) => {
+                    fidl_fuchsia_net::InterfaceAddress::Ipv6(addr.clone())
+                }
+            }
+        };
+
+        let () = control
+            .add_address(
+                &mut interface_addr,
+                fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
+                server_end,
+            )
+            .expect("add_address failed");
+        // Wait for the address to be assigned.
+        let () = fidl_fuchsia_net_interfaces_ext::admin::wait_assignment_state(
+            &mut fidl_fuchsia_net_interfaces_ext::admin::assignment_state_stream(
+                address_state_provider,
+            ),
+            fidl_fuchsia_net_interfaces_admin::AddressAssignmentState::Assigned,
+        )
+        .await
+        .expect("failed to observe assigned address");
+
+        // NB: Adding an address does not add the subnet route, we still have to
+        // add that so we can exchange frames.
+        let stack =
+            fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
+                .expect("failed to connect to stack");
+        let () = stack
+            .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
+                subnet: fidl_fuchsia_net_ext::apply_subnet_mask(subnet),
+                destination: fidl_fuchsia_net_stack::ForwardingDestination::DeviceId(interface_id),
+            })
+            .await
+            .expect("add_forwarding_entry FIDL error")
+            .expect("add_forwarding_entry failed");
     }
 }
