@@ -17,6 +17,10 @@ struct ArchPhysHandoff {
   // ZBI_TYPE_ACPI_RSDP payload.
   // Physical address of the ACPI RSDP (Root System Descriptor Pointer).
   ktl::optional<uint64_t> acpi_rsdp;
+
+  // ZBI_TYPE_EFI_SYSTEM_TABLE payload.
+  // Physical address of the EFI system table.
+  ktl::optional<uint64_t> efi_system_table;
 };
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_PHYS_INCLUDE_PHYS_ARCH_ARCH_HANDOFF_H_

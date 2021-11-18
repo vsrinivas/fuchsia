@@ -6,11 +6,14 @@
 
 #include <arch/interrupt.h>
 #include <fbl/ref_ptr.h>
-#include <platform/pc/bootloader.h>
+#include <ktl/optional.h>
 #include <platform/pc/efi.h>
 #include <vm/vm_aspace.h>
 
 namespace {
+
+// EFI system table physical address.
+ktl::optional<uint64_t> gEfiSystemTable;
 
 // Address space with EFI services mapped in 1:1.
 fbl::RefPtr<VmAspace> efi_aspace;
@@ -30,11 +33,9 @@ void PanicFriendlySwitchAspace(VmAspace* aspace) {
 
 }  // namespace
 
-zx_status_t InitEfiServices() {
-  // Ensure EFI service details were passed in via the bootloader.
-  if (bootloader.efi_system_table == nullptr) {
-    return ZX_ERR_NOT_FOUND;
-  }
+zx_status_t InitEfiServices(uint64_t efi_system_table) {
+  ZX_ASSERT(!gEfiSystemTable);
+  gEfiSystemTable = efi_system_table;
 
   // Create a new address space.
   efi_aspace = VmAspace::Create(VmAspace::TYPE_LOW_KERNEL, "uefi");
@@ -66,13 +67,14 @@ EfiServicesActivation TryActivateEfiServices() {
   if (efi_aspace == nullptr) {
     return EfiServicesActivation::Null();
   }
+  ZX_DEBUG_ASSERT(gEfiSystemTable);
 
   // Switch into the address space where EFI services have been mapped.
   VmAspace* old_aspace = Thread::Current::Get()->aspace();
   PanicFriendlySwitchAspace(efi_aspace.get());
 
   // Return the services.
-  efi_system_table* sys = static_cast<efi_system_table*>(bootloader.efi_system_table);
+  efi_system_table* sys = reinterpret_cast<efi_system_table*>(*gEfiSystemTable);
   return EfiServicesActivation(old_aspace, sys->RuntimeServices);
 }
 

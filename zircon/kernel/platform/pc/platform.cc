@@ -147,13 +147,6 @@ static void platform_save_bootloader_data(void) {
         }
         break;
       }
-      case ZBI_TYPE_EFI_SYSTEM_TABLE: {
-        if (payload.size() >= sizeof(uint64_t)) {
-          bootloader.efi_system_table =
-              reinterpret_cast<void*>(*reinterpret_cast<uint64_t*>(payload.data()));
-        }
-        break;
-      }
       case ZBI_TYPE_FRAMEBUFFER: {
         if (payload.size() >= sizeof(zbi_swfb_t)) {
           memcpy(&bootloader.fb, payload.data(), sizeof(zbi_swfb_t));
@@ -328,8 +321,13 @@ void platform_init_crashlog(void) {
   }
 
   // Attempt to initialize EFI.
-  zx_status_t result = InitEfiServices();
-  if (result != ZX_OK) {
+  if (gPhysHandoff->arch_handoff.efi_system_table) {
+    zx_status_t status = InitEfiServices(gPhysHandoff->arch_handoff.efi_system_table.value());
+    if (status != ZX_OK) {
+      dprintf(INFO, "Unable to initialize EFI services: %d\n", status);
+      return;
+    }
+  } else {
     dprintf(INFO, "No EFI available on system.\n");
     return;
   }
@@ -363,16 +361,6 @@ zx_status_t platform_append_mexec_data(ktl::span<ktl::byte> data_zbi) {
         image.Append(zbi_header_t{.type = ZBI_TYPE_FRAMEBUFFER}, zbitl::AsBytes(bootloader.fb));
     if (result.is_error()) {
       printf("mexec: failed to append framebuffer data to data ZBI: ");
-      zbitl::PrintViewError(result.error_value());
-      return error(result.error_value());
-    }
-  }
-
-  if (bootloader.efi_system_table) {
-    auto result = image.Append(zbi_header_t{.type = ZBI_TYPE_EFI_SYSTEM_TABLE},
-                               zbitl::AsBytes(bootloader.efi_system_table));
-    if (result.is_error()) {
-      printf("mexec: Failed to append EFI sys table data to data ZBI: ");
       zbitl::PrintViewError(result.error_value());
       return error(result.error_value());
     }

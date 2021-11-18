@@ -21,8 +21,6 @@ struct pc_bootloader_info_t {
   uint64_t acpi_rsdp;
   uint64_t smbios;
 
-  void* efi_system_table;
-
   ktl::span<zbi_mem_range_t> memory_ranges;
 
   zbi_swfb_t fb;

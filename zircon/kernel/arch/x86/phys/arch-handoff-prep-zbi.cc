@@ -26,6 +26,9 @@ void HandoffPrep::ArchSummarizeMiscZbiItem(const zbi_header_t& header,
       arch_handoff.acpi_rsdp = *reinterpret_cast<const uint64_t*>(payload.data());
       break;
     case ZBI_TYPE_EFI_SYSTEM_TABLE:
+      ZX_ASSERT(payload.size() >= sizeof(uint64_t));
+      arch_handoff.efi_system_table = *reinterpret_cast<const uint64_t*>(payload.data());
+      break;
     case ZBI_TYPE_FRAMEBUFFER:
     case ZBI_TYPE_SMBIOS:
       break;
