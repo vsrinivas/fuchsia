@@ -4,9 +4,11 @@
 
 import("//build/python/python_host_test.gni")
 
-python_host_test("sdk_common_unittests") {
-  main_source = "sdk_common_unittest.py"
-  sources = [ "sdk_common.py" ]
+if (is_host) {
+  python_host_test("sdk_common_unittests") {
+    main_source = "sdk_common_unittest.py"
+    sources = [ "sdk_common.py" ]
+  }
 }
 
 group("tests") {

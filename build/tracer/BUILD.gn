@@ -18,9 +18,11 @@ group("tests") {
   ]
 }
 
-python_host_test("action_tracer_test") {
-  main_source = "action_tracer_test.py"
-  sources = [ "action_tracer.py" ]
+if (is_host) {
+  python_host_test("action_tracer_test") {
+    main_source = "action_tracer_test.py"
+    sources = [ "action_tracer.py" ]
+  }
 }
 
 # 1. Turn on trace_action:
@@ -66,7 +68,9 @@ action("fsatrace_test") {
   ]
 }
 
-python_host_test("output_cacher_test") {
-  main_source = "output_cacher_test.py"
-  sources = [ "output_cacher.py" ]
+if (is_host) {
+  python_host_test("output_cacher_test") {
+    main_source = "output_cacher_test.py"
+    sources = [ "output_cacher.py" ]
+  }
 }

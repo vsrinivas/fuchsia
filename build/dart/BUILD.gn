@@ -101,22 +101,24 @@ basic_toolchain("dartlang") {
   expected_label = dart_toolchain
 }
 
-python_host_test("gen_reference_docs_test") {
-  main_source = "gen_reference_docs_test.py"
-  sources = [
-    "gen_reference_docs.py",
-    "generate_dart_toc.py",
-  ]
-  libraries = [ "//third_party/pyyaml:yaml" ]
-}
+if (is_host) {
+  python_host_test("gen_reference_docs_test") {
+    main_source = "gen_reference_docs_test.py"
+    sources = [
+      "gen_reference_docs.py",
+      "generate_dart_toc.py",
+    ]
+    libraries = [ "//third_party/pyyaml:yaml" ]
+  }
 
-python_host_test("generate_dart_toc_test") {
-  main_source = "generate_dart_toc_test.py"
-  sources = [ "generate_dart_toc.py" ]
-  libraries = [
-    "//third_party/pyyaml:yaml",
-    "//third_party/parameterized",
-  ]
+  python_host_test("generate_dart_toc_test") {
+    main_source = "generate_dart_toc_test.py"
+    sources = [ "generate_dart_toc.py" ]
+    libraries = [
+      "//third_party/pyyaml:yaml",
+      "//third_party/parameterized",
+    ]
+  }
 }
 
 group("tests") {

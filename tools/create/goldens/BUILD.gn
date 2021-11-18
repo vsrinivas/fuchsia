@@ -43,106 +43,108 @@ group("tests") {
   }
 }
 
-# Create a Rust v1 component project named `my-component-v1-rust` and
-# compare its file contents to the golden project of the same name.
-golden_test("my-component-v1-rust") {
-  project_type = "component"
-  project_subtype = "legacy"
-  language = "rust"
-  golden_files = [
-    "my-component-v1-rust/BUILD.gn",
-    "my-component-v1-rust/meta/my-component-v1-rust.cmx",
-    "my-component-v1-rust/README.md",
-    "my-component-v1-rust/src/main.rs",
-  ]
-}
+if (is_host) {
+  # Create a Rust v1 component project named `my-component-v1-rust` and
+  # compare its file contents to the golden project of the same name.
+  golden_test("my-component-v1-rust") {
+    project_type = "component"
+    project_subtype = "legacy"
+    language = "rust"
+    golden_files = [
+      "my-component-v1-rust/BUILD.gn",
+      "my-component-v1-rust/meta/my-component-v1-rust.cmx",
+      "my-component-v1-rust/README.md",
+      "my-component-v1-rust/src/main.rs",
+    ]
+  }
 
-# Create a C++ v1 component project named `my-component-v1-cpp` and
-# compare its file contents to the golden project of the same name.
-golden_test("my-component-v1-cpp") {
-  project_type = "component"
-  project_subtype = "legacy"
-  language = "cpp"
-  golden_files = [
-    "my-component-v1-cpp/BUILD.gn",
-    "my-component-v1-cpp/main.cc",
-    "my-component-v1-cpp/meta/my-component-v1-cpp.cmx",
-    "my-component-v1-cpp/my_component_v1_cpp_unittest.cc",
-    "my-component-v1-cpp/my_component_v1_cpp.cc",
-    "my-component-v1-cpp/my_component_v1_cpp.h",
-    "my-component-v1-cpp/README.md",
-  ]
-}
+  # Create a C++ v1 component project named `my-component-v1-cpp` and
+  # compare its file contents to the golden project of the same name.
+  golden_test("my-component-v1-cpp") {
+    project_type = "component"
+    project_subtype = "legacy"
+    language = "cpp"
+    golden_files = [
+      "my-component-v1-cpp/BUILD.gn",
+      "my-component-v1-cpp/main.cc",
+      "my-component-v1-cpp/meta/my-component-v1-cpp.cmx",
+      "my-component-v1-cpp/my_component_v1_cpp_unittest.cc",
+      "my-component-v1-cpp/my_component_v1_cpp.cc",
+      "my-component-v1-cpp/my_component_v1_cpp.h",
+      "my-component-v1-cpp/README.md",
+    ]
+  }
 
-# Create a C++ v2 component project named `my-component-v2-cpp` and
-# compare its file contents to the golden project of the same name.
-golden_test("my-component-v2-cpp") {
-  project_type = "component"
-  language = "cpp"
-  golden_files = [
-    "my-component-v2-cpp/BUILD.gn",
-    "my-component-v2-cpp/main.cc",
-    "my-component-v2-cpp/meta/my_component_v2_cpp.cml",
-    "my-component-v2-cpp/my_component_v2_cpp.cc",
-    "my-component-v2-cpp/my_component_v2_cpp.h",
-    "my-component-v2-cpp/my_component_v2_cpp_unittest.cc",
-    "my-component-v2-cpp/README.md",
-  ]
-}
+  # Create a C++ v2 component project named `my-component-v2-cpp` and
+  # compare its file contents to the golden project of the same name.
+  golden_test("my-component-v2-cpp") {
+    project_type = "component"
+    language = "cpp"
+    golden_files = [
+      "my-component-v2-cpp/BUILD.gn",
+      "my-component-v2-cpp/main.cc",
+      "my-component-v2-cpp/meta/my_component_v2_cpp.cml",
+      "my-component-v2-cpp/my_component_v2_cpp.cc",
+      "my-component-v2-cpp/my_component_v2_cpp.h",
+      "my-component-v2-cpp/my_component_v2_cpp_unittest.cc",
+      "my-component-v2-cpp/README.md",
+    ]
+  }
 
-# Create a Rust v2 component project named `my-component-v2-rust` and
-# compare its file contents to the golden project of the same name.
-golden_test("my-component-v2-rust") {
-  project_type = "component"
-  language = "rust"
-  golden_files = [
-    "my-component-v2-rust/BUILD.gn",
-    "my-component-v2-rust/meta/my_component_v2_rust.cml",
-    "my-component-v2-rust/README.md",
-    "my-component-v2-rust/src/main.rs",
-  ]
-}
+  # Create a Rust v2 component project named `my-component-v2-rust` and
+  # compare its file contents to the golden project of the same name.
+  golden_test("my-component-v2-rust") {
+    project_type = "component"
+    language = "rust"
+    golden_files = [
+      "my-component-v2-rust/BUILD.gn",
+      "my-component-v2-rust/meta/my_component_v2_rust.cml",
+      "my-component-v2-rust/README.md",
+      "my-component-v2-rust/src/main.rs",
+    ]
+  }
 
-# Create a C++ component test project named `my-component-test-cpp` and
-# compare its file contents to the golden project of the same name.
-golden_test("my-component-test-cpp") {
-  project_type = "component"
-  project_subtype = "test"
-  language = "cpp"
-  golden_files = [
-    "my-component-test-cpp/BUILD.gn",
-    "my-component-test-cpp/meta/my_component_test_cpp.cml",
-    "my-component-test-cpp/README.md",
-    "my-component-test-cpp/my_component_test_cpp.cc",
-  ]
-}
+  # Create a C++ component test project named `my-component-test-cpp` and
+  # compare its file contents to the golden project of the same name.
+  golden_test("my-component-test-cpp") {
+    project_type = "component"
+    project_subtype = "test"
+    language = "cpp"
+    golden_files = [
+      "my-component-test-cpp/BUILD.gn",
+      "my-component-test-cpp/meta/my_component_test_cpp.cml",
+      "my-component-test-cpp/README.md",
+      "my-component-test-cpp/my_component_test_cpp.cc",
+    ]
+  }
 
-# Create a Rust component test project named `my-component-test-rust` and
-# compare its file contents to the golden project of the same name.
-golden_test("my-component-test-rust") {
-  project_type = "component"
-  project_subtype = "test"
-  language = "rust"
-  golden_files = [
-    "my-component-test-rust/BUILD.gn",
-    "my-component-test-rust/meta/my_component_test_rust.cml",
-    "my-component-test-rust/README.md",
-    "my-component-test-rust/src/lib.rs",
-  ]
-}
+  # Create a Rust component test project named `my-component-test-rust` and
+  # compare its file contents to the golden project of the same name.
+  golden_test("my-component-test-rust") {
+    project_type = "component"
+    project_subtype = "test"
+    language = "rust"
+    golden_files = [
+      "my-component-test-rust/BUILD.gn",
+      "my-component-test-rust/meta/my_component_test_rust.cml",
+      "my-component-test-rust/README.md",
+      "my-component-test-rust/src/lib.rs",
+    ]
+  }
 
-# Create a C++ driver project named `my-driver-cpp` and
-# compare its file contents to the golden project of the same name.
-golden_test("my-driver-cpp") {
-  project_type = "driver"
-  language = "cpp"
-  golden_files = [
-    "my-driver-cpp/BUILD.gn",
-    "my-driver-cpp/README.md",
-    "my-driver-cpp/my_driver_cpp.h",
-    "my-driver-cpp/my_driver_cpp.bind",
-    "my-driver-cpp/my_driver_cpp.cc",
-    "my-driver-cpp/my_driver_cpp-info.json",
-    "my-driver-cpp/unit-tests.cc",
-  ]
+  # Create a C++ driver project named `my-driver-cpp` and
+  # compare its file contents to the golden project of the same name.
+  golden_test("my-driver-cpp") {
+    project_type = "driver"
+    language = "cpp"
+    golden_files = [
+      "my-driver-cpp/BUILD.gn",
+      "my-driver-cpp/README.md",
+      "my-driver-cpp/my_driver_cpp.h",
+      "my-driver-cpp/my_driver_cpp.bind",
+      "my-driver-cpp/my_driver_cpp.cc",
+      "my-driver-cpp/my_driver_cpp-info.json",
+      "my-driver-cpp/unit-tests.cc",
+    ]
+  }
 }

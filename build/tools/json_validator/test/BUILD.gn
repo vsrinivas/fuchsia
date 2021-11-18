@@ -30,26 +30,28 @@ validate_json("test_json_validator_with_comments") {
   allow_comments = true
 }
 
-valico_validator_path = "$root_out_dir/json_validator_valico"
+if (is_host) {
+  valico_validator_path = "$root_out_dir/json_validator_valico"
 
-host_test_data("test_json_validator_valico_data") {
-  sources = [
-    "test_document.json",
-    "test_document_with_comments.json",
-    "test_schema.json",
-    "test_schema_with_ref.json",
-    valico_validator_path,
-  ]
-}
+  host_test_data("test_json_validator_valico_data") {
+    sources = [
+      "test_document.json",
+      "test_document_with_comments.json",
+      "test_schema.json",
+      "test_schema_with_ref.json",
+      valico_validator_path,
+    ]
+  }
 
-host_test("test_json_validator_valico") {
-  binary_path = "json_validator_valico_test.sh"
-  deps = [ "//build/tools/json_validator:json_validator_valico" ]
-  data_deps = [ ":test_json_validator_valico_data" ]
-  args = [
-    rebase_path(valico_validator_path, root_build_dir),
-    rebase_path(".", root_build_dir),
-  ]
+  host_test("test_json_validator_valico") {
+    binary_path = "json_validator_valico_test.sh"
+    deps = [ "//build/tools/json_validator:json_validator_valico" ]
+    data_deps = [ ":test_json_validator_valico_data" ]
+    args = [
+      rebase_path(valico_validator_path, root_build_dir),
+      rebase_path(".", root_build_dir),
+    ]
+  }
 }
 
 # Test (at build time) that the use_valico option of the validate_json build

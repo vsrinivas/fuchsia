@@ -66,10 +66,11 @@ action("normalize_unittest") {
   ]
 }
 
-python_host_test("gen_fidldocs_test") {
-  main_source = "gen_fidldocs_test.py"
-  sources = [ "gen_fidldocs.py" ]
-  libraries = []
+if (is_host) {
+  python_host_test("gen_fidldocs_test") {
+    main_source = "gen_fidldocs_test.py"
+    sources = [ "gen_fidldocs.py" ]
+  }
 }
 
 group("tests") {
