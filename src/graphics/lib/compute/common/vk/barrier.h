@@ -47,10 +47,6 @@ vk_barrier_compute_w_to_host_r(VkCommandBuffer cb);
 void
 vk_barrier_transfer_w_to_host_r(VkCommandBuffer cb);
 
-//
-// FIXME(allanmac): move to this barrier
-//
-
 void
 vk_memory_barrier(VkCommandBuffer      cb,
                   VkPipelineStageFlags src_stage,

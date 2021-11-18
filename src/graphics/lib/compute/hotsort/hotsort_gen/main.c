@@ -1249,7 +1249,7 @@ hsg_fm_merge_all(struct hsg_op * ops, uint32_t const scale_log2, uint32_t const 
   uint32_t const span_left_ru = pow2_ru_u32(span_left);
 
   for (uint32_t span_right = 1; span_right <= span_left_ru; span_right *= 2)
-    ops = hsg_fm_merge(ops, scale_log2, span_left, MIN_MACRO(uint_32_t, span_left, span_right));
+    ops = hsg_fm_merge(ops, scale_log2, span_left, MIN_MACRO(uint32_t, span_left, span_right));
 
   return ops;
 }

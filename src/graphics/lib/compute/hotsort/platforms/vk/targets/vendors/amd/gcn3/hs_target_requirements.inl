@@ -10,7 +10,7 @@
 //
 
 .extensions.named = {
-   .AMD_shader_info  = 1,
+  // No extensions
  },
 
 .features.named = {
