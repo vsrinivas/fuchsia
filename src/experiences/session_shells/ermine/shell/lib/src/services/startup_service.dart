@@ -8,7 +8,7 @@ import 'dart:io';
 
 import 'package:ermine_utils/ermine_utils.dart';
 import 'package:fidl_fuchsia_buildinfo/fidl_async.dart' as buildinfo;
-import 'package:fidl_fuchsia_device_manager/fidl_async.dart';
+import 'package:fidl_fuchsia_hardware_power_statecontrol/fidl_async.dart';
 import 'package:fidl_fuchsia_intl/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_activity/fidl_async.dart' as activity;
 import 'package:flutter/services.dart';
@@ -68,7 +68,7 @@ class StartupService extends activity.Listener {
 
   final _inspect = Inspect();
   final _intl = PropertyProviderProxy();
-  final _deviceManager = AdministratorProxy();
+  final _hardwareAdmin = AdminProxy();
   final _provider = buildinfo.ProviderProxy();
   final _activity = activity.ProviderProxy();
   final _activityBinding = activity.ListenerBinding();
@@ -79,8 +79,8 @@ class StartupService extends activity.Listener {
   StartupService()
       : componentContext = ComponentContext.create(),
         hostView = ViewHandle(ScenicContext.hostViewRef()) {
+    Incoming.fromSvcPath().connectToService(_hardwareAdmin);
     Incoming.fromSvcPath().connectToService(_intl);
-    Incoming.fromSvcPath().connectToService(_deviceManager);
     Incoming.fromSvcPath().connectToService(_provider);
     Incoming.fromSvcPath().connectToService(_activity);
     Incoming.fromSvcPath().connectToService(_activityTracker);
@@ -153,7 +153,7 @@ class StartupService extends activity.Listener {
   }
 
   void dispose() {
-    _deviceManager.ctrl.close();
+    _hardwareAdmin.ctrl.close();
     _intl.ctrl.close();
     _provider.ctrl.close();
     _activityBinding.close();
@@ -197,10 +197,10 @@ class StartupService extends activity.Listener {
   String get buildVersion => _buildVersion;
 
   /// Reboot the device.
-  void restartDevice() => _deviceManager.suspend(suspendFlagReboot);
+  void restartDevice() => _hardwareAdmin.reboot(RebootReason.userRequest);
 
   /// Shutdown the device.
-  void shutdownDevice() => _deviceManager.suspend(suspendFlagPoweroff);
+  void shutdownDevice() => _hardwareAdmin.poweroff();
 
   Stream<Locale> get stream => LocaleSource(_intl).stream();
 

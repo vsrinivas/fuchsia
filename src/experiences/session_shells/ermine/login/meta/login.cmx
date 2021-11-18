@@ -10,9 +10,9 @@
         "services": [
             "fuchsia.accessibility.semantics.SemanticsManager",
             "fuchsia.cobalt.LoggerFactory",
-            "fuchsia.device.manager.Administrator",
             "fuchsia.element.Manager",
             "fuchsia.fonts.Provider",
+            "fuchsia.hardware.power.statecontrol.Admin",
             "fuchsia.intl.PropertyProvider",
             "fuchsia.logger.LogSink",
             "fuchsia.settings.Intl",
