@@ -32,7 +32,7 @@ zbitl::Image<fbl::Array<ktl::byte>> gImageAtHandoff;
 void ConstructMexecDataZbi(uint level) {
   constexpr size_t kInitialBuffSize = ZX_PAGE_SIZE;
 
-  ZX_DEBUG_ASSERT(!gImageAtHandoff.storage());
+  ZX_ASSERT(!gImageAtHandoff.storage());
   {
     fbl::AllocChecker ac;
     auto* buff = new (&ac) ktl::byte[kInitialBuffSize];
@@ -49,11 +49,16 @@ void ConstructMexecDataZbi(uint level) {
   // Forward relevant items from the physboot hand-off.
   ZX_ASSERT(gPhysHandoff != nullptr);
 
+  if (auto result = ArchAppendMexecDataFromHandoff(gImageAtHandoff, *gPhysHandoff);
+      result.is_error()) {
+    abort();
+  }
+
   if (gPhysHandoff->platform_id) {
     auto result = gImageAtHandoff.Append(zbi_header_t{.type = ZBI_TYPE_PLATFORM_ID},
                                          zbitl::AsBytes(gPhysHandoff->platform_id.value()));
     if (result.is_error()) {
-      printf("ConstructMexecDataZbi: could not append platform ID: ");
+      printf("mexec: could not append platform ID: ");
       zbitl::PrintViewError(result.error_value());
       abort();
     }
@@ -105,7 +110,7 @@ zx::status<size_t> WriteMexecData(ktl::span<ktl::byte> buffer) {
         .length = static_cast<uint32_t>(crashlog->size()),
     };
     if (auto result = image.Append(header); result.is_error()) {
-      printf("GetMexecDataZbi: could not append crashlog: ");
+      printf("mexec: could not append crashlog: ");
       zbitl::PrintViewError(result.error_value());
       return error(result.error_value());
     } else {

@@ -131,18 +131,16 @@ static ktl::span<zbi_mem_range_t> get_memory_ranges(ktl::span<std::byte> zbi) {
 }
 
 static void platform_save_bootloader_data(void) {
+  if (gPhysHandoff->arch_handoff.acpi_rsdp) {
+    bootloader.acpi_rsdp = gPhysHandoff->arch_handoff.acpi_rsdp.value();
+  }
+
   // Handle individual ZBI items.
   ktl::span<ktl::byte> zbi = ZbiInPhysmap();
   zbitl::View view(zbi);
   for (auto it = view.begin(); it != view.end(); ++it) {
     auto [header, payload] = *it;
     switch (header->type) {
-      case ZBI_TYPE_ACPI_RSDP: {
-        if (payload.size() >= sizeof(uint64_t)) {
-          bootloader.acpi_rsdp = *reinterpret_cast<uint64_t*>(payload.data());
-        }
-        break;
-      }
       case ZBI_TYPE_SMBIOS: {
         if (payload.size() >= sizeof(uint64_t)) {
           bootloader.smbios = *reinterpret_cast<uint64_t*>(payload.data());
@@ -375,16 +373,6 @@ zx_status_t platform_append_mexec_data(ktl::span<ktl::byte> data_zbi) {
                                zbitl::AsBytes(bootloader.efi_system_table));
     if (result.is_error()) {
       printf("mexec: Failed to append EFI sys table data to data ZBI: ");
-      zbitl::PrintViewError(result.error_value());
-      return error(result.error_value());
-    }
-  }
-
-  if (bootloader.acpi_rsdp) {
-    auto result = image.Append(zbi_header_t{.type = ZBI_TYPE_ACPI_RSDP},
-                               zbitl::AsBytes(bootloader.acpi_rsdp));
-    if (result.is_error()) {
-      printf("mexec: failed to append ACPI RSDP data to data ZBI: ");
       zbitl::PrintViewError(result.error_value());
       return error(result.error_value());
     }

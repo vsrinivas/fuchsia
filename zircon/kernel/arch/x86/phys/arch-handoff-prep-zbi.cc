@@ -20,9 +20,11 @@ void HandoffPrep::ArchSummarizeMiscZbiItem(const zbi_header_t& header,
   ArchPhysHandoff& arch_handoff = handoff_->arch_handoff;
 
   // TODO(fxbug.dev/88059): Handle all cases below.
-  static_cast<void>(arch_handoff);
   switch (header.type) {
     case ZBI_TYPE_ACPI_RSDP:
+      ZX_ASSERT(payload.size() >= sizeof(uint64_t));
+      arch_handoff.acpi_rsdp = *reinterpret_cast<const uint64_t*>(payload.data());
+      break;
     case ZBI_TYPE_EFI_SYSTEM_TABLE:
     case ZBI_TYPE_FRAMEBUFFER:
     case ZBI_TYPE_SMBIOS:

@@ -116,6 +116,7 @@ if (toolchain_environment == "physmem" ||
       "feature.cc",
       "fpu.cc",
       "mexec.S",
+      "mexec.cc",
       "mmu.cc",
       "mp.cc",
       "perf_mon.cc",
@@ -153,9 +154,13 @@ if (toolchain_environment == "physmem" ||
       "//zircon/kernel/lib/syscalls",
       "//zircon/kernel/lib/unittest",
       "//zircon/kernel/object",
+      "//zircon/kernel/phys:handoff",
       "//zircon/kernel/vm",
       "//zircon/system/ulib/bitmap",
+      "//zircon/system/ulib/fbl",
       "//zircon/system/ulib/pretty",
+      "//zircon/system/ulib/zbitl",
+      "//zircon/system/ulib/zxc",
     ]
   }
 

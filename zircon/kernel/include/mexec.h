@@ -15,16 +15,38 @@
 
 #ifndef __ASSEMBLER__
 
+#include <lib/fitx/result.h>
 #include <lib/zx/status.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-#include <fbl/ref_ptr.h>
+#include <fbl/array.h>
 #include <ktl/byte.h>
 #include <ktl/span.h>
 #include <vm/vm_object.h>
+
+// Forward-declared; fully declared in <phys/handoff.h>
+struct PhysHandoff;
+
+namespace fbl {
+
+// Forward-declared; fully declared in <fbl/array.h>
+template <typename T>
+class Array;
+
+}  // namespace fbl
+
+namespace zbitl {
+
+// Forward-declared; fully declared in <lib/zbitl/image.h>
+template <typename Storage>
+class Image;
+
+}  // namespace zbitl
+
+using MexecDataImage = zbitl::Image<fbl::Array<ktl::byte>>;
 
 // Warning: The geometry of this struct is depended upon by the mexec assembly
 //          function. Do not modify without also updating mexec.S.
@@ -56,6 +78,11 @@ zx_status_t platform_append_mexec_data(ktl::span<ktl::byte> data_zbi);
 // Writes an mexec data ZBI into the provided buffer and returns the size of
 // that ZBI if successful.
 zx::status<size_t> WriteMexecData(ktl::span<ktl::byte> buffer);
+
+// Appends arch-specific mexec data from the physboot hand-off.
+// Defined in //zircon/kernel/arch/$cpu/mexec.cc.
+fitx::result<fitx::failed> ArchAppendMexecDataFromHandoff(MexecDataImage& image,
+                                                          PhysHandoff& handoff);
 
 /* This function is called at the beginning of mexec.  Interrupts are not yet
  * disabled, but only one CPU is running.
