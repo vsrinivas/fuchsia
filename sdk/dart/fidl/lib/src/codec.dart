@@ -170,9 +170,14 @@ class Decoder {
     final int result = _nextOffset;
     _nextOffset += align(size);
     if (_nextOffset > data.lengthInBytes) {
-      throw FidlError('Cannot access out of range memory');
+      throw FidlError(
+          'Cannot access out of range memory', FidlErrorCode.fidlTooFewBytes);
     }
     return result;
+  }
+
+  int countUnclaimedMemory() {
+    return data.lengthInBytes - _nextOffset;
   }
 
   int countClaimedHandles() {

@@ -138,6 +138,9 @@ void encodeMessageWithCallback(Encoder encoder, int inlineSize, Function() f) {
 }
 
 void _validateDecoding(Decoder decoder) {
+  // The ordering of the following two checks is important: if there is both unclaimed memory and
+  // unclaimed handles, we should do the unclaimed handles clean up first (namely, closing all open)
+  // handles.
   if (decoder.countUnclaimedHandles() > 0) {
     // If there are unclaimed handles at the end of the decoding, close all
     // handles to the best of our ability, and throw an error.
@@ -155,6 +158,14 @@ void _validateDecoding(Decoder decoder) {
     throw FidlError(
         'Message contains extra handles (unclaimed: $unclaimed, total: $total)',
         FidlErrorCode.fidlTooManyHandles);
+  }
+
+  if (decoder.countUnclaimedMemory() > 0) {
+    int unclaimed = decoder.countUnclaimedMemory();
+    int total = decoder.data.lengthInBytes;
+    throw FidlError(
+        'Message contains unread bytes (unclaimed: $unclaimed, total: $total)',
+        FidlErrorCode.fidlTooManyBytes);
   }
 }
 

@@ -24,14 +24,30 @@ decode_failure("NonZeroEmptyStructBytes") {
     err = INVALID_EMPTY_STRUCT,
 }
 
-decode_failure("TooManyBytes") {
-    // TODO(fxbug.dev/88808) Add validation in Dart and go.
-    bindings_denylist = [dart, go],
+decode_failure("UnconsumedBytesInline") {
+    // TODO(fxbug.dev/88799): Support go.
+    bindings_denylist = [go],
     type = EmptyStruct,
     bytes = {
         v1, v2 = [
             0x00, padding:7,
-            repeat(0x00):8, // extra bytes
+            repeat(0x00):8, // error: extra bytes
+        ],
+    },
+    err = TOO_MANY_BYTES_IN_MESSAGE,
+}
+
+decode_failure("UnconsumedBytesOutOfLine") {
+    // TODO(fxbug.dev/88799): Support go.
+    bindings_denylist = [go],
+    type = OutOfLinePaddingZeroed7,
+    bytes = {
+        v1, v2 = [
+            repeat(0xff):8, // a*
+            repeat(0xff):8, // b*
+            0x01, padding:7, // a + 7 padding
+            0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // b
+            repeat(0x00):8 // error: extra bytes
         ],
     },
     err = TOO_MANY_BYTES_IN_MESSAGE,

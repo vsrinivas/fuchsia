@@ -382,9 +382,9 @@ var dartErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.StrictUnionUnknownField:            "fidlStrictUnionUnknownField",
 	gidlir.StringNotUtf8:                      "unknown",
 	gidlir.StringTooLong:                      "fidlStringTooLong",
-	gidlir.TooFewBytes:                        "unknown",
+	gidlir.TooFewBytes:                        "fidlTooFewBytes",
 	gidlir.TooFewHandles:                      "fidlTooFewHandles",
-	gidlir.TooManyBytesInMessage:              "unknown",
+	gidlir.TooManyBytesInMessage:              "fidlTooManyBytes",
 	gidlir.TooManyHandlesInMessage:            "fidlTooManyHandles",
 	gidlir.UnionFieldNotSet:                   "unknown",
 }
