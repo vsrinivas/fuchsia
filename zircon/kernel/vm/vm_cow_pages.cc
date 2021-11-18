@@ -328,8 +328,8 @@ bool VmCowPages::DedupZeroPage(vm_page_t* page, uint64_t offset) {
     }
   }
 
-  // Check this page is still a part of this VMO. object.page_offset could be complete garbage,
-  // but there's no harm in looking up a random slot as we'll then notice it's the wrong page.
+  // Check this page is still a part of this VMO. object.page_offset could be wrong, but there's no
+  // harm in looking up a random slot as we'll then notice it's the wrong page.
   VmPageOrMarker* page_or_marker = page_list_.Lookup(offset);
   if (!page_or_marker || !page_or_marker->IsPage() || page_or_marker->Page() != page ||
       page->object.pin_count > 0) {
@@ -1230,8 +1230,12 @@ zx_status_t VmCowPages::AddPageLocked(VmPageOrMarker* p, uint64_t offset, bool d
   if (!page) {
     return ZX_ERR_NO_MEMORY;
   }
+
+  DEBUG_ASSERT(!p->IsPage() || !page_source_ || page_source_->DebugIsPageOk(p->Page(), offset));
+
   // Only fail on pages, we overwrite markers and empty slots.
   if (page->IsPage()) {
+    DEBUG_ASSERT(!page_source_ || page_source_->DebugIsPageOk(page->Page(), offset));
     return ZX_ERR_ALREADY_EXISTS;
   }
   // If this is actually a real page, we need to place it into the appropriate queue.
@@ -1469,6 +1473,8 @@ zx_status_t VmCowPages::CloneCowPageAsZeroLocked(uint64_t offset, list_node_t* f
   // We cannot be forking a page to here if there's already something.
   DEBUG_ASSERT(slot->IsEmpty());
 
+  DEBUG_ASSERT(!page_source_ || page_source_->DebugIsPageOk(page, offset));
+
   // Need to make sure the page is duplicated as far as our parent. Then we can pretend
   // that we have forked it into us by setting the marker.
   AssertHeld(parent_->lock_);
@@ -1626,6 +1632,7 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags, uint64
   DEBUG_ASSERT(!is_hidden_locked());
   DEBUG_ASSERT(out);
   DEBUG_ASSERT(max_out_pages > 0);
+  VMO_VALIDATION_ASSERT(DebugValidatePageSplitsHierarchyLocked());
 
   if (offset >= size_) {
     return ZX_ERR_OUT_OF_RANGE;
@@ -1671,7 +1678,7 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags, uint64
           return ZX_ERR_NEXT;
         },
         [](uint64_t start, uint64_t end) {
-          // This is a gap, and we never want to  pre-map in zero pages.
+          // This is a gap, and we never want to pre-map in zero pages.
           return ZX_ERR_STOP;
         },
         offset, CheckedAdd(offset, max_len));
@@ -1756,6 +1763,8 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags, uint64
     // the zero page, or something supplied from a page source. The page source only fills in if we
     // have a true absence of content.
     if ((page_or_mark && page_or_mark->IsMarker()) || !page_owner->page_source_) {
+      // Contiguous VMOs don't use markers.
+      //
       // Either no relevant page source or this is a known marker, in which case the content is
       // the zero page.
       p = vm_get_zero_page();
@@ -2341,6 +2350,7 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
       if (!result) {
         return ZX_ERR_NO_MEMORY;
       }
+      DEBUG_ASSERT(!page_source_ || page_source_->DebugIsPageOk(p, offset));
       SetNotWired(p, offset);
       *slot = VmPageOrMarker::Page(p);
       continue;
@@ -2392,7 +2402,9 @@ void VmCowPages::SetNotWired(vm_page_t* page, uint64_t offset) {
   }
 }
 
-void VmCowPages::UnpinPage(vm_page_t* page, uint64_t offset) {
+void VmCowPages::UnpinPageLocked(vm_page_t* page, uint64_t offset) {
+  canary_.Assert();
+
   DEBUG_ASSERT(page->state() == vm_page_state::OBJECT);
   ASSERT(page->object.pin_count > 0);
   page->object.pin_count--;
@@ -2556,7 +2568,7 @@ void VmCowPages::UnpinLocked(uint64_t offset, uint64_t len, bool allow_gaps) {
           return ZX_ERR_NOT_FOUND;
         }
         AssertHeld(lock_);
-        UnpinPage(page->Page(), off);
+        UnpinPageLocked(page->Page(), off);
         ++unpin_count;
         return ZX_ERR_NEXT;
       },
@@ -3298,12 +3310,60 @@ bool VmCowPages::RemovePageForEviction(vm_page_t* page, uint64_t offset,
 bool VmCowPages::DebugValidatePageSplitsHierarchyLocked() const {
   const VmCowPages* cur = this;
   AssertHeld(cur->lock_);
+  const VmCowPages* parent_most = cur;
   do {
     if (!cur->DebugValidatePageSplitsLocked()) {
       return false;
     }
     cur = cur->parent_.get();
+    if (cur) {
+      parent_most = cur;
+    }
   } while (cur);
+  // Iterate whole hierarchy; the iteration order doesn't matter.  Since there are cases with
+  // >2 children, in-order isn't well defined, so we choose pre-order, but post-order would also
+  // be fine.
+  const VmCowPages* prev = nullptr;
+  cur = parent_most;
+  while (cur) {
+    uint32_t children = cur->children_list_len_;
+    if (!prev || prev == cur->parent_.get()) {
+      // Visit cur
+      if (!cur->DebugValidateBacklinksLocked()) {
+        dprintf(INFO, "cur: %p this: %p\n", cur, this);
+        return false;
+      }
+
+      if (!children) {
+        // no children; move to parent (or nullptr)
+        prev = cur;
+        cur = cur->parent_.get();
+        continue;
+      } else {
+        // move to first child
+        prev = cur;
+        cur = &cur->children_list_.front();
+        continue;
+      }
+    }
+    // At this point we know we came up from a child, not down from the parent.
+    DEBUG_ASSERT(prev && prev != cur->parent_.get());
+    // The children are linked together, so we can move from one child to the next.
+
+    auto iterator = cur->children_list_.make_iterator(*prev);
+    ++iterator;
+    if (iterator == cur->children_list_.end()) {
+      // no more children; move back to parent
+      prev = cur;
+      cur = cur->parent_.get();
+      continue;
+    }
+
+    // descend to next child
+    prev = cur;
+    cur = &(*iterator);
+    DEBUG_ASSERT(cur);
+  }
   return true;
 }
 
@@ -3493,7 +3553,50 @@ bool VmCowPages::DebugValidatePageSplitsLocked() const {
     }
     return ZX_ERR_NEXT;
   });
+
   return valid;
+}
+
+bool VmCowPages::DebugValidateBacklinksLocked() const {
+  canary_.Assert();
+  if (!page_source_) {
+    // If there's not a page_source_, we don't need valid backlinks (for now).
+    return true;
+  }
+  bool result = true;
+  page_list_.ForEveryPage([this, &result](const auto* p, uint64_t offset) {
+    DEBUG_ASSERT(p->IsPage() || p->IsMarker());
+    if (!p->IsPage()) {
+      return ZX_ERR_NEXT;
+    }
+    vm_page_t* page = p->Page();
+    vm_page_state state = page->state();
+    if (state != vm_page_state::OBJECT) {
+      dprintf(INFO, "unexpected page state: %u\n", static_cast<uint32_t>(state));
+      result = false;
+      return ZX_ERR_STOP;
+    }
+    const VmCowPages* object = reinterpret_cast<VmCowPages*>(page->object.get_object());
+    if (!object) {
+      dprintf(INFO, "missing object\n");
+      result = false;
+      return ZX_ERR_STOP;
+    }
+    if (object != this) {
+      dprintf(INFO, "incorrect object - object: %p this: %p\n", object, this);
+      result = false;
+      return ZX_ERR_STOP;
+    }
+    uint64_t page_offset = page->object.get_page_offset();
+    if (page_offset != offset) {
+      dprintf(INFO, "incorrect offset - page_offset: %" PRIx64 " offset: %" PRIx64 "\n",
+              page_offset, offset);
+      result = false;
+      return ZX_ERR_STOP;
+    }
+    return ZX_ERR_NEXT;
+  });
+  return result;
 }
 
 bool VmCowPages::IsLockRangeValidLocked(uint64_t offset, uint64_t len) const {
