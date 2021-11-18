@@ -163,23 +163,6 @@ zx_status_t CheckSlices(const Superblock* info, size_t blocks_per_slice,
   return ZX_OK;
 }
 
-// Issues a sync to the journal's background thread and waits for it to complete.
-zx_status_t BlockingSync(fs::Journal* journal) {
-  zx_status_t sync_status = ZX_OK;
-  sync_completion_t sync_completion = {};
-  journal->schedule_task(journal->Sync().then(
-      [&sync_status, &sync_completion](fpromise::result<void, zx_status_t>& a) {
-        sync_status = a.is_ok() ? ZX_OK : a.error();
-        sync_completion_signal(&sync_completion);
-        return fpromise::ok();
-      }));
-  zx_status_t status = sync_completion_wait(&sync_completion, ZX_TIME_INFINITE);
-  if (status != ZX_OK) {
-    return status;
-  }
-  return sync_status;
-}
-
 // Setups the superblock based on the mount options and the underlying device.
 // It can be called when not loaded on top of FVM, in which case this function
 // will do nothing.
@@ -545,8 +528,37 @@ zx_status_t Minfs::BeginTransaction(size_t reserve_inodes, size_t reserve_blocks
   // TODO(planders): Once we are splitting up write transactions, assert this on host as well.
   ZX_DEBUG_ASSERT(reserve_blocks <= limits_.GetMaximumDataBlocks());
 #endif
+
   // Reserve blocks from allocators before returning WritebackWork to client.
-  return Transaction::Create(this, reserve_inodes, reserve_blocks, inodes_.get(), transaction);
+  zx_status_t status =
+      Transaction::Create(this, reserve_inodes, reserve_blocks, inodes_.get(), transaction);
+#ifdef __Fuchsia__
+  if (status == ZX_ERR_NO_SPACE && (reserve_blocks > 0 || reserve_inodes > 0)) {
+    // First, drop the transaction created to release its internal lock.
+    transaction->reset();
+
+    // When there's no more space, flush the journal in case a recent transaction has freed blocks
+    // but has yet to be flushed from the journal and committed. Then, try again.
+    FX_LOGS(INFO)
+        << "Unable to reserve blocks. Flushing journal in attempt to reclaim unlinked blocks.";
+
+    auto sync_status = BlockingJournalSync();
+    if (sync_status.is_error()) {
+      FX_LOGS(ERROR) << "Failed to flush journal (status: " << sync_status.status_string() << ")";
+      // Return the original status.
+      return status;
+    }
+
+    status = Transaction::Create(this, reserve_inodes, reserve_blocks, inodes_.get(), transaction);
+  }
+
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to reserve blocks for transaction (status: "
+                   << zx::make_status(status).status_string() << ")";
+  }
+#endif
+
+  return status;
 }
 
 #ifdef __Fuchsia__
@@ -892,7 +904,7 @@ zx_status_t Minfs::UpdateCleanBitAndOldestRevision(bool is_clean) {
   // these operations(and any other operations issued before) should be
   // persisted to final location before we allow any other operation to the
   // filesystem or before we return completion status to the caller.
-  return BlockingSync(journal_.get());
+  return BlockingJournalSync().status_value();
 }
 
 void Minfs::StopWriteback() {

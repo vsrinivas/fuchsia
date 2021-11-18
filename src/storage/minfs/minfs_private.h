@@ -18,6 +18,7 @@
 #include <fidl/fuchsia.minfs/cpp/wire.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/sync/completion.h>
+#include <lib/zx/status.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 #include <zircon/compiler.h>
@@ -417,6 +418,9 @@ class Minfs :
   //
   // If |!IsReadonly()|, also sets the dirty bit to a "clean" status.
   void StopWriteback();
+
+  // Issues a sync to the journal's background thread and waits for it to complete.
+  zx::status<> BlockingJournalSync();
 #endif
 
   Bcache* GetMutableBcache() final { return bc_.get(); }

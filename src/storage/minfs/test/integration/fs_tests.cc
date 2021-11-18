@@ -433,10 +433,11 @@ TEST_F(MinfsFvmTestWith8MiBSliceSize, FreeSharedPoolBytes) {
 // Test various operations when the Minfs partition is near capacity.  This test is sensitive to the
 // FVM slice size and was designed with a 8 MiB slice size in mind.
 TEST_F(MinfsFvmTestWith8MiBSliceSize, FullOperations) {
-  // Define file names we will use upfront.
+  // Define file and directory names we will use upfront.
   const char* big_path = "big_file";
   const char* med_path = "med_file";
   const char* sml_path = "sml_file";
+  const char* dir_path = "directory";
 
   // Open the mount point and create three files.
   fbl::unique_fd mnt_fd = fs().GetRootFd();
@@ -451,18 +452,39 @@ TEST_F(MinfsFvmTestWith8MiBSliceSize, FullOperations) {
   fbl::unique_fd sml_fd(openat(mnt_fd.get(), sml_path, O_CREAT | O_RDWR));
   ASSERT_TRUE(sml_fd);
 
-  // Write to the "big" file, filling the partition
-  // and leaving at most kMinfsDirect + 1 blocks unused.
-  uint32_t free_blocks = minfs::kMinfsDirect + 1;
+  // Write to the big file, filling the partition and leaving 2 blocks unused.
+  uint32_t free_blocks = 2;
   uint32_t actual_blocks;
+  ASSERT_NO_FATAL_FAILURE(FillPartition(fs(), big_fd.get(), free_blocks, &actual_blocks));
+
+  // Delete the big file.
+  big_fd.reset();
+  ASSERT_EQ(unlinkat(mnt_fd.get(), big_path, 0), 0);
+
+  // Try to write to more than the previously available blocks, which should succeed if the big
+  // file's blocks were reclaimed properly.
+  auto data = std::vector(static_cast<size_t>(minfs::kMinfsBlockSize) * (actual_blocks + 1), 0xaa);
+  ASSERT_EQ(write(med_fd.get(), data.data(), data.size()), static_cast<ssize_t>(data.size()));
+
+  // Remove all of the data in the medium file.
+  ASSERT_EQ(ftruncate(med_fd.get(), 0), 0);
+  ASSERT_EQ(lseek(med_fd.get(), 0, SEEK_SET), 0);
+
+  // Recreate the big file
+  big_fd.reset(openat(mnt_fd.get(), big_path, O_CREAT | O_RDWR));
+  ASSERT_TRUE(big_fd);
+
+  // Write to the big file, filling the partition and leaving at most kMinfsDirect + 1 blocks
+  // unused.
+  free_blocks = minfs::kMinfsDirect + 1;
   ASSERT_NO_FATAL_FAILURE(FillPartition(fs(), big_fd.get(), free_blocks, &actual_blocks));
 
   // Write enough data to the second file to take up all remaining blocks except for 1.
   // This should strictly be writing to the direct block section of the file.
-  char data[minfs::kMinfsBlockSize];
-  memset(data, 0xaa, sizeof(data));
+  data = std::vector(static_cast<size_t>(minfs::kMinfsBlockSize), 0xaa);
+  ASSERT_EQ(data.size(), static_cast<size_t>(minfs::kMinfsBlockSize));
   for (unsigned i = 0; i < actual_blocks - 1; i++) {
-    ASSERT_EQ(write(med_fd.get(), data, sizeof(data)), static_cast<ssize_t>(sizeof(data)));
+    ASSERT_EQ(write(med_fd.get(), data.data(), data.size()), static_cast<ssize_t>(data.size()));
   }
 
   // Make sure we now have only 1 block remaining.
@@ -474,7 +496,27 @@ TEST_F(MinfsFvmTestWith8MiBSliceSize, FullOperations) {
   // This is expected to fail.
   ASSERT_EQ(lseek(med_fd.get(), minfs::kMinfsBlockSize * minfs::kMinfsDirect, SEEK_SET),
             minfs::kMinfsBlockSize * minfs::kMinfsDirect);
-  ASSERT_LT(write(med_fd.get(), data, sizeof(data)), 0);
+  ASSERT_EQ(data.size(), static_cast<size_t>(minfs::kMinfsBlockSize));
+  ASSERT_LT(write(med_fd.get(), data.data(), data.size()), 0);
+
+  // We should still have 1 free block remaining. Writing to the beginning of the second file
+  // should only require 1 (direct) block, and therefore pass.
+  // Note: This fails without block reservation.
+  ASSERT_EQ(data.size(), static_cast<size_t>(minfs::kMinfsBlockSize));
+  ASSERT_EQ(write(sml_fd.get(), data.data(), data.size()), static_cast<ssize_t>(data.size()));
+
+  // There are no longer any blocks free.
+  ASSERT_NO_FATAL_FAILURE(GetFreeBlocks(fs(), &free_blocks));
+  ASSERT_EQ(free_blocks, 0u);
+
+  // Making directory should fail now that the file system is completely full.
+  ASSERT_LT(mkdirat(mnt_fd.get(), dir_path, 0666), 0);
+
+  // Remove the small file, which should free up blocks.
+  sml_fd.reset();
+  ASSERT_EQ(unlinkat(mnt_fd.get(), sml_path, 0), 0);
+  ASSERT_NO_FATAL_FAILURE(GetFreeBlocks(fs(), &free_blocks));
+  ASSERT_GT(free_blocks, 0u);
 
   // Without block reservation, something from the failed write remains allocated. Try editing
   // nearby blocks to force a writeback of partially allocated data.
@@ -487,23 +529,21 @@ TEST_F(MinfsFvmTestWith8MiBSliceSize, FullOperations) {
       fbl::round_up(static_cast<uint64_t>(s.st_size / 2), minfs::kMinfsBlockSize);
   ASSERT_EQ(ftruncate(big_fd.get(), truncate_size), 0);
 
-  // We should still have 1 free block remaining. Writing to the beginning of the second file
-  // should only require 1 (direct) block, and therefore pass.
-  // Note: This fails without block reservation.
-  ASSERT_EQ(write(sml_fd.get(), data, sizeof(data)), static_cast<ssize_t>(sizeof(data)));
-
   // Attempt to remount. Without block reservation, an additional block from the previously
   // failed write will still be incorrectly allocated, causing fsck to fail.
   EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
   EXPECT_EQ(fs().Fsck().status_value(), ZX_OK);
   EXPECT_EQ(fs().Mount().status_value(), ZX_OK);
 
-  // Re-open files.
   mnt_fd = fs().GetRootFd();
   ASSERT_TRUE(mnt_fd);
+
+  // Re-open big file
   big_fd.reset(openat(mnt_fd.get(), big_path, O_RDWR));
   ASSERT_TRUE(big_fd);
-  sml_fd.reset(openat(mnt_fd.get(), sml_path, O_RDWR));
+
+  // Re-create the small file
+  sml_fd.reset(openat(mnt_fd.get(), sml_path, O_CREAT | O_RDWR));
   ASSERT_TRUE(sml_fd);
 
   // Make sure we now have at least kMinfsDirect + 1 blocks remaining.
@@ -511,7 +551,6 @@ TEST_F(MinfsFvmTestWith8MiBSliceSize, FullOperations) {
   ASSERT_GE(free_blocks, minfs::kMinfsDirect + 1);
 
   // We have some room now, so create a new directory.
-  const char* dir_path = "directory";
   ASSERT_EQ(mkdirat(mnt_fd.get(), dir_path, 0666), 0);
   fbl::unique_fd dir_fd(openat(mnt_fd.get(), dir_path, O_RDONLY));
   ASSERT_TRUE(dir_fd);
@@ -539,7 +578,8 @@ TEST_F(MinfsFvmTestWith8MiBSliceSize, FullOperations) {
   while (actual_blocks > free_blocks) {
     // Otherwise, if too many blocks remain (if e.g. we needed to allocate 3 blocks but only 2
     // are remaining), write to sml_fd until only 1 remains.
-    ASSERT_EQ(write(sml_fd.get(), data, sizeof(data)), static_cast<ssize_t>(sizeof(data)));
+    ASSERT_EQ(data.size(), static_cast<size_t>(minfs::kMinfsBlockSize));
+    ASSERT_EQ(write(sml_fd.get(), data.data(), data.size()), static_cast<ssize_t>(data.size()));
     actual_blocks--;
   }
 
@@ -575,7 +615,8 @@ TEST_F(MinfsFvmTestWith8MiBSliceSize, FullOperations) {
 
   // Fill the partition again, writing one block of data to sml_fd
   // in case we need an emergency truncate.
-  ASSERT_EQ(write(sml_fd.get(), data, sizeof(data)), static_cast<ssize_t>(sizeof(data)));
+  ASSERT_EQ(data.size(), static_cast<size_t>(minfs::kMinfsBlockSize));
+  ASSERT_EQ(write(sml_fd.get(), data.data(), data.size()), static_cast<ssize_t>(data.size()));
   ASSERT_EQ(lseek(big_fd.get(), truncate_size, SEEK_SET), truncate_size);
   free_blocks = 1;
   ASSERT_NO_FATAL_FAILURE(FillPartition(fs(), big_fd.get(), free_blocks, &actual_blocks));
@@ -586,10 +627,11 @@ TEST_F(MinfsFvmTestWith8MiBSliceSize, FullOperations) {
     ASSERT_EQ(ftruncate(sml_fd.get(), 0), 0);
   }
 
+  ASSERT_EQ(data.size(), static_cast<size_t>(minfs::kMinfsBlockSize));
   while (actual_blocks > free_blocks) {
     // Otherwise, if too many blocks remain (if e.g. we needed to allocate 3 blocks but only 2
     // are remaining), write to sml_fd until only 1 remains.
-    ASSERT_EQ(write(sml_fd.get(), data, sizeof(data)), static_cast<ssize_t>(sizeof(data)));
+    ASSERT_EQ(write(sml_fd.get(), data.data(), data.size()), static_cast<ssize_t>(data.size()));
     actual_blocks--;
   }
 

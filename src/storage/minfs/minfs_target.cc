@@ -67,9 +67,30 @@ zx_status_t Minfs::ContinueTransaction(size_t reserve_blocks,
   ZX_DEBUG_ASSERT(reserve_blocks <= limits_.GetMaximumDataBlocks());
 
   *out = Transaction::FromCachedBlockTransaction(this, std::move(cached_transaction));
-  // Reserve blocks from allocators before returning
-  // WritebackWork to client.
-  return (*out)->ExtendBlockReservation(reserve_blocks);
+
+  // Reserve blocks from allocators before returning WritebackWork to client.
+  auto status = (*out)->ExtendBlockReservation(reserve_blocks);
+  if (status == ZX_ERR_NO_SPACE && reserve_blocks > 0) {
+    // When there's no more space, flush the journal in case a recent transaction has freed blocks
+    // but has yet to be flushed from the journal and committed. Then, try again.
+    FX_LOGS(INFO)
+        << "Unable to reserve blocks. Flushing journal in attempt to reclaim unlinked blocks.";
+    auto sync_status = BlockingJournalSync();
+    if (sync_status.is_error()) {
+      FX_LOGS(ERROR) << "Failed to flush journal (status: " << sync_status.status_string() << ")";
+      // Return the original status.
+      return status;
+    }
+
+    status = (*out)->ExtendBlockReservation(reserve_blocks);
+  }
+
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to extend block reservation (status: "
+                   << zx::make_status(status).status_string() << ")";
+  }
+
+  return status;
 }
 
 zx::status<> Minfs::AddDirtyBytes(uint64_t dirty_bytes, bool allocated) {
@@ -105,6 +126,22 @@ void Minfs::SubtractDirtyBytes(uint64_t dirty_bytes, bool allocated) {
 
   ZX_ASSERT(dirty_bytes <= metrics_.dirty_bytes.load());
   metrics_.dirty_bytes -= dirty_bytes;
+}
+
+zx::status<> Minfs::BlockingJournalSync() {
+  zx_status_t sync_status = ZX_OK;
+  sync_completion_t sync_completion = {};
+  journal_->schedule_task(journal_->Sync().then(
+      [&sync_status, &sync_completion](fpromise::result<void, zx_status_t>& a) {
+        sync_status = a.is_ok() ? ZX_OK : a.error();
+        sync_completion_signal(&sync_completion);
+        return fpromise::ok();
+      }));
+  zx_status_t status = sync_completion_wait(&sync_completion, ZX_TIME_INFINITE);
+  if (status != ZX_OK) {
+    return zx::make_status(status);
+  }
+  return zx::make_status(sync_status);
 }
 
 }  // namespace minfs
