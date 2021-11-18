@@ -194,6 +194,10 @@ fuchsia_test_package("foo_test") {
 
 Look for context as to why your test is disabled on coverage and investigate.
 
+An example for troubleshooting a case where a test wasn't showing coverage
+because it was not set up to run on CQ can be found
+[here][fxr608002-comment].
+
 ### Test only flakes in coverage
 
 Related to the above, tests are more likely to be flaky under coverage
@@ -299,6 +303,7 @@ Areas for future work:
 [fuzz-testing]: /docs/concepts/testing/fuzz_testing.md
 [fx-smoke-test]: https://fuchsia.dev/reference/tools/fx/cmd/smoke-test
 [fxr541525]: https://fuchsia-review.googlesource.com/c/fuchsia/+/541525
+[fxr608002-comment]: https://fuchsia-review.googlesource.com/c/fuchsia/+/608002/comments/b0fde8b7_9a3a39d7
 [gerrit]: https://fuchsia-review.googlesource.com/
 [gtb-coverage-best]: https://testing.googleblog.com/2020/08/code-coverage-best-practices.html
 [gtb-coverage-measure]: https://testing.googleblog.com/2014/07/measuring-coverage-at-google.html
