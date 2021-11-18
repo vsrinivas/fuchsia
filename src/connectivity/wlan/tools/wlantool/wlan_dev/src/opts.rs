@@ -115,12 +115,10 @@ pub enum Opt {
     #[structopt(name = "client")]
     Client(ClientCmd),
     #[structopt(name = "connect")]
-    #[cfg(target_os = "fuchsia")]
     Connect(ClientConnectCmd),
     #[structopt(name = "disconnect")]
     Disconnect(ClientDisconnectCmd),
     #[structopt(name = "scan")]
-    #[cfg(target_os = "fuchsia")]
     Scan(ClientScanCmd),
     #[structopt(name = "status")]
     Status(IfaceStatusCmd),
@@ -337,10 +335,8 @@ pub struct IfaceStatusCmd {
 #[derive(StructOpt, Clone, Debug, PartialEq)]
 pub enum ClientCmd {
     #[structopt(name = "scan")]
-    #[cfg(target_os = "fuchsia")]
     Scan(ClientScanCmd),
     #[structopt(name = "connect")]
-    #[cfg(target_os = "fuchsia")]
     Connect(ClientConnectCmd),
     #[structopt(name = "disconnect")]
     Disconnect(ClientDisconnectCmd),

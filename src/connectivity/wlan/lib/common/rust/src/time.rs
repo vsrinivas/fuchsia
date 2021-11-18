@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    fuchsia_zircon::{self as zx, DurationNum},
     std::ops,
     zerocopy::{AsBytes, FromBytes},
 };
@@ -16,6 +15,10 @@ use {
 #[derive(AsBytes, FromBytes, Copy, Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TimeUnit(pub u16);
 
+#[cfg(target_os = "fuchsia")]
+use fuchsia_zircon::{self as zx, DurationNum};
+
+#[cfg(target_os = "fuchsia")]
 impl From<TimeUnit> for zx::Duration {
     fn from(tu: TimeUnit) -> zx::Duration {
         (tu.0 as i64 * 1024).micros()
@@ -61,6 +64,7 @@ impl TimeUnit {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fuchsia_zircon::{self as zx, DurationNum};
 
     #[test]
     fn timeunit() {

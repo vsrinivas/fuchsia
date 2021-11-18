@@ -31,9 +31,11 @@ pub mod sequence;
 pub mod sink;
 #[allow(unused)]
 pub mod stats;
+#[cfg(target_os = "fuchsia")]
 pub mod test_utils;
 pub mod tim;
 pub mod time;
+#[cfg(target_os = "fuchsia")]
 pub mod timer;
 pub mod tx_vector;
 pub mod unaligned_view;

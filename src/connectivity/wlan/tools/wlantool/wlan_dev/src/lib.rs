@@ -10,29 +10,26 @@ use {
     fidl_fuchsia_wlan_device_service::{
         self as wlan_service, DeviceMonitorProxy, DeviceServiceProxy, QueryIfaceResponse,
     },
-    fidl_fuchsia_wlan_internal as fidl_internal,
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_minstrel::Peer,
-    fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_zircon_status as zx_status,
-    fuchsia_zircon_sys as zx_sys,
-    ieee80211::NULL_MAC_ADDR,
-    std::fmt,
-    std::str::FromStr,
-};
-
-#[cfg(target_os = "fuchsia")]
-use {
-    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
+    fidl_fuchsia_wlan_sme as fidl_sme,
     fidl_fuchsia_wlan_sme::{
         ConnectTransactionEvent, ScanTransactionEvent, ScanTransactionEventStream,
     },
+    fuchsia_zircon_status as zx_status, fuchsia_zircon_sys as zx_sys,
     futures::prelude::*,
-    hex::{FromHex, ToHex},
+    hex::FromHex,
     ieee80211::Ssid,
+    ieee80211::NULL_MAC_ADDR,
     itertools::Itertools,
     std::convert::TryFrom,
+    std::fmt,
+    std::str::FromStr,
     wlan_common::scan::ScanResult,
-    wlan_rsn::psk,
 };
+
+#[cfg(target_os = "fuchsia")]
+use {hex::ToHex, wlan_rsn::psk};
 
 pub mod opts;
 use crate::opts::*;
@@ -48,16 +45,12 @@ pub async fn handle_wlantool_command(
     match opt {
         Opt::Phy(cmd) => do_phy(cmd, monitor_proxy).await,
         Opt::Iface(cmd) => do_iface(cmd, dev_svc_proxy, monitor_proxy).await,
-        #[cfg(target_os = "fuchsia")]
         Opt::Client(opts::ClientCmd::Connect(cmd)) => do_client_connect(cmd, dev_svc_proxy).await,
-        #[cfg(target_os = "fuchsia")]
         Opt::Connect(cmd) => do_client_connect(cmd, dev_svc_proxy).await,
         Opt::Client(opts::ClientCmd::Disconnect(cmd)) | Opt::Disconnect(cmd) => {
             do_client_disconnect(cmd, dev_svc_proxy).await
         }
-        #[cfg(target_os = "fuchsia")]
         Opt::Client(opts::ClientCmd::Scan(cmd)) => do_client_scan(cmd, dev_svc_proxy).await,
-        #[cfg(target_os = "fuchsia")]
         Opt::Scan(cmd) => do_client_scan(cmd, dev_svc_proxy).await,
         Opt::Client(opts::ClientCmd::WmmStatus(cmd)) | Opt::WmmStatus(cmd) => {
             do_client_wmm_status(cmd, dev_svc_proxy, &mut std::io::stdout()).await
@@ -268,7 +261,6 @@ async fn do_iface(
     Ok(())
 }
 
-#[cfg(target_os = "fuchsia")]
 async fn do_client_connect(
     cmd: opts::ClientConnectCmd,
     dev_svc_proxy: DeviceServiceProxy,
@@ -371,7 +363,6 @@ async fn do_client_disconnect(
         .map_err(|e| format_err!("error sending disconnect request: {}", e))
 }
 
-#[cfg(target_os = "fuchsia")]
 async fn do_client_scan(
     cmd: opts::ClientScanCmd,
     dev_svc_proxy: DeviceService,
@@ -598,7 +589,6 @@ fn generate_psk(passphrase: &str, ssid: &str) -> Result<String, Error> {
     return Ok(psk_hex);
 }
 
-#[cfg(target_os = "fuchsia")]
 fn make_credential(
     password: Option<String>,
     psk: Option<String>,
@@ -649,7 +639,6 @@ impl FromStr for MacAddr {
     }
 }
 
-#[cfg(target_os = "fuchsia")]
 async fn handle_scan_transaction(scan_txn: fidl_sme::ScanTransactionProxy) -> Result<(), Error> {
     let mut printed_header = false;
     let mut events = scan_txn.take_event_stream();
@@ -694,7 +683,6 @@ async fn handle_scan_transaction(scan_txn: fidl_sme::ScanTransactionProxy) -> Re
     Ok(())
 }
 
-#[cfg(target_os = "fuchsia")]
 fn print_scan_line(
     bssid: impl fmt::Display,
     dbm: impl fmt::Display,
@@ -706,12 +694,10 @@ fn print_scan_line(
     println!("{:17} {:>4} {:>6} {:12} {:10} {}", bssid, dbm, channel, protection, compat, ssid)
 }
 
-#[cfg(target_os = "fuchsia")]
 fn print_scan_header() {
     print_scan_line("BSSID", "dBm", "Chan", "Protection", "Compatible", "SSID");
 }
 
-#[cfg(target_os = "fuchsia")]
 fn print_scan_result(scan_result: &wlan_common::scan::ScanResult) {
     print_scan_line(
         MacAddr(scan_result.bss_description.bssid.0),
@@ -723,7 +709,6 @@ fn print_scan_result(scan_result: &wlan_common::scan::ScanResult) {
     );
 }
 
-#[cfg(target_os = "fuchsia")]
 async fn handle_connect_transaction(
     connect_txn: fidl_sme::ConnectTransactionProxy,
 ) -> Result<(), Error> {
