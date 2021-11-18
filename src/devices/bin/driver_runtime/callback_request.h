@@ -14,6 +14,9 @@
 
 #include "src/devices/bin/driver_runtime/object.h"
 
+// Defined in "src/devices/bin/driver_runtime/dispatcher.h"
+struct fdf_dispatcher;
+
 namespace driver_runtime {
 
 class CallbackRequest;
@@ -25,10 +28,18 @@ class CallbackRequest : public fbl::DoublyLinkedListable<std::unique_ptr<Callbac
  public:
   CallbackRequest() = default;
 
-  // Sets the callback that will be called by |Call|.
-  void SetCallback(Callback callback, fdf_status_t callback_reason) {
+  // Queues the callback to be invoked by the dispatcher, transferring ownership of |req|.
+  // The dispatcher and callback must previously have been set using |SetCallback|.
+  static void QueueOntoDispatcher(std::unique_ptr<CallbackRequest> req);
+
+  // Initializes the callback to be queued.
+  // Sets the dispatcher, and the callback that will be called by |Call|.
+  void SetCallback(struct fdf_dispatcher* dispatcher, Callback callback,
+                   fdf_status_t callback_reason) {
+    ZX_ASSERT(!dispatcher_);
     ZX_ASSERT(!callback_);
     ZX_ASSERT(!reason_);
+    dispatcher_ = dispatcher;
     callback_ = std::move(callback);
     reason_ = callback_reason;
   }
@@ -40,6 +51,7 @@ class CallbackRequest : public fbl::DoublyLinkedListable<std::unique_ptr<Callbac
     if (*reason_ != ZX_OK) {
       status = *reason_;
     }
+    dispatcher_ = nullptr;
     reason_ = std::nullopt;
     callback_(std::move(callback_request), status);
   }
@@ -48,6 +60,7 @@ class CallbackRequest : public fbl::DoublyLinkedListable<std::unique_ptr<Callbac
   bool IsPending() { return !!callback_; }
 
  private:
+  struct fdf_dispatcher* dispatcher_;
   Callback callback_;
   // Reason for scheduling the callback.
   std::optional<fdf_status_t> reason_;

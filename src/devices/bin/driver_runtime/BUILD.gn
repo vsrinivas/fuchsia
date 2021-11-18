@@ -19,6 +19,7 @@ source_set("driver_runtime_impl") {
   sources = [
     "api.cc",
     "arena.cc",
+    "callback_request.cc",
     "channel.cc",
     "dispatcher.cc",
     "driver_context.cc",

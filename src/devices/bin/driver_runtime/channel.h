@@ -54,9 +54,16 @@ struct Channel : public Object {
   // Stores a reference to |peer|. This reference will be cleared in |Close|.
   void Init(const fbl::RefPtr<Channel>& peer);
 
+  // Parameter validation.
+  fdf_status_t CheckWriteArgs(uint32_t options, fdf_arena_t* arena, void* data, uint32_t num_bytes,
+                              zx_handle_t* handles, uint32_t num_handles);
+
   // Takes ownership of the transferred |msg| and adds it to the |msg_queue|.
-  // Queues a callback request with the dispatcher if not already queued.
-  fdf_status_t WriteSelf(MessagePacketOwner msg);
+  // Returns the callback request that should be queued with the dispatcher (outside of the lock),
+  // if any.
+  // __TA_ASSERT is used here to let the compiler know we are holding the shared lock.
+  std::unique_ptr<CallbackRequest> WriteSelfLocked(MessagePacketOwner msg) __TA_ASSERT(get_lock())
+      __TA_REQUIRES(get_lock());
 
   // Called when the other end of the channel is being closed.
   void OnPeerClosed();

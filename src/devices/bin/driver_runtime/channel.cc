@@ -12,6 +12,20 @@
 #include "src/devices/bin/driver_runtime/dispatcher.h"
 #include "src/devices/bin/driver_runtime/handle.h"
 
+namespace {
+
+fdf_status_t CheckReadArgs(uint32_t options, fdf_arena_t** out_arena, void** out_data,
+                           uint32_t* out_num_bytes, zx_handle_t** out_handles,
+                           uint32_t* out_num_handles) {
+  // |out_arena| is required except for empty messages.
+  if (!out_arena && (out_data || out_handles)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  return ZX_OK;
+}
+
+}  // namespace
+
 namespace driver_runtime {
 
 // static
@@ -53,8 +67,9 @@ void Channel::Init(const fbl::RefPtr<Channel>& peer) __TA_NO_THREAD_SAFETY_ANALY
   peer_ = peer;
 }
 
-fdf_status_t Channel::Write(uint32_t options, fdf_arena_t* arena, void* data, uint32_t num_bytes,
-                            zx_handle_t* handles, uint32_t num_handles) {
+fdf_status_t Channel::CheckWriteArgs(uint32_t options, fdf_arena_t* arena, void* data,
+                                     uint32_t num_bytes, zx_handle_t* handles,
+                                     uint32_t num_handles) {
   // Require an arena if data or handles are populated (empty messages are allowed).
   if (!arena && (data || handles)) {
     return ZX_ERR_INVALID_ARGS;
@@ -82,58 +97,57 @@ fdf_status_t Channel::Write(uint32_t options, fdf_arena_t* arena, void* data, ui
       }
     }
   }
+  return ZX_OK;
+}
 
-  fbl::RefPtr<Channel> peer;
+fdf_status_t Channel::Write(uint32_t options, fdf_arena_t* arena, void* data, uint32_t num_bytes,
+                            zx_handle_t* handles, uint32_t num_handles) {
+  fdf_status_t status = CheckWriteArgs(options, arena, data, num_bytes, handles, num_handles);
+  if (status != ZX_OK) {
+    return status;
+  }
+  std::unique_ptr<CallbackRequest> callback_request;
   {
     fbl::AutoLock lock(get_lock());
     if (!peer_) {
       return ZX_ERR_PEER_CLOSED;
     }
-    peer = peer_;
-  }
-  // It should be OK to drop the lock here, as the client shouldn't be trying to
-  // close the handle in the middle of a write call, and if the other side
-  // of the channel is closed, they won't be trying to read again.
-
-  fbl::RefPtr<fdf_arena> arena_ref(arena);
-  auto msg = MessagePacket::Create(std::move(arena_ref), data, num_bytes, handles, num_handles);
-  if (!msg) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  return peer->WriteSelf(std::move(msg));
-}
-
-fdf_status_t Channel::WriteSelf(MessagePacketOwner msg) {
-  fdf_dispatcher_t* dispatcher;
-  std::unique_ptr<driver_runtime::CallbackRequest> callback_request;
-
-  {
-    fbl::AutoLock lock(get_lock());
-    msg_queue_.push_back(std::move(msg));
-    // No dispatcher has been registered yet to handle callback requests.
-    if (!dispatcher_) {
-      return ZX_OK;
+    fbl::RefPtr<fdf_arena> arena_ref(arena);
+    auto msg = MessagePacket::Create(std::move(arena_ref), data, num_bytes, handles, num_handles);
+    if (!msg) {
+      return ZX_ERR_NO_MEMORY;
     }
-    dispatcher = dispatcher_;
-
-    // If no read wait_async has been registered, we will not queue
-    // the callback request yet.
-    if (!IsCallbackRequestQueuedLocked() && IsWaitAsyncRegisteredLocked()) {
-      callback_request = TakeCallbackRequestLocked(ZX_OK);
-    }
+    callback_request = peer_->WriteSelfLocked(std::move(msg));
   }
+  // Queue the callback outside of the lock.
   if (callback_request) {
-    dispatcher->QueueCallback(std::move(callback_request));
+    CallbackRequest::QueueOntoDispatcher(std::move(callback_request));
   }
   return ZX_OK;
+}
+
+std::unique_ptr<CallbackRequest> Channel::WriteSelfLocked(MessagePacketOwner msg) {
+  msg_queue_.push_back(std::move(msg));
+  // No dispatcher has been registered yet to handle callback requests.
+  if (!dispatcher_) {
+    return nullptr;
+  }
+
+  // If no read wait_async has been registered, we will not queue
+  // the callback request yet.
+  if (!IsCallbackRequestQueuedLocked() && IsWaitAsyncRegisteredLocked()) {
+    return TakeCallbackRequestLocked(ZX_OK);
+  }
+  return nullptr;
 }
 
 fdf_status_t Channel::Read(uint32_t options, fdf_arena_t** out_arena, void** out_data,
                            uint32_t* out_num_bytes, zx_handle_t** out_handles,
                            uint32_t* out_num_handles) {
-  // |out_arena| is required except for empty messages.
-  if (!out_arena && (out_data || out_handles)) {
-    return ZX_ERR_INVALID_ARGS;
+  fdf_status_t status =
+      CheckReadArgs(options, out_arena, out_data, out_num_bytes, out_handles, out_num_handles);
+  if (status != ZX_OK) {
+    return status;
   }
 
   // Make sure this destructs outside of the lock.
@@ -152,23 +166,7 @@ fdf_status_t Channel::Read(uint32_t options, fdf_arena_t** out_arena, void** out
     if (msg == nullptr) {
       return ZX_ERR_SHOULD_WAIT;
     }
-    if (out_arena) {
-      fbl::RefPtr<fdf_arena> arena = msg->arena();
-      // The reference is dropped when the user calls fbl_arena::Destroy.
-      *out_arena = fbl::ExportToRawPtr(&arena);
-    }
-    if (out_data) {
-      msg->TakeData(out_data);
-    }
-    if (out_num_bytes) {
-      *out_num_bytes = msg->num_bytes();
-    }
-    if (out_handles) {
-      msg->TakeHandles(out_handles);
-    }
-    if (out_num_handles) {
-      *out_num_handles = msg->num_handles();
-    }
+    msg->CopyOut(out_arena, out_data, out_num_bytes, out_handles, out_num_handles);
   }
   return ZX_OK;
 }
@@ -200,7 +198,7 @@ fdf_status_t Channel::WaitAsync(struct fdf_dispatcher* dispatcher, fdf_channel_r
     }
   }
   if (callback_request) {
-    dispatcher->QueueCallback(std::move(callback_request));
+    CallbackRequest::QueueOntoDispatcher(std::move(callback_request));
   }
   return ZX_OK;
 }
@@ -211,7 +209,6 @@ fdf_status_t Channel::WaitAsync(struct fdf_dispatcher* dispatcher, fdf_channel_r
 // any _Locked class methods.
 void Channel::Close() __TA_NO_THREAD_SAFETY_ANALYSIS {
   fbl::RefPtr<Channel> peer;
-  fdf_dispatcher_t* dispatcher;
   std::unique_ptr<driver_runtime::CallbackRequest> callback_request;
   bool cancel_callback = false;
   {
@@ -228,7 +225,6 @@ void Channel::Close() __TA_NO_THREAD_SAFETY_ANALYSIS {
         // If there were no pending messages we would not yet have queued it to the dispatcher.
         if (!IsCallbackRequestQueuedLocked()) {
           callback_request = TakeCallbackRequestLocked(ZX_ERR_CANCELED);
-          dispatcher = dispatcher_;
         }
       } else {
         // Cancel any pending callback.
@@ -239,7 +235,7 @@ void Channel::Close() __TA_NO_THREAD_SAFETY_ANALYSIS {
     }
   }
   if (callback_request) {
-    dispatcher->QueueCallback(std::move(callback_request));
+    CallbackRequest::QueueOntoDispatcher(std::move(callback_request));
   }
   if (cancel_callback) {
     ZX_ASSERT(unowned_callback_request_);
@@ -253,7 +249,6 @@ void Channel::Close() __TA_NO_THREAD_SAFETY_ANALYSIS {
 }
 
 void Channel::OnPeerClosed() {
-  fdf_dispatcher_t* dispatcher;
   std::unique_ptr<driver_runtime::CallbackRequest> callback_request;
   {
     fbl::AutoLock lock(get_lock());
@@ -261,12 +256,11 @@ void Channel::OnPeerClosed() {
     // we should send the peer closed message now.
     if (msg_queue_.is_empty() && !IsCallbackRequestQueuedLocked() &&
         IsWaitAsyncRegisteredLocked()) {
-      dispatcher = dispatcher_;
       callback_request = TakeCallbackRequestLocked(ZX_ERR_PEER_CLOSED);
     }
   }
   if (callback_request) {
-    dispatcher->QueueCallback(std::move(callback_request));
+    CallbackRequest::QueueOntoDispatcher(std::move(callback_request));
   }
 }
 
@@ -280,7 +274,7 @@ std::unique_ptr<driver_runtime::CallbackRequest> Channel::TakeCallbackRequestLoc
           std::unique_ptr<driver_runtime::CallbackRequest> callback_request, fdf_status_t status) {
         channel->DispatcherCallback(std::move(callback_request), status);
       };
-  callback_request_->SetCallback(std::move(callback), callback_reason);
+  callback_request_->SetCallback(dispatcher_, std::move(callback), callback_reason);
   return std::move(callback_request_);
 }
 

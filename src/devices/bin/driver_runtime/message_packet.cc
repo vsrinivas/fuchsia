@@ -57,4 +57,25 @@ MessagePacket::~MessagePacket() {
   }
 }
 
+void MessagePacket::CopyOut(fdf_arena_t** out_arena, void** out_data, uint32_t* out_num_bytes,
+                            zx_handle_t** out_handles, uint32_t* out_num_handles) {
+  if (out_arena) {
+    fbl::RefPtr<fdf_arena> arena = this->arena();
+    // The reference is dropped when the user calls fbl_arena::Destroy.
+    *out_arena = fbl::ExportToRawPtr(&arena);
+  }
+  if (out_data) {
+    TakeData(out_data);
+  }
+  if (out_num_bytes) {
+    *out_num_bytes = num_bytes();
+  }
+  if (out_handles) {
+    TakeHandles(out_handles);
+  }
+  if (out_num_handles) {
+    *out_num_handles = num_handles();
+  }
+}
+
 }  // namespace driver_runtime

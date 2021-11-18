@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_BIN_DRIVER_RUNTIME_MESSAGE_PACKET_
-#define SRC_DEVICES_BIN_DRIVER_RUNTIME_MESSAGE_PACKET_
+#ifndef SRC_DEVICES_BIN_DRIVER_RUNTIME_MESSAGE_PACKET_H_
+#define SRC_DEVICES_BIN_DRIVER_RUNTIME_MESSAGE_PACKET_H_
 
 #include <lib/fdf/arena.h>
 #include <lib/fdf/types.h>
@@ -30,15 +30,10 @@ class MessagePacket : public fbl::DoublyLinkedListable<MessagePacketOwner> {
   static MessagePacketOwner Create(fbl::RefPtr<fdf_arena_t> arena, void* data, uint32_t num_bytes,
                                    zx_handle_t* handles, uint32_t num_handles);
 
-  void TakeData(void** out_data) {
-    *out_data = data_;
-    data_ = nullptr;
-  }
-
-  void TakeHandles(zx_handle_t** out_handles) {
-    *out_handles = handles_;
-    handles_ = nullptr;
-  }
+  // Copies the message contents to the parameters provided.
+  // Returns ownership of an arena, the data and handles.
+  void CopyOut(fdf_arena_t** out_arena, void** out_data, uint32_t* out_num_bytes,
+               zx_handle_t** out_handles, uint32_t* out_num_handles);
 
   // Returns a reference to the arena.
   // The message packet retains a reference to correctly destruct itself.
@@ -64,6 +59,16 @@ class MessagePacket : public fbl::DoublyLinkedListable<MessagePacketOwner> {
   // to not properly recycle the object.
   ~MessagePacket();
 
+  void TakeData(void** out_data) {
+    *out_data = data_;
+    data_ = nullptr;
+  }
+
+  void TakeHandles(zx_handle_t** out_handles) {
+    *out_handles = handles_;
+    handles_ = nullptr;
+  }
+
   friend struct MessagePacketDestroyer;
   static void Delete(MessagePacket* packet);
 
@@ -82,4 +87,4 @@ inline void MessagePacketDestroyer::operator()(MessagePacket* message_packet) {
 
 }  // namespace driver_runtime
 
-#endif  //  SRC_DEVICES_BIN_DRIVER_RUNTIME_MESSAGE_PACKET_
+#endif  //  SRC_DEVICES_BIN_DRIVER_RUNTIME_MESSAGE_PACKET_H_
