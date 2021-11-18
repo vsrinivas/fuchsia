@@ -26,6 +26,12 @@ import("//build/packages/prebuilt_test_package.gni")
 #     Type: string
 #     Default: $package
 #
+#   log_settings (optional)
+#     The properties of logs produced by the specific test. Overwrites the manifest's
+#     log_settings for a particular test.
+#     See //build/testing/test_spec.gni for more details.
+#     Type: JSON
+#
 # Parameters
 #
 #   archive_dir (required)
@@ -42,6 +48,11 @@ import("//build/packages/prebuilt_test_package.gni")
 #
 #   manifest_name (optional, default: test_manifest.json):
 #     [string] Name of the test manifest file.
+#
+#   log_settings (optional)
+#     The properties of logs produced by the tests defined in the manifest.
+#     See //build/testing/test_spec.gni for more details.
+#     Type: JSON
 #
 template("prebuilt_test_manifest") {
   assert(defined(invoker.archive_dir), "archive_dir must be defined.")
@@ -77,8 +88,13 @@ template("prebuilt_test_manifest") {
                                [
                                  "deps",
                                  "environments",
-                                 "log_settings",
                                ])
+        if (defined(test.log_settings)) {
+          log_settings = test.log_settings
+          not_needed(invoker, [ "log_settings" ])
+        } else if (defined(invoker.log_settings)) {
+          log_settings = invoker.log_settings
+        }
       }
       test_targets += [ ":${test_package}" ]
     }

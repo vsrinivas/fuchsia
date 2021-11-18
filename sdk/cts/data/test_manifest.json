@@ -22,7 +22,10 @@
     {
         "archive_name": "fuchsia-hwinfo-tests",
         "component_name": "hwinfo-test.cm",
-        "package": "fuchsia-hwinfo-tests"
+        "package": "fuchsia-hwinfo-tests",
+        "log_settings": {
+            "max_severity": "ERROR"
+        }
     },
     {
         "archive_name": "fuchsia_settings_test",
@@ -52,6 +55,9 @@
     {
         "archive_name": "reboot_on_terminate_test",
         "component_name": "reboot_on_terminate_test.cm",
-        "package": "reboot_on_terminate_test"
+        "package": "reboot_on_terminate_test",
+        "log_settings": {
+            "max_severity": "FATAL"
+        }
     }
 ]
