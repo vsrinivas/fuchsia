@@ -48,11 +48,11 @@ table/member fuchsia.component.test/Protocol.type fuchsia.component.decl/Depende
 table fuchsia.component.test/Protocol
 table/member fuchsia.component.test/ProtocolCapability.name string:100
 table fuchsia.component.test/ProtocolCapability
-protocol/member fuchsia.component.test/Realm.AddChild(string:100 name,string:4096 url,fuchsia.component.test/ChildOptions properties) -> (fuchsia.component.test/Realm_AddChild_Result result)
-protocol/member fuchsia.component.test/Realm.AddChildFromDecl(string:100 name,fuchsia.component.decl/Component decl,fuchsia.component.test/ChildOptions properties) -> (fuchsia.component.test/Realm_AddChildFromDecl_Result result)
-protocol/member fuchsia.component.test/Realm.AddChildRealm(string:100 name,fuchsia.component.test/ChildOptions properties,server_end:fuchsia.component.test/Realm child_realm) -> (fuchsia.component.test/Realm_AddChildRealm_Result result)
-protocol/member fuchsia.component.test/Realm.AddLegacyChild(string:100 name,string:4096 legacy_url,fuchsia.component.test/ChildOptions properties) -> (fuchsia.component.test/Realm_AddLegacyChild_Result result)
-protocol/member fuchsia.component.test/Realm.AddLocalChild(string:100 name,fuchsia.component.test/ChildOptions properties) -> (fuchsia.component.test/Realm_AddLocalChild_Result result)
+protocol/member fuchsia.component.test/Realm.AddChild(string:100 name,string:4096 url,fuchsia.component.test/ChildOptions options) -> (fuchsia.component.test/Realm_AddChild_Result result)
+protocol/member fuchsia.component.test/Realm.AddChildFromDecl(string:100 name,fuchsia.component.decl/Component decl,fuchsia.component.test/ChildOptions options) -> (fuchsia.component.test/Realm_AddChildFromDecl_Result result)
+protocol/member fuchsia.component.test/Realm.AddChildRealm(string:100 name,fuchsia.component.test/ChildOptions options,server_end:fuchsia.component.test/Realm child_realm) -> (fuchsia.component.test/Realm_AddChildRealm_Result result)
+protocol/member fuchsia.component.test/Realm.AddLegacyChild(string:100 name,string:4096 legacy_url,fuchsia.component.test/ChildOptions options) -> (fuchsia.component.test/Realm_AddLegacyChild_Result result)
+protocol/member fuchsia.component.test/Realm.AddLocalChild(string:100 name,fuchsia.component.test/ChildOptions options) -> (fuchsia.component.test/Realm_AddLocalChild_Result result)
 protocol/member fuchsia.component.test/Realm.AddRoute(vector<fuchsia.component.test/Capability2> capabilities,fuchsia.component.decl/Ref from,vector<fuchsia.component.decl/Ref> to) -> (fuchsia.component.test/Realm_AddRoute_Result result)
 protocol/member fuchsia.component.test/Realm.GetComponentDecl(string:100 name) -> (fuchsia.component.test/Realm_GetComponentDecl_Result result)
 protocol/member fuchsia.component.test/Realm.ReplaceComponentDecl(string:100 name,fuchsia.component.decl/Component component_decl) -> (fuchsia.component.test/Realm_ReplaceComponentDecl_Result result)

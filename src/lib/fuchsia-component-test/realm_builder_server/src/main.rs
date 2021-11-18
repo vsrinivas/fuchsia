@@ -203,10 +203,21 @@ async fn handle_realm_stream(
 ) -> Result<(), anyhow::Error> {
     while let Some(req) = stream.try_next().await? {
         match req {
-            // TODO(88417)
-            ftest::RealmRequest::AddChild { .. } => {
-                unimplemented!();
+            ftest::RealmRequest::AddChild { name, url, options, responder } => {
+                if is_relative_url(&url) {
+                    unimplemented!();
+                } else {
+                    let res = realm_node.add_child_decl(name, url, options).await;
+                    match res {
+                        Ok(()) => responder.send(&mut Ok(()))?,
+                        Err(e) => {
+                            warn!("unable to add child: {:?}", e);
+                            responder.send(&mut Err(e.into()))?;
+                        }
+                    }
+                }
             }
+            // TODO(88417)
             ftest::RealmRequest::AddLegacyChild { .. } => {
                 unimplemented!();
             }
@@ -284,6 +295,29 @@ impl RealmNodeState {
         self.decl.children.iter().any(|c| &c.name == child_name)
             || self.mutable_children.contains_key(child_name)
     }
+
+    fn add_child_decl(
+        &mut self,
+        child_name: String,
+        child_url: String,
+        child_options: ftest::ChildOptions,
+    ) {
+        self.decl.children.push(cm_rust::ChildDecl {
+            name: child_name,
+            url: child_url,
+            startup: match child_options.startup {
+                Some(fcdecl::StartupMode::Lazy) => fsys::StartupMode::Lazy,
+                Some(fcdecl::StartupMode::Eager) => fsys::StartupMode::Eager,
+                None => fsys::StartupMode::Lazy,
+            },
+            environment: child_options.environment,
+            on_terminate: match child_options.on_terminate {
+                Some(fcdecl::OnTerminate::None) => Some(fsys::OnTerminate::None),
+                Some(fcdecl::OnTerminate::Reboot) => Some(fsys::OnTerminate::Reboot),
+                None => None,
+            },
+        });
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -351,6 +385,26 @@ impl RealmNode2 {
         Ok(())
     }
 
+    async fn add_child_decl(
+        &self,
+        child_name: String,
+        child_url: String,
+        child_options: ftest::ChildOptions,
+    ) -> Result<(), RealmBuilderError> {
+        if child_url.trim().ends_with(".cmx") {
+            return Err(RealmBuilderError::InvalidManifestExtension);
+        }
+        let mut state_guard = self.state.lock().await;
+        if state_guard.finalized {
+            return Err(RealmBuilderError::BuildAlreadyCalled);
+        }
+        if state_guard.contains_child(&child_name) {
+            return Err(RealmBuilderError::ChildAlreadyExists(child_name));
+        }
+        state_guard.add_child_decl(child_name, child_url, child_options);
+        Ok(())
+    }
+
     async fn get_sub_realm(&self, child_name: &String) -> Result<RealmNode2, RealmBuilderError> {
         let state_guard = self.state.lock().await;
         if state_guard.decl.children.iter().any(|c| &c.name == child_name) {
@@ -388,29 +442,13 @@ impl RealmNode2 {
 
             let mut mutable_children = state_guard.mutable_children.drain().collect::<Vec<_>>();
             mutable_children.sort_unstable_by_key(|t| t.0.clone());
-            for (name, (child_options, node)) in mutable_children {
+            for (child_name, (child_options, node)) in mutable_children {
                 let mut new_path = walked_path.clone();
-                new_path.push(name.clone());
+                new_path.push(child_name.clone());
 
-                let startup = child_options.startup.clone().unwrap_or(fcdecl::StartupMode::Lazy);
-                let environment = child_options.environment.clone();
-                let on_terminate = child_options.on_terminate.clone();
-                let url =
+                let child_url =
                     node.build(registry.clone(), new_path, Clone::clone(&package_dir)).await?;
-                state_guard.decl.children.push(cm_rust::ChildDecl {
-                    name,
-                    url,
-                    startup: match startup {
-                        fcdecl::StartupMode::Lazy => fsys::StartupMode::Lazy,
-                        fcdecl::StartupMode::Eager => fsys::StartupMode::Eager,
-                    },
-                    environment,
-                    on_terminate: match on_terminate {
-                        Some(fcdecl::OnTerminate::None) => Some(fsys::OnTerminate::None),
-                        Some(fcdecl::OnTerminate::Reboot) => Some(fsys::OnTerminate::Reboot),
-                        None => None,
-                    },
-                });
+                state_guard.add_child_decl(child_name, child_url, child_options);
             }
 
             let name =
@@ -1858,6 +1896,11 @@ mod tests {
             }
             .boxed()
         }
+
+        // Adds the `BINDER_EXPOSE_DECL` to the root component in the tree
+        fn add_binder_expose(&mut self) {
+            self.decl.exposes.push(BINDER_EXPOSE_DECL.clone());
+        }
     }
 
     fn tree_to_realm_node(tree: ComponentTree) -> BoxFuture<'static, RealmNode2> {
@@ -1883,7 +1926,7 @@ mod tests {
         // builder automatically puts stuff into the root realm when building. Add that to our
         // local tree here, so that our tree looks the same as what hopefully got put in the
         // resolver.
-        tree.decl.exposes.push(BINDER_EXPOSE_DECL.clone());
+        tree.add_binder_expose();
 
         res
     }
@@ -1929,6 +1972,58 @@ mod tests {
             builder_proxy.build(runner_client_end).await.expect("failed to send build command");
         match res {
             Ok(url) => Ok((url, registry)),
+            Err(e) => Err(e),
+        }
+    }
+
+    fn launch_realm_and_builder_task() -> (
+        ftest::RealmProxy,
+        ftest::BuilderProxy,
+        Arc<resolver::Registry>,
+        Arc<runner::Runner>,
+        fasync::Task<()>,
+    ) {
+        let (realm_proxy, realm_strealm) = create_proxy_and_stream::<ftest::RealmMarker>().unwrap();
+        let pkg_dir = io_util::open_directory_in_namespace(
+            "/pkg",
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+        )
+        .unwrap();
+        let realm_root = RealmNode2::new();
+        let registry = resolver::Registry::new();
+        let runner = runner::Runner::new();
+        let runner_proxy_placeholder = Arc::new(Mutex::new(None));
+
+        let (builder_proxy, builder_task) =
+            launch_builder_task(realm_root.clone(), registry.clone());
+
+        let registry_clone = registry.clone();
+        let runner_clone = runner.clone();
+        let realm_and_builder_task = fasync::Task::local(async move {
+            handle_realm_stream(
+                realm_strealm,
+                pkg_dir,
+                realm_root,
+                registry_clone,
+                runner_clone,
+                runner_proxy_placeholder,
+            )
+            .await
+            .expect("failed to handle realm stream");
+            builder_task.await;
+        });
+        (realm_proxy, builder_proxy, registry, runner, realm_and_builder_task)
+    }
+
+    async fn call_build_on_builder(
+        builder_proxy: ftest::BuilderProxy,
+    ) -> Result<String, ftest::RealmBuilderError2> {
+        let (runner_client_end, runner_server_end) = create_endpoints().unwrap();
+        drop(runner_server_end);
+        let res =
+            builder_proxy.build(runner_client_end).await.expect("failed to send build command");
+        match res {
+            Ok(url) => Ok(url),
             Err(e) => Err(e),
         }
     }
@@ -2222,6 +2317,63 @@ mod tests {
         let (root_url, registry) = build_tree(&mut tree).await.expect("failed to build tree");
         let tree_from_resolver = ComponentTree::new_from_resolver(root_url, registry).await;
         assert_eq!(Some(tree), tree_from_resolver);
+    }
+
+    #[fuchsia::test]
+    async fn add_child() {
+        let (realm_proxy, builder_proxy, registry, _runner, _realm_and_builder_task) =
+            launch_realm_and_builder_task();
+        realm_proxy
+            .add_child("a", "test:///a", ftest::ChildOptions::EMPTY)
+            .await
+            .expect("failed to call add_child")
+            .expect("add_child returned an error");
+        let root_url = call_build_on_builder(builder_proxy).await.expect("failed to build");
+        let tree_from_resolver = ComponentTree::new_from_resolver(root_url, registry).await;
+        let mut expected_tree = ComponentTree {
+            decl: cm_rust::ComponentDecl {
+                children: vec![cm_rust::ChildDecl {
+                    name: "a".to_string(),
+                    url: "test:///a".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                    on_terminate: None,
+                    environment: None,
+                }],
+                ..cm_rust::ComponentDecl::default()
+            },
+            children: vec![],
+        };
+        expected_tree.add_binder_expose();
+        assert_eq!(Some(expected_tree), tree_from_resolver);
+    }
+
+    #[fuchsia::test]
+    async fn add_child_with_invalid_manifest_extension() {
+        let (realm_proxy, _builder_proxy, _registry, _runner, _realm_and_builder_task) =
+            launch_realm_and_builder_task();
+        let err = realm_proxy
+            .add_child("a", "test:///a.cmx", ftest::ChildOptions::EMPTY)
+            .await
+            .expect("failed to call add_child")
+            .expect_err("add_child was supposed to return an error");
+        assert_eq!(err, ftest::RealmBuilderError2::InvalidManifestExtension);
+    }
+
+    #[fuchsia::test]
+    async fn add_child_that_conflicts_with_child_decl() {
+        let (realm_proxy, _builder_proxy, _registry, _runner, _realm_and_builder_task) =
+            launch_realm_and_builder_task();
+        realm_proxy
+            .add_child("a", "test:///a", ftest::ChildOptions::EMPTY)
+            .await
+            .expect("failed to call add_child")
+            .expect("add_child returned an error");
+        let err = realm_proxy
+            .add_child("a", "test:///a", ftest::ChildOptions::EMPTY)
+            .await
+            .expect("failed to call add_child")
+            .expect_err("add_child was supposed to return an error");
+        assert_eq!(err, ftest::RealmBuilderError2::ChildAlreadyExists);
     }
 
     // Everything below this line are tests for the old fuchsia.component.test.RealmBuilder logic,

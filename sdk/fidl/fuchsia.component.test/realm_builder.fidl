@@ -399,7 +399,7 @@ protocol Realm {
         url fuchsia.url.Url;
 
         /// Additional properties for the child.
-        properties ChildOptions;
+        options ChildOptions;
     }) -> (struct {}) error RealmBuilderError2;
 
     /// Adds a [legacy
@@ -426,7 +426,7 @@ protocol Realm {
         legacy_url fuchsia.url.Url;
 
         /// Additional properties for the child.
-        properties ChildOptions;
+        options ChildOptions;
     }) -> (struct {}) error RealmBuilderError2;
 
     /// Adds a component to this realm whose declaration is set to `decl`. When
@@ -445,7 +445,7 @@ protocol Realm {
         decl fuchsia.component.decl.Component;
 
         /// Additional properties for the child.
-        properties ChildOptions;
+        options ChildOptions;
     }) -> (struct {}) error RealmBuilderError2;
 
     /// Adds a component to the realm whose implementation will be provided by
@@ -463,7 +463,7 @@ protocol Realm {
         name fuchsia.component.name;
 
         /// Additional properties for the child.
-        properties ChildOptions;
+        options ChildOptions;
     }) -> (struct {}) error RealmBuilderError2;
 
     /// Adds a child realm which can be built with the client end of
@@ -477,7 +477,7 @@ protocol Realm {
         name fuchsia.component.name;
 
         /// Additional properties for the child.
-        properties ChildOptions;
+        options ChildOptions;
 
         /// The server end of the `Realm` channel that will be used to build the
         /// sub-realm.
