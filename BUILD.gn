@@ -982,7 +982,6 @@ group("default") {
   testonly = true
   deps = [
     "//:create-all-drivers-doc",
-    "//:drivers-check",
     "//:host",
     "//build/images:packages",
     "//build/input:build_only",
