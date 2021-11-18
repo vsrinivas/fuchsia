@@ -21,6 +21,7 @@
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
+#include "lib/fidl/llcpp/client_end.h"
 #include "parent.h"
 #include "src/devices/lib/device-watcher/cpp/device-watcher.h"
 
@@ -72,13 +73,17 @@ class NandDevice {
       ASSERT_TRUE(dir_fd);
       ASSERT_EQ(device_watcher::DirWatcher::Create(std::move(dir_fd), &watcher), ZX_OK);
 
-      fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(channel()))->ScheduleUnbind();
+      fidl::WireCall(controller())->ScheduleUnbind();
 
       ASSERT_EQ(watcher->WaitForRemoval(filename_, zx::sec(5)), ZX_OK);
     }
   }
 
   bool IsValid() const { return is_valid_; }
+
+  fidl::UnownedClientEnd<fuchsia_device::Controller> controller() {
+    return caller_.borrow_as<fuchsia_device::Controller>();
+  }
 
   // Provides a channel to issue fidl calls.
   zx_handle_t channel() { return caller_.borrow_channel(); }
@@ -128,20 +133,15 @@ NandDevice::NandDevice() {
   if (parent_->IsBroker()) {
     caller_.reset(fbl::unique_fd(open(parent_->Path(), O_RDWR)));
   } else {
-    fdio_t* io = fdio_unsafe_fd_to_io(parent_->get());
-    if (io == nullptr) {
-      return;
-    }
-    zx_status_t call_status = ZX_OK;
+    fdio_cpp::UnownedFdioCaller caller(parent_->get());
     const char kBroker[] = "/boot/driver/nand-broker.so";
-    auto resp = fidl::WireCall<fuchsia_device::Controller>(
-                    zx::unowned_channel(fdio_unsafe_borrow_channel(io)))
+    auto resp = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())
                     ->Bind(::fidl::StringView(kBroker));
     zx_status_t status = resp.status();
+    zx_status_t call_status = ZX_OK;
     if (resp->result.is_err()) {
       call_status = resp->result.err();
     }
-    fdio_unsafe_release(io);
     if (status == ZX_OK) {
       status = call_status;
     }
