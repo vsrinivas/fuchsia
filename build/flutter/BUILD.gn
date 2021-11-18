@@ -17,8 +17,6 @@ group("deprecated_flutter_app_allowlist") {
   # This is only intended to be used as a temporary allowlist. Do not add to this list.
   allowlist = [
     "//examples/dart/fuchsia_inspect_flutter/torus15:torus15-flutter",
-    "//examples/dart/fuchsia_modular/multilevel_mod:multilevel-mod",
-    "//examples/dart/fuchsia_modular/slider_mod:slider-mod",
     "//examples/dart/fuchsia_webview_flutter/webview_mod:webview-mod",
     "//examples/diagnostics/inspect/dart/inspect_mod:inspect-mod",
     "//sdk/dart/fuchsia_inspect/test/inspect_flutter_integration_tester:inspect-flutter-integration-tester",

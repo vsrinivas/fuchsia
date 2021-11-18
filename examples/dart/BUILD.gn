@@ -6,9 +6,6 @@ group("dart") {
   testonly = true
   public_deps = [
     "//examples/dart:tests",
-    "//examples/dart/fuchsia_modular/fibonacci_agent",
-    "//examples/dart/fuchsia_modular/multilevel_mod",
-    "//examples/dart/fuchsia_modular/slider_mod",
     "//examples/dart/fuchsia_services/mind_reader/bin:mind-reader-dart",
     "//examples/dart/fuchsia_webview_flutter/webview_mod",
   ]
@@ -27,7 +24,5 @@ group("tests") {
       [
         "//examples/dart/fuchsia_inspect_flutter/torus15",
         "//examples/dart/fuchsia_inspect_flutter/torus15:torus15-dart-test",
-        "//examples/dart/fuchsia_modular/slider_mod",
-        "//examples/dart/fuchsia_modular/slider_mod:slider-mod-tests",
       ] + _flutter_tester_tests
 }

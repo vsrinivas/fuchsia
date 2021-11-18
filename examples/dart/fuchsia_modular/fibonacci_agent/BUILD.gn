@@ -23,7 +23,6 @@ dart_app("fibonacci_agent") {
   ]
 
   deps = [
-    "//examples/dart/fuchsia_modular/fidl:fuchsia.fibonacci",
     "//sdk/dart/fidl",
     "//sdk/dart/fuchsia",
     "//sdk/dart/fuchsia_logger",
