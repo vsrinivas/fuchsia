@@ -101,9 +101,11 @@ class VirtmagmaObject {
   int magic_;
 };
 
-typedef VirtmagmaObject<magma_connection_t, int32_t, 0x1111> virtmagma_connection_t;
-typedef VirtmagmaObject<magma_buffer_t, magma_connection_t, 0x2222> virtmagma_buffer_t;
-typedef VirtmagmaObject<magma_semaphore_t, magma_connection_t, 0x3333> virtmagma_semaphore_t;
-typedef VirtmagmaObject<magma_device_t, OwnedFd, 0x5555> virtmagma_device_t;
+using virtmagma_connection_t = VirtmagmaObject<magma_connection_t, OwnedFd, 0x1111>;
+using virtmagma_buffer_t = VirtmagmaObject<magma_buffer_t, magma_connection_t, 0x2222>;
+using virtmagma_semaphore_t = VirtmagmaObject<magma_semaphore_t, magma_connection_t, 0x3333>;
+using virtmagma_perf_count_pool_t =
+    VirtmagmaObject<magma_perf_count_pool_t, magma_connection_t, 0x4444>;
+using virtmagma_device_t = VirtmagmaObject<magma_device_t, OwnedFd, 0x5555>;
 
 #endif  // SRC_GRAPHICS_LIB_MAGMA_SRC_LIBMAGMA_LINUX_VIRTMAGMA_UTIL_H_

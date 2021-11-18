@@ -136,39 +136,28 @@ def generate_copy_out(outputs, returns):
 # Handles are not wrapped because a handle (file descriptor) may be passed into the process.
 # Interfaces which can't extract a file descriptor from a wrapped parameter must have a manual
 # implementation that gets the fd from elsewhere.
+# Returns the name of the last wrapped parameter.
 def generate_unwrap(export, needs_connection):
     ret = ''
     have_fd = False
     for argument in export['arguments']:
         type = argument['type']
         name = argument['name']
-        if type == 'magma_connection_t':
-            if needs_connection:
-                ret += '    auto _connection = ' + name + ';\n'
-            ret += '    auto _' + name + '_wrapped = virtmagma_connection_t::Get(' + name + ');\n'
-            ret += '    ' + name + ' = _' + name + '_wrapped->Object();\n'
+        last_wrapped_out = name + '_wrapped'
+        if needs_connection and type == 'magma_connection_t':
+            ret += '    auto _connection = ' + name + ';\n'
+        if type == 'magma_connection_t' or type == 'magma_device_t':
+            ret += '    auto ' + last_wrapped_out + ' = virt' + type + '::Get(' + name + ');\n'
+            ret += '    ' + name + ' = ' + last_wrapped_out + '->Object();\n'
             if not have_fd:
-                ret += '    int32_t file_descriptor = _' + name + '_wrapped->Parent();\n'
+                ret += '    int32_t file_descriptor = ' + last_wrapped_out + '->Parent().fd();\n'
                 have_fd = True
-        if type == 'magma_buffer_t':
-            ret += '    auto _' + name + '_wrapped = virtmagma_buffer_t::Get(' + name + ');\n'
-            ret += '    ' + name + ' = _' + name + '_wrapped->Object();\n'
+        if type == 'magma_buffer_t' or type == 'magma_semaphore_t' or type == 'magma_perf_count_pool_t':
+            ret += '    auto ' + last_wrapped_out + ' = virt' + type + '::Get(' + name + ');\n'
+            ret += '    ' + name + ' = ' + last_wrapped_out + '->Object();\n'
             if not have_fd:
-                ret += '    auto _' + name + '_parent_wrapped = virtmagma_connection_t::Get(_' + name + '_wrapped->Parent());\n'
-                ret += '    int32_t file_descriptor = _' + name + '_parent_wrapped->Parent();\n'
-                have_fd = True
-        if type == 'magma_semaphore_t':
-            ret += '    auto _' + name + '_wrapped = virtmagma_semaphore_t::Get(' + name + ');\n'
-            ret += '    ' + name + ' = _' + name + '_wrapped->Object();\n'
-            if not have_fd:
-                ret += '    auto _' + name + '_parent_wrapped = virtmagma_connection_t::Get(_' + name + '_wrapped->Parent());\n'
-                ret += '    int32_t file_descriptor = _' + name + '_parent_wrapped->Parent();\n'
-                have_fd = True
-        if type == 'magma_device_t':
-            ret += '    auto _' + name + '_wrapped = virtmagma_device_t::Get(' + name + ');\n'
-            ret += '    ' + name + ' = _' + name + '_wrapped->Object();\n'
-            if not have_fd:
-                ret += '    int32_t file_descriptor = _' + name + '_wrapped->Parent().fd();\n'
+                ret += '    auto _' + name + '_parent_wrapped = virtmagma_connection_t::Get(' + last_wrapped_out + '->Parent());\n'
+                ret += '    int32_t file_descriptor = _' + name + '_parent_wrapped->Parent().fd();\n'
                 have_fd = True
         if type == 'magma_handle_t':
             # Necessary for magma_device_import, but may be incorrect for other interfaces.
@@ -179,7 +168,7 @@ def generate_unwrap(export, needs_connection):
         sys.exit(
             'error: could not retrieve virtio fd from export "' +
             export['name'] + '"')
-    return ret
+    return ret, last_wrapped_out
 
 
 # Generate code to wrap applicable output objects
@@ -190,12 +179,9 @@ def generate_wrap(export):
         type = argument['type']
         name = argument['name']
         if type == 'magma_connection_t*':
-            ret += '    *' + name + ' = virtmagma_connection_t::Create(*' + name + ', file_descriptor)->Wrap();\n'
-        if type == 'magma_buffer_t*':
-            ret += '    *' + name + ' = virtmagma_buffer_t::Create(*' + name + ', _connection)->Wrap();\n'
-            needs_connection = True
-        if type == 'magma_semaphore_t*':
-            ret += '    *' + name + ' = virtmagma_semaphore_t::Create(*' + name + ', _connection)->Wrap();\n'
+            ret += '    *' + name + ' = virtmagma_connection_t::Create(*' + name + ', dup(file_descriptor))->Wrap();\n'
+        if type == 'magma_buffer_t*' or type == 'magma_semaphore_t*' or type == 'magma_perf_count_pool_t*':
+            ret += '    *' + name + ' = virt' + type[:-1] + '::Create(*' + name + ', _connection)->Wrap();\n'
             needs_connection = True
         if type == 'magma_device_t*':
             ret += '    *' + name + ' = virtmagma_device_t::Create(*' + name + ', file_descriptor)->Wrap();\n'
@@ -216,11 +202,18 @@ def generate_export(export, gen_debug_prints):
             ret += '    printf("' + argument[
                 'name'] + ' = %ld\\n", (uint64_t)' + argument['name'] + ');\n'
     wrap_code, needs_connection = generate_wrap(export)
-    ret += generate_unwrap(export, needs_connection)
+
+    unwrap_code, last_wrapped_parameter = generate_unwrap(
+        export, needs_connection)
+    ret += unwrap_code
     ret += '    virtio_magma_' + name + '_ctrl_t request{};\n'
     ret += '    virtio_magma_' + name + '_resp_t response{};\n'
     ret += '    request.hdr.type = VIRTIO_MAGMA_CMD_' + name.upper() + ';\n'
     ret += generate_copy_in(inputs)
+
+    if ('release' in name) and (name != 'release_context'):
+        ret += '    delete ' + last_wrapped_parameter + ';\n'
+
     ret += '    if (!virtmagma_send_command(file_descriptor, &request, sizeof(request), &response, sizeof(response)))\n'
     ret += '        ' + err + ';\n'
     ret += '    if (response.hdr.type != VIRTIO_MAGMA_RESP_' + name.upper(

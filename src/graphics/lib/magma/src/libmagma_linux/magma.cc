@@ -44,7 +44,7 @@ magma_status_t magma_poll(magma_poll_item_t* items, uint32_t count, uint64_t tim
 
         if (i == 0) {
           auto semaphore0_parent_wrapped = virtmagma_connection_t::Get(semaphore_wrapped->Parent());
-          file_descriptor = semaphore0_parent_wrapped->Parent();
+          file_descriptor = semaphore0_parent_wrapped->Parent().fd();
         }
         break;
       }
@@ -116,7 +116,7 @@ magma_status_t magma_execute_command_buffer_with_resources2(
   request.context_id = context_id;
   request.command_buffer = reinterpret_cast<decltype(request.command_buffer)>(&virt_command_buffer);
 
-  int32_t file_descriptor = connection_wrapped->Parent();
+  int32_t file_descriptor = connection_wrapped->Parent().fd();
 
   if (!virtmagma_send_command(file_descriptor, &request, sizeof(request), &response,
                               sizeof(response))) {
@@ -137,13 +137,14 @@ magma_status_t magma_initialize_tracing(magma_handle_t channel) {
 magma_status_t magma_virt_create_image(magma_connection_t connection,
                                        magma_image_create_info_t* create_info,
                                        magma_buffer_t* image_out) {
+  auto connection_wrapped = virtmagma_connection_t::Get(connection);
+
 #if VIRTMAGMA_DEBUG
   printf("%s\n", __PRETTY_FUNCTION__);
+  printf("connection %lu\n", reinterpret_cast<uintptr_t>(connection_wrapped->Object()));
   printf("create_info %p\n", create_info);
   printf("image_out %p\n", image_out);
 #endif
-
-  auto connection_wrapped = virtmagma_connection_t::Get(connection);
 
   struct virtmagma_create_image_wrapper wrapper {
     .create_info = reinterpret_cast<uintptr_t>(create_info),
@@ -160,8 +161,8 @@ magma_status_t magma_virt_create_image(magma_connection_t connection,
   };
   virtio_magma_virt_create_image_resp_t response{};
 
-  if (!virtmagma_send_command(connection_wrapped->Parent(), &request, sizeof(request), &response,
-                              sizeof(response))) {
+  if (!virtmagma_send_command(connection_wrapped->Parent().fd(), &request, sizeof(request),
+                              &response, sizeof(response))) {
     assert(false);
     return DRET(MAGMA_STATUS_INTERNAL_ERROR);
   }
@@ -204,8 +205,8 @@ magma_status_t magma_virt_get_image_info(magma_connection_t connection, magma_bu
   };
   virtio_magma_virt_get_image_info_resp_t response{};
 
-  if (!virtmagma_send_command(connection_wrapped->Parent(), &request, sizeof(request), &response,
-                              sizeof(response))) {
+  if (!virtmagma_send_command(connection_wrapped->Parent().fd(), &request, sizeof(request),
+                              &response, sizeof(response))) {
     assert(false);
     return DRET(MAGMA_STATUS_INTERNAL_ERROR);
   }
