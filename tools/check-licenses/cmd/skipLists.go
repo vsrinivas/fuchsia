@@ -5,24 +5,24 @@
 package main
 
 var additionalSkipDirs = []string{
-	// Directories that can always be skipped, all across the repository.
-	"examples",
+	// Skip the gn build out directory.
 	"out",
-	"vendor",
-	"build/test",
+
+	// Skip examples directories.
+	"examples",
 	"garnet/examples",
+	"src/experiences/examples",
+	"src/media/audio/examples",
+	"src/sys/pkg/bin/pm/examples",
+	"third_party/glfw/examples",
+	"third_party/lz4/examples",
+
+	// Skip test directories.
+	"build/test",
 	"garnet/public/lib/fostr/test",
 	"prebuilt/ml/tests",
-	"prebuilt/third_party", // TODO(jcecil): remove in a moment
-	"third_party/glfw/examples",
-	"third_party/glfw/tests",
-	"prebuilt/third_party/cmake", // fxbug.dev/87178
-	"prebuilt/third_party/go/linux-x64/pkg/linux_amd64/cmd/vendor",
-	"prebuilt/third_party/go/linux-x64/pkg/linux_amd64/vendor",
-	"prebuilt/third_party/go/linux-x64/src/cmd/vendor",
 	"prebuilt/third_party/go/linux-x64/src/go/build/testdata",
-	"prebuilt/third_party/go/linux-x64/src/vendor",
-	"prebuilt/vendor",
+	"prebuilt/third_party/web_engine_tests",
 	"scripts/fxtest/test",
 	"scripts/sdk/gn/test_project/tests",
 	"sdk/cts/tests",
@@ -30,26 +30,19 @@ var additionalSkipDirs = []string{
 	"sdk/lib/inspect/contrib/cpp/tests",
 	"sdk/testing/sl4f/client/test",
 	"src/connectivity/telephony/lib/qmi-protocol/tests",
-	"src/connectivity/wlan/testing/hw-sim/BUILD.gn",
 	"src/devices/sysmem/tests",
-	"src/experiences/examples",
-	"src/media/audio/examples",
 	"src/security/fcrypto/test",
 	"src/sys/component_manager/src/elf_runner/tests",
 	"src/sys/component_manager/testing",
 	"src/sys/component_manager/tests",
 	"src/sys/lib/fuchsia-bootfs/testdata",
-	"src/sys/pkg/bin/pm/examples",
 	"src/sys/pkg/testing",
 	"src/sys/pkg/tests",
 	"src/tests",
 	"src/ui/scenic/lib/input/tests",
 	"third_party/expat/testdata",
-	"third_party/go/src/cmd/vendor",
+	"third_party/glfw/tests",
 	"third_party/go/src/go/build/testdata",
-	"third_party/go/src/vendor",
-	"third_party/lz4/examples",
-	"third_party/rust_crates/vendor",
 	"tools/debug/elflib/testdata",
 	"tools/debug/symbolize/testdata",
 	"tools/fidl/fidlc/testdata",
@@ -71,13 +64,23 @@ var additionalSkipDirs = []string{
 	"src/experiences/bin/simple_browser_internationalization/lib/localization",
 	"src/experiences/session_shells/ermine/internationalization/lib/localization",
 
-	// Skip flutter generated / cache directory
+	// Skip flutter generated / cache directory.
 	"third_party/dart-pkg/git/flutter/bin/cache",
 
-	// Skip "_latest" directories
+	// Skip "_latest" directories.
+	"prebuilt/third_party/cast_runner_latest",
+	"prebuilt/third_party/cast_runner_internal_latest",
+	"prebuilt/third_party/chromecast_latest",
+	"prebuilt/third_party/chromecast_eng_latest",
 	"prebuilt/third_party/chromedriver_latest",
+	"prebuilt/third_party/chromedriver_internal_latest",
 	"prebuilt/third_party/chromium_tests_latest",
 	"prebuilt/third_party/chromium_latest",
+	"prebuilt/third_party/web_runner_latest",
+	"prebuilt/third_party/web_runner_internal_latest",
+	"prebuilt/third_party/web_engine_tests_latest",
+	"prebuilt/third_party/web_engine_tests_internal_latest",
+	"prebuilt/third_party/web_engine_latest",
 
 	// Skip check-licenses pattern texts.
 	"tools/check-licenses/golden",
@@ -94,21 +97,60 @@ var additionalSkipDirs = []string{
 	"third_party/grpc/src/core/ext/upb-generated/third_party",
 	"third_party/grpc/src/core/ext/upbdefs-generated/third_party",
 
-	// TODO(fxb/57392): zircon build unification
+	// TODO(fxb/57392): zircon build unification.
 	"third_party/zstd",
 	"third_party/lz4/programs",
 	"third_party/lz4/tests",
 
-	// TODO: Remove once completed
+	// TODO(jcecil): Audit vendor directories.
+	"vendor/amlogic",
+	"vendor/arm",
+	"vendor/google",
+	"vendor/synaptics",
+	"vendor/third_party/cobalt_registry",
+	"vendor/third_party/widevine_cdm",
+	"prebuilt/third_party/go/linux-x64/pkg/linux_amd64/cmd/vendor",
+	"prebuilt/third_party/go/linux-x64/pkg/linux_amd64/vendor",
+	"prebuilt/third_party/go/linux-x64/src/cmd/vendor",
+	"prebuilt/third_party/go/linux-x64/src/vendor",
+	"prebuilt/vendor/amlogic",
+	"prebuilt/vendor/google",
+	"prebuilt/vendor/wavesfx",
+	"third_party/go/src/cmd/vendor",
+	"third_party/go/src/vendor",
+	"third_party/rust_crates/vendor/derp",
+	"third_party/rust_crates/vendor/ring",
+	"third_party/rust_crates/vendor/notify",
+	"third_party/rust_crates/vendor/pulldown-cmark",
+	"third_party/rust_crates/vendor/siphasher",
+	"third_party/rust_crates/vendor/untrusted",
+	"third_party/rust_crates/vendor/webpki",
+	"third_party/rust_crates/vendor/bstr",
+
+	// TODO(jcecil): Remove once completed.
+	"prebuilt/third_party",                               // TODO(jcecil): Remove ASAP.
+	"prebuilt/third_party/cmake",                         // fxbug.dev/87178
+	"prebuilt/third_party/gcc",                           //
 	"prebuilt/camera",                                    // b/169948153 -
 	"prebuilt/connectivity/bluetooth/firmware/mediatek",  // b/178712290 -
+	"prebuilt/third_party/cast_runner",                   //
+	"prebuilt/third_party/cast_runner_internal",          //
+	"prebuilt/third_party/chromecast",                    //
+	"prebuilt/third_party/chromecast_eng",                //
+	"prebuilt/third_party/web_engine",                    //
+	"prebuilt/third_party/web_runner",                    //
+	"prebuilt/third_party/web_runner_internal",           //
 	"prebuilt/third_party/chromedriver",                  // b/180047878 -
 	"prebuilt/third_party/chromium_tests",                // b/180047878 -
+	"prebuilt/third_party/chromium_tests_internal",       // b/180047878 -
+	"prebuilt/third_party/chromium_internal",             // b/180047878 -
 	"prebuilt/third_party/chromium",                      // b/180047878 -
+	"prebuilt/third_party/web_engine_tests_internal",     // b/180047878 -
 	"prebuilt/third_party/ovmf",                          // fxb/59350 -
 	"prebuilt/third_party/rust",                          // b/178714477 -
 	"prebuilt/third_party/skia",                          // b/178714433 -
 	"src/connectivity/wlan/drivers/third_party/mediatek", // b/173236643 -
+	"src/connectivity/wlan/testing/hw-sim/BUILD.gn",      //
 	"third_party/grpc/third_party/cares",                 // b/173238234 -
 	"third_party/libc-tests/third_party/nacl-tests",      // b/178682771
 }
@@ -134,19 +176,19 @@ var additionalSkipFiles = []string{
 	"licenses.dart",
 	"navbar.md",
 
-	// unable to add copyright text to autogenerated code.
+	// Unable to add copyright text to autogenerated code.
 	"tools/femu-control/femu-grpc/proto/emulator_controller.pb.go",
 	"tools/femu-control/femu-grpc/proto/emulator_controller_grpc.pb.go",
 
-	// zstd cleanup
+	// zstd cleanup.
 	"third_party/zstd/src/COPYING", // fxb/68624
 
-	// TODO: Remove once completed.
-	"third_party/rust_crates/README.md",
-	"third_party/dart-pkg/pub/README.md",
+	// TODO(jcecil): Remove once completed.
 	"prebuilt/third_party/rust/linux-x64/share/doc/rust/LICENSE-THIRD-PARTY",
+	"prebuilt/third_party/vulkansdk/linux/source/DirectXShaderCompiler/external/effcee/third_party/CMakeLists.txt", // b/178714418
 	"third_party/crashpad/third_party/glibc/elf/elf.h",
 	"third_party/dart-pkg/pub/devtools/build/assets/NOTICES",
-	"zircon/prebuilt/config.gni",                                                                                   // b/178734726
-	"prebuilt/third_party/vulkansdk/linux/source/DirectXShaderCompiler/external/effcee/third_party/CMakeLists.txt", // b/178714418
+	"third_party/dart-pkg/pub/README.md",
+	"third_party/rust_crates/README.md",
+	"zircon/prebuilt/config.gni", // b/178734726
 }
