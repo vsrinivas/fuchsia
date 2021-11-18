@@ -130,7 +130,7 @@ zx_status_t VnodeF2fs::Create(F2fs *fs, ino_t ino, fbl::RefPtr<VnodeF2fs> *out) 
     vnode->SetFlag(InodeInfoFlag::kInlineDentry);
   }
   if (ri.i_inline & kExtraAttr) {
-    vnode->SetExtraISize(ri.i_extra_isize / sizeof(uint32_t));
+    vnode->SetExtraISize(ri.i_extra_isize);
   }
 
   F2fsPutPage(node_page, 1);

@@ -54,43 +54,52 @@ class GeneralCompatibilityTest : public testing::Test {
 TEST_F(GeneralCompatibilityTest, WriteVerifyHostToFuchsia) {
   constexpr uint32_t kVerifyPatternSize = 1024 * 1024 * 100;  // 100MB
 
-  {
-    host_operator_->Mkfs();
-    host_operator_->Mount();
+  std::string mkfs_option_list[] = {"-f",
+                                    "-f -O extra_attr",
+                                    "-f -O extra_attr,project_quota",
+                                    "-f -O extra_attr,inode_checksum",
+                                    "-f -O extra_attr,inode_crtime",
+                                    "-f -O extra_attr,compression"};
 
-    auto umount = fit::defer([&] { host_operator_->Unmount(); });
+  for (std::string_view mkfs_option : mkfs_option_list) {
+    {
+      host_operator_->Mkfs(mkfs_option);
+      host_operator_->Mount();
 
-    host_operator_->Mkdir("/alpha", 0755);
+      auto umount = fit::defer([&] { host_operator_->Unmount(); });
 
-    auto bravo_file = host_operator_->Open("/alpha/bravo", O_RDWR | O_CREAT, 0644);
-    ASSERT_TRUE(bravo_file->is_valid());
+      host_operator_->Mkdir("/alpha", 0755);
 
-    uint32_t input[kBlockSize / sizeof(uint32_t)];
-    // write to bravo with offset pattern
-    for (uint32_t i = 0; i < kVerifyPatternSize / sizeof(input); ++i) {
-      for (uint32_t j = 0; j < sizeof(input) / sizeof(uint32_t); ++j) {
-        input[j] = CpuToLe(j);
+      auto bravo_file = host_operator_->Open("/alpha/bravo", O_RDWR | O_CREAT, 0644);
+      ASSERT_TRUE(bravo_file->is_valid());
+
+      uint32_t input[kBlockSize / sizeof(uint32_t)];
+      // write to bravo with offset pattern
+      for (uint32_t i = 0; i < kVerifyPatternSize / sizeof(input); ++i) {
+        for (uint32_t j = 0; j < sizeof(input) / sizeof(uint32_t); ++j) {
+          input[j] = CpuToLe(j);
+        }
+        ASSERT_EQ(bravo_file->Write(input, sizeof(input)), static_cast<ssize_t>(sizeof(input)));
       }
-      ASSERT_EQ(bravo_file->Write(input, sizeof(input)), static_cast<ssize_t>(sizeof(input)));
     }
-  }
 
-  // verify on Fuchsia
-  {
-    target_operator_->Fsck();
-    target_operator_->Mount();
+    // verify on Fuchsia
+    {
+      target_operator_->Fsck();
+      target_operator_->Mount();
 
-    auto umount = fit::defer([&] { target_operator_->Unmount(); });
+      auto umount = fit::defer([&] { target_operator_->Unmount(); });
 
-    auto bravo_file = target_operator_->Open("/alpha/bravo", O_RDWR, 0644);
-    ASSERT_TRUE(bravo_file->is_valid());
+      auto bravo_file = target_operator_->Open("/alpha/bravo", O_RDWR, 0644);
+      ASSERT_TRUE(bravo_file->is_valid());
 
-    uint32_t buffer[kBlockSize / sizeof(uint32_t)];
-    for (uint32_t i = 0; i < kVerifyPatternSize / sizeof(buffer); ++i) {
-      ASSERT_EQ(bravo_file->Read(buffer, sizeof(buffer)), static_cast<ssize_t>(sizeof(buffer)));
+      uint32_t buffer[kBlockSize / sizeof(uint32_t)];
+      for (uint32_t i = 0; i < kVerifyPatternSize / sizeof(buffer); ++i) {
+        ASSERT_EQ(bravo_file->Read(buffer, sizeof(buffer)), static_cast<ssize_t>(sizeof(buffer)));
 
-      for (uint32_t j = 0; j < sizeof(buffer) / sizeof(uint32_t); ++j) {
-        ASSERT_EQ(buffer[j], LeToCpu(j));
+        for (uint32_t j = 0; j < sizeof(buffer) / sizeof(uint32_t); ++j) {
+          ASSERT_EQ(buffer[j], LeToCpu(j));
+        }
       }
     }
   }

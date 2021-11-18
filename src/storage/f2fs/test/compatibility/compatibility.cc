@@ -23,9 +23,17 @@ int HostTestFile::Fstat(struct stat *file_stat) { return fstat(fd_.get(), file_s
 
 int HostTestFile::Ftruncate(off_t len) { return ftruncate(fd_.get(), len); }
 
-void HostOperator::Mkfs() {
-  // TODO: changeable option
-  ASSERT_EQ(system(std::string("mkfs.f2fs ").append(test_image_path_).c_str()), 0);
+void HostOperator::Mkfs(std::variant<std::monostate, std::string_view, MkfsOptions> opt) {
+  ASSERT_FALSE(std::holds_alternative<MkfsOptions>(opt));
+  if (std::holds_alternative<std::monostate>(opt)) {
+    opt = std::string_view{};
+  }
+  ASSERT_EQ(system(std::string("mkfs.f2fs ")
+                       .append(std::get<std::string_view>(opt))
+                       .append(" ")
+                       .append(test_image_path_)
+                       .c_str()),
+            0);
 }
 
 void HostOperator::Mount() {
@@ -127,13 +135,16 @@ int TargetTestFile::Ftruncate(off_t len) {
   return 0;
 }
 
-void TargetOperator::Mkfs() {
+void TargetOperator::Mkfs(std::variant<std::monostate, std::string_view, MkfsOptions> opt) {
+  ASSERT_FALSE(std::holds_alternative<std::string_view>(opt));
+  if (std::holds_alternative<std::monostate>(opt)) {
+    opt = MkfsOptions{};
+  }
   if (bcache_ == nullptr) {
     ASSERT_EQ(Bcache::Create(std::move(test_image_fd_), block_count_, &bcache_), ZX_OK);
   }
 
-  // TODO: changeable option
-  MkfsWorker mkfs(std::move(bcache_), MkfsOptions{});
+  MkfsWorker mkfs(std::move(bcache_), std::get<MkfsOptions>(opt));
   auto ret = mkfs.DoMkfs();
   ASSERT_EQ(ret.is_error(), false);
 

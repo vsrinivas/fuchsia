@@ -221,7 +221,7 @@ struct Inode {
   Extent i_ext;  // caching a largest extent
 
   union {
-    uint16_t i_extra_isize;           // extra inode attribute size
+    uint16_t i_extra_isize;           // extra inode attribute size in bytes
     uint32_t i_addr[kAddrsPerInode];  // Pointers to data blocks
   };
 
@@ -439,24 +439,6 @@ struct DentryBlock {
   uint8_t reserved[kSizeOfReserved];
   DirEntry dentry[kNrDentryInBlock];
   uint8_t filename[kNrDentryInBlock][kNameLen];
-} __attribute__((packed));
-
-constexpr uint64_t kNrInlineDentry =
-    kMaxInlineData * kBitsPerByte / ((kSizeOfDirEntry + kDentrySlotLen) * kBitsPerByte + 1);
-constexpr uint64_t kInlineDentryBitmapSize = (kNrInlineDentry + kBitsPerByte - 1) / kBitsPerByte;
-constexpr uint64_t kInlineReservedSize =
-    kMaxInlineData -
-    ((kSizeOfDirEntry + kDentrySlotLen) * kNrInlineDentry + kInlineDentryBitmapSize);
-
-// Inline directory entry
-// Each inode can include a maximum of kNrInlineDentry inline dentries
-// if filename length < kDentrySlotLen. Otherwise, a child can occupy
-// multiple slots.
-struct InlineDentry {
-  uint8_t dentry_bitmap[kInlineDentryBitmapSize];  // slot bitmap
-  uint8_t reserved[kInlineReservedSize];
-  DirEntry dentry[kNrInlineDentry];
-  uint8_t filename[kNrInlineDentry][kDentrySlotLen];
 } __attribute__((packed));
 
 // file types used in InodeInfo->flags

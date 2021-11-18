@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #include <filesystem>
+#include <variant>
 
 #include <gtest/gtest.h>
 
@@ -77,7 +78,8 @@ class CompatibilityTestOperator {
       : test_image_path_(test_image_path) {}
   virtual ~CompatibilityTestOperator() = default;
 
-  virtual void Mkfs() = 0;
+  virtual void Mkfs(
+      std::variant<std::monostate, std::string_view, MkfsOptions> opt = std::monostate{}) = 0;
   virtual void Mount() = 0;
   virtual void Unmount() = 0;
   virtual void Fsck() = 0;
@@ -94,7 +96,8 @@ class HostOperator : public CompatibilityTestOperator {
   explicit HostOperator(std::string_view test_image_path, std::string_view mount_directory)
       : CompatibilityTestOperator(test_image_path), mount_directory_(mount_directory) {}
 
-  void Mkfs() final;
+  void Mkfs(
+      std::variant<std::monostate, std::string_view, MkfsOptions> opt = std::monostate{}) final;
   void Mount() final;
   void Unmount() final;
   void Fsck() final;
@@ -122,7 +125,8 @@ class TargetOperator : public CompatibilityTestOperator {
         test_image_fd_(std::move(test_image_fd)),
         block_count_(block_count) {}
 
-  void Mkfs() final;
+  void Mkfs(
+      std::variant<std::monostate, std::string_view, MkfsOptions> opt = std::monostate{}) final;
   void Mount() final;
   void Unmount() final;
   void Fsck() final;

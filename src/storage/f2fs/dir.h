@@ -51,8 +51,8 @@ class Dir : public VnodeF2fs, public fbl::Recyclable<Dir> {
   zx_status_t AddLink(std::string_view name, VnodeF2fs *vnode) __TA_EXCLUDES(io_lock_)
       __TA_EXCLUDES(io_lock_);
   zx_status_t AddInlineEntry(std::string_view name, VnodeF2fs *vnode, bool *is_converted);
-  unsigned int RoomInInlineDir(InlineDentry *dentry_blk, int slots);
-  zx_status_t ConvertInlineDir(InlineDentry *inline_dentry);
+  unsigned int RoomInInlineDir(Page *ipage, int slots);
+  zx_status_t ConvertInlineDir();
   int RoomForFilename(DentryBlock *dentry_blk, int slots);
   void UpdateParentMetadata(VnodeF2fs *inode, unsigned int current_depth);
   zx_status_t InitInodeMetadata(VnodeF2fs *vnode);
@@ -79,9 +79,12 @@ class Dir : public VnodeF2fs, public fbl::Recyclable<Dir> {
   void SetDeType(DirEntry *de, VnodeF2fs *vnode);
   bool EarlyMatchName(std::string_view name, f2fs_hash_t namehash, const DirEntry &de);
 
-  uint32_t MaxInlineDentry() const {
-    return MaxInlineData() * kBitsPerByte / ((kSizeOfDirEntry + kDentrySlotLen) * kBitsPerByte + 1);
-  }
+  // inline helper
+  uint32_t MaxInlineDentry() const;
+  uint8_t *InlineDentryBitmap(Page *page);
+  uint64_t InlineDentryBitmapSize() const;
+  DirEntry *InlineDentryArray(Page *page);
+  uint8_t (*InlineDentryFilenameArray(Page *page))[kDentrySlotLen];
 
 #if 0  // porting needed
 //   int F2fsLink(dentry *old_dentry, dentry *dentry);

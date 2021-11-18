@@ -10,6 +10,35 @@
 #include "src/storage/f2fs/f2fs.h"
 
 namespace f2fs {
+namespace {
+uint32_t MaxInlineData(Inode &inode) {
+  uint16_t extra_isize = (inode.i_inline & kExtraAttr) ? inode.i_extra_isize : 0;
+  return sizeof(uint32_t) *
+         (kAddrsPerInode - extra_isize / sizeof(uint32_t) - kInlineXattrAddrs - 1);
+}
+
+uint32_t MaxInlineDentry(Inode &inode) {
+  return MaxInlineData(inode) * kBitsPerByte /
+         ((kSizeOfDirEntry + kDentrySlotLen) * kBitsPerByte + 1);
+}
+
+uint8_t *InlineDentryBitmap(Inode &inode) {
+  uint16_t extra_isize = (inode.i_inline & kExtraAttr) ? inode.i_extra_isize : 0;
+  return reinterpret_cast<uint8_t *>(
+      &inode.i_addr[extra_isize / sizeof(uint32_t) + kInlineStartOffset]);
+}
+
+DirEntry *InlineDentryArray(Inode &inode) {
+  uint32_t reserved =
+      MaxInlineData(inode) - MaxInlineDentry(inode) * (kSizeOfDirEntry + kDentrySlotLen);
+  return reinterpret_cast<DirEntry *>(InlineDentryBitmap(inode) + reserved);
+}
+
+uint8_t (*InlineDentryNameArray(Inode &inode))[kDentrySlotLen] {
+  uint32_t reserved = MaxInlineData(inode) - MaxInlineDentry(inode) * kDentrySlotLen;
+  return reinterpret_cast<uint8_t(*)[kDentrySlotLen]>(InlineDentryBitmap(inode) + reserved);
+}
+}  // namespace
 
 template <typename T>
 static inline void DisplayMember(uint32_t typesize, T value, std::string_view name) {
@@ -300,28 +329,21 @@ zx_status_t FsckWorker::CheckInodeBlock(nid_t nid, FileType ftype, Node &node_bl
   }
 #endif
 
-    uint16_t base =
-        (node_block.i.i_inline & kExtraAttr) ? node_block.i.i_extra_isize / sizeof(uint32_t) : 0;
-
     if (node_block.i.i_inline & kInlineDentry) {
-      uint32_t max_data =
-          sizeof(uint32_t) *
-          ((kAddrsPerInode - base * sizeof(uint32_t)) / sizeof(uint32_t) - kInlineXattrAddrs - 1);
-      uint32_t max_dentry =
-          max_data * kBitsPerByte / ((kSizeOfDirEntry + kDentrySlotLen) * kBitsPerByte + 1);
-
-      const auto &entry = reinterpret_cast<const InlineDentry &>(node_block.i.i_addr[base + 1]);
-
-      CheckDentries(child_count, child_files, 1, entry.dentry_bitmap, entry.dentry, entry.filename,
-                    max_dentry);
+      CheckDentries(child_count, child_files, 1, InlineDentryBitmap(node_block.i),
+                    InlineDentryArray(node_block.i), InlineDentryNameArray(node_block.i),
+                    MaxInlineDentry(node_block.i));
     } else {
+      uint16_t base =
+          (node_block.i.i_inline & kExtraAttr) ? node_block.i.i_extra_isize / sizeof(uint32_t) : 0;
+
       // check data blocks in inode
       for (uint16_t index = base; index < AddrsPerInode(&node_block.i); ++index) {
         if (LeToCpu(node_block.i.i_addr[index]) != 0) {
           ++block_count;
           zx_status_t ret = CheckDataBlock(&node_block.i, LeToCpu(node_block.i.i_addr[index]),
                                            child_count, child_files, (i_blocks == block_count),
-                                           ftype, nid, index, node_info.version);
+                                           ftype, nid, index - base, node_info.version);
           ZX_ASSERT(ret == ZX_OK);
         }
       }
@@ -411,10 +433,9 @@ void FsckWorker::CheckDoubleIndirectNodeBlock(Inode *inode, nid_t nid, FileType 
   }
 }
 
-template <size_t size>
 void FsckWorker::PrintDentry(const uint32_t depth, std::string_view name,
-                             const uint8_t (&dentry_bitmap)[size], const DirEntry &dentries,
-                             const int index, const int last_block, const int max_entries) {
+                             const uint8_t *dentry_bitmap, const DirEntry &dentry, const int index,
+                             const int last_block, const int max_entries) {
   int last_de = 0;
   int next_idx = 0;
   int name_len;
@@ -425,7 +446,7 @@ void FsckWorker::PrintDentry(const uint32_t depth, std::string_view name,
     return;
 #endif
 
-  name_len = LeToCpu(dentries.name_len);
+  name_len = LeToCpu(dentry.name_len);
   next_idx = index + (name_len + kDentrySlotLen - 1) / kDentrySlotLen;
 
   bit_offset = FindNextBit(dentry_bitmap, max_entries, next_idx);
@@ -452,10 +473,8 @@ void FsckWorker::PrintDentry(const uint32_t depth, std::string_view name,
   std::cout << (last_de ? "`" : "|") << "-- " << name << std::endl;
 }
 
-template <size_t bitmap_size, size_t entry_size>
 void FsckWorker::CheckDentries(uint32_t &child_count, uint32_t &child_files, const int last_block,
-                               const uint8_t (&dentry_bitmap)[bitmap_size],
-                               const DirEntry (&dentries)[entry_size],
+                               const uint8_t *dentry_bitmap, const DirEntry *dentries,
                                const uint8_t (*filename)[kNameLen], const int max_entries) {
   int num_entries = 0;
   uint32_t hash_code;
