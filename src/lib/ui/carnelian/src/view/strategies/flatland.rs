@@ -22,8 +22,9 @@ use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
 use async_utils::hanging_get::client::HangingGetStream;
 use euclid::size2;
-use fidl::endpoints::create_proxy;
+use fidl::endpoints::{create_proxy, create_request_stream};
 use fidl_fuchsia_ui_composition as flatland;
+use fidl_fuchsia_ui_views::ViewRef;
 use fuchsia_async::{self as fasync, OnSignals};
 use fuchsia_component::client::connect_to_protocol;
 use fuchsia_framebuffer::{sysmem::BufferCollectionAllocator, FrameSet, FrameUsage, ImageId};
@@ -227,6 +228,7 @@ impl FlatlandViewStrategy {
             key,
             flatland_params.args.view_creation_token.expect("view_creation_token"),
         )?;
+
         let strat = Self {
             flatland,
             allocator,
@@ -261,7 +263,20 @@ impl FlatlandViewStrategy {
         let (parent_viewport_watcher, server_end) =
             create_proxy::<flatland::ParentViewportWatcherMarker>()?;
 
-        flatland.create_view(&mut view_creation_token, server_end)?;
+        let viewref_pair = fuchsia_scenic::ViewRefPair::new()?;
+        let view_ref = fuchsia_scenic::duplicate_view_ref(&viewref_pair.view_ref)?;
+        let mut view_identity = fidl_fuchsia_ui_views::ViewIdentityOnCreation::from(viewref_pair);
+
+        let view_bound_protocols = flatland::ViewBoundProtocols::EMPTY;
+
+        flatland.create_view2(
+            &mut view_creation_token,
+            &mut view_identity,
+            view_bound_protocols,
+            server_end,
+        )?;
+
+        Self::listen_for_key_events(view_ref, &app_sender, view_key)?;
 
         let sender = app_sender.clone();
         fasync::Task::local(async move {
@@ -483,6 +498,48 @@ impl FlatlandViewStrategy {
 
     fn present_allowed(&self) -> bool {
         self.pending_present_count <= self.num_presents_allowed
+    }
+
+    fn listen_for_key_events(
+        mut view_ref: ViewRef,
+        app_sender: &UnboundedSender<MessageInternal>,
+        key: ViewKey,
+    ) -> Result<(), Error> {
+        let keyboard = connect_to_protocol::<fidl_fuchsia_ui_input3::KeyboardMarker>()
+            .context("Failed to connect to Keyboard service")?;
+
+        let (listener_client_end, mut listener_stream) =
+            create_request_stream::<fidl_fuchsia_ui_input3::KeyboardListenerMarker>()?;
+
+        let event_sender = app_sender.clone();
+
+        fasync::Task::local(async move {
+            keyboard.add_listener(&mut view_ref, listener_client_end).await.expect("add_listener");
+
+            while let Some(event) =
+                listener_stream.try_next().await.expect("Failed to get next key event")
+            {
+                match event {
+                    fidl_fuchsia_ui_input3::KeyboardListenerRequest::OnKeyEvent {
+                        event,
+                        responder,
+                        ..
+                    } => {
+                        // Carnelian always considers key events handled. In the future, there
+                        // might be a use case that requires letting view assistants change
+                        // this behavior but none currently exists.
+                        responder
+                            .send(fidl_fuchsia_ui_input3::KeyEventStatus::Handled)
+                            .expect("send");
+                        event_sender
+                            .unbounded_send(MessageInternal::ScenicKeyEvent(key, event))
+                            .expect("unbounded_send");
+                    }
+                }
+            }
+        })
+        .detach();
+        Ok(())
     }
 }
 
