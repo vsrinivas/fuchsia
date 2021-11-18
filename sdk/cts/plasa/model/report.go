@@ -13,14 +13,54 @@ import (
 	"strings"
 )
 
+// ReportKind is the type of a platform surface element.
+type ReportKind string
+
+const (
+	ReportKindFunction ReportKind = "function"
+	ReportKindMethod   ReportKind = "method"
+)
+
+var reportKindStringToEnum = map[string]ReportKind{
+	"function": ReportKindFunction,
+	"method":   ReportKindMethod,
+}
+
+var _ json.Marshaler = (*ReportKind)(nil)
+
+// MarshalJSON implements json.Marshaler.
+func (r ReportKind) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf("%q", r)), nil
+}
+
+var _ json.Unmarshaler = (*ReportKind)(nil)
+
+func (r *ReportKind) UnmarshalJSON(value []byte) error {
+	var s string
+	if err := json.Unmarshal(value, &s); err != nil {
+		return fmt.Errorf("while recovering %v into string: %w", string(value), err)
+	}
+	var (
+		e  ReportKind
+		ok bool
+	)
+	if e, ok = reportKindStringToEnum[s]; !ok {
+		return fmt.Errorf("could not parse ReportKind from %v", s)
+	}
+	*r = e
+	return nil
+}
+
 // ReportItem is the format of a single report item. Expect this struct will
 // grow over time to include more extracted information.
 type ReportItem struct {
 	Name string `json:"name"`
 	// Filename is the file name in which the report item can be found.
 	Filename string `json:"file,omitempty"`
-	// Line is the line number (1-based) in Filename where the report item can be found.
+	// Line is the line number (1-based) in Filename where the report item is defined.
 	LineNumber int `json:"line,omitempty"`
+	// Kind is the type of the item.  It is required.
+	Kind ReportKind `json:"kind"`
 }
 
 // Report is the format of the output report for the clang doc filter.
@@ -85,13 +125,20 @@ func (r *Report) Add(a Aggregate) error {
 	for _, f := range a.ChildFunctions {
 		fullName := f.fullName()
 		fn := f.DefLocation.Filename
-		if !r.matchAnyFilename(fn) || !r.matchAnySymbol(fullName) {
+		matchFilename := r.matchAnyFilename(fn)
+		matchSymbol := r.matchAnySymbol(fullName)
+		if !matchFilename || !matchSymbol {
 			continue
 		}
 		i := ReportItem{
 			Name:       fullName,
 			Filename:   fn,
 			LineNumber: f.DefLocation.LineNumber,
+		}
+		if f.IsMethod {
+			i.Kind = ReportKindMethod
+		} else {
+			i.Kind = ReportKindFunction
 		}
 		r.Items = append(r.Items, i)
 	}

@@ -6,7 +6,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"strings"
 	"testing"
 
@@ -36,19 +35,20 @@ func TestReportGeneration(t *testing.T) {
 				allowlistFilenameRegexp: []string{"fidling"},
 			},
 			expectedOutput: `{
-			"items": [
-				{
-					"name": "fuchsia::ui::composition::CreateImageArgs::ValueUnion_image_id::ValueUnion_image_id",
-					"file": "fidling/gen/sdk/fidl/fuchsia.ui.composition/fuchsia.ui.composition/hlcpp/fuchsia/ui/composition/cpp/fidl.h",
-					"line": 1675
-				},
-				{
-					"name": "fuchsia::ui::composition::CreateImageArgs::ValueUnion_image_id::~ValueUnion_image_id",
-					"file": "fidling/gen/sdk/fidl/fuchsia.ui.composition/fuchsia.ui.composition/hlcpp/fuchsia/ui/composition/cpp/fidl.h",
-					"line": 1676
-				}
-			]}
-			`,
+				"items": [
+					{
+						"name": "fuchsia::ui::composition::CreateImageArgs::ValueUnion_image_id::ValueUnion_image_id",
+						"file": "fidling/gen/sdk/fidl/fuchsia.ui.composition/fuchsia.ui.composition/hlcpp/fuchsia/ui/composition/cpp/fidl.h",
+						"line": 1675,
+						"kind": "method"
+					},
+					{
+						"name": "fuchsia::ui::composition::CreateImageArgs::ValueUnion_image_id::~ValueUnion_image_id",
+						"file": "fidling/gen/sdk/fidl/fuchsia.ui.composition/fuchsia.ui.composition/hlcpp/fuchsia/ui/composition/cpp/fidl.h",
+						"line": 1676,
+						"kind": "method"
+					}
+		        ]}`,
 		},
 		{
 			name: "fdio",
@@ -57,40 +57,40 @@ func TestReportGeneration(t *testing.T) {
 			},
 			expectedOutput: `{
 			"items": [
-				{"name": "fdio_bind_to_fd"},
-				{"name": "fdio_create"},
-				{"name": "fdio_cwd_clone"},
-				{"name": "fdio_fd_clone"},
-				{"name": "fdio_fd_create"},
-				{"name": "fdio_fd_create_null"},
-				{"name": "fdio_fd_transfer"},
-				{"name": "fdio_get_service_handle"},
-				{"name": "fdio_get_zxio"},
-				{"name": "fdio_ns_bind"},
-				{"name": "fdio_ns_bind_fd"},
-				{"name": "fdio_ns_chdir"},
-				{"name": "fdio_ns_connect"},
-				{"name": "fdio_ns_create"},
-				{"name": "fdio_ns_destroy"},
-				{"name": "fdio_ns_export"},
-				{"name": "fdio_ns_export_root"},
-				{"name": "fdio_ns_free_flat_ns"},
-				{"name": "fdio_ns_get_installed"},
-				{"name": "fdio_ns_is_bound"},
-				{"name": "fdio_ns_opendir"},
-				{"name": "fdio_ns_unbind"},
-				{"name": "fdio_null_create"},
-				{"name": "fdio_open"},
-				{"name": "fdio_open_at"},
-				{"name": "fdio_open_fd"},
-				{"name": "fdio_open_fd_at"},
-				{"name": "fdio_service_clone"},
-				{"name": "fdio_service_clone_to"},
-				{"name": "fdio_service_connect"},
-				{"name": "fdio_service_connect_at"},
-				{"name": "fdio_service_connect_by_name"},
-				{"name": "fdio_unbind_from_fd"},
-				{"name": "fdio_zxio_create"}
+				{"name": "fdio_bind_to_fd", "kind": "function"},
+				{"name": "fdio_create", "kind": "function"},
+				{"name": "fdio_cwd_clone", "kind": "function"},
+				{"name": "fdio_fd_clone", "kind": "function"},
+				{"name": "fdio_fd_create", "kind": "function"},
+				{"name": "fdio_fd_create_null", "kind": "function"},
+				{"name": "fdio_fd_transfer", "kind": "function"},
+				{"name": "fdio_get_service_handle", "kind": "function"},
+				{"name": "fdio_get_zxio", "kind": "function"},
+				{"name": "fdio_ns_bind", "kind": "function"},
+				{"name": "fdio_ns_bind_fd", "kind": "function"},
+				{"name": "fdio_ns_chdir", "kind": "function"},
+				{"name": "fdio_ns_connect", "kind": "function"},
+				{"name": "fdio_ns_create", "kind": "function"},
+				{"name": "fdio_ns_destroy", "kind": "function"},
+				{"name": "fdio_ns_export", "kind": "function"},
+				{"name": "fdio_ns_export_root", "kind": "function"},
+				{"name": "fdio_ns_free_flat_ns", "kind": "function"},
+				{"name": "fdio_ns_get_installed", "kind": "function"},
+				{"name": "fdio_ns_is_bound", "kind": "function"},
+				{"name": "fdio_ns_opendir", "kind": "function"},
+				{"name": "fdio_ns_unbind", "kind": "function"},
+				{"name": "fdio_null_create", "kind": "function"},
+				{"name": "fdio_open", "kind": "function"},
+				{"name": "fdio_open_at", "kind": "function"},
+				{"name": "fdio_open_fd", "kind": "function"},
+				{"name": "fdio_open_fd_at", "kind": "function"},
+				{"name": "fdio_service_clone", "kind": "function"},
+				{"name": "fdio_service_clone_to", "kind": "function"},
+				{"name": "fdio_service_connect", "kind": "function"},
+				{"name": "fdio_service_connect_at", "kind": "function"},
+				{"name": "fdio_service_connect_by_name", "kind": "function"},
+				{"name": "fdio_unbind_from_fd", "kind": "function"},
+				{"name": "fdio_zxio_create", "kind": "function"}
 			]}
 			`,
 		},
@@ -105,21 +105,17 @@ func TestReportGeneration(t *testing.T) {
 				t.Fatalf("error invoking main.run() from the test:\n\t%v", err)
 			}
 
-			fmt.Printf("TEST: %+v: output: %+v\n", dirName, output.String())
-
 			actual, err := model.ReadReportJSON(strings.NewReader(output.String()))
 			if err != nil {
 				t.Fatalf("error: could not read report from JSON:\n\t%v", err)
 			}
-
-			fmt.Printf("TEST: %+v: actual: %+v\n", dirName, actual)
 
 			expected, err := model.ReadReportJSON(strings.NewReader(test.expectedOutput))
 			if err != nil {
 				t.Fatalf("error: could not read from expectedOutput:\n\t%v", err)
 			}
 			if !cmp.Equal(expected, actual, cmpopts.IgnoreUnexported(model.Report{})) {
-				t.Errorf("error: want: %+v\n\ngot: %+v\n\ndiff: %v",
+				t.Errorf("error:\n\twant: %+v\n\ngot: %+v\n\tdiff: %v",
 					expected, actual, cmp.Diff(actual, expected, cmpopts.IgnoreUnexported(model.Report{})))
 			}
 		})

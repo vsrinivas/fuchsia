@@ -32,7 +32,7 @@ if (is_host) {
     ]
   }
 
-  _testdata_path = "${target_gen_dir}/testdata/dir"
+  _testdata_path = "${target_gen_dir}/testdata"
 
   go_test("clang_doc_filter_test") {
     output_name = "clang_doc_filter_test"
@@ -46,8 +46,12 @@ if (is_host) {
   }
 
   host_test_data("testdatadir") {
-    sources = [ "testdata/zx/channel.yaml" ]
-    outputs = [ "${_testdata_path}/dir/{{source_file_part}}" ]
+    sources = [
+      "testdata/@nonymous_record_FFBFAD8A3BBD799586600B40A3453BBD95900F13.yaml",
+      "testdata/channel.yaml",
+      "testdata/index.yaml",
+    ]
+    outputs = [ "${_testdata_path}/{{source_file_part}}" ]
   }
 }  # is_host
 
