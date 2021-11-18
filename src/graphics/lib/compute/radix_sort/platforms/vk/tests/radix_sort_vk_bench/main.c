@@ -33,20 +33,20 @@
 #include "radix_sort/platforms/vk/shaders/push.h"       // private
 
 //
-// Is the target archive(s) linkable or loadable?
+// Are the target archives compile-time linkable or run-time loadable?
 //
-#ifdef RS_TARGET_ARCHIVE_LINKABLE
+#ifdef RS_VK_TARGET_ARCHIVE_LINKABLE
 
-#include "amd_gcn3_u32_rodata.h"
-#include "amd_gcn3_u64_rodata.h"
-#include "arm_bifrost4_u32_rodata.h"
-#include "arm_bifrost4_u64_rodata.h"
-#include "arm_bifrost8_u32_rodata.h"
-#include "arm_bifrost8_u64_rodata.h"
-#include "intel_gen8_u32_rodata.h"
-#include "intel_gen8_u64_rodata.h"
-#include "nvidia_sm35_u32_rodata.h"
-#include "nvidia_sm35_u64_rodata.h"
+#include "radix_sort_vk_amd_gcn3_u32_linkable.h"
+#include "radix_sort_vk_amd_gcn3_u64_linkable.h"
+#include "radix_sort_vk_arm_bifrost4_u32_linkable.h"
+#include "radix_sort_vk_arm_bifrost4_u64_linkable.h"
+#include "radix_sort_vk_arm_bifrost8_u32_linkable.h"
+#include "radix_sort_vk_arm_bifrost8_u64_linkable.h"
+#include "radix_sort_vk_intel_gen8_u32_linkable.h"
+#include "radix_sort_vk_intel_gen8_u64_linkable.h"
+#include "radix_sort_vk_nvidia_sm35_u32_linkable.h"
+#include "radix_sort_vk_nvidia_sm35_u64_linkable.h"
 
 #endif
 
@@ -110,16 +110,23 @@ cpu_sort(void * sorted_h, uint32_t const rs_dwords, uint32_t const count, double
 //
 //
 static uint32_t
-rs_rand_u32()
+rs_rand_u32(uint32_t index)
 {
-#if 1
+#if 1  // (keyval_dwords * 32) bits
   static uint32_t seed = 0xDEADBEEF;
 
   // Numerical Recipes
   seed = seed * 1664525 + 1013904223;
 
   return seed;
-#else
+#elif 0  // 18 bits
+  static uint32_t seed = 0xDEADBEEF;
+
+  // Numerical Recipes
+  seed = seed * 1664525 + 1013904223;
+
+  return seed & (((index & 1) == 0) ? 0 : 0xFFFFC000);
+#else    // uniform
   return 0x01020304;
 #endif
 }
@@ -132,7 +139,7 @@ rs_fill_rand(uint32_t * vin_h, uint32_t const count, uint32_t const dwords)
 {
   for (uint32_t ii = 0; ii < count * dwords; ii++)
     {
-      vin_h[ii] = rs_rand_u32();
+      vin_h[ii] = rs_rand_u32(ii);
     }
 }
 
@@ -142,7 +149,7 @@ rs_fill_rand(uint32_t * vin_h, uint32_t const count, uint32_t const dwords)
 //   - Loadable expects a path to a target archive ".ar" file
 //   - Linkable expects the target name of the archive
 //
-#ifndef RS_TARGET_ARCHIVE_LINKABLE
+#ifndef RS_VK_TARGET_ARCHIVE_LINKABLE
 
 //
 // Load the target binary.
@@ -212,16 +219,16 @@ struct rs_name_target
 };
 
 static struct rs_name_target const rs_named_targets[] = {
-  { .name = "amd_gcn3_u32",     .header = amd_gcn3_u32_rodata     },
-  { .name = "amd_gcn3_u64",     .header = amd_gcn3_u64_rodata     },
-  { .name = "arm_bifrost4_u32", .header = arm_bifrost4_u32_rodata },
-  { .name = "arm_bifrost4_u64", .header = arm_bifrost4_u64_rodata },
-  { .name = "arm_bifrost8_u32", .header = arm_bifrost8_u32_rodata },
-  { .name = "arm_bifrost8_u64", .header = arm_bifrost8_u64_rodata },
-  { .name = "intel_gen8_u32",   .header = intel_gen8_u32_rodata   },
-  { .name = "intel_gen8_u64",   .header = intel_gen8_u64_rodata   },
-  { .name = "nvidia_sm35_u32",  .header = nvidia_sm35_u32_rodata  },
-  { .name = "nvidia_sm35_u64",  .header = nvidia_sm35_u64_rodata  },
+  { .name = "amd_gcn3_u32",     .header = radix_sort_vk_amd_gcn3_u32_linkable     },
+  { .name = "amd_gcn3_u64",     .header = radix_sort_vk_amd_gcn3_u64_linkable     },
+  { .name = "arm_bifrost4_u32", .header = radix_sort_vk_arm_bifrost4_u32_linkable },
+  { .name = "arm_bifrost4_u64", .header = radix_sort_vk_arm_bifrost4_u64_linkable },
+  { .name = "arm_bifrost8_u32", .header = radix_sort_vk_arm_bifrost8_u32_linkable },
+  { .name = "arm_bifrost8_u64", .header = radix_sort_vk_arm_bifrost8_u64_linkable },
+  { .name = "intel_gen8_u32",   .header = radix_sort_vk_intel_gen8_u32_linkable   },
+  { .name = "intel_gen8_u64",   .header = radix_sort_vk_intel_gen8_u64_linkable   },
+  { .name = "nvidia_sm35_u32",  .header = radix_sort_vk_nvidia_sm35_u32_linkable  },
+  { .name = "nvidia_sm35_u64",  .header = radix_sort_vk_nvidia_sm35_u64_linkable  },
 };
 // clang-format on
 
@@ -402,7 +409,7 @@ rs_usage(char const * const argv[])
     "\n"
     "Usage: %s "
     "<vendorID>:<deviceID> "
-#if defined(__Fuchsia__) && !defined(RS_TARGET_ARCHIVE_LINKABLE)
+#if defined(__Fuchsia__) && !defined(RS_VK_TARGET_ARCHIVE_LINKABLE)
     "<target file> "
 #else
     "<target name> "
@@ -417,8 +424,8 @@ rs_usage(char const * const argv[])
     "[validation?] ] ] ] ] ]\n\n"
 
     "  <vendorID>:<deviceID> : Execute on a specific Vulkan physical device.\n"
-#if defined(__Fuchsia__) && !defined(RS_TARGET_ARCHIVE_LINKABLE)
-    "  <target file>         : Name of Radix Sort target file: \"pkg/data/targets/<vendor name>_<arch name>_<u32 or u64>.ar\".\n"
+#if defined(__Fuchsia__) && !defined(RS_VK_TARGET_ARCHIVE_LINKABLE)
+    "  <target file>         : Name of Radix Sort target file: \"pkg/data/targets/radix_sort_vk_<vendor name>_<arch name>_<u32 or u64>_resource.ar\".\n"
 #else
     "  <target name>         : Name of Radix Sort target: <vendor name>_<arch name>_<u32 or u64>.\n"
 #endif
@@ -432,7 +439,7 @@ rs_usage(char const * const argv[])
     "  <validate?>           : If 0 then skip loading the Vulkan Validation layers. Default 0.\n\n",
     argv[0]);
 
-#ifdef RS_TARGET_ARCHIVE_LINKABLE
+#ifdef RS_VK_TARGET_ARCHIVE_LINKABLE
   rs_list_targets();
 #endif
 }
@@ -574,7 +581,7 @@ main(int argc, char const * argv[])
   //
   if (argc < 3)
     {
-#if defined(__Fuchsia__) && !defined(RS_TARGET_ARCHIVE_LINKABLE)
+#if defined(__Fuchsia__) && !defined(RS_VK_TARGET_ARCHIVE_LINKABLE)
       fprintf(stderr, "Error: Missing target filename\n");
 #else
       fprintf(stderr, "Error: Missing target name\n");
@@ -778,7 +785,7 @@ main(int argc, char const * argv[])
   //
   // free the target archive
   //
-#ifndef RS_TARGET_ARCHIVE_LINKABLE
+#ifndef RS_VK_TARGET_ARCHIVE_LINKABLE
   free((void *)rs_target);
 #endif
 
@@ -1132,6 +1139,10 @@ main(int argc, char const * argv[])
                                             mrs.count.memoryTypeBits,
                                             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
   };
+
+  //
+  // allocate device memory
+  //
   struct
   {
     VkDeviceMemory rand;
@@ -1275,12 +1286,6 @@ main(int argc, char const * argv[])
   for (uint32_t count = count_lo; count <= count_hi; count += count_step)
     {
       //
-      // Anything to do?
-      //
-      if (count <= 1)
-        continue;
-
-      //
       // Init elapsed time accumulators
       //
       uint64_t elapsed_min[QUERY_POOL_SIZE_MAX] = { [0 ... QUERY_POOL_SIZE_MAX - 1] = UINT64_MAX };
@@ -1342,7 +1347,7 @@ main(int argc, char const * argv[])
       //
       // Which dbi contains the sorted keyvals?
       //
-      VkDescriptorBufferInfo const * dbi_keyvals_sorted;
+      VkDescriptorBufferInfo dbi_keyvals_sorted;
 
       //
       // Direct or indirect radix sort?
@@ -1494,13 +1499,13 @@ main(int argc, char const * argv[])
           //
           VkBufferCopy const buffer_sorted_copy = {
 
-            .srcOffset = dbi_keyvals_sorted->offset,
+            .srcOffset = dbi_keyvals_sorted.offset,
             .dstOffset = 0,
-            .size      = dbi_keyvals_sorted->range
+            .size      = dbi_keyvals_sorted.range
           };
 
           vkCmdCopyBuffer(cb,
-                          dbi_keyvals_sorted->buffer,
+                          dbi_keyvals_sorted.buffer,
                           buffers.map_keyvals,
                           1,
                           &buffer_sorted_copy);

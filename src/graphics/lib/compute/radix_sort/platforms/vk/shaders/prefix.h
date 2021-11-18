@@ -47,7 +47,8 @@
 //
 // Compute exclusive prefix of uint32_t[256]
 //
-void rs_prefix(RS_PREFIX_ARGS)
+void
+rs_prefix(RS_PREFIX_ARGS)
 {
 #if (RS_WORKGROUP_SUBGROUPS == 1)
   //

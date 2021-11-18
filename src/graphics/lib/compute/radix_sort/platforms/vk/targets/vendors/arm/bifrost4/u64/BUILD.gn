@@ -8,9 +8,9 @@ import("//src/graphics/lib/compute/radix_sort/platforms/vk/" +
 #
 # Target: ARM / Bifrost4 / 64-bit keys
 #
-radix_sort_vk_target_u64_loadable("arm_bifrost4_u64") {
-  # skip_spirv_opt = true
+radix_sort_vk_target_u64_outputs("radix_sort_vk_arm_bifrost4_u64_outputs") {
 }
-radix_sort_vk_target_u64_linkable("arm_bifrost4_u64_rodata") {
-  # skip_spirv_opt = true
+radix_sort_vk_target_u64_resource("radix_sort_vk_arm_bifrost4_u64_resource") {
+}
+radix_sort_vk_target_u64_linkable("radix_sort_vk_arm_bifrost4_u64_linkable") {
 }

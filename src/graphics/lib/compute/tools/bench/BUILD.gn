@@ -9,5 +9,5 @@ group("bench") {
 
 group("tests") {
   testonly = true
-  public_deps = [ "platforms/vk:tests" ]
+  public_deps = [ "platforms/vk/tests" ]
 }

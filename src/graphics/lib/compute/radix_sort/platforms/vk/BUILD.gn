@@ -27,9 +27,9 @@ source_set("vk") {
     "radix_sort_vk.c",
     "radix_sort_vk_ext.h",
     "shaders/push.h",
-    "targets/radix_sort_vk_target.h",
-    "targets/radix_sort_vk_target_requirements.c",
-    "targets/radix_sort_vk_target_requirements.h",
+    "target.h",
+    "target_requirements.c",
+    "target_requirements.h",
   ]
   deps = [
     "${graphics_compute_dir}/common",
@@ -40,8 +40,10 @@ source_set("vk") {
 }
 
 #
+# A semi-private target used for testing and benchmarking.
+#
 # NOTE(allanmac): Is there a better way to express the same source set
-# with extra configs?
+# with extra configs?  A template can be used.
 #
 source_set("vk_tests") {
   public_configs = [
@@ -55,9 +57,9 @@ source_set("vk_tests") {
     "radix_sort_vk.c",
     "radix_sort_vk_ext.h",
     "shaders/push.h",
-    "targets/radix_sort_vk_target.h",
-    "targets/radix_sort_vk_target_requirements.c",
-    "targets/radix_sort_vk_target_requirements.h",
+    "target.h",
+    "target_requirements.c",
+    "target_requirements.h",
   ]
   deps = [
     "${graphics_compute_dir}/common",

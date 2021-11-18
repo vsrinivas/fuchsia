@@ -22,7 +22,7 @@
 //
 // NOOP shader module
 //
-#include "spirv_modules_rodata.h"
+#include "spirv_modules_linkable.h"
 
 //
 // Windows support
@@ -1076,7 +1076,7 @@ bench_noop(struct bench_config const * config, struct bench_config_noop * config
   //
   // Verify target archive magic
   //
-  if (spirv_modules_rodata[0].magic != TARGET_ARCHIVE_MAGIC)
+  if (spirv_modules_linkable[0].magic != TARGET_ARCHIVE_MAGIC)
     {
       fprintf(stderr, "Error: Invalid target -- missing magic.");
     }
@@ -1084,9 +1084,9 @@ bench_noop(struct bench_config const * config, struct bench_config_noop * config
   //
   // Index into target archive data
   //
-  struct target_archive_entry const * const ar_entries = spirv_modules_rodata[0].entries;
+  struct target_archive_entry const * const ar_entries = spirv_modules_linkable[0].entries;
 
-  uint32_t const * const ar_data = ar_entries[spirv_modules_rodata[0].count - 1].data;
+  uint32_t const * const ar_data = ar_entries[spirv_modules_linkable[0].count - 1].data;
 
   //
   // Create pipeline
@@ -1385,7 +1385,7 @@ bench_config_wait(uint32_t const       argc,
 }
 
 //
-//
+// Expects a string and unsigned integer
 //
 static bool
 bench_config_keyword_uint32(uint32_t           argc,
@@ -1398,18 +1398,15 @@ bench_config_keyword_uint32(uint32_t           argc,
 
   if ((*next_token + 1 < argc) && (strcmp(argv[*next_token], keyword) == 0))
     {
-      ++*next_token;
+      char const * uint_token = argv[*next_token + 1];
+      char *       str_end;
 
-      char * str_end;
+      *value = (uint32_t)strtoul(uint_token, &str_end, 0);
 
-      *value = (uint32_t)strtoul(argv[*next_token], &str_end, 0);
-
-      if (str_end == argv[*next_token])  // error
+      if (str_end != uint_token)  // success
         {
-          return *next_token;
+          *next_token += 2;
         }
-
-      ++*next_token;
     }
 
   return (*next_token > next_token_start);
@@ -1474,7 +1471,6 @@ bench_config_fill(uint32_t const                   argc,
     {
       // defaults
       config_fill->value = 0xBAADF00D;
-      config_fill->count = BENCH_CONFIG_DEFAULT_COUNT;
       config_fill->iter  = (struct bench_config_iter){
 
         .repetitions = BENCH_CONFIG_DEFAULT_REPETITIONS,
@@ -1506,8 +1502,7 @@ bench_config_copy(uint32_t const                   argc,
   if (bench_config_keyword_uint32(argc, argv, next_token, "copy", &config_copy->count))
     {
       // defaults
-      config_copy->count = BENCH_CONFIG_DEFAULT_COUNT;
-      config_copy->iter  = (struct bench_config_iter){
+      config_copy->iter = (struct bench_config_iter){
 
         .repetitions = BENCH_CONFIG_DEFAULT_REPETITIONS,
         .warmup      = BENCH_CONFIG_DEFAULT_WARMUP
@@ -1829,7 +1824,7 @@ bench_vk(uint32_t argc, char const * argv[])
   vk(CreateDevice(config.vk.pd, &dci, NULL, &config.vk.d));
 
   //
-  // get calibrated timestamps pfn -- will be NULL if extensions isn't enabled/present
+  // get calibrated timestamps pfn -- will be NULL if extension isn't enabled/present
   //
   pfn_vkGetCalibratedTimestampsEXT =
     (PFN_vkGetCalibratedTimestampsEXT)vkGetDeviceProcAddr(config.vk.d,

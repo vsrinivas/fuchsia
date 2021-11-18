@@ -14,26 +14,26 @@ template("radix_sort_vk_target") {
   _radix_sort_vk_dir = "//src/graphics/lib/compute/radix_sort/platforms/vk"
 
   #
-  # data_sources
+  # struct_sources
   #
-  data_sources = [
-    "${_radix_sort_vk_dir}/targets/radix_sort_vk_target.h",
-    "${_radix_sort_vk_dir}/targets/radix_sort_vk_target_requirements.h",
+  struct_sources = [
+    "${_radix_sort_vk_dir}/target.h",
+    "${_radix_sort_vk_dir}/target_requirements.h",
     "config.h",
     "header.c",
   ]
 
-  if (defined(invoker.data_sources)) {
-    data_sources += invoker.data_sources
+  if (defined(invoker.struct_sources)) {
+    struct_sources += invoker.struct_sources
   }
 
   #
-  # data_include_dirs
+  # struct_include_dirs
   #
-  data_include_dirs = [ _radix_sort_vk_dir ]
+  struct_include_dirs = [ _radix_sort_vk_dir ]
 
-  if (defined(invoker.data_include_dirs)) {
-    data_include_dirs += invoker.data_include_dirs
+  if (defined(invoker.struct_include_dirs)) {
+    struct_include_dirs += invoker.struct_include_dirs
   }
 
   #
@@ -108,24 +108,41 @@ template("radix_sort_vk_target") {
   #
   forward_variables_from(invoker,
                          [
-                           "is_loadable",
+                           "is_sources",
+                           "is_resource",
                            "is_linkable",
                          ])
 
-  assert((defined(is_loadable) && !defined(is_linkable)) ||
-             (defined(is_linkable) && !defined(is_loadable)),
-         "Define either `is_loadable` or `is_linkable` boolean")
+  assert(defined(is_sources) || defined(is_resource) || defined(is_linkable),
+         "Define either `is_sources` or `is_resource` or `is_linkable` boolean")
 
-  if (defined(is_loadable) && is_loadable) {
-    target_archive_loadable(target_name) {
+  if (defined(is_sources) && is_sources) {
+    target_archive(target_name) {
       forward_variables_from(invoker,
                              [
-                               "data_sources",
-                               "data_include_dirs",
-                               "defines",
+                               "struct_sources",
+                               "struct_include_dirs",
                                "shader_sources",
                                "shader_inputs",
                                "shader_include_dirs",
+                               "defines",
+                               "skip_spirv_opt",
+                             ])
+      if (!defined(skip_spirv_opt)) {
+        skip_spirv_opt = false
+      }
+      gen_debug_shaders = true
+    }
+  } else if (defined(is_resource) && is_resource) {
+    target_archive_resource(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "struct_sources",
+                               "struct_include_dirs",
+                               "shader_sources",
+                               "shader_inputs",
+                               "shader_include_dirs",
+                               "defines",
                                "skip_spirv_opt",
                              ])
       if (!defined(skip_spirv_opt)) {
@@ -137,12 +154,12 @@ template("radix_sort_vk_target") {
     target_archive_linkable(target_name) {
       forward_variables_from(invoker,
                              [
-                               "data_sources",
-                               "data_include_dirs",
-                               "defines",
+                               "struct_sources",
+                               "struct_include_dirs",
                                "shader_sources",
                                "shader_inputs",
                                "shader_include_dirs",
+                               "defines",
                                "skip_spirv_opt",
                              ])
       if (!defined(skip_spirv_opt)) {
@@ -154,27 +171,47 @@ template("radix_sort_vk_target") {
 }
 
 #
-# Loadable 32-bit keyval target
+# Sources: 32-bit keyval target
 #
-template("radix_sort_vk_target_u32_loadable") {
+template("radix_sort_vk_target_u32_outputs") {
   radix_sort_vk_target(target_name) {
-    is_loadable = true
+    is_sources = true
     keyval_dwords = 1
     forward_variables_from(invoker,
                            [
-                             "data_sources",
-                             "data_include_dirs",
-                             "defines",
+                             "struct_sources",
+                             "struct_include_dirs",
                              "shader_sources",
                              "shader_inputs",
                              "shader_include_dirs",
+                             "defines",
                              "skip_spirv_opt",
                            ])
   }
 }
 
 #
-# Linkable 32-bit keyval target
+# Fuchsia resource: 32-bit keyval target
+#
+template("radix_sort_vk_target_u32_resource") {
+  radix_sort_vk_target(target_name) {
+    is_resource = true
+    keyval_dwords = 1
+    forward_variables_from(invoker,
+                           [
+                             "struct_sources",
+                             "struct_include_dirs",
+                             "shader_sources",
+                             "shader_inputs",
+                             "shader_include_dirs",
+                             "defines",
+                             "skip_spirv_opt",
+                           ])
+  }
+}
+
+#
+# Linkable: 32-bit keyval target
 #
 template("radix_sort_vk_target_u32_linkable") {
   radix_sort_vk_target(target_name) {
@@ -182,39 +219,59 @@ template("radix_sort_vk_target_u32_linkable") {
     keyval_dwords = 1
     forward_variables_from(invoker,
                            [
-                             "data_sources",
-                             "data_include_dirs",
-                             "defines",
+                             "struct_sources",
+                             "struct_include_dirs",
                              "shader_sources",
                              "shader_inputs",
                              "shader_include_dirs",
+                             "defines",
                              "skip_spirv_opt",
                            ])
   }
 }
 
 #
-# Loadable 64-bit keyval target
+# Sources: 64-bit keyval target
 #
-template("radix_sort_vk_target_u64_loadable") {
+template("radix_sort_vk_target_u64_outputs") {
   radix_sort_vk_target(target_name) {
-    is_loadable = true
+    is_sources = true
     keyval_dwords = 2
     forward_variables_from(invoker,
                            [
-                             "data_sources",
-                             "data_include_dirs",
-                             "defines",
+                             "struct_sources",
+                             "struct_include_dirs",
                              "shader_sources",
                              "shader_inputs",
                              "shader_include_dirs",
+                             "defines",
                              "skip_spirv_opt",
                            ])
   }
 }
 
 #
-# Linkable 64-bit keyval target
+# Fuchsia resource: 64-bit keyval target
+#
+template("radix_sort_vk_target_u64_resource") {
+  radix_sort_vk_target(target_name) {
+    is_resource = true
+    keyval_dwords = 2
+    forward_variables_from(invoker,
+                           [
+                             "struct_sources",
+                             "struct_include_dirs",
+                             "shader_sources",
+                             "shader_inputs",
+                             "shader_include_dirs",
+                             "defines",
+                             "skip_spirv_opt",
+                           ])
+  }
+}
+
+#
+# Linkable: 64-bit keyval target
 #
 template("radix_sort_vk_target_u64_linkable") {
   radix_sort_vk_target(target_name) {
@@ -222,12 +279,12 @@ template("radix_sort_vk_target_u64_linkable") {
     keyval_dwords = 2
     forward_variables_from(invoker,
                            [
-                             "data_sources",
-                             "data_include_dirs",
-                             "defines",
+                             "struct_sources",
+                             "struct_include_dirs",
                              "shader_sources",
                              "shader_inputs",
                              "shader_include_dirs",
+                             "defines",
                              "skip_spirv_opt",
                            ])
   }

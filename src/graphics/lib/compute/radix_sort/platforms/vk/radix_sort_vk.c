@@ -13,14 +13,14 @@
 #include "common/vk/assert.h"
 #include "common/vk/barrier.h"
 #include "shaders/push.h"
+#include "target.h"
 #include "target_archive/target_archive.h"
-#include "targets/radix_sort_vk_target.h"
 
 //
 //
 //
 
-#ifdef RADIX_SORT_VK_ENABLE_DEBUG_UTILS
+#ifdef RS_VK_ENABLE_DEBUG_UTILS
 #include "common/vk/debug_utils.h"
 #endif
 
@@ -28,7 +28,7 @@
 //
 //
 
-#ifdef RADIX_SORT_VK_ENABLE_EXTENSIONS
+#ifdef RS_VK_ENABLE_EXTENSIONS
 #include "radix_sort_vk_ext.h"
 #endif
 
@@ -208,7 +208,7 @@ radix_sort_vk_get_memory_requirements(struct radix_sort_vk const *              
 //
 //
 //
-#ifdef RADIX_SORT_VK_ENABLE_DEBUG_UTILS
+#ifdef RS_VK_ENABLE_DEBUG_UTILS
 
 static void
 rs_debug_utils_set(VkDevice device, struct radix_sort_vk * rs)
@@ -298,7 +298,7 @@ radix_sort_vk_create(VkDevice                            device,
       return NULL;
     }
 
-#ifndef RADIX_SORT_VK_DISABLE_VERIFY
+#ifndef RS_VK_DISABLE_VERIFY
   //
   // Verify target archive is valid archive
   //
@@ -330,8 +330,8 @@ radix_sort_vk_create(VkDevice                            device,
   // TODO(allanmac): Verify `ar_header->count` but note that not all target
   // archives will have a static count.
   //
-#ifndef RADIX_SORT_VK_DISABLE_VERIFY
-  if (rs_target.header->magic != RADIX_SORT_VK_HEADER_MAGIC)
+#ifndef RS_VK_DISABLE_VERIFY
+  if (rs_target.header->magic != RS_HEADER_MAGIC)
     {
 #ifndef NDEBUG
       fprintf(stderr, "Error: Target is not compatible with library.");
@@ -438,7 +438,8 @@ radix_sort_vk_create(VkDevice                            device,
 #define RS_SUBGROUP_SIZE_CREATE_INFO_SET(size_)                                                    \
   {                                                                                                \
     .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_REQUIRED_SUBGROUP_SIZE_CREATE_INFO_EXT,       \
-    .pNext = NULL, .requiredSubgroupSize = size_,                                                  \
+    .pNext = NULL,                                                                                 \
+    .requiredSubgroupSize = size_,                                                                 \
   }
 
 #define RS_SUBGROUP_SIZE_CREATE_INFO_NAME(name_)                                                   \
@@ -517,7 +518,7 @@ radix_sort_vk_create(VkDevice                            device,
       vkDestroyShaderModule(device, sms[ii], ac);
     }
 
-#ifdef RADIX_SORT_VK_ENABLE_DEBUG_UTILS
+#ifdef RS_VK_ENABLE_DEBUG_UTILS
   //
   // Tag pipelines with names
   //
@@ -547,22 +548,20 @@ radix_sort_vk_create(VkDevice                            device,
 //
 //
 void
-radix_sort_vk_destroy(struct radix_sort_vk *              rs,
-                      VkDevice                            device,
-                      VkAllocationCallbacks const * const ac)
+radix_sort_vk_destroy(struct radix_sort_vk * rs, VkDevice d, VkAllocationCallbacks const * const ac)
 {
   uint32_t const pipeline_count = rs_pipeline_count(rs);
 
   // destroy pipelines
   for (uint32_t ii = 0; ii < pipeline_count; ii++)
     {
-      vkDestroyPipeline(device, rs->pipelines.handles[ii], ac);
+      vkDestroyPipeline(d, rs->pipelines.handles[ii], ac);
     }
 
   // destroy pipeline layouts
   for (uint32_t ii = 0; ii < pipeline_count; ii++)
     {
-      vkDestroyPipelineLayout(device, rs->pipeline_layouts.handles[ii], ac);
+      vkDestroyPipelineLayout(d, rs->pipeline_layouts.handles[ii], ac);
     }
 
   free(rs);
@@ -589,7 +588,7 @@ rs_get_devaddr(VkDevice device, VkDescriptorBufferInfo const * dbi)
 //
 //
 //
-#ifdef RADIX_SORT_VK_ENABLE_EXTENSIONS
+#ifdef RS_VK_ENABLE_EXTENSIONS
 
 void
 rs_ext_cmd_write_timestamp(struct radix_sort_vk_ext_timestamps * ext_timestamps,
@@ -612,7 +611,7 @@ rs_ext_cmd_write_timestamp(struct radix_sort_vk_ext_timestamps * ext_timestamps,
 //
 //
 
-#ifdef RADIX_SORT_VK_ENABLE_EXTENSIONS
+#ifdef RS_VK_ENABLE_EXTENSIONS
 
 struct radix_sort_vk_ext_base
 {
@@ -630,18 +629,18 @@ radix_sort_vk_sort(struct radix_sort_vk const *           rs,
                    struct radix_sort_vk_sort_info const * info,
                    VkDevice                               device,
                    VkCommandBuffer                        cb,
-                   VkDescriptorBufferInfo const **        keyvals_sorted)
+                   VkDescriptorBufferInfo *               keyvals_sorted)
 {
   //
   // Anything to do?
   //
   if ((info->count <= 1) || (info->key_bits == 0))
     {
-      *keyvals_sorted = info->keyvals_even;
+      *keyvals_sorted = *info->keyvals_even;
       return;
     }
 
-#ifdef RADIX_SORT_VK_ENABLE_EXTENSIONS
+#ifdef RS_VK_ENABLE_EXTENSIONS
   //
   // Any extensions?
   //
@@ -655,7 +654,7 @@ radix_sort_vk_sort(struct radix_sort_vk const *           rs,
 
       switch (base->type)
         {
-          case RADIX_SORT_VK_EXT_TIMESTAMPS:
+          case RS_VK_EXT_TIMESTAMPS:
             ext_timestamps                 = ext_next;
             ext_timestamps->timestamps_set = 0;
             break;
@@ -686,7 +685,7 @@ radix_sort_vk_sort(struct radix_sort_vk const *           rs,
     //
     // Label the command buffer
     //
-#ifdef RADIX_SORT_VK_ENABLE_DEBUG_UTILS
+#ifdef RS_VK_ENABLE_DEBUG_UTILS
   if (pfn_vkCmdBeginDebugUtilsLabelEXT != NULL)
     {
       VkDebugUtilsLabelEXT const label = {
@@ -707,7 +706,7 @@ radix_sort_vk_sort(struct radix_sort_vk const *           rs,
   uint32_t const key_bits     = MIN_MACRO(uint32_t, info->key_bits, keyval_bits);
   uint32_t const passes       = (key_bits + RS_RADIX_LOG2 - 1) / RS_RADIX_LOG2;
 
-  *keyvals_sorted = ((passes & 1) != 0) ? info->keyvals_odd : info->keyvals_even;
+  *keyvals_sorted = *(((passes & 1) != 0) ? info->keyvals_odd : info->keyvals_even);
 
   ////////////////////////////////////////////////////////////////////////
   //
@@ -719,7 +718,7 @@ radix_sort_vk_sort(struct radix_sort_vk const *           rs,
   //
   // This assumes the partitions follow the histograms.
   //
-#ifdef RADIX_SORT_VK_ENABLE_EXTENSIONS
+#ifdef RS_VK_ENABLE_EXTENSIONS
   rs_ext_cmd_write_timestamp(ext_timestamps, cb, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
 #endif
 
@@ -788,7 +787,7 @@ radix_sort_vk_sort(struct radix_sort_vk const *           rs,
   // number of blocks in order to minimize tail effects.  This was implemented
   // and reverted but should be reimplemented and benchmarked later.
   //
-#ifdef RADIX_SORT_VK_ENABLE_EXTENSIONS
+#ifdef RS_VK_ENABLE_EXTENSIONS
   rs_ext_cmd_write_timestamp(ext_timestamps, cb, VK_PIPELINE_STAGE_TRANSFER_BIT);
 #endif
 
@@ -826,7 +825,7 @@ radix_sort_vk_sort(struct radix_sort_vk const *           rs,
   //
   // Launch one workgroup per pass.
   //
-#ifdef RADIX_SORT_VK_ENABLE_EXTENSIONS
+#ifdef RS_VK_ENABLE_EXTENSIONS
   rs_ext_cmd_write_timestamp(ext_timestamps, cb, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 #endif
 
@@ -852,7 +851,7 @@ radix_sort_vk_sort(struct radix_sort_vk const *           rs,
   //
   // Pipeline: SCATTER
   //
-#ifdef RADIX_SORT_VK_ENABLE_EXTENSIONS
+#ifdef RS_VK_ENABLE_EXTENSIONS
   rs_ext_cmd_write_timestamp(ext_timestamps, cb, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 #endif
 
@@ -900,7 +899,7 @@ radix_sort_vk_sort(struct radix_sort_vk const *           rs,
       if (++pass_idx >= keyval_bytes)
         break;
 
-#ifdef RADIX_SORT_VK_ENABLE_EXTENSIONS
+#ifdef RS_VK_ENABLE_EXTENSIONS
       rs_ext_cmd_write_timestamp(ext_timestamps, cb, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 #endif
       vk_barrier_compute_w_to_compute_r(cb);
@@ -934,14 +933,14 @@ radix_sort_vk_sort(struct radix_sort_vk const *           rs,
       vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_COMPUTE, p);
     }
 
-#ifdef RADIX_SORT_VK_ENABLE_EXTENSIONS
+#ifdef RS_VK_ENABLE_EXTENSIONS
   rs_ext_cmd_write_timestamp(ext_timestamps, cb, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 #endif
 
   //
   // End the label
   //
-#ifdef RADIX_SORT_VK_ENABLE_DEBUG_UTILS
+#ifdef RS_VK_ENABLE_DEBUG_UTILS
   if (pfn_vkCmdEndDebugUtilsLabelEXT != NULL)
     {
       pfn_vkCmdEndDebugUtilsLabelEXT(cb);
@@ -957,18 +956,18 @@ radix_sort_vk_sort_indirect(struct radix_sort_vk const *                    rs,
                             struct radix_sort_vk_sort_indirect_info const * info,
                             VkDevice                                        device,
                             VkCommandBuffer                                 cb,
-                            VkDescriptorBufferInfo const **                 keyvals_sorted)
+                            VkDescriptorBufferInfo *                        keyvals_sorted)
 {
   //
   // Anything to do?
   //
   if (info->key_bits == 0)
     {
-      *keyvals_sorted = info->keyvals_even;
+      *keyvals_sorted = *info->keyvals_even;
       return;
     }
 
-#ifdef RADIX_SORT_VK_ENABLE_EXTENSIONS
+#ifdef RS_VK_ENABLE_EXTENSIONS
   //
   // Any extensions?
   //
@@ -982,7 +981,7 @@ radix_sort_vk_sort_indirect(struct radix_sort_vk const *                    rs,
 
       switch (base->type)
         {
-          case RADIX_SORT_VK_EXT_TIMESTAMPS:
+          case RS_VK_EXT_TIMESTAMPS:
             ext_timestamps                 = ext_next;
             ext_timestamps->timestamps_set = 0;
             break;
@@ -1015,7 +1014,7 @@ radix_sort_vk_sort_indirect(struct radix_sort_vk const *                    rs,
     //
     // Label the command buffer
     //
-#ifdef RADIX_SORT_VK_ENABLE_DEBUG_UTILS
+#ifdef RS_VK_ENABLE_DEBUG_UTILS
   if (pfn_vkCmdBeginDebugUtilsLabelEXT != NULL)
     {
       VkDebugUtilsLabelEXT const label = {
@@ -1037,7 +1036,7 @@ radix_sort_vk_sort_indirect(struct radix_sort_vk const *                    rs,
   uint32_t const passes       = (key_bits + RS_RADIX_LOG2 - 1) / RS_RADIX_LOG2;
   uint32_t       pass_idx     = (keyval_bytes - passes);
 
-  *keyvals_sorted = ((passes & 1) != 0) ? info->keyvals_odd : info->keyvals_even;
+  *keyvals_sorted = *(((passes & 1) != 0) ? info->keyvals_odd : info->keyvals_even);
 
   //
   //
@@ -1052,7 +1051,7 @@ radix_sort_vk_sort_indirect(struct radix_sort_vk const *                    rs,
   //
   // START
   //
-#ifdef RADIX_SORT_VK_ENABLE_EXTENSIONS
+#ifdef RS_VK_ENABLE_EXTENSIONS
   rs_ext_cmd_write_timestamp(ext_timestamps, cb, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
 #endif
 
@@ -1079,7 +1078,7 @@ radix_sort_vk_sort_indirect(struct radix_sort_vk const *                    rs,
     vkCmdDispatch(cb, 1, 1, 1);
   }
 
-#ifdef RADIX_SORT_VK_ENABLE_EXTENSIONS
+#ifdef RS_VK_ENABLE_EXTENSIONS
   rs_ext_cmd_write_timestamp(ext_timestamps, cb, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 #endif
 
@@ -1137,7 +1136,7 @@ radix_sort_vk_sort_indirect(struct radix_sort_vk const *                    rs,
                           offsetof(struct rs_indirect_info, dispatch.zero));
   }
 
-#ifdef RADIX_SORT_VK_ENABLE_EXTENSIONS
+#ifdef RS_VK_ENABLE_EXTENSIONS
   rs_ext_cmd_write_timestamp(ext_timestamps, cb, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 #endif
 
@@ -1168,7 +1167,7 @@ radix_sort_vk_sort_indirect(struct radix_sort_vk const *                    rs,
                           offsetof(struct rs_indirect_info, dispatch.histogram));
   }
 
-#ifdef RADIX_SORT_VK_ENABLE_EXTENSIONS
+#ifdef RS_VK_ENABLE_EXTENSIONS
   rs_ext_cmd_write_timestamp(ext_timestamps, cb, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 #endif
 
@@ -1195,7 +1194,7 @@ radix_sort_vk_sort_indirect(struct radix_sort_vk const *                    rs,
     vkCmdDispatch(cb, passes, 1, 1);
   }
 
-#ifdef RADIX_SORT_VK_ENABLE_EXTENSIONS
+#ifdef RS_VK_ENABLE_EXTENSIONS
   rs_ext_cmd_write_timestamp(ext_timestamps, cb, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 #endif
 
@@ -1249,7 +1248,7 @@ radix_sort_vk_sort_indirect(struct radix_sort_vk const *                    rs,
         if (++pass_idx >= keyval_bytes)
           break;
 
-#ifdef RADIX_SORT_VK_ENABLE_EXTENSIONS
+#ifdef RS_VK_ENABLE_EXTENSIONS
         rs_ext_cmd_write_timestamp(ext_timestamps, cb, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 #endif
 
@@ -1287,14 +1286,14 @@ radix_sort_vk_sort_indirect(struct radix_sort_vk const *                    rs,
       }
   }
 
-#ifdef RADIX_SORT_VK_ENABLE_EXTENSIONS
+#ifdef RS_VK_ENABLE_EXTENSIONS
   rs_ext_cmd_write_timestamp(ext_timestamps, cb, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 #endif
 
   //
   // End the label
   //
-#ifdef RADIX_SORT_VK_ENABLE_DEBUG_UTILS
+#ifdef RS_VK_ENABLE_DEBUG_UTILS
   if (pfn_vkCmdEndDebugUtilsLabelEXT != NULL)
     {
       pfn_vkCmdEndDebugUtilsLabelEXT(cb);

@@ -7,7 +7,7 @@
 //
 
 #include "config.h"
-#include "targets/radix_sort_vk_target.h"
+#include "target.h"
 
 //
 //
@@ -15,7 +15,7 @@
 
 static struct radix_sort_vk_target_header const header __attribute__((used)) =
 {
-  .magic = RADIX_SORT_VK_HEADER_MAGIC,
+  .magic = RS_HEADER_MAGIC,
 
   .extensions.named = {
 

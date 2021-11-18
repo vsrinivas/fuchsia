@@ -8,7 +8,7 @@ import("//src/graphics/lib/compute/radix_sort/platforms/vk/" +
 #
 # Target: Intel / GEN8 / 32-bit keys
 #
-radix_sort_vk_target_u32_loadable("intel_gen8_u32") {
+radix_sort_vk_target_u32_resource("radix_sort_vk_intel_gen8_u32_resource") {
 }
-radix_sort_vk_target_u32_linkable("intel_gen8_u32_rodata") {
+radix_sort_vk_target_u32_linkable("radix_sort_vk_intel_gen8_u32_linkable") {
 }

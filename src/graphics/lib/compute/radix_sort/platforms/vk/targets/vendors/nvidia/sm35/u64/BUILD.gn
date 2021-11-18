@@ -8,7 +8,9 @@ import("//src/graphics/lib/compute/radix_sort/platforms/vk/" +
 #
 # Target: NVIDIA / sm35 / 64-bit keys
 #
-radix_sort_vk_target_u64_loadable("nvidia_sm35_u64") {
+radix_sort_vk_target_u64_outputs("radix_sort_vk_nvidia_sm35_u64_outputs") {
 }
-radix_sort_vk_target_u64_linkable("nvidia_sm35_u64_rodata") {
+radix_sort_vk_target_u64_resource("radix_sort_vk_nvidia_sm35_u64_resource") {
+}
+radix_sort_vk_target_u64_linkable("radix_sort_vk_nvidia_sm35_u64_linkable") {
 }

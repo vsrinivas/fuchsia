@@ -44,7 +44,7 @@ struct radix_sort_vk_target_requirements
 };
 
 //
-// Get a radix sort target's Vulkan requirements.
+// Get a Radix Sort target's Vulkan requirements.
 //
 // A Radix Sort target is a binary image containing configuration parameters and
 // a bundle of SPIR-V modules.
@@ -52,7 +52,7 @@ struct radix_sort_vk_target_requirements
 // Targets are prebuilt and specific to a particular device vendor, architecture
 // and key-val configuration.
 //
-// A Radix Sort instance must be created with a VkDevice that is initialized
+// A Radix Sort instance can only be created with a VkDevice that is initialized
 // with all of the target's required extensions and features.
 //
 // The `radix_sort_vk_target_get_requirements()` function yields the extensions
@@ -66,8 +66,10 @@ struct radix_sort_vk_target_requirements
 //
 // Returns `false` if:
 //
-//   * The .ext_names field is NULL and .ext_name_count > 0
-//   * The .ext_name_count member is too small
+//   * The .ext_names field is NULL and the number of required extensions is
+//     greater than zero.
+//   * The .ext_name_count is less than the number of required extensions is
+//     greater than zero.
 //   * Any of the .pdf, .pdf11 or .pdf12 members are NULL.
 //
 // Otherwise, returns true.
@@ -97,7 +99,9 @@ radix_sort_vk_create(VkDevice                            device,
 //
 
 void
-radix_sort_vk_destroy(struct radix_sort_vk * rs, VkDevice device, VkAllocationCallbacks const * ac);
+radix_sort_vk_destroy(struct radix_sort_vk *        rs,  //
+                      VkDevice                      d,
+                      VkAllocationCallbacks const * ac);
 
 //
 // Returns the buffer size and alignment requirements for a maximum number of
@@ -113,7 +117,7 @@ radix_sort_vk_destroy(struct radix_sort_vk * rs, VkDevice device, VkAllocationCa
 // is also required.
 //
 // The alignment requirements for the keyval, internal, and indirect buffers
-// must be honored.
+// must be honored.  All alignments are power of 2.
 //
 //   Input:
 //     count             : Maximum number of keyvals
@@ -221,7 +225,7 @@ radix_sort_vk_sort(struct radix_sort_vk const *           rs,
                    struct radix_sort_vk_sort_info const * info,
                    VkDevice                               device,
                    VkCommandBuffer                        cb,
-                   VkDescriptorBufferInfo const **        keyvals_sorted);
+                   VkDescriptorBufferInfo *               keyvals_sorted);
 
 //
 // Indirect dispatch sorting
@@ -278,7 +282,7 @@ radix_sort_vk_sort_indirect(struct radix_sort_vk const *                    rs,
                             struct radix_sort_vk_sort_indirect_info const * info,
                             VkDevice                                        device,
                             VkCommandBuffer                                 cb,
-                            VkDescriptorBufferInfo const **                 keyvals_sorted);
+                            VkDescriptorBufferInfo *                        keyvals_sorted);
 
 //
 //
