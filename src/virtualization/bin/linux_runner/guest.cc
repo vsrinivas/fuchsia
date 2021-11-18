@@ -19,6 +19,8 @@
 
 #include <memory>
 
+#include <fbl/unique_fd.h>
+
 #include "src/virtualization/bin/linux_runner/ports.h"
 #include "src/virtualization/lib/grpc/grpc_vsock_stub.h"
 #include "src/virtualization/lib/guest_config/guest_config.h"
@@ -27,53 +29,58 @@
 #include <grpc++/grpc++.h>
 #include <grpc++/server_posix.h>
 
-namespace linux_runner {
+namespace {
 
-static constexpr const char* kLinuxEnvirionmentName = "termina";
-static constexpr const char* kLinuxGuestPackage =
+constexpr const char* kLinuxEnvirionmentName = "termina";
+constexpr const char* kLinuxGuestPackage =
     "fuchsia-pkg://fuchsia.com/termina_guest#meta/termina_guest.cmx";
-static constexpr const char* kContainerName = "buster";
-static constexpr const char* kContainerImageAlias = "debian/buster";
-static constexpr const char* kContainerImageServer =
-    "https://storage.googleapis.com/cros-containers/%d";
-static constexpr const char* kDefaultContainerUser = "machina";
-static constexpr const char* kLinuxUriScheme = "linux://";
-static constexpr const char* kVshTerminalComponent =
+constexpr const char* kContainerName = "buster";
+constexpr const char* kContainerImageAlias = "debian/buster";
+constexpr const char* kContainerImageServer = "https://storage.googleapis.com/cros-containers/%d";
+constexpr const char* kDefaultContainerUser = "machina";
+constexpr const char* kLinuxUriScheme = "linux://";
+constexpr const char* kVshTerminalComponent =
     "fuchsia-pkg://fuchsia.com/terminal#meta/vsh-terminal.cmx";
 
-#ifdef USE_PREBUILT_STATEFUL_IMAGE
-static constexpr const char* kStatefulImagePath = "/pkg/data/stateful.img";
+#if defined(USE_VOLATILE_BLOCK)
+constexpr bool kForceVolatileWrites = true;
 #else
-// Minfs max file size is currently just under 4GB.
-static constexpr const char* kStatefulImagePath = "/data/stateful.img";
+constexpr bool kForceVolatileWrites = false;
 #endif
-static constexpr const char* kExtrasImagePath = "/pkg/data/extras.img";
 
-static fidl::InterfaceHandle<fuchsia::io::File> GetOrCreateStatefulPartition(size_t image_size) {
-  TRACE_DURATION("linux_runner", "GetOrCreateStatefulPartition");
+// Information about a disk image.
+struct DiskImage {
+  const char* path;                             // Path to the file containing the image
+  fuchsia::virtualization::BlockFormat format;  // Format of the disk image
+  bool read_only;
+};
+
 #ifdef USE_PREBUILT_STATEFUL_IMAGE
-  int fd = open(kStatefulImagePath, O_RDONLY);
+constexpr DiskImage kStatefulImage = DiskImage{
+    .path = "/pkg/data/stateful.qcow2",
+    .format = fuchsia::virtualization::BlockFormat::QCOW,
+    .read_only = true,
+};
 #else
-  int fd = open(kStatefulImagePath, O_RDWR);
+constexpr DiskImage kStatefulImage = DiskImage{
+    // Minfs max file size is currently just under 4GB.
+    .path = "/data/stateful.img",
+    .format = fuchsia::virtualization::BlockFormat::RAW,
+    .read_only = false,
+};
 #endif
-  if (fd < 0 && errno == ENOENT) {
-    fd = open(kStatefulImagePath, O_RDWR | O_CREAT);
-    if (fd < 0) {
-      FX_LOGS(ERROR) << "Failed to create stateful image: " << strerror(errno);
-      return nullptr;
-    }
-    if (ftruncate(fd, image_size) < 0) {
-      FX_LOGS(ERROR) << "Failed to truncate image: " << strerror(errno);
-      return nullptr;
-    }
-  }
-  if (fd < 0) {
-    FX_LOGS(ERROR) << "Failed to open image: " << strerror(errno);
-    return nullptr;
-  }
+constexpr DiskImage kExtrasImage = DiskImage{
+    .path = "/pkg/data/extras.img",
+    .format = fuchsia::virtualization::BlockFormat::RAW,
+    .read_only = true,
+};
 
+// Get the underlying fuchsia::io::File handle for the given file descriptor.
+//
+// Takes ownership of `fd`.
+fidl::InterfaceHandle<fuchsia::io::File> GetFileInterfaceFromFd(fbl::unique_fd fd) {
   zx_handle_t handle = ZX_HANDLE_INVALID;
-  zx_status_t status = fdio_get_service_handle(fd, &handle);
+  zx_status_t status = fdio_get_service_handle(fd.release(), &handle);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to get service handle: " << status;
     return nullptr;
@@ -81,48 +88,75 @@ static fidl::InterfaceHandle<fuchsia::io::File> GetOrCreateStatefulPartition(siz
   return fidl::InterfaceHandle<fuchsia::io::File>(zx::channel(handle));
 }
 
-static fidl::InterfaceHandle<fuchsia::io::File> GetExtrasPartition() {
-  TRACE_DURATION("linux_runner", "GetExtrasPartition");
-  int fd = open(kExtrasImagePath, O_RDONLY);
-  if (fd < 0) {
+// Open the given disk image.
+fidl::InterfaceHandle<fuchsia::io::File> GetPartition(const DiskImage& image) {
+  TRACE_DURATION("linux_runner", "GetPartition");
+  fbl::unique_fd fd(open(image.path, kStatefulImage.read_only ? O_RDONLY : O_RDWR));
+  if (!fd.is_valid()) {
     return nullptr;
   }
-  zx_handle_t handle = ZX_HANDLE_INVALID;
-  zx_status_t status = fdio_get_service_handle(fd, &handle);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to get service handle: " << status;
-    return nullptr;
-  }
-  return fidl::InterfaceHandle<fuchsia::io::File>(zx::channel(handle));
+  return GetFileInterfaceFromFd(std::move(fd));
 }
 
-static std::vector<fuchsia::virtualization::BlockSpec> GetBlockDevices(size_t stateful_image_size) {
+// Create the given disk image.
+fidl::InterfaceHandle<fuchsia::io::File> CreateRawPartition(const char* path, size_t image_size) {
+  TRACE_DURATION("linux_runner", "CreatePartition");
+
+  // Create the image.
+  fbl::unique_fd fd(open(path, O_RDWR | O_CREAT));
+  if (!fd.is_valid()) {
+    FX_LOGS(ERROR) << "Failed to create image: " << path << ": " << strerror(errno);
+    return nullptr;
+  }
+  if (ftruncate(fd.get(), image_size) < 0) {
+    FX_LOGS(ERROR) << "Failed to truncate image: " << path << ": " << strerror(errno);
+    return nullptr;
+  }
+
+  return GetFileInterfaceFromFd(std::move(fd));
+}
+
+std::vector<fuchsia::virtualization::BlockSpec> GetBlockDevices(size_t stateful_image_size) {
   TRACE_DURATION("linux_runner", "GetBlockDevices");
-  auto file_handle = GetOrCreateStatefulPartition(stateful_image_size);
-  FX_CHECK(file_handle) << "Failed to open stateful file";
+
   std::vector<fuchsia::virtualization::BlockSpec> devices;
-#if defined(USE_VOLATILE_BLOCK) || defined(USE_PREBUILT_STATEFUL_IMAGE)
-  auto stateful_block_mode = fuchsia::virtualization::BlockMode::VOLATILE_WRITE;
-#else
-  auto stateful_block_mode = fuchsia::virtualization::BlockMode::READ_WRITE;
-#endif
+
+  // Get/create the stateful partition.
+  fidl::InterfaceHandle<fuchsia::io::File> stateful_handle = GetPartition(kStatefulImage);
+  if (!stateful_handle.is_valid() && !kStatefulImage.read_only) {
+    static_assert(kStatefulImage.read_only ||
+                      kStatefulImage.format == fuchsia::virtualization::BlockFormat::RAW,
+                  "Read/write images must be in RAW format");
+    FX_LOGS(INFO) << "Creating stateful partition: " << kStatefulImage.path;
+    stateful_handle = CreateRawPartition(kStatefulImage.path, stateful_image_size);
+  }
+  FX_CHECK(stateful_handle) << "Failed to open or create stateful file";
   devices.push_back({
-      "stateful",
-      stateful_block_mode,
-      fuchsia::virtualization::BlockFormat::RAW,
-      std::move(file_handle),
+      .id = "stateful",
+      .mode = (kStatefulImage.read_only || kForceVolatileWrites)
+                  ? fuchsia::virtualization::BlockMode::VOLATILE_WRITE
+                  : fuchsia::virtualization::BlockMode::READ_WRITE,
+      .format = kStatefulImage.format,
+      .file = std::move(stateful_handle),
   });
-  auto extras_handle = GetExtrasPartition();
+
+  // Add the extras partition if it exists.
+  fidl::InterfaceHandle<fuchsia::io::File> extras_handle = GetPartition(kExtrasImage);
   if (extras_handle) {
     devices.push_back({
-        "extras",
-        fuchsia::virtualization::BlockMode::VOLATILE_WRITE,
-        fuchsia::virtualization::BlockFormat::RAW,
-        std::move(extras_handle),
+        .id = "extras",
+        .mode = fuchsia::virtualization::BlockMode::VOLATILE_WRITE,
+        .format = kExtrasImage.format,
+        .file = std::move(extras_handle),
     });
   }
+
   return devices;
 }
+
+}  // namespace
+
+namespace linux_runner {
 
 // static
 zx_status_t Guest::CreateAndStart(sys::ComponentContext* context, GuestConfig config,

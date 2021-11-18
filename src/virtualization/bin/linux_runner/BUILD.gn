@@ -29,7 +29,7 @@ declare_args() {
   # Point this to the location of external files to be included as extras
   linux_runner_user_extras = []
 
-  # Point this to the location of a prebuilt stateful image
+  # Point this to the location of a prebuilt stateful image in QCOW2 format
   linux_runner_stateful_image_path = ""
 }
 
@@ -44,9 +44,9 @@ resource("extras_img") {
 }
 
 if (linux_runner_stateful_image_path != "") {
-  resource("stateful_img") {
+  resource("stateful_qcow2") {
     sources = [ linux_runner_stateful_image_path ]
-    outputs = [ "data/stateful.img" ]
+    outputs = [ "data/stateful.qcow2" ]
   }
 }
 
@@ -99,7 +99,7 @@ source_set("lib") {
     defines += [ "USE_VOLATILE_BLOCK" ]
   }
   if (linux_runner_stateful_image_path != "") {
-    public_deps += [ ":stateful_img" ]
+    public_deps += [ ":stateful_qcow2" ]
     defines += [ "USE_PREBUILT_STATEFUL_IMAGE" ]
   }
 }
