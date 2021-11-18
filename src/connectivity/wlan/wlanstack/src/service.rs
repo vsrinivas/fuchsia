@@ -12,7 +12,7 @@ use fuchsia_cobalt::{self, CobaltSender};
 use fuchsia_inspect_contrib::inspect_log;
 use fuchsia_zircon as zx;
 use futures::{future::BoxFuture, prelude::*};
-use log::{error, info};
+use log::{error, info, warn};
 use std::sync::{atomic::Ordering, Arc};
 
 use crate::device::{self, IfaceMap};
@@ -97,13 +97,37 @@ pub async fn serve_device_requests(
                     Err(status) => responder.send(status.into_raw(), None),
                 }
             }
-            DeviceServiceRequest::GetIfaceCounterStats { .. } => {
-                error!("DeviceServiceRequest::GetIfaceCounterStats is unimplemented");
-                Ok(())
+            DeviceServiceRequest::GetIfaceCounterStats { iface_id, responder } => {
+                let mut resp = match get_iface_counter_stats(&ifaces, iface_id).await {
+                    Ok(resp) => match resp {
+                        fidl_mlme::GetIfaceCounterStatsResponse::Stats(stats) => {
+                            fidl_svc::GetIfaceCounterStatsResponse::Stats(stats)
+                        }
+                        fidl_mlme::GetIfaceCounterStatsResponse::ErrorStatus(status) => {
+                            fidl_svc::GetIfaceCounterStatsResponse::ErrorStatus(status)
+                        }
+                    },
+                    Err(status) => {
+                        fidl_svc::GetIfaceCounterStatsResponse::ErrorStatus(status.into_raw())
+                    }
+                };
+                responder.send(&mut resp)
             }
-            DeviceServiceRequest::GetIfaceHistogramStats { .. } => {
-                error!("DeviceServiceRequest::GetIfaceHistogramStats is unimplemented");
-                Ok(())
+            DeviceServiceRequest::GetIfaceHistogramStats { iface_id, responder } => {
+                let mut resp = match get_iface_histogram_stats(&ifaces, iface_id).await {
+                    Ok(resp) => match resp {
+                        fidl_mlme::GetIfaceHistogramStatsResponse::Stats(stats) => {
+                            fidl_svc::GetIfaceHistogramStatsResponse::Stats(stats)
+                        }
+                        fidl_mlme::GetIfaceHistogramStatsResponse::ErrorStatus(status) => {
+                            fidl_svc::GetIfaceHistogramStatsResponse::ErrorStatus(status)
+                        }
+                    },
+                    Err(status) => {
+                        fidl_svc::GetIfaceHistogramStatsResponse::ErrorStatus(status.into_raw())
+                    }
+                };
+                responder.send(&mut resp)
             }
             DeviceServiceRequest::GetMinstrelList { iface_id, responder } => {
                 let (status, mut peers) = list_minstrel_peers(&ifaces, iface_id).await;
@@ -219,6 +243,28 @@ fn get_mesh_sme(ifaces: &IfaceMap, iface_id: u16, endpoint: station::mesh::Endpo
 pub async fn get_iface_stats(ifaces: &IfaceMap, iface_id: u16) -> Result<StatsRef, zx::Status> {
     let iface = ifaces.get(&iface_id).ok_or(zx::Status::NOT_FOUND)?;
     iface.stats_sched.get_stats().await
+}
+
+pub async fn get_iface_counter_stats(
+    ifaces: &IfaceMap,
+    iface_id: u16,
+) -> Result<fidl_mlme::GetIfaceCounterStatsResponse, zx::Status> {
+    let iface = ifaces.get(&iface_id).ok_or(zx::Status::NOT_FOUND)?;
+    iface.mlme_proxy.get_iface_counter_stats().await.map_err(|e| {
+        warn!("get_iface_counter_stats failed: {}", e);
+        zx::Status::INTERNAL
+    })
+}
+
+pub async fn get_iface_histogram_stats(
+    ifaces: &IfaceMap,
+    iface_id: u16,
+) -> Result<fidl_mlme::GetIfaceHistogramStatsResponse, zx::Status> {
+    let iface = ifaces.get(&iface_id).ok_or(zx::Status::NOT_FOUND)?;
+    iface.mlme_proxy.get_iface_histogram_stats().await.map_err(|e| {
+        warn!("get_iface_histogram_stats failed: {}", e);
+        zx::Status::INTERNAL
+    })
 }
 
 async fn list_minstrel_peers(
@@ -345,7 +391,7 @@ async fn add_iface(
 mod tests {
     use super::*;
     use crate::test_helper;
-    use fidl::endpoints::{create_endpoints, create_proxy};
+    use fidl::endpoints::{create_endpoints, create_proxy, create_proxy_and_stream};
     use fidl_fuchsia_wlan_device as fidl_dev;
     use fidl_fuchsia_wlan_device_service::IfaceListItem;
     use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeMarker};
@@ -355,6 +401,7 @@ mod tests {
     use futures::channel::mpsc;
     use futures::task::Poll;
     use pin_utils::pin_mut;
+    use std::pin::Pin;
     use wlan_common::{
         assert_variant,
         channel::{Cbw, Phy},
@@ -365,6 +412,8 @@ mod tests {
         device::IfaceDevice,
         stats_scheduler::{self, StatsRequest},
     };
+
+    const IFACE_ID: u16 = 10;
 
     #[test]
     fn iface_counter() {
@@ -700,16 +749,236 @@ mod tests {
             assert!(result.iface_id.is_none());
         });
     }
+
+    #[test]
+    fn test_get_iface_counter_stats_success() {
+        let (mut test_helper, mut test_fut) = setup_test();
+
+        let get_stats_fut = test_helper.dev_svc_proxy.get_iface_counter_stats(IFACE_ID);
+        pin_mut!(get_stats_fut);
+        assert_variant!(test_helper.exec.run_until_stalled(&mut get_stats_fut), Poll::Pending);
+        assert_variant!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+        // Verify the GetIfaceCounterStats request is forwarded to MLME
+        let responder = assert_variant!(
+            test_helper.exec.run_until_stalled(&mut test_helper.mlme_req_stream.next()),
+            Poll::Ready(Some(Ok(fidl_mlme::MlmeRequest::GetIfaceCounterStats { responder }))) => responder
+        );
+
+        // (mlme -> wlanstack) Respond with mock counter stats
+        let stats = fidl_fuchsia_wlan_stats::IfaceCounterStats {
+            rx_unicast_total: 20,
+            rx_unicast_drop: 3,
+            rx_multicast: 5,
+            tx_total: 10,
+            tx_drop: 1,
+        };
+        let mut mlme_resp = fidl_mlme::GetIfaceCounterStatsResponse::Stats(stats.clone());
+        responder.send(&mut mlme_resp).expect("failed to send stats");
+
+        assert_variant!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        let resp = assert_variant!(test_helper.exec.run_until_stalled(&mut get_stats_fut), Poll::Ready(resp) => resp);
+        assert_variant!(resp, Ok(fidl_svc::GetIfaceCounterStatsResponse::Stats(actual_stats)) => {
+            assert_eq!(actual_stats, stats);
+        });
+    }
+
+    #[test]
+    fn test_get_iface_counter_stats_failure() {
+        let (mut test_helper, mut test_fut) = setup_test();
+
+        let get_stats_fut = test_helper.dev_svc_proxy.get_iface_counter_stats(IFACE_ID);
+        pin_mut!(get_stats_fut);
+        assert_variant!(test_helper.exec.run_until_stalled(&mut get_stats_fut), Poll::Pending);
+        assert_variant!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+        // Verify the GetIfaceCounterStats request is forwarded to MLME
+        let responder = assert_variant!(
+            test_helper.exec.run_until_stalled(&mut test_helper.mlme_req_stream.next()),
+            Poll::Ready(Some(Ok(fidl_mlme::MlmeRequest::GetIfaceCounterStats { responder }))) => responder
+        );
+
+        // (mlme -> wlanstack) Respond with error status
+        let mut mlme_resp = fidl_mlme::GetIfaceCounterStatsResponse::ErrorStatus(1);
+        responder.send(&mut mlme_resp).expect("failed to send stats");
+
+        assert_variant!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        let resp = assert_variant!(test_helper.exec.run_until_stalled(&mut get_stats_fut), Poll::Ready(resp) => resp);
+        assert_variant!(resp, Ok(fidl_svc::GetIfaceCounterStatsResponse::ErrorStatus(1)));
+    }
+
+    #[test]
+    fn test_get_iface_histogram_stats_success() {
+        let (mut test_helper, mut test_fut) = setup_test();
+
+        let get_stats_fut = test_helper.dev_svc_proxy.get_iface_histogram_stats(IFACE_ID);
+        pin_mut!(get_stats_fut);
+        assert_variant!(test_helper.exec.run_until_stalled(&mut get_stats_fut), Poll::Pending);
+        assert_variant!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+        // Verify the GetIfaceHistogramStats request is forwarded to MLME
+        let responder = assert_variant!(
+            test_helper.exec.run_until_stalled(&mut test_helper.mlme_req_stream.next()),
+            Poll::Ready(Some(Ok(fidl_mlme::MlmeRequest::GetIfaceHistogramStats { responder }))) => responder
+        );
+
+        // (mlme -> wlanstack) Respond with mock histogram stats
+        let stats = fake_histogram_stats();
+        let mut mlme_resp = fidl_mlme::GetIfaceHistogramStatsResponse::Stats(stats.clone());
+        responder.send(&mut mlme_resp).expect("failed to send stats");
+
+        assert_variant!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        let resp = assert_variant!(test_helper.exec.run_until_stalled(&mut get_stats_fut), Poll::Ready(resp) => resp);
+        assert_variant!(resp, Ok(fidl_svc::GetIfaceHistogramStatsResponse::Stats(actual_stats)) => {
+            assert_eq!(actual_stats, stats);
+        });
+    }
+
+    #[test]
+    fn test_get_iface_histogram_stats_failure() {
+        let (mut test_helper, mut test_fut) = setup_test();
+
+        let get_stats_fut = test_helper.dev_svc_proxy.get_iface_histogram_stats(IFACE_ID);
+        pin_mut!(get_stats_fut);
+        assert_variant!(test_helper.exec.run_until_stalled(&mut get_stats_fut), Poll::Pending);
+        assert_variant!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+        // Verify the GetIfaceHistogramStats request is forwarded to MLME
+        let responder = assert_variant!(
+            test_helper.exec.run_until_stalled(&mut test_helper.mlme_req_stream.next()),
+            Poll::Ready(Some(Ok(fidl_mlme::MlmeRequest::GetIfaceHistogramStats { responder }))) => responder
+        );
+
+        // (mlme -> wlanstack) Respond with error status
+        let mut mlme_resp = fidl_mlme::GetIfaceHistogramStatsResponse::ErrorStatus(1);
+        responder.send(&mut mlme_resp).expect("failed to send stats");
+
+        assert_variant!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        let resp = assert_variant!(test_helper.exec.run_until_stalled(&mut get_stats_fut), Poll::Ready(resp) => resp);
+        assert_variant!(resp, Ok(fidl_svc::GetIfaceHistogramStatsResponse::ErrorStatus(1)));
+    }
+
+    struct TestHelper {
+        dev_svc_proxy: fidl_svc::DeviceServiceProxy,
+        mlme_req_stream: fidl_mlme::MlmeRequestStream,
+        exec: fasync::TestExecutor,
+    }
+
+    fn setup_test() -> (TestHelper, Pin<Box<impl Future<Output = Result<(), anyhow::Error>>>>) {
+        let mut exec = fasync::TestExecutor::new_with_fake_time().expect("executor should build");
+        exec.set_fake_time(fasync::Time::from_nanos(0));
+
+        let iface_map = Arc::new(IfaceMap::new());
+        let iface = fake_client_iface();
+        iface_map.insert(IFACE_ID, iface.iface);
+        let iface_counter = Arc::new(IfaceCounter::new());
+        let (inspect_tree, _persistence_stream) = test_helper::fake_inspect_tree();
+        let (sender, _receiver) = mpsc::channel(1);
+        let cobalt_sender = CobaltSender::new(sender);
+        let (cobalt_1dot1_proxy, _) =
+            create_proxy::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
+                .expect("failed to create Cobalt 1.1 proxy");
+        let (dev_monitor_proxy, _) =
+            create_proxy::<fidl_fuchsia_wlan_device_service::DeviceMonitorMarker>()
+                .expect("failed to create DeviceMonitor proxy");
+        let cfg = ServiceCfg { wep_supported: false, wpa1_supported: false };
+
+        let (dev_svc_proxy, dev_svc_req_stream) =
+            create_proxy_and_stream::<fidl_svc::DeviceServiceMarker>()
+                .expect("failed to create DeviceService proxy");
+        let mut test_fut = Box::pin(serve_device_requests(
+            iface_counter,
+            cfg,
+            iface_map,
+            dev_svc_req_stream,
+            inspect_tree,
+            cobalt_sender,
+            cobalt_1dot1_proxy,
+            dev_monitor_proxy,
+        ));
+        assert_variant!(exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+        let test_helper =
+            TestHelper { dev_svc_proxy, mlme_req_stream: iface.mlme_req_stream, exec };
+        (test_helper, test_fut)
+    }
+
+    fn fake_histogram_stats() -> fidl_fuchsia_wlan_stats::IfaceHistogramStats {
+        fidl_fuchsia_wlan_stats::IfaceHistogramStats {
+            noise_floor_histograms: vec![fidl_fuchsia_wlan_stats::NoiseFloorHistogram {
+                hist_scope: fidl_fuchsia_wlan_stats::HistScope::PerAntenna,
+                antenna_id: Some(Box::new(fidl_fuchsia_wlan_stats::AntennaId {
+                    freq: fidl_fuchsia_wlan_stats::AntennaFreq::Antenna2G,
+                    index: 0,
+                })),
+                noise_floor_samples: vec![fidl_fuchsia_wlan_stats::HistBucket {
+                    bucket_index: 200,
+                    num_samples: 999,
+                }],
+                invalid_samples: 44,
+            }],
+            rssi_histograms: vec![fidl_fuchsia_wlan_stats::RssiHistogram {
+                hist_scope: fidl_fuchsia_wlan_stats::HistScope::PerAntenna,
+                antenna_id: Some(Box::new(fidl_fuchsia_wlan_stats::AntennaId {
+                    freq: fidl_fuchsia_wlan_stats::AntennaFreq::Antenna2G,
+                    index: 0,
+                })),
+                rssi_samples: vec![fidl_fuchsia_wlan_stats::HistBucket {
+                    bucket_index: 230,
+                    num_samples: 999,
+                }],
+                invalid_samples: 55,
+            }],
+            rx_rate_index_histograms: vec![
+                fidl_fuchsia_wlan_stats::RxRateIndexHistogram {
+                    hist_scope: fidl_fuchsia_wlan_stats::HistScope::Station,
+                    antenna_id: None,
+                    rx_rate_index_samples: vec![fidl_fuchsia_wlan_stats::HistBucket {
+                        bucket_index: 99,
+                        num_samples: 1400,
+                    }],
+                    invalid_samples: 22,
+                },
+                fidl_fuchsia_wlan_stats::RxRateIndexHistogram {
+                    hist_scope: fidl_fuchsia_wlan_stats::HistScope::PerAntenna,
+                    antenna_id: Some(Box::new(fidl_fuchsia_wlan_stats::AntennaId {
+                        freq: fidl_fuchsia_wlan_stats::AntennaFreq::Antenna5G,
+                        index: 1,
+                    })),
+                    rx_rate_index_samples: vec![fidl_fuchsia_wlan_stats::HistBucket {
+                        bucket_index: 100,
+                        num_samples: 1500,
+                    }],
+                    invalid_samples: 33,
+                },
+            ],
+            snr_histograms: vec![fidl_fuchsia_wlan_stats::SnrHistogram {
+                hist_scope: fidl_fuchsia_wlan_stats::HistScope::PerAntenna,
+                antenna_id: Some(Box::new(fidl_fuchsia_wlan_stats::AntennaId {
+                    freq: fidl_fuchsia_wlan_stats::AntennaFreq::Antenna2G,
+                    index: 0,
+                })),
+                snr_samples: vec![fidl_fuchsia_wlan_stats::HistBucket {
+                    bucket_index: 30,
+                    num_samples: 999,
+                }],
+                invalid_samples: 11,
+            }],
+        }
+    }
+
     struct FakeClientIface<St: Stream<Item = StatsRequest>> {
         iface: IfaceDevice,
         _stats_requests: St,
         new_sme_clients: mpsc::UnboundedReceiver<station::client::Endpoint>,
+        mlme_req_stream: fidl_mlme::MlmeRequestStream,
     }
 
     fn fake_client_iface() -> FakeClientIface<impl Stream<Item = StatsRequest>> {
         let (sme_sender, sme_receiver) = mpsc::unbounded();
         let (stats_sched, stats_requests) = stats_scheduler::create_scheduler();
-        let (mlme_proxy, _server) = create_proxy::<MlmeMarker>().expect("Error creating proxy");
+        let (mlme_proxy, mlme_req_stream) =
+            create_proxy_and_stream::<MlmeMarker>().expect("Error creating proxy");
         let (shutdown_sender, _) = mpsc::channel(1);
         let device_info = fake_device_info();
         let iface = IfaceDevice {
@@ -720,7 +989,12 @@ mod tests {
             device_info,
             shutdown_sender,
         };
-        FakeClientIface { iface, _stats_requests: stats_requests, new_sme_clients: sme_receiver }
+        FakeClientIface {
+            iface,
+            _stats_requests: stats_requests,
+            new_sme_clients: sme_receiver,
+            mlme_req_stream,
+        }
     }
 
     struct FakeApIface<St: Stream<Item = StatsRequest>> {
