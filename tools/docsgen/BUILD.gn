@@ -169,9 +169,11 @@ python_binary(_helpdoc_script_target) {
   deps = []
 }
 
-python_host_test("gen_helpdocs_test") {
-  main_source = "gen_helpdocs_test.py"
-  sources = [ "gen_helpdocs.py" ]
+if (is_host) {
+  python_host_test("gen_helpdocs_test") {
+    main_source = "gen_helpdocs_test.py"
+    sources = [ "gen_helpdocs.py" ]
+  }
 }
 
 group("tests") {
