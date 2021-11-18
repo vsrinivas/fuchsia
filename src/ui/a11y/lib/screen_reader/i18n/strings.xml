@@ -50,8 +50,19 @@
     <string name="cell_summary">Row <xliff:g id="row_index" example="2">{row_index}</xliff:g> column <xliff:g id="column_index" example="1">{column_index}</xliff:g>
     </string>
     <!-- Spoken message that summarizes a table row. -->
-    <string name="row_summary">Row <xliff:g id="row_index" example="2">{row_index}</xliff:g>
-    </string>
+    <string name="row_summary">Row <xliff:g id="row_index" example="2">{row_index}</xliff:g></string>
+    <!-- Spoken message that summarizes a table column. -->
+    <string name="column_summary">Column <xliff:g id="column_index" example="2">{column_index}</xliff:g></string>
+    <!-- Spoken message to indicate that a user has entered a table. -->
+    <string name="entered_table">Entered table</string>
+    <!-- Spoken message to indicate that a user has left a table. -->
+    <string name="exited_table">Exited table</string>
+      <!-- Spoken message to describe the dimensions of a table. -->
+    <string name="table_dimensions"><xliff:g id="num_rows" example="2">{num_rows}</xliff:g> rows, <xliff:g id="num_columns" example="1">{num_columns}</xliff:g> columns</string>
+    <!-- Spoken message to describe the row span of a table element. -->
+    <string name="row_span">spans <xliff:g id="num_rows" example="2">{num_rows}</xliff:g> rows</string>
+    <!-- Spoken message to describe the column span of a table element. -->
+    <string name="column_span">spans <xliff:g id="num_columns" example="2">{num_columns}</xliff:g> columns</string>
     <!-- Spoken message that describes an element that is checked. For example, a check box is checked in a html form. -->
     <string name="element_checked">Checked</string>
     <!-- Spoken message that describes an element that is not checked. For example, a check box is not checked in a html form. -->
