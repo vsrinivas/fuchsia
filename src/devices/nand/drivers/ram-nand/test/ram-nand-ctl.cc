@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <fidl/fuchsia.driver.test/cpp/wire.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/service/llcpp/service.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -96,3 +98,31 @@ TEST(RamNandCtlTest, CreateFailure) {
 }
 
 }  // namespace
+
+int main(int argc, char** argv) {
+  // Connect to DriverTestRealm.
+  auto client_end = service::Connect<fuchsia_driver_test::Realm>();
+  if (!client_end.is_ok()) {
+    fprintf(stderr, "Failed to connect to Realm FIDL: %d", client_end.error_value());
+    return 1;
+  }
+  auto client = fidl::BindSyncClient(std::move(*client_end));
+
+  // Start the DriverTestRealm with correct arguments.
+  fidl::Arena arena;
+  fuchsia_driver_test::wire::RealmArgs realm_args(arena);
+  realm_args.set_root_driver(arena, "fuchsia-boot:///#driver/platform-bus.so");
+  auto wire_result = client->Start(realm_args);
+  if (wire_result.status() != ZX_OK) {
+    fprintf(stderr, "Failed to call to Realm:Start: %d", wire_result.status());
+    return 1;
+  }
+  if (wire_result->result.is_err()) {
+    fprintf(stderr, "Realm:Start failed: %d", wire_result->result.err());
+    return 1;
+  }
+  fbl::unique_fd dir_fd;
+  device_watcher::RecursiveWaitForFile(ramdevice_client::RamNand::kBasePath, &dir_fd);
+  setlinebuf(stdout);
+  return RUN_ALL_TESTS(argc, argv);
+}

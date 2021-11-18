@@ -2,12 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.driver.test/cpp/wire.h>
 #include <getopt.h>
+#include <lib/service/llcpp/service.h>
 
+#include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
 #include "parent.h"
+#include "src/devices/lib/device-watcher/cpp/device-watcher.h"
 
+namespace {
 constexpr char kUsageMessage[] = R"""(
 Basic functionality test for a nand device.
 WARNING: Will write to the nand device.
@@ -52,6 +57,33 @@ const fuchsia_hardware_nand_Info kDefaultNandInfo = {.page_size = 4096,
                                                      .oob_size = 4,
                                                      .nand_class = fuchsia_hardware_nand_Class_TEST,
                                                      .partition_guid = {}};
+zx_status_t SetupDriverTestRealm() {
+  // Connect to DriverTestRealm.
+  auto client_end = service::Connect<fuchsia_driver_test::Realm>();
+  if (!client_end.is_ok()) {
+    fprintf(stderr, "Failed to connect to Realm FIDL: %d", client_end.error_value());
+    return client_end.status_value();
+  }
+  auto client = fidl::BindSyncClient(std::move(*client_end));
+
+  // Start the DriverTestRealm with correct arguments.
+  fidl::Arena arena;
+  fuchsia_driver_test::wire::RealmArgs realm_args(arena);
+  realm_args.set_root_driver(arena, "fuchsia-boot:///#driver/platform-bus.so");
+  auto wire_result = client->Start(realm_args);
+  if (!wire_result.ok()) {
+    fprintf(stderr, "Failed to call to Realm:Start: %d", wire_result.status());
+    return wire_result.status();
+  }
+  if (wire_result->result.is_err()) {
+    fprintf(stderr, "Realm:Start failed: %d", wire_result->result.err());
+    return wire_result->result.err();
+  }
+  fbl::unique_fd dir_fd;
+  device_watcher::RecursiveWaitForFile(ramdevice_client::RamNand::kBasePath, &dir_fd);
+  return ZX_OK;
+}
+}  // namespace
 
 // The test can operate over either a ram-nand, or a real device. The simplest
 // way to control what's going on is to have a place outside the test framework
@@ -102,6 +134,13 @@ int main(int argc, char** argv) {
   if (config.first_block && !config.num_blocks) {
     printf("num-blocks required when first-block is set\n");
     return -1;
+  }
+
+  if (config.path == nullptr) {
+    if (SetupDriverTestRealm() != ZX_OK) {
+      printf("Failed to setup driver test realm");
+      return -1;
+    }
   }
 
   ParentDevice parent(config);

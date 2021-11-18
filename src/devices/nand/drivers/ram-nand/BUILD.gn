@@ -3,9 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
+import("//build/components.gni")
 import("//build/drivers.gni")
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
 
 driver_bind_rules("ram-nand-bind") {
   rules = "ram-nand.bind"
@@ -68,7 +68,7 @@ source_set("common") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-test("ram-nand-test") {
+test("test") {
   output_name = "ram-nand-test"
   sources = [
     "test/ram-nand-ctl.cc",
@@ -78,7 +78,9 @@ test("ram-nand-test") {
   deps = [
     ":common",
     "//sdk/banjo/fuchsia.hardware.nand:fuchsia.hardware.nand_banjo_cpp",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_llcpp",
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_llcpp",
+    "//sdk/lib/driver_test_realm",
     "//sdk/lib/fdio",
     "//src/devices/lib/device-watcher/cpp",
     "//src/devices/testing/fake_ddk",
@@ -89,6 +91,7 @@ test("ram-nand-test") {
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/ramdevice-client",
+    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
@@ -100,12 +103,21 @@ test("ram-nand-test") {
   data_deps = [ ":ram-nand" ]
 }
 
-bootfs_test("ram-nand-test-bootfs-test") {
-  name = "ram-nand-test"
-  deps = [ ":ram-nand-test" ]
+fuchsia_unittest_package("ram-nand-test") {
+  deps = [
+    ":test",
+    "//src/devices/board/drivers/integration-test",
+    "//src/devices/bus/drivers/platform",
+    "//src/devices/nand/drivers/nand",
+    "//src/devices/nand/drivers/nandpart",
+    "//src/devices/nand/drivers/ram-nand",
+  ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":ram-nand-bind_test" ]
+  deps = [
+    ":ram-nand-bind_test",
+    ":ram-nand-test",
+  ]
 }

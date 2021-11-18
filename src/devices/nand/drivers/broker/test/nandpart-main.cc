@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/driver-integration-test/fixture.h>
+#include <fidl/fuchsia.driver.test/cpp/wire.h>
 #include <lib/fdio/namespace.h>
+#include <lib/service/llcpp/service.h>
 #include <zircon/hw/gpt.h>
 
 #include <zxtest/zxtest.h>
 
 #include "parent.h"
+#include "src/devices/lib/device-watcher/cpp/device-watcher.h"
 
 constexpr fuchsia_hardware_nand_Info kNandInfo = {
     .page_size = 4096,
@@ -46,35 +48,29 @@ constexpr fuchsia_hardware_nand_PartitionMap kPartitionMap = {
 ParentDevice* g_parent_device_;
 
 int main(int argc, char** argv) {
-  driver_integration_test::IsolatedDevmgr::Args args;
-  args.disable_block_watcher = true;
+  // Connect to DriverTestRealm.
+  auto client_end = service::Connect<fuchsia_driver_test::Realm>();
+  if (!client_end.is_ok()) {
+    fprintf(stderr, "Failed to connect to Realm FIDL: %d", client_end.error_value());
+    return client_end.status_value();
+  }
+  auto client = fidl::BindSyncClient(std::move(*client_end));
 
-  driver_integration_test::IsolatedDevmgr devmgr;
-  zx_status_t st = driver_integration_test::IsolatedDevmgr::Create(&args, &devmgr);
-  if (st != ZX_OK) {
-    fprintf(stderr, "Could not create driver manager, %d\n", st);
-    return st;
+  // Start the DriverTestRealm with correct arguments.
+  fidl::Arena arena;
+  fuchsia_driver_test::wire::RealmArgs realm_args(arena);
+  realm_args.set_root_driver(arena, "fuchsia-boot:///#driver/platform-bus.so");
+  auto wire_result = client->Start(realm_args);
+  if (!wire_result.ok()) {
+    fprintf(stderr, "Failed to call to Realm:Start: %d", wire_result.status());
+    return wire_result.status();
   }
-
-  fdio_ns_t* ns;
-  st = fdio_ns_get_installed(&ns);
-  if (st != ZX_OK) {
-    fprintf(stderr, "Could not create get namespace, %d\n", st);
-    return st;
+  if (wire_result->result.is_err()) {
+    fprintf(stderr, "Realm:Start failed: %d", wire_result->result.err());
+    return wire_result->result.err();
   }
-  st = fdio_ns_bind_fd(ns, "/dev", devmgr.devfs_root().get());
-  if (st != ZX_OK) {
-    fprintf(stderr, "Could not bind /dev namespace, %d\n", st);
-    return st;
-  }
-
-  fbl::unique_fd ctl;
-  st = devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(),
-                                                     "sys/platform/00:00:2e/nand-ctl", &ctl);
-  if (st != ZX_OK) {
-    fprintf(stderr, "sys/platform/00:00:2e/nand-ctl failed to enumerate: %d\n", st);
-    return st;
-  }
+  fbl::unique_fd dir_fd;
+  device_watcher::RecursiveWaitForFile(ramdevice_client::RamNand::kBasePath, &dir_fd);
 
   ParentDevice::TestConfig config = {};
   config.info = kNandInfo;
@@ -93,11 +89,10 @@ int main(int argc, char** argv) {
 
   // Wait for nandpart to spawn.
   fbl::unique_fd nandpart;
-  zx_status_t status =
-      devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), &path[5], &nandpart);
+  zx_status_t status = device_watcher::RecursiveWaitForFile(path, &nandpart);
   if (status != ZX_OK) {
     fprintf(stderr, "Unable to attach to device: %d\n", status);
-    return st;
+    return status;
   }
 
   ParentDevice::TestConfig nandpart_config = {};

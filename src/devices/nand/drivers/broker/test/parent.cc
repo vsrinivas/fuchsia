@@ -23,6 +23,7 @@ ParentDevice::ParentDevice(const TestConfig& config) : config_(config) {
     } else {
       ram_nand_config.export_partition_map = false;
     }
+    fbl::unique_fd fd;
     if (ramdevice_client::RamNand::Create(&ram_nand_config, &ram_nand_) == ZX_OK) {
       path_.Append(ram_nand_->path());
       config_.num_blocks = config.info.num_blocks;

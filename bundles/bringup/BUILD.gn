@@ -15,8 +15,6 @@ group("tests") {
     "//src/bringup/bin/sysinfo:sysinfo-bootfs-test",
     "//src/bringup/tests/bootfs_test:running-on-bootfs-test",
     "//src/devices/block/bin/biotime:biotime-test-bootfs-test",
-    "//src/devices/nand/drivers/broker/test:nand-broker-bootfs-test",  # HW-required.
-    "//src/devices/nand/drivers/ram-nand:ram-nand-test-bootfs-test",
     "//src/devices/sysmem/tests/sysmem:sysmem-bootfs-test",
     "//src/tests/drivers_serial_log:bringup_tests",
     "//src/tests/reboot/dm_reboot_bringup_test:tests",

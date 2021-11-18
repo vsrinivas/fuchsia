@@ -17,14 +17,17 @@ source_set("common") {
   public_deps = [
     "//sdk/banjo/fuchsia.hardware.nand:fuchsia.hardware.nand_banjo_cpp",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_llcpp",
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//sdk/fidl/fuchsia.nand:fuchsia.nand_c",
+    "//sdk/lib/driver_test_realm",
     "//sdk/lib/fdio",
-    "//zircon/system/ulib/driver-integration-test",
+    "//src/devices/lib/device-watcher/cpp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/ramdevice-client",
+    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
@@ -37,31 +40,25 @@ source_set("common") {
 
 test("nand-broker") {
   output_name = "nand-broker-test"
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
   sources = [ "main.cc" ]
   deps = [ ":common" ]
 }
 
 test("nandpart-broker") {
   output_name = "nandpart-broker-test"
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
   sources = [ "nandpart-main.cc" ]
   deps = [ ":common" ]
 }
 
-bootfs_test("nand-broker-bootfs-test") {
-  name = "nand-broker-test"
-  deps = [ ":nand-broker" ]
+fuchsia_unittest_package("nand-broker-test") {
+  deps = [
+    ":nand-broker",
+    "//src/devices/board/drivers/integration-test",
+    "//src/devices/bus/drivers/platform",
+    "//src/devices/nand/drivers/broker:nand-broker",
+    "//src/devices/nand/drivers/nand",
+    "//src/devices/nand/drivers/ram-nand",
+  ]
 }
 
 fuchsia_unittest_package("nandpart-broker-test") {

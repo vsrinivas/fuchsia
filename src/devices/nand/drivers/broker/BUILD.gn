@@ -49,6 +49,7 @@ group("tests") {
   testonly = true
   deps = [
     ":nand-broker-bind_test",
+    "test:nand-broker-test",
     "test:nandpart-broker-test",
   ]
 }

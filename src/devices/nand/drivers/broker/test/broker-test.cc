@@ -5,7 +5,6 @@
 #include <fcntl.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <fuchsia/nand/c/fidl.h>
-#include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/vmo-mapper.h>
@@ -23,6 +22,7 @@
 #include <zxtest/zxtest.h>
 
 #include "parent.h"
+#include "src/devices/lib/device-watcher/cpp/device-watcher.h"
 
 namespace {
 
@@ -66,11 +66,11 @@ class NandDevice {
     if (linked_) {
       // Since WATCH_EVENT_ADD_FILE used by OpenBroker may pick up existing files,
       // we need to make sure the (device) file has been completely removed before returning.
-      std::unique_ptr<devmgr_integration_test::DirWatcher> watcher;
+      std::unique_ptr<device_watcher::DirWatcher> watcher;
 
       fbl::unique_fd dir_fd(open(parent_->Path(), O_RDONLY | O_DIRECTORY));
       ASSERT_TRUE(dir_fd);
-      ASSERT_EQ(devmgr_integration_test::DirWatcher::Create(std::move(dir_fd), &watcher), ZX_OK);
+      ASSERT_EQ(device_watcher::DirWatcher::Create(std::move(dir_fd), &watcher), ZX_OK);
 
       fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(channel()))->ScheduleUnbind();
 
