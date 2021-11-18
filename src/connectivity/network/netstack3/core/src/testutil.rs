@@ -447,7 +447,9 @@ impl DummyEventDispatcherBuilder {
     /// `add_device_with_ip` is like `add_device`, except that it takes an
     /// associated IP address and subnet to assign to the device.
     pub(crate) fn add_device_with_ip<A: IpAddress>(&mut self, mac: Mac, ip: A, subnet: Subnet<A>) {
+        let idx = self.devices.len();
         self.devices.push((mac, Some((ip.into(), subnet.into()))));
+        self.device_routes.push((subnet.into(), idx));
     }
 
     /// Add an ARP table entry for a device's ARP table.
