@@ -965,6 +965,7 @@ config("Wno-conversion") {
     "//src/virtualization/third_party/fdt:*",
     "//third_party/acpica/*",
     "//third_party/crashpad/*",
+    "//third_party/ffmpeg/*",
     "//third_party/glfw/*",
     "//third_party/iperf/*",
     "//third_party/libc-tests/*",
