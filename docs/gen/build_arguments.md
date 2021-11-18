@@ -2242,7 +2242,7 @@ From //src/virtualization/bin/linux_runner/BUILD.gn:16
 From //src/virtualization/bin/linux_runner/BUILD.gn:18
 
 ### linux_runner_stateful_image_path
-Point this to the location of a prebuilt stateful image
+Point this to the location of a prebuilt stateful image in QCOW2 format
 
 **Current value (from the default):** `""`
 
@@ -4038,7 +4038,7 @@ git clone "sso://fuchsia.googlesource.com/third_party/ffmpeg" third_party/ffmpeg
 
 **Current value (from the default):** `true`
 
-From //src/media/lib/ffmpeg/BUILD.gn:40
+From //src/media/lib/ffmpeg/BUILD.gn:21
 
 ### use_spinel_for_carnelian_examples
 Include a config in the example packages to attempt to use Spinel
