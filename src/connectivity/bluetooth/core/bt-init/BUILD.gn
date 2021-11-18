@@ -5,6 +5,7 @@
 import("//build/components.gni")
 import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/core/build/core_shard.gni")
 
 rustc_binary("bin") {
   output_name = "bt_init"
@@ -106,6 +107,13 @@ config_data("bootstrap_config") {
   for_pkg = "sysmgr"
   outputs = [ "bt-init-bootstrap.config" ]
   sources = [ "bootstrap.config" ]
+}
+
+# TODO(fxbug.dev/72960): Make the below true, once associated code is ready for migration.
+# The fuchsia.bluetooth.sys.Bootstrap service is not relevant to all configurations, so products
+# that require it should include this shard to expose the protocol to appmgr via bt-init.
+core_shard("bt-bootstrap-core-shard") {
+  shard_file = "meta/bt-bootstrap.core_shard.cml"
 }
 
 fuchsia_unittest_package("tests-v1") {
