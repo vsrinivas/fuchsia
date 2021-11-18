@@ -155,12 +155,16 @@ bool VkReadbackTest::InitVulkan(uint32_t vk_api_version) {
   vk::DeviceCreateInfo device_info = builder.DeviceInfo();
 
   auto features = vk::PhysicalDeviceVulkan12Features().setTimelineSemaphore(true);
-  switch (CheckVulkanTimelineSemaphoreSupport(vk_api_version)) {
+  auto ext_features = vk::PhysicalDeviceTimelineSemaphoreFeaturesKHR().setTimelineSemaphore(true);
+
+  timeline_semaphore_support_ = GetVulkanTimelineSemaphoreSupport(vk_api_version);
+  switch (timeline_semaphore_support_) {
     case VulkanExtensionSupportState::kSupportedInCore:
       device_info.setPNext(&features);
       break;
     case VulkanExtensionSupportState::kSupportedAsExtensionOnly:
       enabled_extension_names.push_back(VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME);
+      device_info.setPNext(&ext_features);
       break;
     case VulkanExtensionSupportState::kNotSupported:
       break;

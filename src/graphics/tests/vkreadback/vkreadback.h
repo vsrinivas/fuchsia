@@ -15,6 +15,7 @@
 #include <gtest/gtest.h>
 #include <vulkan/vulkan.h>
 
+#include "src/graphics/tests/common/utils.h"
 #include "src/graphics/tests/common/vulkan_context.h"
 
 // Supports Fuchsia external memory extension.
@@ -50,7 +51,11 @@ class VkReadbackTest {
   bool Wait();
   bool Readback();
   vk::Device vulkan_device() const { return ctx_->device().get(); }
+  const vk::DispatchLoaderDynamic& vulkan_loader() const { return ctx_->loader(); }
   vk::PhysicalDevice physical_device() const { return ctx_->physical_device(); }
+  VulkanExtensionSupportState timeline_semaphore_support() const {
+    return timeline_semaphore_support_;
+  }
 
   uint32_t get_exported_memory_handle() const { return exported_memory_handle_; }
 
@@ -59,7 +64,7 @@ class VkReadbackTest {
   bool InitImage();
   bool InitCommandBuffers();
 
-  bool FillCommandBuffer(vk::CommandBuffer &command_buffer, bool transition_image = true);
+  bool FillCommandBuffer(vk::CommandBuffer& command_buffer, bool transition_image = true);
 
 #ifdef __Fuchsia__
   bool AllocateFuchsiaImportedMemory(uint32_t device_memory_handle);
@@ -84,6 +89,9 @@ class VkReadbackTest {
 
   vk::UniqueCommandPool command_pool_;
   std::vector<vk::UniqueCommandBuffer> command_buffers_;
+
+  VulkanExtensionSupportState timeline_semaphore_support_ =
+      VulkanExtensionSupportState::kNotSupported;
 
   uint64_t bind_offset_ = 0;
 

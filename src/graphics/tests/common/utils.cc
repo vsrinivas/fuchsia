@@ -19,7 +19,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL DebugUtilsTestCallback(
   return VK_FALSE;
 }
 
-VulkanExtensionSupportState CheckVulkanTimelineSemaphoreSupport(uint32_t instance_api_version) {
+VulkanExtensionSupportState GetVulkanTimelineSemaphoreSupport(uint32_t instance_api_version) {
   vk::ApplicationInfo app_info;
   app_info.apiVersion = instance_api_version;
 
@@ -55,7 +55,7 @@ VulkanExtensionSupportState CheckVulkanTimelineSemaphoreSupport(uint32_t instanc
   // If device / instance API version < 1.2, we should check if the device supports
   // VK_KHR_timeline_semaphore extension.
   auto extension_rv = physical_device.enumerateDeviceExtensionProperties();
-  if (phy_dev_result != vk::Result::eSuccess) {
+  if (extension_rv.result != vk::Result::eSuccess) {
     RTN_MSG(VulkanExtensionSupportState::kNotSupported,
             "Failed to get device extension properties.\n");
   }
@@ -67,7 +67,13 @@ VulkanExtensionSupportState CheckVulkanTimelineSemaphoreSupport(uint32_t instanc
                    }) != extensions.end();
 
   if (found_ext) {
-    return VulkanExtensionSupportState::kSupportedAsExtensionOnly;
+    auto supported_features =
+        physical_device.getFeatures2<vk::PhysicalDeviceFeatures2,
+                                     vk::PhysicalDeviceTimelineSemaphoreFeaturesKHR>();
+    if (supported_features.get<vk::PhysicalDeviceTimelineSemaphoreFeaturesKHR>()
+            .timelineSemaphore) {
+      return VulkanExtensionSupportState::kSupportedAsExtensionOnly;
+    }
   }
   return VulkanExtensionSupportState::kNotSupported;
 }

@@ -47,7 +47,9 @@ enum class VulkanExtensionSupportState {
   kSupportedAsExtensionOnly,
 };
 
-VulkanExtensionSupportState CheckVulkanTimelineSemaphoreSupport(uint32_t instance_api_version);
+// TODO(fxbug.dev/88970): Currently we can only get extension support for
+// VK_KHR_timeline_semaphore. We should support checking other extensions.
+VulkanExtensionSupportState GetVulkanTimelineSemaphoreSupport(uint32_t instance_api_version);
 
 //
 // DebugUtilsTestCallback will fail an EXPECT_TRUE() test if validation errors should

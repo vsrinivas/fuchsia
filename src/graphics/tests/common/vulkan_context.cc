@@ -187,6 +187,7 @@ bool VulkanContext::InitDevice() {
   } else {
     queue_ = device_->getQueue(queue_family_index_, 0);
   }
+  loader_.init(instance_.get(), device_.get());
   device_initialized_ = true;
   return true;
 }

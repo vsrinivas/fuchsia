@@ -133,15 +133,16 @@ TEST(Vulkan, ReadbackLoopWithFenceWait) {
 TEST(Vulkan, ReadbackLoopWithTimelineWait) {
   VkReadbackTest test;
 
-  if (CheckVulkanTimelineSemaphoreSupport(VK_API_VERSION_1_2) ==
-      VulkanExtensionSupportState::kNotSupported) {
+  ASSERT_TRUE(test.Initialize(VK_API_VERSION_1_2));
+  auto timeline_semaphore_support = test.timeline_semaphore_support();
+
+  if (timeline_semaphore_support == VulkanExtensionSupportState::kNotSupported) {
     fprintf(stderr, "Timeline semaphore feature not supported. Test skipped.\n");
     GTEST_SKIP();
   }
 
-  ASSERT_TRUE(test.Initialize(VK_API_VERSION_1_2));
-
   {
+    // Check device timeline semaphore support.
     vk::PhysicalDeviceTimelineSemaphoreProperties timeline_properties{};
     auto properties = vk::PhysicalDeviceProperties2{};
     properties.pNext = &timeline_properties;
@@ -156,6 +157,7 @@ TEST(Vulkan, ReadbackLoopWithTimelineWait) {
   vk::Semaphore semaphore{};
 
   {
+    // Initialize a timeline semaphore with initial value of 0.
     auto type_create_info =
         vk::SemaphoreTypeCreateInfo().setSemaphoreType(vk::SemaphoreType::eTimeline);
     auto create_info = vk::SemaphoreCreateInfo().setPNext(&type_create_info);
@@ -168,22 +170,52 @@ TEST(Vulkan, ReadbackLoopWithTimelineWait) {
     uint64_t timeline_value = 1 + i;
 
     {
+      // Every time we submit commands to VkQueue, the value of the timeline
+      // semaphore will increment by 1.
       const bool transition_image = (i == 0);
       EXPECT_TRUE(test.Submit(semaphore, timeline_value, transition_image));
     }
 
     {
+      // Wait until the timeline semaphore value is updated.
       auto wait_info = vk::SemaphoreWaitInfo()
                            .setSemaphoreCount(1)
                            .setPSemaphores(&semaphore)
                            .setPValues(&timeline_value);
-      EXPECT_EQ(vk::Result::eSuccess, device.waitSemaphores(&wait_info, ms_to_ns(1000)));
+
+      // We'll use Vulkan 1.2 core API only if it is supported; otherwise we
+      // use Vulkan 1.1 with extension instead. Ditto for below.
+      vk::Result wait_result = vk::Result::eErrorInitializationFailed;
+      switch (timeline_semaphore_support) {
+        case VulkanExtensionSupportState::kSupportedInCore:
+          wait_result = device.waitSemaphores(&wait_info, ms_to_ns(1000));
+          break;
+        case VulkanExtensionSupportState::kSupportedAsExtensionOnly:
+          wait_result = device.waitSemaphoresKHR(&wait_info, ms_to_ns(1000), test.vulkan_loader());
+          break;
+        case VulkanExtensionSupportState::kNotSupported:
+          __builtin_unreachable();
+          break;
+      }
+      EXPECT_EQ(vk::Result::eSuccess, wait_result);
     }
 
     {
-      auto rv_result = device.getSemaphoreCounterValue(semaphore);
-      EXPECT_EQ(rv_result.result, vk::Result::eSuccess);
-      EXPECT_EQ(rv_result.value, timeline_value);
+      // Verify that the timeline semaphore counter has been updated.
+      vk::ResultValue<unsigned long> counter_result(vk::Result::eErrorInitializationFailed, 0u);
+      switch (timeline_semaphore_support) {
+        case VulkanExtensionSupportState::kSupportedInCore:
+          counter_result = device.getSemaphoreCounterValue(semaphore);
+          break;
+        case VulkanExtensionSupportState::kSupportedAsExtensionOnly:
+          counter_result = device.getSemaphoreCounterValueKHR(semaphore, test.vulkan_loader());
+          break;
+        case VulkanExtensionSupportState::kNotSupported:
+          __builtin_unreachable();
+          break;
+      }
+      EXPECT_EQ(counter_result.result, vk::Result::eSuccess);
+      EXPECT_EQ(counter_result.value, timeline_value);
     }
 
     EXPECT_TRUE(test.Readback());
