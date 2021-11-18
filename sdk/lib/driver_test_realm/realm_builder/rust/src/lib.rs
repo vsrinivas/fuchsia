@@ -23,7 +23,8 @@ pub trait DriverTestRealmBuilder {
 #[async_trait::async_trait]
 impl DriverTestRealmBuilder for RealmBuilder {
     async fn driver_test_realm_setup(&self) -> Result<&Self> {
-        self.add_child(COMPONENT_NAME, DRIVER_TEST_REALM_URL, ChildProperties::new()).await?;
+        self.add_child(COMPONENT_NAME, DRIVER_TEST_REALM_URL, ChildProperties::new().eager())
+            .await?;
 
         let driver_realm = RouteEndpoint::component(COMPONENT_NAME);
         self.add_route(
