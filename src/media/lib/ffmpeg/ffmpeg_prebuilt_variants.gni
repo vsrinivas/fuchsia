@@ -1,0 +1,19 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# The list of variants that can use prebuilt ffmpeg libraries.
+# TODO(gulfem): Remove hardcoded ffmpeg_prebuilt_variants, and read it from prebuilt_variants.json.
+ffmpeg_prebuilt_variants = [
+  "asan",
+  "asan-ubsan",
+  "coverage",
+  "coverage-rust",
+  "lto",
+  "profile",
+  "thinlto",
+  "ubsan",
+]
+# prebuilt_variants_file = read_file("//prebuilt/third_party/ffmpeg/prebuilt_variants.json", "json")
+# The list of variants that can use prebuilt ffmpeg libraries.
+# ffmpeg_prebuilt_variants = prebuilt_variants_file["prebuilt_variants"]

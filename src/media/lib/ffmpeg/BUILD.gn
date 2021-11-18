@@ -3,26 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-
-# The list of variants that can use prebuilt ffmpeg libraries.
-ffmpeg_prebuilt_variants = [
-  "",
-  "debug",
-  "release",
-  "asan",
-  "asan-ubsan",
-  "lto",
-  "profile",
-  "coverage",
-  "coverage-rust",
-  "coverage-cts",
-  "novariant",
-  "thinlto",
-  "ubsan",
-]
-
-has_prebuilt_ffmpeg = ffmpeg_prebuilt_variants + [ toolchain_variant.name ] -
-                      [ toolchain_variant.name ] != ffmpeg_prebuilt_variants
+import("//src/media/lib/ffmpeg/ffmpeg_prebuilt_variants.gni")
 
 declare_args() {
   # Use a prebuilt ffmpeg binary rather than building it locally.  See
@@ -37,7 +18,7 @@ declare_args() {
   # it can work to just git clone (but jiri update won't manage third_party/ffmpeg in this case):
   # mkdir third_party/ffmpeg
   # git clone "sso://fuchsia.googlesource.com/third_party/ffmpeg" third_party/ffmpeg
-  use_prebuilt_ffmpeg = has_prebuilt_ffmpeg
+  use_prebuilt_ffmpeg = true
 }
 
 group("ffmpeg") {
@@ -57,10 +38,6 @@ group("ffmpeg") {
 }
 
 if (use_prebuilt_ffmpeg) {
-  assert(has_prebuilt_ffmpeg,
-         "No prebuilt ffmpeg for this variant (${toolchain_variant.name}), " +
-             "did you set use_prebuilt_ffmpeg=true mistakenly in your args.gn?")
-
   group("prebuilt_ffmpeg") {
     deps = [ ":prebuilt_ffmpeg_shared_library" ]
 
@@ -68,27 +45,19 @@ if (use_prebuilt_ffmpeg) {
   }
 
   variant_prefix = toolchain_variant.name
-  if (variant_prefix == "debug" || variant_prefix == "release" ||
-      variant_prefix == "novariant") {
-    variant_prefix = ""
-  }
+  has_prebuilt_ffmpeg_variant = ffmpeg_prebuilt_variants + [ variant_prefix ] -
+                                [ variant_prefix ] != ffmpeg_prebuilt_variants
 
-  # THe 'coverage-cts' build variant only builds the SDK sdk_source_set() and
-  # FIDL C++ source_set() targets with instrumentation, all other targets are
-  # built with the default toolchain suite otherwise.
-  if (variant_prefix == "coverage-cts") {
-    variant_prefix = ""
-  }
-  if (variant_prefix != "") {
+  # If there is an ffmpeg build variant, use that variant as a prefix.
+  # Otherwise, do not use a prefix.
+  if (has_prebuilt_ffmpeg_variant) {
     variant_prefix += "/"
+  } else {
+    variant_prefix = ""
   }
 
   prebuilt_dir = "//prebuilt/third_party/ffmpeg/arch/$current_cpu"
-  if (variant_prefix == "debug") {
-    lib_dir = "$prebuilt_dir/debug/"
-  } else {
-    lib_dir = "$prebuilt_dir/lib/"
-  }
+  lib_dir = "$prebuilt_dir/lib/"
 
   config("prebuilt_ffmpeg_config") {
     visibility = [ ":prebuilt_ffmpeg" ]
@@ -105,7 +74,7 @@ if (use_prebuilt_ffmpeg) {
       "$ffmpeg_include/fuchsia/config/$ffmpeg_config/$current_cpu",
     ]
 
-    libs = [ "ffmpeg" ]
+    libs = [ "$lib_dir/${variant_prefix}libffmpeg.so" ]
     lib_dirs = [ lib_dir ]
   }
 
