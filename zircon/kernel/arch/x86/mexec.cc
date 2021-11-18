@@ -37,5 +37,15 @@ fitx::result<fitx::failed> ArchAppendMexecDataFromHandoff(MexecDataImage& image,
     }
   }
 
+  if (handoff.arch_handoff.framebuffer) {
+    auto result = image.Append(zbi_header_t{.type = ZBI_TYPE_FRAMEBUFFER},
+                               zbitl::AsBytes(handoff.arch_handoff.framebuffer.value()));
+    if (result.is_error()) {
+      printf("mexec: could not append framebuffer data: ");
+      zbitl::PrintViewError(result.error_value());
+      return fitx::failed();
+    }
+  }
+
   return fitx::ok();
 }

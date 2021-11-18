@@ -135,6 +135,13 @@ static void platform_save_bootloader_data(void) {
     bootloader.acpi_rsdp = gPhysHandoff->arch_handoff.acpi_rsdp.value();
   }
 
+  if (gPhysHandoff->arch_handoff.framebuffer) {
+    bootloader.fb = gPhysHandoff->arch_handoff.framebuffer.value();
+    // TODO(fxbug.dev/89029): This will go away, ensuring that gPhysHandoff's
+    // contents are indeed the source of truth.
+    bootloader.fb.format = pixel_format_fixup(bootloader.fb.format);
+  }
+
   // Handle individual ZBI items.
   ktl::span<ktl::byte> zbi = ZbiInPhysmap();
   zbitl::View view(zbi);
@@ -145,13 +152,6 @@ static void platform_save_bootloader_data(void) {
         if (payload.size() >= sizeof(uint64_t)) {
           bootloader.smbios = *reinterpret_cast<uint64_t*>(payload.data());
         }
-        break;
-      }
-      case ZBI_TYPE_FRAMEBUFFER: {
-        if (payload.size() >= sizeof(zbi_swfb_t)) {
-          memcpy(&bootloader.fb, payload.data(), sizeof(zbi_swfb_t));
-        }
-        bootloader.fb.format = pixel_format_fixup(bootloader.fb.format);
         break;
       }
       case ZBI_TYPE_CMDLINE: {
@@ -350,17 +350,6 @@ zx_status_t platform_append_mexec_data(ktl::span<ktl::byte> data_zbi) {
                                    zbitl::AsBytes(bootloader.memory_ranges));
         result.is_error()) {
       printf("mexec: failed to append memory range metadata to data ZBI: ");
-      zbitl::PrintViewError(result.error_value());
-      return error(result.error_value());
-    }
-  }
-
-  // Append information about the framebuffer to the data ZBI.
-  if (bootloader.fb.base) {
-    auto result =
-        image.Append(zbi_header_t{.type = ZBI_TYPE_FRAMEBUFFER}, zbitl::AsBytes(bootloader.fb));
-    if (result.is_error()) {
-      printf("mexec: failed to append framebuffer data to data ZBI: ");
       zbitl::PrintViewError(result.error_value());
       return error(result.error_value());
     }
