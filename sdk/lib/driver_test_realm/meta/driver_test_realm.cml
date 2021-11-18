@@ -164,6 +164,13 @@
                     from: "#driver_manager",
                 },
             ],
+            resolvers: [
+                {
+                    resolver: "boot-resolver",
+                    from: "#driver-manager-support",
+                    scheme: "fuchsia-boot",
+                },
+            ],
 
             // 1 second
             __stop_timeout_ms: 1000,

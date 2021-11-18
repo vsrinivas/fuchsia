@@ -41,6 +41,10 @@
             rights: [ "rx*" ],
             path: "/boot",
         },
+        {
+            resolver: "boot-resolver",
+            path: "/svc/fuchsia.sys2.ComponentResolver",
+        },
     ],
     expose: [
         {
@@ -68,6 +72,10 @@
         },
         {
             directory: "boot",
+            from: "self",
+        },
+        {
+            resolver: "boot-resolver",
             from: "self",
         },
     ],

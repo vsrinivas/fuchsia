@@ -8,8 +8,10 @@
 #include <fidl/fuchsia.device.manager/cpp/wire.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <fidl/fuchsia.driver.test/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <fidl/fuchsia.kernel/cpp/wire.h>
 #include <fidl/fuchsia.power.manager/cpp/wire.h>
+#include <fidl/fuchsia.sys2/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
@@ -18,6 +20,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fidl-async/bind.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/stdcompat/string_view.h>
 #include <lib/svc/dir.h>
 #include <lib/svc/outgoing.h>
 #include <lib/sys/cpp/component_context.h>
@@ -200,6 +203,62 @@ class FakeRootJob final : public fidl::WireServer<fuchsia_kernel::RootJob> {
   }
 };
 
+class FakeBootResolver final : public fidl::WireServer<fuchsia_sys2::ComponentResolver> {
+ public:
+  void SetPkgDir(fbl::RefPtr<fs::RemoteDir> pkg_dir) { pkg_dir_ = std::move(pkg_dir); }
+
+ private:
+  void Resolve(ResolveRequestView request, ResolveCompleter::Sync& completer) override {
+    std::string_view kPrefix = "fuchsia-boot:///";
+    std::string_view relative_path = request->component_url.get();
+    if (!cpp20::starts_with(relative_path, kPrefix)) {
+      completer.ReplyError(fuchsia_sys2::wire::ResolverError::kInvalidArgs);
+      return;
+    }
+    relative_path.remove_prefix(kPrefix.size() + 1);
+
+    auto file = fidl::CreateEndpoints<fuchsia_io::File>();
+    if (file.is_error()) {
+      completer.ReplyError(fuchsia_sys2::wire::ResolverError::kInternal);
+      return;
+    }
+    zx_status_t status =
+        fdio_open_at(pkg_dir_->GetRemote().handle(), std::string(relative_path).data(),
+                     fuchsia_io::wire::kOpenRightReadable, file->server.channel().release());
+    if (status != ZX_OK) {
+      completer.ReplyError(fuchsia_sys2::wire::ResolverError::kInternal);
+      return;
+    }
+    auto result = fidl::WireCall(file->client)->GetBuffer(fuchsia_io::wire::kVmoFlagRead);
+    if (!result.ok() || result->s != ZX_OK) {
+      completer.ReplyError(fuchsia_sys2::wire::ResolverError::kIo);
+      return;
+    }
+    fuchsia_mem::wire::Data data;
+    data.set_buffer(result->buffer);
+
+    fidl::ClientEnd<fuchsia_io::Directory> directory(
+        zx::channel(fdio_service_clone(pkg_dir_->GetRemote().handle())));
+    if (!directory.is_valid()) {
+      completer.ReplyError(fuchsia_sys2::wire::ResolverError::kInternal);
+      return;
+    }
+
+    fidl::Arena arena;
+    fuchsia_sys2::wire::Package package(arena);
+    package.set_package_url(arena, fidl::StringView::FromExternal(kPrefix));
+    package.set_package_dir(std::move(directory));
+
+    fuchsia_sys2::wire::Component component(arena);
+    component.set_resolved_url(arena, request->component_url);
+    component.set_decl(arena, std::move(data));
+    component.set_package(arena, std::move(package));
+    completer.ReplySuccess(std::move(component));
+  }
+
+  fbl::RefPtr<fs::RemoteDir> pkg_dir_;
+};
+
 class DriverTestRealm final : public fidl::WireServer<fuchsia_driver_test::Realm> {
  public:
   DriverTestRealm(svc::Outgoing* outgoing, async::Loop* loop) : outgoing_(outgoing), loop_(loop) {}
@@ -243,21 +302,23 @@ class DriverTestRealm final : public fidl::WireServer<fuchsia_driver_test::Realm
       boot_dir = fidl::ClientEnd<fuchsia_io::Directory>(std::move(request->args.boot()));
     } else {
       auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
-      if (endpoints.status_value() != ZX_OK) {
+      if (endpoints.is_error()) {
         completer.ReplyError(ZX_ERR_INTERNAL);
         return;
       }
       zx_status_t status =
           fdio_open("/pkg", ZX_FS_FLAG_DIRECTORY | ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE,
-                    endpoints->server.TakeChannel().release());
+                    endpoints->server.channel().release());
       if (status != ZX_OK) {
         completer.ReplyError(ZX_ERR_INTERNAL);
         return;
       }
       boot_dir = std::move(endpoints->client);
     }
-    outgoing_->root_dir()->AddEntry("boot",
-                                    fbl::MakeRefCounted<fs::RemoteDir>(std::move(boot_dir)));
+
+    auto remote_dir = fbl::MakeRefCounted<fs::RemoteDir>(std::move(boot_dir));
+    boot_resolver_.SetPkgDir(remote_dir);
+    outgoing_->root_dir()->AddEntry("boot", remote_dir);
 
     start_event_.signal(0, kDriverTestRealmStartSignal);
     completer.ReplySuccess();
@@ -286,6 +347,11 @@ class DriverTestRealm final : public fidl::WireServer<fuchsia_driver_test::Realm
     }
 
     status = AddProtocolWithWait<fuchsia_kernel::RootJob>(&root_job_);
+    if (status != ZX_OK) {
+      return ZX_ERR_INTERNAL;
+    }
+
+    status = AddProtocolWithWait<fuchsia_sys2::ComponentResolver>(&boot_resolver_);
     if (status != ZX_OK) {
       return ZX_ERR_INTERNAL;
     }
@@ -373,6 +439,7 @@ class DriverTestRealm final : public fidl::WireServer<fuchsia_driver_test::Realm
   FakePowerRegistration fake_power_registration_;
   FakeBootItems boot_items_;
   FakeRootJob root_job_;
+  FakeBootResolver boot_resolver_;
 
   zx::event start_event_;
   bool is_started_ = false;
