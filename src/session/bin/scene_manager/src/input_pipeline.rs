@@ -11,8 +11,9 @@ use {
     fuchsia_syslog::{fx_log_err, fx_log_warn},
     futures::lock::Mutex,
     futures::StreamExt,
+    icu_data,
     input_pipeline::{
-        self,
+        self, dead_keys_handler,
         ime_handler::ImeHandler,
         input_device,
         input_pipeline::{InputDeviceBindingHashMap, InputPipeline, InputPipelineAssembly},
@@ -45,6 +46,7 @@ pub async fn handle_input(
         InputDeviceRegistryRequestStream,
     >,
     text_settings_handler: Rc<text_settings_handler::TextSettingsHandler>,
+    icu_data_loader: icu_data::Loader,
     node: &inspect::Node,
 ) -> Result<InputPipeline, Error> {
     let input_pipeline = InputPipeline::new(
@@ -53,8 +55,14 @@ pub async fn handle_input(
             input_device::InputDeviceType::Touch,
             input_device::InputDeviceType::Keyboard,
         ],
-        build_input_pipeline_assembly(use_flatland, scene_manager, text_settings_handler, node)
-            .await,
+        build_input_pipeline_assembly(
+            use_flatland,
+            scene_manager,
+            text_settings_handler,
+            icu_data_loader,
+            node,
+        )
+        .await,
     )
     .context("Failed to create InputPipeline.")?;
 
@@ -105,6 +113,7 @@ async fn build_input_pipeline_assembly(
     use_flatland: bool,
     scene_manager: Arc<Mutex<Box<dyn SceneManager>>>,
     text_settings_handler: Rc<text_settings_handler::TextSettingsHandler>,
+    icu_data_loader: icu_data::Loader,
     node: &inspect::Node,
 ) -> InputPipelineAssembly {
     let mut assembly = InputPipelineAssembly::new();
@@ -115,6 +124,7 @@ async fn build_input_pipeline_assembly(
         // keymap settings in the remainder of the pipeline.
         assembly = add_text_settings_handler(text_settings_handler, assembly);
         assembly = add_keymap_handler(assembly);
+        assembly = add_dead_keys_handler(assembly, icu_data_loader);
         // Shortcut needs to go before IME.
         assembly = add_shortcut_handler(assembly).await;
         assembly = add_ime(assembly).await;
@@ -166,6 +176,15 @@ fn add_text_settings_handler(
 /// the US QWERTY keymap.
 fn add_keymap_handler(assembly: InputPipelineAssembly) -> InputPipelineAssembly {
     assembly.add_handler(keymap_handler::KeymapHandler::new())
+}
+
+/// Hooks up the dead keys handler. This allows us to input accented characters by composing a
+/// diacritic and a character.
+fn add_dead_keys_handler(
+    assembly: InputPipelineAssembly,
+    loader: icu_data::Loader,
+) -> InputPipelineAssembly {
+    assembly.add_handler(dead_keys_handler::Handler::new(loader))
 }
 
 async fn add_shortcut_handler(mut assembly: InputPipelineAssembly) -> InputPipelineAssembly {

@@ -66,6 +66,10 @@ async fn main() -> Result<(), Error> {
     // It also listens to configuration.
     let text_handler = text_settings_handler::TextSettingsHandler::new(None);
 
+    // This call should normally never fail. The ICU data loader must be kept alive to ensure
+    // Unicode data is kept in memory.
+    let icu_data_loader = icu_data::Loader::new().unwrap();
+
     fx_log_info!("Instantiating SceneManager, use_flatland: {:?}", use_flatland);
 
     let scene_manager: Arc<Mutex<Box<dyn SceneManager>>> = if use_flatland {
@@ -114,6 +118,7 @@ async fn main() -> Result<(), Error> {
                         input_receiver,
                         // All text_handler clones share data, so it is OK to clone as needed.
                         text_handler.clone(),
+                        icu_data_loader.clone(),
                         inspect_node.clone(),
                     ))
                     .detach();
@@ -175,6 +180,7 @@ pub async fn handle_scene_manager_request_stream(
         InputDeviceRegistryRequestStream,
     >,
     text_handler: Rc<text_settings_handler::TextSettingsHandler>,
+    icu_data_loader: icu_data::Loader,
     inspect_root: Rc<inspect::Node>,
 ) {
     if let Ok(input_pipeline) = input_pipeline::handle_input(
@@ -182,6 +188,7 @@ pub async fn handle_scene_manager_request_stream(
         scene_manager.clone(),
         input_device_registry_request_stream_receiver,
         text_handler,
+        icu_data_loader,
         &inspect_root,
     )
     .await
