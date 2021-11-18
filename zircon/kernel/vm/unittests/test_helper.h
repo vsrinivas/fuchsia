@@ -95,6 +95,8 @@ class StubPageProvider : public PageProvider {
   StubPageProvider() = default;
   ~StubPageProvider() override = default;
 
+  const PageSourceProperties& properties() const override { return properties_; }
+
  private:
   bool GetPageSync(uint64_t offset, VmoDebugInfo vmo_debug_info, vm_page_t** const page_out,
                    paddr_t* const pa_out) override {
@@ -105,6 +107,7 @@ class StubPageProvider : public PageProvider {
   void SwapAsyncRequest(page_request_t* old, page_request_t* new_req) override {
     panic("Not implemented\n");
   }
+  bool DebugIsPageOk(vm_page_t* page, uint64_t offset) override { return true; }
   void OnDetach() override {}
   void OnClose() override {}
   zx_status_t WaitOnEvent(Event* event) override { panic("Not implemented\n"); }
@@ -112,6 +115,11 @@ class StubPageProvider : public PageProvider {
   bool SupportsPageRequestType(page_request_type type) const override {
     return type == page_request_type::READ;
   }
+
+  PageSourceProperties properties_{
+      .is_user_pager = true,
+      .is_providing_specific_physical_pages = false,
+  };
 };
 
 // Helper function to allocate memory in a user address space.

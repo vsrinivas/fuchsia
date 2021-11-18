@@ -148,7 +148,7 @@ void PageSource::OnPagesFailed(uint64_t offset, uint64_t len, zx_status_t error_
   canary_.Assert();
   LTRACEF_LEVEL(2, "%p offset %lx, len %lx\n", this, offset, len);
 
-  DEBUG_ASSERT(IsValidFailureCode(error_status));
+  DEBUG_ASSERT(PageSource::IsValidInternalFailureCode(error_status));
 
   uint64_t end;
   bool overflow = add_overflow(offset, len, &end);
@@ -180,7 +180,7 @@ void PageSource::OnPagesFailed(uint64_t offset, uint64_t len, zx_status_t error_
 }
 
 // static
-bool PageSource::IsValidFailureCode(zx_status_t error_status) {
+bool PageSource::IsValidExternalFailureCode(zx_status_t error_status) {
   switch (error_status) {
     case ZX_ERR_IO:
     case ZX_ERR_IO_DATA_INTEGRITY:
@@ -188,6 +188,16 @@ bool PageSource::IsValidFailureCode(zx_status_t error_status) {
       return true;
     default:
       return false;
+  }
+}
+
+// static
+bool PageSource::IsValidInternalFailureCode(zx_status_t error_status) {
+  switch (error_status) {
+    case ZX_ERR_NO_MEMORY:
+      return true;
+    default:
+      return IsValidExternalFailureCode(error_status);
   }
 }
 
@@ -306,6 +316,10 @@ zx_status_t PageSource::FinalizeRequestLocked(PageRequest* request) {
 
   SendRequestToProviderLocked(request);
   return ZX_ERR_SHOULD_WAIT;
+}
+
+bool PageSource::DebugIsPageOk(vm_page_t* page, uint64_t offset) {
+  return page_provider_->DebugIsPageOk(page, offset);
 }
 
 void PageSource::SendRequestToProviderLocked(PageRequest* request) {
@@ -440,6 +454,12 @@ zx_status_t PageSource::RequestDirtyTransition(PageRequest* request, uint64_t of
   return status;
 }
 
+const PageSourceProperties& PageSource::properties() const {
+  canary_.Assert();
+  Guard<Mutex> guard{&page_source_mtx_};
+  return page_provider_->properties();
+}
+
 void PageSource::Dump() const {
   Guard<Mutex> guard{&page_source_mtx_};
   printf("page_source %p detached %d closed %d\n", this, detached_, closed_);
@@ -474,7 +494,7 @@ zx_status_t PageRequest::Wait() {
   VM_KTRACE_DURATION(1, "page_request_wait", offset_, len_);
   zx_status_t status = src_->page_provider_->WaitOnEvent(&event_);
   VM_KTRACE_FLOW_END(1, "page_request_signal", reinterpret_cast<uintptr_t>(this));
-  if (status != ZX_OK && !PageSource::IsValidFailureCode(status)) {
+  if (status != ZX_OK && !PageSource::IsValidInternalFailureCode(status)) {
     src_->CancelRequest(this);
   }
   return status;

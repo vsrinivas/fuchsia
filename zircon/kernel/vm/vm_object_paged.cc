@@ -1210,7 +1210,7 @@ zx_status_t VmObjectPaged::SupplyPages(uint64_t offset, uint64_t len, VmPageSpli
   // is certainly expecting it to succeed.
   IncrementHierarchyGenerationCountLocked();
 
-  return cow_pages_locked()->SupplyPagesLocked(offset, len, pages);
+  return cow_pages_locked()->SupplyPagesLocked(offset, len, pages, /*new_zeroed_pages=*/false);
 }
 
 zx_status_t VmObjectPaged::SetMappingCachePolicy(const uint32_t cache_policy) {

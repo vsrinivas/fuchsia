@@ -44,6 +44,7 @@ class PagerProxy : public PageProvider,
   void Free(PortPacket* port_packet) final;
 
   // PageProvider methods.
+  const PageSourceProperties& properties() const final;
   bool GetPageSync(uint64_t offset, VmoDebugInfo vmo_debug_info, vm_page_t** const page_out,
                    paddr_t* const pa_out) final {
     // Pagers cannot synchronusly fulfill requests.
@@ -52,6 +53,7 @@ class PagerProxy : public PageProvider,
   void SendAsyncRequest(page_request_t* request) final;
   void ClearAsyncRequest(page_request_t* request) final;
   void SwapAsyncRequest(page_request_t* old, page_request_t* new_req) final;
+  bool DebugIsPageOk(vm_page_t* page, uint64_t offset) final;
   void OnClose() final;
   void OnDetach() final;
   zx_status_t WaitOnEvent(Event* event) final;
