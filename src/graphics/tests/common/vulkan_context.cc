@@ -187,7 +187,9 @@ bool VulkanContext::InitDevice() {
   } else {
     queue_ = device_->getQueue(queue_family_index_, 0);
   }
-  loader_.init(instance_.get(), device_.get());
+  // Passing vkGetInstanceProcAddr means we can skip an unnecessary dlopen of the Vulkan loader,
+  // and also prevents a crash observed running in the Linux Termina VM.
+  loader_.init(instance_.get(), vkGetInstanceProcAddr, device_.get());
   device_initialized_ = true;
   return true;
 }
