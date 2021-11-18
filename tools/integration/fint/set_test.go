@@ -298,6 +298,9 @@ func TestGenArgs(t *testing.T) {
 		// Relative paths to files to create in the checkout dir prior to
 		// running the test case.
 		checkoutFiles []string
+		// Callback that will be called for each test case to add extra
+		// arbitrary validation of the resulting args.
+		extraChecks func(t *testing.T, args []string)
 	}{
 		{
 			name: "minimal specs",
@@ -498,6 +501,38 @@ func TestGenArgs(t *testing.T) {
 			},
 			orderMatters: true,
 		},
+		{
+			name: "go cache and rust cache",
+			staticSpec: &fintpb.Static{
+				EnableGoCache:   true,
+				EnableRustCache: true,
+			},
+			contextSpec: &fintpb.Context{
+				CacheDir: "/cache",
+			},
+			expectedArgs: []string{
+				`gocache_dir="/cache/go_cache"`,
+				`rust_incremental="/cache/rust_cache"`,
+			},
+		},
+		{
+			name: "temporary go cache",
+			staticSpec: &fintpb.Static{
+				UseTemporaryGoCache: true,
+			},
+			extraChecks: func(t *testing.T, args []string) {
+				// The temporary gocache dir is dynamically generated so we
+				// don't care about its exact name, we just want to make sure
+				// that it is a temporary directory.
+				prefix := fmt.Sprintf(`gocache_dir="%s/`, os.TempDir())
+				for _, arg := range args {
+					if strings.HasPrefix(arg, prefix) {
+						return
+					}
+				}
+				t.Errorf("Expected an arg with prefix %s in args: %s", prefix, args)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -547,6 +582,10 @@ func TestGenArgs(t *testing.T) {
 			assertSubset(t, tc.expectedArgs, args, tc.orderMatters)
 			if len(tc.unexpectedArgs) > 0 {
 				assertNotOverlap(t, tc.unexpectedArgs, args)
+			}
+
+			if tc.extraChecks != nil {
+				tc.extraChecks(t, args)
 			}
 		})
 	}

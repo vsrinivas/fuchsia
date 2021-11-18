@@ -141,4 +141,13 @@ message Static {
 
   // Whether to include the the default ninja target.
   bool include_default_ninja_target = 33;
+
+  // If true, use a temporary directory for the Go cache rather than a
+  // deterministic directory within the build directory. This is useful for
+  // incremental builds because the gocache does not work correctly with cgo
+  // dependencies (which our build uses), so we don't want to reuse the gocache
+  // between builds.
+  //
+  // Ignored if `enable_go_cache` is set.
+  bool use_temporary_go_cache = 34;
 }
