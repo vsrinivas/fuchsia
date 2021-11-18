@@ -428,12 +428,6 @@ void ProcessZbiEarly() {
         is_mexec_data = true;
         break;
       }
-      case ZBI_TYPE_HW_REBOOT_REASON: {
-        zbi_hw_reboot_reason_t reason;
-        memcpy(&reason, payload.data(), sizeof(reason));
-        platform_set_hw_reboot_reason(reason);
-        break;
-      }
     };
 
     if (is_mexec_data) {

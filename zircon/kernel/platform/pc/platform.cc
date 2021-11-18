@@ -206,14 +206,6 @@ static void platform_save_bootloader_data(void) {
       }
       case ZBI_TYPE_DISCARD:
         break;
-      case ZBI_TYPE_HW_REBOOT_REASON: {
-        if (payload.size() >= sizeof(zbi_hw_reboot_reason_t)) {
-          zbi_hw_reboot_reason_t reason;
-          memcpy(&reason, payload.data(), sizeof(reason));
-          platform_set_hw_reboot_reason(reason);
-        }
-        break;
-      }
     };
   }
   if (auto result = view.take_error(); result.is_error()) {

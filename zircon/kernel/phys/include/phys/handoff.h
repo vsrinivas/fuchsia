@@ -72,6 +72,9 @@ struct PhysHandoff {
   // Physical address of the data ZBI.
   uint64_t zbi = 0;
 
+  // ZBI_TYPE_HW_REBOOT_REASON payload.
+  ktl::optional<zbi_hw_reboot_reason_t> reboot_reason;
+
   // ZBI_TYPE_PLATFORM_ID payload.
   ktl::optional<zbi_platform_id_t> platform_id;
 };

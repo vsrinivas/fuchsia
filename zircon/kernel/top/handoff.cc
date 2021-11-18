@@ -18,6 +18,10 @@ PhysHandoff* gPhysHandoff;
 
 void HandoffFromPhys(paddr_t handoff_paddr) {
   gPhysHandoff = static_cast<PhysHandoff*>(paddr_to_physmap(handoff_paddr));
+
+  if (gPhysHandoff->reboot_reason) {
+    platform_set_hw_reboot_reason(gPhysHandoff->reboot_reason.value());
+  }
 }
 
 ktl::span<ktl::byte> ZbiInPhysmap(bool own) {
