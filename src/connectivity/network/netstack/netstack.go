@@ -876,14 +876,17 @@ func (ifs *ifState) remove(reason admin.InterfaceRemovedReason) {
 	// Close all open control channels with the interface before removing it from
 	// the stack. That prevents any further administrative action from happening.
 	ifs.adminControls.onInterfaceRemove(reason)
+	// Detach the endpoint and wait for clean termination before we remove the
+	// NIC from the stack, that ensures that we can't be racing with other calls
+	// to onDown that are signalling link status changes.
+	ifs.endpoint.Attach(nil)
+	_ = syslog.Infof("NIC %s: waiting for endpoint cleanup...", name)
+	ifs.endpoint.Wait()
+	_ = syslog.Infof("NIC %s: endpoint cleanup done", name)
 
 	ifs.mu.Lock()
-	ifs.onDownLocked(name, true)
+	ifs.onDownLocked(name, true /* closed */)
 	ifs.mu.Unlock()
-
-	_ = syslog.Infof("NIC %s: waiting for endpoint cleanup...", name)
-
-	ifs.endpoint.Wait()
 
 	_ = syslog.Infof("NIC %s: removed", name)
 
