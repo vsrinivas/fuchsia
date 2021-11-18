@@ -345,6 +345,18 @@ VmPageSpliceList& VmPageSpliceList::operator=(VmPageSpliceList&& other) {
 
 VmPageSpliceList::~VmPageSpliceList() { FreeAllPages(); }
 
+// static
+VmPageSpliceList VmPageSpliceList::CreateFromPageList(uint64_t offset, uint64_t length,
+                                                      list_node* pages) {
+  // TODO(fxbug.dev/88859): This method needs coverage in vmpl_unittests.
+  DEBUG_ASSERT(pages);
+  DEBUG_ASSERT(list_length(pages) == length / PAGE_SIZE);
+  VmPageSpliceList res(offset, length);
+  DEBUG_ASSERT(list_is_empty(&res.raw_pages_));
+  list_move(pages, &res.raw_pages_);
+  return res;
+}
+
 void VmPageSpliceList::FreeAllPages() {
   // Free any pages owned by the splice list.
   while (!IsDone()) {
@@ -361,26 +373,32 @@ VmPageOrMarker VmPageSpliceList::Pop() {
     return VmPageOrMarker::Empty();
   }
 
-  const uint64_t cur_offset = offset_ + pos_;
-  const auto cur_node_idx = offset_to_node_index(cur_offset, 0);
-  const auto cur_node_offset = offset_to_node_offset(cur_offset, 0);
-
   VmPageOrMarker res;
-  if (offset_to_node_index(offset_, 0) != 0 &&
-      offset_to_node_offset(offset_, 0) == cur_node_offset) {
-    // If the original offset means that pages were placed in head_
-    // and the current offset points to the same node, look there.
-    res = ktl::move(head_.Lookup(cur_node_idx));
-  } else if (cur_node_offset != offset_to_node_offset(offset_ + length_, 0)) {
-    // If the current offset isn't pointing to the tail node,
-    // look in the middle tree.
-    auto middle_node = middle_.find(cur_node_offset);
-    if (middle_node.IsValid()) {
-      res = ktl::move(middle_node->Lookup(cur_node_idx));
-    }
+  if (!list_is_empty(&raw_pages_)) {
+    // TODO(fxbug.dev/88859): This path and CreateFromPageList() need coverage in vmpl_unittests.
+    vm_page_t* head = list_remove_head_type(&raw_pages_, vm_page, queue_node);
+    res = VmPageOrMarker::Page(head);
   } else {
-    // If none of the other cases, we're in the tail_.
-    res = ktl::move(tail_.Lookup(cur_node_idx));
+    const uint64_t cur_offset = offset_ + pos_;
+    const auto cur_node_idx = offset_to_node_index(cur_offset, 0);
+    const auto cur_node_offset = offset_to_node_offset(cur_offset, 0);
+
+    if (offset_to_node_index(offset_, 0) != 0 &&
+        offset_to_node_offset(offset_, 0) == cur_node_offset) {
+      // If the original offset means that pages were placed in head_
+      // and the current offset points to the same node, look there.
+      res = ktl::move(head_.Lookup(cur_node_idx));
+    } else if (cur_node_offset != offset_to_node_offset(offset_ + length_, 0)) {
+      // If the current offset isn't pointing to the tail node,
+      // look in the middle tree.
+      auto middle_node = middle_.find(cur_node_offset);
+      if (middle_node.IsValid()) {
+        res = ktl::move(middle_node->Lookup(cur_node_idx));
+      }
+    } else {
+      // If none of the other cases, we're in the tail_.
+      res = ktl::move(tail_.Lookup(cur_node_idx));
+    }
   }
 
   pos_ += PAGE_SIZE;

@@ -22,6 +22,15 @@ KCOUNTER(dispatcher_pager_succeeded_request_count, "dispatcher.pager.succeeded_r
 KCOUNTER(dispatcher_pager_failed_request_count, "dispatcher.pager.failed_requests")
 KCOUNTER(dispatcher_pager_timed_out_request_count, "dispatcher.pager.timed_out_requests")
 
+namespace {
+
+const PageSourceProperties kProperties{
+    .is_user_pager = true,
+    .is_providing_specific_physical_pages = false,
+};
+
+}  // namespace
+
 PagerProxy::PagerProxy(PagerDispatcher* dispatcher, fbl::RefPtr<PortDispatcher> port, uint64_t key,
                        uint32_t options)
     : pager_(dispatcher), port_(ktl::move(port)), key_(key), options_(options) {
@@ -33,6 +42,8 @@ PagerProxy::~PagerProxy() {
   DEBUG_ASSERT(closed_);
   DEBUG_ASSERT(!complete_pending_);
 }
+
+const PageSourceProperties& PagerProxy::properties() const { return kProperties; }
 
 void PagerProxy::SendAsyncRequest(page_request_t* request) {
   Guard<Mutex> guard{&mtx_};
@@ -125,6 +136,8 @@ void PagerProxy::SwapAsyncRequest(page_request_t* old, page_request_t* new_req) 
     active_request_ = new_req;
   }
 }
+
+bool PagerProxy::DebugIsPageOk(vm_page_t* page, uint64_t offset) { return true; }
 
 void PagerProxy::OnDetach() {
   Guard<Mutex> guard{&mtx_};

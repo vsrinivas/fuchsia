@@ -269,6 +269,14 @@ void VmCowPages::fbl_recycle() {
     list_node_t list;
     list_initialize(&list);
 
+    // We must Close() before removing pages, so that the PageProvider can iterate present/absent
+    // ranges if it needs to during Close().  This is so PhysicalPageProvider can call
+    // pmm_delete_lender() only on ranges that are currently loaned (the ranges that are absent from
+    // the VmCowPages).
+    if (page_source_) {
+      page_source_->Close();
+    }
+
     __UNINITIALIZED BatchPQRemove page_remover(&list);
     // free all of the pages attached to us
     page_list_.RemoveAllPages([&page_remover](vm_page_t* page) {
@@ -276,10 +284,6 @@ void VmCowPages::fbl_recycle() {
       page_remover.Push(page);
     });
     page_remover.Flush();
-
-    if (page_source_) {
-      page_source_->Close();
-    }
 
     pmm_free(&list);
 
@@ -2985,7 +2989,15 @@ zx_status_t VmCowPages::TakePagesLocked(uint64_t offset, uint64_t len, VmPageSpl
   return ZX_OK;
 }
 
-zx_status_t VmCowPages::SupplyPagesLocked(uint64_t offset, uint64_t len, VmPageSpliceList* pages) {
+zx_status_t VmCowPages::SupplyPages(uint64_t offset, uint64_t len, VmPageSpliceList* pages,
+                                    bool new_zeroed_pages) {
+  canary_.Assert();
+  Guard<Mutex> guard{&lock_};
+  return SupplyPagesLocked(offset, len, pages, new_zeroed_pages);
+}
+
+zx_status_t VmCowPages::SupplyPagesLocked(uint64_t offset, uint64_t len, VmPageSpliceList* pages,
+                                          bool new_zeroed_pages) {
   canary_.Assert();
 
   DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
@@ -3017,7 +3029,19 @@ zx_status_t VmCowPages::SupplyPagesLocked(uint64_t offset, uint64_t len, VmPageS
     }
 
     // Defer individual range updates so we can do them in blocks.
-    status = AddPageLocked(&src_page, offset, /*do_range_update=*/false);
+    if (new_zeroed_pages) {
+      // When new_zeroed_pages is true, we need to call InitializeVmPage(), which AddNewPageLocked()
+      // will do.
+      DEBUG_ASSERT(src_page.IsPage());
+      status = AddNewPageLocked(offset, src_page.Page(), /*zero=*/false, /*do_range_update=*/false);
+      if (status == ZX_OK) {
+        src_page.ReleasePage();
+      }
+    } else {
+      // When new_zeroed_pages is false, we don't need InitializeVmPage(), so we use
+      // AddPageLocked().
+      status = AddPageLocked(&src_page, offset, /*do_range_update=*/false);
+    }
     if (status == ZX_OK) {
       new_pages_len += PAGE_SIZE;
     } else {
@@ -3077,10 +3101,11 @@ zx_status_t VmCowPages::FailPageRequestsLocked(uint64_t offset, uint64_t len,
   DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
   DEBUG_ASSERT(IS_PAGE_ALIGNED(len));
 
-  // |error_status| must have already been validated by the PagerDispatcher.
-  DEBUG_ASSERT(PageSource::IsValidFailureCode(error_status));
-
   ASSERT(page_source_);
+
+  if (!PageSource::IsValidInternalFailureCode(error_status)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
 
   if (!InRange(offset, len, size_)) {
     return ZX_ERR_OUT_OF_RANGE;

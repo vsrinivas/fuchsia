@@ -125,8 +125,18 @@ class VmCowPages final
   zx_status_t TakePagesLocked(uint64_t offset, uint64_t len, VmPageSpliceList* pages) TA_REQ(lock_);
 
   // See VmObject::SupplyPages
-  zx_status_t SupplyPagesLocked(uint64_t offset, uint64_t len, VmPageSpliceList* pages)
-      TA_REQ(lock_);
+  //
+  // The new_zeroed_pages parameter should be true if the pages are new pages that need to be
+  // initialized, or false if the pages are from a different VmCowPages and are being moved to this
+  // VmCowPages.
+  zx_status_t SupplyPagesLocked(uint64_t offset, uint64_t len, VmPageSpliceList* pages,
+                                bool new_zeroed_pages) TA_REQ(lock_);
+
+  // The new_zeroed_pages parameter should be true if the pages are new pages that need to be
+  // initialized, or false if the pages are from a different VmCowPages and are being moved to this
+  // VmCowPages.
+  zx_status_t SupplyPages(uint64_t offset, uint64_t len, VmPageSpliceList* pages,
+                          bool new_zeroed_pages) TA_EXCL(lock_);
 
   // See VmObject::FailPageRequests
   zx_status_t FailPageRequestsLocked(uint64_t offset, uint64_t len, zx_status_t error_status)

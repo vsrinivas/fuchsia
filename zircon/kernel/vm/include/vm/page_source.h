@@ -29,12 +29,33 @@ struct VmoDebugInfo {
   uint64_t vmo_id;
 };
 
+// These properties are constant per PageProvider type, so a given VmCowPages can query and cache
+// these properties once (if it has a PageSource) and know they won't change after that.  This also
+// avoids per-property plumbing via PageSource.
+//
+// TODO(dustingreen): (or rashaeqbal) Migrate more const per-PageProvider-type properties to
+// PageSourceProperties, after the initial round of merging is done.
+struct PageSourceProperties {
+  // We use PageSource for both user pager and contiguous page reclaim.  This is how we tell whether
+  // the PageSource is really a user pager when reporting to user mode that a given VMO is/isn't
+  // user pager backed.  This property should not be used for other purposes since we can use more
+  // specific properties for any behavior differences.
+  const bool is_user_pager;
+
+  // Iff true, the PageSource (and PageProvider) must be used to allocate all pages.  Pre-allocating
+  // generic pages from the pmm won't work.
+  const bool is_providing_specific_physical_pages;
+};
+
 // Interface for providing pages to a VMO through page requests.
 class PageProvider : public fbl::RefCounted<PageProvider> {
  public:
   virtual ~PageProvider() = default;
 
  private:
+  // The returned properties will last at least as long as PageProvider.
+  virtual const PageSourceProperties& properties() const = 0;
+
   // Synchronously gets a page from the backing source.
   virtual bool GetPageSync(uint64_t offset, VmoDebugInfo vmo_debug_info, vm_page_t** const page_out,
                            paddr_t* const pa_out) = 0;
@@ -47,8 +68,14 @@ class PageProvider : public fbl::RefCounted<PageProvider> {
   // Swaps the backing memory for a request. Assumes that |old|
   // and |new_request| have the same type, offset, and length.
   virtual void SwapAsyncRequest(page_request_t* old, page_request_t* new_req) = 0;
+  // For asserting purposes only.  This gives the PageProvider a chance to check that a page is
+  // consistent with any rules the PageProvider has re. which pages can go where in the VmCowPages.
+  // PhysicalPageProvider implements this to verify that page at offset makes sense with respect to
+  // phys_base_, since VmCowPages can't do that on its own due to lack of knowledge of phys_base_
+  // and lack of awareness of contiguous.
+  virtual bool DebugIsPageOk(vm_page_t* page, uint64_t offset) = 0;
 
-  // OnDetach is called once no more calls to GetPageSync/GetPageAsync will be made. It
+  // OnDetach is called once no more calls to GetPageSync/SendAsyncRequest will be made. It
   // will be called before OnClose and will only be called once.
   virtual void OnDetach() = 0;
   // After OnClose is called, no more calls will be made except for ::WaitOnEvent.
@@ -81,7 +108,7 @@ class PageProvider : public fbl::RefCounted<PageProvider> {
 // For asynchronous requests, the lifecycle is as follows:
 //   1) A vm object requests a page with PageSource::GetPage.
 //   2) PageSource starts tracking the request's PageRequest and then
-//      forwards the request to PageProvider::GetPageAsync.
+//      forwards the request to PageProvider::SendAsyncRequest.
 //   3) The caller waits for the request with PageRequest::Wait.
 //   4) At some point, whatever is backing the PageProvider provides pages
 //      to the vm object (e.g. with VmObjectPaged::SupplyPages).
@@ -89,6 +116,11 @@ class PageProvider : public fbl::RefCounted<PageProvider> {
 //      any PageRequests that have been fulfilled.
 //   6) The caller wakes up and queries the vm object again, by which
 //      point the requested page will be present.
+//
+// For a contiguous VMO requesting physical pages back, step 4 above just frees the pages from some
+// other use, and step 6 finds the requested pages available, but not yet present in the VMO,
+// similar to what can happen with a normal PageProvider where pages can be read and then
+// decommitted before the caller queries the vm object again.
 
 // Object which provides pages to a vm_object.
 class PageSource : public fbl::RefCounted<PageSource> {
@@ -115,6 +147,13 @@ class PageSource : public fbl::RefCounted<PageSource> {
   // Returns ZX_ERR_NOT_FOUND if the request will never be resolved.
   zx_status_t FinalizeRequest(PageRequest* request);
 
+  // For asserting purposes only.  This gives the PageProvider a chance to check that a page is
+  // consistent with any rules the PageProvider has re. which pages can go where in the VmCowPages.
+  // PhysicalPageProvider implements this to verify that page at offset makes sense with respect to
+  // phys_base_, since VmCowPages can't do that on its own due to lack of knowledge of phys_base_
+  // and lack of awareness of contiguous.
+  bool DebugIsPageOk(vm_page_t* page, uint64_t offset);
+
   // Updates the request tracking metadata to account for pages [offset, offset + len) having
   // been supplied to the owning vmo.
   void OnPagesSupplied(uint64_t offset, uint64_t len);
@@ -124,13 +163,33 @@ class PageSource : public fbl::RefCounted<PageSource> {
   // unblocked.
   void OnPagesFailed(uint64_t offset, uint64_t len, zx_status_t error_status);
 
+  // Returns true if |error_status| is a valid ZX_PAGER_OP_FAIL failure error code (input, specified
+  // by user mode pager).  These codes can be used with |OnPagesFailed| (and so can any failure
+  // codes for which IsValidInternalFailureCode() returns true).
+  //
+  // Not every error code is supported, since these errors can get returned via a zx_vmo_read() or a
+  // zx_vmo_op_range(), if those calls resulted in a page fault.  So the |error_status| should be a
+  // supported return error code for those syscalls _and_ be an error code that we want to be
+  // supported for the user mode pager to specify via ZX_PAGER_OP_FAIL.  Currently,
+  // IsValidExternalFailureCode(ZX_ERR_NO_MEMORY) returns false, as we don't want ZX_ERR_NO_MEMORY
+  // to be specified via ZX_PAGER_OP_FAIL (at least so far).
+  static bool IsValidExternalFailureCode(zx_status_t error_status);
+
   // Returns true if |error_status| is a valid provider failure error code, which can be used with
   // |OnPagesFailed|.
   //
+  // This returns true for every error code that IsValidExternalFailureCode() returns true for, plus
+  // any additional error codes that are valid as an internal PageProvider status but not valid for
+  // ZX_PAGER_OP_FAIL.
+  //
+  // ZX_ERR_NO_MEMORY will return true, unlike IsValidExternalFailureCode(ZX_ERR_NO_MEMORY) which
+  // returns false.
+  //
   // Not every error code is supported, since these errors can get returned via a zx_vmo_read() or a
-  // zx_vmo_op_range(), if those calls resulted in a page fault. So the |error_status| should be a
-  // supported return error code for those syscalls.
-  static bool IsValidFailureCode(zx_status_t error_status);
+  // zx_vmo_op_range(), if those calls resulted in a page fault.  So the |error_status| should be a
+  // supported return error code for those syscalls.  An error code need not be specifiable via
+  // ZX_PAGER_OP_FAIL for this function to return true.
+  static bool IsValidInternalFailureCode(zx_status_t error_status);
 
   // Whether transitions from clean to dirty should be trapped.
   bool ShouldTrapDirtyTransitions() const {
@@ -153,6 +212,9 @@ class PageSource : public fbl::RefCounted<PageSource> {
   // Closes the source. Will call Detach() if the source is not already detached. All pending
   // transactions will be aborted and all future calls will fail.
   void Close();
+
+  // The returned properties will last at least until Detach() or Close().
+  const PageSourceProperties& properties() const;
 
   void Dump() const;
 

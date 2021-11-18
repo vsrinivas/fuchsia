@@ -1005,8 +1005,8 @@ PageQueues::ActiveInactiveCounts PageQueues::GetActiveInactiveCountsLocked() con
   }
 }
 
-fitx::result<zx_status_t, ktl::optional<PageQueues::VmoContainerBacklink>>
-PageQueues::GetCowWithReplaceablePage(vm_page_t* page, VmCowPages* owning_cow) {
+ktl::optional<PageQueues::VmoContainerBacklink> PageQueues::GetCowWithReplaceablePage(
+    vm_page_t* page, VmCowPages* owning_cow) {
   // Wait for the page to not be in a transient state.  This is in a loop, since the wait happens
   // outside the lock, so another thread doing commit/decommit on owning_cow can cause the page
   // state to change, potentially multiple times.
@@ -1053,7 +1053,7 @@ PageQueues::GetCowWithReplaceablePage(vm_page_t* page, VmCowPages* owning_cow) {
           // We care that we will notice transition _to_ FREE that stays FREE indefinitely via this
           // check.  Other threads doing commit/decommit on owning_cow can cause this check to miss
           // a transient FREE state, but we avoid getting stuck waiting indefinitely.
-          return fitx::ok(ktl::nullopt);
+          return ktl::nullopt;
         case vm_page_state::OBJECT: {
           // Sub-cases:
           //  * Using cow.
@@ -1068,7 +1068,7 @@ PageQueues::GetCowWithReplaceablePage(vm_page_t* page, VmCowPages* owning_cow) {
               //
               // This is a success case.  We checked if there was a using cow at the moment, and
               // there wasn't.
-              return fitx::ok(ktl::nullopt);
+              return ktl::nullopt;
             }
             // Page is moving from cow to cow, and/or is on the way to FREE, so wait below for
             // page to get a new VmCowPages or become FREE.  We still have to synchronize further
@@ -1076,10 +1076,10 @@ PageQueues::GetCowWithReplaceablePage(vm_page_t* page, VmCowPages* owning_cow) {
             wait_on_stack_ownership = true;
             break;
           } else if (cow == owning_cow) {
-            DEBUG_ASSERT(owning_cow);
-            // Another thread has already put this page in owning_cow, so there is no borrowing
-            // cow.  Success.
-            return fitx::ok(ktl::nullopt);
+            // This should be impossible, since PageSource guarantees that a given page will only be
+            // actively reclaimed by up to one thread at a time.  If this happens, things are broken
+            // enough that we shouldn't continue.
+            panic("Requested page alraedy in owning_cow; unexpected\n");
           } else {
             // At this point the page may have pin_count != 0.  We have to check in terms of which
             // queue here, since we can't acquire the VmCowPages lock (wrong order).
@@ -1087,7 +1087,7 @@ PageQueues::GetCowWithReplaceablePage(vm_page_t* page, VmCowPages* owning_cow) {
               if (page->object.get_page_queue_ref().load(ktl::memory_order_relaxed) ==
                   PageQueueWired) {
                 // A pinned page is not replaceable.
-                return fitx::ok(ktl::nullopt);
+                return ktl::nullopt;
               }
             }
             // There is a using/borrowing cow, but we may not be able to get a ref to it, if it's
@@ -1119,13 +1119,14 @@ PageQueues::GetCowWithReplaceablePage(vm_page_t* page, VmCowPages* owning_cow) {
               // Existing cow is at least at the end of fbl_recycle().  The page has already become
               // FREE.  Let the loop handle that since it's less code than handling here and not
               // significantly more expensive to handle with the loop.
+              DEBUG_ASSERT(page->is_free());
               continue;
             } else {
               // We AddRef(ed) the using cow_container.  Success.  Return the backlink.  The caller
               // can use this to call cow->ReplacePage(), which is ok to call on a cow with refcount
               // 0 as long as the caller is holding the backlink's cow_container VmCowPagesContainer
               // ref.
-              return fitx::ok(backlink);
+              return backlink;
             }
           }
           break;
@@ -1137,7 +1138,7 @@ PageQueues::GetCowWithReplaceablePage(vm_page_t* page, VmCowPages* owning_cow) {
             // required for intervals involving stack ownership of loaned pages.  Since the caller
             // isn't strictly required to succeed at replacing a page when !owning_cow, the caller
             // is ok with a successful "none" here since the page isn't immediately replaceable.
-            return fitx::ok(ktl::nullopt);
+            return ktl::nullopt;
           }
           // Wait for ALLOC to become OBJECT or FREE.
           wait_on_stack_ownership = true;
@@ -1152,7 +1153,7 @@ PageQueues::GetCowWithReplaceablePage(vm_page_t* page, VmCowPages* owning_cow) {
           // along with the list of other states where the caller can't just replace the page.
           //
           // There is no cow with this page as an immediately-replaceable page.
-          return fitx::ok(ktl::nullopt);
+          return ktl::nullopt;
       }
     }  // ~guard
     // If we get here, we know that wait_on_stack_ownership is true, and we know that never happens

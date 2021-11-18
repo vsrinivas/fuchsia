@@ -117,7 +117,7 @@ zx_status_t PagerDispatcher::RangeOp(uint32_t op, fbl::RefPtr<VmObject> vmo, uin
         return ZX_ERR_INVALID_ARGS;
       }
       auto error_status = static_cast<zx_status_t>(data);
-      if (!PageSource::IsValidFailureCode(error_status)) {
+      if (!PageSource::IsValidExternalFailureCode(error_status)) {
         return ZX_ERR_INVALID_ARGS;
       }
       return vmo->FailPageRequests(offset, length, error_status);
