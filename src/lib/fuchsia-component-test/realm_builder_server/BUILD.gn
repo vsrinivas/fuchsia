@@ -17,6 +17,7 @@ rustc_binary("realm_builder_server_bin") {
   deps = [
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
     "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner-rustc",
     "//sdk/fidl/fuchsia.component.test:fuchsia.component.test-rustc",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
@@ -25,6 +26,7 @@ rustc_binary("realm_builder_server_bin") {
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/storage/vfs/rust:vfs",
@@ -36,10 +38,10 @@ rustc_binary("realm_builder_server_bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
-    "//third_party/rust_crates:log",
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:tracing",
     "//third_party/rust_crates:url",
   ]
   test_deps = [ "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc" ]

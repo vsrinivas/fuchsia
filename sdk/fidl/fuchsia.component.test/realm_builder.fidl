@@ -321,9 +321,8 @@ type RealmBuilderError2 = strict enum : uint32 {
     /// referenced by a relative URL from the test package.
     DECL_READ_ERROR = 11;
 
-    /// A component declaration's `children` field already contains children
-    /// that the builder has been instructed to add.
-    DUPLICATE_CHILD_DECLARATION_DURING_BUILD = 12;
+    /// The `Build` function has been called multiple times on this channel.
+    BUILD_ALREADY_CALLED = 12;
 };
 
 protocol Builder {
@@ -337,10 +336,9 @@ protocol Builder {
     /// component implementations.
     ///
     /// Errors:
-    /// - `DUPLICATE_CHILD_DECLARATION_DURING_BUILD`: A component declaration's
-    ///   `children` field already contains children that the builder has been
-    ///   instructed to add.
     /// - `INVALID_COMPONENT_DECL`: A component declaration failed validaiton.
+    /// - `BUILD_ALREADY_CALLED`: The `Build` function has been called multiple
+    ///   times on this channel.
     Build(resource struct {
         runner client_end:fuchsia.component.runner.ComponentRunner;
     }) -> (struct {
@@ -374,7 +372,7 @@ type Directory = table {
 };
 
 /// Properties that may be set on a child when it is added to a realm
-type ChildOptions = flexible union {
+type ChildOptions = table {
     1: startup fuchsia.component.decl.StartupMode;
     2: environment fuchsia.component.name;
     3: on_terminate fuchsia.component.decl.OnTerminate;
@@ -465,7 +463,7 @@ protocol Realm {
         name fuchsia.component.name;
 
         /// Additional properties for the child.
-        properties ChildOptions:optional;
+        properties ChildOptions;
     }) -> (struct {}) error RealmBuilderError2;
 
     /// Adds a child realm which can be built with the client end of
@@ -479,7 +477,7 @@ protocol Realm {
         name fuchsia.component.name;
 
         /// Additional properties for the child.
-        properties ChildOptions:optional;
+        properties ChildOptions;
 
         /// The server end of the `Realm` channel that will be used to build the
         /// sub-realm.
@@ -519,6 +517,9 @@ protocol Realm {
     /// Errors:
     /// - `NO_SUCH_CHILD`: This realm does not contain a child with the given
     ///   name.
+    /// - `CHILD_ALREADY_EXISTS`: The component whose decl is being replaced has
+    ///   had a child added to it through realm builder with the same name as an
+    ///   element in `component_decl.children`.
     /// - `CHILD_DECL_NOT_VISIBLE`: The component decl cannot be manipulated for
     ///   the referenced child, because the child was added to the realm using
     ///   an absolute (not relative) and modern (not legacy) URL.

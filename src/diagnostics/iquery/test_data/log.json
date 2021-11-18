@@ -4,13 +4,9 @@
         "metadata": {
             "component_url": "#meta/realm_builder_server.cm",
             "dropped": 0,
-            "line": 0,
             "pid": "PID",
             "severity": "INFO",
-            "tags": [
-                "realm_builder_server",
-                "realm_builder_server"
-            ],
+            "tags": [],
             "tid": "TID",
             "timestamp": "TIMESTAMP"
         },

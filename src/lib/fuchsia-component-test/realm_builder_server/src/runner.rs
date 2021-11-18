@@ -11,9 +11,9 @@ use {
     fuchsia_component::client::connect_to_protocol,
     futures::lock::Mutex,
     futures::TryStreamExt,
-    log::*,
     rand::{self, Rng},
     std::{collections::HashMap, sync::Arc},
+    tracing::*,
     vfs::{
         directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
         file::vmo::asynchronous::read_only_static, path::Path as VfsPath, pseudo_directory,
@@ -33,9 +33,15 @@ impl From<MockId> for String {
     }
 }
 
+enum ControlHandleOrRunnerProxy {
+    ControlHandle(ftest::RealmBuilderControlHandle),
+    #[allow(unused)]
+    RunnerProxy(Arc<Mutex<Option<fcrunner::ComponentRunnerProxy>>>),
+}
+
 pub struct Runner {
     next_mock_id: Mutex<u64>,
-    mocks: Mutex<HashMap<String, ftest::RealmBuilderControlHandle>>,
+    mocks: Mutex<HashMap<String, ControlHandleOrRunnerProxy>>,
 }
 
 impl Runner {
@@ -53,7 +59,23 @@ impl Runner {
         let mock_id = format!("{}", *next_mock_id_guard);
         *next_mock_id_guard += 1;
 
-        mocks_guard.insert(mock_id.clone(), control_handle);
+        mocks_guard
+            .insert(mock_id.clone(), ControlHandleOrRunnerProxy::ControlHandle(control_handle));
+        MockId(mock_id)
+    }
+
+    #[allow(unused)]
+    pub async fn register_local_component(
+        self: &Arc<Self>,
+        runner_proxy: Arc<Mutex<Option<fcrunner::ComponentRunnerProxy>>>,
+    ) -> MockId {
+        let mut next_mock_id_guard = self.next_mock_id.lock().await;
+        let mut mocks_guard = self.mocks.lock().await;
+
+        let mock_id = format!("{}", *next_mock_id_guard);
+        *next_mock_id_guard += 1;
+
+        mocks_guard.insert(mock_id.clone(), ControlHandleOrRunnerProxy::RunnerProxy(runner_proxy));
         MockId(mock_id)
     }
 
@@ -106,9 +128,13 @@ impl Runner {
         start_info: fcrunner::ComponentStartInfo,
         controller: ServerEnd<fcrunner::ComponentControllerMarker>,
     ) -> Result<(), Error> {
-        let mock_control_handle = {
-            let mocks_guard = self.mocks.lock().await;
-            mocks_guard.get(&mock_id).ok_or(format_err!("no such mock: {:?}", mock_id))?.clone()
+        let mocks_guard = self.mocks.lock().await;
+        let mock_control_handle_or_runner_proxy =
+            mocks_guard.get(&mock_id).ok_or(format_err!("no such mock: {:?}", mock_id))?.clone();
+
+        let mock_control_handle = match mock_control_handle_or_runner_proxy {
+            ControlHandleOrRunnerProxy::ControlHandle(control_handle) => control_handle,
+            ControlHandleOrRunnerProxy::RunnerProxy(_) => panic!("runner proxies are unsupported"),
         };
 
         mock_control_handle.send_on_mock_run_request(

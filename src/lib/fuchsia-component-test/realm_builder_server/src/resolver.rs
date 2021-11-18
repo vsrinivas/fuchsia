@@ -12,10 +12,13 @@ use {
         lock::{Mutex, MutexGuard},
         TryStreamExt,
     },
-    log::*,
     std::{collections::HashMap, path::Path, sync::Arc},
+    tracing::*,
     url::Url,
 };
+
+#[cfg(test)]
+use cm_rust::{self, FidlIntoNative};
 
 const RESOLVER_SCHEME: &'static str = "realm-builder";
 
@@ -25,6 +28,7 @@ struct ResolveableComponent {
     package_dir: Option<fio::DirectoryProxy>,
 }
 
+#[derive(Debug)]
 pub struct Registry {
     next_unique_component_id: Mutex<u64>,
     component_decls: Mutex<HashMap<Url, ResolveableComponent>>,
@@ -36,6 +40,14 @@ impl Registry {
             next_unique_component_id: Mutex::new(0),
             component_decls: Mutex::new(HashMap::new()),
         })
+    }
+
+    // Only used for unit tests
+    #[cfg(test)]
+    pub async fn get_decl_for_url(self: &Arc<Self>, url: &str) -> Option<cm_rust::ComponentDecl> {
+        let url = Url::parse(url).expect("failed to parse URL");
+        let component = self.component_decls.lock().await.get(&url).cloned();
+        component.map(|c| c.decl.fidl_into_native())
     }
 
     // Validates the given decl, and returns a URL at which it can be resolved
