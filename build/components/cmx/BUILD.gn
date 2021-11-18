@@ -45,7 +45,6 @@ group("cmx_allowlist") {
     "//examples/diagnostics/inspect/codelab/dart/*",
     "//examples/drivers/dotmatrix_display/*",
     "//examples/fidl/dart/*",
-    "//examples/fidl/legacy/*",
     "//examples/fidl/test/*",
     "//examples/fuzzers/*",
     "//examples/hello_world/dart/*",

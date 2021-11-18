@@ -49,17 +49,16 @@ group("http") {
 group("fidl") {
   testonly = true
   public_deps = [
-    "//examples/fidl/legacy/echo_client_cpp",
-    "//examples/fidl/legacy/echo_client_cpp_synchronous",
-    "//examples/fidl/legacy/echo_client_go",
-    "//examples/fidl/legacy/echo_client_llcpp",
-    "//examples/fidl/legacy/echo_client_rust",
-    "//examples/fidl/legacy/echo_client_rust_synchronous",
-    "//examples/fidl/legacy/echo_server_c",
-    "//examples/fidl/legacy/echo_server_cpp",
-    "//examples/fidl/legacy/echo_server_go",
-    "//examples/fidl/legacy/echo_server_llcpp",
-    "//examples/fidl/legacy/echo_server_rust",
+    "//examples/fidl/c/server:echo-c-server",
+    "//examples/fidl/go:echo-go-client",
+    "//examples/fidl/hlcpp:echo-hlcpp-client",
+    "//examples/fidl/hlcpp:echo-hlcpp-client-sync",
+    "//examples/fidl/hlcpp/server:echo-hlcpp-server",
+    "//examples/fidl/llcpp:echo-llcpp-client",
+    "//examples/fidl/llcpp/server:echo-llcpp-server",
+    "//examples/fidl/rust:echo-rust-client",
+    "//examples/fidl/rust:echo-rust-client-sync",
+    "//examples/fidl/rust/server:echo-rust-server",
   ]
 }
 
