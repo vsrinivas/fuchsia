@@ -86,7 +86,6 @@ rustc_binary("bin") {
     "src/future_util.rs",
     "src/inspect.rs",
     "src/main.rs",
-    "src/mlme_query_proxy.rs",
     "src/service.rs",
     "src/station/ap.rs",
     "src/station/client.rs",

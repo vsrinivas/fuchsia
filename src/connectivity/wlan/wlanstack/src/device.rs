@@ -23,9 +23,7 @@ use {
 };
 
 use crate::{
-    inspect,
-    mlme_query_proxy::MlmeQueryProxy,
-    station,
+    inspect, station,
     stats_scheduler::{self, StatsScheduler},
     ServiceCfg,
 };
@@ -64,7 +62,7 @@ pub struct IfaceDevice {
     pub phy_ownership: PhyOwnership,
     pub sme_server: SmeServer,
     pub stats_sched: StatsScheduler,
-    pub mlme_query: MlmeQueryProxy,
+    pub mlme_proxy: fidl_mlme::MlmeProxy,
     pub device_info: DeviceInfo,
     pub shutdown_sender: ShutdownSender,
 }
@@ -136,7 +134,6 @@ pub fn create_and_serve_sme(
     if let fidl_mlme::MacRole::Client = device_info.role {
         inspect_tree.mark_active_client_iface(id, ifaces.clone(), iface_tree_holder.clone());
     }
-    let mlme_query = MlmeQueryProxy::new(mlme_proxy);
     let is_softmac = device_info.driver_features.contains(&DriverFeature::TempSoftmac);
     // For testing only: All synthetic devices are softmac devices.
     if device_info.driver_features.contains(&DriverFeature::Synth) && !is_softmac {
@@ -148,7 +145,7 @@ pub fn create_and_serve_sme(
             phy_ownership,
             sme_server: sme,
             stats_sched,
-            mlme_query,
+            mlme_proxy,
             device_info,
             shutdown_sender,
         },
@@ -329,7 +326,7 @@ mod tests {
                 phy_ownership: PhyOwnership { phy_id: 0, phy_assigned_id: 0 },
                 sme_server: SmeServer::Client(sender),
                 stats_sched,
-                mlme_query: MlmeQueryProxy::new(mlme_proxy),
+                mlme_proxy,
                 device_info: fake_device_info(),
                 shutdown_sender,
             },
@@ -441,7 +438,7 @@ mod tests {
                 phy_ownership: PhyOwnership { phy_id: 0, phy_assigned_id: 0 },
                 sme_server: SmeServer::Client(sender),
                 stats_sched,
-                mlme_query: MlmeQueryProxy::new(mlme_proxy),
+                mlme_proxy,
                 device_info: fake_device_info(),
                 shutdown_sender,
             },
@@ -475,7 +472,7 @@ mod tests {
                 phy_ownership: PhyOwnership { phy_id: 0, phy_assigned_id: 0 },
                 sme_server: SmeServer::Client(sender),
                 stats_sched,
-                mlme_query: MlmeQueryProxy::new(mlme_proxy),
+                mlme_proxy,
                 device_info: fake_device_info(),
                 shutdown_sender,
             },
@@ -509,7 +506,7 @@ mod tests {
                 phy_ownership: PhyOwnership { phy_id: 0, phy_assigned_id: 0 },
                 sme_server: SmeServer::Client(sender),
                 stats_sched,
-                mlme_query: MlmeQueryProxy::new(mlme_proxy),
+                mlme_proxy,
                 device_info: fake_device_info(),
                 shutdown_sender,
             },
@@ -535,7 +532,7 @@ mod tests {
                 phy_ownership: PhyOwnership { phy_id: 0, phy_assigned_id: 0 },
                 sme_server: SmeServer::Client(sender),
                 stats_sched,
-                mlme_query: MlmeQueryProxy::new(mlme_proxy),
+                mlme_proxy,
                 device_info: fake_device_info(),
                 shutdown_sender,
             },
@@ -565,7 +562,7 @@ mod tests {
                 phy_ownership: PhyOwnership { phy_id: 0, phy_assigned_id: 0 },
                 sme_server: SmeServer::Client(sender),
                 stats_sched,
-                mlme_query: MlmeQueryProxy::new(mlme_proxy),
+                mlme_proxy,
                 device_info: fake_device_info(),
                 shutdown_sender,
             },

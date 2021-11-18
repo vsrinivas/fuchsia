@@ -10,7 +10,6 @@
 mod device;
 mod future_util;
 mod inspect;
-mod mlme_query_proxy;
 mod service;
 mod station;
 mod stats_scheduler;

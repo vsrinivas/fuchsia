@@ -818,7 +818,6 @@ mod tests {
         super::*,
         crate::{
             device::{self, IfaceDevice},
-            mlme_query_proxy::MlmeQueryProxy,
             stats_scheduler::{self, StatsRequest},
             telemetry::test_helper::{fake_cobalt_sender, fake_disconnect_info, CobaltExt},
             test_helper::fake_inspect_tree,
@@ -1872,15 +1871,14 @@ mod tests {
     fn fake_iface_device() -> (IfaceDevice, impl Stream<Item = StatsRequest>) {
         let (sme_sender, _sme_receiver) = mpsc::unbounded();
         let (stats_sched, stats_requests) = stats_scheduler::create_scheduler();
-        let (proxy, _server) = create_proxy::<MlmeMarker>().expect("Error creating proxy");
-        let mlme_query = MlmeQueryProxy::new(proxy);
+        let (mlme_proxy, _server) = create_proxy::<MlmeMarker>().expect("Error creating proxy");
         let (shutdown_sender, _) = mpsc::channel(1);
         let device_info = fake_device_info();
         let iface_device = IfaceDevice {
             phy_ownership: device::PhyOwnership { phy_id: 0, phy_assigned_id: 0 },
             sme_server: device::SmeServer::Client(sme_sender),
             stats_sched,
-            mlme_query,
+            mlme_proxy,
             device_info,
             shutdown_sender,
         };

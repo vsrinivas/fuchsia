@@ -230,7 +230,7 @@ async fn list_minstrel_peers(
         Some(iface) => iface,
         None => return (zx::Status::NOT_FOUND, empty_peer_list),
     };
-    match iface.mlme_query.get_minstrel_list().await {
+    match iface.mlme_proxy.list_minstrel_peers().await {
         Ok(resp) => (zx::Status::OK, resp.peers),
         Err(_) => (zx::Status::INTERNAL, empty_peer_list),
     }
@@ -245,7 +245,8 @@ async fn get_minstrel_stats(
         Some(iface) => iface,
         None => return (zx::Status::NOT_FOUND, None),
     };
-    match iface.mlme_query.get_minstrel_peer(peer_addr).await {
+    let mut req = fidl_mlme::MinstrelStatsRequest { peer_addr };
+    match iface.mlme_proxy.get_minstrel_stats(&mut req).await {
         Ok(MinstrelStatsResponse { peer }) => (zx::Status::OK, peer),
         Err(_) => (zx::Status::INTERNAL, None),
     }
@@ -362,7 +363,6 @@ mod tests {
 
     use crate::{
         device::IfaceDevice,
-        mlme_query_proxy::MlmeQueryProxy,
         stats_scheduler::{self, StatsRequest},
     };
 
@@ -709,15 +709,14 @@ mod tests {
     fn fake_client_iface() -> FakeClientIface<impl Stream<Item = StatsRequest>> {
         let (sme_sender, sme_receiver) = mpsc::unbounded();
         let (stats_sched, stats_requests) = stats_scheduler::create_scheduler();
-        let (proxy, _server) = create_proxy::<MlmeMarker>().expect("Error creating proxy");
+        let (mlme_proxy, _server) = create_proxy::<MlmeMarker>().expect("Error creating proxy");
         let (shutdown_sender, _) = mpsc::channel(1);
-        let mlme_query = MlmeQueryProxy::new(proxy);
         let device_info = fake_device_info();
         let iface = IfaceDevice {
             phy_ownership: device::PhyOwnership { phy_id: 0, phy_assigned_id: 0 },
             sme_server: device::SmeServer::Client(sme_sender),
             stats_sched,
-            mlme_query,
+            mlme_proxy,
             device_info,
             shutdown_sender,
         };
@@ -733,15 +732,14 @@ mod tests {
     fn fake_ap_iface() -> FakeApIface<impl Stream<Item = StatsRequest>> {
         let (sme_sender, sme_receiver) = mpsc::unbounded();
         let (stats_sched, stats_requests) = stats_scheduler::create_scheduler();
-        let (proxy, _server) = create_proxy::<MlmeMarker>().expect("Error creating proxy");
-        let mlme_query = MlmeQueryProxy::new(proxy);
+        let (mlme_proxy, _server) = create_proxy::<MlmeMarker>().expect("Error creating proxy");
         let (shutdown_sender, _) = mpsc::channel(1);
         let device_info = fake_device_info();
         let iface = IfaceDevice {
             phy_ownership: device::PhyOwnership { phy_id: 0, phy_assigned_id: 0 },
             sme_server: device::SmeServer::Ap(sme_sender),
             stats_sched,
-            mlme_query,
+            mlme_proxy,
             device_info,
             shutdown_sender,
         };
