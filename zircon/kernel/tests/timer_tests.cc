@@ -29,6 +29,11 @@
 #include <ktl/optional.h>
 #include <ktl/unique_ptr.h>
 
+// TODO(fxbug.dev/85324): Remove this include once the fxbug.dev/85324 has been resolved.
+#if defined(__x86_64__)
+#include <arch/x86/feature.h>
+#endif
+
 #include "tests.h"
 
 static void timer_diag_cb(Timer* timer, zx_time_t now, void* arg) {
@@ -439,6 +444,41 @@ static bool trylock_or_cancel_canceled() {
   END_TEST;
 }
 
+// TODO(fxbug.dev/85324): Remove this class once the fxbug.dev/85324 has been resolved.
+class DiagTimeline {
+ public:
+  DiagTimeline() = default;
+  void AddEvent() {
+#if defined(__x86_64__)
+    if (x86_hypervisor != X86_HYPERVISOR_NONE) {
+      // If we're running under a hypervisor (like KVM) don't bother checking because our (virtual)
+      // CPU might be starved and therefore there is no safe threshold.
+      return;
+    }
+    ASSERT(count_ < kMax);
+    zx_time_t now = current_time();
+    events_[count_++] = now;
+    const zx_duration_t delta = zx_time_sub_time(now, events_[0]);
+    constexpr zx_duration_t kThreshold = ZX_SEC(1);
+    if (delta >= kThreshold) {
+      platform_panic_start();
+      printf("delta=%" PRId64 "\n", delta);
+      for (size_t x = 0; x < count_; ++x) {
+        printf("events_[%lu]=%" PRId64 "\n", x, events_[x]);
+      }
+      platform_halt(HALT_ACTION_HALT, ZirconCrashReason::Panic);
+    }
+#endif
+  }
+
+ private:
+#if defined(__x86_64__)
+  static constexpr size_t kMax = 16;
+  size_t count_{};
+  zx_time_t events_[kMax]{};
+#endif
+};
+
 // See that timer_trylock_or_cancel acquires the lock when the holder releases it.
 static bool trylock_or_cancel_get_lock() {
   BEGIN_TEST;
@@ -454,15 +494,19 @@ static bool trylock_or_cancel_get_lock() {
 
   arg.wait = 1;
 
+  DiagTimeline timeline;
+
   interrupt_saved_state_t int_state = arch_interrupt_save();
 
   cpu_num_t timer_cpu = arch_curr_cpu_num();
   const Deadline deadline = Deadline::after(ZX_USEC(100));
+  timeline.AddEvent();
   t.Set(deadline, timer_trylock_cb, &arg);
-
+  timeline.AddEvent();
   // The timer is set to run on timer_cpu, switch to a different CPU, acquire the spinlock then
   // signal the callback to proceed.
   Thread::Current::Get()->SetCpuAffinity(~cpu_num_to_mask(timer_cpu));
+  timeline.AddEvent();
   DEBUG_ASSERT(arch_curr_cpu_num() != timer_cpu);
 
   arch_interrupt_restore(int_state);
@@ -470,8 +514,10 @@ static bool trylock_or_cancel_get_lock() {
   {
     Guard<MonitoredSpinLock, IrqSave> guard{&arg.lock, SOURCE_TAG};
 
+    timeline.AddEvent();
     while (!arg.timer_fired.load()) {
     }
+    timeline.AddEvent();
 
     // Callback should now be running. Tell it to stop waiting and start trylocking.
     arg.wait.store(0);
@@ -479,6 +525,7 @@ static bool trylock_or_cancel_get_lock() {
 
   // See that timer_cancel returns false indicating that the timer ran.
   ASSERT_FALSE(t.Cancel());
+  timeline.AddEvent();
 
   // Note, we cannot assert the value of arg.result. We have both released the lock and canceled
   // the timer, but we don't know which of these events the timer observed first.
