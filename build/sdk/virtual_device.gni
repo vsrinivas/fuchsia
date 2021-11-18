@@ -26,6 +26,16 @@ template("virtual_device_specification") {
     sources =
         [ "//src/developer/ffx/plugins/emulator/testdata/device_spec.json" ]
     outputs = [ output ]
+    metadata = {
+      images = [
+        {
+          label = get_label_info(":$target_name", "label_with_toolchain")
+          name = "virtual_device"
+          path = rebase_path(output, root_build_dir)
+          type = "manifest"
+        },
+      ]
+    }
   }
 
   validator_target = "${target_name}_json_validator"
