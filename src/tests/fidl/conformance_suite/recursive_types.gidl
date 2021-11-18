@@ -20,9 +20,9 @@ success("RecursiveOptionalStruct") {
 }
 
 success("RecursiveVectorStruct") {
-    // TODO(fxbug.dev/88725) Enable this test for HLCPP and Rust.
-    bindings_denylist = [hlcpp, rust],
-    value = RecursiveVectorStruct { 
+    // TODO(fxbug.dev/88725) Enable this test for Rust.
+    bindings_denylist = [rust],
+    value = RecursiveVectorStruct {
         vec: [
             RecursiveVectorStruct {
                 vec: [

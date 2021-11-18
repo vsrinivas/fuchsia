@@ -911,7 +911,7 @@ func (p *Parser) parseErrorCode() (ir.ErrorCode, error) {
 }
 
 func (p *Parser) parseSlice(rightsConfiguration rightsConfiguration) ([]ir.Value, error) {
-	var result []ir.Value
+	result := make([]ir.Value, 0)
 	err := p.parseCommaSeparated(tLsquare, tRsquare, func() error {
 		val, err := p.parseValue(rightsConfiguration)
 		if err != nil {

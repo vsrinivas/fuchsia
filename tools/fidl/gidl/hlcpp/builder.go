@@ -273,6 +273,9 @@ func (b *cppValueBuilder) visitVector(value []gidlir.Value, decl *gidlmixer.Vect
 	// Populate the vector using push_back. We can't use an initializer list
 	// because they always copy, which breaks if the element is a unique_ptr.
 	b.Builder.WriteString(fmt.Sprintf("%s %s;\n", typeName(decl), vectorVar))
+	if decl.IsNullable() && value != nil {
+		b.Builder.WriteString(fmt.Sprintf("%s.emplace();\n", vectorVar))
+	}
 	accessor := "."
 	if decl.IsNullable() {
 		accessor = "->"

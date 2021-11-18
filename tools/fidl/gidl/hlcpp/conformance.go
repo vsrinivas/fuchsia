@@ -37,7 +37,7 @@ TEST(Conformance, {{ .Name }}_Encode) {
 	{{ .ValueBuild }}
 	const auto expected_bytes = {{ .Bytes }};
 	const auto expected_handles = {{ .Handles }};
-	{{/* Must use a variable because macros don't understand commas in template args. */}}
+	{{/* Must use a variable because macros don't understand commas in template args. */ -}}
 	const auto result =
 		fidl::test::util::ValueToBytes<{{ .ValueType }}>(
 			{{ .EncoderWireFormat }}, {{ .ValueVar }}, expected_bytes, expected_handles, {{ .CheckRights }});
@@ -70,7 +70,7 @@ TEST(Conformance, {{ .Name }}_Decode) {
 	auto {{ .ActualValueVar }} =
 	    fidl::test::util::DecodedBytes<{{ .ValueType }}>({{ .WireFormatHeader }}, std::move(bytes), std::move(handles));
 	{{ .EqualityCheck }}
-	{{- /* The handles are closed in the destructor of .ValueVar */}}
+	{{- /* The handles are closed in the destructor of .ValueVar */ -}}
 	fidl::test::util::ForgetHandles({{ .EncoderWireFormat }}, std::move(value));
 }
 {{- if .FuchsiaOnly }}

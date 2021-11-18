@@ -136,7 +136,7 @@ func TestParseValues(t *testing.T) {
 				},
 			},
 		}},
-		{gidl: `[]`, expectedValue: []ir.Value(nil)},
+		{gidl: `[]`, expectedValue: make([]ir.Value, 0)},
 		{gidl: `[1,]`, expectedValue: []ir.Value{uint64(1)}},
 		{gidl: `[1,"hello",true,]`, expectedValue: []ir.Value{uint64(1), "hello", true}},
 		{gidl: `[null,]`, expectedValue: []ir.Value{nil}},
