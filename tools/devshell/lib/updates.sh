@@ -16,6 +16,16 @@ function check-for-package-server {
       fx-warn "WARNING: It looks like serve-updates is running in a different workspace."
       fx-warn "WARNING: You probably need to stop that one and start a new one here with \"fx serve\""
     fi
+
+    # Warn if incremental is enabled for this shell, but the server is not auto publishing packages.
+    if is_feature_enabled "incremental"; then
+      # Regex terminates with a space to avoid matching the -persist option.
+      if [[ -z "$(pgrep -f "pm serve .*${FUCHSIA_BUILD_DIR}/amber-files .*-p ")" ]]; then
+        fx-warn "WARNING: Incremental build is enabled, but it looks like incremental build is disabled for serve-updates."
+        fx-warn "WARNING: You probably need to stop serve-updates, and restart it with incremental build enabled."
+        fx-warn "WARNING: You can enable incremental build in the shell running serve-updates with 'export FUCHSIA_DISABLED_incremental=0'"
+      fi
+    fi
   else
     if [[ "$(uname -s)" == "Darwin" ]]; then
       if ! netstat -anp tcp | awk '{print $4}' | grep "\.8085$" > /dev/null; then
