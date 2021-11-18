@@ -164,7 +164,6 @@ static void platform_save_bootloader_data(void) {
         mandatory_memset(payload.data(), 0, payload.size());
         break;
       }
-      case ZBI_TYPE_NVRAM_DEPRECATED:
       case ZBI_TYPE_NVRAM: {
         // If we have a valid NVRAM location passed to us by ZBI, and we have
         // not already configured a platform crashlog implementation, use the

@@ -329,8 +329,7 @@ typedef struct {
 // Physical memory region that will persist across warm boots.
 // zbi_nvram_t gives the physical base address and length in bytes.
 #define ZBI_TYPE_NVRAM (0x4c4c564e)  // NVLL
-// This reflects a typo we need to support for a while.
-#define ZBI_TYPE_NVRAM_DEPRECATED (0x4c4c5643)  // CVLL
+
 #ifndef __ASSEMBLER__
 typedef struct {
   uint64_t base;
