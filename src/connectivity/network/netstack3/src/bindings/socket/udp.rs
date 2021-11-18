@@ -24,15 +24,15 @@ use futures::{StreamExt as _, TryFutureExt as _};
 use log::{error, trace};
 use net_types::ip::{Ip, Ipv4, Ipv6};
 use netstack3_core::{
-    connect_udp, get_udp_conn_info, get_udp_listener_info, listen_udp, remove_udp_conn,
-    remove_udp_listener, send_udp, send_udp_conn, send_udp_listener, BufferUdpContext, Ctx,
-    EventDispatcher, IdMap, IdMapCollection, IpExt, UdpConnId, UdpConnInfo, UdpContext,
-    UdpListenerId, UdpListenerInfo,
+    connect_udp, get_udp_conn_info, get_udp_listener_info, icmp::IcmpIpExt, listen_udp,
+    remove_udp_conn, remove_udp_listener, send_udp, send_udp_conn, send_udp_listener,
+    BufferUdpContext, Ctx, EventDispatcher, IdMap, IdMapCollection, IpExt, UdpConnId, UdpConnInfo,
+    UdpContext, UdpListenerId, UdpListenerInfo,
 };
 use packet::{Buf, BufferMut};
 use std::collections::VecDeque;
 
-use crate::bindings::{BindingsDispatcher, Lockable, LockableContext};
+use crate::bindings::{Lockable, LockableContext};
 
 use super::{
     IntoErrno, IpSockAddrExt, SockAddr, SocketWorkerProperties, ZXSIO_SIGNAL_INCOMING,
@@ -59,17 +59,64 @@ pub(crate) struct UdpSocketCollectionInner<I: Ip> {
     listeners: IdMapCollection<UdpListenerId<I>, usize>,
 }
 
-impl<I: Ip> UdpSocketCollectionInner<I> {
-    fn get_conn(&mut self, id: &UdpConnId<I>) -> &mut BindingData<I> {
-        self.binding_data.get_mut(*self.conns.get(id).unwrap()).unwrap()
+impl<I: IcmpIpExt> UdpContext<I> for UdpSocketCollectionInner<I> {
+    fn receive_icmp_error(
+        &mut self,
+        id: Result<UdpConnId<I>, UdpListenerId<I>>,
+        err: I::ErrorCode,
+    ) {
+        let Self { binding_data, conns, listeners } = self;
+        let id = match id.as_ref() {
+            Ok(conn) => conns.get(conn),
+            Err(listener) => listeners.get(listener),
+        };
+        let binding_data = id.copied().and_then(|id| binding_data.get(id));
+        // NB: Logging at error as a means of failing tests that provoke this condition.
+        error!("unimplemented receive_icmp_error {:?} on {:?}", err, binding_data)
     }
-    fn get_listener(&mut self, id: &UdpListenerId<I>) -> &mut BindingData<I> {
-        self.binding_data.get_mut(*self.listeners.get(id).unwrap()).unwrap()
+}
+
+impl<I: IpExt, B: BufferMut> BufferUdpContext<I, B> for UdpSocketCollectionInner<I> {
+    fn receive_udp_from_conn(
+        &mut self,
+        conn: UdpConnId<I>,
+        src_ip: I::Addr,
+        src_port: NonZeroU16,
+        body: B,
+    ) {
+        let Self { binding_data, conns, listeners: _ } = self;
+        let binding_data =
+            conns.get(&conn).copied().and_then(|id| binding_data.get_mut(id)).unwrap();
+        match binding_data.receive_datagram(src_ip, src_port.get(), body.as_ref()) {
+            Ok(()) => (),
+            Err(e) => error!("receive_udp_from_conn failed: {:?}", e),
+        }
+    }
+
+    fn receive_udp_from_listen(
+        &mut self,
+        listener: UdpListenerId<I>,
+        src_ip: I::Addr,
+        _dst_ip: I::Addr,
+        src_port: Option<NonZeroU16>,
+        body: B,
+    ) {
+        let Self { binding_data, conns: _, listeners } = self;
+        let binding_data =
+            listeners.get(&listener).copied().and_then(|id| binding_data.get_mut(id)).unwrap();
+        match binding_data.receive_datagram(
+            src_ip,
+            src_port.map_or(0, NonZeroU16::get),
+            body.as_ref(),
+        ) {
+            Ok(()) => (),
+            Err(e) => error!("receive_udp_from_conn failed: {:?}", e),
+        }
     }
 }
 
 /// Extension trait for [`Ip`] for UDP sockets operations.
-pub(crate) trait UdpSocketIpExt: IpSockAddrExt + IpExt {
+pub(crate) trait UdpSocketIpExt: Ip {
     fn get_collection<D: AsRef<UdpSocketCollection>>(
         dispatcher: &D,
     ) -> &UdpSocketCollectionInner<Self>;
@@ -103,43 +150,6 @@ impl UdpSocketIpExt for Ipv6 {
         dispatcher: &mut D,
     ) -> &mut UdpSocketCollectionInner<Self> {
         &mut dispatcher.as_mut().v6
-    }
-}
-
-impl<I: UdpSocketIpExt> UdpContext<I> for BindingsDispatcher {}
-
-// NOTE(brunodalbo) we implement BufferUdpContext for EventLoopInner in this
-// module so it's closer to the rest of the UDP logic
-impl<I: UdpSocketIpExt, B: BufferMut> BufferUdpContext<I, B> for BindingsDispatcher {
-    fn receive_udp_from_conn(
-        &mut self,
-        conn: UdpConnId<I>,
-        src_ip: I::Addr,
-        src_port: NonZeroU16,
-        body: B,
-    ) {
-        let binding_data = I::get_collection_mut(self).get_conn(&conn);
-        if let Err(e) = binding_data.receive_datagram(src_ip, src_port.get(), body.as_ref()) {
-            error!("receive_udp_from_conn failed: {:?}", e);
-        }
-    }
-
-    fn receive_udp_from_listen(
-        &mut self,
-        listener: UdpListenerId<I>,
-        src_ip: I::Addr,
-        _dst_ip: I::Addr,
-        src_port: Option<NonZeroU16>,
-        body: B,
-    ) {
-        let binding_data = I::get_collection_mut(self).get_listener(&listener);
-        if let Err(e) = binding_data.receive_datagram(
-            src_ip,
-            src_port.map(|p| p.get()).unwrap_or(0),
-            body.as_ref(),
-        ) {
-            error!("receive_udp_from_conn failed: {:?}", e);
-        }
     }
 }
 
@@ -266,7 +276,7 @@ where
 
 impl<I, C> UdpSocketWorker<I, C>
 where
-    I: UdpSocketIpExt,
+    I: UdpSocketIpExt + IpExt + IpSockAddrExt,
     C: RequestHandlerContext<I>,
     C: Clone + Send + Sync + 'static,
 {
@@ -938,7 +948,7 @@ where
 
 impl<'a, I, C> RequestHandler<'a, I, C>
 where
-    I: UdpSocketIpExt,
+    I: UdpSocketIpExt + IpExt + IpSockAddrExt,
     C: RequestHandlerContext<I>,
 {
     fn describe(&self) -> Option<fidl_fuchsia_io::NodeInfo> {
@@ -1086,7 +1096,7 @@ where
 
     fn close_core(&mut self) {
         match self.get_state().info.state {
-            SocketState::Unbound => {} // nothing to do
+            SocketState::Unbound => (), // nothing to do
             SocketState::BoundListen { listener_id } => {
                 // remove from bindings:
                 assert_ne!(
@@ -1910,8 +1920,8 @@ mod tests {
         for i in 0..2 {
             t.get(i)
                 .with_ctx(|ctx| {
-                    let udpsocks: &UdpSocketCollectionInner<<A::AddrType as IpAddress>::Version> =
-                        UdpSocketIpExt::get_collection(ctx.dispatcher());
+                    let udpsocks =
+                        <A::AddrType as IpAddress>::Version::get_collection(ctx.dispatcher());
                     assert_eq!(udpsocks.binding_data.iter().count(), 1);
                     assert_eq!(udpsocks.listeners.iter().count(), 1);
                     assert!(udpsocks.conns.is_empty());
@@ -1936,8 +1946,8 @@ mod tests {
         for i in 0..2 {
             t.get(i)
                 .with_ctx(|ctx| {
-                    let udpsocks: &UdpSocketCollectionInner<<A::AddrType as IpAddress>::Version> =
-                        UdpSocketIpExt::get_collection(ctx.dispatcher());
+                    let udpsocks =
+                        <A::AddrType as IpAddress>::Version::get_collection(ctx.dispatcher());
                     assert!(udpsocks.binding_data.is_empty());
                     assert!(udpsocks.listeners.is_empty());
                     assert!(udpsocks.conns.is_empty());
@@ -1981,8 +1991,8 @@ mod tests {
         // empty
         test_stack
             .with_ctx(|ctx| {
-                let udpsocks: &UdpSocketCollectionInner<<A::AddrType as IpAddress>::Version> =
-                    UdpSocketIpExt::get_collection(ctx.dispatcher());
+                let udpsocks =
+                    <A::AddrType as IpAddress>::Version::get_collection(ctx.dispatcher());
                 assert!(!udpsocks.binding_data.is_empty());
             })
             .await;
@@ -1995,8 +2005,8 @@ mod tests {
         // Now it should become empty
         test_stack
             .with_ctx(|ctx| {
-                let udpsocks: &UdpSocketCollectionInner<<A::AddrType as IpAddress>::Version> =
-                    UdpSocketIpExt::get_collection(ctx.dispatcher());
+                let udpsocks =
+                    <A::AddrType as IpAddress>::Version::get_collection(ctx.dispatcher());
                 assert!(udpsocks.binding_data.is_empty());
             })
             .await;
@@ -2033,8 +2043,8 @@ mod tests {
         // No socket should be there now.
         test_stack
             .with_ctx(|ctx| {
-                let udpsocks: &UdpSocketCollectionInner<<A::AddrType as IpAddress>::Version> =
-                    UdpSocketIpExt::get_collection(ctx.dispatcher());
+                let udpsocks =
+                    <A::AddrType as IpAddress>::Version::get_collection(ctx.dispatcher());
                 assert!(udpsocks.binding_data.is_empty());
             })
             .await;
@@ -2068,11 +2078,13 @@ mod tests {
         assert!(cloned.into_channel().unwrap().is_closed());
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_invalid_clone_args() {
+    async fn test_invalid_clone_args<A: TestSockAddr>()
+    where
+        <A::AddrType as IpAddress>::Version: UdpSocketIpExt,
+    {
         let mut t = TestSetupBuilder::new().add_endpoint().add_empty_stack().build().await.unwrap();
         let test_stack = t.get(0);
-        let socket = get_socket::<fnet::Ipv4SocketAddress>(test_stack).await;
+        let socket = get_socket::<A>(test_stack).await;
         // conflicting flags
         expect_clone_invalid_args(&socket, fio::CLONE_FLAG_SAME_RIGHTS | fio::OPEN_RIGHT_READABLE)
             .await;
@@ -2094,11 +2106,21 @@ mod tests {
         // make sure we don't leak anything.
         test_stack
             .with_ctx(|ctx| {
-                let udpsocks: &UdpSocketCollectionInner<net_types::ip::Ipv4> =
-                    UdpSocketIpExt::get_collection(ctx.dispatcher());
+                let udpsocks =
+                    <A::AddrType as IpAddress>::Version::get_collection(ctx.dispatcher());
                 assert!(udpsocks.binding_data.is_empty());
             })
             .await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_invalid_clone_args_v4() {
+        test_invalid_clone_args::<fnet::Ipv4SocketAddress>().await
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_invalid_clone_args_v6() {
+        test_invalid_clone_args::<fnet::Ipv6SocketAddress>().await
     }
 
     async fn test_udp_shutdown<A: TestSockAddr>() {

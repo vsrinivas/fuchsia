@@ -23,6 +23,7 @@ mod util;
 
 use std::convert::TryFrom as _;
 use std::future::Future;
+use std::num::NonZeroU16;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -41,15 +42,16 @@ use util::ConversionContext;
 
 use context::Lockable;
 use devices::{DeviceInfo, Devices, ToggleError};
-use socket::udp::UdpSocketCollection;
+use socket::udp::{UdpSocketCollection, UdpSocketIpExt};
 use timers::TimerDispatcher;
 
 use netstack3_core::{
     context::{InstantContext, RngContext, TimerContext},
     handle_timer,
     icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
-    initialize_device, remove_device, Ctx, DeviceId, DeviceLayerEventDispatcher, EventDispatcher,
-    IpSockCreationError, StackStateBuilder, TimerId,
+    initialize_device, remove_device, BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher,
+    EventDispatcher, IpExt, IpSockCreationError, StackStateBuilder, TimerId, UdpConnId, UdpContext,
+    UdpListenerId,
 };
 
 pub(crate) trait LockableContext: for<'a> Lockable<'a, Ctx<Self::Dispatcher>> {
@@ -286,6 +288,40 @@ impl<I: IcmpIpExt, B: BufferMut> BufferIcmpContext<I, B> for BindingsDispatcher 
     fn receive_icmp_echo_reply(&mut self, _conn: IcmpConnId<I>, seq_num: u16, data: B) {
         // TODO(https://fxbug.dev/47321): implement.
         trace!("Received ICMP echo reply w/ seq_num={}, len={}", seq_num, data.len());
+    }
+}
+
+impl<I: UdpSocketIpExt + IcmpIpExt> UdpContext<I> for BindingsDispatcher {
+    fn receive_icmp_error(
+        &mut self,
+        id: Result<UdpConnId<I>, UdpListenerId<I>>,
+        err: I::ErrorCode,
+    ) {
+        I::get_collection_mut(self).receive_icmp_error(id, err)
+    }
+}
+
+impl<I: UdpSocketIpExt + IpExt, B: BufferMut> BufferUdpContext<I, B> for BindingsDispatcher {
+    fn receive_udp_from_conn(
+        &mut self,
+        conn: UdpConnId<I>,
+        src_ip: I::Addr,
+        src_port: NonZeroU16,
+        body: B,
+    ) {
+        I::get_collection_mut(self).receive_udp_from_conn(conn, src_ip, src_port, body)
+    }
+
+    fn receive_udp_from_listen(
+        &mut self,
+        listener: UdpListenerId<I>,
+        src_ip: I::Addr,
+        dst_ip: I::Addr,
+        src_port: Option<NonZeroU16>,
+        body: B,
+    ) {
+        I::get_collection_mut(self)
+            .receive_udp_from_listen(listener, src_ip, dst_ip, src_port, body)
     }
 }
 

@@ -27,8 +27,8 @@ use net_types::{
 use netstack3_core::{
     context::{InstantContext, RngContext, TimerContext},
     icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
-    BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher, EntryDest, EntryEither,
-    IpSockCreationError, StackStateBuilder, TimerId, UdpContext,
+    BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher, EntryDest, EntryEither, IpExt,
+    IpSockCreationError, StackStateBuilder, TimerId, UdpConnId, UdpContext, UdpListenerId,
 };
 use packet::{Buf, BufferMut, Serializer};
 
@@ -127,9 +127,17 @@ where
     }
 }
 
-impl<I: UdpSocketIpExt> UdpContext<I> for TestDispatcher {}
+impl<I: UdpSocketIpExt + IcmpIpExt> UdpContext<I> for TestDispatcher {
+    fn receive_icmp_error(
+        &mut self,
+        id: Result<UdpConnId<I>, UdpListenerId<I>>,
+        err: I::ErrorCode,
+    ) {
+        UdpContext::receive_icmp_error(&mut self.disp, id, err)
+    }
+}
 
-impl<I: UdpSocketIpExt, B: BufferMut> BufferUdpContext<I, B> for TestDispatcher {
+impl<I: UdpSocketIpExt + IpExt, B: BufferMut> BufferUdpContext<I, B> for TestDispatcher {
     fn receive_udp_from_conn(
         &mut self,
         conn: netstack3_core::UdpConnId<I>,
