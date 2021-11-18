@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// [START import_statement_rust]
 use {
+    // [START_EXCLUDE]
     anyhow::{self, Error},
     fidl_fidl_examples_routing_echo as fecho,
     fuchsia_async::{
@@ -10,12 +12,12 @@ use {
         futures::{StreamExt, TryStreamExt},
     },
     fuchsia_component::server as fserver,
-    // [START import_statement_rust]
+    // [END_EXCLUDE]
     fuchsia_component_test::{
         mock::MockHandles, ChildProperties, RealmBuilder, RouteBuilder, RouteEndpoint,
     },
-    // [END import_statement_rust]
 };
+// [END import_statement_rust]
 
 #[fuchsia::test]
 async fn make_echo_call() -> Result<(), Error> {

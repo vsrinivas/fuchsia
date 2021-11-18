@@ -104,7 +104,7 @@ class MockHandles final {
 
   MockHandles(MockHandles&) = delete;
   MockHandles& operator=(MockHandles&) = delete;
-  // [END_EXLCUDE]
+  // [END_EXCLUDE]
 
   // Returns the namespace provided to the mock component. The returned pointer
   // will be invalid once *this is destroyed.
