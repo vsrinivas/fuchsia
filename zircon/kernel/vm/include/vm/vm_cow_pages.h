@@ -245,9 +245,12 @@ class VmCowPages final
   bool DedupZeroPage(vm_page_t* page, uint64_t offset);
 
   void DumpLocked(uint depth, bool verbose) const TA_REQ(lock_);
+
+  // VMO_VALIDATION
   bool DebugValidatePageSplitsLocked() const TA_REQ(lock_);
+  bool DebugValidateBacklinksLocked() const TA_REQ(lock_);
   // Calls DebugValidatePageSplitsLocked on this and every parent in the chain, returning true if
-  // all return true.
+  // all return true.  Also calls DebugValidateBacklinksLocked() on every node in the hierarchy.
   bool DebugValidatePageSplitsHierarchyLocked() const TA_REQ(lock_);
 
   // Different operations that RangeChangeUpdate* can perform against any VmMappings that are found.
@@ -486,7 +489,7 @@ class VmCowPages final
 
   // Unpins a page and potentially moves it into a different page queue should its pin
   // count reach zero.
-  void UnpinPage(vm_page_t* page, uint64_t offset);
+  void UnpinPageLocked(vm_page_t* page, uint64_t offset) TA_REQ(lock_);
 
   // Updates the page queue of an existing page, moving it to whichever non wired queue
   // is appropriate.
