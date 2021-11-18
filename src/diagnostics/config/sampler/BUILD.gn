@@ -20,6 +20,7 @@ sampler_files = [
   "input.json",
   "netstack.json",
   "sdmmc.json",
+  "setui.json",
   "sysmem.json",
   "system-update-committer.json",
   "connectivity-wlan.json",

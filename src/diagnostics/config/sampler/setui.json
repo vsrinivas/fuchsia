@@ -1,0 +1,102 @@
+{
+    "metrics": [
+        {
+            "event_codes": [
+                1
+            ],
+            "metric_id": 1,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/stash_failures/accessibility_info:count"
+        },
+        {
+            "event_codes": [
+                2
+            ],
+            "metric_id": 1,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/stash_failures/audio_info:count"
+        },
+        {
+            "event_codes": [
+                3
+            ],
+            "metric_id": 1,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/stash_failures/audio_policy_info:count"
+        },
+        {
+            "event_codes": [
+                4
+            ],
+            "metric_id": 1,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/stash_failures/display_info:count"
+        },
+        {
+            "event_codes": [
+                5
+            ],
+            "metric_id": 1,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/stash_failures/do_not_disturb_info:count"
+        },
+        {
+            "event_codes": [
+                6
+            ],
+            "metric_id": 1,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/stash_failures/factory_reset_info:count"
+        },
+        {
+            "event_codes": [
+                7
+            ],
+            "metric_id": 1,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/stash_failures/input_info:count"
+        },
+        {
+            "event_codes": [
+                8
+            ],
+            "metric_id": 1,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/stash_failures/intl_info:count"
+        },
+        {
+            "event_codes": [
+                9
+            ],
+            "metric_id": 1,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/stash_failures/light_info:count"
+        },
+        {
+            "event_codes": [
+                10
+            ],
+            "metric_id": 1,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/stash_failures/night_mode_info:count"
+        },
+        {
+            "event_codes": [
+                11
+            ],
+            "metric_id": 1,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/stash_failures/privacy_info:count"
+        },
+        {
+            "event_codes": [
+                12
+            ],
+            "metric_id": 1,
+            "metric_type": "Occurrence",
+            "selector": "core/setui_service:root/stash_failures/setup_info:count"
+        }
+    ],
+    "poll_rate_sec": 3600,
+    "project_id": 16
+}
