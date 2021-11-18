@@ -67,6 +67,7 @@ pub fn create_kernel_and_task_with_fs(fs: Arc<FsContext>) -> (Arc<Kernel>, Curre
         None,
     )
     .expect("failed to create first task");
+    *task.exit_code.lock() = Some(0);
 
     (kernel, task)
 }
@@ -75,7 +76,7 @@ pub fn create_kernel_and_task_with_fs(fs: Arc<FsContext>) -> (Arc<Kernel>, Curre
 ///
 /// The `Task` is backed by a real process, and can be used to test syscalls.
 pub fn create_task(kernel: &Arc<Kernel>, task_name: &str) -> CurrentTask {
-    Task::create_process(
+    let task = Task::create_process(
         kernel,
         &CString::new(task_name).unwrap(),
         0,
@@ -86,7 +87,9 @@ pub fn create_task(kernel: &Arc<Kernel>, task_name: &str) -> CurrentTask {
         Arc::clone(&kernel.default_abstract_socket_namespace),
         None,
     )
-    .expect("failed to create second task")
+    .expect("failed to create second task");
+    *task.exit_code.lock() = Some(0);
+    task
 }
 
 /// Maps `length` at `address` with `PROT_READ | PROT_WRITE`, `MAP_ANONYMOUS | MAP_PRIVATE`.

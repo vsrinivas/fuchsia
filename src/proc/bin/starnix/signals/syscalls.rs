@@ -6,7 +6,6 @@ use std::convert::TryFrom;
 use std::sync::Arc;
 
 use super::signalfd::*;
-use super::waiting::*;
 use crate::errno;
 use crate::error;
 use crate::fs::*;
@@ -320,6 +319,53 @@ where
     }
 }
 
+/// Waits on the task with `pid` to exit.
+///
+/// WNOHANG and WNOWAIT are implemented flags for `options`. WUNTRACED, WEXITED and WCONTINUED are
+/// not supported, but don't result in an error, only a log. Any other unsupported flags will
+/// result in EINVAL.
+///
+/// - `current_task`: The current task.
+/// - `pid`: The id of the task to wait on.
+/// - `options`: The options passed to the wait syscall.
+fn wait_on_pid(
+    current_task: &CurrentTask,
+    selector: TaskSelector,
+    options: u32,
+) -> Result<Option<ZombieTask>, Errno> {
+    if options & !(WNOHANG | WNOWAIT) != 0 {
+        not_implemented!("unsupported wait options: {:#x}", options);
+        if options & !(WUNTRACED | WEXITED | WCONTINUED | WNOHANG | WNOWAIT) != 0 {
+            return error!(EINVAL);
+        }
+    }
+
+    let waiter = Waiter::new();
+    let mut wait_result = Ok(());
+    loop {
+        let mut wait_queue = current_task.thread_group.child_exit_waiters.lock();
+        if let Some(zombie) = current_task.get_zombie_child(selector, options & WNOWAIT == 0) {
+            return Ok(Some(zombie));
+        }
+        if options & WNOHANG != 0 {
+            return Ok(None);
+        }
+        // Return any error encountered during previous iteration's wait. This is done after the
+        // zombie task has been dequeued to make sure that the zombie task is returned even if the
+        // wait was interrupted.
+        wait_result?;
+        wait_queue.wait_async(&waiter);
+        std::mem::drop(wait_queue);
+        wait_result = waiter.wait(current_task);
+    }
+}
+
+/// Converts the given exit code to a status code suitable for returning from wait syscalls.
+fn exit_code_to_status(exit_code: Option<i32>) -> i32 {
+    let exit_code = exit_code.expect("a process should not be exiting without an exit code");
+    (exit_code & 0xff) << 8
+}
+
 pub fn sys_waitid(
     current_task: &CurrentTask,
     id_type: u32,
@@ -327,39 +373,40 @@ pub fn sys_waitid(
     user_info: UserRef<siginfo_t>,
     options: u32,
 ) -> Result<SyscallResult, Errno> {
-    // waitid requires at least one option to be provided.
-    if options == 0 {
+    // waitid requires at least one of these options.
+    if options & (WEXITED | WSTOPPED | WCONTINUED) == 0 {
         return error!(EINVAL);
     }
-    if options & !(WEXITED | WNOHANG) != 0 {
-        not_implemented!("Waitid does support options: {:?}", options);
+    // WUNTRACED is not supported (only allowed for waitpid).
+    if options & WUNTRACED != 0 {
         return error!(EINVAL);
     }
+    // TODO(tbodt): don't allow WEXITED or WSTOPPED in any other wait syscalls, according to the
+    // manpage they should be valid only in waitid.
 
-    match id_type {
-        P_PID => {
-            // wait_on_pid returns None if the task was not waited on. In that case, no siginfo is
-            // returned.
-            if let Some(zombie_task) =
-                wait_on_pid(current_task, TaskSelector::Pid(id), (options & WNOHANG) == 0)?
-            {
-                let status = exit_code_to_status(zombie_task.exit_code);
-
-                let mut siginfo = siginfo_t::default();
-                siginfo.si_signo = uapi::SIGCHLD as i32;
-                siginfo.si_code = CLD_EXITED as i32;
-                siginfo.si_status = status;
-                current_task.mm.write_object(user_info, &siginfo)?;
-            }
-
-            Ok(SUCCESS)
+    let task_selector = match id_type {
+        P_PID => TaskSelector::Pid(id),
+        P_ALL => TaskSelector::Any,
+        P_PIDFD | P_PGID => {
+            not_implemented!("unsupported waitpid id_type {:?}", id_type);
+            return error!(ENOSYS);
         }
-        P_ALL | P_PIDFD | P_PGID => {
-            not_implemented!("waitid currently only supports P_ID");
-            error!(ENOSYS)
-        }
-        _ => error!(EINVAL),
+        _ => return error!(EINVAL),
+    };
+
+    // wait_on_pid returns None if the task was not waited on. In that case, we don't write out a
+    // siginfo. This seems weird but is the correct behavior according to the waitid(2) man page.
+    if let Some(zombie_task) = wait_on_pid(current_task, task_selector, options)? {
+        let status = exit_code_to_status(zombie_task.exit_code);
+
+        let mut siginfo = siginfo_t::default();
+        siginfo.si_signo = uapi::SIGCHLD as i32;
+        siginfo.si_code = CLD_EXITED as i32;
+        siginfo.si_status = status;
+        current_task.mm.write_object(user_info, &siginfo)?;
     }
+
+    Ok(SUCCESS)
 }
 
 pub fn sys_wait4(
@@ -378,7 +425,7 @@ pub fn sys_wait4(
         return error!(ENOSYS);
     };
 
-    if let Some(zombie_task) = wait_on_pid(current_task, selector, (options & WNOHANG) == 0)? {
+    if let Some(zombie_task) = wait_on_pid(current_task, selector, options)? {
         let status = exit_code_to_status(zombie_task.exit_code);
 
         if !user_rusage.is_null() {
@@ -982,21 +1029,31 @@ mod tests {
         assert_eq!(sys_waitid(&current_task, P_PID, id, UserRef::default(), 0), Err(EINVAL));
         assert_eq!(sys_waitid(&current_task, P_PID, id, UserRef::default(), WSTOPPED), Err(EINVAL));
         assert_eq!(
-            sys_waitid(&current_task, P_PID, id, UserRef::default(), WCONTINUED),
-            Err(EINVAL)
-        );
-        assert_eq!(sys_waitid(&current_task, P_PID, id, UserRef::default(), WNOWAIT), Err(EINVAL));
-        assert_eq!(
             sys_waitid(&current_task, P_PID, id, UserRef::default(), WEXITED | WSTOPPED),
             Err(EINVAL)
         );
-        assert_eq!(
-            sys_waitid(&current_task, P_PID, id, UserRef::default(), WEXITED | WCONTINUED),
-            Err(EINVAL)
+    }
+
+    #[test]
+    fn test_eintr_when_no_zombie() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        // Send the signal to the task.
+        assert!(
+            sys_kill(&current_task, current_task.get_pid(), UncheckedSignal::from(SIGCHLD)).is_ok()
         );
-        assert_eq!(
-            sys_waitid(&current_task, P_PID, id, UserRef::default(), WEXITED | WNOWAIT),
-            Err(EINVAL)
+        // Verify that EINTR is returned because there is no zombie task.
+        assert_eq!(wait_on_pid(&current_task, TaskSelector::Any, 0), Err(EINTR));
+    }
+
+    #[test]
+    fn test_no_error_when_zombie() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        // Send the signal to the task.
+        assert!(
+            sys_kill(&current_task, current_task.get_pid(), UncheckedSignal::from(SIGCHLD)).is_ok()
         );
+        let zombie = ZombieTask { id: 0, parent: 3, exit_code: Some(1) };
+        current_task.zombie_children.lock().push(zombie.clone());
+        assert_eq!(wait_on_pid(&current_task, TaskSelector::Any, 0), Ok(Some(zombie)));
     }
 }

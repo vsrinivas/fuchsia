@@ -487,15 +487,29 @@ impl Task {
     }
 
     /// Removes and returns any zombie task with the specified `pid`, if such a zombie exists.
-    pub fn get_zombie_child(&self, selector: TaskSelector) -> Option<ZombieTask> {
+    pub fn get_zombie_child(
+        &self,
+        selector: TaskSelector,
+        should_remove_zombie: bool,
+    ) -> Option<ZombieTask> {
         let mut zombie_children = self.zombie_children.lock();
         match selector {
-            TaskSelector::Any => zombie_children.pop(),
-            TaskSelector::Pid(pid) => zombie_children
-                .iter()
-                .position(|zombie| zombie.id == pid)
-                .map(|pos| zombie_children.remove(pos)),
+            TaskSelector::Any => {
+                if zombie_children.len() > 0 {
+                    Some(zombie_children.len() - 1)
+                } else {
+                    None
+                }
+            }
+            TaskSelector::Pid(pid) => zombie_children.iter().position(|zombie| zombie.id == pid),
         }
+        .map(|pos| {
+            if should_remove_zombie {
+                zombie_children.remove(pos)
+            } else {
+                zombie_children[pos].clone()
+            }
+        })
     }
 
     fn remove_child(&self, pid: pid_t) {
