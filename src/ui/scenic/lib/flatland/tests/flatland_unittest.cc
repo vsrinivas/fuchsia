@@ -3189,105 +3189,94 @@ TEST_F(FlatlandTest, CreateImageValidCase) {
 
 TEST_F(FlatlandTest, SetOpacityTestCases) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
-  const TransformId kId = {1};
-  const TransformId kIdChild = {2};
+  const TransformId kTransformId = {3};
+  const ContentId kId = {1};
+  const ContentId kIdChild = {2};
 
-  // Zero is not a valid transform ID.
+  // Zero is not a valid content ID.
   {
     std::shared_ptr<Flatland> flatland = CreateFlatland();
-    flatland->SetOpacity({0}, 0.5);
+    flatland->SetImageOpacity({0}, 0.5);
     PRESENT(flatland, false);
   }
 
-  // The transform id hasn't been imported yet.
+  // The content id hasn't been imported yet.
   {
     std::shared_ptr<Flatland> flatland = CreateFlatland();
-    flatland->SetOpacity(kId, 0.5);
+    flatland->SetImageOpacity(kId, 0.5);
+    PRESENT(flatland, false);
+  }
+
+  // Trying to set opacity on a solid color.
+  {
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
+    flatland->CreateFilledRect(kId);
+    flatland->SetImageOpacity(kId, 0.5);
     PRESENT(flatland, false);
   }
 
   // The alpha values are out of range.
   {
     std::shared_ptr<Flatland> flatland = CreateFlatland();
-    // Setup a valid transform.
-    flatland->CreateTransform(kId);
-    flatland->SetRootTransform(kId);
-    flatland->SetOpacity(kId, -0.5);
+    // Setup a valid image
+    BufferCollectionImportExportTokens ref_pair_1 = BufferCollectionImportExportTokens::New();
+
+    ImageProperties properties1;
+    properties1.set_size({100, 200});
+
+    auto import_token_dup = ref_pair_1.DuplicateImportToken();
+    const allocation::GlobalBufferCollectionId global_collection_id1 =
+        CreateImage(flatland.get(), allocator.get(), kId, std::move(ref_pair_1),
+                    std::move(properties1))
+            .collection_id;
+
+    flatland->CreateTransform(kTransformId);
+    flatland->SetRootTransform(kTransformId);
+    flatland->SetContent(kTransformId, kId);
+    flatland->SetImageOpacity(kId, -0.5);
     PRESENT(flatland, false);
   }
   {
     std::shared_ptr<Flatland> flatland = CreateFlatland();
-    // Setup a valid transform.
-    flatland->CreateTransform(kId);
-    flatland->SetRootTransform(kId);
-    flatland->SetOpacity(kId, 1.5);
+    // Setup a valid image
+    BufferCollectionImportExportTokens ref_pair_1 = BufferCollectionImportExportTokens::New();
+
+    ImageProperties properties1;
+    properties1.set_size({100, 200});
+
+    auto import_token_dup = ref_pair_1.DuplicateImportToken();
+    const allocation::GlobalBufferCollectionId global_collection_id1 =
+        CreateImage(flatland.get(), allocator.get(), kId, std::move(ref_pair_1),
+                    std::move(properties1))
+            .collection_id;
+
+    flatland->CreateTransform(kTransformId);
+    flatland->SetRootTransform(kTransformId);
+    flatland->SetContent(kTransformId, kId);
+    flatland->SetImageOpacity(kId, 1.5);
     PRESENT(flatland, false);
   }
 
   // Testing now with good values should finally work.
   {
     std::shared_ptr<Flatland> flatland = CreateFlatland();
-    // Setup a valid transform.
-    flatland->CreateTransform(kId);
+    // Setup a valid image
+    BufferCollectionImportExportTokens ref_pair_1 = BufferCollectionImportExportTokens::New();
+
+    ImageProperties properties1;
+    properties1.set_size({100, 200});
+
+    auto import_token_dup = ref_pair_1.DuplicateImportToken();
+    const allocation::GlobalBufferCollectionId global_collection_id1 =
+        CreateImage(flatland.get(), allocator.get(), kId, std::move(ref_pair_1),
+                    std::move(properties1))
+            .collection_id;
+
+    flatland->CreateTransform(kTransformId);
+    flatland->SetRootTransform(kTransformId);
+    flatland->SetContent(kTransformId, kId);
+    flatland->SetImageOpacity(kId, 0.7);
     PRESENT(flatland, true);
-    flatland->SetRootTransform(kId);
-    flatland->SetOpacity(kId, 0.5);
-    PRESENT(flatland, true);
-  }
-
-  // Adding a child should fail because the alpha value is not 1.0
-  {
-    std::shared_ptr<Flatland> flatland = CreateFlatland();
-    // Setup a valid transform.
-    flatland->CreateTransform(kId);
-    flatland->SetRootTransform(kId);
-    flatland->SetOpacity(kId, 0.5);
-
-    flatland->CreateTransform(kIdChild);
-    flatland->AddChild(kId, kIdChild);
-    PRESENT(flatland, false);
-  }
-
-  // We should still be able to add an *image* to the transform though since that is
-  // content and is treated differently from a normal child->
-  {
-    std::shared_ptr<Flatland> flatland = CreateFlatland();
-    // Setup a valid transform.
-    flatland->CreateTransform(kId);
-    flatland->SetRootTransform(kId);
-    flatland->CreateTransform(kIdChild);
-
-    const ContentId kImageId = {5};
-    BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
-    ImageProperties properties;
-    properties.set_size({150, 175});
-    std::shared_ptr<Allocator> allocator = CreateAllocator();
-    CreateImage(flatland.get(), allocator.get(), kImageId, std::move(ref_pair),
-                std::move(properties));
-    flatland->SetContent(kId, kImageId);
-    PRESENT(flatland, true);
-
-    // We should still be able to change the opacity to another value < 1 even with an image
-    // on the transform.
-    {
-      flatland->SetOpacity(kId, 0.3);
-      PRESENT(flatland, true);
-    }
-
-    // If we set the alpha to 1.0 again and then add the child, now it
-    // should work.
-    {
-      flatland->SetOpacity(kId, 1.0);
-      flatland->AddChild(kId, kIdChild);
-      PRESENT(flatland, true);
-    }
-
-    // Now that a child is added, if we try to change the alpha again, it
-    // should fail.
-    {
-      flatland->SetOpacity(kId, 0.5);
-      PRESENT(flatland, false);
-    }
   }
 }
 

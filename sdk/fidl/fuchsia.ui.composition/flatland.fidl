@@ -553,17 +553,10 @@ protocol Flatland {
         transform_id TransformId;
     });
 
-    /// Sets an opacity in linear space to be applied to a transform and its descendents,
-    /// which include other transforms and content. This is meant to support "group opacity",
-    /// which allows multiple images to be rendered as a unit with the same opacity value
-    /// applied over the whole.
-    ///
-    /// TODO (fxbug.dev/44255): The implementation for group opacity is not complete, so at
-    /// the moment [`SetOpacity`] is only valid when called on a leaf transform. Flatland will
-    /// report an error if the opacity is changed to be anything other than 1.0 on a non-leaf
-    /// node, or if a child is added to an existing leaf node with an opacity value < 1.0.
-    SetOpacity(struct {
-        transform_id TransformId;
+    /// Sets an opacity in linear space to be applied to a flatland image. Opacity values must
+    /// be in the range [0.0, 1.0].
+    SetImageOpacity(struct {
+        image_id ContentId;
         val float32;
     });
 

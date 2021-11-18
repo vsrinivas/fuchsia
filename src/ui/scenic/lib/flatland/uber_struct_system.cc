@@ -227,13 +227,6 @@ ostream& operator<<(ostream& out, const flatland::UberStruct& us) {
       }
     }
 
-    {
-      auto it = us.local_opacity_values.find(handle);
-      if (it != us.local_opacity_values.end()) {
-        out << "  opacity=" << it->second;
-      }
-    }
-
     out << std::endl;
 
     FX_DCHECK(!children_remaining.empty() && children_remaining.top() > 0);

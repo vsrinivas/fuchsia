@@ -244,10 +244,6 @@ void Flatland::Present(fuchsia::ui::composition::PresentArgs args) {
     uber_struct->local_clip_regions[handle] = clip_region;
   }
 
-  for (const auto& [handle, opacity_value] : opacity_values_) {
-    uber_struct->local_opacity_values[handle] = opacity_value;
-  }
-
   uber_struct->images = image_metadatas_;
 
   if (parent_link_.has_value()) {
@@ -573,13 +569,6 @@ void Flatland::AddChild(TransformId parent_transform_id, TransformId child_trans
   if (child_global_kv == transforms_.end()) {
     error_reporter_->ERROR() << "AddChild failed, child_transform_id " << child_transform_id.value
                              << " not found";
-    ReportBadOperationError();
-    return;
-  }
-
-  if (opacity_values_.find(parent_global_kv->second) != opacity_values_.end() &&
-      opacity_values_[parent_global_kv->second] != 1.f) {
-    error_reporter_->ERROR() << "Cannot add a child to a node with an opacity value < 1.0.";
     ReportBadOperationError();
     return;
   }
@@ -962,9 +951,31 @@ void Flatland::ReleaseFilledRect(ContentId rect_id) {
   content_handles_.erase(rect_id.value);
 }
 
-void Flatland::SetOpacity(TransformId transform_id, float val) {
-  if (transform_id.value == kInvalidId) {
-    error_reporter_->ERROR() << "SetOpacity called with transform_id 0";
+void Flatland::SetImageOpacity(ContentId image_id, float val) {
+  if (image_id.value == kInvalidId) {
+    error_reporter_->ERROR() << "SetImageOpacity called with image_id 0";
+    ReportBadOperationError();
+    return;
+  }
+
+  auto content_kv = content_handles_.find(image_id.value);
+  if (content_kv == content_handles_.end()) {
+    error_reporter_->ERROR() << "SetImageOpacity called with non-existent image_id "
+                             << image_id.value;
+    ReportBadOperationError();
+    return;
+  }
+
+  auto image_kv = image_metadatas_.find(content_kv->second);
+  if (image_kv == image_metadatas_.end()) {
+    error_reporter_->ERROR() << "SetImageOpacity called on non-rectangle content.";
+    ReportBadOperationError();
+    return;
+  }
+
+  auto& metadata = image_kv->second;
+  if (metadata.identifier == allocation::kInvalidImageId) {
+    error_reporter_->ERROR() << "SetImageOpacity called on solid color content.";
     ReportBadOperationError();
     return;
   }
@@ -975,27 +986,8 @@ void Flatland::SetOpacity(TransformId transform_id, float val) {
     return;
   }
 
-  auto transform_kv = transforms_.find(transform_id.value);
-
-  if (transform_kv == transforms_.end()) {
-    error_reporter_->ERROR() << "SetOpacity failed, transform_id " << transform_id.value
-                             << " not found";
-    ReportBadOperationError();
-    return;
-  }
-
-  if (transform_graph_.HasChildren(transform_kv->second)) {
-    error_reporter_->ERROR() << "Cannot set the opacity value of a non-leaf node below 1.0";
-    ReportBadOperationError();
-    return;
-  }
-
-  // Erase the value from the map since we store 1.f implicity.
-  if (val == 1.f) {
-    opacity_values_.erase(transform_kv->second);
-  } else {
-    opacity_values_[transform_kv->second] = val;
-  }
+  // Opacity is stored as the alpha channel of the multiply color.
+  metadata.multiply_color[3] = val;
 }
 
 void Flatland::SetContent(TransformId transform_id, ContentId content_id) {

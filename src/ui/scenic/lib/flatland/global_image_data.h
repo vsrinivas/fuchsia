@@ -27,15 +27,6 @@ struct GlobalImageData {
   GlobalImageVector images;
 };
 
-// Computes a list of global opacity values for the global topology.
-//
-// TODO(fxbug.dev/73516): This is nearly identical to |ComputeGlobalMatrices|. See
-// if we want to consolidate these functions.
-GlobalOpacityVector ComputeGlobalOpacityValues(
-    const GlobalTopologyData::TopologyVector& global_topology,
-    const GlobalTopologyData::ParentIndexVector& parent_indices,
-    const UberStruct::InstanceMap& uber_structs);
-
 // Computes the list of Images given a |global_topology| and the |uber_structs| used to generate
 // that topology. Note that not all TransformHandles will have Images, so the return value will
 // have fewer entries than there are in the global topology.
