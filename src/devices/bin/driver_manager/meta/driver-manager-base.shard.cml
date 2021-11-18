@@ -67,7 +67,6 @@
         {
             // The Realm protocol is required to start components.
             protocol: "fuchsia.component.Realm",
-            from: "parent",
         },
     ],
     expose: [
