@@ -70,9 +70,6 @@ GlobalImageData ComputeGlobalImageData(const GlobalTopologyData::TopologyVector&
     const auto image_kv = uber_struct_kv->second->images.find(handle);
     if (image_kv != uber_struct_kv->second->images.end()) {
       auto image = image_kv->second;
-      FX_DCHECK(image.multiply_color[0] == 1.f);
-      FX_DCHECK(image.multiply_color[1] == 1.f);
-      FX_DCHECK(image.multiply_color[2] == 1.f);
       image.multiply_color[3] = opacity_values[index];
       images.push_back(image);
       indices.push_back(index);

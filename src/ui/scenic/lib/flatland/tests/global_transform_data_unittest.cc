@@ -412,6 +412,36 @@ TEST(Rectangle2DTest, OrderOfOperationsTest) {
   }
 }
 
+// Check that we can set image color values besides white.
+TEST(GlobalImageDataTest, ImageMetadataColorTest) {
+  UberStruct::InstanceMap uber_structs;
+
+  // Make a global topology representing the following graph:
+  //
+  // 1:0 - 1:1
+  GlobalTopologyData::TopologyVector topology_vector = {{1, 0}, {1, 1}};
+  GlobalTopologyData::ParentIndexVector parent_indices = {0, 0};
+
+  // Set the uberstruct image color values.
+  auto uber_struct = std::make_unique<UberStruct>();
+  std::array<float, 4> color_a = {0.5, 0, 0.75, 1.0};
+  std::array<float, 4> color_b = {1.0, 0.6, 0.4, 1.0};
+  uber_struct->images[{1, 0}] = {.multiply_color = color_a};
+  uber_struct->images[{1, 1}] = {.multiply_color = color_b};
+  uber_structs[1] = std::move(uber_struct);
+
+  // These are the color values we expect to get back from |ComputeGlobalImageData|.
+  std::vector<std::array<float, 4>> expected_colors = {color_a, color_b};
+
+  auto global_images = ComputeGlobalImageData(topology_vector, parent_indices, uber_structs).images;
+  for (uint32_t i = 0; i < global_images.size(); i++) {
+    const auto& global_col = global_images[i].multiply_color;
+    for (uint32_t j = 0; j < 4; j++) {
+      EXPECT_EQ(expected_colors[i][j], global_col[j]);
+    }
+  }
+}
+
 // We recreate several of the matrix tests above with opacity values here,
 // since the logic for calculating opacities is largely the same as calculating
 // matrices, where child values are the product of their local values and their
