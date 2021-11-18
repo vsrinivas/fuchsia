@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context, Error},
+    anyhow::{bail, Context, Error},
     fidl::endpoints::{ProtocolMarker, Proxy},
     fidl_fuchsia_developer_remotecontrol::ServiceMatch,
     fidl_fuchsia_diagnostics::{Selector, StringSelector, TreeSelector},
@@ -176,7 +176,9 @@ pub async fn get_matching_paths(root: &str, selector: &Selector) -> Result<Vec<P
 
     match selector.tree_selector.as_ref().unwrap() {
         TreeSelector::SubtreeSelector(s) => {
-            if s.node_path.is_empty() {}
+            if s.node_path.is_empty() {
+                bail!("subtree selector has a missing 'node_path'");
+            }
             node_path = clone_selector(s.node_path.get(0).unwrap());
             selectors.extend(vec![
                 SelectorEntry::new(&node_path, EntryType::ComponentSubdir),
@@ -184,6 +186,9 @@ pub async fn get_matching_paths(root: &str, selector: &Selector) -> Result<Vec<P
             ]);
         }
         TreeSelector::PropertySelector(s) => {
+            if s.node_path.is_empty() {
+                bail!("subtree selector has a missing 'node_path'");
+            }
             node_path = clone_selector(s.node_path.get(0).unwrap());
             prop_path = clone_selector(&s.target_properties);
             selectors.extend(vec![
