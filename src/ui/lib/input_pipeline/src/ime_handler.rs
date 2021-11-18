@@ -40,9 +40,10 @@ impl InputHandler for ImeHandler {
                     input_device::InputDeviceDescriptor::Keyboard(_keyboard_device_descriptor),
                 event_time,
             } => {
-                self.modifier_tracker
-                    .borrow_mut()
-                    .update(keyboard_device_event.event_type, keyboard_device_event.key);
+                self.modifier_tracker.borrow_mut().update(
+                    keyboard_device_event.get_event_type(),
+                    keyboard_device_event.get_key(),
+                );
                 let key_event = create_key_event(
                     &keyboard_device_event,
                     event_time,
@@ -109,7 +110,8 @@ fn create_key_event(
     event_time: input_device::EventTime,
     modifier_state: &keymaps::ModifierState,
 ) -> fidl_ui_input3::KeyEvent {
-    let (key, event_type, modifiers) = (&event.key, &event.event_type, &event.modifiers);
+    let (key, event_type, modifiers) =
+        (event.get_key(), event.get_event_type(), event.get_modifiers());
     fx_log_debug!(
         "ImeHandler::create_key_event: key:{:?}, modifier_state:{:?}, event_type: {:?}",
         key,
@@ -117,13 +119,13 @@ fn create_key_event(
         event_type
     );
     // Don't override the key meaning if already set, e.g. by prior stage.
-    let key_meaning = event.key_meaning.or(keymaps::US_QWERTY.apply(*key, modifier_state));
+    let key_meaning = event.get_key_meaning().or(keymaps::US_QWERTY.apply(key, modifier_state));
 
     fidl_ui_input3::KeyEvent {
         timestamp: Some(event_time.try_into().unwrap_or_default()),
-        type_: Some(*event_type),
-        key: Some(*key),
-        modifiers: *modifiers,
+        type_: Some(event_type),
+        key: Some(key),
+        modifiers,
         key_meaning,
         ..fidl_ui_input3::KeyEvent::EMPTY
     }

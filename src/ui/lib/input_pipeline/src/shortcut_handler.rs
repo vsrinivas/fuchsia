@@ -33,9 +33,9 @@ impl InputHandler for ShortcutHandler {
                 event_time,
             } => {
                 let key_event = create_key_event(
-                    &keyboard_device_event.key,
-                    keyboard_device_event.event_type,
-                    keyboard_device_event.modifiers,
+                    &keyboard_device_event.get_key(),
+                    keyboard_device_event.get_event_type().clone(),
+                    keyboard_device_event.get_modifiers().clone(),
                     *event_time,
                 );
                 // If either pressed_keys or released_keys

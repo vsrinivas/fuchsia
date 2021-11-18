@@ -52,7 +52,7 @@ impl InputHandler for TextSettingsHandler {
                     "text_settings_handler::Instance::handle_input_event: keymap_id = {:?}",
                     &keymap_id
                 );
-                event.keymap = keymap_id;
+                event = event.into_with_keymap(keymap_id);
                 vec![input_device::InputEvent {
                     device_event: input_device::InputDeviceEvent::Keyboard(event),
                     device_descriptor,

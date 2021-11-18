@@ -60,7 +60,7 @@ impl KeymapHandler {
         device_descriptor: input_device::InputDeviceDescriptor,
         event_time: input_device::EventTime,
     ) -> Vec<input_device::InputEvent> {
-        let (key, event_type) = (&event.key, &event.event_type);
+        let (key, event_type) = (event.get_key(), event.get_event_type());
         fx_log_debug!(
             concat!(
                 "Keymap::process_keyboard_event: key:{:?}, ",
@@ -71,12 +71,13 @@ impl KeymapHandler {
             event_type
         );
 
-        self.modifier_state.borrow_mut().update(*event_type, *key);
-        let mut new_event = event.clone();
-        new_event.key_meaning =
-            keymaps::select_keymap(&event.keymap).apply(*key, &*self.modifier_state.borrow());
+        self.modifier_state.borrow_mut().update(event_type, key);
+        let key_meaning =
+            keymaps::select_keymap(&event.get_keymap()).apply(key, &*self.modifier_state.borrow());
         vec![input_device::InputEvent {
-            device_event: input_device::InputDeviceEvent::Keyboard(new_event),
+            device_event: input_device::InputDeviceEvent::Keyboard(
+                event.clone().into_with_key_meaning(key_meaning),
+            ),
             device_descriptor,
             event_time,
         }]
@@ -119,7 +120,7 @@ mod tests {
             input_device::InputEvent {
                 device_event: input_device::InputDeviceEvent::Keyboard(event),
                 ..
-            } => event.key_meaning,
+            } => event.get_key_meaning(),
             _ => None,
         }
     }

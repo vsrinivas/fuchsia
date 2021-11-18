@@ -139,7 +139,7 @@ impl StoredEvent {
 
     /// Returns the code point contained in this [StoredEvent].
     fn code_point(&self) -> u32 {
-        match self.event.key_meaning {
+        match self.event.get_key_meaning() {
             Some(KeyMeaning::Codepoint(c)) => c,
             _ => panic!("programming error: requested code point for an event that has none"),
         }
@@ -147,14 +147,14 @@ impl StoredEvent {
 
     /// Modifies this [StoredEvent] to contain a new code point instead of whatever was there.
     fn into_with_code_point(self, code_point: u32) -> Self {
-        let mut event = self.event.clone();
-        event.key_meaning = Some(KeyMeaning::Codepoint(code_point));
-        self.into_with_event(event)
+        let new_event =
+            self.event.clone().into_with_key_meaning(Some(KeyMeaning::Codepoint(code_point)));
+        self.into_with_event(new_event)
     }
 
     /// Returns true if [StoredEvent] contains a valid code point.
     fn is_code_point(&self) -> bool {
-        match self.event.key_meaning {
+        match self.event.get_key_meaning() {
             // Some nonprintable keys have the code point value set to 0.
             Some(KeyMeaning::Codepoint(c)) => c != 0,
             _ => false,
@@ -164,7 +164,7 @@ impl StoredEvent {
     /// Returns whether the key is a dead key or not.  The return value is an enum
     /// to make the state machine match arms more readable.
     fn key_liveness(&self) -> Liveness {
-        match self.event.key_meaning {
+        match self.event.get_key_meaning() {
             Some(KeyMeaning::Codepoint(c)) if is_dead_key(c) => Liveness::Dead,
             _ => Liveness::Live,
         }
@@ -172,16 +172,19 @@ impl StoredEvent {
 
     /// Returns the key event type (pressed, released, or something else)
     fn e_type(&self) -> KeyEventType {
-        self.event.event_type
+        self.event.get_event_type()
     }
 
     /// Returns a new [StoredEvent] based on `Self`, but with the combining effect removed.
     fn into_base_character(self) -> Self {
-        match self.event.key_meaning.clone() {
+        let key_meaning = self.event.get_key_meaning();
+        match key_meaning {
             Some(KeyMeaning::Codepoint(c)) => {
-                let mut event = self.event.clone();
-                event.key_meaning = Some(KeyMeaning::Codepoint(remove_combination(c)));
-                self.into_with_event(event)
+                let new_event = self
+                    .event
+                    .clone()
+                    .into_with_key_meaning(Some(KeyMeaning::Codepoint(remove_combination(c))));
+                self.into_with_event(new_event)
             }
             _ => self,
         }
@@ -195,7 +198,7 @@ impl StoredEvent {
         // definition the same effect as if the US QWERTY keymap were applied.
         // See discussion at:
         // https://groups.google.com/a/fuchsia.dev/g/ui-input-dev/c/ITYKvbJS6_o/m/8kK0DRccDAAJ
-        event.key_meaning = Some(KeyMeaning::Codepoint(0));
+        event = event.into_with_key_meaning(Some(KeyMeaning::Codepoint(0)));
         self.into_with_event(event)
     }
 
@@ -203,7 +206,7 @@ impl StoredEvent {
     /// as per the USB HID usage reported.  The return value is an enum to make
     /// the state machine match arms more readable.
     fn key_sameness(this: &StoredEvent, that: &StoredEvent) -> Sameness {
-        match this.event.key == that.event.key {
+        match this.event.get_key() == that.event.get_key() {
             true => Sameness::Same,
             false => Sameness::Other,
         }

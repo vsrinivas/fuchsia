@@ -67,14 +67,12 @@ pub fn create_keyboard_event_with_key_meaning(
     keymap: Option<String>,
     key_meaning: Option<fidl_fuchsia_ui_input3::KeyMeaning>,
 ) -> input_device::InputEvent {
+    let keyboard_event = keyboard_binding::KeyboardEvent::new(key, event_type)
+        .into_with_modifiers(modifiers)
+        .into_with_keymap(keymap)
+        .into_with_key_meaning(key_meaning);
     input_device::InputEvent {
-        device_event: input_device::InputDeviceEvent::Keyboard(keyboard_binding::KeyboardEvent {
-            key,
-            event_type,
-            modifiers,
-            keymap,
-            key_meaning,
-        }),
+        device_event: input_device::InputDeviceEvent::Keyboard(keyboard_event),
         device_descriptor: device_descriptor.clone(),
         event_time,
     }

@@ -28,26 +28,79 @@ use {
 /// key is present in a subsequent [`InputReport`]. Clients can assume that
 /// a key is pressed for all received input events until the key is present in
 /// the [`KeyEventType::Released`] entry of [`keys`].
+///
+/// Use `new` to create.  Use `get_*` methods to read fields.  Use `into_with_*`
+/// methods to add optional information.
 #[derive(Clone, Debug, PartialEq)]
 pub struct KeyboardEvent {
     /// The key that changed state in this [KeyboardEvent].
-    pub key: fidl_fuchsia_input::Key,
+    key: fidl_fuchsia_input::Key,
 
     /// A description of what happened to `key`.
-    pub event_type: KeyEventType,
+    event_type: KeyEventType,
 
     /// The [`fidl_ui_input3::Modifiers`] associated with the pressed keys.
-    pub modifiers: Option<fidl_ui_input3::Modifiers>,
+    modifiers: Option<fidl_ui_input3::Modifiers>,
 
     /// If set, contains the unique identifier of the keymap to be used when or
     /// if remapping the keypresses.
-    pub keymap: Option<String>,
+    keymap: Option<String>,
 
     /// If set, denotes the meaning of `key` in terms of the key effect.
     /// A `KeyboardEvent` starts off with `key_meaning` unset, and the key
     /// meaning is added in the input pipeline by the appropriate
     /// keymap-aware input handlers.
-    pub key_meaning: Option<fidl_fuchsia_ui_input3::KeyMeaning>,
+    key_meaning: Option<fidl_fuchsia_ui_input3::KeyMeaning>,
+}
+
+impl KeyboardEvent {
+    /// Creates a new KeyboardEvent, with required fields filled out.  Use the
+    /// `into_with_*` methods to add optional information.
+    pub fn new(key: fidl_fuchsia_input::Key, event_type: KeyEventType) -> Self {
+        KeyboardEvent { key, event_type, modifiers: None, keymap: None, key_meaning: None }
+    }
+
+    pub fn get_key(&self) -> fidl_fuchsia_input::Key {
+        self.key
+    }
+
+    pub fn get_event_type(&self) -> KeyEventType {
+        self.event_type
+    }
+
+    /// Converts [KeyboardEvent] into the same one, but with specified modifiers.
+    pub fn into_with_modifiers(self, modifiers: Option<fidl_ui_input3::Modifiers>) -> Self {
+        Self { modifiers, ..self }
+    }
+
+    /// Returns the currently applicable modifiers.
+    pub fn get_modifiers(&self) -> Option<fidl_ui_input3::Modifiers> {
+        self.modifiers
+    }
+
+    /// Converts [KeyboardEvent] into the same one, but with the specified keymap
+    /// applied.
+    pub fn into_with_keymap(self, keymap: Option<String>) -> Self {
+        Self { keymap, ..self }
+    }
+
+    /// Returns the currently applied keymap.
+    pub fn get_keymap(&self) -> Option<String> {
+        self.keymap.clone()
+    }
+
+    /// Converts [KeyboardEvent] into the same one, but with the key meaning applied.
+    pub fn into_with_key_meaning(
+        self,
+        key_meaning: Option<fidl_fuchsia_ui_input3::KeyMeaning>,
+    ) -> Self {
+        Self { key_meaning, ..self }
+    }
+
+    /// Returns the currently valid key meaning.
+    pub fn get_key_meaning(&self) -> Option<fidl_fuchsia_ui_input3::KeyMeaning> {
+        self.key_meaning
+    }
 }
 
 /// A [`KeyboardDeviceDescriptor`] contains information about a specific keyboard device.
@@ -273,16 +326,9 @@ impl KeyboardBinding {
                 for (key, event_type) in key_events.into_iter() {
                     match input_event_sender
                         .send(input_device::InputEvent {
-                            device_event: input_device::InputDeviceEvent::Keyboard(KeyboardEvent {
-                                event_type,
-
-                                key,
-                                modifiers,
-                                // At this point in the pipeline, the keymap is always unknown.
-                                keymap: None,
-                                // At this point in the pipeline, the key meaning is always unknown.
-                                key_meaning: None,
-                            }),
+                            device_event: input_device::InputDeviceEvent::Keyboard(
+                                KeyboardEvent::new(key, event_type).into_with_modifiers(modifiers),
+                            ),
                             device_descriptor: device_descriptor.clone(),
                             event_time: event_time_ns,
                         })
