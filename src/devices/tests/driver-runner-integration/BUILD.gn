@@ -45,7 +45,7 @@ fuchsia_test_package("package") {
     }
   }
   deps = [
-    "//src/devices/bin/driver_host2",
+    "//src/devices/bin/driver_host2:component",
     "//src/devices/misc/drivers/packaged:component",
   ]
 }

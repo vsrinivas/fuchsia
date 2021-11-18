@@ -243,7 +243,7 @@ TEST_F(DriverHostTest, Start_MultipleDrivers) {
 TEST_F(DriverHostTest, Start_OutgoingServices) {
   auto [driver, outgoing_dir] = StartDriver();
 
-  // NOTE: We skip the leading '/' in the default path to form a relative path.
+  // Note, we skip the leading '/' in the default path to form a relative path.
   auto path = fidl::DiscoverableProtocolDefaultPath<ftest::Outgoing> + 1;
   auto client_end = service::ConnectAt<ftest::Outgoing>(outgoing_dir, path);
   ASSERT_TRUE(client_end.is_ok());

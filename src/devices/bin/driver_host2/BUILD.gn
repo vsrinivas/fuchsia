@@ -9,10 +9,7 @@ import("//build/drivers.gni")
 import("//build/fidl/fidl.gni")
 
 group("driver_host2") {
-  deps = [
-    ":bin",
-    ":meta",
-  ]
+  deps = [ ":component" ]
 }
 
 group("tests") {
@@ -125,6 +122,8 @@ executable("bin") {
   ]
 }
 
-component_manifest_resources("meta") {
-  sources = [ "meta/driver_host2.cml" ]
+fuchsia_component("component") {
+  component_name = "driver_host2"
+  manifest = "meta/driver_host2.cml"
+  deps = [ ":bin" ]
 }
