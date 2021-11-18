@@ -212,12 +212,12 @@ mod private {
     impl NonZeroOrMaxU32 {
         /// Constructs a `NonZeroOrMaxU32`.
         ///
-        /// # Panics
-        ///
-        /// `new` panics if `t` is not greater than 0 and less than `u32::MAX`.
-        pub(super) fn new(v: u32) -> NonZeroOrMaxU32 {
-            assert!(v > 0 && v < u32::MAX);
-            NonZeroOrMaxU32(v)
+        /// Returns `None` if `t` is 0 or `u32::MAX`.
+        pub fn new(t: u32) -> Option<NonZeroOrMaxU32> {
+            if t == 0 || t == u32::MAX {
+                return None;
+            }
+            Some(NonZeroOrMaxU32(t))
         }
 
         /// Returns the value.
@@ -258,14 +258,16 @@ impl TimeValue {
         match t {
             0 => TimeValue::Zero,
             u32::MAX => TimeValue::Infinity,
-            t => TimeValue::Finite(NonZeroOrMaxU32::new(t)),
+            t => TimeValue::Finite(
+                NonZeroOrMaxU32::new(t).expect("should succeed for non zero or u32::MAX values"),
+            ),
         }
     }
 }
 
 impl<'a, B: ByteSlice> IanaData<B> {
     /// Constructs a new `IanaData` from a `ByteSlice`.
-    pub fn new(buf: B) -> Result<Self, ParseError> {
+    fn new(buf: B) -> Result<Self, ParseError> {
         let buf_len = buf.len();
         let (header, options) = LayoutVerified::new_unaligned_from_prefix(buf)
             .ok_or(ParseError::InvalidOpLen(OptionCode::Iana, buf_len))?;
@@ -337,14 +339,24 @@ impl<'a, B: ByteSlice> IaAddrData<B> {
         Ipv6Addr::from(self.header.addr.ipv6_bytes())
     }
 
-    /// Returns the preferred lifetime.
-    pub fn preferred_lifetime(&self) -> u32 {
-        self.header.preferred_lifetime.get()
+    /// Returns the preferred lifetime as `TimeValue` to relay the fact that
+    /// certain values have special significance as described in
+    /// [RFC 8415, section 7.7].
+    ///
+    /// [section 14.2]: https://datatracker.ietf.org/doc/html/rfc8415#section-14.2
+    /// [section 7.7]: https://datatracker.ietf.org/doc/html/rfc8415#section-7.7
+    pub fn preferred_lifetime(&self) -> TimeValue {
+        TimeValue::new(self.header.preferred_lifetime.get())
     }
 
-    /// Returns the valid lifetime.
-    pub fn valid_lifetime(&self) -> u32 {
-        self.header.valid_lifetime.get()
+    /// Returns the valid lifetime as `TimeValue` to relay the fact that certain
+    /// values have special significance as described in
+    /// [RFC 8415, section 7.7].
+    ///
+    /// [section 14.2]: https://datatracker.ietf.org/doc/html/rfc8415#section-14.2
+    /// [section 7.7]: https://datatracker.ietf.org/doc/html/rfc8415#section-7.7
+    pub fn valid_lifetime(&self) -> TimeValue {
+        TimeValue::new(self.header.valid_lifetime.get())
     }
 
     /// Returns an iterator over the options.
@@ -1474,7 +1486,7 @@ mod tests {
     }
 
     #[test_case(TimeValue::new(0), TimeValue::Zero)]
-    #[test_case(TimeValue::new(5), TimeValue::Finite(NonZeroOrMaxU32::new(5)))]
+    #[test_case(TimeValue::new(5), TimeValue::Finite(NonZeroOrMaxU32::new(5).expect("should succeed for non zero or u32::MAX values")))]
     #[test_case(TimeValue::new(u32::MAX), TimeValue::Infinity)]
     fn test_time_value_new(time_value: TimeValue, expected_variant: TimeValue) {
         assert_eq!(time_value, expected_variant);
@@ -1482,26 +1494,35 @@ mod tests {
 
     #[test]
     fn test_time_value_ord() {
-        assert!(TimeValue::Zero < TimeValue::Finite(NonZeroOrMaxU32::new(1)));
-        assert!(TimeValue::Finite(NonZeroOrMaxU32::new(u32::MAX - 1)) < TimeValue::Infinity);
+        assert!(
+            TimeValue::Zero
+                < TimeValue::Finite(
+                    NonZeroOrMaxU32::new(1)
+                        .expect("should succeed for non zero or u32::MAX values")
+                )
+        );
+        assert!(
+            TimeValue::Finite(
+                NonZeroOrMaxU32::new(u32::MAX - 1)
+                    .expect("should succeed for non zero or u32::MAX values")
+            ) < TimeValue::Infinity
+        );
     }
 
-    #[test]
-    #[should_panic]
-    fn test_non_zero_or_max_u32_new_panics_on_zero() {
-        let _ = NonZeroOrMaxU32::new(0);
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_non_zero_or_max_u32_new_panics_on_max_u32() {
-        let _ = NonZeroOrMaxU32::new(u32::MAX);
+    #[test_case(0, None)]
+    #[test_case(60, Some(NonZeroOrMaxU32::new(60).unwrap()))]
+    #[test_case(u32::MAX, None)]
+    fn test_non_zero_or_max_u32_new(t: u32, expected: Option<NonZeroOrMaxU32>) {
+        assert_eq!(NonZeroOrMaxU32::new(t), expected);
     }
 
     #[test_case(1)]
     #[test_case(4321)]
     #[test_case(u32::MAX - 1)]
     fn test_non_zero_or_max_u32_get(t: u32) {
-        assert_eq!(NonZeroOrMaxU32::new(t).get(), t);
+        assert_eq!(
+            NonZeroOrMaxU32::new(t).expect("should succeed for non-zero or u32::MAX values").get(),
+            t
+        );
     }
 }

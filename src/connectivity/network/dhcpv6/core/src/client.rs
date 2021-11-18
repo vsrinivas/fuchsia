@@ -301,8 +301,8 @@ impl InformationReceived {
 struct IdentityAssociation {
     // TODO(https://fxbug.dev/86950): use UnicastAddr.
     address: Ipv6Addr,
-    preferred_lifetime: Duration,
-    valid_lifetime: Duration,
+    preferred_lifetime: v6::TimeValue,
+    valid_lifetime: v6::TimeValue,
 }
 
 // Holds the information received in an Advertise message.
@@ -750,12 +750,8 @@ impl ServerDiscovery {
                             let _: &mut IdentityAssociation =
                                 vacant_ia_entry.insert(IdentityAssociation {
                                     address: Ipv6Addr::from(iaaddr_data.addr()),
-                                    preferred_lifetime: Duration::from_secs(
-                                        iaaddr_data.preferred_lifetime().into(),
-                                    ),
-                                    valid_lifetime: Duration::from_secs(
-                                        iaaddr_data.valid_lifetime().into(),
-                                    ),
+                                    preferred_lifetime: iaaddr_data.preferred_lifetime(),
+                                    valid_lifetime: iaaddr_data.valid_lifetime(),
                                 });
                         }
                     }
@@ -1434,8 +1430,8 @@ mod tests {
         fn new_default(address: Ipv6Addr) -> IdentityAssociation {
             IdentityAssociation {
                 address,
-                preferred_lifetime: Duration::from_secs(0),
-                valid_lifetime: Duration::from_secs(0),
+                preferred_lifetime: v6::TimeValue::Zero,
+                valid_lifetime: v6::TimeValue::Zero,
             }
         }
     }
@@ -1498,11 +1494,7 @@ mod tests {
         ) -> AdvertiseMessage {
             let addresses = (0..)
                 .zip(addresses.iter().fold(Vec::new(), |mut addrs, address| {
-                    addrs.push(IdentityAssociation {
-                        address: *address,
-                        preferred_lifetime: Duration::from_secs(0),
-                        valid_lifetime: Duration::from_secs(0),
-                    });
+                    addrs.push(IdentityAssociation::new_default(*address));
                     addrs
                 }))
                 .collect();
@@ -1760,15 +1752,23 @@ mod tests {
             StepRng::new(std::u64::MAX / 2, 0),
         );
 
+        let preferred_lifetime = 10;
+        let valid_lifetime = 20;
         let ia = IdentityAssociation {
             address: std_ip_v6!("::ffff:c00a:1ff"),
-            preferred_lifetime: Duration::from_secs(10),
-            valid_lifetime: Duration::from_secs(20),
+            preferred_lifetime: v6::TimeValue::Finite(
+                v6::NonZeroOrMaxU32::new(preferred_lifetime)
+                    .expect("should succeed for non-zero or u32::MAX values"),
+            ),
+            valid_lifetime: v6::TimeValue::Finite(
+                v6::NonZeroOrMaxU32::new(valid_lifetime)
+                    .expect("should succeed for non-zero or u32::MAX values"),
+            ),
         };
         let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
             ia.address,
-            u32::try_from(ia.preferred_lifetime.as_secs()).expect("value should fit in u32"),
-            u32::try_from(ia.valid_lifetime.as_secs()).expect("value should fit in u32"),
+            preferred_lifetime,
+            valid_lifetime,
             &[],
         ))];
         let options = [
