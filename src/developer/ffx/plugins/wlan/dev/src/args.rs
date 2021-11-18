@@ -6,7 +6,23 @@ use {argh::FromArgs, ffx_core::ffx_command, wlan_dev};
 
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "dev", description = "Controls WLAN core.")]
+#[argh(
+    subcommand,
+    name = "dev",
+    description = "Warning: this tool may cause state mismatches between layers of the WLAN
+subsystem. It is intended for use by WLAN developers only. Please reach out
+to the WLAN team if your use case relies on it.
+
+To disable the WLAN policy layer:
+
+ffx wlan client stop
+ffx wlan ap stop-all
+
+To enable WLAN policy layer and begin automated WLAN behavior:
+
+ffx wlan client start
+ffx wlan ap start --ssid <SSID_HERE>"
+)]
 pub struct DevCommand {
     #[argh(subcommand)]
     pub subcommand: DevSubcommand,
@@ -74,6 +90,8 @@ pub struct ClientCommand {
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand)]
 pub enum ClientSubcommand {
+    Connect(Connect),
+    Scan(Scan),
     Disconnect(Disconnect),
     WmmStatus(WmmStatus),
 }
@@ -464,8 +482,177 @@ impl From<Status> for wlan_dev::opts::IfaceCmd {
 impl From<ClientSubcommand> for wlan_dev::opts::Opt {
     fn from(cmd: ClientSubcommand) -> Self {
         wlan_dev::opts::Opt::Client(match cmd {
+            ClientSubcommand::Scan(arg) => wlan_dev::opts::ClientCmd::from(arg),
+            ClientSubcommand::Connect(arg) => wlan_dev::opts::ClientCmd::from(arg),
             ClientSubcommand::Disconnect(arg) => wlan_dev::opts::ClientCmd::from(arg),
             ClientSubcommand::WmmStatus(arg) => wlan_dev::opts::ClientCmd::from(arg),
+        })
+    }
+}
+
+#[derive(PartialEq, Debug)]
+pub enum ScanType {
+    Active,
+    Passive,
+}
+
+impl std::str::FromStr for ScanType {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "active" => Ok(ScanType::Active),
+            "passive" => Ok(ScanType::Passive),
+            other => Err(anyhow::format_err!("could not parse ScanType: {}", other)),
+        }
+    }
+}
+
+impl From<ScanType> for wlan_dev::opts::ScanTypeArg {
+    fn from(arg: ScanType) -> Self {
+        match arg {
+            ScanType::Active => wlan_dev::opts::ScanTypeArg::Active,
+            ScanType::Passive => wlan_dev::opts::ScanTypeArg::Passive,
+        }
+    }
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "scan", description = "Scans for nearby networks.")]
+pub struct Scan {
+    #[argh(
+        option,
+        short = 'i',
+        long = "iface",
+        default = "0",
+        description = "iface ID to scan on."
+    )]
+    iface_id: u16,
+    #[argh(
+        option,
+        short = 's',
+        long = "scan-type",
+        default = "ScanType::Passive",
+        description = "experimental. Default scan type on each channel. \
+                       Behavior may differ on DFS channel"
+    )]
+    scan_type: ScanType,
+}
+
+impl From<Scan> for wlan_dev::opts::ClientCmd {
+    fn from(arg: Scan) -> Self {
+        wlan_dev::opts::ClientCmd::Scan(wlan_dev::opts::ClientScanCmd {
+            iface_id: arg.iface_id,
+            scan_type: wlan_dev::opts::ScanTypeArg::from(arg.scan_type),
+        })
+    }
+}
+
+#[derive(PartialEq, Debug)]
+pub enum Phy {
+    Erp,
+    Ht,
+    Vht,
+}
+
+impl std::str::FromStr for Phy {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "erp" => Ok(Phy::Erp),
+            "ht" => Ok(Phy::Ht),
+            "vht" => Ok(Phy::Vht),
+            other => Err(anyhow::format_err!("could not parse Phy: {}", other)),
+        }
+    }
+}
+
+impl From<Phy> for wlan_dev::opts::PhyArg {
+    fn from(arg: Phy) -> Self {
+        match arg {
+            Phy::Erp => wlan_dev::opts::PhyArg::Erp,
+            Phy::Ht => wlan_dev::opts::PhyArg::Ht,
+            Phy::Vht => wlan_dev::opts::PhyArg::Vht,
+        }
+    }
+}
+
+#[derive(PartialEq, Debug)]
+pub enum Cbw {
+    Cbw20,
+    Cbw40,
+    Cbw80,
+}
+
+impl std::str::FromStr for Cbw {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "cbw20" => Ok(Cbw::Cbw20),
+            "cbw40" => Ok(Cbw::Cbw40),
+            "cbw80" => Ok(Cbw::Cbw80),
+            other => Err(anyhow::format_err!("could not parse Cbw: {}", other)),
+        }
+    }
+}
+
+impl From<Cbw> for wlan_dev::opts::CbwArg {
+    fn from(arg: Cbw) -> Self {
+        match arg {
+            Cbw::Cbw20 => wlan_dev::opts::CbwArg::Cbw20,
+            Cbw::Cbw40 => wlan_dev::opts::CbwArg::Cbw40,
+            Cbw::Cbw80 => wlan_dev::opts::CbwArg::Cbw80,
+        }
+    }
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "connect", description = "Connects to the target network.")]
+pub struct Connect {
+    #[argh(
+        option,
+        short = 'i',
+        long = "iface",
+        default = "0",
+        description = "iface ID to connect on."
+    )]
+    iface_id: u16,
+    #[argh(option, short = 'p', description = "WPA2 PSK")]
+    password: Option<String>,
+    #[argh(option, long = "hash", description = "WPA2 PSK as hex string")]
+    psk: Option<String>,
+    #[argh(option, short = 'y', description = "PHY rate upper bound")]
+    phy: Option<Phy>,
+    #[argh(option, short = 'w', description = "CBW upper bound")]
+    cbw: Option<Cbw>,
+    #[argh(
+        option,
+        short = 's',
+        long = "scan-type",
+        default = "ScanType::Passive",
+        description = "determines the type of scan performed on non-DFS channels when connecting."
+    )]
+    scan_type: ScanType,
+    #[argh(
+        positional,
+        description = "SSID of the target network. Connecting via only an SSID is deprecated and will be \
+                      removed; use `ffx wlan client` instead."
+    )]
+    ssid: String,
+}
+
+impl From<Connect> for wlan_dev::opts::ClientCmd {
+    fn from(arg: Connect) -> Self {
+        wlan_dev::opts::ClientCmd::Connect(wlan_dev::opts::ClientConnectCmd {
+            iface_id: arg.iface_id,
+            password: arg.password,
+            psk: arg.psk,
+            phy: arg.phy.map(|p| wlan_dev::opts::PhyArg::from(p)),
+            cbw: arg.cbw.map(|w| wlan_dev::opts::CbwArg::from(w)),
+            scan_type: wlan_dev::opts::ScanTypeArg::from(arg.scan_type),
+            ssid: arg.ssid,
         })
     }
 }
@@ -786,6 +973,41 @@ mod tests {
             wlan_dev::opts::IfaceCmd::from(Status { iface_id: Some(123) }),
             wlan_dev::opts::IfaceCmd::Status(wlan_dev::opts::IfaceStatusCmd {
                 iface_id: Some(123)
+            })
+        );
+    }
+
+    #[test]
+    fn test_client_scan_conversion() {
+        assert_eq!(
+            wlan_dev::opts::ClientCmd::from(Scan { iface_id: 123, scan_type: ScanType::Passive }),
+            wlan_dev::opts::ClientCmd::Scan(wlan_dev::opts::ClientScanCmd {
+                iface_id: 123,
+                scan_type: wlan_dev::opts::ScanTypeArg::Passive,
+            })
+        );
+    }
+
+    #[test]
+    fn test_client_connect_conversion() {
+        assert_eq!(
+            wlan_dev::opts::ClientCmd::from(Connect {
+                iface_id: 123,
+                password: Some(String::from("password")),
+                psk: Some(String::from("psk")),
+                phy: Some(Phy::Vht),
+                cbw: Some(Cbw::Cbw80),
+                scan_type: ScanType::Passive,
+                ssid: String::from("ssid")
+            }),
+            wlan_dev::opts::ClientCmd::Connect(wlan_dev::opts::ClientConnectCmd {
+                iface_id: 123,
+                password: Some(String::from("password")),
+                psk: Some(String::from("psk")),
+                phy: Some(wlan_dev::opts::PhyArg::Vht),
+                cbw: Some(wlan_dev::opts::CbwArg::Cbw80),
+                scan_type: wlan_dev::opts::ScanTypeArg::Passive,
+                ssid: String::from("ssid")
             })
         );
     }
