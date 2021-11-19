@@ -217,10 +217,5 @@ Realm::Builder Realm::Builder::Create(std::shared_ptr<sys::ServiceDirectory> svc
                  std::make_unique<internal::MockRunner>());
 }
 
-Realm::Builder Realm::Builder::New(const sys::ComponentContext* context) {
-  ZX_ASSERT_MSG(context != nullptr, "context passed to RealmBuilder::New() must not be nullptr");
-  return Create(context->svc());
-}
-
 }  // namespace testing
 }  // namespace sys

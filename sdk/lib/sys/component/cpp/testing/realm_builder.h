@@ -12,7 +12,6 @@
 #include <lib/sys/component/cpp/testing/internal/mock_runner.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
 #include <lib/sys/component/cpp/testing/scoped_child.h>
-#include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/service_directory.h>
 
 #include <cstddef>
@@ -99,11 +98,6 @@ class Realm::Builder final {
   // |svc| must outlive the RealmBuilder object and created Realm object.
   // If it's nullptr, then the current process' "/svc" namespace entry is used.
   static Builder Create(std::shared_ptr<sys::ServiceDirectory> svc = nullptr);
-
-  // Factory method to create a new RealmBuilder object.
-  // |context| must not be NULL and must outlive the RealmBuilder object and
-  // created Realm object.
-  static Builder New(const sys::ComponentContext* context);
 
   Builder(Builder&&) = default;
   Builder& operator=(Builder&&) = default;

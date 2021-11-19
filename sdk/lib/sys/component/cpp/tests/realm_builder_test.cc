@@ -32,7 +32,6 @@ constexpr char kEchoServerRelativeUrl[] = "#meta/echo_server.cm";
 class RealmBuilderTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    context_ = sys::ComponentContext::Create();
     loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToCurrentThread);
   }
 
@@ -42,17 +41,14 @@ class RealmBuilderTest : public ::testing::Test {
 
   async::Loop& loop() { return *loop_; }
 
-  sys::ComponentContext* context() { return context_.get(); }
-
  private:
   std::unique_ptr<async::Loop> loop_;
-  std::unique_ptr<sys::ComponentContext> context_;
 };
 
 TEST_F(RealmBuilderTest, RoutesProtocolFromChild) {
   static constexpr auto kEchoServer = Moniker{"echo_server"};
 
-  auto realm_builder = Realm::Builder::New(context());
+  auto realm_builder = Realm::Builder::Create();
   realm_builder.AddComponent(kEchoServer, Component{.source = ComponentUrl{kEchoServerUrl}});
   realm_builder.AddRoute(CapabilityRoute{.capability = Protocol{test::placeholders::Echo::Name_},
                                          .source = kEchoServer,
@@ -67,7 +63,7 @@ TEST_F(RealmBuilderTest, RoutesProtocolFromChild) {
 TEST_F(RealmBuilderTest, RoutesProtocolFromGrandchild) {
   static constexpr auto kEchoServer = Moniker{"parent/echo_server"};
 
-  auto realm_builder = Realm::Builder::New(context());
+  auto realm_builder = Realm::Builder::Create();
   realm_builder.AddComponent(kEchoServer, Component{.source = ComponentUrl{kEchoServerUrl}});
   realm_builder.AddRoute(CapabilityRoute{.capability = Protocol{test::placeholders::Echo::Name_},
                                          .source = kEchoServer,
@@ -82,7 +78,7 @@ TEST_F(RealmBuilderTest, RoutesProtocolFromGrandchild) {
 TEST_F(RealmBuilderTest, RoutesProtocolFromLegacyChild) {
   static constexpr auto kEchoServer = Moniker{"echo_server"};
 
-  auto realm_builder = Realm::Builder::New(context());
+  auto realm_builder = Realm::Builder::Create();
   realm_builder.AddComponent(kEchoServer,
                              Component{.source = LegacyComponentUrl{kEchoServerLegacyUrl}});
   realm_builder.AddRoute(CapabilityRoute{.capability = Protocol{test::placeholders::Echo::Name_},
@@ -98,7 +94,7 @@ TEST_F(RealmBuilderTest, RoutesProtocolFromLegacyChild) {
 TEST_F(RealmBuilderTest, RoutesProtocolFromRelativeChild) {
   static constexpr auto kEchoServer = Moniker{"echo_server"};
 
-  auto realm_builder = Realm::Builder::New(context());
+  auto realm_builder = Realm::Builder::Create();
   realm_builder.AddComponent(kEchoServer,
                              Component{.source = ComponentUrl{kEchoServerRelativeUrl}});
   realm_builder.AddRoute(CapabilityRoute{.capability = Protocol{test::placeholders::Echo::Name_},
@@ -140,7 +136,7 @@ class MockEchoServer : public test::placeholders::Echo, public MockComponent {
 TEST_F(RealmBuilderTest, RoutesProtocolFromMockComponent) {
   static constexpr auto kEchoServer = Moniker{"echo_server"};
   MockEchoServer mock_echo_server(loop());
-  auto realm_builder = Realm::Builder::New(context());
+  auto realm_builder = Realm::Builder::Create();
   realm_builder.AddComponent(kEchoServer, Component{
                                               .source = Mock{&mock_echo_server},
                                               .eager = false,
@@ -186,7 +182,7 @@ TEST_F(RealmBuilderTest, RoutesProtocolToMockComponent) {
   static constexpr auto kEchoServer = Moniker{"echo_server"};
 
   MockEchoClient mock_echo_client(loop());
-  auto realm_builder = Realm::Builder::New(context());
+  auto realm_builder = Realm::Builder::Create();
   realm_builder.AddComponent(kEchoClient, Component{
                                               .source = Mock{&mock_echo_client},
                                               .eager = true,
@@ -204,7 +200,7 @@ TEST_F(RealmBuilderTest, RoutesProtocolToMockComponent) {
 TEST_F(RealmBuilderTest, ConnectsToChannelDirectly) {
   static constexpr auto kEchoServer = Moniker{"echo_server"};
 
-  auto realm_builder = Realm::Builder::New(context());
+  auto realm_builder = Realm::Builder::Create();
   realm_builder.AddComponent(kEchoServer, Component{.source = ComponentUrl{kEchoServerUrl}});
   realm_builder.AddRoute(CapabilityRoute{.capability = Protocol{test::placeholders::Echo::Name_},
                                          .source = kEchoServer,
@@ -222,14 +218,16 @@ TEST_F(RealmBuilderTest, ConnectsToChannelDirectly) {
 }
 
 // This test is nearly identicaly to the RealmBuilderTest.RoutesProtocolFromChild
-// test case above. The only difference is that it doesn't provide a sys::Context
-// object to the Realm::Builder::New method. If the test passes, it must follow that
-// Realm::Builder supplied a Context object internally, otherwise the test
-// component wouldn't be able to connect to fuchsia.sys2.Realm protocol.
-TEST_F(RealmBuilderTest, SuppliesContextIfNoneProvided) {
+// test case above. The only difference is that it provides a svc directory
+// from the sys::Context singleton object to the Realm::Builder::Create method.
+// If the test passes, it must follow that Realm::Builder supplied a Context
+// object internally, otherwise the test component wouldn't be able to connect
+// to fuchsia.component.Realm protocol.
+TEST_F(RealmBuilderTest, UsesProvidedSvcDirectory) {
+  auto context = sys::ComponentContext::Create();
   static constexpr auto kEchoServer = Moniker{"echo_server"};
 
-  auto realm_builder = Realm::Builder::Create();
+  auto realm_builder = Realm::Builder::Create(context->svc());
   realm_builder.AddComponent(kEchoServer, Component{.source = ComponentUrl{kEchoServerUrl}});
   realm_builder.AddRoute(CapabilityRoute{.capability = Protocol{test::placeholders::Echo::Name_},
                                          .source = kEchoServer,
@@ -244,13 +242,13 @@ TEST_F(RealmBuilderTest, SuppliesContextIfNoneProvided) {
 TEST_F(RealmBuilderTest, UsesRandomChildName) {
   std::string child_name_1 = "";
   {
-    auto realm_builder = Realm::Builder::New(context());
+    auto realm_builder = Realm::Builder::Create();
     auto realm = realm_builder.Build(dispatcher());
     child_name_1 = realm.GetChildName();
   }
   std::string child_name_2 = "";
   {
-    auto realm_builder = Realm::Builder::New(context());
+    auto realm_builder = Realm::Builder::Create();
     auto realm = realm_builder.Build(dispatcher());
     child_name_2 = realm.GetChildName();
   }
@@ -261,7 +259,7 @@ TEST_F(RealmBuilderTest, UsesRandomChildName) {
 TEST_F(RealmBuilderTest, PanicsWhenBuildCalledMultipleTimes) {
   ASSERT_DEATH(
       {
-        auto realm_builder = Realm::Builder::New(context());
+        auto realm_builder = Realm::Builder::Create();
         realm_builder.Build(dispatcher());
         realm_builder.Build(dispatcher());
       },
@@ -272,7 +270,7 @@ TEST(RealmBuilderUnittest, PanicsIfMonikerIsBad) {
   auto context = sys::ComponentContext::Create();
   ASSERT_DEATH(
       {
-        auto realm_builder = Realm::Builder::New(context.get());
+        auto realm_builder = Realm::Builder::Create();
         realm_builder.AddComponent(Moniker{""}, Component{
                                                     .source = ComponentUrl{},
                                                 });
@@ -280,7 +278,7 @@ TEST(RealmBuilderUnittest, PanicsIfMonikerIsBad) {
       "");
   ASSERT_DEATH(
       {
-        auto realm_builder = Realm::Builder::New(context.get());
+        auto realm_builder = Realm::Builder::Create();
         realm_builder.AddComponent(Moniker{"/no_leading_slash"}, Component{
                                                                      .source = ComponentUrl{},
                                                                  });
@@ -289,7 +287,7 @@ TEST(RealmBuilderUnittest, PanicsIfMonikerIsBad) {
 
   ASSERT_DEATH(
       {
-        auto realm_builder = Realm::Builder::New(context.get());
+        auto realm_builder = Realm::Builder::Create();
         realm_builder.AddComponent(Moniker{"no_trailing_slash/"}, Component{
                                                                       .source = ComponentUrl{},
                                                                   });
@@ -298,11 +296,9 @@ TEST(RealmBuilderUnittest, PanicsIfMonikerIsBad) {
 }
 
 TEST(RealmBuilderUnittest, PanicsWhenArgsAreNullptr) {
-  ASSERT_DEATH({ Realm::Builder::New(nullptr); }, "");
   ASSERT_DEATH(
       {
-        auto context = sys::ComponentContext::Create();
-        auto realm_builder = Realm::Builder::New(context.get());
+        auto realm_builder = Realm::Builder::Create();
         // Should panic because |async_get_default_dispatcher| was not configured
         // to return nullptr.
         realm_builder.Build(nullptr);
