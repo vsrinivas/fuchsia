@@ -245,8 +245,7 @@ mod tests {
         assert_eq!(*log_count.borrow(), 1);
 
         {
-            let mut now = now.borrow_mut();
-            *now = now.saturating_add(30.seconds());
+            *now.borrow_mut() += 30.seconds();
         }
 
         // Not enough time has passed, so log_count shouldn't increase
@@ -254,8 +253,7 @@ mod tests {
         assert_eq!(*log_count.borrow(), 1);
 
         {
-            let mut now = now.borrow_mut();
-            *now = now.saturating_add(30.seconds());
+            *now.borrow_mut() += 30.seconds();
         }
 
         // Enough time has passed, so log_count should increase

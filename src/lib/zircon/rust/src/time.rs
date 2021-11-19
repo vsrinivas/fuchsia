@@ -28,66 +28,66 @@ impl From<stdtime::Duration> for Duration {
 impl ops::Add<Duration> for Time {
     type Output = Time;
     fn add(self, dur: Duration) -> Time {
-        Time::from_nanos(dur.into_nanos() + self.into_nanos())
+        Time::from_nanos(dur.into_nanos().saturating_add(self.into_nanos()))
     }
 }
 
 impl ops::Add<Time> for Duration {
     type Output = Time;
     fn add(self, time: Time) -> Time {
-        Time::from_nanos(self.into_nanos() + time.into_nanos())
+        Time::from_nanos(self.into_nanos().saturating_add(time.into_nanos()))
     }
 }
 
 impl ops::Add for Duration {
     type Output = Duration;
     fn add(self, dur: Duration) -> Duration {
-        Duration::from_nanos(self.into_nanos() + dur.into_nanos())
+        Duration::from_nanos(self.into_nanos().saturating_add(dur.into_nanos()))
     }
 }
 
 impl ops::Sub for Duration {
     type Output = Duration;
     fn sub(self, dur: Duration) -> Duration {
-        Duration::from_nanos(self.into_nanos() - dur.into_nanos())
+        Duration::from_nanos(self.into_nanos().saturating_sub(dur.into_nanos()))
     }
 }
 
 impl ops::Sub<Duration> for Time {
     type Output = Time;
     fn sub(self, dur: Duration) -> Time {
-        Time::from_nanos(self.into_nanos() - dur.into_nanos())
+        Time::from_nanos(self.into_nanos().saturating_sub(dur.into_nanos()))
     }
 }
 
 impl ops::Sub<Time> for Time {
     type Output = Duration;
     fn sub(self, other: Time) -> Duration {
-        Duration::from_nanos(self.into_nanos() - other.into_nanos())
+        Duration::from_nanos(self.into_nanos().saturating_sub(other.into_nanos()))
     }
 }
 
 impl ops::AddAssign for Duration {
     fn add_assign(&mut self, dur: Duration) {
-        self.0 += dur.into_nanos()
+        self.0 = self.0.saturating_add(dur.into_nanos());
     }
 }
 
 impl ops::SubAssign for Duration {
     fn sub_assign(&mut self, dur: Duration) {
-        self.0 -= dur.into_nanos()
+        self.0 = self.0.saturating_sub(dur.into_nanos());
     }
 }
 
 impl ops::AddAssign<Duration> for Time {
     fn add_assign(&mut self, dur: Duration) {
-        self.0 += dur.into_nanos()
+        self.0 = self.0.saturating_add(dur.into_nanos());
     }
 }
 
 impl ops::SubAssign<Duration> for Time {
     fn sub_assign(&mut self, dur: Duration) {
-        self.0 -= dur.into_nanos()
+        self.0 = self.0.saturating_sub(dur.into_nanos());
     }
 }
 
@@ -97,7 +97,7 @@ where
 {
     type Output = Self;
     fn mul(self, mul: T) -> Self {
-        Duration::from_nanos(self.0 * mul.into())
+        Duration::from_nanos(self.0.saturating_mul(mul.into()))
     }
 }
 
@@ -107,7 +107,7 @@ where
 {
     type Output = Self;
     fn div(self, div: T) -> Self {
-        Duration::from_nanos(self.0 / div.into())
+        Duration::from_nanos(self.0.saturating_div(div.into()))
     }
 }
 
@@ -115,11 +115,14 @@ impl ops::Neg for Duration {
     type Output = Self;
 
     fn neg(self) -> Self::Output {
-        Self(-self.0)
+        Self(self.0.saturating_neg())
     }
 }
 
 impl Duration {
+    pub const INFINITE: Duration = Duration(sys::zx_duration_t::MAX);
+    pub const INFINITE_PAST: Duration = Duration(sys::zx_duration_t::MIN);
+
     /// Sleep for the given amount of time.
     pub fn sleep(self) {
         Time::after(self).sleep()
@@ -190,23 +193,23 @@ impl Duration {
     }
 
     pub const fn from_micros(micros: i64) -> Self {
-        Duration(micros * 1_000)
+        Duration(micros.saturating_mul(1_000))
     }
 
     pub const fn from_millis(millis: i64) -> Self {
-        Duration::from_micros(millis * 1_000)
+        Duration::from_micros(millis.saturating_mul(1_000))
     }
 
     pub const fn from_seconds(secs: i64) -> Self {
-        Duration::from_millis(secs * 1_000)
+        Duration::from_millis(secs.saturating_mul(1_000))
     }
 
     pub const fn from_minutes(min: i64) -> Self {
-        Duration::from_seconds(min * 60)
+        Duration::from_seconds(min.saturating_mul(60))
     }
 
     pub const fn from_hours(hours: i64) -> Self {
-        Duration::from_minutes(hours * 60)
+        Duration::from_minutes(hours.saturating_mul(60))
     }
 }
 
@@ -305,11 +308,6 @@ impl Time {
 
     pub const fn from_nanos(nanos: i64) -> Self {
         Time(nanos)
-    }
-
-    /// Compute `zx::Duration` addition. Computes `self + other`, saturating if overflow occurs.
-    pub fn saturating_add(self, rhs: Duration) -> Self {
-        Time::from_nanos(rhs.into_nanos().saturating_add(self.into_nanos()))
     }
 }
 
@@ -476,19 +474,115 @@ mod tests {
     }
 
     #[test]
-    fn time_saturating_add() {
-        assert_eq!(
-            Time::from_nanos(10).saturating_add(Duration::from_nanos(30)),
-            Time::from_nanos(40)
-        );
-        assert_eq!(
-            Time::from_nanos(10).saturating_add(Duration::from_nanos(sys::ZX_TIME_INFINITE)),
-            Time::INFINITE
-        );
-        assert_eq!(
-            Time::from_nanos(-10).saturating_add(Duration::from_nanos(sys::ZX_TIME_INFINITE_PAST)),
-            Time::INFINITE_PAST
-        );
+    fn time_saturation() {
+        // Addition
+        assert_eq!(Time::from_nanos(10) + Duration::from_nanos(30), Time::from_nanos(40));
+        assert_eq!(Time::from_nanos(10) + Duration::INFINITE, Time::INFINITE);
+        assert_eq!(Time::from_nanos(-10) + Duration::INFINITE_PAST, Time::INFINITE_PAST);
+
+        // Subtraction
+        assert_eq!(Time::from_nanos(10) - Duration::from_nanos(30), Time::from_nanos(-20));
+        assert_eq!(Time::from_nanos(-10) - Duration::INFINITE, Time::INFINITE_PAST);
+        assert_eq!(Time::from_nanos(10) - Duration::INFINITE_PAST, Time::INFINITE);
+
+        // Assigning addition
+        {
+            let mut t = Time::from_nanos(10);
+            t += Duration::from_nanos(30);
+            assert_eq!(t, Time::from_nanos(40));
+        }
+        {
+            let mut t = Time::from_nanos(10);
+            t += Duration::INFINITE;
+            assert_eq!(t, Time::INFINITE);
+        }
+        {
+            let mut t = Time::from_nanos(-10);
+            t += Duration::INFINITE_PAST;
+            assert_eq!(t, Time::INFINITE_PAST);
+        }
+
+        // Assigning subtraction
+        {
+            let mut t = Time::from_nanos(10);
+            t -= Duration::from_nanos(30);
+            assert_eq!(t, Time::from_nanos(-20));
+        }
+        {
+            let mut t = Time::from_nanos(-10);
+            t -= Duration::INFINITE;
+            assert_eq!(t, Time::INFINITE_PAST);
+        }
+        {
+            let mut t = Time::from_nanos(10);
+            t -= Duration::INFINITE_PAST;
+            assert_eq!(t, Time::INFINITE);
+        }
+    }
+
+    #[test]
+    fn duration_saturation() {
+        // Addition
+        assert_eq!(Duration::from_nanos(10) + Duration::from_nanos(30), Duration::from_nanos(40));
+        assert_eq!(Duration::from_nanos(10) + Duration::INFINITE, Duration::INFINITE);
+        assert_eq!(Duration::from_nanos(-10) + Duration::INFINITE_PAST, Duration::INFINITE_PAST);
+
+        // Subtraction
+        assert_eq!(Duration::from_nanos(10) - Duration::from_nanos(30), Duration::from_nanos(-20));
+        assert_eq!(Duration::from_nanos(-10) - Duration::INFINITE, Duration::INFINITE_PAST);
+        assert_eq!(Duration::from_nanos(10) - Duration::INFINITE_PAST, Duration::INFINITE);
+
+        // Multiplication
+        assert_eq!(Duration::from_nanos(10) * 3, Duration::from_nanos(30));
+        assert_eq!(Duration::from_nanos(10) * i64::MAX, Duration::INFINITE);
+        assert_eq!(Duration::from_nanos(10) * i64::MIN, Duration::INFINITE_PAST);
+
+        // Division
+        assert_eq!(Duration::from_nanos(30) / 3, Duration::from_nanos(10));
+        assert_eq!(Duration::INFINITE_PAST / -1, Duration::INFINITE);
+
+        // Negation
+        assert_eq!(-Duration::from_nanos(30), Duration::from_nanos(-30));
+        assert_eq!(-Duration::INFINITE_PAST, Duration::INFINITE);
+
+        // Assigning addition
+        {
+            let mut t = Duration::from_nanos(10);
+            t += Duration::from_nanos(30);
+            assert_eq!(t, Duration::from_nanos(40));
+        }
+        {
+            let mut t = Duration::from_nanos(10);
+            t += Duration::INFINITE;
+            assert_eq!(t, Duration::INFINITE);
+        }
+        {
+            let mut t = Duration::from_nanos(-10);
+            t += Duration::INFINITE_PAST;
+            assert_eq!(t, Duration::INFINITE_PAST);
+        }
+
+        // Assigning subtraction
+        {
+            let mut t = Duration::from_nanos(10);
+            t -= Duration::from_nanos(30);
+            assert_eq!(t, Duration::from_nanos(-20));
+        }
+        {
+            let mut t = Duration::from_nanos(-10);
+            t -= Duration::INFINITE;
+            assert_eq!(t, Duration::INFINITE_PAST);
+        }
+        {
+            let mut t = Duration::from_nanos(10);
+            t -= Duration::INFINITE_PAST;
+            assert_eq!(t, Duration::INFINITE);
+        }
+    }
+
+    #[test]
+    fn time_minus_time_saturates() {
+        assert_eq!(Time::INFINITE - Time::INFINITE_PAST, Duration::INFINITE);
     }
 
     #[test]

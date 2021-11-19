@@ -28,7 +28,7 @@ impl Time {
     ///
     /// This function requires that an executor has been set up.
     pub fn after(duration: zx::Duration) -> Self {
-        Self::now().saturating_add(duration)
+        Self::now() + duration
     }
 
     /// Convert from `zx::Time`. This only makes sense if the time is
@@ -52,11 +52,6 @@ impl Time {
     /// Convert to nanoseconds.
     pub fn into_nanos(self) -> i64 {
         self.0.into_nanos()
-    }
-
-    /// Compute `zx::Duration` addition. Computes `self + `other`, saturating if overflow occurs.
-    pub fn saturating_add(self, duration: zx::Duration) -> Self {
-        Self(self.0.saturating_add(duration))
     }
 
     /// The maximum time.
@@ -163,18 +158,13 @@ mod tests {
 
     #[test]
     fn time_saturating_add() {
+        assert_eq!(Time::from_nanos(10) + zx::Duration::from_nanos(30), Time::from_nanos(40));
         assert_eq!(
-            Time::from_nanos(10).saturating_add(zx::Duration::from_nanos(30)),
-            Time::from_nanos(40)
-        );
-        assert_eq!(
-            Time::from_nanos(10)
-                .saturating_add(zx::Duration::from_nanos(Time::INFINITE.into_nanos())),
+            Time::from_nanos(10) + zx::Duration::from_nanos(Time::INFINITE.into_nanos()),
             Time::INFINITE
         );
         assert_eq!(
-            Time::from_nanos(-10)
-                .saturating_add(zx::Duration::from_nanos(Time::INFINITE_PAST.into_nanos())),
+            Time::from_nanos(-10) + zx::Duration::from_nanos(Time::INFINITE_PAST.into_nanos()),
             Time::INFINITE_PAST
         );
     }
