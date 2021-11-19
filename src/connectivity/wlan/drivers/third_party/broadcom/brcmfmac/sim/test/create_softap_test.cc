@@ -4,6 +4,7 @@
 
 #include <fuchsia/hardware/wlan/info/c/banjo.h>
 #include <fuchsia/hardware/wlanif/c/banjo.h>
+#include <fuchsia/hardware/wlanphyinfo/c/banjo.h>
 #include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
@@ -11,7 +12,6 @@
 #include <lib/inspect/cpp/inspect.h>
 #include <zircon/errors.h>
 
-#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <wifi/wifi-config.h>

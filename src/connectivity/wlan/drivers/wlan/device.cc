@@ -6,6 +6,7 @@
 
 #include <fuchsia/hardware/ethernet/cpp/banjo.h>
 #include <fuchsia/hardware/wlan/mac/cpp/banjo.h>
+#include <fuchsia/hardware/wlanphyinfo/c/banjo.h>
 #include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
@@ -27,7 +28,6 @@
 #include <memory>
 #include <utility>
 
-#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/logging.h>
 #include <wlan/mlme/ap/ap_mlme.h>

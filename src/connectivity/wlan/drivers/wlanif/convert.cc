@@ -4,6 +4,7 @@
 
 #include "convert.h"
 
+#include <fuchsia/hardware/wlanphyinfo/c/banjo.h>
 #include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
@@ -14,7 +15,6 @@
 #include <bitset>
 #include <memory>
 
-#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <wlan/common/band.h>
 #include <wlan/common/ieee80211_codes.h>
 

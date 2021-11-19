@@ -37,11 +37,10 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_MVM_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_MVM_H_
 
+#include <fuchsia/hardware/wlanphyinfo/c/banjo.h>
 #include <threads.h>
 #include <zircon/listnode.h>
 #include <zircon/time.h>
-
-#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/acpi.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/dbg.h"

@@ -13,13 +13,12 @@
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/wlan_interface.h"
 
+#include <fuchsia/hardware/wlanphyinfo/c/banjo.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
 #include <cstdio>
 #include <cstring>
-
-#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 
 #include "fuchsia/hardware/wlanif/c/banjo.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"

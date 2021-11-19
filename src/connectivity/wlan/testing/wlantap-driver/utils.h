@@ -5,12 +5,11 @@
 #ifndef SRC_CONNECTIVITY_WLAN_TESTING_WLANTAP_DRIVER_UTILS_H_
 #define SRC_CONNECTIVITY_WLAN_TESTING_WLANTAP_DRIVER_UTILS_H_
 
-#include <fuchsia/wlan/device/cpp/fidl.h>
-#include <fuchsia/wlan/tap/cpp/fidl.h>
-
 #include <fuchsia/hardware/wlan/mac/c/banjo.h>
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
-#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
+#include <fuchsia/hardware/wlanphyinfo/c/banjo.h>
+#include <fuchsia/wlan/device/cpp/fidl.h>
+#include <fuchsia/wlan/tap/cpp/fidl.h>
 
 #include "utils.h"
 

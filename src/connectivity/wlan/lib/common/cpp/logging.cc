@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/wlanphyinfo/c/banjo.h>
+
 #include <map>
 #include <string>
 
-#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <wlan/common/logging.h>
 
 static std::map<wlan_info_driver_feature_t, std::string> driver_feature_flags_string_map = {

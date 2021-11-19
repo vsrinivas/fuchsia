@@ -20,11 +20,11 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_IEEE80211_H_
 
 #include <fuchsia/hardware/wlan/mac/c/banjo.h>
+#include <fuchsia/hardware/wlanphyinfo/c/banjo.h>
 #include <netinet/if_ether.h>
 #include <stddef.h>
 #include <stdint.h>
 
-#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <wlan/common/ieee80211.h>
 
 #if defined(__cplusplus)

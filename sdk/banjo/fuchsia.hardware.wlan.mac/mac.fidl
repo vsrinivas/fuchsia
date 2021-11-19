@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 library fuchsia.hardware.wlan.mac;
 
-using ddk.hw.wlan.wlaninfo;
+using fuchsia.hardware.wlanphyinfo;
 using fuchsia.hardware.wlan.info;
 using fuchsia.wlan.common;
 using fuchsia.wlan.internal;
@@ -15,19 +15,19 @@ type WlanmacInfo = struct {
     sta_addr ieee80211.MacAddr;
 
     /// MAC role
-    mac_role ddk.hw.wlan.wlaninfo.WlanInfoMacRole;
+    mac_role fuchsia.hardware.wlanphyinfo.WlanInfoMacRole;
 
     /// Bitmask indicating WlanInfoPhyType values supported by the hardware.
-    supported_phys ddk.hw.wlan.wlaninfo.WlanInfoPhyType;
+    supported_phys fuchsia.hardware.wlanphyinfo.WlanInfoPhyType;
 
     /// Bitmask indicating enabled WlanInfoDriverFeature values.
-    driver_features ddk.hw.wlan.wlaninfo.WlanInfoDriverFeature;
+    driver_features fuchsia.hardware.wlanphyinfo.WlanInfoDriverFeature;
 
     /// Bitmask indicating enabled WlanInfoHardwareCapability values.
-    caps ddk.hw.wlan.wlaninfo.WlanInfoHardwareCapability;
+    caps fuchsia.hardware.wlanphyinfo.WlanInfoHardwareCapability;
 
     /// Supported bands.
-    bands array<ddk.hw.wlan.wlaninfo.WlanInfoBandInfo, ddk.hw.wlan.wlaninfo.WLAN_INFO_MAX_BANDS>;
+    bands array<fuchsia.hardware.wlanphyinfo.WlanInfoBandInfo, fuchsia.hardware.wlanphyinfo.WLAN_INFO_MAX_BANDS>;
     bands_count uint32;
 };
 
@@ -197,7 +197,7 @@ type WlanHwScanConfig = struct {
     /// Number of channels in the |channels| array. Must be at least 1
     num_channels uint8;
     /// Channel numbers to scan
-    channels array<uint8, ddk.hw.wlan.wlaninfo.WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS>;
+    channels array<uint8, fuchsia.hardware.wlanphyinfo.WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS>;
     /// SSID for directed probe requests
     ssid ieee80211.CSsid;
 };

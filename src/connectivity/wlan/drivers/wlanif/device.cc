@@ -5,6 +5,7 @@
 #include "device.h"
 
 #include <fuchsia/hardware/wlanif/c/banjo.h>
+#include <fuchsia/hardware/wlanphyinfo/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <fuchsia/wlan/internal/cpp/fidl.h>
@@ -15,7 +16,6 @@
 #include <net/ethernet.h>
 #include <zircon/status.h>
 
-#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <wlan/common/ieee80211_codes.h>
 
 #include "convert.h"

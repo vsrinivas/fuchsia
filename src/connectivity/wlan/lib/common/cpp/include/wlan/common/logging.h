@@ -5,10 +5,10 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_LOGGING_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_LOGGING_H_
 
+#include <fuchsia/hardware/wlanphyinfo/c/banjo.h>
+
 #include <cstdint>
 #include <cstdio>
-
-#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 
 // TODO(hahnr): Allow change of logging prefix.
 // TODO(tkilbourn): use standard logging infrastructure

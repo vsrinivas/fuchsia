@@ -6,13 +6,12 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_IFACE_DEVICE_H_
 
 #include <fuchsia/hardware/wlan/mac/c/banjo.h>
+#include <fuchsia/hardware/wlanphyinfo/c/banjo.h>
 #include <fuchsia/wlan/common/c/banjo.h>
 #include <lib/ddk/device.h>
 #include <zircon/types.h>
 
 #include <mutex>
-
-#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 
 namespace wlan {
 namespace testing {
