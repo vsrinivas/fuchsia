@@ -56,7 +56,7 @@ func run(inputDir string, w io.Writer, args args) error {
 	var r model.Report
 	r.SetFileRegexes(args.allowlistFilenameRegexp)
 	r.SetSymRegexes(args.allowlistNameRegexp)
-	if err := addAllFromDir(args.lenient, inputDir, r.Add); err != nil {
+	if err := addAllFromDir(args.lenient, inputDir, r.AddAggregate); err != nil {
 		return fmt.Errorf("in main.run(): while reading dir:\n\t%w", err)
 	}
 	if err := r.WriteJSON(w); err != nil {

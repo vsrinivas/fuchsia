@@ -17,18 +17,25 @@ import (
 type ReportKind string
 
 const (
-	ReportKindFunction ReportKind = "function"
-	ReportKindMethod   ReportKind = "method"
+	ReportKindFunction     ReportKind = "function"
+	ReportKindMethod       ReportKind = "method"
+	ReportKindEnum         ReportKind = "enum"
+	ReportKindEnumMember   ReportKind = "enum/member"
+	ReportKindRecord       ReportKind = "record"
+	ReportKindRecordMember ReportKind = "record/member"
 )
 
 var reportKindStringToEnum = map[string]ReportKind{
-	"function": ReportKindFunction,
-	"method":   ReportKindMethod,
+	"function":      ReportKindFunction,
+	"method":        ReportKindMethod,
+	"enum":          ReportKindEnum,
+	"enum/member":   ReportKindEnumMember,
+	"record":        ReportKindRecord,
+	"record/member": ReportKindRecordMember,
 }
 
 var _ json.Marshaler = (*ReportKind)(nil)
 
-// MarshalJSON implements json.Marshaler.
 func (r ReportKind) MarshalJSON() ([]byte, error) {
 	return []byte(fmt.Sprintf("%q", r)), nil
 }
@@ -51,6 +58,52 @@ func (r *ReportKind) UnmarshalJSON(value []byte) error {
 	return nil
 }
 
+// ReportAccess is the type of access of a platform surface element.
+type ReportAccess string
+
+const (
+	ReportAccessPublic    ReportAccess = "public"
+	ReportAccessProtected ReportAccess = "protected"
+	ReportAccessPrivate   ReportAccess = "private"
+)
+
+var reportAccessStringToEnum = map[string]ReportAccess{
+	"":          ReportAccessPublic,
+	"public":    ReportAccessPublic,
+	"protected": ReportAccessProtected,
+	"private":   ReportAccessPrivate,
+}
+
+var accessToReportAccess = map[Access]ReportAccess{
+	AccessPublic:    ReportAccessPublic,
+	AccessPrivate:   ReportAccessPrivate,
+	AccessProtected: ReportAccessProtected,
+}
+
+var _ json.Marshaler = (*ReportAccess)(nil)
+
+func (r ReportAccess) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf("%q", r)), nil
+}
+
+var _ json.Unmarshaler = (*ReportAccess)(nil)
+
+func (r *ReportAccess) UnmarshalJSON(value []byte) error {
+	var s string
+	if err := json.Unmarshal(value, &s); err != nil {
+		return fmt.Errorf("while recovering %v into string: %w", string(value), err)
+	}
+	var (
+		e  ReportAccess
+		ok bool
+	)
+	if e, ok = reportAccessStringToEnum[s]; !ok {
+		return fmt.Errorf("could not parse ReportAccess from %v", s)
+	}
+	*r = e
+	return nil
+}
+
 // ReportItem is the format of a single report item. Expect this struct will
 // grow over time to include more extracted information.
 type ReportItem struct {
@@ -61,6 +114,15 @@ type ReportItem struct {
 	LineNumber int `json:"line,omitempty"`
 	// Kind is the type of the item.  It is required.
 	Kind ReportKind `json:"kind"`
+	// Type is the declaration type of an item, if there is one.
+	Type string `json:"type,omitempty"`
+	// ReturnType is a return type of a function or method, if there is one.
+	ReturnType string `json:"return_type,omitempty"`
+	// Params is the type declaration of all parameters, if there are some.
+	Params string `json:"params,omitempty"`
+	// Access lets us know if the item is publicly accessible.  If omitted,
+	// the default is public.
+	Access ReportAccess `json:"access,omitempty"`
 }
 
 // Report is the format of the output report for the clang doc filter.
@@ -99,15 +161,15 @@ func addRegexes(r *[]regexp.Regexp, regexes []string) error {
 	return nil
 }
 
-func (r *Report) matchAnyFilename(fn string) bool {
-	return matchAnySymbolToRegex(fn, r.fileregex)
+func (r *Report) matchFilename(fn string) bool {
+	return matchToAnyRegex(fn, r.fileregex)
 }
 
-func (r *Report) matchAnySymbol(sym string) bool {
-	return matchAnySymbolToRegex(sym, r.symregex)
+func (r *Report) matchSymbol(sym string) bool {
+	return matchToAnyRegex(sym, r.symregex)
 }
 
-func matchAnySymbolToRegex(sym string, regexes []regexp.Regexp) bool {
+func matchToAnyRegex(sym string, regexes []regexp.Regexp) bool {
 	if len(regexes) == 0 {
 		// If we defined no regexes, match everything.
 		return true
@@ -120,27 +182,110 @@ func matchAnySymbolToRegex(sym string, regexes []regexp.Regexp) bool {
 	return false
 }
 
-// Add inserts an Aggregate into the report.
-func (r *Report) Add(a Aggregate) error {
-	for _, f := range a.ChildFunctions {
-		fullName := f.fullName()
-		fn := f.DefLocation.Filename
-		matchFilename := r.matchAnyFilename(fn)
-		matchSymbol := r.matchAnySymbol(fullName)
-		if !matchFilename || !matchSymbol {
-			continue
-		}
+// AddEnumMember adds an enum member to the plasa report.
+func (r *Report) AddEnumMember(enumName, fn, member string) error {
+	fullName := fullNameMulticomponent([]ID{}, enumName, member)
+	if r.matchFilename(fn) && r.matchSymbol(fullName) {
 		i := ReportItem{
-			Name:       fullName,
-			Filename:   fn,
-			LineNumber: f.DefLocation.LineNumber,
+			Name: fullName,
+			Kind: ReportKindEnumMember,
 		}
-		if f.IsMethod {
+		r.Items = append(r.Items, i)
+	}
+	return nil
+}
+
+// AddChildEnum adds the child enum and its members to the plasa report.
+func (r *Report) AddChildEnum(c ChildEnum) error {
+	// Push this into ChildEnum.
+	fullName := fullName(c.Name, c.Namespace)
+	fn := c.DefLocation.Filename
+	if r.matchFilename(fn) && r.matchSymbol(fullName) {
+		i := ReportItem{
+			Name: fullName,
+			Kind: ReportKindEnum,
+		}
+		r.Items = append(r.Items, i)
+	}
+
+	// Add each enum member too.
+	for _, m := range c.Members {
+		if err := r.AddEnumMember(fullName, fn, m); err != nil {
+			return fmt.Errorf("while adding enum member: %v::%v: %w", fullName, m, err)
+		}
+	}
+	return nil
+}
+
+func (r *Report) AddChildFunction(c ChildFunction) error {
+	f := c.fullName()
+	n := c.DefLocation.Filename
+	if r.matchFilename(n) && r.matchSymbol(f) {
+		i := ReportItem{
+			Name:       f,
+			Filename:   n,
+			LineNumber: c.DefLocation.LineNumber,
+			ReturnType: c.ReturnType.TypeName(),
+		}
+		if c.IsMethod {
 			i.Kind = ReportKindMethod
 		} else {
 			i.Kind = ReportKindFunction
 		}
+		var params []string
+		for _, p := range c.Params {
+			params = append(params, p.TypeName())
+		}
+		i.Params = fmt.Sprintf("(%v)", strings.Join(params, ","))
+
+		// Needs return type and params.
 		r.Items = append(r.Items, i)
+	}
+	return nil
+}
+
+func (r *Report) AddMember(parentName string, c Member) error {
+	fullName := fullNameMulticomponent([]ID{}, parentName, string(c.Name))
+	i := ReportItem{
+		Name:   fullName,
+		Kind:   ReportKindRecordMember,
+		Type:   c.Type.GetTypeString(),
+		Access: accessToReportAccess[c.Access],
+	}
+	r.Items = append(r.Items, i)
+	return nil
+}
+
+// Add inserts an Aggregate into the report.
+func (r *Report) AddAggregate(a Aggregate) error {
+	f := fullName(a.Name, a.Namespace)
+	n := a.DefLocation.Filename
+	if r.matchFilename(n) && r.matchSymbol(f) {
+		i := ReportItem{
+			Name:       f,
+			Kind:       ReportKindRecord,
+			LineNumber: a.DefLocation.LineNumber,
+			Filename:   n,
+			Access:     accessToReportAccess[a.Access],
+		}
+		r.Items = append(r.Items, i)
+	}
+
+	// Recurse into components and ship them out too.
+	for _, c := range a.ChildEnums {
+		if err := r.AddChildEnum(c); err != nil {
+			return fmt.Errorf("while adding child enum: %v: %w", c, err)
+		}
+	}
+	for _, c := range a.ChildFunctions {
+		if err := r.AddChildFunction(c); err != nil {
+			return fmt.Errorf("while adding child function: %v: %w", c, err)
+		}
+	}
+	for _, c := range a.Members {
+		if err := r.AddMember(f, c); err != nil {
+			return fmt.Errorf("while adding a member: %v::%v: %w", f, c, err)
+		}
 	}
 	return nil
 }

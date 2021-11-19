@@ -1,10 +1,15 @@
 {
     "items": [
         {
-            "name": "::ns::foo1"
+            "name": "::ns::foo1",
+            "kind": "function"
         },
         {
-            "name": "::ns::foo2"
+            "name": "::ns::foo2",
+            "kind": "method"
+        },
+        {
+            "name": "::ns::foo3"
         }
     ]
 }

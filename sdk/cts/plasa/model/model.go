@@ -21,19 +21,33 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// fullName reconstructs the fully qualified name of an identifier, given its
-// unqualified name and namespace components.
-func fullName(name Name, ns []ID) string {
-	s := make([]string, len(ns)+1)
+// fullnameMulticomponent reconstructs a name from the namespace component,
+// and several name components, of which the more precise ones come later.
+func fullNameMulticomponent(ns []ID, names ...string) string {
+	s := make([]string, len(ns))
 	for i, n := range ns {
 		nc := string(n.Name)
+		if nc == "" {
+			nc = "(anonymous)"
+		}
 		if nc == "GlobalNamespace" {
 			nc = ""
 		}
-		s[len(s)-i-2] = nc
+		s[len(s)-i-1] = nc
 	}
-	s[len(s)-1] = string(name)
+	for _, name := range names {
+		if name == "" {
+			name = "(anonymous)"
+		}
+		s = append(s, name)
+	}
 	return strings.Join(s, "::")
+}
+
+// fullName reconstructs the fully qualified name of an identifier, given its
+// unqualified name and namespace components.
+func fullName(name Name, ns []ID) string {
+	return fullNameMulticomponent(ns, string(name))
 }
 
 // Needs serdes. Unclear why Type is not the same as TagType.
@@ -82,6 +96,14 @@ type ID struct {
 	USR `yaml:"USR,omitempty"`
 }
 
+// GetTypeString returns the string encoding of this ID, as a type string.
+func (i ID) GetTypeString() string {
+	if i.Name != "" {
+		return string(i.Name)
+	}
+	return fmt.Sprintf("%v::%v::%v", i.Type, i.Path, i.USR)
+}
+
 // NamespaceID is a fully qualified namespace identifier
 type NamespaceID struct {
 	ID                  ID   `yaml:",inline"`
@@ -98,6 +120,15 @@ type DefLocation struct {
 type ParamType struct {
 	Name `yaml:"Name"`
 	Type ID `yaml:"Type"`
+}
+
+// TypeName returns the type of this parameter.
+func (p ParamType) TypeName() string {
+	ret := []string{p.Type.GetTypeString()}
+	if p.Name != "" {
+		ret = append(ret, string(p.Name))
+	}
+	return strings.Join(ret, " ")
 }
 
 type Access string

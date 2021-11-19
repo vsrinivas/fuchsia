@@ -110,6 +110,10 @@ func pathKinds(m PlasaManifest) []pathKind {
 // addCCAPIReport adds a C++ API report to the test coverage report.
 func (m *TestCoverageReport) addCCAPIReport(r model.Report) {
 	for _, i := range r.Items {
+		if (i.Kind != model.ReportKindMethod) && (i.Kind != model.ReportKindFunction) {
+			// Only collect methods and functions, and nothing else.
+			continue
+		}
 		n := i.Name
 		if _, ok := m.seen[n]; ok {
 			// Skip seen elements.
@@ -219,7 +223,7 @@ func run(plasaManifestFile, output string) error {
 func main() {
 	flag.Parse()
 	if err := run(*plasaManifestFile, *output); err != nil {
-		fmt.Fprintf(os.Stderr, "plasa_test_coverage_report/main.run(): %v", err)
+		fmt.Fprintf(os.Stderr, "plasa_test_coverage_report/main.run(): %v\n", err)
 		os.Exit(-1)
 	}
 }
