@@ -6,7 +6,6 @@
 
 #include <endian.h>
 #include <lib/ddk/debug.h>
-#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/zx/profile.h>
 #include <threads.h>
@@ -38,33 +37,6 @@ constexpr size_t kI2cMaxTransferSize = 256;
 constexpr uint8_t kCpuRunFromFlash[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 constexpr uint8_t kCpuRunFromRam[8] = {0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55};
 
-// TODO(fxbug.dev/87836): Pull these out into a Nelson-specific file.
-enum {
-  // These values are shared with the bootloader, and must be kept in sync.
-  kPanelTypeKdFiti9364 = 1,
-  kPanelTypeBoeFiti9364 = 2,
-  kPanelTypeInxFiti9364 = 3,
-  kPanelTypeKdFiti9365 = 4,
-  kPanelTypeBoeFiti9365 = 5,
-  kPanelTypeBoeSit7703 = 6,
-};
-
-inline const char* PanelTypeToConfigPath(uint32_t panel_type_id) {
-  switch (panel_type_id) {
-    case kPanelTypeKdFiti9364:
-    case kPanelTypeBoeFiti9364:
-    case kPanelTypeInxFiti9364:
-      return GT6853_CONFIG_9364_PATH;
-    case kPanelTypeKdFiti9365:
-    case kPanelTypeBoeFiti9365:
-      return GT6853_CONFIG_9365_PATH;
-    case kPanelTypeBoeSit7703:
-      return GT6853_CONFIG_7703_PATH;
-    default:
-      return nullptr;
-  }
-}
-
 }  // namespace
 
 namespace touch {
@@ -88,14 +60,14 @@ void Gt6853InputReport::ToFidlInputReport(fuchsia_input_report::wire::InputRepor
     contact.set_contact_id(contacts[i].contact_id);
     contact.set_position_x(allocator, contacts[i].position_x);
     contact.set_position_y(allocator, contacts[i].position_y);
-    input_contacts[i] = std::move(contact);
+    input_contacts[i] = contact;
   }
 
   fuchsia_input_report::wire::TouchInputReport touch_report(allocator);
-  touch_report.set_contacts(allocator, std::move(input_contacts));
+  touch_report.set_contacts(allocator, input_contacts);
 
   input_report.set_event_time(allocator, event_time.get());
-  input_report.set_touch(allocator, std::move(touch_report));
+  input_report.set_touch(allocator, touch_report);
 }
 
 zx::status<Gt6853Device*> Gt6853Device::CreateAndGetDevice(void* ctx, zx_device_t* parent) {
@@ -128,7 +100,8 @@ zx::status<Gt6853Device*> Gt6853Device::CreateAndGetDevice(void* ctx, zx_device_
     return zx::error(status);
   }
 
-  if ((status = device->DdkAdd("gt6853")) != ZX_OK) {
+  if ((status = device->DdkAdd(ddk::DeviceAddArgs("gt6853").set_inspect_vmo(
+           device->inspector_.DuplicateVmo()))) != ZX_OK) {
     zxlogf(ERROR, "DdkAdd failed: %d", status);
     return zx::error(status);
   }
@@ -185,18 +158,18 @@ void Gt6853Device::GetDescriptor(GetDescriptorRequestView request,
   }
 
   fuchsia_input_report::wire::TouchInputDescriptor touch_input_descriptor(allocator);
-  touch_input_descriptor.set_contacts(allocator, std::move(touch_input_contacts));
+  touch_input_descriptor.set_contacts(allocator, touch_input_contacts);
   touch_input_descriptor.set_max_contacts(kMaxContacts);
   touch_input_descriptor.set_touch_type(fuchsia_input_report::wire::TouchType::kTouchscreen);
 
   fuchsia_input_report::wire::TouchDescriptor touch_descriptor(allocator);
-  touch_descriptor.set_input(allocator, std::move(touch_input_descriptor));
+  touch_descriptor.set_input(allocator, touch_input_descriptor);
 
   fuchsia_input_report::wire::DeviceDescriptor descriptor(allocator);
-  descriptor.set_device_info(allocator, std::move(device_info));
-  descriptor.set_touch(allocator, std::move(touch_descriptor));
+  descriptor.set_device_info(allocator, device_info);
+  descriptor.set_touch(allocator, touch_descriptor);
 
-  completer.Reply(std::move(descriptor));
+  completer.Reply(descriptor);
 }
 
 void Gt6853Device::SendOutputReport(SendOutputReportRequestView request,
@@ -232,6 +205,10 @@ Gt6853Contact Gt6853Device::ParseContact(const uint8_t* const contact_buffer) {
 }
 
 zx_status_t Gt6853Device::Init() {
+  root_ = inspector_.GetRoot().CreateChild("gt6853");
+  firmware_status_ = root_.CreateString("firmware_status", "initialization failed");
+  config_status_ = root_.CreateString("config_status", "initialization failed");
+
   zx_status_t status = interrupt_gpio_.ConfigIn(GPIO_NO_PULL);
   if (status != ZX_OK) {
     zxlogf(ERROR, "ConfigIn failed: %d", status);
@@ -243,26 +220,24 @@ zx_status_t Gt6853Device::Init() {
     return status;
   }
 
-  size_t actual = 0;
-  uint32_t panel_type_id = 0;
-  status = DdkGetFragmentMetadata("pdev", DEVICE_METADATA_BOARD_PRIVATE, &panel_type_id,
-                                  sizeof(panel_type_id), &actual);
-  if (status == ZX_ERR_NOT_FOUND) {
-    zxlogf(INFO, "No device metadata, assuming mexec and preserving controller state");
-  } else if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to get panel type: %d", status);
-    return status;
-  } else if (actual != sizeof(panel_type_id)) {
-    zxlogf(ERROR, "Expected metadata size %zu, got %zu", sizeof(panel_type_id), actual);
-    return ZX_ERR_BAD_STATE;
-  } else {
+  zx::status<fuchsia_mem::wire::Range> config = GetConfigFileVmo();
+  if (config.is_error()) {
+    return config.status_value();
+  }
+
+  if (config->vmo.is_valid()) {
     if ((status = UpdateFirmwareIfNeeded()) != ZX_OK) {
+      firmware_status_.Set("failed");
       return status;
     }
 
-    if ((status = DownloadConfigIfNeeded(panel_type_id)) != ZX_OK) {
+    if ((status = DownloadConfigIfNeeded(*config)) != ZX_OK) {
+      config_status_.Set("failed");
       return status;
     }
+  } else {
+    zxlogf(INFO, "No device metadata, assuming mexec and preserving controller state");
+    firmware_status_.Set("skipped");
   }
 
   status = thrd_create_with_name(
@@ -305,33 +280,19 @@ zx_status_t Gt6853Device::Init() {
   return ZX_OK;
 }
 
-zx_status_t Gt6853Device::DownloadConfigIfNeeded(uint32_t panel_type_id) {
-  zx::vmo config_vmo;
-
-  const char* const config_path = PanelTypeToConfigPath(panel_type_id);
-  if (config_path == nullptr) {
-    zxlogf(ERROR, "Failed to find config for panel type %d", panel_type_id);
-    return ZX_ERR_BAD_STATE;
-  }
-
-  size_t config_vmo_size = 0;
-  zx_status_t status =
-      load_firmware(parent(), config_path, config_vmo.reset_and_get_address(), &config_vmo_size);
-  if (status != ZX_OK) {
-    zxlogf(WARNING, "Failed to load config binary, skipping config download");
-    return ZX_OK;
-  }
-
+zx_status_t Gt6853Device::DownloadConfigIfNeeded(const fuchsia_mem::wire::Range& config_file) {
   zx::status<uint8_t> sensor_id = ReadReg8(Register::kSensorIdReg);
   if (sensor_id.is_error()) {
     zxlogf(ERROR, "Failed to read sensor ID register: %d", sensor_id.error_value());
     return sensor_id.error_value();
   }
 
-  zxlogf(INFO, "Sensor ID 0x%02x, panel type %d", sensor_id.value(), panel_type_id);
+  zxlogf(INFO, "Sensor ID 0x%02x", sensor_id.value());
+  sensor_id_ = root_.CreateInt("sensor_id", sensor_id.value());
 
   fzl::VmoMapper mapped_config;
-  if ((status = mapped_config.Map(config_vmo, 0, config_vmo_size, ZX_VM_PERM_READ)) != ZX_OK) {
+  zx_status_t status = mapped_config.Map(config_file.vmo, 0, config_file.size, ZX_VM_PERM_READ);
+  if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to map config VMO: %d", status);
     return status;
   }
@@ -342,8 +303,8 @@ zx_status_t Gt6853Device::DownloadConfigIfNeeded(uint32_t panel_type_id) {
   }
 
   uint32_t config_size = 0;
-  if (config_vmo_size < config_offset.value() + sizeof(config_size)) {
-    zxlogf(ERROR, "Config VMO size is %zu, must be at least %lu", config_vmo_size,
+  if (config_file.size < config_offset.value() + sizeof(config_size)) {
+    zxlogf(ERROR, "Config VMO size is %zu, must be at least %lu", config_file.size,
            config_offset.value() + sizeof(config_size));
     return ZX_ERR_IO_INVALID;
   }
@@ -515,6 +476,7 @@ zx_status_t Gt6853Device::SendConfig(cpp20::span<const uint8_t> config) {
     return status;
   }
 
+  config_status_.Set("download succeeded");
   return ZX_OK;
 }
 
@@ -525,6 +487,7 @@ zx_status_t Gt6853Device::UpdateFirmwareIfNeeded() {
       load_firmware(parent(), GT6853_FIRMWARE_PATH, fw_vmo.reset_and_get_address(), &fw_vmo_size);
   if (status != ZX_OK) {
     zxlogf(WARNING, "Failed to load firmware binary, skipping firmware update");
+    firmware_status_.Set("skipped, no firmware found");
     return ZX_OK;
   }
 
@@ -745,7 +708,7 @@ zx_status_t Gt6853Device::LoadIsp(const FirmwareSubsysInfo& isp_info) {
 }
 
 zx_status_t Gt6853Device::FlashSubsystem(const FirmwareSubsysInfo& subsys_info) {
-  constexpr size_t kIspMaxTransferSize = 1024 * 4;
+  constexpr uint32_t kIspMaxTransferSize = 1024 * 4;
   constexpr size_t kPacketHeaderAndChecksumSize = sizeof(uint16_t) * 3;
   constexpr int kFirmwarePacketTries = 3;
 
@@ -756,10 +719,10 @@ zx_status_t Gt6853Device::FlashSubsystem(const FirmwareSubsysInfo& subsys_info) 
   //  ...: data
   //  n-2: checksum of data length, flash address, and data fields
 
-  size_t remaining = subsys_info.size;
+  uint32_t remaining = subsys_info.size;
   uint32_t offset = 0;
   while (remaining > 0) {
-    const uint16_t transfer_size = std::min(remaining, kIspMaxTransferSize);
+    const auto transfer_size = static_cast<uint16_t>(std::min(remaining, kIspMaxTransferSize));
 
     uint8_t packet_buffer[kIspMaxTransferSize + kPacketHeaderAndChecksumSize];
 
@@ -894,6 +857,7 @@ zx_status_t Gt6853Device::FinishFirmwareUpdate() {
   zx::nanosleep(zx::deadline_after(kResetHoldTime));
 
   zxlogf(INFO, "Updated firmware, reset IC");
+  firmware_status_.Set("update succeeded");
   return ZX_OK;
 }
 

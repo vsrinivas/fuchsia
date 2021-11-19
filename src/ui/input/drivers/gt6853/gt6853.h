@@ -6,11 +6,13 @@
 #define SRC_UI_INPUT_DRIVERS_GT6853_GT6853_H_
 
 #include <fidl/fuchsia.input.report/cpp/wire.h>
+#include <fidl/fuchsia.mem/cpp/wire.h>
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/stdcompat/span.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/status.h>
@@ -122,9 +124,14 @@ class Gt6853Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_IN
 
   static Gt6853Contact ParseContact(const uint8_t* contact_buffer);
 
+  // To be implemented in a device-specific file. Should set panel_type_id_ and panel_type_, and
+  // config_status_ in cases when the config download is skipped. Returns an invalid VMO if the
+  // firmware update and config download should be skipped.
+  zx::status<fuchsia_mem::wire::Range> GetConfigFileVmo();
+
   zx_status_t Init();
 
-  zx_status_t DownloadConfigIfNeeded(uint32_t panel_type_id);
+  zx_status_t DownloadConfigIfNeeded(const fuchsia_mem::wire::Range& config_file);
   static zx::status<uint64_t> GetConfigOffset(const fzl::VmoMapper& mapped_config,
                                               uint8_t sensor_id);
   zx_status_t PollCommandRegister(DeviceCommand command);
@@ -161,6 +168,15 @@ class Gt6853Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_IN
   input::InputReportReaderManager<Gt6853InputReport> input_report_readers_;
   sync_completion_t next_reader_wait_;
   async::Loop loop_;
+
+  inspect::Inspector inspector_;
+  inspect::Node root_;
+
+  inspect::IntProperty sensor_id_;
+  inspect::IntProperty panel_type_id_;
+  inspect::StringProperty panel_type_;
+  inspect::StringProperty firmware_status_;
+  inspect::StringProperty config_status_;
 };
 
 }  // namespace touch

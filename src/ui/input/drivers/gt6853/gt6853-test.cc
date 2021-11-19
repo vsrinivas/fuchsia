@@ -88,7 +88,7 @@ class FakeTouchDevice : public fake_i2c::FakeI2c {
       return ZX_ERR_NOT_SUPPORTED;
     }
 
-    const uint16_t address = (write_buffer[0] << 8) | write_buffer[1];
+    const auto address = static_cast<uint16_t>((write_buffer[0] << 8) | write_buffer[1]);
     write_buffer += 2;
     write_buffer_size -= 2;
 
@@ -342,6 +342,28 @@ class Gt6853Test : public zxtest::Test {
     return firmware_vmo_.write(data.data(), offset, data.size());
   }
 
+  void AddDefaultConfig() {
+    config_size = 2338;
+    ASSERT_OK(zx::vmo::create(fbl::round_up(config_size, ZX_PAGE_SIZE), 0, &config_vmo_));
+
+    const uint32_t config_size_le = htole32(config_size);
+    ASSERT_OK(config_vmo_.write(&config_size_le, 0, sizeof(config_size_le)));
+    ASSERT_OK(WriteConfigData({0x2b}, 4));
+    ASSERT_OK(WriteConfigData({0x03}, 9));
+    ASSERT_OK(WriteConfigData({0x16, 0x00, 0x1a, 0x03, 0x1e, 0x06}, 16));
+    ASSERT_OK(WriteConfigData({0x04, 0x03, 0x00, 0x00}, 0x0016));
+    ASSERT_OK(WriteConfigData({0x02}, 0x0016 + 20));
+    ASSERT_OK(WriteConfigString("Config number two", 0x0016 + 121));
+    ASSERT_OK(WriteConfigData({0x04, 0x03, 0x00, 0x00}, 0x031a));
+    ASSERT_OK(WriteConfigData({0x00}, 0x031a + 20));
+    ASSERT_OK(WriteConfigString("Config number zero", 0x031a + 121));
+    ASSERT_OK(WriteConfigData({0x04, 0x03, 0x00, 0x00}, 0x061e));
+    ASSERT_OK(WriteConfigData({0x01}, 0x061e + 20));
+    ASSERT_OK(WriteConfigString("Config number one", 0x061e + 121));
+
+    fake_i2c_.set_sensor_id(0);
+  }
+
   fake_ddk::Bind ddk_;
   FakeTouchDevice fake_i2c_;
   zx::interrupt gpio_interrupt_;
@@ -364,6 +386,7 @@ class Gt6853Test : public zxtest::Test {
 };
 
 TEST_F(Gt6853Test, GetDescriptor) {
+  AddDefaultConfig();
   ASSERT_OK(Init());
 
   fidl::WireSyncClient<fuchsia_input_report::InputDevice> client(
@@ -408,6 +431,7 @@ TEST_F(Gt6853Test, GetDescriptor) {
 }
 
 TEST_F(Gt6853Test, ReadReport) {
+  AddDefaultConfig();
   ASSERT_OK(Init());
 
   fidl::WireSyncClient<fuchsia_input_report::InputDevice> client(
@@ -541,7 +565,7 @@ TEST_F(Gt6853Test, ConfigDownloadPanelType7703) {
   EXPECT_EQ(fake_i2c_.get_config_data().size(), 0x0304 - 121);
 }
 
-TEST_F(Gt6853Test, ConfigDownloadSkipped) { EXPECT_OK(Init()); }
+TEST_F(Gt6853Test, ConfigDownloadUnableToLoadConfig) { EXPECT_NOT_OK(Init()); }
 
 TEST_F(Gt6853Test, NoConfigEntry) {
   config_size = 2338;
@@ -622,6 +646,8 @@ TEST_F(Gt6853Test, FirmwareDownload) {
   ASSERT_OK(WriteFirmwareData({0x01, 0x00, 0x00, 0x01, 0x00, 0xab, 0xcd}, 32));
   ASSERT_OK(WriteFirmwareData({0x02, 0x00, 0x00, 0x01, 0x00, 0x12, 0x34}, 40));
   ASSERT_OK(WriteFirmwareData({0x03, 0x00, 0x00, 0x01, 0x00, 0x56, 0x78}, 48));
+
+  AddDefaultConfig();
 
   mock_gpio_.ExpectConfigOut(ZX_OK, 0);
   mock_gpio_.ExpectWrite(ZX_OK, 1);

@@ -54,6 +54,7 @@ group("common") {
     "//sdk/banjo/fuchsia.hardware.i2c:fuchsia.hardware.i2c_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem_llcpp",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
@@ -64,6 +65,7 @@ group("common") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/hid",
+    "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
@@ -80,7 +82,10 @@ driver_bind_rules("gt6853-bind") {
 
 fuchsia_driver("gt6853-module-driver") {
   output_name = "gt6853"
-  sources = [ "gt6853.cc" ]
+  sources = [
+    "gt6853-nelson.cc",
+    "gt6853.cc",
+  ]
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -92,9 +97,6 @@ fuchsia_driver("gt6853-module-driver") {
     "GT6853_CONFIG_9365_PATH=\"$config_9365_path\"",
     "GT6853_FIRMWARE_PATH=\"$firmware_path\"",
   ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_driver_component("gt6853-module") {
@@ -107,6 +109,7 @@ test("gt6853-test") {
   output_name = "gt6853-test"
   configs += [ "//build/config:all_source" ]
   sources = [
+    "gt6853-nelson.cc",
     "gt6853-test.cc",
     "gt6853.cc",
   ]
@@ -124,9 +127,6 @@ test("gt6853-test") {
     "GT6853_CONFIG_9365_PATH=\"$config_9365_path\"",
     "GT6853_FIRMWARE_PATH=\"$firmware_path\"",
   ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("gt6853-test-package") {
