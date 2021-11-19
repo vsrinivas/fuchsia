@@ -260,7 +260,7 @@ TEST_F(AccessorTest, StreamDiagnosticsInspect) {
   fuchsia::diagnostics::ArchiveAccessorPtr accessor;
   ASSERT_EQ(ZX_OK, context->svc()->Connect(accessor.NewRequest()));
 
-  auto realm = Realm::Builder::New(context.get())
+  auto realm = Realm::Builder::Create(context->svc())
                    .AddComponent(kInspectPublisher,
                                  Component{
                                      .source = ComponentUrl{kInspectPublisherUrl},
