@@ -10,15 +10,6 @@ pub mod stub;
 /// The trait for the Install Plan that can be acted on by an Installer implementation.
 ///
 pub trait Plan: std::marker::Sized + std::marker::Sync {
-    type Error: std::error::Error + std::marker::Send + std::marker::Sync + 'static;
-
-    /// Try to create a new Plan from the given response, returning a PlanError if unable to do
-    /// so.
-    fn try_create_from(
-        request_params: &RequestParams,
-        response: &Response,
-    ) -> Result<Self, Self::Error>;
-
     /// A string that can identify individual install plans, used to check if the current plan is
     /// the same as the previous one.
     fn id(&self) -> String;
@@ -53,6 +44,13 @@ pub trait Installer {
     /// Perform a reboot of the system (in whichever manner that the installer needs to perform
     /// a reboot.  This fn should not return unless reboot failed.
     fn perform_reboot(&mut self) -> BoxFuture<'_, Result<(), anyhow::Error>>;
+
+    /// Try to create a new Plan from the given response, returning a Error if unable to do so.
+    fn try_create_install_plan(
+        &self,
+        request_params: &RequestParams,
+        response: &Response,
+    ) -> Result<Self::InstallPlan, Self::Error>;
 }
 
 /// The trait for observing progress on the initiated installation.

@@ -18,35 +18,11 @@ pub enum StubInstallErrors {
     Failed,
 }
 
-/// This is the collection of Errors that can occur during the creation of an Install Plan from the
-/// Omaha Response.
-///
-/// This is a placeholder stub implementation.
-///
-#[derive(Debug, Error)]
-pub enum StubPlanErrors {
-    #[error("Stub Plan Creation Failure")]
-    Failed,
-}
-
 /// A stub implementation of the Install Plan.
 ///
 pub struct StubPlan;
 
 impl Plan for StubPlan {
-    type Error = StubPlanErrors;
-
-    fn try_create_from(
-        _request_params: &RequestParams,
-        response: &Response,
-    ) -> Result<Self, Self::Error> {
-        if response.protocol_version != "3.0" {
-            Err(StubPlanErrors::Failed)
-        } else {
-            Ok(StubPlan)
-        }
-    }
-
     fn id(&self) -> String {
         String::new()
     }
@@ -82,5 +58,17 @@ impl Installer for StubInstaller {
 
     fn perform_reboot(&mut self) -> BoxFuture<'_, Result<(), anyhow::Error>> {
         future::ready(Ok(())).boxed()
+    }
+
+    fn try_create_install_plan(
+        &self,
+        _request_params: &RequestParams,
+        response: &Response,
+    ) -> Result<Self::InstallPlan, Self::Error> {
+        if response.protocol_version != "3.0" {
+            Err(StubInstallErrors::Failed)
+        } else {
+            Ok(StubPlan)
+        }
     }
 }

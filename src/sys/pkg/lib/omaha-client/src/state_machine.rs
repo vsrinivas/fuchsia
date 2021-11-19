@@ -839,25 +839,26 @@ where
                     })
                 })
                 .collect();
-            let install_plan = match IN::InstallPlan::try_create_from(&request_params, &response) {
-                Ok(plan) => plan,
-                Err(e) => {
-                    error!("Unable to construct install plan! {}", e);
-                    self.set_state(State::InstallingUpdate, co).await;
-                    self.set_state(State::InstallationError, co).await;
-                    self.report_omaha_event_and_update_context(
-                        &request_params,
-                        Event::error(EventErrorCode::ConstructInstallPlan),
-                        &apps,
-                        &session_id,
-                        next_versions.clone(),
-                        None,
-                        co,
-                    )
-                    .await;
-                    return Err(UpdateCheckError::InstallPlan(e.into()));
-                }
-            };
+            let install_plan =
+                match self.installer.try_create_install_plan(&request_params, &response) {
+                    Ok(plan) => plan,
+                    Err(e) => {
+                        error!("Unable to construct install plan! {}", e);
+                        self.set_state(State::InstallingUpdate, co).await;
+                        self.set_state(State::InstallationError, co).await;
+                        self.report_omaha_event_and_update_context(
+                            &request_params,
+                            Event::error(EventErrorCode::ConstructInstallPlan),
+                            &apps,
+                            &session_id,
+                            next_versions.clone(),
+                            None,
+                            co,
+                        )
+                        .await;
+                        return Err(UpdateCheckError::InstallPlan(e.into()));
+                    }
+                };
 
             info!("Validating Install Plan with Policy");
             let install_plan_decision = self.policy_engine.update_can_start(&install_plan).await;
@@ -1310,7 +1311,9 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::update_check::*;
+    use super::update_check::{
+        Action, CONSECUTIVE_FAILED_UPDATE_CHECKS, LAST_UPDATE_TIME, SERVER_DICTATED_POLL_INTERVAL,
+    };
     use super::*;
     use crate::{
         common::{
@@ -2586,6 +2589,14 @@ mod tests {
             self.reboot_called.replace(true);
             future::ready(Ok(())).boxed()
         }
+
+        fn try_create_install_plan(
+            &self,
+            _request_params: &RequestParams,
+            _response: &Response,
+        ) -> Result<Self::InstallPlan, Self::Error> {
+            Ok(StubPlan)
+        }
     }
 
     #[test]
@@ -3463,6 +3474,14 @@ mod tests {
                 }
                 None => future::ready(Ok(())).boxed(),
             }
+        }
+
+        fn try_create_install_plan(
+            &self,
+            _request_params: &RequestParams,
+            _response: &Response,
+        ) -> Result<Self::InstallPlan, Self::Error> {
+            Ok(StubPlan)
         }
     }
 

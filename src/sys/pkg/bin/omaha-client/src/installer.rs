@@ -17,13 +17,18 @@ use fidl_fuchsia_update_installer_ext::{
 };
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_protocol;
+use fuchsia_url::pkg_url::PkgUrl;
 use fuchsia_zircon as zx;
 use futures::future::BoxFuture;
 use futures::prelude::*;
-use log::info;
+use log::{info, warn};
 use omaha_client::{
     installer::{Installer, ProgressObserver},
-    protocol::request::InstallSource,
+    protocol::{
+        request::InstallSource,
+        response::{OmahaStatus, Response},
+    },
+    request_builder::RequestParams,
 };
 use std::time::Duration;
 use thiserror::Error;
@@ -240,6 +245,101 @@ impl<C: Connect<Proxy = InstallerProxy> + Send> Installer for FuchsiaInstaller<C
         }
         .boxed()
     }
+
+    fn try_create_install_plan(
+        &self,
+        request_params: &RequestParams,
+        response: &Response,
+    ) -> Result<Self::InstallPlan, Self::Error> {
+        let (app, rest) = if let Some((app, rest)) = response.apps.split_first() {
+            (app, rest)
+        } else {
+            return Err(FuchsiaInstallError::Failure(anyhow!("No app in Omaha response")));
+        };
+
+        if !rest.is_empty() {
+            warn!("Only 1 app is supported, found {}", response.apps.len());
+        }
+
+        if app.status != OmahaStatus::Ok {
+            return Err(FuchsiaInstallError::Failure(anyhow!(
+                "Found non-ok app status: {:?}",
+                app.status
+            )));
+        }
+
+        let update_check = if let Some(update_check) = &app.update_check {
+            update_check
+        } else {
+            return Err(FuchsiaInstallError::Failure(anyhow!("No update_check in Omaha response")));
+        };
+
+        let urls = match update_check.status {
+            OmahaStatus::Ok => {
+                if let Some(urls) = &update_check.urls {
+                    &urls.url
+                } else {
+                    return Err(FuchsiaInstallError::Failure(anyhow!("No urls in Omaha response")));
+                }
+            }
+            OmahaStatus::NoUpdate => {
+                return Err(FuchsiaInstallError::Failure(anyhow!(
+                    "Was asked to create an install plan for a NoUpdate Omaha response"
+                )));
+            }
+            _ => {
+                if let Some(info) = &update_check.info {
+                    warn!("update check status info: {}", info);
+                }
+                return Err(FuchsiaInstallError::Failure(anyhow!(
+                    "Unexpected update check status: {:?}",
+                    update_check.status
+                )));
+            }
+        };
+        let (url, rest) = if let Some((url, rest)) = urls.split_first() {
+            (url, rest)
+        } else {
+            return Err(FuchsiaInstallError::Failure(anyhow!("No url in Omaha response")));
+        };
+
+        if !rest.is_empty() {
+            warn!("Only 1 url is supported, found {}", urls.len());
+        }
+
+        let manifest = if let Some(manifest) = &update_check.manifest {
+            manifest
+        } else {
+            return Err(FuchsiaInstallError::Failure(anyhow!("No manifest in Omaha response")));
+        };
+
+        let (package, rest) = if let Some((package, rest)) = manifest.packages.package.split_first()
+        {
+            (package, rest)
+        } else {
+            return Err(FuchsiaInstallError::Failure(anyhow!("No package in Omaha response")));
+        };
+
+        if !rest.is_empty() {
+            warn!("Only 1 package is supported, found {}", manifest.packages.package.len());
+        }
+
+        let urgent_update = update_check.urgent_update.unwrap_or(false);
+
+        let full_url = url.codebase.clone() + &package.name;
+        match PkgUrl::parse(&full_url) {
+            Ok(url) => Ok(FuchsiaInstallPlan {
+                url,
+                install_source: request_params.source.clone(),
+                urgent_update,
+            }),
+            Err(err) => Err(FuchsiaInstallError::Failure(anyhow!(
+                "Failed to parse {} to PkgUrl: {}",
+                full_url,
+                err
+            ))),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -252,11 +352,14 @@ mod tests {
         },
         fuchsia_async as fasync,
         matches::assert_matches,
+        omaha_client::protocol::response::{App, Manifest, Package, Packages, UpdateCheck},
         parking_lot::Mutex,
         std::{convert::TryInto, sync::Arc, task::Poll},
     };
 
     const TEST_URL: &str = "fuchsia-pkg://fuchsia.com/update/0";
+    const TEST_URL_BASE: &str = "fuchsia-pkg://fuchsia.com/";
+    const TEST_PACKAGE_NAME: &str = "update/0";
 
     #[derive(Debug, PartialEq)]
     struct Progress {
@@ -540,5 +643,204 @@ mod tests {
             Some(Ok(RebootControllerRequest::Unblock { .. }))
         );
         assert_matches!(exec.run_singlethreaded(stream.next()), None);
+    }
+
+    #[test]
+    fn test_simple_response() {
+        let request_params = RequestParams::default();
+        let mut update_check = UpdateCheck::ok(vec![TEST_URL_BASE.to_string()]);
+        update_check.manifest = Some(Manifest {
+            packages: Packages {
+                package: vec![Package {
+                    name: TEST_PACKAGE_NAME.to_string(),
+                    ..Package::default()
+                }],
+            },
+            ..Manifest::default()
+        });
+        let response = Response {
+            apps: vec![App { update_check: Some(update_check), ..App::default() }],
+            ..Response::default()
+        };
+
+        let install_plan =
+            FuchsiaInstaller::new().try_create_install_plan(&request_params, &response).unwrap();
+        assert_eq!(install_plan.url.to_string(), TEST_URL_BASE.to_string() + TEST_PACKAGE_NAME);
+        assert_eq!(install_plan.install_source, request_params.source);
+        assert_eq!(install_plan.urgent_update, false);
+    }
+
+    #[test]
+    fn test_no_app() {
+        let request_params = RequestParams::default();
+        let response = Response::default();
+
+        assert_matches!(
+            FuchsiaInstaller::new().try_create_install_plan(&request_params, &response),
+            Err(FuchsiaInstallError::Failure(_))
+        );
+    }
+
+    #[test]
+    fn test_multiple_app() {
+        let request_params = RequestParams::default();
+        let mut update_check = UpdateCheck::ok(vec![TEST_URL_BASE.to_string()]);
+        update_check.manifest = Some(Manifest {
+            packages: Packages {
+                package: vec![Package {
+                    name: TEST_PACKAGE_NAME.to_string(),
+                    ..Package::default()
+                }],
+            },
+            ..Manifest::default()
+        });
+        let response = Response {
+            apps: vec![App { update_check: Some(update_check), ..App::default() }],
+            ..Response::default()
+        };
+
+        let install_plan =
+            FuchsiaInstaller::new().try_create_install_plan(&request_params, &response).unwrap();
+        assert_eq!(install_plan.url.to_string(), TEST_URL_BASE.to_string() + TEST_PACKAGE_NAME);
+        assert_eq!(install_plan.install_source, request_params.source);
+    }
+
+    #[test]
+    fn test_no_update_check() {
+        let request_params = RequestParams::default();
+        let response = Response { apps: vec![App::default()], ..Response::default() };
+
+        assert_matches!(
+            FuchsiaInstaller::new().try_create_install_plan(&request_params, &response),
+            Err(FuchsiaInstallError::Failure(_))
+        );
+    }
+
+    #[test]
+    fn test_no_urls() {
+        let request_params = RequestParams::default();
+        let response = Response {
+            apps: vec![App { update_check: Some(UpdateCheck::default()), ..App::default() }],
+            ..Response::default()
+        };
+
+        assert_matches!(
+            FuchsiaInstaller::new().try_create_install_plan(&request_params, &response),
+            Err(FuchsiaInstallError::Failure(_))
+        );
+    }
+
+    #[test]
+    fn test_app_error_status() {
+        let request_params = RequestParams::default();
+        let response = Response {
+            apps: vec![App {
+                status: OmahaStatus::Error("error-unknownApplication".to_string()),
+                ..App::default()
+            }],
+            ..Response::default()
+        };
+
+        assert_matches!(
+            FuchsiaInstaller::new().try_create_install_plan(&request_params, &response),
+            Err(FuchsiaInstallError::Failure(_))
+        );
+    }
+
+    #[test]
+    fn test_no_update() {
+        let request_params = RequestParams::default();
+        let response = Response {
+            apps: vec![App { update_check: Some(UpdateCheck::no_update()), ..App::default() }],
+            ..Response::default()
+        };
+
+        assert_matches!(
+            FuchsiaInstaller::new().try_create_install_plan(&request_params, &response),
+            Err(FuchsiaInstallError::Failure(_))
+        );
+    }
+
+    #[test]
+    fn test_invalid_url() {
+        let request_params = RequestParams::default();
+        let response = Response {
+            apps: vec![App {
+                update_check: Some(UpdateCheck::ok(vec!["invalid-url".to_string()])),
+                ..App::default()
+            }],
+            ..Response::default()
+        };
+        assert_matches!(
+            FuchsiaInstaller::new().try_create_install_plan(&request_params, &response),
+            Err(FuchsiaInstallError::Failure(_))
+        );
+    }
+
+    #[test]
+    fn test_no_manifest() {
+        let request_params = RequestParams::default();
+        let response = Response {
+            apps: vec![App {
+                update_check: Some(UpdateCheck::ok(vec![TEST_URL_BASE.to_string()])),
+                ..App::default()
+            }],
+            ..Response::default()
+        };
+
+        assert_matches!(
+            FuchsiaInstaller::new().try_create_install_plan(&request_params, &response),
+            Err(FuchsiaInstallError::Failure(_))
+        );
+    }
+
+    #[test]
+    fn test_urgent_update_attribute_true() {
+        let request_params = RequestParams::default();
+        let mut update_check = UpdateCheck::ok(vec![TEST_URL_BASE.to_string()]);
+        update_check.urgent_update = Some(true);
+        update_check.manifest = Some(Manifest {
+            packages: Packages {
+                package: vec![Package {
+                    name: TEST_PACKAGE_NAME.to_string(),
+                    ..Package::default()
+                }],
+            },
+            ..Manifest::default()
+        });
+        let response = Response {
+            apps: vec![App { update_check: Some(update_check), ..App::default() }],
+            ..Response::default()
+        };
+
+        let install_plan =
+            FuchsiaInstaller::new().try_create_install_plan(&request_params, &response).unwrap();
+
+        assert_eq!(install_plan.urgent_update, true);
+    }
+
+    #[test]
+    fn test_urgent_update_attribute_false() {
+        let request_params = RequestParams::default();
+        let mut update_check = UpdateCheck::ok(vec![TEST_URL_BASE.to_string()]);
+        update_check.urgent_update = Some(false);
+        update_check.manifest = Some(Manifest {
+            packages: Packages {
+                package: vec![Package {
+                    name: TEST_PACKAGE_NAME.to_string(),
+                    ..Package::default()
+                }],
+            },
+            ..Manifest::default()
+        });
+        let response = Response {
+            apps: vec![App { update_check: Some(update_check), ..App::default() }],
+            ..Response::default()
+        };
+
+        let install_plan =
+            FuchsiaInstaller::new().try_create_install_plan(&request_params, &response).unwrap();
+
+        assert_eq!(install_plan.urgent_update, false);
     }
 }
