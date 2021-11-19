@@ -82,9 +82,15 @@ def is_response_argument(argument):
 
 # Generate a method that does simple validation of a virtio command struct,
 # passes it on to magma, and populates the corresponding response struct.
+# Also generate an unimplemented, low level method for special case handling.
+# If the low level method is not overridden, the other method will be used.
 def generate_generic_method(method, is_internal):
     name = get_name(method)
     ret = ''
+    ret += '  virtual zx_status_t Handle_' + name + '(\n'
+    ret += '    VirtioDescriptor* request_desc, VirtioDescriptor* response_desc, uint32_t* used_out) \n'
+    ret += '        { return ZX_ERR_NOT_SUPPORTED; }\n'
+    ret += '\n'
     ret += '  virtual zx_status_t Handle_' + name + '(\n'
     ret += '    const virtio_magma_' + name + '_ctrl_t* request,\n'
     ret += '    virtio_magma_' + name + '_resp_t* response)'
@@ -125,11 +131,8 @@ def generate_generic_method(method, is_internal):
 
 # Generate the main command switch method
 def generate_handle_command(magma):
-    ret = '''  virtual zx_status_t HandleCommandDescriptors(VirtioDescriptor* request, VirtioDescriptor* response, uint32_t* used_out) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  virtual zx_status_t HandleCommand(VirtioChain chain) {
+    ret = '''
+    virtual zx_status_t HandleCommand(VirtioChain chain) {
     TRACE_DURATION("machina", "VirtioMagma::HandleCommand");
     VirtioDescriptor request_desc{};
     if (!chain.NextDescriptor(&request_desc)) {
@@ -163,31 +166,36 @@ def generate_handle_command(magma):
         name = get_name(export)
         ret += '      case VIRTIO_MAGMA_CMD_' + name.upper() + ': {\n'
         ret += '        TRACE_DURATION("magma", "' + name + '");\n'
-        ret += '        auto request = reinterpret_cast<const virtio_magma_' + name + '_ctrl_t*>(request_desc.addr);\n'
-        ret += '        virtio_magma_' + name + '_resp_t response{};\n'
+        ret += '        auto request = *reinterpret_cast<const virtio_magma_' + name + '_ctrl_t*>(request_desc.addr);\n'
+        ret += '        if (request_desc.len < sizeof(request)) {\n'
+        ret += '          FX_LOGS(ERROR) << "MAGMA command (" << command_type << ") request descriptor too small";\n'
+        ret += '          chain.Return();\n'
+        ret += '          return ZX_ERR_INVALID_ARGS;\n'
+        ret += '        }\n'
         ret += '#ifdef VIRTMAGMA_DEBUG\n'
         ret += '        FX_LOGS(INFO) << "Received MAGMA command (" << command_type << "):\\n"\\\n'
-        ret += '          "  hdr = { " << virtio_magma_ctrl_type_string((virtio_magma_ctrl_type)request->hdr.type) << ", " << request->hdr.flags << " }"\\\n'
+        ret += '          "  hdr = { " << virtio_magma_ctrl_type_string((virtio_magma_ctrl_type)request.hdr.type) << ", " << request.hdr.flags << " }"\\\n'
         for argument in export['arguments']:
             if argument['name'].find('_out') == -1:
                 ret += '          "\\n  ' + argument[
-                    'name'] + ' = " << static_cast<uint64_t>(request->' + argument[
+                    'name'] + ' = " << static_cast<uint64_t>(request.' + argument[
                         'name'] + ') << ""\\\n'
         ret += '          "";\n'
         ret += '#endif // VIRTMAGMA_DEBUG\n'
+        ret += '        virtio_magma_' + name + '_resp_t response{};\n'
         ret += '        if (response_desc.len < sizeof(response)) {\n'
         ret += '          FX_LOGS(ERROR) << "MAGMA command (" << command_type << ") response descriptor too small";\n'
         ret += '          chain.Return();\n'
         ret += '          return ZX_ERR_INVALID_ARGS;\n'
         ret += '        }\n'
         ret += '        uint32_t used;\n'
-        ret += '        zx_status_t status = HandleCommandDescriptors(&request_desc, &response_desc, &used);\n'
+        ret += '        zx_status_t status = Handle_' + name + '(&request_desc, &response_desc, &used);\n'
         ret += '        if (status != ZX_ERR_NOT_SUPPORTED) {\n'
         ret += '          *chain.Used() = used;\n'
         ret += '          chain.Return();\n'
         ret += '          return status;\n'
         ret += '        }\n'
-        ret += '        status = Handle_' + name + '(request, &response);\n'
+        ret += '        status = Handle_' + name + '(&request, &response);\n'
         ret += '        if (status != ZX_OK) {\n'
         ret += '          FX_LOGS(ERROR) << "Handle_' + name + ' failed (" << zx_status_get_string(status) << ")";\n'
         ret += '          chain.Return();\n'
