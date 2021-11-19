@@ -135,11 +135,13 @@ protocol DeviceInfoIterator {
 protocol DriverDevelopment {
     compose DriverIndex;
 
-    /// Restart all Driver Hosts containing the driver specified by `driver path`.
-    /// ZX_ERR_NOT_FOUND indicates that there is no driver matching the given path.
+    /// Restarts all driver hosts containing the driver specified by `driver path`, and returns the
+    /// number of driver hosts that were restarted.
     RestartDriverHosts(struct {
         driver_path string:fuchsia.device.manager.DEVICE_PATH_MAX;
-    }) -> (struct {}) error zx.status;
+    }) -> (struct {
+        count uint32;
+    }) error zx.status;
 
     /// Returns the list of devices that are running on the system.
     /// If a |device_filter| is provided, the returned list will be filtered to

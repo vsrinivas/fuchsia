@@ -2229,6 +2229,7 @@ void Coordinator::RestartDriverHosts(RestartDriverHostsRequestView request,
   std::string_view driver_path(request->driver_path.data(), request->driver_path.size());
 
   // Find devices containing the driver.
+  uint32_t count = 0;
   for (auto& dev : devices_) {
     // Call remove on the device's driver host if it contains the driver.
     if (dev.libname().compare(driver_path) == 0) {
@@ -2237,10 +2238,11 @@ void Coordinator::RestartDriverHosts(RestartDriverHostsRequestView request,
 
       // Unbind and Remove all the devices in the Driver Host.
       ScheduleUnbindRemoveAllDevices(dev.host());
+      count++;
     }
   }
 
-  completer.ReplySuccess();
+  completer.ReplySuccess(count);
 }
 
 void Coordinator::ScheduleUnbindRemoveAllDevices(const fbl::RefPtr<DriverHost> driver_host) {

@@ -9,10 +9,10 @@ use {argh::FromArgs, ffx_core::ffx_command};
 #[argh(
     subcommand,
     name = "restart",
-    description = "Restart all Driver Hosts containing the driver specified by driver path. ZX_ERR_NOT_FOUND indicates that there is no driver matching the given path",
+    description = "Restart all driver hosts containing the driver specified by driver_path.",
     example = "To restart a driver:
 
-    $ ffx driver restart '/boot/driver/e1000.so'",
+    $ ffx driver restart fuchsia-boot:///#driver/e1000.so",
     error_code(1, "Failed to connect to the driver manager service")
 )]
 pub struct DriverRestartCommand {
