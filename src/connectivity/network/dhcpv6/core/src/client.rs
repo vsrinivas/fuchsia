@@ -6,12 +6,13 @@
 
 use {
     matches::assert_matches,
+    num::{rational::Ratio, CheckedMul},
     packet::serialize::InnerPacketBuilder,
     packet_formats_dhcp::v6,
-    rand::Rng,
+    rand::{thread_rng, Rng},
     std::{
         cmp::{Eq, Ord, PartialEq, PartialOrd},
-        collections::{hash_map::Entry, BinaryHeap, HashMap},
+        collections::{hash_map::Entry, BinaryHeap, HashMap, HashSet},
         convert::TryFrom,
         default::Default,
         net::Ipv6Addr,
@@ -36,8 +37,8 @@ const IRT_DEFAULT: Duration = Duration::from_secs(86400);
 
 /// The max duration in seconds `std::time::Duration` supports.
 ///
-/// NOTE: it is possible for `Duration` to be bigger by filling in the nanos field, but this value
-/// is good enough for the purpose of this crate.
+/// NOTE: it is possible for `Duration` to be bigger by filling in the nanos
+/// field, but this value is good enough for the purpose of this crate.
 const MAX_DURATION: Duration = Duration::from_secs(std::u64::MAX);
 
 /// Initial Solicit timeout `SOL_TIMEOUT` from [RFC 8415, Section 7.6].
@@ -84,6 +85,51 @@ const RANDOMIZATION_FACTOR_MIN: f64 = -0.1;
 ///
 /// [RFC 8415, Section 15](https://datatracker.ietf.org/doc/html/rfc8415#section-15)
 const RANDOMIZATION_FACTOR_MAX: f64 = 0.1;
+
+/// Initial Request timeout `REQ_TIMEOUT` from [RFC 8415, Section 7.6].
+///
+/// [RFC 8415, Section 7.6]: https://tools.ietf.org/html/rfc8415#section-7.6
+const INITIAL_REQUEST_TIMEOUT: Duration = Duration::from_secs(1);
+
+/// Max Request timeout `REQ_MAX_RT` from [RFC 8415, Section 7.6].
+///
+/// [RFC 8415, Section 7.6]: https://tools.ietf.org/html/rfc8415#section-7.6
+const REQUEST_MAX_RT: Duration = Duration::from_secs(30);
+
+/// Max Request retry attempts `REQ_MAX_RC` from [RFC 8415, Section 7.6].
+///
+/// [RFC 8415, Section 7.6]: https://tools.ietf.org/html/rfc8415#section-7.6
+const REQUEST_MAX_RC: u8 = 10;
+
+/// The ratio used for calculating T1 based on the shortest preferred lifetime,
+/// when the T1 value received from the server is 0.
+///
+/// When T1 is set to 0 by the server, the value is left to the discretion of
+/// the client, as described in [RFC 8415, Section 14.2]. The client computes
+/// T1 using the recommended ratio from [RFC 8415, Section 21.4]:
+///    T1 = shortest lifetime * 0.5
+///
+/// [RFC 8415, Section 14.2]: https://datatracker.ietf.org/doc/html/rfc8415#section-14.2
+/// [RFC 8415, Section 21.4]: https://datatracker.ietf.org/doc/html/rfc8415#section-21.4
+const T1_MIN_LIFETIME_RATIO: Ratio<u32> = Ratio::new_raw(1, 2);
+
+/// The ratio used for calculating T2 based on T1, when the T2 value received
+/// from the server is 0.
+///
+/// When T2 is set to 0 by the server, the value is left to the discretion of
+/// the client, as described in [RFC 8415, Section 14.2]. The client computes
+/// T2 using the recommended ratios from [RFC 8415, Section 21.4]:
+///    T2 = T1 * 0.8 / 0.5
+///
+/// [RFC 8415, Section 14.2]: https://datatracker.ietf.org/doc/html/rfc8415#section-14.2
+/// [RFC 8415, Section 21.4]: https://datatracker.ietf.org/doc/html/rfc8415#section-21.4
+const T2_T1_RATIO: Ratio<u32> = Ratio::new_raw(8, 5);
+
+/// The value representing infinity lifetime, as described in
+/// [RFC 8415, Section 7.7].
+///
+/// [RFC 8415, Section 7.7]: https://datatracker.ietf.org/doc/html/rfc8415#section-21.4
+const INFINITY: u32 = u32::MAX;
 
 /// Calculates retransmission timeout based on formulas defined in [RFC 8415, Section 15].
 /// A zero `prev_retrans_timeout` indicates this is the first transmission, so
@@ -147,6 +193,16 @@ fn clipped_duration(secs: f64) -> Duration {
     } else {
         Duration::from_secs_f64(secs)
     }
+}
+
+/// Creates a transaction ID used by the client to match outgoing messages with
+/// server replies, as defined in [RFC 8415, Section 16.1].
+///
+/// [RFC 8415, Section 16.1]: https://tools.ietf.org/html/rfc8415#section-16.1
+pub fn transaction_id() -> [u8; 3] {
+    let mut id = [0u8; 3];
+    let () = thread_rng().fill(&mut id[..]);
+    id
 }
 
 /// Identifies what event should be triggered when a timer fires.
@@ -219,6 +275,7 @@ impl InformationRequesting {
                 Action::SendMessage(buf),
                 Action::ScheduleTimer(ClientTimerType::Retransmission, retrans_timeout),
             ],
+            transaction_id: None,
         }
     }
 
@@ -274,6 +331,7 @@ impl InformationRequesting {
                 dns_servers: dns_servers.unwrap_or(Vec::new()),
             }),
             actions,
+            transaction_id: None,
         }
     }
 }
@@ -297,7 +355,7 @@ impl InformationReceived {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 struct IdentityAssociation {
     // TODO(https://fxbug.dev/86950): use UnicastAddr.
     address: Ipv6Addr,
@@ -306,7 +364,7 @@ struct IdentityAssociation {
 }
 
 // Holds the information received in an Advertise message.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct AdvertiseMessage {
     server_id: Vec<u8>,
     addresses: HashMap<u32, IdentityAssociation>,
@@ -412,14 +470,9 @@ fn compute_preferred_address_count(
 ) -> usize {
     configured_addresses.iter().fold(0, |count, (iaid, address)| {
         count
-            + address.map_or_else(
-                || 0,
-                |addr| {
-                    got_addresses
-                        .get(iaid)
-                        .map_or_else(|| 0, |got_ia| usize::from(got_ia.address == addr))
-                },
-            )
+            + address.map_or(0, |addr| {
+                got_addresses.get(iaid).map_or(0, |got_ia| usize::from(got_ia.address == addr))
+            })
     })
 }
 
@@ -433,6 +486,46 @@ fn elapsed_time_in_centisecs(start_time: Instant) -> u16 {
             .expect("division should succeed, denominator is non-zero"),
     )
     .unwrap_or(u16::MAX)
+}
+
+// Returns the common value in `values` if all the values are equal, or None
+// otherwise.
+fn get_common_value(values: &Vec<u32>) -> Option<Duration> {
+    if !values.is_empty() && values.iter().all(|value| *value == values[0]) {
+        return Some(Duration::from_secs(values[0].into()));
+    }
+    None
+}
+
+// Creates a map of addresses to be requested, combining the IA in the selected
+// Advertise with the configured IAs that were not received in the Advertise
+// message.
+fn build_addresses_to_request(
+    advertised_addresses: &HashMap<u32, IdentityAssociation>,
+    configured_addresses: &HashMap<u32, Option<Ipv6Addr>>,
+) -> HashMap<u32, Option<Ipv6Addr>> {
+    let mut addresses_to_request =
+        advertised_addresses.iter().fold(HashMap::new(), |mut addrs_to_request, (iaid, ia)| {
+            let IdentityAssociation { address, preferred_lifetime: _, valid_lifetime: _ } = ia;
+            assert_eq!(addrs_to_request.insert(*iaid, Some(*address)), None);
+            addrs_to_request
+        });
+
+    for (iaid, iaaddr_opt) in configured_addresses {
+        match addresses_to_request.entry(*iaid) {
+            Entry::Occupied(e) => {
+                assert!(advertised_addresses.get(iaid).map_or(false, |ia| {
+                    let IdentityAssociation { address, preferred_lifetime: _, valid_lifetime: _ } =
+                        ia;
+                    Some(*address) == *e.get()
+                }));
+            }
+            Entry::Vacant(e) => {
+                let _: &mut Option<_> = e.insert(*iaaddr_opt);
+            }
+        }
+    }
+    addresses_to_request
 }
 
 /// Provides methods for handling state transitions from server discovery
@@ -479,7 +572,7 @@ impl ServerDiscovery {
         solicit_max_rt: Duration,
         rng: &mut R,
     ) -> Transition {
-        let server_discovery = ServerDiscovery {
+        Self {
             client_id,
             configured_addresses,
             first_solicit_time: None,
@@ -487,8 +580,8 @@ impl ServerDiscovery {
             solicit_max_rt,
             collected_advertise: BinaryHeap::new(),
             collected_sol_max_rt: Vec::new(),
-        };
-        server_discovery.send_and_schedule_retransmission(transaction_id, options_to_request, rng)
+        }
+        .send_and_schedule_retransmission(transaction_id, options_to_request, rng)
     }
 
     /// Calculates timeout for retransmitting solicits using parameters
@@ -574,6 +667,7 @@ impl ServerDiscovery {
                 Action::SendMessage(buf),
                 Action::ScheduleTimer(ClientTimerType::Retransmission, retrans_timeout),
             ],
+            transaction_id: None,
         }
     }
 
@@ -590,28 +684,27 @@ impl ServerDiscovery {
             configured_addresses,
             first_solicit_time,
             retrans_timeout,
-            mut solicit_max_rt,
-            collected_advertise,
+            solicit_max_rt,
+            mut collected_advertise,
             collected_sol_max_rt,
         } = self;
+        let solicit_max_rt = get_common_value(&collected_sol_max_rt).unwrap_or(solicit_max_rt);
+
         // Update SOL_MAX_RT, per RFC 8415, section 18.2.9:
         //
         //    A client SHOULD only update its SOL_MAX_RT [..] if all received
         //    Advertise messages that contained the corresponding option
         //    specified the same value.
-        if !collected_sol_max_rt.is_empty()
-            && collected_sol_max_rt.iter().all(|sol_max_rt| *sol_max_rt == collected_sol_max_rt[0])
-        {
-            solicit_max_rt = Duration::from_secs(collected_sol_max_rt[0].into());
-        }
-
-        let best_advertise = collected_advertise.peek();
-        if best_advertise.is_some() {
-            return Transition {
-                // TODO(fxbug.dev/69696): implement Requesting.
-                state: ClientState::Requesting(Requesting {}),
-                actions: vec![Action::CancelTimer(ClientTimerType::Retransmission)],
-            };
+        if let Some(advertise) = collected_advertise.pop() {
+            return Requesting::start(
+                client_id,
+                configured_addresses,
+                advertise,
+                &options_to_request,
+                collected_advertise,
+                solicit_max_rt,
+                rng,
+            );
         }
 
         ServerDiscovery {
@@ -626,9 +719,10 @@ impl ServerDiscovery {
         .send_and_schedule_retransmission(transaction_id, options_to_request, rng)
     }
 
-    fn advertise_message_received<B: ByteSlice>(
+    fn advertise_message_received<R: Rng, B: ByteSlice>(
         self,
         options_to_request: &[v6::OptionCode],
+        rng: &mut R,
         msg: v6::Message<'_, B>,
     ) -> Transition {
         let Self {
@@ -822,6 +916,7 @@ impl ServerDiscovery {
                         collected_sol_max_rt,
                     }),
                     actions: Vec::new(),
+                    transaction_id: None,
                 };
             };
         if &client_id != client_id_option {
@@ -836,6 +931,7 @@ impl ServerDiscovery {
                     collected_sol_max_rt,
                 }),
                 actions: Vec::new(),
+                transaction_id: None,
             };
         }
 
@@ -877,6 +973,7 @@ impl ServerDiscovery {
                     collected_sol_max_rt,
                 }),
                 actions: Vec::new(),
+                transaction_id: None,
             };
         }
 
@@ -923,11 +1020,16 @@ impl ServerDiscovery {
             && advertise.is_complete(&configured_addresses, options_to_request))
             || is_retransmitting
         {
-            return Transition {
-                // TODO(https://fxbug.dev/69696): implement Requesting.
-                state: ClientState::Requesting(Requesting {}),
-                actions: vec![Action::CancelTimer(ClientTimerType::Retransmission)],
-            };
+            let solicit_max_rt = get_common_value(&collected_sol_max_rt).unwrap_or(solicit_max_rt);
+            return Requesting::start(
+                client_id,
+                configured_addresses,
+                advertise,
+                &options_to_request,
+                collected_advertise,
+                solicit_max_rt,
+                rng,
+            );
         }
 
         let mut collected_advertise = collected_advertise;
@@ -943,12 +1045,913 @@ impl ServerDiscovery {
                 collected_sol_max_rt,
             }),
             actions: Vec::new(),
+            transaction_id: None,
         }
     }
 }
 
-#[derive(Debug, Default)]
-struct Requesting {}
+// Returns the min value greater than zero, if the arguments are non zero.  If
+// the new value is zero, the old value is returned unchanged; otherwise if the
+// old value is zero, the new value is returned. Used for calculating the
+// minimum T1/T2 as described in RFC 8415, section 18.2.4:
+//
+//    [..] the client SHOULD renew/rebind all IAs from the
+//    server at the same time, the client MUST select T1 and
+//    T2 times from all IA options that will guarantee that
+//    the client initiates transmissions of Renew/Rebind
+//    messages not later than at the T1/T2 times associated
+//    with any of the client's bindings (earliest T1/T2).
+fn maybe_get_nonzero_min(old_value: v6::TimeValue, new_value: v6::TimeValue) -> v6::TimeValue {
+    match (old_value, new_value) {
+        (old_t, v6::TimeValue::Zero) => old_t,
+        (v6::TimeValue::Zero, new_t) => new_t,
+        (old_t, new_t) => std::cmp::min(old_t, new_t),
+    }
+}
+
+/// Provides methods for handling state transitions from requesting state.
+#[derive(Debug)]
+struct Requesting {
+    /// [Client Identifier] used for uniquely identifying the client in
+    /// communication with servers.
+    ///
+    /// [Client Identifier]:
+    /// https://datatracker.ietf.org/doc/html/rfc8415#section-21.2
+    client_id: [u8; CLIENT_ID_LEN],
+    /// The addresses the client is configured to negotiate, indexed by IAID.
+    /// Used when server discovery is restarted.
+    configured_addresses: HashMap<u32, Option<Ipv6Addr>>,
+    /// The [server identifier] of the server to which the client sends
+    /// requests.
+    ///
+    /// [Server Identifier]:
+    /// https://datatracker.ietf.org/doc/html/rfc8415#section-21.3
+    server_id: Vec<u8>,
+    /// The addresses requested by the client.
+    addresses_to_request: HashMap<u32, Option<Ipv6Addr>>,
+    /// The advertise collected from servers during [server discovery].
+    ///
+    /// [server discovery]:
+    /// https://datatracker.ietf.org/doc/html/rfc8415#section-18
+    collected_advertise: BinaryHeap<AdvertiseMessage>,
+    /// The time of the first request. `None` before a request is sent. Used in
+    /// calculating the [elapsed time].
+    ///
+    /// [elapsed time]:
+    /// https://datatracker.ietf.org/doc/html/rfc8415#section-21.9
+    first_request_time: Option<Instant>,
+    /// The request retransmission timeout.
+    retrans_timeout: Duration,
+    /// The request retransmission count.
+    retrans_count: u8,
+    /// The [SOL_MAX_RT] used by the client.
+    ///
+    /// [SOL_MAX_RT]:
+    /// https://datatracker.ietf.org/doc/html/rfc8415#section-21.24
+    solicit_max_rt: Duration,
+}
+
+// Helper function to send a request to an alternate server, or if there are no
+// other collected servers, restart server discovery.
+fn request_from_alternate_server_or_restart_server_discovery<R: Rng>(
+    client_id: [u8; CLIENT_ID_LEN],
+    configured_addresses: HashMap<u32, Option<Ipv6Addr>>,
+    options_to_request: &[v6::OptionCode],
+    mut collected_advertise: BinaryHeap<AdvertiseMessage>,
+    solicit_max_rt: Duration,
+    rng: &mut R,
+) -> Transition {
+    if let Some(advertise) = collected_advertise.pop() {
+        return Requesting::start(
+            client_id,
+            configured_addresses,
+            advertise,
+            options_to_request,
+            collected_advertise,
+            solicit_max_rt,
+            rng,
+        );
+    }
+    return ServerDiscovery::start(
+        transaction_id(),
+        client_id,
+        configured_addresses,
+        &options_to_request,
+        solicit_max_rt,
+        rng,
+    );
+}
+
+fn compute_t(min: u32, ratio: Ratio<u32>) -> u32 {
+    if min == INFINITY {
+        INFINITY
+    } else {
+        ratio.checked_mul(&Ratio::new_raw(min, 1)).map_or(INFINITY, |t| t.to_integer())
+    }
+}
+
+impl Requesting {
+    /// Starts in requesting state following [RFC 8415, Section 18.2.2].
+    ///
+    /// [RFC 8415, Section 18.2.2]: https://tools.ietf.org/html/rfc8415#section-18.2.2
+    fn start<R: Rng>(
+        client_id: [u8; CLIENT_ID_LEN],
+        configured_addresses: HashMap<u32, Option<Ipv6Addr>>,
+        advertise: AdvertiseMessage,
+        options_to_request: &[v6::OptionCode],
+        collected_advertise: BinaryHeap<AdvertiseMessage>,
+        solicit_max_rt: Duration,
+        rng: &mut R,
+    ) -> Transition {
+        let AdvertiseMessage {
+            server_id,
+            addresses,
+            dns_servers: _,
+            preference: _,
+            receive_time: _,
+            preferred_addresses_count: _,
+        } = advertise;
+        let addresses_to_request = build_addresses_to_request(&addresses, &configured_addresses);
+        Self {
+            client_id,
+            configured_addresses,
+            server_id,
+            addresses_to_request,
+            collected_advertise,
+            first_request_time: None,
+            retrans_timeout: Duration::default(),
+            retrans_count: 0,
+            solicit_max_rt,
+        }
+        .send_and_reschedule_retransmission(transaction_id(), options_to_request, rng)
+    }
+
+    /// Calculates timeout for retransmitting requests using parameters
+    /// specified in [RFC 8415, Section 18.2.2].
+    ///
+    /// [RFC 8415, Section 18.2.2]: https://tools.ietf.org/html/rfc8415#section-18.2.2
+    fn retransmission_timeout<R: Rng>(prev_retrans_timeout: Duration, rng: &mut R) -> Duration {
+        retransmission_timeout(prev_retrans_timeout, INITIAL_REQUEST_TIMEOUT, REQUEST_MAX_RT, rng)
+    }
+
+    /// A helper function that returns a transition back to `Requesting`, with
+    /// actions to cancel current retransmission timer, send a request and
+    /// schedules retransmission.
+    fn send_and_reschedule_retransmission<R: Rng>(
+        self,
+        transaction_id: [u8; 3],
+        options_to_request: &[v6::OptionCode],
+        rng: &mut R,
+    ) -> Transition {
+        let Transition { state, actions: request_actions, transaction_id } =
+            self.send_and_schedule_retransmission(transaction_id, options_to_request, rng);
+        let actions = std::iter::once(Action::CancelTimer(ClientTimerType::Retransmission))
+            .chain(request_actions.into_iter())
+            .collect();
+        Transition { state, actions, transaction_id }
+    }
+
+    /// A helper function that returns a transition back to `Requesting`, with
+    /// actions to send a request and schedules retransmission.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `options_to_request` contains SOLICIT_MAX_RT.
+    fn send_and_schedule_retransmission<R: Rng>(
+        self,
+        transaction_id: [u8; 3],
+        options_to_request: &[v6::OptionCode],
+        rng: &mut R,
+    ) -> Transition {
+        let Self {
+            client_id,
+            configured_addresses,
+            server_id,
+            addresses_to_request,
+            collected_advertise,
+            first_request_time,
+            retrans_timeout: prev_retrans_timeout,
+            mut retrans_count,
+            solicit_max_rt,
+        } = self;
+        let retrans_timeout = Self::retransmission_timeout(prev_retrans_timeout, rng);
+
+        // Per RFC 8415, section 18.2.2:
+        //
+        //    The client MUST include the identifier of the destination server
+        //    in a Server Identifier option (see Section 21.3).
+        //
+        //    The client MUST include a Client Identifier option (see Section
+        //    21.2) to identify itself to the server.  The client adds any other
+        //    appropriate options, including one or more IA options.
+        let mut options =
+            vec![v6::DhcpOption::ServerId(&server_id), v6::DhcpOption::ClientId(&client_id)];
+
+        let mut iaaddr_options = HashMap::new();
+        for (iaid, addr_opt) in &addresses_to_request {
+            assert_matches!(
+                iaaddr_options.insert(
+                    *iaid,
+                    addr_opt.map(|addr| {
+                        [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(addr, 0, 0, &[]))]
+                    }),
+                ),
+                None
+            );
+        }
+        for (iaid, iaddr_opt) in &iaaddr_options {
+            options.push(v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                *iaid,
+                0,
+                0,
+                iaddr_opt.as_ref().map_or(&[], AsRef::as_ref),
+            )));
+        }
+
+        // Per RFC 8415, section 18.2.2:
+        //
+        //    The client MUST include an Elapsed Time option (see Section 21.9)
+        //    to indicate how long the client has been trying to complete the
+        //    current DHCP message exchange.
+        let mut elapsed_time = 0;
+        let first_request_time = Some(first_request_time.map_or(Instant::now(), |start_time| {
+            elapsed_time = elapsed_time_in_centisecs(start_time);
+            retrans_count += 1;
+            start_time
+        }));
+        options.push(v6::DhcpOption::ElapsedTime(elapsed_time));
+
+        // Per RFC 8415, section 18.2.2:
+        //
+        //    The client MUST include an Option Request option (ORO) (see
+        //    Section 21.7) to request the SOL_MAX_RT option (see Section 21.24)
+        //    and any other options the client is interested in receiving.
+        assert!(!options_to_request.contains(&v6::OptionCode::SolMaxRt));
+        let oro = std::iter::once(v6::OptionCode::SolMaxRt)
+            .chain(options_to_request.iter().cloned())
+            .collect::<Vec<_>>();
+        options.push(v6::DhcpOption::Oro(&oro));
+
+        let builder = v6::MessageBuilder::new(v6::MessageType::Request, transaction_id, &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        let () = builder.serialize(&mut buf);
+
+        Transition {
+            state: ClientState::Requesting(Requesting {
+                client_id,
+                configured_addresses,
+                server_id,
+                addresses_to_request,
+                collected_advertise,
+                first_request_time,
+                retrans_timeout,
+                retrans_count,
+                solicit_max_rt,
+            }),
+            actions: vec![
+                Action::SendMessage(buf),
+                Action::ScheduleTimer(ClientTimerType::Retransmission, retrans_timeout),
+            ],
+            transaction_id: Some(transaction_id),
+        }
+    }
+
+    /// Retransmits request. Per RFC 8415, section 18.2.2:
+    ///
+    ///    The client transmits the message according to Section 15, using the
+    ///    following parameters:
+    ///
+    ///       IRT     REQ_TIMEOUT
+    ///       MRT     REQ_MAX_RT
+    ///       MRC     REQ_MAX_RC
+    ///       MRD     0
+    ///
+    /// Per RFC 8415, section 15:
+    ///
+    ///    MRC specifies an upper bound on the number of times a client may
+    ///    retransmit a message.  Unless MRC is zero, the message exchange fails
+    ///    once the client has transmitted the message MRC times.
+    ///
+    /// Per RFC 8415, section 18.2.2:
+    ///
+    ///    If the message exchange fails, the client takes an action based on
+    ///    the client's local policy.  Examples of actions the client might take
+    ///    include the following:
+    ///    -  Select another server from a list of servers known to the client
+    ///       -- for example, servers that responded with an Advertise message.
+    ///    -  Initiate the server discovery process described in Section 18.
+    ///    -  Terminate the configuration process and report failure.
+    ///
+    /// The client's policy on message exchange failure is to select another
+    /// server; if there are no  more servers available, restart server
+    /// discovery.
+    /// TODO(https://fxbug.dev/88117): make the client policy configurable.
+    fn retransmission_timer_expired<R: Rng>(
+        self,
+        request_transaction_id: [u8; 3],
+        options_to_request: &[v6::OptionCode],
+        rng: &mut R,
+    ) -> Transition {
+        if self.retrans_count != REQUEST_MAX_RC {
+            return self.send_and_schedule_retransmission(
+                request_transaction_id,
+                options_to_request,
+                rng,
+            );
+        }
+        let Self {
+            client_id,
+            configured_addresses,
+            server_id: _,
+            addresses_to_request: _,
+            mut collected_advertise,
+            first_request_time: _,
+            retrans_timeout: _,
+            retrans_count: _,
+            solicit_max_rt,
+        } = self;
+        if let Some(advertise) = collected_advertise.pop() {
+            return Requesting::start(
+                client_id,
+                configured_addresses,
+                advertise,
+                &options_to_request,
+                collected_advertise,
+                solicit_max_rt,
+                rng,
+            );
+        }
+        return ServerDiscovery::start(
+            transaction_id(),
+            client_id,
+            configured_addresses,
+            &options_to_request,
+            solicit_max_rt,
+            rng,
+        );
+    }
+
+    fn reply_message_received<R: Rng, B: ByteSlice>(
+        self,
+        options_to_request: &[v6::OptionCode],
+        rng: &mut R,
+        msg: v6::Message<'_, B>,
+    ) -> Transition {
+        let Self {
+            client_id,
+            configured_addresses,
+            server_id,
+            mut addresses_to_request,
+            collected_advertise,
+            first_request_time,
+            retrans_timeout,
+            retrans_count,
+            solicit_max_rt,
+        } = self;
+
+        let mut status_code = None;
+        let mut client_id_option = None;
+        let mut server_id_option = None;
+        let mut solicit_max_rt_option = None;
+        let mut t1 = v6::TimeValue::Zero;
+        let mut t2 = v6::TimeValue::Zero;
+        let mut min_preferred_lifetime = v6::TimeValue::Zero;
+        let mut min_valid_lifetime = v6::TimeValue::Zero;
+        let mut assigned_addresses: HashMap<u32, IdentityAssociation> = HashMap::new();
+
+        let mut dns_servers: Option<Vec<Ipv6Addr>> = None;
+        let mut iaids_not_on_link: HashSet<u32> = HashSet::new();
+
+        // Process options; the client does not check whether an option is
+        // present in the Reply message multiple times because each option is
+        // expected to appear only once, per RFC 8415, section 21:
+        //
+        //    Unless otherwise noted, each option may appear only in the options
+        //    area of a DHCP message and may appear only once.
+        //
+        // If an option is present more than once, the client will use the value
+        // of the last read option.
+        //
+        // Options that are not allowed in Reply messages, as specified in RFC
+        // 8415, appendix B table, are ignored. NOTE: the appendix B table holds
+        // some options that are not expected in a reply while in the requesting
+        // state; such options are ignore as well below.
+        'top_level_options: for opt in msg.options() {
+            match opt {
+                v6::ParsedDhcpOption::StatusCode(status_code_opt, message) => {
+                    status_code = Some(match v6::StatusCode::try_from(status_code_opt.get()) {
+                        Ok(code) => code,
+                        Err(code) => {
+                            log::debug!("received unknown status code {:?}", code);
+                            continue;
+                        }
+                    });
+                    if !message.is_empty() {
+                        // Status message is intended for logging only; log if
+                        // not empty.
+                        log::debug!("received status code {:?}: {}", status_code.as_ref(), message);
+                    }
+                }
+                v6::ParsedDhcpOption::ClientId(client_id_opt) => {
+                    client_id_option = Some(client_id_opt.to_vec())
+                }
+                v6::ParsedDhcpOption::ServerId(server_id_opt) => {
+                    server_id_option = Some(server_id_opt.to_vec())
+                }
+                v6::ParsedDhcpOption::SolMaxRt(sol_max_rt_opt) => {
+                    let sol_max_rt_opt = sol_max_rt_opt.get();
+                    if VALID_SOLICIT_MAX_RT_RANGE.contains(&sol_max_rt_opt) {
+                        solicit_max_rt_option = Some(Duration::from_secs(sol_max_rt_opt.into()));
+                    }
+                }
+                v6::ParsedDhcpOption::Iana(iana_data) => {
+                    // Ignore invalid IANA options, per RFC 8415, section 21.4:
+                    //
+                    //    If a client receives an IA_NA with T1 greater than T2
+                    //    and both T1 and T2 are greater than 0, the client
+                    //    discards the IA_NA option and processes the remainder
+                    //    of the message as though the server had not included
+                    //    the invalid IA_NA option.
+                    match (iana_data.t1(), iana_data.t2()) {
+                        (v6::TimeValue::Zero, _) | (_, v6::TimeValue::Zero) => {}
+                        (t1, t2) => {
+                            if t1 > t2 {
+                                continue;
+                            }
+                        }
+                    }
+
+                    // Per RFC 8415, section 21.4, IAIDs are expected to be
+                    // unique. Ignore IA_NA option with duplicate IAID.
+                    //
+                    //    A DHCP message may contain multiple IA_NA options
+                    //    (though each must have a unique IAID).
+                    let vacant_ia_entry = match assigned_addresses.entry(iana_data.iaid()) {
+                        Entry::Occupied(entry) => {
+                            log::debug!(
+                                "received unexpected IA_NA option with
+                                non-unique IAID {:?}.",
+                                entry.key()
+                            );
+                            continue;
+                        }
+                        Entry::Vacant(entry) => entry,
+                    };
+                    // If T1/T2 are set by the server to values greater than 0,
+                    // compute the minimum T1 and T2 values, per RFC 8415,
+                    // section 18.2.4:
+                    //
+                    //    [..] the client SHOULD renew/rebind all IAs from the
+                    //    server at the same time, the client MUST select T1 and
+                    //    T2 times from all IA options that will guarantee that
+                    //    the client initiates transmissions of Renew/Rebind
+                    //    messages not later than at the T1/T2 times associated
+                    //    with any of the client's bindings (earliest T1/T2).
+                    t1 = maybe_get_nonzero_min(t1, iana_data.t1());
+                    t2 = maybe_get_nonzero_min(t2, iana_data.t2());
+
+                    let mut iaaddr_opt = None;
+                    let mut iana_status_code = None;
+                    for iana_opt in iana_data.iter_options() {
+                        match iana_opt {
+                            v6::ParsedDhcpOption::IaAddr(iaaddr_data) => {
+                                if iaaddr_data.preferred_lifetime() > iaaddr_data.valid_lifetime() {
+                                    // Ignore invalid IA Address options, per
+                                    // RFC 8415, section 21.6:
+                                    //
+                                    //    The client MUST discard any addresses
+                                    //    for which the preferred lifetime is
+                                    //    greater than the valid lifetime.
+                                    continue;
+                                }
+                                match iaaddr_data.valid_lifetime() {
+                                    // Per RFC 8415, section 18.2.10.1:
+                                    //
+                                    //    Discard any leases from the IA, as
+                                    //    recorded by the client, that have a
+                                    //    valid lifetime of 0 in the IA Address.
+                                    v6::TimeValue::Zero => {
+                                        log::debug!(
+                                            "IA(address: {:?}) with valid
+                                            lifetime 0 is ignored",
+                                            iaaddr_data.addr()
+                                        );
+                                        continue;
+                                    }
+                                    v6::TimeValue::Finite(_t) => {}
+                                    v6::TimeValue::Infinity => {}
+                                }
+                                iaaddr_opt = Some(iaaddr_data);
+                            }
+                            v6::ParsedDhcpOption::StatusCode(code, message) => {
+                                iana_status_code =
+                                    Some(match v6::StatusCode::try_from(code.get()) {
+                                        Ok(code) => code,
+                                        Err(code) => {
+                                            log::debug!(
+                                                "received unknown IANA status code {:?}",
+                                                code
+                                            );
+                                            // Ignore IANA options with unknown
+                                            // status code.
+                                            continue 'top_level_options;
+                                        }
+                                    });
+                                if !message.is_empty() {
+                                    log::debug!(
+                                        "received status code {:?}: {}",
+                                        iana_status_code.as_ref(),
+                                        message
+                                    );
+                                }
+                            }
+                            v6::ParsedDhcpOption::ClientId(_)
+                            | v6::ParsedDhcpOption::ServerId(_)
+                            | v6::ParsedDhcpOption::SolMaxRt(_)
+                            | v6::ParsedDhcpOption::Preference(_)
+                            | v6::ParsedDhcpOption::Iana(_)
+                            | v6::ParsedDhcpOption::InformationRefreshTime(_)
+                            | v6::ParsedDhcpOption::Oro(_)
+                            | v6::ParsedDhcpOption::ElapsedTime(_)
+                            | v6::ParsedDhcpOption::DnsServers(_)
+                            | v6::ParsedDhcpOption::DomainList(_) => {
+                                log::debug!(
+                                    "received unexpected option with code {:?}
+                                    in IANA options in Reply.",
+                                    iana_opt.code()
+                                );
+                            }
+                        }
+                    }
+
+                    // Per RFC 8415, section 21.13:
+                    //
+                    //    If the Status Code option does not appear in a message
+                    //    in which the option could appear, the status of the
+                    //    message is assumed to be Success.
+                    let iana_status_code = iana_status_code.unwrap_or(v6::StatusCode::Success);
+                    match iana_status_code {
+                        v6::StatusCode::Success => {
+                            if let Some(iaaddr_data) = iaaddr_opt {
+                                let _: &mut IdentityAssociation =
+                                    vacant_ia_entry.insert(IdentityAssociation {
+                                        address: Ipv6Addr::from(iaaddr_data.addr()),
+                                        preferred_lifetime: iaaddr_data.preferred_lifetime(),
+                                        valid_lifetime: iaaddr_data.valid_lifetime(),
+                                    });
+                                min_preferred_lifetime = maybe_get_nonzero_min(
+                                    min_preferred_lifetime,
+                                    iaaddr_data.preferred_lifetime(),
+                                );
+                                min_valid_lifetime = maybe_get_nonzero_min(
+                                    min_valid_lifetime,
+                                    iaaddr_data.valid_lifetime(),
+                                );
+                            }
+                        }
+                        v6::StatusCode::NotOnLink => {
+                            // If the client receives IAs with NotOnLink status,
+                            // try to obtain other addresses in follow-up messages.
+                            assert!(iaids_not_on_link.insert(iana_data.iaid()));
+                        }
+                        v6::StatusCode::UnspecFail
+                        | v6::StatusCode::NoAddrsAvail
+                        | v6::StatusCode::NoBinding
+                        | v6::StatusCode::UseMulticast
+                        | v6::StatusCode::NoPrefixAvail => {
+                            log::debug!(
+                                "received unexpected status code {:?} in IANA
+                                option",
+                                iana_status_code
+                            );
+                        }
+                    }
+                }
+                v6::ParsedDhcpOption::DnsServers(server_addrs) => dns_servers = Some(server_addrs),
+                v6::ParsedDhcpOption::InformationRefreshTime(refresh_time) => {
+                    log::debug!(
+                        "received unexpected option Information Refresh
+                                 Time ({:?}) in Reply to non-Information Request
+                                 message",
+                        refresh_time
+                    );
+                }
+                v6::ParsedDhcpOption::IaAddr(iaaddr_data) => {
+                    log::debug!(
+                        "received unexpected option IA Addr [addr: {:?}] as top
+                        option in Reply message",
+                        iaaddr_data.addr()
+                    );
+                }
+                v6::ParsedDhcpOption::Preference(preference_opt) => {
+                    log::debug!(
+                        "received unexpected option Preference
+                                         ({:?}) in Reply message",
+                        preference_opt
+                    );
+                }
+                v6::ParsedDhcpOption::Oro(option_codes) => {
+                    log::debug!(
+                        "received unexpected option ORO ({:?})
+                                         in Reply message",
+                        option_codes
+                    );
+                }
+                v6::ParsedDhcpOption::ElapsedTime(elapsed_time) => {
+                    log::debug!(
+                        "received unexpected option Elapsed Time ({:?}) in Reply
+                        message",
+                        elapsed_time
+                    );
+                }
+                v6::ParsedDhcpOption::DomainList(_domains) => {
+                    // TODO(https://fxbug.dev/87176) implement domain list.
+                }
+            }
+        }
+
+        // Perform message validation per RFC 8415, section 16.10:
+        //    Clients MUST discard any received Reply message that meets any of
+        //    the following conditions:
+        //    -  the message does not include a Server Identifier option (see
+        //    Section 21.3).
+        //    [..]
+        //    - the Reply message MUST include a Client Identifier option, and
+        //    the contents of the Client Identifier option MUST match the DUID
+        //    of the client.
+        if server_id_option == None
+            || client_id_option.map_or(true, |client_id_opt| client_id_opt != client_id)
+        {
+            return Transition {
+                state: ClientState::Requesting(Self {
+                    client_id,
+                    configured_addresses,
+                    server_id,
+                    addresses_to_request,
+                    collected_advertise,
+                    first_request_time,
+                    retrans_timeout,
+                    retrans_count,
+                    solicit_max_rt,
+                }),
+                actions: Vec::new(),
+                transaction_id: None,
+            };
+        }
+
+        // Always update SOL_MAX_RT, per RFC 8415, section 18.2.10:
+        //
+        //    The client MUST process any SOL_MAX_RT option (see Section 21.24)
+        //    and INF_MAX_RT option (see Section
+        //    21.25) present in a Reply message, even if the message contains a
+        //    Status Code option indicating a failure.
+        let solicit_max_rt = solicit_max_rt_option.unwrap_or(solicit_max_rt);
+
+        // Per RFC 8415, section 21.13:
+        //
+        //    If the Status Code option does not appear in a message
+        //    in which the option could appear, the status of the
+        //    message is assumed to be Success.
+        let status_code = status_code.unwrap_or(v6::StatusCode::Success);
+        match status_code {
+            v6::StatusCode::UnspecFail => {
+                // Per RFC 8415, section 18.2.10:
+                //
+                //    If the client receives a Reply message with a status code of
+                //    UnspecFail, the server is indicating that it was unable to process
+                //    the client's message due to an unspecified failure condition.  If
+                //    the client retransmits the original message to the same server to
+                //    retry the desired operation, the client MUST limit the rate at
+                //    which it retransmits the message and limit the duration of the
+                //    time during which it retransmits the message (see Section 14.1).
+                //
+                // TODO(https://fxbug.dev/81086): implement rate limiting.
+                return Requesting {
+                    client_id,
+                    configured_addresses,
+                    server_id,
+                    addresses_to_request,
+                    collected_advertise,
+                    first_request_time,
+                    retrans_timeout,
+                    retrans_count,
+                    solicit_max_rt,
+                }
+                .send_and_reschedule_retransmission(
+                    *msg.transaction_id(),
+                    options_to_request,
+                    rng,
+                );
+            }
+            v6::StatusCode::NotOnLink => {
+                // Per RFC 8415, section 18.2.10.1:
+                //
+                //    If the client receives a NotOnLink status from the server in
+                //    response to a Solicit (with a Rapid Commit option; see Section
+                //    21.14) or a Request, the client can either reissue the message
+                //    without specifying any addresses or restart the DHCP server
+                //    discovery process (see Section 18).
+                //
+                // The client reissues the message without specifying addresses, leaving
+                // it up to the server to assign addresses appropriate for the client's
+                // link.
+                let addresses_to_request: HashMap<u32, Option<Ipv6Addr>> =
+                    addresses_to_request.into_keys().zip(std::iter::repeat(None)).collect();
+                return Requesting {
+                    client_id,
+                    configured_addresses,
+                    server_id,
+                    addresses_to_request,
+                    collected_advertise,
+                    first_request_time,
+                    retrans_timeout,
+                    retrans_count,
+                    solicit_max_rt,
+                }
+                .send_and_reschedule_retransmission(
+                    *msg.transaction_id(),
+                    options_to_request,
+                    rng,
+                );
+            }
+            // TODO(https://fxbug.dev/76764): implement unicast.
+            // The client already uses multicast.
+            v6::StatusCode::UseMulticast |
+            // Not expected as top level status.
+            v6::StatusCode::NoAddrsAvail
+            | v6::StatusCode::NoPrefixAvail
+            // Expected in Reply to Renew/Rebind, but not to Request.
+            | v6::StatusCode::NoBinding => {
+                log::debug!(
+                    "received error status code option {:?} in Reply message in response to Request", status_code,
+                        );
+                return request_from_alternate_server_or_restart_server_discovery(
+                    client_id,
+                    configured_addresses,
+                    &options_to_request,
+                    collected_advertise,
+                    solicit_max_rt,
+                    rng,
+                );
+            }
+            // Per RFC 8415, section 18.2.10.1:
+            //
+            //    If the Reply message contains any IAs but the client finds no
+            //    usable addresses and/or delegated prefixes in any of these IAs,
+            //    the client may either try another server (perhaps restarting the
+            //    DHCP server discovery process) or use the Information-request
+            //    message to obtain other configuration information only.
+            //
+            // If there are no usable addresses and no other servers to select,
+            // the client restarts server discover instead of requesting
+            // configuration information only. This option is preferred when the
+            // client operates in stateful mode, where the main goal for the
+            // client is to negotiate addresses.
+            v6::StatusCode::Success => if assigned_addresses.is_empty() {
+                return request_from_alternate_server_or_restart_server_discovery(
+                    client_id,
+                    configured_addresses,
+                    &options_to_request,
+                    collected_advertise,
+                    solicit_max_rt,
+                    rng,
+                );
+            },
+        }
+
+        // Build a map of addresses that were requested by the client but were
+        // not assigned in this Reply, to be requested in subsequent messages.
+        // IAs for which the server sent a NotOnLink status will be requested
+        // without specifying an address.
+        addresses_to_request.retain(|iaid, _addr| !assigned_addresses.contains_key(iaid));
+        for iaid in &iaids_not_on_link {
+            if addresses_to_request.contains_key(iaid) {
+                assert_matches!(addresses_to_request.insert(*iaid, None), Some(_));
+            }
+        }
+
+        let actions =
+            std::array::IntoIter::new([Action::CancelTimer(ClientTimerType::Retransmission)])
+                .chain(
+                    dns_servers.clone().map(|server_addrs| Action::UpdateDnsServers(server_addrs)),
+                )
+                .collect::<Vec<_>>();
+
+        // If not set or 0, choose a value for T1 and T2, per RFC 8415, section
+        // 18.2.4:
+        //
+        //    If T1 or T2 had been set to 0 by the server (for an
+        //    IA_NA or IA_PD) or there are no T1 or T2 times (for an
+        //    IA_TA) in a previous Reply, the client may, at its
+        //    discretion, send a Renew or Rebind message,
+        //    respectively.  The client MUST follow the rules
+        //    defined in Section 14.2.
+        //
+        // Per RFC 8415, section 14.2:
+        //
+        //    When T1 and/or T2 values are set to 0, the client MUST choose a
+        //    time to avoid packet storms.  In particular, it MUST NOT transmit
+        //    immediately.
+        //
+        // When left to the client's discretion, the client chooses T1/T1 values
+        // following the recommentations in RFC 8415, section 21.4:
+        //
+        //    Recommended values for T1 and T2 are 0.5 and 0.8 times the
+        //    shortest preferred lifetime of the addresses in the IA that the
+        //    server is willing to extend, respectively.  If the "shortest"
+        //    preferred lifetime is 0xffffffff ("infinity"), the recommended T1
+        //    and T2 values are also 0xffffffff.
+        //
+        // The RFC does not specify how to compute T1 if the shortest preferred
+        // lifetime is zero and T1 is zero. In this case, T1 is calculated as a
+        // fraction of the shortest valid lifetime.
+        let t1 = match t1 {
+            v6::TimeValue::Zero => {
+                let min = match min_preferred_lifetime {
+                    v6::TimeValue::Zero => match min_valid_lifetime {
+                        v6::TimeValue::Zero => {
+                            panic!("IAs with valid lifetime 0 are discarded")
+                        }
+                        v6::TimeValue::Finite(t) => t.get(),
+                        v6::TimeValue::Infinity => INFINITY,
+                    },
+                    v6::TimeValue::Finite(t) => t.get(),
+                    v6::TimeValue::Infinity => INFINITY,
+                };
+                compute_t(min, T1_MIN_LIFETIME_RATIO)
+            }
+            // TODO(https://fxbug.dev/76765): set renew timer.
+            v6::TimeValue::Finite(t) => t.get(),
+            v6::TimeValue::Infinity => INFINITY,
+        };
+        // T2 must be >= T1, compute its value based on T1.
+        let t2 = match t2 {
+            v6::TimeValue::Zero => compute_t(t1, T2_T1_RATIO),
+            // TODO(https://fxbug.dev/76766): set rebind timer.
+            v6::TimeValue::Finite(t) => {
+                if t.get() < t1 {
+                    compute_t(t1, T2_T1_RATIO)
+                } else {
+                    t.get()
+                }
+            }
+            v6::TimeValue::Infinity => INFINITY,
+        };
+
+        // TODO(https://fxbug.dev/72701) Send AddressWatcher update with
+        // assigned addresses.
+        Transition {
+            state: ClientState::AddressAssigned(AddressAssigned {
+                client_id,
+                configured_addresses,
+                server_id,
+                assigned_addresses,
+                t1: Duration::from_secs(t1.into()),
+                t2: Duration::from_secs(t2.into()),
+                addresses_to_request,
+                dns_servers: dns_servers.unwrap_or(Vec::new()),
+                solicit_max_rt,
+            }),
+            actions,
+            transaction_id: None,
+        }
+    }
+}
+
+/// Provides methods for handling state transitions from address assigned
+/// state.
+#[derive(Debug, PartialEq)]
+struct AddressAssigned {
+    /// [Client Identifier] used for uniquely identifying the client in
+    /// communication with servers.
+    ///
+    /// [Client Identifier]: https://datatracker.ietf.org/doc/html/rfc8415#section-21.2
+    client_id: [u8; CLIENT_ID_LEN],
+    /// The addresses the client is configured to negotiate, indexed by IAID.
+    /// Used when server discovery is restarted.
+    configured_addresses: HashMap<u32, Option<Ipv6Addr>>,
+    /// The [server identifier] of the server to which the client sends
+    /// requests.
+    ///
+    /// [Server Identifier]: https://datatracker.ietf.org/doc/html/rfc8415#section-21.3
+    server_id: Vec<u8>,
+    /// The addresses assigned to the client.
+    assigned_addresses: HashMap<u32, IdentityAssociation>,
+    /// The time interval after which the client contacts the server that
+    /// assigned addresses to the client, to extend the lifetimes of the
+    /// assigned addresses.
+    t1: Duration,
+    /// The time interval after which the client contacts any server to extend
+    /// the lifetimes of the assigned addresses.
+    t2: Duration,
+    /// Stores addresses to be requested in follow-up messages.
+    addresses_to_request: HashMap<u32, Option<Ipv6Addr>>,
+    /// Stores the DNS servers received from the reply.
+    dns_servers: Vec<Ipv6Addr>,
+    /// The [SOL_MAX_RT](https://datatracker.ietf.org/doc/html/rfc8415#section-21.24)
+    /// used by the client.
+    solicit_max_rt: Duration,
+}
 
 /// All possible states of a DHCPv6 client.
 ///
@@ -968,39 +1971,55 @@ enum ClientState {
     /// Creating and (re)transmitting a request message, and waiting for a
     /// reply.
     Requesting(Requesting),
+    /// Client is waiting to renew, after receiving a valid reply to a previous request.
+    AddressAssigned(AddressAssigned),
 }
 
 /// State transition, containing the next state, and the actions the client
-/// should take to transition to that state.
+/// should take to transition to that state, and the new transaction ID if it
+/// has been updated.
 struct Transition {
     state: ClientState,
     actions: Actions,
+    transaction_id: Option<[u8; 3]>,
 }
 
 impl ClientState {
     /// Handles a received advertise message.
-    fn advertise_message_received<B: ByteSlice>(
+    fn advertise_message_received<R: Rng, B: ByteSlice>(
         self,
         options_to_request: &[v6::OptionCode],
+        rng: &mut R,
         msg: v6::Message<'_, B>,
     ) -> Transition {
         match self {
             ClientState::ServerDiscovery(s) => {
-                s.advertise_message_received(options_to_request, msg)
+                s.advertise_message_received(options_to_request, rng, msg)
             }
             ClientState::InformationRequesting(_)
             | ClientState::InformationReceived(_)
-            | ClientState::Requesting(_) => Transition { state: self, actions: Vec::new() },
+            | ClientState::Requesting(_)
+            | ClientState::AddressAssigned(_) => {
+                Transition { state: self, actions: vec![], transaction_id: None }
+            }
         }
     }
 
     /// Handles a received reply message.
-    fn reply_message_received<B: ByteSlice>(self, msg: v6::Message<'_, B>) -> Transition {
+    fn reply_message_received<R: Rng, B: ByteSlice>(
+        self,
+        options_to_request: &[v6::OptionCode],
+        rng: &mut R,
+        msg: v6::Message<'_, B>,
+    ) -> Transition {
         match self {
             ClientState::InformationRequesting(s) => s.reply_message_received(msg),
+            ClientState::Requesting(s) => s.reply_message_received(options_to_request, rng, msg),
             ClientState::InformationReceived(_)
             | ClientState::ServerDiscovery(_)
-            | ClientState::Requesting(_) => Transition { state: self, actions: Vec::new() },
+            | ClientState::AddressAssigned(_) => {
+                Transition { state: self, actions: vec![], transaction_id: None }
+            }
         }
     }
 
@@ -1018,8 +2037,11 @@ impl ClientState {
             ClientState::ServerDiscovery(s) => {
                 s.retransmission_timer_expired(transaction_id, options_to_request, rng)
             }
-            ClientState::InformationReceived(_) | ClientState::Requesting(_) => {
-                Transition { state: self, actions: Vec::new() }
+            ClientState::Requesting(s) => {
+                s.retransmission_timer_expired(transaction_id, options_to_request, rng)
+            }
+            ClientState::InformationReceived(_) | ClientState::AddressAssigned(_) => {
+                Transition { state: self, actions: vec![], transaction_id: None }
             }
         }
     }
@@ -1037,7 +2059,10 @@ impl ClientState {
             }
             ClientState::InformationRequesting(_)
             | ClientState::ServerDiscovery(_)
-            | ClientState::Requesting(_) => Transition { state: self, actions: Vec::new() },
+            | ClientState::Requesting(_)
+            | ClientState::AddressAssigned(_) => {
+                Transition { state: self, actions: vec![], transaction_id: None }
+            }
         }
     }
 
@@ -1046,7 +2071,8 @@ impl ClientState {
             ClientState::InformationReceived(s) => s.dns_servers.clone(),
             ClientState::InformationRequesting(_)
             | ClientState::ServerDiscovery(_)
-            | ClientState::Requesting(_) => Vec::new(),
+            | ClientState::Requesting(_)
+            | ClientState::AddressAssigned(_) => Vec::new(),
         }
     }
 }
@@ -1087,9 +2113,17 @@ impl<R: Rng> ClientStateMachine<R> {
         options_to_request: Vec<v6::OptionCode>,
         mut rng: R,
     ) -> (Self, Actions) {
-        let Transition { state, actions } =
+        let Transition { state, actions, transaction_id: new_transaction_id } =
             InformationRequesting::start(transaction_id, &options_to_request, &mut rng);
-        (Self { state: Some(state), transaction_id, options_to_request, rng }, actions)
+        (
+            Self {
+                state: Some(state),
+                transaction_id: new_transaction_id.unwrap_or(transaction_id),
+                options_to_request,
+                rng,
+            },
+            actions,
+        )
     }
 
     /// Starts the client in Statelful mode, as defined in [RFC 8415, Section 6.2].
@@ -1105,15 +2139,24 @@ impl<R: Rng> ClientStateMachine<R> {
         options_to_request: Vec<v6::OptionCode>,
         mut rng: R,
     ) -> (Self, Actions) {
-        let Transition { state, actions } = ServerDiscovery::start(
-            transaction_id,
-            client_id,
-            configured_addresses,
-            &options_to_request,
-            SOLICIT_MAX_RT,
-            &mut rng,
-        );
-        (Self { state: Some(state), transaction_id, options_to_request, rng }, actions)
+        let Transition { state, actions, transaction_id: new_transaction_id } =
+            ServerDiscovery::start(
+                transaction_id,
+                client_id,
+                configured_addresses,
+                &options_to_request,
+                SOLICIT_MAX_RT,
+                &mut rng,
+            );
+        (
+            Self {
+                state: Some(state),
+                transaction_id: new_transaction_id.unwrap_or(transaction_id),
+                options_to_request,
+                rng,
+            },
+            actions,
+        )
     }
 
     pub fn get_dns_servers(&self) -> Vec<Ipv6Addr> {
@@ -1127,7 +2170,7 @@ impl<R: Rng> ClientStateMachine<R> {
     /// `handle_timeout` panics if current state is None.
     pub fn handle_timeout(&mut self, timeout_type: ClientTimerType) -> Actions {
         let state = self.state.take().expect("state should not be empty");
-        let Transition { state, actions } = match timeout_type {
+        let Transition { state, actions, transaction_id: new_transaction_id } = match timeout_type {
             ClientTimerType::Retransmission => state.retransmission_timer_expired(
                 self.transaction_id,
                 &self.options_to_request,
@@ -1140,6 +2183,7 @@ impl<R: Rng> ClientStateMachine<R> {
             ),
         };
         self.state = Some(state);
+        self.transaction_id = new_transaction_id.unwrap_or(self.transaction_id);
         actions
     }
 
@@ -1154,21 +2198,23 @@ impl<R: Rng> ClientStateMachine<R> {
         } else {
             match msg.msg_type() {
                 v6::MessageType::Reply => {
-                    let Transition { state, actions } = self
+                    let Transition { state, actions, transaction_id: new_transaction_id } = self
                         .state
                         .take()
                         .expect("state should not be empty")
-                        .reply_message_received(msg);
+                        .reply_message_received(&self.options_to_request, &mut self.rng, msg);
                     self.state = Some(state);
+                    self.transaction_id = new_transaction_id.unwrap_or(self.transaction_id);
                     actions
                 }
                 v6::MessageType::Advertise => {
-                    let Transition { state, actions } = self
+                    let Transition { state, actions, transaction_id: new_transaction_id } = self
                         .state
                         .take()
                         .expect("state should not be empty")
-                        .advertise_message_received(&self.options_to_request, msg);
+                        .advertise_message_received(&self.options_to_request, &mut self.rng, msg);
                     self.state = Some(state);
+                    self.transaction_id = new_transaction_id.unwrap_or(self.transaction_id);
                     actions
                 }
                 v6::MessageType::Reconfigure => {
@@ -1263,8 +2309,7 @@ mod tests {
             {
                 assert_matches!(
                     client.state,
-                    Some(ClientState::InformationReceived(InformationReceived {
-                        dns_servers: d
+                    Some(ClientState::InformationReceived(InformationReceived {dns_servers: d
                     })) if d == dns_servers.to_vec()
                 );
             }
@@ -1664,8 +2709,30 @@ mod tests {
         // The client should transition to Requesting when receiving a complete
         // advertise with preference 255.
         let actions = client.handle_message_receive(msg);
-        assert_matches!(client.state, Some(ClientState::Requesting(Requesting {})));
-        assert_eq!(actions, [Action::CancelTimer(ClientTimerType::Retransmission)]);
+        let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } = client;
+        assert_matches!(
+            state,
+            Some(ClientState::Requesting(Requesting {
+                client_id: _,
+                configured_addresses: _,
+                server_id: _,
+                addresses_to_request: _,
+                collected_advertise: _,
+                first_request_time: _,
+                retrans_timeout: _,
+                retrans_count: _,
+                solicit_max_rt: _,
+            }))
+        );
+        let buf = match &actions[..] {
+            [Action::CancelTimer(ClientTimerType::Retransmission), Action::SendMessage(buf), Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_REQUEST_TIMEOUT)] => {
+                buf
+            }
+            actions => panic!("unexpected actions {:?}", actions),
+        };
+        let mut buf = &buf[..];
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        assert_eq!(msg.msg_type(), v6::MessageType::Request);
     }
 
     #[test]
@@ -1726,11 +2793,897 @@ mod tests {
         // The client should transition to Requesting when receiving any
         // advertise while retransmitting.
         let actions = client.handle_message_receive(msg);
-        assert_matches!(actions[..], [Action::CancelTimer(ClientTimerType::Retransmission)]);
-        assert_matches!(client.state, Some(ClientState::Requesting(Requesting {})));
+        let buf = match &actions[..] {
+            [Action::CancelTimer(ClientTimerType::Retransmission), Action::SendMessage(buf), Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_REQUEST_TIMEOUT)] => {
+                buf
+            }
+            actions => panic!("unexpected actions {:?}", actions),
+        };
+        let mut buf = &buf[..];
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        assert_eq!(msg.msg_type(), v6::MessageType::Request);
+        let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } = client;
+        assert_matches!(
+            state,
+            Some(ClientState::Requesting(Requesting {
+                client_id: _,
+                configured_addresses: _,
+                server_id: _,
+                addresses_to_request: _,
+                collected_advertise: _,
+                first_request_time: _,
+                retrans_timeout: _,
+                retrans_count: _,
+                solicit_max_rt: _,
+            }))
+        );
     }
 
-    const INFINITY: u32 = u32::MAX;
+    #[test]
+    fn test_request() {
+        let client_id = v6::duid_uuid();
+        let configured_addresses = to_configured_addresses(3, vec![]);
+        let advertised_addresses = [
+            std_ip_v6!("::ffff:c00a:1ff"),
+            std_ip_v6!("::ffff:c00a:2ff"),
+            std_ip_v6!("::ffff:c00a:3ff"),
+        ];
+        let selected_advertise = AdvertiseMessage::new_default(
+            vec![1, 2, 3],
+            &advertised_addresses,
+            &[],
+            &configured_addresses,
+        );
+        let options_to_request = vec![];
+        let mut rng = StepRng::new(std::u64::MAX / 2, 0);
+        let Transition { state, actions, transaction_id } = Requesting::start(
+            client_id.clone(),
+            configured_addresses,
+            selected_advertise,
+            &options_to_request[..],
+            BinaryHeap::new(),
+            SOLICIT_MAX_RT,
+            &mut rng,
+        );
+        assert_matches!(transaction_id, Some(_));
+
+        // Start of requesting should send a request and schedule retransmission.
+        assert_matches!(
+            state,
+            ClientState::Requesting(Requesting {
+                client_id: _,
+                configured_addresses: _,
+                server_id: _,
+                addresses_to_request: _,
+                collected_advertise: _,
+                first_request_time: _,
+                retrans_timeout: _,
+                retrans_count: _,
+                solicit_max_rt: _,
+            })
+        );
+        let buf = match &actions[..] {
+            [Action::CancelTimer(ClientTimerType::Retransmission), Action::SendMessage(buf), Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_REQUEST_TIMEOUT)] => {
+                buf
+            }
+            actions => panic!("unexpected actions {:?}", actions),
+        };
+        let mut buf = &buf[..];
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        assert_eq!(msg.msg_type(), v6::MessageType::Request);
+
+        // The request should contain the expected options.
+        assert_eq!(
+            vec![v6::ParsedDhcpOption::ClientId(&client_id)],
+            msg.options()
+                .filter(|opt| { opt.code() == v6::OptionCode::ClientId })
+                .collect::<Vec<_>>()
+        );
+        assert_eq!(
+            vec![v6::ParsedDhcpOption::ElapsedTime(0)],
+            msg.options()
+                .filter(|opt| { opt.code() == v6::OptionCode::ElapsedTime })
+                .collect::<Vec<_>>()
+        );
+        assert_eq!(
+            vec![v6::ParsedDhcpOption::Oro(vec![v6::OptionCode::SolMaxRt])],
+            msg.options().filter(|opt| { opt.code() == v6::OptionCode::Oro }).collect::<Vec<_>>()
+        );
+
+        let iana_options =
+            msg.options().filter(|opt| opt.code() == v6::OptionCode::Iana).collect::<Vec<_>>();
+        let mut requested_addresses: HashMap<u32, Ipv6Addr> = HashMap::new();
+        for option in iana_options {
+            if let v6::ParsedDhcpOption::Iana(iana_data) = option {
+                for iana_option in iana_data.iter_options() {
+                    if let v6::ParsedDhcpOption::IaAddr(iaaddr_data) = iana_option {
+                        assert_eq!(
+                            None,
+                            requested_addresses.insert(iana_data.iaid(), iaaddr_data.addr())
+                        );
+                        // Each IANA option should have exactly one IA Address option.
+                        break;
+                    }
+                }
+            }
+        }
+        assert_eq!(
+            (0..).zip(advertised_addresses).collect::<HashMap<u32, Ipv6Addr>>(),
+            requested_addresses
+        );
+    }
+
+    #[test]
+    fn test_request_reply_failure_status_code() {
+        let options_to_request = vec![];
+        let configured_addresses = to_configured_addresses(1, vec![]);
+        let advertised_addresses = [std_ip_v6!("::ffff:c00a:1ff")];
+        let selected_advertise = AdvertiseMessage::new_default(
+            vec![1, 2, 3],
+            &advertised_addresses,
+            &[],
+            &configured_addresses,
+        );
+        let mut collected_advertise = BinaryHeap::new();
+        collected_advertise.push(AdvertiseMessage::new_default(
+            vec![4, 5, 6],
+            &[std_ip_v6!("::ffff:c00a:2ff")],
+            &[],
+            &configured_addresses,
+        ));
+        collected_advertise.push(AdvertiseMessage::new_default(
+            vec![7, 8, 9],
+            &[std_ip_v6!("::ffff:c00a:3ff")],
+            &[],
+            &configured_addresses,
+        ));
+        let mut rng = StepRng::new(std::u64::MAX / 2, 0);
+
+        let client_id = v6::duid_uuid();
+        let Transition { state, actions: _, transaction_id } = Requesting::start(
+            client_id.clone(),
+            configured_addresses.clone(),
+            selected_advertise,
+            &options_to_request[..],
+            collected_advertise,
+            SOLICIT_MAX_RT,
+            &mut rng,
+        );
+
+        let (server_id, got_addresses_to_request) = match &state {
+            ClientState::Requesting(Requesting {
+                client_id: _,
+                configured_addresses: _,
+                server_id,
+                addresses_to_request: got_addresses_to_request,
+                collected_advertise: _,
+                first_request_time: _,
+                retrans_timeout: _,
+                retrans_count: _,
+                solicit_max_rt: _,
+            }) => (server_id, got_addresses_to_request),
+            state => panic!("unexpected state {:?}", state),
+        };
+        assert_eq!(*server_id, vec![1, 2, 3]);
+        let addresses_to_request = (0..)
+            .zip(advertised_addresses.iter().map(|addr| Some(*addr)))
+            .collect::<HashMap<u32, Option<Ipv6Addr>>>();
+        assert_eq!(addresses_to_request, *got_addresses_to_request);
+
+        // If the reply contains an top level UnspecFail status code, the
+        // request should be resent.
+        let options = [
+            v6::DhcpOption::ServerId(&[1, 2, 3]),
+            v6::DhcpOption::ClientId(&client_id),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(0, 60, 60, &[])),
+            v6::DhcpOption::StatusCode(v6::StatusCode::UnspecFail.into(), ""),
+        ];
+        let request_transaction_id = transaction_id.unwrap();
+        let builder =
+            v6::MessageBuilder::new(v6::MessageType::Reply, request_transaction_id, &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        let () = builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        let Transition { state, actions: _, transaction_id } =
+            state.reply_message_received(&options_to_request, &mut rng, msg);
+        let (server_id, got_addresses_to_request) = match &state {
+            ClientState::Requesting(Requesting {
+                client_id: _,
+                configured_addresses: _,
+                server_id,
+                addresses_to_request: got_addresses_to_request,
+                collected_advertise: _,
+                first_request_time: _,
+                retrans_timeout: _,
+                retrans_count: _,
+                solicit_max_rt: _,
+            }) => (server_id, got_addresses_to_request),
+            state => panic!("unexpected state {:?}", state),
+        };
+        assert_eq!(*server_id, vec![1, 2, 3]);
+        assert_eq!(addresses_to_request, *got_addresses_to_request);
+        assert!(transaction_id.is_some());
+
+        // If the reply contains an top level NotOnLink status code, the
+        // request should be resent without specifying any addresses.
+        let options = [
+            v6::DhcpOption::ServerId(&[1, 2, 3]),
+            v6::DhcpOption::ClientId(&client_id),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(0, 60, 60, &[])),
+            v6::DhcpOption::StatusCode(v6::StatusCode::NotOnLink.into(), ""),
+        ];
+        let request_transaction_id = transaction_id.unwrap();
+        let builder =
+            v6::MessageBuilder::new(v6::MessageType::Reply, request_transaction_id, &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        let () = builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        let Transition { state, actions: _, transaction_id } =
+            state.reply_message_received(&options_to_request, &mut rng, msg);
+
+        let expected_addresses_to_request: HashMap<u32, Option<Ipv6Addr>> =
+            HashMap::from([(0, None)]);
+        let (server_id, got_addresses_to_request) = match &state {
+            ClientState::Requesting(Requesting {
+                client_id: _,
+                configured_addresses: _,
+                server_id,
+                addresses_to_request: got_addresses_to_request,
+                collected_advertise: _,
+                first_request_time: _,
+                retrans_timeout: _,
+                retrans_count: _,
+                solicit_max_rt: _,
+            }) => (server_id, got_addresses_to_request),
+            state => panic!("unexpected state {:?}", state),
+        };
+        assert_eq!(*server_id, vec![1, 2, 3]);
+        assert_eq!(expected_addresses_to_request, *got_addresses_to_request);
+        assert!(transaction_id.is_some());
+
+        // If the reply contains a top level status code indicating failure
+        // (other than UnspecFail), the client selects another server and sends
+        // a request to it.
+        let options = [
+            v6::DhcpOption::ServerId(&[1, 2, 3]),
+            v6::DhcpOption::ClientId(&client_id),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(0, 60, 60, &[])),
+            v6::DhcpOption::StatusCode(v6::StatusCode::NoAddrsAvail.into(), ""),
+        ];
+        let builder =
+            v6::MessageBuilder::new(v6::MessageType::Reply, request_transaction_id, &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        let () = builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        let Transition { state, actions, transaction_id } =
+            state.reply_message_received(&options_to_request, &mut rng, msg);
+        assert_matches!(&state, ClientState::Requesting(Requesting {
+                client_id: _,
+                configured_addresses: _,
+                server_id,
+                addresses_to_request: _,
+                collected_advertise: _,
+                first_request_time: _,
+                retrans_timeout: _,
+                retrans_count: _,
+                solicit_max_rt: _,
+            }) if *server_id == vec![4, 5, 6]);
+        assert_matches!(
+            &actions[..],
+            [
+                Action::CancelTimer(ClientTimerType::Retransmission),
+                Action::SendMessage(_buf),
+                Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_REQUEST_TIMEOUT)
+            ]
+        );
+        assert!(transaction_id.is_some());
+
+        // If the reply contains no usable addresses, the client selects
+        // another server and sends a request to it.
+        let iana_options = [v6::DhcpOption::StatusCode(v6::StatusCode::NoAddrsAvail.into(), "")];
+        let options = [
+            v6::DhcpOption::ServerId(&[4, 5, 6]),
+            v6::DhcpOption::ClientId(&client_id),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(0, 60, 60, &iana_options)),
+        ];
+        let builder =
+            v6::MessageBuilder::new(v6::MessageType::Reply, transaction_id.unwrap(), &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        let () = builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        let Transition { state, actions, transaction_id } =
+            state.reply_message_received(&options_to_request, &mut rng, msg);
+        assert_matches!(state, ClientState::Requesting(Requesting {
+                client_id: _,
+                configured_addresses: _,
+                server_id,
+                addresses_to_request: _,
+                collected_advertise: _,
+                first_request_time: _,
+                retrans_timeout: _,
+                retrans_count: _,
+                solicit_max_rt: _,
+            }) if server_id == vec![7, 8, 9]);
+        assert_matches!(
+            &actions[..],
+            [
+                Action::CancelTimer(ClientTimerType::Retransmission),
+                Action::SendMessage(_buf),
+                Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_REQUEST_TIMEOUT)
+            ]
+        );
+        assert!(transaction_id.is_some());
+    }
+
+    #[test]
+    fn test_request_reply_ia_not_on_link() {
+        let options_to_request = vec![];
+        let configured_addresses = to_configured_addresses(2, vec![std_ip_v6!("::ffff:c00a:1ff")]);
+        let selected_advertise = AdvertiseMessage::new_default(
+            vec![1, 2, 3],
+            &[std_ip_v6!("::ffff:c00a:1ff"), std_ip_v6!("::ffff:c00a:2ff")],
+            &[],
+            &configured_addresses,
+        );
+        let mut rng = StepRng::new(std::u64::MAX / 2, 0);
+
+        let client_id = v6::duid_uuid();
+        let Transition { state, actions: _, transaction_id } = Requesting::start(
+            client_id.clone(),
+            configured_addresses.clone(),
+            selected_advertise,
+            &options_to_request[..],
+            BinaryHeap::new(),
+            SOLICIT_MAX_RT,
+            &mut rng,
+        );
+
+        // If the reply contains an address with status code NotOnLink, the
+        // client should request the IAs without specifying any addresses in
+        // subsequent messages.
+        let iana_options1 = [v6::DhcpOption::StatusCode(v6::StatusCode::NotOnLink.into(), "")];
+        let iana_options2 = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+            std_ip_v6!("::ffff:c00a:2ff"),
+            60,
+            60,
+            &[],
+        ))];
+        let options = [
+            v6::DhcpOption::ServerId(&[1, 2, 3]),
+            v6::DhcpOption::ClientId(&client_id),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(0, 60, 60, &iana_options1)),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(1, 60, 60, &iana_options2)),
+        ];
+        let builder =
+            v6::MessageBuilder::new(v6::MessageType::Reply, transaction_id.unwrap(), &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        let () = builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        let Transition { state, actions, transaction_id } =
+            state.reply_message_received(&options_to_request, &mut rng, msg);
+        let expected_addresses_to_request = HashMap::from([(0, None)]);
+        let (server_id, addresses_to_request) = match state {
+            ClientState::AddressAssigned(AddressAssigned {
+                client_id: _,
+                configured_addresses: _,
+                server_id,
+                assigned_addresses: _,
+                t1: _,
+                t2: _,
+                addresses_to_request,
+                dns_servers: _,
+                solicit_max_rt: _,
+            }) => (server_id, addresses_to_request),
+            state => panic!("unexpected state {:?}", state),
+        };
+        assert_eq!(*server_id, vec![1, 2, 3]);
+        assert_eq!(expected_addresses_to_request, addresses_to_request);
+        assert_matches!(&actions[..], [Action::CancelTimer(ClientTimerType::Retransmission),]);
+        assert!(transaction_id.is_none());
+    }
+
+    #[test_case(0, 60, true)]
+    #[test_case(60, 0, false)]
+    #[test_case(0, 0, false)]
+    #[test_case(30, 60, true)]
+    fn test_process_reply_with_invalid_ia_lifetimes(
+        preferred_lifetime: u32,
+        valid_lifetime: u32,
+        valid_ia: bool,
+    ) {
+        let options_to_request = vec![];
+        let configured_addresses = to_configured_addresses(1, vec![]);
+        let address = std_ip_v6!("::ffff:c00a:5ff");
+        let server_id = vec![1, 2, 3];
+        let selected_advertise = AdvertiseMessage::new_default(
+            server_id.clone(),
+            &[address],
+            &[],
+            &configured_addresses,
+        );
+        let mut rng = StepRng::new(std::u64::MAX / 2, 0);
+
+        let client_id = v6::duid_uuid();
+        let Transition { state, actions: _, transaction_id } = Requesting::start(
+            client_id.clone(),
+            configured_addresses.clone(),
+            selected_advertise,
+            &options_to_request[..],
+            BinaryHeap::new(),
+            SOLICIT_MAX_RT,
+            &mut rng,
+        );
+
+        // The client should discard the IAs with invalid lifetimes.
+        let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+            address,
+            preferred_lifetime,
+            valid_lifetime,
+            &[],
+        ))];
+        let options = [
+            v6::DhcpOption::ServerId(&server_id),
+            v6::DhcpOption::ClientId(&client_id),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(0, 60, 60, &iana_options)),
+        ];
+        let builder =
+            v6::MessageBuilder::new(v6::MessageType::Reply, transaction_id.unwrap(), &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        let () = builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        let Transition { state, actions: _, transaction_id: _ } =
+            state.reply_message_received(&options_to_request, &mut rng, msg);
+        match valid_ia {
+            true =>
+            // The client should transition to AddressAssigned if the reply contains
+            // a valid IA.
+            {
+                assert_matches!(
+                    state,
+                    ClientState::AddressAssigned(AddressAssigned {
+                        client_id: _,
+                        configured_addresses: _,
+                        server_id: _,
+                        assigned_addresses: _,
+                        t1: _,
+                        t2: _,
+                        addresses_to_request: _,
+                        dns_servers: _,
+                        solicit_max_rt: _,
+                    })
+                )
+            }
+            false =>
+            // The client should transition to ServerDiscovery if the reply contains
+            // no valid IAs.
+            {
+                assert_matches!(
+                    state,
+                    ClientState::ServerDiscovery(ServerDiscovery {
+                        client_id: _,
+                        configured_addresses: _,
+                        first_solicit_time: _,
+                        retrans_timeout: _,
+                        solicit_max_rt: _,
+                        collected_advertise: _,
+                        collected_sol_max_rt: _,
+                    })
+                )
+            }
+        }
+    }
+
+    #[test]
+    fn test_t1_t2_calculation() {
+        let configured_addresses = to_configured_addresses(2, vec![std_ip_v6!("::ffff:c00a:1ff")]);
+        let selected_advertise = AdvertiseMessage::new_default(
+            vec![1, 2, 3],
+            &[std_ip_v6!("::ffff:c00a:1ff"), std_ip_v6!("::ffff:c00a:2ff")],
+            &[],
+            &configured_addresses,
+        );
+        let mut rng = StepRng::new(std::u64::MAX / 2, 0);
+
+        for (
+            (ia1_preferred_lifetime, ia1_valid_lifetime, ia1_t1, ia1_t2),
+            (ia2_preferred_lifetime, ia2_valid_lifetime, ia2_t1, ia2_t2),
+            expected_t1,
+            expected_t2,
+        ) in vec![
+            // If T1/T2 are 0, they should be computed as as 0.5 * minimum
+            // preferred lifetime, and 0.8 * minimum preferred lifetime
+            // respectively.
+            ((100, 160, 0, 0), (120, 180, 0, 0), 50, 80),
+            ((INFINITY, INFINITY, 0, 0), (120, 180, 0, 0), 60, 96),
+            // If T1/T2 are 0, and the minimum preferred lifetime, is infinity,
+            // T1/T2 should also be infinity.
+            ((INFINITY, INFINITY, 0, 0), (INFINITY, INFINITY, 0, 0), INFINITY, INFINITY),
+            // If T1/T2 are set, and have different values across IAs, T1/T2
+            // should be computed as the minimum T1/T2. NOTE: the server should
+            // send the same T1/T2 across all IA, but the client should be
+            // prepared for the server sending different T1/T2 values.
+            ((100, 160, 40, 70), (120, 180, 50, 80), 40, 70),
+        ] {
+            let client_id = v6::duid_uuid();
+            let Transition { state, actions: _, transaction_id } = Requesting::start(
+                client_id.clone(),
+                configured_addresses.clone(),
+                selected_advertise.clone(),
+                &[],
+                BinaryHeap::new(),
+                SOLICIT_MAX_RT,
+                &mut rng,
+            );
+
+            let iana_options1 = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+                std_ip_v6!("::ffff:c00a:1ff"),
+                ia1_preferred_lifetime,
+                ia1_valid_lifetime,
+                &[],
+            ))];
+            let iana_options2 = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+                std_ip_v6!("::ffff:c00a:2ff"),
+                ia2_preferred_lifetime,
+                ia2_valid_lifetime,
+                &[],
+            ))];
+            let options = [
+                v6::DhcpOption::ServerId(&[1, 2, 3]),
+                v6::DhcpOption::ClientId(&client_id),
+                v6::DhcpOption::Iana(v6::IanaSerializer::new(0, ia1_t1, ia1_t2, &iana_options1)),
+                v6::DhcpOption::Iana(v6::IanaSerializer::new(1, ia2_t1, ia2_t2, &iana_options2)),
+            ];
+            let builder =
+                v6::MessageBuilder::new(v6::MessageType::Reply, transaction_id.unwrap(), &options);
+            let mut buf = vec![0; builder.bytes_len()];
+            let () = builder.serialize(&mut buf);
+            let mut buf = &buf[..]; // Implements BufferView.
+            let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+            let Transition { state, actions: _, transaction_id: _ } =
+                state.reply_message_received(&[], &mut rng, msg);
+            let (t1, t2) = match state {
+                ClientState::AddressAssigned(AddressAssigned {
+                    client_id: _,
+                    configured_addresses: _,
+                    server_id: _,
+                    assigned_addresses: _,
+                    t1,
+                    t2,
+                    addresses_to_request: _,
+                    dns_servers: _,
+                    solicit_max_rt: _,
+                }) => (t1, t2),
+                state => panic!("unexpected state {:?}", state),
+            };
+            assert_eq!(t1, Duration::from_secs(expected_t1.into()));
+            assert_eq!(t2, Duration::from_secs(expected_t2.into()));
+        }
+    }
+
+    #[test]
+    fn test_request_max_retrans_count() {
+        let client_id = v6::duid_uuid();
+        let transaction_id = [0, 1, 2];
+        let (mut client, _actions) = start_server_discovery(
+            transaction_id,
+            client_id.clone(),
+            to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
+            Vec::new(),
+            StepRng::new(std::u64::MAX / 2, 0),
+        );
+
+        let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+            std_ip_v6!("::ffff:c00a:1ff"),
+            60,
+            60,
+            &[],
+        ))];
+        let server_id_1 = [1, 2, 3];
+        let options = [
+            v6::DhcpOption::ClientId(&client_id),
+            v6::DhcpOption::ServerId(&server_id_1),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(0, 60, 60, &iana_options)),
+        ];
+        let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, transaction_id, &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        let () = builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        let _actions: Vec<Action> = client.handle_message_receive(msg);
+        let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
+            &client;
+        assert_matches!(
+            state,
+            Some(ClientState::ServerDiscovery(ServerDiscovery {
+                client_id: _,
+                configured_addresses: _,
+                first_solicit_time: _,
+                retrans_timeout: _,
+                solicit_max_rt: _,
+                collected_advertise: _,
+                collected_sol_max_rt: _,
+            }))
+        );
+
+        let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+            std_ip_v6!("::ffff:c00a:2ff"),
+            60,
+            60,
+            &[],
+        ))];
+        let server_id_2 = [4, 5, 6];
+        let options = [
+            v6::DhcpOption::ClientId(&client_id),
+            v6::DhcpOption::ServerId(&server_id_2),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(0, 60, 60, &iana_options)),
+        ];
+        let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, transaction_id, &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        let () = builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        let _actions: Vec<Action> = client.handle_message_receive(msg);
+        let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
+            &client;
+        assert_matches!(
+            state,
+            Some(ClientState::ServerDiscovery(ServerDiscovery {
+                client_id: _,
+                configured_addresses: _,
+                first_solicit_time: _,
+                retrans_timeout: _,
+                solicit_max_rt: _,
+                collected_advertise: _,
+                collected_sol_max_rt: _,
+            }))
+        );
+
+        // The client should transition to Requesting and select the server that sent the best advertise.
+        let _actions: Vec<Action> = client.handle_timeout(ClientTimerType::Retransmission);
+        let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
+            &client;
+        assert_matches!(state, Some(ClientState::Requesting(Requesting {
+                client_id: _,
+                configured_addresses: _,
+                server_id,
+                addresses_to_request: _,
+                collected_advertise: _,
+                first_request_time: _,
+                retrans_timeout: _,
+                retrans_count: _,
+                solicit_max_rt: _,
+        })) if *server_id == server_id_1);
+
+        for count in 1..REQUEST_MAX_RC + 1 {
+            let _actions: Vec<Action> = client.handle_timeout(ClientTimerType::Retransmission);
+            let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
+                &client;
+            let (server_id, retrans_count) = match state {
+                Some(ClientState::Requesting(Requesting {
+                    client_id: _,
+                    configured_addresses: _,
+                    server_id,
+                    addresses_to_request: _,
+                    collected_advertise: _,
+                    first_request_time: _,
+                    retrans_timeout: _,
+                    retrans_count,
+                    solicit_max_rt: _,
+                })) => (server_id, retrans_count),
+                state => panic!("unexpected state {:?}", state),
+            };
+            assert_eq!(*server_id, server_id_1);
+            assert_eq!(*retrans_count, count);
+        }
+
+        // When the retransmission count reaches REQUEST_MAX_RC, the client should select another server.
+        let _actions: Vec<Action> = client.handle_timeout(ClientTimerType::Retransmission);
+        let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
+            &client;
+        let (server_id, retrans_count) = match state {
+            Some(ClientState::Requesting(Requesting {
+                client_id: _,
+                configured_addresses: _,
+                server_id,
+                addresses_to_request: _,
+                collected_advertise: _,
+                first_request_time: _,
+                retrans_timeout: _,
+                retrans_count,
+                solicit_max_rt: _,
+            })) => (server_id, retrans_count),
+            state => panic!("unexpected state {:?}", state),
+        };
+        assert_eq!(*server_id, server_id_2);
+        assert_eq!(*retrans_count, 0);
+
+        for count in 1..REQUEST_MAX_RC + 1 {
+            let _actions: Vec<Action> = client.handle_timeout(ClientTimerType::Retransmission);
+            let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
+                &client;
+            let (server_id, retrans_count) = match state {
+                Some(ClientState::Requesting(Requesting {
+                    client_id: _,
+                    configured_addresses: _,
+                    server_id,
+                    addresses_to_request: _,
+                    collected_advertise: _,
+                    first_request_time: _,
+                    retrans_timeout: _,
+                    retrans_count,
+                    solicit_max_rt: _,
+                })) => (server_id, retrans_count),
+                state => panic!("unexpected state {:?}", state),
+            };
+            assert_eq!(*server_id, server_id_2);
+            assert_eq!(*retrans_count, count);
+        }
+
+        // When the retransmission count reaches REQUEST_MAX_RC, and the client
+        // does not have information about another server, the client should
+        // restart server discovery.
+        let _actions: Vec<Action> = client.handle_timeout(ClientTimerType::Retransmission);
+        let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } = client;
+        assert_matches!(state,
+            Some(ClientState::ServerDiscovery(ServerDiscovery {
+                client_id: _,
+                configured_addresses: _,
+                first_solicit_time: _,
+                retrans_timeout: _,
+                solicit_max_rt: _,
+                collected_advertise,
+                collected_sol_max_rt: _,
+            })) if collected_advertise.is_empty()
+        );
+    }
+
+    #[test]
+    fn test_address_assignment() {
+        let client_id = v6::duid_uuid();
+        let transaction_id = [0, 1, 2];
+        let (mut client, _actions) = start_server_discovery(
+            transaction_id.clone(),
+            client_id.clone(),
+            to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
+            Vec::new(),
+            StepRng::new(std::u64::MAX / 2, 0),
+        );
+
+        let address = std_ip_v6!("::ffff:c00a:1ff");
+        let iana_options =
+            [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(address, 60, 60, &[]))];
+        let options = [
+            v6::DhcpOption::ClientId(&client_id),
+            v6::DhcpOption::ServerId(&[1, 2, 3]),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(0, 60, 60, &iana_options)),
+        ];
+        let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, transaction_id, &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        let () = builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        let _actions: Vec<Action> = client.handle_message_receive(msg);
+        let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
+            &client;
+        assert_matches!(
+            &state,
+            Some(ClientState::ServerDiscovery(ServerDiscovery {
+                client_id: _,
+                configured_addresses: _,
+                first_solicit_time: _,
+                retrans_timeout: _,
+                solicit_max_rt: _,
+                collected_advertise: _,
+                collected_sol_max_rt: _,
+            }))
+        );
+
+        let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+            std_ip_v6!("::ffff:c00a:2ff"),
+            60,
+            60,
+            &[],
+        ))];
+        let options = [
+            v6::DhcpOption::ClientId(&client_id),
+            v6::DhcpOption::ServerId(&[4, 5, 6]),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(0, 60, 60, &iana_options)),
+        ];
+        let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, transaction_id, &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        let () = builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        let _actions: Vec<Action> = client.handle_message_receive(msg);
+        let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
+            &client;
+        assert_matches!(
+            &state,
+            Some(ClientState::ServerDiscovery(ServerDiscovery {
+                client_id: _,
+                configured_addresses: _,
+                first_solicit_time: _,
+                retrans_timeout: _,
+                solicit_max_rt: _,
+                collected_advertise: _,
+                collected_sol_max_rt: _,
+            }))
+        );
+
+        // The client should transition to Requesting and select the server that sent the best advertise.
+        let _actions: Vec<Action> = client.handle_timeout(ClientTimerType::Retransmission);
+        let ClientStateMachine { transaction_id, options_to_request: _, state, rng: _ } = &client;
+        assert_matches!(&state, Some(ClientState::Requesting(Requesting {
+                client_id: _,
+                configured_addresses: _,
+                server_id,
+                addresses_to_request: _,
+                collected_advertise: _,
+                first_request_time: _,
+                retrans_timeout: _,
+                retrans_count: _,
+                solicit_max_rt: _,
+        })) if *server_id == vec![1,2,3]);
+
+        let iana_options =
+            [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(address, 70, 130, &[]))];
+        let options = [
+            v6::DhcpOption::ServerId(&[1, 2, 3]),
+            v6::DhcpOption::ClientId(&client_id),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(0, 60, 120, &iana_options)),
+        ];
+        let builder = v6::MessageBuilder::new(v6::MessageType::Reply, *transaction_id, &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        let () = builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        let actions: Vec<Action> = client.handle_message_receive(msg);
+        assert_matches!(&actions[..], [Action::CancelTimer(ClientTimerType::Retransmission),]);
+        let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
+            &client;
+        let (server_id, assigned_addresses, t1, t2, addresses_to_request, dns_servers) =
+            match &state {
+                Some(ClientState::AddressAssigned(AddressAssigned {
+                    client_id: _,
+                    configured_addresses: _,
+                    server_id,
+                    assigned_addresses,
+                    t1,
+                    t2,
+                    addresses_to_request,
+                    dns_servers,
+                    solicit_max_rt: _,
+                })) => (server_id, assigned_addresses, t1, t2, addresses_to_request, dns_servers),
+                state => panic!("unexpected state {:?}", state),
+            };
+        let expected_assigned_addressess = HashMap::from([(
+            0,
+            IdentityAssociation {
+                address,
+                preferred_lifetime: v6::TimeValue::Finite(
+                    v6::NonZeroOrMaxU32::new(70)
+                        .expect("should succeed for non-zero or u32::MAX values"),
+                ),
+                valid_lifetime: v6::TimeValue::Finite(
+                    v6::NonZeroOrMaxU32::new(130)
+                        .expect("should succeed for non-zero or u32::MAX values"),
+                ),
+            },
+        )]);
+        assert_eq!(*assigned_addresses, expected_assigned_addressess);
+        assert_eq!(*server_id, vec![1, 2, 3]);
+        assert_eq!(*t1, Duration::from_secs(60));
+        assert_eq!(*t2, Duration::from_secs(120));
+        assert_eq!(*addresses_to_request, HashMap::new());
+        assert_eq!(*dns_servers, Vec::<Ipv6Addr>::new());
+    }
+
     // T1 and T2 are non-zero and T1 > T2, the client should ignore this IA_NA option.
     #[test_case(60, 30, true)]
     #[test_case(INFINITY, 30, true)]
@@ -1744,8 +3697,9 @@ mod tests {
     #[test_case(INFINITY, INFINITY, false)]
     fn test_receive_advertise_with_invalid_iana(t1: u32, t2: u32, ignore_iana: bool) {
         let client_id = v6::duid_uuid();
-        let (client, _actions) = start_server_discovery(
-            [0, 1, 2],
+        let transaction_id = [0, 1, 2];
+        let (mut client, _actions) = start_server_discovery(
+            transaction_id,
             client_id.clone(),
             to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
             Vec::new(),
@@ -1776,17 +3730,15 @@ mod tests {
             v6::DhcpOption::ServerId(&[1, 2, 3]),
             v6::DhcpOption::Iana(v6::IanaSerializer::new(0, t1, t2, &iana_options)),
         ];
-        let ClientStateMachine { transaction_id, options_to_request, state, rng } = client;
-        let builder =
-            v6::MessageBuilder::new(v6::MessageType::Advertise, transaction_id.clone(), &options);
+        let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
         let () = builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
 
-        let mut client = ClientStateMachine { transaction_id, options_to_request, state, rng };
         assert_matches!(client.handle_message_receive(msg)[..], []);
-        let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } = client;
+        let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
+            &client;
         let collected_advertise = match state {
             Some(ClientState::ServerDiscovery(ServerDiscovery {
                 client_id: _,
@@ -1820,6 +3772,138 @@ mod tests {
                 assert_eq!(*addresses, HashMap::from([(0, ia)]));
             }
         }
+    }
+
+    #[test]
+    fn test_request_sol_max_rt() {
+        let options_to_request = vec![];
+        let configured_addresses = to_configured_addresses(1, vec![]);
+        let address = std_ip_v6!("::ffff:c00a:1ff");
+        let server_id = vec![1, 2, 3];
+        let selected_advertise = AdvertiseMessage::new_default(
+            server_id.clone(),
+            &[address],
+            &[],
+            &configured_addresses,
+        );
+        let mut rng = StepRng::new(std::u64::MAX / 2, 0);
+        let client_id = v6::duid_uuid();
+        let Transition { state, actions: _, transaction_id } = Requesting::start(
+            client_id.clone(),
+            configured_addresses.clone(),
+            selected_advertise,
+            &options_to_request[..],
+            BinaryHeap::new(),
+            SOLICIT_MAX_RT,
+            &mut rng,
+        );
+        assert_matches!(&state,
+            ClientState::Requesting(Requesting {
+                client_id: _,
+                configured_addresses: _,
+                server_id: _,
+                addresses_to_request: _,
+                collected_advertise: _,
+                first_request_time: _,
+                retrans_timeout: _,
+                retrans_count: _,
+                solicit_max_rt,
+            }) if *solicit_max_rt == SOLICIT_MAX_RT
+        );
+        let received_sol_max_rt = 4800;
+
+        // If the reply does not contain a server ID, the reply should be
+        // discarded and the `solicit_max_rt` should not be updated.
+        let iana_options =
+            [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(address, 60, 120, &[]))];
+        let options = [
+            v6::DhcpOption::ClientId(&client_id),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(0, 30, 45, &iana_options)),
+            v6::DhcpOption::SolMaxRt(received_sol_max_rt),
+        ];
+        let request_transaction_id = transaction_id.unwrap();
+        let builder =
+            v6::MessageBuilder::new(v6::MessageType::Reply, request_transaction_id, &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        let () = builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        let Transition { state, actions: _, transaction_id: _ } =
+            state.reply_message_received(&options_to_request, &mut rng, msg);
+        assert_matches!(&state,
+            ClientState::Requesting(Requesting {
+                client_id: _,
+                configured_addresses: _,
+                server_id: _,
+                addresses_to_request: _,
+                collected_advertise: _,
+                first_request_time: _,
+                retrans_timeout: _,
+                retrans_count: _,
+                solicit_max_rt,
+            }) if *solicit_max_rt == SOLICIT_MAX_RT
+        );
+
+        // If the reply has a different client ID than the test client's client ID,
+        // the `solicit_max_rt` should not be updated.
+        let other_client_id = v6::duid_uuid();
+        let options = [
+            v6::DhcpOption::ServerId(&server_id),
+            v6::DhcpOption::ClientId(&other_client_id),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(0, 30, 45, &iana_options)),
+            v6::DhcpOption::SolMaxRt(received_sol_max_rt),
+        ];
+        let builder =
+            v6::MessageBuilder::new(v6::MessageType::Reply, request_transaction_id, &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        let () = builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        let Transition { state, actions: _, transaction_id: _ } =
+            state.reply_message_received(&options_to_request, &mut rng, msg);
+        assert_matches!(&state,
+            ClientState::Requesting(Requesting {
+                client_id: _,
+                configured_addresses: _,
+                server_id: _,
+                addresses_to_request: _,
+                collected_advertise: _,
+                first_request_time: _,
+                retrans_timeout: _,
+                retrans_count: _,
+                solicit_max_rt,
+            }) if *solicit_max_rt == SOLICIT_MAX_RT
+        );
+
+        // If the client receives a valid reply containing a SOL_MAX_RT option,
+        // the `solicit_max_rt` should be updated.
+        let options = [
+            v6::DhcpOption::ServerId(&server_id),
+            v6::DhcpOption::ClientId(&client_id),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(0, 30, 45, &iana_options)),
+            v6::DhcpOption::SolMaxRt(received_sol_max_rt),
+        ];
+        let builder =
+            v6::MessageBuilder::new(v6::MessageType::Reply, request_transaction_id, &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        let () = builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        let Transition { state, actions: _, transaction_id: _ } =
+            state.reply_message_received(&options_to_request, &mut rng, msg);
+        assert_matches!(&state,
+            ClientState::AddressAssigned(AddressAssigned {
+                    client_id: _,
+                    configured_addresses: _,
+                    server_id: _,
+                    assigned_addresses: _,
+                    t1: _,
+                    t2: _,
+                    addresses_to_request: _,
+                    dns_servers:_,
+                    solicit_max_rt,
+            }) if *solicit_max_rt == Duration::from_secs(received_sol_max_rt.into())
+        );
     }
 
     #[test]
@@ -2036,5 +4120,49 @@ mod tests {
             let t = retransmission_timeout(*rt, initial_rt, max_rt, &mut rng);
             assert_eq!(t.as_millis(), *want_ms);
         });
+    }
+
+    #[test_case(v6::TimeValue::Zero, v6::TimeValue::Zero, v6::TimeValue::Zero)]
+    #[test_case(
+        v6::TimeValue::Zero,
+        v6::TimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values")),
+        v6::TimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values"))
+    )]
+    #[test_case(v6::TimeValue::Zero, v6::TimeValue::Infinity, v6::TimeValue::Infinity)]
+    #[test_case(
+        v6::TimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values")),
+        v6::TimeValue::Zero,
+        v6::TimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values"))
+    )]
+    #[test_case(
+        v6::TimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values")),
+        v6::TimeValue::Finite(v6::NonZeroOrMaxU32::new(60).expect("should succeed for non-zero or u32::MAX values")),
+        v6::TimeValue::Finite(v6::NonZeroOrMaxU32::new(60).expect("should succeed for non-zero or u32::MAX values"))
+    )]
+    #[test_case(
+        v6::TimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values")),
+        v6::TimeValue::Infinity,
+        v6::TimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values"))
+    )]
+    #[test_case(
+        v6::TimeValue::Infinity,
+        v6::TimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values")),
+        v6::TimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values"))
+    )]
+    #[test_case(v6::TimeValue::Infinity, v6::TimeValue::Infinity, v6::TimeValue::Infinity)]
+    fn test_time_value_maybe_get_nonzero_min(
+        old_value: v6::TimeValue,
+        new_value: v6::TimeValue,
+        expected_value: v6::TimeValue,
+    ) {
+        assert_eq!(maybe_get_nonzero_min(old_value, new_value), expected_value);
+    }
+
+    #[test_case(INFINITY, T1_MIN_LIFETIME_RATIO, INFINITY)]
+    #[test_case(100, T1_MIN_LIFETIME_RATIO, 50)]
+    #[test_case(INFINITY, T2_T1_RATIO, INFINITY)]
+    #[test_case(INFINITY - 1, T2_T1_RATIO, INFINITY)]
+    fn test_compute_t(min: u32, ratio: Ratio<u32>, expected_t: u32) {
+        assert_eq!(compute_t(min, ratio), expected_t);
     }
 }

@@ -26,7 +26,7 @@ use {
     matches::assert_matches,
     packet::ParsablePacket,
     packet_formats_dhcp::v6,
-    rand::{rngs::StdRng, thread_rng, FromEntropy, Rng},
+    rand::{rngs::StdRng, FromEntropy},
     std::{
         collections::{
             hash_map::{DefaultHasher, Entry},
@@ -468,15 +468,6 @@ async fn create_socket(addr: SocketAddr) -> Result<fasync::net::UdpSocket> {
     fasync::net::UdpSocket::from_socket(socket.into()).context("converting socket")
 }
 
-/// Creates a transaction ID that can be used by the client as defined in [RFC 8415, Section 16.1].
-///
-/// [RFC 8415, Section 16.1]: https://tools.ietf.org/html/rfc8415#section-16.1
-fn transaction_id() -> [u8; 3] {
-    let mut id = [0u8; 3];
-    let () = thread_rng().fill(&mut id[..]);
-    id
-}
-
 /// Returns `true` if the input address is a link-local address (`fe80::/64`).
 ///
 /// TODO(https://github.com/rust-lang/rust/issues/27709): use is_unicast_link_local_strict() in
@@ -517,7 +508,7 @@ pub(crate) async fn serve_client(
                 )
             })?;
         let mut client = Client::<fasync::net::UdpSocket>::start(
-            transaction_id(),
+            dhcpv6_core::client::transaction_id(),
             config,
             interface_id,
             create_socket(addr).await?,

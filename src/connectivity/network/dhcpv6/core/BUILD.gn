@@ -15,6 +15,7 @@ rustc_library("core") {
     "//src/lib/zerocopy",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:num",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:thiserror",
   ]

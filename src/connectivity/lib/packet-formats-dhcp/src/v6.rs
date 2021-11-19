@@ -236,7 +236,7 @@ pub use private::*;
 ///
 /// [section 14.2]: https://datatracker.ietf.org/doc/html/rfc8415#section-14.2
 /// [section 7.7]: https://datatracker.ietf.org/doc/html/rfc8415#section-7.7
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TimeValue {
     /// The value is left to the discretion of the client per [RFC 8415,
     /// section 14.2].
