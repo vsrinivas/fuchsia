@@ -1,0 +1,52 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//sdk/lib/inspect/client.shard.cml",
+        "//src/sys/test_runners/elf/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/driver_test_realm_cts_test",
+    },
+    children: [
+        {
+            name: "driver_test_realm",
+            url: "fuchsia-pkg://fuchsia.com/driver_test_realm#meta/driver_test_realm.cm",
+        },
+    ],
+    use: [
+        {
+            directory: "dev",
+            from: "#driver_test_realm",
+            rights: [ "r*" ],
+            path: "/dev",
+        },
+        {
+            protocol: [
+                "fuchsia.device.fs.Exporter",
+                "fuchsia.device.manager.Administrator",
+                "fuchsia.device.manager.DebugDumper",
+                "fuchsia.device.manager.SystemStateTransition",
+                "fuchsia.driver.development.DriverDevelopment",
+                "fuchsia.driver.registrar.DriverRegistrar",
+                "fuchsia.driver.test.Realm",
+                "fuchsia.hardware.pci.DeviceWatcher",
+                "fuchsia.hardware.usb.DeviceWatcher",
+            ],
+            from: "#driver_test_realm",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Launcher",
+            ],
+            from: "parent",
+            to: [ "#driver_test_realm" ],
+        },
+    ],
+}

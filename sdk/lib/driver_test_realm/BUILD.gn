@@ -24,6 +24,7 @@ group("realm_builder_version") {
 group("tests") {
   testonly = true
   deps = [
+    ":package",
     "platform:tests",
     "simple:tests",
     "tests",
@@ -90,4 +91,13 @@ expect_includes("client_includes") {
 
 expect_includes("realm_builder_includes") {
   includes = [ "meta/realm_builder.shard.cml" ]
+}
+
+fuchsia_package("package") {
+  testonly = true
+  package_name = "driver_test_realm"
+  deps = [
+    ":driver_test_realm",
+    "//src/devices/misc/drivers/test-parent",
+  ]
 }

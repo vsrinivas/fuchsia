@@ -6,6 +6,7 @@ import("//sdk/cts/build/cts.gni")
 group("tests") {
   deps = [
     "fuchsia.diagnostics:tests",
+    "fuchsia.driver.test:tests",
     "fuchsia.element:tests",
     "fuchsia.hwinfo:tests",
     "fuchsia.settings:tests",
