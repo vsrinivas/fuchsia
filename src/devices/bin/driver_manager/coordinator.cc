@@ -73,7 +73,7 @@ namespace fdm = fuchsia_device_manager;
 namespace fdr = fuchsia_driver_registrar;
 namespace fpm = fuchsia_power_manager;
 
-constexpr char kDriverHostPath[] = "bin/driver_host";
+constexpr char kDriverHostPath[] = "/pkg/bin/driver_host";
 constexpr char kBootFirmwarePath[] = "lib/firmware";
 constexpr char kSystemPrefix[] = "/system/";
 constexpr char kSystemFirmwarePath[] = "/system/lib/firmware";
@@ -393,7 +393,6 @@ zx_status_t Coordinator::GetTopologicalPath(const fbl::RefPtr<const Device>& dev
 }
 
 zx_status_t Coordinator::NewDriverHost(const char* name, fbl::RefPtr<DriverHost>* out) {
-  std::string binary = config_.path_prefix + kDriverHostPath;
   std::string root_driver_path_arg;
   std::vector<const char*> env;
   if (driver_host_is_asan()) {
@@ -441,7 +440,7 @@ zx_status_t Coordinator::NewDriverHost(const char* name, fbl::RefPtr<DriverHost>
 
   DriverHostConfig config{
       .name = name,
-      .binary = binary.c_str(),
+      .binary = kDriverHostPath,
       .env = env.data(),
       .job = zx::unowned_job(config_.driver_host_job),
       .root_resource = zx::unowned_resource(root_resource()),
