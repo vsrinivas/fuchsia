@@ -871,9 +871,11 @@ class WithErrorSyntaxErrorAsPrimitiveResponse extends $fidl.Struct {
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 0, 1);
         return WithErrorSyntaxErrorAsPrimitiveResponse(
             reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
       case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 0, 1);
         return WithErrorSyntaxErrorAsPrimitiveResponse(
             reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
       default:
@@ -938,9 +940,11 @@ class WithErrorSyntaxErrorAsEnumResponse extends $fidl.Struct {
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
+        $decoder.checkPadding($offset + 0, 1);
         return WithErrorSyntaxErrorAsEnumResponse(
             reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
       case $fidl.WireFormat.v2:
+        $decoder.checkPadding($offset + 0, 1);
         return WithErrorSyntaxErrorAsEnumResponse(
             reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
       default:

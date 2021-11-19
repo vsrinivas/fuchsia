@@ -1032,6 +1032,14 @@ func (c *compiler) compileStruct(val fidlgen.Struct) Struct {
 		r.Members = []StructMember{
 			c.compileStructMember(fidlgen.EmptyStructMember("reserved")),
 		}
+		r.Paddings = []StructPadding{
+			{
+				OffsetV1:  0,
+				OffsetV2:  0,
+				PaddingV1: 1,
+				PaddingV2: 1,
+			},
+		}
 		return r
 	}
 

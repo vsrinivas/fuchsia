@@ -366,7 +366,7 @@ var dartErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.ExceededMaxOutOfLineDepth:          "fidlExceededMaxOutOfLineDepth",
 	gidlir.IncorrectHandleType:                "fidlIncorrectHandleType",
 	gidlir.InvalidBoolean:                     "fidlInvalidBoolean",
-	gidlir.InvalidEmptyStruct:                 "unknown",
+	gidlir.InvalidEmptyStruct:                 "fidlInvalidPaddingByte",
 	gidlir.InvalidInlineBitInEnvelope:         "fidlInvalidInlineBitInEnvelope",
 	gidlir.InvalidNumBytesInEnvelope:          "fidlInvalidNumBytesInEnvelope",
 	gidlir.InvalidNumHandlesInEnvelope:        "fidlInvalidNumHandlesInEnvelope",
