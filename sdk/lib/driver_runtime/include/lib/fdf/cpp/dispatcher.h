@@ -59,17 +59,25 @@ class Dispatcher {
 
   Dispatcher(Dispatcher&& other) noexcept : Dispatcher(other.release()) {}
   Dispatcher& operator=(Dispatcher&& other) noexcept {
-    dispatcher_ = other.release();
+    reset(other.release());
     return *this;
   }
 
-  ~Dispatcher() {
-    if (dispatcher_) {
-      fdf_dispatcher_destroy(dispatcher_);
-    }
-  }
+  ~Dispatcher() { close(); }
 
   fdf_dispatcher_t* get() { return dispatcher_; }
+
+  void reset(fdf_dispatcher_t* dispatcher = nullptr) {
+    close();
+    dispatcher_ = dispatcher;
+  }
+
+  void close() {
+    if (dispatcher_) {
+      fdf_dispatcher_destroy(dispatcher_);
+      dispatcher_ = nullptr;
+    }
+  }
 
   fdf_dispatcher_t* release() {
     fdf_dispatcher_t* ret = dispatcher_;

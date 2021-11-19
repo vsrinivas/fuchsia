@@ -39,10 +39,10 @@ class ChannelTest : public RuntimeTestCase {
   void AllocateTestDataWithStartValue(fdf_arena_t* arena, size_t size, size_t start_value,
                                       void** out_data);
 
-  fdf_handle_t local_;
-  fdf_handle_t remote_;
+  fdf::Channel local_;
+  fdf::Channel remote_;
 
-  fdf_arena_t* arena_;
+  fdf::Arena arena_;
 
   async::Loop loop_;
   std::unique_ptr<driver_runtime::Dispatcher> dispatcher_;
@@ -51,8 +51,15 @@ class ChannelTest : public RuntimeTestCase {
 };
 
 void ChannelTest::SetUp() {
-  ASSERT_EQ(ZX_OK, fdf_channel_create(0, &local_, &remote_));
-  ASSERT_EQ(ZX_OK, fdf_arena::Create(0, "arena", 0, &arena_));
+  auto channels = fdf::ChannelPair::Create(0);
+  ASSERT_OK(channels.status_value());
+  local_ = std::move(channels->end0);
+  remote_ = std::move(channels->end1);
+
+  std::string_view tag{""};
+  auto arena = fdf::Arena::Create(0, tag);
+  ASSERT_OK(arena.status_value());
+  arena_ = std::move(*arena);
 
   ASSERT_EQ(ZX_OK, driver_runtime::Dispatcher::CreateWithLoop(
                        FDF_DISPATCHER_OPTION_UNSYNCHRONIZED, "scheduler_role", 0,
@@ -65,15 +72,11 @@ void ChannelTest::SetUp() {
 }
 
 void ChannelTest::TearDown() {
-  if (local_) {
-    fdf_handle_close(local_);
-  }
-  if (remote_) {
-    fdf_handle_close(remote_);
-  }
-  if (arena_) {
-    arena_->Destroy();
-  }
+  local_.reset();
+  remote_.reset();
+
+  arena_.reset();
+
   ASSERT_EQ(0, driver_runtime::gHandleTableArena.num_allocated());
 
   driver_context::PopDriver();
@@ -98,9 +101,9 @@ void ChannelTest::AllocateTestDataWithStartValue(fdf_arena_t* arena, size_t size
 TEST_F(ChannelTest, CreateAndDestroy) {}
 
 TEST_F(ChannelTest, WriteReadEmptyMessage) {
-  ASSERT_EQ(ZX_OK, fdf_channel_write(local_, 0, nullptr, nullptr, 0, nullptr, 0));
-  ASSERT_NO_FATAL_FAILURES(WaitUntilReadReady(remote_));
-  ASSERT_NO_FATAL_FAILURES(AssertRead(remote_, nullptr, 0, nullptr, 0));
+  ASSERT_EQ(ZX_OK, fdf_channel_write(local_.get(), 0, nullptr, nullptr, 0, nullptr, 0));
+  ASSERT_NO_FATAL_FAILURES(WaitUntilReadReady(remote_.get()));
+  ASSERT_NO_FATAL_FAILURES(AssertRead(remote_.get(), nullptr, 0, nullptr, 0));
 }
 
 // Tests writing and reading an array of numbers.
@@ -108,11 +111,11 @@ TEST_F(ChannelTest, WriteData) {
   constexpr uint32_t kNumBytes = 24 * 1024;
 
   void* data;
-  AllocateTestData(arena_, kNumBytes, &data);
+  AllocateTestData(arena_.get(), kNumBytes, &data);
 
-  ASSERT_EQ(ZX_OK, fdf_channel_write(local_, 0, arena_, data, kNumBytes, NULL, 0));
-  ASSERT_NO_FATAL_FAILURES(WaitUntilReadReady(remote_));
-  ASSERT_NO_FATAL_FAILURES(AssertRead(remote_, data, kNumBytes, nullptr, 0));
+  ASSERT_EQ(ZX_OK, fdf_channel_write(local_.get(), 0, arena_.get(), data, kNumBytes, NULL, 0));
+  ASSERT_NO_FATAL_FAILURES(WaitUntilReadReady(remote_.get()));
+  ASSERT_NO_FATAL_FAILURES(AssertRead(remote_.get(), data, kNumBytes, nullptr, 0));
 }
 
 // Tests that transferring zircon handles are allowed.
@@ -120,16 +123,16 @@ TEST_F(ChannelTest, WriteZirconHandle) {
   zx::event event;
   ASSERT_EQ(ZX_OK, zx::event::create(0, &event));
 
-  void* handles_buf = arena_->Allocate(sizeof(fdf_handle_t));
+  void* handles_buf = arena_.Allocate(sizeof(fdf_handle_t));
   ASSERT_NOT_NULL(handles_buf);
 
   fdf_handle_t* handles = reinterpret_cast<fdf_handle_t*>(handles_buf);
   handles[0] = event.release();
 
-  EXPECT_OK(fdf_channel_write(local_, 0, arena_, nullptr, 0, handles, 1));
+  EXPECT_OK(fdf_channel_write(local_.get(), 0, arena_.get(), nullptr, 0, handles, 1));
 
-  ASSERT_NO_FATAL_FAILURES(WaitUntilReadReady(remote_));
-  ASSERT_NO_FATAL_FAILURES(AssertRead(remote_, nullptr, 0, handles, 1));
+  ASSERT_NO_FATAL_FAILURES(WaitUntilReadReady(remote_.get()));
+  ASSERT_NO_FATAL_FAILURES(AssertRead(remote_.get(), nullptr, 0, handles, 1));
 }
 
 // Tests reading channel handles from a channel message, and writing to
@@ -143,22 +146,22 @@ TEST_F(ChannelTest, WriteToTransferredChannels) {
 
   constexpr uint32_t kNumChannels = 2;
   size_t alloc_size = kNumChannels * sizeof(fdf_handle_t);
-  auto channels_to_transfer = reinterpret_cast<fdf_handle_t*>(arena_->Allocate(alloc_size));
+  auto channels_to_transfer = reinterpret_cast<fdf_handle_t*>(arena_.Allocate(alloc_size));
   ASSERT_NOT_NULL(channels_to_transfer);
 
   channels_to_transfer[0] = a1;
   channels_to_transfer[1] = b1;
 
-  ASSERT_EQ(ZX_OK,
-            fdf_channel_write(local_, 0, arena_, nullptr, 0, channels_to_transfer, kNumChannels));
+  ASSERT_EQ(ZX_OK, fdf_channel_write(local_.get(), 0, arena_.get(), nullptr, 0,
+                                     channels_to_transfer, kNumChannels));
 
   // Retrieve the transferred channels.
-  ASSERT_NO_FATAL_FAILURES(WaitUntilReadReady(remote_));
+  ASSERT_NO_FATAL_FAILURES(WaitUntilReadReady(remote_.get()));
   fdf_arena_t* read_arena;
   zx_handle_t* handles;
   uint32_t num_handles;
-  ASSERT_EQ(ZX_OK,
-            fdf_channel_read(remote_, 0, &read_arena, nullptr, nullptr, &handles, &num_handles));
+  ASSERT_EQ(ZX_OK, fdf_channel_read(remote_.get(), 0, &read_arena, nullptr, nullptr, &handles,
+                                    &num_handles));
   ASSERT_NOT_NULL(handles);
   ASSERT_EQ(num_handles, kNumChannels);
 
@@ -184,7 +187,7 @@ TEST_F(ChannelTest, WriteToTransferredChannels) {
 TEST_F(ChannelTest, WaitAsyncBeforeWrite) {
   sync_completion_t read_completion;
   auto channel_read = std::make_unique<fdf::ChannelRead>(
-      remote_, 0,
+      remote_.get(), 0,
       [&read_completion](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read,
                          fdf_status_t status) { sync_completion_signal(&read_completion); });
   ASSERT_OK(channel_read->Begin(fdf_dispatcher_));
@@ -192,12 +195,12 @@ TEST_F(ChannelTest, WaitAsyncBeforeWrite) {
   constexpr uint32_t kNumBytes = 4096;
 
   void* data;
-  AllocateTestData(arena_, kNumBytes, &data);
-  ASSERT_EQ(ZX_OK, fdf_channel_write(local_, 0, arena_, data, kNumBytes, NULL, 0));
+  AllocateTestData(arena_.get(), kNumBytes, &data);
+  ASSERT_EQ(ZX_OK, fdf_channel_write(local_.get(), 0, arena_.get(), data, kNumBytes, NULL, 0));
 
   sync_completion_wait(&read_completion, ZX_TIME_INFINITE);
 
-  ASSERT_NO_FATAL_FAILURES(AssertRead(remote_, data, kNumBytes, nullptr, 0));
+  ASSERT_NO_FATAL_FAILURES(AssertRead(remote_.get(), data, kNumBytes, nullptr, 0));
 }
 
 // Tests reading multiple channel messages from within one read callback.
@@ -206,23 +209,25 @@ TEST_F(ChannelTest, ReadMultiple) {
   constexpr uint32_t kSecondMsgNumBytes = 256;
 
   void* data;
-  AllocateTestData(arena_, kFirstMsgNumBytes, &data);
-  ASSERT_EQ(ZX_OK, fdf_channel_write(local_, 0, arena_, data, kFirstMsgNumBytes, NULL, 0));
+  AllocateTestData(arena_.get(), kFirstMsgNumBytes, &data);
+  ASSERT_EQ(ZX_OK,
+            fdf_channel_write(local_.get(), 0, arena_.get(), data, kFirstMsgNumBytes, NULL, 0));
 
   void* data2;
-  AllocateTestData(arena_, kSecondMsgNumBytes, &data2);
-  ASSERT_EQ(ZX_OK, fdf_channel_write(local_, 0, arena_, data2, kSecondMsgNumBytes, NULL, 0));
+  AllocateTestData(arena_.get(), kSecondMsgNumBytes, &data2);
+  ASSERT_EQ(ZX_OK,
+            fdf_channel_write(local_.get(), 0, arena_.get(), data2, kSecondMsgNumBytes, NULL, 0));
 
   sync_completion_t completion;
 
   auto channel_read = std::make_unique<fdf::ChannelRead>(
-      remote_, 0,
+      remote_.get(), 0,
       [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
-        ASSERT_NO_FATAL_FAILURES(AssertRead(remote_, data, kFirstMsgNumBytes, nullptr, 0));
-        ASSERT_NO_FATAL_FAILURES(AssertRead(remote_, data2, kSecondMsgNumBytes, nullptr, 0));
+        ASSERT_NO_FATAL_FAILURES(AssertRead(remote_.get(), data, kFirstMsgNumBytes, nullptr, 0));
+        ASSERT_NO_FATAL_FAILURES(AssertRead(remote_.get(), data2, kSecondMsgNumBytes, nullptr, 0));
         // There should be no more messages.
         ASSERT_EQ(ZX_ERR_SHOULD_WAIT,
-                  fdf_channel_read(remote_, 0, nullptr, nullptr, nullptr, nullptr, nullptr));
+                  fdf_channel_read(remote_.get(), 0, nullptr, nullptr, nullptr, nullptr, nullptr));
         sync_completion_signal(&completion);
       });
 
@@ -242,10 +247,10 @@ TEST_F(ChannelTest, ReRegisterReadHandler) {
   size_t completed_reads = 0;
   sync_completion_t completion;
   auto channel_read = std::make_unique<fdf::ChannelRead>(
-      remote_, 0,
+      remote_.get(), 0,
       [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
         ASSERT_NO_FATAL_FAILURES(
-            AssertRead(remote_, test_data[completed_reads].data(), kDataSize, nullptr, 0));
+            AssertRead(remote_.get(), test_data[completed_reads].data(), kDataSize, nullptr, 0));
         completed_reads++;
         if (completed_reads == kNumReads) {
           sync_completion_signal(&completion);
@@ -258,9 +263,9 @@ TEST_F(ChannelTest, ReRegisterReadHandler) {
 
   for (size_t i = 0; i < kNumReads; i++) {
     void* data;
-    AllocateTestDataWithStartValue(arena_, kDataSize, i, &data);
+    AllocateTestDataWithStartValue(arena_.get(), kDataSize, i, &data);
     memcpy(test_data[i].data(), data, kDataSize);
-    ASSERT_EQ(ZX_OK, fdf_channel_write(local_, 0, arena_, data, kDataSize, NULL, 0));
+    ASSERT_EQ(ZX_OK, fdf_channel_write(local_.get(), 0, arena_.get(), data, kDataSize, NULL, 0));
   }
   sync_completion_wait(&completion, ZX_TIME_INFINITE);
   ASSERT_EQ(completed_reads, kNumReads);
@@ -271,7 +276,7 @@ TEST_F(ChannelTest, ReRegisterReadHandler) {
 TEST_F(ChannelTest, CloseSignalsPeerClosed) {
   sync_completion_t read_completion;
   auto channel_read = std::make_unique<fdf::ChannelRead>(
-      remote_, 0,
+      remote_.get(), 0,
       [&read_completion](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read,
                          fdf_status_t status) {
         ASSERT_NOT_OK(status);
@@ -279,8 +284,7 @@ TEST_F(ChannelTest, CloseSignalsPeerClosed) {
       });
   ASSERT_OK(channel_read->Begin(fdf_dispatcher_));
 
-  fdf_handle_close(local_);
-  local_ = ZX_HANDLE_INVALID;  // Set this so the destructor doesn't try to close it again.
+  local_.reset();
 
   sync_completion_wait(&read_completion, ZX_TIME_INFINITE);
 }
@@ -297,7 +301,7 @@ TEST_F(ChannelTest, UnsyncDispatcherCallbackOnClose) {
 
   sync_completion_t read_completion;
   auto channel_read = std::make_unique<fdf::ChannelRead>(
-      remote_, 0,
+      remote_.get(), 0,
       [&read_completion](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read,
                          fdf_status_t status) {
         ASSERT_EQ(status, ZX_ERR_CANCELED);
@@ -305,8 +309,7 @@ TEST_F(ChannelTest, UnsyncDispatcherCallbackOnClose) {
       });
   ASSERT_OK(channel_read->Begin(static_cast<fdf_dispatcher_t*>(async_dispatcher.get())));
 
-  fdf_handle_close(remote_);
-  remote_ = ZX_HANDLE_INVALID;  // Set this so the destructor doesn't try to close it again.
+  remote_.reset();
 
   sync_completion_wait(&read_completion, ZX_TIME_INFINITE);
 
@@ -320,7 +323,7 @@ TEST_F(ChannelTest, CancelSynchronousDispatcherCallbackOnClose) {
   ASSERT_EQ(ZX_OK,
             driver_runtime::Dispatcher::CreateWithLoop(0, "", 0, driver, &loop_, &sync_dispatcher));
 
-  ASSERT_EQ(ZX_OK, fdf_channel_write(local_, 0, arena_, nullptr, 0, nullptr, 0));
+  ASSERT_EQ(ZX_OK, fdf_channel_write(local_.get(), 0, arena_.get(), nullptr, 0, nullptr, 0));
 
   // Make the read reentrant so that the callback will be queued on the async loop.
   driver_context::PushDriver(driver);
@@ -329,51 +332,48 @@ TEST_F(ChannelTest, CancelSynchronousDispatcherCallbackOnClose) {
   // Since there is a pending message, this should queue a callback on the dispatcher.
   sync_completion_t read_completion;
   auto channel_read = std::make_unique<fdf::ChannelRead>(
-      remote_, 0,
+      remote_.get(), 0,
       [&read_completion](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read,
                          fdf_status_t status) { sync_completion_signal(&read_completion); });
   ASSERT_OK(channel_read->Begin(static_cast<fdf_dispatcher_t*>(sync_dispatcher.get())));
 
   ASSERT_EQ(sync_dispatcher->callback_queue_size_slow(), 1);
 
-  fdf_handle_close(remote_);
-  remote_ = ZX_HANDLE_INVALID;  // Set this so the destructor doesn't try closing again.
+  remote_.reset();
 
   ASSERT_EQ(sync_dispatcher->callback_queue_size_slow(), 0);
 }
 
 // Tests that you can wait on and read pending messages from a channel even if the peer is closed.
 TEST_F(ChannelTest, ReadRemainingMessagesWhenPeerIsClosed) {
-  void* data = arena_->Allocate(64);
-  ASSERT_EQ(ZX_OK, fdf_channel_write(local_, 0, arena_, data, 64, NULL, 0));
+  void* data = arena_.Allocate(64);
+  ASSERT_EQ(ZX_OK, fdf_channel_write(local_.get(), 0, arena_.get(), data, 64, NULL, 0));
 
-  fdf_handle_close(local_);
-  local_ = ZX_HANDLE_INVALID;  // Set this so the destructor doesn't try to close it again.
+  local_.reset();
 
-  ASSERT_NO_FATAL_FAILURES(WaitUntilReadReady(remote_));
-  ASSERT_NO_FATAL_FAILURES(AssertRead(remote_, data, 64, nullptr, 0));
+  ASSERT_NO_FATAL_FAILURES(WaitUntilReadReady(remote_.get()));
+  ASSERT_NO_FATAL_FAILURES(AssertRead(remote_.get(), data, 64, nullptr, 0));
 }
 
 // Tests that read provides ownership of an arena.
 TEST_F(ChannelTest, ReadArenaOwnership) {
-  void* data = arena_->Allocate(64);
-  ASSERT_EQ(ZX_OK, fdf_channel_write(local_, 0, arena_, data, 64, NULL, 0));
+  void* data = arena_.Allocate(64);
+  ASSERT_EQ(ZX_OK, fdf_channel_write(local_.get(), 0, arena_.get(), data, 64, NULL, 0));
 
-  arena_->Destroy();
-  arena_ = nullptr;  // Set this so the destructor doesn't try to destroy it again.
+  arena_.reset();
 
   fdf_arena_t* read_arena;
-  ASSERT_NO_FATAL_FAILURES(WaitUntilReadReady(remote_));
-  ASSERT_NO_FATAL_FAILURES(AssertRead(remote_, data, 64, nullptr, 0, &read_arena));
+  ASSERT_NO_FATAL_FAILURES(WaitUntilReadReady(remote_.get()));
+  ASSERT_NO_FATAL_FAILURES(AssertRead(remote_.get(), data, 64, nullptr, 0, &read_arena));
 
   // Re-use the arena provided by the read call.
   data = read_arena->Allocate(64);
-  ASSERT_EQ(ZX_OK, fdf_channel_write(remote_, 0, read_arena, data, 64, NULL, 0));
+  ASSERT_EQ(ZX_OK, fdf_channel_write(remote_.get(), 0, read_arena, data, 64, NULL, 0));
 
-  read_arena->Destroy();
+  fdf_arena_destroy(read_arena);
 
-  ASSERT_NO_FATAL_FAILURES(WaitUntilReadReady(local_));
-  ASSERT_NO_FATAL_FAILURES(AssertRead(local_, data, 64, nullptr, 0));
+  ASSERT_NO_FATAL_FAILURES(WaitUntilReadReady(local_.get()));
+  ASSERT_NO_FATAL_FAILURES(AssertRead(local_.get(), data, 64, nullptr, 0));
 }
 
 // This test was adapted from the Zircon Channel test of the same name.
@@ -408,7 +408,7 @@ TEST_F(ChannelTest, ConcurrentReadsConsumeUniqueElements) {
       void* data;
       uint32_t read_bytes = 0;
       zx_status_t read_status =
-          fdf_channel_read(remote_, 0, &arena, &data, &read_bytes, nullptr, nullptr);
+          fdf_channel_read(remote_.get(), 0, &arena, &data, &read_bytes, nullptr, nullptr);
       uint32_t index = offset + i;
       auto& message = read_messages[index];
       if (read_status != ZX_OK) {
@@ -439,7 +439,7 @@ TEST_F(ChannelTest, ConcurrentReadsConsumeUniqueElements) {
     for (uint64_t i = 1; i <= kNumMessages; ++i) {
       void* data = fdf_arena_allocate(arena, sizeof(i));
       memcpy(data, &i, sizeof(i));
-      ASSERT_OK(fdf_channel_write(local_, 0, arena, data, sizeof(i), nullptr, 0));
+      ASSERT_OK(fdf_channel_write(local_.get(), 0, arena, data, sizeof(i), nullptr, 0));
     }
     fdf_arena_destroy(arena);
     ASSERT_OK(event.signal(0, ZX_USER_SIGNAL_0));
@@ -488,17 +488,17 @@ TEST_F(ChannelTest, OnFlightHandlesSignalledWhenPeerIsClosed) {
 
   // Write the fdf channel |zx_on_flight_remote| from |local_| to |remote_|.
   zx_handle_t* channels_to_transfer =
-      reinterpret_cast<zx_handle_t*>(arena_->Allocate(sizeof(zx_handle_t)));
+      reinterpret_cast<zx_handle_t*>(arena_.Allocate(sizeof(zx_handle_t)));
   ASSERT_NOT_NULL(channels_to_transfer);
   *channels_to_transfer = zx_on_flight_remote.release();
-  ASSERT_OK(fdf_channel_write(local_, 0, arena_, nullptr, 0, channels_to_transfer, 1));
+  ASSERT_OK(fdf_channel_write(local_.get(), 0, arena_.get(), nullptr, 0, channels_to_transfer, 1));
 
   // Write the zircon channel |on_flight_remote| from |remote_| to |local_|.
   channels_to_transfer = channels_to_transfer =
-      reinterpret_cast<zx_handle_t*>(arena_->Allocate(sizeof(zx_handle_t)));
+      reinterpret_cast<zx_handle_t*>(arena_.Allocate(sizeof(zx_handle_t)));
   ASSERT_NOT_NULL(channels_to_transfer);
   *channels_to_transfer = on_flight_remote;
-  ASSERT_OK(fdf_channel_write(remote_, 0, arena_, nullptr, 0, channels_to_transfer, 1));
+  ASSERT_OK(fdf_channel_write(remote_.get(), 0, arena_.get(), nullptr, 0, channels_to_transfer, 1));
 
   // Close |local_| and verify that |on_flight_local| gets a peer closed notification.
   sync_completion_t read_completion;
@@ -509,8 +509,7 @@ TEST_F(ChannelTest, OnFlightHandlesSignalledWhenPeerIsClosed) {
       });
   EXPECT_EQ(ZX_OK, channel_read_->Begin(fdf_dispatcher_));
 
-  fdf_handle_close(local_);
-  local_ = FDF_HANDLE_INVALID;  // Set this so the destructor doesn't try closing it again.
+  local_.reset();
 
   sync_completion_wait(&read_completion, ZX_TIME_INFINITE);
 
@@ -520,8 +519,7 @@ TEST_F(ChannelTest, OnFlightHandlesSignalledWhenPeerIsClosed) {
   ASSERT_NE(signals & ZX_CHANNEL_WRITABLE, 0);
 
   // Close |remote_| and verify that |zx_on_flight_local| gets a peer closed notification.
-  fdf_handle_close(remote_);
-  remote_ = FDF_HANDLE_INVALID;  // Set this so the destructor doesn't try closing it again.
+  remote_.reset();
 
   ASSERT_OK(zx_on_flight_local.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr));
 
@@ -540,11 +538,11 @@ TEST_F(ChannelTest, NestingIsOk) {
 
   for (uint32_t i = kNestedCount - 1; i > 0; i--) {
     fdf_handle_t* handles =
-        reinterpret_cast<fdf_handle_t*>(arena_->Allocate(2 * sizeof(fdf_handle_t)));
+        reinterpret_cast<fdf_handle_t*>(arena_.Allocate(2 * sizeof(fdf_handle_t)));
     ASSERT_NOT_NULL(handles);
     handles[0] = local[i];
     handles[1] = remote[i];
-    ASSERT_OK(fdf_channel_write(local[i - 1], 0, arena_, nullptr, 0, handles, 2));
+    ASSERT_OK(fdf_channel_write(local[i - 1], 0, arena_.get(), nullptr, 0, handles, 2));
   }
 
   // Close the handles and for destructions.
@@ -557,13 +555,12 @@ TEST_F(ChannelTest, NestingIsOk) {
 //
 
 TEST_F(ChannelTest, WriteToClosedHandle) {
-  fdf_handle_close(local_);
+  local_.reset();
 
   ASSERT_DEATH([&] {
-    EXPECT_EQ(ZX_ERR_BAD_HANDLE, fdf_channel_write(local_, 0, nullptr, nullptr, 0, nullptr, 0));
+    EXPECT_EQ(ZX_ERR_BAD_HANDLE,
+              fdf_channel_write(local_.get(), 0, nullptr, nullptr, 0, nullptr, 0));
   });
-
-  local_ = FDF_HANDLE_INVALID;  // Set this so the destructor doesn't try to close it again.
 }
 
 // Tests providing a close handle as part of a channel message.
@@ -573,13 +570,14 @@ TEST_F(ChannelTest, WriteClosedHandle) {
   ASSERT_EQ(ZX_OK, fdf_channel_create(0, &closed_ch, &additional_ch));
   fdf_handle_close(closed_ch);
 
-  void* handles_buf = arena_->Allocate(sizeof(fdf_handle_t));
+  void* handles_buf = arena_.Allocate(sizeof(fdf_handle_t));
   ASSERT_NOT_NULL(handles_buf);
 
   fdf_handle_t* handles = reinterpret_cast<fdf_handle_t*>(handles_buf);
   handles[0] = closed_ch;
 
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, fdf_channel_write(local_, 0, arena_, nullptr, 0, handles, 1));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+            fdf_channel_write(local_.get(), 0, arena_.get(), nullptr, 0, handles, 1));
 
   fdf_handle_close(additional_ch);
 }
@@ -587,7 +585,8 @@ TEST_F(ChannelTest, WriteClosedHandle) {
 // Tests providing non arena-managed data in a channel message.
 TEST_F(ChannelTest, WriteNonManagedData) {
   uint8_t data[100];
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, fdf_channel_write(local_, 0, arena_, data, 100, NULL, 0));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
+            fdf_channel_write(local_.get(), 0, arena_.get(), data, 100, NULL, 0));
 }
 
 // Tests providing a non arena-managed handles array in a channel message.
@@ -596,7 +595,8 @@ TEST_F(ChannelTest, WriteNonManagedHandles) {
   fdf_handle_t additional_ch;
   ASSERT_EQ(ZX_OK, fdf_channel_create(0, &transfer_ch, &additional_ch));
 
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, fdf_channel_write(local_, 0, arena_, nullptr, 0, &transfer_ch, 1));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+            fdf_channel_write(local_.get(), 0, arena_.get(), nullptr, 0, &transfer_ch, 1));
 
   fdf_handle_close(transfer_ch);
   fdf_handle_close(additional_ch);
@@ -604,21 +604,22 @@ TEST_F(ChannelTest, WriteNonManagedHandles) {
 
 // Tests writing to the channel after the peer has closed their end.
 TEST_F(ChannelTest, WriteClosedPeer) {
-  fdf_handle_close(local_);
-  local_ = ZX_HANDLE_INVALID;  // Set this so the destructor doesn't try closing it again.
+  local_.reset();
 
-  void* data = arena_->Allocate(64);
-  ASSERT_EQ(ZX_ERR_PEER_CLOSED, fdf_channel_write(remote_, 0, arena_, data, 64, NULL, 0));
+  void* data = arena_.Allocate(64);
+  ASSERT_EQ(ZX_ERR_PEER_CLOSED,
+            fdf_channel_write(remote_.get(), 0, arena_.get(), data, 64, NULL, 0));
 }
 
 TEST_F(ChannelTest, WriteSelfHandleReturnsNotSupported) {
-  void* handles_buf = arena_->Allocate(sizeof(fdf_handle_t));
+  void* handles_buf = arena_.Allocate(sizeof(fdf_handle_t));
   ASSERT_NOT_NULL(handles_buf);
 
   fdf_handle_t* handles = reinterpret_cast<fdf_handle_t*>(handles_buf);
-  handles[0] = local_;
+  handles[0] = local_.get();
 
-  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, fdf_channel_write(local_, 0, arena_, nullptr, 0, handles, 1));
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED,
+            fdf_channel_write(local_.get(), 0, arena_.get(), nullptr, 0, handles, 1));
 }
 
 TEST_F(ChannelTest, WriteWaitedHandle) {
@@ -631,13 +632,13 @@ TEST_F(ChannelTest, WriteWaitedHandle) {
       [](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {});
   ASSERT_OK(channel_read_->Begin(fdf_dispatcher_));
 
-  void* handles_buf = arena_->Allocate(sizeof(fdf_handle_t));
+  void* handles_buf = arena_.Allocate(sizeof(fdf_handle_t));
   ASSERT_NOT_NULL(handles_buf);
 
   fdf_handle_t* handles = reinterpret_cast<fdf_handle_t*>(handles_buf);
   handles[0] = remote;
 
-  ASSERT_NOT_OK(fdf_channel_write(local_, 0, arena_, nullptr, 0, handles, 1));
+  ASSERT_NOT_OK(fdf_channel_write(local_.get(), 0, arena_.get(), nullptr, 0, handles, 1));
 
   fdf_handle_close(local);
   fdf_handle_close(remote);
@@ -649,23 +650,22 @@ TEST_F(ChannelTest, WriteWaitedHandle) {
 
 // Tests reading from a closed channel handle.
 TEST_F(ChannelTest, ReadToClosedHandle) {
-  fdf_handle_close(local_);
+  local_.reset();
 
   ASSERT_DEATH([&] {
-    EXPECT_EQ(ZX_ERR_BAD_HANDLE, fdf_channel_read(local_, 0, nullptr, nullptr, 0, nullptr, 0));
+    EXPECT_EQ(ZX_ERR_BAD_HANDLE,
+              fdf_channel_read(local_.get(), 0, nullptr, nullptr, 0, nullptr, 0));
   });
-
-  local_ = ZX_HANDLE_INVALID;  // Set this so the destructor doesn't try closing it again.
 }
 
 TEST_F(ChannelTest, ReadNullArenaWithData) {
-  void* data = arena_->Allocate(64);
-  ASSERT_EQ(ZX_OK, fdf_channel_write(local_, 0, arena_, data, 64, NULL, 0));
-  ASSERT_NO_FATAL_FAILURES(WaitUntilReadReady(remote_));
+  void* data = arena_.Allocate(64);
+  ASSERT_EQ(ZX_OK, fdf_channel_write(local_.get(), 0, arena_.get(), data, 64, NULL, 0));
+  ASSERT_NO_FATAL_FAILURES(WaitUntilReadReady(remote_.get()));
   void* out_data;
   uint32_t num_bytes;
   ASSERT_EQ(ZX_ERR_INVALID_ARGS,
-            fdf_channel_read(remote_, 0, nullptr, &out_data, &num_bytes, nullptr, 0));
+            fdf_channel_read(remote_.get(), 0, nullptr, &out_data, &num_bytes, nullptr, 0));
 }
 
 TEST_F(ChannelTest, ReadNullArenaWithHandles) {
@@ -673,18 +673,18 @@ TEST_F(ChannelTest, ReadNullArenaWithHandles) {
   fdf_handle_t transfer_ch_remote;
   ASSERT_EQ(ZX_OK, fdf_channel_create(0, &transfer_ch_local, &transfer_ch_remote));
 
-  void* handles_buf = arena_->Allocate(sizeof(fdf_handle_t));
+  void* handles_buf = arena_.Allocate(sizeof(fdf_handle_t));
   ASSERT_NOT_NULL(handles_buf);
 
   fdf_handle_t* handles = reinterpret_cast<fdf_handle_t*>(handles_buf);
   handles[0] = transfer_ch_remote;
 
-  ASSERT_EQ(ZX_OK, fdf_channel_write(local_, 0, arena_, nullptr, 0, handles, 1));
-  ASSERT_NO_FATAL_FAILURES(WaitUntilReadReady(remote_));
+  ASSERT_EQ(ZX_OK, fdf_channel_write(local_.get(), 0, arena_.get(), nullptr, 0, handles, 1));
+  ASSERT_NO_FATAL_FAILURES(WaitUntilReadReady(remote_.get()));
   fdf_handle_t* read_handles;
   uint32_t num_handles;
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS,
-            fdf_channel_read(remote_, 0, nullptr, nullptr, nullptr, &read_handles, &num_handles));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, fdf_channel_read(remote_.get(), 0, nullptr, nullptr, nullptr,
+                                                  &read_handles, &num_handles));
 
   fdf_handle_close(transfer_ch_local);
   // We do not need to to close the transferred handle, as it is consumed by |fdf_channel_write|.
@@ -695,25 +695,26 @@ TEST_F(ChannelTest, ReadWhenEmptyReturnsShouldWait) {
   fdf_arena_t* arena;
   void* data;
   uint32_t num_bytes;
-  ASSERT_EQ(ZX_ERR_SHOULD_WAIT, fdf_channel_read(local_, 0, &arena, &data, &num_bytes, nullptr, 0));
+  ASSERT_EQ(ZX_ERR_SHOULD_WAIT,
+            fdf_channel_read(local_.get(), 0, &arena, &data, &num_bytes, nullptr, 0));
 }
 
 TEST_F(ChannelTest, ReadWhenEmptyAndClosedReturnsPeerClosed) {
-  fdf_handle_close(remote_);
-  remote_ = ZX_HANDLE_INVALID;  // Set this so the destructor doesn't try closing it again.
+  remote_.reset();
 
   fdf_arena_t* arena;
   void* data;
   uint32_t num_bytes;
-  ASSERT_EQ(ZX_ERR_PEER_CLOSED, fdf_channel_read(local_, 0, &arena, &data, &num_bytes, nullptr, 0));
+  ASSERT_EQ(ZX_ERR_PEER_CLOSED,
+            fdf_channel_read(local_.get(), 0, &arena, &data, &num_bytes, nullptr, 0));
 }
 
 // Tests reading from the channel after the peer has closed their end.
 TEST_F(ChannelTest, ReadClosedPeer) {
-  fdf_handle_close(local_);
-  local_ = ZX_HANDLE_INVALID;  // Set this so the destructor doesn't try closing it again.
+  local_.reset();
 
-  ASSERT_EQ(ZX_ERR_PEER_CLOSED, fdf_channel_read(remote_, 0, nullptr, nullptr, 0, nullptr, 0));
+  ASSERT_EQ(ZX_ERR_PEER_CLOSED,
+            fdf_channel_read(remote_.get(), 0, nullptr, nullptr, 0, nullptr, 0));
 }
 
 //
@@ -721,27 +722,42 @@ TEST_F(ChannelTest, ReadClosedPeer) {
 //
 
 TEST_F(ChannelTest, WaitAsyncClosedPeerNoPendingMsgs) {
-  fdf_handle_close(local_);
-  local_ = ZX_HANDLE_INVALID;  // Set this so the destructor doesn't try closing it again.
+  local_.reset();
 
   auto channel_read_ = std::make_unique<fdf::ChannelRead>(
-      remote_, 0 /* options */,
+      remote_.get(), 0 /* options */,
       [](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {});
   EXPECT_EQ(ZX_ERR_PEER_CLOSED, channel_read_->Begin(fdf_dispatcher_));
 }
 
 TEST_F(ChannelTest, WaitAsyncAlreadyWaiting) {
   auto channel_read_ = std::make_unique<fdf::ChannelRead>(
-      local_, 0 /* options */,
+      local_.get(), 0 /* options */,
       [](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {});
   EXPECT_OK(channel_read_->Begin(fdf_dispatcher_));
 
   auto channel_read2_ = std::make_unique<fdf::ChannelRead>(
-      local_, 0 /* options */,
+      local_.get(), 0 /* options */,
       [](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {});
   EXPECT_EQ(ZX_ERR_BAD_STATE, channel_read2_->Begin(fdf_dispatcher_));
 
-  EXPECT_OK(fdf_channel_write(remote_, 0, nullptr, nullptr, 0, nullptr, 0));
+  EXPECT_OK(fdf_channel_write(remote_.get(), 0, nullptr, nullptr, 0, nullptr, 0));
 
-  ASSERT_NO_FATAL_FAILURES(WaitUntilReadReady(local_));
+  ASSERT_NO_FATAL_FAILURES(WaitUntilReadReady(local_.get()));
+}
+
+//
+// Tests for C++ API
+//
+
+TEST_F(ChannelTest, MoveConstructor) {
+  auto channels = fdf::ChannelPair::Create(0);
+  ASSERT_EQ(ZX_OK, channels.status_value());
+  local_ = std::move(channels->end0);
+  remote_ = std::move(channels->end1);
+
+  local_.reset();
+  remote_.reset();
+
+  ASSERT_EQ(0, driver_runtime::gHandleTableArena.num_allocated());
 }

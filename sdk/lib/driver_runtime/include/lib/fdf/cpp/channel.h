@@ -45,22 +45,18 @@ namespace fdf {
 //
 class Channel {
  public:
-  explicit Channel(fdf_handle_t channel = ZX_HANDLE_INVALID) : channel_(channel) {}
+  explicit Channel(fdf_handle_t channel = FDF_HANDLE_INVALID) : channel_(channel) {}
 
   Channel(const Channel& to_copy) = delete;
   Channel& operator=(const Channel& other) = delete;
 
   Channel(Channel&& other) noexcept : Channel(other.release()) {}
   Channel& operator=(Channel&& other) noexcept {
-    channel_ = other.release();
+    reset(other.release());
     return *this;
   }
 
-  ~Channel() {
-    if (channel_ != ZX_HANDLE_INVALID) {
-      fdf_handle_close(channel_);
-    }
-  }
+  ~Channel() { close(); }
 
   // Attempts to write a message to the channel.
   //
@@ -189,9 +185,21 @@ class Channel {
 
   fdf_handle_t get() { return channel_; }
 
+  void reset(fdf_handle_t channel = FDF_HANDLE_INVALID) {
+    close();
+    channel_ = channel;
+  }
+
+  void close() {
+    if (channel_ != FDF_HANDLE_INVALID) {
+      fdf_handle_close(channel_);
+      channel_ = FDF_HANDLE_INVALID;
+    }
+  }
+
   fdf_handle_t release() {
     fdf_handle_t ret = channel_;
-    channel_ = ZX_HANDLE_INVALID;
+    channel_ = FDF_HANDLE_INVALID;
     return ret;
   }
 

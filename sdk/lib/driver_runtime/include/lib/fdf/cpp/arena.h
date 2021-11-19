@@ -29,7 +29,7 @@ namespace fdf {
 //
 class Arena {
  public:
-  explicit Arena(fdf_arena_t* arena) : arena_(arena) {}
+  explicit Arena(fdf_arena_t* arena = nullptr) : arena_(arena) {}
 
   // |tag| provides a hint to the runtime so that it may be more efficient.
   // For example, adjusting the size of the buffer backing the arena
@@ -49,15 +49,11 @@ class Arena {
 
   Arena(Arena&& other) noexcept : Arena(other.release()) {}
   Arena& operator=(Arena&& other) noexcept {
-    arena_ = other.release();
+    reset(other.release());
     return *this;
   }
 
-  ~Arena() {
-    if (arena_) {
-      fdf_arena_destroy(arena_);
-    }
-  }
+  ~Arena() { close(); }
 
   void* Allocate(size_t bytes) { return fdf_arena_allocate(arena_, bytes); }
   void Free(void* ptr) { fdf_arena_free(arena_, ptr); }
@@ -67,6 +63,18 @@ class Arena {
   template <typename T>
   bool Contains(const T* ptr) {
     return fdf_arena_contains(arena_, ptr, sizeof(T));
+  }
+
+  void reset(fdf_arena_t* arena = nullptr) {
+    close();
+    arena_ = arena;
+  }
+
+  void close() {
+    if (arena_) {
+      fdf_arena_destroy(arena_);
+      arena_ = nullptr;
+    }
   }
 
   fdf_arena_t* release() {
