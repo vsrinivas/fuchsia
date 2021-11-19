@@ -49,8 +49,33 @@ class TestDeviceOps : public ::testing::Test {
 int TestDeviceOps::init_count_ = 0;
 int TestDeviceOps::unbind_count_ = 0;
 
+TEST_F(TestDeviceOps, DdkDeviceAdd) {
+  device_add_args_t args = {
+      .ctx = &dev_mgr_,
+      .ops = &ops,
+  };
+  zx_device_t *device = nullptr;
+  ASSERT_EQ(device_add(root_dev_, &args, &device), ZX_OK);
+  ASSERT_NE(device, nullptr);
+  ASSERT_TRUE(dev_mgr_.ContainsDevice(device));
+}
+
+TEST_F(TestDeviceOps, DdkDeviceAsyncRemove) {
+  device_add_args_t args = {
+      .ctx = &dev_mgr_,
+      .ops = &ops,
+  };
+  zx_device_t *device = nullptr;
+  ASSERT_EQ(device_add(root_dev_, &args, &device), ZX_OK);
+  ASSERT_NE(device, nullptr);
+  ASSERT_TRUE(dev_mgr_.ContainsDevice(device));
+
+  device_async_remove(device);
+  ASSERT_FALSE(dev_mgr_.ContainsDevice(device));
+}
+
 TEST_F(TestDeviceOps, DeviceInitTest) {
-  device_add_args_t dev_args[NUM_DEVS];
+  device_add_args_t dev_args[NUM_DEVS] = {};
   zx_device_t *ctx[NUM_DEVS];
 
   // Add NUM_DEVS devices and expect init_count_ to match.
@@ -64,7 +89,7 @@ TEST_F(TestDeviceOps, DeviceInitTest) {
 }
 
 TEST_F(TestDeviceOps, DeviceUnbindTestFlat) {
-  device_add_args_t dev_args[NUM_DEVS];
+  device_add_args_t dev_args[NUM_DEVS] = {};
   zx_device_t *ctx[NUM_DEVS];
 
   for (int i = 0; i < NUM_DEVS; i++) {
@@ -87,7 +112,7 @@ TEST_F(TestDeviceOps, DeviceUnbindTestFlat) {
 
 TEST_F(TestDeviceOps, DeviceUnbindHierarchyRootTest) {
   constexpr int kDeviceCnt = 5;
-  device_add_args_t dev_args[kDeviceCnt];
+  device_add_args_t dev_args[kDeviceCnt] = {};
   zx_device_t *ctx[kDeviceCnt];
 
   for (auto &dev_arg : dev_args) {
@@ -114,7 +139,7 @@ TEST_F(TestDeviceOps, DeviceUnbindHierarchyRootTest) {
 
 TEST_F(TestDeviceOps, DeviceUnbindHierarchyMidTest) {
   constexpr int kDeviceCnt = 5;
-  device_add_args_t dev_args[kDeviceCnt];
+  device_add_args_t dev_args[kDeviceCnt] = {};
   zx_device_t *ctx[kDeviceCnt];
 
   for (auto &dev_arg : dev_args) {
@@ -140,7 +165,7 @@ TEST_F(TestDeviceOps, DeviceUnbindHierarchyMidTest) {
 }
 
 TEST_F(TestDeviceOps, AddRemoveDevs) {
-  device_add_args_t dev_args[NUM_DEVS];
+  device_add_args_t dev_args[NUM_DEVS] = {};
   zx_device_t *ctx[NUM_DEVS];
   zx_status_t last_sts;
 
@@ -166,11 +191,11 @@ TEST_F(TestDeviceOps, AddRemoveDevs) {
   printf("Iterate through the list\n");
   // Iterate through the dev list
 
-  for (const auto &[dev, dev_info] : dev_mgr_) {
+  for (const auto &dev : dev_mgr_) {
     // Check devices' parent other than root device
-    if (dev == dev_mgr_.fake_root_dev_id_)
+    if (dev->IsRootParent())
       continue;
-    EXPECT_EQ(dev_info.parent, root_dev_);
+    EXPECT_EQ(dev->Parent(), root_dev_);
   }
 
   printf("Remove the devs\n");
@@ -189,8 +214,33 @@ TEST_F(TestDeviceOps, AddRemoveDevs) {
 }
 
 TEST_F(TestDeviceOps, RetrieveDevice) {
-  wlan::simulation::FakeDevMgr dev_mgr_;
+  constexpr uint32_t kProtoId = ZX_PROTOCOL_WLANPHY;
+  device_add_args_t add_args{
+      .ops = nullptr,
+      .proto_id = kProtoId,
+  };
+  zx_device_t *dev1 = nullptr;
+  zx_device_t *dev2 = nullptr;
+  auto status = dev_mgr_.DeviceAdd(root_dev_, &add_args, &dev1);
+  ASSERT_EQ(status, ZX_OK);
+  status = dev_mgr_.DeviceAdd(root_dev_, &add_args, &dev2);
+  ASSERT_EQ(status, ZX_OK);
 
+  // Retrieve via protocol:
+  auto child_dev = dev_mgr_.FindFirstByProtocolId(kProtoId);
+  ASSERT_EQ(child_dev, dev1);
+  EXPECT_EQ(child_dev->Parent(), root_dev_);
+
+  child_dev = dev_mgr_.FindLatestByProtocolId(kProtoId);
+  ASSERT_EQ(child_dev, dev2);
+  EXPECT_EQ(child_dev->Parent(), root_dev_);
+
+  // Attempt to find a device with another protocol id which no devices have used. This should fail.
+  child_dev = dev_mgr_.FindFirstByProtocolId(kProtoId + 1);
+  ASSERT_EQ(child_dev, nullptr);
+}
+
+TEST_F(TestDeviceOps, ContainsDevice) {
   device_add_args_t add_args{
       .ops = nullptr,
       .proto_id = 42,
@@ -199,27 +249,13 @@ TEST_F(TestDeviceOps, RetrieveDevice) {
   auto status = dev_mgr_.DeviceAdd(root_dev_, &add_args, &dev);
   ASSERT_EQ(status, ZX_OK);
 
-  // Retrieve via protocol:
-  auto child_dev = dev_mgr_.FindFirstByProtocolId(42);
-  ASSERT_TRUE(child_dev.has_value());
-  EXPECT_EQ(child_dev->parent, root_dev_);
-  child_dev = dev_mgr_.FindFirstByProtocolId(43);
-  ASSERT_FALSE(child_dev.has_value());
-
-  // Retrieve via zx_device:
-  child_dev = dev_mgr_.GetDevice(dev);
-  ASSERT_TRUE(child_dev.has_value());
-  EXPECT_EQ(child_dev->parent, root_dev_);
-  child_dev = dev_mgr_.GetDevice(DeviceId(999).as_device());
-  ASSERT_FALSE(child_dev.has_value());
-  // This is the parent device of fake root device, it doesn't have any device info.
-  child_dev = dev_mgr_.GetDevice(nullptr);
-  ASSERT_FALSE(child_dev.has_value());
+  ASSERT_TRUE(dev_mgr_.ContainsDevice(dev));
+  // Create a pointer that can never be the same as dev no matter how lucky/unlucky we are.
+  zx_device_t *invalid_ptr = reinterpret_cast<zx_device_t *>(~reinterpret_cast<uintptr_t>(dev));
+  ASSERT_FALSE(dev_mgr_.ContainsDevice(invalid_ptr));
 }
 
 TEST_F(TestDeviceOps, RemoveParentBeforeChild) {
-  wlan::simulation::FakeDevMgr dev_mgr_;
-
   // Use three level devices to verify the recursive removal not only works for directly parent
   // device.
   device_add_args_t add_args = {
@@ -248,6 +284,114 @@ TEST_F(TestDeviceOps, RemoveParentBeforeChild) {
   // Now removing the toplevel device should also succeed.
   dev_mgr_.DeviceAsyncRemove(level_one_dev);
   EXPECT_EQ(dev_mgr_.DeviceCount(), static_cast<size_t>(0));
+}
+
+// Used to verify that the address of the init operation remains the same
+void EmptyInit(void *) {}
+
+constexpr char kDeviceName[] = "test name";
+constexpr zx_protocol_device_t kProtoOps = {.init = &EmptyInit};
+constexpr device_power_state_info_t kPowerStates[] = {
+    device_power_state_info_t{.state_id = DEV_POWER_STATE_D0},
+    device_power_state_info_t{.state_id = DEV_POWER_STATE_D1},
+};
+constexpr device_performance_state_info_t kPerformanceStates[] = {
+    device_performance_state_info_t{.state_id = DEV_PERFORMANCE_STATE_P0,
+                                    .restore_latency = ZX_MSEC(3)},
+    device_performance_state_info_t{.state_id = DEV_PERFORMANCE_STATE_P0,
+                                    .restore_latency = ZX_MSEC(4)},
+    device_performance_state_info_t{.state_id = DEV_PERFORMANCE_STATE_P0,
+                                    .restore_latency = ZX_MSEC(5)},
+};
+const char *kFidlProtocolOffers[] = {
+    "one",
+    "two",
+    "three",
+    "four",
+};
+constexpr char kProxyArgs[] = "proxy args";
+
+class DeviceAddArgsTest : public ::testing::Test {
+ public:
+ protected:
+  static void CheckArgsEquality(const device_add_args_t &left, const device_add_args_t &right) {
+    EXPECT_NE(left.name, right.name);
+    EXPECT_STREQ(left.name, right.name);
+
+    EXPECT_NE(left.ops, right.ops);
+    EXPECT_EQ(left.ops->init, right.ops->init);
+
+    EXPECT_NE(left.power_states, right.power_states);
+    ASSERT_EQ(left.power_state_count, right.power_state_count);
+    for (size_t i = 0; i < left.power_state_count; ++i) {
+      EXPECT_EQ(left.power_states[i].state_id, right.power_states[i].state_id);
+    }
+
+    EXPECT_NE(left.performance_states, right.performance_states);
+    ASSERT_EQ(left.performance_state_count, right.performance_state_count);
+    for (size_t i = 0; i < left.performance_state_count; ++i) {
+      EXPECT_EQ(left.performance_states[i].state_id, right.performance_states[i].state_id);
+      EXPECT_EQ(left.performance_states[i].restore_latency,
+                right.performance_states[i].restore_latency);
+    }
+
+    EXPECT_NE(left.fidl_protocol_offers, right.fidl_protocol_offers);
+    ASSERT_EQ(left.fidl_protocol_offer_count, right.fidl_protocol_offer_count);
+    for (size_t i = 0; i < left.fidl_protocol_offer_count; ++i) {
+      EXPECT_NE(left.fidl_protocol_offers[i], right.fidl_protocol_offers[i]);
+      EXPECT_STREQ(left.fidl_protocol_offers[i], right.fidl_protocol_offers[i]);
+    }
+
+    EXPECT_NE(left.proxy_args, right.proxy_args);
+    EXPECT_STREQ(left.proxy_args, right.proxy_args);
+  }
+
+  const device_add_args_t original_args_ = {
+      .name = kDeviceName,
+      .ops = &kProtoOps,
+      .power_states = kPowerStates,
+      .power_state_count = std::size(kPowerStates),
+      .performance_states = kPerformanceStates,
+      .performance_state_count = std::size(kPerformanceStates),
+      .fidl_protocol_offers = kFidlProtocolOffers,
+      .fidl_protocol_offer_count = std::size(kFidlProtocolOffers),
+      .proxy_args = kProxyArgs,
+  };
+};
+
+TEST_F(DeviceAddArgsTest, ConstructFromPlainArgs) {
+  DeviceAddArgs args(original_args_);
+
+  CheckArgsEquality(args.Args(), original_args_);
+}
+
+TEST_F(DeviceAddArgsTest, AssignFromPlainArgs) {
+  // Construct with some empty args, then assign.
+  DeviceAddArgs args(device_add_args_t{});
+
+  args = original_args_;
+
+  CheckArgsEquality(args.Args(), original_args_);
+}
+
+TEST_F(DeviceAddArgsTest, ConstructFromDeviceAddArgs) {
+  // Construct with some empty args, then assign.
+  DeviceAddArgs source(original_args_);
+
+  DeviceAddArgs destination(source);
+
+  CheckArgsEquality(destination.Args(), original_args_);
+}
+
+TEST_F(DeviceAddArgsTest, AssignFromDeviceAddArgs) {
+  // Construct with some empty args, then assign.
+  DeviceAddArgs source(original_args_);
+
+  DeviceAddArgs destination(device_add_args_t{});
+
+  destination = source;
+
+  CheckArgsEquality(destination.Args(), original_args_);
 }
 
 }  // namespace

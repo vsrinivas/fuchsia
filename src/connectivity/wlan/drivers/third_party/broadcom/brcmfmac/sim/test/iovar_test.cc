@@ -21,13 +21,15 @@ class IovarTest : public SimTest {
 
   void Init();
 
-  uint32_t DeviceCount();
+  uint32_t DeviceCountByProtocolId(uint32_t proto_id);
 
   zx_status_t IovarGet(char* buf, uint32_t buf_len);
   zx_status_t IovarSet(char* buf, uint32_t buf_len);
 };
 
-uint32_t IovarTest::DeviceCount() { return (dev_mgr_->DeviceCount()); }
+uint32_t IovarTest::DeviceCountByProtocolId(uint32_t proto_id) {
+  return dev_mgr_->DeviceCountByProtocolId(proto_id);
+}
 
 // Create our device instance and hook up the callbacks
 void IovarTest::Init() { ASSERT_EQ(SimTest::Init(), ZX_OK); }
@@ -47,7 +49,7 @@ zx_status_t IovarTest::IovarSet(char* buf, uint32_t buf_len) {
 TEST_F(IovarTest, CheckIovarGet) {
   Init();
   ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 1u);
   char buf[32];
   strcpy(buf, "mpc");
   // Get the value through the factory iovar interface
@@ -65,7 +67,7 @@ TEST_F(IovarTest, CheckIovarGet) {
 TEST_F(IovarTest, CheckIovarSet) {
   Init();
   ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
-  EXPECT_EQ(DeviceCount(), 2u);
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 1u);
   brcmf_simdev* sim = device_->GetSim();
   // Get the current value of mpc through the public interface
   uint32_t cur_val;
@@ -89,7 +91,7 @@ TEST_F(IovarTest, CheckIovarSet) {
 TEST_F(IovarTest, CheckIovarWrongBufLen) {
   Init();
   ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
-  EXPECT_EQ(DeviceCount(), 2u);
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 1u);
   char buf[32];
   strcpy(buf, "wsec_key");
   // Get the value through the factory iovar interface with insufficient buflen.
@@ -104,7 +106,7 @@ TEST_F(IovarTest, CheckIovarWrongBufLen) {
 TEST_F(IovarTest, CheckIovarBufLenTooShort) {
   Init();
   ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
-  EXPECT_EQ(DeviceCount(), 2u);
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 1u);
   brcmf_simdev* sim = device_->GetSim();
   struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
   zx_status_t status;
@@ -123,7 +125,7 @@ TEST_F(IovarTest, CheckIovarBufLenTooShort) {
 TEST_F(IovarTest, CheckFilIovarFuncs) {
   Init();
   ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
-  EXPECT_EQ(DeviceCount(), 2u);
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 1u);
   brcmf_simdev* sim = device_->GetSim();
   struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
   zx_status_t status;
@@ -135,7 +137,7 @@ TEST_F(IovarTest, CheckFilIovarFuncs) {
 TEST_F(IovarTest, CheckIovarBufLenTooLong) {
   Init();
   ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
-  EXPECT_EQ(DeviceCount(), 2u);
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 1u);
   char buf[BRCMF_DCMD_MAXLEN + 1];
   strcpy(buf, "anything");
   zx_status_t status = IovarGet(buf, BRCMF_DCMD_MAXLEN + 1);

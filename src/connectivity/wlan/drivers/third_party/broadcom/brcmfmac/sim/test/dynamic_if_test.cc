@@ -53,7 +53,7 @@ class DynamicIfTest : public SimTest {
   void Init();
 
   // How many devices have been registered by the fake devhost
-  uint32_t DeviceCount();
+  uint32_t DeviceCountByProtocolId(uint32_t proto_id);
 
   // Force fail an attempt to stop the softAP
   void InjectStopAPError();
@@ -103,7 +103,9 @@ void DynamicIfTest::PhyQuery(wlanphy_impl_info_t* out_info) {
   ASSERT_EQ(status, ZX_OK);
 }
 
-uint32_t DynamicIfTest::DeviceCount() { return (dev_mgr_->DeviceCount()); }
+uint32_t DynamicIfTest::DeviceCountByProtocolId(uint32_t proto_id) {
+  return dev_mgr_->DeviceCountByProtocolId(proto_id);
+}
 
 void DynamicIfTest::InjectStopAPError() {
   brcmf_simdev* sim = device_->GetSim();
@@ -232,7 +234,7 @@ TEST_F(DynamicIfTest, CreateDestroy) {
   EXPECT_EQ(client_mac, kFakeMac);
 
   EXPECT_EQ(DeleteInterface(&client_ifc_), ZX_OK);
-  EXPECT_EQ(DeviceCount(), 1U);
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 0u);
 
   ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_AP, &softap_ifc_, std::nullopt, kDefaultBssid),
             ZX_OK);
@@ -243,7 +245,7 @@ TEST_F(DynamicIfTest, CreateDestroy) {
   EXPECT_EQ(soft_ap_mac, kDefaultBssid);
 
   EXPECT_EQ(DeleteInterface(&softap_ifc_), ZX_OK);
-  EXPECT_EQ(DeviceCount(), 1U);
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 0u);
 }
 
 // fxbug.dev/78738 resulted because of a race created by the invokation of the event handler prior
@@ -354,7 +356,7 @@ TEST_F(DynamicIfTest, CheckClientInitParams) {
   // Set sim->drvr->bus_if->ops back to the original set of brcmf_bus_ops
   sim->drvr->bus_if->ops = original_bus_ops;
   EXPECT_EQ(DeleteInterface(&client_ifc_), ZX_OK);
-  EXPECT_EQ(DeviceCount(), 1U);
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 0u);
 }
 
 // This test case verifies that starting an AP iface using the same MAC address as the existing
@@ -368,9 +370,9 @@ TEST_F(DynamicIfTest, CreateApWithSameMacAsClient) {
   client_ifc_.GetMacAddr(&client_mac);
   EXPECT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_AP, &softap_ifc_, std::nullopt, client_mac),
             ZX_ERR_ALREADY_EXISTS);
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 1u);
   EXPECT_EQ(DeleteInterface(&client_ifc_), ZX_OK);
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 0u);
 }
 
 // Ensure AP uses auto-gen MAC address when MAC address is not specified in the StartInterface
@@ -392,9 +394,9 @@ TEST_F(DynamicIfTest, CreateApWithNoMACAddress) {
   softap_ifc_.GetMacAddr(&softap_mac);
   EXPECT_EQ(softap_mac, expected_mac_addr);
 
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 1u);
   EXPECT_EQ(DeleteInterface(&softap_ifc_), ZX_OK);
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 0u);
 }
 
 // This test verifies that if we want to create an client iface with the same MAC address as the
@@ -410,9 +412,9 @@ TEST_F(DynamicIfTest, CreateClientWithPreAllocMac) {
 
   EXPECT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_, std::nullopt, pre_set_mac),
             ZX_OK);
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 1u);
   EXPECT_EQ(DeleteInterface(&client_ifc_), ZX_OK);
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 0u);
 }
 
 // This test verifies that we still successfully create an iface with a random
@@ -446,7 +448,7 @@ TEST_F(DynamicIfTest, CreateClientWithRandomMac) {
 
   // Set sim->drvr->bus_if->ops back to the original set of brcmf_bus_ops
   sim->drvr->bus_if->ops = original_bus_ops;
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 0u);
 }
 
 // This test verifies brcmf_cfg80211_add_iface() returns ZX_ERR_INVALID_ARGS if the wdev_out
@@ -465,7 +467,7 @@ TEST_F(DynamicIfTest, CreateIfaceMustProvideWdevOut) {
   EXPECT_EQ(ZX_ERR_INVALID_ARGS,
             brcmf_cfg80211_add_iface(sim->drvr, kFakeClientName, nullptr, &req, nullptr));
 
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 0u);
 }
 
 void DynamicIfTest::CheckAddIfaceWritesWdev(wlan_info_mac_role_t role, const char iface_name[],
@@ -486,7 +488,7 @@ void DynamicIfTest::CheckAddIfaceWritesWdev(wlan_info_mac_role_t role, const cha
 
   EXPECT_EQ(ZX_OK, brcmf_cfg80211_del_iface(sim->drvr->config, wdev));
 
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 0u);
 }
 
 // This test verifies brcmf_cfg80211_add_iface() behavior with respect to
@@ -526,7 +528,7 @@ TEST_F(DynamicIfTest, CreateClientWithCustomName) {
   EXPECT_EQ(ZX_OK, brcmf_cfg80211_del_iface(sim->drvr->config, wdev));
   EXPECT_EQ(0, strcmp(brcmf_ifname(ifp), kPrimaryNetworkInterfaceName));
 
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 0u);
 }
 
 // This test verifies new ap interface names are assigned.
@@ -547,7 +549,7 @@ TEST_F(DynamicIfTest, CreateApWithCustomName) {
   EXPECT_EQ(0, strcmp(wdev->netdev->name, kFakeApName));
   EXPECT_EQ(ZX_OK, brcmf_cfg80211_del_iface(sim->drvr->config, wdev));
 
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 0u);
 }
 
 // This test verifies the truncation of long interface names.
@@ -581,7 +583,7 @@ TEST_F(DynamicIfTest, CreateClientWithLongName) {
   EXPECT_EQ(ZX_OK, brcmf_cfg80211_add_iface(sim->drvr, really_long_name, nullptr, &req, &wdev));
   EXPECT_EQ(0, strcmp(wdev->netdev->name, truncated_name));
   EXPECT_EQ(ZX_OK, brcmf_cfg80211_del_iface(sim->drvr->config, wdev));
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 0u);
 }
 
 // This test verifies that creating a client interface with a pre-set MAC address will not cause
@@ -596,9 +598,9 @@ TEST_F(DynamicIfTest, CreateClientWithCustomMac) {
             brcmf_fil_iovar_data_get(ifp, "cur_etheraddr", retrieved_mac.byte, ETH_ALEN, nullptr));
   EXPECT_EQ(retrieved_mac, kFakeMac);
 
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 1u);
   EXPECT_EQ(DeleteInterface(&client_ifc_), ZX_OK);
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 0u);
 }
 
 // This test verifies that creating a client interface with a custom MAC address will not cause
@@ -619,9 +621,9 @@ TEST_F(DynamicIfTest, ClientDefaultMacFallback) {
             brcmf_fil_iovar_data_get(ifp, "cur_etheraddr", retrieved_mac.byte, ETH_ALEN, nullptr));
   EXPECT_EQ(retrieved_mac, kFakeMac);
 
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 1u);
   EXPECT_EQ(DeleteInterface(&client_ifc_), ZX_OK);
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 0u);
 
   // Create a client without a custom MAC address
   EXPECT_EQ(ZX_OK, StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_));
@@ -629,20 +631,20 @@ TEST_F(DynamicIfTest, ClientDefaultMacFallback) {
             brcmf_fil_iovar_data_get(ifp, "cur_etheraddr", retrieved_mac.byte, ETH_ALEN, nullptr));
   EXPECT_EQ(retrieved_mac, pre_set_mac);
 
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 1u);
   EXPECT_EQ(DeleteInterface(&client_ifc_), ZX_OK);
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 0u);
 }
 
 TEST_F(DynamicIfTest, DualInterfaces) {
   Init();
   StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_);
   StartInterface(WLAN_INFO_MAC_ROLE_AP, &softap_ifc_);
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(3));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 2u);
 
   EXPECT_EQ(DeleteInterface(&client_ifc_), ZX_OK);
   EXPECT_EQ(DeleteInterface(&softap_ifc_), ZX_OK);
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 0u);
 }
 
 // Start both client and SoftAP interfaces simultaneously and check if

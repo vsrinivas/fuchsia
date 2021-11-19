@@ -51,7 +51,7 @@ class CreateSoftAPTest : public SimTest {
   void DeleteInterface();
   zx_status_t StartSoftAP();
   zx_status_t StopSoftAP();
-  uint32_t DeviceCount();
+  uint32_t DeviceCountByProtocolId(uint32_t proto_id);
 
   // We track a specific firmware error condition seen in AP start.
   void GetApSetSsidErrInspectCount(uint64_t* out_count);
@@ -180,7 +180,9 @@ void CreateSoftAPTest::DeleteInterface() {
   EXPECT_EQ(SimTest::DeleteInterface(&softap_ifc_), ZX_OK);
 }
 
-uint32_t CreateSoftAPTest::DeviceCount() { return (dev_mgr_->DeviceCount()); }
+uint32_t CreateSoftAPTest::DeviceCountByProtocolId(uint32_t proto_id) {
+  return dev_mgr_->DeviceCountByProtocolId(proto_id);
+}
 
 void CreateSoftAPTest::GetApSetSsidErrInspectCount(uint64_t* out_count) {
   ASSERT_THAT(out_count, NotNull());
@@ -420,13 +422,13 @@ TEST_F(CreateSoftAPTest, SetDefault) {
   Init();
   CreateInterface();
   DeleteInterface();
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 0u);
 }
 
 TEST_F(CreateSoftAPTest, CreateSoftAP) {
   Init();
   CreateInterface();
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 1u);
   zx::duration delay = zx::msec(10);
   env_->ScheduleNotification(std::bind(&CreateSoftAPTest::StartSoftAP, this), delay);
   delay += kStartAPLinkEventDelay + kApStartedEventDelay + zx::msec(10);
@@ -438,7 +440,7 @@ TEST_F(CreateSoftAPTest, CreateSoftAP) {
 TEST_F(CreateSoftAPTest, CreateSoftAPFail) {
   Init();
   CreateInterface();
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 1u);
   InjectStartAPError();
   env_->ScheduleNotification(std::bind(&CreateSoftAPTest::StartSoftAP, this), zx::msec(50));
   env_->Run(kSimulatedClockDuration);
@@ -448,7 +450,7 @@ TEST_F(CreateSoftAPTest, CreateSoftAPFail) {
 TEST_F(CreateSoftAPTest, CreateSoftAPFail_ChanSetError) {
   Init();
   CreateInterface();
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 1u);
   InjectChanspecError();
   env_->ScheduleNotification(std::bind(&CreateSoftAPTest::StartSoftAP, this), zx::msec(50));
   env_->Run(kSimulatedClockDuration);
@@ -459,7 +461,7 @@ TEST_F(CreateSoftAPTest, CreateSoftAPFail_ChanSetError) {
 TEST_F(CreateSoftAPTest, CreateSoftAPFail_SetSsidError) {
   Init();
   CreateInterface();
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 1u);
   InjectSetSsidError();
   env_->ScheduleNotification(std::bind(&CreateSoftAPTest::StartSoftAP, this), zx::msec(50));
   uint64_t count;
@@ -478,7 +480,7 @@ TEST_F(CreateSoftAPTest, CreateSoftAPFail_SetSsidError) {
 TEST_F(CreateSoftAPTest, BssIovarFail) {
   Init();
   CreateInterface();
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 1u);
   InjectStopAPError();
   // Start SoftAP
   StartSoftAP();
@@ -491,7 +493,7 @@ TEST_F(CreateSoftAPTest, BssIovarFail) {
 TEST_F(CreateSoftAPTest, CreateSecureSoftAP) {
   Init();
   CreateInterface();
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 1u);
   // Start SoftAP in secure mode
   sec_enabled_ = true;
   StartSoftAP();
@@ -504,7 +506,7 @@ TEST_F(CreateSoftAPTest, CreateSecureSoftAP) {
 TEST_F(CreateSoftAPTest, AssociateWithSoftAP) {
   Init();
   CreateInterface();
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 1u);
   StartSoftAP();
   env_->ScheduleNotification(
       std::bind(&CreateSoftAPTest::TxAuthReq, this, simulation::AUTH_TYPE_OPEN, kFakeMac),
@@ -520,7 +522,7 @@ TEST_F(CreateSoftAPTest, AssociateWithSoftAP) {
 TEST_F(CreateSoftAPTest, ReassociateWithSoftAP) {
   Init();
   CreateInterface();
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 1u);
   StartSoftAP();
   env_->ScheduleNotification(
       std::bind(&CreateSoftAPTest::TxAuthReq, this, simulation::AUTH_TYPE_OPEN, kFakeMac),
@@ -540,7 +542,7 @@ TEST_F(CreateSoftAPTest, ReassociateWithSoftAP) {
 TEST_F(CreateSoftAPTest, DisassociateFromSoftAP) {
   Init();
   CreateInterface();
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 1u);
   StartSoftAP();
   env_->ScheduleNotification(
       std::bind(&CreateSoftAPTest::TxAuthReq, this, simulation::AUTH_TYPE_OPEN, kFakeMac),
@@ -562,7 +564,7 @@ TEST_F(CreateSoftAPTest, DisassociateFromSoftAP) {
 TEST_F(CreateSoftAPTest, DisassociateClientFromSoftAP) {
   Init();
   CreateInterface();
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 1u);
   StartSoftAP();
   env_->ScheduleNotification(
       std::bind(&CreateSoftAPTest::TxAuthReq, this, simulation::AUTH_TYPE_OPEN, kFakeMac),
@@ -582,7 +584,7 @@ TEST_F(CreateSoftAPTest, DisassociateClientFromSoftAP) {
 TEST_F(CreateSoftAPTest, AssocWithWrongAuth) {
   Init();
   CreateInterface();
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 1u);
   StartSoftAP();
   env_->ScheduleNotification(
       std::bind(&CreateSoftAPTest::TxAuthReq, this, simulation::AUTH_TYPE_SHARED_KEY, kFakeMac),
@@ -597,7 +599,7 @@ TEST_F(CreateSoftAPTest, AssocWithWrongAuth) {
 TEST_F(CreateSoftAPTest, DeauthBeforeAssoc) {
   Init();
   CreateInterface();
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 1u);
   StartSoftAP();
   env_->ScheduleNotification(
       std::bind(&CreateSoftAPTest::TxAuthReq, this, simulation::AUTH_TYPE_OPEN, kFakeMac),
@@ -615,7 +617,7 @@ TEST_F(CreateSoftAPTest, DeauthBeforeAssoc) {
 TEST_F(CreateSoftAPTest, DeauthWhileAssociated) {
   Init();
   CreateInterface();
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 1u);
   StartSoftAP();
   env_->ScheduleNotification(
       std::bind(&CreateSoftAPTest::TxAuthReq, this, simulation::AUTH_TYPE_OPEN, kFakeMac),
@@ -638,7 +640,7 @@ const common::MacAddr kSecondClientMac({0xde, 0xad, 0xbe, 0xef, 0x00, 0x04});
 TEST_F(CreateSoftAPTest, DeauthMultiClients) {
   Init();
   CreateInterface();
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 1u);
   StartSoftAP();
   env_->ScheduleNotification(
       std::bind(&CreateSoftAPTest::TxAuthReq, this, simulation::AUTH_TYPE_OPEN, kFakeMac),

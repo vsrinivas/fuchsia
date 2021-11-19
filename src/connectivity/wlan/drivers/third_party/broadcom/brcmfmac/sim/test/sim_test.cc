@@ -409,9 +409,9 @@ SimTest::SimTest() {
 
 SimTest::~SimTest() {
   // Clean the ifaces created in test but not deleted.
-  for (auto iface : iface_id_set_) {
-    if (device_->WlanphyImplDestroyIface(iface) != ZX_OK) {
-      BRCMF_ERR("Delete iface: %d failed", iface);
+  for (auto iface : ifaces_) {
+    if (device_->WlanphyImplDestroyIface(iface.first) != ZX_OK) {
+      BRCMF_ERR("Delete iface: %u failed", iface.first);
     }
   }
   // Don't have to erase the iface ids here.
@@ -462,19 +462,20 @@ zx_status_t SimTest::StartInterface(wlan_info_mac_role_t role, SimInterface* sim
     return status;
   }
 
-  if (!iface_id_set_.insert(sim_ifc->iface_id_).second) {
+  if (!ifaces_.insert_or_assign(sim_ifc->iface_id_, sim_ifc).second) {
     BRCMF_ERR("Iface already exist in this test.\n");
     return ZX_ERR_ALREADY_EXISTS;
   }
 
   // This should have created a WLANIF_IMPL device
-  auto device_info = dev_mgr_->FindFirstByProtocolId(ZX_PROTOCOL_WLANIF_IMPL);
-  if (device_info == std::nullopt) {
+  auto device = dev_mgr_->FindLatestByProtocolId(ZX_PROTOCOL_WLANIF_IMPL);
+  if (device == nullptr) {
     return ZX_ERR_INTERNAL;
   }
 
-  sim_ifc->if_impl_ctx_ = device_info->dev_args.ctx;
-  sim_ifc->if_impl_ops_ = static_cast<wlanif_impl_protocol_ops_t*>(device_info->dev_args.proto_ops);
+  sim_ifc->if_impl_ctx_ = device->DevArgs().ctx;
+  sim_ifc->if_impl_ops_ =
+      static_cast<wlanif_impl_protocol_ops_t*>(device->DevArgs().proto_ops);
 
   zx_handle_t sme_ch;
   if (!sme_protocol) {
@@ -491,28 +492,29 @@ zx_status_t SimTest::StartInterface(wlan_info_mac_role_t role, SimInterface* sim
 }
 
 zx_status_t SimTest::InterfaceDestroyed(SimInterface* ifc) {
-  auto iter = iface_id_set_.find(ifc->iface_id_);
+  auto iter = ifaces_.find(ifc->iface_id_);
 
-  if (iter == iface_id_set_.end()) {
+  if (iter == ifaces_.end()) {
     BRCMF_ERR("Iface id: %d does not exist", ifc->iface_id_);
     return ZX_ERR_NOT_FOUND;
   }
 
-  iface_id_set_.erase(iter);
+  ifaces_.erase(iter);
+
   return ZX_OK;
 }
 
 zx_status_t SimTest::DeleteInterface(SimInterface* ifc) {
-  auto iter = iface_id_set_.find(ifc->iface_id_);
+  auto iter = ifaces_.find(ifc->iface_id_);
   zx_status_t err;
 
-  if (iter == iface_id_set_.end()) {
+  if (iter == ifaces_.end()) {
     BRCMF_ERR("Iface id: %d does not exist", ifc->iface_id_);
     return ZX_ERR_NOT_FOUND;
   }
 
   BRCMF_DBG(SIM, "Del IF: %d", ifc->iface_id_);
-  if ((err = device_->WlanphyImplDestroyIface(*iter)) != ZX_OK) {
+  if ((err = device_->WlanphyImplDestroyIface(iter->first)) != ZX_OK) {
     BRCMF_ERR("Failed to destroy interface.\n");
     return err;
   }
@@ -521,7 +523,8 @@ zx_status_t SimTest::DeleteInterface(SimInterface* ifc) {
   ifc->if_impl_ctx_ = nullptr;
   ifc->if_impl_ops_ = nullptr;
 
-  iface_id_set_.erase(iter);
+  ifaces_.erase(iter);
+
   return ZX_OK;
 }
 

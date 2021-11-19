@@ -91,7 +91,7 @@ TEST_F(FirmwareConfigTest, StartWithSmeChannel) {
   ASSERT_EQ(status, ZX_OK);
   status = device->BusInit();
   ASSERT_EQ(status, ZX_OK);
-  EXPECT_EQ(dev_mgr->DeviceCount(), static_cast<size_t>(1));
+  EXPECT_EQ(dev_mgr->DeviceCountByProtocolId(ZX_PROTOCOL_WLANPHY_IMPL), 1u);
 
   // Create iface.
   auto [local, _remote] = make_channel();
@@ -100,13 +100,13 @@ TEST_F(FirmwareConfigTest, StartWithSmeChannel) {
   uint16_t iface_id;
   status = device->WlanphyImplCreateIface(&create_iface_req, &iface_id);
   ASSERT_EQ(status, ZX_OK);
-  EXPECT_EQ(dev_mgr->DeviceCount(), static_cast<size_t>(2));
+  EXPECT_EQ(dev_mgr->DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 1u);
 
   // Simulate start call from Fuchsia's generic wlanif-impl driver.
   auto iface = dev_mgr->FindFirstByProtocolId(ZX_PROTOCOL_WLANIF_IMPL);
-  ASSERT_TRUE(iface.has_value());
-  void* ctx = iface->dev_args.ctx;
-  auto* iface_ops = static_cast<wlanif_impl_protocol_ops_t*>(iface->dev_args.proto_ops);
+  ASSERT_NE(iface, nullptr);
+  void* ctx = iface->DevArgs().ctx;
+  auto* iface_ops = static_cast<wlanif_impl_protocol_ops_t*>(iface->DevArgs().proto_ops);
   zx_handle_t mlme_channel = ZX_HANDLE_INVALID;
   wlanif_impl_ifc_protocol_t ifc_ops{};
   status = iface_ops->start(ctx, &ifc_ops, &mlme_channel);

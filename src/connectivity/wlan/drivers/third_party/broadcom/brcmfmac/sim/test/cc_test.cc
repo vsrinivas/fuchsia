@@ -25,7 +25,7 @@ class CountryCodeTest : public SimTest {
   zx_status_t SetCountryCode(const wlanphy_country_t* country);
   void GetCountryCodeFromFirmware(brcmf_fil_country_le* ccode);
   zx_status_t ClearCountryCode();
-  uint32_t DeviceCount();
+  uint32_t DeviceCountByProtocolId(uint32_t proto_id);
 
  private:
   SimInterface client_ifc_;
@@ -44,7 +44,9 @@ void CountryCodeTest::DeleteInterface() {
   EXPECT_EQ(SimTest::DeleteInterface(&client_ifc_), ZX_OK);
 }
 
-uint32_t CountryCodeTest::DeviceCount() { return (dev_mgr_->DeviceCount()); }
+uint32_t CountryCodeTest::DeviceCountByProtocolId(uint32_t proto_id) {
+  return dev_mgr_->DeviceCountByProtocolId(proto_id);
+}
 
 zx_status_t CountryCodeTest::SetCountryCode(const wlanphy_country_t* country) {
   return device_->WlanphyImplSetCountry(country);
@@ -66,7 +68,7 @@ TEST_F(CountryCodeTest, SetDefault) {
   Init();
   CreateInterface();
   DeleteInterface();
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 0u);
 }
 
 TEST_F(CountryCodeTest, SetCCode) {
@@ -78,7 +80,7 @@ TEST_F(CountryCodeTest, SetCCode) {
 
   Init();
   CreateInterface();
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 1u);
 
   // Get the country code and verify that it is set to WW.
   GetCountryCodeFromFirmware(&country_code);
@@ -133,7 +135,7 @@ TEST_F(CountryCodeTest, ClearCCode) {
 
   Init();
   CreateInterface();
-  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 1u);
   status = ClearCountryCode();
   ASSERT_EQ(status, ZX_OK);
   GetCountryCodeFromFirmware(&country_code);

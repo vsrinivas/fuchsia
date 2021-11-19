@@ -25,7 +25,7 @@ class MfgTest : public SimTest {
  public:
   static constexpr zx::duration kTestDuration = zx::sec(100);
   // How many devices have been registered by the fake devhost
-  uint32_t DeviceCount();
+  uint32_t DeviceCountByProtocolId(uint32_t proto_id);
   void CreateIF(wlan_info_mac_role_t role);
   void DelIF(SimInterface* ifc);
   void StartSoftAP();
@@ -36,7 +36,9 @@ class MfgTest : public SimTest {
   SimInterface softap_ifc_;
 };
 
-uint32_t MfgTest::DeviceCount() { return (dev_mgr_->DeviceCount()); }
+uint32_t MfgTest::DeviceCountByProtocolId(uint32_t proto_id) {
+  return dev_mgr_->DeviceCountByProtocolId(proto_id);
+}
 
 void MfgTest::CreateIF(wlan_info_mac_role_t role) {
   switch (role) {
@@ -78,7 +80,7 @@ TEST_F(MfgTest, BasicTest) {
 
   // Now delete the Client IF and SoftAP creation should pass
   EXPECT_EQ(DeleteInterface(&client_ifc_), ZX_OK);
-  EXPECT_EQ(DeviceCount(), 1U);
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 0u);
   ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_AP, &softap_ifc_, std::nullopt, kDefaultBssid),
             ZX_OK);
   // Now that SoftAP IF is created, Client IF creation should fail
@@ -108,13 +110,13 @@ TEST_F(MfgTest, CheckConnections) {
   env_->Run(kTestDuration);
 
   // Check if the client's assoc with FakeAP succeeded
-  EXPECT_EQ(client_ifc_.stats_.assoc_attempts, 1U);
-  EXPECT_EQ(client_ifc_.stats_.assoc_successes, 1U);
+  EXPECT_EQ(client_ifc_.stats_.assoc_attempts, 1u);
+  EXPECT_EQ(client_ifc_.stats_.assoc_successes, 1u);
   // Deletion of the client IF should have resulted in disassoc of the
   // client (cleanup during IF delete).
-  EXPECT_EQ(client_ifc_.stats_.disassoc_indications.size(), 1U);
+  EXPECT_EQ(client_ifc_.stats_.disassoc_indications.size(), 1u);
   // Verify Assoc with SoftAP succeeded
-  ASSERT_EQ(softap_ifc_.stats_.assoc_indications.size(), 1U);
-  ASSERT_EQ(softap_ifc_.stats_.auth_indications.size(), 1U);
+  ASSERT_EQ(softap_ifc_.stats_.assoc_indications.size(), 1u);
+  ASSERT_EQ(softap_ifc_.stats_.auth_indications.size(), 1u);
 }
 }  // namespace wlan::brcmfmac

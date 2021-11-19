@@ -9,7 +9,7 @@
 #include <fuchsia/wlan/common/c/banjo.h>
 #include <zircon/types.h>
 
-#include <set>
+#include <map>
 
 #include <ddk/hw/wlan/ieee80211/c/banjo.h>
 #include <gtest/gtest.h>
@@ -227,7 +227,7 @@ class SimTest : public ::testing::Test, public simulation::StationIfc {
   brcmfmac::SimDevice* device_ = nullptr;
 
   // Keep track of the ifaces we created during test by iface id.
-  std::set<uint16_t> iface_id_set_;
+  std::map<uint16_t, SimInterface*> ifaces_;
 
  private:
   // StationIfc methods - by default, do nothing. These can/will be overridden by superclasses.
