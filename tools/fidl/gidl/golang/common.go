@@ -347,7 +347,7 @@ var goErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.TooFewBytesInPrimaryObject:         "ErrPayloadTooSmall",
 	gidlir.TooFewHandles:                      "ErrNotEnoughHandles",
 	gidlir.TooManyBytesInMessage:              "ErrTooManyBytesInMessage",
-	gidlir.TooManyHandlesInMessage:            "ErrTooManyHandlesInMessage",
+	gidlir.TooManyHandlesInMessage:            "ErrTooManyHandles",
 	gidlir.UnionFieldNotSet:                   "ErrInvalidXUnionTag",
 	gidlir.CountExceedsLimit:                  "ErrVectorTooLong",
 	gidlir.UnexpectedOrdinal:                  "ErrUnexpectedOrdinal",

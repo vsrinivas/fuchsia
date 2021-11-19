@@ -159,8 +159,7 @@ success("MultipleHandleSubtypes") {
 }
 
 decode_failure("TooManyHandles") {
-    // TODO(fxbug.dev/58385): Close handles on encode/decode failure.
-    bindings_denylist = [go,rust],
+    bindings_denylist = [rust],
     handle_defs = {
         #0 = event(),
         #1 = event(),

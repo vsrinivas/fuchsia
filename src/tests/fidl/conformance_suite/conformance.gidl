@@ -24,8 +24,6 @@ decode_failure("NonZeroEmptyStructBytes") {
 }
 
 decode_failure("UnconsumedBytesInline") {
-    // TODO(fxbug.dev/88799): Support go.
-    bindings_denylist = [go],
     type = EmptyStruct,
     bytes = {
         v1, v2 = [
@@ -37,8 +35,6 @@ decode_failure("UnconsumedBytesInline") {
 }
 
 decode_failure("UnconsumedBytesOutOfLine") {
-    // TODO(fxbug.dev/88799): Support go.
-    bindings_denylist = [go],
     type = OutOfLinePaddingZeroed7,
     bytes = {
         v1, v2 = [
