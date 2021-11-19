@@ -104,7 +104,7 @@ example, because the package is in base).
 
 **Current value (from the default):** `true`
 
-From //build/security.gni:130
+From //build/security.gni:133
 
 ### avb_algorithm
 
@@ -1491,6 +1491,13 @@ From //build/security.gni:81
 
 From //build/security.gni:93
 
+### fuchsia_verify_routes_exceptions_allowlist_bootfs
+Same as above, except this allowlist gets added in bootfs_only builds.
+
+**Current value (from the default):** `"//src/security/policy/build/verify_routes_exceptions_allowlist_bootfs.json5"`
+
+From //build/security.gni:96
+
 ### fuchsia_zbi_bootfs_filelist_goldens
 An optional lit of golden files for fuchsia.zbi bootFS file list. If
 specified, they would be compared against fuchsia.zbi bootFS file list
@@ -1863,11 +1870,9 @@ From //src/fonts/build/font_args.gni:7
 Include the shell commands package.  Used as a parameter to
 assemble_system().  See documentation there.
 
-This is a placeholder non-value for a soft transition
+**Current value (from the default):** `false`
 
-**Current value (from the default):** `""`
-
-From //build/images/args.gni:151
+From //build/images/args.gni:149
 
 ### include_zxdb_large_tests
 Normally these tests are not built and run because they require large amounts of optional data
@@ -3262,7 +3267,7 @@ above changes.
 
 **Current value (from the default):** `[]`
 
-From //build/security.gni:108
+From //build/security.gni:111
 
 ### recovery_zbi_bootfs_filelist_goldens
 An optional list of golden files for recovery.zbi bootFS file list. If
@@ -3809,7 +3814,7 @@ Default value is 'all', it is preferable to set to 'none' for production
 
 **Current value (from the default):** `"all"`
 
-From //build/security.gni:121
+From //build/security.gni:124
 
 ### thinlto_cache_dir
 ThinLTO cache directory path.
