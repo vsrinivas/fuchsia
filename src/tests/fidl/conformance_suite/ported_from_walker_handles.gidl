@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(fxbug.dev/88460): Audit each test and merge into the regular `strings.gidl`.
+// These were ported from a legacy set of manual C/C++ tests termed `walker_tests`.
+
 success("SinglePresentHandle") {
     handle_defs = {
         #0 = event(),

@@ -1,0 +1,182 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// TODO(fxbug.dev/88460): Audit each test and merge into the regular `strings.gidl`.
+// These were ported from a legacy set of manual C/C++ tests termed `walker_tests`.
+
+success("PresentNonnullableString") {
+    value = UnboundedNonnullableString {
+        s0: "hello!",
+    },
+    bytes = {
+        v1, v2 = [
+            num(6):8,           // count
+            repeat(0xff):8,     // presence
+            0x68, 0x65, 0x6C, 0x6C, 0x6F, 0x21,     // hello!
+            padding:2,
+        ],
+    },
+}
+
+success("PresentNullableString") {
+    value = UnboundedNullableString {
+        s0: "hello!",
+    },
+    bytes = {
+        v1, v2 = [
+            num(6):8,           // count
+            repeat(0xff):8,     // presence
+            0x68, 0x65, 0x6C, 0x6C, 0x6F, 0x21,     // hello!
+            padding:2,
+        ],
+    },
+}
+
+success("MultipleNonnullableStrings") {
+    value = MultipleNonnullableStrings {
+        s0: "hello",
+        s1: "world!!!",
+    },
+    bytes = {
+        v1, v2 = [
+            num(5):8,           // s0 count
+            repeat(0xff):8,     // s0 presence
+            num(8):8,           // s1 count
+            repeat(0xff):8,     // s1 presence
+            0x68, 0x65, 0x6C, 0x6C, 0x6F,                       // hello
+            padding:3,
+            0x77, 0x6F, 0x72, 0x6C, 0x64, 0x21, 0x21, 0x21,     // world!!!
+        ],
+    },
+}
+
+decode_failure("AbsentNonnullableStringError") {
+    type = UnboundedNonnullableString,
+    bytes = {
+        v1, v2 = [
+            num(0):8,           // count
+            repeat(0):8,        // presence: absent
+        ],
+    },
+    err = NON_NULLABLE_TYPE_WITH_NULL_VALUE,
+}
+
+decode_failure("InvalidAbsentNonnullableStringError") {
+    type = UnboundedNonnullableString,
+    bytes = {
+        v1, v2 = [
+            num(6):8,           // count
+            repeat(0):8,        // presence: absent
+        ],
+    },
+    err = NON_EMPTY_STRING_WITH_NULL_BODY,
+}
+
+success("AbsentNullableString") {
+    value = UnboundedNullableString {},
+    bytes = {
+        v1, v2 = [
+            num(0):8,           // count
+            repeat(0):8,        // presence: absent
+        ],
+    },
+}
+
+success("PresentNonnullableBoundedString") {
+    value = Bounded32NonnullableString {
+        s0: "hello!",
+    },
+    bytes = {
+        v1, v2 = [
+            num(6):8,           // count
+            repeat(0xff):8,     // presence
+            0x68, 0x65, 0x6C, 0x6C, 0x6F, 0x21,     // hello!
+            padding:2,
+        ]
+    },
+}
+
+success("PresentNullableBoundedString") {
+    value = Bounded32NullableString {
+        s0: "hello!",
+    },
+    bytes = {
+        v1, v2 = [
+            num(6):8,           // count
+            repeat(0xff):8,     // presence
+            0x68, 0x65, 0x6C, 0x6C, 0x6F, 0x21,     // hello!
+            padding:2,
+        ]
+    },
+}
+
+decode_failure("AbsentNonnullableBoundedStringError") {
+    type = Bounded32NonnullableString,
+    bytes = {
+        v1, v2 = [
+            num(0):8,           // count
+            repeat(0):8,        // presence: absent
+        ],
+    },
+    err = NON_NULLABLE_TYPE_WITH_NULL_VALUE,
+}
+
+decode_failure("InvalidAbsentNonnullableBoundedStringError") {
+    type = Bounded32NonnullableString,
+    bytes = {
+        v1, v2 = [
+            num(6):8,           // count
+            repeat(0):8,        // presence: absent
+        ],
+    },
+    err = NON_EMPTY_STRING_WITH_NULL_BODY,
+}
+
+success("AbsentNullableBoundedString") {
+    value = Bounded32NullableString {},
+    bytes = {
+        v1, v2 = [
+            num(0):8,           // count
+            repeat(0):8,        // presence: absent
+        ],
+    },
+}
+
+decode_failure("PresentNonnullableBoundedStringShortError") {
+    // TODO(fxbug.dev/37304): Check bounds in Rust.
+    bindings_denylist = [rust],
+    type = MultipleShortNonnullableStrings,
+    bytes = {
+        v1, v2 = [
+            num(6):8,           // s0 count
+            repeat(0xff):8,     // s0 presence
+            num(6):8,           // s1 count
+            repeat(0xff):8,     // s1 presence
+            0x68, 0x65, 0x6C, 0x6C, 0x6F, 0x20,     // "hello "
+            padding:2,
+            0x77, 0x6F, 0x72, 0x6C, 0x64, 0x21,     // "world!"
+            padding:2,
+        ],
+    },
+    err = STRING_TOO_LONG,
+}
+
+decode_failure("PresentNullableBoundedStringShortError") {
+    // TODO(fxbug.dev/37304): Check bounds in Rust.
+    bindings_denylist = [rust],
+    type = MultipleShortNullableStrings,
+    bytes = {
+        v1, v2 = [
+            num(6):8,           // s0 count
+            repeat(0xff):8,     // s0 presence
+            num(6):8,           // s1 count
+            repeat(0xff):8,     // s1 presence
+            0x68, 0x65, 0x6C, 0x6C, 0x6F, 0x20,     // "hello "
+            padding:2,
+            0x77, 0x6F, 0x72, 0x6C, 0x64, 0x21,     // "world!"
+            padding:2,
+        ],
+    },
+    err = STRING_TOO_LONG,
+}

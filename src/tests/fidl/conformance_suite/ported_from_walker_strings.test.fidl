@@ -1,0 +1,40 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library conformance;
+
+type UnboundedNonnullableString = struct {
+    s0 string;
+};
+
+type UnboundedNullableString = struct {
+    s0 string:optional;
+};
+
+type Bounded32NonnullableString = struct {
+    s0 string:32;
+};
+
+type Bounded32NullableString = struct {
+    s0 string:<32, optional>;
+};
+
+type MultipleNonnullableStrings = struct {
+    s0 string;
+    s1 string;
+};
+
+type MultipleNullableStrings = struct {
+    s0 string:optional;
+    s1 string:optional;
+};
+
+type MultipleShortNonnullableStrings = struct {
+    s0 string:4;
+    s1 string:32;
+};
+
+type MultipleShortNullableStrings = struct {
+    s0 string:4;
+    s1 string:32;
+};
