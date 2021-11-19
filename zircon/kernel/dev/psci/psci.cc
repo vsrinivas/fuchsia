@@ -73,24 +73,14 @@ void psci_system_reset(enum reboot_flags flags) {
 }
 
 static void arm_psci_init(const void* driver_data, uint32_t length) {
-#if 0
-    // TODO: restore this after everyone is updated to new bootloaders
-    ASSERT(length >= sizeof(dcfg_arm_psci_driver_t));
-#else
-  ASSERT(length >= sizeof(dcfg_arm_psci_driver_t) - sizeof(reboot_recovery_args));
-#endif
-
+  ASSERT(length >= sizeof(dcfg_arm_psci_driver_t));
   auto driver = static_cast<const dcfg_arm_psci_driver_t*>(driver_data);
 
   do_psci_call = driver->use_hvc ? psci_hvc_call : psci_smc_call;
   memcpy(shutdown_args, driver->shutdown_args, sizeof(shutdown_args));
   memcpy(reboot_args, driver->reboot_args, sizeof(reboot_args));
   memcpy(reboot_bootloader_args, driver->reboot_bootloader_args, sizeof(reboot_bootloader_args));
-
-  // TODO: remove this check after everyone is updated to new bootloaders
-  if (length >= sizeof(dcfg_arm_psci_driver_t)) {
-    memcpy(reboot_recovery_args, driver->reboot_recovery_args, sizeof(reboot_recovery_args));
-  }
+  memcpy(reboot_recovery_args, driver->reboot_recovery_args, sizeof(reboot_recovery_args));
 
   // read information about the psci implementation
   uint32_t result = psci_get_version();
