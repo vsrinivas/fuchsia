@@ -27,6 +27,8 @@ constexpr char kTriangleWaveSwitch[] = "tri";
 constexpr char kFrequencyDefaultHz[] = "440.0";
 constexpr char kWhiteNoiseSwitch[] = "noise";
 constexpr char kPinkNoiseSwitch[] = "pink";
+constexpr char kImpulseSwitch[] = "impulse";
+constexpr char kImpulseInitialDelaySecs[] = "1.0";
 
 constexpr char kDurationSwitch[] = "dur";
 constexpr char kDurationDefaultSecs[] = "2.0";
@@ -124,6 +126,8 @@ void usage(const char* prog_name) {
          kTriangleWaveSwitch);
   printf("  --%s  \t\t   Play pseudo-random 'white' noise\n", kWhiteNoiseSwitch);
   printf("  --%s  \t\t   Play pseudo-random 'pink' (1/f) noise\n", kPinkNoiseSwitch);
+  printf("  --%s  \t\t   Play a single-frame impulse after %s secs of initial delay\n",
+         kImpulseSwitch, kImpulseInitialDelaySecs);
 
   printf("\n    By default, play signal for %s seconds, at amplitude %s\n", kDurationDefaultSecs,
          kAmplitudeNotSpecifiedScale);
@@ -313,6 +317,9 @@ int main(int argc, const char** argv) {
     media_app.set_output_type(kOutputTypeNoise);
   } else if (command_line.HasOption(kPinkNoiseSwitch)) {
     media_app.set_output_type(kOutputTypePinkNoise);
+  } else if (command_line.HasOption(kImpulseSwitch)) {
+    media_app.set_output_type(kOutputTypeImpulse);
+    media_app.set_initial_delay(std::stod(kImpulseInitialDelaySecs));
   } else {
     media_app.set_output_type(kOutputTypeSine);
   }

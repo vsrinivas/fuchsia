@@ -15,11 +15,13 @@
 #include <lib/zx/clock.h>
 
 #include <memory>
+#include <optional>
 
 #include "src/media/audio/lib/timeline/timeline_function.h"
 #include "src/media/audio/lib/wav/wav_writer.h"
 
 namespace {
+
 constexpr float kUnityGainDb = 0.0f;
 
 typedef enum {
@@ -29,6 +31,7 @@ typedef enum {
   kOutputTypeSquare,
   kOutputTypeSawtooth,
   kOutputTypeTriangle,
+  kOutputTypeImpulse,
 } OutputSignalType;
 // TODO(fxbug.dev/49220): refactor signal-generation to make it easier to add new generators.
 
@@ -48,6 +51,7 @@ constexpr std::array<std::pair<const char*, fuchsia::media::AudioRenderUsage>,
 // Until then, we cannot be confident that our renderer is routed to an actual device.
 // TODO(fxbug.dev/50117): remove the workaround once audio_core fixes the underlying fxbug.dev/50017
 constexpr zx::duration kRealDeviceMinLeadTime = zx::msec(1);
+
 }  // namespace
 
 namespace media::tools {
@@ -60,6 +64,9 @@ class MediaApp {
   void set_sample_format(fuchsia::media::AudioSampleFormat format) { sample_format_ = format; }
 
   void set_output_type(OutputSignalType output_type) { output_signal_type_ = output_type; }
+  void set_initial_delay(double secs) {
+    initial_delay_ = zx::duration(static_cast<int64_t>(secs * 1'000'000'000.0));
+  }
   void set_usage(fuchsia::media::AudioRenderUsage usage) { usage_ = usage; }
   void set_frequency(double frequency) { frequency_ = frequency; }
   void set_amplitude(float amplitude) { amplitude_ = amplitude; }
@@ -148,7 +155,7 @@ class MediaApp {
   void GenerateAudioForPacket(const AudioPacket& packet, uint64_t packet_num);
   template <typename SampleType>
   void WriteAudioIntoBuffer(SampleType* audio_buffer, uint32_t num_frames,
-                            uint64_t frames_since_start);
+                            int64_t frames_since_start);
 
   bool Shutdown();
   fit::closure quit_callback_;
@@ -169,6 +176,8 @@ class MediaApp {
   fuchsia::media::audio::VolumeControlPtr usage_volume_control_;  // for usage volume
 
   OutputSignalType output_signal_type_;
+  std::optional<zx::duration> initial_delay_;
+  int64_t initial_delay_frames_ = 0;
 
   double frequency_;
   double frames_per_period_;  // frame_rate_ / frequency_

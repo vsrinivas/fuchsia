@@ -267,6 +267,15 @@ void MediaApp::ParameterRangeChecks() {
                                       fuchsia::media::audio::MAX_VOLUME);
   }
 
+  if (initial_delay_.has_value()) {
+    if (initial_delay_.value() < zx::nsec(0)) {
+      std::cerr << "Initial delay cannot be negative" << std::endl;
+      success = false;
+    } else {
+      initial_delay_frames_ = frame_rate_ * initial_delay_->to_nsecs() / 1'000'000'000;
+    }
+  }
+
   CLI_CHECK(success, "Exiting.");
 }
 
@@ -475,6 +484,8 @@ void MediaApp::DisplayConfigurationSettings() {
     printf("white noise");
   } else if (output_signal_type_ == kOutputTypePinkNoise) {
     printf("pink noise");
+  } else if (output_signal_type_ == kOutputTypeImpulse) {
+    printf("a single-frame impulse");
   } else {
     printf("a %.3f Hz ", frequency_);
     if (output_signal_type_ == kOutputTypeSquare) {
@@ -488,6 +499,10 @@ void MediaApp::DisplayConfigurationSettings() {
     }
   }
   printf(" with amplitude %.4f", amplitude_);
+  if (initial_delay_.has_value()) {
+    printf(" after initial delay of %6.5f seconds",
+           static_cast<double>(initial_delay_.value().to_usecs()) / 1'000'000.0);
+  }
 
   printf(".\nThe generated signal will play for %.3f seconds", duration_secs_);
   if (file_name_) {
@@ -818,36 +833,43 @@ double MediaApp::NextPinkNoiseSample(uint32_t chan) {
 // double running_frame limits precision to 2^53 frames (1487 yrs @ 192kHz: more than adequate!).
 template <typename SampleType>
 void MediaApp::WriteAudioIntoBuffer(SampleType* audio_buffer, uint32_t num_frames,
-                                    uint64_t frames_since_start) {
+                                    int64_t frames_since_start) {
   const double rads_per_frame = 2.0 * M_PI / frames_per_period_;  // Radians/Frame.
 
   for (uint32_t frame = 0; frame < num_frames; ++frame, ++frames_since_start) {
-    double running_frame = static_cast<double>(frames_since_start);
-
     // Generated signal value, before applying amplitude scaling.
     double raw_val;
 
     for (auto chan_num = 0u; chan_num < num_channels_; ++chan_num) {
-      switch (output_signal_type_) {
-        case kOutputTypeSine:
-          raw_val = sin(rads_per_frame * running_frame);
-          break;
-        case kOutputTypeSquare:
-          raw_val =
-              (fmod(running_frame, frames_per_period_) >= frames_per_period_ / 2) ? -1.0 : 1.0;
-          break;
-        case kOutputTypeSawtooth:
-          raw_val = (fmod(running_frame / frames_per_period_, 1.0) * 2.0) - 1.0;
-          break;
-        case kOutputTypeTriangle:
-          raw_val = (abs(fmod(running_frame / frames_per_period_, 1.0) - 0.5) * 4.0) - 1.0;
-          break;
-        case kOutputTypeNoise:
-          raw_val = drand48() * 2.0 - 1.0;
-          break;
-        case kOutputTypePinkNoise:
-          raw_val = NextPinkNoiseSample(chan_num);
-          break;
+      if (frames_since_start < initial_delay_frames_) {
+        raw_val = 0.0;
+      } else {
+        double running_frame = static_cast<double>(frames_since_start - initial_delay_frames_);
+
+        switch (output_signal_type_) {
+          case kOutputTypeSine:
+            raw_val = sin(rads_per_frame * running_frame);
+            break;
+          case kOutputTypeSquare:
+            raw_val =
+                (fmod(running_frame, frames_per_period_) >= frames_per_period_ / 2) ? -1.0 : 1.0;
+            break;
+          case kOutputTypeSawtooth:
+            raw_val = (fmod(running_frame / frames_per_period_, 1.0) * 2.0) - 1.0;
+            break;
+          case kOutputTypeTriangle:
+            raw_val = (abs(fmod(running_frame / frames_per_period_, 1.0) - 0.5) * 4.0) - 1.0;
+            break;
+          case kOutputTypeNoise:
+            raw_val = drand48() * 2.0 - 1.0;
+            break;
+          case kOutputTypePinkNoise:
+            raw_val = NextPinkNoiseSample(chan_num);
+            break;
+          case kOutputTypeImpulse:
+            raw_val = (frames_since_start > initial_delay_frames_) ? 0.0 : 1.0;
+            break;
+        }
       }
 
       // raw_val cannot exceed 1.0; amplitude_scalar_ cannot exceed the SampleType's max.
