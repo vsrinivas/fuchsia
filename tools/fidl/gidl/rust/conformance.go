@@ -385,6 +385,7 @@ var rustErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.StringNotUtf8:                      "Utf8Error",
 	gidlir.StringTooLong:                      "OutOfRange",
 	gidlir.TooFewBytes:                        "OutOfRange",
+	gidlir.TooFewBytesInPrimaryObject:         "OutOfRange",
 	gidlir.TooFewHandles:                      "OutOfRange",
 	gidlir.TooManyBytesInMessage:              "ExtraBytes",
 	gidlir.TooManyHandlesInMessage:            "ExtraHandles",

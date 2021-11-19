@@ -383,6 +383,7 @@ var dartErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.StringNotUtf8:                      "unknown",
 	gidlir.StringTooLong:                      "fidlStringTooLong",
 	gidlir.TooFewBytes:                        "fidlTooFewBytes",
+	gidlir.TooFewBytesInPrimaryObject:         "fidlTooFewBytes",
 	gidlir.TooFewHandles:                      "fidlTooFewHandles",
 	gidlir.TooManyBytesInMessage:              "fidlTooManyBytes",
 	gidlir.TooManyHandlesInMessage:            "fidlTooManyHandles",

@@ -75,6 +75,9 @@ func ConformanceType(gidlTypeString string) string {
 }
 
 func LlcppErrorCode(code gidlir.ErrorCode) string {
+	if code == gidlir.TooFewBytesInPrimaryObject {
+		return "ZX_ERR_BUFFER_TOO_SMALL"
+	}
 	// TODO(fxbug.dev/35381) Implement different codes for different FIDL error cases.
 	return "ZX_ERR_INVALID_ARGS"
 }

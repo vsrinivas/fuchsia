@@ -30,6 +30,7 @@ const (
 	StringNotUtf8                      ErrorCode = "STRING_NOT_UTF8"
 	StringTooLong                      ErrorCode = "STRING_TOO_LONG"
 	TooFewBytes                        ErrorCode = "TOO_FEW_BYTES"
+	TooFewBytesInPrimaryObject         ErrorCode = "TOO_FEW_BYTES_IN_PRIMARY_OBJECT"
 	TooFewHandles                      ErrorCode = "TOO_FEW_HANDLES"
 	TooManyBytesInMessage              ErrorCode = "TOO_MANY_BYTES_IN_MESSAGE"
 	TooManyHandlesInMessage            ErrorCode = "TOO_MANY_HANDLES_IN_MESSAGE"
@@ -61,6 +62,7 @@ var AllErrorCodes = map[ErrorCode]struct{}{
 	StringNotUtf8:                      {},
 	StringTooLong:                      {},
 	TooFewBytes:                        {},
+	TooFewBytesInPrimaryObject:         {},
 	TooFewHandles:                      {},
 	TooManyBytesInMessage:              {},
 	TooManyHandlesInMessage:            {},
