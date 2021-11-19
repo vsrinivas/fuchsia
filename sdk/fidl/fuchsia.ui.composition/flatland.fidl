@@ -466,6 +466,7 @@ protocol Flatland {
         /// The ViewRef to strongly associate with [`token`].
         view_identity fuchsia.ui.views.ViewIdentityOnCreation;
         /// The protocol endpoints that are strongly bound to the ViewRef in [`view_identity`].
+        /// The protocols are bound when the view is created and installed in the view tree.
         protocols ViewBoundProtocols;
         parent_viewport_watcher server_end:ParentViewportWatcher;
     });

@@ -111,6 +111,18 @@ TransformHandle::InstanceId UberStructSystem::GetLatestInstanceId() const {
   return latest_instance_id_;
 }
 
+std::unordered_set<zx_koid_t> UberStructSystem::ExtractViewRefKoids(
+    const UberStruct::InstanceMap& uber_struct_snapshot) {
+  std::unordered_set<zx_koid_t> view_ref_koids;
+  for (const auto& [_, uber_struct] : uber_struct_snapshot) {
+    FX_DCHECK(uber_struct != nullptr);
+    if (uber_struct->view_ref != nullptr) {
+      view_ref_koids.insert(utils::ExtractKoid(*uber_struct->view_ref));
+    }
+  }
+  return view_ref_koids;
+}
+
 // |UberStructSystem::Queue| implementations.
 
 void UberStructSystem::UberStructQueue::Push(scheduling::PresentId present_id,

@@ -236,15 +236,17 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
 }
 
 view_tree::SubtreeSnapshot GlobalTopologyData::GenerateViewTreeSnapshot(
-    float display_width, float display_height) const {
+    float display_width, float display_height, const GlobalTopologyData& data,
+    const std::unordered_set<zx_koid_t>& view_ref_koids) {
   // Find the first node with a ViewRef set. This is the root of the ViewTree.
   size_t root_index = 0;
-  while (root_index < topology_vector.size() && view_refs.count(topology_vector[root_index]) == 0) {
+  while (root_index < data.topology_vector.size() &&
+         data.view_refs.count(data.topology_vector[root_index]) == 0) {
     ++root_index;
   }
 
   // Didn't find one -> empty ViewTree.
-  if (root_index == topology_vector.size()) {
+  if (root_index == data.topology_vector.size()) {
     return {};
   }
 
@@ -260,31 +262,31 @@ view_tree::SubtreeSnapshot GlobalTopologyData::GenerateViewTreeSnapshot(
   };
 
   // Add all Views to |view_tree|.
-  root = GetViewRefKoid(topology_vector[root_index], view_refs).value();
-  for (size_t i = root_index; i < topology_vector.size(); ++i) {
-    const auto& transform_handle = topology_vector.at(i);
-    if (view_refs.count(transform_handle) == 0) {
+  root = GetViewRefKoid(data.topology_vector[root_index], data.view_refs).value();
+  for (size_t i = root_index; i < data.topology_vector.size(); ++i) {
+    const auto& transform_handle = data.topology_vector.at(i);
+    if (data.view_refs.count(transform_handle) == 0) {
       // Transforms without ViewRefs are not Views and can be skipped.
       continue;
     }
 
-    const auto& view_ref = view_refs.at(transform_handle);
+    const auto& view_ref = data.view_refs.at(transform_handle);
     const zx_koid_t view_ref_koid = utils::ExtractKoid(*view_ref);
 
     std::string debug_name;
-    if (debug_names.count(transform_handle) != 0)
-      debug_name = debug_names.at(transform_handle);
+    if (data.debug_names.count(transform_handle) != 0)
+      debug_name = data.debug_names.at(transform_handle);
 
     // Find the parent by looking upwards until a View is found. The root has no parent.
     // TODO(fxbug.dev/84196): Disallow anonymous views from having parents?
     zx_koid_t parent_koid = ZX_KOID_INVALID;
     if (view_ref_koid != root) {
-      size_t parent_index = parent_indices[i];
-      while (view_refs.count(topology_vector[parent_index]) == 0) {
-        parent_index = parent_indices[parent_index];
+      size_t parent_index = data.parent_indices[i];
+      while (data.view_refs.count(data.topology_vector[parent_index]) == 0) {
+        parent_index = data.parent_indices[parent_index];
       }
 
-      parent_koid = GetViewRefKoid(topology_vector[parent_index], view_refs).value();
+      parent_koid = GetViewRefKoid(data.topology_vector[parent_index], data.view_refs).value();
     }
 
     // TODO(fxbug.dev/82678): Add local_from_world_transform to the ViewNode.
@@ -305,8 +307,8 @@ view_tree::SubtreeSnapshot GlobalTopologyData::GenerateViewTreeSnapshot(
   // doing a full hit test. This is a stopgap solution until we've designed the full hit testing API
   // for Flatland.
   zx_koid_t leaf_node_koid = ZX_KOID_INVALID;
-  for (auto it = topology_vector.rbegin(); it != topology_vector.rend(); it++) {
-    const std::optional<zx_koid_t> koid = GetViewRefKoid(*it, view_refs);
+  for (auto it = data.topology_vector.rbegin(); it != data.topology_vector.rend(); it++) {
+    const std::optional<zx_koid_t> koid = GetViewRefKoid(*it, data.view_refs);
     if (koid.has_value()) {
       leaf_node_koid = koid.value();
       break;
@@ -322,7 +324,12 @@ view_tree::SubtreeSnapshot GlobalTopologyData::GenerateViewTreeSnapshot(
     return view_tree::SubtreeHitTestResult{.hits = {leaf_node_koid}};
   };
 
-  // TODO(fxbug.dev/82675): Add unconnected views.
+  // Add unconnected views to the snapshot.
+  for (const auto view_ref_koid : view_ref_koids) {
+    if (view_tree.count(view_ref_koid) == 0) {
+      unconnected_views.insert(view_ref_koid);
+    }
+  }
 
   return snapshot;
 }

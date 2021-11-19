@@ -86,9 +86,11 @@ FocusChangeStatus FocusManager::RequestFocus(zx_koid_t requestor, zx_koid_t requ
 void FocusManager::OnNewViewTreeSnapshot(std::shared_ptr<const view_tree::Snapshot> snapshot) {
   FX_DCHECK(snapshot);
   snapshot_ = std::move(snapshot);
-  RepairFocus();
   // TODO(fxbug.dev/76138): This has linear cost. Look at making it cheaper.
-  view_ref_focused_registry_.Unregister(*snapshot_);
+  // ViewRefFocused clients should be registered before RepairFocus() so that they can be notified
+  // about the new root getting focus.
+  view_ref_focused_registry_.Update(*snapshot_);
+  RepairFocus();
 }
 
 void FocusManager::Register(

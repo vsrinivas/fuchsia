@@ -9,12 +9,14 @@
 #include "src/ui/scenic/lib/flatland/global_image_data.h"
 #include "src/ui/scenic/lib/flatland/global_matrix_data.h"
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
+#include "src/ui/scenic/lib/utils/helpers.h"
 #include "src/ui/scenic/lib/utils/logging.h"
 
 // TODO(fxbug.dev/77414): for hacky invocation of OnVsync() at the end of RenderScheduledFrame().
 #include <lib/zx/time.h>
 
 #include <sstream>
+#include <unordered_set>
 
 // Hardcoded double buffering.
 // TODO(fxbug.dev/76640): make this configurable.  Even fancier: is it worth considering sharing a
@@ -136,7 +138,10 @@ view_tree::SubtreeSnapshot Engine::GenerateViewTreeSnapshot(const FlatlandDispla
   const auto display_width = static_cast<float>(hw_display->width_in_px());
   const auto display_height = static_cast<float>(hw_display->height_in_px());
 
-  return topology_data.GenerateViewTreeSnapshot(display_width, display_height);
+  const auto view_ref_koids = UberStructSystem::ExtractViewRefKoids(uber_struct_snapshot);
+
+  return flatland::GlobalTopologyData::GenerateViewTreeSnapshot(display_width, display_height,
+                                                                topology_data, view_ref_koids);
 }
 
 // TODO(fxbug.dev/81842) If we put Screenshot on its own thread, we should make this call thread

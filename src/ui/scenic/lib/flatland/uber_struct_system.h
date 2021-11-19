@@ -98,6 +98,10 @@ class UberStructSystem {
   // For getting Flatland InstanceIds in tests.
   TransformHandle::InstanceId GetLatestInstanceId() const;
 
+  // Extracts ViewRefKoid from each uber struct present in the instance map.
+  static std::unordered_set<zx_koid_t> ExtractViewRefKoids(
+      const UberStruct::InstanceMap& uber_struct_snapshot);
+
  private:
   // The queue of UberStructs pending for each active session. Flatland instances push UberStructs
   // onto these queues using |UberStructQueue::Push()|. This UberStructSystem removes entries using

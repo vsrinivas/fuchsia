@@ -71,8 +71,9 @@ struct GlobalTopologyData {
                                                       TransformHandle::InstanceId link_instance_id,
                                                       TransformHandle root);
 
-  view_tree::SubtreeSnapshot GenerateViewTreeSnapshot(float display_width,
-                                                      float display_height) const;
+  static view_tree::SubtreeSnapshot GenerateViewTreeSnapshot(
+      float display_width, float display_height, const GlobalTopologyData& data,
+      const std::unordered_set<zx_koid_t>& view_ref_koids);
 };
 
 }  // namespace flatland

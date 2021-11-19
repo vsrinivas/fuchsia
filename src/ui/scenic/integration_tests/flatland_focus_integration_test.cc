@@ -419,6 +419,62 @@ TEST_F(FlatlandFocusIntegrationTest, ViewRefFocused_HappyCase) {
   EXPECT_TRUE(child_focused_ptr.is_bound());
 }
 
+TEST_F(FlatlandFocusIntegrationTest,
+       ChildView_PresentsBeforeParentPresent_ShouldNotKillVrfEndpoint) {
+  // Set up the child view.
+  auto [child_token, parent_token] = NewViewCreationTokens();
+  fuchsia::ui::composition::FlatlandPtr child_session;
+  environment_->ConnectToService(child_session.NewRequest());
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+  fuchsia::ui::views::ViewRefFocusedPtr child_focused_ptr;
+  bool channel_alive = true;
+  child_focused_ptr.set_error_handler([&channel_alive](auto) { channel_alive = false; });
+
+  ViewBoundProtocols protocols;
+  protocols.set_view_ref_focused(child_focused_ptr.NewRequest());
+  auto identity = scenic::NewViewIdentityOnCreation();
+  child_session->CreateView2(std::move(child_token), std::move(identity), std::move(protocols),
+                             parent_viewport_watcher.NewRequest());
+
+  // The child's Present call generates a new snapshot that includes the ViewRef.
+  BlockingPresent(child_session);
+
+  // The parent view creates its Viewport later, and calls Present to commit.
+  // The parent/child commit order should not matter.
+  AttachToRoot(std::move(parent_token));
+
+  // The child_focused_ptr should not die.
+  RunLoopUntilIdle();
+  EXPECT_TRUE(channel_alive);
+}
+
+TEST_F(FlatlandFocusIntegrationTest,
+       ChildView_PresentsAfterParentPresent_ShouldNotKillVrfEndpoint) {
+  // Set up the child view.
+  auto [child_token, parent_token] = NewViewCreationTokens();
+  fuchsia::ui::composition::FlatlandPtr child_session;
+  environment_->ConnectToService(child_session.NewRequest());
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+  fuchsia::ui::views::ViewRefFocusedPtr child_focused_ptr;
+  bool channel_alive = true;
+  child_focused_ptr.set_error_handler([&channel_alive](auto) { channel_alive = false; });
+
+  ViewBoundProtocols protocols;
+  protocols.set_view_ref_focused(child_focused_ptr.NewRequest());
+  auto identity = scenic::NewViewIdentityOnCreation();
+  child_session->CreateView2(std::move(child_token), std::move(identity), std::move(protocols),
+                             parent_viewport_watcher.NewRequest());
+
+  // The parent acts first, which causes a snapshot to be generated *without* the child's ViewRef.
+  // The child_focused_ptr should remain alive, because it is not yet bound.
+  AttachToRoot(std::move(parent_token));
+
+  BlockingPresent(child_session);
+  // The child_focused_ptr should not die.
+  RunLoopUntilIdle();
+  EXPECT_TRUE(channel_alive);
+}
+
 #undef EXPECT_VIEW_REF_MATCH
 
 }  // namespace integration_tests

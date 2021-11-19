@@ -12,6 +12,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/ui/scenic/lib/flatland/uber_struct_system.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 
 using flatland::TransformGraph;
@@ -329,7 +330,8 @@ TEST(GlobalTopologyDataTest, ViewTreeSnapshot) {
   {
     const float kWidth = 10;
     const float kHeight = 5;
-    auto snapshot = gtd.GenerateViewTreeSnapshot(kWidth, kHeight);
+    auto snapshot = GlobalTopologyData::GenerateViewTreeSnapshot(
+        kWidth, kHeight, gtd, UberStructSystem::ExtractViewRefKoids(uber_structs));
     auto& [root, view_tree, unconnected_views, hit_tester, tree_boundaries] = snapshot;
     EXPECT_EQ(root, view_ref1_koid);
     EXPECT_EQ(view_tree.size(), 2u);
