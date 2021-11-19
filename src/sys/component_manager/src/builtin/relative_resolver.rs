@@ -134,7 +134,7 @@ mod tests {
             assert_eq!(self.expected_url, component_url);
             Ok(ResolvedComponent {
                 resolved_url: self.resolved_url.clone(),
-                decl: fsys::ComponentDecl { ..fsys::ComponentDecl::EMPTY },
+                decl: cm_rust::ComponentDecl::default(),
                 package: None,
             })
         }

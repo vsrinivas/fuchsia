@@ -12,7 +12,7 @@ use {
     anyhow::Error,
     async_trait::async_trait,
     clonable_error::ClonableError,
-    cm_rust::ResolverRegistration,
+    cm_rust::{FidlIntoNative, ResolverRegistration},
     fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem, fidl_fuchsia_sys2 as fsys,
     fuchsia_zircon::Status,
     std::{collections::HashMap, sync::Arc},
@@ -40,7 +40,7 @@ pub trait Resolver {
 #[derive(Debug)]
 pub struct ResolvedComponent {
     pub resolved_url: String,
-    pub decl: fsys::ComponentDecl,
+    pub decl: cm_rust::ComponentDecl,
     pub package: Option<fsys::Package>,
 }
 
@@ -173,7 +173,7 @@ impl Resolver for BuiltinResolver {
 
 pub async fn read_and_validate_manifest(
     data: fmem::Data,
-) -> Result<fsys::ComponentDecl, ResolverError> {
+) -> Result<cm_rust::ComponentDecl, ResolverError> {
     let bytes = match data {
         fmem::Data::Bytes(bytes) => bytes,
         fmem::Data::Buffer(buffer) => {
@@ -188,7 +188,7 @@ pub async fn read_and_validate_manifest(
         .map_err(|err| ResolverError::manifest_invalid(err))?;
     cm_fidl_validator::fsys::validate(&component_decl)
         .map_err(|e| ResolverError::manifest_invalid(e))?;
-    Ok(component_decl)
+    Ok(component_decl.fidl_into_native())
 }
 
 /// Errors produced by `Resolver`.
@@ -301,18 +301,7 @@ mod tests {
             assert_eq!(self.expected_url, component_url);
             Ok(ResolvedComponent {
                 resolved_url: self.resolved_url.clone(),
-                decl: fsys::ComponentDecl {
-                    program: None,
-                    uses: None,
-                    exposes: None,
-                    offers: None,
-                    facets: None,
-                    capabilities: None,
-                    children: None,
-                    collections: None,
-                    environments: None,
-                    ..fsys::ComponentDecl::EMPTY
-                },
+                decl: cm_rust::ComponentDecl::default(),
                 package: None,
             })
         }

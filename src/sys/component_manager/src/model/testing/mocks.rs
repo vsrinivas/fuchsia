@@ -31,7 +31,7 @@ use {
         ComponentDiagnostics, ComponentTasks, Task as DiagnosticsTask,
     },
     fidl_fuchsia_io::{DirectoryMarker, NodeMarker},
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, AsHandleRef, HandleBased, Koid},
     futures::{
         channel::oneshot,
@@ -44,7 +44,6 @@ use {
     std::{
         boxed::Box,
         collections::{HashMap, HashSet},
-        convert::TryFrom,
         mem,
         sync::{Arc, Mutex as SyncMutex, Weak},
     },
@@ -164,11 +163,9 @@ impl MockResolver {
             .components
             .get(name)
             .ok_or(ResolverError::manifest_not_found(format_err!("not in the hashmap")))?;
-        let fsys_decl =
-            fsys::ComponentDecl::try_from(decl.clone()).expect("decl failed conversion");
         Ok(ResolvedComponent {
             resolved_url: format!("test:///{}_resolved", name),
-            decl: fsys_decl,
+            decl: decl.clone(),
             package: None,
         })
     }

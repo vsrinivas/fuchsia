@@ -3,11 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::component::ComponentInstance,
-    crate::model::resolver::{ResolvedComponent, Resolver, ResolverError},
+    crate::model::{
+        component::ComponentInstance,
+        resolver::{ResolvedComponent, Resolver, ResolverError},
+    },
     anyhow::format_err,
     async_trait::async_trait,
     cm_fidl_validator,
+    cm_rust::FidlIntoNative,
     fidl::endpoints::{ClientEnd, Proxy},
     fidl_fuchsia_io::{self as fio, DirectoryMarker},
     fidl_fuchsia_sys::LoaderProxy,
@@ -84,7 +87,7 @@ impl FuchsiaPkgResolver {
         };
         Ok(ResolvedComponent {
             resolved_url: component_url.to_string(),
-            decl: component_decl,
+            decl: component_decl.fidl_into_native(),
             package: Some(package),
         })
     }
@@ -105,6 +108,7 @@ impl Resolver for FuchsiaPkgResolver {
 mod tests {
     use {
         super::*,
+        cm_rust::FidlIntoNative,
         fidl::encoding::encode_persistent,
         fidl::endpoints::{self, ServerEnd},
         fidl_fuchsia_data as fdata,
@@ -217,9 +221,9 @@ mod tests {
         let ResolvedComponent { resolved_url, decl, package, .. } = component;
         assert_eq!(resolved_url, url);
 
-        let expected_program = Some(fsys::ProgramDecl {
-            runner: Some("elf".to_string()),
-            info: Some(fdata::Dictionary {
+        let expected_program = Some(cm_rust::ProgramDecl {
+            runner: Some("elf".into()),
+            info: fdata::Dictionary {
                 entries: Some(vec![
                     fdata::DictionaryEntry {
                         key: "binary".to_string(),
@@ -237,8 +241,7 @@ mod tests {
                     },
                 ]),
                 ..fdata::Dictionary::EMPTY
-            }),
-            ..fsys::ProgramDecl::EMPTY
+            },
         });
 
         // no need to check full decl as we just want to make
@@ -256,6 +259,7 @@ mod tests {
         let decl = io_util::read_file_fidl::<fsys::ComponentDecl>(&file_proxy)
             .await
             .expect("could not read cm");
+        let decl = decl.fidl_into_native();
 
         assert_eq!(decl.program, expected_program);
 

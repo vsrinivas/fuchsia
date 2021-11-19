@@ -159,9 +159,6 @@ impl TryFrom<ResolvedComponent> for Component {
     fn try_from(
         ResolvedComponent { resolved_url, decl, package }: ResolvedComponent,
     ) -> Result<Self, Self::Error> {
-        let decl: cm_rust::ComponentDecl = decl
-            .try_into()
-            .map_err(|err| ModelError::component_decl_invalid(&resolved_url, err))?;
         let package = package.map(|p| p.try_into()).transpose()?;
         Ok(Self { resolved_url, decl, package })
     }
