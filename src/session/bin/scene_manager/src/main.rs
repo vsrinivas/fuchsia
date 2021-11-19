@@ -198,17 +198,32 @@ pub async fn handle_scene_manager_request_stream(
 
     while let Ok(Some(request)) = request_stream.try_next().await {
         match request {
-            SceneManagerRequest::SetRootView { view_provider, responder, .. } => {
+            SceneManagerRequest::SetRootView { view_provider, responder } => {
                 if let Ok(proxy) = view_provider.into_proxy() {
                     let mut scene_manager = scene_manager.lock().await;
-                    let mut r = scene_manager.set_root_view(proxy).await.unwrap();
-                    let _ = responder.send(&mut r);
+                    match scene_manager.set_root_view(proxy).await {
+                        Ok(mut view_ref) => {
+                            let _ = responder.send(&mut view_ref);
+                        }
+                        Err(e) => {
+                            // Log an error and close the connection.  This can be a consequence of
+                            // the child View not connecting to the scene graph (hence we don't
+                            // receive the ViewRef to return), or perhaps an internal bug which
+                            // requires further investigation.
+                            fx_log_err!("Failed to obtain ViewRef from set_root_view(): {}", e);
+                        }
+                    }
                 }
             }
-            SceneManagerRequest::RequestFocus { mut view_ref, responder, .. } => {
+            SceneManagerRequest::RequestFocus { mut view_ref, responder } => {
                 let scene_manager = scene_manager.lock().await;
-                if let Ok(mut response) = scene_manager.request_focus(&mut view_ref).await {
-                    let _ = responder.send(&mut response);
+                match scene_manager.request_focus(&mut view_ref).await {
+                    Ok(mut response) => {
+                        let _ = responder.send(&mut response);
+                    }
+                    Err(e) => {
+                        fx_log_err!("RequestFocus FIDL error: {}", e);
+                    }
                 }
             }
         };

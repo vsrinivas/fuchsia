@@ -222,20 +222,20 @@ impl SceneManager for FlatlandSceneManager {
             transform_id: self.id_generator.next_transform_id(),
             content_id: self.id_generator.next_content_id(),
         };
-        let viewport_properties = ui_comp::ViewportProperties {
-            logical_size: Some(self.layout_info.logical_size.unwrap()),
-            ..ui_comp::ViewportProperties::EMPTY
-        };
-        let (view_ref, _child_view_watcher_proxy) = FlatlandSceneManager::create_viewport(
-            self.scene_flatland.flatland.clone(),
-            &ids.content_id,
-            &mut link_token_pair.viewport_creation_token,
-            viewport_properties,
-        )
-        .await?;
+        let (child_view_watcher, child_view_watcher_request) =
+            create_proxy::<ui_comp::ChildViewWatcherMarker>()?;
         {
             let locked = self.scene_flatland.flatland.lock();
-
+            let viewport_properties = ui_comp::ViewportProperties {
+                logical_size: Some(self.layout_info.logical_size.unwrap()),
+                ..ui_comp::ViewportProperties::EMPTY
+            };
+            locked.create_viewport(
+                &mut ids.content_id.clone(),
+                &mut link_token_pair.viewport_creation_token,
+                viewport_properties,
+                child_view_watcher_request,
+            )?;
             locked.create_transform(&mut ids.transform_id.clone())?;
             locked.add_child(
                 &mut self.scene_flatland.root_transform_id.clone(),
@@ -245,9 +245,13 @@ impl SceneManager for FlatlandSceneManager {
         }
         self.scene_root_viewport_ids = Some(ids);
 
+        // Present the previous scene graph mutations.  This MUST be done before awaiting the result
+        // of get_view_ref() below, because otherwise the view won't become attached to the global
+        // scene graph topology, and the awaited ViewRef will never come.
         self.scene_flatland_presentation_sender.unbounded_send(PresentationMessage::Present)?;
 
         // TODO(fxbug.dev/87657): somewhere around here, set focus on the newly-attached view.
+        let view_ref = child_view_watcher.get_view_ref().await?;
 
         Ok(view_ref)
     }
@@ -513,25 +517,5 @@ impl FlatlandSceneManager {
             viewport_hanging_get,
             _viewport_publisher: viewport_publisher,
         })
-    }
-
-    async fn create_viewport(
-        flatland: FlatlandPtr,
-        viewport_id: &ContentId,
-        viewport_creation_token: &mut ui_views::ViewportCreationToken,
-        properties: ui_comp::ViewportProperties,
-    ) -> Result<(ui_views::ViewRef, ui_comp::ChildViewWatcherProxy), Error> {
-        let (child_view_watcher_proxy, child_view_watcher_request) =
-            create_proxy::<ui_comp::ChildViewWatcherMarker>()?;
-
-        flatland.lock().create_viewport(
-            &mut viewport_id.clone(),
-            viewport_creation_token,
-            properties,
-            child_view_watcher_request,
-        )?;
-
-        let view_ref = child_view_watcher_proxy.get_view_ref().await?;
-        Ok((view_ref, child_view_watcher_proxy))
     }
 }

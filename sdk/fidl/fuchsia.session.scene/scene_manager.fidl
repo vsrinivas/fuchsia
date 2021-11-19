@@ -15,11 +15,16 @@ using fuchsia.ui.views;
 protocol Manager {
     /// Sets the root view of the scene graph to the view provided by `view_provider`.
     ///
-    /// Subsequent calls will remove the existing root view, as well as any of its
-    /// descendants from the scene graph. The root view is shared between all clients
-    /// of `Manager`.
+    /// Subsequent calls will replace the view tree with the one starting at the new root view.
+    /// The root view is shared between all clients of `Manager`.
     ///
-    /// Returns a `fuchsia.ui.views.ViewRef` to the view provided by `view_provider`.
+    /// Returns a `fuchsia.ui.views.ViewRef` referencing the view provided by `view_provider`.
+    /// If this ViewRef cannot be returned (e.g. in Flatland case, if the ViewCreationToken is
+    /// dropped before it is given to Scenic), then the connection to the `Manager` will be closed.
+    ///
+    /// NOTE: the ViewRef is only returned after the child view is connected to the scene graph.
+    /// Therefore, the caller must guarantee that the child view will eventually be connected before
+    /// waiting for the ViewRef; if the child view doesn't connect, it is possible to deadlock.
     SetRootView(resource struct {
         view_provider client_end:fuchsia.ui.app.ViewProvider;
     }) -> (resource struct {

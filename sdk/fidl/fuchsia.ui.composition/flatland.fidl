@@ -58,12 +58,15 @@ type ParentViewportStatus = strict enum {
     DISCONNECTED_FROM_DISPLAY = 2;
 };
 
-/// A protocol that provides information about a particular Viewport to the child client. Each
-/// Flatland instance may only specify a single root transform, so each object in this scene graph
-/// can only be the child of at most one Viewport. However, more than one ParentViewportWatcher
-/// protocol may be active at a time for a particular Flatland instance. Specifically, when a
-/// Flatland instance is transitioning from using one Viewport to another, each Viewport will have a
-/// separate protocol instance, and more than one protocol may receive certain updates.
+/// A protocol that provides information about the parent Viewport attached to a Flatland instance's
+/// sole View.  Although Flatland instances can have at most one view, it is possible to have
+/// multiple ParentViewportWatchers during the brief transition period when replacing the instance's
+/// View with another, e.g. via [`CreateView`].  During this period, certain updates may be
+/// duplicated and sent to each ParentViewportWatcher connection.
+///
+/// A ParentViewportWatcher will remain connected as long as the corresponding parent Viewport
+/// exists; the connection will also be closed if the parents's ViewportCreationToken is dropped
+/// without using it to create a Viewport.
 protocol ParentViewportWatcher {
     /// A hanging get for receiving layout information. Clients may receive layout information
     /// before the ParentViewportWatcher operation has been presented. This allows children to
@@ -106,9 +109,15 @@ type ChildViewStatus = strict enum {
     CONTENT_HAS_PRESENTED = 1;
 };
 
-/// A protocol that provides information about a particular View to the parent client. Flatland
-/// instances may contain any number of ChildViewWatchers, each of which may or may not be attached
-/// to a transform. Each ChildViewWatcher has its own protocol instance.
+/// A protocol that provides information about a particular child View which is attached to the
+/// Viewport owned by the parent client; connections to this protocol are estabished in
+/// [`CreateViewport`].  Since a Flatland instance may contain any number of Viewports, each of
+/// which may or may not be attached to a transform, the client can maintain connections to an
+/// equal number of ChildViewWatcher instances.
+///
+/// Each ChildViewWatcher instance will remain connected as long as the corresponding child View
+/// exists; the connection will also be closed if the child's ViewCreationToken is dropped without
+/// using it to create a View.
 protocol ChildViewWatcher {
     /// A hanging get for receiving the status of a View. This provides information to the parent,
     /// such as whether or not the child has successfully presented content through this View.

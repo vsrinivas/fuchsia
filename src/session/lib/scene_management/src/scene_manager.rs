@@ -82,9 +82,8 @@ pub trait SceneManager: Send {
         view_provider: ui_app::ViewProviderProxy,
     ) -> Result<ui_views::ViewRef, Error>;
 
-    // TODO(fxbug.dev/87519): this is a no-op in the Flatland version (focus is automatically set in
-    // set_root_view()).  Modify clients (i.e. Ermine session) to stop calling this, then remove it
-    // from the SceneManager FIDL API.
+    // TODO(fxbug.dev/87519): The goal is to remove this, instead setting focus automatically in
+    // set_root_view().
     fn request_focus(
         &self,
         view_ref: &mut ui_views::ViewRef,
