@@ -20,8 +20,7 @@ constexpr char reverser_url[] =
 }  // namespace
 
 fuchsia::examples::inspect::ReverserPtr IntegrationTest::ConnectToReverser(TestOptions options) {
-  auto context = sys::ComponentContext::Create();
-  auto realm_builder = sys::testing::Realm::Builder::New(context.get());
+  auto realm_builder = sys::testing::Realm::Builder::Create();
   realm_builder.AddComponent(
       sys::testing::Moniker{"reverser"},
       sys::testing::Component{.source = sys::testing::ComponentUrl{reverser_url}});
