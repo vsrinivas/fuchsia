@@ -283,6 +283,7 @@ type EncodedObject = flexible resource union {
 const MAX_METHOD_ARG uint32 = 7;
 
 /// Provides access to an ACPI device.
+@discoverable
 protocol Device {
     /// If ACPI has determined this device is a bus, returns the bus ID.
     /// Otherwise returns ZX_ERR_BAD_STATE.
