@@ -17,7 +17,9 @@ package stack
 import (
 	"encoding/binary"
 	"fmt"
+	"math/rand"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
@@ -94,6 +96,30 @@ func (ti tupleID) reply() tupleID {
 	}
 }
 
+type manipType int
+
+const (
+	// manipNotPerformed indicates that NAT has not been performed.
+	manipNotPerformed manipType = iota
+
+	// manipPerformed indicates that NAT was performed.
+	manipPerformed
+
+	// manipPerformedNoop indicates that NAT was performed but it was a no-op.
+	manipPerformedNoop
+)
+
+type finalizeResult uint32
+
+const (
+	// A finalizeResult must be explicitly set so we don't make use of the zero
+	// value.
+	_ finalizeResult = iota
+
+	finalizeResultSuccess
+	finalizeResultConflict
+)
+
 // conn is a tracked connection.
 //
 // +stateify savable
@@ -106,19 +132,21 @@ type conn struct {
 	// reply is the tuple in reply direction.
 	reply tuple
 
+	finalizeOnce sync.Once
+	// Holds a finalizeResult.
+	//
+	// +checkatomics
+	finalizeResult uint32
+
 	mu sync.RWMutex `state:"nosave"`
-	// Indicates that the connection has been finalized and may handle replies.
+	// sourceManip indicates the source manipulation type.
 	//
 	// +checklocks:mu
-	finalized bool
-	// sourceManip indicates the packet's source is manipulated.
+	sourceManip manipType
+	// destinationManip indicates the destination's manipulation type.
 	//
 	// +checklocks:mu
-	sourceManip bool
-	// destinationManip indicates the packet's destination is manipulated.
-	//
-	// +checklocks:mu
-	destinationManip bool
+	destinationManip manipType
 
 	stateMu sync.RWMutex `state:"nosave"`
 	// tcb is TCB control block. It is used to keep track of states
@@ -148,9 +176,13 @@ func (cn *conn) timedOut(now tcpip.MonotonicTime) bool {
 }
 
 // update the connection tracking state.
-//
-// +checklocks:cn.stateMu
-func (cn *conn) updateLocked(pkt *PacketBuffer, reply bool) {
+func (cn *conn) update(pkt *PacketBuffer, reply bool) {
+	cn.stateMu.Lock()
+	defer cn.stateMu.Unlock()
+
+	// Mark the connection as having been used recently so it isn't reaped.
+	cn.lastUsed = cn.ct.clock.NowMonotonic()
+
 	if pkt.TransportProtocolNumber != header.TCPProtocolNumber {
 		return
 	}
@@ -195,6 +227,7 @@ type ConnTrack struct {
 
 	// clock provides timing used to determine conntrack reapings.
 	clock tcpip.Clock
+	rand  *rand.Rand
 
 	mu sync.RWMutex `state:"nosave"`
 	// mu protects the buckets slice, but not buckets' contents. Only take
@@ -392,60 +425,72 @@ func (ct *ConnTrack) init() {
 	ct.buckets = make([]bucket, numBuckets)
 }
 
-func (ct *ConnTrack) getConnOrMaybeInsertNoop(pkt *PacketBuffer) *tuple {
-	tid, isICMPError, ok := getTupleID(pkt)
-	if !ok {
-		return nil
+// getConnAndUpdate attempts to get a connection or creates one if no
+// connection exists for the packet and packet's protocol is trackable.
+//
+// If the packet's protocol is trackable, the connection's state is updated to
+// match the contents of the packet.
+func (ct *ConnTrack) getConnAndUpdate(pkt *PacketBuffer) *tuple {
+	// Get or (maybe) create a connection.
+	t := func() *tuple {
+		tid, isICMPError, ok := getTupleID(pkt)
+		if !ok {
+			return nil
+		}
+
+		bktID := ct.bucket(tid)
+
+		ct.mu.RLock()
+		bkt := &ct.buckets[bktID]
+		ct.mu.RUnlock()
+
+		now := ct.clock.NowMonotonic()
+		if t := bkt.connForTID(tid, now); t != nil {
+			return t
+		}
+
+		if isICMPError {
+			// Do not create a noop entry in response to an ICMP error.
+			return nil
+		}
+
+		bkt.mu.Lock()
+		defer bkt.mu.Unlock()
+
+		// Make sure a connection wasn't added between when we last checked the
+		// bucket and acquired the bucket's write lock.
+		if t := bkt.connForTIDRLocked(tid, now); t != nil {
+			return t
+		}
+
+		// This is the first packet we're seeing for the connection. Create an entry
+		// for this new connection.
+		conn := &conn{
+			ct:       ct,
+			original: tuple{tupleID: tid},
+			reply:    tuple{tupleID: tid.reply(), reply: true},
+			lastUsed: now,
+		}
+		conn.original.conn = conn
+		conn.reply.conn = conn
+
+		// For now, we only map an entry for the packet's original tuple as NAT may be
+		// performed on this connection. Until the packet goes through all the hooks
+		// and its final address/port is known, we cannot know what the response
+		// packet's addresses/ports will look like.
+		//
+		// This is okay because the destination cannot send its response until it
+		// receives the packet; the packet will only be received once all the hooks
+		// have been performed.
+		//
+		// See (*conn).finalize.
+		bkt.tuples.PushFront(&conn.original)
+		return &conn.original
+	}()
+	if t != nil {
+		t.conn.update(pkt, t.reply)
 	}
-
-	bktID := ct.bucket(tid)
-
-	ct.mu.RLock()
-	bkt := &ct.buckets[bktID]
-	ct.mu.RUnlock()
-
-	now := ct.clock.NowMonotonic()
-	if t := bkt.connForTID(tid, now); t != nil {
-		return t
-	}
-
-	if isICMPError {
-		// Do not create a noop entry in response to an ICMP error.
-		return nil
-	}
-
-	bkt.mu.Lock()
-	defer bkt.mu.Unlock()
-
-	// Make sure a connection wasn't added between when we last checked the
-	// bucket and acquired the bucket's write lock.
-	if t := bkt.connForTIDRLocked(tid, now); t != nil {
-		return t
-	}
-
-	// This is the first packet we're seeing for the connection. Create an entry
-	// for this new connection.
-	conn := &conn{
-		ct:       ct,
-		original: tuple{tupleID: tid},
-		reply:    tuple{tupleID: tid.reply(), reply: true},
-		lastUsed: now,
-	}
-	conn.original.conn = conn
-	conn.reply.conn = conn
-
-	// For now, we only map an entry for the packet's original tuple as NAT may be
-	// performed on this connection. Until the packet goes through all the hooks
-	// and its final address/port is known, we cannot know what the response
-	// packet's addresses/ports will look like.
-	//
-	// This is okay because the destination cannot send its response until it
-	// receives the packet; the packet will only be received once all the hooks
-	// have been performed.
-	//
-	// See (*conn).finalize.
-	bkt.tuples.PushFront(&conn.original)
-	return &conn.original
+	return t
 }
 
 func (ct *ConnTrack) connForTID(tid tupleID) *tuple {
@@ -474,89 +519,182 @@ func (bkt *bucket) connForTIDRLocked(tid tupleID, now tcpip.MonotonicTime) *tupl
 	return nil
 }
 
-func (ct *ConnTrack) finalize(cn *conn) {
-	tid := cn.reply.id()
-	id := ct.bucket(tid)
-
+func (ct *ConnTrack) finalize(cn *conn) finalizeResult {
 	ct.mu.RLock()
-	bkt := &ct.buckets[id]
+	buckets := ct.buckets
 	ct.mu.RUnlock()
 
+	{
+		tid := cn.reply.id()
+		id := ct.bucket(tid)
+
+		bkt := &buckets[id]
+		bkt.mu.Lock()
+		if bkt.connForTIDRLocked(tid, ct.clock.NowMonotonic()) == nil {
+			bkt.tuples.PushFront(&cn.reply)
+			bkt.mu.Unlock()
+			return finalizeResultSuccess
+		}
+		bkt.mu.Unlock()
+	}
+
+	// Another connection for the reply already exists. Remove the original and
+	// let the caller know we failed.
+	//
+	// TODO(https://gvisor.dev/issue/6850): Investigate handling this clash
+	// better.
+
+	tid := cn.original.id()
+	id := ct.bucket(tid)
+	bkt := &buckets[id]
 	bkt.mu.Lock()
 	defer bkt.mu.Unlock()
-
-	if t := bkt.connForTIDRLocked(tid, ct.clock.NowMonotonic()); t != nil {
-		// Another connection for the reply already exists. We can't do much about
-		// this so we leave the connection cn represents in a state where it can
-		// send packets but its responses will be mapped to some other connection.
-		// This may be okay if the connection only expects to send packets without
-		// any responses.
-		return
-	}
-
-	bkt.tuples.PushFront(&cn.reply)
+	bkt.tuples.Remove(&cn.original)
+	return finalizeResultConflict
 }
 
-func (cn *conn) finalize() {
-	{
-		cn.mu.RLock()
-		finalized := cn.finalized
-		cn.mu.RUnlock()
-		if finalized {
-			return
-		}
-	}
-
-	cn.mu.Lock()
-	finalized := cn.finalized
-	cn.finalized = true
-	cn.mu.Unlock()
-	if finalized {
-		return
-	}
-
-	cn.ct.finalize(cn)
+func (cn *conn) getFinalizeResult() finalizeResult {
+	return finalizeResult(atomic.LoadUint32(&cn.finalizeResult))
 }
 
-// performNAT setups up the connection for the specified NAT.
+// finalize attempts to finalize the connection and returns true iff the
+// connection was successfully finalized.
 //
-// Generally, only the first packet of a connection reaches this method; other
-// other packets will be manipulated without needing to modify the connection.
-func (cn *conn) performNAT(pkt *PacketBuffer, hook Hook, r *Route, port uint16, address tcpip.Address, dnat bool) {
-	cn.performNATIfNoop(port, address, dnat)
-	cn.handlePacket(pkt, hook, r)
+// If the connection failed to finalize, the caller should drop the packet
+// associated with the connection.
+//
+// If multiple goroutines attempt to finalize at the same time, only one
+// goroutine will perform the work to finalize the connection, but all
+// goroutines will block until the finalizing goroutine finishes finalizing.
+func (cn *conn) finalize() bool {
+	cn.finalizeOnce.Do(func() {
+		atomic.StoreUint32(&cn.finalizeResult, uint32(cn.ct.finalize(cn)))
+	})
+
+	switch res := cn.getFinalizeResult(); res {
+	case finalizeResultSuccess:
+		return true
+	case finalizeResultConflict:
+		return false
+	default:
+		panic(fmt.Sprintf("unhandled result = %d", res))
+	}
 }
 
-func (cn *conn) performNATIfNoop(port uint16, address tcpip.Address, dnat bool) {
+func (cn *conn) maybePerformNoopNAT(dnat bool) {
 	cn.mu.Lock()
 	defer cn.mu.Unlock()
 
-	if cn.finalized {
-		return
+	var manip *manipType
+	if dnat {
+		manip = &cn.destinationManip
+	} else {
+		manip = &cn.sourceManip
 	}
 
-	if dnat {
-		if cn.destinationManip {
-			return
-		}
-		cn.destinationManip = true
-	} else {
-		if cn.sourceManip {
-			return
-		}
-		cn.sourceManip = true
+	if *manip == manipNotPerformed {
+		*manip = manipPerformedNoop
 	}
+}
+
+type portRange struct {
+	start uint16
+	size  uint16
+}
+
+// performNAT setups up the connection for the specified NAT and rewrites the
+// packet.
+//
+// If NAT has already been performed on the connection, then the packet will
+// be rewritten with the NAT performed on the connection, ignoring the passed
+// address and port range.
+//
+// Generally, only the first packet of a connection reaches this method; other
+// packets will be manipulated without needing to modify the connection.
+func (cn *conn) performNAT(pkt *PacketBuffer, hook Hook, r *Route, ports portRange, natAddress tcpip.Address, dnat bool) {
+	// Make sure the packet is re-written after performing NAT.
+	defer func() {
+		// handlePacket returns true if the packet may skip the NAT table as the
+		// connection is already NATed, but if we reach this point we must be in the
+		// NAT table, so the return value is useless for us.
+		_ = cn.handlePacket(pkt, hook, r)
+	}()
+
+	cn.mu.Lock()
+	defer cn.mu.Unlock()
 
 	cn.reply.mu.Lock()
 	defer cn.reply.mu.Unlock()
 
+	var manip *manipType
+	var address *tcpip.Address
+	var port *uint16
 	if dnat {
-		cn.reply.tupleID.srcAddr = address
-		cn.reply.tupleID.srcPort = port
+		manip = &cn.destinationManip
+		address = &cn.reply.tupleID.srcAddr
+		port = &cn.reply.tupleID.srcPort
 	} else {
-		cn.reply.tupleID.dstAddr = address
-		cn.reply.tupleID.dstPort = port
+		manip = &cn.sourceManip
+		address = &cn.reply.tupleID.dstAddr
+		port = &cn.reply.tupleID.dstPort
 	}
+
+	if *manip != manipNotPerformed {
+		return
+	}
+	*manip = manipPerformed
+	*address = natAddress
+
+	// Does the current port fit in the range?
+	if end := ports.start + ports.size - 1; *port >= ports.start && *port <= end {
+		// Yes, is the current reply tuple unique?
+		if other := cn.ct.connForTID(cn.reply.tupleID); other == nil {
+			// Yes! No need to change the port.
+			return
+		}
+	}
+
+	// Try our best to find a port that results in a unique reply tuple.
+	//
+	// We limit the number of attempts to find a unique tuple to not waste a lot
+	// of time looking for a unique tuple.
+	//
+	// Matches linux behaviour introduced in
+	// https://github.com/torvalds/linux/commit/a504b703bb1da526a01593da0e4be2af9d9f5fa8.
+	const maxAttemptsForInitialRound uint16 = 128
+	const minAttemptsToContinue = 16
+
+	allowedInitialAttempts := maxAttemptsForInitialRound
+	if allowedInitialAttempts > ports.size {
+		allowedInitialAttempts = ports.size
+	}
+
+	for maxAttempts := allowedInitialAttempts; ; maxAttempts /= 2 {
+		// Start reach round with a random initial port in the range.
+		initial := ports.start + uint16(cn.ct.rand.Uint32())%ports.size
+
+		for i := uint16(0); i < maxAttempts; i++ {
+			*port = initial + i%ports.size
+
+			if other := cn.ct.connForTID(cn.reply.tupleID); other == nil {
+				// We found a unique tuple!
+				return
+			}
+		}
+
+		if maxAttempts == ports.size {
+			// We already tried all the ports in the range so no need to keep trying.
+			return
+		}
+
+		if maxAttempts < minAttemptsToContinue {
+			return
+		}
+	}
+
+	// We did not find a unique tuple, use the last used port anyways.
+	// TODO(https://gvisor.dev/issue/6850): Handle not finding a unique tuple
+	// better (e.g. remove the connection and drop the packet).
 }
 
 // handlePacket attempts to handle a packet and perform NAT if the connection
@@ -610,44 +748,34 @@ func (cn *conn) handlePacket(pkt *PacketBuffer, hook Hook, rt *Route) bool {
 
 	reply := pkt.tuple.reply
 
-	cn.stateMu.Lock()
-	// Mark the connection as having been used recently so it isn't reaped.
-	cn.lastUsed = cn.ct.clock.NowMonotonic()
-	// Update connection state.
-	cn.updateLocked(pkt, reply)
-	cn.stateMu.Unlock()
-
-	tid, performManip := func() (tupleID, bool) {
+	tid, manip := func() (tupleID, manipType) {
 		cn.mu.RLock()
 		defer cn.mu.RUnlock()
 
-		var tuple *tuple
 		if reply {
-			if dnat {
-				if !cn.sourceManip {
-					return tupleID{}, false
-				}
-			} else if !cn.destinationManip {
-				return tupleID{}, false
-			}
+			tid := cn.original.id()
 
-			tuple = &cn.original
-		} else {
 			if dnat {
-				if !cn.destinationManip {
-					return tupleID{}, false
-				}
-			} else if !cn.sourceManip {
-				return tupleID{}, false
+				return tid, cn.sourceManip
 			}
-
-			tuple = &cn.reply
+			return tid, cn.destinationManip
 		}
 
-		return tuple.id(), true
+		tid := cn.reply.id()
+		if dnat {
+			return tid, cn.destinationManip
+		}
+		return tid, cn.sourceManip
 	}()
-	if !performManip {
+	switch manip {
+	case manipNotPerformed:
 		return false
+	case manipPerformedNoop:
+		*natDone = true
+		return true
+	case manipPerformed:
+	default:
+		panic(fmt.Sprintf("unhandled manip = %d", manip))
 	}
 
 	newPort := tid.dstPort
@@ -820,9 +948,7 @@ func (ct *ConnTrack) reapTupleLocked(reapingTuple *tuple, bktID int, bkt *bucket
 	}
 
 	otherTupleBktID := ct.bucket(otherTuple.id())
-	reapingTuple.conn.mu.RLock()
-	replyTupleInserted := reapingTuple.conn.finalized
-	reapingTuple.conn.mu.RUnlock()
+	replyTupleInserted := reapingTuple.conn.getFinalizeResult() == finalizeResultSuccess
 
 	// To maintain lock order, we can only reap both tuples if the tuple for the
 	// other direction appears later in the table.
@@ -870,7 +996,7 @@ func (ct *ConnTrack) originalDst(epID TransportEndpointID, netProto tcpip.Networ
 
 	t.conn.mu.RLock()
 	defer t.conn.mu.RUnlock()
-	if !t.conn.destinationManip {
+	if t.conn.destinationManip == manipNotPerformed {
 		// Unmanipulated destination.
 		return "", 0, &tcpip.ErrInvalidOptionValue{}
 	}

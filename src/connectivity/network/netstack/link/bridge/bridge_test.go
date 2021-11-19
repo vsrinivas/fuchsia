@@ -844,8 +844,8 @@ func connectAndWrite(fromStack *stack.Stack, toStack *stack.Stack, protocolNumbe
 }
 
 func write(sender tcpip.Endpoint, s2fulladdr tcpip.FullAddress, payload string, wq *waiter.Queue) error {
-	payloadReceivedWaitEntry, payloadReceivedNotifyCh := waiter.NewChannelEntry(nil)
-	wq.EventRegister(&payloadReceivedWaitEntry, waiter.EventIn)
+	payloadReceivedWaitEntry, payloadReceivedNotifyCh := waiter.NewChannelEntry(waiter.EventIn)
+	wq.EventRegister(&payloadReceivedWaitEntry)
 	defer wq.EventUnregister(&payloadReceivedWaitEntry)
 	var r strings.Reader
 	r.Reset(payload)
@@ -861,12 +861,12 @@ func write(sender tcpip.Endpoint, s2fulladdr tcpip.FullAddress, payload string, 
 }
 
 func connect(sender tcpip.Endpoint, addr tcpip.FullAddress, senderWaitQueue, receiverWaitQueue *waiter.Queue) error {
-	sendReadyWaitEntry, sendReadyNotifyCh := waiter.NewChannelEntry(nil)
-	senderWaitQueue.EventRegister(&sendReadyWaitEntry, waiter.EventOut)
+	sendReadyWaitEntry, sendReadyNotifyCh := waiter.NewChannelEntry(waiter.EventOut)
+	senderWaitQueue.EventRegister(&sendReadyWaitEntry)
 	defer senderWaitQueue.EventUnregister(&sendReadyWaitEntry)
 
-	receiveReadyWaitEntry, receiveReadyNotifyCh := waiter.NewChannelEntry(nil)
-	receiverWaitQueue.EventRegister(&receiveReadyWaitEntry, waiter.EventIn)
+	receiveReadyWaitEntry, receiveReadyNotifyCh := waiter.NewChannelEntry(waiter.EventIn)
+	receiverWaitQueue.EventRegister(&receiveReadyWaitEntry)
 	defer receiverWaitQueue.EventUnregister(&receiveReadyWaitEntry)
 
 	switch err := sender.Connect(addr); err.(type) {
