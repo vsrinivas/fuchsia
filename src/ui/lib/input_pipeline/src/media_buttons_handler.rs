@@ -43,6 +43,7 @@ impl InputHandler for MediaButtonsHandler {
                 device_event: input_device::InputDeviceEvent::ConsumerControls(media_buttons_event),
                 device_descriptor: input_device::InputDeviceDescriptor::ConsumerControls(_),
                 event_time: _,
+                handled: _,
             } => {
                 let media_buttons_event = Self::create_media_buttons_event(media_buttons_event);
 

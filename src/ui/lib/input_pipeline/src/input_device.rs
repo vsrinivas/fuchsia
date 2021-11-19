@@ -37,6 +37,9 @@ pub struct InputEvent {
 
     /// The time in nanoseconds when the event was first recorded.
     pub event_time: EventTime,
+
+    /// Indicates whether the event has been consumed.
+    pub handled: bool,
 }
 
 /// An [`InputDeviceEvent`] represents an input event from an input device.

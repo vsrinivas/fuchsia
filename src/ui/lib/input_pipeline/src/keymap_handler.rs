@@ -40,6 +40,7 @@ impl InputHandler for KeymapHandler {
                 device_event: input_device::InputDeviceEvent::Keyboard(event),
                 device_descriptor,
                 event_time,
+                handled: _,
             } => self.process_keyboard_event(event, device_descriptor, event_time),
             // Pass other events unchanged.
             _ => vec![input_event],
@@ -80,6 +81,7 @@ impl KeymapHandler {
             ),
             device_descriptor,
             event_time,
+            handled: false,
         }]
     }
 }

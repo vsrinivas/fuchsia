@@ -75,6 +75,7 @@ pub fn create_keyboard_event_with_key_meaning(
         device_event: input_device::InputDeviceEvent::Keyboard(keyboard_event),
         device_descriptor: device_descriptor.clone(),
         event_time,
+        handled: false,
     }
 }
 
@@ -114,6 +115,7 @@ pub fn create_fake_input_event(event_time: input_device::EventTime) -> input_dev
         event_time,
         device_event: input_device::InputDeviceEvent::Fake,
         device_descriptor: input_device::InputDeviceDescriptor::Fake,
+        handled: false,
     }
 }
 
@@ -177,6 +179,7 @@ pub fn create_consumer_controls_event(
         ),
         device_descriptor: device_descriptor.clone(),
         event_time,
+        handled: false,
     }
 }
 
@@ -249,6 +252,7 @@ pub fn create_mouse_event(
         )),
         device_descriptor: device_descriptor.clone(),
         event_time,
+        handled: false,
     }
 }
 
@@ -316,6 +320,7 @@ pub fn create_touch_event(
         }),
         device_descriptor: device_descriptor.clone(),
         event_time: event_time,
+        handled: false,
     }
 }
 

@@ -331,6 +331,7 @@ impl KeyboardBinding {
                             ),
                             device_descriptor: device_descriptor.clone(),
                             event_time: event_time_ns,
+                            handled: false,
                         })
                         .await
                     {

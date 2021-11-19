@@ -39,6 +39,7 @@ impl InputHandler for ImeHandler {
                 device_descriptor:
                     input_device::InputDeviceDescriptor::Keyboard(_keyboard_device_descriptor),
                 event_time,
+                handled: _,
             } => {
                 self.modifier_tracker.borrow_mut().update(
                     keyboard_device_event.get_event_type(),

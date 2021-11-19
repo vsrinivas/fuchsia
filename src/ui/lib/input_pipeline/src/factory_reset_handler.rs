@@ -357,6 +357,7 @@ impl InputHandler for FactoryResetHandler {
                 device_event: input_device::InputDeviceEvent::ConsumerControls(ref event),
                 device_descriptor: input_device::InputDeviceDescriptor::ConsumerControls(_),
                 event_time: _,
+                handled: _,
             } => {
                 match self.factory_reset_state() {
                     FactoryResetState::Idle => {
@@ -471,6 +472,7 @@ mod tests {
             device_event,
             device_descriptor: create_input_device_descriptor(),
             event_time: Time::now().into_nanos() as u64,
+            handled: false,
         }
     }
 
@@ -483,6 +485,7 @@ mod tests {
             device_event,
             device_descriptor: create_input_device_descriptor(),
             event_time: Time::now().into_nanos() as u64,
+            handled: false,
         }
     }
 

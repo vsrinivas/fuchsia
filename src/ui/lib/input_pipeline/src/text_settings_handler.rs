@@ -36,6 +36,7 @@ impl InputHandler for TextSettingsHandler {
                 device_event: input_device::InputDeviceEvent::Keyboard(mut event),
                 device_descriptor,
                 event_time,
+                handled: _,
             } => {
                 // Maybe instead just pass in the keymap ID directly?
                 let keymap_id = match *self.keymap_id.borrow() {
@@ -57,6 +58,7 @@ impl InputHandler for TextSettingsHandler {
                     device_event: input_device::InputDeviceEvent::Keyboard(event),
                     device_descriptor,
                     event_time,
+                    handled: false,
                 }]
             }
             // Pass a non-keyboard event through.

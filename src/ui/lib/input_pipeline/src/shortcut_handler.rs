@@ -31,6 +31,7 @@ impl InputHandler for ShortcutHandler {
                 device_descriptor:
                     input_device::InputDeviceDescriptor::Keyboard(_keyboard_device_descriptor),
                 event_time,
+                handled: _,
             } => {
                 let key_event = create_key_event(
                     &keyboard_device_event.get_key(),

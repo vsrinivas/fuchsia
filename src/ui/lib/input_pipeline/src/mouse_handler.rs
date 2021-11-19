@@ -47,6 +47,7 @@ impl InputHandler for MouseHandler {
                 device_event: input_device::InputDeviceEvent::Mouse(mouse_event),
                 device_descriptor: input_device::InputDeviceDescriptor::Mouse(mouse_descriptor),
                 event_time,
+                handled: _,
             } => {
                 self.update_cursor_position(&mouse_event, &mouse_descriptor).await;
                 self.send_events_to_scenic(

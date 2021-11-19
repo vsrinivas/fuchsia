@@ -40,6 +40,7 @@ impl InputHandler for GfxTouchHandler {
                 device_descriptor:
                     input_device::InputDeviceDescriptor::Touch(touch_device_descriptor),
                 event_time,
+                handled: _,
             } => {
                 self.handle_touch_event(touch_event, touch_device_descriptor, event_time);
                 // Consume the event (i.e., don't forward it to the next handler).

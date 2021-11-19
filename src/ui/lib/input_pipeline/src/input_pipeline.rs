@@ -485,6 +485,7 @@ mod tests {
                 },
             ),
             event_time: zx::Time::get_monotonic().into_nanos() as input_device::EventTime,
+            handled: false,
         };
         match sender.try_send(input_event.clone()) {
             Err(_) => assert!(false),

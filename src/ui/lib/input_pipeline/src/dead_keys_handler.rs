@@ -101,6 +101,7 @@ impl Into<InputEvent> for StoredEvent {
             device_event: InputDeviceEvent::Keyboard(self.event),
             device_descriptor: self.device_descriptor,
             event_time: self.event_time,
+            handled: false,
         }
     }
 }
@@ -319,6 +320,7 @@ impl Handler {
                 device_event: InputDeviceEvent::Keyboard(event),
                 device_descriptor,
                 event_time,
+                handled: _,
             } => {
                 let event = StoredEvent { event, device_descriptor, event_time };
                 // Separated into two statements to ensure the logs are not truncated.
