@@ -12,7 +12,7 @@ set -ex
 curl -s "https://fuchsia.googlesource.com/fuchsia/+/HEAD/scripts/bootstrap?format=TEXT" | base64 --decode | bash
 
 pushd fuchsia
-scripts/fx set core.x64 --release
+scripts/fx set core.x64 --release --no-goma
 scripts/fx build src/graphics/lib/magma/src/libmagma_linux:libmagma_linux_x64_shared
 popd
 
