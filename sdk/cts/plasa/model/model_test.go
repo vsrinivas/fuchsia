@@ -34,7 +34,7 @@ func TestModelParsing(t *testing.T) {
 	for _, fileName := range tests {
 		fileName := fileName
 		t.Run(fileName, func(t *testing.T) {
-			fileName := filepath.Join(*testDir, "files", fileName)
+			fileName := filepath.Join(*testDir, fileName)
 			r, err := os.Open(fileName)
 			if err != nil {
 				t.Fatalf("could not open: %v: %v", fileName, err)

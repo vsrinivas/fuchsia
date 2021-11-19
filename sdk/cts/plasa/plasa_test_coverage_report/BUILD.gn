@@ -66,5 +66,8 @@ install_host_tools("host") {
 
 group("tests") {
   testonly = true
-  deps = [ ":plasa_test_coverage_report_test($host_toolchain)" ]
+  deps = [
+    ":plasa_test_coverage_report_test($host_toolchain)",
+    ":testdata($host_toolchain)",
+  ]
 }

@@ -39,7 +39,7 @@ if (is_host) {
     gopackages = [ "go.fuchsia.dev/fuchsia/sdk/cts/plasa/clang_doc_filter" ]
     args = [
       "--test_data_dir",
-      rebase_path(_testdata_path),
+      rebase_path(_testdata_path, root_build_dir),
     ]
     deps = [ ":clang_doc_filter_test_lib" ]
     non_go_deps = [ ":testdatadir" ]
@@ -62,5 +62,8 @@ install_host_tools("host") {
 
 group("tests") {
   testonly = true
-  deps = [ ":clang_doc_filter_test($host_toolchain)" ]
+  deps = [
+    ":clang_doc_filter_test($host_toolchain)",
+    ":testdatadir($host_toolchain)",
+  ]
 }
