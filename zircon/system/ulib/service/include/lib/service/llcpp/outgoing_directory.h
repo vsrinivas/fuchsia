@@ -172,6 +172,9 @@ class OutgoingDirectory final {
   // ZX_ERR_NOT_FOUND: The instance was not found.
   zx::status<> RemoveNamedService(cpp17::string_view service, cpp17::string_view instance) const;
 
+  // Gets the vfs.
+  fs::SynchronousVfs& vfs() { return vfs_; }
+
   // Gets the root directory.
   fbl::RefPtr<fs::PseudoDir> root_dir() const { return root_; }
 
