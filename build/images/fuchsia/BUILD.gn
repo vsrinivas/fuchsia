@@ -2,13 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/images/args.gni")
 import("//build/images/assemble_system.gni")
 import("//build/images/vboot/vboot.gni")
 import("//build/security.gni")
-
-assert(current_toolchain == target_toolchain)
 import("//build/security/policies.gni")
 import("//build/security/policies_swd.gni")
+import("//build/testing/host_test_data.gni")
+import("//build/testing/verify_files_match.gni")
 import("//src/sys/core/build/core.gni")
 
 ##################################################
@@ -29,10 +30,8 @@ fuchsia_base = {
   include_version_and_epoch = true
   include_component_id_index = true
 
-  # The shell commands may be included by the meta_package_labels.
-  # TODO(fxbug.dev/81290): Construct the shell commands package in the Image
-  # Assembler.
-  include_shell_commands = false
+  # Use the GN arg for including shell commands.
+  include_shell_commands = include_shell_commands_package
 
   cmdline_deps = [ "//build/input:bootfs" ]
   recovery = recovery_label
@@ -40,23 +39,20 @@ fuchsia_base = {
   base_packages = [
     "//:additional_base_driver_packages",
     "//:additional_base_packages",
-    "//build/images:driver-manager-base-config",
-    "//src/sys/component_index",
     ":core_realm",
   ]
 
-  # Include the meta package labels, but remove any config-data or
-  # component_index, because those are added inside the template.
-  # TODO: find a better way to do this.
-  base_packages += meta_package_labels
-  base_packages += [
-    "//build/images:config-data",
-    "//src/sys/component_index:component_index",
-  ]
-  base_packages -= [
-    "//build/images:config-data",
-    "//src/sys/component_index:component_index",
-  ]
+  # Include the product-defined meta package labels.
+  meta_packages = meta_package_labels + [ "//src/sys/component_index" ]
+
+  # Add the base package labels for the selected SWD policy.
+  if (defined(policy_labels.swd)) {
+    foreach(policy, policies_swd) {
+      if (policy.name == policy_labels.swd) {
+        base_packages += policy.base_package_deps
+      }
+    }
+  }
 
   if (defined(policy_labels.swd)) {
     foreach(policy, policies_swd) {
@@ -87,6 +83,7 @@ fuchsia_base = {
   base_driver_packages = [ "//:additional_base_driver_packages" ]
   cache_packages = [ "//:additional_cache_packages" ]
   system_image_deps = [ "//build/input:system_image" ]
+  universe_packages = [ "//:additional_universe_packages" ]
 
   if (!bootfs_only) {
     # minfs arguments
