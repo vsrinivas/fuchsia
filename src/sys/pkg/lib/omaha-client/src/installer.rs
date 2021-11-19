@@ -39,7 +39,7 @@ pub trait Installer {
         &'a mut self,
         install_plan: &'a Self::InstallPlan,
         observer: Option<&'a dyn ProgressObserver>,
-    ) -> BoxFuture<'a, Result<Self::InstallResult, Self::Error>>;
+    ) -> BoxFuture<'a, Vec<Result<Self::InstallResult, Self::Error>>>;
 
     /// Perform a reboot of the system (in whichever manner that the installer needs to perform
     /// a reboot.  This fn should not return unless reboot failed.

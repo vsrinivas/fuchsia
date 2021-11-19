@@ -130,6 +130,79 @@ impl FuchsiaInstaller<ServiceReconnector<InstallerMarker>> {
     }
 }
 
+impl<C: Connect<Proxy = InstallerProxy> + Send> FuchsiaInstaller<C> {
+    async fn perform_install_system_update<'a>(
+        &'a mut self,
+        url: &'a PkgUrl,
+        install_source: &'a InstallSource,
+        urgent_update: bool,
+        observer: Option<&'a dyn ProgressObserver>,
+    ) -> Result<InstallResult, FuchsiaInstallError> {
+        let options = Options {
+            initiator: match install_source {
+                InstallSource::ScheduledTask => Initiator::Service,
+                InstallSource::OnDemand => Initiator::User,
+            },
+            should_write_recovery: true,
+            allow_attach_to_existing_attempt: true,
+        };
+
+        let proxy = self.connector.connect().map_err(FuchsiaInstallError::Connect)?;
+        let (reboot_controller, reboot_controller_server_end) =
+            fidl::endpoints::create_proxy::<RebootControllerMarker>()
+                .map_err(FuchsiaInstallError::FIDL)?;
+
+        self.reboot_controller = Some(reboot_controller);
+
+        let mut update_attempt =
+            start_update(url, options, &proxy, Some(reboot_controller_server_end)).await?;
+
+        while let Some(state) = update_attempt.try_next().await? {
+            info!("Installer entered state: {}", state.name());
+            if let Some(observer) = observer {
+                if let Some(progress) = state.progress() {
+                    observer
+                        .receive_progress(
+                            Some(state.name()),
+                            progress.fraction_completed(),
+                            state.download_size(),
+                            Some(progress.bytes_downloaded()),
+                        )
+                        .await;
+                } else {
+                    observer.receive_progress(Some(state.name()), 0., None, None).await;
+                }
+            }
+            if state.id() == StateId::WaitToReboot || state.is_success() {
+                return Ok(InstallResult { urgent_update });
+            } else if state.is_failure() {
+                match state {
+                    State::FailFetch(fail_fetch_data) => {
+                        return Err(FuchsiaInstallError::InstallerFailureState(InstallerFailure {
+                            state_name: state.name(),
+                            reason: fail_fetch_data.reason().into(),
+                        }));
+                    }
+                    State::FailPrepare(prepare_failure_reason) => {
+                        return Err(FuchsiaInstallError::InstallerFailureState(InstallerFailure {
+                            state_name: state.name(),
+                            reason: prepare_failure_reason.into(),
+                        }));
+                    }
+                    _ => {
+                        return Err(FuchsiaInstallError::InstallerFailureState(InstallerFailure {
+                            state_name: state.name(),
+                            reason: InstallerFailureReason::Internal,
+                        }))
+                    }
+                }
+            }
+        }
+
+        Err(FuchsiaInstallError::InstallationEndedUnexpectedly)
+    }
+}
+
 impl<C: Connect<Proxy = InstallerProxy> + Send> Installer for FuchsiaInstaller<C> {
     type InstallPlan = FuchsiaInstallPlan;
     type Error = FuchsiaInstallError;
@@ -139,82 +212,14 @@ impl<C: Connect<Proxy = InstallerProxy> + Send> Installer for FuchsiaInstaller<C
         &'a mut self,
         install_plan: &'a FuchsiaInstallPlan,
         observer: Option<&'a dyn ProgressObserver>,
-    ) -> BoxFuture<'a, Result<Self::InstallResult, FuchsiaInstallError>> {
-        let options = Options {
-            initiator: match install_plan.install_source {
-                InstallSource::ScheduledTask => Initiator::Service,
-                InstallSource::OnDemand => Initiator::User,
-            },
-            should_write_recovery: true,
-            allow_attach_to_existing_attempt: true,
-        };
-
-        async move {
-            let proxy = self.connector.connect().map_err(FuchsiaInstallError::Connect)?;
-            let (reboot_controller, reboot_controller_server_end) =
-                fidl::endpoints::create_proxy::<RebootControllerMarker>()
-                    .map_err(FuchsiaInstallError::FIDL)?;
-
-            self.reboot_controller = Some(reboot_controller);
-
-            let mut update_attempt = start_update(
-                &install_plan.url,
-                options,
-                &proxy,
-                Some(reboot_controller_server_end),
-            )
-            .await?;
-
-            while let Some(state) = update_attempt.try_next().await? {
-                info!("Installer entered state: {}", state.name());
-                if let Some(observer) = observer {
-                    if let Some(progress) = state.progress() {
-                        observer
-                            .receive_progress(
-                                Some(state.name()),
-                                progress.fraction_completed(),
-                                state.download_size(),
-                                Some(progress.bytes_downloaded()),
-                            )
-                            .await;
-                    } else {
-                        observer.receive_progress(Some(state.name()), 0., None, None).await;
-                    }
-                }
-                if state.id() == StateId::WaitToReboot || state.is_success() {
-                    return Ok(InstallResult { urgent_update: install_plan.urgent_update });
-                } else if state.is_failure() {
-                    match state {
-                        State::FailFetch(fail_fetch_data) => {
-                            return Err(FuchsiaInstallError::InstallerFailureState(
-                                InstallerFailure {
-                                    state_name: state.name(),
-                                    reason: fail_fetch_data.reason().into(),
-                                },
-                            ));
-                        }
-                        State::FailPrepare(prepare_failure_reason) => {
-                            return Err(FuchsiaInstallError::InstallerFailureState(
-                                InstallerFailure {
-                                    state_name: state.name(),
-                                    reason: prepare_failure_reason.into(),
-                                },
-                            ));
-                        }
-                        _ => {
-                            return Err(FuchsiaInstallError::InstallerFailureState(
-                                InstallerFailure {
-                                    state_name: state.name(),
-                                    reason: InstallerFailureReason::Internal,
-                                },
-                            ))
-                        }
-                    }
-                }
-            }
-
-            Err(FuchsiaInstallError::InstallationEndedUnexpectedly)
-        }
+    ) -> BoxFuture<'a, Vec<Result<Self::InstallResult, FuchsiaInstallError>>> {
+        self.perform_install_system_update(
+            &install_plan.url,
+            &install_plan.install_source,
+            install_plan.urgent_update,
+            observer,
+        )
+        .map(|result| vec![result])
         .boxed()
     }
 
@@ -436,7 +441,10 @@ mod tests {
         let observer = MockProgressObserver::new();
         let progresses = observer.progresses();
         let installer_fut = async move {
-            let _install_result = installer.perform_install(&plan, Some(&observer)).await.unwrap();
+            assert_matches!(
+                installer.perform_install(&plan, Some(&observer)).await.as_slice(),
+                &[Ok(_)]
+            );
             assert_matches!(installer.reboot_controller, Some(_));
         };
         let stream_fut = async move {
@@ -528,11 +536,11 @@ mod tests {
         };
         let installer_fut = async move {
             assert_matches!(
-                installer.perform_install(&plan, None).await,
-                Err(FuchsiaInstallError::InstallerFailureState(InstallerFailure {
+                installer.perform_install(&plan, None).await.as_slice(),
+                &[Err(FuchsiaInstallError::InstallerFailureState(InstallerFailure {
                     state_name: "fail_prepare",
                     reason: InstallerFailureReason::OutOfSpace
-                }))
+                }))]
             );
         };
         let stream_fut = async move {
@@ -569,8 +577,8 @@ mod tests {
         };
         let installer_fut = async move {
             assert_matches!(
-                installer.perform_install(&plan, None).await,
-                Err(FuchsiaInstallError::InstallationEndedUnexpectedly)
+                installer.perform_install(&plan, None).await.as_slice(),
+                &[Err(FuchsiaInstallError::InstallationEndedUnexpectedly)]
             );
         };
         let stream_fut = async move {
@@ -616,8 +624,8 @@ mod tests {
             urgent_update: false,
         };
         assert_matches!(
-            installer.perform_install(&plan, None).await,
-            Err(FuchsiaInstallError::Connect(_))
+            installer.perform_install(&plan, None).await.as_slice(),
+            &[Err(FuchsiaInstallError::Connect(_))]
         );
     }
 

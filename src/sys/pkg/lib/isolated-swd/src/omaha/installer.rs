@@ -76,13 +76,13 @@ impl Installer for IsolatedInstaller {
         &'a mut self,
         install_plan: &FuchsiaInstallPlan,
         observer: Option<&'a dyn ProgressObserver>,
-    ) -> BoxFuture<'_, Result<Self::InstallResult, IsolatedInstallError>> {
+    ) -> BoxFuture<'_, Vec<Result<Self::InstallResult, IsolatedInstallError>>> {
         if let Some(o) = observer.as_ref() {
             o.receive_progress(None, 0., None, None);
         }
 
         if self.blobfs.is_none() {
-            return async move { Err(IsolatedInstallError::AlreadyRun) }.boxed();
+            return async move { vec![Err(IsolatedInstallError::AlreadyRun)] }.boxed();
         }
 
         let updater = Updater::launch_with_components(
@@ -104,6 +104,7 @@ impl Installer for IsolatedInstaller {
             }
             Ok(())
         }
+        .map(|result| vec![result])
         .boxed()
     }
 

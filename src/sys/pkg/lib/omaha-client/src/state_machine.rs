@@ -942,7 +942,9 @@ where
                 }
             };
 
-            let (install_result, ()) = future::join(perform_install, yield_progress).await;
+            let (mut install_results, ()) = future::join(perform_install, yield_progress).await;
+            // TODO(fxbug.dev/88997): handle multiple results properly.
+            let install_result = install_results.remove(0);
             let update_finish_time = self.time_source.now_in_walltime();
             let install_duration = match update_finish_time.duration_since(update_start_time) {
                 Ok(duration) => {
@@ -2566,10 +2568,10 @@ mod tests {
             &'a mut self,
             _install_plan: &StubPlan,
             observer: Option<&'a dyn ProgressObserver>,
-        ) -> BoxFuture<'a, Result<(), Self::Error>> {
+        ) -> BoxFuture<'a, Vec<Result<(), Self::Error>>> {
             if self.install_fails > 0 {
                 self.install_fails -= 1;
-                future::ready(Err(StubInstallErrors::Failed)).boxed()
+                future::ready(vec![Err(StubInstallErrors::Failed)]).boxed()
             } else {
                 self.mock_time.advance(INSTALL_DURATION);
                 async move {
@@ -2579,7 +2581,7 @@ mod tests {
                         observer.receive_progress(None, 0.9, None, None).await;
                         observer.receive_progress(None, 1.0, None, None).await;
                     }
-                    Ok(())
+                    vec![Ok(())]
                 }
                 .boxed()
             }
@@ -3449,13 +3451,13 @@ mod tests {
             &mut self,
             _install_plan: &StubPlan,
             _observer: Option<&dyn ProgressObserver>,
-        ) -> BoxFuture<'_, Result<(), StubInstallErrors>> {
+        ) -> BoxFuture<'_, Vec<Result<(), StubInstallErrors>>> {
             let (send, recv) = oneshot::channel::<Result<(), StubInstallErrors>>();
             let send_fut = self.on_install.send(send);
 
             async move {
                 send_fut.await.unwrap();
-                recv.await.unwrap()
+                vec![recv.await.unwrap()]
             }
             .boxed()
         }
