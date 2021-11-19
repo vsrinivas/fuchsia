@@ -148,6 +148,7 @@
     expose: [
         {
             protocol: [
+                "fuchsia.net.interfaces.admin.Installer",
                 "fuchsia.net.interfaces.State",
                 "fuchsia.net.routes.State",
                 "fuchsia.net.stack.Stack",
