@@ -39,21 +39,10 @@ fuchsia_base = {
     "//:additional_base_packages",
   ]
 
-  # Include the meta package labels.
-  # First, strip the labels added in core.gni, which are a duplicate of pkgs
-  # added by assemble_system()  (transitional for a soft migration)
-  meta_package_labels += [
-    "//build/images:config-data",
-    "//build/images:shell-commands",
-    "//src/sys/component_index:component_index",
-  ]
-  meta_package_labels -= [
-    "//build/images:config-data",
-    "//build/images:shell-commands",
-    "//src/sys/component_index:component_index",
-  ]
+  # Include the product-defined meta package labels.
   meta_packages = meta_package_labels + [ "//src/sys/component_index" ]
 
+  # Add the base package labels for the selected SWD policy.
   if (defined(policy_labels.swd)) {
     foreach(policy, policies_swd) {
       if (policy.name == policy_labels.swd) {
