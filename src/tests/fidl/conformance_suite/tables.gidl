@@ -1079,8 +1079,6 @@ success("ResourceTableUnknownTrailingHandlesStored") {
 }
 
 decode_failure("ValueTableUnknownBytesNonMultipleOf8") {
-    // TODO(fxbug.dev/80162): Check num_bytes%8==0 in Go.
-    bindings_denylist = [go],
     type = StructOfSimpleTable,
     bytes = {
         v1 = [
@@ -1102,8 +1100,6 @@ decode_failure("ValueTableUnknownBytesNonMultipleOf8") {
 }
 
 decode_failure("ResourceTableUnknownBytesNonMultipleOf8") {
-    // TODO(fxbug.dev/80162): Check num_bytes%8==0 in Go.
-    bindings_denylist = [go],
     type = StructOfSimpleResourceTable,
     bytes = {
         v1 = [

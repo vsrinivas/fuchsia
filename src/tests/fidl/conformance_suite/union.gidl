@@ -341,8 +341,6 @@ encode_failure("StrictUnionUnknownValue") {
 }
 
 decode_failure("FlexibleValueUnionUnknownBytesNonMultipleOf8") {
-    // TODO(fxbug.dev/80162): Check num_bytes%8==0 in Go.
-    bindings_denylist = [go],
     type = TestFlexibleXUnionInStruct,
     bytes = {
         v1 = [
@@ -360,8 +358,6 @@ decode_failure("FlexibleValueUnionUnknownBytesNonMultipleOf8") {
 }
 
 decode_failure("FlexibleResourceUnionUnknownBytesNonMultipleOf8") {
-    // TODO(fxbug.dev/80162): Check num_bytes%8==0 in Go.
-    bindings_denylist = [go],
     type = TestFlexibleResourceXUnionInStruct,
     bytes = {
         v1 = [
