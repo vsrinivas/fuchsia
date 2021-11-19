@@ -146,9 +146,7 @@ declare_args() {
 
   # Include the shell commands package.  Used as a parameter to
   # assemble_system().  See documentation there.
-  #
-  # This is a placeholder non-value for a soft transition
-  include_shell_commands_package = ""
+  include_shell_commands_package = false
 }
 
 assert(custom_signing_script == "" || !use_vboot,

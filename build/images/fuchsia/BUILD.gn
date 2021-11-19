@@ -2,10 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/images/args.gni")
 import("//build/images/assemble_system.gni")
 import("//build/images/assembly/update_package.gni")
 import("//build/images/vboot/vboot.gni")
 import("//build/security.gni")
+import("//build/security/policies.gni")
+import("//build/security/policies_swd.gni")
 import("//build/testing/host_test_data.gni")
 import("//build/testing/verify_files_match.gni")
 
@@ -18,6 +21,7 @@ supports_fastboot_fvm = fvm_partition != "" && !bootfs_only
 fuchsia_base = {
   testonly = fuchsia_zbi_testonly
   generate_fvm = !bootfs_only
+  board_name = board_name
   output_dir = root_build_dir
   fshost_config = board_fshost_config
 
@@ -25,36 +29,43 @@ fuchsia_base = {
 
   include_component_id_index = true
 
-  # The shell commands may be included by the meta_package_labels.
-  # TODO(fxbug.dev/81290): Construct the shell commands package in the Image
-  # Assembler.
-  include_shell_commands = false
+  # Use the GN arg for including shell commands.
+  include_shell_commands = include_shell_commands_package
 
   cmdline_deps = [ "//build/input:bootfs" ]
 
   base_packages = [
     "//:additional_base_driver_packages",
     "//:additional_base_packages",
-    "//build/images:driver-manager-base-config",
-    "//src/sys/component_index",
   ]
 
-  # Include the meta package labels, but remove any config-data or
-  # component_index, because those are added inside the template.
-  # TODO: find a better way to do this.
-  base_packages += meta_package_labels
-  base_packages += [
+  # Include the meta package labels.
+  # First, strip the labels added in core.gni, which are a duplicate of pkgs
+  # added by assemble_system()  (transitional for a soft migration)
+  meta_package_labels += [
     "//build/images:config-data",
+    "//build/images:shell-commands",
     "//src/sys/component_index:component_index",
   ]
-  base_packages -= [
+  meta_package_labels -= [
     "//build/images:config-data",
+    "//build/images:shell-commands",
     "//src/sys/component_index:component_index",
   ]
+  meta_packages = meta_package_labels + [ "//src/sys/component_index" ]
+
+  if (defined(policy_labels.swd)) {
+    foreach(policy, policies_swd) {
+      if (policy.name == policy_labels.swd) {
+        base_packages += policy.base_package_deps
+      }
+    }
+  }
 
   base_driver_packages = [ "//:additional_base_driver_packages" ]
   cache_packages = [ "//:additional_cache_packages" ]
   system_image_deps = [ "//build/input:system_image" ]
+  universe_packages = [ "//:additional_universe_packages" ]
 
   if (!bootfs_only) {
     # minfs arguments

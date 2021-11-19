@@ -86,6 +86,13 @@ import("//src/storage/fshost/generated_fshost_config.gni")
 #     however they may contribute to the config-data and shell-commands meta
 #     packages.
 #
+#   meta_packages (optional)
+#     [list of labels] The packages to build in addition to the base and cache
+#     sets, but are base_packages themselves.  These are packages that contain
+#     files that are generated based on other packages in the base, cache,
+#     and/or universe sets, and therefore cannot be part of those sets directly,
+#     or a GN dependency cycle will result.
+#
 #   bootfs_labels (required)
 #     [list of labels] The objects installed on the bootfs partition of the
 #     generated ZBI.
@@ -186,6 +193,10 @@ template("assemble_system") {
 
   # Internal labels used for Image Assembly.
   labels = {
+    base_packages_group = "${image_name}_base_packages"
+    cache_packages_group = "${image_name}_cache_packages"
+    meta_packages_group = "${image_name}_meta_packages"
+    all_packages_group = "${image_name}_packages"
     product_config = "${image_name}_product_config"
     board_config = "${image_name}_board_config"
     partitions_config = "${image_name}_partitions_config"
@@ -243,6 +254,7 @@ template("assemble_system") {
   _base_driver_packages = []
   _cache_packages = []
   _universe_packages = []
+  _meta_packages = []
   if (defined(invoker.base_driver_packages)) {
     _base_driver_packages = invoker.base_driver_packages
   }
@@ -253,6 +265,9 @@ template("assemble_system") {
   }
   if (defined(invoker.universe_packages)) {
     _universe_packages = invoker.universe_packages
+  }
+  if (defined(invoker.meta_packages)) {
+    _meta_packages = invoker.meta_packages
   }
 
   generate_fvm = true
@@ -309,6 +324,7 @@ template("assemble_system") {
     package_name = "driver-manager-base-config"
     deps = [ ":${base_driver_manifest_label}" ]
   }
+  _meta_packages += [ ":${driver_manager_base_config_label}" ]
 
   # TODO(fxbug.dev/81290): Construct the shell commands package in the Image
   # Assembler.
@@ -322,6 +338,9 @@ template("assemble_system") {
       package_name = "shell-commands"
       deps = _base_packages + _cache_packages + _universe_packages
     }
+    _meta_packages += [ ":${labels.shell_commands}" ]
+  } else {
+    not_needed([ "_universe_packages" ])
   }
 
   # For details, see //docs/development/components/component_id_index.md#system-assembly
@@ -338,12 +357,14 @@ template("assemble_system") {
 
   component_id_index_dep = []
   component_id_index_config_data_dep = []
-  if (defined(invoker.include_component_id_index) &&
-      invoker.include_component_id_index) {
+  include_component_index = defined(invoker.include_component_id_index) &&
+                            invoker.include_component_id_index
+  if (include_component_index) {
     component_id_index_dep = [ ":${image_name}_component_id_index_config" ]
     component_id_index_config_data_dep =
         [ ":${image_name}_component_id_index_config-config-data" ]
   }
+  _meta_packages += component_id_index_dep
 
   config_package(labels.config_data) {
     forward_variables_from(invoker,
@@ -361,6 +382,7 @@ template("assemble_system") {
       sysmgr_golden_warn = invoker.sysmgr_golden_warn
     }
   }
+  _meta_packages += [ ":${labels.config_data}" ]
 
   if (fshost_config != []) {
     generated_fshost_config(labels.fshost_config) {
@@ -369,6 +391,25 @@ template("assemble_system") {
         fvm_ramdisk = true
       }
     }
+  }
+
+  # Create GN groups for each of the package sets.
+  group(labels.base_packages_group) {
+    forward_variables_from(invoker, [ "testonly" ])
+    public_deps = _base_packages
+  }
+
+  group(labels.cache_packages_group) {
+    forward_variables_from(invoker, [ "testonly" ])
+    public_deps = _cache_packages
+  }
+
+  # The group of generated packages that contain files that depend on metadata
+  # walks of the base/cache/universe package sets and therefore cannot be part
+  # of those package sets.
+  group(labels.meta_packages_group) {
+    forward_variables_from(invoker, [ "testonly" ])
+    public_deps = _meta_packages
   }
 
   #######
@@ -388,15 +429,8 @@ template("assemble_system") {
     base_packages = []
     if (generate_fvm) {
       base_packages = _base_packages
-      base_packages += component_id_index_dep
-      base_packages += [ ":${driver_manager_base_config_label}" ]
-      base_packages += [
-        ":${labels.config_data}",
-        pkgfs_package_label,
-      ]
-      if (include_shell_commands) {
-        base_packages += [ ":${labels.shell_commands}" ]
-      }
+      base_packages += _meta_packages
+      base_packages += [ pkgfs_package_label ]
       cache_packages = _cache_packages
     }
 
@@ -410,6 +444,11 @@ template("assemble_system") {
     # Only builds with an FVM need base-resolver for pkgfs.
     if (generate_fvm) {
       bootfs_labels += [ "//src/sys/base-resolver:bootfs" ]
+    }
+
+    # If not building an FVM, then put the driver_manager config into bootfs
+    if (!generate_fvm) {
+      bootfs_labels += [ ":${driver_manager_base_config_label}" ]
     }
 
     if (fshost_config != []) {

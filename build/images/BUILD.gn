@@ -24,8 +24,6 @@ import("//build/sdk/physical_device.gni")
 import("//build/sdk/product_metadata.gni")
 import("//build/sdk/virtual_device.gni")
 import("//build/security.gni")
-import("//build/security/policies.gni")
-import("//build/security/policies_swd.gni")
 import("//build/security/verifier/verify_routes.gni")
 import("//build/zbi/zbi_input.gni")
 import("//build/zircon/tools.gni")
@@ -37,6 +35,9 @@ labels = {
   images = "//build/images/fuchsia"
   images_prime = "//build/images/fuchsia:fuchsia_prime"
   images_netboot = "//build/images/fuchsia:netboot"
+  base_packages = "//build/images/fuchsia:fuchsia_base_packages"
+  cache_packages = "//build/images/fuchsia:fuchsia_cache_packages"
+  meta_packages = "//build/images/fuchsia:fuchsia_meta_packages"
 }
 
 supports_fastboot_fvm = fvm_partition != "" && !bootfs_only
@@ -71,67 +72,21 @@ use_gigaboot = target_cpu != "arm64" && !use_vboot
 #####
 # These are the package groups that are used to build the system:
 
-group("meta_packages") {
-  visibility = [ ":*" ]
-  testonly = fuchsia_zbi_testonly
-  public_deps = meta_package_labels
-}
-
-# Generate the driver manifest file that lists all available drivers
-# collected from the //:additional_base_driver_packages dependency
-# tree. This manifest file will be included in the
-# driver-manager-base-config package.
-combined_driver_manifest("base-driver-manifest") {
-  testonly = base_cache_packages_testonly
-  deps = [ "//:additional_base_driver_packages" ]
-}
-
-# The driver-manager-base-config package is read by Driver Manager to
-# discover where the base drivers are located.
-fuchsia_package("driver-manager-base-config") {
-  testonly = base_cache_packages_testonly
-  deps = [ ":base-driver-manifest" ]
-}
-
-group("base_packages") {
-  testonly = base_cache_packages_testonly
-  visibility = [ "//build/images/*" ]
-  public_deps = [
-    ":driver-manager-base-config",
-    "//:additional_base_driver_packages",
-    "//:additional_base_packages",
-  ]
-  deps = []
-  if (defined(policy_labels.swd)) {
-    foreach(policy, policies_swd) {
-      if (policy.name == policy_labels.swd) {
-        deps += policy.base_package_deps
-      }
-    }
-  }
-}
-
-group("cache_packages") {
-  testonly = base_cache_packages_testonly
-  visibility = [ "//build/images/*" ]
-  public_deps = [ "//:additional_cache_packages" ]
-}
-
 group("universe_packages") {
   testonly = fuchsia_zbi_testonly
   visibility = [ ":*" ]
   public_deps = [
-    ":base_packages",
-    ":cache_packages",
     "//:additional_universe_packages",
+    labels.base_packages,
+    labels.cache_packages,
   ]
 }
 
 group("packages") {
   testonly = true
   public_deps = [
-    ":meta_packages",
     ":universe_packages",
+    labels.meta_packages,
   ]
 }
 
@@ -156,14 +111,14 @@ template("package_list") {
 package_list("base_packages.list") {
   visibility = [ ":*" ]
   deps = [
-    ":base_packages",
-    ":meta_packages",
+    labels.base_packages,
+    labels.meta_packages,
   ]
 }
 
 package_list("cache_packages.list") {
   visibility = [ ":*" ]
-  deps = [ ":cache_packages" ]
+  deps = [ labels.cache_packages ]
 }
 
 package_list("universe_packages.list") {
@@ -183,25 +138,8 @@ group("package_lists") {
   ]
 }
 
-#####
-# Create the config-data package from the universe package set
-
-config_package("config-data") {
-  testonly = fuchsia_zbi_testonly
-  visibility = [ "//build/images/*" ]
-  deps = [
-    ":component_id_index_config-config-data",
-    ":universe_packages",
-  ]
-}
-
-#####
-# Create the shell command entries for all the packages in the universe package set
-
-shell_commands("shell-commands") {
-  testonly = fuchsia_zbi_testonly
-  visibility = [ "//build/images/*" ]
-  deps = [ ":universe_packages" ]
+# empty group for soft-transition
+group("shell-commands") {
 }
 
 ###
@@ -1079,22 +1017,6 @@ generate_package_metadata("all_package_manifests.list") {
   ]
 }
 
-# A component ID index maps component instance IDs to component monikers.
-# Indices are defined using the component_id_index() GN template. They are
-# merged together into a single index and supplied to appmgr using the
-# component_id_index_config() template, which produces a config_data().
-#
-# If a system assembly contains components which use isolated storage, then it
-# needs include a component_id_index_config().
-#
-# For more details, see //docs/development/components/component_id_index.md#system-assembly
-component_id_index_config("component_id_index_config") {
-  testonly = fuchsia_zbi_testonly
-
-  # crawl for component_id_index()s in the base set.
-  deps = [ ":base_packages" ]
-}
-
 component_index_metadata = "$target_out_dir/component_index_metadata"
 generate_component_index("component_index_metadata") {
   visibility = [
@@ -1143,15 +1065,15 @@ tagged_snapshot_manifests = [
   {
     tag = "monolith"
     deps = [
-      ":base_packages",
-      ":meta_packages",
+      labels.base_packages,
+      labels.meta_packages,
       labels.images,
       labels.images_prime,
     ]
   },
   {
     tag = "preinstall"
-    deps = [ ":cache_packages" ]
+    deps = [ labels.cache_packages ]
   },
   {
     tag = "available"

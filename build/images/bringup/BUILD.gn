@@ -23,7 +23,6 @@ bringup_base = {
   base_driver_packages = [ "//:additional_base_driver_packages" ]
 
   bootfs_labels = [
-    "//build/images:driver-manager-base-config",
     "//build/input:bootfs",
     "//build/input:system_image",
     "//:additional_base_driver_packages",
