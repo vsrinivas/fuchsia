@@ -19,14 +19,14 @@ ThreadConfigManager::ThreadConfigManager(const std::string& path) : config_store
 
     std::vector<uint8_t> file_contents;
     if(files::ReadFileToVector(config_store_path_, &file_contents)) {
-      FX_LOGS(DEBUG) << "Read the file: " << config_store_path_
+      FX_LOGS(INFO) << "Read the file: " << config_store_path_
                      << " with contents: ";
       {
         std::stringstream file_contents_combined;
         std::copy(file_contents.begin(),
                   file_contents.end(),
-                  std::ostream_iterator<int>(file_contents_combined, " "));
-        FX_LOGS(DEBUG) << file_contents_combined.str();
+                  std::ostream_iterator<char>(file_contents_combined, " "));
+        FX_LOGS(INFO) << file_contents_combined.str();
       }
     } else {
       FX_LOGS(ERROR) << "Failed to read file: " << config_store_path_

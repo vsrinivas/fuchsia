@@ -81,6 +81,9 @@ otError otPlatSettingsGet(otInstance *instance, uint16_t key, int index, uint8_t
   size_t buffer_length = (value_length == NULL ? 0 : *value_length);
   size_t actual_value_length;
   ThreadConfigMgrError error;
+  if (config_manager == nullptr) {
+    return OT_ERROR_NOT_FOUND;
+  }
   error = config_manager->ReadConfigValueFromBinArray(key_str.c_str(), index, value, buffer_length,
                                                      &actual_value_length);
   if (value_length != NULL) {
@@ -112,6 +115,9 @@ otError otPlatSettingsAdd(otInstance *instance, uint16_t key, const uint8_t *val
   OT_UNUSED_VARIABLE(instance);
   std::string key_str(std::to_string(key));
   ThreadConfigMgrError err;
+  if (config_manager == nullptr) {
+    return OT_ERROR_NOT_FOUND;
+  }
   err = config_manager->AppendConfigValueBinArray(key_str.c_str(), value, value_length);
   return get_ot_error(err);
 }
@@ -127,6 +133,9 @@ static otError platformSettingsDelete(otInstance *instance, uint16_t key, int in
   if (index < -1) {
     return OT_ERROR_INVALID_ARGS;
   }
+  if (config_manager == nullptr) {
+    return OT_ERROR_NOT_FOUND;
+  }
   if (index == -1) {
     // Special case: index == -1 means delete all values
     // corresponding to a key
@@ -139,5 +148,8 @@ static otError platformSettingsDelete(otInstance *instance, uint16_t key, int in
 
 void otPlatSettingsWipe(otInstance *instance) {
   OT_UNUSED_VARIABLE(instance);
+  if (config_manager == nullptr) {
+    return;
+  }
   config_manager->FactoryResetConfig();
 }
