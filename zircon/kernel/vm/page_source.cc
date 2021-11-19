@@ -15,7 +15,8 @@
 #define LOCAL_TRACE 0
 
 PageSource::PageSource(fbl::RefPtr<PageProvider>&& page_provider)
-    : page_provider_(ktl::move(page_provider)) {
+    : page_provider_(ktl::move(page_provider)),
+      page_provider_properties_(page_provider_->properties()) {
   LTRACEF("%p\n", this);
 }
 
@@ -229,6 +230,8 @@ zx_status_t PageSource::GetPage(uint64_t offset, PageRequest* request, VmoDebugI
 
   return PopulateRequestLocked(request, offset);
 }
+
+void PageSource::FreePages(list_node* pages) { page_provider_->FreePages(pages); }
 
 zx_status_t PageSource::PopulateRequestLocked(PageRequest* request, uint64_t offset,
                                               bool internal_batching) {
@@ -456,8 +459,7 @@ zx_status_t PageSource::RequestDirtyTransition(PageRequest* request, uint64_t of
 
 const PageSourceProperties& PageSource::properties() const {
   canary_.Assert();
-  Guard<Mutex> guard{&page_source_mtx_};
-  return page_provider_->properties();
+  return page_provider_properties_;
 }
 
 void PageSource::Dump() const {

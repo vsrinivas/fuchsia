@@ -42,9 +42,23 @@ struct PageSourceProperties {
   // specific properties for any behavior differences.
   const bool is_user_pager;
 
+  // Currently, this is always equal to is_user_pager, but per the comment on is_user_pager, we
+  // prefer to use more specific behavior properties rather than lean on is_user_pager.
+  //
+  // True iff providing page content.  This can be immutable page content, or it can be page content
+  // that was potentially modified and written back previously.
+  //
+  // If this is false, the provider will ensure (possibly with VmCowPages help) that pages are
+  // zeroed by the time they are added to the VmCowPages.
+  const bool is_preserving_page_content;
+
   // Iff true, the PageSource (and PageProvider) must be used to allocate all pages.  Pre-allocating
   // generic pages from the pmm won't work.
   const bool is_providing_specific_physical_pages;
+
+  // true - PageSource::FreePages() must be used instead of pmm_free().
+  // false - pmm_free() must be used; PageSource::FreePages() will assert.
+  const bool is_handling_free;
 };
 
 // Interface for providing pages to a VMO through page requests.
@@ -68,6 +82,11 @@ class PageProvider : public fbl::RefCounted<PageProvider> {
   // Swaps the backing memory for a request. Assumes that |old|
   // and |new_request| have the same type, offset, and length.
   virtual void SwapAsyncRequest(page_request_t* old, page_request_t* new_req) = 0;
+  // This will assert unless is_handling_free is true, in which case this will make the pages FREE.
+  virtual void FreePages(list_node* pages) {
+    // If is_handling_free true, must implement FreePages().
+    ASSERT(false);
+  }
   // For asserting purposes only.  This gives the PageProvider a chance to check that a page is
   // consistent with any rules the PageProvider has re. which pages can go where in the VmCowPages.
   // PhysicalPageProvider implements this to verify that page at offset makes sense with respect to
@@ -138,6 +157,8 @@ class PageSource : public fbl::RefCounted<PageSource> {
   // Returns ZX_ERR_NOT_FOUND if the request cannot be fulfilled.
   zx_status_t GetPage(uint64_t offset, PageRequest* req, VmoDebugInfo vmo_debug_info,
                       vm_page_t** const page_out, paddr_t* const pa_out);
+
+  void FreePages(list_node* pages);
 
   // Called to complete a batched PageRequest if the last call to GetPage
   // returned ZX_ERR_NEXT.
@@ -248,6 +269,8 @@ class PageSource : public fbl::RefCounted<PageSource> {
   // PageProvider instance that will provide pages asynchronously (e.g. a userspace pager, see
   // PagerProxy for details).
   fbl::RefPtr<PageProvider> page_provider_;
+  // We cache the immutable page_provider_->properties() to avoid many virtual calls.
+  const PageSourceProperties page_provider_properties_;
 
   // Helper that adds page at |offset| to |request| and potentially forwards it to the provider.
   // |request| must already be initialized. |offset| must be page-aligned.

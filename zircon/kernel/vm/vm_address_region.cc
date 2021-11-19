@@ -781,7 +781,7 @@ zx_status_t VmAddressRegion::RangeOpInternal(RangeOpType op, vaddr_t base, size_
       return process_range([](VmMapping* mapping, size_t mapping_offset, size_t size) {
         AssertHeld(mapping->lock_ref());
         // Return early if this doesn't map a pager backed VMO.
-        if (!mapping->vmo_locked()->is_pager_backed()) {
+        if (!mapping->vmo_locked()->is_user_pager_backed()) {
           return ZX_OK;
         }
         // Convert the mapping offset into a vmo offset.
@@ -792,8 +792,8 @@ zx_status_t VmAddressRegion::RangeOpInternal(RangeOpType op, vaddr_t base, size_
       return process_range(
           [page_request, next_offset](VmMapping* mapping, size_t mapping_offset, size_t size) {
             AssertHeld(mapping->lock_ref());
-            // Return early if this doesn't map a pager backed VMO.
-            if (!mapping->vmo_locked()->is_pager_backed()) {
+            // Return early if this doesn't map a user pager backed VMO.
+            if (!mapping->vmo_locked()->is_user_pager_backed()) {
               return ZX_OK;
             }
 

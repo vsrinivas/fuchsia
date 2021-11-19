@@ -16,12 +16,14 @@
 
 #include <fbl/array.h>
 #include <fbl/canary.h>
+#include <fbl/enum_bits.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <kernel/mutex.h>
 #include <vm/page_source.h>
+#include <vm/physical_page_borrowing_config.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>
 #include <vm/vm_aspace.h>
@@ -35,6 +37,30 @@ class VmObjectPaged;
 namespace internal {
 struct DiscardableListTag {};
 }  // namespace internal
+
+enum class VmCowPagesOptions : uint32_t {
+  // Externally-usable flags:
+  kNone = 0u,
+
+  // With this clear, zeroing a page tries to decommit the page.  With this set, zeroing never
+  // decommits the page.  Currently this is only set for contiguous VMOs.
+  //
+  // TODO(dustingreen): Once we're happy with the reliability of page borrowing, we should be able
+  // to relax this restriction.  We may still need to flush zeroes to RAM during reclaim to mitigate
+  // a hypothetical client incorrectly assuming that cache-clean status will remain intact while
+  // pages aren't pinned, but that mitigation should be sufficient (even assuming such a client) to
+  // allow implicit decommit when zeroing or when zero scanning, as long as no clients are doing DMA
+  // to/from contiguous while not pinned.
+  kCannotDecommitZeroPages = (1u << 0),
+
+  // Internal-only flags:
+  kHidden = (1u << 1),
+  kSlice = (1u << 2),
+  kUnpinOnDelete = (1u << 3),
+
+  kInternalOnlyMask = kHidden | kSlice,
+};
+FBL_ENABLE_ENUM_BITS(VmCowPagesOptions)
 
 // Implements a copy-on-write hierarchy of pages in a VmPageList.
 class VmCowPages final
@@ -74,8 +100,83 @@ class VmCowPages final
   uint64_t size_locked() const TA_REQ(lock_) { return size_; }
 
   // Returns whether this cow pages node is ultimately backed by a user pager to fulfill initial
-  // content, and not zero pages.
-  bool is_pager_backed_locked() const TA_REQ(lock_) { return GetRootPageSourceLocked() != nullptr; }
+  // content, and not zero pages.  Contiguous VMOs have page_source_ set, but are not pager backed
+  // in this sense.
+  //
+  // This should only be used to report to user mode whether a VMO is user-pager backed, not for any
+  // other purpose.
+  bool is_root_source_user_pager_backed_locked() const TA_REQ(lock_) {
+    auto root = GetRootLocked();
+    // The root will never be null. It will either point to a valid parent, or |this| if there's no
+    // parent.
+    DEBUG_ASSERT(root);
+    return root->page_source_ && root->page_source_->properties().is_user_pager;
+  }
+
+  bool debug_is_user_pager_backed_locked() const TA_REQ(lock_) {
+    return page_source_ && page_source_->properties().is_user_pager;
+  }
+
+  bool debug_is_contiguous() const TA_REQ(lock_) {
+    // for now
+    return is_unpin_on_delete_locked();
+  }
+
+  bool is_private_pager_copy_supported() const TA_REQ(lock_) {
+    auto root = GetRootLocked();
+    // The root will never be null. It will either point to a valid parent, or |this| if there's no
+    // parent.
+    DEBUG_ASSERT(root);
+    bool result = root->page_source_ && root->page_source_->properties().is_preserving_page_content;
+    DEBUG_ASSERT(result == is_root_source_user_pager_backed_locked());
+    return result;
+  }
+
+  bool is_cow_clonable_locked() const TA_REQ(lock_) {
+    // Copy-on-write clones of pager vmos or their descendants aren't supported as we can't
+    // efficiently make an immutable snapshot.
+    if (can_root_source_evict_locked()) {
+      return false;
+    }
+
+    // We also don't support COW clones for contiguous VMOs.
+    if (is_unpin_on_delete_locked()) {
+      return false;
+    }
+
+    // Copy-on-write clones of slices aren't supported at the moment due to the resulting VMO chains
+    // having non hidden VMOs between hidden VMOs. This case cannot be handled be CloneCowPageLocked
+    // at the moment and so we forbid the construction of such cases for the moment.
+    // Bug: 36841
+    if (is_slice_locked()) {
+      return false;
+    }
+
+    return true;
+  }
+
+  bool can_evict_locked() const TA_REQ(lock_) {
+    bool result = page_source_ && page_source_->properties().is_preserving_page_content;
+    DEBUG_ASSERT(result == debug_is_user_pager_backed_locked());
+    return result;
+  }
+
+  bool can_root_source_evict_locked() const TA_REQ(lock_) {
+    auto root = GetRootLocked();
+    // The root will never be null. It will either point to a valid parent, or |this| if there's no
+    // parent.
+    DEBUG_ASSERT(root);
+    AssertHeld(root->lock_);
+    bool result = root->can_evict_locked();
+    DEBUG_ASSERT(result == is_root_source_user_pager_backed_locked());
+    return result;
+  }
+
+  bool has_backlinks_locked() const TA_REQ(lock_) {
+    bool result = can_evict_locked();
+    DEBUG_ASSERT(result == debug_is_user_pager_backed_locked());
+    return result;
+  }
 
   // Returns whether this cow pages node is dirty tracked.
   bool is_dirty_tracked_locked() const TA_REQ(lock_) {
@@ -84,7 +185,12 @@ class VmCowPages final
     // OR
     // 2. They are slice children of root pager-backed VMOs, since slices directly reference the
     // parent's pages.
-    return (is_slice_locked() ? parent_->page_source_ : page_source_) != nullptr;
+    auto* which_cow = is_slice_locked() ? parent_.get() : this;
+    bool result =
+        which_cow->page_source_ && which_cow->page_source_->properties().is_preserving_page_content;
+    AssertHeld(which_cow->lock_);
+    DEBUG_ASSERT(result == which_cow->debug_is_user_pager_backed_locked());
+    return result;
   }
 
   // When attributing pages hidden nodes must be attributed to either their left or right
@@ -335,8 +441,8 @@ class VmCowPages final
  private:
   // private constructor (use Create...())
   VmCowPages(ktl::unique_ptr<VmCowPagesContainer> cow_container,
-             fbl::RefPtr<VmHierarchyState> root_lock, uint32_t options, uint32_t pmm_alloc_flags,
-             uint64_t size, fbl::RefPtr<PageSource> page_source);
+             fbl::RefPtr<VmHierarchyState> root_lock, VmCowPagesOptions options,
+             uint32_t pmm_alloc_flags, uint64_t size, fbl::RefPtr<PageSource> page_source);
   friend class VmCowPagesContainer;
 
   ~VmCowPages() override;
@@ -358,9 +464,40 @@ class VmCowPages final
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(VmCowPages);
 
-  bool is_hidden_locked() const TA_REQ(lock_) { return (options_ & kHidden); }
-  bool is_slice_locked() const TA_REQ(lock_) { return options_ & kSlice; }
-  bool is_unpin_on_delete_locked() const TA_REQ(lock_) { return options_ & kUnpinOnDelete; }
+  bool is_hidden_locked() const TA_REQ(lock_) { return !!(options_ & VmCowPagesOptions::kHidden); }
+  bool is_slice_locked() const TA_REQ(lock_) { return !!(options_ & VmCowPagesOptions::kSlice); }
+  bool is_unpin_on_delete_locked() const TA_REQ(lock_) {
+    return !!(options_ & VmCowPagesOptions::kUnpinOnDelete);
+  }
+  bool can_decommit_zero_pages_locked() const TA_REQ(lock_) {
+    bool result = !(options_ & VmCowPagesOptions::kCannotDecommitZeroPages);
+    // For now.
+    DEBUG_ASSERT(result);
+    return result;
+  }
+
+  bool can_borrow_locked() const TA_REQ(lock_) {
+    // If is_preserving_page_content, this VmCowPages can borrow loaned pages, but only while the
+    // page is not dirty, because we currently evict to reclaim instead of replacing the page, and
+    // we can't evict a dirty page since the contents would be lost.  When a loaned page is about to
+    // become dirty, it'll be replaced with a non-loaned page.  If we replaced instead of evicting
+    // to reclaim, we'd be able to borrow the loaned page while the contents are dirty.
+    //
+    // Exclude ShouldTrapDirtyTransitions() for now to prevent write-back and borrowing from
+    // interesecting until we get a chance to fix that up.
+    bool result = page_source_ && page_source_->properties().is_preserving_page_content &&
+                  !page_source_->ShouldTrapDirtyTransitions();
+    DEBUG_ASSERT(result == (debug_is_user_pager_backed_locked() &&
+                            !page_source_->ShouldTrapDirtyTransitions()));
+    return result;
+  }
+
+  bool direct_source_supplies_zero_pages_locked() const TA_REQ(lock_) {
+    bool result = page_source_ && !page_source_->properties().is_preserving_page_content;
+    // for now
+    DEBUG_ASSERT(!result);
+    return result;
+  }
 
   // Add a page to the object. This operation unmaps the corresponding
   // offset from any existing mappings.
@@ -493,10 +630,10 @@ class VmCowPages final
 
   // Updates the page queue of an existing page, moving it to whichever non wired queue
   // is appropriate.
-  void MoveToNotWired(vm_page_t* page, uint64_t offset);
+  void MoveToNotWiredLocked(vm_page_t* page, uint64_t offset) TA_REQ(lock_);
 
   // Places a newly added page into the appropriate non wired page queue.
-  void SetNotWired(vm_page_t* page, uint64_t offset);
+  void SetNotWiredLocked(vm_page_t* page, uint64_t offset) TA_REQ(lock_);
 
   // Updates any meta data for accessing a page. Currently this moves pager backed pages around in
   // the page queue to track which ones were recently accessed for the purposes of eviction. In
@@ -648,6 +785,26 @@ class VmCowPages final
   // Returns the root parent's page source.
   fbl::RefPtr<PageSource> GetRootPageSourceLocked() const TA_REQ(lock_);
 
+  void FreePages(list_node* pages) {
+    if (!page_source_ || !page_source_->properties().is_handling_free) {
+      pmm_free(pages);
+      return;
+    }
+    page_source_->FreePages(pages);
+  }
+
+  void FreePage(vm_page_t* page) {
+    DEBUG_ASSERT(!list_in_list(&page->queue_node));
+    if (!page_source_ || !page_source_->properties().is_handling_free) {
+      pmm_free_page(page);
+      return;
+    }
+    list_node_t list;
+    list_initialize(&list);
+    list_add_tail(&list, &page->queue_node);
+    page_source_->FreePages(&list);
+  }
+
   // magic value
   fbl::Canary<fbl::magic("VMCP")> canary_;
 
@@ -659,11 +816,7 @@ class VmCowPages final
   fbl::RefPtr<VmCowPagesContainer> container_;
   VmCowPagesContainer* debug_retained_raw_container_ = nullptr;
 
-  // |options_| is a bitmask of:
-  static constexpr uint32_t kHidden = (1u << 2);
-  static constexpr uint32_t kSlice = (1u << 3);
-  static constexpr uint32_t kUnpinOnDelete = (1u << 4);
-  uint32_t options_ TA_GUARDED(lock_);
+  VmCowPagesOptions options_ TA_GUARDED(lock_);
 
   uint64_t size_ TA_GUARDED(lock_);
   // Offset in the *parent* where this object starts.
