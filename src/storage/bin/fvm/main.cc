@@ -136,9 +136,9 @@ int usage(void) {
   fprintf(stderr,
           " --minimum-data-bytes data_bytes - number of bytes to reserve for data\n"
           "                                   in the fs\n"
-          "                                   Blobfs block size is %u\n"
+          "                                   Blobfs block size is %zu\n"
           "                                   Minfs block size is %u\n",
-          blobfs::kBlobfsBlockSize, minfs::kMinfsBlockSize);
+          size_t{blobfs::kBlobfsBlockSize}, minfs::kMinfsBlockSize);
   fprintf(stderr,
           " --maximum-bytes bytes - Places an upper bound of <bytes> on the total\n"
           "                         number of bytes which may be used by the partition.\n"

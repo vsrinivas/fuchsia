@@ -324,6 +324,17 @@ TEST(BlobLayoutTest,
   EXPECT_EQ(blob_layout->MerkleTreeOffsetWithinBlockOffset(), 0ul);
 }
 
+TEST(BlobLayoutTest, MerkleTreeOffsetWithLargeFileSize) {
+  ByteCountType file_size = 1ul << 34;
+  ByteCountType data_size = 1ul << 33;
+  auto blob_layout = BlobLayout::CreateFromSizes(BlobLayoutFormat::kCompactMerkleTreeAtEnd,
+                                                 file_size, data_size, kBlockSize);
+  ASSERT_TRUE(blob_layout.is_ok());
+  size_t expected_tree_offset =
+      blob_layout->TotalBlockCount() * size_t{kBlockSize} - blob_layout->MerkleTreeSize();
+  EXPECT_EQ(blob_layout->MerkleTreeOffset(), expected_tree_offset);
+}
+
 TEST(BlobLayoutTest, TotalBlockCountWithPaddedFormatIsCorrect) {
   // The Merkle tree requires 4 blocks and the data requires 200.
   ByteCountType file_size = 700ul * kBlockSize;

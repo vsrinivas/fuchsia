@@ -482,7 +482,7 @@ zx_status_t Blob::Commit() {
         // Write the merkle data first followed by the data.  The merkle data should be a multiple
         // of the block size so we don't need any padding.
         ZX_ASSERT_MSG(merkle.GetRemainingBytes() % kBlobfsBlockSize == 0,
-                      "Merkle data size :%lu not a multiple of blobfs block size %u",
+                      "Merkle data size :%lu not a multiple of blobfs block size %lu",
                       merkle.GetRemainingBytes(), kBlobfsBlockSize);
         return MergeBlobDataProducer(merkle, *data_ptr, /*padding=*/0);
       case BlobLayoutFormat::kCompactMerkleTreeAtEnd:

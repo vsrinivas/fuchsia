@@ -78,8 +78,8 @@ constexpr uint64_t kBlobfsMinorVersionHostToolHandlesNullBlobCorrectly = 0x00000
 
 constexpr uint32_t kBlobFlagClean          = 1;
 constexpr uint32_t kBlobFlagFVM            = 4;
-constexpr uint32_t kBlobfsBlockSize        = 8192;
-constexpr uint32_t kBlobfsBlockBits        = (kBlobfsBlockSize * 8);
+constexpr uint64_t kBlobfsBlockSize        = 8192;
+constexpr uint64_t kBlobfsBlockBits        = (kBlobfsBlockSize * 8);
 constexpr uint32_t kBlobfsSuperblockBlocks = 1;
 constexpr uint32_t kBlobfsBlockMapStart    = 1;
 constexpr uint32_t kBlobfsInodeSize        = 64;

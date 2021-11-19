@@ -23,7 +23,7 @@ zx::status<cpp20::span<const uint8_t>> SimpleBlobDataProducer::Consume(uint64_t 
 MergeBlobDataProducer::MergeBlobDataProducer(BlobDataProducer& first, BlobDataProducer& second,
                                              size_t padding)
     : first_(first), second_(second), padding_(padding) {
-  ZX_ASSERT_MSG(padding_ < kBlobfsBlockSize, "Padding size:%lu more than blobfs block size: %u",
+  ZX_ASSERT_MSG(padding_ < kBlobfsBlockSize, "Padding size:%lu more than blobfs block size: %lu",
                 padding_, kBlobfsBlockSize);
 }
 

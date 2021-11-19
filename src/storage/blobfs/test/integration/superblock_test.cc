@@ -25,7 +25,7 @@ void FsyncFilesystem(fs_test::TestFilesystem& fs) {
 void ReadSuperblock(const std::string& device_path, Superblock* info) {
   fbl::unique_fd device(open(device_path.c_str(), O_RDWR));
   ASSERT_TRUE(device);
-  ASSERT_EQ(kBlobfsBlockSize, pread(device.get(), info, kBlobfsBlockSize, 0));
+  ASSERT_EQ(ssize_t{kBlobfsBlockSize}, pread(device.get(), info, kBlobfsBlockSize, 0));
 }
 
 TEST_P(SuperblockTest, CheckDirtyBitOnMount) {

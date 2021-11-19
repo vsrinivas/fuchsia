@@ -101,7 +101,7 @@ void Extract(const fbl::unique_fd& input_fd, const fbl::unique_fd& output_fd,
 }
 
 void VerifyInputSuperblock(blobfs::Superblock* info, const fbl::unique_fd& input_fd) {
-  ASSERT_EQ(blobfs::kBlobfsBlockSize,
+  ASSERT_EQ(ssize_t{blobfs::kBlobfsBlockSize},
             pread(input_fd.get(), info, blobfs::kBlobfsBlockSize, blobfs::kSuperblockOffset));
   ASSERT_EQ(info->magic0, blobfs::kBlobfsMagic0);
   ASSERT_EQ(info->magic1, blobfs::kBlobfsMagic1);

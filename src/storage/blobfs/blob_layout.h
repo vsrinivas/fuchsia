@@ -53,7 +53,7 @@ class BlobLayout {
   // The type used to represent a number of blocks in blobfs.
   using BlockCountType = uint32_t;
   // The type used to represent the block size in blobfs.
-  using BlockSizeType = uint32_t;
+  using BlockSizeType = uint64_t;
 
   // Ensure that the types used in this class match the types used in the |Inode|.  This class
   // depends on the exact sizes of these types and should fail to compile if the types used in the
