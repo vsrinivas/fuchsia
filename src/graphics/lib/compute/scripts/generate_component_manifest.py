@@ -58,7 +58,6 @@ def main(argv):
     if needs_vulkan:
         content['sandbox']['features'] += [
             'isolated-cache-storage',
-            'vulkan',
         ]
         content['sandbox']['services'] = [
             'fuchsia.sysmem.Allocator',
