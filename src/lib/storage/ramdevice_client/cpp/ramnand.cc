@@ -60,10 +60,13 @@ __EXPORT
 zx_status_t RamNand::Create(const fuchsia_hardware_nand_RamNandInfo* config,
                             std::optional<RamNand>* out) {
   fbl::unique_fd control(open(kBasePath, O_RDWR));
+  ZX_ASSERT_MSG(control.is_valid(), "Could not open device %s (errno=%s).\n", kBasePath,
+                strerror(errno));
 
   zx::channel ctl_svc;
   zx_status_t st = fdio_get_service_handle(control.release(), ctl_svc.reset_and_get_address());
   if (st != ZX_OK) {
+    fprintf(stderr, "Could not fdio_get_service_handle, %d\n", st);
     return st;
   }
 
