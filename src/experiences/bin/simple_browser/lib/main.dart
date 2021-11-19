@@ -8,6 +8,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:fuchsia_inspect/inspect.dart';
 import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:fuchsia_services/services.dart';
@@ -28,7 +29,8 @@ void main() {
   setupLogger(name: 'simple_browser');
   final _context = createWebContext();
   TldChecker().prefetchTlds();
-  ComponentContext.createAndServe();
+  final _componentContext = ComponentContext.createAndServe();
+  Inspect().serve(_componentContext.outgoing);
 
   // Loads MaterialIcons-Regular.otf
   File file = File('/pkg/data/MaterialIcons-Regular.otf');

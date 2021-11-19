@@ -40,6 +40,7 @@ dart_library("lib") {
 
   deps = [
     "//sdk/dart/fidl",
+    "//sdk/dart/fuchsia_inspect",
     "//sdk/dart/fuchsia_internationalization_flutter",
     "//sdk/dart/fuchsia_logger",
     "//sdk/dart/fuchsia_scenic",
