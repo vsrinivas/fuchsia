@@ -1,0 +1,411 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+success("SinglePresentHandle") {
+    handle_defs = {
+        #0 = event(),
+    },
+    value = NonnullableHandle {
+        h: #0,
+    },
+    bytes = {
+        v1, v2 = [
+            repeat(0xff):4, padding:4,
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0,
+        ],
+    }
+}
+
+// TODO(fxbug.dev/88957): The following 4 tests can be auto-generated using padding metadata.
+decode_failure("SinglePresentHandleCheckTrailingPadding_0") {
+    // TODO(fxbug.dev/58385): Close handles on encode/decode failure.
+    bindings_denylist = [rust, dart, go],
+    handle_defs = {
+        #0 = event(),
+    },
+    type = NonnullableHandle,
+    bytes = {
+        v1, v2 = [
+            repeat(0xff):4, 0xaa, padding:3,
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0,
+        ],
+    },
+    err = INVALID_PADDING_BYTE,
+}
+
+decode_failure("SinglePresentHandleCheckTrailingPadding_1") {
+    // TODO(fxbug.dev/58385): Close handles on encode/decode failure.
+    bindings_denylist = [rust, dart, go],
+    handle_defs = {
+        #0 = event(),
+    },
+    type = NonnullableHandle,
+    bytes = {
+        v1, v2 = [
+            repeat(0xff):4, padding:1, 0xaa, padding:2,
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0,
+        ],
+    },
+    err = INVALID_PADDING_BYTE,
+}
+
+decode_failure("SinglePresentHandleCheckTrailingPadding_2") {
+    // TODO(fxbug.dev/58385): Close handles on encode/decode failure.
+    bindings_denylist = [rust, dart, go],
+    handle_defs = {
+        #0 = event(),
+    },
+    type = NonnullableHandle,
+    bytes = {
+        v1, v2 = [
+            repeat(0xff):4, padding:2, 0xaa, padding:1,
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0,
+        ],
+    },
+    err = INVALID_PADDING_BYTE,
+}
+
+decode_failure("SinglePresentHandleCheckTrailingPadding_3") {
+    // TODO(fxbug.dev/58385): Close handles on encode/decode failure.
+    bindings_denylist = [rust, dart, go],
+    handle_defs = {
+        #0 = event(),
+    },
+    type = NonnullableHandle,
+    bytes = {
+        v1, v2 = [
+            repeat(0xff):4, padding:3, 0xaa,
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0,
+        ],
+    },
+    err = INVALID_PADDING_BYTE,
+}
+
+decode_failure("TooManyHandlesSpecifiedError") {
+    // TODO(fxbug.dev/58385): Close handles on encode/decode failure.
+    bindings_denylist = [rust, go],
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+    },
+    type = NonnullableHandle,
+    bytes = {
+        v1, v2 = [
+            repeat(0xff):4, padding:4,
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0, #1
+        ],
+    },
+    err = TOO_MANY_HANDLES_IN_MESSAGE,
+}
+
+decode_failure("TooManyBytesSpecifiedError") {
+    // TODO(fxbug.dev/58385): Close handles on encode/decode failure for Rust.
+    // TODO(fxbug.dev/88808) Add validation in Dart and go.
+    bindings_denylist = [rust, dart, go],
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+    },
+    type = NonnullableHandle,
+    bytes = {
+        v1, v2 = [
+            repeat(0xff):4, padding:4,
+            padding:8,
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0, #1
+        ],
+    },
+    err = TOO_MANY_BYTES_IN_MESSAGE,
+}
+
+success("MultiplePresentHandles") {
+    handle_defs = {
+        #0 = event(),
+        #1 = channel(),
+        #2 = event(),
+    },
+    value = MultipleNonnullableHandles {
+        data0: 0,
+        handle0: #0,
+        data1: 1,
+        handle1: #1,
+        handle2: #2,
+        data2: 2,
+    },
+    bytes = {
+        v1, v2 = [
+            num(0): 4,
+            repeat(0xff):4,
+            num(1): 8,
+            repeat(0xff):4,
+            repeat(0xff):4,
+            num(2): 8,
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0, #1, #2,
+        ],
+    }
+}
+
+success("SingleAbsentHandle") {
+    value = NullableHandle {},
+    bytes = {
+        v1, v2 = [
+            repeat(0):4,
+            padding:4,
+        ],
+    }
+}
+
+success("MultipleAbsentHandles") {
+    value = MultipleNullableHandles {
+        data0: 0,
+        data1: 1,
+        data2: 2,
+    },
+    bytes = {
+        v1, v2 = [
+            num(0): 4,
+            repeat(0):4,
+            num(1): 8,
+            repeat(0):4,
+            repeat(0):4,
+            num(2): 8,
+        ],
+    }
+}
+
+success("ArrayOfPresentHandles") {
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+        #2 = event(),
+        #3 = event(),
+    },
+    value = ArrayOfNonnullableHandles {
+        handles: [#0, #1, #2, #3],
+    },
+    bytes = {
+        v1, v2 = [
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0, #1, #2, #3,
+        ],
+    }
+}
+
+decode_failure("ArrayOfPresentHandlesTooFewError") {
+    // TODO(fxbug.dev/58385): Close handles on encode/decode failure.
+    bindings_denylist = [rust, dart, go],
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+    },
+    type = ArrayOfNonnullableHandles,
+    bytes = {
+        v1, v2 = [
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0, #1
+        ],
+    },
+    err = TOO_FEW_HANDLES,
+}
+
+decode_failure("ArrayOfNonnullableHandlesSomeAbsentError") {
+    // TODO(fxbug.dev/58385): Close handles on encode/decode failure.
+    bindings_denylist = [rust, go, dart],
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+        #2 = event(),
+    },
+    type = ArrayOfNonnullableHandles,
+    bytes = {
+        v1, v2 = [
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0):4,
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0, #1, #2
+        ],
+    },
+    err = NON_NULLABLE_TYPE_WITH_NULL_VALUE,
+}
+
+success("ArrayOfNullableHandles") {
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+        #2 = event(),
+    },
+    value = ArrayOfNullableHandles {
+        handles: [#0, null, #1, null, #2],
+    },
+    bytes = {
+        v1, v2 = [
+            repeat(0xff):4,
+            repeat(0):4,
+            repeat(0xff):4,
+            repeat(0):4,
+            repeat(0xff):4,
+            padding:4,
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0, #1, #2,
+        ],
+    }
+}
+
+decode_failure("ArrayOfNullableHandlesWithInsufficientHandlesError") {
+    // TODO(fxbug.dev/58385): Close handles on encode/decode failure.
+    bindings_denylist = [go, rust, dart],
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+    },
+    type = ArrayOfNullableHandles,
+    bytes = {
+        v1, v2 = [
+            repeat(0xff):4,
+            repeat(0):4,
+            repeat(0xff):4,
+            repeat(0):4,
+            repeat(0xff):4,
+            padding:4,
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0, #1
+        ],
+    },
+    err = TOO_FEW_HANDLES,
+}
+
+success("ArrayOfArrayOfPresentHandles") {
+    // 4x3 handle array = 12 handles
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+        #2 = event(),
+        #3 = event(),
+        #4 = event(),
+        #5 = event(),
+        #6 = event(),
+        #7 = event(),
+        #8 = event(),
+        #9 = event(),
+        #10 = event(),
+        #11 = event(),
+    },
+    value = ArrayOfArrayOfNonnullableHandles {
+        handles: [
+            [#0, #1, #2],
+            [#3, #4, #5],
+            [#6, #7, #8],
+            [#9, #10, #11],
+        ],
+    },
+    bytes = {
+        v1, v2 = [
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0, #1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11
+        ],
+    }
+}
+
+success("OutOfLineArrayOfNonnullableHandles") {
+    // TODO(fxbug.dev/88979): generated Rust test does not compile.
+    bindings_denylist = [rust],
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+        #2 = event(),
+        #3 = event(),
+    },
+    value = OutOfLineArrayOfNonnullableHandles {
+        handles: NonnullableHandleArray {
+            handles: [#0, #1, #2, #3],
+        },
+    },
+    bytes = {
+        v1, v2 = [
+            // Presence marker
+            repeat(0xff):8,
+            // Out-of-line object
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0, #1, #2, #3,
+        ],
+    }
+}

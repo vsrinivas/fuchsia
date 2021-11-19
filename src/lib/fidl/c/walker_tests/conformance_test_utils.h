@@ -80,6 +80,8 @@ bool EncodeSuccess(FidlWireFormatVersion wire_format_version, FidlType* value,
       copied_bytes.data(), static_cast<uint32_t>(copied_bytes.size()), outgoing_msg.handles(),
       static_cast<fidl_channel_handle_metadata_t*>(outgoing_msg.handle_metadata()),
       outgoing_msg.handle_actual());
+  // Handles are now owned by |llcpp_decoded|.
+  outgoing_msg.ReleaseHandles();
 
   zx_handle_disposition_t handle_dispositions[ZX_CHANNEL_MAX_MSG_HANDLES];
   uint32_t actual_handles;
@@ -87,6 +89,9 @@ bool EncodeSuccess(FidlWireFormatVersion wire_format_version, FidlType* value,
   zx_status_t status = fidl_encode_etc(
       FidlType::Type, llcpp_decoded.PrimaryObject(), static_cast<uint32_t>(copied_bytes.size()),
       handle_dispositions, std::size(handle_dispositions), &actual_handles, &error_msg);
+  // The decoded message is consumed by |fidl_encode_etc|, and handles are moved
+  // to |handle_dispositions|.
+  llcpp_decoded.ReleasePrimaryObject();
   if (status != ZX_OK) {
     std::cout << "Encoding failed (" << zx_status_get_string(status) << "): " << error_msg
               << std::endl;
@@ -111,12 +116,15 @@ bool EncodeSuccess(FidlWireFormatVersion wire_format_version, FidlType* value,
     for (size_t i = 0; i < actual_handles; i++) {
       handles.push_back(handle_dispositions[i].handle);
     }
+    expected_handles.reserve(expected_handle_dispositions.size());
     for (const auto& handle_disposition : expected_handle_dispositions) {
       expected_handles.push_back(handle_disposition.handle);
     }
     handles_match = ComparePayload(handles.data(), handles.size(), expected_handles.data(),
                                    expected_handles.size());
   }
+
+  FidlHandleDispositionCloseMany(handle_dispositions, actual_handles);
   return bytes_match && handles_match;
 }
 

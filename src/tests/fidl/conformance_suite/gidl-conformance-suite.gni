@@ -25,6 +25,9 @@ conformance_suite_gidl_files = [
   "//src/tests/fidl/conformance_suite/vectors.gidl",
 ]
 
+conformance_suite_gidl_files +=
+    [ "//src/tests/fidl/conformance_suite/ported_from_walker_handles.gidl" ]
+
 conformance_suite_fidl_target =
     "//src/tests/fidl/conformance_suite:conformance_fidl"
 

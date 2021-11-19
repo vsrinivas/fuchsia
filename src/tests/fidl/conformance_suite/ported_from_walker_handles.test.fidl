@@ -1,0 +1,52 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library conformance;
+
+// TODO(fxbug.dev/36441): Allow bindings to compile on host with handles.
+
+type NonnullableHandle = resource struct {
+    h handle;
+};
+
+type MultipleNonnullableHandles = resource struct {
+    data0 uint32;
+    handle0 handle;
+    data1 uint64;
+    handle1 handle:CHANNEL;
+    handle2 handle:EVENT;
+    data2 uint64;
+};
+
+type NullableHandle = resource struct {
+    h handle:optional;
+};
+
+type MultipleNullableHandles = resource struct {
+    data0 uint32;
+    handle0 handle:optional;
+    data1 uint64;
+    handle1 handle:<CHANNEL, optional>;
+    handle2 handle:<EVENT, optional>;
+    data2 uint64;
+};
+
+type ArrayOfNonnullableHandles = resource struct {
+    handles array<handle, 4>;
+};
+
+type ArrayOfNullableHandles = resource struct {
+    handles array<handle:optional, 5>;
+};
+
+type ArrayOfArrayOfNonnullableHandles = resource struct {
+    handles array<array<handle, 3>, 4>;
+};
+
+type NonnullableHandleArray = resource struct {
+    handles array<handle, 4>;
+};
+
+type OutOfLineArrayOfNonnullableHandles = resource struct {
+    handles box<NonnullableHandleArray>;
+};
