@@ -363,11 +363,11 @@ class FakeFastbootTcp {
   std::string rx_data_;
 
   // Tokens for current in-progress fastboot server receive/transmit calls.
-  efi_tcp6_io_token* receive_token_;
-  efi_tcp6_io_token* transmit_token_;
+  efi_tcp6_io_token* receive_token_ = nullptr;
+  efi_tcp6_io_token* transmit_token_ = nullptr;
 
   // Set true to mock a fastboot client disconnect.
-  bool disconnect_;
+  bool disconnect_ = false;
 };
 
 struct GetvarState {
