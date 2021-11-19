@@ -138,10 +138,6 @@ group("package_lists") {
   ]
 }
 
-# empty group for soft-transition
-group("shell-commands") {
-}
-
 ###
 ### Zircon Boot Images
 ###
