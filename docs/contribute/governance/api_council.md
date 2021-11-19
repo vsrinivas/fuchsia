@@ -263,7 +263,8 @@ surface.
 
 #### Review API Design Documents
 
-The first priority in API calibration is to review any API Design Documents that
+The first priority in API calibration is to review any
+[API Design Documents][api-design-template] that
 have been referred to the full council. If there are multiple pending documents,
 the chair will select the order in which the council works through the
 documents.
