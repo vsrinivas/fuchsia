@@ -205,6 +205,8 @@
 //src/devices/tests/driver-inspect-test:fuchsia_driver
 //src/devices/tests/driver-runtime:child-driver
 //src/devices/tests/driver-runtime:parent-driver
+//src/devices/tests/dynamic_offers:leaf_driver
+//src/devices/tests/dynamic_offers:root_driver
 //src/devices/tests/fidl-protocol:child-driver
 //src/devices/tests/fidl-protocol:parent-driver
 //src/devices/tests/isolateddevmgr:isolateddevmgr-test-driver-driver

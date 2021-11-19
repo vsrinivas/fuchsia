@@ -16,7 +16,7 @@ group("services") {
 group("dynamic_offers") {
   visibility = [
     "//sdk/lib/driver_test_realm:*",
-    "//src/devices/bin/driver_manager:*",
+    "//src/devices/tests/*",
     "//src/sys/bootstrap:*",
     "//tools/cmc:*",
   ]
