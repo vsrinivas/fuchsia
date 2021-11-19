@@ -175,7 +175,10 @@ default_image_deps += [ ":qemu-kernel" ]
 # the rights chain.
 verify_routes("verify_capability_routes") {
   testonly = true
-  allowlist = fuchsia_verify_routes_exceptions_allowlist
+  allowlist = [ fuchsia_verify_routes_exceptions_allowlist ]
+  if (bootfs_only) {
+    allowlist += [ fuchsia_verify_routes_exceptions_allowlist_bootfs ]
+  }
 }
 
 # This action runs a script that checks all vtables in fuchsia binaries are

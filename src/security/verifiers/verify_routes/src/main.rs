@@ -17,23 +17,47 @@ use {
 pub struct VerifyRoutes {
     stamp_path: String,
     depfile_path: String,
-    allowlist_path: String,
+    allowlist_paths: Vec<String>,
 }
 
 /// Paths required for depfile generation. Both these locations are touched
 /// by the core DataCollector.
 const AMBER_PATH: &str = "amber-files/repository";
 
+fn merge_allowlists(
+    allowlist: &mut Vec<ResultsForCapabilityType>,
+    fragment: Vec<ResultsForCapabilityType>,
+) -> Result<()> {
+    for mut fragment_type_group in fragment {
+        let mut merged = false;
+        for type_group in allowlist.iter_mut() {
+            if type_group.capability_type == fragment_type_group.capability_type {
+                merged = true;
+                type_group.results.errors.append(&mut fragment_type_group.results.errors);
+                type_group.results.warnings.append(&mut fragment_type_group.results.warnings);
+                type_group.results.ok.append(&mut fragment_type_group.results.ok);
+            }
+        }
+        if !merged {
+            // We didn't find another set for this capability type. Just append this set to the
+            // main list.
+            allowlist.push(fragment_type_group);
+        }
+    }
+
+    Ok(())
+}
+
 impl VerifyRoutes {
     /// Creates a new VerifyRoute instance with a `stamp_path` that is written
     /// to if the verification succeeds. A `depfile_path` that lists all the
     /// files this executable touches and a `allowlist_path` which lists all
     /// the moniker & protocol pairs that are filtered from the analysis.
-    fn new<S: Into<String>>(stamp_path: S, depfile_path: S, allowlist_path: S) -> Self {
+    fn new<S: Into<String>>(stamp_path: S, depfile_path: S, allowlist_paths: Vec<S>) -> Self {
         Self {
             stamp_path: stamp_path.into(),
             depfile_path: depfile_path.into(),
-            allowlist_path: allowlist_path.into(),
+            allowlist_paths: allowlist_paths.into_iter().map(|s| s.into()).collect(),
         }
     }
 
@@ -57,10 +81,15 @@ impl VerifyRoutes {
         let results = launcher::launch_from_config(config).context("Failed to launch scrutiny")?;
         let route_analysis: CapabilityRouteResults = serde_json5::from_str(&results)
             .context(format!("Failed to deserialize verify routes results: {}", results))?;
-        let allowlist: Vec<ResultsForCapabilityType> = serde_json5::from_str(
-            &fs::read_to_string(&self.allowlist_path).context("Failed to read allowlist")?,
-        )
-        .context("Failed to deserialize allowlist")?;
+        let mut allowlist = vec![];
+        for allowlist_path in &self.allowlist_paths {
+            let allowlist_fragment = serde_json5::from_str(
+                &fs::read_to_string(allowlist_path).context("Failed to read allowlist")?,
+            )
+            .context("Failed to deserialize allowlist")?;
+            merge_allowlists(&mut allowlist, allowlist_fragment)
+                .context("failed to merge allowlists")?;
+        }
         let filtered_analysis = VerifyRoutes::filter_analysis(route_analysis.results, allowlist);
         for entry in filtered_analysis.iter() {
             if !entry.results.errors.is_empty() {
@@ -72,11 +101,11 @@ The route verifier failed to verify all capability routes in this build.
 See https://fuchsia.dev/fuchsia-src/development/components/v2/troubleshooting#static-analyzer
 
 If the broken route is required for a transition it can be temporarily added
-to the allowlist located at: {}
+to the allowlist located at: {:?}
 
 Verification Errors:
 {}",
-                    self.allowlist_path,
+                    self.allowlist_paths,
                     serde_json::to_string_pretty(&filtered_analysis).unwrap()
                 );
             }
@@ -175,16 +204,17 @@ fn main() -> Result<()> {
             Arg::with_name("allowlist")
                 .long("allowlist")
                 .required(true)
-                .help("The allowlist file input location")
+                .help("The allowlist file input location. This argument can be specified multiple times.")
                 .value_name("allowlist")
-                .takes_value(true),
+                .takes_value(true)
+                .multiple(true),
         )
         .get_matches();
 
     let verify_routes = VerifyRoutes::new(
         args.value_of("stamp").unwrap(),
         args.value_of("depfile").unwrap(),
-        args.value_of("allowlist").unwrap(),
+        args.values_of("allowlist").unwrap().collect(),
     );
     verify_routes.verify()
 }

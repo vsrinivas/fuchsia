@@ -13,31 +13,6 @@
     },
     capabilities: [
         {
-            directory: "pkgfs-delayed",
-            rights: [ "rx*" ],
-            path: "/delayed/fs/pkgfs",
-        },
-        {
-            directory: "pkgfs-packages-delayed",
-            rights: [ "rx*" ],
-            path: "/delayed/fs/pkgfs/packages",
-        },
-        {
-            directory: "system-delayed",
-            rights: [ "rx*" ],
-            path: "/delayed/fs/system",
-        },
-        {
-            directory: "bin",
-            rights: [ "rx*" ],
-            path: "/fs/bin",
-        },
-        {
-            directory: "blob",
-            rights: [ "rw*" ],
-            path: "/fs/blob",
-        },
-        {
             directory: "factory",
             rights: [ "r*" ],
             path: "/fs/factory",
@@ -48,42 +23,9 @@
             path: "/fs/durable",
         },
         {
-            directory: "minfs",
-            rights: [ "rw*" ],
-            path: "/fs/data",
-        },
-        {
             directory: "install",
             rights: [ "rw*" ],
             path: "/fs/install",
-        },
-        {
-            directory: "pkgfs",
-            rights: [
-                "execute",
-                "rw*",
-            ],
-            path: "/fs/pkgfs",
-        },
-        {
-            directory: "config-data",
-            rights: [ "r*" ],
-            path: "/delayed/fs/pkgfs/packages/config-data/0/meta/data",
-        },
-        {
-            directory: "root-ssl-certificates",
-            rights: [ "r*" ],
-            path: "/delayed/fs/pkgfs/packages/root_ssl_certificates/0/data",
-        },
-        {
-            directory: "build-info",
-            rights: [ "r*" ],
-            path: "/delayed/fs/pkgfs/packages/build-info/0/data",
-        },
-        {
-            directory: "system",
-            rights: [ "rx*" ],
-            path: "/fs/system",
         },
         {
             directory: "tmp",
@@ -110,9 +52,6 @@
                 "fuchsia.fshost.Admin",
                 "fuchsia.fshost.BlockWatcher",
                 "fuchsia.fshost.Loader",
-
-                // This service is forwarded from blobfs when blobfs is present.
-                "fuchsia.update.verify.BlobfsVerifier",
             ],
         },
     ],
@@ -157,26 +96,6 @@
     ],
     expose: [
         {
-            directory: "pkgfs-delayed",
-            from: "self",
-        },
-        {
-            directory: "pkgfs-packages-delayed",
-            from: "self",
-        },
-        {
-            directory: "system-delayed",
-            from: "self",
-        },
-        {
-            directory: "bin",
-            from: "self",
-        },
-        {
-            directory: "blob",
-            from: "self",
-        },
-        {
             directory: "factory",
             from: "self",
         },
@@ -185,31 +104,7 @@
             from: "self",
         },
         {
-            directory: "minfs",
-            from: "self",
-        },
-        {
             directory: "install",
-            from: "self",
-        },
-        {
-            directory: "pkgfs",
-            from: "self",
-        },
-        {
-            directory: "config-data",
-            from: "self",
-        },
-        {
-            directory: "root-ssl-certificates",
-            from: "self",
-        },
-        {
-            directory: "build-info",
-            from: "self",
-        },
-        {
-            directory: "system",
             from: "self",
         },
         {
@@ -224,7 +119,6 @@
             protocol: [
                 "fuchsia.fshost.Admin",
                 "fuchsia.fshost.BlockWatcher",
-                "fuchsia.update.verify.BlobfsVerifier",
             ],
             from: "self",
         },

@@ -30,7 +30,7 @@ template("verify_routes") {
     stamp_file = "$target_gen_dir/$target_name.verified"
     published_packages = "//build/images:publish"
 
-    inputs = [ invoker.allowlist ]
+    inputs = invoker.allowlist
     outputs = [ stamp_file ]
 
     args = [
@@ -38,9 +38,13 @@ template("verify_routes") {
       rebase_path(stamp_file, root_build_dir),
       "--depfile",
       rebase_path(depfile, root_build_dir),
-      "--allowlist",
-      rebase_path(invoker.allowlist, root_build_dir),
     ]
+    foreach(allowlist, invoker.allowlist) {
+      args += [
+        "--allowlist",
+        rebase_path(allowlist, root_build_dir),
+      ]
+    }
     if (!defined(invoker.deps)) {
       deps = []
     }

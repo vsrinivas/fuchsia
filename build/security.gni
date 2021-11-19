@@ -92,6 +92,9 @@ declare_args() {
   fuchsia_verify_routes_exceptions_allowlist =
       "//src/security/policy/build/verify_routes_exceptions_allowlist.json5"
 
+  # Same as above, except this allowlist gets added in bootfs_only builds.
+  fuchsia_verify_routes_exceptions_allowlist_bootfs = "//src/security/policy/build/verify_routes_exceptions_allowlist_bootfs.json5"
+
   # An optional list of golden files for recovery.zbi static pkgs list. If
   # specified, they would be compared against recovery.zbi static pkgs list
   # during build time.  At least one of the golden files must match.

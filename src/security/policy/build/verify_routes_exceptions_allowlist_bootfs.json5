@@ -1,0 +1,737 @@
+// This allowlist contains routes broken on bootfs_only builds which are not broken on regular builds.
+[
+    {
+        capability_type: "directory",
+        results: {
+            errors: [
+                {
+                    using_node: "/bootstrap",
+                    capability: "pkgfs-delayed",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    expose_from_child_expose_not_found: {
+                                        child_moniker: {
+                                            name: "fshost",
+                                            collection: null,
+                                            rep: "fshost",
+                                        },
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "bootstrap",
+                                                    collection: null,
+                                                    rep: "bootstrap",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "pkgfs-delayed",
+                                    },
+                                },
+                            },
+                        },
+                        message: "An `expose from #fshost` declaration was found at `/bootstrap` for `pkgfs-delayed`, but no matching `expose` declaration was found in the child",
+                    },
+                },
+                {
+                    using_node: "/bootstrap",
+                    capability: "bin",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    expose_from_child_expose_not_found: {
+                                        child_moniker: {
+                                            name: "fshost",
+                                            collection: null,
+                                            rep: "fshost",
+                                        },
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "bootstrap",
+                                                    collection: null,
+                                                    rep: "bootstrap",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "bin",
+                                    },
+                                },
+                            },
+                        },
+                        message: "An `expose from #fshost` declaration was found at `/bootstrap` for `bin`, but no matching `expose` declaration was found in the child",
+                    },
+                },
+                {
+                    using_node: "/bootstrap",
+                    capability: "blob",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    expose_from_child_expose_not_found: {
+                                        child_moniker: {
+                                            name: "fshost",
+                                            collection: null,
+                                            rep: "fshost",
+                                        },
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "bootstrap",
+                                                    collection: null,
+                                                    rep: "bootstrap",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "blob",
+                                    },
+                                },
+                            },
+                        },
+                        message: "An `expose from #fshost` declaration was found at `/bootstrap` for `blob`, but no matching `expose` declaration was found in the child",
+                    },
+                },
+                {
+                    using_node: "/bootstrap",
+                    capability: "build-info",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    expose_from_child_expose_not_found: {
+                                        child_moniker: {
+                                            name: "fshost",
+                                            collection: null,
+                                            rep: "fshost",
+                                        },
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "bootstrap",
+                                                    collection: null,
+                                                    rep: "bootstrap",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "build-info",
+                                    },
+                                },
+                            },
+                        },
+                        message: "An `expose from #fshost` declaration was found at `/bootstrap` for `build-info`, but no matching `expose` declaration was found in the child",
+                    },
+                },
+                {
+                    using_node: "/bootstrap",
+                    capability: "config-data",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    expose_from_child_expose_not_found: {
+                                        child_moniker: {
+                                            name: "fshost",
+                                            collection: null,
+                                            rep: "fshost",
+                                        },
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "bootstrap",
+                                                    collection: null,
+                                                    rep: "bootstrap",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "config-data",
+                                    },
+                                },
+                            },
+                        },
+                        message: "An `expose from #fshost` declaration was found at `/bootstrap` for `config-data`, but no matching `expose` declaration was found in the child",
+                    },
+                },
+                {
+                    using_node: "/bootstrap",
+                    capability: "minfs",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    expose_from_child_expose_not_found: {
+                                        child_moniker: {
+                                            name: "fshost",
+                                            collection: null,
+                                            rep: "fshost",
+                                        },
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "bootstrap",
+                                                    collection: null,
+                                                    rep: "bootstrap",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "minfs",
+                                    },
+                                },
+                            },
+                        },
+                        message: "An `expose from #fshost` declaration was found at `/bootstrap` for `minfs`, but no matching `expose` declaration was found in the child",
+                    },
+                },
+                {
+                    using_node: "/bootstrap",
+                    capability: "pkgfs",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    expose_from_child_expose_not_found: {
+                                        child_moniker: {
+                                            name: "fshost",
+                                            collection: null,
+                                            rep: "fshost",
+                                        },
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "bootstrap",
+                                                    collection: null,
+                                                    rep: "bootstrap",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "pkgfs",
+                                    },
+                                },
+                            },
+                        },
+                        message: "An `expose from #fshost` declaration was found at `/bootstrap` for `pkgfs`, but no matching `expose` declaration was found in the child",
+                    },
+                },
+                {
+                    using_node: "/bootstrap",
+                    capability: "root-ssl-certificates",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    expose_from_child_expose_not_found: {
+                                        child_moniker: {
+                                            name: "fshost",
+                                            collection: null,
+                                            rep: "fshost",
+                                        },
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "bootstrap",
+                                                    collection: null,
+                                                    rep: "bootstrap",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "root-ssl-certificates",
+                                    },
+                                },
+                            },
+                        },
+                        message: "An `expose from #fshost` declaration was found at `/bootstrap` for `root-ssl-certificates`, but no matching `expose` declaration was found in the child",
+                    },
+                },
+                {
+                    using_node: "/bootstrap",
+                    capability: "system",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    expose_from_child_expose_not_found: {
+                                        child_moniker: {
+                                            name: "fshost",
+                                            collection: null,
+                                            rep: "fshost",
+                                        },
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "bootstrap",
+                                                    collection: null,
+                                                    rep: "bootstrap",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "system",
+                                    },
+                                },
+                            },
+                        },
+                        message: "An `expose from #fshost` declaration was found at `/bootstrap` for `system`, but no matching `expose` declaration was found in the child",
+                    },
+                },
+                {
+                    using_node: "/bootstrap/driver_manager",
+                    capability: "system-delayed",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    offer_from_child_expose_not_found: {
+                                        child_moniker: {
+                                            name: "fshost",
+                                            collection: null,
+                                            rep: "fshost",
+                                        },
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "bootstrap",
+                                                    collection: null,
+                                                    rep: "bootstrap",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "system-delayed",
+                                    },
+                                },
+                            },
+                        },
+                        message: "An `offer from #fshost` declaration was found at `/bootstrap` for `system-delayed`, but no matching `expose` declaration was found in the child",
+                    },
+                },
+                {
+                    using_node: "/bootstrap/driver_manager",
+                    capability: "pkgfs-delayed",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    offer_from_child_expose_not_found: {
+                                        child_moniker: {
+                                            name: "fshost",
+                                            collection: null,
+                                            rep: "fshost",
+                                        },
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "bootstrap",
+                                                    collection: null,
+                                                    rep: "bootstrap",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "pkgfs-delayed",
+                                    },
+                                },
+                            },
+                        },
+                        message: "An `offer from #fshost` declaration was found at `/bootstrap` for `pkgfs-delayed`, but no matching `expose` declaration was found in the child",
+                    },
+                },
+                {
+                    using_node: "/bootstrap/netsvc",
+                    capability: "bin",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    offer_from_child_expose_not_found: {
+                                        child_moniker: {
+                                            name: "fshost",
+                                            collection: null,
+                                            rep: "fshost",
+                                        },
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "bootstrap",
+                                                    collection: null,
+                                                    rep: "bootstrap",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "bin",
+                                    },
+                                },
+                            },
+                        },
+                        message: "An `offer from #fshost` declaration was found at `/bootstrap` for `bin`, but no matching `expose` declaration was found in the child",
+                    },
+                },
+                {
+                    using_node: "/bootstrap/netsvc",
+                    capability: "blob",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    offer_from_child_expose_not_found: {
+                                        child_moniker: {
+                                            name: "fshost",
+                                            collection: null,
+                                            rep: "fshost",
+                                        },
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "bootstrap",
+                                                    collection: null,
+                                                    rep: "bootstrap",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "blob",
+                                    },
+                                },
+                            },
+                        },
+                        message: "An `offer from #fshost` declaration was found at `/bootstrap` for `blob`, but no matching `expose` declaration was found in the child",
+                    },
+                },
+                {
+                    using_node: "/bootstrap/netsvc",
+                    capability: "minfs",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    offer_from_child_expose_not_found: {
+                                        child_moniker: {
+                                            name: "fshost",
+                                            collection: null,
+                                            rep: "fshost",
+                                        },
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "bootstrap",
+                                                    collection: null,
+                                                    rep: "bootstrap",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "minfs",
+                                    },
+                                },
+                            },
+                        },
+                        message: "An `offer from #fshost` declaration was found at `/bootstrap` for `minfs`, but no matching `expose` declaration was found in the child",
+                    },
+                },
+                {
+                    using_node: "/bootstrap/netsvc",
+                    capability: "pkgfs",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    offer_from_child_expose_not_found: {
+                                        child_moniker: {
+                                            name: "fshost",
+                                            collection: null,
+                                            rep: "fshost",
+                                        },
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "bootstrap",
+                                                    collection: null,
+                                                    rep: "bootstrap",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "pkgfs",
+                                    },
+                                },
+                            },
+                        },
+                        message: "An `offer from #fshost` declaration was found at `/bootstrap` for `pkgfs`, but no matching `expose` declaration was found in the child",
+                    },
+                },
+                {
+                    using_node: "/bootstrap/netsvc",
+                    capability: "system",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    offer_from_child_expose_not_found: {
+                                        child_moniker: {
+                                            name: "fshost",
+                                            collection: null,
+                                            rep: "fshost",
+                                        },
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "bootstrap",
+                                                    collection: null,
+                                                    rep: "bootstrap",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "system",
+                                    },
+                                },
+                            },
+                        },
+                        message: "An `offer from #fshost` declaration was found at `/bootstrap` for `system`, but no matching `expose` declaration was found in the child",
+                    },
+                },
+                {
+                    using_node: "/bootstrap/driver_index",
+                    capability: "pkgfs-packages-delayed",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    offer_from_child_expose_not_found: {
+                                        child_moniker: {
+                                            name: "fshost",
+                                            collection: null,
+                                            rep: "fshost",
+                                        },
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "bootstrap",
+                                                    collection: null,
+                                                    rep: "bootstrap",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "pkgfs-packages-delayed",
+                                    },
+                                },
+                            },
+                        },
+                        message: "An `offer from #fshost` declaration was found at `/bootstrap` for `pkgfs-packages-delayed`, but no matching `expose` declaration was found in the child",
+                    },
+                },
+                {
+                    using_node: "/bootstrap/console-launcher",
+                    capability: "bin",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    offer_from_child_expose_not_found: {
+                                        child_moniker: {
+                                            name: "fshost",
+                                            collection: null,
+                                            rep: "fshost",
+                                        },
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "bootstrap",
+                                                    collection: null,
+                                                    rep: "bootstrap",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "bin",
+                                    },
+                                },
+                            },
+                        },
+                        message: "An `offer from #fshost` declaration was found at `/bootstrap` for `bin`, but no matching `expose` declaration was found in the child",
+                    },
+                },
+                {
+                    using_node: "/bootstrap/console-launcher",
+                    capability: "blob",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    offer_from_child_expose_not_found: {
+                                        child_moniker: {
+                                            name: "fshost",
+                                            collection: null,
+                                            rep: "fshost",
+                                        },
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "bootstrap",
+                                                    collection: null,
+                                                    rep: "bootstrap",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "blob",
+                                    },
+                                },
+                            },
+                        },
+                        message: "An `offer from #fshost` declaration was found at `/bootstrap` for `blob`, but no matching `expose` declaration was found in the child",
+                    },
+                },
+                {
+                    using_node: "/bootstrap/console-launcher",
+                    capability: "minfs",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    offer_from_child_expose_not_found: {
+                                        child_moniker: {
+                                            name: "fshost",
+                                            collection: null,
+                                            rep: "fshost",
+                                        },
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "bootstrap",
+                                                    collection: null,
+                                                    rep: "bootstrap",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "minfs",
+                                    },
+                                },
+                            },
+                        },
+                        message: "An `offer from #fshost` declaration was found at `/bootstrap` for `minfs`, but no matching `expose` declaration was found in the child",
+                    },
+                },
+                {
+                    using_node: "/bootstrap/console-launcher",
+                    capability: "pkgfs",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    offer_from_child_expose_not_found: {
+                                        child_moniker: {
+                                            name: "fshost",
+                                            collection: null,
+                                            rep: "fshost",
+                                        },
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "bootstrap",
+                                                    collection: null,
+                                                    rep: "bootstrap",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "pkgfs",
+                                    },
+                                },
+                            },
+                        },
+                        message: "An `offer from #fshost` declaration was found at `/bootstrap` for `pkgfs`, but no matching `expose` declaration was found in the child",
+                    },
+                },
+                {
+                    using_node: "/bootstrap/console-launcher",
+                    capability: "system",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    offer_from_child_expose_not_found: {
+                                        child_moniker: {
+                                            name: "fshost",
+                                            collection: null,
+                                            rep: "fshost",
+                                        },
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "bootstrap",
+                                                    collection: null,
+                                                    rep: "bootstrap",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "system",
+                                    },
+                                },
+                            },
+                        },
+                        message: "An `offer from #fshost` declaration was found at `/bootstrap` for `system`, but no matching `expose` declaration was found in the child",
+                    },
+                },
+                {
+                    using_node: "/bootstrap/console-launcher",
+                    capability: "system-delayed",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    offer_from_child_expose_not_found: {
+                                        child_moniker: {
+                                            name: "fshost",
+                                            collection: null,
+                                            rep: "fshost",
+                                        },
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "bootstrap",
+                                                    collection: null,
+                                                    rep: "bootstrap",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "system-delayed",
+                                    },
+                                },
+                            },
+                        },
+                        message: "An `offer from #fshost` declaration was found at `/bootstrap` for `system-delayed`, but no matching `expose` declaration was found in the child",
+                    },
+                },
+            ],
+        },
+    },
+    {
+        capability_type: "protocol",
+        results: {
+            errors: [
+                {
+                    using_node: "/bootstrap",
+                    capability: "fuchsia.update.verify.BlobfsVerifier",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    expose_from_child_expose_not_found: {
+                                        child_moniker: {
+                                            name: "fshost",
+                                            collection: null,
+                                            rep: "fshost",
+                                        },
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "bootstrap",
+                                                    collection: null,
+                                                    rep: "bootstrap",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "fuchsia.update.verify.BlobfsVerifier",
+                                    },
+                                },
+                            },
+                        },
+                        message: "An `expose from #fshost` declaration was found at `/bootstrap` for `fuchsia.update.verify.BlobfsVerifier`, but no matching `expose` declaration was found in the child",
+                    },
+                },
+            ],
+        },
+    },
+]
