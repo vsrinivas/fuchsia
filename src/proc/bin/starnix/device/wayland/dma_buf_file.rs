@@ -12,6 +12,7 @@ use zerocopy::{AsBytes, FromBytes};
 
 use std::sync::Arc;
 
+use super::drm::{drm_format_to_sysmem_format, min_bytes_per_row};
 use super::sysmem::*;
 use super::BufferCollectionFile;
 use crate::errno;

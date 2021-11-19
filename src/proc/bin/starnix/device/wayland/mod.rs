@@ -8,6 +8,7 @@ mod dma_buf_file;
 mod file_creation;
 mod wayland;
 
+pub mod drm;
 pub mod sysmem;
 
 pub use buffer_collection_file::*;

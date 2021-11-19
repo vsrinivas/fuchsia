@@ -66,6 +66,7 @@ if (target_cpu == "x64") {
       "//third_party/rust_crates:paste",
       "//third_party/rust_crates:rand",
       "//third_party/rust_crates:scopeguard",
+      "//third_party/rust_crates:vk-sys",
     ]
 
     test_deps = [
@@ -84,6 +85,7 @@ if (target_cpu == "x64") {
       "device/wayland/bridge_client.rs",
       "device/wayland/buffer_collection_file.rs",
       "device/wayland/dma_buf_file.rs",
+      "device/wayland/drm.rs",
       "device/wayland/file_creation.rs",
       "device/wayland/mod.rs",
       "device/wayland/sysmem.rs",

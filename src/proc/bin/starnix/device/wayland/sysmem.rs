@@ -70,32 +70,3 @@ pub const BUFFER_COLLECTION_CONSTRAINTS_DEFAULT: fsysmem::BufferCollectionConstr
         image_format_constraints_count: 0,
         image_format_constraints: [IMAGE_FORMAT_CONSTRAINTS_DEFAULT; 32],
     };
-
-const DRM_FORMAT_ARGB8888: u32 = 0x34325241;
-const DRM_FORMAT_ABGR8888: u32 = 0x34324241;
-const DRM_FORMAT_XRGB8888: u32 = 0x34325258;
-const DRM_FORMAT_XBGR8888: u32 = 0x34324258;
-
-pub fn drm_format_to_sysmem_format(drm_format: u32) -> fsysmem::PixelFormatType {
-    match drm_format {
-        format if format == DRM_FORMAT_ARGB8888 => fsysmem::PixelFormatType::Bgra32,
-        format if format == DRM_FORMAT_XRGB8888 => fsysmem::PixelFormatType::Bgra32,
-        format if format == DRM_FORMAT_ABGR8888 => fsysmem::PixelFormatType::R8G8B8A8,
-        format if format == DRM_FORMAT_XBGR8888 => fsysmem::PixelFormatType::R8G8B8A8,
-        _ => fsysmem::PixelFormatType::Invalid,
-    }
-}
-
-pub fn min_bytes_per_row(drm_format: u32, width: u32) -> u32 {
-    match drm_format {
-        format
-            if format == DRM_FORMAT_ARGB8888
-                || format == DRM_FORMAT_XRGB8888
-                || format == DRM_FORMAT_ABGR8888
-                || format == DRM_FORMAT_XBGR8888 =>
-        {
-            width * 4
-        }
-        _ => 0,
-    }
-}
