@@ -112,6 +112,8 @@ rustc_library("lib") {
     "$target_gen_dir/src/translate_response.rs",
     "$target_gen_dir/src/translate_util.rs",
   ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 # Root target
@@ -170,4 +172,6 @@ rustc_test("lib_tests") {
     "$target_gen_dir/src/translate_response.rs",
     "$target_gen_dir/src/translate_util.rs",
   ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }

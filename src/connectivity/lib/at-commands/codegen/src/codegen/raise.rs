@@ -323,7 +323,7 @@ fn codegen_extract_map<W: io::Write>(
             value,
         )?;
 
-        write_indented!(sink, indent, "{}.insert({}, {});\n", name, key_name, value_name)?;
+        write_indented!(sink, indent, "let _ = {}.insert({}, {});\n", name, key_name, value_name)?;
     }
     write_indented!(sink, indent, "}}   \n")?;
 

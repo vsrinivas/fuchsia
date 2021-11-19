@@ -187,11 +187,10 @@ fn validate_name_uniqueness(
     arg: &Argument,
     args_for_error_reporting: &Arguments,
 ) -> Result {
-    let name = arg.name.clone();
-    if arg_names.contains(&name) {
+    if arg_names.contains(&arg.name) {
         return Err(Error::DuplicateArgumentName(args_for_error_reporting.clone()));
     }
-    arg_names.insert(name);
+    let _ = arg_names.insert(arg.name.clone());
     Ok(())
 }
 

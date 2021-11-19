@@ -27,6 +27,8 @@ rustc_library("codegen_lib") {
     "src/lib.rs",
     "src/parser.rs",
   ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 # Build the code generator
@@ -42,6 +44,8 @@ if (host_toolchain == current_toolchain) {
       "//third_party/rust_crates:simplelog",
     ]
     sources = [ "src/main.rs" ]
+
+    configs -= [ "//build/config/rust:allow_unused_results" ]
   }
 }
 
@@ -54,4 +58,6 @@ rustc_test("codegen_parser_tests") {
   source_root = "src/parser_tests.rs"
   deps = [ ":codegen_lib" ]
   sources = [ "src/parser_tests.rs" ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
