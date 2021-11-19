@@ -43,14 +43,14 @@ macro_rules! ptrs {(
     $struct_name:ident,
     { $($name:ident => ($($param_n:ident: $param_ty:ty),*) -> $ret:ty,)+ }) => {
         #[allow(non_snake_case)]
-        pub(crate) struct $struct_name {
+        pub struct $struct_name {
             $(
                 pub $name: extern "system" fn($($param_ty),*) -> $ret,
             )+
         }
 
         impl $struct_name {
-            fn load<F>(mut f: F) -> $struct_name
+            pub fn load<F>(mut f: F) -> $struct_name
                 where F: FnMut(&CStr) -> *const ::std::ffi::c_void
             {
                 #[allow(non_snake_case)]
@@ -75,7 +75,7 @@ macro_rules! ptrs {(
             $(
                 #[inline]
                 #[allow(non_snake_case)]
-                unsafe fn $name(&self $(, $param_n: $param_ty)*) -> $ret {
+                pub unsafe fn $name(&self $(, $param_n: $param_ty)*) -> $ret {
                     let ptr = self.$name;
                     ptr($($param_n),*)
                 }
@@ -98,34 +98,35 @@ extern "C" {
     ) -> vk::PFN_vkVoidFunction;
 }
 
-pub(crate) fn entry_points() -> vk::EntryPoints {
+pub fn entry_points() -> vk::EntryPoints {
     vk::EntryPoints::load(|name| unsafe { mem::transmute(vkGetInstanceProcAddr(0, name.as_ptr())) })
 }
 
-fn instance_pointers(instance: vk::Instance) -> vk::InstancePointers {
+pub fn instance_pointers(instance: vk::Instance) -> vk::InstancePointers {
     vk::InstancePointers::load(|name| unsafe {
         mem::transmute(vkGetInstanceProcAddr(instance, name.as_ptr()))
     })
 }
 
-fn device_pointers(vk_i: &vk::InstancePointers, device: vk::Device) -> vk::DevicePointers {
+pub fn device_pointers(vk_i: &vk::InstancePointers, device: vk::Device) -> vk::DevicePointers {
     vk::DevicePointers::load(|name| unsafe {
         vk_i.GetDeviceProcAddr(device, name.as_ptr()) as *const _
     })
 }
 
 // TODO: Remove buffer collection bindings when they are upstream.
-pub(crate) type BufferCollectionFUCHSIA = u64;
+pub type BufferCollectionFUCHSIA = u64;
+pub type BufferCollectionFUCHSIAX = u64;
 
-const STRUCTURE_TYPE_BUFFER_COLLECTION_CREATE_INFO_FUCHSIA: u32 = 1_001_004_000;
-const STRUCTURE_TYPE_IMPORT_MEMORY_BUFFER_COLLECTION_FUCHSIA: u32 = 1_001_004_004;
-const STRUCTURE_TYPE_BUFFER_COLLECTION_IMAGE_CREATE_INFO_FUCHSIA: u32 = 1_001_004_005;
-const STRUCTURE_TYPE_BUFFER_COLLECTION_PROPERTIES_FUCHSIA: u32 = 1_001_004_006;
+pub const STRUCTURE_TYPE_BUFFER_COLLECTION_CREATE_INFO_FUCHSIA: u32 = 1_001_004_000;
+pub const STRUCTURE_TYPE_IMPORT_MEMORY_BUFFER_COLLECTION_FUCHSIA: u32 = 1_001_004_004;
+pub const STRUCTURE_TYPE_BUFFER_COLLECTION_IMAGE_CREATE_INFO_FUCHSIA: u32 = 1_001_004_005;
+pub const STRUCTURE_TYPE_BUFFER_COLLECTION_PROPERTIES_FUCHSIA: u32 = 1_001_004_006;
 
 #[repr(C)]
 #[allow(non_snake_case)]
 #[derive(Debug)]
-pub(crate) struct BufferCollectionPropertiesFUCHSIA {
+pub struct BufferCollectionPropertiesFUCHSIA {
     sType: vk::StructureType,
     pNext: *const ::std::os::raw::c_void,
     memoryTypeBits: u32,
@@ -135,20 +136,92 @@ pub(crate) struct BufferCollectionPropertiesFUCHSIA {
 #[repr(C)]
 #[allow(non_snake_case)]
 #[derive(Debug)]
-pub(crate) struct BufferCollectionCreateInfoFUCHSIA {
-    sType: vk::StructureType,
-    pNext: *const ::std::os::raw::c_void,
-    collectionToken: u32,
+pub struct BufferCollectionCreateInfoFUCHSIA {
+    pub sType: vk::StructureType,
+    pub pNext: *const ::std::os::raw::c_void,
+    pub collectionToken: u32,
 }
 
 #[repr(C)]
 #[allow(non_snake_case)]
 #[derive(Debug)]
-pub(crate) struct BufferCollectionImageCreateInfoFUCHSIA {
+pub struct BufferCollectionImageCreateInfoFUCHSIA {
     sType: vk::StructureType,
     pNext: *const ::std::os::raw::c_void,
     collection: BufferCollectionFUCHSIA,
     index: u32,
+}
+
+#[repr(C)]
+#[allow(non_snake_case)]
+#[derive(Debug, Copy, Clone)]
+pub struct SysmemColorSpaceFUCHSIAX {
+    pub sType: vk::StructureType,
+    pub __bindgen_padding_0: [u8; 4usize],
+    pub pNext: *const ::std::os::raw::c_void,
+    pub colorSpace: u32,
+    pub __bindgen_padding_1: [u8; 4usize],
+}
+impl Default for SysmemColorSpaceFUCHSIAX {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+
+#[repr(C)]
+#[allow(non_snake_case)]
+#[derive(Debug, Copy, Clone)]
+pub struct ImageConstraintsInfoFUCHSIAX {
+    pub sType: vk::StructureType,
+    pub __bindgen_padding_0: [u8; 4usize],
+    pub pNext: *const ::std::os::raw::c_void,
+    pub createInfoCount: u32,
+    pub __bindgen_padding_1: [u8; 4usize],
+    pub pCreateInfos: *const vk::ImageCreateInfo,
+    pub pFormatConstraints: *const ImageFormatConstraintsInfoFUCHSIAX,
+    pub minBufferCount: u32,
+    pub maxBufferCount: u32,
+    pub minBufferCountForCamping: u32,
+    pub minBufferCountForDedicatedSlack: u32,
+    pub minBufferCountForSharedSlack: u32,
+    pub flags: vk::Flags,
+}
+impl Default for ImageConstraintsInfoFUCHSIAX {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+
+#[repr(C)]
+#[allow(non_snake_case)]
+#[derive(Debug, Copy, Clone)]
+pub struct ImageFormatConstraintsInfoFUCHSIAX {
+    pub sType: vk::StructureType,
+    pub __bindgen_padding_0: [u8; 4usize],
+    pub pNext: *const ::std::os::raw::c_void,
+    pub requiredFormatFeatures: vk::FormatFeatureFlags,
+    pub flags: vk::Flags,
+    pub sysmemFormat: u64,
+    pub colorSpaceCount: u32,
+    pub __bindgen_padding_1: [u8; 4usize],
+    pub pColorSpaces: *const SysmemColorSpaceFUCHSIAX,
+}
+impl Default for ImageFormatConstraintsInfoFUCHSIAX {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
 }
 
 ptrs!(FuchsiaExtensionPointers, {
@@ -157,10 +230,19 @@ ptrs!(FuchsiaExtensionPointers, {
         pImportInfo: *const BufferCollectionCreateInfoFUCHSIA,
         pAllocator: *const vk::AllocationCallbacks,
         pCollection: *mut BufferCollectionFUCHSIA) -> vk::Result,
+    CreateBufferCollectionFUCHSIAX => (
+        device: vk::Device,
+        pImportInfo: *const BufferCollectionCreateInfoFUCHSIA,
+        pAllocator: *const vk::AllocationCallbacks,
+        pCollection: *mut BufferCollectionFUCHSIA) -> vk::Result,
     SetBufferCollectionConstraintsFUCHSIA => (
         device: vk::Device,
         collection: BufferCollectionFUCHSIA,
         pImageInfo: *const vk::ImageCreateInfo) -> vk::Result,
+    SetBufferCollectionImageConstraintsFUCHSIAX => (
+        device: vk::Device,
+        collection: BufferCollectionFUCHSIAX,
+        pImageConstraintsInfo: *const ImageConstraintsInfoFUCHSIAX) -> vk::Result,
     DestroyBufferCollectionFUCHSIA => (
         device: vk::Device,
         collection: BufferCollectionFUCHSIA,
@@ -171,7 +253,7 @@ ptrs!(FuchsiaExtensionPointers, {
         pProperties: *mut BufferCollectionPropertiesFUCHSIA) -> vk::Result,
 });
 
-pub(crate) unsafe fn init<T>(f: impl FnOnce(*mut T)) -> T {
+pub unsafe fn init<T>(f: impl FnOnce(*mut T)) -> T {
     let mut value = MaybeUninit::uninit();
     f(value.as_mut_ptr());
     value.assume_init()
@@ -184,7 +266,7 @@ mod path;
 mod raster;
 
 pub use composition::SpinelComposition;
-pub(crate) use context::InnerContext;
+pub use context::InnerContext;
 pub use context::SpinelContext;
 pub use image::SpinelImage;
 pub use path::{SpinelPath, SpinelPathBuilder};

@@ -185,7 +185,7 @@ struct VulkanContext {
 }
 
 #[derive(Debug)]
-pub(crate) struct InnerContext {
+pub struct InnerContext {
     context: SpnContext,
     is_dropped: bool,
 }
