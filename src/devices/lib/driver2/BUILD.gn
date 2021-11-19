@@ -75,7 +75,7 @@ executable("llcpp_test") {
     "//third_party/rapidjson",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/svc",
+    "//zircon/system/ulib/service:service-llcpp",
   ]
 }
 

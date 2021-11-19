@@ -10,7 +10,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/gtest/test_loop_fixture.h>
-#include <lib/svc/outgoing.h>
+#include <lib/service/llcpp/outgoing_directory.h>
 
 #include "src/devices/lib/driver2/test_base.h"
 
@@ -64,7 +64,7 @@ TEST_F(DevfsExporterTest, Create) {
   fidl::Binding<fio::Directory> svc_binding(&svc_directory);
   svc_binding.Bind(svc->server.TakeChannel(), dispatcher());
 
-  svc::Outgoing outgoing(dispatcher());
+  service::OutgoingDirectory outgoing(dispatcher());
   const auto service = [](fidl::ServerEnd<flogger::LogSink> request) { return ZX_OK; };
   zx_status_t status = outgoing.svc_dir()->AddEntry(
       fidl::DiscoverableProtocolName<flogger::LogSink>, fbl::MakeRefCounted<fs::Service>(service));
@@ -110,7 +110,7 @@ TEST_F(DevfsExporterTest, Create_ServiceNotFound) {
   fidl::Binding<fio::Directory> svc_binding(&svc_directory);
   svc_binding.Bind(svc->server.TakeChannel(), dispatcher());
 
-  svc::Outgoing outgoing(dispatcher());
+  service::OutgoingDirectory outgoing(dispatcher());
   auto exporter = driver::DevfsExporter::Create(*ns, dispatcher(), outgoing.svc_dir());
   ASSERT_TRUE(exporter.is_ok());
 
@@ -141,7 +141,7 @@ TEST_F(DevfsExporterTest, Create_ServiceFailure) {
   fidl::Binding<fio::Directory> svc_binding(&svc_directory);
   svc_binding.Bind(svc->server.TakeChannel(), dispatcher());
 
-  svc::Outgoing outgoing(dispatcher());
+  service::OutgoingDirectory outgoing(dispatcher());
   const auto service = [](fidl::ServerEnd<flogger::LogSink> request) { return ZX_OK; };
   zx_status_t status = outgoing.svc_dir()->AddEntry(
       fidl::DiscoverableProtocolName<flogger::LogSink>, fbl::MakeRefCounted<fs::Service>(service));
