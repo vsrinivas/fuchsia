@@ -26,6 +26,7 @@
                 "fuchsia.hwinfo.Device",
                 "fuchsia.hwinfo.Product",
                 "fuchsia.lowpan.device.Lookup",
+                "fuchsia.net.interfaces.admin.Installer",
                 "fuchsia.net.interfaces.State",
                 "fuchsia.net.name.Lookup",
                 "fuchsia.net.routes.State",

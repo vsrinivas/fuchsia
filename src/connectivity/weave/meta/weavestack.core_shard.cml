@@ -36,6 +36,7 @@
         },
         {
             protocol: [
+                "fuchsia.net.interfaces.admin.Installer",
                 "fuchsia.net.interfaces.State",
                 "fuchsia.net.name.Lookup",
                 "fuchsia.net.routes.State",
