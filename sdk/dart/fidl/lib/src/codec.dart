@@ -50,7 +50,7 @@ class Encoder {
     data = newList.buffer.asByteData();
   }
 
-  void _claimMemory(int claimSize) {
+  void _claimBytes(int claimSize) {
     _extent += claimSize;
     if (_extent > data.lengthInBytes) {
       int newSize =
@@ -65,7 +65,7 @@ class Encoder {
           FidlErrorCode.fidlExceededMaxOutOfLineDepth);
     }
     int offset = _extent;
-    _claimMemory(align(size));
+    _claimBytes(align(size));
     return offset;
   }
 
@@ -162,7 +162,7 @@ class Decoder {
     return _nextOffset;
   }
 
-  int claimMemory(int size, int nextOutOfLineDepth) {
+  int claimBytes(int size, int nextOutOfLineDepth) {
     if (nextOutOfLineDepth > _maxOutOfLineDepth) {
       throw FidlError('Exceeded maxOutOfLineDepth',
           FidlErrorCode.fidlExceededMaxOutOfLineDepth);
@@ -176,7 +176,7 @@ class Decoder {
     return result;
   }
 
-  int countUnclaimedMemory() {
+  int countUnclaimedBytes() {
     return data.lengthInBytes - _nextOffset;
   }
 

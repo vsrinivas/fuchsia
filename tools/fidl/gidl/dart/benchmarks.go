@@ -134,7 +134,7 @@ void decode{{ .Name }}Benchmark(run, teardown) {
 	{{ .ValueType }}.encode(encoder, value, 0, 1);
 	run(() {
 		final Decoder decoder = Decoder(IncomingMessage.fromOutgoingMessage(encoder.message))
-			..claimMemory({{ .ValueType}}.inlineSize(kWireFormatDefault), 0);
+			..claimBytes({{ .ValueType}}.inlineSize(kWireFormatDefault), 0);
 			{{ .ValueType }}.decode(decoder, 0, 1);
   });
 }

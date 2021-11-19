@@ -160,8 +160,8 @@ void _validateDecoding(Decoder decoder) {
         FidlErrorCode.fidlTooManyHandles);
   }
 
-  if (decoder.countUnclaimedMemory() > 0) {
-    int unclaimed = decoder.countUnclaimedMemory();
+  if (decoder.countUnclaimedBytes() > 0) {
+    int unclaimed = decoder.countUnclaimedBytes();
     int total = decoder.data.lengthInBytes;
     throw FidlError(
         'Message contains unread bytes (unclaimed: $unclaimed, total: $total)',
@@ -189,7 +189,7 @@ T decodeMessage<T>(IncomingMessage message, int inlineSize, MemberType typ) {
 A decodeMessageWithCallback<A>(
     IncomingMessage message, int inlineSize, A Function(Decoder decoder) f) {
   final int size = kMessageHeaderSize + inlineSize;
-  final Decoder decoder = Decoder(message)..claimMemory(size, 0);
+  final Decoder decoder = Decoder(message)..claimBytes(size, 0);
   A out = f(decoder);
   final int padding = align(size) - size;
   decoder.checkPadding(size, padding);

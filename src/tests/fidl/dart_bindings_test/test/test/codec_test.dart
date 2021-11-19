@@ -43,7 +43,7 @@ void main() async {
 
         final decoder =
             Decoder(IncomingMessage.fromOutgoingMessage(encoder.message))
-              ..claimMemory(8, 0);
+              ..claimBytes(8, 0);
         final reducedRights =
             kChannelWithReducedRights_Type.decode(decoder, 0, 1);
 
@@ -79,7 +79,7 @@ void main() async {
 
       final decoder =
           Decoder(IncomingMessage.fromOutgoingMessage(encoder.message))
-            ..claimMemory(24, 0);
+            ..claimBytes(24, 0);
       ExampleXunion unknownXunion = kExampleXunion_Type.decode(decoder, 0, 1);
       UnknownRawData actual = unknownXunion.$data;
       final expectedData = Uint8List.fromList([

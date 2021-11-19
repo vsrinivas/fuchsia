@@ -813,7 +813,7 @@ String? _decodeString(Decoder decoder, int offset, int depth) {
         FidlErrorCode.fidlCountExceedsLimit);
   }
   final Uint8List bytes =
-      decoder.data.buffer.asUint8List(decoder.claimMemory(size, depth), size);
+      decoder.data.buffer.asUint8List(decoder.claimBytes(size, depth), size);
   try {
     return const Utf8Decoder().convert(bytes, 0, size);
   } on FormatException {
@@ -904,9 +904,9 @@ class PointerType<T> extends SimpleFidlType<T?> {
       return null;
     }
     final int boxInlineSize = element.inlineSize(decoder.wireFormat);
-    final int boxOffset = decoder.claimMemory(boxInlineSize, depth);
-    T? decoded = element.decodeObject(
-        decoder, boxOffset, boxInlineSize, depth + 1);
+    final int boxOffset = decoder.claimBytes(boxInlineSize, depth);
+    T? decoded =
+        element.decodeObject(decoder, boxOffset, boxInlineSize, depth + 1);
     return decoded;
   }
 
@@ -1179,7 +1179,7 @@ T? _decodeEnvelopeContent<T, I extends Iterable<T>>(
         }
 
         final fieldInlineSize = fieldType.inlineSize(decoder.wireFormat);
-        final fieldOffset = decoder.claimMemory(fieldInlineSize, depth);
+        final fieldOffset = decoder.claimBytes(fieldInlineSize, depth);
         final claimedHandles = decoder.countClaimedHandles();
         final field = fieldType.decodeObject(
             decoder, fieldOffset, fieldInlineSize, depth + 1);
@@ -1198,7 +1198,7 @@ T? _decodeEnvelopeContent<T, I extends Iterable<T>>(
         return field;
       }
 
-      decoder.claimMemory(header.numBytes, depth);
+      decoder.claimBytes(header.numBytes, depth);
       for (int i = 0; i < header.numHandles; i++) {
         final handleInfo = decoder.claimHandle();
         try {
@@ -1326,7 +1326,7 @@ class TableType<T extends Table> extends SimpleFidlType<T> {
     }
 
     // Offsets.
-    int envelopeOffset = decoder.claimMemory(
+    int envelopeOffset = decoder.claimBytes(
         maxOrdinal * envelopeSize(decoder.wireFormat), depth);
 
     // Envelopes, and fields.
@@ -1619,8 +1619,8 @@ I? _decodeVector<T, I extends Iterable<T>>(Decoder decoder,
     throw FidlError('Size of vector exceeds limit: $count',
         FidlErrorCode.fidlCountExceedsLimit);
   }
-  final int base = decoder.claimMemory(
-      count * element.inlineSize(decoder.wireFormat), depth);
+  final int base =
+      decoder.claimBytes(count * element.inlineSize(decoder.wireFormat), depth);
   I? out = element.decodeArray(decoder, count, base, depth + 1);
   return out;
 }
