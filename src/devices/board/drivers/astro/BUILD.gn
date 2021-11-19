@@ -29,6 +29,7 @@ driver_bind_rules("astro-backlight-bind") {
   rules = "bind/astro-backlight.bind"
   header_output = "astro-backlight-bind.h"
   bind_output = "astro-backlight.bindbc"
+  tests = "bind-tests/astro-backlight-test.json"
   deps = [
     "//src/devices/bind/fuchsia.i2c",
     "//src/devices/bind/fuchsia.platform",
@@ -40,7 +41,7 @@ driver_bind_rules("astro-bluetooth-bind") {
   rules = "bind/astro-bluetooth.bind"
   header_output = "astro-bluetooth-bind.h"
   bind_output = "astro-bluetooth.bindbc"
-  tests = "bluetooth-bind-tests.json"
+  tests = "bind-tests/astro-bluetooth-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.platform",
@@ -52,6 +53,7 @@ driver_bind_rules("astro-buttons-bind") {
   rules = "bind/astro-buttons.bind"
   header_output = "astro-buttons-bind.h"
   bind_output = "astro-buttons-bind.bc"
+  tests = "bind-tests/astro-buttons-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform.s905d2",
     "//src/devices/bind/fuchsia.gpio",
@@ -62,6 +64,7 @@ driver_bind_rules("astro-cpu-bind") {
   rules = "bind/astro-cpu.bind"
   header_output = "astro-cpu-bind.h"
   bind_output = "astro-cpu-bind.bc"
+  tests = "bind-tests/astro-cpu-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.amlogic.platform.meson",
@@ -79,6 +82,7 @@ driver_bind_rules("astro-display-bind") {
   rules = "bind/astro-display.bind"
   header_output = "astro-display-bind.h"
   bind_output = "astro-display-bind.bc"
+  tests = "bind-tests/astro-display-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.amlogic.platform.s905d2",
@@ -93,6 +97,7 @@ driver_bind_rules("astro-mali-bind") {
   rules = "bind/astro-mali.bind"
   header_output = "astro-mali-bind.h"
   bind_output = "astro-mali-bind.bc"
+  tests = "bind-tests/astro-mali-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.platform",
@@ -104,6 +109,7 @@ driver_bind_rules("astro-pwm-bind") {
   rules = "bind/astro-pwm.bind"
   header_output = "astro-pwm-bind.h"
   bind_output = "astro-pwm-bind.bc"
+  tests = "bind-tests/astro-pwm-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform.s905d2",
     "//src/devices/bind/fuchsia.gpio",
@@ -115,6 +121,7 @@ driver_bind_rules("astro-securemem-bind") {
   rules = "bind/astro-securemem.bind"
   header_output = "astro-securemem-bind.h"
   bind_output = "astro-securemem-bind.bc"
+  tests = "bind-tests/astro-securemem-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.platform",
@@ -127,6 +134,7 @@ driver_bind_rules("astro-tee-bind") {
   rules = "bind/astro-tee.bind"
   header_output = "astro-tee-bind.h"
   bind_output = "astro-tee-bind.bc"
+  tests = "bind-tests/astro-tee-test.json"
   deps = [
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/fuchsia.sysmem",
@@ -137,6 +145,7 @@ driver_bind_rules("astro-video-bind") {
   rules = "bind/astro-video.bind"
   header_output = "astro-video-bind.h"
   bind_output = "astro-video_bind.bc"
+  tests = "bind-tests/astro-video-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.amlogic.platform.meson",
@@ -151,6 +160,7 @@ driver_bind_rules("ft3x27-touch-bind") {
   rules = "bind/ft3x27-touch.bind"
   header_output = "ft3x27-touch-bind.h"
   bind_output = "ft3x27-touch-bind.bc"
+  tests = "bind-tests/ft3x27-touch-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform.s905d2",
     "//src/devices/bind/fuchsia.gpio",
@@ -162,6 +172,7 @@ driver_bind_rules("gt92xx-touch-bind") {
   rules = "bind/gt92xx-touch.bind"
   header_output = "gt92xx-touch-bind.h"
   bind_output = "gt92xx-touch-bind.bc"
+  tests = "bind-tests/gt92xx-touch-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform.s905d2",
     "//src/devices/bind/fuchsia.gpio",
@@ -169,10 +180,11 @@ driver_bind_rules("gt92xx-touch-bind") {
   ]
 }
 
-driver_bind_rules("gpio-light-bind") {
-  rules = "bind/gpio-light.bind"
-  header_output = "gpio-light-bind.h"
-  bind_output = "gpio-light-bind.bc"
+driver_bind_rules("astro-gpio-light-bind") {
+  rules = "bind/astro-gpio-light.bind"
+  header_output = "astro-gpio-light-bind.h"
+  bind_output = "astro-gpio-light-bind.bc"
+  tests = "bind-tests/astro-gpio-light-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.amlogic.platform.s905d2",
@@ -187,6 +199,7 @@ driver_bind_rules("tcs3400-light-bind") {
   rules = "bind/tcs3400-light.bind"
   header_output = "tcs3400-light-bind.h"
   bind_output = "tcs3400-light-bind.bc"
+  tests = "bind-tests/tcs3400-light-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform.s905d2",
     "//src/devices/bind/fuchsia.gpio",
@@ -198,6 +211,7 @@ driver_bind_rules("pd-armcore-bind") {
   rules = "bind/pd-armcore.bind"
   header_output = "pd-armcore-bind.h"
   bind_output = "pd-armcore-bind.bc"
+  tests = "bind-tests/pd-armcore-test.json"
   deps = [ "//src/devices/bind/fuchsia.power" ]
 }
 
@@ -205,6 +219,7 @@ driver_bind_rules("pwm-ao-d-bind") {
   rules = "bind/pwm-ao-d.bind"
   header_output = "pwm-ao-d-bind.h"
   bind_output = "pwm-ao-d-bind.bc"
+  tests = "bind-tests/pwm-ao-d-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.amlogic.platform.s905d2",
@@ -214,10 +229,11 @@ driver_bind_rules("pwm-ao-d-bind") {
   ]
 }
 
-driver_bind_rules("aml-usb-phy-v2-bind") {
-  rules = "bind/aml-usb-phy-v2.bind"
-  header_output = "aml-usb-phy-v2-bind.h"
-  bind_output = "aml-usb-phy-v2-bind.bc"
+driver_bind_rules("astro-aml-usb-phy-v2-bind") {
+  rules = "bind/astro-aml-usb-phy-v2.bind"
+  header_output = "astro-aml-usb-phy-v2-bind.h"
+  bind_output = "astro-aml-usb-phy-v2-bind.bc"
+  tests = "bind-tests/astro-aml-usb-phy-v2-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.platform",
@@ -225,20 +241,22 @@ driver_bind_rules("aml-usb-phy-v2-bind") {
   ]
 }
 
-driver_bind_rules("dwc2-phy-bind") {
-  rules = "bind/dwc2-phy.bind"
-  header_output = "dwc2-phy-bind.h"
-  bind_output = "dwc2-phy-bind.bc"
+driver_bind_rules("astro-dwc2-phy-bind") {
+  rules = "bind/astro-dwc2-phy.bind"
+  header_output = "astro-dwc2-phy-bind.h"
+  bind_output = "astro-dwc2-phy-bind.bc"
+  tests = "bind-tests/astro-dwc2-phy-test.json"
   deps = [
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/fuchsia.usb.phy",
   ]
 }
 
-driver_bind_rules("xhci-bind") {
-  rules = "bind/xhci.bind"
-  header_output = "xhci-bind.h"
-  bind_output = "xhci-bind.bc"
+driver_bind_rules("astro-xhci-bind") {
+  rules = "bind/astro-xhci.bind"
+  header_output = "astro-xhci-bind.h"
+  bind_output = "astro-xhci-bind.bc"
+  tests = "bind-tests/astro-xhci-test.json"
   deps = [
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/fuchsia.usb.phy",
@@ -249,6 +267,7 @@ driver_bind_rules("astro-dai-test-in-bind") {
   rules = "bind/astro-dai-test-in.bind"
   header_output = "astro-dai-test-in-bind.h"
   bind_output = "astro-dai-test-in-bind.bc"
+  tests = "bind-tests/astro-dai-test-in-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.dai",
@@ -259,6 +278,7 @@ driver_bind_rules("astro-dai-test-out-bind") {
   rules = "bind/astro-dai-test-out.bind"
   header_output = "astro-dai-test-out-bind.h"
   bind_output = "astro-dai-test-out-bind.bc"
+  tests = "bind-tests/astro-dai-test-out-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.dai",
@@ -269,6 +289,7 @@ driver_bind_rules("audio-codec-tas27xx-bind") {
   rules = "bind/audio-codec-tas27xx.bind"
   header_output = "audio-codec-tas27xx-bind.h"
   bind_output = "audio-codec-tas27xx-bind.bc"
+  tests = "bind-tests/audio-codec-tas27xx-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform.s905d2",
     "//src/devices/bind/fuchsia.gpio",
@@ -276,10 +297,11 @@ driver_bind_rules("audio-codec-tas27xx-bind") {
   ]
 }
 
-driver_bind_rules("aml-sdio-bind") {
-  rules = "bind/aml-sdio.bind"
-  header_output = "aml-sdio-bind.h"
-  bind_output = "aml-sdio-bind.bc"
+driver_bind_rules("astro-aml-sdio-bind") {
+  rules = "bind/astro-aml-sdio.bind"
+  header_output = "astro-aml-sdio-bind.h"
+  bind_output = "astro-aml-sdio-bind.bc"
+  tests = "bind-tests/astro-aml-sdio-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.amlogic.platform.s905d2",
@@ -289,10 +311,11 @@ driver_bind_rules("aml-sdio-bind") {
   ]
 }
 
-driver_bind_rules("wifi-bind") {
-  rules = "bind/wifi.bind"
-  header_output = "wifi-bind.h"
-  bind_output = "wifi-bind.bc"
+driver_bind_rules("astro-wifi-bind") {
+  rules = "bind/astro-wifi.bind"
+  header_output = "astro-wifi-bind.h"
+  bind_output = "astro-wifi-bind.bc"
+  tests = "bind-tests/astro-wifi-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform.s905d2",
     "//src/devices/bind/fuchsia.gpio",
@@ -337,8 +360,8 @@ fuchsia_driver("astro-driver") {
     "astro.cc",
   ]
   deps = [
-    ":aml-sdio-bind_header",
-    ":aml-usb-phy-v2-bind_header",
+    ":astro-aml-sdio-bind_header",
+    ":astro-aml-usb-phy-v2-bind_header",
     ":astro-backlight-bind_header",
     ":astro-bind",
     ":astro-bluetooth-bind_header",
@@ -347,21 +370,21 @@ fuchsia_driver("astro-driver") {
     ":astro-dai-test-in-bind_header",
     ":astro-dai-test-out-bind_header",
     ":astro-display-bind_header",
+    ":astro-dwc2-phy-bind_header",
+    ":astro-gpio-light-bind_header",
     ":astro-mali-bind_header",
     ":astro-pwm-bind_header",
     ":astro-securemem-bind_header",
     ":astro-tee-bind_header",
     ":astro-video-bind_header",
+    ":astro-wifi-bind_header",
+    ":astro-xhci-bind_header",
     ":audio-codec-tas27xx-bind_header",
-    ":dwc2-phy-bind_header",
     ":ft3x27-touch-bind_header",
-    ":gpio-light-bind_header",
     ":gt92xx-touch-bind_header",
     ":pd-armcore-bind_header",
     ":pwm-ao-d-bind_header",
     ":tcs3400-light-bind_header",
-    ":wifi-bind_header",
-    ":xhci-bind_header",
     "//sdk/banjo/fuchsia.hardware.clockimpl:fuchsia.hardware.clockimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpioimpl:fuchsia.hardware.gpioimpl_banjo_cpp",
@@ -415,5 +438,31 @@ fuchsia_driver_component("astro") {
 
 group("tests") {
   testonly = true
-  deps = [ ":astro-bind_test" ]
+  deps = [
+    ":astro-aml-sdio-bind_test",
+    ":astro-aml-usb-phy-v2-bind_test",
+    ":astro-backlight-bind_test",
+    ":astro-bind_test",
+    ":astro-bluetooth-bind_test",
+    ":astro-buttons-bind_test",
+    ":astro-cpu-bind_test",
+    ":astro-dai-test-in-bind_test",
+    ":astro-dai-test-out-bind_test",
+    ":astro-display-bind_test",
+    ":astro-dwc2-phy-bind_test",
+    ":astro-gpio-light-bind_test",
+    ":astro-mali-bind_test",
+    ":astro-pwm-bind_test",
+    ":astro-securemem-bind_test",
+    ":astro-tee-bind_test",
+    ":astro-video-bind_test",
+    ":astro-wifi-bind_test",
+    ":astro-xhci-bind_test",
+    ":audio-codec-tas27xx-bind_test",
+    ":ft3x27-touch-bind_test",
+    ":gt92xx-touch-bind_test",
+    ":pd-armcore-bind_test",
+    ":pwm-ao-d-bind_test",
+    ":tcs3400-light-bind_test",
+  ]
 }

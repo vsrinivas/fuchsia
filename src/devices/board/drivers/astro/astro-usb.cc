@@ -20,9 +20,9 @@
 #include <usb/dwc2/metadata.h>
 
 #include "astro.h"
-#include "src/devices/board/drivers/astro/aml-usb-phy-v2-bind.h"
-#include "src/devices/board/drivers/astro/dwc2-phy-bind.h"
-#include "src/devices/board/drivers/astro/xhci-bind.h"
+#include "src/devices/board/drivers/astro/astro-aml-usb-phy-v2-bind.h"
+#include "src/devices/board/drivers/astro/astro-dwc2-phy-bind.h"
+#include "src/devices/board/drivers/astro/astro-xhci-bind.h"
 
 namespace astro {
 
@@ -211,7 +211,7 @@ zx_status_t Astro::UsbInit() {
 
   // Add XHCI and DWC2 to the same driver host as the aml-usb-phy.
   status = pbus_.AddComposite(&xhci_dev, reinterpret_cast<uint64_t>(xhci_fragments),
-                                    countof(xhci_fragments), "xhci-phy");
+                              countof(xhci_fragments), "xhci-phy");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: AddComposite(xhci) failed %d", __func__, status);
     return status;
@@ -239,7 +239,7 @@ zx_status_t Astro::UsbInit() {
   usb_metadata[0].data_buffer = reinterpret_cast<uint8_t*>(config);
 
   status = pbus_.AddComposite(&dwc2_dev, reinterpret_cast<uint64_t>(dwc2_phy_fragments),
-                                    countof(dwc2_phy_fragments), "dwc2-phy");
+                              countof(dwc2_phy_fragments), "dwc2-phy");
   free(config);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: AddComposite(dwc2) failed %d", __func__, status);

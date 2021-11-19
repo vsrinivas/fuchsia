@@ -1,0 +1,31 @@
+[
+    {
+        "node": "pdev",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC",
+                    "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.amlogic.platform.BIND_PLATFORM_DEV_PID.S905D2",
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.DEVICE",
+                    "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.amlogic.platform.BIND_PLATFORM_DEV_DID.MALI_INIT",
+                    "fuchsia.BIND_PLATFORM_DEV_INSTANCE_ID": "0"
+                }
+            }
+        ]
+    },
+    {
+        "node": "register-reset",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.registers.BIND_PROTOCOL.DEVICE",
+                    "fuchsia.BIND_REGISTER_ID": "fuchsia.amlogic.platform.BIND_REGISTER_ID.MALI_RESET"
+                }
+            }
+        ]
+    }
+]

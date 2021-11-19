@@ -1,0 +1,41 @@
+[
+    {
+        "node": "pwm",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.pwm.BIND_PROTOCOL.PWM",
+                    "fuchsia.BIND_PWM_ID": "fuchsia.amlogic.platform.s905d2.BIND_PWM_ID.PWM_E"
+                }
+            }
+        ]
+    },
+    {
+        "node": "gpio-wifi",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_GPIO_PIN": "fuchsia.amlogic.platform.s905d2.GPIOX_PIN_ID.PIN_16",
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.gpio.BIND_PROTOCOL.DEVICE"
+                }
+            }
+        ]
+    },
+    {
+        "node": "gpio-bt",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.gpio.BIND_PROTOCOL.DEVICE",
+                    "fuchsia.BIND_GPIO_PIN": "fuchsia.amlogic.platform.s905d2.GPIOX_PIN_ID.PIN_17"
+                }
+            }
+        ]
+    }
+]

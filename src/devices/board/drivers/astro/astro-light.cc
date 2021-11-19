@@ -17,7 +17,7 @@
 
 #include "astro-gpios.h"
 #include "astro.h"
-#include "src/devices/board/drivers/astro/gpio-light-bind.h"
+#include "src/devices/board/drivers/astro/astro-gpio-light-bind.h"
 #include "src/devices/board/drivers/astro/tcs3400-light-bind.h"
 
 namespace astro {

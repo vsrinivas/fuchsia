@@ -1,0 +1,31 @@
+[
+    {
+        "node": "pdev",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.google.platform.BIND_PLATFORM_DEV_PID.ASTRO",
+                    "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.amlogic.platform.BIND_PLATFORM_DEV_DID.POWER",
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.DEVICE",
+                    "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.google.platform.BIND_PLATFORM_DEV_VID.GOOGLE",
+                    "fuchsia.BIND_PLATFORM_DEV_INSTANCE_ID": "0"
+                }
+            }
+        ]
+    },
+    {
+        "node": "pwm-ao-d",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PWM_ID": "fuchsia.amlogic.platform.s905d2.BIND_PWM_ID.PWM_AO_D",
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.pwm.BIND_PROTOCOL.PWM"
+                }
+            }
+        ]
+    }
+]

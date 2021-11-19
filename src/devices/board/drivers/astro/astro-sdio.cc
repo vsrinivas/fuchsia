@@ -20,8 +20,8 @@
 
 #include "astro-gpios.h"
 #include "astro.h"
-#include "src/devices/board/drivers/astro/aml-sdio-bind.h"
-#include "src/devices/board/drivers/astro/wifi-bind.h"
+#include "src/devices/board/drivers/astro/astro-aml-sdio-bind.h"
+#include "src/devices/board/drivers/astro/astro-wifi-bind.h"
 
 namespace astro {
 
@@ -225,7 +225,7 @@ zx_status_t Astro::SdioInit() {
   SdEmmcConfigurePortB();
 
   status = pbus_.AddComposite(&sd_emmc_dev, reinterpret_cast<uint64_t>(aml_sdio_fragments),
-                                    countof(aml_sdio_fragments), "pdev");
+                              countof(aml_sdio_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: AddComposite sd_emmc failed: %d", __func__, status);
     return status;

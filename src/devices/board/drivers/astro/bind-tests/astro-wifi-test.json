@@ -1,0 +1,83 @@
+[
+    {
+        "node": "sdio-function-1",
+        "tests": [
+            {
+                "name": "Match accept 0x4345",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.sdmmc.BIND_PROTOCOL.SDIO",
+                    "fuchsia.BIND_SDIO_PID": "0x4345",
+                    "fuchsia.BIND_SDIO_FUNCTION": "1",
+                    "fuchsia.BIND_SDIO_VID": "0x02d0"
+                }
+            },
+            {
+                "name": "Match accept 0x4359",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.sdmmc.BIND_PROTOCOL.SDIO",
+                    "fuchsia.BIND_SDIO_PID": "0x4359",
+                    "fuchsia.BIND_SDIO_FUNCTION": "1",
+                    "fuchsia.BIND_SDIO_VID": "0x02d0"
+                }
+            },
+            {
+                "name": "Accept mismatch value",
+                "expected": "abort",
+                "device": {
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.sdmmc.BIND_PROTOCOL.SDIO",
+                    "fuchsia.BIND_SDIO_VID": "0x02d0",
+                    "fuchsia.BIND_SDIO_FUNCTION": "1"
+                }
+            }
+        ]
+    },
+    {
+        "node": "sdio-function-2",
+        "tests": [
+            {
+                "name": "Match accept 0x4345",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_SDIO_PID": "0x4345",
+                    "fuchsia.BIND_SDIO_FUNCTION": "2",
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.sdmmc.BIND_PROTOCOL.SDIO",
+                    "fuchsia.BIND_SDIO_VID": "0x02d0"
+                }
+            },
+            {
+                "name": "Match accept 0x4359",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_SDIO_PID": "0x4359",
+                    "fuchsia.BIND_SDIO_FUNCTION": "2",
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.sdmmc.BIND_PROTOCOL.SDIO",
+                    "fuchsia.BIND_SDIO_VID": "0x02d0"
+                }
+            },
+            {
+                "name": "Accept mismatch value",
+                "expected": "abort",
+                "device": {
+                    "fuchsia.BIND_SDIO_FUNCTION": "2",
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.sdmmc.BIND_PROTOCOL.SDIO",
+                    "fuchsia.BIND_SDIO_VID": "0x02d0"
+                }
+            }
+        ]
+    },
+    {
+        "node": "gpio-oob",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.gpio.BIND_PROTOCOL.DEVICE",
+                    "fuchsia.BIND_GPIO_PIN": "fuchsia.amlogic.platform.s905d2.GPIOX_PIN_ID.PIN_7"
+                }
+            }
+        ]
+    }
+]
