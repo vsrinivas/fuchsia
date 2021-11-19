@@ -50,7 +50,6 @@ class IsolatedDevmgr {
 
  private:
   std::unique_ptr<async::Loop> loop_;
-  std::unique_ptr<sys::ComponentContext> context_;
   std::unique_ptr<sys::testing::Realm> realm_;
 
   // FD to the root of devmgr's devfs

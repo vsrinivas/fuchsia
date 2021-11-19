@@ -11,7 +11,6 @@
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
-#include <lib/sys/cpp/component_context.h>
 
 #include "src/devices/lib/device-watcher/cpp/device-watcher.h"
 
@@ -21,10 +20,8 @@ using fuchsia_device_runtime_test::TestDeviceChild;
 class RuntimeTest : public gtest::TestLoopFixture {
  protected:
   void SetUp() override {
-    context_ = sys::ComponentContext::Create();
-
     // Create and build the realm.
-    auto realm_builder = sys::testing::Realm::Builder::New(context());
+    auto realm_builder = sys::testing::Realm::Builder::Create();
     driver_test_realm::Setup(realm_builder);
     realm_ = std::make_unique<sys::testing::Realm>(realm_builder.Build(dispatcher()));
 
@@ -58,8 +55,6 @@ class RuntimeTest : public gtest::TestLoopFixture {
     ASSERT_TRUE(child_chan.is_valid());
   }
 
-  sys::ComponentContext* context() { return context_.get(); }
-
   // Sets test data in the parent device that can be retrieved by the child device.
   void ParentSetTestData(const void* data_to_send, size_t size);
   // Sends a FIDL request to the child device to retrieve data from the parent device
@@ -71,7 +66,6 @@ class RuntimeTest : public gtest::TestLoopFixture {
   fidl::ClientEnd<TestDevice> parent_chan;
 
  private:
-  std::unique_ptr<sys::ComponentContext> context_;
   std::unique_ptr<sys::testing::Realm> realm_;
 };
 

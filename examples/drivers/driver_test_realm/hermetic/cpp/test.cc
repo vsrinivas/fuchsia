@@ -10,24 +10,15 @@
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
-#include <lib/sys/cpp/component_context.h>
 
 #include "src/devices/lib/device-watcher/cpp/device-watcher.h"
 
 // [START example]
-class DriverTestRealmTest : public gtest::TestLoopFixture {
- protected:
-  void SetUp() override { context_ = sys::ComponentContext::Create(); }
-
-  sys::ComponentContext* context() { return context_.get(); }
-
- private:
-  std::unique_ptr<sys::ComponentContext> context_;
-};
+class DriverTestRealmTest : public gtest::TestLoopFixture {};
 
 TEST_F(DriverTestRealmTest, DriversExist) {
   // Create and build the realm.
-  auto realm_builder = sys::testing::Realm::Builder::New(context());
+  auto realm_builder = sys::testing::Realm::Builder::Create();
   driver_test_realm::Setup(realm_builder);
   auto realm = realm_builder.Build(dispatcher());
 

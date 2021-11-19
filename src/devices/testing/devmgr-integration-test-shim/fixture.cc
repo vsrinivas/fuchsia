@@ -76,11 +76,10 @@ __EXPORT
 zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, async_dispatcher_t* dispatcher,
                                    IsolatedDevmgr* out) {
   IsolatedDevmgr devmgr;
-  devmgr.context_ = sys::ComponentContext::Create();
   devmgr.loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   // Create and build the realm.
-  auto realm_builder = sys::testing::Realm::Builder::New(devmgr.context_.get());
+  auto realm_builder = sys::testing::Realm::Builder::Create();
   driver_test_realm::Setup(realm_builder);
   devmgr.realm_ =
       std::make_unique<sys::testing::Realm>(realm_builder.Build(devmgr.loop_->dispatcher()));
@@ -121,14 +120,12 @@ zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, async_dispatcher_
 
 IsolatedDevmgr::IsolatedDevmgr(IsolatedDevmgr&& other)
     : loop_(std::move(other.loop_)),
-      context_(std::move(other.context_)),
       realm_(std::move(other.realm_)),
       devfs_root_(std::move(other.devfs_root_)) {}
 
 __EXPORT
 IsolatedDevmgr& IsolatedDevmgr::operator=(IsolatedDevmgr&& other) {
   loop_ = std::move(other.loop_);
-  context_ = std::move(other.context_);
   realm_ = std::move(other.realm_);
   devfs_root_ = std::move(other.devfs_root_);
   return *this;
