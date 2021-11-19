@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {argh::FromArgs, ffx_core::ffx_command};
+use {argh::FromArgs, ffx_core::ffx_command, fidl_fuchsia_tracing_controller::BufferingMode};
 
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
@@ -85,6 +85,11 @@ pub struct Stop {
 /// Record a trace
 #[argh(subcommand, name = "start")]
 pub struct Start {
+    /// the buffering to use on the trace. Defaults to "oneshot".
+    /// Accepted values are "oneshot," "circular," and "streaming."
+    #[argh(option, default = "BufferingMode::Oneshot", from_str_fn(buffering_mode_from_str))]
+    pub buffering_mode: BufferingMode,
+
     /// size of per-provider trace buffer in MB.  Defaults to 4.
     #[argh(option, default = "4")]
     pub buffer_size: u32,
@@ -113,6 +118,18 @@ pub struct Start {
     /// which means the trace will run in "interactive" mode.
     #[argh(switch)]
     pub background: bool,
+}
+
+fn buffering_mode_from_str(val: &str) -> Result<BufferingMode, String> {
+    match val {
+        "o" | "oneshot" => Ok(BufferingMode::Oneshot),
+        "c" | "circular" => Ok(BufferingMode::Circular),
+        "s" | "streaming" => Ok(BufferingMode::Streaming),
+        _ => Err(
+            "Unrecognized value. Possible values are \"oneshot\", \"circular\", or \"streaming\""
+                .to_owned(),
+        ),
+    }
 }
 
 fn parse_categories(value: &str) -> Result<TraceCategories, String> {
@@ -159,5 +176,20 @@ mod tests {
         for category in DEFAULT_CATEGORIES {
             assert!(cmd.categories.iter().any(|c| c == category));
         }
+    }
+
+    #[test]
+    fn test_buffering_mode_from_str() {
+        assert_eq!(buffering_mode_from_str("o"), Ok(BufferingMode::Oneshot));
+        assert_eq!(buffering_mode_from_str("oneshot"), Ok(BufferingMode::Oneshot));
+        assert_eq!(buffering_mode_from_str("c"), Ok(BufferingMode::Circular));
+        assert_eq!(buffering_mode_from_str("circular"), Ok(BufferingMode::Circular));
+        assert_eq!(buffering_mode_from_str("s"), Ok(BufferingMode::Streaming));
+        assert_eq!(buffering_mode_from_str("streaming"), Ok(BufferingMode::Streaming));
+    }
+
+    #[test]
+    fn test_unsupported_buffering_mode_from_str() {
+        assert!(buffering_mode_from_str("roundrobin").is_err());
     }
 }
