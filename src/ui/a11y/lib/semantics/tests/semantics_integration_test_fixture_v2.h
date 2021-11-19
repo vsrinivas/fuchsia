@@ -76,7 +76,7 @@ class SemanticsIntegrationTestV2 : public gtest::RealLoopFixture {
 
   SemanticsIntegrationTestV2()
       : context_(sys::ComponentContext::Create()),
-        realm_builder_(std::make_unique<RealmBuilder>(RealmBuilder::New(context_.get()))) {}
+        realm_builder_(std::make_unique<RealmBuilder>(RealmBuilder::Create())) {}
 
   ~SemanticsIntegrationTestV2() override = default;
 

@@ -269,9 +269,7 @@ class ResponseListenerServer : public ResponseListener, public MockComponent {
 class TouchInputBase : public gtest::RealLoopFixture {
  protected:
   TouchInputBase()
-      : context_(sys::ComponentContext::Create()),
-        realm_builder_(std::make_unique<RealmBuilder>(RealmBuilder::New(context_.get()))),
-        realm_() {}
+      : realm_builder_(std::make_unique<RealmBuilder>(RealmBuilder::Create())), realm_() {}
 
   ~TouchInputBase() override {
     FX_CHECK(injection_count_ > 0) << "injection expected but didn't happen.";
@@ -515,7 +513,6 @@ class TouchInputBase : public gtest::RealLoopFixture {
   fuchsia::sys::ComponentControllerPtr& client_component() { return client_component_; }
   sys::ServiceDirectory& child_services() { return *child_services_; }
 
-  sys::ComponentContext* context() { return context_.get(); }
   RealmBuilder* builder() { return realm_builder_.get(); }
   Realm* realm() { return realm_.get(); }
 
@@ -572,7 +569,6 @@ class TouchInputBase : public gtest::RealLoopFixture {
     return static_cast<uint64_t>(time.get());
   }
 
-  std::unique_ptr<sys::ComponentContext> context_;
   std::unique_ptr<RealmBuilder> realm_builder_;
   std::unique_ptr<Realm> realm_;
 
