@@ -17,8 +17,8 @@ rustc_test("driver_test_realm_example_simple_rust") {
   sources = [ "test.rs" ]
   deps = [
     "//garnet/lib/rust/io_util",
+    "//sdk/lib/device-watcher/rust",
     "//sdk/lib/driver_test_realm/simple",
-    "//src/devices/lib/device-watcher/rust",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
   ]

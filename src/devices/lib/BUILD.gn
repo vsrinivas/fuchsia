@@ -17,7 +17,6 @@ group("tests") {
     "acpi:tests",
     "bind:tests",
     "dev-operation:tests",
-    "device-watcher:tests",
     "dma-buffer:tests",
     "driver:tests",
     "driver2:tests",

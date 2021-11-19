@@ -23,7 +23,7 @@
 #include <zxtest/base/log-sink.h>
 #include <zxtest/zxtest.h>
 
-#include "src/devices/lib/device-watcher/cpp/device-watcher.h"
+#include "sdk/lib/device-watcher/cpp/device-watcher.h"
 #include "src/lib/fsl/io/device_watcher.h"
 #include "zircon/system/utest/device-enumeration/aemu.h"
 
@@ -573,8 +573,10 @@ TEST_F(DeviceEnumerationTest, QemuX64Q35Test) {
 
       "sys/platform/acpi",
       "sys/platform/acpi/acpi-pwrbtn",
-      "sys/platform/acpi/acpi-_SB_/acpi-PCI0/acpi-ISA_/acpi-KBD_/i8042-keyboard/hid-device/InputReport",
-      "sys/platform/acpi/acpi-_SB_/acpi-PCI0/acpi-ISA_/acpi-KBD_/i8042-mouse/hid-device/InputReport",
+      "sys/platform/acpi/acpi-_SB_/acpi-PCI0/acpi-ISA_/acpi-KBD_/i8042-keyboard/hid-device/"
+      "InputReport",
+      "sys/platform/acpi/acpi-_SB_/acpi-PCI0/acpi-ISA_/acpi-KBD_/i8042-mouse/hid-device/"
+      "InputReport",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));

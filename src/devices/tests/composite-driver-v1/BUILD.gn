@@ -50,9 +50,9 @@ test("composite-driver-v1-test") {
   deps = [
     ":component",
     "test-root:component",
+    "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/driver_test_realm/simple",
     "//src/devices/internal/drivers/fragment",
-    "//src/devices/lib/device-watcher/cpp",
     "//src/lib/fxl/test:gtest_main",
   ]
 }

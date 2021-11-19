@@ -11,7 +11,7 @@
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
 
-#include "src/devices/lib/device-watcher/cpp/device-watcher.h"
+#include "sdk/lib/device-watcher/cpp/device-watcher.h"
 
 // [START example]
 class DriverTestRealmTest : public gtest::TestLoopFixture {};

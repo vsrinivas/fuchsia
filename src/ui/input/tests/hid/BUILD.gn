@@ -10,9 +10,9 @@ test("hid-driver-test") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.hidctl:fuchsia.hardware.hidctl_c",
     "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_llcpp",
+    "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/driver_test_realm/simple",
     "//sdk/lib/fdio",
-    "//src/devices/lib/device-watcher/cpp",
     "//src/lib/ddk",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hid",

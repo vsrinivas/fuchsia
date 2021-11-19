@@ -15,8 +15,8 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
+#include "sdk/lib/device-watcher/cpp/device-watcher.h"
 #include "src/connectivity/network/testing/netemul/lib/network/network_context.h"
-#include "src/devices/lib/device-watcher/cpp/device-watcher.h"
 
 constexpr char kTapctlRelativePath[] = "sys/test/tapctl";
 

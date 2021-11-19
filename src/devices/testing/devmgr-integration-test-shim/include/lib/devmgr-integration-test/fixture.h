@@ -12,8 +12,8 @@
 
 #include <fbl/unique_fd.h>
 
+#include "sdk/lib/device-watcher/cpp/device-watcher.h"
 #include "sdk/lib/driver_test_realm/realm_builder/cpp/lib.h"
-#include "src/devices/lib/device-watcher/cpp/device-watcher.h"
 
 namespace devmgr_integration_test {
 

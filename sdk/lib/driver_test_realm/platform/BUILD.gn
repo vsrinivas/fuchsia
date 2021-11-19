@@ -46,8 +46,8 @@ test("test") {
   output_name = "platform_driver_test_realm_test"
   sources = [ "test.cc" ]
   deps = [
+    "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/driver_test_realm/platform",
-    "//src/devices/lib/device-watcher/cpp",
     "//src/lib/fxl/test:gtest_main",
   ]
 }

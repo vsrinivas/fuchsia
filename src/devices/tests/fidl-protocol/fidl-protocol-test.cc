@@ -9,7 +9,7 @@
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
-#include "src/devices/lib/device-watcher/cpp/device-watcher.h"
+#include "sdk/lib/device-watcher/cpp/device-watcher.h"
 
 namespace {
 TEST(FidlProtocolTest, ChildBinds) {

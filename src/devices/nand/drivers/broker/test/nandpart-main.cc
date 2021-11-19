@@ -10,7 +10,7 @@
 #include <zxtest/zxtest.h>
 
 #include "parent.h"
-#include "src/devices/lib/device-watcher/cpp/device-watcher.h"
+#include "sdk/lib/device-watcher/cpp/device-watcher.h"
 
 constexpr fuchsia_hardware_nand_Info kNandInfo = {
     .page_size = 4096,

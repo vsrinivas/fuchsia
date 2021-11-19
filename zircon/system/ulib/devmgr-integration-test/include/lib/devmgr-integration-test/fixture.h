@@ -118,7 +118,7 @@ class IsolatedDevmgr {
 };
 
 // NOTE: Please do not use these APIs, use the ones at:
-//  //src/devices/lib/device-watcher/cpp
+//  //sdk/lib/device-watcher/cpp
 // TODO(fxbug.dev/85271): Remove these.
 
 // Wait for |file| to appear in |dir|, and open it when it does.

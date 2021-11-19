@@ -6,7 +6,7 @@
 #include <lib/service/llcpp/service.h>
 #include <lib/syslog/global.h>
 
-#include "src/devices/lib/device-watcher/cpp/device-watcher.h"
+#include "sdk/lib/device-watcher/cpp/device-watcher.h"
 
 int main() {
   auto client_end = service::Connect<fuchsia_driver_test::Realm>();

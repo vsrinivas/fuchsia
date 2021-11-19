@@ -10,11 +10,11 @@ library_headers("devmgr-integration-test-shim-headers") {
   public_deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_llcpp",
+    "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/driver_test_realm/realm_builder/cpp",
     "//sdk/lib/driver_test_realm/realm_builder/cpp",
     "//sdk/lib/fit",
     "//sdk/lib/vfs/cpp",
-    "//src/devices/lib/device-watcher/cpp",
     "//zircon/system/ulib/async",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/devmgr-launcher",

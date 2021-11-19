@@ -18,8 +18,8 @@ test("gpt-unit-test") {
   deps = [
     ":driver-test-realm",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
+    "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/fdio",
-    "//src/devices/lib/device-watcher/cpp",
     "//src/storage/gpt",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",

@@ -15,8 +15,8 @@ test("device-enumeration") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.acpi:fuchsia.hardware.acpi_llcpp",
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_c",
+    "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/fdio",
-    "//src/devices/lib/device-watcher/cpp",
     "//src/lib/fsl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

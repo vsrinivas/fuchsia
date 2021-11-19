@@ -9,13 +9,13 @@ executable("bin") {
   output_name = "network_context"
   sources = [ "main.cc" ]
   deps = [
+    "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/connectivity/network/testing/netemul/lib/fidl:devmgr",
     "//src/connectivity/network/testing/netemul/lib/fidl:network",
     "//src/connectivity/network/testing/netemul/lib/network:network_service",
-    "//src/devices/lib/device-watcher/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fdio-caller",

@@ -49,9 +49,9 @@ test("autobind-test") {
   sources = [ "test.cc" ]
   deps = [
     ":component",
+    "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/driver_test_realm/simple",
     "//src/devices/internal/drivers/fragment",
-    "//src/devices/lib/device-watcher/cpp",
     "//src/lib/fxl/test:gtest_main",
   ]
 }

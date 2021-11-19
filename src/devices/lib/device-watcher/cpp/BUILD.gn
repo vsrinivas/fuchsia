@@ -2,46 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/components.gni")
-import("//build/test.gni")
-
-static_library("cpp") {
-  output_name = "device-watcher"
-
-  sources = [
-    "device-watcher.cc",
-    "device-watcher.h",
-  ]
-  public_deps = [
-    "//zircon/system/ulib/async",
-    "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/zx",
-  ]
-  deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-    "//sdk/lib/fdio",
-    "//zircon/system/ulib/fdio-caller",
-  ]
-}
-
-test("test") {
-  output_name = "device-watcher-cpp-test"
-  sources = [ "test.cc" ]
-  deps = [
-    ":cpp",
-    "//sdk/lib/driver_test_realm/simple",
-    "//src/lib/storage/vfs/cpp",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/zxtest",
-  ]
-}
-
-fuchsia_unittest_package("device-watcher-cpp-test") {
-  deps = [ ":test" ]
-}
-
-group("tests") {
-  testonly = true
-  deps = [ ":device-watcher-cpp-test" ]
+# Temporary redirect for soft transition.
+group("cpp") {
+  public_deps = [ "//sdk/lib/device-watcher/cpp" ]
 }

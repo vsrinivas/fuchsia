@@ -10,7 +10,7 @@
 
 #include <gtest/gtest.h>
 
-#include "src/devices/lib/device-watcher/cpp/device-watcher.h"
+#include "sdk/lib/device-watcher/cpp/device-watcher.h"
 
 TEST(DdkFirmwaretest, DriverWasLoaded) {
   fbl::unique_fd dev(open("/dev", O_RDONLY));

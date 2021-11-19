@@ -47,7 +47,7 @@
 #include <gtest/gtest.h>
 #include <ramdevice-client/ramdisk.h>
 
-#include "src/devices/lib/device-watcher/cpp/device-watcher.h"
+#include "sdk/lib/device-watcher/cpp/device-watcher.h"
 
 namespace ramdisk {
 namespace {

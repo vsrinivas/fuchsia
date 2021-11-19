@@ -21,8 +21,8 @@ test("test") {
   deps = [
     ":echo_llcpp",
     "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_llcpp",
+    "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/fdio",
-    "//src/devices/lib/device-watcher/cpp",
     "//src/lib/ddk",
     "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zxtest",

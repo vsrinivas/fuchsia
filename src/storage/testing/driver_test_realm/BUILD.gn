@@ -26,7 +26,7 @@ executable("bin") {
   sources = [ "storage_driver_test_realm.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_llcpp",
-    "//src/devices/lib/device-watcher/cpp",
+    "//sdk/lib/device-watcher/cpp",
     "//zircon/system/ulib/service:service-llcpp",
   ]
 }

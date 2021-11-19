@@ -14,8 +14,8 @@ group("tests") {
 test("driver_test_realm_example_simple_cpp") {
   sources = [ "test.cc" ]
   deps = [
+    "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/driver_test_realm/simple",
-    "//src/devices/lib/device-watcher/cpp",
     "//src/lib/fxl/test:gtest_main",
   ]
 }

@@ -23,7 +23,7 @@
 
 #include "lib/fidl/llcpp/client_end.h"
 #include "parent.h"
-#include "src/devices/lib/device-watcher/cpp/device-watcher.h"
+#include "sdk/lib/device-watcher/cpp/device-watcher.h"
 
 namespace {
 

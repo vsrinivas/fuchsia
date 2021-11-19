@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 
-#include "src/devices/lib/device-watcher/cpp/device-watcher.h"
+#include "sdk/lib/device-watcher/cpp/device-watcher.h"
 
 // [START example]
 TEST(SimpleDriverTestRealmTest, DriversExist) {
