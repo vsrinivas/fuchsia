@@ -87,15 +87,6 @@ uint32_t Nelson::GetDisplayId() {
   return *display_id_;
 }
 
-bool Nelson::Is9365Ddic() {
-  // On DVT or later, GPIO_DISPLAY_ID0 indicates whether the 9364 (0) or 9365 (1) DDIC is present.
-  // Only the 9364 is used before DVT.
-  if (GetBoardRev() >= BOARD_REV_DVT) {
-    return (GetDisplayId() & 1) == 1;
-  }
-  return false;
-}
-
 int Nelson::Thread() {
   zx_status_t status;
 

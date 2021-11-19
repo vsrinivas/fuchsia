@@ -124,7 +124,7 @@ class Gt6853Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_IN
 
   zx_status_t Init();
 
-  zx_status_t DownloadConfigIfNeeded();
+  zx_status_t DownloadConfigIfNeeded(uint32_t panel_type_id);
   static zx::status<uint64_t> GetConfigOffset(const fzl::VmoMapper& mapped_config,
                                               uint8_t sensor_id);
   zx_status_t PollCommandRegister(DeviceCommand command);

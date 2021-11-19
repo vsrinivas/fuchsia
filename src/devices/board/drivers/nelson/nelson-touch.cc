@@ -50,22 +50,10 @@ zx_status_t Nelson::TouchInit() {
     return TouchInitP1();
   }
 
-  // TODO(fxbug.dev/87836): Remove this once the bootloader has been updated.
-  const bool use_9365_config = Is9365Ddic();
-  const pbus_metadata_t touch_metadata[] = {
-      {
-          .type = DEVICE_METADATA_PRIVATE,
-          .data_buffer = reinterpret_cast<const uint8_t*>(&use_9365_config),
-          .data_size = sizeof(use_9365_config),
-      },
-  };
-
   const pbus_dev_t touch_dev = {
       .name = "gt6853-touch",
       .vid = PDEV_VID_GOODIX,
       .did = PDEV_DID_GOODIX_GT6853,
-      .metadata_list = touch_metadata,
-      .metadata_count = countof(touch_metadata),
       .boot_metadata_list = touch_boot_metadata,
       .boot_metadata_count = countof(touch_boot_metadata),
   };

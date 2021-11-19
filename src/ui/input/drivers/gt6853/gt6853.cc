@@ -49,6 +49,22 @@ enum {
   kPanelTypeBoeSit7703 = 6,
 };
 
+inline const char* PanelTypeToConfigPath(uint32_t panel_type_id) {
+  switch (panel_type_id) {
+    case kPanelTypeKdFiti9364:
+    case kPanelTypeBoeFiti9364:
+    case kPanelTypeInxFiti9364:
+      return GT6853_CONFIG_9364_PATH;
+    case kPanelTypeKdFiti9365:
+    case kPanelTypeBoeFiti9365:
+      return GT6853_CONFIG_9365_PATH;
+    case kPanelTypeBoeSit7703:
+      return GT6853_CONFIG_7703_PATH;
+    default:
+      return nullptr;
+  }
+}
+
 }  // namespace
 
 namespace touch {
@@ -227,12 +243,26 @@ zx_status_t Gt6853Device::Init() {
     return status;
   }
 
-  if ((status = UpdateFirmwareIfNeeded()) != ZX_OK) {
+  size_t actual = 0;
+  uint32_t panel_type_id = 0;
+  status = DdkGetFragmentMetadata("pdev", DEVICE_METADATA_BOARD_PRIVATE, &panel_type_id,
+                                  sizeof(panel_type_id), &actual);
+  if (status == ZX_ERR_NOT_FOUND) {
+    zxlogf(INFO, "No device metadata, assuming mexec and preserving controller state");
+  } else if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to get panel type: %d", status);
     return status;
-  }
+  } else if (actual != sizeof(panel_type_id)) {
+    zxlogf(ERROR, "Expected metadata size %zu, got %zu", sizeof(panel_type_id), actual);
+    return ZX_ERR_BAD_STATE;
+  } else {
+    if ((status = UpdateFirmwareIfNeeded()) != ZX_OK) {
+      return status;
+    }
 
-  if ((status = DownloadConfigIfNeeded()) != ZX_OK) {
-    return status;
+    if ((status = DownloadConfigIfNeeded(panel_type_id)) != ZX_OK) {
+      return status;
+    }
   }
 
   status = thrd_create_with_name(
@@ -275,45 +305,18 @@ zx_status_t Gt6853Device::Init() {
   return ZX_OK;
 }
 
-zx_status_t Gt6853Device::DownloadConfigIfNeeded() {
+zx_status_t Gt6853Device::DownloadConfigIfNeeded(uint32_t panel_type_id) {
   zx::vmo config_vmo;
 
-  bool use_9365_config = false;
-
-  size_t actual = 0;
-  uint32_t panel_type_id = 0;
-  zx_status_t status = DdkGetFragmentMetadata("pdev", DEVICE_METADATA_BOARD_PRIVATE, &panel_type_id,
-                                              sizeof(panel_type_id), &actual);
-  if (status == ZX_OK && actual == sizeof(panel_type_id)) {
-    zxlogf(INFO, "Panel type: %d", panel_type_id);
-
-    // TODO(fxbug.dev/87836): Add support for the new DDIC.
-    use_9365_config =
-        panel_type_id == kPanelTypeKdFiti9365 || panel_type_id == kPanelTypeBoeFiti9365;
-  } else {
-    // TODO(fxbug.dev/87836): Remove this fallback once the bootloader has been updated.
-    status = DdkGetFragmentMetadata("pdev", DEVICE_METADATA_PRIVATE, &use_9365_config,
-                                    sizeof(use_9365_config), &actual);
-    if (status == ZX_OK && actual != sizeof(use_9365_config)) {
-      zxlogf(ERROR, "Expected metadata size %zu, got %zu", sizeof(use_9365_config), actual);
-      return ZX_ERR_BAD_STATE;
-    }
-  }
-
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to get panel type: %d", status);
-    return status;
+  const char* const config_path = PanelTypeToConfigPath(panel_type_id);
+  if (config_path == nullptr) {
+    zxlogf(ERROR, "Failed to find config for panel type %d", panel_type_id);
+    return ZX_ERR_BAD_STATE;
   }
 
   size_t config_vmo_size = 0;
-  if (use_9365_config) {
-    status = load_firmware(parent(), GT6853_CONFIG_9365_PATH, config_vmo.reset_and_get_address(),
-                           &config_vmo_size);
-  } else {
-    status = load_firmware(parent(), GT6853_CONFIG_9364_PATH, config_vmo.reset_and_get_address(),
-                           &config_vmo_size);
-  }
-
+  zx_status_t status =
+      load_firmware(parent(), config_path, config_vmo.reset_and_get_address(), &config_vmo_size);
   if (status != ZX_OK) {
     zxlogf(WARNING, "Failed to load config binary, skipping config download");
     return ZX_OK;
@@ -325,13 +328,13 @@ zx_status_t Gt6853Device::DownloadConfigIfNeeded() {
     return sensor_id.error_value();
   }
 
+  zxlogf(INFO, "Sensor ID 0x%02x, panel type %d", sensor_id.value(), panel_type_id);
+
   fzl::VmoMapper mapped_config;
   if ((status = mapped_config.Map(config_vmo, 0, config_vmo_size, ZX_VM_PERM_READ)) != ZX_OK) {
     zxlogf(ERROR, "Failed to map config VMO: %d", status);
     return status;
   }
-
-  zxlogf(INFO, "Sensor ID 0x%02x, using 936%d config", sensor_id.value(), use_9365_config ? 5 : 4);
 
   zx::status<uint64_t> config_offset = GetConfigOffset(mapped_config, sensor_id.value() & 0xf);
   if (config_offset.is_error()) {

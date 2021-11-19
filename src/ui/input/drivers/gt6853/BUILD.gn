@@ -8,6 +8,7 @@ import("//build/components.gni")
 import("//build/drivers.gni")
 import("//build/test.gni")
 
+config_7703_path = "gt6853/goodix_cfg_group_sit7703.bin"
 config_9364_path = "gt6853/goodix_cfg_group_fiti9364.bin"
 config_9365_path = "gt6853/goodix_cfg_group_fiti9365.bin"
 firmware_path = "gt6853/goodix_firmware.bin"
@@ -17,6 +18,7 @@ fuchsia_system_package("gt6853") {
 
   if (internal_access) {
     deps += [
+      ":config-7703",
       ":config-9364",
       ":config-9365",
       ":firmware",
@@ -26,6 +28,10 @@ fuchsia_system_package("gt6853") {
 }
 
 if (internal_access) {
+  resource("config-7703") {
+    sources = [ "//prebuilt/touch/$config_7703_path" ]
+    outputs = [ "lib/firmware/$config_7703_path" ]
+  }
   resource("config-9364") {
     sources = [ "//prebuilt/touch/$config_9364_path" ]
     outputs = [ "lib/firmware/$config_9364_path" ]
@@ -81,6 +87,7 @@ fuchsia_driver("gt6853-module-driver") {
   ]
   deps = [ ":common" ]
   defines = [
+    "GT6853_CONFIG_7703_PATH=\"$config_7703_path\"",
     "GT6853_CONFIG_9364_PATH=\"$config_9364_path\"",
     "GT6853_CONFIG_9365_PATH=\"$config_9365_path\"",
     "GT6853_FIRMWARE_PATH=\"$firmware_path\"",
@@ -112,6 +119,7 @@ test("gt6853-test") {
     "//zircon/system/ulib/zxtest",
   ]
   defines = [
+    "GT6853_CONFIG_7703_PATH=\"$config_7703_path\"",
     "GT6853_CONFIG_9364_PATH=\"$config_9364_path\"",
     "GT6853_CONFIG_9365_PATH=\"$config_9365_path\"",
     "GT6853_FIRMWARE_PATH=\"$firmware_path\"",

@@ -152,7 +152,6 @@ class Nelson : public NelsonType {
   uint32_t GetBoardRev(void);
   uint32_t GetBoardOption(void);
   uint32_t GetDisplayId(void);
-  bool Is9365Ddic();
   zx_status_t EnableWifi32K(void);
   zx_status_t SdEmmcConfigurePortB(void);
 
