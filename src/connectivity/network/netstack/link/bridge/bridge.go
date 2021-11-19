@@ -234,27 +234,31 @@ func (ep *Endpoint) DeliverNetworkPacketToBridge(rxEP *BridgeableEndpoint, srcLi
 		// because that causes interoperability issues with a router.
 		if l == rxEP {
 			rxFound = true
-		} else {
-			switch i {
-			case len(ep.links):
-				// The last call never needs cloning.
-			case len(ep.links) - 1:
-				// The second-to-last call needs cloning iff the last endpoint is not rxEP.
-				if !rxFound {
-					break
-				}
-				fallthrough
-			default:
-				pkt = pkt.Clone()
-			}
+			continue
+		}
 
-			switch err := l.WriteRawPacket(pkt); err.(type) {
-			case nil:
-			case *tcpip.ErrClosedForSend:
-				// TODO(https://fxbug.dev/86959): Handle bridged interface removal.
-			default:
-				_ = syslog.Warnf("failed to write to bridged endpoint %p: %s", l, err)
+		// Shadow pkt so that changes the link makes to the packet buffer
+		// are not visible to links we write the packet to after.
+		pkt := pkt
+		switch i {
+		case len(ep.links):
+			// The last call never needs cloning.
+		case len(ep.links) - 1:
+			// The second-to-last call needs cloning iff the last endpoint is not rxEP.
+			if !rxFound {
+				break
 			}
+			fallthrough
+		default:
+			pkt = pkt.Clone()
+		}
+
+		switch err := l.WriteRawPacket(pkt); err.(type) {
+		case nil:
+		case *tcpip.ErrClosedForSend:
+			// TODO(https://fxbug.dev/86959): Handle bridged interface removal.
+		default:
+			_ = syslog.Warnf("failed to write to bridged endpoint %p: %s", l, err)
 		}
 	}
 }
