@@ -9,7 +9,7 @@
 {%- set drivers_dir = "reference/drivers/" %}
 {%- set drivers_metadata_file = "all_drivers_doc.yaml" %}
 {%- set areas_yaml_file = "_drivers_areas.yaml" %}
-{%- set info_icon = '<span class="material-icons" style="font-size: 1.1em;color:var(--devsite-contrast-link-color);vertical-align: top;">info</span>' %}
+{%- set info_icon = '<span class="material-icons" style="font-size: 1.1em;color:#007b83;vertical-align: top;">info</span>' %}
 
 {%- set drivers | yamlloads %}
 {% include "reference/drivers/all_drivers_doc.yaml" %}
