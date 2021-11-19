@@ -37,6 +37,9 @@ if (is_host) {
   }
 }
 
+# Use $root_build_dir instead of $root_out_dir because
+# 1. It eliminates multiple copies of the data for different host toolchains.
+# 2. Tests are launched with $root_build_dir as cwd, test data are relatively fixed.
 if (is_host) {
   host_test_data("test_data") {
     sources = [

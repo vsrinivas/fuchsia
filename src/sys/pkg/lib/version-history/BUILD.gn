@@ -18,11 +18,6 @@ copy("copy-files") {
   outputs = [ "$target_gen_dir/{{source_file_part}}" ]
 }
 
-host_test_data("version-history-test-data") {
-  sources = [ "//sdk/version_history.json" ]
-  outputs = [ "$root_out_dir/test_data/version-history/{{source_file_part}}" ]
-}
-
 go_library("version-history") {
   name = "go.fuchsia.dev/fuchsia/src/sys/pkg/lib/version-history/..."
 
@@ -37,10 +32,17 @@ go_library("version-history") {
   non_go_deps = [ ":copy-files" ]
 }
 
-go_test("version-history-test") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/src/sys/pkg/lib/version-history" ]
-  deps = [ ":version-history" ]
-  non_go_deps = [ ":version-history-test-data" ]
+if (is_host) {
+  host_test_data("version-history-test-data") {
+    sources = [ "//sdk/version_history.json" ]
+    outputs = [ "$root_out_dir/test_data/version-history/{{source_file_part}}" ]
+  }
+
+  go_test("version-history-test") {
+    gopackages = [ "go.fuchsia.dev/fuchsia/src/sys/pkg/lib/version-history" ]
+    deps = [ ":version-history" ]
+    non_go_deps = [ ":version-history-test-data" ]
+  }
 }
 
 group("tests") {

@@ -420,8 +420,10 @@ update_package("update") {
   epoch = "1"
 }
 
-host_test_data("fuchsia_zbi_for_host_tests") {
-  sources = [ "$root_build_dir/fuchsia.zbi" ]
+if (is_host) {
+  host_test_data("fuchsia_zbi_for_host_tests") {
+    sources = [ "$root_build_dir/fuchsia.zbi" ]
+  }
 }
 
 ##################################################

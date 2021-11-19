@@ -269,20 +269,22 @@ config("test-image-path") {
   }
 }
 
-host_test_data("host-test-images") {
-  sources = [
-    test_blob_image_path,
-    test_fvm_sparse_image_path,
-    test_fvm_sparse_small_image_path,
-    test_minfs_image_path,
-  ]
-  deps = [
-    ":test-blobfs-image-gen($default_toolchain)",
-    ":test-fvm-sparse-image-gen($default_toolchain)",
-    ":test-fvm-sparse-small-image-gen($default_toolchain)",
-    ":test-minfs-image-gen($default_toolchain)",
-  ]
-  outputs = [ "$root_out_dir/adapter_test_images/{{source_file_part}}" ]
+if (is_host) {
+  host_test_data("host-test-images") {
+    sources = [
+      test_blob_image_path,
+      test_fvm_sparse_image_path,
+      test_fvm_sparse_small_image_path,
+      test_minfs_image_path,
+    ]
+    deps = [
+      ":test-blobfs-image-gen($default_toolchain)",
+      ":test-fvm-sparse-image-gen($default_toolchain)",
+      ":test-fvm-sparse-small-image-gen($default_toolchain)",
+      ":test-minfs-image-gen($default_toolchain)",
+    ]
+    outputs = [ "$root_out_dir/adapter_test_images/{{source_file_part}}" ]
+  }
 }
 
 resource("adapter-test-images") {

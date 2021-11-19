@@ -108,7 +108,7 @@ dart_test("acts_bt_astro_test") {
 
   non_dart_deps = [
     ":acts($host_toolchain)",
-    "//build/python:interpreter",
+    "//build/python:interpreter($host_toolchain)",
     "//src/connectivity/bluetooth/profiles/bt-avrcp:bt-avrcp(${target_toolchain})",
     "//src/connectivity/bluetooth/profiles/bt-avrcp-target:bt-avrcp-target(${target_toolchain})",
     "//src/sys/tools/run:run(${target_toolchain})",

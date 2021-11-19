@@ -4,18 +4,20 @@
 
 import("//build/testing/host_test_data.gni")
 
-host_test_data("interpreter") {
-  sources = [
-    "//prebuilt/third_party/python3/${host_platform}/lib",
-    python_exe_src,
-  ]
-}
+if (is_host) {
+  host_test_data("interpreter") {
+    sources = [
+      "//prebuilt/third_party/python3/${host_platform}/lib",
+      python_exe_src,
+    ]
+  }
 
-host_test_data("pip") {
-  sources = [
-    "//prebuilt/third_party/python3/${host_platform}/lib",
-    pip_exe_src,
-  ]
+  host_test_data("pip") {
+    sources = [
+      "//prebuilt/third_party/python3/${host_platform}/lib",
+      pip_exe_src,
+    ]
+  }
 }
 
 # These tests exercise the build rules we want to test.
