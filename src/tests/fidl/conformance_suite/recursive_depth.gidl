@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-
 success("RecursiveOptionalStructUnderLimit") {
+    // gidl-format off
     value = RecursiveOptionalStruct { // 0
     inner: RecursiveOptionalStruct { // 1
     inner: RecursiveOptionalStruct { // 2
@@ -71,6 +71,7 @@ success("RecursiveOptionalStructUnderLimit") {
     }
     }
     },
+    // gidl-format on
     bytes = {
         v1, v2 = [
             repeat(0xff):256, // 0 - 31
@@ -80,6 +81,7 @@ success("RecursiveOptionalStructUnderLimit") {
 }
 
 encode_failure("RecursiveOptionalStructExceedLimit") {
+    // gidl-format off
     value = RecursiveOptionalStruct { // 0
     inner: RecursiveOptionalStruct { // 1
     inner: RecursiveOptionalStruct { // 2
@@ -149,6 +151,7 @@ encode_failure("RecursiveOptionalStructExceedLimit") {
     }
     }
     },
+    // gidl-format on
     err = EXCEEDED_MAX_OUT_OF_LINE_DEPTH,
 }
 
@@ -164,6 +167,7 @@ decode_failure("RecursiveOptionalStructExceedLimit") {
 }
 
 success("RecursiveOptionalStructArrayWrapperUnderLimit") {
+    // gidl-format off
     value = RecursiveOptionalStructArrayWrapper { // 0
     arr: [ // 0
     RecursiveOptionalStruct { // 0
@@ -235,6 +239,7 @@ success("RecursiveOptionalStructArrayWrapperUnderLimit") {
     }
     ]
     },
+    // gidl-format on
     bytes = {
         v1, v2 = [
             repeat(0xff):256, // 0 - 31
@@ -244,6 +249,7 @@ success("RecursiveOptionalStructArrayWrapperUnderLimit") {
 }
 
 encode_failure("RecursiveOptionalStructArrayWrapperExceedLimit") {
+    // gidl-format off
     value = RecursiveOptionalStructArrayWrapper { // 0
     arr: [ // 0
     RecursiveOptionalStruct { // 0
@@ -317,6 +323,7 @@ encode_failure("RecursiveOptionalStructArrayWrapperExceedLimit") {
     }
     ]
     },
+    // gidl-format on
     err = EXCEEDED_MAX_OUT_OF_LINE_DEPTH,
 }
 
@@ -332,7 +339,8 @@ decode_failure("RecursiveOptionalStructArrayWrapperExceedLimit") {
 }
 
 success("RecursiveOptionalAndUnionUnderLimit") {
-        value = RecursiveOptionalAndUnionStruct { // 0
+    // gidl-format off
+    value = RecursiveOptionalAndUnionStruct { // 0
     u: RecursiveOptionalAndUnion { // 0
     recursive_optional: RecursiveOptionalStruct { // 1
     inner: RecursiveOptionalStruct { // 2
@@ -401,6 +409,7 @@ success("RecursiveOptionalAndUnionUnderLimit") {
     }
     }
     },
+    // gidl-format on
     bytes = {
         v1 = [
             num(1):4, padding:4, // ordinal, padding
@@ -419,6 +428,7 @@ success("RecursiveOptionalAndUnionUnderLimit") {
 }
 
 encode_failure("RecursiveOptionalAndUnionExceedLimit") {
+    // gidl-format off
     value = RecursiveOptionalAndUnionStruct { // 0
     u: RecursiveOptionalAndUnion { // 0
     recursive_optional: RecursiveOptionalStruct { // 1
@@ -490,6 +500,7 @@ encode_failure("RecursiveOptionalAndUnionExceedLimit") {
     }
     }
     },
+    // gidl-format on
     err = EXCEEDED_MAX_OUT_OF_LINE_DEPTH,
 }
 
@@ -514,6 +525,7 @@ decode_failure("RecursiveOptionalAndUnionExceedLimit") {
 }
 
 success("RecursiveOptionalAndTableUnderLimit") {
+    // gidl-format off
     value = RecursiveOptionalAndTableStruct { // 0
     t: RecursiveOptionalAndTable { // 0
     recursive_optional: RecursiveOptionalStruct { // 2
@@ -581,6 +593,7 @@ success("RecursiveOptionalAndTableUnderLimit") {
     }
     }
     },
+    // gidl-format on
     bytes = {
         v1 = [
             num(1):8, // table max ordinal
@@ -601,6 +614,7 @@ success("RecursiveOptionalAndTableUnderLimit") {
 }
 
 encode_failure("RecursiveOptionalAndTableExceedLimit") {
+    // gidl-format off
     value = RecursiveOptionalAndTableStruct { // 0
     t: RecursiveOptionalAndTable { // 0
     recursive_optional: RecursiveOptionalStruct { // 2
@@ -670,6 +684,7 @@ encode_failure("RecursiveOptionalAndTableExceedLimit") {
     }
     }
     },
+    // gidl-format on
     err = EXCEEDED_MAX_OUT_OF_LINE_DEPTH,
 }
 
@@ -689,6 +704,7 @@ decode_failure("RecursiveOptionalAndTableExceedLimit") {
 }
 
 success("RecursiveOptionalAndVectorUnderLimit") {
+    // gidl-format off
     value = RecursiveOptionalAndVectorStruct { // 0
     vec: [ RecursiveOptionalStruct { // 1
     inner: RecursiveOptionalStruct { // 2
@@ -757,6 +773,7 @@ success("RecursiveOptionalAndVectorUnderLimit") {
     }
     ]
     },
+    // gidl-format on
     bytes = {
         v1, v2 = [
             num(1):8, // vector count
@@ -768,6 +785,7 @@ success("RecursiveOptionalAndVectorUnderLimit") {
 }
 
 encode_failure("RecursiveOptionalAndVectorExceedLimit") {
+    // gidl-format off
     value = RecursiveOptionalAndVectorStruct { // 0
     vec: [ RecursiveOptionalStruct { // 1
     inner: RecursiveOptionalStruct { // 2
@@ -838,6 +856,7 @@ encode_failure("RecursiveOptionalAndVectorExceedLimit") {
     }
     ]
     },
+    // gidl-format on
     err = EXCEEDED_MAX_OUT_OF_LINE_DEPTH,
 }
 
@@ -855,6 +874,7 @@ decode_failure("RecursiveOptionalAndVectorExceedLimit") {
 }
 
 success("RecursiveOptionalStructWithStringUnderLimit") {
+    // gidl-format off
     value = RecursiveOptionalStructWithString { // 0
     inner: RecursiveOptionalStructWithString { // 1
     inner: RecursiveOptionalStructWithString { // 2
@@ -920,6 +940,7 @@ success("RecursiveOptionalStructWithStringUnderLimit") {
     }
     }
     },
+    // gidl-format on
     bytes = {
         v1, v2 = [
             // 0
@@ -1057,6 +1078,7 @@ success("RecursiveOptionalStructWithStringUnderLimit") {
 }
 
 encode_failure("RecursiveOptionalStructWithStringExceedLimit") {
+    // gidl-format off
     value = RecursiveOptionalStructWithString { // 0
     inner: RecursiveOptionalStructWithString { // 1
     inner: RecursiveOptionalStructWithString { // 2
@@ -1124,6 +1146,7 @@ encode_failure("RecursiveOptionalStructWithStringExceedLimit") {
     }
     }
     },
+    // gidl-format on
     err = EXCEEDED_MAX_OUT_OF_LINE_DEPTH,
 }
 

@@ -21,6 +21,7 @@ group("fidl") {
     "fidlgen_syzkaller:host",
     "fidlmerge:host",
     "gidl:host",
+    "gidl-format:host",
     "lib",
     "measure-tape/src:host",
   ]
@@ -55,6 +56,7 @@ group("tests") {
     "fidlgen_rust:tests",
     "fidlgen_syzkaller:tests",
     "gidl:tests",
+    "gidl-format:tests",
     "lib:tests",
     "measure-tape:tests",
   ]

@@ -116,6 +116,7 @@ function format-file() {
     *.cml) format-full-file "${CML_FMT_CMD}"  "$1";;
     *.dart) format-full-file "${DART_CMD}"  "$1";;
     *.fidl) format-full-file "${FIDL_CMD}" "$1" ;;
+    *.gidl) format-full-file "${GIDL_CMD}" "$1" ;;
     *.gn) format-full-file "${GN_CMD}" "$1" ;;
     *.gni) format-full-file "${GN_CMD}" "$1" ;;
     *.go) format-full-file "${GO_CMD}" "$1" ;;
@@ -254,6 +255,9 @@ readonly DART_CMD="${PREBUILT_DART_DIR}/bin/dart format"
 readonly FIDL_FORMAT_TOOL="$( fx-command-run list-build-artifacts --expect-one --name fidl-format tools )"
 readonly FIDL_FORMAT_TOOL_ABS="${FUCHSIA_BUILD_DIR}/${FIDL_FORMAT_TOOL}"
 readonly FIDL_CMD="${FIDL_FORMAT_TOOL_ABS} -i"
+readonly GIDL_FORMAT_TOOL="$( fx-command-run list-build-artifacts --expect-one --name gidl-format tools )"
+readonly GIDL_FORMAT_TOOL_ABS="${FUCHSIA_BUILD_DIR}/${GIDL_FORMAT_TOOL}"
+readonly GIDL_CMD="${GIDL_FORMAT_TOOL_ABS} -i"
 readonly GN_CMD="${PREBUILT_GN} format"
 readonly GO_CMD="${PREBUILT_GO_DIR}/bin/gofmt -s -w"
 readonly JSON_FMT_CMD="${PY_TOOL} ${FUCHSIA_DIR}/scripts/style/json-fmt.py --no-sort-keys"

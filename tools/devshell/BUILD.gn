@@ -24,6 +24,7 @@ if (!is_host) {
       "//build/tools/formatjson5",
       "//tools/cmc",
       "//tools/fidl/fidlc:fidl-format",
+      "//tools/fidl/gidl-format:host",
 
       # For `fx klog`.
       "//tools/loglistener:host",
