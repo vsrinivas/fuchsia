@@ -1,0 +1,12 @@
+{
+    children: [
+        {
+            name: "a",
+            url: "#meta/a.cm",
+        },
+        {
+            name: "b",
+            url: "test:///b",
+        },
+    ],
+}

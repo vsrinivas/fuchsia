@@ -32,6 +32,7 @@ rustc_binary("realm_builder_server_bin") {
     "//src/lib/storage/vfs/rust:vfs",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/lib/zircon/rust:fuchsia-zircon-status",
     "//src/sys/lib/cm_fidl_validator",
     "//src/sys/lib/cm_rust",
     "//src/sys/lib/legacy_component:legacy_component_lib",
@@ -53,9 +54,21 @@ fuchsia_component("realm_builder_server_component") {
   deps = [ ":realm_builder_server_bin" ]
 }
 
+fuchsia_component("realm_with_child") {
+  manifest = "meta/realm_with_child.cml"
+}
+
+fuchsia_component("a") {
+  manifest = "meta/a.cml"
+}
+
 fuchsia_unittest_package("realm_builder_server_unit_tests") {
   manifest = "meta/unit-tests.cml"
-  deps = [ ":realm_builder_server_bin_test" ]
+  deps = [
+    ":a",
+    ":realm_builder_server_bin_test",
+    ":realm_with_child",
+  ]
 }
 
 fuchsia_package("fuchsia-component-test") {
