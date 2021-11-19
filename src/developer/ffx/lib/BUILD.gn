@@ -5,6 +5,7 @@
 if (is_host) {
   libs = [
     "addr",
+    "buildid",
     "daemonize",
     "errors",
     "fidl-fuchsia-developer-bridge-ext",

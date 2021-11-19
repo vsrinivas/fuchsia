@@ -731,6 +731,7 @@ config("Wno-conversion") {
     "//src/developer/debug/zxdb/debug_adapter:*",
     "//src/developer/debug/zxdb/expr:*",
     "//src/developer/debug/zxdb/symbols:*",
+    "//src/developer/ffx/lib/buildid/cpp:*",
     "//src/developer/forensics/exceptions/tests:*",
     "//src/developer/forensics/feedback_data/tests:*",
     "//src/developer/memory/metrics:*",
