@@ -5,9 +5,10 @@
 use {
     anyhow::Result,
     ffx_core::ffx_plugin,
-    ffx_driver::get_driver_info,
+    ffx_driver::{get_device_info, get_driver_info},
     ffx_driver_list_args::DriverListCommand,
     fidl_fuchsia_driver_development::{BindRulesBytecode, DriverDevelopmentProxy},
+    std::collections::HashSet,
 };
 
 #[ffx_plugin(
@@ -15,7 +16,30 @@ use {
     DriverDevelopmentProxy = "bootstrap/driver_manager:expose:fuchsia.driver.development.DriverDevelopment"
 )]
 pub async fn list(service: DriverDevelopmentProxy, cmd: DriverListCommand) -> Result<()> {
-    let driver_info = get_driver_info(&service, &mut [].iter().map(String::as_str)).await?;
+    let mut driver_info = get_driver_info(&service, &mut [].iter().map(String::as_str)).await?;
+
+    if cmd.loaded {
+        // Query devices and create a hash set of loaded drivers.
+        let device_info = get_device_info(&service, &mut [].iter().map(String::as_str)).await?;
+        let mut loaded_driver_set = HashSet::new();
+        for device in device_info {
+            if let Some(libname) = &device.bound_driver_libname {
+                loaded_driver_set.insert(String::from(libname));
+            }
+        }
+
+        // Filter the driver list by the hash set.
+        driver_info = driver_info
+            .into_iter()
+            .filter(|driver| {
+                if let Some(libname_or_url) = driver.libname.as_ref().or(driver.url.as_ref()) {
+                    loaded_driver_set.contains(libname_or_url)
+                } else {
+                    false
+                }
+            })
+            .collect();
+    }
 
     if cmd.verbose {
         for driver in driver_info {

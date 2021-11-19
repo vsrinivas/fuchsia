@@ -29,11 +29,9 @@ pub async fn register_impl<W: std::io::Write>(
     match driver_dev_proxy.restart_driver_hosts(&mut cmd.driver_path.to_string()).await? {
         Ok(n) => {
             if n == 0 {
-                // TODO(fxbug.dev/89105): Suggest `ffx driver list --loaded` once that flag is
-                // implemented.
                 writeln!(
                     writer,
-                    "Did not find any matching driver hosts. Is the driver running?"
+                    "Did not find any matching driver hosts. Is the driver running and listed by `ffx driver list --loaded`?"
                 )?;
             } else {
                 writeln!(writer, "Restarted {} driver host{}.", n, if n == 1 { "" } else { "s" })?;

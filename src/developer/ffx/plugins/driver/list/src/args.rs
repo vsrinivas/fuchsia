@@ -12,11 +12,18 @@ use {argh::FromArgs, ffx_core::ffx_command};
     description = "List drivers",
     example = "To list all drivers with properties:
 
-    $ ffx driver list -v",
+    $ ffx driver list -v
+
+To list only loaded drivers:
+
+    $ ffx driver list --loaded",
     error_code(1, "Failed to connect to the driver development service")
 )]
 pub struct DriverListCommand {
-    /// list all driver properties.
+    /// list all driver properties
     #[argh(switch, short = 'v', long = "verbose")]
     pub verbose: bool,
+    /// only list loaded drivers
+    #[argh(switch, long = "loaded")]
+    pub loaded: bool,
 }
