@@ -26,6 +26,11 @@ use {
     std::path::Path,
     thiserror::Error,
 };
+#[cfg(test)]
+use {
+    fidl_fuchsia_io::{DirectoryMarker, MODE_TYPE_DIRECTORY},
+    vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope},
+};
 
 #[derive(Error, Debug)]
 pub enum DiskError {
@@ -454,6 +459,37 @@ impl Minfs for DevMinfs {
                 Ok(())
             }
         }
+    }
+}
+
+#[cfg(test)]
+#[derive(Debug, Clone)]
+pub struct MockMinfs(DirectoryProxy);
+
+#[cfg(test)]
+impl MockMinfs {
+    pub fn simple(scope: ExecutionScope) -> Self {
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        vfs::directory::mutable::simple().open(
+            scope,
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            MODE_TYPE_DIRECTORY,
+            vfs::path::Path::dot(),
+            ServerEnd::new(server_end.into_channel()),
+        );
+        MockMinfs(proxy)
+    }
+}
+
+#[cfg(test)]
+#[async_trait]
+impl Minfs for MockMinfs {
+    fn root_dir(&self) -> &DirectoryProxy {
+        &self.0
+    }
+
+    async fn shutdown(self) -> Result<(), DiskError> {
+        Ok(())
     }
 }
 

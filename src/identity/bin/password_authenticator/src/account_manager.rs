@@ -360,18 +360,17 @@ mod test {
     use {
         super::*,
         crate::{
-            disk_management::{DiskError, Minfs},
+            disk_management::{DiskError, MockMinfs},
             keys::Key,
             prototype::NullKeyDerivation,
         },
         async_trait::async_trait,
         fidl_fuchsia_io::{
-            DirectoryMarker, DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_FLAG_CREATE,
-            OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+            DirectoryMarker, OPEN_FLAG_CREATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
         },
         fs_management::ServeError,
         fuchsia_zircon::Status,
-        vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope},
+        vfs::execution_scope::ExecutionScope,
     };
 
     /// Mock implementation of [`DiskManager`].
@@ -542,34 +541,6 @@ mod test {
 
         async fn unseal(&self, _key: &Key) -> Result<MockBlockDevice, DiskError> {
             self.unseal.clone().map(|b| *b).map_err(|err_factory| err_factory())
-        }
-    }
-
-    #[derive(Debug, Clone)]
-    struct MockMinfs(DirectoryProxy);
-
-    impl MockMinfs {
-        fn simple(scope: ExecutionScope) -> Self {
-            let (proxy, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
-            vfs::directory::mutable::simple().open(
-                scope,
-                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-                MODE_TYPE_DIRECTORY,
-                vfs::path::Path::dot(),
-                ServerEnd::new(server_end.into_channel()),
-            );
-            MockMinfs(proxy)
-        }
-    }
-
-    #[async_trait]
-    impl Minfs for MockMinfs {
-        fn root_dir(&self) -> &DirectoryProxy {
-            &self.0
-        }
-
-        async fn shutdown(self) -> Result<(), DiskError> {
-            Ok(())
         }
     }
 
