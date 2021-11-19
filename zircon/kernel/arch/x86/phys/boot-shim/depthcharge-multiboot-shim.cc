@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <zircon/boot/driver-config.h>
 #include <zircon/boot/image.h>
+#include <zircon/pixelformat.h>
 
 #include <phys/main.h>
 #include <phys/page-table.h>
@@ -57,6 +58,28 @@ void FixRamdiskSize() {
   }
 }
 
+// Up until
+// https://chromium.googlesource.com/chromiumos/platform/depthcharge/+/b8719e3e8693edce7a91db4694c4e61b157427eb
+// on May 06 2021, depthcharge passed the legacy pixel format values. In case
+// an older version is encountered, we convert the older format to the newer
+// one, which the kernel expects.
+uint32_t FixPixelFormat(uint32_t format) {
+  switch (format) {
+    case 1:
+      return ZX_PIXEL_FORMAT_RGB_565;
+    case 2:
+      return ZX_PIXEL_FORMAT_RGB_332;
+    case 3:
+      return ZX_PIXEL_FORMAT_RGB_2220;
+    case 4:
+      return ZX_PIXEL_FORMAT_ARGB_8888;
+    case 5:
+      return ZX_PIXEL_FORMAT_RGB_x888;
+    default:
+      return format;
+  }
+}
+
 bool AppendDepthChargeItems(LegacyBootShim& shim, TrampolineBoot::Zbi& zbi,
                             LegacyBootShim::InputZbi::iterator kernel_item) {
   auto append = [&shim, &zbi](const zbi_header_t& header, auto payload) {
@@ -67,7 +90,7 @@ bool AppendDepthChargeItems(LegacyBootShim& shim, TrampolineBoot::Zbi& zbi,
   for (auto it = shim.input_zbi().begin(); it != kernel_item; ++it) {
     auto [header, payload] = *it;
     switch (header->type) {
-      case kLegacyBootdataDebugUart:
+      case kLegacyBootdataDebugUart: {
         if (payload.size() >= sizeof(LegacyBootdataUart)) {
           LegacyBootdataUart uart;
           memcpy(&uart, payload.data(), sizeof(uart));
@@ -99,14 +122,23 @@ bool AppendDepthChargeItems(LegacyBootShim& shim, TrampolineBoot::Zbi& zbi,
               break;
             }
           }
-          break;
-
-          default:
-            if (!append(*header, payload)) {
-              return false;
-            }
-            break;
         }
+        break;
+      }
+      case ZBI_TYPE_FRAMEBUFFER: {
+        ZX_ASSERT(payload.size() >= sizeof(zbi_swfb_t));
+        zbi_swfb_t framebuffer = *reinterpret_cast<const zbi_swfb_t*>(payload.data());
+        framebuffer.format = FixPixelFormat(framebuffer.format);
+        if (!append(*header, zbitl::AsBytes(framebuffer))) {
+          return false;
+        }
+        break;
+      }
+      default:
+        if (!append(*header, payload)) {
+          return false;
+        }
+        break;
     }
   }
   return true;

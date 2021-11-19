@@ -82,24 +82,6 @@ EfiCrashlog efi;
 }  // namespace crashlog_impls
 }  // namespace
 
-// convert from legacy format
-static unsigned pixel_format_fixup(unsigned pf) {
-  switch (pf) {
-    case 1:
-      return ZX_PIXEL_FORMAT_RGB_565;
-    case 2:
-      return ZX_PIXEL_FORMAT_RGB_332;
-    case 3:
-      return ZX_PIXEL_FORMAT_RGB_2220;
-    case 4:
-      return ZX_PIXEL_FORMAT_ARGB_8888;
-    case 5:
-      return ZX_PIXEL_FORMAT_RGB_x888;
-    default:
-      return pf;
-  }
-}
-
 static bool early_console_disabled;
 
 // Copy ranges in the given ZBI into a newly-allocated array of zbi_mem_range_t structs.
@@ -137,9 +119,6 @@ static void platform_save_bootloader_data(void) {
 
   if (gPhysHandoff->arch_handoff.framebuffer) {
     bootloader.fb = gPhysHandoff->arch_handoff.framebuffer.value();
-    // TODO(fxbug.dev/89029): This will go away, ensuring that gPhysHandoff's
-    // contents are indeed the source of truth.
-    bootloader.fb.format = pixel_format_fixup(bootloader.fb.format);
   }
 
   // If we have an NVRAM location and we have not already configured a platform
