@@ -3,9 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
+import("//build/components.gni")
 import("//build/drivers.gni")
 import("//build/test.gni")
-import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 driver_bind_rules("ddk-fidl-bind") {
   rules = "ddk-fidl.bind"

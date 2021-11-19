@@ -4,7 +4,6 @@
 
 import("//build/components.gni")
 import("//build/test.gni")
-import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 test("ftdi-i2c-test") {
   sources = [ "ftdi-i2c-test.cc" ]
