@@ -1,0 +1,50 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+
+# Install FIRE config into the "sampler" package
+
+config_data("fire_config_component_list") {
+  for_pkg = "sampler"
+  sources = [ "components.json5" ]
+  outputs = [ "fire/fuchsia/{{source_file_part}}" ]
+}
+
+group("fire_config_data") {
+  deps = [
+    ":fire_config_component_list",
+    "//src/diagnostics/config/fire/projects:fire_config_projects",
+  ]
+}
+
+# Validate FIRE config
+
+resource("config-validation-resources") {
+  sources = [ "components.json5" ]
+
+  # The component will see this as /pkg/config/fire/fuchsia/components.json5
+  outputs = [ "config/fire/fuchsia/{{source_file_part}}" ]
+}
+
+# Test component for config validation.
+fuchsia_unittest_component("config-validation-component") {
+  deps = [
+    ":config-validation-resources",
+    "//src/diagnostics/sampler/tests:config-validation",
+  ]
+}
+
+# This target name must be unique in the build tree
+fuchsia_test_package("fire-components-validation-package-src-diagnostics") {
+  test_components = [ ":config-validation-component" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":fire-components-validation-package-src-diagnostics",
+    "//src/diagnostics/config/fire/projects:tests",
+  ]
+}

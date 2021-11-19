@@ -48,7 +48,6 @@ rustc_test("integration-bin") {
     "//src/sys/lib/cm_rust",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:tracing",
   ]
 
   source_root = "lib.rs"
@@ -78,22 +77,52 @@ fuchsia_unittest_component("sampler-integration-test") {
 config_data("reboot-required-config") {
   for_pkg = "sampler-integration-tests"
   sources = [ "configs/reboot_required_config.json" ]
-  outputs = [ "metrics/reboot_required_config.json" ]
+  outputs = [ "metrics/any_name/reboot_required_config.json" ]
 }
 
-# Config-data for the integration test.
-config_data("test-config") {
+# Sampler config-data for the integration test.
+config_data("test-sampler-config") {
   for_pkg = "sampler-integration-tests"
   sources = [ "configs/test_config.json" ]
-  outputs = [ "metrics/test_config.json" ]
+  outputs = [ "metrics/any_name/test_config.json" ]
 }
 
-resource("validation-resources") {
+# FIRE component config-data for the integration test.
+config_data("test-fire-component-config") {
+  for_pkg = "sampler-integration-tests"
+  sources = [ "configs/components.json5" ]
+  outputs = [ "fire/any_name/components.json5" ]
+}
+
+# FIRE template config-data for the integration test.
+config_data("test-fire-project-config") {
+  for_pkg = "sampler-integration-tests"
+  sources = [
+    "configs/fire_1.json5",
+    "configs/fire_2.json5",
+  ]
+  outputs = [ "fire/any_name/projects/{{source_file_part}}" ]
+}
+
+resource("validation-sampler-resources") {
   sources = [
     "configs/reboot_required_config.json",
     "configs/test_config.json",
   ]
-  outputs = [ "config/metrics/{{source_file_part}}" ]
+  outputs = [ "config/metrics/any_name/{{source_file_part}}" ]
+}
+
+resource("validation-fire-components") {
+  sources = [ "configs/components.json5" ]
+  outputs = [ "config/fire/any_name/{{source_file_part}}" ]
+}
+
+resource("validation-fire-projects") {
+  sources = [
+    "configs/fire_1.json5",
+    "configs/fire_2.json5",
+  ]
+  outputs = [ "config/fire/any_name/projects/{{source_file_part}}" ]
 }
 
 fuchsia_test_package("sampler-integration-tests") {
@@ -104,8 +133,12 @@ fuchsia_test_package("sampler-integration-tests") {
   deps = [
     ":reboot-required-config",
     ":sampler-for-test",
-    ":test-config",
-    ":validation-resources",
+    ":test-fire-component-config",
+    ":test-fire-project-config",
+    ":test-sampler-config",
+    ":validation-fire-components",
+    ":validation-fire-projects",
+    ":validation-sampler-resources",
     "//src/cobalt/bin/testing/mock_cobalt:component_v2",
     "//src/diagnostics/archivist:archivist-for-embedding-v2",
     "//src/diagnostics/sampler/tests/test_component:single_counter_test_component",

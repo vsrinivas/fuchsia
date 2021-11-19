@@ -1,0 +1,13 @@
+[
+    {
+        id: 101,
+        moniker: "integer_1",
+    },
+    {
+        id: 102,
+        moniker: "integer_2",
+
+        // Make sure Sampler can ignore extra fields
+        additional_string: "Name of Component",
+    },
+]

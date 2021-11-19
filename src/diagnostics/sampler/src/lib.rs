@@ -41,8 +41,11 @@ pub async fn main(opt: Args) -> Result<(), Error> {
     // Starting service.
     inspect::component::health().set_starting_up();
 
-    match config::SamplerConfig::from_directory(opt.minimum_sample_rate_sec, "/config/data/metrics")
-    {
+    match config::SamplerConfig::from_directories(
+        opt.minimum_sample_rate_sec,
+        "/config/data/metrics", /* Sampler config */
+        "/config/data/fire",    /* FIRE config */
+    ) {
         Ok(sampler_config) => {
             // Create endpoint for the reboot watcher register.
             let (reboot_watcher_client, reboot_watcher_request_stream) =

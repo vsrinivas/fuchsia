@@ -53,7 +53,7 @@ use {
 // ProjectConfig - defined in src/diagnostics/lib/sampler-config/src/lib.rs
 // This encodes the contents of a single config file:
 //  - project_id
-//  - customer_id
+//  - customer_id (defaults to 1)
 //  - poll_rate_sec
 //  - metrics: Vec<MetricConfig>
 //
@@ -270,7 +270,6 @@ impl SamplerExecutor {
             .add(sampler_config.project_configs.len() as u64);
 
         let mut project_to_stats_map: HashMap<u32, Arc<ProjectSamplerStats>> = HashMap::new();
-
         // TODO(42067): Create only one ArchiveReader for each unique poll rate so we
         // can avoid redundant snapshots.
         let project_sampler_futures =
@@ -290,7 +289,6 @@ impl SamplerExecutor {
                                 ProjectSamplerStats::default()
                             }),
                     ));
-
                 ProjectSampler::new(
                     project_config,
                     logger_factory.clone(),
@@ -309,7 +307,6 @@ impl SamplerExecutor {
                 }
             }
         }
-
         Ok(SamplerExecutor { project_samplers, sampler_executor_stats })
     }
 
@@ -429,7 +426,7 @@ impl ProjectSampler {
         minimum_sample_rate_sec: i64,
         project_sampler_stats: Arc<ProjectSamplerStats>,
     ) -> Result<ProjectSampler, Error> {
-        let customer_id = config.customer_id;
+        let customer_id = config.customer_id();
         let project_id = config.project_id;
         let poll_rate_sec = config.poll_rate_sec;
         if poll_rate_sec < minimum_sample_rate_sec {
@@ -650,7 +647,7 @@ impl ProjectSampler {
             let SelectorIndexes { metric_index, selector_index } = index_info;
             let metric = &self.metrics[*metric_index];
             // It's fine if a selector has been removed and is None.
-            if let Some(ParsedSelector { selector, selector_string, .. }) =
+            if let Some(ParsedSelector { selector, selector_string, upload_count, .. }) =
                 &metric.selectors[*selector_index]
             {
                 let found_values = diagnostics_hierarchy::select_from_hierarchy(
@@ -662,6 +659,7 @@ impl ProjectSampler {
                     // metric is the correct one to find the data. Either way, not-found is fine.
                     0 => {}
                     1 => {
+                        upload_count.add(1);
                         // export_sample() needs mut self, so we can't pass in values directly from
                         // metric, since metric is a ref into data contained in self;
                         // we have to copy them out first.

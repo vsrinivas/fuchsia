@@ -1,0 +1,24 @@
+{
+    metrics: [
+        {
+            event_codes: [
+                0,
+                0,
+            ],
+            metric_id: 2,
+            metric_type: "Integer",
+            selector: "single_counter:root/samples:{MONIKER}",
+            use_legacy_cobalt: true,
+        },
+        {
+            // We don't need event_codes if the only code is the component ID
+            metric_id: 3,
+            metric_type: "Integer",
+            selector: "single_counter:root/samples:{MONIKER}",
+            upload_once: true,
+            use_legacy_cobalt: true,
+        },
+    ],
+    poll_rate_sec: 3,
+    project_id: 13,
+}

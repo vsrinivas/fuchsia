@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use {fuchsia_inspect as inspect, fuchsia_inspect_derive::Inspect};
 
-#[derive(Inspect, Default)]
+#[derive(Inspect, Default, Debug)]
 pub struct SamplerExecutorStats {
     pub total_project_samplers_configured: inspect::UintProperty,
     pub healthily_exited_samplers: inspect::UintProperty,
@@ -18,7 +18,7 @@ impl SamplerExecutorStats {
     }
 }
 
-#[derive(Inspect, Default)]
+#[derive(Inspect, Default, Debug)]
 pub struct ProjectSamplerStats {
     // Total number of unique project samplers for this project.
     pub project_sampler_count: inspect::UintProperty,

@@ -189,7 +189,6 @@ async fn sampler_inspect_test() {
         .expect("got inspect data");
 
     let hierarchy = data.pop().expect("one result").payload.expect("payload is not none");
-
     // TODO(42067): Introduce better fencing so we can
     // guarantee we fetch the hierarchy after the metrics were sampled
     // AND fully processed.
@@ -200,12 +199,72 @@ async fn sampler_inspect_test() {
                 healthily_exited_samplers: 0 as u64,
                 errorfully_exited_samplers: 0 as u64,
                 reboot_exited_samplers: 0 as u64,
-                total_project_samplers_configured: 2 as u64,
+                total_project_samplers_configured: 4 as u64,
                 project_5: {
                     project_sampler_count: 2 as u64,
                     metrics_configured: 5 as u64,
                     cobalt_logs_sent: AnyProperty,
-                }
+                },
+                project_13: {
+                    project_sampler_count: 2 as u64,
+                    metrics_configured: 6 as u64,
+                    cobalt_logs_sent: AnyProperty,
+                },
+            },
+            metrics_sent: {
+                "fire_1.json5":
+                {
+                    "0": {
+                        selector: "single_counter:root/samples:integer_1",
+                        upload_count: 0 as u64
+                    },
+                    "1": {
+                        selector: "single_counter:root/samples:integer_1",
+                        upload_count: 0 as u64
+                    },
+                    "2": {
+                        selector: "single_counter:root/samples:integer_2",
+                        upload_count: 0 as u64
+                    },
+                    "3": {
+                        selector: "single_counter:root/samples:integer_2",
+                        upload_count: 0 as u64
+                    }
+                },
+                "fire_2.json5": {
+                    "0": {
+                        selector: "single_counter:root/samples:integer_1",
+                        upload_count: 0 as u64
+                    },
+                    "1": {
+                        selector: "single_counter:root/samples:integer_2",
+                        upload_count: 0 as u64
+                    }
+                },
+                "reboot_required_config.json": {
+                    "0": {
+                        selector: "single_counter:root/samples:counter",
+                        upload_count: 0 as u64
+                    }
+                },
+                "test_config.json": {
+                    "0": {
+                        selector: "single_counter:root/samples:counter",
+                        upload_count: 0 as u64
+                        },
+                    "1": {
+                        selector: "single_counter:root/samples:integer_1",
+                        upload_count: 0 as u64
+                        },
+                    "2": {
+                        selector: "single_counter:root/samples:integer_2",
+                        upload_count: 0 as u64
+                    },
+                    "3": {
+                        selector: "single_counter:root/samples:integer_3",
+                        upload_count: 0 as u64
+                    }
+                },
             },
             "fuchsia.inspect.Health": {
                 start_timestamp_nanos: AnyProperty,

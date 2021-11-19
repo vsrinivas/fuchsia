@@ -8,12 +8,8 @@ use sampler_config::SamplerConfig;
 #[fuchsia::test]
 async fn validate_sampler_configs() {
     let config_directory = "/pkg/config/metrics";
-    match SamplerConfig::from_directory(60, &config_directory) {
-        Ok(config) => {
-            assert!(!config.project_configs.is_empty());
-        }
-        Err(e) => {
-            panic!("{:?}", e);
-        }
-    }
+    let fire_directory = "/pkg/config/fire";
+    // Since this program validates multiple config directories individually, failing on Err() will
+    // validate whatever config files are present without requiring projects to be generated.
+    SamplerConfig::from_directories(60, &config_directory, &fire_directory).unwrap();
 }
