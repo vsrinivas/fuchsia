@@ -9,15 +9,9 @@ constexpr char COMPONENT_URL[] = "fuchsia-pkg://fuchsia.com/echo_server_test#met
 class EchoServerTest: public ::gtest::RealLoopFixture {
 
  protected:
-  void SetUp() override {
-    context_ = sys::ComponentContext::Create();
-  }
-
-  sys::ComponentContext* context() { return context_.get(); }
-
   std::unique_ptr<sys::testing::Realm> CreateRealm() {
 
-    auto realm_builder = sys::testing::Realm::Builder::New(context());
+    auto realm_builder = sys::testing::Realm::Builder::Create();
     realm_builder
       .AddComponent(
         sys::testing::Moniker{"echo_server"},
@@ -33,9 +27,6 @@ class EchoServerTest: public ::gtest::RealLoopFixture {
 
     return std::make_unique<sys::testing::Realm>(realm_builder.Build(dispatcher()));
   }
-
- private:
-  std::unique_ptr<sys::ComponentContext> context_;
 };
 
 TEST_F(EchoServerTest, Echo) {

@@ -35,12 +35,6 @@ class {}Test: public ::gtest::RealLoopFixture {{
         test_fixture.push_str(
             "
  protected:
-  void SetUp() override {
-    context_ = sys::ComponentContext::Create();
-  }
-
-  sys::ComponentContext* context() { return context_.get(); }
-
   std::unique_ptr<sys::testing::Realm> CreateRealm() {
 ",
         );
@@ -57,7 +51,7 @@ class {}Test: public ::gtest::RealLoopFixture {{
         }
         test_fixture.push_str(
             r#"
-    auto realm_builder = sys::testing::Realm::Builder::New(context());
+    auto realm_builder = sys::testing::Realm::Builder::Create();
     realm_builder
 "#,
         );
@@ -67,9 +61,6 @@ class {}Test: public ::gtest::RealLoopFixture {{
         test_fixture.push_str(
             r#"    return std::make_unique<sys::testing::Realm>(realm_builder.Build(dispatcher()));
   }
-
- private:
-  std::unique_ptr<sys::ComponentContext> context_;
 };
 
 "#,
