@@ -10,25 +10,38 @@
             <td>Status</td>
             <td>Deprecated</td>
           </tr>
-          {%- if epitaph.deletion_reason != '' %}
+          {%- if epitaph.deletion_reason %}
           <tr>
             <td>Deletion reason</td>
             <td>{{ epitaph.deletion_reason }}</td>
           </tr>
           {%- endif %}
-          {%- if epitaph.gerrit_change_id != '' %}
+          {%- if epitaph.gerrit_change_id %}
           <tr>
             <td>Removed in CL</td>
             <td><a href="{{ gerrit_change_url }}{{ epitaph.gerrit_change_id }}">{{ epitaph.gerrit_change_id }}</a></td>
           </tr>
           {%- endif %}
-          {%- if epitaph.availabe_in_git != [''] %}
+          {%- if epitaph.availabe_in_git %}
           <tr>
             <td>Available in Fuchsia revision</td>
             <td><a href="{{ fuchsia_source_tree_change }}{{ epitaph.available_in_git }}">{{ epitaph.available_in_git }}</a></td>
           </tr>
           {%- endif %}
-          {%- if epitaph.path != '' %}
+          {%- if epitaph.areas %}
+          <tr>
+            <td>Areas</td>
+            <td>
+              <ul class="comma-list">
+                {%- for area in epitaph.areas %}
+                <!-- area-{{ area }} -->
+                <li>{{ area }}</li>
+                {%- endfor %}
+              </ul>
+            </td>
+          </tr>
+          {%- endif %}
+          {%- if epitaph.path %}
           <tr>
             <td>Path</td>
           {%- if epitaph.path|first in 's' %}

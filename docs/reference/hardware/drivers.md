@@ -11,6 +11,9 @@ Since this page is generated from on a template, the full page is best viewed at
 http://www.fuchsia.dev/fuchsia-src/reference/hardware/drivers
 {% endcomment %}
 
+This page lists drivers that are in the Fuchsia source tree. For deprecated
+drivers, see [Deprecated drivers](#deprecated-drivers).
+
 <a name="drivers"><h2>Drivers</h2></a>
 <div class="form-checkbox">
   <h4 class="showalways">Driver area</h4>
@@ -26,7 +29,8 @@ http://www.fuchsia.dev/fuchsia-src/reference/hardware/drivers
     {%- endfor %}
     {%- if found %}
       <div class="checkbox-div">
-        <input type="checkbox" id="checkbox-reset-{{ area|replace(" ", "-") }}">
+        <input type="checkbox" value="area-{{ area|replace(" ", "-") }}"
+        id="checkbox-reset-{{ area|replace(" ", "-") }}">
         <label for="checkbox-reset-{{ area|replace(" ", "-") }}">{{ area }}</label>
       </div>
     {%- endif %}
@@ -61,7 +65,8 @@ http://www.fuchsia.dev/fuchsia-src/reference/hardware/drivers
     {%- endfor %}
     {%- if found %}
       <div class="checkbox-div">
-        <input type="checkbox" id="checkbox-reset-deprecated-{{ area|replace(" ", "-") }}">
+        <input type="checkbox" value="area-{{ area|replace(" ", "-") }}"
+        id="checkbox-reset-deprecated-{{ area|replace(" ", "-") }}">
         <label for="checkbox-reset-deprecated-{{ area|replace(" ", "-") }}">{{ area }}</label>
       </div>
     {%- endif %}

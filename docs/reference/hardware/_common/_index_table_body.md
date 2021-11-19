@@ -10,23 +10,28 @@
         <tbody class="list">
           {%- if driver.short_description %}
           <tr>
-            <td>Description</td>
+            <td title="A short description, no more than 80 characters.">
+            Description {{info_icon}}</td>
             <td>{{ driver.short_description }}</td>
           </tr>
           {%- endif %}
           {%- if driver.manufacturer %}
           <tr>
-            <td>Manufacturer</td>
+            <td title="Manufacturer of the hardware the driver applies to.">
+            Manufacturer {{info_icon}}</td>
             <td>{{ driver.manufacturer |capitalize() }}</td>
           </tr>
           {%- endif %}
           {%- if driver.families %}
           <tr>
-            <td>Families</td>
+            <td title="Families of hardware the driver applies to. It could be
+              &quot;generic&quot; if the driver applies to wide variety of
+              hardware, for instance implemented based on a standard
+              specification or API.">Families {{info_icon}}</td>
             <td>
               <ul class="comma-list">
                 {%- for fam in driver.families %}
-                <li>{{ fam|capitalize() }}</li>
+                <li>{{ fam }}</li>
                 {%- endfor %}
               </ul>
             </td>
@@ -34,10 +39,12 @@
           {%- endif %}
           {%- if driver.areas %}
           <tr>
-            <td>Areas</td>
+            <td title="The general Fuchsia system areas this driver applies to.">
+            Areas {{info_icon}}</td>
             <td>
               <ul class="comma-list">
                 {%- for area in driver.areas %}
+                <!-- area-{{ area }} -->
                 <li>{{ area }}</li>
                 {%- endfor %}
               </ul>
@@ -46,11 +53,14 @@
           {%- endif %}
           {%- if driver.models %}
           <tr>
-            <td>Models</td>
+            <td title="Models the driver applies to. It could be
+             &quot;generic&quot; if the driver applies to wide variety of
+             hardware, for instance implemented based on a standard
+            specification or API">Models {{info_icon}}</td>
             <td>
               <ul class="comma-list">
                 {%- for mod in driver.models %}
-                <li>{{ mod|capitalize() }}</li>
+                <li>{{ mod }}</li>
                 {%- endfor %}
               </ul>
             </td>
@@ -58,7 +68,8 @@
           {%- endif %}
           {%- if driver.path %}
           <tr>
-            <td>Path</td>
+            <td title="The path in the Fuchsia source tree where the driver
+            source code is currently located.">Path {{info_icon}}</td>
           {%- if driver.path|first in 's' %}
             <td><a href="{{ cs_url }}{{ driver.path }}"><code>//{{ driver.path }}</code></a></td>
           {%- elif driver.path[0] == '/' and driver.path[1] != '/' %}
