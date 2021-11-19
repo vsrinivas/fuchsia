@@ -1,0 +1,56 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library conformance;
+
+type UnboundedNonnullableVectorOfHandles = resource struct {
+    vh0 vector<handle>;
+};
+
+type UnboundedNullableVectorOfHandles = resource struct {
+    vh0 vector<handle>:optional;
+};
+
+type Bounded32NonnullableVectorOfHandles = resource struct {
+    vh0 vector<handle>:32;
+};
+
+type Bounded32NullableVectorOfHandles = resource struct {
+    vh0 vector<handle>:<32, optional>;
+};
+
+type MultipleBoundedNonnullableVectorsOfHandles = resource struct {
+    vh0 vector<handle>:2;
+    vh1 vector<handle>:32;
+};
+
+type MultipleBoundedNullableVectorsOfHandles = resource struct {
+    vh0 vector<handle>:<2, optional>;
+    vh1 vector<handle>:<32, optional>;
+};
+
+type UnboundedNonnullableVectorOfUint32s = struct {
+    vu0 vector<uint32>;
+};
+
+type UnboundedNullableVectorOfUint32s = struct {
+    vu0 vector<uint32>:optional;
+};
+
+type Bounded32NonnullableVectorOfUint32s = struct {
+    vu0 vector<uint32>:32;
+};
+
+type Bounded32NullableVectorOfUint32s = struct {
+    vu0 vector<uint32>:<32, optional>;
+};
+
+type MultipleNonnullableVectorsOfUint32s = struct {
+    vu0 vector<uint32>;
+    vu1 vector<uint32>;
+};
+
+type MultipleNullableVectorsOfUint32s = struct {
+    vu0 vector<uint32>:optional;
+    vu1 vector<uint32>:optional;
+};

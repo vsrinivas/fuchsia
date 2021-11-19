@@ -1,0 +1,344 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// TODO(fxbug.dev/88460): Audit each test and merge into the regular `strings.gidl`.
+// These were ported from a legacy set of manual C/C++ tests termed `walker_tests`.
+
+decode_failure("VectorWithHugeCount") {
+    type = UnboundedNonnullableVectorOfUint32s,
+
+    // (2^30 + 4) * 4 (4 == sizeof(uint32_t)) overflows to 16 when stored as uint32_t.
+    // If a binding is written to use uint32 sizes AND also forget to check for
+    // overflows, it would incorrectly finish decoding the 16 byte vector payload.
+    bytes = {
+        v1, v2 = [
+            num(1073741828):8, // count
+            repeat(0xff):8, // presence
+            repeat(0):16, // payload of 16 bytes
+        ],
+    },
+    err = TOO_FEW_BYTES,
+}
+
+success("PresentNonnullableVectorOfHandles") {
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+        #2 = event(),
+        #3 = event(),
+    },
+    value = UnboundedNonnullableVectorOfHandles{
+        vh0: [#0, #1, #2, #3],
+    },
+    bytes = {
+        v1, v2 = [
+            // Count and presence
+            num(4):8, repeat(0xff):8,
+            // Four handles
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0, #1, #2, #3,
+        ],
+    },
+}
+
+success("PresentNullableVectorOfHandles") {
+    // TODO(fxbug.dev/88979): generated Rust test does not compile.
+    bindings_denylist = [rust],
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+        #2 = event(),
+        #3 = event(),
+    },
+    value = UnboundedNullableVectorOfHandles{
+        vh0: [#0, #1, #2, #3],
+    },
+    bytes = {
+        v1, v2 = [
+            // Count and presence
+            num(4):8, repeat(0xff):8,
+            // Four handles
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0, #1, #2, #3,
+        ],
+    },
+}
+
+decode_failure("AbsentNonnullableVectorOfHandlesError") {
+    // TODO(fxbug.dev/58385): Close handles on encode/decode failure.
+    bindings_denylist = [rust, dart],
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+        #2 = event(),
+        #3 = event(),
+    },
+    type = UnboundedNonnullableVectorOfHandles,
+    bytes = {
+        v1, v2 = [
+            // Count of zero, absent marker.
+            num(0):8, repeat(0):8,
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0, #1, #2, #3,
+        ],
+    },
+    err = NON_NULLABLE_TYPE_WITH_NULL_VALUE,
+}
+
+decode_failure("InvalidAbsentNonnullableVectorOfHandlesError") {
+    // TODO(fxbug.dev/58385): Close handles on encode/decode failure.
+    bindings_denylist = [rust, dart],
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+        #2 = event(),
+        #3 = event(),
+    },
+    type = UnboundedNonnullableVectorOfHandles,
+    bytes = {
+        v1, v2 = [
+            // Count of four, absent marker.
+            num(4):8, repeat(0):8,
+            // Four absent handles.
+            repeat(0):4,
+            repeat(0):4,
+            repeat(0):4,
+            repeat(0):4,
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0, #1, #2, #3,
+        ],
+    },
+    err = NON_EMPTY_VECTOR_WITH_NULL_BODY,
+}
+
+success("AbsentNullableVectorOfHandles") {
+    value = UnboundedNullableVectorOfHandles{},
+    bytes = {
+        v1, v2 = [
+            // Count of zero, absent marker.
+            num(0):8, repeat(0):8,
+        ],
+    },
+}
+
+success("PresentNonnullableBoundedVectorOfHandles") {
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+        #2 = event(),
+        #3 = event(),
+    },
+    value = Bounded32NonnullableVectorOfHandles{
+        vh0: [#0, #1, #2, #3],
+    },
+    bytes = {
+        v1, v2 = [
+            // Count of four, present marker.
+            num(4):8, repeat(0xff):8,
+            // Four present handles.
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0, #1, #2, #3,
+        ],
+    },
+}
+
+success("PresentNullableBoundedVectorOfHandles") {
+    // TODO(fxbug.dev/88979): generated Rust test does not compile.
+    bindings_denylist = [rust],
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+        #2 = event(),
+        #3 = event(),
+    },
+    value = Bounded32NullableVectorOfHandles{
+        vh0: [#0, #1, #2, #3],
+    },
+    bytes = {
+        v1, v2 = [
+            // Count of four, present marker.
+            num(4):8, repeat(0xff):8,
+            // Four present handles.
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0, #1, #2, #3,
+        ],
+    },
+}
+
+decode_failure("AbsentNonnullableBoundedVectorOfHandlesError") {
+    // TODO(fxbug.dev/58385): Close handles on encode/decode failure.
+    bindings_denylist = [rust, dart],
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+        #2 = event(),
+        #3 = event(),
+    },
+    type = Bounded32NonnullableVectorOfHandles,
+    bytes = {
+        v1, v2 = [
+            // Count of zero, absent marker.
+            num(0):8, repeat(0):8,
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0, #1, #2, #3,
+        ],
+    },
+    err = NON_NULLABLE_TYPE_WITH_NULL_VALUE,
+}
+
+decode_failure("InvalidAbsentNonnullableBoundedVectorOfHandlesError") {
+    // TODO(fxbug.dev/58385): Close handles on encode/decode failure.
+    bindings_denylist = [rust, dart],
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+        #2 = event(),
+        #3 = event(),
+    },
+    type = Bounded32NonnullableVectorOfHandles,
+    bytes = {
+        v1, v2 = [
+            // Count of four, absent marker.
+            num(4):8, repeat(0):8,
+            // Four absent handles.
+            repeat(0):4,
+            repeat(0):4,
+            repeat(0):4,
+            repeat(0):4,
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0, #1, #2, #3,
+        ],
+    },
+    err = NON_EMPTY_VECTOR_WITH_NULL_BODY,
+}
+
+success("AbsentNullableBoundedVectorOfHandles") {
+    value = Bounded32NullableVectorOfHandles{},
+    bytes = {
+        v1, v2 = [
+            // Count of zero, absent marker.
+            num(0):8, repeat(0):8,
+        ],
+    },
+}
+
+decode_failure("PresentNonnullableBoundedVectorOfHandlesShortError") {
+    // TODO(fxbug.dev/58385): Close handles on encode/decode failure.
+    bindings_denylist = [rust, dart],
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+        #2 = event(),
+        #3 = event(),
+        #4 = event(),
+        #5 = event(),
+        #6 = event(),
+        #7 = event(),
+    },
+    type = MultipleBoundedNonnullableVectorsOfHandles,
+    bytes = {
+        v1, v2 = [
+            // vh0 count, presence
+            num(4):8, repeat(0xff):8,
+            // vh1 count, presence
+            num(4):8, repeat(0xff):8,
+            // 4 handles from vh0
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+            // 4 handles from vh1
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0, #1, #2, #3, #4, #5, #6, #7,
+        ],
+    },
+    err = COUNT_EXCEEDS_LIMIT,
+}
+
+decode_failure("PresentNullableBoundedVectorOfHandlesShortError") {
+    // TODO(fxbug.dev/58385): Close handles on encode/decode failure.
+    bindings_denylist = [rust, dart],
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+        #2 = event(),
+        #3 = event(),
+        #4 = event(),
+        #5 = event(),
+        #6 = event(),
+        #7 = event(),
+    },
+    type = MultipleBoundedNullableVectorsOfHandles,
+    bytes = {
+        v1, v2 = [
+            // vh0 count, presence
+            num(4):8, repeat(0xff):8,
+            // vh1 count, presence
+            num(4):8, repeat(0xff):8,
+            // 4 handles from vh0
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+            // 4 handles from vh1
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0, #1, #2, #3, #4, #5, #6, #7,
+        ],
+    },
+    err = COUNT_EXCEEDS_LIMIT,
+}

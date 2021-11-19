@@ -37,6 +37,7 @@ fidl("conformance_fidl") {
   sources += [
     "ported_from_walker_handles.test.fidl",
     "ported_from_walker_strings.test.fidl",
+    "ported_from_walker_vectors.test.fidl",
   ]
 
   public_deps = [ "//zircon/vdso/zx" ]

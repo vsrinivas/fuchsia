@@ -1613,6 +1613,10 @@ I? _decodeVector<T, I extends Iterable<T>>(Decoder decoder,
   final int data = decoder.decodeUint64(offset + 8);
   _throwIfExceedsLimit(count, maybeElementCount);
   if (data == kAllocAbsent) {
+    if (count != 0) {
+      throw FidlError('Expected vector, received null',
+          FidlErrorCode.fidlNonEmptyVectorWithNullBody);
+    }
     return null;
   }
   if (count < 0 || count > kMaxCount) {

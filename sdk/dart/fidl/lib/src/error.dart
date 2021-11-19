@@ -25,6 +25,7 @@ enum FidlErrorCode {
   fidlInvalidEnumValue,
   fidlIntOutOfRange,
   fidlNonEmptyStringWithNullBody,
+  fidlNonEmptyVectorWithNullBody,
   fidlNonResourceHandle,
   fidlMissingRequiredHandleRights,
   fidlIncorrectHandleType,

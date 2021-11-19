@@ -28,6 +28,7 @@ conformance_suite_gidl_files = [
 conformance_suite_gidl_files += [
   "//src/tests/fidl/conformance_suite/ported_from_walker_handles.gidl",
   "//src/tests/fidl/conformance_suite/ported_from_walker_strings.gidl",
+  "//src/tests/fidl/conformance_suite/ported_from_walker_vectors.gidl",
 ]
 
 conformance_suite_fidl_target =
