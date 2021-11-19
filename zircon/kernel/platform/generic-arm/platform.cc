@@ -374,6 +374,17 @@ static void allocate_persistent_ram(paddr_t pa, size_t length) {
   }
 }
 
+// Called during platform_init_early.
+void ProcessPhysHandoff() {
+  if (gPhysHandoff->nvram) {
+    const zbi_nvram_t& nvram = gPhysHandoff->nvram.value();
+    dprintf(INFO, "boot reserve NVRAM range: phys base %#" PRIx64 " length %#" PRIx64 "\n",
+            nvram.base, nvram.length);
+    allocate_persistent_ram(nvram.base, nvram.length);
+    boot_reserve_add_range(nvram.base, nvram.length);
+  }
+}
+
 // Called during platform_init_early, the heap is not yet present.
 void ProcessZbiEarly() {
   auto mexec_data_image = GetMexecDataImage();
@@ -413,18 +424,6 @@ void ProcessZbiEarly() {
         for (size_t i = 0; i < count; i++) {
           process_mem_range(mem_range++);
         }
-        is_mexec_data = true;
-        break;
-      }
-      case ZBI_TYPE_NVRAM: {
-        zbi_nvram_t info;
-        memcpy(&info, payload.data(), sizeof(info));
-
-        dprintf(INFO, "boot reserve NVRAM range: phys base %#" PRIx64 " length %#" PRIx64 "\n",
-                info.base, info.length);
-
-        allocate_persistent_ram(info.base, info.length);
-        boot_reserve_add_range(info.base, info.length);
         is_mexec_data = true;
         break;
       }
@@ -539,6 +538,8 @@ void ProcessZbiLate() {
 void platform_early_init(void) {
   // initialize the boot memory reservation system
   boot_reserve_init();
+
+  ProcessPhysHandoff();
 
   // Create an empty ZBI container now, into which ProcessZbi(Early|Late) will
   // append the items for the mexec data ZBI.

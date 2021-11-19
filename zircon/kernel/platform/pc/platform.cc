@@ -142,6 +142,16 @@ static void platform_save_bootloader_data(void) {
     bootloader.fb.format = pixel_format_fixup(bootloader.fb.format);
   }
 
+  // If we have an NVRAM location and we have not already configured a platform
+  // crashlog implementation, use the NVRAM location to back a
+  // RamMappableCrashlog implementation and configure the generic platform
+  // layer to use it.
+  if (gPhysHandoff->nvram && !PlatformCrashlog::HasNonTrivialImpl()) {
+    const zbi_nvram_t& nvram = gPhysHandoff->nvram.value();
+    crashlog_impls::ram_mappable.Initialize(nvram.base, nvram.length);
+    PlatformCrashlog::Bind(crashlog_impls::ram_mappable.Get());
+  }
+
   // Handle individual ZBI items.
   ktl::span<ktl::byte> zbi = ZbiInPhysmap();
   zbitl::View view(zbi);
@@ -162,19 +172,6 @@ static void platform_save_bootloader_data(void) {
         // Editing the header of a ktl::span will not result in an error.
         static_cast<void>(view.EditHeader(it, zbi_header_t{.type = ZBI_TYPE_DISCARD}));
         mandatory_memset(payload.data(), 0, payload.size());
-        break;
-      }
-      case ZBI_TYPE_NVRAM: {
-        // If we have a valid NVRAM location passed to us by ZBI, and we have
-        // not already configured a platform crashlog implementation, use the
-        // NVRAM location to back a RamMappableCrashlog implementation and
-        // configure the generic platform layer to use it.
-        if ((payload.size() >= sizeof(zbi_nvram_t)) && !PlatformCrashlog::HasNonTrivialImpl()) {
-          zbi_nvram_t info;
-          memcpy(&info, payload.data(), sizeof(info));
-          crashlog_impls::ram_mappable.Initialize(info.base, info.length);
-          PlatformCrashlog::Bind(crashlog_impls::ram_mappable.Get());
-        }
         break;
       }
       case ZBI_TYPE_KERNEL_DRIVER: {

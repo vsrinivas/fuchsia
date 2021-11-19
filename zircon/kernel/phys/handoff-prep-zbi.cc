@@ -29,6 +29,10 @@ void HandoffPrep::SummarizeMiscZbiItems(ktl::span<const ktl::byte> zbi) {
         ZX_ASSERT(payload.size() >= sizeof(zbi_hw_reboot_reason_t));
         handoff_->reboot_reason = *reinterpret_cast<const zbi_hw_reboot_reason_t*>(payload.data());
         break;
+      case ZBI_TYPE_NVRAM:
+        ZX_ASSERT(payload.size() >= sizeof(zbi_nvram_t));
+        handoff_->nvram = *reinterpret_cast<const zbi_nvram_t*>(payload.data());
+        break;
       case ZBI_TYPE_PLATFORM_ID:
         ZX_ASSERT(payload.size() >= sizeof(zbi_platform_id_t));
         handoff_->platform_id = *reinterpret_cast<const zbi_platform_id_t*>(payload.data());

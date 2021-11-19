@@ -54,6 +54,16 @@ void ConstructMexecDataZbi(uint level) {
     abort();
   }
 
+  if (gPhysHandoff->nvram) {
+    auto result = gImageAtHandoff.Append(zbi_header_t{.type = ZBI_TYPE_NVRAM},
+                                         zbitl::AsBytes(gPhysHandoff->nvram.value()));
+    if (result.is_error()) {
+      printf("mexec: could not append NVRAM region: ");
+      zbitl::PrintViewError(result.error_value());
+      abort();
+    }
+  }
+
   if (gPhysHandoff->platform_id) {
     auto result = gImageAtHandoff.Append(zbi_header_t{.type = ZBI_TYPE_PLATFORM_ID},
                                          zbitl::AsBytes(gPhysHandoff->platform_id.value()));
