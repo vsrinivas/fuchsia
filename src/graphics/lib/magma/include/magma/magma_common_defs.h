@@ -63,13 +63,6 @@ extern "C" {
 
 #define MAGMA_DUMP_TYPE_NORMAL (1 << 0)
 
-// Deprecated perf counter dumps.
-// TODO(fxbug.dev/57888): Remove.
-// Dump current perf counters and disable them
-#define MAGMA_DUMP_TYPE_PERF_COUNTERS (1 << 1)
-// Start perf counter recording
-#define MAGMA_DUMP_TYPE_PERF_COUNTER_ENABLE (1 << 2)
-
 #define MAGMA_PERF_COUNTER_RESULT_DISCONTINUITY (1 << 0)
 
 enum {

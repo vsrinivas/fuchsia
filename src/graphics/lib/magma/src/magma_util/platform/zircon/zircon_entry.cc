@@ -169,8 +169,7 @@ class GpuDevice : public fidl::WireServer<fuchsia_gpu_magma::Device>,
     std::lock_guard<std::mutex> lock(magma_mutex_);
     if (!CheckSystemDevice(_completer))
       return;
-    if (request->dump_type & ~(MAGMA_DUMP_TYPE_NORMAL | MAGMA_DUMP_TYPE_PERF_COUNTERS |
-                               MAGMA_DUMP_TYPE_PERF_COUNTER_ENABLE)) {
+    if (request->dump_type & ~MAGMA_DUMP_TYPE_NORMAL) {
       DLOG("Invalid dump type %d", request->dump_type);
       return;
     }
