@@ -180,6 +180,7 @@ pub async fn trace(
             let trace_config = TraceConfig {
                 buffer_size_megabytes_hint: Some(opts.buffer_size),
                 categories: Some(opts.categories),
+                buffering_mode: Some(opts.buffering_mode),
                 ..TraceConfig::EMPTY
             };
             let output = canonical_path(opts.output)?;
@@ -385,7 +386,8 @@ mod tests {
         ffx_trace_args::{ListCategories, ListProviders, Start, Status, Stop},
         ffx_writer::Format,
         fidl::endpoints::{ControlHandle, Responder},
-        fidl_fuchsia_developer_bridge as bridge, fidl_fuchsia_tracing_controller as trace,
+        fidl_fuchsia_developer_bridge as bridge,
+        fidl_fuchsia_tracing_controller::{self as trace, BufferingMode},
         futures::TryStreamExt,
         regex::Regex,
         std::matches,
@@ -671,6 +673,7 @@ mod tests {
                     buffer_size: 2,
                     categories: vec![],
                     duration: None,
+                    buffering_mode: BufferingMode::Oneshot,
                     output: "foo.txt".to_string(),
                     background: true,
                 }),
@@ -740,6 +743,7 @@ Current tracing status:
                     buffer_size: 2,
                     categories: vec![],
                     duration: Some(5.2),
+                    buffering_mode: BufferingMode::Oneshot,
                     output: "foober.fxt".to_owned(),
                     background: true,
                 }),
@@ -763,6 +767,7 @@ Current tracing status:
                     buffer_size: 2,
                     categories: vec![],
                     duration: Some(0.8),
+                    buffering_mode: BufferingMode::Oneshot,
                     output: "foober.fxt".to_owned(),
                     background: false,
                 }),
@@ -788,6 +793,7 @@ Current tracing status:
                 sub_cmd: TraceSubCommand::Start(Start {
                     buffer_size: 2,
                     categories: vec![],
+                    buffering_mode: BufferingMode::Oneshot,
                     duration: None,
                     output: "foober.fxt".to_owned(),
                     background: false,
