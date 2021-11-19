@@ -232,23 +232,27 @@ fn glob(path: String) -> Vec<String> {
 mod tests {
     use super::*;
 
+    const TEST_DATA_DIR: &str = "../../src/developer/ffx/lib/symbol-index/test_data";
+
     #[test]
     fn test_load() {
-        let index = SymbolIndex::load("test_data/ffx_debug_symbol_index/main.json").unwrap();
+        let index = SymbolIndex::load(&format!("{}/main.json", TEST_DATA_DIR)).unwrap();
         assert_eq!(index.includes.len(), 2);
         assert_eq!(index.build_id_dirs.len(), 1);
         assert_eq!(index.build_id_dirs[0].path, "/home/someone/.fuchsia/debug/symbol-cache");
         assert_eq!(index.ids_txts.len(), 1);
-        assert_eq!(index.ids_txts[0].path, "test_data/ffx_debug_symbol_index/ids.txt");
-        assert_eq!(index.ids_txts[0].build_dir, Some("test_data/build_dir".to_owned()));
+        assert_eq!(index.ids_txts[0].path, format!("{}/ids.txt", TEST_DATA_DIR));
+        assert_eq!(
+            index.ids_txts[0].build_dir,
+            Some(str::replace(TEST_DATA_DIR, "test_data", "build_dir"))
+        );
         assert_eq!(index.gcs_flat.len(), 1);
         assert_eq!(index.gcs_flat[0].require_authentication, false);
     }
 
     #[test]
     fn test_aggregate() {
-        let index =
-            SymbolIndex::load_aggregate("test_data/ffx_debug_symbol_index/main.json").unwrap();
+        let index = SymbolIndex::load_aggregate(&format!("{}/main.json", TEST_DATA_DIR)).unwrap();
         assert_eq!(index.includes.len(), 0);
         assert_eq!(index.gcs_flat.len(), 2);
         assert_eq!(index.gcs_flat[1].require_authentication, true);

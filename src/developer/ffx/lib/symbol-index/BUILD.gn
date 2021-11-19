@@ -22,7 +22,7 @@ if (is_host) {
     ]
 
     test_deps = [
-      ":test_data($default_toolchain)",
+      ":test_data($host_toolchain)",
       "//third_party/rust_crates:tempfile",
     ]
   }
@@ -37,20 +37,16 @@ if (is_host) {
   }
 }
 
-# Use $root_build_dir instead of $root_out_dir because
-# 1. It eliminates multiple copies of the data for different host toolchains.
-# 2. Tests are launched with $root_build_dir as cwd, test data are relatively fixed.
-if (current_toolchain == default_toolchain) {
+if (is_host) {
   host_test_data("test_data") {
     sources = [
       "test_data/another.json",
       "test_data/main.json",
     ]
-    outputs = [
-      "$root_build_dir/test_data/ffx_debug_symbol_index/{{source_file_part}}",
-    ]
   }
+}
 
+if (current_toolchain == default_toolchain) {
   # Generate .symbol-index.json in the build directory.
   generated_file("symbol_index_json") {
     _symbol_index_path = "$root_build_dir/.symbol-index.json"

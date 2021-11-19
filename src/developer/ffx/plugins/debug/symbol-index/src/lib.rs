@@ -89,10 +89,16 @@ mod tests {
 
     #[test]
     fn test_list() {
-        list(ListCommand { aggregated: false }, "test_data/ffx_debug_symbol_index/main.json")
-            .unwrap();
-        list(ListCommand { aggregated: true }, "test_data/ffx_debug_symbol_index/main.json")
-            .unwrap();
+        list(
+            ListCommand { aggregated: false },
+            "../../src/developer/ffx/lib/symbol-index/test_data/main.json",
+        )
+        .unwrap();
+        list(
+            ListCommand { aggregated: true },
+            "../../src/developer/ffx/lib/symbol-index/test_data/main.json",
+        )
+        .unwrap();
     }
 
     #[test]
