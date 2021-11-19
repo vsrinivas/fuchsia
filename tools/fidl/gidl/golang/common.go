@@ -349,6 +349,7 @@ var goErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.TooManyHandlesInMessage:            "ErrTooManyHandlesInMessage",
 	gidlir.UnionFieldNotSet:                   "ErrInvalidXUnionTag",
 	gidlir.CountExceedsLimit:                  "ErrVectorTooLong",
+	gidlir.UnexpectedOrdinal:                  "ErrUnexpectedOrdinal",
 }
 
 func goErrorCode(code gidlir.ErrorCode) (string, error) {

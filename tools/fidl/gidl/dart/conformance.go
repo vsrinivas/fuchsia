@@ -387,6 +387,7 @@ var dartErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.TooManyBytesInMessage:              "fidlTooManyBytes",
 	gidlir.TooManyHandlesInMessage:            "fidlTooManyHandles",
 	gidlir.UnionFieldNotSet:                   "unknown",
+	gidlir.UnexpectedOrdinal:                  "fidlCountExceedsLimit",
 }
 
 func dartErrorCode(code gidlir.ErrorCode) (string, error) {

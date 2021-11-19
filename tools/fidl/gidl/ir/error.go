@@ -33,6 +33,7 @@ const (
 	TooFewHandles                      ErrorCode = "TOO_FEW_HANDLES"
 	TooManyBytesInMessage              ErrorCode = "TOO_MANY_BYTES_IN_MESSAGE"
 	TooManyHandlesInMessage            ErrorCode = "TOO_MANY_HANDLES_IN_MESSAGE"
+	UnexpectedOrdinal                  ErrorCode = "UNEXPECTED_ORDINAL"
 	UnionFieldNotSet                   ErrorCode = "UNION_FIELD_NOT_SET"
 )
 
@@ -63,5 +64,6 @@ var AllErrorCodes = map[ErrorCode]struct{}{
 	TooFewHandles:                      {},
 	TooManyBytesInMessage:              {},
 	TooManyHandlesInMessage:            {},
+	UnexpectedOrdinal:                  {},
 	UnionFieldNotSet:                   {},
 }

@@ -5,7 +5,7 @@
 encode_failure("StringExceedsLimit") {
     // TODO(fxbug.dev/37304) Enforce size bounds in rust
     bindings_denylist = [rust],
-    value = Length2StringWrapper {
+    value = Length2StringWrapper{
         length_2_string: "abc", // exceeds the string length
     },
     err = STRING_TOO_LONG,
@@ -86,30 +86,26 @@ decode_failure("OptionalStringWrongPointerValue") {
 
 // Test string with a 2^64-1 count, exceeding the 32-bit limit from RFC-0059.
 decode_failure("StringCountExceedsLimitByALot") {
-    // TODO(fxbug.dev/82167): Go panics and doesn't return proper errors.
-    bindings_denylist = [go],
     type = StringWrapper,
     bytes = {
         v1, v2 = [
             num(0xffffffffffffffff):8, // length of string data
             repeat(0xff):8, // presence marker
-        ]
+        ],
     },
-    err = COUNT_EXCEEDS_LIMIT,
+    err = STRING_TOO_LONG,
 }
 
 // Test string with a 2^32 count, exceeding the 32-bit limit from RFC-0059.
 decode_failure("StringCountExceedsLimitByOne") {
-    // TODO(fxbug.dev/82167): Go panics and doesn't return proper errors.
-    bindings_denylist = [go],
     type = StringWrapper,
     bytes = {
         v1, v2 = [
             num(0x100000000):8, // length of string data
             repeat(0xff):8, // presence marker
-        ]
+        ],
     },
-    err = COUNT_EXCEEDS_LIMIT,
+    err = STRING_TOO_LONG,
 }
 
 // Test string with count that exceeds the total message size. Bindings should
@@ -121,7 +117,7 @@ decode_failure("StringCountExceedsTotalMessageSize") {
             num(25):8, // length of string data (invalid, should be 8)
             repeat(0xff):8, // presence marker
             repeat(0xab):8, // string data
-        ]
+        ],
     },
     err = TOO_FEW_BYTES,
 }
@@ -135,7 +131,7 @@ decode_failure("StringCountExceedsRemainingMessageSize") {
             num(9):8, // length of string data (invalid, should be 8)
             repeat(0xff):8, // presence marker
             repeat(0xab):8, // string data
-        ]
+        ],
     },
     err = TOO_FEW_BYTES,
 }

@@ -809,8 +809,8 @@ String? _decodeString(Decoder decoder, int offset, int depth) {
     return null;
   }
   if (size < 0 || size > kMaxCount) {
-    throw FidlError('Size of string exceeds limit: $size',
-        FidlErrorCode.fidlCountExceedsLimit);
+    throw FidlError(
+        'Size of string exceeds limit: $size', FidlErrorCode.fidlStringTooLong);
   }
   final Uint8List bytes =
       decoder.data.buffer.asUint8List(decoder.claimBytes(size, depth), size);

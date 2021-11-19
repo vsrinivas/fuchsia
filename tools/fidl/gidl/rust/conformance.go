@@ -389,6 +389,7 @@ var rustErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.TooManyBytesInMessage:              "ExtraBytes",
 	gidlir.TooManyHandlesInMessage:            "ExtraHandles",
 	gidlir.UnionFieldNotSet:                   "UnknownUnionTag",
+	gidlir.UnexpectedOrdinal:                  "OutOfRange",
 }
 
 func rustErrorCode(code gidlir.ErrorCode) (string, error) {

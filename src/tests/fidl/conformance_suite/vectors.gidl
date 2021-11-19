@@ -6,7 +6,7 @@ encode_failure("VectorExceedsLimit") {
     // TODO(fxbug.dev/37304) Enforce size bounds in rust
     // TODO(fxbug.dev/88730) Enforce size bounds in dart
     bindings_denylist = [rust, dart],
-    value = VectorWithLimit {
+    value = VectorWithLimit{
         v: [1, 2, 3], // exceeds the string length
     },
     err = COUNT_EXCEEDS_LIMIT,
@@ -91,28 +91,24 @@ decode_failure("OptionalVectorWrongPointerValue") {
 
 // Test vector with a 2^64-1 count, exceeding the 32-bit limit from RFC-0059.
 decode_failure("VectorCountExceedsLimitByALot") {
-    // TODO(fxbug.dev/82167): Go panics and doesn't return proper errors.
-    bindings_denylist = [go],
     type = VectorWrapper,
     bytes = {
         v1, v2 = [
             num(0xffffffffffffffff):8, // length of vector data
             repeat(0xff):8, // presence marker
-        ]
+        ],
     },
     err = COUNT_EXCEEDS_LIMIT,
 }
 
 // Test vector with a 2^32 count, exceeding the 32-bit limit from RFC-0059.
 decode_failure("VectorCountExceedsLimitByOne") {
-    // TODO(fxbug.dev/82167): Go panics and doesn't return proper errors.
-    bindings_denylist = [go],
     type = VectorWrapper,
     bytes = {
         v1, v2 = [
             num(0x100000000):8, // length of vector data
             repeat(0xff):8, // presence marker
-        ]
+        ],
     },
     err = COUNT_EXCEEDS_LIMIT,
 }
@@ -126,7 +122,7 @@ decode_failure("VectorCountExceedsTotalMessageSize") {
             num(25):8, // length of vector data (invalid, should be 8)
             repeat(0xff):8, // presence marker
             repeat(0xab):8, // vector data
-        ]
+        ],
     },
     err = TOO_FEW_BYTES,
 }
@@ -140,13 +136,13 @@ decode_failure("VectorCountExceedsRemainingMessageSize") {
             num(9):8, // length of vector data (invalid, should be 8)
             repeat(0xff):8, // presence marker
             repeat(0xab):8, // vector data
-        ]
+        ],
     },
     err = TOO_FEW_BYTES,
 }
 
 success("VectorOfStrings_AFewStrings") {
-    value = VectorOfStrings {
+    value = VectorOfStrings{
         v: [
             "hello, world!",
             "this is fine",
@@ -183,13 +179,13 @@ success("VectorOfStrings_AFewStrings") {
             repeat(0x62):8,
 
             // v[3] "aaa"
-            0x61, 0x61, 0x61, padding:5
-        ]
-    }
+            0x61, 0x61, 0x61, padding:5,
+        ],
+    },
 }
 
 success("LotsOfVectors_AFewVectors") {
-    value = LotsOfVectors {
+    value = LotsOfVectors{
         v1: [1, 2],
         v2: [3, 3],
         v3: [5, 6, 7, 8],
@@ -252,6 +248,6 @@ success("LotsOfVectors_AFewVectors") {
 
             // v9 contents
             0x01, 0x00, 0x01, padding:5,
-        ]
-    }
+        ],
+    },
 }
