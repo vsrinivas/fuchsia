@@ -48,7 +48,7 @@ files = {
   blobfs = "${root_out_dir}/obj/build/images/blob.blk"
 
   if (!bootfs_only) {
-    fvm_blob_sparse = "${outdir}/fvm.blob.sparse.blk"
+    fvm = "${outdir}/fvm.blk"
   }
 
   if (supports_fastboot_fvm) {
@@ -1312,7 +1312,7 @@ if (!bootfs_only && !build_sdk_archives) {
       emu_manifest = {
         initial_ramdisk = "fuchsia.zbi"
         kernel = rebase_path(qemu_kernel_file, root_out_dir)
-        disk_images = [ rebase_path(files.fvm_blob_sparse, root_out_dir) ]
+        disk_images = [ rebase_path(files.fvm, root_out_dir) ]
       }
     } else {
       flash_manifest = flash_manifest_content
