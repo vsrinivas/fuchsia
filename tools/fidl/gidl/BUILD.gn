@@ -21,6 +21,7 @@ if (is_host) {
     name = "go.fuchsia.dev/fuchsia/tools/fidl/gidl/..."
     deps = [ "//tools/fidl/lib/fidlgen" ]
     sources = [
+      "audit/main.go",
       "c/conformance.go",
       "config/defaults.go",
       "dart/benchmarks.go",
@@ -64,6 +65,11 @@ if (is_host) {
 
   go_binary("gidl") {
     gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/gidl"
+    deps = [ ":gopkg" ]
+  }
+
+  go_binary("gidl_audit") {
+    gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/gidl/audit"
     deps = [ ":gopkg" ]
   }
 
@@ -156,8 +162,14 @@ fidl("gidl_mixer_test_fidl") {
 }
 
 install_host_tools("host") {
-  deps = [ ":gidl" ]
-  outputs = [ "gidl" ]
+  deps = [
+    ":gidl",
+    ":gidl_audit",
+  ]
+  outputs = [
+    "gidl",
+    "gidl_audit",
+  ]
 }
 
 ## Tests for building from an empty GIDL file.
