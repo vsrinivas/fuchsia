@@ -33,6 +33,7 @@ source_set("engine") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
+    "//third_party/re2",
     "//zircon/system/ulib/inspector",
   ]
 }

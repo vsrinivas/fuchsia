@@ -7,10 +7,16 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <iomanip>
-#include <regex>
 #include <sstream>
 
+#include <re2/re2.h>
+
 namespace fuzzing {
+
+// Helper for printing one byte as hexadecimal.
+static std::ostream& hex_byte(std::ostream& stream) {
+  return stream << std::uppercase << std::setfill('0') << std::setw(2) << std::hex;
+}
 
 Dictionary& Dictionary::operator=(Dictionary&& other) noexcept {
   options_ = other.options_;
@@ -32,10 +38,9 @@ void Dictionary::AddDefaults(Options* options) {
 
 void Dictionary::Configure(const std::shared_ptr<Options>& options) { options_ = options; }
 
-// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-void Dictionary::Add(const uint8_t* data, size_t size, uint16_t level) {
-  Word word(data, data + size);
-  Add(std::move(word), level);
+void Dictionary::Add(const void* data, size_t size, uint16_t level) {
+  const auto* bytes = reinterpret_cast<const uint8_t*>(data);
+  Add(Word(bytes, bytes + size), level);
 }
 
 void Dictionary::Add(Word&& word, uint16_t level) {
@@ -44,9 +49,9 @@ void Dictionary::Add(Word&& word, uint16_t level) {
 }
 
 bool Dictionary::Parse(const Input& input) {
-  static std::regex blank("^\\s*(?:#.*)?$");
-  static std::regex value("^\\s*(?:\\w+(?:@(\\d+))?\\s*=)?\\s*\"(.*)$");
-  std::smatch match, unused;
+  // TODO(fxbug.dev/89119): Support parsing utf8.
+  re2::RE2 blank("^\\s*(?:#.*)?$");
+  re2::RE2 value("^\\s*(?:\\w+(?:@(\\d+))?\\s*=)?\\s*\"(.*)$");
   const auto* c_str = reinterpret_cast<const char*>(input.data());
   std::istringstream iss(std::string(c_str, input.size()));
   std::string line;
@@ -57,20 +62,22 @@ bool Dictionary::Parse(const Input& input) {
     uint16_t level;
     Word word;
     // Skip blank lines and comment.
-    if (std::regex_match(line, match, blank)) {
+    if (re2::RE2::FullMatch(line, blank)) {
       continue;
     }
     // Use a default level of 0 if omitted.
-    if (std::regex_match(line, match, value)) {
-      if (!ParseLevel(match[1], &level)) {
-        FX_LOGS(WARNING) << "failed to parse level: '" << match[1] << "' (line " << line_no << ")";
+    std::string level_str;
+    std::string word_str;
+    if (re2::RE2::FullMatch(line, value, &level_str, &word_str)) {
+      if (!ParseLevel(level_str, &level)) {
+        FX_LOGS(WARNING) << "failed to parse level: '" << level_str << "' (line " << line_no << ")";
         return false;
       }
-      if (!ParseWord(match[2], &word, &remaining)) {
-        FX_LOGS(WARNING) << "failed to parse word: '" << match[2] << "' (line " << line_no << ")";
+      if (!ParseWord(word_str, &word, &remaining)) {
+        FX_LOGS(WARNING) << "failed to parse word: '" << word_str << "' (line " << line_no << ")";
         return false;
       }
-      if (!std::regex_match(remaining, unused, blank)) {
+      if (!re2::RE2::FullMatch(remaining, blank)) {
         FX_LOGS(WARNING) << "failed to parse line: '" << line << "' (line " << line_no << ")";
         return false;
       }
@@ -116,15 +123,18 @@ bool Dictionary::ParseWord(const std::string& str, Word* out_word, std::string* 
       escaped = false;
     } else if (c == '"') {
       *out_remaining = str.substr(i + 1);
-      break;
+      return !out_word->empty();
     } else if (c == '\\') {
       escaped = true;
-    } else {
+    } else if (isprint(c) || isspace(c)) {
       out_word->push_back(static_cast<uint8_t>(c));
+    } else {
+      FX_LOGS(WARNING) << "invalid byte: 0x" << hex_byte << c;
+      return false;
     }
   }
-
-  return !out_word->empty();
+  FX_LOGS(WARNING) << "missing '\"'";
+  return false;
 }
 
 Input Dictionary::AsInput() const {
@@ -146,10 +156,10 @@ Input Dictionary::AsInput() const {
           oss << "\\\\";
         } else if (c == '"') {
           oss << "\\\"";
-        } else if (isprint(c)) {
+        } else if (isprint(c) || isspace(c)) {
           oss << char(c);
         } else {
-          oss << "\\x" << std::uppercase << std::setfill('0') << std::setw(2) << std::hex << int(c);
+          oss << "\\x" << hex_byte << int(c);
           oss << std::dec;
         }
       }

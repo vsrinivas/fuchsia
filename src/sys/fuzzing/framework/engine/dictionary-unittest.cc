@@ -264,6 +264,19 @@ TEST(DictionaryTest, ParseSpaces) {
   EXPECT_EQ(GetWords(dict), Sort({"val", "  v  a  l  "}));
 }
 
+TEST(DictionaryTest, ParseNonASCII) {
+  Input input;
+  input.Reserve(11);
+  input.Write("key=\"val", 8);
+  input.Write(0x00);  // embedded null;
+  input.Write("\"\n", 2);
+
+  Dictionary dict;
+  dict.Configure(DefaultOptions());
+
+  EXPECT_FALSE(dict.Parse(input));
+}
+
 TEST(DictionaryTest, Parse) {
   std::ostringstream oss;
   oss << "  ####################  " << std::endl;
@@ -302,31 +315,20 @@ TEST(DictionaryTest, Parse) {
 }
 
 TEST(DictionaryTest, AsInput) {
-  std::ostringstream oss;
-  oss << "A=\"foo\"" << std::endl;
-  oss << "B=\"\\\\bar\\\"\"" << std::endl;
-  oss << "C@10=\"baz";
-
-  // It's tricky to embed a null byte with ostringstream...
-  auto str = oss.str();
-  const auto* u8 = reinterpret_cast<const uint8_t*>(str.data());
-  std::vector<uint8_t> bytes(u8, u8 + str.size());
-  bytes.push_back(0x00);
-  bytes.push_back(0xCA);
-  bytes.push_back(0xFE);
-  bytes.push_back(0x22);  // "
-  bytes.push_back(0x0A);  // \n
-
   Dictionary dict;
   auto options = DefaultOptions();
   dict.Configure(options);
 
-  EXPECT_TRUE(dict.Parse(Input(bytes)));
+  dict.Add("foo", 3);
+  dict.Add("\\bar\"", 5);
+  std::vector<uint8_t> baz({0x62, 0x61, 0x7a, 0x00, 0xca, 0xfe});
+  dict.Add(baz.data(), baz.size(), 10);
+
   options->set_dictionary_level(9);  // Should not affect output.
-  auto input2 = dict.AsInput();
+  auto input = dict.AsInput();
 
   // Convert to string to add a null terminator.
-  std::string s(reinterpret_cast<const char*>(input2.data()), input2.size());
+  std::string s(reinterpret_cast<const char*>(input.data()), input.size());
   EXPECT_STREQ(s.c_str(),
                "key1=\"foo\"\n"
                "key2=\"\\\\bar\\\"\"\n"

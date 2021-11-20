@@ -19,6 +19,10 @@
 
 namespace fuzzing {
 
+// This class represents a dictionary of input language keywords or other byte sequences that may be
+// included in generating test inputs that are likely to uncover new features in a target, e.g.
+// "GET" or "POST" for a fuzzer that takes HTTP inputs. The file format is the same as that of AFL,
+// although it is best described by libFuzzer: https://llvm.org/docs/LibFuzzer.html#dictionaries
 class Dictionary final {
  public:
   using Word = std::vector<uint8_t>;
@@ -35,8 +39,10 @@ class Dictionary final {
   // Sets options.
   void Configure(const std::shared_ptr<Options>& options);
 
-  // Adds a word to this dictionary.
-  void Add(const uint8_t* data, size_t size, uint16_t level = 0);
+  // Adds |size| bytes as a word to this dictionary.
+  void Add(const void* data, size_t size, uint16_t level = 0);
+
+  // Adds a |word| to the dictionary.
   void Add(Word&& word, uint16_t level = 0);
 
   // Resets the dictionary to an initial state and attempts to interpret the given input as a
