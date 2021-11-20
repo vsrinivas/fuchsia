@@ -3408,6 +3408,10 @@ void VmCowPages::RangeChangeUpdateLocked(uint64_t offset, uint64_t len, RangeCha
   RangeChangeUpdateListLocked(&list, op);
 }
 
+// This method can be called on a VmCowPages whose refcount is 0, but whose VmCowPagesContainer
+// refcount is still >= 1.  This can be running concurrently with VmCowPages::fbl_recycle(), but
+// we know that ~VmCowPagesContainer won't run until after this call is over because the caller
+// holds a refcount tally on the container.
 bool VmCowPages::RemovePageForEviction(vm_page_t* page, uint64_t offset,
                                        EvictionHintAction hint_action) {
   Guard<Mutex> guard{&lock_};
@@ -4175,6 +4179,14 @@ VmCowPagesContainer::~VmCowPagesContainer() {
     reinterpret_cast<VmCowPages*>(&cow_space_)->~VmCowPages();
     is_cow_present_ = false;
   }
+}
+
+bool VmCowPagesContainer::RemovePageForEviction(vm_page_t* page, uint64_t offset,
+                                                VmCowPages::EvictionHintAction hint_action) {
+  // While the caller must have a ref on VmCowPagesContainer, the caller doesn't need to have a ref
+  // on VmCowPages, for RemovePageForEviction() in particular.
+  DEBUG_ASSERT(ref_count_debug() >= 1);
+  return cow().RemovePageForEviction(page, offset, hint_action);
 }
 
 template <class... Args>
