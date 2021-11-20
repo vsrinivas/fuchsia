@@ -2196,7 +2196,6 @@ zx_status_t VmCowPages::DecommitRangeLocked(uint64_t offset, uint64_t len) {
 
   list_node_t freed_list;
   list_initialize(&freed_list);
-
   zx_status_t status = UnmapAndRemovePagesLocked(offset, new_len, &freed_list);
   if (status != ZX_OK) {
     return status;
@@ -2210,8 +2209,8 @@ zx_status_t VmCowPages::DecommitRangeLocked(uint64_t offset, uint64_t len) {
 zx_status_t VmCowPages::UnmapAndRemovePagesLocked(uint64_t offset, uint64_t len,
                                                   list_node_t* freed_list,
                                                   uint64_t* pages_freed_out) {
-  // TODO(teisenbe): Allow decommitting of pages pinned by
-  // CommitRangeContiguous
+  canary_.Assert();
+
   if (AnyPagesPinnedLocked(offset, len)) {
     return ZX_ERR_BAD_STATE;
   }
