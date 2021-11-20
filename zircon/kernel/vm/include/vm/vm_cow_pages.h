@@ -954,7 +954,7 @@ class VmCowPages final
 //
 // In contrast if we were to attempt upgrade of a raw VmCowPages pointer to VmCowPages ref, the
 // ability to upgrade would disappear before the backlink is removed to make room for a
-// StackOnwedLoanedPagesInterval, so loaned page reclaim would need to wait (somehow) for the page
+// StackOwnedLoanedPagesInterval, so loaned page reclaim would need to wait (somehow) for the page
 // to be removed from the VmCowPages and at least have a backlink.  That wait is problematic since
 // it would also need to propagate priority inheritance properly like StackOwnedLoanedPagesInterval
 // does, but the interval begins at the moment the refcount goes from 1 to 0, and reliably wrapping
@@ -989,10 +989,13 @@ class VmCowPagesContainer : public fbl::RefCountedUpgradeable<VmCowPagesContaine
   VmCowPagesContainer() = default;
   ~VmCowPagesContainer();
 
-  // TODO: Add (only) methods here which are ok to call on a VmCowPages between VmCowPages ref going
-  // from 1 to 0 and VmCowPages::fbl_recycle() (or even up to ~VmCowPages if something is preventing
-  // VmCowPagesContainer from destructing VmCowPages).  For example, a method to replace a loaned
-  // page with a non-loaned page.
+  // This is currently the only VmCowPages method that's ok to call via ref on VmCowPagesContainer
+  // while holding no ref on the contained VmCowPages.  The page can get removed despite potential
+  // concurrent VmCowPages::fbl_recycle() on a different thread, and despite VmCowPages refcount_
+  // potentially being 0.  The VmCowPagesContainer ref held by the caller keeps the actual
+  // VmCowPages object alive during this call.
+  bool RemovePageForEviction(vm_page_t* page, uint64_t offset,
+                             VmCowPages::EvictionHintAction hint_action);
 
  private:
   friend class VmCowPages;

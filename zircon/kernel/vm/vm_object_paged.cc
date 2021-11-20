@@ -25,6 +25,7 @@
 #include <vm/bootreserve.h>
 #include <vm/fault.h>
 #include <vm/page_source.h>
+#include <vm/physical_page_provider.h>
 #include <vm/physmap.h>
 #include <vm/vm.h>
 #include <vm/vm_address_region.h>
