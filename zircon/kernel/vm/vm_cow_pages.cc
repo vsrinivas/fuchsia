@@ -274,14 +274,6 @@ void VmCowPages::fbl_recycle() {
     list_node_t list;
     list_initialize(&list);
 
-    // We must Close() before removing pages, so that the PageProvider can iterate present/absent
-    // ranges if it needs to during Close().  This is so PhysicalPageProvider can call
-    // pmm_delete_lender() only on ranges that are currently loaned (the ranges that are absent from
-    // the VmCowPages).
-    if (page_source_) {
-      page_source_->Close();
-    }
-
     __UNINITIALIZED BatchPQRemove page_remover(&list);
     // free all of the pages attached to us
     page_list_.RemoveAllPages([&page_remover](vm_page_t* page) {
@@ -291,6 +283,12 @@ void VmCowPages::fbl_recycle() {
     page_remover.Flush();
 
     FreePages(&list);
+
+    // We must Close() after removing pages, so that all pages will be loaned by the time
+    // PhysicalPageProvider::OnClose() calls pmm_delete_lender() on the whole physical range.
+    if (page_source_) {
+      page_source_->Close();
+    }
 
     // Update counters
     if (is_latency_sensitive_) {
