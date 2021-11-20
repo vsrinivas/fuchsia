@@ -1,0 +1,18 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("vnext") {
+  testonly = true
+  deps = [ ":tests" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    "//src/media/vnext/lib/reader:tests",
+    "//src/media/vnext/lib/stream_io:tests",
+    "//src/media/vnext/lib/stream_sink:tests",
+    "//src/media/vnext/lib/threads:tests",
+  ]
+}

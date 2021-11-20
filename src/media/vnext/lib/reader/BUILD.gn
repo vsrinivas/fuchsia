@@ -1,0 +1,62 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/test.gni")
+
+source_set("reader") {
+  sources = [
+    "byte_rate_estimator.cc",
+    "byte_rate_estimator.h",
+    "fence.h",
+    "file_reader.cc",
+    "file_reader.h",
+    "reader.h",
+    "reader_cache.cc",
+    "reader_cache.h",
+    "sliding_buffer.cc",
+    "sliding_buffer.h",
+  ]
+
+  public_deps = [
+    "//sdk/lib/fit",
+    "//zircon/system/ulib/async:async-cpp",
+  ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fsl",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":reader_unittests" ]
+}
+
+test("reader_unittests_bin") {
+  testonly = true
+
+  output_name = "reader_unittests"
+
+  sources = [
+    "test/byte_rate_estimator_test.cc",
+    "test/reader_cache_test.cc",
+    "test/sliding_buffer_test.cc",
+  ]
+
+  deps = [
+    ":reader",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_unittest_package("reader_unittests") {
+  package_name = "reader_unittests"
+  deps = [ ":reader_unittests_bin" ]
+}
