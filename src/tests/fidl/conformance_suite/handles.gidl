@@ -6,7 +6,7 @@ success("SingleHandle") {
     handle_defs = {
         #0 = event(),
     },
-    value = SingleHandle {
+    value = SingleHandle{
         h: #0,
     },
     bytes = {
@@ -18,14 +18,14 @@ success("SingleHandle") {
         v1, v2 = [
             #0,
         ],
-    }
+    },
 }
 
 success("SingleOptionalHandlePresent") {
     handle_defs = {
         #0 = event(),
     },
-    value = SingleOptionalHandle {
+    value = SingleOptionalHandle{
         h: #0,
     },
     bytes = {
@@ -37,16 +37,16 @@ success("SingleOptionalHandlePresent") {
         v1, v2 = [
             #0,
         ],
-    }
+    },
 }
 
 success("SingleOptionalHandleAbsent") {
-    value = SingleOptionalHandle {},
+    value = SingleOptionalHandle{},
     bytes = {
         v1, v2 = [
             repeat(0x00):4, padding:4,
         ],
-    }
+    },
 }
 
 success("ArrayOfHandles") {
@@ -55,7 +55,7 @@ success("ArrayOfHandles") {
         #1 = event(),
         #2 = event(),
     },
-    value = ArrayOfHandles {
+    value = ArrayOfHandles{
         a: [#2, #0, #1],
     },
     bytes = {
@@ -67,14 +67,14 @@ success("ArrayOfHandles") {
         v1, v2 = [
             #2, #0, #1,
         ],
-    }
+    },
 }
 
 success("ArrayOfOptionalHandles") {
     handle_defs = {
         #0 = event(),
     },
-    value = ArrayOfOptionalHandles {
+    value = ArrayOfOptionalHandles{
         a: [null, #0, null],
     },
     bytes = {
@@ -86,7 +86,7 @@ success("ArrayOfOptionalHandles") {
         v1, v2 = [
             #0,
         ],
-    }
+    },
 }
 
 success("VectorOfHandles") {
@@ -97,7 +97,7 @@ success("VectorOfHandles") {
         #1 = event(),
         #2 = event(),
     },
-    value = VectorOfHandles {
+    value = VectorOfHandles{
         v: [#2, #0, #1],
     },
     bytes = {
@@ -110,7 +110,7 @@ success("VectorOfHandles") {
         v1, v2 = [
             #2, #0, #1,
         ],
-    }
+    },
 }
 
 success("VectorOfOptionalHandles") {
@@ -119,7 +119,7 @@ success("VectorOfOptionalHandles") {
     handle_defs = {
         #0 = event(),
     },
-    value = VectorOfOptionalHandles {
+    value = VectorOfOptionalHandles{
         v: [null, #0, null],
     },
     bytes = {
@@ -132,7 +132,7 @@ success("VectorOfOptionalHandles") {
         v1, v2 = [
             #0,
         ],
-    }
+    },
 }
 
 success("MultipleHandleSubtypes") {
@@ -141,7 +141,7 @@ success("MultipleHandleSubtypes") {
         #1 = event(),
         #2 = channel(),
     },
-    value = MultipleHandleSubtypes {
+    value = MultipleHandleSubtypes{
         untyped: #0,
         event: #1,
         channel: #2,
@@ -155,7 +155,7 @@ success("MultipleHandleSubtypes") {
         v1, v2 = [
             #0, #1, #2,
         ],
-    }
+    },
 }
 
 decode_failure("TooManyHandles") {
@@ -212,7 +212,7 @@ success("ChannelMaxHandles") {
         #56 = event(), #57 = event(), #58 = event(), #59 = event(),
         #60 = event(), #61 = event(), #62 = event(), #63 = event(),
     },
-    value = VectorOfHandles {
+    value = VectorOfHandles{
         v: [
             #0, #1, #2, #3, #4, #5, #6, #7,
             #8, #9, #10, #11, #12, #13, #14, #15,
@@ -256,7 +256,7 @@ success("ChannelMaxHandles") {
             #48, #49, #50, #51, #52, #53, #54, #55,
             #56, #57, #58, #59, #60, #61, #62, #63,
         ],
-    }
+    },
 }
 
 // There should be support for at least 64 handles in unknown fields.
@@ -281,7 +281,7 @@ decode_success("ChannelMaxUnknownHandlesDropped") {
         #56 = event(), #57 = event(), #58 = event(), #59 = event(),
         #60 = event(), #61 = event(), #62 = event(), #63 = event(),
     },
-    value = ReservedFieldTableStruct {
+    value = ReservedFieldTableStruct{
         table: ReservedFieldTable{},
     },
     bytes = {
@@ -307,7 +307,7 @@ decode_success("ChannelMaxUnknownHandlesDropped") {
             #48, #49, #50, #51, #52, #53, #54, #55,
             #56, #57, #58, #59, #60, #61, #62, #63,
         ],
-    }
+    },
 }
 
 // this test is the same as ChannelMaxUnknownHandlesDropped, but expects
@@ -334,7 +334,7 @@ success("ChannelMaxUnknownHandlesStored") {
         #56 = event(), #57 = event(), #58 = event(), #59 = event(),
         #60 = event(), #61 = event(), #62 = event(), #63 = event(),
     },
-    value = ReservedFieldTableStruct {
+    value = ReservedFieldTableStruct{
         table: ReservedFieldTable{
             1: {
                 // 256 bytes for 64 handles' 4-byte presence markers.
@@ -377,7 +377,7 @@ success("ChannelMaxUnknownHandlesStored") {
             #48, #49, #50, #51, #52, #53, #54, #55,
             #56, #57, #58, #59, #60, #61, #62, #63,
         ],
-    }
+    },
 }
 
 encode_success("EncodeHandleTypeAndRightsComeFromFIDL") {
@@ -385,7 +385,7 @@ encode_success("EncodeHandleTypeAndRightsComeFromFIDL") {
     handle_defs = {
         #0 = channel(rights: channel_default),
     },
-    value = EventWithDefaultRights {
+    value = EventWithDefaultRights{
         h: #0,
     },
     bytes = {
@@ -395,9 +395,9 @@ encode_success("EncodeHandleTypeAndRightsComeFromFIDL") {
     },
     handle_dispositions = {
         v1, v2 = [
-            { #0, type: event, rights: event_default },
+            {#0, type: event, rights: event_default},
         ],
-    }
+    },
 }
 
 decode_success("DecodeHandleHasExactTypeAndRights") {
@@ -415,7 +415,7 @@ decode_success("DecodeHandleHasExactTypeAndRights") {
             #0,
         ],
     },
-    value = EventWithDefaultRights {
+    value = EventWithDefaultRights{
         h: restrict(#0, rights: event_default),
     },
 }
@@ -436,7 +436,7 @@ decode_failure("DecodeHandleHasWrongType") {
             #0,
         ],
     },
-    err = INCORRECT_HANDLE_TYPE
+    err = INCORRECT_HANDLE_TYPE,
 }
 
 decode_success("DecodeHandleHasExtraRights") {
@@ -455,7 +455,7 @@ decode_success("DecodeHandleHasExtraRights") {
             #0,
         ],
     },
-    value = EventWithReducedRights {
+    value = EventWithReducedRights{
         h: restrict(#0, rights: basic),
     },
 }
@@ -476,7 +476,7 @@ decode_failure("DecodeHandleHasTooFewRights") {
             #0,
         ],
     },
-    err = MISSING_REQUIRED_HANDLE_RIGHTS
+    err = MISSING_REQUIRED_HANDLE_RIGHTS,
 }
 
 // Vector and arrays can't hold handle type information in some bindings.
@@ -492,12 +492,12 @@ encode_success("EncodeArrayOfVectorOfEventInStruct") {
             num(1):8,
             repeat(0xff):8,
             repeat(0xff):4,
-            padding:4
+            padding:4,
         ],
     },
     handle_dispositions = {
         v1, v2 = [
-            { #0, type: event, rights: basic },
+            {#0, type: event, rights: basic},
         ],
     },
 }
@@ -515,12 +515,12 @@ encode_success("EncodeVectorOfArrayOfEventInStruct") {
             num(1):8,
             repeat(0xff):8,
             repeat(0xff):4,
-            padding:4
+            padding:4,
         ],
     },
     handle_dispositions = {
         v1, v2 = [
-            { #0, type: event, rights: basic },
+            {#0, type: event, rights: basic},
         ],
     },
 }
@@ -534,7 +534,7 @@ encode_success("EncodeArrayOfVectorOfEventInTable") {
     },
     value = ArrayOfVectorOfEventInTableWithReducedRightsStruct{
         t: ArrayOfVectorOfEventInTableWithReducedRights{
-            h: [[ #0 ]],
+            h: [[#0]],
         },
     },
     bytes = {
@@ -564,7 +564,7 @@ encode_success("EncodeArrayOfVectorOfEventInTable") {
     },
     handle_dispositions = {
         v1, v2 = [
-            { #0, type: event, rights: basic },
+            {#0, type: event, rights: basic},
         ],
     },
 }
@@ -578,7 +578,7 @@ encode_success("EncodeVectorOfArrayOfEventInTable") {
     },
     value = VectorOfArrayOfEventInTableWithReducedRightsStruct{
         t: VectorOfArrayOfEventInTableWithReducedRights{
-            h: [[ #0 ]],
+            h: [[#0]],
         },
     },
     bytes = {
@@ -608,7 +608,7 @@ encode_success("EncodeVectorOfArrayOfEventInTable") {
     },
     handle_dispositions = {
         v1, v2 = [
-            { #0, type: event, rights: basic },
+            {#0, type: event, rights: basic},
         ],
     },
 }
@@ -622,7 +622,7 @@ encode_success("EncodeArrayOfVectorOfEventInUnion") {
     },
     value = ArrayOfVectorOfEventInUnionWithReducedRightsStruct{
         u: ArrayOfVectorOfEventInUnionWithReducedRights{
-            h: [[ #0 ]],
+            h: [[#0]],
         },
     },
     bytes = {
@@ -648,7 +648,7 @@ encode_success("EncodeArrayOfVectorOfEventInUnion") {
     },
     handle_dispositions = {
         v1, v2 = [
-            { #0, type: event, rights: basic },
+            {#0, type: event, rights: basic},
         ],
     },
 }
@@ -662,7 +662,7 @@ encode_success("EncodeVectorOfArrayOfEventInUnion") {
     },
     value = VectorOfArrayOfEventInUnionWithReducedRightsStruct{
         u: VectorOfArrayOfEventInUnionWithReducedRights{
-            h: [[ #0 ]],
+            h: [[#0]],
         },
     },
     bytes = {
@@ -688,7 +688,7 @@ encode_success("EncodeVectorOfArrayOfEventInUnion") {
     },
     handle_dispositions = {
         v1, v2 = [
-            { #0, type: event, rights: basic },
+            {#0, type: event, rights: basic},
         ],
     },
 }
@@ -709,7 +709,7 @@ decode_success("DecodeArrayOfVectorOfEventInStructExtraRights") {
             num(1):8,
             repeat(0xff):8,
             repeat(0xff):4,
-            padding:4
+            padding:4,
         ],
     },
     handles = {
@@ -717,7 +717,7 @@ decode_success("DecodeArrayOfVectorOfEventInStructExtraRights") {
             #0,
         ],
     },
-    value = ArrayOfVectorOfEventInStructWithReducedRights {
+    value = ArrayOfVectorOfEventInStructWithReducedRights{
         h: [[restrict(#0, rights: basic)]],
     },
 }
@@ -733,7 +733,7 @@ decode_failure("DecodeArrayOfVectorOfEventInStructHasTooFewRights") {
             num(1):8,
             repeat(0xff):8,
             repeat(0xff):4,
-            padding:4
+            padding:4,
         ],
     },
     handles = {
@@ -741,7 +741,7 @@ decode_failure("DecodeArrayOfVectorOfEventInStructHasTooFewRights") {
             #0,
         ],
     },
-    err = MISSING_REQUIRED_HANDLE_RIGHTS
+    err = MISSING_REQUIRED_HANDLE_RIGHTS,
 }
 
 // Vector and arrays can't hold handle type information in some bindings
@@ -760,7 +760,7 @@ decode_failure("DecodeArrayOfVectorOfEventInStructType") {
             num(1):8,
             repeat(0xff):8,
             repeat(0xff):4,
-            padding:4
+            padding:4,
         ],
     },
     handles = {
@@ -768,7 +768,7 @@ decode_failure("DecodeArrayOfVectorOfEventInStructType") {
             #0,
         ],
     },
-    err = INCORRECT_HANDLE_TYPE
+    err = INCORRECT_HANDLE_TYPE,
 }
 
 // Vector and arrays can't hold handle rights information in some bindings
@@ -787,7 +787,7 @@ decode_success("DecodeVectorOfArrayOfEventInStructExtraRights") {
             num(1):8,
             repeat(0xff):8,
             repeat(0xff):4,
-            padding:4
+            padding:4,
         ],
     },
     handles = {
@@ -795,7 +795,7 @@ decode_success("DecodeVectorOfArrayOfEventInStructExtraRights") {
             #0,
         ],
     },
-    value = VectorOfArrayOfEventInStructWithReducedRights {
+    value = VectorOfArrayOfEventInStructWithReducedRights{
         h: [[restrict(#0, rights: basic)]],
     },
 }
@@ -811,7 +811,7 @@ decode_failure("DecodeVectorOfArrayOfEventInStructHasTooFewRights") {
             num(1):8,
             repeat(0xff):8,
             repeat(0xff):4,
-            padding:4
+            padding:4,
         ],
     },
     handles = {
@@ -819,7 +819,7 @@ decode_failure("DecodeVectorOfArrayOfEventInStructHasTooFewRights") {
             #0,
         ],
     },
-    err = MISSING_REQUIRED_HANDLE_RIGHTS
+    err = MISSING_REQUIRED_HANDLE_RIGHTS,
 }
 
 // Vector and arrays can't hold handle type information in some bindings
@@ -838,7 +838,7 @@ decode_failure("DecodeVectorOfArrayOfEventInStructType") {
             num(1):8,
             repeat(0xff):8,
             repeat(0xff):4,
-            padding:4
+            padding:4,
         ],
     },
     handles = {
@@ -846,7 +846,7 @@ decode_failure("DecodeVectorOfArrayOfEventInStructType") {
             #0,
         ],
     },
-    err = INCORRECT_HANDLE_TYPE
+    err = INCORRECT_HANDLE_TYPE,
 }
 
 // Vector and arrays can't hold handle rights information in some bindings
@@ -890,7 +890,7 @@ decode_success("DecodeArrayOfVectorOfEventInTableExtraRights") {
             #0,
         ],
     },
-    value = ArrayOfVectorOfEventInTableWithReducedRightsStruct {
+    value = ArrayOfVectorOfEventInTableWithReducedRightsStruct{
         t: ArrayOfVectorOfEventInTableWithReducedRights{
             h: [[restrict(#0, rights: basic)]],
         },
@@ -933,7 +933,7 @@ decode_failure("DecodeArrayOfVectorOfEventInTableHasTooFewRights") {
             #0,
         ],
     },
-    err = MISSING_REQUIRED_HANDLE_RIGHTS
+    err = MISSING_REQUIRED_HANDLE_RIGHTS,
 }
 
 // Vector and arrays can't hold handle type information in some bindings
@@ -977,7 +977,7 @@ decode_failure("DecodeArrayOfVectorOfEventInTableType") {
             #0,
         ],
     },
-    err = INCORRECT_HANDLE_TYPE
+    err = INCORRECT_HANDLE_TYPE,
 }
 
 // Vector and arrays can't hold handle rights information in some bindings
@@ -1017,7 +1017,7 @@ decode_success("DecodeArrayOfVectorOfEventInUnionExtraRights") {
             #0,
         ],
     },
-    value = ArrayOfVectorOfEventInUnionWithReducedRightsStruct {
+    value = ArrayOfVectorOfEventInUnionWithReducedRightsStruct{
         u: ArrayOfVectorOfEventInUnionWithReducedRights{
             h: [[restrict(#0, rights: basic)]],
         },
@@ -1056,7 +1056,7 @@ decode_failure("DecodeArrayOfVectorOfEventInUnionHasTooFewRights") {
             #0,
         ],
     },
-    err = MISSING_REQUIRED_HANDLE_RIGHTS
+    err = MISSING_REQUIRED_HANDLE_RIGHTS,
 }
 
 // Vector and arrays can't hold handle type information in some bindings
@@ -1096,5 +1096,5 @@ decode_failure("DecodeArrayOfVectorOfEventInUnionType") {
             #0,
         ],
     },
-    err = INCORRECT_HANDLE_TYPE
+    err = INCORRECT_HANDLE_TYPE,
 }

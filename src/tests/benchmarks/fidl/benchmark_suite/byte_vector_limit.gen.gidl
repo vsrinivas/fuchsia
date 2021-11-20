@@ -7,6 +7,6 @@
 // 1 byte vector with a 1-element limit in a struct
 benchmark("ByteVectorLimit/1") {
     value = ByteVectorLimit1{
-        bytes: [ 0 ]
+        bytes: [0],
     },
 }

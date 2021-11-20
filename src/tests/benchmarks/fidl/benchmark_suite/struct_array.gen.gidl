@@ -11,1028 +11,1028 @@ benchmark("StructArray/256") {
 
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
             StructArrayElement{
                 a: 1,
-                b: 2
+                b: 2,
             },
-        ]
+        ],
     },
 }

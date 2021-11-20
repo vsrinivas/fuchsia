@@ -9,11 +9,11 @@ benchmark("DatagramSocket/RecvMsg/Request") {
         data_len: 2,
         control_len: 3,
         flags: 4,
-    }
+    },
 }
 
 benchmark("DatagramSocket/RecvMsg/Result") {
-    value = DatagramSocketRecvMsgResultStruct {
+    value = DatagramSocketRecvMsgResultStruct{
         result: DatagramSocketRecvMsgResult{
             response: DatagramSocketRecvMsgResponse{
                 // 128 bytes for addr
@@ -251,13 +251,13 @@ benchmark("DatagramSocket/RecvMsg/Result") {
                     0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f,
                 ],
                 truncated: 0,
-            }
-        }
-    }
+            },
+        },
+    },
 }
 
 benchmark("DatagramSocket/SendMsg2/Request") {
-    value = DatagramSocketSendMsg2Request {
+    value = DatagramSocketSendMsg2Request{
         // 128 bytes for addr
         addr: [
             0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
@@ -493,15 +493,15 @@ benchmark("DatagramSocket/SendMsg2/Request") {
             0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f,
         ],
         flags: 0,
-    }
+    },
 }
 
 benchmark("DatagramSocket/SendMsg2/Result") {
-    value = DatagramSocketSendMsg2ResultStruct {
+    value = DatagramSocketSendMsg2ResultStruct{
         result: DatagramSocketSendMsg2Result{
             response: DatagramSocketSendMsg2Response{
-                len: 1
-            }
-        }
-    }
+                len: 1,
+            },
+        },
+    },
 }

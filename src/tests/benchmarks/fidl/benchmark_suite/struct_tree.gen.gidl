@@ -8,95 +8,95 @@
 benchmark("StructTree/Depth8") {
     bindings_allowlist = [llcpp, hlcpp, rust, go, walker, reference, dart],
     value = StructTree8{
-        left:StructTree7{
-            left:StructTree6{
-                left:StructTree5{
-                    left:StructTree4{
-                        left:StructTree3{
-                            left:StructTree2{
-                                left:StructTree1{
+        left: StructTree7{
+            left: StructTree6{
+                left: StructTree5{
+                    left: StructTree4{
+                        left: StructTree3{
+                            left: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:StructTree2{
-                                left:StructTree1{
+                            right: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
-                        right:StructTree3{
-                            left:StructTree2{
-                                left:StructTree1{
+                        right: StructTree3{
+                            left: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:StructTree2{
-                                left:StructTree1{
+                            right: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
                     },
-                    right:StructTree4{
-                        left:StructTree3{
-                            left:StructTree2{
-                                left:StructTree1{
+                    right: StructTree4{
+                        left: StructTree3{
+                            left: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:StructTree2{
-                                left:StructTree1{
+                            right: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
-                        right:StructTree3{
-                            left:StructTree2{
-                                left:StructTree1{
+                        right: StructTree3{
+                            left: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:StructTree2{
-                                left:StructTree1{
+                            right: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
@@ -104,93 +104,93 @@ benchmark("StructTree/Depth8") {
                         },
                     },
                 },
-                right:StructTree5{
-                    left:StructTree4{
-                        left:StructTree3{
-                            left:StructTree2{
-                                left:StructTree1{
+                right: StructTree5{
+                    left: StructTree4{
+                        left: StructTree3{
+                            left: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:StructTree2{
-                                left:StructTree1{
+                            right: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
-                        right:StructTree3{
-                            left:StructTree2{
-                                left:StructTree1{
+                        right: StructTree3{
+                            left: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:StructTree2{
-                                left:StructTree1{
+                            right: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
                     },
-                    right:StructTree4{
-                        left:StructTree3{
-                            left:StructTree2{
-                                left:StructTree1{
+                    right: StructTree4{
+                        left: StructTree3{
+                            left: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:StructTree2{
-                                left:StructTree1{
+                            right: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
-                        right:StructTree3{
-                            left:StructTree2{
-                                left:StructTree1{
+                        right: StructTree3{
+                            left: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:StructTree2{
-                                left:StructTree1{
+                            right: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
@@ -199,94 +199,94 @@ benchmark("StructTree/Depth8") {
                     },
                 },
             },
-            right:StructTree6{
-                left:StructTree5{
-                    left:StructTree4{
-                        left:StructTree3{
-                            left:StructTree2{
-                                left:StructTree1{
+            right: StructTree6{
+                left: StructTree5{
+                    left: StructTree4{
+                        left: StructTree3{
+                            left: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:StructTree2{
-                                left:StructTree1{
+                            right: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
-                        right:StructTree3{
-                            left:StructTree2{
-                                left:StructTree1{
+                        right: StructTree3{
+                            left: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:StructTree2{
-                                left:StructTree1{
+                            right: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
                     },
-                    right:StructTree4{
-                        left:StructTree3{
-                            left:StructTree2{
-                                left:StructTree1{
+                    right: StructTree4{
+                        left: StructTree3{
+                            left: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:StructTree2{
-                                left:StructTree1{
+                            right: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
-                        right:StructTree3{
-                            left:StructTree2{
-                                left:StructTree1{
+                        right: StructTree3{
+                            left: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:StructTree2{
-                                left:StructTree1{
+                            right: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
@@ -294,93 +294,93 @@ benchmark("StructTree/Depth8") {
                         },
                     },
                 },
-                right:StructTree5{
-                    left:StructTree4{
-                        left:StructTree3{
-                            left:StructTree2{
-                                left:StructTree1{
+                right: StructTree5{
+                    left: StructTree4{
+                        left: StructTree3{
+                            left: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:StructTree2{
-                                left:StructTree1{
+                            right: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
-                        right:StructTree3{
-                            left:StructTree2{
-                                left:StructTree1{
+                        right: StructTree3{
+                            left: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:StructTree2{
-                                left:StructTree1{
+                            right: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
                     },
-                    right:StructTree4{
-                        left:StructTree3{
-                            left:StructTree2{
-                                left:StructTree1{
+                    right: StructTree4{
+                        left: StructTree3{
+                            left: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:StructTree2{
-                                left:StructTree1{
+                            right: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
-                        right:StructTree3{
-                            left:StructTree2{
-                                left:StructTree1{
+                        right: StructTree3{
+                            left: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:StructTree2{
-                                left:StructTree1{
+                            right: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
@@ -390,95 +390,95 @@ benchmark("StructTree/Depth8") {
                 },
             },
         },
-        right:StructTree7{
-            left:StructTree6{
-                left:StructTree5{
-                    left:StructTree4{
-                        left:StructTree3{
-                            left:StructTree2{
-                                left:StructTree1{
+        right: StructTree7{
+            left: StructTree6{
+                left: StructTree5{
+                    left: StructTree4{
+                        left: StructTree3{
+                            left: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:StructTree2{
-                                left:StructTree1{
+                            right: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
-                        right:StructTree3{
-                            left:StructTree2{
-                                left:StructTree1{
+                        right: StructTree3{
+                            left: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:StructTree2{
-                                left:StructTree1{
+                            right: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
                     },
-                    right:StructTree4{
-                        left:StructTree3{
-                            left:StructTree2{
-                                left:StructTree1{
+                    right: StructTree4{
+                        left: StructTree3{
+                            left: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:StructTree2{
-                                left:StructTree1{
+                            right: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
-                        right:StructTree3{
-                            left:StructTree2{
-                                left:StructTree1{
+                        right: StructTree3{
+                            left: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:StructTree2{
-                                left:StructTree1{
+                            right: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
@@ -486,93 +486,93 @@ benchmark("StructTree/Depth8") {
                         },
                     },
                 },
-                right:StructTree5{
-                    left:StructTree4{
-                        left:StructTree3{
-                            left:StructTree2{
-                                left:StructTree1{
+                right: StructTree5{
+                    left: StructTree4{
+                        left: StructTree3{
+                            left: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:StructTree2{
-                                left:StructTree1{
+                            right: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
-                        right:StructTree3{
-                            left:StructTree2{
-                                left:StructTree1{
+                        right: StructTree3{
+                            left: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:StructTree2{
-                                left:StructTree1{
+                            right: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
                     },
-                    right:StructTree4{
-                        left:StructTree3{
-                            left:StructTree2{
-                                left:StructTree1{
+                    right: StructTree4{
+                        left: StructTree3{
+                            left: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:StructTree2{
-                                left:StructTree1{
+                            right: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
-                        right:StructTree3{
-                            left:StructTree2{
-                                left:StructTree1{
+                        right: StructTree3{
+                            left: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:StructTree2{
-                                left:StructTree1{
+                            right: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
@@ -581,94 +581,94 @@ benchmark("StructTree/Depth8") {
                     },
                 },
             },
-            right:StructTree6{
-                left:StructTree5{
-                    left:StructTree4{
-                        left:StructTree3{
-                            left:StructTree2{
-                                left:StructTree1{
+            right: StructTree6{
+                left: StructTree5{
+                    left: StructTree4{
+                        left: StructTree3{
+                            left: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:StructTree2{
-                                left:StructTree1{
+                            right: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
-                        right:StructTree3{
-                            left:StructTree2{
-                                left:StructTree1{
+                        right: StructTree3{
+                            left: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:StructTree2{
-                                left:StructTree1{
+                            right: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
                     },
-                    right:StructTree4{
-                        left:StructTree3{
-                            left:StructTree2{
-                                left:StructTree1{
+                    right: StructTree4{
+                        left: StructTree3{
+                            left: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:StructTree2{
-                                left:StructTree1{
+                            right: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
-                        right:StructTree3{
-                            left:StructTree2{
-                                left:StructTree1{
+                        right: StructTree3{
+                            left: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:StructTree2{
-                                left:StructTree1{
+                            right: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
@@ -676,93 +676,93 @@ benchmark("StructTree/Depth8") {
                         },
                     },
                 },
-                right:StructTree5{
-                    left:StructTree4{
-                        left:StructTree3{
-                            left:StructTree2{
-                                left:StructTree1{
+                right: StructTree5{
+                    left: StructTree4{
+                        left: StructTree3{
+                            left: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:StructTree2{
-                                left:StructTree1{
+                            right: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
-                        right:StructTree3{
-                            left:StructTree2{
-                                left:StructTree1{
+                        right: StructTree3{
+                            left: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:StructTree2{
-                                left:StructTree1{
+                            right: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
                     },
-                    right:StructTree4{
-                        left:StructTree3{
-                            left:StructTree2{
-                                left:StructTree1{
+                    right: StructTree4{
+                        left: StructTree3{
+                            left: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:StructTree2{
-                                left:StructTree1{
+                            right: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
-                        right:StructTree3{
-                            left:StructTree2{
-                                left:StructTree1{
+                        right: StructTree3{
+                            left: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:StructTree2{
-                                left:StructTree1{
+                            right: StructTree2{
+                                left: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:StructTree1{
+                                right: StructTree1{
                                     a: 1,
                                     b: 2,
                                 },

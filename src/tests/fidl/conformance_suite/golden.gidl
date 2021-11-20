@@ -11,112 +11,122 @@
 
 // Simple primitive types.
 success("GoldenBoolStruct") {
-    value = GoldenBoolStruct {
+    value = GoldenBoolStruct{
         v: true,
     },
     bytes = {
-        v1, v2= [
+        v1, v2 = [
             num(1):1, padding:7,
         ],
     },
 }
+
 success("GoldenIntStruct") {
-    value = GoldenIntStruct {
+    value = GoldenIntStruct{
         v: 1,
     },
     bytes = {
-        v1, v2= [
+        v1, v2 = [
             num(1):2, padding:6,
         ],
     },
 }
+
 success("GoldenUintStruct") {
-    value = GoldenUintStruct {
+    value = GoldenUintStruct{
         v: 1,
     },
     bytes = {
-        v1, v2= [
+        v1, v2 = [
             num(1):2, padding:6,
         ],
     },
 }
+
 success("GoldenFloatStruct") {
-    value = GoldenFloatStruct {
+    value = GoldenFloatStruct{
         v: 0.0,
     },
     bytes = {
-        v1, v2= [
+        v1, v2 = [
             num(0):4, padding:4,
         ],
     },
 }
+
 success("GoldenDoubleStruct") {
-    value = GoldenDoubleStruct {
+    value = GoldenDoubleStruct{
         v: 0.0,
     },
     bytes = {
-        v1, v2= [
-            num(0):8
+        v1, v2 = [
+            num(0):8,
         ],
     },
 }
+
 success("GoldenStringStruct") {
-    value = GoldenStringStruct {
+    value = GoldenStringStruct{
         v: "abcd",
     },
     bytes = {
-        v1, v2= [
+        v1, v2 = [
             num(4):8,
             repeat(0xff):8,
             0x61, 0x62, 0x63, 0x64, padding:4,
         ],
     },
 }
+
 success("GoldenNullableStringStructNonNull") {
-    value = GoldenNullableStringStruct {
+    value = GoldenNullableStringStruct{
         v: "abcd",
     },
     bytes = {
-        v1, v2= [
+        v1, v2 = [
             num(4):8,
             repeat(0xff):8,
             0x61, 0x62, 0x63, 0x64, padding:4,
         ],
     },
 }
+
 success("GoldenNullableStringStructNull") {
-    value = GoldenNullableStringStruct {
+    value = GoldenNullableStringStruct{
         v: null,
     },
     bytes = {
-        v1, v2= [
+        v1, v2 = [
             num(0):8,
             repeat(0x00):8,
         ],
     },
 }
+
 success("GoldenEnumStruct") {
-    value = GoldenEnumStruct {
+    value = GoldenEnumStruct{
         v: 1,
     },
     bytes = {
-        v1, v2= [
+        v1, v2 = [
             num(1):2, padding:6,
         ],
     },
 }
+
 success("GoldenBitsStruct") {
-    value = GoldenBitsStruct {
+    value = GoldenBitsStruct{
         v: 1,
     },
     bytes = {
-        v1, v2= [
+        v1, v2 = [
             num(1):2, padding:6,
         ],
     },
 }
+
 success("GoldenTableStruct") {
-    value = GoldenTableStruct {
+    value = GoldenTableStruct{
         v: GoldenTable{
             v: 1,
         },
@@ -137,8 +147,9 @@ success("GoldenTableStruct") {
         ],
     },
 }
+
 success("GoldenUnionStruct") {
-    value = GoldenUnionStruct {
+    value = GoldenUnionStruct{
         v: GoldenUnion{
             v: 1,
         },
@@ -156,8 +167,9 @@ success("GoldenUnionStruct") {
         ],
     },
 }
+
 success("GoldenNullableUnionStructNonNull") {
-    value = GoldenNullableUnionStruct {
+    value = GoldenNullableUnionStruct{
         v: GoldenUnion{
             v: 1,
         },
@@ -175,8 +187,9 @@ success("GoldenNullableUnionStructNonNull") {
         ],
     },
 }
+
 success("GoldenNullableUnionStructNull") {
-    value = GoldenNullableUnionStruct {
+    value = GoldenNullableUnionStruct{
         v: null,
     },
     bytes = {
@@ -191,37 +204,40 @@ success("GoldenNullableUnionStructNull") {
         ],
     },
 }
+
 success("GoldenByteArrayStruct") {
-    value = GoldenByteArrayStruct {
+    value = GoldenByteArrayStruct{
         v: [1, 2, 3, 4],
     },
     bytes = {
-        v1, v2= [
+        v1, v2 = [
             0x01, 0x02, 0x03, 0x04, padding:4,
         ],
     },
 }
+
 // Sometimes GIDL generators might have different behavior for non-byte
 // or primitive arrays.
 success("GoldenStructArrayStruct") {
-    value = GoldenStructArrayStruct {
+    value = GoldenStructArrayStruct{
         v: [
             GoldenIntStruct{v: 1},
             GoldenIntStruct{v: 2},
         ],
     },
     bytes = {
-        v1, v2= [
+        v1, v2 = [
             0x01, 0x00, 0x02, 0x00, padding:4,
         ],
     },
 }
+
 success("GoldenByteVectorStruct") {
-    value = GoldenByteVectorStruct {
+    value = GoldenByteVectorStruct{
         v: [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4],
     },
     bytes = {
-        v1, v2= [
+        v1, v2 = [
             num(12):8,
             repeat(0xff):8,
             0x01, 0x02, 0x03, 0x04, 0x01, 0x02, 0x03, 0x04,
@@ -229,94 +245,101 @@ success("GoldenByteVectorStruct") {
         ],
     },
 }
+
 success("GoldenByteNullableVectorStructNonNull") {
-    value = GoldenNullableByteVectorStruct {
+    value = GoldenNullableByteVectorStruct{
         v: [1, 2, 3, 4],
     },
     bytes = {
-        v1, v2= [
+        v1, v2 = [
             num(4):8,
             repeat(0xff):8,
             0x01, 0x02, 0x03, 0x04, padding:4,
         ],
     },
 }
+
 success("GoldenNullableByteVectorStructNull") {
-    value = GoldenNullableByteVectorStruct {
+    value = GoldenNullableByteVectorStruct{
         v: null,
     },
     bytes = {
-        v1, v2= [
+        v1, v2 = [
             num(0):8,
             repeat(0x00):8,
         ],
     },
 }
+
 // Sometimes GIDL generators might have different behavior for non-byte
 // or primitive vectors.
 success("GoldenStructVectorStruct") {
-    value = GoldenStructVectorStruct {
+    value = GoldenStructVectorStruct{
         v: [
             GoldenIntStruct{v: 1},
             GoldenIntStruct{v: 2},
         ],
     },
     bytes = {
-        v1, v2= [
+        v1, v2 = [
             num(2):8,
             repeat(0xff):8,
             0x01, 0x00, 0x02, 0x00, padding:4,
         ],
     },
 }
+
 success("GoldenNullableStructNonNull") {
-    value = GoldenNullableStruct {
-        v: GoldenBoolStruct {
+    value = GoldenNullableStruct{
+        v: GoldenBoolStruct{
             v: true,
         },
     },
     bytes = {
-        v1, v2= [
+        v1, v2 = [
             repeat(0xff):8,
             num(1):1, padding:7,
         ],
     },
 }
+
 success("GoldenNullableStructNull") {
-    value = GoldenNullableStruct {
-        v:  null,
+    value = GoldenNullableStruct{
+        v: null,
     },
     bytes = {
-        v1, v2= [
+        v1, v2 = [
             repeat(0x00):8,
         ],
     },
 }
+
 encode_success("GoldenHandleBasicRightsStruct") {
     handle_defs = {
         #0 = channel(rights: channel_default),
     },
-    value = GoldenHandleBasicRightsStruct {
+    value = GoldenHandleBasicRightsStruct{
         v: #0,
     },
     bytes = {
-        v1, v2= [
+        v1, v2 = [
             repeat(0xff):4, padding:4,
         ],
     },
     handle_dispositions = {
         v1, v2 = [
-            { #0, type: event, rights: basic },
+            {#0, type: event, rights: basic},
         ],
-    }
+    },
 }
+
 decode_success("GoldenHandleBasicRightsStruct") {
     bindings_allowlist = [llcpp, hlcpp, go],
     handle_defs = {
         #0 = event(rights: event_default),
     },
     bytes = {
-        v1, v2= [
+        v1, v2 = [
             repeat(0xff):4, padding:4,
         ],
     },
@@ -325,19 +348,20 @@ decode_success("GoldenHandleBasicRightsStruct") {
             #0,
         ],
     },
-    value = GoldenHandleBasicRightsStruct {
+    value = GoldenHandleBasicRightsStruct{
         v: restrict(#0, rights: basic),
     },
 }
+
 success("GoldenNullableHandleStructNonNull") {
     handle_defs = {
         #0 = event(),
     },
-    value = GoldenNullableHandleStruct {
+    value = GoldenNullableHandleStruct{
         v: #0,
     },
     bytes = {
-        v1, v2= [
+        v1, v2 = [
             repeat(0xff):4, padding:4,
         ],
     },
@@ -345,34 +369,35 @@ success("GoldenNullableHandleStructNonNull") {
         v1, v2 = [
             #0,
         ],
-    }
+    },
 }
+
 success("GoldenNullableHandleStructNull") {
-    value = GoldenNullableHandleStruct {
+    value = GoldenNullableHandleStruct{
         v: null,
     },
     bytes = {
-        v1, v2= [
+        v1, v2 = [
             repeat(0x00):4, padding:4,
         ],
-    }
+    },
 }
 
 // Golden test for an encode_failure case.
 encode_failure("GoldenStringWithMaxSize2") {
     // TODO(fxbug.dev/37304) Enforce size bounds in rust
     bindings_denylist = [rust, dart],
-    value = GoldenStringWithMaxSize2 {
+    value = GoldenStringWithMaxSize2{
         s: "abc", // exceeds the string length
     },
-    err = STRING_TOO_LONG
+    err = STRING_TOO_LONG,
 }
 
 // Golden test for a decode_failure case.
 decode_failure("GoldenStringStructNullBody") {
     type = GoldenStringStruct,
     bytes = {
-        v1, v2= [
+        v1, v2 = [
             0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // length of string data
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // invalid null pointer to content
         ],

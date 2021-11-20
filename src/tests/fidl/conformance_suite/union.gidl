@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 success("UnionWithBoundString") {
-        value = UnionWithBoundStringStruct {
-        v: UnionWithBoundString {
+    value = UnionWithBoundStringStruct{
+        v: UnionWithBoundString{
             boundFiveStr: "abcd",
         },
     },
@@ -37,8 +37,8 @@ success("UnionWithBoundString") {
 encode_failure("UnionWithBoundString_ExceedsBounds") {
     // TODO(fxbug.dev/37304) Enforce size bounds in rust
     bindings_denylist = [rust],
-    value = UnionWithBoundStringStruct {
-        v: UnionWithBoundString {
+    value = UnionWithBoundStringStruct{
+        v: UnionWithBoundString{
             boundFiveStr: "abcdef",
         },
     },
@@ -46,8 +46,8 @@ encode_failure("UnionWithBoundString_ExceedsBounds") {
 }
 
 success("UnionMigration_SingleVariant") {
-    value = SingleVariantUnionStruct {
-        u: SingleVariantUnion {
+    value = SingleVariantUnionStruct{
+        u: SingleVariantUnion{
             x: 42,
         },
     },
@@ -69,8 +69,8 @@ success("UnionMigration_SingleVariant") {
 }
 
 success("UnionMigration_Uint8Union_1") {
-    value = Uint8UnionStruct {
-        u: Uint8Union {
+    value = Uint8UnionStruct{
+        u: Uint8Union{
             uint8_value: 42,
         },
     },
@@ -88,14 +88,13 @@ success("UnionMigration_Uint8Union_1") {
             num(1):8, // ordinal
             num(42):4, num(0):2, num(1):2, // envelope
         ],
-    }
+    },
 }
 
 success("UnionMigration_Uint8Union_2") {
-    value = Uint8UnionStruct {
-        u: Uint8Union {
-            empty_struct: EmptyStruct{
-            },
+    value = Uint8UnionStruct{
+        u: Uint8Union{
+            empty_struct: EmptyStruct{},
         },
     },
     bytes = {
@@ -112,12 +111,12 @@ success("UnionMigration_Uint8Union_2") {
             num(2):8, // ordinal
             num(0):4, num(0):2, num(1):2, // envelope
         ],
-    }
+    },
 }
 
 success("ReverseOrdinalUnion") {
-    value = ReverseOrdinalUnionStruct {
-        u: ReverseOrdinalUnion {
+    value = ReverseOrdinalUnionStruct{
+        u: ReverseOrdinalUnion{
             x: 42,
         },
     },
@@ -164,7 +163,7 @@ success("FlexibleUnionUnknownValue") {
     // llcpp is tested by hand since it cannot construct unknown unions (and
     // they do not store bytes & handles), see fxr/423117
     bindings_denylist = [llcpp],
-    value = TestFlexibleXUnionInStruct {
+    value = TestFlexibleXUnionInStruct{
         xu: SampleXUnion{
             1234: {
                 // padding must be included in the raw bytes
@@ -190,7 +189,7 @@ success("FlexibleResourceUnionUnknownValue") {
     // llcpp is tested by hand since it cannot construct unknown unions (and
     // they do not store bytes & handles), see fxr/423117
     bindings_denylist = [llcpp],
-    value = TestFlexibleResourceXUnionInStruct {
+    value = TestFlexibleResourceXUnionInStruct{
         xu: SampleResourceXUnion{
             1234: {
                 // padding must be included in the raw bytes
@@ -222,8 +221,8 @@ success("FlexibleResourceUnionUnknownValueWithHandles") {
         #2 = channel(),
         #3 = channel(),
     },
-    value = TestFlexibleResourceXUnionInStruct {
-        xu: SampleResourceXUnion {
+    value = TestFlexibleResourceXUnionInStruct{
+        xu: SampleResourceXUnion{
             1234: {
                 // padding must be included in the raw bytes
                 bytes = [repeat(0xab):20, padding:4],
@@ -246,8 +245,8 @@ success("FlexibleResourceUnionUnknownValueWithHandles") {
     handles = {
         v1, v2 = [
             #0, #1, #2, #3,
-        ]
-    }
+        ],
+    },
 }
 
 decode_failure("StrictUnionUnknownValue") {
@@ -290,7 +289,7 @@ decode_failure("StrictUnionUnknownValueWithHandles") {
     handles = {
         v1, v2 = [
             #0, #1, #2, #3,
-        ]
+        ],
     },
     err = STRICT_UNION_UNKNOWN_FIELD,
 }
@@ -321,7 +320,7 @@ decode_failure("FlexibleUnionUnknownValueWithHandles") {
     handles = {
         v1, v2 = [
             #0, #1, #2, #3,
-        ]
+        ],
     },
     err = NON_RESOURCE_UNKNOWN_HANDLES,
 }
@@ -329,13 +328,13 @@ decode_failure("FlexibleUnionUnknownValueWithHandles") {
 encode_failure("StrictUnionUnknownValue") {
     // Currently no bindings allow constructing a strict union with an unknown variant
     bindings_allowlist = [],
-    value = TestStrictXUnionInStruct {
+    value = TestStrictXUnionInStruct{
         xu: SampleStrictXUnion{
             1234: {
                 // padding must be included in the raw bytes
                 bytes = [repeat(0xab):20, padding:4],
-            }
-        }
+            },
+        },
     },
     err = STRICT_UNION_UNKNOWN_FIELD,
 }
@@ -375,8 +374,8 @@ decode_failure("FlexibleResourceUnionUnknownBytesNonMultipleOf8") {
 }
 
 success("UnionEnvelopeInlining_SmallValue_Inlined") {
-    value = EnvelopeInliningTestUnionStruct {
-        u: EnvelopeInliningTestUnion {
+    value = EnvelopeInliningTestUnionStruct{
+        u: EnvelopeInliningTestUnion{
             small: 100,
         },
     },
@@ -387,7 +386,7 @@ success("UnionEnvelopeInlining_SmallValue_Inlined") {
             num(8):4, num(0):4, repeat(0xff):8, // envelope
 
             // secondary object
-            num(100):4, padding: 4,
+            num(100):4, padding:4,
         ],
         v2 = [
             // primary object
@@ -398,8 +397,8 @@ success("UnionEnvelopeInlining_SmallValue_Inlined") {
 }
 
 success("UnionEnvelopeInlining_LargeValue_Outlined") {
-    value = EnvelopeInliningTestUnionStruct {
-        u: EnvelopeInliningTestUnion {
+    value = EnvelopeInliningTestUnionStruct{
+        u: EnvelopeInliningTestUnion{
             large: 100,
         },
     },
@@ -427,8 +426,8 @@ success("UnionEnvelopeInlining_HandleValue_Inlined") {
     handle_defs = {
         #0 = event(),
     },
-    value = EnvelopeInliningTestUnionStruct {
-        u: EnvelopeInliningTestUnion {
+    value = EnvelopeInliningTestUnionStruct{
+        u: EnvelopeInliningTestUnion{
             handle: #0,
         },
     },
@@ -439,7 +438,7 @@ success("UnionEnvelopeInlining_HandleValue_Inlined") {
             num(8):4, num(1):4, repeat(0xff):8, // envelope
 
             // secondary object
-            repeat(0xff):4, padding: 4,
+            repeat(0xff):4, padding:4,
         ],
         v2 = [
             // primary object
@@ -448,17 +447,17 @@ success("UnionEnvelopeInlining_HandleValue_Inlined") {
         ],
     },
     handles = {
-        v1, v2 = [#0]
-    }
+        v1, v2 = [#0],
+    },
 }
 
 success("UnionEnvelopeInlining_UnknownSmallValue_Inlined") {
-    bindings_allowlist = [go,rust,transformer],
-    value = EnvelopeInliningTestUnionStruct {
-        u: EnvelopeInliningTestUnion {
+    bindings_allowlist = [go, rust, transformer],
+    value = EnvelopeInliningTestUnionStruct{
+        u: EnvelopeInliningTestUnion{
             10: {
-                bytes = [num(100):4]
-            }
+                bytes = [num(100):4],
+            },
         },
     },
     bytes = {
@@ -471,12 +470,12 @@ success("UnionEnvelopeInlining_UnknownSmallValue_Inlined") {
 }
 
 success("UnionEnvelopeInlining_UnknownLargeValue_Outlined") {
-    bindings_allowlist = [go,rust,transformer],
-    value = EnvelopeInliningTestUnionStruct {
-        u: EnvelopeInliningTestUnion {
+    bindings_allowlist = [go, rust, transformer],
+    value = EnvelopeInliningTestUnionStruct{
+        u: EnvelopeInliningTestUnion{
             10: {
-                bytes = [num(100):8]
-            }
+                bytes = [num(100):8],
+            },
         },
     },
     bytes = {
@@ -492,16 +491,16 @@ success("UnionEnvelopeInlining_UnknownLargeValue_Outlined") {
 }
 
 success("UnionEnvelopeInlining_UnknownHandleValue_Inlined") {
-    bindings_allowlist = [go,rust,transformer],
+    bindings_allowlist = [go, rust, transformer],
     handle_defs = {
         #0 = event(),
     },
-    value = EnvelopeInliningTestUnionStruct {
-        u: EnvelopeInliningTestUnion {
+    value = EnvelopeInliningTestUnionStruct{
+        u: EnvelopeInliningTestUnion{
             10: {
                 bytes = [repeat(0xff):4],
                 handles = [#0],
-            }
+            },
         },
     },
     bytes = {
@@ -512,14 +511,14 @@ success("UnionEnvelopeInlining_UnknownHandleValue_Inlined") {
         ],
     },
     handles = {
-        v2 = [#0]
-    }
+        v2 = [#0],
+    },
 }
 
 // Tests decode of a value in a union that can be represented inline in the
 // envelope but is incorrectly using the out of line representation.
 decode_failure("UnionOutOfLineEnvelopeWhenInlineRequired") {
-    bindings_allowlist = [go,dart,rust,llcpp],
+    bindings_allowlist = [go, dart, rust, llcpp],
     type = EnvelopeInliningTestUnionStruct,
     bytes = {
         v2 = [
@@ -537,12 +536,12 @@ decode_failure("UnionOutOfLineEnvelopeWhenInlineRequired") {
 encode_failure("RequiredFlexibleValueUnionZeroOrdinalNoPayload") {
     // C and LLCPP cannot construct unknown variants.
     bindings_denylist = [c, llcpp],
-    value = TestFlexibleXUnionInStruct {
-        xu: SampleXUnion {
+    value = TestFlexibleXUnionInStruct{
+        xu: SampleXUnion{
             0: {
                 bytes = [],
-            }
-        }
+            },
+        },
     },
     err = UNION_FIELD_NOT_SET,
 }
@@ -550,12 +549,12 @@ encode_failure("RequiredFlexibleValueUnionZeroOrdinalNoPayload") {
 encode_failure("RequiredFlexibleValueUnionZeroOrdinalWithPayload") {
     // C and LLCPP cannot construct unknown variants.
     bindings_denylist = [c, llcpp],
-    value = TestFlexibleXUnionInStruct {
-        xu: SampleXUnion {
+    value = TestFlexibleXUnionInStruct{
+        xu: SampleXUnion{
             0: {
                 bytes = [repeat(0xab):20, padding:4],
-            }
-        }
+            },
+        },
     },
     err = UNION_FIELD_NOT_SET,
 }
@@ -563,12 +562,12 @@ encode_failure("RequiredFlexibleValueUnionZeroOrdinalWithPayload") {
 encode_failure("RequiredFlexibleResourceUnionZeroOrdinalNoPayload") {
     // C and LLCPP cannot construct unknown variants.
     bindings_denylist = [c, llcpp],
-    value = TestFlexibleResourceXUnionInStruct {
-        xu: SampleResourceXUnion {
+    value = TestFlexibleResourceXUnionInStruct{
+        xu: SampleResourceXUnion{
             0: {
                 bytes = [],
-            }
-        }
+            },
+        },
     },
     err = UNION_FIELD_NOT_SET,
 }
@@ -576,12 +575,12 @@ encode_failure("RequiredFlexibleResourceUnionZeroOrdinalNoPayload") {
 encode_failure("RequiredFlexibleResourceUnionZeroOrdinalWithPayload") {
     // C and LLCPP cannot construct unknown variants.
     bindings_denylist = [c, llcpp],
-    value = TestFlexibleResourceXUnionInStruct {
-        xu: SampleResourceXUnion {
+    value = TestFlexibleResourceXUnionInStruct{
+        xu: SampleResourceXUnion{
             0: {
                 bytes = [repeat(0xab):20, padding:4],
-            }
-        }
+            },
+        },
     },
     err = UNION_FIELD_NOT_SET,
 }
@@ -589,12 +588,12 @@ encode_failure("RequiredFlexibleResourceUnionZeroOrdinalWithPayload") {
 encode_failure("OptionalFlexibleValueUnionZeroOrdinalWithPayload") {
     // C and LLCPP cannot construct unknown variants.
     bindings_denylist = [c, llcpp],
-    value = TestOptionalFlexibleXUnionInStruct {
-        xu: SampleXUnion {
+    value = TestOptionalFlexibleXUnionInStruct{
+        xu: SampleXUnion{
             0: {
                 bytes = [repeat(0xab):20, padding:4],
-            }
-        }
+            },
+        },
     },
     err = UNION_FIELD_NOT_SET,
 }
@@ -602,12 +601,12 @@ encode_failure("OptionalFlexibleValueUnionZeroOrdinalWithPayload") {
 encode_failure("OptionalFlexibleResourceUnionZeroOrdinalWithPayload") {
     // C and LLCPP cannot construct unknown variants.
     bindings_denylist = [c, llcpp],
-    value = TestOptionalFlexibleResourceXUnionInStruct {
-        xu: SampleResourceXUnion {
+    value = TestOptionalFlexibleResourceXUnionInStruct{
+        xu: SampleResourceXUnion{
             0: {
                 bytes = [repeat(0xab):20, padding:4],
-            }
-        }
+            },
+        },
     },
     err = UNION_FIELD_NOT_SET,
 }
@@ -741,7 +740,7 @@ decode_failure("RequiredFlexibleResourceUnionZeroOrdinalWithPayload") {
 }
 
 success("OptionalStrictValueUnionZeroOrdinalNoPayload") {
-    value = TestOptionalStrictXUnionInStruct {
+    value = TestOptionalStrictXUnionInStruct{
         xu: null,
     },
     bytes = {
@@ -774,7 +773,7 @@ decode_failure("OptionalStrictValueUnionZeroOrdinalWithPayload") {
 }
 
 success("OptionalStrictResourceUnionZeroOrdinalNoPayload") {
-    value = TestOptionalStrictResourceXUnionInStruct {
+    value = TestOptionalStrictResourceXUnionInStruct{
         xu: null,
     },
     bytes = {
@@ -807,7 +806,7 @@ decode_failure("OptionalStrictResourceUnionZeroOrdinalWithPayload") {
 }
 
 success("OptionalFlexibleValueUnionZeroOrdinalNoPayload") {
-        value = TestOptionalFlexibleXUnionInStruct {
+    value = TestOptionalFlexibleXUnionInStruct{
         xu: null,
     },
     bytes = {
@@ -840,7 +839,7 @@ decode_failure("OptionalFlexibleValueUnionZeroOrdinalWithPayload") {
 }
 
 success("OptionalFlexibleResourceUnionZeroOrdinalNoPayload") {
-        value = TestOptionalFlexibleResourceXUnionInStruct {
+    value = TestOptionalFlexibleResourceXUnionInStruct{
         xu: null,
     },
     bytes = {
@@ -874,32 +873,32 @@ decode_failure("OptionalFlexibleResourceUnionZeroOrdinalWithPayload") {
 
 encode_failure("RequiredStrictValueUnionDefaultInitialized") {
     bindings_allowlist = [go, llcpp, hlcpp],
-    value = TestStrictXUnionInStruct {
-        xu: SampleStrictXUnion {},
+    value = TestStrictXUnionInStruct{
+        xu: SampleStrictXUnion{},
     },
     err = UNION_FIELD_NOT_SET,
 }
 
 encode_failure("RequiredStrictResourceUnionDefaultInitialized") {
     bindings_allowlist = [go, llcpp, hlcpp],
-    value = TestStrictResourceXUnionInStruct {
-        xu: SampleStrictResourceXUnion {},
+    value = TestStrictResourceXUnionInStruct{
+        xu: SampleStrictResourceXUnion{},
     },
     err = UNION_FIELD_NOT_SET,
 }
 
 encode_failure("RequiredFlexibleValueUnionDefaultInitialized") {
     bindings_allowlist = [go, llcpp, hlcpp],
-    value = TestFlexibleXUnionInStruct {
-        xu: SampleXUnion {},
+    value = TestFlexibleXUnionInStruct{
+        xu: SampleXUnion{},
     },
     err = UNION_FIELD_NOT_SET,
 }
 
 encode_failure("RequiredFlexibleResourceUnionDefaultInitialized") {
     bindings_allowlist = [go, llcpp, hlcpp],
-    value = TestFlexibleResourceXUnionInStruct {
-        xu: SampleResourceXUnion {},
+    value = TestFlexibleResourceXUnionInStruct{
+        xu: SampleResourceXUnion{},
     },
     err = UNION_FIELD_NOT_SET,
 }
@@ -907,8 +906,8 @@ encode_failure("RequiredFlexibleResourceUnionDefaultInitialized") {
 encode_failure("OptionalStrictValueUnionDefaultInitialized") {
     // TODO(fxbug.dev/7805): Enable in HLCPP and LLCPP.
     bindings_allowlist = [go],
-    value = TestOptionalStrictXUnionInStruct {
-        xu: SampleStrictXUnion {},
+    value = TestOptionalStrictXUnionInStruct{
+        xu: SampleStrictXUnion{},
     },
     err = UNION_FIELD_NOT_SET,
 }
@@ -916,8 +915,8 @@ encode_failure("OptionalStrictValueUnionDefaultInitialized") {
 encode_failure("OptionalStrictResourceUnionDefaultInitialized") {
     // TODO(fxbug.dev/7805): Enable in HLCPP and LLCPP.
     bindings_allowlist = [go],
-    value = TestOptionalStrictResourceXUnionInStruct {
-        xu: SampleStrictResourceXUnion {},
+    value = TestOptionalStrictResourceXUnionInStruct{
+        xu: SampleStrictResourceXUnion{},
     },
     err = UNION_FIELD_NOT_SET,
 }
@@ -925,8 +924,8 @@ encode_failure("OptionalStrictResourceUnionDefaultInitialized") {
 encode_failure("OptionalFlexibleValueUnionDefaultInitialized") {
     // TODO(fxbug.dev/7805): Enable in HLCPP, LLCPP.
     bindings_allowlist = [go],
-    value = TestOptionalFlexibleXUnionInStruct {
-        xu: SampleXUnion {},
+    value = TestOptionalFlexibleXUnionInStruct{
+        xu: SampleXUnion{},
     },
     err = UNION_FIELD_NOT_SET,
 }
@@ -934,8 +933,8 @@ encode_failure("OptionalFlexibleValueUnionDefaultInitialized") {
 encode_failure("OptionalFlexibleResourceUnionDefaultInitialized") {
     // TODO(fxbug.dev/7805): Enable in HLCPP, LLCPP.
     bindings_allowlist = [go],
-    value = TestOptionalFlexibleResourceXUnionInStruct {
-        xu: SampleResourceXUnion {},
+    value = TestOptionalFlexibleResourceXUnionInStruct{
+        xu: SampleResourceXUnion{},
     },
     err = UNION_FIELD_NOT_SET,
 }

@@ -9,7 +9,7 @@ success("SinglePresentHandle") {
     handle_defs = {
         #0 = event(),
     },
-    value = NonnullableHandle {
+    value = NonnullableHandle{
         h: #0,
     },
     bytes = {
@@ -21,7 +21,7 @@ success("SinglePresentHandle") {
         v1, v2 = [
             #0,
         ],
-    }
+    },
 }
 
 // TODO(fxbug.dev/88957): The following 4 tests can be auto-generated using padding metadata.
@@ -120,7 +120,7 @@ decode_failure("TooManyHandlesSpecifiedError") {
     },
     handles = {
         v1, v2 = [
-            #0, #1
+            #0, #1,
         ],
     },
     err = TOO_MANY_HANDLES_IN_MESSAGE,
@@ -143,7 +143,7 @@ decode_failure("TooManyBytesSpecifiedError") {
     },
     handles = {
         v1, v2 = [
-            #0, #1
+            #0, #1,
         ],
     },
     err = TOO_MANY_BYTES_IN_MESSAGE,
@@ -155,7 +155,7 @@ success("MultiplePresentHandles") {
         #1 = channel(),
         #2 = event(),
     },
-    value = MultipleNonnullableHandles {
+    value = MultipleNonnullableHandles{
         data0: 0,
         handle0: #0,
         data1: 1,
@@ -165,47 +165,47 @@ success("MultiplePresentHandles") {
     },
     bytes = {
         v1, v2 = [
-            num(0): 4,
+            num(0):4,
             repeat(0xff):4,
-            num(1): 8,
+            num(1):8,
             repeat(0xff):4,
             repeat(0xff):4,
-            num(2): 8,
+            num(2):8,
         ],
     },
     handles = {
         v1, v2 = [
             #0, #1, #2,
         ],
-    }
+    },
 }
 
 success("SingleAbsentHandle") {
-    value = NullableHandle {},
+    value = NullableHandle{},
     bytes = {
         v1, v2 = [
             repeat(0):4,
             padding:4,
         ],
-    }
+    },
 }
 
 success("MultipleAbsentHandles") {
-    value = MultipleNullableHandles {
+    value = MultipleNullableHandles{
         data0: 0,
         data1: 1,
         data2: 2,
     },
     bytes = {
         v1, v2 = [
-            num(0): 4,
+            num(0):4,
             repeat(0):4,
-            num(1): 8,
+            num(1):8,
             repeat(0):4,
             repeat(0):4,
-            num(2): 8,
+            num(2):8,
         ],
-    }
+    },
 }
 
 success("ArrayOfPresentHandles") {
@@ -215,7 +215,7 @@ success("ArrayOfPresentHandles") {
         #2 = event(),
         #3 = event(),
     },
-    value = ArrayOfNonnullableHandles {
+    value = ArrayOfNonnullableHandles{
         handles: [#0, #1, #2, #3],
     },
     bytes = {
@@ -230,7 +230,7 @@ success("ArrayOfPresentHandles") {
         v1, v2 = [
             #0, #1, #2, #3,
         ],
-    }
+    },
 }
 
 decode_failure("ArrayOfPresentHandlesTooFewError") {
@@ -251,7 +251,7 @@ decode_failure("ArrayOfPresentHandlesTooFewError") {
     },
     handles = {
         v1, v2 = [
-            #0, #1
+            #0, #1,
         ],
     },
     err = TOO_FEW_HANDLES,
@@ -276,7 +276,7 @@ decode_failure("ArrayOfNonnullableHandlesSomeAbsentError") {
     },
     handles = {
         v1, v2 = [
-            #0, #1, #2
+            #0, #1, #2,
         ],
     },
     err = NON_NULLABLE_TYPE_WITH_NULL_VALUE,
@@ -288,7 +288,7 @@ success("ArrayOfNullableHandles") {
         #1 = event(),
         #2 = event(),
     },
-    value = ArrayOfNullableHandles {
+    value = ArrayOfNullableHandles{
         handles: [#0, null, #1, null, #2],
     },
     bytes = {
@@ -305,7 +305,7 @@ success("ArrayOfNullableHandles") {
         v1, v2 = [
             #0, #1, #2,
         ],
-    }
+    },
 }
 
 decode_failure("ArrayOfNullableHandlesWithInsufficientHandlesError") {
@@ -328,7 +328,7 @@ decode_failure("ArrayOfNullableHandlesWithInsufficientHandlesError") {
     },
     handles = {
         v1, v2 = [
-            #0, #1
+            #0, #1,
         ],
     },
     err = TOO_FEW_HANDLES,
@@ -350,7 +350,7 @@ success("ArrayOfArrayOfPresentHandles") {
         #10 = event(),
         #11 = event(),
     },
-    value = ArrayOfArrayOfNonnullableHandles {
+    value = ArrayOfArrayOfNonnullableHandles{
         handles: [
             [#0, #1, #2],
             [#3, #4, #5],
@@ -376,9 +376,9 @@ success("ArrayOfArrayOfPresentHandles") {
     },
     handles = {
         v1, v2 = [
-            #0, #1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11
+            #0, #1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11,
         ],
-    }
+    },
 }
 
 success("OutOfLineArrayOfNonnullableHandles") {
@@ -390,8 +390,8 @@ success("OutOfLineArrayOfNonnullableHandles") {
         #2 = event(),
         #3 = event(),
     },
-    value = OutOfLineArrayOfNonnullableHandles {
-        handles: NonnullableHandleArray {
+    value = OutOfLineArrayOfNonnullableHandles{
+        handles: NonnullableHandleArray{
             handles: [#0, #1, #2, #3],
         },
     },
@@ -410,5 +410,5 @@ success("OutOfLineArrayOfNonnullableHandles") {
         v1, v2 = [
             #0, #1, #2, #3,
         ],
-    }
+    },
 }

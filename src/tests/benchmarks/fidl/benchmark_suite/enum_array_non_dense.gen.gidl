@@ -265,6 +265,6 @@ benchmark("EnumArray/NonDense/256") {
             1,
             3,
 
-        ]
+        ],
     },
 }

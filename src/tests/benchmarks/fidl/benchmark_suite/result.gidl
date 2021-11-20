@@ -12,9 +12,9 @@ benchmark("ErrorSyntaxResult_Success") {
                 payload_size: 4,
                 flags: 5,
                 buffer_config: 6,
-                stream_segment_id: 7
-            }
-        }
+                stream_segment_id: 7,
+            },
+        },
     },
 }
 
@@ -22,6 +22,6 @@ benchmark("ErrorSyntaxResult_Failure") {
     value = ErrorSyntaxResultStruct{
         result: ErrorSyntaxResult{
             err: 10,
-        }
+        },
     },
 }

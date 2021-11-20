@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 success("RecursiveOptionalStruct") {
-    value = RecursiveOptionalBasicStruct {
-        inner: RecursiveOptionalBasicStruct {
-            inner: RecursiveOptionalBasicStruct {
+    value = RecursiveOptionalBasicStruct{
+        inner: RecursiveOptionalBasicStruct{
+            inner: RecursiveOptionalBasicStruct{
                 inner: null,
             },
         },
@@ -15,23 +15,23 @@ success("RecursiveOptionalStruct") {
             repeat(0xff):8,
             repeat(0xff):8,
             repeat(0x00):8,
-        ]
-    }
+        ],
+    },
 }
 
 success("RecursiveVectorStruct") {
     // TODO(fxbug.dev/88725) Enable this test for Rust.
     bindings_denylist = [rust],
-    value = RecursiveVectorStruct {
+    value = RecursiveVectorStruct{
         vec: [
-            RecursiveVectorStruct {
+            RecursiveVectorStruct{
                 vec: [
-                    RecursiveVectorStruct {
+                    RecursiveVectorStruct{
                         vec: [],
                     },
                 ],
             },
-        ]
+        ],
     },
     bytes = {
         v1, v2 = [
@@ -43,16 +43,16 @@ success("RecursiveVectorStruct") {
 
             num(0):8,
             repeat(0xff):8,
-        ]
-    }
+        ],
+    },
 }
 
 success("RecursiveUnionStruct") {
-    value = RecursiveUnionStruct {
-        u: RecursiveUnion {
-            s: RecursiveUnionStruct {
-                u: RecursiveUnion {
-                    s: RecursiveUnionStruct {
+    value = RecursiveUnionStruct{
+        u: RecursiveUnion{
+            s: RecursiveUnionStruct{
+                u: RecursiveUnion{
+                    s: RecursiveUnionStruct{
                         u: null,
                     },
                 },
@@ -69,20 +69,20 @@ success("RecursiveUnionStruct") {
 
             num(0):8,
             num(0):4, num(0):2, num(0):2,
-        ]
-    }
+        ],
+    },
 }
 
 success("RecursiveTableStruct") {
-    value = RecursiveTableHolder {
-        t: RecursiveTable {
-            s: RecursiveTableOptionalHolder {
-                o: RecursiveTableHolder {
-                    t: RecursiveTable {
-                        s: RecursiveTableOptionalHolder {
-                            o: RecursiveTableHolder {
-                                t: RecursiveTable {
-                                    s: RecursiveTableOptionalHolder {
+    value = RecursiveTableHolder{
+        t: RecursiveTable{
+            s: RecursiveTableOptionalHolder{
+                o: RecursiveTableHolder{
+                    t: RecursiveTable{
+                        s: RecursiveTableOptionalHolder{
+                            o: RecursiveTableHolder{
+                                t: RecursiveTable{
+                                    s: RecursiveTableOptionalHolder{
                                         o: null,
                                     },
                                 },
@@ -109,6 +109,6 @@ success("RecursiveTableStruct") {
             repeat(0xff):8,
             num(8):4, num(0):2, num(0):2,
             repeat(0x00):8,
-        ]
-    }
+        ],
+    },
 }

@@ -76,8 +76,8 @@ success("RecursiveOptionalStructUnderLimit") {
         v1, v2 = [
             repeat(0xff):256, // 0 - 31
             repeat(0x00):8, // 32
-        ]
-    }
+        ],
+    },
 }
 
 encode_failure("RecursiveOptionalStructExceedLimit") {
@@ -161,7 +161,7 @@ decode_failure("RecursiveOptionalStructExceedLimit") {
         v1, v2 = [
             repeat(0xff):264, // 0 - 32
             repeat(0x00):8, // 32
-        ]
+        ],
     },
     err = EXCEEDED_MAX_OUT_OF_LINE_DEPTH,
 }
@@ -244,8 +244,8 @@ success("RecursiveOptionalStructArrayWrapperUnderLimit") {
         v1, v2 = [
             repeat(0xff):256, // 0 - 31
             repeat(0x00):8, // 32
-        ]
-    }
+        ],
+    },
 }
 
 encode_failure("RecursiveOptionalStructArrayWrapperExceedLimit") {
@@ -333,7 +333,7 @@ decode_failure("RecursiveOptionalStructArrayWrapperExceedLimit") {
         v1, v2 = [
             repeat(0xff):264, // 0 - 32
             repeat(0x00):8, // 32
-        ]
+        ],
     },
     err = EXCEEDED_MAX_OUT_OF_LINE_DEPTH,
 }
@@ -424,7 +424,7 @@ success("RecursiveOptionalAndUnionUnderLimit") {
             repeat(0xff):248, // 1 - 31
             repeat(0x00):8, // 32
         ],
-    }
+    },
 }
 
 encode_failure("RecursiveOptionalAndUnionExceedLimit") {
@@ -609,8 +609,8 @@ success("RecursiveOptionalAndTableUnderLimit") {
             num(248):4, num(0):4, // num bytes, num handles
             repeat(0xff):240, // 2 - 31
             repeat(0x00):8, // 32
-        ]
-    }
+        ],
+    },
 }
 
 encode_failure("RecursiveOptionalAndTableExceedLimit") {
@@ -698,7 +698,7 @@ decode_failure("RecursiveOptionalAndTableExceedLimit") {
             repeat(0xff):8, // envelope data
             repeat(0xff):248, // 2 - 32
             repeat(0x00):8, // 33
-        ]
+        ],
     },
     err = EXCEEDED_MAX_OUT_OF_LINE_DEPTH,
 }
@@ -780,8 +780,8 @@ success("RecursiveOptionalAndVectorUnderLimit") {
             repeat(0xff):8, // vector data
             repeat(0xff):248, // 1 - 31
             repeat(0x00):8, // 32
-        ]
-    }
+        ],
+    },
 }
 
 encode_failure("RecursiveOptionalAndVectorExceedLimit") {
@@ -868,7 +868,7 @@ decode_failure("RecursiveOptionalAndVectorExceedLimit") {
             repeat(0xff):8, // vector data
             repeat(0xff):256, // 1 - 32
             repeat(0x00):8, // 33
-        ]
+        ],
     },
     err = EXCEEDED_MAX_OUT_OF_LINE_DEPTH,
 }
@@ -1072,9 +1072,9 @@ success("RecursiveOptionalStructWithStringUnderLimit") {
             num(1):8, // string count
             repeat(0xff):8, // string body
             // 32
-            'X', padding:7
-        ]
-    }
+            'X', padding:7,
+        ],
+    },
 }
 
 encode_failure("RecursiveOptionalStructWithStringExceedLimit") {
@@ -1154,7 +1154,7 @@ decode_failure("RecursiveOptionalStructWithStringExceedLimit") {
     type = RecursiveOptionalStructWithString,
     bytes = {
         v1, v2 = [
-                        // 0
+            // 0
             repeat(0xff):8, // inner,
             num(0):8, // string count
             repeat(0x00):8, // string body
@@ -1287,8 +1287,8 @@ decode_failure("RecursiveOptionalStructWithStringExceedLimit") {
             num(1):8, // string count
             repeat(0xff):8, // string body
             // 33
-            'X', padding:7
-        ]
+            'X', padding:7,
+        ],
     },
     err = EXCEEDED_MAX_OUT_OF_LINE_DEPTH,
 }

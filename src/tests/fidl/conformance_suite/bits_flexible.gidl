@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 success("FlexibleBitsUint8KnownValue") {
-    value = FlexibleBitsUint8Struct {
+    value = FlexibleBitsUint8Struct{
         b: 1,
     },
     bytes = {
@@ -14,7 +14,7 @@ success("FlexibleBitsUint8KnownValue") {
 }
 
 success("FlexibleBitsUint8CombinedValue") {
-    value = FlexibleBitsUint8Struct {
+    value = FlexibleBitsUint8Struct{
         b: 3,
     },
     bytes = {
@@ -25,7 +25,7 @@ success("FlexibleBitsUint8CombinedValue") {
 }
 
 success("FlexibleBitsUint16KnownValue") {
-    value = FlexibleBitsUint16Struct {
+    value = FlexibleBitsUint16Struct{
         b: 1,
     },
     bytes = {
@@ -36,7 +36,7 @@ success("FlexibleBitsUint16KnownValue") {
 }
 
 success("FlexibleBitsUint16CombinedValue") {
-    value = FlexibleBitsUint16Struct {
+    value = FlexibleBitsUint16Struct{
         b: 3,
     },
     bytes = {
@@ -47,7 +47,7 @@ success("FlexibleBitsUint16CombinedValue") {
 }
 
 success("FlexibleBitsUint32KnownValue") {
-    value = FlexibleBitsUint32Struct {
+    value = FlexibleBitsUint32Struct{
         b: 1,
     },
     bytes = {
@@ -58,7 +58,7 @@ success("FlexibleBitsUint32KnownValue") {
 }
 
 success("FlexibleBitsUint32CombinedValue") {
-    value = FlexibleBitsUint32Struct {
+    value = FlexibleBitsUint32Struct{
         b: 3,
     },
     bytes = {
@@ -67,8 +67,9 @@ success("FlexibleBitsUint32CombinedValue") {
         ],
     },
 }
+
 success("FlexibleBitsUint64KnownValue") {
-    value = FlexibleBitsUint64Struct {
+    value = FlexibleBitsUint64Struct{
         b: 1,
     },
     bytes = {
@@ -79,7 +80,7 @@ success("FlexibleBitsUint64KnownValue") {
 }
 
 success("FlexibleBitsUint64CombinedValue") {
-    value = FlexibleBitsUint64Struct {
+    value = FlexibleBitsUint64Struct{
         b: 3,
     },
     bytes = {
@@ -90,7 +91,7 @@ success("FlexibleBitsUint64CombinedValue") {
 }
 
 success("FlexibleBitsUint8UnknownValue") {
-    value = FlexibleBitsUint8Struct {
+    value = FlexibleBitsUint8Struct{
         b: 0xff,
     },
     bytes = {
@@ -101,7 +102,7 @@ success("FlexibleBitsUint8UnknownValue") {
 }
 
 success("FlexibleBitsUint16UnknownValue") {
-   value = FlexibleBitsUint16Struct {
+    value = FlexibleBitsUint16Struct{
         b: 0x1234,
     },
     bytes = {
@@ -111,9 +112,8 @@ success("FlexibleBitsUint16UnknownValue") {
     },
 }
 
-
 success("FlexibleBitsUint32UnknownValue") {
-    value = FlexibleBitsUint32Struct {
+    value = FlexibleBitsUint32Struct{
         b: 0x12345678,
     },
     bytes = {
@@ -124,12 +124,12 @@ success("FlexibleBitsUint32UnknownValue") {
 }
 
 success("FlexibleBitsUint64UnknownValue") {
-    value = FlexibleBitsUint64Struct {
+    value = FlexibleBitsUint64Struct{
         b: 0x0102030405060708,
     },
     bytes = {
         v1, v2 = [
-            num(0x0102030405060708):8
+            num(0x0102030405060708):8,
         ],
     },
 }

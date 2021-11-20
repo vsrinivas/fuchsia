@@ -3,21 +3,21 @@
 // found in the LICENSE file.
 
 success("PersistentCombined") {
-    value = PersistentMessage {
-        header: PersistentHeader {
+    value = PersistentMessage{
+        header: PersistentHeader{
             flags: [0x01, 0x02, 0x02],
             magic_number: 0x04,
         },
-        body: Table_PersistentMessage {
+        body: Table_PersistentMessage{
             i: 0x0d0c0b0a,
         },
     },
     bytes = {
         v1, v2 = [
-            0x01, 0x02, 0x03, 0x04,  // Persistent header
+            0x01, 0x02, 0x03, 0x04, // Persistent header
 
-            0x0A, 0x0B, 0x0C, 0x0D,  // i
-            0x00, 0x00, 0x00, 0x00,  // i padding
+            0x0A, 0x0B, 0x0C, 0x0D, // i
+            0x00, 0x00, 0x00, 0x00, // i padding
         ],
     },
 }

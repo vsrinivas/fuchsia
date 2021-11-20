@@ -8,95 +8,95 @@
 benchmark("PaddedStructTree/Depth8") {
     bindings_allowlist = [llcpp, hlcpp, rust, go, walker, reference, dart],
     value = PaddedStructTree8{
-        left:PaddedStructTree7{
-            left:PaddedStructTree6{
-                left:PaddedStructTree5{
-                    left:PaddedStructTree4{
-                        left:PaddedStructTree3{
-                            left:PaddedStructTree2{
-                                left:PaddedStructTree1{
+        left: PaddedStructTree7{
+            left: PaddedStructTree6{
+                left: PaddedStructTree5{
+                    left: PaddedStructTree4{
+                        left: PaddedStructTree3{
+                            left: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                            right: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
-                        right:PaddedStructTree3{
-                            left:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                        right: PaddedStructTree3{
+                            left: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                            right: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
                     },
-                    right:PaddedStructTree4{
-                        left:PaddedStructTree3{
-                            left:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                    right: PaddedStructTree4{
+                        left: PaddedStructTree3{
+                            left: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                            right: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
-                        right:PaddedStructTree3{
-                            left:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                        right: PaddedStructTree3{
+                            left: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                            right: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
@@ -104,93 +104,93 @@ benchmark("PaddedStructTree/Depth8") {
                         },
                     },
                 },
-                right:PaddedStructTree5{
-                    left:PaddedStructTree4{
-                        left:PaddedStructTree3{
-                            left:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                right: PaddedStructTree5{
+                    left: PaddedStructTree4{
+                        left: PaddedStructTree3{
+                            left: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                            right: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
-                        right:PaddedStructTree3{
-                            left:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                        right: PaddedStructTree3{
+                            left: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                            right: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
                     },
-                    right:PaddedStructTree4{
-                        left:PaddedStructTree3{
-                            left:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                    right: PaddedStructTree4{
+                        left: PaddedStructTree3{
+                            left: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                            right: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
-                        right:PaddedStructTree3{
-                            left:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                        right: PaddedStructTree3{
+                            left: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                            right: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
@@ -199,94 +199,94 @@ benchmark("PaddedStructTree/Depth8") {
                     },
                 },
             },
-            right:PaddedStructTree6{
-                left:PaddedStructTree5{
-                    left:PaddedStructTree4{
-                        left:PaddedStructTree3{
-                            left:PaddedStructTree2{
-                                left:PaddedStructTree1{
+            right: PaddedStructTree6{
+                left: PaddedStructTree5{
+                    left: PaddedStructTree4{
+                        left: PaddedStructTree3{
+                            left: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                            right: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
-                        right:PaddedStructTree3{
-                            left:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                        right: PaddedStructTree3{
+                            left: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                            right: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
                     },
-                    right:PaddedStructTree4{
-                        left:PaddedStructTree3{
-                            left:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                    right: PaddedStructTree4{
+                        left: PaddedStructTree3{
+                            left: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                            right: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
-                        right:PaddedStructTree3{
-                            left:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                        right: PaddedStructTree3{
+                            left: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                            right: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
@@ -294,93 +294,93 @@ benchmark("PaddedStructTree/Depth8") {
                         },
                     },
                 },
-                right:PaddedStructTree5{
-                    left:PaddedStructTree4{
-                        left:PaddedStructTree3{
-                            left:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                right: PaddedStructTree5{
+                    left: PaddedStructTree4{
+                        left: PaddedStructTree3{
+                            left: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                            right: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
-                        right:PaddedStructTree3{
-                            left:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                        right: PaddedStructTree3{
+                            left: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                            right: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
                     },
-                    right:PaddedStructTree4{
-                        left:PaddedStructTree3{
-                            left:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                    right: PaddedStructTree4{
+                        left: PaddedStructTree3{
+                            left: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                            right: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
-                        right:PaddedStructTree3{
-                            left:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                        right: PaddedStructTree3{
+                            left: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                            right: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
@@ -390,95 +390,95 @@ benchmark("PaddedStructTree/Depth8") {
                 },
             },
         },
-        right:PaddedStructTree7{
-            left:PaddedStructTree6{
-                left:PaddedStructTree5{
-                    left:PaddedStructTree4{
-                        left:PaddedStructTree3{
-                            left:PaddedStructTree2{
-                                left:PaddedStructTree1{
+        right: PaddedStructTree7{
+            left: PaddedStructTree6{
+                left: PaddedStructTree5{
+                    left: PaddedStructTree4{
+                        left: PaddedStructTree3{
+                            left: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                            right: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
-                        right:PaddedStructTree3{
-                            left:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                        right: PaddedStructTree3{
+                            left: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                            right: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
                     },
-                    right:PaddedStructTree4{
-                        left:PaddedStructTree3{
-                            left:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                    right: PaddedStructTree4{
+                        left: PaddedStructTree3{
+                            left: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                            right: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
-                        right:PaddedStructTree3{
-                            left:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                        right: PaddedStructTree3{
+                            left: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                            right: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
@@ -486,93 +486,93 @@ benchmark("PaddedStructTree/Depth8") {
                         },
                     },
                 },
-                right:PaddedStructTree5{
-                    left:PaddedStructTree4{
-                        left:PaddedStructTree3{
-                            left:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                right: PaddedStructTree5{
+                    left: PaddedStructTree4{
+                        left: PaddedStructTree3{
+                            left: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                            right: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
-                        right:PaddedStructTree3{
-                            left:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                        right: PaddedStructTree3{
+                            left: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                            right: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
                     },
-                    right:PaddedStructTree4{
-                        left:PaddedStructTree3{
-                            left:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                    right: PaddedStructTree4{
+                        left: PaddedStructTree3{
+                            left: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                            right: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
-                        right:PaddedStructTree3{
-                            left:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                        right: PaddedStructTree3{
+                            left: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                            right: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
@@ -581,94 +581,94 @@ benchmark("PaddedStructTree/Depth8") {
                     },
                 },
             },
-            right:PaddedStructTree6{
-                left:PaddedStructTree5{
-                    left:PaddedStructTree4{
-                        left:PaddedStructTree3{
-                            left:PaddedStructTree2{
-                                left:PaddedStructTree1{
+            right: PaddedStructTree6{
+                left: PaddedStructTree5{
+                    left: PaddedStructTree4{
+                        left: PaddedStructTree3{
+                            left: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                            right: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
-                        right:PaddedStructTree3{
-                            left:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                        right: PaddedStructTree3{
+                            left: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                            right: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
                     },
-                    right:PaddedStructTree4{
-                        left:PaddedStructTree3{
-                            left:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                    right: PaddedStructTree4{
+                        left: PaddedStructTree3{
+                            left: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                            right: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
-                        right:PaddedStructTree3{
-                            left:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                        right: PaddedStructTree3{
+                            left: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                            right: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
@@ -676,93 +676,93 @@ benchmark("PaddedStructTree/Depth8") {
                         },
                     },
                 },
-                right:PaddedStructTree5{
-                    left:PaddedStructTree4{
-                        left:PaddedStructTree3{
-                            left:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                right: PaddedStructTree5{
+                    left: PaddedStructTree4{
+                        left: PaddedStructTree3{
+                            left: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                            right: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
-                        right:PaddedStructTree3{
-                            left:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                        right: PaddedStructTree3{
+                            left: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                            right: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
                     },
-                    right:PaddedStructTree4{
-                        left:PaddedStructTree3{
-                            left:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                    right: PaddedStructTree4{
+                        left: PaddedStructTree3{
+                            left: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                            right: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
                         },
-                        right:PaddedStructTree3{
-                            left:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                        right: PaddedStructTree3{
+                            left: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
                             },
-                            right:PaddedStructTree2{
-                                left:PaddedStructTree1{
+                            right: PaddedStructTree2{
+                                left: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
-                                right:PaddedStructTree1{
+                                right: PaddedStructTree1{
                                     a: 1,
                                     b: 2,
                                 },
