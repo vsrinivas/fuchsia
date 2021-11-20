@@ -44,5 +44,7 @@ fuchsia_component("directory_migrator_impl_unittest") {
 # PACKAGES
 ###############################################################################
 fuchsia_test_package("feedback-migration-shell-tests") {
+  package_deps =
+      [ "//src/testing/fidl/echo_client_placeholder:echo_client_placeholder" ]
   test_components = [ ":directory_migrator_impl_unittest" ]
 }

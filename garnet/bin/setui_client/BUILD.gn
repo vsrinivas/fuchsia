@@ -113,6 +113,7 @@ fuchsia_component("setui-client-integration-test") {
 }
 
 fuchsia_test_package("setui-client-integration-tests") {
+  package_deps = [ "//garnet/bin/setui_client:setui_client" ]
   test_components = [ ":setui-client-integration-test" ]
 }
 

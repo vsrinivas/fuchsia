@@ -85,6 +85,10 @@ fuchsia_test_component("use_h264_decoder_test_v2") {
 }
 
 fuchsia_test_package("use_h264_decoder_tests") {
+  package_deps = [
+    "//src/media/codec:codec_factory",
+    "//src/media/codec:codec_runner_sw_ffmpeg",
+  ]
   test_components = [
     ":use_h264_decoder_test",
     ":use_h264_decoder_test_v2",
@@ -121,6 +125,10 @@ fuchsia_unittest_component("use_h264_decoder_frame_num_gaps_test_v2") {
 }
 
 fuchsia_test_package("use_h264_decoder_frame_num_gaps_tests") {
+  package_deps = [
+    "//src/media/codec:codec_factory",
+    "//src/media/codec:codec_runner_sw_ffmpeg",
+  ]
   test_components = [
     ":use_h264_decoder_frame_num_gaps_test",
     ":use_h264_decoder_frame_num_gaps_test_v2",
@@ -134,7 +142,6 @@ fuchsia_test_package("use_h264_decoder_frame_num_gaps_tests") {
       vim3_env,
     ]
   }
-  package_deps = [ "//src/media/codec:codec_factory" ]
 }
 
 # Force SW decode.  Only run in environments where we include a SW h264 decoder.

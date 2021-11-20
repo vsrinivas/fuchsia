@@ -69,6 +69,11 @@ dart_test_component("integration-test-component") {
 }
 
 fuchsia_test_package("fuchsia-services-integration-tests") {
+  package_deps = [
+    "//sdk/dart/fuchsia_services/test_support:fuchsia-services-foo-test-server",
+    "//src/developer/debug/debug_agent:debug_agent",
+    dart_default_build_cfg.runner_dep,
+  ]
   test_components = [ ":integration-test-component" ]
 }
 

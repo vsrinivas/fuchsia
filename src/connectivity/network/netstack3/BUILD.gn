@@ -87,6 +87,8 @@ fuchsia_package("netstack3") {
 }
 
 fuchsia_unittest_package("netstack3-tests") {
+  package_deps =
+      [ "//src/connectivity/network/testing/netemul/runner:netemul-sandbox" ]
   component_name = "netstack3-bin-test"
   manifest = "meta/netstack3-bin-test.cmx"
   deps = [

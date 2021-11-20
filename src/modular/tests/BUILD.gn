@@ -438,8 +438,14 @@ fuchsia_package_with_single_component("module_with_fake_runner") {
 }
 
 fuchsia_test_package("modular_integration_tests") {
-  package_deps =
-      [ "//src/modular/bin/modular_test_harness:modular_test_harness" ]
+  package_deps = [
+    "//sdk/lib/sys/cpp/testing/environment_delegating_runner:environment_delegating_runner",
+    "//src/diagnostics/archivist:archivist-for-embedding",
+    "//src/modular/bin/basemgr:basemgr",
+    "//src/modular/bin/modular_test_harness:modular_test_harness",
+    "//src/modular/bin/sessionmgr:sessionmgr",
+    "//src/modular/tests:module_with_fake_runner",
+  ]
   test_components = [
     ":agent-restart-test",
     ":agent-services-test",

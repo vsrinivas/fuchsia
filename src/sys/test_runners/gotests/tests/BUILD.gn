@@ -33,6 +33,8 @@ fuchsia_component("go_runner_integration_test") {
 }
 
 fuchsia_test_package("go-runner-integration-test") {
+  package_deps =
+      [ "//src/sys/test_runners/gotests/test_data:go-test-runner-example" ]
   test_components = [ ":go_runner_integration_test" ]
 }
 

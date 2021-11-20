@@ -202,6 +202,9 @@ fuchsia_component("crashing_component") {
 
 fuchsia_test_package("appmgr_integration_tests") {
   package_deps = [
+    "//garnet/bin/glob:glob",
+    "//src/sys/appmgr/integration_tests/mock_runner:appmgr_mock_runner",
+    "//src/sys/appmgr/integration_tests/mock_runner:fake_component_for_runner",
     "//src/sys/appmgr/integration_tests/util:persistent_storage_test_util",
     "//src/testing/sl4f:sl4f",
   ]

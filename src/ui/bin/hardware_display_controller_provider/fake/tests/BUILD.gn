@@ -31,6 +31,10 @@ executable("unittests") {
 }
 
 fuchsia_unittest_package("fake_hdcp_tests") {
+  package_deps = [
+    "//garnet/bin/cpuperf_provider:cpuperf_provider",
+    "//garnet/bin/ktrace_provider:ktrace_provider",
+  ]
   manifest = "meta/fake_hdcp_unittests.cmx"
   deps = [ ":unittests" ]
 }

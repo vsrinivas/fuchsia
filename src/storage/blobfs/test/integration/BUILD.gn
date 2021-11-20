@@ -425,6 +425,10 @@ wrap_with_decompressor("blobfs-use-second-bitmap") {
 }
 
 fuchsia_test_package("blobfs-large-integration-package") {
+  package_deps = [
+    "//src/developer/debug/debug_agent:debug_agent",
+    "//src/storage/blobfs/test/integration:blobfs-integration-package",
+  ]
   test_specs = {
     log_settings = {
       max_severity = "ERROR"

@@ -87,6 +87,8 @@ isolated_swd_components = [
 ]
 
 fuchsia_test_package("isolated-swd-tests") {
+  package_deps =
+      [ "//src/lib/storage/ramdevice_client/rust:ramdisk-isolated-devmgr" ]
   test_components = [ ":isolated-swd-tests-component" ]
 
   deps = [

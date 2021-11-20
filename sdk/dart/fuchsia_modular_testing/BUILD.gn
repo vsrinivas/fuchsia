@@ -80,7 +80,13 @@ dart_test_component("integration-test-component") {
 }
 
 fuchsia_test_package("fuchsia-modular-testing-integration-tests") {
-  package_deps = [ dart_default_build_cfg.runner_dep ]
+  package_deps = [
+    "//sdk/lib/sys/cpp/testing/environment_delegating_runner:environment_delegating_runner",
+    "//src/cobalt/bin/testing/mock_cobalt:mock_cobalt",
+    "//src/modular/bin/basemgr:basemgr",
+    "//src/modular/bin/sessionmgr:sessionmgr",
+    dart_default_build_cfg.runner_dep,
+  ]
   test_components = [ ":integration-test-component" ]
 
   # TODO(fxb/65865): This check shouldn't be necessary.

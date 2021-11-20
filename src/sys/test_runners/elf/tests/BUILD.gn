@@ -29,6 +29,8 @@ fuchsia_component("elf_test_runner_integration_test") {
 }
 
 fuchsia_test_package("elf-test-runner-integration-test") {
+  package_deps =
+      [ "//src/sys/test_runners/elf/test_data:elf-test-runner-example-tests" ]
   test_components = [ ":elf_test_runner_integration_test" ]
 }
 

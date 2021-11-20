@@ -46,6 +46,11 @@ rustc_test("test") {
 }
 
 fuchsia_unittest_package("account_manager_integration_test") {
+  package_deps = [
+    "//src/identity/bin/account_handler:account_handler",
+    "//src/identity/bin/account_manager:account_manager",
+    "//src/identity/bin/dev_authenticator:dev_authenticator",
+  ]
   deps = [ ":test" ]
   manifest = "meta/account_manager_integration_test.cmx"
 }

@@ -341,6 +341,13 @@ fuchsia_component("namespace_init_unittest") {
 # PACKAGES
 ###############################################################################
 fuchsia_test_package("feedback-tests") {
+  package_deps = [
+    "//src/cobalt/bin/testing/mock_cobalt",
+    "//src/developer/forensics:copy-pkg",
+    "//src/factory/fake_factory_store_providers:fake_factory_store_providers",
+    "//src/hwinfo:fake_legacy_hwinfo",
+    "//src/sys/pkg/bin/fake-channel-control:fake-channel-control",
+  ]
   test_components = [
     ":config_unittest",
     ":device_id_provider_unittest",

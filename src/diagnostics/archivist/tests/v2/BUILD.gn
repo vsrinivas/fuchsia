@@ -144,6 +144,11 @@ resource("configure_legacy_metrics_pipeline") {
 }
 
 fuchsia_test_package("archivist-integration-tests-v2") {
+  package_deps = [
+    "//src/diagnostics/archivist/tests/v2:archivist-with-feedback-filtering",
+    "//src/diagnostics/archivist/tests/v2:archivist-with-feedback-filtering-disabled",
+    "//src/diagnostics/archivist/tests/v2:archivist-with-legacy-metrics",
+  ]
   test_components = [ ":archivist_integration_tests" ]
   deps = [
     ":archivist-with-small-caches",

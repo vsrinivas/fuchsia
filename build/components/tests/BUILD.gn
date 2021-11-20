@@ -167,6 +167,13 @@ fuchsia_test_component("launcher-test") {
 }
 
 fuchsia_test_package("launcher-integration-test") {
+  package_deps = [
+    ":return-zero-component-named",
+    ":return-zero-package-component-named",
+    ":return-zero-package-named",
+    ":return-zero-unnamed",
+  ]
+
   # Demonstrate that `fuchsia_package_with_single_component` generates packages
   # with single components and those packages have the expected names. See the
   # launcher test binary to learn more.

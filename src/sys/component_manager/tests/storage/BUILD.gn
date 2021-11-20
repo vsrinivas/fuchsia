@@ -155,6 +155,7 @@ fuchsia_unittest_component("storage_admin_integration_test_component") {
 }
 
 fuchsia_test_package("storage_integration_test") {
+  package_deps = [ "//src/sys/component_manager:component-manager" ]
   test_components = [
     ":storage_integration_test_component",
     ":storage_admin_integration_test_component",

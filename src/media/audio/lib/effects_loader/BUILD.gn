@@ -59,6 +59,10 @@ executable("test") {
 }
 
 fuchsia_unittest_package("audio_effects_loader_unittests") {
+  package_deps = [
+    "//src/developer/system_monitor/bin/harvester:system_monitor_harvester",
+    "//src/media/audio/virtual_audio_service:virtual_audio_service",
+  ]
   deps = [
     ":test",
     "//src/media/audio/effects/test_effects:test_effects_v1",

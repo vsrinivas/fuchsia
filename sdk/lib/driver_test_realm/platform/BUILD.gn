@@ -53,5 +53,7 @@ test("test") {
 }
 
 fuchsia_unittest_package("platform_driver_test_realm_test") {
+  package_deps =
+      [ "//src/media/audio/virtual_audio_service:virtual_audio_service" ]
   deps = [ ":test" ]
 }

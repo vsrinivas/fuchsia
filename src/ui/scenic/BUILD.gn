@@ -127,6 +127,10 @@ fuchsia_unittest_package("flatland_unittests") {
 }
 
 fuchsia_unittest_package("flatland_buffers_unittests") {
+  package_deps = [
+    "//garnet/bin/cpuperf_provider:cpuperf_provider",
+    "//garnet/bin/ktrace_provider:ktrace_provider",
+  ]
   manifest = "meta/flatland_buffers_unittests.cmx"
   deps = [ "lib/flatland/buffers/tests:unittests" ] + scenic_test_deps
   test_specs = {
@@ -159,6 +163,7 @@ fuchsia_unittest_package("flatland_display_compositor_pixeltests") {
 
 fuchsia_unittest_package(
     "flatland_display_compositor_pixeltests_with_fake_display") {
+  package_deps = [ "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider" ]
   manifest = "meta/flatland_display_compositor_pixeltests_with_fake_display.cmx"
   deps =
       [ "lib/flatland/engine/tests/pixeltests:pixeltests_with_fake_display" ] +
@@ -202,6 +207,7 @@ fuchsia_unittest_package("flatland_engine_unittests") {
 }
 
 fuchsia_unittest_package("flatland_renderer_unittests") {
+  package_deps = [ "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider" ]
   manifest = "meta/flatland_renderer_unittests.cmx"
   deps = [ "lib/flatland/renderer/tests:unittests" ] + scenic_test_deps
   test_specs = {
@@ -225,6 +231,7 @@ fuchsia_unittest_package("gfx_apptests") {
 fuchsia_unittest_package("gfx_pixeltests") {
   package_deps = [
     "//garnet/bin/trace_manager:trace_manager",
+    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider",
     "//src/ui/bin/root_presenter:root_presenter",
     "//src/ui/scenic:scenic_pkg",
   ]
@@ -247,6 +254,10 @@ fuchsia_unittest_package("gfx_swapchain_tests") {
 }
 
 fuchsia_unittest_package("gfx_unittests") {
+  package_deps = [
+    "//garnet/bin/cpuperf_provider:cpuperf_provider",
+    "//garnet/bin/ktrace_provider:ktrace_provider",
+  ]
   manifest = "meta/gfx_unittests.cmx"
   deps = [ "lib/gfx/tests:unittests" ] + scenic_test_deps
   test_specs = {
@@ -262,6 +273,13 @@ fuchsia_unittest_package("gfx_util_unittests") {
 }
 
 fuchsia_unittest_package("gfx_viewstate_apptests") {
+  package_deps = [
+    "//garnet/bin/cpuperf_provider:cpuperf_provider",
+    "//garnet/bin/ktrace_provider:ktrace_provider",
+    "//src/ui/bin/root_presenter:root_presenter",
+    "//src/ui/examples/bouncing_ball:bouncing_ball",
+    "//src/ui/scenic:scenic_pkg",
+  ]
   manifest = "meta/gfx_viewstate_apptests.cmx"
   deps = [ "lib/gfx/tests:viewstate_apptests" ] + scenic_test_deps
   test_specs = {

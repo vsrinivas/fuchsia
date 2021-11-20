@@ -118,6 +118,7 @@ fuchsia_unittest_component("shell-server-test") {
 }
 
 fuchsia_test_package("shell-interpreter-tests") {
+  package_deps = [ "//src/developer/shell/interpreter:shell_server" ]
   test_components = [
     ":shell-interpreter-test",
     ":shell-server-test",

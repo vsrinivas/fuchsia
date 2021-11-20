@@ -31,6 +31,7 @@ dart_test_component("gidl-library-test") {
 
 fuchsia_test_package("test_package") {
   package_name = "gidl-library-test"
+  package_deps = [ dart_default_build_cfg.runner_dep ]
   test_components = [ ":gidl-library-test" ]
 }
 

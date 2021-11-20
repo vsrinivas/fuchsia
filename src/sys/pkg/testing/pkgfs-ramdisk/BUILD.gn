@@ -43,6 +43,8 @@ fuchsia_component("pkgfs-ramdisk-lib-test") {
 }
 
 fuchsia_test_package("pkgfs-ramdisk-tests") {
+  package_deps =
+      [ "//src/lib/storage/ramdevice_client/rust:ramdisk-isolated-devmgr" ]
   test_components = [ ":pkgfs-ramdisk-lib-test" ]
   deps = [
     "//src/storage/bin/blobfs",

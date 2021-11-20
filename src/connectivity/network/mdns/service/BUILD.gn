@@ -269,6 +269,11 @@ fuchsia_unittest_component("mdns_netemul_multi_network_test") {
 }
 
 fuchsia_test_package("mdns-netemul-tests") {
+  package_deps = [
+    "//src/connectivity/network/testing/netemul/runner:netemul-sandbox",
+    "//src/connectivity/network/testing/netemul/runner/runner:netemul-runner",
+    "//src/diagnostics/archivist:archivist-for-embedding",
+  ]
   test_components = [
     ":mdns_netemul_test",
     ":mdns_netemul_v6_test",

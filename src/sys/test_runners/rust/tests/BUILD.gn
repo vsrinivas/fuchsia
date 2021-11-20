@@ -62,6 +62,8 @@ fuchsia_component("rust_runner_stress_test") {
 }
 
 fuchsia_test_package("rust-runner-integration-test") {
+  package_deps =
+      [ "//src/sys/test_runners/rust/test_data:rust-test-runner-example" ]
   test_components = [ ":rust_runner_integration_test" ]
 
   if (!is_coverage) {

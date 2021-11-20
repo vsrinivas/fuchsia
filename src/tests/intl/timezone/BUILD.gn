@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/dart/config.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
@@ -81,6 +82,10 @@ rustc_test("timezone_bin_test") {
 }
 
 fuchsia_unittest_package("timezone-test") {
+  package_deps = [
+    "//src/tests/intl/timestamp-server-dart:timestamp-server-dart",
+    dart_default_build_cfg.runner_dep,
+  ]
   component_name = "timezone_bin_test"
   manifest = "meta/timezone_bin_test.cmx"
   deps = [

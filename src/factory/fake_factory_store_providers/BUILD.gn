@@ -78,6 +78,9 @@ rustc_test("fake_factory_store_providers_test") {
 }
 
 fuchsia_unittest_package("fake_factory_store_providers_tests") {
+  package_deps = [
+    "//src/factory/fake_factory_store_providers:fake_factory_store_providers",
+  ]
   manifest = "meta/fake_factory_store_providers_test.cmx"
   deps = [ ":fake_factory_store_providers_test" ]
 }

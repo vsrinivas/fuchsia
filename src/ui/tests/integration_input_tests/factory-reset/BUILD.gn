@@ -43,6 +43,10 @@ config_data("factory-reset-test-audio") {
 }
 
 fuchsia_unittest_package("factory-reset-test") {
+  package_deps = [
+    "//src/cobalt/bin/testing/mock_cobalt:mock_cobalt",
+    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider",
+  ]
   manifest = "meta/factory_reset_test.cmx"
   deps = [
     ":factory-reset-test-audio",

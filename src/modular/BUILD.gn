@@ -41,6 +41,11 @@ group("tests") {
 }
 
 fuchsia_unittest_package("modular_lib_tests") {
+  package_deps = [
+    "//sdk/lib/sys/cpp/testing/environment_delegating_runner:environment_delegating_runner",
+    "//src/modular/bin/basemgr:basemgr",
+    "//src/modular/bin/sessionmgr:sessionmgr",
+  ]
   deps = [ "//src/modular/lib:modular_lib_unittests" ]
   manifest = "meta/modular_lib_unittests.cmx"
   test_specs = {

@@ -73,6 +73,7 @@ executable("camera_device_watcher_unittest_bin") {
 }
 
 fuchsia_unittest_package("camera_device_watcher_unittest") {
+  package_deps = [ "//src/camera/bin/device_watcher:camera_device_watcher" ]
   manifest = "meta/camera_device_watcher_unittest.cmx"
   deps = [ ":camera_device_watcher_unittest_bin" ]
 }

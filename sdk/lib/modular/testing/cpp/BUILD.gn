@@ -71,6 +71,10 @@ executable("modular_testing_cpp_tests_bin") {
 }
 
 fuchsia_unittest_package("modular_testing_cpp_tests") {
+  package_deps = [
+    "//sdk/lib/sys/cpp/testing/environment_delegating_runner:environment_delegating_runner",
+    "//src/cobalt/bin/testing/mock_cobalt:mock_cobalt",
+  ]
   manifest = "meta/modular_testing_cpp_tests_bin.cmx"
   deps = [ ":modular_testing_cpp_tests_bin" ]
 }

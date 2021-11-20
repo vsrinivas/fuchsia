@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/flutter/config.gni")
 import("//build/testing/environments.gni")
 
 group("unit") {
@@ -150,7 +151,13 @@ resource("static") {
 }
 
 fuchsia_test_package("semantics-integration-tests") {
-  package_deps = [ "//src/ui/scenic:scenic_pkg" ]
+  package_deps = [
+    "//src/cobalt/bin/testing/mock_cobalt:mock_cobalt",
+    "//src/ui/a11y/bin/demo:a11y-demo",
+    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider",
+    "//src/ui/scenic:scenic_pkg",
+    flutter_default_build_cfg.runner_dep,
+  ]
   test_components = [
     ":flutter_semantics_tests",
     ":web_semantics_tests",

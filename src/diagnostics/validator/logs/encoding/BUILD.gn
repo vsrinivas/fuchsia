@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/dart/config.gni")
 import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
@@ -48,6 +49,10 @@ fuchsia_component("encoding-validator-for-dart") {
 }
 
 fuchsia_test_package("log-encoding-validator-dart") {
+  package_deps = [
+    "//src/diagnostics/validator/logs/encoding/puppet/dart:log-validator-dart-puppet",
+    dart_default_build_cfg.runner_dep,
+  ]
   test_components = [ ":encoding-validator-for-dart" ]
 }
 

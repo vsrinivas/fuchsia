@@ -87,6 +87,10 @@ executable("smart-door-server-unittest-bin") {
 }
 
 fuchsia_unittest_package("smart-door-functional-test") {
+  package_deps = [
+    "//src/security/codelab/smart_door:smart-door",
+    "//src/security/codelab/smart_door_memory:smart-door-memory",
+  ]
   manifest = "meta/smart-door-functional-test.cmx"
   deps = [ ":smart-door-functional-test-bin" ]
 }

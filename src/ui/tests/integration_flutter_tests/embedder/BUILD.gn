@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/config.gni")
+import("//build/flutter/config.gni")
 import("//build/test.gni")
 
 group("tests") {
@@ -22,6 +23,18 @@ group("tests") {
 }
 
 fuchsia_unittest_package("flutter-embedder-test") {
+  package_deps = [
+    "//examples/intl/manager:intl_property_manager",
+    "//garnet/bin/cpuperf_provider:cpuperf_provider",
+    "//garnet/bin/ktrace_provider:ktrace_provider",
+    "//src/fonts:pkg",
+    "//src/ui/a11y/bin/a11y_manager:a11y-manager",
+    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider",
+    "//src/ui/bin/text:text_manager",
+    "//src/ui/tests/integration_flutter_tests/embedder/child-view",
+    "//src/ui/tests/integration_flutter_tests/embedder/parent-view",
+    flutter_default_build_cfg.runner_dep,
+  ]
   manifest = "meta/flutter-embedder-test.cmx"
   deps = [
     ":flutter-embedder-test-bin",

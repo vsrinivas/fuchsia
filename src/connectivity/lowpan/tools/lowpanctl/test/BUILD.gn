@@ -37,6 +37,11 @@ rustc_test("lowpanctl-integration-test-bin") {
 }
 
 fuchsia_unittest_package("lowpanctl-integration-test") {
+  package_deps = [
+    "//src/connectivity/lowpan/drivers/lowpan-dummy-driver:lowpan-dummy-driver",
+    "//src/connectivity/lowpan/service:lowpanservice",
+    "//src/connectivity/lowpan/tools/lowpanctl:lowpanctl",
+  ]
   manifest = "meta/lowpanctl-integration-test.cmx"
   deps = [ ":lowpanctl-integration-test-bin" ]
 }

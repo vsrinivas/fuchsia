@@ -35,5 +35,6 @@ fuchsia_component("font_provider_smoke_tests_cmp") {
 }
 
 fuchsia_test_package("font_provider_smoke_tests") {
+  package_deps = [ "//src/fonts:pkg" ]
   test_components = [ ":font_provider_smoke_tests_cmp" ]
 }

@@ -86,6 +86,7 @@ fuchsia_unittest_package("scenic-stress-tests") {
 }
 
 fuchsia_unittest_package("scenic-stress-tests-short") {
+  package_deps = [ "//src/ui/tests/scenic-stress-tests" ]
   manifest = "meta/scenic_stressor_short.cml"
   deps = [
     ":scenic-for-stress-tests",

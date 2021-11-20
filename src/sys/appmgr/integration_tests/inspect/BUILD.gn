@@ -94,6 +94,7 @@ fuchsia_component("inspect_health_test_app") {
 }
 
 fuchsia_test_package("appmgr_inspect_integration_tests") {
+  package_deps = [ "//src/diagnostics/archivist:archivist-for-embedding" ]
   test_components = [
     ":inspect_vmo_integration_tests",
     ":inspect_health_integration_tests",

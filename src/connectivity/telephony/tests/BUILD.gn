@@ -65,7 +65,10 @@ fuchsia_component("tel-driver-unit-test") {
 }
 
 fuchsia_test_package("telephony-tests") {
-  package_deps = [ "//src/connectivity/telephony/ril-qmi:ril-qmi" ]
+  package_deps = [
+    "//src/connectivity/telephony/ril-qmi:ril-qmi",
+    "//src/connectivity/telephony/telephony-snooper:telephony-snooper",
+  ]
   test_components = [
     ":fake-at-driver-test",
     ":fake-qmi-query",
@@ -75,6 +78,10 @@ fuchsia_test_package("telephony-tests") {
 }
 
 fuchsia_test_package("telephony-tests-with-error-logs") {
+  package_deps = [
+    "//src/connectivity/telephony/ril-at:ril-at",
+    "//src/connectivity/telephony/tests:telephony-tests",
+  ]
   test_components = [
     ":fake-at-query",
     ":telephony-qmi-usb-integration-test",

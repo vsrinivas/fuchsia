@@ -20,5 +20,6 @@ dart_test_component("integration-test-component") {
 }
 
 fuchsia_test_package("fuchsia-logger-integration-tests") {
+  package_deps = [ dart_default_build_cfg.runner_dep ]
   test_components = [ ":integration-test-component" ]
 }

@@ -48,7 +48,12 @@ executable("basemgr_launcher_test") {
 }
 
 fuchsia_unittest_package("basemgr_launcher_tests") {
-  package_deps = [ "//src/modular/bin/basemgr_launcher:basemgr_launcher" ]
+  package_deps = [
+    "//src/modular/bin/basemgr:basemgr",
+    "//src/modular/bin/basemgr_launcher:basemgr_launcher",
+    "//src/modular/bin/sessionmgr:dev_session_shell",
+    "//src/modular/bin/sessionmgr:sessionmgr",
+  ]
   manifest = "meta/basemgr_launcher_test.cmx"
   deps = [ ":basemgr_launcher_test" ]
 }

@@ -50,6 +50,12 @@ executable("examples_integration_test") {
 # echo client/server to be available, which is currently done by adding them
 # deps to the test group, not the test itself.
 fuchsia_unittest_package("examples-integration-test") {
+  package_deps = [
+    "//examples/fidl/dart/client:echo-dart-client",
+    "//examples/fidl/dart/request_pipelining/client:echo-launcher-dart-client",
+    "//examples/fidl/dart/request_pipelining/server:echo-launcher-dart-server",
+    "//examples/fidl/dart/server:echo-dart-server",
+  ]
   manifest = "meta/tests.cmx"
   deps = [ ":examples_integration_test" ]
 }
