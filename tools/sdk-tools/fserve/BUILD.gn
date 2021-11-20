@@ -24,12 +24,12 @@ go_binary("fserve") {
   deps = [ ":main" ]
 }
 
-host_test_data("fserve-test-data") {
-  sources = [ "testdata/testdata.tgz" ]
-  outputs = [ "${target_out_dir}/testdata/testdata.tgz" ]
-}
-
 if (is_host) {
+  host_test_data("fserve-test-data") {
+    sources = [ "testdata/testdata.tgz" ]
+    outputs = [ "${target_out_dir}/testdata/testdata.tgz" ]
+  }
+
   go_test("fserve-test") {
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/sdk-tools/fserve/cmd" ]
     deps = [ ":main" ]
