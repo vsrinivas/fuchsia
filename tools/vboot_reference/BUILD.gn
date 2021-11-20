@@ -227,6 +227,8 @@ config("internal_config") {
     "-Wno-unused-function",
     "-Wno-implicit-fallthrough",
     "-Wno-incompatible-pointer-types-discards-qualifiers",
+    "-Wno-extra-semi",
+    "-Wno-strict-prototypes",
   ]
   if (is_mac) {
     defines = [
