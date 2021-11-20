@@ -244,6 +244,7 @@ struct StructType : public Type {
   std::vector<StructElement> elements;
   std::string qname;
   bool contains_envelope;
+  bool is_empty = false;
   StructPointerType* maybe_reference_type = nullptr;
 };
 

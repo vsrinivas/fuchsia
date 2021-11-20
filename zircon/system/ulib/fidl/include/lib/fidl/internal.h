@@ -74,6 +74,11 @@ typedef bool FidlContainsEnvelope;
 static const FidlContainsEnvelope kFidlContainsEnvelope_DoesNotContainEnvelope = false;
 static const FidlContainsEnvelope kFidlContainsEnvelope_ContainsEnvelope = true;
 
+// Indicates if a struct is empty.
+typedef bool FidlEmpty;
+static const FidlEmpty kFidlEmpty_IsNotEmpty = false;
+static const FidlEmpty kFidlEmpty_IsEmpty = true;
+
 // TODO(fxbug.dev/42792): Remove either this FidlAlign function or the FIDL_ALIGN macro in
 // zircon/fidl.h.
 // clang-format off
@@ -405,6 +410,7 @@ struct FidlCodedStruct FIDL_INTERNAL_INHERIT_TYPE_T {
   // of the envelope wire format migration.
   // TODO(fxbug.dev/79584) Remove this once the migration is complete.
   const FidlContainsEnvelope contains_envelope;
+  const FidlEmpty is_empty;
   // element_count should be a uint32_t, but for the sake of binary size
   // a uint16_t is used (all existing values fit within this size).
   // If a larger size is needed, replace FidlCodedStruct or add a second

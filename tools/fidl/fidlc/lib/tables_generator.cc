@@ -241,6 +241,8 @@ void TablesGenerator::Generate(const coded::StructType& struct_type) {
   Emit(&tables_file_, struct_type.contains_envelope
                           ? "kFidlContainsEnvelope_ContainsEnvelope"
                           : "kFidlContainsEnvelope_DoesNotContainEnvelope");
+  Emit(&tables_file_, ", .is_empty=");
+  Emit(&tables_file_, struct_type.is_empty ? "kFidlEmpty_IsEmpty" : "kFidlEmpty_IsNotEmpty");
   Emit(&tables_file_, ", .elements=");
   Emit(&tables_file_, struct_type.elements.empty() ? "NULL" : fields_array_name);
   Emit(&tables_file_, ", .element_count=");

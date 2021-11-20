@@ -407,6 +407,9 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
         field_num++;
       }
       coded_struct->is_noop = is_noop;
+      if (field_num == 0) {
+        coded_struct->is_empty = true;
+      }
       break;
     }
     case flat::Decl::Kind::kUnion: {

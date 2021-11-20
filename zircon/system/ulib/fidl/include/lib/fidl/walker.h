@@ -372,6 +372,14 @@ template <typename VisitorImpl, FidlWireFormatVersion WireFormatVersion>
 Result Walker<VisitorImpl, WireFormatVersion>::WalkStruct(
     const FidlCodedStruct* coded_struct, Walker<VisitorImpl, WireFormatVersion>::Position position,
     OutOfLineDepth depth) {
+  if (unlikely(coded_struct->is_empty)) {
+    ZX_DEBUG_ASSERT(FIDL_VERSIONED_VALUE(coded_struct->size_v1, coded_struct->size_v2) == 1);
+    uint8_t value = *PtrTo<uint8_t>(position);
+    if (value != 0) {
+      visitor_->OnError("invalid empty struct");
+      FIDL_STATUS_GUARD(Status::kConstraintViolationError);
+    }
+  }
   for (uint32_t i = 0; i < coded_struct->element_count; i++) {
     const FidlStructElement& element = coded_struct->elements[i];
     if (VisitorImpl::kOnlyWalkResources) {

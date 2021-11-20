@@ -42,7 +42,7 @@ static const struct FidlStructElement Fields76fidl_test_errorsyntax_ExampleUseOf
 const struct FidlCodedStruct fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .elements=Fields76fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailResponseMessage, .element_count=1u, .size_v1=40u, .size_v2=32u, .name="fidl.test.errorsyntax/ExampleUseOfErrorSyntaxCallWhichMayFailResponseMessage"};
 
 
-const struct FidlCodedStruct fidl_test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=8u, .size_v2=8u, .name="fidl.test.errorsyntax/ExampleUseOfErrorSyntax_CallWhichMayFail_Response"};
+const struct FidlCodedStruct fidl_test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v1=8u, .size_v2=8u, .name="fidl.test.errorsyntax/ExampleUseOfErrorSyntax_CallWhichMayFail_Response"};
 
 static const struct FidlXUnionField Fields69fidl_test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_Result[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseTable)},
@@ -57,10 +57,10 @@ const struct FidlCodedXUnion fidl_test_errorsyntax_ExampleUseOfErrorSyntax_CallW
 static const struct FidlStructElement Fields72fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&fidl_test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResultTable)}}
 };
-const struct FidlCodedStruct fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailTopResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .elements=Fields72fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse, .element_count=1u, .size_v1=24u, .size_v2=16u, .name="fidl.test.errorsyntax/ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse"};
+const struct FidlCodedStruct fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailTopResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields72fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse, .element_count=1u, .size_v1=24u, .size_v2=16u, .name="fidl.test.errorsyntax/ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse"};
 
 static const struct FidlStructElement Fields68fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequest[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&String4294967295nonnullableTable)}}
 };
-const struct FidlCodedStruct fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields68fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequest, .element_count=1u, .size_v1=16u, .size_v2=16u, .name="fidl.test.errorsyntax/ExampleUseOfErrorSyntaxCallWhichMayFailRequest"};
+const struct FidlCodedStruct fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields68fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequest, .element_count=1u, .size_v1=16u, .size_v2=16u, .name="fidl.test.errorsyntax/ExampleUseOfErrorSyntaxCallWhichMayFailRequest"};
 

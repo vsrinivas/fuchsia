@@ -12,8 +12,6 @@ success("EmptyStruct") {
 }
 
 decode_failure("NonZeroEmptyStructBytes") {
-    // TODO(fxbug.dev/88799) Add validation in c, llcpp, hlcpp.
-    bindings_denylist = [c, llcpp, hlcpp],
     type = EmptyStruct,
     bytes = {
         v1, v2 = [

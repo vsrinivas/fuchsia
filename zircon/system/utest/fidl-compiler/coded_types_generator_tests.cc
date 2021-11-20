@@ -93,6 +93,7 @@ type Vectors = struct {
   EXPECT_TRUE(type_some_struct->is_coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kStruct, type_some_struct->kind);
   auto type_some_struct_struct = static_cast<const fidl::coded::StructType*>(type_some_struct);
+  ASSERT_TRUE(type_some_struct_struct->is_empty);
   ASSERT_EQ(0, type_some_struct_struct->elements.size());
   EXPECT_STR_EQ("example/SomeStruct", type_some_struct_struct->qname.c_str());
   EXPECT_FALSE(type_some_struct_struct->contains_envelope);
@@ -489,6 +490,7 @@ type MyXUnionStruct = struct {
   ASSERT_TRUE(struct_type->is_coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kStruct, struct_type->kind);
   auto struct_type_struct = static_cast<const fidl::coded::StructType*>(struct_type);
+  ASSERT_FALSE(struct_type_struct->is_empty);
   EXPECT_TRUE(struct_type_struct->contains_envelope);
 }
 
@@ -665,6 +667,7 @@ type Complex = struct {
   EXPECT_STR_EQ("example_BoolAndInt32", type_bool_and_int32->coded_name.c_str());
   auto type_bool_and_int32_struct =
       static_cast<const fidl::coded::StructType*>(type_bool_and_int32);
+  ASSERT_FALSE(type_bool_and_int32_struct->is_empty);
   ASSERT_EQ(type_bool_and_int32_struct->elements.size(), 2);
   EXPECT_EQ(field(type_bool_and_int32_struct->elements[0]).type->kind,
             fidl::coded::Type::Kind::kPrimitive);
@@ -679,6 +682,7 @@ type Complex = struct {
   ASSERT_NOT_NULL(type_complex);
   EXPECT_STR_EQ("example_Complex", type_complex->coded_name.c_str());
   auto type_complex_struct = static_cast<const fidl::coded::StructType*>(type_complex);
+  ASSERT_FALSE(type_complex_struct->is_empty);
   ASSERT_EQ(type_complex_struct->elements.size(), 3);
   EXPECT_EQ(field(type_complex_struct->elements[0]).type->kind,
             fidl::coded::Type::Kind::kPrimitive);
@@ -727,6 +731,7 @@ type Level2 = struct {
   auto type_level0 = gen.CodedTypeFor(name_level0);
   ASSERT_NOT_NULL(type_level0);
   auto struct_level0 = static_cast<const fidl::coded::StructType*>(type_level0);
+  ASSERT_FALSE(struct_level0->is_empty);
   ASSERT_EQ(struct_level0->elements.size(), 2);
   EXPECT_EQ(padding(struct_level0->elements[0]).offset_v1, 0);
   EXPECT_EQ(padding(struct_level0->elements[0]).offset_v2, 0);
@@ -739,6 +744,7 @@ type Level2 = struct {
   auto type_level1 = gen.CodedTypeFor(name_level1);
   ASSERT_NOT_NULL(type_level1);
   auto struct_level1 = static_cast<const fidl::coded::StructType*>(type_level1);
+  ASSERT_FALSE(struct_level1->is_empty);
   ASSERT_EQ(struct_level1->elements.size(), 2);
   EXPECT_EQ(padding(struct_level1->elements[0]).offset_v1, 0);
   EXPECT_EQ(padding(struct_level1->elements[0]).offset_v2, 0);
@@ -751,6 +757,7 @@ type Level2 = struct {
   auto type_level2 = gen.CodedTypeFor(name_level2);
   ASSERT_NOT_NULL(type_level2);
   auto struct_level2 = static_cast<const fidl::coded::StructType*>(type_level2);
+  ASSERT_FALSE(struct_level2->is_empty);
   ASSERT_EQ(struct_level2->elements.size(), 3);
   EXPECT_EQ(padding(struct_level2->elements[0]).offset_v1, 0);
   EXPECT_EQ(padding(struct_level2->elements[0]).offset_v2, 0);
@@ -786,6 +793,7 @@ type TwoLevelRecursiveOptionalStructB = struct {
   auto type_one_level = gen.CodedTypeFor(name_one_level);
   ASSERT_NOT_NULL(type_one_level);
   auto struct_one_level = static_cast<const fidl::coded::StructType*>(type_one_level);
+  ASSERT_FALSE(struct_one_level->is_empty);
   ASSERT_EQ(struct_one_level->elements.size(), 1);
   EXPECT_EQ(field(struct_one_level->elements[0]).type->kind,
             fidl::coded::Type::Kind::kStructPointer);
@@ -799,6 +807,7 @@ type TwoLevelRecursiveOptionalStructB = struct {
   auto type_two_level_b = gen.CodedTypeFor(name_two_level_b);
   ASSERT_NOT_NULL(type_two_level_b);
   auto struct_two_level_b = static_cast<const fidl::coded::StructType*>(type_two_level_b);
+  ASSERT_FALSE(struct_two_level_b->is_empty);
   ASSERT_EQ(struct_two_level_b->elements.size(), 1);
   EXPECT_EQ(field(struct_two_level_b->elements[0]).type->kind,
             fidl::coded::Type::Kind::kStructPointer);
@@ -814,6 +823,7 @@ type TwoLevelRecursiveOptionalStructB = struct {
   auto type_two_level_a = gen.CodedTypeFor(name_two_level_a);
   ASSERT_NOT_NULL(type_two_level_a);
   auto struct_two_level_a = static_cast<const fidl::coded::StructType*>(type_two_level_a);
+  ASSERT_FALSE(struct_two_level_a->is_empty);
   ASSERT_EQ(struct_two_level_a->elements.size(), 1);
   EXPECT_EQ(field(struct_two_level_a->elements[0]).type->kind,
             fidl::coded::Type::Kind::kStructPointer);
@@ -846,6 +856,7 @@ type OuterStruct = struct {
   auto type_inner_struct = gen.CodedTypeFor(name_inner_struct);
   ASSERT_NOT_NULL(type_inner_struct);
   auto struct_inner_struct = static_cast<const fidl::coded::StructType*>(type_inner_struct);
+  ASSERT_FALSE(struct_inner_struct->is_empty);
   ASSERT_EQ(struct_inner_struct->elements.size(), 1);
   EXPECT_EQ(padding(struct_inner_struct->elements[0]).offset_v1, 0);
   EXPECT_EQ(padding(struct_inner_struct->elements[0]).offset_v2, 0);
@@ -856,6 +867,7 @@ type OuterStruct = struct {
   auto type_outer_struct = gen.CodedTypeFor(name_outer_struct);
   ASSERT_NOT_NULL(type_outer_struct);
   auto struct_outer_struct = static_cast<const fidl::coded::StructType*>(type_outer_struct);
+  ASSERT_FALSE(struct_outer_struct->is_empty);
   ASSERT_EQ(struct_outer_struct->elements.size(), 2);
   EXPECT_EQ(padding(struct_outer_struct->elements[0]).offset_v1, 0);
   EXPECT_EQ(padding(struct_outer_struct->elements[0]).offset_v2, 0);
@@ -898,6 +910,7 @@ type OuterStruct = resource struct {
   auto type_outer_struct = gen.CodedTypeFor(name_outer_struct);
   ASSERT_NOT_NULL(type_outer_struct);
   auto struct_outer_struct = static_cast<const fidl::coded::StructType*>(type_outer_struct);
+  ASSERT_FALSE(struct_outer_struct->is_empty);
   ASSERT_EQ(struct_outer_struct->elements.size(), 5);
   EXPECT_EQ(padding(struct_outer_struct->elements[0]).offset_v1, 0);
   EXPECT_EQ(padding(struct_outer_struct->elements[0]).offset_v2, 0);
@@ -945,6 +958,7 @@ type badlookup = struct {
   auto the_coded_type = gen.CodedTypeFor(the_struct_name);
   ASSERT_NOT_NULL(the_coded_type);
   auto the_struct_coded_type = static_cast<const fidl::coded::StructType*>(the_coded_type);
+  ASSERT_FALSE(the_struct_coded_type->is_empty);
   ASSERT_EQ(the_struct_coded_type->elements.size(), 2);
   EXPECT_EQ(0xffffffffffffff00,
             std::get<uint64_t>(padding(the_struct_coded_type->elements[0]).mask));
@@ -1134,6 +1148,7 @@ type MyUnion = strict union {
   auto union_field0 = coded_union->fields.at(0);
   ASSERT_NOT_NULL(union_field0.type);
   auto union_field0_struct = static_cast<const fidl::coded::StructType*>(union_field0.type);
+  ASSERT_TRUE(union_field0_struct->is_empty);
   EXPECT_STR_EQ("example/First", union_field0_struct->qname.c_str());
 
   auto union_field1 = coded_union->fields.at(1);
@@ -1142,6 +1157,7 @@ type MyUnion = strict union {
   auto union_field2 = coded_union->fields.at(2);
   ASSERT_NOT_NULL(union_field2.type);
   auto union_field2_struct = static_cast<const fidl::coded::StructType*>(union_field2.type);
+  ASSERT_TRUE(union_field2_struct->is_empty);
   EXPECT_STR_EQ("example/Second", union_field2_struct->qname.c_str());
 }
 
