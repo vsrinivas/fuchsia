@@ -986,7 +986,7 @@ func (s_ *WithAndWithoutRequestResponseWithCtxStub) Dispatch(args_ _bindings.Dis
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if _, _, err_ := _bindings.UnmarshalWithContext(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
 			return nil, false, err_
 		}
 		err_ := s_.Impl.WithRequestNoResponse(args_.Ctx, in_.Arg)
@@ -997,7 +997,7 @@ func (s_ *WithAndWithoutRequestResponseWithCtxStub) Dispatch(args_ _bindings.Dis
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if _, _, err_ := _bindings.UnmarshalWithContext(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
 			return nil, false, err_
 		}
 		err_ := s_.Impl.WithRequestEmptyResponse(args_.Ctx, in_.Arg)
@@ -1008,7 +1008,7 @@ func (s_ *WithAndWithoutRequestResponseWithCtxStub) Dispatch(args_ _bindings.Dis
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if _, _, err_ := _bindings.UnmarshalWithContext(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
 			return nil, false, err_
 		}
 		ret, err_ := s_.Impl.WithRequestWithResponse(args_.Ctx, in_.Arg)
@@ -1198,7 +1198,7 @@ func (s_ *ChannelProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_b
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if _, _, err_ := _bindings.UnmarshalWithContext(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
 			return nil, false, err_
 		}
 		err_ := s_.Impl.MethodA(args_.Ctx, in_.A, in_.B)
@@ -1209,7 +1209,7 @@ func (s_ *ChannelProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_b
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if _, _, err_ := _bindings.UnmarshalWithContext(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
 			return nil, false, err_
 		}
 		result, err_ := s_.Impl.MethodB(args_.Ctx, in_.A, in_.B)
@@ -1222,7 +1222,7 @@ func (s_ *ChannelProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_b
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if _, _, err_ := _bindings.UnmarshalWithContext(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
 			return nil, false, err_
 		}
 		err_ := s_.Impl.TakeHandle(args_.Ctx, in_.H)
@@ -1233,7 +1233,7 @@ func (s_ *ChannelProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_b
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if _, _, err_ := _bindings.UnmarshalWithContext(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
 			return nil, false, err_
 		}
 		b, err_ := s_.Impl.MutateSocket(args_.Ctx, in_.A)
@@ -1318,7 +1318,7 @@ func (s_ *TransitionalWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bind
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if _, _, err_ := _bindings.UnmarshalWithContext(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
 			return nil, false, err_
 		}
 		y, err_ := s_.Impl.Request(args_.Ctx, in_.X)
@@ -1331,7 +1331,7 @@ func (s_ *TransitionalWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bind
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if _, _, err_ := _bindings.UnmarshalWithContext(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
 			return nil, false, err_
 		}
 		err_ := s_.Impl.OneWay(args_.Ctx, in_.X)
@@ -1456,7 +1456,7 @@ func (s_ *HandleRightsProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if _, _, err_ := _bindings.UnmarshalWithContext(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
 			return nil, false, err_
 		}
 		err_ := s_.Impl.NoResponseMethod(args_.Ctx, in_.H)
@@ -1467,7 +1467,7 @@ func (s_ *HandleRightsProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if _, _, err_ := _bindings.UnmarshalWithContext(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
 			return nil, false, err_
 		}
 		h, err_ := s_.Impl.ResponseMethod(args_.Ctx, in_.H)
@@ -1549,7 +1549,7 @@ func (s_ *WithProtocolEndsWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if _, _, err_ := _bindings.UnmarshalWithContext(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
 			return nil, false, err_
 		}
 		out, err_ := s_.Impl.ClientEnds(args_.Ctx, in_.In)
@@ -1562,7 +1562,7 @@ func (s_ *WithProtocolEndsWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if _, _, err_ := _bindings.UnmarshalWithContext(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
 			return nil, false, err_
 		}
 		out, err_ := s_.Impl.ServerEnds(args_.Ctx, in_.In)
@@ -1575,7 +1575,7 @@ func (s_ *WithProtocolEndsWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if _, _, err_ := _bindings.UnmarshalWithContext(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
 			return nil, false, err_
 		}
 		out, err_ := s_.Impl.StructContainingEnds(args_.Ctx, in_.In)
@@ -1641,7 +1641,7 @@ func (s_ *ManyParametersWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bi
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if _, _, err_ := _bindings.UnmarshalWithContext(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
 			return nil, false, err_
 		}
 		err_ := s_.Impl.Fifteen(args_.Ctx, in_.P1, in_.P2, in_.P3, in_.P4, in_.P5, in_.P6, in_.P7, in_.P8, in_.P9, in_.P10, in_.P11, in_.P12, in_.P13, in_.P14, in_.P15)
@@ -1691,7 +1691,7 @@ func (s_ *MethodWithUnionWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_b
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if _, _, err_ := _bindings.UnmarshalWithContext(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
 			return nil, false, err_
 		}
 		err_ := s_.Impl.UnionMethod(args_.Ctx, in_.U)

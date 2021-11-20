@@ -108,16 +108,19 @@ func serveOne(g *errgroup.Group, ctx context.Context, stub fidl.Stub, req zx.Cha
 	b = b[:nb]
 	hi = hi[:nhi]
 
+	if len(b) < fidl.MessageHeaderSize {
+		return fidl.ErrPayloadTooSmall
+	}
+
 	var reqHeader fidl.MessageHeader
-	hnb, hnh, err := fidl.UnmarshalWithContext(fidl.NewCtx(), b, hi, &reqHeader)
+	err := fidl.Unmarshal(fidl.NewCtx(), b[:fidl.MessageHeaderSize], nil, &reqHeader)
 	if err != nil {
 		return err
 	}
 	if !reqHeader.IsSupportedVersion() {
 		return fidl.ErrUnknownMagic
 	}
-	b = b[hnb:]
-	hi = hi[hnh:]
+	b = b[fidl.MessageHeaderSize:]
 
 	marshalerCtx := reqHeader.NewCtx()
 

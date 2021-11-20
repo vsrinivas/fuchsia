@@ -639,7 +639,7 @@ func (s_ *SomeProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bind
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if _, _, err_ := _bindings.UnmarshalWithContext(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
 			return nil, false, err_
 		}
 		result, err_ := s_.Impl.SomeMethod(args_.Ctx, in_.UnionMember, in_.TableMember)
