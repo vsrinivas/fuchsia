@@ -91,7 +91,7 @@ fidl::InterfaceHandle<fuchsia::io::File> GetFileInterfaceFromFd(fbl::unique_fd f
 // Open the given disk image.
 fidl::InterfaceHandle<fuchsia::io::File> GetPartition(const DiskImage& image) {
   TRACE_DURATION("linux_runner", "GetPartition");
-  fbl::unique_fd fd(open(image.path, kStatefulImage.read_only ? O_RDONLY : O_RDWR));
+  fbl::unique_fd fd(open(image.path, image.read_only ? O_RDONLY : O_RDWR));
   if (!fd.is_valid()) {
     return nullptr;
   }
