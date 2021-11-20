@@ -119,6 +119,9 @@ pub struct TestParams {
 pub struct RunParams {
     /// The behavior of the test run if a suite times out.
     pub timeout_behavior: TimeoutBehavior,
+
+    /// If set, stop executing tests after this number of normal test failures occur.
+    pub stop_after_failures: Option<std::num::NonZeroU16>,
 }
 
 /// Sets the behavior of the overall run if a suite terminates with a timeout.
@@ -811,6 +814,7 @@ pub async fn run_test<'a, Out: Write>(
         run_reporter: &'a mut RunReporter,
         min_severity_logs: Option<Severity>,
         run_params: RunParams,
+        num_failed: u16,
     }
 
     let args = FoldArgs {
@@ -821,6 +825,7 @@ pub async fn run_test<'a, Out: Write>(
         run_reporter,
         min_severity_logs,
         run_params,
+        num_failed: 0,
     };
 
     // Handle suite events. Note this assumes that suites are run in serial - it waits to
@@ -850,23 +855,29 @@ pub async fn run_test<'a, Out: Write>(
                 suite_reporter.finished()?;
                 let result = result?;
 
-                match &result.outcome {
-                    Outcome::Timedout | Outcome::Error { .. } => {
-                        match &args.run_params.timeout_behavior {
-                            TimeoutBehavior::TerminateRemaining => {
-                                args.run_controller.stop()?;
-                                // Drop remaining controllers, which is the same as calling kill on
-                                // each controller.
-                                unstarted_suites = vec![];
-                            }
-                            TimeoutBehavior::Continue => (),
-                        }
-                    }
-                    _ => (),
+                let accumulated_failures = match result.outcome {
+                    Outcome::Passed => args.num_failed,
+                    _ => args.num_failed + 1,
+                };
+                let stop_due_to_timeout = match args.run_params.timeout_behavior {
+                    TimeoutBehavior::TerminateRemaining => result.outcome == Outcome::Timedout,
+                    TimeoutBehavior::Continue => false,
+                };
+                let stop_due_to_failures = match args.run_params.stop_after_failures.as_ref() {
+                    Some(threshold) => accumulated_failures >= threshold.get(),
+                    None => false,
+                };
+
+                if stop_due_to_timeout || stop_due_to_failures {
+                    args.run_controller.stop()?;
+                    // Drop remaining controllers, which is the same as calling kill on
+                    // each controller.
+                    unstarted_suites = vec![];
                 }
                 let next_args = FoldArgs {
                     suite_start_futs: unstarted_suites,
                     next_suite_id: args.next_suite_id + 1,
+                    num_failed: accumulated_failures,
                     ..args
                 };
                 Ok(Some((result, next_args)))

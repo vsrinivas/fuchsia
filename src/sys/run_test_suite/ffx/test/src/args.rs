@@ -86,6 +86,11 @@ pub struct RunCommand {
     #[argh(switch)]
     pub continue_on_timeout: bool,
 
+    /// stop running unfinished suites after the number of provided failures has occurred.
+    /// By default, all suites are run to completion if a suite fails.
+    #[argh(option)]
+    pub stop_after_failures: Option<u16>,
+
     /// run tests in parallel, up to the number provided.
     #[argh(option)]
     pub parallel: Option<u16>,

@@ -99,6 +99,7 @@ async fn main() {
         ],
         run_test_suite_lib::RunParams {
             timeout_behavior: run_test_suite_lib::TimeoutBehavior::TerminateRemaining,
+            stop_after_failures: None,
         },
         min_severity_logs,
         filter_ansi,

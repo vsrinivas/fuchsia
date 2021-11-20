@@ -132,16 +132,23 @@ async fn run_test(builder_connector: Box<RunBuilderConnector>, cmd: RunCommand) 
         Ok(true) => true,
         Ok(false) | Err(_) => false,
     };
-    let timeout_behavior = match cmd.continue_on_timeout {
-        false => run_test_suite_lib::TimeoutBehavior::TerminateRemaining,
-        true => run_test_suite_lib::TimeoutBehavior::Continue,
+    let run_params = run_test_suite_lib::RunParams {
+        timeout_behavior: match cmd.continue_on_timeout {
+            false => run_test_suite_lib::TimeoutBehavior::TerminateRemaining,
+            true => run_test_suite_lib::TimeoutBehavior::Continue,
+        },
+        stop_after_failures: match cmd.stop_after_failures.map(std::num::NonZeroU16::new) {
+            None => None,
+            Some(None) => ffx_bail!("--stop-after-failures should be greater than zero."),
+            Some(Some(stop_after)) => Some(stop_after),
+        },
     };
     let test_definitions = test_params_from_args(cmd, std::io::stdin, json_input_experiment)?;
 
     match run_test_suite_lib::run_tests_and_get_outcome(
         builder_connector.connect().await,
         test_definitions,
-        run_test_suite_lib::RunParams { timeout_behavior },
+        run_params,
         min_log_severity,
         filter_ansi,
         output_directory,
@@ -480,6 +487,7 @@ mod test {
                     output_directory: None,
                     disable_output_directory: false,
                     continue_on_timeout: false,
+                    stop_after_failures: None,
                 },
                 vec![run_test_suite_lib::TestParams {
                     test_url: "my-test-url".to_string(),
@@ -506,6 +514,7 @@ mod test {
                     output_directory: None,
                     disable_output_directory: false,
                     continue_on_timeout: false,
+                    stop_after_failures: None,
                 },
                 vec![
                     run_test_suite_lib::TestParams {
@@ -535,6 +544,7 @@ mod test {
                     output_directory: None,
                     disable_output_directory: false,
                     continue_on_timeout: false,
+                    stop_after_failures: None,
                 },
                 vec![run_test_suite_lib::TestParams {
                     test_url: "my-test-url".to_string(),
@@ -561,6 +571,7 @@ mod test {
                     output_directory: None,
                     disable_output_directory: false,
                     continue_on_timeout: false,
+                    stop_after_failures: None,
                 },
                 vec![
                     run_test_suite_lib::TestParams {
@@ -600,6 +611,7 @@ mod test {
                     output_directory: None,
                     disable_output_directory: false,
                     continue_on_timeout: false,
+                    stop_after_failures: None,
                 },
                 vec![
                     run_test_suite_lib::TestParams {
@@ -664,6 +676,7 @@ mod test {
                     output_directory: None,
                     disable_output_directory: false,
                     continue_on_timeout: false,
+                    stop_after_failures: None,
                 },
             ),
             (
@@ -684,6 +697,7 @@ mod test {
                     output_directory: None,
                     disable_output_directory: false,
                     continue_on_timeout: false,
+                    stop_after_failures: None,
                 },
             ),
             (
@@ -704,6 +718,7 @@ mod test {
                     output_directory: None,
                     disable_output_directory: false,
                     continue_on_timeout: false,
+                    stop_after_failures: None,
                 },
             ),
         ];

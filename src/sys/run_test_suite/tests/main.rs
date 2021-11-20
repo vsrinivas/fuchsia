@@ -8,6 +8,7 @@ use futures::prelude::*;
 use matches::assert_matches;
 use regex::Regex;
 use run_test_suite_lib::{output, Outcome, RunTestSuiteError, SuiteRunResult, TestParams};
+use std::convert::TryInto;
 use std::io::Write;
 use std::str::from_utf8;
 use test_output_directory::{
@@ -68,6 +69,7 @@ fn new_test_params(test_url: &str) -> TestParams {
 fn new_run_params() -> run_test_suite_lib::RunParams {
     run_test_suite_lib::RunParams {
         timeout_behavior: run_test_suite_lib::TimeoutBehavior::TerminateRemaining,
+        stop_after_failures: None,
     }
 }
 
@@ -926,6 +928,7 @@ async fn test_coninue_on_timeout() {
         test_params,
         run_test_suite_lib::RunParams {
             timeout_behavior: run_test_suite_lib::TimeoutBehavior::Continue,
+            stop_after_failures: None,
         },
         None,
         &mut output,
@@ -946,6 +949,36 @@ async fn test_coninue_on_timeout() {
     assert_eq!(timed_out.len(), 1);
     assert_eq!(others.len(), 10);
     assert!(others.iter().all(|result| result.outcome == Outcome::Passed));
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_stop_after_n_failures() {
+    let mut output = std::io::sink();
+    let mut reporter = output::RunReporter::new_noop();
+    let streams = run_test_suite_lib::run_test(
+        fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
+                    .expect("connecting to RunBuilderProxy"),
+        vec![new_test_params(
+                "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/failing-test-example.cm",
+                ); 10],
+                run_test_suite_lib::RunParams {
+                    timeout_behavior: run_test_suite_lib::TimeoutBehavior::Continue,
+                    stop_after_failures: Some(5u16.try_into().unwrap()),
+                },
+                None,&mut output, &mut reporter
+        )
+    .await.expect("run test");
+    let run_results = streams.collect::<Vec<_>>().await;
+
+    assert_eq!(run_results.len(), 5);
+    for run_result in run_results {
+        let run_result = run_result.expect("Running test should not fail");
+        assert_eq!(run_result.outcome, Outcome::Failed);
+        assert_eq!(run_result.executed, vec!["Example.Test1", "Example.Test2", "Example.Test3"]);
+        assert_eq!(run_result.passed, vec!["Example.Test1", "Example.Test3"]);
+        assert_eq!(run_result.failed, vec!["Example.Test2"]);
+        assert!(run_result.successful_completion);
+    }
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
