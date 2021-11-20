@@ -1,0 +1,81 @@
+// workstation.core_shard.cml
+{
+    offer: [
+        {
+            protocol: [
+                "fuchsia.media.AudioCore",
+
+                // TODO(fxbug.dev/89048): remove once Flutter no longer depends on fuchsia.sys.Environment
+                "fuchsia.sys.Environment",
+                "fuchsia.ui.input.PointerCaptureListenerRegistry",
+                "fuchsia.ui.shortcut.Registry",
+            ],
+            from: "self",
+            to: [ "#session-manager" ],
+        },
+        {
+            protocol: [
+                "fuchsia.ui.activity.Provider",
+                "fuchsia.ui.activity.Tracker",
+            ],
+            from: "#activity",
+            to: "#session-manager",
+        },
+        {
+            protocol: [
+                "fuchsia.update.channelcontrol.ChannelControl",
+                "fuchsia.update.Manager",
+            ],
+            from: "#system-update-checker",
+            to: "#session-manager",
+        },
+        {
+            protocol: "fuchsia.accessibility.semantics.SemanticsManager",
+            from: "self",
+            to: "#session-manager",
+        },
+        {
+            protocol: "fuchsia.ssh.AuthorizedKeys",
+            from: "#ssh-key-manager",
+            to: "#session-manager",
+        },
+        {
+            protocol: "fuchsia.wlan.policy.ClientProvider",
+            from: "#wlancfg",
+            to: "#session-manager",
+        },
+        {
+            protocol: "fuchsia.buildinfo.Provider",
+            from: "#build-info",
+            to: "#session-manager",
+        },
+        {
+            protocol: "fuchsia.power.BatteryManager",
+            from: "#battery_manager",
+            to: "#session-manager",
+        },
+        {
+            protocol: "fuchsia.memory.Monitor",
+            from: "#memory_monitor",
+            to: "#session-manager",
+        },
+        {
+            protocol: "fuchsia.ui.brightness.Control",
+            from: "#brightness_manager",
+            to: "#session-manager",
+        },
+        {
+            protocol: "fuchsia.net.interfaces.State",
+            from: "#network",
+            to: "#session-manager",
+        },
+        {
+            protocol: [
+                "fuchsia.settings.Intl",
+                "fuchsia.settings.Privacy",
+            ],
+            from: "#setui_service",
+            to: "#session-manager",
+        },
+    ],
+}

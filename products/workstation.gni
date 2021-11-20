@@ -6,9 +6,12 @@ import("//products/core.gni")
 
 core_realm_package_name = "core-workstation"
 core_realm_shards += [
+  "//src/developer/build_info:build_info_core_shard",
+  "//src/developer/memory/monitor:memory_monitor_core_shard",
   "//src/identity/bin/account:account-core-shard",
   "//src/media/audio/drivers/configurator:configurator_provider_shard",
   "//src/power/battery-manager:battery-manager-core-shard",
+  "//src/session/bin/session_manager:workstation_core_shard",
 ]
 
 base_package_labels += [

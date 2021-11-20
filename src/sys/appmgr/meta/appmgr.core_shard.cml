@@ -23,6 +23,7 @@
         // lose access to the protocol at some point when the system is shut down.
         {
             protocol: [
+                "fuchsia.accessibility.semantics.SemanticsManager",
                 "fuchsia.bluetooth.bredr.Profile",
                 "fuchsia.bluetooth.gatt.Server",
                 "fuchsia.bluetooth.le.Peripheral",
@@ -66,6 +67,7 @@
                 "fuchsia.ui.composition.FlatlandDisplay",
                 "fuchsia.ui.focus.FocusChainListenerRegistry",
                 "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.input.PointerCaptureListenerRegistry",
                 "fuchsia.ui.input3.Keyboard",
                 "fuchsia.ui.input3.KeyEventInjector",
                 "fuchsia.ui.keyboard.focus.Controller",
@@ -75,6 +77,7 @@
                 "fuchsia.ui.policy.Presenter",
                 "fuchsia.ui.scenic.Scenic",
                 "fuchsia.ui.shortcut.Manager",
+                "fuchsia.ui.shortcut.Registry",
                 "fuchsia.ui.views.ViewRefInstalled",
                 "fuchsia.virtualization.Manager",
                 "fuchsia.weave.FactoryDataManager",
