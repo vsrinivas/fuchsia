@@ -27,7 +27,7 @@ success("SinglePresentHandle") {
 // TODO(fxbug.dev/88957): The following 4 tests can be auto-generated using padding metadata.
 decode_failure("SinglePresentHandleCheckTrailingPadding_0") {
     // TODO(fxbug.dev/58385): Close handles on encode/decode failure.
-    bindings_denylist = [rust, dart, go],
+    bindings_denylist = [rust, dart],
     handle_defs = {
         #0 = event(),
     },
@@ -47,7 +47,7 @@ decode_failure("SinglePresentHandleCheckTrailingPadding_0") {
 
 decode_failure("SinglePresentHandleCheckTrailingPadding_1") {
     // TODO(fxbug.dev/58385): Close handles on encode/decode failure.
-    bindings_denylist = [rust, dart, go],
+    bindings_denylist = [rust, dart],
     handle_defs = {
         #0 = event(),
     },
@@ -67,7 +67,7 @@ decode_failure("SinglePresentHandleCheckTrailingPadding_1") {
 
 decode_failure("SinglePresentHandleCheckTrailingPadding_2") {
     // TODO(fxbug.dev/58385): Close handles on encode/decode failure.
-    bindings_denylist = [rust, dart, go],
+    bindings_denylist = [rust, dart],
     handle_defs = {
         #0 = event(),
     },
@@ -87,7 +87,7 @@ decode_failure("SinglePresentHandleCheckTrailingPadding_2") {
 
 decode_failure("SinglePresentHandleCheckTrailingPadding_3") {
     // TODO(fxbug.dev/58385): Close handles on encode/decode failure.
-    bindings_denylist = [rust, dart, go],
+    bindings_denylist = [rust, dart],
     handle_defs = {
         #0 = event(),
     },
@@ -107,7 +107,7 @@ decode_failure("SinglePresentHandleCheckTrailingPadding_3") {
 
 decode_failure("TooManyHandlesSpecifiedError") {
     // TODO(fxbug.dev/58385): Close handles on encode/decode failure.
-    bindings_denylist = [rust, go],
+    bindings_denylist = [rust],
     handle_defs = {
         #0 = event(),
         #1 = event(),
@@ -129,7 +129,7 @@ decode_failure("TooManyHandlesSpecifiedError") {
 decode_failure("TooManyBytesSpecifiedError") {
     // TODO(fxbug.dev/58385): Close handles on encode/decode failure for Rust.
     // TODO(fxbug.dev/88808) Add validation in Dart and go.
-    bindings_denylist = [rust, dart, go],
+    bindings_denylist = [rust, dart],
     handle_defs = {
         #0 = event(),
         #1 = event(),
@@ -235,7 +235,7 @@ success("ArrayOfPresentHandles") {
 
 decode_failure("ArrayOfPresentHandlesTooFewError") {
     // TODO(fxbug.dev/58385): Close handles on encode/decode failure.
-    bindings_denylist = [rust, dart, go],
+    bindings_denylist = [rust, dart],
     handle_defs = {
         #0 = event(),
         #1 = event(),
@@ -259,7 +259,7 @@ decode_failure("ArrayOfPresentHandlesTooFewError") {
 
 decode_failure("ArrayOfNonnullableHandlesSomeAbsentError") {
     // TODO(fxbug.dev/58385): Close handles on encode/decode failure.
-    bindings_denylist = [rust, go, dart],
+    bindings_denylist = [rust, dart],
     handle_defs = {
         #0 = event(),
         #1 = event(),
@@ -310,7 +310,7 @@ success("ArrayOfNullableHandles") {
 
 decode_failure("ArrayOfNullableHandlesWithInsufficientHandlesError") {
     // TODO(fxbug.dev/58385): Close handles on encode/decode failure.
-    bindings_denylist = [go, rust, dart],
+    bindings_denylist = [rust, dart],
     handle_defs = {
         #0 = event(),
         #1 = event(),

@@ -923,8 +923,8 @@ encode_failure("OptionalStrictResourceUnionDefaultInitialized") {
 }
 
 encode_failure("OptionalFlexibleValueUnionDefaultInitialized") {
-    // TODO(fxbug.dev/7805): Enable in HLCPP, LLCPP, and Go.
-    bindings_allowlist = [],
+    // TODO(fxbug.dev/7805): Enable in HLCPP, LLCPP.
+    bindings_allowlist = [go],
     value = TestOptionalFlexibleXUnionInStruct {
         xu: SampleXUnion {},
     },
@@ -932,8 +932,8 @@ encode_failure("OptionalFlexibleValueUnionDefaultInitialized") {
 }
 
 encode_failure("OptionalFlexibleResourceUnionDefaultInitialized") {
-    // TODO(fxbug.dev/7805): Enable in HLCPP, LLCPP, and Go.
-    bindings_allowlist = [],
+    // TODO(fxbug.dev/7805): Enable in HLCPP, LLCPP.
+    bindings_allowlist = [go],
     value = TestOptionalFlexibleResourceXUnionInStruct {
         xu: SampleResourceXUnion {},
     },
