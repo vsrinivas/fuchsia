@@ -85,6 +85,8 @@ sdk_atom("gen_snapshot_sdk") {
         target_files.arm64 = files_content
       } else if (target_cpu == "x64") {
         target_files.x64 = files_content
+      } else if (target_cpu == "riscv64") {
+        target_files.riscv64 = files_content
       } else {
         assert(false, "Unknown CPU type: $target_cpu")
       }
