@@ -1031,6 +1031,20 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 
 		group('encode failure cases', () {
 			
+			EncodeFailureCase.run(
+				Encoders.v1,
+				'GoldenStringWithMaxSize2_v1',
+				() => GoldenStringWithMaxSize2(s: 'abc'),
+				kGoldenStringWithMaxSize2_Type,
+				fidl.FidlErrorCode.fidlStringTooLong);
+			
+			EncodeFailureCase.run(
+				Encoders.v2,
+				'GoldenStringWithMaxSize2_v2',
+				() => GoldenStringWithMaxSize2(s: 'abc'),
+				kGoldenStringWithMaxSize2_Type,
+				fidl.FidlErrorCode.fidlStringTooLong);
+			
 				});
 
 		group('decode failure cases', () {

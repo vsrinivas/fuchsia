@@ -4,8 +4,7 @@
 
 encode_failure("VectorExceedsLimit") {
     // TODO(fxbug.dev/37304) Enforce size bounds in rust
-    // TODO(fxbug.dev/88730) Enforce size bounds in dart
-    bindings_denylist = [rust, dart],
+    bindings_denylist = [rust],
     value = VectorWithLimit{
         v: [1, 2, 3], // exceeds the string length
     },

@@ -386,7 +386,7 @@ success("GoldenNullableHandleStructNull") {
 // Golden test for an encode_failure case.
 encode_failure("GoldenStringWithMaxSize2") {
     // TODO(fxbug.dev/37304) Enforce size bounds in rust
-    bindings_denylist = [rust, dart],
+    bindings_denylist = [rust],
     value = GoldenStringWithMaxSize2{
         s: "abc", // exceeds the string length
     },

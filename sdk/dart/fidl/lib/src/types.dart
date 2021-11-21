@@ -25,10 +25,10 @@ import 'union.dart';
 const _notNullable = FidlError('Found null for a non-nullable type',
     FidlErrorCode.fidlNonNullableTypeWithNullValue);
 
-void _throwIfExceedsLimit(int count, int? limit) {
+void _throwIfExceedsLimit(int count, int? limit, FidlErrorCode code) {
   if (limit != null && count > limit) {
-    throw FidlError('Found an object wth $count elements. Limited to $limit.',
-        FidlErrorCode.fidlStringTooLong);
+    throw FidlError(
+        'Found an object with $count elements. Limited to $limit.', code);
   }
 }
 
@@ -788,7 +788,8 @@ void _encodeString(Encoder encoder, String value, int offset, int depth,
     int? maybeElementCount) {
   final bytes = Utf8Encoder().convert(value);
   final int size = bytes.length;
-  _throwIfExceedsLimit(size, maybeElementCount);
+  _throwIfExceedsLimit(
+      size, maybeElementCount, FidlErrorCode.fidlStringTooLong);
   encoder
     ..encodeUint64(size, offset) // size
     ..encodeUint64(kAllocPresent, offset + 8); // data
@@ -847,7 +848,8 @@ class StringType extends SimpleFidlType<String> {
     if (value == null) {
       throw _notNullable;
     }
-    _throwIfExceedsLimit(value.length, maybeElementCount);
+    _throwIfExceedsLimit(
+        value.length, maybeElementCount, FidlErrorCode.fidlStringTooLong);
     return value;
   }
 }
@@ -872,7 +874,8 @@ class NullableStringType extends SimpleFidlType<String?> {
   String? decode(Decoder decoder, int offset, int depth) {
     String? value = _decodeString(decoder, offset, depth);
     if (value != null) {
-      _throwIfExceedsLimit(value.length, maybeElementCount);
+      _throwIfExceedsLimit(
+          value.length, maybeElementCount, FidlErrorCode.fidlStringTooLong);
     }
     return value;
   }
@@ -1598,7 +1601,8 @@ void _encodeVector<T, I extends Iterable<T>>(
     int depth,
     int? maybeElementCount) {
   final int count = value.length;
-  _throwIfExceedsLimit(count, maybeElementCount);
+  _throwIfExceedsLimit(
+      count, maybeElementCount, FidlErrorCode.fidlCountExceedsLimit);
   encoder
     ..encodeUint64(count, offset) // count
     ..encodeUint64(kAllocPresent, offset + 8); // data
@@ -1611,7 +1615,8 @@ I? _decodeVector<T, I extends Iterable<T>>(Decoder decoder,
     FidlType<T, I> element, int offset, int depth, int? maybeElementCount) {
   final int count = decoder.decodeUint64(offset);
   final int data = decoder.decodeUint64(offset + 8);
-  _throwIfExceedsLimit(count, maybeElementCount);
+  _throwIfExceedsLimit(
+      count, maybeElementCount, FidlErrorCode.fidlCountExceedsLimit);
   if (data == kAllocAbsent) {
     if (count != 0) {
       throw FidlError('Expected vector, received null',
