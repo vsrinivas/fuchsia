@@ -53,6 +53,11 @@ static_library("ring-core") {
       ":ring-p256",
     ]
   }
+  if (current_cpu == "riscv64") {
+    deps += [
+      ":riscv64-stubs",
+    ]
+  }
 }
 
 static_library("ring-aes") {
@@ -322,4 +327,11 @@ static_library("ring-cpu-intel") {
   configs += [ ":ring-config" ]
 
   sources = [ "$ring_crate/crypto/cpu-intel.c" ]
+}
+
+static_library("riscv64-stubs") {
+  visibility = [ ":*" ]
+  configs += [ ":ring-config" ]
+
+  sources = [ "riscv64-stubs.c" ]
 }
