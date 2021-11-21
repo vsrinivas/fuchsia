@@ -157,6 +157,9 @@ resource("vmm-resources") {
   if (target_cpu == "arm64") {
     sources = [ "arch/arm64/dts/board.dtb" ]
   }
+  if (target_cpu == "riscv64") {
+    sources = [ "arch/riscv64/dts/board.dtb" ]
+  }
   if (target_cpu == "x64") {
     sources = [
       "arch/x64/asl/dsdt.aml",
