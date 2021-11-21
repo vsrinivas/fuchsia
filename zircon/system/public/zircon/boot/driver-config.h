@@ -18,6 +18,7 @@
 #define KDRV_AMLOGIC_UART 0x554C4D41            // 'AMLU'
 #define KDRV_NXP_IMX_UART 0x55584D49            // 'IMXU'
 #define KDRV_MT8167_UART 0x5538544D             // 'MT8U'
+#define KDRV_SIFIVE_UART 0x55474954             // 'SIFU'
 #define KDRV_AMLOGIC_HDCP 0x484C4D41            // 'AMLH'
 #define KDRV_MSM_UART 0x554D534D                // 'MSMU'
 #define KDRV_MSM_POWER 1347244877               // 'MSMP'
@@ -33,7 +34,7 @@
 
 // Kernel driver struct that can be used for simple drivers.
 // Used by KDRV_PL011_UART, KDRV_AMLOGIC_UART, KDRV_NXP_IMX_UART,
-// KDRV_NS16550A_UART and KDRV_I8250_MMIO_UART.
+// KDRV_NS16550A_UART and KDRV_I8250_MMIO_UART and KDRV_SIFIVE_UART.
 typedef struct {
   uint64_t mmio_phys;
   uint32_t irq;
