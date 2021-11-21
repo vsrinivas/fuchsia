@@ -189,6 +189,10 @@ std::string Arm64ExceptionRecordToString(const debug_ipc::ExceptionRecord& recor
   return std::string();
 }
 
+std::string Riscv64ExceptionRecordToString(const debug_ipc::ExceptionRecord& record) {
+  return std::string();
+}
+
 }  // namespace
 
 OutputBuffer FormatException(const ConsoleContext* context, const Thread* thread,
@@ -252,6 +256,8 @@ std::string ExceptionRecordToString(debug::Arch arch, const debug_ipc::Exception
       return X64ExceptionRecordToString(record) + suffix;
     case debug::Arch::kArm64:
       return Arm64ExceptionRecordToString(record) + suffix;
+    case debug::Arch::kRiscv64:
+      return Riscv64ExceptionRecordToString(record) + suffix;
   }
   FX_NOTREACHED();
   return std::string();
