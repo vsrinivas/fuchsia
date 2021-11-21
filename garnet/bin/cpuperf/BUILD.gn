@@ -77,6 +77,11 @@ resource("cpuperf_resources") {
       "cpspec/arm64/l1.cpspec",
     ]
   }
+  if (current_cpu == "riscv64") {
+    sources = [
+      "cpspec/riscv64/l1.cpspec",
+    ]
+  }
   outputs = [ "data/{{source_file_part}}" ]
 }
 

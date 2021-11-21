@@ -42,6 +42,14 @@ executable("cpuperf_integration_tests_bin") {
     ]
   }
 
+  if (current_cpu == "riscv64") {
+    sources += [
+      "riscv64/riscv64_tests.cc",
+      "riscv64/riscv64_tests.h",
+      "riscv64/tally.cc",
+    ]
+  }
+
   if (current_cpu == "x64") {
     sources += [
       "intel/fixed_counters.cc",
@@ -92,6 +100,9 @@ fuchsia_unittest_package("cpuperf_integration_tests") {
 resource("cpuperf_resources") {
   if (current_cpu == "arm64") {
     sources = [ "arm64/tally.cpspec" ]
+  }
+  if (current_cpu == "riscv64") {
+    sources = [ "riscv64/tally.cpspec" ]
   }
   if (current_cpu == "x64") {
     sources = [

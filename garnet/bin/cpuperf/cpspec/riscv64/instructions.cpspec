@@ -1,0 +1,37 @@
+// Instruction stats
+// There are more stats than just these.
+// This is for illustration purposes.
+{
+  "config_name": "insn-stats",
+  "events": [
+    {
+      "group_name": "arch",
+      "event_name": "inst_retired",
+      "rate": 0,
+      "flags": [ "os", "user" ]
+    },
+    {
+      "group_name": "arch",
+      "event_name": "inst_spec",
+      "rate": 0,
+      "flags": [ "os", "user" ]
+    },
+    {
+      "group_name": "arch",
+      "event_name": "exc_taken",
+      "rate": 0,
+      "flags": [ "os", "user" ]
+    },
+    {
+      "group_name": "arch",
+      "event_name": "exc_return",
+      "rate": 0,
+      "flags": [ "os", "user" ]
+    }
+  ],
+  "buffer_size_in_mb": 1,
+  "duration": 1,
+  "num_iterations": 10,
+  "output_path_prefix": "/tmp/cpuperf-test",
+  "session_result_spec_path": "/tmp/cpuperf-test.cpsession"
+}

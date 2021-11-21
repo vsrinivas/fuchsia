@@ -1,0 +1,17 @@
+// Test "tally" mode: counts are accumulated and reported at the end.
+{
+  "config_name": "tally",
+  "events": [
+    {
+      "group_name": "arch",
+      "event_name": "inst_retired",
+      "rate": 0,
+      "flags": [ "os", "user" ]
+    }
+  ],
+  "buffer_size_in_mb": 1,
+  "duration": 1,
+  "num_iterations": 1,
+  "output_path_prefix": "/tmp/cpuperf-test",
+  "session_result_spec_path": "/tmp/cpuperf-test.cpsession"
+}
