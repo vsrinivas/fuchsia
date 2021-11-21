@@ -125,8 +125,12 @@ void DumpRegistersAndBacktrace(cpu_num_t cpu, FILE* output_target) {
 void DumpRegistersAndBacktrace(cpu_num_t cpu, FILE* output_target) {
   fprintf(output_target, "Regs and Backtrace unavailable for CPU-%u on x64\n", cpu);
 }
+#elif defined(__riscv)
+void DumpRegistersAndBacktrace(cpu_num_t cpu, FILE* output_target) {
+  fprintf(output_target, "Regs and Backtrace unavailable for CPU-%u on riscv64\n", cpu);
+}
 #else
-#error "Unknown architecture! Neither __aarch64__ nor __x86_64__ are defined"
+#error "Unknown architecture! Neither __aarch64__ nor __x86_64__ nor __riscv are defined"
 #endif
 
 void DumpCommonDiagnostics(cpu_num_t cpu, FILE* output_target, FailureSeverity severity) {
