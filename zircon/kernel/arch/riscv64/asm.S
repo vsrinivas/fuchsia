@@ -33,7 +33,7 @@ FUNCTION(riscv64_context_switch)
     // the floating registers if FP support is off.  See riscv64_exception_entry
     // below for details.
 
-    fsd   fs0, CONTEXT_SWITCH_FRAME_OFFSET_FS(0)(sp)
+/*    fsd   fs0, CONTEXT_SWITCH_FRAME_OFFSET_FS(0)(sp)
     fsd   fs1, CONTEXT_SWITCH_FRAME_OFFSET_FS(1)(sp)
     fsd   fs2, CONTEXT_SWITCH_FRAME_OFFSET_FS(2)(sp)
     fsd   fs3, CONTEXT_SWITCH_FRAME_OFFSET_FS(3)(sp)
@@ -44,7 +44,7 @@ FUNCTION(riscv64_context_switch)
     fsd   fs8, CONTEXT_SWITCH_FRAME_OFFSET_FS(8)(sp)
     fsd   fs9, CONTEXT_SWITCH_FRAME_OFFSET_FS(9)(sp)
     fsd   fs10, CONTEXT_SWITCH_FRAME_OFFSET_FS(10)(sp)
-    fsd   fs11, CONTEXT_SWITCH_FRAME_OFFSET_FS(11)(sp)
+    fsd   fs11, CONTEXT_SWITCH_FRAME_OFFSET_FS(11)(sp) */
 
     /* save old sp */
     sd    sp, (a0)
@@ -66,7 +66,7 @@ FUNCTION(riscv64_context_switch)
     ld    s10, CONTEXT_SWITCH_FRAME_OFFSET_S(10)(sp)
     ld    s11, CONTEXT_SWITCH_FRAME_OFFSET_S(11)(sp)
 
-    fld   fs0, CONTEXT_SWITCH_FRAME_OFFSET_FS(0)(sp)
+/*    fld   fs0, CONTEXT_SWITCH_FRAME_OFFSET_FS(0)(sp)
     fld   fs1, CONTEXT_SWITCH_FRAME_OFFSET_FS(1)(sp)
     fld   fs2, CONTEXT_SWITCH_FRAME_OFFSET_FS(2)(sp)
     fld   fs3, CONTEXT_SWITCH_FRAME_OFFSET_FS(3)(sp)
@@ -77,7 +77,7 @@ FUNCTION(riscv64_context_switch)
     fld   fs8, CONTEXT_SWITCH_FRAME_OFFSET_FS(8)(sp)
     fld   fs9, CONTEXT_SWITCH_FRAME_OFFSET_FS(9)(sp)
     fld   fs10, CONTEXT_SWITCH_FRAME_OFFSET_FS(10)(sp)
-    fld   fs11, CONTEXT_SWITCH_FRAME_OFFSET_FS(11)(sp)
+    fld   fs11, CONTEXT_SWITCH_FRAME_OFFSET_FS(11)(sp) */
 
     ld    ra, CONTEXT_SWITCH_FRAME_OFFSET_RA(sp)
     addi  sp, sp, SIZEOF_CONTEXT_SWITCH_FRAME
@@ -176,7 +176,7 @@ END_FUNCTION(riscv64_uspace_entry)
 
     // If the floating point registers are dirty, save them too.
     // Note: t0 at this time holds the value of CSR sstatus.
-    srli   t1, t0, 13              // Put FS[1:0] into t1[1:0].
+/*    srli   t1, t0, 13              // Put FS[1:0] into t1[1:0].
     andi   t1, t1, 3               // Mask out all bits but t1[1:0].
     li     t2, 3                   // Load "dirty" value (3) into t2.
     bne    t1, t2, 1f              // Skip saving fp registers if not "dirty".
@@ -217,7 +217,7 @@ END_FUNCTION(riscv64_uspace_entry)
     fsd    ft10, IFRAME_T_OFFSET_FT(10)(sp)
     fsd    ft11, IFRAME_T_OFFSET_FT(11)(sp)
 
-1:
+1: */
     csrr   a0, scause
     mv     a1, sp
     // args are set up for a call into riscv64_exception_handler()
@@ -237,7 +237,7 @@ END_FUNCTION(riscv64_uspace_entry)
     // "clean" load the register values from the iframe.  It would be an error
     // for the state to be "dirty" since the kernel does not use floating point
     // instructions.
-    srli   t1, t0, 13             // Put FS[1:0] into t1[1:0].
+/*    srli   t1, t0, 13             // Put FS[1:0] into t1[1:0].
     andi   t1, t1, 3              // Mask out all bits but t1[1:0].
 
     // If state is "off" then no floating point registers are in use.
@@ -300,7 +300,7 @@ END_FUNCTION(riscv64_uspace_entry)
     fcvt.d.l ft10, zero
     fcvt.d.l ft11, zero
 
-2:
+2: */
     ld     ra, IFRAME_T_OFFSET_RA(sp)
     ld     a0, IFRAME_T_OFFSET_A(0)(sp)
     ld     a1, IFRAME_T_OFFSET_A(1)(sp)
@@ -490,7 +490,7 @@ FUNCTION(_riscv64_user_copy)
     // NOTE! We make important assumptions here about what the memcpy
     // code does: it never moves the stack pointer, and it never touches a6 and
     // a7 where we saved fault_return and ra
-    jal    memcpy
+    call   memcpy
 
     // Store a successful status for the return. In this case since we do not set x1 the value of
     // the fault address in the return struct is undefined.

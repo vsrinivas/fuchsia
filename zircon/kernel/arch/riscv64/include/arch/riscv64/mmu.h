@@ -13,6 +13,7 @@
 
 #define MMU_LX_X(page_shift, level) ((4 - (level)) * ((page_shift) - 3) + 3)
 #define MMU_KERNEL_PAGE_SIZE_SHIFT      (PAGE_SIZE_SHIFT)
+#define MMU_USER_PAGE_SIZE_SHIFT 12
 #define MMU_USER_SIZE_SHIFT 48
 
 typedef uintptr_t pte_t;

@@ -21,6 +21,11 @@
 #define ZX_MIN_PAGE_SHIFT ((uint32_t)12u)
 #define ZX_MAX_PAGE_SHIFT ((uint32_t)16u)
 
+#elif defined(__riscv)
+
+#define ZX_MIN_PAGE_SHIFT ((uint32_t)12u)
+#define ZX_MAX_PAGE_SHIFT ((uint32_t)16u)
+
 #else
 
 #error what architecture?

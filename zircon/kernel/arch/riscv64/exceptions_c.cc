@@ -50,7 +50,8 @@ void arch_fill_in_exception_context(const arch_exception_context_t* arch_context
                                     zx_exception_report_t* report) {
 }
 
-zx_status_t arch_dispatch_user_policy_exception(uint32_t policy_exception_code) {
+zx_status_t arch_dispatch_user_policy_exception(uint32_t policy_exception_code,
+                                                uint32_t policy_exception_data) {
   return ZX_OK;
 }
 
@@ -147,83 +148,14 @@ static void riscv64_page_fault_handler(long cause, struct iframe_t *frame) {
   }
 }
 
-static bool riscv64_is_floating_point_instruction(long instruction) {
-  // Instructions are divided into 4 quadrants based on the two LSBs of the
-  // instruction's bits.  The first three quadrants (00, 01, 10) are used
-  // by 16-bit instructions.  The last quadrant (11) holds all 32-bit or larger
-  // instructions.
-  //
-  // The 16-bit floating point instructions are:
-  //
-  //           | Quadrant         | Opcode
-  //  Name     | instruction[1:0] | instruction[15:13]
-  //  ---------+------------------+--------------------
-  //  c.fld    | 00               | 001
-  //  c.flw    | 00               | 011     (RV32 only)
-  //  c.fsd    | 00               | 101
-  //  c.fsw    | 00               | 111     (RV32 only)
-  //  c.fldsp  | 10               | 001
-  //  c.flwsp  | 10               | 011     (RV32 only)
-  //  c.fsdsp  | 10               | 101
-  //  c.fswsp  | 10               | 111     (RV32 only)
-  //
-  // The 32-bit floating point instructions use seven major opcodes stored
-  // in bits instruction[6:2]:
-  //
-  //    Opcode
-  //    instruction[6:2] | Name
-  //    -----------------+-------------
-  //    00001            | LOAD-FP (width determined by instruction[26:25])
-  //    01001            | STORE-FP (width determined by instruction[26:25])
-  //    10100            | OP-FP
-  //    10000            | MADD
-  //    10001            | MSUB
-  //    10010            | NMSUB
-  //    10011            | NMADD
-  //
-  // Note that fuchsia supports only RV64 so RV32 instructions can be ignored.
-  // See section 16.8 "RVC Instruction Set Listings" in the "The RISC-V
-  // Instruction Set Manual Volume I: Unprivileged ISA" V20191213 spec for
-  // complete details.
-
-  long quad = instruction & 0b11;
-  if (quad == 0b01) {
-    return false;
-  } else if (quad == 0b00 || quad == 0b10) {
-    long opcode = (instruction >> 13) & 0b111;
-    return opcode == 0b001 || opcode == 0b101;
-  }
-
-  instruction &= 0b1111111;
-  return (instruction == 0b0000111) ||  // LOAD-FP
-         (instruction == 0b0100111) ||  // STORE-FP
-         (instruction == 0b1010011) ||  // OP-FP
-         (instruction == 0b1000011) ||  // FMADD
-         (instruction == 0b1000111) ||  // FMSUB
-         (instruction == 0b1001011) ||  // FNMSUB
-         (instruction == 0b1001111);    // FNMADD
-}
-
 static void riscv64_illegal_instruction_handler(long cause, struct iframe_t *frame) {
-  long instruction = riscv64_csr_read(RISCV64_CSR_STVAL);
-  if (riscv64_is_floating_point_instruction(instruction)) {
-    // A floating point instruction was used but floating point support is not
-    // enabled.  Enable it now.
-    if ((frame->status & RISCV64_CSR_SSTATUS_FS) != RISCV64_CSR_SSTATUS_FS_OFF) {
-      panic("FP already enabled %#lx, epc %#lx, inst %#lx, cpu %u", cause,
-          frame->epc, instruction, arch_curr_cpu_num());
-    }
-    frame->status |= RISCV64_CSR_SSTATUS_FS_INITIAL;
-  } else if (!(frame->status & RISCV64_CSR_SSTATUS_PP)) {
-    // An illegal instruction happened in a user thread.  Handle the execption.
-    // This will kill the process.
+  // If the FPU is already enabled this is bad.
+  if ((frame->status & RISCV64_CSR_SSTATUS_FS) != RISCV64_CSR_SSTATUS_FS_OFF) {
     try_dispatch_user_data_fault_exception(ZX_EXCP_UNDEFINED_INSTRUCTION,
         frame);
-  } else {
-    // An illegal instruction happened in a kernel thread.  That's bad, panic.
-    panic("Exception in a kernel thread %#lx, epc %#lx, inst %#lx, cpu %u",
-        cause, frame->epc, instruction, arch_curr_cpu_num());
   }
+  // Otherwise we just try to enable the FPU.
+  frame->status |= RISCV64_CSR_SSTATUS_FS_INITIAL;
 }
 
 extern "C" syscall_result riscv64_syscall_dispatcher(struct iframe_t *frame);

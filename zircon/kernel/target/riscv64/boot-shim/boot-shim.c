@@ -12,12 +12,12 @@
 #include <string.h>
 #include <zircon/boot/driver-config.h>
 
-#include <ddk/platform-defs.h>
-#include <lib/zbi/zbi.h>
+#include <lib/ddk/platform-defs.h>
 
 #include "debug.h"
 #include "devicetree.h"
 #include "util.h"
+#include "zbi.h"
 
 // used in boot-shim-config.h and in this file below
 static void append_boot_item(zbi_header_t* container, uint32_t type, uint32_t extra,
@@ -70,6 +70,7 @@ typedef enum {
 } node_t;
 
 typedef struct {
+  dt_slice_t devicetree;
   node_t node;
   uintptr_t initrd_start;
   size_t memory_base;
@@ -94,7 +95,8 @@ static int node_callback(int depth, const char* name, void* cookie) {
     ctx->node = NODE_CHOSEN;
   } else if (!strcmp(name, "memory") || !strncmp(name, "memory@", 7)) {
     ctx->node = NODE_MEMORY;
-  } else if (!strcmp(name, "mmod_pmp0") || !strncmp(name, "mmode_pmp0@", 11)) {
+  } else if (!strcmp(name, "mmod_pmp0") || !strncmp(name, "mmode_pmp0@", 11) ||
+	     !strcmp(name, "mmod_resv0") || !strncmp(name, "mmode_resv0@", 11)) {
     ctx->node = NODE_RESERVED;
   } else if (!strncmp(name, "cpu@", 4)) {
     ctx->node = NODE_CPU;
@@ -184,6 +186,8 @@ static void* read_device_tree(void* device_tree, device_tree_context_t* ctx) {
   if (ret) {
     fail("dt_init failed\n");
   }
+  ctx->devicetree.data = device_tree;
+  ctx->devicetree.size = dt.hdr.size;
   dt_walk(&dt, node_callback, prop_callback, ctx);
 
 #if USE_DEVICE_TREE_CPU_COUNT
@@ -231,6 +235,7 @@ static void append_from_device_tree(zbi_header_t* zbi, device_tree_context_t* ct
   if (ctx->cmdline && ctx->cmdline_length) {
     append_boot_item(zbi, ZBI_TYPE_CMDLINE, 0, ctx->cmdline, ctx->cmdline_length);
   }
+  append_boot_item(zbi, ZBI_TYPE_DEVICETREE, 0, ctx->devicetree.data, ctx->devicetree.size);
 }
 
 #else
@@ -387,6 +392,9 @@ boot_shim_return_t boot_shim(uint64_t hart_id, void* device_tree) {
 
       memmove(zbi + 1, payload, header.length);
       *zbi = header;
+#else
+      // Just mark the original kernel item as to be ignored.
+      ((zircon_kernel_t*)zbi)->hdr_kernel.type = ZBI_TYPE_DISCARD;
 #endif
 
 #if RELOCATE_KERNEL

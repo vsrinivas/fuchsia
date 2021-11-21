@@ -48,20 +48,12 @@ END_DATA(_zbi_kernel_header)
 DATA(_zbi_kernel_payload)
     // The boot-shim code expects this to be an offset from the beginning
     // of the load image, whatever the kernel's virtual address.
-    .quad IMAGE_ELF_ENTRY - 0xffff800000000000 # TODO(revest): Once the linker supports this relocation type add: - _zbi_file_header
-    .quad IMAGE_MEMORY_END # TODO(revest): and here too: - boot_load_end
+    .quad IMAGE_ELF_ENTRY - _zbi_file_header
+    .quad IMAGE_MEMORY_END - boot_load_end
 END_DATA(_zbi_kernel_payload)
 
-// Pad out to the header size that was allocated in the kernel image layout.
-// This ensures that the kernel image is aligned correctly in memory.
-.org BOOT_HEADER_SIZE
-
 // Include the kernel image itself, skipping the padding left for the headers.
-DATA(kernel_image)
-#include "kernel_image.h"
-.incbin KERNEL_IMAGE, BOOT_HEADER_SIZE
-DATA(kernel_image_end)
-END_DATA(kernel_image)
+#include "kernel-image.inc"
 
 // Immediately after the kernel image comes the fixup code.
 // The start.S code sees this address as __data_end.
@@ -69,7 +61,7 @@ END_DATA(kernel_image)
 // TODO(revest): Use IMAGE_LOAD_START when LLVM supports it
 // This constant was found in the boot-shim logs with the formula:
 //   "Kernel to 0000000089180000" - "Kernel at 0000000088200000"
-#define FIXUP_LOCATION(addr) (addr - KERNEL_BASE + 0xf70000)
+#define FIXUP_LOCATION(addr) (addr - KERNEL_BASE + 0x18c0000)
 
 // This code must be purely position-independent and have no relocs.
 // This is called with the physical address of __code_start in a0 and the

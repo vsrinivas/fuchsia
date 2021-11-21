@@ -10,10 +10,10 @@ source_set("hypervisor") {
     "vcpu.cc",
   ]
   deps = [
-    "$zx/kernel/hypervisor:headers",
-    "$zx/kernel/lib/ktl",
-    "$zx/kernel/lib/ktrace",
-    "$zx/system/ulib/affine",
+    "//zircon/kernel/hypervisor:headers",
+    "//zircon/kernel/lib/ktl",
+    "//zircon/kernel/lib/ktrace",
+    "//zircon/system/ulib/affine",
   ]
 }
 

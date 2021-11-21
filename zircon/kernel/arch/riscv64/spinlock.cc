@@ -6,7 +6,6 @@
 
 #include <arch/ops.h>
 #include <arch/spinlock.h>
-#include <kernel/atomic.h>
 
 // We need to disable thread safety analysis in this file, since we're
 // implementing the locks themselves.  Without this, the header-level

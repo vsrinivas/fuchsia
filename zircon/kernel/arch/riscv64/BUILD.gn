@@ -4,34 +4,34 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-# TODO(fxbug.dev/54160): Keep in sync with BUILD.gn
-
-import("$zx/kernel/params.gni")
-import("$zx/public/gn/toolchain/environment.gni")
+import("//build/toolchain/toolchain_environment.gni")
+import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
 
 if (current_toolchain == default_toolchain) {
   # Define a special environment for building code that runs in physical
   # memory with the MMU disabled, at early boot.
-  environment("physmem") {
+  zircon_toolchain_suite("physmem_riscv64") {
     cpu = "riscv64"
-    globals = {
-      is_kernel = true
-    }
-    configs += standard_fuchsia_configs + [ ":physmem_config" ]
-    tags = [
-      "standalone",
+    os = "fuchsia"
+    environment = "physmem"
+    with_shared = false
+    configs = [ "//zircon/kernel/arch/riscv64:physmem_config" ]
+    toolchain_tags = [
+      "kernel",
       "strict-align",
     ]
     exclude_variant_tags = [ "instrumented" ]
   }
-} else {
+}
+
+if (toolchain_environment == "physmem") {
   # This is the top config for the physmem environment.
   config("physmem_config") {
     configs = [
-      "$zx/kernel:headers",
-      "$zx/kernel:standalone",
-      "$zx/kernel:warnings",
-      "$zx/public/gn/config:no_sanitizers",
+      "//zircon/kernel:headers",
+      "//zircon/kernel:standalone",
+      "//zircon/kernel:warnings",
+      "//build/config/zircon:no_sanitizers",
     ]
 
     cflags = [
@@ -41,6 +41,16 @@ if (current_toolchain == default_toolchain) {
     include_dirs = [ "include" ]
   }
 
+  group("physmem_config_deps") {
+  }
+}
+
+if (toolchain_environment == "physmem" ||
+    toolchain_environment == "kernel.phys" ||
+    toolchain_environment == "kernel") {
+  # These set the ABI contract between C++ and assembly code.
+  # This is kept consistent between the kernel proper and phys
+  # so (pure PIC) code should be callable from the kernel proper.
   config("abi") {
   }
 
@@ -67,7 +77,7 @@ if (current_toolchain == default_toolchain) {
 
     configs = [
       # <arch/current_thread.h> has #include <lib/arch/intrin.h>.
-      "$zx/kernel/lib/arch/riscv64:headers.config",
+      "//zircon/kernel/lib/arch/riscv64:headers.config",
     ]
 
     # Align the kernel's segments to 64k so it can use "combined pages" to
@@ -78,6 +88,7 @@ if (current_toolchain == default_toolchain) {
   source_set("riscv64") {
     sources = [
       "arch.cc",
+      "asid_allocator.cc",
       "asm.S",
       "boot-mmu.cc",
       "debugger.cc",
@@ -91,20 +102,20 @@ if (current_toolchain == default_toolchain) {
       "user_copy_c.cc",
     ]
     deps = [
-      "$zx/kernel/dev/iommu/dummy",
-      "$zx/kernel/lib/arch",
-      "$zx/kernel/lib/cmdline",
-      "$zx/kernel/lib/console",
-      "$zx/kernel/lib/counters",
-      "$zx/kernel/lib/crashlog",
-      "$zx/kernel/lib/init",
-      "$zx/kernel/lib/ktl",
-      "$zx/kernel/lib/perfmon",
-      "$zx/kernel/lib/syscalls",
-      "$zx/kernel/object",
-      "$zx/kernel/vm",
-      "$zx/system/ulib/bitmap",
-      "$zx/system/ulib/pretty",
+      "//zircon/kernel/dev/iommu/dummy",
+      "//zircon/kernel/lib/arch",
+      "//zircon/kernel/lib/cmdline",
+      "//zircon/kernel/lib/console",
+      "//zircon/kernel/lib/counters",
+      "//zircon/kernel/lib/crashlog",
+      "//zircon/kernel/lib/init",
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/perfmon",
+      "//zircon/kernel/lib/syscalls",
+      "//zircon/kernel/object",
+      "//zircon/kernel/vm",
+      "//zircon/system/ulib/bitmap",
+      "//zircon/system/ulib/pretty",
     ]
   }
 }

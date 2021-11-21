@@ -32,7 +32,7 @@ static inline cpu_num_t arch_spin_lock_holder_cpu(const arch_spin_lock_t* lock) 
   return (cpu_num_t)__atomic_load_n(&lock->value, __ATOMIC_RELAXED) - 1;
 }
 
-static inline bool arch_spin_lock_held(arch_spin_lock_t* lock) {
+static inline bool arch_spin_lock_held(const arch_spin_lock_t* lock) {
   return arch_spin_lock_holder_cpu(lock) == arch_curr_cpu_num();
 }
 

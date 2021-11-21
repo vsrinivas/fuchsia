@@ -9,7 +9,6 @@
 
 #ifndef __ASSEMBLER__
 
-#include <kernel/atomic.h>
 #include <arch/riscv64.h>
 
 __BEGIN_CDECLS

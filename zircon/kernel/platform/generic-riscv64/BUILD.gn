@@ -4,31 +4,38 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-import("$zx/kernel/params.gni")
+import("//zircon/kernel/params.gni")
 
 source_set("generic-riscv64") {
   sources = [ "platform.cc" ]
   deps = [
-    "$zx/kernel/dev/hw_rng",
-    "$zx/kernel/dev/pdev",
-    "$zx/kernel/dev/interrupt/riscv_plic",
-    "$zx/kernel/dev/uart/ns16550a",
-    "$zx/kernel/dev/timer/riscv_generic",
-    "$zx/kernel/lib/cbuf",
-    "$zx/kernel/lib/cmdline",
-    "$zx/kernel/lib/console",
-    "$zx/kernel/lib/fbl",
-    "$zx/kernel/lib/init",
-    "$zx/kernel/lib/lockdep",
-    "$zx/kernel/lib/memory_limit",
-    "$zx/kernel/lib/topology",
-    "$zx/kernel/object",
-    "$zx/kernel/vm",
-    "$zx/system/ulib/explicit-memory",
-    "$zx/system/ulib/zbitl",
+    "//zircon/kernel/dev/hw_rng",
+    "//zircon/kernel/dev/pdev",
+    "//zircon/kernel/dev/interrupt/riscv_plic",
+    "//zircon/kernel/dev/uart/ns16550a",
+    "//zircon/kernel/dev/uart/sifive",
+    "//zircon/kernel/dev/timer/riscv_generic",
+    "//zircon/kernel/lib/boot-options",
+    "//zircon/kernel/lib/cbuf",
+    "//zircon/kernel/lib/cmdline",
+    "//zircon/kernel/lib/console",
+    "//zircon/kernel/lib/crashlog",
+    "//zircon/kernel/lib/fbl",
+    "//zircon/kernel/lib/init",
+    "//zircon/kernel/lib/lockdep",
+    "//zircon/kernel/lib/jtrace",
+    "//zircon/kernel/lib/memory_limit",
+    "//zircon/kernel/lib/persistent-debuglog",
+    "//zircon/kernel/lib/topology",
+    "//zircon/kernel/object",
+    "//zircon/kernel/phys:handoff",
+    "//zircon/kernel/vm",
+    "//zircon/system/ulib/explicit-memory",
+    "//zircon/system/ulib/ram-crashlog",
+    "//zircon/system/ulib/zbitl",
   ]
 
   public_deps = [
-    "$zx/system/ulib/affine",
+    "//zircon/system/ulib/affine",
   ]
 }

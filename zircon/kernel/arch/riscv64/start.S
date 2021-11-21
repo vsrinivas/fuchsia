@@ -116,10 +116,10 @@ FUNCTION(_start)
 
 .Lmmu_on_vaddr:
     // Set up the percpu structure for the logical CPU 0
-    lla     gp, percpu
+    lla     gp, riscv64_percpu_array
 
-    // call main
-    jal     lk_main
+    // Call main
+    call lk_main
 
     // should never return here
     j       .

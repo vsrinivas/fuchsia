@@ -15,6 +15,8 @@
 
 __BEGIN_CDECLS
 
+struct percpu;
+
 struct riscv64_percpu {
   // The CPU number is used internally in Zircon
   cpu_num_t cpu_num;
@@ -27,10 +29,24 @@ struct riscv64_percpu {
 
   // Number of spinlocks currently held.
   uint32_t num_spinlocks;
+
+  // A pointer providing fast access to the high-level arch-agnostic per-cpu struct.
+  percpu* high_level_percpu;
 } __ALIGNED(MAX_CACHE_LINE);
 
 static inline void riscv64_set_percpu(struct riscv64_percpu *ptr) {
   __asm__ volatile("mv gp, %0" :: "r"(ptr));
+}
+
+static inline struct riscv64_percpu* riscv64_read_percpu_ptr() {
+  struct riscv64_percpu* p;
+  __asm__("mv %0, gp" : "=r"(p));
+  return p;
+}
+
+// Return a pointer to the high-level percpu struct for the calling CPU.
+static inline struct percpu* arch_get_curr_percpu(void) {
+  return riscv64_read_percpu_ptr()->high_level_percpu;
 }
 
 // TODO(ZX-3068) get num_cpus from topology.
@@ -46,6 +62,7 @@ static inline uint arch_max_num_cpus(void) {
   return riscv64_num_cpus;
 }
 
+void riscv64_init_percpu_early(uint hart_id, uint cpu_num);
 void arch_register_hart(uint cpu_num, uint64_t hart_id);
 
 static inline uint32_t riscv64_read_percpu_u32(size_t offset) {
@@ -64,6 +81,9 @@ static inline void riscv64_write_percpu_u32(size_t offset, uint32_t val) {
 
 #define READ_PERCPU_FIELD32(field) riscv64_read_percpu_u32(offsetof(struct riscv64_percpu, field))
 #define WRITE_PERCPU_FIELD32(field, value) riscv64_write_percpu_u32(offsetof(struct riscv64_percpu, field), (value))
+
+// Setup the high-level percpu struct pointer for |cpu_num|.
+void arch_setup_percpu(cpu_num_t cpu_num, struct percpu *percpu);
 
 static inline cpu_num_t arch_curr_cpu_num(void) {
   return READ_PERCPU_FIELD32(cpu_num);

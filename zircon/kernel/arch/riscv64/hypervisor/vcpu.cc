@@ -11,7 +11,6 @@
 
 #include <arch/hypervisor.h>
 #include <arch/ops.h>
-#include <fbl/auto_call.h>
 #include <hypervisor/cpu.h>
 #include <hypervisor/guest_physical_address_space.h>
 #include <hypervisor/ktrace.h>

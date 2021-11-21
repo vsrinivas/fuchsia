@@ -23,7 +23,11 @@ uint64_t cpu_to_hart_map[SMP_MAX_CPUS] = {0};
 // list of IPIs queued per cpu
 static volatile ktl::atomic<int> ipi_data[SMP_MAX_CPUS];
 
+// total number of detected cpus
 uint riscv64_num_cpus = 1;
+
+// per cpu structures, each cpu will point to theirs using the fixed register
+riscv64_percpu riscv64_percpu_array[SMP_MAX_CPUS];
 
 void arch_register_hart(uint cpu_num, uint64_t hart_id) {
   cpu_to_hart_map[cpu_num] = hart_id;
@@ -105,13 +109,21 @@ void arch_mp_send_ipi(mp_ipi_target_t target, cpu_mask_t mask, mp_ipi_t ipi) {
   sbi_send_ipis(&hart_mask);
 }
 
-void arch_mp_init_percpu(void) {
-  interrupt_init_percpu();
+void riscv64_init_percpu_early(uint hart_id, uint cpu_num) {
+  // basic bootstrapping of this cpu
+  riscv64_percpu_array[cpu_num].cpu_num = cpu_num;
+  riscv64_percpu_array[cpu_num].hart_id = hart_id;
+  riscv64_set_percpu(&riscv64_percpu_array[cpu_num]);
+  arch_register_hart(cpu_num, hart_id);
+  wmb();
 }
+
+void arch_mp_init_percpu(void) { interrupt_init_percpu(); }
 
 void arch_flush_state_and_halt(Event* flush_done) {
   DEBUG_ASSERT(arch_ints_disabled());
-  flush_done->SignalNoResched();
+  Thread::Current::Get()->preemption_state().PreemptDisable();
+  flush_done->Signal();
   platform_halt_cpu();
   panic("control should never reach here\n");
 }
@@ -132,4 +144,10 @@ zx_status_t arch_mp_cpu_unplug(uint cpu_id) {
 }
 
 zx_status_t arch_mp_cpu_hotplug(cpu_num_t cpu_id) { return ZX_ERR_NOT_SUPPORTED; }
+
+void arch_setup_percpu(cpu_num_t cpu_num, struct percpu* percpu) {
+  riscv64_percpu* arch_percpu = &riscv64_percpu_array[cpu_num];
+  DEBUG_ASSERT(arch_percpu->high_level_percpu == nullptr);
+  arch_percpu->high_level_percpu = percpu;
+}
 

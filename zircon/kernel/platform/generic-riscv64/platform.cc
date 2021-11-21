@@ -8,14 +8,19 @@
 #include <debug.h>
 #include <lib/affine/ratio.h>
 #include <lib/arch/intrin.h>
-#include <lib/cmdline.h>
+#include <lib/boot-options/boot-options.h>
+#include <lib/boot-options/types.h>
+#include <lib/crashlog.h>
 #include <lib/console.h>
 #include <lib/debuglog.h>
+#include <lib/jtrace/jtrace.h>
 #include <lib/memory_limit.h>
+#include <lib/persistent-debuglog.h>
 #include <lib/system-topology.h>
 #include <mexec.h>
 #include <platform.h>
 #include <reg.h>
+#include <string-file.h>
 #include <trace.h>
 
 #include <arch/arch_ops.h>
@@ -32,13 +37,19 @@
 #include <fbl/ref_ptr.h>
 #include <kernel/cpu_distance_map.h>
 #include <kernel/dpc.h>
+#include <kernel/jtrace_config.h>
+#include <kernel/persistent_ram.h>
 #include <kernel/spinlock.h>
 #include <kernel/topology.h>
 #include <ktl/algorithm.h>
 #include <ktl/atomic.h>
+#include <ktl/byte.h>
+#include <ktl/span.h>
 #include <lk/init.h>
 #include <object/resource_dispatcher.h>
+#include <phys/handoff.h>
 #include <platform/crashlog.h>
+#include <platform/ram_mappable_crashlog.h>
 #include <platform/timer.h>
 #include <vm/bootreserve.h>
 #include <vm/kstack.h>
@@ -62,6 +73,16 @@
 
 #define LOCAL_TRACE 0
 
+extern "C" {
+
+// Samples taken at the first instruction in the kernel.
+uint64_t kernel_entry_ticks;
+// ... and at the entry to normal virtual-space kernel code.
+uint64_t kernel_virtual_entry_ticks;
+
+}  // extern "C"
+
+
 // Defined in start.S.
 extern paddr_t zbi_paddr;
 extern paddr_t kernel_secondary_entry_paddr;
@@ -78,11 +99,18 @@ static constexpr size_t kNumArenas = 16;
 static pmm_arena_info_t mem_arena[kNumArenas];
 static size_t arena_count = 0;
 
+static ktl::atomic<int> panic_started;
+static ktl::atomic<int> halted;
+
 const zbi_header_t* platform_get_zbi(void) { return zbi_root; }
 
-static void halt_other_cpus(void) {
-  static ktl::atomic<int> halted;
+namespace {
+lazy_init::LazyInit<RamMappableCrashlog, lazy_init::CheckType::None,
+                    lazy_init::Destructor::Disabled>
+    ram_mappable_crashlog;
+}
 
+static void halt_other_cpus(void) {
   if (halted.exchange(1) == 0) {
     // stop the other cpus
     printf("stopping other cpus\n");
@@ -97,8 +125,6 @@ static void halt_other_cpus(void) {
 }
 
 void platform_panic_start(void) {
-  static ktl::atomic<int> panic_started;
-
   arch_disable_ints();
 
   halt_other_cpus();
@@ -246,16 +272,100 @@ static void init_topology(const zbi_topology_node_t* nodes, size_t node_count) {
   arch_set_num_cpus(static_cast<uint>(system_topology::GetSystemTopology().processor_count()));
 }
 
+static void allocate_persistent_ram(paddr_t pa, size_t length) {
+  // Figure out how to divide up our persistent RAM.  Right now there are
+  // three potential users:
+  //
+  // 1) The crashlog.
+  // 2) Persistent debug logging.
+  // 3) Persistent debug tracing.
+  //
+  // Persistent debug logging and tracing have target amounts of RAM they would
+  // _like_ to have, and crash-logging has a minimum amount it is guaranteed to
+  // get.  Additionally, all allocated are made in a chunks of the minimum
+  // persistent RAM allocation granularity.
+  //
+  // Make sure that the crashlog gets as much of its minimum allocation as is
+  // possible.  Then attempt to satisfy the target for persistent debug logging,
+  // followed by persistent debug tracing.  Finally, give anything leftovers to
+  // the crashlog.
+  size_t crashlog_size = 0;
+  size_t pdlog_size = 0;
+  size_t jtrace_size = 0;
+  {
+    // start by figuring out how many chunks of RAM we have available to
+    // us total.
+    size_t persistent_chunks_available = length / kPersistentRamAllocationGranularity;
+
+    // If we have not already configured a non-trivial crashlog implementation
+    // for the platform, make sure that crashlog gets its minimum allocation, or
+    // all of the RAM if it cannot meet even its minimum allocation.
+    size_t crashlog_chunks = !PlatformCrashlog::HasNonTrivialImpl()
+                                 ? ktl::min(persistent_chunks_available,
+                                            kMinCrashlogSize / kPersistentRamAllocationGranularity)
+                                 : 0;
+    persistent_chunks_available -= crashlog_chunks;
+
+    // Next in line is persistent debug logging.
+    size_t pdlog_chunks =
+        ktl::min(persistent_chunks_available,
+                 kTargetPersistentDebugLogSize / kPersistentRamAllocationGranularity);
+    persistent_chunks_available -= pdlog_chunks;
+
+    // Next up is persistent debug tracing.
+    size_t jtrace_chunks =
+        ktl::min(persistent_chunks_available,
+                 kJTraceTargetPersistentBufferSize / kPersistentRamAllocationGranularity);
+    persistent_chunks_available -= jtrace_chunks;
+
+    // Finally, anything left over can go to the crashlog.
+    crashlog_chunks += persistent_chunks_available;
+
+    crashlog_size = crashlog_chunks * kPersistentRamAllocationGranularity;
+    pdlog_size = pdlog_chunks * kPersistentRamAllocationGranularity;
+    jtrace_size = jtrace_chunks * kPersistentRamAllocationGranularity;
+  }
+
+  // Configure up the crashlog RAM
+  if (crashlog_size > 0) {
+    dprintf(INFO, "Crashlog configured with %" PRIu64 " bytes\n", crashlog_size);
+    ram_mappable_crashlog.Initialize(pa, crashlog_size);
+    PlatformCrashlog::Bind(ram_mappable_crashlog.Get());
+  }
+  size_t offset = crashlog_size;
+
+  // Configure the persistent debuglog RAM (if we have any)
+  if (pdlog_size > 0) {
+    dprintf(INFO, "Persistent debug logging enabled and configured with %" PRIu64 " bytes\n",
+            pdlog_size);
+    persistent_dlog_set_location(paddr_to_physmap(pa + offset), pdlog_size);
+    offset += pdlog_size;
+  }
+
+  // Do _not_ attempt to set the location of the debug trace buffer if this is
+  // not a persistent debug trace buffer.  The location of a non-persistent
+  // trace buffer would have been already set during (very) early init.
+  if constexpr (kJTraceIsPersistent == jtrace::IsPersistent::Yes) {
+    jtrace_set_location(paddr_to_physmap(pa + offset), jtrace_size);
+    offset += jtrace_size;
+  }
+}
+
 // Called during platform_init_early, the heap is not yet present.
 void ProcessZbiEarly(zbi_header_t* zbi) {
   DEBUG_ASSERT(zbi);
 
   // Writable bytes, as we will need to edit CMDLINE items (see below).
-  zbitl::View view(zbitl::AsWritableBytes(zbi, SIZE_MAX));
+  ktl::span span{reinterpret_cast<ktl::byte*>(zbi), SIZE_MAX};
+  zbitl::View view(span);
 
   for (auto it = view.begin(); it != view.end(); ++it) {
     auto [header, payload] = *it;
     switch (header->type) {
+      case ZBI_TYPE_STORAGE_KERNEL: {
+        gPhysHandoff = PhysHandoff::FromPayload(payload);
+        break;
+      }
       case ZBI_TYPE_KERNEL_DRIVER:
       case ZBI_TYPE_PLATFORM_ID:
         break;
@@ -263,17 +373,19 @@ void ProcessZbiEarly(zbi_header_t* zbi) {
         if (payload.empty()) {
           break;
         }
-        payload.back() = std::byte{'\0'};
-        gCmdline.Append(reinterpret_cast<const char*>(payload.data()));
+        payload.back() = ktl::byte{'\0'};
+
+	ParseBootOptions(
+            ktl::string_view{reinterpret_cast<const char*>(payload.data()), payload.size()});
 
         // The CMDLINE might include entropy for the zircon cprng.
         // We don't want that information to be accesible after it has
         // been added to the kernel cmdline.
         // Editing the header of a ktl::span will not result in an error.
         // TODO(fxbug.dev/64272): Inline the following once the GCC bug is fixed.
-        zbi_header_t header{};
-        header.type = ZBI_TYPE_DISCARD;
-        static_cast<void>(view.EditHeader(it, header));
+	static_cast<void>(view.EditHeader(it, zbi_header_t{
+					  .type = ZBI_TYPE_DISCARD,
+				      }));
         mandatory_memset(payload.data(), 0, payload.size());
         break;
       }
@@ -292,7 +404,7 @@ void ProcessZbiEarly(zbi_header_t* zbi) {
         dprintf(INFO, "boot reserve NVRAM range: phys base %#" PRIx64 " length %#" PRIx64 "\n",
                 info.base, info.length);
 
-        platform_set_ram_crashlog_location(info.base, info.length);
+        allocate_persistent_ram(info.base, info.length);
         boot_reserve_add_range(info.base, info.length);
         break;
       }
@@ -350,7 +462,6 @@ void platform_early_init(void) {
   if (zbi_vaddr && is_zbi_container(zbi_vaddr)) {
     zbi_header_t* header = (zbi_header_t*)zbi_vaddr;
 
-
     ramdisk_base = header;
     ramdisk_size = ROUNDUP(header->length + sizeof(*header), PAGE_SIZE);
   } else {
@@ -364,6 +475,7 @@ void platform_early_init(void) {
   zbi_root = reinterpret_cast<zbi_header_t*>(ramdisk_base);
   // walk the zbi structure and process all the items
   ProcessZbiEarly(zbi_root);
+  FinishBootOptions();
 
   // is the cmdline option to bypass dlog set ?
   dlog_bypass_init();
@@ -374,8 +486,12 @@ void platform_early_init(void) {
   // Serial port should be active now
 
   // Check if serial should be enabled
-  const char* serial_mode = gCmdline.GetString("kernel.serial");
-  uart_disabled = (serial_mode != NULL && !strcmp(serial_mode, "none"));
+  if (gBootOptions->serial_source == OptionSource::kCmdLine) {
+    SmallString serial_mode = {};
+    StringFile string_file(serial_mode);
+    BootOptions::PrintValue(gBootOptions->serial, &string_file);
+    uart_disabled = (strcmp(ktl::move(string_file).take().data(), "none") == 0);
+  }
 
   // Initialize the PmmChecker now that the cmdline has been parsed.
   pmm_checker_init_from_cmdline();
@@ -547,6 +663,11 @@ zx_status_t platform_mp_prep_cpu_unplug(cpu_num_t cpu_id) {
 
 zx_status_t platform_mp_cpu_unplug(cpu_num_t cpu_id) { return arch_mp_cpu_unplug(cpu_id); }
 
-zx_status_t platform_append_mexec_data(fbl::Span<std::byte> data_zbi)  {
+zx_status_t platform_append_mexec_data(ktl::span<ktl::byte> data_zbi)  {
   return ZX_OK;
 }
+
+zx_ticks_t platform_convert_early_ticks(arch::EarlyTicks sample) {
+  return sample.placeholder;
+}
+

@@ -42,6 +42,7 @@ void arch_thread_initialize(Thread* t, vaddr_t entry_point) {
 }
 
 __NO_SAFESTACK void arch_thread_construct_first(Thread* t) {
+  arch_set_current_thread(t);
 }
 
 __NO_SAFESTACK void arch_context_switch(Thread* oldthread, Thread* newthread) {
@@ -49,6 +50,7 @@ __NO_SAFESTACK void arch_context_switch(Thread* oldthread, Thread* newthread) {
 
   LTRACEF("old %p (%s), new %p (%s)\n", oldthread, oldthread->name(), newthread, newthread->name());
 
+  arch_set_current_thread(newthread);
   riscv64_context_switch(&oldthread->arch().sp, newthread->arch().sp);
 }
 
@@ -57,10 +59,6 @@ void arch_dump_thread(Thread* t) {
     dprintf(INFO, "\tarch: ");
     dprintf(INFO, "sp 0x%lx\n", t->arch().sp);
   }
-}
-
-void* arch_thread_get_blocked_fp(Thread* t) {
-  return 0;
 }
 
 __NO_SAFESTACK void arch_save_user_state(Thread* thread) {
@@ -74,4 +72,8 @@ void arch_set_suspended_general_regs(struct Thread* thread, GeneralRegsSource so
 }
 
 void arch_reset_suspended_general_regs(struct Thread* thread) {
+}
+
+vaddr_t arch_thread_get_blocked_fp(Thread* t) {
+  return 0;
 }
