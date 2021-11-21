@@ -1,0 +1,21 @@
+{
+    include: [
+        // Enable system logging.
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        data: "data/hello-experiences"
+    },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.ui.app.ViewProvider" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.ui.app.ViewProvider" ],
+            from: "self",
+            to: "parent"
+        },
+    ],
+}

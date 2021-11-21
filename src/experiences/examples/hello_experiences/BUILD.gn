@@ -18,7 +18,7 @@ dart_library("lib") {
 
 flutter_component("component") {
   component_name = "hello-experiences"
-  manifest = "meta/hello-experiences.cmx"
+  manifest = "meta/hello-experiences.cml"
   deps = [ ":lib" ]
 }
 
