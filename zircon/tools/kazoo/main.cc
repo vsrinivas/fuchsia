@@ -18,9 +18,11 @@ struct CommandLineOptions {
   std::optional<std::string> c_ulib_header;
   std::optional<std::string> go_syscall_arm64_asm;
   std::optional<std::string> go_syscall_stubs;
+  std::optional<std::string> go_syscall_riscv64_asm;
   std::optional<std::string> go_syscall_x86_asm;
   std::optional<std::string> go_vdso_arm64_calls;
   std::optional<std::string> go_vdso_keys;
+  std::optional<std::string> go_vdso_riscv64_calls;
   std::optional<std::string> go_vdso_x86_calls;
   std::optional<std::string> json;
   std::optional<std::string> kernel_header;
@@ -53,6 +55,9 @@ constexpr const char kGoSyscallArm64AsmHelp[] = R"(  --go-syscall-arm64-asm=FILE
 constexpr const char kGoSyscallStubsHelp[] = R"(  --go-syscall-stubs=FILENAME
     The output name for the Go syscall/zx stubs .go file.)";
 
+constexpr const char kGoSyscallRiscv64AsmHelp[] = R"(  --go-syscall-riscv64-asm=FILENAME
+    The output name for the Go syscall/zx arm .s file.)";
+
 constexpr const char kGoSyscallX86AsmHelp[] = R"(  --go-syscall-x86-asm=FILENAME
     The output name for the Go syscall/zx x86 .s file.)";
 
@@ -64,6 +69,9 @@ constexpr const char kGoVdsoArm64CallsHelp[] = R"(  --go-vdso-arm64-calls=FILENA
 
 constexpr const char kGoVdsoX86CallsHelp[] = R"(  --go-vdso-x86-calls=FILENAME
     The output name for the Go runtime x86-64 VDSO calls file.)";
+
+constexpr const char kGoVdsoRiscv64CallsHelp[] = R"(  --go-vdso-riscv64-calls=FILENAME
+    The output name for the Go runtime riscv64 VDSO calls file.)";
 
 constexpr const char kJsonHelp[] = R"(  --json=FILENAME
     The output name for the .json syscall definitions.)";
@@ -106,11 +114,15 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
                    &CommandLineOptions::go_syscall_arm64_asm);
   parser.AddSwitch("go-syscall-stubs", 0, kGoSyscallStubsHelp,
                    &CommandLineOptions::go_syscall_stubs);
+  parser.AddSwitch("go-syscall-riscv64-asm", 0, kGoSyscallRiscv64AsmHelp,
+                   &CommandLineOptions::go_syscall_riscv64_asm);
   parser.AddSwitch("go-syscall-x86-asm", 0, kGoSyscallX86AsmHelp,
                    &CommandLineOptions::go_syscall_x86_asm);
   parser.AddSwitch("go-vdso-arm64-calls", 0, kGoVdsoArm64CallsHelp,
                    &CommandLineOptions::go_vdso_arm64_calls);
   parser.AddSwitch("go-vdso-keys", 0, kGoVdsoKeysHelp, &CommandLineOptions::go_vdso_keys);
+  parser.AddSwitch("go-vdso-riscv64-calls", 0, kGoVdsoRiscv64CallsHelp,
+                   &CommandLineOptions::go_vdso_riscv64_calls);
   parser.AddSwitch("go-vdso-x86-calls", 0, kGoVdsoX86CallsHelp,
                    &CommandLineOptions::go_vdso_x86_calls);
   parser.AddSwitch("json", 0, kJsonHelp, &CommandLineOptions::json);
@@ -180,9 +192,11 @@ int main(int argc, const char* argv[]) {
       {&options.c_ulib_header, CUlibHeaderOutput},
       {&options.go_syscall_arm64_asm, GoSyscallsAsm},
       {&options.go_syscall_stubs, GoSyscallsStubs},
+      {&options.go_syscall_riscv64_asm, GoSyscallsAsm},
       {&options.go_syscall_x86_asm, GoSyscallsAsm},
       {&options.go_vdso_arm64_calls, GoVdsoArm64Calls},
       {&options.go_vdso_keys, GoVdsoKeys},
+      {&options.go_vdso_riscv64_calls, GoVdsoRiscv64Calls},
       {&options.go_vdso_x86_calls, GoVdsoX86Calls},
       {&options.json, JsonOutput},
       {&options.kernel_header, KernelDeclarationsOutput},

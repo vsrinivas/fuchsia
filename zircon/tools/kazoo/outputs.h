@@ -17,6 +17,7 @@ bool GoSyscallsAsm(const SyscallLibrary& library, Writer* writer);
 bool GoSyscallsStubs(const SyscallLibrary& library, Writer* writer);
 bool GoVdsoArm64Calls(const SyscallLibrary& library, Writer* writer);
 bool GoVdsoKeys(const SyscallLibrary& library, Writer* writer);
+bool GoVdsoRiscv64Calls(const SyscallLibrary& library, Writer* writer);
 bool GoVdsoX86Calls(const SyscallLibrary& library, Writer* writer);
 bool JsonOutput(const SyscallLibrary& library, Writer* writer);
 bool KernelDeclarationsOutput(const SyscallLibrary& library, Writer* writer);
