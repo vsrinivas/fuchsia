@@ -68,6 +68,7 @@ debug::RegisterID ConvertRegisterID(unwinder::Registers::Arch arch, unwinder::Re
       {unwinder::RegisterID::kArm64_x31, debug::RegisterID::kARMv8_sp},
       {unwinder::RegisterID::kArm64_pc, debug::RegisterID::kARMv8_pc},
   };
+  static Map riscv64_map = {};
 
   Map* map = nullptr;
 
@@ -77,6 +78,9 @@ debug::RegisterID ConvertRegisterID(unwinder::Registers::Arch arch, unwinder::Re
       break;
     case unwinder::Registers::Arch::kArm64:
       map = &arm64_map;
+      break;
+    case unwinder::Registers::Arch::kRiscv64:
+      map = &riscv64_map;
       break;
   }
 

@@ -160,6 +160,7 @@ void JitDebug::ProcessArch() {
       read_descriptor_func_ = &JitDebug::ReadDescriptor64;
       read_entry_func_ = &JitDebug::ReadEntry64;
       break;
+    case ARCH_RISCV64:
     case ARCH_UNKNOWN:
       abort();
   }

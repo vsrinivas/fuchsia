@@ -47,6 +47,8 @@ void AddThreadRegs(const GeneralRegisters& source, debug_ipc::StackFrame* dest) 
   dest->regs.emplace_back(RegisterID::kX64_gsbase, native_regs.gs_base);
 #elif defined(__aarch64__)
   dest->regs.emplace_back(RegisterID::kARMv8_tpidr, native_regs.tpidr);
+#elif defined(__riscv)
+  dest->regs.emplace_back(RegisterID::kRISCV64_placeholder, native_regs.placeholder);
 #else
 #error Write for your platform
 #endif
@@ -110,6 +112,9 @@ containers::array_view<NGUnwindRegisterMap> GetNGUnwindGeneralRegisters() {
       {UNW_AARCH64_X28, RegisterID::kARMv8_x28},
       {UNW_AARCH64_X29, RegisterID::kARMv8_x29},
       {UNW_AARCH64_X30, RegisterID::kARMv8_lr}};
+#elif defined(__riscv)
+  static NGUnwindRegisterMap kGeneral[] = {
+      {0, RegisterID::kRISCV64_placeholder}};
 #else
 #error Write for your platform
 #endif

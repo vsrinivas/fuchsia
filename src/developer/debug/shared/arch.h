@@ -9,7 +9,7 @@
 
 namespace debug {
 
-enum class Arch : uint32_t { kUnknown = 0, kX64, kArm64 };
+enum class Arch : uint32_t { kUnknown = 0, kX64, kArm64, kRiscv64 };
 
 }  // namespace debug
 

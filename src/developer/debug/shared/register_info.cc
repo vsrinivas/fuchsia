@@ -585,6 +585,9 @@ RegisterID GetSpecialRegisterID(Arch arch, SpecialRegisterType type) {
       }
       break;
 
+    case Arch::kRiscv64:
+      break;
+
     case Arch::kUnknown:
       break;
   }

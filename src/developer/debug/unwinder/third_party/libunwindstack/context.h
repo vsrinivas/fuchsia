@@ -71,11 +71,20 @@ constexpr auto kCurrentArch = Registers::Arch::kArm64;
 extern "C" void AsmGetRegs(void* regs);
 constexpr auto kCurrentArch = Registers::Arch::kX64;
 
+#elif defined(__riscv)
+
+[[gnu::always_inline]] inline void AsmGetRegs(void* reg_data) {
+}
+
+constexpr auto kCurrentArch = Registers::Arch::kRiscv64;
+
 #endif
 
 [[gnu::always_inline]] inline Registers GetContext() {
   constexpr auto kRegLast = static_cast<uint8_t>(
-      kCurrentArch == Registers::Arch::kX64 ? RegisterID::kX64_last : RegisterID::kArm64_last);
+      kCurrentArch == Registers::Arch::kX64 ? RegisterID::kX64_last :
+      kCurrentArch == Registers::Arch::kArm64 ? RegisterID::kArm64_last :
+                                               RegisterID::kArm64_last);
 
   uint64_t regs[kRegLast];
   AsmGetRegs(regs);

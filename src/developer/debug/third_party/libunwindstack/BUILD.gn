@@ -54,6 +54,8 @@ static_library("libunwindstack") {
       sources += [ "fuchsia/RegsFuchsiaX86_64.cpp" ]
     } else if (target_cpu == "arm64") {
       sources += [ "fuchsia/RegsFuchsiaArm64.cpp" ]
+    } else if (target_cpu == "riscv64") {
+      sources += [ "fuchsia/RegsFuchsiaRiscv64.cpp" ]
     }
   } else {
     sources += [

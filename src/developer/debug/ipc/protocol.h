@@ -23,6 +23,7 @@ const uint64_t kTimestampDefault = 0x0fefffffffffffff;
 // be updated.
 static_assert(static_cast<int>(debug::Arch::kX64) == 1);
 static_assert(static_cast<int>(debug::Arch::kArm64) == 2);
+static_assert(static_cast<int>(debug::Arch::kRiscv64) == 3);
 
 #pragma pack(push, 8)
 

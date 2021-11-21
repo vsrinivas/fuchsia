@@ -99,6 +99,10 @@ static_library("lib") {
       "debug_registers_arm64.cc",
     ]
   } else if (current_cpu == "riscv64") {
+    sources += [
+      "arch_riscv64.cc",
+      "debug_registers_riscv64.cc",
+    ]
   } else {
     assert(false, "Un-supported CPU: ${current_cpu}")
   }

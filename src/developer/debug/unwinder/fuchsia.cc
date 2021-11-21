@@ -36,6 +36,11 @@ unwinder::Registers FromFuchsiaRegisters(const zx_thread_state_general_regs& reg
   for (int i = 0; i < static_cast<int>(unwinder::RegisterID::kArm64_last); i++) {
     res.Set(static_cast<unwinder::RegisterID>(i), reinterpret_cast<const uint64_t*>(&regs)[i]);
   }
+#elif defined(__riscv)
+  unwinder::Registers res(unwinder::Registers::Arch::kRiscv64);
+  for (int i = 0; i < static_cast<int>(unwinder::RegisterID::kRiscv64_last); i++) {
+    res.Set(static_cast<unwinder::RegisterID>(i), reinterpret_cast<const uint64_t*>(&regs)[i]);
+  }
 #else
 #error What platform?
 #endif

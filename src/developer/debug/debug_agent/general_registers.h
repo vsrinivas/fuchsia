@@ -37,6 +37,13 @@ class GeneralRegisters {
   // Stack pointer.
   uint64_t sp() const { return regs_.sp; }
   void set_sp(uint64_t sp) { regs_.sp = sp; }
+#elif defined(__riscv)
+  uint64_t ip() const { return 0; }
+  void set_ip(uint64_t ip) { }
+
+  // Stack pointer.
+  uint64_t sp() const { return 0; }
+  void set_sp(uint64_t sp) { }
 #endif
 
   // Appends the current general registers to the given high-level register record.

@@ -54,6 +54,8 @@ DwarfCfiParser::DwarfCfiParser(Registers::Arch arch) {
       RegisterID::kArm64_x28, RegisterID::kArm64_x29, RegisterID::kArm64_x30,
       RegisterID::kArm64_x31,
   };
+  // TODO
+  static RegisterID kRiscv64Preserved[] = {};
 
   RegisterID* preserved;
   size_t length;
@@ -65,6 +67,10 @@ DwarfCfiParser::DwarfCfiParser(Registers::Arch arch) {
     case Registers::Arch::kArm64:
       preserved = kArm64Preserved;
       length = sizeof(kArm64Preserved) / sizeof(RegisterID);
+      break;
+    case Registers::Arch::kRiscv64:
+      preserved = kRiscv64Preserved;
+      length = sizeof(kRiscv64Preserved) / sizeof(RegisterID);
       break;
   }
 

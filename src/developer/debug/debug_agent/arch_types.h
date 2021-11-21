@@ -21,6 +21,11 @@ using BreakInstructionType = uint8_t;
 
 using BreakInstructionType = uint32_t;
 
+#elif defined(__riscv)
+
+using BreakInstructionType = uint32_t;
+
+
 #else
 #error
 #endif

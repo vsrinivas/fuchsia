@@ -76,6 +76,10 @@ enum class RegisterID : uint8_t {
   kArm64_lr = kArm64_x30,
   kArm64_sp = kArm64_x31,
 
+  // riscv64
+  kRiscv64_placeholder = 0,
+  kRiscv64_last,
+
   kInvalid = static_cast<uint8_t>(-1),
 };
 
@@ -84,6 +88,7 @@ class Registers {
   enum class Arch {
     kX64,
     kArm64,
+    kRiscv64,
   };
 
   explicit Registers(Arch arch) : arch_(arch) {}

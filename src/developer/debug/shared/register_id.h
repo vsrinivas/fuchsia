@@ -477,6 +477,10 @@ enum class RegisterID : uint32_t {
   // dr5 is reserved.
   kX64_dr6 = 2606,
   kX64_dr7 = 2607,
+
+  // RISCV (Range: 3000-3999) --------------------------------------------------
+
+  kRISCV64_placeholder = 3000,
 };
 
 }  // namespace debug
