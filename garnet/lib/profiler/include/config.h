@@ -263,6 +263,8 @@
 #define PC_FROM_UCONTEXT uc_mcontext.gregs[REG_EIP]
 #elif defined(__x86_64__)
 #define PC_FROM_UCONTEXT uc_mcontext.gregs[REG_RIP]
+#elif defined(__riscv)
+#define PC_FROM_UCONTEXT uc_mcontext.pc
 #else
 #error "Unsupported Architecture"
 #endif
