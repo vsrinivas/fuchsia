@@ -27,6 +27,7 @@ EM_386 = 3
 EM_ARM = 40
 EM_X86_64 = 62
 EM_AARCH64 = 183
+EM_RISCV64 = 243
 PT_LOAD = 1
 PT_DYNAMIC = 2
 PT_INTERP = 3
@@ -271,6 +272,7 @@ ELF_MACHINE_TO_CPU = {
         (EM_ARM, 'arm', 'arm'),
         (EM_X86_64, 'x86_64', 'x64'),
         (EM_AARCH64, 'aarch64', 'arm64'),
+        (EM_RISCV64, 'riscv64', 'riscv64'),
     ]
 }
 
