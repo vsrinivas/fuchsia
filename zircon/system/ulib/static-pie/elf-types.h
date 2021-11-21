@@ -33,6 +33,8 @@ enum class ElfRelocType : uint32_t {
   kRelative = 8,  // R_X86_64_RELATIVE
 #elif defined(__aarch64__)
   kRelative = 1027,  // R_AARCH64_RELATIVE
+#elif defined(__riscv)
+  kRelative = 3,  // R_RISCV_RELATIVE
 #else
 #error "Unknown architecture."
 #endif
