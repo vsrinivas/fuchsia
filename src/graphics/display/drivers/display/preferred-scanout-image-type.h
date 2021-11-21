@@ -15,12 +15,12 @@
 #if defined(__x86_64__)
 // IMAGE_TYPE_X_TILED from fuchsia/hardware/intelgpucore/c/banjo.h
 constexpr uint32_t IMAGE_TYPE_PREFERRED_SCANOUT = 1;
-#elif defined(__aarch64__)
+#elif defined(__aarch64__) || defined(__riscv)
 // TYPE_SIMPLE from fuchsia.hardware.display/display-controller.fidl
 // ImageType::SIMPLE from display-controller.banjo
 constexpr uint32_t IMAGE_TYPE_PREFERRED_SCANOUT = 0;
 #else
-#error "Preferred scanout image format only defined on Intel and ARM."
+#error "Preferred scanout image format only defined on Intel, RISCV and ARM."
 #endif
 
 #endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_DISPLAY_PREFERRED_SCANOUT_IMAGE_TYPE_H_
