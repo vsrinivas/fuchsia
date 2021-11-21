@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_LIB_ARCH_INCLUDE_LIB_ARCH_NOP_H_
 #define ZIRCON_KERNEL_LIB_ARCH_INCLUDE_LIB_ARCH_NOP_H_
 
+#include <lib/arch/riscv64/nop.h>
 #include <lib/arch/arm64/nop.h>
 #include <lib/arch/x86/nop.h>
 #include <zircon/assert.h>
@@ -39,6 +40,8 @@ template <typename NopTraits
           = Arm64NopTraits
 #elif defined(__x86_64__)
           = X86NopTraits
+#elif defined(__riscv)
+          = Riscv64NopTraits
 #endif
           >
 void NopFill(fbl::Span<std::byte> instructions) {

@@ -14,6 +14,8 @@
   lsl x0, x0, #1
 #elif defined(__x86_64__)
   lea (%rdi, %rdi), %rax
+#elif defined(__riscv)
+  slli a0, a0, 1
 #else
   .error "unknown architecture"
 #endif

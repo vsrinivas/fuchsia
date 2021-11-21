@@ -40,7 +40,9 @@
 #ifdef _KERNEL
   .pushsection .code-patches, "aM?", %progbits, 16
 #else
-  .pushsection .code-patches, "M?", %progbits, 16
+// TODO why does this not work
+//  .pushsection .code-patches, "M?", %progbits, 16
+  .pushsection .code-patches
 #endif
   .quad \begin
   .int \end - \begin
@@ -98,6 +100,10 @@ _.code_patching.end.reset
 #elif defined(__x86_64__)
   .rept \size
   int3
+  .endr
+#elif defined(__riscv)
+  .rept \size
+  ebreak
   .endr
 #else
 #error "unknown architecture"

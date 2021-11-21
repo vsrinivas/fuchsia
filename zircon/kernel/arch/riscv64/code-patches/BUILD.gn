@@ -1,0 +1,17 @@
+# Copyright 2021 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//build/cpp/library_headers.gni")
+
+source_set("code-patches") {
+  sources = [ "code-patches.cc" ]
+  public_deps = [ ":headers" ]
+}
+
+library_headers("headers") {
+  headers = [ "arch/code-patches/case-id.h" ]
+  public_deps = [ "//zircon/kernel/lib/code-patching:headers" ]
+}
