@@ -54,7 +54,7 @@ template("boot_shim") {
   board = target_name
 
   if (toolchain_environment == "physmem") {
-    shim_name = "${board}-boot-shim"
+    shim_name = "${board}-blah-boot-shim"
 
     executable(shim_name) {
       output_extension = "elf"
