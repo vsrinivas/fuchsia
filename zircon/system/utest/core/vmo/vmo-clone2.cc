@@ -1635,6 +1635,12 @@ TEST_F(VmoClone2TestCase, ParentStartLimitRegression) {
     asm volatile("yield" ::: "memory"); \
   } while (0)
 #endif
+#ifdef __riscv
+#define yield()                        \
+  do {                                 \
+    asm volatile("nop" ::: "memory"); \
+  } while (0)
+#endif
 
 // This is a regression test for fxbug.dev/56137 and checks that if both children of a hidden parent
 // are dropped 'at the same time', then there are no races with their parallel destruction.

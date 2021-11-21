@@ -69,6 +69,7 @@ void threads_test_wait_break_fn(void* arg) {
 #elif defined(__x86_64__)
   __asm__ volatile("int3");
 #elif defined(__riscv)
+  __asm__ volatile("ebreak");
 #else
 #error Not supported on this platform.
 #endif
@@ -129,6 +130,8 @@ void threads_bad_syscall_fn(void* arg_) {
   __asm__ volatile("mov x16, %0\nsvc #0" : : "r" (syscall_number));
 #elif defined(__x86_64__)
   __asm__ volatile("syscall" : : "rax" (syscall_number));
+#elif defined(__riscv)
+  __asm__ volatile("mv t0, %0\necall" : : "r" (syscall_number));
 #else
 #error Not supported on this platform.
 #endif

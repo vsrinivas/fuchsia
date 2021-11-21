@@ -868,6 +868,8 @@ static void jump_to_thread_exit(zx_handle_t thread) {
   regs.pc = reinterpret_cast<uint64_t>(&zx_thread_exit);
 #elif defined(__x86_64__)
   regs.rip = reinterpret_cast<uint64_t>(&zx_thread_exit);
+#elif defined(__riscv)
+  regs.placeholder = reinterpret_cast<uint64_t>(&zx_thread_exit);
 #else
 #error Not supported on this platform.
 #endif
