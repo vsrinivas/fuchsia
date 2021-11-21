@@ -78,10 +78,17 @@ template("ifs_shared_library") {
     sources = [ invoker.abi ]
     outputs = [ stub_file ]
     rebased_stub_file = rebase_path(stub_file, root_build_dir)
+
+    if (clang_cpu == "riscv64") {
+      llvm_ifs_cpu = "riscv"
+    } else {
+      llvm_ifs_cpu = clang_cpu
+    }
+
     args = [
       "--input-format=IFS",
       "--output-format=ELF",
-      "--arch=${clang_cpu}",
+      "--arch=${llvm_ifs_cpu}",
       "--endianness=little",
       "--bitwidth=64",
       "--write-if-changed",
