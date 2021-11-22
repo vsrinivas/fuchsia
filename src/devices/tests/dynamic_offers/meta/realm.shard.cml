@@ -4,12 +4,9 @@
 {
     offer: [
         {
-            protocol: "fuchsia.test.Waiter",
+            protocol: "fuchsia.offers.test.Waiter",
             from: "parent",
-            to: [
-                "#boot-drivers",
-                "#pkg-drivers",
-            ],
+            to: "#boot-drivers",
         },
     ],
 }

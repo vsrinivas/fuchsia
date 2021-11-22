@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
-#include <fidl/fuchsia.test/cpp/wire.h>
+#include <fidl/fuchsia.offers.test/cpp/wire.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/fpromise/scope.h>
@@ -13,7 +13,7 @@
 #include "src/devices/lib/driver2/record.h"
 
 namespace fdf = fuchsia_driver_framework;
-namespace ft = fuchsia_test;
+namespace ft = fuchsia_offers_test;
 
 using fpromise::error;
 using fpromise::ok;

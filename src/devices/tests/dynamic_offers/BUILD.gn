@@ -14,9 +14,9 @@ group("tests") {
   ]
 }
 
-fidl("fuchsia.test") {
+fidl("fuchsia.offers.test") {
   testonly = true
-  sources = [ "fuchsia.test.fidl" ]
+  sources = [ "offers.test.fidl" ]
 }
 
 driver_bind_rules("root_bind") {
@@ -29,7 +29,7 @@ fuchsia_driver("root_driver") {
   output_name = "dynamic_offers_root"
   sources = [ "root_driver.cc" ]
   deps = [
-    ":fuchsia.test_llcpp",
+    ":fuchsia.offers.test_llcpp",
     ":root_bind",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_llcpp",
     "//src/devices/bind/fuchsia.test:bind.fuchsia.test",
@@ -57,7 +57,7 @@ fuchsia_driver("leaf_driver") {
   output_name = "dynamic_offers_leaf"
   sources = [ "leaf_driver.cc" ]
   deps = [
-    ":fuchsia.test_llcpp",
+    ":fuchsia.offers.test_llcpp",
     ":leaf_bind",
     "//src/devices/lib/driver2",
     "//src/devices/lib/driver2:llcpp",
@@ -76,7 +76,7 @@ rustc_test("bin") {
   source_root = "test.rs"
   sources = [ "test.rs" ]
   deps = [
-    ":fuchsia.test-rustc",
+    ":fuchsia.offers.test-rustc",
     "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test-rustc",
     "//sdk/lib/driver_test_realm/realm_builder/rust",
     "//src/lib/fidl/rust/fidl",

@@ -14,8 +14,8 @@
     use: [
         {
             protocol: [
-                "fuchsia.test.Handshake",
-                "fuchsia.test.Waiter",
+                "fuchsia.offers.test.Handshake",
+                "fuchsia.offers.test.Waiter",
             ],
         },
     ],
