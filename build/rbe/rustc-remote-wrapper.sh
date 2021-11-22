@@ -528,6 +528,13 @@ trace_depfile_scanning_prefix=(
   debug_var "[$script: dep-info]" "${dep_only_command[@]}"
   exit "$status"
 }
+
+# TEMPORARY WORKAROUND until upstream fix lands:
+#   https://github.com/pest-parser/pest/pull/522
+# Remove redundant occurences of the current working dir absolute path.
+# Paths should be relative to the root_build_dir.
+sed -i -e "s|$PWD/||g" "$depfile.nolink"
+
 # Convert depfile absolute paths to relative.
 mapfile -t depfile_inputs < <(depfile_inputs_by_line "$depfile.nolink" | \
   xargs -n 1 realpath --relative-to="$project_root" )
@@ -871,6 +878,12 @@ test "$status" -ne 0 || test "$compare" = 0 || {
     echo "Local command failed for comparison: ${rustc_command[@]}"
     exit "$status"
   }
+
+  # TEMPORARY WORKAROUND until upstream fix lands:
+  #   https://github.com/pest-parser/pest/pull/522
+  # Remove redundant occurences of the current working dir absolute path.
+  # Paths should be relative to the root_build_dir.
+  sed -i -e "s|$PWD/||g" "$depfile"
 
   # Compare outputs.
   output_diffs=()
