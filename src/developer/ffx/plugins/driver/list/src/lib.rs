@@ -8,6 +8,7 @@ use {
     ffx_driver::{get_device_info, get_driver_info},
     ffx_driver_list_args::DriverListCommand,
     fidl_fuchsia_driver_development::{BindRulesBytecode, DriverDevelopmentProxy},
+    futures::join,
     std::collections::HashSet,
 };
 
@@ -16,20 +17,26 @@ use {
     DriverDevelopmentProxy = "bootstrap/driver_manager:expose:fuchsia.driver.development.DriverDevelopment"
 )]
 pub async fn list(service: DriverDevelopmentProxy, cmd: DriverListCommand) -> Result<()> {
-    let mut driver_info = get_driver_info(&service, &mut [].iter().map(String::as_str)).await?;
+    let mut empty1 = [].iter().map(String::as_str);
+    let driver_info = get_driver_info(&service, &mut empty1);
 
-    if cmd.loaded {
+    let driver_info = if cmd.loaded {
         // Query devices and create a hash set of loaded drivers.
-        let device_info = get_device_info(&service, &mut [].iter().map(String::as_str)).await?;
+        let mut empty2 = [].iter().map(String::as_str);
+        let device_info = get_device_info(&service, &mut empty2);
+
+        // Await the futures concurrently.
+        let (driver_info, device_info) = join!(driver_info, device_info);
+
         let mut loaded_driver_set = HashSet::new();
-        for device in device_info {
+        for device in device_info? {
             if let Some(libname) = &device.bound_driver_libname {
                 loaded_driver_set.insert(String::from(libname));
             }
         }
 
         // Filter the driver list by the hash set.
-        driver_info = driver_info
+        driver_info?
             .into_iter()
             .filter(|driver| {
                 if let Some(libname_or_url) = driver.libname.as_ref().or(driver.url.as_ref()) {
@@ -38,8 +45,10 @@ pub async fn list(service: DriverDevelopmentProxy, cmd: DriverListCommand) -> Re
                     false
                 }
             })
-            .collect();
-    }
+            .collect()
+    } else {
+        driver_info.await?
+    };
 
     if cmd.verbose {
         for driver in driver_info {
