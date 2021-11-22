@@ -207,6 +207,7 @@ fuchsia_driver("crash-device-driver") {
 fuchsia_driver_component("crash-device") {
   component_name = "crash-device"
   deps = [ ":crash-device-driver" ]
+  info = "crash-device-info.json"
 }
 
 fuchsia_component("isolated-devmgr-tests") {
