@@ -86,7 +86,6 @@ zx_status_t EventRing::Init(size_t page_size, const zx::bti& bti, ddk::MmioBuffe
   if (status != ZX_OK) {
     return status;
   }
-  l.release();
   return AddSegmentIfNone();
 }
 
@@ -111,7 +110,6 @@ zx_status_t EventRing::AddTRB() {
   fbl::AutoLock l(&segment_mutex_);
   trbs_++;
   if (trbs_ == segments_.TrbCount()) {
-    l.release();
     zx_status_t status = AddSegment();
     if (status != ZX_OK) {
       return status;
@@ -122,7 +120,6 @@ zx_status_t EventRing::AddTRB() {
 }
 
 zx_status_t EventRing::AddSegment() {
-  fbl::AutoLock l(&segment_mutex_);
   if (segments_.Pressure() < segments_.SegmentCount()) {
     segments_.AddPressure();
     return ZX_OK;
@@ -605,8 +602,11 @@ zx_status_t EventRing::HandleIRQ() {
     }
     if (last_phys != erdp_phys_) {
       executor_.run_until_idle();
-      erdp_reg_ =
-          erdp_reg_.set_Pointer(erdp_phys_).set_DESI(segment_index_).set_EHB(1).WriteTo(mmio_);
+      {
+        fbl::AutoLock l(&segment_mutex_);
+        erdp_reg_ =
+            erdp_reg_.set_Pointer(erdp_phys_).set_DESI(segment_index_).set_EHB(1).WriteTo(mmio_);
+      }
       last_phys = erdp_phys_;
     }
     if (!hci_->HasCoherentState()) {

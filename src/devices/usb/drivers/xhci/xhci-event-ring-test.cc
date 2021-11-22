@@ -174,7 +174,7 @@ class EventRingHarness : public zxtest::Test {
     if (status != ZX_OK) {
       return status;
     }
-    status = ring_->AddSegmentIfNone();
+    status = ring_->AddSegmentIfNoneLock();
     if (status != ZX_OK) {
       return status;
     }

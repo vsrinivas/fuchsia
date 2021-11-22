@@ -94,9 +94,11 @@ class EventRing {
   zx_paddr_t erst() __TA_NO_THREAD_SAFETY_ANALYSIS { return segments_.erst(); }
   void RemovePressure();
   size_t GetPressure();
-  zx_status_t AddSegmentIfNone();
+  zx_status_t AddSegmentIfNoneLock() {
+    fbl::AutoLock l(&segment_mutex_);
+    return AddSegmentIfNone();
+  }
   zx_status_t AddTRB();
-  zx_status_t AddSegment();
   zx_paddr_t erdp_phys() { return erdp_phys_; }
   TRB* erdp_virt() { return erdp_virt_; }
   zx_status_t HandleIRQ();
@@ -116,7 +118,7 @@ class EventRing {
   TRBPromise LinkUp(uint8_t port_id);
   void CallPortStatusChanged(fbl::RefPtr<PortStatusChangeState> state);
   Control AdvanceErdp() {
-    fbl::AutoLock _(&segment_mutex_);
+    fbl::AutoLock l(&segment_mutex_);
     erdp_ = (erdp_ + 1) % segments_.TrbCount();
     if (unlikely((reinterpret_cast<size_t>(erdp_virt_ + 1) / 4096) !=
                  (reinterpret_cast<size_t>(erdp_virt_) / 4096))) {
@@ -142,12 +144,16 @@ class EventRing {
   void Usb3DeviceAttach(uint16_t port_id);
   // USB 2.0 device attach
   void Usb2DeviceAttach(uint16_t port_id);
+  zx_status_t AddSegmentIfNone() __TA_REQUIRES(segment_mutex_);
+  zx_status_t AddSegment() __TA_REQUIRES(segment_mutex_);
 
   std::variant<bool, std::unique_ptr<TRBContext>> StallWorkaroundForDefectiveHubs(
       std::unique_ptr<TRBContext> context);
 
-  fbl::DoublyLinkedList<std::unique_ptr<dma_buffer::ContiguousBuffer>> buffers_;
-  fbl::DoublyLinkedList<std::unique_ptr<dma_buffer::ContiguousBuffer>>::iterator buffers_it_;
+  fbl::DoublyLinkedList<std::unique_ptr<dma_buffer::ContiguousBuffer>> buffers_
+      __TA_GUARDED(segment_mutex_);
+  fbl::DoublyLinkedList<std::unique_ptr<dma_buffer::ContiguousBuffer>>::iterator buffers_it_
+      __TA_GUARDED(segment_mutex_);
 
   // Virtual address of the event ring dequeue pointer
   TRB* erdp_virt_ = nullptr;
@@ -179,7 +185,7 @@ class EventRing {
 
   // Interrupt management register
   IMAN iman_reg_;
-  uint8_t segment_index_ = 0;
+  uint8_t segment_index_ __TA_GUARDED(segment_mutex_) = 0;
   UsbXhci* hci_;
   uint8_t cap_length_;
   HCSPARAMS1 hcs_params_1_;

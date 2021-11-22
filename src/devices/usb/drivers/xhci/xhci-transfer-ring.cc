@@ -498,7 +498,7 @@ zx_status_t TransferRing::AllocBuffer(dma_buffer::ContiguousBuffer** out) {
   trbs[count - 1].ptr = trb_start_phys_;
   hw_mb();
   control.ToTrb(trbs + (count - 1));
-  zx_status_t status = ring_->AddSegmentIfNone();
+  zx_status_t status = ring_->AddSegmentIfNoneLock();
   if (status != ZX_OK) {
     return status;
   }
