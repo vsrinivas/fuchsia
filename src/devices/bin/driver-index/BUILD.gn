@@ -89,6 +89,7 @@ fuchsia_driver_component("test-bind-component") {
     ":test-bind",
   ]
   colocate = true
+  info = "test-bind-component-info.json"
 }
 
 fuchsia_driver("fake-driver2") {
@@ -103,6 +104,7 @@ fuchsia_driver_component("test-bind2-component") {
     ":fake-driver2",
     ":test-bind2",
   ]
+  info = "test-bind2-component-info.json"
 }
 
 driver_manifest("driver-manifest") {

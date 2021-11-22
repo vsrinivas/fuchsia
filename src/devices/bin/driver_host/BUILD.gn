@@ -125,6 +125,7 @@ fuchsia_driver("driver-host-test-driver-driver") {
 fuchsia_driver_component("driver-host-test-driver") {
   component_name = "driver-host-test-driver"
   deps = [ ":driver-host-test-driver-driver" ]
+  info = "driver-host-test-driver-info.json"
 }
 
 driver_bind_rules("test-devhost-child-bind") {
@@ -149,6 +150,7 @@ fuchsia_driver("driver-host-test-child-driver-driver") {
 fuchsia_driver_component("driver-host-test-child-driver") {
   component_name = "driver-host-test-child-driver"
   deps = [ ":driver-host-test-child-driver-driver" ]
+  info = "driver-host-test-child-driver-info.json"
 }
 
 fidl("fuchsia.device.restarttest") {
@@ -182,6 +184,7 @@ fuchsia_driver("driver-host-restart-driver-driver") {
 fuchsia_driver_component("driver-host-restart-driver") {
   component_name = "driver-host-restart-driver"
   deps = [ ":driver-host-restart-driver-driver" ]
+  info = "driver-host-restart-driver-info.json"
 }
 
 test("driver_host_test") {
@@ -238,6 +241,7 @@ fuchsia_driver("unit-test-fail-driver") {
 fuchsia_driver_component("unit-test-fail") {
   component_name = "unit-test-fail"
   deps = [ ":unit-test-fail-driver" ]
+  info = "unit-test-fail-info.json"
 }
 
 driver_bind_rules("unit-test-pass-bind") {
@@ -260,6 +264,7 @@ fuchsia_driver("unit-test-pass-driver") {
 fuchsia_driver_component("unit-test-pass") {
   component_name = "unit-test-pass"
   deps = [ ":unit-test-pass-driver" ]
+  info = "unit-test-pass-info.json"
 }
 
 fuchsia_unittest_package("driver-host-tests") {
