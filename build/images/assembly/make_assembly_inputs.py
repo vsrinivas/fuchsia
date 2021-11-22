@@ -22,16 +22,23 @@ def main():
     parser.add_argument('--depfile', type=argparse.FileType('w'), required=True)
     args = parser.parse_args()
 
-    # The files to put in the output.
-    files = []
+    # The files to put in the output with source mapped to destination.
+    file_mapping = {}
 
     # The files that are read in this script, and the build system needs to be
     # aware of. This will be written to a depfile.
     depfiles = []
 
     # Add a file's path to one of the lists, relative to CWD.
+    # The destination of the file is the same as the source, but moved to the
+    # same directory as the build output.
     def add_file(file_path):
-        files.append(os.path.relpath(file_path, os.getcwd()))
+        source = os.path.relpath(file_path, os.getcwd())
+        destination = source
+        prefix = "../../"
+        if source.startswith(prefix):
+            destination = source[len(prefix):]
+        file_mapping[source] = destination
 
     def add_depfile(file_path):
         depfiles.append(os.path.relpath(file_path, os.getcwd()))
@@ -65,8 +72,13 @@ def main():
 
     # TODO: Add the board config.
 
-    # Remove duplicates.
-    files = list(set(files))
+    # Convert the map into a list of maps.
+    files = []
+    for src, dest in file_mapping.items():
+        files.append({
+            "source": src,
+            "destination": dest,
+        })
 
     # Write the list.
     json.dump(files, args.output, indent=2)
