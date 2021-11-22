@@ -57,4 +57,5 @@ fuchsia_driver_component("fake_at_driver") {
   testonly = true
   component_name = "at-fake-transport"
   deps = [ ":fake_at_driver-driver" ]
+  info = "fake_at_driver-info.json"
 }

@@ -1,0 +1,10 @@
+{
+    "short_description": "Qualcomm QMI telephony fake driver",
+    "manufacturer": "Qualcomm",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Telephony",
+        "Test"
+    ]
+}

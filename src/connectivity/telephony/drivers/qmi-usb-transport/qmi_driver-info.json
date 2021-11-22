@@ -1,0 +1,12 @@
+{
+    "short_description": "USB QMI telephony driver",
+    "manufacturer": "Qualcomm",
+    "families": [],
+    "models": [
+        "EM7565"
+    ],
+    "areas": [
+        "Telephony",
+        "Usb"
+    ]
+}

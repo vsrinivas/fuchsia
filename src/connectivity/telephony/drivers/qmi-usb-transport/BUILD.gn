@@ -39,6 +39,7 @@ fuchsia_driver("qmi_driver-driver") {
 fuchsia_driver_component("qmi_driver") {
   component_name = "qmi-transport"
   deps = [ ":qmi_driver-driver" ]
+  info = "qmi_driver-info.json"
 }
 
 source_set("qmi_driver_src") {

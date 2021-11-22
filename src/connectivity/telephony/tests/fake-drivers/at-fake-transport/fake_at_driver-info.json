@@ -1,0 +1,10 @@
+{
+    "short_description": "Sierra Wireless fake telephony driver",
+    "manufacturer": "Sierra Wireless",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Telephony",
+        "Test"
+    ]
+}

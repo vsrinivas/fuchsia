@@ -45,4 +45,5 @@ fuchsia_driver_component("qmi_function") {
   testonly = true
   component_name = "qmi-function"
   deps = [ ":qmi_function-driver" ]
+  info = "qmi_function-info.json"
 }
