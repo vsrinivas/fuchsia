@@ -345,7 +345,7 @@ bool TypeTemplate::Fail(const ErrorDef<const TypeTemplate*, Args...>& err,
 }
 
 template <typename... Args>
-bool TypeTemplate::Fail(const ErrorDef<Args...>& err, const Args&... args) const {
+bool TypeTemplate::FailNoSpan(const ErrorDef<Args...>& err, const Args&... args) const {
   reporter_->Report(err, args...);
   return false;
 }
@@ -933,7 +933,7 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
     if (!decl_->compiled) {
       if (decl_->compiling) {
-        return Fail(ErrIncludeCycle);
+        return FailNoSpan(ErrIncludeCycle);
       }
       lib.CompileDecl(decl_);
     }
@@ -981,7 +981,7 @@ class BoxTypeTemplate final : public TypeTemplate {
     if (!lib.ResolveParamAsType(this, unresolved_args.parameters->items[0], &boxed_type))
       return false;
     if (!IsStruct(boxed_type))
-      return Fail(ErrCannotBeBoxed, boxed_type->name);
+      return FailNoSpan(ErrCannotBeBoxed, boxed_type->name);
     const auto* inner = static_cast<const IdentifierType*>(boxed_type);
     if (inner->nullability == types::Nullability::kNullable) {
       reporter_->Report(ErrBoxedTypeCannotBeNullable, unresolved_args.parameters->items[0]->span);
@@ -1846,7 +1846,7 @@ bool Library::Fail(std::unique_ptr<Diagnostic> err) {
 }
 
 template <typename... Args>
-bool Library::Fail(const ErrorDef<Args...>& err, const Args&... args) {
+bool Library::FailNoSpan(const ErrorDef<Args...>& err, const Args&... args) {
   reporter_->Report(err, args...);
   return false;
 }
@@ -2150,15 +2150,15 @@ void Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
     case Dependencies::RegisterResult::kSuccess:
       break;
     case Dependencies::RegisterResult::kDuplicate:
-      Fail(ErrDuplicateLibraryImport, library_name);
+      FailNoSpan(ErrDuplicateLibraryImport, library_name);
       return;
     case Dependencies::RegisterResult::kCollision:
       if (using_directive->maybe_alias) {
-        Fail(ErrConflictingLibraryImportAlias, library_name,
-             using_directive->maybe_alias->span().data());
+        FailNoSpan(ErrConflictingLibraryImportAlias, library_name,
+                   using_directive->maybe_alias->span().data());
         return;
       }
-      Fail(ErrConflictingLibraryImport, library_name);
+      FailNoSpan(ErrConflictingLibraryImport, library_name);
       return;
   }
 
@@ -2904,7 +2904,7 @@ bool Library::ResolveOrOperatorConstant(Constant* constant, const Type* type,
   if (type == nullptr)
     return false;
   if (type->kind != Type::Kind::kPrimitive) {
-    return Fail(ErrOrOperatorOnNonPrimitiveValue);
+    return FailNoSpan(ErrOrOperatorOnNonPrimitiveValue);
   }
   std::unique_ptr<ConstantValue> left_operand_u64;
   std::unique_ptr<ConstantValue> right_operand_u64;
@@ -3111,7 +3111,8 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
       }
 
       auto fail_with_mismatched_type = [this, identifier_type](const Name& type_name) {
-        return Fail(ErrMismatchedNameTypeAssignment, identifier_type->type_decl->name, type_name);
+        return FailNoSpan(ErrMismatchedNameTypeAssignment, identifier_type->type_decl->name,
+                          type_name);
       };
 
       switch (decl->kind) {
@@ -3144,7 +3145,7 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
   return true;
 
 fail_cannot_convert:
-  return Fail(ErrCannotConvertConstantToType, identifier_constant, const_type, type);
+  return FailNoSpan(ErrCannotConvertConstantToType, identifier_constant, const_type, type);
 }
 
 bool Library::ResolveLiteralConstant(LiteralConstant* literal_constant, const Type* type) {
@@ -3345,7 +3346,7 @@ const Type* Library::TypeResolve(const Type* type) {
   auto identifier_type = static_cast<const IdentifierType*>(type);
   Decl* decl = LookupDeclByName(identifier_type->name);
   if (!decl) {
-    Fail(ErrCouldNotResolveIdentifierToType);
+    FailNoSpan(ErrCouldNotResolveIdentifierToType);
     return nullptr;
   }
   CompileDecl(decl);
@@ -3708,7 +3709,7 @@ bool Library::SortDeclarations() {
 
   if (declaration_order_.size() != degrees.size()) {
     // We didn't visit all the edges! There was a cycle.
-    return Fail(ErrIncludeCycle);
+    return FailNoSpan(ErrIncludeCycle);
   }
 
   return true;
@@ -3719,7 +3720,7 @@ void Library::CompileDecl(Decl* decl) {
     return;
   }
   if (decl->compiling) {
-    Fail(ErrIncludeCycle);
+    FailNoSpan(ErrIncludeCycle);
     return;
   }
   Compiling guard(decl);
@@ -4406,7 +4407,7 @@ void Library::CompileTable(Table* table_declaration) {
 
   CompileAttributeList(table_declaration->attributes.get());
   if (table_declaration->members.size() > kMaxTableOrdinals) {
-    Fail(ErrTooManyTableOrdinals);
+    FailNoSpan(ErrTooManyTableOrdinals);
   }
 
   for (size_t i = 0; i < table_declaration->members.size(); i++) {
@@ -4442,11 +4443,11 @@ void Library::CompileTable(Table* table_declaration) {
     }
     if (i == kMaxTableOrdinals - 1) {
       if (member_used.type_ctor->type->kind != Type::Kind::kIdentifier) {
-        Fail(ErrMaxOrdinalNotTable);
+        FailNoSpan(ErrMaxOrdinalNotTable);
       } else {
         auto identifier_type = static_cast<const IdentifierType*>(member_used.type_ctor->type);
         if (identifier_type->type_decl->kind != Decl::Kind::kTable) {
-          Fail(ErrMaxOrdinalNotTable);
+          FailNoSpan(ErrMaxOrdinalNotTable);
         }
       }
     }
@@ -4516,7 +4517,7 @@ void Library::CompileTypeAlias(TypeAlias* type_alias) {
     // defined `uint32` fails to shadow the builtin which means that we successfully
     // resolve the RHS. To avoid inconsistent semantics, we need to manually
     // catch this case and fail.
-    Fail(ErrIncludeCycle);
+    FailNoSpan(ErrIncludeCycle);
     return;
   }
   CompileTypeConstructor(type_alias->partial_type_ctor.get());
@@ -4614,7 +4615,7 @@ bool Library::VerifyTypeCategory(const Type* type, std::optional<SourceSpan> spa
 bool Library::ResolveHandleRightsConstant(Resource* resource, Constant* constant,
                                           const HandleRights** out_rights) {
   if (resource->subtype_ctor == nullptr || resource->subtype_ctor->name.full_name() != "uint32") {
-    return Fail(ErrResourceMustBeUint32Derived, resource->name);
+    return FailNoSpan(ErrResourceMustBeUint32Derived, resource->name);
   }
 
   auto rights_property = resource->LookupProperty("rights");

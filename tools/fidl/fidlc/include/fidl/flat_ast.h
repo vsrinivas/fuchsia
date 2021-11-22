@@ -903,8 +903,9 @@ class TypeTemplate {
   template <typename... Args>
   bool Fail(const ErrorDef<const TypeTemplate*, Args...>& err,
             const std::optional<SourceSpan>& span, const Args&... args) const;
+  // TODO(fxbug.dev/89213): Remove, all failures should report spans.
   template <typename... Args>
-  bool Fail(const ErrorDef<Args...>& err, const Args&... args) const;
+  bool FailNoSpan(const ErrorDef<Args...>& err, const Args&... args) const;
 
   Typespace* typespace_;
 
@@ -1183,8 +1184,12 @@ class Library : Attributable {
 
  private:
   bool Fail(std::unique_ptr<Diagnostic> err);
+  // TODO(fxbug.dev/89213): Remove, all failures should report spans. There is
+  // one error ErrIncludeCycle for which a major change is required to report
+  // with appropriate span information, but other cases should be relatively
+  // direct to improve.
   template <typename... Args>
-  bool Fail(const ErrorDef<Args...>& err, const Args&... args);
+  bool FailNoSpan(const ErrorDef<Args...>& err, const Args&... args);
   template <typename... Args>
   bool Fail(const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span,
             const Args&... args);
