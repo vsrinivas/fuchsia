@@ -95,9 +95,9 @@ rustc_binary("bin-basic") {
   configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
-rustc_binary("bin-workstation") {
-  name = "netcfg_workstation"
-  source_root = "src/bin/workstation.rs"
+rustc_binary("bin-advanced") {
+  name = "netcfg_advanced"
+  source_root = "src/bin/advanced.rs"
 
   deps = [
     ":lib",
@@ -105,7 +105,7 @@ rustc_binary("bin-workstation") {
     "//third_party/rust_crates:anyhow",
   ]
 
-  sources = [ "src/bin/workstation.rs" ]
+  sources = [ "src/bin/advanced.rs" ]
 
   configs -= [ "//build/config/rust:allow_unused_results" ]
 }
@@ -123,11 +123,11 @@ fuchsia_component("component-basic") {
 }
 
 # TODO(https://fxbug.dev/85450): use product assembly to include this as the
-# `netcfg` in the workstation product.
-fuchsia_component("component-workstation") {
-  component_name = "netcfg-workstation"
-  manifest = "meta/netcfg-workstation.cml"
-  deps = [ ":bin-workstation" ]
+# `netcfg` in the core product.
+fuchsia_component("component-advanced") {
+  component_name = "netcfg-advanced"
+  manifest = "meta/netcfg-advanced.cml"
+  deps = [ ":bin-advanced" ]
 }
 
 fuchsia_package("netcfg") {
@@ -157,10 +157,10 @@ fuchsia_unittest_package("netcfg-tests") {
   manifest = "meta/netcfg_lib_test.cml"
 }
 
-# TODO(https://fxbug.dev/85450): remove this group once the workstation variant
-# of netcfg is included in the workstation product build.
+# TODO(https://fxbug.dev/85450): remove this group once the advanced variant of
+# netcfg is included in the core product build.
 group("compile") {
-  deps = [ ":component-workstation" ]
+  deps = [ ":component-advanced" ]
 }
 
 group("tests") {

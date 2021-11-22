@@ -4,7 +4,7 @@
 {
     include: [ "//src/connectivity/network/netcfg/meta/common.shard.cml" ],
     program: {
-        binary: "bin/netcfg_workstation",
+        binary: "bin/netcfg_advanced",
     },
     capabilities: [
         { protocol: "fuchsia.net.virtualization.Control" },
