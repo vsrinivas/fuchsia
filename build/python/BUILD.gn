@@ -26,6 +26,7 @@ group("tests") {
   deps = [
     "tests/action:tests",
     "tests/bin",
+    "tests/depfile:tests",
     "tests/host_test:py_host_test_with_lib($host_toolchain)",
     "tests/lib",
   ]

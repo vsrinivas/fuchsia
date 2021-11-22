@@ -1,0 +1,23 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/python/python_action.gni")
+
+python_action("depfile_module_test") {
+  testonly = true
+
+  modules = [ "//build/python/modules/depfile.py" ]
+  script = "depfile_test.py"
+  outputs = [ "${target_out_dir}/depfile.txt" ]
+
+  args = [
+    "--outfile",
+    rebase_path(outputs[0], root_build_dir),
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":depfile_module_test" ]
+}
