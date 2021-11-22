@@ -202,6 +202,7 @@
 //src/devices/tests/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test-child-driver
 //src/devices/tests/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test-driver
 //src/devices/tests/device-watcher:test-driver-driver
+//src/devices/tests/devfs_exporter:root_driver
 //src/devices/tests/driver-inspect-test:fuchsia_driver
 //src/devices/tests/driver-runtime:child-driver
 //src/devices/tests/driver-runtime:parent-driver

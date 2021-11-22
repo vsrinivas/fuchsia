@@ -1,0 +1,72 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/drivers.gni")
+import("//build/rust/rustc_test.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":devfs_exporter_test" ]
+}
+
+fidl("fuchsia.devfs.test") {
+  testonly = true
+  sources = [ "devfs.test.fidl" ]
+}
+
+driver_bind_rules("root_bind") {
+  disable_autobind = true
+  bind_output = "root.bindbc"
+}
+
+fuchsia_driver("root_driver") {
+  testonly = true
+  output_name = "devfs_exporter_root"
+  sources = [ "root_driver.cc" ]
+  deps = [
+    ":fuchsia.devfs.test_llcpp",
+    ":root_bind",
+    "//src/devices/lib/driver2",
+    "//src/devices/lib/driver2:devfs_exporter",
+    "//src/devices/lib/driver2:llcpp",
+    "//zircon/system/ulib/service:service-llcpp",
+  ]
+}
+
+fuchsia_driver_component("root") {
+  testonly = true
+  manifest = "meta/root.cml"
+  deps = [ ":root_driver" ]
+}
+
+rustc_test("bin") {
+  output_name = "devfs_exporter_bin"
+  testonly = true
+  source_root = "test.rs"
+  sources = [ "test.rs" ]
+  deps = [
+    ":fuchsia.devfs.test-rustc",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test-rustc",
+    "//sdk/lib/device-watcher/rust",
+    "//sdk/lib/driver_test_realm/realm_builder/rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component-test",
+    "//third_party/rust_crates:anyhow",
+  ]
+}
+
+fuchsia_unittest_package("devfs_exporter_test") {
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+  deps = [
+    ":bin",
+    ":root",
+    "//src/devices/bin/driver_host2:component",
+  ]
+}
