@@ -649,6 +649,9 @@ mod tests {
 
         // Await all futures concurrently. If this completes, then the touch event was handled and
         // matches `expected_event`.
-        let _ = futures::join!(handle_event_fut, registry_fut, device_fut);
+        let (handle_result, _, _) = futures::join!(handle_event_fut, registry_fut, device_fut);
+
+        // No unhandled events.
+        assert_eq!(handle_result.len(), 0);
     }
 }
