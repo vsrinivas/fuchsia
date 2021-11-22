@@ -2,6 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! FxFS is a log-structured filesystem for [Fuchsia](https://fuchsia.dev/).
+//!
+//! For a high-level overview, please refer to the [RFC](/docs/contribute/governance/rfcs/0136_fxfs.md).
+//!
+//! Where possible, FxFS code tries to be target agnostic.
+//! Fuchsia specific bindings are primarily found under [server].
 pub mod errors;
 pub mod lsm_tree;
 #[cfg(target_os = "fuchsia")]

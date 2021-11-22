@@ -164,42 +164,42 @@ struct Inner {
     super_block: SuperBlock,
     super_block_to_write: SuperBlockCopy,
 
-    // This event is used when we are waiting for a compaction to free up journal space.
+    /// This event is used when we are waiting for a compaction to free up journal space.
     reclaim_event: Option<Event>,
 
-    // The offset that we can zero the journal up to now that it is no longer needed.
+    /// The offset that we can zero the journal up to now that it is no longer needed.
     zero_offset: Option<u64>,
 
-    // The journal offset that we most recently flushed to the device.
+    /// The journal offset that we most recently flushed to the device.
     device_flushed_offset: u64,
 
-    // If true, indicates a DidFlushDevice record is pending.
+    /// If true, indicates a DidFlushDevice record is pending.
     needs_did_flush_device: bool,
 
-    // The writer for the journal.
+    /// The writer for the journal.
     writer: JournalWriter,
 
-    // Waker for the flush task.
+    /// Waker for the flush task.
     flush_waker: Option<Waker>,
 
-    // Tells the flush task to terminate.
+    /// Tells the flush task to terminate.
     terminate: bool,
 
-    // Disable compactions.
+    /// Disable compactions.
     disable_compactions: bool,
 
-    // True if compactions are running.
+    /// True if compactions are running.
     compaction_running: bool,
 
-    // Waker for the sync task for when it's waiting for the flush task to finish.
+    /// Waker for the sync task for when it's waiting for the flush task to finish.
     sync_waker: Option<Waker>,
 
-    // The last offset we flushed to the journal file.
+    /// The last offset we flushed to the journal file.
     flushed_offset: u64,
 
-    // If, after replaying, we have to discard a number of mutations (because they don't validate),
-    // this offset specifies where we need to discard back to.  This is so that when we next replay,
-    // we ignore those mutations and continue with new good mutations.
+    /// If, after replaying, we have to discard a number of mutations (because they don't validate),
+    /// this offset specifies where we need to discard back to.  This is so that when we next replay,
+    /// we ignore those mutations and continue with new good mutations.
     discard_offset: Option<u64>,
 }
 

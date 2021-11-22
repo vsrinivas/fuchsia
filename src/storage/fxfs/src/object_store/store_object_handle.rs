@@ -76,9 +76,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
             content_size: AtomicU64::new(size),
         }
     }
-}
 
-impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
     pub fn owner(&self) -> &Arc<S> {
         &self.owner
     }

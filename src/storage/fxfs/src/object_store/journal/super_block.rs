@@ -31,16 +31,24 @@ use {
     storage_device::Device,
 };
 
+/// The block size used when reading and writing journal entries.
 const SUPER_BLOCK_BLOCK_SIZE: usize = 8192;
+
+/// The superblock is extended in units of `SUPER_BLOCK_CHUNK_SIZE` as required.
 const SUPER_BLOCK_CHUNK_SIZE: u64 = 65536;
 
-// The first 2 * 512 KiB on the disk are reserved for two A/B super-blocks.
+/// The first 2 * 512 KiB on the disk are reserved for two A/B super-blocks.
 const MIN_SUPER_BLOCK_SIZE: u64 = 524_288;
 
-pub const SUPER_BLOCK_MAGIC: u64 = 0x514741c7522d20f5;
+// TODO(ripper): Consolidate constants in 'constants' or localise? Pick one, not both.
+pub const SUPER_BLOCK_MAGIC: u64 = 0x7270755353467846; // Little-endian "FxFSSupr" in ASCII.
 pub const SUPER_BLOCK_MAJOR_VERSION: u32 = 1;
 pub const SUPER_BLOCK_MINOR_VERSION: u32 = 1;
 
+/// An enum representing one of our [SuperBlock] copies.
+///
+/// This provides hard-coded constants related to the location and properties of the super blocks
+/// that are required to bootstrap the filesystem.
 #[derive(Copy, Clone, Debug)]
 pub enum SuperBlockCopy {
     A,
@@ -48,6 +56,7 @@ pub enum SuperBlockCopy {
 }
 
 impl SuperBlockCopy {
+    /// Returns the next [SuperBlockCopy] for use in round-robining writes across super-blocks.
     pub fn next(&self) -> SuperBlockCopy {
         match self {
             SuperBlockCopy::A => SuperBlockCopy::B,
@@ -62,6 +71,8 @@ impl SuperBlockCopy {
         }
     }
 
+    /// Returns the byte range where the first extent of the [SuperBlockCopy] is stored.
+    /// (Note that a [SuperBlockCopy] may still have multiple extents.)
     pub fn first_extent(&self) -> Range<u64> {
         match self {
             SuperBlockCopy::A => 0..MIN_SUPER_BLOCK_SIZE,
@@ -70,23 +81,31 @@ impl SuperBlockCopy {
     }
 }
 
-// A super-block consists of this header followed by records that are to be replayed into the root
-// parent object store.
+/// A super-block structure describing the filesystem.
+///
+/// We currently store two of these super blocks (A/B) located in two logical consecutive
+/// 512kiB extents at the start of the device.
+///
+/// Immediately following the serialized `SuperBlock` structure below is a stream of serialized
+/// operations that are replayed into the root parent `ObjectStore`. Note that the root parent
+/// object store exists entirely in RAM until serialized back into the super-block.
+///
+/// Super blocks are updated alternately with a monotonically increasing generation number.
+/// At mount time, the super block used is the valid `SuperBlock` with the highest generation
+/// number.
 // TODO(csuter): Add a UUID
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct SuperBlock {
     /// A constant value (SUPER_BLOCK_MAGIC) for identifying super-blocks.
-    /// TODO(jfsulliv): Check this value.
     pub magic: u64,
 
     /// The major version of the super-block's format.
-    /// TODO(jfsulliv): Check this value.
     pub major_version: u32,
 
     /// The minor version of the oldest driver which touched the super-block in writeable mode.
     /// See //src/storage/docs/versioning.md.
-    /// TODO(jfsulliv): Actually set this based on the driver version.
-    /// TODO(jfsulliv): Check this value.
+    // TODO(jfsulliv): Actually set this based on the driver version.
+    // TODO(jfsulliv): Check this value.
     pub oldest_minor_version: u32,
 
     /// There are two super-blocks which are used in an A/B configuration. The super-block with the

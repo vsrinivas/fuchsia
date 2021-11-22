@@ -10,7 +10,7 @@ $ fx set core.x64 --goma --auto-dir --with //src/storage/fxfs:tests --cargo-toml
 # Rebuild to actually generates cargo .toml files.
 $ fx build
 # Generate rustdoc.
-$ fx rustdoc //src/storage/fxfs:lib --open
+$ fx rustdoc --doc-private //src/storage/fxfs:lib --open
 ```
 
 Note: The last line prints the documentation location, which depends on target.
