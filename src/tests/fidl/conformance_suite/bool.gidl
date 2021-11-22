@@ -1,0 +1,35 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+success("BoolTrue") {
+    value = MyBool{
+        value: true,
+    },
+    bytes = {
+        v1, v2 = [
+            0x01, padding:7,
+        ],
+    },
+}
+
+success("BoolFalse") {
+    value = MyBool{
+        value: false,
+    },
+    bytes = {
+        v1, v2 = [
+            0x00, padding:7,
+        ],
+    },
+}
+
+decode_failure("BadInvalidBoolean") {
+    type = MyBool,
+    bytes = {
+        v1, v2 = [
+            0x10, padding:7,
+        ],
+    },
+    err = INVALID_BOOLEAN,
+}

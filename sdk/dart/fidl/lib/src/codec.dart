@@ -197,10 +197,14 @@ class Decoder {
   }
 
   bool decodeBool(int offset) {
-    if (data.getUint8(offset) > 1) {
-      throw FidlError('Invalid boolean', FidlErrorCode.fidlInvalidBoolean);
+    switch (data.getUint8(offset)) {
+      case 0:
+        return false;
+      case 1:
+        return true;
+      default:
+        throw FidlError('Invalid boolean', FidlErrorCode.fidlInvalidBoolean);
     }
-    return data.getUint8(offset) == 1;
   }
 
   int decodeInt8(int offset) => data.getInt8(offset);
