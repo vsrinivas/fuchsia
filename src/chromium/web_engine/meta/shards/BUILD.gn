@@ -13,6 +13,11 @@ expect_includes("web_engine_view") {
   includes = [ "web_engine_view.shard.cmx" ]
 }
 
+expect_includes("web_engine_feature_audio") {
+  deps = [ ":web_engine_base" ]
+  includes = [ "web_engine_feature_audio.shard.cmx" ]
+}
+
 expect_includes("web_engine_feature_network") {
   deps = [ ":web_engine_base" ]
   includes = [ "web_engine_feature_network.shard.cmx" ]

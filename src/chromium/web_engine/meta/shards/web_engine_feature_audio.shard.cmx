@@ -1,0 +1,9 @@
+{
+    "sandbox": {
+        "services": [
+            "fuchsia.media/Audio",
+            "fuchsia.media/AudioDeviceEnumerator",
+            "fuchsia.media/SessionAudioConsumerFactory"
+        ]
+    }
+}
