@@ -35,7 +35,7 @@ Examples
 )";
 
 Err RunVerbDown(ConsoleContext* context, const Command& cmd) {
-  if (Err err = AssertStoppedThreadCommand(context, cmd, true, "down"); err.has_error())
+  if (Err err = AssertStoppedThreadWithFrameCommand(context, cmd, "down"); err.has_error())
     return err;
 
   auto id = context->GetActiveFrameIdForThread(cmd.thread());

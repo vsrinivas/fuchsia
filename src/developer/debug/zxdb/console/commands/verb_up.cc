@@ -32,7 +32,7 @@ Examples
 )";
 
 Err RunVerbUp(ConsoleContext* context, const Command& cmd) {
-  if (Err err = AssertStoppedThreadCommand(context, cmd, true, "up"); err.has_error())
+  if (Err err = AssertStoppedThreadWithFrameCommand(context, cmd, "up"); err.has_error())
     return err;
 
   // This computes the frame index from the callback in case the user does "up" faster than an

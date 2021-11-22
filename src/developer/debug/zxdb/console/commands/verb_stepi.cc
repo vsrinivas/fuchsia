@@ -49,7 +49,7 @@ Examples
 )";
 
 Err RunVerbStepi(ConsoleContext* context, const Command& cmd) {
-  if (Err err = AssertStoppedThreadCommand(context, cmd, true, "stepi"); err.has_error())
+  if (Err err = AssertStoppedThreadWithFrameCommand(context, cmd, "stepi"); err.has_error())
     return err;
 
   cmd.thread()->StepInstruction();

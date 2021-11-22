@@ -51,7 +51,7 @@ Examples
       Steps thread 2 in process 3.
 )";
 Err RunVerbNext(ConsoleContext* context, const Command& cmd) {
-  if (Err err = AssertStoppedThreadCommand(context, cmd, true, "next"); err.has_error())
+  if (Err err = AssertStoppedThreadWithFrameCommand(context, cmd, "next"); err.has_error())
     return err;
 
   auto controller = std::make_unique<StepOverThreadController>(StepMode::kSourceLine,

@@ -69,8 +69,9 @@ TEST_F(VerbsMemoryTest, Stack) {
   event = console.GetOutputEvent();
   EXPECT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   EXPECT_EQ(
-      "\"stack\" requires a suspended thread but thread 1 is Running.\nTo view "
-      "and sync thread state with the remote system, type \"thread\".",
+      "\"stack\" requires a suspended thread but thread 1 is Running.\n"
+      "To view and sync thread state with the remote system, type \"thread\".\n"
+      "Or type \"pause\" to pause a running thread.",
       event.output.AsString());
 
   // Thread needs to be stopped. Add two frames with some different registers.

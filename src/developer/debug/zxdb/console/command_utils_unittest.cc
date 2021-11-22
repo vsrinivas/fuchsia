@@ -9,8 +9,12 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/debug/zxdb/client/filter.h"
+#include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/mock_breakpoint.h"
 #include "src/developer/debug/zxdb/client/mock_breakpoint_location.h"
+#include "src/developer/debug/zxdb/client/mock_frame.h"
+#include "src/developer/debug/zxdb/client/mock_process.h"
+#include "src/developer/debug/zxdb/client/mock_thread.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/console/command.h"
@@ -239,6 +243,45 @@ TEST(CommandUtils, FormatConsoleString) {
   EXPECT_EQ("R\"(foo \"bar\")\"", FormatConsoleString("foo \"bar\""));
   EXPECT_EQ("R\"*(raw end )\")*\"", FormatConsoleString("raw end )\""));
   EXPECT_EQ("R\"**(raw end )\" )*\")**\"", FormatConsoleString("raw end )\" )*\""));
+}
+
+TEST(CommandUtils, AssertStoppedThreadWithFrameCommand) {
+  Session session;
+  ConsoleContext context(&session);
+
+  MockProcess process(&session);
+  MockThread thread(&process);
+  thread.SetState(debug_ipc::ThreadRecord::State::kBlocked,
+                  debug_ipc::ThreadRecord::BlockedReason::kException);
+  std::vector<std::unique_ptr<Frame>> frames;
+  frames.push_back(std::make_unique<MockFrame>(
+      &session, &thread, Location(Location::State::kAddress, 0x1000), 0x2000));
+  thread.GetStack().SetFramesForTest(std::move(frames), false);
+
+  Command cmd;
+  cmd.set_verb(Verb::kSteps);
+
+  // Test with no thread.
+  Err err = AssertStoppedThreadWithFrameCommand(&context, cmd, "steps", true);
+  ASSERT_TRUE(err.has_error());
+  EXPECT_EQ("\"steps\" requires a thread but there is no current thread.", err.msg());
+
+  // Supply a valid thread, this should succeed.
+  cmd.set_thread(&thread);
+  cmd.set_frame(thread.GetStack()[0]);
+  err = AssertStoppedThreadWithFrameCommand(&context, cmd, "steps", true);
+  EXPECT_FALSE(err.has_error());
+
+  // Test with an invalid noun.
+  Command job_cmd(cmd);
+  job_cmd.SetNoun(Noun::kJob, Command::kNoIndex);
+  err = AssertStoppedThreadWithFrameCommand(&context, job_cmd, "steps", true);
+  ASSERT_TRUE(err.has_error());
+  EXPECT_EQ("\"job\" may not be specified for this command.", err.msg());
+
+  // Skip checking the nouns but pass an invalid one.
+  err = AssertStoppedThreadWithFrameCommand(&context, job_cmd, "steps", false);
+  ASSERT_FALSE(err.has_error());
 }
 
 }  // namespace zxdb

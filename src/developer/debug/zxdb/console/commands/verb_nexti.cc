@@ -56,7 +56,7 @@ Examples
 )";
 
 Err RunVerbNexti(ConsoleContext* context, const Command& cmd) {
-  Err err = AssertStoppedThreadCommand(context, cmd, true, "nexti");
+  Err err = AssertStoppedThreadWithFrameCommand(context, cmd, "nexti");
   if (err.has_error())
     return err;
 

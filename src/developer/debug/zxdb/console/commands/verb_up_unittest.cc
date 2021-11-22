@@ -40,6 +40,7 @@ TEST_F(VerbUp, Up) {
   debug_ipc::ThreadStatusReply thread_status;
   thread_status.record.id = {.process = kProcessKoid, .thread = kThreadKoid};
   thread_status.record.state = debug_ipc::ThreadRecord::State::kBlocked;
+  thread_status.record.blocked_reason = debug_ipc::ThreadRecord::BlockedReason::kException;
   thread_status.record.stack_amount = debug_ipc::ThreadRecord::StackAmount::kFull;
   thread_status.record.frames.emplace_back(kAddress0, kSP0, kSP0);
   thread_status.record.frames.emplace_back(kAddress0 + 16, kSP0 + 16, kSP0 + 16);

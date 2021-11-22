@@ -68,46 +68,34 @@ Err AssertRunningTarget(ConsoleContext* context, const char* command_name, Targe
                                context->IdForTarget(target), TargetStateToString(state)));
 }
 
-Err AssertStoppedThreadCommand(ConsoleContext* context, const Command& cmd, bool validate_nouns,
-                               const char* command_name) {
-  Err err;
+Err AssertStoppedThreadWithFrameCommand(ConsoleContext* context, const Command& cmd,
+                                        const char* command_name, bool validate_nouns) {
   if (validate_nouns) {
-    err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread});
-    if (err.has_error())
+    if (Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kFrame}); err.has_error())
       return err;
   }
 
   if (!cmd.thread()) {
     return Err("\"%s\" requires a thread but there is no current thread.", command_name);
   }
-  if (cmd.thread()->GetState() != debug_ipc::ThreadRecord::State::kBlocked &&
-      cmd.thread()->GetState() != debug_ipc::ThreadRecord::State::kCoreDump &&
-      cmd.thread()->GetState() != debug_ipc::ThreadRecord::State::kSuspended) {
+  if (!cmd.thread()->CurrentStopSupportsFrames()) {
     return Err(
         "\"%s\" requires a suspended thread but thread %d is %s.\n"
         "To view and sync thread state with the remote system, type "
-        "\"thread\".",
+        "\"thread\".\nOr type \"pause\" to pause a running thread.",
         command_name, context->IdForThread(cmd.thread()),
         ThreadStateToString(cmd.thread()->GetState(), cmd.thread()->GetBlockedReason()).c_str());
+  } else if (!cmd.frame()) {
+    // Theoretically this shouldn't happen: if the thread is in a proper blocked state it should
+    // have a frame. But we check this because callers will crash if the frame is not valid after
+    // a successful return.
+    FX_NOTREACHED() << "Thread has no frame but its state is "
+                    << ThreadStateToString(cmd.thread()->GetState(),
+                                           cmd.thread()->GetBlockedReason());
+    return Err("Thread has no frame.");
   }
+
   return Err();
-}
-
-Err AssertStoppedThreadWithFrameCommand(ConsoleContext* context, const Command& cmd,
-                                        const char* command_name) {
-  // Does most validation except noun checking.
-  Err err = AssertStoppedThreadCommand(context, cmd, false, command_name);
-  if (err.has_error())
-    return err;
-
-  if (!cmd.frame()) {
-    return Err(
-        "\"%s\" requires a stack frame but none is available.\n"
-        "You may need to \"pause\" the thread or sync the frames with \"frame\".",
-        command_name);
-  }
-
-  return cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kFrame});
 }
 
 size_t CheckHexPrefix(const std::string& s) {

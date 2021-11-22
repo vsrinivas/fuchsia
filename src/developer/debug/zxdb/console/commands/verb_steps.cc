@@ -85,7 +85,7 @@ Err CompleteSteps(Thread* thread, TargetPointer ip, const std::vector<AddressRan
 }
 
 Err RunVerbSteps(ConsoleContext* context, const Command& cmd) {
-  if (Err err = AssertStoppedThreadCommand(context, cmd, true, "steps"); err.has_error())
+  if (Err err = AssertStoppedThreadWithFrameCommand(context, cmd, "steps"); err.has_error())
     return err;
 
   Process* process = cmd.target()->GetProcess();

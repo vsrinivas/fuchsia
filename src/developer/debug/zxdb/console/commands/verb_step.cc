@@ -75,7 +75,7 @@ Examples
 )";
 
 Err RunVerbStep(ConsoleContext* context, const Command& cmd) {
-  if (Err err = AssertStoppedThreadCommand(context, cmd, true, "step"); err.has_error())
+  if (Err err = AssertStoppedThreadWithFrameCommand(context, cmd, "step"); err.has_error())
     return err;
 
   // All controllers do this on completion.

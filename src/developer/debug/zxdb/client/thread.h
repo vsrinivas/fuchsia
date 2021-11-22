@@ -50,6 +50,15 @@ class Thread : public ClientObject {
   virtual debug_ipc::ThreadRecord::State GetState() const = 0;
   virtual debug_ipc::ThreadRecord::BlockedReason GetBlockedReason() const = 0;
 
+  // The "blocked on exception" state has a special query function since that's the only blocked
+  // state that has valid frames.
+  //
+  // The other states that support valid frames (suspended and "core dump") are checked by
+  // CurrentStopSupportsFrames(). Theoretically there should always be at least one frame in the
+  // GetStack() if this returns true.
+  bool IsBlockedOnException() const;
+  bool CurrentStopSupportsFrames() const;
+
   // Pauses (suspends in Zircon terms) the thread, it does not affect other threads or processes.
   //
   // The backend will try to ensure the thread is actually paused before issuing the on_paused

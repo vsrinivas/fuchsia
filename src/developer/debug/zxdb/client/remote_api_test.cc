@@ -131,6 +131,7 @@ void RemoteAPITest::InjectExceptionWithStack(
   exception.type = exception_type;
   exception.thread.id = {.process = process_koid, .thread = thread_koid};
   exception.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
+  exception.thread.blocked_reason = debug_ipc::ThreadRecord::BlockedReason::kException;
   exception.hit_breakpoints = breakpoints;
 
   InjectExceptionWithStack(exception, std::move(frames), has_all_frames);

@@ -5,6 +5,8 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_MOCK_THREAD_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_MOCK_THREAD_H_
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/thread.h"
@@ -22,11 +24,9 @@ class MockThread : public Thread, public Stack::Delegate {
   Process* GetProcess() const override { return process_; }
   uint64_t GetKoid() const override { return 1234; }
   const std::string& GetName() const override { return thread_name_; }
-  debug_ipc::ThreadRecord::State GetState() const override {
-    return debug_ipc::ThreadRecord::State::kSuspended;
-  }
+  debug_ipc::ThreadRecord::State GetState() const override { return state_; }
   debug_ipc::ThreadRecord::BlockedReason GetBlockedReason() const override {
-    return debug_ipc::ThreadRecord::BlockedReason::kNotBlocked;
+    return blocked_reason_;
   }
   void Pause(fit::callback<void()> on_paused) override {
     debug::MessageLoop::Current()->PostTask(
@@ -41,6 +41,17 @@ class MockThread : public Thread, public Stack::Delegate {
   void StepInstruction() override {}
   const Stack& GetStack() const override { return stack_; }
   Stack& GetStack() override { return stack_; }
+
+  void SetState(debug_ipc::ThreadRecord::State state,
+                debug_ipc::ThreadRecord::BlockedReason blocked_reason =
+                    debug_ipc::ThreadRecord::BlockedReason::kNotBlocked) {
+    if (state == debug_ipc::ThreadRecord::State::kBlocked) {
+      // Blocked reason must be supplied.
+      FX_DCHECK(blocked_reason != debug_ipc::ThreadRecord::BlockedReason::kNotBlocked);
+    }
+    state_ = state;
+    blocked_reason_ = blocked_reason;
+  }
 
  private:
   // Stack::Delegate implementation.
@@ -58,6 +69,10 @@ class MockThread : public Thread, public Stack::Delegate {
 
   std::string thread_name_ = "test thread";
   Process* process_;
+
+  debug_ipc::ThreadRecord::State state_ = debug_ipc::ThreadRecord::State::kSuspended;
+  debug_ipc::ThreadRecord::BlockedReason blocked_reason_ =
+      debug_ipc::ThreadRecord::BlockedReason::kNotBlocked;
 
   Stack stack_;
 };

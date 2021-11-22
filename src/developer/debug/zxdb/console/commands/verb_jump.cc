@@ -33,7 +33,7 @@ Location arguments
 )" LOCATION_ARG_HELP("jump");
 
 Err RunVerbJump(ConsoleContext* context, const Command& cmd) {
-  if (Err err = AssertStoppedThreadCommand(context, cmd, true, "jump"); err.has_error())
+  if (Err err = AssertStoppedThreadWithFrameCommand(context, cmd, "jump"); err.has_error())
     return err;
 
   if (cmd.args().size() != 1)
