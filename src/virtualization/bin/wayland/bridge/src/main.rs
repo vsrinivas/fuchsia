@@ -7,10 +7,12 @@
 use {
     crate::dispatcher::*,
     anyhow::Error,
+    fidl::endpoints::create_proxy,
+    fidl_fuchsia_stash::{StoreMarker, Value},
     fidl_fuchsia_virtualization::{WaylandDispatcherRequest, WaylandDispatcherRequestStream},
     fidl_fuchsia_wayland::ViewProducerRequestStream,
     fuchsia_async as fasync,
-    fuchsia_component::server::ServiceFs,
+    fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
     fuchsia_trace_provider::trace_provider_create_with_fdio,
     futures::prelude::*,
 };
@@ -42,10 +44,30 @@ mod xdg_shell;
 fn spawn_wayland_dispatcher_service(mut stream: WaylandDispatcherRequestStream, display: Display) {
     fasync::Task::local(
         async move {
+            // Determine if protocol logging is enabled.
+            let protocol_logging = {
+                let store = connect_to_protocol::<StoreMarker>()?;
+                store.identify("stash_ctl")?;
+                let (accessor, server_end) = create_proxy()?;
+                store.create_accessor(false, server_end)?;
+                accessor
+                    .get_value("wayland_protocol_logging")
+                    .map(|result| match result {
+                        Ok(Some(value)) => match *value {
+                            Value::Boolval(b) => b,
+                            _ => false,
+                        },
+                        _ => false,
+                    })
+                    .await
+            };
             while let Some(WaylandDispatcherRequest::OnNewConnection { channel, .. }) =
                 stream.try_next().await.unwrap()
             {
-                display.clone().spawn_new_client(fasync::Channel::from_channel(channel).unwrap());
+                display.clone().spawn_new_client(
+                    fasync::Channel::from_channel(channel).unwrap(),
+                    protocol_logging,
+                );
             }
             Ok(())
         }

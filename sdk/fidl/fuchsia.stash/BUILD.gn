@@ -28,5 +28,6 @@ fidl("fuchsia.stash") {
     "//src/sys/pkg/bin/omaha-client/*",
     "//src/sys/stash/*",
     "//src/sys/tools/stash_ctl/*",
+    "//src/virtualization/bin/wayland/bridge/*",
   ]
 }
