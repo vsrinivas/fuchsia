@@ -317,8 +317,6 @@ library example;
 const c array<int32,2> = -1;
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidConstantType);
-  // TODO(fxdev.bug/73879): Update string matched when error output respects new
-  //  syntax.
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "array<int32, 2>");
 }
 
@@ -350,9 +348,7 @@ resource_definition handle : uint32 {
 const c handle:THREAD = -1;
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidConstantType);
-  // TODO(fxdev.bug/73879): Update string matched when error output respects new
-  //  syntax.
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "handle:thread");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "example/handle:thread");
 }
 
 TEST(ConstsTests, GoodConstEnumMemberReference) {
