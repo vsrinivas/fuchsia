@@ -27,6 +27,7 @@ go_library("lib") {
     "//third_party/golibs:golang.org/x/sync",
     "//tools/bootserver:bootserverconstants",
     "//tools/botanist:constants",
+    "//tools/lib/serial:constants",
     "//tools/lib/syslog:constants",
     "//tools/net/netutil:constants",
     "//tools/net/sshutil:constants",

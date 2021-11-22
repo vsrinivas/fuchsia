@@ -53,6 +53,7 @@ go_library("target") {
     "//tools/lib/osmisc",
     "//tools/lib/retry",
     "//tools/lib/serial",
+    "//tools/lib/serial:constants",
     "//tools/net/netutil",
     "//tools/net/sshutil",
     "//tools/qemu",

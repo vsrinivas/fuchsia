@@ -15,6 +15,7 @@ go_library("serial") {
     "server_test.go",
   ]
   deps = [
+    ":constants",
     "//third_party/golibs:golang.org/x/sys",
     "//tools/lib/iomisc",
     "//tools/lib/logger",
@@ -29,4 +30,9 @@ go_test("tests") {
     "//third_party/golibs:github.com/google/go-cmp",
     "//third_party/golibs:golang.org/x/sync",
   ]
+}
+
+go_library("constants") {
+  source_dir = "constants"
+  sources = [ "constants.go" ]
 }

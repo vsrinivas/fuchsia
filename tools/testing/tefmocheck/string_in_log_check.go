@@ -13,6 +13,7 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver/bootserverconstants"
 	botanistconstants "go.fuchsia.dev/fuchsia/tools/botanist/constants"
+	serialconstants "go.fuchsia.dev/fuchsia/tools/lib/serial/constants"
 	syslogconstants "go.fuchsia.dev/fuchsia/tools/lib/syslog/constants"
 	netutilconstants "go.fuchsia.dev/fuchsia/tools/net/netutil/constants"
 	sshutilconstants "go.fuchsia.dev/fuchsia/tools/net/sshutil/constants"
@@ -336,6 +337,11 @@ func infraToolLogChecks() []FailureModeCheck {
 			// This error is generally transient, so ignore it as long as the
 			// download can be retried and eventually succeeds.
 			SkipPassedTask: true,
+		},
+		// For fxbug.dev/89222.
+		&stringInLogCheck{
+			String: serialconstants.FailedToOpenSerialSocketMsg,
+			Type:   swarmingOutputType,
 		},
 		// For fxbug.dev/53101.
 		&stringInLogCheck{

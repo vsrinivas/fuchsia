@@ -20,6 +20,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/serial"
+	serialconstants "go.fuchsia.dev/fuchsia/tools/lib/serial/constants"
 	"go.fuchsia.dev/fuchsia/tools/net/netboot"
 	"go.fuchsia.dev/fuchsia/tools/net/netutil"
 	"go.fuchsia.dev/fuchsia/tools/net/tftp"
@@ -216,7 +217,7 @@ func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, arg
 			logger.Debugf(ctx, "watching serial for string that indicates device has booted: %q", bootedLogSignature)
 			socket, err := net.Dial("unix", serialSocketPath)
 			if err != nil {
-				bootedLogChan <- fmt.Errorf("failed to open serial socket connection: %w", err)
+				bootedLogChan <- fmt.Errorf("%s: %w", serialconstants.FailedToOpenSerialSocketMsg, err)
 				return
 			}
 			defer socket.Close()

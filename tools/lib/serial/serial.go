@@ -16,6 +16,7 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/lib/serial/constants"
 )
 
 const (
@@ -104,7 +105,7 @@ func NewSocketWithIOTimeout(ctx context.Context, socketPath string, ioTimeout ti
 	}
 	conn, err := net.Dial("unix", socketPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open serial socket connection: %v", err)
+		return nil, fmt.Errorf("%s: %w", constants.FailedToOpenSerialSocketMsg, err)
 	}
 	if ioTimeout <= 0 {
 		ioTimeout = defaultSocketIOTimeout
