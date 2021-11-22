@@ -304,19 +304,31 @@ impl Surface {
 
     /// Assigns a role to this surface.
     ///
-    /// Once a role has been assigned to a surface, it is an error to set a
-    /// different role for that same surface.
+    /// The role can be updated as long as the type of role remains the same,
+    /// it is an error to set a different type of role for that same surface.
     pub fn set_role(&mut self, role: SurfaceRole) -> Result<(), Error> {
         ftrace::duration!("wayland", "Surface::set_role");
-        if let Some(current_role) = self.role {
-            Err(format_err!(
-                "Attemping to reassign surface role from {:?} to {:?}",
-                current_role,
-                role
-            ))
-        } else {
+        // The role is valid unless a different role has been assigned before.
+        let valid_role = match &self.role {
+            Some(SurfaceRole::XdgSurface(_)) => match role {
+                SurfaceRole::XdgSurface(_) => true,
+                _ => false,
+            },
+            Some(SurfaceRole::Subsurface(_)) => match role {
+                SurfaceRole::Subsurface(_) => true,
+                _ => false,
+            },
+            _ => true,
+        };
+        if valid_role {
             self.role = Some(role);
             Ok(())
+        } else {
+            Err(format_err!(
+                "Attemping to reassign surface role from {:?} to {:?}",
+                self.role,
+                role
+            ))
         }
     }
 

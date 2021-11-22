@@ -291,15 +291,27 @@ impl XdgSurface {
     /// has been assigned.
     pub fn set_xdg_role(&mut self, xdg_role: XdgSurfaceRole) -> Result<(), Error> {
         ftrace::duration!("wayland", "XdgSurface::set_xdg_role");
-        if let Some(current_role) = &self.xdg_role {
-            Err(format_err!(
-                "Attemping to re-assign xdg_surface role {:?} to {:?}",
-                current_role,
-                xdg_role
-            ))
-        } else {
+        // The role is valid unless a different role has been assigned before.
+        let valid_role = match &self.xdg_role {
+            Some(XdgSurfaceRole::Popup(_)) => match xdg_role {
+                XdgSurfaceRole::Popup(_) => true,
+                _ => false,
+            },
+            Some(XdgSurfaceRole::Toplevel(_)) => match xdg_role {
+                XdgSurfaceRole::Toplevel(_) => true,
+                _ => false,
+            },
+            _ => true,
+        };
+        if valid_role {
             self.xdg_role = Some(xdg_role);
             Ok(())
+        } else {
+            Err(format_err!(
+                "Attemping to re-assign xdg_surface role from {:?} to {:?}",
+                self.xdg_role,
+                xdg_role
+            ))
         }
     }
 
