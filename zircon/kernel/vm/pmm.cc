@@ -509,7 +509,7 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
   return ZX_OK;
 }
 
-void pmm_print_ppb_stats() {
+void pmm_print_physical_page_borrowing_stats() {
   uint64_t free_pages = pmm_count_free_pages();
   uint64_t loaned_free_pages = pmm_count_loaned_free_pages();
   uint64_t loaned_pages = pmm_count_loaned_pages();
