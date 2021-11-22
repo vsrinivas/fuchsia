@@ -5,13 +5,12 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_TESTS_TEST_UTILS_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_TESTS_TEST_UTILS_H_
 
-#include <fuchsia/hardware/wlanphyinfo/c/banjo.h>
-
 #include <algorithm>
 #include <array>
 #include <memory>
 #include <vector>
 
+#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <gtest/gtest.h>
 #include <wlan/common/buffer_writer.h>
 #include <wlan/mlme/mac_frame.h>

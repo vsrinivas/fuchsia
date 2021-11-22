@@ -4,7 +4,7 @@
 library fuchsia.hardware.wlanif;
 
 using ddk.hw.wlan.ieee80211;
-using fuchsia.hardware.wlanphyinfo;
+using ddk.hw.wlan.wlaninfo;
 using fuchsia.hardware.ethernet;
 using fuchsia.hardware.wlan.info;
 using fuchsia.wlan.internal;
@@ -33,7 +33,7 @@ type WlanifScanReq = struct {
     scan_type WlanScanType;
     probe_delay uint32;
     num_channels uint64;
-    channel_list array<uint8, fuchsia.hardware.wlanphyinfo.WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS>;
+    channel_list array<uint8, ddk.hw.wlan.wlaninfo.WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS>;
     min_channel_time uint32;
     max_channel_time uint32;
     num_ssids uint64;
@@ -365,10 +365,10 @@ type WlanifBandCapabilities = struct {
     /// Values from enum Band (WLAN_BAND_*)
     band_id uint8;
     num_rates uint64;
-    rates array<uint16, fuchsia.hardware.wlanphyinfo.WLAN_INFO_BAND_INFO_MAX_RATES>;
+    rates array<uint16, ddk.hw.wlan.wlaninfo.WLAN_INFO_BAND_INFO_MAX_RATES>;
     base_frequency uint16;
     num_channels uint64;
-    channels array<uint8, fuchsia.hardware.wlanphyinfo.WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS>;
+    channels array<uint8, ddk.hw.wlan.wlaninfo.WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS>;
     ht_supported bool;
     ht_caps ddk.hw.wlan.ieee80211.Ieee80211HtCapabilities;
     vht_supported bool;
@@ -385,11 +385,11 @@ type WlanifFeature = strict enum : uint32 {
 type WlanifQueryInfo = struct {
     sta_addr ieee80211.MacAddr;
     /// WLAN_MAC_ROLE_*
-    role fuchsia.hardware.wlanphyinfo.WlanInfoMacRole;
+    role ddk.hw.wlan.wlaninfo.WlanInfoMacRole;
     /// WLANIF_FEATURE_*
     features uint32;
     num_bands uint64;
-    bands array<WlanifBandCapabilities, fuchsia.hardware.wlanphyinfo.WLAN_INFO_MAX_BANDS>;
+    bands array<WlanifBandCapabilities, ddk.hw.wlan.wlaninfo.WLAN_INFO_MAX_BANDS>;
     /// WLAN_DRIVER_FEATURE_*
     driver_features uint32;
 };

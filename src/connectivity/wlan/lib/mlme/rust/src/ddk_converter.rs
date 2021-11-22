@@ -4,11 +4,11 @@
 
 use {
     anyhow::{bail, Error},
+    banjo_ddk_hw_wlan_wlaninfo as banjo_ddk_wlaninfo,
     banjo_fuchsia_hardware_wlan_info as banjo_wlan_info,
-    banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac,
-    banjo_fuchsia_hardware_wlanphyinfo as banjo_ddk_wlanphyinfo,
-    banjo_fuchsia_wlan_common as banjo_common, fidl_fuchsia_wlan_common as fidl_common,
-    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_mlme as fidl_mlme,
+    banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac, banjo_fuchsia_wlan_common as banjo_common,
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
+    fidl_fuchsia_wlan_mlme as fidl_mlme,
     ieee80211::Bssid,
     log::warn,
     wlan_common::{
@@ -116,9 +116,9 @@ pub fn device_info_from_wlanmac_info(
 ) -> Result<fidl_mlme::DeviceInfo, Error> {
     let sta_addr = info.sta_addr;
     let role = match info.mac_role {
-        banjo_ddk_wlanphyinfo::WlanInfoMacRole::CLIENT => fidl_mlme::MacRole::Client,
-        banjo_ddk_wlanphyinfo::WlanInfoMacRole::AP => fidl_mlme::MacRole::Ap,
-        banjo_ddk_wlanphyinfo::WlanInfoMacRole::MESH => fidl_mlme::MacRole::Mesh,
+        banjo_ddk_wlaninfo::WlanInfoMacRole::CLIENT => fidl_mlme::MacRole::Client,
+        banjo_ddk_wlaninfo::WlanInfoMacRole::AP => fidl_mlme::MacRole::Ap,
+        banjo_ddk_wlaninfo::WlanInfoMacRole::MESH => fidl_mlme::MacRole::Mesh,
         other => bail!("Unknown WLAN MAC role: {:?}", other),
     };
     let cap = wlan_common::mac::CapabilityInfo::from(info.caps).0;
@@ -132,13 +132,13 @@ pub fn device_info_from_wlanmac_info(
 }
 
 fn convert_ddk_band_info(
-    band_info: banjo_ddk_wlanphyinfo::WlanInfoBandInfo,
+    band_info: banjo_ddk_wlaninfo::WlanInfoBandInfo,
     capability_info: u16,
 ) -> fidl_mlme::BandCapabilities {
     let band_id = match band_info.band {
-        banjo_ddk_wlanphyinfo::WlanInfoBand::TWO_GHZ => fidl_common::Band::WlanBand2Ghz,
-        banjo_ddk_wlanphyinfo::WlanInfoBand::FIVE_GHZ => fidl_common::Band::WlanBand5Ghz,
-        banjo_ddk_wlanphyinfo::WlanInfoBand::COUNT => fidl_common::Band::WlanBandCount,
+        banjo_ddk_wlaninfo::WlanInfoBand::TWO_GHZ => fidl_common::Band::WlanBand2Ghz,
+        banjo_ddk_wlaninfo::WlanInfoBand::FIVE_GHZ => fidl_common::Band::WlanBand5Ghz,
+        banjo_ddk_wlaninfo::WlanInfoBand::COUNT => fidl_common::Band::WlanBandCount,
         unknown => {
             warn!("Unexpected WLAN band: {:?}. Defaulting to WlanBandCount", unknown);
             fidl_common::Band::WlanBandCount
@@ -182,7 +182,7 @@ fn convert_ddk_band_info(
 }
 
 fn convert_driver_features(
-    features: &banjo_ddk_wlanphyinfo::WlanInfoDriverFeature,
+    features: &banjo_ddk_wlaninfo::WlanInfoDriverFeature,
 ) -> Vec<fidl_common::DriverFeature> {
     // Add features supported at the MLME level.
     let mut out = vec![
@@ -191,25 +191,25 @@ fn convert_driver_features(
         // This flag tells SME that SoftMAC drivers need SME to derive association capabilities.
         fidl_common::DriverFeature::TempSoftmac,
     ];
-    if (*features & banjo_ddk_wlanphyinfo::WlanInfoDriverFeature::SCAN_OFFLOAD).0 != 0 {
+    if (*features & banjo_ddk_wlaninfo::WlanInfoDriverFeature::SCAN_OFFLOAD).0 != 0 {
         out.push(fidl_common::DriverFeature::ScanOffload);
     }
-    if (*features & banjo_ddk_wlanphyinfo::WlanInfoDriverFeature::RATE_SELECTION).0 != 0 {
+    if (*features & banjo_ddk_wlaninfo::WlanInfoDriverFeature::RATE_SELECTION).0 != 0 {
         out.push(fidl_common::DriverFeature::RateSelection);
     }
-    if (*features & banjo_ddk_wlanphyinfo::WlanInfoDriverFeature::SYNTH).0 != 0 {
+    if (*features & banjo_ddk_wlaninfo::WlanInfoDriverFeature::SYNTH).0 != 0 {
         out.push(fidl_common::DriverFeature::Synth);
     }
-    if (*features & banjo_ddk_wlanphyinfo::WlanInfoDriverFeature::TX_STATUS_REPORT).0 != 0 {
+    if (*features & banjo_ddk_wlaninfo::WlanInfoDriverFeature::TX_STATUS_REPORT).0 != 0 {
         out.push(fidl_common::DriverFeature::TxStatusReport);
     }
-    if (*features & banjo_ddk_wlanphyinfo::WlanInfoDriverFeature::DFS).0 != 0 {
+    if (*features & banjo_ddk_wlaninfo::WlanInfoDriverFeature::DFS).0 != 0 {
         out.push(fidl_common::DriverFeature::Dfs);
     }
-    if (*features & banjo_ddk_wlanphyinfo::WlanInfoDriverFeature::PROBE_RESP_OFFLOAD).0 != 0 {
+    if (*features & banjo_ddk_wlaninfo::WlanInfoDriverFeature::PROBE_RESP_OFFLOAD).0 != 0 {
         out.push(fidl_common::DriverFeature::ProbeRespOffload);
     }
-    if (*features & banjo_ddk_wlanphyinfo::WlanInfoDriverFeature::MFP).0 != 0 {
+    if (*features & banjo_ddk_wlaninfo::WlanInfoDriverFeature::MFP).0 != 0 {
         out.push(fidl_common::DriverFeature::Mfp);
     }
     out
@@ -383,12 +383,12 @@ mod tests {
 
     #[test]
     fn test_convert_driver_features() {
-        let features = banjo_ddk_wlanphyinfo::WlanInfoDriverFeature::SCAN_OFFLOAD
-            | banjo_ddk_wlanphyinfo::WlanInfoDriverFeature::RATE_SELECTION
-            | banjo_ddk_wlanphyinfo::WlanInfoDriverFeature::SYNTH
-            | banjo_ddk_wlanphyinfo::WlanInfoDriverFeature::TX_STATUS_REPORT
-            | banjo_ddk_wlanphyinfo::WlanInfoDriverFeature::DFS
-            | banjo_ddk_wlanphyinfo::WlanInfoDriverFeature::PROBE_RESP_OFFLOAD;
+        let features = banjo_ddk_wlaninfo::WlanInfoDriverFeature::SCAN_OFFLOAD
+            | banjo_ddk_wlaninfo::WlanInfoDriverFeature::RATE_SELECTION
+            | banjo_ddk_wlaninfo::WlanInfoDriverFeature::SYNTH
+            | banjo_ddk_wlaninfo::WlanInfoDriverFeature::TX_STATUS_REPORT
+            | banjo_ddk_wlaninfo::WlanInfoDriverFeature::DFS
+            | banjo_ddk_wlaninfo::WlanInfoDriverFeature::PROBE_RESP_OFFLOAD;
         let converted_features = convert_driver_features(&features);
         assert_eq!(
             converted_features,

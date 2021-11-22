@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
-#include <fuchsia/hardware/wlanphyinfo/c/banjo.h>
 #include <zircon/errors.h>
 
 #include <array>
 #include <vector>
 
+#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <wifi/wifi-config.h>

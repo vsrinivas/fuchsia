@@ -16,13 +16,13 @@
 
 #include <fuchsia/hardware/wlan/info/c/banjo.h>
 #include <fuchsia/hardware/wlanif/c/banjo.h>
-#include <fuchsia/hardware/wlanphyinfo/c/banjo.h>
 #include <lib/ddk/device.h>
 #include <zircon/errors.h>
 
 #include <algorithm>
 #include <memory>
 
+#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <gtest/gtest.h>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"

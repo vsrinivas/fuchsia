@@ -6,7 +6,6 @@
 
 #include <fidl/fuchsia.wlan.device/cpp/wire.h>
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
-#include <fuchsia/hardware/wlanphyinfo/c/banjo.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
 #include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <lib/ddk/device.h>
@@ -15,6 +14,7 @@
 
 #include <iterator>
 
+#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <wlan/common/band.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/element.h>

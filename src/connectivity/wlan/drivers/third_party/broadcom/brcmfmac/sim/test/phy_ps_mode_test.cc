@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
-#include <fuchsia/hardware/wlanphyinfo/c/banjo.h>
 #include <zircon/errors.h>
 
+#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <gtest/gtest.h>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"

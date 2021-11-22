@@ -4,12 +4,13 @@
 
 #include "iface-device.h"
 
-#include <fuchsia/hardware/wlanphyinfo/c/banjo.h>
 #include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <stdio.h>
+
+#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 
 namespace wlan {
 namespace testing {

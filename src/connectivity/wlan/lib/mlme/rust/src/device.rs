@@ -469,7 +469,7 @@ mod test_utils {
             test_utils::fake_control_handle,
         },
         banjo_ddk_hw_wlan_ieee80211::*,
-        banjo_fuchsia_hardware_wlanphyinfo::*,
+        banjo_ddk_hw_wlan_wlaninfo::*,
         fuchsia_async as fasync,
     };
 
@@ -832,7 +832,7 @@ mod test_utils {
 mod tests {
     use {
         super::*, crate::ddk_converter, banjo_ddk_hw_wlan_ieee80211::*,
-        banjo_fuchsia_hardware_wlan_mac::WlanHwScanType, banjo_fuchsia_hardware_wlanphyinfo::*,
+        banjo_ddk_hw_wlan_wlaninfo::*, banjo_fuchsia_hardware_wlan_mac::WlanHwScanType,
         banjo_fuchsia_wlan_ieee80211 as banjo_ieee80211,
         banjo_fuchsia_wlan_internal as banjo_internal,
         fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fuchsia_async as fasync,

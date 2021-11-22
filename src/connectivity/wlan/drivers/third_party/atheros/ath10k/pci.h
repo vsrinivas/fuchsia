@@ -21,8 +21,9 @@
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/wlan/mac/c/banjo.h>
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
-#include <fuchsia/hardware/wlanphyinfo/c/banjo.h>
 #include <lib/ddk/mmio-buffer.h>
+
+#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 
 #include "ce.h"
 #include "hw.h"

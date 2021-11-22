@@ -4,7 +4,8 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("fuchsia.hardware.wlanphyinfo") {
-  sources = [ "wlanphyinfo.fidl" ]
+fidl("ddk.hw.wlan.wlaninfo") {
+  sources = [ "wlaninfo.fidl" ]
   public_deps = [ "//sdk/banjo/ddk.hw.wlan.ieee80211" ]
+  excluded_checks = [ "wrong-prefix-for-platform-source-library" ]
 }

@@ -310,7 +310,7 @@ struct/member fuchsia.hardware.wlanif/WlanifQueryInfo.driver_features uint32
 struct/member fuchsia.hardware.wlanif/WlanifQueryInfo.features uint32
 struct/member fuchsia.hardware.wlanif/WlanifQueryInfo.mac_addr array<uint8,6>
 struct/member fuchsia.hardware.wlanif/WlanifQueryInfo.num_bands uint64
-struct/member fuchsia.hardware.wlanif/WlanifQueryInfo.role fuchsia.hardware.wlanphyinfo/WlanInfoMacRole
+struct/member fuchsia.hardware.wlanif/WlanifQueryInfo.role ddk.hw.wlan.wlaninfo/WlanInfoMacRole
 struct fuchsia.hardware.wlanif/WlanifQueryInfo
 struct/member fuchsia.hardware.wlanif/WlanifResetReq.set_default_mib bool
 struct/member fuchsia.hardware.wlanif/WlanifResetReq.sta_address array<uint8,6>

@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/wlanphyinfo/c/banjo.h>
-
 #include <memory>
 
+#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <gtest/gtest.h>
 #include <wlan/common/write_element.h>
 #include <wlan/mlme/mac_frame.h>

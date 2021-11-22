@@ -5,9 +5,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_DEBUG_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_DEBUG_H_
 
-#include <fuchsia/hardware/wlanphyinfo/c/banjo.h>
-
 #include <ddk/hw/wlan/ieee80211/c/banjo.h>
+#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <wlan/common/tx_vector.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>

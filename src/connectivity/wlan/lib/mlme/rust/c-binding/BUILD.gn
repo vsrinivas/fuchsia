@@ -28,7 +28,8 @@ rustc_staticlib("wlan-mlme-c") {
     "//third_party/rust_crates:num-traits",
     "//third_party/rust_crates:thiserror",
   ]
-  non_rust_deps = [ "//sdk/banjo/fuchsia.hardware.wlanphyinfo:fuchsia.hardware.wlanphyinfo_banjo_cpp" ]
+  non_rust_deps =
+      [ "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_cpp" ]
 
   public = [ "bindings.h" ]
 

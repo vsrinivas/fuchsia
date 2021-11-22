@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/wlanif/c/banjo.h>
-#include <fuchsia/hardware/wlanphyinfo/c/banjo.h>
 #include <fuchsia/wlan/common/c/banjo.h>
 #include <lib/zx/clock.h>
 
@@ -11,6 +10,7 @@
 #include <memory>
 #include <utility>
 
+#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 

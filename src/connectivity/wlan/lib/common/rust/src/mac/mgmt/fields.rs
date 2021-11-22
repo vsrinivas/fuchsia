@@ -8,7 +8,7 @@ use {
         SequenceControl, StatusCode,
     },
     crate::TimeUnit,
-    banjo_fuchsia_hardware_wlanphyinfo as banjo_ddk_wlanphyinfo,
+    banjo_ddk_hw_wlan_wlaninfo as banjo_ddk_wlaninfo,
     wlan_bitfield::bitfield,
     zerocopy::{AsBytes, FromBytes, Unaligned},
 };
@@ -35,21 +35,21 @@ use {
 #[repr(C)]
 pub struct CapabilityInfo(pub u16);
 
-impl From<banjo_ddk_wlanphyinfo::WlanInfoHardwareCapability> for CapabilityInfo {
-    fn from(info: banjo_ddk_wlanphyinfo::WlanInfoHardwareCapability) -> Self {
+impl From<banjo_ddk_wlaninfo::WlanInfoHardwareCapability> for CapabilityInfo {
+    fn from(info: banjo_ddk_wlaninfo::WlanInfoHardwareCapability) -> Self {
         let mut cap_info = Self(0);
         cap_info.set_short_preamble(
-            (info & banjo_ddk_wlanphyinfo::WlanInfoHardwareCapability::SHORT_PREAMBLE).0 != 0,
+            (info & banjo_ddk_wlaninfo::WlanInfoHardwareCapability::SHORT_PREAMBLE).0 != 0,
         );
         cap_info.set_spectrum_mgmt(
-            (info & banjo_ddk_wlanphyinfo::WlanInfoHardwareCapability::SPECTRUM_MGMT).0 != 0,
+            (info & banjo_ddk_wlaninfo::WlanInfoHardwareCapability::SPECTRUM_MGMT).0 != 0,
         );
-        cap_info.set_qos((info & banjo_ddk_wlanphyinfo::WlanInfoHardwareCapability::QOS).0 != 0);
+        cap_info.set_qos((info & banjo_ddk_wlaninfo::WlanInfoHardwareCapability::QOS).0 != 0);
         cap_info.set_short_slot_time(
-            (info & banjo_ddk_wlanphyinfo::WlanInfoHardwareCapability::SHORT_SLOT_TIME).0 != 0,
+            (info & banjo_ddk_wlaninfo::WlanInfoHardwareCapability::SHORT_SLOT_TIME).0 != 0,
         );
         cap_info.set_radio_measurement(
-            (info & banjo_ddk_wlanphyinfo::WlanInfoHardwareCapability::RADIO_MSMT).0 != 0,
+            (info & banjo_ddk_wlaninfo::WlanInfoHardwareCapability::RADIO_MSMT).0 != 0,
         );
         cap_info
     }
@@ -327,11 +327,11 @@ mod tests {
 
     #[test]
     fn test_convert_capability_info() {
-        let info = banjo_ddk_wlanphyinfo::WlanInfoHardwareCapability::SHORT_PREAMBLE
-            | banjo_ddk_wlanphyinfo::WlanInfoHardwareCapability::SPECTRUM_MGMT
-            | banjo_ddk_wlanphyinfo::WlanInfoHardwareCapability::QOS
-            | banjo_ddk_wlanphyinfo::WlanInfoHardwareCapability::SHORT_SLOT_TIME
-            | banjo_ddk_wlanphyinfo::WlanInfoHardwareCapability::RADIO_MSMT;
+        let info = banjo_ddk_wlaninfo::WlanInfoHardwareCapability::SHORT_PREAMBLE
+            | banjo_ddk_wlaninfo::WlanInfoHardwareCapability::SPECTRUM_MGMT
+            | banjo_ddk_wlaninfo::WlanInfoHardwareCapability::QOS
+            | banjo_ddk_wlaninfo::WlanInfoHardwareCapability::SHORT_SLOT_TIME
+            | banjo_ddk_wlaninfo::WlanInfoHardwareCapability::RADIO_MSMT;
         let converted_info = CapabilityInfo::from(info);
         assert!(converted_info.short_preamble());
         assert!(converted_info.spectrum_mgmt());

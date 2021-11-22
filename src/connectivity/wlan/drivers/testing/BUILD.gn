@@ -38,10 +38,10 @@ fuchsia_driver("wlanphy-testdev-driver") {
 
   deps = [
     ":wlanphy_test_bind",
+    "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.sdio:fuchsia.hardware.sdio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.test:fuchsia.hardware.test_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanphy:fuchsia.hardware.wlanphy_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.wlanphyinfo:fuchsia.hardware.wlanphyinfo_banjo_cpp",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
     "//sdk/fidl/fuchsia.wlan.device",
     "//sdk/fidl/fuchsia.wlan.device:fuchsia.wlan.device_llcpp",
