@@ -64,6 +64,32 @@ enum __enum_type {
 
 INSTANTIATE_TEST_SUITE_P(Enum, ParamTestChild, ::zxtest::testing::Values(VALUE_1, VALUE_2))
 
+class EnumContainer {
+ public:
+  enum class Enum {
+    kFoo,
+    kBar,
+  };
+
+  explicit EnumContainer(enum Enum e) : e_(e) {}
+
+  Enum value() { return e_; }
+
+ private:
+  enum Enum e_;
+};
+
+using EnumTuple = std::tuple<EnumContainer, EnumContainer>;
+class EnumTest : public zxtest::TestWithParam<EnumTuple> {};
+
+TEST_P(EnumTest, SomeName) {}
+
+INSTANTIATE_TEST_SUITE_P(
+    EnumClass, EnumTest,
+    ::zxtest::testing::Combine(::zxtest::testing::Values(EnumContainer::Enum::kFoo,
+                                                         EnumContainer::Enum::kBar),
+                               ::zxtest::testing::Values(EnumContainer::Enum::kFoo)))
+
 using StringAndBool = std::tuple<std::string, bool>;
 class StringAndBoolParent : public zxtest::TestWithParam<StringAndBool> {};
 class StringAndBoolChild : public StringAndBoolParent {};

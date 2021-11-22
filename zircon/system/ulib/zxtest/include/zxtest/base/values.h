@@ -9,6 +9,7 @@
 #include <lib/stdcompat/span.h>
 #include <math.h>
 
+#include <optional>
 #include <tuple>
 #include <type_traits>
 #include <vector>
@@ -30,15 +31,22 @@ class ValueProvider {
 
   ValueProvider() = delete;
   ValueProvider(Callback accessor, size_t size) : accessor_(std::move(accessor)), size_(size) {}
+  template <typename U,
+            std::enable_if_t<(std::is_convertible_v<U, T> || std::is_constructible_v<T, U>)>>
+  explicit ValueProvider(ValueProvider<U>&& provider)
+      : size_(provider.size()),
+        accessor_([provider = std::move(provider)](size_t i) -> const T& { return provider[i]; }) {}
+
   ValueProvider(const ValueProvider&) = delete;
   ValueProvider(ValueProvider&&) noexcept = default;
-  template <typename U, typename std::enable_if_t<std::is_convertible_v<U, T> &&
-                                                  !std::is_same_v<U, T>>* = nullptr>
+  template <typename U, typename std::enable_if_t<
+                            (std::is_convertible_v<U, T> ||
+                             std::is_constructible_v<T, U>)&&!std::is_same_v<U, T>>* = nullptr>
   ValueProvider(ValueProvider<U>&& other)
       : accessor_([cb = std::move(other.accessor_)](size_t index) -> const T& {
-          static T tmp;
-          tmp = cb(index);
-          return tmp;
+          static std::optional<cpp20::remove_cvref_t<T>> tmp;
+          tmp.emplace(cb(index));
+          return tmp.value();
         }),
         size_(other.size_) {}
   ValueProvider& operator=(ValueProvider&&) noexcept = default;
