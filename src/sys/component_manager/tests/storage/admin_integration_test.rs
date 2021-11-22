@@ -172,6 +172,8 @@ async fn multiple_storage_users() {
 
     let instance = builder.build().await.unwrap();
     let _ = instance.root.connect_to_binder().unwrap();
+    futures::future::join_all(done_signals).await;
+
     let instance_moniker = format!("./{}:{}", DEFAULT_COLLECTION_NAME, instance.root.child_name());
     let expected_storage_users: HashSet<_> = (0..NUM_MOCKS)
         .map(|mock_idx| format!("{}/storage-user-{:?}", &instance_moniker, mock_idx))
@@ -188,13 +190,11 @@ async fn multiple_storage_users() {
             .collect::<HashSet<_>>(),
         expected_storage_users
     );
-
-    futures::future::join_all(done_signals).await;
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn purged_storage_user() {
-    let (mock, _) = new_data_user_mock("file", "data");
+    let (mock, done_signal) = new_data_user_mock("file", "data");
     let builder = RealmBuilder::new().await.unwrap();
     builder
         .add_mock_child("storage-user", mock, ChildProperties::new().eager())
@@ -218,6 +218,8 @@ async fn purged_storage_user() {
     let instance_moniker = format!("./{}:{}", DEFAULT_COLLECTION_NAME, instance.root.child_name());
     let storage_user_moniker = format!("{}/storage-user", &instance_moniker);
     let storage_user_moniker_regex = format!("{}:.*/storage-user:.*", &instance_moniker);
+
+    done_signal.await;
 
     let storage_admin = connect_to_protocol::<fsys::StorageAdminMarker>().unwrap();
     let storage_users = collect_storage_user_monikers(&storage_admin, &instance_moniker).await;
