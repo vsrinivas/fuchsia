@@ -83,8 +83,12 @@ class HermeticFidelityTest : public HermeticPipelineTest {
 
     PipelineConstants pipeline;
     // TODO(fxbug.dev/85960): Add mechanism to specify that a single frequency should be tested.
+    //
+    // Regardless of the input frequencies used, expect no output frequencies below this value.
     int32_t low_cut_frequency = 0;
+    // Regardless of the input frequencies used, expect no output frequencies above this value.
     int32_t low_pass_frequency = fuchsia::media::MAX_PCM_FRAMES_PER_SECOND;
+    // If specified, the thermal state to put the pipeline into, before assessing its fidelity.
     std::optional<uint32_t> thermal_state = std::nullopt;
 
     std::optional<audio_stream_unique_id_t> device_id = std::nullopt;
@@ -108,7 +112,8 @@ class HermeticFidelityTest : public HermeticPipelineTest {
   static std::array<double, HermeticFidelityTest::kNumReferenceFreqs>& sinad_results(
       std::string test_name, int32_t channel);
 
-  void TranslateReferenceFrequencies(int32_t device_frame_rate);
+  void TranslateReferenceFrequenciesToPeriods(int32_t device_frame_rate);
+  int32_t FrequencyToPeriods(int32_t device_frame_rate, int32_t frequency);
 
   // Create a renderer for this path, submit and play the input buffer, retrieve the ring buffer.
   template <fuchsia::media::AudioSampleFormat InputFormat,
@@ -133,8 +138,8 @@ class HermeticFidelityTest : public HermeticPipelineTest {
   zx_status_t ConfigurePipelineForThermal(uint32_t thermal_state);
 
  private:
-  // Ref frequencies, internally translated to values corresponding to a buffer[kFreqTestBufSize].
-  std::array<int32_t, kNumReferenceFreqs> translated_ref_freqs_;
+  // Ref frequencies, internally translated to periods that fit into kFreqTestBufSize.
+  std::array<int32_t, kNumReferenceFreqs> translated_ref_periods_;
 
   bool save_fidelity_wav_files_;
 };

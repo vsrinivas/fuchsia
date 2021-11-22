@@ -34,6 +34,9 @@ namespace media::audio::test {
 //
 // Saving all input|output files (if --save-input-and-output specified) consumes too much
 // on-device storage. These tests save only the input|output files for this specified frequency.
+//
+// We favor 1 khz tones in single-frequency tests because it activates both low-frequency and
+// high-frequency outputs ("woofers" and "tweeters"), for dual-amp output devices.
 static constexpr int32_t kFrequencyForSavedWavFiles = 1000;
 
 // Custom build-time flags
@@ -41,13 +44,24 @@ static constexpr int32_t kFrequencyForSavedWavFiles = 1000;
 // For normal CQ operation, the below should be FALSE.
 //
 // Debug positioning and values of the renderer's input buffer, by showing certain sections.
+//
+// When debugging an input buffer of floats, we expect perfect 1.0 values in both the first frame
+// "post-ramp-in", and first "ramp-out" frame (i.e., indices that become the first-frame and
+// one-after-final-frame locations in the output analysis section).
 static constexpr bool kDebugInputBuffer = false;
 
 // Debug positioning and values of the output ring buffer snapshot, by showing certain sections.
+//
+// If output pipeline has no phase shift, then (like input buffers) we expect perfect 1.0 values in
+// both the first frame of the analysis section, and the first frame after the analysis section.
 static constexpr bool kDebugOutputBuffer = false;
+// How many output frames on either side of "positions of interest" should we display
+static constexpr int64_t kOutputDisplayWindow = 128;
 
 // If debugging input/output ring buffer contents, display buffer sections for ALL frequencies.
+// Otherwise, kDebugInputBuffer|kDebugOutputBuffer only display buffers for the below frequency.
 static constexpr bool kDebugBuffersAtAllFrequencies = false;
+static constexpr int32_t kFrequencyForBufferDebugging = 1000;
 
 // Retain/display worst-case single-test-case results in a looped run. Used to update limits.
 static constexpr bool kRetainWorstCaseResults = false;
@@ -55,15 +69,18 @@ static constexpr bool kRetainWorstCaseResults = false;
 // Show results at test-end in tabular form, for copy/compare to hermetic_fidelity_result.cc.
 static constexpr bool kDisplaySummaryResults = false;
 
+//
 // For normal CQ operation, the below should be TRUE.
-// These aid in debugging sporadic failures.
+// These aid in debugging sporadic failures encountered in CQ.
 //
 // Displaying results on-the-fly helps correlate an UNDERFLOW with the affected frequency.
 static constexpr bool kDisplayInProgressResults = true;
 
-// Upon significant SINAD failure, display relevant sections of the output buffer before moving on.
+// On significant SINAD failure (-20db), display relevant output buffer sections before moving on.
 static constexpr bool kDebugOutputBufferOnSinadFailure = true;
+static constexpr double kDebugOutputBufferOnSinadFailureDbTolerance = 20.0;
 
+//
 // Consts related to fidelity testing thresholds
 //
 // The power-of-two size of our spectrum analysis buffer, and our frequency spectrum set.
@@ -73,9 +90,6 @@ static constexpr int64_t kFreqTestBufSize = 65536;
 // to pass if 'actual >= expected', OR less but within the following tolerance. This tolerance
 // also sets the digits of precision for 'expected' values, when stored or displayed.
 static constexpr double kFidelityDbTolerance = 0.001;
-static constexpr double kDebugOutputBufferOnSinadFailureDbTolerance = 20.0;
-
-static constexpr int32_t kFrequencyForBufferDebugging = 8000;
 
 // For each test_name|channel, we maintain two results arrays: Frequency Response and
 // Signal-to-Noise-and-Distortion (sinad). A map of array results is saved as a function-local
@@ -83,7 +97,6 @@ static constexpr int32_t kFrequencyForBufferDebugging = 8000;
 //
 // Note: two test cases must not collide on the same test_name/channel. Thus, test cases must take
 // care not to reuse test_name upon copy-and-paste.
-namespace {
 struct ResultsIndex {
   std::string test_name;
   int32_t channel;
@@ -92,7 +105,6 @@ struct ResultsIndex {
     return std::tie(test_name, channel) < std::tie(rhs.test_name, rhs.channel);
   }
 };
-} // namespace
 
 // static
 // Retrieve (initially allocating, if necessary) the array of level results for this path|channel.
@@ -157,22 +169,26 @@ void HermeticFidelityTest::SetUp() {
   }
 }
 
-// Translate real-world frequencies to frequencies that fit perfectly into our signal buffer.
-// Internal frequencies must be integers, so we don't need to Window the output before frequency
-// analysis. We use buffer size and frame rate. Thus, when measuring real-world frequency 2000 Hz
-// with buffer size 65536 at frame rate 96 kHz, we use the internal frequency 1365, rather than
-// 1365.333... -- translating to a real-world frequency of 1999.5 Hz (this is not a problem).
+// Translate real-world frequencies into 'internal_periods', the number of complete wavelengths that
+// fit perfectly into our signal buffer. If this is an integer, we won't need to Window the output
+// before frequency analysis. Example: when measuring real-world frequency 2000 Hz at frame rate 96
+// kHz, for buffer size 65536 this translates into 1365.333... periods, but we use the integer 1365.
+// This translates back to a real-world frequency of 1999.5 Hz, which is not a problem.
 //
-// We also want these internal frequencies to have fewer common factors with our buffer size and
-// frame rates, as this can mask problems where previous buffer sections are erroneously repeated.
-// So if a computed internal frequency is not integral, we use the odd neighbor, rather than round.
-void HermeticFidelityTest::TranslateReferenceFrequencies(int32_t device_frame_rate) {
+// We also want 'internal_periods' to have fewer common factors with our buffer size and frame
+// rates, as this can mask problems where previous buffer sections are erroneously repeated. So if a
+// computed internal frequency is not integral, we use the odd neighbor, rather than round.
+int32_t HermeticFidelityTest::FrequencyToPeriods(int32_t device_frame_rate, int32_t frequency) {
+  double internal_periods = static_cast<double>(frequency * kFreqTestBufSize) / device_frame_rate;
+  auto floor_periods = static_cast<int32_t>(std::floor(internal_periods));
+  auto ceil_periods = static_cast<int32_t>(std::ceil(internal_periods));
+  return (floor_periods % 2) ? floor_periods : ceil_periods;
+}
+
+void HermeticFidelityTest::TranslateReferenceFrequenciesToPeriods(int32_t device_frame_rate) {
   for (auto freq_idx = 0u; freq_idx < kReferenceFrequencies.size(); ++freq_idx) {
-    double internal_freq =
-        static_cast<double>(kReferenceFrequencies[freq_idx] * kFreqTestBufSize) / device_frame_rate;
-    int32_t floor_freq = std::floor(internal_freq);
-    int32_t ceil_freq = std::ceil(internal_freq);
-    translated_ref_freqs_[freq_idx] = (floor_freq % 2) ? floor_freq : ceil_freq;
+    translated_ref_periods_[freq_idx] =
+        FrequencyToPeriods(device_frame_rate, kReferenceFrequencies[freq_idx]);
   }
 }
 
@@ -219,8 +235,8 @@ zx_status_t HermeticFidelityTest::ConfigurePipelineForThermal(uint32_t thermal_s
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  auto status =
-      this->thermal_test_control()->SetThermalState(audio_subscriber.value(), thermal_state);
+  auto status = this->thermal_test_control()->SetThermalState(
+      static_cast<int32_t>(audio_subscriber.value()), thermal_state);
   if (status != ZX_OK) {
     ADD_FAILURE() << "SetThermalState failed: " << status;
     return status;
@@ -229,6 +245,9 @@ zx_status_t HermeticFidelityTest::ConfigurePipelineForThermal(uint32_t thermal_s
   return ZX_OK;
 }
 
+// Render source such that first input frame will be rendered into first ring buffer frame.
+// Create a renderer, submit packets, play, wait for them to be rendered, shut down the renderer,
+// and extract the output from the VAD ring buffer.
 template <ASF InputFormat, ASF OutputFormat>
 AudioBuffer<OutputFormat> HermeticFidelityTest::GetRendererOutput(
     TypedFormat<InputFormat> input_format, int64_t input_buffer_frames, RenderPath path,
@@ -239,7 +258,6 @@ AudioBuffer<OutputFormat> HermeticFidelityTest::GetRendererOutput(
     usage = fuchsia::media::AudioRenderUsage::COMMUNICATION;
   }
 
-  // Render source such that first input frame will be rendered into first ring buffer frame.
   if (path == RenderPath::Ultrasound) {
     auto renderer = CreateUltrasoundRenderer(input_format, input_buffer_frames, true);
     auto packets = renderer->AppendPackets({&input});
@@ -287,7 +305,6 @@ AudioBuffer<OutputFormat> HermeticFidelityTest::GetRendererOutput(
     Unbind(renderer);
   }
 
-  // Extract it from the VAD ring-buffer.
   return device->SnapshotRingBuffer();
 }
 
@@ -302,7 +319,7 @@ void HermeticFidelityTest::DisplaySummaryResults(
     printf("\n\tFull-spectrum Frequency Response - %s - output channel %d",
            test_case.test_name.c_str(), channel_spec.channel);
     for (auto freq_idx = 0u; freq_idx < kNumReferenceFreqs; ++freq_idx) {
-      printf("%s %8.3f,", (freq_idx % 10 == 0 ? "\n " : ""),
+      printf("%s %8.3f,", (freq_idx % 10 == 0 ? "\n" : ""),
              std::min(floor(chan_level_results_db[freq_idx] / kFidelityDbTolerance) *
                           kFidelityDbTolerance,
                       0.0));
@@ -313,7 +330,7 @@ void HermeticFidelityTest::DisplaySummaryResults(
     printf("\n\tSignal-to-Noise and Distortion -   %s - output channel %d",
            test_case.test_name.c_str(), channel_spec.channel);
     for (auto freq_idx = 0u; freq_idx < kNumReferenceFreqs; ++freq_idx) {
-      printf("%s %8.3f,", (freq_idx % 10 == 0 ? "\n " : ""),
+      printf("%s %8.3f,", (freq_idx % 10 == 0 ? "\n" : ""),
              floor(chan_sinad_results_db[freq_idx] / kFidelityDbTolerance) * kFidelityDbTolerance);
     }
     printf("\n\n");
@@ -377,45 +394,55 @@ void HermeticFidelityTest::Run(
   // We'll need this potentially-fractional input-signal-length value later.
   auto input_signal_frames_to_measure_double = output_frame_to_input_frame(kFreqTestBufSize);
 
-  // Buffers are of course integral in length, but frequencies need not be. We want a specific
-  // (integer) number of signal wavelengths to fit within the output buffer analysis section, which
-  // (regardless of rate-conversion ratio) translates into the SAME integer of signal wavelengths in
-  // our input signal (input_signal_frames_to_measure). However, buffers must have integral length!
-  // If our ideal input buffer length would be fractional, then we adjust the length and compensate
-  // for it later on. So (1) we choose to make it slightly too-large rather than too-small (although
-  // quality is approx. equivalent either way), and (2) we adjust the frequency correspondingly, so
-  // that effectively that same integer number of signal wavelengths fits perfectly in a FRACTIONAL
-  // input length. Post-rate-conversion, we'll again see a perfectly integral frequency within an
-  // integral output buffer.
-
-  // Here's the actual input-signal-buffer-length value that we use.
+  // Our frequency analysis does not window the output it receives, which means we want a specific
+  // number of (integral) signal wavelengths to fit within the OUTPUT buffer analysis section.
+  // We want the SAME number of wavelengths in our INPUT signal (regardless of rate-conversion
+  // ratio), but the LENGTH of that input signal is scaled by rate-conversion ratio and becomes
+  // input_signal_frames_to_measure.
+  //
+  // However, certain rate-conversion ratios WOULD lead to non-integral input buffer lengths!
+  // Buffer lengths of course must be integral, but frequencies need not be.
+  // If our ideal input length WOULD be fractional, we (1) "ceiling" the input buffer length to be
+  // integral, then compensate later by (2) adjusting input frequency correspondingly.
+  // We insert a slightly-larger number of signal wavelengths in our slightly-larger (integral)
+  // input buffer, which is equivalent to inserting the intended (integral) number of signal
+  // wavelengths in the FRACTIONAL input length that (via rate-conversion) will translate perfectly
+  // to the integral frequency, within an output buffer of the required integral length.
+  //
+  // Here's the actual (integral) signal length corresponding to the output section we analyze.
+  // We use input_signal_frames_to_measure_double later, if we must adjust the source frequency.
   auto input_signal_frames_to_measure =
       static_cast<int64_t>(std::ceil(input_signal_frames_to_measure_double));
 
-  //
-  // Compute the full input signal length: it should first include time to ramp in, then the number
-  // of frames that we actually analyze, and then time to ramp out.
-  //
-  // Although we do not analyze the ramp-in and ramp-out sections in the OUTPUT buffer, they are
-  // essential to include in the SOURCE buffer as they contribute significantly to output values
-  // near the analysis section's leading and trailing edges.
-  auto input_signal_frames =
-      tc.pipeline.neg_filter_width + input_signal_frames_to_measure + tc.pipeline.pos_filter_width;
+  // Compute lengths of the other portions of our full input signal, so that we generate an output
+  // signal with a fully-stabilized steady-state analysis section. The input signal should include
+  // (1) enough silent frames for a complete output ramp-in, then
+  // (2) enough signal frames for output "post-signal-start stabilization", then
+  // (3) the input frames that become the output section that we actually analyze, then
+  // (4) enough additional input frames to postpone the output's "pre-signal-end destabilization"
+  //     section until after the analysis section.
+  // (5) for now, we also include final silence, as this seems to make results more stable. This
+  //     SHOULD not be needed and thus needs to be investigated and more fully understood.
+  auto init_silence_len = tc.pipeline.pos_filter_width;
+  auto init_stabilization_len = tc.pipeline.neg_filter_width;
+  auto final_stabilization_len = tc.pipeline.pos_filter_width;
+  auto final_silence_len = tc.pipeline.neg_filter_width;
+  auto input_signal_len =
+      init_stabilization_len + input_signal_frames_to_measure + final_stabilization_len;
 
-  //
-  // Compute the renderer payload buffer size (including pre-signal silence).
-  // TODO(mpuryear): revisit, once pipeline automatically handles filter_width by feeding silence.
-  auto input_signal_start = tc.pipeline.pos_filter_width;
-  auto total_input_frames = input_signal_start + input_signal_frames;
+  auto total_input_buffer_len = init_silence_len + input_signal_len + final_silence_len;
   if constexpr (kDebugInputBuffer) {
-    FX_LOGS(INFO) << "input_signal_start " << input_signal_start
-                  << ", input_signal_frames_to_measure " << input_signal_frames_to_measure
-                  << ", total_input_frames " << total_input_frames;
+    FX_LOGS(INFO) << "init_silence_len " << init_silence_len << " + pre-stabilization "
+                  << init_stabilization_len << " + frames_to_measure "
+                  << input_signal_frames_to_measure << " + post-stabilization "
+                  << final_stabilization_len << " + final_silence_len " << final_silence_len
+                  << " = total buffer " << total_input_buffer_len;
   }
 
   auto input_type_mono =
       Format::Create<InputFormat>(1, tc.input_format.frames_per_second()).take_value();
-  auto bookend_silence = GenerateSilentAudio(input_type_mono, input_signal_start);
+  auto init_silence = GenerateSilentAudio(input_type_mono, init_silence_len);
+  auto final_silence = GenerateSilentAudio(input_type_mono, final_silence_len);
 
   // We create the AudioBuffer later. Ensure no out-of-range channels are requested to play.
   for (const auto& channel : tc.channels_to_play) {
@@ -423,13 +450,12 @@ void HermeticFidelityTest::Run(
         << "Cannot play out-of-range input channel";
   }
 
-  //
-  // Then, calculate the length of the output signal and set up the VAD, with a 1-sec ring-buffer.
-  // We round up any partial frames, to guarantee we have adequate space for the full signal
-  // including initial silence, full ramp-in, the signal to be analyzed, and full ramp-out.
-  //
+  // Calculate the output buffer length needed for our total input signal (initial silence, full
+  // ramp-in, the signal to be analyzed, and full ramp-out). Set up a virtual audio device with
+  // a ring-buffer large enough to receive that output length. Round up any partial frames, to
+  // guarantee we have adequate output space for the full input signal.
   auto output_buffer_frames_needed =
-      static_cast<int64_t>(std::ceil(input_frame_to_output_frame(total_input_frames)));
+      static_cast<int64_t>(std::ceil(input_frame_to_output_frame(total_input_buffer_len)));
 
   audio_stream_unique_id_t device_id = AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS;
   if (tc.device_id.has_value()) {
@@ -452,39 +478,63 @@ void HermeticFidelityTest::Run(
   }
 
   // Generate rate-specific internal frequency values for our power-of-two-sized analysis buffer.
-  TranslateReferenceFrequencies(tc.output_format.frames_per_second());
+  TranslateReferenceFrequenciesToPeriods(tc.output_format.frames_per_second());
+  int32_t nyquist_limit =
+      std::min(tc.input_format.frames_per_second(), tc.output_format.frames_per_second()) / 2;
+
+  auto low_pass_frequency = std::min(tc.low_pass_frequency, nyquist_limit);
+  if (tc.low_pass_frequency > low_pass_frequency) {
+    FX_LOGS(INFO) << "low_pass_frequency (" << tc.low_pass_frequency
+                  << ") should not exceed the Nyquist limits for this input/output pair ("
+                  << tc.input_format.frames_per_second() << ", "
+                  << tc.output_format.frames_per_second() << "): reducing low_pass_frequency to "
+                  << low_pass_frequency;
+  }
+  ASSERT_GE(tc.low_cut_frequency, 0)
+      << "low_cut_frequency (" << tc.low_cut_frequency << ") cannot be negative";
+  ASSERT_LT(tc.low_cut_frequency, low_pass_frequency)
+      << "low_cut_frequency (" << tc.low_cut_frequency << ") must be less than low_pass_frequency ("
+      << low_pass_frequency << ")";
 
   // This is the factor mentioned earlier (where we set input_signal_frames_to_measure_double). We
   // apply this adjustment to freq, to perfectly fit an integral number of wavelengths into the
-  // intended FRACTIONAL input buffer length. (This fractional input length is translated via
-  // rate-conversion into the exact integral output buffer length we need for our analysis.)
-  double source_freq_adjustment_factor =
-      input_signal_frames_to_measure / input_signal_frames_to_measure_double;
-  //
-  // Now iterate through the spectrum, completely processing one frequency at a time.
+  // intended FRACTIONAL Input buffer length. (This fractional input length is translated via
+  // rate-conversion into the exact integral Output buffer length used in our analysis.)
+  auto source_rate_adjustment_factor =
+      static_cast<double>(input_signal_len) / input_signal_frames_to_measure_double;
+
+  // Iterate through the spectrum, completely processing one frequency at a time.
   for (auto freq_idx = 0u; freq_idx < kNumReferenceFreqs; ++freq_idx) {
-    auto freq = translated_ref_freqs_[freq_idx];  // The frequency within our power-of-two buffer
-    auto freq_for_display = kReferenceFrequencies[freq_idx];
+    int32_t periods =
+        translated_ref_periods_[freq_idx];  // The frequency within our power-of-two buffer
+    int32_t freq_for_display = kReferenceFrequencies[freq_idx];
+
     if (freq_for_display * 2 > tc.input_format.frames_per_second()) {
       continue;
     }
 
-    // Write input signal to input buffer. Start with silence for pre-ramping, which aligns the
-    // input and output WAV files (if enabled). Prepend / append signal to account for ramp-in/out.
-    // We could include trailing silence to flush out any cached values and show decay, but there is
-    // no need to do so for these tests.
-    auto signal_section = GenerateCosineAudio(input_type_mono, input_signal_frames_to_measure,
-                                              source_freq_adjustment_factor * freq);
-    auto input_mono = bookend_silence;
-    input_mono.Append(AudioBufferSlice(
-        &signal_section, input_signal_frames_to_measure - tc.pipeline.neg_filter_width,
-        input_signal_frames_to_measure));
+    // Write input signal to input buffer. This starts with silence for pre-ramp-in (which aligns
+    // the input and output WAV files, if enabled); we also prepend / append signal to account for
+    // stabilization periods corresponding to input signal start and end.
+    auto adjusted_periods = source_rate_adjustment_factor * static_cast<double>(periods);
+    auto amplitude = SampleFormatTraits<InputFormat>::kUnityValue -
+                     SampleFormatTraits<InputFormat>::kSilentValue;
+    // To make it easier to debug the generation of the input signal, include a phase offset so that
+    // the beginning of the signal section is aligned with the exact beginning of the cosine signal.
+    // But don't apply any phase offset if the frequency is zero.
+    auto phase = periods ? (-2.0 * M_PI * static_cast<double>(init_stabilization_len) *
+                            adjusted_periods / static_cast<double>(input_signal_len))
+                         : 0.0;
+    auto signal_section =
+        GenerateCosineAudio(input_type_mono, input_signal_len, adjusted_periods, amplitude, phase);
+
+    auto input_mono = init_silence;
     input_mono.Append(AudioBufferSlice(&signal_section));
-    input_mono.Append(AudioBufferSlice(&signal_section, 0, tc.pipeline.pos_filter_width));
-    FX_CHECK(input_mono.NumFrames() == static_cast<int64_t>(total_input_frames))
+    input_mono.Append(AudioBufferSlice(&final_silence));
+    FX_CHECK(input_mono.NumFrames() == static_cast<int64_t>(total_input_buffer_len))
         << "Incorrect input_mono length: testcode logic error";
 
-    auto silence_mono = GenerateSilentAudio(input_type_mono, total_input_frames);
+    auto silence_mono = GenerateSilentAudio(input_type_mono, total_input_buffer_len);
 
     std::vector<AudioBufferSlice<InputFormat>> channels;
     for (auto play_channel = 0; play_channel < tc.input_format.channels(); ++play_channel) {
@@ -495,7 +545,7 @@ void HermeticFidelityTest::Run(
       }
     }
     auto input = AudioBuffer<InputFormat>::Interleave(channels);
-    FX_CHECK(input.NumFrames() == static_cast<int64_t>(total_input_frames))
+    FX_CHECK(input.NumFrames() == static_cast<int64_t>(total_input_buffer_len))
         << "Incorrect input length: testcode logic error";
 
     if constexpr (kDebugInputBuffer) {
@@ -505,17 +555,29 @@ void HermeticFidelityTest::Run(
         std::string tag = "\nInput buffer for " + std::to_string(freq_for_display) + " Hz [" +
                           std::to_string(freq_idx) + "]";
         input.Display(0, 16, tag);
-        input.Display(input_signal_start - 16, input_signal_start + 16, "Start of input signal");
-        input.Display(input_signal_start + tc.pipeline.neg_filter_width - 16,
-                      input_signal_start + tc.pipeline.neg_filter_width + 16,
-                      "End of initial ramp-in of input signal");
+        input.Display(init_silence_len - 16, init_silence_len,
+                      "Final init_silence_len (should be silent)");
+        input.Display(init_silence_len, init_silence_len + 16, "Start of init_stabilization_len");
+        input.Display(init_silence_len + init_stabilization_len - 16,
+                      init_silence_len + init_stabilization_len,
+                      "Final init_stabilization_len (should lead to full-scale)");
+        input.Display(init_silence_len + init_stabilization_len,
+                      init_silence_len + init_stabilization_len + 16,
+                      "Start of input_signal_frames_to_measure (should start with full-scale)");
         input.Display(
-            input_signal_start + tc.pipeline.neg_filter_width + input_signal_frames_to_measure - 16,
-            input_signal_start + tc.pipeline.neg_filter_width + input_signal_frames_to_measure + 16,
-            "End of input signal; start of additional ramp-out");
-        input.Display(input_signal_start + input_signal_frames - 16,
-                      input_signal_start + input_signal_frames + 16, "End of additional ramp-out");
-        input.Display(input.NumFrames() - 16, input.NumFrames(), "End of input buffer");
+            init_silence_len + init_stabilization_len + input_signal_frames_to_measure - 16,
+            init_silence_len + init_stabilization_len + input_signal_frames_to_measure,
+            "Final input_signal_frames_to_measure (should lead to roughly full-scale)");
+        input.Display(
+            init_silence_len + init_stabilization_len + input_signal_frames_to_measure,
+            init_silence_len + init_stabilization_len + input_signal_frames_to_measure + 16,
+            "Start of final_stabilization (should start at, or fall from, roughly full-scale)");
+        input.Display(init_silence_len + input_signal_len - 16, init_silence_len + input_signal_len,
+                      "End of final_stabilization");
+        input.Display(init_silence_len + input_signal_len, init_silence_len + input_signal_len + 16,
+                      "Start of final_silence");
+        input.Display(total_input_buffer_len - 16, total_input_buffer_len,
+                      "End of final_silence and end of input buffer");
       }
     }
 
@@ -530,7 +592,7 @@ void HermeticFidelityTest::Run(
     }
 
     // Set up the renderer, run it and retrieve the output.
-    auto ring_buffer = GetRendererOutput(tc.input_format, total_input_frames, tc.path, input,
+    auto ring_buffer = GetRendererOutput(tc.input_format, total_input_buffer_len, tc.path, input,
                                          device, tc.renderer_clock_mode);
 
     // Loop here on each channel to measure...
@@ -542,36 +604,60 @@ void HermeticFidelityTest::Run(
       // analysis section is bookended by full ramps in/out on either side, containing identical
       // data (i.e. the analysis section's first value is repeated immediately after the section
       // ends; conversely its final value is "pre-repeated" immediately prior to section start).
-      auto output_analysis_start = static_cast<int64_t>(std::round(
-          input_frame_to_output_frame(input_signal_start + tc.pipeline.neg_filter_width)));
-      auto output = AudioBufferSlice(&ring_buffer_chan, output_analysis_start,
-                                     output_analysis_start + kFreqTestBufSize);
+      auto output_stabilization_start =
+          static_cast<int64_t>(std::round(input_frame_to_output_frame(init_silence_len)));
+      auto output_analysis_start = static_cast<int64_t>(
+          std::round(input_frame_to_output_frame(init_silence_len + init_stabilization_len)));
+      auto output_analysis_end = output_analysis_start + kFreqTestBufSize;
+      auto output_stabilization_end =
+          output_analysis_end +
+          static_cast<int64_t>(std::round(input_frame_to_output_frame(final_stabilization_len)));
+      auto output = AudioBufferSlice(&ring_buffer_chan, output_analysis_start, output_analysis_end);
 
       if constexpr (kDebugOutputBuffer) {
         if (kDebugBuffersAtAllFrequencies || freq_for_display == kFrequencyForBufferDebugging) {
           // For debugging, show critical locations in the output buffer we retrieved.
           std::string tag = "\nOutput buffer for " + std::to_string(freq_for_display) + " Hz [" +
-                            std::to_string(freq_idx) + "], channel " +
+                            std::to_string(freq_idx) + "] (" + std::to_string(periods) +
+                            "-periods-in-" + std::to_string(kFreqTestBufSize) + ", adjusted-freq " +
+                            std::to_string(adjusted_periods) + "; channel " +
                             std::to_string(channel_spec.channel);
-          ring_buffer_chan.Display(0, 16, tag);
-          ring_buffer_chan.Display(output_analysis_start - 16, output_analysis_start,
-                                   "Leading up to the analysis section");
-          ring_buffer_chan.Display(output_analysis_start, output_analysis_start + 16,
-                                   "Start of analysis section");
-          ring_buffer_chan.Display(output_analysis_start + kFreqTestBufSize - 16,
-                                   output_analysis_start + kFreqTestBufSize,
-                                   "Final row of analysis section");
-          ring_buffer_chan.Display(output_analysis_start + kFreqTestBufSize,
-                                   output_analysis_start + kFreqTestBufSize + 16,
-                                   "Immediately following the analysis section");
-          ring_buffer_chan.Display(ring_buffer_chan.NumFrames() - 16, ring_buffer_chan.NumFrames(),
-                                   "End of output buffer");
+          ring_buffer_chan.Display(0, std::min(kOutputDisplayWindow, output_stabilization_start),
+                                   tag);
+          ring_buffer_chan.Display(output_stabilization_start - kOutputDisplayWindow,
+                                   output_stabilization_start,
+                                   "Final ramp-in (may lead to local overshoot value)");
+          ring_buffer_chan.Display(
+              output_stabilization_start,
+              std::min(output_stabilization_start + kOutputDisplayWindow, output_analysis_start),
+              "Start of initial stabilization (may start with max local overshoot)");
+          ring_buffer_chan.Display(
+              std::max(output_analysis_start - kOutputDisplayWindow, output_stabilization_start),
+              output_analysis_start,
+              "End of initial stabilization (should lead to local max value)");
+          ring_buffer_chan.Display(
+              output_analysis_start, output_analysis_start + kOutputDisplayWindow,
+              "Start of Analysis Section (should start with max value received on this channel)");
+          ring_buffer_chan.Display(
+              output_analysis_end - kOutputDisplayWindow, output_analysis_end,
+              "Final Analysis Section (should resemble end of initial stabilization)");
+          ring_buffer_chan.Display(
+              output_analysis_end, output_analysis_end + kOutputDisplayWindow,
+              "Start of final stabilization (should resemble Start of Analysis Section)");
+          ring_buffer_chan.Display(output_stabilization_end - kOutputDisplayWindow,
+                                   output_stabilization_end,
+                                   "End of final stabilization (should destabilize)");
+          ring_buffer_chan.Display(output_stabilization_end,
+                                   output_stabilization_end + kOutputDisplayWindow,
+                                   "Start of final ramp-out (should ramp out)");
+          ring_buffer_chan.Display(ring_buffer_chan.NumFrames() - kOutputDisplayWindow,
+                                   ring_buffer_chan.NumFrames(), "End of output buffer");
         }
       }
 
       auto channel_is_out_of_band = (channel_spec.freq_resp_lower_limits_db[0] == -INFINITY);
       auto out_of_band = (freq_for_display < tc.low_cut_frequency ||
-                          freq_for_display > tc.low_pass_frequency || channel_is_out_of_band);
+                          freq_for_display > low_pass_frequency || channel_is_out_of_band);
 
       double sinad_db, level_db = 0.0;
       if (out_of_band) {
@@ -586,14 +672,14 @@ void HermeticFidelityTest::Run(
                         << std::setw(8) << sinad_db << " db";
         }
       } else {
-        auto result = MeasureAudioFreqs(output, {static_cast<int32_t>(freq)});
-        level_db = DoubleToDb(result.magnitudes[freq]);
+        auto result = MeasureAudioFreqs(output, {static_cast<int32_t>(periods)});
+        level_db = DoubleToDb(result.magnitudes[periods]);
         if (isinf(level_db) && level_db < 0) {
           // If an expected signal was truly absent (silence), we probably underflowed. This
           // [level_db, sinad_db] pair is meaningless, so set sinad_db to -INFINITY as well.
           sinad_db = -INFINITY;
         } else {
-          sinad_db = DoubleToDb(result.magnitudes[freq] / result.total_magn_other);
+          sinad_db = DoubleToDb(result.magnitudes[periods] / result.total_magn_other);
         }
 
         if constexpr (kDisplayInProgressResults) {
@@ -635,17 +721,20 @@ void HermeticFidelityTest::Run(
             std::string tag = "\nFAILURE (sinad " + std::to_string(sinad_db) +
                               "dB, should have been " + std::to_string(required_sinad) +
                               "dB): \nOutput buffer for " + std::to_string(freq_for_display) +
-                              " Hz [" + std::to_string(freq_idx) + "], channel " +
+                              " Hz [" + std::to_string(freq_idx) + "] (" + std::to_string(periods) +
+                              "-periods-in-" + std::to_string(kFreqTestBufSize) +
+                              ", adjusted-freq " + std::to_string(adjusted_periods) + "; channel " +
                               std::to_string(channel_spec.channel);
-            ring_buffer_chan.Display(output_analysis_start - 32, output_analysis_start, tag);
-            ring_buffer_chan.Display(output_analysis_start, output_analysis_start + 32,
+            ring_buffer_chan.Display(output_analysis_start - kOutputDisplayWindow,
+                                     output_analysis_start, tag);
+            ring_buffer_chan.Display(output_analysis_start,
+                                     output_analysis_start + kOutputDisplayWindow,
                                      "Start of analysis section (should start with max value)");
-            ring_buffer_chan.Display(output_analysis_start + kFreqTestBufSize - 32,
-                                     output_analysis_start + kFreqTestBufSize,
-                                     "Final rows of analysis section");
-            ring_buffer_chan.Display(output_analysis_start + kFreqTestBufSize,
-                                     output_analysis_start + kFreqTestBufSize + 32,
-                                     "Ring-out (should start with max value");
+            ring_buffer_chan.Display(output_analysis_end - kOutputDisplayWindow,
+                                     output_analysis_end, "Final rows of analysis section");
+            ring_buffer_chan.Display(output_analysis_end,
+                                     output_analysis_end + kOutputDisplayWindow,
+                                     "Post-analysis destabilization (should start with max value)");
           }
         }
       }
