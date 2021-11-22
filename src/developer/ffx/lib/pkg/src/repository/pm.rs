@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    super::{Error, FileSystemRepository, RepositoryBackend, RepositorySpec, Resource},
+    super::{
+        Error, FileSystemRepository, RepositoryBackend, RepositorySpec, Resource, ResourceRange,
+    },
     anyhow::Result,
     futures::stream::BoxStream,
     std::{path::PathBuf, time::SystemTime},
@@ -33,6 +35,14 @@ impl RepositoryBackend for PmRepository {
 
     async fn fetch(&self, resource_path: &str) -> Result<Resource, Error> {
         self.repo.fetch(resource_path).await
+    }
+
+    async fn fetch_range(
+        &self,
+        resource_path: &str,
+        range: ResourceRange,
+    ) -> Result<Resource, Error> {
+        self.repo.fetch_range(resource_path, range).await
     }
 
     fn supports_watch(&self) -> bool {

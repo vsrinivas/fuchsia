@@ -3,14 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    super::{Error, RepositoryBackend, Resource},
+    super::{Error, RepositoryBackend, Resource, ResourceRange},
     anyhow::Result,
     bytes::{Bytes, BytesMut},
     fidl_fuchsia_developer_bridge_ext::RepositorySpec,
     futures::{
+        io::SeekFrom,
         ready,
         stream::{self, BoxStream},
-        AsyncRead, Stream, StreamExt,
+        AsyncRead, AsyncSeekExt, Stream, StreamExt,
     },
     log::{error, warn},
     notify::{immediate_watcher, RecursiveMode, Watcher as _},
@@ -55,10 +56,41 @@ impl RepositoryBackend for FileSystemRepository {
     }
 
     async fn fetch(&self, resource_path: &str) -> Result<Resource, Error> {
+        self.fetch_range(resource_path, ResourceRange::RangeFrom { start: 0 }).await
+    }
+
+    async fn fetch_range(
+        &self,
+        resource_path: &str,
+        range: ResourceRange,
+    ) -> Result<Resource, Error> {
         let file_path = sanitize_path(&self.repo_path, resource_path)?;
 
-        let file = async_fs::File::open(&file_path).await?;
+        let mut file = async_fs::File::open(&file_path).await?;
         let len = file.metadata().await?.len();
+
+        match range {
+            ResourceRange::Range { start, end: _ } => file.seek(SeekFrom::Start(start)).await?,
+            ResourceRange::RangeFrom { start } => file.seek(SeekFrom::Start(start)).await?,
+            _ => len,
+        };
+        let len = match range {
+            ResourceRange::Range { start, end } => {
+                if start > end || end > len {
+                    println!("length: {}, start: {}, end: {}", len, start, end);
+                    return Err(Error::RangeNotSatisfiable);
+                }
+                end - start
+            }
+            ResourceRange::RangeTo { end } => {
+                if end > len {
+                    println!("length: {}, end: {}", len, end);
+                    return Err(Error::RangeNotSatisfiable);
+                }
+                end
+            }
+            _ => len,
+        };
 
         Ok(Resource { len, stream: Box::pin(file_stream(file_path, len as usize, file)) })
     }
@@ -219,6 +251,15 @@ mod tests {
         read_stream(f.stream).await
     }
 
+    async fn range_read(
+        repo: &FileSystemRepository,
+        path: &str,
+        range: ResourceRange,
+    ) -> Result<Vec<u8>, Error> {
+        let f = repo.fetch_range(path, range).await?;
+        read_stream(f.stream).await
+    }
+
     async fn read_stream<T>(mut stream: T) -> Result<Vec<u8>, Error>
     where
         T: Stream<Item = io::Result<Bytes>> + Unpin,
@@ -272,6 +313,37 @@ mod tests {
         drop(f);
 
         assert_matches!(read(&repo, "small").await, Ok(b) if b == body);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_range_fetch_small() {
+        let d = tempfile::tempdir().unwrap();
+        let repo = FileSystemRepository::new(d.path().to_path_buf());
+        let body = b"hello world";
+        let mut f = File::create(d.path().join("small")).unwrap();
+        f.write(body).unwrap();
+        drop(f);
+
+        let result = b"el".to_vec();
+        assert_eq!(
+            range_read(&repo, "small", ResourceRange::Range { start: 1, end: 3 }).await.unwrap(),
+            result
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_range_fetch_small_get_err() {
+        let d = tempfile::tempdir().unwrap();
+        let repo = FileSystemRepository::new(d.path().to_path_buf());
+        let body = b"hello world";
+        let mut f = File::create(d.path().join("small")).unwrap();
+        f.write(body).unwrap();
+        drop(f);
+
+        assert!(range_read(&repo, "small", ResourceRange::Range { start: 4, end: 3 })
+            .await
+            .is_err());
+        assert!(range_read(&repo, "small", ResourceRange::RangeTo { end: 12 }).await.is_err());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

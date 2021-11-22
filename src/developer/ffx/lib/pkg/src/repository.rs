@@ -141,6 +141,8 @@ pub enum Error {
     Meta(#[from] fuchsia_pkg::MetaContentsError),
     #[error(transparent)]
     Other(#[from] anyhow::Error),
+    #[error("range not satisfiable")]
+    RangeNotSatisfiable,
 }
 
 impl From<std::io::Error> for Error {
@@ -580,6 +582,12 @@ impl Drop for Repository {
     }
 }
 
+pub enum ResourceRange {
+    Range { start: u64, end: u64 },
+    RangeFrom { start: u64 },
+    RangeTo { end: u64 },
+}
+
 #[async_trait::async_trait]
 pub trait RepositoryBackend: std::fmt::Debug {
     /// Get a [RepositorySpec] for this [Repository]
@@ -587,6 +595,9 @@ pub trait RepositoryBackend: std::fmt::Debug {
 
     /// Fetch a [Resource] from this repository.
     async fn fetch(&self, path: &str) -> Result<Resource, Error>;
+
+    /// Fetch a [Resource] from this repository.
+    async fn fetch_range(&self, path: &str, range: ResourceRange) -> Result<Resource, Error>;
 
     /// Whether or not the backend supports watching for file changes.
     fn supports_watch(&self) -> bool {
