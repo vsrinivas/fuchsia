@@ -1,0 +1,11 @@
+{
+    "short_description": "AMLogic camera MIPI CSI driver",
+    "manufacturer": "AMLogic",
+    "families": [],
+    "models": [
+        "T931"
+    ],
+    "areas": [
+        "Camera"
+    ]
+}

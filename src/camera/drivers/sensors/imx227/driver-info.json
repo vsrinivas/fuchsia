@@ -1,0 +1,11 @@
+{
+    "short_description": "Sony IMX227 image sensor driver",
+    "manufacturer": "Sony",
+    "families": [],
+    "models": [
+        "IMX227"
+    ],
+    "areas": [
+        "Camera"
+    ]
+}

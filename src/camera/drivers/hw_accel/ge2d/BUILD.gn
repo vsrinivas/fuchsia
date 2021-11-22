@@ -72,6 +72,7 @@ fuchsia_driver("ge2d-driver-driver") {
 fuchsia_driver_component("ge2d-driver") {
   component_name = "ge2d"
   deps = [ ":ge2d-driver-driver" ]
+  info = "ge2d-driver-info.json"
 }
 
 fuchsia_system_package("ge2d") {
