@@ -19,12 +19,34 @@ source_set("lib") {
   public_deps = [ "//zircon/system/ulib/async" ]
 }
 
-source_set("llcpp") {
+source_set("devfs_exporter") {
   sources = [
     "devfs_exporter.cc",
     "devfs_exporter.h",
+  ]
+
+  deps = [ ":llcpp" ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.device.fs:fuchsia.device.fs_llcpp",
+    "//src/lib/storage/vfs/cpp",
+  ]
+}
+
+source_set("inspect") {
+  sources = [
     "inspect.cc",
     "inspect.h",
+  ]
+
+  public_deps = [
+    "//src/lib/storage/vfs/cpp",
+    "//zircon/system/ulib/inspect",
+  ]
+}
+
+source_set("llcpp") {
+  sources = [
     "logger.cc",
     "logger.h",
     "logger_internal.h",
@@ -38,15 +60,11 @@ source_set("llcpp") {
   public_deps = [
     "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner_llcpp",
     "//sdk/fidl/fuchsia.data:fuchsia.data_llcpp",
-    "//sdk/fidl/fuchsia.device.fs:fuchsia.device.fs_llcpp",
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_llcpp",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fit-promise",
     "//sdk/lib/syslog/structured_backend",
-    "//src/lib/storage/vfs/cpp",
-    "//zircon/system/ulib/inspect",
-    "//zircon/system/ulib/zxc",
   ]
 }
 
@@ -62,6 +80,7 @@ executable("llcpp_test") {
   ]
 
   deps = [
+    ":devfs_exporter",
     ":llcpp",
     "//sdk/fidl/fuchsia.device.fs",
     "//sdk/fidl/fuchsia.io",

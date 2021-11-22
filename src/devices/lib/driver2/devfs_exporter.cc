@@ -11,32 +11,36 @@ namespace fdfs = fuchsia_device_fs;
 namespace driver {
 
 zx::status<DevfsExporter> DevfsExporter::Create(const Namespace& ns, async_dispatcher_t* dispatcher,
+                                                fs::SynchronousVfs& vfs,
                                                 const fbl::RefPtr<fs::PseudoDir>& svc_dir) {
   auto result = ns.Connect<fdfs::Exporter>();
   if (result.is_error()) {
     return result.take_error();
   }
   fidl::WireSharedClient<fdfs::Exporter> client(std::move(*result), dispatcher);
-  return zx::ok(DevfsExporter(std::move(client), svc_dir));
+  return zx::ok(DevfsExporter(std::move(client), vfs, svc_dir));
 }
 
 DevfsExporter::DevfsExporter(fidl::WireSharedClient<fdfs::Exporter> exporter,
-                             const fbl::RefPtr<fs::PseudoDir>& svc_dir)
-    : exporter_(std::move(exporter)), svc_dir_(svc_dir) {}
+                             fs::SynchronousVfs& vfs, const fbl::RefPtr<fs::PseudoDir>& svc_dir)
+    : exporter_(std::move(exporter)), vfs_(&vfs), svc_dir_(svc_dir) {}
 
-fpromise::promise<void, zx_status_t> DevfsExporter::Export(std::string_view service_name,
+fpromise::promise<void, zx_status_t> DevfsExporter::Export(std::string_view service_path,
                                                            std::string_view devfs_path,
                                                            uint32_t protocol_id) const {
-  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
-  if (endpoints.is_error()) {
-    return fpromise::make_error_promise(endpoints.status_value());
-  }
+  // Verify that `service_path` exists.
   fbl::RefPtr<fs::Vnode> service;
-  zx_status_t status = svc_dir_->Lookup(service_name, &service);
+  zx_status_t status = svc_dir_->Lookup(service_path, &service);
   if (status != ZX_OK) {
     return fpromise::make_error_promise(status);
   }
-  status = service->ConnectService(endpoints->server.TakeChannel());
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  if (endpoints.is_error()) {
+    return fpromise::make_error_promise(endpoints.status_value());
+  }
+  // Serve a connection to `svc_dir_`.
+  status = vfs_->Serve(std::move(svc_dir_), endpoints->server.TakeChannel(),
+                       fs::VnodeConnectionOptions::ReadWrite());
   if (status != ZX_OK) {
     return fpromise::make_error_promise(status);
   }
@@ -51,8 +55,8 @@ fpromise::promise<void, zx_status_t> DevfsExporter::Export(std::string_view serv
       completer.complete_ok();
     }
   };
-  exporter_->Export(std::move(endpoints->client), fidl::StringView::FromExternal(devfs_path),
-                    protocol_id, std::move(callback));
+  exporter_->Export(std::move(endpoints->client), fidl::StringView::FromExternal(service_path),
+                    fidl::StringView::FromExternal(devfs_path), protocol_id, std::move(callback));
   return bridge.consumer.promise_or(fpromise::error(ZX_ERR_UNAVAILABLE));
 }
 

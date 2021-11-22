@@ -61,6 +61,7 @@ fuchsia_driver("leaf_driver") {
     ":leaf_bind",
     "//src/devices/lib/driver2",
     "//src/devices/lib/driver2:llcpp",
+    "//zircon/system/ulib/async:async-cpp",
   ]
 }
 

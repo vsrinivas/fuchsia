@@ -17,7 +17,7 @@ TEST(Devfs, Export) {
   Devnode root_node("root");
   std::vector<std::unique_ptr<Devnode>> out;
 
-  ASSERT_OK(devfs_export(&root_node, {}, "one/two", 0, out));
+  ASSERT_OK(devfs_export(&root_node, {}, "svc", "one/two", 0, out));
 
   ASSERT_EQ(1, root_node.children.size_slow());
   auto& node_one = root_node.children.front();
@@ -31,7 +31,7 @@ TEST(Devfs, Export_ExcessSeparators) {
   Devnode root_node("root");
   std::vector<std::unique_ptr<Devnode>> out;
 
-  ASSERT_OK(devfs_export(&root_node, {}, "one////two", 0, out));
+  ASSERT_OK(devfs_export(&root_node, {}, "svc", "one////two", 0, out));
 
   ASSERT_EQ(1, root_node.children.size_slow());
   auto& node_one = root_node.children.front();
@@ -45,13 +45,13 @@ TEST(Devfs, Export_OneByOne) {
   Devnode root_node("root");
   std::vector<std::unique_ptr<Devnode>> out;
 
-  ASSERT_OK(devfs_export(&root_node, {}, "one", 0, out));
+  ASSERT_OK(devfs_export(&root_node, {}, "svc", "one", 0, out));
 
   ASSERT_EQ(1, root_node.children.size_slow());
   auto& node_one = root_node.children.front();
   EXPECT_EQ("one", node_one.name);
 
-  ASSERT_OK(devfs_export(&root_node, {}, "one/two", 0, out));
+  ASSERT_OK(devfs_export(&root_node, {}, "svc", "one/two", 0, out));
 
   ASSERT_EQ(1, node_one.children.size_slow());
   auto& node_two = node_one.children.front();
@@ -62,10 +62,15 @@ TEST(Devfs, Export_InvalidPath) {
   Devnode root_node("root");
   std::vector<std::unique_ptr<Devnode>> out;
 
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, devfs_export(&root_node, {}, "", 0, out));
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, devfs_export(&root_node, {}, "/one/two", 0, out));
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, devfs_export(&root_node, {}, "one/two/", 0, out));
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, devfs_export(&root_node, {}, "/one/two/", 0, out));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, devfs_export(&root_node, {}, "", "one", 0, out));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, devfs_export(&root_node, {}, "/svc", "one", 0, out));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, devfs_export(&root_node, {}, "svc/", "one", 0, out));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, devfs_export(&root_node, {}, "/svc/", "one", 0, out));
+
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, devfs_export(&root_node, {}, "svc", "", 0, out));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, devfs_export(&root_node, {}, "svc", "/one/two", 0, out));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, devfs_export(&root_node, {}, "svc", "one/two/", 0, out));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, devfs_export(&root_node, {}, "svc", "/one/two/", 0, out));
 }
 
 TEST(Devfs, Export_WithProtocol) {
@@ -84,8 +89,8 @@ TEST(Devfs, Export_WithProtocol) {
   ASSERT_OK(endpoints.status_value());
   ASSERT_OK(outgoing.Serve(std::move(endpoints->server)));
 
-  fidl::ClientEnd<fio::Node> client(endpoints->client.TakeChannel());
-  ASSERT_OK(devfs_export(&root_node, std::move(client), "one/two", ZX_PROTOCOL_BLOCK, out));
+  ASSERT_OK(devfs_export(&root_node, std::move(endpoints->client), "svc", "one/two",
+                         ZX_PROTOCOL_BLOCK, out));
 
   ASSERT_EQ(1, root_node.children.size_slow());
   auto& node_one = root_node.children.front();
@@ -103,8 +108,8 @@ TEST(Devfs, Export_AlreadyExists) {
   Devnode root_node("root");
   std::vector<std::unique_ptr<Devnode>> out;
 
-  ASSERT_OK(devfs_export(&root_node, {}, "one/two", 0, out));
-  ASSERT_EQ(ZX_ERR_ALREADY_EXISTS, devfs_export(&root_node, {}, "one/two", 0, out));
+  ASSERT_OK(devfs_export(&root_node, {}, "svc", "one/two", 0, out));
+  ASSERT_EQ(ZX_ERR_ALREADY_EXISTS, devfs_export(&root_node, {}, "svc", "one/two", 0, out));
 }
 
 TEST(Devfs, Export_FailedToClone) {
@@ -114,5 +119,6 @@ TEST(Devfs, Export_FailedToClone) {
   Devnode root_node("root");
   std::vector<std::unique_ptr<Devnode>> out;
 
-  ASSERT_EQ(ZX_ERR_BAD_HANDLE, devfs_export(&root_node, {}, "one/two", ZX_PROTOCOL_BLOCK, out));
+  ASSERT_EQ(ZX_ERR_BAD_HANDLE,
+            devfs_export(&root_node, {}, "svc", "one/two", ZX_PROTOCOL_BLOCK, out));
 }

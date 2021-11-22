@@ -36,7 +36,8 @@ struct Devnode : public fbl::DoublyLinkedListable<Devnode*> {
   Device* device = nullptr;
 
   // Set if this devnode is attached to a remote service.
-  fidl::ClientEnd<fuchsia_io::Node> service_node;
+  fidl::ClientEnd<fuchsia_io::Directory> service_dir;
+  std::string service_path;
 
   fbl::DoublyLinkedList<std::unique_ptr<Watcher>> watchers;
 
@@ -82,14 +83,15 @@ void devfs_connect_diagnostics(fidl::UnownedClientEnd<fuchsia_io::Directory> dia
 // relative to the devnode.
 zx_status_t devfs_walk(Devnode* dn, const char* path, fbl::RefPtr<Device>* device_out);
 
-// Exports `service_node` to `devfs_path`, under `dn`. If `protocol_id` matches
-// a known protocol, `service_node` will also be exposed under a class path.
+// Exports `service_path` from `service_dir` to `devfs_path`, under `dn`. If
+// `protocol_id` matches a known protocol, `service_path` will also be exposed
+// under a class path.
 //
 // Every Devnode that is created during the export is stored within `out`. As
 // each of these Devnodes are children of `dn`, they must live as long as `dn`.
-zx_status_t devfs_export(Devnode* dn, fidl::ClientEnd<fuchsia_io::Node> service_node,
-                         std::string_view devfs_path, uint32_t protocol_id,
-                         std::vector<std::unique_ptr<Devnode>>& out);
+zx_status_t devfs_export(Devnode* dn, fidl::ClientEnd<fuchsia_io::Directory> service_dir,
+                         std::string_view service_path, std::string_view devfs_path,
+                         uint32_t protocol_id, std::vector<std::unique_ptr<Devnode>>& out);
 
 // This method is exposed for testing. It returns true if the devfs has active watchers.
 bool devfs_has_watchers(Devnode* dn);

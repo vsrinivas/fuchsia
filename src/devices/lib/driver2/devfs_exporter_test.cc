@@ -20,16 +20,18 @@ namespace flogger = fuchsia_logger;
 
 class TestExporter : public fdfs::testing::Exporter_TestBase {
  public:
-  using ExportHandler = fit::function<zx_status_t(std::string devfs_path, uint32_t protocol_id)>;
+  using ExportHandler = fit::function<zx_status_t(std::string service_path, std::string devfs_path,
+                                                  uint32_t protocol_id)>;
 
   void SetExportHandler(ExportHandler export_handler) {
     export_handler_ = std::move(export_handler);
   }
 
  private:
-  void Export(fidl::InterfaceHandle<fio::Node> service_node, std::string devfs_path,
-              uint32_t protocol_id, ExportCallback callback) override {
-    zx_status_t status = export_handler_(std::move(devfs_path), protocol_id);
+  void Export(fidl::InterfaceHandle<fio::Directory> service_dir, std::string service_path,
+              std::string devfs_path, uint32_t protocol_id, ExportCallback callback) override {
+    zx_status_t status =
+        export_handler_(std::move(service_path), std::move(devfs_path), protocol_id);
     auto result = status == ZX_OK
                       ? fdfs::Exporter_Export_Result::WithResponse(fdfs::Exporter_Export_Response())
                       : fdfs::Exporter_Export_Result::WithErr(std::move(status));
@@ -70,14 +72,18 @@ TEST_F(DevfsExporterTest, Create) {
       fidl::DiscoverableProtocolName<flogger::LogSink>, fbl::MakeRefCounted<fs::Service>(service));
   ASSERT_EQ(ZX_OK, status);
 
-  auto exporter = driver::DevfsExporter::Create(*ns, dispatcher(), outgoing.svc_dir());
+  auto exporter =
+      driver::DevfsExporter::Create(*ns, dispatcher(), outgoing.vfs(), outgoing.svc_dir());
   ASSERT_TRUE(exporter.is_ok());
 
   // Check export is successful.
+  std::string service_path;
   std::string devfs_path;
   uint32_t protocol_id;
-  exporter_server.SetExportHandler([&devfs_path, &protocol_id](std::string path, uint32_t id) {
-    devfs_path = path;
+  exporter_server.SetExportHandler([&service_path, &devfs_path, &protocol_id](
+                                       std::string service, std::string devfs, uint32_t id) {
+    service_path = service;
+    devfs_path = devfs;
     protocol_id = id;
     return ZX_OK;
   });
@@ -87,6 +93,7 @@ TEST_F(DevfsExporterTest, Create) {
   driver::testing::FakeContext context;
   auto result = exported(context);
   ASSERT_TRUE(result.is_ok());
+  EXPECT_EQ(fidl::DiscoverableProtocolName<flogger::LogSink>, service_path);
   EXPECT_EQ("sys/log", devfs_path);
   EXPECT_EQ(1u, protocol_id);
 }
@@ -111,7 +118,8 @@ TEST_F(DevfsExporterTest, Create_ServiceNotFound) {
   svc_binding.Bind(svc->server.TakeChannel(), dispatcher());
 
   service::OutgoingDirectory outgoing(dispatcher());
-  auto exporter = driver::DevfsExporter::Create(*ns, dispatcher(), outgoing.svc_dir());
+  auto exporter =
+      driver::DevfsExporter::Create(*ns, dispatcher(), outgoing.vfs(), outgoing.svc_dir());
   ASSERT_TRUE(exporter.is_ok());
 
   // Check export failure due to missing service.
@@ -147,11 +155,13 @@ TEST_F(DevfsExporterTest, Create_ServiceFailure) {
       fidl::DiscoverableProtocolName<flogger::LogSink>, fbl::MakeRefCounted<fs::Service>(service));
   ASSERT_EQ(ZX_OK, status);
 
-  auto exporter = driver::DevfsExporter::Create(*ns, dispatcher(), outgoing.svc_dir());
+  auto exporter =
+      driver::DevfsExporter::Create(*ns, dispatcher(), outgoing.vfs(), outgoing.svc_dir());
   ASSERT_TRUE(exporter.is_ok());
 
   // Check export failure due to service failure.
-  exporter_server.SetExportHandler([](std::string path, uint32_t id) { return ZX_ERR_INTERNAL; });
+  exporter_server.SetExportHandler([](std::string service_path, std::string devfs_path,
+                                      uint32_t id) { return ZX_ERR_INTERNAL; });
 
   auto exported = exporter->Export<flogger::LogSink>("sys/log", 1);
   RunLoopUntilIdle();

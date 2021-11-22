@@ -187,7 +187,7 @@ bool devnode_is_dir(const Devnode* dn) {
 // Local devnodes are ones that we should not hand off OPEN
 // RPCs to the underlying driver_host
 bool devnode_is_local(Devnode* dn) {
-  if (dn->service_node) {
+  if (dn->service_dir) {
     return false;
   }
   if (dn->device == nullptr) {
@@ -484,8 +484,9 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, fidl::ServerEnd<
       node_info.set_directory(directory);
       describe(zx::ok(std::move(node_info)));
       DcIostate::Bind(std::move(ios), std::move(ipc));
-    } else if (dn->service_node) {
-      fidl::WireCall(dn->service_node)->Clone(flags, std::move(ipc));
+    } else if (dn->service_dir) {
+      fidl::WireCall(dn->service_dir)
+          ->Open(flags, 0, fidl::StringView::FromExternal(dn->service_path), std::move(ipc));
     } else {
       dn->device->device_controller()->Open(flags, 0, ".", std::move(ipc));
     }
@@ -828,11 +829,14 @@ zx_status_t devfs_walk(Devnode* dn, const char* path, fbl::RefPtr<Device>* dev) 
   return ZX_OK;
 }
 
-zx_status_t devfs_export(Devnode* dn, fidl::ClientEnd<fuchsia_io::Node> service_node,
-                         std::string_view devfs_path, uint32_t protocol_id,
-                         std::vector<std::unique_ptr<Devnode>>& out) {
+zx_status_t devfs_export(Devnode* dn, fidl::ClientEnd<fuchsia_io::Directory> service_dir,
+                         std::string_view service_path, std::string_view devfs_path,
+                         uint32_t protocol_id, std::vector<std::unique_ptr<Devnode>>& out) {
   // Check if the `devfs_path` provided is valid.
-  if (devfs_path.empty() || devfs_path.front() == '/' || devfs_path.back() == '/') {
+  const auto is_valid_path = [](std::string_view path) {
+    return !path.empty() && path.front() != '/' && path.back() != '/';
+  };
+  if (!is_valid_path(service_path) || !is_valid_path(devfs_path)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -870,8 +874,8 @@ zx_status_t devfs_export(Devnode* dn, fidl::ClientEnd<fuchsia_io::Node> service_
     return ZX_ERR_ALREADY_EXISTS;
   }
 
-  // Create Devnodes for the remainder of the path, and attach `service_node` to
-  // the leaf Devnode.
+  // Create Devnodes for the remainder of the path, and set `service_dir` and
+  // `service_path` on the leaf Devnode.
   dn = prev_dn;
   walk([&out, &dn](std::string_view name) {
     out.push_back(devfs_mkdir(dn, name));
@@ -879,7 +883,8 @@ zx_status_t devfs_export(Devnode* dn, fidl::ClientEnd<fuchsia_io::Node> service_
     dn = out.back().get();
     return true;
   });
-  dn->service_node = std::move(service_node);
+  dn->service_dir = std::move(service_dir);
+  dn->service_path = service_path;
 
   // If a protocol directory exists for `protocol_id`, then create a Devnode
   // under the protocol directory too.
@@ -897,12 +902,14 @@ zx_status_t devfs_export(Devnode* dn, fidl::ClientEnd<fuchsia_io::Node> service_
     if (endpoints.is_error()) {
       return endpoints.status_value();
     }
-    out.back()->service_node = std::move(endpoints->client);
-    auto result = fidl::WireCall(dn->service_node)
+    auto result = fidl::WireCall(dn->service_dir)
                       ->Clone(ZX_FS_FLAG_CLONE_SAME_RIGHTS, std::move(endpoints->server));
     if (!result.ok()) {
       return result.status();
     }
+    Devnode* class_dn = out.back().get();
+    class_dn->service_dir.channel().swap(endpoints->client.channel());
+    class_dn->service_path = service_path;
   }
 
   return ZX_OK;

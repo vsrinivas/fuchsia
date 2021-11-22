@@ -29,8 +29,9 @@ zx::status<> DevfsExporter::PublishExporter(const fbl::RefPtr<fs::PseudoDir>& sv
 }
 
 void DevfsExporter::Export(ExportRequestView request, ExportCompleter::Sync& completer) {
-  zx_status_t status = devfs_export(root_, std::move(request->service_node),
-                                    request->devfs_path.get(), request->protocol_id, devnodes_);
+  zx_status_t status =
+      devfs_export(root_, std::move(request->service_dir), request->service_path.get(),
+                   request->devfs_path.get(), request->protocol_id, devnodes_);
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to export service to devfs path \"%.*s\": %s",
          static_cast<int>(request->devfs_path.size()), request->devfs_path.data(),
