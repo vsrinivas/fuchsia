@@ -47,7 +47,7 @@ match are automatically bound.
 In this case, a driver that binds to a "PCI root" parent is found, and bound.
 
 This is the base PCI driver.
-It's job is to configure the PCI bus, and enumerate the peripherals on the bus.
+Its job is to configure the PCI bus, and enumerate the peripherals on the bus.
 
 The PCI bus has specific conventions for how peripherals are identified:
 a combination of a Vendor ID (**VID**) and Device ID (**DID**) uniquely identifies
