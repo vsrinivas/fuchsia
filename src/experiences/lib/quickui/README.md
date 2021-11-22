@@ -1,1 +1,0 @@
-A library to build user interfaces for quick settings and interruptions.

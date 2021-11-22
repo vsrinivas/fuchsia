@@ -120,7 +120,6 @@ dart_library("lib") {
     "//sdk/fidl/fuchsia.wlan.policy",
     "//src/experiences/session_shells/ermine/internationalization",
     "//src/experiences/session_shells/ermine/keyboard_shortcuts",
-    "//src/experiences/session_shells/ermine/settings",
     "//src/experiences/session_shells/ermine/utils:ermine_utils",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/git/flutter/packages/flutter_driver",

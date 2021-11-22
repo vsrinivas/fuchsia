@@ -14,13 +14,10 @@ group("dart_unittests") {
   _flutter_tester_tests = []
   if (host_os != "mac") {
     _flutter_tester_tests += [
-      "ermine/settings:ermine_settings_unittests($host_toolchain)",
       "ermine/shell:ermine_unittests($host_toolchain)",
       "ermine/keyboard_shortcuts:keyboard_shortcuts_unittests($host_toolchain)",
     ]
   }
 
-  deps =
-      [ "//src/experiences/lib/quickui:quickui_unittests($host_toolchain)" ] +
-      _flutter_tester_tests
+  deps = _flutter_tester_tests
 }
