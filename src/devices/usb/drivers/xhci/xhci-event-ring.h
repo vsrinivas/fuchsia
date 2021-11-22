@@ -117,29 +117,7 @@ class EventRing {
   TRBPromise WaitForPortStatusChange(uint8_t port_id);
   TRBPromise LinkUp(uint8_t port_id);
   void CallPortStatusChanged(fbl::RefPtr<PortStatusChangeState> state);
-  Control AdvanceErdp() {
-    fbl::AutoLock l(&segment_mutex_);
-    erdp_ = (erdp_ + 1) % segments_.TrbCount();
-    if (unlikely((reinterpret_cast<size_t>(erdp_virt_ + 1) / 4096) !=
-                 (reinterpret_cast<size_t>(erdp_virt_) / 4096))) {
-      // Page transition -- next buffer
-      if (unlikely(!erdp_)) {
-        // Wrap around
-        ccs_ = !ccs_;
-        buffers_it_ = buffers_.begin();
-      } else {
-        buffers_it_++;
-      }
-      erdp_virt_ = reinterpret_cast<TRB*>((*buffers_it_).virt());
-      erdp_phys_ = (*buffers_it_).phys();
-      segment_index_ =
-          static_cast<uint8_t>((segment_index_ + 1) % segments_.SegmentCount()) & 0b111;
-    } else {
-      erdp_virt_++;
-      erdp_phys_ += sizeof(TRB);
-    }
-    return Control::FromTRB(erdp_virt_);
-  }
+  Control AdvanceErdp(bool start);
   // USB 3.0 device attach
   void Usb3DeviceAttach(uint16_t port_id);
   // USB 2.0 device attach
@@ -157,9 +135,6 @@ class EventRing {
 
   // Virtual address of the event ring dequeue pointer
   TRB* erdp_virt_ = nullptr;
-
-  // Event ring dequeue pointer (index)
-  size_t erdp_ = 0;
 
   // Event ring dequeue pointer (physical address)
   zx_paddr_t erdp_phys_ = 0;
@@ -186,6 +161,7 @@ class EventRing {
   // Interrupt management register
   IMAN iman_reg_;
   uint8_t segment_index_ __TA_GUARDED(segment_mutex_) = 0;
+  bool new_segment_ __TA_GUARDED(segment_mutex_) = false;
   UsbXhci* hci_;
   uint8_t cap_length_;
   HCSPARAMS1 hcs_params_1_;

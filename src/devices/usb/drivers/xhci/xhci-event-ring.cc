@@ -114,6 +114,7 @@ zx_status_t EventRing::AddTRB() {
     if (status != ZX_OK) {
       return status;
     }
+    new_segment_ = true;
     return ZX_OK;
   }
   return ZX_OK;
@@ -147,7 +148,6 @@ zx_status_t EventRing::AddSegment() {
   if (!erdp_phys_) {
     erdp_phys_ = buffer->phys();
     erdp_virt_ = static_cast<TRB*>(buffer->virt());
-    erdp_ = 0;
     needs_iterator = true;
   }
   buffers_.push_back(std::move(buffer));
@@ -410,6 +410,81 @@ std::variant<bool, std::unique_ptr<TRBContext>> EventRing::StallWorkaroundForDef
   return context;
 }
 
+Control EventRing::AdvanceErdp(bool start) {
+  enum {
+    STOP = 0,
+    INCREMENT = 1,
+    NEXT = 2,
+    WRAP_AROUND = 3,
+  } action = STOP;
+
+  fbl::AutoLock l(&segment_mutex_);
+  if (unlikely((reinterpret_cast<size_t>(erdp_virt_ + 1) / 4096) !=
+               (reinterpret_cast<size_t>(erdp_virt_) / 4096))) {
+    // Page transition -- next buffer
+    if (unlikely(buffers_it_ == --buffers_.end())) {
+      // Wrap around
+      action = WRAP_AROUND;
+    } else if (unlikely(new_segment_ && (buffers_it_ == --(--buffers_.end())))) {
+      // New segment (always the last segment and only one at a time)
+      // Check for valid Completion Code
+      if (static_cast<CommandCompletionEvent*>(buffers_.back().virt())->CompletionCode() ==
+          CommandCompletionEvent::Invalid) {
+        // Invalid completion code. New segment not in use yet.
+        if (Control::FromTRB(reinterpret_cast<TRB*>(buffers_.front().virt())).Cycle() == ccs_) {
+          // Empty ring, re-evaluate next time. No internal state should be changed if we return
+          // here. Return an TRB with ccs as opposite what is expected to stop advancement of
+          // pointer.
+          return Control::Get().FromValue(0).set_Cycle(!ccs_);
+        }
+        // Non-empty ring. Wrap around to beginning.
+        action = WRAP_AROUND;
+      } else {
+        // Valid completion code. New segment already in use.
+        action = NEXT;
+      }
+      new_segment_ = false;
+    } else {
+      // Not new segment.
+      action = NEXT;
+    }
+  } else {
+    action = INCREMENT;
+  }
+
+  // First round through, just evaluate if this is valid and do not advance.
+  if (!start) {
+    switch (action) {
+      case INCREMENT: {
+        // Increment within segment
+        erdp_virt_++;
+        erdp_phys_ += sizeof(TRB);
+      } break;
+      case NEXT: {
+        // Next segment
+        buffers_it_++;
+        erdp_virt_ = reinterpret_cast<TRB*>((*buffers_it_).virt());
+        erdp_phys_ = (*buffers_it_).phys();
+        segment_index_ = (segment_index_ + 1) & 0b111;
+      } break;
+      case WRAP_AROUND: {
+        // Wrap around to first segment
+        ccs_ = !ccs_;
+        buffers_it_ = buffers_.begin();
+        erdp_virt_ = reinterpret_cast<TRB*>((*buffers_it_).virt());
+        erdp_phys_ = (*buffers_it_).phys();
+        segment_index_ = 0;
+      } break;
+      default: {
+        zxlogf(ERROR, "This should not happen.");
+      } break;
+    }
+  }
+
+  trbs_--;
+  return Control::FromTRB(erdp_virt_);
+}
+
 zx_status_t EventRing::HandleIRQ() {
   iman_reg_.set_IP(1).set_IE(1).WriteTo(mmio_);
   bool avoid_yield = false;
@@ -426,8 +501,8 @@ zx_status_t EventRing::HandleIRQ() {
   // we could safely yield after flushing our caches and wouldn't need this loop.
   do {
     avoid_yield = false;
-    for (Control control = Control::FromTRB(erdp_virt_); control.Cycle() == ccs_;
-         control = AdvanceErdp()) {
+    for (Control control = AdvanceErdp(true); control.Cycle() == ccs_;
+         control = AdvanceErdp(false)) {
       switch (control.Type()) {
         case Control::PortStatusChangeEvent: {
           // Section 4.3 -- USB device intialization
