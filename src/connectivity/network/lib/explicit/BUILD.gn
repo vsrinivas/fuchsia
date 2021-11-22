@@ -1,0 +1,17 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_library.gni")
+
+rustc_library("explicit") {
+  name = "explicit"
+  version = "0.1.0"
+  edition = "2021"
+  with_unit_tests = false
+
+  sources = [ "src/lib.rs" ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
+}
