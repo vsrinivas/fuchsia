@@ -95,4 +95,14 @@ size_checker_input = {
       creep_limit = 1048576
     },
   ]
+
+  non_blobfs_components = [
+    {
+      component = "Update Package"
+      blobs_json_path =
+          "obj/build/images/fuchsia/update/update_package_manifest.json"
+      limit = 104857600
+      creep_limit = 1048576
+    },
+  ]
 }
