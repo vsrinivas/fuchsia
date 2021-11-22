@@ -14,13 +14,13 @@ use {
 /// Combines pagination results into a single vector.
 pub async fn get_device_info(
     service: &fdd::DriverDevelopmentProxy,
-    device_filter: &mut dyn ExactSizeIterator<Item = &str>,
+    device_filter: &[String],
 ) -> Result<Vec<fdd::DeviceInfo>> {
     let (iterator, iterator_server) =
         fidl::endpoints::create_proxy::<fdd::DeviceInfoIteratorMarker>()?;
 
     service
-        .get_device_info(device_filter, iterator_server)
+        .get_device_info(&mut device_filter.iter().map(String::as_str), iterator_server)
         .context("FIDL call to get device info failed")?;
 
     let mut info_result = Vec::new();
@@ -38,13 +38,13 @@ pub async fn get_device_info(
 /// Combines pagination results into a single vector.
 pub async fn get_driver_info(
     service: &fdd::DriverDevelopmentProxy,
-    driver_filter: &mut dyn ExactSizeIterator<Item = &str>,
+    driver_filter: &[String],
 ) -> Result<Vec<fdd::DriverInfo>> {
     let (iterator, iterator_server) =
         fidl::endpoints::create_proxy::<fdd::DriverInfoIteratorMarker>()?;
 
     service
-        .get_driver_info(driver_filter, iterator_server)
+        .get_driver_info(&mut driver_filter.iter().map(String::as_str), iterator_server)
         .context("FIDL call to get driver info failed")?;
 
     let mut info_result = Vec::new();
@@ -110,8 +110,8 @@ pub async fn user_choose_selector(
         let line = line_editor.readline("$ ")?;
         let choice = line.trim().parse::<usize>();
         if choice.is_err() {
-                println!("Error: please choose a value.");
-                continue;
+            println!("Error: please choose a value.");
+            continue;
         }
         let choice = choice.unwrap();
         if choice >= capabilities.len() {

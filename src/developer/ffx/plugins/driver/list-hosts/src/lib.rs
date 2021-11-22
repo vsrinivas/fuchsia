@@ -19,7 +19,7 @@ pub async fn list_hosts(
     service: DriverDevelopmentProxy,
     _cmd: DriverListHostsCommand,
 ) -> Result<()> {
-    let device_info = get_device_info(&service, &mut [].iter().map(String::as_str)).await?;
+    let device_info = get_device_info(&service, &[]).await?;
 
     let mut driver_hosts = BTreeMap::new();
 

@@ -17,13 +17,12 @@ use {
     DriverDevelopmentProxy = "bootstrap/driver_manager:expose:fuchsia.driver.development.DriverDevelopment"
 )]
 pub async fn list(service: DriverDevelopmentProxy, cmd: DriverListCommand) -> Result<()> {
-    let mut empty1 = [].iter().map(String::as_str);
-    let driver_info = get_driver_info(&service, &mut empty1);
+    let empty: [String; 0] = [];
+    let driver_info = get_driver_info(&service, &empty);
 
     let driver_info = if cmd.loaded {
         // Query devices and create a hash set of loaded drivers.
-        let mut empty2 = [].iter().map(String::as_str);
-        let device_info = get_device_info(&service, &mut empty2);
+        let device_info = get_device_info(&service, &empty);
 
         // Await the futures concurrently.
         let (driver_info, device_info) = join!(driver_info, device_info);

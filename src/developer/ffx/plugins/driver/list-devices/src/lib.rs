@@ -28,8 +28,8 @@ pub async fn list_devices(
     let service =
         remotecontrol_connect::<DriverDevelopmentMarker>(&remote_control, &selector).await?;
     let device_info = match cmd.device {
-        Some(device) => get_device_info(&service, &mut [device].iter().map(String::as_str)).await?,
-        None => get_device_info(&service, &mut [].iter().map(String::as_str)).await?,
+        Some(device) => get_device_info(&service, &[device]).await?,
+        None => get_device_info(&service, &[]).await?,
     };
 
     if cmd.verbose {

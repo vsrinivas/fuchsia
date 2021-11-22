@@ -29,8 +29,7 @@ pub async fn debug_bind_impl<W: std::io::Write>(
     cmd: DriverDebugBindCommand,
     writer: &mut W,
 ) -> Result<()> {
-    let driver_info =
-        get_driver_info(&service, &mut [cmd.driver_path].iter().map(String::as_str)).await?;
+    let driver_info = get_driver_info(&service, &[cmd.driver_path]).await?;
 
     if driver_info.len() != 1 {
         return Err(format_err!(
@@ -47,8 +46,7 @@ pub async fn debug_bind_impl<W: std::io::Write>(
             }
         };
 
-    let mut device_info =
-        get_device_info(&service, &mut [cmd.device_path].iter().map(String::as_str)).await?;
+    let mut device_info = get_device_info(&service, &[cmd.device_path]).await?;
 
     if device_info.len() != 1 {
         return Err(format_err!(

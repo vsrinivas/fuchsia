@@ -21,7 +21,7 @@ fn extract_name<'a>(topo_path: &'a str) -> &'a str {
     fdd::DriverDevelopmentProxy = "bootstrap/driver_manager:expose:fuchsia.driver.development.DriverDevelopment"
 )]
 pub async fn dump(service: fdd::DriverDevelopmentProxy, cmd: DriverDumpCommand) -> Result<()> {
-    let device_info = get_device_info(&service, &mut [].iter().map(String::as_str)).await?;
+    let device_info = get_device_info(&service, &[]).await?;
 
     let device_map = device_info
         .iter()
