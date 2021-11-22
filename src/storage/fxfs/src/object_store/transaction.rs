@@ -34,7 +34,7 @@ use {
 
 /// `Options` are provided to types that expose the `TransactionHandler` trait.
 ///
-/// This allows for allow special handling of certain transactions such as deletes and the
+/// This allows for special handling of certain transactions such as deletes and the
 /// extension of Journal extents. For most other use cases it is appropriate to use
 /// `default()` here.
 #[derive(Clone, Copy, Default)]
@@ -118,7 +118,7 @@ pub trait TransactionHandler: Send + Sync {
     async fn write_lock<'a>(&'a self, lock_keys: &[LockKey]) -> WriteGuard<'a>;
 }
 
-/// The journal consists of these records which will be replayed at mount time.  Within a a
+/// The journal consists of these records which will be replayed at mount time.  Within a
 /// transaction, these are stored as a set which allows some mutations to be deduplicated and found
 /// (and we require custom comparison functions below).  For example, we need to be able to find
 /// object size changes.
