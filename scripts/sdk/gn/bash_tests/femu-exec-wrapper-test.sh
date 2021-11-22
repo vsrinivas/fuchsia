@@ -17,7 +17,7 @@ return 3
 INPUT
 
   # Make fssh never connect, because the emulator did not start
-  cat>"${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fssh.sh.mock_side_effects" <<INPUT
+  cat>"${MOCKED_FSSH}.mock_side_effects" <<INPUT
   echo "Cannot connect" > /dev/stderr
   # ssh returns 255 when there is a failure to connect to the host.
   return 255
@@ -166,8 +166,9 @@ BT_FILE_DEPS=(
 BT_MOCKED_TOOLS=(
   scripts/sdk/gn/base/tools/x64/fconfig
   scripts/sdk/gn/base/tools/arm64/fconfig
+  scripts/sdk/gn/base/tools/x64/fssh
+  scripts/sdk/gn/base/tools/arm64/fssh
   scripts/sdk/gn/base/bin/femu.sh
-  scripts/sdk/gn/base/bin/fssh.sh
   scripts/sdk/gn/base/bin/fserve.sh
   script.sh
   isolated/ps
@@ -184,6 +185,7 @@ BT_SET_UP() {
   export HOME="${BT_TEMP_DIR}/test-home"
 
   MOCKED_FCONFIG="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/fconfig"
+  MOCKED_FSSH="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/fssh"
 }
 
 BT_RUN_TESTS "$@"

@@ -32,6 +32,8 @@ SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
 # shellcheck disable=SC1090
 source "${SCRIPT_SRC_DIR}/fuchsia-common.sh" || exit $?
 
+readonly TOOL_DIR="$(get-fuchsia-sdk-tools-dir)"
+
 function get_child_pids {
   children=()
   if is-mac; then
@@ -162,7 +164,7 @@ COUNT=0
 COUNT_TIMEOUT=120
 while [[ $COUNT -lt $COUNT_TIMEOUT ]] ; do
   kill -0 ${FEMU_PID} &> /dev/null || { echo "ERROR: Emulator pid $FEMU_PID has exited, cannot connect"; dump_femu_log; exit 1; }
-  "${SCRIPT_SRC_DIR}/fssh.sh" --device-ip "${EMULATOR_ADDRESS}" "echo hello" &> /dev/null && break
+  "${TOOL_DIR}/fssh" --device-ip "${EMULATOR_ADDRESS}" "echo hello" &> /dev/null && break
   echo "Waiting for emulator SSH server ${EMULATOR_ADDRESS} - attempt ${COUNT} ..."
   COUNT=$((COUNT+1))
   sleep 1s

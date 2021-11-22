@@ -56,7 +56,6 @@ The internal GN SDK helper scripts can be executed after the GN SDK has been gen
 ```sh
 $ gn_sdk_dir/bin/fserve.sh
 $ gn_sdk_dir/bin/fpave.sh
-$ gn_sdk_dir/bin/fssh.sh
 $ gn_sdk_dir/bin/femu.sh
 ```
 

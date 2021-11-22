@@ -33,10 +33,6 @@
       "type": "host_tool"
     },
     {
-      "meta": "bin/fssh-meta.json",
-      "type": "host_tool"
-    },
-    {
       "meta": "build/gn-build-files-meta.json",
       "type": "documentation"
     },
