@@ -401,7 +401,6 @@ EOF
 # behavior of generate.py by copying these files into scripts/sdk/gn/base/bin/devshell
 # shellcheck disable=SC2034
 BT_FILE_DEPS=(
-  scripts/sdk/gn/base/bin/fconfig.sh
   scripts/sdk/gn/base/bin/femu.sh
   scripts/sdk/gn/base/bin/devshell/lib/image_build_vars.sh
   scripts/sdk/gn/base/bin/fuchsia-common.sh

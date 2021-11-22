@@ -320,7 +320,6 @@ TEST_fserve_custom_sshconfig(){
 # shellcheck disable=SC2034
 BT_FILE_DEPS=(
   scripts/sdk/gn/base/bin/fserve.sh
-  scripts/sdk/gn/base/bin/fconfig.sh
   scripts/sdk/gn/base/bin/fuchsia-common.sh
   scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh
 )

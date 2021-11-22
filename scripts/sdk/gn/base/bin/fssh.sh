@@ -19,10 +19,10 @@ function usage {
   echo "    This message."
   echo "  [--device-name <device hostname>]"
   echo "    Connects to the device with the given device hostname. Cannot be used with --device-ip."
-  echo "    Defaults to the value from \`fconfig.sh get device-name\`."
+  echo "    Defaults to the value from \`fconfig get device-name\`."
   echo "  [--device-ip <device ip>]"
   echo "    Connects to the device with the given device ip address. Cannot be used with --device-name."
-  echo "    Defaults to the value from \`fconfig.sh get device-ip\`."
+  echo "    Defaults to the value from \`fconfig get device-ip\`."
   echo "    Note: If defaults are configured for both device-name and device-ip, then device-ip is used."
   echo "          If the device is specified at all, then the first device discovered is used."
   echo "  [--private-key <identity file>]"
@@ -91,13 +91,13 @@ if [[ "${DEVICE_IP_ADDR}" == "" && "${DEVICE_NAME_FILTER}" == "" ]]; then
   DEVICE_IP_ADDR="$(get-fuchsia-property device-ip)"
   if [[ -n "${DEVICE_IP_ADDR}" ]]; then
     if [[ -z "${QUIET}" ]]; then
-      echo "Using device address ${DEVICE_IP_ADDR}. Use --device-ip or fconfig.sh to use another device."
+      echo "Using device address ${DEVICE_IP_ADDR}. Use --device-ip or fconfig to use another device."
     fi
   else
     DEVICE_NAME_FILTER="$(get-fuchsia-property device-name)"
     if [[ -n "${DEVICE_NAME_FILTER}" ]]; then
       if [[ -z "${QUIET}" ]]; then
-        echo "Using device name ${DEVICE_NAME_FILTER}. Use --device-name or fconfig.sh to use another device."
+        echo "Using device name ${DEVICE_NAME_FILTER}. Use --device-name or fconfig to use another device."
       fi
     fi
   fi

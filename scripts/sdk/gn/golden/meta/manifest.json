@@ -9,10 +9,6 @@
   "id": "8890373976687374912",
   "parts": [
     {
-      "meta": "bin/fconfig-meta.json",
-      "type": "host_tool"
-    },
-    {
       "meta": "bin/fdevtools-meta.json",
       "type": "host_tool"
     },

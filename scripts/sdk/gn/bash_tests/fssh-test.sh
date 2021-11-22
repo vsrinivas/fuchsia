@@ -52,10 +52,10 @@ readonly EXPECTED_HELP="Usage: fssh.sh [args]
     This message.
   [--device-name <device hostname>]
     Connects to the device with the given device hostname. Cannot be used with --device-ip.
-    Defaults to the value from \`fconfig.sh get device-name\`.
+    Defaults to the value from \`fconfig get device-name\`.
   [--device-ip <device ip>]
     Connects to the device with the given device ip address. Cannot be used with --device-name.
-    Defaults to the value from \`fconfig.sh get device-ip\`.
+    Defaults to the value from \`fconfig get device-ip\`.
     Note: If defaults are configured for both device-name and device-ip, then device-ip is used.
           If the device is specified at all, then the first device discovered is used.
   [--private-key <identity file>]
@@ -238,7 +238,6 @@ TEST_fssh_with_custom_sshconfig() {
 # Test initialization.
 # shellcheck disable=SC2034
 BT_FILE_DEPS=(
-  scripts/sdk/gn/base/bin/fconfig.sh
   scripts/sdk/gn/base/bin/fssh.sh
   scripts/sdk/gn/base/bin/fuchsia-common.sh
   scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh

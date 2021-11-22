@@ -108,7 +108,7 @@ TEST_fserve_remote() {
     fi
 
     # log the call to configure the settings
-    if [[ "$*" =~ "fconfig.sh list" ]]; then
+    if [[ "$*" =~ "fconfig list" ]]; then
       rc=0
       gn-test-log-mock "${0}.fconfig" $rc $@
       return "${rc}"
@@ -158,7 +158,7 @@ EOF
     "cd" "/home/path_to_samples/third_party/fuchsia-sdk" "&&"
     "./tools/x64/fconfig" "set-device" "coffee-coffee-coffee-coffee" "--default" "--device-ip" "127.0.0.1"
     "--image" "image1" "&&"
-    "./bin/fconfig.sh" "list" )
+    "./tools/x64/fconfig" "list" )
   gn-test-check-mock-args "${expected[@]}"
 
   # shellcheck disable=SC1090
@@ -266,7 +266,7 @@ EOF
     fi
 
     # log the call to configure the settings
-    if [[ "$*" =~ "fconfig.sh list" ]]; then
+    if [[ "$*" =~ "fconfig list" ]]; then
       rc=0
       gn-test-log-mock "${0}.fconfig" $rc $@
       return "${rc}"
@@ -317,7 +317,7 @@ EOF
     "cd" "/home/path_to_samples/third_party/fuchsia-sdk" "&&"
     "./tools/x64/fconfig" "set-device" "coffee-coffee-coffee-coffee"
     "--default" "--device-ip" "127.0.0.1" "--bucket" "custom-bucket"
-    "--image" "test-image" "&&" "./bin/fconfig.sh" "list")
+    "--image" "test-image" "&&" "./tools/x64/fconfig" "list")
   gn-test-check-mock-args "${expected[@]}"
 
   # shellcheck disable=SC1090
@@ -424,7 +424,7 @@ TEST_fserve_remote_existing_session() {
     fi
 
     # log the call to configure the settings
-    if [[ "$*" =~ "fconfig.sh list" ]]; then
+    if [[ "$*" =~ "fconfig list" ]]; then
       rc=0
       gn-test-log-mock "${0}.fconfig" $rc $@
       return "${rc}"
@@ -497,7 +497,7 @@ EOF
     "cd" "/home/path_to_samples/third_party/fuchsia-sdk" "&&"
     "./tools/x64/fconfig" "set-device" "coffee-coffee-coffee-coffee"
     "--default" "--device-ip" "127.0.0.1" "--image" "image1" "&&"
-    "./bin/fconfig.sh" "list")
+    "./tools/x64/fconfig" "list")
   gn-test-check-mock-args "${expected[@]}"
 
    # shellcheck disable=SC1090
@@ -609,7 +609,7 @@ TEST_fserve_remote_pm_running() {
     fi
 
     # log the call to configure the settings
-    if [[ "$*" =~ "fconfig.sh list" ]]; then
+    if [[ "$*" =~ "fconfig list" ]]; then
       rc=0
       gn-test-log-mock "${0}.fconfig" $rc $@
       return "${rc}"
@@ -666,7 +666,7 @@ EOF
     "cd" "/home/path_to_samples/third_party/fuchsia-sdk" "&&"
     "./tools/x64/fconfig" "set-device" "coffee-coffee-coffee-coffee"
     "--default" "--device-ip" "127.0.0.1" "--image" "image1" "&&"
-    "./bin/fconfig.sh" "list")
+    "./tools/x64/fconfig" "list")
   gn-test-check-mock-args "${expected[@]}"
 
   # shellcheck disable=SC1090
@@ -708,7 +708,6 @@ EOF
 # behavior of generate.py by copying these files into scripts/sdk/gn/base/bin/devshell
 # shellcheck disable=SC2034
 BT_FILE_DEPS=(
-  scripts/sdk/gn/base/bin/fconfig.sh
   scripts/sdk/gn/base/bin/fserve-remote.sh
   scripts/sdk/gn/base/bin/fuchsia-common.sh
   scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh

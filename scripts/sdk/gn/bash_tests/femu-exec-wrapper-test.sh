@@ -131,7 +131,7 @@ INPUT
 
 TEST_femu_exec_wrapper_with_default_ip_set() {
   # This tests making sure the package server is serving to the emulator, and not the default ip address
-  # set via fconfig.sh.
+  # set via fconfig.
 
     cat >"${MOCKED_FCONFIG}.mock_side_effects" <<"EOF"
 
@@ -158,7 +158,6 @@ EOF
 # behavior of generate.py by copying these files into scripts/sdk/gn/base/bin/devshell
 # shellcheck disable=SC2034
 BT_FILE_DEPS=(
-  scripts/sdk/gn/base/bin/fconfig.sh
   scripts/sdk/gn/base/bin/femu-exec-wrapper.sh
   scripts/sdk/gn/base/bin/fuchsia-common.sh
   scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh

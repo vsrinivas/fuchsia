@@ -265,9 +265,9 @@ fi
 
 remote_cmds+=("&&" "${fconfig_cmd}")
 
-# Run fconfig.sh list to print out the settings, this will help diagnosing any
+# Run fconfig list to print out the settings, this will help diagnosing any
 # problems.
-remote_cmds+=("&&" "./bin/fconfig.sh list")
+remote_cmds+=("&&" "./tools/x64/fconfig list")
 if [[ "${DEBUG_FLAG}" != "" ]]; then
   remote_cmds+=("&&" "echo Desktop env is \$(env)")
 fi

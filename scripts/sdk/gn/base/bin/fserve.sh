@@ -40,10 +40,10 @@ usage () {
   echo "    Port number to use when serving the packages.  Defaults to ${FUCHSIA_SERVER_PORT}."
   echo "  [--device-name <device hostname>]"
   echo "    Only serves packages to a device with the given device hostname. Cannot be used with --device-ip."
-  echo "    If neither --device-name nor --device-ip are specified, the device-name configured using fconfig.sh is used."
+  echo "    If neither --device-name nor --device-ip are specified, the device-name configured using fconfig is used."
   echo "  [--device-ip <device ip>]"
   echo "    Only serves packages to a device with the given device ip address. Cannot be used with --device-name."
-  echo "    If neither --device-name nor --device-ip are specified, the device-ip configured using fconfig.sh is used."
+  echo "    If neither --device-name nor --device-ip are specified, the device-ip configured using fconfig is used."
   echo "  [--sshconfig <sshconfig file>]"
   echo "    Use the specified sshconfig file instead of fssh's version."
   echo "  [--kill]"
@@ -128,10 +128,10 @@ if [[ "${DEVICE_IP_ADDR}" == "" && "${DEVICE_NAME_FILTER}" == "" ]]; then
   if [[ -z "${DEVICE_IP_ADDR}" ]]; then
     DEVICE_NAME_FILTER="$(get-fuchsia-property device-name)"
     if [[ -n "${DEVICE_NAME_FILTER}" ]]; then
-      echo "Using device name ${DEVICE_NAME_FILTER}. Use --device-name or fconfig.sh to use another device."
+      echo "Using device name ${DEVICE_NAME_FILTER}. Use --device-name or fconfig to use another device."
     fi
   else
-    echo "Using device address ${DEVICE_IP_ADDR}. Use --device-ip or fconfig.sh to use another device."
+    echo "Using device address ${DEVICE_IP_ADDR}. Use --device-ip or fconfig to use another device."
   fi
 elif [[ "${DEVICE_IP_ADDR}" != "" && "${DEVICE_NAME_FILTER}" != "" ]]; then
   fx-error "Cannot use both --device-name and --device-ip".
