@@ -88,7 +88,9 @@ between higher-level function calls and FIDL messages. On the server side,
 bindings process incoming request messages and deliver them through an abstract
 interface for components to implement.
 
-![bindings wrap FIDL messages](images/fidl-bindings.png){: width="574"}
+![Diagram showing how FIDL bindings provide generated library code to translate
+function calls into FIDL messages for transport across process boundaries.]
+(images/fidl-bindings.png){: width="574"}
 
 
 Note: For more details on the bindings specification and supported programming

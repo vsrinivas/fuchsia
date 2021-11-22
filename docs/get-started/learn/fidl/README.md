@@ -19,7 +19,9 @@ idioms such as structured types and synchronous execution. The compiler generate
 bindings for each supported language so providers do not need to maintain client
 libraries.
 
-![FIDL connects processes](images/fuchsia-interface.png){: width="870"}
+![Diagram showing how Fuchsia Interface Definition Language (FIDL) facilitates
+inter-process communication (IPC) through a common interface; regardless of the
+programming language used.](images/fuchsia-interface.png){: width="870"}
 
 ## Prerequisites
 

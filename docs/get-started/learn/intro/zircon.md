@@ -13,7 +13,9 @@ running in the system to a few core functions:
 * Scheduling
 * Inter-process communication
 
-![operating system kernel services](images/kernel-services.png){: width="799"}
+![Data table showing a comparison between kernel services in Fuchsia and a
+typical operating system, indicating Fuchsia includes fewer services in its
+kernel.](images/kernel-services.png){: width="799"}
 
 ## System calls
 
@@ -72,7 +74,9 @@ Zircon exposes three main kernel objects for running code:
 * [Job](/docs/reference/kernel_objects/job.md):
   Group of related processes and jobs. All jobs form a single rooted tree.
 
-![hierarchy of jobs and processes](images/processes-jobs.png){: width="549"}
+![Tree diagram illustrating Fuchsia's process hierarchy. Processes are
+grouped into jobs, which are ultimately owned by the Root Job.]
+(images/processes-jobs.png){: width="549"}
 
 Processes form the basis for system capabilities. Each process is granted a set
 of capabilities through the various handles it holds.
@@ -108,7 +112,9 @@ be transferred from one process to another. When handles are written into a
 channel, they are removed from the sending process. When a message with handles
 is read from a channel, the handles are added to the receiving process.
 
-![Fuchsia inter-process communication](images/ipc.png){: width="582"}
+![Diagram showing how processes communicate through shared objects found in the
+kernel. The most common of these connections is the channel.]
+(images/ipc.png){: width="582"}
 
 Note: You can find more of Zircon's deep technical details in the
 [kernel documentation](/docs/concepts/kernel/README.md).

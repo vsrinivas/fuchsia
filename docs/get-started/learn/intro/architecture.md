@@ -1,6 +1,8 @@
 # Fuchsia architecture
 
-![Fuchsia architecture](images/fuchsia-architecture.png){: width="1080"}
+![Data table showing high-level diagram of the entire Fuchsia system
+architecture, highlighting core components and subsystems.]
+(images/fuchsia-architecture.png){: width="1080"}
 
 The following architectural principles guide Fuchsia's design and development:
 

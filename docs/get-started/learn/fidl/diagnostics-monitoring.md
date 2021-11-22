@@ -54,7 +54,9 @@ individual FIDL messages sent and received by your component. Similar to the
 Fuchsia debugger (`zxdb`), `fidlcat` connects to a running `debug_agent`
 component on the target device and monitors running processes.
 
-![fidlcat connection to debug agent](images/fidlcat.png){: width="592"}
+![Diagram showing how "fidlcat" interacts with the debug_agent service running
+on a Fuchsia device to monitor and debug FIDL calls for a given process.]
+(images/fidlcat.png){: width="592"}
 
 Setting up the monitoring session requires the following high-level steps:
 
@@ -97,7 +99,9 @@ variety of numeric, string, and array data types. The component inspector
 libraries provide an interface to your component's **root node** where you can
 attach additional properties of interest to your application.
 
-![inspect data tree of property nodes](images/component-inspect.png){: width="583"}
+![Tree diagram showing how component inspection provides structured metrics
+data as a tree of "nodes," where each node can contain one or more key/value
+"properties."](images/component-inspect.png){: width="583"}
 
 You can retrieve the current set of metrics published to Inspect using the
 developer tools:
