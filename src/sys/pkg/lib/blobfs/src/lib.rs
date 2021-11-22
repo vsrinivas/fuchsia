@@ -38,6 +38,9 @@ pub enum BlobfsError {
     #[error("while deleting blob")]
     Unlink(#[source] Status),
 
+    #[error("while sync'ing")]
+    Sync(#[source] Status),
+
     #[error("while parsing blob merkle hash")]
     ParseHash(#[from] ParseHashError),
 
@@ -249,6 +252,12 @@ impl Client {
             .filter_map(|blob| async move { blob })
             .collect()
             .await
+    }
+
+    /// Call fuchsia.io/Node.Sync on the blobfs directory.
+    pub async fn sync(&self) -> Result<(), BlobfsError> {
+        let status = self.proxy.sync().await?;
+        zx::Status::ok(status).map_err(BlobfsError::Sync)
     }
 }
 
@@ -613,5 +622,25 @@ mod tests {
         );
 
         blobfs.stop().await.unwrap();
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn sync() {
+        let counter = Arc::new(std::sync::atomic::AtomicU32::new(0));
+        let counter_clone = Arc::clone(&counter);
+        let (client, mut stream) = Client::new_test();
+        fasync::Task::spawn(async move {
+            match stream.try_next().await.unwrap().unwrap() {
+                DirectoryRequest::Sync { responder } => {
+                    counter_clone.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                    responder.send(0).unwrap();
+                }
+                other => panic!("unexpected request: {:?}", other),
+            }
+        })
+        .detach();
+
+        assert_matches!(client.sync().await, Ok(()));
+        assert_eq!(counter.load(std::sync::atomic::Ordering::SeqCst), 1);
     }
 }

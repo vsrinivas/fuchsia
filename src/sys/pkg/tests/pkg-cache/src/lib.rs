@@ -40,7 +40,7 @@ use {
     pkgfs_ramdisk::PkgfsRamdisk,
     std::{
         collections::HashMap,
-        fs::{create_dir, create_dir_all, remove_dir, File},
+        fs::{create_dir, create_dir_all, File},
         io::Write as _,
         sync::Arc,
         time::Duration,
@@ -697,6 +697,7 @@ impl MockLoggerFactory {
 
 struct TempDirPkgFs {
     root: TempDir,
+    disable_blobfs: bool,
 }
 
 impl TempDirPkgFs {
@@ -749,11 +750,12 @@ impl TempDirPkgFs {
 
         create_dir(root.path().join("blobfs")).unwrap();
 
-        Self { root }
+        Self { root, disable_blobfs: false }
     }
 
-    pub fn emulate_ctl_error(&self) {
-        remove_dir(self.root.path().join("ctl")).unwrap();
+    fn disable_blobfs(&mut self) {
+        assert_eq!(self.disable_blobfs, false);
+        self.disable_blobfs = true;
     }
 }
 
@@ -763,9 +765,16 @@ impl PkgFs for TempDirPkgFs {
     }
 
     fn blobfs_root_proxy(&self) -> Result<DirectoryProxy, Error> {
-        let dir_handle: ClientEnd<DirectoryMarker> =
-            fdio::transfer_fd(File::open(self.root.path().join("blobfs")).unwrap()).unwrap().into();
-        Ok(dir_handle.into_proxy().unwrap())
+        if self.disable_blobfs {
+            let (proxy, _) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+            Ok(proxy)
+        } else {
+            let dir_handle: ClientEnd<DirectoryMarker> =
+                fdio::transfer_fd(File::open(self.root.path().join("blobfs")).unwrap())
+                    .unwrap()
+                    .into();
+            Ok(dir_handle.into_proxy().unwrap())
+        }
     }
 
     fn system_image_hash(&self) -> Option<Hash> {

@@ -38,7 +38,6 @@ use {
 
 pub async fn serve(
     pkgfs_versions: pkgfs::versions::Client,
-    pkgfs_ctl: pkgfs::control::Client,
     pkgfs_install: pkgfs::install::Client,
     pkgfs_needs: pkgfs::needs::Client,
     package_index: Arc<Mutex<PackageIndex>>,
@@ -105,8 +104,8 @@ pub async fn serve(
                     serve_base_package_index(Arc::clone(&base_packages), stream).await;
                 }
                 PackageCacheRequest::Sync { responder } => {
-                    responder.send(&mut pkgfs_ctl.sync().await.map_err(|e| {
-                        fx_log_err!("error syncing /pkgfs/ctl: {:#}", anyhow!(e));
+                    responder.send(&mut blobfs.sync().await.map_err(|e| {
+                        fx_log_err!("error syncing blobfs: {:#}", anyhow!(e));
                         Status::INTERNAL.into_raw()
                     }))?;
                 }
