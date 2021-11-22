@@ -30,6 +30,7 @@
         },
         {
             protocol: [
+                "fuchsia.boot.Arguments",
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.update.CommitStatusProvider",

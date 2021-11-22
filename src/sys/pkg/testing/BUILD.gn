@@ -6,6 +6,7 @@ group("tests") {
   testonly = true
   public_deps = [
     "blobfs-ramdisk:tests",
+    "mock-boot-arguments:tests",
     "mock-crash-reporter:tests",
     "mock-installer:tests",
     "mock-omaha-server:tests",

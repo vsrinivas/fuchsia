@@ -3,14 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    crate::{base_packages::BasePackages, index::PackageIndex, pkgfs_inspect::PkgfsInspectState},
+    crate::{base_packages::BasePackages, index::PackageIndex},
     anyhow::{anyhow, Context as _, Error},
     argh::FromArgs,
     cobalt_sw_delivery_registry as metrics,
     fidl_fuchsia_update::CommitStatusProviderMarker,
-    fuchsia_async::{futures::try_join, Task},
+    fuchsia_async::{futures::join, Task},
     fuchsia_cobalt::{CobaltConnector, ConnectionType},
-    fuchsia_component::server::ServiceFs,
+    fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
     fuchsia_inspect as finspect,
     fuchsia_syslog::{self, fx_log_err, fx_log_info},
     futures::{lock::Mutex, prelude::*},
@@ -23,14 +23,21 @@ mod cache_service;
 mod compat;
 mod gc_service;
 mod index;
-mod pkgfs_inspect;
-
 mod retained_packages_service;
 
 #[cfg(test)]
 mod test_utils;
 
 const COBALT_CONNECTOR_BUFFER_SIZE: usize = 1000;
+static DISABLE_RESTRICTIONS_FILE_PATH: &str = "data/pkgfs_disable_executability_restrictions";
+static PKGFS_BOOT_ARG_KEY: &'static str = "zircon.system.pkgfs.cmd";
+static PKGFS_BOOT_ARG_VALUE_PREFIX: &'static str = "bin/pkgsvr+";
+
+#[derive(Debug, PartialEq, Eq)]
+enum ExecutabilityRestrictions {
+    Enforce,
+    DoNotEnforce,
+}
 
 #[derive(FromArgs, Debug, PartialEq)]
 /// Flags to the package cache.
@@ -65,8 +72,6 @@ async fn main_inner() -> Result<(), Error> {
         .serve(ConnectionType::project_id(metrics::PROJECT_ID));
     let cobalt_fut = Task::spawn(cobalt_fut);
 
-    let pkgfs_system =
-        pkgfs::system::Client::open_from_namespace().context("error opening /pkgfs/system")?;
     let pkgfs_versions =
         pkgfs::versions::Client::open_from_namespace().context("error opening /pkgfs/versions")?;
     let pkgfs_ctl =
@@ -79,27 +84,53 @@ async fn main_inner() -> Result<(), Error> {
 
     let mut package_index = PackageIndex::new(index_node);
 
-    let (_pkgfs_inspect, (), base_packages) = {
-        let pkgfs_inspect_fut = async {
-            Ok(PkgfsInspectState::new(&pkgfs_system, inspector.root().create_child("pkgfs")).await)
-        };
+    let (executability_restrictions, base_packages) = if ignore_system_image {
+        fx_log_info!("not loading system_image due to process arguments");
+        inspector.root().record_string("system_image", "ignored");
+        (ExecutabilityRestrictions::Enforce, None)
+    } else {
+        let boot_args = connect_to_protocol::<fidl_fuchsia_boot::ArgumentsMarker>()
+            .context("error connecting to fuchsia.boot/Arguments")?;
+        let system_image =
+            get_system_image_hash(&boot_args).await.context("getting system_image hash")?;
+        inspector.root().record_string("system_image", system_image.to_string());
+        let system_image = package_directory::RootDir::new(blobfs.clone(), system_image)
+            .await
+            .context("creating RootDir for system_image")?;
 
         let load_cache_packages_fut = async {
-            index::load_cache_packages(&mut package_index, &pkgfs_system, &pkgfs_versions)
-                .unwrap_or_else(|e| fx_log_err!("Failed to load cache packages: {:#}", anyhow!(e)))
-                .await;
-            Ok(())
+            let cache_packages = system_image::CachePackages::deserialize(
+                system_image
+                    .read_file("data/cache_packages")
+                    .await
+                    .context("read system_image data/cache_packages")?
+                    .as_slice(),
+            )
+            .context("deserialize data/cache_packages")?;
+
+            index::load_cache_packages(&mut package_index, cache_packages, &pkgfs_versions).await
         };
 
         let base_packages_fut = load_base_packages(
-            &pkgfs_system,
+            &system_image,
             &pkgfs_versions,
             inspector.root().create_child("base-packages"),
-            ignore_system_image,
         );
 
-        try_join!(pkgfs_inspect_fut, load_cache_packages_fut, base_packages_fut)?
+        let (cache_packages_res, base_packages_res) =
+            join!(load_cache_packages_fut, base_packages_fut);
+        let () = cache_packages_res
+            .unwrap_or_else(|e| fx_log_err!("Failed to load cache packages: {:#}", anyhow!(e)));
+
+        (
+            load_executability_restrictions(&system_image),
+            Some(base_packages_res.context("loading base packages")?),
+        )
     };
+
+    inspector
+        .root()
+        .record_string("executability-restrictions", format!("{:?}", executability_restrictions));
 
     let commit_status_provider =
         fuchsia_component::client::connect_to_protocol::<CommitStatusProviderMarker>()
@@ -174,34 +205,41 @@ async fn main_inner() -> Result<(), Error> {
 }
 
 async fn load_base_packages(
-    pkgfs_system: &pkgfs::system::Client,
+    system_image: &package_directory::RootDir,
     pkgfs_versions: &pkgfs::versions::Client,
     node: finspect::Node,
-    ignore_system_image: bool,
-) -> Result<Option<BasePackages>, Error> {
-    // Not all constructions with pkg-cache include a system image (any recovery implementation,
-    // for example, as it will be putting blobs into an empty blobfs).
-    if ignore_system_image {
-        fx_log_info!("Ignoring system image, so not loading base packages");
-        return Ok(None);
-    }
+) -> Result<BasePackages, Error> {
+    let static_packages = system_image
+        .read_file("data/static_packages")
+        .await
+        .context("failed to read data/static_packages from system_image package")?;
+    let static_packages = StaticPackages::deserialize(static_packages.as_slice())
+        .context("error deserializing data/static_packages")?;
 
-    let static_packages = get_static_packages(pkgfs_system).await?;
-    let pkgfs_system_hash = pkgfs_system.hash().await.context("while getting system image hash")?;
-
-    let base_packages =
-        BasePackages::new(pkgfs_versions, static_packages, &pkgfs_system_hash, node)
-            .await
-            .context("loading base packages")?;
-    Ok(Some(base_packages))
+    Ok(BasePackages::new(pkgfs_versions, static_packages, system_image.hash(), node)
+        .await
+        .context("loading base packages")?)
 }
 
-async fn get_static_packages(
-    pkgfs_system: &pkgfs::system::Client,
-) -> Result<StaticPackages, Error> {
-    let file = pkgfs_system
-        .open_file("data/static_packages")
+async fn get_system_image_hash(
+    args: &fidl_fuchsia_boot::ArgumentsProxy,
+) -> Result<fuchsia_hash::Hash, Error> {
+    let hash = args
+        .get_string(PKGFS_BOOT_ARG_KEY)
         .await
-        .context("failed to open data/static_packages from system image package")?;
-    StaticPackages::deserialize(file).context("error deserializing data/static_packages")
+        .context("get pkgfs boot command")?
+        .ok_or_else(|| anyhow!("boot args have no value for key {}", PKGFS_BOOT_ARG_KEY))?;
+    let hash = hash
+        .strip_prefix(PKGFS_BOOT_ARG_VALUE_PREFIX)
+        .ok_or_else(|| anyhow!("malformated pkgfs boot arg {:?}", hash))?;
+    hash.parse().with_context(|| format!("pkgfs boot arg hash invalid {:?}", hash))
+}
+
+fn load_executability_restrictions(
+    system_image: &package_directory::RootDir,
+) -> ExecutabilityRestrictions {
+    match system_image.has_file(DISABLE_RESTRICTIONS_FILE_PATH) {
+        true => ExecutabilityRestrictions::DoNotEnforce,
+        false => ExecutabilityRestrictions::Enforce,
+    }
 }

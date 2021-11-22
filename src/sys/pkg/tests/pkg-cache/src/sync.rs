@@ -23,7 +23,7 @@ async fn sync_returns_errs() {
     let test_fs = TempDirPkgFs::new();
     test_fs.emulate_ctl_error();
 
-    let env = TestEnv::builder().pkgfs(test_fs).build().await;
+    let env = TestEnv::builder().pkgfs(test_fs).ignore_system_image().build().await;
 
     assert_eq!(
         env.proxies.package_cache.sync().map_ok(|res| res.map_err(Status::from_raw)).await.unwrap(),

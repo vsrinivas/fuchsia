@@ -74,6 +74,10 @@ impl PkgFs for BlobFsWithFileCreateOverride {
 
         Ok(client)
     }
+
+    fn system_image_hash(&self) -> Option<fuchsia_merkle::Hash> {
+        self.pkgfs.system_image_hash()
+    }
 }
 
 #[derive(Clone)]

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{get_missing_blobs, write_blob, TempDirPkgFs, TestEnv},
+    crate::{get_missing_blobs, write_blob, TestEnv},
     blobfs_ramdisk::{BlobfsRamdisk, Ramdisk},
     fidl_fuchsia_io::{DirectoryMarker, FileMarker},
     fidl_fuchsia_paver as paver,
@@ -73,8 +73,17 @@ async fn do_fetch(package_cache: &PackageCacheProxy, pkg: &Package) {
 async fn gc_error_pending_commit() {
     let (throttle_hook, throttler) = mphooks::throttle();
 
+    let blobfs = BlobfsRamdisk::start().unwrap();
+    let system_image_package = SystemImageBuilder::new().build().await;
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .start()
+        .unwrap();
+
     let env = TestEnv::builder()
-        .pkgfs(TempDirPkgFs::new())
+        .pkgfs(pkgfs)
         .paver_service_builder(
             MockPaverServiceBuilder::new()
                 .insert_hook(throttle_hook)
@@ -82,7 +91,6 @@ async fn gc_error_pending_commit() {
         )
         .build()
         .await;
-    env.pkgfs.create_garbage();
 
     // Allow the paver to emit enough events to unblock the CommitStatusProvider FIDL server, but
     // few enough to guarantee the commit is still pending.

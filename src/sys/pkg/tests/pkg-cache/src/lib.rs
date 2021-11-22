@@ -33,6 +33,7 @@ use {
     io_util::file::*,
     maplit::hashmap,
     matches::assert_matches,
+    mock_boot_arguments::MockBootArgumentsService,
     mock_paver::{MockPaverService, MockPaverServiceBuilder},
     mock_verifier::MockVerifierService,
     parking_lot::Mutex,
@@ -41,7 +42,6 @@ use {
         collections::HashMap,
         fs::{create_dir, create_dir_all, remove_dir, File},
         io::Write as _,
-        path::PathBuf,
         sync::Arc,
         time::Duration,
     },
@@ -244,6 +244,8 @@ trait PkgFs {
     fn root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error>;
 
     fn blobfs_root_proxy(&self) -> Result<DirectoryProxy, Error>;
+
+    fn system_image_hash(&self) -> Option<Hash>;
 }
 
 impl PkgFs for PkgfsRamdisk {
@@ -253,6 +255,10 @@ impl PkgFs for PkgfsRamdisk {
 
     fn blobfs_root_proxy(&self) -> Result<DirectoryProxy, Error> {
         self.blobfs().root_dir_proxy()
+    }
+
+    fn system_image_hash(&self) -> Option<Hash> {
+        self.system_image_merkle()
     }
 }
 
@@ -264,6 +270,8 @@ where
 {
     paver_service_builder: Option<MockPaverServiceBuilder>,
     pkgfs: PkgFsFn,
+    ignore_system_image: bool,
+    system_image_hash_override: Option<Hash>,
 }
 
 async fn make_default_pkgfs_ramdisk() -> PkgfsRamdisk {
@@ -280,7 +288,12 @@ async fn make_default_pkgfs_ramdisk() -> PkgfsRamdisk {
 
 impl TestEnvBuilder<fn() -> BoxFuture<'static, PkgfsRamdisk>, BoxFuture<'static, PkgfsRamdisk>> {
     fn new() -> Self {
-        Self { pkgfs: || make_default_pkgfs_ramdisk().boxed(), paver_service_builder: None }
+        Self {
+            pkgfs: || make_default_pkgfs_ramdisk().boxed(),
+            paver_service_builder: None,
+            ignore_system_image: false,
+            system_image_hash_override: None,
+        }
     }
 }
 
@@ -304,7 +317,19 @@ where
         TestEnvBuilder {
             pkgfs: || future::ready(pkgfs),
             paver_service_builder: self.paver_service_builder,
+            ignore_system_image: self.ignore_system_image,
+            system_image_hash_override: self.system_image_hash_override,
         }
+    }
+
+    fn ignore_system_image(self) -> Self {
+        assert_eq!(self.ignore_system_image, false);
+        Self { ignore_system_image: true, ..self }
+    }
+
+    fn system_image_hash_override(self, system_image: Hash) -> Self {
+        assert_eq!(self.system_image_hash_override, None);
+        Self { system_image_hash_override: Some(system_image), ..self }
     }
 
     async fn build(self) -> TestEnv<PkgFsFut::Output> {
@@ -348,11 +373,31 @@ where
             .detach()
         });
 
+        // fuchsia.boot/Arguments service to supply the hash of the system_image package.
+        let mut arguments_service = MockBootArgumentsService::new(HashMap::new());
+        if let Some(hash) = self.system_image_hash_override {
+            arguments_service.insert_pkgfs_boot_arg(hash);
+        } else {
+            pkgfs.system_image_hash().map(|hash| arguments_service.insert_pkgfs_boot_arg(hash));
+        }
+        let arguments_service = Arc::new(arguments_service);
+        let arguments_service_clone = Arc::clone(&arguments_service);
+        fs.dir("svc").add_fidl_service(move |stream| {
+            fasync::Task::spawn(Arc::clone(&arguments_service_clone).handle_request_stream(stream))
+                .detach()
+        });
+
         let fs_holder = Mutex::new(Some(fs));
+
+        let pkg_cache_manifest = if self.ignore_system_image {
+            "fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/pkg-cache-ignore-system-image.cm"
+        } else {
+            "fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/pkg-cache.cm"
+        };
 
         let builder = RealmBuilder::new().await.unwrap();
         builder
-            .add_child("pkg_cache", "fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/pkg-cache.cm", ChildProperties::new()).await.unwrap()
+            .add_child("pkg_cache", pkg_cache_manifest, ChildProperties::new()).await.unwrap()
             .add_child("system_update_committer", "fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/system-update-committer.cm", ChildProperties::new()).await.unwrap()
             .add_mock_child(
                 "service_reflector",
@@ -375,6 +420,12 @@ where
                 ])
             ).await.unwrap()
             .add_route(RouteBuilder::protocol("fuchsia.cobalt.LoggerFactory")
+                .source(RouteEndpoint::component("service_reflector"))
+                .targets(vec![
+                    RouteEndpoint::component("pkg_cache"),
+                ])
+            ).await.unwrap()
+            .add_route(RouteBuilder::protocol("fuchsia.boot.Arguments")
                 .source(RouteEndpoint::component("service_reflector"))
                 .targets(vec![
                     RouteEndpoint::component("pkg_cache"),
@@ -701,14 +752,6 @@ impl TempDirPkgFs {
         Self { root }
     }
 
-    fn garbage_path(&self) -> PathBuf {
-        self.root.path().join("ctl/do-not-use-this-garbage")
-    }
-
-    fn create_garbage(&self) {
-        File::create(self.garbage_path()).unwrap();
-    }
-
     pub fn emulate_ctl_error(&self) {
         remove_dir(self.root.path().join("ctl")).unwrap();
     }
@@ -723,5 +766,9 @@ impl PkgFs for TempDirPkgFs {
         let dir_handle: ClientEnd<DirectoryMarker> =
             fdio::transfer_fd(File::open(self.root.path().join("blobfs")).unwrap()).unwrap().into();
         Ok(dir_handle.into_proxy().unwrap())
+    }
+
+    fn system_image_hash(&self) -> Option<Hash> {
+        Some("0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap())
     }
 }

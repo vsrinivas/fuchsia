@@ -336,6 +336,11 @@
             to: "#pkg-cache",
         },
         {
+            protocol: [ "fuchsia.boot.Arguments" ],
+            from: "parent",
+            to: "#pkg-cache",
+        },
+        {
             protocol: [ "fuchsia.tracing.provider.Registry" ],
             from: "self",
             to: "#pkg-cache",

@@ -9,7 +9,7 @@ use {
     diagnostics_hierarchy::{testing::TreeAssertion, DiagnosticsHierarchy},
     diagnostics_reader::{ArchiveReader, ComponentSelector, Inspect},
     fidl::endpoints::ClientEnd,
-    fidl_fuchsia_boot::{ArgumentsRequest, ArgumentsRequestStream},
+    fidl_fuchsia_boot::ArgumentsRequestStream,
     fidl_fuchsia_cobalt::{CobaltEvent, CountEvent, EventPayload},
     fidl_fuchsia_component::{RealmMarker, RealmProxy},
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
@@ -36,10 +36,12 @@ use {
     fuchsia_zircon::{self as zx, Status},
     futures::{future::BoxFuture, prelude::*},
     matches::assert_matches,
+    mock_boot_arguments::MockBootArgumentsService,
     parking_lot::Mutex,
     pkgfs_ramdisk::PkgfsRamdisk,
     serde::Serialize,
     std::{
+        collections::HashMap,
         convert::TryInto,
         fs::File,
         io::{self, BufWriter, Read, Write},
@@ -65,6 +67,8 @@ pub trait PkgFs {
     fn root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error>;
 
     fn blobfs_root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error>;
+
+    fn system_image_hash(&self) -> Option<Hash>;
 }
 
 impl PkgFs for PkgfsRamdisk {
@@ -74,6 +78,10 @@ impl PkgFs for PkgfsRamdisk {
 
     fn blobfs_root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error> {
         self.blobfs().root_dir_handle()
+    }
+
+    fn system_image_hash(&self) -> Option<Hash> {
+        self.system_image_merkle()
     }
 }
 
@@ -303,7 +311,7 @@ where
 {
     pkgfs: PkgFsFn,
     mounts: MountsFn,
-    boot_arguments_service: Option<BootArgumentsService<'static>>,
+    tuf_repo_config_boot_arg: Option<String>,
     local_mirror_repo: Option<(Arc<Repository>, RepoUrl)>,
     resolver_variant: ResolverVariant,
 }
@@ -329,7 +337,7 @@ impl
                     })
                     .build()
             },
-            boot_arguments_service: None,
+            tuf_repo_config_boot_arg: None,
             local_mirror_repo: None,
             resolver_variant: ResolverVariant::DefaultArgs,
         }
@@ -353,7 +361,7 @@ where
         TestEnvBuilder::<_, _, MountsFn> {
             pkgfs: || future::ready(pkgfs),
             mounts: self.mounts,
-            boot_arguments_service: self.boot_arguments_service,
+            tuf_repo_config_boot_arg: self.tuf_repo_config_boot_arg,
             local_mirror_repo: self.local_mirror_repo,
             resolver_variant: self.resolver_variant,
         }
@@ -365,19 +373,15 @@ where
         TestEnvBuilder::<PkgFsFn, _, _> {
             pkgfs: self.pkgfs,
             mounts: || mounts,
-            boot_arguments_service: self.boot_arguments_service,
+            tuf_repo_config_boot_arg: self.tuf_repo_config_boot_arg,
             local_mirror_repo: self.local_mirror_repo,
             resolver_variant: self.resolver_variant,
         }
     }
-    pub fn boot_arguments_service(self, svc: BootArgumentsService<'static>) -> Self {
-        Self {
-            pkgfs: self.pkgfs,
-            mounts: self.mounts,
-            boot_arguments_service: Some(svc),
-            local_mirror_repo: self.local_mirror_repo,
-            resolver_variant: self.resolver_variant,
-        }
+    pub fn tuf_repo_config_boot_arg(mut self, repo: String) -> Self {
+        assert_eq!(self.tuf_repo_config_boot_arg, None);
+        self.tuf_repo_config_boot_arg = Some(repo);
+        self
     }
 
     pub fn local_mirror_repo(mut self, repo: &Arc<Repository>, hostname: RepoUrl) -> Self {
@@ -426,12 +430,15 @@ where
             fs.dir("usb").dir("0").add_remote("fuchsia_pkg", proxy);
         }
 
-        if let Some(boot_arguments_service) = self.boot_arguments_service {
-            let mock_arg_svc = Arc::new(boot_arguments_service);
-            fs.dir("svc").add_fidl_service(move |stream: ArgumentsRequestStream| {
-                fasync::Task::spawn(Arc::clone(&mock_arg_svc).run_service(stream)).detach();
-            });
-        }
+        let mut args = HashMap::new();
+        args.insert("tuf_repo_config".to_string(), self.tuf_repo_config_boot_arg);
+        let mut boot_arguments_service = MockBootArgumentsService::new(args);
+        pkgfs.system_image_hash().map(|hash| boot_arguments_service.insert_pkgfs_boot_arg(hash));
+        let boot_arguments_service = Arc::new(boot_arguments_service);
+        fs.dir("svc").add_fidl_service(move |stream: ArgumentsRequestStream| {
+            fasync::Task::spawn(Arc::clone(&boot_arguments_service).handle_request_stream(stream))
+                .detach();
+        });
 
         let logger_factory = Arc::new(MockLoggerFactory::new());
         let logger_factory_clone = Arc::clone(&logger_factory);
@@ -484,6 +491,7 @@ where
             .add_route(RouteBuilder::protocol("fuchsia.boot.Arguments")
                 .source(RouteEndpoint::component("service_reflector"))
                 .targets(vec![
+                    RouteEndpoint::component("pkg_cache"),
                     RouteEndpoint::component("pkg_resolver_wrapper"),
                 ])
             ).await.unwrap()
@@ -726,26 +734,6 @@ impl TestEnv<PkgfsRamdisk> {
         drop(self.proxies);
         drop(self.apps);
         self.pkgfs.stop().await.expect("pkgfs to stop gracefully");
-    }
-}
-
-pub struct BootArgumentsService<'a> {
-    tuf_repo_config: &'a str,
-}
-impl BootArgumentsService<'_> {
-    pub fn new(tuf_repo_config: &'static str) -> Self {
-        Self { tuf_repo_config }
-    }
-    async fn run_service(self: Arc<Self>, mut stream: ArgumentsRequestStream) {
-        while let Some(req) = stream.try_next().await.unwrap() {
-            match req {
-                ArgumentsRequest::GetString { key, responder } => {
-                    assert_eq!(key, "tuf_repo_config", "Unexpected GetString key: {}", key);
-                    responder.send(Some(self.tuf_repo_config)).unwrap();
-                }
-                _ => panic!("Unexpected request to mock BootArgumentsService!"),
-            };
-        }
     }
 }
 

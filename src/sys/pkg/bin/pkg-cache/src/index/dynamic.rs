@@ -227,21 +227,13 @@ impl DynamicIndex {
     }
 }
 
-/// Loads the cache_packages manifest from the provided system_image package, and then, for any
-/// package referenced by that manifest that has all of its blobs present in blobfs, imports those
-/// packages into the provided dynamic index.
+/// For any package referenced by the cache packages manifest that has all of its blobs present in
+/// blobfs, imports those packages into the provided dynamic index.
 pub async fn load_cache_packages(
     index: &mut DynamicIndex,
-    system_image: &pkgfs::system::Client,
+    cache_packages: CachePackages,
     versions: &pkgfs::versions::Client,
 ) -> Result<(), Error> {
-    let cache_packages = CachePackages::deserialize(
-        system_image
-            .open_file("data/cache_packages")
-            .await
-            .context("open system_image data/cache_packages")?,
-    )?;
-
     for (path, package_hash) in cache_packages.into_contents() {
         let package = match versions.open_package(&package_hash).await {
             Ok(package) => package,
@@ -662,10 +654,6 @@ mod tests {
             )
         }
 
-        fn system_image(&self) -> pkgfs::system::Client {
-            pkgfs::system::Client::open_from_pkgfs_root(&self.root_proxy()).unwrap()
-        }
-
         fn versions(&self) -> pkgfs::versions::Client {
             pkgfs::versions::Client::open_from_pkgfs_root(&self.root_proxy()).unwrap()
         }
@@ -715,9 +703,7 @@ mod tests {
         let pkgfs = TestPkgfs::new(&cache_packages, &versions_contents);
         let inspector = finspect::Inspector::new();
         let mut dynamic_index = DynamicIndex::new(inspector.root().create_child("index"));
-        load_cache_packages(&mut dynamic_index, &pkgfs.system_image(), &pkgfs.versions())
-            .await
-            .unwrap();
+        load_cache_packages(&mut dynamic_index, cache_packages, &pkgfs.versions()).await.unwrap();
 
         let fake_package = Package::Active {
             path: fake_package_path.clone(),

@@ -11,27 +11,17 @@
     offer: [
         {
             protocol: [
+                "fuchsia.diagnostics.ArchiveAccessor",
                 "fuchsia.logger.LogSink",
-                "fuchsia.tracing.provider.Registry",
-            ],
-            from: "parent",
-            to: [ "#pkg_cache_integration_test" ],
-        },
-        {
-            protocol: [
                 "fuchsia.process.Launcher",
                 "fuchsia.sys.Launcher",
+                "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",
             to: "#pkg_cache_integration_test",
         },
         {
             storage: "tmp",
-            from: "parent",
-            to: "#pkg_cache_integration_test",
-        },
-        {
-            protocol: "fuchsia.diagnostics.ArchiveAccessor",
             from: "parent",
             to: "#pkg_cache_integration_test",
         },

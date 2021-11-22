@@ -1,0 +1,6 @@
+{
+    include: [ "//src/sys/pkg/bin/pkg-cache/meta/pkg-cache.cml" ],
+    program: {
+        args: [ "--ignore-system-image" ],
+    },
+}

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::index::PackageIndex,
+    crate::{index::PackageIndex, ExecutabilityRestrictions},
     anyhow::anyhow,
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
@@ -31,14 +31,6 @@ use {
         path::Path as VfsPath,
     },
 };
-
-// TODO use this
-#[allow(dead_code)]
-#[derive(Debug, PartialEq)]
-pub enum ExecutabilityRestrictions {
-    Enforce,
-    DoNotEnforce,
-}
 
 #[derive(Debug)]
 struct PkgfsVersions {

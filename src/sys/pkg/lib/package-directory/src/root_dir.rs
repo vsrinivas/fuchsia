@@ -56,10 +56,7 @@ pub struct RootDir {
 impl RootDir {
     /// Loads the package metadata given by `hash` from `blobfs`, returning an object representing
     /// the package, backed by `blobfs`.
-    pub(crate) async fn new(
-        blobfs: blobfs::Client,
-        hash: fuchsia_hash::Hash,
-    ) -> Result<Self, Error> {
+    pub async fn new(blobfs: blobfs::Client, hash: fuchsia_hash::Hash) -> Result<Self, Error> {
         let meta_far = blobfs.open_blob_for_read_no_describe(&hash).map_err(Error::OpenMetaFar)?;
 
         let reader = io_util::file::AsyncFile::from_proxy(Clone::clone(&meta_far));

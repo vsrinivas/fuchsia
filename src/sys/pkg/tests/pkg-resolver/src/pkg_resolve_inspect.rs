@@ -319,7 +319,7 @@ async fn channel_in_vbmeta_appears_in_inspect_state() {
     let repo_url = "fuchsia-pkg://test-repo".parse().unwrap();
     let config = served_repository.make_repo_config(repo_url);
     let env = TestEnvBuilder::new()
-        .boot_arguments_service(lib::BootArgumentsService::new("test-repo"))
+        .tuf_repo_config_boot_arg("test-repo".to_string())
         .mounts(lib::MountsBuilder::new().static_repository(config.clone()).build())
         .build()
         .await;

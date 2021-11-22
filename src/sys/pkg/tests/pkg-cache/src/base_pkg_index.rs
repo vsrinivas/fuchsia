@@ -89,7 +89,8 @@ async fn verify_base_packages_iterator(
 #[fasync::run_singlethreaded(test)]
 async fn no_base_package_error() {
     let pkgfs = PkgfsRamdisk::builder().start().unwrap();
-    let env = TestEnv::builder().pkgfs(pkgfs).build().await;
+    let env =
+        TestEnv::builder().pkgfs(pkgfs).system_image_hash_override([0u8; 32].into()).build().await;
     let res = env.proxies.package_cache.sync().await;
     assert_eq!(res.is_err(), true);
 }

@@ -24,6 +24,45 @@ use {
     std::collections::HashMap,
 };
 
+#[fasync::run_singlethreaded(test)]
+async fn system_image_hash_present() {
+    let blobfs = BlobfsRamdisk::start().unwrap();
+    let system_image_package = SystemImageBuilder::new().build().await;
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .start()
+        .unwrap();
+
+    let env = TestEnv::builder().pkgfs(pkgfs).build().await;
+    env.block_until_started().await;
+
+    let hierarchy = env.inspect_hierarchy().await;
+    assert_data_tree!(
+        hierarchy,
+        root: contains {
+            "system_image": system_image_package.meta_far_merkle_root().to_string(),
+        }
+    );
+    env.stop().await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn system_image_hash_ignored() {
+    let env = TestEnv::builder().ignore_system_image().build().await;
+    env.block_until_started().await;
+
+    let hierarchy = env.inspect_hierarchy().await;
+    assert_data_tree!(
+        hierarchy,
+        root: contains {
+            "system_image": "ignored",
+        }
+    );
+    env.stop().await;
+}
+
 async fn assert_base_blob_count(
     static_packages: &[&Package],
     cache_packages: Option<&[&Package]>,
@@ -129,10 +168,7 @@ async fn pkgfs_with_restrictions_enabled(restrictions_enabled: bool) -> PkgfsRam
         .unwrap()
 }
 
-async fn assert_pkgfs_executability_restrictions_enabled(
-    pkgfs: PkgfsRamdisk,
-    expected_state: String,
-) {
+async fn assert_executability_restrictions(pkgfs: PkgfsRamdisk, expected_state: String) {
     let env = TestEnv::builder().pkgfs(pkgfs).build().await;
     env.block_until_started().await;
 
@@ -140,28 +176,26 @@ async fn assert_pkgfs_executability_restrictions_enabled(
     assert_data_tree!(
         hierarchy,
         root: contains {
-            "pkgfs" : {
-                "pkgfs-executability-restrictions-enabled": expected_state
-            }
+            "executability-restrictions": expected_state
         }
     );
     env.stop().await;
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn pkgfs_executability_restrictions_enabled() {
-    assert_pkgfs_executability_restrictions_enabled(
+async fn executability_restrictions_enabled() {
+    assert_executability_restrictions(
         pkgfs_with_restrictions_enabled(true).await,
-        "true".to_string(),
+        "Enforce".to_string(),
     )
     .await;
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn pkgfs_executability_restrictions_disabled() {
-    assert_pkgfs_executability_restrictions_enabled(
+async fn executability_restrictions_disabled() {
+    assert_executability_restrictions(
         pkgfs_with_restrictions_enabled(false).await,
-        "false".to_string(),
+        "DoNotEnforce".to_string(),
     )
     .await;
 }

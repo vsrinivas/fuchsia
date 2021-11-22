@@ -142,10 +142,10 @@ impl PackageIndex {
 /// Load present cache packages into the dynamic index.
 pub async fn load_cache_packages(
     index: &mut PackageIndex,
-    system_image: &pkgfs::system::Client,
+    cache_packages: system_image::CachePackages,
     versions: &pkgfs::versions::Client,
 ) -> Result<(), anyhow::Error> {
-    crate::index::dynamic::load_cache_packages(&mut index.dynamic, system_image, versions).await
+    crate::index::dynamic::load_cache_packages(&mut index.dynamic, cache_packages, versions).await
 }
 
 /// Notifies the appropriate inner indices that the given meta far blob is now available in blobfs.
