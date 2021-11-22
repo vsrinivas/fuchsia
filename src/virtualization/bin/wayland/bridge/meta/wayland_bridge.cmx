@@ -7,7 +7,6 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.stash.Store",
             "fuchsia.sys.Launcher",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.composition.Flatland",

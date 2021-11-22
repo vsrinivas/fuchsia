@@ -12,7 +12,6 @@ base_deps = [
   "//sdk/fidl/fuchsia.images:fuchsia.images-rustc",
   "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
   "//sdk/fidl/fuchsia.math:fuchsia.math-rustc",
-  "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
   "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app-rustc",
   "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition-rustc",
   "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx-rustc",
