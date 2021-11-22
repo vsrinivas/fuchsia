@@ -176,12 +176,12 @@ impl Client {
                     message = self.client_channel.recv_msg(&mut buffer).fuse() => {
                         // We got a new message over the zircon channel.
                         if let Err(e) = message {
-                            println!("Failed to receive message on the channel {}", e);
+                            println!("Failed to receive message on the channel: {}", e);
                             break;
                         }
                         // Dispatch the message.
                         if let Err(e) = self.handle_message(buffer.into()) {
-                            println!("Failed to receive message on the channel {}", e);
+                            println!("Failed to handle message on the channel: {}", e);
                             break;
                         }
                         buffer = zx::MessageBuf::new();

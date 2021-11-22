@@ -339,13 +339,16 @@ impl XdgSurface {
     /// to the concrete surface.
     pub fn finalize_commit(this: ObjectRef<Self>, client: &mut Client) -> Result<bool, Error> {
         ftrace::duration!("wayland", "XdgSurface::finalize_commit");
-        let xdg_surface = this.get(client)?;
-        match xdg_surface.xdg_role {
-            Some(XdgSurfaceRole::Popup(_)) => Ok(true),
-            Some(XdgSurfaceRole::Toplevel(toplevel)) => {
-                XdgToplevel::finalize_commit(toplevel, client)
+        if let Ok(xdg_surface) = this.get(client) {
+            match xdg_surface.xdg_role {
+                Some(XdgSurfaceRole::Popup(_)) => Ok(true),
+                Some(XdgSurfaceRole::Toplevel(toplevel)) => {
+                    XdgToplevel::finalize_commit(toplevel, client)
+                }
+                _ => Ok(false),
             }
-            _ => Ok(false),
+        } else {
+            Ok(false)
         }
     }
 
