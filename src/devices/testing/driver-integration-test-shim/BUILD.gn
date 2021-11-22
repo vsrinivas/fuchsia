@@ -1,0 +1,47 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/cpp/library_headers.gni")
+
+library_headers("driver-integration-test-shim-headers") {
+  testonly = true
+  headers = [ "lib/driver-integration-test/fixture.h" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_llcpp",
+    "//sdk/lib/device-watcher/cpp",
+    "//sdk/lib/driver_test_realm/realm_builder/cpp",
+    "//sdk/lib/driver_test_realm/realm_builder/cpp",
+    "//sdk/lib/fit",
+    "//sdk/lib/vfs/cpp",
+    "//zircon/system/ulib/async",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
+source_set("driver-integration-test-shim") {
+  testonly = true
+
+  sources = [ "fixture.cc" ]
+  public_deps = [ ":driver-integration-test-shim-headers" ]
+  deps = [
+    "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_llcpp",
+    "//sdk/fidl/fuchsia.driver.test",
+    "//sdk/lib/fdio",
+    "//sdk/lib/sys/cpp",
+    "//src/devices/board/drivers/integration-test:fuchsia.board.test_llcpp",
+    "//src/lib/ddk",
+    "//src/lib/storage/vfs/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/fidl-async",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+    "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/zx",
+  ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+}

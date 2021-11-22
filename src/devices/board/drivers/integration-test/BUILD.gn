@@ -5,6 +5,10 @@
 import("//build/bind/bind.gni")
 import("//build/drivers.gni")
 
+fidl("fuchsia.board.test") {
+  sources = [ "board.test.fidl" ]
+}
+
 driver_bind_rules("test-bus-bind") {
   rules = "test-bus.bind"
   header_output = "test-bus-bind.h"
@@ -21,6 +25,7 @@ fuchsia_driver("integration-test-driver") {
   # TODO: testonly = true
   sources = [ "test.cc" ]
   deps = [
+    ":fuchsia.board.test_llcpp",
     ":test-bus-bind",
     "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",

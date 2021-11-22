@@ -3,10 +3,12 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <fidl/fuchsia.board.test/cpp/wire.h>
 #include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -18,7 +20,6 @@
 
 #include <memory>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/test.h>
 #include <ddktl/device.h>
 #include <fbl/array.h>
@@ -29,7 +30,7 @@
 namespace board_test {
 
 class TestBoard;
-using TestBoardType = ddk::Device<TestBoard>;
+using TestBoardType = ddk::Device<TestBoard, ddk::Messageable<fuchsia_board_test::Board>::Mixin>;
 
 // This is the main class for the platform bus driver.
 class TestBoard : public TestBoardType {
@@ -38,6 +39,22 @@ class TestBoard : public TestBoardType {
       : TestBoardType(parent), pbus_(pbus) {}
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
+
+  void CreateDevice(CreateDeviceRequestView request,
+                    CreateDeviceCompleter::Sync& completer) override {
+    pbus_dev_t device = {};
+    device.name = request->entry.name.data();
+    device.vid = request->entry.vid;
+    device.pid = request->entry.pid;
+    device.did = request->entry.did;
+
+    zx_status_t status = pbus_.DeviceAdd(&device);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "Failed to add device: %s: %d", device.name, status);
+    }
+
+    completer.Reply();
+  }
 
   // Device protocol implementation.
   void DdkRelease();

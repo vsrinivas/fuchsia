@@ -1,0 +1,18 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.board.test;
+
+type Entry = struct {
+    name string:MAX;
+    vid uint32;
+    pid uint32;
+    did uint32;
+};
+
+protocol Board {
+    CreateDevice(struct {
+        entry Entry;
+    }) -> ();
+};

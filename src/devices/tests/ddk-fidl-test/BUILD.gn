@@ -78,10 +78,10 @@ test("ddk-fidl-test") {
   sources = [ "test.cc" ]
   deps = [
     "//sdk/lib/fdio",
+    "//src/devices/testing/driver-integration-test-shim",
     "//src/devices/tests/fuchsia-hardware-test:fuchsia.hardware.test_c",
     "//src/devices/tests/fuchsia-hardware-test:fuchsia.hardware.test_llcpp",
     "//src/lib/ddk",
-    "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/zx",

@@ -39,7 +39,6 @@ zx_library("driver-integration-test") {
     "//src/devices/rtc/drivers/fallback/*",
     "//src/devices/tests/ddk-environment-test/*",
     "//src/devices/tests/ddk-fallback-test/*",
-    "//src/devices/tests/ddk-fidl-test/*",
     "//src/devices/tests/ddk-instance-lifecycle-test/*",
     "//src/devices/tests/ddk-lifecycle/*",
     "//src/devices/tests/ddk-power/*",
