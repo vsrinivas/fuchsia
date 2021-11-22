@@ -94,6 +94,17 @@ kernel.shell has not already been launched. Defaults to false.
 If this is false, it also disables the zircon.autorun.boot and
 zircon.autorun.system options.
 
+## console.allowed\_log\_tags=\<tag\>,\<tag\>...
+
+Add a tag to the allow list. Log entries with matching tags will be output to
+the console. This takes precedent over tags passed via process args.
+
+## console.denied\_log\_tags=\<tag\>,\<tag\>...
+
+Add a tag to the deny list. Log entries with matching tags will be prevented
+from being printed the console. This takes precedent over tags passed via
+process args as well as the allow list.
+
 ## devmgr.bind-eager=\<driver\>,\<driver\>...
 
 For each driver listed as an argument to this option, the driver manager will

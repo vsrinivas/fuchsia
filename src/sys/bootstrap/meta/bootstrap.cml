@@ -262,7 +262,10 @@
             to: "#pkg-drivers",
         },
         {
-            protocol: "fuchsia.boot.RootResource",
+            protocol: [
+                "fuchsia.boot.Arguments",
+                "fuchsia.boot.RootResource",
+            ],
             from: "parent",
             to: "#console",
         },

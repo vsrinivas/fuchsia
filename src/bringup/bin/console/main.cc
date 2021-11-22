@@ -4,41 +4,19 @@
 
 #include <fidl/fuchsia.boot/cpp/wire.h>
 #include <fidl/fuchsia.logger/cpp/wire.h>
-#include <lib/cmdline/args_parser.h>
 #include <lib/fs-pty/service.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/svc/outgoing.h>
+#include <zircon/errors.h>
+#include <zircon/status.h>
 
 #include <fbl/string_printf.h>
 
-#include "console.h"
+#include "src/bringup/bin/console/args.h"
+#include "src/bringup/bin/console/console.h"
 #include "src/sys/lib/stdout-to-debuglog/cpp/stdout-to-debuglog.h"
 
 namespace {
-
-struct Options {
-  std::vector<std::string> allowed_log_tags;
-  std::vector<std::string> denied_log_tags;
-};
-
-zx_status_t ParseArgs(int argc, const char** argv, Options* opts) {
-  cmdline::ArgsParser<Options> parser;
-  parser.AddSwitch("allow-log-tag", 'a',
-                   "Add a tag to the allow list. Log entries with matching tags will be output to "
-                   "the console. If no tags are specified, all log entries will be printed.",
-                   &Options::allowed_log_tags);
-  parser.AddSwitch("deny-log-tag", 'd',
-                   "Add a tag to the deny list. Log entries with matching tags will be prevented "
-                   "from being output to the console. This takes precedence over the allow list.",
-                   &Options::denied_log_tags);
-  std::vector<std::string> params;
-  auto status = parser.Parse(argc, argv, opts, &params);
-  if (status.has_error()) {
-    printf("console: ArgsParser::Parse() = %s\n", status.error_message().data());
-    return ZX_ERR_INVALID_ARGS;
-  }
-  return ZX_OK;
-}
 
 zx::resource GetRootResource() {
   auto client_end = service::Connect<fuchsia_boot::RootResource>();
@@ -93,8 +71,14 @@ int main(int argc, const char** argv) {
     return status;
   }
 
+  zx::status boot_args = service::Connect<fuchsia_boot::Arguments>();
+  if (boot_args.is_error()) {
+    return boot_args.status_value();
+  }
+  const auto boot_args_client = fidl::BindSyncClient(*std::move(boot_args));
+
   Options opts;
-  status = ParseArgs(argc, argv, &opts);
+  status = ParseArgs(argc, argv, boot_args_client, &opts);
   if (status != ZX_OK) {
     return status;
   }

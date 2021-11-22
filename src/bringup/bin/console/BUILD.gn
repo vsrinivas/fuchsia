@@ -7,16 +7,9 @@ import("//build/dist/component_manifest_resources.gni")
 import("//build/test.gni")
 
 executable("console") {
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
   sources = [ "main.cc" ]
   deps = [
     ":common",
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/lib/fdio",
     "//src/sys/lib/stdout-to-debuglog/cpp",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
@@ -29,19 +22,21 @@ executable("console") {
 source_set("common") {
   visibility = [ ":*" ]
   sources = [
+    "args.cc",
+    "args.h",
     "console.cc",
     "console.h",
     "fifo.cc",
     "fifo.h",
   ]
   public_deps = [
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_llcpp",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
     "//sdk/lib/fit",
     "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/cmdline",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/syslog:syslog-headers",
     "//zircon/system/ulib/zircon-internal",
@@ -51,25 +46,23 @@ source_set("common") {
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
+    "//src/lib/fxl",
+    "//zircon/system/ulib/cmdline",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+    "//zircon/system/ulib/service:service-llcpp",
   ]
 }
 
 test("console-test") {
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
-
   sources = [
+    "args-test.cc",
     "console-test.cc",
     "fifo-test.cc",
   ]
   deps = [
     ":common",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//zircon/system/ulib/mock-boot-arguments",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zxtest",
   ]

@@ -38,6 +38,7 @@
         { protocol: "fuchsia.hardware.pty.Device" },
     ],
     use: [
+        { protocol: "fuchsia.boot.Arguments" },
         { protocol: "fuchsia.boot.RootResource" },
         { protocol: "fuchsia.boot.WriteOnlyLog" },
         { protocol: "fuchsia.logger.Log" },
