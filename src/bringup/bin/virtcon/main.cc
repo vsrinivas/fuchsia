@@ -104,7 +104,7 @@ int main(int argc, char** argv) {
       return -1;
     }
 
-    auto result = BindSyncClient(std::move(*local)).Get();
+    auto result = BindSyncClient(std::move(*local))->Get();
     if (!result.ok()) {
       fprintf(stderr, "vc: unable to get read only debulog\n");
       return -1;

@@ -668,7 +668,7 @@ static zx_status_t vc_dc_event(uint32_t evt, const char* name) {
   }
 
   ZX_DEBUG_ASSERT(!dc_wait.is_pending());
-  dc_wait.set_object(dc_client.channel().get());
+  dc_wait.set_object(dc_client.client_end().borrow().handle());
   dc_wait.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
   dc_wait.set_handler([](async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
                          const zx_packet_signal_t* signal) {
