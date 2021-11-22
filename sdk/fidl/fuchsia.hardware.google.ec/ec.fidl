@@ -1,0 +1,69 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+/// FIDL definitions used for communicating to the Embedded Controller (EC) used
+/// on ChromeOS devices.
+library fuchsia.hardware.google.ec;
+
+using zx;
+
+const MAX_COMMAND_SIZE uint16 = 65535;
+
+/// Status codes returned by the EC.
+/// The canonical source for this list is in this file:
+/// https://chromium.googlesource.com/chromiumos/platform/ec/+/HEAD/include/ec_commands.h
+type EcStatus = flexible enum {
+    SUCCESS = 0;
+    INVALID_COMMAND = 1;
+    ERROR = 2;
+    INVALID_PARAM = 3;
+    ACCESS_DENIED = 4;
+    INVALID_RESPONSE = 5;
+    INVALID_VERSION = 6;
+    INVALID_CHECKSUM = 7;
+    /// Accepted, command in progress
+    IN_PROGRESS = 8;
+    /// No response available
+    UNAVAILABLE = 9;
+    /// We got a timeout
+    TIMEOUT = 10;
+    /// Table / data overflow
+    OVERFLOW = 11;
+    /// Header contains invalid data
+    INVALID_HEADER = 12;
+    /// Didn't get the entire request
+    REQUEST_TRUNCATED = 13;
+    /// Response was too big to handle
+    RESPONSE_TOO_BIG = 14;
+    /// Communications bus error
+    BUS_ERROR = 15;
+    /// Up but too busy.  Should retry
+    BUSY = 16;
+    /// Header version invalid
+    INVALID_HEADER_VERSION = 17;
+    /// Header CRC invalid
+    INVALID_HEADER_CRC = 18;
+    /// Data CRC invalid
+    INVALID_DATA_CRC = 19;
+    /// Can't resend response
+    DUP_UNAVAILABLE = 20;
+};
+
+@discoverable
+protocol Device {
+    /// Run the given command on the EC.
+    RunCommand(struct {
+        /// Command code.
+        command uint16;
+        /// Command version.
+        command_version uint8;
+        /// Request bytes, which are command-code and -version specific.
+        request vector<uint8>:MAX_COMMAND_SIZE;
+    }) -> (struct {
+        /// Result returned by the EC command.
+        result EcStatus;
+        /// Response bytes, which are command-code and -version specific.
+        data vector<uint8>:MAX_COMMAND_SIZE;
+    }) error zx.status;
+};
