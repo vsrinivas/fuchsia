@@ -13,6 +13,8 @@ dart_test("time_sync_test") {
     "//third_party/dart-pkg/pub/test",
   ]
 
+  package_deps = [ "//src/testing/sl4f($default_toolchain)" ]
+
   environments = [
     nuc_env,
     {

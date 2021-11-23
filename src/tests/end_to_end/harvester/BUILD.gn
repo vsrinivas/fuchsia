@@ -12,6 +12,10 @@ dart_test("harvester_test") {
     "//sdk/testing/sl4f/client",
     "//third_party/dart-pkg/pub/test",
   ]
+  package_deps = [
+    "//src/developer/system_monitor/bin/harvester:system_monitor_harvester($default_toolchain)",
+    "//src/testing/sl4f($default_toolchain)",
+  ]
   environments = []
   if (is_host && target_cpu == "x64") {
     # Required for SL4F.

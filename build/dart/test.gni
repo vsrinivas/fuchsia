@@ -201,6 +201,20 @@ template("dart_test") {
     if (defined(invoker.non_dart_deps)) {
       deps += invoker.non_dart_deps
     }
+
+    # Add the package manifest of any package that this test depends on to
+    # run.
+    package_manifests = []
+    if (defined(invoker.package_deps)) {
+      deps += invoker.package_deps
+      foreach(dep, invoker.package_deps) {
+        dep_out_dir = get_label_info(dep, "target_out_dir")
+        dep_name = get_label_info(dep, "name")
+        package_manifests +=
+            [ rebase_path("${dep_out_dir}/${dep_name}/package_manifest.json",
+                          root_build_dir) ]
+      }
+    }
   }
 
   # Creates a convenience script to invoke the test.
