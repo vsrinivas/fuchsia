@@ -1,0 +1,11 @@
+{
+    "short_description": "PCI fake test driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Bus",
+        "PCI",
+        "Test"
+    ]
+}

@@ -102,6 +102,7 @@ if (platform_enable_user_pci) {
   fuchsia_driver_component("bus-pci") {
     component_name = "bus-pci"
     deps = [ ":bus-pci-driver" ]
+    info = "bus-pci-info.json"
   }
 } else {  # Kernel PCI
   fuchsia_driver("bus-pci-driver") {
@@ -135,6 +136,7 @@ if (platform_enable_user_pci) {
   fuchsia_driver_component("bus-pci") {
     component_name = "bus-pci"
     deps = [ ":bus-pci-driver" ]
+    info = "bus-pci-info.json"
   }
 }
 

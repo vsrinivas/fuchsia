@@ -1,0 +1,10 @@
+{
+    "short_description": "Platform bus proxy driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Bus",
+        "Platform"
+    ]
+}

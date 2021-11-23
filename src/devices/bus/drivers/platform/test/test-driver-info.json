@@ -1,0 +1,11 @@
+{
+    "short_description": "Platform bus test driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Bus",
+        "Platform",
+        "Test"
+    ]
+}

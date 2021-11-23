@@ -77,6 +77,7 @@ fuchsia_driver("test-board-driver") {
 fuchsia_driver_component("test-board") {
   component_name = "test-board"
   deps = [ ":test-board-driver" ]
+  info = "test-driver-info.json"
 }
 
 driver_bind_rules("test-gpio-bind") {
@@ -109,6 +110,7 @@ fuchsia_driver("test-gpio-driver") {
 fuchsia_driver_component("test-gpio") {
   component_name = "test-gpio"
   deps = [ ":test-gpio-driver" ]
+  info = "test-driver-info.json"
 }
 
 driver_bind_rules("test-power-bind") {
@@ -141,6 +143,7 @@ fuchsia_driver("test-power-driver") {
 fuchsia_driver_component("test-power") {
   component_name = "test-power"
   deps = [ ":test-power-driver" ]
+  info = "test-driver-info.json"
 }
 
 driver_bind_rules("test-goldfish-address-space-bind") {
@@ -172,6 +175,7 @@ fuchsia_driver("test-goldfish-address-space-driver") {
 fuchsia_driver_component("test-goldfish-address-space") {
   component_name = "test-goldfish-address-space"
   deps = [ ":test-goldfish-address-space-driver" ]
+  info = "test-driver-info.json"
 }
 
 driver_bind_rules("test-goldfish-pipe-bind") {
@@ -203,6 +207,7 @@ fuchsia_driver("test-goldfish-pipe-driver") {
 fuchsia_driver_component("test-goldfish-pipe") {
   component_name = "test-goldfish-pipe"
   deps = [ ":test-goldfish-pipe-driver" ]
+  info = "test-driver-info.json"
 }
 
 driver_bind_rules("test-goldfish-sync-bind") {
@@ -234,6 +239,7 @@ fuchsia_driver("test-goldfish-sync-driver") {
 fuchsia_driver_component("test-goldfish-sync") {
   component_name = "test-goldfish-sync"
   deps = [ ":test-goldfish-sync-driver" ]
+  info = "test-driver-info.json"
 }
 
 driver_bind_rules("test-clock-bind") {
@@ -266,6 +272,7 @@ fuchsia_driver("test-clock-driver") {
 fuchsia_driver_component("test-clock") {
   component_name = "test-clock"
   deps = [ ":test-clock-driver" ]
+  info = "test-driver-info.json"
 }
 
 driver_bind_rules("test-i2c-bind") {
@@ -298,6 +305,7 @@ fuchsia_driver("test-i2c-driver") {
 fuchsia_driver_component("test-i2c") {
   component_name = "test-i2c"
   deps = [ ":test-i2c-driver" ]
+  info = "test-driver-info.json"
 }
 
 driver_bind_rules("test-spi-bind") {
@@ -330,6 +338,7 @@ fuchsia_driver("test-spi-driver") {
 fuchsia_driver_component("test-spi") {
   component_name = "test-spi"
   deps = [ ":test-spi-driver" ]
+  info = "test-driver-info.json"
 }
 
 driver_bind_rules("test-pwm-bind") {
@@ -361,6 +370,7 @@ fuchsia_driver("test-pwm-driver") {
 fuchsia_driver_component("test-pwm") {
   component_name = "test-pwm"
   deps = [ ":test-pwm-driver" ]
+  info = "test-driver-info.json"
 }
 
 driver_bind_rules("test-rpmb-bind") {
@@ -392,6 +402,7 @@ fuchsia_driver("test-rpmb-driver") {
 fuchsia_driver_component("test-rpmb") {
   component_name = "test-rpmb"
   deps = [ ":test-rpmb-driver" ]
+  info = "test-driver-info.json"
 }
 
 driver_bind_rules("test-vreg-bind") {
@@ -439,6 +450,7 @@ fuchsia_driver_component("test-pci") {
   testonly = true
   component_name = "test-pci"
   deps = [ ":test-pci-driver" ]
+  info = "test-driver-info.json"
 }
 
 fuchsia_driver("test-vreg-driver") {
@@ -462,6 +474,7 @@ fuchsia_driver("test-vreg-driver") {
 fuchsia_driver_component("test-vreg") {
   component_name = "test-vreg"
   deps = [ ":test-vreg-driver" ]
+  info = "test-driver-info.json"
 }
 
 driver_bind_rules("test-composite-bind") {
@@ -503,6 +516,7 @@ fuchsia_driver("test-composite-driver") {
 fuchsia_driver_component("test-composite") {
   component_name = "test-composite"
   deps = [ ":test-composite-driver" ]
+  info = "test-driver-info.json"
 }
 
 driver_bind_rules("test-child-2.proxy-bind") {
@@ -524,6 +538,7 @@ fuchsia_driver("test-child-2.proxy-driver") {
 fuchsia_driver_component("test-child-2.proxy") {
   component_name = "test-child-2.proxy"
   deps = [ ":test-child-2.proxy-driver" ]
+  info = "test-driver-info.json"
 }
 
 simple_drivers = [
@@ -558,6 +573,7 @@ foreach(driver, simple_drivers) {
   fuchsia_driver_component("test-$driver") {
     component_name = "test-$driver"
     deps = [ ":test-$driver-driver" ]
+    info = "test-driver-info.json"
   }
 }
 
@@ -627,6 +643,7 @@ fuchsia_driver("test-bti-board-driver") {
 fuchsia_driver_component("test-bti-board") {
   component_name = "test-bti-board"
   deps = [ ":test-bti-board-driver" ]
+  info = "test-driver-info.json"
 }
 
 driver_bind_rules("test-bti-bind") {
@@ -654,6 +671,7 @@ fuchsia_driver("test-bti-driver") {
 fuchsia_driver_component("test-bti") {
   component_name = "test-bti"
   deps = [ ":test-bti-driver" ]
+  info = "test-driver-info.json"
 }
 
 test("platform-bus-bti") {
@@ -712,6 +730,7 @@ fuchsia_driver("test-power-sensor-driver") {
 fuchsia_driver_component("test-power-sensor") {
   component_name = "test-power-sensor"
   deps = [ ":test-power-sensor-driver" ]
+  info = "test-driver-info.json"
 }
 
 fuchsia_unittest_package("platform-bus-bti-test") {

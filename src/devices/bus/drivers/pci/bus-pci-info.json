@@ -1,5 +1,5 @@
 {
-    "short_description": "PCI Virtio ethernet driver",
+    "short_description": "PCI bus driver",
     "manufacturer": "",
     "families": [
         "generic"
@@ -8,9 +8,7 @@
         "generic"
     ],
     "areas": [
-        "Connectivity",
-        "Ethernet",
-        "Networking",
+        "Bus",
         "PCI"
     ]
 }

@@ -3,6 +3,7 @@ Audio
 Block
 Bluetooth
 Board
+Bus
 Camera
 Connectivity
 Clock
@@ -21,7 +22,7 @@ Misc
 Nand
 Networking
 Openthread
-Pci
+PCI
 Platform
 Power
 Spi
