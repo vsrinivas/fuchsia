@@ -53,7 +53,7 @@ def main():
     if len(banned_guard_variables) > 0:
         print(
             '{:s}: ERROR: {:s} contains non-trivial function scoped statics. Mangled guard variable symbol names follow:'
-            .format(parser.prog, args.zircon_elf))
+            .format(parser.prog, zircon_elf))
         print(*banned_guard_variables, sep='\n')
         sys.exit(1)
 

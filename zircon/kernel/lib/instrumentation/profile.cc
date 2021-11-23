@@ -4,19 +4,34 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include "private.h"
+
+#ifndef HAVE_PROFDATA
+#error "build system regression"
+#endif
+
+#if !HAVE_PROFDATA
+
+InstrumentationDataVmo LlvmProfileGetVmo() { return {}; }
+
+#else  // HAVE_PROFDATA
+
 #include <lib/version.h>
+#include <stdint.h>
 #include <string.h>
 #include <zircon/assert.h>
-
-#include <cstdint>
 
 #include <ktl/byte.h>
 #include <ktl/span.h>
 #include <lk/init.h>
+#include <object/vm_object_dispatcher.h>
+#include <vm/vm_object_paged.h>
 
 #include <profile/InstrProfData.inc>
 
 namespace {
+
+constexpr ktl::string_view kVmoName = "data/zircon.elf.profraw";
 
 using IntPtrT = intptr_t;
 
@@ -101,6 +116,11 @@ extern uint64_t CountersStart __asm__(
     INSTR_PROF_QUOTE(INSTR_PROF_SECT_START(INSTR_PROF_CNTS_COMMON)));
 extern uint64_t CountersEnd __asm__(INSTR_PROF_QUOTE(INSTR_PROF_SECT_STOP(INSTR_PROF_CNTS_COMMON)));
 
+// These are defined by the linker script.  When there is no such
+// instrumentation data in this kernel build, they're equal.
+extern const uint8_t __llvm_profile_start[], __llvm_profile_end[];
+extern const uint8_t __llvm_profile_vmo_end[];
+
 }  // extern "C"
 
 #endif  // _WIN32
@@ -114,8 +134,9 @@ uint64_t __llvm_profile_get_version() { return INSTR_PROF_RAW_VERSION_VAR; }
 // TODO(fxbug.dev/81362): this is used by the InstrProfData.inc code in the new
 // version but not the old.  Remove this attribute after the new toolchain has
 // landed.
-[[gnu::unused]]
-uint64_t __llvm_write_binary_ids(void* ignored) { return sizeof(uint64_t) + ElfBuildId().size(); }
+[[gnu::unused]] uint64_t __llvm_write_binary_ids(void* ignored) {
+  return sizeof(uint64_t) + ElfBuildId().size();
+}
 
 #define DataSize (&DataEnd - &DataStart)
 #define PaddingBytesBeforeCounters 0
@@ -153,6 +174,42 @@ void InitLlvmProfileBuildId(unsigned int level) {
   memcpy(profdata_build_id.data(), link_build_id.data(), link_build_id.size_bytes());
 }
 
+fbl::RefPtr<VmObjectPaged> gLlvmProfileVmo;
+
 }  // namespace
 
 LK_INIT_HOOK(InitLlvmProfileBuildId, InitLlvmProfileBuildId, LK_INIT_LEVEL_ARCH_LATE + 1)
+
+InstrumentationDataVmo LlvmProfileGetVmo() {
+  const size_t content_size = __llvm_profile_end - __llvm_profile_start;
+  const size_t vmo_size = __llvm_profile_vmo_end - __llvm_profile_start;
+  if (vmo_size == 0) {
+    return {};
+  }
+
+  fbl::RefPtr<VmObjectPaged> vmo;
+  zx_status_t status =
+      VmObjectPaged::CreateFromWiredPages(__llvm_profile_start, vmo_size, false, &vmo);
+  ZX_ASSERT(status == ZX_OK);
+
+  // This is kept alive forever to keep a permanent reference to the VMO so
+  // that the memory always remains valid, even if userspace closes the last
+  // handle.
+  gLlvmProfileVmo = vmo;
+
+  zx_rights_t rights;
+  KernelHandle<VmObjectDispatcher> handle;
+  status =
+      VmObjectDispatcher::Create(ktl::move(vmo), content_size,
+                                 VmObjectDispatcher::InitialMutability::kMutable, &handle, &rights);
+  ZX_ASSERT(status == ZX_OK);
+  handle.dispatcher()->set_name(kVmoName.data(), kVmoName.size());
+
+  return {
+      .announce = "LLVM Profile",
+      .sink_name = "llvm-profdata",
+      .handle = Handle::Make(ktl::move(handle), rights & ~ZX_RIGHT_WRITE).release(),
+  };
+}
+
+#endif  // HAVE_PROFDATA

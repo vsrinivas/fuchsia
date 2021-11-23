@@ -23,7 +23,11 @@ source_set("cmpctmalloc") {
     include_dirs = [ "//zircon/kernel/lib/heap/include" ]
     defines = [ "ZX_ASSERT_LEVEL=2" ]
   } else if (is_kernel) {
-    # TODO(fxbug.dev/51163): Remove headers when possible.
-    deps += [ "//zircon/kernel/lib/instrumentation:headers" ]
+    deps += [
+      "//zircon/kernel/lib/counters",
+
+      # TODO(fxbug.dev/51163): Remove headers when possible.
+      "//zircon/kernel/lib/instrumentation:headers",
+    ]
   }
 }

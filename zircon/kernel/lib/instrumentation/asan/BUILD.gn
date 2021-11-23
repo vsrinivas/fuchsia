@@ -79,7 +79,9 @@ if (is_asan) {
     sources += [ "asan-init-$zircon_cpu.cc" ]
     deps = [
       "..:headers",
+      "//zircon/kernel/lib/counters",
       "//zircon/kernel/lib/init",
+      "//zircon/kernel/vm:headers",
     ]
   }
 }

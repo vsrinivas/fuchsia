@@ -9,179 +9,138 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <ktl/initializer_list.h>
 #include <ktl/iterator.h>
+#include <ktl/string_view.h>
 #include <object/vm_object_dispatcher.h>
 #include <vm/vm_object_paged.h>
 
+#include "private.h"
+
 namespace {
 
-// These are defined by the linker script.  When there is no such
-// instrumentation data in this kernel build, they're equal.
-extern "C" const uint8_t __llvm_profile_start[], __llvm_profile_end[];
-extern "C" const uint8_t __llvm_profile_vmo_end[];
-extern "C" const uint8_t __sancov_pc_table[], __sancov_pc_table_end[];
-extern "C" const uint8_t __sancov_pc_table_vmo_end[];
-extern "C" const uint8_t __sancov_pc_counts[], __sancov_pc_counts_end[];
-extern "C" const uint8_t __sancov_pc_counts_vmo_end[];
+// This object facilitates doing fprintf directly into the VMO representing
+// the symbolizer markup data file.  This gets the symbolizer context for the
+// kernel and then a dumpfile element for each VMO published.
+class SymbolizerFile {
+ public:
+  SymbolizerFile() {
+    zx_status_t status =
+        VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, VmObjectPaged::kResizable, PAGE_SIZE, &vmo_);
+    ZX_ASSERT(status == ZX_OK);
+  }
 
-constexpr struct Kind {
-  const char* announce;
-  const char* sink_name;
-  const char* vmo_name;
-  const uint8_t* start;
-  const uint8_t* end;
-  const uint8_t* vmo_end;
-  size_t scale;
-  const char* units;
+  FILE* stream() { return &stream_; }
 
-  constexpr size_t content_size() const { return end - start; }
-} kKinds[] = {
-    // LLVM profile data.  When not compiled in, this will be a zero-length
-    // anonymous VMO and userland will just ignore it.  But it's simpler to
-    // keep the number of VMOs fixed in the ABI with userboot because the
-    // way the build works, the userboot build is independent of different
-    // kernel variants that might have things enabled or disabled.
-    {"LLVM Profile", "llvm-profile", "data/zircon.elf.profraw",
-     // Linker-generated symbols.
-     __llvm_profile_start, __llvm_profile_end, __llvm_profile_vmo_end,
-     // Units.
-     1, "bytes"},
+  int Write(ktl::string_view str) {
+    zx_status_t status = vmo_->Write(str.data(), pos_, str.size());
+    ZX_ASSERT(status == ZX_OK);
+    pos_ += str.size();
+    return static_cast<int>(str.size());
+  }
 
-    // -fsanitizer-coverage=trace-pc-guard data.  Same story.
-    {"SanitizerCoverage", "sancov",
-     // The sancov tool matches "<binaryname>" to "<binaryname>.%u.sancov".
-     "data/zircon.elf.1.sancov",
-     // Linker-generated symbols.
-     __sancov_pc_table, __sancov_pc_table_end, __sancov_pc_table_vmo_end,
-     // Units.
-     sizeof(uintptr_t), "PCs"},
-    {"SanitizerCoverage Counts", "sancov-counts",
-     // This follows the sancov PCs file name just for consistency.
-     "data/zircon.elf.1.sancov-counts",
-     // Linker-generated symbols.
-     __sancov_pc_counts, __sancov_pc_counts_end, __sancov_pc_counts_vmo_end,
-     // Units.
-     sizeof(uint64_t), "counters"},
+  // Move the VMO into a handle and return it.
+  Handle* Finish() && {
+    KernelHandle<VmObjectDispatcher> handle;
+    zx_rights_t rights;
+    zx_status_t status = VmObjectDispatcher::Create(
+        ktl::move(vmo_), 0, VmObjectDispatcher::InitialMutability::kMutable, &handle, &rights);
+    ZX_ASSERT(status == ZX_OK);
+    handle.dispatcher()->set_name(kVmoName.data(), kVmoName.size());
+    handle.dispatcher()->SetContentSize(pos_);
+    return Handle::Make(ktl::move(handle), rights).release();
+  }
 
-    // NOTE!  This element must be last.  This file contains logging text
-    // with symbolizer markup that describes all the other data files.
-    {{}, {}, "data/symbolizer.log", {}, {}, {}, {}, {}},
+ private:
+  static constexpr ktl::string_view kVmoName = "data/symbolizer.log";
+
+  fbl::RefPtr<VmObjectPaged> vmo_;
+  FILE stream_{this};
+  size_t pos_ = 0;
 };
 
-void PrintDumpfile(FILE* f, const Kind& k) {
-  fprintf(f, "%s: {{{dumpfile:%s:%s}}} maximum %zu %s.\n", k.announce, k.sink_name, k.vmo_name,
-          (k.end - k.start) / k.scale, k.units);
+void PrintDumpfile(const InstrumentationDataVmo& data, ktl::initializer_list<FILE*> streams) {
+  if (!data.handle) {
+    return;
+  }
+
+  auto vmo = DownCastDispatcher<VmObjectDispatcher>(data.handle->dispatcher().get());
+
+  char name_buffer[ZX_MAX_NAME_LEN];
+  vmo->get_name(name_buffer);
+  ktl::string_view vmo_name{name_buffer, sizeof(name_buffer)};
+  vmo_name = vmo_name.substr(0, vmo_name.find_first_of('\0'));
+
+  size_t content_size = vmo->GetContentSize();
+  size_t scaled_size = content_size / data.scale;
+
+  for (FILE* f : streams) {
+    fprintf(f, "%.*s: {{{dumpfile:%.*s:%.*s}}} maximum %zu %.*s.\n",
+            static_cast<int>(data.announce.size()), data.announce.data(),
+            static_cast<int>(data.sink_name.size()), data.sink_name.data(),
+            static_cast<int>(vmo_name.size()), vmo_name.data(), scaled_size,
+            static_cast<int>(data.units.size()), data.units.data());
+  }
 }
 
 }  // namespace
 
-decltype(InstrumentationData::instances_) InstrumentationData::instances_;
-
-zx_status_t InstrumentationData::Create() {
-  const auto& k = kKinds[which()];
-  return VmObjectPaged::CreateFromWiredPages(k.start, k.vmo_end - k.start, false, &vmo_);
-}
-
-zx_status_t InstrumentationData::GetVmo(Handle** handle) {
-  zx_rights_t rights;
-  KernelHandle<VmObjectDispatcher> new_handle;
-  zx_status_t status = VmObjectDispatcher::Create(vmo_, kKinds[which()].content_size(),
-                                                  VmObjectDispatcher::InitialMutability::kMutable,
-                                                  &new_handle, &rights);
-  if (status == ZX_OK) {
-    *handle = Handle::Make(ktl::move(new_handle), rights & ~ZX_RIGHT_WRITE).release();
-  }
-  return status;
-}
-
-bool InstrumentationData::Publish(FILE* symbolizer) {
-  if (vmo_->size() == 0) {
-    return false;
-  }
-
-  const auto& k = kKinds[which()];
-
-  // Set the name to expose the meaning of the VMO to userland.
-  vmo_->set_name(k.vmo_name, strlen(k.vmo_name));
-
-  if (symbolizer) {
-    // Log the name that goes with the VMO.
-    PrintDumpfile(stdout, k);
-    PrintDumpfile(symbolizer, k);
-  }
-
-  return true;
-}
-
 zx_status_t InstrumentationData::GetVmos(Handle* handles[]) {
-  // This object facilitates doing fprintf directly into the VMO representing
-  // the symbolizer markup data file.  This gets the symbolizer context for the
-  // kernel and then a dumpfile element for each VMO published.
-  struct SymbolizerFile {
-    fbl::RefPtr<VmObjectPaged>& vmo_ = instances_[kSymbolizer].vmo_;
-    size_t pos_ = 0;
-    FILE stream_{this};
-
-    zx_status_t Create() {
-      return VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, VmObjectPaged::kResizable, PAGE_SIZE, &vmo_);
-    }
-
-    int Write(ktl::string_view str) {
-      zx_status_t status = vmo_->Write(str.data(), pos_, str.size());
+  // To keep the protocol with userboot simple, we always supply all the VMO
+  // handles.  Slots with no instrumentation data to report will hold an empty
+  // VMO with no name.  Create this the first time it's needed and then just
+  // duplicate the read-only handle as needed.
+  auto get_stub_vmo = [stub_vmo = fbl::RefPtr<VmObjectDispatcher>{},
+                       rights = zx_rights_t{}]() mutable -> Handle* {
+    KernelHandle<VmObjectDispatcher> handle(stub_vmo);
+    if (!stub_vmo) {
+      fbl::RefPtr<VmObjectPaged> vmo;
+      zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0, 0, &vmo);
       ZX_ASSERT(status == ZX_OK);
-      pos_ += str.size();
-      return static_cast<int>(str.size());
+      status = VmObjectDispatcher::Create(
+          ktl::move(vmo), 0, VmObjectDispatcher::InitialMutability::kMutable, &handle, &rights);
+      ZX_ASSERT(status == ZX_OK);
+      rights &= ~ZX_RIGHT_WRITE;
     }
-  } symbolizer;
-  zx_status_t status = symbolizer.Create();
-  if (status != ZX_OK) {
-    return status;
-  }
-  PrintSymbolizerContext(&symbolizer.stream_);
+    return Handle::Make(ktl::move(handle), rights).release();
+  };
 
-  bool any_published = false;
-  for (auto& instance : instances_) {
-    bool published = false;
-    if (instance.which() == kSymbolizer) {
-      // This is the last iteration, so everything has been published now.
-      static_assert(kSymbolizer == ktl::size(instances_) - 1);
-      if (any_published) {
-        // Publish the symbolizer file.
-        published = instance.Publish(nullptr);
+  SymbolizerFile symbolizer;
+  PrintSymbolizerContext(symbolizer.stream());
+
+  // This is just a fixed list of steps but using a loop and a switch gets the
+  // compiler to check that every enum case is handled.
+  constexpr auto get_getter = [](Vmo idx) -> InstrumentationDataVmo (*)() {
+    switch (idx) {
+      case kLlvmProfileVmo:
+        return LlvmProfileGetVmo;
+      case kSancovVmo:
+        return SancovGetPcVmo;
+      case kSancovCountsVmo:
+        return SancovGetCountsVmo;
+
+        // The symbolizer file is done separately below since it must be last.
+      case kSymbolizer:
+      case kVmoCount:
+        break;
+    }
+    return nullptr;
+  };
+  bool have_data = false;
+  for (uint32_t idx = 0; idx < kVmoCount; ++idx) {
+    if (auto getter = get_getter(static_cast<Vmo>(idx))) {
+      InstrumentationDataVmo data = getter();
+      if (data.handle) {
+        PrintDumpfile(data, {stdout, symbolizer.stream()});
+        have_data = true;
+        handles[idx] = data.handle;
       } else {
-        // Nothing to publish, so zero out the symbolizer file VMO so it won't
-        // be published either.
-        status = instance.vmo_->Resize(0);
-        ZX_ASSERT(status == ZX_OK);
+        handles[idx] = get_stub_vmo();
       }
-    } else {
-      status = instance.Create();
-      published = instance.Publish(&symbolizer.stream_);
     }
-    if (status == ZX_OK) {
-      status = instance.GetVmo(&handles[instance.which()]);
-    }
-    if (published) {
-      any_published = true;
-    } else {
-      // The empty VMO doesn't need to be kept alive.
-      instance.vmo_.reset();
-    }
-    if (status != ZX_OK) {
-      return status;
-    }
-  }
+  };
 
-  if (any_published) {
-    // Finalize the official size of the symbolizer file.
-    auto* dispatcher = handles[kSymbolizer]->dispatcher().get();
-    auto vmo = DownCastDispatcher<VmObjectDispatcher>(dispatcher);
-    vmo->SetContentSize(symbolizer.pos_);
-  }
-
-  // There's no need to keep the symbolizer file VMO alive if userland drops
-  // it.  Its memory is not special and isn't used by the kernel directly.
-  symbolizer.vmo_.reset();
+  handles[kSymbolizer] = have_data ? ktl::move(symbolizer).Finish() : get_stub_vmo();
 
   return ZX_OK;
 }

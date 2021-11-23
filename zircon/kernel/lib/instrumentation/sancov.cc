@@ -4,13 +4,25 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <zircon/assert.h>
-#include <zircon/compiler.h>
+#include "private.h"
+#ifndef HAVE_SANCOV
+#error "build system regression"
+#endif
 
-#include <cstdint>
+#if !HAVE_SANCOV
+
+InstrumentationDataVmo SancovGetPcVmo() { return {}; }
+InstrumentationDataVmo SancovGetCountsVmo() { return {}; }
+
+#else  // HAVE_SANCOV
+
+#include <stdint.h>
+#include <zircon/assert.h>
 
 #include <ktl/atomic.h>
-#include <vm/vm.h>
+#include <ktl/span.h>
+#include <object/vm_object_dispatcher.h>
+#include <vm/vm_object_paged.h>
 
 namespace {
 
@@ -21,6 +33,12 @@ namespace {
 constexpr uint64_t kMagic64 = 0xC0BFFFFFFFFFFF64ULL;
 
 constexpr uint64_t kCountsMagic = 0x0023766f436e6153ULL;  // "SanCov#" (LE)
+
+// The sancov tool matches "<binaryname>" to "<binaryname>.%u.sancov".
+constexpr ktl::string_view kPcVmoName = "data/zircon.elf.1.sancov";
+
+// This follows the sancov PCs file name just for consistency.
+constexpr ktl::string_view kCountsVmoName = "data/zircon.elf.1.sancov-counts";
 
 using Guard = ktl::atomic<uint32_t>;
 static_assert(sizeof(Guard) == sizeof(uint32_t));
@@ -45,8 +63,8 @@ extern "C" {
 // each element in __sancov_guards (statically allocated via linker script).
 // Likewise for __sancov_pc_counts.
 extern Guard __start___sancov_guards[], __stop___sancov_guards[];
-extern uintptr_t __sancov_pc_table[];
-extern Count __sancov_pc_counts[];
+extern uintptr_t __sancov_pc_table[], __sancov_pc_table_end[], __sancov_pc_table_vmo_end[];
+extern Count __sancov_pc_counts[], __sancov_pc_counts_end[], __sancov_pc_counts_vmo_end[];
 
 // This is run along with static constructors, pretty early in startup.
 // It's always run on the boot CPU before secondary CPUs are started up.
@@ -95,4 +113,76 @@ void __sanitizer_cov_trace_pc_guard(Guard* guard) {
 
 }  // extern "C"
 
+// These are kept alive forever to keep a permanent reference to the VMO so
+// that the memory always remains valid, even if userspace closes the last
+// handle.
+fbl::RefPtr<VmObjectPaged> gSancovPcVmo, gSancovCountsVmo;
+
 }  // namespace
+
+InstrumentationDataVmo SancovGetPcVmo() {
+  ktl::span contents(__sancov_pc_table, __sancov_pc_table_end);
+  ktl::span contents_vmo(__sancov_pc_table, __sancov_pc_table_vmo_end);
+  if (contents.empty()) {
+    return {};
+  }
+
+  // This is kept alive forever to keep a permanent reference to the VMO so
+  // that the memory always remains valid, even if userspace closes the last
+  // handle.
+  fbl::RefPtr<VmObjectPaged> vmo;
+  zx_status_t status = VmObjectPaged::CreateFromWiredPages(contents_vmo.data(),
+                                                           contents_vmo.size_bytes(), false, &vmo);
+  ZX_ASSERT(status == ZX_OK);
+
+  gSancovPcVmo = vmo;
+
+  zx_rights_t rights;
+  KernelHandle<VmObjectDispatcher> handle;
+  status =
+      VmObjectDispatcher::Create(ktl::move(vmo), contents.size_bytes(),
+                                 VmObjectDispatcher::InitialMutability::kMutable, &handle, &rights);
+  ZX_ASSERT(status == ZX_OK);
+  handle.dispatcher()->set_name(kPcVmoName.data(), kPcVmoName.size());
+
+  return {
+      .announce = "SanitizerCoverage",
+      .sink_name = "sancov",
+      .units = "PCs",
+      .scale = sizeof(__sancov_pc_table[0]),
+      .handle = Handle::Make(ktl::move(handle), rights & ~ZX_RIGHT_WRITE).release(),
+  };
+}
+
+InstrumentationDataVmo SancovGetCountsVmo() {
+  ktl::span contents(__sancov_pc_counts, __sancov_pc_counts_end);
+  ktl::span contents_vmo(__sancov_pc_counts, __sancov_pc_counts_vmo_end);
+  if (contents.empty()) {
+    return {};
+  }
+
+  fbl::RefPtr<VmObjectPaged> vmo;
+  zx_status_t status = VmObjectPaged::CreateFromWiredPages(contents_vmo.data(),
+                                                           contents_vmo.size_bytes(), false, &vmo);
+  ZX_ASSERT(status == ZX_OK);
+
+  gSancovCountsVmo = vmo;
+
+  zx_rights_t rights;
+  KernelHandle<VmObjectDispatcher> handle;
+  status =
+      VmObjectDispatcher::Create(ktl::move(vmo), contents.size_bytes(),
+                                 VmObjectDispatcher::InitialMutability::kMutable, &handle, &rights);
+  ZX_ASSERT(status == ZX_OK);
+  handle.dispatcher()->set_name(kCountsVmoName.data(), kCountsVmoName.size());
+
+  return {
+      .announce = "SanitizerCoverage Counts",
+      .sink_name = "sancov-counts",
+      .units = "counters",
+      .scale = sizeof(__sancov_pc_counts[0]),
+      .handle = Handle::Make(ktl::move(handle), rights & ~ZX_RIGHT_WRITE).release(),
+  };
+}
+
+#endif  // HAVE_SANCOV
