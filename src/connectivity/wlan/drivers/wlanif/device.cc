@@ -9,7 +9,6 @@
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
-#include <fuchsia/wlan/stats/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/ddk/device.h>
 #include <net/ethernet.h>
@@ -27,7 +26,6 @@ namespace wlanif {
 namespace wlan_common = ::fuchsia::wlan::common;
 namespace wlan_ieee80211 = ::fuchsia::wlan::ieee80211;
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
-namespace wlan_stats = ::fuchsia::wlan::stats;
 
 Device::Device(zx_device_t* device, wlanif_impl_protocol_t wlanif_impl_proto)
     : parent_(device), wlanif_impl_(wlanif_impl_proto) {
@@ -614,45 +612,11 @@ void Device::StatsQueryReq() {
 }
 
 void Device::GetIfaceCounterStats(GetIfaceCounterStatsCallback cb) {
-  std::lock_guard<std::mutex> lock(lock_);
-
-  auto status = ZX_ERR_BAD_STATE;
-  wlanif_iface_counter_stats_t out_stats = {};
-  if (wlanif_impl_.ops->get_iface_counter_stats != nullptr) {
-    status = wlanif_impl_get_iface_counter_stats(&wlanif_impl_, &out_stats);
-  }
-
-  wlan_mlme::GetIfaceCounterStatsResponse fidl_resp;
-  if (status == ZX_OK) {
-    wlan_stats::IfaceCounterStats fidl_out_stats;
-    ConvertIfaceCounterStats(&fidl_out_stats, out_stats);
-    fidl_resp.set_stats(fidl_out_stats);
-  } else {
-    fidl_resp.set_error_status(status);
-  }
-
-  cb(std::move(fidl_resp));
+  lerror("GetIfaceCounterStats is not implemented\n");
 }
 
 void Device::GetIfaceHistogramStats(GetIfaceHistogramStatsCallback cb) {
-  std::lock_guard<std::mutex> lock(lock_);
-
-  auto status = ZX_ERR_BAD_STATE;
-  wlanif_iface_histogram_stats_t out_stats = {};
-  if (wlanif_impl_.ops->get_iface_histogram_stats != nullptr) {
-    status = wlanif_impl_get_iface_histogram_stats(&wlanif_impl_, &out_stats);
-  }
-
-  wlan_mlme::GetIfaceHistogramStatsResponse fidl_resp;
-  if (status == ZX_OK) {
-    wlan_stats::IfaceHistogramStats fidl_out_stats;
-    ConvertIfaceHistogramStats(&fidl_out_stats, out_stats);
-    fidl_resp.set_stats(std::move(fidl_out_stats));
-  } else {
-    fidl_resp.set_error_status(status);
-  }
-
-  cb(std::move(fidl_resp));
+  lerror("GetIfaceHistogramStats is not implemented\n");
 }
 
 void Device::ListMinstrelPeers(ListMinstrelPeersCallback cb) {

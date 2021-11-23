@@ -68,10 +68,6 @@ void ConvertSnrHistogram(::fuchsia::wlan::stats::SnrHistogram* fidl_stats,
 void ConvertPmkInfo(::fuchsia::wlan::mlme::PmkInfo* fidl_ind, const wlanif_pmk_info_t& ind);
 
 void ConvertIfaceStats(::fuchsia::wlan::stats::IfaceStats* fidl_stats, const wlanif_stats_t& stats);
-void ConvertIfaceCounterStats(::fuchsia::wlan::stats::IfaceCounterStats* fidl_stats,
-                              const wlanif_iface_counter_stats_t& stats);
-void ConvertIfaceHistogramStats(::fuchsia::wlan::stats::IfaceHistogramStats* fidl_stats,
-                                const wlanif_iface_histogram_stats_t& stats);
 uint32_t ConvertMgmtCaptureFlags(::fuchsia::wlan::mlme::MgmtFrameCaptureFlags fidl_flags);
 ::fuchsia::wlan::mlme::MgmtFrameCaptureFlags ConvertMgmtCaptureFlags(uint32_t ddk_flags);
 void ConvertRates(::std::vector<uint8_t>* rates, const bss_description_t& banjo_desc);

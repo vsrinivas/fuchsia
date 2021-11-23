@@ -730,37 +730,6 @@ void ConvertIfaceStats(wlan_stats::IfaceStats* fidl_stats, const wlanif_stats_t&
   }
 }
 
-void ConvertIfaceCounterStats(wlan_stats::IfaceCounterStats* fidl_stats,
-                              const wlanif_iface_counter_stats_t& stats) {
-  fidl_stats->rx_unicast_total = stats.rx_unicast_total;
-  fidl_stats->rx_unicast_drop = stats.rx_unicast_drop;
-  fidl_stats->rx_multicast = stats.rx_multicast;
-  fidl_stats->tx_total = stats.tx_total;
-  fidl_stats->tx_drop = stats.tx_drop;
-}
-
-void ConvertIfaceHistogramStats(wlan_stats::IfaceHistogramStats* fidl_stats,
-                                const wlanif_iface_histogram_stats_t& stats) {
-  fidl_stats->noise_floor_histograms.resize(stats.noise_floor_histograms_count);
-  for (size_t i = 0; i < stats.noise_floor_histograms_count; ++i) {
-    ConvertNoiseFloorHistogram(&fidl_stats->noise_floor_histograms[i],
-                               stats.noise_floor_histograms_list[i]);
-  }
-  fidl_stats->rssi_histograms.resize(stats.rssi_histograms_count);
-  for (size_t i = 0; i < stats.rssi_histograms_count; ++i) {
-    ConvertRssiHistogram(&fidl_stats->rssi_histograms[i], stats.rssi_histograms_list[i]);
-  }
-  fidl_stats->rx_rate_index_histograms.resize(stats.rx_rate_index_histograms_count);
-  for (size_t i = 0; i < stats.rx_rate_index_histograms_count; ++i) {
-    ConvertRxRateIndexHistogram(&fidl_stats->rx_rate_index_histograms[i],
-                                stats.rx_rate_index_histograms_list[i]);
-  }
-  fidl_stats->snr_histograms.resize(stats.snr_histograms_count);
-  for (size_t i = 0; i < stats.snr_histograms_count; ++i) {
-    ConvertSnrHistogram(&fidl_stats->snr_histograms[i], stats.snr_histograms_list[i]);
-  }
-}
-
 uint32_t ConvertMgmtCaptureFlags(wlan_mlme::MgmtFrameCaptureFlags fidl_flags) {
   uint32_t ret_flags = 0;
   uint32_t flags = static_cast<uint32_t>(fidl_flags);

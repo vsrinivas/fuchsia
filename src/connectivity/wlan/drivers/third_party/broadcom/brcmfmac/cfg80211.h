@@ -24,7 +24,6 @@
 
 #include <atomic>
 
-#include "fuchsia/hardware/wlanif/c/banjo.h"
 #include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/macaddr.h"
 
 /* for brcmu_d11inf */
@@ -559,10 +558,6 @@ void brcmf_if_set_keys_req(net_device* ndev, const wlanif_set_keys_req_t* req);
 void brcmf_if_del_keys_req(net_device* ndev, const wlanif_del_keys_req_t* req);
 void brcmf_if_eapol_req(net_device* ndev, const wlanif_eapol_req_t* req);
 void brcmf_if_stats_query_req(net_device* ndev);
-zx_status_t brcmf_if_get_iface_counter_stats(net_device* ndev,
-                                             wlanif_iface_counter_stats_t* out_stats);
-zx_status_t brcmf_if_get_iface_histogram_stats(net_device* ndev,
-                                               wlanif_iface_histogram_stats_t* out_stats);
 void brcmf_if_start_capture_frames(net_device* ndev, const wlanif_start_capture_frames_req_t* req,
                                    wlanif_start_capture_frames_resp_t* resp);
 void brcmf_if_stop_capture_frames(net_device* ndev);
